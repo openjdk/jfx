@@ -268,14 +268,14 @@ public class TabPaneDragPolicyTest {
             robot.mousePress(MouseButton.PRIMARY);
             robot.mouseRelease(MouseButton.PRIMARY);
         });
-        waitForLatch(latches[0], 5, "Timeout waiting tabs[0] to get selected.");
+        Util.waitForLatch(latches[0], 5, "Timeout waiting tabs[0] to get selected.");
 
         CountDownLatch pressLatch = new CountDownLatch(1);
         Platform.runLater(() -> {
             robot.mousePress(MouseButton.PRIMARY);
             pressLatch.countDown();
         });
-        waitForLatch(pressLatch, 5, "Timeout waiting for robot.mousePress(Robot.MOUSE_LEFT_BTN).");
+        Util.waitForLatch(pressLatch, 5, "Timeout waiting for robot.mousePress(Robot.MOUSE_LEFT_BTN).");
         for (int i = 0; i < DRAG_DISTANCE; i++) {
             final int c = i;
             CountDownLatch moveLatch = new CountDownLatch(1);
@@ -291,7 +291,7 @@ public class TabPaneDragPolicyTest {
                 }
                 moveLatch.countDown();
             });
-            waitForLatch(moveLatch, 5, "Timeout waiting for robot.mouseMove(023).");
+            Util.waitForLatch(moveLatch, 5, "Timeout waiting for robot.mouseMove(023).");
         }
 
         CountDownLatch releaseLatch = new CountDownLatch(1);
@@ -299,11 +299,11 @@ public class TabPaneDragPolicyTest {
             robot.mouseRelease(MouseButton.PRIMARY);
             releaseLatch.countDown();
         });
-        waitForLatch(releaseLatch, 5, "Timeout waiting for robot.mouseRelease(Robot.MOUSE_LEFT_BTN).");
+        Util.waitForLatch(releaseLatch, 5, "Timeout waiting for robot.mouseRelease(Robot.MOUSE_LEFT_BTN).");
 
         if (isFixed) {
             Util.runAndWait(() -> tabPane.getSelectionModel().select(tabs[2]));
-            waitForLatch(latches[2], 5, "Timeout waiting tabs[2] to get selected.");
+            Util.waitForLatch(latches[2], 5, "Timeout waiting tabs[2] to get selected.");
             latches[0] = new CountDownLatch(1);
         }
 
@@ -321,11 +321,11 @@ public class TabPaneDragPolicyTest {
             } catch (Exception ex) {
                 fail("Thread was interrupted." + ex);
             }
-            waitForLatch(latches[0], 5, "Timeout waiting tabs[0] to get selected.");
+            Util.waitForLatch(latches[0], 5, "Timeout waiting tabs[0] to get selected.");
         } else {
             // For REORDER drag policy, tabs[1] should be the first tab.
-            waitForLatch(changeListenerLatch, 5, "Timeout waiting ChangeListener to get called.");
-            waitForLatch(latches[1], 5, "Timeout waiting tabs[1] to get selected.");
+            Util.waitForLatch(changeListenerLatch, 5, "Timeout waiting ChangeListener to get called.");
+            Util.waitForLatch(latches[1], 5, "Timeout waiting tabs[1] to get selected.");
         }
     }
 
@@ -377,7 +377,7 @@ public class TabPaneDragPolicyTest {
             }
             latch.countDown();
         });
-        waitForLatch(latch, 5, "Timeout waiting for setupTest().");
+        Util.waitForLatch(latch, 5, "Timeout waiting for setupTest().");
     }
 
     @After
@@ -394,17 +394,7 @@ public class TabPaneDragPolicyTest {
             tabs = null;
             latch.countDown();
         });
-        waitForLatch(latch, 5, "Timeout waiting for resetTest().");
-    }
-
-    public static void waitForLatch(CountDownLatch latch, int seconds, String msg) {
-        try {
-            if (!latch.await(seconds, TimeUnit.SECONDS)) {
-                fail(msg);
-            }
-        } catch (Exception ex) {
-            fail("Unexpected exception: " + ex);
-        }
+        Util.waitForLatch(latch, 5, "Timeout waiting for resetTest().");
     }
 
     public void setDragPolicyAndSide(TabPane.TabDragPolicy dragPolicy, Side side) {

@@ -24,12 +24,9 @@
  */
 package test.robot.javafx.scene.canvas;
 
-import static org.junit.Assert.fail;
-
 import java.io.FileInputStream;
 import java.net.URL;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 
 import javafx.application.Application;
 import javafx.application.Platform;
@@ -139,16 +136,6 @@ public class ImageSmoothingDrawTest {
                     Platform.runLater(startupLatch::countDown));
             stage.setAlwaysOnTop(true);
             stage.show();
-        }
-    }
-
-    public static void waitForLatch(CountDownLatch latch, int seconds, String msg) {
-        try {
-            if (!latch.await(seconds, TimeUnit.SECONDS)) {
-                fail(msg);
-            }
-        } catch (Exception ex) {
-            fail("Unexpected exception: " + ex);
         }
     }
 

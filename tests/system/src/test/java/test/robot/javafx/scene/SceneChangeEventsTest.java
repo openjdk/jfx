@@ -89,7 +89,7 @@ public class SceneChangeEventsTest {
         Platform.runLater(() -> {
             stage.setScene(scene);
         });
-        waitForLatch(setSceneLatch, 5, "Timeout while waiting for scene to be set on stage.");
+        Util.waitForLatch(setSceneLatch, 5, "Timeout while waiting for scene to be set on stage.");
 
         scene.setOnMouseExited(event -> {
             mouseExited = true;
@@ -104,7 +104,7 @@ public class SceneChangeEventsTest {
             robot.mousePress(MouseButton.PRIMARY);
             robot.mouseRelease(MouseButton.PRIMARY);
         });
-        waitForLatch(onActionLatch, 5, "Timeout while waiting for button.onAction().");
+        Util.waitForLatch(onActionLatch, 5, "Timeout while waiting for button.onAction().");
 
         Assert.assertTrue("MOUSE_EXITED should be received when scene is " +
             " changed.", mouseExited);
@@ -135,15 +135,5 @@ public class SceneChangeEventsTest {
     @AfterClass
     public static void exit() {
         Util.shutdown(stage);
-    }
-
-    public static void waitForLatch(CountDownLatch latch, int seconds, String msg) {
-        try {
-            if (!latch.await(seconds, TimeUnit.SECONDS)) {
-                fail(msg);
-            }
-        } catch (Exception ex) {
-            fail("Unexpected exception: " + ex);
-        }
     }
 }

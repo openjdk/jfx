@@ -182,7 +182,7 @@ public class RobotTest {
             });
             stage.setScene(scene);
         });
-        waitForLatch(setSceneLatch, 5, "Timeout while waiting for scene to be set on stage.");
+        Util.waitForLatch(setSceneLatch, 5, "Timeout while waiting for scene to be set on stage.");
         Util.runAndWait(() -> {
             int mouseX = (int) (scene.getWindow().getX() + scene.getX() +
                     textField.getLayoutX() + textField.getLayoutBounds().getWidth() / 2);
@@ -200,7 +200,7 @@ public class RobotTest {
                     break;
             }
         });
-        waitForLatch(keyActionLatch, 5, "Timeout while waiting for textField.onKey" +
+        Util.waitForLatch(keyActionLatch, 5, "Timeout while waiting for textField.onKey" +
                 capFirst(keyAction.name()) + "().");
         Assert.assertEquals("letter 'a' should be " + keyAction.name().toLowerCase() +
                 " by Robot", "a", textField.getText());
@@ -271,7 +271,7 @@ public class RobotTest {
             });
             stage.setScene(scene);
         });
-        waitForLatch(setSceneLatch, 5, "Timeout while waiting for scene to be set on stage.");
+        Util.waitForLatch(setSceneLatch, 5, "Timeout while waiting for scene to be set on stage.");
         AtomicReference<Point2D> mousePosition = new AtomicReference<>();
         Util.runAndWait(() -> {
             if (primitiveArg) {
@@ -412,7 +412,7 @@ public class RobotTest {
             });
             stage.setScene(scene);
         });
-        waitForLatch(setSceneLatch, 5, "Timeout while waiting for scene to be set on stage.");
+        Util.waitForLatch(setSceneLatch, 5, "Timeout while waiting for scene to be set on stage.");
         int mouseX = (int) (scene.getWindow().getX() + scene.getX() +
                 button.getLayoutX() + button.getLayoutBounds().getWidth() / 2);
         int mouseY = (int) (scene.getWindow().getY() + scene.getY() +
@@ -430,7 +430,7 @@ public class RobotTest {
                     break;
             }
         });
-        waitForLatch(onClickLatch, 5, "Timeout while waiting for button.onMouse" +
+        Util.waitForLatch(onClickLatch, 5, "Timeout while waiting for button.onMouse" +
                 capFirst(mouseAction.name()) + "().");
         Assert.assertEquals(mouseButton + " mouse button should be " + mouseAction.name().toLowerCase() + " by Robot",
                 expectedText, button.getText());
@@ -553,7 +553,7 @@ public class RobotTest {
             });
             stage.setScene(scene);
         });
-        waitForLatch(setSceneLatch, 5, "Timeout while waiting for scene to be set on stage.");
+        Util.waitForLatch(setSceneLatch, 5, "Timeout while waiting for scene to be set on stage.");
         Util.runAndWait(() -> {
             int mouseX = (int) (scene.getWindow().getX() + scene.getX() +
                     label.getLayoutX() + label.getLayoutBounds().getWidth() / 2);
@@ -566,7 +566,7 @@ public class RobotTest {
             }
             robot.mouseRelease(mouseButton);
         });
-        waitForLatch(mouseDragLatch, 5, "Timeout while waiting for button.onMouseDragged().");
+        Util.waitForLatch(mouseDragLatch, 5, "Timeout while waiting for button.onMouseDragged().");
     }
 
     @Test
@@ -614,7 +614,7 @@ public class RobotTest {
             });
             stage.setScene(scene);
         });
-        waitForLatch(setSceneLatch, 5, "Timeout while waiting for scene to be set on stage.");
+        Util.waitForLatch(setSceneLatch, 5, "Timeout while waiting for scene to be set on stage.");
         Util.runAndWait(() -> {
             int mouseX = (int) (scene.getWindow().getX() + scene.getX() +
                     button.getLayoutX() + button.getLayoutBounds().getWidth() / 2);
@@ -623,7 +623,7 @@ public class RobotTest {
             robot.mouseMove(mouseX, mouseY);
             robot.mouseWheel(amount);
         });
-        waitForLatch(onScrollLatch, 5, "Timeout while waiting for button.onScroll().");
+        Util.waitForLatch(onScrollLatch, 5, "Timeout while waiting for button.onScroll().");
         Assert.assertEquals("mouse wheel should be scrolled " + amount + " vertical units by Robot",
                 "Scrolled " + amount, button.getText());
     }
@@ -662,7 +662,7 @@ public class RobotTest {
             });
             stage.setScene(scene);
         });
-        waitForLatch(setSceneLatch, 5, "Timeout while waiting for scene to be set on stage.");
+        Util.waitForLatch(setSceneLatch, 5, "Timeout while waiting for scene to be set on stage.");
         AtomicReference<Color> captureColor = new AtomicReference<>();
         Thread.sleep(1000);
         Util.runAndWait(() -> {
@@ -692,7 +692,7 @@ public class RobotTest {
             });
             stage.setScene(scene);
         });
-        waitForLatch(setSceneLatch, 5, "Timeout while waiting for scene to be set on stage.");
+        Util.waitForLatch(setSceneLatch, 5, "Timeout while waiting for scene to be set on stage.");
         AtomicReference<Color> captureColor = new AtomicReference<>();
         Thread.sleep(1000);
         Util.runAndWait(() -> {
@@ -743,7 +743,7 @@ public class RobotTest {
             });
             stage.setScene(scene);
         });
-        waitForLatch(setSceneLatch, 5, "Timeout while waiting for scene to be set on stage.");
+        Util.waitForLatch(setSceneLatch, 5, "Timeout while waiting for scene to be set on stage.");
         AtomicReference<WritableImage> screenCaptureNotScaledToFit = new AtomicReference<>();
         AtomicReference<WritableImage> screenCaptureScaledToFit = new AtomicReference<>();
         Thread.sleep(1000);
@@ -831,16 +831,6 @@ public class RobotTest {
             }
             robot.keyRelease(KeyCode.A);
         });
-    }
-
-    private static void waitForLatch(CountDownLatch latch, int seconds, String msg) {
-        try {
-            if (!latch.await(seconds, TimeUnit.SECONDS)) {
-                fail(msg);
-            }
-        } catch (Exception ex) {
-            fail("Unexpected exception: " + ex);
-        }
     }
 
     private static void assertColorEquals(Color expected, Color actual, double delta) {

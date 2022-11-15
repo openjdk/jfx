@@ -24,10 +24,7 @@
  */
 package test.robot.javafx.scene;
 
-import static org.junit.Assert.fail;
-
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 
 import javafx.application.Application;
 import javafx.application.Platform;
@@ -141,7 +138,7 @@ public class TabPaneReorderTest {
                 (int)(scene.getWindow().getY() + scene.getY() + dY));
             robot.mousePress(MouseButton.PRIMARY);
         });
-        waitForLatch(selectionLatch, 5, "Timeout waiting for the tab to get selected.");
+        Util.waitForLatch(selectionLatch, 5, "Timeout waiting for the tab to get selected.");
         tabPane.getSelectionModel().selectedItemProperty().
                 removeListener(selectionChangeListener);
 
@@ -170,7 +167,7 @@ public class TabPaneReorderTest {
                 addListener(selectionChangeListener);
         selectionLatch = new CountDownLatch(1);
         tabPane.getSelectionModel().select(0);
-        waitForLatch(selectionLatch, 5, "Timeout waiting for tab[0] to get selected.");
+        Util.waitForLatch(selectionLatch, 5, "Timeout waiting for tab[0] to get selected.");
 
         for (int i = 1; i < TAB_COUNT; i++) {
             Util.runAndWait(() -> {
@@ -178,7 +175,7 @@ public class TabPaneReorderTest {
                 robot.keyPress(KeyCode.RIGHT);
                 robot.keyRelease(KeyCode.RIGHT);
             });
-            waitForLatch(selectionLatch, 5, "Timeout waiting for tab[" +
+            Util.waitForLatch(selectionLatch, 5, "Timeout waiting for tab[" +
                          i + "] to get selected.");
         }
         tabPane.getSelectionModel().selectedItemProperty().
@@ -238,7 +235,7 @@ public class TabPaneReorderTest {
             tabPane.getTabs().addListener(reorderListener);
             root.getChildren().add(tabPane);
         });
-        waitForLatch(tabPaneLayoutLatch, 5, "Timeout waiting for TabPane layout.");
+        Util.waitForLatch(tabPaneLayoutLatch, 5, "Timeout waiting for TabPane layout.");
     }
 
     @After
@@ -250,16 +247,6 @@ public class TabPaneReorderTest {
             tabPane.getTabs().clear();
             tabPane = null;
         });
-    }
-
-    private static void waitForLatch(CountDownLatch latch, int seconds, String msg) {
-        try {
-            if (!latch.await(seconds, TimeUnit.SECONDS)) {
-                fail(msg);
-            }
-        } catch (Exception ex) {
-            fail("Unexpected exception: " + ex);
-        }
     }
 
     private void setDragPolicyAndSide(TabPane.TabDragPolicy dragPolicy, Side side) {
@@ -283,6 +270,6 @@ public class TabPaneReorderTest {
             }
             moveLatch.countDown();
         });
-        waitForLatch(moveLatch, 5, "Timeout waiting for robot.mouseMove().");
+        Util.waitForLatch(moveLatch, 5, "Timeout waiting for robot.mouseMove().");
     }
 }

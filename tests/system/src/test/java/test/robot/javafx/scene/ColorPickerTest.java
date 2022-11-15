@@ -77,7 +77,7 @@ public class ColorPickerTest {
         mouseClick(colorPicker.getLayoutX() + colorPicker.getWidth() - 15,
                     colorPicker.getLayoutY() + colorPicker.getHeight() / 2);
         Thread.sleep(400); // ColorPicker takes some time to display the color palette.
-        waitForLatch(onShownLatch, 10, "Failed to show color palette.");
+        Util.waitForLatch(onShownLatch, 10, "Failed to show color palette.");
     }
 
     private void clickColorPickerPalette(int yFactor) throws Exception {
@@ -85,7 +85,7 @@ public class ColorPickerTest {
         mouseClick(colorPicker.getLayoutX() + colorPicker.getWidth() / 2,
                     colorPicker.getLayoutY() + colorPicker.getHeight() * yFactor);
         Thread.sleep(400);
-        waitForLatch(onActionLatch, 10, "Failed to receive onAction callback.");
+        Util.waitForLatch(onActionLatch, 10, "Failed to receive onAction callback.");
     }
 
     // This test is for verifying a specific behavior.
@@ -110,7 +110,7 @@ public class ColorPickerTest {
             colorPicker.show();
             root.getChildren().add(colorPicker);
         });
-        waitForLatch(onShownLatch, 10, "Failed to show color palette.");
+        Util.waitForLatch(onShownLatch, 10, "Failed to show color palette.");
         Thread.sleep(400); // ColorPicker takes some time to display the color palette.
         // 2.
         Assert.assertEquals("ColorPicker palette should be shown once.", 1, onShownCount);
@@ -193,9 +193,5 @@ public class ColorPickerTest {
             stage.setAlwaysOnTop(true);
             stage.show();
         }
-    }
-
-    public static void waitForLatch(CountDownLatch latch, int seconds, String msg) throws Exception {
-        Assert.assertTrue("Timeout: " + msg, latch.await(seconds, TimeUnit.SECONDS));
     }
 }

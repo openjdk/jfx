@@ -32,7 +32,6 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.IntBuffer;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 
 import javafx.application.Application;
 import javafx.application.Platform;
@@ -311,9 +310,5 @@ public class PixelBufferDrawTest {
         } catch (Exception ex) {
             fail("Thread was interrupted." + ex);
         }
-    }
-
-    public static void waitForLatch(CountDownLatch latch, int seconds, String msg) throws Exception {
-        Assert.assertTrue(msg, latch.await(seconds, TimeUnit.SECONDS));
     }
 }

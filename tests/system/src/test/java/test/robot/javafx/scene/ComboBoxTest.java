@@ -25,7 +25,6 @@
 package test.robot.javafx.scene;
 
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 
 import javafx.application.Application;
 import javafx.application.Platform;
@@ -101,7 +100,7 @@ public class ComboBoxTest {
 
         for (int i = 0; i < ITEM_COUNT; i++) {
             Thread.sleep(300); // ComboBox is removed and added back. Time for layout.
-            waitForLatch(showLatch, 10, "Failed to show ComboBox popup list. " + i);
+            Util.waitForLatch(showLatch, 10, "Failed to show ComboBox popup list. " + i);
             showLatch = new CountDownLatch(1);
             selectedLatch = new CountDownLatch(1);
             final int k = i;
@@ -109,7 +108,7 @@ public class ComboBoxTest {
             mouseClick(comboBox.getLayoutX() + comboBox.getWidth() / 2,
                         comboBox.getLayoutY() + comboBox.getHeight() * (k + 1.2f));
 
-            waitForLatch(selectedLatch, 10, "Failed to select " + i + "th choice.");
+            Util.waitForLatch(selectedLatch, 10, "Failed to select " + i + "th choice.");
         }
         Assert.assertEquals("ComboBox popup list should have been displayed " +
             (ITEM_COUNT + 1) + " times.", (ITEM_COUNT + 1), onShownCount);
@@ -146,13 +145,13 @@ public class ComboBoxTest {
                     comboBox.getLayoutY() + comboBox.getHeight() / 2);
 
             Thread.sleep(200); // ComboBox takes some time to display the popup list.
-            waitForLatch(showLatch, 10, "Failed to show ComboBox popup list. " + i);
+            Util.waitForLatch(showLatch, 10, "Failed to show ComboBox popup list. " + i);
             final int k = i;
             // Select a choice.
             mouseClick(comboBox.getLayoutX() + comboBox.getWidth() / 2,
                         comboBox.getLayoutY() + comboBox.getHeight() * (k + 1.2f));
 
-            waitForLatch(selectedLatch, 10, "Failed to select " + i + "th choice.");
+            Util.waitForLatch(selectedLatch, 10, "Failed to select " + i + "th choice.");
         }
         Assert.assertEquals("ComboBox popup list should be displayed " +
             ITEM_COUNT + " times.", ITEM_COUNT, onShownCount);
@@ -204,9 +203,5 @@ public class ComboBoxTest {
             stage.setAlwaysOnTop(true);
             stage.show();
         }
-    }
-
-    public static void waitForLatch(CountDownLatch latch, int seconds, String msg) throws Exception {
-        Assert.assertTrue("Timeout: " + msg, latch.await(seconds, TimeUnit.SECONDS));
     }
 }

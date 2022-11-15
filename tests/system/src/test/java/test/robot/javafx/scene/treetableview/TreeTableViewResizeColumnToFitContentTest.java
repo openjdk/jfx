@@ -28,7 +28,6 @@ package test.robot.javafx.scene.treetableview;
 import static org.junit.Assert.fail;
 
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 
 import javafx.application.Application;
 import javafx.application.Platform;
@@ -90,7 +89,7 @@ public class TreeTableViewResizeColumnToFitContentTest {
             robot.mouseRelease(MouseButton.PRIMARY);
             latch.countDown();
         });
-        waitForLatch(latch, 5, "Timeout while waiting for mouse double click");
+        Util.waitForLatch(latch, 5, "Timeout while waiting for mouse double click");
         try {
             Thread.sleep(1000); // Delay for table resizing of table columns.
         } catch (Exception e) {
@@ -113,17 +112,6 @@ public class TreeTableViewResizeColumnToFitContentTest {
     @AfterClass
     public static void exit() {
         Util.shutdown(stage);
-    }
-
-    public static void waitForLatch(CountDownLatch latch,
-                                    int seconds, String msg) {
-        try {
-            if (!latch.await(seconds, TimeUnit.SECONDS)) {
-                fail(msg);
-            }
-        } catch (Exception ex) {
-            fail("Unexpected exception: " + ex);
-        }
     }
 
     public static class TestApp extends Application {
