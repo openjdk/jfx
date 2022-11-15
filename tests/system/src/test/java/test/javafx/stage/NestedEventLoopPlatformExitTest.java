@@ -66,11 +66,6 @@ public class NestedEventLoopPlatformExitTest {
         Util.launch(launchLatch, 15, TestApp.class);
     }
 
-    @AfterClass
-    public static void shutdown() {
-        Util.shutdown();
-    }
-
     // Verify that Platform.exit can be called while the NestedEventLoop is
     // running
     @Test(timeout = 20000)
