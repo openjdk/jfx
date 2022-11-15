@@ -24,10 +24,7 @@
  */
 package test.robot.javafx.scene;
 
-import static org.junit.Assert.fail;
-
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 
 import javafx.application.Application;
 import javafx.application.Platform;
@@ -104,7 +101,7 @@ public class TabContextMenuCloseButtonTest {
             robot.mousePress(MouseButton.SECONDARY);
             robot.mouseRelease(MouseButton.SECONDARY);
         });
-        waitForLatch(cmlatch, 5, "Timeout waiting for ContextMenu to be shown.");
+        Util.waitForLatch(cmlatch, 5, "Timeout waiting for ContextMenu to be shown.");
     }
 
     @After
@@ -149,16 +146,6 @@ public class TabContextMenuCloseButtonTest {
                     Platform.runLater(startupLatch::countDown));
             stage.setAlwaysOnTop(true);
             stage.show();
-        }
-    }
-
-    public static void waitForLatch(CountDownLatch latch, int seconds, String msg) {
-        try {
-            if (!latch.await(seconds, TimeUnit.SECONDS)) {
-                fail(msg);
-            }
-        } catch (Exception ex) {
-            fail("Unexpected exception: " + ex);
         }
     }
 }

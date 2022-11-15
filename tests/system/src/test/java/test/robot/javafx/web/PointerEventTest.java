@@ -25,10 +25,8 @@
 package test.robot.javafx.web;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
 
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 
 import javafx.application.Application;
 import javafx.concurrent.Worker;
@@ -197,15 +195,5 @@ public class PointerEventTest {
             robot.mouseRelease(MouseButton.PRIMARY, MouseButton.MIDDLE, MouseButton.SECONDARY);
             robot.keyType(KeyCode.ESCAPE);
         });
-    }
-
-    public static void waitForLatch(CountDownLatch latch, int seconds, String msg) {
-        try {
-            if (!latch.await(seconds, TimeUnit.SECONDS)) {
-                fail(msg);
-            }
-        } catch (Exception ex) {
-            fail("Unexpected exception: " + ex);
-        }
     }
 }

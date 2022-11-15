@@ -83,7 +83,6 @@ public class Util {
         } catch (InterruptedException ex) {}
     }
 
-    // FIX remove
     public static boolean await(final CountDownLatch latch) {
         try {
             return latch.await(TIMEOUT, TimeUnit.MILLISECONDS);
@@ -346,6 +345,10 @@ public class Util {
         });
     }
 
+    /**
+     * Calls CountDownLatch.await() with the specified timeout (in seconds).
+     * Throws an exception if await() returns false or the process gets interrupted.
+     */
     public static void waitForLatch(CountDownLatch latch, int seconds, String msg) {
         try {
             Assert.assertTrue("Timeout: " + msg, latch.await(seconds, TimeUnit.SECONDS));
