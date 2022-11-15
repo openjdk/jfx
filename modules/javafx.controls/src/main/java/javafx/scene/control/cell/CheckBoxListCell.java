@@ -135,7 +135,12 @@ public class CheckBoxListCell<T> extends ListCell<T> {
      **************************************************************************/
 
     private final CheckBox checkBox;
-
+    
+    // make sure that setFocusTraversable works on all checkbox elements
+    public BooleanProperty focusTraversableProperty() {
+        return checkBox.focusTraversableProperty();   
+    }
+    
     private ObservableValue<Boolean> booleanProperty;
 
 
@@ -180,6 +185,10 @@ public class CheckBoxListCell<T> extends ListCell<T> {
         setConverter(converter);
 
         this.checkBox = new CheckBox();
+        
+        /*
+            make sure that method 'setFocusTraversable'
+        */
 
         setAlignment(Pos.CENTER_LEFT);
         setContentDisplay(ContentDisplay.LEFT);
