@@ -8331,14 +8331,14 @@ public abstract class Node implements EventTarget, Styleable {
      */
     private BooleanProperty focusTraversable;
 
-    public final void setFocusTraversable(boolean value) {
+    public void setFocusTraversable(boolean value) {
         focusTraversableProperty().set(value);
     }
-    public final boolean isFocusTraversable() {
-        return focusTraversable == null ? false : focusTraversable.get();
+    public boolean isFocusTraversable() {
+        return focusTraversableProperty().get();
     }
 
-    public final BooleanProperty focusTraversableProperty() {
+    public BooleanProperty focusTraversableProperty() {
         if (focusTraversable == null) {
             focusTraversable = new StyleableBooleanProperty(false) {
 
