@@ -66,6 +66,10 @@ import javafx.stage.Window;
  * <li>Client code registers a number of listeners and removes one via its
  * {@link IDisconnectable} instance.
  * </ul>
+ *
+ * This class is currently used for clean replacement of {@link Skin}s.
+ * We should consider making this class a part of the public API in {@code javax.base},
+ * since it proved itself useful in removing listeners and handlers in bulk at the application level.
  */
 public class ListenerHelper implements IDisconnectable {
     private WeakReference<Object> ownerRef;
