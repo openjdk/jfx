@@ -131,7 +131,7 @@ public class HugePolygonClipTest {
 
     @BeforeClass
     public static void setupOnce() throws Exception {
-        Util.launch(launchLatch, 10, MyApp.class);
+        Util.launch(launchLatch, MyApp.class);
         assertEquals(0, launchLatch.getCount());
     }
 

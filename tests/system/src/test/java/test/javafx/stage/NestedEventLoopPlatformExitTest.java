@@ -63,7 +63,7 @@ public class NestedEventLoopPlatformExitTest {
 
     @BeforeClass
     public static void initFX() throws InterruptedException {
-        Util.launch(launchLatch, 15, TestApp.class);
+        Util.launch(launchLatch, TestApp.class);
     }
 
     // Verify that Platform.exit can be called while the NestedEventLoop is

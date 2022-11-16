@@ -152,7 +152,7 @@ public class WritableImageFromBufferTest {
 
     @BeforeClass
     public static void initFX() throws Exception {
-        Util.launch(startupLatch, 15, TestApp.class);
+        Util.launch(startupLatch, TestApp.class);
     }
 
     @AfterClass

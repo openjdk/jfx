@@ -67,7 +67,7 @@ public class AccordionTitlePaneLeakTest {
     @BeforeClass
     public static void initFX() throws Exception {
         startupLatch = new CountDownLatch(1);
-        Util.launch(startupLatch, 15, TestApp.class);
+        Util.launch(startupLatch, TestApp.class);
     }
 
     @AfterClass

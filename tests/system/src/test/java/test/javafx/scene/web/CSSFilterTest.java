@@ -105,7 +105,7 @@ public class CSSFilterTest {
 
     @BeforeClass
     public static void setupOnce() {
-        Util.launch(launchLatch, 10, CSSFilterTestApp.class);
+        Util.launch(launchLatch, CSSFilterTestApp.class);
     }
 
     @AfterClass

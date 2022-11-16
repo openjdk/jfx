@@ -65,7 +65,7 @@ public class HeadlessGeometry2Test {
         System.setProperty("prism.order", "sw");
         System.setProperty("headless.geometry", "150x250-16");
 
-        Util.launch(startupLatch, 15, TestApp.class);
+        Util.launch(startupLatch, TestApp.class);
         Assert.assertEquals(0, startupLatch.getCount());
     }
 

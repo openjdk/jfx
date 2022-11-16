@@ -63,7 +63,7 @@ public class ColorChooserTest {
 
     @BeforeAll
     public static void setupOnce() {
-        Util.launch(launchLatch, 10, ColorChooserTestApp.class);
+        Util.launch(launchLatch, ColorChooserTestApp.class);
     }
 
     @AfterAll

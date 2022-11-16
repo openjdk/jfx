@@ -84,7 +84,7 @@ public class NestedEventLoopTest {
 
     @BeforeClass
     public static void setupOnce() {
-        Util.launch(launchLatch, 10, MyApp.class);
+        Util.launch(launchLatch, MyApp.class);
     }
 
     @AfterClass

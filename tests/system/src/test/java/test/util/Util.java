@@ -303,6 +303,25 @@ public class Util {
 
     /**
      * Launches an FX application, at the same time ensuring that it has been
+     * actually launched within 15 seconds.
+     * <p>
+     * The application being started must call {@link CountdownLatch#countDown()} once to signal
+     * its successful start (for example, by setting a handler for {@link javafx.stage.WindowEvent.WINDOW_SHOWN} event
+     * on its primary Stage).
+     *
+     * @param startupLatch
+     * @param applicationClass - application to launch
+     * @param args - command line arguments
+     */
+    public static <T extends Application> void launch (
+            CountDownLatch startupLatch,
+            Class<T> applicationClass,
+            String... args) {
+        launch(startupLatch, 15, applicationClass, args);
+    }
+
+    /**
+     * Launches an FX application, at the same time ensuring that it has been
      * actually launched within the specified time.
      * <p>
      * The application being started must call {@link CountdownLatch#countDown()} once to signal

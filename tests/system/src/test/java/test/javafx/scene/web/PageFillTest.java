@@ -108,7 +108,7 @@ public class PageFillTest {
 
     @BeforeClass
     public static void setupOnce() {
-        Util.launch(launchLatch, 10, PageFillTestApp.class);
+        Util.launch(launchLatch, PageFillTestApp.class);
     }
 
     @AfterClass

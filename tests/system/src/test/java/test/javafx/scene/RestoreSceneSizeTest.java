@@ -85,7 +85,7 @@ public class RestoreSceneSizeTest {
 
     @BeforeClass
     public static void initFX() {
-        Util.launch(startupLatch, 15, TestApp.class);
+        Util.launch(startupLatch, TestApp.class);
     }
 
     @AfterClass

@@ -70,7 +70,7 @@ public class SwingNodeBase {
         robot.setAutoDelay(100);
 
         // Start the Application
-        Util.launch(launchLatch, 10, MyApp.class);
+        Util.launch(launchLatch, MyApp.class);
 
         CountDownLatch paintLatch = new CountDownLatch(1);
         SwingUtilities.invokeAndWait(()->{

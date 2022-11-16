@@ -75,7 +75,7 @@ public class WebPageTest {
 
     @BeforeClass
     public static void setupOnce() {
-        Util.launch(launchLatch, 10, WebPageTestApp.class);
+        Util.launch(launchLatch, WebPageTestApp.class);
     }
 
     @AfterClass

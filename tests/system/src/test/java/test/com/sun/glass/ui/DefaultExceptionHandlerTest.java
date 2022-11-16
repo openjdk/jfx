@@ -65,7 +65,7 @@ public class DefaultExceptionHandlerTest {
             System.out.flush();
         });
 
-        Util.launch(startupLatch, 10, TestApp.class);
+        Util.launch(startupLatch, TestApp.class);
     }
 
     @AfterClass

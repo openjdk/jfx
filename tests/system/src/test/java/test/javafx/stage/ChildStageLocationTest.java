@@ -50,7 +50,7 @@ import org.junit.Test;
 import test.util.Util;
 
 public class ChildStageLocationTest {
-    static CountDownLatch startupLatch;
+    static CountDownLatch startupLatch = new CountDownLatch(1);
     static Timer timer;
     static Runnable runNext;
     static volatile Stage stage;
@@ -65,8 +65,7 @@ public class ChildStageLocationTest {
 
     @BeforeClass
     public static void initFX() throws Exception {
-        startupLatch = new CountDownLatch(1);
-        Util.launch(startupLatch, 15, TestApp.class);
+        Util.launch(startupLatch, TestApp.class);
     }
 
     @AfterClass

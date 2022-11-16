@@ -74,7 +74,7 @@ public class SVGTest {
 
     @BeforeClass
     public static void setupOnce() {
-        Util.launch(launchLatch, 10, SVGTestApp.class);
+        Util.launch(launchLatch, SVGTestApp.class);
     }
 
     @AfterClass

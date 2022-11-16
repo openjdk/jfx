@@ -974,7 +974,7 @@ NbPixels [All Test setups][n: 30] sum: 232 avg: 7.733 [1 | 27]
 
     @BeforeClass
     public static void setupOnce() throws Exception {
-        Util.launch(launchLatch, 10, MyApp.class);
+        Util.launch(launchLatch, MyApp.class);
 
         assertEquals(0, launchLatch.getCount());
     }

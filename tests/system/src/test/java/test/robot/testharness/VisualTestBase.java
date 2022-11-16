@@ -89,7 +89,7 @@ public abstract class VisualTestBase {
 
     @BeforeClass
     public static void doSetupOnce() {
-        Util.launch(launchLatch, 10, MyApp.class);
+        Util.launch(launchLatch, MyApp.class);
         assertEquals(0, launchLatch.getCount());
     }
 

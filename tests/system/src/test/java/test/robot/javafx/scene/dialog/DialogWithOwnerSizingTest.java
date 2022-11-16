@@ -90,7 +90,7 @@ public class DialogWithOwnerSizingTest {
 
     @BeforeClass
     public static void initFX() throws Exception {
-        Util.launch(startupLatch, 15, SizingTestApp.class);
+        Util.launch(startupLatch, SizingTestApp.class);
     }
 
     @AfterClass

@@ -68,7 +68,7 @@ public class WindowSceneInitDisposeTest {
 
     @BeforeClass
     public static void setup() throws Exception {
-        Util.launch(startupLatch, 15, TestApp.class);
+        Util.launch(startupLatch, TestApp.class);
     }
 
     @AfterClass

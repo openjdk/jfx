@@ -49,7 +49,7 @@ import com.sun.javafx.PlatformUtil;
 import test.util.Util;
 
 public class AfterModalClosedTest {
-    static CountDownLatch startupLatch;
+    static CountDownLatch startupLatch = new CountDownLatch(1);
     static volatile Stage stage;
     private Robot robot;
     private int x, y;
@@ -82,8 +82,7 @@ public class AfterModalClosedTest {
 
     @BeforeClass
     public static void initFX() throws InterruptedException {
-        startupLatch = new CountDownLatch(1);
-        Util.launch(startupLatch, 15, TestApp.class);
+        Util.launch(startupLatch, TestApp.class);
     }
 
     @AfterClass

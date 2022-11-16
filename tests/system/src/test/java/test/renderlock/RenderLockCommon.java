@@ -115,7 +115,7 @@ public class RenderLockCommon {
         // focusLost event with the lock held
         assumeTrue(PlatformUtil.isMac() || PlatformUtil.isWindows());
 
-        Util.launch(launchLatch, 10, MyApp.class);
+        Util.launch(launchLatch, MyApp.class);
         assertEquals(0, launchLatch.getCount());
     }
 

@@ -67,7 +67,7 @@ public class HostServicesTest {
 
     @BeforeClass
     public static void setupOnce() {
-        Util.launch(launchLatch, 10, MyApp.class);
+        Util.launch(launchLatch, MyApp.class);
     }
 
     @AfterClass

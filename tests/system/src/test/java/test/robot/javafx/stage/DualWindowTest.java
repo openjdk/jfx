@@ -114,7 +114,7 @@ public class DualWindowTest {
     @BeforeClass
     public static void setupOnce() throws Exception {
         startupLatch = new CountDownLatch(2);
-        Util.launch(startupLatch, 15, TestApp.class);
+        Util.launch(startupLatch, TestApp.class);
     }
 
     @AfterClass

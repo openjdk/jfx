@@ -100,7 +100,7 @@ public class UIRenderDialogTest {
         System.setProperty("glass.win.uiScale", String.valueOf(scale));
         System.setProperty("glass.gtk.uiScale", String.valueOf(scale));
 
-        Util.launch(startupLatch, 15, TestApp.class);
+        Util.launch(startupLatch, TestApp.class);
     }
 
     @AfterClass

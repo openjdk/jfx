@@ -96,7 +96,7 @@ public class HTMLEditorTest {
 
     @BeforeClass
     public static void setupOnce() {
-        Util.launch(launchLatch, 10, HTMLEditorTestApp.class);
+        Util.launch(launchLatch, HTMLEditorTestApp.class);
     }
 
     @AfterClass

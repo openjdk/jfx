@@ -106,7 +106,7 @@ public class TreeTableViewResizeColumnToFitContentTest {
 
     @BeforeClass
     public static void initFX() {
-        Util.launch(startupLatch, 10, TestApp.class);
+        Util.launch(startupLatch, TestApp.class);
     }
 
     @AfterClass

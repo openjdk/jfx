@@ -58,7 +58,7 @@ public class DirectionalLightTest extends LightingTest {
         startupLatch = new CountDownLatch(1);
         LightingTest.light = LIGHT;
 
-        Util.launch(startupLatch, 15, TestApp.class);
+        Util.launch(startupLatch, TestApp.class);
     }
 
     @AfterClass

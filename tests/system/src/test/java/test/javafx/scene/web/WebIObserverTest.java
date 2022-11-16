@@ -71,7 +71,7 @@ public class WebIObserverTest {
 
     @BeforeClass
     public static void setupOnce() {
-        Util.launch(launchLatch, 10, WebIObserverTestApp.class);
+        Util.launch(launchLatch, WebIObserverTestApp.class);
     }
 
     @AfterClass

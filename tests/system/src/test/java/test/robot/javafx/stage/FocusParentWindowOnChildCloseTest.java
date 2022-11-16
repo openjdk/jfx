@@ -76,7 +76,7 @@ public class FocusParentWindowOnChildCloseTest {
 
     @BeforeClass
     public static void initFX() throws Exception {
-        Util.launch(startupLatch, 10, TestApp.class);
+        Util.launch(startupLatch, TestApp.class);
     }
 
     @AfterClass

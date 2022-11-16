@@ -88,7 +88,7 @@ public class StraightLineTest {
 
     @BeforeClass
     public static void setupOnce() {
-        Util.launch(launchLatch, 10, StraightLineTestApp.class);
+        Util.launch(launchLatch, StraightLineTestApp.class);
     }
 
     @AfterClass
