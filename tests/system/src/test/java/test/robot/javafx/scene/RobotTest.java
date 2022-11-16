@@ -677,6 +677,10 @@ public class RobotTest {
 
     @Test
     public void testPixelCaptureAverage() throws Exception {
+        if (PlatformUtil.isWindows() && Screen.getPrimary().getOutputScaleX() > 1) {
+            //Mark test as unstable for HiDPI scale greater than 100%
+            Assume.assumeTrue(Boolean.getBoolean("unstable.test"));
+        }
         CountDownLatch setSceneLatch = new CountDownLatch(1);
         Pane pane = new StackPane();
         InvalidationListener invalidationListener = observable -> setSceneLatch.countDown();
@@ -729,6 +733,10 @@ public class RobotTest {
 
     @Test
     public void testScreenCapture() throws Exception {
+        if (PlatformUtil.isWindows() && Screen.getPrimary().getOutputScaleX() > 1) {
+            //Mark test as unstable for HiDPI scale greater than 100%
+            Assume.assumeTrue(Boolean.getBoolean("unstable.test"));
+        }
         CountDownLatch setSceneLatch = new CountDownLatch(1);
         Pane pane = new StackPane();
         InvalidationListener invalidationListener = observable -> setSceneLatch.countDown();
