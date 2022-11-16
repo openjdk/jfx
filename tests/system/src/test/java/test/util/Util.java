@@ -334,8 +334,7 @@ public class Util {
      * in the platform thread, then calls {@link Platform.exit()}.
      */
     public static void shutdown(Stage... stages) {
-        // why isn't runAndWait() exposed as a public API?
-        PlatformImpl.runAndWait(() -> {
+        runAndWait(() -> {
             for (Stage s : stages) {
                 if (s != null) {
                     s.hide();
