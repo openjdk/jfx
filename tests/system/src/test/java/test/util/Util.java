@@ -50,8 +50,9 @@ import junit.framework.AssertionFailedError;
  * Utility methods for life-cycle testing
  */
 public class Util {
-
-    // Test timeout value in milliseconds
+    /** Default startup timeout value in seconds */
+    public static final int STARTUP_TIMEOUT = 15;
+    /** Test timeout value in milliseconds */
     public static final int TIMEOUT = 10000;
 
     private static interface Future {
@@ -301,7 +302,7 @@ public class Util {
 
     /**
      * Launches an FX application, at the same time ensuring that it has been
-     * actually launched within 15 seconds.
+     * actually launched within {@link #STARTUP_TIMEOUT} (15 seconds).
      * <p>
      * The application being started must call {@link CountdownLatch#countDown()} once to signal
      * its successful start (for example, by setting a handler for {@link javafx.stage.WindowEvent.WINDOW_SHOWN} event
@@ -315,14 +316,14 @@ public class Util {
             CountDownLatch startupLatch,
             Class<T> applicationClass,
             String... args) {
-        launch(startupLatch, 15, applicationClass, args);
+        launch(startupLatch, STARTUP_TIMEOUT, applicationClass, args);
     }
 
     /**
      * Launches an FX application, at the same time ensuring that it has been
      * actually launched within the specified time.
      * <p>
-     * The application being started must call {@link CountdownLatch#countDown()} once to signal
+     * The application being started must call {@link java.util.concurrent.CountdownLatch#countDown()} once to signal
      * its successful start (for example, by setting a handler for {@link javafx.stage.WindowEvent.WINDOW_SHOWN} event
      * on its primary Stage).
      *
@@ -337,7 +338,10 @@ public class Util {
             Class<T> applicationClass,
             String... args) {
 
-        new Thread(() -> Application.launch(applicationClass, args)).start();
+        new Thread(() -> {
+            Application.launch(applicationClass, args);
+        }).start();
+
         String msg = "Failed to launch FX application " + applicationClass + " within " + timeoutSeconds + " sec.";
         try {
             Assert.assertTrue(msg, startupLatch.await(timeoutSeconds, TimeUnit.SECONDS));
@@ -348,9 +352,9 @@ public class Util {
 
     /**
      * Starts the JavaFX runtime, invoking the specified Runnable on the JavaFX application thread.
-     * This Runnable must call {@link CountdownLatch#countDown()} once to signal
+     * This Runnable must call {@link java.util.concurrent.CountDownLatch#countDown()} once to signal
      * its successful start, otherwise an exception will be thrown when no such signal is received
-     * within 15 seconds.
+     * within {@link #STARTUP_TIMEOUT} (15 seconds).
      *
      * @param startupLatch - a latch used to communicate successful start of the application
      * @param r - code to invoke on the application thread.
@@ -359,7 +363,7 @@ public class Util {
         Platform.startup(r);
         try {
             String msg = "Timeout waiting for FX runtime to start";
-            Assert.assertTrue(msg, startupLatch.await(TIMEOUT, TimeUnit.MILLISECONDS));
+            Assert.assertTrue(msg, startupLatch.await(STARTUP_TIMEOUT, TimeUnit.SECONDS));
         } catch (InterruptedException e) {
             throw new AssertionError(e);
         }
