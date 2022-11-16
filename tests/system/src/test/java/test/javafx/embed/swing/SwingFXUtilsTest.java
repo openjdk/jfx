@@ -67,7 +67,7 @@ public class SwingFXUtilsTest {
 
     @BeforeClass
     public static void doSetupOnce() {
-        Util.launch(launchLatch, 5, MyApp.class);
+        Util.launch(launchLatch, MyApp.class);
         assertEquals(0, launchLatch.getCount());
     }
 

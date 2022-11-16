@@ -36,7 +36,6 @@ import javafx.geometry.Point3D;
 import javafx.scene.DirectionalLight;
 import javafx.scene.paint.Color;
 
-import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -59,11 +58,6 @@ public class DirectionalLightTest extends LightingTest {
         LightingTest.light = LIGHT;
 
         Util.launch(startupLatch, TestApp.class);
-    }
-
-    @AfterClass
-    public static void exit() {
-        Util.shutdown();
     }
 
     @Before

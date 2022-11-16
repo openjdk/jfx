@@ -69,7 +69,7 @@ public class JFXPanelTest {
 
     @BeforeClass
     public static void doSetupOnce() throws Exception {
-        Util.launch(launchLatch, 5, MyApp.class);
+        Util.launch(launchLatch, MyApp.class);
         Assert.assertEquals(0, launchLatch.getCount());
     }
 

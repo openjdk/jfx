@@ -121,7 +121,10 @@ public class RenderLockCommon {
 
     @AfterClass
     public static void doTeardownOnce() {
-        Util.shutdown();
+        // see doSetupOnce() assumeTrue condition
+        if (myApp != null) {
+            Util.shutdown();
+        }
     }
 
     // ========================== TEST CASES ==========================
