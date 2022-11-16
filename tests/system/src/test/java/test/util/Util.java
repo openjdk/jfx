@@ -44,8 +44,6 @@ import javafx.stage.Stage;
 
 import org.junit.Assert;
 
-import com.sun.javafx.application.PlatformImpl;
-
 import junit.framework.AssertionFailedError;
 
 /**
@@ -309,7 +307,7 @@ public class Util {
      * its successful start (for example, by setting a handler for {@link javafx.stage.WindowEvent.WINDOW_SHOWN} event
      * on its primary Stage).
      *
-     * @param startupLatch
+     * @param startupLatch - a latch used to communicate successful start of the application
      * @param applicationClass - application to launch
      * @param args - command line arguments
      */
@@ -328,7 +326,7 @@ public class Util {
      * its successful start (for example, by setting a handler for {@link javafx.stage.WindowEvent.WINDOW_SHOWN} event
      * on its primary Stage).
      *
-     * @param startupLatch
+     * @param startupLatch - a latch used to communicate successful start of the application
      * @param timeoutSeconds - timeout in seconds after which the test fails
      * @param applicationClass - application to launch
      * @param args - command line arguments
@@ -349,8 +347,27 @@ public class Util {
     }
 
     /**
-     * This synchronous method first hides all the specified stages (ignoring any null Stages)
-     * in the platform thread, then calls {@link Platform.exit()}.
+     * Starts the JavaFX runtime, invoking the specified Runnable on the JavaFX application thread.
+     * This Runnable must call {@link CountdownLatch#countDown()} once to signal
+     * its successful start, otherwise an exception will be thrown when no such signal is received
+     * within 15 seconds.
+     *
+     * @param startupLatch - a latch used to communicate successful start of the application
+     * @param r - code to invoke on the application thread.
+     */
+    public static void startup(CountDownLatch startupLatch, Runnable r) {
+        Platform.startup(r);
+        try {
+            String msg = "Timeout waiting for FX runtime to start";
+            Assert.assertTrue(msg, startupLatch.await(TIMEOUT, TimeUnit.MILLISECONDS));
+        } catch (InterruptedException e) {
+            throw new AssertionError(e);
+        }
+    }
+
+    /**
+     * This synchronous method first hides all the specified stages (ignoring any
+     * null Stages) in the platform thread, then calls {@link Platform.exit()}.
      */
     public static void shutdown(Stage... stages) {
         runAndWait(() -> {
