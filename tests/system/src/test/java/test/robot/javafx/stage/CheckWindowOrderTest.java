@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2019, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,8 @@
 
 package test.robot.javafx.stage;
 
+import java.util.concurrent.CountDownLatch;
+
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.scene.Scene;
@@ -32,13 +34,13 @@ import javafx.scene.control.Label;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.stage.Window;
+
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
+import test.util.Util;
 
 // See JDK8220272
 public class CheckWindowOrderTest {
@@ -57,19 +59,12 @@ public class CheckWindowOrderTest {
 
     @BeforeClass
     public static void initFX() throws Exception {
-        new Thread(() -> Application.launch(TestApp.class, (String[]) null)).start();
-        waitForLatch(startupLatch, 10, "FX runtime failed to start.");
+        Util.launch(startupLatch, TestApp.class);
     }
 
     @AfterClass
     public static void exit() {
-        Platform.runLater(() -> {
-            lastWindow.hide();
-            secondWindow.hide();
-            firstWindow.hide();
-            stage.hide();
-        });
-        Platform.exit();
+        Util.shutdown(lastWindow, secondWindow, firstWindow, stage);
     }
 
     public static class TestApp extends Application {
@@ -98,10 +93,6 @@ public class CheckWindowOrderTest {
 
             return stage;
         }
-    }
-
-    public static void waitForLatch(CountDownLatch latch, int seconds, String msg) throws Exception {
-        Assert.assertTrue("Timeout: " + msg, latch.await(seconds, TimeUnit.SECONDS));
     }
 
     static class TestStage extends Stage {

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,10 +25,18 @@
 
 package test.renderlock;
 
-import com.sun.javafx.PlatformUtil;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+import static org.junit.Assume.assumeTrue;
+import static test.util.Util.TIMEOUT;
+
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
+
 import javafx.animation.FillTransition;
 import javafx.animation.Timeline;
 import javafx.application.Application;
@@ -43,14 +51,13 @@ import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
 import javafx.util.Duration;
-import junit.framework.AssertionFailedError;
+
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
-import test.util.Util;
 
-import static org.junit.Assert.*;
-import static org.junit.Assume.*;
-import static test.util.Util.TIMEOUT;
+import com.sun.javafx.PlatformUtil;
+
+import test.util.Util;
 
 /**
  * Common base class for testing snapshot.
@@ -108,19 +115,16 @@ public class RenderLockCommon {
         // focusLost event with the lock held
         assumeTrue(PlatformUtil.isMac() || PlatformUtil.isWindows());
 
-        // Start the Application
-        new Thread(() -> Application.launch(MyApp.class, (String[])null)).start();
-
-        if (!launchLatch.await(TIMEOUT, TimeUnit.MILLISECONDS)) {
-            fail("Timeout waiting for Application to launch");
-        }
-
+        Util.launch(launchLatch, MyApp.class);
         assertEquals(0, launchLatch.getCount());
     }
 
     @AfterClass
     public static void doTeardownOnce() {
-        Platform.exit();
+        // see doSetupOnce() assumeTrue condition
+        if (myApp != null) {
+            Util.shutdown();
+        }
     }
 
     // ========================== TEST CASES ==========================

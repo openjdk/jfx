@@ -25,10 +25,17 @@
 
 package test.robot.javafx.scene;
 
+import static org.junit.Assert.fail;
+
+import java.nio.Buffer;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+import java.nio.IntBuffer;
+import java.util.concurrent.CountDownLatch;
+
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.geometry.Rectangle2D;
-import javafx.scene.robot.Robot;
 import javafx.scene.Scene;
 import javafx.scene.image.ImageView;
 import javafx.scene.image.PixelBuffer;
@@ -36,25 +43,17 @@ import javafx.scene.image.PixelFormat;
 import javafx.scene.image.WritableImage;
 import javafx.scene.layout.HBox;
 import javafx.scene.paint.Color;
+import javafx.scene.robot.Robot;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 import javafx.stage.WindowEvent;
 import javafx.util.Callback;
 
-import java.nio.Buffer;
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
-import java.nio.IntBuffer;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-
+import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
-import org.junit.After;
 import org.junit.Test;
-
-import static org.junit.Assert.fail;
 
 import test.util.Util;
 
@@ -87,7 +86,7 @@ public class PixelBufferDrawTest {
     private static Stage stage;
     private static Scene scene;
     private static Robot robot;
-    private static CountDownLatch startupLatch;
+    private static CountDownLatch startupLatch = new CountDownLatch(1);
 
     private static final int DELAY = 500;
     private static final int NUM_IMAGES = 4;
@@ -288,9 +287,12 @@ public class PixelBufferDrawTest {
 
     @BeforeClass
     public static void initFX() throws Exception {
-        startupLatch = new CountDownLatch(1);
-        new Thread(() -> Application.launch(TestApp.class, (String[]) null)).start();
-        waitForLatch(startupLatch, 10, "Timeout waiting for FX runtime to start");
+        Util.launch(startupLatch, TestApp.class);
+    }
+
+    @AfterClass
+    public static void exit() {
+        Util.shutdown(stage);
     }
 
     @After
@@ -302,21 +304,11 @@ public class PixelBufferDrawTest {
         });
     }
 
-    @AfterClass
-    public static void exit() {
-        Platform.runLater(() -> stage.hide());
-        Platform.exit();
-    }
-
     private static void delay() {
         try {
             Thread.sleep(DELAY);
         } catch (Exception ex) {
             fail("Thread was interrupted." + ex);
         }
-    }
-
-    public static void waitForLatch(CountDownLatch latch, int seconds, String msg) throws Exception {
-        Assert.assertTrue(msg, latch.await(seconds, TimeUnit.SECONDS));
     }
 }

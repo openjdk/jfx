@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2017, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,31 +25,30 @@
 
 package test.robot.javafx.embed.swing;
 
-import javafx.application.Application;
-import javafx.application.Platform;
-import javafx.embed.swing.SwingNode;
-import javafx.scene.Scene;
-import javafx.scene.layout.VBox;
-import javafx.stage.Stage;
-import junit.framework.AssertionFailedError;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import test.util.Util;
-
-import javax.swing.JDialog;
-import javax.swing.JOptionPane;
-import javax.swing.JPanel;
-import javax.swing.SwingUtilities;
 import java.awt.AWTException;
 import java.awt.Frame;
 import java.awt.Robot;
 import java.awt.event.InputEvent;
 import java.lang.reflect.InvocationTargetException;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 
-import static test.util.Util.TIMEOUT;
+import javax.swing.JDialog;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.SwingUtilities;
+
+import javafx.application.Application;
+import javafx.application.Platform;
+import javafx.embed.swing.SwingNode;
+import javafx.scene.Scene;
+import javafx.scene.layout.VBox;
+import javafx.stage.Stage;
+
+import org.junit.AfterClass;
+import org.junit.Assert;
+import org.junit.BeforeClass;
+
+import test.util.Util;
 
 public class SwingNodeBase {
     public static final int BASE_LOCATION = 200;
@@ -71,17 +70,7 @@ public class SwingNodeBase {
         robot.setAutoDelay(100);
 
         // Start the Application
-        new Thread(() -> Application.launch(MyApp.class, (String[])null)).start();
-
-        try {
-            if (!launchLatch.await(TIMEOUT, TimeUnit.MILLISECONDS)) {
-                throw new AssertionFailedError("Timeout waiting for Application to launch");
-            }
-        } catch (InterruptedException ex) {
-            AssertionFailedError err = new AssertionFailedError("Unexpected exception");
-            err.initCause(ex);
-            throw err;
-        }
+        Util.launch(launchLatch, MyApp.class);
 
         CountDownLatch paintLatch = new CountDownLatch(1);
         SwingUtilities.invokeAndWait(()->{
@@ -93,9 +82,7 @@ public class SwingNodeBase {
 
     @AfterClass
     public static void teardownOnce() {
-        Platform.runLater(() -> {
-            Platform.exit();
-        });
+        Util.shutdown();
     }
 
     public static void runWaitSleep(Runnable run) {
