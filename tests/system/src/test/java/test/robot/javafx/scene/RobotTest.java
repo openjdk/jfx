@@ -678,7 +678,7 @@ public class RobotTest {
     @Test
     public void testPixelCaptureAverage() throws Exception {
         if (PlatformUtil.isWindows() && Screen.getPrimary().getOutputScaleX() > 1) {
-            //Mark test as unstable for HiDPI scale greater than 100%
+            // Mark this test as unstable on Windows when HiDPI scale is more than 100%
             Assume.assumeTrue(Boolean.getBoolean("unstable.test")); // JDK-8255079
         }
         CountDownLatch setSceneLatch = new CountDownLatch(1);
@@ -734,7 +734,7 @@ public class RobotTest {
     @Test
     public void testScreenCapture() throws Exception {
         if (PlatformUtil.isWindows() && Screen.getPrimary().getOutputScaleX() > 1) {
-            //Mark test as unstable for HiDPI scale greater than 100%
+            // Mark this test as unstable on Windows when HiDPI scale is more than 100%
             Assume.assumeTrue(Boolean.getBoolean("unstable.test")); // JDK-8207379
         }
         CountDownLatch setSceneLatch = new CountDownLatch(1);
