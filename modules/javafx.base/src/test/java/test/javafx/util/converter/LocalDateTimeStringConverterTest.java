@@ -41,6 +41,7 @@ import javafx.util.converter.LocalDateTimeStringConverter;
 import javafx.util.converter.LocalDateTimeStringConverterShim;
 
 import org.junit.BeforeClass;
+import org.junit.AfterClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -56,11 +57,9 @@ public class LocalDateTimeStringConverterTest {
 
     private static final DateTimeFormatter aFormatter = DateTimeFormatter.ofPattern("dd MM yyyy HH mm ss");
     private static final DateTimeFormatter aParser = DateTimeFormatter.ofPattern("yyyy MM dd hh mm ss a");
+    private static Locale oldLocale;
 
     @Parameterized.Parameters public static Collection implementations() {
-        // Tests require that default locale is en_US
-        Locale.setDefault(Locale.US);
-
         return Arrays.asList(new Object[][] {
             { new LocalDateTimeStringConverter(),
               Locale.getDefault(Locale.Category.FORMAT), FormatStyle.SHORT, FormatStyle.SHORT,
@@ -92,6 +91,17 @@ public class LocalDateTimeStringConverterTest {
         this.validDateTime = validDateTime;
         this.formatter = formatter;
         this.parser = parser;
+    }
+
+    @BeforeClass public static void setupBeforeAll() {
+        // Tests require that default locale is en_US
+        oldLocale = Locale.getDefault();
+        Locale.setDefault(Locale.US);
+    }
+
+    @AfterClass public static void teardownAfterAll() {
+        // Restore VM's old locale
+        Locale.setDefault(oldLocale);
     }
 
     /*********************************************************************
