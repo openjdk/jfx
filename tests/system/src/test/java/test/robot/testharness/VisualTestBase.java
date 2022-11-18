@@ -101,6 +101,7 @@ public abstract class VisualTestBase {
     @Before
     public void doSetup() {
         runAndWait(() -> robot = new Robot());
+        Util.parkCursor(robot);
     }
 
     @After

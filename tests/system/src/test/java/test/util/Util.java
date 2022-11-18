@@ -40,6 +40,9 @@ import java.util.concurrent.TimeUnit;
 
 import javafx.application.Application;
 import javafx.application.Platform;
+import javafx.geometry.Rectangle2D;
+import javafx.scene.robot.Robot;
+import javafx.stage.Screen;
 import javafx.stage.Stage;
 
 import org.junit.Assert;
@@ -393,6 +396,29 @@ public class Util {
             Assert.assertTrue("Timeout: " + msg, latch.await(seconds, TimeUnit.SECONDS));
         } catch (InterruptedException e) {
             throw new AssertionError(e);
+        }
+    }
+
+    /**
+     * Moves the cursor outside of the Stage to avoid it interfering with Robot tests.
+     * The cursor is moved to a point close to the lower right corner of the primary screen,
+     * avoiding any areas occupied by dock, tray, or Active Corners.
+     * <p>
+     * This method can be called from any thread.
+     */
+    public static void parkCursor(Robot robot) {
+        Runnable park = () -> {
+            Rectangle2D r = Screen.getPrimary().getVisualBounds();
+            double activeCornersMargin = 5.0;
+            double x = r.getMaxX() - activeCornersMargin;
+            double y = r.getMaxY() - activeCornersMargin;
+            robot.mouseMove(x, y);
+        };
+
+        if (Platform.isFxApplicationThread()) {
+            park.run();
+        } else {
+            runAndWait(park);
         }
     }
 }

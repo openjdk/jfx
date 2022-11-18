@@ -43,6 +43,7 @@ import javafx.stage.WindowEvent;
 
 import org.junit.AfterClass;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -110,6 +111,11 @@ public class ImageSmoothingDrawTest {
     @AfterClass
     public static void exit() {
         Util.shutdown(stage);
+    }
+
+    @Before
+    public void before() {
+        Util.parkCursor(robot);
     }
 
     public static class TestApp extends Application {
