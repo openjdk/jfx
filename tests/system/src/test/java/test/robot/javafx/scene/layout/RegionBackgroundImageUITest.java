@@ -29,13 +29,10 @@ import static org.junit.Assume.assumeTrue;
 import javafx.geometry.Bounds;
 import javafx.scene.paint.Color;
 
-import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
 
 import com.sun.javafx.PlatformUtil;
-
-import test.util.Util;
 
 /**************************************************************************
  *                                                                        *
@@ -44,11 +41,6 @@ import test.util.Util;
  *                                                                        *
  *************************************************************************/
 public class RegionBackgroundImageUITest extends RegionUITestBase {
-
-    @Before
-    public void before() {
-        Util.parkCursor(getRobot());
-    }
 
     @Test(timeout = 20000)
     public void alignedImage() {
