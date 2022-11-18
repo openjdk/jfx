@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2021, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,7 +27,7 @@ package test.com.sun.javafx.tk.quantum;
 
 import java.lang.ref.WeakReference;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
+
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.scene.Scene;
@@ -37,17 +37,17 @@ import javafx.scene.text.Text;
 import javafx.scene.text.TextFlow;
 import javafx.stage.Stage;
 import javafx.stage.WindowEvent;
+
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
+
 import test.util.Util;
 import test.util.memory.JMemoryBuddy;
 
-import static org.junit.Assert.*;
-
 public class ViewPainterLeakTest {
 
-    private static CountDownLatch startupLatch;
+    private static CountDownLatch startupLatch = new CountDownLatch(1);
     private static Stage stage;
     private static ScrollPane scrollPane;
     private static WeakReference<Scene> sceneRef;
@@ -83,15 +83,12 @@ public class ViewPainterLeakTest {
 
     @BeforeClass
     public static void setupOnce() throws Exception {
-        startupLatch = new CountDownLatch(1);
-        new Thread(() -> Application.launch(TestApp.class, (String[]) null)).start();
-        assertTrue("Timeout waiting for FX runtime to start",
-                startupLatch.await(15, TimeUnit.SECONDS));
+        Util.launch(startupLatch, TestApp.class);
     }
 
     @AfterClass
     public static void teardown() {
-        Platform.exit();
+        Util.shutdown();
     }
 
     @Test

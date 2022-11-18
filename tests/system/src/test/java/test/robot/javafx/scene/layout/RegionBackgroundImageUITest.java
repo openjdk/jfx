@@ -26,14 +26,13 @@ package test.robot.javafx.scene.layout;
 
 import static org.junit.Assume.assumeTrue;
 
-import org.junit.Before;
+import javafx.geometry.Bounds;
+import javafx.scene.paint.Color;
+
 import org.junit.Ignore;
 import org.junit.Test;
 
 import com.sun.javafx.PlatformUtil;
-
-import javafx.geometry.Bounds;
-import javafx.scene.paint.Color;
 
 /**************************************************************************
  *                                                                        *
@@ -42,15 +41,6 @@ import javafx.scene.paint.Color;
  *                                                                        *
  *************************************************************************/
 public class RegionBackgroundImageUITest extends RegionUITestBase {
-
-    @Before
-    public void before() {
-        double x = stage.getX() + stage.getWidth();
-        double y = stage.getY() + stage.getHeight();
-        runAndWait(() -> {
-            getRobot().mouseMove(x,y);
-        });
-    }
 
     @Test(timeout = 20000)
     public void alignedImage() {
