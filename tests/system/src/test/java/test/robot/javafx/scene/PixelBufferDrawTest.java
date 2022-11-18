@@ -52,6 +52,7 @@ import javafx.util.Callback;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -295,6 +296,11 @@ public class PixelBufferDrawTest {
         Util.shutdown(stage);
     }
 
+    @Before
+    public void before() {
+        Util.parkCursor(robot);
+    }
+
     @After
     public void cleanupTest() {
         Util.runAndWait(() -> {
@@ -305,10 +311,6 @@ public class PixelBufferDrawTest {
     }
 
     private static void delay() {
-        try {
-            Thread.sleep(DELAY);
-        } catch (Exception ex) {
-            fail("Thread was interrupted." + ex);
-        }
+        Util.sleep(DELAY);
     }
 }

@@ -25,12 +25,10 @@
 package test.robot.javafx.scene;
 
 import static javafx.scene.paint.Color.MAGENTA;
-import static org.junit.Assert.fail;
 
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 import javafx.application.Application;
@@ -144,11 +142,7 @@ public class RobotTest {
 
     @Before
     public void before() {
-        double x = stage.getX() + stage.getWidth();
-        double y = stage.getY() + stage.getHeight();
-        Util.runAndWait(() -> {
-            robot.mouseMove(x,y);
-        });
+        Util.parkCursor(robot);
     }
 
     @Test

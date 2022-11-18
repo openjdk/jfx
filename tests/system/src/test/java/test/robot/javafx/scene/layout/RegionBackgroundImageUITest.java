@@ -26,14 +26,16 @@ package test.robot.javafx.scene.layout;
 
 import static org.junit.Assume.assumeTrue;
 
+import javafx.geometry.Bounds;
+import javafx.scene.paint.Color;
+
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
 
 import com.sun.javafx.PlatformUtil;
 
-import javafx.geometry.Bounds;
-import javafx.scene.paint.Color;
+import test.util.Util;
 
 /**************************************************************************
  *                                                                        *
@@ -45,11 +47,7 @@ public class RegionBackgroundImageUITest extends RegionUITestBase {
 
     @Before
     public void before() {
-        double x = stage.getX() + stage.getWidth();
-        double y = stage.getY() + stage.getHeight();
-        runAndWait(() -> {
-            getRobot().mouseMove(x,y);
-        });
+        Util.parkCursor(getRobot());
     }
 
     @Test(timeout = 20000)
