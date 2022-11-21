@@ -27,9 +27,7 @@ package test.javafx.util.converter;
 
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
-import java.util.Currency;
 import java.util.Locale;
-import javafx.util.converter.LocalTimeStringConverterShim;
 import javafx.util.converter.CurrencyStringConverter;
 import javafx.util.converter.NumberStringConverterShim;
 import static org.junit.Assert.*;

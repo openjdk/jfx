@@ -63,6 +63,6 @@ public class LongStringConverter extends StringConverter<Long> {
             return "";
         }
 
-        return Long.toString(((Long)value).longValue());
+        return Long.toString(value.longValue());
     }
 }

@@ -69,9 +69,9 @@ public class LongExpressionTest {
 
     @Test
     public void testGetters() {
-        assertEquals((double)data, op1.doubleValue(), EPSILON);
-        assertEquals((float)data, op1.floatValue(), EPSILON);
-        assertEquals((long)data, op1.longValue());
+        assertEquals(data, op1.doubleValue(), EPSILON);
+        assertEquals(data, op1.floatValue(), EPSILON);
+        assertEquals(data, op1.longValue());
         assertEquals((int)data, op1.intValue());
     }
 
@@ -197,7 +197,7 @@ public class LongExpressionTest {
 
     @Test
     public void testObjectToLong() {
-        final ObservableValueStub<Long> valueModel = new ObservableValueStub<Long>();
+        final ObservableValueStub<Long> valueModel = new ObservableValueStub<>();
         final LongExpression exp = LongExpression.longExpression(valueModel);
 
         assertTrue(exp instanceof LongBinding);

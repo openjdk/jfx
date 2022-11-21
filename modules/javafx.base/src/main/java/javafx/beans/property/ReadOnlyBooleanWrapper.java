@@ -120,5 +120,5 @@ public class ReadOnlyBooleanWrapper extends SimpleBooleanProperty {
         public String getName() {
             return ReadOnlyBooleanWrapper.this.getName();
         }
-    };
+    }
 }
