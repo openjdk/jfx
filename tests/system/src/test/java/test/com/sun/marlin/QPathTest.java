@@ -25,9 +25,10 @@
 
 package test.com.sun.marlin;
 
+import static org.junit.Assert.assertEquals;
+
 import java.util.Locale;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 import java.util.logging.Handler;
 import java.util.logging.Level;
 import java.util.logging.LogRecord;
@@ -48,15 +49,12 @@ import javafx.scene.shape.SVGPath;
 import javafx.stage.Stage;
 import javafx.util.Duration;
 
-import junit.framework.AssertionFailedError;
 import org.junit.AfterClass;
 import org.junit.Assert;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import static test.util.Util.TIMEOUT;
+import test.util.Util;
 
 /**
  * @test
@@ -141,18 +139,13 @@ public class QPathTest {
 
     @BeforeClass
     public static void setupOnce() throws Exception {
-        // Start the Application
-        new Thread(() -> Application.launch(MyApp.class, (String[]) null)).start();
-
-        assertTrue("Timeout waiting for Application to launch",
-                launchLatch.await(TIMEOUT, TimeUnit.MILLISECONDS));
-
+        Util.launch(launchLatch, MyApp.class);
         assertEquals(0, launchLatch.getCount());
     }
 
     @AfterClass
     public static void teardownOnce() {
-        Platform.exit();
+        Util.shutdown();
     }
 
     @Test(timeout = 15000)
