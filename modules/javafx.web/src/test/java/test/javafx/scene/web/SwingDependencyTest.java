@@ -27,9 +27,6 @@ package test.javafx.scene.web;
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
 
-import javafx.scene.web.WebEngine;
-import javafx.scene.web.WebView;
-
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Test;

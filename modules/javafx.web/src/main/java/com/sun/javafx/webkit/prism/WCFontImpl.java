@@ -30,21 +30,15 @@ import com.sun.javafx.font.FontFactory;
 import com.sun.javafx.font.FontResource;
 import com.sun.javafx.font.FontStrike;
 import com.sun.javafx.font.PGFont;
-import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.logging.PlatformLogger.Level;
 import com.sun.javafx.logging.PlatformLogger;
-import com.sun.javafx.scene.text.GlyphList;
 import com.sun.javafx.scene.text.TextLayout;
-import com.sun.javafx.text.TextRun;
-import com.sun.javafx.webkit.prism.WCTextRunImpl;
 import com.sun.prism.GraphicsPipeline;
 import com.sun.webkit.graphics.WCFont;
 import com.sun.webkit.graphics.WCTextRun;
 import java.util.Arrays;
 import java.util.HashMap;
-import static com.sun.javafx.webkit.prism.TextUtilities.getLayoutBounds;
-import static com.sun.javafx.webkit.prism.TextUtilities.getLayoutWidth;
 
 final class WCFontImpl extends WCFont {
     private final static PlatformLogger log =

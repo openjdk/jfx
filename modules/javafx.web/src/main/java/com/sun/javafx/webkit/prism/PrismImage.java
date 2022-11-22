@@ -39,7 +39,6 @@ import javafx.scene.image.WritablePixelFormat;
 import javax.imageio.ImageIO;
 import javax.imageio.ImageWriter;
 
-import com.sun.javafx.webkit.UIClientImpl;
 import com.sun.prism.Graphics;
 import com.sun.prism.Image;
 import com.sun.webkit.graphics.WCImage;

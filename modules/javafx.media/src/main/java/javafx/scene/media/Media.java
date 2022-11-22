@@ -51,7 +51,6 @@ import javafx.beans.property.ReadOnlyIntegerWrapper;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import com.sun.media.jfxmedia.events.MetadataListener;
-import com.sun.media.jfxmedia.track.VideoResolution;
 
 /**
  * The <code>Media</code> class represents a media resource. It is instantiated

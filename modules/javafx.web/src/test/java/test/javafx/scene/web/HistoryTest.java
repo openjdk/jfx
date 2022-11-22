@@ -26,21 +26,15 @@
 package test.javafx.scene.web;
 
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.List;
 import java.io.File;
-import java.net.MalformedURLException;
 import javafx.beans.value.ObservableValue;
 import javafx.scene.web.WebHistory;
 import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.collections.ListChangeListener;
 import java.util.Date;
 
-import java.util.concurrent.Callable;
-import javafx.scene.web.WebHistory;
 import org.junit.Test;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 

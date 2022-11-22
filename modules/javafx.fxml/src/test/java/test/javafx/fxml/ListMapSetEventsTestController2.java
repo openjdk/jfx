@@ -24,10 +24,6 @@
  */
 package test.javafx.fxml;
 
-import javafx.collections.ListChangeListener;
-import javafx.collections.MapChangeListener;
-import javafx.collections.SetChangeListener;
-
 import java.net.URL;
 import java.util.ResourceBundle;
 import javafx.fxml.FXML;

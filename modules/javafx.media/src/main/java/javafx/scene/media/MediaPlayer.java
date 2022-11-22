@@ -55,7 +55,6 @@ import com.sun.javafx.tk.TKPulseListener;
 import com.sun.javafx.tk.Toolkit;
 import com.sun.media.jfxmedia.MediaManager;
 import com.sun.media.jfxmedia.control.VideoDataBuffer;
-import com.sun.media.jfxmedia.effects.AudioSpectrum;
 import com.sun.media.jfxmedia.events.AudioSpectrumEvent;
 import com.sun.media.jfxmedia.events.BufferListener;
 import com.sun.media.jfxmedia.events.BufferProgressEvent;

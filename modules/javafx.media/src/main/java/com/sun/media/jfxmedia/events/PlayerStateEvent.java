@@ -24,8 +24,6 @@
  */
 package com.sun.media.jfxmedia.events;
 
-import com.sun.media.jfxmediaimpl.MediaUtils;
-
 /**
  * An event indicating a change in the state of a media player.
  */

@@ -25,22 +25,18 @@
 
 package com.sun.javafx.webkit.prism;
 
-import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.logging.PlatformLogger;
 import com.sun.prism.Graphics;
 import com.sun.prism.GraphicsPipeline;
-import com.sun.prism.Image;
 import com.sun.prism.RTTexture;
 import com.sun.prism.ResourceFactory;
 import com.sun.prism.ResourceFactoryListener;
 import com.sun.prism.Texture;
-import com.sun.prism.paint.Color;
 import com.sun.webkit.graphics.WCCamera;
 import com.sun.webkit.graphics.WCGraphicsContext;
 import com.sun.webkit.graphics.WCGraphicsManager;
 import com.sun.webkit.graphics.WCPageBackBuffer;
 import java.lang.ref.WeakReference;
-import javafx.scene.transform.Transform;
 
 final class WCPageBackBufferImpl extends WCPageBackBuffer implements ResourceFactoryListener {
     private RTTexture texture;

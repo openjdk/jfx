@@ -29,7 +29,6 @@ import com.sun.media.jfxmedia.logging.Logger;
 import java.lang.ref.PhantomReference;
 import java.lang.ref.Reference;
 import java.lang.ref.ReferenceQueue;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 

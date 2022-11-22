@@ -25,13 +25,11 @@
 
 package test.javafx.scene.web;
 
-import com.sun.javafx.PlatformUtil;
 import java.lang.management.ManagementFactory;
 import java.lang.management.ThreadMXBean;
 import javafx.event.EventHandler;
 import javafx.scene.web.WebEvent;
 import netscape.javascript.JSException;
-import org.junit.Assume;
 import org.junit.Test;
 import org.junit.Ignore;
 

@@ -42,7 +42,6 @@ import javafx.beans.Observable;
 import javafx.beans.property.*;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableObjectValue;
-import javafx.beans.value.ObservableValue;
 import javafx.collections.ObservableMap;
 import javafx.event.EventHandler;
 import javafx.geometry.NodeOrientation;

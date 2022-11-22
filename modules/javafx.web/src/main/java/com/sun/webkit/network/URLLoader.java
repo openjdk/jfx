@@ -56,7 +56,6 @@ import java.security.PrivilegedAction;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.concurrent.CountDownLatch;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.InflaterInputStream;
 import javax.net.ssl.SSLHandshakeException;

@@ -30,7 +30,6 @@ import java.util.Iterator;
 import java.util.List;
 
 import javafx.beans.InvalidationListener;
-import javafx.beans.property.ReadOnlyProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.beans.value.ObservableValueBase;
