@@ -2111,7 +2111,7 @@ public class TableView<S> extends Control {
             };
             this.tableView.itemsProperty().addListener(itemsPropertyListener);
 
-            selectedCellsMap = new SelectedCellsMap<>(this::fireCustomSelectedCellsListChangeEvent) {
+            selectedCellsMap = new SelectedCellsMap<>(c -> fireCustomSelectedCellsListChangeEvent(c)) {  // Note: use of method reference causes javac compilation error (see JDK-8297428)
                 @Override public boolean isCellSelectionEnabled() {
                     return TableViewArrayListSelectionModel.this.isCellSelectionEnabled();
                 }

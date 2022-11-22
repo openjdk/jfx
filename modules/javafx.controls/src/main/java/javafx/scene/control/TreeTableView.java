@@ -2421,7 +2421,7 @@ public class TreeTableView<S> extends Control {
             this.treeTableView.showRootProperty().addListener(showRootPropertyListener);
             updateTreeEventListener(null, treeTableView.getRoot());
 
-            selectedCellsMap = new SelectedCellsMap<>(this::fireCustomSelectedCellsListChangeEvent) {
+            selectedCellsMap = new SelectedCellsMap<>(c -> fireCustomSelectedCellsListChangeEvent(c)) {  // Note: use of method reference causes javac compilation error (see JDK-8297428)
                 @Override public boolean isCellSelectionEnabled() {
                     return TreeTableViewArrayListSelectionModel.this.isCellSelectionEnabled();
                 }
@@ -3402,7 +3402,7 @@ public class TreeTableView<S> extends Control {
 
         private final TreeTableView<S> treeTableView;
 
-        private final TreeTablePosition EMPTY_CELL;
+        private final TreeTablePosition<S, ?> EMPTY_CELL;
 
         /**
          * Creates a default TableViewFocusModel instance that will be used to
