@@ -184,7 +184,7 @@ public class ListViewTest {
     }
 
     @Test public void noArgConstructorSetsVerticalPseudoclass() {
-        ListView<?> listView = new ListView<String>();
+        ListView<?> listView = new ListView<>();
         assertTrue(listView.getPseudoClassStates().stream().anyMatch(c -> c.getPseudoClassName().equals("vertical")));
         assertFalse(listView.getPseudoClassStates().stream().anyMatch(c -> c.getPseudoClassName().equals("horizontal")));
     }
@@ -2282,7 +2282,7 @@ public class ListViewTest {
         final ListView<Integer> listView = new ListView(items);
         listView.setPrefHeight(400);
         double viewportLength = 398; // it would be better to calculate this from listView but there is no API for this
-        listView.setCellFactory(lv -> new ListCell<Integer>() {
+        listView.setCellFactory(lv -> new ListCell<>() {
             @Override
             public void updateItem(Integer item, boolean empty) {
                 super.updateItem(item, empty);
@@ -2340,7 +2340,7 @@ public class ListViewTest {
         final ListView<Integer> listView = new ListView(items);
         listView.setPrefHeight(400);
         double viewportLength = 398;
-        listView.setCellFactory(lv -> new ListCell<Integer>() {
+        listView.setCellFactory(lv -> new ListCell<>() {
             @Override
             public void updateItem(Integer item, boolean empty) {
                 super.updateItem(item, empty);
@@ -2417,9 +2417,9 @@ public class ListViewTest {
     }
 
     public void testScrollTo(boolean addIncremental, boolean layoutTwice, boolean selectIndex, int listViewHeight, int scrollToIndex, Integer[] heights) {
-        final ListView<Integer> listView = new ListView<Integer>();
+        final ListView<Integer> listView = new ListView<>();
         listView.setPrefHeight(listViewHeight);
-        listView.setCellFactory(lv -> new ListCell<Integer>() {
+        listView.setCellFactory(lv -> new ListCell<>() {
             @Override
             public void updateItem(Integer item, boolean empty) {
                 super.updateItem(item, empty);

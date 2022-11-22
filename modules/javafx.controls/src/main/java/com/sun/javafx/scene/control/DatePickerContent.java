@@ -292,7 +292,7 @@ public class DatePickerContent extends VBox {
     }
 
     private ObjectProperty<YearMonth> displayedYearMonth =
-        new SimpleObjectProperty<YearMonth>(this, "displayedYearMonth");
+        new SimpleObjectProperty<>(this, "displayedYearMonth");
 
     public ObjectProperty<YearMonth> displayedYearMonthProperty() {
         return displayedYearMonth;

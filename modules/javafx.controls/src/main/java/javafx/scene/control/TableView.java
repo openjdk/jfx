@@ -548,7 +548,7 @@ public class TableView<S> extends Control {
         // We're watching for changes to the content width such
         // that the resize policy can be run if necessary. This comes from
         // TreeViewSkin.
-        getProperties().addListener(new MapChangeListener<Object, Object>() {
+        getProperties().addListener(new MapChangeListener<>() {
             @Override
             public void onChanged(Change<? extends Object, ? extends Object> c) {
                 if (c.wasAdded() && SET_CONTENT_WIDTH.equals(c.getKey())) {
@@ -2351,7 +2351,7 @@ public class TableView<S> extends Control {
                 }
             }
 
-            shiftSelection(startRow, shift, new Callback<ShiftParams, Void>() {
+            shiftSelection(startRow, shift, new Callback<>() {
                 @Override public Void call(ShiftParams param) {
 
                     // we make the shifts atomic, as otherwise listeners to
@@ -3171,7 +3171,7 @@ public class TableView<S> extends Control {
 
         private ReadOnlyObjectWrapper<TablePosition> focusedCellPropertyImpl() {
             if (focusedCell == null) {
-                focusedCell = new ReadOnlyObjectWrapper<TablePosition>(EMPTY_CELL) {
+                focusedCell = new ReadOnlyObjectWrapper<>(EMPTY_CELL) {
                     private TablePosition old;
                     @Override protected void invalidated() {
                         if (get() == null) return;

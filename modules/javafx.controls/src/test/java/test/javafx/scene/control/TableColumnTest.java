@@ -1028,7 +1028,7 @@ public class TableColumnTest {
         column.setCellValueFactory(param -> param.getValue().firstNameProperty());
         TablePosition<Person,String> pos = new TablePosition<>(table, 0, column);
         EventType<TableColumn.CellEditEvent<Person,String>> eventType = TableColumn.editCommitEvent();
-        column.getOnEditCommit().handle(new TableColumn.CellEditEvent<Person,String>(
+        column.getOnEditCommit().handle(new TableColumn.CellEditEvent<>(
                 table, pos, eventType, "Richard Bair"));
         assertEquals("Richard Bair", table.getItems().get(0).getFirstName());
     }
@@ -1039,7 +1039,7 @@ public class TableColumnTest {
         ageColumn.setCellValueFactory(param -> param.getValue().ageProperty());
         TablePosition<Person,Number> pos = new TablePosition<>(table, 0, ageColumn);
         EventType<TableColumn.CellEditEvent<Person,Number>> eventType = TableColumn.editCommitEvent();
-        ageColumn.getOnEditCommit().handle(new TableColumn.CellEditEvent<Person,Number>(
+        ageColumn.getOnEditCommit().handle(new TableColumn.CellEditEvent<>(
                 table, pos, eventType, 109));
         assertEquals(76, table.getItems().get(0).getAge());
     }
@@ -1050,7 +1050,7 @@ public class TableColumnTest {
         column.setCellValueFactory(param -> param.getValue().firstNameProperty());
         TablePosition<Person,String> pos = new TablePosition<>(table, 0, column);
         EventType<TableColumn.CellEditEvent<Person,String>> eventType = TableColumn.editCommitEvent();
-        column.getOnEditCommit().handle(new TableColumn.CellEditEvent<Person, String>(
+        column.getOnEditCommit().handle(new TableColumn.CellEditEvent<>(
                 null, pos, eventType, "Richard Bair"));
     }
 
@@ -1059,7 +1059,7 @@ public class TableColumnTest {
         table.getColumns().add(column);
         column.setCellValueFactory(param -> param.getValue().firstNameProperty());
         EventType<TableColumn.CellEditEvent<Person,String>> eventType = TableColumn.editCommitEvent();
-        column.getOnEditCommit().handle(new TableColumn.CellEditEvent<Person, String>(
+        column.getOnEditCommit().handle(new TableColumn.CellEditEvent<>(
                 table, null, eventType, "Richard Bair"));
     }
 
@@ -1068,7 +1068,7 @@ public class TableColumnTest {
         column.setCellValueFactory(param -> param.getValue().firstNameProperty());
         TablePosition<Person,String> pos = new TablePosition<>(table, -1, column);
         EventType<TableColumn.CellEditEvent<Person,String>> eventType = TableColumn.editCommitEvent();
-        column.getOnEditCommit().handle(new TableColumn.CellEditEvent<Person,String>(
+        column.getOnEditCommit().handle(new TableColumn.CellEditEvent<>(
                 table, pos, eventType, "Richard Bair"));
         assertEquals("Humphrey McPhee", table.getItems().get(0).getFirstName());
     }
@@ -1078,7 +1078,7 @@ public class TableColumnTest {
         column.setCellValueFactory(param -> param.getValue().firstNameProperty());
         TablePosition<Person,String> pos = new TablePosition<>(table, 100, column);
         EventType<TableColumn.CellEditEvent<Person,String>> eventType = TableColumn.editCommitEvent();
-        column.getOnEditCommit().handle(new TableColumn.CellEditEvent<Person, String>(
+        column.getOnEditCommit().handle(new TableColumn.CellEditEvent<>(
                 table, pos, eventType, "Richard Bair"));
         assertEquals("Humphrey McPhee", table.getItems().get(0).getFirstName());
     }

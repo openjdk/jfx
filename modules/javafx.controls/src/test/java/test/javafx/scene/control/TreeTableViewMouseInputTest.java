@@ -933,7 +933,7 @@ public class TreeTableViewMouseInputTest {
 
         TreeTableView<Person> table = new TreeTableView<>();
 
-        TreeItem<Person> root = new TreeItem<Person>(new Person("Root", null, null));
+        TreeItem<Person> root = new TreeItem<>(new Person("Root", null, null));
         root.setExpanded(true);
         table.setRoot(root);
         table.setShowRoot(false);
@@ -1022,7 +1022,7 @@ public class TreeTableViewMouseInputTest {
 
         TreeTableView<Person> table = new TreeTableView<>();
 
-        TreeItem<Person> root = new TreeItem<Person>(new Person("Root", null, null));
+        TreeItem<Person> root = new TreeItem<>(new Person("Root", null, null));
         root.setExpanded(true);
         table.setRoot(root);
         table.setShowRoot(false);

@@ -1077,7 +1077,7 @@ public class TreeTableColumnTest {
         column.setCellValueFactory(param -> param.getValue().getValue().firstNameProperty());
         TreeTablePosition<Person,String> pos = new TreeTablePosition<>(table, 1, column);
         EventType<TreeTableColumn.CellEditEvent<Person,String>> eventType = TreeTableColumn.editCommitEvent();
-        column.getOnEditCommit().handle(new TreeTableColumn.CellEditEvent<Person, String>(
+        column.getOnEditCommit().handle(new TreeTableColumn.CellEditEvent<>(
                 null, pos, eventType, "Richard Bair"));
     }
 
@@ -1086,7 +1086,7 @@ public class TreeTableColumnTest {
         table.getColumns().add(column);
         column.setCellValueFactory(param -> param.getValue().getValue().firstNameProperty());
         EventType<TreeTableColumn.CellEditEvent<Person,String>> eventType = TreeTableColumn.editCommitEvent();
-        column.getOnEditCommit().handle(new TreeTableColumn.CellEditEvent<Person, String>(
+        column.getOnEditCommit().handle(new TreeTableColumn.CellEditEvent<>(
                 table, null, eventType, "Richard Bair"));
     }
 //
