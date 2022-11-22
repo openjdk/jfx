@@ -207,7 +207,7 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
         return skinProperty().getValue();
     }
 
-    private final ObjectProperty<Skin<?>> skin = new ObjectPropertyBase<Skin<?>>() {
+    private final ObjectProperty<Skin<?>> skin = new ObjectPropertyBase<>() {
         // We store a reference to the oldValue so that we can handle
         // changes in the skin properly in the case of binding. This is
         // only needed because invalidated() does not currently take
@@ -998,7 +998,7 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
      **************************************************************************/
 
     private static final CssMetaData<CSSBridge,String> SKIN =
-            new CssMetaData<CSSBridge,String>("-fx-skin",
+            new CssMetaData<>("-fx-skin",
                     StringConverter.getInstance()) {
 
                 @Override
@@ -1015,7 +1015,7 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
     private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
     static {
         final List<CssMetaData<? extends Styleable, ?>> styleables =
-                new ArrayList<CssMetaData<? extends Styleable, ?>>();
+                new ArrayList<>();
         Collections.addAll(styleables,
                 SKIN
         );

@@ -54,7 +54,7 @@ public class VirtualFlowSubClassTest {
     private SubVirtualFlow<IndexedCell> flow;
 
     @Before public void setUp() {
-        list = new VirtualFlowShim.ArrayLinkedListShim<CellStub>();
+        list = new VirtualFlowShim.ArrayLinkedListShim<>();
         a = new CellStub(flow, "A");
         b = new CellStub(flow, "B");
         c = new CellStub(flow, "C");

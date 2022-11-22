@@ -44,7 +44,7 @@ public class ControlTooltipTest {
 
     @Before public void setUp() {
         c = new ControlStub();
-        s = new SkinStub<ControlStub>(c);
+        s = new SkinStub<>(c);
         c.setSkin(s);
         t = new Tooltip();
 //        t.setSkin(new SkinStub<Tooltip>(t));

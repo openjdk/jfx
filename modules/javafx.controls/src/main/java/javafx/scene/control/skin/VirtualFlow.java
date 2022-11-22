@@ -182,7 +182,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
      * <p>
      * This is package private ONLY FOR TESTING
      */
-    final ArrayLinkedList<T> cells = new ArrayLinkedList<T>();
+    final ArrayLinkedList<T> cells = new ArrayLinkedList<>();
 
     /**
      * A structure containing cells that can be reused later. These are cells
@@ -191,7 +191,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
      * <p>
      * This is package private ONLY FOR TESTING
      */
-    final ArrayLinkedList<T> pile = new ArrayLinkedList<T>();
+    final ArrayLinkedList<T> pile = new ArrayLinkedList<>();
 
     /**
      * A special cell used to accumulate bounds, such that we reduce object
@@ -979,7 +979,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
      */
     public final ObjectProperty<Callback<VirtualFlow<T>, T>> cellFactoryProperty() {
         if (cellFactory == null) {
-            cellFactory = new SimpleObjectProperty<Callback<VirtualFlow<T>, T>>(this, "cellFactory") {
+            cellFactory = new SimpleObjectProperty<>(this, "cellFactory") {
                 @Override protected void invalidated() {
                     if (get() != null) {
                         setNeedsLayout(true);
@@ -3232,7 +3232,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         private int lastIndex = -1;
 
         public ArrayLinkedList() {
-            array = new ArrayList<T>(50);
+            array = new ArrayList<>(50);
 
             for (int i = 0; i < 50; i++) {
                 array.add(null);

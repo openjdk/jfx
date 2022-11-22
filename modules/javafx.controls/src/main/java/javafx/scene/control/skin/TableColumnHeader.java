@@ -228,11 +228,11 @@ public class TableColumnHeader extends Region {
     };
 
     private WeakListChangeListener<TableColumnBase<?,?>> weakSortOrderListener =
-            new WeakListChangeListener<TableColumnBase<?,?>>(sortOrderListener);
+            new WeakListChangeListener<>(sortOrderListener);
     private final WeakListChangeListener<TableColumnBase<?,?>> weakVisibleLeafColumnsListener =
-            new WeakListChangeListener<TableColumnBase<?,?>>(visibleLeafColumnsListener);
+            new WeakListChangeListener<>(visibleLeafColumnsListener);
     private final WeakListChangeListener<String> weakStyleClassListener =
-            new WeakListChangeListener<String>(styleClassListener);
+            new WeakListChangeListener<>(styleClassListener);
 
     private static final EventHandler<MouseEvent> mousePressedHandler = me -> {
         TableColumnHeader header = (TableColumnHeader) me.getSource();
@@ -1087,7 +1087,7 @@ public class TableColumnHeader extends Region {
                 // to prevent multiple sorts, we make a copy of the sort order
                 // list, moving the column value from the current position to
                 // its new position at the front of the list
-                List<TableColumnBase<?,?>> sortOrderCopy = new ArrayList<TableColumnBase<?,?>>(sortOrder);
+                List<TableColumnBase<?,?>> sortOrderCopy = new ArrayList<>(sortOrder);
                 sortOrderCopy.remove(getTableColumn());
                 sortOrderCopy.add(0, getTableColumn());
                 sortOrder.setAll(getTableColumn());
@@ -1298,7 +1298,7 @@ public class TableColumnHeader extends Region {
      */
      private static class StyleableProperties {
          private static final CssMetaData<TableColumnHeader,Number> SIZE =
-            new CssMetaData<TableColumnHeader,Number>("-fx-size",
+            new CssMetaData<>("-fx-size",
                  SizeConverter.getInstance(), 20.0) {
 
             @Override
@@ -1316,7 +1316,7 @@ public class TableColumnHeader extends Region {
          static {
 
             final List<CssMetaData<? extends Styleable, ?>> styleables =
-                new ArrayList<CssMetaData<? extends Styleable, ?>>(Region.getClassCssMetaData());
+                new ArrayList<>(Region.getClassCssMetaData());
             styleables.add(SIZE);
             STYLEABLES = Collections.unmodifiableList(styleables);
 

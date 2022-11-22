@@ -86,7 +86,7 @@ public class LineChart<X,Y> extends XYChart<X,Y> {
     private Data<X,Y> dataItemBeingRemoved = null;
     private FadeTransition fadeSymbolTransition = null;
     private Map<Data<X,Y>, Double> XYValueMap =
-                                new HashMap<Data<X,Y>, Double>();
+                                new HashMap<>();
     private Timeline seriesRemoveTimeline = null;
     // -------------- PUBLIC PROPERTIES ----------------------------------------
 
@@ -193,8 +193,8 @@ public class LineChart<X,Y> extends XYChart<X,Y> {
         final Axis<Y> ya = getYAxis();
         List<X> xData = null;
         List<Y> yData = null;
-        if(xa.isAutoRanging()) xData = new ArrayList<X>();
-        if(ya.isAutoRanging()) yData = new ArrayList<Y>();
+        if(xa.isAutoRanging()) xData = new ArrayList<>();
+        if(ya.isAutoRanging()) yData = new ArrayList<>();
         if(xData != null || yData != null) {
             for(Series<X,Y> series : getData()) {
                 for(Data<X,Y> data: series.getData()) {
@@ -404,7 +404,7 @@ public class LineChart<X,Y> extends XYChart<X,Y> {
         }
         getPlotChildren().add(seriesLine);
 
-        List<KeyFrame> keyFrames = new ArrayList<KeyFrame>();
+        List<KeyFrame> keyFrames = new ArrayList<>();
         if (shouldAnimate()) {
             // animate in new series
             keyFrames.add(new KeyFrame(Duration.ZERO,
@@ -546,7 +546,7 @@ public class LineChart<X,Y> extends XYChart<X,Y> {
 
     private static class StyleableProperties {
         private static final CssMetaData<LineChart<?,?>,Boolean> CREATE_SYMBOLS =
-            new CssMetaData<LineChart<?,?>,Boolean>("-fx-create-symbols",
+            new CssMetaData<>("-fx-create-symbols",
                 BooleanConverter.getInstance(), Boolean.TRUE) {
 
             @Override
@@ -563,7 +563,7 @@ public class LineChart<X,Y> extends XYChart<X,Y> {
         private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
         static {
             final List<CssMetaData<? extends Styleable, ?>> styleables =
-                new ArrayList<CssMetaData<? extends Styleable, ?>>(XYChart.getClassCssMetaData());
+                new ArrayList<>(XYChart.getClassCssMetaData());
             styleables.add(CREATE_SYMBOLS);
             STYLEABLES = Collections.unmodifiableList(styleables);
         }

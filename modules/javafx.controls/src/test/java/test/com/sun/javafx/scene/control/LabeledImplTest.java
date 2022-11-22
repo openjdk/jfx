@@ -161,7 +161,7 @@ public class LabeledImplTest {
     @Parameters
     public static Collection<Configuration[]> data() {
 
-        Collection<Configuration[]> data = new ArrayList<Configuration[]>();
+        Collection<Configuration[]> data = new ArrayList<>();
 
         List<CssMetaData<? extends Styleable, ?>> styleables = LabeledImplShim.STYLEABLES_TO_MIRROR;
         for(CssMetaData<? extends Styleable, ?> styleable : styleables) {

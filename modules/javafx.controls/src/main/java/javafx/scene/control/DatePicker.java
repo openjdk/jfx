@@ -212,7 +212,7 @@ public class DatePicker extends ComboBoxBase<LocalDate> {
     }
     public final ObjectProperty<Callback<DatePicker, DateCell>> dayCellFactoryProperty() {
         if (dayCellFactory == null) {
-            dayCellFactory = new SimpleObjectProperty<Callback<DatePicker, DateCell>>(this, "dayCellFactory");
+            dayCellFactory = new SimpleObjectProperty<>(this, "dayCellFactory");
         }
         return dayCellFactory;
     }
@@ -237,7 +237,7 @@ public class DatePicker extends ComboBoxBase<LocalDate> {
         return chronology;
     }
     private ObjectProperty<Chronology> chronology =
-        new SimpleObjectProperty<Chronology>(this, "chronology", null);
+        new SimpleObjectProperty<>(this, "chronology", null);
     public final Chronology getChronology() {
         Chronology chrono = chronology.get();
         if (chrono == null) {
@@ -392,7 +392,7 @@ public class DatePicker extends ComboBoxBase<LocalDate> {
      */
     public final ObjectProperty<StringConverter<LocalDate>> converterProperty() { return converter; }
     private ObjectProperty<StringConverter<LocalDate>> converter =
-            new SimpleObjectProperty<StringConverter<LocalDate>>(this, "converter", null);
+            new SimpleObjectProperty<>(this, "converter", null);
     public final void setConverter(StringConverter<LocalDate> value) { converterProperty().set(value); }
     public final StringConverter<LocalDate> getConverter() {
         StringConverter<LocalDate> converter = converterProperty().get();
@@ -479,7 +479,7 @@ public class DatePicker extends ComboBoxBase<LocalDate> {
         private static final String country =
             Locale.getDefault(Locale.Category.FORMAT).getCountry();
         private static final CssMetaData<DatePicker, Boolean> SHOW_WEEK_NUMBERS =
-              new CssMetaData<DatePicker, Boolean>("-fx-show-week-numbers",
+              new CssMetaData<>("-fx-show-week-numbers",
                    BooleanConverter.getInstance(),
                    (!country.isEmpty() &&
                     ControlResources.getNonTranslatableString("DatePicker.showWeekNumbers").contains(country))) {
@@ -496,7 +496,7 @@ public class DatePicker extends ComboBoxBase<LocalDate> {
 
         static {
             final List<CssMetaData<? extends Styleable, ?>> styleables =
-                new ArrayList<CssMetaData<? extends Styleable, ?>>(Control.getClassCssMetaData());
+                new ArrayList<>(Control.getClassCssMetaData());
             Collections.addAll(styleables,
                 SHOW_WEEK_NUMBERS
             );

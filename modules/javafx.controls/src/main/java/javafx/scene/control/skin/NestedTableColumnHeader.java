@@ -564,7 +564,7 @@ public class NestedTableColumnHeader extends TableColumnHeader {
     private void updateContent() {
         // create a temporary list so we only do addAll into the main content
         // observableArrayList once.
-        final List<Node> content = new ArrayList<Node>();
+        final List<Node> content = new ArrayList<>();
 
         // the label is the region that sits above the children columns
         content.add(label);

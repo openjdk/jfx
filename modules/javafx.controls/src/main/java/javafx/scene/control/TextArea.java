@@ -87,7 +87,7 @@ public class TextArea extends TextInputControl {
     // Text area content model
     private static final class TextAreaContent implements Content {
         private ExpressionHelper<String> helper = null;
-        private ArrayList<StringBuilder> paragraphs = new ArrayList<StringBuilder>();
+        private ArrayList<StringBuilder> paragraphs = new ArrayList<>();
         private int contentLength = 0;
         private ParagraphList paragraphList = new ParagraphList();
         private ListListenerHelper<CharSequence> listenerHelper;
@@ -154,7 +154,7 @@ public class TextArea extends TextInputControl {
             int length = text.length();
             if (length > 0) {
                 // Split the text into lines
-                ArrayList<StringBuilder> lines = new ArrayList<StringBuilder>();
+                ArrayList<StringBuilder> lines = new ArrayList<>();
 
                 StringBuilder line = new StringBuilder(DEFAULT_PARAGRAPH_CAPACITY);
                 for (int i = 0; i < length; i++) {
@@ -281,7 +281,7 @@ public class TextArea extends TextInputControl {
                         Collections.singletonList((CharSequence)trailingParagraph));
 
                     if (trailingParagraphIndex - leadingParagraphIndex > 0) {
-                        List<CharSequence> removed = new ArrayList<CharSequence>(paragraphs.subList(leadingParagraphIndex,
+                        List<CharSequence> removed = new ArrayList<>(paragraphs.subList(leadingParagraphIndex,
                             trailingParagraphIndex));
                         paragraphs.subList(leadingParagraphIndex,
                             trailingParagraphIndex).clear();
@@ -633,7 +633,7 @@ public class TextArea extends TextInputControl {
 
     private static class StyleableProperties {
         private static final CssMetaData<TextArea,Number> PREF_COLUMN_COUNT =
-            new CssMetaData<TextArea,Number>("-fx-pref-column-count",
+            new CssMetaData<>("-fx-pref-column-count",
                 SizeConverter.getInstance(), DEFAULT_PREF_COLUMN_COUNT) {
 
             @Override
@@ -648,7 +648,7 @@ public class TextArea extends TextInputControl {
         };
 
         private static final CssMetaData<TextArea,Number> PREF_ROW_COUNT =
-            new CssMetaData<TextArea,Number>("-fx-pref-row-count",
+            new CssMetaData<>("-fx-pref-row-count",
                 SizeConverter.getInstance(), DEFAULT_PREF_ROW_COUNT) {
 
             @Override
@@ -663,7 +663,7 @@ public class TextArea extends TextInputControl {
         };
 
         private static final CssMetaData<TextArea,Boolean> WRAP_TEXT =
-            new CssMetaData<TextArea,Boolean>("-fx-wrap-text",
+            new CssMetaData<>("-fx-wrap-text",
                 StyleConverter.getBooleanConverter(), false) {
 
             @Override
@@ -680,7 +680,7 @@ public class TextArea extends TextInputControl {
         private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
         static {
             final List<CssMetaData<? extends Styleable, ?>> styleables =
-                new ArrayList<CssMetaData<? extends Styleable, ?>>(TextInputControl.getClassCssMetaData());
+                new ArrayList<>(TextInputControl.getClassCssMetaData());
             styleables.add(PREF_COLUMN_COUNT);
             styleables.add(PREF_ROW_COUNT);
             styleables.add(WRAP_TEXT);

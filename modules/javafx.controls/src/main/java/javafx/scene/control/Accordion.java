@@ -111,7 +111,7 @@ public class Accordion extends Control {
      **************************************************************************/
 
     // The ObservableList of TitlePanes to use in this Accordion.
-    private final ObservableList<TitledPane> panes = new TrackableObservableList<TitledPane>() {
+    private final ObservableList<TitledPane> panes = new TrackableObservableList<>() {
         @Override protected void onChanged(ListChangeListener.Change<TitledPane> c) {
             // If one of the removed panes was the expandedPane, then clear
             // the expandedPane property. This can only be done if expandedPane
@@ -137,7 +137,7 @@ public class Accordion extends Control {
      **************************************************************************/
 
     // --- Expanded Pane
-    private ObjectProperty<TitledPane> expandedPane = new ObjectPropertyBase<TitledPane>() {
+    private ObjectProperty<TitledPane> expandedPane = new ObjectPropertyBase<>() {
 
         private TitledPane oldValue;
 

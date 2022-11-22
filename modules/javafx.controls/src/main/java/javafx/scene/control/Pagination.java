@@ -303,7 +303,7 @@ public class Pagination extends Control {
     public final IntegerProperty currentPageIndexProperty() { return currentPageIndex; }
 
     private ObjectProperty<Callback<Integer, Node>> pageFactory =
-            new SimpleObjectProperty<Callback<Integer, Node>>(this, "pageFactory");
+            new SimpleObjectProperty<>(this, "pageFactory");
 
     /**
      * Sets the page factory callback function.
@@ -353,7 +353,7 @@ public class Pagination extends Control {
 
     private static class StyleableProperties {
         private static final CssMetaData<Pagination,Number> MAX_PAGE_INDICATOR_COUNT =
-            new CssMetaData<Pagination,Number>("-fx-max-page-indicator-count",
+            new CssMetaData<>("-fx-max-page-indicator-count",
                 SizeConverter.getInstance(), DEFAULT_MAX_PAGE_INDICATOR_COUNT) {
 
             @Override
@@ -369,7 +369,7 @@ public class Pagination extends Control {
         private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
         static {
             final List<CssMetaData<? extends Styleable, ?>> styleables =
-                new ArrayList<CssMetaData<? extends Styleable, ?>>(Control.getClassCssMetaData());
+                new ArrayList<>(Control.getClassCssMetaData());
             styleables.add(MAX_PAGE_INDICATOR_COUNT);
             STYLEABLES = Collections.unmodifiableList(styleables);
         }

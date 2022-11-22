@@ -116,7 +116,7 @@ public class Label extends Labeled {
      */
     public ObjectProperty<Node> labelForProperty() {
         if (labelFor == null) {
-            labelFor = new ObjectPropertyBase<Node>() {
+            labelFor = new ObjectPropertyBase<>() {
                 Node oldValue = null;
                 @Override protected void invalidated() {
                     if (oldValue != null) {

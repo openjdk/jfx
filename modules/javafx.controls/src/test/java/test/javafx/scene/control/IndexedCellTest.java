@@ -39,7 +39,7 @@ public class IndexedCellTest {
     private IndexedCell<String> cell;
 
     @Before public void setup() {
-        cell = new IndexedCell<String>();
+        cell = new IndexedCell<>();
     }
 
     @Test public void defaultStyleClassShouldBe_indexed_cell() {

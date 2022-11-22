@@ -178,21 +178,21 @@ public class SpinnerTest {
      **************************************************************************/
 
     @Test public void createIntSpinner_createValidValueFactory() {
-        Spinner<Integer> intSpinner = new Spinner<Integer>(0, 10, 5, 1);
+        Spinner<Integer> intSpinner = new Spinner<>(0, 10, 5, 1);
         assertTrue(intSpinner.getValueFactory() instanceof IntegerSpinnerValueFactory);
         IntegerSpinnerValueFactory valueFactory = (IntegerSpinnerValueFactory) intSpinner.getValueFactory();
         assertEquals(5, (int) valueFactory.getValue());
     }
 
     @Test public void createIntSpinner_setInitialValueOutsideMaxBounds() {
-        Spinner<Integer> intSpinner = new Spinner<Integer>(0, 10, 100, 1);
+        Spinner<Integer> intSpinner = new Spinner<>(0, 10, 100, 1);
         assertTrue(intSpinner.getValueFactory() instanceof IntegerSpinnerValueFactory);
         IntegerSpinnerValueFactory valueFactory = (IntegerSpinnerValueFactory) intSpinner.getValueFactory();
         assertEquals(0, (int) valueFactory.getValue());
     }
 
     @Test public void createIntSpinner_setInitialValueOutsideMinBounds() {
-        Spinner<Integer> intSpinner = new Spinner<Integer>(0, 10, -100, 1);
+        Spinner<Integer> intSpinner = new Spinner<>(0, 10, -100, 1);
         assertTrue(intSpinner.getValueFactory() instanceof IntegerSpinnerValueFactory);
         IntegerSpinnerValueFactory valueFactory = (IntegerSpinnerValueFactory) intSpinner.getValueFactory();
         assertEquals(0, (int) valueFactory.getValue());
@@ -206,7 +206,7 @@ public class SpinnerTest {
     }
 
     @Test public void createListSpinner_emptyListResultsInNullValue() {
-        Spinner<String> stringSpinner = new Spinner<String>(FXCollections.observableArrayList());
+        Spinner<String> stringSpinner = new Spinner<>(FXCollections.observableArrayList());
         assertTrue(stringSpinner.getValueFactory() instanceof ListSpinnerValueFactory);
         ListSpinnerValueFactory valueFactory = (ListSpinnerValueFactory) stringSpinner.getValueFactory();
         assertNull(valueFactory.getValue());

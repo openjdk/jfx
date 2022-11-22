@@ -81,7 +81,7 @@ public class FXVKSkin extends SkinBase<FXVK> {
     private static final int GAP = 6;
 
     private List<List<Key>> currentBoard;
-    private static HashMap<String, List<List<Key>>> boardMap = new HashMap<String, List<List<Key>>>();
+    private static HashMap<String, List<List<Key>>> boardMap = new HashMap<>();
     private int numCols;
 
     private boolean capsDown = false;
@@ -567,7 +567,7 @@ public class FXVKSkin extends SkinBase<FXVK> {
             int nKeysPerRow = (int)Math.ceil(nKeys / (double)nRows);
 
             Key tmpKey;
-            List<List<Key>> rows = new ArrayList<List<Key>>(2);
+            List<List<Key>> rows = new ArrayList<>(2);
 
             for (int i = 0; i < nRows; i++) {
                 int start = i * nKeysPerRow;
@@ -575,7 +575,7 @@ public class FXVKSkin extends SkinBase<FXVK> {
                 if (start >= end)
                     break;
 
-                List<Key> keys = new ArrayList<Key>(nKeysPerRow);
+                List<Key> keys = new ArrayList<>(nKeysPerRow);
                 for (int j = start; j < end; j++) {
                     tmpKey = new CharKey(secondaryVK.chars[j], null, null);
                     tmpKey.col= (j - start) * 2;
@@ -906,7 +906,7 @@ public class FXVKSkin extends SkinBase<FXVK> {
             }
 
             secondaryVK.chars=null;
-            ArrayList<String> secondaryList = new ArrayList<String>();
+            ArrayList<String> secondaryList = new ArrayList<>();
 
             // Add primary character
             if (!isSymbol) {
@@ -1008,8 +1008,8 @@ public class FXVKSkin extends SkinBase<FXVK> {
 
         String boardFileName = type.substring(0,1).toUpperCase() + type.substring(1).toLowerCase() + "Board.txt";
         try {
-            tmpBoard = new ArrayList<List<Key>>(5);
-            List<Key> keys = new ArrayList<Key>(20);
+            tmpBoard = new ArrayList<>(5);
+            List<Key> keys = new ArrayList<>(20);
 
             InputStream boardFile = FXVKSkin.class.getResourceAsStream(boardFileName);
             BufferedReader reader = new BufferedReader(new InputStreamReader(boardFile, "UTF-8"));
@@ -1024,7 +1024,7 @@ public class FXVKSkin extends SkinBase<FXVK> {
             // Whether the "chars" is an identifier, like $shift or $SymbolBoard, etc.
             boolean identifier = false;
             // The textual content of the Key
-            List<String> charsList = new ArrayList<String>(10);
+            List<String> charsList = new ArrayList<>(10);
 
             while ((line = reader.readLine()) != null) {
                 if (line.length() == 0 || line.charAt(0) == '#') {
@@ -1040,7 +1040,7 @@ public class FXVKSkin extends SkinBase<FXVK> {
                     } else if (ch == '[') {
                         // Start of a key
                         col = c;
-                        charsList = new ArrayList<String>(10);
+                        charsList = new ArrayList<>(10);
                         identifier = false;
                     } else if (ch == ']') {
                         String chars = "";
@@ -1211,7 +1211,7 @@ public class FXVKSkin extends SkinBase<FXVK> {
                 c = 0;
                 col = 0;
                 tmpBoard.add(keys);
-                keys = new ArrayList<Key>(20);
+                keys = new ArrayList<>(20);
             }
             reader.close();
             boardMap.put(type, tmpBoard);

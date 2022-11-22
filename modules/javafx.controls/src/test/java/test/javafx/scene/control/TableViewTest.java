@@ -237,7 +237,7 @@ public class TableViewTest {
 
     @Test public void selectionModelCanBeBound() {
         TableView.TableViewSelectionModel<String> sm = TableViewShim.<String>get_TableViewArrayListSelectionModel(table);
-        ObjectProperty<TableView.TableViewSelectionModel<String>> other = new SimpleObjectProperty<TableView.TableViewSelectionModel<String>>(sm);
+        ObjectProperty<TableView.TableViewSelectionModel<String>> other = new SimpleObjectProperty<>(sm);
         table.selectionModelProperty().bind(other);
         assertSame(sm, sm);
     }
@@ -440,9 +440,9 @@ public class TableViewTest {
     @Test
     public void testSortOrderCleanup() {
         TableView table = new TableView();
-        TableColumn<String,String> first = new TableColumn<String,String>("first");
+        TableColumn<String,String> first = new TableColumn<>("first");
         first.setCellValueFactory(new PropertyValueFactory("firstName"));
-        TableColumn<String,String> second = new TableColumn<String,String>("second");
+        TableColumn<String,String> second = new TableColumn<>("second");
         second.setCellValueFactory(new PropertyValueFactory("lastName"));
         table.getColumns().addAll(first, second);
         table.getSortOrder().setAll(first, second);
@@ -474,9 +474,9 @@ public class TableViewTest {
             };
 
     private TableColumn<String, String> initSortTestStructure() {
-        TableColumn<String, String> col = new TableColumn<String, String>("column");
+        TableColumn<String, String> col = new TableColumn<>("column");
         col.setSortType(ASCENDING);
-        col.setCellValueFactory(param -> new ReadOnlyObjectWrapper<String>(param.getValue()));
+        col.setCellValueFactory(param -> new ReadOnlyObjectWrapper<>(param.getValue()));
         table.getColumns().add(col);
         table.getItems().addAll("Apple", "Orange", "Banana");
         return col;
@@ -961,7 +961,7 @@ public class TableViewTest {
     }
 
     @Test public void test_rt18339_onlyEditWhenTableViewIsEditable_tableEditableIsFalse_columnEditableIsFalse() {
-        TableColumn<String,String> first = new TableColumn<String,String>("first");
+        TableColumn<String,String> first = new TableColumn<>("first");
         first.setEditable(false);
         table.getColumns().add(first);
         table.setEditable(false);
@@ -970,7 +970,7 @@ public class TableViewTest {
     }
 
     @Test public void test_rt18339_onlyEditWhenTableViewIsEditable_tableEditableIsFalse_columnEditableIsTrue() {
-        TableColumn<String,String> first = new TableColumn<String,String>("first");
+        TableColumn<String,String> first = new TableColumn<>("first");
         first.setEditable(true);
         table.getColumns().add(first);
         table.setEditable(false);
@@ -979,7 +979,7 @@ public class TableViewTest {
     }
 
     @Test public void test_rt18339_onlyEditWhenTableViewIsEditable_tableEditableIsTrue_columnEditableIsFalse() {
-        TableColumn<String,String> first = new TableColumn<String,String>("first");
+        TableColumn<String,String> first = new TableColumn<>("first");
         first.setEditable(false);
         table.getColumns().add(first);
         table.setEditable(true);
@@ -988,7 +988,7 @@ public class TableViewTest {
     }
 
     @Test public void test_rt18339_onlyEditWhenTableViewIsEditable_tableEditableIsTrue_columnEditableIsTrue() {
-        TableColumn<String,String> first = new TableColumn<String,String>("first");
+        TableColumn<String,String> first = new TableColumn<>("first");
         first.setEditable(true);
         table.getColumns().add(first);
         table.setEditable(true);
@@ -1039,7 +1039,7 @@ public class TableViewTest {
     }
 
     @Test public void test_rt28534() {
-        TableView<Person> table = new TableView<Person>();
+        TableView<Person> table = new TableView<>();
         table.setItems(personTestData);
 
         TableColumn firstNameCol = new TableColumn("First Name");

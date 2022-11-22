@@ -237,7 +237,7 @@ public class RadioMenuItemTest {
 
     @Test public void toggleGroupCanBeBound() {
         ToggleGroup tg = new ToggleGroup();
-        SimpleObjectProperty<ToggleGroup> other = new SimpleObjectProperty<ToggleGroup>(rmi, "toggleGroup", tg);
+        SimpleObjectProperty<ToggleGroup> other = new SimpleObjectProperty<>(rmi, "toggleGroup", tg);
         rmi.toggleGroupProperty().bind(other);
         assertSame(tg, rmi.getToggleGroup());
     }

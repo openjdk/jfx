@@ -70,7 +70,7 @@ public class StackedBarChart<X, Y> extends XYChart<X, Y> {
     private CategoryAxis categoryAxis;
     private ValueAxis valueAxis;
     // RT-23125 handling data removal when a category is removed.
-    private ListChangeListener<String> categoriesListener = new ListChangeListener<String>() {
+    private ListChangeListener<String> categoriesListener = new ListChangeListener<>() {
         @Override public void onChanged(ListChangeListener.Change<? extends String> c) {
             while (c.next()) {
                 for(String cat : c.getRemoved()) {
@@ -198,11 +198,11 @@ public class StackedBarChart<X, Y> extends XYChart<X, Y> {
         Map<String, List<Data<X, Y>>> categoryMap = seriesCategoryMap.get(series);
 
         if (categoryMap == null) {
-            categoryMap = new HashMap<String, List<Data<X, Y>>>();
+            categoryMap = new HashMap<>();
             seriesCategoryMap.put(series, categoryMap);
         }
         // list to hold more that one bar "positive and negative"
-        List<Data<X, Y>> itemList = categoryMap.get(category) != null ? categoryMap.get(category) : new ArrayList<Data<X, Y>>();
+        List<Data<X, Y>> itemList = categoryMap.get(category) != null ? categoryMap.get(category) : new ArrayList<>();
         itemList.add(item);
         categoryMap.put(category, itemList);
 //        categoryMap.put(category, item);
@@ -270,7 +270,7 @@ public class StackedBarChart<X, Y> extends XYChart<X, Y> {
     @Override protected void seriesAdded(Series<X, Y> series, int seriesIndex) {
         // handle any data already in series
         // create entry in the map
-        Map<String, List<Data<X, Y>>> categoryMap = new HashMap<String, List<Data<X, Y>>>();
+        Map<String, List<Data<X, Y>>> categoryMap = new HashMap<>();
         for (int j = 0; j < series.getData().size(); j++) {
             Data<X, Y> item = series.getData().get(j);
             Node bar = createBar(series, seriesIndex, item, j);
@@ -281,7 +281,7 @@ public class StackedBarChart<X, Y> extends XYChart<X, Y> {
                 category = (String) item.getYValue();
             }
             // list of two item positive and negative
-            List<Data<X, Y>> itemList = categoryMap.get(category) != null ? categoryMap.get(category) : new ArrayList<Data<X, Y>>();
+            List<Data<X, Y>> itemList = categoryMap.get(category) != null ? categoryMap.get(category) : new ArrayList<>();
             itemList.add(item);
             categoryMap.put(category, itemList);
             if (shouldAnimate()) {
@@ -542,7 +542,7 @@ public class StackedBarChart<X, Y> extends XYChart<X, Y> {
     private List<Data<X, Y>> getDataItem(Series<X, Y> series, String category) {
         Map<String, List<Data<X, Y>>> catmap = seriesCategoryMap.get(series);
         return catmap != null ? catmap.get(category) != null ?
-            catmap.get(category) : new ArrayList<Data<X, Y>>() : new ArrayList<Data<X, Y>>();
+            catmap.get(category) : new ArrayList<>() : new ArrayList<>();
     }
 
 // -------------- STYLESHEET HANDLING ------------------------------------------------------------------------------
@@ -553,7 +553,7 @@ public class StackedBarChart<X, Y> extends XYChart<X, Y> {
     private static class StyleableProperties {
 
         private static final CssMetaData<StackedBarChart<?,?>,Number> CATEGORY_GAP =
-            new CssMetaData<StackedBarChart<?,?>,Number>("-fx-category-gap",
+            new CssMetaData<>("-fx-category-gap",
                 SizeConverter.getInstance(), 10.0)  {
 
             @Override

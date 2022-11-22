@@ -301,7 +301,7 @@ public class ButtonBarSkin extends SkinBase<ButtonBar> {
             String type =  getButtonType(btn);
             List<Node> typedButtons = buttonMap.get(type);
             if ( typedButtons == null ) {
-                typedButtons = new ArrayList<Node>();
+                typedButtons = new ArrayList<>();
                 buttonMap.put(type, typedButtons);
             }
             typedButtons.add( btn );

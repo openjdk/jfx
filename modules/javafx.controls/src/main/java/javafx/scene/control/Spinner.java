@@ -352,7 +352,7 @@ public class Spinner<T> extends Control {
      * @param items A list of items that will be stepped through in the Spinner.
      */
     public Spinner(@NamedArg("items") ObservableList<T> items) {
-        this(new SpinnerValueFactory.ListSpinnerValueFactory<T>(items));
+        this(new SpinnerValueFactory.ListSpinnerValueFactory<>(items));
     }
 
     /**
@@ -506,7 +506,7 @@ public class Spinner<T> extends Control {
      * spinner.getValueFactory().setValue(newValue);
      * }</pre>
      */
-    private ReadOnlyObjectWrapper<T> value = new ReadOnlyObjectWrapper<T>(this, "value");
+    private ReadOnlyObjectWrapper<T> value = new ReadOnlyObjectWrapper<>(this, "value");
     public final T getValue() {
         return value.get();
     }
@@ -533,7 +533,7 @@ public class Spinner<T> extends Control {
      * </ul>
      */
     private ObjectProperty<SpinnerValueFactory<T>> valueFactory =
-            new SimpleObjectProperty<SpinnerValueFactory<T>>(this, "valueFactory") {
+            new SimpleObjectProperty<>(this, "valueFactory") {
                 @Override protected void invalidated() {
                     value.unbind();
 
@@ -680,7 +680,7 @@ public class Spinner<T> extends Control {
      **************************************************************************/
 
     private static final CssMetaData<Spinner<?>,Duration> INITIAL_DELAY =
-                                    new CssMetaData<Spinner<?>,Duration>("-fx-initial-delay",
+                                    new CssMetaData<>("-fx-initial-delay",
                                         DurationConverter.getInstance(), new Duration(300)) {
 
         @Override
@@ -695,7 +695,7 @@ public class Spinner<T> extends Control {
     };
 
     private static final CssMetaData<Spinner<?>,Duration> REPEAT_DELAY =
-                                   new CssMetaData<Spinner<?>,Duration>("-fx-repeat-delay",
+                                   new CssMetaData<>("-fx-repeat-delay",
                                         DurationConverter.getInstance(), new Duration(60)) {
 
         @Override

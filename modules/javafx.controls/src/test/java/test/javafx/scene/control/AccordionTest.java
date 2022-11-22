@@ -150,7 +150,7 @@ public class AccordionTest {
         TitledPane a = new TitledPane();
         TitledPane b = new TitledPane();
         TitledPane c = new TitledPane();
-        ObservableValue<TitledPane> value = new SimpleObjectProperty<TitledPane>(b);
+        ObservableValue<TitledPane> value = new SimpleObjectProperty<>(b);
         accordion.getPanes().addAll(a, b, c);
         accordion.expandedPaneProperty().bind(value);
         accordion.getPanes().removeAll(b, c);

@@ -140,7 +140,7 @@ public class LabelTest {
 
     @Test public void labelForCanBeBound() {
         TextField textField = new TextField();
-        ObjectProperty<TextField> other = new SimpleObjectProperty<TextField>(textField);
+        ObjectProperty<TextField> other = new SimpleObjectProperty<>(textField);
         label.labelForProperty().bind(other);
         assertSame(textField, label.getLabelFor());
         other.set(null);
@@ -189,7 +189,7 @@ public class LabelTest {
 
     @Test public void settingLabelForShouldAddListenerToShowMnemonics_WhenBound() {
         TextField textField = new TextField();
-        ObjectProperty<TextField> other = new SimpleObjectProperty<TextField>(textField);
+        ObjectProperty<TextField> other = new SimpleObjectProperty<>(textField);
         label.labelForProperty().bind(other);
         assertEquals(1, getListenerCount(NodeHelper.showMnemonicsProperty(textField)));
     }
@@ -210,7 +210,7 @@ public class LabelTest {
 
     @Test public void clearingLabelForShouldRemoveListenerFromShowMnemonics_WhenBound() {
         TextField textField = new TextField();
-        ObjectProperty<TextField> other = new SimpleObjectProperty<TextField>(textField);
+        ObjectProperty<TextField> other = new SimpleObjectProperty<>(textField);
         label.labelForProperty().bind(other);
         other.set(null);
         assertEquals(0, getListenerCount(NodeHelper.showMnemonicsProperty(textField)));
@@ -237,7 +237,7 @@ public class LabelTest {
     @Test public void swappingLabelForShouldAddAndRemoveListenerFromShowMnemonics_WhenBound() {
         TextField a = new TextField();
         TextField b = new TextField();
-        ObjectProperty<TextField> other = new SimpleObjectProperty<TextField>(a);
+        ObjectProperty<TextField> other = new SimpleObjectProperty<>(a);
         label.labelForProperty().bind(other);
         other.set(b);
         assertEquals(0, getListenerCount(NodeHelper.showMnemonicsProperty(a)));

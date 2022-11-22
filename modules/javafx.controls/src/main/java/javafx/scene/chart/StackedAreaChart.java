@@ -352,7 +352,7 @@ public class StackedAreaChart<X,Y> extends XYChart<X,Y> {
             seriesYAnimMultiplier.setValue(1d);
         }
         getPlotChildren().add(areaGroup);
-        List<KeyFrame> keyFrames = new ArrayList<KeyFrame>();
+        List<KeyFrame> keyFrames = new ArrayList<>();
         if (shouldAnimate()) {
             // animate in new series
             keyFrames.add(new KeyFrame(Duration.ZERO,
@@ -861,7 +861,7 @@ public class StackedAreaChart<X,Y> extends XYChart<X,Y> {
     private static class StyleableProperties {
 
         private static final CssMetaData<StackedAreaChart<?, ?>, Boolean> CREATE_SYMBOLS =
-                new CssMetaData<StackedAreaChart<?, ?>, Boolean>("-fx-create-symbols",
+                new CssMetaData<>("-fx-create-symbols",
                 BooleanConverter.getInstance(), Boolean.TRUE) {
             @Override
             public boolean isSettable(StackedAreaChart<?,?> node) {
@@ -878,7 +878,7 @@ public class StackedAreaChart<X,Y> extends XYChart<X,Y> {
 
         static {
             final List<CssMetaData<? extends Styleable, ?>> styleables =
-                new ArrayList<CssMetaData<? extends Styleable, ?>>(XYChart.getClassCssMetaData());
+                new ArrayList<>(XYChart.getClassCssMetaData());
             styleables.add(CREATE_SYMBOLS);
             STYLEABLES = Collections.unmodifiableList(styleables);
 

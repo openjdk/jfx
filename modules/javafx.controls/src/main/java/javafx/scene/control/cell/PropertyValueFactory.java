@@ -174,7 +174,7 @@ public class PropertyValueFactory<S,T> implements Callback<CellDataFeatures<S,T>
                 // create a new PropertyReference
                 this.columnClass = rowData.getClass();
                 this.previousProperty = getProperty();
-                this.propertyRef = new PropertyReference<T>(rowData.getClass(), getProperty());
+                this.propertyRef = new PropertyReference<>(rowData.getClass(), getProperty());
             }
 
             if (propertyRef != null) {
@@ -182,7 +182,7 @@ public class PropertyValueFactory<S,T> implements Callback<CellDataFeatures<S,T>
                     return propertyRef.getProperty(rowData);
                 } else {
                     T value = propertyRef.get(rowData);
-                    return new ReadOnlyObjectWrapper<T>(value);
+                    return new ReadOnlyObjectWrapper<>(value);
                 }
             }
         } catch (RuntimeException e) {

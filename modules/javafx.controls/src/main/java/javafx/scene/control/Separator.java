@@ -251,8 +251,8 @@ public class Separator extends Control {
 
     private static class StyleableProperties {
         private static final CssMetaData<Separator,Orientation> ORIENTATION =
-                new CssMetaData<Separator,Orientation>("-fx-orientation",
-                new EnumConverter<Orientation>(Orientation.class),
+                new CssMetaData<>("-fx-orientation",
+                new EnumConverter<>(Orientation.class),
                 Orientation.HORIZONTAL) {
 
             @Override
@@ -273,8 +273,8 @@ public class Separator extends Control {
         };
 
         private static final CssMetaData<Separator,HPos> HALIGNMENT =
-                new CssMetaData<Separator,HPos>("-fx-halignment",
-                new EnumConverter<HPos>(HPos.class),
+                new CssMetaData<>("-fx-halignment",
+                new EnumConverter<>(HPos.class),
                 HPos.CENTER) {
 
             @Override
@@ -289,8 +289,8 @@ public class Separator extends Control {
         };
 
         private static final CssMetaData<Separator,VPos> VALIGNMENT =
-                new CssMetaData<Separator,VPos>("-fx-valignment",
-                new EnumConverter<VPos>(VPos.class),
+                new CssMetaData<>("-fx-valignment",
+                new EnumConverter<>(VPos.class),
                 VPos.CENTER){
 
             @Override
@@ -307,7 +307,7 @@ public class Separator extends Control {
         private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
         static {
             final List<CssMetaData<? extends Styleable, ?>> styleables =
-                new ArrayList<CssMetaData<? extends Styleable, ?>>(Control.getClassCssMetaData());
+                new ArrayList<>(Control.getClassCssMetaData());
             styleables.add(ORIENTATION);
             styleables.add(HALIGNMENT);
             styleables.add(VALIGNMENT);

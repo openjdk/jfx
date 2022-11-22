@@ -82,7 +82,7 @@ public class SliderSkin extends SkinBase<Slider> {
 
     private final SliderBehavior behavior;
 
-    StringConverter<Number> stringConverterWrapper = new StringConverter<Number>() {
+    StringConverter<Number> stringConverterWrapper = new StringConverter<>() {
         Slider slider = getSkinnable();
         @Override public String toString(Number object) {
             return(object != null) ? slider.getLabelFormatter().toString(object.doubleValue()) : "";

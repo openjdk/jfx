@@ -383,7 +383,7 @@ public class Cell<T> extends Labeled {
      **************************************************************************/
 
     // --- item
-    private ObjectProperty<T> item = new SimpleObjectProperty<T>(this, "item");
+    private ObjectProperty<T> item = new SimpleObjectProperty<>(this, "item");
 
     /**
      * The data value associated with this Cell. This value is set by the

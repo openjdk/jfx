@@ -182,7 +182,7 @@ public class PieChart extends Chart {
     // -------------- PUBLIC PROPERTIES ----------------------------------------
 
     /** PieCharts data */
-    private ObjectProperty<ObservableList<Data>> data = new ObjectPropertyBase<ObservableList<Data>>() {
+    private ObjectProperty<ObservableList<Data>> data = new ObjectPropertyBase<>() {
         private ObservableList<Data> old;
         @Override protected void invalidated() {
             final ObservableList<Data> current = getValue();
@@ -195,7 +195,7 @@ public class PieChart extends Chart {
                 final int toIndex = (current != null) ? current.size() : 0;
                 // let data listener know all old data have been removed and new data that has been added
                 if (toIndex > 0 || !removed.isEmpty()) {
-                    dataChangeListener.onChanged(new NonIterableChange<Data>(0, toIndex, current){
+                    dataChangeListener.onChanged(new NonIterableChange<>(0, toIndex, current){
                         @Override public List<Data> getRemoved() { return removed; }
                         @Override public boolean wasPermutated() { return false; }
                         @Override protected int[] getPermutation() {
@@ -205,7 +205,7 @@ public class PieChart extends Chart {
                 }
             } else if (old != null && old.size() > 0) {
                 // let series listener know all old series have been removed
-                dataChangeListener.onChanged(new NonIterableChange<Data>(0, 0, current){
+                dataChangeListener.onChanged(new NonIterableChange<>(0, 0, current){
                     @Override public List<Data> getRemoved() { return old; }
                     @Override public boolean wasPermutated() { return false; }
                     @Override protected int[] getPermutation() {
@@ -851,7 +851,7 @@ public class PieChart extends Chart {
         /**
          * The chart which this data belongs to.
          */
-        private ReadOnlyObjectWrapper<PieChart> chart = new ReadOnlyObjectWrapper<PieChart>(this, "chart");
+        private ReadOnlyObjectWrapper<PieChart> chart = new ReadOnlyObjectWrapper<>(this, "chart");
 
         public final PieChart getChart() {
             return chart.getValue();
@@ -1029,7 +1029,7 @@ public class PieChart extends Chart {
      */
      private static class StyleableProperties {
          private static final CssMetaData<PieChart,Boolean> CLOCKWISE =
-             new CssMetaData<PieChart,Boolean>("-fx-clockwise",
+             new CssMetaData<>("-fx-clockwise",
                  BooleanConverter.getInstance(), Boolean.TRUE) {
 
             @Override
@@ -1044,7 +1044,7 @@ public class PieChart extends Chart {
         };
 
          private static final CssMetaData<PieChart,Boolean> LABELS_VISIBLE =
-             new CssMetaData<PieChart,Boolean>("-fx-pie-label-visible",
+             new CssMetaData<>("-fx-pie-label-visible",
                  BooleanConverter.getInstance(), Boolean.TRUE) {
 
             @Override
@@ -1059,7 +1059,7 @@ public class PieChart extends Chart {
         };
 
          private static final CssMetaData<PieChart,Number> LABEL_LINE_LENGTH =
-             new CssMetaData<PieChart,Number>("-fx-label-line-length",
+             new CssMetaData<>("-fx-label-line-length",
                  SizeConverter.getInstance(), 20d) {
 
             @Override
@@ -1074,7 +1074,7 @@ public class PieChart extends Chart {
         };
 
          private static final CssMetaData<PieChart,Number> START_ANGLE =
-             new CssMetaData<PieChart,Number>("-fx-start-angle",
+             new CssMetaData<>("-fx-start-angle",
                  SizeConverter.getInstance(), 0d) {
 
             @Override
@@ -1092,7 +1092,7 @@ public class PieChart extends Chart {
          static {
 
             final List<CssMetaData<? extends Styleable, ?>> styleables =
-                new ArrayList<CssMetaData<? extends Styleable, ?>>(Chart.getClassCssMetaData());
+                new ArrayList<>(Chart.getClassCssMetaData());
             styleables.add(CLOCKWISE);
             styleables.add(LABELS_VISIBLE);
             styleables.add(LABEL_LINE_LENGTH);

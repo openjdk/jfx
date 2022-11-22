@@ -70,7 +70,7 @@ public class MenuItemTest {
     private MenuItem menuItem;
 
     @BeforeClass public static void classSetup() {
-        eventType = new EventType<Event>(Event.ANY, "TEST_EVENT");
+        eventType = new EventType<>(Event.ANY, "TEST_EVENT");
     }
 
     @Before public void setup() {
@@ -279,7 +279,7 @@ public class MenuItemTest {
 
     @Test public void graphicCanBeBound() {
         Rectangle rect = new Rectangle();
-        SimpleObjectProperty<Node> other = new SimpleObjectProperty<Node>(menuItem, "graphic", rect);
+        SimpleObjectProperty<Node> other = new SimpleObjectProperty<>(menuItem, "graphic", rect);
         menuItem.graphicProperty().bind(other);
         assertSame(rect, menuItem.getGraphic());
     }
@@ -319,7 +319,7 @@ public class MenuItemTest {
 
     @Test public void onActionCanBeBound() {
         final EventHandler<ActionEvent> handler = new EventHandlerStub();
-        ObjectProperty<EventHandler<ActionEvent>> other = new SimpleObjectProperty<EventHandler<ActionEvent>>(handler);
+        ObjectProperty<EventHandler<ActionEvent>> other = new SimpleObjectProperty<>(handler);
         menuItem.onActionProperty().bind(other);
         assertEquals(handler, menuItem.getOnAction());
     }
@@ -440,7 +440,7 @@ public class MenuItemTest {
 
     @Test public void acceleratorCanBeBound() {
         KeyCombination kc = new KeyCharacterCombination("A", KeyCombination.ALT_DOWN);
-        SimpleObjectProperty<KeyCombination> other = new SimpleObjectProperty<KeyCombination>(menuItem, "accelerator", kc);
+        SimpleObjectProperty<KeyCombination> other = new SimpleObjectProperty<>(menuItem, "accelerator", kc);
         menuItem.acceleratorProperty().bind(other);
         assertEquals(kc, menuItem.getAccelerator());
     }

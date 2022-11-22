@@ -58,7 +58,7 @@ public class GlobalMenuAdapter extends Menu implements MenuBase {
         return new GlobalMenuAdapter(menu);
     }
 
-    private final ObservableList<MenuItemBase> items = new TrackableObservableList<MenuItemBase>() {
+    private final ObservableList<MenuItemBase> items = new TrackableObservableList<>() {
         @Override protected void onChanged(Change<MenuItemBase> c) {
         }
     };

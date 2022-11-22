@@ -271,7 +271,7 @@ public class CustomMenuItemTest {
 
     @Test public void contentCanBeBound() {
         Rectangle rect = new Rectangle();
-        SimpleObjectProperty<Node> other = new SimpleObjectProperty<Node>(cmi, "content", rect);
+        SimpleObjectProperty<Node> other = new SimpleObjectProperty<>(cmi, "content", rect);
         cmi.contentProperty().bind(other);
         assertEquals(rect, cmi.getContent());
     }

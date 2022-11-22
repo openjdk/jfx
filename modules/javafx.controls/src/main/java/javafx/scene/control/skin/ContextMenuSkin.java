@@ -85,7 +85,7 @@ public class ContextMenuSkin implements Skin<ContextMenu> {
      **************************************************************************/
 
     // Fix for RT-18247
-    private final EventHandler<KeyEvent> keyListener = new EventHandler<KeyEvent>() {
+    private final EventHandler<KeyEvent> keyListener = new EventHandler<>() {
         @Override public void handle(KeyEvent event) {
             if (event.getEventType() != KeyEvent.KEY_PRESSED) return;
 

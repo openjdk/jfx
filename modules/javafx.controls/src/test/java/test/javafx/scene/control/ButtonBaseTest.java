@@ -161,7 +161,7 @@ public class ButtonBaseTest {
 
     @Test public void onActionCanBeBound() {
         final EventHandler<ActionEvent> handler = new EventHandlerStub();
-        ObjectProperty<EventHandler<ActionEvent>> other = new SimpleObjectProperty<EventHandler<ActionEvent>>(handler);
+        ObjectProperty<EventHandler<ActionEvent>> other = new SimpleObjectProperty<>(handler);
         btn.onActionProperty().bind(other);
         assertEquals(handler, btn.getOnAction());
     }

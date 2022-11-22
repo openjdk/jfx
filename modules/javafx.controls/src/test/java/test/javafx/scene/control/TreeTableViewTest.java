@@ -154,24 +154,24 @@ public class TreeTableViewTest {
             private TreeItem<String> gregorySmith;
 
     @Before public void setup() {
-        treeTableView = new TreeTableView<String>();
+        treeTableView = new TreeTableView<>();
         sm = treeTableView.getSelectionModel();
         fm = treeTableView.getFocusModel();
 
         // build sample data #2, even though it may not be used...
-        myCompanyRootNode = new TreeItem<String>("MyCompany Human Resources");
-        salesDepartment = new TreeItem<String>("Sales Department");
-            ethanWilliams = new TreeItem<String>("Ethan Williams");
-            emmaJones = new TreeItem<String>("Emma Jones");
-            michaelBrown = new TreeItem<String>("Michael Brown");
-            annaBlack = new TreeItem<String>("Anna Black");
-            rodgerYork = new TreeItem<String>("Rodger York");
-            susanCollins = new TreeItem<String>("Susan Collins");
+        myCompanyRootNode = new TreeItem<>("MyCompany Human Resources");
+        salesDepartment = new TreeItem<>("Sales Department");
+            ethanWilliams = new TreeItem<>("Ethan Williams");
+            emmaJones = new TreeItem<>("Emma Jones");
+            michaelBrown = new TreeItem<>("Michael Brown");
+            annaBlack = new TreeItem<>("Anna Black");
+            rodgerYork = new TreeItem<>("Rodger York");
+            susanCollins = new TreeItem<>("Susan Collins");
 
-        itSupport = new TreeItem<String>("IT Support");
-            mikeGraham = new TreeItem<String>("Mike Graham");
-            judyMayer = new TreeItem<String>("Judy Mayer");
-            gregorySmith = new TreeItem<String>("Gregory Smith");
+        itSupport = new TreeItem<>("IT Support");
+            mikeGraham = new TreeItem<>("Mike Graham");
+            judyMayer = new TreeItem<>("Judy Mayer");
+            gregorySmith = new TreeItem<>("Gregory Smith");
 
         myCompanyRootNode.getChildren().setAll(
             salesDepartment,
@@ -200,10 +200,10 @@ public class TreeTableViewTest {
     }
 
     private void installChildren() {
-        root = new TreeItem<String>("Root");
-        child1 = new TreeItem<String>("Child 1");
-        child2 = new TreeItem<String>("Child 2");
-        child3 = new TreeItem<String>("Child 3");
+        root = new TreeItem<>("Root");
+        child1 = new TreeItem<>("Child 1");
+        child2 = new TreeItem<>("Child 2");
+        child3 = new TreeItem<>("Child 3");
         root.setExpanded(true);
         root.getChildren().setAll(child1, child2, child3);
         treeTableView.setRoot(root);
@@ -348,9 +348,9 @@ public class TreeTableViewTest {
 
     @Test public void testSortOrderCleanup() {
         TreeTableView treeTableView = new TreeTableView();
-        TreeTableColumn<String,String> first = new TreeTableColumn<String,String>("first");
+        TreeTableColumn<String,String> first = new TreeTableColumn<>("first");
         first.setCellValueFactory(new PropertyValueFactory("firstName"));
-        TreeTableColumn<String,String> second = new TreeTableColumn<String,String>("second");
+        TreeTableColumn<String,String> second = new TreeTableColumn<>("second");
         second.setCellValueFactory(new PropertyValueFactory("lastName"));
         treeTableView.getColumns().addAll(first, second);
         treeTableView.getSortOrder().setAll(first, second);
@@ -383,12 +383,12 @@ public class TreeTableViewTest {
             };
 
     private TreeTableColumn<String, String> initSortTestStructure() {
-        TreeTableColumn<String, String> col = new TreeTableColumn<String, String>("column");
+        TreeTableColumn<String, String> col = new TreeTableColumn<>("column");
         col.setSortType(ASCENDING);
-        col.setCellValueFactory(param -> new ReadOnlyObjectWrapper<String>(param.getValue().getValue()));
+        col.setCellValueFactory(param -> new ReadOnlyObjectWrapper<>(param.getValue().getValue()));
         treeTableView.getColumns().add(col);
 
-        TreeItem<String> newRoot = new TreeItem<String>("root");
+        TreeItem<String> newRoot = new TreeItem<>("root");
         newRoot.setExpanded(true);
         newRoot.getChildren().addAll(
                 apple  = new TreeItem("Apple"),
@@ -507,12 +507,12 @@ public class TreeTableViewTest {
         expectedCountSelectedIndicesChangeEvent = 1;
         expectedCountSelectedItemsChangeEvent = 1;
 
-        TreeTableColumn<String, String> col = new TreeTableColumn<String, String>("column");
+        TreeTableColumn<String, String> col = new TreeTableColumn<>("column");
         col.setSortType(DESCENDING);
-        col.setCellValueFactory(param -> new ReadOnlyObjectWrapper<String>(param.getValue().getValue()));
+        col.setCellValueFactory(param -> new ReadOnlyObjectWrapper<>(param.getValue().getValue()));
         treeTableView.getColumns().add(col);
 
-        TreeItem<String> treeRoot = new TreeItem<String>("root");
+        TreeItem<String> treeRoot = new TreeItem<>("root");
         treeRoot.setExpanded(true);
         treeTableView.setRoot(treeRoot);
 

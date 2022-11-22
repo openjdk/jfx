@@ -299,7 +299,7 @@ public abstract class TextInputControl extends Control {
      * @defaultValue null
      * @since JavaFX 8u40
      */
-    private final ObjectProperty<TextFormatter<?>> textFormatter = new ObjectPropertyBase<TextFormatter<?>>() {
+    private final ObjectProperty<TextFormatter<?>> textFormatter = new ObjectPropertyBase<>() {
 
         private TextFormatter<?> oldFormatter = null;
 
@@ -383,7 +383,7 @@ public abstract class TextInputControl extends Control {
     /**
      * The current selection.
      */
-    private ReadOnlyObjectWrapper<IndexRange> selection = new ReadOnlyObjectWrapper<IndexRange>(this, "selection", new IndexRange(0, 0));
+    private ReadOnlyObjectWrapper<IndexRange> selection = new ReadOnlyObjectWrapper<>(this, "selection", new IndexRange(0, 0));
     public final IndexRange getSelection() { return selection.getValue(); }
     public final ReadOnlyObjectProperty<IndexRange> selectionProperty() { return selection.getReadOnlyProperty(); }
 
@@ -1592,7 +1592,7 @@ public abstract class TextInputControl extends Control {
 
     private static class StyleableProperties {
         private static final FontCssMetaData<TextInputControl> FONT =
-            new FontCssMetaData<TextInputControl>("-fx-font", Font.getDefault()) {
+            new FontCssMetaData<>("-fx-font", Font.getDefault()) {
 
             @Override
             public boolean isSettable(TextInputControl n) {
@@ -1608,7 +1608,7 @@ public abstract class TextInputControl extends Control {
         private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
         static {
             final List<CssMetaData<? extends Styleable, ?>> styleables =
-                new ArrayList<CssMetaData<? extends Styleable, ?>>(Control.getClassCssMetaData());
+                new ArrayList<>(Control.getClassCssMetaData());
             styleables.add(FONT);
             STYLEABLES = Collections.unmodifiableList(styleables);
         }

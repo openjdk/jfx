@@ -610,7 +610,7 @@ public class TabPaneSkin extends SkinBase<TabPane> {
                         // restore old selection, and old tab animation states.
                         int size = c.getTo() - c.getFrom();
                         Tab selTab = tabPane.getSelectionModel().getSelectedItem();
-                        List<Tab> permutatedTabs = new ArrayList<Tab>(size);
+                        List<Tab> permutatedTabs = new ArrayList<>(size);
                         getSkinnable().getSelectionModel().clearSelection();
 
                         // save and set tab animation to none - as it is not a good idea
@@ -756,8 +756,8 @@ public class TabPaneSkin extends SkinBase<TabPane> {
         private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
 
         private final static CssMetaData<TabPane,TabAnimation> OPEN_TAB_ANIMATION =
-                new CssMetaData<TabPane, TabPaneSkin.TabAnimation>("-fx-open-tab-animation",
-                    new EnumConverter<TabAnimation>(TabAnimation.class), TabAnimation.GROW) {
+                new CssMetaData<>("-fx-open-tab-animation",
+                    new EnumConverter<>(TabAnimation.class), TabAnimation.GROW) {
 
             @Override public boolean isSettable(TabPane node) {
                 return true;
@@ -770,8 +770,8 @@ public class TabPaneSkin extends SkinBase<TabPane> {
         };
 
         private final static CssMetaData<TabPane,TabAnimation> CLOSE_TAB_ANIMATION =
-                new CssMetaData<TabPane, TabPaneSkin.TabAnimation>("-fx-close-tab-animation",
-                    new EnumConverter<TabAnimation>(TabAnimation.class), TabAnimation.GROW) {
+                new CssMetaData<>("-fx-close-tab-animation",
+                    new EnumConverter<>(TabAnimation.class), TabAnimation.GROW) {
 
             @Override public boolean isSettable(TabPane node) {
                 return true;
@@ -786,7 +786,7 @@ public class TabPaneSkin extends SkinBase<TabPane> {
         static {
 
            final List<CssMetaData<? extends Styleable, ?>> styleables =
-               new ArrayList<CssMetaData<? extends Styleable, ?>>(SkinBase.getClassCssMetaData());
+               new ArrayList<>(SkinBase.getClassCssMetaData());
            styleables.add(OPEN_TAB_ANIMATION);
            styleables.add(CLOSE_TAB_ANIMATION);
            STYLEABLES = Collections.unmodifiableList(styleables);
@@ -1263,7 +1263,7 @@ public class TabPaneSkin extends SkinBase<TabPane> {
 
         private LambdaMultiplePropertyChangeListenerHandler listener = new LambdaMultiplePropertyChangeListenerHandler();
 
-        private final ListChangeListener<String> styleClassListener = new ListChangeListener<String>() {
+        private final ListChangeListener<String> styleClassListener = new ListChangeListener<>() {
             @Override
             public void onChanged(Change<? extends String> c) {
                 getStyleClass().setAll(tab.getStyleClass());

@@ -43,7 +43,7 @@ public class TextFieldTreeTableCellTest {
     private StringConverter<Object> converter;
 
     @Before public void setup() {
-        converter = new StringConverter<Object>() {
+        converter = new StringConverter<>() {
             @Override public String toString(Object object) {
                 return null;
             }
@@ -196,7 +196,7 @@ public class TextFieldTreeTableCellTest {
     @Test public void test_updateItem_isNotEmpty_textIsNotNull_nonNullConverter() {
         TextFieldTreeTableCell<?,Object> cell = new TextFieldTreeTableCell<>();
         cell.setConverter(
-                new StringConverter<Object>() {
+                new StringConverter<>() {
                     @Override public Object fromString(String string) {
                         return null;
                     }

@@ -108,7 +108,7 @@ public abstract class Axis<T> extends Region {
     public ObservableList<TickMark<T>> getTickMarks() { return unmodifiableTickMarks; }
 
     /** The side of the plot which this axis is being drawn on */
-    private ObjectProperty<Side> side = new StyleableObjectProperty<Side>(){
+    private ObjectProperty<Side> side = new StyleableObjectProperty<>(){
         @Override protected void invalidated() {
             // cause refreshTickMarks
             Side edge = get();
@@ -153,7 +153,7 @@ public abstract class Axis<T> extends Region {
     }
 
     /** The axis label */
-    private ObjectProperty<String> label = new ObjectPropertyBase<String>() {
+    private ObjectProperty<String> label = new ObjectPropertyBase<>() {
         @Override protected void invalidated() {
             axisLabel.setText(get());
             requestAxisLayout();
@@ -680,7 +680,7 @@ public abstract class Axis<T> extends Region {
 
             // add new tick marks for new values
             for(T newValue: newTickValues) {
-                final TickMark<T> tick = new TickMark<T>();
+                final TickMark<T> tick = new TickMark<>();
                 tick.setValue(newValue);
                 tick.textNode.setText(getTickMarkLabel(newValue));
                 tick.textNode.setFont(getTickLabelFont());
@@ -1006,7 +1006,7 @@ public abstract class Axis<T> extends Region {
         /**
          * The value for this tick mark in data units
          */
-        private ObjectProperty<T> value = new SimpleObjectProperty<T>(this, "value");
+        private ObjectProperty<T> value = new SimpleObjectProperty<>(this, "value");
         public final T getValue() { return value.get(); }
         public final void setValue(T v) { value.set(v); }
         public final ObjectExpression<T> valueProperty() { return value; }
@@ -1071,8 +1071,8 @@ public abstract class Axis<T> extends Region {
 
     private static class StyleableProperties {
         private static final CssMetaData<Axis<?>,Side> SIDE =
-            new CssMetaData<Axis<?>,Side>("-fx-side",
-                new EnumConverter<Side>(Side.class)) {
+            new CssMetaData<>("-fx-side",
+                new EnumConverter<>(Side.class)) {
 
             @Override
             public boolean isSettable(Axis<?> n) {
@@ -1087,7 +1087,7 @@ public abstract class Axis<T> extends Region {
         };
 
         private static final CssMetaData<Axis<?>,Number> TICK_LENGTH =
-            new CssMetaData<Axis<?>,Number>("-fx-tick-length",
+            new CssMetaData<>("-fx-tick-length",
                 SizeConverter.getInstance(), 8.0) {
 
             @Override
@@ -1102,7 +1102,7 @@ public abstract class Axis<T> extends Region {
         };
 
         private static final CssMetaData<Axis<?>,Font> TICK_LABEL_FONT =
-            new FontCssMetaData<Axis<?>>("-fx-tick-label-font",
+            new FontCssMetaData<>("-fx-tick-label-font",
                 Font.font("system", 8.0)) {
 
             @Override
@@ -1118,7 +1118,7 @@ public abstract class Axis<T> extends Region {
         };
 
         private static final CssMetaData<Axis<?>,Paint> TICK_LABEL_FILL =
-            new CssMetaData<Axis<?>,Paint>("-fx-tick-label-fill",
+            new CssMetaData<>("-fx-tick-label-fill",
                 PaintConverter.getInstance(), Color.BLACK) {
 
             @Override
@@ -1134,7 +1134,7 @@ public abstract class Axis<T> extends Region {
         };
 
         private static final CssMetaData<Axis<?>,Number> TICK_LABEL_TICK_GAP =
-            new CssMetaData<Axis<?>,Number>("-fx-tick-label-gap",
+            new CssMetaData<>("-fx-tick-label-gap",
                 SizeConverter.getInstance(), 3.0) {
 
             @Override
@@ -1149,7 +1149,7 @@ public abstract class Axis<T> extends Region {
         };
 
         private static final CssMetaData<Axis<?>,Boolean> TICK_MARK_VISIBLE =
-            new CssMetaData<Axis<?>,Boolean>("-fx-tick-mark-visible",
+            new CssMetaData<>("-fx-tick-mark-visible",
                 BooleanConverter.getInstance(), Boolean.TRUE) {
 
             @Override
@@ -1164,7 +1164,7 @@ public abstract class Axis<T> extends Region {
         };
 
         private static final CssMetaData<Axis<?>,Boolean> TICK_LABELS_VISIBLE =
-            new CssMetaData<Axis<?>,Boolean>("-fx-tick-labels-visible",
+            new CssMetaData<>("-fx-tick-labels-visible",
                 BooleanConverter.getInstance(), Boolean.TRUE) {
 
             @Override
@@ -1181,7 +1181,7 @@ public abstract class Axis<T> extends Region {
         private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
         static {
         final List<CssMetaData<? extends Styleable, ?>> styleables =
-            new ArrayList<CssMetaData<? extends Styleable, ?>>(Region.getClassCssMetaData());
+            new ArrayList<>(Region.getClassCssMetaData());
             styleables.add(SIDE);
             styleables.add(TICK_LENGTH);
             styleables.add(TICK_LABEL_FONT);

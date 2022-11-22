@@ -150,16 +150,16 @@ public abstract class ReadOnlyUnbackedObservableList<E> extends ObservableListBa
     }
 
     @Override public ListIterator<E> listIterator() {
-        return new SelectionListIterator<E>(this);
+        return new SelectionListIterator<>(this);
     }
 
     @Override public ListIterator<E> listIterator(int index) {
-        return new SelectionListIterator<E>(this, index);
+        return new SelectionListIterator<>(this, index);
     }
 
     @Override
     public Iterator<E> iterator() {
-        return new SelectionListIterator<E>(this);
+        return new SelectionListIterator<>(this);
     }
 
     /**
@@ -172,7 +172,7 @@ public abstract class ReadOnlyUnbackedObservableList<E> extends ObservableListBa
         }
 
         final List<E> outer = this;
-        return new ReadOnlyUnbackedObservableList<E>() {
+        return new ReadOnlyUnbackedObservableList<>() {
             @Override public E get(int i) {
                 return outer.get(i + fromIndex);
             }

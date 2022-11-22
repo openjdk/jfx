@@ -173,7 +173,7 @@ public class TabPane extends Control {
      * The selection model used for selecting tabs. Changing the model alters
      * how the tabs are selected and which tabs are first or last.
      */
-    private ObjectProperty<SingleSelectionModel<Tab>> selectionModel = new SimpleObjectProperty<SingleSelectionModel<Tab>>(this, "selectionModel");
+    private ObjectProperty<SingleSelectionModel<Tab>> selectionModel = new SimpleObjectProperty<>(this, "selectionModel");
 
     public final void setSelectionModel(SingleSelectionModel<Tab> value) { selectionModel.set(value); }
 
@@ -244,7 +244,7 @@ public class TabPane extends Control {
 
     public final ObjectProperty<TabClosingPolicy> tabClosingPolicyProperty() {
         if (tabClosingPolicy == null) {
-            tabClosingPolicy = new SimpleObjectProperty<TabClosingPolicy>(this, "tabClosingPolicy", TabClosingPolicy.SELECTED_TAB);
+            tabClosingPolicy = new SimpleObjectProperty<>(this, "tabClosingPolicy", TabClosingPolicy.SELECTED_TAB);
         }
         return tabClosingPolicy;
     }
@@ -473,7 +473,7 @@ public class TabPane extends Control {
             results.addAll(tab.lookupAll(selector));
         }
 
-        return new UnmodifiableListSet<Node>(results);
+        return new UnmodifiableListSet<>(results);
     }
 
 
@@ -485,7 +485,7 @@ public class TabPane extends Control {
 
     private static class StyleableProperties {
         private static final CssMetaData<TabPane,Number> TAB_MIN_WIDTH =
-                new CssMetaData<TabPane,Number>("-fx-tab-min-width",
+                new CssMetaData<>("-fx-tab-min-width",
                 SizeConverter.getInstance(), DEFAULT_TAB_MIN_WIDTH) {
 
             @Override
@@ -500,7 +500,7 @@ public class TabPane extends Control {
         };
 
         private static final CssMetaData<TabPane,Number> TAB_MAX_WIDTH =
-                new CssMetaData<TabPane,Number>("-fx-tab-max-width",
+                new CssMetaData<>("-fx-tab-max-width",
                 SizeConverter.getInstance(), DEFAULT_TAB_MAX_WIDTH) {
 
             @Override
@@ -515,7 +515,7 @@ public class TabPane extends Control {
         };
 
         private static final CssMetaData<TabPane,Number> TAB_MIN_HEIGHT =
-                new CssMetaData<TabPane,Number>("-fx-tab-min-height",
+                new CssMetaData<>("-fx-tab-min-height",
                 SizeConverter.getInstance(), DEFAULT_TAB_MIN_HEIGHT) {
 
             @Override
@@ -530,7 +530,7 @@ public class TabPane extends Control {
         };
 
         private static final CssMetaData<TabPane,Number> TAB_MAX_HEIGHT =
-                new CssMetaData<TabPane,Number>("-fx-tab-max-height",
+                new CssMetaData<>("-fx-tab-max-height",
                 SizeConverter.getInstance(), DEFAULT_TAB_MAX_HEIGHT) {
 
             @Override
@@ -547,7 +547,7 @@ public class TabPane extends Control {
         private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
         static {
             final List<CssMetaData<? extends Styleable, ?>> styleables =
-                new ArrayList<CssMetaData<? extends Styleable, ?>>(Control.getClassCssMetaData());
+                new ArrayList<>(Control.getClassCssMetaData());
             styleables.add(TAB_MIN_WIDTH);
             styleables.add(TAB_MAX_WIDTH);
             styleables.add(TAB_MIN_HEIGHT);
@@ -776,7 +776,7 @@ public class TabPane extends Control {
 
     public final ObjectProperty<TabDragPolicy> tabDragPolicyProperty() {
         if (tabDragPolicy == null) {
-            tabDragPolicy = new SimpleObjectProperty<TabDragPolicy>(this, "tabDragPolicy", TabDragPolicy.FIXED);
+            tabDragPolicy = new SimpleObjectProperty<>(this, "tabDragPolicy", TabDragPolicy.FIXED);
         }
         return tabDragPolicy;
     }

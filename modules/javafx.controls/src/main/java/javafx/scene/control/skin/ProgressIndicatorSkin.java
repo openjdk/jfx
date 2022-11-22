@@ -403,7 +403,7 @@ public class ProgressIndicatorSkin extends SkinBase<ProgressIndicator> {
      **************************************************************************/
 
     private static final CssMetaData<ProgressIndicator,Paint> PROGRESS_COLOR =
-            new CssMetaData<ProgressIndicator,Paint>("-fx-progress-color",
+            new CssMetaData<>("-fx-progress-color",
                     PaintConverter.getInstance(), null) {
 
                 @Override
@@ -420,7 +420,7 @@ public class ProgressIndicatorSkin extends SkinBase<ProgressIndicator> {
                 }
             };
     private static final CssMetaData<ProgressIndicator,Number> INDETERMINATE_SEGMENT_COUNT =
-            new CssMetaData<ProgressIndicator,Number>("-fx-indeterminate-segment-count",
+            new CssMetaData<>("-fx-indeterminate-segment-count",
                     SizeConverter.getInstance(), 8) {
 
                 @Override public boolean isSettable(ProgressIndicator n) {
@@ -435,7 +435,7 @@ public class ProgressIndicatorSkin extends SkinBase<ProgressIndicator> {
                 }
             };
     private static final CssMetaData<ProgressIndicator,Boolean> SPIN_ENABLED =
-            new CssMetaData<ProgressIndicator,Boolean>("-fx-spin-enabled", BooleanConverter.getInstance(), Boolean.FALSE) {
+            new CssMetaData<>("-fx-spin-enabled", BooleanConverter.getInstance(), Boolean.FALSE) {
 
                 @Override public boolean isSettable(ProgressIndicator node) {
                     final ProgressIndicatorSkin skin = (ProgressIndicatorSkin) node.getSkin();
@@ -451,7 +451,7 @@ public class ProgressIndicatorSkin extends SkinBase<ProgressIndicator> {
     private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
     static {
         final List<CssMetaData<? extends Styleable, ?>> styleables =
-                new ArrayList<CssMetaData<? extends Styleable, ?>>(SkinBase.getClassCssMetaData());
+                new ArrayList<>(SkinBase.getClassCssMetaData());
         styleables.add(PROGRESS_COLOR);
         styleables.add(INDETERMINATE_SEGMENT_COUNT);
         styleables.add(SPIN_ENABLED);

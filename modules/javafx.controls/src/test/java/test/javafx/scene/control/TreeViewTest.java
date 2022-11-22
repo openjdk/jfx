@@ -140,24 +140,24 @@ public class TreeViewTest {
             }
         });
 
-        treeView = new TreeView<String>();
+        treeView = new TreeView<>();
         sm = treeView.getSelectionModel();
         fm = treeView.getFocusModel();
 
         // build sample data #2, even though it may not be used...
-        myCompanyRootNode = new TreeItem<String>("MyCompany Human Resources");
-        salesDepartment = new TreeItem<String>("Sales Department");
-            ethanWilliams = new TreeItem<String>("Ethan Williams");
-            emmaJones = new TreeItem<String>("Emma Jones");
-            michaelBrown = new TreeItem<String>("Michael Brown");
-            annaBlack = new TreeItem<String>("Anna Black");
-            rodgerYork = new TreeItem<String>("Rodger York");
-            susanCollins = new TreeItem<String>("Susan Collins");
+        myCompanyRootNode = new TreeItem<>("MyCompany Human Resources");
+        salesDepartment = new TreeItem<>("Sales Department");
+            ethanWilliams = new TreeItem<>("Ethan Williams");
+            emmaJones = new TreeItem<>("Emma Jones");
+            michaelBrown = new TreeItem<>("Michael Brown");
+            annaBlack = new TreeItem<>("Anna Black");
+            rodgerYork = new TreeItem<>("Rodger York");
+            susanCollins = new TreeItem<>("Susan Collins");
 
-        itSupport = new TreeItem<String>("IT Support");
-            mikeGraham = new TreeItem<String>("Mike Graham");
-            judyMayer = new TreeItem<String>("Judy Mayer");
-            gregorySmith = new TreeItem<String>("Gregory Smith");
+        itSupport = new TreeItem<>("IT Support");
+            mikeGraham = new TreeItem<>("Mike Graham");
+            judyMayer = new TreeItem<>("Judy Mayer");
+            gregorySmith = new TreeItem<>("Gregory Smith");
 
         myCompanyRootNode.getChildren().setAll(
             salesDepartment,
@@ -184,10 +184,10 @@ public class TreeViewTest {
     }
 
     private void installChildren() {
-        root = new TreeItem<String>("Root");
-        child1 = new TreeItem<String>("Child 1");
-        child2 = new TreeItem<String>("Child 2");
-        child3 = new TreeItem<String>("Child 3");
+        root = new TreeItem<>("Root");
+        child1 = new TreeItem<>("Child 1");
+        child2 = new TreeItem<>("Child 2");
+        child3 = new TreeItem<>("Child 3");
         root.setExpanded(true);
         root.getChildren().setAll(child1, child2, child3);
         treeView.setRoot(root);
@@ -263,7 +263,7 @@ public class TreeViewTest {
     @Test public void selectionModelCanBeBound() {
         MultipleSelectionModel<TreeItem<String>> sm =
                 TreeViewShim.<String>get_TreeViewBitSetSelectionModel(treeView);
-        ObjectProperty<MultipleSelectionModel<TreeItem<String>>> other = new SimpleObjectProperty<MultipleSelectionModel<TreeItem<String>>>(sm);
+        ObjectProperty<MultipleSelectionModel<TreeItem<String>>> other = new SimpleObjectProperty<>(sm);
         treeView.selectionModelProperty().bind(other);
         assertSame(sm, treeView.getSelectionModel());
     }
@@ -276,7 +276,7 @@ public class TreeViewTest {
     }
 
     @Test public void canSetSelectedItemToAnItemEvenWhenThereAreNoItems() {
-        TreeItem<String> element = new TreeItem<String>("I AM A CRAZY RANDOM STRING");
+        TreeItem<String> element = new TreeItem<>("I AM A CRAZY RANDOM STRING");
         treeView.getSelectionModel().select(element);
         assertEquals(-1, treeView.getSelectionModel().getSelectedIndex());
         assertSame(element, treeView.getSelectionModel().getSelectedItem());
@@ -284,7 +284,7 @@ public class TreeViewTest {
 
     @Test public void canSetSelectedItemToAnItemNotInTheDataModel() {
         installChildren();
-        TreeItem<String> element = new TreeItem<String>("I AM A CRAZY RANDOM STRING");
+        TreeItem<String> element = new TreeItem<>("I AM A CRAZY RANDOM STRING");
         treeView.getSelectionModel().select(element);
         assertEquals(-1, treeView.getSelectionModel().getSelectedIndex());
         assertSame(element, treeView.getSelectionModel().getSelectedItem());
@@ -331,10 +331,10 @@ public class TreeViewTest {
         assertNull(treeView.getSelectionModel().getSelectedItem());
         assertEquals(-1, treeView.getSelectionModel().getSelectedIndex());
 
-        TreeItem<String> newRoot = new TreeItem<String>("New Root");
-        TreeItem<String> newChild1 = new TreeItem<String>("New Child 1");
-        TreeItem<String> newChild2 = new TreeItem<String>("New Child 2");
-        TreeItem<String> newChild3 = new TreeItem<String>("New Child 3");
+        TreeItem<String> newRoot = new TreeItem<>("New Root");
+        TreeItem<String> newChild1 = new TreeItem<>("New Child 1");
+        TreeItem<String> newChild2 = new TreeItem<>("New Child 2");
+        TreeItem<String> newChild3 = new TreeItem<>("New Child 3");
         newRoot.setExpanded(true);
         newRoot.getChildren().setAll(newChild1, newChild2, newChild3);
         treeView.setRoot(root);
@@ -418,7 +418,7 @@ public class TreeViewTest {
     @Test public void removingLastTest() {
         TreeView tree_view = new TreeView();
         MultipleSelectionModel sm = tree_view.getSelectionModel();
-        TreeItem<String> tree_model = new TreeItem<String>("Root");
+        TreeItem<String> tree_model = new TreeItem<>("Root");
         TreeItem node = new TreeItem("Data item");
         tree_model.getChildren().add(node);
         tree_view.setRoot(tree_model);
@@ -439,7 +439,7 @@ public class TreeViewTest {
      * Tests from bug reports                                            *
      ********************************************************************/
     @Ignore @Test public void test_rt17112() {
-        TreeItem<String> root1 = new TreeItem<String>("Root");
+        TreeItem<String> root1 = new TreeItem<>("Root");
         root1.setExpanded(true);
         addChildren(root1, "child");
         for (TreeItem child : root1.getChildren()) {
@@ -482,7 +482,7 @@ public class TreeViewTest {
     }
     private void addChildren(TreeItem parent, String name) {
         for (int i=0; i<3; i++) {
-            TreeItem<String> ti = new TreeItem<String>(name+"-"+i);
+            TreeItem<String> ti = new TreeItem<>(name+"-"+i);
             parent.getChildren().add(ti);
         }
     }

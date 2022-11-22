@@ -195,7 +195,7 @@ public class TabPaneTest {
     }
 
     @Test public void checkSidePropertyBind() {
-        ObjectProperty objPr = new SimpleObjectProperty<Side>(Side.BOTTOM);
+        ObjectProperty objPr = new SimpleObjectProperty<>(Side.BOTTOM);
         tabPane.sideProperty().bind(objPr);
         assertSame("side cannot be bound", tabPane.sideProperty().getValue(), Side.BOTTOM);
         objPr.setValue(Side.RIGHT);
@@ -203,7 +203,7 @@ public class TabPaneTest {
     }
 
     @Test public void checkTabClosingPropertyBind() {
-        ObjectProperty objPr = new SimpleObjectProperty<TabPane.TabClosingPolicy>(TabPane.TabClosingPolicy.UNAVAILABLE);
+        ObjectProperty objPr = new SimpleObjectProperty<>(TabPane.TabClosingPolicy.UNAVAILABLE);
         tabPane.tabClosingPolicyProperty().bind(objPr);
         assertSame("side cannot be bound", tabPane.tabClosingPolicyProperty().getValue(), TabPane.TabClosingPolicy.UNAVAILABLE);
         objPr.setValue(TabPane.TabClosingPolicy.ALL_TABS);

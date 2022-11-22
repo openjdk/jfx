@@ -212,7 +212,7 @@ public class MenuBar extends Control {
 
     private static class StyleableProperties {
         private static final CssMetaData<MenuBar, Boolean> USE_SYSTEM_MENU_BAR =
-                new CssMetaData<MenuBar, Boolean>("-fx-use-system-menu-bar",
+                new CssMetaData<>("-fx-use-system-menu-bar",
                                                         BooleanConverter.getInstance(),
                                                         false) {
             @Override public boolean isSettable(MenuBar n) {
@@ -227,7 +227,7 @@ public class MenuBar extends Control {
         private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
         static {
             final List<CssMetaData<? extends Styleable, ?>> styleables =
-                new ArrayList<CssMetaData<? extends Styleable, ?>>(Control.getClassCssMetaData());
+                new ArrayList<>(Control.getClassCssMetaData());
             styleables.add(USE_SYSTEM_MENU_BAR);
             STYLEABLES = Collections.unmodifiableList(styleables);
         }

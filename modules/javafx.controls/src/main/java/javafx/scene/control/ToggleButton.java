@@ -203,7 +203,7 @@ import javafx.css.StyleableProperty;
 
     public final ObjectProperty<ToggleGroup> toggleGroupProperty() {
         if (toggleGroup == null) {
-            toggleGroup = new ObjectPropertyBase<ToggleGroup>() {
+            toggleGroup = new ObjectPropertyBase<>() {
                 private ToggleGroup old;
                 private ChangeListener<Toggle> listener = (o, oV, nV) ->
                     ParentHelper.getTraversalEngine(ToggleButton.this).setOverriddenFocusTraversability(nV != null ? isSelected() : null);

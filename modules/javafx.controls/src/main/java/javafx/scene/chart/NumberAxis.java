@@ -458,7 +458,7 @@ public final class NumberAxis extends ValueAxis<Number> {
 
     private static class StyleableProperties {
         private static final CssMetaData<NumberAxis,Number> TICK_UNIT =
-            new CssMetaData<NumberAxis,Number>("-fx-tick-unit",
+            new CssMetaData<>("-fx-tick-unit",
                 SizeConverter.getInstance(), 5.0) {
 
             @Override
@@ -475,7 +475,7 @@ public final class NumberAxis extends ValueAxis<Number> {
         private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
         static {
            final List<CssMetaData<? extends Styleable, ?>> styleables =
-               new ArrayList<CssMetaData<? extends Styleable, ?>>(ValueAxis.getClassCssMetaData());
+               new ArrayList<>(ValueAxis.getClassCssMetaData());
            styleables.add(TICK_UNIT);
            STYLEABLES = Collections.unmodifiableList(styleables);
         }

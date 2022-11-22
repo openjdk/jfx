@@ -94,7 +94,7 @@ public class ChoiceBoxSkin<T> extends SkinBase<ChoiceBox<T>> {
      *                                                                         *
      **************************************************************************/
 
-    private final ListChangeListener<T> choiceBoxItemsListener = new ListChangeListener<T>() {
+    private final ListChangeListener<T> choiceBoxItemsListener = new ListChangeListener<>() {
         @Override public void onChanged(Change<? extends T> c) {
             while (c.next()) {
                 if (c.getRemovedSize() > 0 || c.wasPermutated()) {
@@ -118,7 +118,7 @@ public class ChoiceBoxSkin<T> extends SkinBase<ChoiceBox<T>> {
     };
 
     private final WeakListChangeListener<T> weakChoiceBoxItemsListener =
-            new WeakListChangeListener<T>(choiceBoxItemsListener);
+            new WeakListChangeListener<>(choiceBoxItemsListener);
 
     private final InvalidationListener itemsObserver;
 

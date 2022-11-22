@@ -44,7 +44,7 @@ import org.junit.Test;
 
 public class StackedAreaChartTest extends XYChartTestBase {
     StackedAreaChart<Number,Number> ac;
-    final XYChart.Series<Number, Number> series1 = new XYChart.Series<Number, Number>();
+    final XYChart.Series<Number, Number> series1 = new XYChart.Series<>();
     boolean useCategoryAxis = false;
     final String[] countries = {"USA", "Italy", "France", "China", "India"};
     protected Chart createChart() {

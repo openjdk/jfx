@@ -133,7 +133,7 @@ public class ProgressIndicatorTest {
 
         for (int i = 0; i < TOTAL_PROGRESS_INDICATORS; i++) {
             pi[i] = new ProgressIndicator();
-            weakRefArr.add(i, new WeakReference<ProgressIndicator>(pi[i]));
+            weakRefArr.add(i, new WeakReference<>(pi[i]));
             hb.getChildren().add(pi[i]);
         }
 
@@ -157,7 +157,7 @@ public class ProgressIndicatorTest {
 
         for (int i = 0; i < TOTAL_PROGRESS_INDICATORS; i++) {
             pi[i] = new ProgressIndicator();
-            weakRefArr.add(i, new WeakReference<ProgressIndicator>(pi[i]));
+            weakRefArr.add(i, new WeakReference<>(pi[i]));
             root.getChildren().add(pi[i]);
         }
 
@@ -179,7 +179,7 @@ public class ProgressIndicatorTest {
 
         for (int i = 0; i < TOTAL_PROGRESS_INDICATORS; i++) {
             pi[i] = new ProgressIndicator();
-            weakRefArr.add(i, new WeakReference<ProgressIndicator>(pi[i]));
+            weakRefArr.add(i, new WeakReference<>(pi[i]));
             hb.getChildren().add(pi[i]);
         }
 

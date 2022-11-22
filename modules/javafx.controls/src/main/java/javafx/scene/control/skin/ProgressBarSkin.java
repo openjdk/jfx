@@ -394,7 +394,7 @@ public class ProgressBarSkin extends ProgressIndicatorSkin {
      */
     private static class StyleableProperties {
         private static final CssMetaData<ProgressBar, Number> INDETERMINATE_BAR_LENGTH =
-                new CssMetaData<ProgressBar, Number>("-fx-indeterminate-bar-length",
+                new CssMetaData<>("-fx-indeterminate-bar-length",
                         SizeConverter.getInstance(), 60.0) {
 
                     @Override
@@ -412,7 +412,7 @@ public class ProgressBarSkin extends ProgressIndicatorSkin {
                 };
 
         private static final CssMetaData<ProgressBar, Boolean> INDETERMINATE_BAR_ESCAPE =
-                new CssMetaData<ProgressBar, Boolean>("-fx-indeterminate-bar-escape",
+                new CssMetaData<>("-fx-indeterminate-bar-escape",
                         BooleanConverter.getInstance(), Boolean.TRUE) {
 
                     @Override
@@ -430,7 +430,7 @@ public class ProgressBarSkin extends ProgressIndicatorSkin {
                 };
 
         private static final CssMetaData<ProgressBar, Boolean> INDETERMINATE_BAR_FLIP =
-                new CssMetaData<ProgressBar, Boolean>("-fx-indeterminate-bar-flip",
+                new CssMetaData<>("-fx-indeterminate-bar-flip",
                         BooleanConverter.getInstance(), Boolean.TRUE) {
 
                     @Override
@@ -448,7 +448,7 @@ public class ProgressBarSkin extends ProgressIndicatorSkin {
                 };
 
         private static final CssMetaData<ProgressBar, Number> INDETERMINATE_BAR_ANIMATION_TIME =
-                new CssMetaData<ProgressBar, Number>("-fx-indeterminate-bar-animation-time",
+                new CssMetaData<>("-fx-indeterminate-bar-animation-time",
                         SizeConverter.getInstance(), 2.0) {
 
                     @Override
@@ -469,7 +469,7 @@ public class ProgressBarSkin extends ProgressIndicatorSkin {
 
         static {
             final List<CssMetaData<? extends Styleable, ?>> styleables =
-                    new ArrayList<CssMetaData<? extends Styleable, ?>>(SkinBase.getClassCssMetaData());
+                    new ArrayList<>(SkinBase.getClassCssMetaData());
             styleables.add(INDETERMINATE_BAR_LENGTH);
             styleables.add(INDETERMINATE_BAR_ESCAPE);
             styleables.add(INDETERMINATE_BAR_FLIP);

@@ -157,7 +157,7 @@ public class CellSkinBase<C extends Cell> extends LabeledSkinBase<C> {
       */
      private static class StyleableProperties {
          private final static CssMetaData<Cell<?>,Number> CELL_SIZE =
-                new CssMetaData<Cell<?>,Number>("-fx-cell-size",
+                new CssMetaData<>("-fx-cell-size",
                  SizeConverter.getInstance(), DEFAULT_CELL_SIZE) {
 
             @Override
@@ -177,7 +177,7 @@ public class CellSkinBase<C extends Cell> extends LabeledSkinBase<C> {
          static {
 
             final List<CssMetaData<? extends Styleable, ?>> styleables =
-                new ArrayList<CssMetaData<? extends Styleable, ?>>(SkinBase.getClassCssMetaData());
+                new ArrayList<>(SkinBase.getClassCssMetaData());
             styleables.add(CELL_SIZE);
             STYLEABLES = Collections.unmodifiableList(styleables);
 

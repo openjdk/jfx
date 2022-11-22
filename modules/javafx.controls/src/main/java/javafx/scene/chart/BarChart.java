@@ -77,7 +77,7 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
     private ParallelTransition pt;
     // For storing data values in case removed and added immediately.
     private Map<Data<X,Y>, Double> XYValueMap =
-                                new HashMap<Data<X,Y>, Double>();
+                                new HashMap<>();
     // -------------- PUBLIC PROPERTIES ----------------------------------------
 
     /** The gap to leave between bars in the same category */
@@ -198,7 +198,7 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
          Map<String, Data<X,Y>> categoryMap = seriesCategoryMap.get(series);
 
         if (categoryMap == null) {
-            categoryMap = new HashMap<String, Data<X,Y>>();
+            categoryMap = new HashMap<>();
             seriesCategoryMap.put(series, categoryMap);
         }
         // check if category is already present
@@ -281,7 +281,7 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
     @Override protected void seriesAdded(Series<X,Y> series, int seriesIndex) {
         // handle any data already in series
         // create entry in the map
-        Map<String, Data<X,Y>> categoryMap = new HashMap<String, Data<X,Y>>();
+        Map<String, Data<X,Y>> categoryMap = new HashMap<>();
         for (int j=0; j<series.getData().size(); j++) {
             Data<X,Y> item = series.getData().get(j);
             Node bar = createBar(series, seriesIndex, item, j);
@@ -567,7 +567,7 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
      */
     private static class StyleableProperties {
         private static final CssMetaData<BarChart<?,?>,Number> BAR_GAP =
-            new CssMetaData<BarChart<?,?>,Number>("-fx-bar-gap",
+            new CssMetaData<>("-fx-bar-gap",
                 SizeConverter.getInstance(), 4.0) {
 
             @Override
@@ -582,7 +582,7 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
         };
 
         private static final CssMetaData<BarChart<?,?>,Number> CATEGORY_GAP =
-            new CssMetaData<BarChart<?,?>,Number>("-fx-category-gap",
+            new CssMetaData<>("-fx-category-gap",
                 SizeConverter.getInstance(), 10.0)  {
 
             @Override

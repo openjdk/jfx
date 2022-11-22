@@ -192,7 +192,7 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane> {
     /*
     ** The content of the ScrollPane has just changed bounds, check scrollBar positions.
     */
-    private final ChangeListener<Bounds> boundsChangeListener = new ChangeListener<Bounds>() {
+    private final ChangeListener<Bounds> boundsChangeListener = new ChangeListener<>() {
         @Override public void changed(ObservableValue<? extends Bounds> observable, Bounds oldBounds, Bounds newBounds) {
 
             /*

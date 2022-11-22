@@ -202,8 +202,8 @@ public class ToolBar extends Control {
 
     private static class StyleableProperties {
         private static final CssMetaData<ToolBar,Orientation> ORIENTATION =
-                new CssMetaData<ToolBar,Orientation>("-fx-orientation",
-                new EnumConverter<Orientation>(Orientation.class),
+                new CssMetaData<>("-fx-orientation",
+                new EnumConverter<>(Orientation.class),
                 Orientation.HORIZONTAL) {
 
             @Override
@@ -226,7 +226,7 @@ public class ToolBar extends Control {
         private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
         static {
             final List<CssMetaData<? extends Styleable, ?>> styleables =
-                new ArrayList<CssMetaData<? extends Styleable, ?>>(Control.getClassCssMetaData());
+                new ArrayList<>(Control.getClassCssMetaData());
             styleables.add(ORIENTATION);
             STYLEABLES = Collections.unmodifiableList(styleables);
         }

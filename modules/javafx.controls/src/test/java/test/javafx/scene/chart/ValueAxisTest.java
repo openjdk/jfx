@@ -86,7 +86,7 @@ public class ValueAxisTest {
             };
         }
 
-        formatter = new StringConverter<Number>() {
+        formatter = new StringConverter<>() {
             @Override
             public String toString(Number object) { return null; }
             @Override

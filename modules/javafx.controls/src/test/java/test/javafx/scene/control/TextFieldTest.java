@@ -231,7 +231,7 @@ public class TextFieldTest {
     }
 
     @Test public void checkOnActionPropertyBind() {
-        ObjectProperty<EventHandler<ActionEvent>> op= new SimpleObjectProperty<EventHandler<ActionEvent>>();
+        ObjectProperty<EventHandler<ActionEvent>> op= new SimpleObjectProperty<>();
         EventHandler<ActionEvent> ev = event -> {
             //Nothing to do
         };

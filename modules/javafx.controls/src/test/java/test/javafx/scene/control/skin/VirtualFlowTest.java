@@ -77,7 +77,7 @@ public class VirtualFlowTest {
 
 
     @Before public void setUp() {
-        list = new ArrayLinkedListShim<CellStub>();
+        list = new ArrayLinkedListShim<>();
         a = new CellStub(flow, "A");
         b = new CellStub(flow, "B");
         c = new CellStub(flow, "C");
@@ -764,7 +764,7 @@ public class VirtualFlowTest {
      * took place.
      */
     @Test public void testCellLayout_LayoutWithoutChangingThingsUsesCellsInSameOrderAsBefore() {
-        List<IndexedCell> cells = new LinkedList<IndexedCell>();
+        List<IndexedCell> cells = new LinkedList<>();
         for (int i = 0; i < VirtualFlowShim.cells_size(flow.cells); i++) {
             cells.add(VirtualFlowShim.<IndexedCell>cells_get(flow.cells, i));
         }
@@ -1288,7 +1288,7 @@ public class VirtualFlowTest {
         pulse();
     }
 
-    private ArrayLinkedListShim<GraphicalCellStub> circlelist = new ArrayLinkedListShim<GraphicalCellStub>();
+    private ArrayLinkedListShim<GraphicalCellStub> circlelist = new ArrayLinkedListShim<>();
 
     private VirtualFlowShim createCircleFlow() {
         // The second VirtualFlow we are going to test, with 7 cells. Each cell
@@ -1445,7 +1445,7 @@ class GraphicalCellStub extends IndexedCellShim<Node> {
 
     private void init() {
         // System.err.println("Init vf cell "+this);
-        setSkin(new SkinStub<GraphicalCellStub>(this));
+        setSkin(new SkinStub<>(this));
     }
 
     @Override
@@ -1494,7 +1494,7 @@ class CellStub extends IndexedCellShim {
 
     private void init(VirtualFlowShim flow) {
      //   this.flow = flow;
-        setSkin(new SkinStub<CellStub>(this));
+        setSkin(new SkinStub<>(this));
         updateItem(this, false);
     }
 

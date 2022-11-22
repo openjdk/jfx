@@ -80,7 +80,7 @@ public class ControlUtils {
      * Each cell contains a "..." string.
      */
     public static TreeTableView<String> createTreeTableView() {
-        TreeItem<String> root = new TreeItem<String>("");
+        TreeItem<String> root = new TreeItem<>("");
         root.setExpanded(true);
         root.getChildren().setAll(
             new TreeItem<>(""),

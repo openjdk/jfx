@@ -204,7 +204,7 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
                 new MouseMapping(MouseEvent.MOUSE_PRESSED, this::mousePressed),
                 new MouseMapping(MouseEvent.MOUSE_DRAGGED, this::mouseDragged),
                 new MouseMapping(MouseEvent.MOUSE_RELEASED, this::mouseReleased),
-                new InputMap.Mapping<ContextMenuEvent>(ContextMenuEvent.CONTEXT_MENU_REQUESTED, this::contextMenuRequested) {
+                new InputMap.Mapping<>(ContextMenuEvent.CONTEXT_MENU_REQUESTED, this::contextMenuRequested) {
                     @Override public int getSpecificity(Event event) {
                         return 1;
                     }
