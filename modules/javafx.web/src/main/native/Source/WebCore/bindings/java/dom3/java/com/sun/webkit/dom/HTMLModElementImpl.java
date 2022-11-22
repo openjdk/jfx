@@ -38,25 +38,21 @@ public class HTMLModElementImpl extends HTMLElementImpl implements HTMLModElemen
 
 
 // Attributes
-    @Override
     public String getCite() {
         return getCiteImpl(getPeer());
     }
     native static String getCiteImpl(long peer);
 
-    @Override
     public void setCite(String value) {
         setCiteImpl(getPeer(), value);
     }
     native static void setCiteImpl(long peer, String value);
 
-    @Override
     public String getDateTime() {
         return getDateTimeImpl(getPeer());
     }
     native static String getDateTimeImpl(long peer);
 
-    @Override
     public void setDateTime(String value) {
         setDateTimeImpl(getPeer(), value);
     }

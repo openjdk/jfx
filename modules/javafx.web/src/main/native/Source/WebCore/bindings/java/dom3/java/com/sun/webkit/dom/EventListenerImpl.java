@@ -38,16 +38,15 @@ import org.w3c.dom.events.EventListener;
 //single time peer usage
 final class EventListenerImpl implements EventListener {
     private static final Map<EventListener, Long> EL2peer =
-            new WeakHashMap<>();
+            new WeakHashMap<EventListener, Long>();
     private static final Map<Long, WeakReference<EventListener>> peer2EL =
-            new HashMap<>();
+            new HashMap<Long, WeakReference<EventListener>>();
 
     private static final class SelfDisposer implements DisposerRecord {
         private final long peer;
         private SelfDisposer(final long peer) {
             this.peer = peer;
         }
-        @Override
         public void dispose() {
             //dispose JavaEL <-> JSstab connection (JavaEL die)
             EventListenerImpl.dispose(peer);
@@ -72,7 +71,7 @@ final class EventListenerImpl implements EventListener {
         EventListenerImpl eli = new EventListenerImpl(eventListener, 0L);
         peer = eli.twkCreatePeer();
         EL2peer.put(eventListener, peer);
-        peer2EL.put(peer, new WeakReference<>(eventListener));
+        peer2EL.put(peer, new WeakReference<EventListener>(eventListener));
 
         return peer;
     }
@@ -97,13 +96,12 @@ final class EventListenerImpl implements EventListener {
         //[peer] is the JS EventListener.
         EventListener el = new EventListenerImpl(null, peer);
         EL2peer.put(el, peer);
-        peer2EL.put(peer, new WeakReference<>(el));
+        peer2EL.put(peer, new WeakReference<EventListener>(el));
         Disposer.addRecord(el, new SelfDisposer(peer));
 
         return el;
     }
 
-    @Override
     public void handleEvent(Event evt) {
         //call to JS peer if any
         if (jsPeer != 0L && (evt instanceof EventImpl)) {

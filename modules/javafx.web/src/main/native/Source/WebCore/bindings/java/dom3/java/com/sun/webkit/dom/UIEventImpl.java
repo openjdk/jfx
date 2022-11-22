@@ -39,13 +39,11 @@ public class UIEventImpl extends EventImpl implements UIEvent {
 
 
 // Attributes
-    @Override
     public AbstractView getView() {
         return DOMWindowImpl.getImpl(getViewImpl(getPeer()));
     }
     native static long getViewImpl(long peer);
 
-    @Override
     public int getDetail() {
         return getDetailImpl(getPeer());
     }
@@ -88,7 +86,6 @@ public class UIEventImpl extends EventImpl implements UIEvent {
 
 
 // Functions
-    @Override
     public void initUIEvent(String type
         , boolean canBubble
         , boolean cancelable

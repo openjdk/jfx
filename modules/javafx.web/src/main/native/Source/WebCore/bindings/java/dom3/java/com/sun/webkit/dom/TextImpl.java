@@ -39,7 +39,6 @@ public class TextImpl extends CharacterDataImpl implements Text {
 
 
 // Attributes
-    @Override
     public String getWholeText() {
         return getWholeTextImpl(getPeer());
     }
@@ -47,7 +46,6 @@ public class TextImpl extends CharacterDataImpl implements Text {
 
 
 // Functions
-    @Override
     public Text splitText(int offset) throws DOMException
     {
         return TextImpl.getImpl(splitTextImpl(getPeer()
@@ -57,7 +55,6 @@ public class TextImpl extends CharacterDataImpl implements Text {
         , int offset);
 
 
-    @Override
     public Text replaceWholeText(String content) throws DOMException
     {
         return TextImpl.getImpl(replaceWholeTextImpl(getPeer()
@@ -69,7 +66,6 @@ public class TextImpl extends CharacterDataImpl implements Text {
 
 
 //stubs
-    @Override
     public boolean isElementContentWhitespace() {
         throw new UnsupportedOperationException("Not supported yet.");
     }

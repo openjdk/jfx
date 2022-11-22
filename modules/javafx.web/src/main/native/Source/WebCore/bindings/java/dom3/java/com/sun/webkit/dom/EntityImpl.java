@@ -38,19 +38,16 @@ public class EntityImpl extends NodeImpl implements Entity {
 
 
 // Attributes
-    @Override
     public String getPublicId() {
         return getPublicIdImpl(getPeer());
     }
     native static String getPublicIdImpl(long peer);
 
-    @Override
     public String getSystemId() {
         return getSystemIdImpl(getPeer());
     }
     native static String getSystemIdImpl(long peer);
 
-    @Override
     public String getNotationName() {
         return getNotationNameImpl(getPeer());
     }
@@ -58,15 +55,12 @@ public class EntityImpl extends NodeImpl implements Entity {
 
 
 //stubs
-    @Override
     public String getInputEncoding() {
         throw new UnsupportedOperationException("Not supported yet.");
     }
-    @Override
     public String getXmlVersion() {
         throw new UnsupportedOperationException("Not supported yet.");
     }
-    @Override
     public String getXmlEncoding() {
         throw new UnsupportedOperationException("Not supported yet.");
     }

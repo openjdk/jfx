@@ -38,49 +38,41 @@ public class HTMLHRElementImpl extends HTMLElementImpl implements HTMLHRElement 
 
 
 // Attributes
-    @Override
     public String getAlign() {
         return getAlignImpl(getPeer());
     }
     native static String getAlignImpl(long peer);
 
-    @Override
     public void setAlign(String value) {
         setAlignImpl(getPeer(), value);
     }
     native static void setAlignImpl(long peer, String value);
 
-    @Override
     public boolean getNoShade() {
         return getNoShadeImpl(getPeer());
     }
     native static boolean getNoShadeImpl(long peer);
 
-    @Override
     public void setNoShade(boolean value) {
         setNoShadeImpl(getPeer(), value);
     }
     native static void setNoShadeImpl(long peer, boolean value);
 
-    @Override
     public String getSize() {
         return getSizeImpl(getPeer());
     }
     native static String getSizeImpl(long peer);
 
-    @Override
     public void setSize(String value) {
         setSizeImpl(getPeer(), value);
     }
     native static void setSizeImpl(long peer, String value);
 
-    @Override
     public String getWidth() {
         return getWidthImpl(getPeer());
     }
     native static String getWidthImpl(long peer);
 
-    @Override
     public void setWidth(String value) {
         setWidthImpl(getPeer(), value);
     }

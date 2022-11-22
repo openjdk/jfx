@@ -35,7 +35,6 @@ public class DOMStringListImpl implements DOMStringList {
         SelfDisposer(final long peer) {
             this.peer = peer;
         }
-        @Override
         public void dispose() {
             DOMStringListImpl.dispose(peer);
         }
@@ -73,12 +72,11 @@ public class DOMStringListImpl implements DOMStringList {
     native private static void dispose(long peer);
 
     static DOMStringList getImpl(long peer) {
-        return create(peer);
+        return (DOMStringList)create(peer);
     }
 
 
 // Attributes
-    @Override
     public int getLength() {
         return getLengthImpl(getPeer());
     }
@@ -86,7 +84,6 @@ public class DOMStringListImpl implements DOMStringList {
 
 
 // Functions
-    @Override
     public String item(int index)
     {
         return itemImpl(getPeer()
@@ -96,7 +93,6 @@ public class DOMStringListImpl implements DOMStringList {
         , int index);
 
 
-    @Override
     public boolean contains(String string)
     {
         return containsImpl(getPeer()

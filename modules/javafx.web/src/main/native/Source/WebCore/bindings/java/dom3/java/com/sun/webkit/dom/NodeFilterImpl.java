@@ -36,7 +36,6 @@ public class NodeFilterImpl implements NodeFilter {
         SelfDisposer(final long peer) {
             this.peer = peer;
         }
-        @Override
         public void dispose() {
             NodeFilterImpl.dispose(peer);
         }
@@ -74,7 +73,7 @@ public class NodeFilterImpl implements NodeFilter {
     native private static void dispose(long peer);
 
     static NodeFilter getImpl(long peer) {
-        return create(peer);
+        return (NodeFilter)create(peer);
     }
 
 
@@ -97,7 +96,6 @@ public class NodeFilterImpl implements NodeFilter {
     public static final int SHOW_NOTATION = 0x00000800;
 
 // Functions
-    @Override
     public short acceptNode(Node n)
     {
         return acceptNodeImpl(getPeer()

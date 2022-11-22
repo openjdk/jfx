@@ -37,7 +37,6 @@ public class DOMSelectionImpl {
         SelfDisposer(final long peer) {
             this.peer = peer;
         }
-        @Override
         public void dispose() {
             DOMSelectionImpl.dispose(peer);
         }
@@ -69,13 +68,13 @@ public class DOMSelectionImpl {
     }
 
     static long getPeer(DOMSelectionImpl arg) {
-        return (arg == null) ? 0L : arg.getPeer();
+        return (arg == null) ? 0L : ((DOMSelectionImpl)arg).getPeer();
     }
 
     native private static void dispose(long peer);
 
     static DOMSelectionImpl getImpl(long peer) {
-        return create(peer);
+        return (DOMSelectionImpl)create(peer);
     }
 
 

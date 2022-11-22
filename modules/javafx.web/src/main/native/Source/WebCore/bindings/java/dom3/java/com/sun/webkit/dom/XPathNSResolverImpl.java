@@ -35,7 +35,6 @@ public class XPathNSResolverImpl implements XPathNSResolver {
         SelfDisposer(final long peer) {
             this.peer = peer;
         }
-        @Override
         public void dispose() {
             XPathNSResolverImpl.dispose(peer);
         }
@@ -73,12 +72,11 @@ public class XPathNSResolverImpl implements XPathNSResolver {
     native private static void dispose(long peer);
 
     static XPathNSResolver getImpl(long peer) {
-        return create(peer);
+        return (XPathNSResolver)create(peer);
     }
 
 
 // Functions
-    @Override
     public String lookupNamespaceURI(String prefix)
     {
         return lookupNamespaceURIImpl(getPeer()

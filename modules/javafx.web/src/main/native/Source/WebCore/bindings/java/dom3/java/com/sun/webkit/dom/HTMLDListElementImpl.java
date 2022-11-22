@@ -38,13 +38,11 @@ public class HTMLDListElementImpl extends HTMLElementImpl implements HTMLDListEl
 
 
 // Attributes
-    @Override
     public boolean getCompact() {
         return getCompactImpl(getPeer());
     }
     native static boolean getCompactImpl(long peer);
 
-    @Override
     public void setCompact(boolean value) {
         setCompactImpl(getPeer(), value);
     }

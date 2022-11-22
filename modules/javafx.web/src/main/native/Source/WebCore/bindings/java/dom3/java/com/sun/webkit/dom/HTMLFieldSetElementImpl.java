@@ -49,7 +49,6 @@ public class HTMLFieldSetElementImpl extends HTMLElementImpl implements HTMLFiel
     }
     native static void setDisabledImpl(long peer, boolean value);
 
-    @Override
     public HTMLFormElement getForm() {
         return HTMLFormElementImpl.getImpl(getFormImpl(getPeer()));
     }

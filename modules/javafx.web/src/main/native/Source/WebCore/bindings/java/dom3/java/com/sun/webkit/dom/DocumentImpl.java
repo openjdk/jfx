@@ -77,73 +77,61 @@ public class DocumentImpl extends NodeImpl implements Document, XPathEvaluator, 
 
 
 // Attributes
-    @Override
     public DocumentType getDoctype() {
         return DocumentTypeImpl.getImpl(getDoctypeImpl(getPeer()));
     }
     native static long getDoctypeImpl(long peer);
 
-    @Override
     public DOMImplementation getImplementation() {
         return DOMImplementationImpl.getImpl(getImplementationImpl(getPeer()));
     }
     native static long getImplementationImpl(long peer);
 
-    @Override
     public Element getDocumentElement() {
         return ElementImpl.getImpl(getDocumentElementImpl(getPeer()));
     }
     native static long getDocumentElementImpl(long peer);
 
-    @Override
     public String getInputEncoding() {
         return getInputEncodingImpl(getPeer());
     }
     native static String getInputEncodingImpl(long peer);
 
-    @Override
     public String getXmlEncoding() {
         return getXmlEncodingImpl(getPeer());
     }
     native static String getXmlEncodingImpl(long peer);
 
-    @Override
     public String getXmlVersion() {
         return getXmlVersionImpl(getPeer());
     }
     native static String getXmlVersionImpl(long peer);
 
-    @Override
     public void setXmlVersion(String value) throws DOMException {
         setXmlVersionImpl(getPeer(), value);
     }
     native static void setXmlVersionImpl(long peer, String value);
 
-    @Override
     public boolean getXmlStandalone() {
         return getXmlStandaloneImpl(getPeer());
     }
     native static boolean getXmlStandaloneImpl(long peer);
 
-    @Override
     public void setXmlStandalone(boolean value) throws DOMException {
         setXmlStandaloneImpl(getPeer(), value);
     }
     native static void setXmlStandaloneImpl(long peer, boolean value);
 
-    @Override
     public String getDocumentURI() {
         return getDocumentURIImpl(getPeer());
     }
     native static String getDocumentURIImpl(long peer);
 
-    @Override
     public void setDocumentURI(String value) {
         setDocumentURIImpl(getPeer(), value);
     }
     native static void setDocumentURIImpl(long peer, String value);
 
-    @Override
     public AbstractView getDefaultView() {
         return DOMWindowImpl.getImpl(getDefaultViewImpl(getPeer()));
     }
@@ -1006,7 +994,6 @@ public class DocumentImpl extends NodeImpl implements Document, XPathEvaluator, 
 
 
 // Functions
-    @Override
     public Element createElement(String tagName) throws DOMException
     {
         return ElementImpl.getImpl(createElementImpl(getPeer()
@@ -1016,7 +1003,6 @@ public class DocumentImpl extends NodeImpl implements Document, XPathEvaluator, 
         , String tagName);
 
 
-    @Override
     public DocumentFragment createDocumentFragment()
     {
         return DocumentFragmentImpl.getImpl(createDocumentFragmentImpl(getPeer()));
@@ -1024,7 +1010,6 @@ public class DocumentImpl extends NodeImpl implements Document, XPathEvaluator, 
     native static long createDocumentFragmentImpl(long peer);
 
 
-    @Override
     public Text createTextNode(String data)
     {
         return TextImpl.getImpl(createTextNodeImpl(getPeer()
@@ -1034,7 +1019,6 @@ public class DocumentImpl extends NodeImpl implements Document, XPathEvaluator, 
         , String data);
 
 
-    @Override
     public Comment createComment(String data)
     {
         return CommentImpl.getImpl(createCommentImpl(getPeer()
@@ -1044,7 +1028,6 @@ public class DocumentImpl extends NodeImpl implements Document, XPathEvaluator, 
         , String data);
 
 
-    @Override
     public CDATASection createCDATASection(String data) throws DOMException
     {
         return CDATASectionImpl.getImpl(createCDATASectionImpl(getPeer()
@@ -1054,7 +1037,6 @@ public class DocumentImpl extends NodeImpl implements Document, XPathEvaluator, 
         , String data);
 
 
-    @Override
     public ProcessingInstruction createProcessingInstruction(String target
         , String data) throws DOMException
     {
@@ -1067,7 +1049,6 @@ public class DocumentImpl extends NodeImpl implements Document, XPathEvaluator, 
         , String data);
 
 
-    @Override
     public Attr createAttribute(String name) throws DOMException
     {
         return AttrImpl.getImpl(createAttributeImpl(getPeer()
@@ -1077,7 +1058,6 @@ public class DocumentImpl extends NodeImpl implements Document, XPathEvaluator, 
         , String name);
 
 
-    @Override
     public EntityReference createEntityReference(String name) throws DOMException
     {
         return EntityReferenceImpl.getImpl(createEntityReferenceImpl(getPeer()
@@ -1087,7 +1067,6 @@ public class DocumentImpl extends NodeImpl implements Document, XPathEvaluator, 
         , String name);
 
 
-    @Override
     public NodeList getElementsByTagName(String tagname)
     {
         return NodeListImpl.getImpl(getElementsByTagNameImpl(getPeer()
@@ -1097,7 +1076,6 @@ public class DocumentImpl extends NodeImpl implements Document, XPathEvaluator, 
         , String tagname);
 
 
-    @Override
     public Node importNode(Node importedNode
         , boolean deep) throws DOMException
     {
@@ -1110,7 +1088,6 @@ public class DocumentImpl extends NodeImpl implements Document, XPathEvaluator, 
         , boolean deep);
 
 
-    @Override
     public Element createElementNS(String namespaceURI
         , String qualifiedName) throws DOMException
     {
@@ -1123,7 +1100,6 @@ public class DocumentImpl extends NodeImpl implements Document, XPathEvaluator, 
         , String qualifiedName);
 
 
-    @Override
     public Attr createAttributeNS(String namespaceURI
         , String qualifiedName) throws DOMException
     {
@@ -1136,7 +1112,6 @@ public class DocumentImpl extends NodeImpl implements Document, XPathEvaluator, 
         , String qualifiedName);
 
 
-    @Override
     public NodeList getElementsByTagNameNS(String namespaceURI
         , String localName)
     {
@@ -1149,7 +1124,6 @@ public class DocumentImpl extends NodeImpl implements Document, XPathEvaluator, 
         , String localName);
 
 
-    @Override
     public Node adoptNode(Node source) throws DOMException
     {
         return NodeImpl.getImpl(adoptNodeImpl(getPeer()
@@ -1159,7 +1133,6 @@ public class DocumentImpl extends NodeImpl implements Document, XPathEvaluator, 
         , long source);
 
 
-    @Override
     public Event createEvent(String eventType) throws DOMException
     {
         return EventImpl.getImpl(createEventImpl(getPeer()
@@ -1224,7 +1197,6 @@ public class DocumentImpl extends NodeImpl implements Document, XPathEvaluator, 
         , String pseudoElement);
 
 
-    @Override
     public XPathExpression createExpression(String expression
         , XPathNSResolver resolver) throws DOMException
     {
@@ -1237,7 +1209,6 @@ public class DocumentImpl extends NodeImpl implements Document, XPathEvaluator, 
         , long resolver);
 
 
-    @Override
     public XPathNSResolver createNSResolver(Node nodeResolver)
     {
         return XPathNSResolverImpl.getImpl(createNSResolverImpl(getPeer()
@@ -1398,7 +1369,6 @@ public class DocumentImpl extends NodeImpl implements Document, XPathEvaluator, 
     native static void webkitExitFullscreenImpl(long peer);
 
 
-    @Override
     public Element getElementById(String elementId)
     {
         return ElementImpl.getImpl(getElementByIdImpl(getPeer()
@@ -1428,23 +1398,18 @@ public class DocumentImpl extends NodeImpl implements Document, XPathEvaluator, 
 
 
 //stubs
-    @Override
     public boolean getStrictErrorChecking() {
         throw new UnsupportedOperationException("Not supported yet.");
     }
-    @Override
     public void setStrictErrorChecking(boolean strictErrorChecking) {
         throw new UnsupportedOperationException("Not supported yet.");
     }
-    @Override
     public Node renameNode(Node n, String namespaceURI, String qualifiedName) throws DOMException {
         throw new UnsupportedOperationException("Not supported yet.");
     }
-    @Override
     public DOMConfiguration getDomConfig() {
         throw new UnsupportedOperationException("Not supported yet.");
     }
-    @Override
     public void normalizeDocument() {
         throw new UnsupportedOperationException("Not supported yet.");
     }

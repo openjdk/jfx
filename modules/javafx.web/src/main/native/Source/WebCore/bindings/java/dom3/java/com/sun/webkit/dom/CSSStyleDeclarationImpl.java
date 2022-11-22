@@ -38,7 +38,6 @@ public class CSSStyleDeclarationImpl implements CSSStyleDeclaration {
         SelfDisposer(final long peer) {
             this.peer = peer;
         }
-        @Override
         public void dispose() {
             CSSStyleDeclarationImpl.dispose(peer);
         }
@@ -76,30 +75,26 @@ public class CSSStyleDeclarationImpl implements CSSStyleDeclaration {
     native private static void dispose(long peer);
 
     static CSSStyleDeclaration getImpl(long peer) {
-        return create(peer);
+        return (CSSStyleDeclaration)create(peer);
     }
 
 
 // Attributes
-    @Override
     public String getCssText() {
         return getCssTextImpl(getPeer());
     }
     native static String getCssTextImpl(long peer);
 
-    @Override
     public void setCssText(String value) throws DOMException {
         setCssTextImpl(getPeer(), value);
     }
     native static void setCssTextImpl(long peer, String value);
 
-    @Override
     public int getLength() {
         return getLengthImpl(getPeer());
     }
     native static int getLengthImpl(long peer);
 
-    @Override
     public CSSRule getParentRule() {
         return CSSRuleImpl.getImpl(getParentRuleImpl(getPeer()));
     }
@@ -107,7 +102,6 @@ public class CSSStyleDeclarationImpl implements CSSStyleDeclaration {
 
 
 // Functions
-    @Override
     public String getPropertyValue(String propertyName)
     {
         return getPropertyValueImpl(getPeer()
@@ -117,7 +111,6 @@ public class CSSStyleDeclarationImpl implements CSSStyleDeclaration {
         , String propertyName);
 
 
-    @Override
     public CSSValue getPropertyCSSValue(String propertyName)
     {
         return CSSValueImpl.getImpl(getPropertyCSSValueImpl(getPeer()
@@ -127,7 +120,6 @@ public class CSSStyleDeclarationImpl implements CSSStyleDeclaration {
         , String propertyName);
 
 
-    @Override
     public String removeProperty(String propertyName) throws DOMException
     {
         return removePropertyImpl(getPeer()
@@ -137,7 +129,6 @@ public class CSSStyleDeclarationImpl implements CSSStyleDeclaration {
         , String propertyName);
 
 
-    @Override
     public String getPropertyPriority(String propertyName)
     {
         return getPropertyPriorityImpl(getPeer()
@@ -147,7 +138,6 @@ public class CSSStyleDeclarationImpl implements CSSStyleDeclaration {
         , String propertyName);
 
 
-    @Override
     public void setProperty(String propertyName
         , String value
         , String priority) throws DOMException
@@ -163,7 +153,6 @@ public class CSSStyleDeclarationImpl implements CSSStyleDeclaration {
         , String priority);
 
 
-    @Override
     public String item(int index)
     {
         return itemImpl(getPeer()

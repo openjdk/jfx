@@ -35,12 +35,11 @@ public class ProcessingInstructionImpl extends CharacterDataImpl implements Proc
     }
 
     static Node getImpl(long peer) {
-        return create(peer);
+        return (Node)create(peer);
     }
 
 
 // Attributes
-    @Override
     public String getTarget() {
         return getTargetImpl(getPeer());
     }

@@ -51,13 +51,11 @@ public class ElementImpl extends NodeImpl implements Element {
     public static final int ALLOW_KEYBOARD_INPUT = 1;
 
 // Attributes
-    @Override
     public String getTagName() {
         return getTagNameImpl(getPeer());
     }
     native static String getTagNameImpl(long peer);
 
-    @Override
     public NamedNodeMap getAttributes() {
         return NamedNodeMapImpl.getImpl(getAttributesImpl(getPeer()));
     }
@@ -955,7 +953,6 @@ public class ElementImpl extends NodeImpl implements Element {
 
 
 // Functions
-    @Override
     public String getAttribute(String name)
     {
         return getAttributeImpl(getPeer()
@@ -965,7 +962,6 @@ public class ElementImpl extends NodeImpl implements Element {
         , String name);
 
 
-    @Override
     public void setAttribute(String name
         , String value) throws DOMException
     {
@@ -978,7 +974,6 @@ public class ElementImpl extends NodeImpl implements Element {
         , String value);
 
 
-    @Override
     public void removeAttribute(String name)
     {
         removeAttributeImpl(getPeer()
@@ -988,7 +983,6 @@ public class ElementImpl extends NodeImpl implements Element {
         , String name);
 
 
-    @Override
     public Attr getAttributeNode(String name)
     {
         return AttrImpl.getImpl(getAttributeNodeImpl(getPeer()
@@ -998,7 +992,6 @@ public class ElementImpl extends NodeImpl implements Element {
         , String name);
 
 
-    @Override
     public Attr setAttributeNode(Attr newAttr) throws DOMException
     {
         return AttrImpl.getImpl(setAttributeNodeImpl(getPeer()
@@ -1008,7 +1001,6 @@ public class ElementImpl extends NodeImpl implements Element {
         , long newAttr);
 
 
-    @Override
     public Attr removeAttributeNode(Attr oldAttr) throws DOMException
     {
         return AttrImpl.getImpl(removeAttributeNodeImpl(getPeer()
@@ -1018,7 +1010,6 @@ public class ElementImpl extends NodeImpl implements Element {
         , long oldAttr);
 
 
-    @Override
     public NodeList getElementsByTagName(String name)
     {
         return NodeListImpl.getImpl(getElementsByTagNameImpl(getPeer()
@@ -1028,7 +1019,6 @@ public class ElementImpl extends NodeImpl implements Element {
         , String name);
 
 
-    @Override
     public boolean hasAttributes()
     {
         return hasAttributesImpl(getPeer());
@@ -1036,7 +1026,6 @@ public class ElementImpl extends NodeImpl implements Element {
     native static boolean hasAttributesImpl(long peer);
 
 
-    @Override
     public String getAttributeNS(String namespaceURI
         , String localName)
     {
@@ -1049,7 +1038,6 @@ public class ElementImpl extends NodeImpl implements Element {
         , String localName);
 
 
-    @Override
     public void setAttributeNS(String namespaceURI
         , String qualifiedName
         , String value) throws DOMException
@@ -1065,7 +1053,6 @@ public class ElementImpl extends NodeImpl implements Element {
         , String value);
 
 
-    @Override
     public void removeAttributeNS(String namespaceURI
         , String localName)
     {
@@ -1078,7 +1065,6 @@ public class ElementImpl extends NodeImpl implements Element {
         , String localName);
 
 
-    @Override
     public NodeList getElementsByTagNameNS(String namespaceURI
         , String localName)
     {
@@ -1091,7 +1077,6 @@ public class ElementImpl extends NodeImpl implements Element {
         , String localName);
 
 
-    @Override
     public Attr getAttributeNodeNS(String namespaceURI
         , String localName)
     {
@@ -1104,7 +1089,6 @@ public class ElementImpl extends NodeImpl implements Element {
         , String localName);
 
 
-    @Override
     public Attr setAttributeNodeNS(Attr newAttr) throws DOMException
     {
         return AttrImpl.getImpl(setAttributeNodeNSImpl(getPeer()
@@ -1114,7 +1098,6 @@ public class ElementImpl extends NodeImpl implements Element {
         , long newAttr);
 
 
-    @Override
     public boolean hasAttribute(String name)
     {
         return hasAttributeImpl(getPeer()
@@ -1124,7 +1107,6 @@ public class ElementImpl extends NodeImpl implements Element {
         , String name);
 
 
-    @Override
     public boolean hasAttributeNS(String namespaceURI
         , String localName)
     {
@@ -1266,19 +1248,15 @@ public class ElementImpl extends NodeImpl implements Element {
 
 
 //stubs
-    @Override
     public void setIdAttribute(String name, boolean isId) throws DOMException {
         throw new UnsupportedOperationException("Not supported yet.");
     }
-    @Override
     public void setIdAttributeNode(Attr idAttr, boolean isId) throws DOMException {
         throw new UnsupportedOperationException("Not supported yet.");
     }
-    @Override
     public TypeInfo getSchemaTypeInfo() {
         throw new UnsupportedOperationException("Not supported yet.");
     }
-    @Override
     public void setIdAttributeNS(String namespaceURI, String localName, boolean isId) throws DOMException {
         throw new UnsupportedOperationException("Not supported yet.");
     }

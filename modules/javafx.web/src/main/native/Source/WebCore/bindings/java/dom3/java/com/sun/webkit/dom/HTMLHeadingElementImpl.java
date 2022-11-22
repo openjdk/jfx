@@ -38,13 +38,11 @@ public class HTMLHeadingElementImpl extends HTMLElementImpl implements HTMLHeadi
 
 
 // Attributes
-    @Override
     public String getAlign() {
         return getAlignImpl(getPeer());
     }
     native static String getAlignImpl(long peer);
 
-    @Override
     public void setAlign(String value) {
         setAlignImpl(getPeer(), value);
     }

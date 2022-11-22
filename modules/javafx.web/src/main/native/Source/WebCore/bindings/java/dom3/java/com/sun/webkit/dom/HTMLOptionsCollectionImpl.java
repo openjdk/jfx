@@ -50,7 +50,6 @@ public class HTMLOptionsCollectionImpl extends HTMLCollectionImpl {
     }
     native static void setSelectedIndexImpl(long peer, int value);
 
-    @Override
     public int getLength() {
         return getLengthImpl(getPeer());
     }
@@ -63,7 +62,6 @@ public class HTMLOptionsCollectionImpl extends HTMLCollectionImpl {
 
 
 // Functions
-    @Override
     public Node namedItem(String name)
     {
         return NodeImpl.getImpl(namedItemImpl(getPeer()
@@ -85,7 +83,6 @@ public class HTMLOptionsCollectionImpl extends HTMLCollectionImpl {
         , int index);
 
 
-    @Override
     public Node item(int index)
     {
         return NodeImpl.getImpl(itemImpl(getPeer()

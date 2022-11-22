@@ -26,6 +26,8 @@
 package com.sun.webkit.dom;
 
 import com.sun.webkit.Disposer;
+import com.sun.webkit.DisposerRecord;
+import com.sun.webkit.dom.JSObject;
 import org.w3c.dom.DOMException;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -112,7 +114,6 @@ public class DOMWindowImpl extends JSObject implements AbstractView, EventTarget
             peer = _peer;
         }
 
-        @Override
         public void dispose() {
             int hash = hashPeer(peer);
             SelfDisposer head = hashTable[hash];
@@ -155,7 +156,7 @@ public class DOMWindowImpl extends JSObject implements AbstractView, EventTarget
     native private static void dispose(long peer);
 
     static AbstractView getImpl(long peer) {
-        return create(peer);
+        return (AbstractView)create(peer);
     }
 
 
@@ -1261,7 +1262,6 @@ public class DOMWindowImpl extends JSObject implements AbstractView, EventTarget
     native static void releaseEventsImpl(long peer);
 
 
-    @Override
     public void addEventListener(String type
         , EventListener listener
         , boolean useCapture)
@@ -1277,7 +1277,6 @@ public class DOMWindowImpl extends JSObject implements AbstractView, EventTarget
         , boolean useCapture);
 
 
-    @Override
     public void removeEventListener(String type
         , EventListener listener
         , boolean useCapture)
@@ -1293,7 +1292,6 @@ public class DOMWindowImpl extends JSObject implements AbstractView, EventTarget
         , boolean useCapture);
 
 
-    @Override
     public boolean dispatchEvent(Event event) throws DOMException
     {
         return dispatchEventImpl(getPeer()
@@ -1341,7 +1339,6 @@ public class DOMWindowImpl extends JSObject implements AbstractView, EventTarget
 
 
 //stubs
-    @Override
     public DocumentView getDocument() {
         throw new UnsupportedOperationException("Not supported yet.");
     }

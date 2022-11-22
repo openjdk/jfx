@@ -39,19 +39,16 @@ public class HTMLMapElementImpl extends HTMLElementImpl implements HTMLMapElemen
 
 
 // Attributes
-    @Override
     public HTMLCollection getAreas() {
         return HTMLCollectionImpl.getImpl(getAreasImpl(getPeer()));
     }
     native static long getAreasImpl(long peer);
 
-    @Override
     public String getName() {
         return getNameImpl(getPeer());
     }
     native static String getNameImpl(long peer);
 
-    @Override
     public void setName(String value) {
         setNameImpl(getPeer(), value);
     }

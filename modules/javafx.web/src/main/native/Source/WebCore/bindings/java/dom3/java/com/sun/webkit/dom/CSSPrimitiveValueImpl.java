@@ -74,7 +74,6 @@ public class CSSPrimitiveValueImpl extends CSSValueImpl implements CSSPrimitiveV
     public static final int CSS_VMAX = 29;
 
 // Attributes
-    @Override
     public short getPrimitiveType() {
         return getPrimitiveTypeImpl(getPeer());
     }
@@ -82,7 +81,6 @@ public class CSSPrimitiveValueImpl extends CSSValueImpl implements CSSPrimitiveV
 
 
 // Functions
-    @Override
     public void setFloatValue(short unitType
         , float floatValue) throws DOMException
     {
@@ -95,7 +93,6 @@ public class CSSPrimitiveValueImpl extends CSSValueImpl implements CSSPrimitiveV
         , float floatValue);
 
 
-    @Override
     public float getFloatValue(short unitType) throws DOMException
     {
         return getFloatValueImpl(getPeer()
@@ -105,7 +102,6 @@ public class CSSPrimitiveValueImpl extends CSSValueImpl implements CSSPrimitiveV
         , short unitType);
 
 
-    @Override
     public void setStringValue(short stringType
         , String stringValue) throws DOMException
     {
@@ -118,7 +114,6 @@ public class CSSPrimitiveValueImpl extends CSSValueImpl implements CSSPrimitiveV
         , String stringValue);
 
 
-    @Override
     public String getStringValue() throws DOMException
     {
         return getStringValueImpl(getPeer());
@@ -126,7 +121,6 @@ public class CSSPrimitiveValueImpl extends CSSValueImpl implements CSSPrimitiveV
     native static String getStringValueImpl(long peer);
 
 
-    @Override
     public Counter getCounterValue() throws DOMException
     {
         return CounterImpl.getImpl(getCounterValueImpl(getPeer()));
@@ -134,7 +128,6 @@ public class CSSPrimitiveValueImpl extends CSSValueImpl implements CSSPrimitiveV
     native static long getCounterValueImpl(long peer);
 
 
-    @Override
     public Rect getRectValue() throws DOMException
     {
         return RectImpl.getImpl(getRectValueImpl(getPeer()));
@@ -142,7 +135,6 @@ public class CSSPrimitiveValueImpl extends CSSValueImpl implements CSSPrimitiveV
     native static long getRectValueImpl(long peer);
 
 
-    @Override
     public RGBColor getRGBColorValue() throws DOMException
     {
         return RGBColorImpl.getImpl(getRGBColorValueImpl(getPeer()));

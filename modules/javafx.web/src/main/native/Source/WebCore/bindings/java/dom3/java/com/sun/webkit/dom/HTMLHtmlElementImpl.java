@@ -38,13 +38,11 @@ public class HTMLHtmlElementImpl extends HTMLElementImpl implements HTMLHtmlElem
 
 
 // Attributes
-    @Override
     public String getVersion() {
         return getVersionImpl(getPeer());
     }
     native static String getVersionImpl(long peer);
 
-    @Override
     public void setVersion(String value) {
         setVersionImpl(getPeer(), value);
     }

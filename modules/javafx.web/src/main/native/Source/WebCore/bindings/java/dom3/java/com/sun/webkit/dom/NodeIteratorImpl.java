@@ -37,7 +37,6 @@ public class NodeIteratorImpl implements NodeIterator {
         SelfDisposer(final long peer) {
             this.peer = peer;
         }
-        @Override
         public void dispose() {
             NodeIteratorImpl.dispose(peer);
         }
@@ -75,30 +74,26 @@ public class NodeIteratorImpl implements NodeIterator {
     native private static void dispose(long peer);
 
     static NodeIterator getImpl(long peer) {
-        return create(peer);
+        return (NodeIterator)create(peer);
     }
 
 
 // Attributes
-    @Override
     public Node getRoot() {
         return NodeImpl.getImpl(getRootImpl(getPeer()));
     }
     native static long getRootImpl(long peer);
 
-    @Override
     public int getWhatToShow() {
         return getWhatToShowImpl(getPeer());
     }
     native static int getWhatToShowImpl(long peer);
 
-    @Override
     public NodeFilter getFilter() {
         return NodeFilterImpl.getImpl(getFilterImpl(getPeer()));
     }
     native static long getFilterImpl(long peer);
 
-    @Override
     public boolean getExpandEntityReferences() {
         return getExpandEntityReferencesImpl(getPeer());
     }
@@ -116,7 +111,6 @@ public class NodeIteratorImpl implements NodeIterator {
 
 
 // Functions
-    @Override
     public Node nextNode()
     {
         return NodeImpl.getImpl(nextNodeImpl(getPeer()));
@@ -124,7 +118,6 @@ public class NodeIteratorImpl implements NodeIterator {
     native static long nextNodeImpl(long peer);
 
 
-    @Override
     public Node previousNode()
     {
         return NodeImpl.getImpl(previousNodeImpl(getPeer()));
@@ -132,7 +125,6 @@ public class NodeIteratorImpl implements NodeIterator {
     native static long previousNodeImpl(long peer);
 
 
-    @Override
     public void detach()
     {
         detachImpl(getPeer());

@@ -36,7 +36,6 @@ public class StyleSheetListImpl implements StyleSheetList {
         SelfDisposer(final long peer) {
             this.peer = peer;
         }
-        @Override
         public void dispose() {
             StyleSheetListImpl.dispose(peer);
         }
@@ -74,12 +73,11 @@ public class StyleSheetListImpl implements StyleSheetList {
     native private static void dispose(long peer);
 
     static StyleSheetList getImpl(long peer) {
-        return create(peer);
+        return (StyleSheetList)create(peer);
     }
 
 
 // Attributes
-    @Override
     public int getLength() {
         return getLengthImpl(getPeer());
     }
@@ -87,7 +85,6 @@ public class StyleSheetListImpl implements StyleSheetList {
 
 
 // Functions
-    @Override
     public StyleSheet item(int index)
     {
         return StyleSheetImpl.getImpl(itemImpl(getPeer()

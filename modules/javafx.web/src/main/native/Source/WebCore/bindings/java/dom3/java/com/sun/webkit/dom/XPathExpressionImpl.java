@@ -38,7 +38,6 @@ public class XPathExpressionImpl implements XPathExpression {
         SelfDisposer(final long peer) {
             this.peer = peer;
         }
-        @Override
         public void dispose() {
             XPathExpressionImpl.dispose(peer);
         }
@@ -76,7 +75,7 @@ public class XPathExpressionImpl implements XPathExpression {
     native private static void dispose(long peer);
 
     static XPathExpression getImpl(long peer) {
-        return create(peer);
+        return (XPathExpression)create(peer);
     }
 
     @Override public Object evaluate(Node contextNode, short type, Object result) throws DOMException {

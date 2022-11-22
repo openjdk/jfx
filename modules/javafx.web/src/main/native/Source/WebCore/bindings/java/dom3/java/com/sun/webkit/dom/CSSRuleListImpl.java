@@ -36,7 +36,6 @@ public class CSSRuleListImpl implements CSSRuleList {
         SelfDisposer(final long peer) {
             this.peer = peer;
         }
-        @Override
         public void dispose() {
             CSSRuleListImpl.dispose(peer);
         }
@@ -74,12 +73,11 @@ public class CSSRuleListImpl implements CSSRuleList {
     native private static void dispose(long peer);
 
     static CSSRuleList getImpl(long peer) {
-        return create(peer);
+        return (CSSRuleList)create(peer);
     }
 
 
 // Attributes
-    @Override
     public int getLength() {
         return getLengthImpl(getPeer());
     }
@@ -87,7 +85,6 @@ public class CSSRuleListImpl implements CSSRuleList {
 
 
 // Functions
-    @Override
     public CSSRule item(int index)
     {
         return CSSRuleImpl.getImpl(itemImpl(getPeer()

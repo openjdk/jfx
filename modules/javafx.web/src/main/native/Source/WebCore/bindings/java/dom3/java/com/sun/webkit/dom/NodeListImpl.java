@@ -36,7 +36,6 @@ public class NodeListImpl implements NodeList {
         SelfDisposer(final long peer) {
             this.peer = peer;
         }
-        @Override
         public void dispose() {
             NodeListImpl.dispose(peer);
         }
@@ -74,12 +73,11 @@ public class NodeListImpl implements NodeList {
     native private static void dispose(long peer);
 
     static NodeList getImpl(long peer) {
-        return create(peer);
+        return (NodeList)create(peer);
     }
 
 
 // Attributes
-    @Override
     public int getLength() {
         return getLengthImpl(getPeer());
     }
@@ -87,7 +85,6 @@ public class NodeListImpl implements NodeList {
 
 
 // Functions
-    @Override
     public Node item(int index)
     {
         return NodeImpl.getImpl(itemImpl(getPeer()

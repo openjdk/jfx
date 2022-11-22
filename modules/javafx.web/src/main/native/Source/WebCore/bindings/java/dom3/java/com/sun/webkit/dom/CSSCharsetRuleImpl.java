@@ -39,13 +39,11 @@ public class CSSCharsetRuleImpl extends CSSRuleImpl implements CSSCharsetRule {
 
 
 // Attributes
-    @Override
     public String getEncoding() {
         return getEncodingImpl(getPeer());
     }
     native static String getEncodingImpl(long peer);
 
-    @Override
     public void setEncoding(String value) throws DOMException {
         setEncodingImpl(getPeer(), value);
     }

@@ -36,7 +36,6 @@ public class EventImpl implements Event {
         SelfDisposer(final long peer) {
             this.peer = peer;
         }
-        @Override
         public void dispose() {
             EventImpl.dispose(peer);
         }
@@ -88,7 +87,7 @@ public class EventImpl implements Event {
     native private static int getCPPTypeImpl(long peer);
 
     static Event getImpl(long peer) {
-        return create(peer);
+        return (Event)create(peer);
     }
 
 
@@ -115,43 +114,36 @@ public class EventImpl implements Event {
     public static final int CHANGE = 32768;
 
 // Attributes
-    @Override
     public String getType() {
         return getTypeImpl(getPeer());
     }
     native static String getTypeImpl(long peer);
 
-    @Override
     public EventTarget getTarget() {
         return (EventTarget)NodeImpl.getImpl(getTargetImpl(getPeer()));
     }
     native static long getTargetImpl(long peer);
 
-    @Override
     public EventTarget getCurrentTarget() {
         return (EventTarget)NodeImpl.getImpl(getCurrentTargetImpl(getPeer()));
     }
     native static long getCurrentTargetImpl(long peer);
 
-    @Override
     public short getEventPhase() {
         return getEventPhaseImpl(getPeer());
     }
     native static short getEventPhaseImpl(long peer);
 
-    @Override
     public boolean getBubbles() {
         return getBubblesImpl(getPeer());
     }
     native static boolean getBubblesImpl(long peer);
 
-    @Override
     public boolean getCancelable() {
         return getCancelableImpl(getPeer());
     }
     native static boolean getCancelableImpl(long peer);
 
-    @Override
     public long getTimeStamp() {
         return getTimeStampImpl(getPeer());
     }
@@ -194,7 +186,6 @@ public class EventImpl implements Event {
 
 
 // Functions
-    @Override
     public void stopPropagation()
     {
         stopPropagationImpl(getPeer());
@@ -202,7 +193,6 @@ public class EventImpl implements Event {
     native static void stopPropagationImpl(long peer);
 
 
-    @Override
     public void preventDefault()
     {
         preventDefaultImpl(getPeer());
@@ -210,7 +200,6 @@ public class EventImpl implements Event {
     native static void preventDefaultImpl(long peer);
 
 
-    @Override
     public void initEvent(String eventTypeArg
         , boolean canBubbleArg
         , boolean cancelableArg)

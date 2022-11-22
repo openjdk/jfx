@@ -38,7 +38,6 @@ public class TreeWalkerImpl implements TreeWalker {
         SelfDisposer(final long peer) {
             this.peer = peer;
         }
-        @Override
         public void dispose() {
             TreeWalkerImpl.dispose(peer);
         }
@@ -76,42 +75,36 @@ public class TreeWalkerImpl implements TreeWalker {
     native private static void dispose(long peer);
 
     static TreeWalker getImpl(long peer) {
-        return create(peer);
+        return (TreeWalker)create(peer);
     }
 
 
 // Attributes
-    @Override
     public Node getRoot() {
         return NodeImpl.getImpl(getRootImpl(getPeer()));
     }
     native static long getRootImpl(long peer);
 
-    @Override
     public int getWhatToShow() {
         return getWhatToShowImpl(getPeer());
     }
     native static int getWhatToShowImpl(long peer);
 
-    @Override
     public NodeFilter getFilter() {
         return NodeFilterImpl.getImpl(getFilterImpl(getPeer()));
     }
     native static long getFilterImpl(long peer);
 
-    @Override
     public boolean getExpandEntityReferences() {
         return getExpandEntityReferencesImpl(getPeer());
     }
     native static boolean getExpandEntityReferencesImpl(long peer);
 
-    @Override
     public Node getCurrentNode() {
         return NodeImpl.getImpl(getCurrentNodeImpl(getPeer()));
     }
     native static long getCurrentNodeImpl(long peer);
 
-    @Override
     public void setCurrentNode(Node value) throws DOMException {
         setCurrentNodeImpl(getPeer(), NodeImpl.getPeer(value));
     }
@@ -119,7 +112,6 @@ public class TreeWalkerImpl implements TreeWalker {
 
 
 // Functions
-    @Override
     public Node parentNode()
     {
         return NodeImpl.getImpl(parentNodeImpl(getPeer()));
@@ -127,7 +119,6 @@ public class TreeWalkerImpl implements TreeWalker {
     native static long parentNodeImpl(long peer);
 
 
-    @Override
     public Node firstChild()
     {
         return NodeImpl.getImpl(firstChildImpl(getPeer()));
@@ -135,7 +126,6 @@ public class TreeWalkerImpl implements TreeWalker {
     native static long firstChildImpl(long peer);
 
 
-    @Override
     public Node lastChild()
     {
         return NodeImpl.getImpl(lastChildImpl(getPeer()));
@@ -143,7 +133,6 @@ public class TreeWalkerImpl implements TreeWalker {
     native static long lastChildImpl(long peer);
 
 
-    @Override
     public Node previousSibling()
     {
         return NodeImpl.getImpl(previousSiblingImpl(getPeer()));
@@ -151,7 +140,6 @@ public class TreeWalkerImpl implements TreeWalker {
     native static long previousSiblingImpl(long peer);
 
 
-    @Override
     public Node nextSibling()
     {
         return NodeImpl.getImpl(nextSiblingImpl(getPeer()));
@@ -159,7 +147,6 @@ public class TreeWalkerImpl implements TreeWalker {
     native static long nextSiblingImpl(long peer);
 
 
-    @Override
     public Node previousNode()
     {
         return NodeImpl.getImpl(previousNodeImpl(getPeer()));
@@ -167,7 +154,6 @@ public class TreeWalkerImpl implements TreeWalker {
     native static long previousNodeImpl(long peer);
 
 
-    @Override
     public Node nextNode()
     {
         return NodeImpl.getImpl(nextNodeImpl(getPeer()));

@@ -38,13 +38,11 @@ public class HTMLQuoteElementImpl extends HTMLElementImpl implements HTMLQuoteEl
 
 
 // Attributes
-    @Override
     public String getCite() {
         return getCiteImpl(getPeer());
     }
     native static String getCiteImpl(long peer);
 
-    @Override
     public void setCite(String value) {
         setCiteImpl(getPeer(), value);
     }

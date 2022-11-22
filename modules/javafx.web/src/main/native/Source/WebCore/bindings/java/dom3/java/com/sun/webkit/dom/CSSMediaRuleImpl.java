@@ -41,13 +41,11 @@ public class CSSMediaRuleImpl extends CSSRuleImpl implements CSSMediaRule {
 
 
 // Attributes
-    @Override
     public MediaList getMedia() {
         return MediaListImpl.getImpl(getMediaImpl(getPeer()));
     }
     native static long getMediaImpl(long peer);
 
-    @Override
     public CSSRuleList getCssRules() {
         return CSSRuleListImpl.getImpl(getCssRulesImpl(getPeer()));
     }
@@ -55,7 +53,6 @@ public class CSSMediaRuleImpl extends CSSRuleImpl implements CSSMediaRule {
 
 
 // Functions
-    @Override
     public int insertRule(String rule
         , int index) throws DOMException
     {
@@ -68,7 +65,6 @@ public class CSSMediaRuleImpl extends CSSRuleImpl implements CSSMediaRule {
         , int index);
 
 
-    @Override
     public void deleteRule(int index) throws DOMException
     {
         deleteRuleImpl(getPeer()

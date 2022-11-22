@@ -41,25 +41,21 @@ public class HTMLInputElementImpl extends HTMLElementImpl implements HTMLInputEl
 
 
 // Attributes
-    @Override
     public String getAccept() {
         return getAcceptImpl(getPeer());
     }
     native static String getAcceptImpl(long peer);
 
-    @Override
     public void setAccept(String value) {
         setAcceptImpl(getPeer(), value);
     }
     native static void setAcceptImpl(long peer, String value);
 
-    @Override
     public String getAlt() {
         return getAltImpl(getPeer());
     }
     native static String getAltImpl(long peer);
 
-    @Override
     public void setAlt(String value) {
         setAltImpl(getPeer(), value);
     }
@@ -85,25 +81,21 @@ public class HTMLInputElementImpl extends HTMLElementImpl implements HTMLInputEl
     }
     native static void setAutofocusImpl(long peer, boolean value);
 
-    @Override
     public boolean getDefaultChecked() {
         return getDefaultCheckedImpl(getPeer());
     }
     native static boolean getDefaultCheckedImpl(long peer);
 
-    @Override
     public void setDefaultChecked(boolean value) {
         setDefaultCheckedImpl(getPeer(), value);
     }
     native static void setDefaultCheckedImpl(long peer, boolean value);
 
-    @Override
     public boolean getChecked() {
         return getCheckedImpl(getPeer());
     }
     native static boolean getCheckedImpl(long peer);
 
-    @Override
     public void setChecked(boolean value) {
         setCheckedImpl(getPeer(), value);
     }
@@ -119,19 +111,16 @@ public class HTMLInputElementImpl extends HTMLElementImpl implements HTMLInputEl
     }
     native static void setDirNameImpl(long peer, String value);
 
-    @Override
     public boolean getDisabled() {
         return getDisabledImpl(getPeer());
     }
     native static boolean getDisabledImpl(long peer);
 
-    @Override
     public void setDisabled(boolean value) {
         setDisabledImpl(getPeer(), value);
     }
     native static void setDisabledImpl(long peer, boolean value);
 
-    @Override
     public HTMLFormElement getForm() {
         return HTMLFormElementImpl.getImpl(getFormImpl(getPeer()));
     }
@@ -217,13 +206,11 @@ public class HTMLInputElementImpl extends HTMLElementImpl implements HTMLInputEl
     }
     native static void setMaxImpl(long peer, String value);
 
-    @Override
     public int getMaxLength() {
         return getMaxLengthImpl(getPeer());
     }
     native static int getMaxLengthImpl(long peer);
 
-    @Override
     public void setMaxLength(int value) throws DOMException {
         setMaxLengthImpl(getPeer(), value);
     }
@@ -249,13 +236,11 @@ public class HTMLInputElementImpl extends HTMLElementImpl implements HTMLInputEl
     }
     native static void setMultipleImpl(long peer, boolean value);
 
-    @Override
     public String getName() {
         return getNameImpl(getPeer());
     }
     native static String getNameImpl(long peer);
 
-    @Override
     public void setName(String value) {
         setNameImpl(getPeer(), value);
     }
@@ -281,13 +266,11 @@ public class HTMLInputElementImpl extends HTMLElementImpl implements HTMLInputEl
     }
     native static void setPlaceholderImpl(long peer, String value);
 
-    @Override
     public boolean getReadOnly() {
         return getReadOnlyImpl(getPeer());
     }
     native static boolean getReadOnlyImpl(long peer);
 
-    @Override
     public void setReadOnly(boolean value) {
         setReadOnlyImpl(getPeer(), value);
     }
@@ -303,25 +286,21 @@ public class HTMLInputElementImpl extends HTMLElementImpl implements HTMLInputEl
     }
     native static void setRequiredImpl(long peer, boolean value);
 
-    @Override
     public String getSize() {
         return getSizeImpl(getPeer())+"";
     }
     native static String getSizeImpl(long peer);
 
-    @Override
     public void setSize(String value) {
         setSizeImpl(getPeer(), value);
     }
     native static void setSizeImpl(long peer, String value);
 
-    @Override
     public String getSrc() {
         return getSrcImpl(getPeer());
     }
     native static String getSrcImpl(long peer);
 
-    @Override
     public void setSrc(String value) {
         setSrcImpl(getPeer(), value);
     }
@@ -337,7 +316,6 @@ public class HTMLInputElementImpl extends HTMLElementImpl implements HTMLInputEl
     }
     native static void setStepImpl(long peer, String value);
 
-    @Override
     public String getType() {
         return getTypeImpl(getPeer());
     }
@@ -348,25 +326,21 @@ public class HTMLInputElementImpl extends HTMLElementImpl implements HTMLInputEl
     }
     native static void setTypeImpl(long peer, String value);
 
-    @Override
     public String getDefaultValue() {
         return getDefaultValueImpl(getPeer());
     }
     native static String getDefaultValueImpl(long peer);
 
-    @Override
     public void setDefaultValue(String value) {
         setDefaultValueImpl(getPeer(), value);
     }
     native static void setDefaultValueImpl(long peer, String value);
 
-    @Override
     public String getValue() {
         return getValueImpl(getPeer());
     }
     native static String getValueImpl(long peer);
 
-    @Override
     public void setValue(String value) {
         setValueImpl(getPeer(), value);
     }
@@ -417,25 +391,21 @@ public class HTMLInputElementImpl extends HTMLElementImpl implements HTMLInputEl
     }
     native static long getLabelsImpl(long peer);
 
-    @Override
     public String getAlign() {
         return getAlignImpl(getPeer());
     }
     native static String getAlignImpl(long peer);
 
-    @Override
     public void setAlign(String value) {
         setAlignImpl(getPeer(), value);
     }
     native static void setAlignImpl(long peer, String value);
 
-    @Override
     public String getUseMap() {
         return getUseMapImpl(getPeer());
     }
     native static String getUseMapImpl(long peer);
 
-    @Override
     public void setUseMap(String value) {
         setUseMapImpl(getPeer(), value);
     }
@@ -451,13 +421,11 @@ public class HTMLInputElementImpl extends HTMLElementImpl implements HTMLInputEl
     }
     native static void setIncrementalImpl(long peer, boolean value);
 
-    @Override
     public String getAccessKey() {
         return getAccessKeyImpl(getPeer());
     }
     native static String getAccessKeyImpl(long peer);
 
-    @Override
     public void setAccessKey(String value) {
         setAccessKeyImpl(getPeer(), value);
     }
@@ -499,7 +467,6 @@ public class HTMLInputElementImpl extends HTMLElementImpl implements HTMLInputEl
         , String error);
 
 
-    @Override
     public void select()
     {
         selectImpl(getPeer());
@@ -534,7 +501,6 @@ public class HTMLInputElementImpl extends HTMLElementImpl implements HTMLInputEl
         , String selectionMode);
 
 
-    @Override
     public void click()
     {
         clickImpl(getPeer());

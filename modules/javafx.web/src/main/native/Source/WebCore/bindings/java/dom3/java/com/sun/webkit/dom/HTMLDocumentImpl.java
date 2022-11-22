@@ -84,7 +84,6 @@ public class HTMLDocumentImpl extends DocumentImpl implements HTMLDocument {
     }
     native static void setDesignModeImpl(long peer, String value);
 
-    @Override
     public String getCompatMode() {
         return getCompatModeImpl(getPeer());
     }
@@ -142,7 +141,6 @@ public class HTMLDocumentImpl extends DocumentImpl implements HTMLDocument {
 
 
 // Functions
-    @Override
     public void open()
     {
         openImpl(getPeer());
@@ -150,7 +148,6 @@ public class HTMLDocumentImpl extends DocumentImpl implements HTMLDocument {
     native static void openImpl(long peer);
 
 
-    @Override
     public void close()
     {
         closeImpl(getPeer());
@@ -158,7 +155,6 @@ public class HTMLDocumentImpl extends DocumentImpl implements HTMLDocument {
     native static void closeImpl(long peer);
 
 
-    @Override
     public void write(String text)
     {
         writeImpl(getPeer()
@@ -168,7 +164,6 @@ public class HTMLDocumentImpl extends DocumentImpl implements HTMLDocument {
         , String text);
 
 
-    @Override
     public void writeln(String text)
     {
         writelnImpl(getPeer()

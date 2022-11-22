@@ -50,19 +50,16 @@ public class HTMLButtonElementImpl extends HTMLElementImpl implements HTMLButton
     }
     native static void setAutofocusImpl(long peer, boolean value);
 
-    @Override
     public boolean getDisabled() {
         return getDisabledImpl(getPeer());
     }
     native static boolean getDisabledImpl(long peer);
 
-    @Override
     public void setDisabled(boolean value) {
         setDisabledImpl(getPeer(), value);
     }
     native static void setDisabledImpl(long peer, boolean value);
 
-    @Override
     public HTMLFormElement getForm() {
         return HTMLFormElementImpl.getImpl(getFormImpl(getPeer()));
     }
@@ -98,7 +95,6 @@ public class HTMLButtonElementImpl extends HTMLElementImpl implements HTMLButton
     }
     native static void setFormMethodImpl(long peer, String value);
 
-    @Override
     public String getType() {
         return getTypeImpl(getPeer());
     }
@@ -129,25 +125,21 @@ public class HTMLButtonElementImpl extends HTMLElementImpl implements HTMLButton
     }
     native static void setFormTargetImpl(long peer, String value);
 
-    @Override
     public String getName() {
         return getNameImpl(getPeer());
     }
     native static String getNameImpl(long peer);
 
-    @Override
     public void setName(String value) {
         setNameImpl(getPeer(), value);
     }
     native static void setNameImpl(long peer, String value);
 
-    @Override
     public String getValue() {
         return getValueImpl(getPeer());
     }
     native static String getValueImpl(long peer);
 
-    @Override
     public void setValue(String value) {
         setValueImpl(getPeer(), value);
     }
@@ -168,13 +160,11 @@ public class HTMLButtonElementImpl extends HTMLElementImpl implements HTMLButton
     }
     native static long getLabelsImpl(long peer);
 
-    @Override
     public String getAccessKey() {
         return getAccessKeyImpl(getPeer());
     }
     native static String getAccessKeyImpl(long peer);
 
-    @Override
     public void setAccessKey(String value) {
         setAccessKeyImpl(getPeer(), value);
     }
@@ -198,7 +188,6 @@ public class HTMLButtonElementImpl extends HTMLElementImpl implements HTMLButton
         , String error);
 
 
-    @Override
     public void click()
     {
         clickImpl(getPeer());

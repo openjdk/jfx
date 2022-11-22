@@ -38,25 +38,21 @@ public class HTMLOListElementImpl extends HTMLElementImpl implements HTMLOListEl
 
 
 // Attributes
-    @Override
     public boolean getCompact() {
         return getCompactImpl(getPeer());
     }
     native static boolean getCompactImpl(long peer);
 
-    @Override
     public void setCompact(boolean value) {
         setCompactImpl(getPeer(), value);
     }
     native static void setCompactImpl(long peer, boolean value);
 
-    @Override
     public int getStart() {
         return getStartImpl(getPeer());
     }
     native static int getStartImpl(long peer);
 
-    @Override
     public void setStart(int value) {
         setStartImpl(getPeer(), value);
     }
@@ -72,13 +68,11 @@ public class HTMLOListElementImpl extends HTMLElementImpl implements HTMLOListEl
     }
     native static void setReversedImpl(long peer, boolean value);
 
-    @Override
     public String getType() {
         return getTypeImpl(getPeer());
     }
     native static String getTypeImpl(long peer);
 
-    @Override
     public void setType(String value) {
         setTypeImpl(getPeer(), value);
     }

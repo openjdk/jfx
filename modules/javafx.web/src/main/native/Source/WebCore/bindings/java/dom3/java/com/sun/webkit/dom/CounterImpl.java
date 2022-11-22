@@ -35,7 +35,6 @@ public class CounterImpl implements Counter {
         SelfDisposer(final long peer) {
             this.peer = peer;
         }
-        @Override
         public void dispose() {
             CounterImpl.dispose(peer);
         }
@@ -73,24 +72,21 @@ public class CounterImpl implements Counter {
     native private static void dispose(long peer);
 
     static Counter getImpl(long peer) {
-        return create(peer);
+        return (Counter)create(peer);
     }
 
 
 // Attributes
-    @Override
     public String getIdentifier() {
         return getIdentifierImpl(getPeer());
     }
     native static String getIdentifierImpl(long peer);
 
-    @Override
     public String getListStyle() {
         return getListStyleImpl(getPeer());
     }
     native static String getListStyleImpl(long peer);
 
-    @Override
     public String getSeparator() {
         return getSeparatorImpl(getPeer());
     }

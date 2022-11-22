@@ -38,25 +38,21 @@ public class HTMLUListElementImpl extends HTMLElementImpl implements HTMLUListEl
 
 
 // Attributes
-    @Override
     public boolean getCompact() {
         return getCompactImpl(getPeer());
     }
     native static boolean getCompactImpl(long peer);
 
-    @Override
     public void setCompact(boolean value) {
         setCompactImpl(getPeer(), value);
     }
     native static void setCompactImpl(long peer, boolean value);
 
-    @Override
     public String getType() {
         return getTypeImpl(getPeer());
     }
     native static String getTypeImpl(long peer);
 
-    @Override
     public void setType(String value) {
         setTypeImpl(getPeer(), value);
     }

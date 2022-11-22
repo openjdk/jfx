@@ -40,7 +40,6 @@ public class DOMImplementationImpl implements DOMImplementation {
         SelfDisposer(final long peer) {
             this.peer = peer;
         }
-        @Override
         public void dispose() {
             DOMImplementationImpl.dispose(peer);
         }
@@ -78,12 +77,11 @@ public class DOMImplementationImpl implements DOMImplementation {
     native private static void dispose(long peer);
 
     static DOMImplementation getImpl(long peer) {
-        return create(peer);
+        return (DOMImplementation)create(peer);
     }
 
 
 // Functions
-    @Override
     public boolean hasFeature(String feature
         , String version)
     {
@@ -96,7 +94,6 @@ public class DOMImplementationImpl implements DOMImplementation {
         , String version);
 
 
-    @Override
     public DocumentType createDocumentType(String qualifiedName
         , String publicId
         , String systemId) throws DOMException
@@ -112,7 +109,6 @@ public class DOMImplementationImpl implements DOMImplementation {
         , String systemId);
 
 
-    @Override
     public Document createDocument(String namespaceURI
         , String qualifiedName
         , DocumentType doctype) throws DOMException
@@ -151,7 +147,6 @@ public class DOMImplementationImpl implements DOMImplementation {
 
 
 //stubs
-    @Override
     public Object getFeature(String feature, String version) {
         throw new UnsupportedOperationException("Not supported yet.");
     }
