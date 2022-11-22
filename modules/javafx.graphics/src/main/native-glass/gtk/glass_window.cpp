@@ -710,35 +710,35 @@ WindowFrameExtents WindowContextTop::normal_extents = {0, 0, 0, 0};
 WindowFrameExtents WindowContextTop::utility_extents = {0, 0, 0, 0};
 
 static int geometry_get_window_width(const WindowGeometry *windowGeometry) {
-     return (windowGeometry->final_width.type != BOUNDSTYPE_WINDOW)
+     return (windowGeometry->final_width.type == BOUNDSTYPE_WINDOW)
                    ? windowGeometry->final_width.value
+                   : windowGeometry->final_width.value
                          + windowGeometry->extents.left
-                         + windowGeometry->extents.right
-                   : windowGeometry->final_width.value;
+                         + windowGeometry->extents.right;
 }
 
 static int geometry_get_window_height(const WindowGeometry *windowGeometry) {
-    return (windowGeometry->final_height.type != BOUNDSTYPE_WINDOW)
+    return (windowGeometry->final_height.type == BOUNDSTYPE_WINDOW)
                    ? windowGeometry->final_height.value
+                   : windowGeometry->final_height.value
                          + windowGeometry->extents.top
-                         + windowGeometry->extents.bottom
-                   : windowGeometry->final_height.value;
+                         + windowGeometry->extents.bottom;
 }
 
 static int geometry_get_content_width(WindowGeometry *windowGeometry) {
-    return (windowGeometry->final_width.type != BOUNDSTYPE_CONTENT)
+    return (windowGeometry->final_width.type == BOUNDSTYPE_CONTENT)
                    ? windowGeometry->final_width.value
+                   : windowGeometry->final_width.value
                          - windowGeometry->extents.left
-                         - windowGeometry->extents.right
-                   : windowGeometry->final_width.value;
+                         - windowGeometry->extents.right;
 }
 
 static int geometry_get_content_height(WindowGeometry *windowGeometry) {
-    return (windowGeometry->final_height.type != BOUNDSTYPE_CONTENT)
+    return (windowGeometry->final_height.type == BOUNDSTYPE_CONTENT)
                    ? windowGeometry->final_height.value
+                   : windowGeometry->final_height.value
                          - windowGeometry->extents.top
-                         - windowGeometry->extents.bottom
-                   : windowGeometry->final_height.value;
+                         - windowGeometry->extents.bottom;
 }
 
 static int geometry_get_window_x(const WindowGeometry *windowGeometry) {
@@ -765,7 +765,7 @@ static void geometry_set_window_x(WindowGeometry *windowGeometry, int value) {
         newValue += geometry_get_window_width(windowGeometry)
                 * windowGeometry->gravity_x;
     }
-    windowGeometry->refx = newValue;
+    windowGeometry->refx = (int) newValue;
 }
 
 static void geometry_set_window_y(WindowGeometry *windowGeometry, int value) {
@@ -774,7 +774,7 @@ static void geometry_set_window_y(WindowGeometry *windowGeometry, int value) {
         newValue += geometry_get_window_height(windowGeometry)
                 * windowGeometry->gravity_y;
     }
-    windowGeometry->refy = newValue;
+    windowGeometry->refy = (int) newValue;
 }
 
 static GdkAtom get_net_frame_extents_atom() {
@@ -1041,13 +1041,15 @@ void WindowContextTop::process_configure(GdkEventConfigure* event) {
         }
     }
 
-    bool moved = (geometry.current_x != x || geometry.current_y != y);
+    int curX, curY;
+    curX = geometry_get_window_x(&geometry);
+    curY = geometry_get_window_y(&geometry);
+
+    bool moved = (curX != x || curY != y);
 
     if (moved) {
         geometry_set_window_x(&geometry, x);
         geometry_set_window_y(&geometry, y);
-        geometry.current_x = x;
-        geometry.current_y = y;
 
         if (jwindow) {
             notify_window_move();
@@ -1153,11 +1155,11 @@ void WindowContextTop::set_bounds(int x, int y, bool xSet, bool ySet, int w, int
 
     if (xSet || ySet) {
         if (xSet) {
-            geometry.refx = x + geometry_get_window_width(&geometry) * geometry.gravity_x;
+            geometry.refx = (int) (x + geometry_get_window_width(&geometry) * geometry.gravity_x);
         }
 
         if (ySet) {
-            geometry.refy = y + geometry_get_window_height(&geometry) * geometry.gravity_y;
+            geometry.refy = (int) (y + geometry_get_window_height(&geometry) * geometry.gravity_y);
         }
 
         int newX, newY;
