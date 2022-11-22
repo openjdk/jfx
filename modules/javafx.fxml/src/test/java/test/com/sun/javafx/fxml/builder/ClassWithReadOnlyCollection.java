@@ -30,13 +30,11 @@ import javafx.beans.NamedArg;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 public class ClassWithReadOnlyCollection {
     public double a;
-    ObservableList<Integer> propertyList = new TrackableObservableList<Integer>() {
+    ObservableList<Integer> propertyList = new TrackableObservableList<>() {
         @Override
         protected void onChanged(ListChangeListener.Change<Integer> c) {}
     };

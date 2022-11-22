@@ -191,12 +191,12 @@ public class FXMLLoader_ExpressionTest {
 
     @Test
     public void testParseExpression5() {
-        HashMap<String, Object> namespace = new HashMap<String, Object>();
+        HashMap<String, Object> namespace = new HashMap<>();
 
-        HashMap<String, Object> a = new HashMap<String, Object>();
+        HashMap<String, Object> a = new HashMap<>();
         namespace.put("a", a);
 
-        HashMap<String, Object> b = new HashMap<String, Object>();
+        HashMap<String, Object> b = new HashMap<>();
         a.put("b", b);
 
         b.put("c", 5);
