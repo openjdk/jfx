@@ -76,7 +76,7 @@ public class EventTargetImpl implements EventTarget {
     native private static void dispose(long peer);
 
     static EventTarget getImpl(long peer) {
-        return (EventTarget)create(peer);
+        return create(peer);
     }
 
 

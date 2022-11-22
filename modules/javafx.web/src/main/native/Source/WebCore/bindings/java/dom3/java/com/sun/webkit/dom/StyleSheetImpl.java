@@ -81,7 +81,7 @@ public class StyleSheetImpl implements StyleSheet {
     native private static int getCPPTypeImpl(long peer);
 
     static StyleSheet getImpl(long peer) {
-        return (StyleSheet)create(peer);
+        return create(peer);
     }
 
 

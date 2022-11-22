@@ -161,7 +161,7 @@ public class SwingNodeInteropN {
     }
 
     public LightweightContentWrapper createSwingNodeContent(JComponent content, SwingNode node) {
-        return (LightweightContentWrapper)new SwingNodeContent(content, node);
+        return new SwingNodeContent(content, node);
     }
 
     public DisposerRecord createSwingNodeDisposer(Object frame) {

@@ -394,7 +394,7 @@ public final class WebPage {
             if (paintLog.isLoggable(Level.FINEST)) {
                 paintLog.finest("rect=[" + x + ", " + y + " " + w + "x" + h +"]");
             }
-            addDirtyRect(new WCRectangle(x, y, (float) w, (float) h));
+            addDirtyRect(new WCRectangle(x, y, w, h));
             return;
         }
 

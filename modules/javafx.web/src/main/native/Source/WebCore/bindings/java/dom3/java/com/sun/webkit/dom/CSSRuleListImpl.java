@@ -74,7 +74,7 @@ public class CSSRuleListImpl implements CSSRuleList {
     native private static void dispose(long peer);
 
     static CSSRuleList getImpl(long peer) {
-        return (CSSRuleList)create(peer);
+        return create(peer);
     }
 
 

@@ -73,7 +73,7 @@ public class CounterImpl implements Counter {
     native private static void dispose(long peer);
 
     static Counter getImpl(long peer) {
-        return (Counter)create(peer);
+        return create(peer);
     }
 
 

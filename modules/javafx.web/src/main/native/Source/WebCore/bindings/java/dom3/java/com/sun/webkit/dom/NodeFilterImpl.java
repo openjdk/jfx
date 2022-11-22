@@ -74,7 +74,7 @@ public class NodeFilterImpl implements NodeFilter {
     native private static void dispose(long peer);
 
     static NodeFilter getImpl(long peer) {
-        return (NodeFilter)create(peer);
+        return create(peer);
     }
 
 

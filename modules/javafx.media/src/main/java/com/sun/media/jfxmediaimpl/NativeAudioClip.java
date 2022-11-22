@@ -60,7 +60,7 @@ final class NativeAudioClip extends AudioClip {
             throw new MediaException("Cannot connect to media", ex);
         }
         if (null != newClip && 0 != newClip.getNativeHandle()) {
-            MediaDisposer.addResourceDisposer(newClip, (Long)newClip.getNativeHandle(), clipDisposer);
+            MediaDisposer.addResourceDisposer(newClip, newClip.getNativeHandle(), clipDisposer);
         } else {
             newClip = null;
             throw new MediaException("Cannot create audio clip");
@@ -71,7 +71,7 @@ final class NativeAudioClip extends AudioClip {
     public static AudioClip create(byte[] data, int dataOffset, int sampleCount, int sampleFormat, int channels, int sampleRate) {
         NativeAudioClip newClip = new NativeAudioClip(data, dataOffset, sampleCount, sampleFormat, channels, sampleRate);
         if (null != newClip && 0 != newClip.getNativeHandle()) {
-            MediaDisposer.addResourceDisposer(newClip, (Long)newClip.getNativeHandle(), clipDisposer);
+            MediaDisposer.addResourceDisposer(newClip, newClip.getNativeHandle(), clipDisposer);
         } else {
             newClip = null;
             throw new MediaException("Cannot create audio clip");

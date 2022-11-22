@@ -75,7 +75,7 @@ public class XPathResultImpl implements XPathResult {
     native private static void dispose(long peer);
 
     static XPathResult getImpl(long peer) {
-        return (XPathResult)create(peer);
+        return create(peer);
     }
 
 

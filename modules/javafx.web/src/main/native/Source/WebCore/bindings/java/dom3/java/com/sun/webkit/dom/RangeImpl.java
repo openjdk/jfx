@@ -76,7 +76,7 @@ public class RangeImpl implements Range {
     native private static void dispose(long peer);
 
     static Range getImpl(long peer) {
-        return (Range)create(peer);
+        return create(peer);
     }
 
 

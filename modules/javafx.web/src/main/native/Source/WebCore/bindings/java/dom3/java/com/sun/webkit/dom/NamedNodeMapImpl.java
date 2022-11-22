@@ -75,7 +75,7 @@ public class NamedNodeMapImpl implements NamedNodeMap {
     native private static void dispose(long peer);
 
     static NamedNodeMap getImpl(long peer) {
-        return (NamedNodeMap)create(peer);
+        return create(peer);
     }
 
 

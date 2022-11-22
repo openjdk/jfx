@@ -74,7 +74,7 @@ public class RectImpl implements Rect {
     native private static void dispose(long peer);
 
     static Rect getImpl(long peer) {
-        return (Rect)create(peer);
+        return create(peer);
     }
 
 

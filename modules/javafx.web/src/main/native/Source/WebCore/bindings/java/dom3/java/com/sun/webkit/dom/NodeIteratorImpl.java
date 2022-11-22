@@ -75,7 +75,7 @@ public class NodeIteratorImpl implements NodeIterator {
     native private static void dispose(long peer);
 
     static NodeIterator getImpl(long peer) {
-        return (NodeIterator)create(peer);
+        return create(peer);
     }
 
 

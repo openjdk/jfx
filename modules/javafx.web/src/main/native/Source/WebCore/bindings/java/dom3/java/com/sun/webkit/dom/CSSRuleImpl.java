@@ -83,7 +83,7 @@ public class CSSRuleImpl implements CSSRule {
     native private static void dispose(long peer);
 
     static CSSRule getImpl(long peer) {
-        return (CSSRule)create(peer);
+        return create(peer);
     }
 
 

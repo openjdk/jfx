@@ -228,7 +228,7 @@ public class NodeImpl extends JSObject implements Node, EventTarget {
     native private static void dispose(long peer);
 
     static Node getImpl(long peer) {
-        return (Node)create(peer);
+        return create(peer);
     }
 
 

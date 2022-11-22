@@ -76,7 +76,7 @@ public class XPathExpressionImpl implements XPathExpression {
     native private static void dispose(long peer);
 
     static XPathExpression getImpl(long peer) {
-        return (XPathExpression)create(peer);
+        return create(peer);
     }
 
     @Override public Object evaluate(Node contextNode, short type, Object result) throws DOMException {

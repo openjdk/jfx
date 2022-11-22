@@ -1414,8 +1414,8 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
             }
         }
 
-        private double getX() { return (double) bounds.x; }
-        private double getY() { return (double) bounds.y; }
+        private double getX() { return bounds.x; }
+        private double getY() { return bounds.y; }
     }
 
     private final class TransparencyLayer extends Layer {

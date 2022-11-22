@@ -322,9 +322,9 @@ public abstract class MetadataParserImpl extends Thread implements com.sun.media
         int value = 0;
 
         value |= (getNextByte() & 0xFF);
-        value = (int) (value << 8);
+        value = value << 8;
         value |= (getNextByte() & 0xFF);
-        value = (int) (value << 8);
+        value = value << 8;
         value |= (getNextByte() & 0xFF);
 
         return value;

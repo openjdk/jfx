@@ -76,7 +76,7 @@ public class CSSStyleDeclarationImpl implements CSSStyleDeclaration {
     native private static void dispose(long peer);
 
     static CSSStyleDeclaration getImpl(long peer) {
-        return (CSSStyleDeclaration)create(peer);
+        return create(peer);
     }
 
 

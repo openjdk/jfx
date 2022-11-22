@@ -524,7 +524,7 @@ final class WCMediaPlayerImpl extends WCMediaPlayer
         if (event.getDuration() < 0) {
             return;
         }
-        double bytes2seconds = event.getDuration() / (double)event.getBufferStop();
+        double bytes2seconds = event.getDuration() / event.getBufferStop();
         bufferedStart = (float)(bytes2seconds * event.getBufferStart());
         bufferedEnd = (float)(bytes2seconds * event.getBufferPosition());
         buffering = event.getBufferPosition() < event.getBufferStop();

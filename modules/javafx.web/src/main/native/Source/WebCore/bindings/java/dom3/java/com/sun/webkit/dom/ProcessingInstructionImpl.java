@@ -35,7 +35,7 @@ public class ProcessingInstructionImpl extends CharacterDataImpl implements Proc
     }
 
     static Node getImpl(long peer) {
-        return (Node)create(peer);
+        return create(peer);
     }
 
 

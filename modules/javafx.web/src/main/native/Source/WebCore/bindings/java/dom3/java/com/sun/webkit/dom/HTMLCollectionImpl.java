@@ -80,7 +80,7 @@ public class HTMLCollectionImpl implements HTMLCollection {
     native private static int getCPPTypeImpl(long peer);
 
     static HTMLCollection getImpl(long peer) {
-        return (HTMLCollection)create(peer);
+        return create(peer);
     }
 
 

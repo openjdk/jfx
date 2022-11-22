@@ -725,7 +725,7 @@ public class HTMLEditorSkin extends SkinBase<HTMLEditor> {
                             setText(item);
                             // Remove trailing non-digits to get the size (don't assume there's a space).
                             String size = item.replaceFirst("[^0-9.].*$", "");
-                            setFont(new Font((String)fontFamilyComboBox.getValue(), Double.valueOf(size)));
+                            setFont(new Font(fontFamilyComboBox.getValue(), Double.valueOf(size)));
                         }
                     }
                 };

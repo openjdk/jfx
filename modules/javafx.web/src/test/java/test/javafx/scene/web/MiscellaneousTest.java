@@ -263,7 +263,7 @@ public class MiscellaneousTest extends TestBase {
             assertNotNull(ttfFileContent);
             while (offset < length) {
                 final int available = ttfFileStream.available();
-                ttfFileStream.read(ttfFileContent, (int)offset, available);
+                ttfFileStream.read(ttfFileContent, offset, available);
                 offset += available;
             }
             assertEquals("Offset must equal to file length", length, offset);

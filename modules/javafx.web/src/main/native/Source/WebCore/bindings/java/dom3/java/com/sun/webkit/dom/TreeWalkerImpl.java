@@ -76,7 +76,7 @@ public class TreeWalkerImpl implements TreeWalker {
     native private static void dispose(long peer);
 
     static TreeWalker getImpl(long peer) {
-        return (TreeWalker)create(peer);
+        return create(peer);
     }
 
 

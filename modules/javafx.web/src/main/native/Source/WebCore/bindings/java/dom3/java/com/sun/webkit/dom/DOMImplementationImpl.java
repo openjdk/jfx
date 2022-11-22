@@ -78,7 +78,7 @@ public class DOMImplementationImpl implements DOMImplementation {
     native private static void dispose(long peer);
 
     static DOMImplementation getImpl(long peer) {
-        return (DOMImplementation)create(peer);
+        return create(peer);
     }
 
 

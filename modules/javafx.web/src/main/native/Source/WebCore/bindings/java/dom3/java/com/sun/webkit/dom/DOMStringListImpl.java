@@ -73,7 +73,7 @@ public class DOMStringListImpl implements DOMStringList {
     native private static void dispose(long peer);
 
     static DOMStringList getImpl(long peer) {
-        return (DOMStringList)create(peer);
+        return create(peer);
     }
 
 

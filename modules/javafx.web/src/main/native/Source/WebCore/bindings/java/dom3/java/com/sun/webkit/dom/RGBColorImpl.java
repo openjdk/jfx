@@ -74,7 +74,7 @@ public class RGBColorImpl implements RGBColor {
     native private static void dispose(long peer);
 
     static RGBColor getImpl(long peer) {
-        return (RGBColor)create(peer);
+        return create(peer);
     }
 
 

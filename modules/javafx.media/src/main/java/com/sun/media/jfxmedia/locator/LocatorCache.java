@@ -136,7 +136,7 @@ public class LocatorCache {
             // to periodically purge the Map
             if (resource instanceof URI) {
                 synchronized (uriCache) {
-                    uriCache.remove((URI)resource);
+                    uriCache.remove(resource);
                 }
             }
         }

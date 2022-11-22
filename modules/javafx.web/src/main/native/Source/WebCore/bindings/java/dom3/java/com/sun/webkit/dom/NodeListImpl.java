@@ -74,7 +74,7 @@ public class NodeListImpl implements NodeList {
     native private static void dispose(long peer);
 
     static NodeList getImpl(long peer) {
-        return (NodeList)create(peer);
+        return create(peer);
     }
 
 

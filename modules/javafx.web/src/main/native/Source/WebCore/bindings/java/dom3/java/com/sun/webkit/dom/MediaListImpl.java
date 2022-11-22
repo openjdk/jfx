@@ -74,7 +74,7 @@ public class MediaListImpl implements MediaList {
     native private static void dispose(long peer);
 
     static MediaList getImpl(long peer) {
-        return (MediaList)create(peer);
+        return create(peer);
     }
 
 

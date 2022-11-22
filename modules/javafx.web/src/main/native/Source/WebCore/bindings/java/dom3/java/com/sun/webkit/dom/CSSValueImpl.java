@@ -78,7 +78,7 @@ public class CSSValueImpl implements CSSValue {
     native private static void dispose(long peer);
 
     static CSSValue getImpl(long peer) {
-        return (CSSValue)create(peer);
+        return create(peer);
     }
 
 

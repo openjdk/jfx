@@ -88,7 +88,7 @@ public class EventImpl implements Event {
     native private static int getCPPTypeImpl(long peer);
 
     static Event getImpl(long peer) {
-        return (Event)create(peer);
+        return create(peer);
     }
 
 

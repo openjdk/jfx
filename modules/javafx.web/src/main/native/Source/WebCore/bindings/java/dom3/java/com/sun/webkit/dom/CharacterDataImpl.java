@@ -94,7 +94,7 @@ public class CharacterDataImpl extends NodeImpl implements CharacterData {
     }
 
     static Node getImpl(long peer) {
-        return (Node)create(peer);
+        return create(peer);
     }
 
 

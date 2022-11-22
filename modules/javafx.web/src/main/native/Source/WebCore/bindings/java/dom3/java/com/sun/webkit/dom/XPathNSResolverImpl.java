@@ -73,7 +73,7 @@ public class XPathNSResolverImpl implements XPathNSResolver {
     native private static void dispose(long peer);
 
     static XPathNSResolver getImpl(long peer) {
-        return (XPathNSResolver)create(peer);
+        return create(peer);
     }
 
 

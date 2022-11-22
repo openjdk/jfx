@@ -155,7 +155,7 @@ public class DOMWindowImpl extends JSObject implements AbstractView, EventTarget
     native private static void dispose(long peer);
 
     static AbstractView getImpl(long peer) {
-        return (AbstractView)create(peer);
+        return create(peer);
     }
 
 

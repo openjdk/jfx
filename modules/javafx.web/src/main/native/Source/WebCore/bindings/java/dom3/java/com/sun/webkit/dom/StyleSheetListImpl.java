@@ -74,7 +74,7 @@ public class StyleSheetListImpl implements StyleSheetList {
     native private static void dispose(long peer);
 
     static StyleSheetList getImpl(long peer) {
-        return (StyleSheetList)create(peer);
+        return create(peer);
     }
 
 
