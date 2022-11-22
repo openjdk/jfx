@@ -25,8 +25,6 @@
 
 package test.javafx.print;
 
-import javafx.application.Platform;
-
 import javafx.print.PageLayout;
 import javafx.print.PageOrientation;
 import javafx.print.Paper;
@@ -37,7 +35,6 @@ import javax.print.PrintService;
 import javax.print.PrintServiceLookup;
 import javax.print.attribute.HashPrintRequestAttributeSet;
 import javax.print.attribute.PrintRequestAttributeSet;
-import javax.print.attribute.standard.Media;
 import javax.print.attribute.standard.MediaPrintableArea;
 import static javax.print.attribute.standard.MediaPrintableArea.INCH;
 import javax.print.attribute.standard.MediaSizeName;

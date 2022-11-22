@@ -30,7 +30,6 @@ import com.sun.javafx.iio.ImageLoader;
 import com.sun.javafx.iio.ImageLoaderFactory;
 import java.io.IOException;
 import java.io.InputStream;
-import java.security.*;
 
 public class PNGImageLoaderFactory implements ImageLoaderFactory {
     private static final PNGImageLoaderFactory theInstance =

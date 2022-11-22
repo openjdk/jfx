@@ -32,9 +32,7 @@ import javafx.scene.Node;
 import javafx.scene.shape.Shape;
 import javafx.util.Duration;
 
-import com.sun.javafx.geom.Path2D;
 import com.sun.javafx.geom.PathIterator;
-import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.scene.shape.ShapeHelper;
 import java.util.ArrayList;

@@ -29,8 +29,6 @@ import com.sun.glass.ui.Pixels;
 import com.sun.glass.ui.SystemClipboard;
 import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Set;

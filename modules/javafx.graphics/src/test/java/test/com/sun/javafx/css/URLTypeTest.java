@@ -27,8 +27,6 @@ package test.com.sun.javafx.css;
 
 import com.sun.javafx.css.ParsedValueImpl;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
-
 import javafx.css.ParsedValue;
 import javafx.scene.text.Font;
 

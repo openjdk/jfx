@@ -39,7 +39,6 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.net.URL;
-import java.nio.file.Files;
 import java.util.Base64;
 import java.util.Collections;
 import java.util.List;

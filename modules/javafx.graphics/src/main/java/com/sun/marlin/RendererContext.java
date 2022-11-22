@@ -33,7 +33,6 @@ import com.sun.marlin.ArrayCacheConst.CacheStats;
 import com.sun.marlin.TransformingPathConsumer2D.CurveBasicMonotonizer;
 import com.sun.marlin.TransformingPathConsumer2D.CurveClipSplitter;
 import com.sun.util.reentrant.ReentrantContext;
-import com.sun.marlin.ArrayCacheIntClean;
 
 /**
  * This class is a renderer context dedicated to a single thread

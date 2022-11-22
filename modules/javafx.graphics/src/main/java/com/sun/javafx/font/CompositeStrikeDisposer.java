@@ -26,10 +26,6 @@
 package com.sun.javafx.font;
 import java.lang.ref.WeakReference;
 
-import com.sun.javafx.font.DisposerRecord;
-import com.sun.javafx.font.FontResource;
-import com.sun.javafx.font.FontStrikeDesc;
-
 class CompositeStrikeDisposer implements DisposerRecord {
 
     FontResource fontResource;

@@ -34,7 +34,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertSame;
 
 import javafx.beans.InvalidationListener;
-import javafx.beans.Observable;
 import javafx.geometry.Dimension2D;
 import javafx.scene.image.Image;
 import test.javafx.scene.image.TestImages;

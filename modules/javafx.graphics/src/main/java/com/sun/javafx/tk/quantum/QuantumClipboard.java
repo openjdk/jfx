@@ -41,7 +41,6 @@ import java.net.SocketPermission;
 import java.net.URL;
 import java.nio.ByteBuffer;
 import java.security.AccessControlContext;
-import java.security.Permission;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumSet;

@@ -31,7 +31,6 @@ import javafx.beans.NamedArg;
 import javafx.event.EventTarget;
 import javafx.event.EventType;
 import javafx.geometry.Point3D;
-import javafx.scene.Node;
 
 // PENDING_DOC_REVIEW
 /**

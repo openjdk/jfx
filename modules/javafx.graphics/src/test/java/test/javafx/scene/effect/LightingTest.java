@@ -25,7 +25,6 @@
 
 package test.javafx.scene.effect;
 
-import test.javafx.scene.effect.EffectsTestBase;
 import static test.com.sun.javafx.test.TestHelper.box;
 import com.sun.scenario.effect.Color4f;
 import static org.junit.Assert.assertEquals;

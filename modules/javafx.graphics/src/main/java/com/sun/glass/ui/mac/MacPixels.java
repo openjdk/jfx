@@ -28,10 +28,7 @@ import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
 
-import com.sun.glass.ui.Application;
 import com.sun.glass.ui.Pixels;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 
 /**
  * MacOSX platform implementation class for Pixels.

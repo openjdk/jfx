@@ -34,7 +34,6 @@ import com.sun.prism.PhongMaterial;
 import com.sun.prism.PixelFormat;
 import com.sun.prism.Presentable;
 import com.sun.prism.PresentableState;
-import com.sun.prism.ResourceFactory;
 import com.sun.prism.RTTexture;
 import com.sun.prism.Texture;
 import com.sun.prism.Texture.Usage;

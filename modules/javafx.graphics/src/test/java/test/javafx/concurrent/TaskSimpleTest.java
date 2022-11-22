@@ -25,8 +25,6 @@
 
 package test.javafx.concurrent;
 
-import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import java.util.ArrayList;
 import java.util.List;
 import javafx.concurrent.Task;

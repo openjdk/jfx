@@ -46,7 +46,6 @@ import java.io.IOException;
 import javafx.css.ParsedValue;
 import javafx.css.Size;
 import javafx.css.SizeUnits;
-import javafx.css.StylesheetShim;
 
 public class ParsedValueTest {
 

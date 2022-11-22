@@ -25,7 +25,6 @@
 
 package test.javafx.scene.effect;
 
-import test.javafx.scene.effect.EffectsTestBase;
 import static org.junit.Assert.assertEquals;
 
 import java.lang.reflect.Method;

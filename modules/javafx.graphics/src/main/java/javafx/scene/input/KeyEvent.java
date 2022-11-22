@@ -30,11 +30,6 @@ import javafx.beans.NamedArg;
 import javafx.event.EventTarget;
 import javafx.event.EventType;
 
-import com.sun.javafx.scene.input.KeyCodeMap;
-import javafx.event.Event;
-import javafx.scene.input.ScrollEvent.HorizontalTextScrollUnits;
-import javafx.scene.input.ScrollEvent.VerticalTextScrollUnits;
-
 /**
  * An event which indicates that a keystroke occurred in a {@link javafx.scene.Node}.
  * <p>

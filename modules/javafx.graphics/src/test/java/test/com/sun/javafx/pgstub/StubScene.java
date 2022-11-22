@@ -33,7 +33,6 @@ import com.sun.javafx.tk.TKClipboard;
 import com.sun.javafx.tk.TKScene;
 import com.sun.javafx.tk.TKSceneListener;
 import com.sun.javafx.tk.TKScenePaintListener;
-import javafx.scene.Node;
 
 public class StubScene implements TKScene {
 

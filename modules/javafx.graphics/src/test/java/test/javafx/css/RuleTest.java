@@ -41,7 +41,6 @@ import javafx.css.RuleShim;
 import javafx.css.Selector;
 import javafx.css.StyleOrigin;
 import javafx.css.Stylesheet;
-import javafx.css.StylesheetShim;
 import javafx.scene.Node;
 import org.junit.AfterClass;
 import org.junit.Test;

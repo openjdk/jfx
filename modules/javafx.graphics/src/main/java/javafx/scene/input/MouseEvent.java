@@ -27,12 +27,9 @@ package javafx.scene.input;
 
 import com.sun.javafx.tk.Toolkit;
 import javafx.beans.NamedArg;
-import javafx.event.Event;
 import javafx.event.EventTarget;
 import javafx.event.EventType;
 import javafx.geometry.Point3D;
-import javafx.scene.Node;
-
 import com.sun.javafx.scene.input.InputEventUtils;
 import java.io.IOException;
 

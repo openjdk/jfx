@@ -24,7 +24,6 @@
  */
 package com.sun.glass.ui;
 
-import java.util.*;
 import java.util.concurrent.*;
 
 /**

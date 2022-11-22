@@ -25,7 +25,6 @@
 
 package test.javafx.css;
 
-import test.javafx.css.TypeTest;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.CycleMethod;
 import javafx.scene.paint.LinearGradient;

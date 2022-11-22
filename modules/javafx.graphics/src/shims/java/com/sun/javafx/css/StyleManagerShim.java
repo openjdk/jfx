@@ -1,7 +1,6 @@
 package com.sun.javafx.css;
 
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import javafx.css.PseudoClass;
 import javafx.css.Styleable;

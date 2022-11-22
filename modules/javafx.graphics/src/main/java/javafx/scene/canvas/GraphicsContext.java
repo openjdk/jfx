@@ -40,7 +40,6 @@ import com.sun.javafx.tk.Toolkit;
 import com.sun.scenario.effect.EffectHelper;
 import javafx.geometry.NodeOrientation;
 import javafx.geometry.VPos;
-import javafx.scene.effect.Blend;
 import javafx.scene.effect.BlendMode;
 import javafx.scene.effect.Effect;
 import javafx.scene.image.Image;

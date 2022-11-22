@@ -33,7 +33,6 @@ import java.lang.annotation.Native;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
 
 public abstract class Window {
 

@@ -31,7 +31,6 @@ import static com.sun.javafx.animation.TickCalculation.*;
 import java.util.Arrays;
 
 import javafx.beans.InvalidationListener;
-import javafx.beans.Observable;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.ListChangeListener.Change;

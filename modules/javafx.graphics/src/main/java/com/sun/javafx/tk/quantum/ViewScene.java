@@ -36,7 +36,6 @@ import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.tk.Toolkit;
 import com.sun.prism.GraphicsPipeline;
-import javafx.scene.Parent;
 
 class ViewScene extends GlassScene {
 

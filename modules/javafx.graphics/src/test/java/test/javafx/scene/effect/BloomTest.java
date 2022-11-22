@@ -33,7 +33,6 @@ import static org.junit.Assert.assertEquals;
 
 import org.junit.Before;
 import org.junit.Test;
-import test.javafx.scene.effect.EffectsTestBase;
 
 public class BloomTest extends EffectsTestBase {
     private Bloom effect;

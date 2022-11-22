@@ -29,7 +29,6 @@ import com.sun.javafx.animation.TickCalculation;
 import static com.sun.javafx.animation.TickCalculation.*;
 
 import javafx.beans.InvalidationListener;
-import javafx.beans.Observable;
 import javafx.beans.property.ObjectProperty;
 import javafx.collections.ListChangeListener.Change;
 import javafx.collections.ObservableList;

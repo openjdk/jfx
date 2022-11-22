@@ -26,7 +26,6 @@
 package com.sun.javafx.sg.prism;
 
 import com.sun.javafx.geom.Vec3d;
-import com.sun.javafx.geom.Vec3f;
 import com.sun.javafx.geom.transform.Affine3D;
 import com.sun.javafx.util.Utils;
 import com.sun.prism.Graphics;
@@ -36,7 +35,6 @@ import com.sun.prism.ResourceFactory;
 
 import javafx.application.ConditionalFeature;
 import javafx.application.Platform;
-import javafx.geometry.Point3D;
 import javafx.scene.shape.CullFace;
 import javafx.scene.shape.DrawMode;
 
