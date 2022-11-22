@@ -2563,7 +2563,6 @@ public abstract class Node implements EventTarget, Styleable {
      */
     private NGNode peer;
 
-    @SuppressWarnings("CallToPrintStackTrace")
     <P extends NGNode> P getPeer() {
         if (Utils.assertionEnabled()) {
             // Assertion checking code
