@@ -429,7 +429,7 @@ public class TextArea extends TextInputControl {
         protected int[] getPermutation() {
             return new int[0];
         }
-    };
+    }
 
     /**
      * The default value for {@link #prefColumnCountProperty() prefColumnCount}.
@@ -643,7 +643,7 @@ public class TextArea extends TextInputControl {
 
             @Override
             public StyleableProperty<Number> getStyleableProperty(TextArea n) {
-                return (StyleableProperty<Number>)(WritableValue<Number>)n.prefColumnCountProperty();
+                return (StyleableProperty<Number>)n.prefColumnCountProperty();
             }
         };
 
@@ -658,7 +658,7 @@ public class TextArea extends TextInputControl {
 
             @Override
             public StyleableProperty<Number> getStyleableProperty(TextArea n) {
-                return (StyleableProperty<Number>)(WritableValue<Number>)n.prefRowCountProperty();
+                return (StyleableProperty<Number>)n.prefRowCountProperty();
             }
         };
 
@@ -673,7 +673,7 @@ public class TextArea extends TextInputControl {
 
             @Override
             public StyleableProperty<Boolean> getStyleableProperty(TextArea n) {
-                return (StyleableProperty<Boolean>)(WritableValue<Boolean>)n.wrapTextProperty();
+                return (StyleableProperty<Boolean>)n.wrapTextProperty();
             }
         };
 

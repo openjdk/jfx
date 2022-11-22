@@ -52,7 +52,7 @@ public class LineChartTest extends XYChartTestBase {
 
     @Override protected Chart createChart() {
         final NumberAxis xAxis = new NumberAxis(0, 90, 10);
-        final NumberAxis yAxis = new NumberAxis(0, 30, 2);;
+        final NumberAxis yAxis = new NumberAxis(0, 30, 2);
         lineChart = new LineChart<>(xAxis,yAxis);
         xAxis.setLabel("X Axis");
         yAxis.setLabel("Y Axis");

@@ -370,5 +370,5 @@ public class ComboBoxTreeCell<T> extends DefaultTreeCell<T> {
 
         Node graphic = CellUtils.getGraphic(getTreeItem());
         CellUtils.updateItem(this, getConverter(), hbox, graphic, comboBox);
-    };
+    }
 }

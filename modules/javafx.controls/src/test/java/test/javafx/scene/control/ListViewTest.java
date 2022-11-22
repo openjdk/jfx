@@ -772,7 +772,7 @@ public class ListViewTest {
             public ListCell<String> call(ListView<String> param) {
                 return new ListCellShim<>() {
                     ImageView view = new ImageView();
-                    { setGraphic(view); };
+                    { setGraphic(view); }
 
                     @Override
                     public void updateItem(String item, boolean empty) {
@@ -812,7 +812,7 @@ public class ListViewTest {
             @Override public ListCell<String> call(ListView<String> param) {
                 return new ListCellShim<>() {
                     Rectangle graphic = new Rectangle(10, 10, Color.RED);
-                    { setGraphic(graphic); };
+                    { setGraphic(graphic); }
 
                     @Override public void updateItem(String item, boolean empty) {
                         super.updateItem(item, empty);

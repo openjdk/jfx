@@ -122,7 +122,7 @@ public abstract class TextInputControlSkin<T extends TextInputControl> extends S
         PARAGRAPH,
         /** Page unit */
         PAGE
-    };
+    }
 
     /**
      * Direction names for caret movement.
@@ -142,7 +142,7 @@ public abstract class TextInputControlSkin<T extends TextInputControl> extends S
         BEGINNING,
         /** End */
         END
-    };
+    }
 
     static boolean preload = false;
     static {
@@ -737,17 +737,17 @@ public abstract class TextInputControlSkin<T extends TextInputControl> extends S
     /**
      * Called when textFill property changes.
      */
-    protected void updateTextFill() {};
+    protected void updateTextFill() {}
 
     /**
      * Called when highlightFill property changes.
      */
-    protected void updateHighlightFill() {};
+    protected void updateHighlightFill() {}
 
     /**
      * Called when highlightTextFill property changes.
      */
-    protected void updateHighlightTextFill() {};
+    protected void updateHighlightTextFill() {}
 
     /**
      * Handles an input method event.
@@ -835,7 +835,7 @@ public abstract class TextInputControlSkin<T extends TextInputControl> extends S
 
     boolean isRTL() {
         return (getSkinnable().getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT);
-    };
+    }
 
     private void createInputMethodAttributes(InputMethodHighlight highlight, int start, int end) {
         double minX = 0f;

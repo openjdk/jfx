@@ -595,7 +595,7 @@ public class MenuTest {
         @Override public void handle(Event event) {
             called = true;
         }
-    };
+    }
 
 
     //TODO: test this -> Menu.buildEventDispatchChain(EventDispatchChain tail)

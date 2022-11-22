@@ -215,7 +215,7 @@ public class Tooltip extends PopupControl {
         return textAlignmentProperty().getValue();
     }
     private final ObjectProperty<TextAlignment> textAlignment =
-            new SimpleStyleableObjectProperty<>(TEXT_ALIGNMENT, this, "textAlignment", TextAlignment.LEFT);;
+            new SimpleStyleableObjectProperty<>(TEXT_ALIGNMENT, this, "textAlignment", TextAlignment.LEFT);
 
     /**
      * Specifies the behavior to use if the text of the {@code Tooltip}
@@ -637,7 +637,7 @@ public class Tooltip extends PopupControl {
 
                 @Override
                 public StyleableProperty<Boolean> getStyleableProperty(Tooltip.CSSBridge cssBridge) {
-                    return (StyleableProperty<Boolean>)(WritableValue<Boolean>)cssBridge.tooltip.wrapTextProperty();
+                    return (StyleableProperty<Boolean>)cssBridge.tooltip.wrapTextProperty();
                 }
             };
 
@@ -652,7 +652,7 @@ public class Tooltip extends PopupControl {
 
                 @Override
                 public StyleableProperty<String> getStyleableProperty(Tooltip.CSSBridge cssBridge) {
-                    return (StyleableProperty<String>)cssBridge.tooltip.imageUrlProperty();
+                    return cssBridge.tooltip.imageUrlProperty();
                 }
             };
 
@@ -683,7 +683,7 @@ public class Tooltip extends PopupControl {
 
                 @Override
                 public StyleableProperty<Number> getStyleableProperty(Tooltip.CSSBridge cssBridge) {
-                    return (StyleableProperty<Number>)(WritableValue<Number>)cssBridge.tooltip.graphicTextGapProperty();
+                    return (StyleableProperty<Number>)cssBridge.tooltip.graphicTextGapProperty();
                 }
             };
 

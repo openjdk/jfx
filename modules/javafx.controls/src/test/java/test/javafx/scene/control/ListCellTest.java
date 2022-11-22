@@ -915,7 +915,7 @@ public class ListCellTest {
         @Override protected int getFocusedIndex() {
             return list.getFocusModel().getFocusedIndex();
         }
-    };
+    }
 
     private final class FocusModelMock extends FocusModel {
         @Override protected int getItemCount() {

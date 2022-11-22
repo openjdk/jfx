@@ -288,7 +288,7 @@ public class TableColumnHeaderTest {
         TableRow<Person> row = new TableRow<>() {
             protected Skin<?> createDefaultSkin() {
                 return new CustomSkin(this);
-            };
+            }
         };
         return row;
     }

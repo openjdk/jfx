@@ -247,7 +247,7 @@ public class HyperlinkTest {
         @Override public void handle(ActionEvent event) {
             called = true;
         }
-    };
+    }
 
     /********************************************************************************
      *                                                                              *

@@ -256,7 +256,7 @@ public class ContextMenuTest {
         @Override public void handle(ActionEvent event) {
             called = true;
         }
-    };
+    }
 
 
 

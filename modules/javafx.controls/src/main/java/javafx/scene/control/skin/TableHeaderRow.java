@@ -261,7 +261,7 @@ public class TableHeaderRow extends StackPane {
         BooleanProperty tableMenuButtonVisibleProperty = TableSkinUtils.tableMenuButtonVisibleProperty(skin);
         if (tableMenuButtonVisibleProperty != null) {
             cornerRegion.visibleProperty().bind(tableMenuButtonVisibleProperty);
-        };
+        }
 
         cornerRegion.setOnMousePressed(me -> {
             // show a popupMenu which lists all columns

@@ -117,7 +117,7 @@ public class TreeTableColumnHeaderTest {
         TreeTableRow<Person> row = new TreeTableRow<>() {
             protected Skin<?> createDefaultSkin() {
                 return new CustomSkin(this);
-            };
+            }
         };
         return row;
     }

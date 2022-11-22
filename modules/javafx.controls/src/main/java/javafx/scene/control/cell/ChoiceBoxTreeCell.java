@@ -337,7 +337,7 @@ public class ChoiceBoxTreeCell<T> extends DefaultTreeCell<T> {
         super.updateItem(item, empty);
 
         CellUtils.updateItem(this, getConverter(), hbox, getTreeItemGraphic(), choiceBox);
-    };
+    }
 
 
 

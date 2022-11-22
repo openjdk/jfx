@@ -805,7 +805,7 @@ public abstract class XYChart<X,Y> extends Chart {
             final List<Double> tickPositionsPositive = new ArrayList<>();
             final List<Double> tickPositionsNegative = new ArrayList<>();
             for(int i=0; i < xaTickMarks.size(); i++) {
-                double pos = xa.getDisplayPosition((X) xaTickMarks.get(i).getValue());
+                double pos = xa.getDisplayPosition(xaTickMarks.get(i).getValue());
                 if (pos == xAxisZero) {
                     tickPositionsPositive.add(pos);
                     tickPositionsNegative.add(pos);
@@ -851,7 +851,7 @@ public abstract class XYChart<X,Y> extends Chart {
             final List<Double> tickPositionsPositive = new ArrayList<>();
             final List<Double> tickPositionsNegative = new ArrayList<>();
             for(int i=0; i < yaTickMarks.size(); i++) {
-                double pos = ya.getDisplayPosition((Y) yaTickMarks.get(i).getValue());
+                double pos = ya.getDisplayPosition(yaTickMarks.get(i).getValue());
                 if (pos == yAxisZero) {
                     tickPositionsPositive.add(pos);
                     tickPositionsNegative.add(pos);
@@ -1085,7 +1085,7 @@ public abstract class XYChart<X,Y> extends Chart {
 
             @Override
             public StyleableProperty<Boolean> getStyleableProperty(XYChart<?,?> node) {
-                return (StyleableProperty<Boolean>)(WritableValue<Boolean>)node.horizontalGridLinesVisibleProperty();
+                return (StyleableProperty<Boolean>)node.horizontalGridLinesVisibleProperty();
             }
         };
 
@@ -1101,7 +1101,7 @@ public abstract class XYChart<X,Y> extends Chart {
 
             @Override
             public StyleableProperty<Boolean> getStyleableProperty(XYChart<?,?> node) {
-                return (StyleableProperty<Boolean>)(WritableValue<Boolean>)node.horizontalZeroLineVisibleProperty();
+                return (StyleableProperty<Boolean>)node.horizontalZeroLineVisibleProperty();
             }
         };
 
@@ -1117,7 +1117,7 @@ public abstract class XYChart<X,Y> extends Chart {
 
             @Override
             public StyleableProperty<Boolean> getStyleableProperty(XYChart<?,?> node) {
-                return (StyleableProperty<Boolean>)(WritableValue<Boolean>)node.alternativeRowFillVisibleProperty();
+                return (StyleableProperty<Boolean>)node.alternativeRowFillVisibleProperty();
             }
         };
 
@@ -1133,7 +1133,7 @@ public abstract class XYChart<X,Y> extends Chart {
 
             @Override
             public StyleableProperty<Boolean> getStyleableProperty(XYChart<?,?> node) {
-                return (StyleableProperty<Boolean>)(WritableValue<Boolean>)node.verticalGridLinesVisibleProperty();
+                return (StyleableProperty<Boolean>)node.verticalGridLinesVisibleProperty();
             }
         };
 
@@ -1149,7 +1149,7 @@ public abstract class XYChart<X,Y> extends Chart {
 
             @Override
             public StyleableProperty<Boolean> getStyleableProperty(XYChart<?,?> node) {
-                return (StyleableProperty<Boolean>)(WritableValue<Boolean>)node.verticalZeroLineVisibleProperty();
+                return (StyleableProperty<Boolean>)node.verticalZeroLineVisibleProperty();
             }
         };
 
@@ -1165,7 +1165,7 @@ public abstract class XYChart<X,Y> extends Chart {
 
             @Override
             public StyleableProperty<Boolean> getStyleableProperty(XYChart<?,?> node) {
-                return (StyleableProperty<Boolean>)(WritableValue<Boolean>)node.alternativeColumnFillVisibleProperty();
+                return (StyleableProperty<Boolean>)node.alternativeColumnFillVisibleProperty();
             }
         };
 
@@ -1326,7 +1326,7 @@ public abstract class XYChart<X,Y> extends Chart {
                         }
                     });
                 }
-            };
+            }
         };
         public final Node getNode() { return node.get(); }
         public final void setNode(Node value) { node.set(value); }

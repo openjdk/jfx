@@ -179,7 +179,7 @@ public class ButtonBaseTest {
         @Override public void handle(ActionEvent event) {
             called = true;
         }
-    };
+    }
 
     public static final class ButtonBaseMock extends ButtonBase {
         public ButtonBaseMock() { super(); }

@@ -493,7 +493,7 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea> {
         Point2D p = new Point2D(x - textNode.getLayoutX(), y - getTextTranslateY());
         HitInfo hit = textNode.hitTest(translateCaretPosition(p));
         return hit;
-    };
+    }
 
     /** {@inheritDoc} */
     @Override public void moveCaret(TextUnit unit, Direction dir, boolean select) {
@@ -1016,6 +1016,7 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea> {
      *
      **************************************************************************/
 
+    @Override
     TextAreaBehavior getBehavior() {
         return behavior;
     }

@@ -301,7 +301,7 @@ public abstract class DefaultCancelButtonTestBase<C extends Control> {
     protected abstract C createControl();
     protected C getControl() {
         return control;
-    };
+    }
 
     protected void show() {
         stage.show();
@@ -314,7 +314,7 @@ public abstract class DefaultCancelButtonTestBase<C extends Control> {
     private void initStage() {
         //This step is not needed (Just to make sure StubToolkit is loaded into VM)
         @SuppressWarnings("unused")
-        Toolkit tk = (StubToolkit)Toolkit.getToolkit();
+        Toolkit tk = Toolkit.getToolkit();
         root = new VBox();
         scene = new Scene(root);
         stage = new Stage();

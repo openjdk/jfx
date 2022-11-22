@@ -998,7 +998,7 @@ public class TreeCellTest {
         @Override protected int getFocusedIndex() {
             return tree.getFocusModel().getFocusedIndex();
         }
-    };
+    }
 
     private final class FocusModelMock extends FocusModel {
         @Override protected int getItemCount() {

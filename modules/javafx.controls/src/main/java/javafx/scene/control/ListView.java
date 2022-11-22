@@ -523,7 +523,7 @@ public class ListView<T> extends Control {
      */
     public final void setOrientation(Orientation value) {
         orientationProperty().set(value);
-    };
+    }
 
     /**
      * Returns the current orientation of the ListView, which dictates whether
@@ -1058,7 +1058,7 @@ public class ListView<T> extends Control {
                 }
 
                 @Override public StyleableProperty<Number> getStyleableProperty(ListView<?> n) {
-                    return (StyleableProperty<Number>)(WritableValue<Number>)n.fixedCellSizeProperty();
+                    return (StyleableProperty<Number>)n.fixedCellSizeProperty();
                 }
             };
 

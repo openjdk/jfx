@@ -639,7 +639,7 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
     }
 
     protected void fire(KeyEvent event) { } // TODO move to TextFieldBehavior
-    protected void cancelEdit(KeyEvent event) { };
+    protected void cancelEdit(KeyEvent event) { }
 
     protected void selectHome() {
         getNode().selectHome();

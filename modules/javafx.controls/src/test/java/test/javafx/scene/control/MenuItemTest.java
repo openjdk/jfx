@@ -348,7 +348,7 @@ public class MenuItemTest {
         @Override public void handle(ActionEvent event) {
             called = true;
         }
-    };
+    }
 
     @Test public void getUnspecifiedDisable() {
         assertEquals(false, menuItem.isDisable());
@@ -538,7 +538,7 @@ public class MenuItemTest {
         @Override public void handle(Event event) {
             called = true;
         }
-    };
+    }
 
     //TODO: test this -> MenuItem.buildEventDispatchChain(EventDispatchChain tail)
 
