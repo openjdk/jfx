@@ -123,7 +123,7 @@ public abstract class TablePositionBase<TC extends TableColumnBase> {
         if (getClass() != obj.getClass()) {
             return false;
         }
-        @SuppressWarnings("unchecked")
+
         final TablePositionBase other = (TablePositionBase) obj;
         if (this.row != other.row) {
             return false;

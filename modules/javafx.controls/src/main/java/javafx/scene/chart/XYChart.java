@@ -499,7 +499,6 @@ public abstract class XYChart<X,Y> extends Chart {
         requestChartLayout();
     }
 
-    @SuppressWarnings({"UnusedParameters"})
     private void dataItemsChanged(Series<X,Y> series, List<Data<X,Y>> removed, int addedFrom, int addedTo, boolean permutation) {
         for (Data<X,Y> item : removed) {
             dataItemRemoved(item, series);
