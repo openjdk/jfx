@@ -533,7 +533,7 @@ public class LauncherImpl {
 
             // don't bother if there's nothing to add
             if (!jcpList.isEmpty()) {
-                ArrayList<URL> urlList = new ArrayList<URL>();
+                ArrayList<URL> urlList = new ArrayList<>();
 
                 // prepend the existing classpath
                 // this will already have the app jar, so no need to worry about it

@@ -117,7 +117,7 @@ public class TaskSimpleTest {
      ***********************************************************************/
 
     @Test public void afterRunningStatesShouldHaveBeen_SCHEDULED_RUNNING_SUCCEEDED() {
-        final List<Worker.State> states = new ArrayList<Worker.State>();
+        final List<Worker.State> states = new ArrayList<>();
         task.stateProperty().addListener((observable, oldValue, newValue) -> {
             states.add(newValue);
         });

@@ -414,8 +414,7 @@ public class LogicalFont implements CompositeFontResource {
         return mapper;
     }
 
-    Map<FontStrikeDesc, WeakReference<FontStrike>> strikeMap =
-        new ConcurrentHashMap<FontStrikeDesc, WeakReference<FontStrike>>();
+    Map<FontStrikeDesc, WeakReference<FontStrike>> strikeMap = new ConcurrentHashMap<>();
 
     @Override
     public Map<FontStrikeDesc, WeakReference<FontStrike>> getStrikeMap() {
@@ -447,7 +446,7 @@ public class LogicalFont implements CompositeFontResource {
             if (strike.disposer != null) {
                 ref = Disposer.addRecord(strike, strike.disposer);
             } else {
-                ref = new WeakReference<FontStrike>(strike);
+                ref = new WeakReference<>(strike);
             }
             strikeMap.put(desc, ref);
         }

@@ -157,7 +157,7 @@ public abstract class Service<V> implements Worker<V>, EventTarget {
      * our queue has to be smart in that it will REJECT an item in the queue unless the
      * thread size in the EXECUTOR is > 32, in which case we will queue up.
      */
-    private static final BlockingQueue<Runnable> IO_QUEUE = new LinkedBlockingQueue<Runnable>() {
+    private static final BlockingQueue<Runnable> IO_QUEUE = new LinkedBlockingQueue<>() {
         @Override public boolean offer(Runnable runnable) {
             if (EXECUTOR.getPoolSize() < THREAD_POOL_SIZE) {
                 return false;

@@ -183,8 +183,7 @@ class PrismCompositeFontResource implements CompositeFontResource {
         return slotResource.getAdvance(slotglyphCode, size);
     }
 
-    Map<FontStrikeDesc, WeakReference<FontStrike>> strikeMap =
-        new ConcurrentHashMap<FontStrikeDesc, WeakReference<FontStrike>>();
+    Map<FontStrikeDesc, WeakReference<FontStrike>> strikeMap = new ConcurrentHashMap<>();
 
     @Override
     public Map<FontStrikeDesc, WeakReference<FontStrike>> getStrikeMap() {
@@ -215,7 +214,7 @@ class PrismCompositeFontResource implements CompositeFontResource {
             if (strike.disposer != null) {
                 ref = Disposer.addRecord(strike, strike.disposer);
             } else {
-                ref = new WeakReference<FontStrike>(strike);
+                ref = new WeakReference<>(strike);
             }
             strikeMap.put(desc, ref);
         }

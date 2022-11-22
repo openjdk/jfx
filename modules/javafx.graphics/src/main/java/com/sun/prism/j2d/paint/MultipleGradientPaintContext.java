@@ -216,10 +216,10 @@ abstract class MultipleGradientPaintContext implements PaintContext {
             if (isSimpleLookup) {
                 // only cache the fast array
                 mgp.fastGradientArraySize = this.fastGradientArraySize;
-                mgp.gradient = new SoftReference<int[]>(this.gradient);
+                mgp.gradient = new SoftReference<>(this.gradient);
             } else {
                 // only cache the slow array
-                mgp.gradients = new SoftReference<int[][]>(this.gradients);
+                mgp.gradients = new SoftReference<>(this.gradients);
             }
         } else {
             // use the values cached in the MultipleGradientPaint instance
@@ -694,7 +694,7 @@ abstract class MultipleGradientPaintContext implements PaintContext {
             }
         }
         cachedModel = cm;
-        cached = new WeakReference<Raster>(ras);
+        cached = new WeakReference<>(ras);
     }
 
     /**

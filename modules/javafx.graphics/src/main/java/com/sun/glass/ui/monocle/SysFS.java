@@ -45,7 +45,7 @@ class SysFS {
 
     /** Read input device capability data from sysfs */
     static Map<String, BitSet> readCapabilities(File sysPath) {
-        Map<String, BitSet> capsMap = new HashMap<String, BitSet>();
+        Map<String, BitSet> capsMap = new HashMap<>();
         File[] capsFiles = new File(sysPath, "device/capabilities").listFiles();
         if (capsFiles == null) {
             return capsMap;

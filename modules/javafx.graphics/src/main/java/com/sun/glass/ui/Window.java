@@ -84,7 +84,7 @@ public abstract class Window {
     private volatile long delegatePtr = 0L;
 
     // window list
-    static private final LinkedList<Window> visibleWindows = new LinkedList<Window>();
+    static private final LinkedList<Window> visibleWindows = new LinkedList<>();
      // Return a list of all visible windows.  Note that on platforms without a native window manager,
      // this list will be sorted in proper z-order
     static public synchronized List<Window> getWindows() {

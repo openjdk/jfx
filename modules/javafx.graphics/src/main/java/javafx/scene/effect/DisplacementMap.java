@@ -201,7 +201,7 @@ public class DisplacementMap extends Effect {
 
     public final ObjectProperty<FloatMap> mapDataProperty() {
         if (mapData == null) {
-            mapData = new ObjectPropertyBase<FloatMap>() {
+            mapData = new ObjectPropertyBase<>() {
 
                 @Override
                 public void invalidated() {

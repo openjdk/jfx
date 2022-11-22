@@ -39,8 +39,8 @@ public class PrismTrace {
 
     static {
         if (enabled) {
-            texData = new HashMap<Long, Long>();
-            rttData = new HashMap<Long, Long>();
+            texData = new HashMap<>();
+            rttData = new HashMap<>();
             Runtime.getRuntime().addShutdownHook(new Thread("RTT printAlloc shutdown hook") {
                 @Override
                 public void run() {

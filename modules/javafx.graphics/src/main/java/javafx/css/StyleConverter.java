@@ -346,7 +346,7 @@ public class StyleConverter<F, T> {
             if (converter == null) {
                 System.err.println("could not deserialize " + cname);
             }
-            if (tmap == null) tmap = new HashMap<String,StyleConverter<?,?>>();
+            if (tmap == null) tmap = new HashMap<>();
             tmap.put(cname, converter);
             return converter;
         }
@@ -535,12 +535,12 @@ public class StyleConverter<F, T> {
      * @since 9
      */
     public static class StringStore {
-        private final Map<String,Integer> stringMap = new HashMap<String,Integer>();
+        private final Map<String,Integer> stringMap = new HashMap<>();
 
         /**
          * List of strings of this {@code StringStore}.
          */
-        public final List<String> strings = new ArrayList<String>();
+        public final List<String> strings = new ArrayList<>();
 
         /**
          * Creates a {@code StringStore}.

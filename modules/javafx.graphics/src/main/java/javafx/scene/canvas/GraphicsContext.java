@@ -495,8 +495,8 @@ public final class GraphicsContext {
         pathDirty = true;
 
         this.curState = new State();
-        this.stateStack = new LinkedList<State>();
-        this.clipStack = new LinkedList<Path2D>();
+        this.stateStack = new LinkedList<>();
+        this.clipStack = new LinkedList<>();
     }
 
     static class State {

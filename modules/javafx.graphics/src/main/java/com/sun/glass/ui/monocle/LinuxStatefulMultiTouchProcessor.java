@@ -39,7 +39,7 @@ class LinuxStatefulMultiTouchProcessor extends LinuxTouchProcessor {
     private int currentSlot = 0;
 
     private final Map<Integer, Integer> slotToIDMap =
-            new HashMap<Integer, Integer>();
+            new HashMap<>();
 
     LinuxStatefulMultiTouchProcessor(LinuxInputDevice device) {
         super(device);

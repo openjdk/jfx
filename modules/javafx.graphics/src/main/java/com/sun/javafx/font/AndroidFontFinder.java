@@ -177,7 +177,7 @@ class AndroidFontFinder {
                                 ArrayList<String> list = familyToFontListMap
                                         .get(familyName);
                                 if (list == null) {
-                                    list = new ArrayList<String>();
+                                    list = new ArrayList<>();
                                     familyToFontListMap.put(familyName, list);
                                 }
                                 list.add(fullName);

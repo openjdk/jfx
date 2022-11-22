@@ -140,7 +140,7 @@ public class PerformanceLogger {
                 logWriter = new OutputStreamWriter(System.out);
             }
         }
-        times = new Vector<TimeData>(10);
+        times = new Vector<>(10);
         // Reserve predefined slots
         for (int i = 0; i <= LAST_RESERVED; ++i) {
             times.add(new TimeData("Time " + i + " not set", 0));

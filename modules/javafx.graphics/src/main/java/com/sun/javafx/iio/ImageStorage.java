@@ -431,7 +431,7 @@ public class ImageStorage {
             double width, double height, boolean preserveAspectRatio,
             float pixelScale, boolean smooth) throws ImageStorageException {
         ImageFrame[] images = null;
-        ArrayList<ImageFrame> list = new ArrayList<ImageFrame>();
+        ArrayList<ImageFrame> list = new ArrayList<>();
         int imageIndex = 0;
         ImageFrame image = null;
         int imgw = (int) Math.round(width * pixelScale);

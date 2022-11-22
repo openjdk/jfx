@@ -242,7 +242,7 @@ public abstract class LightBase extends Node {
 
     public final ObjectProperty<Color> colorProperty() {
         if (color == null) {
-            color = new SimpleObjectProperty<Color>(LightBase.this, "color") {
+            color = new SimpleObjectProperty<>(LightBase.this, "color") {
                 @Override
                 protected void invalidated() {
                     NodeHelper.markDirty(LightBase.this, DirtyBits.NODE_LIGHT);

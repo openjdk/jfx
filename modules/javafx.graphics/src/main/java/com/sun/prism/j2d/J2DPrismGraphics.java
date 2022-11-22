@@ -335,8 +335,7 @@ public class J2DPrismGraphics
 
     private static ConcurrentHashMap<java.awt.Font,
                                      WeakReference<java.awt.Font>>
-        fontMap = new ConcurrentHashMap<java.awt.Font,
-                                        WeakReference<java.awt.Font>>();
+        fontMap = new ConcurrentHashMap<>();
     private static volatile int cleared = 0;
 
     private static java.awt.Font toJ2DFont(FontStrike strike) {

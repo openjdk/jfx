@@ -78,11 +78,9 @@ public abstract class PrismFontFactory implements FontFactory {
      * only go to the second map to create a wrapped resource.
      * Logical Fonts are handled separately.
      */
-    HashMap<String, FontResource> fontResourceMap =
-        new HashMap<String, FontResource>();
+    HashMap<String, FontResource> fontResourceMap = new HashMap<>();
 
-    HashMap<String, CompositeFontResource> compResourceMap =
-        new HashMap<String, CompositeFontResource>();
+    HashMap<String, CompositeFontResource> compResourceMap = new HashMap<>();
 
     static {
         isWindows = PlatformUtil.isWindows();
@@ -216,8 +214,7 @@ public abstract class PrismFontFactory implements FontFactory {
         return null;
     }
 
-    private HashMap<String, PrismFontFile>
-        fileNameToFontResourceMap = new HashMap<String, PrismFontFile>();
+    private HashMap<String, PrismFontFile> fileNameToFontResourceMap = new HashMap<>();
 
     protected abstract PrismFontFile
           createFontFile(String name, String filename,
@@ -374,7 +371,7 @@ public abstract class PrismFontFactory implements FontFactory {
 
     private synchronized void addTmpFont(PrismFontFile fr) {
         if (tmpFonts == null) {
-            tmpFonts = new ArrayList<WeakReference<PrismFontFile>>();
+            tmpFonts = new ArrayList<>();
         }
         WeakReference<PrismFontFile> ref;
         /* Registered fonts are enumerable by the application and are
@@ -384,7 +381,7 @@ public abstract class PrismFontFactory implements FontFactory {
          * temp files deleted at any time.
          */
         if (fr.isRegistered()) {
-            ref = new WeakReference<PrismFontFile>(fr);
+            ref = new WeakReference<>(fr);
         } else {
             ref = fr.createFileDisposer(this, fr.getFileRefCounter());
         }
@@ -939,8 +936,8 @@ public abstract class PrismFontFactory implements FontFactory {
         ArrayList<String> [] fontRegInfo = new ArrayList[2];
         // index 0 = file names, 1 = font name.
         // the name is only specified for TTC files.
-        fontRegInfo[0] = new ArrayList<String>();
-        fontRegInfo[1] = new ArrayList<String>();
+        fontRegInfo[0] = new ArrayList<>();
+        fontRegInfo[1] = new ArrayList<>();
 
         if (isMacOSX) {
             // Hotkey implementation of fallback font on Mac
@@ -1074,7 +1071,7 @@ public abstract class PrismFontFactory implements FontFactory {
                     }
                 } else {
                     if (unmappedFontNames == null) {
-                        unmappedFontNames = new ArrayList<String>();
+                        unmappedFontNames = new ArrayList<>();
                     }
                     unmappedFontNames.add(font);
                 }
@@ -1082,10 +1079,10 @@ public abstract class PrismFontFactory implements FontFactory {
         }
 
         if (unmappedFontNames != null) {
-            HashSet<String> unmappedFontFiles = new HashSet<String>();
+            HashSet<String> unmappedFontFiles = new HashSet<>();
 
             // Used HashMap.clone() on SE but TV didn't support it.
-            HashMap<String,String> ffmapCopy = new HashMap<String,String>();
+            HashMap<String,String> ffmapCopy = new HashMap<>();
             ffmapCopy.putAll(fontToFileMap);
             for (String key : fontToFamilyNameMap.keySet()) {
                 ffmapCopy.remove(key);
@@ -1175,7 +1172,7 @@ public abstract class PrismFontFactory implements FontFactory {
                                 if (familylist != null) {
                                     familyToFontListMap.remove(localeFamilyLC);
                                 }
-                                familylist = new ArrayList<String>();
+                                familylist = new ArrayList<>();
                                 familyToFontListMap.put(familyLC, familylist);
                             }
                             familylist.add(ttf.getFullName());
@@ -1243,7 +1240,7 @@ public abstract class PrismFontFactory implements FontFactory {
              * - Embedded fonts
              * - Fonts found on the platform (includes JRE fonts)..
              */
-            ArrayList<String> familyNames = new ArrayList<String>();
+            ArrayList<String> familyNames = new ArrayList<>();
             LogicalFont.addFamilies(familyNames);
             //  Putting this in here is dependendent on the FontLoader
             // loading embedded fonts before calling into here. If
@@ -1263,7 +1260,7 @@ public abstract class PrismFontFactory implements FontFactory {
                 }
             }
             Collections.sort(familyNames);
-            allFamilyNames = new ArrayList<String>(familyNames);
+            allFamilyNames = new ArrayList<>(familyNames);
         }
         return allFamilyNames.toArray(STR_ARRAY);
     }
@@ -1277,7 +1274,7 @@ public abstract class PrismFontFactory implements FontFactory {
              * - Embedded fonts
              * - Fonts found on the platform (includes JRE fonts).
              */
-            ArrayList<String> fontNames = new ArrayList<String>();
+            ArrayList<String> fontNames = new ArrayList<>();
             LogicalFont.addFullNames(fontNames);
             if (embeddedFonts != null) {
                 for (PrismFontFile embeddedFont : embeddedFonts.values()) {
@@ -1313,7 +1310,7 @@ public abstract class PrismFontFactory implements FontFactory {
             for (PrismFontFile embeddedFont : embeddedFonts.values()) {
                 if (embeddedFont.getFamilyName().equalsIgnoreCase(family)) {
                     if (embeddedFamily == null) {
-                        embeddedFamily = new ArrayList<String>();
+                        embeddedFamily = new ArrayList<>();
                     }
                     embeddedFamily.add(embeddedFont.getFullName());
                 }
@@ -1614,7 +1611,7 @@ public abstract class PrismFontFactory implements FontFactory {
          */
 
         if (embeddedFonts == null) {
-            embeddedFonts = new HashMap<String, PrismFontFile>();
+            embeddedFonts = new HashMap<>();
         }
 
         boolean registerEmbedded = true;
@@ -1714,11 +1711,10 @@ public abstract class PrismFontFactory implements FontFactory {
     private synchronized HashMap<String,String> getFullNameToFileMap() {
         if (fontToFileMap == null) {
 
-            HashMap<String, String>
-                tmpFontToFileMap = new HashMap<String,String>(100);
-            fontToFamilyNameMap = new HashMap<String,String>(100);
-            familyToFontListMap = new HashMap<String,ArrayList<String>>(50);
-            fileToFontMap = new HashMap<String,String>(100);
+            HashMap<String, String> tmpFontToFileMap = new HashMap<>(100);
+            fontToFamilyNameMap = new HashMap<>(100);
+            familyToFontListMap = new HashMap<>(50);
+            fileToFontMap = new HashMap<>(100);
 
             if (isWindows) {
                 getPlatformFontDirs();
@@ -1862,7 +1858,7 @@ public abstract class PrismFontFactory implements FontFactory {
         fontToFamilyNameMap.put(lcFullName, familyName);
         ArrayList<String> familyList = familyToFontListMap.get(lcFamilyName);
         if (familyList == null) {
-            familyList = new ArrayList<String>();
+            familyList = new ArrayList<>();
             familyToFontListMap.put(lcFamilyName, familyList);
         }
         familyList.add(fullName);

@@ -215,7 +215,7 @@ final class SWContext {
 
     private SWRTTexture initRBBuffer(int width, int height) {
         final SWRTTexture tex = (SWRTTexture)factory.createRTTexture(width, height, Texture.WrapMode.CLAMP_NOT_NEEDED);
-        readBackBufferRef = new SoftReference<SWRTTexture>(tex);
+        readBackBufferRef = new SoftReference<>(tex);
         return tex;
     }
 
@@ -248,7 +248,7 @@ final class SWContext {
     private SWArgbPreTexture initImagePaintTexture(int width, int height) {
         final SWArgbPreTexture tex = (SWArgbPreTexture)factory.createTexture(PixelFormat.INT_ARGB_PRE,
                 Texture.Usage.DEFAULT, Texture.WrapMode.REPEAT, width, height);
-        imagePaintTextureRef = new SoftReference<SWArgbPreTexture>(tex);
+        imagePaintTextureRef = new SoftReference<>(tex);
         return tex;
     }
 

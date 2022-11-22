@@ -740,7 +740,7 @@ public final class JobSettings {
      */
     public final ObjectProperty<PrintSides> printSidesProperty() {
          if (sides == null) {
-             sides = new SimpleObjectProperty<PrintSides>
+             sides = new SimpleObjectProperty<>
                  (JobSettings.this, "printSides",
                   printerCaps.getDefaultPrintSides()) {
 
@@ -822,7 +822,7 @@ public final class JobSettings {
     public final ObjectProperty<Collation> collationProperty() {
          if (collation == null) {
              Collation coll = printerCaps.getDefaultCollation();
-             collation = new SimpleObjectProperty<Collation>
+             collation = new SimpleObjectProperty<>
                 (JobSettings.this, "collation", coll) {
 
                 @Override
@@ -891,7 +891,7 @@ public final class JobSettings {
      */
     public final ObjectProperty<PrintColor> printColorProperty() {
          if (color == null) {
-            color = new SimpleObjectProperty<PrintColor>
+            color = new SimpleObjectProperty<>
                 (JobSettings.this, "printColor",
                  printerCaps.getDefaultPrintColor()) {
 
@@ -969,7 +969,7 @@ public final class JobSettings {
      */
     public final ObjectProperty<PrintQuality> printQualityProperty() {
          if (quality == null) {
-            quality = new SimpleObjectProperty<PrintQuality>
+            quality = new SimpleObjectProperty<>
                 (JobSettings.this, "printQuality",
                  printerCaps.getDefaultPrintQuality()) {
 
@@ -1049,7 +1049,7 @@ public final class JobSettings {
      */
     public final ObjectProperty<PrintResolution> printResolutionProperty() {
          if (resolution == null) {
-            resolution = new SimpleObjectProperty<PrintResolution>
+            resolution = new SimpleObjectProperty<>
                 (JobSettings.this, "printResolution",
                  printerCaps.getDefaultPrintResolution()) {
 
@@ -1122,7 +1122,7 @@ public final class JobSettings {
      */
     public final ObjectProperty<PaperSource> paperSourceProperty() {
          if (paperSource == null) {
-            paperSource = new SimpleObjectProperty<PaperSource>
+            paperSource = new SimpleObjectProperty<>
                 (JobSettings.this, "paperSource",
                  printerCaps.getDefaultPaperSource()) {
 
@@ -1200,7 +1200,7 @@ public final class JobSettings {
      */
     public final ObjectProperty<PageLayout> pageLayoutProperty() {
          if (layout == null) {
-             layout = new SimpleObjectProperty<PageLayout>
+             layout = new SimpleObjectProperty<>
                  (JobSettings.this, "pageLayout",
                   printer.getDefaultPageLayout()) {
 

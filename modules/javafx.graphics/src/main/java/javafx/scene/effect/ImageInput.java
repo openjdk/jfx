@@ -104,7 +104,7 @@ public class ImageInput extends Effect {
     private Image oldImage;
     public final ObjectProperty<Image> sourceProperty() {
         if (source == null) {
-            source = new ObjectPropertyBase<Image>() {
+            source = new ObjectPropertyBase<>() {
 
                 private boolean needsListeners = false;
 

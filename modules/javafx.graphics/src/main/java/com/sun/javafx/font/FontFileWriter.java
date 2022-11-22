@@ -341,8 +341,7 @@ class FontFileWriter implements FontConstants {
          * Helper class for cleanup of temp files created while processing fonts.
          */
         private static class TempFileDeletionHook {
-            private static HashMap<File, RandomAccessFile> files =
-                new HashMap<File, RandomAccessFile>();
+            private static HashMap<File, RandomAccessFile> files = new HashMap<>();
 
             private static Thread t = null;
             @SuppressWarnings("removal")

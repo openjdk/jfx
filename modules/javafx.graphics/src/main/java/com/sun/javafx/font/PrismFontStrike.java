@@ -38,7 +38,7 @@ import com.sun.javafx.scene.text.GlyphList;
 public abstract class PrismFontStrike<T extends PrismFontFile> implements FontStrike {
     private DisposerRecord disposer;
     private T fontResource;
-    private Map<Integer,Glyph> glyphMap = new HashMap<Integer,Glyph>();
+    private Map<Integer,Glyph> glyphMap = new HashMap<>();
     private PrismMetrics metrics;
     protected boolean drawShapes = false;
     private float size;

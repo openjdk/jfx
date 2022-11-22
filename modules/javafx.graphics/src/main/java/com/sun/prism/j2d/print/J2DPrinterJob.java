@@ -374,7 +374,7 @@ public class J2DPrinterJob implements PrinterJobImpl {
                 settings.setPageRanges(range);
             } else if (members.length > 0) {
                 try {
-                    ArrayList<PageRange> prList = new ArrayList<PageRange>();
+                    ArrayList<PageRange> prList = new ArrayList<>();
                     int last = 0;
                     for (int i=0; i<members.length;i++) {
                         int s = members[i][0];

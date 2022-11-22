@@ -54,7 +54,7 @@ public abstract class ImageLoaderImpl implements ImageLoader {
     @Override
     public final void addListener(ImageLoadListener listener) {
         if (listeners == null) {
-            listeners = new HashSet<ImageLoadListener>();
+            listeners = new HashSet<>();
         }
         listeners.add(listener);
     }

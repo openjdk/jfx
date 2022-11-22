@@ -117,7 +117,7 @@ public final class PathTransition extends Transition {
 
     public final ObjectProperty<Node> nodeProperty() {
         if (node == null) {
-            node = new SimpleObjectProperty<Node>(this, "node", DEFAULT_NODE);
+            node = new SimpleObjectProperty<>(this, "node", DEFAULT_NODE);
         }
         return node;
     }
@@ -211,7 +211,7 @@ public final class PathTransition extends Transition {
 
     public final ObjectProperty<Shape> pathProperty() {
         if (path == null) {
-            path = new SimpleObjectProperty<Shape>(this, "path", DEFAULT_PATH);
+            path = new SimpleObjectProperty<>(this, "path", DEFAULT_PATH);
         }
         return path;
     }
@@ -261,7 +261,7 @@ public final class PathTransition extends Transition {
 
     public final ObjectProperty<OrientationType> orientationProperty() {
         if (orientation == null) {
-            orientation = new SimpleObjectProperty<OrientationType>(this, "orientation", DEFAULT_ORIENTATION);
+            orientation = new SimpleObjectProperty<>(this, "orientation", DEFAULT_ORIENTATION);
         }
         return orientation;
     }

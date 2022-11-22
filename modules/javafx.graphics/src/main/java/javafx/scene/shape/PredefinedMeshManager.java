@@ -45,7 +45,7 @@ final class PredefinedMeshManager {
         private void put(Key key, TriangleMesh mesh) {
             cleanCache();
             if (mesh != null) {
-                cache.put(key, new SoftReference<TriangleMesh>(mesh));
+                cache.put(key, new SoftReference<>(mesh));
             }
         }
 

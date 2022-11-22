@@ -89,7 +89,7 @@ public final class Printer {
         Printer p = PrintPipeline.getPrintPipeline().getDefaultPrinter();
         if (defaultPrinter == null) {
             defaultPrinter =
-                new ReadOnlyObjectWrapper<Printer>(null, "defaultPrinter", p);
+                new ReadOnlyObjectWrapper<>(null, "defaultPrinter", p);
         } else {
             defaultPrinter.setValue(p);
         }

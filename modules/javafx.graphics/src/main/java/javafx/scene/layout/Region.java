@@ -883,7 +883,7 @@ public class Region extends Parent {
      */
     public final ObjectProperty<Insets> opaqueInsetsProperty() {
         if (opaqueInsets == null) {
-            opaqueInsets = new StyleableObjectProperty<Insets>() {
+            opaqueInsets = new StyleableObjectProperty<>() {
                 @Override public Object getBean() { return Region.this; }
                 @Override public String getName() { return "opaqueInsets"; }
                 @Override public CssMetaData<Region, Insets> getCssMetaData() {
@@ -3442,7 +3442,7 @@ public class Region extends Parent {
      */
      private static class StyleableProperties {
          private static final CssMetaData<Region,Insets> PADDING =
-             new CssMetaData<Region,Insets>("-fx-padding",
+             new CssMetaData<>("-fx-padding",
                  InsetsConverter.getInstance(), Insets.EMPTY) {
 
             @Override public boolean isSettable(Region node) {
@@ -3455,7 +3455,7 @@ public class Region extends Parent {
          };
 
          private static final CssMetaData<Region,Insets> OPAQUE_INSETS =
-                 new CssMetaData<Region,Insets>("-fx-opaque-insets",
+                 new CssMetaData<>("-fx-opaque-insets",
                          InsetsConverter.getInstance(), null) {
 
                      @Override
@@ -3471,7 +3471,7 @@ public class Region extends Parent {
                  };
 
          private static final CssMetaData<Region,Background> BACKGROUND =
-             new CssMetaData<Region,Background>("-fx-region-background",
+             new CssMetaData<>("-fx-region-background",
                  BackgroundConverter.INSTANCE,
                  null,
                  false,
@@ -3487,7 +3487,7 @@ public class Region extends Parent {
          };
 
          private static final CssMetaData<Region,Border> BORDER =
-             new CssMetaData<Region,Border>("-fx-region-border",
+             new CssMetaData<>("-fx-region-border",
                      BorderConverter.getInstance(),
                      null,
                      false,
@@ -3503,7 +3503,7 @@ public class Region extends Parent {
              };
 
          private static final CssMetaData<Region,Shape> SHAPE =
-             new CssMetaData<Region,Shape>("-fx-shape",
+             new CssMetaData<>("-fx-shape",
                  ShapeConverter.getInstance()) {
 
             @Override public boolean isSettable(Region node) {
@@ -3517,7 +3517,7 @@ public class Region extends Parent {
          };
 
          private static final CssMetaData<Region, Boolean> SCALE_SHAPE =
-             new CssMetaData<Region,Boolean>("-fx-scale-shape",
+             new CssMetaData<>("-fx-scale-shape",
                  BooleanConverter.getInstance(), Boolean.TRUE){
 
             @Override public boolean isSettable(Region node) {
@@ -3530,7 +3530,7 @@ public class Region extends Parent {
         };
 
          private static final CssMetaData<Region,Boolean> POSITION_SHAPE =
-             new CssMetaData<Region,Boolean>("-fx-position-shape",
+             new CssMetaData<>("-fx-position-shape",
                  BooleanConverter.getInstance(), Boolean.TRUE){
 
             @Override public boolean isSettable(Region node) {
@@ -3543,7 +3543,7 @@ public class Region extends Parent {
         };
 
          private static final CssMetaData<Region,Boolean> CACHE_SHAPE =
-             new CssMetaData<Region,Boolean>("-fx-cache-shape",
+             new CssMetaData<>("-fx-cache-shape",
                  BooleanConverter.getInstance(), Boolean.TRUE){
 
             @Override public boolean isSettable(Region node) {
@@ -3556,7 +3556,7 @@ public class Region extends Parent {
         };
 
          private static final CssMetaData<Region, Boolean> SNAP_TO_PIXEL =
-             new CssMetaData<Region,Boolean>("-fx-snap-to-pixel",
+             new CssMetaData<>("-fx-snap-to-pixel",
                  BooleanConverter.getInstance(), Boolean.TRUE){
 
             @Override public boolean isSettable(Region node) {
@@ -3570,7 +3570,7 @@ public class Region extends Parent {
         };
 
          private static final CssMetaData<Region, Number> MIN_HEIGHT =
-             new CssMetaData<Region,Number>("-fx-min-height",
+             new CssMetaData<>("-fx-min-height",
                  SizeConverter.getInstance(), USE_COMPUTED_SIZE){
 
             @Override public boolean isSettable(Region node) {
@@ -3584,7 +3584,7 @@ public class Region extends Parent {
         };
 
          private static final CssMetaData<Region, Number> PREF_HEIGHT =
-             new CssMetaData<Region,Number>("-fx-pref-height",
+             new CssMetaData<>("-fx-pref-height",
                  SizeConverter.getInstance(), USE_COMPUTED_SIZE){
 
             @Override public boolean isSettable(Region node) {
@@ -3598,7 +3598,7 @@ public class Region extends Parent {
         };
 
          private static final CssMetaData<Region, Number> MAX_HEIGHT =
-             new CssMetaData<Region,Number>("-fx-max-height",
+             new CssMetaData<>("-fx-max-height",
                  SizeConverter.getInstance(), USE_COMPUTED_SIZE){
 
             @Override public boolean isSettable(Region node) {
@@ -3612,7 +3612,7 @@ public class Region extends Parent {
         };
 
          private static final CssMetaData<Region, Number> MIN_WIDTH =
-             new CssMetaData<Region,Number>("-fx-min-width",
+             new CssMetaData<>("-fx-min-width",
                  SizeConverter.getInstance(), USE_COMPUTED_SIZE){
 
             @Override public boolean isSettable(Region node) {
@@ -3626,7 +3626,7 @@ public class Region extends Parent {
         };
 
          private static final CssMetaData<Region, Number> PREF_WIDTH =
-             new CssMetaData<Region,Number>("-fx-pref-width",
+             new CssMetaData<>("-fx-pref-width",
                  SizeConverter.getInstance(), USE_COMPUTED_SIZE){
 
             @Override public boolean isSettable(Region node) {
@@ -3640,7 +3640,7 @@ public class Region extends Parent {
         };
 
          private static final CssMetaData<Region, Number> MAX_WIDTH =
-             new CssMetaData<Region,Number>("-fx-max-width",
+             new CssMetaData<>("-fx-max-width",
                  SizeConverter.getInstance(), USE_COMPUTED_SIZE){
 
             @Override public boolean isSettable(Region node) {
@@ -3657,7 +3657,7 @@ public class Region extends Parent {
          static {
 
             final List<CssMetaData<? extends Styleable, ?>> styleables =
-                new ArrayList<CssMetaData<? extends Styleable, ?>>(Parent.getClassCssMetaData());
+                new ArrayList<>(Parent.getClassCssMetaData());
             styleables.add(PADDING);
             styleables.add(BACKGROUND);
             styleables.add(BORDER);

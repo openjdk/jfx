@@ -58,7 +58,7 @@ public final class Menu {
 
     private String title;
     private boolean enabled;
-    private final List<Object> items = new ArrayList<Object>();
+    private final List<Object> items = new ArrayList<>();
 
     private EventHandler eventHandler;
 

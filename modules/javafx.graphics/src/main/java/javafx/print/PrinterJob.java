@@ -171,7 +171,7 @@ public final class PrinterJob {
 
     private ObjectProperty<Printer> createPrinterProperty(Printer printer) {
 
-        return new SimpleObjectProperty<Printer>(printer) {
+        return new SimpleObjectProperty<>(printer) {
 
             @Override
             public void set(Printer value) {

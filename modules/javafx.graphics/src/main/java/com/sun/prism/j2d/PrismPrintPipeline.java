@@ -108,7 +108,7 @@ public final class PrismPrintPipeline extends PrintPipeline {
     @Override
     public synchronized ObservableSet<Printer> getAllPrinters() {
         if (returnedPrinterSet == null) {
-            TreeSet<Printer> printers = new TreeSet<Printer>(nameComparator);
+            TreeSet<Printer> printers = new TreeSet<>(nameComparator);
             // Trigger getting default first, so we don't recreate that.
             Printer defPrinter = getDefaultPrinter();
             PrintService defService = null;

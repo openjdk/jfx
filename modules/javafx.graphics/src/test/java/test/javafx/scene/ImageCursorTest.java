@@ -235,11 +235,11 @@ public final class ImageCursorTest {
         final ImageCursor testCursor = new ImageCursor(testImage, 16, 16);
 
         final PropertyInvalidationCounter<Number> hotspotXInvalidationCounter =
-                new PropertyInvalidationCounter<Number>();
+                new PropertyInvalidationCounter<>();
         final PropertyInvalidationCounter<Number> hotspotYInvalidationCounter =
-                new PropertyInvalidationCounter<Number>();
+                new PropertyInvalidationCounter<>();
         final PropertyInvalidationCounter<Object> imageInvalidationCounter =
-                new PropertyInvalidationCounter<Object>();
+                new PropertyInvalidationCounter<>();
 
         testCursor.hotspotXProperty().addListener(hotspotXInvalidationCounter);
         testCursor.hotspotYProperty().addListener(hotspotYInvalidationCounter);

@@ -87,8 +87,7 @@ public abstract class PrismFontFile implements FontResource, FontConstants {
      * manage how much of that is kept around. We clearly want
      * to keep a reference to the strike that created that data.
      */
-    Map<FontStrikeDesc, WeakReference<PrismFontStrike>> strikeMap =
-        new ConcurrentHashMap<FontStrikeDesc, WeakReference<PrismFontStrike>>();
+    Map<FontStrikeDesc, WeakReference<PrismFontStrike>> strikeMap = new ConcurrentHashMap<>();
 
     protected PrismFontFile(String name, String filename, int fIndex,
                           boolean register, boolean embedded,
@@ -350,7 +349,7 @@ public abstract class PrismFontFile implements FontResource, FontConstants {
             if (disposer != null) {
                 ref = Disposer.addRecord(strike, disposer);
             } else {
-                ref = new WeakReference<PrismFontStrike>(strike);
+                ref = new WeakReference<>(strike);
             }
             strikeMap.put(desc, ref);
         }
@@ -372,7 +371,7 @@ public abstract class PrismFontFile implements FontResource, FontConstants {
             return retArr;
         }
         if (bbCache == null) {
-            bbCache = new HashMap<Integer, int[]>();
+            bbCache = new HashMap<>();
         }
         int[] bb = bbCache.get(gc);
         if (bb == null) {
@@ -967,7 +966,7 @@ public abstract class PrismFontFile implements FontResource, FontConstants {
             return;
         }
 
-        Map<String, Short> map = new HashMap<String, Short>(200);
+        Map<String, Short> map = new HashMap<>(200);
         addLCIDMapEntry(map, "ar", (short) 0x0401);
         addLCIDMapEntry(map, "bg", (short) 0x0402);
         addLCIDMapEntry(map, "ca", (short) 0x0403);

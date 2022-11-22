@@ -43,7 +43,7 @@ import java.util.concurrent.*;
  */
 public final class InvokeLaterDispatcher extends Thread {
     // The runnables queue
-    private final BlockingDeque<Runnable> deque = new LinkedBlockingDeque<Runnable>();
+    private final BlockingDeque<Runnable> deque = new LinkedBlockingDeque<>();
 
     // Main lock
     private final Object LOCK = new StringBuilder("InvokeLaterLock");

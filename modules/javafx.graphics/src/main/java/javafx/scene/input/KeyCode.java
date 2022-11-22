@@ -1314,7 +1314,7 @@ public enum KeyCode {
     private static final Map<String, KeyCode> nameMap;
     static {
 
-        nameMap = new HashMap<String, KeyCode>(KeyCode.values().length);
+        nameMap = new HashMap<>(KeyCode.values().length);
         for (KeyCode c : KeyCode.values()) {
             nameMap.put(c.name, c);
         }

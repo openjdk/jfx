@@ -168,7 +168,7 @@ public class Utils {
         if (separator == null || separator.length() == 0) return new String[] { };
         if (separator.length() > str.length()) return new String[] { };
 
-        java.util.List<String> result = new java.util.ArrayList<String>();
+        java.util.List<String> result = new java.util.ArrayList<>();
 
         int index = str.indexOf(separator);
         while (index >= 0) {

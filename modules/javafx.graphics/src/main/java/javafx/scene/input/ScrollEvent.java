@@ -106,14 +106,14 @@ public final class ScrollEvent extends GestureEvent {
      * Common supertype for all scroll event types.
      */
     public static final EventType<ScrollEvent> ANY =
-            new EventType<ScrollEvent> (GestureEvent.ANY, "ANY_SCROLL");
+            new EventType<> (GestureEvent.ANY, "ANY_SCROLL");
 
     /**
      * This event occurs when user performs a scrolling action such as
      * rotating mouse wheel or dragging a finger over touch screen.
      */
     public static final EventType<ScrollEvent> SCROLL =
-            new EventType<ScrollEvent> (ScrollEvent.ANY, "SCROLL");
+            new EventType<> (ScrollEvent.ANY, "SCROLL");
 
     /**
      * This event occurs when a scrolling gesture is detected. It doesn't
@@ -121,7 +121,7 @@ public final class ScrollEvent extends GestureEvent {
      * @since JavaFX 2.2
      */
     public static final EventType<ScrollEvent> SCROLL_STARTED =
-            new EventType<ScrollEvent> (ScrollEvent.ANY, "SCROLL_STARTED");
+            new EventType<> (ScrollEvent.ANY, "SCROLL_STARTED");
 
     /**
      * This event occurs when a scrolling gesture ends. It doesn't
@@ -129,7 +129,7 @@ public final class ScrollEvent extends GestureEvent {
      * @since JavaFX 2.2
      */
     public static final EventType<ScrollEvent> SCROLL_FINISHED =
-            new EventType<ScrollEvent> (ScrollEvent.ANY, "SCROLL_FINISHED");
+            new EventType<> (ScrollEvent.ANY, "SCROLL_FINISHED");
 
 
     private ScrollEvent(Object source, EventTarget target,

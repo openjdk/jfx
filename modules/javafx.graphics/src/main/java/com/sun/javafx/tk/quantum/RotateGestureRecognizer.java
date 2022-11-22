@@ -75,8 +75,7 @@ class RotateGestureRecognizer implements GestureRecognizer {
     private double lastTouchEventTime = 0;
 
     // from MultiTouchTracker
-    Map<Long, TouchPointTracker> trackers =
-            new HashMap<Long, TouchPointTracker>();
+    Map<Long, TouchPointTracker> trackers = new HashMap<>();
 
     int modifiers;
     boolean direct;

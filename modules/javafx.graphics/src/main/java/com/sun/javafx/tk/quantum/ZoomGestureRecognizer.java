@@ -77,8 +77,7 @@ class ZoomGestureRecognizer implements GestureRecognizer {
 
     private ZoomRecognitionState state = ZoomRecognitionState.IDLE;
 
-    private Map<Long, TouchPointTracker> trackers =
-            new HashMap<Long, TouchPointTracker>();
+    private Map<Long, TouchPointTracker> trackers = new HashMap<>();
 
     private int modifiers;
     private boolean direct;

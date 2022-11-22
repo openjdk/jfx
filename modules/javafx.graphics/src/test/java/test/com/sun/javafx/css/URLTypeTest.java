@@ -89,14 +89,14 @@ public class URLTypeTest {
 
         for(int n=0; n<testPairs.length; n++) {
             ParsedValue[] values = new ParsedValue[] {
-                new ParsedValueImpl<String,String>(testPairs[n][0], StringConverter.getInstance()),
+                new ParsedValueImpl<>(testPairs[n][0], StringConverter.getInstance()),
                 new ParsedValueImpl<String, String>(baseURL, null)
             };
-            urls[n] = new ParsedValueImpl<ParsedValue[],String>(values, URLConverter.getInstance());
+            urls[n] = new ParsedValueImpl<>(values, URLConverter.getInstance());
         }
 
         ParsedValue<ParsedValue<ParsedValue[],String>[],String[]> value =
-                new ParsedValueImpl<ParsedValue<ParsedValue[],String>[],String[]>(urls, URLConverter.SequenceConverter.getInstance());
+                new ParsedValueImpl<>(urls, URLConverter.SequenceConverter.getInstance());
 
         Font font = null;
         String[] result = value.convert(font);

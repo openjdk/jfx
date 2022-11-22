@@ -67,7 +67,7 @@ public class PathTest {
         PathElement two = new LineTo(20, 20);
         PathElement three = new MoveTo(30, 30);
 
-        List<PathElement> listOfElements = new ArrayList<PathElement>();
+        List<PathElement> listOfElements = new ArrayList<>();
         listOfElements.add(one);
         listOfElements.add(two);
         listOfElements.add(three);
@@ -79,7 +79,7 @@ public class PathTest {
     }
 
     @Test public void testBoundPropertySync_FillRule() throws Exception {
-        ObjectProperty<FillRule> v = new SimpleObjectProperty<FillRule>(FillRule.EVEN_ODD);
+        ObjectProperty<FillRule> v = new SimpleObjectProperty<>(FillRule.EVEN_ODD);
         Path path = new Path();
         path.fillRuleProperty().bind(v);
         ((Group)new Scene(new Group()).getRoot()).getChildren().add(path);

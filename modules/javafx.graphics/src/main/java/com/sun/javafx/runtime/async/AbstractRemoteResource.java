@@ -50,8 +50,8 @@ public abstract class AbstractRemoteResource<T> extends AbstractAsyncOperation<T
     protected final String method;
     protected final String outboundContent;
     protected int fileSize;
-    private Map<String, String> headers = new HashMap<String, String>();
-    private Map<String, List<String>> responseHeaders = new HashMap<String, List<String>>();
+    private Map<String, String> headers = new HashMap<>();
+    private Map<String, List<String>> responseHeaders = new HashMap<>();
 
     protected AbstractRemoteResource(String url, AsyncOperationListener<T> listener) {
         this(url, "GET", listener);

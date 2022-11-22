@@ -209,7 +209,7 @@ public final class DragEvent extends InputEvent {
      * Common supertype for all drag event types.
      */
     public static final EventType<DragEvent> ANY =
-            new EventType<DragEvent>(InputEvent.ANY, "DRAG");
+            new EventType<>(InputEvent.ANY, "DRAG");
 
     /**
      * This event occurs when drag gesture enters a node. It's the
@@ -222,7 +222,7 @@ public final class DragEvent extends InputEvent {
      * which is similar
      */
     public static final EventType<DragEvent> DRAG_ENTERED_TARGET =
-            new EventType<DragEvent>(DragEvent.ANY, "DRAG_ENTERED_TARGET");
+            new EventType<>(DragEvent.ANY, "DRAG_ENTERED_TARGET");
 
     /**
      * This event occurs when drag gesture enters a node.
@@ -234,7 +234,7 @@ public final class DragEvent extends InputEvent {
      * which is similar
      */
     public static final EventType<DragEvent> DRAG_ENTERED =
-            new EventType<DragEvent>(DragEvent.DRAG_ENTERED_TARGET, "DRAG_ENTERED");
+            new EventType<>(DragEvent.DRAG_ENTERED_TARGET, "DRAG_ENTERED");
 
     /**
      * This event occurs when drag gesture exits a node. It's the
@@ -247,7 +247,7 @@ public final class DragEvent extends InputEvent {
      * which is similar
      */
     public static final EventType<DragEvent> DRAG_EXITED_TARGET =
-            new EventType<DragEvent>(DragEvent.ANY, "DRAG_EXITED_TARGET");
+            new EventType<>(DragEvent.ANY, "DRAG_EXITED_TARGET");
 
     /**
      * This event occurs when drag gesture exits a node.
@@ -259,13 +259,13 @@ public final class DragEvent extends InputEvent {
      * which is similar
      */
     public static final EventType<DragEvent> DRAG_EXITED =
-            new EventType<DragEvent>(DragEvent.DRAG_EXITED_TARGET, "DRAG_EXITED");
+            new EventType<>(DragEvent.DRAG_EXITED_TARGET, "DRAG_EXITED");
 
     /**
      * This event occurs when drag gesture progresses within this node.
      */
     public static final EventType<DragEvent> DRAG_OVER =
-            new EventType<DragEvent>(DragEvent.ANY, "DRAG_OVER");
+            new EventType<>(DragEvent.ANY, "DRAG_OVER");
 
     // Do we want DRAG_TRANSFER_MODE_CHANGED event?
 //    /**
@@ -284,7 +284,7 @@ public final class DragEvent extends InputEvent {
      * in handler of this event.
      */
     public static final EventType<DragEvent> DRAG_DROPPED =
-            new EventType<DragEvent>(DragEvent.ANY, "DRAG_DROPPED");
+            new EventType<>(DragEvent.ANY, "DRAG_DROPPED");
 
     /**
      * This event occurs on drag-and-drop gesture source after its data has
@@ -297,7 +297,7 @@ public final class DragEvent extends InputEvent {
      * indicates that no data was transferred during the drag and drop gesture.
      */
     public static final EventType<DragEvent> DRAG_DONE =
-            new EventType<DragEvent>(DragEvent.ANY, "DRAG_DONE");
+            new EventType<>(DragEvent.ANY, "DRAG_DONE");
 
     /**
      * Creates a copy of the given drag event with the given fields substituted.

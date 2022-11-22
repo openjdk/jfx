@@ -214,7 +214,7 @@ public class J2DPrinter implements PrinterImpl {
     @Override
     public Set<Collation> supportedCollations() {
         if (collateSet == null) {
-            Set<Collation> cSet = new TreeSet<Collation>();
+            Set<Collation> cSet = new TreeSet<>();
             SheetCollate[] sc = null;
             try {
                 sc = (SheetCollate[])
@@ -268,7 +268,7 @@ public class J2DPrinter implements PrinterImpl {
     @Override
     public Set<PrintColor> supportedPrintColor() {
         if (colorSet == null) {
-            Set<PrintColor> cSet = new TreeSet<PrintColor>();
+            Set<PrintColor> cSet = new TreeSet<>();
             Chromaticity[] sc = null;
             try {
                 sc = (Chromaticity[])
@@ -316,7 +316,7 @@ public class J2DPrinter implements PrinterImpl {
     @Override
     public Set<PrintSides> supportedSides() {
         if (sidesSet == null) {
-            Set<PrintSides> sSet = new TreeSet<PrintSides>();
+            Set<PrintSides> sSet = new TreeSet<>();
             Sides[] ss = null;
             try {
                 ss = (Sides[])
@@ -397,7 +397,7 @@ public class J2DPrinter implements PrinterImpl {
             return orientSet;
         }
 
-        Set<PageOrientation> oset = new TreeSet<PageOrientation>();
+        Set<PageOrientation> oset = new TreeSet<>();
         OrientationRequested[] or = null;
         try {
             or = (OrientationRequested[])
@@ -492,7 +492,7 @@ public class J2DPrinter implements PrinterImpl {
             return resSet;
         }
         Set<PrintResolution> rSet = new
-            TreeSet<PrintResolution>(PrintResolutionComparator.theComparator);
+            TreeSet<>(PrintResolutionComparator.theComparator);
         PrinterResolution[] pr = null;
         try {
             pr = (PrinterResolution[])
@@ -554,7 +554,7 @@ public class J2DPrinter implements PrinterImpl {
     @Override
     public Set<PrintQuality> supportedPrintQuality() {
         if (qualitySet == null) {
-            Set<PrintQuality> set = new TreeSet<PrintQuality>();
+            Set<PrintQuality> set = new TreeSet<>();
            javax.print.attribute.standard.PrintQuality[] arr = null;
             try {
                 arr = (javax.print.attribute.standard.PrintQuality[])
@@ -708,9 +708,9 @@ public class J2DPrinter implements PrinterImpl {
         Media[] media =
             (Media[])service.getSupportedAttributeValues(Media.class,
                                                          null, null);
-        Set<Paper> pSet = new TreeSet<Paper>(PaperComparator.theComparator);
+        Set<Paper> pSet = new TreeSet<>(PaperComparator.theComparator);
         Set<PaperSource> tSet =
-            new TreeSet<PaperSource>(PaperSourceComparator.theComparator);
+            new TreeSet<>(PaperSourceComparator.theComparator);
         /* We will get back a list of Media and want to look for
          * MediaSizeName and MediaTray instances and map to FX classes.
          * We will hard code here recognising the set we've chosen to
@@ -790,12 +790,12 @@ public class J2DPrinter implements PrinterImpl {
         }
 
         if (trayToSourceMap == null) {
-            trayToSourceMap = new HashMap<MediaTray, PaperSource>();
+            trayToSourceMap = new HashMap<>();
         }
         trayToSourceMap.put(tray, source);
 
         if (sourceToTrayMap == null) {
-            sourceToTrayMap = new HashMap<PaperSource, MediaTray>();
+            sourceToTrayMap = new HashMap<>();
         }
         sourceToTrayMap.put(source, tray);
         return source;
@@ -807,9 +807,9 @@ public class J2DPrinter implements PrinterImpl {
      * create a printer-specific instance and store it in a per-printer map.
      */
     private final Map<MediaSizeName, Paper> mediaToPaperMap
-         = new HashMap<MediaSizeName, Paper>();
+         = new HashMap<>();
     private final Map<Paper, MediaSizeName> paperToMediaMap
-         = new HashMap<Paper, MediaSizeName>();
+         = new HashMap<>();
 
     private Paper createPaper(MediaSizeName media) {
         Paper paper = null;

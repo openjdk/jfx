@@ -222,7 +222,7 @@ class WinSystemClipboard extends SystemClipboard {
     @Override
     protected final void pushToSystem(HashMap<String, Object> cacheData, int supportedActions) {
         Set<String> mimes = cacheData.keySet();
-        Set<String> mimesForSystem = new HashSet<String>();
+        Set<String> mimesForSystem = new HashSet<>();
         MimeTypeParser parser = new MimeTypeParser();
         for (String mime : mimes) {
             parser.parse(mime);

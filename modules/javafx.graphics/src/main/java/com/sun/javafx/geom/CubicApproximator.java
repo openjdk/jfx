@@ -73,7 +73,7 @@ public class CubicApproximator {
     }
 
     public float approximate(List<QuadCurve2D> res, CubicCurve2D curve) {
-        List<CubicCurve2D> tmp = new ArrayList<CubicCurve2D>();
+        List<CubicCurve2D> tmp = new ArrayList<>();
         return approximate(res, tmp, curve);
     }
 

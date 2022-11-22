@@ -195,7 +195,7 @@ public class StyleManagerShim {
         }
 
         public StyleManagerShim.RefList<Parent> get_parentUsers() {
-            return new RefList<Parent>(sc.parentUsers);
+            return new RefList<>(sc.parentUsers);
         }
     }
 

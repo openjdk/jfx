@@ -143,7 +143,7 @@ public class PseudoClassTest {
         PseudoClassState states = new PseudoClassState();
         BitSetShim.add(states, state);
 
-        List<PseudoClass> stateList = new ArrayList<PseudoClass>();
+        List<PseudoClass> stateList = new ArrayList<>();
         Iterator<PseudoClass> iter = BitSetShim.iterator(states);
         while (iter.hasNext()) {
             stateList.add(iter.next());
@@ -165,7 +165,7 @@ public class PseudoClassTest {
             BitSetShim.add(states, state);
         }
 
-        List<PseudoClass> stateList = new ArrayList<PseudoClass>();
+        List<PseudoClass> stateList = new ArrayList<>();
         Iterator<PseudoClass> iter = BitSetShim.iterator(states);
         while (iter.hasNext()) {
             stateList.add(iter.next());
@@ -576,7 +576,7 @@ public class PseudoClassTest {
         };
 
         BitSetShim.retainAll(aStates, bStates);
-        List<PseudoClass> states = new ArrayList<PseudoClass>();
+        List<PseudoClass> states = new ArrayList<>();
         Iterator<PseudoClass> iter = BitSetShim.iterator(aStates);
         while (iter.hasNext()) {
             states.add(iter.next());
@@ -596,7 +596,7 @@ public class PseudoClassTest {
         PseudoClassState bStates = new PseudoClassState();
         PseudoClassState aStates = new PseudoClassState();
         BitSetShim.retainAll(aStates, bStates);
-        List<PseudoClass> states = new ArrayList<PseudoClass>();
+        List<PseudoClass> states = new ArrayList<>();
         Iterator<PseudoClass> iter = BitSetShim.iterator(aStates);
         while (iter.hasNext()) {
             states.add(iter.next());
@@ -610,7 +610,7 @@ public class PseudoClassTest {
         PseudoClassState aStates = new PseudoClassState();
         PseudoClassState bStates = null;
         BitSetShim.retainAll(aStates, bStates);
-        List<PseudoClass> states = new ArrayList<PseudoClass>();
+        List<PseudoClass> states = new ArrayList<>();
         Iterator<PseudoClass> iter = BitSetShim.iterator(aStates);
         while (iter.hasNext()) {
             states.add(iter.next());
@@ -642,7 +642,7 @@ public class PseudoClassTest {
         String[] expected = new String[0];
 
         BitSetShim.retainAll(aStates, bStates);
-        List<PseudoClass> states = new ArrayList<PseudoClass>();
+        List<PseudoClass> states = new ArrayList<>();
         Iterator<PseudoClass> iter = BitSetShim.iterator(aStates);
         while (iter.hasNext()) {
             states.add(iter.next());
@@ -682,7 +682,7 @@ public class PseudoClassTest {
         };
 
         BitSetShim.addAll(aStates, bStates);
-        List<PseudoClass> states = new ArrayList<PseudoClass>();
+        List<PseudoClass> states = new ArrayList<>();
         Iterator<PseudoClass> iter = BitSetShim.iterator(aStates);
         while (iter.hasNext()) {
             states.add(iter.next());
@@ -702,7 +702,7 @@ public class PseudoClassTest {
         PseudoClassState bStates = new PseudoClassState();
         PseudoClassState aStates = new PseudoClassState();
         BitSetShim.addAll(aStates, bStates);
-        List<PseudoClass> states = new ArrayList<PseudoClass>();
+        List<PseudoClass> states = new ArrayList<>();
         Iterator<PseudoClass> iter = BitSetShim.iterator(aStates);
         while (iter.hasNext()) {
             states.add(iter.next());
@@ -716,7 +716,7 @@ public class PseudoClassTest {
         PseudoClassState aStates = new PseudoClassState();
         PseudoClassState bStates = null;
         BitSetShim.addAll(aStates, bStates);
-        List<PseudoClass> states = new ArrayList<PseudoClass>();
+        List<PseudoClass> states = new ArrayList<>();
         Iterator<PseudoClass> iter = BitSetShim.iterator(aStates);
         while (iter.hasNext()) {
             states.add(iter.next());
@@ -731,7 +731,7 @@ public class PseudoClassTest {
         String[] pseudoClasses = new String[] {
             "zero", "one", "two", "three"
         };
-        List<PseudoClass> expected = new ArrayList<PseudoClass>();
+        List<PseudoClass> expected = new ArrayList<>();
         PseudoClassState states = new PseudoClassState();
         for(int n=0; n<pseudoClasses.length; n++) {
             PseudoClass state = PseudoClass.getPseudoClass(pseudoClasses[n]);
@@ -739,7 +739,7 @@ public class PseudoClassTest {
             expected.add(state);
         }
 
-        List<PseudoClass> stateList = new ArrayList<PseudoClass>();
+        List<PseudoClass> stateList = new ArrayList<>();
         Iterator<PseudoClass> iter = BitSetShim.iterator(states);
         while (iter.hasNext()) {
             stateList.add(iter.next());
@@ -760,7 +760,7 @@ public class PseudoClassTest {
             BitSetShim.add(states, PseudoClass.getPseudoClass(pseudoClasses[n]));
         }
 
-        List<PseudoClass> stateList = new ArrayList<PseudoClass>();
+        List<PseudoClass> stateList = new ArrayList<>();
         Iterator<PseudoClass> iter = BitSetShim.iterator(states);
         while (iter.hasNext()) {
             stateList.add(iter.next());

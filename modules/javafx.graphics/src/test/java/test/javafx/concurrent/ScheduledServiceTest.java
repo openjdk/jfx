@@ -640,7 +640,7 @@ public class ScheduledServiceTest extends ServiceTestBase {
 
     @Test public void restartOnFailure_True() {
         final AtomicInteger counter = new AtomicInteger();
-        taskFactory = new Callback<Void, AbstractTask>() {
+        taskFactory = new Callback<>() {
             @Override public AbstractTask call(Void param) {
                 return new EpicFailTask() {
                     @Override protected String call() throws Exception {
@@ -658,7 +658,7 @@ public class ScheduledServiceTest extends ServiceTestBase {
 
     @Test public void restartOnFailure_False() {
         final AtomicInteger counter = new AtomicInteger();
-        taskFactory = new Callback<Void, AbstractTask>() {
+        taskFactory = new Callback<>() {
             @Override public AbstractTask call(Void param) {
                 return new EpicFailTask() {
                     @Override protected String call() throws Exception {
@@ -684,7 +684,7 @@ public class ScheduledServiceTest extends ServiceTestBase {
 
     @Test public void serviceIteratesWhile_CurrentFailureCount_IsLessThan_MaximumFailureCount() {
         final AtomicInteger counter = new AtomicInteger();
-        taskFactory = new Callback<Void, AbstractTask>() {
+        taskFactory = new Callback<>() {
             @Override public AbstractTask call(Void param) {
                 return new EpicFailTask() {
                     @Override protected String call() throws Exception {

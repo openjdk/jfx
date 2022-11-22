@@ -380,20 +380,16 @@ public abstract class Toolkit {
     public abstract TKStage createTKEmbeddedStage(HostInterface host, @SuppressWarnings("removal") AccessControlContext acc);
 
     @SuppressWarnings("removal")
-    private final Map<TKPulseListener,AccessControlContext> stagePulseListeners =
-            new WeakHashMap<TKPulseListener,AccessControlContext>();
+    private final Map<TKPulseListener,AccessControlContext> stagePulseListeners = new WeakHashMap<>();
     @SuppressWarnings("removal")
-    private final Map<TKPulseListener,AccessControlContext> scenePulseListeners =
-            new WeakHashMap<TKPulseListener,AccessControlContext>();
+    private final Map<TKPulseListener,AccessControlContext> scenePulseListeners = new WeakHashMap<>();
     @SuppressWarnings("removal")
-    private final Map<TKPulseListener,AccessControlContext> postScenePulseListeners =
-            new WeakHashMap<TKPulseListener,AccessControlContext>();
+    private final Map<TKPulseListener,AccessControlContext> postScenePulseListeners = new WeakHashMap<>();
     @SuppressWarnings("removal")
-    private final Map<TKListener,AccessControlContext> toolkitListeners =
-            new WeakHashMap<TKListener,AccessControlContext>();
+    private final Map<TKListener,AccessControlContext> toolkitListeners = new WeakHashMap<>();
 
     // The set of shutdown hooks is strongly held to avoid premature GC.
-    private final Set<Runnable> shutdownHooks = new HashSet<Runnable>();
+    private final Set<Runnable> shutdownHooks = new HashSet<>();
 
     @SuppressWarnings("removal")
     private void runPulse(final TKPulseListener listener,
@@ -416,13 +412,13 @@ public abstract class Toolkit {
         // Copy of listener map
         @SuppressWarnings("removal")
         final Map<TKPulseListener,AccessControlContext> stagePulseList =
-                new WeakHashMap<TKPulseListener,AccessControlContext>();
+                new WeakHashMap<>();
         @SuppressWarnings("removal")
         final Map<TKPulseListener,AccessControlContext> scenePulseList =
-                new WeakHashMap<TKPulseListener,AccessControlContext>();
+                new WeakHashMap<>();
         @SuppressWarnings("removal")
         final Map<TKPulseListener,AccessControlContext> postScenePulseList =
-                new WeakHashMap<TKPulseListener,AccessControlContext>();
+                new WeakHashMap<>();
 
         synchronized (this) {
             stagePulseList.putAll(stagePulseListeners);
@@ -529,7 +525,7 @@ public abstract class Toolkit {
     protected void notifyShutdownHooks() {
         List<Runnable> hooks;
         synchronized (shutdownHooks) {
-            hooks = new ArrayList<Runnable>(shutdownHooks);
+            hooks = new ArrayList<>(shutdownHooks);
             shutdownHooks.clear();
         }
 

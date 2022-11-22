@@ -94,7 +94,7 @@ public final class DMarlinRenderingEngine implements MarlinConst
         }
 
         if (USE_THREAD_LOCAL) {
-            RDR_CTX_PROVIDER = new ReentrantContextProviderTL<RendererContext>(REF_TYPE)
+            RDR_CTX_PROVIDER = new ReentrantContextProviderTL<>(REF_TYPE)
                 {
                     @Override
                     protected RendererContext newContext() {
@@ -102,7 +102,7 @@ public final class DMarlinRenderingEngine implements MarlinConst
                     }
                 };
         } else {
-            RDR_CTX_PROVIDER = new ReentrantContextProviderCLQ<RendererContext>(REF_TYPE)
+            RDR_CTX_PROVIDER = new ReentrantContextProviderCLQ<>(REF_TYPE)
                 {
                     @Override
                     protected RendererContext newContext() {

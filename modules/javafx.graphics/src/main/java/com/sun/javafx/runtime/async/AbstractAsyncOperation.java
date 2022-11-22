@@ -75,7 +75,7 @@ public abstract class AbstractAsyncOperation<V> implements AsyncOperation,
             }
         };
 
-        future = new FutureTask<V>(callable) {
+        future = new FutureTask<>(callable) {
             @Override
             protected void done() {
                 try {

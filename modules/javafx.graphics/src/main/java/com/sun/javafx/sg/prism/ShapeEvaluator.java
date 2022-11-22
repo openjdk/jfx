@@ -174,7 +174,7 @@ class ShapeEvaluator {
             bezierCoords[0] = curx = movx = coords[0];
             bezierCoords[1] = cury = movy = coords[1];
             float newx, newy;
-            Vector<Point2D> savedpathendpoints = new Vector<Point2D>();
+            Vector<Point2D> savedpathendpoints = new Vector<>();
             numCoords = 2;
             while (!pi.isDone()) {
                 switch (pi.currentSegment(coords)) {

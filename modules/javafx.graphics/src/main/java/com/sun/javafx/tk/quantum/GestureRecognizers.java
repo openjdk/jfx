@@ -30,7 +30,7 @@ import java.util.Collection;
 
 class GestureRecognizers implements GestureRecognizer {
 
-    private Collection<GestureRecognizer> recognizers = new Vector<GestureRecognizer>();
+    private Collection<GestureRecognizer> recognizers = new Vector<>();
     private GestureRecognizer workList[];
 
     void add(GestureRecognizer r) {

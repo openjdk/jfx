@@ -459,10 +459,10 @@ public final class KeyboardShortcutsHandler extends BasicEventDispatcher {
 
         @Override
         public Set<Entry<K, V>> entrySet() {
-            return new AbstractSet<Entry<K, V>>() {
+            return new AbstractSet<>() {
                 @Override
                 public Iterator<Entry<K, V>> iterator() {
-                    return new Iterator<Entry<K, V>>() {
+                    return new Iterator<>() {
 
                         private Iterator<Entry<K, V>> backingIt = backingMap.entrySet().iterator();
                         private Map<K, V> backingMapAtCreation = backingMap;

@@ -58,7 +58,7 @@ public class CompositeGlyphMapper extends CharToGlyphMapper {
     public CompositeGlyphMapper(CompositeFontResource compFont) {
         font = compFont;
         missingGlyph = 0; // TrueType font standard, avoids lookup.
-        glyphMap = new HashMap<Integer, Integer>();
+        glyphMap = new HashMap<>();
         slotMappers = new CharToGlyphMapper[compFont.getNumSlots()];
         asciiCacheOK = true;
     }

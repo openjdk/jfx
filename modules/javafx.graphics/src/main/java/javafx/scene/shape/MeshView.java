@@ -119,7 +119,7 @@ public class MeshView extends Shape3D {
 
     public final ObjectProperty<Mesh> meshProperty() {
         if (mesh == null) {
-            mesh = new SimpleObjectProperty<Mesh>(MeshView.this, "mesh") {
+            mesh = new SimpleObjectProperty<>(MeshView.this, "mesh") {
 
                 private Mesh old = null;
                 private final ChangeListener<Boolean> meshChangeListener =

@@ -52,7 +52,7 @@ public class J2DPipeline extends GraphicsPipeline {
     }
 
     private final HashMap<Integer, J2DResourceFactory> factories =
-            new HashMap<Integer, J2DResourceFactory>(1);
+            new HashMap<>(1);
 
     @Override
     public int getAdapterOrdinal(Screen screen) {

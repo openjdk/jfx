@@ -128,10 +128,10 @@ public abstract class CssMethodsTestBase {
 
     public static class Configuration {
         private static final StyleConverter<String, Object> TEST_TYPE =
-                new StyleConverter<String, Object>();
+                new StyleConverter<>();
 
         private static final CssMetaData<Node, Object> UNDEFINED_KEY =
-                new CssMetaData<Node,Object>("U-N-D-E-F-I-N-E-D", TEST_TYPE, "") {
+                new CssMetaData<>("U-N-D-E-F-I-N-E-D", TEST_TYPE, "") {
 
             @Override
             public boolean isSettable(Node n) {

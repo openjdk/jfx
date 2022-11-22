@@ -464,7 +464,7 @@ public class PrismTextLayout implements TextLayout {
                                   float x, float y) {
         ensureLayout();
         int lineCount = getLineCount();
-        ArrayList<PathElement> result = new ArrayList<PathElement>();
+        ArrayList<PathElement> result = new ArrayList<>();
         float lineY = 0;
 
         for  (int lineIndex = 0; lineIndex < lineCount; lineIndex++) {
@@ -1088,7 +1088,7 @@ public class PrismTextLayout implements TextLayout {
         float lineWidth = 0;
         int startIndex = 0;
         int startOffset = 0;
-        ArrayList<TextLine> linesList = new ArrayList<TextLine>();
+        ArrayList<TextLine> linesList = new ArrayList<>();
         for (int i = 0; i < runCount; i++) {
             TextRun run = runs[i];
             shape(run, chars, layout);

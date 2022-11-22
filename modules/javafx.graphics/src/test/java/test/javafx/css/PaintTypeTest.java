@@ -63,14 +63,14 @@ public class PaintTypeTest {
     };
 
     ParsedValue<?,Size> sizeVal(float value) {
-        return new ParsedValueImpl<Size,Size>(new Size(value*100, SizeUnits.PERCENT), null);
+        return new ParsedValueImpl<>(new Size(value*100, SizeUnits.PERCENT), null);
     }
 
     ParsedValue<ParsedValue[],Stop> stopValue(Stop stop) {
         ParsedValue<?,Size> offset = sizeVal((float)stop.getOffset());
-        ParsedValue<Color,Color> color = new ParsedValueImpl<Color,Color>(stop.getColor(), null);
+        ParsedValue<Color,Color> color = new ParsedValueImpl<>(stop.getColor(), null);
         ParsedValue[] values = new ParsedValue[] { offset, color };
-        return new ParsedValueImpl<ParsedValue[],Stop>(values, StopConverter.getInstance());
+        return new ParsedValueImpl<>(values, StopConverter.getInstance());
     }
 
     ParsedValue<ParsedValue[],Paint> linearGradientValues(LinearGradient lg) {
@@ -83,7 +83,7 @@ public class PaintTypeTest {
         values[v++] = new ParsedValueImpl<CycleMethod,CycleMethod>(lg.getCycleMethod(),null);
         values[v++] = stopValue(stops[0]);
         values[v++] = stopValue(stops[1]);
-        return new ParsedValueImpl<ParsedValue[],Paint>(values, PaintConverter.LinearGradientConverter.getInstance());
+        return new ParsedValueImpl<>(values, PaintConverter.LinearGradientConverter.getInstance());
     }
 
     ParsedValue<ParsedValue[],Paint> radialGradientValues(RadialGradient rg) {
@@ -97,7 +97,7 @@ public class PaintTypeTest {
         values[v++] = new ParsedValueImpl<CycleMethod,CycleMethod>(rg.getCycleMethod(),null);
         values[v++] = stopValue(stops[0]);
         values[v++] = stopValue(stops[1]);
-        return new ParsedValueImpl<ParsedValue[],Paint>(values, PaintConverter.RadialGradientConverter.getInstance());
+        return new ParsedValueImpl<>(values, PaintConverter.RadialGradientConverter.getInstance());
     }
 
     final ParsedValue[] paintValues = new ParsedValue[] {
@@ -116,7 +116,7 @@ public class PaintTypeTest {
         for (int l=0; l<nLayers; l++) {
             layers[l] = paintValues[l % paintValues.length];
         }
-        return new ParsedValueImpl<ParsedValue<?,Paint>[],Paint[]>(layers, PaintConverter.SequenceConverter.getInstance());
+        return new ParsedValueImpl<>(layers, PaintConverter.SequenceConverter.getInstance());
     }
     /**
      * Test of convert method, of class PaintType.
