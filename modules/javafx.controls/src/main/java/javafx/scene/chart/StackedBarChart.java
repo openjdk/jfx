@@ -563,7 +563,7 @@ public class StackedBarChart<X, Y> extends XYChart<X, Y> {
 
             @Override
             public StyleableProperty<Number> getStyleableProperty(StackedBarChart<?,?> node) {
-                return (StyleableProperty<Number>)(WritableValue<Number>)node.categoryGapProperty();
+                return (StyleableProperty<Number>)node.categoryGapProperty();
             }
         };
 

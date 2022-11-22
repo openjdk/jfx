@@ -534,7 +534,7 @@ public abstract class ValueAxis<T extends Number> extends Axis<T> {
 
             @Override
             public StyleableProperty<Number> getStyleableProperty(ValueAxis<? extends Number> n) {
-                return (StyleableProperty<Number>)(WritableValue<Number>)n.minorTickLengthProperty();
+                return (StyleableProperty<Number>)n.minorTickLengthProperty();
             }
         };
 
@@ -549,7 +549,7 @@ public abstract class ValueAxis<T extends Number> extends Axis<T> {
 
             @Override
             public StyleableProperty<Number> getStyleableProperty(ValueAxis<? extends Number> n) {
-                return (StyleableProperty<Number>)(WritableValue<Number>)n.minorTickCountProperty();
+                return (StyleableProperty<Number>)n.minorTickCountProperty();
             }
         };
 
@@ -564,7 +564,7 @@ public abstract class ValueAxis<T extends Number> extends Axis<T> {
 
             @Override
             public StyleableProperty<Boolean> getStyleableProperty(ValueAxis<? extends Number> n) {
-                return (StyleableProperty<Boolean>)(WritableValue<Boolean>)n.minorTickVisibleProperty();
+                return (StyleableProperty<Boolean>)n.minorTickVisibleProperty();
             }
         };
 

@@ -431,7 +431,7 @@ public class ProgressIndicatorSkin extends SkinBase<ProgressIndicator> {
 
                 @Override public StyleableProperty<Number> getStyleableProperty(ProgressIndicator n) {
                     final ProgressIndicatorSkin skin = (ProgressIndicatorSkin) n.getSkin();
-                    return (StyleableProperty<Number>)(WritableValue<Number>)skin.indeterminateSegmentCount;
+                    return (StyleableProperty<Number>)skin.indeterminateSegmentCount;
                 }
             };
     private static final CssMetaData<ProgressIndicator,Boolean> SPIN_ENABLED =
@@ -444,7 +444,7 @@ public class ProgressIndicatorSkin extends SkinBase<ProgressIndicator> {
 
                 @Override public StyleableProperty<Boolean> getStyleableProperty(ProgressIndicator node) {
                     final ProgressIndicatorSkin skin = (ProgressIndicatorSkin) node.getSkin();
-                    return (StyleableProperty<Boolean>)(WritableValue<Boolean>)skin.spinEnabled;
+                    return (StyleableProperty<Boolean>)skin.spinEnabled;
                 }
             };
 

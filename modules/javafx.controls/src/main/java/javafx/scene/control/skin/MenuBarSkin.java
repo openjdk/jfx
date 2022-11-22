@@ -1186,7 +1186,7 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
                 @Override
                 public StyleableProperty<Number> getStyleableProperty(MenuBar n) {
                     final MenuBarSkin skin = (MenuBarSkin) n.getSkin();
-                    return (StyleableProperty<Number>)(WritableValue<Number>)skin.spacingProperty();
+                    return (StyleableProperty<Number>)skin.spacingProperty();
                 }
             };
 

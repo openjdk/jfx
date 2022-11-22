@@ -78,7 +78,7 @@ public class ChoiceBoxTest {
         });
 
         //This step is not needed (Just to make sure StubToolkit is loaded into VM)
-        tk = (StubToolkit)Toolkit.getToolkit();
+        tk = Toolkit.getToolkit();
     }
 
     @After public void cleanUp() {

@@ -789,7 +789,7 @@ public class CustomColorDialog extends HBox {
         double offset;
         Stop[] stops = new Stop[255];
         for (int y = 0; y < 255; y++) {
-            offset = (double) (1 - (1.0 / 255) * y);
+            offset = 1 - (1.0 / 255) * y;
             int h = (int) ((y / 255.0) * 360);
             stops[y] = new Stop(offset, Color.hsb(h, 1.0, 1.0));
         }

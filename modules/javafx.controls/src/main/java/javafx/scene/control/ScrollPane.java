@@ -105,7 +105,7 @@ public class ScrollPane extends Control {
         // makes it look to css like the user set the value and css will not
         // override. Initializing focusTraversable by calling applyStyle with
         // null StyleOrigin ensures that css will be able to override the value.
-        ((StyleableProperty<Boolean>)(WritableValue<Boolean>)focusTraversableProperty()).applyStyle(null, Boolean.FALSE);
+        ((StyleableProperty<Boolean>)focusTraversableProperty()).applyStyle(null, Boolean.FALSE);
     }
 
     /**
@@ -689,7 +689,7 @@ public class ScrollPane extends Control {
 
             @Override
             public StyleableProperty<Boolean> getStyleableProperty(ScrollPane n) {
-                return (StyleableProperty<Boolean>)(WritableValue<Boolean>)n.fitToWidthProperty();
+                return (StyleableProperty<Boolean>)n.fitToWidthProperty();
             }
         };
 
@@ -704,7 +704,7 @@ public class ScrollPane extends Control {
 
             @Override
             public StyleableProperty<Boolean> getStyleableProperty(ScrollPane n) {
-                return (StyleableProperty<Boolean>)(WritableValue<Boolean>)n.fitToHeightProperty();
+                return (StyleableProperty<Boolean>)n.fitToHeightProperty();
             }
         };
 
@@ -719,7 +719,7 @@ public class ScrollPane extends Control {
 
             @Override
             public StyleableProperty<Boolean> getStyleableProperty(ScrollPane n) {
-                return (StyleableProperty<Boolean>)(WritableValue<Boolean>)n.pannableProperty();
+                return (StyleableProperty<Boolean>)n.pannableProperty();
             }
         };
 

@@ -495,7 +495,7 @@ public class TabPane extends Control {
 
             @Override
             public StyleableProperty<Number> getStyleableProperty(TabPane n) {
-                return (StyleableProperty<Number>)(WritableValue<Number>)n.tabMinWidthProperty();
+                return (StyleableProperty<Number>)n.tabMinWidthProperty();
             }
         };
 
@@ -510,7 +510,7 @@ public class TabPane extends Control {
 
             @Override
             public StyleableProperty<Number> getStyleableProperty(TabPane n) {
-                return (StyleableProperty<Number>)(WritableValue<Number>)n.tabMaxWidthProperty();
+                return (StyleableProperty<Number>)n.tabMaxWidthProperty();
             }
         };
 
@@ -525,7 +525,7 @@ public class TabPane extends Control {
 
             @Override
             public StyleableProperty<Number> getStyleableProperty(TabPane n) {
-                return (StyleableProperty<Number>)(WritableValue<Number>)n.tabMinHeightProperty();
+                return (StyleableProperty<Number>)n.tabMinHeightProperty();
             }
         };
 
@@ -540,7 +540,7 @@ public class TabPane extends Control {
 
             @Override
             public StyleableProperty<Number> getStyleableProperty(TabPane n) {
-                return (StyleableProperty<Number>)(WritableValue<Number>)n.tabMaxHeightProperty();
+                return (StyleableProperty<Number>)n.tabMaxHeightProperty();
             }
         };
 

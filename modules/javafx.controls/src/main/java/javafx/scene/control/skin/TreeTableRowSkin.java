@@ -419,7 +419,7 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
 
             @Override public StyleableProperty<Number> getStyleableProperty(TreeTableRow<?> n) {
                 final TreeTableRowSkin<?> skin = (TreeTableRowSkin<?>) n.getSkin();
-                return (StyleableProperty<Number>)(WritableValue<Number>)skin.indentProperty();
+                return (StyleableProperty<Number>)skin.indentProperty();
             }
         };
 

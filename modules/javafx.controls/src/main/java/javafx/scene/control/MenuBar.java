@@ -106,7 +106,7 @@ public class MenuBar extends Control {
         // makes it look to css like the user set the value and css will not
         // override. Initializing focusTraversable by calling applyStyle with null
         // StyleOrigin ensures that css will be able to override the value.
-        ((StyleableProperty<Boolean>)(WritableValue<Boolean>)focusTraversableProperty()).applyStyle(null, Boolean.FALSE);
+        ((StyleableProperty<Boolean>)focusTraversableProperty()).applyStyle(null, Boolean.FALSE);
     }
 
 
@@ -220,7 +220,7 @@ public class MenuBar extends Control {
             }
 
             @Override public StyleableProperty<Boolean> getStyleableProperty(MenuBar n) {
-                return (StyleableProperty<Boolean>)(WritableValue<Boolean>)n.useSystemMenuBarProperty();
+                return (StyleableProperty<Boolean>)n.useSystemMenuBarProperty();
             }
         };
 

@@ -1008,7 +1008,7 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
 
                 @Override
                 public StyleableProperty<String> getStyleableProperty(CSSBridge cssBridge) {
-                    return (StyleableProperty<String>)(WritableValue<String>)cssBridge.popupControl.skinClassNameProperty();
+                    return (StyleableProperty<String>)cssBridge.popupControl.skinClassNameProperty();
                 }
             };
 

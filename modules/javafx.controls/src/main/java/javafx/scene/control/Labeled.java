@@ -945,7 +945,7 @@ public abstract class Labeled extends Control {
             }
 
             @Override public StyleableProperty<String> getStyleableProperty(Labeled n) {
-                return (StyleableProperty<String>)(WritableValue<String>)n.ellipsisStringProperty();
+                return (StyleableProperty<String>)n.ellipsisStringProperty();
             }
         };
 
@@ -960,7 +960,7 @@ public abstract class Labeled extends Control {
 
             @Override
             public StyleableProperty<Boolean> getStyleableProperty(Labeled n) {
-                return (StyleableProperty<Boolean>)(WritableValue<Boolean>)n.wrapTextProperty();
+                return (StyleableProperty<Boolean>)n.wrapTextProperty();
             }
         };
 
@@ -991,7 +991,7 @@ public abstract class Labeled extends Control {
 
             @Override
             public StyleableProperty<Boolean> getStyleableProperty(Labeled n) {
-                return (StyleableProperty<Boolean>)(WritableValue<Boolean>)n.underlineProperty();
+                return (StyleableProperty<Boolean>)n.underlineProperty();
             }
         };
 
@@ -1006,7 +1006,7 @@ public abstract class Labeled extends Control {
 
             @Override
             public StyleableProperty<Number> getStyleableProperty(Labeled n) {
-                return (StyleableProperty<Number>)(WritableValue<Number>)n.lineSpacingProperty();
+                return (StyleableProperty<Number>)n.lineSpacingProperty();
             }
         };
 
@@ -1052,7 +1052,7 @@ public abstract class Labeled extends Control {
 
             @Override
             public StyleableProperty<Number> getStyleableProperty(Labeled n) {
-                return (StyleableProperty<Number>)(WritableValue<Number>)n.graphicTextGapProperty();
+                return (StyleableProperty<Number>)n.graphicTextGapProperty();
             }
         };
 

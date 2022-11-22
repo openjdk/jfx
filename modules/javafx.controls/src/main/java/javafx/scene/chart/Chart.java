@@ -477,7 +477,7 @@ public abstract class Chart extends Region {
 
             @Override
             public StyleableProperty<Boolean> getStyleableProperty(Chart node) {
-                return (StyleableProperty<Boolean>)(WritableValue<Boolean>)node.legendVisibleProperty();
+                return (StyleableProperty<Boolean>)node.legendVisibleProperty();
             }
         };
 

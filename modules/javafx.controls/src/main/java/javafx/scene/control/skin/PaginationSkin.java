@@ -575,7 +575,7 @@ public class PaginationSkin extends SkinBase<Pagination> {
                 // if time is less than 300ms then considered a quick swipe and whole time is used
                 final boolean quick = time < 300;
                 // calculate velocity
-                final double velocity = quick ? (double)drag / time : touchVelocity; // pixels/ms
+                final double velocity = quick ? drag / time : touchVelocity; // pixels/ms
                 // calculate distance we would travel at this speed for 500ms of travel
                 final double distance = (velocity * 500);
                 final double width = control.getWidth() - (snappedLeftInset() + snappedRightInset());
@@ -1389,7 +1389,7 @@ public class PaginationSkin extends SkinBase<Pagination> {
             @Override
             public StyleableProperty<Boolean> getStyleableProperty(Pagination n) {
                 final PaginationSkin skin = (PaginationSkin) n.getSkin();
-                return (StyleableProperty<Boolean>)(WritableValue<Boolean>)skin.arrowsVisibleProperty();
+                return (StyleableProperty<Boolean>)skin.arrowsVisibleProperty();
             }
         };
 
@@ -1406,7 +1406,7 @@ public class PaginationSkin extends SkinBase<Pagination> {
             @Override
             public StyleableProperty<Boolean> getStyleableProperty(Pagination n) {
                 final PaginationSkin skin = (PaginationSkin) n.getSkin();
-                return (StyleableProperty<Boolean>)(WritableValue<Boolean>)skin.pageInformationVisibleProperty();
+                return (StyleableProperty<Boolean>)skin.pageInformationVisibleProperty();
             }
         };
 
@@ -1440,7 +1440,7 @@ public class PaginationSkin extends SkinBase<Pagination> {
             @Override
             public StyleableProperty<Boolean> getStyleableProperty(Pagination n) {
                 final PaginationSkin skin = (PaginationSkin) n.getSkin();
-                return (StyleableProperty<Boolean>)(WritableValue<Boolean>)skin.tooltipVisibleProperty();
+                return (StyleableProperty<Boolean>)skin.tooltipVisibleProperty();
             }
         };
         private static final CssMetaData<Pagination,Number> ARROW_BUTTON_GAP =
@@ -1452,7 +1452,7 @@ public class PaginationSkin extends SkinBase<Pagination> {
                 }
                 @Override public StyleableProperty<Number> getStyleableProperty(Pagination n) {
                     final PaginationSkin skin = (PaginationSkin) n.getSkin();
-                    return (StyleableProperty<Number>)(WritableValue<Number>)skin.arrowButtonGapProperty();
+                    return (StyleableProperty<Number>)skin.arrowButtonGapProperty();
                 }
             };
 

@@ -577,7 +577,7 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
 
             @Override
             public StyleableProperty<Number> getStyleableProperty(BarChart<?,?> node) {
-                return (StyleableProperty<Number>)(WritableValue<Number>)node.barGapProperty();
+                return (StyleableProperty<Number>)node.barGapProperty();
             }
         };
 
@@ -592,7 +592,7 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
 
             @Override
             public StyleableProperty<Number> getStyleableProperty(BarChart<?,?> node) {
-                return (StyleableProperty<Number>)(WritableValue<Number>)node.categoryGapProperty();
+                return (StyleableProperty<Number>)node.categoryGapProperty();
             }
         };
 

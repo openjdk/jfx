@@ -169,7 +169,7 @@ public class CellSkinBase<C extends Cell> extends LabeledSkinBase<C> {
             @Override
             public StyleableProperty<Number> getStyleableProperty(Cell<?> n) {
                 final CellSkinBase<?> skin = (CellSkinBase<?>) n.getSkin();
-                return (StyleableProperty<Number>)(WritableValue<Number>)skin.cellSizePropertyImpl();
+                return (StyleableProperty<Number>)skin.cellSizePropertyImpl();
             }
         };
 

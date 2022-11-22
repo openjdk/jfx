@@ -407,7 +407,7 @@ public class ProgressBarSkin extends ProgressIndicatorSkin {
                     @Override
                     public StyleableProperty<Number> getStyleableProperty(ProgressBar n) {
                         final ProgressBarSkin skin = (ProgressBarSkin) n.getSkin();
-                        return (StyleableProperty<Number>) (WritableValue<Number>) skin.indeterminateBarLengthProperty();
+                        return (StyleableProperty<Number>) skin.indeterminateBarLengthProperty();
                     }
                 };
 
@@ -425,7 +425,7 @@ public class ProgressBarSkin extends ProgressIndicatorSkin {
                     @Override
                     public StyleableProperty<Boolean> getStyleableProperty(ProgressBar n) {
                         final ProgressBarSkin skin = (ProgressBarSkin) n.getSkin();
-                        return (StyleableProperty<Boolean>) (WritableValue<Boolean>) skin.indeterminateBarEscapeProperty();
+                        return (StyleableProperty<Boolean>) skin.indeterminateBarEscapeProperty();
                     }
                 };
 
@@ -443,7 +443,7 @@ public class ProgressBarSkin extends ProgressIndicatorSkin {
                     @Override
                     public StyleableProperty<Boolean> getStyleableProperty(ProgressBar n) {
                         final ProgressBarSkin skin = (ProgressBarSkin) n.getSkin();
-                        return (StyleableProperty<Boolean>) (WritableValue<Boolean>) skin.indeterminateBarFlipProperty();
+                        return (StyleableProperty<Boolean>) skin.indeterminateBarFlipProperty();
                     }
                 };
 
@@ -461,7 +461,7 @@ public class ProgressBarSkin extends ProgressIndicatorSkin {
                     @Override
                     public StyleableProperty<Number> getStyleableProperty(ProgressBar n) {
                         final ProgressBarSkin skin = (ProgressBarSkin) n.getSkin();
-                        return (StyleableProperty<Number>) (WritableValue<Number>) skin.indeterminateBarAnimationTimeProperty();
+                        return (StyleableProperty<Number>) skin.indeterminateBarAnimationTimeProperty();
                     }
                 };
 

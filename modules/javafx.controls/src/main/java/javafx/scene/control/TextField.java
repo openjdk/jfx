@@ -312,7 +312,7 @@ public class TextField extends TextInputControl {
 
             @Override
             public StyleableProperty<Number> getStyleableProperty(TextField n) {
-                return (StyleableProperty<Number>)(WritableValue<Number>)n.prefColumnCountProperty();
+                return (StyleableProperty<Number>)n.prefColumnCountProperty();
             }
         };
 

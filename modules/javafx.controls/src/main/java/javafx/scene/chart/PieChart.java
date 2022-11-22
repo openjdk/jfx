@@ -768,11 +768,11 @@ public class PieChart extends Chart {
     }
 
     private static double calcX(double angle, double radius, double centerX) {
-        return (double)(centerX + radius * Math.cos(Math.toRadians(-angle)));
+        return centerX + radius * Math.cos(Math.toRadians(-angle));
     }
 
     private static double calcY(double angle, double radius, double centerY) {
-        return (double)(centerY + radius * Math.sin(Math.toRadians(-angle)));
+        return centerY + radius * Math.sin(Math.toRadians(-angle));
     }
 
      /** Normalize any angle into -180 to 180 deg range */
@@ -1039,7 +1039,7 @@ public class PieChart extends Chart {
 
             @Override
             public StyleableProperty<Boolean> getStyleableProperty(PieChart node) {
-                return (StyleableProperty<Boolean>)(WritableValue<Boolean>)node.clockwiseProperty();
+                return (StyleableProperty<Boolean>)node.clockwiseProperty();
             }
         };
 
@@ -1054,7 +1054,7 @@ public class PieChart extends Chart {
 
             @Override
             public StyleableProperty<Boolean> getStyleableProperty(PieChart node) {
-                return (StyleableProperty<Boolean>)(WritableValue<Boolean>)node.labelsVisibleProperty();
+                return (StyleableProperty<Boolean>)node.labelsVisibleProperty();
             }
         };
 
@@ -1069,7 +1069,7 @@ public class PieChart extends Chart {
 
             @Override
             public StyleableProperty<Number> getStyleableProperty(PieChart node) {
-                return (StyleableProperty<Number>)(WritableValue<Number>)node.labelLineLengthProperty();
+                return (StyleableProperty<Number>)node.labelLineLengthProperty();
             }
         };
 
@@ -1084,7 +1084,7 @@ public class PieChart extends Chart {
 
             @Override
             public StyleableProperty<Number> getStyleableProperty(PieChart node) {
-                return (StyleableProperty<Number>)(WritableValue<Number>)node.startAngleProperty();
+                return (StyleableProperty<Number>)node.startAngleProperty();
             }
         };
 

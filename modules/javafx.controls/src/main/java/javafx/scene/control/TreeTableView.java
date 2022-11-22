@@ -2051,7 +2051,7 @@ public class TreeTableView<S> extends Control {
                     }
 
                     @Override public StyleableProperty<Number> getStyleableProperty(TreeTableView<?> n) {
-                        return (StyleableProperty<Number>)(WritableValue<Number>) n.fixedCellSizeProperty();
+                        return (StyleableProperty<Number>)n.fixedCellSizeProperty();
                     }
                 };
 

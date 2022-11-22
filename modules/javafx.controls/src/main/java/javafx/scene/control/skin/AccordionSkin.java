@@ -223,7 +223,7 @@ public class AccordionSkin extends SkinBase<Accordion> {
         double collapsedPanesHeight = 0;
         for (TitledPane tp : getSkinnable().getPanes()) {
             if (!tp.equals(expandedPane)) {
-                TitledPaneSkin childSkin = (TitledPaneSkin) ((TitledPane)tp).getSkin();
+                TitledPaneSkin childSkin = (TitledPaneSkin) tp.getSkin();
                 collapsedPanesHeight += snapSizeY(childSkin.getTitleRegionSize(w));
             }
         }

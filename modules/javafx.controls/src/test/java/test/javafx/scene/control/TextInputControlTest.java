@@ -397,7 +397,7 @@ public class TextInputControlTest {
 
     // Test for JDK-8178417
     @Test public void caretPositionUndo() {
-        Toolkit tk = (StubToolkit)Toolkit.getToolkit();
+        Toolkit tk = Toolkit.getToolkit();
         StackPane root = new StackPane();
         Scene scene = new Scene(root);
         Stage stage = new Stage();
@@ -1946,7 +1946,7 @@ public class TextInputControlTest {
 
     // Test for JDK-8178418
     @Test public void UndoRedoSpaceSequence() {
-        Toolkit tk = (StubToolkit)Toolkit.getToolkit();
+        Toolkit tk = Toolkit.getToolkit();
         StackPane root = new StackPane();
         Scene scene = new Scene(root);
         Stage stage = new Stage();
@@ -1985,7 +1985,7 @@ public class TextInputControlTest {
 
     // Test for JDK-8178418
     @Test public void UndoRedoReverseSpaceSequence() {
-        Toolkit tk = (StubToolkit)Toolkit.getToolkit();
+        Toolkit tk = Toolkit.getToolkit();
         StackPane root = new StackPane();
         Scene scene = new Scene(root);
         Stage stage = new Stage();
@@ -2032,7 +2032,7 @@ public class TextInputControlTest {
 
     // Test for JDK-8178418
     @Test public void UndoRedoWords() {
-        Toolkit tk = (StubToolkit)Toolkit.getToolkit();
+        Toolkit tk = Toolkit.getToolkit();
         StackPane root = new StackPane();
         Scene scene = new Scene(root);
         Stage stage = new Stage();
@@ -2081,7 +2081,7 @@ public class TextInputControlTest {
 
     // Test for JDK-8178418
     @Test public void UndoRedoTimestampBased() {
-        Toolkit tk = (StubToolkit)Toolkit.getToolkit();
+        Toolkit tk = Toolkit.getToolkit();
         StackPane root = new StackPane();
         Scene scene = new Scene(root);
         Stage stage = new Stage();

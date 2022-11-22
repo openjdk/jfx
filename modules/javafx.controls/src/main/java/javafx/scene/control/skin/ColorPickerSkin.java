@@ -627,7 +627,7 @@ public class ColorPickerSkin extends ComboBoxPopupControl<Color> {
 
             @Override public StyleableProperty<Boolean> getStyleableProperty(ColorPicker n) {
                 final ColorPickerSkin skin = (ColorPickerSkin) n.getSkin();
-                return (StyleableProperty<Boolean>)(WritableValue<Boolean>)skin.colorLabelVisible;
+                return (StyleableProperty<Boolean>)skin.colorLabelVisible;
             }
         };
         private static final CssMetaData<ColorPicker,Number> COLOR_RECT_WIDTH =

@@ -376,7 +376,7 @@ public class TreeCellSkin<T> extends CellSkinBase<TreeCell<T>> {
 
             @Override public StyleableProperty<Number> getStyleableProperty(TreeCell<?> n) {
                 final TreeCellSkin<?> skin = (TreeCellSkin<?>) n.getSkin();
-                return (StyleableProperty<Number>)(WritableValue<Number>)skin.indentProperty();
+                return (StyleableProperty<Number>)skin.indentProperty();
             }
         };
 

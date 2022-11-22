@@ -488,7 +488,7 @@ public class DatePicker extends ComboBoxBase<LocalDate> {
             }
 
             @Override public StyleableProperty<Boolean> getStyleableProperty(DatePicker n) {
-                return (StyleableProperty<Boolean>)(WritableValue<Boolean>)n.showWeekNumbersProperty();
+                return (StyleableProperty<Boolean>)n.showWeekNumbersProperty();
             }
         };
 

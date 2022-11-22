@@ -57,7 +57,7 @@ public class SliderTest {
     private Stage stage;
 
     @Before public void setup() {
-        tk = (StubToolkit)Toolkit.getToolkit();//This step is not needed (Just to make sure StubToolkit is loaded into VM)
+        tk = Toolkit.getToolkit();//This step is not needed (Just to make sure StubToolkit is loaded into VM)
         slider = new Slider();
     }
 

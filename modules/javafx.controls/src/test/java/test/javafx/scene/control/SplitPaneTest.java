@@ -75,7 +75,7 @@ public class SplitPaneTest {
     private StageLoader stageLoader;
 
     @Before public void setup() {
-        tk = (StubToolkit)Toolkit.getToolkit();//This step is not needed (Just to make sure StubToolkit is loaded into VM)
+        tk = Toolkit.getToolkit();//This step is not needed (Just to make sure StubToolkit is loaded into VM)
         splitPane = new SplitPane();
         splitPane.setSkin(new SplitPaneSkin(splitPane));
         divider1 = new SplitPane.Divider();

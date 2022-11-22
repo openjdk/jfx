@@ -384,7 +384,7 @@ public final class NumberAxis extends ValueAxis<Number> {
             paddedMax = 0;
         }
         // calculate tick unit for the number of ticks can have in the given data range
-        double tickUnit = paddedRange/(double)numOfTickMarks;
+        double tickUnit = paddedRange/numOfTickMarks;
         // search for the best tick unit that fits
         double tickUnitRounded = 0;
         double minRounded = 0;
@@ -468,7 +468,7 @@ public final class NumberAxis extends ValueAxis<Number> {
 
             @Override
             public StyleableProperty<Number> getStyleableProperty(NumberAxis n) {
-                return (StyleableProperty<Number>)(WritableValue<Number>)n.tickUnitProperty();
+                return (StyleableProperty<Number>)n.tickUnitProperty();
             }
         };
 

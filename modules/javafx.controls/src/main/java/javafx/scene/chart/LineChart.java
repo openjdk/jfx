@@ -556,7 +556,7 @@ public class LineChart<X,Y> extends XYChart<X,Y> {
 
             @Override
             public StyleableProperty<Boolean> getStyleableProperty(LineChart<?,?> node) {
-                return (StyleableProperty<Boolean>)(WritableValue<Boolean>)node.createSymbolsProperty();
+                return (StyleableProperty<Boolean>)node.createSymbolsProperty();
             }
         };
 

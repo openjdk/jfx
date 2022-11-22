@@ -260,7 +260,7 @@ public class ChoiceBoxSkin<T> extends SkinBase<ChoiceBox<T>> {
         double popupWidth = popup.prefWidth(-1);
         if (popupWidth <= 0) { // first time: when the popup has not shown yet
             if (popup.getItems().size() > 0){
-                popupWidth = (new Text(((MenuItem)popup.getItems().get(0)).getText())).prefWidth(-1);
+                popupWidth = (new Text(popup.getItems().get(0).getText())).prefWidth(-1);
             }
         }
         return (popup.getItems().size() == 0) ? 50 : leftInset + Math.max(boxWidth, popupWidth)

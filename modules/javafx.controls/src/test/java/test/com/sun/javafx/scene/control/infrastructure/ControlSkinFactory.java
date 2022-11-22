@@ -282,7 +282,7 @@ public class ControlSkinFactory {
      * @return the list of the data converted to one-dimensional arrays
      */
     public static List<Object[]> asArrays(List<?> data) {
-        List<Object[]> result =  (List) data.stream()
+        List<Object[]> result =  data.stream()
                 .map(d -> new Object[] {d, })
                 .collect(toList());
         return result;

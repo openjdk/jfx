@@ -59,7 +59,7 @@ public class ColorPickerTest {
     private VBox root;
 
     @Before public void setup() {
-        tk = (StubToolkit)Toolkit.getToolkit();
+        tk = Toolkit.getToolkit();
         colorPicker = new ColorPicker();
         Scene scene = new Scene(new VBox(20), 800, 600);
         VBox box = (VBox)scene.getRoot();

@@ -309,7 +309,7 @@ public class TitledPane extends Labeled {
 
             @Override
             public StyleableProperty<Boolean> getStyleableProperty(TitledPane n) {
-                return (StyleableProperty<Boolean>)(WritableValue<Boolean>)n.collapsibleProperty();
+                return (StyleableProperty<Boolean>)n.collapsibleProperty();
             }
         };
 
@@ -324,7 +324,7 @@ public class TitledPane extends Labeled {
 
             @Override
             public StyleableProperty<Boolean> getStyleableProperty(TitledPane n) {
-                return (StyleableProperty<Boolean>)(WritableValue<Boolean>)n.animatedProperty();
+                return (StyleableProperty<Boolean>)n.animatedProperty();
             }
         };
 

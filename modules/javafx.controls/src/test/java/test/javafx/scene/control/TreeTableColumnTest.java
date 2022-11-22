@@ -1078,7 +1078,7 @@ public class TreeTableColumnTest {
         TreeTablePosition<Person,String> pos = new TreeTablePosition<>(table, 1, column);
         EventType<TreeTableColumn.CellEditEvent<Person,String>> eventType = TreeTableColumn.editCommitEvent();
         column.getOnEditCommit().handle(new TreeTableColumn.CellEditEvent<Person, String>(
-                null, pos, (EventType) eventType, "Richard Bair"));
+                null, pos, eventType, "Richard Bair"));
     }
 
     @Test
@@ -1087,7 +1087,7 @@ public class TreeTableColumnTest {
         column.setCellValueFactory(param -> param.getValue().getValue().firstNameProperty());
         EventType<TreeTableColumn.CellEditEvent<Person,String>> eventType = TreeTableColumn.editCommitEvent();
         column.getOnEditCommit().handle(new TreeTableColumn.CellEditEvent<Person, String>(
-                table, null, (EventType) eventType, "Richard Bair"));
+                table, null, eventType, "Richard Bair"));
     }
 //
 //    @Test public void defaultOnEditCommitHandlerDealsWithInvalidTablePosition_indexIsNegative() {

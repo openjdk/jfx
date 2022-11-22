@@ -1308,7 +1308,7 @@ public class TableColumnHeader extends Region {
 
             @Override
             public StyleableProperty<Number> getStyleableProperty(TableColumnHeader n) {
-                return (StyleableProperty<Number>)(WritableValue<Number>)n.sizeProperty();
+                return (StyleableProperty<Number>)n.sizeProperty();
             }
         };
 

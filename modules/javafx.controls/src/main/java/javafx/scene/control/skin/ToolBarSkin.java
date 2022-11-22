@@ -841,7 +841,7 @@ public class ToolBarSkin extends SkinBase<ToolBar> {
             @Override
             public StyleableProperty<Number> getStyleableProperty(ToolBar n) {
                 final ToolBarSkin skin = (ToolBarSkin) n.getSkin();
-                return (StyleableProperty<Number>)(WritableValue<Number>)skin.spacingProperty();
+                return (StyleableProperty<Number>)skin.spacingProperty();
             }
         };
 

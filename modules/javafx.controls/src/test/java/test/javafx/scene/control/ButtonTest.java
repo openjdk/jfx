@@ -79,7 +79,7 @@ public class ButtonTest {
 
     @Before public void setup() {
         btn = new Button();
-        tk = (StubToolkit)Toolkit.getToolkit();//This step is not needed (Just to make sure StubToolkit is loaded into VM)
+        tk = Toolkit.getToolkit();//This step is not needed (Just to make sure StubToolkit is loaded into VM)
         root = new StackPane();
         scene = new Scene(root);
         stage = new Stage();

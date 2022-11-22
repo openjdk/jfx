@@ -1097,7 +1097,7 @@ public abstract class Axis<T> extends Region {
 
             @Override
             public StyleableProperty<Number> getStyleableProperty(Axis<?> n) {
-                return (StyleableProperty<Number>)(WritableValue<Number>)n.tickLengthProperty();
+                return (StyleableProperty<Number>)n.tickLengthProperty();
             }
         };
 
@@ -1144,7 +1144,7 @@ public abstract class Axis<T> extends Region {
 
             @Override
             public StyleableProperty<Number> getStyleableProperty(Axis<?> n) {
-                return (StyleableProperty<Number>)(WritableValue<Number>)n.tickLabelGapProperty();
+                return (StyleableProperty<Number>)n.tickLabelGapProperty();
             }
         };
 
@@ -1159,7 +1159,7 @@ public abstract class Axis<T> extends Region {
 
             @Override
             public StyleableProperty<Boolean> getStyleableProperty(Axis<?> n) {
-                return (StyleableProperty<Boolean>)(WritableValue<Boolean>)n.tickMarkVisibleProperty();
+                return (StyleableProperty<Boolean>)n.tickMarkVisibleProperty();
             }
         };
 
@@ -1174,7 +1174,7 @@ public abstract class Axis<T> extends Region {
 
             @Override
             public StyleableProperty<Boolean> getStyleableProperty(Axis<?> n) {
-                return (StyleableProperty<Boolean>)(WritableValue<Boolean>)n.tickLabelsVisibleProperty();
+                return (StyleableProperty<Boolean>)n.tickLabelsVisibleProperty();
             }
         };
 

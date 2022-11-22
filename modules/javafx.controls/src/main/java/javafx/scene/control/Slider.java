@@ -662,7 +662,7 @@ public class Slider extends Control {
 
             @Override
             public StyleableProperty<Number> getStyleableProperty(Slider n) {
-                return (StyleableProperty<Number>)(WritableValue<Number>)n.blockIncrementProperty();
+                return (StyleableProperty<Number>)n.blockIncrementProperty();
             }
         };
 
@@ -677,7 +677,7 @@ public class Slider extends Control {
 
             @Override
             public StyleableProperty<Boolean> getStyleableProperty(Slider n) {
-                return (StyleableProperty<Boolean>)(WritableValue<Boolean>)n.showTickLabelsProperty();
+                return (StyleableProperty<Boolean>)n.showTickLabelsProperty();
             }
         };
 
@@ -692,7 +692,7 @@ public class Slider extends Control {
 
             @Override
             public StyleableProperty<Boolean> getStyleableProperty(Slider n) {
-                return (StyleableProperty<Boolean>)(WritableValue<Boolean>)n.showTickMarksProperty();
+                return (StyleableProperty<Boolean>)n.showTickMarksProperty();
             }
         };
 
@@ -707,7 +707,7 @@ public class Slider extends Control {
 
             @Override
             public StyleableProperty<Boolean> getStyleableProperty(Slider n) {
-                return (StyleableProperty<Boolean>)(WritableValue<Boolean>)n.snapToTicksProperty();
+                return (StyleableProperty<Boolean>)n.snapToTicksProperty();
             }
         };
 
@@ -722,7 +722,7 @@ public class Slider extends Control {
 
             @Override
             public StyleableProperty<Number> getStyleableProperty(Slider n) {
-                return (StyleableProperty<Number>)(WritableValue<Number>)n.majorTickUnitProperty();
+                return (StyleableProperty<Number>)n.majorTickUnitProperty();
             }
         };
 
@@ -737,7 +737,7 @@ public class Slider extends Control {
 
             @Override
             public StyleableProperty<Number> getStyleableProperty(Slider n) {
-                return (StyleableProperty<Number>)(WritableValue<Number>)n.minorTickCountProperty();
+                return (StyleableProperty<Number>)n.minorTickCountProperty();
             }
         };
 

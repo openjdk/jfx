@@ -564,7 +564,7 @@ public final class CategoryAxis extends Axis<String> {
 
             @Override
             public StyleableProperty<Number> getStyleableProperty(CategoryAxis n) {
-                return (StyleableProperty<Number>)(WritableValue<Number>)n.startMarginProperty();
+                return (StyleableProperty<Number>)n.startMarginProperty();
             }
         };
 
@@ -579,7 +579,7 @@ public final class CategoryAxis extends Axis<String> {
 
             @Override
             public StyleableProperty<Number> getStyleableProperty(CategoryAxis n) {
-                return (StyleableProperty<Number>)(WritableValue<Number>)n.endMarginProperty();
+                return (StyleableProperty<Number>)n.endMarginProperty();
             }
         };
 
@@ -594,7 +594,7 @@ public final class CategoryAxis extends Axis<String> {
 
             @Override
             public StyleableProperty<Boolean> getStyleableProperty(CategoryAxis n) {
-                return (StyleableProperty<Boolean>)(WritableValue<Boolean>)n.gapStartAndEndProperty();
+                return (StyleableProperty<Boolean>)n.gapStartAndEndProperty();
             }
         };
 

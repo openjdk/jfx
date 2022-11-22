@@ -363,7 +363,7 @@ public class Pagination extends Control {
 
             @Override
             public StyleableProperty<Number> getStyleableProperty(Pagination n) {
-                return (StyleableProperty<Number>)(WritableValue<Number>)n.maxPageIndicatorCountProperty();
+                return (StyleableProperty<Number>)n.maxPageIndicatorCountProperty();
             }
         };
         private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;

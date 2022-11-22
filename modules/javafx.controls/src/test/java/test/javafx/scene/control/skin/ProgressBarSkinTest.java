@@ -65,7 +65,7 @@ public class ProgressBarSkinTest {
      */
     private void initStage() {
         //This step is not needed (Just to make sure StubToolkit is loaded into VM)
-        Toolkit tk = (StubToolkit)Toolkit.getToolkit();
+        Toolkit tk = Toolkit.getToolkit();
         root = new StackPane();
         scene = new Scene(root);
         stage = new Stage();

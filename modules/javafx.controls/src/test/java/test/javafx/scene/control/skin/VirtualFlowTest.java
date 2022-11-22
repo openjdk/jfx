@@ -140,7 +140,7 @@ public class VirtualFlowTest {
         Iterator<IndexedCell> itr = control.iterator();
         while (itr.hasNext()) {
             IndexedCell cell = itr.next();
-            IndexedCell cell2 = (IndexedCell)list.get(index);
+            IndexedCell cell2 = list.get(index);
             assertSame("The control and list did not have the same item at " +
                        "index " + index + ". Expected " + cell + " but was " + cell2,
                        cell, cell2);

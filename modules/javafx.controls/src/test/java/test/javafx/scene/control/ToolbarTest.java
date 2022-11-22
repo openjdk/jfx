@@ -74,7 +74,7 @@ public class ToolbarTest {
     private static final double ORIGINAL_CHILDREN_SIZE = 100.0;
 
     @Before public void setup() {
-        tk = (StubToolkit)Toolkit.getToolkit();//This step is not needed (Just to make sure StubToolkit is loaded into VM)
+        tk = Toolkit.getToolkit();//This step is not needed (Just to make sure StubToolkit is loaded into VM)
         toolBar = new ToolBar();
         node1 = new Rectangle();
         node2 = new Rectangle(2.0,4.0);

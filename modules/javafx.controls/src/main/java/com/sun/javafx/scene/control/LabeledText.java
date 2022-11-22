@@ -185,7 +185,7 @@ public class LabeledText extends Text {
     private StyleablePropertyMirror<Boolean> underlineMirror;
     private StyleableProperty<Boolean> underlineMirror() {
         if (underlineMirror == null) {
-            underlineMirror = new StyleablePropertyMirror<>(UNDERLINE, "underLineMirror", Boolean.FALSE, (StyleableProperty<Boolean>)(WritableValue<Boolean>)labeled.underlineProperty());
+            underlineMirror = new StyleablePropertyMirror<>(UNDERLINE, "underLineMirror", Boolean.FALSE, (StyleableProperty<Boolean>)labeled.underlineProperty());
             underlineProperty().addListener(underlineMirror);
         }
         return underlineMirror;
@@ -210,7 +210,7 @@ public class LabeledText extends Text {
     private StyleablePropertyMirror<Number> lineSpacingMirror;
     private StyleableProperty<Number> lineSpacingMirror() {
         if (lineSpacingMirror == null) {
-            lineSpacingMirror = new StyleablePropertyMirror<>(LINE_SPACING, "lineSpacingMirror", 0d, (StyleableProperty<Number>)(WritableValue<Number>)labeled.lineSpacingProperty());
+            lineSpacingMirror = new StyleablePropertyMirror<>(LINE_SPACING, "lineSpacingMirror", 0d, (StyleableProperty<Number>)labeled.lineSpacingProperty());
             lineSpacingProperty().addListener(lineSpacingMirror);
         }
         return lineSpacingMirror;

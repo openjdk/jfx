@@ -102,7 +102,7 @@ public class TabPaneTest {
     private StackPane root;
 
     @Before public void setup() {
-        tk = (StubToolkit)Toolkit.getToolkit();//This step is not needed (Just to make sure StubToolkit is loaded into VM)
+        tk = Toolkit.getToolkit();//This step is not needed (Just to make sure StubToolkit is loaded into VM)
         tabPane = new TabPane();
         tab1 = new Tab("one");
         tab2 = new Tab("two");

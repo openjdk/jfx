@@ -90,7 +90,7 @@ public class ScrollBar extends Control {
         // makes it look to css like the user set the value and css will not
         // override. Initializing focusTraversable by calling applyStyle with null
         // for StyleOrigin ensures that css will be able to override the value.
-        ((StyleableProperty<Boolean>)(WritableValue<Boolean>)focusTraversableProperty()).applyStyle(null,Boolean.FALSE);
+        ((StyleableProperty<Boolean>)focusTraversableProperty()).applyStyle(null,Boolean.FALSE);
 
         // set pseudo-class state to horizontal
         pseudoClassStateChanged(HORIZONTAL_PSEUDOCLASS_STATE, true);
@@ -405,7 +405,7 @@ public class ScrollBar extends Control {
 
             @Override
             public StyleableProperty<Number> getStyleableProperty(ScrollBar n) {
-                return (StyleableProperty<Number>)(WritableValue<Number>)n.unitIncrementProperty();
+                return (StyleableProperty<Number>)n.unitIncrementProperty();
             }
 
         };
@@ -421,7 +421,7 @@ public class ScrollBar extends Control {
 
             @Override
             public StyleableProperty<Number> getStyleableProperty(ScrollBar n) {
-                return (StyleableProperty<Number>)(WritableValue<Number>)n.blockIncrementProperty();
+                return (StyleableProperty<Number>)n.blockIncrementProperty();
             }
 
         };

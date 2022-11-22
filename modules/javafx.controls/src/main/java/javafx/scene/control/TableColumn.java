@@ -424,7 +424,7 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
      */
     private final ObjectProperty<Callback<TableColumn<S,T>, TableCell<S,T>>> cellFactory =
         new SimpleObjectProperty<>(
-            this, "cellFactory", (Callback<TableColumn<S,T>, TableCell<S,T>>) ((Callback) DEFAULT_CELL_FACTORY)) {
+            this, "cellFactory", ((Callback) DEFAULT_CELL_FACTORY)) {
                 @Override protected void invalidated() {
                     TableView<S> table = getTableView();
                     if (table == null) return;
@@ -839,7 +839,7 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
             }
 
             // if we are here, we now need to get the data for the specific column
-            return (T) pos.getTableColumn().getCellData(rowData);
+            return pos.getTableColumn().getCellData(rowData);
         }
 
         /**

@@ -421,7 +421,7 @@ public class TreeTableColumn<S,T> extends TableColumnBase<TreeItem<S>,T> impleme
      */
     private final ObjectProperty<Callback<TreeTableColumn<S,T>, TreeTableCell<S,T>>> cellFactory =
         new SimpleObjectProperty<>(
-            this, "cellFactory", (Callback<TreeTableColumn<S,T>, TreeTableCell<S,T>>) ((Callback) DEFAULT_CELL_FACTORY)) {
+            this, "cellFactory", ((Callback) DEFAULT_CELL_FACTORY)) {
                 @Override protected void invalidated() {
                     TreeTableView<S> table = getTreeTableView();
                     if (table == null) return;
@@ -823,7 +823,7 @@ public class TreeTableColumn<S,T> extends TableColumnBase<TreeItem<S>,T> impleme
             }
 
             // if we are here, we now need to get the data for the specific column
-            return (T) pos.getTableColumn().getCellData(rowData);
+            return pos.getTableColumn().getCellData(rowData);
         }
 
         /**
