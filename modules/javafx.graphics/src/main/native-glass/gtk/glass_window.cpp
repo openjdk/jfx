@@ -914,6 +914,8 @@ void WindowContextTop::update_frame_extents() {
                 set_bounds(-1, -1, false, false, w, h, cw, ch);
 
                 notify_window_resize();
+                // Window didn't actually move, but view X, Y might change
+                notify_window_move();
             }
         }
     }
