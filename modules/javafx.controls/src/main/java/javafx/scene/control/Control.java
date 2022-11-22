@@ -335,7 +335,7 @@ public abstract class Control extends Region implements Skinnable {
         // but SKIN is CssMetaData<Control,String>. This does not matter to
         // the CSS code which doesn't care about the actual type. Hence,
         // we'll suppress the warnings
-        @Override @SuppressWarnings({"unchecked", "rawtype"})
+        @Override @SuppressWarnings({"unchecked", "rawtypes"})
         public CssMetaData getCssMetaData() {
             return StyleableProperties.SKIN;
         }
