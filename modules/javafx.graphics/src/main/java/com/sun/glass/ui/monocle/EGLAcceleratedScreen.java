@@ -42,7 +42,7 @@ public class EGLAcceleratedScreen extends AcceleratedScreen {
      * @param attributes an array of attributes that will be used by the underlying
      *        implementation to get the best matching configuration.
      */
-    EGLAcceleratedScreen(int[] attributes) throws GLException {
+    EGLAcceleratedScreen(int[] attributes) {
         eglWindowHandle = platformGetNativeWindow();
         eglDisplay = nGetEglDisplayHandle();
         nEglInitialize(eglDisplay);

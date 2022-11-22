@@ -359,25 +359,25 @@ public class ScheduledServiceTest extends ServiceTestBase {
     //     delay works on restart
     //     delay works on reset / start
 
-    @Test public void delayIsHonored_Positive() throws InterruptedException {
+    @Test public void delayIsHonored_Positive() {
         s.setDelay(Duration.seconds(1));
         s.start();
         assertEquals(1000, wallClock);
     }
 
-    @Test public void delayIsHonored_Unknown() throws InterruptedException {
+    @Test public void delayIsHonored_Unknown() {
         s.setDelay(Duration.UNKNOWN);
         s.start();
         assertEquals(0, wallClock);
     }
 
-    @Test public void delayIsHonored_Infinite() throws InterruptedException {
+    @Test public void delayIsHonored_Infinite() {
         s.setDelay(Duration.INDEFINITE);
         s.start();
         assertEquals(Long.MAX_VALUE, wallClock);
     }
 
-    @Test public void delayIsHonored_ZERO() throws InterruptedException {
+    @Test public void delayIsHonored_ZERO() {
         s.setDelay(Duration.ZERO);
         s.start();
         assertEquals(0, wallClock);

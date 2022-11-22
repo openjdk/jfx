@@ -3391,8 +3391,7 @@ final public class CssParser {
 
     }
 
-    private ParsedValueImpl<String,StrokeType> parseStrokeType(final Term root)
-        throws ParseException {
+    private ParsedValueImpl<String,StrokeType> parseStrokeType(final Term root) {
 
         final String keyword = getKeyword(root);
 
@@ -3446,8 +3445,7 @@ final public class CssParser {
 
     // Root term is the term just after the line-cap keyword
     // If the token is not a StrokeLineCap, then null is returned.
-    private ParsedValueImpl<String,StrokeLineCap> parseStrokeLineCap(final Term root)
-        throws ParseException {
+    private ParsedValueImpl<String,StrokeLineCap> parseStrokeLineCap(final Term root) {
 
         final String keyword = getKeyword(root);
 

@@ -575,38 +575,31 @@ public class LauncherImpl {
         return null;
     }
 
-    private static String decodeBase64(String inp) throws IOException {
+    private static String decodeBase64(String inp) {
         return new String(Base64.getDecoder().decode(inp));
     }
 
     private static String[] getAppArguments(Attributes attrs) {
         List args = new LinkedList();
 
-        try {
-            int idx = 1;
-            String argNamePrefix = MF_JAVAFX_ARGUMENT_PREFIX;
-            while (attrs.getValue(argNamePrefix + idx) != null) {
-                args.add(decodeBase64(attrs.getValue(argNamePrefix + idx)));
-                idx++;
-            }
+        int idx = 1;
+        String argNamePrefix = MF_JAVAFX_ARGUMENT_PREFIX;
+        while (attrs.getValue(argNamePrefix + idx) != null) {
+            args.add(decodeBase64(attrs.getValue(argNamePrefix + idx)));
+            idx++;
+        }
 
-            String paramNamePrefix = MF_JAVAFX_PARAMETER_NAME_PREFIX;
-            String paramValuePrefix = MF_JAVAFX_PARAMETER_VALUE_PREFIX;
-            idx = 1;
-            while (attrs.getValue(paramNamePrefix + idx) != null) {
-                String k = decodeBase64(attrs.getValue(paramNamePrefix + idx));
-                String v = null;
-                if (attrs.getValue(paramValuePrefix + idx) != null) {
-                    v = decodeBase64(attrs.getValue(paramValuePrefix + idx));
-                }
-                args.add("--" + k + "=" + (v != null ? v : ""));
-                idx++;
+        String paramNamePrefix = MF_JAVAFX_PARAMETER_NAME_PREFIX;
+        String paramValuePrefix = MF_JAVAFX_PARAMETER_VALUE_PREFIX;
+        idx = 1;
+        while (attrs.getValue(paramNamePrefix + idx) != null) {
+            String k = decodeBase64(attrs.getValue(paramNamePrefix + idx));
+            String v = null;
+            if (attrs.getValue(paramValuePrefix + idx) != null) {
+                v = decodeBase64(attrs.getValue(paramValuePrefix + idx));
             }
-        } catch (IOException ioe) {
-            if (verbose) {
-                System.err.println("Failed to extract application parameters");
-            }
-            ioe.printStackTrace();
+            args.add("--" + k + "=" + (v != null ? v : ""));
+            idx++;
         }
 
         return (String[]) args.toArray(new String[0]);

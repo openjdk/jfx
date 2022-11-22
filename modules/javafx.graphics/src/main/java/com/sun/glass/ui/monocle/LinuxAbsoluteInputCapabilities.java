@@ -54,7 +54,7 @@ class LinuxAbsoluteInputCapabilities {
 
     private LinuxAbsoluteInputCapabilities(LinuxSystem system,
                                            LinuxSystem.InputAbsInfo info,
-                                           long fd, int axis) throws IOException {
+                                           long fd, int axis) {
         system.ioctl(fd, system.EVIOCGABS(axis), info.p);
         value = LinuxSystem.InputAbsInfo.getValue(info.p);
         minimum = LinuxSystem.InputAbsInfo.getMinimum(info.p);

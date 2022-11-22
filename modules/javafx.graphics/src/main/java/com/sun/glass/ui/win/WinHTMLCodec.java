@@ -278,7 +278,7 @@ class HTMLCodec extends InputStream {
 
     public HTMLCodec(
         InputStream _bytestream,
-        EHTMLReadMode _readMode) throws IOException
+        EHTMLReadMode _readMode)
     {
         bufferedStream = new BufferedInputStream(_bytestream, BYTE_BUFFER_LEN);
         readMode = _readMode;
