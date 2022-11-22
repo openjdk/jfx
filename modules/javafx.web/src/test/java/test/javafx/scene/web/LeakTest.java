@@ -28,7 +28,6 @@ package test.javafx.scene.web;
 import static javafx.concurrent.Worker.State.SUCCEEDED;
 import com.sun.webkit.dom.JSObjectShim;
 import com.sun.webkit.dom.NodeImplShim;
-import com.sun.webkit.WebPage;
 import java.io.File;
 import java.lang.ref.Reference;
 import java.lang.ref.WeakReference;
