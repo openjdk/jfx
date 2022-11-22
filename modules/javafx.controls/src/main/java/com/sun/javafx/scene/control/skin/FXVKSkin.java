@@ -748,10 +748,8 @@ public class FXVKSkin extends SkinBase<FXVK> {
 
         protected void sendKeyEvents() {
             Node target = fxvk.getAttachedNode();
-            if (target instanceof EventTarget) {
-                if (chars != null) {
-                    target.fireEvent(new KeyEvent(KeyEvent.KEY_TYPED, chars, "", KeyCode.UNDEFINED, shiftDown, false, false, false));
-                }
+            if (chars != null) {
+                target.fireEvent(new KeyEvent(KeyEvent.KEY_TYPED, chars, "", KeyCode.UNDEFINED, shiftDown, false, false, false));
             }
         }
     }
@@ -858,11 +856,10 @@ public class FXVKSkin extends SkinBase<FXVK> {
         @Override
         protected void sendKeyEvents() {
             Node target = fxvk.getAttachedNode();
-            if (target instanceof EventTarget) {
-                target.fireEvent(new KeyEvent(KeyEvent.KEY_PRESSED, KeyEvent.CHAR_UNDEFINED, chars, code, shiftDown, false, false, false));
-                target.fireEvent(new KeyEvent(KeyEvent.KEY_TYPED, chars, "", KeyCode.UNDEFINED, shiftDown, false, false, false));
-                target.fireEvent(new KeyEvent(KeyEvent.KEY_RELEASED, KeyEvent.CHAR_UNDEFINED, chars, code, shiftDown, false, false, false));
-            }
+
+            target.fireEvent(new KeyEvent(KeyEvent.KEY_PRESSED, KeyEvent.CHAR_UNDEFINED, chars, code, shiftDown, false, false, false));
+            target.fireEvent(new KeyEvent(KeyEvent.KEY_TYPED, chars, "", KeyCode.UNDEFINED, shiftDown, false, false, false));
+            target.fireEvent(new KeyEvent(KeyEvent.KEY_RELEASED, KeyEvent.CHAR_UNDEFINED, chars, code, shiftDown, false, false, false));
         }
     }
 

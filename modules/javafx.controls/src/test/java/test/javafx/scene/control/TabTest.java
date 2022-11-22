@@ -169,14 +169,6 @@ public class TabTest {
         assertEquals("styleProperty cannot be bound", tab.styleProperty().getValue(), "another");
     }
 
-    @Test public void checkSelectedPropertyReadOnly() {
-        assertTrue(tab.selectedProperty() instanceof ReadOnlyBooleanProperty);
-    }
-
-    @Test public void checkTabPanePropertyReadOnly() {
-        assertTrue(tab.tabPaneProperty() instanceof ReadOnlyObjectProperty);
-    }
-
     @Test public void checkTextPropertyBind() {
         StringProperty strPr = new SimpleStringProperty("value");
         tab.textProperty().bind(strPr);

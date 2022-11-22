@@ -168,10 +168,6 @@ public class ValueAxisTest {
         assertEquals("minorTickCountProperty cannot be bound", axis.minorTickCountProperty().getValue(),23.0,0.0);
     }
 
-    @Test public void checkScaleIsReadOnlyPropertyAndHenceCannotBeBound() {
-        assertTrue(axis.scaleProperty() instanceof ReadOnlyDoubleProperty);
-    }
-
     @Test public void checkUpperBoundPropertyBind() {
         DoubleProperty objPr = new SimpleDoubleProperty(56.0);
         axis.upperBoundProperty().bind(objPr);

@@ -118,10 +118,6 @@ public class CategoryAxisTest {
     }
 
 
-    @Test public void checkCategorySpacingReadOnlyCannotBind() {
-        assertTrue(axis.categorySpacingProperty() instanceof ReadOnlyDoubleProperty);
-    }
-
     @Test public void startMarginPropertyHasBeanReference() {
         assertSame(axis, axis.startMarginProperty().getBean());
     }
