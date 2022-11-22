@@ -109,6 +109,7 @@ public class StackedBarChart<X, Y> extends XYChart<X, Y> {
             return "categoryGap";
         }
 
+        @Override
         public CssMetaData<StackedBarChart<?,?>,Number> getCssMetaData() {
             return StackedBarChart.StyleableProperties.CATEGORY_GAP;
         }

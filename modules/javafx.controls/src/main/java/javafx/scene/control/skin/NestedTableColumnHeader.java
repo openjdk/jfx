@@ -515,6 +515,7 @@ public class NestedTableColumnHeader extends TableColumnHeader {
 
     // Used to test whether this column header properly represents the given column.
     // In particular, whether it has child column headers for all child columns
+    @Override
     boolean represents(TableColumnBase<?, ?> column) {
         if (column.getColumns().isEmpty()) {
             // this column has no children, but we are in a NestedTableColumnHeader instance,

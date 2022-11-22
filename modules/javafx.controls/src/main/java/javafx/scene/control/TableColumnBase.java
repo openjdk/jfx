@@ -806,6 +806,7 @@ public abstract class TableColumnBase<S,T> implements EventTarget, Styleable {
     /**
      * {@inheritDoc}
      */
+    @Override
     public final ObservableSet<PseudoClass> getPseudoClassStates() {
         return FXCollections.emptyObservableSet();
     }

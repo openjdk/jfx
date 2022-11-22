@@ -898,6 +898,7 @@ public class Tab implements EventTarget, Styleable {
      * {@inheritDoc}
      * @since JavaFX 8.0
      */
+    @Override
     public final ObservableSet<PseudoClass> getPseudoClassStates() {
         return FXCollections.emptyObservableSet();
     }

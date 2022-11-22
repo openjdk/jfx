@@ -462,6 +462,7 @@ public class TabPane extends Control {
     }
 
     /** {@inheritDoc} */
+    @Override
     public Set<Node> lookupAll(String selector) {
 
         if (selector == null) return null;

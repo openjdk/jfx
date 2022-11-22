@@ -135,6 +135,7 @@ public class GlobalMenuAdapter extends Menu implements MenuBase {
         getItems().add(pos, (MenuItem)mib);
     }
 
+    @Override
     public final ObservableList<MenuItemBase> getItemsBase() {
         return items;
     }

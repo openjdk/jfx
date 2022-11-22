@@ -811,6 +811,7 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
             }
         }
 
+        @Override
         public void clear() {
             _beginChange();
             List<Integer> removed = bitset.stream().boxed().collect(Collectors.toList());

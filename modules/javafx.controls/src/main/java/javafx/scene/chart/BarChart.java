@@ -87,14 +87,17 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
             requestChartLayout();
         }
 
+        @Override
         public Object getBean() {
             return BarChart.this;
         }
 
+        @Override
         public String getName() {
             return "barGap";
         }
 
+        @Override
         public CssMetaData<BarChart<?,?>,Number> getCssMetaData() {
             return StyleableProperties.BAR_GAP;
         }
@@ -120,6 +123,7 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
             return "categoryGap";
         }
 
+        @Override
         public CssMetaData<BarChart<?,?>,Number> getCssMetaData() {
             return StyleableProperties.CATEGORY_GAP;
         }

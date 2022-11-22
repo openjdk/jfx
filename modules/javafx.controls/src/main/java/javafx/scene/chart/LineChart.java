@@ -111,14 +111,17 @@ public class LineChart<X,Y> extends XYChart<X,Y> {
             requestChartLayout();
         }
 
+        @Override
         public Object getBean() {
             return LineChart.this;
         }
 
+        @Override
         public String getName() {
             return "createSymbols";
         }
 
+        @Override
         public CssMetaData<LineChart<?,?>,Boolean> getCssMetaData() {
             return StyleableProperties.CREATE_SYMBOLS;
         }
@@ -147,10 +150,12 @@ public class LineChart<X,Y> extends XYChart<X,Y> {
             requestChartLayout();
         }
 
+        @Override
         public Object getBean() {
             return LineChart.this;
         }
 
+        @Override
         public String getName() {
             return "axisSortingPolicy";
         }

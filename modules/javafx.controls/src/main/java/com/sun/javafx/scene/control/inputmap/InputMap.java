@@ -925,6 +925,7 @@ public class InputMap<N extends Node> implements EventHandler<Event> {
         }
 
         /**  {@inheritDoc} */
+        @Override
         public boolean test(Event event) {
             if (!(event instanceof KeyEvent)) return false;
             return KeyBinding.toKeyBinding((KeyEvent)event).equals(keyBinding);
@@ -961,6 +962,7 @@ public class InputMap<N extends Node> implements EventHandler<Event> {
         }
 
         /**  {@inheritDoc} */
+        @Override
         public boolean test(Event event) {
             if (!(event instanceof MouseEvent)) return false;
             return event.getEventType() == this.eventType;

@@ -103,14 +103,17 @@ public class StackedAreaChart<X,Y> extends XYChart<X,Y> {
             requestChartLayout();
         }
 
+        @Override
         public Object getBean() {
             return this;
         }
 
+        @Override
         public String getName() {
             return "createSymbols";
         }
 
+        @Override
         public CssMetaData<StackedAreaChart<?, ?>,Boolean> getCssMetaData() {
             return StyleableProperties.CREATE_SYMBOLS;
         }

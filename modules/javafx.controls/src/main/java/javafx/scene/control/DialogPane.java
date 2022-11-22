@@ -665,6 +665,7 @@ public class DialogPane extends Pane {
 
     // --- expanded
     private final BooleanProperty expandedProperty = new SimpleBooleanProperty(this, "expanded", false) {
+        @Override
         protected void invalidated() {
             final Node expandableContent = getExpandableContent();
 

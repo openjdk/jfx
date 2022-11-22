@@ -187,6 +187,7 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
     };
 
     Runnable firstMenuRunnable = new Runnable() {
+        @Override
         public void run() {
             /*
             ** check that this menubar's container has contents,

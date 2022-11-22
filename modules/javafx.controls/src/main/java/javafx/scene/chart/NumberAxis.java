@@ -266,6 +266,7 @@ public final class NumberAxis extends ValueAxis<Number> {
      *
      * @return List of data values where to draw minor tick marks
      */
+    @Override
     protected List<Number> calculateMinorTickMarks() {
         final List<Number> minorTickMarks = new ArrayList<>();
         final double lowerBound = getLowerBound();

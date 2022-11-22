@@ -51,6 +51,7 @@ public class StackedBarChartTest extends XYChartTestBase {
     final XYChart.Series<String,Number> series3 = new XYChart.Series<>();
     final String[] years = {"2007", "2008", "2009"};
 
+    @Override
     protected Chart createChart() {
         final NumberAxis yAxis = new NumberAxis();
         sbc = new StackedBarChart<>(xAxis,yAxis);

@@ -82,6 +82,7 @@ public class WebColorFieldSkin extends InputFieldSkin {
     }
 
     //  "^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$";
+    @Override
     protected boolean accept(String text) {
         if (text.length() == 0) return true;
         if (text.matches("#[a-fA-F0-9]{0,6}") || text.matches("[a-fA-F0-9]{0,6}")) {
@@ -90,12 +91,14 @@ public class WebColorFieldSkin extends InputFieldSkin {
         return false;
     }
 
+    @Override
     protected void updateText() {
         Color color = ((WebColorField) control).getValue();
         if (color == null) color = Color.BLACK;
         getTextField().setText(Utils.formatHexString(color));
     }
 
+    @Override
     protected void updateValue() {
         if (noChangeInValue) return;
         Color value = ((WebColorField) control).getValue();

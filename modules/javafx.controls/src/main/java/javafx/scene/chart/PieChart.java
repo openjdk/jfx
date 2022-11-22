@@ -245,6 +245,7 @@ public class PieChart extends Chart {
             return "startAngle";
         }
 
+        @Override
         public CssMetaData<PieChart,Number> getCssMetaData() {
             return StyleableProperties.START_ANGLE;
         }
@@ -270,6 +271,7 @@ public class PieChart extends Chart {
             return "clockwise";
         }
 
+        @Override
         public CssMetaData<PieChart,Boolean> getCssMetaData() {
             return StyleableProperties.CLOCKWISE;
         }
@@ -296,6 +298,7 @@ public class PieChart extends Chart {
             return "labelLineLength";
         }
 
+        @Override
         public CssMetaData<PieChart,Number> getCssMetaData() {
             return StyleableProperties.LABEL_LINE_LENGTH;
         }
@@ -321,6 +324,7 @@ public class PieChart extends Chart {
             return "labelsVisible";
         }
 
+        @Override
         public CssMetaData<PieChart,Boolean> getCssMetaData() {
             return StyleableProperties.LABELS_VISIBLE;
         }

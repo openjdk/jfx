@@ -731,8 +731,10 @@ public class FXVKSkin extends SkinBase<FXVK> {
     private class TextInputKey extends Key {
         String chars = "";
 
+        @Override
         protected void press() {
         }
+        @Override
         protected void release() {
             if (fxvk != secondaryVK && secondaryPopup != null && secondaryPopup.isShowing()) {
                 return;
@@ -780,6 +782,7 @@ public class FXVKSkin extends SkinBase<FXVK> {
             this(letter, alt, moreChars, null);
         }
 
+        @Override
         protected void press() {
             super.press();
             if (letterChars.equals(altChars) && moreChars == null) {
@@ -792,6 +795,7 @@ public class FXVKSkin extends SkinBase<FXVK> {
             }
         }
 
+        @Override
         protected void release() {
             super.release();
             if (letterChars.equals(altChars) && moreChars == null) {
@@ -851,6 +855,7 @@ public class FXVKSkin extends SkinBase<FXVK> {
             }
         }
 
+        @Override
         protected void sendKeyEvents() {
             Node target = fxvk.getAttachedNode();
             if (target instanceof EventTarget) {

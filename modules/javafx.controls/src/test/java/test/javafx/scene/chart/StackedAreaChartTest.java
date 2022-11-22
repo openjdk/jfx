@@ -47,6 +47,7 @@ public class StackedAreaChartTest extends XYChartTestBase {
     final XYChart.Series<Number, Number> series1 = new XYChart.Series<>();
     boolean useCategoryAxis = false;
     final String[] countries = {"USA", "Italy", "France", "China", "India"};
+    @Override
     protected Chart createChart() {
         final NumberAxis yAxis = new NumberAxis();
         ObservableList<XYChart.Data> data = FXCollections.observableArrayList();
