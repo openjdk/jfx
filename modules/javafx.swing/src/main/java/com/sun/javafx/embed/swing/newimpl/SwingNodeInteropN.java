@@ -233,18 +233,19 @@ public class SwingNodeInteropN {
     }
 
     private static class SwingNodeDisposer implements DisposerRecord {
-         LightweightFrameWrapper lwFrame;
+        LightweightFrameWrapper lwFrame;
 
-         SwingNodeDisposer(LightweightFrameWrapper ref) {
-             this.lwFrame = ref;
-         }
-         @Override
+        SwingNodeDisposer(LightweightFrameWrapper ref) {
+            this.lwFrame = ref;
+        }
+
+        @Override
         public void dispose() {
-             if (lwFrame != null) {
-                 lwFrame.dispose();
-                 lwFrame = null;
-             }
-         }
+            if (lwFrame != null) {
+                lwFrame.dispose();
+                lwFrame = null;
+            }
+        }
     }
 
     private static class SwingNodeContent extends LightweightContentWrapper {
