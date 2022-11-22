@@ -76,7 +76,7 @@ public final class MappingChange<E, F> extends Change<F>{
     @Override
     public List<F> getRemoved() {
         if (removed == null) {
-            removed = new AbstractList<F>() {
+            removed = new AbstractList<>() {
 
                 @Override
                 public F get(int index) {

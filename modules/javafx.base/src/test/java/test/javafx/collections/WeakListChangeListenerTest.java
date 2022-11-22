@@ -40,16 +40,16 @@ public class WeakListChangeListenerTest {
 
     @Test(expected=NullPointerException.class)
     public void testConstructWithNull() {
-        new WeakListChangeListener<Object>(null);
+        new WeakListChangeListener<>(null);
     }
 
     @Test
     public void testHandle() {
-        MockListObserver<Object> listener = new MockListObserver<Object>();
-        final WeakListChangeListener<Object> weakListener = new WeakListChangeListener<Object>(listener);
-        final ObservableListWrapper<Object> list = new ObservableListWrapper<Object>(new ArrayList<Object>());
+        MockListObserver<Object> listener = new MockListObserver<>();
+        final WeakListChangeListener<Object> weakListener = new WeakListChangeListener<>(listener);
+        final ObservableListWrapper<Object> list = new ObservableListWrapper<>(new ArrayList<>());
         final Object removedElement = new Object();
-        final ListChangeListener.Change<Object> change = new NonIterableChange.SimpleRemovedChange<Object>(0, 1, removedElement, list);
+        final ListChangeListener.Change<Object> change = new NonIterableChange.SimpleRemovedChange<>(0, 1, removedElement, list);
 
         // regular call
         weakListener.onChanged(change);

@@ -90,7 +90,7 @@ public final class ReadOnlyJavaBeanIntegerProperty extends ReadOnlyIntegerProper
 
     ReadOnlyJavaBeanIntegerProperty(ReadOnlyPropertyDescriptor descriptor, Object bean) {
         this.descriptor = descriptor;
-        this.listener = descriptor.new ReadOnlyListener<Number>(bean, this);
+        this.listener = descriptor.new ReadOnlyListener<>(bean, this);
         descriptor.addListener(listener);
         Disposer.addRecord(this, new DescriptorListenerCleaner(descriptor, listener));
     }
