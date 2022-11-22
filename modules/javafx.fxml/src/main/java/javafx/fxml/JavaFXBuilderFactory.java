@@ -198,12 +198,12 @@ public final class JavaFXBuilderFactory implements BuilderFactory {
         private final Class<?>           builderClass;
         private final Method             createMethod;
         private final Method             buildMethod;
-        private final Map<String,Method> methods = new HashMap<>();
-        private final Map<String,Method> getters = new HashMap<>();
-        private final Map<String,Method> setters = new HashMap<>();
+        private final Map<String,Method> methods = new HashMap<String, Method>();
+        private final Map<String,Method> getters = new HashMap<String,Method>();
+        private final Map<String,Method> setters = new HashMap<String,Method>();
 
         final class ObjectBuilder extends AbstractMap<String, Object> implements Builder<Object> {
-            private final Map<String,Object> containers = new HashMap<>();
+            private final Map<String,Object> containers = new HashMap<String,Object>();
             private Object                   builder = null;
             private Map<Object,Object>       properties;
 
@@ -361,15 +361,15 @@ public final class JavaFXBuilderFactory implements BuilderFactory {
                 }
 
                 if (ObservableMap.class.isAssignableFrom(type)) {
-                    return FXCollections.observableMap(new HashMap<>());
+                    return FXCollections.observableMap(new HashMap<Object, Object>());
                 } else if (Map.class.isAssignableFrom(type)) {
-                    return new HashMap<>();
+                    return new HashMap<Object, Object>();
                 } else if (ObservableList.class.isAssignableFrom(type)) {
                     return FXCollections.observableArrayList();
                 } else if (List.class.isAssignableFrom(type)) {
-                    return new ArrayList<>();
+                    return new ArrayList<Object>();
                 } else if (Set.class.isAssignableFrom(type)) {
-                    return new HashSet<>();
+                    return new HashSet<Object>();
                 }
                 return null;
             }
@@ -429,7 +429,7 @@ public final class JavaFXBuilderFactory implements BuilderFactory {
             buildMethod = null;
         }
 
-        ObjectBuilderWrapper(Class<?> builderClass) throws NoSuchMethodException {
+        ObjectBuilderWrapper(Class<?> builderClass) throws NoSuchMethodException, InstantiationException, IllegalAccessException {
             this.builderClass = builderClass;
             createMethod = MethodUtil.getMethod(builderClass, "create", NO_SIG);
             buildMethod = MethodUtil.getMethod(builderClass, "build", NO_SIG);

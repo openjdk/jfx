@@ -115,7 +115,7 @@ public class KeyPath extends AbstractList<String> {
      * The resulting key path.
      */
     protected static KeyPath parse(PushbackReader reader) throws IOException {
-        ArrayList<String> elements = new ArrayList<>();
+        ArrayList<String> elements = new ArrayList<String>();
 
         int c = reader.read();
 

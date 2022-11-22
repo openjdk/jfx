@@ -550,7 +550,6 @@ public class ProxyBuilder<T> extends AbstractMap<String, Object> implements Buil
             super(m, t);
         }
 
-        @Override
         public void invoke(Object obj, Object argStr) throws Exception {
             Object arg[] = new Object[]{BeanAdapter.coerce(argStr, type)};
             ModuleHelper.invoke(method, obj, arg);
@@ -632,7 +631,7 @@ public class ProxyBuilder<T> extends AbstractMap<String, Object> implements Buil
     // it assumes that localType is array
     private static Object[] convertListToArray(Object userValue, Class<?> localType) {
         Class<?> arrayType = localType.getComponentType();
-        List l = BeanAdapter.coerce(userValue, List.class);
+        List l = (List) BeanAdapter.coerce(userValue, List.class);
 
         return l.toArray((Object[]) Array.newInstance(arrayType, 0));
     }

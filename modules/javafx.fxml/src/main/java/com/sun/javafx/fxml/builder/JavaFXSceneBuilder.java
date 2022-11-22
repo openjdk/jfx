@@ -43,7 +43,7 @@ public class JavaFXSceneBuilder implements Builder<Scene> {
     private double width = -1;
     private double height = -1;
     private Paint fill = Color.WHITE;
-    private ArrayList<String> stylesheets = new ArrayList<>();
+    private ArrayList<String> stylesheets = new ArrayList<String>();
 
     public Parent getRoot() {
         return root;

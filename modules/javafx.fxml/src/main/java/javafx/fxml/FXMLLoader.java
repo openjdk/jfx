@@ -123,10 +123,10 @@ public class FXMLLoader {
         public Object value = null;
         private BeanAdapter valueAdapter = null;
 
-        public final LinkedList<Attribute> eventHandlerAttributes = new LinkedList<>();
-        public final LinkedList<Attribute> instancePropertyAttributes = new LinkedList<>();
-        public final LinkedList<Attribute> staticPropertyAttributes = new LinkedList<>();
-        public final LinkedList<PropertyElement> staticPropertyElements = new LinkedList<>();
+        public final LinkedList<Attribute> eventHandlerAttributes = new LinkedList<Attribute>();
+        public final LinkedList<Attribute> instancePropertyAttributes = new LinkedList<Attribute>();
+        public final LinkedList<Attribute> staticPropertyAttributes = new LinkedList<Attribute>();
+        public final LinkedList<PropertyElement> staticPropertyElements = new LinkedList<PropertyElement>();
 
         public Element() {
             parent = current;
@@ -153,7 +153,7 @@ public class FXMLLoader {
         }
 
         @SuppressWarnings("unchecked")
-        public void add(Object element) {
+        public void add(Object element) throws LoadException {
             // If value is a list, add element to it; otherwise, get the value
             // of the default property, which is assumed to be a list and add
             // to that (coerce to the appropriate type)
@@ -231,7 +231,9 @@ public class FXMLLoader {
             }
         }
 
-        public abstract void processEndElement() throws IOException;
+        public void processEndElement() throws IOException {
+            // No-op
+        }
 
         public void processCharacters() throws IOException {
             throw constructLoadException("Unexpected characters in input stream.");
@@ -292,6 +294,7 @@ public class FXMLLoader {
             }
         }
 
+        @SuppressWarnings("unchecked")
         public void processPropertyAttribute(Attribute attribute) throws IOException {
             String value = attribute.value;
             if (isBindingExpression(value)) {
@@ -492,7 +495,7 @@ public class FXMLLoader {
             // Split the string and add the values to the list
             List<Object> list = (List<Object>)valueAdapter.get(listPropertyName);
             Type listType = valueAdapter.getGenericType(listPropertyName);
-            Type itemType = BeanAdapter.getGenericListItemType(listType);
+            Type itemType = (Class<?>)BeanAdapter.getGenericListItemType(listType);
 
             if (itemType instanceof ParameterizedType) {
                 itemType = ((ParameterizedType)itemType).getRawType();
@@ -763,6 +766,8 @@ public class FXMLLoader {
         @Override
         @SuppressWarnings("unchecked")
         public void processEndElement() throws IOException {
+            super.processEndElement();
+
             // Build the value, if necessary
             if (value instanceof Builder<?>) {
                 Builder<Object> builder = (Builder<Object>)value;
@@ -957,7 +962,7 @@ public class FXMLLoader {
         public String constant = null;
         public String factory = null;
 
-        public InstanceDeclarationElement(Class<?> type) {
+        public InstanceDeclarationElement(Class<?> type) throws LoadException {
             this.type = type;
         }
 
@@ -1028,8 +1033,8 @@ public class FXMLLoader {
         // Map type representing an unknown value
         @DefaultProperty("items")
         public class UnknownValueMap extends AbstractMap<String, Object> {
-            private ArrayList<?> items = new ArrayList<>();
-            private HashMap<String, Object> values = new HashMap<>();
+            private ArrayList<?> items = new ArrayList<Object>();
+            private HashMap<String, Object> values = new HashMap<String, Object>();
 
             @Override
             public Object get(Object key) {
@@ -1396,7 +1401,7 @@ public class FXMLLoader {
         }
 
         @Override
-        public void add(Object element) {
+        public void add(Object element) throws LoadException {
             // Coerce the element to the list item type
             if (parent.isTyped()) {
                 Type listType = parent.getValueAdapter().getGenericType(name);
@@ -1438,6 +1443,8 @@ public class FXMLLoader {
 
         @Override
         public void processEndElement() throws IOException {
+            super.processEndElement();
+
             if (readOnly) {
                 processInstancePropertyAttributes();
                 processEventHandlerAttributes();
@@ -1489,11 +1496,6 @@ public class FXMLLoader {
             text = extraneousWhitespacePattern.matcher(text).replaceAll(" ");
 
             updateValue(text.trim());
-        }
-
-        @Override
-        public void processEndElement() {
-            // No-op
         }
     }
 
@@ -1608,6 +1610,8 @@ public class FXMLLoader {
 
         @Override
         public void processEndElement() throws IOException {
+            super.processEndElement();
+
             if (value != null && !staticLoad) {
                 // Evaluate the script
                 String filename = null;
@@ -1691,11 +1695,6 @@ public class FXMLLoader {
         public void processAttribute(String prefix, String localName, String value)
             throws LoadException{
             throw constructLoadException("Element does not support attributes.");
-        }
-
-        @Override
-        public void processEndElement() {
-            // No-op
         }
     }
 
@@ -1782,6 +1781,7 @@ public class FXMLLoader {
         }
 
         @Override
+        @SuppressWarnings("unchecked")
         public void onChanged(Change change) {
             if (handler != null) {
                 handler.invoke(change);
@@ -1887,8 +1887,8 @@ public class FXMLLoader {
     private ScriptEngine scriptEngine = null;
     private static boolean compileScript = true;
 
-    private List<String> packages = new LinkedList<>();
-    private Map<String, Class<?>> classes = new HashMap<>();
+    private List<String> packages = new LinkedList<String>();
+    private Map<String, Class<?>> classes = new HashMap<String, Class<?>>();
 
     private ScriptEngineManager scriptEngineManager = null;
 
@@ -2562,7 +2562,7 @@ public class FXMLLoader {
         return value;
     }
 
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings({ "dep-ann", "unchecked" })
     private <T> T loadImpl(InputStream inputStream,
                            Class<?> callerClass) throws IOException {
         if (inputStream == null) {
@@ -2801,7 +2801,7 @@ public class FXMLLoader {
         }
     }
 
-    private void processComment() {
+    private void processComment() throws LoadException {
         if (loadListener != null) {
             loadListener.readComment(xmlStreamReader.getText());
         }
@@ -2945,7 +2945,7 @@ public class FXMLLoader {
         }
     }
 
-    private void importPackage(String name) {
+    private void importPackage(String name) throws LoadException {
         packages.add(name);
     }
 
@@ -2957,7 +2957,7 @@ public class FXMLLoader {
         }
     }
 
-    private Class<?> getType(String name) {
+    private Class<?> getType(String name) throws LoadException {
         Class<?> type = null;
 
         if (Character.isLowerCase(name.charAt(0))) {
