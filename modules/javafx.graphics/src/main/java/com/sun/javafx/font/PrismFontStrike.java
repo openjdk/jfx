@@ -81,6 +81,7 @@ public abstract class PrismFontStrike<T extends PrismFontFile> implements FontSt
 
     protected abstract DisposerRecord createDisposer(FontStrikeDesc desc);
 
+    @Override
     public synchronized void clearDesc() {
         fontResource.getStrikeMap().remove(desc);
         // Native resources are freed via a disposer once we are sure
@@ -96,10 +97,12 @@ public abstract class PrismFontStrike<T extends PrismFontFile> implements FontSt
      * we can't share a strike between 12 pt at scale of 2.0 and 24 pt
      * at scale of 1.0
      */
+    @Override
     public float getSize() {
         return size;
     }
 
+    @Override
     public Metrics getMetrics() {
         // I don't need native code to do this .. it can be done
         // by just reading the hhea table once for the font. This should
@@ -116,18 +119,22 @@ public abstract class PrismFontStrike<T extends PrismFontFile> implements FontSt
         return metrics;
     }
 
+    @Override
     public T getFontResource() {
         return fontResource;
     }
 
+    @Override
     public boolean drawAsShapes() {
         return drawShapes;
     }
 
+    @Override
     public int getAAMode() {
         return aaMode;
     }
 
+    @Override
     public BaseTransform getTransform() {
         return transform;
     }
@@ -152,12 +159,14 @@ public abstract class PrismFontStrike<T extends PrismFontFile> implements FontSt
      * @param ch char
      * @return advance of single char
      */
+    @Override
     public float getCharAdvance(char ch) {
         int glyphCode = fontResource.getGlyphMapper().charToGlyph((int)ch);
         return fontResource.getAdvance(glyphCode, size);
     }
 
     /* REMIND A map is not the solution ultimately required here */
+    @Override
     public Glyph getGlyph(char ch) {
         int glyphCode = fontResource.getGlyphMapper().charToGlyph((int)ch);
         return getGlyph(glyphCode);
@@ -165,6 +174,7 @@ public abstract class PrismFontStrike<T extends PrismFontFile> implements FontSt
 
     protected abstract Glyph createGlyph(int glyphCode);
 
+    @Override
     public Glyph getGlyph(int glyphCode) {
         Glyph glyph = glyphMap.get(glyphCode);
         if (glyph == null) {
@@ -176,6 +186,7 @@ public abstract class PrismFontStrike<T extends PrismFontFile> implements FontSt
 
     protected abstract Path2D createGlyphOutline(int glyphCode);
 
+    @Override
     public Shape getOutline(GlyphList gl, BaseTransform transform) {
         Path2D result = new Path2D();
         getOutline(gl, transform, result);
@@ -240,6 +251,7 @@ public abstract class PrismFontStrike<T extends PrismFontFile> implements FontSt
         return hash;
     }
 
+    @Override
     public String toString() {
         return "FontStrike: " + super.toString() +
                " font resource = " + fontResource +

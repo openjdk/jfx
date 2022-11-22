@@ -149,6 +149,7 @@ class MouseState {
         return buttonsPressed;
     }
 
+    @Override
     public String toString() {
         return "MouseState[x="
                 + x + ",y=" + y

@@ -554,6 +554,7 @@ public abstract class PrismFontFactory implements FontFactory {
         return fr;
     }
 
+    @Override
     public synchronized PGFont createFont(String familyName, boolean bold,
                                           boolean italic, float size) {
         FontResource fr = null;
@@ -573,6 +574,7 @@ public abstract class PrismFontFactory implements FontFactory {
         return new PrismFont(fr, fr.getFullName(), size);
     }
 
+    @Override
     public synchronized PGFont createFont(String name, float size) {
 
         FontResource fr = null;
@@ -632,6 +634,7 @@ public abstract class PrismFontFactory implements FontFactory {
         return fr;
     }
 
+    @Override
     public synchronized PGFont deriveFont(PGFont font, boolean bold,
                                           boolean italic, float size) {
         FontResource fr = font.getFontResource();
@@ -1213,6 +1216,7 @@ public abstract class PrismFontFactory implements FontFactory {
         @SuppressWarnings("removal")
         String path = AccessController.doPrivileged(
             new PrivilegedAction<String>() {
+                @Override
                 public String run() {
                     File f = new File(sysFontDir+"\\"+filename);
                     if (f.exists()) {
@@ -1231,6 +1235,7 @@ public abstract class PrismFontFactory implements FontFactory {
     }
 
     private static ArrayList<String> allFamilyNames;
+    @Override
     public String[] getFontFamilyNames() {
         if (allFamilyNames == null) {
             /* Create an array list and add the families for :
@@ -1264,6 +1269,7 @@ public abstract class PrismFontFactory implements FontFactory {
     }
 
     private static ArrayList<String> allFontNames;
+    @Override
     public String[] getFontFullNames() {
         if (allFontNames == null) {
             /* Create an array list and add
@@ -1292,6 +1298,7 @@ public abstract class PrismFontFactory implements FontFactory {
         return allFontNames.toArray(STR_ARRAY);
     }
 
+    @Override
     public String[] getFontFullNames(String family) {
 
         // First check if its a logical font family.
@@ -1410,6 +1417,7 @@ public abstract class PrismFontFactory implements FontFactory {
 
     private HashMap<String, PrismFontFile> embeddedFonts;
 
+    @Override
     public PGFont[] loadEmbeddedFont(String name, InputStream fontStream,
                                      float size,
                                      boolean register,
@@ -1518,6 +1526,7 @@ public abstract class PrismFontFactory implements FontFactory {
      * @param loadAll whether to load all fonts if it is a TTC
      * @return font name extracted from font file
      */
+    @Override
     public PGFont[] loadEmbeddedFont(String name, String path,
                                      float size,
                                      boolean register,
@@ -1790,6 +1799,7 @@ public abstract class PrismFontFactory implements FontFactory {
         return fontToFileMap;
     }
 
+    @Override
     @SuppressWarnings("removal")
     public final boolean hasPermission() {
         try {
@@ -1804,6 +1814,7 @@ public abstract class PrismFontFactory implements FontFactory {
     }
 
     private static class TTFilter implements FilenameFilter {
+        @Override
         public boolean accept(File dir,String name) {
             /* all conveniently have the same suffix length */
             int offset = name.length()-4;

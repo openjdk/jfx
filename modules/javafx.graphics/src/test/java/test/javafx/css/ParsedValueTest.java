@@ -61,7 +61,7 @@ public class ParsedValueTest {
         //System.out.println("getValue");
         ParsedValue<Size,Size> instance =
                 new ParsedValueImpl<Size,Size>(new Size(100.0, SizeUnits.PERCENT), null);
-        Size expResult = new Size(100.0, SizeUnits.PERCENT);;
+        Size expResult = new Size(100.0, SizeUnits.PERCENT);
         Size result = instance.getValue();
         assertEquals(expResult, result);
     }

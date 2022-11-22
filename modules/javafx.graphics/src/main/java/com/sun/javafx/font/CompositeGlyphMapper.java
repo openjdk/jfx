@@ -77,6 +77,7 @@ public class CompositeGlyphMapper extends CharToGlyphMapper {
         return mapper;
     }
 
+    @Override
     public int getMissingGlyphCode() {
         return missingGlyph;
     }
@@ -139,6 +140,7 @@ public class CompositeGlyphMapper extends CharToGlyphMapper {
         return charToGlyph[index];
     }
 
+    @Override
     public int getGlyphCode(int charCode) {
         // If ASCII then array lookup, else use glyphMap
         int retVal = getAsciiGlyphCode(charCode);

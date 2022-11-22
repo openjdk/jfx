@@ -49,6 +49,7 @@ class J2DRTTexture extends J2DTexture implements RTTexture {
         this.opaque = false;
     }
 
+    @Override
     public int[] getPixels() {
         BufferedImage bimg = getBufferedImage();
         java.awt.image.DataBuffer db = bimg.getRaster().getDataBuffer();
@@ -58,6 +59,7 @@ class J2DRTTexture extends J2DTexture implements RTTexture {
         return null;
     }
 
+    @Override
     public boolean readPixels(Buffer pixels, int x, int y, int width, int height) {
         if (x != getContentX() || y != getContentY()
                 || width != getContentWidth() || height != getContentHeight())
@@ -67,6 +69,7 @@ class J2DRTTexture extends J2DTexture implements RTTexture {
         return readPixels(pixels);
     }
 
+    @Override
     public boolean readPixels(Buffer pixels) {
 //        int x = getContentX();
 //        int y = getContentY();
@@ -96,6 +99,7 @@ class J2DRTTexture extends J2DTexture implements RTTexture {
         return true;
     }
 
+    @Override
     public Graphics createGraphics() {
         BufferedImage bimg = getBufferedImage();
         J2DPresentable presentable = J2DPresentable.create(bimg, factory);
@@ -107,6 +111,7 @@ class J2DRTTexture extends J2DTexture implements RTTexture {
         return getBufferedImage().createGraphics();
     }
 
+    @Override
     public Screen getAssociatedScreen() {
         return factory.getScreen();
     }
@@ -142,14 +147,17 @@ class J2DRTTexture extends J2DTexture implements RTTexture {
         throw new UnsupportedOperationException("update() not supported for RTTextures");
     }
 
+    @Override
     public boolean isOpaque() {
         return opaque;
     }
 
+    @Override
     public void setOpaque(boolean opaque) {
         this.opaque = opaque;
     }
 
+    @Override
     public boolean isVolatile() {
         return false;
     }

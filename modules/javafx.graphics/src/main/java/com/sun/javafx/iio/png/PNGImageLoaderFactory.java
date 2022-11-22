@@ -42,10 +42,12 @@ public class PNGImageLoaderFactory implements ImageLoaderFactory {
         return theInstance;
     }
 
+    @Override
     public ImageFormatDescription getFormatDescription() {
         return PNGDescriptor.getInstance();
     }
 
+    @Override
     public ImageLoader createImageLoader(InputStream input) throws IOException {
         return new PNGImageLoader2(input);
     }

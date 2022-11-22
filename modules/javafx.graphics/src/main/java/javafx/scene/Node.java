@@ -1200,6 +1200,7 @@ public abstract class Node implements EventTarget, Styleable {
      * @defaultValue null
      * @see <a href="doc-files/cssref.html">CSS Reference Guide</a>
      */
+    @Override
     public final String getId() {
         return id == null ? null : id.get();
     }
@@ -1309,6 +1310,7 @@ public abstract class Node implements EventTarget, Styleable {
      *         an empty String is returned.
      * @see <a href="doc-files/cssref.html">CSS Reference Guide</a>
      */
+    @Override
     public final String getStyle() {
         return style == null ? "" : style.get();
     }

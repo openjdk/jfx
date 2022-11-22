@@ -470,7 +470,7 @@ public final class PrinterJob {
          * as it cannot be re-used.
          */
         DONE
-    };
+    }
 
     private ReadOnlyObjectWrapper<JobStatus> jobStatus =
         new ReadOnlyObjectWrapper(JobStatus.NOT_STARTED);

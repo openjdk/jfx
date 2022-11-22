@@ -68,6 +68,7 @@ final class SWResourceFactory
         this.context = new SWContext(this);
     }
 
+    @Override
     public TextureResourcePool getTextureResourcePool() {
         return SWTexturePool.instance;
     }
@@ -107,10 +108,12 @@ final class SWResourceFactory
         return new SWPresentable(pState, this);
     }
 
+    @Override
     public int getRTTWidth(int w, WrapMode wrapMode) {
         return w;
     }
 
+    @Override
     public int getRTTHeight(int h, WrapMode wrapMode) {
         return h;
     }
@@ -182,14 +185,17 @@ final class SWResourceFactory
         return createTexture(formatHint, usageHint, wrapMode, w, h);
     }
 
+    @Override
     public PhongMaterial createPhongMaterial() {
         throw new UnsupportedOperationException("Not supported yet.");
 }
 
+    @Override
     public MeshView createMeshView(Mesh mesh) {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 
+    @Override
     public Mesh createMesh() {
         throw new UnsupportedOperationException("Not supported yet.");
     }

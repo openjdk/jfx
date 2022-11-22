@@ -53,7 +53,7 @@ public class PrismTrace {
         }
     }
 
-    private static enum SummaryType { TYPE_TEX, TYPE_RTT, TYPE_ALL };
+    private static enum SummaryType { TYPE_TEX, TYPE_RTT, TYPE_ALL }
     private static String summary(long count, long size, String label) {
         return String.format("%s=%d@%,dKB", label, count, size >> 10);
     }

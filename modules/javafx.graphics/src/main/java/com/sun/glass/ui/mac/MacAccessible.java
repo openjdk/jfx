@@ -1119,7 +1119,7 @@ final class MacAccessible extends Accessible {
                 result[i] = getNativeAccessible(node);
                 i++;
             }
-            if (i == maxCount) return NSAccessibilityUnignoredChildren(result);;
+            if (i == maxCount) return NSAccessibilityUnignoredChildren(result);
         }
         return null;
     }
@@ -1506,7 +1506,7 @@ final class MacAccessible extends Accessible {
             }
             case NSAccessibilityNumberOfCharactersAttribute: {
                 String text = (String)result;
-                result = (Integer)text.length();
+                result = text.length();
                 break;
             }
             case NSAccessibilitySelectedTextAttribute: {

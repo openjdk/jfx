@@ -59,6 +59,7 @@ class ViewScene extends GlassScene {
         return painter != null && painter instanceof PresentingPainter;
     }
 
+    @Override
     protected View getPlatformView() {
         return this.platformView;
     }

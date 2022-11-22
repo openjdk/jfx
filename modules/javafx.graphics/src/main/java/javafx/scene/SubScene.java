@@ -140,7 +140,7 @@ public class SubScene extends Node {
             @Override
             public boolean isDepthBuffer(SubScene subScene) {
                 return subScene.isDepthBufferInternal();
-            };
+            }
 
             @Override
             public Camera getEffectiveCamera(SubScene subScene) {

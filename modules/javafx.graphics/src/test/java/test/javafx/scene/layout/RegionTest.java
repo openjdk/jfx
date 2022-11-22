@@ -1221,7 +1221,7 @@ public class RegionTest {
         public void clearDirty() {
             NodeShim.clearDirty(this, DirtyBits.NODE_CONTENTS);
         }
-    };
+    }
 
     // Test for RT-13820
     @Test public void changingShapeElementsShouldResultInRender() {

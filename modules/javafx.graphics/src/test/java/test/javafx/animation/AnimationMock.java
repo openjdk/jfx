@@ -38,7 +38,7 @@ public class AnimationMock extends AnimationImpl {
     public static final boolean DEFAULT_AUTOREVERSE = false;
     private long lastTimePulse;
 
-    public enum Command {PLAY, JUMP, NONE};
+    public enum Command {PLAY, JUMP, NONE}
 
     private Command lastCommand = Command.NONE;
     private long lastCurrentTicks = -1;

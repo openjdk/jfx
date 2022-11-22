@@ -39,6 +39,7 @@ class AndroidAcceleratedScreen extends AcceleratedScreen {
         super(attributes);
     }
 
+    @Override
     boolean initPlatformLibraries() {
         return super.initPlatformLibraries();
     }

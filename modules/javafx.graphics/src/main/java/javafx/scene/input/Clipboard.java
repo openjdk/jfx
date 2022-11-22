@@ -386,7 +386,7 @@ public class Clipboard {
      */
     public final boolean hasImage() {
         return hasContent(DataFormat.IMAGE);
-    };
+    }
 
     /**
      * Gets the Image from the clipboard which had previously

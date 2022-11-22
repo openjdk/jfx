@@ -108,6 +108,7 @@ public class J2DPipeline extends GraphicsPipeline {
      */
     private FontFactory j2DFontFactory;
 
+    @Override
     public FontFactory getFontFactory() {
         if (j2DFontFactory == null) {
             FontFactory fontFactory = super.getFontFactory();

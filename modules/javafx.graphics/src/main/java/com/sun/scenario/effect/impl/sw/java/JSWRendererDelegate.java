@@ -34,10 +34,12 @@ public class JSWRendererDelegate implements RendererDelegate {
     public JSWRendererDelegate() {
     }
 
+    @Override
     public AccelType getAccelType() {
         return AccelType.NONE;
     }
 
+    @Override
     public String getPlatformPeerName(String name, int unrollCount) {
         return Renderer.rootPkg + ".impl.sw.java.JSW" + name + "Peer";
     }

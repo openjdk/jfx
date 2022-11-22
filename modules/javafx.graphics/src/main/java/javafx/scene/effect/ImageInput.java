@@ -78,7 +78,7 @@ public class ImageInput extends Effect {
     @Override
     com.sun.scenario.effect.Identity createPeer() {
         return new com.sun.scenario.effect.Identity(null);
-    };
+    }
     /**
      * The source {@code Image}.
      */

@@ -150,6 +150,7 @@ public abstract class PrismFontFile implements FontResource, FontConstants {
         }
     }
 
+    @Override
     public int getDefaultAAMode() {
         return AA_GREYSCALE;
     }
@@ -219,6 +220,7 @@ public abstract class PrismFontFile implements FontResource, FontConstants {
             this.refKey = refKey;
         }
 
+        @Override
         @SuppressWarnings("removal")
         public synchronized void dispose() {
             if (fileName != null) {
@@ -263,6 +265,7 @@ public abstract class PrismFontFile implements FontResource, FontConstants {
         }
     }
 
+    @Override
     public String getFileName() {
         return filename;
     }
@@ -275,10 +278,12 @@ public abstract class PrismFontFile implements FontResource, FontConstants {
         return fontIndex;
     }
 
+    @Override
     public String getFullName() {
         return fullName;
     }
 
+    @Override
     public String getPSName() {
         if (psName == null) {
             psName = fullName;
@@ -286,22 +291,27 @@ public abstract class PrismFontFile implements FontResource, FontConstants {
         return psName;
     }
 
+    @Override
     public String getFamilyName() {
         return familyName;
     }
 
+    @Override
     public String getStyleName() {
         return styleName;
     }
 
+    @Override
     public String getLocaleFullName() {
         return localeFullName;
     }
 
+    @Override
     public String getLocaleFamilyName() {
         return localeFamilyName;
     }
 
+    @Override
     public String getLocaleStyleName() {
         return localeStyleName;
     }
@@ -309,11 +319,13 @@ public abstract class PrismFontFile implements FontResource, FontConstants {
     /*
      * Returns the features the font supports.
      */
+    @Override
     public int getFeatures() {
         //TODO check font file for features
         return -1;
     }
 
+    @Override
     public Map getStrikeMap() {
         return strikeMap;
     }
@@ -323,6 +335,7 @@ public abstract class PrismFontFile implements FontResource, FontConstants {
                                                     int aaMode,
                                                     FontStrikeDesc desc);
 
+    @Override
     public FontStrike getStrike(float size, BaseTransform transform,
                                 int aaMode) {
         FontStrikeDesc desc = new FontStrikeDesc(size, transform, aaMode);
@@ -388,10 +401,12 @@ public abstract class PrismFontFile implements FontResource, FontConstants {
     }
 
     private Object peer;
+    @Override
     public Object getPeer() {
         return peer;
     }
 
+    @Override
     public void setPeer(Object peer) {
         this.peer = peer;
     }
@@ -708,10 +723,12 @@ public abstract class PrismFontFile implements FontResource, FontConstants {
         }
     }
 
+    @Override
     public boolean isBold() {
         return isBold;
     }
 
+    @Override
     public boolean isItalic() {
         return isItalic;
     }
@@ -724,6 +741,7 @@ public abstract class PrismFontFile implements FontResource, FontConstants {
         return isRegistered;
     }
 
+    @Override
     public boolean isEmbeddedFont() {
         return isEmbedded;
     }
@@ -1148,6 +1166,7 @@ public abstract class PrismFontFile implements FontResource, FontConstants {
 
     private OpenTypeGlyphMapper mapper = null;
 
+    @Override
     public CharToGlyphMapper getGlyphMapper() {
         if (mapper == null) {
             mapper = new OpenTypeGlyphMapper(this);
@@ -1155,6 +1174,7 @@ public abstract class PrismFontFile implements FontResource, FontConstants {
         return mapper;
     }
 
+    @Override
     public FontStrike getStrike(float size, BaseTransform transform) {
         return getStrike(size, transform, getDefaultAAMode());
     }
@@ -1189,6 +1209,7 @@ public abstract class PrismFontFile implements FontResource, FontConstants {
      * they do not provide hdmx entry for sizes below that where hinting is
      * required, suggesting the htmx table is fine for such cases.
      */
+    @Override
     public float getAdvance(int glyphCode, float ptSize) {
         if (glyphCode == CharToGlyphMapper.INVISIBLE_GLYPH_ID)
             return 0f;

@@ -41,6 +41,7 @@ class CompositeStrikeDisposer implements DisposerRecord {
         this.desc = desc;
     }
 
+    @Override
     public synchronized void dispose() {
         if (!disposed) {
             // Careful here. The original strike we are collecting

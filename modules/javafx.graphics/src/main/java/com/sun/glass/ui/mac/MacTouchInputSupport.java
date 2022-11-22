@@ -60,7 +60,7 @@ class MacTouchInputSupport extends TouchInputSupport
             this.xAbs = xAbs;
             this.yAbs = yAbs;
         }
-    };
+    }
 
     MacTouchInputSupport(TouchCountListener listener,
                          boolean filterTouchCoordinates) {

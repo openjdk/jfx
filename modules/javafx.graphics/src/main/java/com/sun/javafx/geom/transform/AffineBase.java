@@ -270,6 +270,7 @@ public abstract class AffineBase extends BaseTransform {
         }
     }
 
+    @Override
     public int getType() {
         if (type == TYPE_UNKNOWN) {
             updateState(); // TODO: Is this really needed? (RT-26884)
@@ -477,6 +478,7 @@ public abstract class AffineBase extends BaseTransform {
      * @return <code>true</code> if this <code>Affine2D</code> is
      * an identity transform; <code>false</code> otherwise.
      */
+    @Override
     public boolean isIdentity() {
         return (state == APPLY_IDENTITY || (getType() == TYPE_IDENTITY));
     }
@@ -531,6 +533,7 @@ public abstract class AffineBase extends BaseTransform {
      * @see #inverseTransform
      * @see #TYPE_UNIFORM_SCALE
      */
+    @Override
     public double getDeterminant() {
         // assert(APPLY_3D was dealt with at a higher level)
         switch (state) {
@@ -563,6 +566,7 @@ public abstract class AffineBase extends BaseTransform {
     /**
      * Resets this transform to the Identity transform.
      */
+    @Override
     public void setToIdentity() {
         mxx = myy = 1.0;
         myx = mxy = mxt = myt = 0.0;
@@ -646,6 +650,7 @@ public abstract class AffineBase extends BaseTransform {
      * @return the <code>ptDst</code> after transforming
      * <code>ptSrc</code> and stroring the result in <code>ptDst</code>.
      */
+    @Override
     public Point2D transform(Point2D ptSrc, Point2D ptDst) {
         if (ptDst == null) {
             ptDst = new Point2D();
@@ -694,6 +699,7 @@ public abstract class AffineBase extends BaseTransform {
         /* NOTREACHED */
     }
 
+    @Override
     public Vec3d transform(Vec3d src, Vec3d dst) {
         if (dst == null) {
             dst = new Vec3d();
@@ -770,6 +776,7 @@ public abstract class AffineBase extends BaseTransform {
      * <code>src</code> and storing the result in <code>dst</code>.
      * @since JavaFX 8.0
      */
+    @Override
     public Vec3d deltaTransform(Vec3d src, Vec3d dst) {
         if (dst == null) {
             dst = new Vec3d();
@@ -958,6 +965,7 @@ public abstract class AffineBase extends BaseTransform {
         return dst;
     }
 
+    @Override
     public BaseBounds transform(BaseBounds src, BaseBounds dst) {
         // assert(APPLY_3D was dealt with at a higher level)
         if (src.getBoundsType() != BaseBounds.BoundsType.RECTANGLE ||
@@ -967,6 +975,7 @@ public abstract class AffineBase extends BaseTransform {
         return transform2DBounds((RectBounds)src, (RectBounds)dst);
     }
 
+    @Override
     public void transform(Rectangle src, Rectangle dst) {
         // assert(APPLY_3D was dealt with at a higher level)
         switch (state & APPLY_2D_MASK) {
@@ -1015,6 +1024,7 @@ public abstract class AffineBase extends BaseTransform {
      * transformed point that is stored in the destination array
      * @param numPts the number of points to be transformed
      */
+    @Override
     public void transform(float[] srcPts, int srcOff,
                           float[] dstPts, int dstOff,
                           int numPts)
@@ -1053,6 +1063,7 @@ public abstract class AffineBase extends BaseTransform {
      * @param numPts the number of vector coordinate pairs to be
      * transformed
      */
+    @Override
     public void deltaTransform(float[] srcPts, int srcOff,
                                float[] dstPts, int dstOff,
                                int numPts)
@@ -1179,6 +1190,7 @@ public abstract class AffineBase extends BaseTransform {
      * transformed point that is stored in the destination array
      * @param numPts the number of point objects to be transformed
      */
+    @Override
     public void transform(double[] srcPts, int srcOff,
                           double[] dstPts, int dstOff,
                           int numPts)
@@ -1217,6 +1229,7 @@ public abstract class AffineBase extends BaseTransform {
      * @param numPts the number of vector coordinate pairs to be
      * transformed
      */
+    @Override
     public void deltaTransform(double[] srcPts, int srcOff,
                                double[] dstPts, int dstOff,
                                int numPts)
@@ -1339,6 +1352,7 @@ public abstract class AffineBase extends BaseTransform {
      * transformed point that is stored in the destination array
      * @param numPts the number of points to be transformed
      */
+    @Override
     public void transform(float[] srcPts, int srcOff,
                           double[] dstPts, int dstOff,
                           int numPts) {
@@ -1437,6 +1451,7 @@ public abstract class AffineBase extends BaseTransform {
      * transformed point that is stored in the destination array
      * @param numPts the number of point objects to be transformed
      */
+    @Override
     public void transform(double[] srcPts, int srcOff,
                           float[] dstPts, int dstOff,
                           int numPts) {
@@ -1537,6 +1552,7 @@ public abstract class AffineBase extends BaseTransform {
      * @exception NoninvertibleTransformException  if the matrix cannot be
      *                                         inverted.
      */
+    @Override
     public Point2D inverseTransform(Point2D ptSrc, Point2D ptDst)
         throws NoninvertibleTransformException
     {
@@ -1896,6 +1912,7 @@ public abstract class AffineBase extends BaseTransform {
         return dst;
     }
 
+    @Override
     public BaseBounds inverseTransform(BaseBounds src, BaseBounds dst)
         throws NoninvertibleTransformException
     {
@@ -1907,6 +1924,7 @@ public abstract class AffineBase extends BaseTransform {
         return inversTransform2DBounds((RectBounds)src, (RectBounds)dst);
     }
 
+    @Override
     public void inverseTransform(Rectangle src, Rectangle dst)
         throws NoninvertibleTransformException
     {
@@ -1960,6 +1978,7 @@ public abstract class AffineBase extends BaseTransform {
      * @exception NoninvertibleTransformException  if the matrix cannot be
      *                                         inverted.
      */
+    @Override
     public void inverseTransform(float[] srcPts, int srcOff,
                                  float[] dstPts, int dstOff,
                                  int numPts)
@@ -1991,6 +2010,7 @@ public abstract class AffineBase extends BaseTransform {
      * @exception NoninvertibleTransformException  if the matrix cannot be
      *                                         inverted.
      */
+    @Override
     public void inverseDeltaTransform(float[] srcPts, int srcOff,
                                       float[] dstPts, int dstOff,
                                       int numPts)
@@ -2146,6 +2166,7 @@ public abstract class AffineBase extends BaseTransform {
      * @exception NoninvertibleTransformException  if the matrix cannot be
      *                                         inverted.
      */
+    @Override
     public void inverseTransform(double[] srcPts, int srcOff,
                                  double[] dstPts, int dstOff,
                                  int numPts)
@@ -2274,6 +2295,7 @@ public abstract class AffineBase extends BaseTransform {
      * @return a new <code>Shape</code> object that defines the geometry
      * of the transformed <code>Shape</code>, or null if {@code pSrc} is null.
      */
+    @Override
     public Shape createTransformedShape(Shape s) {
         if (s == null) {
             return null;
@@ -2882,6 +2904,7 @@ public abstract class AffineBase extends BaseTransform {
      * @exception NoninvertibleTransformException
      * if the matrix cannot be inverted.
      */
+    @Override
     public void invert()
         throws NoninvertibleTransformException
     {

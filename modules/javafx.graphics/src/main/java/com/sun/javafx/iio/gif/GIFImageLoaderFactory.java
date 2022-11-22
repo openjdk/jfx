@@ -44,10 +44,12 @@ public class GIFImageLoaderFactory implements ImageLoaderFactory {
         return theInstance;
     }
 
+    @Override
     public ImageFormatDescription getFormatDescription() {
         return GIFDescriptor.getInstance();
     }
 
+    @Override
     public ImageLoader createImageLoader(InputStream input) throws IOException {
         return new GIFImageLoader2(input);
     }

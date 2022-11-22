@@ -75,10 +75,12 @@ public class PPSRenderer extends PrRenderer {
     private final ResourceFactoryListener listener =
         new ResourceFactoryListener()
     {
+        @Override
         public void factoryReset() {
             dispose();
         }
 
+        @Override
         public void factoryReleased() {
             dispose();
         }

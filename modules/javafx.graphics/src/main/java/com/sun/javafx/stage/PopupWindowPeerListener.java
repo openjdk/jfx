@@ -39,6 +39,7 @@ public class PopupWindowPeerListener extends WindowPeerListener {
         this.popupWindow = popupWindow;
     }
 
+    @Override
     public void changedFocused(boolean cf, FocusCause cause) {
         // TODO: at the native level popup windows are unfocusable, so we
         // don't get any focus notifications from the platform. Temporary
@@ -48,24 +49,30 @@ public class PopupWindowPeerListener extends WindowPeerListener {
         WindowHelper.setFocused(popupWindow, cf);
     }
 
+    @Override
     public void closing() {
     }
 
+    @Override
     public void changedLocation(float x, float y) {
     }
 
+    @Override
     public void changedIconified(boolean iconified) {
         // Not applicable for popups
     }
 
+    @Override
     public void changedMaximized(boolean maximized) {
         // Not applicable for popups
     }
 
+    @Override
     public void changedResizable(boolean resizable) {
         // Not applicable for popups
     }
 
+    @Override
     public void changedFullscreen(boolean fs) {
         //  Not applicable for popups
     }

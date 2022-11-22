@@ -562,6 +562,7 @@ class ShapeEvaluator {
             return new Rectangle(getBounds());
         }
 
+        @Override
         public RectBounds getBounds() {
             int n = geom0.getNumCoords();
             float xmin, ymin, xmax, ymax;
@@ -586,26 +587,32 @@ class ShapeEvaluator {
             return new RectBounds(xmin, ymin, xmax, ymax);
         }
 
+        @Override
         public boolean contains(float x, float y) {
             return Path2D.contains(getPathIterator(null), x, y);
         }
 
+        @Override
         public boolean intersects(float x, float y, float w, float h) {
             return Path2D.intersects(getPathIterator(null), x, y, w, h);
         }
 
+        @Override
         public boolean contains(float x, float y, float width, float height) {
             return Path2D.contains(getPathIterator(null), x, y, width, height);
         }
 
+        @Override
         public PathIterator getPathIterator(BaseTransform at) {
             return new Iterator(at, geom0, geom1, t);
         }
 
+        @Override
         public PathIterator getPathIterator(BaseTransform at, float flatness) {
             return new FlatteningPathIterator(getPathIterator(at), flatness);
         }
 
+        @Override
         public Shape copy() {
             return new Path2D(this);
         }
@@ -630,6 +637,7 @@ class ShapeEvaluator {
         /**
          * @{inheritDoc}
          */
+        @Override
         public int getWindingRule() {
             return (t < 0.5 ? g0.getWindingRule() : g1.getWindingRule());
         }
@@ -637,6 +645,7 @@ class ShapeEvaluator {
         /**
          * @{inheritDoc}
          */
+        @Override
         public boolean isDone() {
             return (cindex > g0.getNumCoords());
         }
@@ -644,6 +653,7 @@ class ShapeEvaluator {
         /**
          * @{inheritDoc}
          */
+        @Override
         public void next() {
             if (cindex == 0) {
                 cindex = 2;
@@ -655,6 +665,7 @@ class ShapeEvaluator {
         /**
          * @{inheritDoc}
          */
+        @Override
         public int currentSegment(float coords[]) {
             int type;
             int n;

@@ -89,6 +89,7 @@ public class PerformanceLogger {
         String perfLoggingProp =
             java.security.AccessController.doPrivileged(
                     new java.security.PrivilegedAction<String>() {
+                        @Override
                         public String run() {
                             return System.getProperty("sun.perflog");
                         }
@@ -101,6 +102,7 @@ public class PerformanceLogger {
             String perfNanoProp =
                 java.security.AccessController.doPrivileged(
                     new java.security.PrivilegedAction<String>() {
+                        @Override
                         public String run() {
                             return System.getProperty("sun.perflog.nano");
                         }
@@ -118,6 +120,7 @@ public class PerformanceLogger {
                     @SuppressWarnings("removal")
                     var dummy = java.security.AccessController.doPrivileged(
                     new java.security.PrivilegedAction<Void>() {
+                        @Override
                         public Void run() {
                             try {
                                 File logFile = new File(logFileName);

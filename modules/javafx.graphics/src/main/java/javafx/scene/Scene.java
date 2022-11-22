@@ -376,11 +376,13 @@ public class Scene implements EventTarget {
 
     static {
             PerformanceTracker.setSceneAccessor(new PerformanceTracker.SceneAccessor() {
+                @Override
                 public void setPerfTracker(Scene scene, PerformanceTracker tracker) {
                     synchronized (trackerMonitor) {
                         scene.tracker = tracker;
                     }
                 }
+                @Override
                 public PerformanceTracker getPerfTracker(Scene scene) {
                     synchronized (trackerMonitor) {
                         return scene.tracker;
@@ -2015,7 +2017,7 @@ public class Scene implements EventTarget {
             EventTarget grabbed = tp.getGrabbed();
             if (grabbed != null) {
                 touchTargets.put(tp.getId(), grabbed);
-            };
+            }
 
             if (grabbed == null || tp.getState() == TouchPoint.State.RELEASED) {
                 touchTargets.remove(tp.getId());
@@ -2638,6 +2640,7 @@ public class Scene implements EventTarget {
             processInputMethodEvent(inputMethodEvent);
         }
 
+        @Override
         public void menuEvent(double x, double y, double xAbs, double yAbs,
                 boolean isKeyboardTrigger) {
             Scene.this.processMenuEvent(x, y, xAbs,yAbs, isKeyboardTrigger);

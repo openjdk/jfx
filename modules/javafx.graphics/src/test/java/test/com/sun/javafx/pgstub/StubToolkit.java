@@ -735,6 +735,7 @@ public class StubToolkit extends Toolkit {
         this.platformShortcutKey = platformShortcutKey;
     }
 
+    @Override
     public KeyCode getPlatformShortcutKey() {
         return platformShortcutKey;
     }

@@ -318,6 +318,7 @@ public abstract class Parent extends Node {
     private final ObservableList<Node> children = new VetoableListDecorator<Node>(new TrackableObservableList<Node>() {
 
 
+        @Override
         protected void onChanged(Change<Node> c) {
             // proceed with updating the scene graph
             unmodifiableManagedChildren = null;
@@ -1916,6 +1917,7 @@ public abstract class Parent extends Node {
         }
     }
 
+    @Override
     void releaseAccessible() {
         for (int i=0, max=children.size(); i<max; i++) {
             final Node node = children.get(i);

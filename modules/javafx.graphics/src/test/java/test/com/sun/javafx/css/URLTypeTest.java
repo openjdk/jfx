@@ -93,7 +93,7 @@ public class URLTypeTest {
                 new ParsedValueImpl<String, String>(baseURL, null)
             };
             urls[n] = new ParsedValueImpl<ParsedValue[],String>(values, URLConverter.getInstance());
-        };
+        }
 
         ParsedValue<ParsedValue<ParsedValue[],String>[],String[]> value =
                 new ParsedValueImpl<ParsedValue<ParsedValue[],String>[],String[]>(urls, URLConverter.SequenceConverter.getInstance());

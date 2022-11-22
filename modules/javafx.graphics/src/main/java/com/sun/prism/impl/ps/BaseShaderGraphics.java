@@ -95,6 +95,7 @@ public abstract class BaseShaderGraphics
         return isComplexPaint;
     }
 
+    @Override
     public void getPaintShaderTransform(Affine3D ret) {
         ret.setTransform(getTransformNoClone());
     }
@@ -103,6 +104,7 @@ public abstract class BaseShaderGraphics
         return externalShader;
     }
 
+    @Override
     public void setExternalShader(Shader shader) {
         this.externalShader = shader;
         context.setExternalShader(this, shader);
@@ -121,8 +123,10 @@ public abstract class BaseShaderGraphics
 
     private NGLightBase lights[] = null;
 
+    @Override
     public void setLights(NGLightBase lights[]) { this.lights = lights; }
 
+    @Override
     public final NGLightBase[] getLights() { return this.lights; }
 
     @Override
@@ -303,6 +307,7 @@ public abstract class BaseShaderGraphics
         }
     }
 
+    @Override
     public void drawTextureRaw2(Texture src1, Texture src2,
                                 float dx1, float dy1, float dx2, float dy2,
                                 float t1x1, float t1y1, float t1x2, float t1y2,
@@ -326,6 +331,7 @@ public abstract class BaseShaderGraphics
                    t2x1, t2y1, t2x2, t2y2);
     }
 
+    @Override
     public void drawMappedTextureRaw2(Texture src1, Texture src2,
                                       float dx1, float dy1, float dx2, float dy2,
                                       float t1x11, float t1y11, float t1x21, float t1y21,
@@ -353,6 +359,7 @@ public abstract class BaseShaderGraphics
                          t2x12, t2y12, t2x22, t2y22);
     }
 
+    @Override
     public void drawPixelsMasked(RTTexture imgtex, RTTexture masktex,
                                  int dx, int dy, int dw, int dh,
                                  int ix, int iy, int mx, int my)
@@ -382,6 +389,7 @@ public abstract class BaseShaderGraphics
                    mx1, my1, mx2, my2);
     }
 
+    @Override
     public void maskInterpolatePixels(RTTexture imgtex, RTTexture masktex,
                                       int dx, int dy, int dw, int dh,
                                       int ix, int iy, int mx, int my)
@@ -1502,6 +1510,7 @@ public abstract class BaseShaderGraphics
         return true;
     }
 
+    @Override
     public void fillRect(float x, float y, float w, float h) {
         if (w <= 0 || h <= 0) {
             return;
@@ -1527,6 +1536,7 @@ public abstract class BaseShaderGraphics
                                  MaskType.FILL_PGRAM, null);
     }
 
+    @Override
     public void fillEllipse(float x, float y, float w, float h) {
         if (w <= 0 || h <= 0) {
             return;
@@ -1554,6 +1564,7 @@ public abstract class BaseShaderGraphics
                                  MaskType.FILL_ELLIPSE, null);
     }
 
+    @Override
     public void fillRoundRect(float x, float y, float w, float h,
                               float arcw, float arch)
     {
@@ -1577,6 +1588,7 @@ public abstract class BaseShaderGraphics
                                  MaskType.FILL_ROUNDRECT, null);
     }
 
+    @Override
     public void fillQuad(float x1, float y1, float x2, float y2) {
         float bx, by, bw, bh;
         if (x1 <= x2) {
@@ -1646,6 +1658,7 @@ public abstract class BaseShaderGraphics
                   bs.getMiterLimit() >= SQRT_2)));
     }
 
+    @Override
     public void blit(RTTexture srcTex, RTTexture dstTex,
                      int srcX0, int srcY0, int srcX1, int srcY1,
                      int dstX0, int dstY0, int dstX1, int dstY1) {
@@ -1658,6 +1671,7 @@ public abstract class BaseShaderGraphics
                 dstX0, dstY0, dstX1, dstY1);
     }
 
+    @Override
     public void drawRect(float x, float y, float w, float h) {
         if (w < 0 || h < 0) {
             return;
@@ -1710,6 +1724,7 @@ public abstract class BaseShaderGraphics
                 (arcw * 2f > arch && arch * 2f > arcw));
     }
 
+    @Override
     public void drawEllipse(float x, float y, float w, float h) {
         if (w < 0 || h < 0) {
             return;
@@ -1725,6 +1740,7 @@ public abstract class BaseShaderGraphics
         renderShape(scratchEllipse, stroke, x, y, w, h);
     }
 
+    @Override
     public void drawRoundRect(float x, float y, float w, float h,
                               float arcw, float arch)
     {
@@ -1745,6 +1761,7 @@ public abstract class BaseShaderGraphics
         renderShape(scratchRRect, stroke, x, y, w, h);
     }
 
+    @Override
     public void drawLine(float x1, float y1, float x2, float y2) {
         float bx, by, bw, bh;
         if (x1 <= x2) {
@@ -1920,6 +1937,7 @@ public abstract class BaseShaderGraphics
 
     private boolean lcdSampleInvalid = false;
 
+    @Override
     public void setNodeBounds(RectBounds bounds) {
         nodeBounds = bounds;
         lcdSampleInvalid = bounds != null;
@@ -1963,6 +1981,7 @@ public abstract class BaseShaderGraphics
         lcdSampleInvalid = false;
     }
 
+    @Override
     public void drawString(GlyphList gl, FontStrike strike, float x, float y,
                            Color selectColor, int selectStart, int selectEnd) {
 
@@ -2132,12 +2151,14 @@ public abstract class BaseShaderGraphics
         context.getVertexBuffer().addQuad(bx, by, bx + bw, by + bh, tx1, ty1, tx2, ty2);
     }
 
+    @Override
     public boolean canReadBack() {
         RenderTarget rt = getRenderTarget();
         return rt instanceof ReadbackRenderTarget &&
             ((ReadbackRenderTarget) rt).getBackBuffer() != null;
     }
 
+    @Override
     public RTTexture readBack(Rectangle view) {
         RenderTarget rt = getRenderTarget();
         context.flushVertexBuffer();
@@ -2165,12 +2186,14 @@ public abstract class BaseShaderGraphics
         return lcdrtt;
     }
 
+    @Override
     public void releaseReadBackBuffer(RTTexture rtt) {
         // This will be needed when we track LCD buffer locks and uses.
         // (See RT-29488)
 //        context.releaseLCDBuffer();
     }
 
+    @Override
     public void setup3DRendering() {
         context.setRenderTarget(this);
     }

@@ -2334,7 +2334,7 @@ final public class CssParser {
                 temp.token.getText() == null ||
                 temp.token.getText().isEmpty()) error(temp, "Expected \'<paint>\'");
 
-            paints[paint++] = (ParsedValueImpl<?,Paint>)parse(temp);
+            paints[paint++] = parse(temp);
 
             temp = nextLayer(temp);
         } while (temp != null);
@@ -2490,7 +2490,7 @@ final public class CssParser {
                 }
                 nHorizontalTerms += 1;
                 temp = temp.nextInSeries;
-            };
+            }
 
             int nVerticalTerms = 0;
             while (temp != null) {
@@ -3827,11 +3827,11 @@ final public class CssParser {
                 error(term, "Expected \'<font-weight>\', \'<font-style>\' or \'<font-variant>\'");
 
             if (fstyle == null && ((fstyle = parseFontStyle(term)) != null)) {
-                ;
+
             } else if (fvariant == null && "small-caps".equalsIgnoreCase(term.token.getText())) {
                 fvariant = term.token.getText();
             } else if (fweight == null && ((fweight = parseFontWeight(term)) != null)) {
-                ;
+
             }
         }
 

@@ -1174,7 +1174,7 @@ public enum KeyCode {
 
     // Need to bundle this in another class to avoid "forward reference" compiler error
     private static class KeyCodeClass {
-        private KeyCodeClass() {};
+        private KeyCodeClass() {}
 
         private static final int FUNCTION = 1;
         private static final int NAVIGATION = 1 << 1;

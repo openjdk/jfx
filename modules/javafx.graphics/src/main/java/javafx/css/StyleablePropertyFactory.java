@@ -1897,6 +1897,7 @@ public class StyleablePropertyFactory<S extends Styleable> {
 
         private final Function<S,StyleableProperty<V>> function;
 
+        @Override
         public final boolean isSettable(S styleable) {
             final StyleableProperty<V> prop = getStyleableProperty(styleable);
             if (prop instanceof Property) {

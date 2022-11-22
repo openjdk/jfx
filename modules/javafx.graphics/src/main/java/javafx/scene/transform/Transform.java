@@ -2921,6 +2921,7 @@ public abstract class Transform implements Cloneable, EventTarget {
             }
         }
 
+        @Override
         void ensureCanTransform2DPoint() throws IllegalStateException {
             if (state3d != APPLY_NON_3D) {
                 throw new IllegalStateException("Cannot transform 2D point "

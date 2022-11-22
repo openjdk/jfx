@@ -51,11 +51,13 @@ public class NULL3DPipeline extends GraphicsPipeline {
         return theInstance;
     }
 
+    @Override
     public boolean init() {
         return true;
     }
 
 
+    @Override
     public void dispose() {
     }
 

@@ -53,6 +53,7 @@ public final class GtkPlatformFactory extends PlatformFactory {
         return new GtkMenuItemDelegate();
     }
 
+    @Override
     public ClipboardDelegate createClipboardDelegate() {
         return new GtkClipboardDelegate();
     }

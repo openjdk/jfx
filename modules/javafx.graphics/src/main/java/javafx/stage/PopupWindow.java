@@ -689,7 +689,7 @@ public abstract class PopupWindow extends Window {
         boolean isContentLocation() {
             return contentLocation;
         }
-    };
+    }
 
     @Override
     void setXInternal(final double value) {

@@ -226,6 +226,7 @@ public class LogicalFont implements CompositeFontResource {
         }
     }
 
+    @Override
     public int getNumSlots() {
         getLinkedFonts();
         int num = linkedFontFiles.size();
@@ -235,6 +236,7 @@ public class LogicalFont implements CompositeFontResource {
         return num + 1;
     }
 
+    @Override
     public int getSlotForFont(String fontName) {
         getLinkedFonts();
         int i = 1;
@@ -287,6 +289,7 @@ public class LogicalFont implements CompositeFontResource {
         return i;
     }
 
+    @Override
     public FontResource getSlotResource(int slot) {
         if (slot == 0) {
             return getSlot0Resource();
@@ -314,62 +317,77 @@ public class LogicalFont implements CompositeFontResource {
         }
     }
 
+    @Override
     public String getFullName() {
         return fullName;
     }
 
+    @Override
     public String getPSName() {
         return fullName;
     }
 
+    @Override
     public String getFamilyName() {
         return familyName;
     }
 
+    @Override
     public String getStyleName() {
         return styleName;
     }
 
+    @Override
     public String getLocaleFullName() {
         return fullName;
     }
 
+    @Override
     public String getLocaleFamilyName() {
         return familyName;
     }
 
+    @Override
     public String getLocaleStyleName() {
         return styleName;
     }
 
+    @Override
     public boolean isBold() {
         return getSlotResource(0).isBold();
     }
 
+    @Override
     public boolean isItalic() {
         return getSlotResource(0).isItalic();
     }
 
+    @Override
     public String getFileName() {
         return getSlotResource(0).getFileName();
     }
 
+    @Override
     public int getFeatures() {
         return getSlotResource(0).getFeatures();
     }
 
+    @Override
     public Object getPeer() {
         return null;
     }
 
+    @Override
     public boolean isEmbeddedFont() {
         return getSlotResource(0).isEmbeddedFont();
     }
 
+    @Override
     public void setPeer(Object peer) {
         throw new UnsupportedOperationException("Not supported");
     }
 
+    @Override
     public float[] getGlyphBoundingBox(int glyphCode,
                                 float size, float[] retArr) {
         int slot = (glyphCode >>> 24);
@@ -378,6 +396,7 @@ public class LogicalFont implements CompositeFontResource {
         return slotResource.getGlyphBoundingBox(slotglyphCode, size, retArr);
    }
 
+    @Override
     public float getAdvance(int glyphCode, float size) {
         int slot = (glyphCode >>> 24);
         int slotglyphCode = glyphCode & CompositeGlyphMapper.GLYPHMASK;
@@ -386,6 +405,7 @@ public class LogicalFont implements CompositeFontResource {
     }
 
     CompositeGlyphMapper mapper;
+    @Override
     public CharToGlyphMapper getGlyphMapper() {
         //return getSlot0Resource().getGlyphMapper();
         if (mapper == null) {
@@ -397,18 +417,22 @@ public class LogicalFont implements CompositeFontResource {
     Map<FontStrikeDesc, WeakReference<FontStrike>> strikeMap =
         new ConcurrentHashMap<FontStrikeDesc, WeakReference<FontStrike>>();
 
+    @Override
     public Map<FontStrikeDesc, WeakReference<FontStrike>> getStrikeMap() {
         return strikeMap;
     }
 
+    @Override
     public int getDefaultAAMode() {
         return getSlot0Resource().getDefaultAAMode();
     }
 
+    @Override
     public FontStrike getStrike(float size, BaseTransform transform) {
         return getStrike(size, transform, getDefaultAAMode());
     }
 
+    @Override
     public FontStrike getStrike(float size, BaseTransform transform,
                                 int aaMode) {
         FontStrikeDesc desc= new FontStrikeDesc(size, transform, aaMode);

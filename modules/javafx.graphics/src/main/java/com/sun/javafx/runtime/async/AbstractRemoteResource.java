@@ -70,6 +70,7 @@ public abstract class AbstractRemoteResource<T> extends AbstractAsyncOperation<T
 
     protected abstract T processStream(InputStream stream) throws IOException;
 
+    @Override
     public T call() throws IOException {
         URL u = new URL(url);
         InputStream stream = null;

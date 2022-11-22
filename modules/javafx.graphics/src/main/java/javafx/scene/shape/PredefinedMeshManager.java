@@ -231,4 +231,4 @@ final class PredefinedMeshManager {
         private static final TriangleMeshCache INSTANCE = new TriangleMeshCache();
     }
 
-};
+}

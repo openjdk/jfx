@@ -53,6 +53,7 @@ class WinSystemClipboard extends SystemClipboard {
         return ptr;
     }
 
+    @Override
     protected native boolean isOwner();
 
     protected native void create();
@@ -218,6 +219,7 @@ class WinSystemClipboard extends SystemClipboard {
         }
     }
 
+    @Override
     protected final void pushToSystem(HashMap<String, Object> cacheData, int supportedActions) {
         Set<String> mimes = cacheData.keySet();
         Set<String> mimesForSystem = new HashSet<String>();
@@ -235,6 +237,7 @@ class WinSystemClipboard extends SystemClipboard {
     }
 
     private native byte[] popBytes(String mime, long index);
+    @Override
     protected final Object popFromSystem(String mimeFull) {
         //we have to syncronize with system ones per
         //a popFromSystem function call, because
@@ -322,6 +325,7 @@ class WinSystemClipboard extends SystemClipboard {
     }
 
     private native String[] popMimesFromSystem();
+    @Override
     protected final String[] mimesFromSystem() {
         //we have to syncronize with system
         //if we heed to do it. DnD clipboard need not.

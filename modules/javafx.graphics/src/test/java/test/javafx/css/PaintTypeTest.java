@@ -71,7 +71,7 @@ public class PaintTypeTest {
         ParsedValue<Color,Color> color = new ParsedValueImpl<Color,Color>(stop.getColor(), null);
         ParsedValue[] values = new ParsedValue[] { offset, color };
         return new ParsedValueImpl<ParsedValue[],Stop>(values, StopConverter.getInstance());
-    };
+    }
 
     ParsedValue<ParsedValue[],Paint> linearGradientValues(LinearGradient lg) {
         ParsedValue[] values = new ParsedValue[7];

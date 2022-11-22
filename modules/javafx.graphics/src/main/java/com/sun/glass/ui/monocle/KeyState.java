@@ -111,6 +111,7 @@ class KeyState {
         return (modifiers & KeyEvent.MODIFIER_CONTROL) != 0;
     }
 
+    @Override
     public String toString() {
         return "KeyState[modifiers=" + modifiers + ",keys=" + keysPressed + "]";
     }
