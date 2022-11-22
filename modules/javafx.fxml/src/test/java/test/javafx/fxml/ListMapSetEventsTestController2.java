@@ -42,19 +42,16 @@ public class ListMapSetEventsTestController2 implements Initializable {
     }
 
     @FXML
-    @SuppressWarnings("unchecked")
     protected void handleChildListChange() {
         listNoParamCalled = true;
     }
 
     @FXML
-    @SuppressWarnings("unchecked")
     protected void handlePropertiesChange() {
         mapNoParamCalled = true;
     }
 
     @FXML
-    @SuppressWarnings("unchecked")
     protected void handleSetChange() {
         setNoParamCalled = true;
     }

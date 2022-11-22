@@ -51,7 +51,7 @@ public class ExpressionValue extends ObservableValueBase<Object> {
 
         private Object namespace = null;
 
-        private ListChangeListener<Object> listChangeListener = new ListChangeListener<Object>() {
+        private ListChangeListener<Object> listChangeListener = new ListChangeListener<>() {
             @Override
             public void onChanged(Change<? extends Object> change) {
                 while (change.next()) {
@@ -65,7 +65,7 @@ public class ExpressionValue extends ObservableValueBase<Object> {
             }
         };
 
-        private MapChangeListener<String, Object> mapChangeListener = new MapChangeListener<String, Object>() {
+        private MapChangeListener<String, Object> mapChangeListener = new MapChangeListener<>() {
             @Override
             public void onChanged(Change<? extends String, ? extends Object> change) {
                 if (key.equals(change.getKey())) {
@@ -75,7 +75,7 @@ public class ExpressionValue extends ObservableValueBase<Object> {
             }
         };
 
-        private ChangeListener<Object> propertyChangeListener = new ChangeListener<Object>() {
+        private ChangeListener<Object> propertyChangeListener = new ChangeListener<>() {
             @Override
             public void changed(ObservableValue<? extends Object> observable, Object oldValue, Object newValue) {
                 fireValueChangedEvent();
@@ -179,7 +179,7 @@ public class ExpressionValue extends ObservableValueBase<Object> {
         this.type = type;
 
         List<KeyPath> arguments = expression.getArguments();
-        argumentMonitors = new ArrayList<KeyPathMonitor>(arguments.size());
+        argumentMonitors = new ArrayList<>(arguments.size());
 
         for (KeyPath argument : arguments) {
             argumentMonitors.add(new KeyPathMonitor(argument.iterator()));

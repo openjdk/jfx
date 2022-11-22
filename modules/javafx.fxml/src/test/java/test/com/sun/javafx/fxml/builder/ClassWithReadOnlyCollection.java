@@ -34,7 +34,7 @@ import java.util.List;
 
 public class ClassWithReadOnlyCollection {
     public double a;
-    ObservableList<Integer> propertyList = new TrackableObservableList<Integer>() {
+    ObservableList<Integer> propertyList = new TrackableObservableList<>() {
         @Override
         protected void onChanged(ListChangeListener.Change<Integer> c) {}
     };
