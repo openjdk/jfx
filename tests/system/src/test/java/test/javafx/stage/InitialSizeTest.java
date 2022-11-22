@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2017, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,25 +24,24 @@
  */
 package test.javafx.stage;
 
+import java.util.concurrent.CountDownLatch;
+
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.scene.Group;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
 import javafx.stage.WindowEvent;
+
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
+
 import test.util.Util;
 
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-
-import static org.junit.Assert.fail;
-
 public class InitialSizeTest {
-    static CountDownLatch startupLatch;
+    static CountDownLatch startupLatch = new CountDownLatch(1);
     static Stage stage;
     private static final double INIT_SIZE = 200.d;
 
@@ -61,15 +60,12 @@ public class InitialSizeTest {
 
     @BeforeClass
     public static void initFX() {
-        startupLatch = new CountDownLatch(1);
-        new Thread(() -> Application.launch(TestApp.class, (String[]) null)).start();
-        try {
-            if (!startupLatch.await(15, TimeUnit.SECONDS)) {
-                fail("Timeout waiting for FX runtime to start");
-            }
-        } catch (InterruptedException ex) {
-            fail("Unexpected exception: " + ex);
-        }
+        Util.launch(startupLatch, TestApp.class);
+    }
+
+    @AfterClass
+    public static void teardown() {
+        Util.shutdown(stage);
     }
 
     @Test
@@ -78,11 +74,5 @@ public class InitialSizeTest {
         Assert.assertTrue(stage.isShowing());
         Assert.assertEquals("Stage height", INIT_SIZE, stage.getHeight(), .1d);
         Assert.assertEquals("Stage width", INIT_SIZE, stage.getWidth(), .1d);
-    }
-
-    @AfterClass
-    public static void teardown() {
-        Platform.runLater(stage::hide);
-        Platform.exit();
     }
 }

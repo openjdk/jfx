@@ -609,12 +609,6 @@ ext.CROSS_TOOLS_DIR = file(crossToolsDir)
 defineProperty("BUILD_SDK_FOR_TEST", "true")
 ext.DO_BUILD_SDK_FOR_TEST = Boolean.parseBoolean(BUILD_SDK_FOR_TEST)
 
-// All "classes" and "jar" tasks and their dependencies would be disabled
-// when running with DO_BUILD_SDK_FOR_TEST=false as they're unneeded for running tests
-if (!DO_BUILD_SDK_FOR_TEST) {
-    gradle.taskGraph.useFilter({ task -> !task.name.equals("classes") && !task.name.equals("jar") })
-}
-
 // Make sure JDK_HOME/bin/java exists
 if (!file(JAVA).exists()) throw new Exception("Missing or incorrect path to 'java': '$JAVA'. Perhaps bad JDK_HOME? $JDK_HOME")
 if (!file(JAVAC).exists()) throw new Exception("Missing or incorrect path to 'javac': '$JAVAC'. Perhaps bad JDK_HOME? $JDK_HOME")

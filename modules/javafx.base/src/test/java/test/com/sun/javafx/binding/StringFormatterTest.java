@@ -53,7 +53,6 @@ import test.javafx.binding.DependencyUtils;
 import org.junit.Before;
 import org.junit.Test;
 
-@SuppressWarnings("WebTest")
 public class StringFormatterTest {
 
     private double double0;
@@ -104,7 +103,7 @@ public class StringFormatterTest {
         intV = new SimpleIntegerProperty(int0);
         booleanV = new SimpleBooleanProperty(boolean0);
         stringV = new SimpleStringProperty(string0);
-        dateV = new SimpleObjectProperty<Date>(date0);
+        dateV = new SimpleObjectProperty<>(date0);
     }
 
     @Test

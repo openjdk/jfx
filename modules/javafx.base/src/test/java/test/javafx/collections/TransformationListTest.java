@@ -25,9 +25,7 @@
 
 package test.javafx.collections;
 
-import java.util.ArrayList;
 import java.util.Collection;
-import java.util.List;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener.Change;
 import javafx.collections.ObservableList;

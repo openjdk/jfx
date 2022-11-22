@@ -25,6 +25,9 @@
 
 package test.javafx.scene.control;
 
+import java.lang.ref.WeakReference;
+import java.util.concurrent.CountDownLatch;
+
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.scene.Scene;
@@ -34,20 +37,16 @@ import javafx.scene.control.TextField;
 import javafx.scene.layout.StackPane;
 import javafx.stage.Stage;
 
-import java.lang.ref.WeakReference;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-
-import junit.framework.Assert;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
+
+import junit.framework.Assert;
 import test.util.Util;
-import static org.junit.Assert.assertTrue;
 
 public class TabPaneHeaderLeakTest {
 
-    private static CountDownLatch startupLatch;
+    private static CountDownLatch startupLatch = new CountDownLatch(1);
     private static StackPane root;
     private static Stage stage;
     private static TabPane tabPane;
@@ -78,10 +77,12 @@ public class TabPaneHeaderLeakTest {
 
     @BeforeClass
     public static void initFX() throws Exception {
-        startupLatch = new CountDownLatch(1);
-        new Thread(() -> Application.launch(TestApp.class, (String[]) null)).start();
-        assertTrue("Timeout waiting for FX runtime to start",
-                   startupLatch.await(15, TimeUnit.SECONDS));
+        Util.launch(startupLatch, TestApp.class);
+    }
+
+    @AfterClass
+    public static void teardownOnce() {
+        Util.shutdown(stage);
     }
 
     @Test
@@ -102,13 +103,5 @@ public class TabPaneHeaderLeakTest {
         // Ensure that Tab and TextField are GCed.
         Assert.assertNull("Couldn't collect Tab", tabWeakRef.get());
         Assert.assertNull("Couldn't collect TextField", textFieldWeakRef.get());
-    }
-
-    @AfterClass
-    public static void teardownOnce() {
-        Platform.runLater(() -> {
-            stage.hide();
-            Platform.exit();
-        });
     }
 }
