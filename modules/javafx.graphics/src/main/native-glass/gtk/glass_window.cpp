@@ -1155,11 +1155,11 @@ void WindowContextTop::set_bounds(int x, int y, bool xSet, bool ySet, int w, int
 
     if (xSet || ySet) {
         if (xSet) {
-            geometry.refx = (int) (x + geometry_get_window_width(&geometry) * geometry.gravity_x);
+            geometry.refx = x + geometry_get_window_width(&geometry) * geometry.gravity_x;
         }
 
         if (ySet) {
-            geometry.refy = (int) (y + geometry_get_window_height(&geometry) * geometry.gravity_y);
+            geometry.refy = y + geometry_get_window_height(&geometry) * geometry.gravity_y;
         }
 
         int newX, newY;
