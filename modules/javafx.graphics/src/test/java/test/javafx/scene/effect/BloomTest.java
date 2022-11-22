@@ -50,7 +50,7 @@ public class BloomTest extends EffectsTestBase {
         effect.setThreshold(1.0f);
         assertEquals(1.0f, (float) effect.getThreshold(), 1e-100);
         pulse();
-        assertEquals(1.0f, (float) ((com.sun.scenario.effect.Bloom)
+        assertEquals(1.0f, ((com.sun.scenario.effect.Bloom)
                 EffectShim.getPeer(effect)).getThreshold(), 1e-100);
     }
 
@@ -60,7 +60,7 @@ public class BloomTest extends EffectsTestBase {
         assertEquals(0.3f, (float) effect.getThreshold(), 1e-100);
         assertEquals(0.3f, (float) effect.thresholdProperty().get(), 1e-100);
         pulse();
-        assertEquals(0.3f, (float) ((com.sun.scenario.effect.Bloom)
+        assertEquals(0.3f, ((com.sun.scenario.effect.Bloom)
                 EffectShim.getPeer(effect)).getThreshold(), 1e-100);
     }
 
@@ -72,7 +72,7 @@ public class BloomTest extends EffectsTestBase {
         effect.setThreshold(-0.1f);
         assertEquals(-0.1f, (float) effect.getThreshold(), 1e-100);
         pulse();
-        assertEquals(0.0f, (float) ((com.sun.scenario.effect.Bloom)
+        assertEquals(0.0f, ((com.sun.scenario.effect.Bloom)
                 EffectShim.getPeer(effect)).getThreshold(), 1e-100);
     }
 
@@ -84,7 +84,7 @@ public class BloomTest extends EffectsTestBase {
         effect.setThreshold(1.1f);
         assertEquals(1.1f, (float) effect.getThreshold(), 1e-100);
         pulse();
-        assertEquals(1.0f, (float) ((com.sun.scenario.effect.Bloom)
+        assertEquals(1.0f, ((com.sun.scenario.effect.Bloom)
                 EffectShim.getPeer(effect)).getThreshold(), 1e-100);
     }
 

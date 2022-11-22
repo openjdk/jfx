@@ -83,8 +83,8 @@ public class MarginsTest {
         if (mpa.length == 0) { // never null.
             return;
         }
-        int mlm = (int)(Math.round(mpa[0].getX(INCH)*72));
-        int mtm = (int)(Math.round(mpa[0].getX(INCH)*72));
+        int mlm = Math.round(mpa[0].getX(INCH) * 72);
+        int mtm = Math.round(mpa[0].getY(INCH) * 72);
         System.out.println("2D : lm=" + mlm + " tm= " + mtm);
         if (mlm == 54 && mtm == 54) {
             return;

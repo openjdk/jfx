@@ -133,18 +133,19 @@ public final class Border {
                     new Insets[] {Insets.EMPTY});
 
     private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES =
-            (List<CssMetaData<? extends Styleable, ?>>) (List) Collections.unmodifiableList(
-                    // Unchecked!
-                    Arrays.asList(BORDER_COLOR,
-                            BORDER_STYLE,
-                            BORDER_WIDTH,
-                            BORDER_RADIUS,
-                            BORDER_INSETS,
-                            BORDER_IMAGE_SOURCE,
-                            BORDER_IMAGE_REPEAT,
-                            BORDER_IMAGE_SLICE,
-                            BORDER_IMAGE_WIDTH,
-                            BORDER_IMAGE_INSETS));
+            // Unchecked!
+            (List) Collections.unmodifiableList(Arrays.asList(
+                BORDER_COLOR,
+                BORDER_STYLE,
+                BORDER_WIDTH,
+                BORDER_RADIUS,
+                BORDER_INSETS,
+                BORDER_IMAGE_SOURCE,
+                BORDER_IMAGE_REPEAT,
+                BORDER_IMAGE_SLICE,
+                BORDER_IMAGE_WIDTH,
+                BORDER_IMAGE_INSETS
+            ));
 
     /**
      * Gets the {@code CssMetaData} associated with this class, which may include the

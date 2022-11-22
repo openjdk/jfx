@@ -562,7 +562,7 @@ public abstract class PrismFontFile implements FontResource, FontConstants {
             Buffer headTable = filereader.readBlock(headDE.offset,
                                                     headDE.length);
             // Important font attribute must be set in order to prevent div by zero
-            upem = (float)(headTable.getShort(18) & 0xffff);
+            upem = headTable.getShort(18) & 0xffff;
             if (!(16 <= upem && upem <= 16384)) {
                 upem = 2048;
             }
@@ -583,7 +583,7 @@ public abstract class PrismFontFile implements FontResource, FontConstants {
                 // reversed from our coordinate system.
                 ascent = -(float)hhea.getShort(4);
                 descent = -(float)hhea.getShort(6);
-                linegap = (float)hhea.getShort(8);
+                linegap = hhea.getShort(8);
                 // advanceWidthMax is max horizontal advance of all glyphs in
                 // font. For some fonts advanceWidthMax is much larger then "M"
                 // advanceWidthMax = (float)hhea.getChar(10);
@@ -817,9 +817,9 @@ public abstract class PrismFontFile implements FontResource, FontConstants {
                 buffer.skip(6);
                 continue;
             }
-            short nameID     = buffer.getShort();
-            int nameLen    = ((int)buffer.getShort()) & 0xffff;
-            int namePtr    = (((int)buffer.getShort()) & 0xffff) + stringPtr;
+            short nameID   = buffer.getShort();
+            int nameLen    = buffer.getShort() & 0xffff;
+            int namePtr    = (buffer.getShort() & 0xffff) + stringPtr;
             String tmpName = null;
             String enc;
             switch (nameID) {
@@ -1134,7 +1134,7 @@ public abstract class PrismFontFile implements FontResource, FontConstants {
 
         String key = locale.toString();
         while (!key.isEmpty()) {
-            Short lcidObject = (Short) lcidMap.get(key);
+            Short lcidObject = lcidMap.get(key);
             if (lcidObject != null) {
                 return lcidObject.shortValue();
             }
@@ -1237,7 +1237,7 @@ public abstract class PrismFontFile implements FontResource, FontConstants {
             } else {
                 cadv = advanceWidths[numHMetrics-1];
             }
-            return ((float)(cadv & 0xffff)*ptSize)/upem;
+            return ((cadv & 0xffff)*ptSize)/upem;
         } else { // no valid lookup.
             return 0f;
         }

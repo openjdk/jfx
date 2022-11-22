@@ -411,8 +411,7 @@ public class PPSRenderer extends PrRenderer {
         if (!validate()) {
             return null;
         }
-        PPSDrawable dst = (PPSDrawable)
-            getCompatibleImage(xformBounds.width, xformBounds.height);
+        PPSDrawable dst = getCompatibleImage(xformBounds.width, xformBounds.height);
         if (dst != null) {
             Graphics g = dst.createGraphics();
             g.translate(-xformBounds.x, -xformBounds.y);
@@ -433,8 +432,7 @@ public class PPSRenderer extends PrRenderer {
         if (!validate()) {
             return null;
         }
-        PPSDrawable dst = (PPSDrawable)
-            getCompatibleImage(xformBounds.width, xformBounds.height);
+        PPSDrawable dst = getCompatibleImage(xformBounds.width, xformBounds.height);
         if (dst != null) {
             PPSDrawable orig = (PPSDrawable)original.getUntransformedImage();
             Graphics g = dst.createGraphics();

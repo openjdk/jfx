@@ -556,7 +556,7 @@ public class LauncherImpl {
                 // and finally append the JavaFX-Class-Path entries
                 urlList.addAll(jcpList);
 
-                URL[] urls = (URL[])urlList.toArray(new URL[0]);
+                URL[] urls = urlList.toArray(new URL[0]);
                 if (verbose) {
                     System.err.println("===== URL list");
                     for (int i = 0; i < urls.length; i++) {
@@ -788,7 +788,7 @@ public class LauncherImpl {
                 if (currentPreloader != null) {
                     if (simulateSlowProgress) {
                         for (int i = 0; i < 100; i++) {
-                            notifyProgress(currentPreloader, (double)i / 100.0);
+                            notifyProgress(currentPreloader, i / 100.0);
                             Thread.sleep(10);
                         }
                     }

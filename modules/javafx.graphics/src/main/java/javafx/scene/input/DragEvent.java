@@ -433,7 +433,7 @@ public final class DragEvent extends InputEvent {
      * @since JavaFX 8.0
      */
     public DragEvent copyFor(Object source, EventTarget target, EventType<DragEvent> type) {
-        DragEvent e = (DragEvent) copyFor(source, target);
+        DragEvent e = copyFor(source, target);
         e.eventType = type;
         return e;
     }

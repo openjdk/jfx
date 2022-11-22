@@ -724,7 +724,7 @@ public final class JobSettings {
      * @param pages null or a varargs array as specified above
      */
     public final void setPageRanges(PageRange... pages) {
-        pageRangesProperty().set((PageRange[])pages);
+        pageRangesProperty().set(pages);
     }
 
     ///////////////////////  END PAGE RANGES /////////////////////

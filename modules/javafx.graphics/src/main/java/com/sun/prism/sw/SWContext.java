@@ -168,7 +168,7 @@ final class SWContext {
             MarlinRenderer renderer = null;
             try {
                 if (shape instanceof Path2D) {
-                    renderer = DMarlinPrismUtils.setupRenderer(rdrCtx, (Path2D) shape, stroke, tr, clip,
+                    renderer = DMarlinPrismUtils.setupRenderer(rdrCtx, shape, stroke, tr, clip,
                             antialiasedShape);
                 }
                 if (renderer == null) {

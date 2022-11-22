@@ -143,12 +143,12 @@ public abstract class PrismFontStrike<T extends PrismFontFile> implements FontSt
     public int getQuantizedPosition(Point2D point) {
         if (aaMode == FontResource.AA_GREYSCALE) {
             /* No subpixel position */
-            point.x = (float)Math.round(point.x);
+            point.x = Math.round(point.x);
         } else {
             /* Prism can produce 3 subpixel positions in the shader */
-            point.x = (float)Math.round(3.0 * point.x)/ 3.0f;
+            point.x = Math.round(3.0 * point.x) / 3.0f;
         }
-        point.y = (float)Math.round(point.y);
+        point.y = Math.round(point.y);
         return 0;
     }
 

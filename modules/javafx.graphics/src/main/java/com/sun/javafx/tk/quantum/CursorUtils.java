@@ -161,8 +161,8 @@ final class CursorUtils {
                         "QuantumToolkit.createImageCursor: bad image format");
         }
 
-        float xscale = bestWidth / (float)iwidth;
-        float yscale = bestHeight / (float)iheight;
+        float xscale = bestWidth / iwidth;
+        float yscale = bestHeight / iheight;
 
         int scaledHotSpotX = (int) (hotspotX * xscale);
         int scaledHotSpotY = (int) (hotspotY * yscale);

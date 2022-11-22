@@ -399,7 +399,7 @@ public abstract class LightBase extends Node {
     private void markChildrenDirty(Node node) {
         if (node instanceof Shape3D) {
             // Dirty using a lightweight DirtyBits.NODE_DRAWMODE bit
-            NodeHelper.markDirty(((Shape3D) node), DirtyBits.NODE_DRAWMODE);
+            NodeHelper.markDirty(node, DirtyBits.NODE_DRAWMODE);
         } else if (node instanceof Parent) {
             for (Node child : ((Parent) node).getChildren()) {
                 if ((scope != null && getScope().contains(child)) ||

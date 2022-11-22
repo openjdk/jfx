@@ -251,7 +251,7 @@ public abstract class BaseShaderGraphics
             dy2 += transY;
         }
 
-        Texture textures[] = ((MultiTexture)tex).getTextures();
+        Texture textures[] = tex.getTextures();
         Shader shader = context.validateTextureOp(this, xform, textures, tex.getPixelFormat());
 
         if (null == shader) {
@@ -265,31 +265,31 @@ public abstract class BaseShaderGraphics
             Texture crTex = textures[PixelFormat.YCBCR_PLANE_CHROMARED];
 
             // sampler scaling factors
-            float imgWidth = (float)tex.getContentWidth();
-            float imgHeight = (float)tex.getContentHeight();
+            float imgWidth = tex.getContentWidth();
+            float imgHeight = tex.getContentHeight();
             float lumaScaleX, lumaScaleY;
             float alphaScaleX, alphaScaleY;
             float cbScaleX, cbScaleY;
             float crScaleX, crScaleY;
 
-            lumaScaleX = calculateScaleFactor(imgWidth, (float)lumaTex.getPhysicalWidth());
-            lumaScaleY = calculateScaleFactor(imgHeight, (float)lumaTex.getPhysicalHeight());
+            lumaScaleX = calculateScaleFactor(imgWidth, lumaTex.getPhysicalWidth());
+            lumaScaleY = calculateScaleFactor(imgHeight, lumaTex.getPhysicalHeight());
 
             if (textures.length > 3) {
                 Texture alphaTex = textures[PixelFormat.YCBCR_PLANE_ALPHA];
-                alphaScaleX = calculateScaleFactor(imgWidth, (float)alphaTex.getPhysicalWidth());
-                alphaScaleY = calculateScaleFactor(imgHeight, (float)alphaTex.getPhysicalHeight());
+                alphaScaleX = calculateScaleFactor(imgWidth, alphaTex.getPhysicalWidth());
+                alphaScaleY = calculateScaleFactor(imgHeight, alphaTex.getPhysicalHeight());
             } else {
                 alphaScaleX = alphaScaleY = 0f;
             }
 
-            float chromaWidth = (float)Math.floor((double)imgWidth/2.0);
-            float chromaHeight = (float)Math.floor((double)imgHeight/2.0);
+            float chromaWidth = (float)Math.floor(imgWidth/2.0);
+            float chromaHeight = (float)Math.floor(imgHeight/2.0);
 
-            cbScaleX = calculateScaleFactor(chromaWidth, (float)cbTex.getPhysicalWidth());
-            cbScaleY = calculateScaleFactor(chromaHeight, (float)cbTex.getPhysicalHeight());
-            crScaleX = calculateScaleFactor(chromaWidth, (float)crTex.getPhysicalWidth());
-            crScaleY = calculateScaleFactor(chromaHeight, (float)crTex.getPhysicalHeight());
+            cbScaleX = calculateScaleFactor(chromaWidth, cbTex.getPhysicalWidth());
+            cbScaleY = calculateScaleFactor(chromaHeight, cbTex.getPhysicalHeight());
+            crScaleX = calculateScaleFactor(chromaWidth, crTex.getPhysicalWidth());
+            crScaleY = calculateScaleFactor(chromaHeight, crTex.getPhysicalHeight());
 
             shader.setConstant("lumaAlphaScale", lumaScaleX, lumaScaleY, alphaScaleX, alphaScaleY);
             shader.setConstant("cbCrScale", cbScaleX, cbScaleY, crScaleX, crScaleY);
@@ -2120,7 +2120,7 @@ public abstract class BaseShaderGraphics
                                                 context.getLCDBuffer(),
                                                 cacheTex, false, textColor);
 
-            float unitXCoord = 1.0f/((float)cacheTex.getPhysicalWidth());
+            float unitXCoord = 1.0f / cacheTex.getPhysicalWidth();
             shader.setConstant("gamma", gamma, invgamma, unitXCoord);
             setCompositeMode(blendMode); // Restore composite mode
         } else {

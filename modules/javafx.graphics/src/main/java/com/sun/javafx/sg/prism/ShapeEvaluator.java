@@ -681,9 +681,7 @@ class ShapeEvaluator {
             }
             if (n > 0) {
                 for (int i = 0; i < n; i++) {
-                    coords[i] = (float) interp(g0.getCoord(cindex + i),
-                                               g1.getCoord(cindex + i),
-                                               t);
+                    coords[i] = interp(g0.getCoord(cindex + i), g1.getCoord(cindex + i), t);
                 }
                 if (at != null) {
                     at.transform(coords, 0, coords, 0, n / 2);

@@ -911,50 +911,50 @@ public abstract class AffineBase extends BaseTransform {
                         (float) (x2 * myx + y1 * myy), 0);
                 dst.deriveWithNewBounds((float) (dst.getMinX() + mxt),
                         (float) (dst.getMinY() + myt),
-                        (float) dst.getMinZ(),
+                        dst.getMinZ(),
                         (float) (dst.getMaxX() + mxt),
                         (float) (dst.getMaxY() + myt),
-                        (float) dst.getMaxZ());
+                        dst.getMaxZ());
                 break;
             case (APPLY_SHEAR | APPLY_TRANSLATE):
                 dst = dst.deriveWithNewBoundsAndSort((float) (src.getMinY() * mxy + mxt),
                         (float) (src.getMinX() * myx + myt),
-                        (float) src.getMinZ(),
+                        src.getMinZ(),
                         (float) (src.getMaxY() * mxy + mxt),
                         (float) (src.getMaxX() * myx + myt),
-                        (float) src.getMaxZ());
+                        src.getMaxZ());
                 break;
             case (APPLY_SHEAR):
                 dst = dst.deriveWithNewBoundsAndSort((float) (src.getMinY() * mxy),
                         (float) (src.getMinX() * myx),
-                        (float) src.getMinZ(),
+                        src.getMinZ(),
                         (float) (src.getMaxY() * mxy),
                         (float) (src.getMaxX() * myx),
-                        (float) src.getMaxZ());
+                        src.getMaxZ());
                 break;
             case (APPLY_SCALE | APPLY_TRANSLATE):
                 dst = dst.deriveWithNewBoundsAndSort((float) (src.getMinX() * mxx + mxt),
                         (float) (src.getMinY() * myy + myt),
-                        (float) src.getMinZ(),
+                        src.getMinZ(),
                         (float) (src.getMaxX() * mxx + mxt),
                         (float) (src.getMaxY() * myy + myt),
-                        (float) src.getMaxZ());
+                        src.getMaxZ());
                 break;
             case (APPLY_SCALE):
                 dst = dst.deriveWithNewBoundsAndSort((float) (src.getMinX() * mxx),
                         (float) (src.getMinY() * myy),
-                        (float) src.getMinZ(),
+                        src.getMinZ(),
                         (float) (src.getMaxX() * mxx),
                         (float) (src.getMaxY() * myy),
-                        (float) src.getMaxZ());
+                        src.getMaxZ());
                 break;
             case (APPLY_TRANSLATE):
                 dst = dst.deriveWithNewBounds((float) (src.getMinX() + mxt),
                         (float) (src.getMinY() + myt),
-                        (float) src.getMinZ(),
+                        src.getMinZ(),
                         (float) (src.getMaxX() + mxt),
                         (float) (src.getMaxY() + myt),
-                        (float) src.getMaxZ());
+                        src.getMaxZ());
                 break;
             case (APPLY_IDENTITY):
                 if (src != dst) {
@@ -1828,7 +1828,7 @@ public abstract class AffineBase extends BaseTransform {
             break;
         case (APPLY_IDENTITY):
             if (dst != src) {
-                ((RectBounds) dst).setBounds((RectBounds) src);
+                dst.setBounds(src);
             }
             break;
         }
@@ -1879,10 +1879,10 @@ public abstract class AffineBase extends BaseTransform {
                 }
                 dst = dst.deriveWithNewBoundsAndSort((float) ((src.getMinX() - mxt) / mxx),
                         (float) ((src.getMinY() - myt) / myy),
-                        (float) src.getMinZ(),
+                        src.getMinZ(),
                         (float) ((src.getMaxX() - mxt) / mxx),
                         (float) ((src.getMaxY() - myt) / myy),
-                        (float) src.getMaxZ());
+                        src.getMaxZ());
                 break;
             case (APPLY_SCALE):
                 if (mxx == 0.0 || myy == 0.0) {
@@ -1890,18 +1890,18 @@ public abstract class AffineBase extends BaseTransform {
                 }
                 dst = dst.deriveWithNewBoundsAndSort((float) (src.getMinX() / mxx),
                         (float) (src.getMinY() / myy),
-                        (float) src.getMinZ(),
+                        src.getMinZ(),
                         (float) (src.getMaxX() / mxx),
                                 (float) (src.getMaxY() / myy),
-                                (float) src.getMaxZ());
+                                src.getMaxZ());
                 break;
             case (APPLY_TRANSLATE):
                 dst = dst.deriveWithNewBounds((float) (src.getMinX() - mxt),
                         (float) (src.getMinY() - myt),
-                        (float) src.getMinZ(),
+                        src.getMinZ(),
                         (float) (src.getMaxX() - mxt),
                         (float) (src.getMaxY() - myt),
-                        (float) src.getMaxZ());
+                        src.getMaxZ());
                 break;
             case (APPLY_IDENTITY):
                 if (dst != src) {

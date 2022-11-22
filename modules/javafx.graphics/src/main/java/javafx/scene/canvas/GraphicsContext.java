@@ -2166,8 +2166,8 @@ public final class GraphicsContext {
         coords[0] = (float) x;
         coords[1] = (float) y;
         coords[2] = (float) w;
-        coords[3] = (float) 0;
-        coords[4] = (float) 0;
+        coords[3] = 0;
+        coords[4] = 0;
         coords[5] = (float) h;
         curState.transform.deltaTransform(coords, 0, coords, 0, 3);
         float x0 = coords[0] + (float) curState.transform.getMxt();

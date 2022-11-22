@@ -313,7 +313,7 @@ public class CubicApproximator {
                 if (param > 0) {
                     ProcessFirstMonotonicPartOfCubic(resVect, coords,
                         /* Scale parameter to match with rest of the curve */
-                        (float)(param/(1f - params[i - 1])));
+                        param / (1f - params[i - 1]));
                 }
             }
         }

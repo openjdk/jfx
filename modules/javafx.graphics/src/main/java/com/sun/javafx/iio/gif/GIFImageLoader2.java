@@ -457,7 +457,7 @@ public class GIFImageLoader2 extends ImageLoaderImpl {
             if (blockPos == blockLength) {
                 readData();
             }
-            return (int)block[blockPos++] & 0xFF;
+            return block[blockPos++] & 0xFF;
         }
 
         // reads next block if data

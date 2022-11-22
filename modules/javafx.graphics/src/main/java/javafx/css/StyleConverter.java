@@ -331,7 +331,7 @@ public class StyleConverter<F, T> {
             cname = "javafx.css.converter." + cname.substring("com.sun.javafx.css.converters.".length());
         }
         if (cname.startsWith("javafx.css.converter.EnumConverter")) {
-            return (StyleConverter)javafx.css.converter.EnumConverter.readBinary(is, strings);
+            return javafx.css.converter.EnumConverter.readBinary(is, strings);
         }
 
         // Make a new entry in tmap, if necessary

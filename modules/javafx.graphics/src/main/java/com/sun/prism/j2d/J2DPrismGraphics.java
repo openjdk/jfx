@@ -1594,7 +1594,7 @@ public void setClipRectIndex(int index) {
             }
             int ret = priterator.currentSegment(tmpcoords);
             for (int i = 0; i < NUM_COORDS[ret]; i++) {
-                coords[i] = (double) tmpcoords[i];
+                coords[i] = tmpcoords[i];
             }
             return ret;
         }

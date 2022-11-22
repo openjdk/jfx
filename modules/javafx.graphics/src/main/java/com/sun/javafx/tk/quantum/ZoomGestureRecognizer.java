@@ -190,7 +190,7 @@ class ZoomGestureRecognizer implements GestureRecognizer {
                 sendZoomFinishedEvent();
             }
             if (ZOOM_INERTIA_ENABLED && (state == ZoomRecognitionState.PRE_INERTIA || state == ZoomRecognitionState.ACTIVE)) {
-                double timeFromLastZoom = ((double)time - zoomStartTime) / 1000000;
+                double timeFromLastZoom = (time - zoomStartTime) / 1000000;
                 if (initialInertiaZoomVelocity != 0 && timeFromLastZoom < 200) {
                     state = ZoomRecognitionState.INERTIA;
                     // activate inertia
@@ -277,7 +277,7 @@ class ZoomGestureRecognizer implements GestureRecognizer {
                         totalZoomFactor *= zoomFactor;
                         sendZoomEvent(false);
                         distanceReference = currentDistance;
-                        double timePassed = ((double)time - zoomStartTime) / 1000000000;
+                        double timePassed = (time - zoomStartTime) / 1000000000;
                         if (timePassed > 1e-4) {
                             initialInertiaZoomVelocity = (totalZoomFactor - prevTotalZoomFactor) / timePassed;
                             zoomStartTime = time;

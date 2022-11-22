@@ -193,7 +193,7 @@ public class PSWDrawable extends PrDrawable implements HeapImage {
     @Override
     public Graphics createGraphics() {
         vramDirty = true;
-        return (Graphics)rtt.createGraphics();
+        return rtt.createGraphics();
     }
 
     @Override

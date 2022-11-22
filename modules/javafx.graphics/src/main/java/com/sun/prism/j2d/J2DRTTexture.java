@@ -89,10 +89,10 @@ class J2DRTTexture extends J2DTexture implements RTTexture {
                 byte r = (byte) (argb >> 16);
                 byte g = (byte) (argb >>  8);
                 byte b = (byte) (argb      );
-                ((ByteBuffer)pixels).put((byte)b);
-                ((ByteBuffer)pixels).put((byte)g);
-                ((ByteBuffer)pixels).put((byte)r);
-                ((ByteBuffer)pixels).put((byte)a);
+                ((ByteBuffer)pixels).put(b);
+                ((ByteBuffer)pixels).put(g);
+                ((ByteBuffer)pixels).put(r);
+                ((ByteBuffer)pixels).put(a);
             }
         }
         pixels.rewind();

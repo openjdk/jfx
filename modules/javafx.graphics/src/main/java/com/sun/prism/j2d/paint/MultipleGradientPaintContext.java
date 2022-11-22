@@ -657,7 +657,7 @@ abstract class MultipleGradientPaintContext implements PaintContext {
     {
         if (cm == cachedModel) {
             if (cached != null) {
-                Raster ras = (Raster) cached.get();
+                Raster ras = cached.get();
                 if (ras != null &&
                     ras.getWidth() >= w &&
                     ras.getHeight() >= h)
@@ -679,7 +679,7 @@ abstract class MultipleGradientPaintContext implements PaintContext {
                                                      Raster ras)
     {
         if (cached != null) {
-            Raster cras = (Raster) cached.get();
+            Raster cras = cached.get();
             if (cras != null) {
                 int cw = cras.getWidth();
                 int ch = cras.getHeight();

@@ -305,7 +305,7 @@ public class CssParserTest {
         value = new CssParserShim().parseExpr("foo", "1;");
         obj = value.convert(null);
         assert obj instanceof Number;
-        assertEquals(1d, (Number)obj);
+        assertEquals(1d, obj);
 
     }
 

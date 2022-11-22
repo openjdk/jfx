@@ -354,8 +354,8 @@ public class FlatteningPathIterator implements PathIterator {
         }
         int type = holdType;
         if (type != SEG_CLOSE) {
-            coords[0] = (float) hold[holdIndex + 0];
-            coords[1] = (float) hold[holdIndex + 1];
+            coords[0] = hold[holdIndex + 0];
+            coords[1] = hold[holdIndex + 1];
             if (type != SEG_MOVETO) {
             type = SEG_LINETO;
             }

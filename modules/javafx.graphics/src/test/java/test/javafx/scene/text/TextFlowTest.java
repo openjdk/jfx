@@ -45,7 +45,7 @@ import org.junit.Test;
 public class TextFlowTest {
 
     @Test public void testTabSize() {
-        Toolkit tk = (StubToolkit) Toolkit.getToolkit();
+        Toolkit tk = Toolkit.getToolkit();
         VBox root = new VBox();
         Scene scene = new Scene(root);
         Stage stage = new Stage();

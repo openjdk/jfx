@@ -239,7 +239,7 @@ public class TextTest {
         // Test is unstable until JDK-8236728 is fixed
         assumeTrue(Boolean.getBoolean("unstable.test"));
 
-        Toolkit tk = (StubToolkit)Toolkit.getToolkit();
+        Toolkit tk = Toolkit.getToolkit();
         HBox root = new HBox();
         Scene scene = new Scene(root);
         Stage stage = new Stage();
