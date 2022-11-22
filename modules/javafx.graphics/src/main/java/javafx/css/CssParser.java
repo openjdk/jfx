@@ -2926,7 +2926,7 @@ final public class CssParser {
             layers[layer++] = parseBackgroundPosition(term);
             term = nextLayer(term);
         }
-        return new ParsedValueImpl<ParsedValue<ParsedValue[], BackgroundPosition>[], BackgroundPosition[]>(layers, LayeredBackgroundPositionConverter.getInstance());
+        return new ParsedValueImpl<>(layers, LayeredBackgroundPositionConverter.getInstance());
     }
 
     /*
@@ -3116,7 +3116,7 @@ final public class CssParser {
             layers[layer++] = parseBackgroundSize(term);
             term = nextLayer(term);
         }
-        return new ParsedValueImpl<ParsedValue<ParsedValue[], BackgroundSize>[], BackgroundSize[]>(layers, LayeredBackgroundSizeConverter.getInstance());
+        return new ParsedValueImpl<>(layers, LayeredBackgroundSizeConverter.getInstance());
     }
 
     private ParsedValueImpl<ParsedValue<?,Paint>[], Paint[]> parseBorderPaint(final Term root)
@@ -3169,7 +3169,7 @@ final public class CssParser {
         if (border < 3) borders[2] = borders[0]; // bottom = top
         if (border < 4) borders[3] = borders[1]; // left = right
 
-        return new ParsedValueImpl<ParsedValue<ParsedValue[],BorderStrokeStyle>[],BorderStrokeStyle[]>(borders, BorderStrokeStyleSequenceConverter.getInstance());
+        return new ParsedValueImpl<>(borders, BorderStrokeStyleSequenceConverter.getInstance());
     }
 
 
@@ -3184,7 +3184,7 @@ final public class CssParser {
             layers[layer++] = parseBorderStyleSeries(term);
             term = nextLayer(term);
         }
-        return new ParsedValueImpl<ParsedValue<ParsedValue<ParsedValue[],BorderStrokeStyle>[],BorderStrokeStyle[]>[], BorderStrokeStyle[][]>(layers, LayeredBorderStyleConverter.getInstance());
+        return new ParsedValueImpl<>(layers, LayeredBorderStyleConverter.getInstance());
     }
 
     // Only meant to be used from parseBorderStyle, but might be useful elsewhere
@@ -3511,7 +3511,7 @@ final public class CssParser {
             layers[layer++] = parseBorderImageSlice(term);
             term = nextLayer(term);
         }
-        return new ParsedValueImpl<ParsedValue<ParsedValue[],BorderImageSlices>[],BorderImageSlices[]> (layers, SliceSequenceConverter.getInstance());
+        return new ParsedValueImpl<> (layers, SliceSequenceConverter.getInstance());
     }
 
     /*
@@ -3555,7 +3555,7 @@ final public class CssParser {
             layers[layer++] = parseBorderImageWidth(term);
             term = nextLayer(term);
         }
-        return new ParsedValueImpl<ParsedValue<ParsedValue[],BorderWidths>[],BorderWidths[]> (layers, BorderImageWidthsSequenceConverter.getInstance());
+        return new ParsedValueImpl<>(layers, BorderImageWidthsSequenceConverter.getInstance());
     }
 
     // parse a Region value
