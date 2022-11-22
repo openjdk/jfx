@@ -202,17 +202,17 @@ public class LeakTest extends TestBase {
             assertNotNull("Document should not be null", doc);
 
             NodeList tagList = doc.getElementsByTagName("html");
-            Element element = (Element) tagList.item(0);;
+            Element element = (Element) tagList.item(0);
             willGC[0] = new WeakReference<>(element);
             assertEquals("Expected NodeImpl(tag:html) HashCount", initialHashCount+1, NodeImplShim.test_getHashCount());
 
             tagList = doc.getElementsByTagName("head");
-            element = (Element) tagList.item(0);;
+            element = (Element) tagList.item(0);
             willGC[1] = new WeakReference<>(element);
             assertEquals("Expected NodeImpl(tag:head) HashCount", initialHashCount+2, NodeImplShim.test_getHashCount());
 
             tagList = doc.getElementsByTagName("body");
-            element = (Element) tagList.item(0);;
+            element = (Element) tagList.item(0);
             willGC[2] = new WeakReference<>(element);
             assertEquals("Expected NodeImpl(tag:body) HashCount", initialHashCount+3, NodeImplShim.test_getHashCount());
 

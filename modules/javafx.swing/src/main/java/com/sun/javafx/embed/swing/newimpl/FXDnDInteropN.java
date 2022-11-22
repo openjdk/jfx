@@ -373,7 +373,7 @@ public class FXDnDInteropN {
                 }
             }
         }
-    };
+    }
 
     ///////////////////////////////////////////////////////////////////////////
     //     DROP TARGET IMPLEMENTATION
@@ -504,7 +504,7 @@ public class FXDnDInteropN {
                      FXDropTargetContextPeer.this);
                     }
 
-                    DropTargetListener dtl = (DropTargetListener)target;
+                    DropTargetListener dtl = target;
 
                     if (DragEvent.DRAG_DROPPED.equals(fxEvType)) {
                         DropTargetDropEvent awtEvent = new DropTargetDropEvent(

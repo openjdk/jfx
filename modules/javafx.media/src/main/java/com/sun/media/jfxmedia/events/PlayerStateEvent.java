@@ -32,7 +32,7 @@ public class PlayerStateEvent extends PlayerEvent {
     public enum PlayerState {
 
         UNKNOWN, READY, PLAYING, PAUSED, STOPPED, STALLED, FINISHED, HALTED
-    };
+    }
 
     private PlayerState playerState;
     private double playerTime;

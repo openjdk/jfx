@@ -49,7 +49,7 @@ final class WCPluginWidget extends WCWidget implements PluginListener {
 
     static {
         initIDs();
-    };
+    }
 
     private WCPluginWidget(
             WebPage webPage,

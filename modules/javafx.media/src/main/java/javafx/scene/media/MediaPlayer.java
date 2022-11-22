@@ -263,7 +263,7 @@ public final class MediaPlayer {
          * @since JavaFX 8.0
          */
         DISPOSED
-    };
+    }
 
     /**
      * A value representing an effectively infinite number of playback cycles.
@@ -1280,7 +1280,7 @@ public final class MediaPlayer {
          } else if (getCycleDuration().isUnknown()) {
              setTotalDuration(Duration.UNKNOWN);
          } else {
-             setTotalDuration(getCycleDuration().multiply((double)getCycleCount()));
+             setTotalDuration(getCycleDuration().multiply(getCycleCount()));
          }
      }
 

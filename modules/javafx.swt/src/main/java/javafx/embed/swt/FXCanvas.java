@@ -167,7 +167,7 @@ public class FXCanvas extends Canvas {
                 break;
             }
             control = control.getParent();
-        };
+        }
     };
 
     private double getScaleFactor() {
@@ -1254,7 +1254,7 @@ public class FXCanvas extends Canvas {
 
         String getMime(Transfer transfer) {
             if (transfer.equals(TextTransfer.getInstance())) return "text/plain";
-            if (transfer.equals(RTFTransfer.getInstance())) return "text/rtf"; ;
+            if (transfer.equals(RTFTransfer.getInstance())) return "text/rtf";
             if (transfer.equals( HTMLTransfer.getInstance())) return "text/html";
             if (transfer.equals(URLTransfer.getInstance())) return "text/uri-list";
             if (transfer.equals( ImageTransfer.getInstance())) return "application/x-java-rawimage";

@@ -81,7 +81,7 @@ public final class RenderThemeImpl extends RenderTheme {
         static { for (WidgetType v: values()) map.put(v.value, v); }
 
         private static WidgetType convert(int index) { return map.get(index); }
-    };
+    }
 
     private Accessor accessor;
     private boolean isDefault; // indicates if the instance is used in non-page context
@@ -442,7 +442,7 @@ public final class RenderThemeImpl extends RenderTheme {
             if (isPressed()) arm(); else disarm();
         }
 
-        @Override public WidgetType getType() { return WidgetType.BUTTON; };
+        @Override public WidgetType getType() { return WidgetType.BUTTON; }
     }
 
     private static final class FormTextField extends TextField implements FormControl {
@@ -460,7 +460,7 @@ public final class RenderThemeImpl extends RenderTheme {
             setHover(hasState(state, RenderTheme.HOVERED) && !isDisabled());
         }
 
-        @Override public WidgetType getType() { return WidgetType.TEXTFIELD; };
+        @Override public WidgetType getType() { return WidgetType.TEXTFIELD; }
     }
 
     private static final class FormCheckBox extends CheckBox implements FormControl {
@@ -474,7 +474,7 @@ public final class RenderThemeImpl extends RenderTheme {
             setSelected(hasState(state, RenderTheme.CHECKED));
         }
 
-        @Override public WidgetType getType() { return WidgetType.CHECKBOX; };
+        @Override public WidgetType getType() { return WidgetType.CHECKBOX; }
     }
 
     private static final class FormRadioButton extends RadioButton implements FormControl {
@@ -488,7 +488,7 @@ public final class RenderThemeImpl extends RenderTheme {
             setSelected(hasState(state, RenderTheme.CHECKED));
         }
 
-        @Override public WidgetType getType() { return WidgetType.RADIOBUTTON; };
+        @Override public WidgetType getType() { return WidgetType.RADIOBUTTON; }
     }
 
     private static final class FormSlider extends Slider implements FormControl {
@@ -501,7 +501,7 @@ public final class RenderThemeImpl extends RenderTheme {
             setHover(hasState(state, RenderTheme.HOVERED) && !isDisabled());
         }
 
-        @Override public WidgetType getType() { return WidgetType.SLIDER; };
+        @Override public WidgetType getType() { return WidgetType.SLIDER; }
     }
 
     private static final class FormProgressBar extends ProgressBar implements FormControl {
@@ -519,7 +519,7 @@ public final class RenderThemeImpl extends RenderTheme {
             setHover(hasState(state, RenderTheme.HOVERED) && !isDisabled());
         }
 
-        @Override public WidgetType getType() { return type; };
+        @Override public WidgetType getType() { return type; }
     }
 
     private static final class FormMenuList extends ChoiceBox implements FormControl {
@@ -539,7 +539,7 @@ public final class RenderThemeImpl extends RenderTheme {
             setHover(hasState(state, RenderTheme.HOVERED) && !isDisabled());
         }
 
-        @Override public WidgetType getType() { return WidgetType.MENULIST; };
+        @Override public WidgetType getType() { return WidgetType.MENULIST; }
     }
 
     private static final class FormMenuListButton extends Button implements FormControl {
@@ -589,6 +589,6 @@ public final class RenderThemeImpl extends RenderTheme {
             }
         }
 
-        @Override public WidgetType getType() { return WidgetType.MENULISTBUTTON; };
+        @Override public WidgetType getType() { return WidgetType.MENULISTBUTTON; }
     }
 }

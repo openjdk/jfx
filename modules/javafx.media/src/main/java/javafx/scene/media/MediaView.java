@@ -471,7 +471,7 @@ public class MediaView extends Node {
      */
     public final void setPreserveRatio(boolean value) {
         preserveRatioProperty().set(value);
-    };
+    }
 
     /**
      * Returns whether the media aspect ratio is preserved when scaling.
@@ -740,7 +740,7 @@ public class MediaView extends Node {
      */
     public final void setFitHeight(double value) {
         fitHeightProperty().set(value);
-    };
+    }
 
     /**
      * Retrieves the height of the bounding box of the resized media.
@@ -796,7 +796,7 @@ public class MediaView extends Node {
      */
     public final void setViewport(Rectangle2D value) {
         viewportProperty().set(value);
-    };
+    }
 
     /**
      * Retrieves the rectangular viewport into the media frame.
