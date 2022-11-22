@@ -116,6 +116,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		114ECB8E2928543700BE8CE2 /* plugins */ = {isa = PBXFileReference; lastKnownFileType = folder; name = plugins; path = ../gstreamer/plugins; sourceTree = "<group>"; };
 		652BECE8199BCFD4007217BB /* NullAudioEqualizer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = NullAudioEqualizer.h; sourceTree = "<group>"; };
 		652BECEB199BD515007217BB /* NullAudioSpectrum.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = NullAudioSpectrum.h; sourceTree = "<group>"; };
 		652BECED199BDB28007217BB /* NativeAudioEqualizer.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = NativeAudioEqualizer.cpp; sourceTree = "<group>"; };
@@ -613,6 +614,7 @@
 		65FF278A1991545E006BF9EE = {
 			isa = PBXGroup;
 			children = (
+				114ECB8E2928543700BE8CE2 /* plugins */,
 				B3BFE7721D7A15FA00E48712 /* glib */,
 				B3BFE7711D7A159A00E48712 /* gstreamer-lite */,
 				65989B121991823700319296 /* build_prereqs.sh */,
@@ -712,6 +714,7 @@
 			developmentRegion = English;
 			hasScannedForEncodings = 0;
 			knownRegions = (
+				English,
 				en,
 				Base,
 			);
@@ -948,7 +951,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				GLIB_LITE_DIR = "../gstreamer/3rd_party/glib";
+				GLIB_LITE_DIR = ../gstreamer/3rd_party/glib;
 				GSTREAMER_LITE_DIR = "../gstreamer/gstreamer-lite";
 				HEADER_SEARCH_PATHS = (
 					"$(inherited)",
@@ -1000,7 +1003,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				GLIB_LITE_DIR = "../gstreamer/3rd_party/glib";
+				GLIB_LITE_DIR = ../gstreamer/3rd_party/glib;
 				GSTREAMER_LITE_DIR = "../gstreamer/gstreamer-lite";
 				HEADER_SEARCH_PATHS = (
 					"$(inherited)",
