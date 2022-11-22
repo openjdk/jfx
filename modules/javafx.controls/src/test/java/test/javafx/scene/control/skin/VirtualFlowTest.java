@@ -52,7 +52,6 @@ import org.junit.Ignore;
 import org.junit.Test;
 
 
-import java.util.ArrayList;
 import java.util.List;
 import javafx.scene.control.IndexedCellShim;
 import javafx.scene.control.ScrollBar;

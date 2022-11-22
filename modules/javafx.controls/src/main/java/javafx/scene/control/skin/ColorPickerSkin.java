@@ -59,7 +59,6 @@ import java.util.Map;
 import javafx.scene.control.ColorPicker;
 import javafx.scene.control.TextField;
 import javafx.beans.property.BooleanProperty;
-import javafx.beans.value.WritableValue;
 import javafx.css.Styleable;
 import javafx.css.StyleableProperty;
 import javafx.scene.control.Label;

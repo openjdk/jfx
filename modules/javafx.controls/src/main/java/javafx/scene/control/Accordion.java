@@ -35,7 +35,6 @@ import javafx.scene.Node;
 import javafx.scene.control.skin.AccordionSkin;
 
 import javafx.beans.property.ObjectPropertyBase;
-import javafx.beans.value.WritableValue;
 import javafx.css.StyleableProperty;
 
 import java.util.List;

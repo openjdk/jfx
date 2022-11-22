@@ -40,7 +40,6 @@ import javafx.css.PseudoClass;
 
 import javafx.css.converter.EnumConverter;
 import javafx.scene.control.skin.SeparatorSkin;
-import javafx.scene.layout.VBox;
 import javafx.css.Styleable;
 import javafx.css.StyleableProperty;
 

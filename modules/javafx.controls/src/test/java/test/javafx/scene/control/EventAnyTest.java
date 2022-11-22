@@ -28,7 +28,6 @@ package test.javafx.scene.control;
 import java.util.Arrays;
 import java.util.Collection;
 import javafx.event.Event;
-import javafx.event.EventHandler;
 import javafx.event.EventType;
 import javafx.scene.Node;
 import javafx.scene.control.CheckBoxTreeItem;

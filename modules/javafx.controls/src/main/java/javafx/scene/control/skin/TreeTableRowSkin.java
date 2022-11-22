@@ -50,7 +50,6 @@ import javafx.css.converter.SizeConverter;
 import com.sun.javafx.scene.control.behavior.TreeTableRowBehavior;
 
 import javafx.beans.property.ObjectProperty;
-import javafx.beans.value.WritableValue;
 import javafx.collections.ObservableList;
 import javafx.css.Styleable;
 import javafx.css.StyleableProperty;

@@ -25,7 +25,6 @@
 
 package test.javafx.scene.control.cell;
 
-import javafx.collections.FXCollections;
 import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeTableCell;
 import javafx.scene.control.TreeTableColumn;

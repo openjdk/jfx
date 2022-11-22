@@ -26,7 +26,6 @@
 package test.javafx.scene.control;
 
 import javafx.scene.control.IndexedCell;
-import javafx.scene.control.IndexedCell;
 import org.junit.Before;
 import org.junit.Test;
 

@@ -39,7 +39,6 @@ import javafx.scene.shape.Rectangle;
 import javafx.css.PseudoClass;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
-import javafx.beans.value.WritableValue;
 import javafx.css.StyleableProperty;
 
 /**

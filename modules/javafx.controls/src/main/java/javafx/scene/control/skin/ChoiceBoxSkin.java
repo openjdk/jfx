@@ -27,10 +27,8 @@ package javafx.scene.control.skin;
 
 import com.sun.javafx.scene.control.ContextMenuContent;
 import com.sun.javafx.scene.control.behavior.BehaviorBase;
-import javafx.beans.WeakInvalidationListener;
 import javafx.scene.control.Control;
 import javafx.scene.control.SkinBase;
-import javafx.util.StringConverter;
 import javafx.beans.InvalidationListener;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;

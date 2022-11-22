@@ -32,7 +32,6 @@ import javafx.scene.AccessibleAttribute;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import test.com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
-import test.com.sun.javafx.pgstub.StubToolkit;
 import javafx.scene.control.skin.ToolBarSkin;
 import com.sun.javafx.tk.Toolkit;
 import java.util.ArrayList;

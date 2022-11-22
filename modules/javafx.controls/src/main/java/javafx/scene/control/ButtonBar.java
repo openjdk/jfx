@@ -38,7 +38,6 @@ import javafx.scene.layout.HBox;
 
 import com.sun.javafx.util.Utils;
 import javafx.scene.control.skin.ButtonBarSkin;
-import javafx.beans.value.WritableValue;
 import javafx.css.StyleableProperty;
 
 import java.util.Map;

@@ -27,8 +27,6 @@ package test.javafx.scene.control;
 import static org.junit.Assert.assertEquals;
 
 import java.util.Set;
-import java.util.concurrent.Callable;
-import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 

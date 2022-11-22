@@ -43,7 +43,6 @@ import javafx.scene.control.skin.ProgressBarSkin;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.stage.Stage;
-import test.com.sun.javafx.pgstub.StubToolkit;
 
 /**
  */

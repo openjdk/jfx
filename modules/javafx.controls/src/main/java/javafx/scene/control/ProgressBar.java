@@ -27,7 +27,6 @@ package javafx.scene.control;
 
 import javafx.scene.control.skin.ProgressBarSkin;
 
-import javafx.beans.value.WritableValue;
 import javafx.css.StyleableProperty;
 import javafx.scene.AccessibleAttribute;
 import javafx.geometry.Orientation;

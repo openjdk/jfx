@@ -32,7 +32,6 @@ import javafx.scene.Node;
 import javafx.scene.Parent;
 
 import javafx.scene.Scene;
-import javafx.scene.control.skin.ComboBoxPopupControl;
 import javafx.scene.input.KeyEvent;
 
 import javafx.beans.value.ChangeListener;

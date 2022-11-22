@@ -25,8 +25,6 @@
 
 package com.sun.javafx.scene.control;
 
-import com.sun.javafx.scene.control.IntegerField;
-import com.sun.javafx.scene.control.WebColorField;
 import com.sun.javafx.scene.control.skin.IntegerFieldSkin;
 import com.sun.javafx.scene.control.skin.WebColorFieldSkin;
 import javafx.beans.InvalidationListener;

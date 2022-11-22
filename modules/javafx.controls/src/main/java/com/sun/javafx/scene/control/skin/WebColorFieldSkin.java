@@ -31,7 +31,6 @@ import com.sun.javafx.scene.control.WebColorField;
 import javafx.beans.InvalidationListener;
 import javafx.geometry.NodeOrientation;
 import javafx.scene.Node;
-import javafx.scene.control.skin.ColorPickerSkin;
 import javafx.scene.paint.Color;
 
 /**

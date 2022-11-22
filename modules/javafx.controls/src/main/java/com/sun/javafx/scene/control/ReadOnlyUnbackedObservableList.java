@@ -32,17 +32,8 @@ import java.util.List;
 import java.util.ListIterator;
 import java.util.NoSuchElementException;
 
-import javafx.beans.InvalidationListener;
-import com.sun.javafx.collections.ListListenerHelper;
-import javafx.collections.ListChangeListener;
 import javafx.collections.ListChangeListener.Change;
-import javafx.collections.ObservableList;
 import javafx.collections.ObservableListBase;
-
-import java.util.Collections;
-import java.util.function.Consumer;
-
-import static com.sun.javafx.collections.ListListenerHelper.fireValueChangedEvent;
 
 /**
  * A read-only and unbacked ObservableList - the data is retrieved on demand by

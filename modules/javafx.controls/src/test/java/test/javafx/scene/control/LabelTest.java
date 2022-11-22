@@ -38,12 +38,9 @@ import javafx.beans.property.SimpleObjectProperty;
 import javafx.css.StyleableProperty;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
-import javafx.scene.paint.Color;
-import javafx.scene.paint.Paint;
 import javafx.scene.shape.Rectangle;
 
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 public class LabelTest {

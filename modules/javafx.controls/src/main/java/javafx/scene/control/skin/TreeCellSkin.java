@@ -33,7 +33,6 @@ import java.util.WeakHashMap;
 
 import com.sun.javafx.scene.control.behavior.BehaviorBase;
 import javafx.beans.property.DoubleProperty;
-import javafx.beans.value.WritableValue;
 import javafx.geometry.HPos;
 import javafx.geometry.VPos;
 import javafx.scene.Node;

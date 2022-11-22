@@ -27,7 +27,6 @@ package test.javafx.scene.control;
 
 import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.*;
 
-import test.com.sun.javafx.pgstub.StubToolkit;
 import com.sun.javafx.tk.Toolkit;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.scene.Node;

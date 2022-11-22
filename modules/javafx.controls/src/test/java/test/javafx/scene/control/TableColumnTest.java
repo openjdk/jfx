@@ -51,7 +51,6 @@ import java.util.Comparator;
 import java.util.List;
 import javafx.scene.control.CellShim;
 import javafx.scene.control.ContextMenu;
-import javafx.scene.control.Control;
 import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableColumnShim;

@@ -51,7 +51,6 @@ import java.time.temporal.TemporalUnit;
 import javafx.css.CssMetaData;
 import javafx.css.converter.DurationConverter;
 import javafx.css.Styleable;
-import javafx.css.StyleableObjectProperty;
 import javafx.css.StyleableProperty;
 import javafx.css.SimpleStyleableObjectProperty;
 

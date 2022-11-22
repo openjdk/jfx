@@ -40,7 +40,6 @@ import javafx.css.CssMetaData;
 import javafx.css.Styleable;
 import javafx.event.Event;
 import javafx.event.EventHandler;
-import javafx.event.EventTarget;
 import javafx.event.EventType;
 import javafx.scene.Node;
 import javafx.scene.control.cell.PropertyValueFactory;

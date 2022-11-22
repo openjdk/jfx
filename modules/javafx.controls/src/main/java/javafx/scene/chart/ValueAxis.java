@@ -38,7 +38,6 @@ import java.util.Collections;
 import java.util.List;
 
 import javafx.beans.property.*;
-import javafx.beans.value.WritableValue;
 import javafx.css.Styleable;
 import javafx.css.StyleableProperty;
 import javafx.geometry.Side;

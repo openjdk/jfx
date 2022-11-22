@@ -30,7 +30,6 @@ import java.util.List;
 import java.util.Map;
 
 import com.sun.javafx.scene.control.Properties;
-import com.sun.javafx.scene.control.behavior.BehaviorBase;
 import javafx.beans.InvalidationListener;
 import javafx.beans.property.ObjectProperty;
 import javafx.collections.ListChangeListener;

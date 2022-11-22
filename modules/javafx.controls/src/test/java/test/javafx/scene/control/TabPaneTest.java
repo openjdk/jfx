@@ -38,7 +38,6 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import javafx.scene.control.SelectionModel;
-import javafx.scene.control.Skin;
 import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
 import javafx.application.Platform;
 import javafx.beans.property.BooleanProperty;
@@ -62,10 +61,8 @@ import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
-import test.com.sun.javafx.pgstub.StubToolkit;
 import test.com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
 import test.com.sun.javafx.scene.control.infrastructure.MouseEventGenerator;
 import com.sun.javafx.scene.input.KeyCodeMap;

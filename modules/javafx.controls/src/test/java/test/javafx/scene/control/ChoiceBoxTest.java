@@ -27,7 +27,6 @@ package test.javafx.scene.control;
 
 import javafx.scene.control.Separator;
 import org.junit.After;
-import test.com.sun.javafx.pgstub.StubToolkit;
 import com.sun.javafx.tk.Toolkit;
 
 import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.assertPseudoClassDoesNotExist;

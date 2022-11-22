@@ -47,7 +47,6 @@ import com.sun.javafx.charts.Legend.LegendItem;
 import javafx.css.converter.BooleanConverter;
 
 import javafx.beans.property.BooleanProperty;
-import javafx.beans.value.WritableValue;
 import javafx.css.CssMetaData;
 import javafx.css.Styleable;
 import javafx.css.StyleableBooleanProperty;

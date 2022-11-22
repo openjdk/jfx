@@ -29,7 +29,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import javafx.scene.Node;
 import javafx.scene.control.Cell;
 import javafx.css.StyleableDoubleProperty;
 import javafx.css.CssMetaData;
@@ -39,7 +38,6 @@ import javafx.css.converter.SizeConverter;
 
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ReadOnlyDoubleProperty;
-import javafx.beans.value.WritableValue;
 import javafx.css.Styleable;
 import javafx.css.StyleableProperty;
 import javafx.scene.control.Control;
