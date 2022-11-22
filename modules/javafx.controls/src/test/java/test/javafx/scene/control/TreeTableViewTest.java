@@ -2519,8 +2519,6 @@ public class TreeTableViewTest {
                         setGraphic(view);
                     }
 
-                    ;
-
                     @Override
                     public void updateItem(String item, boolean empty) {
                         if (getItem() == null ? item == null : getItem().equals(item)) {
@@ -2571,8 +2569,6 @@ public class TreeTableViewTest {
                     {
                         setGraphic(view);
                     }
-
-                    ;
 
                     @Override
                     public void updateItem(String item, boolean empty) {
@@ -2715,7 +2711,7 @@ public class TreeTableViewTest {
             public TreeTableCell<String, String> call(TreeTableColumn<String, String> param) {
                 return new TreeTableCellShim<>() {
                     Rectangle graphic = new Rectangle(10, 10, Color.RED);
-                    { setGraphic(graphic); };
+                    { setGraphic(graphic); }
 
                     @Override public void updateItem(String item, boolean empty) {
                         super.updateItem(item, empty);
@@ -2754,7 +2750,7 @@ public class TreeTableViewTest {
             @Override public TreeTableRow<String> call(TreeTableView<String> param) {
                 return new TreeTableRowShim<>() {
                     Rectangle graphic = new Rectangle(10, 10, Color.RED);
-                    { setGraphic(graphic); };
+                    { setGraphic(graphic); }
 
                     @Override public void updateItem(String item, boolean empty) {
                         super.updateItem(item, empty);

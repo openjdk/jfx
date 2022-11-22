@@ -1118,7 +1118,7 @@ public class TreeViewTest {
             public TreeCell<String> call(TreeView<String> param) {
                 return new TreeCellShim<>() {
                     ImageView view = new ImageView();
-                    { setGraphic(view); };
+                    { setGraphic(view); }
 
                     @Override
                     public void updateItem(String item, boolean empty) {
@@ -1157,7 +1157,7 @@ public class TreeViewTest {
             @Override public TreeCell<String> call(TreeView<String> param) {
                 return new TreeCellShim<>() {
                     Rectangle graphic = new Rectangle(10, 10, Color.RED);
-                    { setGraphic(graphic); };
+                    { setGraphic(graphic); }
 
                     @Override public void updateItem(String item, boolean empty) {
                         super.updateItem(item, empty);

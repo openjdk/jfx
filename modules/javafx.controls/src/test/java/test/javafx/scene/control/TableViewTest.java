@@ -1532,7 +1532,7 @@ public class TableViewTest {
             public TableCell<Person, String> call(TableColumn<Person,String> param) {
                 return new TableCellShim<>() {
                     ImageView view = new ImageView();
-                    { setGraphic(view); };
+                    { setGraphic(view); }
 
                     @Override
                     public void updateItem(String item, boolean empty) {
@@ -1584,7 +1584,7 @@ public class TableViewTest {
             public TableRow<Person> call(TableView<Person> param) {
                 return new TableRowShim<>() {
                     ImageView view = new ImageView();
-                    { setGraphic(view); };
+                    { setGraphic(view); }
 
                     @Override
                     public void updateItem(Person item, boolean empty) {
@@ -1740,7 +1740,7 @@ public class TableViewTest {
             public TableCell<Person, String> call(TableColumn<Person, String> param) {
                 return new TableCellShim<>() {
                     Rectangle graphic = new Rectangle(10, 10, Color.RED);
-                    { setGraphic(graphic); };
+                    { setGraphic(graphic); }
 
                     @Override public void updateItem(String item, boolean empty) {
                         super.updateItem(item, empty);
@@ -1782,7 +1782,7 @@ public class TableViewTest {
             @Override public TableRow<Person> call(TableView<Person> param) {
                 return new TableRowShim<>() {
                     Rectangle graphic = new Rectangle(10, 10, Color.RED);
-                    { setGraphic(graphic); };
+                    { setGraphic(graphic); }
 
                     @Override public void updateItem(Person item, boolean empty) {
                         super.updateItem(item, empty);
