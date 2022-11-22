@@ -49,8 +49,7 @@ import java.util.Map;
 import java.util.WeakHashMap;
 
 final class SWResourceFactory
-    extends BaseResourceFactory
-        implements ResourceFactory {
+    extends BaseResourceFactory {
 
     private static final Map<Image,Texture> clampTexCache = new WeakHashMap<>();
     private static final Map<Image,Texture> repeatTexCache = new WeakHashMap<>();

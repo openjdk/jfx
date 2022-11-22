@@ -30,7 +30,7 @@ import com.sun.javafx.geom.PathConsumer2D;
 
 /**
  */
-public class SVGPathImpl extends Path2D implements PathConsumer2D {
+public class SVGPathImpl extends Path2D {
     String content;
     int windingRule;
 
