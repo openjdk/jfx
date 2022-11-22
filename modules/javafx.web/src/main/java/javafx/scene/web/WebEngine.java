@@ -1460,6 +1460,7 @@ final public class WebEngine {
             }
         }
 
+        @Override
         public Document get() {
             if (!this.available) {
                 return null;
@@ -1473,10 +1474,12 @@ final public class WebEngine {
             return this.document;
         }
 
+        @Override
         public Object getBean() {
             return WebEngine.this;
         }
 
+        @Override
         public String getName() {
             return "document";
         }

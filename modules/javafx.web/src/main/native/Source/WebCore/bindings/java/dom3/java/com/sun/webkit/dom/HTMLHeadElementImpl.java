@@ -38,11 +38,13 @@ public class HTMLHeadElementImpl extends HTMLElementImpl implements HTMLHeadElem
 
 
 // Attributes
+    @Override
     public String getProfile() {
         return getProfileImpl(getPeer());
     }
     native static String getProfileImpl(long peer);
 
+    @Override
     public void setProfile(String value) {
         setProfileImpl(getPeer(), value);
     }

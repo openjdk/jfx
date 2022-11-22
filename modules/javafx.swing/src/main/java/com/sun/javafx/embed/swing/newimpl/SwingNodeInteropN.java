@@ -238,7 +238,8 @@ public class SwingNodeInteropN {
          SwingNodeDisposer(LightweightFrameWrapper ref) {
              this.lwFrame = ref;
          }
-         public void dispose() {
+         @Override
+        public void dispose() {
              if (lwFrame != null) {
                  lwFrame.dispose();
                  lwFrame = null;

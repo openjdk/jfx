@@ -39,6 +39,7 @@ public class CSSFontFaceRuleImpl extends CSSRuleImpl implements CSSFontFaceRule 
 
 
 // Attributes
+    @Override
     public CSSStyleDeclaration getStyle() {
         return CSSStyleDeclarationImpl.getImpl(getStyleImpl(getPeer()));
     }

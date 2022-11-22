@@ -38,11 +38,13 @@ public class HTMLTitleElementImpl extends HTMLElementImpl implements HTMLTitleEl
 
 
 // Attributes
+    @Override
     public String getText() {
         return getTextImpl(getPeer());
     }
     native static String getTextImpl(long peer);
 
+    @Override
     public void setText(String value) {
         setTextImpl(getPeer(), value);
     }

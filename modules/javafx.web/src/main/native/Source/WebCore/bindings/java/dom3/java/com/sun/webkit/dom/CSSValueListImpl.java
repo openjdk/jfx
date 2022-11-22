@@ -39,6 +39,7 @@ public class CSSValueListImpl extends CSSValueImpl implements CSSValueList {
 
 
 // Attributes
+    @Override
     public int getLength() {
         return getLengthImpl(getPeer());
     }
@@ -46,6 +47,7 @@ public class CSSValueListImpl extends CSSValueImpl implements CSSValueList {
 
 
 // Functions
+    @Override
     public CSSValue item(int index)
     {
         return CSSValueImpl.getImpl(itemImpl(getPeer()

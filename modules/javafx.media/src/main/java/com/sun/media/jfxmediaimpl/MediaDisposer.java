@@ -191,6 +191,7 @@ public class MediaDisposer {
             this.disposer = disposer;
         }
 
+        @Override
         public void dispose() {
             disposer.disposeResource(resource);
         }

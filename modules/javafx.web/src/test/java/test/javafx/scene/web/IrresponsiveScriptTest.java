@@ -57,6 +57,7 @@ public class IrresponsiveScriptTest extends TestBase {
         // and checks that it is not interrupted.
         final int TIMEOUT = 24;    // seconds
         getEngine().setOnAlert(new EventHandler<WebEvent<String>>() {
+            @Override
             public void handle(WebEvent<String> ev) {
                 try {
                     synchronized (this) {

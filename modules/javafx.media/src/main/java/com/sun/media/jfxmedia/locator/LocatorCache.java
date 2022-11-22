@@ -129,6 +129,7 @@ public class LocatorCache {
     }
 
     private class CacheDisposer implements MediaDisposer.ResourceDisposer {
+        @Override
         public void disposeResource(Object resource) {
             // resource will be the URI that the CacheReference was stored against
             // use it to remove the entry from uriCache, this way we don't need

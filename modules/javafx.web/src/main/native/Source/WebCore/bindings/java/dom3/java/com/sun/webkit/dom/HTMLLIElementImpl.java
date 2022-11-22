@@ -38,21 +38,25 @@ public class HTMLLIElementImpl extends HTMLElementImpl implements HTMLLIElement 
 
 
 // Attributes
+    @Override
     public String getType() {
         return getTypeImpl(getPeer());
     }
     native static String getTypeImpl(long peer);
 
+    @Override
     public void setType(String value) {
         setTypeImpl(getPeer(), value);
     }
     native static void setTypeImpl(long peer, String value);
 
+    @Override
     public int getValue() {
         return getValueImpl(getPeer());
     }
     native static int getValueImpl(long peer);
 
+    @Override
     public void setValue(int value) {
         setValueImpl(getPeer(), value);
     }

@@ -37,6 +37,7 @@ public class CSSRuleImpl implements CSSRule {
         SelfDisposer(final long peer) {
             this.peer = peer;
         }
+        @Override
         public void dispose() {
             CSSRuleImpl.dispose(peer);
         }
@@ -102,26 +103,31 @@ public class CSSRuleImpl implements CSSRule {
     public static final int WEBKIT_KEYFRAME_RULE = 8;
 
 // Attributes
+    @Override
     public short getType() {
         return getTypeImpl(getPeer());
     }
     native static short getTypeImpl(long peer);
 
+    @Override
     public String getCssText() {
         return getCssTextImpl(getPeer());
     }
     native static String getCssTextImpl(long peer);
 
+    @Override
     public void setCssText(String value) throws DOMException {
         setCssTextImpl(getPeer(), value);
     }
     native static void setCssTextImpl(long peer, String value);
 
+    @Override
     public CSSStyleSheet getParentStyleSheet() {
         return CSSStyleSheetImpl.getImpl(getParentStyleSheetImpl(getPeer()));
     }
     native static long getParentStyleSheetImpl(long peer);
 
+    @Override
     public CSSRule getParentRule() {
         return CSSRuleImpl.getImpl(getParentRuleImpl(getPeer()));
     }

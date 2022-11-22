@@ -39,7 +39,7 @@ public class JavaScriptBridgeTest extends TestBase {
         parent.setMember(name, javaObject);
     }
 
-    public @Test void testJSBridge1() throws InterruptedException {
+    public @Test void testJSBridge1() {
         final Document doc = getDocumentFor("src/test/resources/test/html/dom.html");
         final WebEngine web = getEngine();
 
@@ -121,7 +121,7 @@ public class JavaScriptBridgeTest extends TestBase {
         });
     }
 
-    public @Test void testJSBridge2() throws InterruptedException {
+    public @Test void testJSBridge2() {
         submit(() -> {
             JSObject strO = (JSObject)
                     getEngine().executeScript("new String('test me')");
@@ -135,7 +135,7 @@ public class JavaScriptBridgeTest extends TestBase {
         });
     }
 
-    public @Test void testJSBridge3() throws InterruptedException {
+    public @Test void testJSBridge3() {
         //final Document doc = getDocumentFor("src/test/resources/test/html/dom.html");
         final WebEngine web = getEngine();
 
@@ -157,7 +157,7 @@ public class JavaScriptBridgeTest extends TestBase {
         });
     }
 
-    public @Test void testJSBridge4() throws InterruptedException {
+    public @Test void testJSBridge4() {
         final WebEngine web = getEngine();
 
         submit(() -> {
@@ -207,7 +207,7 @@ public class JavaScriptBridgeTest extends TestBase {
         });
     }
 
-    @Test public void testJSBridge5() throws InterruptedException {
+    @Test public void testJSBridge5() {
         final Document doc = getDocumentFor("src/test/resources/test/html/dom.html");
         final WebEngine web = getEngine();
 
@@ -223,7 +223,7 @@ public class JavaScriptBridgeTest extends TestBase {
         });
     }
 
-    @Test public void testJSCall1() throws InterruptedException {
+    @Test public void testJSCall1() {
         final WebEngine web = getEngine();
         submit(() -> {
             assertEquals("123.7", web.executeScript("123.67.toFixed(1)"));
@@ -237,7 +237,7 @@ public class JavaScriptBridgeTest extends TestBase {
          });
     }
 
-    @Test public void testNullMemberName() throws InterruptedException {
+    @Test public void testNullMemberName() {
         submit(() -> {
             JSObject parent = (JSObject) getEngine().executeScript("parent");
 
@@ -299,7 +299,7 @@ public class JavaScriptBridgeTest extends TestBase {
         }
     }
 
-    public @Test void testCallStatic() throws InterruptedException {
+    public @Test void testCallStatic() {
         final WebEngine web = getEngine();
 
         submit(() -> {
@@ -541,7 +541,7 @@ public class JavaScriptBridgeTest extends TestBase {
         });
     }
 
-    public @Test void testBridgeExplicitOverloading() throws InterruptedException {
+    public @Test void testBridgeExplicitOverloading() {
         final WebEngine web = getEngine();
 
         submit(() -> {
@@ -600,7 +600,7 @@ public class JavaScriptBridgeTest extends TestBase {
         executeShouldFail(web, expression, "is not a function");
     }
 
-    public @Test void testThrowJava() throws InterruptedException {
+    public @Test void testThrowJava() {
         final WebEngine web = getEngine();
 
         submit(() -> {
@@ -619,7 +619,7 @@ public class JavaScriptBridgeTest extends TestBase {
     }
 
     // RT-37859
-    public @Test void testThrowJava2() throws InterruptedException {
+    public @Test void testThrowJava2() {
         final WebEngine web = getEngine();
 
         submit(() -> {
@@ -652,7 +652,7 @@ public class JavaScriptBridgeTest extends TestBase {
     }
 
 
-    public @Test void testBridgeArray1() throws InterruptedException {
+    public @Test void testBridgeArray1() {
         final WebEngine web = getEngine();
 
         submit(() -> {
@@ -665,7 +665,7 @@ public class JavaScriptBridgeTest extends TestBase {
          });
     }
 
-    public @Test void testBridgeBadOverloading() throws InterruptedException {
+    public @Test void testBridgeBadOverloading() {
         final WebEngine web = getEngine();
 
         submit(() -> {

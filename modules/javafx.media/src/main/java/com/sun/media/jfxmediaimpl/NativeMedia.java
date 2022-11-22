@@ -68,6 +68,7 @@ public abstract class NativeMedia extends Media {
 
     // --- Markers ---
 
+    @Override
     public void addMarker(String markerName, double presentationTime){
         if (markerName == null) {
             throw new IllegalArgumentException("markerName == null!");
@@ -90,6 +91,7 @@ public abstract class NativeMedia extends Media {
         fireMarkerStateEvent(true);
     }
 
+    @Override
     public Map<String, Double> getMarkers() {
         Map<String, Double> markers = null;
         markerLock.lock();
@@ -103,6 +105,7 @@ public abstract class NativeMedia extends Media {
         return markers;
     }
 
+    @Override
     public double removeMarker(String markerName) {
         if (markerName == null) {
             throw new IllegalArgumentException("markerName == null!");
@@ -128,6 +131,7 @@ public abstract class NativeMedia extends Media {
         return time;
     }
 
+    @Override
     public void removeAllMarkers() {
         markerLock.lock();
         try {

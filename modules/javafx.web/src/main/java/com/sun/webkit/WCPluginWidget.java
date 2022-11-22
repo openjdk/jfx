@@ -186,6 +186,7 @@ final class WCPluginWidget extends WCWidget implements PluginListener {
     }
 
     //PluginListener
+    @Override
     public void fwkRedraw(
             //client coordinates!!!
             final int x,
@@ -199,6 +200,7 @@ final class WCPluginWidget extends WCWidget implements PluginListener {
 
     private native void twkSetPlugunFocused(boolean isFocused);
 
+    @Override
     public String fwkEvent(
             final int eventId,
             final String name,

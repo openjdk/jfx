@@ -39,7 +39,7 @@ import org.w3c.dom.Document;
 
 public class BindingTest extends TestBase {
 
-    @Test public void testWebView() throws InterruptedException {
+    @Test public void testWebView() {
         submit(() -> {
             WebView main = getView();
             WebView test = new WebView();

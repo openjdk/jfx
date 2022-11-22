@@ -37,6 +37,7 @@ public class DOMSelectionImpl {
         SelfDisposer(final long peer) {
             this.peer = peer;
         }
+        @Override
         public void dispose() {
             DOMSelectionImpl.dispose(peer);
         }

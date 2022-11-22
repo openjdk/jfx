@@ -75,6 +75,7 @@ public class HistoryTest extends TestBase {
         // check the list update
         //
         history.getEntries().addListener(new ListChangeListener<WebHistory.Entry>() {
+            @Override
             public void onChanged(ListChangeListener.Change<? extends WebHistory.Entry> c) {
                 c.next();
                 assertTrue("entries: change is wrong", c.wasAdded());
@@ -117,6 +118,7 @@ public class HistoryTest extends TestBase {
         try { Thread.sleep(150); } catch (Exception e) {} // ensure the next date doesn't fit into the same millisecond
 
         history.currentIndexProperty().addListener(new ChangeListener<Number>() {
+            @Override
             public void changed(ObservableValue<? extends java.lang.Number> observable, Number oldValue, Number newValue) {
                 assertEquals("currentIndexProperty: old index is wrong", 2, oldValue);
                 assertEquals("currentIndexProperty: new index is wrong", 1, newValue);
@@ -283,6 +285,7 @@ public class HistoryTest extends TestBase {
         return new ChangeListener<Date>() {
             long startTime = System.currentTimeMillis();
 
+            @Override
             public void changed(ObservableValue<? extends Date> observable, Date oldValue, Date newValue) {
                 long curTime = System.currentTimeMillis();
 

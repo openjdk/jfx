@@ -84,11 +84,13 @@ public class KeyboardEventImpl extends UIEventImpl {
     }
     native static boolean getAltGraphKeyImpl(long peer);
 
+    @Override
     public int getKeyCode() {
         return getKeyCodeImpl(getPeer());
     }
     native static int getKeyCodeImpl(long peer);
 
+    @Override
     public int getCharCode() {
         return getCharCodeImpl(getPeer());
     }

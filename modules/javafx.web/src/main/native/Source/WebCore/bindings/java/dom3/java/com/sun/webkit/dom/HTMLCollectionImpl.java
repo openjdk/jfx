@@ -36,6 +36,7 @@ public class HTMLCollectionImpl implements HTMLCollection {
         SelfDisposer(final long peer) {
             this.peer = peer;
         }
+        @Override
         public void dispose() {
             HTMLCollectionImpl.dispose(peer);
         }
@@ -84,6 +85,7 @@ public class HTMLCollectionImpl implements HTMLCollection {
 
 
 // Attributes
+    @Override
     public int getLength() {
         return getLengthImpl(getPeer());
     }
@@ -91,6 +93,7 @@ public class HTMLCollectionImpl implements HTMLCollection {
 
 
 // Functions
+    @Override
     public Node item(int index)
     {
         return NodeImpl.getImpl(itemImpl(getPeer()
@@ -100,6 +103,7 @@ public class HTMLCollectionImpl implements HTMLCollection {
         , int index);
 
 
+    @Override
     public Node namedItem(String name)
     {
         return NodeImpl.getImpl(namedItemImpl(getPeer()

@@ -127,8 +127,10 @@ final class WCImageDecoderImpl extends WCImageDecoder {
     private void startLoader() {
         if (this.loader == null) {
             this.loader = new Service<ImageFrame[]>() {
+                @Override
                 protected Task<ImageFrame[]> createTask() {
                     return new Task<ImageFrame[]>() {
+                        @Override
                         protected ImageFrame[] call() throws Exception {
                             return loadFrames();
                         }

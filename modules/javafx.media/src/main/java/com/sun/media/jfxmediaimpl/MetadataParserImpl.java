@@ -58,6 +58,7 @@ public abstract class MetadataParserImpl extends Thread implements com.sun.media
         this.locator = locator;
     }
 
+    @Override
     public void addListener(MetadataListener listener) {
         synchronized (listeners) {
             if (listener != null) {
@@ -66,6 +67,7 @@ public abstract class MetadataParserImpl extends Thread implements com.sun.media
         }
     }
 
+    @Override
     public void removeListener(MetadataListener listener) {
         synchronized (listeners) {
             if (listener != null) {
@@ -79,10 +81,12 @@ public abstract class MetadataParserImpl extends Thread implements com.sun.media
         }
     }
 
+    @Override
     public void startParser() throws IOException {
         start();
     }
 
+    @Override
     public void stopParser() {
         if (connectionHolder != null) {
             connectionHolder.closeConnection();

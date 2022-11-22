@@ -246,6 +246,7 @@ final class RTImage extends PrismImage implements ResourceFactoryListener {
     @Override
     protected void drawPixelBuffer() {
         PrismInvoker.invokeOnRenderThread(new Runnable() {
+            @Override
             public void run() {
                 //[g] field can be null if it is the first paint
                 //from synthetic ImageData or if the resource factory is disposed

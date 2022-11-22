@@ -192,6 +192,7 @@ public class FXDnDInteropN {
             if (c != null) recognizers.put(c, this);
         }
 
+        @Override
         protected void registerListeners() {
             runOnFxThread(() -> {
                 if (!isDragSourceListenerInstalled) {
@@ -207,6 +208,7 @@ public class FXDnDInteropN {
             });
         }
 
+        @Override
         protected void unregisterListeners() {
             runOnFxThread(() -> {
                 if (isDragSourceListenerInstalled) {

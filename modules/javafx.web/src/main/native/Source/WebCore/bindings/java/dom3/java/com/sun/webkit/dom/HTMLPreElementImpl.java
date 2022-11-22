@@ -38,11 +38,13 @@ public class HTMLPreElementImpl extends HTMLElementImpl implements HTMLPreElemen
 
 
 // Attributes
+    @Override
     public int getWidth() {
         return getWidthImpl(getPeer());
     }
     native static int getWidthImpl(long peer);
 
+    @Override
     public void setWidth(int value) {
         setWidthImpl(getPeer(), value);
     }

@@ -39,26 +39,31 @@ public class HTMLLegendElementImpl extends HTMLElementImpl implements HTMLLegend
 
 
 // Attributes
+    @Override
     public HTMLFormElement getForm() {
         return HTMLFormElementImpl.getImpl(getFormImpl(getPeer()));
     }
     native static long getFormImpl(long peer);
 
+    @Override
     public String getAlign() {
         return getAlignImpl(getPeer());
     }
     native static String getAlignImpl(long peer);
 
+    @Override
     public void setAlign(String value) {
         setAlignImpl(getPeer(), value);
     }
     native static void setAlignImpl(long peer, String value);
 
+    @Override
     public String getAccessKey() {
         return getAccessKeyImpl(getPeer());
     }
     native static String getAccessKeyImpl(long peer);
 
+    @Override
     public void setAccessKey(String value) {
         setAccessKeyImpl(getPeer(), value);
     }

@@ -85,6 +85,7 @@ public class DebuggerTest extends TestBase {
         submit(() -> {
             Debugger debugger = WebEngineShim.getDebugger(getEngine());
             Callback<String,Void> callback = new Callback<String,Void>() {
+                @Override
                 public Void call(String message) {
                     return null;
                 }

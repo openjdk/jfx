@@ -40,16 +40,19 @@ public class CSSImportRuleImpl extends CSSRuleImpl implements CSSImportRule {
 
 
 // Attributes
+    @Override
     public String getHref() {
         return getHrefImpl(getPeer());
     }
     native static String getHrefImpl(long peer);
 
+    @Override
     public MediaList getMedia() {
         return MediaListImpl.getImpl(getMediaImpl(getPeer()));
     }
     native static long getMediaImpl(long peer);
 
+    @Override
     public CSSStyleSheet getStyleSheet() {
         return CSSStyleSheetImpl.getImpl(getStyleSheetImpl(getPeer()));
     }

@@ -38,11 +38,13 @@ public class HTMLBRElementImpl extends HTMLElementImpl implements HTMLBRElement 
 
 
 // Attributes
+    @Override
     public String getClear() {
         return getClearImpl(getPeer());
     }
     native static String getClearImpl(long peer);
 
+    @Override
     public void setClear(String value) {
         setClearImpl(getPeer(), value);
     }

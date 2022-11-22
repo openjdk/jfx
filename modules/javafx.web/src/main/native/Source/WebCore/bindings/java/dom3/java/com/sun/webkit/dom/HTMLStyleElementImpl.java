@@ -39,31 +39,37 @@ public class HTMLStyleElementImpl extends HTMLElementImpl implements HTMLStyleEl
 
 
 // Attributes
+    @Override
     public boolean getDisabled() {
         return getDisabledImpl(getPeer());
     }
     native static boolean getDisabledImpl(long peer);
 
+    @Override
     public void setDisabled(boolean value) {
         setDisabledImpl(getPeer(), value);
     }
     native static void setDisabledImpl(long peer, boolean value);
 
+    @Override
     public String getMedia() {
         return getMediaImpl(getPeer());
     }
     native static String getMediaImpl(long peer);
 
+    @Override
     public void setMedia(String value) {
         setMediaImpl(getPeer(), value);
     }
     native static void setMediaImpl(long peer, String value);
 
+    @Override
     public String getType() {
         return getTypeImpl(getPeer());
     }
     native static String getTypeImpl(long peer);
 
+    @Override
     public void setType(String value) {
         setTypeImpl(getPeer(), value);
     }

@@ -39,16 +39,19 @@ public class CSSStyleRuleImpl extends CSSRuleImpl implements CSSStyleRule {
 
 
 // Attributes
+    @Override
     public String getSelectorText() {
         return getSelectorTextImpl(getPeer());
     }
     native static String getSelectorTextImpl(long peer);
 
+    @Override
     public void setSelectorText(String value) {
         setSelectorTextImpl(getPeer(), value);
     }
     native static void setSelectorTextImpl(long peer, String value);
 
+    @Override
     public CSSStyleDeclaration getStyle() {
         return CSSStyleDeclarationImpl.getImpl(getStyleImpl(getPeer()));
     }

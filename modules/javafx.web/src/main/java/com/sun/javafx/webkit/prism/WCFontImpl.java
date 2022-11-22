@@ -140,6 +140,7 @@ final class WCFontImpl extends WCFont {
         return glyphs;
     }
 
+    @Override
     public float getAscent() {
         // REMIND: This method needs to require a render context.
         float res = - getFontStrike().getMetrics().getAscent();
@@ -151,6 +152,7 @@ final class WCFontImpl extends WCFont {
         return res;
     }
 
+    @Override
     public float getDescent() {
         // REMIND: This method needs to require a render context.
         float res = getFontStrike().getMetrics().getDescent();
@@ -162,6 +164,7 @@ final class WCFontImpl extends WCFont {
         return res;
     }
 
+    @Override
     public float getLineSpacing() {
         // REMIND: This method needs to require a render context.
         float res = getFontStrike().getMetrics().getLineHeight();
@@ -173,6 +176,7 @@ final class WCFontImpl extends WCFont {
         return res;
     }
 
+    @Override
     public float getLineGap() {
         // REMIND: This method needs to require a render context.
         float res = getFontStrike().getMetrics().getLineGap();
@@ -184,10 +188,12 @@ final class WCFontImpl extends WCFont {
         return res;
     }
 
+    @Override
     public boolean hasUniformLineMetrics() {
         return false;
     }
 
+    @Override
     public Object getPlatformFont() {
         return font;
     }

@@ -40,16 +40,19 @@ public class HTMLLabelElementImpl extends HTMLElementImpl implements HTMLLabelEl
 
 
 // Attributes
+    @Override
     public HTMLFormElement getForm() {
         return HTMLFormElementImpl.getImpl(getFormImpl(getPeer()));
     }
     native static long getFormImpl(long peer);
 
+    @Override
     public String getHtmlFor() {
         return getHtmlForImpl(getPeer());
     }
     native static String getHtmlForImpl(long peer);
 
+    @Override
     public void setHtmlFor(String value) {
         setHtmlForImpl(getPeer(), value);
     }
@@ -60,11 +63,13 @@ public class HTMLLabelElementImpl extends HTMLElementImpl implements HTMLLabelEl
     }
     native static long getControlImpl(long peer);
 
+    @Override
     public String getAccessKey() {
         return getAccessKeyImpl(getPeer());
     }
     native static String getAccessKeyImpl(long peer);
 
+    @Override
     public void setAccessKey(String value) {
         setAccessKeyImpl(getPeer(), value);
     }

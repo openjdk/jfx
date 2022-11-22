@@ -52,6 +52,7 @@ final class WCLinearGradient extends WCGradient<LinearGradient> {
         this.stops.add(new Stop(color, offset));
     }
 
+    @Override
     public LinearGradient getPlatformGradient() {
         Collections.sort(this.stops, WCRadialGradient.COMPARATOR);
         return new LinearGradient(

@@ -117,6 +117,7 @@ public final class Disposer implements Runnable {
         records.add(rec);
     }
 
+    @Override
     public void run() {
         while (true) {
             try {

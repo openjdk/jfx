@@ -393,6 +393,7 @@ public class NativeMediaManager {
 
     private static class NativeMediaPlayerDisposer implements MediaDisposer.ResourceDisposer {
 
+        @Override
         public void disposeResource(Object resource) {
             // resource is a MediaPlayer
             MediaPlayer player = (MediaPlayer) resource;

@@ -37,6 +37,7 @@ public class StyleSheetImpl implements StyleSheet {
         SelfDisposer(final long peer) {
             this.peer = peer;
         }
+        @Override
         public void dispose() {
             StyleSheetImpl.dispose(peer);
         }
@@ -85,41 +86,49 @@ public class StyleSheetImpl implements StyleSheet {
 
 
 // Attributes
+    @Override
     public String getType() {
         return getTypeImpl(getPeer());
     }
     native static String getTypeImpl(long peer);
 
+    @Override
     public boolean getDisabled() {
         return getDisabledImpl(getPeer());
     }
     native static boolean getDisabledImpl(long peer);
 
+    @Override
     public void setDisabled(boolean value) {
         setDisabledImpl(getPeer(), value);
     }
     native static void setDisabledImpl(long peer, boolean value);
 
+    @Override
     public Node getOwnerNode() {
         return NodeImpl.getImpl(getOwnerNodeImpl(getPeer()));
     }
     native static long getOwnerNodeImpl(long peer);
 
+    @Override
     public StyleSheet getParentStyleSheet() {
         return StyleSheetImpl.getImpl(getParentStyleSheetImpl(getPeer()));
     }
     native static long getParentStyleSheetImpl(long peer);
 
+    @Override
     public String getHref() {
         return getHrefImpl(getPeer());
     }
     native static String getHrefImpl(long peer);
 
+    @Override
     public String getTitle() {
         return getTitleImpl(getPeer());
     }
     native static String getTitleImpl(long peer);
 
+    @Override
     public MediaList getMedia() {
         return MediaListImpl.getImpl(getMediaImpl(getPeer()));
     }

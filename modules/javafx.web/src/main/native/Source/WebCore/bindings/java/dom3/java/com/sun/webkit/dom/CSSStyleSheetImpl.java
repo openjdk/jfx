@@ -41,11 +41,13 @@ public class CSSStyleSheetImpl extends StyleSheetImpl implements CSSStyleSheet {
 
 
 // Attributes
+    @Override
     public CSSRule getOwnerRule() {
         return CSSRuleImpl.getImpl(getOwnerRuleImpl(getPeer()));
     }
     native static long getOwnerRuleImpl(long peer);
 
+    @Override
     public CSSRuleList getCssRules() {
         return CSSRuleListImpl.getImpl(getCssRulesImpl(getPeer()));
     }
@@ -58,6 +60,7 @@ public class CSSStyleSheetImpl extends StyleSheetImpl implements CSSStyleSheet {
 
 
 // Functions
+    @Override
     public int insertRule(String rule
         , int index) throws DOMException
     {
@@ -70,6 +73,7 @@ public class CSSStyleSheetImpl extends StyleSheetImpl implements CSSStyleSheet {
         , int index);
 
 
+    @Override
     public void deleteRule(int index) throws DOMException
     {
         deleteRuleImpl(getPeer()

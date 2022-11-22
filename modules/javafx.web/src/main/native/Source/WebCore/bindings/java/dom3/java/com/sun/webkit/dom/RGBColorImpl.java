@@ -36,6 +36,7 @@ public class RGBColorImpl implements RGBColor {
         SelfDisposer(final long peer) {
             this.peer = peer;
         }
+        @Override
         public void dispose() {
             RGBColorImpl.dispose(peer);
         }
@@ -78,16 +79,19 @@ public class RGBColorImpl implements RGBColor {
 
 
 // Attributes
+    @Override
     public CSSPrimitiveValue getRed() {
         return CSSPrimitiveValueImpl.getImpl(getRedImpl(getPeer()));
     }
     native static long getRedImpl(long peer);
 
+    @Override
     public CSSPrimitiveValue getGreen() {
         return CSSPrimitiveValueImpl.getImpl(getGreenImpl(getPeer()));
     }
     native static long getGreenImpl(long peer);
 
+    @Override
     public CSSPrimitiveValue getBlue() {
         return CSSPrimitiveValueImpl.getImpl(getBlueImpl(getPeer()));
     }

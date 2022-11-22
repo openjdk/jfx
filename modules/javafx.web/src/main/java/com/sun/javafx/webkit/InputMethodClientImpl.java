@@ -65,6 +65,7 @@ public final class InputMethodClientImpl
         }
     }
 
+    @Override
     public void activateInputMethods(final boolean doActivate) {
         WebView wv = wvRef.get();
         if (wv != null && wv.getScene() != null) {
@@ -122,6 +123,7 @@ public final class InputMethodClientImpl
     }
 
     // InputMethodRequests implementation
+    @Override
     public Point2D getTextLocation(int offset) {
         FutureTask<Point2D> f = new FutureTask<>(() -> {
             int[] loc = webPage.getClientTextLocation(offset);
@@ -143,6 +145,7 @@ public final class InputMethodClientImpl
         return result;
     }
 
+    @Override
     public int getLocationOffset(int x, int y) {
         FutureTask<Integer> f = new FutureTask<>(() -> {
             WCPoint point = webPage.getPageClient().windowToScreen(new WCPoint(0, 0));
@@ -161,10 +164,12 @@ public final class InputMethodClientImpl
         return location;
     }
 
+    @Override
     public void cancelLatestCommittedText() {
         // "Undo commit" is not supported.
     }
 
+    @Override
     public String getSelectedText() {
         return webPage.getClientSelectedText();
     }

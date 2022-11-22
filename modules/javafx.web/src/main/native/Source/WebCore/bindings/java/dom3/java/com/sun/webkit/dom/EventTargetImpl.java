@@ -38,6 +38,7 @@ public class EventTargetImpl implements EventTarget {
         SelfDisposer(final long peer) {
             this.peer = peer;
         }
+        @Override
         public void dispose() {
             EventTargetImpl.dispose(peer);
         }
@@ -80,6 +81,7 @@ public class EventTargetImpl implements EventTarget {
 
 
 // Functions
+    @Override
     public void addEventListener(String type
         , EventListener listener
         , boolean useCapture)
@@ -95,6 +97,7 @@ public class EventTargetImpl implements EventTarget {
         , boolean useCapture);
 
 
+    @Override
     public void removeEventListener(String type
         , EventListener listener
         , boolean useCapture)
@@ -110,6 +113,7 @@ public class EventTargetImpl implements EventTarget {
         , boolean useCapture);
 
 
+    @Override
     public boolean dispatchEvent(Event event) throws DOMException
     {
         return dispatchEventImpl(getPeer()

@@ -36,6 +36,7 @@ public class RectImpl implements Rect {
         SelfDisposer(final long peer) {
             this.peer = peer;
         }
+        @Override
         public void dispose() {
             RectImpl.dispose(peer);
         }
@@ -78,21 +79,25 @@ public class RectImpl implements Rect {
 
 
 // Attributes
+    @Override
     public CSSPrimitiveValue getTop() {
         return CSSPrimitiveValueImpl.getImpl(getTopImpl(getPeer()));
     }
     native static long getTopImpl(long peer);
 
+    @Override
     public CSSPrimitiveValue getRight() {
         return CSSPrimitiveValueImpl.getImpl(getRightImpl(getPeer()));
     }
     native static long getRightImpl(long peer);
 
+    @Override
     public CSSPrimitiveValue getBottom() {
         return CSSPrimitiveValueImpl.getImpl(getBottomImpl(getPeer()));
     }
     native static long getBottomImpl(long peer);
 
+    @Override
     public CSSPrimitiveValue getLeft() {
         return CSSPrimitiveValueImpl.getImpl(getLeftImpl(getPeer()));
     }

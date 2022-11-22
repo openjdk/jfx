@@ -163,6 +163,7 @@ final class NativeAudioClip extends AudioClip {
     }
 
     private static class NativeAudioClipDisposer implements MediaDisposer.ResourceDisposer {
+        @Override
         public void disposeResource(Object resource) {
             // resource is a Long
             long nativeHandle = ((Long)resource).longValue();

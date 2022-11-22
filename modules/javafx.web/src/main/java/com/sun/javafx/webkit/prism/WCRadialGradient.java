@@ -79,6 +79,7 @@ final class WCRadialGradient extends WCGradient<RadialGradient> {
         this.stops.add(new Stop(color, offset));
     }
 
+    @Override
     public RadialGradient getPlatformGradient() {
         Collections.sort(this.stops, COMPARATOR);
         float dx = this.p2.getX() - this.p1.getX();

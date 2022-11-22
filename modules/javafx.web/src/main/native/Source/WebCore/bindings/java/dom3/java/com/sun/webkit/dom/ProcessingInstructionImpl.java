@@ -40,6 +40,7 @@ public class ProcessingInstructionImpl extends CharacterDataImpl implements Proc
 
 
 // Attributes
+    @Override
     public String getTarget() {
         return getTargetImpl(getPeer());
     }

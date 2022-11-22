@@ -36,6 +36,7 @@ public class MediaListImpl implements MediaList {
         SelfDisposer(final long peer) {
             this.peer = peer;
         }
+        @Override
         public void dispose() {
             MediaListImpl.dispose(peer);
         }
@@ -78,16 +79,19 @@ public class MediaListImpl implements MediaList {
 
 
 // Attributes
+    @Override
     public String getMediaText() {
         return getMediaTextImpl(getPeer());
     }
     native static String getMediaTextImpl(long peer);
 
+    @Override
     public void setMediaText(String value) throws DOMException {
         setMediaTextImpl(getPeer(), value);
     }
     native static void setMediaTextImpl(long peer, String value);
 
+    @Override
     public int getLength() {
         return getLengthImpl(getPeer());
     }
@@ -95,6 +99,7 @@ public class MediaListImpl implements MediaList {
 
 
 // Functions
+    @Override
     public String item(int index)
     {
         return itemImpl(getPeer()
@@ -104,6 +109,7 @@ public class MediaListImpl implements MediaList {
         , int index);
 
 
+    @Override
     public void deleteMedium(String oldMedium) throws DOMException
     {
         deleteMediumImpl(getPeer()
@@ -113,6 +119,7 @@ public class MediaListImpl implements MediaList {
         , String oldMedium);
 
 
+    @Override
     public void appendMedium(String newMedium) throws DOMException
     {
         appendMediumImpl(getPeer()

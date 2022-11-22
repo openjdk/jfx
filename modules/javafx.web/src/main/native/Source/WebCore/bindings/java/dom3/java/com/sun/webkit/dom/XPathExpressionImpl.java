@@ -38,6 +38,7 @@ public class XPathExpressionImpl implements XPathExpression {
         SelfDisposer(final long peer) {
             this.peer = peer;
         }
+        @Override
         public void dispose() {
             XPathExpressionImpl.dispose(peer);
         }

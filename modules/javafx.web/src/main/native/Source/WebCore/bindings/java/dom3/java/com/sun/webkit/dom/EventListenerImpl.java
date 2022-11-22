@@ -47,6 +47,7 @@ final class EventListenerImpl implements EventListener {
         private SelfDisposer(final long peer) {
             this.peer = peer;
         }
+        @Override
         public void dispose() {
             //dispose JavaEL <-> JSstab connection (JavaEL die)
             EventListenerImpl.dispose(peer);
@@ -102,6 +103,7 @@ final class EventListenerImpl implements EventListener {
         return el;
     }
 
+    @Override
     public void handleEvent(Event evt) {
         //call to JS peer if any
         if (jsPeer != 0L && (evt instanceof EventImpl)) {

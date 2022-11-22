@@ -38,21 +38,25 @@ public class HTMLOptGroupElementImpl extends HTMLElementImpl implements HTMLOptG
 
 
 // Attributes
+    @Override
     public boolean getDisabled() {
         return getDisabledImpl(getPeer());
     }
     native static boolean getDisabledImpl(long peer);
 
+    @Override
     public void setDisabled(boolean value) {
         setDisabledImpl(getPeer(), value);
     }
     native static void setDisabledImpl(long peer, boolean value);
 
+    @Override
     public String getLabel() {
         return getLabelImpl(getPeer());
     }
     native static String getLabelImpl(long peer);
 
+    @Override
     public void setLabel(String value) {
         setLabelImpl(getPeer(), value);
     }

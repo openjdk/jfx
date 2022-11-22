@@ -44,26 +44,31 @@ public class MutationEventImpl extends EventImpl implements MutationEvent {
     public static final int REMOVAL = 3;
 
 // Attributes
+    @Override
     public Node getRelatedNode() {
         return NodeImpl.getImpl(getRelatedNodeImpl(getPeer()));
     }
     native static long getRelatedNodeImpl(long peer);
 
+    @Override
     public String getPrevValue() {
         return getPrevValueImpl(getPeer());
     }
     native static String getPrevValueImpl(long peer);
 
+    @Override
     public String getNewValue() {
         return getNewValueImpl(getPeer());
     }
     native static String getNewValueImpl(long peer);
 
+    @Override
     public String getAttrName() {
         return getAttrNameImpl(getPeer());
     }
     native static String getAttrNameImpl(long peer);
 
+    @Override
     public short getAttrChange() {
         return getAttrChangeImpl(getPeer());
     }
@@ -71,6 +76,7 @@ public class MutationEventImpl extends EventImpl implements MutationEvent {
 
 
 // Functions
+    @Override
     public void initMutationEvent(String type
         , boolean canBubble
         , boolean cancelable

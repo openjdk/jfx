@@ -52,6 +52,7 @@ final class ID3MetadataParser extends MetadataParserImpl {
         super(locator);
     }
 
+    @Override
     protected void parse() {
         try {
             // We will need ISO-8859-1
