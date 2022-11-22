@@ -125,7 +125,7 @@ import javafx.css.Styleable;
  * @see javafx.scene.control.cell.TreeItemPropertyValueFactory
  * @since JavaFX 8.0
  */
-public class TreeTableColumn<S,T> extends TableColumnBase<TreeItem<S>,T> implements EventTarget {
+public class TreeTableColumn<S,T> extends TableColumnBase<TreeItem<S>,T> {
 
     /* *************************************************************************
      *                                                                         *

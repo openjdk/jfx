@@ -132,7 +132,7 @@ import javafx.beans.value.WritableValue;
  * @see TablePosition
  * @since JavaFX 2.0
  */
-public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarget {
+public class TableColumn<S,T> extends TableColumnBase<S,T> {
 
     /* *************************************************************************
      *                                                                         *
