@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,7 +24,6 @@
  */
 package com.sun.glass.ui.win;
 
-import com.sun.glass.ui.Application;
 import com.sun.glass.ui.Menu;
 import com.sun.glass.ui.MenuBar;
 import com.sun.glass.ui.MenuItem;
@@ -33,15 +32,8 @@ import com.sun.glass.ui.delegate.MenuDelegate;
 import com.sun.glass.ui.delegate.ClipboardDelegate;
 import com.sun.glass.ui.delegate.MenuBarDelegate;
 import com.sun.glass.ui.delegate.MenuItemDelegate;
-import com.sun.javafx.tk.Toolkit;
-import java.util.Map;
 
 public final class WinPlatformFactory extends PlatformFactory {
-
-    static {
-        Toolkit.loadMSWindowsLibraries();
-        Application.loadNativeLibrary();
-    }
 
     @Override public WinApplication createApplication() {
         return new WinApplication();
@@ -62,8 +54,4 @@ public final class WinPlatformFactory extends PlatformFactory {
     @Override public ClipboardDelegate createClipboardDelegate() {
         return new WinClipboardDelegate();
     }
-
-    @Override
-    public native Map<String, Object> getPreferences();
-
 }

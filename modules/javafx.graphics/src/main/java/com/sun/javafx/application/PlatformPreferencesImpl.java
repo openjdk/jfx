@@ -25,7 +25,6 @@
 
 package com.sun.javafx.application;
 
-import com.sun.glass.ui.PlatformFactory;
 import javafx.application.PlatformPreferences;
 import javafx.application.PlatformPreferencesListener;
 import javafx.scene.paint.Color;
@@ -39,7 +38,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 
 public final class PlatformPreferencesImpl extends AbstractMap<String, Object> implements PlatformPreferences {
 
-    private final Map<String, Object> modifiableMap = new HashMap<>(PlatformFactory.getPlatformFactory().getPreferences());
+    private final Map<String, Object> modifiableMap = new HashMap<>();
     private final Set<Entry<String, Object>> unmodifiableEntrySet = Collections.unmodifiableSet(modifiableMap.entrySet());
     private final List<PlatformPreferencesListener> listeners = new CopyOnWriteArrayList<>();
 

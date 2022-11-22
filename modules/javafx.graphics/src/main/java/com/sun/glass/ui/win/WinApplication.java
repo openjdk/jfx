@@ -35,6 +35,7 @@ import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
+import java.util.Map;
 
 final class WinApplication extends Application implements InvokeLaterDispatcher.InvokeLaterSubmitter {
     static float   overrideUIScale;
@@ -362,4 +363,7 @@ final class WinApplication extends Application implements InvokeLaterDispatcher.
 
     @Override
     protected native int _isKeyLocked(int keyCode);
+
+    @Override
+    public native Map<String, Object> getPlatformPreferences();
 }

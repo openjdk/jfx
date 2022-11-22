@@ -592,11 +592,11 @@ JNIEXPORT jobjectArray JNICALL Java_com_sun_glass_ui_win_WinApplication_staticSc
 }
 
 /*
- * Class:     com_sun_glass_ui_win_WinPlatformFactory
- * Method:    getPreferences
+ * Class:     com_sun_glass_ui_win_WinApplication
+ * Method:    getPlatformPreferences
  * Signature: ()Ljava/util/Map;
  */
-JNIEXPORT jobject JNICALL Java_com_sun_glass_ui_win_WinPlatformFactory_getPreferences
+JNIEXPORT jobject JNICALL Java_com_sun_glass_ui_win_WinApplication_getPlatformPreferences
     (JNIEnv * env, jobject self)
 {
     return GlassApplication::GetPreferences(env);

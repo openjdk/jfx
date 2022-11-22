@@ -114,7 +114,7 @@ public abstract class Application {
     }
 
     // May be called on any thread.
-    public static synchronized void loadNativeLibrary() {
+    protected static synchronized void loadNativeLibrary() {
         // use the "platform default" name of "glass"
         loadNativeLibrary("glass");
     }
@@ -752,5 +752,9 @@ public abstract class Application {
             default:
                 return Optional.empty();
         }
+    }
+
+    public Map<String, Object> getPlatformPreferences() {
+        return Map.of();
     }
 }

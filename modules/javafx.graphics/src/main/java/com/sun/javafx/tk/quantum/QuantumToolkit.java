@@ -359,6 +359,8 @@ public final class QuantumToolkit extends Toolkit {
             };
             pulseTimer = Application.GetApplication().createTimer(timerRunnable);
 
+            PlatformImpl.updatePreferences(Application.GetApplication().getPlatformPreferences());
+
             Application.GetApplication().setEventHandler(new Application.EventHandler() {
                 @Override public void handleQuitAction(Application app, long time) {
                     GlassStage.requestClosingAllWindows();
