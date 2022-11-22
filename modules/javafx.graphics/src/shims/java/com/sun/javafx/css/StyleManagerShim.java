@@ -194,12 +194,12 @@ public class StyleManagerShim {
             return sc.parentUsers.contains(k);
         }
 
-        public StyleManagerShim.RefList<Parent> get_parentUsers() {
-            return new RefList<>(sc.parentUsers);
+        public RefList get_parentUsers() {
+            return new RefList(sc.parentUsers);
         }
     }
 
-    static class RefList<T> {
+    static class RefList {
          private StyleManager.RefList ref;
 
          RefList(StyleManager.RefList ref) {
