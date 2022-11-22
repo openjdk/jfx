@@ -1382,7 +1382,7 @@ public class SpinnerTest {
     boolean enterDefaultPass = false;
     boolean escapeCancelPass = false;
     @Test public void testEnterEscapeKeysWithDefaultCancelButtons() {
-        Toolkit tk = (StubToolkit)Toolkit.getToolkit();
+        Toolkit tk = Toolkit.getToolkit();
         VBox root = new VBox();
         Scene scene = new Scene(root);
         Stage stage = new Stage();
@@ -1460,7 +1460,7 @@ public class SpinnerTest {
 
     // Test for JDK-8185937
     @Test public void testIncDecKeys() {
-        Toolkit tk = (StubToolkit)Toolkit.getToolkit();
+        Toolkit tk = Toolkit.getToolkit();
         VBox root = new VBox();
         Scene scene = new Scene(root);
         Stage stage = new Stage();
