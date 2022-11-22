@@ -84,9 +84,9 @@ public class LeakTest extends TestBase {
 
         submit(() -> {
             WebView webView = new WebView();
-            willGC[0] = new WeakReference<WebView>(webView);
-            willGC[1] = new WeakReference<WebEngine>(webView.getEngine());
-            willGC[2] = new WeakReference<WebPage>(WebEngineShim.getPage(webView.getEngine()));
+            willGC[0] = new WeakReference<>(webView);
+            willGC[1] = new WeakReference<>(webView.getEngine());
+            willGC[2] = new WeakReference<>(WebEngineShim.getPage(webView.getEngine()));
         });
 
         Thread.sleep(SLEEP_TIME);

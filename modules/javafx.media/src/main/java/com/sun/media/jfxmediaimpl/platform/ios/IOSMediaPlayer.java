@@ -264,7 +264,7 @@ public final class IOSMediaPlayer extends NativeMediaPlayer {
     private static final class NullAudioEQ implements AudioEqualizer {
         private boolean enabled = false;
         private Map<Double, EqualizerBand> bands
-                = new HashMap<Double,EqualizerBand>();
+                = new HashMap<>();
 
         @Override
         public boolean getEnabled() {

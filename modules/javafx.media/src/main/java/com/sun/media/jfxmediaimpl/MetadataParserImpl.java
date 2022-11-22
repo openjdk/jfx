@@ -42,8 +42,8 @@ import java.nio.charset.Charset;
 import java.util.Collections;
 
 public abstract class MetadataParserImpl extends Thread implements com.sun.media.jfxmedia.MetadataParser {
-    private final List<WeakReference<MetadataListener>> listeners = new ArrayList<WeakReference<MetadataListener>>();
-    private Map<String, Object> metadata = new HashMap<String, Object>();
+    private final List<WeakReference<MetadataListener>> listeners = new ArrayList<>();
+    private Map<String, Object> metadata = new HashMap<>();
     private Locator locator = null;
     private ConnectionHolder connectionHolder = null;
     private ByteBuffer buffer = null;
@@ -62,7 +62,7 @@ public abstract class MetadataParserImpl extends Thread implements com.sun.media
     public void addListener(MetadataListener listener) {
         synchronized (listeners) {
             if (listener != null) {
-                listeners.add(new WeakReference<MetadataListener>(listener));
+                listeners.add(new WeakReference<>(listener));
             }
         }
     }
@@ -188,7 +188,7 @@ public abstract class MetadataParserImpl extends Thread implements com.sun.media
         }
 
         if (null == rawMetaMap) {
-            rawMetaMap = new HashMap<String,ByteBuffer>();
+            rawMetaMap = new HashMap<>();
             // make sure the map we add to the metadata is read-only
             metadata.put(RAW_METADATA_TAG_NAME, Collections.unmodifiableMap(rawMetaMap));
         }

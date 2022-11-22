@@ -89,7 +89,7 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
     Graphics baseGraphics;
     private BaseTransform baseTransform;
 
-    private final List<ContextState> states = new ArrayList<ContextState>();
+    private final List<ContextState> states = new ArrayList<>();
 
     private ContextState state = new ContextState();
 

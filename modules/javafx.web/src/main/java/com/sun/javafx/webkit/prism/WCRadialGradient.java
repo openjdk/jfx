@@ -57,7 +57,7 @@ final class WCRadialGradient extends WCGradient<RadialGradient> {
     private final float r1over;
     private final float r1;
     private final float r2;
-    private final List<Stop> stops = new ArrayList<Stop>();
+    private final List<Stop> stops = new ArrayList<>();
 
     WCRadialGradient(WCPoint p1, float r1, WCPoint p2, float r2) {
         this.reverse = r1 < r2;

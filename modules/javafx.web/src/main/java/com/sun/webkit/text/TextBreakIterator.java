@@ -80,7 +80,7 @@ final class TextBreakIterator {
 
     private final static Map<CacheKey, BreakIterator> iteratorCache =
         //new WeakHashMap<CacheKey, BreakIterator>();
-        new HashMap<CacheKey, BreakIterator>();
+        new HashMap<>();
 
     static BreakIterator getIterator(
         int type,

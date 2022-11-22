@@ -283,7 +283,7 @@ final class HTTP2Loader extends URLLoaderBase {
                 didFail(ex);
             }
         });
-        return new BodySubscriber<Void>() {
+        return new BodySubscriber<>() {
                 @Override
                 public void onComplete() {
                     streamSubscriber.onComplete();

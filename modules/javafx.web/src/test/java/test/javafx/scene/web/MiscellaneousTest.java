@@ -90,7 +90,7 @@ public class MiscellaneousTest extends TestBase {
                 this.location = location;
             }
         }
-        final ArrayList<Record> records = new ArrayList<Record>();
+        final ArrayList<Record> records = new ArrayList<>();
         ChangeListener<State> listener = (ov, oldValue, newValue) -> {
             if (newValue == State.SUCCEEDED) {
                 records.add(new Record(

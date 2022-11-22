@@ -143,7 +143,7 @@ public final class UIClientImpl implements UIClient {
         if (w != null && w.getOnVisibilityChanged() != null) {
             dispatchWebEvent(
                     w.getOnVisibilityChanged(),
-                    new WebEvent<Boolean>(w, VISIBILITY_CHANGED, visible));
+                    new WebEvent<>(w, VISIBILITY_CHANGED, visible));
         }
     }
 
@@ -174,7 +174,7 @@ public final class UIClientImpl implements UIClient {
         if (w != null && w.getOnResized() != null) {
             dispatchWebEvent(
                     w.getOnResized(),
-                    new WebEvent<Rectangle2D>(w, RESIZED,
+                    new WebEvent<>(w, RESIZED,
                         new Rectangle2D(r.getX(), r.getY(), r.getWidth(), r.getHeight())));
         }
     }
@@ -184,7 +184,7 @@ public final class UIClientImpl implements UIClient {
         if (w != null && w.getOnStatusChanged() != null) {
             dispatchWebEvent(
                     w.getOnStatusChanged(),
-                    new WebEvent<String>(w, STATUS_CHANGED, text));
+                    new WebEvent<>(w, STATUS_CHANGED, text));
         }
     }
 
@@ -193,7 +193,7 @@ public final class UIClientImpl implements UIClient {
         if (w != null && w.getOnAlert() != null) {
             dispatchWebEvent(
                     w.getOnAlert(),
-                    new WebEvent<String>(w, ALERT, text));
+                    new WebEvent<>(w, ALERT, text));
         }
     }
 

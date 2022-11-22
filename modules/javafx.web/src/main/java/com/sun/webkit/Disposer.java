@@ -56,7 +56,7 @@ public final class Disposer implements Runnable {
     private static final ReferenceQueue queue = new ReferenceQueue();
     private static final Disposer disposerInstance = new Disposer();
     private static final Set<WeakDisposerRecord> records =
-            new HashSet<WeakDisposerRecord>();
+            new HashSet<>();
 
     static {
         @SuppressWarnings("removal")
@@ -141,7 +141,7 @@ public final class Disposer implements Runnable {
         private boolean isRunning = false;
         private final Object disposerLock = new Object();
         private final LinkedBlockingQueue<WeakDisposerRecord> disposerQueue
-                = new LinkedBlockingQueue<WeakDisposerRecord>();
+                = new LinkedBlockingQueue<>();
 
         private void enqueueAll(Collection<WeakDisposerRecord> objs) {
             synchronized (disposerLock) {

@@ -335,7 +335,7 @@ public class NativeMediaManager {
                 }
             }
 
-            this.errorListeners.add(new WeakReference<MediaErrorListener>(listener));
+            this.errorListeners.add(new WeakReference<>(listener));
         }
     }
 
@@ -378,7 +378,7 @@ public class NativeMediaManager {
         List<MediaPlayer> allPlayers = null;
 
         if (!allMediaPlayers.isEmpty()) {
-            allPlayers = new ArrayList<MediaPlayer>(allMediaPlayers.keySet());
+            allPlayers = new ArrayList<>(allMediaPlayers.keySet());
         }
 
         return allPlayers;

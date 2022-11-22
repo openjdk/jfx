@@ -143,7 +143,7 @@ public class JavaScriptBridgeTest extends TestBase {
             Object wino = web.executeScript("parent.parent");
             assertTrue(wino instanceof JSObject);
             JSObject win = (JSObject) wino;
-            java.util.Stack<Object> st = new java.util.Stack<Object>();
+            java.util.Stack<Object> st = new java.util.Stack<>();
             bind("myStack", st);
             win.setMember("myStack2", st);
             web.executeScript("myStack.push(\"abc\")");
@@ -572,7 +572,7 @@ public class JavaScriptBridgeTest extends TestBase {
             web.executeScript("sb['append(char[],int,int)'](carr, 1, 2)");
             assertEquals("123 5 5.5 abc 987 klmlm", sb.toString());
 
-            java.util.List<Integer> alist = new java.util.ArrayList<Integer>();
+            java.util.List<Integer> alist = new java.util.ArrayList<>();
             alist.add(98);
             alist.add(87);
             alist.add(76);

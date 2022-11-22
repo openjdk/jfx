@@ -58,7 +58,7 @@ public final class InputMethodClientImpl
     private boolean state;
 
     public InputMethodClientImpl(WebView wv, WebPage webPage) {
-        this.wvRef = new WeakReference<WebView>(wv);
+        this.wvRef = new WeakReference<>(wv);
         this.webPage = webPage;
         if (webPage != null) {
             webPage.setInputMethodClient(this);
@@ -82,7 +82,7 @@ public final class InputMethodClientImpl
      * Converts the given InputMethodEvent to a WCInputMethodEvent.
      */
     public static WCInputMethodEvent convertToWCInputMethodEvent(InputMethodEvent ie) {
-        List<Integer> underlines = new ArrayList<Integer>();
+        List<Integer> underlines = new ArrayList<>();
         StringBuilder composed = new StringBuilder();
         int pos = 0;
 

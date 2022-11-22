@@ -254,7 +254,7 @@ public class SwingNodeInteropN {
 
         SwingNodeContent(JComponent comp, SwingNode swingNode) {
             this.comp = comp;
-            this.swingNodeRef = new WeakReference<SwingNode>(swingNode);
+            this.swingNodeRef = new WeakReference<>(swingNode);
         }
         @Override
         public JComponent getComponent() {

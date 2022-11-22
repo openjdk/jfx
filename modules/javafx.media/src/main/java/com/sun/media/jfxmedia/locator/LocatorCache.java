@@ -48,7 +48,7 @@ public class LocatorCache {
     private final CacheDisposer cacheDisposer;
 
     private LocatorCache() {
-        uriCache = new HashMap<URI,WeakReference<CacheReference>>();
+        uriCache = new HashMap<>();
         cacheDisposer = new CacheDisposer();
     }
 

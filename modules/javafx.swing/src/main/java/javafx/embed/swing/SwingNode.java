@@ -782,7 +782,7 @@ public class SwingNode extends Node {
         private WeakReference<SwingNode> swingNodeRef;
 
         SwingNodeWindowFocusListener(SwingNode swingNode) {
-            this.swingNodeRef = new WeakReference<SwingNode>(swingNode);
+            this.swingNodeRef = new WeakReference<>(swingNode);
         }
 
         @Override

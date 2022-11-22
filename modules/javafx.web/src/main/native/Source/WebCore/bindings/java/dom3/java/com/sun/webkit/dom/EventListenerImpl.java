@@ -38,9 +38,9 @@ import org.w3c.dom.events.EventListener;
 //single time peer usage
 final class EventListenerImpl implements EventListener {
     private static final Map<EventListener, Long> EL2peer =
-            new WeakHashMap<EventListener, Long>();
+            new WeakHashMap<>();
     private static final Map<Long, WeakReference<EventListener>> peer2EL =
-            new HashMap<Long, WeakReference<EventListener>>();
+            new HashMap<>();
 
     private static final class SelfDisposer implements DisposerRecord {
         private final long peer;
@@ -72,7 +72,7 @@ final class EventListenerImpl implements EventListener {
         EventListenerImpl eli = new EventListenerImpl(eventListener, 0L);
         peer = eli.twkCreatePeer();
         EL2peer.put(eventListener, peer);
-        peer2EL.put(peer, new WeakReference<EventListener>(eventListener));
+        peer2EL.put(peer, new WeakReference<>(eventListener));
 
         return peer;
     }
@@ -97,7 +97,7 @@ final class EventListenerImpl implements EventListener {
         //[peer] is the JS EventListener.
         EventListener el = new EventListenerImpl(null, peer);
         EL2peer.put(el, peer);
-        peer2EL.put(peer, new WeakReference<EventListener>(el));
+        peer2EL.put(peer, new WeakReference<>(el));
         Disposer.addRecord(el, new SelfDisposer(peer));
 
         return el;

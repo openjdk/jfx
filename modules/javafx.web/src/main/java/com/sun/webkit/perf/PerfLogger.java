@@ -38,7 +38,7 @@ public final class PerfLogger {
     private static Map<PlatformLogger, PerfLogger> loggers;
 
     private final HashMap<String, ProbeStat> probes =
-            new HashMap<String, ProbeStat>();
+            new HashMap<>();
     private final PlatformLogger log;
     private final boolean isEnabled; // needed at shutdown time
 
@@ -50,7 +50,7 @@ public final class PerfLogger {
      */
     public synchronized static PerfLogger getLogger(PlatformLogger log) {
         if (loggers == null) {
-            loggers = new HashMap<PlatformLogger, PerfLogger>();
+            loggers = new HashMap<>();
         }
         PerfLogger l = loggers.get(log);
         if (l == null) {
@@ -272,7 +272,7 @@ public final class PerfLogger {
 
         ProbeStat total = getProbeStat("TOTALTIME");
 
-        ArrayList<String> list = new ArrayList<String>();
+        ArrayList<String> list = new ArrayList<>();
         list.addAll(probes.keySet());
 
         buf.append("\nTime:\n");

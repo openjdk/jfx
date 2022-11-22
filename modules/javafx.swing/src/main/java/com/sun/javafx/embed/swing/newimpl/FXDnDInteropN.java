@@ -108,7 +108,7 @@ public class FXDnDInteropN {
     }
 
     public void setNode(SwingNode swnode) {
-        this.nodeRef = new WeakReference<SwingNode>(swnode);
+        this.nodeRef = new WeakReference<>(swnode);
     }
 
     private WeakReference<SwingNode> nodeRef = null;
@@ -154,7 +154,7 @@ public class FXDnDInteropN {
     }
 
     public <T> ComponentMapper<T> mapComponent(Map<Component, T> map, int x, int y) {
-        return new ComponentMapper<T>(map, x, y);
+        return new ComponentMapper<>(map, x, y);
     }
 
     ///////////////////////////////////////////////////////////////////////////

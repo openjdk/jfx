@@ -1108,7 +1108,7 @@ public class FXCanvas extends Canvas {
         }
 
         Set<TransferMode> getTransferModes(int bits) {
-            Set<TransferMode> set = new HashSet<TransferMode>();
+            Set<TransferMode> set = new HashSet<>();
             if ((bits & DND.DROP_COPY) != 0) set.add(TransferMode.COPY);
             if ((bits & DND.DROP_MOVE) != 0) set.add(TransferMode.MOVE);
             if ((bits & DND.DROP_TARGET_MOVE) != 0) set.add(TransferMode.MOVE);

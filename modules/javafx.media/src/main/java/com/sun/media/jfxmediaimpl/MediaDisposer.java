@@ -118,7 +118,7 @@ public class MediaDisposer {
         purgatory = new ReferenceQueue();
         // disposers is accessed by multiple threads potentially simultaneously,
         // so make it synchronized
-        disposers = new  HashMap<Reference,Disposable>();
+        disposers = new  HashMap<>();
     }
 
     private void disposerLoop() {

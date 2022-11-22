@@ -79,8 +79,8 @@ public abstract class NativeMedia extends Media {
         markerLock.lock();
         try {
             if(markersByName == null) {
-                markersByName = new HashMap<String,Double>();
-                markersByTime = new TreeMap<Double,String>();
+                markersByName = new HashMap<>();
+                markersByTime = new TreeMap<>();
             }
             markersByName.put(markerName, presentationTime);
             markersByTime.put(presentationTime, markerName);
@@ -168,7 +168,7 @@ public abstract class NativeMedia extends Media {
             listenerLock.lock();
             try {
                 if (markerListeners == null) {
-                    markerListeners = new WeakHashMap<MarkerStateListener,Boolean>();
+                    markerListeners = new WeakHashMap<>();
                 }
                 markerListeners.put(listener, Boolean.TRUE);
             } finally {

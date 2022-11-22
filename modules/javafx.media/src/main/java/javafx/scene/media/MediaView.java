@@ -359,7 +359,7 @@ public class MediaView extends Node {
 
     public final ObjectProperty<MediaPlayer> mediaPlayerProperty() {
         if (mediaPlayer == null) {
-            mediaPlayer = new ObjectPropertyBase<MediaPlayer>() {
+            mediaPlayer = new ObjectPropertyBase<>() {
                 MediaPlayer oldValue = null;
                 @Override protected void invalidated() {
                     if (oldValue != null) {
@@ -437,7 +437,7 @@ public class MediaView extends Node {
 
     public final ObjectProperty<EventHandler<MediaErrorEvent>> onErrorProperty() {
         if (onError == null) {
-            onError = new ObjectPropertyBase<EventHandler<MediaErrorEvent>>() {
+            onError = new ObjectPropertyBase<>() {
 
                 @Override
                 protected void invalidated() {
@@ -808,7 +808,7 @@ public class MediaView extends Node {
 
     public final ObjectProperty<Rectangle2D> viewportProperty() {
         if (viewport == null) {
-            viewport = new ObjectPropertyBase<Rectangle2D>() {
+            viewport = new ObjectPropertyBase<>() {
 
                 @Override
                 protected void invalidated() {

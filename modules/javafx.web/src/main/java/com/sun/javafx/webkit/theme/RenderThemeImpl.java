@@ -73,7 +73,7 @@ public final class RenderThemeImpl extends RenderTheme {
         METER          (8),
         SCROLLBAR      (9);
 
-        private static final HashMap<Integer, WidgetType> map = new HashMap<Integer, WidgetType>();
+        private static final HashMap<Integer, WidgetType> map = new HashMap<>();
         private final int value;
 
         private WidgetType(int value) { this.value = value; }
@@ -172,7 +172,7 @@ public final class RenderThemeImpl extends RenderTheme {
                 }
             }
             ids.put(id, updateContentCycleID);
-            pool.put(id, new WeakReference<T>(control));
+            pool.put(id, new WeakReference<>(control));
         }
 
         void clear() {
@@ -232,7 +232,7 @@ public final class RenderThemeImpl extends RenderTheme {
 
     public RenderThemeImpl(final Accessor accessor) {
         this.accessor = accessor;
-        pool = new Pool<FormControl>(fc -> {
+        pool = new Pool<>(fc -> {
             // Remove the control from WebView when it's removed from the pool.
             accessor.removeChild(fc.asControl());
         }, FormControl.class);
@@ -413,7 +413,7 @@ public final class RenderThemeImpl extends RenderTheme {
         private final WeakReference<FormControl> fcRef;
 
         private FormControlRef(FormControl fc) {
-            this.fcRef = new WeakReference<FormControl>(fc);
+            this.fcRef = new WeakReference<>(fc);
         }
 
         private FormControl asFormControl() {
@@ -526,7 +526,7 @@ public final class RenderThemeImpl extends RenderTheme {
 
         private FormMenuList() {
             // Adding a dummy item to please ChoiceBox.
-            List<String> l = new ArrayList<String>();
+            List<String> l = new ArrayList<>();
             l.add("");
             setItems(FXCollections.observableList(l));
         }

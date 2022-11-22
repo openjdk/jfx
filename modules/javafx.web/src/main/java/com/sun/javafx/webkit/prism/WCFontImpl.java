@@ -44,7 +44,7 @@ final class WCFontImpl extends WCFont {
     private final static PlatformLogger log =
             PlatformLogger.getLogger(WCFontImpl.class.getName());
 
-    private static final HashMap<String, String> FONT_MAP = new HashMap<String, String>();
+    private static final HashMap<String, String> FONT_MAP = new HashMap<>();
 
     static WCFont getFont(String name, boolean bold, boolean italic, float size) {
         FontFactory factory = GraphicsPipeline.getPipeline().getFontFactory();
