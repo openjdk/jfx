@@ -58,7 +58,6 @@ public class WeakReferenceQueue<E> {
      */
     int size = 0;
 
-    @SuppressWarnings("unchecked")
     public void add(E obj) {
         cleanup();
         size++;

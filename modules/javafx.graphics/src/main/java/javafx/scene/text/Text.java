@@ -1502,7 +1502,6 @@ public class Text extends Shape {
         return getClassCssMetaData();
     }
 
-    @SuppressWarnings("deprecation")
     private void updatePGText() {
         final NGText peer = NodeHelper.getPeer(this);
         if (NodeHelper.isDirty(this, DirtyBits.TEXT_ATTRS)) {

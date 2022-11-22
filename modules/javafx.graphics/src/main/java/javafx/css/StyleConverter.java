@@ -315,7 +315,6 @@ public class StyleConverter<F, T> {
      * @throws java.io.IOException the exception
      * @since 9
      */
-    @SuppressWarnings("rawtypes")
     public static StyleConverter<?,?> readBinary(DataInputStream is, String[] strings)
             throws IOException {
 

@@ -257,7 +257,6 @@ public final class DMarlinRenderingEngine implements MarlinConst
      * Get the RendererContext instance dedicated to the current thread
      * @return RendererContext instance
      */
-    @SuppressWarnings({"unchecked"})
     public static RendererContext getRendererContext() {
         final RendererContext rdrCtx = RDR_CTX_PROVIDER.acquire();
         if (DO_MONITORS) {
