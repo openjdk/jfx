@@ -142,7 +142,7 @@ public abstract class SetExpression<E> implements ObservableSetValue<E> {
             throw new NullPointerException("Set must be specified.");
         }
         return value instanceof SetExpression ? (SetExpression<E>) value
-                : new SetBinding<E>() {
+                : new SetBinding<>() {
             {
                 super.bind(value);
             }

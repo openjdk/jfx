@@ -52,7 +52,7 @@ import javafx.beans.WeakListener;
 public abstract class ObjectPropertyBase<T> extends ObjectProperty<T> {
 
     private T value;
-    private ObservableValue<? extends T> observable = null;;
+    private ObservableValue<? extends T> observable = null;
     private InvalidationListener listener = null;
     private boolean valid = true;
     private ExpressionHelper<T> helper = null;
@@ -222,7 +222,7 @@ public abstract class ObjectPropertyBase<T> extends ObjectProperty<T> {
         private final WeakReference<ObjectPropertyBase<?>> wref;
 
         public Listener(ObjectPropertyBase<?> ref) {
-            this.wref = new WeakReference<ObjectPropertyBase<?>>(ref);
+            this.wref = new WeakReference<>(ref);
         }
 
         @Override

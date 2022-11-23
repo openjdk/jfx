@@ -65,7 +65,7 @@ public class ExpressionHelperTest {
                 new InvalidationListenerMock(), new InvalidationListenerMock(), new InvalidationListenerMock(), new InvalidationListenerMock()
         };
         changeListener = new ChangeListenerMock[] {
-                new ChangeListenerMock<Object>(UNDEFINED), new ChangeListenerMock<Object>(UNDEFINED), new ChangeListenerMock<Object>(UNDEFINED), new ChangeListenerMock<Object>(UNDEFINED)
+                new ChangeListenerMock<>(UNDEFINED), new ChangeListenerMock<>(UNDEFINED), new ChangeListenerMock<>(UNDEFINED), new ChangeListenerMock<>(UNDEFINED)
         };
     }
 

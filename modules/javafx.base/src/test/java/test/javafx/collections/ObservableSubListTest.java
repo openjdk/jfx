@@ -66,7 +66,7 @@ public class ObservableSubListTest {
     @Before
     public void setup() throws Exception {
         list = listFactory.call();
-        mlo = new MockListObserver<String>();
+        mlo = new MockListObserver<>();
         list.addListener(mlo);
         useListData("a", "b", "c", "d", "e", "f");
         sublist = list.subList(1, 5);

@@ -101,7 +101,7 @@ public final class JavaBeanIntegerProperty extends IntegerProperty implements Ja
 
     JavaBeanIntegerProperty(PropertyDescriptor descriptor, Object bean) {
         this.descriptor = descriptor;
-        this.listener = descriptor.new Listener<Number>(bean, this);
+        this.listener = descriptor.new Listener<>(bean, this);
         descriptor.addListener(listener);
         Disposer.addRecord(this, new DescriptorListenerCleaner(descriptor, listener));
     }

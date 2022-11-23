@@ -38,7 +38,7 @@ public class RedirectedEvent extends Event {
     private static final long serialVersionUID = 20121107L;
 
     public static final EventType<RedirectedEvent> REDIRECTED =
-            new EventType<RedirectedEvent>(Event.ANY, "REDIRECTED");
+            new EventType<>(Event.ANY, "REDIRECTED");
 
     private final Event originalEvent;
 
