@@ -22,12 +22,16 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
+
 package javafx.scene.control;
 
 /**
  * Base class for a constrained column resize policy.
  * Setting any policy that extends this class on a Tree/TableView results in
  * disabling of its horizontal scroll bar.
+ *
+ * @see {@link TableView#columnResizePolicyProperty}
+ * @see {@link TreeTableView#columnResizePolicyProperty}
  *
  * @since 20
  */

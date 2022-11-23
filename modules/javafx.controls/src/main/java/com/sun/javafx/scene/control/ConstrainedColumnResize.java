@@ -22,6 +22,7 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
+
 package com.sun.javafx.scene.control;
 
 import java.util.List;
@@ -39,6 +40,7 @@ import javafx.util.Callback;
  * minimum, preferred, and maximum width.
  */
 public class ConstrainedColumnResize extends ConstrainedColumnResizeBase {
+
     public enum ResizeMode {
         AUTO_RESIZE_FLEX_HEAD,
         AUTO_RESIZE_FLEX_TAIL, // will be used to replace a (deprecated) CONSTRAINED_RESIZE_POLICY.
@@ -76,7 +78,7 @@ public class ConstrainedColumnResize extends ConstrainedColumnResizeBase {
         // conditionally remove pseudoclass (given by this policy toString()) when the columns
         // are narrower than the available area and the rightmost column boundary line needs to be drawn.
         // hint: search modena.css for "constrained-resize" token
-        Node n = rf.getTableNode();
+        Node n = rf.getTableControl();
         PseudoClass pc = PseudoClass.getPseudoClass(toString());
         boolean wide = h.applySizes();
         boolean current = n.getPseudoClassStates().contains(pc);

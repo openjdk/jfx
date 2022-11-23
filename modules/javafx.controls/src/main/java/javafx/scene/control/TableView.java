@@ -401,6 +401,8 @@ public class TableView<S> extends Control {
      * When column constraints make it impossible to fit all the columns into the allowed area,
      * the columns are either clipped, or an empty space appears.  This policy disables the horizontal
      * scroll bar.
+     *
+     * @since 20
      */
     public static final Callback<TableView.ResizeFeatures, Boolean> CONSTRAINED_RESIZE_POLICY_ALL_COLUMNS =
         ConstrainedColumnResize.forTable(ConstrainedColumnResize.ResizeMode.AUTO_RESIZE_ALL_COLUMNS);
@@ -411,6 +413,8 @@ public class TableView<S> extends Control {
      * When column constraints make it impossible to fit all the columns into the allowed area,
      * the columns are either clipped, or an empty space appears.  This policy disables the horizontal
      * scroll bar.
+     *
+     * @since 20
      */
     public static final Callback<TableView.ResizeFeatures, Boolean> CONSTRAINED_RESIZE_POLICY_LAST_COLUMN =
         ConstrainedColumnResize.forTable(ConstrainedColumnResize.ResizeMode.AUTO_RESIZE_LAST_COLUMN);
@@ -421,6 +425,8 @@ public class TableView<S> extends Control {
      * When column constraints make it impossible to fit all the columns into the allowed area,
      * the columns are either clipped, or an empty space appears.  This policy disables the horizontal
      * scroll bar.
+     *
+     * @since 20
      */
     public static final Callback<TableView.ResizeFeatures, Boolean> CONSTRAINED_RESIZE_POLICY_NEXT_COLUMN =
         ConstrainedColumnResize.forTable(ConstrainedColumnResize.ResizeMode.AUTO_RESIZE_NEXT_COLUMN);
@@ -431,6 +437,8 @@ public class TableView<S> extends Control {
      * When column constraints make it impossible to fit all the columns into the allowed area,
      * the columns are either clipped, or an empty space appears.  This policy disables the horizontal
      * scroll bar.
+     *
+     * @since 20
      */
     public static final Callback<TableView.ResizeFeatures, Boolean> CONSTRAINED_RESIZE_POLICY_SUBSEQUENT_COLUMNS =
         ConstrainedColumnResize.forTable(ConstrainedColumnResize.ResizeMode.AUTO_RESIZE_SUBSEQUENT_COLUMNS);
@@ -441,6 +449,8 @@ public class TableView<S> extends Control {
      * When column constraints make it impossible to fit all the columns into the allowed area,
      * the columns are either clipped, or an empty space appears.  This policy disables the horizontal
      * scroll bar.
+     *
+     * @since 20
      */
     public static final Callback<TableView.ResizeFeatures, Boolean> CONSTRAINED_RESIZE_POLICY_FLEX_HEAD =
         ConstrainedColumnResize.forTable(ConstrainedColumnResize.ResizeMode.AUTO_RESIZE_FLEX_HEAD);
@@ -451,6 +461,8 @@ public class TableView<S> extends Control {
      * When column constraints make it impossible to fit all the columns into the allowed area,
      * the columns are either clipped, or an empty space appears.  This policy disables the horizontal
      * scroll bar.
+     *
+     * @since 20
      */
     public static final Callback<TableView.ResizeFeatures, Boolean> CONSTRAINED_RESIZE_POLICY_FLEX_TAIL =
         ConstrainedColumnResize.forTable(ConstrainedColumnResize.ResizeMode.AUTO_RESIZE_FLEX_TAIL);
@@ -466,6 +478,8 @@ public class TableView<S> extends Control {
      * rightmost column until it reaches minimum width and so on. When all right
      * hand side columns reach minimum size, the user cannot increase the size of
      * resized column any more.
+     *
+     * @deprecated Use {@link #CONSTRAINED_RESIZE_POLICY_FLEX_TAIL} instead.
      */
     @Deprecated(since="20")
     public static final Callback<ResizeFeatures, Boolean> CONSTRAINED_RESIZE_POLICY =
@@ -1903,7 +1917,7 @@ public class TableView<S> extends Control {
         }
 
         @Override
-        public Node getTableNode() {
+        public Control getTableControl() {
             return table;
         }
 

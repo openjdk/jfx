@@ -26,7 +26,6 @@
 package javafx.scene.control;
 
 import javafx.beans.NamedArg;
-import javafx.scene.Node;
 
 
 /**
@@ -55,6 +54,10 @@ public class ResizeFeaturesBase<S> {
 
   /**
    * Returns the width of the area available for columns.
+   *
+   * @return the width availabe for columns
+   *
+   * @since 20
    */
   public double getContentWidth() {
       // not available in the base class
@@ -62,9 +65,13 @@ public class ResizeFeaturesBase<S> {
   }
 
   /**
-   * Returns the associated TreeView or TreeTableView
+   * Returns the associated TreeView or TreeTableView control.
+   *
+   * @return the control in which the resize is occurring
+   *
+   * @since 20
    */
-  public Node getTableNode() {
+  public Control getTableControl() {
       // not available in the base class
       throw new UnsupportedOperationException("method not available in the base class");
   }
@@ -87,6 +94,11 @@ public class ResizeFeaturesBase<S> {
 
   /**
    * Sets the column width during the resizing pass.
+   *
+   * @param col column being changed
+   * @param width desired column width
+   *
+   * @since 20
    */
   public void setColumnWidth(TableColumnBase<S,?> col, double width) {
       col.doSetWidth(width);

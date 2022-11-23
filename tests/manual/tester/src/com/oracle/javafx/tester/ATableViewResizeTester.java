@@ -22,7 +22,9 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
+
 package com.oracle.javafx.tester;
+
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.EventQueue;
