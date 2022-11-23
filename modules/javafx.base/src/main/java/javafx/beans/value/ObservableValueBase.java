@@ -25,12 +25,8 @@
 
 package javafx.beans.value;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import com.sun.javafx.binding.ExpressionHelper;
 import javafx.beans.InvalidationListener;
-import javafx.beans.Observable;
 
 /**
  * A convenience class for creating implementations of {@link ObservableValue}.

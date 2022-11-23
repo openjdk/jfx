@@ -468,14 +468,14 @@ public class ObservableValueFluentBindingsTest {
                     super.addListener(listener);
 
                     subscribeCount++;
-                };
+                }
 
                 @Override
                 public void removeListener(InvalidationListener listener) {
                     super.removeListener(listener);
 
                     unsubscribeCount++;
-                };
+                }
             };
 
             private ObservableValue<String> observableValue =

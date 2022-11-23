@@ -59,6 +59,11 @@ import com.sun.javafx.scene.control.ListenerHelper;
  */
 public abstract class SkinBase<C extends Control> implements Skin<C> {
 
+    static {
+        // must be the first code to execute
+        ListenerHelper.setAccessor((skin) -> skin.listenerHelper());
+    }
+
     /* *************************************************************************
      *                                                                         *
      * Private fields                                                          *
@@ -88,11 +93,6 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
     private LambdaMultiplePropertyChangeListenerHandler lambdaChangeListenerHandler;
 
     private ListenerHelper listenerHelper;
-
-    static {
-        ListenerHelper.setAccessor((skin) -> skin.listenerHelper());
-    }
-
 
     /* *************************************************************************
      *                                                                         *
@@ -221,8 +221,6 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
 
     /**
      * Returns the skin's instance of {@link ListenerHelper}, creating it if necessary.
-     *
-     * @since 20
      */
     ListenerHelper listenerHelper() {
         if (listenerHelper == null) {

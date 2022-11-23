@@ -25,10 +25,20 @@
 
 package test.robot.javafx.scene;
 
-import com.sun.javafx.PlatformUtil;
-
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
+
+import javafx.application.Application;
+import javafx.application.Platform;
+import javafx.scene.Parent;
+import javafx.scene.Scene;
+import javafx.scene.control.Label;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
+import javafx.scene.layout.VBox;
+import javafx.scene.robot.Robot;
+import javafx.stage.Modality;
+import javafx.stage.Stage;
+import javafx.stage.StageStyle;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Assertions;
@@ -36,18 +46,9 @@ import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
-import javafx.application.Application;
-import javafx.application.Platform;
-import javafx.scene.Parent;
-import javafx.scene.Scene;
-import javafx.scene.control.Label;
-import javafx.scene.input.KeyEvent;
-import javafx.scene.input.KeyCode;
-import javafx.scene.layout.VBox;
-import javafx.scene.robot.Robot;
-import javafx.stage.Modality;
-import javafx.stage.Stage;
-import javafx.stage.StageStyle;
+import com.sun.javafx.PlatformUtil;
+
+import test.util.Util;
 
 // When a key equivalent closes a window it can be passed
 // to the new key window and processed twice.
@@ -63,7 +64,7 @@ public class DoubleShortcutProcessingTest {
     void testDoubleShortcut() {
         Assumptions.assumeTrue(PlatformUtil.isMac());
         testApp.startTest();
-        waitForLatch(dialogLatch, 5, "Dialog never received shortcut");
+        Util.waitForLatch(dialogLatch, 5, "Dialog never received shortcut");
         if (testApp.failed()) {
             Assertions.fail("performKeyEquivalent was handled twice in separate windows");
         }
@@ -71,14 +72,12 @@ public class DoubleShortcutProcessingTest {
 
     @BeforeAll
     static void initFX() throws Exception {
-        new Thread(() -> Application.launch(TestApp.class, (String[])null)).start();
-        waitForLatch(startupLatch, 10, "FX runtime failed to start.");
+        Util.launch(startupLatch, TestApp.class);
     }
 
     @AfterAll
     static void exit() {
-        Platform.runLater(stage::hide);
-        Platform.exit();
+        Util.shutdown(stage);
     }
 
     public static class TestApp extends Application {
@@ -150,16 +149,6 @@ public class DoubleShortcutProcessingTest {
                 this.initOwner(owner);
                 this.setResizable(true);
             }
-        }
-    }
-
-    private static void waitForLatch(CountDownLatch latch, int seconds, String msg) {
-        try {
-            if (!latch.await(seconds, TimeUnit.SECONDS)) {
-                Assertions.fail(msg);
-            }
-        } catch (Exception ex) {
-            Assertions.fail("Unexpected exception: " + ex);
         }
     }
 }

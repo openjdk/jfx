@@ -29,7 +29,6 @@ import java.util.Arrays;
 import java.util.Collection;
 import javafx.util.Duration;
 
-import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;

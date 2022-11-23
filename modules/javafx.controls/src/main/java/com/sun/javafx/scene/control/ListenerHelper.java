@@ -22,6 +22,9 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
+// Original code is re-licensed to Oracle by the author.
+// https://github.com/andy-goryachev/FxTextEditor/blob/master/src/goryachev/fx/FxDisconnector.java
+// Copyright © 2021-2022 Andy Goryachev <andy@goryachev.com>
 package com.sun.javafx.scene.control;
 
 import java.lang.ref.WeakReference;
@@ -63,10 +66,10 @@ import javafx.stage.Window;
  * <li>Client code registers a number of listeners and removes one via its
  * {@link IDisconnectable} instance.
  * </ul>
- * <p>
- * Original code is re-licensed to Oracle by the author.
- * https://github.com/andy-goryachev/FxTextEditor/blob/master/src/goryachev/fx/FxDisconnector.java
- * Copyright © 2021-2022 Andy Goryachev <andy@goryachev.com>
+ *
+ * This class is currently used for clean replacement of {@link Skin}s.
+ * We should consider making this class a part of the public API in {@code javax.base},
+ * since it proved itself useful in removing listeners and handlers in bulk at the application level.
  */
 public class ListenerHelper implements IDisconnectable {
     private WeakReference<Object> ownerRef;
@@ -86,11 +89,6 @@ public class ListenerHelper implements IDisconnectable {
 
     public static ListenerHelper get(SkinBase<?> skin) {
         return accessor.apply(skin);
-    }
-
-    public static void disconnect(SkinBase<?> skin) {
-        ListenerHelper h = get(skin);
-        h.disconnect();
     }
 
     public IDisconnectable addDisconnectable(Runnable r) {
@@ -113,7 +111,7 @@ public class ListenerHelper implements IDisconnectable {
         }
     }
 
-    protected boolean isAliveOrDisconnect() {
+    private boolean isAliveOrDisconnect() {
         if (ownerRef != null) {
             if (ownerRef.get() == null) {
                 disconnect();
@@ -487,17 +485,17 @@ public class ListenerHelper implements IDisconnectable {
 
     //
 
-    protected static abstract class ChLi<T> implements IDisconnectable, ChangeListener<T> { }
+    private static abstract class ChLi<T> implements IDisconnectable, ChangeListener<T> { }
 
-    protected static abstract class InLi implements IDisconnectable, InvalidationListener { }
+    private static abstract class InLi implements IDisconnectable, InvalidationListener { }
 
-    protected static abstract class LiChLi<T> implements IDisconnectable, ListChangeListener<T> { }
+    private static abstract class LiChLi<T> implements IDisconnectable, ListChangeListener<T> { }
 
-    protected static abstract class MaChLi<K,V> implements IDisconnectable, MapChangeListener<K,V> { }
+    private static abstract class MaChLi<K,V> implements IDisconnectable, MapChangeListener<K,V> { }
 
-    protected static abstract class SeChLi<T> implements IDisconnectable, SetChangeListener<T> { }
+    private static abstract class SeChLi<T> implements IDisconnectable, SetChangeListener<T> { }
 
-    protected abstract class EvHa<T extends Event> implements IDisconnectable, EventHandler<T> {
+    private abstract class EvHa<T extends Event> implements IDisconnectable, EventHandler<T> {
         private final EventHandler<T> handler;
 
         public EvHa(EventHandler<T> h) {

@@ -60,21 +60,6 @@ import test.util.memory.JMemoryBuddy;
  */
 public class TestListenerHelper {
     @Test
-    public void testStaticDisconnect() {
-        AtomicInteger ct = new AtomicInteger();
-        LabelSkin skin = new LabelSkin(new Label("yo"));
-        ListenerHelper h = ListenerHelper.get(skin);
-        assertNotNull(h);
-
-        h.addDisconnectable(() -> {
-            ct.incrementAndGet();
-        });
-
-        ListenerHelper.disconnect(skin);
-        assertEquals(1, ct.get());
-    }
-
-    @Test
     public void testCheckAlive() {
         Object owner = new Object();
         WeakReference<Object> ref = new WeakReference<>(owner);
@@ -295,7 +280,7 @@ public class TestListenerHelper {
         SimpleStringProperty p = new SimpleStringProperty();
         AtomicInteger ct = new AtomicInteger();
 
-        h.addInvalidationListener(p, (cur) -> ct.incrementAndGet());
+        h.addInvalidationListener(() -> ct.incrementAndGet(), p);
 
         p.set("1");
         assertEquals(1, ct.get());
@@ -312,7 +297,7 @@ public class TestListenerHelper {
         SimpleStringProperty p = new SimpleStringProperty();
         AtomicInteger ct = new AtomicInteger();
 
-        h.addInvalidationListener(p, true, (cur) -> ct.incrementAndGet());
+        h.addInvalidationListener(() -> ct.incrementAndGet(), true, p);
 
         p.set("1");
         assertEquals(2, ct.get());
