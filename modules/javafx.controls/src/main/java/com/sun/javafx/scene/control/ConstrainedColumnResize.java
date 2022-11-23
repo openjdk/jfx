@@ -22,18 +22,21 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-package javafx.scene.control;
+package com.sun.javafx.scene.control;
 
 import java.util.List;
 import javafx.css.PseudoClass;
 import javafx.scene.Node;
+import javafx.scene.control.ConstrainedColumnResizeBase;
+import javafx.scene.control.ResizeFeaturesBase;
+import javafx.scene.control.TableColumnBase;
+import javafx.scene.control.TableView;
+import javafx.scene.control.TreeTableView;
 import javafx.util.Callback;
 
 /**
  * A constrained column resize implementation that honors all Tree/TableColumn constraints -
  * minimum, preferred, and maximum width.
- *
- * @since 20
  */
 public class ConstrainedColumnResize extends ConstrainedColumnResizeBase {
     public enum ResizeMode {

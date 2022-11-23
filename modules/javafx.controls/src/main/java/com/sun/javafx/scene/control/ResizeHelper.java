@@ -22,10 +22,12 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-package javafx.scene.control;
+package com.sun.javafx.scene.control;
 
 import java.util.BitSet;
 import java.util.List;
+import javafx.scene.control.ResizeFeaturesBase;
+import javafx.scene.control.TableColumnBase;
 
 /**
  * Helps resize Tree/TableView columns.

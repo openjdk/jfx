@@ -40,11 +40,8 @@ import javafx.embed.swing.SwingNode;
 import javafx.geometry.Orientation;
 import javafx.scene.Scene;
 import javafx.scene.control.ComboBox;
-import javafx.scene.control.ConstrainedColumnResize;
-import javafx.scene.control.ConstrainedColumnResize.ResizeMode;
 import javafx.scene.control.ConstrainedColumnResizeBase;
 import javafx.scene.control.Label;
-import javafx.scene.control.ResizeHelper;
 import javafx.scene.control.SelectionMode;
 import javafx.scene.control.SplitPane;
 import javafx.scene.control.TableColumn;
@@ -210,17 +207,17 @@ public class ATableViewResizeTester extends Application {
     protected Callback<ResizeFeatures, Boolean> createPolicy(Policy p) {
         switch(p) {
         case AUTO_RESIZE_FLEX_HEAD:
-            return ConstrainedColumnResize.forTable(ResizeMode.AUTO_RESIZE_FLEX_HEAD);
+            return TableView.CONSTRAINED_RESIZE_POLICY_FLEX_HEAD;
         case AUTO_RESIZE_FLEX_TAIL:
-            return ConstrainedColumnResize.forTable(ResizeMode.AUTO_RESIZE_FLEX_TAIL);
+            return TableView.CONSTRAINED_RESIZE_POLICY_FLEX_TAIL;
         case AUTO_RESIZE_ALL_COLUMNS:
-            return ConstrainedColumnResize.forTable(ResizeMode.AUTO_RESIZE_ALL_COLUMNS);
+            return TableView.CONSTRAINED_RESIZE_POLICY_ALL_COLUMNS;
         case AUTO_RESIZE_LAST_COLUMN:
-            return ConstrainedColumnResize.forTable(ResizeMode.AUTO_RESIZE_LAST_COLUMN);
+            return TableView.CONSTRAINED_RESIZE_POLICY_LAST_COLUMN;
         case AUTO_RESIZE_NEXT_COLUMN:
-            return ConstrainedColumnResize.forTable(ResizeMode.AUTO_RESIZE_NEXT_COLUMN);
+            return TableView.CONSTRAINED_RESIZE_POLICY_NEXT_COLUMN;
         case AUTO_RESIZE_SUBSEQUENT_COLUMNS:
-            return ConstrainedColumnResize.forTable(ResizeMode.AUTO_RESIZE_SUBSEQUENT_COLUMNS);
+            return TableView.CONSTRAINED_RESIZE_POLICY_SUBSEQUENT_COLUMNS;
         case CONSTRAINED_RESIZE_POLICY:
             return TableView.CONSTRAINED_RESIZE_POLICY;
         case UNCONSTRAINED_RESIZE_POLICY:

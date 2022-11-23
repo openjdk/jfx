@@ -39,6 +39,7 @@ import java.util.function.IntPredicate;
 import com.sun.javafx.collections.MappingChange;
 import com.sun.javafx.collections.NonIterableChange;
 import com.sun.javafx.logging.PlatformLogger.Level;
+import com.sun.javafx.scene.control.ConstrainedColumnResize;
 import com.sun.javafx.scene.control.Logging;
 import com.sun.javafx.scene.control.Properties;
 import com.sun.javafx.scene.control.ReadOnlyUnbackedObservableList;
