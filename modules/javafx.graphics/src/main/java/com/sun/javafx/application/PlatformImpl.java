@@ -41,6 +41,7 @@ import java.lang.reflect.Method;
 import java.security.AccessControlContext;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
+import java.util.Arrays;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -1000,7 +1001,16 @@ public class PlatformImpl {
             Map<String, Object> changed = new HashMap<>();
             for (Map.Entry<String, Object> entry : preferences.entrySet()) {
                 Object existingValue = platformPreferences.getModifiableMap().get(entry.getKey());
-                if (!Objects.equals(existingValue, entry.getValue())) {
+                Object newValue = entry.getValue();
+                boolean equals = false;
+
+                if (existingValue instanceof Object[] && newValue instanceof Object[]) {
+                    equals = Arrays.equals((Object[]) existingValue, (Object[]) newValue);
+                } else if (!(existingValue instanceof Object[]) && !(newValue instanceof Object[])) {
+                    equals = Objects.equals(existingValue, entry.getValue());
+                }
+
+                if (!equals) {
                     changed.put(entry.getKey(), entry.getValue());
                 }
             }

@@ -106,7 +106,60 @@ import java.util.Map;
  *     <p>
  *
  *     <li><span style="font-weight: bold">macOS</span>
- *         <p>Platform preferences are currently not reported on macOS.
+ *     <p>
+ *     <table border="1" style="table-layout: fixed; width: 100%; max-width: 40em">
+ *         <caption style="text-align: left">UI element colors, reported by {@code NSColor}</caption>
+ *         <tr><td>{@code macOS.NSColor.labelColor}</td><td style="width: 5em">{@link Color}</td></tr>
+ *         <tr><td>{@code macOS.NSColor.secondaryLabelColor}</td><td style="width: 5em">{@link Color}</td></tr>
+ *         <tr><td>{@code macOS.NSColor.tertiaryLabelColor}</td><td style="width: 5em">{@link Color}</td></tr>
+ *         <tr><td>{@code macOS.NSColor.quaternaryLabelColor}</td><td style="width: 5em">{@link Color}</td></tr>
+ *         <tr><td>{@code macOS.NSColor.textColor}</td><td style="width: 5em">{@link Color}</td></tr>
+ *         <tr><td>{@code macOS.NSColor.placeholderTextColor}</td><td style="width: 5em">{@link Color}</td></tr>
+ *         <tr><td>{@code macOS.NSColor.selectedTextColor}</td><td style="width: 5em">{@link Color}</td></tr>
+ *         <tr><td>{@code macOS.NSColor.textBackgroundColor}</td><td style="width: 5em">{@link Color}</td></tr>
+ *         <tr><td>{@code macOS.NSColor.selectedTextBackgroundColor}</td><td style="width: 5em">{@link Color}</td></tr>
+ *         <tr><td>{@code macOS.NSColor.keyboardFocusIndicatorColor}</td><td style="width: 5em">{@link Color}</td></tr>
+ *         <tr><td>{@code macOS.NSColor.unemphasizedSelectedTextColor}</td><td style="width: 5em">{@link Color}</td></tr>
+ *         <tr><td>{@code macOS.NSColor.unemphasizedSelectedTextBackgroundColor}</td><td style="width: 5em">{@link Color}</td></tr>
+ *         <tr><td>{@code macOS.NSColor.linkColor}</td><td style="width: 5em">{@link Color}</td></tr>
+ *         <tr><td>{@code macOS.NSColor.separatorColor}</td><td style="width: 5em">{@link Color}</td></tr>
+ *         <tr><td>{@code macOS.NSColor.selectedContentBackgroundColor}</td><td style="width: 5em">{@link Color}</td></tr>
+ *         <tr><td>{@code macOS.NSColor.unemphasizedSelectedContentBackgroundColor}</td><td style="width: 5em">{@link Color}</td></tr>
+ *         <tr><td>{@code macOS.NSColor.selectedMenuItemTextColor}</td><td style="width: 5em">{@link Color}</td></tr>
+ *         <tr><td>{@code macOS.NSColor.gridColor}</td><td style="width: 5em">{@link Color}</td></tr>
+ *         <tr><td>{@code macOS.NSColor.headerTextColor}</td><td style="width: 5em">{@link Color}</td></tr>
+ *         <tr><td>{@code macOS.NSColor.alternatingContentBackgroundColors}</td><td style="width: 5em">{@link Color}[]</td></tr>
+ *         <tr><td>{@code macOS.NSColor.controlAccentColor}</td><td style="width: 5em">{@link Color}</td></tr>
+ *         <tr><td>{@code macOS.NSColor.controlColor}</td><td style="width: 5em">{@link Color}</td></tr>
+ *         <tr><td>{@code macOS.NSColor.controlBackgroundColor}</td><td style="width: 5em">{@link Color}</td></tr>
+ *         <tr><td>{@code macOS.NSColor.controlTextColor}</td><td style="width: 5em">{@link Color}</td></tr>
+ *         <tr><td>{@code macOS.NSColor.disabledControlTextColor}</td><td style="width: 5em">{@link Color}</td></tr>
+ *         <tr><td>{@code macOS.NSColor.selectedControlColor}</td><td style="width: 5em">{@link Color}</td></tr>
+ *         <tr><td>{@code macOS.NSColor.selectedControlTextColor}</td><td style="width: 5em">{@link Color}</td></tr>
+ *         <tr><td>{@code macOS.NSColor.alternateSelectedControlTextColor}</td><td style="width: 5em">{@link Color}</td></tr>
+ *         <tr><td>{@code macOS.NSColor.currentControlTint}</td><td style="width: 5em">{@link String}</td></tr>
+ *         <tr><td>{@code macOS.NSColor.windowBackgroundColor}</td><td style="width: 5em">{@link Color}</td></tr>
+ *         <tr><td>{@code macOS.NSColor.windowFrameTextColor}</td><td style="width: 5em">{@link Color}</td></tr>
+ *         <tr><td>{@code macOS.NSColor.underPageBackgroundColor}</td><td style="width: 5em">{@link Color}</td></tr>
+ *         <tr><td>{@code macOS.NSColor.findHighlightColor}</td><td style="width: 5em">{@link Color}</td></tr>
+ *         <tr><td>{@code macOS.NSColor.highlightColor}</td><td style="width: 5em">{@link Color}</td></tr>
+ *         <tr><td>{@code macOS.NSColor.shadowColor}</td><td style="width: 5em">{@link Color}</td></tr>
+ *     </table>
+ *     <p>
+ *     <table border="1" style="table-layout: fixed; width: 100%; max-width: 40em">
+ *         <caption style="text-align: left">Standard colors, reported by {@code NSColor}</caption>
+ *         <tr><td>{@code macOS.NSColor.systemBlueColor}</td><td style="width: 5em">{@link Color}</td></tr>
+ *         <tr><td>{@code macOS.NSColor.systemBrownColor}</td><td style="width: 5em">{@link Color}</td></tr>
+ *         <tr><td>{@code macOS.NSColor.systemGrayColor}</td><td style="width: 5em">{@link Color}</td></tr>
+ *         <tr><td>{@code macOS.NSColor.systemGreenColor}</td><td style="width: 5em">{@link Color}</td></tr>
+ *         <tr><td>{@code macOS.NSColor.systemIndigoColor}</td><td style="width: 5em">{@link Color}</td></tr>
+ *         <tr><td>{@code macOS.NSColor.systemOrangeColor}</td><td style="width: 5em">{@link Color}</td></tr>
+ *         <tr><td>{@code macOS.NSColor.systemPinkColor}</td><td style="width: 5em">{@link Color}</td></tr>
+ *         <tr><td>{@code macOS.NSColor.systemPurpleColor}</td><td style="width: 5em">{@link Color}</td></tr>
+ *         <tr><td>{@code macOS.NSColor.systemRedColor}</td><td style="width: 5em">{@link Color}</td></tr>
+ *         <tr><td>{@code macOS.NSColor.systemTealColor}</td><td style="width: 5em">{@link Color}</td></tr>
+ *         <tr><td>{@code macOS.NSColor.systemYellowColor}</td><td style="width: 5em">{@link Color}</td></tr>
+ *     </table>
  *
  *     <li><span style="font-weight: bold">Linux</span>
  *         <p>Platform preferences are currently not reported on Linux.

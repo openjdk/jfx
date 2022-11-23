@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -35,6 +35,7 @@
 #import "GlassScreen.h"
 #import "GlassWindow.h"
 #import "GlassTouches.h"
+#import "ThemeSupport.h"
 
 #import "ProcessInfo.h"
 #import <Security/SecRequirement.h>
@@ -116,7 +117,9 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
 
 #pragma mark --- GlassApplication
 
-@implementation GlassApplication
+@implementation GlassApplication {
+    jobject currentPreferences;
+}
 
 - (id)initWithEnv:(JNIEnv*)env application:(jobject)application launchable:(jobject)launchable taskbarApplication:(jboolean)isTaskbarApplication classLoader:(jobject)classLoader
 {
@@ -141,6 +144,107 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
 }
 
 #pragma mark --- delegate methods
+
+/**
+ * Collect all platform preferences and return them as a java/util/Map.
+ */
++ (jobject)queryPlatformPreferences
+{
+    GET_MAIN_JENV;
+    jclass mapClass = (jclass)(*env)->FindClass(env, "java/util/HashMap");
+    GLASS_CHECK_EXCEPTION(env);
+    if (mapClass == nil) {
+        return nil;
+    }
+
+    jmethodID constructor = (*env)->GetMethodID(env, mapClass, "<init>", "()V");
+    GLASS_CHECK_EXCEPTION(env);
+    if (constructor == nil) {
+        return nil;
+    }
+
+    jobject properties = (*env)->NewObject(env, mapClass, constructor);
+    GLASS_CHECK_EXCEPTION(env);
+    if (properties == nil) {
+        return nil;
+    }
+
+    // The current appearance is independent from the system appearance, and is set when the application
+    // is started. Since the system appearance can change while the application is running, we need to set
+    // the current appearance to the application's effective appearance before querying system colors.
+    NSAppearance* lastAppearance = [NSAppearance currentAppearance];
+    [NSAppearance setCurrentAppearance:[[NSApplication sharedApplication] effectiveAppearance]];
+
+    ThemeSupport* themeSupport = [[ThemeSupport alloc] initWithEnv:env];
+    [themeSupport queryProperties:properties];
+    [themeSupport release];
+
+    [NSAppearance setCurrentAppearance:lastAppearance];
+
+    (*env)->DeleteLocalRef(env, mapClass);
+    return properties;
+}
+
+- (void)platformPreferencesChanged {
+    [self performSelectorOnMainThread:@selector(platformPreferencesChangedOnMainThread)
+          withObject:nil
+          waitUntilDone:false];
+}
+
+- (void)platformPreferencesChangedOnMainThread {
+    GET_MAIN_JENV;
+
+    jobject newPreferences = [GlassApplication queryPlatformPreferences];
+    if (newPreferences == nil) {
+        return;
+    }
+
+    jclass objectClass, collectionsClass;
+    jmethodID equalsMethod, unmodifiableMapMethod;
+
+    bool initialized =
+        ((objectClass = (jclass)(*env)->FindClass(env, "java/lang/Object")) != nil) &&
+        ((collectionsClass = (jclass)(*env)->FindClass(env, "java/util/Collections")) != nil) &&
+        ((equalsMethod = (*env)->GetMethodID(env, objectClass, "equals", "(Ljava/lang/Object;)Z")) != 0) &&
+        ((unmodifiableMapMethod = (*env)->GetStaticMethodID(env, collectionsClass, "unmodifiableMap",
+                                                            "(Ljava/util/Map;)Ljava/util/Map;")) != 0);
+
+    if (!initialized) {
+        GLASS_CHECK_EXCEPTION(env);
+    } else {
+        jboolean isEqual = (*env)->CallBooleanMethod(env, newPreferences, equalsMethod, currentPreferences);
+        GLASS_CHECK_EXCEPTION(env);
+
+        if (!isEqual) {
+            if (currentPreferences != nil) {
+                (*env)->DeleteGlobalRef(env, currentPreferences);
+            }
+
+            currentPreferences = (*env)->NewGlobalRef(env, newPreferences);
+            jobject unmodifiablePreferences = (*env)->CallStaticObjectMethod(
+                env, collectionsClass, unmodifiableMapMethod, newPreferences);
+            GLASS_CHECK_EXCEPTION(env);
+            if (unmodifiablePreferences != nil) {
+                (*env)->CallVoidMethod(
+                    env, self->jApplication,
+                    javaIDs.MacApplication.notifyPreferencesChanged,
+                    unmodifiablePreferences);
+            }
+
+            (*env)->DeleteLocalRef(env, unmodifiablePreferences);
+        }
+    }
+
+    (*env)->DeleteLocalRef(env, newPreferences);
+
+    if (objectClass != nil) {
+        (*env)->DeleteLocalRef(env, objectClass);
+    }
+
+    if (collectionsClass != nil) {
+        (*env)->DeleteLocalRef(env, collectionsClass);
+    }
+}
 
 - (void)GlassApplicationDidChangeScreenParameters
 {
@@ -192,6 +296,16 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
                                                                  selector:@selector(GlassApplicationDidChangeScreenParameters)
                                                                      name:NSApplicationDidChangeScreenParametersNotification
                                                                    object:nil];
+
+                        [[NSDistributedNotificationCenter defaultCenter] addObserver:self
+                                                                         selector:@selector(platformPreferencesChanged)
+                                                                         name:@"AppleInterfaceThemeChangedNotification"
+                                                                         object:nil];
+
+                        [[NSDistributedNotificationCenter defaultCenter] addObserver:self
+                                                                         selector:@selector(platformPreferencesChanged)
+                                                                         name:@"AppleColorPreferencesChangedNotification"
+                                                                         object:nil];
 
                         // localMonitor = [NSEvent addLocalMonitorForEventsMatchingMask: NSRightMouseDownMask
                         //                                                      handler:^(NSEvent *incomingEvent) {
@@ -834,6 +948,10 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacApplication__1initIDs
             env, jClass, "notifyApplicationDidTerminate", "()V");
     if ((*env)->ExceptionCheck(env)) return;
 
+    javaIDs.MacApplication.notifyPreferencesChanged = (*env)->GetMethodID(
+            env, jClass, "notifyPreferencesChanged", "(Ljava/util/Map;)V");
+    if ((*env)->ExceptionCheck(env)) return;
+
     if (jRunnableRun == NULL)
     {
         jclass jcls = (*env)->FindClass(env, "java/lang/Runnable");
@@ -1138,4 +1256,15 @@ JNIEXPORT jint JNICALL Java_com_sun_glass_ui_mac_MacApplication__1getMacKey
     unsigned short macCode = 0;
     GetMacKey(code, &macCode);
     return (macCode & 0xFFFF);
+}
+
+/*
+ * Class:     com_sun_glass_ui_mac_MacApplication
+ * Method:    getPreferences
+ * Signature: ()Ljava/util/Map;
+ */
+JNIEXPORT jobject JNICALL Java_com_sun_glass_ui_mac_MacApplication_getPlatformPreferences
+(JNIEnv *env, jobject self)
+{
+    return [GlassApplication queryPlatformPreferences];
 }

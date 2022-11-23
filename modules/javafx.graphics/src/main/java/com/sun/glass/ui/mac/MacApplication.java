@@ -36,6 +36,7 @@ import java.nio.IntBuffer;
 
 import java.security.AccessController;
 import java.security.PrivilegedAction;
+import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
@@ -387,4 +388,7 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
 
     @Override
     protected native int _isKeyLocked(int keyCode);
+
+    @Override
+    public native Map<String, Object> getPlatformPreferences();
 }
