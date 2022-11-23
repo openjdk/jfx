@@ -198,23 +198,25 @@ public class PaginationSkin extends SkinBase<Pagination> {
 
         getChildren().addAll(currentStackPane, nextStackPane, navigation);
 
-        ListenerHelper.get(this).addInvalidationListener(getSkinnable().maxPageIndicatorCountProperty(), (o) -> {
+        ListenerHelper lh = ListenerHelper.get(this);
+
+        lh.addInvalidationListener(control.maxPageIndicatorCountProperty(), (o) -> {
             resetIndiciesAndNav();
         });
 
-        ListenerHelper.get(this).addChangeListener(getSkinnable().widthProperty(), true, (ev) -> {
-            clipRect.setWidth(getSkinnable().getWidth());
+        lh.addChangeListener(control.widthProperty(), true, (ev) -> {
+            clipRect.setWidth(control.getWidth());
         });
 
-        ListenerHelper.get(this).addChangeListener(getSkinnable().heightProperty(), true, (ev) -> {
-            clipRect.setHeight(getSkinnable().getHeight());
+        lh.addChangeListener(control.heightProperty(), true, (ev) -> {
+            clipRect.setHeight(control.getHeight());
         });
 
-        ListenerHelper.get(this).addChangeListener(getSkinnable().pageCountProperty(), (ev) -> {
+        lh.addChangeListener(control.pageCountProperty(), (ev) -> {
             resetIndiciesAndNav();
         });
 
-        ListenerHelper.get(this).addChangeListener(getSkinnable().pageFactoryProperty(), (ev) -> {
+        lh.addChangeListener(control.pageFactoryProperty(), (ev) -> {
             if (animate && timeline != null) {
                 // If we are in the middle of a page animation.
                 // Speedup and finish the animation then update the page factory.
@@ -944,12 +946,6 @@ public class PaginationSkin extends SkinBase<Pagination> {
         }
 
         private void clearIndicatorButtons() {
-            for (Toggle toggle : indicatorButtons.getToggles()) {
-                if (toggle instanceof IndicatorButton) {
-                    IndicatorButton indicatorButton = (IndicatorButton) toggle;
-                    indicatorButton.release();
-                }
-            }
             indicatorButtons.getToggles().clear();
         }
 
@@ -1295,7 +1291,9 @@ public class PaginationSkin extends SkinBase<Pagination> {
             this.pageNumber = pageNumber;
             setFocusTraversable(false);
 
-            ListenerHelper.get(PaginationSkin.this).addListChangeListener(getSkinnable().getStyleClass(), (ch) -> {
+            ListenerHelper lh = ListenerHelper.get(PaginationSkin.this);
+
+            lh.addListChangeListener(getSkinnable().getStyleClass(), (ch) -> {
                 setIndicatorType();
             });
             setIndicatorType();
@@ -1310,7 +1308,7 @@ public class PaginationSkin extends SkinBase<Pagination> {
                     }
             });
 
-            ListenerHelper.get(PaginationSkin.this).addChangeListener(tooltipVisibleProperty(), true, (visible) -> {
+            lh.addChangeListener(tooltipVisibleProperty(), true, (visible) -> {
                 setTooltipVisible(visible);
             });
 
@@ -1353,12 +1351,6 @@ public class PaginationSkin extends SkinBase<Pagination> {
             if (getToggleGroup() == null || !isSelected()) {
                 super.fire();
             }
-        }
-
-        public void release() {
-            // FIX own listener helper?
-            //getSkinnable().getStyleClass().removeListener(updateSkinIndicatorType);
-            //tooltipVisibleProperty().removeListener(updateTooltipVisibility);
         }
 
         /** {@inheritDoc} */
