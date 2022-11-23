@@ -718,7 +718,7 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
             _beginChange();
             size = -1;
             bitset.set(index);
-             if (index <= lastGetValue) reset();
+            if (index <= lastGetValue) reset();
             int indicesIndex = indexOf(index);
             _nextAdd(indicesIndex, indicesIndex + 1);
             _endChange();
