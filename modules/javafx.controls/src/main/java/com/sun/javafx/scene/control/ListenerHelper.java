@@ -111,7 +111,7 @@ public class ListenerHelper implements IDisconnectable {
         }
     }
 
-    protected boolean isAliveOrDisconnect() {
+    private boolean isAliveOrDisconnect() {
         if (ownerRef != null) {
             if (ownerRef.get() == null) {
                 disconnect();

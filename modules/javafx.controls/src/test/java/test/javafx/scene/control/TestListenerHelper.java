@@ -280,7 +280,7 @@ public class TestListenerHelper {
         SimpleStringProperty p = new SimpleStringProperty();
         AtomicInteger ct = new AtomicInteger();
 
-        h.addInvalidationListener(p, (cur) -> ct.incrementAndGet());
+        h.addInvalidationListener(() -> ct.incrementAndGet(), p);
 
         p.set("1");
         assertEquals(1, ct.get());
@@ -297,7 +297,7 @@ public class TestListenerHelper {
         SimpleStringProperty p = new SimpleStringProperty();
         AtomicInteger ct = new AtomicInteger();
 
-        h.addInvalidationListener(p, true, (cur) -> ct.incrementAndGet());
+        h.addInvalidationListener(() -> ct.incrementAndGet(), true, p);
 
         p.set("1");
         assertEquals(2, ct.get());
