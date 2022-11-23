@@ -718,7 +718,7 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
             _beginChange();
             size = -1;
             bitset.set(index);
-            if(index <= lastGetValue) reset();
+             if (index <= lastGetValue) reset();
             int indicesIndex = indexOf(index);
             _nextAdd(indicesIndex, indicesIndex + 1);
             _endChange();
@@ -741,14 +741,14 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
             size = -1;
             if (isSet) {
                 bitset.set(index, end, isSet);
-                if(index <= lastGetValue) reset();
+                if (index <= lastGetValue) reset();
                 int indicesIndex = indexOf(index);
                 int span = end - index;
                 _nextAdd(indicesIndex, indicesIndex + span);
             } else {
                 // TODO handle remove
                 bitset.set(index, end, isSet);
-                if(index <= lastGetValue) reset();
+                if (index <= lastGetValue) reset();
             }
             _endChange();
         }
@@ -824,7 +824,7 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
             _beginChange();
             size = -1;
             bitset.clear(index);
-            if(index <= lastGetValue) reset();
+            if (index <= lastGetValue) reset();
             _nextRemove(indicesIndex, index);
             _endChange();
         }
