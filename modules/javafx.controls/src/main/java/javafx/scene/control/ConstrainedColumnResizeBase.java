@@ -30,8 +30,8 @@ package javafx.scene.control;
  * Setting any policy that extends this class on a Tree/TableView results in
  * disabling of its horizontal scroll bar.
  *
- * @see {@link TableView#columnResizePolicyProperty}
- * @see {@link TreeTableView#columnResizePolicyProperty}
+ * @see TableView#columnResizePolicyProperty
+ * @see TreeTableView#columnResizePolicyProperty
  *
  * @since 20
  */
