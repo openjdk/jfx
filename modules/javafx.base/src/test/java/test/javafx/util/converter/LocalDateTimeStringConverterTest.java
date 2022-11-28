@@ -90,7 +90,7 @@ public class LocalDateTimeStringConverterTest {
     private FormatStyle dateStyle;
     private FormatStyle timeStyle;
     private LocalDateTime validDateTime;
-    
+
     private LocalDateTimeStringConverter converter;
     private Locale locale;
     private DateTimeFormatter formatter, parser;

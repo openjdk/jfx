@@ -88,7 +88,7 @@ public class LocalTimeStringConverterTest {
     private LocalTimeStringConverterVariant converterVariant;
     private FormatStyle timeStyle;
     private LocalTime validTime;
-    
+
     private LocalTimeStringConverter converter;
     private Locale locale;
     private DateTimeFormatter formatter, parser;

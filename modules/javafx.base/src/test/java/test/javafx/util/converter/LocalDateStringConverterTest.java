@@ -84,7 +84,7 @@ public class LocalDateStringConverterTest {
     private LocalDateStringConverterVariant converterVariant;
     private FormatStyle dateStyle;
     private LocalDate validDate;
-    
+
     private LocalDateStringConverter converter;
     private Locale locale;
     private DateTimeFormatter formatter, parser;
