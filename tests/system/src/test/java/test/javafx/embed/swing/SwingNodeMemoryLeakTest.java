@@ -25,34 +25,33 @@
 
 package test.javafx.embed.swing;
 
-import com.sun.javafx.PlatformUtil;
-import javafx.application.Application;
-import javafx.application.Platform;
-import javafx.embed.swing.SwingNode;
-import javafx.scene.Scene;
-import javafx.scene.layout.BorderPane;
-import javafx.scene.layout.HBox;
-import javafx.stage.Stage;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assume.assumeTrue;
 
-import javax.swing.JLabel;
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
+
+import javax.swing.JLabel;
+
+import javafx.application.Application;
+import javafx.embed.swing.SwingNode;
+import javafx.scene.Scene;
+import javafx.scene.layout.BorderPane;
+import javafx.stage.Stage;
+
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
+import org.junit.Test;
+
+import com.sun.javafx.PlatformUtil;
 
 import test.util.Util;
-import static test.util.Util.TIMEOUT;
-import junit.framework.AssertionFailedError;
-import org.junit.Test;
-import org.junit.BeforeClass;
-import org.junit.AfterClass;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assume.assumeTrue;
 
 public class SwingNodeMemoryLeakTest {
 
     final static int TOTAL_SWINGNODE = 10;
-    static CountDownLatch launchLatch;
+    static CountDownLatch launchLatch = new CountDownLatch(1);
     final static int GC_ATTEMPTS = 10;
     ArrayList<WeakReference<SwingNode>> weakRefArrSN =
                                       new ArrayList(TOTAL_SWINGNODE);
@@ -61,25 +60,12 @@ public class SwingNodeMemoryLeakTest {
 
     @BeforeClass
     public static void setupOnce() {
-        launchLatch = new CountDownLatch(1);
-        // Start the Application
-        new Thread(() -> Application.launch(SwingNodeMemoryLeakTest.MyApp.class, (String[])null)).start();
-
-        try {
-            if (!launchLatch.await(5 * TIMEOUT, TimeUnit.MILLISECONDS)) {
-                throw new AssertionFailedError("Timeout waiting for Application to launch ("+
-                    (5 * TIMEOUT) + " seconds)");
-            }
-        } catch (InterruptedException ex) {
-            AssertionFailedError err = new AssertionFailedError("Unexpected exception");
-            err.initCause(ex);
-            throw err;
-        }
+        Util.launch(launchLatch, 50, MyApp.class);
     }
 
     @AfterClass
     public static void teardownOnce() {
-        Platform.exit();
+        Util.shutdown();
     }
 
     @Test

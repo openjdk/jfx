@@ -33,7 +33,6 @@ import java.util.Collection;
 import java.util.Date;
 import java.util.Locale;
 import java.util.TimeZone;
-import javafx.util.converter.LocalTimeStringConverterShim;
 import javafx.util.converter.DateTimeStringConverterShim;
 import javafx.util.converter.TimeStringConverter;
 import static org.junit.Assert.*;

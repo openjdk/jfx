@@ -234,7 +234,7 @@ public abstract class BooleanExpression implements ObservableBooleanValue {
      * @since JavaFX 8.0
      */
     public ObjectExpression<Boolean> asObject() {
-        return new ObjectBinding<Boolean>() {
+        return new ObjectBinding<>() {
             {
                 bind(BooleanExpression.this);
             }

@@ -66,7 +66,7 @@ public class EventRedirector extends BasicEventDispatcher {
      *      ({@code RedirectedEvent} event source)
      */
     public EventRedirector(final Object eventSource) {
-        this.eventDispatchers = new CopyOnWriteArrayList<EventDispatcher>();
+        this.eventDispatchers = new CopyOnWriteArrayList<>();
         this.eventDispatchChain = new EventDispatchChainImpl();
         this.eventSource = eventSource;
     }

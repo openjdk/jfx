@@ -26,22 +26,20 @@
 package test.javafx.scene.lighting3D;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 import static org.junit.Assume.assumeTrue;
 
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
-
-import javafx.application.Application;
 import javafx.application.ConditionalFeature;
 import javafx.application.Platform;
 import javafx.geometry.Point3D;
 import javafx.scene.DirectionalLight;
 import javafx.scene.paint.Color;
+
+import org.junit.Before;
+import org.junit.BeforeClass;
+import org.junit.Test;
+
 import test.util.Util;
 
 public class DirectionalLightTest extends LightingTest {
@@ -58,8 +56,8 @@ public class DirectionalLightTest extends LightingTest {
     public static void initFX() throws Exception {
         startupLatch = new CountDownLatch(1);
         LightingTest.light = LIGHT;
-        new Thread(() -> Application.launch(TestApp.class, (String[]) null)).start();
-        assertTrue("Timeout waiting for FX runtime to start", startupLatch.await(15, TimeUnit.SECONDS));
+
+        Util.launch(startupLatch, TestApp.class);
     }
 
     @Before

@@ -56,10 +56,10 @@ public class ListExpressionTest {
 
     @Before
     public void setUp() {
-        opNull = new SimpleListProperty<Integer>();
-        opEmpty = new SimpleListProperty<Integer>(FXCollections.<Integer>observableArrayList());
-        op1 = new SimpleListProperty<Integer>(FXCollections.observableArrayList(data1_0));
-        op2 = new SimpleListProperty<Integer>(FXCollections.observableArrayList(data2_0, data2_1));
+        opNull = new SimpleListProperty<>();
+        opEmpty = new SimpleListProperty<>(FXCollections.<Integer>observableArrayList());
+        op1 = new SimpleListProperty<>(FXCollections.observableArrayList(data1_0));
+        op2 = new SimpleListProperty<>(FXCollections.observableArrayList(data2_0, data2_1));
     }
 
     @BeforeClass

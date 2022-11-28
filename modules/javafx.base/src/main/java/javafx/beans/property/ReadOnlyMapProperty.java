@@ -25,9 +25,7 @@
 
 package javafx.beans.property;
 
-import java.util.Iterator;
 import java.util.Map;
-import java.util.Map.Entry;
 import javafx.beans.binding.Bindings;
 import javafx.beans.binding.MapExpression;
 import javafx.collections.ObservableMap;

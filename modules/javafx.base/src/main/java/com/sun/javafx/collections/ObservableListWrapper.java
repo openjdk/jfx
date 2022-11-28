@@ -35,7 +35,6 @@ import java.util.List;
 import java.util.RandomAccess;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
-import javafx.collections.ObservableList;
 import javafx.util.Callback;
 
 /**
@@ -43,7 +42,7 @@ import javafx.util.Callback;
  *
  */
 public class ObservableListWrapper<E> extends ModifiableObservableListBase<E> implements
-        ObservableList<E>, SortableList<E>, RandomAccess {
+        SortableList<E>, RandomAccess {
 
     private final List<E> backingList;
 
@@ -214,7 +213,7 @@ public class ObservableListWrapper<E> extends ModifiableObservableListBase<E> im
             return;
         }
         int[] perm = getSortHelper().sort((List<? extends Comparable>)backingList);
-        fireChange(new SimplePermutationChange<E>(0, size(), perm, this));
+        fireChange(new SimplePermutationChange<>(0, size(), perm, this));
     }
 
     @Override
@@ -223,7 +222,7 @@ public class ObservableListWrapper<E> extends ModifiableObservableListBase<E> im
             return;
         }
         int[] perm = getSortHelper().sort(backingList, comparator);
-        fireChange(new SimplePermutationChange<E>(0, size(), perm, this));
+        fireChange(new SimplePermutationChange<>(0, size(), perm, this));
     }
 
     private SortHelper getSortHelper() {

@@ -89,7 +89,7 @@ public abstract class ListExpression<E> implements ObservableListValue<E> {
             throw new NullPointerException("List must be specified.");
         }
         return value instanceof ListExpression ? (ListExpression<E>) value
-                : new ListBinding<E>() {
+                : new ListBinding<>() {
             {
                 super.bind(value);
             }

@@ -33,14 +33,12 @@ import java.util.Collection;
 import java.util.Date;
 import java.util.Locale;
 import java.util.TimeZone;
-import javafx.util.converter.LocalTimeStringConverterShim;
 import javafx.util.converter.DateTimeStringConverter;
 import javafx.util.converter.DateTimeStringConverterShim;
 import static org.junit.Assert.*;
 
 import org.junit.Before;
 import org.junit.Test;
-import org.junit.Ignore;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
