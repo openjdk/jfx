@@ -326,7 +326,7 @@ public abstract class SetPropertyBase<E> extends SetProperty<E> {
         private final WeakReference<SetPropertyBase<E>> wref;
 
         public Listener(SetPropertyBase<E> ref) {
-            this.wref = new WeakReference<SetPropertyBase<E>>(ref);
+            this.wref = new WeakReference<>(ref);
         }
 
         @Override

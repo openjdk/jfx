@@ -28,15 +28,12 @@ package test.javafx.util.converter;
 import java.security.InvalidParameterException;
 import java.util.Arrays;
 import java.time.LocalDate;
-import java.time.chrono.Chronology;
 import java.time.chrono.IsoChronology;
 import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;
 import java.util.Collection;
 import java.util.Locale;
 
-import javafx.util.StringConverter;
-import javafx.util.converter.LocalTimeStringConverterShim;
 import javafx.util.converter.LocalDateStringConverter;
 import javafx.util.converter.LocalDateStringConverterShim;
 
@@ -47,7 +44,6 @@ import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import org.junit.Ignore;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 

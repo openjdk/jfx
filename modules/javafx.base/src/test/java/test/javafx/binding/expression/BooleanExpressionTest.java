@@ -179,7 +179,7 @@ public class BooleanExpressionTest {
 
     @Test
     public void testObjectToBoolean() {
-        final ObservableValueStub<Boolean> valueModel = new ObservableValueStub<Boolean>();
+        final ObservableValueStub<Boolean> valueModel = new ObservableValueStub<>();
         final BooleanExpression exp = BooleanExpression.booleanExpression(valueModel);
 
         assertTrue(exp instanceof BooleanBinding);
