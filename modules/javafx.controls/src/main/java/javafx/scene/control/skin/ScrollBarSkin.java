@@ -39,6 +39,7 @@ import javafx.scene.input.ScrollEvent;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 
+import com.sun.javafx.scene.control.ListenerHelper;
 import com.sun.javafx.scene.control.Properties;
 import com.sun.javafx.scene.control.behavior.ScrollBarBehavior;
 import com.sun.javafx.util.Utils;
@@ -97,13 +98,20 @@ public class ScrollBarSkin extends SkinBase<ScrollBar> {
         initialize();
         getSkinnable().requestLayout();
 
-        listenerHelper().addChangeListener(() -> {
+        ListenerHelper lh = ListenerHelper.get(this);
+
+        lh.addChangeListener(() -> {
             positionThumb();
             getSkinnable().requestLayout();
         }, control.minProperty(), control.maxProperty(), control.visibleAmountProperty());
 
-        listenerHelper().addChangeListener(control.valueProperty(), e -> positionThumb());
-        listenerHelper().addChangeListener(control.orientationProperty(), e -> getSkinnable().requestLayout());
+        lh.addChangeListener(control.valueProperty(), (ev) -> {
+            positionThumb();
+        });
+
+        lh.addChangeListener(control.orientationProperty(), (ev) -> {
+            getSkinnable().requestLayout();
+        });
     }
 
 
@@ -501,7 +509,7 @@ public class ScrollBarSkin extends SkinBase<ScrollBar> {
             }
         });
 
-        listenerHelper().addEventHandler(getSkinnable(), ScrollEvent.SCROLL, event -> {
+        ListenerHelper.get(this).addEventHandler(getSkinnable(), ScrollEvent.SCROLL, event -> {
             /*
             ** if the tracklength isn't greater then do nothing....
             */
