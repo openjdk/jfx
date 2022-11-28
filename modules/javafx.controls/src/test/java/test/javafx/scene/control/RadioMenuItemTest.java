@@ -27,6 +27,7 @@ package test.javafx.scene.control;
 
 import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.*;
 
+import test.com.sun.javafx.pgstub.StubToolkit;
 import com.sun.javafx.tk.Toolkit;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ObjectProperty;
@@ -53,10 +54,10 @@ public class RadioMenuItemTest {
     private RadioMenuItem radioMenuItem, rmi;//Empty string
     private RadioMenuItem radioMenuItemTwoArg;
     private Node node;
-    private Toolkit tk;
 
     @Before public void setup() {
-        tk = Toolkit.getToolkit();//This step is not needed (Just to make sure StubToolkit is loaded into VM)
+        assertTrue(Toolkit.getToolkit() instanceof StubToolkit);  // Ensure StubToolkit is loaded
+
         node = new Rectangle();
         toggleGroup = new ToggleGroup();
         radioMenuItem = rmi = new RadioMenuItem("one");

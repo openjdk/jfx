@@ -52,6 +52,7 @@ import javafx.stage.Stage;
 import org.junit.Before;
 import org.junit.Test;
 
+import test.com.sun.javafx.pgstub.StubToolkit;
 import test.com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
 import test.com.sun.javafx.scene.control.infrastructure.MouseEventGenerator;
 import javafx.scene.control.skin.TitledPaneSkin;
@@ -74,7 +75,10 @@ public class TitledPaneTest {
 
     @Before public void setup() {
         node = new Rectangle();
-        tk = Toolkit.getToolkit();//This step is not needed (Just to make sure StubToolkit is loaded into VM)
+        tk = Toolkit.getToolkit();
+
+        assertTrue(tk instanceof StubToolkit);  // Ensure it's StubToolkit
+
         titledPane = new TitledPane();
         titledPane.setSkin(new TitledPaneSkin(titledPane));
         titledPaneWithTitleAndNode = new TitledPane("title", node);

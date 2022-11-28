@@ -51,6 +51,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+import test.com.sun.javafx.pgstub.StubToolkit;
 import test.com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
 import test.com.sun.javafx.scene.control.infrastructure.MouseEventGenerator;
 import com.sun.javafx.tk.Toolkit;
@@ -67,6 +68,9 @@ public class PaginationTest {
     @Before public void setup() {
         pagination = new Pagination();
         tk = Toolkit.getToolkit();//This step is not needed (Just to make sure StubToolkit is loaded into VM)
+
+        assertTrue(tk instanceof StubToolkit);  // Ensure it's StubToolkit
+
         root = new StackPane();
         scene = new Scene(root);
         stage = new Stage();

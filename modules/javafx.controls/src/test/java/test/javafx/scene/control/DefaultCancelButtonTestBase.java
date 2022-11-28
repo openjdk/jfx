@@ -51,6 +51,7 @@ import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
+import test.com.sun.javafx.pgstub.StubToolkit;
 import test.com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
 
 /**
@@ -311,9 +312,8 @@ public abstract class DefaultCancelButtonTestBase<C extends Control> {
     }
 
     private void initStage() {
-        //This step is not needed (Just to make sure StubToolkit is loaded into VM)
-        @SuppressWarnings("unused")
-        Toolkit tk = Toolkit.getToolkit();
+        assertTrue(Toolkit.getToolkit() instanceof StubToolkit);  // Ensure StubToolkit is loaded
+
         root = new VBox();
         scene = new Scene(root);
         stage = new Stage();

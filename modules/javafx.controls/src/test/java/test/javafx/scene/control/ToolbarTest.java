@@ -32,6 +32,7 @@ import javafx.scene.AccessibleAttribute;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import test.com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
+import test.com.sun.javafx.pgstub.StubToolkit;
 import javafx.scene.control.skin.ToolBarSkin;
 import com.sun.javafx.tk.Toolkit;
 import java.util.ArrayList;
@@ -73,7 +74,10 @@ public class ToolbarTest {
     private static final double ORIGINAL_CHILDREN_SIZE = 100.0;
 
     @Before public void setup() {
-        tk = Toolkit.getToolkit();//This step is not needed (Just to make sure StubToolkit is loaded into VM)
+        tk = Toolkit.getToolkit();
+
+        assertTrue(tk instanceof StubToolkit);  // Ensure it's StubToolkit
+
         toolBar = new ToolBar();
         node1 = new Rectangle();
         node2 = new Rectangle(2.0,4.0);

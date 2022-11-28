@@ -43,6 +43,7 @@ import javafx.scene.control.skin.ProgressBarSkin;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.stage.Stage;
+import test.com.sun.javafx.pgstub.StubToolkit;
 
 /**
  */
@@ -63,8 +64,8 @@ public class ProgressBarSkinTest {
      * Helper method to init the stage only if really needed.
      */
     private void initStage() {
-        //This step is not needed (Just to make sure StubToolkit is loaded into VM)
-        Toolkit tk = Toolkit.getToolkit();
+        assertTrue(Toolkit.getToolkit() instanceof StubToolkit);  // Ensure StubToolkit is loaded
+
         root = new StackPane();
         scene = new Scene(root);
         stage = new Stage();

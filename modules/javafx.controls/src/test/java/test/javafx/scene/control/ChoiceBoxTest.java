@@ -27,6 +27,7 @@ package test.javafx.scene.control;
 
 import javafx.scene.control.Separator;
 import org.junit.After;
+import test.com.sun.javafx.pgstub.StubToolkit;
 import com.sun.javafx.tk.Toolkit;
 
 import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.assertPseudoClassDoesNotExist;
@@ -76,8 +77,9 @@ public class ChoiceBoxTest {
             }
         });
 
-        //This step is not needed (Just to make sure StubToolkit is loaded into VM)
         tk = Toolkit.getToolkit();
+
+        assertTrue(tk instanceof StubToolkit);  // Ensure it's StubToolkit
     }
 
     @After public void cleanUp() {

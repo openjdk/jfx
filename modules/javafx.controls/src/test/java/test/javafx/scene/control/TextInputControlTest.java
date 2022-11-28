@@ -25,6 +25,23 @@
 
 package test.javafx.scene.control;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
+import java.util.Arrays;
+import java.util.Collection;
+
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+
+import com.sun.javafx.tk.Toolkit;
+
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleStringProperty;
@@ -32,32 +49,19 @@ import javafx.beans.property.StringProperty;
 import javafx.css.CssMetaData;
 import javafx.css.StyleableProperty;
 import javafx.scene.Scene;
-import javafx.scene.input.KeyCode;
-import javafx.scene.input.Clipboard;
-import javafx.scene.input.ClipboardContent;
-import javafx.scene.text.Font;
-import javafx.scene.layout.StackPane;
-import javafx.stage.Stage;
-import java.util.Arrays;
-import java.util.Collection;
 import javafx.scene.control.IndexRange;
 import javafx.scene.control.PasswordField;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.control.TextInputControl;
-import com.sun.javafx.tk.Toolkit;
-
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import javafx.scene.input.Clipboard;
+import javafx.scene.input.ClipboardContent;
+import javafx.scene.input.KeyCode;
+import javafx.scene.layout.StackPane;
+import javafx.scene.text.Font;
+import javafx.stage.Stage;
+import test.com.sun.javafx.pgstub.StubToolkit;
 import test.com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 /**
  */
 @RunWith(Parameterized.class)
@@ -391,6 +395,9 @@ public class TextInputControlTest {
     // Test for JDK-8178417
     @Test public void caretPositionUndo() {
         Toolkit tk = Toolkit.getToolkit();
+
+        assertTrue(tk instanceof StubToolkit);  // Ensure it's StubToolkit
+
         StackPane root = new StackPane();
         Scene scene = new Scene(root);
         Stage stage = new Stage();
@@ -1940,6 +1947,9 @@ public class TextInputControlTest {
     // Test for JDK-8178418
     @Test public void UndoRedoSpaceSequence() {
         Toolkit tk = Toolkit.getToolkit();
+
+        assertTrue(tk instanceof StubToolkit);  // Ensure it's StubToolkit
+
         StackPane root = new StackPane();
         Scene scene = new Scene(root);
         Stage stage = new Stage();
@@ -1979,6 +1989,9 @@ public class TextInputControlTest {
     // Test for JDK-8178418
     @Test public void UndoRedoReverseSpaceSequence() {
         Toolkit tk = Toolkit.getToolkit();
+
+        assertTrue(tk instanceof StubToolkit);  // Ensure it's StubToolkit
+
         StackPane root = new StackPane();
         Scene scene = new Scene(root);
         Stage stage = new Stage();
@@ -2026,6 +2039,9 @@ public class TextInputControlTest {
     // Test for JDK-8178418
     @Test public void UndoRedoWords() {
         Toolkit tk = Toolkit.getToolkit();
+
+        assertTrue(tk instanceof StubToolkit);  // Ensure it's StubToolkit
+
         StackPane root = new StackPane();
         Scene scene = new Scene(root);
         Stage stage = new Stage();
@@ -2075,6 +2091,9 @@ public class TextInputControlTest {
     // Test for JDK-8178418
     @Test public void UndoRedoTimestampBased() {
         Toolkit tk = Toolkit.getToolkit();
+
+        assertTrue(tk instanceof StubToolkit);  // Ensure it's StubToolkit
+
         StackPane root = new StackPane();
         Scene scene = new Scene(root);
         Stage stage = new Stage();

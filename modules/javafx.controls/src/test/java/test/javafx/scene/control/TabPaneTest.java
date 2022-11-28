@@ -63,6 +63,7 @@ import javafx.stage.Stage;
 import org.junit.Before;
 import org.junit.Test;
 
+import test.com.sun.javafx.pgstub.StubToolkit;
 import test.com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
 import test.com.sun.javafx.scene.control.infrastructure.MouseEventGenerator;
 import com.sun.javafx.scene.input.KeyCodeMap;
@@ -99,7 +100,10 @@ public class TabPaneTest {
     private StackPane root;
 
     @Before public void setup() {
-        tk = Toolkit.getToolkit();//This step is not needed (Just to make sure StubToolkit is loaded into VM)
+        tk = Toolkit.getToolkit();
+
+        assertTrue(tk instanceof StubToolkit);  // Ensure it's StubToolkit
+
         tabPane = new TabPane();
         tab1 = new Tab("one");
         tab2 = new Tab("two");

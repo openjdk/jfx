@@ -28,6 +28,7 @@ package test.javafx.scene.control;
 
 import javafx.css.ParsedValue;
 import javafx.css.CssParserShim;
+import test.com.sun.javafx.pgstub.StubToolkit;
 import com.sun.javafx.tk.Toolkit;
 import javafx.css.StyleableProperty;
 import javafx.scene.Scene;
@@ -54,7 +55,10 @@ public class SliderTest {
     private Stage stage;
 
     @Before public void setup() {
-        tk = Toolkit.getToolkit();//This step is not needed (Just to make sure StubToolkit is loaded into VM)
+        tk = Toolkit.getToolkit();
+
+        assertTrue(tk instanceof StubToolkit);  // Ensure it's StubToolkit
+
         slider = new Slider();
     }
 

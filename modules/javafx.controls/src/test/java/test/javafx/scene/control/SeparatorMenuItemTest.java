@@ -27,6 +27,7 @@ package test.javafx.scene.control;
 
 import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.*;
 
+import test.com.sun.javafx.pgstub.StubToolkit;
 import com.sun.javafx.tk.Toolkit;
 import javafx.geometry.Orientation;
 import javafx.scene.Node;
@@ -46,10 +47,10 @@ import org.junit.Test;
 public class SeparatorMenuItemTest {
     private SeparatorMenuItem separatorMenuItem, smi;
     private Node node;
-    private Toolkit tk;
 
     @Before public void setup() {
-        tk = Toolkit.getToolkit();//This step is not needed (Just to make sure StubToolkit is loaded into VM)
+        assertTrue(Toolkit.getToolkit() instanceof StubToolkit);  // Ensure StubToolkit is loaded
+
         node = new Rectangle();
         separatorMenuItem = smi = new SeparatorMenuItem();
     }

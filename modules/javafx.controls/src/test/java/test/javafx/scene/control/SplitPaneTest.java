@@ -34,6 +34,7 @@ import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
 import javafx.css.CssMetaData;
 import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.*;
 
+import test.com.sun.javafx.pgstub.StubToolkit;
 import javafx.scene.control.skin.SplitPaneSkin;
 import com.sun.javafx.tk.Toolkit;
 import javafx.application.Platform;
@@ -67,14 +68,14 @@ public class SplitPaneTest {
     private SplitPane splitPane;//Empty string
     private SplitPane.Divider divider1;
     private SplitPane.Divider divider2;
-    private Toolkit tk;
     private Scene scene;
     private Stage stage;
     private StackPane root;
     private StageLoader stageLoader;
 
     @Before public void setup() {
-        tk = Toolkit.getToolkit();//This step is not needed (Just to make sure StubToolkit is loaded into VM)
+        assertTrue(Toolkit.getToolkit() instanceof StubToolkit);  // Ensure StubToolkit is loaded
+
         splitPane = new SplitPane();
         splitPane.setSkin(new SplitPaneSkin(splitPane));
         divider1 = new SplitPane.Divider();

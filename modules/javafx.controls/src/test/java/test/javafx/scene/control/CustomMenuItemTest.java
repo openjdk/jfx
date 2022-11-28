@@ -32,6 +32,7 @@ import javafx.beans.property.SimpleObjectProperty;
 import javafx.scene.Node;
 import javafx.scene.shape.Rectangle;
 
+import test.com.sun.javafx.pgstub.StubToolkit;
 import com.sun.javafx.tk.Toolkit;
 import javafx.scene.control.CustomMenuItem;
 import org.junit.Before;
@@ -49,10 +50,10 @@ public class CustomMenuItemTest {
     private CustomMenuItem customMenuItemOneArg;
     private CustomMenuItem customMenuItemTwoArg;
     private Node node;
-    private Toolkit tk;
 
     @Before public void setup() {
-        tk = Toolkit.getToolkit();//This step is not needed (Just to make sure StubToolkit is loaded into VM)
+        assertTrue(Toolkit.getToolkit() instanceof StubToolkit);  // Ensure StubToolkit is loaded
+
         node = new Rectangle();
         customMenuItem = cmi = new CustomMenuItem();
         customMenuItemOneArg = new CustomMenuItem(node);

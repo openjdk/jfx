@@ -54,6 +54,7 @@ import javafx.scene.Scene;
 import javafx.stage.Stage;
 import javafx.util.Duration;
 
+import test.com.sun.javafx.pgstub.StubToolkit;
 import test.com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
 import com.sun.javafx.tk.Toolkit;
 
@@ -1382,6 +1383,9 @@ public class SpinnerTest {
     boolean escapeCancelPass = false;
     @Test public void testEnterEscapeKeysWithDefaultCancelButtons() {
         Toolkit tk = Toolkit.getToolkit();
+
+        assertTrue(tk instanceof StubToolkit);  // Ensure it's StubToolkit
+
         VBox root = new VBox();
         Scene scene = new Scene(root);
         Stage stage = new Stage();
@@ -1460,6 +1464,9 @@ public class SpinnerTest {
     // Test for JDK-8185937
     @Test public void testIncDecKeys() {
         Toolkit tk = Toolkit.getToolkit();
+
+        assertTrue(tk instanceof StubToolkit);  // Ensure it's StubToolkit
+
         VBox root = new VBox();
         Scene scene = new Scene(root);
         Stage stage = new Stage();
