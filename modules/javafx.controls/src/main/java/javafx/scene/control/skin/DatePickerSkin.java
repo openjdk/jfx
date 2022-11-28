@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,21 +29,20 @@ import java.time.LocalDate;
 import java.time.YearMonth;
 import java.time.chrono.HijrahChronology;
 
-import com.sun.javafx.scene.control.DatePickerContent;
-import com.sun.javafx.scene.control.DatePickerHijrahContent;
-import com.sun.javafx.scene.control.behavior.BehaviorBase;
-import com.sun.javafx.scene.control.behavior.ComboBoxBaseBehavior;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.event.ActionEvent;
 import javafx.geometry.Insets;
 import javafx.scene.Node;
-import javafx.scene.control.Button;
 import javafx.scene.control.Control;
 import javafx.scene.control.DatePicker;
 import javafx.scene.control.TextField;
 import javafx.util.StringConverter;
 
+import com.sun.javafx.scene.control.DatePickerContent;
+import com.sun.javafx.scene.control.DatePickerHijrahContent;
+import com.sun.javafx.scene.control.ListenerHelper;
+import com.sun.javafx.scene.control.behavior.ComboBoxBaseBehavior;
 import com.sun.javafx.scene.control.behavior.DatePickerBehavior;
 
 /**
@@ -89,9 +88,11 @@ public class DatePickerSkin extends ComboBoxPopupControl<LocalDate> {
         // install default input map for the control
         this.behavior = new DatePickerBehavior(control);
 
+        ListenerHelper lh = ListenerHelper.get(this);
+
         // The "arrow" is actually a rectangular svg icon resembling a calendar.
         // Round the size of the icon to whole integers to get sharp edges.
-        listenerHelper().addInvalidationListener(arrow.paddingProperty(), new InvalidationListener() {
+        lh.addInvalidationListener(arrow.paddingProperty(), new InvalidationListener() {
             // This boolean protects against unwanted recursion.
             private boolean rounding = false;
 
@@ -109,24 +110,24 @@ public class DatePickerSkin extends ComboBoxPopupControl<LocalDate> {
             }
         });
 
-        listenerHelper().addChangeListener(control.chronologyProperty(), e -> {
+        lh.addChangeListener(control.chronologyProperty(), e -> {
             updateDisplayNode();
             datePickerContent = null;
             popup = null;
         });
-        listenerHelper().addChangeListener(control.converterProperty(), e -> updateDisplayNode());
-        listenerHelper().addChangeListener(control.dayCellFactoryProperty(), e -> {
+        lh.addChangeListener(control.converterProperty(), e -> updateDisplayNode());
+        lh.addChangeListener(control.dayCellFactoryProperty(), e -> {
             updateDisplayNode();
             datePickerContent = null;
             popup = null;
         });
-        listenerHelper().addChangeListener(control.showWeekNumbersProperty(), e -> {
+        lh.addChangeListener(control.showWeekNumbersProperty(), e -> {
             if (datePickerContent != null) {
                 datePickerContent.updateGrid();
                 datePickerContent.updateWeeknumberDateCells();
             }
         });
-        listenerHelper().addChangeListener(control.valueProperty(), e -> {
+        lh.addChangeListener(control.valueProperty(), e -> {
             updateDisplayNode();
             if (datePickerContent != null) {
                 LocalDate date = control.getValue();
@@ -135,7 +136,7 @@ public class DatePickerSkin extends ComboBoxPopupControl<LocalDate> {
             }
             control.fireEvent(new ActionEvent());
         });
-        listenerHelper().addChangeListener(control.showingProperty(), e -> {
+        lh.addChangeListener(control.showingProperty(), e -> {
             if (control.isShowing()) {
                 if (datePickerContent != null) {
                     LocalDate date = control.getValue();

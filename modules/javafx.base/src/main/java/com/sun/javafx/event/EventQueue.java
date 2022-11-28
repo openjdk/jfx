@@ -30,7 +30,7 @@ import java.util.Queue;
 import javafx.event.Event;
 
 public final class EventQueue {
-    private Queue<Event> queue = new ArrayDeque<Event>();
+    private Queue<Event> queue = new ArrayDeque<>();
     private boolean inLoop;
 
     public void postEvent(Event event) {

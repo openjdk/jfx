@@ -25,47 +25,43 @@
 
 package javafx.scene.control.skin;
 
-import com.sun.javafx.css.StyleManager;
-
-import com.sun.javafx.scene.control.Properties;
-import com.sun.javafx.scene.control.behavior.ComboBoxBaseBehavior;
-import com.sun.javafx.scene.control.skin.Utils;
-import javafx.beans.property.StringProperty;
-import javafx.css.StyleOrigin;
-import javafx.css.StyleableBooleanProperty;
-import javafx.css.CssMetaData;
-
-import javafx.css.converter.BooleanConverter;
+import static javafx.scene.paint.Color.*;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-
-import javafx.css.StyleableDoubleProperty;
-import javafx.css.StyleableStringProperty;
-import javafx.geometry.Pos;
-import javafx.scene.Node;
-import javafx.scene.control.Control;
-import javafx.scene.image.ImageView;
-import javafx.scene.layout.StackPane;
-import javafx.scene.shape.Rectangle;
-
-import javafx.css.converter.SizeConverter;
-import javafx.css.converter.StringConverter;
-import com.sun.javafx.scene.control.behavior.ColorPickerBehavior;
-
 import java.util.Map;
 
-import javafx.scene.control.ColorPicker;
-import javafx.scene.control.TextField;
 import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.StringProperty;
 import javafx.beans.value.WritableValue;
+import javafx.css.CssMetaData;
+import javafx.css.StyleOrigin;
 import javafx.css.Styleable;
+import javafx.css.StyleableBooleanProperty;
+import javafx.css.StyleableDoubleProperty;
 import javafx.css.StyleableProperty;
+import javafx.css.StyleableStringProperty;
+import javafx.css.converter.BooleanConverter;
+import javafx.css.converter.SizeConverter;
+import javafx.css.converter.StringConverter;
+import javafx.geometry.Pos;
+import javafx.scene.Node;
+import javafx.scene.control.ColorPicker;
+import javafx.scene.control.Control;
 import javafx.scene.control.Label;
+import javafx.scene.control.TextField;
+import javafx.scene.image.ImageView;
+import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
+import javafx.scene.shape.Rectangle;
 
-import static javafx.scene.paint.Color.*;
+import com.sun.javafx.css.StyleManager;
+import com.sun.javafx.scene.control.ListenerHelper;
+import com.sun.javafx.scene.control.Properties;
+import com.sun.javafx.scene.control.behavior.ColorPickerBehavior;
+import com.sun.javafx.scene.control.behavior.ComboBoxBaseBehavior;
+import com.sun.javafx.scene.control.skin.Utils;
 
 /**
  * Default skin implementation for the {@link ColorPicker} control.
@@ -110,7 +106,8 @@ public class ColorPickerSkin extends ComboBoxPopupControl<Color> {
         this.behavior = new ColorPickerBehavior(control);
 
         updateComboBoxMode();
-        listenerHelper().addChangeListener(control.valueProperty(), (ev) -> updateColor());
+
+        ListenerHelper.get(this).addChangeListener(control.valueProperty(), (ev) -> updateColor());
 
         // create displayNode
         displayNode = new Label();

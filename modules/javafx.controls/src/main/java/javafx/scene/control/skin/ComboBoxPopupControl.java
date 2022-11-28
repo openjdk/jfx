@@ -27,6 +27,7 @@ package javafx.scene.control.skin;
 
 import com.sun.javafx.scene.ParentHelper;
 import com.sun.javafx.scene.control.FakeFocusTextField;
+import com.sun.javafx.scene.control.ListenerHelper;
 import com.sun.javafx.scene.control.Properties;
 import com.sun.javafx.scene.control.behavior.TextInputControlBehavior;
 import com.sun.javafx.scene.input.ExtendedInputMethodRequests;
@@ -136,15 +137,17 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
             getChildren().add(textField);
         }
 
+        ListenerHelper lh = ListenerHelper.get(this);
+
         // move fake focus in to the textfield if the comboBox is editable
-        listenerHelper().addChangeListener(comboBoxBase.focusedProperty(), (ov, t, hasFocus) -> {
+        lh.addChangeListener(comboBoxBase.focusedProperty(), (ov, t, hasFocus) -> {
             if (getEditor() != null) {
                 // Fix for the regression noted in a comment in RT-29885.
                 ((FakeFocusTextField)textField).setFakeFocus(hasFocus);
             }
         });
 
-        listenerHelper().addEventFilter(comboBoxBase, KeyEvent.ANY, (ke) -> {
+        lh.addEventFilter(comboBoxBase, KeyEvent.ANY, (ke) -> {
             if (textField == null || getEditor() == null) {
                 handleKeyEvent(ke, false);
             } else {
@@ -497,21 +500,23 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
         popup.setAutoFix(true);
         popup.setHideOnEscape(true);
         popup.setOnAutoHide(e -> getBehavior().onAutoHide(popup));
-        listenerHelper().addEventHandler(popup, MouseEvent.MOUSE_CLICKED, t -> {
+
+        ListenerHelper lh = ListenerHelper.get(this);
+        lh.addEventHandler(popup, MouseEvent.MOUSE_CLICKED, t -> {
             // RT-18529: We listen to mouse input that is received by the popup
             // but that is not consumed, and assume that this is due to the mouse
             // clicking outside of the node, but in areas such as the
             // dropshadow.
             getBehavior().onAutoHide(popup);
         });
-        listenerHelper().addEventHandler(popup, WindowEvent.WINDOW_HIDDEN, t -> {
+        lh.addEventHandler(popup, WindowEvent.WINDOW_HIDDEN, t -> {
             // Make sure the accessibility focus returns to the combo box
             // after the window closes.
             getSkinnable().notifyAccessibleAttributeChanged(AccessibleAttribute.FOCUS_NODE);
         });
 
         // Fix for RT-21207
-        listenerHelper().addInvalidationListener(() -> {
+        lh.addInvalidationListener(() -> {
                 popupNeedsReconfiguring = true;
                 reconfigurePopup();
             },
@@ -523,7 +528,7 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
 
         // RT-36966 - if skinnable's scene becomes null, ensure popup is closed
         // FIX npe
-        listenerHelper().addInvalidationListener(getSkinnable().sceneProperty(), (obs) -> {
+        lh.addInvalidationListener(getSkinnable().sceneProperty(), (obs) -> {
             if (((ObservableValue)obs).getValue() == null) {
                 hide();
             } else if (getSkinnable().isShowing()) {

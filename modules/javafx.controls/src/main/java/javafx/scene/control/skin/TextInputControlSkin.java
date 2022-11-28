@@ -74,6 +74,7 @@ import javafx.scene.control.SkinBase;
 import javafx.scene.control.TextInputControl;
 import javafx.scene.input.InputMethodEvent;
 import javafx.scene.input.InputMethodHighlight;
+import javafx.scene.input.InputMethodRequests;
 import javafx.scene.input.InputMethodTextRun;
 import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
@@ -192,7 +193,8 @@ public abstract class TextInputControlSkin<T extends TextInputControl> extends S
     // Holds concrete attributes for the composition runs
     private List<Shape> imattrs = new java.util.ArrayList<Shape>();
 
-    private EventHandler<InputMethodEvent> inputMethodTextChangedHandler;
+    private final EventHandler<InputMethodEvent> inputMethodTextChangedHandler = this::handleInputMethodEvent;
+    private InputMethodRequests inputMethodRequests;
 
 
     /* ************************************************************************
@@ -325,82 +327,86 @@ public abstract class TextInputControlSkin<T extends TextInputControl> extends S
             });
         }
 
-        // FIXME: JDK-8268877 - incorrectly wired handler on replacing skin
-        if (control.getOnInputMethodTextChanged() == null) {
-            inputMethodTextChangedHandler = this::handleInputMethodEvent;
-            control.setOnInputMethodTextChanged(inputMethodTextChangedHandler);
-        }
+        control.addEventHandler(InputMethodEvent.INPUT_METHOD_TEXT_CHANGED, inputMethodTextChangedHandler);
+    }
 
-        control.setInputMethodRequests(new ExtendedInputMethodRequests() {
-            @Override public Point2D getTextLocation(int offset) {
-                Scene scene = getSkinnable().getScene();
-                Window window = scene != null ? scene.getWindow() : null;
-                if (window == null) {
-                    return new Point2D(0, 0);
-                }
-                // Don't use imstart here because it isn't initialized yet.
-                Rectangle2D characterBounds = getCharacterBounds(control.getSelection().getStart() + offset);
-                Point2D p = getSkinnable().localToScene(characterBounds.getMinX(), characterBounds.getMaxY());
-                Point2D location = new Point2D(window.getX() + scene.getX() + p.getX(),
-                        window.getY() + scene.getY() + p.getY());
-                return location;
-            }
+    @Override
+    public void install() {
+        super.install();
 
-            @Override public int getLocationOffset(int x, int y) {
-                return getInsertionPoint(x, y);
-            }
+        TextInputControl control = getSkinnable();
 
-            @Override public void cancelLatestCommittedText() {
-                // TODO
-            }
-
-            @Override public String getSelectedText() {
-                TextInputControl control = getSkinnable();
-                IndexRange selection = control.getSelection();
-
-                return control.getText(selection.getStart(), selection.getEnd());
-            }
-
-            @Override public int getInsertPositionOffset() {
-                int caretPosition = getSkinnable().getCaretPosition();
-                if (caretPosition < imstart) {
-                    return caretPosition;
-                } else if (caretPosition < imstart + imlength) {
-                    return imstart;
-                } else {
-                    return caretPosition - imlength;
-                }
-            }
-
-            @Override public String getCommittedText(int begin, int end) {
-                TextInputControl control = getSkinnable();
-                if (begin < imstart) {
-                    if (end <= imstart) {
-                        return control.getText(begin, end);
-                    } else {
-                        return control.getText(begin, imstart) + control.getText(imstart + imlength, end + imlength);
+        if (control.getInputMethodRequests() == null) {
+            inputMethodRequests = new ExtendedInputMethodRequests() {
+                @Override public Point2D getTextLocation(int offset) {
+                    Scene scene = control.getScene();
+                    Window window = scene != null ? scene.getWindow() : null;
+                    if (window == null) {
+                        return new Point2D(0, 0);
                     }
-                } else {
-                    return control.getText(begin + imlength, end + imlength);
+                    // Don't use imstart here because it isn't initialized yet.
+                    Rectangle2D characterBounds = getCharacterBounds(control.getSelection().getStart() + offset);
+                    Point2D p = control.localToScene(characterBounds.getMinX(), characterBounds.getMaxY());
+                    Point2D location = new Point2D(window.getX() + scene.getX() + p.getX(),
+                            window.getY() + scene.getY() + p.getY());
+                    return location;
                 }
-            }
 
-            @Override public int getCommittedTextLength() {
-                return getSkinnable().getText().length() - imlength;
-            }
-        });
+                @Override public int getLocationOffset(int x, int y) {
+                    return getInsertionPoint(x, y);
+                }
+
+                @Override public void cancelLatestCommittedText() {
+                    // TODO
+                }
+
+                @Override public String getSelectedText() {
+                    IndexRange selection = control.getSelection();
+                    return control.getText(selection.getStart(), selection.getEnd());
+                }
+
+                @Override public int getInsertPositionOffset() {
+                    int caretPosition = control.getCaretPosition();
+                    if (caretPosition < imstart) {
+                        return caretPosition;
+                    } else if (caretPosition < imstart + imlength) {
+                        return imstart;
+                    } else {
+                        return caretPosition - imlength;
+                    }
+                }
+
+                @Override public String getCommittedText(int begin, int end) {
+                    if (begin < imstart) {
+                        if (end <= imstart) {
+                            return control.getText(begin, end);
+                        } else {
+                            return control.getText(begin, imstart) + control.getText(imstart + imlength, end + imlength);
+                        }
+                    } else {
+                        return control.getText(begin + imlength, end + imlength);
+                    }
+                }
+
+                @Override public int getCommittedTextLength() {
+                    return control.getText().length() - imlength;
+                }
+            };
+            control.setInputMethodRequests(inputMethodRequests);
+        }
     }
 
     @Override
     public void dispose() {
-        if (getSkinnable() == null) return;
-        // the inputMethodEvent handler installed by this skin must be removed to prevent a memory leak
-        // while a handler installed by the control must not be removed
-        if (getSkinnable().getOnInputMethodTextChanged() == inputMethodTextChangedHandler) {
-            getSkinnable().setOnInputMethodTextChanged(null);
+        if (getSkinnable() == null) {
+            return;
         }
-        // cleanup to guard against potential NPE
-        getSkinnable().setInputMethodRequests(null);
+
+        getSkinnable().removeEventHandler(InputMethodEvent.INPUT_METHOD_TEXT_CHANGED, inputMethodTextChangedHandler);
+
+        if (getSkinnable().getInputMethodRequests() == inputMethodRequests) {
+            getSkinnable().setInputMethodRequests(null);
+        }
         super.dispose();
     }
 

@@ -56,6 +56,7 @@ import javafx.util.Callback;
 import javafx.util.StringConverter;
 
 import com.sun.javafx.scene.control.IDisconnectable;
+import com.sun.javafx.scene.control.ListenerHelper;
 import com.sun.javafx.scene.control.behavior.ComboBoxBaseBehavior;
 import com.sun.javafx.scene.control.behavior.ComboBoxListViewBehavior;
 
@@ -143,7 +144,9 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
         this.comboBox = control;
         updateComboBoxItems();
 
-        listenerHelper().addInvalidationListener(control.itemsProperty(), (x) -> {
+        ListenerHelper lh = ListenerHelper.get(this);
+
+        lh.addInvalidationListener(control.itemsProperty(), (x) -> {
             updateComboBoxItems();
             updateListViewItems();
         });
@@ -164,33 +167,33 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
         // Fix for RT-19431 (also tested via ComboBoxListViewSkinTest)
         updateValue();
 
-        listenerHelper().addChangeListener(control.itemsProperty(), e -> {
+        lh.addChangeListener(control.itemsProperty(), e -> {
             updateComboBoxItems();
             updateListViewItems();
         });
-        listenerHelper().addChangeListener(control.promptTextProperty(), e -> updateDisplayNode());
-        listenerHelper().addChangeListener(control.cellFactoryProperty(), e -> updateCellFactory());
-        listenerHelper().addChangeListener(control.visibleRowCountProperty(), e -> {
+        lh.addChangeListener(control.promptTextProperty(), e -> updateDisplayNode());
+        lh.addChangeListener(control.cellFactoryProperty(), e -> updateCellFactory());
+        lh.addChangeListener(control.visibleRowCountProperty(), e -> {
             if (listView == null) return;
             listView.requestLayout();
         });
-        listenerHelper().addChangeListener(control.converterProperty(), e -> updateListViewItems());
-        listenerHelper().addChangeListener(control.buttonCellProperty(), e -> {
+        lh.addChangeListener(control.converterProperty(), e -> updateListViewItems());
+        lh.addChangeListener(control.buttonCellProperty(), e -> {
             updateButtonCell();
             updateDisplayArea();
         });
-        listenerHelper().addChangeListener(control.valueProperty(), e -> {
+        lh.addChangeListener(control.valueProperty(), e -> {
             updateValue();
             control.fireEvent(new ActionEvent());
         });
-        listenerHelper().addChangeListener(control.editableProperty(), e -> updateEditable());
+        lh.addChangeListener(control.editableProperty(), e -> updateEditable());
 
         // Refer to JDK-8095306
         if (comboBox.isShowing()) {
             show();
         }
 
-        listenerHelper().addInvalidationListener(comboBox.sceneProperty(), (o) -> {
+        lh.addInvalidationListener(comboBox.sceneProperty(), (o) -> {
             if (((ObservableValue)o).getValue() == null) {
                 comboBox.hide();
             }
@@ -570,13 +573,14 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
             comboBox.notifyAccessibleAttributeChanged(AccessibleAttribute.TEXT);
         });
 
-        listenerHelper().addChangeListener(comboBox.selectionModelProperty(), true, (src, oldsm, newsm) -> {
+        ListenerHelper lh = ListenerHelper.get(this);
+        lh.addChangeListener(comboBox.selectionModelProperty(), true, (src, oldsm, newsm) -> {
             if (selectedItemWatcher != null) {
                 selectedItemWatcher.disconnect();
             }
 
             if (newsm != null) {
-                selectedItemWatcher = listenerHelper().addInvalidationListener(newsm.selectedItemProperty(), (x) -> {
+                selectedItemWatcher = lh.addInvalidationListener(newsm.selectedItemProperty(), (x) -> {
                     listViewSelectionDirty = true;
                 });
             }
