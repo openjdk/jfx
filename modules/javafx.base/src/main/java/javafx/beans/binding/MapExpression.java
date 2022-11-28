@@ -119,7 +119,7 @@ public abstract class MapExpression<K, V> implements ObservableMapValue<K, V> {
             throw new NullPointerException("Map must be specified.");
         }
         return value instanceof MapExpression ? (MapExpression<K, V>) value
-                : new MapBinding<K, V>() {
+                : new MapBinding<>() {
             {
                 super.bind(value);
             }

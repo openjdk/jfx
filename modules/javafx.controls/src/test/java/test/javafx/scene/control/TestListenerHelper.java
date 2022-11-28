@@ -37,13 +37,17 @@ import javafx.collections.ListChangeListener;
 import javafx.collections.MapChangeListener;
 import javafx.collections.ObservableList;
 import javafx.collections.ObservableMap;
+import javafx.collections.ObservableSet;
+import javafx.collections.SetChangeListener;
 import javafx.concurrent.Task;
 import javafx.event.EventTarget;
 import javafx.scene.Group;
 import javafx.scene.Scene;
+import javafx.scene.control.Label;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TreeItem;
+import javafx.scene.control.skin.LabelSkin;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.Region;
 import javafx.scene.transform.Scale;
@@ -55,21 +59,6 @@ import test.util.memory.JMemoryBuddy;
  * Tests ListenerHelper utility class.
  */
 public class TestListenerHelper {
-    @Test
-    public void testStaticDisconnect() {
-        AtomicInteger ct = new AtomicInteger();
-        Group node = new Group();
-        ListenerHelper h = ListenerHelper.get(node);
-        assertNotNull(h);
-
-        h.addDisconnectable(() -> {
-            ct.incrementAndGet();
-        });
-
-        ListenerHelper.disconnect(node);
-        assertEquals(1, ct.get());
-    }
-
     @Test
     public void testCheckAlive() {
         Object owner = new Object();
@@ -291,7 +280,7 @@ public class TestListenerHelper {
         SimpleStringProperty p = new SimpleStringProperty();
         AtomicInteger ct = new AtomicInteger();
 
-        h.addInvalidationListener(p, (cur) -> ct.incrementAndGet());
+        h.addInvalidationListener(() -> ct.incrementAndGet(), p);
 
         p.set("1");
         assertEquals(1, ct.get());
@@ -308,7 +297,7 @@ public class TestListenerHelper {
         SimpleStringProperty p = new SimpleStringProperty();
         AtomicInteger ct = new AtomicInteger();
 
-        h.addInvalidationListener(p, true, (cur) -> ct.incrementAndGet());
+        h.addInvalidationListener(() -> ct.incrementAndGet(), true, p);
 
         p.set("1");
         assertEquals(2, ct.get());
@@ -329,6 +318,26 @@ public class TestListenerHelper {
         ListChangeListener<String> li = (ch) -> ct.incrementAndGet();
 
         h.addListChangeListener(list, li);
+
+        list.add("1");
+        assertEquals(1, ct.get());
+
+        h.disconnect();
+
+        list.add("2");
+        assertEquals(1, ct.get());
+    }
+
+    // set change listeners
+
+    @Test
+    public void testSetChangeListener() {
+        ListenerHelper h = new ListenerHelper();
+        ObservableSet<String> list = FXCollections.observableSet();
+        AtomicInteger ct = new AtomicInteger();
+        SetChangeListener<String> li = (ch) -> ct.incrementAndGet();
+
+        h.addSetChangeListener(list, li);
 
         list.add("1");
         assertEquals(1, ct.get());

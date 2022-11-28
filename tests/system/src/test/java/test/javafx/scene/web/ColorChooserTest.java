@@ -25,7 +25,9 @@
 
 package test.javafx.scene.web;
 
-import com.sun.javafx.scene.control.CustomColorDialog;
+import java.util.List;
+import java.util.concurrent.CountDownLatch;
+
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.collections.ListChangeListener;
@@ -38,14 +40,15 @@ import javafx.scene.paint.Color;
 import javafx.scene.web.WebView;
 import javafx.stage.Stage;
 import javafx.stage.Window;
+
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-import test.util.Util;
 
-import java.util.List;
-import java.util.concurrent.CountDownLatch;
+import com.sun.javafx.scene.control.CustomColorDialog;
+
+import test.util.Util;
 
 public class ColorChooserTest {
     private static final CountDownLatch launchLatch = new CountDownLatch(1);
@@ -60,14 +63,12 @@ public class ColorChooserTest {
 
     @BeforeAll
     public static void setupOnce() {
-        new Thread(() -> Application.launch(ColorChooserTestApp.class, (String[]) null)).start();
-        Assertions.assertTrue(Util.await(launchLatch), "Timeout waiting for FX runtime to start");
+        Util.launch(launchLatch, ColorChooserTestApp.class);
     }
 
     @AfterAll
     public static void tearDownOnce() {
-        Platform.runLater(stage::hide);
-        Platform.exit();
+        Util.shutdown(stage);
     }
 
     public static class ColorChooserTestApp extends Application {

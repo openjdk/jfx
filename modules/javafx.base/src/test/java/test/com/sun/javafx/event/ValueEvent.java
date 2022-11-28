@@ -30,14 +30,14 @@ import javafx.event.EventType;
 
 public final class ValueEvent extends Event {
     public static final EventType<ValueEvent> ANY =
-            new EventType<ValueEvent>(Event.ANY, "VALUE");
+            new EventType<>(Event.ANY, "VALUE");
 
     public static final EventType<ValueEvent> VALUE_A =
-            new EventType<ValueEvent>(ValueEvent.ANY, "VALUE_A");
+            new EventType<>(ValueEvent.ANY, "VALUE_A");
     public static final EventType<ValueEvent> VALUE_B =
-            new EventType<ValueEvent>(ValueEvent.ANY, "VALUE_B");
+            new EventType<>(ValueEvent.ANY, "VALUE_B");
     public static final EventType<ValueEvent> VALUE_C =
-            new EventType<ValueEvent>(ValueEvent.ANY, "VALUE_C");
+            new EventType<>(ValueEvent.ANY, "VALUE_C");
 
     private int value;
 

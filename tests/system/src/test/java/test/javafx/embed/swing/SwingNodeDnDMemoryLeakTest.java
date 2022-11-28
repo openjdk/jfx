@@ -25,50 +25,43 @@
 
 package test.javafx.embed.swing;
 
-import javafx.application.Application;
-import javafx.application.Platform;
-import javafx.embed.swing.SwingNode;
-import javafx.scene.Scene;
-import javafx.scene.layout.BorderPane;
-import javafx.stage.Stage;
+import static org.junit.Assert.assertEquals;
 
 import java.awt.dnd.DropTarget;
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
+
 import javax.swing.JLabel;
 
-import test.util.Util;
-import static test.util.Util.TIMEOUT;
-import org.junit.Test;
-import org.junit.BeforeClass;
+import javafx.application.Application;
+import javafx.embed.swing.SwingNode;
+import javafx.scene.Scene;
+import javafx.scene.layout.BorderPane;
+import javafx.stage.Stage;
+
 import org.junit.AfterClass;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import org.junit.BeforeClass;
+import org.junit.Test;
+
+import test.util.Util;
 
 public class SwingNodeDnDMemoryLeakTest {
 
     final static int TOTAL_SWINGNODE = 10;
-    static CountDownLatch launchLatch;
+    static CountDownLatch launchLatch = new CountDownLatch(1);
     final static int GC_ATTEMPTS = 10;
     ArrayList<WeakReference<SwingNode>> weakRefArrSN =
                                       new ArrayList(TOTAL_SWINGNODE);
 
     @BeforeClass
     public static void setupOnce() throws Exception {
-        launchLatch = new CountDownLatch(1);
-        // Start the Application
-        new Thread(() -> Application.launch(SwingNodeDnDMemoryLeakTest.MyApp.class,
-                                            (String[])null)).start();
-
-        assertTrue("Timeout waiting for Application to launch",
-                    launchLatch.await(10, TimeUnit.SECONDS));
+        Util.launch(launchLatch, MyApp.class);
     }
 
     @AfterClass
     public static void teardownOnce() {
-        Platform.exit();
+        Util.shutdown();
     }
 
     @Test
@@ -127,7 +120,7 @@ public class SwingNodeDnDMemoryLeakTest {
                 break;
             }
             try {
-                Thread.sleep(250);
+                Thread.sleep(500);
             } catch (InterruptedException e) {
                 System.err.println("InterruptedException occurred during Thread.sleep()");
             }

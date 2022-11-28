@@ -52,8 +52,8 @@ public class SetPropertyTest {
 
     @Test
     public void testBindBidirectional() {
-        final SetProperty<Object> p1 = new SimpleSetProperty<Object>(VALUE_2);
-        final SetProperty<Object> p2 = new SimpleSetProperty<Object>(VALUE_1);
+        final SetProperty<Object> p1 = new SimpleSetProperty<>(VALUE_2);
+        final SetProperty<Object> p2 = new SimpleSetProperty<>(VALUE_1);
 
         p1.bindBidirectional(p2);
         assertEquals(VALUE_1, p1.get());

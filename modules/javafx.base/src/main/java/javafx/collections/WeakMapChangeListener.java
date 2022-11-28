@@ -67,7 +67,7 @@ public final class WeakMapChangeListener<K, V> implements MapChangeListener<K, V
         if (listener == null) {
             throw new NullPointerException("Listener must be specified.");
         }
-        this.ref = new WeakReference<MapChangeListener<K, V>>(listener);
+        this.ref = new WeakReference<>(listener);
     }
 
     /**

@@ -71,7 +71,7 @@ public final class ReadOnlyJavaBeanObjectPropertyBuilder<T> {
      * @return the new {@code ReadOnlyJavaBeanObjectPropertyBuilder}
      */
     public static <T> ReadOnlyJavaBeanObjectPropertyBuilder<T> create() {
-        return new ReadOnlyJavaBeanObjectPropertyBuilder<T>();
+        return new ReadOnlyJavaBeanObjectPropertyBuilder<>();
     }
 
     /**
@@ -83,7 +83,7 @@ public final class ReadOnlyJavaBeanObjectPropertyBuilder<T> {
      */
     public ReadOnlyJavaBeanObjectProperty<T> build() throws NoSuchMethodException {
         final ReadOnlyPropertyDescriptor descriptor = helper.getDescriptor();
-        return new ReadOnlyJavaBeanObjectProperty<T>(descriptor, helper.getBean());
+        return new ReadOnlyJavaBeanObjectProperty<>(descriptor, helper.getBean());
     }
 
     /**
