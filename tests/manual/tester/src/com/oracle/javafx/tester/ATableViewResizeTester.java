@@ -88,8 +88,8 @@ public class ATableViewResizeTester extends Application {
     }
 
     public enum Policy {
-        AUTO_RESIZE_FLEX_HEAD(JTable.AUTO_RESIZE_SUBSEQUENT_COLUMNS),
-        AUTO_RESIZE_FLEX_TAIL(JTable.AUTO_RESIZE_SUBSEQUENT_COLUMNS),
+        AUTO_RESIZE_FLEX_NEXT_COLUMN(JTable.AUTO_RESIZE_SUBSEQUENT_COLUMNS),
+        AUTO_RESIZE_FLEX_LAST_COLUMN(JTable.AUTO_RESIZE_SUBSEQUENT_COLUMNS),
         AUTO_RESIZE_NEXT_COLUMN(JTable.AUTO_RESIZE_NEXT_COLUMN),
         AUTO_RESIZE_SUBSEQUENT_COLUMNS(JTable.AUTO_RESIZE_SUBSEQUENT_COLUMNS),
         AUTO_RESIZE_LAST_COLUMN(JTable.AUTO_RESIZE_LAST_COLUMN),
@@ -208,10 +208,10 @@ public class ATableViewResizeTester extends Application {
 
     protected Callback<ResizeFeatures, Boolean> createPolicy(Policy p) {
         switch(p) {
-        case AUTO_RESIZE_FLEX_HEAD:
-            return TableView.CONSTRAINED_RESIZE_POLICY_FLEX_HEAD;
-        case AUTO_RESIZE_FLEX_TAIL:
-            return TableView.CONSTRAINED_RESIZE_POLICY_FLEX_TAIL;
+        case AUTO_RESIZE_FLEX_NEXT_COLUMN:
+            return TableView.CONSTRAINED_RESIZE_POLICY_FLEX_NEXT_COLUMN;
+        case AUTO_RESIZE_FLEX_LAST_COLUMN:
+            return TableView.CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN;
         case AUTO_RESIZE_ALL_COLUMNS:
             return TableView.CONSTRAINED_RESIZE_POLICY_ALL_COLUMNS;
         case AUTO_RESIZE_LAST_COLUMN:

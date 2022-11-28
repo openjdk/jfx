@@ -588,7 +588,7 @@ public class TreeTableView<S> extends Control {
      *
      * @since 20
      */
-    public static final Callback<TreeTableView.ResizeFeatures, Boolean> CONSTRAINED_RESIZE_POLICY_FLEX_HEAD =
+    public static final Callback<TreeTableView.ResizeFeatures, Boolean> CONSTRAINED_RESIZE_POLICY_FLEX_NEXT_COLUMN =
         ConstrainedColumnResize.forTreeTable(ConstrainedColumnResize.ResizeMode.AUTO_RESIZE_FLEX_HEAD);
 
     /**
@@ -600,7 +600,7 @@ public class TreeTableView<S> extends Control {
      *
      * @since 20
      */
-    public static final Callback<TreeTableView.ResizeFeatures, Boolean> CONSTRAINED_RESIZE_POLICY_FLEX_TAIL =
+    public static final Callback<TreeTableView.ResizeFeatures, Boolean> CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN =
         ConstrainedColumnResize.forTreeTable(ConstrainedColumnResize.ResizeMode.AUTO_RESIZE_FLEX_TAIL);
 
     /**
@@ -615,11 +615,11 @@ public class TreeTableView<S> extends Control {
      * hand side columns reach minimum size, the user cannot increase the size of
      * resized column any more.
      *
-     * @deprecated Use {@link #CONSTRAINED_RESIZE_POLICY_FLEX_TAIL} instead.
+     * @deprecated Use {@link #CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN} instead.
      */
     @Deprecated(since="20")
     public static final Callback<TreeTableView.ResizeFeatures, Boolean> CONSTRAINED_RESIZE_POLICY =
-        CONSTRAINED_RESIZE_POLICY_FLEX_TAIL;
+        CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN;
 
     /**
      * The default {@link #sortPolicyProperty() sort policy} that this TreeTableView
