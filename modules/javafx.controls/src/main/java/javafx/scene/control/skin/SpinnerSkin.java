@@ -25,14 +25,7 @@
 package javafx.scene.control.skin;
 
 import java.util.List;
-import com.sun.javafx.scene.ParentHelper;
-import com.sun.javafx.scene.control.FakeFocusTextField;
-import com.sun.javafx.scene.control.ListenerHelper;
-import com.sun.javafx.scene.control.behavior.SpinnerBehavior;
-import com.sun.javafx.scene.traversal.Algorithm;
-import com.sun.javafx.scene.traversal.Direction;
-import com.sun.javafx.scene.traversal.ParentTraversalEngine;
-import com.sun.javafx.scene.traversal.TraversalContext;
+
 import javafx.css.PseudoClass;
 import javafx.geometry.HPos;
 import javafx.geometry.VPos;
@@ -47,6 +40,15 @@ import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
+
+import com.sun.javafx.scene.ParentHelper;
+import com.sun.javafx.scene.control.FakeFocusTextField;
+import com.sun.javafx.scene.control.ListenerHelper;
+import com.sun.javafx.scene.control.behavior.SpinnerBehavior;
+import com.sun.javafx.scene.traversal.Algorithm;
+import com.sun.javafx.scene.traversal.Direction;
+import com.sun.javafx.scene.traversal.ParentTraversalEngine;
+import com.sun.javafx.scene.traversal.TraversalContext;
 
 /**
  * Default skin implementation for the {@link Spinner} control.
@@ -103,8 +105,10 @@ public class SpinnerSkin<T> extends SkinBase<Spinner<T>> {
 
         textField = control.getEditor();
 
+        ListenerHelper lh = ListenerHelper.get(this);
+
         updateStyleClass();
-        ListenerHelper.get(this).addListChangeListener(control.getStyleClass(), (ch) -> {
+        lh.addListChangeListener(control.getStyleClass(), (ch) -> {
             updateStyleClass();
         });
 
@@ -164,12 +168,12 @@ public class SpinnerSkin<T> extends SkinBase<Spinner<T>> {
         // Fixes in the same vein as ComboBoxListViewSkin
 
         // move fake focus in to the textfield if the spinner is editable
-        ListenerHelper.get(this).addChangeListener(control.focusedProperty(), (op) -> {
+        lh.addChangeListener(control.focusedProperty(), (op) -> {
             // Fix for the regression noted in a comment in RT-29885.
             ((FakeFocusTextField)textField).setFakeFocus(control.isFocused());
         });
 
-        ListenerHelper.get(this).addEventFilter(control, KeyEvent.ANY, (ke) -> {
+        lh.addEventFilter(control, KeyEvent.ANY, (ke) -> {
             if (control.isEditable()) {
                 // This prevents a stack overflow from our rebroadcasting of the
                 // event to the textfield that occurs in the final else statement
@@ -199,14 +203,14 @@ public class SpinnerSkin<T> extends SkinBase<Spinner<T>> {
         // Spinner control. Without this the up/down/left/right arrow keys don't
         // work when you click inside the TextField area (but they do in the case
         // of tabbing in).
-        ListenerHelper.get(this).addEventFilter(textField, KeyEvent.ANY, (ke) -> {
+        lh.addEventFilter(textField, KeyEvent.ANY, (ke) -> {
             if (! control.isEditable() || isIncDecKeyEvent(ke)) {
                 control.fireEvent(ke.copyFor(control, control));
                 ke.consume();
             }
         });
 
-        ListenerHelper.get(this).addChangeListener(textField.focusedProperty(), (op) -> {
+        lh.addChangeListener(textField.focusedProperty(), (op) -> {
             boolean hasFocus = textField.isFocused();
             // Fix for RT-29885
             control.getProperties().put("FOCUSED", hasFocus);
