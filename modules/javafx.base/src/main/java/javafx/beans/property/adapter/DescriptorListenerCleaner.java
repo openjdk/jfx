@@ -35,7 +35,7 @@ class DescriptorListenerCleaner implements Runnable{
 
     DescriptorListenerCleaner(ReadOnlyPropertyDescriptor pd, ReadOnlyPropertyDescriptor.ReadOnlyListener<?> l) {
         this.pd = pd;
-        this.lRef = new WeakReference<ReadOnlyPropertyDescriptor.ReadOnlyListener<?>>(l);
+        this.lRef = new WeakReference<>(l);
     }
 
     @Override

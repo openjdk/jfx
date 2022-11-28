@@ -137,7 +137,7 @@ public class IntegerPropertyTest {
 
     @Test
     public void testObjectToInteger() {
-        final ObjectProperty<Integer> valueModel = new SimpleObjectProperty<Integer>(2);
+        final ObjectProperty<Integer> valueModel = new SimpleObjectProperty<>(2);
         final IntegerProperty exp = IntegerProperty.integerProperty(valueModel);
 
         assertEquals(2, exp.intValue());

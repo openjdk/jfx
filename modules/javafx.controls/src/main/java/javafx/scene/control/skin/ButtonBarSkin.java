@@ -29,11 +29,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import com.sun.javafx.scene.control.Properties;
-import com.sun.javafx.scene.control.behavior.BehaviorBase;
 import javafx.beans.InvalidationListener;
 import javafx.beans.property.ObjectProperty;
-import javafx.collections.ListChangeListener;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
@@ -45,6 +42,9 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
+
+import com.sun.javafx.scene.control.ListenerHelper;
+import com.sun.javafx.scene.control.Properties;
 
 /**
  * Default skin implementation for the {@link ButtonBar} control.
@@ -107,8 +107,10 @@ public class ButtonBarSkin extends SkinBase<ButtonBar> {
 
         layoutButtons();
 
+        ListenerHelper lh = ListenerHelper.get(this);
+
         updateButtonListeners(control.getButtons(), true);
-        listenerHelper().addListChangeListener(control.getButtons(), (c) -> {
+        lh.addListChangeListener(control.getButtons(), (c) -> {
             while (c.next()) {
                 updateButtonListeners(c.getRemoved(), false);
                 updateButtonListeners(c.getAddedSubList(), true);
@@ -116,8 +118,8 @@ public class ButtonBarSkin extends SkinBase<ButtonBar> {
             layoutButtons();
         });
 
-        listenerHelper().addChangeListener(control.buttonOrderProperty(), (ev) -> layoutButtons());
-        listenerHelper().addChangeListener(control.buttonMinWidthProperty(), (ev) -> resizeButtons());
+        lh.addChangeListener(control.buttonOrderProperty(), (ev) -> layoutButtons());
+        lh.addChangeListener(control.buttonMinWidthProperty(), (ev) -> resizeButtons());
     }
 
 

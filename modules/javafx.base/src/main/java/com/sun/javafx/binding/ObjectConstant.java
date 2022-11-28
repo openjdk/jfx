@@ -38,7 +38,7 @@ public class ObjectConstant<T> implements ObservableObjectValue<T> {
     }
 
     public static <T> ObjectConstant<T> valueOf(T value) {
-        return new ObjectConstant<T>(value);
+        return new ObjectConstant<>(value);
     }
 
     @Override

@@ -66,7 +66,7 @@ public class EventSerializationEventExists {
             fail("Test error: Event type already registered before the test");
         }
 
-        List<String> l = new ArrayList<String>();
+        List<String> l = new ArrayList<>();
         l.add("ACTION");
         EventTypeShim.EventTypeSerializationShim e = new EventTypeShim.EventTypeSerializationShim(l);
 

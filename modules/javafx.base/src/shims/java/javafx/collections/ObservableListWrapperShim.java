@@ -24,10 +24,8 @@
  */
 package javafx.collections;
 
-import com.sun.javafx.collections.ListListenerHelper;
 import com.sun.javafx.collections.ObservableListWrapper;
 import java.util.List;
-import javafx.beans.InvalidationListener;
 
 public class ObservableListWrapperShim<E> extends ObservableListWrapper<E> {
 

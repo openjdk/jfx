@@ -26,15 +26,12 @@
 package test.javafx.util.converter;
 
 import java.time.LocalTime;
-import java.time.chrono.Chronology;
-import java.time.chrono.IsoChronology;
 import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Locale;
 
-import javafx.util.StringConverter;
 import javafx.util.converter.LocalTimeStringConverterShim;
 import javafx.util.converter.LocalTimeStringConverter;
 
