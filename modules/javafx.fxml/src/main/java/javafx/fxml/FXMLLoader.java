@@ -231,7 +231,12 @@ public class FXMLLoader {
             }
         }
 
-        public abstract void processEndElement() throws IOException;
+        /**
+         * @throws IOException when I/O by implementation fails
+         */
+        public void processEndElement() throws IOException {
+            // No-op
+        }
 
         public void processCharacters() throws IOException {
             throw constructLoadException("Unexpected characters in input stream.");
@@ -763,6 +768,8 @@ public class FXMLLoader {
         @Override
         @SuppressWarnings("unchecked")
         public void processEndElement() throws IOException {
+            super.processEndElement();
+
             // Build the value, if necessary
             if (value instanceof Builder<?>) {
                 Builder<Object> builder = (Builder<Object>)value;
@@ -1438,6 +1445,8 @@ public class FXMLLoader {
 
         @Override
         public void processEndElement() throws IOException {
+            super.processEndElement();
+
             if (readOnly) {
                 processInstancePropertyAttributes();
                 processEventHandlerAttributes();
@@ -1489,11 +1498,6 @@ public class FXMLLoader {
             text = extraneousWhitespacePattern.matcher(text).replaceAll(" ");
 
             updateValue(text.trim());
-        }
-
-        @Override
-        public void processEndElement() {
-            // No-op
         }
     }
 
@@ -1608,6 +1612,8 @@ public class FXMLLoader {
 
         @Override
         public void processEndElement() throws IOException {
+            super.processEndElement();
+
             if (value != null && !staticLoad) {
                 // Evaluate the script
                 String filename = null;
@@ -1691,11 +1697,6 @@ public class FXMLLoader {
         public void processAttribute(String prefix, String localName, String value)
             throws LoadException{
             throw constructLoadException("Element does not support attributes.");
-        }
-
-        @Override
-        public void processEndElement() {
-            // No-op
         }
     }
 
