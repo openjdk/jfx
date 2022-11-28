@@ -357,6 +357,9 @@ is being used to size a border should also be in pixels.
     /** Focus line for keyboard focus traversal on cell based controls */
     -fx-cell-focus-inner-border: derive(-fx-selection-bar,30%);
 
+    /* Cell border color is initialized here to avoid a race condition during initialization */
+    -fx-table-cell-border-color: transparent;
+
     /* The colors to use in Pagination */
     -fx-page-bullet-border: #acacac;
     -fx-page-indicator-hover-border: #accee5;

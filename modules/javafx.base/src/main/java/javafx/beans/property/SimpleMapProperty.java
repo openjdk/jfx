@@ -26,7 +26,6 @@
 package javafx.beans.property;
 
 import javafx.collections.ObservableMap;
-import javafx.collections.ObservableSet;
 
 /**
  * This class provides a full implementation of a {@link Property} wrapping an

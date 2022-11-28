@@ -53,7 +53,7 @@ import javafx.beans.value.ObservableNumberValue;
 public abstract class IntegerPropertyBase extends IntegerProperty {
 
     private int value;
-    private ObservableIntegerValue observable = null;;
+    private ObservableIntegerValue observable = null;
     private InvalidationListener listener = null;
     private boolean valid = true;
     private ExpressionHelper<Number> helper = null;

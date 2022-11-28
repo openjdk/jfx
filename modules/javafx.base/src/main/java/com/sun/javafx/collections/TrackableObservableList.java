@@ -27,7 +27,6 @@ package com.sun.javafx.collections;
 
 import java.util.ArrayList;
 import java.util.List;
-import javafx.collections.ListChangeListener;
 import javafx.collections.ListChangeListener.Change;
 
 /**

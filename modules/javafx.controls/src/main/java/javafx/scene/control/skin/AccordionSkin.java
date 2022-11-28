@@ -25,23 +25,22 @@
 
 package javafx.scene.control.skin;
 
-import com.sun.javafx.scene.control.behavior.BehaviorBase;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 import javafx.beans.value.ChangeListener;
-import javafx.collections.ListChangeListener;
 import javafx.scene.Node;
 import javafx.scene.control.Accordion;
-import javafx.scene.control.Button;
 import javafx.scene.control.Control;
 import javafx.scene.control.Skin;
 import javafx.scene.control.SkinBase;
 import javafx.scene.control.TitledPane;
 import javafx.scene.shape.Rectangle;
 
+import com.sun.javafx.scene.control.ListenerHelper;
 import com.sun.javafx.scene.control.behavior.AccordionBehavior;
-
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import com.sun.javafx.scene.control.behavior.BehaviorBase;
 
 /**
  * Default skin implementation for the {@link Accordion} control.
@@ -97,7 +96,9 @@ public class AccordionSkin extends SkinBase<Accordion> {
         // install default input map for the accordion control
         behavior = new AccordionBehavior(control);
 
-        listenerHelper().addListChangeListener(control.getPanes(), (c) -> {
+        ListenerHelper lh = ListenerHelper.get(this);
+
+        lh.addListChangeListener(control.getPanes(), (c) -> {
             if (firstTitledPane != null) {
                 firstTitledPane.getStyleClass().remove("first-titled-pane");
             }
@@ -131,16 +132,15 @@ public class AccordionSkin extends SkinBase<Accordion> {
         getChildren().setAll(control.getPanes());
         getSkinnable().requestLayout();
 
-        listenerHelper().addChangeListener(getSkinnable().widthProperty(), (ev) -> {
+        lh.addChangeListener(getSkinnable().widthProperty(), (ev) -> {
             clipRect.setWidth(getSkinnable().getWidth());
         });
 
-        listenerHelper().addChangeListener(getSkinnable().heightProperty(), (ev) -> {
+        lh.addChangeListener(getSkinnable().heightProperty(), (ev) -> {
             clipRect.setHeight(getSkinnable().getHeight());
             relayout = true;
         });
     }
-
 
 
     /* *************************************************************************

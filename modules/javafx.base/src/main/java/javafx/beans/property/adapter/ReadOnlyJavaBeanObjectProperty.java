@@ -92,7 +92,7 @@ public final class ReadOnlyJavaBeanObjectProperty<T> extends ReadOnlyObjectPrope
 
     ReadOnlyJavaBeanObjectProperty(ReadOnlyPropertyDescriptor descriptor, Object bean) {
         this.descriptor = descriptor;
-        this.listener = descriptor.new ReadOnlyListener<T>(bean, this);
+        this.listener = descriptor.new ReadOnlyListener<>(bean, this);
         descriptor.addListener(listener);
         Disposer.addRecord(this, new DescriptorListenerCleaner(descriptor, listener));
     }
