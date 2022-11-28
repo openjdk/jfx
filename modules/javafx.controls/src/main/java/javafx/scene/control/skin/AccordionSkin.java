@@ -158,11 +158,11 @@ public class AccordionSkin extends SkinBase<Accordion> {
 
         removeTitledPaneListeners(getSkinnable().getPanes());
 
-        super.dispose();
-
         if (behavior != null) {
             behavior.dispose();
         }
+
+        super.dispose();
     }
 
     /** {@inheritDoc} */
