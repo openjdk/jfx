@@ -48,8 +48,8 @@ class GtkMenuDelegate implements MenuDelegate {
         return true;
     }
 
-   @Override
-public boolean setPixels(Pixels pixels) {
+    @Override
+    public boolean setPixels(Pixels pixels) {
         return false;
     }
 
