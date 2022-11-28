@@ -28,6 +28,7 @@ package test.javafx.scene.chart;
 import javafx.css.CssMetaData;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
+import javafx.beans.property.ReadOnlyDoubleProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.collections.FXCollections;
@@ -116,6 +117,11 @@ public class CategoryAxisTest {
         assertFalse("gapStartAndEndProperty cannot be bound", axis.gapStartAndEndProperty().getValue());
     }
 
+
+    @SuppressWarnings("cast")
+    @Test public void checkCategorySpacingReadOnlyCannotBind() {
+        assertTrue(axis.categorySpacingProperty() instanceof ReadOnlyDoubleProperty);
+    }
 
     @Test public void startMarginPropertyHasBeanReference() {
         assertSame(axis, axis.startMarginProperty().getBean());

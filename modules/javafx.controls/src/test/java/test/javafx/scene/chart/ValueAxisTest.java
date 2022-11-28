@@ -30,6 +30,7 @@ import javafx.css.CssMetaData;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.ReadOnlyDoubleProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.beans.property.SimpleObjectProperty;
@@ -165,6 +166,11 @@ public class ValueAxisTest {
         assertEquals("minorTickCountProperty cannot be bound", axis.minorTickCountProperty().getValue(),56.0,0.0);
         objPr.setValue(23.0);
         assertEquals("minorTickCountProperty cannot be bound", axis.minorTickCountProperty().getValue(),23.0,0.0);
+    }
+
+    @SuppressWarnings("cast")
+    @Test public void checkScaleIsReadOnlyPropertyAndHenceCannotBeBound() {
+        assertTrue(axis.scaleProperty() instanceof ReadOnlyDoubleProperty);
     }
 
     @Test public void checkUpperBoundPropertyBind() {
