@@ -39,16 +39,16 @@ public class WeakSetChangeListenerTest {
 
     @Test(expected=NullPointerException.class)
     public void testConstructWithNull() {
-        new WeakSetChangeListener<Object>(null);
+        new WeakSetChangeListener<>(null);
     }
 
     @Test
     public void testHandle() {
-        MockSetObserver<Object> listener = new MockSetObserver<Object>();
-        final WeakSetChangeListener<Object> weakListener = new WeakSetChangeListener<Object>(listener);
+        MockSetObserver<Object> listener = new MockSetObserver<>();
+        final WeakSetChangeListener<Object> weakListener = new WeakSetChangeListener<>(listener);
         final ObservableSetMock set = new ObservableSetMock();
         final Object removedElement = new Object();
-        final SetChangeListener.Change<Object> change = new SetExpressionHelper.SimpleChange<Object>(set).setRemoved(removedElement);
+        final SetChangeListener.Change<Object> change = new SetExpressionHelper.SimpleChange<>(set).setRemoved(removedElement);
 
         // regular call
         weakListener.onChanged(change);
@@ -68,7 +68,7 @@ public class WeakSetChangeListenerTest {
         private int removeCounter;
 
         public ObservableSetMock() {
-            super(new HashSet<Object>());
+            super(new HashSet<>());
         }
 
         private void reset() {

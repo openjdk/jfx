@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2017, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,11 +24,16 @@
  */
 package test.robot.javafx.scene;
 
-import com.sun.javafx.PlatformUtil;
+import static org.junit.Assert.fail;
+import static org.junit.Assume.assumeTrue;
+
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.collections.ListChangeListener;
+import javafx.geometry.Side;
 import javafx.scene.Scene;
 import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
@@ -37,10 +42,6 @@ import javafx.scene.robot.Robot;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 import javafx.stage.WindowEvent;
-import javafx.geometry.Side;
-
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 
 import org.junit.After;
 import org.junit.AfterClass;
@@ -48,8 +49,8 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import static org.junit.Assert.fail;
-import static org.junit.Assume.assumeTrue;
+
+import com.sun.javafx.PlatformUtil;
 
 import test.util.Util;
 
@@ -75,7 +76,7 @@ import test.util.Util;
 public class TabPaneDragPolicyTest {
     CountDownLatch[] latches;
     CountDownLatch changeListenerLatch;
-    static CountDownLatch startupLatch;
+    static CountDownLatch startupLatch = new CountDownLatch(1);
     static Robot robot;
     static TabPane tabPane;
     static volatile Stage stage;
@@ -267,14 +268,14 @@ public class TabPaneDragPolicyTest {
             robot.mousePress(MouseButton.PRIMARY);
             robot.mouseRelease(MouseButton.PRIMARY);
         });
-        waitForLatch(latches[0], 5, "Timeout waiting tabs[0] to get selected.");
+        Util.waitForLatch(latches[0], 5, "Timeout waiting tabs[0] to get selected.");
 
         CountDownLatch pressLatch = new CountDownLatch(1);
         Platform.runLater(() -> {
             robot.mousePress(MouseButton.PRIMARY);
             pressLatch.countDown();
         });
-        waitForLatch(pressLatch, 5, "Timeout waiting for robot.mousePress(Robot.MOUSE_LEFT_BTN).");
+        Util.waitForLatch(pressLatch, 5, "Timeout waiting for robot.mousePress(Robot.MOUSE_LEFT_BTN).");
         for (int i = 0; i < DRAG_DISTANCE; i++) {
             final int c = i;
             CountDownLatch moveLatch = new CountDownLatch(1);
@@ -290,7 +291,7 @@ public class TabPaneDragPolicyTest {
                 }
                 moveLatch.countDown();
             });
-            waitForLatch(moveLatch, 5, "Timeout waiting for robot.mouseMove(023).");
+            Util.waitForLatch(moveLatch, 5, "Timeout waiting for robot.mouseMove(023).");
         }
 
         CountDownLatch releaseLatch = new CountDownLatch(1);
@@ -298,11 +299,11 @@ public class TabPaneDragPolicyTest {
             robot.mouseRelease(MouseButton.PRIMARY);
             releaseLatch.countDown();
         });
-        waitForLatch(releaseLatch, 5, "Timeout waiting for robot.mouseRelease(Robot.MOUSE_LEFT_BTN).");
+        Util.waitForLatch(releaseLatch, 5, "Timeout waiting for robot.mouseRelease(Robot.MOUSE_LEFT_BTN).");
 
         if (isFixed) {
             Util.runAndWait(() -> tabPane.getSelectionModel().select(tabs[2]));
-            waitForLatch(latches[2], 5, "Timeout waiting tabs[2] to get selected.");
+            Util.waitForLatch(latches[2], 5, "Timeout waiting tabs[2] to get selected.");
             latches[0] = new CountDownLatch(1);
         }
 
@@ -320,11 +321,11 @@ public class TabPaneDragPolicyTest {
             } catch (Exception ex) {
                 fail("Thread was interrupted." + ex);
             }
-            waitForLatch(latches[0], 5, "Timeout waiting tabs[0] to get selected.");
+            Util.waitForLatch(latches[0], 5, "Timeout waiting tabs[0] to get selected.");
         } else {
             // For REORDER drag policy, tabs[1] should be the first tab.
-            waitForLatch(changeListenerLatch, 5, "Timeout waiting ChangeListener to get called.");
-            waitForLatch(latches[1], 5, "Timeout waiting tabs[1] to get selected.");
+            Util.waitForLatch(changeListenerLatch, 5, "Timeout waiting ChangeListener to get called.");
+            Util.waitForLatch(latches[1], 5, "Timeout waiting tabs[1] to get selected.");
         }
     }
 
@@ -347,17 +348,12 @@ public class TabPaneDragPolicyTest {
 
     @BeforeClass
     public static void initFX() {
-        startupLatch = new CountDownLatch(1);
-        new Thread(() -> Application.launch(TestApp.class, (String[])null)).start();
-        waitForLatch(startupLatch, 10, "Timeout waiting for FX runtime to start");
+        Util.launch(startupLatch, TestApp.class);
     }
 
     @AfterClass
     public static void exit() {
-        Platform.runLater(() -> {
-            stage.hide();
-        });
-        Platform.exit();
+        Util.shutdown(stage);
     }
 
     @Before
@@ -381,7 +377,7 @@ public class TabPaneDragPolicyTest {
             }
             latch.countDown();
         });
-        waitForLatch(latch, 5, "Timeout waiting for setupTest().");
+        Util.waitForLatch(latch, 5, "Timeout waiting for setupTest().");
     }
 
     @After
@@ -398,17 +394,7 @@ public class TabPaneDragPolicyTest {
             tabs = null;
             latch.countDown();
         });
-        waitForLatch(latch, 5, "Timeout waiting for resetTest().");
-    }
-
-    public static void waitForLatch(CountDownLatch latch, int seconds, String msg) {
-        try {
-            if (!latch.await(seconds, TimeUnit.SECONDS)) {
-                fail(msg);
-            }
-        } catch (Exception ex) {
-            fail("Unexpected exception: " + ex);
-        }
+        Util.waitForLatch(latch, 5, "Timeout waiting for resetTest().");
     }
 
     public void setDragPolicyAndSide(TabPane.TabDragPolicy dragPolicy, Side side) {

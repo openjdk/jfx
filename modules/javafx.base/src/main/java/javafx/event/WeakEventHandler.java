@@ -52,7 +52,7 @@ public final class WeakEventHandler<T extends Event>
      *      notifications
      */
     public WeakEventHandler(final @NamedArg("eventHandler") EventHandler<T> eventHandler) {
-        weakRef = new WeakReference<EventHandler<T>>(eventHandler);
+        weakRef = new WeakReference<>(eventHandler);
     }
 
     /**

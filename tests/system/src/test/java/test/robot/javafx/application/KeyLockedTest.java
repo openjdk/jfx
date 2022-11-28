@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2021, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,22 +25,26 @@
 
 package test.robot.javafx.application;
 
-import com.sun.javafx.PlatformUtil;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assume.assumeTrue;
+
 import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+
 import javafx.application.Platform;
 import javafx.scene.input.KeyCode;
 import javafx.scene.robot.Robot;
-import test.util.Util;
 
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import static org.junit.Assert.*;
-import static org.junit.Assume.assumeTrue;
+import com.sun.javafx.PlatformUtil;
+
+import test.util.Util;
 
 /**
  * Test program for Platform::isKeyLocked.
@@ -54,9 +58,7 @@ public class KeyLockedTest {
     @BeforeClass
     public static void initFX() throws Exception {
         Platform.setImplicitExit(false);
-        Platform.startup(startupLatch::countDown);
-        assertTrue("Timeout waiting for FX runtime to start",
-                startupLatch.await(15, TimeUnit.SECONDS));
+        Util.startup(startupLatch, startupLatch::countDown);
 
         if (PlatformUtil.isWindows()) {
             Util.runAndWait(() -> robot = new Robot());
@@ -77,7 +79,7 @@ public class KeyLockedTest {
                 });
             });
         }
-        Platform.exit();
+        Util.shutdown();
     }
 
     @Test(expected = IllegalStateException.class)

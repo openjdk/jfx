@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -690,14 +690,14 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
      */
     protected abstract V call() throws Exception;
 
-    private ObjectProperty<State> state = new SimpleObjectProperty<>(this, "state", State.READY);
-    final void setState(State value) { // package access for the Service
+    private ObjectProperty<Worker.State> state = new SimpleObjectProperty<>(this, "state", Worker.State.READY);
+    final void setState(Worker.State value) { // package access for the Service
         checkThread();
-        final State s = getState();
-        if (s != State.CANCELLED) {
+        final Worker.State s = getState();
+        if (s != Worker.State.CANCELLED) {
             this.state.set(value);
             // Make sure the running flag is set
-            setRunning(value == State.SCHEDULED || value == State.RUNNING);
+            setRunning(value == Worker.State.SCHEDULED || value == Worker.State.RUNNING);
 
             // Invoke the event handlers, and then call the protected methods.
             switch (state.get()) {
@@ -729,8 +729,8 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
             }
         }
     }
-    @Override public final State getState() { checkThread(); return state.get(); }
-    @Override public final ReadOnlyObjectProperty<State> stateProperty() { checkThread(); return state; }
+    @Override public final Worker.State getState() { checkThread(); return state.get(); }
+    @Override public final ReadOnlyObjectProperty<Worker.State> stateProperty() { checkThread(); return state; }
 
     /**
      * The onSchedule event handler is called whenever the Task state
@@ -1025,9 +1025,9 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
             // state flag will not be readable immediately after this call. However,
             // that would be the case anyway since these properties are not thread-safe.
             if (isFxApplicationThread()) {
-                setState(State.CANCELLED);
+                setState(Worker.State.CANCELLED);
             } else {
-                runLater(() -> setState(State.CANCELLED));
+                runLater(() -> setState(Worker.State.CANCELLED));
             }
         }
         // return the flag
@@ -1418,8 +1418,8 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
             // in all cases so that developer code can be consistent.
             task.started = true;
             task.runLater(() -> {
-                task.setState(State.SCHEDULED);
-                task.setState(State.RUNNING);
+                task.setState(Worker.State.SCHEDULED);
+                task.setState(Worker.State.RUNNING);
             });
             // Go ahead and delegate to the wrapped callable
             try {
@@ -1434,7 +1434,7 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
                         // can assume if the result is set, it has
                         // succeeded.
                         task.updateValue(result);
-                        task.setState(State.SUCCEEDED);
+                        task.setState(Worker.State.SUCCEEDED);
                     });
                     return result;
                 } else {
@@ -1453,7 +1453,7 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
                 // in that circumstance.
                 task.runLater(() -> {
                     task._setException(th);
-                    task.setState(State.FAILED);
+                    task.setState(Worker.State.FAILED);
                 });
                 // Some error occurred during the call (it might be
                 // an exception (either runtime or checked), or it might

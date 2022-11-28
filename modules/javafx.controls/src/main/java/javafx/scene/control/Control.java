@@ -222,8 +222,19 @@ public abstract class Control extends Region implements Skinnable {
      * {@code Skin}. Every {@code Skin} maintains a back reference to the
      * {@code Control} via the {@link Skin#getSkinnable()} method.
      * <p>
+     * To ensure a one-to-one relationship between a {@code Control} and its {@code Skin},
+     * skins which were not created for this control are rejected with an
+     * {@code IllegalArgumentException}.
+     * Then, {@link Skin#dispose()} is called on the old skin, disconnecting
+     * it from the corresponding {@code Control}.  And finally, {@link Skin#install()} is invoked
+     * to complete the process.  Only inside of {@link Skin#install()} should {@code Skin} implementations
+     * set/overwrite properties of their {@code Control} (though some operations like adding/removing a listener
+     * can still be done in the {@code Skin} constructor).
+     * <p>
      * A skin may be null.
+     *
      * @return the skin property for this control
+     * @throws IllegalArgumentException if {@code (skin != null && skin.getSkinnable() != this)}
      */
     @Override public final ObjectProperty<Skin<?>> skinProperty() { return skin; }
     @Override public final void setSkin(Skin<?> value) {
@@ -239,6 +250,15 @@ public abstract class Control extends Region implements Skinnable {
 
         @Override protected void invalidated() {
             Skin<?> skin = get();
+            // check whether the skin is for right control
+            if (skin != null) {
+                if (skin.getSkinnable() != Control.this) {
+                    unbind();
+                    set(oldValue);
+                    throw new IllegalArgumentException("Skin does not correspond to this Control");
+                }
+            }
+
             // Collect the name of the currently installed skin class. We do this
             // so that subsequent updates from CSS to the same skin class will not
             // result in reinstalling the skin
@@ -286,6 +306,11 @@ public abstract class Control extends Region implements Skinnable {
                 } else {
                     getChildren().clear();
                 }
+            }
+
+            // let the new skin modify this control
+            if (skin != null) {
+                skin.install();
             }
 
             // clear out the styleable properties so that the list is rebuilt

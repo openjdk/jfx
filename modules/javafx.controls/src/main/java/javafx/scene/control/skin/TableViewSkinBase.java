@@ -25,35 +25,45 @@
 
 package javafx.scene.control.skin;
 
-import com.sun.javafx.scene.control.Properties;
+import java.lang.ref.WeakReference;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
+import java.util.List;
+
 import javafx.application.Platform;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
+import javafx.beans.WeakInvalidationListener;
+import javafx.beans.property.ObjectProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
-import javafx.collections.MapChangeListener;
 import javafx.collections.ObservableList;
 import javafx.collections.ObservableMap;
+import javafx.collections.WeakListChangeListener;
+import javafx.geometry.HPos;
+import javafx.geometry.VPos;
 import javafx.scene.AccessibleAttribute;
 import javafx.scene.Node;
-import javafx.scene.control.*;
-
+import javafx.scene.control.Control;
+import javafx.scene.control.FocusModel;
+import javafx.scene.control.IndexedCell;
+import javafx.scene.control.Label;
+import javafx.scene.control.ResizeFeaturesBase;
+import javafx.scene.control.ScrollToEvent;
+import javafx.scene.control.SelectionModel;
+import javafx.scene.control.TableColumnBase;
+import javafx.scene.control.TableFocusModel;
+import javafx.scene.control.TablePositionBase;
+import javafx.scene.control.TableSelectionModel;
+import javafx.scene.control.TableView;
+import javafx.scene.control.TreeTableView;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.util.Callback;
 
-import javafx.collections.WeakListChangeListener;
+import com.sun.javafx.scene.control.ListenerHelper;
+import com.sun.javafx.scene.control.Properties;
 import com.sun.javafx.scene.control.skin.resources.ControlResources;
-
-import java.lang.ref.WeakReference;
-import java.util.List;
-import javafx.beans.WeakInvalidationListener;
-import javafx.beans.property.ObjectProperty;
-import javafx.geometry.HPos;
-import javafx.geometry.VPos;
-
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 
 /**
  * TableViewSkinBase is the base skin class used by controls such as
@@ -235,11 +245,13 @@ public abstract class TableViewSkinBase<M, S, C extends Control, I extends Index
         flow = getVirtualFlow();
         flow.setPannable(IS_PANNABLE);
 
+        ListenerHelper lh = ListenerHelper.get(this);
+
         /*
          * Listening for scrolling along the X axis, but we need to be careful
          * to handle the situation appropriately when the hbar is invisible.
          */
-        listenerHelper().addInvalidationListener(flow.getHbar().valueProperty(), (o) -> {
+        lh.addInvalidationListener(flow.getHbar().valueProperty(), (o) -> {
             horizontalScroll();
         });
 
@@ -266,11 +278,11 @@ public abstract class TableViewSkinBase<M, S, C extends Control, I extends Index
         updateVisibleColumnCount();
         updateVisibleLeafColumnWidthListeners(getVisibleLeafColumns(), FXCollections.<TC>emptyObservableList());
 
-        listenerHelper().addInvalidationListener(tableHeaderRow.reorderingProperty(), (ob) -> {
+        lh.addInvalidationListener(tableHeaderRow.reorderingProperty(), (ob) -> {
             getSkinnable().requestLayout();
         });
 
-        listenerHelper().addListChangeListener(getVisibleLeafColumns(), (c) -> {
+        lh.addListChangeListener(getVisibleLeafColumns(), (c) -> {
             updateVisibleColumnCount();
             while (c.next()) {
                 updateVisibleLeafColumnWidthListeners(c.getAddedSubList(), c.getRemoved());
@@ -280,7 +292,7 @@ public abstract class TableViewSkinBase<M, S, C extends Control, I extends Index
         final ObjectProperty<ObservableList<S>> itemsProperty = TableSkinUtils.itemsProperty(this);
         updateTableItems(null, itemsProperty.get());
 
-        listenerHelper().addInvalidationListener(itemsProperty, new InvalidationListener() {
+        lh.addInvalidationListener(itemsProperty, new InvalidationListener() {
             private WeakReference<ObservableList<S>> weakItemsRef = new WeakReference<>(itemsProperty.get());
 
             @Override public void invalidated(Observable observable) {
@@ -293,7 +305,7 @@ public abstract class TableViewSkinBase<M, S, C extends Control, I extends Index
         final ObservableMap<Object, Object> properties = control.getProperties();
         properties.remove(Properties.REFRESH);
         properties.remove(Properties.RECREATE);
-        listenerHelper().addMapChangeListener(properties, (c) -> {
+        lh.addMapChangeListener(properties, (c) -> {
             if (!c.wasAdded()) {
                 return;
             }
@@ -307,12 +319,12 @@ public abstract class TableViewSkinBase<M, S, C extends Control, I extends Index
             }
         });
 
-        listenerHelper().addEventHandler(control, ScrollToEvent.<TC>scrollToColumn(), (ev) -> {
+        lh.addEventHandler(control, ScrollToEvent.<TC>scrollToColumn(), (ev) -> {
             scrollHorizontally(ev.getScrollTarget());
         });
 
         // flow and flow.vbar width observer
-        listenerHelper().addInvalidationListener(
+        lh.addInvalidationListener(
             () -> {
                 contentWidthDirty = true;
                 getSkinnable().requestLayout();
@@ -322,7 +334,7 @@ public abstract class TableViewSkinBase<M, S, C extends Control, I extends Index
         );
 
         final ObjectProperty<Callback<C, I>> rowFactoryProperty = TableSkinUtils.rowFactoryProperty(this);
-        listenerHelper().addChangeListener(rowFactoryProperty, e -> {
+        lh.addChangeListener(rowFactoryProperty, e -> {
             Callback<C, I> oldFactory = rowFactory;
             rowFactory = rowFactoryProperty.get();
             if (oldFactory != rowFactory) {
@@ -330,15 +342,15 @@ public abstract class TableViewSkinBase<M, S, C extends Control, I extends Index
             }
         });
 
-        listenerHelper().addChangeListener(TableSkinUtils.placeholderProperty(this), (ev) -> {
+        lh.addChangeListener(TableSkinUtils.placeholderProperty(this), (ev) -> {
             updatePlaceholderRegionVisibility();
         });
 
-        listenerHelper().addChangeListener(flow.getVbar().visibleProperty(), (ev) -> {
+        lh.addChangeListener(flow.getVbar().visibleProperty(), (ev) -> {
             updateContentWidth();
         });
 
-        listenerHelper().addChangeListener(TableSkinUtils.columnResizePolicyProperty(this), (ev) -> {
+        lh.addChangeListener(TableSkinUtils.columnResizePolicyProperty(this), (ev) -> {
             updateSuppressBreadthBar();
         });
 

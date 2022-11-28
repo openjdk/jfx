@@ -58,7 +58,7 @@ public class StringPropertyBaseTest {
     public void setUp() throws Exception {
         property = new StringPropertyMock();
         invalidationListener = new InvalidationListenerMock();
-        changeListener = new ChangeListenerMock<String>(UNDEFINED);
+        changeListener = new ChangeListenerMock<>(UNDEFINED);
     }
 
     private void attachInvalidationListener() {

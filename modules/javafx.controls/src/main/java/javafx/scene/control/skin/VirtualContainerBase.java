@@ -25,11 +25,12 @@
 
 package javafx.scene.control.skin;
 
-import javafx.event.EventHandler;
 import javafx.scene.control.Control;
 import javafx.scene.control.IndexedCell;
 import javafx.scene.control.ScrollToEvent;
 import javafx.scene.control.SkinBase;
+
+import com.sun.javafx.scene.control.ListenerHelper;
 
 /**
  * Parent class to control skins whose contents are virtualized and scrollable.
@@ -69,7 +70,7 @@ public abstract class VirtualContainerBase<C extends Control, I extends IndexedC
         super(control);
         flow = createVirtualFlow();
 
-        listenerHelper().addEventHandler(control, ScrollToEvent.scrollToTopIndex(), (ev) -> {
+        ListenerHelper.get(this).addEventHandler(control, ScrollToEvent.scrollToTopIndex(), (ev) -> {
             // Fix for RT-24630: The row count in VirtualFlow was incorrect
             // (normally zero), so the scrollTo call was misbehaving.
             if (itemCountDirty) {
