@@ -25,7 +25,13 @@
 
 package test.javafx.scene.web;
 
+import static javafx.concurrent.Worker.State.SUCCEEDED;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
 import java.util.concurrent.CountDownLatch;
+
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.scene.Scene;
@@ -34,17 +40,14 @@ import javafx.scene.image.WritableImage;
 import javafx.scene.paint.Color;
 import javafx.scene.web.WebView;
 import javafx.stage.Stage;
+
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
-import test.util.Util;
 
-import static javafx.concurrent.Worker.State.SUCCEEDED;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import test.util.Util;
 
 public class CSSFilterTest {
     private static final CountDownLatch launchLatch = new CountDownLatch(1);
@@ -102,15 +105,12 @@ public class CSSFilterTest {
 
     @BeforeClass
     public static void setupOnce() {
-        // Start the Test Application
-        new Thread(() -> Application.launch(CSSFilterTestApp.class, (String[])null)).start();
-
-        assertTrue("Timeout waiting for FX runtime to start", Util.await(launchLatch));
+        Util.launch(launchLatch, CSSFilterTestApp.class);
     }
 
     @AfterClass
     public static void tearDownOnce() {
-        Platform.exit();
+        Util.shutdown();
     }
 
     @Before

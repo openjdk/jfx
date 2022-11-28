@@ -73,7 +73,7 @@ public class ObservableListIteratorTest {
     // ========== Utility Functions ==========
 
     List<String> copyOut(Iterator<String> itr) {
-        List<String> out = new ArrayList<String>();
+        List<String> out = new ArrayList<>();
         while (itr.hasNext()) {
             out.add(itr.next());
         }
@@ -159,7 +159,7 @@ public class ObservableListIteratorTest {
 
     @Test
     public void testForEachLoop() {
-        List<String> output = new ArrayList<String>();
+        List<String> output = new ArrayList<>();
         for (String s : list) {
             output.add(s);
         }

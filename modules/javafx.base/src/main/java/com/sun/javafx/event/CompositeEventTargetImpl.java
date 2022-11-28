@@ -37,7 +37,7 @@ public class CompositeEventTargetImpl implements CompositeEventTarget {
 
     public CompositeEventTargetImpl(final EventTarget... eventTargets) {
         final Set<EventTarget> mutableSet =
-                new HashSet<EventTarget>(eventTargets.length);
+                new HashSet<>(eventTargets.length);
         mutableSet.addAll(Arrays.asList(eventTargets));
 
         this.eventTargets = Collections.unmodifiableSet(mutableSet);

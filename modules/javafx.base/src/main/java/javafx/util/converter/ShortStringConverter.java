@@ -63,6 +63,6 @@ public class ShortStringConverter extends StringConverter<Short> {
             return "";
         }
 
-        return Short.toString(((Short)value).shortValue());
+        return Short.toString(value.shortValue());
     }
 }

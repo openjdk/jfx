@@ -26,9 +26,7 @@
 package javafx.beans.property;
 
 import javafx.beans.binding.Bindings;
-import javafx.beans.value.WritableListValue;
 import javafx.beans.value.WritableSetValue;
-import javafx.collections.ObservableList;
 import javafx.collections.ObservableSet;
 
 /**

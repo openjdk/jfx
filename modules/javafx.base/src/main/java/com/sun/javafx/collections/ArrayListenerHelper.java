@@ -29,7 +29,6 @@ import java.util.Arrays;
 import javafx.beans.InvalidationListener;
 import javafx.collections.ArrayChangeListener;
 import javafx.collections.ObservableArray;
-import com.sun.javafx.logging.PlatformLogger;
 
 /**
  */

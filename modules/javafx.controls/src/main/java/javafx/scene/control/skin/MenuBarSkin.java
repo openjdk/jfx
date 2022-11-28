@@ -241,13 +241,15 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
         };
         weakMenuVisibilityChangeListener = new WeakChangeListener(menuVisibilityChangeListener);
 
+        ListenerHelper lh = ListenerHelper.get(this);
+
         rebuildUI();
-        listenerHelper().addListChangeListener(control.getMenus(), (v) -> {
+        lh.addListChangeListener(control.getMenus(), (v) -> {
             rebuildUI();
         });
 
         if (Toolkit.getToolkit().getSystemMenu().isSupported()) {
-            listenerHelper().addInvalidationListener(control.useSystemMenuBarProperty(), (v) -> {
+            lh.addInvalidationListener(control.useSystemMenuBarProperty(), (v) -> {
                 rebuildUI();
             });
         }
@@ -281,7 +283,7 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
         });
         ParentHelper.setTraversalEngine(getSkinnable(), engine);
 
-        listenerHelper().addChangeListener(control.sceneProperty(), true, (scene) -> {
+        lh.addChangeListener(control.sceneProperty(), true, (scene) -> {
             if (sceneListenerHelper != null) {
                 sceneListenerHelper.disconnect();
                 sceneListenerHelper = null;

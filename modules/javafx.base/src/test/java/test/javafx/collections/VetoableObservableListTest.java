@@ -76,8 +76,8 @@ public class VetoableObservableListTest {
 
     @Before
     public void setUp() {
-        calls = new ArrayList<Call>();
-        list = new VetoableListDecorator<String>(FXCollections.<String>observableArrayList()) {
+        calls = new ArrayList<>();
+        list = new VetoableListDecorator<>(FXCollections.<String>observableArrayList()) {
 
             @Override
             protected void onProposedChange(List<String> added, int... removed) {
