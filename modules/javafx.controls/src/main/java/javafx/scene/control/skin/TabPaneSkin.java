@@ -2102,14 +2102,12 @@ public class TabPaneSkin extends SkinBase<TabPane> {
 
     private void handleHeaderMousePressed(MouseEvent event) {
         if (event.getButton().equals(MouseButton.PRIMARY)) {
-            ((StackPane) event.getSource()).setMouseTransparent(true);
             startDrag(event);
         }
     }
 
     private void handleHeaderMouseReleased(MouseEvent event) {
         if (event.getButton().equals(MouseButton.PRIMARY)) {
-            ((StackPane) event.getSource()).setMouseTransparent(false);
             stopDrag();
             event.consume();
         }

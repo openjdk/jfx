@@ -25,11 +25,8 @@
 
 package javafx.scene.control.skin;
 
-import com.sun.javafx.scene.NodeHelper;
-import com.sun.javafx.scene.ParentHelper;
-import com.sun.javafx.scene.control.Properties;
-import com.sun.javafx.scene.control.behavior.BehaviorBase;
-import com.sun.javafx.scene.traversal.ParentTraversalEngine;
+import static com.sun.javafx.scene.control.skin.Utils.boundedSize;
+
 import javafx.animation.Animation.Status;
 import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
@@ -46,11 +43,11 @@ import javafx.event.EventDispatcher;
 import javafx.event.EventHandler;
 import javafx.geometry.BoundingBox;
 import javafx.geometry.Bounds;
+import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
 import javafx.scene.AccessibleAttribute;
 import javafx.scene.Cursor;
 import javafx.scene.Node;
-import javafx.scene.control.Button;
 import javafx.scene.control.Control;
 import javafx.scene.control.ScrollBar;
 import javafx.scene.control.ScrollPane;
@@ -62,12 +59,15 @@ import javafx.scene.input.TouchEvent;
 import javafx.scene.layout.StackPane;
 import javafx.scene.shape.Rectangle;
 import javafx.util.Duration;
-import com.sun.javafx.util.Utils;
-import com.sun.javafx.scene.control.behavior.ScrollPaneBehavior;
-import static com.sun.javafx.scene.control.skin.Utils.*;
-import javafx.geometry.Insets;
 
-import java.util.function.Consumer;
+import com.sun.javafx.scene.NodeHelper;
+import com.sun.javafx.scene.ParentHelper;
+import com.sun.javafx.scene.control.ListenerHelper;
+import com.sun.javafx.scene.control.Properties;
+import com.sun.javafx.scene.control.behavior.BehaviorBase;
+import com.sun.javafx.scene.control.behavior.ScrollPaneBehavior;
+import com.sun.javafx.scene.traversal.ParentTraversalEngine;
+import com.sun.javafx.util.Utils;
 
 /**
  * Default skin implementation for the {@link ScrollPane} control.
@@ -269,7 +269,9 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane> {
         initialize();
 
         // Register listeners
-        listenerHelper().addChangeListener(control.contentProperty(), (ev) -> {
+        ListenerHelper lh = ListenerHelper.get(this);
+
+        lh.addChangeListener(control.contentProperty(), (ev) -> {
             if (scrollNode != getSkinnable().getContent()) {
                 if (scrollNode != null) {
                     scrollNode.layoutBoundsProperty().removeListener(weakNodeListener);
@@ -288,7 +290,7 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane> {
             getSkinnable().requestLayout();
         });
 
-        listenerHelper().addChangeListener(
+        lh.addChangeListener(
             () -> {
                 getSkinnable().requestLayout();
                 viewRect.requestLayout();
@@ -297,14 +299,14 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane> {
             control.fitToHeightProperty()
         );
 
-        listenerHelper().addChangeListener(control.hvalueProperty(), e -> hsb.setValue(getSkinnable().getHvalue()));
-        listenerHelper().addChangeListener(control.hmaxProperty(), e -> hsb.setMax(getSkinnable().getHmax()));
-        listenerHelper().addChangeListener(control.hminProperty(), e -> hsb.setMin(getSkinnable().getHmin()));
-        listenerHelper().addChangeListener(control.vvalueProperty(), e -> vsb.setValue(getSkinnable().getVvalue()));
-        listenerHelper().addChangeListener(control.vmaxProperty(), e -> vsb.setMax(getSkinnable().getVmax()));
-        listenerHelper().addChangeListener(control.vminProperty(), e -> vsb.setMin(getSkinnable().getVmin()));
+        lh.addChangeListener(control.hvalueProperty(), e -> hsb.setValue(getSkinnable().getHvalue()));
+        lh.addChangeListener(control.hmaxProperty(), e -> hsb.setMax(getSkinnable().getHmax()));
+        lh.addChangeListener(control.hminProperty(), e -> hsb.setMin(getSkinnable().getHmin()));
+        lh.addChangeListener(control.vvalueProperty(), e -> vsb.setValue(getSkinnable().getVvalue()));
+        lh.addChangeListener(control.vmaxProperty(), e -> vsb.setMax(getSkinnable().getVmax()));
+        lh.addChangeListener(control.vminProperty(), e -> vsb.setMin(getSkinnable().getVmin()));
 
-        listenerHelper().addChangeListener(
+        lh.addChangeListener(
             () -> {
                 // change affects pref size, so requestLayout on control
                 getSkinnable().requestLayout();
@@ -665,8 +667,10 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane> {
             }
         };
 
-        listenerHelper().addEventFilter(hsb, MouseEvent.MOUSE_PRESSED, barHandler);
-        listenerHelper().addEventFilter(vsb, MouseEvent.MOUSE_PRESSED, barHandler);
+        ListenerHelper lh = ListenerHelper.get(this);
+
+        lh.addEventFilter(hsb, MouseEvent.MOUSE_PRESSED, barHandler);
+        lh.addEventFilter(vsb, MouseEvent.MOUSE_PRESSED, barHandler);
 
         corner = new StackPane();
         corner.getStyleClass().setAll("corner");
@@ -709,7 +713,7 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane> {
 
         // listeners, and assorted housekeeping
 
-        listenerHelper().addInvalidationListener(vsb.valueProperty(), (valueModel) -> {
+        lh.addInvalidationListener(vsb.valueProperty(), (valueModel) -> {
             if (!Properties.IS_TOUCH_SUPPORTED) {
                 posY = Utils.clamp(getSkinnable().getVmin(), vsb.getValue(), getSkinnable().getVmax());
             }
@@ -719,7 +723,7 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane> {
             updatePosY();
         });
 
-        listenerHelper().addInvalidationListener(hsb.valueProperty(), (valueModel) -> {
+        lh.addInvalidationListener(hsb.valueProperty(), (valueModel) -> {
             if (!Properties.IS_TOUCH_SUPPORTED) {
                 posX = Utils.clamp(getSkinnable().getHmin(), hsb.getValue(), getSkinnable().getHmax());
             }
@@ -948,13 +952,13 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane> {
         ** there are certain animations that need to know if the touch is
         ** happening.....
         */
-        listenerHelper().addEventHandler(getSkinnable(), TouchEvent.TOUCH_PRESSED, e -> {
+        lh.addEventHandler(getSkinnable(), TouchEvent.TOUCH_PRESSED, e -> {
             touchDetected = true;
             startSBReleasedAnimation();
             e.consume();
         });
 
-        listenerHelper().addEventHandler(getSkinnable(), TouchEvent.TOUCH_RELEASED, e -> {
+        lh.addEventHandler(getSkinnable(), TouchEvent.TOUCH_RELEASED, e -> {
             touchDetected = false;
             e.consume();
         });

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2019, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,25 +25,25 @@
 
 package test.javafx.scene;
 
+import static org.junit.Assert.assertTrue;
+
+import java.util.concurrent.CountDownLatch;
+
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.scene.Scene;
-import javafx.scene.layout.HBox;
 import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.HBox;
 import javafx.scene.text.Text;
 import javafx.stage.Stage;
 import javafx.stage.WindowEvent;
 
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-
-import test.util.Util;
-import junit.framework.Assert;
-import org.junit.Test;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
-import static org.junit.Assert.assertTrue;
+import org.junit.Test;
+
+import test.util.Util;
 
 /**
  * This test is based on the test case reported in JDK-8209830
@@ -63,7 +63,7 @@ import static org.junit.Assert.assertTrue;
 
 public class QuadraticCssTimeTest {
 
-    private static CountDownLatch startupLatch;
+    private static CountDownLatch startupLatch = new CountDownLatch(1);
     private static Stage stage;
     private static BorderPane rootPane;
 
@@ -83,10 +83,12 @@ public class QuadraticCssTimeTest {
 
     @BeforeClass
     public static void initFX() throws Exception {
-        startupLatch = new CountDownLatch(1);
-        new Thread(() -> Application.launch(QuadraticCssTimeTest.TestApp.class, (String[]) null)).start();
+        Util.launch(startupLatch, TestApp.class);
+    }
 
-        assertTrue("Timeout waiting for FX runtime to start", startupLatch.await(15, TimeUnit.SECONDS));
+    @AfterClass
+    public static void teardownOnce() {
+        Util.shutdown(stage);
     }
 
     @Test
@@ -112,14 +114,6 @@ public class QuadraticCssTimeTest {
             // NOTE : 800 mSec is not a benchmark value
             // It is good enough to catch the regression in performance, if any
             assertTrue("Time to add 500 Nodes is more than 800 mSec", (endTime - startTime) < 800);
-        });
-    }
-
-    @AfterClass
-    public static void teardownOnce() {
-        Platform.runLater(() -> {
-            stage.hide();
-            Platform.exit();
         });
     }
 }

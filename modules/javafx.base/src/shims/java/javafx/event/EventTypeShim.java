@@ -27,7 +27,7 @@ package javafx.event;
 
 import java.util.List;
 
-public class EventTypeShim<T extends Event> {
+public class EventTypeShim {
 
     public static Object getEventTypeSerialization(List<String> path) {
         return new EventType.EventTypeSerialization(path);

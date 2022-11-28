@@ -58,7 +58,7 @@ public class FloatPropertyBaseTest {
     public void setUp() throws Exception {
         property = new FloatPropertyMock();
         invalidationListener = new InvalidationListenerMock();
-        changeListener = new ChangeListenerMock<Number>(UNDEFINED);
+        changeListener = new ChangeListenerMock<>(UNDEFINED);
     }
 
     private void attachInvalidationListener() {
@@ -282,7 +282,7 @@ public class FloatPropertyBaseTest {
         final float value1 = (float)Math.PI;
         final float value2 = (float)Math.E;
         attachInvalidationListener();
-        final ObservableValueStub<Number> v = new ObservableValueStub<Number>(value1);
+        final ObservableValueStub<Number> v = new ObservableValueStub<>(value1);
 
         property.bind(v);
         assertEquals(value1, property.get(), EPSILON);
@@ -322,7 +322,7 @@ public class FloatPropertyBaseTest {
         final float value1 = (float)Math.PI;
         final float value2 = (float)Math.E;
         attachChangeListener();
-        final ObservableValueStub<Number> v = new ObservableValueStub<Number>(value1);
+        final ObservableValueStub<Number> v = new ObservableValueStub<>(value1);
 
         property.bind(v);
         assertEquals(value1, property.get(), EPSILON);
@@ -433,7 +433,7 @@ public class FloatPropertyBaseTest {
         final float value2 = (float)Math.E;
 
         attachInvalidationListener();
-        final ObservableValueStub<Number> v = new ObservableValueStub<Number>(value1);
+        final ObservableValueStub<Number> v = new ObservableValueStub<>(value1);
         property.bind(v);
         property.unbind();
         assertEquals(value1, property.get(), EPSILON);
