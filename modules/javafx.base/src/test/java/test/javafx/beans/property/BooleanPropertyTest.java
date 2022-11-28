@@ -136,7 +136,7 @@ public class BooleanPropertyTest {
 
     @Test
     public void testObjectToBoolean() {
-        final ObjectProperty<Boolean> valueModel = new SimpleObjectProperty<Boolean>(true);
+        final ObjectProperty<Boolean> valueModel = new SimpleObjectProperty<>(true);
         final BooleanProperty exp = BooleanProperty.booleanProperty(valueModel);
 
         assertEquals(true, exp.get());

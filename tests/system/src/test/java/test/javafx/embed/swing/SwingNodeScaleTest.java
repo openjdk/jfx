@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2016, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,25 +25,31 @@
 
 package test.javafx.embed.swing;
 
+import java.awt.Dimension;
+import java.awt.GridBagLayout;
+import java.awt.Rectangle;
+import java.awt.event.FocusAdapter;
+import java.awt.event.FocusEvent;
+import java.util.concurrent.CountDownLatch;
+
+import javax.swing.JButton;
+import javax.swing.JPanel;
+import javax.swing.SwingUtilities;
+import javax.swing.UIManager;
+
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.embed.swing.SwingNode;
 import javafx.scene.Scene;
 import javafx.scene.layout.StackPane;
 import javafx.stage.Stage;
+
+import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
-import org.junit.AfterClass;
 import org.junit.Test;
-import junit.framework.AssertionFailedError;
-import javax.swing.*;
-import java.awt.*;
-import java.awt.event.FocusAdapter;
-import java.awt.event.FocusEvent;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 
-import static test.util.Util.TIMEOUT;
+import test.util.Util;
 
 public class SwingNodeScaleTest {
     static CountDownLatch launchLatch;
@@ -57,24 +63,13 @@ public class SwingNodeScaleTest {
         System.setProperty("glass.gtk.uiScale", "2");
         launchLatch = new CountDownLatch(1);
         request = new Dimension(150, 100);
-        // Start the Application
-        new Thread(() -> Application.launch(SwingNodeScaleTest.MyApp.class, (String[])null)).start();
 
-        try {
-            if (!launchLatch.await(5 * TIMEOUT, TimeUnit.MILLISECONDS)) {
-                throw new AssertionFailedError("Timeout waiting for Application to launch ("+
-                    (5 * TIMEOUT) + " seconds)");
-            }
-        } catch (InterruptedException ex) {
-            AssertionFailedError err = new AssertionFailedError("Unexpected exception");
-            err.initCause(ex);
-            throw err;
-        }
+        Util.launch(launchLatch, 50, MyApp.class);
     }
 
     @AfterClass
     public static void teardownOnce() {
-        Platform.exit();
+        Util.shutdown();
     }
 
     @Test
