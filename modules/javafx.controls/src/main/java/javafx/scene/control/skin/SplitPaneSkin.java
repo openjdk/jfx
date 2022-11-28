@@ -107,7 +107,8 @@ public class SplitPaneSkin extends SkinBase<SplitPane> {
 
         rebuildDividers(false);
 
-        listenerHelper().addChangeListener(control.orientationProperty(), (v) -> {
+        ListenerHelper lh = ListenerHelper.get(this);
+        lh.addChangeListener(control.orientationProperty(), (v) -> {
             this.horizontal = getSkinnable().getOrientation() == Orientation.HORIZONTAL;
             this.previousSize = -1;
             for (ContentDivider c: contentDividers) {
@@ -115,8 +116,8 @@ public class SplitPaneSkin extends SkinBase<SplitPane> {
             }
             getSkinnable().requestLayout();
         });
-        listenerHelper().addChangeListener(control.widthProperty(), (v) -> getSkinnable().requestLayout());
-        listenerHelper().addChangeListener(control.heightProperty(), (v) -> getSkinnable().requestLayout());
+        lh.addChangeListener(control.widthProperty(), (v) -> getSkinnable().requestLayout());
+        lh.addChangeListener(control.heightProperty(), (v) -> getSkinnable().requestLayout());
     }
 
 
@@ -529,7 +530,7 @@ public class SplitPaneSkin extends SkinBase<SplitPane> {
     }
 
     private void initializeContentListener() {
-        listenerHelper().addListChangeListener(getSkinnable().getItems(), (ListChangeListener<Node>) c -> {
+        ListenerHelper.get(this).addListChangeListener(getSkinnable().getItems(), (ListChangeListener<Node>) c -> {
             while (c.next()) {
                 if (c.wasPermutated() || c.wasUpdated()) {
                     /**

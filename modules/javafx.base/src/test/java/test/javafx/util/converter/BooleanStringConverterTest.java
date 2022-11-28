@@ -25,7 +25,6 @@
 
 package test.javafx.util.converter;
 
-import java.math.BigInteger;
 import javafx.util.converter.BooleanStringConverter;
 import static org.junit.Assert.assertEquals;
 

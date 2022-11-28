@@ -279,6 +279,7 @@ public class ListBindingTest {
             return value;
         }
 
+        @Override
         public ObservableList<?> getDependencies() {
             fail("Should not reach here");
             return null;

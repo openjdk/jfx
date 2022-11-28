@@ -119,5 +119,5 @@ public class ReadOnlyIntegerWrapper extends SimpleIntegerProperty {
         public String getName() {
             return ReadOnlyIntegerWrapper.this.getName();
         }
-    };
+    }
 }

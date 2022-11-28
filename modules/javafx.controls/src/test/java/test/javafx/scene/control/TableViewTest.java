@@ -303,8 +303,8 @@ public class TableViewTest {
         assertEquals("Pineapple", sm.getSelectedItem());
     }
 
-    @Ignore("Not fixed yet")
-    @Test public void ensureSelectionShiftsDownWhenOneNewItemIsAdded() {
+    @Test
+    public void ensureSelectionShiftsDownWhenOneNewItemIsAdded() {
         table.getItems().addAll("Apple", "Orange", "Banana");
         sm.select(1);
         assertEquals(1, sm.getSelectedIndex());
@@ -315,8 +315,8 @@ public class TableViewTest {
         assertEquals("Orange", sm.getSelectedItem());
     }
 
-    @Ignore("Not fixed yet")
-    @Test public void ensureSelectionShiftsDownWhenMultipleNewItemAreAdded() {
+    @Test
+    public void ensureSelectionShiftsDownWhenMultipleNewItemAreAdded() {
         table.getItems().addAll("Apple", "Orange", "Banana");
         sm.select(1);
         assertEquals(1, sm.getSelectedIndex());
@@ -327,8 +327,8 @@ public class TableViewTest {
         assertEquals(4, sm.getSelectedIndex());
     }
 
-    @Ignore("Not fixed yet")
-    @Test public void ensureSelectionShiftsDownWhenOneItemIsRemoved() {
+    @Test
+    public void ensureSelectionShiftsDownWhenOneItemIsRemoved() {
         table.getItems().addAll("Apple", "Orange", "Banana");
         sm.select(1);
         assertEquals(1, sm.getSelectedIndex());
@@ -339,8 +339,8 @@ public class TableViewTest {
         assertEquals("Orange", sm.getSelectedItem());
     }
 
-    @Ignore("Not fixed yet")
-    @Test public void ensureSelectionShiftsDownWheMultipleItemsAreRemoved() {
+    @Test
+    public void ensureSelectionShiftsDownWheMultipleItemsAreRemoved() {
         table.getItems().addAll("Apple", "Orange", "Banana");
         sm.select(2);
         assertEquals(2, sm.getSelectedIndex());
@@ -437,8 +437,8 @@ public class TableViewTest {
         assertEquals(0, table.getVisibleLeafColumns().size());
     }
 
-    @Test public void testSortOrderCleanup() {
-//        ObservableList<ObservablePerson> persons = ObservablePerson.createFXPersonList();
+    @Test
+    public void testSortOrderCleanup() {
         TableView table = new TableView();
         TableColumn<String,String> first = new TableColumn<String,String>("first");
         first.setCellValueFactory(new PropertyValueFactory("firstName"));
@@ -728,8 +728,8 @@ public class TableViewTest {
         VirtualFlowTestUtils.assertListContainsItemsInOrder(c.getColumns(), col);
     }
 
-    @Ignore
-    @Test public void testComparatorChangesInSyncWithSortOrder_2() {
+    @Test
+    public void testComparatorChangesInSyncWithSortOrder_2() {
         // same as test above
         TableColumn<String, String> col = initSortTestStructure();
         assertNull(table.getComparator());
@@ -865,8 +865,12 @@ public class TableViewTest {
         assertEquals(-1, tv.getSelectionModel().getSelectedIndex());
     }
 
-    @Ignore("Started failing recently, but manual tests seem to indicate the functionality is intact")
-    @Test public void test_rt17522_focusShouldMoveWhenItemAddedAtFocusIndex() {
+    /**
+     * JDK-8119787
+     * @ Ignore("Started failing recently, but manual tests seem to indicate the functionality is intact")
+     */
+    @Test
+    public void test_rt17522_focusShouldMoveWhenItemAddedAtFocusIndex() {
         final TableView lv = new TableView();
         StageLoader sl = new StageLoader(lv);
         FocusModel fm = lv.getFocusModel();
@@ -2047,8 +2051,12 @@ public class TableViewTest {
         sl.dispose();
     }
 
-//    @Ignore("Test started intermittently failing, most probably due to RT-36855 changeset")
-    @Test public void test_rt_34493() {
+    /**
+     * JDK-8093986
+     * @ Ignore("Test started intermittently failing, most probably due to RT-36855/JDK-8096512 changeset")
+     */
+    @Test
+    public void noAutoresizeOnColumnRemoval() {
         TableView<Person> table = new TableView<>();
         table.setItems(FXCollections.observableArrayList(
                 new Person("John", "Smith", "jacob.smith@example.com")

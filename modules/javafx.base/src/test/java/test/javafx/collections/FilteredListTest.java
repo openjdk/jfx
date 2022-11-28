@@ -51,7 +51,7 @@ public class FilteredListTest {
         list = FXCollections.observableArrayList();
         list.addAll("a", "c", "d", "c");
         Predicate<String> predicate = (String e) -> !e.equals("c");
-        mlo = new MockListObserver<String>();
+        mlo = new MockListObserver<>();
         filteredList = new FilteredList<>(list, predicate);
         filteredList.addListener(mlo);
     }

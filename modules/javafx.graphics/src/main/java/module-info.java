@@ -68,6 +68,7 @@ module javafx.graphics {
 
     exports com.sun.glass.ui to
         javafx.media,
+        javafx.swing,
         javafx.web;
     exports com.sun.glass.utils to
         javafx.media,
