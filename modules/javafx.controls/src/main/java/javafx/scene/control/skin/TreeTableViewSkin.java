@@ -34,7 +34,6 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.EventHandler;
 import javafx.event.EventType;
-import javafx.event.WeakEventHandler;
 import javafx.scene.AccessibleAction;
 import javafx.scene.AccessibleAttribute;
 import javafx.scene.Node;
@@ -49,6 +48,7 @@ import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.StackPane;
 
 import com.sun.javafx.scene.control.IDisconnectable;
+import com.sun.javafx.scene.control.ListenerHelper;
 import com.sun.javafx.scene.control.TreeTableViewBackingList;
 import com.sun.javafx.scene.control.behavior.TreeTableViewBehavior;
 
@@ -99,6 +99,8 @@ public class TreeTableViewSkin<T> extends TableViewSkinBase<T, TreeItem<T>, Tree
 
         setRoot(getSkinnable().getRoot());
 
+        ListenerHelper lh = ListenerHelper.get(this);
+
         EventHandler<MouseEvent> ml = event -> {
             // This ensures that the table maintains the focus, even when the vbar
             // and hbar controls inside the flow are clicked. Without this, the
@@ -109,8 +111,8 @@ public class TreeTableViewSkin<T> extends TableViewSkinBase<T, TreeItem<T>, Tree
                 control.requestFocus();
             }
         };
-        listenerHelper().addEventFilter(flow.getVbar(), MouseEvent.MOUSE_PRESSED, ml);
-        listenerHelper().addEventFilter(flow.getHbar(), MouseEvent.MOUSE_PRESSED, ml);
+        lh.addEventFilter(flow.getVbar(), MouseEvent.MOUSE_PRESSED, ml);
+        lh.addEventFilter(flow.getHbar(), MouseEvent.MOUSE_PRESSED, ml);
 
         // init the behavior 'closures'
         behavior.setOnFocusPreviousRow(() -> onFocusAboveCell());
@@ -126,13 +128,13 @@ public class TreeTableViewSkin<T> extends TableViewSkinBase<T, TreeItem<T>, Tree
         behavior.setOnFocusLeftCell(() -> onFocusLeftCell());
         behavior.setOnFocusRightCell(() -> onFocusRightCell());
 
-        listenerHelper().addChangeListener(control.rootProperty(), (ev) -> {
+        lh.addChangeListener(control.rootProperty(), (ev) -> {
             // fix for RT-37853
             getSkinnable().edit(-1, null);
             setRoot(getSkinnable().getRoot());
         });
 
-        listenerHelper().addChangeListener(control.showRootProperty(), (ev) -> {
+        lh.addChangeListener(control.showRootProperty(), (ev) -> {
             // if we turn off showing the root, then we must ensure the root
             // is expanded - otherwise we end up with no visible items in
             // the tree.
@@ -143,15 +145,15 @@ public class TreeTableViewSkin<T> extends TableViewSkinBase<T, TreeItem<T>, Tree
             updateItemCount();
         });
 
-        listenerHelper().addChangeListener(control.rowFactoryProperty(), (ev) -> {
+        lh.addChangeListener(control.rowFactoryProperty(), (ev) -> {
             flow.recreateCells();
         });
 
-        listenerHelper().addChangeListener(control.expandedItemCountProperty(), (ev) -> {
+        lh.addChangeListener(control.expandedItemCountProperty(), (ev) -> {
             markItemCountDirty();
         });
 
-       listenerHelper().addChangeListener(control.fixedCellSizeProperty(), (ev) -> {
+        lh.addChangeListener(control.fixedCellSizeProperty(), (ev) -> {
             flow.setFixedCellSize(getSkinnable().getFixedCellSize());
         });
     }
@@ -288,7 +290,7 @@ public class TreeTableViewSkin<T> extends TableViewSkinBase<T, TreeItem<T>, Tree
         if (getRoot() != null) {
             // TODO I wonder if it might be possible for the root ref to get collected between these two lines
             // which would throw an NPE.  Perhaps we should simply use newRoot instance instead of getRoot().
-            rootListener = listenerHelper().addEventHandler(getRoot(), TreeItem.<T>treeNotificationEvent(), e -> {
+            rootListener = ListenerHelper.get(this).addEventHandler(getRoot(), TreeItem.<T>treeNotificationEvent(), e -> {
                 if (e.wasAdded() && e.wasRemoved() && e.getAddedSize() == e.getRemovedSize()) {
                     // Fix for RT-14842, where the children of a TreeItem were changing,
                     // but because the overall item count was staying the same, there was

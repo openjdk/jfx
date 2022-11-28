@@ -50,6 +50,7 @@ import javafx.scene.control.TreeTablePosition;
 import javafx.scene.control.TreeTableRow;
 import javafx.scene.control.TreeTableView;
 
+import com.sun.javafx.scene.control.ListenerHelper;
 import com.sun.javafx.scene.control.behavior.BehaviorBase;
 import com.sun.javafx.scene.control.behavior.TreeTableRowBehavior;
 
@@ -98,11 +99,13 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
 
         updateTreeItem();
 
-        listenerHelper().addChangeListener(control.indexProperty(), (ev) -> {
+        ListenerHelper lh = ListenerHelper.get(this);
+
+        lh.addChangeListener(control.indexProperty(), (ev) -> {
             updateCells = true;
         });
 
-        listenerHelper().addChangeListener(control.treeItemProperty(), (ev) -> {
+        lh.addChangeListener(control.treeItemProperty(), (ev) -> {
             updateTreeItem();
             // There used to be an isDirty = true statement here, but this was
             // determined to be unnecessary and led to performance issues such as
@@ -114,14 +117,15 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
 
     // FIXME: replace listener to fixedCellSize with direct lookup - JDK-8277000
     private void setupTreeTableViewListeners() {
+        ListenerHelper lh = ListenerHelper.get(this);
         TreeTableView<T> treeTableView = getSkinnable().getTreeTableView();
         if (treeTableView == null) {
-            listenerHelper().addInvalidationListener(getSkinnable().treeTableViewProperty(), (ev) -> {
+            lh.addInvalidationListener(getSkinnable().treeTableViewProperty(), (ev) -> {
                 unregisterInvalidationListeners(getSkinnable().treeTableViewProperty());
                 setupTreeTableViewListeners();
             });
         } else {
-            listenerHelper().addChangeListener(treeTableView.treeColumnProperty(), (ev) -> {
+            lh.addChangeListener(treeTableView.treeColumnProperty(), (ev) -> {
                 // Fix for RT-27782: Need to set isDirty to true, rather than the
                 // cheaper updateCells, as otherwise the text indentation will not
                 // be recalculated in TreeTableCellSkin.calculateIndentation()
@@ -131,7 +135,7 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
 
             DoubleProperty fixedCellSizeProperty = getTreeTableView().fixedCellSizeProperty();
             if (fixedCellSizeProperty != null) {
-                listenerHelper().addChangeListener(fixedCellSizeProperty, (ev) -> {
+                lh.addChangeListener(fixedCellSizeProperty, (ev) -> {
                     fixedCellSize = fixedCellSizeProperty.get();
                     fixedCellSizeEnabled = fixedCellSize > 0;
                 });
@@ -142,7 +146,7 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
                 // When in fixed cell size mode, we must listen to the width of the virtual flow, so
                 // that when it changes, we can appropriately add / remove cells that may or may not
                 // be required (because we remove all cells that are not visible).
-                listenerHelper().addChangeListener(getVirtualFlow().widthProperty(), (ev) -> {
+                lh.addChangeListener(getVirtualFlow().widthProperty(), (ev) -> {
                     treeTableView.requestLayout();
                 });
             }
