@@ -54,6 +54,7 @@ import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
+import test.com.sun.javafx.pgstub.StubToolkit;
 import test.com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
 
 /**
@@ -65,7 +66,6 @@ import test.com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
 @RunWith(Parameterized.class)
 public class ComboSpecialKeyTest {
 
-    private Toolkit tk;
     private Scene scene;
     private Stage stage;
     private Pane root;
@@ -158,9 +158,9 @@ public class ComboSpecialKeyTest {
     @Before
     public void setup() {
         ComboBoxPopupControl c;
-        // This step is not needed (Just to make sure StubToolkit is
-        // loaded into VM)
-        tk = Toolkit.getToolkit();
+
+        assertTrue(Toolkit.getToolkit() instanceof StubToolkit);  // Ensure StubToolkit is loaded
+
         root = new VBox();
         scene = new Scene(root);
         stage = new Stage();

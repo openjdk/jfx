@@ -31,6 +31,7 @@ import javafx.scene.Scene;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.stage.Stage;
+import test.com.sun.javafx.pgstub.StubToolkit;
 import com.sun.javafx.tk.Toolkit;
 import javafx.scene.control.ColorPicker;
 import org.junit.Before;
@@ -51,6 +52,9 @@ public class ColorPickerTest {
 
     @Before public void setup() {
         tk = Toolkit.getToolkit();
+
+        assertTrue(tk instanceof StubToolkit);  // Ensure it's StubToolkit
+
         colorPicker = new ColorPicker();
         Scene scene = new Scene(new VBox(20), 800, 600);
         VBox box = (VBox)scene.getRoot();

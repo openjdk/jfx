@@ -43,6 +43,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import static org.junit.Assert.*;
+import test.com.sun.javafx.pgstub.StubToolkit;
 
 /**
  */
@@ -54,7 +55,10 @@ public class AccordionTest {
     private StackPane root;
 
     @Before public void setup() {
-        tk = Toolkit.getToolkit();//This step is not needed (Just to make sure StubToolkit is loaded into VM)
+        tk = Toolkit.getToolkit();
+
+        assertTrue(tk instanceof StubToolkit);  // Ensure it's StubToolkit
+
         accordion = new Accordion();
         root = new StackPane();
         scene = new Scene(root);
