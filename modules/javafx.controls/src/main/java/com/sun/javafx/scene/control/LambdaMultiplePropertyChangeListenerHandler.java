@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2015, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -58,7 +58,6 @@ import javafx.collections.WeakListChangeListener;
  * <p>
  * Disposing removes all listeners added by this handler from all registered observables.
  */
-@Deprecated // TODO use ListenerHelper instead
 public final class LambdaMultiplePropertyChangeListenerHandler {
 // FIXME JDK-8265401: name doesn't fit after widening to support more notification event types
 
