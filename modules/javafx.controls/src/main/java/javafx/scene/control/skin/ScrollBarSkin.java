@@ -110,7 +110,7 @@ public class ScrollBarSkin extends SkinBase<ScrollBar> {
         });
 
         lh.addChangeListener(control.orientationProperty(), (ev) -> {
-            getSkinnable().requestLayout();   
+            getSkinnable().requestLayout();
         });
     }
 
