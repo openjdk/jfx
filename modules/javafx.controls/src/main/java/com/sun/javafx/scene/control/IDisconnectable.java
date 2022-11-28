@@ -22,14 +22,13 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
+// Original code is re-licensed to Oracle by the author.
+// https://github.com/andy-goryachev/FxTextEditor/blob/master/src/goryachev/common/util/Disconnectable.java
+// Copyright © 2021-2022 Andy Goryachev <andy@goryachev.com>
 package com.sun.javafx.scene.control;
 
 /**
  * A functional interface that provides a {@link #disconnect()} method.
- * <p>
- * Original code is re-licensed to Oracle by the author.
- * https://github.com/andy-goryachev/FxTextEditor/blob/master/src/goryachev/common/util/Disconnectable.java
- * Copyright © 2021-2022 Andy Goryachev <andy@goryachev.com>
  */
 @FunctionalInterface
 public interface IDisconnectable {

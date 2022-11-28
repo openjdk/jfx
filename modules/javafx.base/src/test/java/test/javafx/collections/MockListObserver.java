@@ -57,13 +57,13 @@ public class MockListObserver<E> implements ListChangeListener<E> {
         }
     }
 
-    List<Call<E>> calls = new LinkedList<Call<E>>();
+    List<Call<E>> calls = new LinkedList<>();
 
     @Override
     public void onChanged(Change<? extends E> change) {
         if (calls.isEmpty()) {
             while (change.next()) {
-                Call<E> call = new Call<E>();
+                Call<E> call = new Call<>();
                 call.list = change.getList();
                 call.removed = change.getRemoved();
                 call.from = change.getFrom();

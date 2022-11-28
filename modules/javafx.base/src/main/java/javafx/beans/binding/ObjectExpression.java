@@ -77,7 +77,7 @@ public abstract class ObjectExpression<T> implements ObservableObjectValue<T> {
             throw new NullPointerException("Value must be specified.");
         }
         return value instanceof ObjectExpression ? (ObjectExpression<T>) value
-                : new ObjectBinding<T>() {
+                : new ObjectBinding<>() {
                     {
                         super.bind(value);
                     }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2020, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,29 +25,28 @@
 
 package test.javafx.stage;
 
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assume.assumeTrue;
+
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
+
 import javafx.application.Platform;
 import javafx.collections.ListChangeListener.Change;
 import javafx.collections.ObservableList;
 import javafx.stage.Screen;
+
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import test.util.Util;
 
-import static org.junit.Assert.*;
-import static org.junit.Assume.assumeTrue;
+import test.util.Util;
 
 public class ScreenTest {
     static CountDownLatch startupLatch = new CountDownLatch(1);
     static ObservableList<Screen> screens;
     static volatile boolean screensListenerCalled = false;
     static volatile boolean screensSizeIsZero = false;
-
-    private static void waitForLatch(CountDownLatch latch, int seconds, String msg) throws Exception {
-        assertTrue("Timeout: " + msg, latch.await(seconds, TimeUnit.SECONDS));
-    }
 
     /* This test for JDK-8252446 adds a listener on the ObservableList of
      * screens as the first thing in the platform startup runnable. Even
@@ -59,7 +58,7 @@ public class ScreenTest {
     @BeforeClass
     public static void initFX() throws Exception {
         Platform.setImplicitExit(false);
-        Platform.startup(() -> {
+        Util.startup(startupLatch, () -> {
             screens = Screen.getScreens();
             screens.addListener((Change<?> change) -> {
                 final int size = screens.size();
@@ -71,12 +70,11 @@ public class ScreenTest {
             });
             Platform.runLater(startupLatch::countDown);
         });
-        waitForLatch(startupLatch, 10, "FX runtime failed to start");
     }
 
     @AfterClass
     public static void exitFX() {
-        Platform.exit();
+        Util.shutdown();
     }
 
     @Test
@@ -99,5 +97,4 @@ public class ScreenTest {
         assumeTrue(screensListenerCalled);
         assertFalse("Screens list is empty in listener", screensSizeIsZero);
     }
-
 }

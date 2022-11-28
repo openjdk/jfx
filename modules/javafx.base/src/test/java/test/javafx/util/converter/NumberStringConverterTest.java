@@ -28,7 +28,6 @@ package test.javafx.util.converter;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
 import java.util.Locale;
-import javafx.util.converter.LocalTimeStringConverterShim;
 import javafx.util.converter.NumberStringConverter;
 import javafx.util.converter.NumberStringConverterShim;
 import static org.junit.Assert.*;

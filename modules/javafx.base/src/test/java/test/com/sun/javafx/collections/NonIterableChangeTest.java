@@ -44,7 +44,7 @@ public class NonIterableChangeTest {
 
     @Test
     public void testSimpleAdd() {
-        Change<String> change = new NonIterableChange.SimpleAddChange<String>(0, 1, list);
+        Change<String> change = new NonIterableChange.SimpleAddChange<>(0, 1, list);
 
         assertTrue(change.next());
 
@@ -66,7 +66,7 @@ public class NonIterableChangeTest {
 
     @Test
     public void testSimpleRemove() {
-        Change<String> change = new NonIterableChange.SimpleRemovedChange<String>(0, 0, "a0", list);
+        Change<String> change = new NonIterableChange.SimpleRemovedChange<>(0, 0, "a0", list);
 
         assertTrue(change.next());
 
@@ -88,7 +88,7 @@ public class NonIterableChangeTest {
 
     @Test
     public void testSimpleUpdate() {
-        Change<String> change = new NonIterableChange.SimpleUpdateChange<String>(0, 1, list);
+        Change<String> change = new NonIterableChange.SimpleUpdateChange<>(0, 1, list);
 
         assertTrue(change.next());
 
@@ -110,7 +110,7 @@ public class NonIterableChangeTest {
 
     @Test
     public void testSimplePermutation() {
-        Change<String> change = new NonIterableChange.SimplePermutationChange<String>(0, 2, new int[] {1, 0}, list);
+        Change<String> change = new NonIterableChange.SimplePermutationChange<>(0, 2, new int[] {1, 0}, list);
 
         assertTrue(change.next());
 
