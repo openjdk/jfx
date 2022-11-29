@@ -82,8 +82,7 @@ public class LineChart<X,Y> extends XYChart<X,Y> {
     private Series<X,Y> seriesOfDataRemoved = null;
     private Data<X,Y> dataItemBeingRemoved = null;
     private FadeTransition fadeSymbolTransition = null;
-    private Map<Data<X,Y>, Double> XYValueMap =
-                                new HashMap<>();
+    private Map<Data<X,Y>, Double> XYValueMap = new HashMap<>();
     private Timeline seriesRemoveTimeline = null;
     // -------------- PUBLIC PROPERTIES ----------------------------------------
 
