@@ -171,8 +171,8 @@ public class ATableViewResizeTester extends Application {
         stage.setTitle("TableView/JTable Resize Tester " + System.getProperty("java.version"));
         stage.show();
 
-        demoSelector.getSelectionModel().selectFirst();
-        policySelector.getSelectionModel().selectFirst();
+        demoSelector.getSelectionModel().select(Demo.FIXED_MIDDLE); // selectFirst();
+        policySelector.getSelectionModel().select(Policy.AUTO_RESIZE_SUBSEQUENT_COLUMNS); // selectFirst();
     }
 
     protected Callback<ResizeFeatures,Boolean> wrap(Callback<ResizeFeatures,Boolean> policy) {

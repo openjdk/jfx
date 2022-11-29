@@ -69,8 +69,9 @@ public class ResizeHelper {
 
             if (c.isResizable()) {
                 min[i] = c.getMinWidth();
-                pref[i] = clip(c.getPrefWidth(), c.getMinWidth(), c.getMaxWidth());
                 max[i] = c.getMaxWidth();
+                // TODO use integers or round
+                pref[i] = clip(c.getPrefWidth(), c.getMinWidth(), c.getMaxWidth());
             } else {
                 skip.set(i, true);
             }
@@ -78,9 +79,9 @@ public class ResizeHelper {
     }
 
     public void resizeToContentWidth() {
-        boolean needsAnotherPass = false;
-
+        boolean needsAnotherPass;
         do {
+            needsAnotherPass = false;
             double sumWidths = 0.0;
             double sumMins = 0.0;
             for (int i = 0; i < count; i++) {
@@ -141,8 +142,6 @@ public class ResizeHelper {
                 needsAnotherPass = false;
             }
 
-            if (needsAnotherPass) {
-            }
         } while (needsAnotherPass);
     }
 
@@ -324,6 +323,7 @@ public class ResizeHelper {
             size[oppx] -= delta;
             return true;
         } else {
+            double w1 = sumSizes(); // FIX
             size[ix] += delta;
             double adj;
             switch(mode) {
@@ -334,7 +334,15 @@ public class ResizeHelper {
                 adj = distributeDeltaFlexTail(-delta);
                 break;
             default:
-                adj = distributeDeltaRemainingColumns(-delta);
+                distributeDeltaRemainingColumns(-delta);
+                adj = 0.0;
+                
+                double w2 = sumSizes(); // FIX
+                if(w1 != w2) {
+                    System.err.println("ERR 2 sum sizes before="  + w1 + " after=" + w2 + " adj=" + adj + " delta=" + delta);
+//                    adj = w1-w2;
+                }
+                
                 break;
             }
             size[ix] += adj;
@@ -452,11 +460,8 @@ public class ResizeHelper {
         return delta;
     }
 
-    protected double distributeDeltaRemainingColumns(double delta) {
-        boolean needsAnotherPass = false;
-        double adj = 0.0;
-
-        do {
+    protected void distributeDeltaRemainingColumns(double delta) {
+        for(;;) {
             double total = 0.0;
             for (int i = 0; i < count; i++) {
                 if (!skip.get(i)) {
@@ -465,10 +470,12 @@ public class ResizeHelper {
             }
 
             if (isZero(total)) {
-                return adj;
+                System.err.println("zero total");
+                return;
             }
 
-            double rem = 0.0; // remainder from previous column
+            double rem = 0.0; // remainder from the previous column
+            boolean needsAnotherPass = false;
 
             for (int i = 0; i < count; i++) {
                 if (skip.get(i)) {
@@ -482,27 +489,60 @@ public class ResizeHelper {
                     w = min[i];
                     skip.set(i, true);
                     needsAnotherPass = true;
-                } else if (w > max[i]) {
+                    double ch = (w - size[i]);
+                    if(ch != 0) {
+                        System.err.println("min ch=" + ch);
+                    }
+                    delta -= ch;
+               } else if (w > max[i]) {
                     rem = (w - max[i]);
                     w = max[i];
                     skip.set(i, true);
                     needsAnotherPass = true;
+                    double ch = (w - size[i]);
+                    if(ch != 0) {
+                        System.err.println("max ch=" + ch);
+                    }
+                    delta -= ch;
                 } else {
                     rem = dw - (w - size[i]);
                 }
 
                 size[i] = w;
-            }
-
-            if (Math.abs(delta) < 1.0) {
-                if (Math.abs(delta) >= 0.5) {
-                    adj = Math.signum(delta);
+                
+                if(needsAnotherPass) {
+                    resetSizeChanges();
+                    break;
                 }
-                needsAnotherPass = false;
             }
 
-        } while (needsAnotherPass);
+//            if (Math.abs(delta) < 1.0) {
+//                if (Math.abs(delta) >= 0.5) {
+//                    adj = Math.signum(delta);
+//                }
+//                needsAnotherPass = false;
+//            }
 
-        return adj;
+            if (!needsAnotherPass) {
+                return;
+            }
+        }
+    }
+    
+    private void resetSizeChanges() {
+        // reset size changes
+        for (int i = 0; i < count; i++) {
+            if (!skip.get(i)) {
+                size[i] = columns.get(i).getWidth();
+            }
+        }
+    }
+
+    private double sumSizes() {
+        double sum = 0.0;
+        for (int i = 0; i < count; i++) {
+            sum += size[i];
+        }
+        return sum;
     }
 }
