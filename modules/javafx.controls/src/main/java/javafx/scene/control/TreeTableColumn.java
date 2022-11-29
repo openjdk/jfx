@@ -42,6 +42,7 @@ import javafx.collections.ObservableList;
 import javafx.collections.WeakListChangeListener;
 import javafx.event.Event;
 import javafx.event.EventHandler;
+import javafx.event.EventTarget;
 import javafx.event.EventType;
 import javafx.scene.Node;
 import javafx.scene.control.skin.*;
@@ -124,7 +125,7 @@ import javafx.css.Styleable;
  * @see javafx.scene.control.cell.TreeItemPropertyValueFactory
  * @since JavaFX 8.0
  */
-public class TreeTableColumn<S,T> extends TableColumnBase<TreeItem<S>,T> {
+public class TreeTableColumn<S,T> extends TableColumnBase<TreeItem<S>,T> implements EventTarget {
 
     /* *************************************************************************
      *                                                                         *

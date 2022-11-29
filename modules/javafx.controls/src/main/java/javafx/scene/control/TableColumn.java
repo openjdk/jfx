@@ -40,6 +40,7 @@ import javafx.css.CssMetaData;
 import javafx.css.Styleable;
 import javafx.event.Event;
 import javafx.event.EventHandler;
+import javafx.event.EventTarget;
 import javafx.event.EventType;
 import javafx.scene.Node;
 import javafx.scene.control.cell.PropertyValueFactory;
@@ -131,7 +132,7 @@ import javafx.beans.value.WritableValue;
  * @see TablePosition
  * @since JavaFX 2.0
  */
-public class TableColumn<S,T> extends TableColumnBase<S,T> {
+public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarget {
 
     /* *************************************************************************
      *                                                                         *
