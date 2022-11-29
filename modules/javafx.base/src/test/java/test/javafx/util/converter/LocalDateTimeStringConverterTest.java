@@ -41,7 +41,6 @@ import javafx.util.StringConverter;
 import javafx.util.converter.LocalDateTimeStringConverter;
 import javafx.util.converter.LocalDateTimeStringConverterShim;
 
-import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -127,33 +126,29 @@ public class LocalDateTimeStringConverterTest {
 
     @Before
     public void setup() {
-        if (this.converter == null) {
-            // Locale is established now, so we can allocate objects depending on it
-            switch (this.converterVariant) {
-            case NO_PARAM:
-                this.converter = new LocalDateTimeStringConverter();
-                this.locale = Locale.getDefault(Locale.Category.FORMAT);
-                // this.formatter and this.parser remain null
-                break;
-            case WITH_FORMATTER_PARSER:
-                this.converter = new LocalDateTimeStringConverter(aFormatter, aParser);
-                this.locale = Locale.getDefault(Locale.Category.FORMAT);
-                this.formatter = aFormatter;
-                this.parser = aParser;
-                break;
-            case WITH_FORMAT_STYLES:
-                this.converter = new LocalDateTimeStringConverter(FormatStyle.SHORT, FormatStyle.SHORT, Locale.UK, IsoChronology.INSTANCE);
-                this.locale = Locale.UK;
-                // this.formatter and this.parser remain null
-                break;
-            default:
-                throw new InvalidParameterException("Invalid converter variant: " + this.converterVariant.toString());
-            }
+        // Locale is established now, so we can allocate objects depending on it
+        switch (this.converterVariant) {
+        case NO_PARAM:
+            this.converter = new LocalDateTimeStringConverter();
+            this.locale = Locale.getDefault(Locale.Category.FORMAT);
+            this.formatter = null;
+            this.parser = null;
+            break;
+        case WITH_FORMATTER_PARSER:
+            this.converter = new LocalDateTimeStringConverter(aFormatter, aParser);
+            this.locale = Locale.getDefault(Locale.Category.FORMAT);
+            this.formatter = aFormatter;
+            this.parser = aParser;
+            break;
+        case WITH_FORMAT_STYLES:
+            this.converter = new LocalDateTimeStringConverter(FormatStyle.SHORT, FormatStyle.SHORT, Locale.UK, IsoChronology.INSTANCE);
+            this.locale = Locale.UK;
+            this.formatter = null;
+            this.parser = null;
+            break;
+        default:
+            fail("Invalid converter variant: " + this.converterVariant.toString());
         }
-    }
-
-    @After
-    public void teardown() {
     }
 
     /*********************************************************************
