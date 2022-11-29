@@ -25,7 +25,6 @@
 
 package test.javafx.util.converter;
 
-import java.security.InvalidParameterException;
 import java.util.Arrays;
 import java.time.LocalDate;
 import java.time.chrono.IsoChronology;
