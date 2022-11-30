@@ -25,12 +25,7 @@
 
 package javafx.scene.control.skin;
 
-import com.sun.javafx.collections.NonIterableChange;
-import com.sun.javafx.scene.control.Properties;
-import com.sun.javafx.scene.control.ReadOnlyUnbackedObservableList;
-
 import com.sun.javafx.scene.control.TreeTableViewBackingList;
-import com.sun.javafx.scene.control.skin.Utils;
 import javafx.event.WeakEventHandler;
 import javafx.scene.control.*;
 
@@ -40,9 +35,7 @@ import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.List;
 
-import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ObjectProperty;
-import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.EventHandler;
@@ -52,9 +45,7 @@ import javafx.scene.AccessibleAttribute;
 import javafx.scene.Node;
 import javafx.scene.control.TreeItem.TreeModificationEvent;
 import javafx.scene.input.MouseEvent;
-import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
-import javafx.util.Callback;
 
 /**
  * Default skin implementation for the {@link TreeTableView} control.
@@ -284,7 +275,7 @@ public class TreeTableViewSkin<T> extends TableViewSkinBase<T, TreeItem<T>, Tree
         if (treeTableView.getRowFactory() != null) {
             cell = treeTableView.getRowFactory().call(treeTableView);
         } else {
-            cell = new TreeTableRow<T>();
+            cell = new TreeTableRow<>();
         }
 
         // If there is no disclosure node, then add one of my own

@@ -165,7 +165,7 @@ public enum MediaError {
     WARNING_GSTREAMER_AUDIO_BUFFER_FIELD(WARNING_BASE_GSTREAMER.code()+0x0008);
 
     private static ResourceBundle bundle;
-    private static final Map<Integer, MediaError> map = new HashMap<Integer, MediaError>();
+    private static final Map<Integer, MediaError> map = new HashMap<>();
 
     static {
         try {

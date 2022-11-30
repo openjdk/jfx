@@ -43,5 +43,5 @@ public class TextBehaviorShim {
         return behavior.isRTLText();
     }
 
-    private TextBehaviorShim() {};
+    private TextBehaviorShim() {}
 }

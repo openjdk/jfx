@@ -139,7 +139,7 @@ public class ChoiceDialog<T> extends Dialog<T> {
 
         final double MIN_WIDTH = 150;
 
-        comboBox = new ComboBox<T>();
+        comboBox = new ComboBox<>();
         comboBox.setMinWidth(MIN_WIDTH);
         if (choices != null) {
             comboBox.getItems().addAll(choices);

@@ -63,6 +63,7 @@ public class ControlHelper extends RegionHelper {
         super.processCSSImpl(node);
     }
 
+    @Override
     protected void processCSSImpl(Node node) {
         controlAccessor.doProcessCSS(node);
     }

@@ -125,7 +125,7 @@ public class CheckBoxListCell<T> extends ListCell<T> {
     public static <T> Callback<ListView<T>, ListCell<T>> forListView(
             final Callback<T, ObservableValue<Boolean>> getSelectedProperty,
             final StringConverter<T> converter) {
-        return list -> new CheckBoxListCell<T>(getSelectedProperty, converter);
+        return list -> new CheckBoxListCell<>(getSelectedProperty, converter);
     }
 
     /* *************************************************************************
@@ -197,7 +197,7 @@ public class CheckBoxListCell<T> extends ListCell<T> {
 
     // --- converter
     private ObjectProperty<StringConverter<T>> converter =
-            new SimpleObjectProperty<StringConverter<T>>(this, "converter");
+            new SimpleObjectProperty<>(this, "converter");
 
     /**
      * The {@link StringConverter} property.
@@ -227,7 +227,7 @@ public class CheckBoxListCell<T> extends ListCell<T> {
     // --- selected state callback property
     private ObjectProperty<Callback<T, ObservableValue<Boolean>>>
             selectedStateCallback =
-            new SimpleObjectProperty<Callback<T, ObservableValue<Boolean>>>(
+            new SimpleObjectProperty<>(
             this, "selectedStateCallback");
 
     /**

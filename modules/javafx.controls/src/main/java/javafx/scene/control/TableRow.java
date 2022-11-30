@@ -143,7 +143,7 @@ public class TableRow<T> extends IndexedCell<T> {
 
     private ReadOnlyObjectWrapper<TableView<T>> tableViewPropertyImpl() {
         if (tableView == null) {
-            tableView = new ReadOnlyObjectWrapper<TableView<T>>() {
+            tableView = new ReadOnlyObjectWrapper<>() {
                 private WeakReference<TableView<T>> weakTableViewRef;
                 @Override protected void invalidated() {
                     TableView.TableViewSelectionModel<T> sm;
@@ -182,7 +182,7 @@ public class TableRow<T> extends IndexedCell<T> {
 
                         tableView.editingCellProperty().addListener(weakEditingListener);
 
-                        weakTableViewRef = new WeakReference<TableView<T>>(get());
+                        weakTableViewRef = new WeakReference<>(get());
                     }
                 }
 

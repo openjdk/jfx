@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,16 +25,12 @@
 
 package javafx.scene.control.skin;
 
-import com.sun.javafx.scene.control.Properties;
-import com.sun.javafx.scene.control.behavior.BehaviorBase;
-import javafx.beans.value.ObservableValue;
 import javafx.geometry.Orientation;
 import javafx.geometry.Point2D;
 import javafx.scene.AccessibleAction;
 import javafx.scene.AccessibleAttribute;
 import javafx.scene.AccessibleRole;
-import javafx.scene.control.Accordion;
-import javafx.scene.control.Button;
+import javafx.scene.Node;
 import javafx.scene.control.Control;
 import javafx.scene.control.ScrollBar;
 import javafx.scene.control.SkinBase;
@@ -42,11 +38,11 @@ import javafx.scene.input.MouseButton;
 import javafx.scene.input.ScrollEvent;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
-import javafx.scene.Node;
-import com.sun.javafx.util.Utils;
-import com.sun.javafx.scene.control.behavior.ScrollBarBehavior;
 
-import java.util.function.Consumer;
+import com.sun.javafx.scene.control.ListenerHelper;
+import com.sun.javafx.scene.control.Properties;
+import com.sun.javafx.scene.control.behavior.ScrollBarBehavior;
+import com.sun.javafx.util.Utils;
 
 /**
  * Default skin implementation for the {@link ScrollBar} control.
@@ -98,21 +94,24 @@ public class ScrollBarSkin extends SkinBase<ScrollBar> {
 
         // install default input map for the ScrollBar control
         this.behavior = new ScrollBarBehavior(control);
-//        control.setInputMap(behavior.getInputMap());
 
         initialize();
         getSkinnable().requestLayout();
 
-        // Register listeners
-        final Consumer<ObservableValue<?>> consumer = e -> {
+        ListenerHelper lh = ListenerHelper.get(this);
+
+        lh.addChangeListener(() -> {
             positionThumb();
             getSkinnable().requestLayout();
-        };
-        registerChangeListener(control.minProperty(), consumer);
-        registerChangeListener(control.maxProperty(), consumer);
-        registerChangeListener(control.visibleAmountProperty(), consumer);
-        registerChangeListener(control.valueProperty(), e -> positionThumb());
-        registerChangeListener(control.orientationProperty(), e -> getSkinnable().requestLayout());
+        }, control.minProperty(), control.maxProperty(), control.visibleAmountProperty());
+
+        lh.addChangeListener(control.valueProperty(), (ev) -> {
+            positionThumb();
+        });
+
+        lh.addChangeListener(control.orientationProperty(), (ev) -> {
+            getSkinnable().requestLayout();
+        });
     }
 
 
@@ -510,8 +509,7 @@ public class ScrollBarSkin extends SkinBase<ScrollBar> {
             }
         });
 
-
-        getSkinnable().addEventHandler(ScrollEvent.SCROLL, event -> {
+        ListenerHelper.get(this).addEventHandler(getSkinnable(), ScrollEvent.SCROLL, event -> {
             /*
             ** if the tracklength isn't greater then do nothing....
             */
@@ -529,7 +527,7 @@ public class ScrollBarSkin extends SkinBase<ScrollBar> {
                 /*
                 ** we only consume an event that we've used.
                 */
-                ScrollBar sb = (ScrollBar) getSkinnable();
+                ScrollBar sb = getSkinnable();
 
                 double delta = (getSkinnable().getOrientation() == Orientation.VERTICAL ? dy : dx);
 

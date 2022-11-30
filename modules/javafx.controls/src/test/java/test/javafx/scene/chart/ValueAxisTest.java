@@ -86,7 +86,7 @@ public class ValueAxisTest {
             };
         }
 
-        formatter = new StringConverter<Number>() {
+        formatter = new StringConverter<>() {
             @Override
             public String toString(Number object) { return null; }
             @Override
@@ -168,6 +168,7 @@ public class ValueAxisTest {
         assertEquals("minorTickCountProperty cannot be bound", axis.minorTickCountProperty().getValue(),23.0,0.0);
     }
 
+    @SuppressWarnings("cast")
     @Test public void checkScaleIsReadOnlyPropertyAndHenceCannotBeBound() {
         assertTrue(axis.scaleProperty() instanceof ReadOnlyDoubleProperty);
     }
