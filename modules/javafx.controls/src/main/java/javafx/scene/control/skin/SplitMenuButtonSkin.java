@@ -25,11 +25,6 @@
 
 package javafx.scene.control.skin;
 
-import com.sun.javafx.scene.control.behavior.BehaviorBase;
-import com.sun.javafx.scene.control.behavior.MenuButtonBehavior;
-import javafx.scene.Node;
-import javafx.scene.control.Accordion;
-import javafx.scene.control.Button;
 import javafx.scene.control.Control;
 import javafx.scene.control.SplitMenuButton;
 import javafx.scene.input.MouseEvent;

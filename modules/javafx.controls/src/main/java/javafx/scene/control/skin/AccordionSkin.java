@@ -30,7 +30,6 @@ import javafx.beans.value.ChangeListener;
 import javafx.collections.ListChangeListener;
 import javafx.scene.Node;
 import javafx.scene.control.Accordion;
-import javafx.scene.control.Button;
 import javafx.scene.control.Control;
 import javafx.scene.control.Skin;
 import javafx.scene.control.SkinBase;
@@ -223,7 +222,7 @@ public class AccordionSkin extends SkinBase<Accordion> {
         double collapsedPanesHeight = 0;
         for (TitledPane tp : getSkinnable().getPanes()) {
             if (!tp.equals(expandedPane)) {
-                TitledPaneSkin childSkin = (TitledPaneSkin) ((TitledPane)tp).getSkin();
+                TitledPaneSkin childSkin = (TitledPaneSkin) tp.getSkin();
                 collapsedPanesHeight += snapSizeY(childSkin.getTitleRegionSize(w));
             }
         }

@@ -56,7 +56,7 @@ public class CheckBoxTreeTableCellTest {
         tableColumn = new TreeTableColumn<>();
         booleanProperty = new SimpleBooleanProperty(false);
         callback = param -> booleanProperty;
-        converter = new StringConverter<Object>() {
+        converter = new StringConverter<>() {
             @Override public String toString(Object object) {
                 return null;
             }
@@ -294,7 +294,7 @@ public class CheckBoxTreeTableCellTest {
     @Test public void test_updateItem_isNotEmpty_textIsNotNull_nonNullConverter() {
         CheckBoxTreeTableCell<Object, Object> cell = new CheckBoxTreeTableCell<>(callback);
         setTableViewAndTableColumn(cell);
-        cell.setConverter(new StringConverter<Object>() {
+        cell.setConverter(new StringConverter<>() {
             @Override public Object fromString(String string) {
                 return "ERROR";
             }

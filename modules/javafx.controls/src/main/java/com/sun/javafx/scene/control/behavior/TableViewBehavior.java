@@ -58,7 +58,7 @@ public class TableViewBehavior<T> extends TableViewBehaviorBase<TableView<T>, T,
             };
 
     private final WeakChangeListener<TableViewSelectionModel<T>> weakSelectionModelListener =
-            new WeakChangeListener<TableViewSelectionModel<T>>(selectionModelListener);
+            new WeakChangeListener<>(selectionModelListener);
 
     private TwoLevelFocusBehavior tlFocus;
 

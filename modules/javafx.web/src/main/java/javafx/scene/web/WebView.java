@@ -798,7 +798,7 @@ final public class WebView extends Parent {
     private static final class StyleableProperties {
 
         private static final CssMetaData<WebView, Boolean> CONTEXT_MENU_ENABLED
-                = new CssMetaData<WebView, Boolean>(
+                = new CssMetaData<>(
                 "-fx-context-menu-enabled",
                 BooleanConverter.getInstance(),
                 DEFAULT_CONTEXT_MENU_ENABLED)
@@ -812,9 +812,9 @@ final public class WebView extends Parent {
         };
 
         private static final CssMetaData<WebView, FontSmoothingType> FONT_SMOOTHING_TYPE
-                = new CssMetaData<WebView, FontSmoothingType>(
+                = new CssMetaData<>(
                 "-fx-font-smoothing-type",
-                new EnumConverter<FontSmoothingType>(FontSmoothingType.class),
+                new EnumConverter<>(FontSmoothingType.class),
                 DEFAULT_FONT_SMOOTHING_TYPE) {
             @Override
             public boolean isSettable(WebView view) {
@@ -842,7 +842,7 @@ final public class WebView extends Parent {
                 };
 
         private static final CssMetaData<WebView, Number> ZOOM
-                = new CssMetaData<WebView, Number>(
+                = new CssMetaData<>(
                 "-fx-zoom",
                 SizeConverter.getInstance(),
                 DEFAULT_ZOOM) {
@@ -855,7 +855,7 @@ final public class WebView extends Parent {
         };
 
         private static final CssMetaData<WebView, Number> FONT_SCALE
-                = new CssMetaData<WebView, Number>(
+                = new CssMetaData<>(
                 "-fx-font-scale",
                 SizeConverter.getInstance(),
                 DEFAULT_FONT_SCALE) {
@@ -870,7 +870,7 @@ final public class WebView extends Parent {
         };
 
         private static final CssMetaData<WebView, Number> MIN_WIDTH
-                = new CssMetaData<WebView, Number>(
+                = new CssMetaData<>(
                 "-fx-min-width",
                 SizeConverter.getInstance(),
                 DEFAULT_MIN_WIDTH) {
@@ -885,7 +885,7 @@ final public class WebView extends Parent {
         };
 
         private static final CssMetaData<WebView, Number> MIN_HEIGHT
-                = new CssMetaData<WebView, Number>(
+                = new CssMetaData<>(
                 "-fx-min-height",
                 SizeConverter.getInstance(),
                 DEFAULT_MIN_HEIGHT) {
@@ -900,7 +900,7 @@ final public class WebView extends Parent {
         };
 
         private static final CssMetaData<WebView, Number> MAX_WIDTH
-                = new CssMetaData<WebView, Number>(
+                = new CssMetaData<>(
                 "-fx-max-width",
                 SizeConverter.getInstance(),
                 DEFAULT_MAX_WIDTH) {
@@ -915,7 +915,7 @@ final public class WebView extends Parent {
         };
 
         private static final CssMetaData<WebView, Number> MAX_HEIGHT
-                = new CssMetaData<WebView, Number>(
+                = new CssMetaData<>(
                 "-fx-max-height",
                 SizeConverter.getInstance(),
                 DEFAULT_MAX_HEIGHT) {
@@ -930,7 +930,7 @@ final public class WebView extends Parent {
         };
 
         private static final CssMetaData<WebView, Number> PREF_WIDTH
-                = new CssMetaData<WebView, Number>(
+                = new CssMetaData<>(
                 "-fx-pref-width",
                 SizeConverter.getInstance(),
                 DEFAULT_PREF_WIDTH) {
@@ -945,7 +945,7 @@ final public class WebView extends Parent {
         };
 
         private static final CssMetaData<WebView, Number> PREF_HEIGHT
-                = new CssMetaData<WebView, Number>(
+                = new CssMetaData<>(
                 "-fx-pref-height",
                 SizeConverter.getInstance(),
                 DEFAULT_PREF_HEIGHT) {
@@ -963,7 +963,7 @@ final public class WebView extends Parent {
 
         static {
             List<CssMetaData<? extends Styleable, ?>> styleables
-                    = new ArrayList<CssMetaData<? extends Styleable, ?>>(Parent.getClassCssMetaData());
+                    = new ArrayList<>(Parent.getClassCssMetaData());
             styleables.add(CONTEXT_MENU_ENABLED);
             styleables.add(FONT_SMOOTHING_TYPE);
             styleables.add(PAGE_FILL);
@@ -1201,7 +1201,7 @@ final public class WebView extends Parent {
     }
 
     private static TransferMode[] getFXDndAction(int wkDndAction) {
-        LinkedList<TransferMode> tms = new LinkedList<TransferMode>();
+        LinkedList<TransferMode> tms = new LinkedList<>();
         if ((wkDndAction & WK_DND_ACTION_COPY) != 0)
             tms.add(TransferMode.COPY);
         if ((wkDndAction & WK_DND_ACTION_MOVE) != 0)

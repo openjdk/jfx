@@ -25,13 +25,11 @@
 
 package test.javafx.scene.web;
 
-import com.sun.javafx.PlatformUtil;
 import java.lang.management.ManagementFactory;
 import java.lang.management.ThreadMXBean;
 import javafx.event.EventHandler;
 import javafx.scene.web.WebEvent;
 import netscape.javascript.JSException;
-import org.junit.Assume;
 import org.junit.Test;
 import org.junit.Ignore;
 
@@ -59,6 +57,7 @@ public class IrresponsiveScriptTest extends TestBase {
         // and checks that it is not interrupted.
         final int TIMEOUT = 24;    // seconds
         getEngine().setOnAlert(new EventHandler<WebEvent<String>>() {
+            @Override
             public void handle(WebEvent<String> ev) {
                 try {
                     synchronized (this) {

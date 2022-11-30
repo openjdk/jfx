@@ -94,6 +94,7 @@ public class CookieShim {
         return cookie.equals(cs != null ? cs.cookie: null);
     }
 
+    @Override
     public int hashCode() {
         return cookie.hashCode();
     }

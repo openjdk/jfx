@@ -73,7 +73,10 @@ public class MenuBarTest {
     @Before public void setup() {
         setUncaughtExceptionHandler();
 
-        tk = (StubToolkit)Toolkit.getToolkit();
+        tk = Toolkit.getToolkit();
+
+        assertTrue(tk instanceof StubToolkit);  // Ensure it's StubToolkit
+
         menuBar = new MenuBar();
         menuBar.setUseSystemMenuBar(false);
     }

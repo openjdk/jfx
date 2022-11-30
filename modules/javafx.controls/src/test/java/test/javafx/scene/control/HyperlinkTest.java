@@ -226,7 +226,7 @@ public class HyperlinkTest {
 
     @Test public void onActionCanBeBound() {
         final EventHandler<ActionEvent> handler = new EventHandlerStub();
-        ObjectProperty<EventHandler<ActionEvent>> other = new SimpleObjectProperty<EventHandler<ActionEvent>>(handler);
+        ObjectProperty<EventHandler<ActionEvent>> other = new SimpleObjectProperty<>(handler);
         link.onActionProperty().bind(other);
         assertEquals(handler, link.getOnAction());
     }
@@ -247,7 +247,7 @@ public class HyperlinkTest {
         @Override public void handle(ActionEvent event) {
             called = true;
         }
-    };
+    }
 
     /********************************************************************************
      *                                                                              *
