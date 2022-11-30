@@ -442,7 +442,7 @@ class ColorPalette extends Region {
         NORMAL,
         STANDARD,
         CUSTOM
-    };
+    }
 
     class ColorSquare extends StackPane {
         Rectangle rectangle;

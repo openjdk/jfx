@@ -52,7 +52,7 @@ public class ProgressBarTableCellTest {
         tableColumn = new TableColumn<>();
         booleanProperty = new SimpleBooleanProperty(false);
         callback = param -> booleanProperty;
-        converter = new StringConverter<Object>() {
+        converter = new StringConverter<>() {
             @Override public String toString(Object object) {
                 return null;
             }

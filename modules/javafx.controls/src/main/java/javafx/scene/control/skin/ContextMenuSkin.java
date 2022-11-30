@@ -35,7 +35,6 @@ import javafx.geometry.Bounds;
 import javafx.scene.AccessibleAttribute;
 import javafx.scene.Node;
 import javafx.scene.control.ContextMenu;
-import javafx.scene.control.Control;
 import javafx.scene.control.Menu;
 import javafx.scene.control.Skin;
 import javafx.scene.input.KeyCode;
@@ -85,7 +84,7 @@ public class ContextMenuSkin implements Skin<ContextMenu> {
      **************************************************************************/
 
     // Fix for RT-18247
-    private final EventHandler<KeyEvent> keyListener = new EventHandler<KeyEvent>() {
+    private final EventHandler<KeyEvent> keyListener = new EventHandler<>() {
         @Override public void handle(KeyEvent event) {
             if (event.getEventType() != KeyEvent.KEY_PRESSED) return;
 

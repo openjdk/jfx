@@ -42,7 +42,7 @@ import org.junit.Test;
 
 public class LoadNotificationsTest extends TestBase {
 
-    Set<State> log = new HashSet<State>();
+    Set<State> log = new HashSet<>();
     AssertionError assertion;
     String currentUrl;
 

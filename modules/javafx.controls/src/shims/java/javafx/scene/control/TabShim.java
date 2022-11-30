@@ -25,7 +25,6 @@
 package javafx.scene.control;
 
 import javafx.scene.Node;
-import javafx.scene.control.Tab;
 
 public class TabShim extends Tab {
 

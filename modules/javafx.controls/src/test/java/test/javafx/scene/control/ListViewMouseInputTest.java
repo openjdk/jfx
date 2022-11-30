@@ -60,7 +60,7 @@ public class ListViewMouseInputTest {
     private StageLoader stageLoader;
 
     @Before public void setup() {
-        listView = new ListView<String>();
+        listView = new ListView<>();
         sm = listView.getSelectionModel();
         fm = listView.getFocusModel();
 

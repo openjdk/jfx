@@ -34,7 +34,6 @@ import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleIntegerProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ObservableValue;
-import javafx.beans.value.WritableValue;
 import javafx.css.CssMetaData;
 import javafx.css.StyleableIntegerProperty;
 import javafx.css.Styleable;
@@ -303,7 +302,7 @@ public class Pagination extends Control {
     public final IntegerProperty currentPageIndexProperty() { return currentPageIndex; }
 
     private ObjectProperty<Callback<Integer, Node>> pageFactory =
-            new SimpleObjectProperty<Callback<Integer, Node>>(this, "pageFactory");
+            new SimpleObjectProperty<>(this, "pageFactory");
 
     /**
      * Sets the page factory callback function.
@@ -353,7 +352,7 @@ public class Pagination extends Control {
 
     private static class StyleableProperties {
         private static final CssMetaData<Pagination,Number> MAX_PAGE_INDICATOR_COUNT =
-            new CssMetaData<Pagination,Number>("-fx-max-page-indicator-count",
+            new CssMetaData<>("-fx-max-page-indicator-count",
                 SizeConverter.getInstance(), DEFAULT_MAX_PAGE_INDICATOR_COUNT) {
 
             @Override
@@ -363,13 +362,13 @@ public class Pagination extends Control {
 
             @Override
             public StyleableProperty<Number> getStyleableProperty(Pagination n) {
-                return (StyleableProperty<Number>)(WritableValue<Number>)n.maxPageIndicatorCountProperty();
+                return (StyleableProperty<Number>)n.maxPageIndicatorCountProperty();
             }
         };
         private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
         static {
             final List<CssMetaData<? extends Styleable, ?>> styleables =
-                new ArrayList<CssMetaData<? extends Styleable, ?>>(Control.getClassCssMetaData());
+                new ArrayList<>(Control.getClassCssMetaData());
             styleables.add(MAX_PAGE_INDICATOR_COUNT);
             STYLEABLES = Collections.unmodifiableList(styleables);
         }

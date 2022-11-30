@@ -63,7 +63,7 @@ public class TextFormatter<V> {
      * This string converter converts the text to the same String value. This might be useful for cases where you
      * want to manipulate with the text through the value or you need to provide a default text value.
      */
-    public static final StringConverter<String> IDENTITY_STRING_CONVERTER = new StringConverter<String>() {
+    public static final StringConverter<String> IDENTITY_STRING_CONVERTER = new StringConverter<>() {
         @Override
         public String toString(String object) {
             return object == null ? "" : object;
@@ -145,7 +145,7 @@ public class TextFormatter<V> {
      * The current value for this formatter. When the formatter is set on a {@code TextInputControl} and has a
      * {@code valueConverter}, the value is set by the control, when the text is commited.
      */
-    private final ObjectProperty<V> value = new ObjectPropertyBase<V>() {
+    private final ObjectProperty<V> value = new ObjectPropertyBase<>() {
 
         @Override
         public Object getBean() {
