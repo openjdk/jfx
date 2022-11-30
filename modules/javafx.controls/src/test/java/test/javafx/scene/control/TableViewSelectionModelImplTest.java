@@ -121,7 +121,7 @@ public class TableViewSelectionModelImplTest {
         if (TableViewSelectionModel.class.isAssignableFrom(modelClass)) {
             // recreate the selection model
             model = TreeViewShim.newInstance_from_class(modelClass, tableView);
-            tableView.setSelectionModel((TableViewSelectionModel) model);
+            tableView.setSelectionModel(model);
 
             // create a new focus model
             focusModel = new TableViewFocusModel(tableView);

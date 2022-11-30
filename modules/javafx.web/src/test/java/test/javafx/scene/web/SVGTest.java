@@ -32,8 +32,6 @@ import java.awt.image.BufferedImage;
 import java.util.HashMap;
 import javafx.scene.web.WebEngineShim;
 import org.junit.Test;
-import org.w3c.dom.Document;
-import static java.lang.String.format;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;

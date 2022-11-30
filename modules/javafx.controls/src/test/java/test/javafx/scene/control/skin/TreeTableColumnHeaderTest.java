@@ -61,10 +61,10 @@ public class TreeTableColumnHeaderTest {
     public void before() {
         TreeItem<Person> root = new TreeItem<>(new Person("Witty quotes", "", ""));
         root.getChildren().addAll(List.of(
-            new TreeItem<Person>(new Person(NAME0, 76)),
-            new TreeItem<Person>(new Person(NAME1, 30)),
-            new TreeItem<Person>(new Person(NAME2, 30)),
-            new TreeItem<Person>(new Person(NAME3, 8))
+            new TreeItem<>(new Person(NAME0, 76)),
+            new TreeItem<>(new Person(NAME1, 30)),
+            new TreeItem<>(new Person(NAME2, 30)),
+            new TreeItem<>(new Person(NAME3, 8))
         ));
 
         TreeTableColumn<Person, String> column = new TreeTableColumn<>("Col ");
@@ -117,7 +117,7 @@ public class TreeTableColumnHeaderTest {
         TreeTableRow<Person> row = new TreeTableRow<>() {
             protected Skin<?> createDefaultSkin() {
                 return new CustomSkin(this);
-            };
+            }
         };
         return row;
     }

@@ -26,8 +26,6 @@
 package test.javafx.scene.control;
 
 import com.sun.javafx.event.EventUtil;
-import test.com.sun.javafx.pgstub.StubScene;
-
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.scene.Group;

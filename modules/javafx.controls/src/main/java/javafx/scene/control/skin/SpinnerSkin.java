@@ -121,6 +121,7 @@ public class SpinnerSkin<T> extends SkinBase<Spinner<T>> {
         incrementArrow.setMouseTransparent(true);
 
         incrementArrowButton = new StackPane() {
+            @Override
             public void executeAccessibleAction(AccessibleAction action, Object... parameters) {
                 switch (action) {
                     case FIRE: getSkinnable().increment(); break;
@@ -146,6 +147,7 @@ public class SpinnerSkin<T> extends SkinBase<Spinner<T>> {
         decrementArrow.setMouseTransparent(true);
 
         decrementArrowButton = new StackPane() {
+            @Override
             public void executeAccessibleAction(AccessibleAction action, Object... parameters) {
                 switch (action) {
                     case FIRE: getSkinnable().decrement(); break;

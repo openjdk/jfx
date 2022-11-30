@@ -110,7 +110,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
      **************************************************************************/
 
     private boolean itemCountDirty;
-    private final ListChangeListener<T> listViewItemsListener = new ListChangeListener<T>() {
+    private final ListChangeListener<T> listViewItemsListener = new ListChangeListener<>() {
         @Override public void onChanged(ListChangeListener.Change<? extends T> c) {
             itemCountDirty = true;
             getSkinnable().requestLayout();
@@ -120,7 +120,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
     private final InvalidationListener itemsObserver;
 
     private final WeakListChangeListener<T> weakListViewItemsListener =
-            new WeakListChangeListener<T>(listViewItemsListener);
+            new WeakListChangeListener<>(listViewItemsListener);
 
 
     /* *************************************************************************
@@ -498,9 +498,9 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
     }
 
     private Callback<ListView<T>, ListCell<T>> getDefaultCellFactory() {
-        return new Callback<ListView<T>, ListCell<T>>() {
+        return new Callback<>() {
             @Override public ListCell<T> call(ListView<T> listView) {
-                return new ListCell<T>() {
+                return new ListCell<>() {
                     @Override public void updateItem(T item, boolean empty) {
                         super.updateItem(item, empty);
                         updateDisplayText(this, item, empty);
@@ -511,7 +511,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
     }
 
     private ListView<T> createListView() {
-        final ListView<T> _listView = new ListView<T>() {
+        final ListView<T> _listView = new ListView<>() {
 
             {
                 getProperties().put("selectFirstRowByDefault", false);

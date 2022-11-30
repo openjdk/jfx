@@ -43,12 +43,12 @@ public final class PluginManager {
         ServiceLoader.load(PluginHandler.class);
 
     private static final TreeMap<String,PluginHandler> hndMap =
-        new TreeMap<String,PluginHandler>();
+        new TreeMap<>();
 
     private static PluginHandler[] hndArray;
 
     private static final HashSet<String> disabledPluginHandlers =
-        new HashSet<String>();
+        new HashSet<>();
 
 
     private static void updatePluginHandlers() {
@@ -107,7 +107,7 @@ public final class PluginManager {
 
 
     private static List<PluginHandler> getAvailablePlugins() {
-        Vector<PluginHandler> res = new Vector<PluginHandler>();
+        Vector<PluginHandler> res = new Vector<>();
         Iterator<PluginHandler> iter = pHandlers.iterator();
         while(iter.hasNext()) {
             PluginHandler hnd = iter.next();

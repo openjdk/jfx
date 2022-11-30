@@ -65,6 +65,7 @@ public class MediaViewHelper extends NodeHelper {
         mediaViewAccessor.doUpdatePeer(node);
     }
 
+    @Override
     protected void transformsChangedImpl(Node node) {
         super.transformsChangedImpl(node);
         mediaViewAccessor.doTransformsChanged(node);

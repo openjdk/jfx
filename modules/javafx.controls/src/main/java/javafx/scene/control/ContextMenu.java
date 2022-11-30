@@ -168,7 +168,7 @@ public class ContextMenu extends PopupControl {
      * all parent menus as well, so that it is not necessary to listen to all
      * sub menus for events.
      */
-    private ObjectProperty<EventHandler<ActionEvent>> onAction = new ObjectPropertyBase<EventHandler<ActionEvent>>() {
+    private ObjectProperty<EventHandler<ActionEvent>> onAction = new ObjectPropertyBase<>() {
         @Override protected void invalidated() {
             setEventHandler(ActionEvent.ACTION, get());
        }
@@ -187,7 +187,7 @@ public class ContextMenu extends PopupControl {
     public final EventHandler<ActionEvent> getOnAction() { return onActionProperty().get(); }
     public final ObjectProperty<EventHandler<ActionEvent>> onActionProperty() { return onAction; }
 
-    private final ObservableList<MenuItem> items = new TrackableObservableList<MenuItem>() {
+    private final ObservableList<MenuItem> items = new TrackableObservableList<>() {
         @Override protected void onChanged(Change<MenuItem> c) {
             while (c.next()) {
                 for (MenuItem item : c.getRemoved()) {
