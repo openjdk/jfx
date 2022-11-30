@@ -82,8 +82,8 @@ public class ResizeHelper {
         boolean needsAnotherPass;
         do {
             needsAnotherPass = false;
-            double sumWidths = 0.0;
-            double sumMins = 0.0;
+            int sumWidths = 0;
+            int sumMins = 0;
             for (int i = 0; i < count; i++) {
                 sumWidths += size[i];
                 sumMins += min[i];
@@ -99,18 +99,18 @@ public class ResizeHelper {
             }
 
             // remove fixed and skipped columns from consideration
-            double total = 0.0;
+            int total = 0;
             for (int i = 0; i < count; i++) {
                 if (!skip.get(i)) {
-                    total += step1(i);
+                    total += pref[i];
                 }
             }
 
-            if (isZero(total)) {
+            if (total == 0) {
                 return;
             }
 
-            double acc = 0.0; // accumulating widths of processed columns
+            int acc = 0; // accumulating widths of processed columns
             double rem = 0.0; // remainder from previous column
 
             for (int i = 0; i < count; i++) {
@@ -118,7 +118,7 @@ public class ResizeHelper {
                     continue;
                 }
 
-                double dw = rem + (delta * step1(i) / total);
+                double dw = rem + (delta * pref[i] / total);
                 int w = (int)Math.round(size[i] + dw);
                 if (w < min[i]) {
                     rem = (w - min[i]);
@@ -143,15 +143,6 @@ public class ResizeHelper {
             }
 
         } while (needsAnotherPass);
-    }
-
-    protected int step1(int ix) {
-        int w = pref[ix] - size[ix];
-        if(w <= 0) {
-            return size[ix];
-        } else {
-            return pref[ix];
-        }
     }
 
     /**
