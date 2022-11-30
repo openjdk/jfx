@@ -297,65 +297,64 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
                     // process right left and may be tab key events
                     if (focusedMenu != null) {
                         switch (ev.getCode()) {
-                            case LEFT: {
-                                boolean isRTL = control.getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT;
-                                if (control.getScene().getWindow().isFocused()) {
-                                    if (openMenu != null && !openMenu.isShowing()) {
-                                        if (isRTL) {
-                                            moveToMenu(Direction.NEXT, false); // just move the selection bar
-                                        } else {
-                                            moveToMenu(Direction.PREVIOUS, false); // just move the selection bar
-                                        }
-                                        ev.consume();
-                                        return;
-                                    }
+                        case LEFT: {
+                            boolean isRTL = control.getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT;
+                            if (control.getScene().getWindow().isFocused()) {
+                                if (openMenu != null && !openMenu.isShowing()) {
                                     if (isRTL) {
-                                        moveToMenu(Direction.NEXT, true);
+                                        moveToMenu(Direction.NEXT, false); // just move the selection bar
                                     } else {
-                                        moveToMenu(Direction.PREVIOUS, true);
+                                        moveToMenu(Direction.PREVIOUS, false); // just move the selection bar
                                     }
+                                    ev.consume();
+                                    return;
                                 }
-                                ev.consume();
-                                break;
+                                if (isRTL) {
+                                    moveToMenu(Direction.NEXT, true);
+                                } else {
+                                    moveToMenu(Direction.PREVIOUS, true);
+                                }
                             }
-                            case RIGHT:
-                            {
-                                boolean isRTL = control.getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT;
-                                if (control.getScene().getWindow().isFocused()) {
-                                    if (openMenu != null && !openMenu.isShowing()) {
-                                        if (isRTL) {
-                                            moveToMenu(Direction.PREVIOUS, false); // just move the selection bar
-                                        } else {
-                                            moveToMenu(Direction.NEXT, false); // just move the selection bar
-                                        }
-                                        ev.consume();
-                                        return;
-                                    }
+                            ev.consume();
+                            break;
+                        }
+                        case RIGHT: {
+                            boolean isRTL = control.getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT;
+                            if (control.getScene().getWindow().isFocused()) {
+                                if (openMenu != null && !openMenu.isShowing()) {
                                     if (isRTL) {
-                                        moveToMenu(Direction.PREVIOUS, true);
+                                        moveToMenu(Direction.PREVIOUS, false); // just move the selection bar
                                     } else {
-                                        moveToMenu(Direction.NEXT, true);
+                                        moveToMenu(Direction.NEXT, false); // just move the selection bar
                                     }
+                                    ev.consume();
+                                    return;
                                 }
-                                ev.consume();
-                                break;
+                                if (isRTL) {
+                                    moveToMenu(Direction.PREVIOUS, true);
+                                } else {
+                                    moveToMenu(Direction.NEXT, true);
+                                }
                             }
-                            case DOWN:
-                            //case SPACE:
-                            //case ENTER:
-                                // RT-18859: Doing nothing for space and enter
-                                if (control.getScene().getWindow().isFocused()) {
-                                    if (focusedMenuIndex != -1) {
-                                        Menu menuToOpen = getSkinnable().getMenus().get(focusedMenuIndex);
-                                        showMenu(menuToOpen, true);
-                                        ev.consume();
-                                    }
+                            ev.consume();
+                            break;
+                        }
+                        case DOWN:
+                            // case SPACE:
+                            // case ENTER:
+                            // RT-18859: Doing nothing for space and enter
+                            if (control.getScene().getWindow().isFocused()) {
+                                if (focusedMenuIndex != -1) {
+                                    Menu menuToOpen = getSkinnable().getMenus().get(focusedMenuIndex);
+                                    showMenu(menuToOpen, true);
+                                    ev.consume();
                                 }
-                                break;
-                            case ESCAPE:
-                                unSelectMenus();
-                                ev.consume();
-                                break;
+                            }
+                            break;
+                        case ESCAPE:
+                            unSelectMenus();
+                            ev.consume();
+                            break;
                         default:
                             break;
                         }
@@ -1177,7 +1176,7 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
             };
 
     private static final CssMetaData<MenuBar,Pos> ALIGNMENT =
-            new CssMetaData<>("-fx-alignment", new EnumConverter<Pos>(Pos.class), Pos.TOP_LEFT ) {
+            new CssMetaData<>("-fx-alignment", new EnumConverter<>(Pos.class), Pos.TOP_LEFT ) {
                 @Override
                 public boolean isSettable(MenuBar n) {
                     final MenuBarSkin skin = (MenuBarSkin) n.getSkin();
