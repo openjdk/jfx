@@ -45,7 +45,6 @@ import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ReadOnlyProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.WeakChangeListener;
-import javafx.beans.value.WritableValue;
 import javafx.collections.ListChangeListener;
 import javafx.collections.MapChangeListener;
 import javafx.collections.ObservableList;
@@ -178,6 +177,7 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
     };
 
     Runnable firstMenuRunnable = new Runnable() {
+        @Override
         public void run() {
             /*
             ** check that this menubar's container has contents,
@@ -234,7 +234,7 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
                 openMenuButton.setHover();
             }
         };
-        weakMenuBarFocusedPropertyListener = new WeakChangeListener(menuBarFocusedPropertyListener);
+        weakMenuBarFocusedPropertyListener = new WeakChangeListener<>(menuBarFocusedPropertyListener);
 
         menuVisibilityChangeListener = (ov, t, t1) -> {
             rebuildUI();
@@ -1162,9 +1162,7 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
      **************************************************************************/
 
     private static final CssMetaData<MenuBar,Number> SPACING =
-            new CssMetaData<MenuBar,Number>("-fx-spacing",
-                    SizeConverter.getInstance(), 0.0) {
-
+            new CssMetaData<>("-fx-spacing", SizeConverter.getInstance(), 0.0) {
                 @Override
                 public boolean isSettable(MenuBar n) {
                     final MenuBarSkin skin = (MenuBarSkin) n.getSkin();
@@ -1174,14 +1172,12 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
                 @Override
                 public StyleableProperty<Number> getStyleableProperty(MenuBar n) {
                     final MenuBarSkin skin = (MenuBarSkin) n.getSkin();
-                    return (StyleableProperty<Number>)(WritableValue<Number>)skin.spacingProperty();
+                    return (StyleableProperty<Number>)skin.spacingProperty();
                 }
             };
 
     private static final CssMetaData<MenuBar,Pos> ALIGNMENT =
-            new CssMetaData<MenuBar,Pos>("-fx-alignment",
-                    new EnumConverter<Pos>(Pos.class), Pos.TOP_LEFT ) {
-
+            new CssMetaData<>("-fx-alignment", new EnumConverter<Pos>(Pos.class), Pos.TOP_LEFT ) {
                 @Override
                 public boolean isSettable(MenuBar n) {
                     final MenuBarSkin skin = (MenuBarSkin) n.getSkin();
@@ -1191,16 +1187,13 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
                 @Override
                 public StyleableProperty<Pos> getStyleableProperty(MenuBar n) {
                     final MenuBarSkin skin = (MenuBarSkin) n.getSkin();
-                    return (StyleableProperty<Pos>)(WritableValue<Pos>)skin.containerAlignmentProperty();
+                    return (StyleableProperty<Pos>)skin.containerAlignmentProperty();
                 }
             };
 
-
     private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
     static {
-
-        final List<CssMetaData<? extends Styleable, ?>> styleables =
-                new ArrayList<CssMetaData<? extends Styleable, ?>>(SkinBase.getClassCssMetaData());
+        final List<CssMetaData<? extends Styleable, ?>> styleables = new ArrayList<>(SkinBase.getClassCssMetaData());
 
         // StackPane also has -fx-alignment. Replace it with
         // MenuBarSkin's.
@@ -1214,7 +1207,6 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
         styleables.add(SPACING);
         styleables.add(ALIGNMENT);
         STYLEABLES = Collections.unmodifiableList(styleables);
-
     }
 
     /**

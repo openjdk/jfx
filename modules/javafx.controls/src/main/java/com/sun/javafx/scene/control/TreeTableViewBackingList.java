@@ -29,8 +29,6 @@ import javafx.collections.FXCollections;
 import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeTableView;
 
-import java.util.List;
-
 /**
  * A simple read only list structure that maps into the TreeTableView tree
  * structure.

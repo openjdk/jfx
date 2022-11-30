@@ -35,11 +35,7 @@ import javax.imageio.ImageIO;
 
 import netscape.javascript.JSObject;
 import org.junit.After;
-import org.junit.Ignore;
 import org.junit.Test;
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
-
 import static org.junit.Assert.*;
 
 /**

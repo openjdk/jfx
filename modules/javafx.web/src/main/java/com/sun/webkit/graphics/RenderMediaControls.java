@@ -245,7 +245,7 @@ final class RenderMediaControls {
     }
 
     private static final Map<String, WCImage> controlImages
-            = new HashMap<String, WCImage>();
+            = new HashMap<>();
 
     private static WCImage getControlImage(String resName) {
         WCImage image = controlImages.get(resName);

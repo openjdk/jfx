@@ -118,6 +118,7 @@ public class CategoryAxisTest {
     }
 
 
+    @SuppressWarnings("cast")
     @Test public void checkCategorySpacingReadOnlyCannotBind() {
         assertTrue(axis.categorySpacingProperty() instanceof ReadOnlyDoubleProperty);
     }

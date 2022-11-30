@@ -476,7 +476,7 @@ public class CookieTest {
      * Tests the hasExpired() method.
      */
     @Test
-    public void testHasExpired() throws InterruptedException {
+    public void testHasExpired() {
         ExtendedTimeShim currentTime = ExtendedTimeShim.currentTime();
         CookieShim cookie = CookieShim.parse("foo=bar; Max-Age=0", currentTime);
         assertTrue(cookie.hasExpired());

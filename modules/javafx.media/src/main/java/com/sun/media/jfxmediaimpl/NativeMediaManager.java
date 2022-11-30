@@ -36,7 +36,6 @@ import java.security.AccessController;
 import java.security.PrivilegedActionException;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
@@ -336,7 +335,7 @@ public class NativeMediaManager {
                 }
             }
 
-            this.errorListeners.add(new WeakReference<MediaErrorListener>(listener));
+            this.errorListeners.add(new WeakReference<>(listener));
         }
     }
 
@@ -379,7 +378,7 @@ public class NativeMediaManager {
         List<MediaPlayer> allPlayers = null;
 
         if (!allMediaPlayers.isEmpty()) {
-            allPlayers = new ArrayList<MediaPlayer>(allMediaPlayers.keySet());
+            allPlayers = new ArrayList<>(allMediaPlayers.keySet());
         }
 
         return allPlayers;
@@ -394,6 +393,7 @@ public class NativeMediaManager {
 
     private static class NativeMediaPlayerDisposer implements MediaDisposer.ResourceDisposer {
 
+        @Override
         public void disposeResource(Object resource) {
             // resource is a MediaPlayer
             MediaPlayer player = (MediaPlayer) resource;
