@@ -207,7 +207,7 @@ public class TableViewSkin<T> extends TableViewSkinBase<T, T, TableView<T>, Tabl
         if (tableView.getRowFactory() != null) {
             cell = tableView.getRowFactory().call(tableView);
         } else {
-            cell = new TableRow<T>();
+            cell = new TableRow<>();
         }
 
         cell.updateTableView(tableView);

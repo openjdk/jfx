@@ -24,8 +24,6 @@
  */
 package com.sun.media.jfxmedia.events;
 
-import com.sun.media.jfxmediaimpl.MediaUtils;
-
 /**
  * An event indicating a change in the state of a media player.
  */
@@ -34,7 +32,7 @@ public class PlayerStateEvent extends PlayerEvent {
     public enum PlayerState {
 
         UNKNOWN, READY, PLAYING, PAUSED, STOPPED, STALLED, FINISHED, HALTED
-    };
+    }
 
     private PlayerState playerState;
     private double playerTime;

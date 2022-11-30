@@ -492,7 +492,7 @@ public class UserDataDirectoryTest extends TestBase {
     }
 
     @Test
-    public void testNoFxThreadCheck() throws IOException {
+    public void testNoFxThreadCheck() {
         webEngine.getUserDataDirectory();
         webEngine.setUserDataDirectory(FOO);
     }

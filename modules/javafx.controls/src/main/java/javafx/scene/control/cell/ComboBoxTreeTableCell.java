@@ -165,7 +165,7 @@ public class ComboBoxTreeTableCell<S,T> extends TreeTableCell<S,T> {
     public static <S,T> Callback<TreeTableColumn<S,T>, TreeTableCell<S,T>> forTreeTableColumn(
             final StringConverter<T> converter,
             final ObservableList<T> items) {
-        return list -> new ComboBoxTreeTableCell<S,T>(converter, items);
+        return list -> new ComboBoxTreeTableCell<>(converter, items);
     }
 
 
@@ -263,7 +263,7 @@ public class ComboBoxTreeTableCell<S,T> extends TreeTableCell<S,T> {
 
     // --- converter
     private ObjectProperty<StringConverter<T>> converter =
-            new SimpleObjectProperty<StringConverter<T>>(this, "converter");
+            new SimpleObjectProperty<>(this, "converter");
 
     /**
      * The {@link StringConverter} property.

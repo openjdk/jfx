@@ -59,7 +59,6 @@ import java.util.Map;
 import javafx.scene.control.ColorPicker;
 import javafx.scene.control.TextField;
 import javafx.beans.property.BooleanProperty;
-import javafx.beans.value.WritableValue;
 import javafx.css.Styleable;
 import javafx.css.StyleableProperty;
 import javafx.scene.control.Label;
@@ -617,7 +616,7 @@ public class ColorPickerSkin extends ComboBoxPopupControl<Color> {
 
      private static class StyleableProperties {
         private static final CssMetaData<ColorPicker,Boolean> COLOR_LABEL_VISIBLE =
-                new CssMetaData<ColorPicker,Boolean>("-fx-color-label-visible",
+                new CssMetaData<>("-fx-color-label-visible",
                 BooleanConverter.getInstance(), Boolean.TRUE) {
 
             @Override public boolean isSettable(ColorPicker n) {
@@ -627,11 +626,11 @@ public class ColorPickerSkin extends ComboBoxPopupControl<Color> {
 
             @Override public StyleableProperty<Boolean> getStyleableProperty(ColorPicker n) {
                 final ColorPickerSkin skin = (ColorPickerSkin) n.getSkin();
-                return (StyleableProperty<Boolean>)(WritableValue<Boolean>)skin.colorLabelVisible;
+                return (StyleableProperty<Boolean>)skin.colorLabelVisible;
             }
         };
         private static final CssMetaData<ColorPicker,Number> COLOR_RECT_WIDTH =
-                new CssMetaData<ColorPicker,Number>("-fx-color-rect-width", SizeConverter.getInstance(), 12d) {
+                new CssMetaData<>("-fx-color-rect-width", SizeConverter.getInstance(), 12d) {
                     @Override public boolean isSettable(ColorPicker n) {
                         final ColorPickerSkin skin = (ColorPickerSkin) n.getSkin();
                         return !skin.colorRectWidth.isBound();
@@ -642,7 +641,7 @@ public class ColorPickerSkin extends ComboBoxPopupControl<Color> {
                     }
                 };
         private static final CssMetaData<ColorPicker,Number> COLOR_RECT_HEIGHT =
-                new CssMetaData<ColorPicker,Number>("-fx-color-rect-height", SizeConverter.getInstance(), 12d) {
+                new CssMetaData<>("-fx-color-rect-height", SizeConverter.getInstance(), 12d) {
                     @Override public boolean isSettable(ColorPicker n) {
                         final ColorPickerSkin skin = (ColorPickerSkin) n.getSkin();
                         return !skin.colorRectHeight.isBound();
@@ -653,7 +652,7 @@ public class ColorPickerSkin extends ComboBoxPopupControl<Color> {
                     }
                 };
         private static final CssMetaData<ColorPicker,Number> COLOR_RECT_X =
-                new CssMetaData<ColorPicker,Number>("-fx-color-rect-x", SizeConverter.getInstance(), 0) {
+                new CssMetaData<>("-fx-color-rect-x", SizeConverter.getInstance(), 0) {
                     @Override public boolean isSettable(ColorPicker n) {
                         final ColorPickerSkin skin = (ColorPickerSkin) n.getSkin();
                         return !skin.colorRectX.isBound();
@@ -664,7 +663,7 @@ public class ColorPickerSkin extends ComboBoxPopupControl<Color> {
                     }
                 };
         private static final CssMetaData<ColorPicker,Number> COLOR_RECT_Y =
-                new CssMetaData<ColorPicker,Number>("-fx-color-rect-y", SizeConverter.getInstance(), 0) {
+                new CssMetaData<>("-fx-color-rect-y", SizeConverter.getInstance(), 0) {
                     @Override public boolean isSettable(ColorPicker n) {
                         final ColorPickerSkin skin = (ColorPickerSkin) n.getSkin();
                         return !skin.colorRectY.isBound();
@@ -675,7 +674,7 @@ public class ColorPickerSkin extends ComboBoxPopupControl<Color> {
                     }
                 };
         private static final CssMetaData<ColorPicker,String> GRAPHIC =
-            new CssMetaData<ColorPicker,String>("-fx-graphic", StringConverter.getInstance()) {
+            new CssMetaData<>("-fx-graphic", StringConverter.getInstance()) {
                 @Override public boolean isSettable(ColorPicker n) {
                     final ColorPickerSkin skin = (ColorPickerSkin) n.getSkin();
                     return !skin.imageUrl.isBound();
@@ -688,7 +687,7 @@ public class ColorPickerSkin extends ComboBoxPopupControl<Color> {
         private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
         static {
             final List<CssMetaData<? extends Styleable, ?>> styleables =
-                new ArrayList<CssMetaData<? extends Styleable, ?>>(ComboBoxBaseSkin.getClassCssMetaData());
+                new ArrayList<>(ComboBoxBaseSkin.getClassCssMetaData());
             styleables.add(COLOR_LABEL_VISIBLE);
             styleables.add(COLOR_RECT_WIDTH);
             styleables.add(COLOR_RECT_HEIGHT);

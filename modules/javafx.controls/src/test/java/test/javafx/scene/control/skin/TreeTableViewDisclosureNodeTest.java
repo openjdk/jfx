@@ -304,7 +304,7 @@ public class TreeTableViewDisclosureNodeTest {
         rootExpandedChildIndex = 1;
         rootCollapsedChildIndex = 2;
         root = new TreeItem<>("Root");
-        treeTable = new TreeTableView<String>(root);
+        treeTable = new TreeTableView<>(root);
         fillTree(root);
 
         sm = treeTable.getSelectionModel();

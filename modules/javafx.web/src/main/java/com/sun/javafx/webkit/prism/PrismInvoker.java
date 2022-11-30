@@ -86,7 +86,7 @@ public final class PrismInvoker extends Invoker {
         if (Thread.currentThread().getName().startsWith("QuantumRenderer")) {
             r.run();
         } else {
-            FutureTask<Void> f = new FutureTask<Void>(r, null);
+            FutureTask<Void> f = new FutureTask<>(r, null);
             Toolkit.getToolkit().addRenderJob(new RenderJob(f));
             try {
                 // block until job is complete

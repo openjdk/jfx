@@ -922,7 +922,7 @@ public class ContextMenuContent extends Region {
         static {
 
             final List<CssMetaData<? extends Styleable, ?>> styleables =
-                new ArrayList<CssMetaData<? extends Styleable, ?>>(Region.getClassCssMetaData());
+                new ArrayList<>(Region.getClassCssMetaData());
 
             //
             // SkinBase only has Region's unique StlyleableProperty's, none of Nodes
