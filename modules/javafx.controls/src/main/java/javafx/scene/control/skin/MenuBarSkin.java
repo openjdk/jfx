@@ -239,7 +239,7 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
         menuVisibilityChangeListener = (ov, t, t1) -> {
             rebuildUI();
         };
-        weakMenuVisibilityChangeListener = new WeakChangeListener(menuVisibilityChangeListener);
+        weakMenuVisibilityChangeListener = new WeakChangeListener<>(menuVisibilityChangeListener);
 
         ListenerHelper lh = ListenerHelper.get(this);
 
