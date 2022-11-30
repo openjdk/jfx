@@ -118,7 +118,7 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
     };
 
     protected final WeakListChangeListener<TablePositionBase> weakSelectedCellsListener =
-            new WeakListChangeListener<TablePositionBase>(selectedCellsListener);
+            new WeakListChangeListener<>(selectedCellsListener);
 
 
 
@@ -574,7 +574,7 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
         int min = Math.min(start, end);
         int max = Math.max(start, end);
 
-        List<Integer> indices = new ArrayList<Integer>(sm.getSelectedIndices());
+        List<Integer> indices = new ArrayList<>(sm.getSelectedIndices());
 
         selectionChanging = true;
         for (int i = 0; i < indices.size(); i++) {

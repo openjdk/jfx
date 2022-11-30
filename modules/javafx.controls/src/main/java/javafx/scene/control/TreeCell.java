@@ -104,7 +104,7 @@ public class TreeCell<T> extends IndexedCell<T> {
      * Listens to the selectionModel property on the TreeView. Whenever the entire model is changed,
      * we have to unhook the weakSelectedListener and update the selection.
      */
-    private final ChangeListener<MultipleSelectionModel<TreeItem<T>>> selectionModelPropertyListener = new ChangeListener<MultipleSelectionModel<TreeItem<T>>>() {
+    private final ChangeListener<MultipleSelectionModel<TreeItem<T>>> selectionModelPropertyListener = new ChangeListener<>() {
         @Override public void changed(ObservableValue<? extends MultipleSelectionModel<TreeItem<T>>> observable,
                                       MultipleSelectionModel<TreeItem<T>> oldValue,
                                       MultipleSelectionModel<TreeItem<T>> newValue) {
@@ -126,7 +126,7 @@ public class TreeCell<T> extends IndexedCell<T> {
      * Listens to the focusModel property on the TreeView. Whenever the entire model is changed,
      * we have to unhook the weakFocusedListener and update the focus.
      */
-    private final ChangeListener<FocusModel<TreeItem<T>>> focusModelPropertyListener = new ChangeListener<FocusModel<TreeItem<T>>>() {
+    private final ChangeListener<FocusModel<TreeItem<T>>> focusModelPropertyListener = new ChangeListener<>() {
         @Override public void changed(ObservableValue<? extends FocusModel<TreeItem<T>>> observable,
                                       FocusModel<TreeItem<T>> oldValue,
                                       FocusModel<TreeItem<T>> newValue) {
@@ -173,10 +173,10 @@ public class TreeCell<T> extends IndexedCell<T> {
         updateItem(-1);
     };
 
-    private final WeakListChangeListener<Integer> weakSelectedListener = new WeakListChangeListener<Integer>(selectedListener);
-    private final WeakChangeListener<MultipleSelectionModel<TreeItem<T>>> weakSelectionModelPropertyListener = new WeakChangeListener<MultipleSelectionModel<TreeItem<T>>>(selectionModelPropertyListener);
+    private final WeakListChangeListener<Integer> weakSelectedListener = new WeakListChangeListener<>(selectedListener);
+    private final WeakChangeListener<MultipleSelectionModel<TreeItem<T>>> weakSelectionModelPropertyListener = new WeakChangeListener<>(selectionModelPropertyListener);
     private final WeakInvalidationListener weakFocusedListener = new WeakInvalidationListener(focusedListener);
-    private final WeakChangeListener<FocusModel<TreeItem<T>>> weakFocusModelPropertyListener = new WeakChangeListener<FocusModel<TreeItem<T>>>(focusModelPropertyListener);
+    private final WeakChangeListener<FocusModel<TreeItem<T>>> weakFocusModelPropertyListener = new WeakChangeListener<>(focusModelPropertyListener);
     private final WeakInvalidationListener weakEditingListener = new WeakInvalidationListener(editingListener);
     private final WeakInvalidationListener weakLeafListener = new WeakInvalidationListener(leafListener);
     private final WeakInvalidationListener weakTreeItemExpandedInvalidationListener =
@@ -194,7 +194,7 @@ public class TreeCell<T> extends IndexedCell<T> {
 
     // --- TreeItem
     private ReadOnlyObjectWrapper<TreeItem<T>> treeItem =
-        new ReadOnlyObjectWrapper<TreeItem<T>>(this, "treeItem") {
+        new ReadOnlyObjectWrapper<>(this, "treeItem") {
 
             TreeItem<T> oldValue = null;
 
@@ -234,7 +234,7 @@ public class TreeCell<T> extends IndexedCell<T> {
 
 
     // --- Disclosure Node
-    private ObjectProperty<Node> disclosureNode = new SimpleObjectProperty<Node>(this, "disclosureNode");
+    private ObjectProperty<Node> disclosureNode = new SimpleObjectProperty<>(this, "disclosureNode");
 
     /**
      * The node to use as the "disclosure" triangle, or toggle, used for
@@ -262,7 +262,7 @@ public class TreeCell<T> extends IndexedCell<T> {
 
 
     // --- TreeView
-    private ReadOnlyObjectWrapper<TreeView<T>> treeView = new ReadOnlyObjectWrapper<TreeView<T>>() {
+    private ReadOnlyObjectWrapper<TreeView<T>> treeView = new ReadOnlyObjectWrapper<>() {
         private WeakReference<TreeView<T>> weakTreeViewRef;
         @Override protected void invalidated() {
             MultipleSelectionModel<TreeItem<T>> sm;
@@ -311,7 +311,7 @@ public class TreeCell<T> extends IndexedCell<T> {
                 treeView.selectionModelProperty().addListener(weakSelectionModelPropertyListener);
                 treeView.rootProperty().addListener(weakRootPropertyListener);
 
-                weakTreeViewRef = new WeakReference<TreeView<T>>(treeView);
+                weakTreeViewRef = new WeakReference<>(treeView);
             }
 
             updateItem(-1);
@@ -381,7 +381,7 @@ public class TreeCell<T> extends IndexedCell<T> {
         treeItemAtStartEdit = getTreeItem();
          // Inform the TreeView of the edit starting.
         if (tree != null) {
-            tree.fireEvent(new TreeView.EditEvent<T>(tree,
+            tree.fireEvent(new TreeView.EditEvent<>(tree,
                     TreeView.<T>editStartEvent(),
                     treeItemAtStartEdit,
                     getItem(),
@@ -407,7 +407,7 @@ public class TreeCell<T> extends IndexedCell<T> {
         // JDK-8187307: fire the commit after updating cell's editing state
         if (tree != null) {
             // Inform the TreeView of the edit being ready to be committed.
-            tree.fireEvent(new TreeView.EditEvent<T>(tree,
+            tree.fireEvent(new TreeView.EditEvent<>(tree,
                     TreeView.<T>editCommitEvent(),
                     treeItem,
                     getItem(),
@@ -452,7 +452,7 @@ public class TreeCell<T> extends IndexedCell<T> {
             // It would be rude of us to request it back again.
             ControlUtils.requestFocusOnControlOnlyIfCurrentFocusOwnerIsChild(tree);
 
-            tree.fireEvent(new TreeView.EditEvent<T>(tree,
+            tree.fireEvent(new TreeView.EditEvent<>(tree,
                     TreeView.<T>editCancelEvent(),
                     editingItem,
                     value,
@@ -463,7 +463,7 @@ public class TreeCell<T> extends IndexedCell<T> {
 
     /** {@inheritDoc} */
     @Override protected Skin<?> createDefaultSkin() {
-        return new TreeCellSkin<T>(this);
+        return new TreeCellSkin<>(this);
     }
 
     /* *************************************************************************

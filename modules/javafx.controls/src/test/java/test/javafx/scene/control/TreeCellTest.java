@@ -72,7 +72,7 @@ public class TreeCellTest {
     private StageLoader stageLoader;
 
     @Before public void setup() {
-        cell = new TreeCell<String>();
+        cell = new TreeCell<>();
 
         root = new TreeItem<>(ROOT);
         apples = new TreeItem<>(APPLES);
@@ -80,7 +80,7 @@ public class TreeCellTest {
         pears = new TreeItem<>(PEARS);
         root.getChildren().addAll(apples, oranges, pears);
 
-        tree = new TreeView<String>(root);
+        tree = new TreeView<>(root);
         root.setExpanded(true);
     }
 
@@ -239,7 +239,7 @@ public class TreeCellTest {
     @Test public void itemIsUpdatedWhenItWasOutOfRangeButUpdatesToTreeViewItemsMakesItInRange() {
         cell.updateIndex(4);
         cell.updateTreeView(tree);
-        root.getChildren().addAll(new TreeItem<String>("Pumpkin"), new TreeItem<>("Lemon"));
+        root.getChildren().addAll(new TreeItem<>("Pumpkin"), new TreeItem<>("Lemon"));
         assertSame("Pumpkin", cell.getItem());
     }
 
@@ -301,7 +301,7 @@ public class TreeCellTest {
         TreeItem<String> newRoot = new TreeItem<>();
         newRoot.setExpanded(true);
         newRoot.getChildren().setAll(new TreeItem<>("Water"), new TreeItem<>("Juice"), new TreeItem<>("Soda"));
-        TreeView<String> treeView2 = new TreeView<String>(newRoot);
+        TreeView<String> treeView2 = new TreeView<>(newRoot);
         cell.updateTreeView(treeView2);
         assertEquals("Juice", cell.getItem());
     }
@@ -342,7 +342,7 @@ public class TreeCellTest {
         cell.updateTreeView(tree);
         cell.updateIndex(0);
 
-        TreeCell<String> other = new TreeCell<String>();
+        TreeCell<String> other = new TreeCell<>();
         other.updateTreeView(tree);
         other.updateIndex(1);
 
@@ -355,7 +355,7 @@ public class TreeCellTest {
         cell.updateTreeView(tree);
         cell.updateIndex(0);
 
-        TreeCell<String> other = new TreeCell<String>();
+        TreeCell<String> other = new TreeCell<>();
         other.updateTreeView(tree);
         other.updateIndex(1);
 
@@ -374,7 +374,7 @@ public class TreeCellTest {
         tree.getSelectionModel().select(0);
 
         // Other is configured to represent row 1 which is not selected.
-        TreeCell<String> other = new TreeCell<String>();
+        TreeCell<String> other = new TreeCell<>();
         other.updateTreeView(tree);
         other.updateIndex(1);
 
@@ -392,7 +392,7 @@ public class TreeCellTest {
         cell.updateTreeView(tree);
         cell.updateIndex(0);
 
-        TreeCell<String> other = new TreeCell<String>();
+        TreeCell<String> other = new TreeCell<>();
         other.updateTreeView(tree);
         other.updateIndex(1);
 
@@ -409,7 +409,7 @@ public class TreeCellTest {
         tree.getSelectionModel().select(0);
 
         // Other is configured to represent row 1 which is not selected.
-        TreeCell<String> other = new TreeCell<String>();
+        TreeCell<String> other = new TreeCell<>();
         other.updateTreeView(tree);
         other.updateIndex(1);
 
@@ -430,7 +430,7 @@ public class TreeCellTest {
         cell.updateTreeView(tree);
 
         // Other is configured to represent row 1 which is not selected.
-        TreeCell<String> other = new TreeCell<String>();
+        TreeCell<String> other = new TreeCell<>();
         other.updateTreeView(tree);
         other.updateIndex(1);
 
@@ -449,7 +449,7 @@ public class TreeCellTest {
         cell.updateTreeView(tree);
 
         // Other is configured to represent row 1 which is not selected.
-        TreeCell<String> other = new TreeCell<String>();
+        TreeCell<String> other = new TreeCell<>();
         other.updateTreeView(tree);
         other.updateIndex(1);
 
@@ -477,7 +477,7 @@ public class TreeCellTest {
         cell.updateTreeView(tree);
         cell.updateIndex(0);
 
-        TreeCell<String> other = new TreeCell<String>();
+        TreeCell<String> other = new TreeCell<>();
         other.updateTreeView(tree);
         other.updateIndex(1);
 
@@ -490,7 +490,7 @@ public class TreeCellTest {
         cell.updateTreeView(tree);
         cell.updateIndex(0);
 
-        TreeCell<String> other = new TreeCell<String>();
+        TreeCell<String> other = new TreeCell<>();
         other.updateTreeView(tree);
         other.updateIndex(1);
 
@@ -507,7 +507,7 @@ public class TreeCellTest {
         tree.getFocusModel().focus(0);
 
         // Other is configured to represent row 1 which is not focused.
-        TreeCell<String> other = new TreeCell<String>();
+        TreeCell<String> other = new TreeCell<>();
         other.updateTreeView(tree);
         other.updateIndex(1);
 
@@ -527,7 +527,7 @@ public class TreeCellTest {
         cell.updateTreeView(tree);
 
         // Other is configured to represent row 1 which is not focused
-        TreeCell<String> other = new TreeCell<String>();
+        TreeCell<String> other = new TreeCell<>();
         other.updateTreeView(tree);
         other.updateIndex(1);
 
@@ -546,7 +546,7 @@ public class TreeCellTest {
         cell.updateTreeView(tree);
 
         // Other is configured to represent row 1 which is not focused.
-        TreeCell<String> other = new TreeCell<String>();
+        TreeCell<String> other = new TreeCell<>();
         other.updateTreeView(tree);
         other.updateIndex(1);
 
@@ -998,7 +998,7 @@ public class TreeCellTest {
         @Override protected int getFocusedIndex() {
             return tree.getFocusModel().getFocusedIndex();
         }
-    };
+    }
 
     private final class FocusModelMock extends FocusModel {
         @Override protected int getItemCount() {

@@ -85,7 +85,7 @@ public class Legend extends TilePane {
     public final BooleanProperty verticalProperty() { return vertical; }
 
      /** The legend items to display in this legend */
-    private ObjectProperty<ObservableList<LegendItem>> items = new ObjectPropertyBase<ObservableList<LegendItem>>() {
+    private ObjectProperty<ObservableList<LegendItem>> items = new ObjectPropertyBase<>() {
         ObservableList<LegendItem> oldItems = null;
         @Override protected void invalidated() {
             if (oldItems != null) oldItems.removeListener(itemsListener);

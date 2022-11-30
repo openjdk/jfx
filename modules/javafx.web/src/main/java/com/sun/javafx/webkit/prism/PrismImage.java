@@ -39,7 +39,6 @@ import javafx.scene.image.WritablePixelFormat;
 import javax.imageio.ImageIO;
 import javax.imageio.ImageWriter;
 
-import com.sun.javafx.webkit.UIClientImpl;
 import com.sun.prism.Graphics;
 import com.sun.prism.Image;
 import com.sun.webkit.graphics.WCImage;
@@ -78,7 +77,7 @@ abstract class PrismImage extends WCImage {
                 ImageWriter writer = it.next();
                 try {
                     writer.setOutput(ImageIO.createImageOutputStream(output));
-                    writer.write((BufferedImage) image);
+                    writer.write(image);
                 }
                 catch (IOException exception) {
                     continue; // try next image writer
@@ -144,8 +143,8 @@ abstract class PrismImage extends WCImage {
     }
 
     private static BufferedImage fromFXImage(Image img, boolean forceRGB) {
-        final int iw = (int) img.getWidth();
-        final int ih = (int) img.getHeight();
+        final int iw = img.getWidth();
+        final int ih = img.getHeight();
         final int destImageType = forceRGB ? BufferedImage.TYPE_INT_RGB : getBestBufferedImageType(img.getPlatformPixelFormat());
         final BufferedImage bimg = new BufferedImage(iw, ih, destImageType);
         final DataBufferInt db = (DataBufferInt) bimg.getRaster().getDataBuffer();

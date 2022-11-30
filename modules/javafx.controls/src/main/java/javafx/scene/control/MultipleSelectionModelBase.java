@@ -69,7 +69,7 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
 
         selectedIndices = new SelectedIndicesList();
 
-        selectedItems = new SelectedItemsReadOnlyObservableList<T>(selectedIndices, () -> getItemCount()) {
+        selectedItems = new SelectedItemsReadOnlyObservableList<>(selectedIndices, () -> getItemCount()) {
             @Override protected T getModelItem(int index) {
                 return MultipleSelectionModelBase.this.getModelItem(index);
             }
@@ -807,6 +807,7 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
             }
         }
 
+        @Override
         public void clear() {
             _beginChange();
             List<Integer> removed = bitset.stream().boxed().collect(Collectors.toList());

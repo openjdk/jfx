@@ -74,7 +74,10 @@ public class ToolbarTest {
     private static final double ORIGINAL_CHILDREN_SIZE = 100.0;
 
     @Before public void setup() {
-        tk = (StubToolkit)Toolkit.getToolkit();//This step is not needed (Just to make sure StubToolkit is loaded into VM)
+        tk = Toolkit.getToolkit();
+
+        assertTrue(tk instanceof StubToolkit);  // Ensure it's StubToolkit
+
         toolBar = new ToolBar();
         node1 = new Rectangle();
         node2 = new Rectangle(2.0,4.0);
@@ -129,7 +132,7 @@ public class ToolbarTest {
     @Test public void whenOrientationIsBound_CssMetaData_isSettable_ReturnsFalse() {
         CssMetaData styleable = ((StyleableProperty)toolBar.orientationProperty()).getCssMetaData();
         assertTrue(styleable.isSettable(toolBar));
-        ObjectProperty<Orientation> other = new SimpleObjectProperty<Orientation>(Orientation.VERTICAL);
+        ObjectProperty<Orientation> other = new SimpleObjectProperty<>(Orientation.VERTICAL);
         toolBar.orientationProperty().bind(other);
         assertFalse(styleable.isSettable(toolBar));
     }
@@ -163,7 +166,7 @@ public class ToolbarTest {
         toolBar.getItems().clear();
         node1 = new Rectangle();
         node2 = new Rectangle(2.0,4.0);
-        final List<Node> list1 = new ArrayList<Node>();
+        final List<Node> list1 = new ArrayList<>();
         list1.add(node1);
 
         toolBar.getItems().add(node1);
