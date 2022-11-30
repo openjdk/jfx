@@ -162,9 +162,9 @@ public class TableCellEditingTest {
 
     @Before
     public void setup() {
-        cell = new TableCell<String,String>();
+        cell = new TableCell<>();
         model = FXCollections.observableArrayList("Four", "Five", "Fear"); // "Flop", "Food", "Fizz"
-        table = new TableView<String>(model);
+        table = new TableView<>(model);
         table.setEditable(true);
         editingColumn = new TableColumn<>("TEST");
         editingColumn.setCellValueFactory(param -> null);

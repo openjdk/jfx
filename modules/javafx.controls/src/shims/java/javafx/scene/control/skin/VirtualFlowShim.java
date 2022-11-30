@@ -26,7 +26,6 @@ package javafx.scene.control.skin;
 
 import java.util.List;
 
-import com.sun.javafx.scene.control.VirtualScrollBar;
 import javafx.collections.ObservableList;
 import javafx.scene.Node;
 import javafx.scene.control.IndexedCell;

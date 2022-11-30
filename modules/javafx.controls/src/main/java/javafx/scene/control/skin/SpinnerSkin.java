@@ -25,13 +25,10 @@
 package javafx.scene.control.skin;
 
 import com.sun.javafx.scene.ParentHelper;
-import com.sun.javafx.scene.control.behavior.BehaviorBase;
 import com.sun.javafx.scene.traversal.Algorithm;
 import com.sun.javafx.scene.control.FakeFocusTextField;
 import com.sun.javafx.scene.traversal.Direction;
 import com.sun.javafx.scene.traversal.ParentTraversalEngine;
-import javafx.scene.control.Accordion;
-import javafx.scene.control.Button;
 import javafx.scene.control.Control;
 import javafx.scene.control.SkinBase;
 import com.sun.javafx.scene.control.behavior.SpinnerBehavior;
@@ -123,6 +120,7 @@ public class SpinnerSkin<T> extends SkinBase<Spinner<T>> {
         incrementArrow.setMouseTransparent(true);
 
         incrementArrowButton = new StackPane() {
+            @Override
             public void executeAccessibleAction(AccessibleAction action, Object... parameters) {
                 switch (action) {
                     case FIRE: getSkinnable().increment(); break;
@@ -148,6 +146,7 @@ public class SpinnerSkin<T> extends SkinBase<Spinner<T>> {
         decrementArrow.setMouseTransparent(true);
 
         decrementArrowButton = new StackPane() {
+            @Override
             public void executeAccessibleAction(AccessibleAction action, Object... parameters) {
                 switch (action) {
                     case FIRE: getSkinnable().decrement(); break;

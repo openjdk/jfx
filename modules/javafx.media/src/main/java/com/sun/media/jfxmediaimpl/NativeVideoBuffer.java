@@ -59,7 +59,7 @@ final class NativeVideoBuffer implements VideoDataBuffer {
 
     public static NativeVideoBuffer createVideoBuffer(long nativePeer) {
         NativeVideoBuffer buffer = new NativeVideoBuffer(nativePeer);
-        MediaDisposer.addResourceDisposer(buffer, (Long)nativePeer, disposer);
+        MediaDisposer.addResourceDisposer(buffer, nativePeer, disposer);
         return buffer;
     }
 
@@ -90,7 +90,7 @@ final class NativeVideoBuffer implements VideoDataBuffer {
                 }
 
                 // last reference released, dispose and clear our native handle
-                MediaDisposer.removeResourceDisposer((Long)nativePeer);
+                MediaDisposer.removeResourceDisposer(nativePeer);
                 nativeDisposeBuffer(nativePeer);
                 nativePeer = 0;
             }

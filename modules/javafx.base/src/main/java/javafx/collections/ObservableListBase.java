@@ -27,7 +27,6 @@ package javafx.collections;
 
 import com.sun.javafx.collections.ListListenerHelper;
 import java.util.AbstractList;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
@@ -91,7 +90,7 @@ import javafx.beans.InvalidationListener;
 public abstract class ObservableListBase<E> extends AbstractList<E>  implements ObservableList<E> {
 
     private ListListenerHelper<E> listenerHelper;
-    private final ListChangeBuilder<E> changeBuilder = new ListChangeBuilder<E>(this);
+    private final ListChangeBuilder<E> changeBuilder = new ListChangeBuilder<>(this);
 
     /**
      * Creates a default {@code ObservableListBase}.

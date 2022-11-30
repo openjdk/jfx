@@ -67,7 +67,7 @@ public final class WeakSetChangeListener<E> implements SetChangeListener<E>, Wea
         if (listener == null) {
             throw new NullPointerException("Listener must be specified.");
         }
-        this.ref = new WeakReference<SetChangeListener<E>>(listener);
+        this.ref = new WeakReference<>(listener);
     }
 
     /**

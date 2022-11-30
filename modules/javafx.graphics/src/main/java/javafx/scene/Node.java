@@ -957,7 +957,7 @@ public abstract class Node implements EventTarget, Styleable {
                 @Override
                 protected void invalidated() {
                     if (oldParent != null) {
-                        updateRemovedParentFocus(oldParent);
+                        clearParentsFocusWithin(oldParent);
                         oldParent.disabledProperty().removeListener(parentDisabledChangedListener);
                         oldParent.treeVisibleProperty().removeListener(parentTreeVisibleChangedListener);
                         if (nodeTransformation != null && nodeTransformation.listenerReasons > 0) {
@@ -8184,15 +8184,16 @@ public abstract class Node implements EventTarget, Styleable {
     }
 
     /**
-     * Called when the current node was removed from the scene graph in order to clear
-     * the focus bits of the former parents.
+     * Called when the current node was removed from the scene graph.
+     * If the current node has the focusWithin bit, we also need to clear the focusWithin bits of this
+     * node's parents. Note that a scene graph can have more than a single focused node, for example when
+     * a PopupWindow is used to present a branch of the scene graph. Since we need to preserve multi-level
+     * focus, we need to stop clearing the focusWithin bits if we encounter a parent node that is focused.
      */
-    private void updateRemovedParentFocus(Node oldParent) {
+    private void clearParentsFocusWithin(Node oldParent) {
         if (oldParent != null && focusWithin.get()) {
             Node node = oldParent;
-            while (node != null) {
-                node.focused.set(false);
-                node.focusVisible.set(false);
+            while (node != null && !node.focused.get()) {
                 node.focusWithin.set(false);
                 node = node.getParent();
             }
@@ -8239,7 +8240,7 @@ public abstract class Node implements EventTarget, Styleable {
                 do {
                     node.focusWithin.set(value);
                     node = node.getParent();
-                } while (node != null);
+                } while (node != null && !node.focused.get());
             }
         }
     };

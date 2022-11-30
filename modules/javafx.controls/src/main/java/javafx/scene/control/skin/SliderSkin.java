@@ -25,17 +25,13 @@
 
 package javafx.scene.control.skin;
 
-import com.sun.javafx.scene.control.behavior.BehaviorBase;
 import javafx.animation.Transition;
 import javafx.geometry.Orientation;
 import javafx.geometry.Point2D;
 import javafx.geometry.Side;
 import javafx.scene.AccessibleAttribute;
 import javafx.scene.AccessibleRole;
-import javafx.scene.Node;
 import javafx.scene.chart.NumberAxis;
-import javafx.scene.control.Accordion;
-import javafx.scene.control.Button;
 import javafx.scene.control.Control;
 import javafx.scene.control.SkinBase;
 import javafx.scene.control.Slider;
@@ -82,7 +78,7 @@ public class SliderSkin extends SkinBase<Slider> {
 
     private final SliderBehavior behavior;
 
-    StringConverter<Number> stringConverterWrapper = new StringConverter<Number>() {
+    StringConverter<Number> stringConverterWrapper = new StringConverter<>() {
         Slider slider = getSkinnable();
         @Override public String toString(Number object) {
             return(object != null) ? slider.getLabelFormatter().toString(object.doubleValue()) : "";

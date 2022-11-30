@@ -25,7 +25,6 @@
 
 package test.javafx.scene.web;
 
-import static javafx.concurrent.Worker.State.FAILED;
 import static javafx.concurrent.Worker.State.SUCCEEDED;
 
 import com.sun.webkit.WebPage;

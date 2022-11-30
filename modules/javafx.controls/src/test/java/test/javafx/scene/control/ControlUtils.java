@@ -27,8 +27,6 @@ package test.javafx.scene.control;
 import static org.junit.Assert.assertEquals;
 
 import java.util.Set;
-import java.util.concurrent.Callable;
-import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
@@ -80,7 +78,7 @@ public class ControlUtils {
      * Each cell contains a "..." string.
      */
     public static TreeTableView<String> createTreeTableView() {
-        TreeItem<String> root = new TreeItem<String>("");
+        TreeItem<String> root = new TreeItem<>("");
         root.setExpanded(true);
         root.getChildren().setAll(
             new TreeItem<>(""),

@@ -66,7 +66,7 @@ public abstract class FloatExpression extends NumberExpressionBase implements
 
     @Override
     public double doubleValue() {
-        return (double) get();
+        return get();
     }
 
     @Override
@@ -271,7 +271,7 @@ public abstract class FloatExpression extends NumberExpressionBase implements
      * @since JavaFX 8.0
      */
     public ObjectExpression<Float> asObject() {
-        return new ObjectBinding<Float>() {
+        return new ObjectBinding<>() {
             {
                 bind(FloatExpression.this);
             }

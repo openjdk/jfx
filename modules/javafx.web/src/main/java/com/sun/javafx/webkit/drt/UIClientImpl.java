@@ -42,7 +42,7 @@ import java.util.List;
 final class UIClientImpl implements UIClient {
 
     private WebPage webPage;
-    private final List<UIClient> clients = new ArrayList<UIClient>();
+    private final List<UIClient> clients = new ArrayList<>();
 
     private WCRectangle bounds = new WCRectangle(0, 0, 800, 600);
 

@@ -46,7 +46,7 @@ public class BindingsSetTest {
 
     @Before
     public void setUp() {
-        property = new SimpleSetProperty<Object>();
+        property = new SimpleSetProperty<>();
         set1 = FXCollections.observableSet(data1, data2);
         set2 = FXCollections.observableSet();
     }

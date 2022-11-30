@@ -1073,11 +1073,11 @@ public class TreeTableViewSelectionModelImplTest {
         TreeItem<Person> root = new TreeItem<>();
         root.setExpanded(true);
         root.getChildren().addAll(
-            new TreeItem<Person>(new Person("Jacob", "Smith", "jacob.smith@example.com")),
-            new TreeItem<Person>(new Person("Isabella", "Johnson", "isabella.johnson@example.com")),
-            new TreeItem<Person>(new Person("Ethan", "Williams", "ethan.williams@example.com")),
-            new TreeItem<Person>(new Person("Emma", "Jones", "emma.jones@example.com")),
-            new TreeItem<Person>(new Person("Michael", "Brown", "michael.brown@example.com"))
+            new TreeItem<>(new Person("Jacob", "Smith", "jacob.smith@example.com")),
+            new TreeItem<>(new Person("Isabella", "Johnson", "isabella.johnson@example.com")),
+            new TreeItem<>(new Person("Ethan", "Williams", "ethan.williams@example.com")),
+            new TreeItem<>(new Person("Emma", "Jones", "emma.jones@example.com")),
+            new TreeItem<>(new Person("Michael", "Brown", "michael.brown@example.com"))
         );
 
         TreeTableView<Person> table = new TreeTableView<>();
