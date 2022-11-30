@@ -527,7 +527,7 @@ public class ScrollBarSkin extends SkinBase<ScrollBar> {
                 /*
                 ** we only consume an event that we've used.
                 */
-                ScrollBar sb = (ScrollBar) getSkinnable();
+                ScrollBar sb = getSkinnable();
 
                 double delta = (getSkinnable().getOrientation() == Orientation.VERTICAL ? dy : dx);
 

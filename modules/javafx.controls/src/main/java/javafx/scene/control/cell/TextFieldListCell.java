@@ -85,7 +85,7 @@ public class TextFieldListCell<T> extends ListCell<T> {
      *      ListView, that enables textual editing of the content.
      */
     public static <T> Callback<ListView<T>, ListCell<T>> forListView(final StringConverter<T> converter) {
-        return list -> new TextFieldListCell<T>(converter);
+        return list -> new TextFieldListCell<>(converter);
     }
 
 
@@ -144,7 +144,7 @@ public class TextFieldListCell<T> extends ListCell<T> {
 
     // --- converter
     private ObjectProperty<StringConverter<T>> converter =
-            new SimpleObjectProperty<StringConverter<T>>(this, "converter");
+            new SimpleObjectProperty<>(this, "converter");
 
     /**
      * The {@link StringConverter} property.

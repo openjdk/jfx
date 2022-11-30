@@ -138,7 +138,7 @@ public class PaginationSkin extends SkinBase<Pagination> {
      *                                                                         *
      **************************************************************************/
 
-    private EventHandler<ActionEvent> swipeAnimationEndEventHandler = new EventHandler<ActionEvent>() {
+    private EventHandler<ActionEvent> swipeAnimationEndEventHandler = new EventHandler<>() {
         @Override public void handle(ActionEvent t) {
             swapPanes();
             timeline = null;
@@ -150,7 +150,7 @@ public class PaginationSkin extends SkinBase<Pagination> {
         }
     };
 
-    private EventHandler<ActionEvent> clampAnimationEndEventHandler = new EventHandler<ActionEvent>() {
+    private EventHandler<ActionEvent> clampAnimationEndEventHandler = new EventHandler<>() {
         @Override public void handle(ActionEvent t) {
             currentStackPane.setTranslateX(0);
             nextStackPane.setTranslateX(0);
@@ -575,7 +575,7 @@ public class PaginationSkin extends SkinBase<Pagination> {
                 // if time is less than 300ms then considered a quick swipe and whole time is used
                 final boolean quick = time < 300;
                 // calculate velocity
-                final double velocity = quick ? (double)drag / time : touchVelocity; // pixels/ms
+                final double velocity = quick ? drag / time : touchVelocity; // pixels/ms
                 // calculate distance we would travel at this speed for 500ms of travel
                 final double distance = (velocity * 500);
                 final double width = control.getWidth() - (snappedLeftInset() + snappedRightInset());
@@ -1377,7 +1377,7 @@ public class PaginationSkin extends SkinBase<Pagination> {
 
     private static class StyleableProperties {
         private static final CssMetaData<Pagination,Boolean> ARROWS_VISIBLE =
-            new CssMetaData<Pagination,Boolean>("-fx-arrows-visible",
+            new CssMetaData<>("-fx-arrows-visible",
                 BooleanConverter.getInstance(), DEFAULT_ARROW_VISIBLE) {
 
             @Override
@@ -1389,12 +1389,12 @@ public class PaginationSkin extends SkinBase<Pagination> {
             @Override
             public StyleableProperty<Boolean> getStyleableProperty(Pagination n) {
                 final PaginationSkin skin = (PaginationSkin) n.getSkin();
-                return (StyleableProperty<Boolean>)(WritableValue<Boolean>)skin.arrowsVisibleProperty();
+                return (StyleableProperty<Boolean>)skin.arrowsVisibleProperty();
             }
         };
 
         private static final CssMetaData<Pagination,Boolean> PAGE_INFORMATION_VISIBLE =
-            new CssMetaData<Pagination,Boolean>("-fx-page-information-visible",
+            new CssMetaData<>("-fx-page-information-visible",
                 BooleanConverter.getInstance(), DEFAULT_PAGE_INFORMATION_VISIBLE) {
 
             @Override
@@ -1406,13 +1406,13 @@ public class PaginationSkin extends SkinBase<Pagination> {
             @Override
             public StyleableProperty<Boolean> getStyleableProperty(Pagination n) {
                 final PaginationSkin skin = (PaginationSkin) n.getSkin();
-                return (StyleableProperty<Boolean>)(WritableValue<Boolean>)skin.pageInformationVisibleProperty();
+                return (StyleableProperty<Boolean>)skin.pageInformationVisibleProperty();
             }
         };
 
         private static final CssMetaData<Pagination,Side> PAGE_INFORMATION_ALIGNMENT =
-            new CssMetaData<Pagination,Side>("-fx-page-information-alignment",
-                new EnumConverter<Side>(Side.class), DEFAULT_PAGE_INFORMATION_ALIGNMENT) {
+            new CssMetaData<>("-fx-page-information-alignment",
+                new EnumConverter<>(Side.class), DEFAULT_PAGE_INFORMATION_ALIGNMENT) {
 
             @Override
             public boolean isSettable(Pagination n) {
@@ -1428,7 +1428,7 @@ public class PaginationSkin extends SkinBase<Pagination> {
         };
 
         private static final CssMetaData<Pagination,Boolean> TOOLTIP_VISIBLE =
-            new CssMetaData<Pagination,Boolean>("-fx-tooltip-visible",
+            new CssMetaData<>("-fx-tooltip-visible",
                 BooleanConverter.getInstance(), DEFAULT_TOOLTIP_VISIBLE) {
 
             @Override
@@ -1440,11 +1440,11 @@ public class PaginationSkin extends SkinBase<Pagination> {
             @Override
             public StyleableProperty<Boolean> getStyleableProperty(Pagination n) {
                 final PaginationSkin skin = (PaginationSkin) n.getSkin();
-                return (StyleableProperty<Boolean>)(WritableValue<Boolean>)skin.tooltipVisibleProperty();
+                return (StyleableProperty<Boolean>)skin.tooltipVisibleProperty();
             }
         };
         private static final CssMetaData<Pagination,Number> ARROW_BUTTON_GAP =
-            new CssMetaData<Pagination,Number>("-fx-arrow-button-gap", SizeConverter.getInstance(), 4) {
+            new CssMetaData<>("-fx-arrow-button-gap", SizeConverter.getInstance(), 4) {
                 @Override public boolean isSettable(Pagination n) {
                     final PaginationSkin skin = (PaginationSkin) n.getSkin();
                     return skin.arrowButtonGap == null ||
@@ -1452,14 +1452,14 @@ public class PaginationSkin extends SkinBase<Pagination> {
                 }
                 @Override public StyleableProperty<Number> getStyleableProperty(Pagination n) {
                     final PaginationSkin skin = (PaginationSkin) n.getSkin();
-                    return (StyleableProperty<Number>)(WritableValue<Number>)skin.arrowButtonGapProperty();
+                    return (StyleableProperty<Number>)skin.arrowButtonGapProperty();
                 }
             };
 
         private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
         static {
             final List<CssMetaData<? extends Styleable, ?>> styleables =
-                new ArrayList<CssMetaData<? extends Styleable, ?>>(SkinBase.getClassCssMetaData());
+                new ArrayList<>(SkinBase.getClassCssMetaData());
             styleables.add(ARROWS_VISIBLE);
             styleables.add(PAGE_INFORMATION_VISIBLE);
             styleables.add(PAGE_INFORMATION_ALIGNMENT);

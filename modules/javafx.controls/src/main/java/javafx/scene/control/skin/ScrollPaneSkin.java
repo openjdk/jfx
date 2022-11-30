@@ -192,7 +192,7 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane> {
     /*
     ** The content of the ScrollPane has just changed bounds, check scrollBar positions.
     */
-    private final ChangeListener<Bounds> boundsChangeListener = new ChangeListener<Bounds>() {
+    private final ChangeListener<Bounds> boundsChangeListener = new ChangeListener<>() {
         @Override public void changed(ObservableValue<? extends Bounds> observable, Bounds oldBounds, Bounds newBounds) {
 
             /*
@@ -909,7 +909,7 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane> {
                     ** if there is a repositioning in progress then we only
                     ** set the value for 'real' events
                     */
-                    if (!(((ScrollEvent)event).isInertia()) || (((ScrollEvent)event).isInertia()) && (contentsToViewTimeline == null || contentsToViewTimeline.getStatus() == Status.STOPPED)) {
+                    if (!(event.isInertia()) || (event.isInertia()) && (contentsToViewTimeline == null || contentsToViewTimeline.getStatus() == Status.STOPPED)) {
                         vsb.setValue(newValue);
                         if ((newValue > vsb.getMax() || newValue < vsb.getMin()) && (!mouseDown && !touchDetected)) {
                             startContentsToViewport();
@@ -936,7 +936,7 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane> {
                     ** if there is a repositioning in progress then we only
                     ** set the value for 'real' events
                     */
-                    if (!(((ScrollEvent)event).isInertia()) || (((ScrollEvent)event).isInertia()) && (contentsToViewTimeline == null || contentsToViewTimeline.getStatus() == Status.STOPPED)) {
+                    if (!(event.isInertia()) || (event.isInertia()) && (contentsToViewTimeline == null || contentsToViewTimeline.getStatus() == Status.STOPPED)) {
                         hsb.setValue(newValue);
 
                         if ((newValue > hsb.getMax() || newValue < hsb.getMin()) && (!mouseDown && !touchDetected)) {
