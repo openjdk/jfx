@@ -336,13 +336,13 @@ public class ResizeHelper {
             default:
                 distributeDeltaRemainingColumns(-delta);
                 adj = 0.0;
-                
+
                 double w2 = sumSizes(); // FIX
                 if(w1 != w2) {
                     System.err.println("ERR 2 sum sizes before="  + w1 + " after=" + w2 + " adj=" + adj + " delta=" + delta);
 //                    adj = w1-w2;
                 }
-                
+
                 break;
             }
             size[ix] += adj;
@@ -461,7 +461,10 @@ public class ResizeHelper {
     }
 
     protected void distributeDeltaRemainingColumns(double delta) {
-        for(;;) {
+        System.err.println("distributeDeltaRemainingColumns delta=" + delta);
+
+        boolean needsAnotherPass = false;
+        do {
             double total = 0.0;
             for (int i = 0; i < count; i++) {
                 if (!skip.get(i)) {
@@ -475,7 +478,7 @@ public class ResizeHelper {
             }
 
             double rem = 0.0; // remainder from the previous column
-            boolean needsAnotherPass = false;
+            needsAnotherPass = false;
 
             for (int i = 0; i < count; i++) {
                 if (skip.get(i)) {
@@ -509,8 +512,9 @@ public class ResizeHelper {
                 }
 
                 size[i] = w;
-                
+
                 if(needsAnotherPass) {
+                    System.err.println("needsAnotherPass"); // FIX
                     resetSizeChanges();
                     break;
                 }
@@ -522,13 +526,9 @@ public class ResizeHelper {
 //                }
 //                needsAnotherPass = false;
 //            }
-
-            if (!needsAnotherPass) {
-                return;
-            }
-        }
+        } while(needsAnotherPass);
     }
-    
+
     private void resetSizeChanges() {
         // reset size changes
         for (int i = 0; i < count; i++) {
