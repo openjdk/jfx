@@ -33,10 +33,8 @@ import javafx.scene.control.TableColumnBase;
  * Helps resize Tree/TableView columns.  JDK-8293119
  */
 public class ResizeHelper {
-    protected static final double EPSILON = 0.0000001;
-
     private final ResizeFeaturesBase rf;
-    private final double target;
+    private final int target;
     private final List<? extends TableColumnBase<?,?>> columns;
     private final int count;
     private final ConstrainedColumnResize.ResizeMode mode;
@@ -51,7 +49,7 @@ public class ResizeHelper {
                         List<? extends TableColumnBase<?,?>> columns,
                         ConstrainedColumnResize.ResizeMode mode) {
         this.rf = rf;
-        this.target = target;
+        this.target = (int)target;
         this.columns = columns;
         this.mode = mode;
 
@@ -93,8 +91,8 @@ public class ResizeHelper {
                 return;
             }
 
-            double delta = target - sumWidths;
-            if (isZero(delta)) {
+            int delta = target - sumWidths;
+            if (delta == 0) {
                 return;
             }
 
@@ -118,7 +116,7 @@ public class ResizeHelper {
                     continue;
                 }
 
-                double dw = rem + (delta * pref[i] / total);
+                double dw = rem + ((double)delta * pref[i] / total);
                 int w = (int)Math.round(size[i] + dw);
                 if (w < min[i]) {
                     rem = (w - min[i]);
@@ -138,7 +136,7 @@ public class ResizeHelper {
                 size[i] = w;
             }
 
-            if (isZero(target - acc)) {
+            if (target == acc) {
                 needsAnotherPass = false;
             }
 
@@ -159,11 +157,7 @@ public class ResizeHelper {
             }
         }
 
-        return (w > (target - 1.0));
-    }
-
-    protected static boolean isZero(double x) {
-        return Math.abs(x) < EPSILON;
+        return (w > (target - 1));
     }
 
     protected static int clip(double v, int min, int max) {
