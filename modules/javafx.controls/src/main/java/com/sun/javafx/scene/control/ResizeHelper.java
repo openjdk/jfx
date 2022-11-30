@@ -200,14 +200,9 @@ public class ResizeHelper {
 
         int ix = columns.indexOf(leafColumn);
         boolean expanding = delta > 0.0;
-        double allowedDelta;
-        if (mode == ConstrainedColumnResize.ResizeMode.AUTO_RESIZE_ALL_COLUMNS) {
-            allowedDelta = Math.abs(delta);
-        } else {
-            allowedDelta = getAllowedDelta(ix, expanding);
-            if (isZero(allowedDelta)) {
-                return false;
-            }
+        double allowedDelta = getAllowedDelta(ix, expanding);
+        if (isZero(allowedDelta)) {
+            return false;
         }
 
         int ct = markOppositeColumns(ix);
@@ -315,14 +310,15 @@ public class ResizeHelper {
 
     protected boolean distributeDelta(int ix, double delta) {
         int ct = count - skip.cardinality();
-        if (ct == 0) {
+        switch(ct) {
+        case 0:
             return false;
-        } else if (ct == 1) {
+        case 1:
             int oppx = skip.nextClearBit(0);
             size[ix] += delta;
             size[oppx] -= delta;
             return true;
-        } else {
+        default:
             double w1 = sumSizes(); // FIX
             size[ix] += delta;
             double adj;
@@ -339,8 +335,7 @@ public class ResizeHelper {
 
                 double w2 = sumSizes(); // FIX
                 if(w1 != w2) {
-                    System.err.println("ERR 2 sum sizes before="  + w1 + " after=" + w2 + " adj=" + adj + " delta=" + delta);
-//                    adj = w1-w2;
+                    System.err.println("*** ERR 2 sum sizes before="  + w1 + " after=" + w2 + " adj=" + adj + " delta=" + delta);
                 }
 
                 break;
@@ -461,9 +456,8 @@ public class ResizeHelper {
     }
 
     protected void distributeDeltaRemainingColumns(double delta) {
-        System.err.println("distributeDeltaRemainingColumns delta=" + delta);
+        boolean needsAnotherPass;
 
-        boolean needsAnotherPass = false;
         do {
             double total = 0.0;
             for (int i = 0; i < count; i++) {
@@ -473,7 +467,6 @@ public class ResizeHelper {
             }
 
             if (isZero(total)) {
-                System.err.println("zero total");
                 return;
             }
 
@@ -492,21 +485,13 @@ public class ResizeHelper {
                     w = min[i];
                     skip.set(i, true);
                     needsAnotherPass = true;
-                    double ch = (w - size[i]);
-                    if(ch != 0) {
-                        System.err.println("min ch=" + ch);
-                    }
-                    delta -= ch;
+                    delta -= (w - size[i]);
                } else if (w > max[i]) {
                     rem = (w - max[i]);
                     w = max[i];
                     skip.set(i, true);
                     needsAnotherPass = true;
-                    double ch = (w - size[i]);
-                    if(ch != 0) {
-                        System.err.println("max ch=" + ch);
-                    }
-                    delta -= ch;
+                    delta -= (w - size[i]);
                 } else {
                     rem = dw - (w - size[i]);
                 }
@@ -514,23 +499,14 @@ public class ResizeHelper {
                 size[i] = w;
 
                 if(needsAnotherPass) {
-                    System.err.println("needsAnotherPass"); // FIX
                     resetSizeChanges();
                     break;
                 }
             }
-
-//            if (Math.abs(delta) < 1.0) {
-//                if (Math.abs(delta) >= 0.5) {
-//                    adj = Math.signum(delta);
-//                }
-//                needsAnotherPass = false;
-//            }
         } while(needsAnotherPass);
     }
 
-    private void resetSizeChanges() {
-        // reset size changes
+    protected void resetSizeChanges() {
         for (int i = 0; i < count; i++) {
             if (!skip.get(i)) {
                 size[i] = columns.get(i).getWidth();
@@ -538,7 +514,7 @@ public class ResizeHelper {
         }
     }
 
-    private double sumSizes() {
+    protected double sumSizes() {
         double sum = 0.0;
         for (int i = 0; i < count; i++) {
             sum += size[i];
