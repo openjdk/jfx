@@ -90,7 +90,7 @@ public class TextFieldBehavior extends TextInputControlBehavior<TextField> {
                 textField.selectRange(0, 0);
             }
         };
-        weakFocusOwnerListener = new WeakChangeListener<Node>(focusOwnerListener);
+        weakFocusOwnerListener = new WeakChangeListener<>(focusOwnerListener);
 
         sceneListener = (observable, oldValue, newValue) -> {
             if (oldValue != null) {
@@ -100,7 +100,7 @@ public class TextFieldBehavior extends TextInputControlBehavior<TextField> {
                 newValue.focusOwnerProperty().addListener(weakFocusOwnerListener);
             }
         };
-        weakSceneListener = new WeakChangeListener<Scene>(sceneListener);
+        weakSceneListener = new WeakChangeListener<>(sceneListener);
 
         textField.sceneProperty().addListener(weakSceneListener);
         if (textField.getScene() != null) {

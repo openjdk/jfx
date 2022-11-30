@@ -114,7 +114,7 @@ public class SwingNodeHelper extends NodeHelper {
     }
 
     public static void setSwingPrefWidth(SwingNode node, int swingPrefWidth) {
-        swingNodeAccessor.setSwingPrefWidth(node, swingPrefWidth);;
+        swingNodeAccessor.setSwingPrefWidth(node, swingPrefWidth);
     }
 
     public static void setSwingPrefHeight(SwingNode node, int swingPrefHeight) {

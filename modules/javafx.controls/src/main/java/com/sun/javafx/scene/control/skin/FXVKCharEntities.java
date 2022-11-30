@@ -31,7 +31,7 @@ import java.util.HashMap;
  * Provides a mapping from HTML ISO-8859-1 character entity names to Unicode.
  */
 class FXVKCharEntities  {
-    private static final HashMap<String, Character> map = new HashMap<String, Character>();
+    private static final HashMap<String, Character> map = new HashMap<>();
 
     public static String get(String name) {
         Character c = map.get(name);

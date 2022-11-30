@@ -91,7 +91,7 @@ public final class DumpRenderTree {
                     webPage.forceRepaint();
             });
         }
-    };
+    }
 
     static class ThemeClientImplStub extends ThemeClient {
         @Override
@@ -103,7 +103,7 @@ public final class DumpRenderTree {
         protected ScrollBarTheme createScrollBarTheme() {
             return new ScrollBarThemeStub();
         }
-    };
+    }
 
     static class RenderThemeStub extends RenderTheme {
         @Override

@@ -38,7 +38,6 @@ import javafx.scene.layout.HBox;
 
 import com.sun.javafx.util.Utils;
 import javafx.scene.control.skin.ButtonBarSkin;
-import javafx.beans.value.WritableValue;
 import javafx.css.StyleableProperty;
 
 import java.util.Map;
@@ -471,7 +470,7 @@ public class ButtonBar extends Control {
         // makes it look to css like the user set the value and css will not
         // override. Initializing focusTraversable by calling set on the
         // CssMetaData ensures that css will be able to override the value.
-        ((StyleableProperty<Boolean>)(WritableValue<Boolean>)focusTraversableProperty()).applyStyle(null, Boolean.FALSE);
+        ((StyleableProperty<Boolean>)focusTraversableProperty()).applyStyle(null, Boolean.FALSE);
 
         final boolean buttonOrderEmpty = buttonOrder == null || buttonOrder.isEmpty();
 

@@ -43,7 +43,7 @@ public class ChoiceBoxListCellTest {
     private StringConverter<Object> converter;
 
     @Before public void setup() {
-        converter = new StringConverter<Object>() {
+        converter = new StringConverter<>() {
             @Override public String toString(Object object) {
                 return null;
             }
@@ -201,7 +201,7 @@ public class ChoiceBoxListCellTest {
     @Test public void test_updateItem_isNotEmpty_textIsNotNull_nonNullConverter() {
         ChoiceBoxListCell<Object> cell = new ChoiceBoxListCell<>();
         cell.setConverter(
-                new StringConverter<Object>() {
+                new StringConverter<>() {
                     @Override public Object fromString(String string) {
                         return null;
                     }
@@ -355,7 +355,7 @@ public class ChoiceBoxListCellTest {
         cell.setConverter(null);
         assertNull(cb.getConverter());
 
-        StringConverter<Object> customConverter = new StringConverter<Object>() {
+        StringConverter<Object> customConverter = new StringConverter<>() {
             @Override public String toString(Object object) { return null; }
             @Override public Object fromString(String string) { return null; }
         };

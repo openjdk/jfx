@@ -28,14 +28,9 @@ package test.javafx.scene.control.skin;
 import javafx.scene.control.IndexedCell;
 import javafx.scene.control.skin.VirtualFlowShim;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
 
 /**
  * Tests some protected methods of the VirtualFlow when overriding it.
@@ -54,7 +49,7 @@ public class VirtualFlowSubClassTest {
     private SubVirtualFlow<IndexedCell> flow;
 
     @Before public void setUp() {
-        list = new VirtualFlowShim.ArrayLinkedListShim<CellStub>();
+        list = new VirtualFlowShim.ArrayLinkedListShim<>();
         a = new CellStub(flow, "A");
         b = new CellStub(flow, "B");
         c = new CellStub(flow, "C");
