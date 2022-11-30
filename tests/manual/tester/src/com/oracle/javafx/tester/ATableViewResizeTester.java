@@ -94,7 +94,7 @@ public class ATableViewResizeTester extends Application {
         AUTO_RESIZE_SUBSEQUENT_COLUMNS(JTable.AUTO_RESIZE_SUBSEQUENT_COLUMNS),
         AUTO_RESIZE_LAST_COLUMN(JTable.AUTO_RESIZE_LAST_COLUMN),
         AUTO_RESIZE_ALL_COLUMNS(JTable.AUTO_RESIZE_ALL_COLUMNS),
-        USER(JTable.AUTO_RESIZE_ALL_COLUMNS),
+        USER_DEFINED_EQUAL_WIDTHS(JTable.AUTO_RESIZE_ALL_COLUMNS),
         UNCONSTRAINED_RESIZE_POLICY(JTable.AUTO_RESIZE_OFF),
         CONSTRAINED_RESIZE_POLICY(JTable.AUTO_RESIZE_SUBSEQUENT_COLUMNS);
 
@@ -224,7 +224,7 @@ public class ATableViewResizeTester extends Application {
             return TableView.CONSTRAINED_RESIZE_POLICY;
         case UNCONSTRAINED_RESIZE_POLICY:
             return TableView.UNCONSTRAINED_RESIZE_POLICY;
-        case USER:
+        case USER_DEFINED_EQUAL_WIDTHS:
             return new UserDefinedResizePolicy();
         default:
             throw new Error("?" + p);
