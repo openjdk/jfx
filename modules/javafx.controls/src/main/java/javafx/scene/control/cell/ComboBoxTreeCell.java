@@ -151,7 +151,7 @@ public class ComboBoxTreeCell<T> extends DefaultTreeCell<T> {
     public static <T> Callback<TreeView<T>, TreeCell<T>> forTreeView(
             final StringConverter<T> converter,
             final ObservableList<T> items) {
-        return list -> new ComboBoxTreeCell<T>(converter, items);
+        return list -> new ComboBoxTreeCell<>(converter, items);
     }
 
 
@@ -249,7 +249,7 @@ public class ComboBoxTreeCell<T> extends DefaultTreeCell<T> {
 
     // --- converter
     private ObjectProperty<StringConverter<T>> converter =
-            new SimpleObjectProperty<StringConverter<T>>(this, "converter");
+            new SimpleObjectProperty<>(this, "converter");
 
     /**
      * The {@link StringConverter} property.
@@ -370,5 +370,5 @@ public class ComboBoxTreeCell<T> extends DefaultTreeCell<T> {
 
         Node graphic = CellUtils.getGraphic(getTreeItem());
         CellUtils.updateItem(this, getConverter(), hbox, graphic, comboBox);
-    };
+    }
 }

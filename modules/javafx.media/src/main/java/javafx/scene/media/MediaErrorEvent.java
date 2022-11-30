@@ -41,7 +41,7 @@ public class MediaErrorEvent extends Event {
      * The only valid event type for the <code>MediaErrorEvent</code>.
      */
     public static final EventType<MediaErrorEvent> MEDIA_ERROR =
-            new EventType<MediaErrorEvent>(Event.ANY, "Media Error Event");
+            new EventType<>(Event.ANY, "Media Error Event");
 
     /**
      * The {@link MediaException} which provoked this error event.

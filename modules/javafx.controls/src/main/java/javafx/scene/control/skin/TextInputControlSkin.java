@@ -122,7 +122,7 @@ public abstract class TextInputControlSkin<T extends TextInputControl> extends S
         PARAGRAPH,
         /** Page unit */
         PAGE
-    };
+    }
 
     /**
      * Direction names for caret movement.
@@ -142,7 +142,7 @@ public abstract class TextInputControlSkin<T extends TextInputControl> extends S
         BEGINNING,
         /** End */
         END
-    };
+    }
 
     static boolean preload = false;
     static {
@@ -191,7 +191,7 @@ public abstract class TextInputControlSkin<T extends TextInputControl> extends S
     private int imstart;
     private int imlength;
     // Holds concrete attributes for the composition runs
-    private List<Shape> imattrs = new java.util.ArrayList<Shape>();
+    private List<Shape> imattrs = new java.util.ArrayList<>();
 
     private final EventHandler<InputMethodEvent> inputMethodTextChangedHandler = this::handleInputMethodEvent;
     private InputMethodRequests inputMethodRequests;
@@ -213,7 +213,7 @@ public abstract class TextInputControlSkin<T extends TextInputControl> extends S
     public TextInputControlSkin(final T control) {
         super(control);
 
-        fontMetrics = new ObjectBinding<FontMetrics>() {
+        fontMetrics = new ObjectBinding<>() {
             { bind(control.fontProperty()); }
             @Override protected FontMetrics computeValue() {
                 invalidateMetrics();
@@ -737,17 +737,17 @@ public abstract class TextInputControlSkin<T extends TextInputControl> extends S
     /**
      * Called when textFill property changes.
      */
-    protected void updateTextFill() {};
+    protected void updateTextFill() {}
 
     /**
      * Called when highlightFill property changes.
      */
-    protected void updateHighlightFill() {};
+    protected void updateHighlightFill() {}
 
     /**
      * Called when highlightTextFill property changes.
      */
-    protected void updateHighlightTextFill() {};
+    protected void updateHighlightTextFill() {}
 
     /**
      * Handles an input method event.
@@ -835,7 +835,7 @@ public abstract class TextInputControlSkin<T extends TextInputControl> extends S
 
     boolean isRTL() {
         return (getSkinnable().getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT);
-    };
+    }
 
     private void createInputMethodAttributes(InputMethodHighlight highlight, int start, int end) {
         double minX = 0f;
@@ -946,7 +946,7 @@ public abstract class TextInputControlSkin<T extends TextInputControl> extends S
 
     private static class StyleableProperties {
         private static final CssMetaData<TextInputControl,Paint> TEXT_FILL =
-            new CssMetaData<TextInputControl,Paint>("-fx-text-fill",
+            new CssMetaData<>("-fx-text-fill",
                 PaintConverter.getInstance(), Color.BLACK) {
 
             @Override public boolean isSettable(TextInputControl n) {
@@ -962,7 +962,7 @@ public abstract class TextInputControlSkin<T extends TextInputControl> extends S
         };
 
         private static final CssMetaData<TextInputControl,Paint> PROMPT_TEXT_FILL =
-            new CssMetaData<TextInputControl,Paint>("-fx-prompt-text-fill",
+            new CssMetaData<>("-fx-prompt-text-fill",
                 PaintConverter.getInstance(), Color.GRAY) {
 
             @Override public boolean isSettable(TextInputControl n) {
@@ -978,7 +978,7 @@ public abstract class TextInputControlSkin<T extends TextInputControl> extends S
         };
 
         private static final CssMetaData<TextInputControl,Paint> HIGHLIGHT_FILL =
-            new CssMetaData<TextInputControl,Paint>("-fx-highlight-fill",
+            new CssMetaData<>("-fx-highlight-fill",
                 PaintConverter.getInstance(), Color.DODGERBLUE) {
 
             @Override public boolean isSettable(TextInputControl n) {
@@ -994,7 +994,7 @@ public abstract class TextInputControlSkin<T extends TextInputControl> extends S
         };
 
         private static final CssMetaData<TextInputControl,Paint> HIGHLIGHT_TEXT_FILL =
-            new CssMetaData<TextInputControl,Paint>("-fx-highlight-text-fill",
+            new CssMetaData<>("-fx-highlight-text-fill",
                 PaintConverter.getInstance(), Color.WHITE) {
 
             @Override public boolean isSettable(TextInputControl n) {
@@ -1010,7 +1010,7 @@ public abstract class TextInputControlSkin<T extends TextInputControl> extends S
         };
 
         private static final CssMetaData<TextInputControl,Boolean> DISPLAY_CARET =
-            new CssMetaData<TextInputControl,Boolean>("-fx-display-caret",
+            new CssMetaData<>("-fx-display-caret",
                 BooleanConverter.getInstance(), Boolean.TRUE) {
 
             @Override public boolean isSettable(TextInputControl n) {
@@ -1028,7 +1028,7 @@ public abstract class TextInputControlSkin<T extends TextInputControl> extends S
         private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
         static {
             List<CssMetaData<? extends Styleable, ?>> styleables =
-                new ArrayList<CssMetaData<? extends Styleable, ?>>(SkinBase.getClassCssMetaData());
+                new ArrayList<>(SkinBase.getClassCssMetaData());
             styleables.add(TEXT_FILL);
             styleables.add(PROMPT_TEXT_FILL);
             styleables.add(HIGHLIGHT_FILL);

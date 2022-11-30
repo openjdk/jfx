@@ -258,7 +258,7 @@ public class TreeTableViewSkin<T> extends TableViewSkinBase<T, TreeItem<T>, Tree
         if (treeTableView.getRowFactory() != null) {
             cell = treeTableView.getRowFactory().call(treeTableView);
         } else {
-            cell = new TreeTableRow<T>();
+            cell = new TreeTableRow<>();
         }
 
         // If there is no disclosure node, then add one of my own

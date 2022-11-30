@@ -24,7 +24,6 @@
  */
 package javafx.scene.control;
 
-import java.net.URL;
 import java.util.List;
 
 import javafx.beans.property.BooleanProperty;

@@ -46,14 +46,15 @@ public class StackedBarChartTest extends XYChartTestBase {
 
     final CategoryAxis xAxis = new CategoryAxis();
     StackedBarChart<String,Number> sbc;
-    final XYChart.Series<String,Number> series1 = new XYChart.Series<String,Number>();
-    final XYChart.Series<String,Number> series2 = new XYChart.Series<String,Number>();
-    final XYChart.Series<String,Number> series3 = new XYChart.Series<String,Number>();
+    final XYChart.Series<String,Number> series1 = new XYChart.Series<>();
+    final XYChart.Series<String,Number> series2 = new XYChart.Series<>();
+    final XYChart.Series<String,Number> series3 = new XYChart.Series<>();
     final String[] years = {"2007", "2008", "2009"};
 
+    @Override
     protected Chart createChart() {
         final NumberAxis yAxis = new NumberAxis();
-        sbc = new StackedBarChart<String,Number>(xAxis,yAxis);
+        sbc = new StackedBarChart<>(xAxis,yAxis);
         xAxis.setLabel("Year");
         xAxis.setCategories(FXCollections.<String>observableArrayList(Arrays.asList(years)));
         yAxis.setLabel("Price");

@@ -92,7 +92,7 @@ public class TextFieldTreeCell<T> extends DefaultTreeCell<T> {
      */
     public static <T> Callback<TreeView<T>, TreeCell<T>> forTreeView(
             final StringConverter<T> converter) {
-        return list -> new TextFieldTreeCell<T>(converter);
+        return list -> new TextFieldTreeCell<>(converter);
     }
 
 
@@ -153,7 +153,7 @@ public class TextFieldTreeCell<T> extends DefaultTreeCell<T> {
 
     // --- converter
     private ObjectProperty<StringConverter<T>> converter =
-            new SimpleObjectProperty<StringConverter<T>>(this, "converter");
+            new SimpleObjectProperty<>(this, "converter");
 
     /**
      * The {@link StringConverter} property.

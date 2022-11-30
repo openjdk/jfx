@@ -133,7 +133,7 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
     };
 
     private final ChangeListener<MultipleSelectionModel<TreeItem<T>>> selectionModelListener =
-            new ChangeListener<MultipleSelectionModel<TreeItem<T>>>() {
+            new ChangeListener<>() {
         @Override public void changed(ObservableValue<? extends MultipleSelectionModel<TreeItem<T>>> observable,
                     MultipleSelectionModel<TreeItem<T>> oldValue,
                     MultipleSelectionModel<TreeItem<T>> newValue) {
@@ -444,7 +444,7 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
         int min = Math.min(start, end);
         int max = Math.max(start, end);
 
-        List<Integer> indices = new ArrayList<Integer>(sm.getSelectedIndices());
+        List<Integer> indices = new ArrayList<>(sm.getSelectedIndices());
 
         selectionChanging = true;
         for (int i = 0; i < indices.size(); i++) {

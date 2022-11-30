@@ -92,7 +92,7 @@ public class VirtualizedControlTestUtils {
             return getHBar(flow);
         }
         throw new IllegalStateException("control's skin must be of type VirtualContainerBase but was: " + control.getSkin());
-    };
+    }
 
     private VirtualizedControlTestUtils() {}
 
