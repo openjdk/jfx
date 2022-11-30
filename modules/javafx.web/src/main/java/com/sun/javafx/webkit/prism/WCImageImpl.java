@@ -76,6 +76,7 @@ final class WCImageImpl extends PrismImage {
         img = Image.convertImageFrame(frame);
     }
 
+    @Override
     Image getImage() {
         return img;
     }

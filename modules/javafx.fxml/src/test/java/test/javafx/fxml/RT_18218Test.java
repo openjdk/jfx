@@ -36,7 +36,7 @@ import static org.junit.Assert.*;
 
 public class RT_18218Test {
     @Test
-    @SuppressWarnings({"unchecked", "deprecation"})
+    @SuppressWarnings("unchecked")
     public void testStaticScriptLoad() throws IOException {
         FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("rt_18218.fxml"));
         FXMLLoaderHelper.setStaticLoad(fxmlLoader, true);
