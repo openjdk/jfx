@@ -71,7 +71,7 @@ public class TreeTableRowTest {
     }
 
     @Before public void setup() {
-        cell = new TreeTableRow<String>();
+        cell = new TreeTableRow<>();
 
         root = new TreeItem<>(ROOT);
         apples = new TreeItem<>(APPLES);
@@ -79,7 +79,7 @@ public class TreeTableRowTest {
         pears = new TreeItem<>(PEARS);
         root.getChildren().addAll(apples, oranges, pears);
 
-        tree = new TreeTableView<String>(root);
+        tree = new TreeTableView<>(root);
         root.setExpanded(true);
     }
 
@@ -233,7 +233,7 @@ public class TreeTableRowTest {
     @Test public void itemIsUpdatedWhenItWasOutOfRangeButUpdatesToTreeTableViewItemsMakesItInRange() {
         cell.updateIndex(4);
         cell.updateTreeTableView(tree);
-        root.getChildren().addAll(new TreeItem<String>("Pumpkin"), new TreeItem<>("Lemon"));
+        root.getChildren().addAll(new TreeItem<>("Pumpkin"), new TreeItem<>("Lemon"));
         assertSame("Pumpkin", cell.getItem());
     }
 
@@ -295,7 +295,7 @@ public class TreeTableRowTest {
         TreeItem<String> newRoot = new TreeItem<>();
         newRoot.setExpanded(true);
         newRoot.getChildren().setAll(new TreeItem<>("Water"), new TreeItem<>("Juice"), new TreeItem<>("Soda"));
-        TreeTableView<String> treeView2 = new TreeTableView<String>(newRoot);
+        TreeTableView<String> treeView2 = new TreeTableView<>(newRoot);
         cell.updateTreeTableView(treeView2);
         assertEquals("Juice", cell.getItem());
     }
@@ -338,7 +338,7 @@ public class TreeTableRowTest {
         cell.updateTreeTableView(tree);
         cell.updateIndex(0);
 
-        TreeTableCell<String,String> other = new TreeTableCell<String,String>();
+        TreeTableCell<String,String> other = new TreeTableCell<>();
         other.updateTreeTableView(tree);
         other.updateIndex(1);
 
@@ -352,7 +352,7 @@ public class TreeTableRowTest {
         cell.updateTreeTableView(tree);
         cell.updateIndex(0);
 
-        TreeTableCell<String,String> other = new TreeTableCell<String,String>();
+        TreeTableCell<String,String> other = new TreeTableCell<>();
         other.updateTreeTableView(tree);
         other.updateIndex(1);
 
@@ -390,7 +390,7 @@ public class TreeTableRowTest {
         cell.updateTreeTableView(tree);
         cell.updateIndex(0);
 
-        TreeTableCell<String,String> other = new TreeTableCell<String,String>();
+        TreeTableCell<String,String> other = new TreeTableCell<>();
         other.updateTreeTableView(tree);
         other.updateIndex(1);
 
@@ -447,7 +447,7 @@ public class TreeTableRowTest {
         cell.updateTreeTableView(tree);
 
         // Other is configured to represent row 1 which is not selected.
-        TreeTableCell<String,String> other = new TreeTableCell<String,String>();
+        TreeTableCell<String,String> other = new TreeTableCell<>();
         other.updateTreeTableView(tree);
         other.updateIndex(1);
 
@@ -475,7 +475,7 @@ public class TreeTableRowTest {
         cell.updateTreeTableView(tree);
         cell.updateIndex(0);
 
-        TreeTableCell<String,String> other = new TreeTableCell<String,String>();
+        TreeTableCell<String,String> other = new TreeTableCell<>();
         other.updateTreeTableView(tree);
         other.updateIndex(1);
 
@@ -489,7 +489,7 @@ public class TreeTableRowTest {
         cell.updateTreeTableView(tree);
         cell.updateIndex(0);
 
-        TreeTableCell<String,String> other = new TreeTableCell<String,String>();
+        TreeTableCell<String,String> other = new TreeTableCell<>();
         other.updateTreeTableView(tree);
         other.updateIndex(1);
 
@@ -545,7 +545,7 @@ public class TreeTableRowTest {
         cell.updateTreeTableView(tree);
 
         // Other is configured to represent row 1 which is not focused.
-        TreeTableCell<String,String> other = new TreeTableCell<String,String>();
+        TreeTableCell<String,String> other = new TreeTableCell<>();
         other.updateTreeTableView(tree);
         other.updateIndex(1);
 
@@ -702,7 +702,7 @@ public class TreeTableRowTest {
         cell.updateIndex(0);
         cell.startEdit();
 
-        TreeTableCell<String,String> other = new TreeTableCell<String,String>();
+        TreeTableCell<String,String> other = new TreeTableCell<>();
         other.updateTreeTableView(tree);
         other.updateIndex(1);
         tree.edit(1, null);

@@ -82,7 +82,7 @@ public abstract class FocusModel<T> {
      * reference the item that would receive the keyboard focus if the control
      * itself were focused.
      */
-    private ReadOnlyObjectWrapper<T> focusedItem = new ReadOnlyObjectWrapper<T>(this, "focusedItem");
+    private ReadOnlyObjectWrapper<T> focusedItem = new ReadOnlyObjectWrapper<>(this, "focusedItem");
     public final ReadOnlyObjectProperty<T> focusedItemProperty() { return focusedItem.getReadOnlyProperty(); }
     public final T getFocusedItem() { return focusedItemProperty().get(); }
     final void setFocusedItem(T value) { focusedItem.set(value); }

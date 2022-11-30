@@ -133,7 +133,6 @@ public class Utils {
         return computeTextHeight(font, text, wrappingWidth, 0, boundsType);
     }
 
-    @SuppressWarnings("deprecation")
     public static double computeTextHeight(Font font, String text, double wrappingWidth, double lineSpacing, TextBoundsType boundsType) {
         layout.setContent(text != null ? text : "", FontHelper.getNativeFont(font));
         layout.setWrapWidth((float)wrappingWidth);

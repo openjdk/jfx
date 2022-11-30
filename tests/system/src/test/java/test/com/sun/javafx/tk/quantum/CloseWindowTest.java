@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,8 @@
 
 package test.com.sun.javafx.tk.quantum;
 
+import java.util.concurrent.CountDownLatch;
+
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.scene.Group;
@@ -33,11 +35,10 @@ import javafx.stage.Modality;
 import javafx.stage.Stage;
 
 import org.junit.AfterClass;
-import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import java.util.concurrent.CountDownLatch;
+import test.util.Util;
 
 public class CloseWindowTest {
 
@@ -68,13 +69,12 @@ public class CloseWindowTest {
 
     @BeforeClass
     public static void setup() throws Exception {
-        new Thread(() -> Application.launch(TestApp.class)).start();
-        startupLatch.await();
+        Util.launch(startupLatch, TestApp.class);
     }
 
     @AfterClass
     public static void shutdown() {
-        Platform.runLater(primaryStage::hide);
+        Util.shutdown(primaryStage);
     }
 
     @Test

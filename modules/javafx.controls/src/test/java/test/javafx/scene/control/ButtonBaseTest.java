@@ -161,7 +161,7 @@ public class ButtonBaseTest {
 
     @Test public void onActionCanBeBound() {
         final EventHandler<ActionEvent> handler = new EventHandlerStub();
-        ObjectProperty<EventHandler<ActionEvent>> other = new SimpleObjectProperty<EventHandler<ActionEvent>>(handler);
+        ObjectProperty<EventHandler<ActionEvent>> other = new SimpleObjectProperty<>(handler);
         btn.onActionProperty().bind(other);
         assertEquals(handler, btn.getOnAction());
     }
@@ -179,7 +179,7 @@ public class ButtonBaseTest {
         @Override public void handle(ActionEvent event) {
             called = true;
         }
-    };
+    }
 
     public static final class ButtonBaseMock extends ButtonBase {
         public ButtonBaseMock() { super(); }

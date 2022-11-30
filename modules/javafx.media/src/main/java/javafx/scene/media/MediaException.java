@@ -86,7 +86,7 @@ public final class MediaException extends RuntimeException {
          * Indicates an error has occurred for an unknown reason.
          */
         UNKNOWN
-    };
+    }
 
     /**
      * Map {@link MediaError} codes to {@link Type}s.
@@ -198,4 +198,4 @@ public final class MediaException extends RuntimeException {
         if (getCause() != null) errString += " : " + getCause();
         return errString;
     }
-};
+}

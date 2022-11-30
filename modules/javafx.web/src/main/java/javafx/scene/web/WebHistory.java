@@ -27,8 +27,6 @@ package javafx.scene.web;
 
 import com.sun.webkit.BackForwardList;
 import com.sun.webkit.WebPage;
-import com.sun.webkit.event.WCChangeEvent;
-import com.sun.webkit.event.WCChangeListener;
 import java.net.URL;
 import java.util.Date;
 import javafx.beans.property.IntegerProperty;

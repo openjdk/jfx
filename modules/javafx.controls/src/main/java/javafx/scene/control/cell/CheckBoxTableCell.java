@@ -195,7 +195,7 @@ public class CheckBoxTableCell<S,T> extends TableCell<S,T> {
     public static <S,T> Callback<TableColumn<S,T>, TableCell<S,T>> forTableColumn(
             final Callback<Integer, ObservableValue<Boolean>> getSelectedProperty,
             final StringConverter<T> converter) {
-        return list -> new CheckBoxTableCell<S,T>(getSelectedProperty, converter);
+        return list -> new CheckBoxTableCell<>(getSelectedProperty, converter);
     }
 
 
@@ -280,7 +280,7 @@ public class CheckBoxTableCell<S,T> extends TableCell<S,T> {
 
     // --- converter
     private ObjectProperty<StringConverter<T>> converter =
-            new SimpleObjectProperty<StringConverter<T>>(this, "converter") {
+            new SimpleObjectProperty<>(this, "converter") {
         protected void invalidated() {
             updateShowLabel();
         }
@@ -315,7 +315,7 @@ public class CheckBoxTableCell<S,T> extends TableCell<S,T> {
     // --- selected state callback property
     private ObjectProperty<Callback<Integer, ObservableValue<Boolean>>>
             selectedStateCallback =
-            new SimpleObjectProperty<Callback<Integer, ObservableValue<Boolean>>>(
+            new SimpleObjectProperty<>(
             this, "selectedStateCallback");
 
     /**

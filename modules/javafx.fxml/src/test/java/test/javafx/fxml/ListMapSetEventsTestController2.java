@@ -24,10 +24,6 @@
  */
 package test.javafx.fxml;
 
-import javafx.collections.ListChangeListener;
-import javafx.collections.MapChangeListener;
-import javafx.collections.SetChangeListener;
-
 import java.net.URL;
 import java.util.ResourceBundle;
 import javafx.fxml.FXML;
@@ -46,19 +42,16 @@ public class ListMapSetEventsTestController2 implements Initializable {
     }
 
     @FXML
-    @SuppressWarnings("unchecked")
     protected void handleChildListChange() {
         listNoParamCalled = true;
     }
 
     @FXML
-    @SuppressWarnings("unchecked")
     protected void handlePropertiesChange() {
         mapNoParamCalled = true;
     }
 
     @FXML
-    @SuppressWarnings("unchecked")
     protected void handleSetChange() {
         setNoParamCalled = true;
     }

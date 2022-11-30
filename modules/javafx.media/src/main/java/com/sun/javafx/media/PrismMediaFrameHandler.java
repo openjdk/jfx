@@ -176,10 +176,12 @@ public class PrismMediaFrameHandler implements ResourceFactoryListener {
         tk.addRenderJob(releaseRenderJob);
     }
 
+    @Override
     public void factoryReset() {
         releaseData();
     }
 
+    @Override
     public void factoryReleased() {
         releaseData();
     }

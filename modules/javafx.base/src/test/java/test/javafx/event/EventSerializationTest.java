@@ -37,7 +37,6 @@ import javafx.event.ActionEvent;
 import javafx.event.Event;
 import javafx.event.EventType;
 import javafx.event.EventTypeShim;
-import javafx.event.EventTypeShim.EventTypeSerializationShim;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -77,7 +76,7 @@ public class EventSerializationTest {
 
     @Test
     public void testNewEventTypeSerialization() throws IOException, ClassNotFoundException {
-        EventType<Event> eventType = new EventType<Event>(Event.ANY, "MY_TYPE");
+        EventType<Event> eventType = new EventType<>(Event.ANY, "MY_TYPE");
         Event e = new Event(eventType);
 
         objectOutputStream.writeObject(e);
@@ -92,7 +91,7 @@ public class EventSerializationTest {
 
     @Test(expected=InvalidObjectException.class)
     public void testUnknownEventTypeSerialization() throws IOException, ClassNotFoundException {
-        List<String> l = new ArrayList<String>();
+        List<String> l = new ArrayList<>();
         l.add("UNKNOWN");
         Object e = EventTypeShim.getEventTypeSerialization(l);
 

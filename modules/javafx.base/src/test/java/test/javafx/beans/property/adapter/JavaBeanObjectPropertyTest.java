@@ -57,7 +57,7 @@ public class JavaBeanObjectPropertyTest extends JavaBeanPropertyTestBase<Object>
 
     @Override
     protected Property<Object> createObservable(Object value) {
-        return new SimpleObjectProperty<Object>(value);
+        return new SimpleObjectProperty<>(value);
     }
 
     @Override

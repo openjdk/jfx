@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2021, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,19 +25,16 @@
 
 package test.com.sun.javafx.application;
 
-import javafx.application.Platform;
-
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-import static org.junit.Assert.assertTrue;
+
+import test.util.Util;
 
 public class InitializeJavaFXStartupBase extends InitializeJavaFXBase {
 
     public static void initializeStartup() throws Exception {
         CountDownLatch latch = new CountDownLatch(1);
-        Platform.startup(() -> {
+        Util.startup(latch, () -> {
             latch.countDown();
         });
-        assertTrue(latch.await(5, TimeUnit.SECONDS));
     }
 }
