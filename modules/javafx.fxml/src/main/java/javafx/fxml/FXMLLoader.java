@@ -123,10 +123,10 @@ public class FXMLLoader {
         public Object value = null;
         private BeanAdapter valueAdapter = null;
 
-        public final LinkedList<Attribute> eventHandlerAttributes = new LinkedList<Attribute>();
-        public final LinkedList<Attribute> instancePropertyAttributes = new LinkedList<Attribute>();
-        public final LinkedList<Attribute> staticPropertyAttributes = new LinkedList<Attribute>();
-        public final LinkedList<PropertyElement> staticPropertyElements = new LinkedList<PropertyElement>();
+        public final LinkedList<Attribute> eventHandlerAttributes = new LinkedList<>();
+        public final LinkedList<Attribute> instancePropertyAttributes = new LinkedList<>();
+        public final LinkedList<Attribute> staticPropertyAttributes = new LinkedList<>();
+        public final LinkedList<PropertyElement> staticPropertyElements = new LinkedList<>();
 
         public Element() {
             parent = current;
@@ -153,7 +153,7 @@ public class FXMLLoader {
         }
 
         @SuppressWarnings("unchecked")
-        public void add(Object element) throws LoadException {
+        public void add(Object element) {
             // If value is a list, add element to it; otherwise, get the value
             // of the default property, which is assumed to be a list and add
             // to that (coerce to the appropriate type)
@@ -231,6 +231,9 @@ public class FXMLLoader {
             }
         }
 
+        /**
+         * @throws IOException when I/O by implementation fails
+         */
         public void processEndElement() throws IOException {
             // No-op
         }
@@ -294,7 +297,6 @@ public class FXMLLoader {
             }
         }
 
-        @SuppressWarnings("unchecked")
         public void processPropertyAttribute(Attribute attribute) throws IOException {
             String value = attribute.value;
             if (isBindingExpression(value)) {
@@ -495,7 +497,7 @@ public class FXMLLoader {
             // Split the string and add the values to the list
             List<Object> list = (List<Object>)valueAdapter.get(listPropertyName);
             Type listType = valueAdapter.getGenericType(listPropertyName);
-            Type itemType = (Class<?>)BeanAdapter.getGenericListItemType(listType);
+            Type itemType = BeanAdapter.getGenericListItemType(listType);
 
             if (itemType instanceof ParameterizedType) {
                 itemType = ((ParameterizedType)itemType).getRawType();
@@ -962,7 +964,7 @@ public class FXMLLoader {
         public String constant = null;
         public String factory = null;
 
-        public InstanceDeclarationElement(Class<?> type) throws LoadException {
+        public InstanceDeclarationElement(Class<?> type) {
             this.type = type;
         }
 
@@ -1033,8 +1035,8 @@ public class FXMLLoader {
         // Map type representing an unknown value
         @DefaultProperty("items")
         public class UnknownValueMap extends AbstractMap<String, Object> {
-            private ArrayList<?> items = new ArrayList<Object>();
-            private HashMap<String, Object> values = new HashMap<String, Object>();
+            private ArrayList<?> items = new ArrayList<>();
+            private HashMap<String, Object> values = new HashMap<>();
 
             @Override
             public Object get(Object key) {
@@ -1401,7 +1403,7 @@ public class FXMLLoader {
         }
 
         @Override
-        public void add(Object element) throws LoadException {
+        public void add(Object element) {
             // Coerce the element to the list item type
             if (parent.isTyped()) {
                 Type listType = parent.getValueAdapter().getGenericType(name);
@@ -1781,7 +1783,6 @@ public class FXMLLoader {
         }
 
         @Override
-        @SuppressWarnings("unchecked")
         public void onChanged(Change change) {
             if (handler != null) {
                 handler.invoke(change);
@@ -1887,8 +1888,8 @@ public class FXMLLoader {
     private ScriptEngine scriptEngine = null;
     private static boolean compileScript = true;
 
-    private List<String> packages = new LinkedList<String>();
-    private Map<String, Class<?>> classes = new HashMap<String, Class<?>>();
+    private List<String> packages = new LinkedList<>();
+    private Map<String, Class<?>> classes = new HashMap<>();
 
     private ScriptEngineManager scriptEngineManager = null;
 
@@ -2562,7 +2563,7 @@ public class FXMLLoader {
         return value;
     }
 
-    @SuppressWarnings({ "dep-ann", "unchecked" })
+    @SuppressWarnings("unchecked")
     private <T> T loadImpl(InputStream inputStream,
                            Class<?> callerClass) throws IOException {
         if (inputStream == null) {
@@ -2801,7 +2802,7 @@ public class FXMLLoader {
         }
     }
 
-    private void processComment() throws LoadException {
+    private void processComment() {
         if (loadListener != null) {
             loadListener.readComment(xmlStreamReader.getText());
         }
@@ -2945,7 +2946,7 @@ public class FXMLLoader {
         }
     }
 
-    private void importPackage(String name) throws LoadException {
+    private void importPackage(String name) {
         packages.add(name);
     }
 
@@ -2957,7 +2958,7 @@ public class FXMLLoader {
         }
     }
 
-    private Class<?> getType(String name) throws LoadException {
+    private Class<?> getType(String name) {
         Class<?> type = null;
 
         if (Character.isLowerCase(name.charAt(0))) {

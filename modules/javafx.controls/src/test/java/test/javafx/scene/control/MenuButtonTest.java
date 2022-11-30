@@ -207,7 +207,7 @@ public class MenuButtonTest {
 
     @Test public void popupSideCanBeBound() {
         Side side = Side.TOP;
-        SimpleObjectProperty<Side> other = new SimpleObjectProperty<Side>(menuButton, "popupSide", side);
+        SimpleObjectProperty<Side> other = new SimpleObjectProperty<>(menuButton, "popupSide", side);
         menuButton.popupSideProperty().bind(other);
         assertSame(side, menuButton.getPopupSide());
     }

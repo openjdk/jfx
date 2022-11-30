@@ -126,7 +126,7 @@ public class CustomMenuItem extends MenuItem {
 
     public final ObjectProperty<Node> contentProperty() {
         if (content == null) {
-            content = new SimpleObjectProperty<Node>(this, "content");
+            content = new SimpleObjectProperty<>(this, "content");
         }
         return content;
     }

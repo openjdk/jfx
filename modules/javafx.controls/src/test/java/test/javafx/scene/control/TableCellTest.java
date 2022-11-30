@@ -76,9 +76,9 @@ public class TableCellTest {
             }
         });
 
-        cell = new TableCell<String,String>();
+        cell = new TableCell<>();
         model = FXCollections.observableArrayList("Four", "Five", "Fear"); // "Flop", "Food", "Fizz"
-        table = new TableView<String>(model);
+        table = new TableView<>(model);
         editingColumn = new TableColumn<>("TEST");
 
         row = new TableRow<>();
@@ -194,7 +194,7 @@ public class TableCellTest {
     private int rt_29923_count = 0;
     @Test public void test_rt_29923() {
         // setup test
-        cell = new TableCellShim<String,String>() {
+        cell = new TableCellShim<>() {
             @Override public void updateItem(String item, boolean empty) {
                 super.updateItem(item, empty);
                 rt_29923_count++;

@@ -144,7 +144,7 @@ public class LabeledImpl extends Label {
             final List<CssMetaData<? extends Styleable, ?>> labeledStyleables = Labeled.getClassCssMetaData();
             final List<CssMetaData<? extends Styleable, ?>> parentStyleables = Region.getClassCssMetaData();
             final List<CssMetaData<? extends Styleable, ?>> styleables =
-                new ArrayList<CssMetaData<? extends Styleable, ?>>(labeledStyleables);
+                new ArrayList<>(labeledStyleables);
             styleables.removeAll(parentStyleables);
             STYLEABLES_TO_MIRROR = Collections.unmodifiableList(styleables);
         }

@@ -164,13 +164,13 @@ public class TreeTableCellEditingTest {
 
     @Before
     public void setup() {
-        cell = new TreeTableCell<String,String>();
+        cell = new TreeTableCell<>();
         model = FXCollections.observableArrayList(new TreeItem<>("Four"),
                 new TreeItem<>("Five"), new TreeItem<>("Fear")); // "Flop", "Food", "Fizz"
         TreeItem<String> root = new TreeItem<>("root");
         root.getChildren().addAll(model);
         root.setExpanded(true);
-        table = new TreeTableView<String>(root);
+        table = new TreeTableView<>(root);
         table.setEditable(true);
         editingColumn = new TreeTableColumn<>("TEST");
         editingColumn.setCellValueFactory(param -> null);

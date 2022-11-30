@@ -101,7 +101,7 @@ public abstract class SelectionModel<T> {
      * @return the selected item property
      */
     public final ReadOnlyObjectProperty<T> selectedItemProperty() { return selectedItem.getReadOnlyProperty(); }
-    private ReadOnlyObjectWrapper<T> selectedItem = new ReadOnlyObjectWrapper<T>(this, "selectedItem");
+    private ReadOnlyObjectWrapper<T> selectedItem = new ReadOnlyObjectWrapper<>(this, "selectedItem");
     protected final void setSelectedItem(T value) { selectedItem.set(value); }
 
     /**

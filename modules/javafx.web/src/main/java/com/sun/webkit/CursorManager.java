@@ -88,7 +88,7 @@ public abstract class CursorManager<T> {
         return instance;
     }
 
-    private final Map<Long, T> map = new HashMap<Long, T>();
+    private final Map<Long, T> map = new HashMap<>();
 
     protected abstract T getCustomCursor(WCImage image, int hotspotX, int hotspotY);
 

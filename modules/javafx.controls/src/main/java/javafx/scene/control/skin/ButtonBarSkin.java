@@ -30,7 +30,6 @@ import java.util.List;
 import java.util.Map;
 
 import com.sun.javafx.scene.control.Properties;
-import com.sun.javafx.scene.control.behavior.BehaviorBase;
 import javafx.beans.InvalidationListener;
 import javafx.beans.property.ObjectProperty;
 import javafx.collections.ListChangeListener;
@@ -301,7 +300,7 @@ public class ButtonBarSkin extends SkinBase<ButtonBar> {
             String type =  getButtonType(btn);
             List<Node> typedButtons = buttonMap.get(type);
             if ( typedButtons == null ) {
-                typedButtons = new ArrayList<Node>();
+                typedButtons = new ArrayList<>();
                 buttonMap.put(type, typedButtons);
             }
             typedButtons.add( btn );
