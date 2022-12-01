@@ -290,7 +290,7 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
             }
 
             if (scene != null ) {
-                sceneListenerHelper = new ListenerHelper(MenuBarSkin.this);
+                sceneListenerHelper = new ListenerHelper();
 
                 // Key navigation
                 sceneListenerHelper.addEventFilter(scene, KeyEvent.KEY_PRESSED, (ev) -> {
