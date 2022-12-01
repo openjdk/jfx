@@ -98,9 +98,6 @@ public class StubToolkit extends Toolkit {
 
     private ScreenConfiguration[] screenConfigurations = DEFAULT_SCREEN_CONFIG;
 
-    // By default, always on the FX app thread
-    private boolean fxUserThread = true;
-
     static {
         try {
             // ugly hack to initialize "runLater" method in Platform.java
@@ -156,11 +153,8 @@ public class StubToolkit extends Toolkit {
 
     @Override
     public boolean isFxUserThread() {
-        return fxUserThread;
-    }
-
-    public void setFxUserThread(boolean fxUserThread) {
-        this.fxUserThread = fxUserThread;
+        // Always on the FX app thread
+        return true;
     }
 
     @Override

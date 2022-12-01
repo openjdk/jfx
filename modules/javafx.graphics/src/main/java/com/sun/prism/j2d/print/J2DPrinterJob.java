@@ -153,23 +153,15 @@ public class J2DPrinterJob implements PrinterJobImpl {
         fxPrinter = fxPrinterJob.getPrinter();
         j2dPrinter = getJ2DPrinter(fxPrinter);
         settings = fxPrinterJob.getJobSettings();
-        pJob2D = createPrinterJob();
+        pJob2D = java.awt.print.PrinterJob.getPrinterJob();
         try {
             pJob2D.setPrintService(j2dPrinter.getService());
         } catch (PrinterException pe) {
         }
         printReqAttrSet = new HashPrintRequestAttributeSet();
         printReqAttrSet.add(DialogTypeSelection.NATIVE);
-        j2dPageable = createJ2dPageable();
+        j2dPageable = new J2DPageable();
         pJob2D.setPageable(j2dPageable);
-    }
-
-    protected java.awt.print.PrinterJob createPrinterJob() {
-        return java.awt.print.PrinterJob.getPrinterJob();
-    }
-
-    protected J2DPageable createJ2dPageable() {
-        return new J2DPageable();
     }
 
     private void setEnabledState(Window owner, boolean state) {
@@ -1050,7 +1042,7 @@ public class J2DPrinterJob implements PrinterJobImpl {
         }
     }
 
-    protected class J2DPageable implements Pageable, Printable {
+    private class J2DPageable implements Pageable, Printable {
 
         private volatile boolean pageDone;
 
@@ -1076,7 +1068,7 @@ public class J2DPrinterJob implements PrinterJobImpl {
                 }
             }
             currPageInfo = null;
-            setPageDone(true);
+            pageDone = true;
             synchronized (monitor) {
                 if (newPageInfo == null) {
                     monitor.notify(); // page is printed and no new page to print
@@ -1187,10 +1179,6 @@ public class J2DPrinterJob implements PrinterJobImpl {
             return this;
         }
 
-        protected PageFormat getCurrentPageFormat() {
-            return currPageFormat;
-        }
-
         public PageFormat getPageFormat(int pageIndex) {
             getPage(pageIndex);
             return currPageFormat;
@@ -1222,7 +1210,7 @@ public class J2DPrinterJob implements PrinterJobImpl {
              * So, when we are in here, we know that the app is providing
              * the info for the next page.
              */
-            setPageDone(false);
+            pageDone = false;
             synchronized (monitor) {
                 newPageInfo = new PageInfo(pageLayout, node);
                 monitor.notify();
@@ -1243,10 +1231,6 @@ public class J2DPrinterJob implements PrinterJobImpl {
                     }
                 }
             }
-        }
-
-        protected void setPageDone(boolean pageDone) {
-            this.pageDone = pageDone;
         }
 
     } /* END J2DPageable class */
