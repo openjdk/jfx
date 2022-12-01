@@ -370,14 +370,14 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
                 });
 
                 // When the parent window looses focus - menu selection should be cleared
-                sceneListenerHelper.addChangeListener(scene.windowProperty(), true, (sr, oldw, w) -> {
+                sceneListenerHelper.addChangeListener(scene.windowProperty(), true, (w) -> {
                     if (windowFocusHelper != null) {
                         windowFocusHelper.disconnect();
                         windowFocusHelper = null;
                     }
 
                     if (w != null) {
-                        windowFocusHelper = sceneListenerHelper.addChangeListener(w.focusedProperty(), true, (s, p, focused) -> {
+                        windowFocusHelper = sceneListenerHelper.addChangeListener(w.focusedProperty(), true, (focused) -> {
                             if (!focused) {
                                 unSelectMenus();
                             }
