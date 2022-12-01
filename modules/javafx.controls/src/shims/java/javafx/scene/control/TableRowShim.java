@@ -25,8 +25,6 @@
 
 package javafx.scene.control;
 
-import javafx.scene.control.*;
-
 public class TableRowShim<T> extends TableRow<T> {
 
     @Override

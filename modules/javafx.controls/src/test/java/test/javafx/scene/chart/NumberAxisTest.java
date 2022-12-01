@@ -67,7 +67,7 @@ public class NumberAxisTest {
         if (fourValueAxis == null) {
             fourValueAxis = new NumberAxis("dummy", 0.0, 100.0, 10.0);
         }
-        formatter = new StringConverter<Number>() {
+        formatter = new StringConverter<>() {
             @Override
             public String toString(Number object) { return null; }
             @Override

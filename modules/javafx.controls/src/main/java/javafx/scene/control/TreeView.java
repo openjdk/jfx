@@ -46,7 +46,6 @@ import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.WeakChangeListener;
-import javafx.beans.value.WritableValue;
 import javafx.collections.ListChangeListener;
 import javafx.css.CssMetaData;
 import javafx.css.Styleable;
@@ -335,9 +334,9 @@ public class TreeView<T> extends Control {
 
         // install default selection and focus models - it's unlikely this will be changed
         // by many users.
-        MultipleSelectionModel<TreeItem<T>> sm = new TreeViewBitSetSelectionModel<T>(this);
+        MultipleSelectionModel<TreeItem<T>> sm = new TreeViewBitSetSelectionModel<>(this);
         setSelectionModel(sm);
-        setFocusModel(new TreeViewFocusModel<T>(this));
+        setFocusModel(new TreeViewFocusModel<>(this));
 
         setOnEditCommit(DEFAULT_EDIT_COMMIT_HANDLER);
     }
@@ -437,14 +436,14 @@ public class TreeView<T> extends Control {
      */
     public final ObjectProperty<Callback<TreeView<T>, TreeCell<T>>> cellFactoryProperty() {
         if (cellFactory == null) {
-            cellFactory = new SimpleObjectProperty<Callback<TreeView<T>, TreeCell<T>>>(this, "cellFactory");
+            cellFactory = new SimpleObjectProperty<>(this, "cellFactory");
         }
         return cellFactory;
     }
 
 
     // --- Root
-    private ObjectProperty<TreeItem<T>> root = new SimpleObjectProperty<TreeItem<T>>(this, "root") {
+    private ObjectProperty<TreeItem<T>> root = new SimpleObjectProperty<>(this, "root") {
         private WeakReference<TreeItem<T>> weakOldItem;
 
         @Override protected void invalidated() {
@@ -570,7 +569,7 @@ public class TreeView<T> extends Control {
      */
     public final ObjectProperty<MultipleSelectionModel<TreeItem<T>>> selectionModelProperty() {
         if (selectionModel == null) {
-            selectionModel = new SimpleObjectProperty<MultipleSelectionModel<TreeItem<T>>>(this, "selectionModel");
+            selectionModel = new SimpleObjectProperty<>(this, "selectionModel");
         }
         return selectionModel;
     }
@@ -603,7 +602,7 @@ public class TreeView<T> extends Control {
      */
     public final ObjectProperty<FocusModel<TreeItem<T>>> focusModelProperty() {
         if (focusModel == null) {
-            focusModel = new SimpleObjectProperty<FocusModel<TreeItem<T>>>(this, "focusModel");
+            focusModel = new SimpleObjectProperty<>(this, "focusModel");
         }
         return focusModel;
     }
@@ -758,7 +757,7 @@ public class TreeView<T> extends Control {
 
     private ReadOnlyObjectWrapper<TreeItem<T>> editingItemPropertyImpl() {
         if (editingItem == null) {
-            editingItem = new ReadOnlyObjectWrapper<TreeItem<T>>(this, "editingItem");
+            editingItem = new ReadOnlyObjectWrapper<>(this, "editingItem");
         }
         return editingItem;
     }
@@ -793,7 +792,7 @@ public class TreeView<T> extends Control {
      */
     public final ObjectProperty<EventHandler<EditEvent<T>>> onEditStartProperty() {
         if (onEditStart == null) {
-            onEditStart = new SimpleObjectProperty<EventHandler<EditEvent<T>>>(this, "onEditStart") {
+            onEditStart = new SimpleObjectProperty<>(this, "onEditStart") {
                 @Override protected void invalidated() {
                     setEventHandler(TreeView.<T>editStartEvent(), get());
                 }
@@ -839,7 +838,7 @@ public class TreeView<T> extends Control {
      */
     public final ObjectProperty<EventHandler<EditEvent<T>>> onEditCommitProperty() {
         if (onEditCommit == null) {
-            onEditCommit = new SimpleObjectProperty<EventHandler<EditEvent<T>>>(this, "onEditCommit") {
+            onEditCommit = new SimpleObjectProperty<>(this, "onEditCommit") {
                 @Override protected void invalidated() {
                     setEventHandler(TreeView.<T>editCommitEvent(), get());
                 }
@@ -884,7 +883,7 @@ public class TreeView<T> extends Control {
      */
     public final ObjectProperty<EventHandler<EditEvent<T>>> onEditCancelProperty() {
         if (onEditCancel == null) {
-            onEditCancel = new SimpleObjectProperty<EventHandler<EditEvent<T>>>(this, "onEditCancel") {
+            onEditCancel = new SimpleObjectProperty<>(this, "onEditCancel") {
                 @Override protected void invalidated() {
                     setEventHandler(TreeView.<T>editCancelEvent(), get());
                 }
@@ -958,7 +957,7 @@ public class TreeView<T> extends Control {
 
     public ObjectProperty<EventHandler<ScrollToEvent<Integer>>> onScrollToProperty() {
         if( onScrollTo == null ) {
-            onScrollTo = new ObjectPropertyBase<EventHandler<ScrollToEvent<Integer>>>() {
+            onScrollTo = new ObjectPropertyBase<>() {
                 @Override
                 protected void invalidated() {
                     setEventHandler(ScrollToEvent.scrollToTopIndex(), get());
@@ -1113,7 +1112,7 @@ public class TreeView<T> extends Control {
 
     private static class StyleableProperties {
         private static final CssMetaData<TreeView<?>,Number> FIXED_CELL_SIZE =
-                new CssMetaData<TreeView<?>,Number>("-fx-fixed-cell-size",
+                new CssMetaData<>("-fx-fixed-cell-size",
                                                      SizeConverter.getInstance(),
                                                      Region.USE_COMPUTED_SIZE) {
 
@@ -1126,14 +1125,14 @@ public class TreeView<T> extends Control {
                     }
 
                     @Override public StyleableProperty<Number> getStyleableProperty(TreeView<?> n) {
-                        return (StyleableProperty<Number>)(WritableValue<Number>) n.fixedCellSizeProperty();
+                        return (StyleableProperty<Number>)n.fixedCellSizeProperty();
                     }
                 };
 
         private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
         static {
             final List<CssMetaData<? extends Styleable, ?>> styleables =
-                    new ArrayList<CssMetaData<? extends Styleable, ?>>(Control.getClassCssMetaData());
+                    new ArrayList<>(Control.getClassCssMetaData());
             styleables.add(FIXED_CELL_SIZE);
             STYLEABLES = Collections.unmodifiableList(styleables);
         }
@@ -1654,7 +1653,7 @@ public class TreeView<T> extends Control {
             }
         }
 
-        private EventHandler<TreeModificationEvent<T>> treeItemListener = new EventHandler<TreeModificationEvent<T>>() {
+        private EventHandler<TreeModificationEvent<T>> treeItemListener = new EventHandler<>() {
             @Override public void handle(TreeModificationEvent<T> e) {
                 // don't shift focus if the event occurred on a tree item after
                 // the focused row, or if there is no focus index at present

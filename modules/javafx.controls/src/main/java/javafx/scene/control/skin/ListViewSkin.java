@@ -133,7 +133,7 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListCell<
     private WeakMapChangeListener<Object, Object> weakPropertiesMapListener =
             new WeakMapChangeListener<>(propertiesMapListener);
 
-    private final ListChangeListener<T> listViewItemsListener = new ListChangeListener<T>() {
+    private final ListChangeListener<T> listViewItemsListener = new ListChangeListener<>() {
         @Override public void onChanged(Change<? extends T> c) {
             while (c.next()) {
                 if (c.wasReplaced()) {
@@ -167,7 +167,7 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListCell<
     };
 
     private final WeakListChangeListener<T> weakListViewItemsListener =
-            new WeakListChangeListener<T>(listViewItemsListener);
+            new WeakListChangeListener<>(listViewItemsListener);
 
 
     private final InvalidationListener itemsChangeListener = observable -> updateListViewItems();
@@ -504,7 +504,7 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListCell<
     }
 
     private static <T> ListCell<T> createDefaultCellImpl() {
-        return new ListCell<T>() {
+        return new ListCell<>() {
             @Override public void updateItem(T item, boolean empty) {
                 super.updateItem(item, empty);
 

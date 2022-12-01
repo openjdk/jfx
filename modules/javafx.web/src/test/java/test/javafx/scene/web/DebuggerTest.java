@@ -43,7 +43,7 @@ public class DebuggerTest extends TestBase {
         submit(() -> {
             Debugger debugger = WebEngineShim.getDebugger(getEngine());
 
-            final List<String> callbackMessages = new ArrayList<String>();
+            final List<String> callbackMessages = new ArrayList<>();
             debugger.setMessageCallback(message -> {
                 callbackMessages.add(message);
                 return null;
@@ -84,7 +84,8 @@ public class DebuggerTest extends TestBase {
     public void testMessageCallbackProperty() {
         submit(() -> {
             Debugger debugger = WebEngineShim.getDebugger(getEngine());
-            Callback<String,Void> callback = new Callback<String,Void>() {
+            Callback<String,Void> callback = new Callback<>() {
+                @Override
                 public Void call(String message) {
                     return null;
                 }

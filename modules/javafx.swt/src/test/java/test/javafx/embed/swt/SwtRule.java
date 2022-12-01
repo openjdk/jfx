@@ -50,6 +50,7 @@ public class SwtRule implements MethodRule {
     public Statement apply(final Statement base, final FrameworkMethod testMethod, final Object target) {
         return new Statement() {
 
+            @Override
             public void evaluate() throws Throwable {
                 Display display = Display.getDefault();
 

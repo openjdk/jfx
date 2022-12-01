@@ -173,7 +173,7 @@ public class MultipleSelectionModelImplTest {
             if (modelClass.equals(ListViewShim.get_ListViewBitSetSelectionModel_class())) {
                 // recreate the selection model
                 model = MultipleSelectionModelShim.newInstance_from_class(modelClass, ListView.class, listView);
-                listView.setSelectionModel((MultipleSelectionModel<String>)model);
+                listView.setSelectionModel(model);
 
                 // create a new focus model
                 focusModel = ListViewShim.getListViewFocusModel(listView);
@@ -181,7 +181,7 @@ public class MultipleSelectionModelImplTest {
                 currentControl = listView;
             } else if (modelClass.equals(TreeViewShim.get_TreeViewBitSetSelectionModel_class())) {
                 model = MultipleSelectionModelShim.newInstance_from_class(modelClass, TreeView.class, treeView);
-                treeView.setSelectionModel((MultipleSelectionModel<String>)model);
+                treeView.setSelectionModel(model);
                 focusModel = treeView.getFocusModel();
 
                 // create a new focus model

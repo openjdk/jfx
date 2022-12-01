@@ -512,7 +512,7 @@ public class SharedBufferTest {
 
     private void assertSharedBufferContains(byte[]... expectedChunks) {
         ArrayList<byte[]> expectedChunkList =
-                new ArrayList<byte[]>(Arrays.asList(expectedChunks));
+                new ArrayList<>(Arrays.asList(expectedChunks));
         expectedChunkList.add(new byte[0]);
         long position = 0;
         for (byte[] expectedChunk : expectedChunkList) {
