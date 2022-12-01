@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,11 +26,13 @@
 package javafx.scene.control.skin;
 
 import com.sun.javafx.scene.control.ContextMenuContent;
+import com.sun.javafx.scene.control.ListenerHelper;
+import com.sun.javafx.scene.control.behavior.MenuButtonBehavior;
+import javafx.event.ActionEvent;
 import javafx.scene.AccessibleAttribute;
 import javafx.scene.control.Control;
 import javafx.scene.control.MenuButton;
-
-import com.sun.javafx.scene.control.behavior.MenuButtonBehavior;
+import javafx.stage.WindowEvent;
 
 /**
  * Default skin implementation for the {@link MenuButton} control.
@@ -78,11 +80,13 @@ public class MenuButtonSkin extends MenuButtonSkinBase<MenuButton> {
 
         // install default input map for the MenuButton-like controls
         this.behavior = new MenuButtonBehavior(control);
-//        control.setInputMap(behavior.getInputMap());
 
         // MenuButton's showing does not get updated when autoHide happens,
         // as that hide happens under the covers. So we add to the menuButton's
         // properties map to which the MenuButton can react and update accordingly..
+        // JDK-8295426:
+        // onAutoHide triggers an Event.ANY, making it impossible to add a listener which dispose() can remove.
+        // keeping the existing setOnAutoHide(), making sure to setOnAutoHide(null) later.
         popup.setOnAutoHide(e -> {
             MenuButton menuButton = getSkinnable();
             // work around for the fact autohide happens twice
@@ -92,8 +96,10 @@ public class MenuButtonSkin extends MenuButtonSkinBase<MenuButton> {
             }
         });
 
+        ListenerHelper lh = ListenerHelper.get(this);
+
         // request focus on content when the popup is shown
-        popup.setOnShown(event -> {
+        lh.addEventHandler(popup, WindowEvent.WINDOW_SHOWN, (ev) -> {
             if (requestFocusOnFirstMenuItem) {
                 requestFocusOnFirstMenuItem();
                 requestFocusOnFirstMenuItem = false;
@@ -105,9 +111,9 @@ public class MenuButtonSkin extends MenuButtonSkinBase<MenuButton> {
             }
         });
 
-        if (control.getOnAction() == null) {
-            control.setOnAction(e -> control.show());
-        }
+        lh.addEventHandler(control, ActionEvent.ACTION, (ev) -> {
+            control.show();
+        });
 
         label.setLabelFor(control);
     }
@@ -121,7 +127,14 @@ public class MenuButtonSkin extends MenuButtonSkinBase<MenuButton> {
      **************************************************************************/
 
     /** {@inheritDoc} */
-    @Override public void dispose() {
+    @Override
+    public void dispose() {
+        if (getSkinnable() == null) {
+            return;
+        }
+
+        popup.setOnAutoHide(null);
+
         super.dispose();
 
         if (behavior != null) {
