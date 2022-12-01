@@ -100,7 +100,7 @@ public class ResizeHelper {
             int total = 0;
             for (int i = 0; i < count; i++) {
                 if (!skip.get(i)) {
-                    total += pref[i];
+                    total += step1(i);
                 }
             }
 
@@ -116,7 +116,7 @@ public class ResizeHelper {
                     continue;
                 }
 
-                double dw = rem + ((double)delta * pref[i] / total);
+                double dw = rem + ((double)delta * step1(i) / total);
                 int w = (int)Math.round(size[i] + dw);
                 if (w < min[i]) {
                     rem = (w - min[i]);
@@ -141,6 +141,10 @@ public class ResizeHelper {
             }
 
         } while (needsAnotherPass);
+    }
+
+    protected int step1(int ix) {
+        return pref[ix] - min[ix];
     }
 
     /**
