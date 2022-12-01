@@ -25,18 +25,13 @@
 
 package test.com.sun.prism.j2d.print;
 
-import java.awt.Graphics;
-import java.awt.Graphics2D;
 import java.awt.HeadlessException;
-import java.awt.image.BufferedImage;
 import java.awt.print.PageFormat;
 import java.awt.print.Pageable;
 import java.awt.print.Printable;
 import java.awt.print.PrinterException;
 import java.io.ByteArrayOutputStream;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
+import java.util.function.Supplier;
 
 import javax.print.DocFlavor;
 import javax.print.DocPrintJob;
@@ -66,14 +61,16 @@ import javafx.print.PrinterShim;
 import javafx.scene.ParentShim;
 import test.com.sun.javafx.pgstub.StubToolkit;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class J2DPrinterJobTest {
 
     private J2DPrinterJob job;
     private PrinterJobMock printerJobMock;
+    private Supplier<PageFormat> pageFormatAccessor;
 
     @Before
     public void setUp() {
@@ -92,11 +89,16 @@ public class J2DPrinterJobTest {
 
             @Override
             protected J2DPrinterJob.J2DPageable createJ2dPageable() {
-                return new J2DPageable();
+                J2DPageable pageable = new J2DPageable();
+
+                // The printer thread initializes the current page format when it processes a page.
+                // We use it to check if the page has been printed.
+                pageFormatAccessor = pageable::getCurrentPageFormat;
+
+                return pageable;
             }
 
             class J2DPageable extends J2DPrinterJob.J2DPageable {
-
                 @Override
                 public void setPageDone(boolean pageDone) {
                     super.setPageDone(pageDone);
@@ -117,13 +119,8 @@ public class J2DPrinterJobTest {
                 }
 
                 @Override
-                protected void printNode(Graphics g, int w, int h) {
-                    // do nothing, as we don't really print in the test
-                }
-
-                @Override
-                protected void clearScene(J2DPrinterJob.PageInfo pageInfo) {
-                    // not needed in test
+                public PageFormat getCurrentPageFormat() {
+                    return super.getCurrentPageFormat();
                 }
             }
         };
@@ -135,20 +132,19 @@ public class J2DPrinterJobTest {
     }
 
     @Test
-    public void testJobEnd() {
+    public void testJobEnd() throws InterruptedException {
         assertTrue(job.print(PageLayoutShim.createPageLayout(Paper.A4, PageOrientation.PORTRAIT), new ParentShim()));
-        assertTrue(job.endJob());
-        printerJobMock.waitUntilPrinted(10);
-        assertTrue("It seems that an error is occurred during printing.", job.endJob()); // check the jobError is not set
-        assertEquals("The submitted page was not printed.", List.of(0), printerJobMock.getPrintedPages());
+        job.endJob();
+        printerJobMock.waitUntilPrinted(5);
+        assertNotNull("The submitted page was not printed.", pageFormatAccessor.get());
     }
 
     @Test
-    public void testJobCanceled() {
+    public void testJobCanceled() throws InterruptedException {
         assertTrue(job.print(PageLayoutShim.createPageLayout(Paper.A4, PageOrientation.PORTRAIT), new ParentShim()));
         job.cancelJob();
-        printerJobMock.waitUntilPrinted(10);
-        assertEquals("The page was printed even though the job was canceled.", List.of(), printerJobMock.getPrintedPages());
+        printerJobMock.waitUntilPrinted(5);
+        assertNull("The page was printed even though the job was canceled.", pageFormatAccessor.get());
     }
 
     private static class PrintServiceMock extends StreamPrintService {
@@ -241,7 +237,6 @@ public class J2DPrinterJobTest {
         private PrintService service;
         private Pageable pageable;
         private volatile boolean printed;
-        private List<Integer> printedPages = Collections.synchronizedList(new ArrayList<>());
 
         public void waitUntilPrinted(int timeoutInSeconds) {
             for (int i = 0; !printed && i < timeoutInSeconds; i++) {
@@ -255,10 +250,6 @@ public class J2DPrinterJobTest {
             if (!printed) {
                 fail("Timeout: after " + timeoutInSeconds + " seconds the print job is still running");
             }
-        }
-
-        public List<Integer> getPrintedPages() {
-            return printedPages;
         }
 
         @Override
@@ -277,28 +268,8 @@ public class J2DPrinterJobTest {
 
         @Override
         public void print(PrintRequestAttributeSet attributes) throws PrinterException {
-            try {
-                int numberOfPages = pageable.getNumberOfPages();
-                if (numberOfPages == Pageable.UNKNOWN_NUMBER_OF_PAGES) {
-                    numberOfPages = 10; // it should be enough for test purposes
-                }
-                for (int i = 0; i < numberOfPages; i++) {
-                    PageFormat pageFormat = pageable.getPageFormat(i);
-                    int printResult = printPage(pageFormat, i);
-                    if (printResult == Printable.NO_SUCH_PAGE) {
-                        break;
-                    }
-                    printedPages.add(i);
-                }
-            } finally {
-                printed = true;
-            }
-        }
-
-        protected int printPage(PageFormat pageFormat, int pageIndex) throws PrinterException {
-            Graphics2D graphics = new BufferedImage(1000, 1000, BufferedImage.TYPE_INT_ARGB).createGraphics();
-            Printable printable = pageable.getPrintable(pageIndex);
-            return printable.print(graphics, pageFormat, pageIndex);
+            pageable.getPageFormat(0);
+            printed = true;
         }
 
         @Override
