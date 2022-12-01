@@ -347,6 +347,7 @@ public class SliderSkin extends SkinBase<Slider> {
         };
         thumb.getStyleClass().setAll("thumb");
         thumb.setAccessibleRole(AccessibleRole.THUMB);
+        dragStart = new Point2D(thumb.getLayoutX(), thumb.getLayoutY());
         track = new StackPane();
         track.getStyleClass().setAll("track");
 //        horizontal = getSkinnable().isVertical();
