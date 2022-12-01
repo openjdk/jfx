@@ -224,15 +224,8 @@ public class SkinMemoryLeakTest {
                 ColorPicker.class,
                 ComboBox.class,
                 DatePicker.class,
-                //MenuBar.class,
-                MenuButton.class,
-                //Pagination.class,
                 PasswordField.class,
-                //ScrollBar.class,
-                //ScrollPane.class,
-                // @Ignore("8245145")
                 Spinner.class,
-                SplitMenuButton.class,
                 SplitPane.class,
                 TableView.class,
                 TreeTableView.class
