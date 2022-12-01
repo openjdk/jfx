@@ -1201,6 +1201,7 @@ public abstract class Node implements EventTarget, Styleable {
      * @defaultValue null
      * @see <a href="doc-files/cssref.html">CSS Reference Guide</a>
      */
+    @Override
     public final String getId() {
         return id == null ? null : id.get();
     }
@@ -1310,6 +1311,7 @@ public abstract class Node implements EventTarget, Styleable {
      *         an empty String is returned.
      * @see <a href="doc-files/cssref.html">CSS Reference Guide</a>
      */
+    @Override
     public final String getStyle() {
         return style == null ? "" : style.get();
     }
@@ -1407,7 +1409,7 @@ public abstract class Node implements EventTarget, Styleable {
 
     /**
      * Indicates whether or not this {@code Node} is shown. A node is considered shown if it's
-     * part of a {@code Scene} which is part of a {@code Window} whose
+     * part of a {@code Scene} that is part of a {@code Window} whose
      * {@link Window#showingProperty showing property} is {@code true}. The {@link Node#visibleProperty visibility}
      * of the node or its scene does not affect this property.
      * <p>
@@ -1417,16 +1419,19 @@ public abstract class Node implements EventTarget, Styleable {
      * This property can also be used to start animations when the node is shown, and to stop them
      * when it is no longer shown.
      *
-     * @see ObservableValue#when(ObservableValue)
      * @since 20
      */
     private ReadOnlyBooleanProperty shown;
 
     public final boolean isShown() {
-        Scene s = getScene();
-        if (s == null) return false;
-        Window w = s.getWindow();
-        return w != null && w.isShowing();
+        if (shown == null) {  // avoid eager instantiation of property
+            Scene s = getScene();
+            if (s == null) return false;
+            Window w = s.getWindow();
+            return w != null && w.isShowing();
+        }
+
+        return shown.get();
     }
 
     public final ReadOnlyBooleanProperty shownProperty() {
