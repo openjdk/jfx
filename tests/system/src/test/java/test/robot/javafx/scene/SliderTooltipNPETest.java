@@ -47,7 +47,7 @@ import test.util.Util;
  * Unit test for verifying Slider NPE error.
  *
  * There is 1 tests in this file.
- * Steps for testSliderTooltipNPE() 
+ * Steps for testSliderTooltipNPE()
  * 1. Create a slider and tooltip.
  * 2. Make setAutoHide of tooltip as true and add tooltip to slider.
  * 3. Hover over slider thumb and wait for tooltip. Drag the thumb.
@@ -65,7 +65,7 @@ public class SliderTooltipNPETest {
     final int DRAG_DISTANCE = 10;
 
     public static void main(String[] args) {
-        initFX();  
+        initFX();
         try {
             SliderTooltipNPETest test = new SliderTooltipNPETest();
             test.testSliderTooltipNPE();
@@ -73,7 +73,7 @@ public class SliderTooltipNPETest {
             e.printStackTrace();
         } finally {
             exit();
-        }        
+        }
     }
 
     @Test
@@ -83,12 +83,12 @@ public class SliderTooltipNPETest {
 
     private void dragSliderAfterTooltipDisplayed(int dragDistance, boolean xIncr) throws Throwable {
         Thread.sleep(1000); // Wait for slider to layout
-        
+
         Util.runAndWait(() -> {
             robot.mouseMove((int)(scene.getWindow().getX() + scene.getX() + SCENE_WIDTH/2),
                 (int)(scene.getWindow().getY() + scene.getY() + SCENE_HEIGHT/2));
         });
-        
+
         Thread.sleep(3000); // Wait for tooltip to be displayed
 
         Util.runAndWait(() -> {
