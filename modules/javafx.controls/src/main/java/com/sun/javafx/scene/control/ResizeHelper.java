@@ -144,7 +144,8 @@ public class ResizeHelper {
     }
 
     protected int step1(int ix) {
-        return pref[ix] - min[ix];
+        // TODO inline
+        return pref[ix];
     }
 
     /**
