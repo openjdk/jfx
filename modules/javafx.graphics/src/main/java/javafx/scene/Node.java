@@ -1410,14 +1410,14 @@ public abstract class Node implements EventTarget, Styleable {
     /**
      * Indicates whether or not this {@code Node} is shown. A node is considered shown if it's
      * part of a {@code Scene} that is part of a {@code Window} whose
-     * {@link Window#showingProperty showing property} is {@code true}. The {@link Node#visibleProperty visibility}
+     * {@link Window#showingProperty showing} property is {@code true}. The {@link Node#visibleProperty visibility}
      * of the node or its scene does not affect this property.
      * <p>
      * This property can be used in conjunction with {@link ObservableValue#when} to
      * create bindings which are only actively listening to their source when the node is shown.
      * <p>
-     * This property can also be used to start animations when the node is shown, and to stop them
-     * when it is no longer shown.
+     * This property can also be useful to perform actions when the node is shown or no longer
+     * shown, like starting and stopping animations
      *
      * @since 20
      */
@@ -1446,7 +1446,7 @@ public abstract class Node implements EventTarget, Styleable {
         return shown;
     }
 
-    // Candidate to make publicly available or to add as a convience method to ObservableValue
+    // Candidate to make publicly available or to add as a convenience method to ObservableValue
     private static class ReadOnlyBooleanDelegate extends ReadOnlyBooleanProperty {
         private final ObservableValue<Boolean> delegate;
         private final Object bean;
