@@ -28,32 +28,21 @@ package javafx.scene.control.skin;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.sun.javafx.scene.control.Properties;
-import com.sun.javafx.scene.control.behavior.BehaviorBase;
-import com.sun.javafx.scene.control.skin.Utils;
-import javafx.beans.property.BooleanProperty;
-import javafx.beans.property.ObjectProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.EventHandler;
 import javafx.scene.AccessibleAction;
 import javafx.scene.AccessibleAttribute;
 import javafx.scene.Node;
-import javafx.scene.control.Button;
 import javafx.scene.control.Control;
-import javafx.scene.control.ResizeFeaturesBase;
 import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TablePosition;
 import javafx.scene.control.TableRow;
 import javafx.scene.control.TableSelectionModel;
 import javafx.scene.control.TableView;
-import javafx.scene.control.TableView.TableViewFocusModel;
 import javafx.scene.control.TableView.TableViewSelectionModel;
 import javafx.scene.input.MouseEvent;
-import javafx.scene.layout.Region;
-import javafx.util.Callback;
-
 import com.sun.javafx.scene.control.behavior.TableViewBehavior;
 
 /**
@@ -212,7 +201,7 @@ public class TableViewSkin<T> extends TableViewSkinBase<T, T, TableView<T>, Tabl
         if (tableView.getRowFactory() != null) {
             cell = tableView.getRowFactory().call(tableView);
         } else {
-            cell = new TableRow<T>();
+            cell = new TableRow<>();
         }
 
         cell.updateTableView(tableView);

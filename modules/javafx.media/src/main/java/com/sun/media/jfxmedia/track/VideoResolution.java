@@ -73,6 +73,7 @@ public class VideoResolution {
     /**
      * Write the dimensions to a <code>String</code>.
      */
+    @Override
     public String toString() {
         return "VideoResolution {width: "+width+" height: "+height+"}";
     }

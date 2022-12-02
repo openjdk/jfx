@@ -24,10 +24,7 @@
  */
 package javafx.scene.control.skin;
 
-import com.sun.javafx.scene.control.Properties;
-import com.sun.javafx.scene.control.TableColumnBaseHelper;
 import com.sun.javafx.scene.control.TreeTableViewBackingList;
-import com.sun.javafx.scene.control.skin.Utils;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
@@ -37,22 +34,15 @@ import javafx.scene.Node;
 import javafx.scene.control.Control;
 import javafx.scene.control.IndexedCell;
 import javafx.scene.control.ResizeFeaturesBase;
-import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableColumnBase;
 import javafx.scene.control.TableFocusModel;
 import javafx.scene.control.TablePositionBase;
 import javafx.scene.control.TableSelectionModel;
 import javafx.scene.control.TableView;
-import javafx.scene.control.TreeTableCell;
 import javafx.scene.control.TreeTableColumn;
-import javafx.scene.control.TreeTableRow;
 import javafx.scene.control.TreeTableView;
-import javafx.scene.layout.Region;
 import javafx.util.Callback;
-
-import java.util.List;
-import java.util.Optional;
 
 // NOT PUBLIC API
 class TableSkinUtils {

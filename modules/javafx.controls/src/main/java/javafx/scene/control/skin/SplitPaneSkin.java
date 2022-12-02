@@ -140,7 +140,7 @@ public class SplitPaneSkin extends SkinBase<SplitPane> {
 
         if (contentDividers.size() > 0 && previousSize != -1 && previousSize != (horizontal ? sw  : sh)) {
             //This algorithm adds/subtracts a little to each panel on every resize
-            List<Content> resizeList = new ArrayList<Content>();
+            List<Content> resizeList = new ArrayList<>();
             for (Content c: contentRegions) {
                 if (c.isResizableWithParent()) {
                     resizeList.add(c);
@@ -308,9 +308,9 @@ public class SplitPaneSkin extends SkinBase<SplitPane> {
             spaceRequested = Math.abs(spaceRequested);
 
             // Add the panels where we can take space from
-            List<Content> availableList = new ArrayList<Content>();
-            List<Content> storageList = new ArrayList<Content>();
-            List<Content> spaceRequestor = new ArrayList<Content>();
+            List<Content> availableList = new ArrayList<>();
+            List<Content> storageList = new ArrayList<>();
+            List<Content> spaceRequestor = new ArrayList<>();
             double available = 0;
             for (Content c: contentRegions) {
                 if (c.getAvailable() >= 0) {

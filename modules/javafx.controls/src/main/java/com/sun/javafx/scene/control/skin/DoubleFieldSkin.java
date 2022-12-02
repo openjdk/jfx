@@ -72,6 +72,7 @@ public class DoubleFieldSkin extends InputFieldSkin {
         super.dispose();
     }
 
+    @Override
     protected boolean accept(String text) {
         if (text.length() == 0) return true;
         if (text.matches("[0-9\\.]*")) {
@@ -83,10 +84,12 @@ public class DoubleFieldSkin extends InputFieldSkin {
         return false;
     }
 
+    @Override
     protected void updateText() {
         getTextField().setText("" + ((DoubleField) control).getValue());
     }
 
+    @Override
     protected void updateValue() {
         double value = ((DoubleField) control).getValue();
         double newValue;

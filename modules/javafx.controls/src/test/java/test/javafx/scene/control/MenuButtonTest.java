@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,27 +25,37 @@
 
 package test.javafx.scene.control;
 
-import javafx.scene.control.skin.MenuButtonSkin;
-import com.sun.javafx.tk.Toolkit;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertTrue;
+
 import javafx.beans.property.SimpleObjectProperty;
+import javafx.event.Event;
+import javafx.event.EventHandler;
+import javafx.event.EventType;
 import javafx.geometry.Side;
-import javafx.scene.Scene;
 import javafx.scene.Group;
-import javafx.scene.control.ContentDisplay;
+import javafx.scene.Scene;
 import javafx.scene.control.Button;
+import javafx.scene.control.ContentDisplay;
 import javafx.scene.control.MenuButton;
 import javafx.scene.control.MenuItem;
+import javafx.scene.control.skin.MenuButtonSkin;
+import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.VBox;
 import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
-import javafx.event.Event;
-import javafx.event.EventType;
-import javafx.event.EventHandler;
 
 import org.junit.Before;
 import org.junit.Test;
 
-import static org.junit.Assert.*;
+import com.sun.javafx.scene.SceneHelper;
+import com.sun.javafx.tk.Toolkit;
+
+import test.com.sun.javafx.scene.control.infrastructure.MouseEventGenerator;
 
 /**
  *
@@ -207,7 +217,7 @@ public class MenuButtonTest {
 
     @Test public void popupSideCanBeBound() {
         Side side = Side.TOP;
-        SimpleObjectProperty<Side> other = new SimpleObjectProperty<Side>(menuButton, "popupSide", side);
+        SimpleObjectProperty<Side> other = new SimpleObjectProperty<>(menuButton, "popupSide", side);
         menuButton.popupSideProperty().bind(other);
         assertSame(side, menuButton.getPopupSide());
     }
@@ -652,5 +662,64 @@ public class MenuButtonTest {
             mbtn, mbtn.onHidingProperty().getBean());
         assertEquals("MenuButton.onHidden bean should be MenuButton object.",
             mbtn, mbtn.onHiddenProperty().getBean());
+    }
+
+    /**
+     * JDK-8295426 menu button popup is not shown on mouse click after skin is
+     * replaced.
+     */
+    @Test
+    public void testMenuButtonPopupAfterSkinReplaced() {
+        MenuItem mi = new MenuItem("MenuItem1");
+
+        MenuButton b = new MenuButton("Menu Button");
+        b.getItems().add(mi);
+
+        VBox root = new VBox();
+        root.getChildren().addAll(b);
+
+        Scene scene = new Scene(root, 800, 600);
+        Stage stage = new Stage();
+        // keep stage at 0,0 so the screen X/Y to be the same as local Node X/Y, for
+        // MouseEventGenerator
+        stage.setX(0);
+        stage.setY(0);
+        stage.setScene(scene);
+        stage.show();
+        stage.requestFocus();
+
+        Toolkit.getToolkit().firePulse();
+
+        MenuButtonSkin skin = (MenuButtonSkin)b.getSkin();
+        assertTrue(skin != null);
+
+        double offset = 15;
+        double x = (b.localToScene(b.getLayoutBounds())).getMinX() + offset;
+        double y = (b.localToScene(b.getLayoutBounds())).getMinY() + offset;
+
+        // click on menu button to show the popup
+        SceneHelper.processMouseEvent(scene, MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_PRESSED, x, y));
+        SceneHelper.processMouseEvent(scene, MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_RELEASED, x, y));
+        assertTrue(b.isShowing());
+
+        // change the skin
+        b.setSkin(new MenuButtonSkin(b));
+        b.requestFocus();
+        Toolkit.getToolkit().firePulse();
+        assertTrue(b.isFocused());
+
+        // click once more on menu button to hide the popup
+        SceneHelper.processMouseEvent(scene, MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_PRESSED, x, y));
+        SceneHelper.processMouseEvent(scene, MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_RELEASED, x, y));
+        Toolkit.getToolkit().firePulse();
+        assertFalse(b.isShowing()); // fails JDK-8295426
+
+        // click again to show the popup
+        SceneHelper.processMouseEvent(scene, MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_PRESSED, x, y));
+        SceneHelper.processMouseEvent(scene, MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_RELEASED, x, y));
+        Toolkit.getToolkit().firePulse();
+        assertTrue(b.isShowing());
+
+        stage.hide();
     }
 }

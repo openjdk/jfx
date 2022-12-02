@@ -24,7 +24,7 @@
  */
 package javafx.scene.control;
 
-public class ListViewShim<T> {
+public class ListViewShim {
 
     public static <T> MultipleSelectionModel<T> getListViewBitSetSelectionModel(ListView listView) {
             return new ListView.ListViewBitSetSelectionModel<>(listView);

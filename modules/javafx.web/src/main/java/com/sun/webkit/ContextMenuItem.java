@@ -51,6 +51,7 @@ public final class ContextMenuItem {
 
     public ContextMenu getSubmenu() { return submenu; }
 
+    @Override
     public String toString() {
         return String.format(
                 "%s[title='%s', action=%d, enabled=%b, checked=%b, type=%d]",

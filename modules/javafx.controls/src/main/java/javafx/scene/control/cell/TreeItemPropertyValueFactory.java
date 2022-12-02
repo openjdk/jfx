@@ -26,7 +26,6 @@
 package javafx.scene.control.cell;
 
 import javafx.beans.NamedArg;
-import javafx.beans.property.Property;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.beans.value.ObservableValue;
 import javafx.scene.control.TreeItem;
@@ -178,7 +177,7 @@ public class TreeItemPropertyValueFactory<S,T> implements Callback<TreeTableColu
                 // create a new PropertyReference
                 this.columnClass = rowData.getClass();
                 this.previousProperty = getProperty();
-                this.propertyRef = new PropertyReference<T>(rowData.getClass(), getProperty());
+                this.propertyRef = new PropertyReference<>(rowData.getClass(), getProperty());
             }
 
             if (propertyRef != null) {
@@ -188,7 +187,7 @@ public class TreeItemPropertyValueFactory<S,T> implements Callback<TreeTableColu
             try {
                 // attempt to just get the value
                 T value = propertyRef.get(rowData);
-                return new ReadOnlyObjectWrapper<T>(value);
+                return new ReadOnlyObjectWrapper<>(value);
             } catch (RuntimeException e2) {
                 // fall through to logged exception below
             }
