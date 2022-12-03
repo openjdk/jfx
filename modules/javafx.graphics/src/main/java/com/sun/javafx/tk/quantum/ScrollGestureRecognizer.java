@@ -174,7 +174,7 @@ class ScrollGestureRecognizer implements GestureRecognizer {
                 sendScrollFinishedEvent(lastCenterAbsX, lastCenterAbsY, lastTouchCount);
 
                 if (SCROLL_INERTIA_ENABLED) {
-                    double timeFromLastScroll = (time - scrollStartTime) / 1000000;
+                    double timeFromLastScroll = ((double)time - scrollStartTime) / 1000000;
                     if (timeFromLastScroll < 300) {
                         state = ScrollRecognitionState.INERTIA;
                         // activate inertia
@@ -242,7 +242,7 @@ class ScrollGestureRecognizer implements GestureRecognizer {
                     totalDeltaY += deltaY;
 
                     sendScrollEvent(false, centerAbsX, centerAbsY, currentTouchCount);
-                    double timePassed = (time - scrollStartTime) / 1000000000;
+                    double timePassed = ((double)time - scrollStartTime) / 1000000000;
                     if (timePassed > 1e-4) {
                         //capture radius (pytaguras) or init to variables x,y ???
                         double scrollMagnitude = Math.sqrt(deltaX * deltaX + deltaY * deltaY);

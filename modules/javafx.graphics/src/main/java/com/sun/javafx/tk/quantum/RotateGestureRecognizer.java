@@ -227,7 +227,7 @@ class RotateGestureRecognizer implements GestureRecognizer {
                 sendRotateFinishedEvent();
             }
             if (ROTATION_INERTIA_ENABLED && (state == RotateRecognitionState.PRE_INERTIA || state == RotateRecognitionState.ACTIVE)) {
-                double timeFromLastRotation = (time - rotationStartTime) / 1000000;
+                double timeFromLastRotation = ((double)time - rotationStartTime) / 1000000;
                 if (timeFromLastRotation < 300) {
                     state = RotateRecognitionState.INERTIA;
                     // activate inertia
@@ -303,7 +303,7 @@ class RotateGestureRecognizer implements GestureRecognizer {
                         totalRotation += currentRotation;
                         sendRotateEvent(false);
                         angleReference = newAngle;
-                        double timePassed = (time - rotationStartTime) / 1000000000;
+                        double timePassed = ((double)time - rotationStartTime) / 1000000000;
                         if (timePassed > 1e-4) {
                             initialInertiaRotationVelocity = currentRotation / timePassed;
                             rotationStartTime = time;
