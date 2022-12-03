@@ -32,6 +32,8 @@ import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
+
 import javafx.util.Duration;
 import javafx.event.EventType;
 import javafx.scene.input.ScrollEvent;
@@ -49,6 +51,8 @@ class ScrollGestureRecognizer implements GestureRecognizer {
     private static boolean SCROLL_INERTIA_ENABLED = true;
     private static double MAX_INITIAL_VELOCITY = 1000;
     private static double SCROLL_INERTIA_MILLIS = 1500;
+    private static final long SCROLL_INERTIA_THRESHOLD_NANOS = TimeUnit.MILLISECONDS.toNanos(300);
+
     static {
         @SuppressWarnings("removal")
         var dummy = AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
@@ -70,7 +74,7 @@ class ScrollGestureRecognizer implements GestureRecognizer {
     private Timeline inertiaTimeline = new Timeline();
     private DoubleProperty inertiaScrollVelocity = new SimpleDoubleProperty();
     private double initialInertiaScrollVelocity = 0;
-    private double scrollStartTime = 0;
+    private long scrollStartNanos;
     private double lastTouchEventTime = 0;
 
     private Map<Long, TouchPointTracker> trackers =
@@ -165,8 +169,8 @@ class ScrollGestureRecognizer implements GestureRecognizer {
     }
 
     @Override
-    public void notifyEndTouchEvent(long time) {
-        lastTouchEventTime = time;
+    public void notifyEndTouchEvent(long nanos) {
+        lastTouchEventTime = nanos;
         if (currentTouchCount != trackers.size()) {
             throw new RuntimeException("Error in Scroll gesture recognition: "
                     + "touch count is wrong: " + currentTouchCount);
@@ -177,8 +181,9 @@ class ScrollGestureRecognizer implements GestureRecognizer {
                 sendScrollFinishedEvent(lastCenterAbsX, lastCenterAbsY, lastTouchCount);
 
                 if (SCROLL_INERTIA_ENABLED) {
-                    double timeFromLastScroll = ((double)time - scrollStartTime) / 1000000;
-                    if (timeFromLastScroll < 300) {
+                    double nanosSinceLastScroll = nanos - scrollStartNanos;
+
+                    if (nanosSinceLastScroll < SCROLL_INERTIA_THRESHOLD_NANOS) {
                         state = ScrollRecognitionState.INERTIA;
                         // activate inertia
                         inertiaLastTime = 0;
@@ -245,15 +250,16 @@ class ScrollGestureRecognizer implements GestureRecognizer {
                     totalDeltaY += deltaY;
 
                     sendScrollEvent(false, centerAbsX, centerAbsY, currentTouchCount);
-                    double timePassed = ((double)time - scrollStartTime) / 1000000000;
-                    if (timePassed > 1e-4) {
+                    long nanosPassed = nanos - scrollStartNanos;
+
+                    if (nanosPassed > INITIAL_VELOCITY_THRESHOLD_NANOS) {
                         //capture radius (pytaguras) or init to variables x,y ???
                         double scrollMagnitude = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
                         factorX = deltaX / scrollMagnitude;
                         factorY = deltaY / scrollMagnitude;
-                        initialInertiaScrollVelocity = scrollMagnitude / timePassed;
+                        initialInertiaScrollVelocity = scrollMagnitude / nanosPassed * NANOS_TO_SECONDS;
 
-                        scrollStartTime = time;
+                        scrollStartNanos = nanos;
                     }
 
                     lastCenterAbsX = centerAbsX;

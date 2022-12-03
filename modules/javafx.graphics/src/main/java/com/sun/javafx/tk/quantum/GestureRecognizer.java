@@ -25,5 +25,9 @@
 
 package com.sun.javafx.tk.quantum;
 
+import java.util.concurrent.TimeUnit;
+
 interface GestureRecognizer extends GlassTouchEventListener {
+    static final long INITIAL_VELOCITY_THRESHOLD_NANOS = 100L * 1000;
+    static final double NANOS_TO_SECONDS = 1.0 / TimeUnit.SECONDS.toNanos(1);
 }

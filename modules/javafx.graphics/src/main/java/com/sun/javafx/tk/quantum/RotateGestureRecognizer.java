@@ -33,6 +33,8 @@ import java.security.PrivilegedAction;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
+
 import javafx.util.Duration;
 import javafx.event.EventType;
 import javafx.scene.input.RotateEvent;
@@ -52,6 +54,8 @@ class RotateGestureRecognizer implements GestureRecognizer {
     private static boolean ROTATION_INERTIA_ENABLED = true;
     private static double MAX_INITIAL_VELOCITY = 500;
     private static double ROTATION_INERTIA_MILLIS = 1500;
+    private static final long ROTATION_INERTIA_THRESHOLD_NANOS = TimeUnit.MILLISECONDS.toNanos(300);
+
     static {
         @SuppressWarnings("removal")
         var dummy = AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
@@ -71,7 +75,7 @@ class RotateGestureRecognizer implements GestureRecognizer {
     private Timeline inertiaTimeline = new Timeline();
     private DoubleProperty inertiaRotationVelocity = new SimpleDoubleProperty();
     private double initialInertiaRotationVelocity = 0;
-    private double rotationStartTime = 0;
+    private long rotationStartTime;
     private double lastTouchEventTime = 0;
 
     // from MultiTouchTracker
@@ -219,7 +223,7 @@ class RotateGestureRecognizer implements GestureRecognizer {
     }
 
     @Override
-    public void notifyEndTouchEvent(long time) {
+    public void notifyEndTouchEvent(long nanos) {
         lastTouchEventTime = time;
         if (currentTouchCount != trackers.size()) {
             throw new RuntimeException("Error in Rotate gesture recognition: "
@@ -231,8 +235,9 @@ class RotateGestureRecognizer implements GestureRecognizer {
                 sendRotateFinishedEvent();
             }
             if (ROTATION_INERTIA_ENABLED && (state == RotateRecognitionState.PRE_INERTIA || state == RotateRecognitionState.ACTIVE)) {
-                double timeFromLastRotation = ((double)time - rotationStartTime) / 1000000;
-                if (timeFromLastRotation < 300) {
+                long nanosSinceLastRotation = nanos - rotationStartNanos;
+
+                if (nanosSinceLastRotation < ROTATION_INERTIA_THRESHOLD_NANOS) {
                     state = RotateRecognitionState.INERTIA;
                     // activate inertia
                     inertiaLastTime = 0;
@@ -307,10 +312,11 @@ class RotateGestureRecognizer implements GestureRecognizer {
                         totalRotation += currentRotation;
                         sendRotateEvent(false);
                         angleReference = newAngle;
-                        double timePassed = ((double)time - rotationStartTime) / 1000000000;
-                        if (timePassed > 1e-4) {
-                            initialInertiaRotationVelocity = currentRotation / timePassed;
-                            rotationStartTime = time;
+                        long nanosPassed = nanos - rotationStartNanos;
+
+                        if (nanosPassed > INITIAL_VELOCITY_THRESHOLD_NANOS) {
+                            initialInertiaRotationVelocity = currentRotation / nanosPassed * NANOS_TO_SECONDS;
+                            rotationStartNanos = nanos;
                         }
                     }
                 }

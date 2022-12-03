@@ -32,6 +32,8 @@ import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
+
 import javafx.util.Duration;
 import javafx.event.EventType;
 import javafx.scene.input.ZoomEvent;
@@ -52,6 +54,7 @@ class ZoomGestureRecognizer implements GestureRecognizer {
     private static double ZOOM_INERTIA_MILLIS = 500;
     private static double MAX_ZOOM_IN_FACTOR = 10;
     private static double MAX_ZOOM_OUT_FACTOR = 0.1;
+    private static final long ZOOM_INERTIA_THRESHOLD_NANOS = TimeUnit.MILLISECONDS.toNanos(200);
 
     static {
         @SuppressWarnings("removal")
@@ -72,7 +75,7 @@ class ZoomGestureRecognizer implements GestureRecognizer {
     private Timeline inertiaTimeline = new Timeline();
     private DoubleProperty inertiaZoomVelocity = new SimpleDoubleProperty();
     private double initialInertiaZoomVelocity = 0;
-    private double zoomStartTime = 0;
+    private long zoomStartNanos;
     private double lastTouchEventTime = 0;
 
     private ZoomRecognitionState state = ZoomRecognitionState.IDLE;
@@ -179,8 +182,8 @@ class ZoomGestureRecognizer implements GestureRecognizer {
     }
 
     @Override
-    public void notifyEndTouchEvent(long time) {
-        lastTouchEventTime = time;
+    public void notifyEndTouchEvent(long nanos) {
+        lastTouchEventTime = nanos;
         if (currentTouchCount != trackers.size()) {
             throw new RuntimeException("Error in Zoom gesture recognition: "
                     + "touch count is wrong: " + currentTouchCount);
@@ -191,8 +194,9 @@ class ZoomGestureRecognizer implements GestureRecognizer {
                 sendZoomFinishedEvent();
             }
             if (ZOOM_INERTIA_ENABLED && (state == ZoomRecognitionState.PRE_INERTIA || state == ZoomRecognitionState.ACTIVE)) {
-                double timeFromLastZoom = ((double)time - zoomStartTime) / 1000000;
-                if (initialInertiaZoomVelocity != 0 && timeFromLastZoom < 200) {
+                long nanosSinceLastZoom = nanos - zoomStartNanos;
+
+                if (initialInertiaZoomVelocity != 0 && nanosSinceLastZoom < ZOOM_INERTIA_THRESHOLD_NANOS) {
                     state = ZoomRecognitionState.INERTIA;
                     // activate inertia
                     inertiaLastTime = 0;
@@ -255,7 +259,7 @@ class ZoomGestureRecognizer implements GestureRecognizer {
                 // currentTouchCount >= 2
                 if (state == ZoomRecognitionState.IDLE) {
                     state = ZoomRecognitionState.TRACKING;
-                    zoomStartTime = time;
+                    zoomStartNanos = nanos;
                 }
 
                 calculateCenter();
@@ -278,10 +282,11 @@ class ZoomGestureRecognizer implements GestureRecognizer {
                         totalZoomFactor *= zoomFactor;
                         sendZoomEvent(false);
                         distanceReference = currentDistance;
-                        double timePassed = ((double)time - zoomStartTime) / 1000000000;
-                        if (timePassed > 1e-4) {
-                            initialInertiaZoomVelocity = (totalZoomFactor - prevTotalZoomFactor) / timePassed;
-                            zoomStartTime = time;
+                        long nanosPassed = nanos - zoomStartNanos;
+
+                        if (nanosPassed > INITIAL_VELOCITY_THRESHOLD_NANOS) {
+                            initialInertiaZoomVelocity = (totalZoomFactor - prevTotalZoomFactor) / nanosPassed * NANOS_TO_SECONDS;
+                            zoomStartNanos = nanos;
                         } else {
                             initialInertiaZoomVelocity = 0;
                         }
