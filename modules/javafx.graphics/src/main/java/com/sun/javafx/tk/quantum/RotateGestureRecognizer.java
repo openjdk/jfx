@@ -25,80 +25,72 @@
 
 package com.sun.javafx.tk.quantum;
 
-import com.sun.glass.events.KeyEvent;
-import com.sun.glass.events.TouchEvent;
-
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
-import javafx.util.Duration;
-import javafx.event.EventType;
-import javafx.scene.input.RotateEvent;
-import javafx.animation.Animation;
+import com.sun.glass.events.KeyEvent;
+import com.sun.glass.events.TouchEvent;
+
 import javafx.animation.Interpolator;
 import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
 import javafx.animation.Timeline;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.SimpleDoubleProperty;
+import javafx.scene.input.RotateEvent;
+import javafx.util.Duration;
 
 class RotateGestureRecognizer implements GestureRecognizer {
-    private ViewScene scene;
-
-    // gesture will be activated if |rotation| > ROTATATION_THRESHOLD
-    private static double ROTATATION_THRESHOLD = 5; //in degrees
-    private static boolean ROTATION_INERTIA_ENABLED = true;
-    private static double MAX_INITIAL_VELOCITY = 500;
-    private static double ROTATION_INERTIA_MILLIS = 1500;
+    private static final double MAX_INITIAL_VELOCITY = 500;
+    private static final double ROTATION_INERTIA_MILLIS = 1500;
     private static final long ROTATION_INERTIA_THRESHOLD_NANOS = TimeUnit.MILLISECONDS.toNanos(300);
+
+    // gesture will be activated if |rotation| > rotationThresholdDegrees
+    private static double rotationThresholdDegrees = 5;
+    private static boolean rotationInertiaEnabled = true;
 
     static {
         @SuppressWarnings("removal")
         var dummy = AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
             String s = System.getProperty("com.sun.javafx.gestures.rotate.threshold");
             if (s != null) {
-                ROTATATION_THRESHOLD = Double.valueOf(s);
+                rotationThresholdDegrees = Double.valueOf(s);
             }
             s = System.getProperty("com.sun.javafx.gestures.rotate.inertia");
             if (s != null) {
-                ROTATION_INERTIA_ENABLED = Boolean.valueOf(s);
+                rotationInertiaEnabled = Boolean.valueOf(s);
             }
             return null;
         });
     }
 
+    private final Timeline inertiaTimeline = new Timeline();
+    private final DoubleProperty inertiaRotationVelocity = new SimpleDoubleProperty();
+    private final Map<Long, TouchPointTracker> trackers = new HashMap<>();  // from MultiTouchTracker
+
+    private ViewScene scene;
     private RotateRecognitionState state = RotateRecognitionState.IDLE;
-    private Timeline inertiaTimeline = new Timeline();
-    private DoubleProperty inertiaRotationVelocity = new SimpleDoubleProperty();
-    private double initialInertiaRotationVelocity = 0;
-    private long rotationStartTime;
-    private double lastTouchEventTime = 0;
+    private double initialInertiaRotationVelocity;
+    private long rotationStartNanos;
 
-    // from MultiTouchTracker
-    Map<Long, TouchPointTracker> trackers =
-            new HashMap<Long, TouchPointTracker>();
+    private int modifiers;
+    private boolean direct;
 
-    int modifiers;
-    boolean direct;
-
-    //private int touchCount;
-    private int currentTouchCount = 0;
+    private int currentTouchCount;
     private boolean touchPointsSetChanged;
     private boolean touchPointsPressed;
-    int touchPointsInEvent;
-    long touchPointID1 = -1;
-    long touchPointID2 = -1;
-    double centerX, centerY;
-    double centerAbsX, centerAbsY;
+    private long touchPointID1 = -1;
+    private long touchPointID2 = -1;
+    private double centerX, centerY;
+    private double centerAbsX, centerAbsY;
 
-    double currentRotation;
-    double angleReference;
-    double totalRotation = 0;
-    double inertiaLastTime = 0;
+    private double currentRotation;
+    private double angleReference;
+    private double totalRotation;
+    private double inertiaLastTime;
 
     RotateGestureRecognizer(final ViewScene scene) {
         this.scene = scene;
@@ -119,27 +111,25 @@ class RotateGestureRecognizer implements GestureRecognizer {
         params(modifiers, isDirect);
         touchPointsSetChanged = false;
         touchPointsPressed = false;
-        touchPointsInEvent = 0;
     }
 
     @Override
     public void notifyNextTouchEvent(long time, int type, long touchId,
                                      int x, int y, int xAbs, int yAbs) {
-        touchPointsInEvent++;
         switch(type) {
             case TouchEvent.TOUCH_PRESSED:
                 touchPointsSetChanged = true;
                 touchPointsPressed = true;
-                touchPressed(touchId, time, x, y, xAbs, yAbs);
+                touchPressed(touchId, x, y, xAbs, yAbs);
                 break;
             case TouchEvent.TOUCH_STILL:
                 break;
             case TouchEvent.TOUCH_MOVED:
-                touchMoved(touchId, time, x, y, xAbs, yAbs);
+                touchMoved(touchId, x, y, xAbs, yAbs);
                 break;
             case TouchEvent.TOUCH_RELEASED:
                 touchPointsSetChanged = true;
-                touchReleased(touchId, time, x, y, xAbs, yAbs);
+                touchReleased(touchId);
                 break;
             default:
                 throw new RuntimeException("Error in Rotate gesture recognition: "
@@ -224,7 +214,6 @@ class RotateGestureRecognizer implements GestureRecognizer {
 
     @Override
     public void notifyEndTouchEvent(long nanos) {
-        lastTouchEventTime = time;
         if (currentTouchCount != trackers.size()) {
             throw new RuntimeException("Error in Rotate gesture recognition: "
                     + "touch count is wrong: " + currentTouchCount);
@@ -234,7 +223,7 @@ class RotateGestureRecognizer implements GestureRecognizer {
             if (state == RotateRecognitionState.ACTIVE) {
                 sendRotateFinishedEvent();
             }
-            if (ROTATION_INERTIA_ENABLED && (state == RotateRecognitionState.PRE_INERTIA || state == RotateRecognitionState.ACTIVE)) {
+            if (rotationInertiaEnabled && (state == RotateRecognitionState.PRE_INERTIA || state == RotateRecognitionState.ACTIVE)) {
                 long nanosSinceLastRotation = nanos - rotationStartNanos;
 
                 if (nanosSinceLastRotation < ROTATION_INERTIA_THRESHOLD_NANOS) {
@@ -252,10 +241,7 @@ class RotateGestureRecognizer implements GestureRecognizer {
                             new KeyValue(inertiaRotationVelocity, initialInertiaRotationVelocity, Interpolator.LINEAR)),
                         new KeyFrame(
                             Duration.millis(ROTATION_INERTIA_MILLIS * Math.abs(initialInertiaRotationVelocity) / MAX_INITIAL_VELOCITY),
-                            event -> {
-                                //stop inertia
-                                reset();
-                            },
+                            event -> reset(),  // stop inertia
                             new KeyValue(inertiaRotationVelocity, 0, Interpolator.LINEAR))
                         );
                     inertiaTimeline.playFromStart();
@@ -273,7 +259,7 @@ class RotateGestureRecognizer implements GestureRecognizer {
             if (currentTouchCount == 1) {
                 if (state == RotateRecognitionState.ACTIVE) {
                     sendRotateFinishedEvent();
-                    if (ROTATION_INERTIA_ENABLED) {
+                    if (rotationInertiaEnabled) {
                         //prepare for inertia
                         state = RotateRecognitionState.PRE_INERTIA;
                     } else {
@@ -302,7 +288,7 @@ class RotateGestureRecognizer implements GestureRecognizer {
                 } else {
                     currentRotation = getNormalizedDelta(angleReference, newAngle);
                     if (state == RotateRecognitionState.TRACKING) {
-                        if (Math.abs(currentRotation) > ROTATATION_THRESHOLD) {
+                        if (Math.abs(currentRotation) > rotationThresholdDegrees) {
                             state = RotateRecognitionState.ACTIVE;
                             sendRotateStartedEvent();
                         }
@@ -380,19 +366,19 @@ class RotateGestureRecognizer implements GestureRecognizer {
         }, scene.getAccessControlContext());
     }
 
-    public void params(int modifiers, boolean direct) {
+    private void params(int modifiers, boolean direct) {
         this.modifiers = modifiers;
         this.direct = direct;
     }
 
-    public void touchPressed(long id, long nanos, int x, int y, int xAbs, int yAbs) {
+    private void touchPressed(long id, int x, int y, int xAbs, int yAbs) {
         currentTouchCount++;
         TouchPointTracker tracker = new TouchPointTracker();
-        tracker.update(nanos, x, y, xAbs, yAbs);
+        tracker.update(x, y, xAbs, yAbs);
         trackers.put(id, tracker);
     }
 
-    public void touchReleased(long id, long nanos, int x, int y, int xAbs, int yAbs) {
+    private void touchReleased(long id) {
         if (state != RotateRecognitionState.FAILURE) {
             TouchPointTracker tracker = trackers.get(id);
             if (tracker == null) {
@@ -406,7 +392,7 @@ class RotateGestureRecognizer implements GestureRecognizer {
         currentTouchCount--;
     }
 
-    public void touchMoved(long id, long nanos, int x, int y, int xAbs, int yAbs) {
+    private void touchMoved(long id, int x, int y, int xAbs, int yAbs) {
         if (state == RotateRecognitionState.FAILURE) {
             return;
         }
@@ -418,10 +404,10 @@ class RotateGestureRecognizer implements GestureRecognizer {
             throw new RuntimeException("Error in rotate gesture "
                     + "recognition: reported unknown touch point");
         }
-        tracker.update(nanos, x, y, xAbs, yAbs);
+        tracker.update(x, y, xAbs, yAbs);
     }
 
-    void reset() {
+    private void reset() {
         state = RotateRecognitionState.IDLE;
         touchPointID1 = -1;
         touchPointID2 = -1;
@@ -433,7 +419,7 @@ class RotateGestureRecognizer implements GestureRecognizer {
         double x, y;
         double absX, absY;
 
-        public void update(long nanos, double x, double y, double absX, double absY) {
+        public void update(double x, double y, double absX, double absY) {
             this.x = x;
             this.y = y;
             this.absX = absX;

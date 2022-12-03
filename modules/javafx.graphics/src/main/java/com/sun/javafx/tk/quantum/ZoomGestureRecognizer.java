@@ -25,63 +25,58 @@
 
 package com.sun.javafx.tk.quantum;
 
-import com.sun.glass.events.KeyEvent;
-import com.sun.glass.events.TouchEvent;
-
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
-import javafx.util.Duration;
-import javafx.event.EventType;
-import javafx.scene.input.ZoomEvent;
-import javafx.animation.Animation;
+import com.sun.glass.events.KeyEvent;
+import com.sun.glass.events.TouchEvent;
+
 import javafx.animation.Interpolator;
 import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
 import javafx.animation.Timeline;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.SimpleDoubleProperty;
+import javafx.scene.input.ZoomEvent;
+import javafx.util.Duration;
 
 class ZoomGestureRecognizer implements GestureRecognizer {
-    // gesture will be activated if |zoomFactor - 1| > ZOOM_FACTOR_THRESHOLD
-    private static double ZOOM_FACTOR_THRESHOLD = 0.1;
-    private static boolean ZOOM_INERTIA_ENABLED = true;
-    private static double MAX_ZOOMIN_VELOCITY = 3.0;
-    private static double MAX_ZOOMOUT_VELOCITY = 0.3333;
-    private static double ZOOM_INERTIA_MILLIS = 500;
-    private static double MAX_ZOOM_IN_FACTOR = 10;
-    private static double MAX_ZOOM_OUT_FACTOR = 0.1;
+    private static final double ZOOM_INERTIA_MILLIS = 500;
+    private static final double MAX_ZOOM_IN_FACTOR = 10;
+    private static final double MAX_ZOOM_OUT_FACTOR = 0.1;
     private static final long ZOOM_INERTIA_THRESHOLD_NANOS = TimeUnit.MILLISECONDS.toNanos(200);
+
+    // gesture will be activated if |zoomFactor - 1| > zoomFactorThreshold
+    private static double zoomFactorThreshold = 0.1;
+    private static boolean zoomInertiaEnabled = true;
 
     static {
         @SuppressWarnings("removal")
         var dummy = AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
             String s = System.getProperty("com.sun.javafx.gestures.zoom.threshold");
             if (s != null) {
-                ZOOM_FACTOR_THRESHOLD = Double.valueOf(s);
+                zoomFactorThreshold = Double.valueOf(s);
             }
             s = System.getProperty("com.sun.javafx.gestures.zoom.inertia");
             if (s != null) {
-                ZOOM_INERTIA_ENABLED = Boolean.valueOf(s);
+                zoomInertiaEnabled = Boolean.valueOf(s);
             }
             return null;
         });
     }
 
+    private final Timeline inertiaTimeline = new Timeline();
+    private final DoubleProperty inertiaZoomVelocity = new SimpleDoubleProperty();
+    private final Map<Long, TouchPointTracker> trackers = new HashMap<>();
+
     private ViewScene scene;
-    private Timeline inertiaTimeline = new Timeline();
-    private DoubleProperty inertiaZoomVelocity = new SimpleDoubleProperty();
-    private double initialInertiaZoomVelocity = 0;
+    private double initialInertiaZoomVelocity;
     private long zoomStartNanos;
-    private double lastTouchEventTime = 0;
 
     private ZoomRecognitionState state = ZoomRecognitionState.IDLE;
-
-    private Map<Long, TouchPointTracker> trackers =
-            new HashMap<Long, TouchPointTracker>();
 
     private int modifiers;
     private boolean direct;
@@ -92,11 +87,10 @@ class ZoomGestureRecognizer implements GestureRecognizer {
 
     private double centerX, centerY;
     private double centerAbsX, centerAbsY;
-    private double currentDistance;
     private double distanceReference;
     private double zoomFactor = 1.0;
     private double totalZoomFactor = 1.0;
-    double inertiaLastTime = 0;
+    private double inertiaLastTime;
 
     ZoomGestureRecognizer(final ViewScene scene) {
         this.scene = scene;
@@ -128,16 +122,16 @@ class ZoomGestureRecognizer implements GestureRecognizer {
             case TouchEvent.TOUCH_PRESSED:
                 touchPointsSetChanged = true;
                 touchPointsPressed = true;
-                touchPressed(touchId, time, x, y, xAbs, yAbs);
+                touchPressed(touchId, x, y, xAbs, yAbs);
                 break;
             case TouchEvent.TOUCH_STILL:
                 break;
             case TouchEvent.TOUCH_MOVED:
-                touchMoved(touchId, time, x, y, xAbs, yAbs);
+                touchMoved(touchId, x, y, xAbs, yAbs);
                 break;
             case TouchEvent.TOUCH_RELEASED:
                 touchPointsSetChanged = true;
-                touchReleased(touchId, time, x, y, xAbs, yAbs);
+                touchReleased(touchId);
                 break;
             default:
                 throw new RuntimeException("Error in Zoom gesture recognition: "
@@ -183,7 +177,6 @@ class ZoomGestureRecognizer implements GestureRecognizer {
 
     @Override
     public void notifyEndTouchEvent(long nanos) {
-        lastTouchEventTime = nanos;
         if (currentTouchCount != trackers.size()) {
             throw new RuntimeException("Error in Zoom gesture recognition: "
                     + "touch count is wrong: " + currentTouchCount);
@@ -193,7 +186,7 @@ class ZoomGestureRecognizer implements GestureRecognizer {
             if (state == ZoomRecognitionState.ACTIVE) {
                 sendZoomFinishedEvent();
             }
-            if (ZOOM_INERTIA_ENABLED && (state == ZoomRecognitionState.PRE_INERTIA || state == ZoomRecognitionState.ACTIVE)) {
+            if (zoomInertiaEnabled && (state == ZoomRecognitionState.PRE_INERTIA || state == ZoomRecognitionState.ACTIVE)) {
                 long nanosSinceLastZoom = nanos - zoomStartNanos;
 
                 if (initialInertiaZoomVelocity != 0 && nanosSinceLastZoom < ZOOM_INERTIA_THRESHOLD_NANOS) {
@@ -221,12 +214,8 @@ class ZoomGestureRecognizer implements GestureRecognizer {
                             Duration.millis(0),
                             new KeyValue(inertiaZoomVelocity, initialInertiaZoomVelocity, Interpolator.LINEAR)),
                         new KeyFrame(
-                            //Duration.millis(ZOOM_INERTIA_MILLIS * Math.abs(initialInertiaZoomVelocity - 1) / (MAX_ZOOMIN_VELOCITY - 1)),
                             Duration.seconds(duration),
-                            event -> {
-                                //stop inertia
-                                reset();
-                            },
+                            event -> reset(),  // stop inertia
                             new KeyValue(inertiaZoomVelocity, 0, Interpolator.LINEAR))
                         );
                     inertiaTimeline.playFromStart();
@@ -247,7 +236,7 @@ class ZoomGestureRecognizer implements GestureRecognizer {
             if (currentTouchCount == 1) {
                 if (state == ZoomRecognitionState.ACTIVE) {
                     sendZoomFinishedEvent();
-                    if (ZOOM_INERTIA_ENABLED) {
+                    if (zoomInertiaEnabled) {
                         //prepare for inertia
                         state = ZoomRecognitionState.PRE_INERTIA;
                     } else {
@@ -272,7 +261,7 @@ class ZoomGestureRecognizer implements GestureRecognizer {
                 } else {
                     zoomFactor = currentDistance / distanceReference;
                     if (state == ZoomRecognitionState.TRACKING) {
-                        if ( Math.abs(zoomFactor - 1) > ZOOM_FACTOR_THRESHOLD) {
+                        if ( Math.abs(zoomFactor - 1) > zoomFactorThreshold) {
                             state = ZoomRecognitionState.ACTIVE;
                             sendZoomStartedEvent();
                         }
@@ -352,19 +341,19 @@ class ZoomGestureRecognizer implements GestureRecognizer {
         }, scene.getAccessControlContext());
     }
 
-    public void params(int modifiers, boolean direct) {
+    private void params(int modifiers, boolean direct) {
         this.modifiers = modifiers;
         this.direct = direct;
     }
 
-    public void touchPressed(long id, long nanos, int x, int y, int xAbs, int yAbs) {
+    private void touchPressed(long id, int x, int y, int xAbs, int yAbs) {
         currentTouchCount++;
         TouchPointTracker tracker = new TouchPointTracker();
-        tracker.update(nanos, x, y, xAbs, yAbs);
+        tracker.update(x, y, xAbs, yAbs);
         trackers.put(id, tracker);
     }
 
-    public void touchReleased(long id, long nanos, int x, int y, int xAbs, int yAbs) {
+    private void touchReleased(long id) {
         if (state != ZoomRecognitionState.FAILURE) {
             TouchPointTracker tracker = trackers.get(id);
             if (tracker == null) {
@@ -378,7 +367,7 @@ class ZoomGestureRecognizer implements GestureRecognizer {
         currentTouchCount--;
     }
 
-    public void touchMoved(long id, long nanos, int x, int y, int xAbs, int yAbs) {
+    private void touchMoved(long id, int x, int y, int xAbs, int yAbs) {
         if (state == ZoomRecognitionState.FAILURE) {
             return;
         }
@@ -390,10 +379,10 @@ class ZoomGestureRecognizer implements GestureRecognizer {
             throw new RuntimeException("Error in zoom gesture "
                     + "recognition: reported unknown touch point");
         }
-        tracker.update(nanos, x, y, xAbs, yAbs);
+        tracker.update(x, y, xAbs, yAbs);
     }
 
-    void reset() {
+    private void reset() {
         state = ZoomRecognitionState.IDLE;
         zoomFactor = 1.0;
         totalZoomFactor = 1.0;
@@ -403,7 +392,7 @@ class ZoomGestureRecognizer implements GestureRecognizer {
         double x, y;
         double absX, absY;
 
-        public void update(long nanos, double x, double y, double absX, double absY) {
+        public void update(double x, double y, double absX, double absY) {
             this.x = x;
             this.y = y;
             this.absX = absX;
