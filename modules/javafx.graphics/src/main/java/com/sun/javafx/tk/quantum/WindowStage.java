@@ -418,8 +418,8 @@ public class WindowStage extends GlassStage {
                     adjh = (int)Math.round(ih / scaleDivider);
                     scaleMeasure = 1.0 - 1.0 / scaleDivider;
                 }
-                double similarity = (width - adjw) / (double) width +
-                    (height - adjh) / (double) height + //Large padding is bad
+                double similarity = ((double)width - (double)adjw) / width +
+                    ((double)height - (double)adjh) / height + //Large padding is bad
                     scaleMeasure; //Large rescale is bad
                 if (similarity < bestSimilarity) {
                     bestSimilarity = similarity;

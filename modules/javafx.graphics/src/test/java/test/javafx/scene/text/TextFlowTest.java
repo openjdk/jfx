@@ -32,6 +32,7 @@ import javafx.scene.text.TextFlow;
 import javafx.scene.layout.VBox;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
+import test.com.sun.javafx.pgstub.StubToolkit;
 
 import com.sun.javafx.tk.Toolkit;
 
@@ -41,6 +42,9 @@ public class TextFlowTest {
 
     @Test public void testTabSize() {
         Toolkit tk = Toolkit.getToolkit();
+
+        assertTrue(tk instanceof StubToolkit);  // Ensure it's StubToolkit
+
         VBox root = new VBox();
         Scene scene = new Scene(root);
         Stage stage = new Stage();

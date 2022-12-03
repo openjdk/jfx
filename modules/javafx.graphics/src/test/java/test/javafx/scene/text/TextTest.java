@@ -35,6 +35,7 @@ import javafx.scene.text.Text;
 import javafx.scene.layout.HBox;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
+import test.com.sun.javafx.pgstub.StubToolkit;
 
 import com.sun.javafx.tk.Toolkit;
 
@@ -237,6 +238,9 @@ public class TextTest {
         assumeTrue(Boolean.getBoolean("unstable.test"));
 
         Toolkit tk = Toolkit.getToolkit();
+
+        assertTrue(tk instanceof StubToolkit);  // Ensure it's StubToolkit
+
         HBox root = new HBox();
         Scene scene = new Scene(root);
         Stage stage = new Stage();

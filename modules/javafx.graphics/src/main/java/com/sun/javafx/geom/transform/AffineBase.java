@@ -1892,8 +1892,8 @@ public abstract class AffineBase extends BaseTransform {
                         (float) (src.getMinY() / myy),
                         src.getMinZ(),
                         (float) (src.getMaxX() / mxx),
-                                (float) (src.getMaxY() / myy),
-                                src.getMaxZ());
+                        (float) (src.getMaxY() / myy),
+                        src.getMaxZ());
                 break;
             case (APPLY_TRANSLATE):
                 dst = dst.deriveWithNewBounds((float) (src.getMinX() - mxt),

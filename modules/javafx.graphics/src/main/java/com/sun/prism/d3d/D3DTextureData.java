@@ -42,7 +42,7 @@ public class D3DTextureData extends D3DResource.D3DRecord {
     static long estimateRTSize(int physicalWidth, int physicalHeight,
                                boolean hasDepth)
     {
-        return (long) physicalWidth * physicalHeight * 4L;
+        return 4L * physicalWidth * physicalHeight;
     }
 
     D3DTextureData(D3DContext context,

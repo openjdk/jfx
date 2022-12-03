@@ -56,7 +56,7 @@ class D3DVramPool extends BaseResourcePool<D3DTextureData>
                                       boolean hasDepth)
     {
         // REMIND: need to deal with size of depth buffer, etc.
-        return (long) width * height * 4;
+        return 4L * width * height;
     }
 
     @Override
