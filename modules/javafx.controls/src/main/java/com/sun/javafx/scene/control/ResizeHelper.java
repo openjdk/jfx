@@ -30,7 +30,8 @@ import javafx.scene.control.ResizeFeaturesBase;
 import javafx.scene.control.TableColumnBase;
 
 /**
- * Helps resize Tree/TableView columns.  JDK-8293119
+ * Helps resize Tree/TableView columns.
+ * https://bugs.openjdk.org/browse/JDK-8293119
  */
 public class ResizeHelper {
     private final ResizeFeaturesBase rf;
@@ -43,6 +44,7 @@ public class ResizeHelper {
     private final int[] pref;
     private final int[] max;
     private final BitSet skip;
+    private static final int SMALL_DELTA = 8;
 
     public ResizeHelper(ResizeFeaturesBase rf,
                         double target,
@@ -105,6 +107,11 @@ public class ResizeHelper {
             }
 
             if (total == 0) {
+                return;
+            }
+
+            if (Math.abs(delta) < SMALL_DELTA) {
+                distributeSmallDelta(delta);
                 return;
             }
 
@@ -322,7 +329,11 @@ public class ResizeHelper {
                 adj = distributeDeltaFlexTail(-delta);
                 break;
             default:
-                distributeDeltaRemainingColumns(-delta);
+                if (Math.abs(delta) < SMALL_DELTA) {
+                    distributeSmallDelta(-delta);
+                } else {
+                    distributeDeltaRemainingColumns(-delta);
+                }
                 adj = 0;
 
                 int w2 = sumSizes(); // FIX remove once everyone reviews and tests the code
@@ -496,6 +507,74 @@ public class ResizeHelper {
                 }
             }
         } while(needsAnotherPass);
+    }
+
+    /**
+     * for small deltas, use a simpler algorithm to distribute space one pixel at the time,
+     * first to columns further away from their preferred width.
+     */
+    protected void distributeSmallDelta(int delta) {
+        if (delta < 0) {
+            for(int i=-delta-1; i>=0; --i) {
+                int ix = findShrinking();
+                if(ix < 0) {
+                    return;
+                }
+                size[ix] -= 1;
+            }
+        } else {
+            for(int i=delta-1; i>=0; --i) {
+                int ix = findGrowing();
+                if(ix < 0) {
+                    return;
+                }
+                size[ix] += 1;
+            }
+        }
+    }
+
+    // less than pref, then smallest
+    protected int findGrowing() {
+        int dist = Integer.MIN_VALUE;
+        int ix = -1;
+        for (int i = 0; i < count; i++) {
+            if (!skip.get(i)) {
+                int w = size[i] + 1;
+                if ((w < min[i]) || (w > max[i])) {
+                    skip.set(i);
+                    continue;
+                }
+
+                int d = pref[i] - size[i];
+                if (d > dist) {
+                    dist = d;
+                    ix = i;
+                }
+            }
+        }
+        return ix;
+    }
+
+    // shrinking: more than pref, then largest
+    protected int findShrinking() {
+        int dist = Integer.MIN_VALUE;
+        int ix = -1;
+        for (int i = 0; i < count; i++) {
+            if (!skip.get(i)) {
+                int w = size[i] - 1;
+                if ((w < min[i]) || (w > max[i])) {
+                    skip.set(i);
+                    continue;
+                }
+
+                int d = size[i] - pref[i];
+                if (d > dist) {
+                    dist = d;
+                    ix = i;
+                }
+            }
+        }
+        return ix;
     }
 
     protected void resetSizeChanges() {
