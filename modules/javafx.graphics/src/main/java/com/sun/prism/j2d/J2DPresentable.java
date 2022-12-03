@@ -190,8 +190,8 @@ public abstract class J2DPresentable implements Presentable {
             return buffer.getHeight();
         }
 
-       @Override
-    public void setOpaque(boolean opaque) {
+        @Override
+        public void setOpaque(boolean opaque) {
             this.opaque = opaque;
         }
 

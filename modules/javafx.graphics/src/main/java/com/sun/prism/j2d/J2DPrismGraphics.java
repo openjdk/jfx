@@ -1429,10 +1429,11 @@ public class J2DPrismGraphics
         return this.cull;
     }
 
- @Override
-public void setClipRectIndex(int index) {
+    @Override
+    public void setClipRectIndex(int index) {
         this.clipRectIndex = index;
     }
+
     @Override
     public int getClipRectIndex() {
         return this.clipRectIndex;

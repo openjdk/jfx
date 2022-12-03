@@ -81,8 +81,7 @@ class LinuxAbsoluteInputCapabilities {
         if (fd == -1) {
             throw new IOException(system.getErrorMessage());
         }
-        Map<Integer, LinuxAbsoluteInputCapabilities> caps =
-                new HashMap<>();
+        Map<Integer, LinuxAbsoluteInputCapabilities> caps = new HashMap<>();
         for (int i = 0; (i = axes.nextSetBit(i)) != -1; i++) {
             caps.put(i, new LinuxAbsoluteInputCapabilities(system, info, fd, i));
         }
