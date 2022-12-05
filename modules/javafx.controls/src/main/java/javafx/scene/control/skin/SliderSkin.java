@@ -61,6 +61,7 @@ public class SliderSkin extends SkinBase<Slider> {
     private double trackToTickGap = 2;
 
     private boolean showTickMarks;
+    private boolean tooltipConsumeAutoHidingEvents;
     private double thumbWidth;
     private double thumbHeight;
 
@@ -391,14 +392,15 @@ public class SliderSkin extends SkinBase<Slider> {
         });
 
         thumb.setOnMouseEntered(me -> {
-            if (getSkinnable().getTooltip() != null) {
+            if (getSkinnable().getTooltip() != null && getSkinnable().getTooltip().isAutoHide()) {
+                tooltipConsumeAutoHidingEvents = getSkinnable().getTooltip().getConsumeAutoHidingEvents();
                 getSkinnable().getTooltip().setConsumeAutoHidingEvents(false);
             }
         });
 
         thumb.setOnMouseExited(me -> {
-            if (getSkinnable().getTooltip() != null) {
-                getSkinnable().getTooltip().setConsumeAutoHidingEvents(true);
+            if (getSkinnable().getTooltip() != null && getSkinnable().getTooltip().isAutoHide()) {
+                getSkinnable().getTooltip().setConsumeAutoHidingEvents(tooltipConsumeAutoHidingEvents);
             }
         });
     }

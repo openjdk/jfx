@@ -39,6 +39,7 @@ import javafx.scene.control.Tooltip;
 import javafx.stage.WindowEvent;
 
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -71,11 +72,13 @@ public class SliderTooltipNPETest {
 
     @Test
     public void testSliderTooltipNPE() throws Throwable {
+        Assert.assertTrue(slider.getTooltip().getConsumeAutoHidingEvents());
         dragSliderAfterTooltipDisplayed(DRAG_DISTANCE);
         if (exception != null) {
             exception.printStackTrace();
             throw exception;
         }
+        Assert.assertTrue(slider.getTooltip().getConsumeAutoHidingEvents());
     }
 
     private void dragSliderAfterTooltipDisplayed(int dragDistance) throws Exception {
@@ -107,6 +110,12 @@ public class SliderTooltipNPETest {
 
         Util.runAndWait(() -> {
             robot.mouseRelease(MouseButton.PRIMARY);
+        });
+
+        // Move the cursor away from the slider
+        Util.runAndWait(() -> {
+            robot.mouseMove((int)(scene.getWindow().getX() + scene.getX()),
+                            (int)(scene.getWindow().getY() + scene.getY()));
         });
     }
 
