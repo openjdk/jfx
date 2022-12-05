@@ -35,31 +35,33 @@ import javafx.scene.control.TextField;
 import javafx.scene.layout.Pane;
 import javafx.stage.Stage;
 import javafx.util.Duration;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import test.util.Util;
 
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class SceneChangeShouldNotFocusStageTest {
     static Stage stage;
     static CountDownLatch startupLatch = new CountDownLatch(1);
 
-    @Test(timeout = 15000)
-    public void windowShouldRemainIconified() throws InterruptedException {
-        Thread.sleep(1000);
-        Assert.assertTrue("Stage should be iconified", stage.isIconified());
+    @Test
+    void windowShouldRemainIconified() {
+        Util.sleep(1000);
+        assertTrue(stage.isIconified(), "Stage should be iconified");
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void initFX() throws Exception {
         new Thread(() -> Application.launch(TestApp.class, (String[]) null)).start();
         waitForLatch(startupLatch, 10, "FX runtime failed to start.");
     }
 
-    @AfterClass
+    @AfterAll
     public static void exit() {
         Platform.runLater(() -> stage.hide());
         Platform.exit();
@@ -88,6 +90,6 @@ public class SceneChangeShouldNotFocusStageTest {
     }
 
     public static void waitForLatch(CountDownLatch latch, int seconds, String msg) throws Exception {
-        Assert.assertTrue("Timeout: " + msg, latch.await(seconds, TimeUnit.SECONDS));
+        assertTrue(latch.await(seconds, TimeUnit.SECONDS), "Timeout: " + msg);
     }
 }
