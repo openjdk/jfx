@@ -53,7 +53,7 @@ public:
      */
     virtual int  ReadBlock(int64_t position, int size) = 0;
 
-    /* CopyBlock copies the datra from whatever internal buffer to the destination.*/
+    /* CopyBlock copies the data from whatever internal buffer to the destination.*/
     virtual void CopyBlock(void* destination, int size) = 0;
 
     /* Detects whether the source is seekable.*/
