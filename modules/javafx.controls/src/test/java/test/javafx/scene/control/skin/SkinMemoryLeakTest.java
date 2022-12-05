@@ -241,7 +241,7 @@ public class SkinMemoryLeakTest {
                 SplitPane.class,
 
                 //
-                TableView.class,
+                //TableView.class,
 
                 //
                 TreeTableView.class
