@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -174,6 +174,7 @@ static gpointer         progress_buffer_range_monitor(ProgressBuffer *element);
 #endif
 
 static void             progress_buffer_set_pending_event(ProgressBuffer *element, GstEvent* new_event);
+static GstEventType     progress_buffer_get_pending_event_type(ProgressBuffer *element);
 
 /**
  * progress_buffer_class_init()
@@ -513,6 +514,14 @@ static void progress_buffer_set_pending_event(ProgressBuffer *element, GstEvent*
     element->pending_src_event = new_event;
 }
 
+static GstEventType progress_buffer_get_pending_event_type(ProgressBuffer *element)
+{
+    if (element->pending_src_event)
+        return GST_EVENT_TYPE(element->pending_src_event);
+    else
+        return GST_EVENT_UNKNOWN;
+}
+
 /**
  * send_position_message
  * Sends application message on the BUS with the following parameters:
@@ -590,7 +599,11 @@ static GstFlowReturn progress_buffer_enqueue_item(ProgressBuffer *element, GstMi
                 if (element->sink_segment.position < element->sink_segment.stop)
                     element->sink_segment.stop = element->sink_segment.position;
 
-                progress_buffer_set_pending_event(element, NULL);
+                // Do not clear pending EOS event if set. If progress buffer
+                // set pending EOS event we need to deliver it, otherwise
+                // downstream will wait for data forever.
+                if (progress_buffer_get_pending_event_type(element) != GST_EVENT_EOS)
+                    progress_buffer_set_pending_event(element, NULL);
 
                 signal = send_position_message(element, TRUE);
                 gst_event_unref(event); // INLINE - gst_event_unref()
