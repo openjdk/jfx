@@ -60,7 +60,6 @@ public class TableRowSkin<T> extends TableRowSkinBase<T, TableRow<T>, TableCell<
      *                                                                         *
      **************************************************************************/
 
-    private TableViewSkin<T> tableViewSkin;
     private final BehaviorBase<TableRow<T>> behavior;
 
 
@@ -83,13 +82,8 @@ public class TableRowSkin<T> extends TableRowSkinBase<T, TableRow<T>, TableCell<
 
         // install default input map for the TableRow control
         behavior = new TableRowBehavior<>(control);
-//        control.setInputMap(behavior.getInputMap());
-
-        updateTableViewSkin();
 
         registerChangeListener(control.tableViewProperty(), e -> {
-            updateTableViewSkin();
-
             for (int i = 0, max = cells.size(); i < max; i++) {
                 Node n = cells.get(i);
                 if (n instanceof TableCell) {
@@ -233,16 +227,12 @@ public class TableRowSkin<T> extends TableRowSkinBase<T, TableRow<T>, TableCell<
         return getSkinnable().getTableView();
     }
 
-    private void updateTableViewSkin() {
-        TableView<T> tableView = getSkinnable().getTableView();
-        if (tableView != null && tableView.getSkin() instanceof TableViewSkin) {
-            tableViewSkin = (TableViewSkin)tableView.getSkin();
-        }
-    }
-
     // test-only
     TableViewSkin<T> getTableViewSkin() {
-        return tableViewSkin;
+        TableView<T> tableView = getSkinnable().getTableView();
+        if (tableView != null && tableView.getSkin() instanceof TableViewSkin) {
+            return (TableViewSkin)tableView.getSkin();
+        }
+        return null;
     }
-
 }

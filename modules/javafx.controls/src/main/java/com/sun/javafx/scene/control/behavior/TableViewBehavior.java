@@ -78,7 +78,7 @@ public class TableViewBehavior<T> extends TableViewBehaviorBase<TableView<T>, T,
         control.selectionModelProperty().addListener(weakSelectionModelListener);
         TableViewSelectionModel<T> sm = control.getSelectionModel();
         if (sm != null) {
-            sm.getSelectedCells().addListener(selectedCellsListener);
+            sm.getSelectedCells().addListener(weakSelectedCellsListener);
         }
 
         // Only add this if we're on an embedded platform that supports 5-button navigation
@@ -87,8 +87,12 @@ public class TableViewBehavior<T> extends TableViewBehaviorBase<TableView<T>, T,
         }
     }
 
-    @Override public void dispose() {
-        if (tlFocus != null) tlFocus.dispose();
+    @Override
+    public void dispose() {
+        if (tlFocus != null) {
+            tlFocus.dispose();
+            tlFocus = null;
+        }
         super.dispose();
     }
 
