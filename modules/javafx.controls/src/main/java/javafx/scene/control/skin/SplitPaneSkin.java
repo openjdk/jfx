@@ -105,7 +105,7 @@ public class SplitPaneSkin extends SkinBase<SplitPane> {
         }
         initializeContentListener();
 
-        rebuildDividers(false);
+        addDividers();
 
         ListenerHelper lh = ListenerHelper.get(this);
         lh.addChangeListener(control.orientationProperty(), (v) -> {
@@ -556,7 +556,8 @@ public class SplitPaneSkin extends SkinBase<SplitPane> {
                 }
             }
 
-            rebuildDividers(true);
+            removeAllDividers();
+            addDividers();
         });
     }
 
@@ -624,11 +625,7 @@ public class SplitPaneSkin extends SkinBase<SplitPane> {
         checkDividerPos = true;
     }
 
-    private void rebuildDividers(boolean removeAllDividers) {
-        if (removeAllDividers) {
-            removeAllDividers();
-        }
-
+    private void addDividers() {
         contentDividerListenerHelper = new ListenerHelper();
 
         for (SplitPane.Divider d : getSkinnable().getDividers()) {
@@ -639,7 +636,6 @@ public class SplitPaneSkin extends SkinBase<SplitPane> {
             ChangeListener<Number> li = new PosPropertyListener(c);
             contentDividerListenerHelper.addChangeListener(d.positionProperty(), li);
 
-            // TODO
             initializeDividerEventHandlers(c);
 
             contentDividers.add(c);
@@ -657,7 +653,7 @@ public class SplitPaneSkin extends SkinBase<SplitPane> {
 
         lastDividerUpdate = 0;
 
-        if(contentDividerListenerHelper != null) {
+        if (contentDividerListenerHelper != null) {
             contentDividerListenerHelper.disconnect();
             contentDividerListenerHelper = null;
         }
