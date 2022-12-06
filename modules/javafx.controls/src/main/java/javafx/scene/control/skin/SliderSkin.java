@@ -35,6 +35,7 @@ import javafx.scene.chart.NumberAxis;
 import javafx.scene.control.Control;
 import javafx.scene.control.SkinBase;
 import javafx.scene.control.Slider;
+import javafx.scene.control.Tooltip;
 import javafx.scene.layout.StackPane;
 import javafx.util.Duration;
 import javafx.util.StringConverter;
@@ -61,6 +62,8 @@ public class SliderSkin extends SkinBase<Slider> {
     private double trackToTickGap = 2;
 
     private boolean showTickMarks;
+
+    // Used to save and restore consumeAutoHidingEvents property of the tooltip to original value.
     private boolean tooltipConsumeAutoHidingEvents;
     private double thumbWidth;
     private double thumbHeight;
@@ -392,15 +395,20 @@ public class SliderSkin extends SkinBase<Slider> {
         });
 
         thumb.setOnMouseEntered(me -> {
-            if (getSkinnable().getTooltip() != null && getSkinnable().getTooltip().isAutoHide()) {
-                tooltipConsumeAutoHidingEvents = getSkinnable().getTooltip().getConsumeAutoHidingEvents();
-                getSkinnable().getTooltip().setConsumeAutoHidingEvents(false);
+            Tooltip t = getSkinnable().getTooltip();
+            if (t != null && t.isAutoHide()) {
+                tooltipConsumeAutoHidingEvents = t.getConsumeAutoHidingEvents();
+                // Temporarily disable consuming auto hiding events from tooltip.
+                // This is done to receive mouse pressed event on thumb and
+                // inturn to detect start of drag.
+                t.setConsumeAutoHidingEvents(false);
             }
         });
 
         thumb.setOnMouseExited(me -> {
-            if (getSkinnable().getTooltip() != null && getSkinnable().getTooltip().isAutoHide()) {
-                getSkinnable().getTooltip().setConsumeAutoHidingEvents(tooltipConsumeAutoHidingEvents);
+            Tooltip t = getSkinnable().getTooltip();
+            if (t != null && t.isAutoHide()) {
+                t.setConsumeAutoHidingEvents(tooltipConsumeAutoHidingEvents);
             }
         });
     }
