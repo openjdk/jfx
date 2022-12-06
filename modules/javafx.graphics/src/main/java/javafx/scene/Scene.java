@@ -2088,14 +2088,14 @@ public class Scene implements EventTarget {
      *                                                                         *
      **************************************************************************/
 
-    private void windowForSceneChanged(Window oldWindow, Window window) {
+    private void windowForSceneChanged(Window oldWindow, Window newWindow) {
         if (oldWindow != null) {
             oldWindow.focusedProperty().removeListener(sceneWindowFocusedListener);
         }
 
-        if (window != null) {
-            window.focusedProperty().addListener(sceneWindowFocusedListener);
-            setWindowFocused(window.isFocused());
+        if (newWindow != null) {
+            newWindow.focusedProperty().addListener(sceneWindowFocusedListener);
+            setWindowFocused(newWindow.isFocused());
         } else {
             setWindowFocused(false);
         }
@@ -2205,7 +2205,7 @@ public class Scene implements EventTarget {
     private FocusOwnerProperty focusOwner = new FocusOwnerProperty();
 
     private class FocusOwnerProperty extends ReadOnlyObjectWrapper<Node> {
-        Node oldValue;
+        Node oldFocusOwner;
 
         /**
          * Stores whether the current focus owner visibly indicates focus.
@@ -2226,13 +2226,13 @@ public class Scene implements EventTarget {
 
         @Override
         protected void invalidated() {
-            if (oldValue != null) {
-                oldValue.setFocusQuietly(false, false);
+            if (oldFocusOwner != null) {
+                oldFocusOwner.setFocusQuietly(false, false);
             }
             Node value = get();
             if (value != null) {
                 value.setFocusQuietly(windowFocused, focusVisible);
-                if (value != oldValue) {
+                if (value != oldFocusOwner) {
                     value.getScene().enableInputMethodEvents(
                             value.getInputMethodRequests() != null
                             && value.getOnInputMethodTextChanged() != null);
@@ -2241,8 +2241,8 @@ public class Scene implements EventTarget {
             // for the rest of the method we need to update the oldFocusOwner
             // and use a local copy of it because the user handlers can cause
             // recurrent calls of requestFocus
-            Node localOldOwner = oldValue;
-            oldValue = value;
+            Node localOldOwner = oldFocusOwner;
+            oldFocusOwner = value;
             if (localOldOwner != null) {
                 localOldOwner.notifyFocusListeners();
             }
@@ -2278,8 +2278,8 @@ public class Scene implements EventTarget {
         // Cancel IM composition if there is one in progress.
         // This needs to be done before the focus owner is switched as it
         // generates event that needs to be delivered to the old focus owner.
-        if (focusOwner.oldValue != null) {
-            final Scene s = focusOwner.oldValue.getScene();
+        if (focusOwner.oldFocusOwner != null) {
+            final Scene s = focusOwner.oldFocusOwner.getScene();
             if (s != null) {
                 final TKScene peer = s.getPeer();
                 if (peer != null) {
