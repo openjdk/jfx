@@ -287,7 +287,7 @@ class ES2RTTexture extends ES2Texture<ES2RTTextureData>
         ES2RTTextureData texData =
             new ES2RTTextureData(context, nativeTexID, nativeFBOID,
                                  texWidth, texHeight, size);
-        ES2TextureResource<ES2RTTextureData> texRes = new ES2TextureResource<ES2RTTextureData>(texData);
+        ES2TextureResource<ES2RTTextureData> texRes = new ES2TextureResource<>(texData);
 
         ES2RTTexture es2RTT = new ES2RTTexture(context, texRes, wrapMode,
                                 texWidth, texHeight,

@@ -259,6 +259,7 @@ public final class MonocleApplication extends Application {
         return MonocleTimer.getMaxPeriod_impl();
     }
 
+    @Override
     public boolean hasWindowManager() {
         return false;
     }

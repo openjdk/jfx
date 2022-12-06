@@ -86,7 +86,7 @@ public class LightBaseTest {
 
     private Group root = new Group(parent1, parent2, pointLight);
 
-    private StubToolkit toolkit = (StubToolkit) Toolkit.getToolkit();;
+    private StubToolkit toolkit = (StubToolkit) Toolkit.getToolkit();
     private Stage stage = new Stage();
 
     @Before

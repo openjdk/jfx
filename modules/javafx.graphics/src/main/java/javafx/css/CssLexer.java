@@ -213,7 +213,7 @@ final class CssLexer {
     private Map<LexerState, LexerState[]> createStateMap() {
 
         Map<LexerState, LexerState[]> map =
-                new HashMap<LexerState, LexerState[]>();
+                new HashMap<>();
 
         // initState -- [#] --> hashState
         // initState -- [-] --> minusState

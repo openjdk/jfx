@@ -80,7 +80,7 @@ public class ColorInput extends Effect {
     com.sun.scenario.effect.Flood createPeer() {
         return new com.sun.scenario.effect.Flood(
                 Toolkit.getPaintAccessor().getPlatformPaint(Color.RED));
-    };
+    }
     /**
      * The {@code Paint} used to flood the region.
      * <pre>

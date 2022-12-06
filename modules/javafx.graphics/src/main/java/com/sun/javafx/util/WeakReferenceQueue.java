@@ -58,7 +58,6 @@ public class WeakReferenceQueue<E> {
      */
     int size = 0;
 
-    @SuppressWarnings("unchecked")
     public void add(E obj) {
         cleanup();
         size++;
@@ -93,6 +92,7 @@ public class WeakReferenceQueue<E> {
             private ListEntry index = head;
             private Object next = null;
 
+            @Override
             public boolean hasNext() {
                 next = null;
                 while (next == null) {
@@ -110,6 +110,7 @@ public class WeakReferenceQueue<E> {
                 return next != null;
             }
 
+            @Override
             public Object next() {
                 hasNext(); // forces us to clear out crap up to the next
                            // valid spot
@@ -117,6 +118,7 @@ public class WeakReferenceQueue<E> {
                 return next;
             }
 
+            @Override
             public void remove() {
                 if (index != head) {
                     ListEntry nextIndex = index.next;

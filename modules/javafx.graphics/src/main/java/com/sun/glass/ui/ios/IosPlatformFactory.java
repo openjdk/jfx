@@ -31,7 +31,6 @@ import com.sun.glass.ui.delegate.MenuBarDelegate;
 import com.sun.glass.ui.delegate.MenuDelegate;
 import com.sun.glass.ui.delegate.MenuItemDelegate;
 
-@SuppressWarnings({"UnusedDeclaration"})
 public final class IosPlatformFactory extends PlatformFactory {
 
     /**

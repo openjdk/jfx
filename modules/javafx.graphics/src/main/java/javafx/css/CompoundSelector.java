@@ -311,14 +311,14 @@ final public class CompoundSelector extends Selector {
     {
 
         final int nSelectors = is.readShort();
-        final List<SimpleSelector> selectors = new ArrayList<SimpleSelector>();
+        final List<SimpleSelector> selectors = new ArrayList<>();
         for (int n=0; n<nSelectors; n++) {
             selectors.add((SimpleSelector)Selector.readBinary(bssVersion, is,strings));
         }
 
         final int nRelationships = is.readShort();
 
-        final List<Combinator> relationships = new ArrayList<Combinator>();
+        final List<Combinator> relationships = new ArrayList<>();
         for (int n=0; n<nRelationships; n++) {
             final int ordinal = is.readByte();
             if (ordinal == Combinator.CHILD.ordinal())

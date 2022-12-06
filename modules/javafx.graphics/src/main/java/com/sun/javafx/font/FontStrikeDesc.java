@@ -55,12 +55,12 @@ public class FontStrikeDesc {
     public int hashCode() {
         if (hash == 0) {
             hash =
-                aaMode+
-                Float.floatToIntBits(size)+
-                Float.floatToIntBits((float)matrix[0])+
-                Float.floatToIntBits((float)matrix[1])+
-                Float.floatToIntBits((float)matrix[2])+
-                Float.floatToIntBits((float)matrix[3]);
+                aaMode +
+                Float.floatToIntBits(size) +
+                Float.floatToIntBits(matrix[0]) +
+                Float.floatToIntBits(matrix[1]) +
+                Float.floatToIntBits(matrix[2]) +
+                Float.floatToIntBits(matrix[3]);
         }
         return hash;
     }

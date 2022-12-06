@@ -131,7 +131,7 @@ public  class Polyline extends Shape {
      *
      * @defaultValue empty
      */
-    private final ObservableList<Double> points = new TrackableObservableList<Double>() {
+    private final ObservableList<Double> points = new TrackableObservableList<>() {
         @Override
         protected void onChanged(Change<Double> c) {
             NodeHelper.markDirty(Polyline.this, DirtyBits.NODE_GEOMETRY);

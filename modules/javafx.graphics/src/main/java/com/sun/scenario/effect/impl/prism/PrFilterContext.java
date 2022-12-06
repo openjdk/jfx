@@ -34,7 +34,7 @@ public class PrFilterContext extends FilterContext {
 
     private static Screen defaultScreen;
     private static final Map<Screen, PrFilterContext> ctxMap =
-        new WeakHashMap<Screen, PrFilterContext>();
+        new WeakHashMap<>();
 
     private static PrFilterContext printerFilterContext = null;
     public static PrFilterContext getPrinterContext(Object resourceFactory) {

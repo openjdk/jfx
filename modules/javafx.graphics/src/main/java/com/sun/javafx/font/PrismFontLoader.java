@@ -120,7 +120,6 @@ public class PrismFontLoader extends FontLoader {
         return createFonts(fonts);
     }
 
-    @SuppressWarnings("deprecation")
     private Font createFont(PGFont font) {
         return FontHelper.nativeFont(font,
                                      font.getName(),

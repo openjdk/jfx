@@ -66,10 +66,10 @@ public class Clipboard {
     @Native public final static String SYSTEM = "SYSTEM";
     @Native public final static String SELECTION = "SELECTION";
 
-    private final static Map <String, Clipboard> clipboards  = new HashMap <String, Clipboard> ();
+    private final static Map<String, Clipboard> clipboards = new HashMap<>();
     private final static ClipboardDelegate delegate = PlatformFactory.getPlatformFactory().createClipboardDelegate();
 
-    private final HashSet <ClipboardAssistance> assistants  =  new HashSet <ClipboardAssistance> ();
+    private final HashSet<ClipboardAssistance> assistants = new HashSet<>();
     private final String name;
     private final Object localDataProtector = new Object();
     private HashMap <String, Object> localSharedData;

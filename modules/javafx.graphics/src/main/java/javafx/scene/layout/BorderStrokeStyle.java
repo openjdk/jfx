@@ -179,7 +179,7 @@ public final class BorderStrokeStyle {
             } else {
                 // Must not allow the passed in array to inadvertently mutate the
                 // state of this BorderStrokeStyle!
-                List<Double> list = new ArrayList<Double>(dashArray);
+                List<Double> list = new ArrayList<>(dashArray);
                 this.dashArray = Collections.unmodifiableList(list);
             }
         }
@@ -261,7 +261,7 @@ public final class BorderStrokeStyle {
     }
 
     private static List<Double> asList(double... items) {
-        List<Double> list = new ArrayList<Double>(items.length);
+        List<Double> list = new ArrayList<>(items.length);
         for (int i=0; i<items.length; i++) {
             list.add(items[i]);
         }

@@ -28,8 +28,6 @@ package com.sun.javafx.tk.quantum;
 import com.sun.glass.ui.ClipboardAssistance;
 import com.sun.javafx.embed.EmbeddedSceneDSInterface;
 import com.sun.javafx.embed.EmbeddedSceneDTInterface;
-import java.util.concurrent.Callable;
-import javafx.application.Platform;
 import javafx.scene.input.TransferMode;
 
 final class EmbeddedSceneDT implements EmbeddedSceneDTInterface {

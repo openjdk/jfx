@@ -41,7 +41,7 @@ public class TestScene extends Scene {
     private final String name;
 
     private final ObjectProperty<Window> _windowProperty =
-            new ObjectPropertyBase<Window>() {
+            new ObjectPropertyBase<>() {
                 private Window old_window;
 
                 @Override

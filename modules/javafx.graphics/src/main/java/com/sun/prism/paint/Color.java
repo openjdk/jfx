@@ -25,7 +25,6 @@
 
 package com.sun.prism.paint;
 
-import com.sun.prism.paint.Paint.Type;
 import java.nio.ByteBuffer;
 
 /**
