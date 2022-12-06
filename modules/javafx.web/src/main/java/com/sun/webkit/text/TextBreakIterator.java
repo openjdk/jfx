@@ -63,6 +63,7 @@ final class TextBreakIterator {
             this.hashCode = locale.hashCode() + type;
         }
 
+        @Override
         public boolean equals(Object o){
             if (!(o instanceof CacheKey)) {
                 return false;
@@ -71,6 +72,7 @@ final class TextBreakIterator {
             return (that.type == this.type) && that.locale.equals(this.locale);
         }
 
+        @Override
         public int hashCode() {
             return hashCode;
         }
@@ -78,7 +80,7 @@ final class TextBreakIterator {
 
     private final static Map<CacheKey, BreakIterator> iteratorCache =
         //new WeakHashMap<CacheKey, BreakIterator>();
-        new HashMap<CacheKey, BreakIterator>();
+        new HashMap<>();
 
     static BreakIterator getIterator(
         int type,

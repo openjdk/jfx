@@ -65,7 +65,7 @@ public abstract class TablePositionBase<TC extends TableColumnBase> {
      */
     protected TablePositionBase(int row, TC tableColumn) {
         this.row = row;
-        this.tableColumnRef = new WeakReference<TC>(tableColumn);
+        this.tableColumnRef = new WeakReference<>(tableColumn);
     }
 
 
@@ -123,7 +123,7 @@ public abstract class TablePositionBase<TC extends TableColumnBase> {
         if (getClass() != obj.getClass()) {
             return false;
         }
-        @SuppressWarnings("unchecked")
+
         final TablePositionBase other = (TablePositionBase) obj;
         if (this.row != other.row) {
             return false;

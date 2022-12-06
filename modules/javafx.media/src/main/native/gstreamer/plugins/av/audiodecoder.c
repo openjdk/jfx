@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -124,7 +124,7 @@ static gboolean audiodecoder_init_state(AudioDecoder *decoder);
 static gboolean audiodecoder_open_init(AudioDecoder *decoder, GstCaps* caps);
 static gboolean audiodecoder_src_event(GstPad* pad, GstObject *parent, GstEvent* event);
 
-#if DECODE_AUDIO4
+#if DECODE_AUDIO4 || USE_SEND_RECEIVE
 static gboolean audiodecoder_is_oformat_supported(int format);
 #endif
 
@@ -190,7 +190,7 @@ static gboolean audiodecoder_init_state(AudioDecoder *decoder)
     decoder->codec_id = CODEC_ID_NONE;
 #endif
 
-#if !DECODE_AUDIO4
+#if !DECODE_AUDIO4 && !USE_SEND_RECEIVE
     decoder->samples = av_mallocz(AVCODEC_MAX_AUDIO_FRAME_SIZE + FF_INPUT_BUFFER_PADDING_SIZE);
     if (!decoder->samples)
         return FALSE;
@@ -225,7 +225,7 @@ static void audiodecoder_state_reset(AudioDecoder *decoder)
 
 static void audiodecoder_close_decoder(AudioDecoder *decoder)
 {
-#if !DECODE_AUDIO4
+#if !DECODE_AUDIO4 && !USE_SEND_RECEIVE
     if (decoder->samples)
     {
         av_free(decoder->samples);
@@ -649,7 +649,7 @@ static GstFlowReturn audiodecoder_chain(GstPad *pad, GstObject *parent, GstBuffe
     GstMapInfo    info2;
     gboolean      unmap_buf = FALSE;
 
-#if DECODE_AUDIO4
+#if DECODE_AUDIO4 || USE_SEND_RECEIVE
     gint          got_frame = 0;
     int           sample, ci;
  #else
@@ -712,14 +712,24 @@ static GstFlowReturn audiodecoder_chain(GstPad *pad, GstObject *parent, GstBuffe
     decoder->packet.data = info.data;
     decoder->packet.size = info.size;
 
-#if DECODE_AUDIO4
+#if USE_SEND_RECEIVE
+    num_dec = avcodec_send_packet(base->context, &decoder->packet);
+    if (num_dec == 0)
+    {
+        num_dec = avcodec_receive_frame(base->context, base->frame);
+        if (num_dec == 0)
+        {
+            got_frame = 1;
+        }
+    }
+#elif DECODE_AUDIO4
     num_dec = avcodec_decode_audio4(base->context, base->frame, &got_frame, &decoder->packet);
 #else
     num_dec = avcodec_decode_audio3(base->context, (int16_t*)decoder->samples, &outbuf_size, &decoder->packet);
 #endif
 
 
-#if DECODE_AUDIO4
+#if DECODE_AUDIO4 || USE_SEND_RECEIVE
     if (num_dec < 0 || !got_frame)
 #else
     if (num_dec < 0 || outbuf_size == 0)
@@ -732,7 +742,7 @@ static GstFlowReturn audiodecoder_chain(GstPad *pad, GstObject *parent, GstBuffe
     }
 
     GstBuffer *outbuf = NULL;
-#if DECODE_AUDIO4
+#if DECODE_AUDIO4 || USE_SEND_RECEIVE
     if (!audiodecoder_is_oformat_supported(base->frame->format))
     {
         gst_element_message_full(GST_ELEMENT(decoder), GST_MESSAGE_ERROR, GST_CORE_ERROR, GST_CORE_ERROR_NOT_IMPLEMENTED,
@@ -767,7 +777,7 @@ static GstFlowReturn audiodecoder_chain(GstPad *pad, GstObject *parent, GstBuffe
         goto _exit;
     }
 
-#if DECODE_AUDIO4
+#if DECODE_AUDIO4 || USE_SEND_RECEIVE
     if (base->frame->format == AV_SAMPLE_FMT_S16P || base->frame->format == AV_SAMPLE_FMT_FLTP)
     {
         // Make sure we received expected data
@@ -876,7 +886,7 @@ _exit:
     return ret;
 }
 
-#if DECODE_AUDIO4
+#if DECODE_AUDIO4 || USE_SEND_RECEIVE
 static gboolean audiodecoder_is_oformat_supported(int format)
 {
     return (format == AV_SAMPLE_FMT_S16P || format == AV_SAMPLE_FMT_FLTP ||

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2021, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,26 +25,29 @@
 
 package test.javafx.scene.web;
 
+import static javafx.concurrent.Worker.State.SUCCEEDED;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+
 import java.util.concurrent.CountDownLatch;
+
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.scene.Scene;
 import javafx.scene.web.WebEngineShim;
 import javafx.scene.web.WebView;
 import javafx.stage.Stage;
+
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import test.util.Util;
 
 import com.sun.webkit.WebPage;
 import com.sun.webkit.WebPageShim;
 
-import static javafx.concurrent.Worker.State.SUCCEEDED;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import test.util.Util;
 
 public class WebPageTest {
     private static final CountDownLatch launchLatch = new CountDownLatch(1);
@@ -72,15 +75,12 @@ public class WebPageTest {
 
     @BeforeClass
     public static void setupOnce() {
-        // Start the Test Application
-        new Thread(() -> Application.launch(WebPageTestApp.class, (String[])null)).start();
-
-        assertTrue("Timeout waiting for FX runtime to start", Util.await(launchLatch));
+        Util.launch(launchLatch, WebPageTestApp.class);
     }
 
     @AfterClass
     public static void tearDownOnce() {
-        Platform.exit();
+        Util.shutdown();
     }
 
     @Before

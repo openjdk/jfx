@@ -45,12 +45,6 @@ static void ProcessAudioTap(MTAudioProcessingTapRef tapRef, CMItemCount numberFr
         AudioBufferList *bufferListInOut,
         CMItemCount *numberFramesOut,
         MTAudioProcessingTapFlags *flagsOut);
-static OSStatus AVFTapRenderCallback(void *inRefCon,
-                                     AudioUnitRenderActionFlags *ioActionFlags,
-                                     const AudioTimeStamp *inTimeStamp,
-                                     UInt32 inBusNumber,
-                                     UInt32 inNumberFrames,
-                                     AudioBufferList *ioData);
 
 @implementation AVFAudioProcessor
 
@@ -167,34 +161,6 @@ void FinalizeAudioTap(MTAudioProcessingTapRef tapRef) {
     if (context) {
         delete context;
     }
-}
-
-static OSStatus SetupAudioUnit(AudioUnit unit,
-                               const AudioStreamBasicDescription *processingFormat,
-                               UInt32 maxFrames) {
-    OSStatus status = noErr;
-    if (noErr == status) {
-        status = AudioUnitSetProperty(unit,
-                                      kAudioUnitProperty_StreamFormat,
-                                      kAudioUnitScope_Input, 0,
-                                      processingFormat, sizeof(AudioStreamBasicDescription));
-    }
-    if (noErr == status) {
-        status = AudioUnitSetProperty(unit,
-                                      kAudioUnitProperty_StreamFormat,
-                                      kAudioUnitScope_Output, 0,
-                                      processingFormat, sizeof(AudioStreamBasicDescription));
-    }
-    if (noErr == status) {
-        status = AudioUnitSetProperty(unit,
-                                      kAudioUnitProperty_MaximumFramesPerSlice,
-                                      kAudioUnitScope_Global, 0,
-                                      &maxFrames, sizeof(UInt32));
-    }
-    if (noErr == status) {
-        status = AudioUnitInitialize(unit);
-    }
-    return status;
 }
 
 void PrepareAudioTap(MTAudioProcessingTapRef tapRef,

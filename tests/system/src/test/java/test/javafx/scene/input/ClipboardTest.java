@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2017, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,32 +24,33 @@
  */
 package test.javafx.scene.input;
 
-import com.sun.javafx.PlatformUtil;
-import javafx.application.Platform;
-import javafx.scene.input.Clipboard;
-import javafx.scene.input.ClipboardContent;
-import javafx.scene.input.DataFormat;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import test.util.Util;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assume.assumeTrue;
 
 import java.awt.Toolkit;
 import java.awt.datatransfer.DataFlavor;
 import java.awt.datatransfer.StringSelection;
 import java.awt.datatransfer.Transferable;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
+
+import javafx.scene.input.Clipboard;
+import javafx.scene.input.ClipboardContent;
+import javafx.scene.input.DataFormat;
+
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
+import org.junit.Test;
+
+import com.sun.javafx.PlatformUtil;
 
 import sun.awt.datatransfer.ClipboardTransferable;
 import sun.awt.datatransfer.SunClipboard;
-
-import static org.junit.Assert.*;
-import static org.junit.Assume.assumeTrue;
+import test.util.Util;
 
 
 public class ClipboardTest {
-    static CountDownLatch startupLatch;
+    static CountDownLatch startupLatch = new CountDownLatch(1);
     static Clipboard clipboard;
 
 
@@ -68,18 +69,15 @@ public class ClipboardTest {
 
     @BeforeClass
     public static void initFX() {
-        startupLatch = new CountDownLatch(1);
-        Platform.startup(() -> {
+        Util.startup(startupLatch, () -> {
             clipboard = Clipboard.getSystemClipboard();
             startupLatch.countDown();
         });
-        try {
-            if (!startupLatch.await(15, TimeUnit.SECONDS)) {
-                fail("Timeout waiting for FX runtime to start");
-            }
-        } catch (InterruptedException ex) {
-            fail("Unexpected exception: " + ex);
-        }
+    }
+
+    @AfterClass
+    public static void teardown() {
+        Util.shutdown();
     }
 
     @Test
@@ -136,11 +134,6 @@ public class ClipboardTest {
             boolean hasString = clipboard.hasString();
             assertFalse(hasString);
         });
-    }
-
-    @AfterClass
-    public static void teardown() {
-        Platform.exit();
     }
 
     private static final class CustomClipboard extends SunClipboard {

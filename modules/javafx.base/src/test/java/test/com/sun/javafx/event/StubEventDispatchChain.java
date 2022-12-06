@@ -78,6 +78,6 @@ public final class StubEventDispatchChain implements EventDispatchChain {
 
     private static LinkedList<EventDispatcher> copyDispatchers(
             final List<EventDispatcher> dispatchers) {
-        return new LinkedList<EventDispatcher>(dispatchers);
+        return new LinkedList<>(dispatchers);
     }
 }

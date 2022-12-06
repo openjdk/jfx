@@ -271,7 +271,7 @@ public class PlatformLogger implements System.Logger {
     private boolean loggingEnabled = true;
     public void enableLogging() {
         loggingEnabled = true;
-    };
+    }
 
     public void disableLogging() {
         loggingEnabled = false;

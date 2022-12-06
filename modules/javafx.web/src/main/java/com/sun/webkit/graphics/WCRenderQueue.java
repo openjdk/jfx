@@ -40,7 +40,7 @@ public abstract class WCRenderQueue extends Ref {
             PlatformLogger.getLogger(WCRenderQueue.class.getName());
     @Native public final static int MAX_QUEUE_SIZE = 0x80000;
 
-    private final LinkedList<BufferData> buffers = new LinkedList<BufferData>();
+    private final LinkedList<BufferData> buffers = new LinkedList<>();
     private BufferData currentBuffer = new BufferData();
     private final WCRectangle clip;
     private int size = 0;
@@ -195,11 +195,11 @@ final class BufferData {
     /* For passing data that does not fit into the queue */
     private final AtomicInteger idCount = new AtomicInteger(0);
     private final HashMap<Integer,String> strMap =
-            new HashMap<Integer,String>();
+            new HashMap<>();
     private final HashMap<Integer,int[]> intArrMap =
-            new HashMap<Integer,int[]>();
+            new HashMap<>();
     private final HashMap<Integer,float[]> floatArrMap =
-            new HashMap<Integer,float[]>();
+            new HashMap<>();
 
     private ByteBuffer buffer;
 

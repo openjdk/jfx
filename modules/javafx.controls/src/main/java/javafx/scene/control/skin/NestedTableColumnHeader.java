@@ -35,8 +35,6 @@ import javafx.scene.Cursor;
 import javafx.scene.Node;
 import javafx.scene.control.ResizeFeaturesBase;
 import javafx.scene.control.TableColumnBase;
-import javafx.scene.control.TableView;
-import javafx.scene.control.TreeTableView;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
@@ -515,6 +513,7 @@ public class NestedTableColumnHeader extends TableColumnHeader {
 
     // Used to test whether this column header properly represents the given column.
     // In particular, whether it has child column headers for all child columns
+    @Override
     boolean represents(TableColumnBase<?, ?> column) {
         if (column.getColumns().isEmpty()) {
             // this column has no children, but we are in a NestedTableColumnHeader instance,
@@ -564,7 +563,7 @@ public class NestedTableColumnHeader extends TableColumnHeader {
     private void updateContent() {
         // create a temporary list so we only do addAll into the main content
         // observableArrayList once.
-        final List<Node> content = new ArrayList<Node>();
+        final List<Node> content = new ArrayList<>();
 
         // the label is the region that sits above the children columns
         content.add(label);

@@ -25,8 +25,6 @@
 
 package test.javafx.collections;
 
-import test.javafx.collections.MockListObserver;
-import com.sun.javafx.collections.ObservableListWrapper;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -47,11 +45,11 @@ public class ListChangeBuilderTest {
 
     @Before
     public void setUp() {
-        observer = new MockListObserver<String>();
-        list = new ArrayList<String>(Arrays.asList("a", "b", "c", "d"));
-        observableList = new ObservableListWrapperShim<String>(list);
+        observer = new MockListObserver<>();
+        list = new ArrayList<>(Arrays.asList("a", "b", "c", "d"));
+        observableList = new ObservableListWrapperShim<>(list);
         observableList.addListener(observer);
-        builder = new ListChangeBuilderShim<String>(observableList);
+        builder = new ListChangeBuilderShim<>(observableList);
     }
 
     @Test

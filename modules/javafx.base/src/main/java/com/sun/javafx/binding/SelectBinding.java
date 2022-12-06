@@ -470,7 +470,7 @@ public class SelectBinding {
                     if ((propRefs[i] == null)
                             || (!obj.getClass().equals(
                             propRefs[i].getContainingClass()))) {
-                        propRefs[i] = new PropertyReference<Object>(obj.getClass(),
+                        propRefs[i] = new PropertyReference<>(obj.getClass(),
                                 propertyNames[i]);
                     }
                     if (propRefs[i].hasProperty()) {

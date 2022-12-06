@@ -52,6 +52,7 @@ final class ID3MetadataParser extends MetadataParserImpl {
         super(locator);
     }
 
+    @Override
     protected void parse() {
         try {
             // We will need ISO-8859-1
@@ -73,7 +74,7 @@ final class ID3MetadataParser extends MetadataParserImpl {
             //
 
             byte[] buf = getBytes(10);
-            version = (int)(buf[3] & 0xFF);
+            version = buf[3] & 0xFF;
             if (buf[0] == 0x49 && buf[1] == 0x44 && buf[2] == 0x33 &&
                     (version >= ID3_VERSION_MIN && version <= ID3_VERSION_MAX)) {
                 int flags = buf[5] & 0xFF;

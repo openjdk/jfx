@@ -26,7 +26,6 @@
 package test.com.sun.javafx.scene.control;
 
 import com.sun.javafx.scene.control.LabeledImpl;
-import com.sun.javafx.scene.control.skin.Utils;
 import javafx.scene.Scene;
 import javafx.scene.control.Label;
 import javafx.scene.control.Labeled;

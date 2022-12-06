@@ -39,7 +39,6 @@ import static org.junit.Assume.assumeTrue;
 
 public class FXMLLoader_ScriptTest {
     @Test
-    @SuppressWarnings("deprecation")
     public void testStaticScriptLoad() throws IOException {
         FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("static_script_load.fxml"));
         FXMLLoaderHelper.setStaticLoad(fxmlLoader, true);

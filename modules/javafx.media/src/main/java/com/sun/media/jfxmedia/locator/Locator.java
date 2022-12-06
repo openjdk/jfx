@@ -590,7 +590,7 @@ public class Locator {
     public void setConnectionProperty(String property, Object value) {
         synchronized (propertyLock) {
             if (connectionProperties == null) {
-                connectionProperties = new TreeMap<String, Object>();
+                connectionProperties = new TreeMap<>();
             }
 
             connectionProperties.put(property, value);

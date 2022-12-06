@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2021, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,23 +25,24 @@
 
 package test.javafx.scene;
 
-import javafx.application.Platform;
-import javafx.scene.Group;
-import javafx.scene.control.Button;
-import javafx.scene.Scene;
-import javafx.stage.Stage;
-import junit.framework.Assert;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import test.util.Util;
-import test.util.memory.JMemoryBuddy;
+import static org.junit.Assert.assertTrue;
+
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static org.junit.Assert.fail;
-import static org.junit.Assert.assertTrue;
+import javafx.application.Platform;
+import javafx.scene.Group;
+import javafx.scene.Scene;
+import javafx.scene.control.Button;
+import javafx.stage.Stage;
+
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
+import org.junit.Test;
+
+import test.util.Util;
+import test.util.memory.JMemoryBuddy;
 
 
 public class StyleMemoryLeakTest {
@@ -49,11 +50,16 @@ public class StyleMemoryLeakTest {
     @BeforeClass
     public static void initFX() throws Exception {
         CountDownLatch startupLatch = new CountDownLatch(1);
-        Platform.startup(() -> {
-            Platform.setImplicitExit(false);
+        Platform.setImplicitExit(false);
+
+        Util.startup(startupLatch, () -> {
             startupLatch.countDown();
         });
-        assertTrue("Timeout waiting for FX runtime to start", startupLatch.await(15, TimeUnit.SECONDS));
+    }
+
+    @AfterClass
+    public static void teardownOnce() {
+        Util.shutdown();
     }
 
     @Test
@@ -88,10 +94,5 @@ public class StyleMemoryLeakTest {
             checker.assertCollectable(stage.get());
             checker.setAsReferenced(toBeRemoved);
         });
-    }
-
-    @AfterClass
-    public static void teardownOnce() {
-        Platform.exit();
     }
 }

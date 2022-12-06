@@ -43,7 +43,7 @@ public abstract class WCGraphicsManager {
 
     private final AtomicInteger idCount = new AtomicInteger(0);
 
-    private final HashMap<Integer,Ref> refMap = new HashMap<Integer,Ref>();
+    private final HashMap<Integer,Ref> refMap = new HashMap<>();
 
     private static ResourceBundle imageProperties = null;
     private static WCGraphicsManager manager = null;

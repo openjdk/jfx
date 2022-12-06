@@ -231,6 +231,7 @@ public class DOMTest extends TestBase {
             final EventTarget[] evtTarget = new EventTarget[1];
 
             EventListener listener = new EventListener() {
+                    @Override
                     public void handleEvent(Event evt) {
                         evtTarget[0] = evt.getTarget();
                     }

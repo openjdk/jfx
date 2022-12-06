@@ -291,7 +291,7 @@ public abstract class DoubleExpression extends NumberExpressionBase implements
      * @since JavaFX 8.0
      */
     public ObjectExpression<Double> asObject() {
-        return new ObjectBinding<Double>() {
+        return new ObjectBinding<>() {
             {
                 bind(DoubleExpression.this);
             }
