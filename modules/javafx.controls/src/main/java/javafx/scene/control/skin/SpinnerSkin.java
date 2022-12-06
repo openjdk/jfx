@@ -264,6 +264,8 @@ public class SpinnerSkin<T> extends SkinBase<Spinner<T>> {
 
     @Override
     public void install() {
+        // when replacing the skin, the textField (which comes from the control), must first be uninstalled
+        // by the old skin in its dispose(), followed by (re-)adding it here.
         getChildren().add(textField);
     }
 
