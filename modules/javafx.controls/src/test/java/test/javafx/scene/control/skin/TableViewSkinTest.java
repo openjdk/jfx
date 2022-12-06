@@ -26,13 +26,10 @@
 package test.javafx.scene.control.skin;
 
 import com.sun.javafx.tk.Toolkit;
-import javafx.scene.Group;
-import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.scene.control.skin.TableHeaderRow;
-import javafx.scene.control.skin.TableViewSkin;
 import javafx.stage.Stage;
 import org.junit.Test;
 import static org.junit.Assert.assertEquals;

@@ -39,7 +39,7 @@ public class WebColorField extends InputField {
      * The value of the WebColorField. If null, the value will be treated as "#000000" black, but
      * will still actually be null.
      */
-    private ObjectProperty<Color> value = new SimpleObjectProperty<Color>(this, "value");
+    private ObjectProperty<Color> value = new SimpleObjectProperty<>(this, "value");
     public final Color getValue() { return value.get(); }
     public final void setValue(Color value) { this.value.set(value); }
     public final ObjectProperty<Color> valueProperty() { return value; }

@@ -58,7 +58,7 @@ class DefaultTreeCell<T> extends TreeCell<T> {
             TreeItem<T> newTreeItem = getTreeItem();
             if (newTreeItem != null) {
                 newTreeItem.graphicProperty().addListener(weakTreeItemGraphicListener);
-                treeItemRef = new WeakReference<TreeItem<T>>(newTreeItem);
+                treeItemRef = new WeakReference<>(newTreeItem);
             }
         }
     };

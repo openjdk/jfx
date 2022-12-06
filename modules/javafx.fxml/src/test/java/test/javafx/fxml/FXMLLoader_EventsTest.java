@@ -2,9 +2,6 @@ package test.javafx.fxml;
 
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
-import javafx.scene.Scene;
-import javafx.scene.control.Button;
-import javafx.stage.Stage;
 import javafx.util.Callback;
 import org.junit.Test;
 

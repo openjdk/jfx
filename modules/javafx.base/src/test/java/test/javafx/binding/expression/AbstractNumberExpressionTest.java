@@ -56,7 +56,6 @@ import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
 
-@SuppressWarnings("WebTest")
 public class AbstractNumberExpressionTest {
 
     private static final float EPSILON = 1e-6f;

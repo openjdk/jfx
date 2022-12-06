@@ -47,10 +47,10 @@ import org.junit.Test;
 public class SeparatorMenuItemTest {
     private SeparatorMenuItem separatorMenuItem, smi;
     private Node node;
-    private Toolkit tk;
 
     @Before public void setup() {
-        tk = (StubToolkit)Toolkit.getToolkit();//This step is not needed (Just to make sure StubToolkit is loaded into VM)
+        assertTrue(Toolkit.getToolkit() instanceof StubToolkit);  // Ensure StubToolkit is loaded
+
         node = new Rectangle();
         separatorMenuItem = smi = new SeparatorMenuItem();
     }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2018, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,6 +24,8 @@
  */
 package test.robot.javafx.scene;
 
+import java.util.concurrent.CountDownLatch;
+
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.scene.Scene;
@@ -37,16 +39,12 @@ import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 import javafx.stage.WindowEvent;
 
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import static org.junit.Assert.fail;
 
 import test.util.Util;
 
@@ -103,7 +101,7 @@ public class TabContextMenuCloseButtonTest {
             robot.mousePress(MouseButton.SECONDARY);
             robot.mouseRelease(MouseButton.SECONDARY);
         });
-        waitForLatch(cmlatch, 5, "Timeout waiting for ContextMenu to be shown.");
+        Util.waitForLatch(cmlatch, 5, "Timeout waiting for ContextMenu to be shown.");
     }
 
     @After
@@ -125,16 +123,12 @@ public class TabContextMenuCloseButtonTest {
 
     @BeforeClass
     public static void initFX() {
-        new Thread(() -> Application.launch(TestApp.class, (String[])null)).start();
-        waitForLatch(startupLatch, 10, "Timeout waiting for FX runtime to start");
+        Util.launch(startupLatch, TestApp.class);
     }
 
     @AfterClass
     public static void exit() {
-        Platform.runLater(() -> {
-            stage.hide();
-        });
-        Platform.exit();
+        Util.shutdown(stage);
     }
 
     public static class TestApp extends Application {
@@ -152,16 +146,6 @@ public class TabContextMenuCloseButtonTest {
                     Platform.runLater(startupLatch::countDown));
             stage.setAlwaysOnTop(true);
             stage.show();
-        }
-    }
-
-    public static void waitForLatch(CountDownLatch latch, int seconds, String msg) {
-        try {
-            if (!latch.await(seconds, TimeUnit.SECONDS)) {
-                fail(msg);
-            }
-        } catch (Exception ex) {
-            fail("Unexpected exception: " + ex);
         }
     }
 }

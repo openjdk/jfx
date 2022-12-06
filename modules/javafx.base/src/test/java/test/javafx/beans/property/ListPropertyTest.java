@@ -52,8 +52,8 @@ public class ListPropertyTest {
 
     @Test
     public void testBindBidirectional() {
-        final ListProperty<Object> p1 = new SimpleListProperty<Object>(VALUE_2);
-        final ListProperty<Object> p2 = new SimpleListProperty<Object>(VALUE_1);
+        final ListProperty<Object> p1 = new SimpleListProperty<>(VALUE_2);
+        final ListProperty<Object> p2 = new SimpleListProperty<>(VALUE_1);
 
         p1.bindBidirectional(p2);
         assertEquals(VALUE_1, p1.get());

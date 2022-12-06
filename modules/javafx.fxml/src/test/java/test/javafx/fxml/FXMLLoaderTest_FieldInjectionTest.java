@@ -27,7 +27,6 @@ package test.javafx.fxml;
 import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.shape.Rectangle;
-import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.IOException;

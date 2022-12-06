@@ -52,7 +52,7 @@ final class DataFlavorUtils {
 
     static DataFlavor[] getDataFlavors(String[] mimeTypes) {
         final ArrayList<DataFlavor> flavors =
-            new ArrayList<DataFlavor>(mimeTypes.length);
+            new ArrayList<>(mimeTypes.length);
         for (String mime : mimeTypes) {
             DataFlavor flavor = null;
             try {
@@ -196,7 +196,7 @@ final class DataFlavorUtils {
                     // type has been finalized already.
                 }
             } else {
-                Set<DataFlavor> mimeTypeFlavors = new HashSet<DataFlavor>();
+                Set<DataFlavor> mimeTypeFlavors = new HashSet<>();
 
                 // If this is text data flavor use DataFlavor representing
                 // a Java Unicode String class. This is what FX expects from

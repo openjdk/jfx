@@ -48,13 +48,13 @@ public final class JFRPulseLogger extends Logger {
     private JFRPulseLogger() {
         FlightRecorder.register(JFRInputEvent.class);
         FlightRecorder.register(JFRPulsePhaseEvent.class);
-        currentPulsePhaseEvent = new ThreadLocal<JFRPulsePhaseEvent>() {
+        currentPulsePhaseEvent = new ThreadLocal<>() {
             @Override
             public JFRPulsePhaseEvent initialValue() {
                 return new JFRPulsePhaseEvent();
             }
         };
-        currentInputEvent = new ThreadLocal<JFRInputEvent>() {
+        currentInputEvent = new ThreadLocal<>() {
             @Override
             public JFRInputEvent initialValue() {
                 return new JFRInputEvent();

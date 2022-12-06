@@ -60,12 +60,12 @@ public abstract class LongExpression extends NumberExpressionBase implements
 
     @Override
     public float floatValue() {
-        return (float) get();
+        return get();
     }
 
     @Override
     public double doubleValue() {
-        return (double) get();
+        return get();
     }
 
     @Override
@@ -268,7 +268,7 @@ public abstract class LongExpression extends NumberExpressionBase implements
      * @since JavaFX 8.0
      */
     public ObjectExpression<Long> asObject() {
-        return new ObjectBinding<Long>() {
+        return new ObjectBinding<>() {
             {
                 bind(LongExpression.this);
             }

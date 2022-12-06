@@ -47,7 +47,7 @@ public class ReadOnlyStringPropertyBaseTest {
     public void setUp() throws Exception {
         property = new ReadOnlyPropertyMock();
         invalidationListener = new InvalidationListenerMock();
-        changeListener = new ChangeListenerMock<String>(UNDEFINED);
+        changeListener = new ChangeListenerMock<>(UNDEFINED);
     }
 
     @Test

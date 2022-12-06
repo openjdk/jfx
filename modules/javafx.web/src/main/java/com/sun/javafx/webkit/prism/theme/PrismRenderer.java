@@ -31,7 +31,6 @@ import com.sun.javafx.sg.prism.NGNode;
 import com.sun.prism.Graphics;
 import com.sun.webkit.graphics.WCGraphicsContext;
 import com.sun.javafx.webkit.theme.Renderer;
-import javafx.scene.Scene;
 import javafx.scene.control.Control;
 
 public final class PrismRenderer extends Renderer {

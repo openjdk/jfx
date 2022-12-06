@@ -62,6 +62,7 @@ public final class WebViewBuilder
      * Creates an instance of the {@link WebView} class
      * based on the properties set on this builder.
      */
+    @Override
     public WebView build() {
         WebView x = new WebView();
         applyTo(x);
