@@ -36,7 +36,7 @@ import com.sun.javafx.logging.PlatformLogger;
 /**
  * TODO: 3D - Need documentation
  */
-class D3DPhongMaterial extends BasePhongMaterial implements PhongMaterial {
+class D3DPhongMaterial extends BasePhongMaterial {
 
     static int count = 0;
 

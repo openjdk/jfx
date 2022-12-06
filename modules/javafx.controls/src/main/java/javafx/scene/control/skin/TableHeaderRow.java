@@ -88,7 +88,7 @@ public class TableHeaderRow extends StackPane {
 
     private final VirtualFlow flow;
     final TableViewSkinBase<?,?,?,?,?> tableSkin;
-    private Map<TableColumnBase, CheckMenuItem> columnMenuItems = new HashMap<TableColumnBase, CheckMenuItem>();
+    private Map<TableColumnBase, CheckMenuItem> columnMenuItems = new HashMap<>();
     private double scrollX;
     private double tableWidth;
     private Rectangle clip;
@@ -261,7 +261,7 @@ public class TableHeaderRow extends StackPane {
         BooleanProperty tableMenuButtonVisibleProperty = TableSkinUtils.tableMenuButtonVisibleProperty(skin);
         if (tableMenuButtonVisibleProperty != null) {
             cornerRegion.visibleProperty().bind(tableMenuButtonVisibleProperty);
-        };
+        }
 
         cornerRegion.setOnMousePressed(me -> {
             // show a popupMenu which lists all columns

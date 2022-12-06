@@ -36,7 +36,6 @@ import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 import javafx.scene.Scene;
 import javafx.scene.shape.Rectangle;
-import javafx.event.EventHandler;
 import javafx.geometry.Point3D;
 import javafx.scene.input.ContextMenuEvent;
 import javafx.scene.input.PickResult;

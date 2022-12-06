@@ -55,6 +55,7 @@ public class WCCamera extends NGDefaultCamera {
 
     public static final NGCamera INSTANCE = new WCCamera();
 
+    @Override
     public void validate(final int w, final int h) {
         if ((w != viewWidth) || (h != viewHeight)) {
             setViewWidth(w);

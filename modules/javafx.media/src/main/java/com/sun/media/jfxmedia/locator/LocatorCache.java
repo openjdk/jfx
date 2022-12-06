@@ -48,7 +48,7 @@ public class LocatorCache {
     private final CacheDisposer cacheDisposer;
 
     private LocatorCache() {
-        uriCache = new HashMap<URI,WeakReference<CacheReference>>();
+        uriCache = new HashMap<>();
         cacheDisposer = new CacheDisposer();
     }
 
@@ -129,13 +129,14 @@ public class LocatorCache {
     }
 
     private class CacheDisposer implements MediaDisposer.ResourceDisposer {
+        @Override
         public void disposeResource(Object resource) {
             // resource will be the URI that the CacheReference was stored against
             // use it to remove the entry from uriCache, this way we don't need
             // to periodically purge the Map
             if (resource instanceof URI) {
                 synchronized (uriCache) {
-                    uriCache.remove((URI)resource);
+                    uriCache.remove(resource);
                 }
             }
         }

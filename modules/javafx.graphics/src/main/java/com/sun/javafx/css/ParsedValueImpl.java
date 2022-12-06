@@ -189,6 +189,7 @@ public class ParsedValueImpl<V, T> extends ParsedValue<V,T> {
     }
 
 
+    @Override
     public T convert(Font font) {
         return (T)((converter != null) ? converter.convert(this, font) : value);
     }

@@ -45,7 +45,7 @@ public final class NodeEffectInput extends Effect {
         EFFECT_CONTENT,
         CLIPPED_CONTENT,
         FULL_CONTENT,
-    };
+    }
 
     private NGNode node;
     private RenderType renderType;

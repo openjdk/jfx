@@ -380,7 +380,7 @@ final public class SwingDnD {
             final String mimeTypes[] = fxDragSource.getMimeTypes();
 
             final ArrayList<DataFlavor> flavors =
-                    new ArrayList<DataFlavor>(mimeTypes.length);
+                    new ArrayList<>(mimeTypes.length);
             for (String mime : mimeTypes) {
                 DataFlavor flavor = null;
                 try {

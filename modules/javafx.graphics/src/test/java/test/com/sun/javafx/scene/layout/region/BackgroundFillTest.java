@@ -25,16 +25,7 @@
 
 package test.com.sun.javafx.scene.layout.region;
 
-import javafx.geometry.Insets;
-import javafx.scene.layout.BackgroundFill;
-import javafx.scene.paint.Color;
 import org.junit.Test;
-
-import java.util.HashMap;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
 
 /**
  * Tests for the BackgroundFill class

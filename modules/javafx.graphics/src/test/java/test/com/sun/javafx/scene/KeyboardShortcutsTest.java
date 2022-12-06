@@ -27,7 +27,6 @@ package test.com.sun.javafx.scene;
 
 import javafx.collections.ObservableList;
 import javafx.scene.Group;
-import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyCodeCombination;

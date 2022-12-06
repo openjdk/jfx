@@ -91,7 +91,7 @@ class CTGlyph implements Glyph {
         /* Avoid CTFontGetBoundingRectsForGlyphs as it is too slow */
 //        bounds = OS.CTFontGetBoundingRectsForGlyphs(fontRef, orientation, (short)glyphCode, null, 1);
 
-        CTFontFile fr = (CTFontFile)strike.getFontResource();
+        CTFontFile fr = strike.getFontResource();
         float[] bb = new float[4];
         fr.getGlyphBoundingBox((short)glyphCode, strike.getSize(), bb);
         bounds.origin.x = bb[0];

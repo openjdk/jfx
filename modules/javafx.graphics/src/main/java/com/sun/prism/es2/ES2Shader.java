@@ -77,7 +77,7 @@ public class ES2Shader extends BaseGraphicsResource implements Shader {
      */
     private int programID;
     private final ES2Context context;
-    private final Map<String, Uniform> uniforms = new HashMap<String, Uniform>();
+    private final Map<String, Uniform> uniforms = new HashMap<>();
     private final int maxTexCoordIndex;
     private final boolean isPixcoordUsed;
     private boolean valid;

@@ -162,7 +162,7 @@ public class ChoiceBoxTableCell<S,T> extends TableCell<S,T> {
     public static <S,T> Callback<TableColumn<S,T>, TableCell<S,T>> forTableColumn(
             final StringConverter<T> converter,
             final ObservableList<T> items) {
-        return list -> new ChoiceBoxTableCell<S,T>(converter, items);
+        return list -> new ChoiceBoxTableCell<>(converter, items);
     }
 
 
@@ -259,7 +259,7 @@ public class ChoiceBoxTableCell<S,T> extends TableCell<S,T> {
 
     // --- converter
     private ObjectProperty<StringConverter<T>> converter =
-            new SimpleObjectProperty<StringConverter<T>>(this, "converter");
+            new SimpleObjectProperty<>(this, "converter");
 
     /**
      * The {@link StringConverter} property.

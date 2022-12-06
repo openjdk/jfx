@@ -41,7 +41,6 @@ import javafx.css.RuleShim;
 import javafx.css.Selector;
 import javafx.css.StyleOrigin;
 import javafx.css.Stylesheet;
-import javafx.css.StylesheetShim;
 import javafx.scene.Node;
 import org.junit.AfterClass;
 import org.junit.Test;
@@ -65,7 +64,7 @@ public class RuleTest {
 
     @Test
     public void testGetUnobservedSelectorList() {
-        List<Selector> expResult = new ArrayList<Selector>();
+        List<Selector> expResult = new ArrayList<>();
         expResult.add(Selector.createSelector("One.two#three"));
         expResult.add(Selector.createSelector("Four.five#six"));
         Rule instance = RuleShim.getRule(expResult, Collections.EMPTY_LIST);
@@ -75,7 +74,7 @@ public class RuleTest {
 
     @Test
     public void testGetUnobservedDeclarationList() {
-        List<Declaration> expResult = new ArrayList<Declaration>();
+        List<Declaration> expResult = new ArrayList<>();
         expResult.add(DeclarationShim.getDeclaration("one", new ParsedValueImpl<String,String>("one", null), false));
         expResult.add(DeclarationShim.getDeclaration("two", new ParsedValueImpl<String,String>("two", null), false));
         expResult.add(DeclarationShim.getDeclaration("three", new ParsedValueImpl<String,String>("three", null), false));
@@ -86,7 +85,7 @@ public class RuleTest {
 
     @Test
     public void testGetSelectors() {
-        List<Selector> expResult = new ArrayList<Selector>();
+        List<Selector> expResult = new ArrayList<>();
         expResult.add(Selector.createSelector("One.two#three"));
         expResult.add(Selector.createSelector("Four.five#six"));
         Rule instance = RuleShim.getRule(expResult, Collections.EMPTY_LIST);
@@ -96,7 +95,7 @@ public class RuleTest {
 
     @Test
     public void testGetDeclarations() {
-        List<Declaration> expResult = new ArrayList<Declaration>();
+        List<Declaration> expResult = new ArrayList<>();
         expResult.add(DeclarationShim.getDeclaration("one", new ParsedValueImpl<String,String>("one", null), false));
         expResult.add(DeclarationShim.getDeclaration("two", new ParsedValueImpl<String,String>("two", null), false));
         expResult.add(DeclarationShim.getDeclaration("three", new ParsedValueImpl<String,String>("three", null), false));

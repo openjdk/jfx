@@ -260,7 +260,7 @@ public class Clipboard {
             Pair<DataFormat, Object>[] data = new Pair[content.size()];
             int index = 0;
             for (Map.Entry<DataFormat, Object> entry : content.entrySet()) {
-                data[index++] = new Pair<DataFormat, Object>(entry.getKey(), entry.getValue());
+                data[index++] = new Pair<>(entry.getKey(), entry.getValue());
             }
             contentPut = peer.putContent(data);
             return contentPut;
@@ -386,7 +386,7 @@ public class Clipboard {
      */
     public final boolean hasImage() {
         return hasContent(DataFormat.IMAGE);
-    };
+    }
 
     /**
      * Gets the Image from the clipboard which had previously

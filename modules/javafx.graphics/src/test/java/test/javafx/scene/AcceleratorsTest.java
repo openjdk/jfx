@@ -26,7 +26,6 @@
 package test.javafx.scene;
 
 import com.sun.javafx.scene.SceneHelper;
-import test.com.sun.javafx.test.MouseEventGenerator;
 import javafx.collections.ObservableMap;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyCombination;

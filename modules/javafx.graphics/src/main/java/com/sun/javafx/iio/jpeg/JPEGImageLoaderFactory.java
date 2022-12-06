@@ -41,10 +41,12 @@ public class JPEGImageLoaderFactory implements ImageLoaderFactory {
         return theInstance;
     }
 
+    @Override
     public ImageFormatDescription getFormatDescription() {
         return JPEGDescriptor.getInstance();
     }
 
+    @Override
     public ImageLoader createImageLoader(InputStream input) throws IOException {
         return new JPEGImageLoader(input);
     }
