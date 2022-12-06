@@ -74,8 +74,8 @@ public class SceneChangeShouldNotFocusStageTest {
 
             Timeline tl = new Timeline();
             tl.setCycleCount(Animation.INDEFINITE);
-            tl.getKeyFrames().addAll(new KeyFrame(Duration.millis(0), e -> stage.setScene(scene1)),
-                    new KeyFrame(Duration.millis(200), e -> stage.setScene(scene2)));
+            tl.getKeyFrames().addAll(new KeyFrame(Duration.millis(200), e -> stage.setScene(scene1)),
+                    new KeyFrame(Duration.millis(400), e -> stage.setScene(scene2)));
 
             stage.setOnShown(e -> {
                 tl.play();
