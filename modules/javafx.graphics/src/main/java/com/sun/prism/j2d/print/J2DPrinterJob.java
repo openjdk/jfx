@@ -177,7 +177,7 @@ public class J2DPrinterJob implements PrinterJobImpl {
 
     public boolean showPrintDialog(Window owner) {
 
-        if (jobRunning || jobDone) {
+        if (jobRunning || jobDone || jobCanceled) {
             return false;
         }
 
@@ -252,7 +252,7 @@ public class J2DPrinterJob implements PrinterJobImpl {
     }
 
     public boolean showPageDialog(Window owner) {
-        if (jobRunning || jobDone) {
+        if (jobRunning || jobDone || jobCanceled) {
             return false;
         }
         if (GraphicsEnvironment.isHeadless()) {
@@ -812,6 +812,7 @@ public class J2DPrinterJob implements PrinterJobImpl {
     private boolean jobRunning = false;
     private boolean jobError = false;
     private boolean jobDone = false;
+    private boolean jobCanceled = false;
     private J2DPageable j2dPageable = null;
 
     /*
@@ -847,7 +848,7 @@ public class J2DPrinterJob implements PrinterJobImpl {
             }
         }
 
-        if (jobError || jobDone) {
+        if (jobError || jobDone || jobCanceled) {
             return false;
         }
 
@@ -867,7 +868,9 @@ public class J2DPrinterJob implements PrinterJobImpl {
                 t.printStackTrace();
             }
             jobError = true;
-            jobDone = true;
+            if (!jobCanceled) {
+                jobDone = true;
+            }
         }
         return !jobError;
     }
@@ -878,14 +881,18 @@ public class J2DPrinterJob implements PrinterJobImpl {
 
             try {
                 pJob2D.print(printReqAttrSet);
-                jobDone = true;
+                if (!jobCanceled) {
+                    jobDone = true;
+                }
             } catch (Throwable t) { /* subsumes declared PrinterException */
                 if (com.sun.prism.impl.PrismSettings.debug) {
                     System.err.println("print caught exception.");
                     t.printStackTrace();
                 }
                 jobError = true;
-                jobDone = true;
+                if (!jobCanceled) {
+                    jobDone = true;
+                }
             }
             /*
              * If the job ends because its reached a page range limit
@@ -1066,14 +1073,15 @@ public class J2DPrinterJob implements PrinterJobImpl {
                 if (newPageInfo == null) {
                     monitor.notify(); // page is printed and no new page to print
                 }
-                while (newPageInfo == null && !jobDone && !jobError) {
+                while (newPageInfo == null && !jobDone && !jobCanceled && !jobError) {
                     try {
                         monitor.wait(1000);
                     } catch (InterruptedException e) {
                     }
                 }
             }
-            if (jobDone || jobError) {
+            // Even if the jobDone is set to true (this is also done by 'endJob()'), we need to process the last page.
+            if (jobDone && newPageInfo == null || jobCanceled || jobError) {
                 return false;
             }
             currPageInfo = newPageInfo;
@@ -1134,7 +1142,7 @@ public class J2DPrinterJob implements PrinterJobImpl {
         }
 
         public int print(Graphics g, PageFormat pf, int pageIndex) {
-            if (jobError || jobDone || !getPage(pageIndex)) {
+            if (jobError || jobCanceled || jobDone && !getPage(pageIndex)) {
                 return Printable.NO_SUCH_PAGE;
             }
             int x = (int)pf.getImageableX();
@@ -1212,7 +1220,7 @@ public class J2DPrinterJob implements PrinterJobImpl {
                 Toolkit.getToolkit().enterNestedEventLoop(elo);
                 elo = null;
             } else {
-                while (!pageDone && !jobDone && !jobError) {
+                while (!pageDone && !jobDone && !jobCanceled && !jobError) {
                     synchronized (monitor) {
                         try {
                             if (!pageDone) {
@@ -1229,7 +1237,7 @@ public class J2DPrinterJob implements PrinterJobImpl {
 
 
     public boolean endJob() {
-        if (jobRunning && !jobDone && !jobError) {
+        if (jobRunning && !jobDone && !jobCanceled && !jobError) {
             jobDone = true;
             try {
                 synchronized (monitor) {
@@ -1251,7 +1259,7 @@ public class J2DPrinterJob implements PrinterJobImpl {
         if (!pJob2D.isCancelled()) {
             pJob2D.cancel();
         }
-        jobDone = true;
+        jobCanceled = true;
         if (jobRunning) {
             jobRunning = false;
             try {
