@@ -238,7 +238,7 @@ public class SkinMemoryLeakTest {
                 Spinner.class,
 
                 //
-                SplitPane.class,
+                //SplitPane.class,
 
                 //
                 //TableView.class,
