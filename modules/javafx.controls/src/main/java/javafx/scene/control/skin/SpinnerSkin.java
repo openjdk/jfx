@@ -272,7 +272,7 @@ public class SpinnerSkin<T> extends SkinBase<Spinner<T>> {
     /** {@inheritDoc} */
     @Override
     public void dispose() {
-        if(getSkinnable() == null) {
+        if (getSkinnable() == null) {
             return;
         }
 
