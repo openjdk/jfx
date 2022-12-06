@@ -44,7 +44,7 @@ class RunnableProcessor implements Runnable {
     }
 
     // our stack of nested run loops
-    private LinkedList<RunLoopControl> activeRunLoops = new LinkedList<RunLoopControl>();
+    private LinkedList<RunLoopControl> activeRunLoops = new LinkedList<>();
 
     @Override
     public void run() {

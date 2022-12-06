@@ -34,11 +34,13 @@ public class ES2ShaderSource implements ShaderSource {
     public ES2ShaderSource() {
     }
 
+    @Override
     public InputStream loadSource(String name) {
         return ES2ShaderSource.class.
             getResourceAsStream("glsl/" + name + ".frag");
     }
 
+    @Override
     public AccelType getAccelType() {
         return AccelType.OPENGL;
     }

@@ -31,7 +31,6 @@ import javafx.beans.NamedArg;
 import javafx.event.EventTarget;
 import javafx.event.EventType;
 import javafx.geometry.Point3D;
-import javafx.scene.Node;
 
 // PENDING_DOC_REVIEW
 /**
@@ -55,7 +54,7 @@ public class ContextMenuEvent extends InputEvent {
      * This event occurs when a context menu is requested.
      */
     public static final EventType<ContextMenuEvent> CONTEXT_MENU_REQUESTED =
-            new EventType<ContextMenuEvent>(InputEvent.ANY, "CONTEXTMENUREQUESTED");
+            new EventType<>(InputEvent.ANY, "CONTEXTMENUREQUESTED");
 
     /**
      * Common supertype for all context menu event types.

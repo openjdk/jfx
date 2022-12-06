@@ -26,8 +26,6 @@
 package com.sun.javafx.print;
 
 import javafx.print.PageLayout;
-import javafx.print.Printer;
-import javafx.print.PrinterJob;
 import javafx.scene.Node;
 import javafx.stage.Window;
 

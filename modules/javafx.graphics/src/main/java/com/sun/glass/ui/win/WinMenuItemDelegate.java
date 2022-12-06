@@ -135,10 +135,9 @@ final class WinMenuItemDelegate implements MenuItemDelegate {
     static class CommandIDManager {
         final private static int FIRST_ID = 1;
         final private static int LAST_ID = 0xFFFF;
-        private static List<Integer> freeList = new ArrayList<Integer>();
+        private static List<Integer> freeList = new ArrayList<>();
 
-        final private static Map<Integer, WinMenuItemDelegate> map =
-                new HashMap<Integer, WinMenuItemDelegate>();
+        final private static Map<Integer, WinMenuItemDelegate> map = new HashMap<>();
         private static int nextID = FIRST_ID;
 
         public static synchronized int getID(WinMenuItemDelegate menu) {

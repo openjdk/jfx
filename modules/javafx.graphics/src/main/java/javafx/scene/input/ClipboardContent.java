@@ -209,7 +209,7 @@ public class ClipboardContent extends HashMap<DataFormat, Object> {
      */
     public final boolean hasImage() {
         return containsKey(DataFormat.IMAGE);
-    };
+    }
 
     /**
      * Puts an Image into the {@code ClipboardContent}. This is
@@ -280,7 +280,7 @@ public class ClipboardContent extends HashMap<DataFormat, Object> {
      * @return always true (the files are always successfully put)
      */
     public final boolean putFilesByPath(List<String> filePaths) {
-        final List<File> files = new ArrayList<File>(filePaths.size());
+        final List<File> files = new ArrayList<>(filePaths.size());
         for (String path : filePaths) {
             files.add(new File(path));
         }

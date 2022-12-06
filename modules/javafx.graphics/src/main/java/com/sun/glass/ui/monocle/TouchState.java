@@ -86,9 +86,7 @@ class TouchState {
             if (primaryID >= 0) {
                 Point p = getPointForID(primaryID);
                 if (p != null) {
-                    window = (MonocleWindow)
-                            MonocleWindowManager.getInstance()
-                                    .getWindowForLocation(p.x, p.y);
+                    window = MonocleWindowManager.getInstance().getWindowForLocation(p.x, p.y);
                 }
             }
         }

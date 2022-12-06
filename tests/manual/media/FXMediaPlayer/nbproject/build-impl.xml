@@ -26,7 +26,7 @@ is divided into following sections:
             </not>
         </condition>
     </fail>
-    <target depends="test,jar" description="Build and test whole project." name="default"/>
+    <target depends="jar" description="Build and test whole project." name="default"/>
     <!--
                 ======================
                 INITIALIZATION SECTION
@@ -869,12 +869,12 @@ is divided into following sections:
             <attribute default="jvm" name="jvm"/>
             <element name="customize" optional="true"/>
             <sequential>
-                <java classname="@{classname}" dir="${work.dir}" failonerror="${java.failonerror}" fork="true" jvm="${platform.java}" module="@{modulename}">
+                <java classname="@{classname}" dir="${work.dir}" failonerror="${java.failonerror}" fork="true" jvm="" module="@{modulename}">
                     <classpath>
                         <path path="@{classpath}"/>
                     </classpath>
                     <modulepath>
-                        <pathelement path="@{modulepath}"/>
+                        <pathelement path="../../../../build/sdk/lib:@{modulepath}"/>
                         <pathelement location="${module.build.classes.dir}"/>
                     </modulepath>
                     <upgrademodulepath>

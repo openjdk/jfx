@@ -153,7 +153,7 @@ public final class KeyFrame {
         this.time = time;
         this.name = name;
         if (values != null) {
-            final Set<KeyValue> set = new CopyOnWriteArraySet<KeyValue>(values);
+            final Set<KeyValue> set = new CopyOnWriteArraySet<>(values);
             set.remove(null);
             this.values = (set.size() == 0) ? Collections.<KeyValue> emptySet()
                     : (set.size() == 1) ? Collections.<KeyValue> singleton(set
@@ -195,7 +195,7 @@ public final class KeyFrame {
         this.time = time;
         this.name = name;
         if (values != null) {
-            final Set<KeyValue> set = new CopyOnWriteArraySet<KeyValue>();
+            final Set<KeyValue> set = new CopyOnWriteArraySet<>();
             for (final KeyValue keyValue : values) {
                 if (keyValue != null) {
                     set.add(keyValue);

@@ -61,6 +61,7 @@ public class ResizablePerfNodeHelper extends PerfNodeHelper {
         return resizablePerfNodeAccessor.doComputeLayoutBounds(node);
     }
 
+    @Override
     protected void notifyLayoutBoundsChangedImpl(Node node) {
         resizablePerfNodeAccessor.doNotifyLayoutBoundsChanged(node);
     }

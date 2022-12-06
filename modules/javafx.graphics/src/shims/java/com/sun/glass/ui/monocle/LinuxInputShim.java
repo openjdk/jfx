@@ -24,9 +24,6 @@
  */
 package com.sun.glass.ui.monocle;
 
-import java.util.HashMap;
-import java.util.Map;
-
 public class LinuxInputShim {
 
     public static final short INPUT_PROP_POINTER = LinuxInput.INPUT_PROP_POINTER;

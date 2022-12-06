@@ -39,7 +39,7 @@ public class IosImageLoaderFactory implements ImageLoaderFactory {
 
     private static IosImageLoaderFactory theInstance;
 
-    private IosImageLoaderFactory() {};
+    private IosImageLoaderFactory() {}
 
     /**
      * Returns an instance of IosImageLoaderFactory
@@ -56,6 +56,7 @@ public class IosImageLoaderFactory implements ImageLoaderFactory {
     /**
      * @inheritDoc
      */
+    @Override
     public ImageFormatDescription getFormatDescription() {
         return IosDescriptor.getInstance();
     }
@@ -63,6 +64,7 @@ public class IosImageLoaderFactory implements ImageLoaderFactory {
     /**
      * @inheritDoc
      */
+    @Override
     public ImageLoader createImageLoader(final InputStream input) throws IOException {
         return new IosImageLoader(input, IosDescriptor.getInstance());
     }

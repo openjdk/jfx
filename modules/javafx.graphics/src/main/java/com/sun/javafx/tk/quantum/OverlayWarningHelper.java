@@ -27,7 +27,6 @@ package com.sun.javafx.tk.quantum;
 
 import com.sun.javafx.scene.DirtyBits;
 import com.sun.javafx.scene.GroupHelper;
-import com.sun.javafx.scene.shape.TextHelper;
 import com.sun.javafx.util.Utils;
 import javafx.scene.Node;
 

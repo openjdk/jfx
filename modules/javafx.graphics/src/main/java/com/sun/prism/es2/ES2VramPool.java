@@ -43,8 +43,7 @@ class ES2VramPool extends BaseResourcePool<ES2TextureData>
     public long estimateTextureSize(int width, int height,
                                     PixelFormat format)
     {
-        return ((long) width) * ((long) height) *
-               ((long) format.getBytesPerPixelUnit());
+        return (long) width * height * format.getBytesPerPixelUnit();
     }
 
     @Override
@@ -52,7 +51,7 @@ class ES2VramPool extends BaseResourcePool<ES2TextureData>
                                       boolean hasDepth)
     {
         // REMIND: need to deal with size of depth buffer, etc.
-        return ((long) width) * ((long) height) * 4L;
+        return 4L * width * height;
     }
 
     @Override

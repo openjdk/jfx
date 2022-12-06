@@ -77,6 +77,7 @@ public class CylinderHelper extends Shape3DHelper {
         return cylinderAccessor.doComputeContains(node, localX, localY);
     }
 
+    @Override
     protected boolean computeIntersectsImpl(Node node, PickRay pickRay,
             PickResultChooser pickResult) {
         return cylinderAccessor.doComputeIntersects(node, pickRay, pickResult);

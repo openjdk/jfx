@@ -31,7 +31,6 @@ import com.sun.javafx.scene.BoundsAccessor;
 import com.sun.javafx.util.Utils;
 import javafx.beans.property.IntegerProperty;
 import javafx.scene.Node;
-import javafx.scene.effect.Blend;
 import javafx.scene.effect.BlendMode;
 
 /**

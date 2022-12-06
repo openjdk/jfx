@@ -93,6 +93,7 @@ public final class PrismSettings {
         private RasterizerType(String publicname) {
             this.publicName = publicname;
         }
+        @Override
         public String toString() {
             return publicName;
         }
