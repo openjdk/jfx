@@ -111,7 +111,10 @@ public abstract class ReadOnlySetProperty<E> extends SetExpression<E> implements
 
         if (!(obj instanceof Set))
             return false;
-        Set c = (Set) obj;
+
+        @SuppressWarnings("unchecked")
+        Set<E> c = (Set<E>) obj;  // safe cast as elements are only referenced
+
         if (c.size() != size())
             return false;
         try {

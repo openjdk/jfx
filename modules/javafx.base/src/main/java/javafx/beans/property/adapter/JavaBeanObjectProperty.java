@@ -92,8 +92,8 @@ import java.security.PrivilegedAction;
  */
 public final class JavaBeanObjectProperty<T> extends ObjectProperty<T> implements JavaBeanProperty<T> {
 
-    private final PropertyDescriptor descriptor;
-    private final PropertyDescriptor.Listener<T> listener;
+    private final PropertyDescriptor<T> descriptor;
+    private final PropertyDescriptor<T>.Listener listener;
 
     private ObservableValue<? extends T> observable = null;
     private ExpressionHelper<T> helper = null;
@@ -101,11 +101,11 @@ public final class JavaBeanObjectProperty<T> extends ObjectProperty<T> implement
     @SuppressWarnings("removal")
     private final AccessControlContext acc = AccessController.getContext();
 
-    JavaBeanObjectProperty(PropertyDescriptor descriptor, Object bean) {
+    JavaBeanObjectProperty(PropertyDescriptor<T> descriptor, Object bean) {
         this.descriptor = descriptor;
-        this.listener = descriptor.new Listener<>(bean, this);
+        this.listener = descriptor.new Listener(bean, this);
         descriptor.addListener(listener);
-        Disposer.addRecord(this, new DescriptorListenerCleaner(descriptor, listener));
+        Disposer.addRecord(this, new DescriptorListenerCleaner<>(descriptor, listener));
     }
 
     /**

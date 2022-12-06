@@ -112,7 +112,10 @@ public abstract class ReadOnlyMapProperty<K, V> extends MapExpression<K, V> impl
 
         if (!(obj instanceof Map))
             return false;
-        Map<K,V> m = (Map<K,V>) obj;
+
+        @SuppressWarnings("unchecked")
+        Map<K,V> m = (Map<K,V>) obj;  // safe cast as elements are only referenced
+
         if (m.size() != size())
             return false;
 

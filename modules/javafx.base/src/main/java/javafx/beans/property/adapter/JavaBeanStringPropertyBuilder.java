@@ -59,7 +59,7 @@ import java.lang.reflect.Method;
  */
 public final class JavaBeanStringPropertyBuilder {
 
-    private JavaBeanPropertyBuilderHelper helper = new JavaBeanPropertyBuilderHelper();
+    private JavaBeanPropertyBuilderHelper<String> helper = new JavaBeanPropertyBuilderHelper<>();
 
     private JavaBeanStringPropertyBuilder() {}
 
@@ -82,7 +82,7 @@ public final class JavaBeanStringPropertyBuilder {
      * {@code String}
      */
     public JavaBeanStringProperty build() throws NoSuchMethodException {
-        final PropertyDescriptor descriptor = helper.getDescriptor();
+        final PropertyDescriptor<String> descriptor = helper.getDescriptor();
         if (!String.class.equals(descriptor.getType())) {
             throw new IllegalArgumentException("Not a String property");
         }
