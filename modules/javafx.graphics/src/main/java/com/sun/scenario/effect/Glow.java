@@ -73,6 +73,7 @@ public class Glow extends DelegateEffect {
         this.blend.setOpacity(0.3f);
     }
 
+    @Override
     protected Effect getDelegate() {
         return blend;
     }

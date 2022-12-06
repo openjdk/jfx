@@ -51,40 +51,52 @@ public class DummyShader extends DummyResource implements Shader {
     }
 
 
+    @Override
     public void enable() {
     }
 
+    @Override
     public void disable() {
     }
 
 
+    @Override
     public void setConstant(String name, int i0) {
     }
 
+    @Override
     public void setConstant(String name, int i0, int i1) {
     }
 
+    @Override
     public void setConstant(String name, int i0, int i1, int i2) {
     }
 
+    @Override
     public void setConstant(String name, int i0, int i1, int i2, int i3) {
     }
 
+    @Override
     public void setConstants(String name, IntBuffer buf, int off, int count) {
     }
 
+    @Override
     public void setConstant(String name, float f0) {
     }
 
+    @Override
     public void setConstant(String name, float f0, float f1) {
     }
 
+    @Override
     public void setConstant(String name, float f0, float f1, float f2) {
     }
 
+    @Override
     public void setConstant(String name, float f0, float f1, float f2, float f3) {
     }
 
+    @Override
     public void setConstants(String name, FloatBuffer buf, int off, int count) {
     }
 

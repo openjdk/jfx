@@ -40,12 +40,15 @@ class DummyGraphics extends BaseShaderGraphics  {
         return new DummyGraphics(ctx, target);
     }
 
+    @Override
     public void clearQuad(float x1, float y1, float x2, float y2) {
     }
 
+    @Override
     public void clear(Color color) {
     }
 
+    @Override
     public void sync() {
     }
 

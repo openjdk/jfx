@@ -92,6 +92,7 @@ class SceneState extends PresentableState {
      * May only be called from the event thread. Must be called
      * under the render lock.
      */
+    @Override
     public void update() {
         // When the state is created, the platform view has not yet been
         // created (it is null).  Update the view each time the we ask

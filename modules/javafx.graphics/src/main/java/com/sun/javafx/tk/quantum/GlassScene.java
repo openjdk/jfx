@@ -121,6 +121,7 @@ abstract class GlassScene implements TKScene {
                 () -> AccessController.getContext(), acc, ctx);
     }
 
+    @Override
     public void waitForRenderingToComplete() {
         PaintCollector.getInstance().waitForRenderingToComplete();
     }
@@ -194,8 +195,10 @@ abstract class GlassScene implements TKScene {
     // List of all attached PGLights
     private NGLightBase[] lights;
 
+    @Override
     public NGLightBase[] getLights() { return lights; }
 
+    @Override
     public void setLights(NGLightBase[] lights) { this.lights = lights; }
 
     @Override
@@ -220,6 +223,7 @@ abstract class GlassScene implements TKScene {
         sceneChanged();
     }
 
+    @Override
     public void entireSceneNeedsRepaint() {
         if (Platform.isFxApplicationThread()) {
             entireSceneDirty = true;

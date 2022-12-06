@@ -71,6 +71,7 @@ public class GeneralShadow extends DelegateEffect {
         this.shadow = shadow.implFor(mode);
     }
 
+    @Override
     protected Effect getDelegate() {
         return shadow;
     }

@@ -30,7 +30,7 @@ import java.util.ArrayList;
 class TouchPipeline {
 
     private TouchInput touch = TouchInput.getInstance();
-    private ArrayList<TouchFilter> filters = new ArrayList<TouchFilter>();
+    private ArrayList<TouchFilter> filters = new ArrayList<>();
     private TouchState flushState = new TouchState();
 
     /**

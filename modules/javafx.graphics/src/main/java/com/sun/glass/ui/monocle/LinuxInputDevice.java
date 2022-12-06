@@ -173,6 +173,7 @@ class LinuxInputDevice implements Runnable, InputDevice {
     class EventProcessor implements Runnable {
         boolean scheduled;
 
+        @Override
         public void run() {
             buffer.startIteration();
             // Do not lock the buffer while processing events. We still want to be
@@ -211,6 +212,7 @@ class LinuxInputDevice implements Runnable, InputDevice {
     /**
      * @return a string describing this input device
      */
+    @Override
     public String toString() {
         return devNode == null ? "Robot" : devNode.toString();
     }

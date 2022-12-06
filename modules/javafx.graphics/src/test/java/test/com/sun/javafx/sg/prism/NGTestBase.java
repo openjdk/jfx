@@ -39,7 +39,6 @@ import com.sun.javafx.geom.transform.GeneralTransform3D;
 import com.sun.javafx.sg.prism.NGCircleShim;
 import com.sun.javafx.sg.prism.NGGroupShim;
 import com.sun.javafx.sg.prism.NGNode;
-import com.sun.javafx.sg.prism.NGNodeShim;
 import com.sun.javafx.sg.prism.NGRectangleShim;
 import com.sun.javafx.sg.prism.NGRegionShim;
 import com.sun.javafx.sg.prism.NodeEffectInput;

@@ -26,7 +26,6 @@
 package test.javafx.concurrent.mocks;
 
 import test.javafx.concurrent.AbstractTask;
-import javafx.concurrent.TaskShim;
 
 /**
  *

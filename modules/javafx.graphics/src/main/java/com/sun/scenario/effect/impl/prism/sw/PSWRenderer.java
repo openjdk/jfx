@@ -343,8 +343,7 @@ public class PSWRenderer extends PrRenderer {
                                 Rectangle origBounds,
                                 Rectangle xformBounds)
     {
-        PSWDrawable dst = (PSWDrawable)
-            getCompatibleImage(xformBounds.width, xformBounds.height);
+        PSWDrawable dst = getCompatibleImage(xformBounds.width, xformBounds.height);
         if (dst != null) {
             Graphics g = dst.createGraphics();
             g.translate(-xformBounds.x, -xformBounds.y);
@@ -362,8 +361,7 @@ public class PSWRenderer extends PrRenderer {
                                Rectangle origBounds,
                                Rectangle xformBounds)
     {
-        PSWDrawable dst = (PSWDrawable)
-            getCompatibleImage(xformBounds.width, xformBounds.height);
+        PSWDrawable dst = getCompatibleImage(xformBounds.width, xformBounds.height);
         if (dst != null) {
             PSWDrawable orig = (PSWDrawable)original.getUntransformedImage();
             Graphics g = dst.createGraphics();

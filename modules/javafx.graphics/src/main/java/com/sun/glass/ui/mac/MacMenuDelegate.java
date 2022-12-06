@@ -24,17 +24,11 @@
  */
 package com.sun.glass.ui.mac;
 
-import java.nio.ByteBuffer;
-
-import com.sun.glass.ui.Application;
 import com.sun.glass.ui.Menu;
 import com.sun.glass.ui.MenuItem.Callback;
 import com.sun.glass.ui.Pixels;
-import com.sun.glass.ui.delegate.MenuBarDelegate;
 import com.sun.glass.ui.delegate.MenuDelegate;
 import com.sun.glass.ui.delegate.MenuItemDelegate;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 
 class MacMenuDelegate implements MenuDelegate, MenuItemDelegate {
 

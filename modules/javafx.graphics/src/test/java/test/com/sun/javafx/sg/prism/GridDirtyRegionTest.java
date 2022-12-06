@@ -25,7 +25,6 @@
 
 package test.com.sun.javafx.sg.prism;
 
-import test.com.sun.javafx.sg.prism.TestGraphics;
 import java.util.ArrayList;
 import java.util.List;
 import com.sun.javafx.geom.BaseBounds;

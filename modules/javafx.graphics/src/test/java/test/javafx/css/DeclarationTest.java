@@ -28,14 +28,11 @@ package test.javafx.css;
 import javafx.scene.paint.Color;
 import com.sun.javafx.css.ParsedValueImpl;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.List;
 import javafx.css.Declaration;
 import javafx.css.DeclarationShim;
-import javafx.css.Rule;
 import javafx.css.RuleShim;
 import javafx.css.SelectorShim;
 import javafx.css.StyleOrigin;

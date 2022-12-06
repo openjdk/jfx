@@ -29,8 +29,6 @@ import test.com.sun.javafx.test.TransformHelper;
 import javafx.scene.transform.Transform;
 import javafx.scene.transform.Translate;
 import javafx.scene.shape.Rectangle;
-import javafx.beans.Observable;
-import javafx.beans.InvalidationListener;
 import javafx.scene.Node;
 import org.junit.Test;
 import static org.junit.Assert.*;

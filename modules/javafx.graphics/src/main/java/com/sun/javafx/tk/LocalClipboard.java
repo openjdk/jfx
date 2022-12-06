@@ -40,7 +40,7 @@ final class LocalClipboard implements TKClipboard {
     private final Map<DataFormat, Object> values;
 
     public LocalClipboard() {
-        values = new HashMap<DataFormat, Object>();
+        values = new HashMap<>();
     }
 
     @Override
@@ -50,8 +50,7 @@ final class LocalClipboard implements TKClipboard {
 
     @Override
     public Set<DataFormat> getContentTypes() {
-        return Collections.unmodifiableSet(
-                   new HashSet<DataFormat>(values.keySet()));
+        return Collections.unmodifiableSet(new HashSet<>(values.keySet()));
     }
 
     @Override

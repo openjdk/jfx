@@ -164,6 +164,7 @@ public final class GeneralTransform3D implements CanTransformVec3d {
      *
      * @return the transformed point
      */
+    @Override
     public Vec3d transform(Vec3d point, Vec3d pointOut)  {
         if (pointOut == null) {
             pointOut = new Vec3d();

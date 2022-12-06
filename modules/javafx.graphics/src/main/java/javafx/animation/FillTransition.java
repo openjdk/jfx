@@ -103,7 +103,7 @@ public final class FillTransition extends Transition {
 
     public final ObjectProperty<Shape> shapeProperty() {
         if (shape == null) {
-            shape = new SimpleObjectProperty<Shape>(this, "shape", DEFAULT_SHAPE);
+            shape = new SimpleObjectProperty<>(this, "shape", DEFAULT_SHAPE);
         }
         return shape;
     }
@@ -197,7 +197,7 @@ public final class FillTransition extends Transition {
 
     public final ObjectProperty<Color> fromValueProperty() {
         if (fromValue == null) {
-            fromValue = new SimpleObjectProperty<Color>(this, "fromValue", DEFAULT_FROM_VALUE);
+            fromValue = new SimpleObjectProperty<>(this, "fromValue", DEFAULT_FROM_VALUE);
         }
         return fromValue;
     }
@@ -227,7 +227,7 @@ public final class FillTransition extends Transition {
 
     public final ObjectProperty<Color> toValueProperty() {
         if (toValue == null) {
-            toValue = new SimpleObjectProperty<Color>(this, "toValue", DEFAULT_TO_VALUE);
+            toValue = new SimpleObjectProperty<>(this, "toValue", DEFAULT_TO_VALUE);
         }
         return toValue;
     }

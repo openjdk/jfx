@@ -27,7 +27,6 @@ package com.sun.javafx.scene.shape;
 
 import com.sun.javafx.geom.PickRay;
 import com.sun.javafx.scene.input.PickResultChooser;
-import com.sun.javafx.sg.prism.NGTriangleMesh;
 import com.sun.javafx.util.Utils;
 import javafx.scene.Node;
 import javafx.scene.shape.CullFace;
