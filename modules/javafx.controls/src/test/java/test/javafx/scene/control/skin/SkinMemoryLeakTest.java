@@ -232,7 +232,7 @@ public class SkinMemoryLeakTest {
                 //MenuBar.class,
 
                 //
-                PasswordField.class,
+                //PasswordField.class,
 
                 //
                 Spinner.class
