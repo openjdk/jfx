@@ -35,21 +35,26 @@ public class BasicShapeRep implements ShapeRep {
     public BasicShapeRep() {
     }
 
+    @Override
     public boolean is3DCapable() {
         return false;
     }
 
+    @Override
     public void invalidate(InvalidationType type) {
     }
 
+    @Override
     public void fill(Graphics g, Shape shape, BaseBounds bounds) {
         g.fill(shape);
     }
 
+    @Override
     public void draw(Graphics g, Shape shape, BaseBounds bounds) {
         g.draw(shape);
     }
 
+    @Override
     public void dispose() {
     }
 }

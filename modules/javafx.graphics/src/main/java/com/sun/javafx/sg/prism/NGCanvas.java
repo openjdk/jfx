@@ -370,7 +370,7 @@ public class NGCanvas extends NGNode {
         ngtext = new NGText();
         textLayout = new PrismTextLayout();
         transform = new Affine2D();
-        clipStack = new LinkedList<Path2D>();
+        clipStack = new LinkedList<>();
         initAttributes();
     }
 
@@ -556,7 +556,7 @@ public class NGCanvas extends NGNode {
         if (Thread.currentThread().getName().startsWith("QuantumRenderer")) {
             r.run();
         } else {
-            FutureTask<Void> f = new FutureTask<Void>(r, null);
+            FutureTask<Void> f = new FutureTask<>(r, null);
             Toolkit.getToolkit().addRenderJob(new RenderJob(f));
             try {
                 // block until job is complete

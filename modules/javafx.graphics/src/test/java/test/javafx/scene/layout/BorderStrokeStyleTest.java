@@ -49,7 +49,7 @@ public class BorderStrokeStyleTest {
     }
 
     @Test public void instanceCreation2() {
-        List<Double> dashArray = new ArrayList<Double>();
+        List<Double> dashArray = new ArrayList<>();
         dashArray.add(1.0);
         dashArray.add(4.0);
         BorderStrokeStyle style = new BorderStrokeStyle(StrokeType.OUTSIDE, StrokeLineJoin.BEVEL, StrokeLineCap.SQUARE,
@@ -71,7 +71,7 @@ public class BorderStrokeStyleTest {
     }
 
     @Test public void changesToDashArrayPassedToConstructorHaveNoEffect() {
-        List<Double> dashArray = new ArrayList<Double>();
+        List<Double> dashArray = new ArrayList<>();
         BorderStrokeStyle style = new BorderStrokeStyle(null, null, null, 1, 2, dashArray);
         dashArray.add(4.0);
         assertEquals(0, style.getDashArray().size());
@@ -112,11 +112,11 @@ public class BorderStrokeStyleTest {
     }
 
     @Test public void equality5() {
-        List<Double> dashArray1 = new ArrayList<Double>();
+        List<Double> dashArray1 = new ArrayList<>();
         dashArray1.add(1.0);
         dashArray1.add(4.0);
 
-        List<Double> dashArray2 = new ArrayList<Double>();
+        List<Double> dashArray2 = new ArrayList<>();
         dashArray2.add(1.0);
         dashArray2.add(4.0);
 
@@ -157,7 +157,7 @@ public class BorderStrokeStyleTest {
     }
 
     @Test public void notEqual6() {
-        List<Double> dashArray1 = new ArrayList<Double>();
+        List<Double> dashArray1 = new ArrayList<>();
         dashArray1.add(1.0);
         dashArray1.add(4.0);
         BorderStrokeStyle a = new BorderStrokeStyle(null, null, null, 10, 0, null);

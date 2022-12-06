@@ -76,7 +76,7 @@ import java.util.concurrent.Future;
  */
 public class StubToolkit extends Toolkit {
 
-    private Map<Object, Object> contextMap = new HashMap<Object, Object>();
+    private Map<Object, Object> contextMap = new HashMap<>();
 
     private StubPrimaryTimer primaryTimer = new StubPrimaryTimer();
 
@@ -371,7 +371,7 @@ public class StubToolkit extends Toolkit {
     }
 
     private TKClipboard clipboard = new TKClipboard() {
-        private Map<DataFormat, Object> map = new HashMap<DataFormat, Object>();
+        private Map<DataFormat, Object> map = new HashMap<>();
         private Image image;
         private double offsetX;
         private double offsetY;
@@ -402,7 +402,7 @@ public class StubToolkit extends Toolkit {
         }
 
         @Override public Set<TransferMode> getTransferModes() {
-            Set<TransferMode> modes = new HashSet<TransferMode>();
+            Set<TransferMode> modes = new HashSet<>();
             modes.add(TransferMode.COPY);
             return modes;
         }
@@ -735,6 +735,7 @@ public class StubToolkit extends Toolkit {
         this.platformShortcutKey = platformShortcutKey;
     }
 
+    @Override
     public KeyCode getPlatformShortcutKey() {
         return platformShortcutKey;
     }

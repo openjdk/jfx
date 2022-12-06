@@ -47,6 +47,7 @@ public class PrRenderInfo implements ImageDataRenderer {
     // RT-27390
     // TODO: Have Graphics implement ImageRenderer directly to avoid
     // needing a wrapper object...
+    @Override
     public void renderImage(ImageData image,
                             BaseTransform transform,
                             FilterContext fctx)

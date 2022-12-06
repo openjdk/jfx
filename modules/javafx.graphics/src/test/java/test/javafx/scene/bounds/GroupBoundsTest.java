@@ -391,7 +391,7 @@ public class GroupBoundsTest {
             Group g = new Group();
             assertGroupBounds(g);
             for (int j = 0; j < 500; j++) {
-                LinkedList<String> whatHappenedStack = new java.util.LinkedList<String>();
+                LinkedList<String> whatHappenedStack = new java.util.LinkedList<>();
                 for (int i = 0; i <= 50; i++) {
                     Bounds layoutBounds = g.getLayoutBounds();
                     int numChildren = g.getChildren().size();

@@ -38,7 +38,6 @@ import com.sun.javafx.geom.transform.Affine3D;
 import com.sun.javafx.geom.transform.BaseTransform;
 import javafx.scene.transform.Scale;
 import javafx.scene.transform.Transform;
-import test.javafx.scene.transform.TransformTest;
 
 public class ScaleTest {
 

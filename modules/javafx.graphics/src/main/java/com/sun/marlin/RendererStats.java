@@ -354,7 +354,7 @@ public final class RendererStats implements MarlinConst {
         /* RendererStats collection as hard references
            (only used for debugging purposes) */
         private final ConcurrentLinkedQueue<RendererStats> allStats
-            = new ConcurrentLinkedQueue<RendererStats>();
+            = new ConcurrentLinkedQueue<>();
 
         @SuppressWarnings("removal")
         private RendererStatsHolder() {

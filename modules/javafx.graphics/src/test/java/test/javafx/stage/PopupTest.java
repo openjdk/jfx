@@ -795,6 +795,7 @@ public class PopupTest {
             return counter;
         }
 
+        @Override
         public void handle(final Event event) {
             ++counter;
         }

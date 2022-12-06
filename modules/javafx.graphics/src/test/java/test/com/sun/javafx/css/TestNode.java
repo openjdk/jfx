@@ -78,7 +78,7 @@ public class TestNode extends TestNodeBase {
     public static class StyleableProperties {
 
          public static final CssMetaData<TestNode, Number> XYZZY =
-             new CssMetaData<TestNode, Number>("-fx-xyzzy",
+             new CssMetaData<>("-fx-xyzzy",
                  SizeConverter.getInstance(),
                  .5) {
 
@@ -97,7 +97,7 @@ public class TestNode extends TestNodeBase {
          private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
          static {
             final List<CssMetaData<? extends Styleable, ?>> styleables =
-                new ArrayList<CssMetaData<? extends Styleable, ?>>(TestNodeBase.getClassCssMetaData());
+                new ArrayList<>(TestNodeBase.getClassCssMetaData());
             styleables.add(XYZZY);
             STYLEABLES = Collections.unmodifiableList(styleables);
          }

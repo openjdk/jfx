@@ -76,8 +76,7 @@ public class PlatformImpl {
     private static volatile boolean firstWindowShown = false;
     private static volatile boolean lastWindowClosed = false;
     private static AtomicBoolean reallyIdle = new AtomicBoolean(false);
-    private static Set<FinishListener> finishListeners =
-            new CopyOnWriteArraySet<FinishListener>();
+    private static Set<FinishListener> finishListeners = new CopyOnWriteArraySet<>();
     private final static Object runLaterLock = new Object();
     private static Boolean isGraphicsSupported;
     private static Boolean isControlsSupported;

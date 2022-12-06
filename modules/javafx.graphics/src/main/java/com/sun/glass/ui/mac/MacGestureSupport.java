@@ -26,10 +26,7 @@ package com.sun.glass.ui.mac;
 
 import com.sun.glass.ui.TouchInputSupport;
 import com.sun.glass.ui.GestureSupport;
-import com.sun.glass.ui.Application;
 import com.sun.glass.ui.View;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 
 final class MacGestureSupport {
 

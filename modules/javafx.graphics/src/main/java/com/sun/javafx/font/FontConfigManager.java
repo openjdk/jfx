@@ -478,8 +478,7 @@ class FontConfigManager {
                 String fcFamily = fonts[f].fcFamily;
                 String styleStr = getStyleStr(fonts[f].style);
                 String key = fcFamily+"."+styleStr+".";
-                ArrayList<FontConfigFont> allFonts =
-                      new ArrayList<FontConfigFont>();
+                ArrayList<FontConfigFont> allFonts = new ArrayList<>();
                 int i=0;
                 while (true) {
                     String file = props.getProperty(key+i+".file");
@@ -594,7 +593,7 @@ class FontConfigManager {
                     ArrayList<String> familyArr =
                         familyToFontListMap.get(familyLC);
                     if (familyArr == null) {
-                        familyArr = new ArrayList<String>(4);
+                        familyArr = new ArrayList<>(4);
                         familyToFontListMap.put(familyLC, familyArr);
                     }
                     familyArr.add(font);

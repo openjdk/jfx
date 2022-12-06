@@ -29,14 +29,12 @@ import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.scene.SceneHelper;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
-import javafx.concurrent.Task;
 import javafx.scene.input.MouseButton;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.TilePane;
 import javafx.scene.layout.VBox;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.transform.Scale;
-import javafx.stage.PopupWindow;
 import javafx.stage.Stage;
 
 import test.com.sun.javafx.pgstub.StubScene;
@@ -46,8 +44,6 @@ import test.com.sun.javafx.test.MouseEventGenerator;
 import com.sun.javafx.tk.Toolkit;
 
 import javafx.application.Platform;
-import javafx.beans.InvalidationListener;
-import javafx.beans.Observable;
 import javafx.scene.input.MouseEvent;
 
 import org.junit.After;
@@ -55,8 +51,6 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.lang.ref.WeakReference;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import javafx.scene.Camera;

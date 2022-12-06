@@ -46,18 +46,22 @@ public class ImageDescriptor implements ImageFormatDescription {
                                           Arrays.asList(mimeSubtypes));
     }
 
+    @Override
     public String getFormatName() {
         return formatName;
     }
 
+    @Override
     public List<String> getExtensions() {
         return extensions;
     }
 
+    @Override
     public List<Signature> getSignatures() {
         return signatures;
     }
 
+    @Override
     public List<String> getMIMESubtypes() {
         return mimeSubtypes;
     }

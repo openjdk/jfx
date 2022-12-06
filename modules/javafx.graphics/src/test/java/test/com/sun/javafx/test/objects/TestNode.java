@@ -34,7 +34,7 @@ public final class TestNode extends Rectangle {
     private final String name;
 
     private final ObjectProperty<Group> _parentProperty =
-            new SimpleObjectProperty<Group>() {
+            new SimpleObjectProperty<>() {
                 private Group old_parent;
 
                 @Override

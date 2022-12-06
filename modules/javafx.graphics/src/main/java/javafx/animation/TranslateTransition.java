@@ -116,7 +116,7 @@ public final class TranslateTransition extends Transition {
 
     public final ObjectProperty<Node> nodeProperty() {
         if (node == null) {
-            node = new SimpleObjectProperty<Node>(this, "node", DEFAULT_NODE);
+            node = new SimpleObjectProperty<>(this, "node", DEFAULT_NODE);
         }
         return node;
     }

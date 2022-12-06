@@ -534,7 +534,7 @@ public class Image {
 
     private ReadOnlyObjectWrapper<Exception> exceptionPropertyImpl() {
         if (exception == null) {
-            exception = new ReadOnlyObjectWrapper<Exception>(this, "exception");
+            exception = new ReadOnlyObjectWrapper<>(this, "exception");
         }
         return exception;
     }
@@ -556,7 +556,7 @@ public class Image {
 
     private ObjectPropertyImpl<PlatformImage> platformImagePropertyImpl() {
         if (platformImage == null) {
-            platformImage = new ObjectPropertyImpl<PlatformImage>("platformImage");
+            platformImage = new ObjectPropertyImpl<>("platformImage");
         }
 
         return platformImage;
@@ -892,7 +892,7 @@ public class Image {
         };
 
         public Animation(final Image image, final ImageLoader loader) {
-            imageRef = new WeakReference<Image>(image);
+            imageRef = new WeakReference<>(image);
             timeline = new Timeline();
             int loopCount = loader.getLoopCount();
             timeline.setCycleCount(loopCount == 0 ? Timeline.INDEFINITE : loopCount);
@@ -1016,7 +1016,7 @@ public class Image {
     private static final int MAX_RUNNING_TASKS = 4;
     private static int runningTasks = 0;
     private static final Queue<ImageTask> pendingTasks =
-            new LinkedList<ImageTask>();
+            new LinkedList<>();
 
     private final class ImageTask
             implements AsyncOperationListener<ImageLoader> {

@@ -171,7 +171,7 @@ public final class PrinterJob {
 
     private ObjectProperty<Printer> createPrinterProperty(Printer printer) {
 
-        return new SimpleObjectProperty<Printer>(printer) {
+        return new SimpleObjectProperty<>(printer) {
 
             @Override
             public void set(Printer value) {
@@ -470,7 +470,7 @@ public final class PrinterJob {
          * as it cannot be re-used.
          */
         DONE
-    };
+    }
 
     private ReadOnlyObjectWrapper<JobStatus> jobStatus =
         new ReadOnlyObjectWrapper(JobStatus.NOT_STARTED);

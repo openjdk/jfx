@@ -26,7 +26,6 @@
 package com.sun.javafx.scene;
 
 import com.sun.glass.ui.Accessible;
-import com.sun.javafx.tk.TKPulseListener;
 import com.sun.javafx.tk.TKScene;
 import com.sun.javafx.util.Utils;
 import javafx.scene.Camera;

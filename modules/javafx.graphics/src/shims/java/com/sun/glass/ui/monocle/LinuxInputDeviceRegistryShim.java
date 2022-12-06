@@ -58,7 +58,7 @@ public class LinuxInputDeviceRegistryShim {
 
     static Map<Integer, LinuxAbsoluteInputCapabilities> createAbsCapsMap(Map<Integer, int[]> absCaps) {
         Map<Integer, LinuxAbsoluteInputCapabilities> map
-                = new HashMap<Integer, LinuxAbsoluteInputCapabilities>();
+                = new HashMap<>();
         for (Integer axis : absCaps.keySet()) {
             int[] a = absCaps.get(axis);
             if (a != null) {

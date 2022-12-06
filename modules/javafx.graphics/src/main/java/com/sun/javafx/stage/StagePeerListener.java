@@ -25,8 +25,6 @@
 
 package com.sun.javafx.stage;
 
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 import javafx.stage.Stage;
 
 
