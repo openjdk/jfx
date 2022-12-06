@@ -57,14 +57,12 @@ public class SceneChangeShouldNotFocusStageTest {
 
     @BeforeAll
     public static void initFX() throws Exception {
-        new Thread(() -> Application.launch(TestApp.class, (String[]) null)).start();
-        waitForLatch(startupLatch, 10, "FX runtime failed to start.");
+        Util.launch(startupLatch, TestApp.class);
     }
 
     @AfterAll
     public static void exit() {
-        Platform.runLater(() -> stage.hide());
-        Platform.exit();
+        Util.shutdown(stage);
     }
 
     public static class TestApp extends Application {
