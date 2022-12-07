@@ -51,7 +51,7 @@ public class SceneChangeShouldNotFocusStageTest {
 
     @Test
     void windowShouldRemainIconified() {
-        Util.sleep(1000);
+        Util.sleep(2000);
         assertTrue(stage.isIconified(), "Stage should be iconified");
     }
 
@@ -82,8 +82,8 @@ public class SceneChangeShouldNotFocusStageTest {
                 startupLatch.countDown();
             });
 
-            stage.show();
             stage.setIconified(true);
+            stage.show();
         }
     }
 
