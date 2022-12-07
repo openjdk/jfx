@@ -235,7 +235,7 @@ public class SkinMemoryLeakTest {
                 PasswordField.class,
 
                 //
-                Spinner.class,
+                //Spinner.class,
 
                 //
                 //SplitPane.class,
