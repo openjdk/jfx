@@ -162,7 +162,7 @@ class GlassWindowEventHandler extends Window.EventHandler implements PrivilegedA
             AccessControlContext acc = stage.getAccessControlContext();
             return AccessController.doPrivileged((PrivilegedAction<Void>)() -> {
                 stage.stageListener.changedAlwaysOnTop(level != Level.NORMAL);
-                return (Void)null;
+                return null;
             } , acc);
         });
     }
@@ -195,7 +195,7 @@ class GlassWindowEventHandler extends Window.EventHandler implements PrivilegedA
             AccessControlContext acc = stage.getAccessControlContext();
             return AccessController.doPrivileged((PrivilegedAction<Void>)() -> {
                 stage.stageListener.changedScreen(oldScreen, newScreen);
-                return (Void)null;
+                return null;
             } , acc);
         });
     }

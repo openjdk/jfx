@@ -506,7 +506,7 @@ public abstract class Shape extends Node {
     Paint old_stroke;
     public final ObjectProperty<Paint> strokeProperty() {
         if (stroke == null) {
-            stroke = new StyleableObjectProperty<Paint>() {
+            stroke = new StyleableObjectProperty<>() {
 
                 boolean needsListener = false;
 
@@ -634,7 +634,7 @@ public abstract class Shape extends Node {
         * @see Shape#fill
         */
         private static final CssMetaData<Shape,Paint> FILL =
-            new CssMetaData<Shape,Paint>("-fx-fill",
+            new CssMetaData<>("-fx-fill",
                 PaintConverter.getInstance(), Color.BLACK) {
 
             @Override
@@ -661,7 +661,7 @@ public abstract class Shape extends Node {
         * @see Shape#smooth
         */
         private static final CssMetaData<Shape,Boolean> SMOOTH =
-            new CssMetaData<Shape,Boolean>("-fx-smooth",
+            new CssMetaData<>("-fx-smooth",
                 BooleanConverter.getInstance(), Boolean.TRUE) {
 
             @Override
@@ -681,7 +681,7 @@ public abstract class Shape extends Node {
         * @see Shape#stroke
         */
         private static final CssMetaData<Shape,Paint> STROKE =
-            new CssMetaData<Shape,Paint>("-fx-stroke",
+            new CssMetaData<>("-fx-stroke",
                 PaintConverter.getInstance()) {
 
             @Override
@@ -719,7 +719,7 @@ public abstract class Shape extends Node {
         * @see StrokeAttributes#dashArray
         */
         private static final CssMetaData<Shape,Number[]> STROKE_DASH_ARRAY =
-            new CssMetaData<Shape,Number[]>("-fx-stroke-dash-array",
+            new CssMetaData<>("-fx-stroke-dash-array",
                 SizeConverter.SequenceConverter.getInstance(),
                 new Double[0]) {
 
@@ -740,7 +740,7 @@ public abstract class Shape extends Node {
         * @see #strokeDashOffsetProperty()
         */
         private static final CssMetaData<Shape,Number> STROKE_DASH_OFFSET =
-            new CssMetaData<Shape,Number>("-fx-stroke-dash-offset",
+            new CssMetaData<>("-fx-stroke-dash-offset",
                 SizeConverter.getInstance(), 0.0) {
 
             @Override
@@ -761,8 +761,8 @@ public abstract class Shape extends Node {
         * @see #strokeLineCapProperty()
         */
         private static final CssMetaData<Shape,StrokeLineCap> STROKE_LINE_CAP =
-            new CssMetaData<Shape,StrokeLineCap>("-fx-stroke-line-cap",
-                new EnumConverter<StrokeLineCap>(StrokeLineCap.class),
+            new CssMetaData<>("-fx-stroke-line-cap",
+                new EnumConverter<>(StrokeLineCap.class),
                 StrokeLineCap.SQUARE) {
 
             @Override
@@ -783,8 +783,8 @@ public abstract class Shape extends Node {
         * @see #strokeLineJoinProperty()
         */
         private static final CssMetaData<Shape,StrokeLineJoin> STROKE_LINE_JOIN =
-            new CssMetaData<Shape,StrokeLineJoin>("-fx-stroke-line-join",
-                new EnumConverter<StrokeLineJoin>(StrokeLineJoin.class),
+            new CssMetaData<>("-fx-stroke-line-join",
+                new EnumConverter<>(StrokeLineJoin.class),
                 StrokeLineJoin.MITER) {
 
             @Override
@@ -805,8 +805,8 @@ public abstract class Shape extends Node {
         * @see #strokeTypeProperty()
         */
         private static final CssMetaData<Shape,StrokeType> STROKE_TYPE =
-            new CssMetaData<Shape,StrokeType>("-fx-stroke-type",
-                new EnumConverter<StrokeType>(StrokeType.class),
+            new CssMetaData<>("-fx-stroke-type",
+                new EnumConverter<>(StrokeType.class),
                 StrokeType.CENTERED) {
 
             @Override
@@ -828,7 +828,7 @@ public abstract class Shape extends Node {
         * @see #strokeMiterLimitProperty()
         */
         private static final CssMetaData<Shape,Number> STROKE_MITER_LIMIT =
-            new CssMetaData<Shape,Number>("-fx-stroke-miter-limit",
+            new CssMetaData<>("-fx-stroke-miter-limit",
                 SizeConverter.getInstance(), 10.0) {
 
             @Override
@@ -849,7 +849,7 @@ public abstract class Shape extends Node {
         * @see #strokeWidthProperty()
         */
         private static final CssMetaData<Shape,Number> STROKE_WIDTH =
-            new CssMetaData<Shape,Number>("-fx-stroke-width",
+            new CssMetaData<>("-fx-stroke-width",
                 SizeConverter.getInstance(), 1.0) {
 
             @Override
@@ -868,7 +868,7 @@ public abstract class Shape extends Node {
          static {
 
             final List<CssMetaData<? extends Styleable, ?>> styleables =
-                new ArrayList<CssMetaData<? extends Styleable, ?>>(Node.getClassCssMetaData());
+                new ArrayList<>(Node.getClassCssMetaData());
             styleables.add(FILL);
             styleables.add(SMOOTH);
             styleables.add(STROKE);
@@ -1433,7 +1433,7 @@ public abstract class Shape extends Node {
         // TODO: Need to handle set from css - should clear array and add all.
         public ObservableList<Double> dashArrayProperty() {
             if (dashArray == null) {
-                dashArray = new TrackableObservableList<Double>() {
+                dashArray = new TrackableObservableList<>() {
                     @Override
                     protected void onChanged(Change<Double> c) {
                         StrokeAttributes.this.invalidated(
@@ -1447,7 +1447,7 @@ public abstract class Shape extends Node {
         private ObjectProperty<Number[]> cssDashArray = null;
         private ObjectProperty<Number[]> cssDashArrayProperty() {
             if (cssDashArray == null) {
-                cssDashArray = new StyleableObjectProperty<Number[]>()
+                cssDashArray = new StyleableObjectProperty<>()
                 {
 
                     @Override

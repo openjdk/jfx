@@ -33,7 +33,7 @@ public final class MenuBar {
 
     final private MenuBarDelegate delegate;
 
-    private final List<Menu> menus = new ArrayList<Menu>();
+    private final List<Menu> menus = new ArrayList<>();
 
     protected MenuBar() {
         Application.checkEventThread();

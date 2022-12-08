@@ -104,7 +104,7 @@ public abstract class Transition extends Animation {
 
     public final ObjectProperty<Interpolator> interpolatorProperty() {
         if (interpolator == null) {
-            interpolator = new SimpleObjectProperty<Interpolator>(
+            interpolator = new SimpleObjectProperty<>(
                     this, "interpolator", DEFAULT_INTERPOLATOR
             );
         }

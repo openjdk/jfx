@@ -78,6 +78,7 @@ public class DWGlyphLayout extends GlyphLayout {
         return textRun;
     }
 
+    @Override
     public void layout(TextRun run, PGFont font, FontStrike strike, char[] text) {
 
         int slot = 0;

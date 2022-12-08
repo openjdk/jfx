@@ -27,7 +27,6 @@ package test.javafx.animation;
 
 import com.sun.javafx.animation.TickCalculation;
 import javafx.animation.Animation.Status;
-import javafx.animation.AnimationShim;
 import javafx.animation.Interpolator;
 import javafx.animation.SequentialTransition;
 import javafx.animation.SequentialTransitionShim;

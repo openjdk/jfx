@@ -143,7 +143,7 @@ public abstract class Shape3D extends Node {
 
     public final ObjectProperty<Material> materialProperty() {
         if (material == null) {
-            material = new SimpleObjectProperty<Material>(Shape3D.this,
+            material = new SimpleObjectProperty<>(Shape3D.this,
                     "material") {
 
                 private Material old = null;
@@ -193,7 +193,7 @@ public abstract class Shape3D extends Node {
 
     public final ObjectProperty<DrawMode> drawModeProperty() {
         if (drawMode == null) {
-            drawMode = new SimpleObjectProperty<DrawMode>(Shape3D.this,
+            drawMode = new SimpleObjectProperty<>(Shape3D.this,
                     "drawMode", DrawMode.FILL) {
 
                 @Override
@@ -222,7 +222,7 @@ public abstract class Shape3D extends Node {
 
     public final ObjectProperty<CullFace> cullFaceProperty() {
         if (cullFace == null) {
-            cullFace = new SimpleObjectProperty<CullFace>(Shape3D.this,
+            cullFace = new SimpleObjectProperty<>(Shape3D.this,
                     "cullFace", CullFace.BACK) {
 
                 @Override

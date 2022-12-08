@@ -25,7 +25,6 @@
 
 package com.sun.javafx.stage;
 
-import static com.sun.javafx.stage.WindowHelper.setHelper;
 import com.sun.javafx.util.Utils;
 import javafx.stage.Window;
 

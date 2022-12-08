@@ -38,7 +38,6 @@ import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
-import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.shape.Rectangle;
 
@@ -339,7 +338,7 @@ public final class Scenegraph_eventHandlers_Test {
     private static final Group TEST_ROOT_NODE =
             new Group(TEST_L_NODE, TEST_R_NODE);
     private static final Scene TEST_SCENE = new Scene(TEST_ROOT_NODE);
-    private static final Event TEST_EVENT = new Event(new EventType<Event>("Test Event"));
+    private static final Event TEST_EVENT = new Event(new EventType<>("Test Event"));
 
     private static final EventHandler<Event> EVENT_CONSUMING_HANDLER =
             event -> event.consume();

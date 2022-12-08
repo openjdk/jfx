@@ -141,4 +141,12 @@ public class SpinnerSkinTest {
         assertEquals(new BoundingBox(PADDING_LEFT, PADDING_TOP + HEIGHT - tallest, WIDTH, tallest), decrementArrowButton.getBoundsInParent());
         assertEquals(new BoundingBox(PADDING_LEFT, PADDING_TOP, WIDTH, tallest), incrementArrowButton.getBoundsInParent());
     }
+
+    /** Tests JDK-8245145: IAE when replacing skins */
+    @Test
+    public void testSpinnerSkin() {
+        Spinner<?> spinner = new Spinner<>();
+        spinner.setSkin(new SpinnerSkin<>(spinner));
+        spinner.setSkin(new SpinnerSkin<>(spinner));
+    }
 }

@@ -57,11 +57,13 @@ public final class PrismPrintPipeline extends PrintPipeline {
         return true;
     }
 
+    @Override
     public PrinterJobImpl createPrinterJob(PrinterJob job) {
         return new J2DPrinterJob(job);
     }
 
     private static Printer defaultPrinter = null;
+    @Override
     public synchronized Printer getDefaultPrinter() {
         if (defaultPrinter == null) {
             PrintService defPrt =
@@ -88,6 +90,7 @@ public final class PrismPrintPipeline extends PrintPipeline {
     }
 
     static class NameComparator implements Comparator<Printer> {
+        @Override
         public int compare(Printer p1, Printer p2) {
             return p1.getName().compareTo(p2.getName());
         }
@@ -102,9 +105,10 @@ public final class PrismPrintPipeline extends PrintPipeline {
     private static ObservableSet<Printer> printerSet = null;
     private static ObservableSet<Printer> returnedPrinterSet = null;
 
+    @Override
     public synchronized ObservableSet<Printer> getAllPrinters() {
         if (returnedPrinterSet == null) {
-            TreeSet<Printer> printers = new TreeSet<Printer>(nameComparator);
+            TreeSet<Printer> printers = new TreeSet<>(nameComparator);
             // Trigger getting default first, so we don't recreate that.
             Printer defPrinter = getDefaultPrinter();
             PrintService defService = null;
