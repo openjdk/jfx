@@ -396,7 +396,7 @@ public class SliderSkin extends SkinBase<Slider> {
 
         thumb.setOnMouseEntered(me -> {
             Tooltip t = getSkinnable().getTooltip();
-            if (t != null && t.isAutoHide()) {
+            if (t != null && t.isAutoHide() && !t.consumeAutoHidingEventsProperty().isBound()) {
                 tooltipConsumeAutoHidingEvents = t.getConsumeAutoHidingEvents();
                 // Temporarily disable consuming auto hiding events from tooltip.
                 // This is done to receive mouse pressed event on thumb and
@@ -407,7 +407,7 @@ public class SliderSkin extends SkinBase<Slider> {
 
         thumb.setOnMouseExited(me -> {
             Tooltip t = getSkinnable().getTooltip();
-            if (t != null && t.isAutoHide()) {
+            if (t != null && t.isAutoHide() && !t.consumeAutoHidingEventsProperty().isBound()) {
                 t.setConsumeAutoHidingEvents(tooltipConsumeAutoHidingEvents);
             }
         });
