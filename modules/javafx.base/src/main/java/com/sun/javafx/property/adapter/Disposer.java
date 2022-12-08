@@ -43,8 +43,8 @@ import java.util.concurrent.ConcurrentHashMap;
  * of the associated Runnable object will be called.
  */
 public class Disposer implements Runnable {
-    private static final ReferenceQueue<Object> QUEUE = new ReferenceQueue<>();
-    private static final Map<Reference<?>, Runnable> RECORDS = new ConcurrentHashMap<>();
+    private static final ReferenceQueue<Object> queue = new ReferenceQueue<>();
+    private static final Map<Reference<?>, Runnable> records = new ConcurrentHashMap<>();
     private static Disposer disposerInstance;
 
     static {
@@ -81,17 +81,17 @@ public class Disposer implements Runnable {
      * @param rec the associated Runnable object
      */
     public static void addRecord(Object target, Runnable rec) {
-        PhantomReference<Object> ref = new PhantomReference<>(target, QUEUE);
-        RECORDS.put(ref, rec);
+        PhantomReference<Object> ref = new PhantomReference<>(target, queue);
+        records.put(ref, rec);
     }
 
     @Override
     public void run() {
         while (true) {
             try {
-                Reference<?> reference = QUEUE.remove();
+                Reference<?> reference = queue.remove();
                 reference.clear();
-                Runnable rec = RECORDS.remove(reference);
+                Runnable rec = records.remove(reference);
                 rec.run();
             } catch (Exception e) {
                 System.out.println("Exception while removing reference: " + e);
