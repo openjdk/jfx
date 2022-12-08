@@ -77,6 +77,7 @@ import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableColumnBase;
 import javafx.scene.control.TableRow;
 import javafx.scene.control.TableView;
+import javafx.scene.control.TableViewShim;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.control.ToolBar;
@@ -95,6 +96,7 @@ import javafx.scene.input.InputMethodEvent;
 import javafx.scene.input.InputMethodRequests;
 import javafx.scene.input.ScrollEvent;
 import javafx.scene.layout.Pane;
+import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Font;
@@ -275,7 +277,7 @@ public class SkinCleanupTest {
     }
 
     @Test
-    public void testTreeTableRowVirtualFlowWidthListenerReplaceSkin() {
+    public void testTreeTableRowTracksVirtualFlowReplaceSkin() {
         TreeTableView<Person> tableView = createPersonTreeTable(false);
         showControl(tableView, true);
         VirtualFlow<?> flow = getVirtualFlow(tableView);
@@ -283,22 +285,35 @@ public class SkinCleanupTest {
         replaceSkin(tableRow);
         Toolkit.getToolkit().firePulse();
         TreeTableRowSkin<?> rowSkin = (TreeTableRowSkin<?>) tableRow.getSkin();
-        assertNotNull("row skin must have listener to virtualFlow width",
-                unregisterChangeListeners(rowSkin, flow.widthProperty()));
+        checkFollowsWidth(flow, (Region) rowSkin.getNode());
     }
 
     /**
-     * Sanity: listener to flow's width is registered.
+     * Sanity test checks that tree table row skin tracks the virtual flow width.
      */
     @Test
-    public void testTreeTableRowVirtualFlowWidthListener() {
+    public void testTreeTableRowTracksVirtualFlowWidth() {
         TreeTableView<Person> tableView = createPersonTreeTable(false);
         showControl(tableView, true);
         VirtualFlow<?> flow = getVirtualFlow(tableView);
         TreeTableRow<?> tableRow = (TreeTableRow<?>) getCell(tableView, 1);
         TreeTableRowSkin<?> rowSkin = (TreeTableRowSkin<?>) tableRow.getSkin();
-        assertNotNull("row skin must have listener to virtualFlow width",
-                unregisterChangeListeners(rowSkin, flow.widthProperty()));
+        checkFollowsWidth(flow, (Region) rowSkin.getNode());
+    }
+
+    protected void checkFollowsWidth(Region owner, Region skin) {
+        owner.resize(10000, 1000);
+        Toolkit.getToolkit().firePulse();
+        double widthBefore = skin.getWidth();
+
+        owner.resize(100, 1000);
+        Toolkit.getToolkit().firePulse();
+        double widthAfter = skin.getWidth();
+
+        // since we are dealing with tree/tables with unconstrained resize policies,
+        // the row skin may not follow the width exactly. we'll check that the width
+        // simply changes.
+        assertTrue("TreeTableRowSkin must follow the VirtualFlow width", widthAfter < (widthBefore - 10));
     }
 
     /**
