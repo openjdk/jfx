@@ -43,23 +43,8 @@ import java.util.Collection;
 import java.util.List;
 
 import javafx.scene.Scene;
-import javafx.scene.control.Accordion;
-import javafx.scene.control.ButtonBar;
-import javafx.scene.control.ColorPicker;
-import javafx.scene.control.ComboBox;
 import javafx.scene.control.Control;
-import javafx.scene.control.DatePicker;
-import javafx.scene.control.MenuButton;
-import javafx.scene.control.Pagination;
-import javafx.scene.control.PasswordField;
-import javafx.scene.control.ScrollBar;
-import javafx.scene.control.ScrollPane;
 import javafx.scene.control.Skin;
-import javafx.scene.control.Spinner;
-import javafx.scene.control.SplitMenuButton;
-import javafx.scene.control.SplitPane;
-import javafx.scene.control.TableView;
-import javafx.scene.control.TreeTableView;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
@@ -214,40 +199,6 @@ public class SkinMemoryLeakTest {
     @Parameterized.Parameters //(name = "{index}: {0} ")
     public static Collection<Object[]> data() {
         List<Class<Control>> controlClasses = getControlClasses();
-        // FIXME as part of JDK-8241364
-        // The default skins of these controls are leaking
-        // step 1: file issues (where not yet done), add informal ignore to entry
-        // step 2: fix and remove from list
-        List<Class<? extends Control>> leakingClasses = List.of(
-                //
-                //ColorPicker.class,
-
-                //
-                //ComboBox.class,
-
-                //
-                //DatePicker.class,
-
-                //
-                //MenuBar.class,
-
-                //
-                PasswordField.class,
-
-                //
-                //Spinner.class,
-
-                //
-                //SplitPane.class,
-
-                //
-                //TableView.class,
-
-                //
-                TreeTableView.class
-        );
-        // remove the known issues to make the test pass
-        controlClasses.removeAll(leakingClasses);
         return asArrays(controlClasses);
     }
 
