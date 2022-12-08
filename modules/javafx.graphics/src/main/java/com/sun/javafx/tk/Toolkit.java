@@ -28,7 +28,6 @@ package com.sun.javafx.tk;
 import javafx.application.ConditionalFeature;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.geometry.Dimension2D;
-import javafx.scene.Scene;
 import javafx.scene.effect.BlurType;
 import javafx.scene.image.Image;
 import javafx.scene.image.PixelFormat;
@@ -51,11 +50,9 @@ import javafx.scene.shape.StrokeLineJoin;
 import javafx.scene.shape.StrokeType;
 import javafx.stage.FileChooser.ExtensionFilter;
 import javafx.stage.Modality;
-import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 import javafx.stage.Window;
 import java.io.File;
-import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.security.AccessControlContext;
@@ -63,7 +60,6 @@ import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -82,7 +78,6 @@ import com.sun.javafx.perf.PerformanceTracker;
 import com.sun.javafx.runtime.VersionInfo;
 import com.sun.javafx.runtime.async.AsyncOperation;
 import com.sun.javafx.runtime.async.AsyncOperationListener;
-import com.sun.javafx.scene.SceneHelper;
 import com.sun.javafx.scene.text.TextLayoutFactory;
 import com.sun.javafx.sg.prism.NGCamera;
 import com.sun.javafx.sg.prism.NGLightBase;
@@ -380,20 +375,16 @@ public abstract class Toolkit {
     public abstract TKStage createTKEmbeddedStage(HostInterface host, @SuppressWarnings("removal") AccessControlContext acc);
 
     @SuppressWarnings("removal")
-    private final Map<TKPulseListener,AccessControlContext> stagePulseListeners =
-            new WeakHashMap<TKPulseListener,AccessControlContext>();
+    private final Map<TKPulseListener,AccessControlContext> stagePulseListeners = new WeakHashMap<>();
     @SuppressWarnings("removal")
-    private final Map<TKPulseListener,AccessControlContext> scenePulseListeners =
-            new WeakHashMap<TKPulseListener,AccessControlContext>();
+    private final Map<TKPulseListener,AccessControlContext> scenePulseListeners = new WeakHashMap<>();
     @SuppressWarnings("removal")
-    private final Map<TKPulseListener,AccessControlContext> postScenePulseListeners =
-            new WeakHashMap<TKPulseListener,AccessControlContext>();
+    private final Map<TKPulseListener,AccessControlContext> postScenePulseListeners = new WeakHashMap<>();
     @SuppressWarnings("removal")
-    private final Map<TKListener,AccessControlContext> toolkitListeners =
-            new WeakHashMap<TKListener,AccessControlContext>();
+    private final Map<TKListener,AccessControlContext> toolkitListeners = new WeakHashMap<>();
 
     // The set of shutdown hooks is strongly held to avoid premature GC.
-    private final Set<Runnable> shutdownHooks = new HashSet<Runnable>();
+    private final Set<Runnable> shutdownHooks = new HashSet<>();
 
     @SuppressWarnings("removal")
     private void runPulse(final TKPulseListener listener,
@@ -416,13 +407,13 @@ public abstract class Toolkit {
         // Copy of listener map
         @SuppressWarnings("removal")
         final Map<TKPulseListener,AccessControlContext> stagePulseList =
-                new WeakHashMap<TKPulseListener,AccessControlContext>();
+                new WeakHashMap<>();
         @SuppressWarnings("removal")
         final Map<TKPulseListener,AccessControlContext> scenePulseList =
-                new WeakHashMap<TKPulseListener,AccessControlContext>();
+                new WeakHashMap<>();
         @SuppressWarnings("removal")
         final Map<TKPulseListener,AccessControlContext> postScenePulseList =
-                new WeakHashMap<TKPulseListener,AccessControlContext>();
+                new WeakHashMap<>();
 
         synchronized (this) {
             stagePulseList.putAll(stagePulseListeners);
@@ -529,7 +520,7 @@ public abstract class Toolkit {
     protected void notifyShutdownHooks() {
         List<Runnable> hooks;
         synchronized (shutdownHooks) {
-            hooks = new ArrayList<Runnable>(shutdownHooks);
+            hooks = new ArrayList<>(shutdownHooks);
             shutdownHooks.clear();
         }
 

@@ -150,7 +150,7 @@ public class ChoiceBoxTreeCell<T> extends DefaultTreeCell<T> {
     public static <T> Callback<TreeView<T>, TreeCell<T>> forTreeView(
             final StringConverter<T> converter,
             final ObservableList<T> items) {
-        return list -> new ChoiceBoxTreeCell<T>(converter, items);
+        return list -> new ChoiceBoxTreeCell<>(converter, items);
     }
 
 
@@ -250,7 +250,7 @@ public class ChoiceBoxTreeCell<T> extends DefaultTreeCell<T> {
 
     // --- converter
     private ObjectProperty<StringConverter<T>> converter =
-            new SimpleObjectProperty<StringConverter<T>>(this, "converter");
+            new SimpleObjectProperty<>(this, "converter");
 
     /**
      * The {@link StringConverter} property.
@@ -337,7 +337,7 @@ public class ChoiceBoxTreeCell<T> extends DefaultTreeCell<T> {
         super.updateItem(item, empty);
 
         CellUtils.updateItem(this, getConverter(), hbox, getTreeItemGraphic(), choiceBox);
-    };
+    }
 
 
 

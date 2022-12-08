@@ -83,7 +83,7 @@ public final class JavaBeanObjectPropertyBuilder<T> {
      */
     public JavaBeanObjectProperty<T> build() throws NoSuchMethodException {
         final PropertyDescriptor descriptor = helper.getDescriptor();
-        return new JavaBeanObjectProperty<T>(descriptor, helper.getBean());
+        return new JavaBeanObjectProperty<>(descriptor, helper.getBean());
     }
 
     /**

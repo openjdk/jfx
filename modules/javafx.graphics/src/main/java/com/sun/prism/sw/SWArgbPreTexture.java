@@ -60,6 +60,7 @@ class SWArgbPreTexture extends SWTexture {
         return data;
     }
 
+    @Override
     int getOffset() {
         return offset;
     }
@@ -178,10 +179,12 @@ class SWArgbPreTexture extends SWTexture {
         }
     }
 
+    @Override
     void allocateBuffer() {
         this.data = new int[physicalWidth * physicalHeight];
     }
 
+    @Override
     Texture createSharedLockedTexture(WrapMode altMode) {
         return new SWArgbPreTexture(this, altMode);
     }

@@ -42,6 +42,7 @@ class DummyResource extends BaseGraphicsResource {
     }
 
     static class DummyRecord implements Disposer.Record {
+        @Override
         public void dispose() {
         }
     }

@@ -26,7 +26,7 @@
 package javafx.beans.value;
 
 
-public class ObservableValueStub<T> extends ObservableValueBase<T> implements ObservableValue<T> {
+public class ObservableValueStub<T> extends ObservableValueBase<T> {
 
     private T value;
 

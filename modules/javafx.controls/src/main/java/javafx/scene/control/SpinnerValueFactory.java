@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -240,7 +240,7 @@ public abstract class SpinnerValueFactory<T> {
         };
 
         private WeakListChangeListener<T> weakItemsContentObserver =
-                new WeakListChangeListener<T>(itemsContentObserver);
+                new WeakListChangeListener<>(itemsContentObserver);
 
 
 
@@ -272,6 +272,8 @@ public abstract class SpinnerValueFactory<T> {
             });
 
             valueProperty().addListener((o, oldValue, newValue) -> {
+                if (newValue == null) return;
+
                 // when the value is set, we need to react to ensure it is a
                 // valid value (and if not, blow up appropriately)
                 int newIndex = -1;
@@ -326,7 +328,7 @@ public abstract class SpinnerValueFactory<T> {
          */
         public final ObjectProperty<ObservableList<T>> itemsProperty() {
             if (items == null) {
-                items = new SimpleObjectProperty<ObservableList<T>>(this, "items") {
+                items = new SimpleObjectProperty<>(this, "items") {
                     WeakReference<ObservableList<T>> oldItemsRef;
 
                     @Override protected void invalidated() {
@@ -468,6 +470,8 @@ public abstract class SpinnerValueFactory<T> {
             setConverter(new IntegerStringConverter());
 
             valueProperty().addListener((o, oldValue, newValue) -> {
+                if (newValue == null) return;
+
                 // when the value is set, we need to react to ensure it is a
                 // valid value (and if not, blow up appropriately)
                 if (newValue < getMin()) {
@@ -957,6 +961,8 @@ public abstract class SpinnerValueFactory<T> {
             });
 
             valueProperty().addListener((o, oldValue, newValue) -> {
+                if (newValue == null) return;
+
                 // when the value is set, we need to react to ensure it is a
                 // valid value (and if not, blow up appropriately)
                 if (getMin() != null && newValue.isBefore(getMin())) {
@@ -977,7 +983,7 @@ public abstract class SpinnerValueFactory<T> {
          **********************************************************************/
 
         // --- min
-        private ObjectProperty<LocalDate> min = new SimpleObjectProperty<LocalDate>(this, "min") {
+        private ObjectProperty<LocalDate> min = new SimpleObjectProperty<>(this, "min") {
             @Override protected void invalidated() {
                 LocalDate currentValue = LocalDateSpinnerValueFactory.this.getValue();
                 if (currentValue == null) {
@@ -1010,7 +1016,7 @@ public abstract class SpinnerValueFactory<T> {
         }
 
         // --- max
-        private ObjectProperty<LocalDate> max = new SimpleObjectProperty<LocalDate>(this, "max") {
+        private ObjectProperty<LocalDate> max = new SimpleObjectProperty<>(this, "max") {
             @Override protected void invalidated() {
                 LocalDate currentValue = LocalDateSpinnerValueFactory.this.getValue();
                 if (currentValue == null) {
@@ -1213,6 +1219,8 @@ public abstract class SpinnerValueFactory<T> {
             });
 
             valueProperty().addListener((o, oldValue, newValue) -> {
+                if (newValue == null) return;
+
                 // when the value is set, we need to react to ensure it is a
                 // valid value (and if not, blow up appropriately)
                 if (getMin() != null && newValue.isBefore(getMin())) {
@@ -1233,7 +1241,7 @@ public abstract class SpinnerValueFactory<T> {
          **********************************************************************/
 
         // --- min
-        private ObjectProperty<LocalTime> min = new SimpleObjectProperty<LocalTime>(this, "min") {
+        private ObjectProperty<LocalTime> min = new SimpleObjectProperty<>(this, "min") {
             @Override protected void invalidated() {
                 LocalTime currentValue = LocalTimeSpinnerValueFactory.this.getValue();
                 if (currentValue == null) {
@@ -1266,7 +1274,7 @@ public abstract class SpinnerValueFactory<T> {
         }
 
         // --- max
-        private ObjectProperty<LocalTime> max = new SimpleObjectProperty<LocalTime>(this, "max") {
+        private ObjectProperty<LocalTime> max = new SimpleObjectProperty<>(this, "max") {
             @Override protected void invalidated() {
                 LocalTime currentValue = LocalTimeSpinnerValueFactory.this.getValue();
                 if (currentValue == null) {

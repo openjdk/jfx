@@ -121,7 +121,7 @@ class CTFontStrike extends PrismFontStrike<CTFontFile> {
                 float subPixelX = point.x;
                 point.x = (int) point.x;
                 subPixelX -= point.x;
-                point.y = (float) Math.round(point.y);
+                point.y = Math.round(point.y);
                 if (subPixelX >= 0.75f) return 3;
                 if (subPixelX >= 0.50f) return 2;
                 if (subPixelX >= 0.25f) return 1;
@@ -132,7 +132,7 @@ class CTFontStrike extends PrismFontStrike<CTFontFile> {
                     float subPixelX = point.x;
                     point.x = (int) point.x;
                     subPixelX -= point.x;
-                    point.y = (float) Math.round(point.y);
+                    point.y = Math.round(point.y);
                     if (subPixelX >= 0.66f) return 2;
                     if (subPixelX >= 0.33f) return 1;
                     return 0;
@@ -141,7 +141,7 @@ class CTFontStrike extends PrismFontStrike<CTFontFile> {
                     float subPixelX = point.x;
                     point.x = (int) point.x;
                     subPixelX -= point.x;
-                    point.y = (float) Math.round(point.y);
+                    point.y = Math.round(point.y);
                     if (subPixelX >= 0.5f) return 1;
                 }
                 return 0;

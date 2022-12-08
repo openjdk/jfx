@@ -31,7 +31,6 @@ import java.util.Arrays;
 import java.util.Collection;
 import javafx.event.ActionEvent;
 import javafx.event.Event;
-import javafx.event.EventHandler;
 import javafx.event.EventType;
 import javafx.scene.Node;
 import javafx.scene.input.ContextMenuEvent;

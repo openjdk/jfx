@@ -308,7 +308,7 @@ public class ColumnConstraints extends ConstraintsBase {
 
     public final ObjectProperty<Priority> hgrowProperty() {
         if (hgrow == null) {
-            hgrow = new ObjectPropertyBase<Priority>() {
+            hgrow = new ObjectPropertyBase<>() {
 
                 @Override
                 protected void invalidated() {
@@ -348,7 +348,7 @@ public class ColumnConstraints extends ConstraintsBase {
 
     public final ObjectProperty<HPos> halignmentProperty() {
         if (halignment == null) {
-            halignment = new ObjectPropertyBase<HPos>() {
+            halignment = new ObjectPropertyBase<>() {
 
                 @Override
                 protected void invalidated() {

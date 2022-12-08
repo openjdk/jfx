@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -321,11 +321,11 @@ public class ObservableSetWrapper<E> implements ObservableSet<E> {
     }
 
     /**
-     * Keeps only elements that are included the specified collection.
+     * Keeps only elements that are included in the specified collection.
      * All other elements are removed. For each removed element all the
      * observers are called.
      *
-     * @see java.util.Set in JDK API documentation
+     * @see java.util.Set
      * @param c collection containing elements to be kept in this set
      * @return true if this set changed as a result of the call
      */

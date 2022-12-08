@@ -85,7 +85,7 @@ public final class PseudoClassState extends BitSet<PseudoClass> {
 
     @Override
     public String toString() {
-        List<String> strings = new ArrayList<String>();
+        List<String> strings = new ArrayList<>();
         Iterator<PseudoClass> iter = iterator();
         while (iter.hasNext()) {
             strings.add(iter.next().getPseudoClassName());
@@ -166,10 +166,10 @@ public final class PseudoClassState extends BitSet<PseudoClass> {
 
     // package private for unit test purposes
     static final Map<String,Integer> pseudoClassMap =
-            new HashMap<String,Integer>(64);
+            new HashMap<>(64);
 
     static final List<PseudoClass> pseudoClasses =
-            new ArrayList<PseudoClass>();
+            new ArrayList<>();
 
 }
 

@@ -96,7 +96,7 @@ class MacFontFinder {
             fontToFamilyNameMap.put(lcName, family);
             ArrayList<String> list = familyToFontListMap.get(lcFamily);
             if (list == null) {
-                list = new ArrayList<String>();
+                list = new ArrayList<>();
                 familyToFontListMap.put(lcFamily, list);
             }
             list.add(name);

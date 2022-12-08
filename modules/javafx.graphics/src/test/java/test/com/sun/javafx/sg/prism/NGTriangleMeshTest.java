@@ -24,8 +24,6 @@
  */
 package test.com.sun.javafx.sg.prism;
 
-import com.sun.javafx.collections.FloatArraySyncer;
-import com.sun.javafx.collections.IntegerArraySyncer;
 import com.sun.javafx.sg.prism.NGTriangleMeshShim;
 import java.util.Arrays;
 import static org.junit.Assert.assertArrayEquals;

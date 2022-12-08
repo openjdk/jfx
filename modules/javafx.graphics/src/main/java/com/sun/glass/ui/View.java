@@ -925,7 +925,7 @@ public abstract class View {
             } else {
                 clickCount = 1;
 
-                View.lastClickedView = new WeakReference<View>(this);
+                View.lastClickedView = new WeakReference<>(this);
                 lastClickedButton = button;
                 lastClickedX = x;
                 lastClickedY = y;

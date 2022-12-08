@@ -32,7 +32,7 @@ package com.sun.prism;
 
 public interface PhongMaterial extends Material {
 
-    public enum MapType {DIFFUSE, SPECULAR, BUMP, SELF_ILLUM};
+    public enum MapType {DIFFUSE, SPECULAR, BUMP, SELF_ILLUM}
     public static final int DIFFUSE = MapType.DIFFUSE.ordinal();
     public static final int SPECULAR = MapType.SPECULAR.ordinal();
     public static final int BUMP = MapType.BUMP.ordinal();

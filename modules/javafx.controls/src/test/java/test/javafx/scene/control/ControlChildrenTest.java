@@ -48,7 +48,7 @@ public class ControlChildrenTest {
 
     @Before public void setUp() {
         c = new ControlStub();
-        s = new SkinStub<ControlStub>(c);
+        s = new SkinStub<>(c);
         t = new Tooltip();
 //        t.setSkin(new SkinStub<Tooltip>(t));
         changeNotificationCount = 0;
@@ -76,7 +76,7 @@ public class ControlChildrenTest {
     @Test public void changingTheSkinResultsInBothNewSkinNodeAndTooltipAsChildren() {
         c.setSkin(s);
         c.setTooltip(t);
-        SkinStub<ControlStub> s2 = new SkinStub<ControlStub>(c);
+        SkinStub<ControlStub> s2 = new SkinStub<>(c);
         c.setSkin(s2);
         assertEquals(2, c.getChildrenUnmodifiable().size());
         assertSame(t, c.getChildrenUnmodifiable().get(0));
@@ -122,7 +122,7 @@ public class ControlChildrenTest {
         c.setSkin(s);
         c.setTooltip(t);
         c.getChildrenUnmodifiable().addListener(changeNotifier);
-        SkinStub<ControlStub> s2 = new SkinStub<ControlStub>(c);
+        SkinStub<ControlStub> s2 = new SkinStub<>(c);
         c.setSkin(s2);
         assertEquals(1, changeNotificationCount);
     }

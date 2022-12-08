@@ -32,11 +32,8 @@ import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Set;
 import javafx.util.Duration;
-import javafx.event.EventType;
 import javafx.scene.input.RotateEvent;
-import javafx.animation.Animation;
 import javafx.animation.Interpolator;
 import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
@@ -75,8 +72,7 @@ class RotateGestureRecognizer implements GestureRecognizer {
     private double lastTouchEventTime = 0;
 
     // from MultiTouchTracker
-    Map<Long, TouchPointTracker> trackers =
-            new HashMap<Long, TouchPointTracker>();
+    Map<Long, TouchPointTracker> trackers = new HashMap<>();
 
     int modifiers;
     boolean direct;

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,7 @@
 
 #import <Foundation/Foundation.h>
 #import <jni/JavaPlayerEventDispatcher.h>
+#import <Locator/LocatorStream.h>
 
 // PlayerState.{UNKNOWN, READY, PLAYING, PAUSED, STOPPED, STALLED, FINISHED, HALTED}
 #define kPlayerState_UNKNOWN 0
@@ -57,7 +58,7 @@
 @property (nonatomic,readonly) CAudioEqualizer *audioEqualizer;
 @property (nonatomic,readonly) CAudioSpectrum *audioSpectrum;
 
-- (id) initWithURL:(NSURL *)source eventHandler:(CJavaPlayerEventDispatcher*)hdlr;
+- (id) initWithURL:(NSURL *)source eventHandler:(CJavaPlayerEventDispatcher*)hdlr locatorStream:(CLocatorStream*)ls;
 
 - (void) play;
 - (void) pause;

@@ -89,7 +89,7 @@ public final class WebPageClientImpl implements WebPageClient<WebView> {
             Tooltip tooltip = (tooltipRef == null) ? null : tooltipRef.get();
             if (tooltip == null) {
                 tooltip = new Tooltip(tooltipText);
-                tooltipRef = new WeakReference<Tooltip>(tooltip);
+                tooltipRef = new WeakReference<>(tooltip);
             } else {
                 tooltip.setText(tooltipText);
                 if (!oldTooltipText.equals(tooltipText)) {

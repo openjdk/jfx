@@ -98,7 +98,7 @@ public abstract class Timer {
             this.period = UNSET_PERIOD;
             throw new RuntimeException("Failed to start the timer");
         } else {
-            this.period = (double)period;
+            this.period = period;
         }
     }
 

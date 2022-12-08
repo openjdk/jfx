@@ -90,7 +90,7 @@ public class TextFieldTreeTableCell<S,T> extends TreeTableCell<S,T> {
      */
     public static <S,T> Callback<TreeTableColumn<S,T>, TreeTableCell<S,T>> forTreeTableColumn(
             final StringConverter<T> converter) {
-        return list -> new TextFieldTreeTableCell<S,T>(converter);
+        return list -> new TextFieldTreeTableCell<>(converter);
     }
 
 
@@ -149,7 +149,7 @@ public class TextFieldTreeTableCell<S,T> extends TreeTableCell<S,T> {
 
     // --- converter
     private ObjectProperty<StringConverter<T>> converter =
-            new SimpleObjectProperty<StringConverter<T>>(this, "converter");
+            new SimpleObjectProperty<>(this, "converter");
 
     /**
      * The {@link StringConverter} property.

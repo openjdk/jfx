@@ -89,6 +89,7 @@ public final class ImagePattern extends Paint {
         return patternTransform;
     }
 
+    @Override
     public boolean isOpaque() {
         return image.isOpaque();
     }

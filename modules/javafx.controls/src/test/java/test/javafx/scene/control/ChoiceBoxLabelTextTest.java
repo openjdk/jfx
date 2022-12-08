@@ -376,7 +376,7 @@ public class ChoiceBoxLabelTextTest {
     }
 
     protected static StringConverter<String> createStringConverter() {
-        return new StringConverter<String>() {
+        return new StringConverter<>() {
 
             @Override
             public String toString(String object) {
@@ -427,7 +427,7 @@ public class ChoiceBoxLabelTextTest {
         scene = new Scene(root);
         stage = new Stage();
         stage.setScene(scene);
-        box = new ChoiceBox<String>(FXCollections.observableArrayList("Apple", "Orange", "Banana"));
+        box = new ChoiceBox<>(FXCollections.observableArrayList("Apple", "Orange", "Banana"));
         box.setConverter(converter);
         root.getChildren().addAll(box);
     }

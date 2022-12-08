@@ -43,7 +43,7 @@ public abstract class ReentrantContextProviderTL<K extends ReentrantContext>
 {
     // Thread-local storage:
     private final ThreadLocal<Reference<K>> ctxTL
-        = new ThreadLocal<Reference<K>>();
+        = new ThreadLocal<>();
 
     // ReentrantContext CLQ provider for child contexts:
     private final ReentrantContextProviderCLQ<K> ctxProviderCLQ;
@@ -72,7 +72,7 @@ public abstract class ReentrantContextProviderTL<K extends ReentrantContext>
 
         final ReentrantContextProviderTL<K> parent = this;
 
-        this.ctxProviderCLQ = new ReentrantContextProviderCLQ<K>(refTypeCLQ) {
+        this.ctxProviderCLQ = new ReentrantContextProviderCLQ<>(refTypeCLQ) {
             @Override
             protected K newContext() {
                 return parent.newContext();

@@ -88,7 +88,7 @@ public class KeyCombinationTest {
     @BeforeClass
     public static void setUpCharToKeyCodeMap() {
         final Map<String, KeyCode> charToKeyCodeMap =
-                new HashMap<String, KeyCode>();
+                new HashMap<>();
 
         // LATIN SMALL LETTER Q
         charToKeyCodeMap.put("q", KeyCode.Q);

@@ -52,10 +52,10 @@ public class BidirectionalContentBindingMapTest {
 
     @Before
     public void setUp() {
-        map0 = new HashMap<String, Integer>();
-        map1 = new HashMap<String, Integer>();
+        map0 = new HashMap<>();
+        map1 = new HashMap<>();
         map1.put(key1, -1);
-        map2 = new HashMap<String, Integer>();
+        map2 = new HashMap<>();
         map2.put(key2_1, 2);
         map2.put(key2_2, 1);
 

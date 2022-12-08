@@ -69,7 +69,7 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
 
         selectedIndices = new SelectedIndicesList();
 
-        selectedItems = new SelectedItemsReadOnlyObservableList<T>(selectedIndices, () -> getItemCount()) {
+        selectedItems = new SelectedItemsReadOnlyObservableList<>(selectedIndices, () -> getItemCount()) {
             @Override protected T getModelItem(int index) {
                 return MultipleSelectionModelBase.this.getModelItem(index);
             }
@@ -683,8 +683,9 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
             if (index < 0 || index >= itemCount)  {
                 throw new IndexOutOfBoundsException(index + " >= " + itemCount);
             }
-
-            if (index == (lastGetIndex + 1) && lastGetValue < itemCount) {
+            if (lastGetIndex == index) {
+                return lastGetValue;
+            } else if (index == (lastGetIndex + 1) && lastGetValue < itemCount) {
                 // we're iterating forward in order, short circuit for
                 // performance reasons (RT-39776)
                 lastGetIndex++;
@@ -717,6 +718,7 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
             _beginChange();
             size = -1;
             bitset.set(index);
+            if (index <= lastGetValue) reset();
             int indicesIndex = indexOf(index);
             _nextAdd(indicesIndex, indicesIndex + 1);
             _endChange();
@@ -739,12 +741,14 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
             size = -1;
             if (isSet) {
                 bitset.set(index, end, isSet);
+                if (index <= lastGetValue) reset();
                 int indicesIndex = indexOf(index);
                 int span = end - index;
                 _nextAdd(indicesIndex, indicesIndex + span);
             } else {
                 // TODO handle remove
                 bitset.set(index, end, isSet);
+                if (index <= lastGetValue) reset();
             }
             _endChange();
         }
@@ -779,30 +783,22 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
                     _endChange();
                 } else {
                     _beginChange();
-                    int pos = 0;
-                    int start = 0;
-                    int end = 0;
 
-                    // starting from pos, we keep going until the value is
-                    // not the next value
-                    int startValue = sortedNewIndices.get(pos++);
-                    start = indexOf(startValue);
-                    end = start + 1;
-                    int endValue = startValue;
-                    while (pos < size) {
-                        int previousEndValue = endValue;
-                        endValue = sortedNewIndices.get(pos++);
-                        ++end;
-                        if (previousEndValue != (endValue - 1)) {
-                            _nextAdd(start, end);
-                            start = end;
-                            continue;
+                    int startIndex = indexOf(sortedNewIndices.get(0));
+                    int endIndex = startIndex + 1;
+
+                    for (int i = 1; i < sortedNewIndices.size(); ++i) {
+                        int currentValue = get(endIndex);
+                        int currentNewValue = sortedNewIndices.get(i);
+                        if (currentValue != currentNewValue) {
+                            _nextAdd(startIndex, endIndex);
+                            while (get(endIndex) != currentNewValue) ++endIndex;
+                            startIndex = endIndex++;
+                        } else {
+                            ++endIndex;
                         }
-
-                        // special case for when we get to the point where the loop is about to end
-                        // and we have uncommitted changes to fire.
-                        if (pos == size) {
-                            _nextAdd(start, start + pos);
+                        if (i == sortedNewIndices.size() - 1) {
+                            _nextAdd(startIndex, endIndex);
                         }
                     }
 
@@ -811,11 +807,13 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
             }
         }
 
+        @Override
         public void clear() {
             _beginChange();
             List<Integer> removed = bitset.stream().boxed().collect(Collectors.toList());
             size = 0;
             bitset.clear();
+            reset();
             _nextRemove(0, removed);
             _endChange();
         }
@@ -827,6 +825,7 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
             _beginChange();
             size = -1;
             bitset.clear(index);
+            if (index <= lastGetValue) reset();
             _nextRemove(indicesIndex, index);
             _endChange();
         }

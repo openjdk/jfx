@@ -49,8 +49,8 @@ public class MappingChangeTest {
 
     @Test
     public void testAddRemove() {
-        Change<Integer> change = new NonIterableChange.SimpleRemovedChange<Integer>(0, 1, Integer.valueOf(5), originalList);
-        MappingChange<Integer, String> mapChange = new MappingChange<Integer, String>(change,
+        Change<Integer> change = new NonIterableChange.SimpleRemovedChange<>(0, 1, Integer.valueOf(5), originalList);
+        MappingChange<Integer, String> mapChange = new MappingChange<>(change,
                 e -> e.toString(), list);
 
         assertTrue(mapChange.next());
@@ -64,8 +64,8 @@ public class MappingChangeTest {
 
     @Test
     public void testUpdate() {
-        Change<Integer> change = new NonIterableChange.SimpleUpdateChange<Integer>(0, 1, originalList);
-        MappingChange<Integer, String> mapChange = new MappingChange<Integer, String>(change,
+        Change<Integer> change = new NonIterableChange.SimpleUpdateChange<>(0, 1, originalList);
+        MappingChange<Integer, String> mapChange = new MappingChange<>(change,
                 e -> e.toString(), list);
 
         assertTrue(mapChange.next());
@@ -79,8 +79,8 @@ public class MappingChangeTest {
 
     @Test
     public void testPermutation() {
-        Change<Integer> change = new NonIterableChange.SimplePermutationChange<Integer>(0, 2, new int[] {1, 0}, originalList);
-        MappingChange<Integer, String> mapChange = new MappingChange<Integer, String>(change,
+        Change<Integer> change = new NonIterableChange.SimplePermutationChange<>(0, 2, new int[] {1, 0}, originalList);
+        MappingChange<Integer, String> mapChange = new MappingChange<>(change,
                 e -> e.toString(), list);
 
         assertTrue(mapChange.next());
@@ -133,7 +133,7 @@ public class MappingChangeTest {
                 return new int[0];
             }
         };
-        MappingChange<Integer, String> mapChange = new MappingChange<Integer, String>(change,
+        MappingChange<Integer, String> mapChange = new MappingChange<>(change,
                 e -> e.toString(), list);
 
         assertTrue(mapChange.next());

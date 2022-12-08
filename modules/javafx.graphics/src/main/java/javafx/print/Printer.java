@@ -89,7 +89,7 @@ public final class Printer {
         Printer p = PrintPipeline.getPrintPipeline().getDefaultPrinter();
         if (defaultPrinter == null) {
             defaultPrinter =
-                new ReadOnlyObjectWrapper<Printer>(null, "defaultPrinter", p);
+                new ReadOnlyObjectWrapper<>(null, "defaultPrinter", p);
         } else {
             defaultPrinter.setValue(p);
         }
@@ -212,7 +212,7 @@ public final class Printer {
          */
         EQUAL_OPPOSITES,
 
-    };
+    }
 
     private PageLayout defPageLayout;
     /**
@@ -272,15 +272,15 @@ public final class Printer {
             pbm = (pbm <= 0.75) ? 0.75 : pbm;
             break;
         case EQUAL: {
-            double maxH = (double)Math.max(plm, prm);
-            double maxV = (double)Math.max(ptm, pbm);
-            double maxM = (double)Math.max(maxH, maxV);
+            double maxH = Math.max(plm, prm);
+            double maxV = Math.max(ptm, pbm);
+            double maxM = Math.max(maxH, maxV);
             plm = prm = ptm = pbm = maxM;
             break;
         }
         case EQUAL_OPPOSITES: {
-            double maxH = (double)Math.max(plm, prm);
-            double maxV = (double)Math.max(ptm, pbm);
+            double maxH = Math.max(plm, prm);
+            double maxV = Math.max(ptm, pbm);
             plm = prm = maxH;
             ptm = pbm = maxV;
             break;

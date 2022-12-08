@@ -40,7 +40,7 @@ import javafx.scene.image.Image;
 
 public final class CursorManagerImpl extends CursorManager<Cursor> {
 
-    private final Map<String, Cursor> map = new HashMap<String, Cursor>();
+    private final Map<String, Cursor> map = new HashMap<>();
     private ResourceBundle bundle;
 
     @Override protected Cursor getCustomCursor(WCImage image, int hotspotX, int hotspotY) {

@@ -47,7 +47,7 @@ public class CheckBoxListCellTest {
     @Before public void setup() {
         booleanProperty = new SimpleBooleanProperty(false);
         callback = param -> booleanProperty;
-        converter = new StringConverter<Object>() {
+        converter = new StringConverter<>() {
             @Override public String toString(Object object) {
                 return null;
             }
@@ -277,7 +277,7 @@ public class CheckBoxListCellTest {
 
     @Test public void test_updateItem_isNotEmpty_textIsNotNull_nonNullConverter() {
         CheckBoxListCell<Object> cell = new CheckBoxListCell<>(callback);
-        cell.setConverter(new StringConverter<Object>() {
+        cell.setConverter(new StringConverter<>() {
             @Override public Object fromString(String string) {
                 return null;
             }

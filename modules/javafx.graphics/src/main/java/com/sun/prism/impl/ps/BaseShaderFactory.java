@@ -50,21 +50,25 @@ public abstract class BaseShaderFactory extends BaseResourceFactory
         super(clampTexCache, repeatTexCache, mipmapTexCache);
     }
 
+    @Override
     public ShapeRep createPathRep() {
         return PrismSettings.cacheComplexShapes ?
                 new CachingShapeRep() : new BasicShapeRep();
     }
 
+    @Override
     public ShapeRep createRoundRectRep() {
         return PrismSettings.cacheSimpleShapes ?
             new CachingRoundRectRep() : new BasicRoundRectRep();
     }
 
+    @Override
     public ShapeRep createEllipseRep() {
         return PrismSettings.cacheSimpleShapes ?
             new CachingEllipseRep() : new BasicEllipseRep();
     }
 
+    @Override
     public ShapeRep createArcRep() {
         return PrismSettings.cacheComplexShapes ?
             new CachingShapeRep() : new BasicShapeRep();

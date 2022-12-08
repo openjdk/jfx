@@ -26,7 +26,6 @@
 package javafx.scene.shape;
 
 import com.sun.javafx.geom.Path2D;
-import com.sun.javafx.scene.shape.CubicCurveToHelper;
 import com.sun.javafx.scene.shape.LineToHelper;
 import com.sun.javafx.sg.prism.NGPath;
 import javafx.beans.property.DoubleProperty;

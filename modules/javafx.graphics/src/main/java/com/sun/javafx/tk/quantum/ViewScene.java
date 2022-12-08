@@ -36,7 +36,6 @@ import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.tk.Toolkit;
 import com.sun.prism.GraphicsPipeline;
-import javafx.scene.Parent;
 
 class ViewScene extends GlassScene {
 
@@ -59,6 +58,7 @@ class ViewScene extends GlassScene {
         return painter != null && painter instanceof PresentingPainter;
     }
 
+    @Override
     protected View getPlatformView() {
         return this.platformView;
     }

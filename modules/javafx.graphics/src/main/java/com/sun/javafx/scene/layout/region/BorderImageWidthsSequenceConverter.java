@@ -26,7 +26,6 @@
 package com.sun.javafx.scene.layout.region;
 
 import javafx.css.ParsedValue;
-import javafx.css.Size;
 import javafx.css.StyleConverter;
 import javafx.scene.layout.BorderWidths;
 import javafx.scene.text.Font;

@@ -244,7 +244,7 @@ public class AccordionBehavior extends BehaviorBase<Accordion> {
     static class AccordionFocusModel extends FocusModel<TitledPane> {
 
         private final Accordion accordion;
-        private final ChangeListener<Boolean> focusListener = new ChangeListener<Boolean>() {
+        private final ChangeListener<Boolean> focusListener = new ChangeListener<>() {
             @Override
             public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
                 if (newValue) {
@@ -261,7 +261,7 @@ public class AccordionBehavior extends BehaviorBase<Accordion> {
                 }
             }
         };
-        private final ChangeListener<Boolean> paneFocusListener = new ChangeListener<Boolean>() {
+        private final ChangeListener<Boolean> paneFocusListener = new ChangeListener<>() {
             @Override public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
                 if (newValue) {
                     final ReadOnlyBooleanProperty focusedProperty = (ReadOnlyBooleanProperty) observable;

@@ -185,5 +185,5 @@ public class AbstractPrimaryTimerTest {
             return precision / 60;
         }
 
-    };
+    }
 }

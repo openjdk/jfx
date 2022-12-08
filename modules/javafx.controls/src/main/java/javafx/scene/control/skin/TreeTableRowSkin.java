@@ -50,7 +50,6 @@ import javafx.css.converter.SizeConverter;
 import com.sun.javafx.scene.control.behavior.TreeTableRowBehavior;
 
 import javafx.beans.property.ObjectProperty;
-import javafx.beans.value.WritableValue;
 import javafx.collections.ObservableList;
 import javafx.css.Styleable;
 import javafx.css.StyleableProperty;
@@ -412,7 +411,7 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
     private static class StyleableProperties {
 
         private static final CssMetaData<TreeTableRow<?>,Number> INDENT =
-            new CssMetaData<TreeTableRow<?>,Number>("-fx-indent",
+            new CssMetaData<>("-fx-indent",
                 SizeConverter.getInstance(), 10.0) {
 
             @Override public boolean isSettable(TreeTableRow<?> n) {
@@ -422,14 +421,14 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
 
             @Override public StyleableProperty<Number> getStyleableProperty(TreeTableRow<?> n) {
                 final TreeTableRowSkin<?> skin = (TreeTableRowSkin<?>) n.getSkin();
-                return (StyleableProperty<Number>)(WritableValue<Number>)skin.indentProperty();
+                return (StyleableProperty<Number>)skin.indentProperty();
             }
         };
 
         private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
         static {
             final List<CssMetaData<? extends Styleable, ?>> styleables =
-                new ArrayList<CssMetaData<? extends Styleable, ?>>(CellSkinBase.getClassCssMetaData());
+                new ArrayList<>(CellSkinBase.getClassCssMetaData());
             styleables.add(INDENT);
             STYLEABLES = Collections.unmodifiableList(styleables);
         }

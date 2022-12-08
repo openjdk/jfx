@@ -41,7 +41,7 @@ public class ArrayLinkedListTest {
     private String c = "c";
 
     @Before public void setUp() {
-        list = new ArrayLinkedListShim<String>();
+        list = new ArrayLinkedListShim<>();
     }
 
     @Test public void testArrayLinkedList_Empty_GetFirstReturnsNull() {

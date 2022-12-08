@@ -92,7 +92,7 @@ public class StubTextLayout implements TextLayout {
 
     @Override
     public BaseBounds getBounds(TextSpan filter, BaseBounds bounds) {
-        final double fontSize = (font == null ? nullFontSize : ((Font)font).getSize());
+        final double fontSize = (font == null ? nullFontSize : font.getSize());
         final String[] lines = getText().split("\n");
         double width = 0.0;
         double height = fontSize * lines.length + spacing * (lines.length - 1);
@@ -164,7 +164,7 @@ public class StubTextLayout implements TextLayout {
             return new Hit(0, -1, true);
         }
 
-        final double fontSize = (font == null ? nullFontSize : ((Font)font).getSize());
+        final double fontSize = (font == null ? nullFontSize : font.getSize());
         final String[] lines = text.split("\n");
         int lineIndex = Math.min(lines.length - 1, (int) (y / fontSize));
         if (lineIndex >= lines.length) {

@@ -133,7 +133,7 @@ public final class BackForwardList {
 
 
         private final List<WCChangeListener> listenerList =
-            new LinkedList<WCChangeListener>();
+            new LinkedList<>();
 
         public void addChangeListener(WCChangeListener l) {
             if (l == null)
@@ -150,7 +150,7 @@ public final class BackForwardList {
 
     private final WebPage page;
     private final List<WCChangeListener> listenerList =
-        new LinkedList<WCChangeListener>();
+        new LinkedList<>();
 
     BackForwardList(WebPage page) {
         this.page = page;

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2021, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,6 +28,7 @@ package fxmediaplayer.control;
 import fxmediaplayer.FXMediaPlayerInterface;
 import fxmediaplayer.FXMediaPlayerUtils;
 import fxmediaplayer.MediaPlayerDefaults;
+import fxmediaplayer.media.FXMedia;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -150,7 +151,12 @@ public class MediaPlayerPlayListTab {
     }
 
     private void loadPlayList() throws InvalidPropertiesFormatException, IOException {
-        loadPlayListProperties();
+        List<String> embededSources = FXMedia.getEmbededMediaFiles();
+        if (embededSources.size() > 0) {
+            sources.addAll(embededSources);
+        } else {
+            loadPlayListProperties();
+        }
 
         for (int i = 0; i < sources.size(); i++) {
             addPlayListItem(sources.get(i));

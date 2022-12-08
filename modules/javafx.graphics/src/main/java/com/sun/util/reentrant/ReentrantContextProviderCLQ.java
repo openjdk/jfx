@@ -43,7 +43,7 @@ public abstract class ReentrantContextProviderCLQ<K extends ReentrantContext>
 {
     // ReentrantContext queue to store all contexts
     private final ConcurrentLinkedQueue<Reference<K>> ctxQueue
-        = new ConcurrentLinkedQueue<Reference<K>>();
+        = new ConcurrentLinkedQueue<>();
 
     /**
      * Create a new ReentrantContext provider using the given reference type

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -91,7 +91,7 @@ public class ControlTest {
 
     @Before public void setUp() {
         c = new ControlStub();
-        s = new SkinStub<ControlStub>(c);
+        s = new SkinStub<>(c);
         skinNode = new ResizableRectangle();
         skinNode.resize(20, 20);
         skinNode.minWidth = MIN_WIDTH;
@@ -787,6 +787,36 @@ public class ControlTest {
         assertNull(c.getSkin());
     }
 
+    /** verifies that Control.setSkin() calls Skin.install() JDK-8290844 */
+    @Test
+    public void setSkinCallsInstall() {
+        class SkinWithInstall extends SkinStub {
+            public boolean installed;
+
+            public SkinWithInstall(Control c) {
+                super(c);
+            }
+
+            @Override
+            public void install() {
+                installed = true;
+            }
+        }
+
+        SkinWithInstall skin = new SkinWithInstall(c);
+        c.setSkin(skin);
+        assertTrue("Control.setSkin() must call Skin.install()", skin.installed);
+    }
+
+    /** Verifies that an IllegalArgumentException is thrown when setting skin for an unrelated control JDK-8290844 */
+    @Test
+    public void skinMustCorrespondToControl() {
+        SkinStub skin = new SkinStub(new ControlStub());
+        assertThrows(IllegalArgumentException.class, () -> {
+            c.setSkin(skin);
+        });
+    }
+
     @Test public void skinPropertyHasBeanReference() {
         assertSame(c, c.skinProperty().getBean());
     }
@@ -900,7 +930,7 @@ public class ControlTest {
 
     @Test public void tooltipCanBeBound() {
         Tooltip tip = new Tooltip("Hello");
-        ObjectProperty<Tooltip> other = new SimpleObjectProperty<Tooltip>(tip);
+        ObjectProperty<Tooltip> other = new SimpleObjectProperty<>(tip);
         c.tooltipProperty().bind(other);
         assertSame(tip, c.getTooltip());
         assertSame(tip, c.tooltipProperty().get());
@@ -943,7 +973,7 @@ public class ControlTest {
 
     @Test public void contextMenuCanBeBound() {
         ContextMenu menu = new ContextMenu();
-        ObjectProperty<ContextMenu> other = new SimpleObjectProperty<ContextMenu>(menu);
+        ObjectProperty<ContextMenu> other = new SimpleObjectProperty<>(menu);
         c.contextMenuProperty().bind(other);
         assertSame(menu, c.getContextMenu());
         assertSame(menu, c.contextMenuProperty().get());

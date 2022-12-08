@@ -24,13 +24,8 @@
  */
 package com.sun.glass.ui.win;
 
-import com.sun.glass.ui.Application;
 import com.sun.glass.ui.Pixels;
 import com.sun.glass.ui.View;
-import com.sun.glass.ui.Window;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
-
 import java.util.Map;
 
 /**
