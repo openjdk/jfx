@@ -25,8 +25,6 @@
 
 package com.sun.glass.ui.monocle;
 
-import java.io.IOException;
-
 /**
  *
  */

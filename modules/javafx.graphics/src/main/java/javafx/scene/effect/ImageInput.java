@@ -78,7 +78,7 @@ public class ImageInput extends Effect {
     @Override
     com.sun.scenario.effect.Identity createPeer() {
         return new com.sun.scenario.effect.Identity(null);
-    };
+    }
     /**
      * The source {@code Image}.
      */
@@ -104,7 +104,7 @@ public class ImageInput extends Effect {
     private Image oldImage;
     public final ObjectProperty<Image> sourceProperty() {
         if (source == null) {
-            source = new ObjectPropertyBase<Image>() {
+            source = new ObjectPropertyBase<>() {
 
                 private boolean needsListeners = false;
 

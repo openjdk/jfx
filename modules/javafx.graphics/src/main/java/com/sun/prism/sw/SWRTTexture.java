@@ -108,10 +108,12 @@ class SWRTTexture extends SWArgbPreTexture implements RTTexture {
         return true;
     }
 
+    @Override
     public Screen getAssociatedScreen() {
         return getResourceFactory().getScreen();
     }
 
+    @Override
     public Graphics createGraphics() {
         if (pr == null) {
             pr = new PiscesRenderer(this.surface);
@@ -119,16 +121,19 @@ class SWRTTexture extends SWArgbPreTexture implements RTTexture {
         return new SWGraphics(this, getResourceFactory().getContext(), pr);
     }
 
+    @Override
     public boolean isOpaque() {
         return isOpaque;
     }
 
+    @Override
     public void setOpaque(boolean opaque) {
         this.isOpaque = opaque;
     }
 
     Rectangle getDimensions() { return dimensions; }
 
+    @Override
     public boolean isVolatile() {
         return false;
     }

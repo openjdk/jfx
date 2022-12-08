@@ -41,14 +41,17 @@ public class PrTexture<T extends com.sun.prism.Texture> implements LockableResou
         this.bounds = new Rectangle(tex.getPhysicalWidth(), tex.getPhysicalHeight());
     }
 
+    @Override
     public void lock() {
         if (tex != null) tex.lock();
     }
 
+    @Override
     public void unlock() {
         if (tex != null) tex.unlock();
     }
 
+    @Override
     public boolean isLost() {
         return tex.isSurfaceLost();
     }

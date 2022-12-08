@@ -30,10 +30,7 @@ import com.sun.glass.ui.Pixels;
 import com.sun.glass.ui.Screen;
 import com.sun.glass.ui.View;
 import com.sun.glass.ui.Window;
-import com.sun.glass.ui.Window.State;
 import java.nio.ByteBuffer;
-
-import java.util.Map;
 
 /**
  * MacOSX platform implementation class for Window.

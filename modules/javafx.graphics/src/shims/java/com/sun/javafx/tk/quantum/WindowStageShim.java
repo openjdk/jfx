@@ -28,7 +28,6 @@ package com.sun.javafx.tk.quantum;
 import com.sun.prism.Image;
 import javafx.stage.StageStyle;
 import javafx.stage.Window;
-import com.sun.javafx.stage.WindowHelper;
 
 public class WindowStageShim {
 

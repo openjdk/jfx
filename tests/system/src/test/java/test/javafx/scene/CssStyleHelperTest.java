@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2021, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,28 +25,30 @@
 
 package test.javafx.scene;
 
-import javafx.application.Application;
-import javafx.application.Platform;
-import javafx.scene.Scene;
-import javafx.scene.control.Label;
-import javafx.scene.control.Button;
-import javafx.scene.control.CheckBox;
-import javafx.scene.layout.StackPane;
-import javafx.stage.Stage;
+import static org.junit.Assert.assertTrue;
 
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
-import junit.framework.Assert;
+import javafx.application.Application;
+import javafx.application.Platform;
+import javafx.scene.Scene;
+import javafx.scene.control.Button;
+import javafx.scene.control.CheckBox;
+import javafx.scene.control.Label;
+import javafx.scene.layout.StackPane;
+import javafx.stage.Stage;
+
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
+
 import test.util.Util;
-import static org.junit.Assert.assertTrue;
 
 public class CssStyleHelperTest {
 
-    private static CountDownLatch startupLatch;
+    private static CountDownLatch startupLatch = new CountDownLatch(1);
     private static StackPane root;
     private static Stage stage;
     private static Label label1;
@@ -77,10 +79,12 @@ public class CssStyleHelperTest {
 
     @BeforeClass
     public static void initFX() throws Exception {
-        startupLatch = new CountDownLatch(1);
-        new Thread(() -> Application.launch(TestApp.class, (String[]) null)).start();
-        assertTrue("Timeout waiting for FX runtime to start",
-                   startupLatch.await(15, TimeUnit.SECONDS));
+        Util.launch(startupLatch, TestApp.class);
+    }
+
+    @AfterClass
+    public static void teardownOnce() {
+        Util.shutdown(stage);
     }
 
     @Test
@@ -99,13 +103,5 @@ public class CssStyleHelperTest {
 
         Assert.assertNull("Label1 should have no background", label1.getBackground());
         Assert.assertNull("Label2 should have no background", label2.getBackground());
-    }
-
-    @AfterClass
-    public static void teardownOnce() {
-        Platform.runLater(() -> {
-            stage.hide();
-            Platform.exit();
-        });
     }
 }

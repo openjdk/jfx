@@ -29,7 +29,6 @@ import com.sun.javafx.scene.SceneHelper;
 import test.com.sun.javafx.pgstub.StubScene;
 import test.com.sun.javafx.test.MouseEventGenerator;
 import javafx.event.Event;
-import javafx.event.EventHandler;
 import javafx.geometry.Point3D;
 import javafx.scene.Group;
 import javafx.scene.ParentShim;

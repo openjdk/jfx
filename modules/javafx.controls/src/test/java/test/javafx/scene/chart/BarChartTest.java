@@ -50,7 +50,7 @@ public class BarChartTest extends XYChartTestBase {
     static double[] pillsSold = { 1154, 1927, 2774 };
     final CategoryAxis xAxis = new CategoryAxis();
     final NumberAxis yAxis = new NumberAxis();
-    final BarChart<String,Number> bc = new BarChart<String,Number>(xAxis,yAxis);
+    final BarChart<String,Number> bc = new BarChart<>(xAxis,yAxis);
 
     @Override
     protected Chart createChart() {
@@ -58,9 +58,9 @@ public class BarChartTest extends XYChartTestBase {
         xAxis.setCategories(FXCollections.<String>observableArrayList(Arrays.asList(years)));
         yAxis.setLabel("Y Axis");
         // add starting data
-        XYChart.Series<String,Number> series1 = new XYChart.Series<String,Number>();
+        XYChart.Series<String,Number> series1 = new XYChart.Series<>();
         series1.setName("Data Series 1");
-        XYChart.Series<String,Number> series2 = new XYChart.Series<String,Number>();
+        XYChart.Series<String,Number> series2 = new XYChart.Series<>();
         series2.setName("Data Series 2");
         series1.getData().add(new XYChart.Data<String,Number>(years[0], 567));
         series1.getData().add(new XYChart.Data<String,Number>(years[1], 1292));
@@ -98,7 +98,7 @@ public class BarChartTest extends XYChartTestBase {
         bc.getData().clear();
         xAxis.getCategories().clear();
         xAxis.setAutoRanging(true);
-        XYChart.Series<String,Number> series = new XYChart.Series<String,Number>();
+        XYChart.Series<String,Number> series = new XYChart.Series<>();
         series.getData().clear();
         series.getData().add(new XYChart.Data<String, Number>("1", 1));
         series.getData().add(new XYChart.Data<String, Number>("2", 2));

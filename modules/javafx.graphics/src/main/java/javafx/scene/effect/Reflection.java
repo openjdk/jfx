@@ -92,7 +92,7 @@ public class Reflection extends Effect {
     @Override
     com.sun.scenario.effect.Reflection createPeer() {
         return new com.sun.scenario.effect.Reflection();
-    };
+    }
     /**
      * The input for this {@code Effect}.
      * If set to {@code null}, or left unspecified, a graphical image of

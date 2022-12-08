@@ -89,7 +89,7 @@ public class CssLexerTest {
         final CssLexerShim lexer = new CssLexerShim();
         lexer.setReader(reader);
 
-        final List<TokenShim> tokens = new ArrayList<TokenShim>();
+        final List<TokenShim> tokens = new ArrayList<>();
 
         TokenShim token = null;
         do {

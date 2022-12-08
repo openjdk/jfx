@@ -322,7 +322,7 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
         }
     };
 
-    private final ChangeListener<ObservableList<T>> itemsListener = new ChangeListener<ObservableList<T>>() {
+    private final ChangeListener<ObservableList<T>> itemsListener = new ChangeListener<>() {
         @Override
         public void changed(
                 ObservableValue<? extends ObservableList<T>> observable,
@@ -335,7 +335,7 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
         }
     };
 
-    private final ChangeListener<MultipleSelectionModel<T>> selectionModelListener = new ChangeListener<MultipleSelectionModel<T>>() {
+    private final ChangeListener<MultipleSelectionModel<T>> selectionModelListener = new ChangeListener<>() {
         @Override public void changed(
                 ObservableValue<? extends MultipleSelectionModel<T>> observable,
                 MultipleSelectionModel<T> oldValue,
@@ -350,13 +350,13 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
     };
 
     private final WeakChangeListener<ObservableList<T>> weakItemsListener =
-            new WeakChangeListener<ObservableList<T>>(itemsListener);
+            new WeakChangeListener<>(itemsListener);
     private final WeakListChangeListener<Integer> weakSelectedIndicesListener =
-            new WeakListChangeListener<Integer>(selectedIndicesListener);
+            new WeakListChangeListener<>(selectedIndicesListener);
     private final WeakListChangeListener<T> weakItemsListListener =
             new WeakListChangeListener<>(itemsListListener);
     private final WeakChangeListener<MultipleSelectionModel<T>> weakSelectionModelListener =
-            new WeakChangeListener<MultipleSelectionModel<T>>(selectionModelListener);
+            new WeakChangeListener<>(selectionModelListener);
 
     private TwoLevelFocusListBehavior tlFocus;
 

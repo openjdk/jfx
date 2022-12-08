@@ -55,8 +55,7 @@ class PrintLogger extends Logger {
      * only the time of the pulse is logged.
      */
     @SuppressWarnings("removal")
-    private static long THRESHOLD = (long)
-            AccessController.doPrivileged((PrivilegedAction<Integer>) () -> Integer.getInteger("javafx.pulseLogger.threshold", 17));
+    private static long THRESHOLD = AccessController.doPrivileged((PrivilegedAction<Integer>) () -> Integer.getInteger("javafx.pulseLogger.threshold", 17));
 
     /**
      * Optionally exit after a given number of pulses

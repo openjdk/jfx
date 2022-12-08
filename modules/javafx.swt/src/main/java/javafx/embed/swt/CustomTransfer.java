@@ -48,6 +48,7 @@ class CustomTransfer extends ByteArrayTransfer {
         return mime;
     }
 
+    @Override
     public void javaToNative (Object object, TransferData transferData) {
         if (!checkCustom(object) || !isSupportedType(transferData)) {
             DND.error(DND.ERROR_INVALID_DATA);
@@ -62,6 +63,7 @@ class CustomTransfer extends ByteArrayTransfer {
         super.javaToNative(bytes, transferData);
     }
 
+    @Override
     public Object nativeToJava(TransferData transferData){
         if (isSupportedType(transferData)) {
             return super.nativeToJava(transferData);
@@ -69,10 +71,12 @@ class CustomTransfer extends ByteArrayTransfer {
         return null;
     }
 
+    @Override
     protected String[] getTypeNames(){
         return new String [] {name};
     }
 
+    @Override
     protected int[] getTypeIds(){
         return new int [] {registerType(name)};
     }
@@ -89,6 +93,7 @@ class CustomTransfer extends ByteArrayTransfer {
         return checkByteArray(object) || checkByteBuffer(object);
     }
 
+    @Override
     protected boolean validate(Object object) {
         return checkCustom(object);
     }

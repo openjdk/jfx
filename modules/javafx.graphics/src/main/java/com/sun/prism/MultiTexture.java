@@ -46,7 +46,7 @@ public final class MultiTexture implements Texture {
         this.height = height;
         this.format = format;
         this.wrapMode = wrapMode;
-        textures = new ArrayList<Texture>(4);
+        textures = new ArrayList<>(4);
     }
 
     private MultiTexture(MultiTexture sharedTex, WrapMode newMode) {

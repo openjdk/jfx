@@ -43,7 +43,6 @@ import javafx.scene.effect.BoxBlur;
 import javafx.scene.effect.ColorInput;
 import javafx.scene.effect.Effect;
 import javafx.scene.effect.EffectShim;
-import test.javafx.scene.effect.EffectsTestBase;
 
 public class BlendTest extends EffectsTestBase {
     private Blend effect;

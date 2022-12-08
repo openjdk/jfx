@@ -38,7 +38,7 @@ class DummyTexture extends BaseTexture  {
         DummyManagedResource() {
             super(new Object(), DummyTexturePool.instance);
         }
-    };
+    }
 
     DummyContext context;
 
@@ -69,10 +69,12 @@ class DummyTexture extends BaseTexture  {
         return context;
     }
 
+    @Override
     public void update(Buffer buffer, PixelFormat format, int dstx, int dsty, int srcx, int srcy, int srcw, int srch, int srcscan, boolean skipFlush) {
 
     }
 
+    @Override
     public void update(MediaFrame frame, boolean skipFlush) {
     }
 

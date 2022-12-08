@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2017, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,7 +24,11 @@
  */
 package test.robot.javafx.scene;
 
-import com.sun.javafx.PlatformUtil;
+import static org.junit.Assume.assumeTrue;
+
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.scene.Scene;
@@ -34,19 +38,18 @@ import javafx.scene.robot.Robot;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.stage.WindowEvent;
+
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
+import com.sun.javafx.PlatformUtil;
 
-import static org.junit.Assert.fail;
-import static org.junit.Assume.assumeTrue;
+import test.util.Util;
 
 public class AfterModalClosedTest {
-    static CountDownLatch startupLatch;
+    static CountDownLatch startupLatch = new CountDownLatch(1);
     static volatile Stage stage;
     private Robot robot;
     private int x, y;
@@ -78,16 +81,13 @@ public class AfterModalClosedTest {
     }
 
     @BeforeClass
-    public static void initFX() {
-        startupLatch = new CountDownLatch(1);
-        new Thread(() -> Application.launch(TestApp.class, (String[])null)).start();
-        try {
-            if (!startupLatch.await(15, TimeUnit.SECONDS)) {
-                fail("Timeout waiting for FX runtime to start");
-            }
-        } catch (InterruptedException ex) {
-            fail("Unexpected exception: " + ex);
-        }
+    public static void initFX() throws InterruptedException {
+        Util.launch(startupLatch, TestApp.class);
+    }
+
+    @AfterClass
+    public static void teardown() {
+        Util.shutdown(stage);
     }
 
     @Test
@@ -122,11 +122,5 @@ public class AfterModalClosedTest {
         });
         resizeLatch.await(5, TimeUnit.SECONDS);
         Assert.assertTrue("Window is not resized", w && h);
-    }
-
-    @AfterClass
-    public static void teardown() {
-        Platform.runLater(stage::hide);
-        Platform.exit();
     }
 }

@@ -60,10 +60,12 @@ public class PPSDrawable extends PrDrawable {
         return new PPSDrawable(rtt);
     }
 
+    @Override
     public boolean isLost() {
         return rtt == null || rtt.isSurfaceLost();
     }
 
+    @Override
     public void flush() {
         if (rtt != null) {
             rtt.dispose();
@@ -71,42 +73,52 @@ public class PPSDrawable extends PrDrawable {
         }
     }
 
+    @Override
     public Object getData() {
         return this;
     }
 
+    @Override
     public int getContentWidth() {
         return rtt.getContentWidth();
     }
 
+    @Override
     public int getContentHeight() {
         return rtt.getContentHeight();
     }
 
+    @Override
     public int getMaxContentWidth() {
         return rtt.getMaxContentWidth();
     }
 
+    @Override
     public int getMaxContentHeight() {
         return rtt.getMaxContentHeight();
     }
 
+    @Override
     public void setContentWidth(int contentW) {
         rtt.setContentWidth(contentW);
     }
 
+    @Override
     public void setContentHeight(int contentH) {
         rtt.setContentHeight(contentH);
     }
 
+    @Override
     public int getPhysicalWidth() {
         return rtt.getPhysicalWidth();
     }
 
+    @Override
     public int getPhysicalHeight() {
         return rtt.getPhysicalHeight();
     }
 
+    @Override
     public ShaderGraphics createGraphics() {
         return (ShaderGraphics)rtt.createGraphics();
     }

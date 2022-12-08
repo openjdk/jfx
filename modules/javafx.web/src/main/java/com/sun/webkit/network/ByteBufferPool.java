@@ -40,7 +40,7 @@ final class ByteBufferPool {
      * The shared collection of byte buffers.
      */
     private final Queue<ByteBuffer> byteBuffers =
-            new ConcurrentLinkedQueue<ByteBuffer>();
+            new ConcurrentLinkedQueue<>();
 
     /**
      * The size of each byte buffer.

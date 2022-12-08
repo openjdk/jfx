@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,18 +25,20 @@
 
 package javafx.scene.control.skin;
 
+import java.util.List;
+
 import javafx.event.EventHandler;
-import javafx.scene.control.SkinBase;
-import com.sun.javafx.scene.control.behavior.ComboBoxBaseBehavior;
 import javafx.geometry.HPos;
 import javafx.geometry.VPos;
 import javafx.scene.Node;
 import javafx.scene.control.ComboBoxBase;
+import javafx.scene.control.SkinBase;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 
-import java.util.List;
+import com.sun.javafx.scene.control.ListenerHelper;
+import com.sun.javafx.scene.control.behavior.ComboBoxBaseBehavior;
 
 /**
  * An abstract class intended to be used as the base skin for ComboBox-like
@@ -110,8 +112,10 @@ public abstract class ComboBoxBaseSkin<T> extends SkinBase<ComboBoxBase<T>> {
 
         getChildren().add(arrowButton);
 
+        ListenerHelper lh = ListenerHelper.get(this);
+
         // When ComboBoxBase focus shifts to another node, it should hide.
-        getSkinnable().focusedProperty().addListener((observable, oldValue, newValue) -> {
+        lh.addChangeListener(getSkinnable().focusedProperty(), (observable, oldValue, newValue) -> {
             if (!newValue) {
                 focusLost();
             }
@@ -119,18 +123,21 @@ public abstract class ComboBoxBaseSkin<T> extends SkinBase<ComboBoxBase<T>> {
 
         // Register listeners
         updateArrowButtonListeners();
-        registerChangeListener(control.editableProperty(), e -> {
+
+        lh.addChangeListener(control.editableProperty(), e -> {
             updateArrowButtonListeners();
             updateDisplayArea();
         });
-        registerChangeListener(control.showingProperty(), e -> {
+
+        lh.addChangeListener(control.showingProperty(), e -> {
             if (getSkinnable().isShowing()) {
                 show();
             } else {
                 hide();
             }
         });
-        registerChangeListener(control.valueProperty(), e -> updateDisplayArea());
+
+        lh.addChangeListener(control.valueProperty(), e -> updateDisplayArea());
     }
 
 

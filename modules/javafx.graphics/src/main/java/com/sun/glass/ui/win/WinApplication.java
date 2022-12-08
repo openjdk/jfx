@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -36,8 +36,6 @@ import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
-import java.util.Iterator;
-import java.util.Locale;
 import java.util.ResourceBundle;
 
 final class WinApplication extends Application implements InvokeLaterDispatcher.InvokeLaterSubmitter {
@@ -86,6 +84,7 @@ final class WinApplication extends Application implements InvokeLaterDispatcher.
     static {
         @SuppressWarnings("removal")
         var dummy = AccessController.doPrivileged(new PrivilegedAction<Void>() {
+            @Override
             public Void run() {
                 verbose = Boolean.getBoolean("javafx.verbose");
                 if (PrismSettings.allowHiDPIScaling) {
@@ -363,6 +362,7 @@ final class WinApplication extends Application implements InvokeLaterDispatcher.
 
     @Override native protected boolean _supportsUnifiedWindows();
 
+    @Override
     public String getDataDirectory() {
         checkEventThread();
         @SuppressWarnings("removal")

@@ -1174,7 +1174,7 @@ public enum KeyCode {
 
     // Need to bundle this in another class to avoid "forward reference" compiler error
     private static class KeyCodeClass {
-        private KeyCodeClass() {};
+        private KeyCodeClass() {}
 
         private static final int FUNCTION = 1;
         private static final int NAVIGATION = 1 << 1;
@@ -1314,7 +1314,7 @@ public enum KeyCode {
     private static final Map<String, KeyCode> nameMap;
     static {
 
-        nameMap = new HashMap<String, KeyCode>(KeyCode.values().length);
+        nameMap = new HashMap<>(KeyCode.values().length);
         for (KeyCode c : KeyCode.values()) {
             nameMap.put(c.name, c);
         }

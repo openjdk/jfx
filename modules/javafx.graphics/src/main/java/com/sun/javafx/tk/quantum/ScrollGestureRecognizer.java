@@ -33,9 +33,7 @@ import java.security.PrivilegedAction;
 import java.util.HashMap;
 import java.util.Map;
 import javafx.util.Duration;
-import javafx.event.EventType;
 import javafx.scene.input.ScrollEvent;
-import javafx.animation.Animation;
 import javafx.animation.Interpolator;
 import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
@@ -73,8 +71,7 @@ class ScrollGestureRecognizer implements GestureRecognizer {
     private double scrollStartTime = 0;
     private double lastTouchEventTime = 0;
 
-    private Map<Long, TouchPointTracker> trackers =
-            new HashMap<Long, TouchPointTracker>();
+    private Map<Long, TouchPointTracker> trackers = new HashMap<>();
 
     private int modifiers;
     private boolean direct;
