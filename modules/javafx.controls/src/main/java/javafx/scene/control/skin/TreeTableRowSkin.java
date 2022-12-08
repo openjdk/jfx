@@ -145,9 +145,10 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
                 // When in fixed cell size mode, we must listen to the width of the virtual flow, so
                 // that when it changes, we can appropriately add / remove cells that may or may not
                 // be required (because we remove all cells that are not visible).
-                lh.addChangeListener(getVirtualFlow().widthProperty(), (ev) -> {
-                    treeTableView.requestLayout();
-                });
+                VirtualFlow<TreeTableRow<T>> virtualFlow = getVirtualFlow();
+                if (virtualFlow != null) {
+                    lh.addChangeListener(getVirtualFlow().widthProperty(), (ev) -> treeTableView.requestLayout());
+                }
             }
         }
     }

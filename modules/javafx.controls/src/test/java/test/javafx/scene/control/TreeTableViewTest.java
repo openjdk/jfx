@@ -2589,14 +2589,14 @@ public class TreeTableViewTest {
 
         StageLoader sl = new StageLoader(treeTableView);
 
-        assertEquals(21, rt_31200_count);
+        assertEquals(22, rt_31200_count);
 
         // resize the stage
         sl.getStage().setHeight(250);
         Toolkit.getToolkit().firePulse();
         sl.getStage().setHeight(50);
         Toolkit.getToolkit().firePulse();
-        assertEquals(21, rt_31200_count);
+        assertEquals(22, rt_31200_count);
 
         sl.dispose();
     }
