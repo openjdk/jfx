@@ -34,7 +34,6 @@ import javafx.stage.Stage;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
-import static org.junit.Assert.assertEquals;
 import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
 import javafx.scene.ParentShim;
@@ -728,19 +727,19 @@ public class AnchorPaneTest {
     }
 
     /**
-     * Tests the snapping of the {@link AnchorPane} with different scales.
+     * Tests the {@link Insets} snapping of the {@link AnchorPane} with different scales.
      *
      * @param scale the scale which is used as render scale on the {@link Stage}
      * @see <a href="https://bugs.openjdk.org/browse/JDK-8295078">JDK-8295078</a>
      */
     @ValueSource(doubles = { 1.0, 1.25, 1.5, 1.75, 2.0 })
     @ParameterizedTest
-    void testAnchorPaneSnappingWithDifferentScales(double scale) {
+    void testAnchorPaneInsetsSnappingWithDifferentScales(double scale) {
         double padding = 9.6;
 
         StackPane child = new StackPane();
-        AnchorPane anchorpane = new AnchorPane(child);
-        anchorpane.setStyle("-fx-padding: " + padding + "px;");
+        AnchorPane anchorPane = new AnchorPane(child);
+        anchorPane.setStyle("-fx-padding: " + padding + "px;");
 
         AnchorPane.setTopAnchor(child, 0d);
         AnchorPane.setLeftAnchor(child, 0d);
@@ -754,7 +753,7 @@ public class AnchorPaneTest {
         stage.renderScaleYProperty().bind(renderScaleProperty);
 
         int widthHeight = 500;
-        Scene scene = new Scene(anchorpane, widthHeight, widthHeight);
+        Scene scene = new Scene(anchorPane, widthHeight, widthHeight);
         stage.setScene(scene);
         stage.show();
 
@@ -767,7 +766,7 @@ public class AnchorPaneTest {
         assertEquals(snappedPaddingY, boundsInParent.getMinY(), 0.0001);
 
         double expectedMaxX = widthHeight - snappedPaddingX;
-        assertEquals(expectedMaxX, boundsInParent.getMaxY(), 0.0001);
+        assertEquals(expectedMaxX, boundsInParent.getMaxX(), 0.0001);
 
         double expectedMaxY = widthHeight - snappedPaddingY;
         assertEquals(expectedMaxY, boundsInParent.getMaxY(), 0.0001);
@@ -776,6 +775,65 @@ public class AnchorPaneTest {
         assertEquals(expectedWidth, boundsInParent.getWidth(), 0.0001);
 
         double expectedHeight = widthHeight - snappedPaddingY * 2;
+        assertEquals(expectedHeight, boundsInParent.getHeight(), 0.0001);
+    }
+
+    /**
+     * Tests the anchor snapping of the {@link AnchorPane} with different scales.
+     *
+     * @param scale the scale which is used as render scale on the {@link Stage}
+     * @see <a href="https://bugs.openjdk.org/browse/JDK-8295078">JDK-8295078</a>
+     */
+    @ValueSource(doubles = { 1.0, 1.25, 1.5, 1.75, 2.0 })
+    @ParameterizedTest
+    void testAnchorPaneAnchorSnappingWithDifferentScales(double scale) {
+        StackPane child = new StackPane();
+        AnchorPane anchorPane = new AnchorPane(child);
+
+        double topAnchor = 4d;
+        double leftAnchor = 5d;
+        double bottomAnchor = 6d;
+        double rightAnchor = 7d;
+
+        AnchorPane.setTopAnchor(child, topAnchor);
+        AnchorPane.setLeftAnchor(child, leftAnchor);
+        AnchorPane.setBottomAnchor(child, bottomAnchor);
+        AnchorPane.setRightAnchor(child, rightAnchor);
+
+        DoubleProperty renderScaleProperty = new SimpleDoubleProperty(scale);
+
+        Stage stage = new Stage();
+        stage.renderScaleXProperty().bind(renderScaleProperty);
+        stage.renderScaleYProperty().bind(renderScaleProperty);
+
+        int widthHeight = 500;
+        Scene scene = new Scene(anchorPane, widthHeight, widthHeight);
+        stage.setScene(scene);
+        stage.show();
+
+        Bounds boundsInParent = child.getBoundsInParent();
+
+        double snappedLeftAnchor = child.snapPositionY(leftAnchor);
+        double snappedRightAnchor = child.snapPositionY(rightAnchor);
+        double horizontalAnchor = snappedLeftAnchor + snappedRightAnchor;
+
+        double snappedTopAnchor = child.snapPositionX(topAnchor);
+        double snappedBottomAnchor = child.snapPositionX(bottomAnchor);
+        double verticalAnchor = snappedTopAnchor + snappedBottomAnchor;
+
+        assertEquals(snappedLeftAnchor, boundsInParent.getMinX(), 0.0001);
+        assertEquals(snappedTopAnchor, boundsInParent.getMinY(), 0.0001);
+
+        double expectedMaxX = widthHeight - snappedRightAnchor;
+        assertEquals(expectedMaxX, boundsInParent.getMaxX(), 0.0001);
+
+        double expectedMaxY = widthHeight - snappedBottomAnchor;
+        assertEquals(expectedMaxY, boundsInParent.getMaxY(), 0.0001);
+
+        double expectedWidth = widthHeight - horizontalAnchor;
+        assertEquals(expectedWidth, boundsInParent.getWidth(), 0.0001);
+
+        double expectedHeight = widthHeight - verticalAnchor;
         assertEquals(expectedHeight, boundsInParent.getHeight(), 0.0001);
     }
 }

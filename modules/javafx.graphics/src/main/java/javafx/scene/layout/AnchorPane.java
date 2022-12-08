@@ -265,8 +265,8 @@ public class AnchorPane extends Pane {
         double contentHeight = height != -1 ? height - getInsets().getTop() - getInsets().getBottom() : -1;
         final List<Node> children = getManagedChildren();
         for (Node child : children) {
-            Double leftAnchor = getLeftAnchor(child);
-            Double rightAnchor = getRightAnchor(child);
+            Double leftAnchor = getSnappedLeftAnchor(child);
+            Double rightAnchor = getSnappedRightAnchor(child);
 
             double left = leftAnchor != null? leftAnchor :
                 (rightAnchor != null? 0 : child.getLayoutBounds().getMinX() + child.getLayoutX());
@@ -274,7 +274,7 @@ public class AnchorPane extends Pane {
             double childHeight = -1;
             if (child.getContentBias() == Orientation.VERTICAL && contentHeight != -1) {
                 // The width depends on the node's height!
-                childHeight = computeChildHeight(child, getTopAnchor(child), getBottomAnchor(child), contentHeight, -1);
+                childHeight = computeChildHeight(child, getSnappedTopAnchor(child), getSnappedBottomAnchor(child), contentHeight, -1);
             }
             max = Math.max(max, left + (minimum && leftAnchor != null && rightAnchor != null?
                     child.minWidth(childHeight) : computeChildPrefAreaWidth(child, -1, null, childHeight, false)) + right);
@@ -283,20 +283,52 @@ public class AnchorPane extends Pane {
         return snappedLeftInset() + max + snappedRightInset();
     }
 
+    private Double getSnappedTopAnchor(Node child) {
+        Double topAnchor = getTopAnchor(child);
+        if (topAnchor == null) {
+            return null;
+        }
+        return snapPositionY(topAnchor);
+    }
+
+    private Double getSnappedBottomAnchor(Node child) {
+        Double bottomAnchor = getBottomAnchor(child);
+        if (bottomAnchor == null) {
+            return null;
+        }
+        return snapPositionY(bottomAnchor);
+    }
+
+    private Double getSnappedLeftAnchor(Node child) {
+        Double leftAnchor = getLeftAnchor(child);
+        if (leftAnchor == null) {
+            return null;
+        }
+        return snapPositionX(leftAnchor);
+    }
+
+    private Double getSnappedRightAnchor(Node child) {
+        Double rightAnchor = getRightAnchor(child);
+        if (rightAnchor == null) {
+            return null;
+        }
+        return snapPositionX(rightAnchor);
+    }
+
     private double computeHeight(final boolean minimum, final double width) {
         double max = 0;
         double contentWidth = width != -1 ? width - getInsets().getLeft()- getInsets().getRight() : -1;
         final List<Node> children = getManagedChildren();
         for (Node child : children) {
-            Double topAnchor = getTopAnchor(child);
-            Double bottomAnchor = getBottomAnchor(child);
+            Double topAnchor = getSnappedTopAnchor(child);
+            Double bottomAnchor = getSnappedBottomAnchor(child);
 
             double top = topAnchor != null? topAnchor :
                 (bottomAnchor != null? 0 : child.getLayoutBounds().getMinY() + child.getLayoutY());
             double bottom = bottomAnchor != null? bottomAnchor : 0;
             double childWidth = -1;
             if (child.getContentBias() == Orientation.HORIZONTAL && contentWidth != -1) {
-                childWidth = computeChildWidth(child, getLeftAnchor(child), getRightAnchor(child), contentWidth, -1);
+                childWidth = computeChildWidth(child, getSnappedLeftAnchor(child), getSnappedRightAnchor(child), contentWidth, -1);
             }
             max = Math.max(max, top + (minimum && topAnchor != null && bottomAnchor != null?
                     child.minHeight(childWidth) : computeChildPrefAreaHeight(child, -1, null, childWidth)) + bottom);
@@ -322,10 +354,10 @@ public class AnchorPane extends Pane {
     @Override protected void layoutChildren() {
         final List<Node> children = getManagedChildren();
         for (Node child : children) {
-            final Double topAnchor = getTopAnchor(child);
-            final Double bottomAnchor = getBottomAnchor(child);
-            final Double leftAnchor = getLeftAnchor(child);
-            final Double rightAnchor = getRightAnchor(child);
+            final Double topAnchor = getSnappedTopAnchor(child);
+            final Double bottomAnchor = getSnappedBottomAnchor(child);
+            final Double leftAnchor = getSnappedLeftAnchor(child);
+            final Double rightAnchor = getSnappedRightAnchor(child);
             final Bounds childLayoutBounds = child.getLayoutBounds();
             final Orientation bias = child.getContentBias();
 
