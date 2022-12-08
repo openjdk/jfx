@@ -299,6 +299,7 @@ public abstract class MultipleGradientPaint implements Paint {
      * this Paint object
      * @see java.awt.Transparency
      */
+    @Override
     public final int getTransparency() {
         return transparency;
     }

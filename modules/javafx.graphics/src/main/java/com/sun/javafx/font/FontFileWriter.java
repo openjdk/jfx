@@ -215,9 +215,7 @@ class FontFileWriter implements FontConstants {
         writeShort(rangeShift);
     }
 
-    public void writeDirectoryEntry(int index, int tag,
-            int checksum, int offset, int length) throws IOException
-    {
+    public void writeDirectoryEntry(int index, int tag, int checksum, int offset, int length) {
         setHeaderPos(TTCHEADERSIZE + DIRECTORYENTRYSIZE * index);
         writeInt(tag);
         writeInt(checksum);
@@ -225,14 +223,14 @@ class FontFileWriter implements FontConstants {
         writeInt(length);
     }
 
-    private void writeInt(int value) throws IOException {
+    private void writeInt(int value) {
         header[headerPos++] = (byte)((value & 0xFF000000) >> 24);
         header[headerPos++] = (byte)((value & 0x00FF0000) >> 16);
         header[headerPos++] = (byte)((value & 0x0000FF00) >> 8);
         header[headerPos++] = (byte) (value & 0x000000FF);
     }
 
-    private void writeShort(short value) throws IOException {
+    private void writeShort(short value) {
         header[headerPos++] = (byte)((value & 0xFF00) >> 8);
         header[headerPos++] = (byte)(value & 0xFF);
     }
@@ -341,8 +339,7 @@ class FontFileWriter implements FontConstants {
          * Helper class for cleanup of temp files created while processing fonts.
          */
         private static class TempFileDeletionHook {
-            private static HashMap<File, RandomAccessFile> files =
-                new HashMap<File, RandomAccessFile>();
+            private static HashMap<File, RandomAccessFile> files = new HashMap<>();
 
             private static Thread t = null;
             @SuppressWarnings("removal")

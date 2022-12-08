@@ -302,7 +302,7 @@ public class StubStage implements TKStage {
 
     private static final class NotificationSender implements TKStageListener {
         private final Queue<Notification> queue =
-                new LinkedList<Notification>();
+                new LinkedList<>();
 
         private boolean hold;
         private TKStageListener listener;

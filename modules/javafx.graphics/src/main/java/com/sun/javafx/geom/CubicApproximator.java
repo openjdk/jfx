@@ -73,7 +73,7 @@ public class CubicApproximator {
     }
 
     public float approximate(List<QuadCurve2D> res, CubicCurve2D curve) {
-        List<CubicCurve2D> tmp = new ArrayList<CubicCurve2D>();
+        List<CubicCurve2D> tmp = new ArrayList<>();
         return approximate(res, tmp, curve);
     }
 
@@ -313,7 +313,7 @@ public class CubicApproximator {
                 if (param > 0) {
                     ProcessFirstMonotonicPartOfCubic(resVect, coords,
                         /* Scale parameter to match with rest of the curve */
-                        (float)(param/(1f - params[i - 1])));
+                        param / (1f - params[i - 1]));
                 }
             }
         }

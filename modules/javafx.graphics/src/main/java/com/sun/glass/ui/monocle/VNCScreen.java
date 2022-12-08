@@ -48,7 +48,7 @@ import java.util.Set;
 class VNCScreen extends HeadlessScreen {
 
     private ServerSocketChannel server;
-    private Set<ClientConnection> clients = new HashSet<ClientConnection>();
+    private Set<ClientConnection> clients = new HashSet<>();
 
     VNCScreen() {
         super(1024, 600, 32);

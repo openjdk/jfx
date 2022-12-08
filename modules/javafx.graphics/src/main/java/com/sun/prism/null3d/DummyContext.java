@@ -44,6 +44,7 @@ class DummyContext extends BaseShaderContext {
         super(screen, factory, 32);
     }
 
+    @Override
     protected void renderQuads(float coordArray[], byte colorArray[], int numVertices) {
     }
 

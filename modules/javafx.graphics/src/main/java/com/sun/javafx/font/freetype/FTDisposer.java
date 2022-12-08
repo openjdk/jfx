@@ -37,6 +37,7 @@ class FTDisposer implements DisposerRecord  {
         this.face = face;
     }
 
+    @Override
     public synchronized void dispose() {
         if (face != 0) {
             OSFreetype.FT_Done_Face(face);

@@ -25,8 +25,6 @@
 
 package test.javafx.scene.layout;
 
-import test.javafx.scene.layout.MockBiased;
-import test.javafx.scene.layout.MockRegion;
 import javafx.geometry.HPos;
 import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
@@ -1221,7 +1219,7 @@ public class RegionTest {
         public void clearDirty() {
             NodeShim.clearDirty(this, DirtyBits.NODE_CONTENTS);
         }
-    };
+    }
 
     // Test for RT-13820
     @Test public void changingShapeElementsShouldResultInRender() {

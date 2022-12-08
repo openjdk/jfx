@@ -34,11 +34,13 @@ public class D3DShaderSource implements ShaderSource {
     public D3DShaderSource() {
     }
 
+    @Override
     public InputStream loadSource(String name) {
         return D3DShaderSource.class.
             getResourceAsStream("hlsl/" + name + ".obj");
     }
 
+    @Override
     public AccelType getAccelType() {
         return AccelType.DIRECT3D;
     }

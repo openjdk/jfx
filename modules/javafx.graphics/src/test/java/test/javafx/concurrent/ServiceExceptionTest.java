@@ -28,8 +28,6 @@ package test.javafx.concurrent;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.concurrent.atomic.AtomicBoolean;
-import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.concurrent.Worker;
 import test.javafx.concurrent.mocks.EpicFailTask;
 import org.junit.Test;

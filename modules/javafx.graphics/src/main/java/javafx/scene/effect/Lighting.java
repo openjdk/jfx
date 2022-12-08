@@ -74,7 +74,7 @@ public class Lighting extends Effect {
     @Override
     com.sun.scenario.effect.PhongLighting createPeer() {
         return new PhongLighting(getLightInternal().getPeer());
-    };
+    }
 
     /**
      * Creates a new instance of Lighting with default parameters.
@@ -161,7 +161,7 @@ public class Lighting extends Effect {
                 effectBoundsChanged();
             }
         }
-    };
+    }
     /**
      * The optional bump map input.
      * If not specified, a bump map will be automatically generated

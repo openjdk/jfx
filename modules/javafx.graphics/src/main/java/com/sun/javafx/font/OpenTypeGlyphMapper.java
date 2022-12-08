@@ -43,6 +43,7 @@ public class OpenTypeGlyphMapper extends CharToGlyphMapper {
         missingGlyph = 0; /* standard for TrueType fonts */
     }
 
+    @Override
     public int getGlyphCode(int charCode) {
         try {
             return cmap.getGlyph(charCode);

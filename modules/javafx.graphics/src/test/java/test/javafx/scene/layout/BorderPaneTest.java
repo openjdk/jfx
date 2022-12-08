@@ -25,7 +25,6 @@
 
 package test.javafx.scene.layout;
 
-import test.javafx.scene.layout.MockBiased;
 import javafx.geometry.Insets;
 import static org.junit.Assert.*;
 import javafx.geometry.Orientation;

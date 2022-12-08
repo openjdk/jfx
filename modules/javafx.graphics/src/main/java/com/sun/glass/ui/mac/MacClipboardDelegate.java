@@ -29,6 +29,7 @@ import com.sun.glass.ui.delegate.ClipboardDelegate;
 
 final class MacClipboardDelegate implements ClipboardDelegate {
 
+    @Override
     public Clipboard createClipboard(String clipboardName) {
         if (Clipboard.SYSTEM.equals(clipboardName)) {
             return new MacSystemClipboard(clipboardName);

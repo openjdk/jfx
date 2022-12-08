@@ -28,7 +28,6 @@ package test.javafx.scene;
 import java.util.Arrays;
 import java.util.Collection;
 
-import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.geometry.Point2D;
 import javafx.scene.effect.BlendMode;

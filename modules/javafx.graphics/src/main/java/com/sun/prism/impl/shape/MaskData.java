@@ -25,7 +25,6 @@
 
 package com.sun.prism.impl.shape;
 
-import com.sun.prism.PixelFormat;
 import com.sun.prism.Texture;
 import java.nio.ByteBuffer;
 

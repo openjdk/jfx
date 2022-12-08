@@ -25,7 +25,6 @@
 
 package test.javafx.scene.layout;
 
-import test.javafx.scene.layout.MockBiased;
 import javafx.css.ParsedValue;
 import javafx.css.CssMetaData;
 import javafx.css.CssParserShim;

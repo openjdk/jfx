@@ -212,7 +212,7 @@ public class TriangleMesh extends Mesh {
 
     public final ObjectProperty<VertexFormat> vertexFormatProperty() {
         if (vertexFormat == null) {
-            vertexFormat = new SimpleObjectProperty<VertexFormat>(TriangleMesh.this, "vertexFormat") {
+            vertexFormat = new SimpleObjectProperty<>(TriangleMesh.this, "vertexFormat") {
 
                 @Override
                 protected void invalidated() {

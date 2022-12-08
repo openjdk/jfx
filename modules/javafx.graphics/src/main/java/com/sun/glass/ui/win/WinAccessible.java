@@ -776,7 +776,7 @@ final class WinAccessible extends Accessible {
                 }
                 variant = new WinVariant();
                 variant.vt = WinVariant.VT_BSTR;
-                variant.bstrVal = (String)name;
+                variant.bstrVal = name;
                 break;
             }
             case UIA_HelpTextPropertyId: {

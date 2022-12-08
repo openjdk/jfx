@@ -121,7 +121,7 @@ public abstract class LinearConvolveRenderState implements RenderState {
          * vector.
          */
         GENERAL_VECTOR,
-    };
+    }
 
     /**
      * Returns the peer sample count for a given kernel size.  There are

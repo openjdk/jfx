@@ -86,6 +86,7 @@ public class SubSceneHelper extends NodeHelper {
         super.processCSSImpl(node);
     }
 
+    @Override
     protected void processCSSImpl(Node node) {
         subSceneAccessor.doProcessCSS(node);
     }

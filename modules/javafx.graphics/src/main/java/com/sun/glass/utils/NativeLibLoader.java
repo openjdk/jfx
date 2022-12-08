@@ -43,7 +43,7 @@ import java.util.Locale;
 
 public class NativeLibLoader {
 
-    private static final HashSet<String> loaded = new HashSet<String>();
+    private static final HashSet<String> loaded = new HashSet<>();
 
     public static synchronized void loadLibrary(String libname) {
         if (!loaded.contains(libname)) {
