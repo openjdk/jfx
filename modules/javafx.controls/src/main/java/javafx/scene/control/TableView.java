@@ -396,9 +396,8 @@ public class TableView<S> extends Control {
     };
 
     /**
-     * A policy that tries to adjust other columns in order to fit the table width.
-     * <p>
-     * During UI adjustment, proportionately resizes all columns.
+     * A resize policy that adjusts other columns in order to fit the table width.
+     * During UI adjustment, proportionately resizes all columns to preserve the total width.
      * <p>
      * When column constraints make it impossible to fit all the columns into the allowed area,
      * the columns are either clipped, or an empty space appears.  This policy disables the horizontal
@@ -410,9 +409,8 @@ public class TableView<S> extends Control {
         ConstrainedColumnResize.forTable(ConstrainedColumnResize.ResizeMode.AUTO_RESIZE_ALL_COLUMNS);
 
     /**
-     * A policy that tries to adjust last column in order to fit the table width.
-     * <p>
-     * During UI adjustment, resizes the last column only.
+     * A resize policy that adjusts the last column in order to fit the table width.
+     * During UI adjustment, resizes the last column only to preserve the total width.
      * <p>
      * When column constraints make it impossible to fit all the columns into the allowed area,
      * the columns are either clipped, or an empty space appears.  This policy disables the horizontal
@@ -424,8 +422,7 @@ public class TableView<S> extends Control {
         ConstrainedColumnResize.forTable(ConstrainedColumnResize.ResizeMode.AUTO_RESIZE_LAST_COLUMN);
 
     /**
-     * A policy adjusts the next column in the opposite way in order to fit the table width.
-     * <p>
+     * A resize policy that adjusts the next column in order to fit the table width.
      * During UI adjustment, resizes the next column the opposite way.
      * <p>
      * When column constraints make it impossible to fit all the columns into the allowed area,
@@ -438,9 +435,8 @@ public class TableView<S> extends Control {
         ConstrainedColumnResize.forTable(ConstrainedColumnResize.ResizeMode.AUTO_RESIZE_NEXT_COLUMN);
 
     /**
-     * A policy that tries to adjust subsequent columns in order to fit the table width.
-     * <p>
-     * During UI adjustment, resizes subsequent columns to preserve the total width.
+     * A resize policy that adjusts subsequent columns in order to fit the table width.
+     * During UI adjustment, proportionally resizes subsequent columns to preserve the total width.
      * <p>
      * When column constraints make it impossible to fit all the columns into the allowed area,
      * the columns are either clipped, or an empty space appears.  This policy disables the horizontal
@@ -452,7 +448,7 @@ public class TableView<S> extends Control {
         ConstrainedColumnResize.forTable(ConstrainedColumnResize.ResizeMode.AUTO_RESIZE_SUBSEQUENT_COLUMNS);
 
     /**
-     * A policy that tries to adjust columns, starting with the next one, in order to fit the table width.
+     * A resize policy that adjusts columns, starting with the next one, in order to fit the table width.
      * <p>
      * During UI adjustment, resizes the next column to preserve the total width.  When the next column
      * cannot be further resized due to a constraint, the following column gets resized, and so on.
@@ -467,8 +463,7 @@ public class TableView<S> extends Control {
         ConstrainedColumnResize.forTable(ConstrainedColumnResize.ResizeMode.AUTO_RESIZE_FLEX_HEAD);
 
     /**
-     * A policy that tries to adjust columns, starting with the last one, in order to fit the table width.
-     * <p>
+     * A resize policy that adjusts columns, starting with the last one, in order to fit the table width.
      * During UI adjustment, resizes the last column to preserve the total width.  When the last column
      * cannot be further resized due to a constraint, the column preceding the last one gets resized, and so on.
      * <p>

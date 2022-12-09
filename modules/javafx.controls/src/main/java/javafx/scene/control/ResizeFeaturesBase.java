@@ -54,6 +54,7 @@ public class ResizeFeaturesBase<S> {
 
   /**
    * Returns the width of the area available for columns.
+   * Subclasses must override this method.
    *
    * @return the width availabe for columns
    *
@@ -66,6 +67,7 @@ public class ResizeFeaturesBase<S> {
 
   /**
    * Returns the associated TreeView or TreeTableView control.
+   * Subclasses must override this method.
    *
    * @return the control in which the resize is occurring
    *
