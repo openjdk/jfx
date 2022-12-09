@@ -22,6 +22,7 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
+
 package test.robot.javafx.scene;
 
 import java.util.concurrent.CountDownLatch;
@@ -58,7 +59,6 @@ import test.util.Util;
  * 3. Click on date picker and select a date from popup.
  * 4. Verify that selected date is updated in the date picker.
  */
-
 public class DatePickerUpdateOnAlertCloseTest {
     static CountDownLatch startupLatch = new CountDownLatch(1);
     static CountDownLatch onDatePickerShownLatch = new CountDownLatch(1);
@@ -117,6 +117,7 @@ public class DatePickerUpdateOnAlertCloseTest {
         // Select date from date picker popup
         mouseClick(datePicker.getLayoutX() + datePicker.getWidth() / 2,
                     datePicker.getLayoutY() + datePicker.getHeight() * Y_FACTOR);
+        Thread.sleep(400); // Wait for date to be selected.
 
         Assert.assertFalse(LocalDate.now().isEqual(datePicker.getValue()));
     }
