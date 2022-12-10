@@ -29,7 +29,6 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Set;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;

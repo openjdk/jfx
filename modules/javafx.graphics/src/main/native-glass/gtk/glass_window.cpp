@@ -128,7 +128,7 @@ void WindowContextBase::process_state(GdkEventWindowState* event) {
 
         notify_state(stateChangeEvent);
     } else if (event->changed_mask & GDK_WINDOW_STATE_ABOVE) {
-        notify_on_top( event->new_window_state & GDK_WINDOW_STATE_ABOVE);
+        notify_on_top(event->new_window_state & GDK_WINDOW_STATE_ABOVE);
     }
 }
 
@@ -575,7 +575,7 @@ void WindowContextBase::reparent_children(WindowContext* parent) {
 
 void WindowContextBase::set_visible(bool visible) {
     if (visible) {
-        gtk_widget_show_all(gtk_widget);
+        gtk_widget_show(gtk_widget);
     } else {
         gtk_widget_hide(gtk_widget);
         if (jview && is_mouse_entered) {
@@ -1013,6 +1013,14 @@ void WindowContextTop::process_property_notify(GdkEventProperty* event) {
             process_net_wm_property();
         }
     }
+}
+
+void WindowContextTop::process_state(GdkEventWindowState* event) {
+    if (!map_received) {
+        return;
+    }
+
+    WindowContextBase::process_state(event);
 }
 
 void WindowContextTop::process_configure(GdkEventConfigure* event) {

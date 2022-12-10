@@ -80,6 +80,7 @@ public class TwoLevelFocusPopupBehavior extends TwoLevelFocusBehavior {
      * Invoked by the behavior when it is disposed, so that any listeners installed by
      * the TwoLevelFocusBehavior can also be uninstalled
      */
+    @Override
     public void dispose() {
         tlNode.removeEventHandler(KeyEvent.ANY, keyEventListener);
         tlNode.removeEventHandler(MouseEvent.MOUSE_PRESSED, mouseEventListener);

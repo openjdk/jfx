@@ -25,9 +25,6 @@
 
 package com.sun.glass.ui.monocle;
 
-import java.security.AccessController;
-import java.security.PrivilegedAction;
-
 /**
  * Provide Android implementation of AcceleratedScreen
  *
@@ -39,6 +36,7 @@ class AndroidAcceleratedScreen extends AcceleratedScreen {
         super(attributes);
     }
 
+    @Override
     boolean initPlatformLibraries() {
         return super.initPlatformLibraries();
     }

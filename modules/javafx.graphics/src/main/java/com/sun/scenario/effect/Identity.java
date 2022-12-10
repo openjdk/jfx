@@ -47,7 +47,7 @@ public class Identity extends Effect {
     private Filterable src;
     private Point2D loc = new Point2D();
     private final Map<FilterContext, ImageData> datacache =
-        new HashMap<FilterContext, ImageData>();
+        new HashMap<>();
 
     /**
      * Constructs a new {@code Identity} effect with the

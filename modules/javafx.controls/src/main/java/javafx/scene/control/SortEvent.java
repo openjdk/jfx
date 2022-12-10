@@ -41,7 +41,7 @@ public class SortEvent<C> extends Event {
      * Common supertype for all sort event types.
      */
     public static final EventType<SortEvent> ANY =
-            new EventType<SortEvent> (Event.ANY, "SORT");
+            new EventType<> (Event.ANY, "SORT");
 
     /**
      * Gets the default singleton {@code SortEvent}.

@@ -55,7 +55,7 @@ import com.sun.javafx.css.PseudoClassState;
  *       new BooleanPropertyBase(false) {
  *
  *       {@literal @}Override protected void invalidated() {
- *           pseudoClassStateChanged(MAGIC_PSEUDO_CLASS. get());
+ *           pseudoClassStateChanged(MAGIC_PSEUDO_CLASS, get());
  *       }
  *
  *       {@literal @}Override public Object getBean() {

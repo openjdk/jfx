@@ -39,10 +39,12 @@ public class StubPrimaryTimer extends AbstractPrimaryTimer {
     protected StubPrimaryTimer() {
     }
 
+    @Override
     protected int getPulseDuration(int precision) {
         return precision / 60;
     }
 
+    @Override
     protected void postUpdateAnimationRunnable(DelayedRunnable animationRunnable) {
         Toolkit.getToolkit().setAnimationRunnable(animationRunnable);
     }

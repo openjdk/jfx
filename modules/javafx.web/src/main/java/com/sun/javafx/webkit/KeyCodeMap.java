@@ -59,7 +59,7 @@ public final class KeyCodeMap {
         public String getKeyIdentifier() {
             return keyIdentifier;
         }
-    };
+    }
 
     private static final Map<KeyCode, Entry> MAP = Map.ofEntries(
         entry(KeyCode.ENTER,             WCKeyEvent.VK_RETURN, "Enter"),

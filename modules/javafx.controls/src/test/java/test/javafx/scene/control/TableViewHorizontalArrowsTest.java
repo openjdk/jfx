@@ -84,7 +84,7 @@ public class TableViewHorizontalArrowsTest {
 
     @Before
     public void setup() {
-        tableView = new TableView<String>();
+        tableView = new TableView<>();
         tableView.setNodeOrientation(orientation);
         sm = tableView.getSelectionModel();
         fm = tableView.getFocusModel();
@@ -94,11 +94,11 @@ public class TableViewHorizontalArrowsTest {
 
         tableView.getItems().setAll("1", "2", "3", "4", "5", "6", "7", "8", "9", "10");
 
-        col0 = new TableColumn<String, String>("col0");
-        col1 = new TableColumn<String, String>("col1");
-        col2 = new TableColumn<String, String>("col2");
-        col3 = new TableColumn<String, String>("col3");
-        col4 = new TableColumn<String, String>("col4");
+        col0 = new TableColumn<>("col0");
+        col1 = new TableColumn<>("col1");
+        col2 = new TableColumn<>("col2");
+        col3 = new TableColumn<>("col3");
+        col4 = new TableColumn<>("col4");
         tableView.getColumns().setAll(col0, col1, col2, col3, col4);
 
         keyboard = new KeyEventFirer(tableView);

@@ -757,6 +757,7 @@ public class Affine2D extends AffineBase {
      * @param Tx the <code>BaseTransform</code> object from which to
      * copy the transform
      */
+    @Override
     public void setTransform(BaseTransform Tx) {
         switch (Tx.getDegree()) {
             case IDENTITY:
@@ -1054,6 +1055,7 @@ public class Affine2D extends AffineBase {
      * @exception NoninvertibleTransformException
      * if the matrix cannot be inverted.
      */
+    @Override
     public Affine2D createInverse()
         throws NoninvertibleTransformException
     {

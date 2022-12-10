@@ -276,6 +276,7 @@ public:
     WindowContextTop(jobject, WindowContext*, long, WindowFrameType, WindowType, GdkWMFunction);
     void process_map();
     void process_property_notify(GdkEventProperty*);
+    void process_state(GdkEventWindowState*);
     void process_configure(GdkEventConfigure*);
     void process_destroy();
     void process_net_wm_property();

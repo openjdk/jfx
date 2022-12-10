@@ -68,14 +68,14 @@ public class SplitPaneTest {
     private SplitPane splitPane;//Empty string
     private SplitPane.Divider divider1;
     private SplitPane.Divider divider2;
-    private Toolkit tk;
     private Scene scene;
     private Stage stage;
     private StackPane root;
     private StageLoader stageLoader;
 
     @Before public void setup() {
-        tk = (StubToolkit)Toolkit.getToolkit();//This step is not needed (Just to make sure StubToolkit is loaded into VM)
+        assertTrue(Toolkit.getToolkit() instanceof StubToolkit);  // Ensure StubToolkit is loaded
+
         splitPane = new SplitPane();
         splitPane.setSkin(new SplitPaneSkin(splitPane));
         divider1 = new SplitPane.Divider();
@@ -150,7 +150,7 @@ public class SplitPaneTest {
      ********************************************************************/
 
     @Test public void checkHBarPolicyPropertyBind() {
-        ObjectProperty objPr = new SimpleObjectProperty<Orientation>(Orientation.VERTICAL);
+        ObjectProperty objPr = new SimpleObjectProperty<>(Orientation.VERTICAL);
         splitPane.orientationProperty().bind(objPr);
         assertSame("orientationProperty cannot be bound", splitPane.orientationProperty().getValue(), Orientation.VERTICAL);
         objPr.setValue(Orientation.HORIZONTAL);
@@ -166,7 +166,7 @@ public class SplitPaneTest {
     }
 
     @Test public void checkOrientationPropertyBind() {
-        ObjectProperty objPr = new SimpleObjectProperty<Orientation>(Orientation.HORIZONTAL);
+        ObjectProperty objPr = new SimpleObjectProperty<>(Orientation.HORIZONTAL);
         splitPane.orientationProperty().bind(objPr);
         assertSame("orientationProperty cannot be bound", splitPane.orientationProperty().getValue(), Orientation.HORIZONTAL);
         objPr.setValue(Orientation.VERTICAL);
@@ -228,7 +228,7 @@ public class SplitPaneTest {
     @Test public void whenOrientationIsBound_CssMetaData_isSettable_ReturnsFalse() {
         CssMetaData styleable = ((StyleableProperty)splitPane.orientationProperty()).getCssMetaData();
         assertTrue(styleable.isSettable(splitPane));
-        ObjectProperty<Orientation> other = new SimpleObjectProperty<Orientation>(Orientation.VERTICAL);
+        ObjectProperty<Orientation> other = new SimpleObjectProperty<>(Orientation.VERTICAL);
         splitPane.orientationProperty().bind(other);
         assertFalse(styleable.isSettable(splitPane));
     }

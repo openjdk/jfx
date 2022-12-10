@@ -25,7 +25,6 @@
 
 package test.javafx.scene.layout;
 
-import java.util.EnumSet;
 import javafx.geometry.Insets;
 import javafx.scene.layout.Background;
 import javafx.scene.layout.BackgroundFill;

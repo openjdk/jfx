@@ -24,8 +24,6 @@
  */
 package com.sun.javafx.css.parser;
 
-import static com.sun.javafx.css.parser.Token.EOF;
-
 public class TokenShim {
 
     public static final int EOF = Token.EOF;

@@ -254,7 +254,7 @@ public class DialogPane extends Pane {
      **************************************************************************/
 
     // --- graphic
-    private final ObjectProperty<Node> graphicProperty = new StyleableObjectProperty<Node>() {
+    private final ObjectProperty<Node> graphicProperty = new StyleableObjectProperty<>() {
         // The graphic is styleable by css, but it is the
         // imageUrlProperty that handles the style value.
         @Override public CssMetaData getCssMetaData() {
@@ -432,7 +432,7 @@ public class DialogPane extends Pane {
 
 
     // --- header
-    private final ObjectProperty<Node> header = new SimpleObjectProperty<Node>(null) {
+    private final ObjectProperty<Node> header = new SimpleObjectProperty<>(null) {
         WeakReference<Node> headerRef = new WeakReference<>(null);
         @Override protected void invalidated() {
             Node oldHeader = headerRef.get();
@@ -526,7 +526,7 @@ public class DialogPane extends Pane {
 
 
     // --- content
-    private final ObjectProperty<Node> content = new SimpleObjectProperty<Node>(null) {
+    private final ObjectProperty<Node> content = new SimpleObjectProperty<>(null) {
         WeakReference<Node> contentRef = new WeakReference<>(null);
         @Override protected void invalidated() {
             Node oldContent = contentRef.get();
@@ -610,7 +610,7 @@ public class DialogPane extends Pane {
 
 
     // --- expandable content
-    private final ObjectProperty<Node> expandableContentProperty = new SimpleObjectProperty<Node>(null) {
+    private final ObjectProperty<Node> expandableContentProperty = new SimpleObjectProperty<>(null) {
         WeakReference<Node> expandableContentRef = new WeakReference<>(null);
         @Override protected void invalidated() {
             Node oldExpandableContent = expandableContentRef.get();
@@ -619,7 +619,7 @@ public class DialogPane extends Pane {
             }
 
             Node newExpandableContent = getExpandableContent();
-            expandableContentRef = new WeakReference<Node>(newExpandableContent);
+            expandableContentRef = new WeakReference<>(newExpandableContent);
             if (newExpandableContent != null) {
                 newExpandableContent.setVisible(isExpanded());
                 newExpandableContent.setManaged(isExpanded());
@@ -665,6 +665,7 @@ public class DialogPane extends Pane {
 
     // --- expanded
     private final BooleanProperty expandedProperty = new SimpleBooleanProperty(this, "expanded", false) {
+        @Override
         protected void invalidated() {
             final Node expandableContent = getExpandableContent();
 
@@ -1196,7 +1197,7 @@ public class DialogPane extends Pane {
     private static class StyleableProperties {
 
         private static final CssMetaData<DialogPane,String> GRAPHIC =
-            new CssMetaData<DialogPane,String>("-fx-graphic",
+            new CssMetaData<>("-fx-graphic",
                 StringConverter.getInstance()) {
 
             @Override

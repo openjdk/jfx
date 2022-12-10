@@ -123,7 +123,7 @@ public abstract class ButtonBase extends Labeled {
     public final ObjectProperty<EventHandler<ActionEvent>> onActionProperty() { return onAction; }
     public final void setOnAction(EventHandler<ActionEvent> value) { onActionProperty().set(value); }
     public final EventHandler<ActionEvent> getOnAction() { return onActionProperty().get(); }
-    private ObjectProperty<EventHandler<ActionEvent>> onAction = new ObjectPropertyBase<EventHandler<ActionEvent>>() {
+    private ObjectProperty<EventHandler<ActionEvent>> onAction = new ObjectPropertyBase<>() {
         @Override protected void invalidated() {
             setEventHandler(ActionEvent.ACTION, get());
         }

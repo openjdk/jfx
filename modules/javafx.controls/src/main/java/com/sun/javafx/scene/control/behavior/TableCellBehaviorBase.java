@@ -63,7 +63,9 @@ public abstract class TableCellBehaviorBase<S, T, TC extends TableColumnBase<S, 
 
     protected abstract TableColumnBase<S, T> getTableColumn(); // getControl().getTableColumn()
     protected abstract int getItemCount();
+    @Override
     protected abstract TableSelectionModel<S> getSelectionModel();
+    @Override
     protected abstract TableFocusModel<S,TC> getFocusModel();
     protected abstract TablePositionBase getFocusedCell();
     protected abstract boolean isTableRowSelected(); // tableCell.getTableRow().isSelected()
@@ -92,6 +94,7 @@ public abstract class TableCellBehaviorBase<S, T, TC extends TableColumnBase<S, 
      *                                                                         *
      **************************************************************************/
 
+    @Override
     protected void doSelect(final double x, final double y, final MouseButton button,
                           final int clickCount, final boolean shiftDown, final boolean shortcutDown) {
         // Note that table.select will reset selection
@@ -198,6 +201,7 @@ public abstract class TableCellBehaviorBase<S, T, TC extends TableColumnBase<S, 
         }
     }
 
+    @Override
     protected void simpleSelect(MouseButton button, int clickCount, boolean shortcutDown) {
         final TableSelectionModel<S> sm = getSelectionModel();
         final int row = getNode().getIndex();

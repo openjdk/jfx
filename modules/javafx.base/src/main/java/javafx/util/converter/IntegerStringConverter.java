@@ -63,6 +63,6 @@ public class IntegerStringConverter extends StringConverter<Integer> {
             return "";
         }
 
-        return (Integer.toString(((Integer)value).intValue()));
+        return (Integer.toString(value.intValue()));
     }
 }

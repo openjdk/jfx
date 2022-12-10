@@ -89,7 +89,7 @@ public class Shadow extends Effect {
     @Override
     com.sun.scenario.effect.GeneralShadow createPeer() {
         return new com.sun.scenario.effect.GeneralShadow();
-    };
+    }
     /**
      * The input for this {@code Effect}.
      * If set to {@code null}, or left unspecified, a graphical image of

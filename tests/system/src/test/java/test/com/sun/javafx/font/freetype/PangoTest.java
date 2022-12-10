@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2020, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,8 +25,13 @@
 
 package test.com.sun.javafx.font.freetype;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static test.util.Util.TIMEOUT;
+
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.scene.Scene;
@@ -36,14 +41,11 @@ import javafx.scene.text.Text;
 import javafx.stage.Stage;
 import javafx.stage.WindowEvent;
 
-import org.junit.Test;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.Test;
 
-import junit.framework.AssertionFailedError;
-import static test.util.Util.TIMEOUT;
-
-import static org.junit.Assert.*;
+import test.util.Util;
 
 /**
  * Test program for UTF16 to UTF8 conversion and Pango
@@ -81,16 +83,13 @@ public class PangoTest {
 
     @BeforeClass
     public static void setupOnce() throws Exception {
-        // Start the Application
-        new Thread(() -> Application.launch(MyApp.class, (String[]) null)).start();
-        assertTrue("Timeout waiting for Application to launch",
-                launchLatch.await(TIMEOUT, TimeUnit.MILLISECONDS));
+        Util.launch(launchLatch, MyApp.class);
         assertEquals(0, launchLatch.getCount());
     }
 
     @AfterClass
     public static void teardownOnce() {
-        Platform.exit();
+        Util.shutdown();
     }
 
     private void addTextToPane(Text text) throws Exception {

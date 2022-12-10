@@ -34,7 +34,7 @@ import com.sun.scenario.animation.shared.PulseReceiver;
 
 public class AbstractPrimaryTimerMock extends AbstractPrimaryTimer {
 
-    private final Set<PulseReceiver> targets = new HashSet<PulseReceiver>();
+    private final Set<PulseReceiver> targets = new HashSet<>();
 
     private long nanos;
 

@@ -24,11 +24,12 @@
  */
 package test.com.sun.marlin;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
+
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 
 import javafx.application.Application;
-import javafx.application.Platform;
 import javafx.collections.ObservableList;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.Group;
@@ -44,16 +45,11 @@ import javafx.scene.shape.Path;
 import javafx.scene.shape.VLineTo;
 import javafx.stage.Stage;
 
-import junit.framework.AssertionFailedError;
 import org.junit.AfterClass;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
 import test.util.Util;
-import static test.util.Util.TIMEOUT;
 
 /**
  * Simple Dashed Rect rendering test
@@ -106,18 +102,13 @@ public class DashedRectTest {
 
     @BeforeClass
     public static void setupOnce() throws Exception {
-        // Start the Application
-        new Thread(() -> Application.launch(MyApp.class, (String[]) null)).start();
-
-        assertTrue("Timeout waiting for Application to launch",
-                launchLatch.await(TIMEOUT, TimeUnit.MILLISECONDS));
-
+        Util.launch(launchLatch, MyApp.class);
         assertEquals(0, launchLatch.getCount());
     }
 
     @AfterClass
     public static void teardownOnce() {
-        Platform.exit();
+        Util.shutdown();
     }
 
     @Test(timeout = 10000)

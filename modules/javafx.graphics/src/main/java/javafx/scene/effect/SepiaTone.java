@@ -80,7 +80,7 @@ public class SepiaTone extends Effect {
     @Override
     com.sun.scenario.effect.SepiaTone createPeer() {
         return new com.sun.scenario.effect.SepiaTone();
-    };
+    }
     /**
      * The input for this {@code Effect}.
      * If set to {@code null}, or left unspecified, a graphical image of

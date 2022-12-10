@@ -25,18 +25,13 @@
 
 package test.javafx.css;
 
-import test.javafx.css.TypeTest;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
-
-import java.io.IOException;
 import javafx.geometry.Insets;
 import javafx.scene.text.Font;
 
 import org.junit.Before;
 import org.junit.Test;
 
-import javafx.css.CssParser;
 import javafx.css.CssParser;
 import javafx.css.ParsedValue;
 import javafx.css.Stylesheet;

@@ -24,8 +24,6 @@
  */
 package com.sun.javafx.scene.control;
 
-import javafx.scene.control.IndexRange;
-
 public interface FormatterAccessor {
 
     public int getTextLength();

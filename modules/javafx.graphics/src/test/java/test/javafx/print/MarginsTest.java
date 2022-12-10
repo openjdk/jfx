@@ -25,8 +25,6 @@
 
 package test.javafx.print;
 
-import javafx.application.Platform;
-
 import javafx.print.PageLayout;
 import javafx.print.PageOrientation;
 import javafx.print.Paper;
@@ -37,7 +35,6 @@ import javax.print.PrintService;
 import javax.print.PrintServiceLookup;
 import javax.print.attribute.HashPrintRequestAttributeSet;
 import javax.print.attribute.PrintRequestAttributeSet;
-import javax.print.attribute.standard.Media;
 import javax.print.attribute.standard.MediaPrintableArea;
 import static javax.print.attribute.standard.MediaPrintableArea.INCH;
 import javax.print.attribute.standard.MediaSizeName;
@@ -83,8 +80,8 @@ public class MarginsTest {
         if (mpa.length == 0) { // never null.
             return;
         }
-        int mlm = (int)(Math.round(mpa[0].getX(INCH)*72));
-        int mtm = (int)(Math.round(mpa[0].getX(INCH)*72));
+        int mlm = Math.round(mpa[0].getX(INCH) * 72);
+        int mtm = Math.round(mpa[0].getY(INCH) * 72);
         System.out.println("2D : lm=" + mlm + " tm= " + mtm);
         if (mlm == 54 && mtm == 54) {
             return;

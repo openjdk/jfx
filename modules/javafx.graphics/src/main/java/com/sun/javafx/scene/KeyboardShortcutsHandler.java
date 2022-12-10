@@ -395,11 +395,11 @@ public final class KeyboardShortcutsHandler extends BasicEventDispatcher {
         ObservableList<Mnemonic> mnemonicsList = null;
         if (mnemonics != null) {
             for (Map.Entry<KeyCombination, ObservableList<Mnemonic>> mnemonic: mnemonics.entrySet()) {
-                mnemonicsList = (ObservableList) mnemonic.getValue();
+                mnemonicsList = mnemonic.getValue();
 
                 if (mnemonicsList != null) {
                     for (int i = 0 ; i < mnemonicsList.size() ; i++) {
-                        Node currentNode = (Node)mnemonicsList.get(i).getNode();
+                        Node currentNode = mnemonicsList.get(i).getNode();
                         NodeHelper.setShowMnemonics(currentNode, mnemonicsDisplayEnabled);
                     }
                 }
@@ -459,10 +459,10 @@ public final class KeyboardShortcutsHandler extends BasicEventDispatcher {
 
         @Override
         public Set<Entry<K, V>> entrySet() {
-            return new AbstractSet<Entry<K, V>>() {
+            return new AbstractSet<>() {
                 @Override
                 public Iterator<Entry<K, V>> iterator() {
-                    return new Iterator<Entry<K, V>>() {
+                    return new Iterator<>() {
 
                         private Iterator<Entry<K, V>> backingIt = backingMap.entrySet().iterator();
                         private Map<K, V> backingMapAtCreation = backingMap;

@@ -25,10 +25,7 @@
 
 package javafx.print;
 
-import java.util.Arrays;
-
 import javafx.beans.NamedArg;
-import javafx.beans.property.IntegerProperty;
 import javafx.beans.property.ReadOnlyIntegerProperty;
 import javafx.beans.property.ReadOnlyIntegerWrapper;
 

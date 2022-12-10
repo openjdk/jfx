@@ -54,6 +54,7 @@ abstract class MultiLoopClipEnvelope extends ClipEnvelope {
         this.autoReverse = autoReverse;
     }
 
+    @Override
     protected long ticksRateChange(double newRate) {
         return Math.round((ticks - deltaTicks) * Math.abs(newRate / rate));
      }

@@ -26,10 +26,7 @@
 package test.javafx.beans.property;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
 import javafx.beans.InvalidationListener;
-import javafx.beans.binding.ObjectExpression;
 import javafx.beans.property.ReadOnlyLongProperty;
 import javafx.beans.property.ReadOnlyLongWrapper;
 import javafx.beans.property.ReadOnlyObjectProperty;
@@ -86,7 +83,7 @@ public class ReadOnlyLongPropertyTest {
 
     @Test
     public void testObjectToLong() {
-        final ReadOnlyObjectWrapper<Long> valueModel = new ReadOnlyObjectWrapper<Long>();
+        final ReadOnlyObjectWrapper<Long> valueModel = new ReadOnlyObjectWrapper<>();
         final ReadOnlyLongProperty exp = ReadOnlyLongProperty.readOnlyLongProperty(valueModel.getReadOnlyProperty());
 
         assertEquals(0L, exp.longValue());

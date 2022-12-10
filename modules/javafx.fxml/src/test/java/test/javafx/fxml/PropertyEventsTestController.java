@@ -26,8 +26,6 @@
 package test.javafx.fxml;
 
 import javafx.beans.value.ObservableValue;
-import javafx.event.Event;
-
 import java.net.URL;
 import java.util.ResourceBundle;
 import javafx.fxml.FXML;

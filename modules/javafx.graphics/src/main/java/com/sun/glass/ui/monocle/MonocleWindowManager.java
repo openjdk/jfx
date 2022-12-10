@@ -97,7 +97,7 @@ final class MonocleWindowManager {
                              windows.length - index - 1);
             windows = Arrays.copyOf(windows, windows.length - 1);
         }
-        List<MonocleWindow> windowsToNotify = new ArrayList<MonocleWindow>();
+        List<MonocleWindow> windowsToNotify = new ArrayList<>();
         for (MonocleWindow otherWindow : windows) {
             if (otherWindow.getOwner() == window) {
                 windowsToNotify.add(otherWindow);
