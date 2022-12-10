@@ -30,8 +30,6 @@ import com.sun.javafx.iio.ImageLoader;
 import com.sun.javafx.iio.ImageLoaderFactory;
 import java.io.IOException;
 import java.io.InputStream;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 
 public class GIFImageLoaderFactory implements ImageLoaderFactory {
 
@@ -44,10 +42,12 @@ public class GIFImageLoaderFactory implements ImageLoaderFactory {
         return theInstance;
     }
 
+    @Override
     public ImageFormatDescription getFormatDescription() {
         return GIFDescriptor.getInstance();
     }
 
+    @Override
     public ImageLoader createImageLoader(InputStream input) throws IOException {
         return new GIFImageLoader2(input);
     }

@@ -26,12 +26,7 @@
 package javafx.print;
 
 
-import java.util.Collections;
 import java.util.Set;
-import java.util.TreeSet;
-
-import static javafx.print.PageOrientation.*;
-
 import com.sun.javafx.print.PrinterImpl;
 
 /**

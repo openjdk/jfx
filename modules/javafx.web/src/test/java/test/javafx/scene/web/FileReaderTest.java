@@ -220,7 +220,7 @@ public class FileReaderTest extends TestBase {
         });
     }
 
-    @Test public void testreadAsArrayBuffer() throws FileNotFoundException, IOException {
+    @Test public void testreadAsArrayBuffer() {
         loadFileReaderTestScript(getScriptString("readAsArrayBuffer", "", false));
         try (FileInputStream in = new FileInputStream(fileList[0])) {
             final byte[] expectedArrayBuffer = in.readAllBytes();
@@ -237,7 +237,7 @@ public class FileReaderTest extends TestBase {
         }
     }
 
-    @Test public void testreadAsDataURL() throws FileNotFoundException, IOException {
+    @Test public void testreadAsDataURL() {
         loadFileReaderTestScript(getScriptString("readAsDataURL", "", false));
         try (FileInputStream in = new FileInputStream(fileList[0])) {
             final byte[] expectedArrayBuffer = in.readAllBytes();

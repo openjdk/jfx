@@ -25,12 +25,9 @@
 
 package javafx.beans.property;
 
-import java.util.Collection;
-import java.util.Iterator;
 import java.util.Set;
 import javafx.beans.binding.Bindings;
 import javafx.beans.binding.SetExpression;
-import javafx.collections.ObservableList;
 import javafx.collections.ObservableSet;
 
 /**

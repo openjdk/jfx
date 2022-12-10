@@ -30,8 +30,6 @@ import static org.junit.Assert.*;
 import com.sun.javafx.css.StyleManager;
 import com.sun.javafx.PlatformUtil;
 
-import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.scene.Cursor;
 import javafx.scene.Group;
 import javafx.scene.Scene;
@@ -40,15 +38,10 @@ import javafx.scene.text.Font;
 import javafx.scene.text.FontSmoothingType;
 import javafx.scene.text.Text;
 import javafx.stage.Stage;
-import javafx.stage.Window;
-
-import com.sun.javafx.util.Logging;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import com.sun.javafx.logging.PlatformLogger;
-
 import static org.junit.Assume.assumeTrue;
 
 /**

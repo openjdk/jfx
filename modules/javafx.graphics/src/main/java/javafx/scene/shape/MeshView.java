@@ -38,7 +38,6 @@ import com.sun.javafx.sg.prism.NGNode;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.beans.value.WeakChangeListener;
 import javafx.scene.Node;
 
@@ -119,7 +118,7 @@ public class MeshView extends Shape3D {
 
     public final ObjectProperty<Mesh> meshProperty() {
         if (mesh == null) {
-            mesh = new SimpleObjectProperty<Mesh>(MeshView.this, "mesh") {
+            mesh = new SimpleObjectProperty<>(MeshView.this, "mesh") {
 
                 private Mesh old = null;
                 private final ChangeListener<Boolean> meshChangeListener =

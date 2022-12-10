@@ -59,7 +59,7 @@ public class URLConverterTest {
             new ParsedValueImpl<String,String>(null,null)
         };
         ParsedValueImpl<ParsedValue[], String> value =
-            new ParsedValueImpl<ParsedValue[], String>(values, URLConverter.getInstance());
+            new ParsedValueImpl<>(values, URLConverter.getInstance());
 
         Font font = null;
         ClassLoader cl = Thread.currentThread().getContextClassLoader();
@@ -76,7 +76,7 @@ public class URLConverterTest {
             new ParsedValueImpl<String,String>(base,null)
         };
         ParsedValueImpl<ParsedValue[], String> value =
-            new ParsedValueImpl<ParsedValue[], String>(values, URLConverter.getInstance());
+            new ParsedValueImpl<>(values, URLConverter.getInstance());
 
         Font font = null;
         String expResult = cl.getResource("test/javafx/css/converter/some.txt").toExternalForm();
@@ -94,7 +94,7 @@ public class URLConverterTest {
             new ParsedValueImpl<String,String>(null,null)
         };
         ParsedValueImpl<ParsedValue[], String> value =
-            new ParsedValueImpl<ParsedValue[], String>(values, URLConverter.getInstance());
+            new ParsedValueImpl<>(values, URLConverter.getInstance());
 
         Font font = null;
         String result = value.convert(font);
@@ -112,7 +112,7 @@ public class URLConverterTest {
             new ParsedValueImpl<String,String>(baseURL,null)
         };
         ParsedValueImpl<ParsedValue[], String> value =
-            new ParsedValueImpl<ParsedValue[], String>(values, URLConverter.getInstance());
+            new ParsedValueImpl<>(values, URLConverter.getInstance());
 
         Font font = null;
         String result = value.convert(font);

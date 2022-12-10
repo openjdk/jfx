@@ -65,7 +65,7 @@ public abstract class CursorFrame {
         }
 
         if (otherPlatformCursors == null) {
-            otherPlatformCursors = new HashMap<Class<?>, Object>();
+            otherPlatformCursors = new HashMap<>();
         }
 
         otherPlatformCursors.put(platformCursorClass, platformCursor);

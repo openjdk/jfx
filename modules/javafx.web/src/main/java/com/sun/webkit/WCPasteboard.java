@@ -38,7 +38,7 @@ final class WCPasteboard {
 
     static {
         pasteboard = Utilities.getUtilities().createPasteboard();
-    };
+    }
 
     private WCPasteboard() {
     }

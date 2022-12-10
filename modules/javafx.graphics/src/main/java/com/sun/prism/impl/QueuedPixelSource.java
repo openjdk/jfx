@@ -62,7 +62,7 @@ public class QueuedPixelSource implements PixelSource {
     private volatile Pixels beingConsumed;
     private volatile Pixels enqueued;
     private final List<WeakReference<Pixels>> saved =
-         new ArrayList<WeakReference<Pixels>>(3);
+         new ArrayList<>(3);
     private final boolean useDirectBuffers;
 
     public QueuedPixelSource(boolean useDirectBuffers) {

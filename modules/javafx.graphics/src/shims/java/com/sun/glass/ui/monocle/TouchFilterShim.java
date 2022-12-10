@@ -27,14 +27,17 @@ package com.sun.glass.ui.monocle;
 
 public class TouchFilterShim  implements TouchFilter {
 
+    @Override
     public boolean filter(TouchState ts) {
         throw new RuntimeException("not implemented");
     }
 
+    @Override
     public boolean flush(TouchState ts) {
         throw new RuntimeException("not implemented");
     }
 
+    @Override
     public int getPriority() {
         throw new RuntimeException("not implemented");
     }

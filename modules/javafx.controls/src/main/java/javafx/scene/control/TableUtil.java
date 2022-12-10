@@ -401,7 +401,7 @@ class TableUtil {
             return Collections.emptyList();
         }
 
-        List<TableColumnBase<?,?>> tablecolumns = new ArrayList<TableColumnBase<?,?>>();
+        List<TableColumnBase<?,?>> tablecolumns = new ArrayList<>();
         for (TableColumnBase c : column.getColumns()) {
             if (! c.isVisible()) continue;
             if (! c.isResizable()) continue;

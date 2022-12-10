@@ -476,6 +476,7 @@ final class BMPImageLoader extends ImageLoaderImpl {
         }
     }
 
+    @Override
     public ImageFrame load(int imageIndex, int width, int height,
             boolean preserveAspectRatio, boolean smooth) throws IOException
     {
@@ -561,10 +562,12 @@ public final class BMPImageLoaderFactory implements ImageLoaderFactory {
         return theInstance;
     }
 
+    @Override
     public ImageFormatDescription getFormatDescription() {
         return BMPDescriptor.theInstance;
     }
 
+    @Override
     public ImageLoader createImageLoader(InputStream input) throws IOException {
         return new BMPImageLoader(input);
     }

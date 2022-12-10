@@ -25,7 +25,6 @@
 
 package test.javafx.beans.value;
 
-import test.javafx.beans.value.ChangeListenerMock;
 import javafx.beans.InvalidationListener;
 import test.javafx.beans.InvalidationListenerMock;
 import javafx.beans.Observable;
@@ -47,9 +46,9 @@ public class ObservableValueBaseTest {
 
     @Before
     public void setUp() {
-        valueModel = new ObservableObjectValueStub<Object>();
+        valueModel = new ObservableObjectValueStub<>();
         invalidationListener = new InvalidationListenerMock();
-        changeListener = new ChangeListenerMock<Object>(UNDEFINED_VALUE);
+        changeListener = new ChangeListenerMock<>(UNDEFINED_VALUE);
     }
 
     @Test

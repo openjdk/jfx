@@ -30,11 +30,19 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
 import javafx.scene.control.IndexedCell;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
+import javafx.scene.control.Skin;
+import javafx.scene.control.TableRow;
+import javafx.scene.control.TableView;
 import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeTableColumn;
 import javafx.scene.control.TreeTableRow;
 import javafx.scene.control.TreeTableView;
 import javafx.scene.control.cell.TreeItemPropertyValueFactory;
+import javafx.scene.control.skin.TableColumnHeader;
+import javafx.scene.control.skin.TableColumnHeaderShim;
+import javafx.scene.control.skin.TreeTableRowSkin;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -42,12 +50,15 @@ import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
 import test.com.sun.javafx.scene.control.infrastructure.VirtualFlowTestUtils;
 import test.com.sun.javafx.scene.control.test.Person;
 
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class TreeTableRowSkinTest {
 
     private TreeTableView<Person> treeTableView;
     private StageLoader stageLoader;
+    private TableColumnHeader firstColumnHeader;
 
     @BeforeEach
     public void before() {
@@ -77,6 +88,32 @@ public class TreeTableRowSkinTest {
         treeTableView.setShowRoot(false);
 
         stageLoader = new StageLoader(treeTableView);
+        firstColumnHeader = VirtualFlowTestUtils.getTableColumnHeader(treeTableView, firstNameCol);
+    }
+
+    /**
+     * The {@link TreeTableView} should never be null inside the {@link TreeTableRowSkin} during auto sizing.
+     * See also: JDK-8289357
+     */
+    @Test
+    public void testTreeTableViewInRowSkinIsNotNullWhenAutoSizing() {
+        treeTableView.setRowFactory(tv -> new TreeTableRow<>() {
+            @Override
+            protected Skin<?> createDefaultSkin() {
+                return new ThrowingTreeTableRowSkin<>(this);
+            }
+        });
+        TableColumnHeaderShim.resizeColumnToFitContent(firstColumnHeader, -1);
+    }
+
+    /**
+     * The {@link TreeTableView} should not have any {@link TreeTableRow} as children.
+     * {@link TreeTableRow}s are added temporary as part of the auto sizing, but should never remain after.
+     * See also: JDK-8289357 and JDK-8292009
+     */
+    @Test
+    public void testTreeTableViewChildrenCount() {
+        assertTrue(treeTableView.getChildrenUnmodifiable().stream().noneMatch(node -> node instanceof TreeTableRow));
     }
 
     @Test
@@ -265,6 +302,13 @@ public class TreeTableRowSkinTest {
         // Note: TreeTableView has an additional children - the disclosure node - therefore we subtract 1 here.
         assertEquals(treeTableView.getColumns().size(),
                 VirtualFlowTestUtils.getCell(treeTableView, 0).getChildrenUnmodifiable().size() - 1);
+    }
+
+    private static class ThrowingTreeTableRowSkin<T> extends TreeTableRowSkin<T> {
+        public ThrowingTreeTableRowSkin(TreeTableRow<T> treeTableRow) {
+            super(treeTableRow);
+            assertNotNull(treeTableRow.getTreeTableView());
+        }
     }
 
 }

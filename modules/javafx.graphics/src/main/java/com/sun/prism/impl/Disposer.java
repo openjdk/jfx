@@ -74,7 +74,7 @@ public class Disposer {
 
     private final ReferenceQueue queue = new ReferenceQueue();
     private final Hashtable records = new Hashtable();
-    private final LinkedList<Record> disposalQueue = new LinkedList<Record>();
+    private final LinkedList<Record> disposalQueue = new LinkedList<>();
 
     /**
      * Private constructor to prevent outside instantiation.

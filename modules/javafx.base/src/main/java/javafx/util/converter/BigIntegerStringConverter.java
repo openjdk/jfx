@@ -63,6 +63,6 @@ public class BigIntegerStringConverter extends StringConverter<BigInteger> {
             return "";
         }
 
-        return ((BigInteger)value).toString();
+        return value.toString();
     }
 }

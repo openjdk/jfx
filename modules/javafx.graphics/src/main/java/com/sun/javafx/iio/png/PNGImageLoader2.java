@@ -298,6 +298,7 @@ public final class PNGImageLoader2 extends ImageLoaderImpl {
         }
     }
 
+    @Override
     public void dispose() {
     }
 
@@ -635,6 +636,7 @@ public final class PNGImageLoader2 extends ImageLoaderImpl {
         return bitDepth == 16 ? 2 : 1;
     }
 
+    @Override
     public ImageFrame load(int imageIndex, int rWidth, int rHeight,
             boolean preserveAspectRatio, boolean smooth) throws IOException {
 

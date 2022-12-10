@@ -243,7 +243,7 @@ public class Rectangle2D {
      * The returned string might be empty but cannot be {@code null}.
      */
     @Override public String toString() {
-        return "Rectangle2D [minX = " + minX
+        return "Rectangle2D [minX=" + minX
                 + ", minY=" + minY
                 + ", maxX=" + maxX
                 + ", maxY=" + maxY

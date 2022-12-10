@@ -25,7 +25,6 @@
 
 package test.javafx.scene.layout;
 
-import test.javafx.scene.layout.MockNode;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;

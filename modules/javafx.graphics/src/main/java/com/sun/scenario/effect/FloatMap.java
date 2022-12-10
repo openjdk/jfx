@@ -195,7 +195,7 @@ public class FloatMap {
 
     public LockableResource getAccelData(FilterContext fctx) {
         if (cache == null) {
-            cache = new HashMap<FilterContext, Entry>();
+            cache = new HashMap<>();
         } else if (!cacheValid) {
             for (Entry entry : cache.values()) {
                 entry.valid = false;

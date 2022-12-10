@@ -862,9 +862,11 @@ public class CameraTest {
         }
 
         @Override public void setViewWidth(double viewWidth) { this.viewWidth = viewWidth; }
+        @Override
         public double getViewWidth() { return viewWidth; }
 
         @Override public void setViewHeight(double viewHeight) { this.viewHeight = viewHeight; }
+        @Override
         public double getViewHeight() { return viewHeight; }
 
         @Override public void setPosition(Vec3d position) { this.position = position; }
@@ -910,9 +912,11 @@ public class CameraTest {
         Affine3D localToWorldTx;
 
         @Override public void setViewWidth(double viewWidth) { this.viewWidth = viewWidth; }
+        @Override
         public double getViewWidth() { return viewWidth; }
 
         @Override public void setViewHeight(double viewHeight) { this.viewHeight = viewHeight; }
+        @Override
         public double getViewHeight() { return viewHeight; }
 
         @Override public void setPosition(Vec3d position) { this.position = position; }

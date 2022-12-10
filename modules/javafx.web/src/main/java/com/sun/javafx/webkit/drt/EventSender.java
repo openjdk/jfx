@@ -50,7 +50,7 @@ final class EventSender {
     private static final float ZOOM = 1.2f;
     private static final float SCROLL = 40f;
 
-    private static final Map<Object, KeyCode> MAP = new HashMap<Object, KeyCode>();
+    private static final Map<Object, KeyCode> MAP = new HashMap<>();
 
     static {
         MAP.put("\r", KeyCode.ENTER);

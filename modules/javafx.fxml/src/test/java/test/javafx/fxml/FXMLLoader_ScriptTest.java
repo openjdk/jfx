@@ -39,7 +39,6 @@ import static org.junit.Assume.assumeTrue;
 
 public class FXMLLoader_ScriptTest {
     @Test
-    @SuppressWarnings("deprecation")
     public void testStaticScriptLoad() throws IOException {
         // This test needs Nashorn script engine.
         // Test will be rewritten under - JDK-8245568

@@ -27,7 +27,6 @@ package javafx.scene.control;
 import com.sun.javafx.scene.control.skin.resources.ControlResources;
 
 import javafx.beans.NamedArg;
-import javafx.scene.control.Button;
 import javafx.scene.control.ButtonBar.ButtonData;
 
 /**

@@ -539,7 +539,7 @@ public class SelectBindingTest {
     @Test
     public void stressTestRandomOperationsResultInCorrectListenersInstalled() {
 
-        List<String> steps = new ArrayList<String>();
+        List<String> steps = new ArrayList<>();
 
         Random rand = new Random(System.currentTimeMillis());
         for (int i = 0; i < 10000; i++) {

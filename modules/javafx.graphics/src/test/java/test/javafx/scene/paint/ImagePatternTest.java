@@ -39,7 +39,6 @@ import test.com.sun.javafx.pgstub.StubImageLoaderFactory;
 import test.com.sun.javafx.pgstub.StubPlatformImageInfo;
 import test.com.sun.javafx.pgstub.StubToolkit;
 import com.sun.javafx.tk.Toolkit;
-import javafx.scene.paint.ImagePattern;
 
 public class ImagePatternTest {
 

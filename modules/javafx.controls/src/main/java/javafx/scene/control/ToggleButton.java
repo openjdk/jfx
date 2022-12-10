@@ -146,14 +146,17 @@ import javafx.css.StyleableProperty;
      * programmatically.
      */
     private BooleanProperty selected;
+    @Override
     public final void setSelected(boolean value) {
         selectedProperty().set(value);
     }
 
+    @Override
     public final boolean isSelected() {
         return selected == null ? false : selected.get();
     }
 
+    @Override
     public final BooleanProperty selectedProperty() {
         if (selected == null) {
             selected = new BooleanPropertyBase() {
@@ -193,17 +196,20 @@ import javafx.css.StyleableProperty;
      * being added to the new group.
      */
     private ObjectProperty<ToggleGroup> toggleGroup;
+    @Override
     public final void setToggleGroup(ToggleGroup value) {
         toggleGroupProperty().set(value);
     }
 
+    @Override
     public final ToggleGroup getToggleGroup() {
         return toggleGroup == null ? null : toggleGroup.get();
     }
 
+    @Override
     public final ObjectProperty<ToggleGroup> toggleGroupProperty() {
         if (toggleGroup == null) {
-            toggleGroup = new ObjectPropertyBase<ToggleGroup>() {
+            toggleGroup = new ObjectPropertyBase<>() {
                 private ToggleGroup old;
                 private ChangeListener<Toggle> listener = (o, oV, nV) ->
                     ParentHelper.getTraversalEngine(ToggleButton.this).setOverriddenFocusTraversability(nV != null ? isSelected() : null);

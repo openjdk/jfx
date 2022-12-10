@@ -406,7 +406,7 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeCell<
     // Note: This is a copy/paste of javafx.scene.control.cell.DefaultTreeCell,
     // which is package-protected
     private TreeCell<T> createDefaultCellImpl() {
-        return new TreeCell<T>() {
+        return new TreeCell<>() {
             private HBox hbox;
 
             private WeakReference<TreeItem<T>> treeItemRef;
@@ -425,7 +425,7 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeCell<
                     TreeItem<T> newTreeItem = getTreeItem();
                     if (newTreeItem != null) {
                         newTreeItem.graphicProperty().addListener(weakTreeItemGraphicListener);
-                        treeItemRef = new WeakReference<TreeItem<T>>(newTreeItem);
+                        treeItemRef = new WeakReference<>(newTreeItem);
                     }
                 }
             };

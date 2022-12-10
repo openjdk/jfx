@@ -73,7 +73,7 @@ class D3DResourceFactory extends BaseShaderFactory {
      * @see D3DResource
      */
     private final LinkedList<D3DResource.D3DRecord> records =
-        new LinkedList<D3DResource.D3DRecord>();
+        new LinkedList<>();
 
     D3DResourceFactory(long pContext, Screen screen) {
         super(clampTexCache, repeatTexCache, mipmapTexCache);

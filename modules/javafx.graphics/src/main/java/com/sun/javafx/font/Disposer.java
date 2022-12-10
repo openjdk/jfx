@@ -55,6 +55,7 @@ public class Disposer implements Runnable {
         @SuppressWarnings("removal")
         var dummy = java.security.AccessController.doPrivileged(
             new java.security.PrivilegedAction() {
+                @Override
                 public Object run() {
                     /* The thread must be a member of a thread group
                      * which will not get GCed before VM exit.
@@ -88,6 +89,7 @@ public class Disposer implements Runnable {
         return ref;
     }
 
+    @Override
     public void run() {
         while (true) {
             try {
