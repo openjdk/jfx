@@ -173,8 +173,7 @@ public class PropertyDescriptor<T> extends ReadOnlyPropertyDescriptor<T> {
         @Override
         public void vetoableChange(PropertyChangeEvent propertyChangeEvent) throws PropertyVetoException {
             if (bean.equals(propertyChangeEvent.getSource()) && name.equals(propertyChangeEvent.getPropertyName())) {
-                final ReadOnlyJavaBeanProperty<T> property = checkRef();
-                if ((property instanceof Property) && (((Property<?>)property).isBound()) && !updating) {
+                if ((checkRef() instanceof Property<?> property) && property.isBound() && !updating) {
                     throw new PropertyVetoException("A bound value cannot be set.", propertyChangeEvent);
                 }
             }
