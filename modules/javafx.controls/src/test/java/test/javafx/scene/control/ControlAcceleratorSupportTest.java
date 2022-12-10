@@ -39,7 +39,6 @@ import test.util.memory.JMemoryBuddy;
 import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.*;
 
 import org.junit.Test;
-import org.junit.BeforeClass;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 

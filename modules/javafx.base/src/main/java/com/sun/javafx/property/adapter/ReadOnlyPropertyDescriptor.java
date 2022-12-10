@@ -158,7 +158,7 @@ public class ReadOnlyPropertyDescriptor {
 
         public ReadOnlyListener(Object bean, ReadOnlyJavaBeanProperty<T> property) {
             this.bean = bean;
-            this.propertyRef = new WeakReference<ReadOnlyJavaBeanProperty<T>>(property);
+            this.propertyRef = new WeakReference<>(property);
         }
 
         protected ReadOnlyJavaBeanProperty<T> checkRef() {

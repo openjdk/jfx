@@ -44,7 +44,7 @@ public final class RepeatStructConverter extends StyleConverter<ParsedValue<Stri
 
     private RepeatStructConverter() {
         super();
-        repeatConverter = new EnumConverter<BackgroundRepeat>(BackgroundRepeat.class);
+        repeatConverter = new EnumConverter<>(BackgroundRepeat.class);
     }
 
     private final EnumConverter<BackgroundRepeat> repeatConverter;

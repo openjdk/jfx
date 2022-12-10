@@ -25,27 +25,32 @@
 
 package test.memoryleak;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertTrue;
+
 import java.lang.ref.WeakReference;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.concurrent.CountDownLatch;
+
 import javafx.application.Platform;
 import javafx.concurrent.Worker;
-import javafx.scene.paint.Color;
 import javafx.scene.Scene;
+import javafx.scene.paint.Color;
 import javafx.scene.web.WebView;
 import javafx.stage.Stage;
-import junit.framework.AssertionFailedError;
-import netscape.javascript.JSObject;
+
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import test.util.Util;
 
-import static org.junit.Assert.*;
-import static test.util.Util.TIMEOUT;
+import junit.framework.AssertionFailedError;
+import netscape.javascript.JSObject;
+import test.util.Util;
 
 public class JSCallbackMemoryTest {
 
@@ -184,13 +189,9 @@ public class JSCallbackMemoryTest {
     public static void doSetupOnce() throws Exception {
 
         Platform.setImplicitExit(false);
-        Platform.startup(() -> {
+        Util.startup(launchLatch, () -> {
             launchLatch.countDown();
         });
-
-        if (!launchLatch.await(TIMEOUT, TimeUnit.MILLISECONDS)) {
-            fail("Timeout waiting for Platform to start");
-        }
 
         Util.runAndWait(() -> {
             primarystage = new Stage();
@@ -209,7 +210,7 @@ public class JSCallbackMemoryTest {
 
     @AfterClass
     public static void doTeardownOnce() {
-        Platform.exit();
+        Util.shutdown();
     }
 
     @After

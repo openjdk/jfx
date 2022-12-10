@@ -194,6 +194,7 @@ public class JPEGImageLoader extends ImageLoaderImpl {
         }
     }
 
+    @Override
     public synchronized void dispose() {
         if(!accessLock.isLocked() && !isDisposed && structPointer != 0L) {
             isDisposed = true;
@@ -202,6 +203,7 @@ public class JPEGImageLoader extends ImageLoaderImpl {
         }
     }
 
+    @Override
     public ImageFrame load(int imageIndex, int width, int height, boolean preserveAspectRatio, boolean smooth) throws IOException {
         if (imageIndex != 0) {
             return null;

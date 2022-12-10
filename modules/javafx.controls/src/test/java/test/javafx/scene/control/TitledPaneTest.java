@@ -75,7 +75,10 @@ public class TitledPaneTest {
 
     @Before public void setup() {
         node = new Rectangle();
-        tk = (StubToolkit)Toolkit.getToolkit();//This step is not needed (Just to make sure StubToolkit is loaded into VM)
+        tk = Toolkit.getToolkit();
+
+        assertTrue(tk instanceof StubToolkit);  // Ensure it's StubToolkit
+
         titledPane = new TitledPane();
         titledPane.setSkin(new TitledPaneSkin(titledPane));
         titledPaneWithTitleAndNode = new TitledPane("title", node);

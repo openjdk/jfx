@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2019, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,8 @@
 
 package test.robot.javafx.stage;
 
+import java.util.concurrent.CountDownLatch;
+
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.scene.Scene;
@@ -36,14 +38,13 @@ import javafx.scene.layout.StackPane;
 import javafx.scene.robot.Robot;
 import javafx.stage.Stage;
 import javafx.stage.WindowEvent;
+
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import test.util.Util;
 
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
+import test.util.Util;
 
 // See JDK-8210973
 public class FocusParentWindowOnChildCloseTest {
@@ -70,22 +71,17 @@ public class FocusParentWindowOnChildCloseTest {
         mouseClick(button.getLayoutX() + button.getWidth() / 2, button.getLayoutY() + button.getHeight() / 2);
 
         Thread.sleep(400);
-        waitForLatch(alertShownLatch, 10, "Failed to show Alert");
+        Util.waitForLatch(alertShownLatch, 10, "Failed to show Alert");
     }
 
     @BeforeClass
     public static void initFX() throws Exception {
-        new Thread(() -> Application.launch(TestApp.class, (String[]) null)).start();
-        waitForLatch(startupLatch, 10, "FX runtime failed to start.");
+        Util.launch(startupLatch, TestApp.class);
     }
 
     @AfterClass
     public static void exit() {
-        Platform.runLater(() -> {
-            stage.hide();
-            stage2.hide();
-        });
-        Platform.exit();
+        Util.shutdown(stage, stage2);
     }
 
     private void mouseClick(double x, double y) {
@@ -104,7 +100,7 @@ public class FocusParentWindowOnChildCloseTest {
                     okButton.fire();
                 });
         Thread.sleep(400);
-        waitForLatch(alertCloseLatch, 10, "Failed to close alert.");
+        Util.waitForLatch(alertCloseLatch, 10, "Failed to close alert.");
     }
 
     public static class TestApp extends Application {
@@ -151,9 +147,5 @@ public class FocusParentWindowOnChildCloseTest {
             stage2.addEventHandler(WindowEvent.WINDOW_SHOWN, e -> Platform.runLater(startupLatch::countDown));
             stage2.show();
         }
-    }
-
-    public static void waitForLatch(CountDownLatch latch, int seconds, String msg) throws Exception {
-        Assert.assertTrue("Timeout: " + msg, latch.await(seconds, TimeUnit.SECONDS));
     }
 }

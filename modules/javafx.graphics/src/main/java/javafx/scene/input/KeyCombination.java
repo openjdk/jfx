@@ -385,7 +385,7 @@ public abstract class KeyCombination {
      * @since JavaFX 2.1
      */
     public static KeyCombination valueOf(String value) {
-        final List<Modifier> modifiers = new ArrayList<Modifier>(4);
+        final List<Modifier> modifiers = new ArrayList<>(4);
 
         final String[] tokens = splitName(value);
 
@@ -635,7 +635,7 @@ public abstract class KeyCombination {
     }
 
     private static String[] splitName(String name) {
-        List<String> tokens = new ArrayList<String>();
+        List<String> tokens = new ArrayList<>();
         char[] chars = name.trim().toCharArray();
 
         final int STATE_BASIC = 0;      // general text

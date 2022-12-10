@@ -40,7 +40,7 @@ public interface TestedObservableLists {
 
     Callable<ObservableList<String>> LINKED_LIST = () -> FXCollections.observableList(new LinkedList<String>());
 
-    Callable<ObservableList<String>> VETOABLE_LIST = () -> new VetoableListDecorator<String>(FXCollections.<String>observableArrayList()) {
+    Callable<ObservableList<String>> VETOABLE_LIST = () -> new VetoableListDecorator<>(FXCollections.<String>observableArrayList()) {
 
         @Override
         protected void onProposedChange(List list, int... idx) { }

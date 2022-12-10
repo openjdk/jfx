@@ -77,6 +77,7 @@ public class Bloom extends DelegateEffect {
         this.blend = new Blend(Blend.Mode.ADD, input, crop);
     }
 
+    @Override
     protected Effect getDelegate() {
         return blend;
     }

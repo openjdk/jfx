@@ -30,7 +30,6 @@ import javafx.scene.input.DragEvent;
 import javafx.scene.input.MouseEvent;
 
 import com.sun.javafx.event.BasicEventDispatcher;
-import javafx.event.EventType;
 import javafx.scene.input.MouseDragEvent;
 
 /**

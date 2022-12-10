@@ -53,6 +53,7 @@ public class Disposer implements Runnable {
         @SuppressWarnings("removal")
         var dummy = java.security.AccessController.doPrivileged(
             new java.security.PrivilegedAction() {
+                @Override
                 public Object run() {
                     /* The thread must be a member of a thread group
                      * which will not get GCed before VM exit.
@@ -84,12 +85,13 @@ public class Disposer implements Runnable {
         records.put(ref, rec);
     }
 
+    @Override
     public void run() {
         while (true) {
             try {
                 Object obj = queue.remove();
                 ((Reference)obj).clear();
-                Runnable rec = (Runnable)records.remove(obj);
+                Runnable rec = records.remove(obj);
                 rec.run();
             } catch (Exception e) {
                 System.out.println("Exception while removing reference: " + e);

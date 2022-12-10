@@ -39,7 +39,7 @@ public class NGExternalNode extends NGNode {
     private Texture dsttexture;
 
     private BufferData bufferData;
-    private final AtomicReference<RenderData> renderData = new AtomicReference<RenderData>(null);
+    private final AtomicReference<RenderData> renderData = new AtomicReference<>(null);
     private RenderData rd; // last rendered data
 
     private volatile ReentrantLock bufferLock;

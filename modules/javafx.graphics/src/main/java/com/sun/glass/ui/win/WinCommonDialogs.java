@@ -24,13 +24,11 @@
  */
 package com.sun.glass.ui.win;
 
-import com.sun.glass.ui.Application;
 import com.sun.glass.ui.CommonDialogs.ExtensionFilter;
 import com.sun.glass.ui.CommonDialogs.FileChooserResult;
 import com.sun.glass.ui.Window;
 
 import java.io.File;
-import java.util.List;
 
 /**
  * MS Windows platform implementation class for CommonDialogs.

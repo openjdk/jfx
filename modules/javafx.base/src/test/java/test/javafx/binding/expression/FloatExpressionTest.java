@@ -68,8 +68,8 @@ public class FloatExpressionTest {
 
     @Test
     public void testGetters() {
-        assertEquals((double)data, op1.doubleValue(), EPSILON);
-        assertEquals((float)data, op1.floatValue(), EPSILON);
+        assertEquals(data, op1.doubleValue(), EPSILON);
+        assertEquals(data, op1.floatValue(), EPSILON);
         assertEquals((long)data, op1.longValue());
         assertEquals((int)data, op1.intValue());
     }
@@ -197,7 +197,7 @@ public class FloatExpressionTest {
 
     @Test
     public void testObjectToFloat() {
-        final ObservableValueStub<Float> valueModel = new ObservableValueStub<Float>();
+        final ObservableValueStub<Float> valueModel = new ObservableValueStub<>();
         final FloatExpression exp = FloatExpression.floatExpression(valueModel);
 
         assertTrue(exp instanceof FloatBinding);

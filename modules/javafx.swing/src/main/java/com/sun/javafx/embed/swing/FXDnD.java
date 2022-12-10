@@ -48,6 +48,7 @@ final public class FXDnD {
     static {
         @SuppressWarnings("removal")
         var dummy = AccessController.doPrivileged(new PrivilegedAction<Object>() {
+            @Override
             public Object run() {
                 fxAppThreadIsDispatchThread =
                         "true".equals(System.getProperty("javafx.embed.singleThread"));

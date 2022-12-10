@@ -58,7 +58,7 @@ public class TimelinePlayTest {
     }
 
     public void setupTimeline(Timeline a, LongProperty property, Pair<Duration, Long>... values) {
-        ObservableList<KeyFrame> keyFrames = ((Timeline) a).getKeyFrames();
+        ObservableList<KeyFrame> keyFrames = a.getKeyFrames();
         for (Pair<Duration, Long> v : values) {
             keyFrames.add(new KeyFrame(v.getKey(), new KeyValue(property, v.getValue())));
         }

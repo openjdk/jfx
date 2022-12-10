@@ -33,7 +33,6 @@ import javafx.scene.input.InputMethodEvent;
 import javafx.scene.input.InputMethodRequests;
 import javafx.scene.input.InputMethodTextRun;
 import javafx.scene.input.MouseEvent;
-import javafx.scene.input.ScrollEvent;
 import javafx.scene.image.PixelFormat;
 import java.nio.IntBuffer;
 import java.security.AccessController;

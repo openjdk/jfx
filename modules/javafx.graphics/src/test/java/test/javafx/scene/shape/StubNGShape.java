@@ -48,10 +48,12 @@ public class StubNGShape extends NGShape {
         return fill;
     }
 
+    @Override
     public boolean isSmooth() {
         return smooth;
     }
 
+    @Override
     public NGShape.Mode getMode() {
         return mode;
     }
@@ -84,6 +86,7 @@ public class StubNGShape extends NGShape {
         return pgStrokeLineJoin;
     }
 
+    @Override
     public void setMode(NGShape.Mode mode) {
         this.mode = mode;
     }

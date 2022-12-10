@@ -92,8 +92,7 @@ class MouseState {
      */
     MonocleWindow getWindow(boolean recalculateCache, MonocleWindow fallback) {
         if (recalculateCache) {
-            window = (MonocleWindow)
-                    MonocleWindowManager.getInstance().getWindowForLocation(x, y);
+            window = MonocleWindowManager.getInstance().getWindowForLocation(x, y);
         }
         if (window == null) {
             window = fallback;
@@ -149,6 +148,7 @@ class MouseState {
         return buttonsPressed;
     }
 
+    @Override
     public String toString() {
         return "MouseState[x="
                 + x + ",y=" + y

@@ -111,7 +111,7 @@ public final class RotateTransition extends Transition {
 
     public final ObjectProperty<Node> nodeProperty() {
         if (node == null) {
-            node = new SimpleObjectProperty<Node>(this, "node", DEFAULT_NODE);
+            node = new SimpleObjectProperty<>(this, "node", DEFAULT_NODE);
         }
         return node;
     }
@@ -207,7 +207,7 @@ public final class RotateTransition extends Transition {
 
     public final ObjectProperty<Point3D> axisProperty() {
         if (axis == null) {
-            axis = new SimpleObjectProperty<Point3D>(this, "axis", DEFAULT_AXIS);
+            axis = new SimpleObjectProperty<>(this, "axis", DEFAULT_AXIS);
         }
         return axis;
     }

@@ -34,6 +34,7 @@ final class GtkDnDClipboard extends SystemClipboard{
         super(Clipboard.DND);
     }
 
+    @Override
     protected void pushToSystem(HashMap<String, Object> cacheData,
                                 int supportedActions) {
         final int performedAction = pushToSystemImpl(cacheData,

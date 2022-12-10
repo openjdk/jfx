@@ -47,7 +47,7 @@ public final class Popup_parentWindow_Test extends PropertiesTestBase {
 
     @Parameters
     public static Collection<Object> data() {
-        final List<Object> configurations = new ArrayList<Object>();
+        final List<Object> configurations = new ArrayList<>();
 
         TestObjects to;
 

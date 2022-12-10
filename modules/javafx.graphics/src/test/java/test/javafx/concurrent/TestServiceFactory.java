@@ -45,7 +45,7 @@ public abstract class TestServiceFactory {
 
     public abstract AbstractTask createTestTask();
     public Service<String> createService() {
-        return new ServiceShim<String>() {
+        return new ServiceShim<>() {
             @Override protected Task<String> createTask() {
                 currentTask = createTestTask();
                 currentTask.set_test(test);

@@ -32,6 +32,7 @@ class GtkClipboardDelegate implements ClipboardDelegate {
     public GtkClipboardDelegate() {
     }
 
+    @Override
     public Clipboard createClipboard(String clipboardName) {
         if (Clipboard.SYSTEM.equals(clipboardName)) {
             return new GtkSystemClipboard();

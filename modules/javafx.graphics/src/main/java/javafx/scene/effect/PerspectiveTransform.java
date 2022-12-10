@@ -133,7 +133,7 @@ public class PerspectiveTransform extends Effect {
     @Override
     com.sun.scenario.effect.PerspectiveTransform createPeer() {
         return new com.sun.scenario.effect.PerspectiveTransform();
-    };
+    }
     /**
      * The input for this {@code Effect}.
      * If set to {@code null}, or left unspecified, a graphical image of

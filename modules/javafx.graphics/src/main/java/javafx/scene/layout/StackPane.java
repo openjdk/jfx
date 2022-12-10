@@ -360,8 +360,8 @@ public class StackPane extends Pane {
       */
      private static class StyleableProperties {
          private static final CssMetaData<StackPane,Pos> ALIGNMENT =
-             new CssMetaData<StackPane,Pos>("-fx-alignment",
-                 new EnumConverter<Pos>(Pos.class),
+             new CssMetaData<>("-fx-alignment",
+                 new EnumConverter<>(Pos.class),
                  Pos.CENTER) {
 
             @Override
@@ -379,7 +379,7 @@ public class StackPane extends Pane {
          private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
          static {
             final List<CssMetaData<? extends Styleable, ?>> styleables =
-                new ArrayList<CssMetaData<? extends Styleable, ?>>(Region.getClassCssMetaData());
+                new ArrayList<>(Region.getClassCssMetaData());
             styleables.add(ALIGNMENT);
             STYLEABLES = Collections.unmodifiableList(styleables);
          }

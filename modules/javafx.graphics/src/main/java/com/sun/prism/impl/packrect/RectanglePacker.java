@@ -47,7 +47,7 @@ public class RectanglePacker {
      contained within the RectanglePacker and encompasses the storage
      algorithm for the contained Rects. */
     // Maintained in sorted order by increasing Y coordinate
-    private List<Level> levels = new ArrayList<Level>(150);
+    private List<Level> levels = new ArrayList<>(150);
     private static final int MIN_SIZE = 8; // The minimum size of level
     private static final int ROUND_UP = 4; // Round up to multiple of 4
     private int recentUsedLevelIndex = 0;

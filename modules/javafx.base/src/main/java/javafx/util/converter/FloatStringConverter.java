@@ -63,6 +63,6 @@ public class FloatStringConverter extends StringConverter<Float> {
             return "";
         }
 
-        return Float.toString(((Float)value).floatValue());
+        return Float.toString(value.floatValue());
     }
 }

@@ -65,7 +65,7 @@ final class NativeMediaAudioClipPlayer
     private static final int MAX_PLAYER_COUNT = 16;
 
     private static final List<NativeMediaAudioClipPlayer> activePlayers =
-                new ArrayList<NativeMediaAudioClipPlayer>(MAX_PLAYER_COUNT);
+                new ArrayList<>(MAX_PLAYER_COUNT);
     private static final ReentrantLock playerListLock = new ReentrantLock();
 
     public static int getPlayerLimit() {
@@ -94,7 +94,7 @@ final class NativeMediaAudioClipPlayer
     }
 
     private static final LinkedBlockingQueue<SchedulerEntry> schedule =
-            new LinkedBlockingQueue<SchedulerEntry>();
+            new LinkedBlockingQueue<>();
 
     private static void clipScheduler() {
         while (true) {
@@ -362,6 +362,7 @@ final class NativeMediaAudioClipPlayer
         }
     }
 
+    @Override
     public void onReady(PlayerStateEvent evt) {
         playerStateLock.lock();
         try {
@@ -377,19 +378,24 @@ final class NativeMediaAudioClipPlayer
         }
     }
 
+    @Override
     public void onPlaying(PlayerStateEvent evt) {
     }
 
+    @Override
     public void onPause(PlayerStateEvent evt) {
     }
 
+    @Override
     public void onStop(PlayerStateEvent evt) {
         invalidate();
     }
 
+    @Override
     public void onStall(PlayerStateEvent evt) {
     }
 
+    @Override
     public void onFinish(PlayerStateEvent evt) {
         playerStateLock.lock();
         try {
@@ -410,6 +416,7 @@ final class NativeMediaAudioClipPlayer
         }
     }
 
+    @Override
     public void onHalt(PlayerStateEvent evt) {
         invalidate();
     }
@@ -417,6 +424,7 @@ final class NativeMediaAudioClipPlayer
     public void onWarning(Object source, String message) {
     }
 
+    @Override
     public void onError(Object source, int errorCode, String message) {
         if (Logger.canLog(Logger.ERROR)) {
             Logger.logMsg(Logger.ERROR, "Error with AudioClip player: code "+errorCode+" : "+message);

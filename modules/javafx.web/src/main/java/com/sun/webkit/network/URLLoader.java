@@ -56,7 +56,6 @@ import java.security.PrivilegedAction;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.concurrent.CountDownLatch;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.InflaterInputStream;
 import javax.net.ssl.SSLHandshakeException;
@@ -620,7 +619,7 @@ final class URLLoader extends URLLoaderBase implements Runnable {
         twkDidSendData(totalBytesSent, totalBytesToBeSent, data);
     }
 
-    private void willSendRequest(URLConnection c) throws InterruptedException
+    private void willSendRequest(URLConnection c)
     {
         final int status = extractStatus(c);
         final String contentType = c.getContentType();

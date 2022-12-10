@@ -89,5 +89,5 @@ public class FireButtonBaseTest {
         @Override public void handle(ActionEvent event) {
             called = true;
         }
-    };
+    }
 }

@@ -27,7 +27,6 @@ package test.javafx.scene.transform;
 
 import javafx.event.ActionEvent;
 import javafx.event.Event;
-import javafx.event.EventDispatchChain;
 import javafx.event.EventTarget;
 import javafx.scene.transform.TransformChangedEvent;
 import org.junit.Test;
