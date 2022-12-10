@@ -30,8 +30,6 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import com.sun.javafx.tk.Toolkit;
-import javafx.animation.Animation;
-
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;

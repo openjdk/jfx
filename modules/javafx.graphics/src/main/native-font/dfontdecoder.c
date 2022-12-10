@@ -117,6 +117,9 @@ JNIEXPORT jintArray JNICALL Java_com_sun_javafx_font_DFontDecoder_getCTFontTags
     CTFontRef fontRef = (CTFontRef)fontPtr;
     CTFontTableOptions  options = kCTFontTableOptionNoOptions;
     CFArrayRef tags = CTFontCopyAvailableTables(fontRef, options);
+    if (tags == NULL) {
+        return NULL;
+    }
     CFIndex count = CFArrayGetCount(tags);
     jintArray intArrObj = (*env)->NewIntArray(env, count);
     if (intArrObj == NULL) {

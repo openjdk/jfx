@@ -27,7 +27,6 @@ package com.sun.glass.ui.monocle;
 
 import com.sun.glass.ui.Size;
 
-import java.io.IOException;
 import java.nio.ByteBuffer;
 
 /** Provides a native cursor for use with X11. Since X11 doesn't provide any

@@ -45,7 +45,7 @@ class TestStream extends InputStream {
 
     @Override
     public int read() throws IOException {
-        return p < data.length ? (int)data[p++] & 0xff : -1;
+        return p < data.length ? data[p++] & 0xff : -1;
     }
 }
 

@@ -30,7 +30,6 @@ import com.sun.scenario.animation.shared.InterpolationInterval;
 import javafx.animation.Interpolatable;
 import javafx.animation.Interpolator;
 import javafx.animation.KeyValue;
-import javafx.beans.property.Property;
 import javafx.beans.property.SimpleLongProperty;
 import javafx.util.Duration;
 import static org.junit.Assert.assertEquals;

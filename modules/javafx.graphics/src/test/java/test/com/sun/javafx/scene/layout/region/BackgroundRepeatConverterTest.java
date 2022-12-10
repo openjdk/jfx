@@ -43,7 +43,7 @@ public class BackgroundRepeatConverterTest {
      */
     @Test public void scenario1() {
         ParsedValueImpl<ParsedValue<String,BackgroundRepeat>[][], RepeatStruct[]> value =
-                new ParsedValueImpl<ParsedValue<String,BackgroundRepeat>[][], RepeatStruct[]>(
+                new ParsedValueImpl<>(
                         new ParsedValueImpl[0][0], null
                 );
         RepeatStruct[] results = RepeatStructConverter.getInstance().convert(value, null);
@@ -60,7 +60,7 @@ public class BackgroundRepeatConverterTest {
         };
 
         ParsedValueImpl<ParsedValue<String,BackgroundRepeat>[][], RepeatStruct[]> value =
-                new ParsedValueImpl<ParsedValue<String,BackgroundRepeat>[][], RepeatStruct[]>(
+                new ParsedValueImpl<>(
                         values, null
                 );
         try {
@@ -80,7 +80,7 @@ public class BackgroundRepeatConverterTest {
         };
 
         ParsedValue<ParsedValue<String,BackgroundRepeat>[][], RepeatStruct[]> value =
-                new ParsedValueImpl<ParsedValue<String,BackgroundRepeat>[][], RepeatStruct[]>(
+                new ParsedValueImpl<>(
                         values, null
                 );
         RepeatStruct[] results = RepeatStructConverter.getInstance().convert(value, null);
@@ -98,7 +98,7 @@ public class BackgroundRepeatConverterTest {
         };
 
         ParsedValue<ParsedValue<String,BackgroundRepeat>[][], RepeatStruct[]> value =
-                new ParsedValueImpl<ParsedValue<String,BackgroundRepeat>[][], RepeatStruct[]>(
+                new ParsedValueImpl<>(
                         values, null
                 );
         RepeatStruct[] results = RepeatStructConverter.getInstance().convert(value, null);
@@ -117,7 +117,7 @@ public class BackgroundRepeatConverterTest {
         };
 
         ParsedValue<ParsedValue<String,BackgroundRepeat>[][], RepeatStruct[]> value =
-                new ParsedValueImpl<ParsedValue<String,BackgroundRepeat>[][], RepeatStruct[]>(
+                new ParsedValueImpl<>(
                         values, null
                 );
         RepeatStruct[] results = RepeatStructConverter.getInstance().convert(value, null);

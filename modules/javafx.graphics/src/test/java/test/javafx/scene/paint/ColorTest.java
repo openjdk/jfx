@@ -106,7 +106,7 @@ public class ColorTest {
     public void testOfTheWayAll()
         throws IllegalArgumentException, IllegalAccessException
     {
-        ArrayList<Color> colors = new ArrayList<Color>();
+        ArrayList<Color> colors = new ArrayList<>();
         for (Field f : Color.class.getDeclaredFields()) {
             if (Modifier.isStatic(f.getModifiers()) &&
                 f.getType() == Color.class)

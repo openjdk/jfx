@@ -99,10 +99,12 @@ public abstract class Crossings {
             super(xlo, ylo, xhi, yhi);
         }
 
+        @Override
         public final boolean covers(double ystart, double yend) {
             return (limit == 2 && yranges[0] <= ystart && yranges[1] >= yend);
         }
 
+        @Override
         public void record(double ystart, double yend, int direction) {
             if (ystart >= yend) {
                 return;

@@ -24,9 +24,6 @@
  */
 package com.sun.glass.ui;
 
-import java.security.AccessController;
-import java.security.PrivilegedAction;
-
 public final class Size {
     public int width;
     public int height;

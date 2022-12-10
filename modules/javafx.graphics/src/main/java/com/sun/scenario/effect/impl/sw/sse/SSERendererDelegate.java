@@ -51,10 +51,12 @@ public class SSERendererDelegate implements RendererDelegate {
         }
     }
 
+    @Override
     public AccelType getAccelType() {
         return AccelType.SIMD;
     }
 
+    @Override
     public String getPlatformPeerName(String name, int unrollCount) {
         return Renderer.rootPkg + ".impl.sw.sse.SSE" + name + "Peer";
     }

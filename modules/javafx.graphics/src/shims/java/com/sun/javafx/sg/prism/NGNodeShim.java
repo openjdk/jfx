@@ -25,7 +25,6 @@
 package com.sun.javafx.sg.prism;
 
 import com.sun.javafx.geom.DirtyRegionContainer;
-import com.sun.javafx.geom.DirtyRegionPool;
 import com.sun.javafx.geom.RectBounds;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.geom.transform.GeneralTransform3D;

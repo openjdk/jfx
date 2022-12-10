@@ -30,11 +30,6 @@ import javafx.beans.NamedArg;
 import javafx.event.EventTarget;
 import javafx.event.EventType;
 
-import com.sun.javafx.scene.input.KeyCodeMap;
-import javafx.event.Event;
-import javafx.scene.input.ScrollEvent.HorizontalTextScrollUnits;
-import javafx.scene.input.ScrollEvent.VerticalTextScrollUnits;
-
 /**
  * An event which indicates that a keystroke occurred in a {@link javafx.scene.Node}.
  * <p>
@@ -89,19 +84,19 @@ public final class KeyEvent extends InputEvent {
      * Common supertype for all key event types.
      */
     public static final EventType<KeyEvent> ANY =
-            new EventType<KeyEvent>(InputEvent.ANY, "KEY");
+            new EventType<>(InputEvent.ANY, "KEY");
 
     /**
      * This event occurs when a key has been pressed.
      */
     public static final EventType<KeyEvent> KEY_PRESSED =
-            new EventType<KeyEvent>(KeyEvent.ANY, "KEY_PRESSED");
+            new EventType<>(KeyEvent.ANY, "KEY_PRESSED");
 
     /**
      * This event occurs when a key has been released.
      */
     public static final EventType<KeyEvent> KEY_RELEASED =
-            new EventType<KeyEvent>(KeyEvent.ANY, "KEY_RELEASED");
+            new EventType<>(KeyEvent.ANY, "KEY_RELEASED");
 
     /**
      * This event occurs when a character-generating key was typed
@@ -110,7 +105,7 @@ public final class KeyEvent extends InputEvent {
      * fields are not used.
      */
     public static final EventType<KeyEvent> KEY_TYPED =
-            new EventType<KeyEvent>(KeyEvent.ANY, "KEY_TYPED");
+            new EventType<>(KeyEvent.ANY, "KEY_TYPED");
 
     /**
      * Constructs a new {@code KeyEvent} event from the specified parameters.

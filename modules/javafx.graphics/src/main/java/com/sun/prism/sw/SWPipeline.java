@@ -62,7 +62,7 @@ public final class SWPipeline extends GraphicsPipeline {
     }
 
     private final HashMap<Integer, SWResourceFactory> factories =
-            new HashMap<Integer, SWResourceFactory>(1);
+            new HashMap<>(1);
 
     @Override
     public int getAdapterOrdinal(Screen screen) {

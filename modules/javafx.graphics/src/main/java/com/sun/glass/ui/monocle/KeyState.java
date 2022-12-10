@@ -77,8 +77,7 @@ class KeyState {
     /** Returns the Glass window on which this event state is located . */
     MonocleWindow getWindow(boolean recalculateCache) {
         if (window == null || recalculateCache) {
-            window = (MonocleWindow)
-                    MonocleWindowManager.getInstance().getFocusedWindow();
+            window = MonocleWindowManager.getInstance().getFocusedWindow();
         }
         return window;
     }
@@ -111,6 +110,7 @@ class KeyState {
         return (modifiers & KeyEvent.MODIFIER_CONTROL) != 0;
     }
 
+    @Override
     public String toString() {
         return "KeyState[modifiers=" + modifiers + ",keys=" + keysPressed + "]";
     }

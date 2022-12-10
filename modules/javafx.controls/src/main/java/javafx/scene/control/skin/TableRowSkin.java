@@ -117,7 +117,10 @@ public class TableRowSkin<T> extends TableRowSkinBase<T, TableRow<T>, TableCell<
                 // When in fixed cell size mode, we must listen to the width of the virtual flow, so
                 // that when it changes, we can appropriately add / remove cells that may or may not
                 // be required (because we remove all cells that are not visible).
-                registerChangeListener(getVirtualFlow().widthProperty(), e -> tableView.requestLayout());
+                VirtualFlow<TableRow<T>> virtualFlow = getVirtualFlow();
+                if (virtualFlow != null) {
+                    registerChangeListener(virtualFlow.widthProperty(), e -> tableView.requestLayout());
+                }
             }
         }
     }

@@ -103,7 +103,7 @@ class DWFontStrike extends PrismFontStrike<DWFontFile> {
                         index += 3;
                     }
                 } else {
-                    point.y = (float)Math.round(point.y);
+                    point.y = Math.round(point.y);
                 }
                 return index;
             }

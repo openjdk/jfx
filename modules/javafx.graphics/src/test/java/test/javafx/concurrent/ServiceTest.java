@@ -33,12 +33,9 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicBoolean;
 import javafx.concurrent.Service;
-import javafx.concurrent.Service;
 import javafx.concurrent.ServiceShim;
 import javafx.concurrent.Task;
-import javafx.concurrent.Task;
 import javafx.concurrent.TaskShim;
-import javafx.concurrent.Worker;
 import javafx.concurrent.Worker;
 import org.junit.Before;
 import org.junit.Test;
@@ -57,7 +54,7 @@ public class ServiceTest {
     @Before public void setup() {
         // I don't use the AbstractService here because I don't want to
         // take advantage of the built in executor / threading stuff
-        service = new ServiceShim<String>() {
+        service = new ServiceShim<>() {
             @Override public Task<String> createTask() {
                 return new SimpleTask();
             }
@@ -98,7 +95,7 @@ public class ServiceTest {
      */
     @Test public void executorCanBeBound() {
         final Executor e = command -> { };
-        ObjectProperty<Executor> other = new SimpleObjectProperty<Executor>(e);
+        ObjectProperty<Executor> other = new SimpleObjectProperty<>(e);
         service.executorProperty().bind(other);
         assertSame(e, service.getExecutor());
         assertSame(e, service.executorProperty().get());
@@ -182,12 +179,12 @@ public class ServiceTest {
 
         final CountDownLatch latch = new CountDownLatch(32);
         for (int i=0; i<32; i++) {
-            Service<Void> s = new ServiceShim<Void>() {
+            Service<Void> s = new ServiceShim<>() {
                 @Override public void checkThread() { }
                 @Override public void runLater(Runnable r) { r.run(); }
 
                 @Override protected Task<Void> createTask() {
-                    return new TaskShim<Void>() {
+                    return new TaskShim<>() {
                         @Override protected Void call() throws Exception {
                             Thread.sleep(1000);
                             latch.countDown();

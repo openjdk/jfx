@@ -51,16 +51,18 @@ public class NULL3DPipeline extends GraphicsPipeline {
         return theInstance;
     }
 
+    @Override
     public boolean init() {
         return true;
     }
 
 
+    @Override
     public void dispose() {
     }
 
     private final HashMap<Integer, DummyResourceFactory> factories =
-            new HashMap<Integer, DummyResourceFactory>(1);
+            new HashMap<>(1);
 
     @Override
     public int getAdapterOrdinal(Screen screen) {

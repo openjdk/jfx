@@ -25,7 +25,6 @@
 
 package test.javafx.scene.effect;
 
-import test.javafx.scene.effect.LightTestBase;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import javafx.scene.paint.Color;

@@ -48,8 +48,7 @@ class D3DVramPool extends BaseResourcePool<D3DTextureData>
     public long estimateTextureSize(int width, int height,
                                     PixelFormat format)
     {
-        return ((long) width) * ((long) height) *
-               ((long) format.getBytesPerPixelUnit());
+        return (long) width * height * format.getBytesPerPixelUnit();
     }
 
     @Override
@@ -57,7 +56,7 @@ class D3DVramPool extends BaseResourcePool<D3DTextureData>
                                       boolean hasDepth)
     {
         // REMIND: need to deal with size of depth buffer, etc.
-        return ((long) width) * ((long) height) * 4L;
+        return 4L * width * height;
     }
 
     @Override

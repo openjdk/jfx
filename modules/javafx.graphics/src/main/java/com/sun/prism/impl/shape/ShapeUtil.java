@@ -25,14 +25,11 @@
 
 package com.sun.prism.impl.shape;
 
-import com.sun.javafx.geom.Path2D;
-import com.sun.javafx.geom.PathConsumer2D;
 import com.sun.javafx.geom.RectBounds;
 import com.sun.javafx.geom.Shape;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.prism.BasicStroke;
 import com.sun.prism.impl.PrismSettings;
-import com.sun.prism.impl.PrismSettings.RasterizerType;
 
 public class ShapeUtil {
 

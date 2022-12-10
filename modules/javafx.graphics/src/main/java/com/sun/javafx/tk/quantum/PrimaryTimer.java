@@ -76,6 +76,7 @@ public final class PrimaryTimer extends AbstractPrimaryTimer {
      * @return pulse duration value, either in ms or ns depending on the
      * parameter.
      */
+    @Override
     protected int getPulseDuration(int precision) {
         int retVal = precision / 60;
         // Allow Setting to override monitor refresh
@@ -101,6 +102,7 @@ public final class PrimaryTimer extends AbstractPrimaryTimer {
         return retVal;
     }
 
+    @Override
     protected void postUpdateAnimationRunnable(DelayedRunnable animationRunnable) {
         Toolkit.getToolkit().setAnimationRunnable(animationRunnable);
     }

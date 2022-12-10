@@ -30,7 +30,6 @@ import javafx.collections.ObservableSet;
 import javafx.print.Printer;
 import javafx.print.PrinterJob;
 
-import javafx.print.Printer;
 import com.sun.javafx.print.PrinterJobImpl;
 
 public abstract class PrintPipeline {

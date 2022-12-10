@@ -24,10 +24,7 @@
  */
 package com.sun.glass.ui.mac;
 
-import com.sun.glass.ui.Application;
 import com.sun.glass.ui.Timer;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 
 /**
  * MacOSX platform implementation class for Timer.

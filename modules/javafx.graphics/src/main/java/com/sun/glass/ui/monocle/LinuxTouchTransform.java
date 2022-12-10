@@ -148,7 +148,7 @@ class LinuxTouchTransform {
                     "monocle.input." + product + ".max" + axisName,
                     caps.getMaximum());
             translates[index] = -minimum;
-            scalars[index] = ((double) (range)) / (maximum - minimum);
+            scalars[index] = range / (maximum - minimum);
             return null;
         });
     }
