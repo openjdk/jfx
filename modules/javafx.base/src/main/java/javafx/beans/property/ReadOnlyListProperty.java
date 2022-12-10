@@ -115,15 +115,14 @@ public abstract class ReadOnlyListProperty<E> extends ListExpression<E>
             return false;
         }
 
-        @SuppressWarnings("unchecked")
-        final List<E> list = (List<E>)obj;  // safe cast as elements are only referenced
+        final List<?> list = (List<?>)obj;
 
         if (size() != list.size()) {
             return false;
         }
 
         ListIterator<E> e1 = listIterator();
-        ListIterator<E> e2 = list.listIterator();
+        ListIterator<?> e2 = list.listIterator();
         while (e1.hasNext() && e2.hasNext()) {
             E o1 = e1.next();
             Object o2 = e2.next();
