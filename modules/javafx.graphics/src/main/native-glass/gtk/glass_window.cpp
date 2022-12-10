@@ -1176,7 +1176,10 @@ void WindowContextTop::set_bounds(int x, int y, bool xSet, bool ySet, int w, int
 
 void WindowContextTop::process_map() {
     map_received = true;
-    request_focus();
+
+    if (!is_iconified) {
+        request_focus();
+    }
 }
 
 void WindowContextTop::applyShapeMask(void* data, uint width, uint height) {
