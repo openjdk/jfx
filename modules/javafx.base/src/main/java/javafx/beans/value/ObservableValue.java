@@ -287,12 +287,6 @@ public interface ObservableValue<T> extends Observable {
      *
      * condition.setValue(true);  // longLivedProperty is observed again, and "D" is printed
      * }</pre>
-     * An example for binding a label's text to a long-lived property only when it is shown:
-     * <pre>{@code
-     * Label label = ... ;
-     * ObservableValue<String> longLivedProperty = new SimpleStringProperty("A");
-     * label.textProperty().bind(longLivedProperty.when(label::isShownProperty));
-     * }</pre>
      *
      * @param condition a boolean {@code ObservableValue}, cannot be {@code null}
      * @return an {@code ObservableValue} that holds this value whenever the given
