@@ -1256,63 +1256,6 @@ public class NodeTest {
     }
 
     @Test
-    public void testIsShowingProperty() {
-        final Group g = new Group();
-        final Circle c = new CircleTest.StubCircle(50);
-
-        ParentShim.getChildren(g).add(c);
-
-        Scene s = new Scene(g);
-        Stage st = new Stage();
-
-        assertFalse(g.isShown());
-        assertFalse(c.isShown());
-        assertFalse(g.shownProperty().get());
-        assertFalse(c.shownProperty().get());
-
-        st.show();
-        st.setScene(s);
-        SceneShim.scenePulseListener_pulse(s);
-
-        assertTrue(g.isShown());
-        assertTrue(c.isShown());
-        assertTrue(g.shownProperty().get());
-        assertTrue(c.shownProperty().get());
-
-        g.setVisible(false);  // irrelevant change for isShown
-        SceneShim.scenePulseListener_pulse(s);
-
-        assertTrue(g.isShown());
-        assertTrue(c.isShown());
-        assertTrue(g.shownProperty().get());
-        assertTrue(c.shownProperty().get());
-
-        s.setRoot(new Group());
-        SceneShim.scenePulseListener_pulse(s);
-
-        assertFalse(g.isShown());
-        assertFalse(c.isShown());
-        assertFalse(g.shownProperty().get());
-        assertFalse(c.shownProperty().get());
-
-        s.setRoot(g);
-        SceneShim.scenePulseListener_pulse(s);
-
-        assertTrue(g.isShown());
-        assertTrue(c.isShown());
-        assertTrue(g.shownProperty().get());
-        assertTrue(c.shownProperty().get());
-
-        st.hide();
-        SceneShim.scenePulseListener_pulse(s);
-
-        assertFalse(g.isShown());
-        assertFalse(c.isShown());
-        assertFalse(g.shownProperty().get());
-        assertFalse(c.shownProperty().get());
-    }
-
-    @Test
     public void testSynchronizationOfInvisibleNodes_2() {
         final Group g = new Group();
         final Circle c = new CircleTest.StubCircle(50);

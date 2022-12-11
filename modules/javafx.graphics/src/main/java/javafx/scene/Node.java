@@ -50,7 +50,6 @@ import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.StringProperty;
 import javafx.beans.property.StringPropertyBase;
 import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener.Change;
 import javafx.collections.ObservableList;
@@ -1201,7 +1200,6 @@ public abstract class Node implements EventTarget, Styleable {
      * @defaultValue null
      * @see <a href="doc-files/cssref.html">CSS Reference Guide</a>
      */
-    @Override
     public final String getId() {
         return id == null ? null : id.get();
     }
@@ -1311,7 +1309,6 @@ public abstract class Node implements EventTarget, Styleable {
      *         an empty String is returned.
      * @see <a href="doc-files/cssref.html">CSS Reference Guide</a>
      */
-    @Override
     public final String getStyle() {
         return style == null ? "" : style.get();
     }
@@ -1405,93 +1402,6 @@ public abstract class Node implements EventTarget, Styleable {
             };
         }
         return visible;
-    }
-
-    /**
-     * Indicates whether or not this {@code Node} is shown. A node is considered shown if it's
-     * part of a {@code Scene} that is part of a {@code Window} whose
-     * {@link Window#showingProperty showing} property is {@code true}. The {@link Node#visibleProperty visibility}
-     * of the node or its scene does not affect this property.
-     * <p>
-     * This property can be used in conjunction with {@link ObservableValue#when} to
-     * create bindings which are only actively listening to their source when the node is shown.
-     * <p>
-     * This property can also be useful to perform actions when the node is shown or no longer
-     * shown, like starting and stopping animations
-     *
-     * @since 20
-     */
-    private ReadOnlyBooleanProperty shown;
-
-    public final boolean isShown() {
-        if (shown == null) {  // avoid eager instantiation of property
-            Scene s = getScene();
-            if (s == null) return false;
-            Window w = s.getWindow();
-            return w != null && w.isShowing();
-        }
-
-        return shown.get();
-    }
-
-    public final ReadOnlyBooleanProperty shownProperty() {
-        if (shown == null) {
-            ObservableValue<Boolean> ov = sceneProperty()
-                .flatMap(Scene::windowProperty)
-                .flatMap(Window::showingProperty);  // note: the null case is handled by the delegate with an orElse(false)
-
-            shown = new ReadOnlyBooleanDelegate(Node.this, "shown", ov);
-        }
-
-        return shown;
-    }
-
-    // Candidate to make publicly available or to add as a convenience method to ObservableValue
-    private static class ReadOnlyBooleanDelegate extends ReadOnlyBooleanProperty {
-        private final ObservableValue<Boolean> delegate;
-        private final Object bean;
-        private final String name;
-
-        ReadOnlyBooleanDelegate(Object bean, String name, ObservableValue<Boolean> delegate) {
-            this.bean = bean;
-            this.name = name;
-            this.delegate = delegate.orElse(false);
-        }
-
-        @Override
-        public Object getBean() {
-            return bean;
-        }
-
-        @Override
-        public String getName() {
-            return name;
-        }
-
-        @Override
-        public void addListener(ChangeListener<? super Boolean> listener) {
-            delegate.addListener(listener);
-        }
-
-        @Override
-        public void removeListener(ChangeListener<? super Boolean> listener) {
-            delegate.removeListener(listener);
-        }
-
-        @Override
-        public void addListener(InvalidationListener listener) {
-            delegate.addListener(listener);
-        }
-
-        @Override
-        public void removeListener(InvalidationListener listener) {
-            delegate.removeListener(listener);
-        }
-
-        @Override
-        public boolean get() {
-            return delegate.getValue();  // orElse guarantees this is never null
-        }
     }
 
     public final void setCursor(Cursor value) {
@@ -8603,8 +8513,15 @@ public abstract class Node implements EventTarget, Styleable {
 
     }
 
+    private boolean isWindowShowing() {
+        Scene s = getScene();
+        if (s == null) return false;
+        Window w = s.getWindow();
+        return w != null && w.isShowing();
+    }
+
     final boolean isTreeShowing() {
-        return isTreeVisible() && isShown();
+        return isTreeVisible() && isWindowShowing();
     }
 
     private void updateTreeVisible(boolean parentChanged) {
