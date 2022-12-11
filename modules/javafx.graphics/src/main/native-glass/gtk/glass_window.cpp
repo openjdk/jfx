@@ -564,15 +564,6 @@ void WindowContextBase::show_or_hide_children(bool show) {
     }
 }
 
-void WindowContextBase::reparent_children(WindowContext* parent) {
-    std::set<WindowContextTop*>::iterator it;
-    for (it = children.begin(); it != children.end(); ++it) {
-        (*it)->set_owner(parent);
-        parent->add_child(*it);
-    }
-    children.clear();
-}
-
 void WindowContextBase::set_visible(bool visible) {
     if (visible) {
         gtk_widget_show(gtk_widget);

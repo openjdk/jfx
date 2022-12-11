@@ -214,7 +214,6 @@ public:
     void add_child(WindowContextTop*);
     void remove_child(WindowContextTop*);
     void show_or_hide_children(bool);
-    void reparent_children(WindowContext* parent);
     void set_visible(bool);
     bool is_visible();
     bool set_view(jobject);
