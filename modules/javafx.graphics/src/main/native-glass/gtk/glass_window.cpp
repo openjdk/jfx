@@ -962,8 +962,8 @@ bool WindowContextTop::get_frame_extents_property(int *top, int *left,
 void WindowContextTop::process_net_wm_property() {
     // Workaround for https://bugs.launchpad.net/unity/+bug/998073
 
-     // This is a Unity bug (which is not Ubuntu default anymore)
-    if (!g_strcmp0("Unity", gdk_x11_screen_get_window_manager_name(gdk_screen_get_default()))) {
+    // This is a Unity bug (which is not Ubuntu default anymore)
+    if (!g_strcmp0("Compiz", gdk_x11_screen_get_window_manager_name(gdk_screen_get_default()))) {
         return;
     }
 
