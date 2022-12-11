@@ -76,22 +76,19 @@ public class BidirectionalContentBinding {
 
     public static void unbind(Object obj1, Object obj2) {
         checkParameters(obj1, obj2);
-        if ((obj1 instanceof ObservableList) && (obj2 instanceof ObservableList)) {
-            final ObservableList list1 = (ObservableList)obj1;
-            final ObservableList list2 = (ObservableList)obj2;
-            final ListContentBinding binding = new ListContentBinding(list1, list2);
+        if ((obj1 instanceof ObservableList<?> list1) && (obj2 instanceof ObservableList<?> list2)) {
+            @SuppressWarnings("unchecked")
+            final ListContentBinding<Object> binding = new ListContentBinding<>((ObservableList<Object>) list1, (ObservableList<Object>) list2);
             list1.removeListener(binding);
             list2.removeListener(binding);
-        } else if ((obj1 instanceof ObservableSet) && (obj2 instanceof ObservableSet)) {
-            final ObservableSet set1 = (ObservableSet)obj1;
-            final ObservableSet set2 = (ObservableSet)obj2;
-            final SetContentBinding binding = new SetContentBinding(set1, set2);
+        } else if ((obj1 instanceof ObservableSet<?> set1) && (obj2 instanceof ObservableSet<?> set2)) {
+            @SuppressWarnings("unchecked")
+            final SetContentBinding<Object> binding = new SetContentBinding<>((ObservableSet<Object>) set1, (ObservableSet<Object>) set2);
             set1.removeListener(binding);
             set2.removeListener(binding);
-        } else if ((obj1 instanceof ObservableMap) && (obj2 instanceof ObservableMap)) {
-            final ObservableMap map1 = (ObservableMap)obj1;
-            final ObservableMap map2 = (ObservableMap)obj2;
-            final MapContentBinding binding = new MapContentBinding(map1, map2);
+        } else if ((obj1 instanceof ObservableMap<?, ?> map1) && (obj2 instanceof ObservableMap<?, ?> map2)) {
+            @SuppressWarnings("unchecked")
+            final MapContentBinding<Object, Object> binding = new MapContentBinding<>((ObservableMap<Object, Object>) map1, (ObservableMap<Object, Object>) map2);
             map1.removeListener(binding);
             map2.removeListener(binding);
         }
@@ -172,8 +169,7 @@ public class BidirectionalContentBinding {
                 return false;
             }
 
-            if (obj instanceof ListContentBinding) {
-                final ListContentBinding otherBinding = (ListContentBinding) obj;
+            if (obj instanceof ListContentBinding<?> otherBinding) {
                 final Object propertyB1 = otherBinding.propertyRef1.get();
                 final Object propertyB2 = otherBinding.propertyRef2.get();
                 if ((propertyB1 == null) || (propertyB2 == null)) {
@@ -258,8 +254,7 @@ public class BidirectionalContentBinding {
                 return false;
             }
 
-            if (obj instanceof SetContentBinding) {
-                final SetContentBinding otherBinding = (SetContentBinding) obj;
+            if (obj instanceof SetContentBinding<?> otherBinding) {
                 final Object propertyB1 = otherBinding.propertyRef1.get();
                 final Object propertyB2 = otherBinding.propertyRef2.get();
                 if ((propertyB1 == null) || (propertyB2 == null)) {
@@ -345,8 +340,7 @@ public class BidirectionalContentBinding {
                 return false;
             }
 
-            if (obj instanceof MapContentBinding) {
-                final MapContentBinding otherBinding = (MapContentBinding) obj;
+            if (obj instanceof MapContentBinding<?, ?> otherBinding) {
                 final Object propertyB1 = otherBinding.propertyRef1.get();
                 final Object propertyB2 = otherBinding.propertyRef2.get();
                 if ((propertyB1 == null) || (propertyB2 == null)) {

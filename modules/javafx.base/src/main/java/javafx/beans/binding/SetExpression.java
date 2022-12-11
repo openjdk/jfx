@@ -63,11 +63,11 @@ public abstract class SetExpression<E> implements ObservableSetValue<E> {
     public SetExpression() {
     }
 
-    private static final ObservableSet EMPTY_SET = new EmptyObservableSet();
+    private static final ObservableSet<?> EMPTY_SET = new EmptyObservableSet<>();
 
     private static class EmptyObservableSet<E> extends AbstractSet<E> implements ObservableSet<E> {
 
-        private static final Iterator iterator = new Iterator() {
+        private static final Iterator<?> iterator = new Iterator<>() {
             @Override
             public boolean hasNext() {
                 return false;
@@ -85,9 +85,10 @@ public abstract class SetExpression<E> implements ObservableSetValue<E> {
             }
         };
 
+        @SuppressWarnings("unchecked")
         @Override
         public Iterator<E> iterator() {
-            return iterator;
+            return (Iterator<E>) iterator;
         }
 
         @Override
@@ -263,7 +264,7 @@ public abstract class SetExpression<E> implements ObservableSetValue<E> {
     @Override
     public Iterator<E> iterator() {
         final ObservableSet<E> set = get();
-        return (set == null)? EMPTY_SET.iterator() : set.iterator();
+        return (set == null)? SetExpression.<E>emptySet().iterator() : set.iterator();
     }
 
     @Override
@@ -281,7 +282,7 @@ public abstract class SetExpression<E> implements ObservableSetValue<E> {
     @Override
     public boolean add(E element) {
         final ObservableSet<E> set = get();
-        return (set == null)? EMPTY_SET.add(element) : set.add(element);
+        return (set == null)? emptySet().add(element) : set.add(element);
     }
 
     @Override
@@ -299,7 +300,7 @@ public abstract class SetExpression<E> implements ObservableSetValue<E> {
     @Override
     public boolean addAll(Collection<? extends E> elements) {
         final ObservableSet<E> set = get();
-        return (set == null)? EMPTY_SET.addAll(elements) : set.addAll(elements);
+        return (set == null)? emptySet().addAll(elements) : set.addAll(elements);
     }
 
     @Override
@@ -324,4 +325,8 @@ public abstract class SetExpression<E> implements ObservableSetValue<E> {
         }
     }
 
+    @SuppressWarnings("unchecked")
+    private static <E> ObservableSet<E> emptySet() {
+        return (ObservableSet<E>) EMPTY_SET;
+    }
 }

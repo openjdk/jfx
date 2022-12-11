@@ -55,7 +55,7 @@ import java.util.ListIterator;
  */
 public abstract class ListExpression<E> implements ObservableListValue<E> {
 
-    private static final ObservableList EMPTY_LIST = FXCollections.emptyObservableList();
+    private static final ObservableList<?> EMPTY_LIST = FXCollections.emptyObservableList();
 
     /**
      * Creates a default {@code ListExpression}.
@@ -235,7 +235,7 @@ public abstract class ListExpression<E> implements ObservableListValue<E> {
     @Override
     public Iterator<E> iterator() {
         final ObservableList<E> list = get();
-        return (list == null)? EMPTY_LIST.iterator() : list.iterator();
+        return (list == null)? ListExpression.<E>emptyList().iterator() : list.iterator();
     }
 
     @Override
@@ -253,7 +253,7 @@ public abstract class ListExpression<E> implements ObservableListValue<E> {
     @Override
     public boolean add(E element) {
         final ObservableList<E> list = get();
-        return (list == null)? EMPTY_LIST.add(element) : list.add(element);
+        return (list == null)? emptyList().add(element) : list.add(element);
     }
 
     @Override
@@ -271,13 +271,13 @@ public abstract class ListExpression<E> implements ObservableListValue<E> {
     @Override
     public boolean addAll(Collection<? extends E> elements) {
         final ObservableList<E> list = get();
-        return (list == null)? EMPTY_LIST.addAll(elements) : list.addAll(elements);
+        return (list == null)? emptyList().addAll(elements) : list.addAll(elements);
     }
 
     @Override
     public boolean addAll(int i, Collection<? extends E> elements) {
         final ObservableList<E> list = get();
-        return (list == null)? EMPTY_LIST.addAll(i, elements) : list.addAll(i, elements);
+        return (list == null)? emptyList().addAll(i, elements) : list.addAll(i, elements);
     }
 
     @Override
@@ -305,20 +305,20 @@ public abstract class ListExpression<E> implements ObservableListValue<E> {
     @Override
     public E get(int i) {
         final ObservableList<E> list = get();
-        return (list == null)? (E) EMPTY_LIST.get(i) : list.get(i);
+        return (list == null)? ListExpression.<E>emptyList().get(i) : list.get(i);
     }
 
     @Override
     public E set(int i, E element) {
         final ObservableList<E> list = get();
-        return (list == null)? (E) EMPTY_LIST.set(i, element) : list.set(i, element);
+        return (list == null)? ListExpression.<E>emptyList().set(i, element) : list.set(i, element);
     }
 
     @Override
     public void add(int i, E element) {
         final ObservableList<E> list = get();
         if (list == null) {
-            EMPTY_LIST.add(i, element);
+            emptyList().add(i, element);
         } else {
             list.add(i, element);
         }
@@ -327,7 +327,7 @@ public abstract class ListExpression<E> implements ObservableListValue<E> {
     @Override
     public E remove(int i) {
         final ObservableList<E> list = get();
-        return (list == null)? (E) EMPTY_LIST.remove(i) : list.remove(i);
+        return (list == null)? ListExpression.<E>emptyList().remove(i) : list.remove(i);
     }
 
     @Override
@@ -345,49 +345,49 @@ public abstract class ListExpression<E> implements ObservableListValue<E> {
     @Override
     public ListIterator<E> listIterator() {
         final ObservableList<E> list = get();
-        return (list == null)? EMPTY_LIST.listIterator() : list.listIterator();
+        return (list == null)? ListExpression.<E>emptyList().listIterator() : list.listIterator();
     }
 
     @Override
     public ListIterator<E> listIterator(int i) {
         final ObservableList<E> list = get();
-        return (list == null)? EMPTY_LIST.listIterator(i) : list.listIterator(i);
+        return (list == null)? ListExpression.<E>emptyList().listIterator(i) : list.listIterator(i);
     }
 
     @Override
     public List<E> subList(int from, int to) {
         final ObservableList<E> list = get();
-        return (list == null)? EMPTY_LIST.subList(from, to) : list.subList(from, to);
+        return (list == null)? ListExpression.<E>emptyList().subList(from, to) : list.subList(from, to);
     }
 
     @Override
     public boolean addAll(E... elements) {
         final ObservableList<E> list = get();
-        return (list == null)? EMPTY_LIST.addAll(elements) : list.addAll(elements);
+        return (list == null)? emptyList().addAll(elements) : list.addAll(elements);
     }
 
     @Override
     public boolean setAll(E... elements) {
         final ObservableList<E> list = get();
-        return (list == null)? EMPTY_LIST.setAll(elements) : list.setAll(elements);
+        return (list == null)? emptyList().setAll(elements) : list.setAll(elements);
     }
 
     @Override
     public boolean setAll(Collection<? extends E> elements) {
         final ObservableList<E> list = get();
-        return (list == null)? EMPTY_LIST.setAll(elements) : list.setAll(elements);
+        return (list == null)? emptyList().setAll(elements) : list.setAll(elements);
     }
 
     @Override
     public boolean removeAll(E... elements) {
         final ObservableList<E> list = get();
-        return (list == null)? EMPTY_LIST.removeAll(elements) : list.removeAll(elements);
+        return (list == null)? emptyList().removeAll(elements) : list.removeAll(elements);
     }
 
     @Override
     public boolean retainAll(E... elements) {
         final ObservableList<E> list = get();
-        return (list == null)? EMPTY_LIST.retainAll(elements) : list.retainAll(elements);
+        return (list == null)? emptyList().retainAll(elements) : list.retainAll(elements);
     }
 
     @Override
@@ -400,4 +400,8 @@ public abstract class ListExpression<E> implements ObservableListValue<E> {
         }
     }
 
+    @SuppressWarnings("unchecked")
+    private static <E> ObservableList<E> emptyList() {
+        return (ObservableList<E>) EMPTY_LIST;
+    }
 }

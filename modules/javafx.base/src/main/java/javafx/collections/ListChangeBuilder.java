@@ -637,10 +637,10 @@ final class ListChangeBuilder<E> {
 
     private static class IterableChange<E> extends Change<E> {
 
-        private SubChange[] changes;
+        private SubChange<E>[] changes;
         private int cursor = -1;
 
-        private IterableChange(SubChange[] changes, ObservableList<E> list) {
+        private IterableChange(SubChange<E>[] changes, ObservableList<E> list) {
             super(list);
             this.changes = changes;
         }

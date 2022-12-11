@@ -56,7 +56,7 @@ import java.util.*;
  */
 public abstract class MapExpression<K, V> implements ObservableMapValue<K, V> {
 
-    private static final ObservableMap EMPTY_MAP = new EmptyObservableMap();
+    private static final ObservableMap<?, ?> EMPTY_MAP = new EmptyObservableMap<>();
 
     private static class EmptyObservableMap<K, V> extends AbstractMap<K, V> implements ObservableMap<K, V> {
 
@@ -267,20 +267,20 @@ public abstract class MapExpression<K, V> implements ObservableMapValue<K, V> {
     @Override
     public V put(K key, V value) {
         final ObservableMap<K, V> map = get();
-        return (map == null)? (V) EMPTY_MAP.put(key, value) : map.put(key, value);
+        return (map == null)? MapExpression.<K, V>emptyMap().put(key, value) : map.put(key, value);
     }
 
     @Override
     public V remove(Object obj) {
         final ObservableMap<K, V> map = get();
-        return (map == null)? (V) EMPTY_MAP.remove(obj) : map.remove(obj);
+        return (map == null)? MapExpression.<K, V>emptyMap().remove(obj) : map.remove(obj);
     }
 
     @Override
     public void putAll(Map<? extends K, ? extends V> elements) {
         final ObservableMap<K, V> map = get();
         if (map == null) {
-            EMPTY_MAP.putAll(elements);
+            emptyMap().putAll(elements);
         } else {
             map.putAll(elements);
         }
@@ -299,25 +299,29 @@ public abstract class MapExpression<K, V> implements ObservableMapValue<K, V> {
     @Override
     public Set<K> keySet() {
         final ObservableMap<K, V> map = get();
-        return (map == null)? EMPTY_MAP.keySet() : map.keySet();
+        return (map == null)? MapExpression.<K, V>emptyMap().keySet() : map.keySet();
     }
 
     @Override
     public Collection<V> values() {
         final ObservableMap<K, V> map = get();
-        return (map == null)? EMPTY_MAP.values() : map.values();
+        return (map == null)? MapExpression.<K, V>emptyMap().values() : map.values();
     }
 
     @Override
     public Set<Entry<K, V>> entrySet() {
         final ObservableMap<K, V> map = get();
-        return (map == null)? EMPTY_MAP.entrySet() : map.entrySet();
+        return (map == null)? MapExpression.<K, V>emptyMap().entrySet() : map.entrySet();
     }
 
     @Override
     public V get(Object key) {
         final ObservableMap<K, V> map = get();
-        return (map == null)? (V) EMPTY_MAP.get(key) : map.get(key);
+        return (map == null)? MapExpression.<K, V>emptyMap().get(key) : map.get(key);
     }
 
+    @SuppressWarnings("unchecked")
+    private static <K, V> ObservableMap<K, V> emptyMap() {
+        return (ObservableMap<K, V>) EMPTY_MAP;
+    }
 }

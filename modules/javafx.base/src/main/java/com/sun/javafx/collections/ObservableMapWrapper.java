@@ -525,10 +525,9 @@ public class ObservableMapWrapper<K, V> implements ObservableMap<K, V>{
 
         @Override
         public final boolean equals(Object o) {
-            if (!(o instanceof Map.Entry)) {
+            if (!(o instanceof Map.Entry<?, ?> e)) {
                 return false;
             }
-            Map.Entry e = (Map.Entry) o;
             Object k1 = getKey();
             Object k2 = e.getKey();
             if (k1 == k2 || (k1 != null && k1.equals(k2))) {
