@@ -49,7 +49,6 @@ import javafx.scene.ParentShim;
 import javafx.scene.PerspectiveCamera;
 import javafx.scene.Scene;
 import javafx.scene.SubScene;
-import javafx.scene.input.MouseDragEvent;
 import javafx.scene.input.PickResult;
 import javafx.scene.paint.Color;
 import javafx.scene.transform.Rotate;

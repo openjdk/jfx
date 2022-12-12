@@ -258,7 +258,7 @@ public final class ImageTest {
     public void loadMultipleImagesAsyncTest() {
         final int multiImageCount = 100;
         final Queue<StubAsyncImageLoader> asyncLoaders =
-                new LinkedList<StubAsyncImageLoader>();
+                new LinkedList<>();
         final Image[] images = new Image[multiImageCount];
 
         StubAsyncImageLoader lastAsyncLoader = null;
@@ -394,11 +394,11 @@ public final class ImageTest {
                 getLastAsyncImageLoader();
 
         final PropertyInvalidationCounter<Number> widthInvalidationCounter =
-                new PropertyInvalidationCounter<Number>();
+                new PropertyInvalidationCounter<>();
         final PropertyInvalidationCounter<Number> heightInvalidationCounter =
-                new PropertyInvalidationCounter<Number>();
+                new PropertyInvalidationCounter<>();
         final PropertyInvalidationCounter<Object> plImageInvalidationCounter =
-                new PropertyInvalidationCounter<Object>();
+                new PropertyInvalidationCounter<>();
 
         image.widthProperty().addListener(widthInvalidationCounter);
         image.heightProperty().addListener(heightInvalidationCounter);

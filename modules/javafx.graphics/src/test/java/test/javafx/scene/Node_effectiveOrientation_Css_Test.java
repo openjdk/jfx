@@ -28,7 +28,6 @@ package test.javafx.scene;
 import com.sun.javafx.css.StyleManager;
 import javafx.css.Stylesheet;
 import javafx.css.CssParser;
-import com.sun.javafx.tk.Toolkit;
 import static javafx.geometry.NodeOrientation.*;
 import javafx.scene.Group;
 import javafx.scene.Scene;

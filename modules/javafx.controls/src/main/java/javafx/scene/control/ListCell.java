@@ -122,7 +122,7 @@ public class ListCell<T> extends IndexedCell<T> {
      * Listens to the selectionModel property on the ListView. Whenever the entire model is changed,
      * we have to unhook the weakSelectedListener and update the selection.
      */
-    private final ChangeListener<MultipleSelectionModel<T>> selectionModelPropertyListener = new ChangeListener<MultipleSelectionModel<T>>() {
+    private final ChangeListener<MultipleSelectionModel<T>> selectionModelPropertyListener = new ChangeListener<>() {
         @Override
         public void changed(
                 ObservableValue<? extends MultipleSelectionModel<T>> observable,
@@ -205,7 +205,7 @@ public class ListCell<T> extends IndexedCell<T> {
      * Listens to the focusModel property on the ListView. Whenever the entire model is changed,
      * we have to unhook the weakFocusedListener and update the focus.
      */
-    private final ChangeListener<FocusModel<T>> focusModelPropertyListener = new ChangeListener<FocusModel<T>>() {
+    private final ChangeListener<FocusModel<T>> focusModelPropertyListener = new ChangeListener<>() {
         @Override public void changed(ObservableValue<? extends FocusModel<T>> observable,
                                       FocusModel<T> oldValue,
                                       FocusModel<T> newValue) {
@@ -221,12 +221,12 @@ public class ListCell<T> extends IndexedCell<T> {
 
 
     private final WeakInvalidationListener weakEditingListener = new WeakInvalidationListener(editingListener);
-    private final WeakListChangeListener<Integer> weakSelectedListener = new WeakListChangeListener<Integer>(selectedListener);
-    private final WeakChangeListener<MultipleSelectionModel<T>> weakSelectionModelPropertyListener = new WeakChangeListener<MultipleSelectionModel<T>>(selectionModelPropertyListener);
-    private final WeakListChangeListener<T> weakItemsListener = new WeakListChangeListener<T>(itemsListener);
+    private final WeakListChangeListener<Integer> weakSelectedListener = new WeakListChangeListener<>(selectedListener);
+    private final WeakChangeListener<MultipleSelectionModel<T>> weakSelectionModelPropertyListener = new WeakChangeListener<>(selectionModelPropertyListener);
+    private final WeakListChangeListener<T> weakItemsListener = new WeakListChangeListener<>(itemsListener);
     private final WeakInvalidationListener weakItemsPropertyListener = new WeakInvalidationListener(itemsPropertyListener);
     private final WeakInvalidationListener weakFocusedListener = new WeakInvalidationListener(focusedListener);
-    private final WeakChangeListener<FocusModel<T>> weakFocusModelPropertyListener = new WeakChangeListener<FocusModel<T>>(focusModelPropertyListener);
+    private final WeakChangeListener<FocusModel<T>> weakFocusModelPropertyListener = new WeakChangeListener<>(focusModelPropertyListener);
 
     /* *************************************************************************
      *                                                                         *
@@ -237,11 +237,11 @@ public class ListCell<T> extends IndexedCell<T> {
     /**
      * The ListView associated with this Cell.
      */
-    private ReadOnlyObjectWrapper<ListView<T>> listView = new ReadOnlyObjectWrapper<ListView<T>>(this, "listView") {
+    private ReadOnlyObjectWrapper<ListView<T>> listView = new ReadOnlyObjectWrapper<>(this, "listView") {
         /**
          * A weak reference to the ListView itself, such that whenever the ...
          */
-        private WeakReference<ListView<T>> weakListViewRef = new WeakReference<ListView<T>>(null);
+        private WeakReference<ListView<T>> weakListViewRef = new WeakReference<>(null);
 
         @Override protected void invalidated() {
             // Get the current and old list view references
@@ -300,7 +300,7 @@ public class ListCell<T> extends IndexedCell<T> {
                 currentListView.focusModelProperty().addListener(weakFocusModelPropertyListener);
                 currentListView.selectionModelProperty().addListener(weakSelectionModelPropertyListener);
 
-                weakListViewRef = new WeakReference<ListView<T>>(currentListView);
+                weakListViewRef = new WeakReference<>(currentListView);
             }
 
             updateItem(-1);
@@ -343,7 +343,7 @@ public class ListCell<T> extends IndexedCell<T> {
 
     /** {@inheritDoc} */
     @Override protected Skin<?> createDefaultSkin() {
-        return new ListCellSkin<T>(this);
+        return new ListCellSkin<>(this);
     }
 
 
@@ -373,7 +373,7 @@ public class ListCell<T> extends IndexedCell<T> {
         indexAtStartEdit = getIndex();
          // Inform the ListView of the edit starting.
         if (list != null) {
-            list.fireEvent(new ListView.EditEvent<T>(list,
+            list.fireEvent(new ListView.EditEvent<>(list,
                     ListView.<T>editStartEvent(),
                     null,
                     indexAtStartEdit));
@@ -398,7 +398,7 @@ public class ListCell<T> extends IndexedCell<T> {
         // JDK-8187307: fire the commit after updating cell's editing state
         if (list != null) {
             // Inform the ListView of the edit being ready to be committed.
-            list.fireEvent(new ListView.EditEvent<T>(list,
+            list.fireEvent(new ListView.EditEvent<>(list,
                     ListView.<T>editCommitEvent(),
                     newValue,
                     list.getEditingIndex()));
@@ -441,7 +441,7 @@ public class ListCell<T> extends IndexedCell<T> {
             // It would be rude of us to request it back again.
             ControlUtils.requestFocusOnControlOnlyIfCurrentFocusOwnerIsChild(list);
 
-            list.fireEvent(new ListView.EditEvent<T>(list,
+            list.fireEvent(new ListView.EditEvent<>(list,
                     ListView.<T>editCancelEvent(),
                     null,
                     indexAtStartEdit));

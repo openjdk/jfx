@@ -146,7 +146,7 @@ static const int AVCODEC_LIBAV_EXPLICIT_VERSIONS[] = { 54, 56 };
 // For ffmpeg (libavcodec-ffmpeg.so)
 static const int AVCODEC_FFMPEG_EXPLICIT_VERSIONS[] = { 56 };
 // For libav or ffmpeg (libavcodec.so)
-static const int AVCODEC_EXPLICIT_VERSIONS[] = { 57, 58 };
+static const int AVCODEC_EXPLICIT_VERSIONS[] = { 57, 58, 59 };
 
 /*
  * Callback passed to dl_iterate_phdr(): finds the path of

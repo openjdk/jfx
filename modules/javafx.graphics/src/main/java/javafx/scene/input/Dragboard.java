@@ -25,13 +25,11 @@
 
 package javafx.scene.input;
 
-import java.security.Permission;
 import java.util.Set;
 
 import com.sun.javafx.scene.input.DragboardHelper;
 import com.sun.javafx.tk.PermissionHelper;
 import com.sun.javafx.tk.TKClipboard;
-import com.sun.javafx.tk.TKScene;
 import javafx.scene.image.Image;
 
 /**

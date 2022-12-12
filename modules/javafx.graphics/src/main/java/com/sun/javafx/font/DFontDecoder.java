@@ -64,6 +64,9 @@ class DFontDecoder extends FontFileWriter {
                 throw new IOException("Unsupported Dfont");
             }
             int[] tags = DFontDecoder.getCTFontTags(fontRef);
+            if (tags == null) {
+                throw new IOException("Could not get tables for Dfont");
+            }
             short numTables = (short)tags.length;
             int size = TTCHEADERSIZE + (DIRECTORYENTRYSIZE * numTables);
             byte[][] tableData = new byte[numTables][];

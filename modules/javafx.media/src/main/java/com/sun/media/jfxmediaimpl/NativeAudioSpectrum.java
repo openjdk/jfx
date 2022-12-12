@@ -82,7 +82,7 @@ final class NativeAudioSpectrum implements AudioSpectrum {
         if (bands > 1) {
             magnitudes = new float[bands];
             for (int i = 0; i < magnitudes.length; i++) {
-                magnitudes[i] = (float)DEFAULT_THRESHOLD;//Float.NEGATIVE_INFINITY;
+                magnitudes[i] = DEFAULT_THRESHOLD;//Float.NEGATIVE_INFINITY;
             }
 
             phases = new float[bands];

@@ -111,7 +111,7 @@ public class CellEditEventOfTableColumnTest {
 
     @Test
     public void testNullTable() {
-        new CellEditEvent<Object, Object>(null, // null table must not throw NPE
+        new CellEditEvent<>(null, // null table must not throw NPE
                 new TablePosition<>(null, -1, null), editAnyEvent(), null);
     }
 
@@ -173,7 +173,7 @@ public class CellEditEventOfTableColumnTest {
         });
 
         ObservableList<String> model = FXCollections.observableArrayList("Four", "Five", "Fear");
-        table = new TableView<String>(model);
+        table = new TableView<>(model);
         editingColumn = new TableColumn<>("TEST");
         editingColumn.setCellValueFactory(e -> new SimpleStringProperty(e.getValue()));
         table.getColumns().addAll(editingColumn);

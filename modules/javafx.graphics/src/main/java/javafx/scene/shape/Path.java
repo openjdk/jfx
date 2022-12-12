@@ -224,7 +224,7 @@ public class Path extends Shape {
      *
      * @defaultValue empty
      */
-    private final ObservableList<PathElement> elements = new TrackableObservableList<PathElement>() {
+    private final ObservableList<PathElement> elements = new TrackableObservableList<>() {
         @Override
         protected void onChanged(Change<PathElement> c) {
             List<PathElement> list = c.getList();

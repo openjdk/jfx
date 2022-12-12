@@ -26,21 +26,12 @@
 package test.javafx.beans.property;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
 import javafx.beans.InvalidationListener;
-import javafx.beans.binding.BooleanBinding;
-import javafx.beans.binding.BooleanExpression;
-import javafx.beans.binding.ObjectExpression;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
-import javafx.beans.value.ObservableValueStub;
-import javafx.collections.FXCollections;
-
 import org.junit.Before;
 import org.junit.Test;
 
@@ -90,7 +81,7 @@ public class ReadOnlyBooleanPropertyTest {
 
     @Test
     public void testObjectToBoolean() {
-        final ReadOnlyObjectWrapper<Boolean> valueModel = new ReadOnlyObjectWrapper<Boolean>();
+        final ReadOnlyObjectWrapper<Boolean> valueModel = new ReadOnlyObjectWrapper<>();
         final ReadOnlyBooleanProperty exp = ReadOnlyBooleanProperty.readOnlyBooleanProperty(valueModel.getReadOnlyProperty());
 
 

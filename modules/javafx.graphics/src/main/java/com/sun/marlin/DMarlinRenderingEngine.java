@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2007, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2007, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -94,7 +94,7 @@ public final class DMarlinRenderingEngine implements MarlinConst
         }
 
         if (USE_THREAD_LOCAL) {
-            RDR_CTX_PROVIDER = new ReentrantContextProviderTL<RendererContext>(REF_TYPE)
+            RDR_CTX_PROVIDER = new ReentrantContextProviderTL<>(REF_TYPE)
                 {
                     @Override
                     protected RendererContext newContext() {
@@ -102,7 +102,7 @@ public final class DMarlinRenderingEngine implements MarlinConst
                     }
                 };
         } else {
-            RDR_CTX_PROVIDER = new ReentrantContextProviderCLQ<RendererContext>(REF_TYPE)
+            RDR_CTX_PROVIDER = new ReentrantContextProviderCLQ<>(REF_TYPE)
                 {
                     @Override
                     protected RendererContext newContext() {
@@ -257,7 +257,6 @@ public final class DMarlinRenderingEngine implements MarlinConst
      * Get the RendererContext instance dedicated to the current thread
      * @return RendererContext instance
      */
-    @SuppressWarnings({"unchecked"})
     public static RendererContext getRendererContext() {
         final RendererContext rdrCtx = RDR_CTX_PROVIDER.acquire();
         if (DO_MONITORS) {

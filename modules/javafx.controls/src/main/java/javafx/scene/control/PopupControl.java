@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -35,7 +35,6 @@ import javafx.beans.property.DoublePropertyBase;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ObjectPropertyBase;
 import javafx.beans.property.StringProperty;
-import javafx.beans.value.WritableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.collections.ObservableSet;
@@ -207,7 +206,7 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
         return skinProperty().getValue();
     }
 
-    private final ObjectProperty<Skin<?>> skin = new ObjectPropertyBase<Skin<?>>() {
+    private final ObjectProperty<Skin<?>> skin = new ObjectPropertyBase<>() {
         // We store a reference to the oldValue so that we can handle
         // changes in the skin properly in the case of binding. This is
         // only needed because invalidated() does not currently take
@@ -261,6 +260,11 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
                 bridge.getChildren().setAll(n);
             } else {
                 bridge.getChildren().clear();
+            }
+
+            // let the new skin modify this control
+            if (skin != null) {
+                skin.install();
             }
 
             // calling NodeHelper.reapplyCSS() as the styleable properties may now
@@ -993,7 +997,7 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
      **************************************************************************/
 
     private static final CssMetaData<CSSBridge,String> SKIN =
-            new CssMetaData<CSSBridge,String>("-fx-skin",
+            new CssMetaData<>("-fx-skin",
                     StringConverter.getInstance()) {
 
                 @Override
@@ -1003,14 +1007,14 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
 
                 @Override
                 public StyleableProperty<String> getStyleableProperty(CSSBridge cssBridge) {
-                    return (StyleableProperty<String>)(WritableValue<String>)cssBridge.popupControl.skinClassNameProperty();
+                    return (StyleableProperty<String>)cssBridge.popupControl.skinClassNameProperty();
                 }
             };
 
     private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
     static {
         final List<CssMetaData<? extends Styleable, ?>> styleables =
-                new ArrayList<CssMetaData<? extends Styleable, ?>>();
+                new ArrayList<>();
         Collections.addAll(styleables,
                 SKIN
         );

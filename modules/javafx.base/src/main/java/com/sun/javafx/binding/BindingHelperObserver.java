@@ -40,7 +40,7 @@ public class BindingHelperObserver implements InvalidationListener, WeakListener
         if (binding == null) {
             throw new NullPointerException("Binding has to be specified.");
         }
-        ref = new WeakReference<Binding<?>>(binding);
+        ref = new WeakReference<>(binding);
     }
 
     @Override

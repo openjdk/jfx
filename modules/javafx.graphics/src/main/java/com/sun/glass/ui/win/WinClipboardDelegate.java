@@ -28,6 +28,7 @@ import com.sun.glass.ui.Clipboard;
 import com.sun.glass.ui.delegate.ClipboardDelegate;
 
 final class WinClipboardDelegate implements ClipboardDelegate {
+    @Override
     public Clipboard createClipboard(String clipboardName) {
         if (Clipboard.SYSTEM.equals(clipboardName)) {
             return new WinSystemClipboard(clipboardName);

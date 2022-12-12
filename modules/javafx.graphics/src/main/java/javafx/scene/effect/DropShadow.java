@@ -145,7 +145,7 @@ public class DropShadow extends Effect {
     @Override
     com.sun.scenario.effect.DropShadow createPeer() {
         return new com.sun.scenario.effect.DropShadow();
-    };
+    }
     /**
      * The input for this {@code Effect}.
      * If set to {@code null}, or left unspecified, a graphical image of

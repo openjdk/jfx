@@ -58,7 +58,7 @@ class AndroidInputProcessor {
 
     synchronized void dispatchKeyEvent(int type, int key, char[] chars, int modifiers) {
         Platform.runLater( () -> {
-            MonocleWindow window = (MonocleWindow) MonocleWindowManager.getInstance().getFocusedWindow();
+            MonocleWindow window = MonocleWindowManager.getInstance().getFocusedWindow();
             if (window == null) {
                 return;
             }

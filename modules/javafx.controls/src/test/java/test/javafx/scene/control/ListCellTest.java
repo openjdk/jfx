@@ -70,9 +70,9 @@ public class ListCellTest {
             }
         });
 
-        cell = new ListCell<String>();
+        cell = new ListCell<>();
         model = FXCollections.observableArrayList("Apples", "Oranges", "Pears");
-        list = new ListView<String>(model);
+        list = new ListView<>(model);
     }
 
     @After public void cleanup() {
@@ -269,7 +269,7 @@ public class ListCellTest {
         cell.updateIndex(2);
         cell.updateListView(list);
         ObservableList<String> model2 = FXCollections.observableArrayList("Water", "Juice", "Soda");
-        ListView<String> listView2 = new ListView<String>(model2);
+        ListView<String> listView2 = new ListView<>(model2);
         cell.updateListView(listView2);
         assertEquals("Soda", cell.getItem());
     }
@@ -394,7 +394,7 @@ public class ListCellTest {
         cell.updateListView(list);
         cell.updateIndex(0);
 
-        ListCell<String> other = new ListCell<String>();
+        ListCell<String> other = new ListCell<>();
         other.updateListView(list);
         other.updateIndex(1);
 
@@ -407,7 +407,7 @@ public class ListCellTest {
         cell.updateListView(list);
         cell.updateIndex(0);
 
-        ListCell<String> other = new ListCell<String>();
+        ListCell<String> other = new ListCell<>();
         other.updateListView(list);
         other.updateIndex(1);
 
@@ -426,7 +426,7 @@ public class ListCellTest {
         list.getSelectionModel().select(0);
 
         // Other is configured to represent row 1 which is not selected.
-        ListCell<String> other = new ListCell<String>();
+        ListCell<String> other = new ListCell<>();
         other.updateListView(list);
         other.updateIndex(1);
 
@@ -444,7 +444,7 @@ public class ListCellTest {
         cell.updateListView(list);
         cell.updateIndex(0);
 
-        ListCell<String> other = new ListCell<String>();
+        ListCell<String> other = new ListCell<>();
         other.updateListView(list);
         other.updateIndex(1);
 
@@ -461,7 +461,7 @@ public class ListCellTest {
         list.getSelectionModel().select(0);
 
         // Other is configured to represent row 1 which is not selected.
-        ListCell<String> other = new ListCell<String>();
+        ListCell<String> other = new ListCell<>();
         other.updateListView(list);
         other.updateIndex(1);
 
@@ -482,7 +482,7 @@ public class ListCellTest {
         cell.updateListView(list);
 
         // Other is configured to represent row 1 which is not selected.
-        ListCell<String> other = new ListCell<String>();
+        ListCell<String> other = new ListCell<>();
         other.updateListView(list);
         other.updateIndex(1);
 
@@ -501,7 +501,7 @@ public class ListCellTest {
         cell.updateListView(list);
 
         // Other is configured to represent row 1 which is not selected.
-        ListCell<String> other = new ListCell<String>();
+        ListCell<String> other = new ListCell<>();
         other.updateListView(list);
         other.updateIndex(1);
 
@@ -529,7 +529,7 @@ public class ListCellTest {
         cell.updateListView(list);
         cell.updateIndex(0);
 
-        ListCell<String> other = new ListCell<String>();
+        ListCell<String> other = new ListCell<>();
         other.updateListView(list);
         other.updateIndex(1);
 
@@ -542,7 +542,7 @@ public class ListCellTest {
         cell.updateListView(list);
         cell.updateIndex(0);
 
-        ListCell<String> other = new ListCell<String>();
+        ListCell<String> other = new ListCell<>();
         other.updateListView(list);
         other.updateIndex(1);
 
@@ -559,7 +559,7 @@ public class ListCellTest {
         list.getFocusModel().focus(0);
 
         // Other is configured to represent row 1 which is not focused.
-        ListCell<String> other = new ListCell<String>();
+        ListCell<String> other = new ListCell<>();
         other.updateListView(list);
         other.updateIndex(1);
 
@@ -579,7 +579,7 @@ public class ListCellTest {
         cell.updateListView(list);
 
         // Other is configured to represent row 1 which is not focused
-        ListCell<String> other = new ListCell<String>();
+        ListCell<String> other = new ListCell<>();
         other.updateListView(list);
         other.updateIndex(1);
 
@@ -915,7 +915,7 @@ public class ListCellTest {
         @Override protected int getFocusedIndex() {
             return list.getFocusModel().getFocusedIndex();
         }
-    };
+    }
 
     private final class FocusModelMock extends FocusModel {
         @Override protected int getItemCount() {
@@ -930,7 +930,7 @@ public class ListCellTest {
     private int rt_29923_count = 0;
     @Test public void test_rt_29923() {
         // setup test
-        cell = new ListCellShim<String>() {
+        cell = new ListCellShim<>() {
             @Override public void updateItem(String item, boolean empty) {
                 super.updateItem(item, empty);
                 rt_29923_count++;
@@ -1018,7 +1018,7 @@ public class ListCellTest {
 
     private void assertChangeIndexToEditing(int initialCellIndex, int listEditingIndex) {
         list.getFocusModel().focus(-1);
-        List<EditEvent> events = new ArrayList<EditEvent>();
+        List<EditEvent> events = new ArrayList<>();
         list.setOnEditStart(e -> {
             events.add(e);
         });
@@ -1054,7 +1054,7 @@ public class ListCellTest {
 
     public void assertUpdateCellIndexOffEditing(int editingIndex, int cancelIndex) {
         list.getFocusModel().focus(-1);
-        List<EditEvent> events = new ArrayList<EditEvent>();
+        List<EditEvent> events = new ArrayList<>();
         list.setOnEditCancel(e -> {
             events.add(e);
         });

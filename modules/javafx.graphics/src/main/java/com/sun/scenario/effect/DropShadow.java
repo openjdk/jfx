@@ -108,6 +108,7 @@ public class DropShadow extends DelegateEffect {
         this.shadow = s;
     }
 
+    @Override
     protected Effect getDelegate() {
         return merge;
     }

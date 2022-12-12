@@ -70,7 +70,7 @@ public abstract class ListBinding<E> extends ListExpression<E> implements Bindin
     public ListBinding() {
     }
 
-    private final ListChangeListener<E> listChangeListener = new ListChangeListener<E>() {
+    private final ListChangeListener<E> listChangeListener = new ListChangeListener<>() {
         @Override
         public void onChanged(Change<? extends E> change) {
             invalidateProperties();
@@ -111,6 +111,7 @@ public abstract class ListBinding<E> extends ListExpression<E> implements Bindin
             return "size";
         }
 
+        @Override
         protected void fireValueChangedEvent() {
             super.fireValueChangedEvent();
         }
@@ -141,6 +142,7 @@ public abstract class ListBinding<E> extends ListExpression<E> implements Bindin
             return "empty";
         }
 
+        @Override
         protected void fireValueChangedEvent() {
             super.fireValueChangedEvent();
         }

@@ -28,16 +28,11 @@ package test.javafx.css;
 import com.sun.javafx.css.*;
 
 import java.io.BufferedWriter;
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import javafx.css.CssParser;
@@ -45,7 +40,6 @@ import javafx.css.CssParserShim;
 import javafx.css.Declaration;
 import javafx.css.FontFace;
 
-import javafx.css.ParsedValue;
 import javafx.css.ParsedValue;
 import javafx.css.Rule;
 import javafx.css.RuleShim;
@@ -305,7 +299,7 @@ public class CssParserTest {
         value = new CssParserShim().parseExpr("foo", "1;");
         obj = value.convert(null);
         assert obj instanceof Number;
-        assertEquals(1d, (Number)obj);
+        assertEquals(1d, obj);
 
     }
 

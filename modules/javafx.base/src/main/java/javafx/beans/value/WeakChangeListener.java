@@ -64,7 +64,7 @@ public final class WeakChangeListener<T> implements ChangeListener<T>, WeakListe
         if (listener == null) {
             throw new NullPointerException("Listener must be specified.");
         }
-        this.ref = new WeakReference<ChangeListener<T>>(listener);
+        this.ref = new WeakReference<>(listener);
     }
 
     /**

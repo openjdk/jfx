@@ -829,7 +829,7 @@ public class ToolBarSkin extends SkinBase<ToolBar> {
       */
      private static class StyleableProperties {
          private static final CssMetaData<ToolBar,Number> SPACING =
-             new CssMetaData<ToolBar,Number>("-fx-spacing",
+             new CssMetaData<>("-fx-spacing",
                  SizeConverter.getInstance(), 0.0) {
 
             @Override
@@ -841,13 +841,13 @@ public class ToolBarSkin extends SkinBase<ToolBar> {
             @Override
             public StyleableProperty<Number> getStyleableProperty(ToolBar n) {
                 final ToolBarSkin skin = (ToolBarSkin) n.getSkin();
-                return (StyleableProperty<Number>)(WritableValue<Number>)skin.spacingProperty();
+                return (StyleableProperty<Number>)skin.spacingProperty();
             }
         };
 
         private static final CssMetaData<ToolBar,Pos>ALIGNMENT =
-                new CssMetaData<ToolBar,Pos>("-fx-alignment",
-                new EnumConverter<Pos>(Pos.class), Pos.TOP_LEFT ) {
+                new CssMetaData<>("-fx-alignment",
+                new EnumConverter<>(Pos.class), Pos.TOP_LEFT ) {
 
             @Override
             public boolean isSettable(ToolBar n) {
@@ -867,7 +867,7 @@ public class ToolBarSkin extends SkinBase<ToolBar> {
          static {
 
             final List<CssMetaData<? extends Styleable, ?>> styleables =
-                new ArrayList<CssMetaData<? extends Styleable, ?>>(SkinBase.getClassCssMetaData());
+                new ArrayList<>(SkinBase.getClassCssMetaData());
 
             // StackPane also has -fx-alignment. Replace it with
             // ToolBarSkin's.

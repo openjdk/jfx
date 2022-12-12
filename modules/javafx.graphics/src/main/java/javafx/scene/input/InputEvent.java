@@ -42,7 +42,7 @@ public class InputEvent extends Event {
      * Common supertype for all input event types.
      */
     public static final EventType<InputEvent> ANY =
-            new EventType<InputEvent> (Event.ANY, "INPUT");
+            new EventType<> (Event.ANY, "INPUT");
 
     /**
      * Creates new instance of InputEvent.

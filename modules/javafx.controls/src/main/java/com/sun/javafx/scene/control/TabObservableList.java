@@ -79,6 +79,6 @@ public class TabObservableList<E> extends ObservableListWrapper<E> {
         for (int i = 0; i < permSize; ++i) {
             perm[i] = i + from;
         }
-        fireChange(new NonIterableChange.SimplePermutationChange<E>(from, to + 1, perm, this));
+        fireChange(new NonIterableChange.SimplePermutationChange<>(from, to + 1, perm, this));
     }
 }

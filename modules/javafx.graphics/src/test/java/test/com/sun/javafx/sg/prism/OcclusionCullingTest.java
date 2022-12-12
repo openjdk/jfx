@@ -25,7 +25,6 @@
 
 package test.com.sun.javafx.sg.prism;
 
-import test.com.sun.javafx.sg.prism.TestGraphics;
 import com.sun.javafx.geom.RectBounds;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.geom.transform.GeneralTransform3D;

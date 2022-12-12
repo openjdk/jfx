@@ -181,7 +181,7 @@ public class CascadingStyle implements Comparable<CascadingStyle> {
             else c = otherSource.compareTo(source);
         } else {
             c = other.specificity - this.specificity;
-        };
+        }
 
         if (c == 0) c = other.ordinal - this.ordinal;
         return c;

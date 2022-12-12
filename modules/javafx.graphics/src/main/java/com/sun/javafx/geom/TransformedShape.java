@@ -187,10 +187,12 @@ public abstract class TransformedShape extends Shape {
             this.transform = transform;
         }
 
+        @Override
         public BaseTransform getTransformNoClone() {
             return transform;
         }
 
+        @Override
         public BaseTransform adjust(BaseTransform transform) {
             if (transform == null || transform.isIdentity()) {
                 return this.transform.copy();
@@ -218,6 +220,7 @@ public abstract class TransformedShape extends Shape {
             return cachedTx;
         }
 
+        @Override
         public BaseTransform adjust(BaseTransform transform) {
             if (transform == null || transform.isIdentity()) {
                 return BaseTransform.getTranslateInstance(tx, ty);

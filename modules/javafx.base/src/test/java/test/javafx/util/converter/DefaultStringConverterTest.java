@@ -25,8 +25,6 @@
 
 package test.javafx.util.converter;
 
-import java.util.Arrays;
-import java.util.Collection;
 import javafx.util.converter.DefaultStringConverter;
 import static org.junit.Assert.assertEquals;
 

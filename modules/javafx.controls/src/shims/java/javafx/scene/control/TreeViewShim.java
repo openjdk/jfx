@@ -24,7 +24,7 @@
  */
 package javafx.scene.control;
 
-public class TreeViewShim<T> {
+public class TreeViewShim {
 
 
     public static <T> MultipleSelectionModel<TreeItem<T>>

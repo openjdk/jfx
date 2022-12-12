@@ -594,14 +594,14 @@ public class HTMLEditorSkin extends SkinBase<HTMLEditor> {
         //toolbar1.getItems().add(new Separator());
 
         // Toolbar 2
-        formatComboBox = new ComboBox<String>();
+        formatComboBox = new ComboBox<>();
         formatComboBox.getStyleClass().add("font-menu-button");
         formatComboBox.setFocusTraversable(false);
         formatComboBox.setMinWidth(Region.USE_PREF_SIZE);
         toolbar2.getItems().add(formatComboBox);
 
-        formatStyleMap = new HashMap<String, String>();
-        styleFormatMap = new HashMap<String, String>();
+        formatStyleMap = new HashMap<>();
+        styleFormatMap = new HashMap<>();
 
         createFormatMenuItem(FORMAT_PARAGRAPH, resources.getString("paragraph"));
         Platform.runLater(() -> {
@@ -650,7 +650,7 @@ public class HTMLEditorSkin extends SkinBase<HTMLEditor> {
             }
         });
 
-        fontFamilyComboBox = new ComboBox<String>();
+        fontFamilyComboBox = new ComboBox<>();
         fontFamilyComboBox.getStyleClass().add("font-menu-button");
         fontFamilyComboBox.setMinWidth(FONT_FAMILY_MENUBUTTON_WIDTH);
         fontFamilyComboBox.setPrefWidth(FONT_FAMILY_MENUBUTTON_WIDTH);
@@ -667,7 +667,7 @@ public class HTMLEditorSkin extends SkinBase<HTMLEditor> {
 
         fontFamilyComboBox.setCellFactory(new Callback<ListView<String>, ListCell<String>>() {
             @Override public ListCell<String> call(ListView<String> param) {
-                final ListCell<String> cell = new ListCell<String>() {
+                final ListCell<String> cell = new ListCell<>() {
                     @Override public void updateItem(String item, boolean empty) {
                         super.updateItem(item, empty);
                         if (item != null) {
@@ -696,13 +696,13 @@ public class HTMLEditorSkin extends SkinBase<HTMLEditor> {
             executeCommand(FONT_FAMILY.getCommand(), "'" + newValue + "'");
         });
 
-        fontSizeComboBox = new ComboBox<String>();
+        fontSizeComboBox = new ComboBox<>();
         fontSizeComboBox.getStyleClass().add("font-menu-button");
         fontSizeComboBox.setFocusTraversable(false);
         toolbar2.getItems().add(fontSizeComboBox);
 
-        fontSizeMap = new HashMap<String, String>();
-        sizeFontMap = new HashMap<String, String>();
+        fontSizeMap = new HashMap<>();
+        sizeFontMap = new HashMap<>();
 
         createFontSizeMenuItem(SIZE_XX_SMALL, resources.getString("extraExtraSmall"));
         createFontSizeMenuItem(SIZE_X_SMALL, resources.getString("extraSmall"));
@@ -718,14 +718,14 @@ public class HTMLEditorSkin extends SkinBase<HTMLEditor> {
 
         fontSizeComboBox.setCellFactory(new Callback<ListView<String>, ListCell<String>>() {
             @Override public ListCell<String> call(ListView<String> param) {
-                final ListCell<String> cell = new ListCell<String>() {
+                final ListCell<String> cell = new ListCell<>() {
                     @Override public void updateItem(String item, boolean empty) {
                         super.updateItem(item, empty);
                         if (item != null) {
                             setText(item);
                             // Remove trailing non-digits to get the size (don't assume there's a space).
                             String size = item.replaceFirst("[^0-9.].*$", "");
-                            setFont(new Font((String)fontFamilyComboBox.getValue(), Double.valueOf(size)));
+                            setFont(new Font(fontFamilyComboBox.getValue(), Double.valueOf(size)));
                         }
                     }
                 };

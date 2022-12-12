@@ -50,7 +50,7 @@ public class SkinBaseTest {
 
     @Before public void setup() {
         c = new ControlStub();
-        s = new SkinBaseStub<ControlStub>(c);
+        s = new SkinBaseStub<>(c);
     }
 
     @Test public void skinNotAssignedToControlShouldStillHaveReferenceToControl() {

@@ -26,7 +26,6 @@
 package javafx.beans;
 
 import java.lang.ref.WeakReference;
-import javafx.beans.NamedArg;
 
 /**
  * A {@code WeakInvalidationListener} can be used if an {@link Observable}
@@ -62,7 +61,7 @@ public final class WeakInvalidationListener implements InvalidationListener, Wea
         if (listener == null) {
             throw new NullPointerException("Listener must be specified.");
         }
-        this.ref = new WeakReference<InvalidationListener>(listener);
+        this.ref = new WeakReference<>(listener);
     }
 
     /**

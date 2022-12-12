@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -162,7 +162,7 @@ public abstract class ScheduledService<V> extends Service<V> {
      * the returned value is the same as {@code period + (period * Math.exp(currentFailureCount))}.</p>
      */
     public static final Callback<ScheduledService<?>, Duration> EXPONENTIAL_BACKOFF_STRATEGY
-            = new Callback<ScheduledService<?>, Duration>() {
+            = new Callback<>() {
         @Override public Duration call(ScheduledService<?> service) {
             if (service == null) return Duration.ZERO;
             final double period = service.getPeriod() == null ? 0 : service.getPeriod().toMillis();
@@ -182,7 +182,7 @@ public abstract class ScheduledService<V> extends Service<V> {
      * the returned value is the same as {@code period + (period * Math.log1p(currentFailureCount))}.</p>
      */
     public static final Callback<ScheduledService<?>, Duration> LOGARITHMIC_BACKOFF_STRATEGY
-            = new Callback<ScheduledService<?>, Duration>() {
+            = new Callback<>() {
         @Override public Duration call(ScheduledService<?> service) {
             if (service == null) return Duration.ZERO;
             final double period = service.getPeriod() == null ? 0 : service.getPeriod().toMillis();
@@ -202,7 +202,7 @@ public abstract class ScheduledService<V> extends Service<V> {
      * the returned value is the same as {@code period + (period * currentFailureCount)}.</p>
      */
     public static final Callback<ScheduledService<?>, Duration> LINEAR_BACKOFF_STRATEGY
-            = new Callback<ScheduledService<?>, Duration>() {
+            = new Callback<>() {
         @Override public Duration call(ScheduledService<?> service) {
             if (service == null) return Duration.ZERO;
             final double period = service.getPeriod() == null ? 0 : service.getPeriod().toMillis();

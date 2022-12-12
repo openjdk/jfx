@@ -83,7 +83,7 @@ public class ImageCursor extends Cursor {
 
     private ObjectPropertyImpl<Image> imagePropertyImpl() {
         if (image == null) {
-            image = new ObjectPropertyImpl<Image>("image");
+            image = new ObjectPropertyImpl<>("image");
         }
 
         return image;
@@ -314,7 +314,7 @@ public class ImageCursor extends Cursor {
             currentCursorFrame = firstCursorFrame;
         } else {
             if (otherCursorFrames == null) {
-                otherCursorFrames = new HashMap<Object, ImageCursorFrame>();
+                otherCursorFrames = new HashMap<>();
             }
 
             currentCursorFrame = otherCursorFrames.get(cursorPlatformImage);

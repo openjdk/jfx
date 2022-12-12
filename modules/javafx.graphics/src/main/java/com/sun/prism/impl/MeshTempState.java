@@ -110,7 +110,7 @@ final class MeshTempState {
     float[] vertexBuffer;
 
     private static final ThreadLocal<MeshTempState> tempStateRef =
-            new ThreadLocal<MeshTempState>() {
+            new ThreadLocal<>() {
                 @Override
                 protected MeshTempState initialValue() {
                     return new MeshTempState();

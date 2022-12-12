@@ -27,11 +27,9 @@ package test.com.sun.javafx.scene.traversal;
 
 import com.sun.javafx.scene.ParentHelper;
 import com.sun.javafx.scene.traversal.Algorithm;
-import com.sun.javafx.scene.traversal.ContainerTabOrder;
 import com.sun.javafx.scene.traversal.ContainerTabOrderShim;
 import com.sun.javafx.scene.traversal.Direction;
 import com.sun.javafx.scene.traversal.ParentTraversalEngine;
-import com.sun.javafx.scene.traversal.TopMostTraversalEngine;
 import com.sun.javafx.scene.traversal.TopMostTraversalEngineShim;
 import com.sun.javafx.scene.traversal.TraversalContext;
 import com.sun.javafx.scene.traversal.TraversalMethod;

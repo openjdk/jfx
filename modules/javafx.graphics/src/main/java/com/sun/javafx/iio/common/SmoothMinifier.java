@@ -155,6 +155,7 @@ public class SmoothMinifier implements PushbroomScaler {
      *
      * @return The destination buffer.
      */
+    @Override
     public ByteBuffer getDestination() {
         return this.destBuf;
     }
@@ -168,6 +169,7 @@ public class SmoothMinifier implements PushbroomScaler {
      * @throws IllegalArgumentException if <code>off&nbsp;&lt;&nbsp;0</code>.
      * @return Whether the destination image is complete.
      */
+    @Override
     public boolean putSourceScanline(byte[] scanline, int off) {
         if (off < 0) {
             throw new IllegalArgumentException("off < 0!");
