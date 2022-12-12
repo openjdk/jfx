@@ -928,7 +928,8 @@ public class ObservableValueFluentBindingsTest {
 
         @Nested
         class WithNotNullReturns_ObservableValue_Which {
-            private ObjectProperty<Boolean> condition = new SimpleObjectProperty<Boolean>(true);  // using object property here so it can be set to null for testing
+            // using object property here so it can be set to null for testing
+            private ObjectProperty<Boolean> condition = new SimpleObjectProperty<>(true);
             private ObservableValue<String> observableValue = property.when(condition);
 
             @Test
