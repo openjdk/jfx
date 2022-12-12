@@ -449,7 +449,6 @@ public class TableView<S> extends Control {
 
     /**
      * A resize policy that adjusts columns, starting with the next one, in order to fit the table width.
-     * <p>
      * During UI adjustment, resizes the next column to preserve the total width.  When the next column
      * cannot be further resized due to a constraint, the following column gets resized, and so on.
      * <p>
