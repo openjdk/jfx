@@ -24,13 +24,9 @@
  */
 package com.sun.glass.ui.win;
 
-import com.sun.glass.ui.Application;
-import com.sun.glass.ui.Menu;
 import com.sun.glass.ui.MenuItem;
 import com.sun.glass.ui.MenuItem.Callback;
 import com.sun.glass.ui.Window;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 
 /*
  * Base Windows menu implementation.

@@ -79,7 +79,7 @@ public final class CookieManager extends CookieHandler {
 
         Map<String,List<String>> result;
         if (cookieString != null) {
-            result = new HashMap<String,List<String>>();
+            result = new HashMap<>();
             result.put("Cookie", Arrays.asList(cookieString));
         } else {
             result = Collections.emptyMap();

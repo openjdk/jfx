@@ -91,7 +91,7 @@ public class ControlTest {
 
     @Before public void setUp() {
         c = new ControlStub();
-        s = new SkinStub<ControlStub>(c);
+        s = new SkinStub<>(c);
         skinNode = new ResizableRectangle();
         skinNode.resize(20, 20);
         skinNode.minWidth = MIN_WIDTH;
@@ -930,7 +930,7 @@ public class ControlTest {
 
     @Test public void tooltipCanBeBound() {
         Tooltip tip = new Tooltip("Hello");
-        ObjectProperty<Tooltip> other = new SimpleObjectProperty<Tooltip>(tip);
+        ObjectProperty<Tooltip> other = new SimpleObjectProperty<>(tip);
         c.tooltipProperty().bind(other);
         assertSame(tip, c.getTooltip());
         assertSame(tip, c.tooltipProperty().get());
@@ -973,7 +973,7 @@ public class ControlTest {
 
     @Test public void contextMenuCanBeBound() {
         ContextMenu menu = new ContextMenu();
-        ObjectProperty<ContextMenu> other = new SimpleObjectProperty<ContextMenu>(menu);
+        ObjectProperty<ContextMenu> other = new SimpleObjectProperty<>(menu);
         c.contextMenuProperty().bind(other);
         assertSame(menu, c.getContextMenu());
         assertSame(menu, c.contextMenuProperty().get());

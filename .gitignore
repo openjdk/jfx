@@ -16,9 +16,6 @@ testbin/
 /webrev/
 /webrev.zip
 
-# Ignore Eclipse files
-org.eclipse.buildship*
-
 # Ignore IntelliJ files
 .idea/tasks.xml
 .idea/workspace.xml

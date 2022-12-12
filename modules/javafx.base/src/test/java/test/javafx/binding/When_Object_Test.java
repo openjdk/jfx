@@ -35,7 +35,7 @@ public class When_Object_Test extends WhenTestBase<Object, ObjectProperty<Object
     public When_Object_Test() {
         super(
             new Object(), new Object(), new Object(), new Object(),
-            new SimpleObjectProperty<Object>(), new SimpleObjectProperty<Object>()
+            new SimpleObjectProperty<>(), new SimpleObjectProperty<>()
         );
     }
 

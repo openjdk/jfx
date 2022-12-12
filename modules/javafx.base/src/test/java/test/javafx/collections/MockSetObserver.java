@@ -36,11 +36,11 @@ import static org.junit.Assert.assertTrue;
 
 public class MockSetObserver<E> implements SetChangeListener<E> {
 
-    private List<Call> calls = new ArrayList<Call>();
+    private List<Call> calls = new ArrayList<>();
 
     @Override
     public void onChanged(Change<? extends E> c) {
-        calls.add(new Call<E>(c.getElementRemoved(), c.getElementAdded()));
+        calls.add(new Call<>(c.getElementRemoved(), c.getElementAdded()));
     }
 
     public int getCallsNumber() {
@@ -74,7 +74,7 @@ public class MockSetObserver<E> implements SetChangeListener<E> {
     public void assertMultipleRemove(Tuple<E>... tuples) {
         assertEquals(this.calls.size(), tuples.length);
         for (Tuple<E> t : tuples) {
-            assertTrue(calls + " doesn't contain "  + t, this.calls.contains(new Call<E>(t.val, null)));
+            assertTrue(calls + " doesn't contain "  + t, this.calls.contains(new Call<>(t.val, null)));
         }
     }
 
@@ -110,7 +110,7 @@ public class MockSetObserver<E> implements SetChangeListener<E> {
         }
 
         public static<E> Call<E> call(E o, E n) {
-            return new Call<E>(o, n);
+            return new Call<>(o, n);
         }
 
         @Override
@@ -155,7 +155,7 @@ public class MockSetObserver<E> implements SetChangeListener<E> {
         }
 
         public static<E> Tuple<E> tup(E v) {
-            return new Tuple<E>(v);
+            return new Tuple<>(v);
         }
     }
 

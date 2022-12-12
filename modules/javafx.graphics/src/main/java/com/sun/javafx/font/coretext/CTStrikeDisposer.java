@@ -48,6 +48,7 @@ class CTStrikeDisposer implements DisposerRecord {
         this.fontRef = fontRef;
     }
 
+    @Override
     public synchronized void dispose() {
         if (!disposed) {
             // Careful here. The original strike we are collecting

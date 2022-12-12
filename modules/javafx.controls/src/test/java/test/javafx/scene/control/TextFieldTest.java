@@ -62,7 +62,6 @@ import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.StackPane;
 import javafx.stage.Stage;
 import javafx.util.converter.IntegerStringConverter;
-import test.com.sun.javafx.pgstub.StubToolkit;
 import test.com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
 import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
 
@@ -231,7 +230,7 @@ public class TextFieldTest {
     }
 
     @Test public void checkOnActionPropertyBind() {
-        ObjectProperty<EventHandler<ActionEvent>> op= new SimpleObjectProperty<EventHandler<ActionEvent>>();
+        ObjectProperty<EventHandler<ActionEvent>> op= new SimpleObjectProperty<>();
         EventHandler<ActionEvent> ev = event -> {
             //Nothing to do
         };

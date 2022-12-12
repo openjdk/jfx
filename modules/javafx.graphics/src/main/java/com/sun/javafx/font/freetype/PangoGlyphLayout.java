@@ -85,6 +85,7 @@ class PangoGlyphLayout extends GlyphLayout {
     }
 
     private Map<TextRun, Long> runUtf8 = new LinkedHashMap<>();
+    @Override
     public void layout(TextRun run, PGFont font, FontStrike strike, char[] text) {
         /* Create the pango font and attribute list */
         FontResource fr = font.getFontResource();

@@ -49,7 +49,7 @@ public abstract class BaseResourceFactory implements ResourceFactory {
     // Use a WeakHashMap as it automatically removes dead objects when they're
     // collected
     private final WeakHashMap<ResourceFactoryListener,Boolean> listenerMap =
-            new WeakHashMap<ResourceFactoryListener,Boolean>();
+            new WeakHashMap<>();
 
     private boolean disposed = false;
 

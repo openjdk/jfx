@@ -36,6 +36,7 @@ import java.nio.IntBuffer;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.Map;
+import java.util.ResourceBundle;
 
 final class WinApplication extends Application implements InvokeLaterDispatcher.InvokeLaterSubmitter {
     static float   overrideUIScale;
@@ -82,6 +83,7 @@ final class WinApplication extends Application implements InvokeLaterDispatcher.
     static {
         @SuppressWarnings("removal")
         var dummy = AccessController.doPrivileged(new PrivilegedAction<Void>() {
+            @Override
             public Void run() {
                 verbose = Boolean.getBoolean("javafx.verbose");
                 if (PrismSettings.allowHiDPIScaling) {
@@ -348,6 +350,7 @@ final class WinApplication extends Application implements InvokeLaterDispatcher.
 
     @Override native protected boolean _supportsUnifiedWindows();
 
+    @Override
     public String getDataDirectory() {
         checkEventThread();
         @SuppressWarnings("removal")

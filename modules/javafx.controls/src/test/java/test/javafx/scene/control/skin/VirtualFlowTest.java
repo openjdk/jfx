@@ -52,7 +52,6 @@ import org.junit.Ignore;
 import org.junit.Test;
 
 
-import java.util.ArrayList;
 import java.util.List;
 import javafx.scene.control.IndexedCellShim;
 import javafx.scene.control.ScrollBar;
@@ -77,7 +76,7 @@ public class VirtualFlowTest {
 
 
     @Before public void setUp() {
-        list = new ArrayLinkedListShim<CellStub>();
+        list = new ArrayLinkedListShim<>();
         a = new CellStub(flow, "A");
         b = new CellStub(flow, "B");
         c = new CellStub(flow, "C");
@@ -140,7 +139,7 @@ public class VirtualFlowTest {
         Iterator<IndexedCell> itr = control.iterator();
         while (itr.hasNext()) {
             IndexedCell cell = itr.next();
-            IndexedCell cell2 = (IndexedCell)list.get(index);
+            IndexedCell cell2 = list.get(index);
             assertSame("The control and list did not have the same item at " +
                        "index " + index + ". Expected " + cell + " but was " + cell2,
                        cell, cell2);
@@ -764,7 +763,7 @@ public class VirtualFlowTest {
      * took place.
      */
     @Test public void testCellLayout_LayoutWithoutChangingThingsUsesCellsInSameOrderAsBefore() {
-        List<IndexedCell> cells = new LinkedList<IndexedCell>();
+        List<IndexedCell> cells = new LinkedList<>();
         for (int i = 0; i < VirtualFlowShim.cells_size(flow.cells); i++) {
             cells.add(VirtualFlowShim.<IndexedCell>cells_get(flow.cells, i));
         }
@@ -1288,7 +1287,7 @@ public class VirtualFlowTest {
         pulse();
     }
 
-    private ArrayLinkedListShim<GraphicalCellStub> circlelist = new ArrayLinkedListShim<GraphicalCellStub>();
+    private ArrayLinkedListShim<GraphicalCellStub> circlelist = new ArrayLinkedListShim<>();
 
     private VirtualFlowShim createCircleFlow() {
         // The second VirtualFlow we are going to test, with 7 cells. Each cell
@@ -1445,7 +1444,7 @@ class GraphicalCellStub extends IndexedCellShim<Node> {
 
     private void init() {
         // System.err.println("Init vf cell "+this);
-        setSkin(new SkinStub<GraphicalCellStub>(this));
+        setSkin(new SkinStub<>(this));
     }
 
     @Override
@@ -1494,7 +1493,7 @@ class CellStub extends IndexedCellShim {
 
     private void init(VirtualFlowShim flow) {
      //   this.flow = flow;
-        setSkin(new SkinStub<CellStub>(this));
+        setSkin(new SkinStub<>(this));
         updateItem(this, false);
     }
 

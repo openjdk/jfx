@@ -63,6 +63,6 @@ public class BigDecimalStringConverter extends StringConverter<BigDecimal> {
             return "";
         }
 
-        return ((BigDecimal)value).toString();
+        return value.toString();
     }
 }

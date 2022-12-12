@@ -39,7 +39,7 @@ public class ActionEvent extends Event {
      * The only valid EventType for the ActionEvent.
      */
     public static final EventType<ActionEvent> ACTION =
-            new EventType<ActionEvent>(Event.ANY, "ACTION");
+            new EventType<>(Event.ANY, "ACTION");
 
     /**
      * Common supertype for all action event types.

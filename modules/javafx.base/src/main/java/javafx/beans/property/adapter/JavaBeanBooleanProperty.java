@@ -101,7 +101,7 @@ public final class JavaBeanBooleanProperty extends BooleanProperty implements Ja
 
     JavaBeanBooleanProperty(PropertyDescriptor descriptor, Object bean) {
         this.descriptor = descriptor;
-        this.listener = descriptor.new Listener<Boolean>(bean, this);
+        this.listener = descriptor.new Listener<>(bean, this);
         descriptor.addListener(listener);
         Disposer.addRecord(this, new DescriptorListenerCleaner(descriptor, listener));
     }

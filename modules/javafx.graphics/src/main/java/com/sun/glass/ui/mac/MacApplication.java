@@ -374,6 +374,7 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
     }
 
     private native String _getDataDirectory();
+    @Override
     public String getDataDirectory() {
         checkEventThread();
         String baseDirectory = _getDataDirectory();

@@ -93,10 +93,12 @@ public class SWMaskTexture extends SWTexture {
         }
     }
 
+    @Override
     void allocateBuffer() {
         this.data = new byte[physicalWidth * physicalHeight];
     }
 
+    @Override
     Texture createSharedLockedTexture(WrapMode altMode) {
         return new SWMaskTexture(this, altMode);
     }

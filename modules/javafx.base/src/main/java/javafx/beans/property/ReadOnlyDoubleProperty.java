@@ -26,7 +26,6 @@
 package javafx.beans.property;
 
 import javafx.beans.InvalidationListener;
-import javafx.beans.Observable;
 import javafx.beans.WeakInvalidationListener;
 import javafx.beans.binding.DoubleExpression;
 
@@ -136,7 +135,7 @@ public abstract class ReadOnlyDoubleProperty extends DoubleExpression implements
      */
     @Override
     public ReadOnlyObjectProperty<Double> asObject() {
-        return new ReadOnlyObjectPropertyBase<Double>() {
+        return new ReadOnlyObjectPropertyBase<>() {
 
             private boolean valid = true;
             private final InvalidationListener listener = observable -> {
@@ -166,7 +165,7 @@ public abstract class ReadOnlyDoubleProperty extends DoubleExpression implements
                 return ReadOnlyDoubleProperty.this.getValue();
             }
         };
-    };
+    }
 
 
 

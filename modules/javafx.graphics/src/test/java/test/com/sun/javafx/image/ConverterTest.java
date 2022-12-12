@@ -694,8 +694,8 @@ public class ConverterTest {
         assertEquals(hbuf.capacity(), arr.length);
         byte bv = (byte) (Math.random() * 255);
         for (int i = 0; i < arr.length; i++) {
-            hbuf.put(i, (byte) bv);
-            dbuf.put(i, (byte) bv);
+            hbuf.put(i, bv);
+            dbuf.put(i, bv);
             arr[i] = bv;
         }
     }

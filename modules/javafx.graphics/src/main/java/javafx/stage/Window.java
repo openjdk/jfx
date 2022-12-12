@@ -733,7 +733,7 @@ public class Window implements EventTarget {
       */
      public final ObservableMap<Object, Object> getProperties() {
         if (properties == null) {
-            properties = FXCollections.observableMap(new HashMap<Object, Object>());
+            properties = FXCollections.observableMap(new HashMap<>());
         }
         return properties;
     }
@@ -952,7 +952,7 @@ public class Window implements EventTarget {
     public final ObjectProperty<EventHandler<WindowEvent>>
             onCloseRequestProperty() {
         if (onCloseRequest == null) {
-            onCloseRequest = new ObjectPropertyBase<EventHandler<WindowEvent>>() {
+            onCloseRequest = new ObjectPropertyBase<>() {
                 @Override protected void invalidated() {
                     setEventHandler(WindowEvent.WINDOW_CLOSE_REQUEST, get());
                 }
@@ -981,7 +981,7 @@ public class Window implements EventTarget {
     }
     public final ObjectProperty<EventHandler<WindowEvent>> onShowingProperty() {
         if (onShowing == null) {
-            onShowing = new ObjectPropertyBase<EventHandler<WindowEvent>>() {
+            onShowing = new ObjectPropertyBase<>() {
                 @Override protected void invalidated() {
                     setEventHandler(WindowEvent.WINDOW_SHOWING, get());
                 }
@@ -1010,7 +1010,7 @@ public class Window implements EventTarget {
     }
     public final ObjectProperty<EventHandler<WindowEvent>> onShownProperty() {
         if (onShown == null) {
-            onShown = new ObjectPropertyBase<EventHandler<WindowEvent>>() {
+            onShown = new ObjectPropertyBase<>() {
                 @Override protected void invalidated() {
                     setEventHandler(WindowEvent.WINDOW_SHOWN, get());
                 }
@@ -1039,7 +1039,7 @@ public class Window implements EventTarget {
     }
     public final ObjectProperty<EventHandler<WindowEvent>> onHidingProperty() {
         if (onHiding == null) {
-            onHiding = new ObjectPropertyBase<EventHandler<WindowEvent>>() {
+            onHiding = new ObjectPropertyBase<>() {
                 @Override protected void invalidated() {
                     setEventHandler(WindowEvent.WINDOW_HIDING, get());
                 }
@@ -1071,7 +1071,7 @@ public class Window implements EventTarget {
     }
     public final ObjectProperty<EventHandler<WindowEvent>> onHiddenProperty() {
         if (onHidden == null) {
-            onHidden = new ObjectPropertyBase<EventHandler<WindowEvent>>() {
+            onHidden = new ObjectPropertyBase<>() {
                 @Override protected void invalidated() {
                     setEventHandler(WindowEvent.WINDOW_HIDDEN, get());
                 }
@@ -1411,7 +1411,7 @@ public class Window implements EventTarget {
     private void initializeInternalEventDispatcher() {
         if (internalEventDispatcher == null) {
             internalEventDispatcher = createInternalEventDispatcher();
-            eventDispatcher = new SimpleObjectProperty<EventDispatcher>(
+            eventDispatcher = new SimpleObjectProperty<>(
                                           this,
                                           "eventDispatcher",
                                           internalEventDispatcher);

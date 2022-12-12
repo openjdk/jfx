@@ -49,7 +49,7 @@ class SkinWithCustomVirtualFlow<T> extends ListViewSkin<T> {
 
     @Override
     protected VirtualFlow<ListCell<T>> createVirtualFlow() {
-       return new VirtualFlowShim<ListCell<T>>();
+       return new VirtualFlowShim<>();
     }
 
     /* Methods for test purpose */
@@ -90,12 +90,12 @@ public class CustomListViewSkinTest {
     private ListView<String> listViewObj = null;
 
     @Before public void setup() {
-        listViewObj = new ListView<String>();
+        listViewObj = new ListView<>();
     }
 
     @Test public void testCustomVirtualFlow() {
         SkinWithCustomVirtualFlow skin =
-            new SkinWithCustomVirtualFlow<String>(listViewObj);
+            new SkinWithCustomVirtualFlow<>(listViewObj);
         listViewObj.setSkin(skin);
 
         assertFalse(skin.isVirtualFlowNull());
@@ -104,7 +104,7 @@ public class CustomListViewSkinTest {
 
     @Test public void testDefaultVirtualFlow() {
         SkinWithDefaultVirtualFlow skin =
-            new SkinWithDefaultVirtualFlow<String>(listViewObj);
+            new SkinWithDefaultVirtualFlow<>(listViewObj);
         listViewObj.setSkin(skin);
 
         assertFalse(skin.isVirtualFlowNull());

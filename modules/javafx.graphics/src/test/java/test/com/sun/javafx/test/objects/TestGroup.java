@@ -34,7 +34,7 @@ public class TestGroup extends Group {
     private final String name;
 
     private final ObjectProperty<Scene> _sceneProperty =
-            new SimpleObjectProperty<Scene>() {
+            new SimpleObjectProperty<>() {
                 private Scene old_scene;
 
                 @Override

@@ -50,7 +50,7 @@ public class SizeTypeTest {
     public void testConvert() {
         //System.out.println("convert");
         Size size = new Size(2.0f, SizeUnits.EM);
-        ParsedValue<Size, Size> value = new ParsedValueImpl<Size,Size>(size,null);
+        ParsedValue<Size, Size> value = new ParsedValueImpl<>(size,null);
         Font font = null;
         Size result = value.convert(font);
         assertEquals(size, result);

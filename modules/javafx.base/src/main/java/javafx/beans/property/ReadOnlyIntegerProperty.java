@@ -26,7 +26,6 @@
 package javafx.beans.property;
 
 import javafx.beans.InvalidationListener;
-import javafx.beans.Observable;
 import javafx.beans.WeakInvalidationListener;
 import javafx.beans.binding.IntegerExpression;
 
@@ -137,7 +136,7 @@ public abstract class ReadOnlyIntegerProperty extends IntegerExpression
      */
     @Override
     public ReadOnlyObjectProperty<Integer> asObject() {
-        return new ReadOnlyObjectPropertyBase<Integer>() {
+        return new ReadOnlyObjectPropertyBase<>() {
 
             private boolean valid = true;
             private final InvalidationListener listener = observable -> {
@@ -167,6 +166,6 @@ public abstract class ReadOnlyIntegerProperty extends IntegerExpression
                 return ReadOnlyIntegerProperty.this.getValue();
             }
         };
-    };
+    }
 
 }

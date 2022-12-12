@@ -27,8 +27,6 @@ package javafx.scene.control.skin;
 
 import com.sun.javafx.scene.control.behavior.BehaviorBase;
 import com.sun.javafx.scene.control.skin.Utils;
-import javafx.scene.Node;
-import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
 import com.sun.javafx.scene.control.behavior.ButtonBehavior;
 import javafx.scene.control.Control;

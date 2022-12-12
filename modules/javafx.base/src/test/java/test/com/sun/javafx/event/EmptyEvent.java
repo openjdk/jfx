@@ -30,7 +30,7 @@ import javafx.event.EventType;
 
 public final class EmptyEvent extends Event {
     public static final EventType<EmptyEvent> EMPTY =
-            new EventType<EmptyEvent>(Event.ANY, "EMPTY");
+            new EventType<>(Event.ANY, "EMPTY");
 
     public EmptyEvent() {
         super(EMPTY);

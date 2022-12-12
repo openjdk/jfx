@@ -100,14 +100,17 @@ public class AreaChart<X,Y> extends XYChart<X,Y> {
             requestChartLayout();
         }
 
+        @Override
         public Object getBean() {
             return this;
         }
 
+        @Override
         public String getName() {
             return "createSymbols";
         }
 
+        @Override
         public CssMetaData<AreaChart<?, ?>,Boolean> getCssMetaData() {
             return StyleableProperties.CREATE_SYMBOLS;
         }
@@ -161,8 +164,8 @@ public class AreaChart<X,Y> extends XYChart<X,Y> {
         final Axis<Y> ya = getYAxis();
         List<X> xData = null;
         List<Y> yData = null;
-        if(xa.isAutoRanging()) xData = new ArrayList<X>();
-        if(ya.isAutoRanging()) yData = new ArrayList<Y>();
+        if(xa.isAutoRanging()) xData = new ArrayList<>();
+        if(ya.isAutoRanging()) yData = new ArrayList<>();
         if(xData != null || yData != null) {
             for(Series<X,Y> series : getData()) {
                 for(Data<X,Y> data: series.getData()) {
@@ -369,7 +372,7 @@ public class AreaChart<X,Y> extends XYChart<X,Y> {
             seriesYAnimMultiplier.setValue(1d);
         }
         getPlotChildren().add(areaGroup);
-        List<KeyFrame> keyFrames = new ArrayList<KeyFrame>();
+        List<KeyFrame> keyFrames = new ArrayList<>();
         if (shouldAnimate()) {
             // animate in new series
             keyFrames.add(new KeyFrame(Duration.ZERO,
@@ -555,7 +558,7 @@ public class AreaChart<X,Y> extends XYChart<X,Y> {
 
     private static class StyleableProperties {
         private static final CssMetaData<AreaChart<?,?>,Boolean> CREATE_SYMBOLS =
-            new CssMetaData<AreaChart<?,?>,Boolean>("-fx-create-symbols",
+            new CssMetaData<>("-fx-create-symbols",
                 BooleanConverter.getInstance(), Boolean.TRUE) {
 
             @Override
@@ -572,7 +575,7 @@ public class AreaChart<X,Y> extends XYChart<X,Y> {
         private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
         static {
             final List<CssMetaData<? extends Styleable, ?>> styleables =
-                new ArrayList<CssMetaData<? extends Styleable, ?>>(XYChart.getClassCssMetaData());
+                new ArrayList<>(XYChart.getClassCssMetaData());
             styleables.add(CREATE_SYMBOLS);
             STYLEABLES = Collections.unmodifiableList(styleables);
         }

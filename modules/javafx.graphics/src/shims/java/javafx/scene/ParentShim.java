@@ -32,6 +32,7 @@ public class ParentShim extends Parent {
 
     public static final int DIRTY_CHILDREN_THRESHOLD = Parent.DIRTY_CHILDREN_THRESHOLD;
 
+    @Override
     public ObservableList<Node> getChildren() {
         return super.getChildren();
     }

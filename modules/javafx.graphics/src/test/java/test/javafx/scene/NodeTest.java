@@ -69,7 +69,6 @@ import java.util.Comparator;
 import java.util.Set;
 
 import javafx.scene.Group;
-import javafx.scene.GroupShim;
 import javafx.scene.Node;
 import javafx.scene.NodeShim;
 import javafx.scene.ParallelCamera;

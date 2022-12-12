@@ -38,7 +38,7 @@ import com.sun.javafx.logging.PlatformLogger;
 /**
  * TODO: 3D - Need documentation
  */
-class ES2PhongMaterial extends BasePhongMaterial implements PhongMaterial {
+class ES2PhongMaterial extends BasePhongMaterial {
 
     static int count = 0;
     private final ES2Context context;

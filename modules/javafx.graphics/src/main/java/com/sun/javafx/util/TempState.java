@@ -82,7 +82,7 @@ public final class TempState {
     public final Affine3D tempTx = new Affine3D();
 
     private static final ThreadLocal<TempState> tempStateRef =
-            new ThreadLocal<TempState>() {
+            new ThreadLocal<>() {
                 @Override
                 protected TempState initialValue() {
                     return new TempState();

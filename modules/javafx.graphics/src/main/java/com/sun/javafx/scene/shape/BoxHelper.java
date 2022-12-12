@@ -77,6 +77,7 @@ public class BoxHelper extends Shape3DHelper {
         return boxAccessor.doComputeContains(node, localX, localY);
     }
 
+    @Override
     protected boolean computeIntersectsImpl(Node node, PickRay pickRay,
             PickResultChooser pickResult) {
         return boxAccessor.doComputeIntersects(node, pickRay, pickResult);
