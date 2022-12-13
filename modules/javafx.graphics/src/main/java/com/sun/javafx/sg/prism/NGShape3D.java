@@ -179,12 +179,10 @@ public abstract class NGShape3D extends NGNode {
                     addDirectionalLight(light, lightIndex++, rL, gL, bL);
                 }
             }
-            if (ambientRed != 0.0f || ambientGreen != 0.0f || ambientBlue != 0.0f) {
-                ambientRed = Utils.clamp(0, ambientRed, 1);
-                ambientGreen = Utils.clamp(0, ambientGreen, 1);
-                ambientBlue = Utils.clamp(0, ambientBlue, 1);
-                meshView.setAmbientLight(ambientRed, ambientGreen, ambientBlue);
-            }
+            ambientRed = Utils.clamp(0, ambientRed, 1);
+            ambientGreen = Utils.clamp(0, ambientGreen, 1);
+            ambientBlue = Utils.clamp(0, ambientBlue, 1);
+            meshView.setAmbientLight(ambientRed, ambientGreen, ambientBlue);
         }
         // TODO: 3D Required for D3D implementation of lights, which is limited to 3
 
