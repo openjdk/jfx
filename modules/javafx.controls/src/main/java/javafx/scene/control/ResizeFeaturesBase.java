@@ -29,11 +29,11 @@ import javafx.beans.NamedArg;
 
 
 /**
- * An immutable wrapper class for use by the column resize policies offered by
+ * A wrapper class for use by the column resize policies offered by
  * controls such as {@link TableView} and {@link TreeTableView}.
  * @since JavaFX 8.0
  */
-public class ResizeFeaturesBase<S> {
+public abstract class ResizeFeaturesBase<S> {
   private final TableColumnBase<S,?> column;
   private final Double delta;
 
@@ -54,29 +54,21 @@ public class ResizeFeaturesBase<S> {
 
   /**
    * Returns the width of the area available for columns.
-   * Subclasses must override this method.
    *
    * @return the width availabe for columns
    *
    * @since 20
    */
-  public double getContentWidth() {
-      // not available in the base class
-      throw new UnsupportedOperationException("method not available in the base class");
-  }
+  public abstract double getContentWidth();
 
   /**
    * Returns the associated TreeView or TreeTableView control.
-   * Subclasses must override this method.
    *
    * @return the control in which the resize is occurring
    *
    * @since 20
    */
-  public Control getTableControl() {
-      // not available in the base class
-      throw new UnsupportedOperationException("method not available in the base class");
-  }
+  public abstract Control getTableControl();
 
   /**
    * Returns the column upon which the resize is occurring, or null
