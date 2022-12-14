@@ -1,6 +1,6 @@
 ## Gradle v7.6
 
-### Gradle License
+### Gradle Notice
 ```
 
 gradlew
