@@ -30,7 +30,7 @@ import com.sun.javafx.reflect.ReflectUtil;
 
 /**
  */
-public class JavaBeanPropertyBuilderHelper {
+public class JavaBeanPropertyBuilderHelper<T> {
 
     private static final String IS_PREFIX = "is";
     private static final String GET_PREFIX = "get";
@@ -43,7 +43,7 @@ public class JavaBeanPropertyBuilderHelper {
     private String setterName;
     private Method getter;
     private Method setter;
-    private PropertyDescriptor descriptor;
+    private PropertyDescriptor<T> descriptor;
 
     public void name(String propertyName) {
         if ((propertyName == null)? this.propertyName != null : !propertyName.equals(this.propertyName)) {
@@ -104,7 +104,7 @@ public class JavaBeanPropertyBuilderHelper {
         }
     }
 
-    public PropertyDescriptor getDescriptor() throws NoSuchMethodException {
+    public PropertyDescriptor<T> getDescriptor() throws NoSuchMethodException {
         if (descriptor == null) {
             if (propertyName == null) {
                 throw new NullPointerException("Property name has to be specified");
@@ -134,7 +134,7 @@ public class JavaBeanPropertyBuilderHelper {
                     setterMethod = beanClass.getMethod(SET_PREFIX + capitalizedName, type);
                 }
             }
-            descriptor = new PropertyDescriptor(propertyName, beanClass, getterMethod, setterMethod);
+            descriptor = new PropertyDescriptor<>(propertyName, beanClass, getterMethod, setterMethod);
         }
         return descriptor;
     }
