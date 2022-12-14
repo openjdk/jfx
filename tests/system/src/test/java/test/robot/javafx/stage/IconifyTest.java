@@ -92,7 +92,7 @@ public class IconifyTest extends VisualTestBase {
         assertTrue("Timeout waiting for top stage to be shown",
             topShownLatch.await(TIMEOUT, TimeUnit.MILLISECONDS));
 
-        sleep(500);
+        sleep(1000);
         runAndWait(() -> {
             assertFalse(topStage.isIconified());
             Color color = getColor(100, 100);
@@ -103,7 +103,7 @@ public class IconifyTest extends VisualTestBase {
             topStage.setIconified(true);
         });
 
-        sleep(500);
+        sleep(1000);
         runAndWait(() -> {
             assertTrue(topStage.isIconified());
             Color color = getColor(100, 100);
@@ -114,7 +114,7 @@ public class IconifyTest extends VisualTestBase {
             topStage.setIconified(false);
         });
 
-        sleep(500);
+        sleep(1000);
         runAndWait(() -> {
             assertFalse(topStage.isIconified());
             Color color = getColor(100, 100);
