@@ -34,6 +34,7 @@ import javafx.scene.control.TableColumnBase;
  * https://bugs.openjdk.org/browse/JDK-8293119
  */
 public class ResizeHelper {
+    private static final int SMALL_DELTA = 32;
     private final ResizeFeaturesBase rf;
     private final int target;
     private final List<? extends TableColumnBase<?,?>> columns;
@@ -44,7 +45,6 @@ public class ResizeHelper {
     private final int[] pref;
     private final int[] max;
     private final BitSet skip;
-    private static final int SMALL_DELTA = 8;
 
     public ResizeHelper(ResizeFeaturesBase rf,
                         double target,
@@ -141,12 +141,12 @@ public class ResizeHelper {
 
                 acc += w;
                 size[i] = w;
-            }
 
-            if (target == acc) {
-                needsAnotherPass = false;
+                if(needsAnotherPass) {
+                    resetSizeChanges();
+                    break;
+                }
             }
-
         } while (needsAnotherPass);
     }
 
