@@ -123,6 +123,7 @@ public class SpinnerBehavior<T> extends BehaviorBase<Spinner<T>> {
 
     public void startSpinning(boolean increment) {
         isIncrementing = increment;
+
         if (timeline != null) {
             timeline.stop();
         }
