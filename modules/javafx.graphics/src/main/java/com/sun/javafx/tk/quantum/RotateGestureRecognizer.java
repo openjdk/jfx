@@ -44,8 +44,8 @@ import javafx.animation.Timeline;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.SimpleDoubleProperty;
 
-class RotateGestureRecognizer implements GestureRecognizer {
-    private ViewScene scene;
+public class RotateGestureRecognizer implements GestureRecognizer {
+    private PrivilegedSceneListenerAccessor accessor;
 
     // gesture will be activated if |rotation| > ROTATATION_THRESHOLD
     private static double ROTATATION_THRESHOLD = 5; //in degrees
@@ -96,8 +96,8 @@ class RotateGestureRecognizer implements GestureRecognizer {
     double totalRotation = 0;
     double inertiaLastTime = 0;
 
-    RotateGestureRecognizer(final ViewScene scene) {
-        this.scene = scene;
+    public RotateGestureRecognizer(PrivilegedSceneListenerAccessor accessor) {
+        this.accessor = accessor;
         inertiaRotationVelocity.addListener(valueModel -> {
             double currentTime = inertiaTimeline.getCurrentTime().toSeconds();
             double timePassed = currentTime - inertiaLastTime;
@@ -318,60 +318,51 @@ class RotateGestureRecognizer implements GestureRecognizer {
         }
     }
 
-    @SuppressWarnings("removal")
     private void sendRotateStartedEvent() {
-        AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
-            if (scene.sceneListener != null) {
-                scene.sceneListener.rotateEvent(RotateEvent.ROTATION_STARTED,
-                    0, 0,
-                    centerX, centerY,
-                    centerAbsX, centerAbsY,
-                    (modifiers & KeyEvent.MODIFIER_SHIFT) != 0,
-                    (modifiers & KeyEvent.MODIFIER_CONTROL) != 0,
-                    (modifiers & KeyEvent.MODIFIER_ALT) != 0,
-                    (modifiers & KeyEvent.MODIFIER_WINDOWS) != 0,
-                    direct,
-                    false /*inertia*/);
-            }
-            return null;
-        }, scene.getAccessControlContext());
+        accessor.withSceneListener(sceneListener -> {
+            sceneListener.rotateEvent(RotateEvent.ROTATION_STARTED,
+                0, 0,
+                centerX, centerY,
+                centerAbsX, centerAbsY,
+                (modifiers & KeyEvent.MODIFIER_SHIFT) != 0,
+                (modifiers & KeyEvent.MODIFIER_CONTROL) != 0,
+                (modifiers & KeyEvent.MODIFIER_ALT) != 0,
+                (modifiers & KeyEvent.MODIFIER_WINDOWS) != 0,
+                direct,
+                false  // inertia
+            );
+        });
     }
 
-    @SuppressWarnings("removal")
     private void sendRotateEvent(boolean isInertia) {
-        AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
-            if (scene.sceneListener != null) {
-                scene.sceneListener.rotateEvent(RotateEvent.ROTATE,
-                    currentRotation, totalRotation,
-                    centerX, centerY,
-                    centerAbsX, centerAbsY,
-                    (modifiers & KeyEvent.MODIFIER_SHIFT) != 0,
-                    (modifiers & KeyEvent.MODIFIER_CONTROL) != 0,
-                    (modifiers & KeyEvent.MODIFIER_ALT) != 0,
-                    (modifiers & KeyEvent.MODIFIER_WINDOWS) != 0,
-                    direct, isInertia);
-            }
-            return null;
-        }, scene.getAccessControlContext());
+        accessor.withSceneListener(sceneListener -> {
+            sceneListener.rotateEvent(RotateEvent.ROTATE,
+                currentRotation, totalRotation,
+                centerX, centerY,
+                centerAbsX, centerAbsY,
+                (modifiers & KeyEvent.MODIFIER_SHIFT) != 0,
+                (modifiers & KeyEvent.MODIFIER_CONTROL) != 0,
+                (modifiers & KeyEvent.MODIFIER_ALT) != 0,
+                (modifiers & KeyEvent.MODIFIER_WINDOWS) != 0,
+                direct, isInertia
+            );
+        });
     }
 
-    @SuppressWarnings("removal")
     private void sendRotateFinishedEvent() {
-        AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
-            if (scene.sceneListener != null) {
-                scene.sceneListener.rotateEvent(RotateEvent.ROTATION_FINISHED,
-                    0, totalRotation,
-                    centerX, centerY,
-                    centerAbsX, centerAbsY,
-                    (modifiers & KeyEvent.MODIFIER_SHIFT) != 0,
-                    (modifiers & KeyEvent.MODIFIER_CONTROL) != 0,
-                    (modifiers & KeyEvent.MODIFIER_ALT) != 0,
-                    (modifiers & KeyEvent.MODIFIER_WINDOWS) != 0,
-                    direct,
-                    false /*inertia*/);
-            }
-            return null;
-        }, scene.getAccessControlContext());
+        accessor.withSceneListener(sceneListener -> {
+            sceneListener.rotateEvent(RotateEvent.ROTATION_FINISHED,
+                0, totalRotation,
+                centerX, centerY,
+                centerAbsX, centerAbsY,
+                (modifiers & KeyEvent.MODIFIER_SHIFT) != 0,
+                (modifiers & KeyEvent.MODIFIER_CONTROL) != 0,
+                (modifiers & KeyEvent.MODIFIER_ALT) != 0,
+                (modifiers & KeyEvent.MODIFIER_WINDOWS) != 0,
+                direct,
+                false  // inertia
+            );
+        });
     }
 
     public void params(int modifiers, boolean direct) {

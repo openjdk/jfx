@@ -78,12 +78,23 @@ class GlassViewEventHandler extends View.EventHandler {
         });
     }
 
-    private ViewScene scene;
+    private final ViewScene scene;
+    private final PrivilegedSceneListenerAccessor privilegedSceneListenerAccessor;
     private final GlassSceneDnDEventHandler dndHandler;
     private final GestureRecognizers gestures;
 
+    @SuppressWarnings("removal")
     public GlassViewEventHandler(final ViewScene scene) {
         this.scene = scene;
+        this.privilegedSceneListenerAccessor = consumer -> AccessController.doPrivileged(
+            (PrivilegedAction<Void>) () -> {
+                if (scene.sceneListener != null) {
+                    consumer.accept(scene.sceneListener);
+                }
+                return null;
+            },
+            scene.getAccessControlContext()
+        );
 
         dndHandler = new GlassSceneDnDEventHandler(scene);
 
@@ -95,7 +106,7 @@ class GlassViewEventHandler extends View.EventHandler {
             gestures.add(new ZoomGestureRecognizer(scene));
         }
         if (rotateGestureEnabled) {
-            gestures.add(new RotateGestureRecognizer(scene));
+            gestures.add(new RotateGestureRecognizer(privilegedSceneListenerAccessor));
         }
         if (scrollGestureEnabled) {
             gestures.add(new ScrollGestureRecognizer(scene));
