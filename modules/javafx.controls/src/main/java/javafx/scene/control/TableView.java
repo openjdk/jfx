@@ -1605,8 +1605,8 @@ public class TableView<S> extends Control {
                 final ObservableList<TablePosition<S,?>> newState = (ObservableList<TablePosition<S,?>>)(Object)sm.getSelectedCells();
 
                 List<TablePosition<S, ?>> removed = new ArrayList<>();
-                if(prevState != null) {
-                    for (TablePosition<S, ?> prevItem: prevState) {
+                if (prevState != null) {
+                    for (TablePosition<S, ?> prevItem : prevState) {
                         if (!newState.contains(prevItem)) {
                             removed.add(prevItem);
                         }
