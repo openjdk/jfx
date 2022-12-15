@@ -90,8 +90,8 @@ import java.security.PrivilegedAction;
  */
 public final class JavaBeanLongProperty extends LongProperty implements JavaBeanProperty<Number> {
 
-    private final PropertyDescriptor descriptor;
-    private final PropertyDescriptor.Listener<Number> listener;
+    private final PropertyDescriptor<Number> descriptor;
+    private final PropertyDescriptor<Number>.Listener listener;
 
     private ObservableValue<? extends Number> observable = null;
     private ExpressionHelper<Number> helper = null;
@@ -99,11 +99,11 @@ public final class JavaBeanLongProperty extends LongProperty implements JavaBean
     @SuppressWarnings("removal")
     private final AccessControlContext acc = AccessController.getContext();
 
-    JavaBeanLongProperty(PropertyDescriptor descriptor, Object bean) {
+    JavaBeanLongProperty(PropertyDescriptor<Number> descriptor, Object bean) {
         this.descriptor = descriptor;
-        this.listener = descriptor.new Listener<>(bean, this);
+        this.listener = descriptor.new Listener(bean, this);
         descriptor.addListener(listener);
-        Disposer.addRecord(this, new DescriptorListenerCleaner(descriptor, listener));
+        Disposer.addRecord(this, new DescriptorListenerCleaner<>(descriptor, listener));
     }
 
     /**

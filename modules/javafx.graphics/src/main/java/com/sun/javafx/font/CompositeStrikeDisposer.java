@@ -26,10 +26,6 @@
 package com.sun.javafx.font;
 import java.lang.ref.WeakReference;
 
-import com.sun.javafx.font.DisposerRecord;
-import com.sun.javafx.font.FontResource;
-import com.sun.javafx.font.FontStrikeDesc;
-
 class CompositeStrikeDisposer implements DisposerRecord {
 
     FontResource fontResource;
@@ -41,6 +37,7 @@ class CompositeStrikeDisposer implements DisposerRecord {
         this.desc = desc;
     }
 
+    @Override
     public synchronized void dispose() {
         if (!disposed) {
             // Careful here. The original strike we are collecting

@@ -128,22 +128,22 @@ public class KeyFrameTest {
         assertEquals(NAME, kf5.getName());
         assertEquals(ACTION, kf5.getOnFinished());
         assertSetEquals(TWO_KEYVALUES, kf2.getValues());
-    };
+    }
 
     @Test(expected=NullPointerException.class)
     public void testConstructor_ObservableList_DurationIsNull(){
         new KeyFrame(null, NAME, ACTION, TWO_KEYVALUES_COL);
-    };
+    }
 
     @Test(expected=IllegalArgumentException.class)
     public void testConstructor_ObservableList_DurationIsNegative(){
         new KeyFrame(Duration.millis(-1), NAME, ACTION, TWO_KEYVALUES_COL);
-    };
+    }
 
     @Test(expected=IllegalArgumentException.class)
     public void testConstructor_ObservableList_DuratinIsUnknown(){
         new KeyFrame(Duration.UNKNOWN, NAME, ACTION, TWO_KEYVALUES_COL);
-    };
+    }
 
     @Test public void testConstructor_Time_Name_Action_Valus() {
         // no values
@@ -215,17 +215,17 @@ public class KeyFrameTest {
     @Test(expected=NullPointerException.class)
     public void testConstructor_KeyValues_DurationIsNull(){
         new KeyFrame(null, NAME, ACTION, TWO_KEYVALUES);
-    };
+    }
 
     @Test(expected=IllegalArgumentException.class)
     public void testConstructor_KeyValues_DurationIsNegative(){
         new KeyFrame(Duration.millis(-1), NAME, ACTION, TWO_KEYVALUES);
-    };
+    }
 
     @Test(expected=IllegalArgumentException.class)
     public void testConstructor_KeyValues_DurationIsUnknown(){
         new KeyFrame(Duration.UNKNOWN, NAME, ACTION, TWO_KEYVALUES);
-    };
+    }
 
     @Test public void testConstructor_Time_Action_Valus() {
         final KeyFrame kf0 = new KeyFrame(TIME, ACTION, TWO_KEYVALUES);

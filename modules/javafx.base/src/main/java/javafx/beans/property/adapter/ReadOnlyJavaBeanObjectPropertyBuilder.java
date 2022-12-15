@@ -60,7 +60,7 @@ import java.lang.reflect.Method;
  */
 public final class ReadOnlyJavaBeanObjectPropertyBuilder<T> {
 
-    private final ReadOnlyJavaBeanPropertyBuilderHelper helper = new ReadOnlyJavaBeanPropertyBuilderHelper();
+    private final ReadOnlyJavaBeanPropertyBuilderHelper<T> helper = new ReadOnlyJavaBeanPropertyBuilderHelper<>();
 
     private ReadOnlyJavaBeanObjectPropertyBuilder() {}
 
@@ -82,7 +82,7 @@ public final class ReadOnlyJavaBeanObjectPropertyBuilder<T> {
      * the getter of the Java Bean property
      */
     public ReadOnlyJavaBeanObjectProperty<T> build() throws NoSuchMethodException {
-        final ReadOnlyPropertyDescriptor descriptor = helper.getDescriptor();
+        final ReadOnlyPropertyDescriptor<T> descriptor = helper.getDescriptor();
         return new ReadOnlyJavaBeanObjectProperty<>(descriptor, helper.getBean());
     }
 

@@ -53,10 +53,10 @@ public class ToggleButtonTest {
     private ToggleButton toggleWithText;//WithText
     private ToggleButton toggleWithGraphic;//With Graphic
     private Node node;
-    private Toolkit tk;
 
     @Before public void setup() {
-        tk = (StubToolkit)Toolkit.getToolkit();//This step is not needed (Just to make sure StubToolkit is loaded into VM)
+        assertTrue(Toolkit.getToolkit() instanceof StubToolkit);  // Ensure StubToolkit is loaded
+
         node = new Rectangle();
         toggleGroup = new ToggleGroup();
         toggle = new ToggleButton();

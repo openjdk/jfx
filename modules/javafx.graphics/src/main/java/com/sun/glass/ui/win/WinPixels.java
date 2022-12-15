@@ -24,7 +24,6 @@
  */
 package com.sun.glass.ui.win;
 
-import com.sun.glass.ui.Application;
 import com.sun.glass.ui.Pixels;
 
 import java.nio.ByteBuffer;

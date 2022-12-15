@@ -39,7 +39,7 @@ import org.w3c.dom.Document;
 
 public class BindingTest extends TestBase {
 
-    @Test public void testWebView() throws InterruptedException {
+    @Test public void testWebView() {
         submit(() -> {
             WebView main = getView();
             WebView test = new WebView();
@@ -120,9 +120,9 @@ public class BindingTest extends TestBase {
     }
 
     @Test public void testWebEngineReadonlyProperties() {
-        ObjectProperty<Document> doc = new SimpleObjectProperty<Document>();
-        ObjectProperty<String> title = new SimpleObjectProperty<String>();
-        ObjectProperty<String> loc = new SimpleObjectProperty<String>();
+        ObjectProperty<Document> doc = new SimpleObjectProperty<>();
+        ObjectProperty<String> title = new SimpleObjectProperty<>();
+        ObjectProperty<String> loc = new SimpleObjectProperty<>();
 
         WebEngine web = getEngine();
         doc.bind(web.documentProperty());

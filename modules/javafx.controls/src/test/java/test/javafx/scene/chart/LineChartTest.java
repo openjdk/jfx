@@ -48,12 +48,12 @@ import static org.junit.Assert.assertEquals;
 public class LineChartTest extends XYChartTestBase {
 
     LineChart<Number,Number> lineChart;
-    final XYChart.Series<Number, Number> series1 = new XYChart.Series<Number, Number>();
+    final XYChart.Series<Number, Number> series1 = new XYChart.Series<>();
 
     @Override protected Chart createChart() {
         final NumberAxis xAxis = new NumberAxis(0, 90, 10);
-        final NumberAxis yAxis = new NumberAxis(0, 30, 2);;
-        lineChart = new LineChart<Number,Number>(xAxis,yAxis);
+        final NumberAxis yAxis = new NumberAxis(0, 30, 2);
+        lineChart = new LineChart<>(xAxis,yAxis);
         xAxis.setLabel("X Axis");
         yAxis.setLabel("Y Axis");
         lineChart.setTitle("HelloLineChart");
@@ -137,7 +137,7 @@ public class LineChartTest extends XYChartTestBase {
     public void testSeriesAddWithAnimation() {
         startApp();
         lineChart.setAnimated(true);
-        final XYChart.Series<Number, Number> series2 = new XYChart.Series<Number, Number>();
+        final XYChart.Series<Number, Number> series2 = new XYChart.Series<>();
         series1.getData().add(new XYChart.Data(15d, 40d));
         series1.getData().add(new XYChart.Data(25d, 10d));
         series1.getData().add(new XYChart.Data(40d, 35d));

@@ -48,10 +48,12 @@ final class WCStrokeImpl extends WCStroke<Paint, BasicStroke> {
         setDashOffset(dashOffset);
     }
 
+    @Override
     protected void invalidate() {
         this.stroke = null;
     }
 
+    @Override
     public BasicStroke getPlatformStroke() {
         if (this.stroke == null) {
             int style = getStyle();

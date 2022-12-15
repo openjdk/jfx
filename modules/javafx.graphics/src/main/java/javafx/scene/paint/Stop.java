@@ -63,7 +63,7 @@ public final class Stop {
         }
         Stop zerostop = null;
         Stop onestop = null;
-        List<Stop> newlist = new ArrayList<Stop>(stops.size());
+        List<Stop> newlist = new ArrayList<>(stops.size());
         for (Stop s : stops) {
             if (s == null || s.getColor() == null) continue;
             double off = s.getOffset();

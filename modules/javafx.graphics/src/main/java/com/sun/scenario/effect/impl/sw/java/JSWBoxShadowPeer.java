@@ -31,7 +31,6 @@
 package com.sun.scenario.effect.impl.sw.java;
 
 import com.sun.scenario.effect.Effect;
-import com.sun.scenario.effect.BoxShadow;
 import com.sun.scenario.effect.FilterContext;
 import com.sun.scenario.effect.ImageData;
 import com.sun.scenario.effect.impl.HeapImage;

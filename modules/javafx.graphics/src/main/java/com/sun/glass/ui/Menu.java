@@ -28,7 +28,6 @@ import java.util.List;
 import java.util.ArrayList;
 import java.util.Collections;
 
-import com.sun.glass.ui.Pixels;
 import com.sun.glass.ui.delegate.MenuDelegate;
 import com.sun.glass.ui.delegate.MenuItemDelegate;
 
@@ -58,7 +57,7 @@ public final class Menu {
 
     private String title;
     private boolean enabled;
-    private final List<Object> items = new ArrayList<Object>();
+    private final List<Object> items = new ArrayList<>();
 
     private EventHandler eventHandler;
 

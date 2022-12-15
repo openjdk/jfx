@@ -106,19 +106,16 @@ public abstract class ReadOnlySetProperty<E> extends SetExpression<E> implements
 
     @Override
     public boolean equals(Object obj) {
-        if (obj == this)
+        if (obj == this) {
             return true;
+        }
+        if (!(obj instanceof Set<?> otherSet) || otherSet.size() != size()) {
+            return false;
+        }
 
-        if (!(obj instanceof Set))
-            return false;
-        Set c = (Set) obj;
-        if (c.size() != size())
-            return false;
         try {
-            return containsAll(c);
-        } catch (ClassCastException unused)   {
-            return false;
-        } catch (NullPointerException unused) {
+            return containsAll(otherSet);
+        } catch (ClassCastException | NullPointerException unused)   {
             return false;
         }
     }

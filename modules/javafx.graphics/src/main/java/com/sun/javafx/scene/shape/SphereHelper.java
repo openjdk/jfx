@@ -77,6 +77,7 @@ public class SphereHelper extends Shape3DHelper {
         return sphereAccessor.doComputeContains(node, localX, localY);
     }
 
+    @Override
     protected boolean computeIntersectsImpl(Node node, PickRay pickRay,
           PickResultChooser pickResult) {
         return sphereAccessor.doComputeIntersects(node, pickRay, pickResult);

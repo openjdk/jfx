@@ -76,9 +76,9 @@ public abstract class BaseContext {
     private final GeneralTransform3D perspectiveTransform = new GeneralTransform3D();
 
     private final Map<FontStrike, GlyphCache>
-        greyGlyphCaches = new HashMap<FontStrike, GlyphCache>();
+        greyGlyphCaches = new HashMap<>();
     private final Map<FontStrike, GlyphCache>
-        lcdGlyphCaches = new HashMap<FontStrike, GlyphCache>();
+        lcdGlyphCaches = new HashMap<>();
 
     protected BaseContext(Screen screen, ResourceFactory factory, int vbQuads) {
         this.screen = screen;

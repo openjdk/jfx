@@ -37,7 +37,7 @@ import org.junit.Before;
  */
 public abstract class ServiceTestBase {
     protected final ConcurrentLinkedQueue<Runnable> eventQueue =
-            new ConcurrentLinkedQueue<Runnable>();
+            new ConcurrentLinkedQueue<>();
     protected TestServiceFactory factory;
     protected Service<String> service;
 

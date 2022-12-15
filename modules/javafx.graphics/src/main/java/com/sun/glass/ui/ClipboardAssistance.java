@@ -28,7 +28,7 @@ import java.util.HashMap;
 
 public class ClipboardAssistance {
 
-    private final HashMap <String, Object> cacheData  =  new HashMap <String, Object> ();
+    private final HashMap<String, Object> cacheData = new HashMap<>();
     private final Clipboard clipboard;
     private int supportedActions = Clipboard.ACTION_ANY;
 

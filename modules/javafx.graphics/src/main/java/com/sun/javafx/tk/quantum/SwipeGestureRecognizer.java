@@ -215,8 +215,7 @@ class SwipeGestureRecognizer implements GestureRecognizer {
 
     private class MultiTouchTracker {
         SwipeRecognitionState state = SwipeRecognitionState.IDLE;
-        Map<Long, TouchPointTracker> trackers =
-                new HashMap<Long, TouchPointTracker>();
+        Map<Long, TouchPointTracker> trackers = new HashMap<>();
         CenterComputer cc = new CenterComputer();
         int modifiers;
         boolean direct;

@@ -160,6 +160,7 @@ public class WeightedClosestCorner implements Algorithm {
         return distance;
     }
 
+    @Override
     public Node select(Node node, Direction dir, TraversalContext context) {
         Node newNode = null;
         List<Node> nodes = context.getAllTargetNodes();

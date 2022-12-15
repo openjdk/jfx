@@ -77,6 +77,7 @@ public class MeshViewHelper extends Shape3DHelper {
         return meshViewAccessor.doComputeContains(node, localX, localY);
     }
 
+    @Override
     protected boolean computeIntersectsImpl(Node node, PickRay pickRay,
             PickResultChooser pickResult) {
         return meshViewAccessor.doComputeIntersects(node, pickRay, pickResult);

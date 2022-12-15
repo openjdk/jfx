@@ -27,7 +27,6 @@ package test.javafx.scene.web;
 
 import com.sun.webkit.WebPage;
 import com.sun.webkit.WebPageShim;
-import java.util.concurrent.Callable;
 import javafx.scene.web.WebEngineShim;
 
 import static org.junit.Assert.assertEquals;

@@ -87,7 +87,7 @@ abstract class BitSet<T> implements ObservableSet<T> {
     @Override
     public Iterator<T> iterator() {
 
-        return new Iterator<T>() {
+        return new Iterator<>() {
             int next = -1;
             int element = 0;
             int index = -1;

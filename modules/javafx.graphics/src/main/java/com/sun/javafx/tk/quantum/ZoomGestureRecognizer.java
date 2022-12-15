@@ -77,7 +77,6 @@ class ZoomGestureRecognizer implements GestureRecognizer {
     private long zoomStartNanos;
 
     private ZoomRecognitionState state = ZoomRecognitionState.IDLE;
-
     private int modifiers;
     private boolean direct;
 
