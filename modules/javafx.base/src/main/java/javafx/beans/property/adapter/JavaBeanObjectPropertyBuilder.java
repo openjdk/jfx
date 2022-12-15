@@ -59,9 +59,10 @@ import java.lang.reflect.Method;
  * @param <T> the type of the wrapped {@code Object}
  * @since JavaFX 2.1
  */
+// TODO Update API: all public methods should have type <T> added instead of returning raw types
 public final class JavaBeanObjectPropertyBuilder<T> {
 
-    private JavaBeanPropertyBuilderHelper helper = new JavaBeanPropertyBuilderHelper();
+    private JavaBeanPropertyBuilderHelper<T> helper = new JavaBeanPropertyBuilderHelper<>();
 
     private JavaBeanObjectPropertyBuilder() {}
 
@@ -71,7 +72,7 @@ public final class JavaBeanObjectPropertyBuilder<T> {
      * @return the new {@code JavaBeanObjectPropertyBuilder}
      */
     public static JavaBeanObjectPropertyBuilder create() {
-        return new JavaBeanObjectPropertyBuilder();
+        return new JavaBeanObjectPropertyBuilder<>();
     }
 
     /**
@@ -82,7 +83,7 @@ public final class JavaBeanObjectPropertyBuilder<T> {
      * the getter and the setter of the Java Bean property
      */
     public JavaBeanObjectProperty<T> build() throws NoSuchMethodException {
-        final PropertyDescriptor descriptor = helper.getDescriptor();
+        final PropertyDescriptor<T> descriptor = helper.getDescriptor();
         return new JavaBeanObjectProperty<>(descriptor, helper.getBean());
     }
 

@@ -226,8 +226,8 @@ public class TreeAndTableViewTest {
     }
 
     protected static boolean containsPseudoclass(Node n, String pseudoclass) {
-        for (PseudoClass pc: n.getPseudoClassStates()) {
-            if(pseudoclass.equals(pc.getPseudoClassName())) {
+        for (PseudoClass pc : n.getPseudoClassStates()) {
+            if (pseudoclass.equals(pc.getPseudoClassName())) {
                 return true;
             }
         }

@@ -59,7 +59,7 @@ import java.lang.reflect.Method;
  */
 public final class JavaBeanLongPropertyBuilder {
 
-    private JavaBeanPropertyBuilderHelper helper = new JavaBeanPropertyBuilderHelper();
+    private JavaBeanPropertyBuilderHelper<Number> helper = new JavaBeanPropertyBuilderHelper<>();
 
     private JavaBeanLongPropertyBuilder() {}
 
@@ -82,7 +82,7 @@ public final class JavaBeanLongPropertyBuilder {
      * {@code long} or {@code Long}
      */
     public JavaBeanLongProperty build() throws NoSuchMethodException {
-        final PropertyDescriptor descriptor = helper.getDescriptor();
+        final PropertyDescriptor<Number> descriptor = helper.getDescriptor();
         if (!long.class.equals(descriptor.getType()) && !Number.class.isAssignableFrom(descriptor.getType())) {
             throw new IllegalArgumentException("Not a long property");
         }

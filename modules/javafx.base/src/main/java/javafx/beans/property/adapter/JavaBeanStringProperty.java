@@ -90,8 +90,8 @@ import java.security.PrivilegedAction;
  */
 public final class JavaBeanStringProperty extends StringProperty implements JavaBeanProperty<String> {
 
-    private final PropertyDescriptor descriptor;
-    private final PropertyDescriptor.Listener<String> listener;
+    private final PropertyDescriptor<String> descriptor;
+    private final PropertyDescriptor<String>.Listener listener;
 
     private ObservableValue<? extends String> observable = null;
     private ExpressionHelper<String> helper = null;
@@ -99,11 +99,11 @@ public final class JavaBeanStringProperty extends StringProperty implements Java
     @SuppressWarnings("removal")
     private final AccessControlContext acc = AccessController.getContext();
 
-    JavaBeanStringProperty(PropertyDescriptor descriptor, Object bean) {
+    JavaBeanStringProperty(PropertyDescriptor<String> descriptor, Object bean) {
         this.descriptor = descriptor;
-        this.listener = descriptor.new Listener<>(bean, this);
+        this.listener = descriptor.new Listener(bean, this);
         descriptor.addListener(listener);
-        Disposer.addRecord(this, new DescriptorListenerCleaner(descriptor, listener));
+        Disposer.addRecord(this, new DescriptorListenerCleaner<>(descriptor, listener));
     }
 
     /**
