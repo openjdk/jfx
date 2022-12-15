@@ -162,7 +162,6 @@ public class SpinnerSkinTest {
     @Test
     public void testSpinnerIncrementOnRemovingFromScene() {
         spinner = new Spinner<>(0, 1000, 0);
-        // spinner.setEditable(true);
         spinner.setSkin(new SpinnerSkin<>(spinner));
 
         HBox root = new HBox(spinner);
