@@ -81,7 +81,8 @@ public class SpinnerSkin<T> extends SkinBase<Spinner<T>> {
     private static final int SPLIT_ARROWS_HORIZONTAL    = 5;
 
     private int layoutMode = 0;
-    private final SpinnerBehavior behavior;
+    /* Package-private for testing purposes */
+    final SpinnerBehavior behavior;
 
 
     /* *************************************************************************
@@ -249,6 +250,12 @@ public class SpinnerSkin<T> extends SkinBase<Spinner<T>> {
                 return null;
             }
         }));
+
+        getSkinnable().sceneProperty().addListener((observable, oldValue, newValue) -> {
+            // Stop spinning when sceneProperty is modified
+            behavior.stopSpinning();
+        });
+
     }
 
     private boolean isIncDecKeyEvent(KeyEvent ke) {

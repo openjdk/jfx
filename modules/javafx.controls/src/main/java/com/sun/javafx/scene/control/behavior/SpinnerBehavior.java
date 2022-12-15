@@ -53,7 +53,8 @@ public class SpinnerBehavior<T> extends BehaviorBase<Spinner<T>> {
 
     private boolean isIncrementing = false;
 
-    private Timeline timeline;
+    /* Package-private for testing purposes */
+    Timeline timeline;
 
     final EventHandler<ActionEvent> spinningKeyFrameEventHandler = event -> {
         final SpinnerValueFactory<T> valueFactory = getNode().getValueFactory();
@@ -122,7 +123,6 @@ public class SpinnerBehavior<T> extends BehaviorBase<Spinner<T>> {
 
     public void startSpinning(boolean increment) {
         isIncrementing = increment;
-
         if (timeline != null) {
             timeline.stop();
         }
