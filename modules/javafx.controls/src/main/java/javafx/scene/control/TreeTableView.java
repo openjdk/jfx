@@ -1068,6 +1068,7 @@ public class TreeTableView<S> extends Control {
                     // need to listen to the cellSelectionEnabledProperty
                     // in order to set pseudo-class state
                     if (oldValue != null) {
+                        oldValue.clearSelection();
                         oldValue.cellSelectionEnabledProperty().removeListener(weakCellSelectionModelInvalidationListener);
 
                         if (oldValue instanceof TreeTableViewArrayListSelectionModel) {
@@ -1077,7 +1078,12 @@ public class TreeTableView<S> extends Control {
 
                     oldValue = get();
 
-                    if (oldValue != null) {
+                    if (oldValue == null) {
+                        // show no focused rows with a null selection model
+                        if (getFocusModel() != null) {
+                            getFocusModel().setFocusedIndex(-1);
+                        }
+                    } else {
                         oldValue.cellSelectionEnabledProperty().addListener(weakCellSelectionModelInvalidationListener);
                         // fake invalidation to ensure updated pseudo-class states
                         weakCellSelectionModelInvalidationListener.invalidated(oldValue.cellSelectionEnabledProperty());
@@ -1847,13 +1853,17 @@ public class TreeTableView<S> extends Control {
             return;
         }
 
-        final List<TreeTablePosition<S,?>> prevState = new ArrayList<>(getSelectionModel().getSelectedCells());
-        final int itemCount = prevState.size();
+        TreeTableViewSelectionModel<S> selectionModel = getSelectionModel();
+        final List<TreeTablePosition<S,?>> prevState = (selectionModel == null) ?
+                null :
+                new ArrayList<>(selectionModel.getSelectedCells());
 
         // we set makeAtomic to true here, so that we don't fire intermediate
         // sort events - instead we send a single permutation event at the end
         // of this method.
-        getSelectionModel().startAtomic();
+        if (selectionModel != null) {
+            selectionModel.startAtomic();
+        }
 
         // get the sort policy and run it
         Callback<TreeTableView<S>, Boolean> sortPolicy = getSortPolicy();
@@ -1863,22 +1873,27 @@ public class TreeTableView<S> extends Control {
         }
         Boolean success = sortPolicy.call(this);
 
-        if (getSortMode() == TreeSortMode.ALL_DESCENDANTS) {
-            Set<TreeItem<S>> sortedParents = new HashSet<>();
-            for (TreeTablePosition<S,?> selectedPosition : prevState) {
-                // This null check is not required ideally.
-                // The selectedPosition.getTreeItem() should always return a valid TreeItem.
-                // But, it is possible to be null due to JDK-8248217.
-                if (selectedPosition.getTreeItem() != null) {
-                    TreeItem<S> parent = selectedPosition.getTreeItem().getParent();
-                    while (parent != null && sortedParents.add(parent)) {
-                        parent.getChildren();
-                        parent = parent.getParent();
+        if (prevState != null) {
+            if (getSortMode() == TreeSortMode.ALL_DESCENDANTS) {
+                Set<TreeItem<S>> sortedParents = new HashSet<>();
+                for (TreeTablePosition<S,?> selectedPosition : prevState) {
+                    // This null check is not required ideally.
+                    // The selectedPosition.getTreeItem() should always return a valid TreeItem.
+                    // But, it is possible to be null due to JDK-8248217.
+                    if (selectedPosition.getTreeItem() != null) {
+                        TreeItem<S> parent = selectedPosition.getTreeItem().getParent();
+                        while (parent != null && sortedParents.add(parent)) {
+                            parent.getChildren();
+                            parent = parent.getParent();
+                        }
                     }
                 }
             }
         }
-        getSelectionModel().stopAtomic();
+
+        if (selectionModel != null) {
+            selectionModel.stopAtomic();
+        }
 
         if (success == null || ! success) {
             // the sort was a failure. Need to backout if possible
@@ -1891,29 +1906,36 @@ public class TreeTableView<S> extends Control {
             // selection model that the items list has 'permutated' to a new ordering
 
             // FIXME we should support alternative selection model implementations!
-            if (getSelectionModel() instanceof TreeTableViewArrayListSelectionModel) {
-                final TreeTableViewArrayListSelectionModel<S> sm = (TreeTableViewArrayListSelectionModel<S>) getSelectionModel();
+            if (selectionModel instanceof TreeTableViewArrayListSelectionModel) {
+                final TreeTableViewArrayListSelectionModel<S> sm = (TreeTableViewArrayListSelectionModel<S>)selectionModel;
                 final ObservableList<TreeTablePosition<S, ?>> newState = sm.getSelectedCells();
 
                 List<TreeTablePosition<S, ?>> removed = new ArrayList<>();
-                for (int i = 0; i < itemCount; i++) {
-                    TreeTablePosition<S, ?> prevItem = prevState.get(i);
-                    if (!newState.contains(prevItem)) {
-                        removed.add(prevItem);
+                if (prevState != null) {
+                    for (TreeTablePosition<S, ?> prevItem: prevState) {
+                        if (!newState.contains(prevItem)) {
+                            removed.add(prevItem);
+                        }
                     }
                 }
+
                 if (!removed.isEmpty()) {
                     // the sort operation effectively permutates the selectedCells list,
                     // but we cannot fire a permutation event as we are talking about
                     // TreeTablePosition's changing (which may reside in the same list
                     // position before and after the sort). Therefore, we need to fire
                     // a single add/remove event to cover the added and removed positions.
+                    int itemCount = prevState == null ? 0 : prevState.size();
                     ListChangeListener.Change<TreeTablePosition<S, ?>> c = new NonIterableChange.GenericAddRemoveChange<>(0, itemCount, removed, newState);
                     sm.fireCustomSelectedCellsListChangeEvent(c);
                 }
             }
-            getSelectionModel().setSelectedIndex(getRow(getSelectionModel().getSelectedItem()));
-            getFocusModel().focus(getSelectionModel().getSelectedIndex());
+
+            if (selectionModel != null) {
+                selectionModel.setSelectedIndex(getRow(selectionModel.getSelectedItem()));
+            }
+
+            getFocusModel().focus(selectionModel == null ? -1 : selectionModel.getSelectedIndex());
         }
         sortingInProgress = false;
     }

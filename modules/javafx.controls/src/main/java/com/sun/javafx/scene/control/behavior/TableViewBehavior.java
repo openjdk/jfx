@@ -27,6 +27,7 @@ package com.sun.javafx.scene.control.behavior;
 
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.WeakChangeListener;
+import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableColumnBase;
@@ -118,7 +119,12 @@ public class TableViewBehavior<T> extends TableViewBehaviorBase<TableView<T>, T,
 
     /** {@inheritDoc}  */
     @Override protected ObservableList<TablePosition> getSelectedCells() {
-        return getNode().getSelectionModel().getSelectedCells();
+        TableViewSelectionModel<T> sm = getNode().getSelectionModel();
+        if (sm == null) {
+            return FXCollections.emptyObservableList();
+        } else {
+            return sm.getSelectedCells();
+        }
     }
 
     /** {@inheritDoc}  */

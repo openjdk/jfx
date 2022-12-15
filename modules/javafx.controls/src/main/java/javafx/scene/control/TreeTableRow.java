@@ -442,6 +442,9 @@ public class TreeTableRow<T> extends IndexedCell<T> {
 
         TreeTableViewSelectionModel<T> sm = getTreeTableView().getSelectionModel();
         if (sm == null) {
+            if (isSelected()) {
+                updateSelected(false);
+            }
             return;
         }
 
