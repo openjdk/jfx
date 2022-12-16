@@ -251,7 +251,7 @@ public class SpinnerSkin<T> extends SkinBase<Spinner<T>> {
             }
         }));
 
-        getSkinnable().sceneProperty().addListener((observable, oldValue, newValue) -> {
+        lh.addChangeListener(control.sceneProperty(), (op) -> {
             // Stop spinning when sceneProperty is modified
             behavior.stopSpinning();
         });
