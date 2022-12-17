@@ -806,6 +806,9 @@ WindowContextTop::WindowContextTop(jobject _jwindow, WindowContext* _owner, long
         gtk_window_set_type_hint(GTK_WINDOW(gtk_widget), GDK_WINDOW_TYPE_HINT_UTILITY);
     }
 
+    const char* wm_name = gdk_x11_screen_get_window_manager_name(gdk_screen_get_default());
+    wmanager = (g_strcmp0("Compiz", wm_name) == 0) ? COMPIZ : UNKNOWN;
+
 //    glong xdisplay = (glong)mainEnv->GetStaticLongField(jApplicationCls, jApplicationDisplay);
 //    gint  xscreenID = (gint)mainEnv->GetStaticIntField(jApplicationCls, jApplicationScreen);
     glong xvisualID = (glong)mainEnv->GetStaticLongField(jApplicationCls, jApplicationVisualID);
@@ -823,7 +826,11 @@ WindowContextTop::WindowContextTop(jobject _jwindow, WindowContext* _owner, long
 
     glass_gtk_configure_transparency_and_realize(gtk_widget, frame_type == TRANSPARENT);
     gtk_window_set_title(GTK_WINDOW(gtk_widget), "");
-    gtk_window_set_focus_on_map(GTK_WINDOW(gtk_widget), FALSE);
+
+    if (wmanager != COMPIZ) {
+        // Compiz doesn't like focus on map disabled
+        gtk_window_set_focus_on_map(GTK_WINDOW(gtk_widget), FALSE);
+    }
 
     gdk_window = gtk_widget_get_window(gtk_widget);
     gdk_window_set_events(gdk_window, GDK_FILTERED_EVENTS_MASK);
@@ -952,9 +959,7 @@ bool WindowContextTop::get_frame_extents_property(int *top, int *left,
 
 void WindowContextTop::process_net_wm_property() {
     // Workaround for https://bugs.launchpad.net/unity/+bug/998073
-
-    // This is a Unity bug (which is not Ubuntu default anymore)
-    if (!g_strcmp0("Compiz", gdk_x11_screen_get_window_manager_name(gdk_screen_get_default()))) {
+    if (wmanager != COMPIZ) {
         return;
     }
 
@@ -1088,7 +1093,6 @@ void WindowContextTop::update_window_constraints() {
 
         hints.max_height = (resizable.maxh == -1) ? G_MAXINT
                            : resizable.maxh - geometry.extents.top - geometry.extents.bottom;
-
     } else {
         int w = geometry_get_content_width(&geometry);
         int h = geometry_get_content_height(&geometry);
@@ -1192,7 +1196,7 @@ void WindowContextTop::applyShapeMask(void* data, uint width, uint height) {
 void WindowContextTop::set_minimized(bool minimize) {
     is_iconified = minimize;
     if (minimize) {
-        if (frame_type == TRANSPARENT) {
+        if (frame_type == TRANSPARENT && wmanager == COMPIZ) {
             // https://bugs.launchpad.net/ubuntu/+source/unity/+bug/1245571
             glass_window_reset_input_shape_mask(gtk_widget_get_window(gtk_widget));
         }

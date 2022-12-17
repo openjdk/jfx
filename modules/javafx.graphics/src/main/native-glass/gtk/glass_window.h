@@ -34,6 +34,11 @@
 
 #include "glass_view.h"
 
+enum WindowManager {
+    COMPIZ,
+    UNKNOWN
+};
+
 enum WindowFrameType {
     TITLED,
     UNTITLED,
@@ -271,6 +276,8 @@ class WindowContextTop: public WindowContextBase {
 
     static WindowFrameExtents normal_extents;
     static WindowFrameExtents utility_extents;
+
+    WindowManager wmanager;
 public:
     WindowContextTop(jobject, WindowContext*, long, WindowFrameType, WindowType, GdkWMFunction);
     void process_map();
