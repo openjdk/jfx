@@ -58,7 +58,7 @@ public final class JavaBeanAccessHelper {
     private static void init() {
         if (!initialized) {
             try {
-                Class accessor = Class.forName(
+                Class<?> accessor = Class.forName(
                         "com.sun.javafx.property.adapter.JavaBeanQuickAccessor",
                         true, JavaBeanAccessHelper.class.getClassLoader());
                 JAVA_BEAN_QUICK_ACCESSOR_CREATE_RO =

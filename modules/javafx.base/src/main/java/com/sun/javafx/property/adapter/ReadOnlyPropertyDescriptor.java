@@ -40,7 +40,7 @@ import static java.util.Locale.ENGLISH;
 
 /**
  */
-public class ReadOnlyPropertyDescriptor {
+public class ReadOnlyPropertyDescriptor<T> {
 
     private static final String ADD_LISTENER_METHOD_NAME = "addPropertyChangeListener";
     private static final String REMOVE_LISTENER_METHOD_NAME = "removePropertyChangeListener";
@@ -149,7 +149,7 @@ public class ReadOnlyPropertyDescriptor {
         }
     }
 
-    public class ReadOnlyListener<T> implements PropertyChangeListener, WeakListener {
+    public class ReadOnlyListener implements PropertyChangeListener, WeakListener {
 
         protected final Object bean;
         private final WeakReference<ReadOnlyJavaBeanProperty<T>> propertyRef;

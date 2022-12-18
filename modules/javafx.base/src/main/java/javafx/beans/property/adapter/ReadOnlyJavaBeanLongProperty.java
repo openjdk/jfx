@@ -82,17 +82,17 @@ import java.security.PrivilegedAction;
  */
 public final class ReadOnlyJavaBeanLongProperty extends ReadOnlyLongPropertyBase implements ReadOnlyJavaBeanProperty<Number> {
 
-    private final ReadOnlyPropertyDescriptor descriptor;
-    private final ReadOnlyPropertyDescriptor.ReadOnlyListener<Number> listener;
+    private final ReadOnlyPropertyDescriptor<Number> descriptor;
+    private final ReadOnlyPropertyDescriptor<Number>.ReadOnlyListener listener;
 
     @SuppressWarnings("removal")
     private final AccessControlContext acc = AccessController.getContext();
 
-    ReadOnlyJavaBeanLongProperty(ReadOnlyPropertyDescriptor descriptor, Object bean) {
+    ReadOnlyJavaBeanLongProperty(ReadOnlyPropertyDescriptor<Number> descriptor, Object bean) {
         this.descriptor = descriptor;
-        this.listener = descriptor.new ReadOnlyListener<>(bean, this);
+        this.listener = descriptor.new ReadOnlyListener(bean, this);
         descriptor.addListener(listener);
-        Disposer.addRecord(this, new DescriptorListenerCleaner(descriptor, listener));
+        Disposer.addRecord(this, new DescriptorListenerCleaner<>(descriptor, listener));
     }
 
     /**

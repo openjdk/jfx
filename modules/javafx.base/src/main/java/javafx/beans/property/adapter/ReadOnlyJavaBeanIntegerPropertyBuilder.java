@@ -58,7 +58,7 @@ import java.lang.reflect.Method;
  */
 public final class ReadOnlyJavaBeanIntegerPropertyBuilder {
 
-    private final ReadOnlyJavaBeanPropertyBuilderHelper helper = new ReadOnlyJavaBeanPropertyBuilderHelper();
+    private final ReadOnlyJavaBeanPropertyBuilderHelper<Number> helper = new ReadOnlyJavaBeanPropertyBuilderHelper<>();
 
     private ReadOnlyJavaBeanIntegerPropertyBuilder() {}
 
@@ -81,7 +81,7 @@ public final class ReadOnlyJavaBeanIntegerPropertyBuilder {
      * {@code int} or {@code Integer}
      */
     public ReadOnlyJavaBeanIntegerProperty build() throws NoSuchMethodException {
-        final ReadOnlyPropertyDescriptor descriptor = helper.getDescriptor();
+        final ReadOnlyPropertyDescriptor<Number> descriptor = helper.getDescriptor();
         if (!int.class.equals(descriptor.getType()) && !Number.class.isAssignableFrom(descriptor.getType())) {
             throw new IllegalArgumentException("Not an int property");
         }

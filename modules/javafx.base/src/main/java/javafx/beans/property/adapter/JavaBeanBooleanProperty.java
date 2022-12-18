@@ -90,8 +90,8 @@ import java.security.PrivilegedAction;
  */
 public final class JavaBeanBooleanProperty extends BooleanProperty implements JavaBeanProperty<Boolean> {
 
-    private final PropertyDescriptor descriptor;
-    private final PropertyDescriptor.Listener<Boolean> listener;
+    private final PropertyDescriptor<Boolean> descriptor;
+    private final PropertyDescriptor<Boolean>.Listener listener;
 
     private ObservableValue<? extends Boolean> observable = null;
     private ExpressionHelper<Boolean> helper = null;
@@ -99,11 +99,11 @@ public final class JavaBeanBooleanProperty extends BooleanProperty implements Ja
     @SuppressWarnings("removal")
     private final AccessControlContext acc = AccessController.getContext();
 
-    JavaBeanBooleanProperty(PropertyDescriptor descriptor, Object bean) {
+    JavaBeanBooleanProperty(PropertyDescriptor<Boolean> descriptor, Object bean) {
         this.descriptor = descriptor;
-        this.listener = descriptor.new Listener<>(bean, this);
+        this.listener = descriptor.new Listener(bean, this);
         descriptor.addListener(listener);
-        Disposer.addRecord(this, new DescriptorListenerCleaner(descriptor, listener));
+        Disposer.addRecord(this, new DescriptorListenerCleaner<>(descriptor, listener));
     }
 
     /**

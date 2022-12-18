@@ -830,6 +830,10 @@ public abstract class TableViewSkinBase<M, S, C extends Control, I extends Index
 
     private boolean isLeadIndex(boolean isFocusDriven, int index) {
         final TableSelectionModel<S> sm = getSelectionModel();
+        if (sm == null) {
+            return false;
+        }
+
         final FocusModel<M> fm = getFocusModel();
 
         return (isFocusDriven && fm.getFocusedIndex() == index)
@@ -1076,5 +1080,4 @@ public abstract class TableViewSkinBase<M, S, C extends Control, I extends Index
             default: return super.queryAccessibleAttribute(attribute, parameters);
         }
     }
-
 }

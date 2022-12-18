@@ -59,7 +59,7 @@ import java.lang.reflect.Method;
  */
 public final class JavaBeanFloatPropertyBuilder {
 
-    private JavaBeanPropertyBuilderHelper helper = new JavaBeanPropertyBuilderHelper();
+    private JavaBeanPropertyBuilderHelper<Number> helper = new JavaBeanPropertyBuilderHelper<>();
 
     private JavaBeanFloatPropertyBuilder() {}
 
@@ -82,7 +82,7 @@ public final class JavaBeanFloatPropertyBuilder {
      * {@code float} or {@code Float}
      */
     public JavaBeanFloatProperty build() throws NoSuchMethodException {
-        final PropertyDescriptor descriptor = helper.getDescriptor();
+        final PropertyDescriptor<Number> descriptor = helper.getDescriptor();
         if (!float.class.equals(descriptor.getType()) && !Number.class.isAssignableFrom(descriptor.getType())) {
             throw new IllegalArgumentException("Not a float property");
         }

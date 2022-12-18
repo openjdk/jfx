@@ -58,7 +58,7 @@ import java.lang.reflect.Method;
  */
 public final class ReadOnlyJavaBeanLongPropertyBuilder {
 
-    private final ReadOnlyJavaBeanPropertyBuilderHelper helper = new ReadOnlyJavaBeanPropertyBuilderHelper();
+    private final ReadOnlyJavaBeanPropertyBuilderHelper<Number> helper = new ReadOnlyJavaBeanPropertyBuilderHelper<>();
 
     private ReadOnlyJavaBeanLongPropertyBuilder() {}
 
@@ -81,7 +81,7 @@ public final class ReadOnlyJavaBeanLongPropertyBuilder {
      * {@code long} or {@code Long}
      */
     public ReadOnlyJavaBeanLongProperty build() throws NoSuchMethodException {
-        final ReadOnlyPropertyDescriptor descriptor = helper.getDescriptor();
+        final ReadOnlyPropertyDescriptor<Number> descriptor = helper.getDescriptor();
         if (!long.class.equals(descriptor.getType()) && !Number.class.isAssignableFrom(descriptor.getType())) {
             throw new IllegalArgumentException("Not a long property");
         }
