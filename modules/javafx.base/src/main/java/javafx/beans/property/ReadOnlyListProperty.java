@@ -27,6 +27,8 @@ package javafx.beans.property;
 
 import java.util.List;
 import java.util.ListIterator;
+import java.util.Objects;
+
 import javafx.beans.binding.Bindings;
 import javafx.beans.binding.ListExpression;
 import javafx.collections.ObservableList;
@@ -111,23 +113,19 @@ public abstract class ReadOnlyListProperty<E> extends ListExpression<E>
         if (this == obj) {
             return true;
         }
-        if (!(obj instanceof List)) {
-            return false;
-        }
-        final List list = (List)obj;
-
-        if (size() != list.size()) {
+        if (!(obj instanceof List<?> otherList) || size() != otherList.size()) {
             return false;
         }
 
         ListIterator<E> e1 = listIterator();
-        ListIterator e2 = list.listIterator();
+        ListIterator<?> e2 = otherList.listIterator();
+
         while (e1.hasNext() && e2.hasNext()) {
-            E o1 = e1.next();
-            Object o2 = e2.next();
-            if (!(o1==null ? o2==null : o1.equals(o2)))
+            if (!Objects.equals(e1.next(), e2.next())) {
                 return false;
+            }
         }
+
         return true;
     }
 

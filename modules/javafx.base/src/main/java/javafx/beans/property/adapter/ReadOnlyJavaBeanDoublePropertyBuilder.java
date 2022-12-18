@@ -58,7 +58,7 @@ import java.lang.reflect.Method;
  */
 public final class ReadOnlyJavaBeanDoublePropertyBuilder {
 
-    private final ReadOnlyJavaBeanPropertyBuilderHelper helper = new ReadOnlyJavaBeanPropertyBuilderHelper();
+    private final ReadOnlyJavaBeanPropertyBuilderHelper<Number> helper = new ReadOnlyJavaBeanPropertyBuilderHelper<>();
 
     private ReadOnlyJavaBeanDoublePropertyBuilder() {}
 
@@ -81,7 +81,7 @@ public final class ReadOnlyJavaBeanDoublePropertyBuilder {
      * {@code double} or {@code Double}
      */
     public ReadOnlyJavaBeanDoubleProperty build() throws NoSuchMethodException {
-        final ReadOnlyPropertyDescriptor descriptor = helper.getDescriptor();
+        final ReadOnlyPropertyDescriptor<Number> descriptor = helper.getDescriptor();
         if (!double.class.equals(descriptor.getType()) && !Number.class.isAssignableFrom(descriptor.getType())) {
             throw new IllegalArgumentException("Not a double property");
         }

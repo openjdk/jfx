@@ -84,17 +84,17 @@ import java.security.PrivilegedAction;
  */
 public final class ReadOnlyJavaBeanObjectProperty<T> extends ReadOnlyObjectPropertyBase<T> implements ReadOnlyJavaBeanProperty<T> {
 
-    private final ReadOnlyPropertyDescriptor descriptor;
-    private final ReadOnlyPropertyDescriptor.ReadOnlyListener<T> listener;
+    private final ReadOnlyPropertyDescriptor<T> descriptor;
+    private final ReadOnlyPropertyDescriptor<T>.ReadOnlyListener listener;
 
     @SuppressWarnings("removal")
     private final AccessControlContext acc = AccessController.getContext();
 
-    ReadOnlyJavaBeanObjectProperty(ReadOnlyPropertyDescriptor descriptor, Object bean) {
+    ReadOnlyJavaBeanObjectProperty(ReadOnlyPropertyDescriptor<T> descriptor, Object bean) {
         this.descriptor = descriptor;
-        this.listener = descriptor.new ReadOnlyListener<>(bean, this);
+        this.listener = descriptor.new ReadOnlyListener(bean, this);
         descriptor.addListener(listener);
-        Disposer.addRecord(this, new DescriptorListenerCleaner(descriptor, listener));
+        Disposer.addRecord(this, new DescriptorListenerCleaner<>(descriptor, listener));
     }
 
     /**

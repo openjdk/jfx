@@ -58,7 +58,7 @@ import java.lang.reflect.Method;
  */
 public final class ReadOnlyJavaBeanBooleanPropertyBuilder {
 
-    private final ReadOnlyJavaBeanPropertyBuilderHelper helper = new ReadOnlyJavaBeanPropertyBuilderHelper();
+    private final ReadOnlyJavaBeanPropertyBuilderHelper<Boolean> helper = new ReadOnlyJavaBeanPropertyBuilderHelper<>();
 
     private ReadOnlyJavaBeanBooleanPropertyBuilder() {}
 
@@ -81,7 +81,7 @@ public final class ReadOnlyJavaBeanBooleanPropertyBuilder {
      * {@code boolean} or {@code Boolean}
      */
     public ReadOnlyJavaBeanBooleanProperty build() throws NoSuchMethodException {
-        final ReadOnlyPropertyDescriptor descriptor = helper.getDescriptor();
+        final ReadOnlyPropertyDescriptor<Boolean> descriptor = helper.getDescriptor();
         if (!boolean.class.equals(descriptor.getType()) && !Boolean.class.equals(descriptor.getType())) {
             throw new IllegalArgumentException("Not a boolean property");
         }
