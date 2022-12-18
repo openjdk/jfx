@@ -52,7 +52,7 @@
 #define MOUSE_FORWARD_BTN 9
 
 WindowContext * WindowContextBase::sm_grab_window = NULL;
-WindowContext * WindowContextBase::sm_mouse_drag_window = NULL;
+WindowContext * WindowContextBase::sm_devices_drag_window = NULL;
 
 GdkWindow* WindowContextBase::get_gdk_window(){
     return gdk_window;
@@ -133,8 +133,8 @@ void WindowContextBase::process_state(GdkEventWindowState* event) {
 }
 
 void WindowContextBase::process_focus(GdkEventFocus* event) {
-    if (!event->in && WindowContextBase::sm_mouse_drag_window == this) {
-        ungrab_mouse_drag_focus();
+    if (!event->in && WindowContextBase::sm_devices_drag_window == this) {
+        ungrab_devices_drag_focus();
     }
     if (!event->in && WindowContextBase::sm_grab_window == this) {
         ungrab_focus();
@@ -190,8 +190,8 @@ void destroy_and_delete_ctx(WindowContext* ctx) {
 }
 
 void WindowContextBase::process_destroy() {
-    if (WindowContextBase::sm_mouse_drag_window == this) {
-        ungrab_mouse_drag_focus();
+    if (WindowContextBase::sm_devices_drag_window == this) {
+        ungrab_devices_drag_focus();
     }
 
     if (WindowContextBase::sm_grab_window == this) {
@@ -308,17 +308,17 @@ void WindowContextBase::process_mouse_button(GdkEventButton* event) {
     // and no exit/enter event should be reported during this drag.
     // We can grab mouse pointer for these needs.
     if (press) {
-        grab_mouse_drag_focus();
+        grab_devices_drag_focus();
     } else {
         if ((event->state & MOUSE_BUTTONS_MASK)
             && !(state & MOUSE_BUTTONS_MASK)) { // all buttons released
-            ungrab_mouse_drag_focus();
+            ungrab_devices_drag_focus();
         } else if (event->button == 8 || event->button == 9) {
             // GDK X backend interprets button press events for buttons 4-7 as
             // scroll events so GDK_BUTTON4_MASK and GDK_BUTTON5_MASK will never
             // be set on the event->state from GDK. Thus we cannot check if all
             // buttons have been released in the usual way (as above).
-            ungrab_mouse_drag_focus();
+            ungrab_devices_drag_focus();
         }
     }
 
@@ -619,26 +619,27 @@ bool WindowContextBase::set_view(jobject view) {
     return TRUE;
 }
 
-bool WindowContextBase::grab_mouse_drag_focus() {
+bool WindowContextBase::grab_devices_drag_focus() {
     if (glass_gdk_mouse_devices_grab_with_cursor(
             gdk_window, gdk_window_get_cursor(gdk_window), FALSE)) {
-        WindowContextBase::sm_mouse_drag_window = this;
+        gdk_keyboard_grab(gdk_window, TRUE, GDK_CURRENT_TIME);
+        WindowContextBase::sm_devices_drag_window = this;
         return true;
     } else {
         return false;
     }
 }
 
-void WindowContextBase::ungrab_mouse_drag_focus() {
-    WindowContextBase::sm_mouse_drag_window = NULL;
-    glass_gdk_mouse_devices_ungrab();
+void WindowContextBase::ungrab_devices_drag_focus() {
+    WindowContextBase::sm_devices_drag_window = NULL;
+    gdk_keyboard_ungrab(GDK_CURRENT_TIME);
     if (WindowContextBase::sm_grab_window) {
         WindowContextBase::sm_grab_window->grab_focus();
     }
 }
 
 bool WindowContextBase::grab_focus() {
-    if (WindowContextBase::sm_mouse_drag_window
+    if (WindowContextBase::sm_devices_drag_window
             || glass_gdk_mouse_devices_grab(gdk_window)) {
         WindowContextBase::sm_grab_window = this;
         return true;
@@ -648,7 +649,7 @@ bool WindowContextBase::grab_focus() {
 }
 
 void WindowContextBase::ungrab_focus() {
-    if (!WindowContextBase::sm_mouse_drag_window) {
+    if (!WindowContextBase::sm_devices_drag_window) {
         glass_gdk_mouse_devices_ungrab();
     }
     WindowContextBase::sm_grab_window = NULL;
@@ -661,9 +662,9 @@ void WindowContextBase::ungrab_focus() {
 
 void WindowContextBase::set_cursor(GdkCursor* cursor) {
     if (!is_in_drag()) {
-        if (WindowContextBase::sm_mouse_drag_window) {
+        if (WindowContextBase::sm_devices_drag_window) {
             glass_gdk_mouse_devices_grab_with_cursor(
-                    WindowContextBase::sm_mouse_drag_window->get_gdk_window(), cursor, FALSE);
+                    WindowContextBase::sm_devices_drag_window->get_gdk_window(), cursor, FALSE);
         } else if (WindowContextBase::sm_grab_window) {
             glass_gdk_mouse_devices_grab_with_cursor(
                     WindowContextBase::sm_grab_window->get_gdk_window(), cursor, TRUE);

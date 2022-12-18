@@ -120,9 +120,9 @@ public:
     virtual void request_focus() = 0;
     virtual void set_focusable(bool)= 0;
     virtual bool grab_focus() = 0;
-    virtual bool grab_mouse_drag_focus() = 0;
+    virtual bool grab_devices_drag_focus() = 0;
     virtual void ungrab_focus() = 0;
-    virtual void ungrab_mouse_drag_focus() = 0;
+    virtual void ungrab_devices_drag_focus() = 0;
     virtual void set_title(const char*) = 0;
     virtual void set_alpha(double) = 0;
     virtual void set_enabled(bool) = 0;
@@ -200,9 +200,9 @@ protected:
     static WindowContext* sm_grab_window;
 
     /*
-     * sm_mouse_drag_window points to a WindowContext from which a mouse drag started.
-     * This WindowContext holding a mouse grab during this drag. After releasing
-     * all mouse buttons sm_mouse_drag_window becomes NULL and sm_grab_window's
+     * sm_devices_drag_window points to a WindowContext from which a mouse drag started.
+     * This WindowContext holding devices grab during this drag. After releasing
+     * all mouse buttons sm_devices_darg_window becomes NULL and sm_grab_window's
      * mouse grab should be restored if present.
      *
      * This is done in order to mimic Windows behavior:
@@ -210,7 +210,7 @@ protected:
      * started, until all mouse buttons released. No mouse ENTER/EXIT events
      * should be reported during this drag.
      */
-    static WindowContext* sm_mouse_drag_window;
+    static WindowContext* sm_devices_drag_window;
 public:
     bool isEnabled();
     bool hasIME();
@@ -230,9 +230,9 @@ public:
     bool is_visible();
     bool set_view(jobject);
     bool grab_focus();
-    bool grab_mouse_drag_focus();
+    bool grab_devices_drag_focus();
     void ungrab_focus();
-    void ungrab_mouse_drag_focus();
+    void ungrab_devices_drag_focus();
     void set_cursor(GdkCursor*);
     void set_level(int) {}
     void set_background(float, float, float);
