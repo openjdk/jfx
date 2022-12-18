@@ -101,35 +101,7 @@ void WindowContextBase::notify_state(jint glass_state) {
 }
 
 void WindowContextBase::process_state(GdkEventWindowState* event) {
-    if (event->changed_mask &
-            (GDK_WINDOW_STATE_ICONIFIED | GDK_WINDOW_STATE_MAXIMIZED)) {
-
-        if (event->changed_mask & GDK_WINDOW_STATE_ICONIFIED) {
-            is_iconified = event->new_window_state & GDK_WINDOW_STATE_ICONIFIED;
-        }
-        if (event->changed_mask & GDK_WINDOW_STATE_MAXIMIZED) {
-            is_maximized = event->new_window_state & GDK_WINDOW_STATE_MAXIMIZED;
-        }
-
-        jint stateChangeEvent;
-
-        if (is_iconified) {
-            stateChangeEvent = com_sun_glass_events_WindowEvent_MINIMIZE;
-        } else if (is_maximized) {
-            stateChangeEvent = com_sun_glass_events_WindowEvent_MAXIMIZE;
-        } else {
-            stateChangeEvent = com_sun_glass_events_WindowEvent_RESTORE;
-            if ((gdk_windowManagerFunctions & GDK_FUNC_MINIMIZE) == 0) {
-                // in this case - the window manager will not support the programatic
-                // request to iconify - so we need to restore it now.
-                gdk_window_set_functions(gdk_window, gdk_windowManagerFunctions);
-            }
-        }
-
-        notify_state(stateChangeEvent);
-    } else if (event->changed_mask & GDK_WINDOW_STATE_ABOVE) {
-        notify_on_top(event->new_window_state & GDK_WINDOW_STATE_ABOVE);
-    }
+    // Empty
 }
 
 void WindowContextBase::process_focus(GdkEventFocus* event) {
@@ -893,6 +865,7 @@ void WindowContextTop::update_frame_extents() {
                             || geometry.extents.bottom != bottom
                             || geometry.extents.right != right;
 
+
             if (changed) {
                 geometry.extents.top = top;
                 geometry.extents.left = left;
@@ -901,22 +874,25 @@ void WindowContextTop::update_frame_extents() {
 
                 set_cached_extents(geometry.extents);
                 update_window_constraints();
-
-                // set bounds again to set to correct window size that must
-                // be the total width and height accounting extents
-                int w = geometry_get_window_width(&geometry);
-                int h = geometry_get_window_height(&geometry);
-                int cw = geometry_get_content_width(&geometry);
-                int ch = geometry_get_content_height(&geometry);
-
-                set_bounds(-1, -1, false, false, w, h, cw, ch);
-
-                notify_window_resize();
-                // Window didn't actually move, but view X, Y might change
-                notify_window_move();
+                ensure_window_size();
             }
         }
     }
+}
+
+void WindowContextTop::ensure_window_size() {
+    // set bounds again to set to correct window size that must
+    // be the total width and height accounting extents
+    int w = geometry_get_window_width(&geometry);
+    int h = geometry_get_window_height(&geometry);
+    int cw = geometry_get_content_width(&geometry);
+    int ch = geometry_get_content_height(&geometry);
+
+    set_bounds(-1, -1, false, false, w, h, cw, ch);
+
+    notify_window_resize();
+    // Window didn't actually move, but view X, Y might change
+    notify_window_move();
 }
 
 void WindowContextTop::set_cached_extents(WindowFrameExtents ex) {
@@ -957,7 +933,7 @@ bool WindowContextTop::get_frame_extents_property(int *top, int *left,
     return false;
 }
 
-void WindowContextTop::process_net_wm_property() {
+void WindowContextTop::work_around_compiz_state() {
     // Workaround for https://bugs.launchpad.net/unity/+bug/998073
     if (wmanager != COMPIZ) {
         return;
@@ -1006,7 +982,7 @@ void WindowContextTop::process_property_notify(GdkEventProperty* event) {
         if (event->atom == get_net_frame_extents_atom()) {
             update_frame_extents();
         } else if (event->atom == atom_net_wm_state) {
-            process_net_wm_property();
+            work_around_compiz_state();
         }
     }
 }
@@ -1016,7 +992,39 @@ void WindowContextTop::process_state(GdkEventWindowState* event) {
         return;
     }
 
-    WindowContextBase::process_state(event);
+    if (event->changed_mask & GDK_WINDOW_STATE_FULLSCREEN) {
+        is_fullscreen = event->new_window_state & GDK_WINDOW_STATE_FULLSCREEN;
+    }
+
+    if (event->changed_mask & (GDK_WINDOW_STATE_ICONIFIED | GDK_WINDOW_STATE_MAXIMIZED)) {
+
+        if (event->changed_mask & GDK_WINDOW_STATE_ICONIFIED) {
+            is_iconified = event->new_window_state & GDK_WINDOW_STATE_ICONIFIED;
+        }
+
+        if (event->changed_mask & GDK_WINDOW_STATE_MAXIMIZED) {
+            is_maximized = event->new_window_state & GDK_WINDOW_STATE_MAXIMIZED;
+        }
+
+        jint stateChangeEvent;
+
+        if (is_iconified) {
+            stateChangeEvent = com_sun_glass_events_WindowEvent_MINIMIZE;
+        } else if (is_maximized) {
+            stateChangeEvent = com_sun_glass_events_WindowEvent_MAXIMIZE;
+        } else {
+            stateChangeEvent = com_sun_glass_events_WindowEvent_RESTORE;
+            if ((gdk_windowManagerFunctions & GDK_FUNC_MINIMIZE) == 0) {
+                // in this case - the window manager will not support the programatic
+                // request to iconify - so we need to restore it now.
+                gdk_window_set_functions(gdk_window, gdk_windowManagerFunctions);
+            }
+        }
+
+        notify_state(stateChangeEvent);
+    } else if (event->changed_mask & GDK_WINDOW_STATE_ABOVE) {
+        notify_on_top(event->new_window_state & GDK_WINDOW_STATE_ABOVE);
+    }
 }
 
 void WindowContextTop::process_configure(GdkEventConfigure* event) {
@@ -1033,17 +1041,27 @@ void WindowContextTop::process_configure(GdkEventConfigure* event) {
     w = event->width;
     h = event->height;
 
-    bool size_changed = geometry.final_width.value != w
-                        || geometry.final_height.value != h;
-
-    if (size_changed) {
+    if (!is_maximized && !is_fullscreen) {
         geometry.final_width.value = w;
         geometry.final_width.type = BOUNDSTYPE_CONTENT;
         geometry.final_height.value = h;
         geometry.final_height.type = BOUNDSTYPE_CONTENT;
+    }
 
-        if (jwindow) {
-            notify_window_resize();
+    if (jwindow) {
+        int ww = w + geometry.extents.left + geometry.extents.right;
+        int wh = h + geometry.extents.top + geometry.extents.bottom;
+
+        mainEnv->CallVoidMethod(jwindow, jWindowNotifyResize,
+                (is_maximized)
+                    ? com_sun_glass_events_WindowEvent_MAXIMIZE
+                    : com_sun_glass_events_WindowEvent_RESIZE,
+                ww, wh);
+        CHECK_JNI_EXCEPTION(mainEnv)
+
+        if (jview) {
+            mainEnv->CallVoidMethod(jview, jViewNotifyResize, w, h);
+            CHECK_JNI_EXCEPTION(mainEnv)
         }
     }
 
@@ -1234,7 +1252,6 @@ void WindowContextTop::enter_fullscreen() {
 
 void WindowContextTop::exit_fullscreen() {
     gtk_window_unfullscreen(GTK_WINDOW(gtk_widget));
-    is_fullscreen = false;
 }
 
 void WindowContextTop::request_focus() {
@@ -1380,10 +1397,7 @@ void WindowContextTop::notify_window_resize() {
     int h = geometry_get_window_height(&geometry);
 
     mainEnv->CallVoidMethod(jwindow, jWindowNotifyResize,
-            (is_maximized)
-                ? com_sun_glass_events_WindowEvent_MAXIMIZE
-                : com_sun_glass_events_WindowEvent_RESIZE,
-            w, h);
+                 com_sun_glass_events_WindowEvent_RESIZE, w, h);
     CHECK_JNI_EXCEPTION(mainEnv)
 
     if (jview) {

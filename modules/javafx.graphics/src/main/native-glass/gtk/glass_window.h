@@ -285,7 +285,7 @@ public:
     void process_state(GdkEventWindowState*);
     void process_configure(GdkEventConfigure*);
     void process_destroy();
-    void process_net_wm_property();
+    void work_around_compiz_state();
 
     WindowFrameExtents get_frame_extents();
 
@@ -330,6 +330,7 @@ private:
     bool effective_on_top();
     void notify_window_move();
     void notify_window_resize();
+    void ensure_window_size();
     WindowContextTop(WindowContextTop&);
     WindowContextTop& operator= (const WindowContextTop&);
 };
