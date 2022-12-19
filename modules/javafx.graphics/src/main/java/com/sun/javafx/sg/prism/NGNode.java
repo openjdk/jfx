@@ -330,12 +330,12 @@ public abstract class NGNode {
         // cache needs to be regenerated. So we will not invalidate it here.
         if (dirtyBounds.isEmpty()) {
             dirtyBounds = dirtyBounds.deriveWithNewBounds(transformedBounds);
-            dirtyBounds = dirtyBounds.deriveWithUnion(bounds);
         } else {
             // TODO I think this is vestigial from Scenario and will never
             // actually occur in real life... (RT-23956)
             dirtyBounds = dirtyBounds.deriveWithUnion(transformedBounds);
         }
+        dirtyBounds = dirtyBounds.deriveWithUnion(bounds);
         transformedBounds = transformedBounds.deriveWithNewBounds(bounds);
         if (hasVisuals() && !byTransformChangeOnly) {
             markDirty();
