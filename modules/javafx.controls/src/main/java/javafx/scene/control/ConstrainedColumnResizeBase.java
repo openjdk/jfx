@@ -36,6 +36,11 @@ package javafx.scene.control;
  * @since 20
  */
 public abstract class ConstrainedColumnResizeBase {
+    /**
+     * Constructor for subclasses to call.
+     */
+    public ConstrainedColumnResizeBase() {
+    }
 
     @Override
     public String toString() {

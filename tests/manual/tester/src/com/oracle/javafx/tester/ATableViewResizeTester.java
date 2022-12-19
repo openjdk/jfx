@@ -449,11 +449,11 @@ public class ATableViewResizeTester extends Application {
     }
 
     protected void combineColumns(TableView<String> t, int ix, int count, int name) {
-        TableColumn<String,String> tc = new TableColumn<>();
+        TableColumn<String,?> tc = new TableColumn<>();
         tc.setText("N" + name);
 
         for (int i = 0; i < count; i++) {
-            TableColumn<String,String> c = (TableColumn<String,String>)t.getColumns().remove(ix);
+            TableColumn<String,?> c = t.getColumns().remove(ix);
             tc.getColumns().add(c);
         }
         t.getColumns().add(ix, tc);
@@ -464,7 +464,7 @@ public class ATableViewResizeTester extends Application {
             return new BorderPane();
         }
 
-        TableView<String> table = new TableView();
+        TableView<String> table = new TableView<>();
         table.getSelectionModel().setCellSelectionEnabled(true);
         table.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
 
@@ -635,6 +635,7 @@ public class ATableViewResizeTester extends Application {
         extends ConstrainedColumnResizeBase
         implements Callback<TableView.ResizeFeatures,Boolean> {
 
+        @SuppressWarnings("unchecked")
         @Override
         public Boolean call(ResizeFeatures rf) {
             List<? extends TableColumnBase<?,?>> visibleLeafColumns = rf.getTable().getVisibleLeafColumns();
