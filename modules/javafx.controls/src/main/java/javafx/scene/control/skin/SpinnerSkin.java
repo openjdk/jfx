@@ -255,7 +255,6 @@ public class SpinnerSkin<T> extends SkinBase<Spinner<T>> {
             // Stop spinning when sceneProperty is modified
             behavior.stopSpinning();
         });
-
     }
 
     private boolean isIncDecKeyEvent(KeyEvent ke) {

@@ -176,5 +176,7 @@ public class SpinnerSkinTest {
         assertEquals(Status.RUNNING, SpinnerBehaviorShim.getTimeline(behavior).getStatus());
         root.getChildren().clear();
         assertEquals(Status.STOPPED, SpinnerBehaviorShim.getTimeline(behavior).getStatus());
+        root.getChildren().setAll(spinner);
+        assertEquals(Status.STOPPED, SpinnerBehaviorShim.getTimeline(behavior).getStatus());
     }
 }
