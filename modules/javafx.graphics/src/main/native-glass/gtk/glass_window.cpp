@@ -826,12 +826,6 @@ WindowContextTop::WindowContextTop(jobject _jwindow, WindowContext* _owner, long
 
     glass_gtk_configure_transparency_and_realize(gtk_widget, frame_type == TRANSPARENT);
     gtk_window_set_title(GTK_WINDOW(gtk_widget), "");
-
-    if (wmanager != COMPIZ) {
-        // Compiz doesn't like focus on map disabled
-        gtk_window_set_focus_on_map(GTK_WINDOW(gtk_widget), FALSE);
-    }
-
     gdk_window = gtk_widget_get_window(gtk_widget);
     gdk_window_set_events(gdk_window, GDK_FILTERED_EVENTS_MASK);
 
