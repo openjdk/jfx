@@ -28,6 +28,7 @@ import java.util.BitSet;
 import java.util.List;
 import javafx.scene.control.ResizeFeaturesBase;
 import javafx.scene.control.TableColumnBase;
+import javafx.scene.layout.Region;
 
 /**
  * Helps resize Tree/TableView columns.
@@ -35,40 +36,43 @@ import javafx.scene.control.TableColumnBase;
  */
 public class ResizeHelper {
     private static final int SMALL_DELTA = 32;
+    private static final double EPSILON = 0.000001;
     private final ResizeFeaturesBase rf;
-    private final int target;
+    private final double target;
     private final List<? extends TableColumnBase<?,?>> columns;
     private final int count;
     private final ConstrainedColumnResize.ResizeMode mode;
-    private final int[] size;
-    private final int[] min;
-    private final int[] pref;
-    private final int[] max;
+    private final double[] size;
+    private final double[] min;
+    private final double[] pref;
+    private final double[] max;
     private final BitSet skip;
+    private final Region snap;
 
     public ResizeHelper(ResizeFeaturesBase rf,
                         double target,
                         List<? extends TableColumnBase<?,?>> columns,
                         ConstrainedColumnResize.ResizeMode mode) {
         this.rf = rf;
-        this.target = (int)target;
+        this.target = target;
         this.columns = columns;
         this.mode = mode;
+        this.snap = (rf.getTableControl().isSnapToPixel() ? rf.getTableControl() : null);
 
         this.count = columns.size();
-        size = new int[count];
-        min = new int[count];
-        pref = new int[count];
-        max = new int[count];
+        size = new double[count];
+        min = new double[count];
+        pref = new double[count];
+        max = new double[count];
         skip = new BitSet(count);
 
         for (int i = 0; i < count; i++) {
             TableColumnBase<?,?> c = columns.get(i);
-            size[i] = (int)c.getWidth();
+            size[i] = c.getWidth();
 
             if (c.isResizable()) {
-                int cmin = (int)Math.ceil(c.getMinWidth());
-                int cmax = (int)Math.floor(Math.min(c.getMaxWidth(), Integer.MAX_VALUE));
+                double cmin = c.getMinWidth();
+                double cmax = c.getMaxWidth();
                 min[i] = cmin;
                 max[i] = cmax;
                 pref[i] = clip(c.getPrefWidth(), cmin, cmax);
@@ -82,8 +86,8 @@ public class ResizeHelper {
         boolean needsAnotherPass;
         do {
             needsAnotherPass = false;
-            int sumWidths = 0;
-            int sumMins = 0;
+            double sumWidths = 0.0;
+            double sumMins = 0;
             for (int i = 0; i < count; i++) {
                 sumWidths += size[i];
                 sumMins += min[i];
@@ -93,20 +97,20 @@ public class ResizeHelper {
                 return;
             }
 
-            int delta = target - sumWidths;
-            if (delta == 0) {
+            double delta = target - sumWidths;
+            if (isZero(delta)) {
                 return;
             }
 
             // remove fixed and skipped columns from consideration
-            int total = 0;
+            double total = 0;
             for (int i = 0; i < count; i++) {
                 if (!skip.get(i)) {
                     total += step1(i);
                 }
             }
 
-            if (total == 0) {
+            if (isZero(total)) {
                 return;
             }
 
@@ -124,7 +128,7 @@ public class ResizeHelper {
                 }
 
                 double dw = rem + ((double)delta * step1(i) / total);
-                int w = (int)Math.round(size[i] + dw);
+                double w = snap(size[i] + dw);
                 if (w < min[i]) {
                     rem = (w - min[i]);
                     w = min[i];
@@ -150,7 +154,7 @@ public class ResizeHelper {
         } while (needsAnotherPass);
     }
 
-    protected int step1(int ix) {
+    protected double step1(int ix) {
         // TODO inline
         return pref[ix];
     }
@@ -160,7 +164,7 @@ public class ResizeHelper {
      * @return true if sum of columns equals or greater than the target area
      */
     public boolean applySizes() {
-        int w = 0;
+        double w = 0;
         for (int i = 0; i < count; i++) {
             TableColumnBase<?,?> c = columns.get(i);
             if (c.isResizable()) {
@@ -169,16 +173,16 @@ public class ResizeHelper {
             }
         }
 
-        return (w > (target - 1));
+        return (w > target); // TODO used to be target-1 for the line
     }
 
-    protected static int clip(double v, int min, int max) {
+    protected static double clip(double v, double min, double max) {
         if (v < min) {
             return min;
         } else if (v > max) {
             return max;
         }
-        return (int)v;
+        return v;
     }
 
     public boolean resizeColumn(TableColumnBase<?,?> column) {
@@ -197,8 +201,8 @@ public class ResizeHelper {
 
         int ix = columns.indexOf(leafColumn);
         boolean expanding = delta > 0.0;
-        int allowedDelta = getAllowedDelta(ix, expanding);
-        if (allowedDelta == 0) {
+        double allowedDelta = getAllowedDelta(ix, expanding);
+        if (isZero(allowedDelta)) {
             return false;
         }
 
@@ -207,8 +211,8 @@ public class ResizeHelper {
             return false;
         }
 
-        int d = computeAllowedDelta(!expanding);
-        if (d == 0) {
+        double d = computeAllowedDelta(!expanding);
+        if (isZero(d)) {
             return false;
         }
 
@@ -224,7 +228,7 @@ public class ResizeHelper {
         return distributeDelta(ix, allowedDelta);
     }
 
-    protected boolean isCornerCase(int delta, int ix) {
+    protected boolean isCornerCase(double delta, int ix) {
         boolean isResizingLastColumn = (ix == count - 2);
         if (isResizingLastColumn) {
             if (delta > 0) {
@@ -240,7 +244,7 @@ public class ResizeHelper {
     }
 
     /** non-negative */
-    protected int getAllowedDelta(int ix, boolean expanding) {
+    protected double getAllowedDelta(int ix, boolean expanding) {
         if (expanding) {
             return Math.abs(max[ix] - size[ix]);
         } else {
@@ -286,8 +290,8 @@ public class ResizeHelper {
     }
 
     /** returns the allowable delta for all of the opposite columns */
-    protected int computeAllowedDelta(boolean expanding) {
-        int delta = 0;
+    protected double computeAllowedDelta(boolean expanding) {
+        double delta = 0;
         int i = 0;
         for (;;) {
             i = skip.nextClearBit(i);
@@ -307,7 +311,7 @@ public class ResizeHelper {
         return delta;
     }
 
-    protected boolean distributeDelta(int ix, int delta) {
+    protected boolean distributeDelta(int ix, double delta) {
         int ct = count - skip.cardinality();
         switch(ct) {
         case 0:
@@ -318,9 +322,9 @@ public class ResizeHelper {
             size[oppx] -= delta;
             return true;
         default:
-            int w1 = sumSizes(); // FIX
+            double w1 = sumSizes(); // FIX
             size[ix] += delta;
-            int adj;
+            double adj; // FIX check double
             switch(mode) {
             case AUTO_RESIZE_FLEX_HEAD:
                 adj = distributeDeltaFlexHead(-delta);
@@ -336,9 +340,9 @@ public class ResizeHelper {
                 }
                 adj = 0;
 
-                int w2 = sumSizes(); // FIX remove once everyone reviews and tests the code
-                if(w1 != w2) {
-                    System.err.println("*** ERR sum sizes before="  + w1 + " after=" + w2 + " adj=" + adj + " delta=" + delta);
+                double w2 = sumSizes(); // FIX remove once everyone reviews and tests the code
+                if (!isZero(w1 - w2)) {
+                    System.err.println("*** ERR sum sizes before=" + w1 + " after=" + w2 + " adj=" + adj + " delta=" + delta);
                 }
 
                 break;
@@ -348,7 +352,7 @@ public class ResizeHelper {
         }
     }
 
-    protected int distributeDeltaFlexHead(int delta) {
+    protected double distributeDeltaFlexHead(double delta) {
         if (delta < 0) {
             // when shrinking, first resize columns that are wider than their preferred width
             for (int i = 0; i < count; i++) {
@@ -359,7 +363,7 @@ public class ResizeHelper {
                 if (size[i] > pref[i]) {
                     delta = resize(i, delta);
 
-                    if (delta == 0) {
+                    if (isZero(delta)) {
                         break;
                     }
                 }
@@ -374,7 +378,7 @@ public class ResizeHelper {
                 if (size[i] < pref[i]) {
                     delta = resize(i, delta);
 
-                    if (delta == 0) {
+                    if (isZero(delta)) {
                         break;
                     }
                 }
@@ -388,14 +392,14 @@ public class ResizeHelper {
 
             delta = resize(i, delta);
 
-            if (delta == 0) {
+            if (isZero(delta)) {
                 break;
             }
         }
         return delta;
     }
 
-    protected int distributeDeltaFlexTail(int delta) {
+    protected double distributeDeltaFlexTail(double delta) {
         if (delta < 0) {
             // when shrinking, first resize columns that are wider than their preferred width
             for (int i = count - 1; i >= 0; --i) {
@@ -406,7 +410,7 @@ public class ResizeHelper {
                 if (size[i] > pref[i]) {
                     delta = resize(i, delta);
 
-                    if (delta == 0) {
+                    if (isZero(delta)) {
                         break;
                     }
                 }
@@ -421,7 +425,7 @@ public class ResizeHelper {
                 if (size[i] < pref[i]) {
                     delta = resize(i, delta);
 
-                    if (delta == 0) {
+                    if (isZero(delta)) {
                         break;
                     }
                 }
@@ -435,15 +439,15 @@ public class ResizeHelper {
 
             delta = resize(i, delta);
 
-            if (delta == 0) {
+            if (isZero(delta)) {
                 break;
             }
         }
         return delta;
     }
 
-    protected int resize(int ix, int delta) {
-        int w = size[ix] + delta;
+    protected double resize(int ix, double delta) {
+        double w = snap(size[ix] + delta);
         if (w < min[ix]) {
             delta = (w - min[ix]);
             w = min[ix];
@@ -458,18 +462,18 @@ public class ResizeHelper {
         return delta;
     }
 
-    protected void distributeDeltaRemainingColumns(int delta) {
+    protected void distributeDeltaRemainingColumns(double delta) {
         boolean needsAnotherPass;
 
         do {
-            int total = 0;
+            double total = 0;
             for (int i = 0; i < count; i++) {
                 if (!skip.get(i)) {
                     total += pref[i];
                 }
             }
 
-            if (total == 0) {
+            if (isZero(total)) {
                 return;
             }
 
@@ -482,7 +486,7 @@ public class ResizeHelper {
                 }
 
                 double dw = rem + ((double)delta * pref[i] / total);
-                int w = (int)Math.round(size[i] + dw);
+                double w = snap(size[i] + dw);
                 if (w < min[i]) {
                     rem = (w - min[i]);
                     w = min[i];
@@ -513,39 +517,45 @@ public class ResizeHelper {
      * for small deltas, use a simpler algorithm to distribute space one pixel at the time,
      * first to columns further away from their preferred width.
      */
-    protected void distributeSmallDelta(int delta) {
+    protected void distributeSmallDelta(double delta) {
         if (delta < 0) {
-            for(int i=-delta-1; i>=0; --i) {
+            while (delta < 0.0) {
                 int ix = findShrinking();
                 if(ix < 0) {
                     return;
                 }
-                size[ix] -= 1;
+
+                double w = snap(size[ix] - 1.0);
+                delta -= (w - size[ix]);
+                size[ix] = w;
             }
         } else {
-            for(int i=delta-1; i>=0; --i) {
+            while (delta > 0.0) {
                 int ix = findGrowing();
                 if(ix < 0) {
                     return;
                 }
-                size[ix] += 1;
+
+                double w = snap(size[ix] + 1.0);
+                delta -= (w - size[ix]);
+                size[ix] = w;
             }
         }
     }
 
     // less than pref, then smallest
     protected int findGrowing() {
-        int dist = Integer.MIN_VALUE;
+        double dist = Double.NEGATIVE_INFINITY;
         int ix = -1;
         for (int i = 0; i < count; i++) {
             if (!skip.get(i)) {
-                int w = size[i] + 1;
+                double w = snap(size[i] + 1.0);
                 if ((w < min[i]) || (w > max[i])) {
                     skip.set(i);
                     continue;
                 }
 
-                int d = pref[i] - size[i];
+                double d = pref[i] - size[i];
                 if (d > dist) {
                     dist = d;
                     ix = i;
@@ -557,17 +567,17 @@ public class ResizeHelper {
 
     // shrinking: more than pref, then largest
     protected int findShrinking() {
-        int dist = Integer.MIN_VALUE;
+        double dist = Double.NEGATIVE_INFINITY;
         int ix = -1;
         for (int i = 0; i < count; i++) {
             if (!skip.get(i)) {
-                int w = size[i] - 1;
+                double w = snap(size[i] - 1.0);
                 if ((w < min[i]) || (w > max[i])) {
                     skip.set(i);
                     continue;
                 }
 
-                int d = size[i] - pref[i];
+                double d = size[i] - pref[i];
                 if (d > dist) {
                     dist = d;
                     ix = i;
@@ -580,16 +590,27 @@ public class ResizeHelper {
     protected void resetSizeChanges() {
         for (int i = 0; i < count; i++) {
             if (!skip.get(i)) {
-                size[i] = (int)columns.get(i).getWidth();
+                size[i] = columns.get(i).getWidth();
             }
         }
     }
 
-    protected int sumSizes() {
-        int sum = 0;
+    protected double sumSizes() {
+        double sum = 0;
         for (int i = 0; i < count; i++) {
             sum += size[i];
         }
         return sum;
+    }
+    
+    protected static boolean isZero(double x) {
+        return Math.abs(x) < EPSILON;
+    }
+    
+    protected double snap(double x) {
+        if(snap == null) {
+            return x;
+        }
+        return snap.snapSizeX(x);
     }
 }
