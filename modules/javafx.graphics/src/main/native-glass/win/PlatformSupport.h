@@ -25,31 +25,46 @@
 
 #pragma once
 
-#include <jni.h>
+#include <common.h>
 
 namespace ABI { namespace Windows { namespace UI { struct Color; } } }
 
-class ThemeSupport final
+class PlatformSupport final
 {
 public:
-    ThemeSupport(JNIEnv*);
-    ~ThemeSupport();
-    ThemeSupport(ThemeSupport const&) = delete;
-    ThemeSupport& operator=(ThemeSupport const&) = delete;
+    PlatformSupport(JNIEnv*);
+    ~PlatformSupport() = default;
+    PlatformSupport(PlatformSupport const&) = delete;
+    PlatformSupport& operator=(PlatformSupport const&) = delete;
+
+    /**
+     * Collect all platform preferences and return them as a new java/util/Map.
+     */
+    jobject collectPreferences() const;
+
+    /**
+     * Collect all platform preferences and notify the JavaFX application when a preference has changed.
+     * The change notification includes all preferences, not only the changed preferences.
+     */
+    bool updatePreferences(jobject application) const;
+
+private:
+    JNIEnv* env;
+    bool initialized;
+    mutable JGlobalRef<jobject> preferences;
+
+    struct {
+        JGlobalRef<jclass> Boolean;
+        JGlobalRef<jclass> Object;
+        JGlobalRef<jclass> Collections;
+        JGlobalRef<jclass> Map;
+        JGlobalRef<jclass> HashMap;
+        JGlobalRef<jclass> Color;
+    } javaClasses;
 
     void querySystemColors(jobject properties) const;
     void queryHighContrastScheme(jobject properties) const;
     void queryUIColors(jobject properties) const;
-
-private:
-    JNIEnv* env_;
-    jclass mapClass_;
-    jclass colorClass_;
-    jclass booleanClass_;
-    jmethodID putMethod_;
-    jmethodID rgbMethod_;
-    jfieldID trueField_;
-    jfieldID falseField_;
 
     void putString(jobject properties, const char* key, const char* value) const;
     void putString(jobject properties, const char* key, const wchar_t* value) const;

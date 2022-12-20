@@ -288,9 +288,9 @@ public:
         m_localJRef = newValue;
     }
 
-    operator T() { return m_localJRef; }
-    operator bool() { return NULL!=m_localJRef; }
-    bool operator !() { return NULL==m_localJRef; }
+    operator T() const { return m_localJRef; }
+    operator bool() const { return NULL!=m_localJRef; }
+    bool operator !() const { return NULL==m_localJRef; }
 
     ~JLocalRef() {
         if (m_localJRef) {
@@ -326,9 +326,9 @@ public:
         return *this;
     }
 
-    operator T() { return m_globalJRef; }
-    operator bool() { return NULL!=m_globalJRef; }
-    bool operator !() { return NULL==m_globalJRef; }
+    operator T() const { return m_globalJRef; }
+    operator bool() const { return NULL!=m_globalJRef; }
+    bool operator !() const { return NULL==m_globalJRef; }
 
     ~JGlobalRef() {
         if (m_globalJRef) {
@@ -505,6 +505,25 @@ typedef struct _tagJavaIDs {
         jmethodID reportExceptionMID;
         jmethodID notifyPreferencesChangedMID;
     } Application;
+    struct {
+        jmethodID rgb;
+    } Color;
+    struct {
+        jfieldID trueID;
+        jfieldID falseID;
+    } Boolean;
+    struct {
+        jmethodID equals;
+    } Object;
+    struct {
+        jmethodID unmodifiableMap;
+    } Collections;
+    struct {
+        jmethodID put;
+    } Map;
+    struct {
+        jmethodID init;
+    } HashMap;
 } JavaIDs;
 
 extern JavaIDs javaIDs;

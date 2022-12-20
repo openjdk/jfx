@@ -30,7 +30,6 @@
 #include "GlassScreen.h"
 #include "GlassWindow.h"
 #include "Timer.h"
-#include "ThemeSupport.h"
 #include "RoActivationSupport.h"
 
 #include "com_sun_glass_ui_win_WinApplication.h"
@@ -100,13 +99,12 @@ jclass GlassApplication::ClassForName(JNIEnv *env, char *className)
     return foundClass;
 }
 
-GlassApplication::GlassApplication(jobject jrefThis) : BaseWnd()
+GlassApplication::GlassApplication(jobject jrefThis) : BaseWnd(), m_platformSupport(GetEnv())
 {
     m_grefThis = GetEnv()->NewGlobalRef(jrefThis);
     m_clipboard = NULL;
     m_hNextClipboardView = NULL;
     m_mainThreadId = ::GetCurrentThreadId();
-    m_preferences = NULL;
 
     Create(NULL, 0, 0, 400, 300, TEXT(""), 0, 0, NULL);
 }
@@ -119,85 +117,11 @@ GlassApplication::~GlassApplication()
     if (m_clipboard) {
         GetEnv()->DeleteGlobalRef(m_clipboard);
     }
-    if (m_preferences) {
-        GetEnv()->DeleteGlobalRef(m_preferences);
-    }
 }
 
 LPCTSTR GlassApplication::GetWindowClassNameSuffix()
 {
     return szGlassToolkitWindow;
-}
-
-/**
- * Collect all platform preferences and return them as a java/util/Map.
- */
-jobject GlassApplication::GetPreferences(JNIEnv* env)
-{
-    jclass mapClass = (jclass)env->FindClass("java/util/HashMap");
-    if (CheckAndClearException(env)) return NULL;
-
-    jmethodID constructor = env->GetMethodID(mapClass, "<init>", "()V");
-    jobject properties = env->NewObject(mapClass, constructor);
-    if (CheckAndClearException(env)) { env->DeleteLocalRef(mapClass); return NULL; }
-
-    ThemeSupport themeSupport(env);
-    themeSupport.queryHighContrastScheme(properties);
-    themeSupport.querySystemColors(properties);
-    themeSupport.queryUIColors(properties);
-
-    env->DeleteLocalRef(mapClass);
-    return properties;
-}
-
-/**
- * Collect all platform preferences and notify the JavaFX application when a preference has changed.
- * The change notification includes all preferences, not only the changed preferences.
- */
-bool GlassApplication::UpdatePreferences()
-{
-    JNIEnv* env = GetEnv();
-    jobject newPreferences = GetPreferences(env);
-    if (newPreferences == NULL) {
-        return false;
-    }
-
-    jclass objectClass = (jclass)env->FindClass("java/lang/Object");
-    if (CheckAndClearException(env)) return false;
-
-    jmethodID equalsMethod = env->GetMethodID(objectClass, "equals", "(Ljava/lang/Object;)Z");
-    jboolean isEqual = env->CallBooleanMethod(newPreferences, equalsMethod, m_preferences);
-
-    if (!CheckAndClearException(env) && !isEqual) {
-        if (m_preferences != NULL) {
-            env->DeleteGlobalRef(m_preferences);
-        }
-
-        m_preferences = env->NewGlobalRef(newPreferences);
-
-        jclass collectionsClass = (jclass)env->FindClass("java/util/Collections");
-        if (CheckAndClearException(env)) {
-            env->DeleteLocalRef(newPreferences);
-            env->DeleteLocalRef(objectClass);
-            return false;
-        }
-
-        jmethodID method = env->GetStaticMethodID(collectionsClass, "unmodifiableMap", "(Ljava/util/Map;)Ljava/util/Map;");
-        jobject unmodifiablePreferences = env->CallStaticObjectMethod(collectionsClass, method, newPreferences);
-        if (!CheckAndClearException(env)) {
-            env->CallVoidMethod(m_grefThis, javaIDs.Application.notifyPreferencesChangedMID, unmodifiablePreferences);
-        }
-
-        env->DeleteLocalRef(unmodifiablePreferences);
-        env->DeleteLocalRef(newPreferences);
-        env->DeleteLocalRef(collectionsClass);
-        env->DeleteLocalRef(objectClass);
-        return true;
-    }
-
-    env->DeleteLocalRef(newPreferences);
-    env->DeleteLocalRef(objectClass);
-    return false;
 }
 
 LRESULT GlassApplication::WindowProc(UINT msg, WPARAM wParam, LPARAM lParam)
@@ -244,9 +168,10 @@ LRESULT GlassApplication::WindowProc(UINT msg, WPARAM wParam, LPARAM lParam)
             }
             break;
         case WM_SETTINGCHANGE:
-            if ((UINT)wParam == SPI_GETHIGHCONTRAST ||
-                    lParam != NULL && wcscmp(LPCWSTR(lParam), L"ImmersiveColorSet") == 0) {
-                return UpdatePreferences() ? 0 : 1;
+            if (((UINT)wParam == SPI_GETHIGHCONTRAST ||
+                    lParam != NULL && wcscmp(LPCWSTR(lParam), L"ImmersiveColorSet") == 0) &&
+                    m_platformSupport.updatePreferences(m_grefThis)) {
+                return 0;
             }
             if ((UINT)wParam != SPI_SETWORKAREA) {
                 break;
@@ -258,7 +183,10 @@ LRESULT GlassApplication::WindowProc(UINT msg, WPARAM wParam, LPARAM lParam)
         case WM_THEMECHANGED:
         case WM_SYSCOLORCHANGE:
         case WM_DWMCOLORIZATIONCOLORCHANGED:
-            return UpdatePreferences() ? 0 : 1;
+            if (m_platformSupport.updatePreferences(m_grefThis)) {
+                return 0;
+            }
+            break;
     }
     return ::DefWindowProc(GetHWND(), msg, wParam, lParam);
 }
@@ -599,7 +527,7 @@ JNIEXPORT jobjectArray JNICALL Java_com_sun_glass_ui_win_WinApplication_staticSc
 JNIEXPORT jobject JNICALL Java_com_sun_glass_ui_win_WinApplication_getPlatformPreferences
     (JNIEnv * env, jobject self)
 {
-    return GlassApplication::GetPreferences(env);
+    return GlassApplication::GetPlatformPreferences();
 }
 
 } // extern "C"

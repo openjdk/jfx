@@ -23,34 +23,106 @@
  * questions.
  */
 
-#include "common.h"
-#include "ThemeSupport.h"
+#include "PlatformSupport.h"
 #include "RoActivationSupport.h"
 #include <windows.ui.viewmanagement.h>
+#include <tuple>
 
 using namespace Microsoft::WRL;
 using namespace ABI::Windows::UI;
 using namespace ABI::Windows::UI::ViewManagement;
 
-ThemeSupport::ThemeSupport(JNIEnv* env) :
-    env_(env),
-    mapClass_((jclass)env->FindClass("java/util/Map")),
-    colorClass_((jclass)env->FindClass("javafx/scene/paint/Color")),
-    booleanClass_((jclass)env->FindClass("java/lang/Boolean"))
+PlatformSupport::PlatformSupport(JNIEnv* env) : env(env), initialized(false)
 {
-    putMethod_ = env->GetMethodID(mapClass_, "put", "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;");
-    rgbMethod_ = env->GetStaticMethodID(colorClass_, "rgb", "(IIID)Ljavafx/scene/paint/Color;");
-    trueField_ = env->GetStaticFieldID(booleanClass_, "TRUE", "Ljava/lang/Boolean;");
-    falseField_ = env->GetStaticFieldID(booleanClass_, "FALSE", "Ljava/lang/Boolean;");
+    javaClasses.Object = (jclass)env->FindClass("java/lang/Object");
+    if (CheckAndClearException(env)) return;
+
+    javaIDs.Object.equals = env->GetMethodID(javaClasses.Object, "equals", "(Ljava/lang/Object;)Z");
+    if (CheckAndClearException(env)) return;
+
+    javaClasses.Collections = (jclass)env->FindClass("java/util/Collections");
+    if (CheckAndClearException(env)) return;
+
+    javaIDs.Collections.unmodifiableMap = env->GetStaticMethodID(
+        javaClasses.Collections, "unmodifiableMap", "(Ljava/util/Map;)Ljava/util/Map;");
+    if (CheckAndClearException(env)) return;
+
+    javaClasses.Map = (jclass)env->FindClass("java/util/Map");
+    if (CheckAndClearException(env)) return;
+
+    javaIDs.Map.put = env->GetMethodID(
+        javaClasses.Map, "put", "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;");
+    if (CheckAndClearException(env)) return;
+
+    javaClasses.HashMap = (jclass)env->FindClass("java/util/HashMap");
+    if (CheckAndClearException(env)) return;
+
+    javaIDs.HashMap.init = env->GetMethodID(javaClasses.HashMap, "<init>", "()V");
+    if (CheckAndClearException(env)) return;
+
+    javaClasses.Color = (jclass)env->FindClass("javafx/scene/paint/Color");
+    if (CheckAndClearException(env)) return;
+
+    javaIDs.Color.rgb = env->GetStaticMethodID(javaClasses.Color, "rgb", "(IIID)Ljavafx/scene/paint/Color;");
+    if (CheckAndClearException(env)) return;
+
+    javaClasses.Boolean = (jclass)env->FindClass("java/lang/Boolean");
+    if (CheckAndClearException(env)) return;
+
+    javaIDs.Boolean.trueID = env->GetStaticFieldID(javaClasses.Boolean, "TRUE", "Ljava/lang/Boolean;");
+    if (CheckAndClearException(env)) return;
+
+    javaIDs.Boolean.falseID = env->GetStaticFieldID(javaClasses.Boolean, "FALSE", "Ljava/lang/Boolean;");
+    if (CheckAndClearException(env)) return;
+
+    initialized = true;
 }
 
-ThemeSupport::~ThemeSupport() {
-    env_->DeleteLocalRef(mapClass_);
-    env_->DeleteLocalRef(colorClass_);
-    env_->DeleteLocalRef(booleanClass_);
+jobject PlatformSupport::collectPreferences() const
+{
+    if (!initialized) {
+        return NULL;
+    }
+
+    jobject prefs = env->NewObject(javaClasses.HashMap, javaIDs.HashMap.init);
+    if (CheckAndClearException(env)) return NULL;
+
+    queryHighContrastScheme(prefs);
+    querySystemColors(prefs);
+    queryUIColors(prefs);
+    return prefs;
 }
 
-void ThemeSupport::queryHighContrastScheme(jobject properties) const
+bool PlatformSupport::updatePreferences(jobject application) const
+{
+    if (!initialized || application == NULL) {
+        return false;
+    }
+
+    jobject newPreferences = collectPreferences();
+
+    jboolean preferencesChanged =
+        newPreferences != NULL &&
+        !env->CallBooleanMethod(newPreferences, javaIDs.Object.equals, preferences);
+
+    if (!CheckAndClearException(env) && preferencesChanged) {
+        preferences = newPreferences;
+        jobject unmodifiablePreferences = env->CallStaticObjectMethod(
+            javaClasses.Collections, javaIDs.Collections.unmodifiableMap, newPreferences);
+
+        if (!CheckAndClearException(env)) {
+            env->CallVoidMethod(application, javaIDs.Application.notifyPreferencesChangedMID, unmodifiablePreferences);
+            env->DeleteLocalRef(unmodifiablePreferences);
+            env->DeleteLocalRef(newPreferences);
+            return true;
+        }
+    }
+
+    env->DeleteLocalRef(newPreferences);
+    return false;
+}
+
+void PlatformSupport::queryHighContrastScheme(jobject properties) const
 {
     HIGHCONTRAST contrastInfo;
     contrastInfo.cbSize = sizeof(HIGHCONTRAST);
@@ -64,7 +136,7 @@ void ThemeSupport::queryHighContrastScheme(jobject properties) const
     }
 }
 
-void ThemeSupport::querySystemColors(jobject properties) const
+void PlatformSupport::querySystemColors(jobject properties) const
 {
     putColor(properties, "Windows.SysColor.COLOR_3DDKSHADOW", GetSysColor(COLOR_3DDKSHADOW));
     putColor(properties, "Windows.SysColor.COLOR_3DFACE", GetSysColor(COLOR_3DFACE));
@@ -104,7 +176,7 @@ void ThemeSupport::querySystemColors(jobject properties) const
     putColor(properties, "Windows.SysColor.COLOR_WINDOWTEXT", GetSysColor(COLOR_WINDOWTEXT));
 }
 
-void ThemeSupport::queryUIColors(jobject properties) const
+void PlatformSupport::queryUIColors(jobject properties) const
 {
     if (!isRoActivationSupported()) {
         return;
@@ -141,7 +213,7 @@ void ThemeSupport::queryUIColors(jobject properties) const
         putColor(properties, "Windows.UIColor.AccentLight1", accentLight1);
         putColor(properties, "Windows.UIColor.AccentLight2", accentLight2);
         putColor(properties, "Windows.UIColor.AccentLight3", accentLight3);
-    } catch (RoException const& ex) {
+    } catch (RoException const&) {
         // If an activation exception occurs, it probably means that we're on a Windows system
         // that doesn't support the UISettings API. This is not a problem, it simply means that
         // we don't report the UISettings properties back to the JavaFX application.
@@ -149,40 +221,42 @@ void ThemeSupport::queryUIColors(jobject properties) const
     }
 }
 
-void ThemeSupport::putString(jobject properties, const char* key, const char* value) const
+void PlatformSupport::putString(jobject properties, const char* key, const char* value) const
 {
-    env_->CallObjectMethod(properties, putMethod_,
-        env_->NewStringUTF(key),
-        value != NULL ? env_->NewStringUTF(value) : NULL);
+    env->CallObjectMethod(properties, javaIDs.Map.put,
+        env->NewStringUTF(key),
+        value != NULL ? env->NewStringUTF(value) : NULL);
 }
 
-void ThemeSupport::putString(jobject properties, const char* key, const wchar_t* value) const
+void PlatformSupport::putString(jobject properties, const char* key, const wchar_t* value) const
 {
-    env_->CallObjectMethod(properties, putMethod_,
-        env_->NewStringUTF(key),
-        value != NULL ? env_->NewString((jchar*)value, wcslen(value)) : NULL);
+    env->CallObjectMethod(properties, javaIDs.Map.put,
+        env->NewStringUTF(key),
+        value != NULL ? env->NewString((jchar*)value, wcslen(value)) : NULL);
 }
 
-void ThemeSupport::putBoolean(jobject properties, const char* key, const bool value) const
+void PlatformSupport::putBoolean(jobject properties, const char* key, const bool value) const
 {
-    env_->CallObjectMethod(properties, putMethod_,
-        env_->NewStringUTF(key),
-        value ? env_->GetStaticObjectField(booleanClass_, trueField_) :
-                env_->GetStaticObjectField(booleanClass_, falseField_));
+    env->CallObjectMethod(properties, javaIDs.Map.put,
+        env->NewStringUTF(key),
+        value ? env->GetStaticObjectField(javaClasses.Boolean, javaIDs.Boolean.trueID) :
+                env->GetStaticObjectField(javaClasses.Boolean, javaIDs.Boolean.falseID));
 }
 
-void ThemeSupport::putColor(jobject properties, const char* colorName, int colorValue) const
+void PlatformSupport::putColor(jobject properties, const char* colorName, int colorValue) const
 {
-    env_->CallObjectMethod(properties, putMethod_,
-        env_->NewStringUTF(colorName),
-        env_->CallStaticObjectMethod(
-            colorClass_, rgbMethod_, GetRValue(colorValue), GetGValue(colorValue), GetBValue(colorValue), 1.0));
+    env->CallObjectMethod(properties, javaIDs.Map.put,
+        env->NewStringUTF(colorName),
+        env->CallStaticObjectMethod(
+            javaClasses.Color, javaIDs.Color.rgb,
+            GetRValue(colorValue), GetGValue(colorValue), GetBValue(colorValue), 1.0));
 }
 
-void ThemeSupport::putColor(jobject properties, const char* colorName, Color colorValue) const
+void PlatformSupport::putColor(jobject properties, const char* colorName, Color colorValue) const
 {
-    env_->CallObjectMethod(properties, putMethod_,
-        env_->NewStringUTF(colorName),
-        env_->CallStaticObjectMethod(
-            colorClass_, rgbMethod_, colorValue.R, colorValue.G, colorValue.B, (double)colorValue.A / 255.0));
+    env->CallObjectMethod(properties, javaIDs.Map.put,
+        env->NewStringUTF(colorName),
+        env->CallStaticObjectMethod(
+            javaClasses.Color, javaIDs.Color.rgb,
+            colorValue.R, colorValue.G, colorValue.B, (double)colorValue.A / 255.0));
 }

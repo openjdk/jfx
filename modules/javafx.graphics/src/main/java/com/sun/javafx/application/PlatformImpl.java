@@ -996,6 +996,10 @@ public class PlatformImpl {
      * @param preferences a map that includes the changed preferences
      */
     public static void updatePreferences(Map<String, Object> preferences) {
+        if (preferences == null) {
+            return;
+        }
+
         if (isFxApplicationThread()) {
             Map<String, Object> changed = new HashMap<>();
             for (Map.Entry<String, Object> entry : preferences.entrySet()) {
