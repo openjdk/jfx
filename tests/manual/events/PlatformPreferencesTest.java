@@ -33,6 +33,8 @@ import javafx.scene.control.TextArea;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 public class PlatformPreferencesTest extends Application {
 
@@ -44,7 +46,7 @@ public class PlatformPreferencesTest extends Application {
         var failButton = new Button("Fail");
         failButton.setOnAction(e -> {
             Platform.exit();
-            throw new AssertionError("Changed platform preferences were not correctly reported");
+            throw new AssertionError("Platform preferences were not correctly reported");
         });
 
         var textArea = new TextArea();
@@ -63,8 +65,10 @@ public class PlatformPreferencesTest extends Application {
             textArea
         ));
 
+        textArea.setText("preferences = " + formatPrefs(Platform.getPreferences()));
+
         Platform.getPreferences().addListener(
-            (preferences, changed) -> textArea.setText(textArea.getText() + changed + System.lineSeparator()));
+            (preferences, changed) -> textArea.setText(textArea.getText() + "changed = " + formatPrefs(changed)));
 
         stage.setScene(new Scene(root));
         stage.show();
@@ -72,6 +76,15 @@ public class PlatformPreferencesTest extends Application {
 
     public static void main(String[] args) {
         Application.launch(args);
+    }
+
+    private static String formatPrefs(Map<String, Object> map) {
+        String entries = map.entrySet().stream()
+                .sorted(Map.Entry.comparingByKey())
+                .map(Object::toString)
+                .collect(Collectors.joining("\r\n\t"));
+
+        return "{\r\n\t" + entries + "\r\n}\r\n";
     }
 
 }
