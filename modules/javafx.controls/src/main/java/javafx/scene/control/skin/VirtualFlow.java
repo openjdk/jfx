@@ -2323,8 +2323,12 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         double oldOffset = computeViewportOffset(getPosition());
         int oldIndex = computeCurrentIndex();
         double cellLength = getOrCreateCellSize(index);
-        if (index > 0) getOrCreateCellSize(index - 1);
-        if (index < getCellCount() -1) getOrCreateCellSize(index + 1);
+        if (index > 0) {
+            getOrCreateCellSize(index - 1);
+        }
+        if (index < getCellCount() -1) {
+            getOrCreateCellSize(index + 1);
+        }
         double estlength = cellLength;
         int i = index;
         while ((estlength < viewportLength) && (++i < getCellCount())) {
@@ -3066,20 +3070,26 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
      * If this cell was already in the cache, its old value is replaced by the
      * new size. The total size of the flow will be recalculated, respecting the
      * current index and offset.
-     * @param cell
+     * If the specific cell is the "current" cell (which is the first cell that is
+     * at least partially visible), the offset used for the viewport needs to be
+     * recalculated in case the new size is different from the cached size. This way,
+     * we keep the end of the current cell (and start of the cell at current + 1)
+     * constant. An exception to this is when the current cell starts at offset 0,
+     * in which case we keep the (0) offset as is.
+     * @param cell the cell which size has to be calculated
      */
     void updateCellSize(T cell) {
         int cellIndex = cell.getIndex();
         int currentIndex = computeCurrentIndex();
         double oldOffset = computeViewportOffset(getPosition());
 
+
         if (itemSizeCache.size() > cellIndex) {
-            if (isVertical()) {
-                double newh = cell.getLayoutBounds().getHeight();
-                itemSizeCache.set(cellIndex, newh);
-            } else {
-                double newh = cell.getLayoutBounds().getWidth();
-                itemSizeCache.set(cellIndex, newh);
+            Double oldSize = itemSizeCache.get(cellIndex);
+            double newSize = isVertical() ? cell.getLayoutBounds().getHeight() : cell.getLayoutBounds().getWidth();
+            itemSizeCache.set(cellIndex, newSize);
+            if ((cellIndex == currentIndex) && (oldSize != null) && (oldOffset != 0)) {
+                oldOffset = oldOffset + newSize - oldSize;
             }
         }
         recalculateAndImproveEstimatedSize(0, currentIndex, oldOffset);

@@ -66,6 +66,7 @@ import javafx.scene.control.TextField;
 import javafx.scene.control.cell.CheckBoxListCell;
 import javafx.scene.control.cell.ComboBoxListCell;
 import javafx.scene.control.cell.TextFieldListCell;
+import javafx.scene.control.skin.VirtualFlow;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.KeyCode;
 import javafx.scene.layout.VBox;
@@ -2510,6 +2511,9 @@ public class ListViewTest {
             listView.requestLayout();
             Toolkit.getToolkit().firePulse();
             assertEquals("Upper cell shouldn't move after changing heights", previousLayoutY, scrollToCell.getLayoutY(), 1.);
+            VirtualFlow vf = VirtualFlowTestUtils.getVirtualFlow(listView);
+            vf.scrollPixels(-1);
+            assertEquals("Upper cell should move 1 pixels, after scrolling 1 pixel", previousLayoutY + 1, scrollToCell.getLayoutY(), 1.);
         }
 
     }
