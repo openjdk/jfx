@@ -520,4 +520,7 @@ final class GtkApplication extends Application implements
     @Override
     protected native int _isKeyLocked(int keyCode);
 
+    @Override
+    public native Map<String, Object> getPlatformPreferences();
+
 }
