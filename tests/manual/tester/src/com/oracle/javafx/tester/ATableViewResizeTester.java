@@ -168,7 +168,7 @@ public class ATableViewResizeTester extends Application {
         stage.setScene(new Scene(sp));
         stage.setWidth(1000);
         stage.setHeight(500);
-        stage.setTitle("TableView/JTable Resize Tester " + System.getProperty("java.version"));
+        stage.setTitle("TableView/JTable Resize Tester " + System.getProperty("java.version") + " scale=" + stage.getRenderScaleX());
         stage.show();
 
         demoSelector.getSelectionModel().select(Demo.FIXED_MIDDLE); // selectFirst();
