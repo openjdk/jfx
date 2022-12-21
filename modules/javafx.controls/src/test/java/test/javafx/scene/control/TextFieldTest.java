@@ -50,12 +50,15 @@ import javafx.css.PseudoClass;
 import javafx.event.ActionEvent;
 import javafx.event.Event;
 import javafx.event.EventHandler;
+import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.TextField;
 import javafx.scene.control.TextFormatter;
 import javafx.scene.control.TextFormatter.Change;
 import javafx.scene.control.TextInputControlShim;
+import javafx.scene.control.skin.TextFieldSkin;
+import javafx.scene.control.skin.TextInputSkinShim;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyCodeCombination;
 import javafx.scene.input.KeyEvent;
@@ -541,6 +544,28 @@ public class TextFieldTest {
         // 3 is removed, therefore we get 100. The value converter above will then add 100 (=200).
         txtField.setText("1300");
         assertEquals("200", txtField.getText());
+    }
+
+    /**
+     * test for JDK-8178368: Right alignment of text fields works incorrectly
+     *
+     * Here we test that text aligns as expected when text width is more than TextField width
+     */
+    @Test
+    public void testTextFieldAlignment() {
+        initStage();
+        txtField.setSkin(new TextFieldSkin(txtField));
+        txtField.setText("A short text.");
+        txtField.setPrefColumnCount(20);
+        txtField.setAlignment(Pos.BASELINE_RIGHT);
+
+        root.getChildren().add(txtField);
+        stage.show();
+
+        double oldX = TextInputSkinShim.getTextTranslateX(txtField);
+        txtField.setText("This is a long text. this is a long text.");
+
+        assertNotEquals(oldX, TextInputSkinShim.getTextTranslateX(txtField));
     }
 
     private Change upperCase(Change change) {

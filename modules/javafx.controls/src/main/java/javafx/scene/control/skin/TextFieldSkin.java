@@ -818,6 +818,9 @@ public class TextFieldSkin extends TextInputControlSkin<TextField> {
             if (newX > oldX || newX > 0) {
                 textTranslateX.set(newX);
             }
+            else {
+                textTranslateX.set(caretWidth / 2);
+            }
             if (usePromptText.get()) {
                 promptNode.setLayoutX(textRight.get() - promptNode.getLayoutBounds().getWidth() -
                                       caretWidth / 2);
