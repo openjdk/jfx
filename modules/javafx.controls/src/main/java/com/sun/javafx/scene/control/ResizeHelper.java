@@ -341,7 +341,7 @@ public class ResizeHelper {
                 adj = 0;
 
                 double w2 = sumSizes(); // FIX remove once everyone reviews and tests the code
-                if (!isZero(w1 - w2)) {
+                if (Math.abs(w1 - w2) >= 1.0) {
                     System.err.println("*** ERR sum sizes before=" + w1 + " after=" + w2 + " adj=" + adj + " delta=" + delta);
                 }
 
