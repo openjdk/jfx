@@ -520,23 +520,25 @@ public class ResizeHelper {
     protected void distributeSmallDelta(double delta) {
         if (delta < 0) {
             while (delta < 0.0) {
-                int ix = findShrinking();
+                double dw = Math.max(-1.0, delta);
+                int ix = findShrinking(dw);
                 if(ix < 0) {
                     return;
                 }
 
-                double w = snap(size[ix] - 1.0);
+                double w = snap(size[ix] + dw);
                 delta -= (w - size[ix]);
                 size[ix] = w;
             }
         } else {
             while (delta > 0.0) {
-                int ix = findGrowing();
+                double dw = Math.min(1.0, delta);
+                int ix = findGrowing(dw);
                 if(ix < 0) {
                     return;
                 }
 
-                double w = snap(size[ix] + 1.0);
+                double w = snap(size[ix] + dw);
                 delta -= (w - size[ix]);
                 size[ix] = w;
             }
@@ -544,12 +546,12 @@ public class ResizeHelper {
     }
 
     // less than pref, then smallest
-    protected int findGrowing() {
+    protected int findGrowing(double delta) {
         double dist = Double.NEGATIVE_INFINITY;
         int ix = -1;
         for (int i = 0; i < count; i++) {
             if (!skip.get(i)) {
-                double w = snap(size[i] + 1.0);
+                double w = snap(size[i] + delta);
                 if ((w < min[i]) || (w > max[i])) {
                     skip.set(i);
                     continue;
@@ -566,12 +568,12 @@ public class ResizeHelper {
     }
 
     // shrinking: more than pref, then largest
-    protected int findShrinking() {
+    protected int findShrinking(double delta) {
         double dist = Double.NEGATIVE_INFINITY;
         int ix = -1;
         for (int i = 0; i < count; i++) {
             if (!skip.get(i)) {
-                double w = snap(size[i] - 1.0);
+                double w = snap(size[i] - delta);
                 if ((w < min[i]) || (w > max[i])) {
                     skip.set(i);
                     continue;
