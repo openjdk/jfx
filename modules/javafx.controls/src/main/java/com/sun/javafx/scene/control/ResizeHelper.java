@@ -98,7 +98,7 @@ public class ResizeHelper {
             }
 
             double delta = target - sumWidths;
-            if (isZero(delta)) {
+            if (Math.abs(delta) < 1.0) {
                 return;
             }
 
@@ -522,11 +522,14 @@ public class ResizeHelper {
             while (delta < 0.0) {
                 double dw = Math.max(-1.0, delta);
                 int ix = findShrinking(dw);
-                if(ix < 0) {
+                if (ix < 0) {
                     return;
                 }
 
                 double w = snap(size[ix] + dw);
+                if (size[ix] == w) {
+                    return;
+                }
                 delta -= (w - size[ix]);
                 size[ix] = w;
             }
@@ -534,11 +537,14 @@ public class ResizeHelper {
             while (delta > 0.0) {
                 double dw = Math.min(1.0, delta);
                 int ix = findGrowing(dw);
-                if(ix < 0) {
+                if (ix < 0) {
                     return;
                 }
 
                 double w = snap(size[ix] + dw);
+                if (size[ix] == w) {
+                    return;
+                }
                 delta -= (w - size[ix]);
                 size[ix] = w;
             }
@@ -573,7 +579,7 @@ public class ResizeHelper {
         int ix = -1;
         for (int i = 0; i < count; i++) {
             if (!skip.get(i)) {
-                double w = snap(size[i] - delta);
+                double w = snap(size[i] + delta);
                 if ((w < min[i]) || (w > max[i])) {
                     skip.set(i);
                     continue;
