@@ -324,7 +324,7 @@ public class ResizeHelper {
         default:
             double w1 = sumSizes(); // FIX
             size[ix] += delta;
-            double adj; // FIX check double
+            double adj;
             switch(mode) {
             case AUTO_RESIZE_FLEX_HEAD:
                 adj = distributeDeltaFlexHead(-delta);
@@ -341,8 +341,15 @@ public class ResizeHelper {
                 adj = 0;
 
                 double w2 = sumSizes(); // FIX remove once everyone reviews and tests the code
-                if (Math.abs(w1 - w2) >= 1.0) {
-                    System.err.println("*** ERR sum sizes before=" + w1 + " after=" + w2 + " adj=" + adj + " delta=" + delta);
+                if (Math.abs(w1 - w2) > 0.0) {
+                    // note: this might happen when snapping with a fractional scale
+                    System.err.println(
+                        "*** ERR sum sizes before=" + w1 +
+                        " after=" + w2 +
+                        " diff=" + Math.abs(w1 - w2) +
+                        " adj=" + adj +
+                        " delta=" + delta
+                    );
                 }
 
                 break;
@@ -455,7 +462,7 @@ public class ResizeHelper {
             delta = (w - max[ix]);
             w = max[ix];
         } else {
-            delta = 0;
+            delta = 0.0;
         }
 
         size[ix] = w;
@@ -514,55 +521,74 @@ public class ResizeHelper {
     }
 
     /**
-     * for small deltas, use a simpler algorithm to distribute space one pixel at the time,
-     * first to columns further away from their preferred width.
+     * for small deltas, uses a simpler algorithm to distribute space one small step at a time,
+     * favoring columns further away from their preferred width.
      */
     protected void distributeSmallDelta(double delta) {
         if (delta < 0) {
             while (delta < 0.0) {
-                double dw = Math.max(-1.0, delta);
-                int ix = findShrinking(dw);
+                int ix = findShrinking();
                 if (ix < 0) {
                     return;
                 }
 
-                double w = snap(size[ix] + dw);
-                if (size[ix] == w) {
-                    return;
-                }
-                delta -= (w - size[ix]);
-                size[ix] = w;
+                double d = smallChange(ix, delta);
+                delta -= d;
             }
         } else {
             while (delta > 0.0) {
-                double dw = Math.min(1.0, delta);
-                int ix = findGrowing(dw);
+                int ix = findGrowing();
                 if (ix < 0) {
                     return;
                 }
 
-                double w = snap(size[ix] + dw);
-                if (size[ix] == w) {
-                    return;
-                }
-                delta -= (w - size[ix]);
-                size[ix] = w;
+                double d = smallChange(ix, delta);
+                delta -= d;
             }
         }
     }
 
+    protected double smallChange(int ix, double delta) {
+        double sz = size[ix];
+        double dw;
+        double w = sz;
+        boolean shrink = delta < 0.0;
+
+        // make sure the column gets slightly resized, regardless
+        for(int i=1; i<100; i++) {
+            w = snap(sz + (shrink ? -i : i));
+            if(w != sz) {
+                break;
+            }
+        }
+
+        if (w < min[ix]) {
+            dw = (w - min[ix]);
+            w = min[ix];
+            skip.set(ix);
+        } else if (w > max[ix]) {
+            dw = (w - max[ix]);
+            w = max[ix];
+            skip.set(ix);
+        } else {
+            dw = (w - sz); // TODO check
+        }
+
+        // stop when adjustment exceeds the requirement
+        if (Math.abs(dw) > Math.abs(delta)) {
+            return delta;
+        }
+
+        size[ix] = w;
+        return dw;
+    }
+
     // less than pref, then smallest
-    protected int findGrowing(double delta) {
+    protected int findGrowing() {
         double dist = Double.NEGATIVE_INFINITY;
         int ix = -1;
         for (int i = 0; i < count; i++) {
             if (!skip.get(i)) {
-                double w = snap(size[i] + delta);
-                if ((w < min[i]) || (w > max[i])) {
-                    skip.set(i);
-                    continue;
-                }
-
                 double d = pref[i] - size[i];
                 if (d > dist) {
                     dist = d;
@@ -574,17 +600,11 @@ public class ResizeHelper {
     }
 
     // shrinking: more than pref, then largest
-    protected int findShrinking(double delta) {
+    protected int findShrinking() {
         double dist = Double.NEGATIVE_INFINITY;
         int ix = -1;
         for (int i = 0; i < count; i++) {
             if (!skip.get(i)) {
-                double w = snap(size[i] + delta);
-                if ((w < min[i]) || (w > max[i])) {
-                    skip.set(i);
-                    continue;
-                }
-
                 double d = size[i] - pref[i];
                 if (d > dist) {
                     dist = d;
