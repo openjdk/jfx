@@ -133,9 +133,6 @@ void WindowContextBase::process_state(GdkEventWindowState* event) {
 }
 
 void WindowContextBase::process_focus(GdkEventFocus* event) {
-//    if (!event->in && WindowContextBase::sm_mouse_drag_window == this) {
-//        ungrab_mouse_drag_focus();
-//    }
     if (!event->in && WindowContextBase::sm_grab_window == this) {
         ungrab_focus();
     }
