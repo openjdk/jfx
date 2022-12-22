@@ -33,6 +33,8 @@ import javafx.scene.layout.Region;
 /**
  * Helps resize Tree/TableView columns.
  * https://bugs.openjdk.org/browse/JDK-8293119
+ * 
+ * TODO remove snapping from intermediary computations, snap at the end.
  */
 public class ResizeHelper {
     private static final int SMALL_DELTA = 32;
@@ -106,7 +108,7 @@ public class ResizeHelper {
             double total = 0;
             for (int i = 0; i < count; i++) {
                 if (!skip.get(i)) {
-                    total += step1(i);
+                    total += pref[i];
                 }
             }
 
@@ -126,7 +128,7 @@ public class ResizeHelper {
                     continue;
                 }
 
-                double dw = rem + ((double)delta * step1(i) / total);
+                double dw = rem + (delta * pref[i] / total);
                 double w = snap(size[i] + dw);
                 if (w < min[i]) {
                     rem = (w - min[i]);
@@ -150,11 +152,6 @@ public class ResizeHelper {
                 }
             }
         } while (needsAnotherPass);
-    }
-
-    protected double step1(int ix) {
-        // TODO inline
-        return pref[ix];
     }
 
     /**
@@ -323,6 +320,7 @@ public class ResizeHelper {
             double w1 = sumSizes(); // FIX
             size[ix] += delta;
             double adj;
+
             switch(mode) {
             case AUTO_RESIZE_FLEX_HEAD:
                 adj = distributeDeltaFlexHead(-delta);
@@ -336,23 +334,24 @@ public class ResizeHelper {
                 } else {
                     distributeDeltaRemainingColumns(-delta);
                 }
-                adj = 0;
-
-                double w2 = sumSizes(); // FIX remove once everyone reviews and tests the code
-                if (Math.abs(w1 - w2) > 0.0) {
-                    // note: this might happen when snapping with a fractional scale
-                    System.err.println(
-                        "*** ERR sum sizes before=" + w1 +
-                        " after=" + w2 +
-                        " diff=" + Math.abs(w1 - w2) +
-                        " adj=" + adj +
-                        " delta=" + delta
-                    );
-                }
-
+                adj = 0.0;
                 break;
             }
+
             size[ix] += adj;
+
+            double w2 = sumSizes(); // FIX remove once everyone reviews and tests the code
+            if (Math.abs(w1 - w2) > 0.0) {
+                // note: this might happen when snapping with a fractional scale
+                System.err.println(
+                    "*** ERR sum sizes before=" + w1 +
+                    " after=" + w2 +
+                    " diff=" + Math.abs(w1 - w2) +
+                    " adj=" + adj +
+                    " delta=" + delta
+                );
+            }
+
             return true;
         }
     }
@@ -490,7 +489,7 @@ public class ResizeHelper {
                     continue;
                 }
 
-                double dw = rem + ((double)delta * pref[i] / total);
+                double dw = rem + (delta * pref[i] / total);
                 double w = snap(size[i] + dw);
                 if (w < min[i]) {
                     rem = (w - min[i]);
@@ -632,7 +631,8 @@ public class ResizeHelper {
     protected static boolean isZero(double x) {
         return Math.abs(x) < EPSILON;
     }
-    
+
+    @Deprecated // FIX use last
     protected double snap(double x) {
         if(snap == null) {
             return x;
