@@ -35,7 +35,7 @@
 #import "GlassScreen.h"
 #import "GlassWindow.h"
 #import "GlassTouches.h"
-#import "ThemeSupport.h"
+#import "PlatformSupport.h"
 
 #import "ProcessInfo.h"
 #import <Security/SecRequirement.h>
@@ -117,9 +117,7 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
 
 #pragma mark --- GlassApplication
 
-@implementation GlassApplication {
-    jobject currentPreferences;
-}
+@implementation GlassApplication
 
 - (id)initWithEnv:(JNIEnv*)env application:(jobject)application launchable:(jobject)launchable taskbarApplication:(jboolean)isTaskbarApplication classLoader:(jobject)classLoader
 {
@@ -145,107 +143,6 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
 
 #pragma mark --- delegate methods
 
-/**
- * Collect all platform preferences and return them as a java/util/Map.
- */
-+ (jobject)queryPlatformPreferences
-{
-    GET_MAIN_JENV;
-    jclass mapClass = (jclass)(*env)->FindClass(env, "java/util/HashMap");
-    GLASS_CHECK_EXCEPTION(env);
-    if (mapClass == nil) {
-        return nil;
-    }
-
-    jmethodID constructor = (*env)->GetMethodID(env, mapClass, "<init>", "()V");
-    GLASS_CHECK_EXCEPTION(env);
-    if (constructor == nil) {
-        return nil;
-    }
-
-    jobject properties = (*env)->NewObject(env, mapClass, constructor);
-    GLASS_CHECK_EXCEPTION(env);
-    if (properties == nil) {
-        return nil;
-    }
-
-    // The current appearance is independent from the system appearance, and is set when the application
-    // is started. Since the system appearance can change while the application is running, we need to set
-    // the current appearance to the application's effective appearance before querying system colors.
-    NSAppearance* lastAppearance = [NSAppearance currentAppearance];
-    [NSAppearance setCurrentAppearance:[[NSApplication sharedApplication] effectiveAppearance]];
-
-    ThemeSupport* themeSupport = [[ThemeSupport alloc] initWithEnv:env];
-    [themeSupport queryProperties:properties];
-    [themeSupport release];
-
-    [NSAppearance setCurrentAppearance:lastAppearance];
-
-    (*env)->DeleteLocalRef(env, mapClass);
-    return properties;
-}
-
-- (void)platformPreferencesChanged {
-    [self performSelectorOnMainThread:@selector(platformPreferencesChangedOnMainThread)
-          withObject:nil
-          waitUntilDone:false];
-}
-
-- (void)platformPreferencesChangedOnMainThread {
-    GET_MAIN_JENV;
-
-    jobject newPreferences = [GlassApplication queryPlatformPreferences];
-    if (newPreferences == nil) {
-        return;
-    }
-
-    jclass objectClass, collectionsClass;
-    jmethodID equalsMethod, unmodifiableMapMethod;
-
-    bool initialized =
-        ((objectClass = (jclass)(*env)->FindClass(env, "java/lang/Object")) != nil) &&
-        ((collectionsClass = (jclass)(*env)->FindClass(env, "java/util/Collections")) != nil) &&
-        ((equalsMethod = (*env)->GetMethodID(env, objectClass, "equals", "(Ljava/lang/Object;)Z")) != 0) &&
-        ((unmodifiableMapMethod = (*env)->GetStaticMethodID(env, collectionsClass, "unmodifiableMap",
-                                                            "(Ljava/util/Map;)Ljava/util/Map;")) != 0);
-
-    if (!initialized) {
-        GLASS_CHECK_EXCEPTION(env);
-    } else {
-        jboolean isEqual = (*env)->CallBooleanMethod(env, newPreferences, equalsMethod, currentPreferences);
-        GLASS_CHECK_EXCEPTION(env);
-
-        if (!isEqual) {
-            if (currentPreferences != nil) {
-                (*env)->DeleteGlobalRef(env, currentPreferences);
-            }
-
-            currentPreferences = (*env)->NewGlobalRef(env, newPreferences);
-            jobject unmodifiablePreferences = (*env)->CallStaticObjectMethod(
-                env, collectionsClass, unmodifiableMapMethod, newPreferences);
-            GLASS_CHECK_EXCEPTION(env);
-            if (unmodifiablePreferences != nil) {
-                (*env)->CallVoidMethod(
-                    env, self->jApplication,
-                    javaIDs.MacApplication.notifyPreferencesChanged,
-                    unmodifiablePreferences);
-            }
-
-            (*env)->DeleteLocalRef(env, unmodifiablePreferences);
-        }
-    }
-
-    (*env)->DeleteLocalRef(env, newPreferences);
-
-    if (objectClass != nil) {
-        (*env)->DeleteLocalRef(env, objectClass);
-    }
-
-    if (collectionsClass != nil) {
-        (*env)->DeleteLocalRef(env, collectionsClass);
-    }
-}
-
 - (void)GlassApplicationDidChangeScreenParameters
 {
     LOG("GlassApplicationDidChangeScreenParameters");
@@ -256,6 +153,25 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
     {
         GlassScreenDidChangeScreenParameters(env);
     }
+}
+
+- (void)platformPreferencesDidChange {
+    // Some dynamic colors like NSColor.controlAccentColor don't seem to be reliably updated
+    // at the exact moment AppleColorPreferencesChangedNotification is received.
+    // As a workaround, we wait for a short period of time (one second seems sufficient) before
+    // we query the updated platform preferences.
+
+    [NSObject cancelPreviousPerformRequestsWithTarget:self
+              selector:@selector(updatePlatformPreferences)
+              object:nil];
+
+    [self performSelector:@selector(updatePlatformPreferences)
+          withObject:nil
+          afterDelay:1.0];
+}
+
+- (void)updatePlatformPreferences {
+    [PlatformSupport updatePreferences:self->jApplication];
 }
 
 - (void)applicationWillFinishLaunching:(NSNotification *)aNotification
@@ -298,12 +214,12 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
                                                                    object:nil];
 
                         [[NSDistributedNotificationCenter defaultCenter] addObserver:self
-                                                                         selector:@selector(platformPreferencesChanged)
+                                                                         selector:@selector(platformPreferencesDidChange)
                                                                          name:@"AppleInterfaceThemeChangedNotification"
                                                                          object:nil];
 
                         [[NSDistributedNotificationCenter defaultCenter] addObserver:self
-                                                                         selector:@selector(platformPreferencesChanged)
+                                                                         selector:@selector(platformPreferencesDidChange)
                                                                          name:@"AppleColorPreferencesChangedNotification"
                                                                          object:nil];
 
@@ -959,6 +875,8 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacApplication__1initIDs
         jRunnableRun = (*env)->GetMethodID(env, jcls, "run", "()V");
         if ((*env)->ExceptionCheck(env)) return;
     }
+
+    [PlatformSupport initIDs:env];
 }
 
 /*
@@ -1266,5 +1184,5 @@ JNIEXPORT jint JNICALL Java_com_sun_glass_ui_mac_MacApplication__1getMacKey
 JNIEXPORT jobject JNICALL Java_com_sun_glass_ui_mac_MacApplication_getPlatformPreferences
 (JNIEnv *env, jobject self)
 {
-    return [GlassApplication queryPlatformPreferences];
+    return [PlatformSupport collectPreferences];
 }

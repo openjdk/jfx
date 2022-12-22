@@ -86,6 +86,18 @@ extern jmethodID jSizeInit;
 
 extern jmethodID jPixelsAttachData;
 
+extern jclass jObjectClass;
+extern jclass jCollectionsClass;
+extern jclass jColorClass;
+extern jclass jHashMapClass;
+extern jfieldID jBooleanTRUE;
+extern jfieldID jBooleanFALSE;
+extern jmethodID jColorRgbMethod;
+extern jmethodID jHashMapInitMethod;
+extern jmethodID jMapPutMethod;
+extern jmethodID jObjectEqualsMethod;
+extern jmethodID jCollectionsUnmodifiableMapMethod;
+
 typedef struct _tagJavaIDs {
     struct {
         jmethodID init;

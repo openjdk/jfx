@@ -28,10 +28,19 @@
 #import <Cocoa/Cocoa.h>
 #import <jni.h>
 
-@interface ThemeSupport : NSObject
+@interface PlatformSupport : NSObject
 
-- (id)initWithEnv:(JNIEnv*)env;
-- (void)dealloc;
-- (void)queryProperties:(jobject)properties;
++ (void)initIDs:(JNIEnv*)env;
+
+/**
+ * Collect all platform preferences and return them as a new java/util/Map.
+ */
++ (jobject)collectPreferences;
+
+/**
+ * Collect all platform preferences and notify the JavaFX application when a preference has changed.
+ * The change notification includes all preferences, not only the changed preferences.
+ */
++ (void)updatePreferences:(jobject)application;
 
 @end

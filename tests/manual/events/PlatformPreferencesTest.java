@@ -30,6 +30,7 @@ import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextArea;
+import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
@@ -52,23 +53,34 @@ public class PlatformPreferencesTest extends Application {
         var textArea = new TextArea();
         textArea.setEditable(false);
 
-        var root = new VBox();
-        root.setPadding(new Insets(20));
-        root.setSpacing(20);
-        root.getChildren().add(new VBox(10,
+        var clearButton = new Button("Clear Log");
+        clearButton.setOnAction(e -> textArea.setText(""));
+
+        var box = new VBox();
+        box.setSpacing(20);
+        box.getChildren().add(new VBox(10,
             new VBox(
                 new Label("1. On a supported platform, change any of the platform preferences."),
                 new Label("    See javafx.application.PlatformPreferences for a list of supported platforms.")),
             new Label("2. Observe whether the changed preferences are reported in the log below."),
             new Label("3. Click \"Pass\" if the changes were correctly reported, otherwise click \"Fail\"."),
-            new HBox(5, passButton, failButton),
-            textArea
+            new HBox(5, passButton, failButton, clearButton)
         ));
+
+        var root = new BorderPane();
+        root.setPadding(new Insets(20));
+        root.setTop(box);
+        root.setCenter(textArea);
+        BorderPane.setMargin(textArea, new Insets(20, 0, 0, 0));
 
         textArea.setText("preferences = " + formatPrefs(Platform.getPreferences()));
 
         Platform.getPreferences().addListener(
-            (preferences, changed) -> textArea.setText(textArea.getText() + "changed = " + formatPrefs(changed)));
+            (preferences, changed) -> {
+                double scrollTop = textArea.getScrollTop();
+                textArea.setText(textArea.getText() + "changed = " + formatPrefs(changed));
+                textArea.setScrollTop(scrollTop);
+            });
 
         stage.setScene(new Scene(root));
         stage.show();
