@@ -912,7 +912,11 @@ void WindowContextTop::ensure_window_size() {
 
     set_bounds(-1, -1, false, false, w, h, cw, ch);
 
-     // Window didn't actually move, but view X, Y might change
+    // set_bounds will only notify for content size - this is needed in case
+    // of window oriented size
+    notify_window_resize();
+
+    // Window didn't actually move, but view X, Y might change
     notify_window_move();
 }
 
