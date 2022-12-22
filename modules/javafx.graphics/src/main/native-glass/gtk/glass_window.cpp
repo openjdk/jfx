@@ -912,8 +912,7 @@ void WindowContextTop::ensure_window_size() {
 
     set_bounds(-1, -1, false, false, w, h, cw, ch);
 
-    notify_window_resize();
-    // Window didn't actually move, but view X, Y might change
+     // Window didn't actually move, but view X, Y might change
     notify_window_move();
 }
 
@@ -1387,13 +1386,6 @@ void WindowContextTop::set_owner(WindowContext * owner_ctx) {
 }
 
 void WindowContextTop::notify_window_resize() {
-    int w = geometry_get_window_width(&geometry);
-    int h = geometry_get_window_height(&geometry);
-
-    mainEnv->CallVoidMethod(jwindow, jWindowNotifyResize,
-                 com_sun_glass_events_WindowEvent_RESIZE, w, h);
-    CHECK_JNI_EXCEPTION(mainEnv)
-
     if (jview) {
         int cw = geometry_get_content_width(&geometry);
         int ch = geometry_get_content_height(&geometry);
@@ -1401,6 +1393,13 @@ void WindowContextTop::notify_window_resize() {
         mainEnv->CallVoidMethod(jview, jViewNotifyResize, cw, ch);
         CHECK_JNI_EXCEPTION(mainEnv)
     }
+
+    int w = geometry_get_window_width(&geometry);
+    int h = geometry_get_window_height(&geometry);
+
+    mainEnv->CallVoidMethod(jwindow, jWindowNotifyResize,
+                 com_sun_glass_events_WindowEvent_RESIZE, w, h);
+    CHECK_JNI_EXCEPTION(mainEnv)
 }
 
 void WindowContextTop::notify_window_move() {
