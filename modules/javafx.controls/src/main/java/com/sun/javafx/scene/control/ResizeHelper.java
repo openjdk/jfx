@@ -33,10 +33,9 @@ import javafx.scene.layout.Region;
 /**
  * Helps resize Tree/TableView columns.
  * https://bugs.openjdk.org/browse/JDK-8293119
- * 
- * TODO remove snapping from intermediary computations, snap at the end.
  */
 public class ResizeHelper {
+    private static final boolean CHECK = true; // TODO remove once fully debugged
     private static final int SMALL_DELTA = 32;
     private static final double EPSILON = 0.000001;
     private final ResizeFeaturesBase rf;
@@ -121,27 +120,20 @@ public class ResizeHelper {
                 return;
             }
 
-            double rem = 0.0; // remainder from previous column
-
             for (int i = 0; i < count; i++) {
                 if (skip.get(i)) {
                     continue;
                 }
 
-                double dw = rem + (delta * pref[i] / total);
-                double w = snap(size[i] + dw);
+                double w = size[i] + (delta * pref[i] / total);
                 if (w < min[i]) {
-                    rem = (w - min[i]);
                     w = min[i];
                     skip.set(i, true);
                     needsAnotherPass = true;
                 } else if (w > max[i]) {
-                    rem = (w - max[i]);
                     w = max[i];
                     skip.set(i, true);
                     needsAnotherPass = true;
-                } else {
-                    rem = dw - (w - size[i]);
                 }
 
                 size[i] = w;
@@ -155,20 +147,28 @@ public class ResizeHelper {
     }
 
     /**
-     * Applies computed column widths to the tree/table columns.
-     * @return true if sum of columns equals or greater than the target area
+     * Applies computed column widths to the tree/table columns,
+     * snapping coordinates if required.
+     *
+     * @return true if sum of columns equals or greater than the target width
      */
     public boolean applySizes() {
-        double w = 0;
+        double pos = 0.0;
+        double prev = 0.0;
+
         for (int i = 0; i < count; i++) {
             TableColumnBase<?,?> c = columns.get(i);
             if (c.isResizable()) {
-                rf.setColumnWidth(c, size[i]);
-                w += size[i];
+                pos = snap(pos + size[i]);
+                double w = (pos - prev);
+                rf.setColumnWidth(c, w);
+            } else {
+                pos = pos + size[i];
             }
+            prev = pos;
         }
 
-        return (w > target); // TODO used to be target-1 for the line
+        return (pos > target);
     }
 
     protected static double clip(double v, double min, double max) {
@@ -183,8 +183,7 @@ public class ResizeHelper {
     public boolean resizeColumn(TableColumnBase<?,?> column) {
         double delta = rf.getDelta();
         // need to find the last leaf column of the given column - it is this
-        // column that we actually resize from. If this column is a leaf, then we
-        // use it.
+        // column that we actually resize from. If this column is a leaf, then we use it.
         TableColumnBase<?,?> leafColumn = column;
         while (leafColumn.getColumns().size() > 0) {
             leafColumn = leafColumn.getColumns().get(leafColumn.getColumns().size() - 1);
@@ -307,6 +306,7 @@ public class ResizeHelper {
     }
 
     protected boolean distributeDelta(int ix, double delta) {
+        double w1; // remove
         int ct = count - skip.cardinality();
         switch(ct) {
         case 0:
@@ -317,7 +317,9 @@ public class ResizeHelper {
             size[oppx] -= delta;
             return true;
         default:
-            double w1 = sumSizes(); // FIX
+            if (CHECK) {
+                w1 = sumSizes();
+            }
             size[ix] += delta;
             double adj;
 
@@ -340,16 +342,18 @@ public class ResizeHelper {
 
             size[ix] += adj;
 
-            double w2 = sumSizes(); // FIX remove once everyone reviews and tests the code
-            if (Math.abs(w1 - w2) > 0.0) {
-                // note: this might happen when snapping with a fractional scale
-                System.err.println(
-                    "*** ERR sum sizes before=" + w1 +
-                    " after=" + w2 +
-                    " diff=" + Math.abs(w1 - w2) +
-                    " adj=" + adj +
-                    " delta=" + delta
-                );
+            if (CHECK) {
+                double w2 = sumSizes();
+                if (Math.abs(w1 - w2) > 0.1) {
+                    // note: this might happen when snapping with a fractional scale
+                    System.err.println(
+                        "*** ERR sum sizes before=" + w1 +
+                        " after=" + w2 +
+                        " diff=" + Math.abs(w1 - w2) +
+                        " adj=" + adj +
+                        " delta=" + delta
+                    );
+                }
             }
 
             return true;
@@ -366,7 +370,6 @@ public class ResizeHelper {
 
                 if (size[i] > pref[i]) {
                     delta = resize(i, delta);
-
                     if (isZero(delta)) {
                         break;
                     }
@@ -381,7 +384,6 @@ public class ResizeHelper {
 
                 if (size[i] < pref[i]) {
                     delta = resize(i, delta);
-
                     if (isZero(delta)) {
                         break;
                     }
@@ -395,7 +397,6 @@ public class ResizeHelper {
             }
 
             delta = resize(i, delta);
-
             if (isZero(delta)) {
                 break;
             }
@@ -413,7 +414,6 @@ public class ResizeHelper {
 
                 if (size[i] > pref[i]) {
                     delta = resize(i, delta);
-
                     if (isZero(delta)) {
                         break;
                     }
@@ -428,7 +428,6 @@ public class ResizeHelper {
 
                 if (size[i] < pref[i]) {
                     delta = resize(i, delta);
-
                     if (isZero(delta)) {
                         break;
                     }
@@ -442,7 +441,6 @@ public class ResizeHelper {
             }
 
             delta = resize(i, delta);
-
             if (isZero(delta)) {
                 break;
             }
@@ -451,7 +449,7 @@ public class ResizeHelper {
     }
 
     protected double resize(int ix, double delta) {
-        double w = snap(size[ix] + delta);
+        double w = size[ix] + delta;
         if (w < min[ix]) {
             delta = (w - min[ix]);
             w = min[ix];
@@ -481,7 +479,6 @@ public class ResizeHelper {
                 return;
             }
 
-            double rem = 0.0; // remainder from the previous column
             needsAnotherPass = false;
 
             for (int i = 0; i < count; i++) {
@@ -489,22 +486,17 @@ public class ResizeHelper {
                     continue;
                 }
 
-                double dw = rem + (delta * pref[i] / total);
-                double w = snap(size[i] + dw);
+                double w = size[i] + (delta * pref[i] / total);
                 if (w < min[i]) {
-                    rem = (w - min[i]);
                     w = min[i];
                     skip.set(i, true);
                     needsAnotherPass = true;
                     delta -= (w - size[i]);
                } else if (w > max[i]) {
-                    rem = (w - max[i]);
                     w = max[i];
                     skip.set(i, true);
                     needsAnotherPass = true;
                     delta -= (w - size[i]);
-                } else {
-                    rem = dw - (w - size[i]);
                 }
 
                 size[i] = w;
@@ -528,9 +520,13 @@ public class ResizeHelper {
                 if (ix < 0) {
                     return;
                 }
+                
+                double dw = Math.max(-1.0, delta);
+                if (smallChange(ix, dw)) {
+                    return;
+                }
 
-                double d = smallChange(ix, delta);
-                delta -= d;
+                delta -= dw;
             }
         } else {
             while (delta > 0.0) {
@@ -538,46 +534,30 @@ public class ResizeHelper {
                 if (ix < 0) {
                     return;
                 }
+                
+                double dw = Math.min(1.0, delta);
+                if (smallChange(ix, dw)) {
+                    return;
+                }
 
-                double d = smallChange(ix, delta);
-                delta -= d;
+                delta -= dw;
             }
         }
     }
 
-    protected double smallChange(int ix, double delta) {
-        double sz = size[ix];
-        double dw;
-        double w = sz;
-        boolean shrink = delta < 0.0;
-
-        // open pixel change may not alter the width of the column when fractional scale is in effect
-        for(int i=1; i<100; i++) {
-            w = snap(sz + (shrink ? -i : i));
-            if(w != sz) {
-                break;
-            }
-        }
-
+    /** adjusts the column width, returns true if hit the constraint (also sets skip bit in this case) */
+    protected boolean smallChange(int ix, double delta) {
+        double w = size[ix] + delta;
         if (w < min[ix]) {
-            dw = (w - min[ix]);
-            w = min[ix];
             skip.set(ix);
+            return true;
         } else if (w > max[ix]) {
-            dw = (w - max[ix]);
-            w = max[ix];
             skip.set(ix);
-        } else {
-            dw = (w - sz); // TODO check
-        }
-
-        // stop when adjustment exceeds the requirement
-        if (Math.abs(dw) > Math.abs(delta)) {
-            return delta;
+            return true;
         }
 
         size[ix] = w;
-        return dw;
+        return false;
     }
 
     // less than pref, then smallest
@@ -632,11 +612,10 @@ public class ResizeHelper {
         return Math.abs(x) < EPSILON;
     }
 
-    @Deprecated // FIX use last
     protected double snap(double x) {
         if(snap == null) {
             return x;
         }
-        return snap.snapSizeX(x);
+        return snap.snapSpaceX(x);
     }
 }
