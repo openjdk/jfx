@@ -48,41 +48,13 @@ import java.util.Map;
  *         <tr><th colspan="2" scope="colgroup">Windows</th></tr>
  *         <tr><td>{@code Windows.SPI.HighContrast}</td><td>{@link Boolean}</td></tr>
  *         <tr><td>{@code Windows.SPI.HighContrastColorScheme}</td><td>{@link String}</td></tr>
- *         <tr><td>{@code Windows.SysColor.COLOR_3DDKSHADOW}</td><td>{@link Color}</td></tr>
  *         <tr><td>{@code Windows.SysColor.COLOR_3DFACE}</td><td>{@link Color}</td></tr>
- *         <tr><td>{@code Windows.SysColor.COLOR_3DHIGHLIGHT}</td><td>{@link Color}</td></tr>
- *         <tr><td>{@code Windows.SysColor.COLOR_3DHILIGHT}</td><td>{@link Color}</td></tr>
- *         <tr><td>{@code Windows.SysColor.COLOR_3DLIGHT}</td><td>{@link Color}</td></tr>
- *         <tr><td>{@code Windows.SysColor.COLOR_3DSHADOW}</td><td>{@link Color}</td></tr>
- *         <tr><td>{@code Windows.SysColor.COLOR_ACTIVEBORDER}</td><td>{@link Color}</td></tr>
- *         <tr><td>{@code Windows.SysColor.COLOR_ACTIVECAPTION}</td><td>{@link Color}</td></tr>
- *         <tr><td>{@code Windows.SysColor.COLOR_APPWORKSPACE}</td><td>{@link Color}</td></tr>
- *         <tr><td>{@code Windows.SysColor.COLOR_BACKGROUND}</td><td>{@link Color}</td></tr>
- *         <tr><td>{@code Windows.SysColor.COLOR_BTNFACE}</td><td>{@link Color}</td></tr>
- *         <tr><td>{@code Windows.SysColor.COLOR_BTNHIGHLIGHT}</td><td>{@link Color}</td></tr>
- *         <tr><td>{@code Windows.SysColor.COLOR_BTNHILIGHT}</td><td>{@link Color}</td></tr>
- *         <tr><td>{@code Windows.SysColor.COLOR_BTNSHADOW}</td><td>{@link Color}</td></tr>
  *         <tr><td>{@code Windows.SysColor.COLOR_BTNTEXT}</td><td>{@link Color}</td></tr>
- *         <tr><td>{@code Windows.SysColor.COLOR_CAPTIONTEXT}</td><td>{@link Color}</td></tr>
- *         <tr><td>{@code Windows.SysColor.COLOR_DESKTOP}</td><td>{@link Color}</td></tr>
- *         <tr><td>{@code Windows.SysColor.COLOR_GRADIENTACTIVECAPTION}</td><td>{@link Color}</td></tr>
- *         <tr><td>{@code Windows.SysColor.COLOR_GRADIENTINACTIVECAPTION}</td><td>{@link Color}</td></tr>
  *         <tr><td>{@code Windows.SysColor.COLOR_GRAYTEXT}</td><td>{@link Color}</td></tr>
  *         <tr><td>{@code Windows.SysColor.COLOR_HIGHLIGHT}</td><td>{@link Color}</td></tr>
  *         <tr><td>{@code Windows.SysColor.COLOR_HIGHLIGHTTEXT}</td><td>{@link Color}</td></tr>
  *         <tr><td>{@code Windows.SysColor.COLOR_HOTLIGHT}</td><td>{@link Color}</td></tr>
- *         <tr><td>{@code Windows.SysColor.COLOR_INACTIVEBORDER}</td><td>{@link Color}</td></tr>
- *         <tr><td>{@code Windows.SysColor.COLOR_INACTIVECAPTION}</td><td>{@link Color}</td></tr>
- *         <tr><td>{@code Windows.SysColor.COLOR_INACTIVECAPTIONTEXT}</td><td>{@link Color}</td></tr>
- *         <tr><td>{@code Windows.SysColor.COLOR_INFOBK}</td><td>{@link Color}</td></tr>
- *         <tr><td>{@code Windows.SysColor.COLOR_INFOTEXT}</td><td>{@link Color}</td></tr>
- *         <tr><td>{@code Windows.SysColor.COLOR_MENU}</td><td>{@link Color}</td></tr>
- *         <tr><td>{@code Windows.SysColor.COLOR_MENUHILIGHT}</td><td>{@link Color}</td></tr>
- *         <tr><td>{@code Windows.SysColor.COLOR_MENUBAR}</td><td>{@link Color}</td></tr>
- *         <tr><td>{@code Windows.SysColor.COLOR_MENUTEXT}</td><td>{@link Color}</td></tr>
- *         <tr><td>{@code Windows.SysColor.COLOR_SCROLLBAR}</td><td>{@link Color}</td></tr>
  *         <tr><td>{@code Windows.SysColor.COLOR_WINDOW}</td><td>{@link Color}</td></tr>
- *         <tr><td>{@code Windows.SysColor.COLOR_WINDOWFRAME}</td><td>{@link Color}</td></tr>
  *         <tr><td>{@code Windows.SysColor.COLOR_WINDOWTEXT}</td><td>{@link Color}</td></tr>
  *         <tr><td>{@code Windows.UIColor.Background}</td><td>{@link Color}</td></tr>
  *         <tr><td>{@code Windows.UIColor.Foreground}</td><td>{@link Color}</td></tr>

@@ -138,41 +138,13 @@ void PlatformSupport::queryHighContrastScheme(jobject properties) const
 
 void PlatformSupport::querySystemColors(jobject properties) const
 {
-    putColor(properties, "Windows.SysColor.COLOR_3DDKSHADOW", GetSysColor(COLOR_3DDKSHADOW));
     putColor(properties, "Windows.SysColor.COLOR_3DFACE", GetSysColor(COLOR_3DFACE));
-    putColor(properties, "Windows.SysColor.COLOR_3DHIGHLIGHT", GetSysColor(COLOR_3DHIGHLIGHT));
-    putColor(properties, "Windows.SysColor.COLOR_3DHILIGHT", GetSysColor(COLOR_3DHILIGHT));
-    putColor(properties, "Windows.SysColor.COLOR_3DLIGHT", GetSysColor(COLOR_3DLIGHT));
-    putColor(properties, "Windows.SysColor.COLOR_3DSHADOW", GetSysColor(COLOR_3DSHADOW));
-    putColor(properties, "Windows.SysColor.COLOR_ACTIVEBORDER", GetSysColor(COLOR_ACTIVEBORDER));
-    putColor(properties, "Windows.SysColor.COLOR_ACTIVECAPTION", GetSysColor(COLOR_ACTIVECAPTION));
-    putColor(properties, "Windows.SysColor.COLOR_APPWORKSPACE", GetSysColor(COLOR_APPWORKSPACE));
-    putColor(properties, "Windows.SysColor.COLOR_BACKGROUND", GetSysColor(COLOR_BACKGROUND));
-    putColor(properties, "Windows.SysColor.COLOR_BTNFACE", GetSysColor(COLOR_BTNFACE));
-    putColor(properties, "Windows.SysColor.COLOR_BTNHIGHLIGHT", GetSysColor(COLOR_BTNHIGHLIGHT));
-    putColor(properties, "Windows.SysColor.COLOR_BTNHILIGHT", GetSysColor(COLOR_BTNHILIGHT));
-    putColor(properties, "Windows.SysColor.COLOR_BTNSHADOW", GetSysColor(COLOR_BTNSHADOW));
     putColor(properties, "Windows.SysColor.COLOR_BTNTEXT", GetSysColor(COLOR_BTNTEXT));
-    putColor(properties, "Windows.SysColor.COLOR_CAPTIONTEXT", GetSysColor(COLOR_CAPTIONTEXT));
-    putColor(properties, "Windows.SysColor.COLOR_DESKTOP", GetSysColor(COLOR_DESKTOP));
-    putColor(properties, "Windows.SysColor.COLOR_GRADIENTACTIVECAPTION", GetSysColor(COLOR_GRADIENTACTIVECAPTION));
-    putColor(properties, "Windows.SysColor.COLOR_GRADIENTINACTIVECAPTION", GetSysColor(COLOR_GRADIENTINACTIVECAPTION));
     putColor(properties, "Windows.SysColor.COLOR_GRAYTEXT", GetSysColor(COLOR_GRAYTEXT));
     putColor(properties, "Windows.SysColor.COLOR_HIGHLIGHT", GetSysColor(COLOR_HIGHLIGHT));
     putColor(properties, "Windows.SysColor.COLOR_HIGHLIGHTTEXT", GetSysColor(COLOR_HIGHLIGHTTEXT));
     putColor(properties, "Windows.SysColor.COLOR_HOTLIGHT", GetSysColor(COLOR_HOTLIGHT));
-    putColor(properties, "Windows.SysColor.COLOR_INACTIVEBORDER", GetSysColor(COLOR_INACTIVEBORDER));
-    putColor(properties, "Windows.SysColor.COLOR_INACTIVECAPTION", GetSysColor(COLOR_INACTIVECAPTION));
-    putColor(properties, "Windows.SysColor.COLOR_INACTIVECAPTIONTEXT", GetSysColor(COLOR_INACTIVECAPTIONTEXT));
-    putColor(properties, "Windows.SysColor.COLOR_INFOBK", GetSysColor(COLOR_INFOBK));
-    putColor(properties, "Windows.SysColor.COLOR_INFOTEXT", GetSysColor(COLOR_INFOTEXT));
-    putColor(properties, "Windows.SysColor.COLOR_MENU", GetSysColor(COLOR_MENU));
-    putColor(properties, "Windows.SysColor.COLOR_MENUHILIGHT", GetSysColor(COLOR_MENUHILIGHT));
-    putColor(properties, "Windows.SysColor.COLOR_MENUBAR", GetSysColor(COLOR_MENUBAR));
-    putColor(properties, "Windows.SysColor.COLOR_MENUTEXT", GetSysColor(COLOR_MENUTEXT));
-    putColor(properties, "Windows.SysColor.COLOR_SCROLLBAR", GetSysColor(COLOR_SCROLLBAR));
     putColor(properties, "Windows.SysColor.COLOR_WINDOW", GetSysColor(COLOR_WINDOW));
-    putColor(properties, "Windows.SysColor.COLOR_WINDOWFRAME", GetSysColor(COLOR_WINDOWFRAME));
     putColor(properties, "Windows.SysColor.COLOR_WINDOWTEXT", GetSysColor(COLOR_WINDOWTEXT));
 }
 
