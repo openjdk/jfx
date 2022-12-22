@@ -514,11 +514,7 @@ void WindowContextBase::process_key(GdkEventKey* event) {
     }
 }
 
-void WindowContextBase::paint(void* data, jint width, jint height)
-{
-    if (!is_visible()) {
-        return;
-    }
+void WindowContextBase::paint(void* data, jint width, jint height) {
 #ifdef GLASS_GTK3
     cairo_region_t *region = gdk_window_get_clip_region(gdk_window);
     gdk_window_begin_paint_region(gdk_window, region);
@@ -1136,7 +1132,7 @@ void WindowContextTop::set_visible(bool visible) {
 }
 
 void WindowContextTop::set_bounds(int x, int y, bool xSet, bool ySet, int w, int h, int cw, int ch) {
-    // newW / newH always content sizes compatible with GTK+ (content size means "do not account window frame")
+    // newW / newH are view/content sizes
     int newW = 0;
     int newH = 0;
 
@@ -1187,7 +1183,6 @@ void WindowContextTop::set_bounds(int x, int y, bool xSet, bool ySet, int w, int
         newY = geometry_get_window_y(&geometry);
 
         gtk_window_move(GTK_WINDOW(gtk_widget), newX, newY);
-
         notify_window_move();
     }
 }
@@ -1390,6 +1385,13 @@ void WindowContextTop::set_owner(WindowContext * owner_ctx) {
 }
 
 void WindowContextTop::notify_window_resize() {
+    int w = geometry_get_window_width(&geometry);
+    int h = geometry_get_window_height(&geometry);
+
+    mainEnv->CallVoidMethod(jwindow, jWindowNotifyResize,
+                 com_sun_glass_events_WindowEvent_RESIZE, w, h);
+    CHECK_JNI_EXCEPTION(mainEnv)
+
     if (jview) {
         int cw = geometry_get_content_width(&geometry);
         int ch = geometry_get_content_height(&geometry);
@@ -1397,13 +1399,6 @@ void WindowContextTop::notify_window_resize() {
         mainEnv->CallVoidMethod(jview, jViewNotifyResize, cw, ch);
         CHECK_JNI_EXCEPTION(mainEnv)
     }
-
-    int w = geometry_get_window_width(&geometry);
-    int h = geometry_get_window_height(&geometry);
-
-    mainEnv->CallVoidMethod(jwindow, jWindowNotifyResize,
-                 com_sun_glass_events_WindowEvent_RESIZE, w, h);
-    CHECK_JNI_EXCEPTION(mainEnv)
 }
 
 void WindowContextTop::notify_window_move() {
