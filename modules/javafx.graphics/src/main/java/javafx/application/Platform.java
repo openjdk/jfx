@@ -421,7 +421,7 @@ public final class Platform {
      * Gets all {@link PlatformPreferences} of the current platform.
      *
      * @return a {@code PlatformPreferences} instance
-     * @since 20
+     * @since 21
      */
     public static PlatformPreferences getPreferences() {
         return PlatformImpl.getPlatformPreferences();

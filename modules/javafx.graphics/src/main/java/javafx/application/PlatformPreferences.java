@@ -168,7 +168,7 @@ import java.util.Map;
  *     </tbody>
  * </table>
  *
- * @since 20
+ * @since 21
  */
 public interface PlatformPreferences extends Map<String, Object> {
 

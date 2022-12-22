@@ -32,7 +32,7 @@ import java.util.Map;
  * It can be registered and unregistered with {@link PlatformPreferences#addListener}
  * and {@link PlatformPreferences#removeListener}.
  *
- * @since 20
+ * @since 21
  */
 public interface PlatformPreferencesListener {
 

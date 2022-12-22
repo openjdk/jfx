@@ -47,7 +47,7 @@ import java.util.Map;
  * @see PlatformPreferences
  * @see PlatformPreferencesListener
  *
- * @since 20
+ * @since 21
  */
 public final class WeakPlatformPreferencesListener implements PlatformPreferencesListener, WeakListener {
 

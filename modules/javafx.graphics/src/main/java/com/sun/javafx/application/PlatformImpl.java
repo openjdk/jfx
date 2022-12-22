@@ -823,30 +823,39 @@ public class PlatformImpl {
     }
 
     private static void styleThemeChanged(String userAgentStylesheet, StyleTheme theme) {
-        // If the javafx.userAgentStylesheetUrl system property is specified, we ignore the current theme
-        // to maximize compatibility with earlier versions of JavaFX where setting a UA stylesheet replaces
-        // the style theme entirely.
-        String overrideStylesheetUrl = System.getProperty("javafx.userAgentStylesheetUrl");
-        if (overrideStylesheetUrl != null) {
-            userAgentStylesheet = overrideStylesheetUrl.trim();
-            BuiltinTheme builtinTheme = BuiltinTheme.fromName(userAgentStylesheet);
-            if (builtinTheme != null) {
-                theme = newThemeInstance(builtinTheme);
-                userAgentStylesheet = null;
-            } else {
-                theme = null;
+        if (!isFxApplicationThread()) {
+            final String userAgentStylesheetCopy = userAgentStylesheet;
+            final StyleTheme themeCopy = theme;
+            runLater(() -> styleThemeChanged(userAgentStylesheetCopy, themeCopy));
+        } else {
+            // If the javafx.userAgentStylesheetUrl system property is specified, we ignore the current theme
+            // to maximize compatibility with earlier versions of JavaFX where setting a UA stylesheet replaces
+            // the style theme entirely.
+            String overrideStylesheetUrl = System.getProperty("javafx.userAgentStylesheetUrl");
+            if (overrideStylesheetUrl != null) {
+                userAgentStylesheet = overrideStylesheetUrl.trim();
+                BuiltinTheme builtinTheme = BuiltinTheme.fromName(userAgentStylesheet);
+                if (builtinTheme != null) {
+                    theme = newThemeInstance(builtinTheme);
+                    userAgentStylesheet = null;
+                } else {
+                    theme = null;
+                }
+            } else if (userAgentStylesheet != null) {
+                userAgentStylesheet = userAgentStylesheet.trim();
             }
-        } else if (userAgentStylesheet != null) {
-            userAgentStylesheet = userAgentStylesheet.trim();
-        }
 
-        updateStyleManager(userAgentStylesheet, theme != null ? theme.getStylesheets() : null);
+            updateStyleManager(userAgentStylesheet, theme != null ? theme.getStylesheets() : null);
+        }
     }
 
     private static List<String> themeStylesheets;
 
     private static final ListChangeListener<String> themeStylesheetsChanged =
-        change -> updateStyleManager(platformUserAgentStylesheet.get(), themeStylesheets);
+        change -> {
+            Toolkit.getToolkit().checkFxUserThread();
+            updateStyleManager(platformUserAgentStylesheet.get(), themeStylesheets);
+        };
 
     /**
      * Updates the {@link StyleManager} with a new list of stylesheets that consist of the

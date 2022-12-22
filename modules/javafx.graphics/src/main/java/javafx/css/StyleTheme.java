@@ -55,7 +55,7 @@ import java.util.List;
  * {@link StyleOrigin#USER_AGENT} stylesheets, but have a higher precedence in the CSS cascade
  * than a stylesheet referenced by {@link Application#userAgentStylesheetProperty()}.
  *
- * @since 20
+ * @since 21
  */
 public interface StyleTheme {
 
@@ -77,6 +77,9 @@ public interface StyleTheme {
      * If the list of stylesheets that comprise this {@code StyleTheme} is changed at runtime, this
      * method must return an {@link ObservableList} to allow the CSS subsystem to subscribe to list
      * change notifications.
+     *
+     * @implSpec Implementations of this method that return an {@link ObservableList} must emit all
+     *           change notifications on the JavaFX application thread.
      *
      * @implNote Implementations of this method that return an {@link ObservableList} are encouraged
      *           to minimize the number of subsequent list change notifications that are fired by the

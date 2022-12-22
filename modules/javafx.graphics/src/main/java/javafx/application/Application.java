@@ -190,7 +190,7 @@ public abstract class Application {
      *             call {@link #setStyleTheme(StyleTheme)} with an instance of
      *             {@link javafx.scene.control.theme.CaspianTheme} instead
      */
-    @Deprecated
+    @Deprecated(since = "21")
     public static final String STYLESHEET_CASPIAN = "CASPIAN";
 
     /**
@@ -203,7 +203,7 @@ public abstract class Application {
      *             call {@link #setStyleTheme(StyleTheme)} with an instance of
      *             {@link javafx.scene.control.theme.ModenaTheme} instead
      */
-    @Deprecated
+    @Deprecated(since = "21")
     public static final String STYLESHEET_MODENA = "MODENA";
 
     /**
@@ -526,15 +526,16 @@ public abstract class Application {
      * If the MIME type is "application/octet-stream", the payload will be interpreted as a binary
      * CSS file (see {@link Stylesheet#convertToBinary(File, File)}).
      * <p>
-     * Before JavaFX 20, built-in themes were selectable using the special user-agent stylesheet constants
+     * Before JavaFX 21, built-in themes were selectable using the special user-agent stylesheet constants
      * {@link #STYLESHEET_CASPIAN} and {@link #STYLESHEET_MODENA}. For backwards compatibility, the meaning
      * of these special constants is retained: setting the user-agent stylesheet to either {@code STYLESHEET_CASPIAN}
      * or {@code STYLESHEET_MODENA} will also set the value of the {@link #styleThemeProperty() styleTheme}
      * property to a new instance of the corresponding theme class.
      * <p>
-     * Note: this property must only be modified on the JavaFX application thread.
+     * Note: this property can be modified on any thread, but it is not thread-safe and must
+     *       not be concurrently modified with {@link #styleThemeProperty() styleTheme}.
      *
-     * @since 20
+     * @since 21
      */
     private static StringProperty userAgentStylesheet;
 
@@ -564,9 +565,10 @@ public abstract class Application {
      * Stylesheets that comprise a {@code StyleTheme} have a higher precedence in the CSS cascade than a
      * stylesheet referenced by the {@link #userAgentStylesheetProperty() userAgentStylesheet} property.
      * <p>
-     * Note: this property must only be modified on the JavaFX application thread.
+     * Note: this property can be modified on any thread, but it is not thread-safe and must not be
+     *       concurrently modified with {@link #userAgentStylesheetProperty() userAgentStylesheet}.
      *
-     * @since 20
+     * @since 21
      */
     private static ObjectProperty<StyleTheme> styleTheme;
 
