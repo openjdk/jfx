@@ -54,12 +54,12 @@ public class ResizeHelper {
                         List<? extends TableColumnBase<?,?>> columns,
                         ConstrainedColumnResize.ResizeMode mode) {
         this.rf = rf;
-        this.target = target;
+        this.snap = (rf.getTableControl().isSnapToPixel() ? rf.getTableControl() : null);
         this.columns = columns;
         this.mode = mode;
-        this.snap = (rf.getTableControl().isSnapToPixel() ? rf.getTableControl() : null);
-
+        this.target = target;
         this.count = columns.size();
+
         size = new double[count];
         min = new double[count];
         pref = new double[count];
@@ -98,7 +98,7 @@ public class ResizeHelper {
             }
 
             double delta = target - sumWidths;
-            if (Math.abs(delta) < 1.0) {
+            if (isZero(delta)) {
                 return;
             }
 
@@ -119,7 +119,6 @@ public class ResizeHelper {
                 return;
             }
 
-            int acc = 0; // accumulating widths of processed columns
             double rem = 0.0; // remainder from previous column
 
             for (int i = 0; i < count; i++) {
@@ -143,7 +142,6 @@ public class ResizeHelper {
                     rem = dw - (w - size[i]);
                 }
 
-                acc += w;
                 size[i] = w;
 
                 if(needsAnotherPass) {
@@ -216,7 +214,7 @@ public class ResizeHelper {
             return false;
         }
 
-        allowedDelta = (int)Math.floor(Math.min(Math.abs(delta), Math.min(allowedDelta, d)));
+        allowedDelta = Math.min(Math.abs(delta), Math.min(allowedDelta, d));
         if (!expanding) {
             allowedDelta = -allowedDelta;
         }
@@ -554,7 +552,7 @@ public class ResizeHelper {
         double w = sz;
         boolean shrink = delta < 0.0;
 
-        // make sure the column gets slightly resized, regardless
+        // open pixel change may not alter the width of the column when fractional scale is in effect
         for(int i=1; i<100; i++) {
             w = snap(sz + (shrink ? -i : i));
             if(w != sz) {
