@@ -582,7 +582,7 @@ public class ResizeHelper {
         int ix = -1;
         for (int i = 0; i < count; i++) {
             if (!skip.get(i)) {
-                double d = size[i] - pref[i];
+                double d = size[i] - pref[i] + min[i];
                 if (d > dist) {
                     dist = d;
                     ix = i;
@@ -607,7 +607,7 @@ public class ResizeHelper {
         }
         return sum;
     }
-    
+
     protected static boolean isZero(double x) {
         return Math.abs(x) < EPSILON;
     }
