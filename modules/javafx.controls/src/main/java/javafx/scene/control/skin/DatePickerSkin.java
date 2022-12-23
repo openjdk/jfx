@@ -145,6 +145,7 @@ public class DatePickerSkin extends ComboBoxPopupControl<LocalDate> {
                 }
                 show();
             } else {
+                updateDisplayNode();
                 hide();
             }
         });

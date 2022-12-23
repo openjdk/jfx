@@ -192,9 +192,11 @@ public class TreeTableViewSkin<T> extends TableViewSkinBase<T, TreeItem<T>, Tree
             case SELECTED_ITEMS: {
                 List<Node> selection = new ArrayList<>();
                 TreeTableView.TreeTableViewSelectionModel<T> sm = getSkinnable().getSelectionModel();
-                for (TreeTablePosition<T,?> pos : sm.getSelectedCells()) {
-                    TreeTableRow<T> row = flow.getPrivateCell(pos.getRow());
-                    if (row != null) selection.add(row);
+                if (sm != null) {
+                    for (TreeTablePosition<T,?> pos : sm.getSelectedCells()) {
+                        TreeTableRow<T> row = flow.getPrivateCell(pos.getRow());
+                        if (row != null) selection.add(row);
+                    }
                 }
                 return FXCollections.observableArrayList(selection);
             }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -204,23 +204,30 @@ public abstract class TableCellBehaviorBase<S, T, TC extends TableColumnBase<S, 
     @Override
     protected void simpleSelect(MouseButton button, int clickCount, boolean shortcutDown) {
         final TableSelectionModel<S> sm = getSelectionModel();
-        final int row = getNode().getIndex();
-        final TableColumnBase<S,T> column = getTableColumn();
-        boolean isAlreadySelected = sm.isSelected(row, column);
+        boolean isAlreadySelected;
 
-        if (isAlreadySelected && shortcutDown) {
-            sm.clearSelection(row, column);
-            getFocusModel().focus(row, (TC) column);
+        if (sm == null) {
             isAlreadySelected = false;
         } else {
-            // we check if cell selection is enabled to fix RT-33897
-            sm.clearAndSelect(row, column);
+            final int row = getNode().getIndex();
+            final TableColumnBase<S,T> column = getTableColumn();
+            isAlreadySelected = sm.isSelected(row, column);
+
+            if (isAlreadySelected && shortcutDown) {
+                sm.clearSelection(row, column);
+                getFocusModel().focus(row, (TC) column);
+                isAlreadySelected = false;
+            } else {
+                // we check if cell selection is enabled to fix RT-33897
+                sm.clearAndSelect(row, column);
+            }
         }
 
         handleClicks(button, clickCount, isAlreadySelected);
     }
 
     private int getColumn() {
+        // this method will not be called if selection model is null
         if (getSelectionModel().isCellSelectionEnabled()) {
             TableColumnBase<S,T> tc = getTableColumn();
             return getVisibleLeafIndex(tc);
