@@ -169,7 +169,7 @@ public class ATableViewResizeTester extends Application {
         stage.setWidth(1000);
         stage.setHeight(500);
         stage.show();
-        
+
         stage.renderScaleXProperty().addListener((s,p,c) -> updateTitle(stage));
         updateTitle(stage);
 
@@ -180,7 +180,7 @@ public class ATableViewResizeTester extends Application {
             selectFirst();
             //select(Policy.AUTO_RESIZE_SUBSEQUENT_COLUMNS);
     }
-    
+
     protected void updateTitle(Stage s) {
         s.setTitle("TableView/JTable Resize Tester " + System.getProperty("java.version") + " scaleX=" + s.getRenderScaleX());
     }
