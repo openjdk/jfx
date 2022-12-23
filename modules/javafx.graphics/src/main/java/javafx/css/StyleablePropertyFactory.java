@@ -121,7 +121,7 @@ import java.util.function.Function;
  * <pre><code>
  public final class MyButton extends Button {
 
-     private static CssMetaData<JavadocFixStylableProperty, Boolean> SELECTED;
+     private static {@literal CssMetaData<MyButton, Boolean>} SELECTED;
 
      private static final {@literal StyleablePropertyFactory<MyButton>} FACTORY =
          new {@literal StyleablePropertyFactory<>}(Button.getClassCssMetaData()) {
