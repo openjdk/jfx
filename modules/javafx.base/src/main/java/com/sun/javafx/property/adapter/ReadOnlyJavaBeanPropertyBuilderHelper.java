@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,7 +30,7 @@ import com.sun.javafx.reflect.ReflectUtil;
 
 /**
  */
-public class ReadOnlyJavaBeanPropertyBuilderHelper {
+public class ReadOnlyJavaBeanPropertyBuilderHelper<T> {
 
     private static final String IS_PREFIX = "is";
     private static final String GET_PREFIX = "get";
@@ -40,7 +40,7 @@ public class ReadOnlyJavaBeanPropertyBuilderHelper {
     private Object bean;
     private String getterName;
     private Method getter;
-    private ReadOnlyPropertyDescriptor descriptor;
+    private ReadOnlyPropertyDescriptor<T> descriptor;
 
     public void name(String propertyName) {
         if ((propertyName == null)? this.propertyName != null : !propertyName.equals(this.propertyName)) {
@@ -87,7 +87,7 @@ public class ReadOnlyJavaBeanPropertyBuilderHelper {
         }
     }
 
-    public ReadOnlyPropertyDescriptor getDescriptor() throws NoSuchMethodException {
+    public ReadOnlyPropertyDescriptor<T> getDescriptor() throws NoSuchMethodException {
         if (descriptor == null) {
             if ((propertyName == null) || (bean == null)) {
                 throw new NullPointerException("Bean and property name have to be specified");
@@ -107,7 +107,7 @@ public class ReadOnlyJavaBeanPropertyBuilderHelper {
                     }
                 }
             }
-            descriptor = new ReadOnlyPropertyDescriptor(propertyName, beanClass, getter);
+            descriptor = new ReadOnlyPropertyDescriptor<>(propertyName, beanClass, getter);
         }
         return descriptor;
     }
