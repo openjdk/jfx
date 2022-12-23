@@ -816,11 +816,8 @@ WindowContextTop::WindowContextTop(jobject _jwindow, WindowContext* _owner, long
 
     gtk_widget_set_events(gtk_widget, GDK_FILTERED_EVENTS_MASK);
     gtk_widget_set_app_paintable(gtk_widget, TRUE);
-    if (frame_type != TITLED) {
-        gtk_window_set_decorated(GTK_WINDOW(gtk_widget), FALSE);
-    }
-
     glass_gtk_configure_transparency_and_realize(gtk_widget, frame_type == TRANSPARENT);
+
     gtk_window_set_title(GTK_WINDOW(gtk_widget), "");
     gdk_window = gtk_widget_get_window(gtk_widget);
     gdk_window_set_events(gdk_window, GDK_FILTERED_EVENTS_MASK);
@@ -834,7 +831,9 @@ WindowContextTop::WindowContextTop(jobject _jwindow, WindowContext* _owner, long
         gdk_window_set_functions(gdk_window, wmf);
     }
 
-    if (frame_type == TITLED) {
+    if (frame_type != TITLED) {
+        gtk_window_set_decorated(GTK_WINDOW(gtk_widget), FALSE);
+    } else {
         request_frame_extents();
         geometry.extents = get_cached_extents();
     }
