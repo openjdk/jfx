@@ -97,7 +97,7 @@ public class ResizeHelper {
                 sumMins += min[i];
             }
 
-            if(sumMins >= target) {
+            if (sumMins >= target) {
                 return;
             }
 
@@ -136,7 +136,7 @@ public class ResizeHelper {
 
                 size[i] = w;
 
-                if(needsAnotherPass) {
+                if (needsAnotherPass) {
                     resetSizeChanges();
                     break;
                 }
@@ -156,7 +156,7 @@ public class ResizeHelper {
         double prev = 0.0;
 
         for (int i = 0; i < count; i++) {
-            TableColumnBase<?,?> c = columns.get(i);
+            TableColumnBase<?, ?> c = columns.get(i);
             if (c.isResizable()) {
                 pos = snap(pos + size[i]);
                 double w = (pos - prev);
@@ -180,11 +180,11 @@ public class ResizeHelper {
         return v;
     }
 
-    public boolean resizeColumn(TableColumnBase<?,?> column) {
+    public boolean resizeColumn(TableColumnBase<?, ?> column) {
         double delta = rf.getDelta();
         // need to find the last leaf column of the given column - it is this
         // column that we actually resize from. If this column is a leaf, then we use it.
-        TableColumnBase<?,?> leafColumn = column;
+        TableColumnBase<?, ?> leafColumn = column;
         while (leafColumn.getColumns().size() > 0) {
             leafColumn = leafColumn.getColumns().get(leafColumn.getColumns().size() - 1);
         }
@@ -501,12 +501,12 @@ public class ResizeHelper {
 
                 size[i] = w;
 
-                if(needsAnotherPass) {
+                if (needsAnotherPass) {
                     resetSizeChanges();
                     break;
                 }
             }
-        } while(needsAnotherPass);
+        } while (needsAnotherPass);
     }
 
     /**
@@ -543,8 +543,8 @@ public class ResizeHelper {
             }
         }
     }
-    
-    /** 
+
+    /**
      * Finds the best column to shrink, then reduces its width.
      * Adds the column to skip list if the column width hits a constraint after adjustement.
      * @return unused portion of delta, or Double.NaN if it did not find a good candidate
@@ -561,14 +561,14 @@ public class ResizeHelper {
                 }
             }
         }
-        
-        if(ix < 0) {
+
+        if (ix < 0) {
             return Double.NaN;
         }
-        
+
         double rem = 0.0;
         double w = size[ix] + delta;
-        if(w < min[ix]) {
+        if (w < min[ix]) {
             rem = (w - min[ix]); // TODO check sign
             w = min[ix];
             skip.set(ix);
@@ -576,8 +576,8 @@ public class ResizeHelper {
         size[ix] = w;
         return rem;
     }
-    
-    /** 
+
+    /**
      * Finds the best column to shrink, then reduces its width.
      * Adds the column to skip list if the column width hits a constraint after adjustement.
      * @return unused portion of delta, or Double.NaN if it did not find a good candidate
@@ -594,14 +594,14 @@ public class ResizeHelper {
                 }
             }
         }
-        
-        if(ix < 0) {
+
+        if (ix < 0) {
             return Double.NaN;
         }
-        
+
         double rem = 0.0;
         double w = size[ix] + delta;
-        if(w > max[ix]) {
+        if (w > max[ix]) {
             rem = (w - max[ix]); // TODO check sign
             w = max[ix];
             skip.set(ix);
@@ -631,7 +631,7 @@ public class ResizeHelper {
     }
 
     protected double snap(double x) {
-        if(snap == null) {
+        if (snap == null) {
             return x;
         }
         return snap.snapSpaceX(x);
@@ -648,7 +648,7 @@ public class ResizeHelper {
     protected static String print(Object... items) {
         if (LOG) {
             StringBuilder sb = new StringBuilder();
-            for (Object x : items) {
+            for (Object x: items) {
                 if (sb.length() > 0) {
                     sb.append(' ');
                 }
@@ -659,26 +659,25 @@ public class ResizeHelper {
             return "";
         }
     }
-    
+
     @Deprecated // TODO remove
     protected List<Double> asList(double[] items) {
         ArrayList<Double> a = new ArrayList<>(items.length);
-        for(int i=0; i<items.length; i++) {
+        for (int i = 0; i < items.length; i++) {
             a.add(items[i]);
         }
         return a;
     }
-    
+
     @Deprecated // TODO remove
     protected String d() {
         double sum = sumSizes();
         boolean diff = !isZero(sum - target);
-        
+
         return print(
             diff ? ("ERR(" + (target - sum) + ")") : "",
             "target", target,
             "sum", sum,
-            "sizes", asList(size)
-        );
+            "sizes", asList(size));
     }
 }
