@@ -345,7 +345,7 @@ void WindowContextBase::process_mouse_motion(GdkEventMotion* event) {
             com_sun_glass_events_KeyEvent_MODIFIER_BUTTON_FORWARD);
     jint button = com_sun_glass_events_MouseEvent_BUTTON_NONE;
 
-    if (isDrag) {
+    if (isDrag && WindowContextBase::sm_mouse_drag_window == NULL) {
         // Upper layers expects from us Windows behavior:
         // all mouse events should be delivered to window where drag begins
         // and no exit/enter event should be reported during this drag.
