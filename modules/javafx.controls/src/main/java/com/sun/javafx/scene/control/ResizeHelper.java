@@ -24,8 +24,10 @@
  */
 package com.sun.javafx.scene.control;
 
+import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.List;
+
 import javafx.scene.control.ResizeFeaturesBase;
 import javafx.scene.control.TableColumnBase;
 import javafx.scene.layout.Region;
@@ -35,6 +37,7 @@ import javafx.scene.layout.Region;
  * https://bugs.openjdk.org/browse/JDK-8293119
  */
 public class ResizeHelper {
+    private static final boolean LOG = true; // TODO remove once fully debugged
     private static final boolean CHECK = true; // TODO remove once fully debugged
     private static final int SMALL_DELTA = 32;
     private static final double EPSILON = 0.000001;
@@ -58,7 +61,7 @@ public class ResizeHelper {
         this.snap = (rf.getTableControl().isSnapToPixel() ? rf.getTableControl() : null);
         this.columns = columns;
         this.mode = mode;
-        this.target = target;
+        this.target = snap(target); // snap target to avoid problems later
         this.count = columns.size();
 
         size = new double[count];
@@ -98,7 +101,7 @@ public class ResizeHelper {
                 return;
             }
 
-            double delta = target - sumWidths;
+            double delta = target - snap(sumWidths);
             if (isZero(delta)) {
                 return;
             }
@@ -112,11 +115,6 @@ public class ResizeHelper {
             }
 
             if (isZero(total)) {
-                return;
-            }
-
-            if (Math.abs(delta) < SMALL_DELTA) {
-                distributeSmallDelta(delta);
                 return;
             }
 
@@ -153,6 +151,7 @@ public class ResizeHelper {
      * @return true if sum of columns equals or greater than the target width
      */
     public boolean applySizes() {
+        p("applySizes", d());
         double pos = 0.0;
         double prev = 0.0;
 
@@ -168,6 +167,7 @@ public class ResizeHelper {
             prev = pos;
         }
 
+        p("applySizes done", d());
         return (pos > target);
     }
 
@@ -510,58 +510,79 @@ public class ResizeHelper {
     }
 
     /**
-     * for small deltas, uses a simpler algorithm to distribute space one small step at a time,
-     * favoring columns further away from their preferred width.
+     * for small deltas, we use a simpler, but more expensive algorithm to distribute space in small steps,
+     * each time favoring a column that is further away from its preferred width.
      */
     protected void distributeSmallDelta(double delta) {
+        p("delta", delta, "before", asList(size));
+        distributeSmallDelta2(delta);
+        p("     after", asList(size), d());
+    }
+    protected void distributeSmallDelta2(double delta) {
         if (delta < 0) {
             while (delta < 0.0) {
-                int ix = findShrinking();
-                if (ix < 0) {
-                    return;
-                }
-                
-                double dw = Math.max(-1.0, delta);
-                if (smallChange(ix, dw)) {
+                double d = Math.max(-1.0, delta);
+                double rem = shrinkSmall(d);
+                p("d", d, "rem", rem);
+                if (Double.isNaN(rem)) {
                     return;
                 }
 
-                delta -= dw;
+                delta -= (d - rem);
             }
         } else {
             while (delta > 0.0) {
-                int ix = findGrowing();
-                if (ix < 0) {
-                    return;
-                }
-                
-                double dw = Math.min(1.0, delta);
-                if (smallChange(ix, dw)) {
+                double d = Math.min(1.0, delta);
+                double rem = expandSmall(d);
+                p("d", d, "rem", rem);
+                if (Double.isNaN(rem)) {
                     return;
                 }
 
-                delta -= dw;
+                delta -= (d - rem);
             }
         }
     }
-
-    /** adjusts the column width, returns true if hit the constraint (also sets skip bit in this case) */
-    protected boolean smallChange(int ix, double delta) {
-        double w = size[ix] + delta;
-        if (w < min[ix]) {
-            skip.set(ix);
-            return true;
-        } else if (w > max[ix]) {
-            skip.set(ix);
-            return true;
+    
+    /** 
+     * Finds the best column to shrink, then reduces its width.
+     * Adds the column to skip list if the column width hits a constraint after adjustement.
+     * @return unused portion of delta, or Double.NaN if it did not find a good candidate
+     */
+    protected double shrinkSmall(double delta) {
+        double dist = Double.NEGATIVE_INFINITY;
+        int ix = -1;
+        for (int i = 0; i < count; i++) {
+            if (!skip.get(i)) {
+                double d = size[i] - pref[i];
+                if (d > dist) {
+                    dist = d;
+                    ix = i;
+                }
+            }
         }
-
+        
+        if(ix < 0) {
+            return Double.NaN;
+        }
+        
+        double rem = 0.0;
+        double w = size[ix] + delta;
+        if(w < min[ix]) {
+            rem = (w - min[ix]); // TODO check sign
+            w = min[ix];
+            skip.set(ix);
+        }
         size[ix] = w;
-        return false;
+        return rem;
     }
-
-    // less than pref, then smallest
-    protected int findGrowing() {
+    
+    /** 
+     * Finds the best column to shrink, then reduces its width.
+     * Adds the column to skip list if the column width hits a constraint after adjustement.
+     * @return unused portion of delta, or Double.NaN if it did not find a good candidate
+     */
+    protected double expandSmall(double delta) {
         double dist = Double.NEGATIVE_INFINITY;
         int ix = -1;
         for (int i = 0; i < count; i++) {
@@ -573,23 +594,20 @@ public class ResizeHelper {
                 }
             }
         }
-        return ix;
-    }
-
-    // shrinking: more than pref, then largest
-    protected int findShrinking() {
-        double dist = Double.NEGATIVE_INFINITY;
-        int ix = -1;
-        for (int i = 0; i < count; i++) {
-            if (!skip.get(i)) {
-                double d = size[i] - pref[i] + min[i];
-                if (d > dist) {
-                    dist = d;
-                    ix = i;
-                }
-            }
+        
+        if(ix < 0) {
+            return Double.NaN;
         }
-        return ix;
+        
+        double rem = 0.0;
+        double w = size[ix] + delta;
+        if(w > max[ix]) {
+            rem = (w - max[ix]); // TODO check sign
+            w = max[ix];
+            skip.set(ix);
+        }
+        size[ix] = w;
+        return rem;
     }
 
     protected void resetSizeChanges() {
@@ -617,5 +635,50 @@ public class ResizeHelper {
             return x;
         }
         return snap.snapSpaceX(x);
+    }
+
+    @Deprecated // TODO remove
+    protected static void p(Object... items) {
+        if (LOG) {
+            System.err.println(print(items));
+        }
+    }
+
+    @Deprecated // TODO remove
+    protected static String print(Object... items) {
+        if (LOG) {
+            StringBuilder sb = new StringBuilder();
+            for (Object x : items) {
+                if (sb.length() > 0) {
+                    sb.append(' ');
+                }
+                sb.append(x);
+            }
+            return sb.toString();
+        } else {
+            return "";
+        }
+    }
+    
+    @Deprecated // TODO remove
+    protected List<Double> asList(double[] items) {
+        ArrayList<Double> a = new ArrayList<>(items.length);
+        for(int i=0; i<items.length; i++) {
+            a.add(items[i]);
+        }
+        return a;
+    }
+    
+    @Deprecated // TODO remove
+    protected String d() {
+        double sum = sumSizes();
+        boolean diff = !isZero(sum - target);
+        
+        return print(
+            diff ? ("ERR(" + (target - sum) + ")") : "",
+            "target", target,
+            "sum", sum,
+            "sizes", asList(size)
+        );
     }
 }
