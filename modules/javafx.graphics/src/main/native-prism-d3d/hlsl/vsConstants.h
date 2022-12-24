@@ -45,6 +45,7 @@ float4   gReserved5[5] : register(c5);
 
 // lighting
 float4   gLightsPos[maxLights]     : register(c10);
+//float4   13-19 reserved
 float4   gLightsNormDir[maxLights] : register(c20);
 //float4 gAmbinetLightColor        : register(c25);
 //float4 gAmbinetData[10]          : register(c25);
