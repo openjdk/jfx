@@ -98,8 +98,8 @@ float computeSpotlightFactor3(float3 l, float3 lightDir, float cosOuter, float d
 void computeLight(float i, float3 normal, float3 refl, float specPower, float3 toLight, float3 lightDir, in out float3 diff, in out float3 spec) {
     // testing if w is 0 or 1 using <0.5 since equality check for floating points might not work well
     if (gLightAttenuation[i].w < 0.5) {
-        diff += saturate(dot(normal, -lightDir)) * gLightColor[i].xyz;
-        spec += pow(saturate(dot(-refl, -lightDir)), specPower) * gLightColor[i].xyz;
+        diff += saturate(dot(normal, -lightDir)) * gLightColor[i].rgb;
+        spec += pow(saturate(dot(-refl, -lightDir)), specPower) * gLightColor[i].rgb;
         return;
     }
 
@@ -119,7 +119,7 @@ void computeLight(float i, float3 normal, float3 refl, float specPower, float3 t
     float qa = gLightAttenuation[i].z;
     float invAttnFactor = ca + la * dist + qa * dist * dist;
 
-    float3 attenuatedColor = gLightColor[i].xyz * spotlightFactor / invAttnFactor;
+    float3 attenuatedColor = gLightColor[i].rgb * spotlightFactor / invAttnFactor;
     diff += saturate(dot(normal, l)) * attenuatedColor;
     spec += pow(saturate(dot(-refl, l)), specPower) * attenuatedColor;
 }
