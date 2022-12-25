@@ -26,7 +26,7 @@
 #include "vsDecl.h"
 #include "vsMath.h"
 
-// VertexType = VsInput as defined the gradle build file
+// VertexType = VsInput, as defined in the build.gradle file
 VsOutput main(VertexType vsInput) {
     VsOutput vsOutput;
 
