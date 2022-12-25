@@ -61,9 +61,6 @@ class CameraScene3D extends Pane {
     public DoubleProperty fieldOfView = new SimpleDoubleProperty(camera.getFieldOfView());
     public BooleanProperty verticalFOV = new SimpleBooleanProperty(camera.isVerticalFieldOfView());
 
-    protected PointLight camLight = new PointLight();
-    public BooleanProperty camLightOn = new SimpleBooleanProperty(camLight.isLightOn());
-
     public Group rootGroup = new Group();
 
     public CameraScene3D() {
