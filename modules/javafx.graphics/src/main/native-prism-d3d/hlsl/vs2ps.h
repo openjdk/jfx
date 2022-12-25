@@ -23,14 +23,12 @@
  * questions.
  */
 
+static const int numLights = 3;
+
 /*
  * The output of the vertex shader is the input of the pixel shader.
  */
 typedef struct PsInput {
-
-    static const float nLights = 3;
-
-    float2  texD : texcoord0;
 
     // projection space = homogeneous clip space
     float4 projPos : position; // must be outputed even if unused
@@ -38,12 +36,14 @@ typedef struct PsInput {
 //  needed for pixel lighting
 //  float3 worldPos           : texcoord1;
 
-    float3 worldVecToEye               : texcoord2;
-    float3 worldVecsToLights[nLights]  : texcoord3; // 3, 4, 5
-    float3 worldNormLightDirs[nLights] : texcoord6; // 6, 7, 8
+    float3 worldVecToEye                 : texcoord2;
+    float3 worldVecsToLights[numLights]  : texcoord3; // 3, 4, 5
+    float3 worldNormLightDirs[numLights] : texcoord6; // 6, 7, 8
 
 //  needed for pixel lighting
 //  float3 worldNormals[3] : texcoord3; // 3, 4, 5
+
+    float2 texD : texcoord0;
 
 //  float  oFog  : fog;
 //  float3 debug : texcoord11;

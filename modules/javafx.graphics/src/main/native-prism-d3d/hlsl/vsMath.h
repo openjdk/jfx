@@ -68,7 +68,7 @@ void transformVertexAttributes(float4 modelVertexPos, float4 modelVertexNormal, 
     }
 
 //  needed for pixel lighting
-//  vsOutput.worldNormals = n;
+//  r.worldNormals = n;
 
 #if 0
     float3 s = pos*0.5+getTime();
@@ -78,7 +78,7 @@ void transformVertexAttributes(float4 modelVertexPos, float4 modelVertexNormal, 
     float3 worldVecToEye = gCameraPos.xyz - worldVertexPos;
     vsOutput.worldVecToEye = getLocalVector(worldVecToEye, n);
 
-    for (int k = 0; k < PsInput::nLights; ++k) {
+    for (int k = 0; k < numLights; ++k) {
         float3 worldVecToLight = gLightsPos[k].xyz - worldVertexPos;
         vsOutput.worldVecsToLights[k] = getLocalVector(worldVecToLight, n);
         float3 worldNormLightDir = gLightsNormDir[k].xyz;
@@ -88,7 +88,6 @@ void transformVertexAttributes(float4 modelVertexPos, float4 modelVertexNormal, 
 //    vsOutput.debug = n[0];
 
 //    vsOutput.oFog  = 1; // getFogExp2(pos);
-
 }
 
 //float4 retFloat(float x) { return float4(x.xxx,1); }

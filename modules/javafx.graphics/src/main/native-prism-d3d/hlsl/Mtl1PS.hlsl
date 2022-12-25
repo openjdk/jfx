@@ -66,7 +66,7 @@ float4 debug() {
 float4 main(PsInput psInput) : color {
 
     if (0) return debug();
-    // return retNormal(lSpace.debug);
+    // return retNormal(psInput.debug);
 
     float2 texD = psInput.texD;
 
@@ -79,7 +79,7 @@ float4 main(PsInput psInput) : color {
 
     float3 normal = float3(0, 0, 1);
 
-    //bump
+    // bump
     if (bump) {
         float4 BumpSpec = tex2D(mapBumpHeight, texD);
         normal = normalize(BumpSpec.xyz * 2 - 1);
@@ -109,7 +109,7 @@ float4 main(PsInput psInput) : color {
     float3 diffLightColor = 0;
     float3 specLightColor = 0;
 
-    for (int i = 0; i < numShaderLights; i++) {
+    for (int i = 0; i < numLights; i++) {
         //  needed for pixel lighting
         //  float3 worldVecToLight = gLightsPos[i].xyz - worldPixelPos;
         //  worldVecToLight = getLocalVector(worldVecToLight, worldNormals);
