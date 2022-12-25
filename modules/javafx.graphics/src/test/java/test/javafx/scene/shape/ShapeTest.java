@@ -25,11 +25,8 @@
 
 package test.javafx.scene.shape;
 
-import com.sun.javafx.scene.DirtyBits;
 import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.scene.shape.ShapeHelper;
-import com.sun.javafx.sg.prism.NGNode;
-import com.sun.javafx.sg.prism.NGShape;
 import javafx.beans.value.WritableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;

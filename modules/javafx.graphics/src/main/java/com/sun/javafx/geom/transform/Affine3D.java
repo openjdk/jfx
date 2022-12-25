@@ -152,6 +152,7 @@ public class Affine3D extends AffineBase {
                 mxz * (myx * mzy - mzx * myy));
     }
 
+    @Override
     public void setTransform(BaseTransform transform) {
         this.mxx = transform.getMxx();
         this.mxy = transform.getMxy();

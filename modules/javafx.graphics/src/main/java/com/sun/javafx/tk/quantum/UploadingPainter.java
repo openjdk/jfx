@@ -38,7 +38,7 @@ import com.sun.prism.impl.QueuedPixelSource;
  * UploadingPainter is used when we need to render into an offscreen buffer.
  * The PresentingPainter is used when we are rendering to the main screen.
  */
-final class UploadingPainter extends ViewPainter implements Runnable {
+final class UploadingPainter extends ViewPainter {
 
     private RTTexture   rttexture;
     // resolveRTT is a temporary render target to "resolve" a msaa render buffer

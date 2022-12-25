@@ -48,10 +48,10 @@ public class CheckMenuItemTest {
     private CheckMenuItem checkMenuItemOneArg;//Empty graphic
     private CheckMenuItem checkMenuItemTwoArg;
     private Node node;
-    private Toolkit tk;
 
     @Before public void setup() {
-        tk = (StubToolkit)Toolkit.getToolkit();//This step is not needed (Just to make sure StubToolkit is loaded into VM)
+        assertTrue(Toolkit.getToolkit() instanceof StubToolkit);  // Ensure StubToolkit is loaded
+
         node = new Rectangle();
         checkMenuItem = cmi = new CheckMenuItem();
         checkMenuItemOneArg = new CheckMenuItem("one");

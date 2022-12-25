@@ -27,7 +27,6 @@ package test.com.sun.javafx.sg.prism;
 
 import javafx.scene.Group;
 import javafx.scene.Node;
-import javafx.scene.Scene;
 import javafx.scene.shape.Rectangle;
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.DirtyRegionContainer;
@@ -36,7 +35,6 @@ import com.sun.javafx.geom.RectBounds;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.scene.SceneHelper;
-import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.sg.prism.NGNode;
 import com.sun.scenario.effect.Blend;
 import com.sun.scenario.effect.Bloom;

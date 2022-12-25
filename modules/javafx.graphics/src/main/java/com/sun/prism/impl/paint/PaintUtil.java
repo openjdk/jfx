@@ -45,7 +45,7 @@ public class PaintUtil {
                                              float bx, float by,
                                              float bw, float bh)
     {
-        Gradient mgrad = (Gradient)grad;
+        Gradient mgrad = grad;
         int numStops = mgrad.getNumStops();
         float[] fractions = new float[numStops];
         Color[] colors = new Color[numStops];

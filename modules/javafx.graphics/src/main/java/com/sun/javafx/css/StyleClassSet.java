@@ -158,11 +158,9 @@ public final class StyleClassSet  extends BitSet<StyleClass> {
    }
 
     // package private for unit test purposes
-    static final Map<String,Integer> styleClassMap =
-            new HashMap<String,Integer>(64);
+    static final Map<String,Integer> styleClassMap = new HashMap<>(64);
 
-    static final List<StyleClass> styleClasses =
-            new ArrayList<StyleClass>();
+    static final List<StyleClass> styleClasses = new ArrayList<>();
 
 }
 

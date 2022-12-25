@@ -32,7 +32,7 @@ import java.util.Deque;
  */
 public final class EventLoop {
 
-    private static final Deque<EventLoop> stack = new ArrayDeque<EventLoop>();
+    private static final Deque<EventLoop> stack = new ArrayDeque<>();
 
     /**
      * Possible states for a nested event loop object.

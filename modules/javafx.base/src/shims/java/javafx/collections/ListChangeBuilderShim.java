@@ -31,7 +31,7 @@ public class ListChangeBuilderShim<E> {
     private ListChangeBuilder lcb;
 
     public ListChangeBuilderShim(ObservableListBase<E> list) {
-        lcb = new ListChangeBuilder<E>(list);
+        lcb = new ListChangeBuilder<>(list);
     }
 
     public ListChangeBuilder<E> getBuilder() {

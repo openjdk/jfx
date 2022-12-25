@@ -103,7 +103,7 @@ public class Stylesheet {
     }
 
     /** All the rules contained in the stylesheet in the order they are in the file */
-    private final ObservableList<Rule> rules = new TrackableObservableList<Rule>() {
+    private final ObservableList<Rule> rules = new TrackableObservableList<>() {
 
         @Override protected void onChanged(Change<Rule> c) {
             c.reset();
@@ -122,7 +122,7 @@ public class Stylesheet {
     };
 
     /** List of all font faces */
-    private final List<FontFace> fontFaces = new ArrayList<FontFace>();
+    private final List<FontFace> fontFaces = new ArrayList<>();
 
     /**
      * Constructs a stylesheet with the base URI defaulting to the root
@@ -251,7 +251,7 @@ public class Stylesheet {
         final int index = is.readShort();
         this.setOrigin(StyleOrigin.valueOf(strings[index]));
         final int nRules = is.readShort();
-        List<Rule> persistedRules = new ArrayList<Rule>(nRules);
+        List<Rule> persistedRules = new ArrayList<>(nRules);
         for (int n=0; n<nRules; n++) {
             persistedRules.add(Rule.readBinary(bssVersion,is,strings));
         }

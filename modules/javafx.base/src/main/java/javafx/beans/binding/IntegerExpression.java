@@ -56,17 +56,17 @@ public abstract class IntegerExpression extends NumberExpressionBase implements
 
     @Override
     public long longValue() {
-        return (long) get();
+        return get();
     }
 
     @Override
     public float floatValue() {
-        return (float) get();
+        return get();
     }
 
     @Override
     public double doubleValue() {
-        return (double) get();
+        return get();
     }
 
     @Override
@@ -271,7 +271,7 @@ public abstract class IntegerExpression extends NumberExpressionBase implements
      * @since JavaFX 8.0
      */
     public ObjectExpression<Integer> asObject() {
-        return new ObjectBinding<Integer>() {
+        return new ObjectBinding<>() {
             {
                 bind(IntegerExpression.this);
             }

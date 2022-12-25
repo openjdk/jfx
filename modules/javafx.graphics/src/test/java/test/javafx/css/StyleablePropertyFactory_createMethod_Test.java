@@ -328,6 +328,7 @@ public class StyleablePropertyFactory_createMethod_Test {
     private static class MyStyleable1<T> extends MyStyleable<T> {
         MyStyleable1() { super(); }
         static final StyleablePropertyFactory<MyStyleable1> styleablePropertyFactory = new StyleablePropertyFactory<>(null);
+        @Override
         protected StyleablePropertyFactory<? extends MyStyleable> getFactory() { return MyStyleable1.styleablePropertyFactory; }
 
     }
@@ -335,6 +336,7 @@ public class StyleablePropertyFactory_createMethod_Test {
     private static class MyStyleable2<T> extends MyStyleable<T> {
         MyStyleable2() { super(); }
         static final StyleablePropertyFactory<MyStyleable2> styleablePropertyFactory = new StyleablePropertyFactory<>(null);
+        @Override
         protected StyleablePropertyFactory<? extends MyStyleable> getFactory() { return MyStyleable2.styleablePropertyFactory; }
 
     }
@@ -342,6 +344,7 @@ public class StyleablePropertyFactory_createMethod_Test {
     private static class MyStyleableEnum<T extends Enum<T>> extends MyStyleable<T> {
         MyStyleableEnum() { super(); }
         static final StyleablePropertyFactory<MyStyleableEnum> styleablePropertyFactory = new StyleablePropertyFactory<>(null);
+        @Override
         protected StyleablePropertyFactory<? extends MyStyleable> getFactory() { return MyStyleableEnum.styleablePropertyFactory; }
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2020, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,28 +25,25 @@
 
 package test.javafx.scene.control;
 
-import javafx.application.Application;
-import javafx.application.Platform;
-import javafx.scene.Node;
-import javafx.scene.Group;
-import javafx.scene.Scene;
-import javafx.scene.control.ProgressIndicator;
-import javafx.scene.control.skin.ProgressIndicatorSkin;
-import javafx.stage.Stage;
-import javafx.stage.WindowEvent;
+import static org.junit.Assert.assertTrue;
 
-import java.lang.ref.WeakReference;
-import java.util.LinkedList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
-import junit.framework.Assert;
+import javafx.application.Platform;
+import javafx.scene.Group;
+import javafx.scene.Node;
+import javafx.scene.Scene;
+import javafx.scene.control.ProgressIndicator;
+import javafx.scene.control.skin.ProgressIndicatorSkin;
+import javafx.stage.Stage;
+
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import static org.junit.Assert.assertTrue;
-import static test.util.Util.TIMEOUT;
+
 import test.util.Util;
 import test.util.memory.JMemoryBuddy;
 
@@ -56,9 +53,12 @@ public class ProgressIndicatorLeakTest {
     public static void initFX() throws Exception {
         CountDownLatch startupLatch = new CountDownLatch(1);
         Platform.setImplicitExit(false);
-        Platform.startup(startupLatch::countDown);
-        Assert.assertTrue("Timeout waiting for FX runtime to start",
-                startupLatch.await(TIMEOUT, TimeUnit.MILLISECONDS));
+        Util.startup(startupLatch, startupLatch::countDown);
+    }
+
+    @AfterClass
+    public static void teardownOnce() {
+        Util.shutdown();
     }
 
     @Test
@@ -119,13 +119,6 @@ public class ProgressIndicatorLeakTest {
             });
 
             checker.assertCollectable(stage.get());
-        });
-    }
-
-    @AfterClass
-    public static void teardownOnce() {
-        Platform.runLater(() -> {
-            Platform.exit();
         });
     }
 }

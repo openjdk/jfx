@@ -56,7 +56,7 @@ public abstract class ManagedResource<T> implements GraphicsResource {
         this.resource = resource;
         this.pool = pool;
         if (trackLockSources) {
-            this.lockedFrom = new ArrayList<Throwable>();
+            this.lockedFrom = new ArrayList<>();
         }
         manage();
         lock();

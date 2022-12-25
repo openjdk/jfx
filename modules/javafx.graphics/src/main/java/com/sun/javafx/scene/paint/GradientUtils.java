@@ -73,7 +73,7 @@ public class GradientUtils {
         }
 
         private String[] splitString(String string, Delimiter delimiter, boolean canRepeat) {
-            List<String> tokenList = new LinkedList<String>();
+            List<String> tokenList = new LinkedList<>();
             StringBuilder token = new StringBuilder();
             int i = 0;
             char[] input = string.toCharArray();

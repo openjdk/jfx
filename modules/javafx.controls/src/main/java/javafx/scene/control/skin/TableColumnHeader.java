@@ -33,7 +33,6 @@ import com.sun.javafx.scene.control.skin.Utils;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
-import javafx.beans.value.WritableValue;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.collections.WeakListChangeListener;
@@ -228,11 +227,11 @@ public class TableColumnHeader extends Region {
     };
 
     private WeakListChangeListener<TableColumnBase<?,?>> weakSortOrderListener =
-            new WeakListChangeListener<TableColumnBase<?,?>>(sortOrderListener);
+            new WeakListChangeListener<>(sortOrderListener);
     private final WeakListChangeListener<TableColumnBase<?,?>> weakVisibleLeafColumnsListener =
-            new WeakListChangeListener<TableColumnBase<?,?>>(visibleLeafColumnsListener);
+            new WeakListChangeListener<>(visibleLeafColumnsListener);
     private final WeakListChangeListener<String> weakStyleClassListener =
-            new WeakListChangeListener<String>(styleClassListener);
+            new WeakListChangeListener<>(styleClassListener);
 
     private static final EventHandler<MouseEvent> mousePressedHandler = me -> {
         TableColumnHeader header = (TableColumnHeader) me.getSource();
@@ -293,8 +292,6 @@ public class TableColumnHeader extends Region {
             me.consume();
         }
     };
-
-
 
     /* *************************************************************************
      *                                                                         *
@@ -372,8 +369,9 @@ public class TableColumnHeader extends Region {
             isSizeDirty = false;
         }
 
+        double cornerRegionPadding = tableHeaderRow == null ? 0.0 : tableHeaderRow.cornerPadding.get();
         double sortWidth = 0;
-        double w = snapSizeX(getWidth()) - (snappedLeftInset() + snappedRightInset());
+        double w = snapSizeX(getWidth()) - (snappedLeftInset() + snappedRightInset()) - cornerRegionPadding;
         double h = getHeight() - (snappedTopInset() + snappedBottomInset());
         double x = w;
 
@@ -476,7 +474,17 @@ public class TableColumnHeader extends Region {
     }
 
     void setTableHeaderRow(TableHeaderRow thr) {
+        if (tableHeaderRow != null) {
+            changeListenerHandler.unregisterChangeListeners(tableHeaderRow.cornerPadding);
+        }
         tableHeaderRow = thr;
+        if (tableHeaderRow != null) {
+            changeListenerHandler.registerChangeListener(tableHeaderRow.cornerPadding, o -> {
+                if (isLastVisibleColumn) {
+                    requestLayout();
+                }
+            });
+        }
         updateTableSkin();
     }
 
@@ -681,7 +689,7 @@ public class TableColumnHeader extends Region {
 
         // RT-23486
         maxWidth += padding;
-        if (tv.getColumnResizePolicy() == TableView.CONSTRAINED_RESIZE_POLICY && tv.getWidth() > 0) {
+        if (TableSkinUtils.isConstrainedResizePolicy(tv.getColumnResizePolicy()) && tv.getWidth() > 0) {
             if (maxWidth > tc.getMaxWidth()) {
                 maxWidth = tc.getMaxWidth();
             }
@@ -776,7 +784,7 @@ public class TableColumnHeader extends Region {
 
         // RT-23486
         maxWidth += padding;
-        if (ttv.getColumnResizePolicy() == TreeTableView.CONSTRAINED_RESIZE_POLICY && ttv.getWidth() > 0) {
+        if (TableSkinUtils.isConstrainedResizePolicy(ttv.getColumnResizePolicy()) && ttv.getWidth() > 0) {
 
             if (maxWidth > tc.getMaxWidth()) {
                 maxWidth = tc.getMaxWidth();
@@ -1078,7 +1086,7 @@ public class TableColumnHeader extends Region {
                 // to prevent multiple sorts, we make a copy of the sort order
                 // list, moving the column value from the current position to
                 // its new position at the front of the list
-                List<TableColumnBase<?,?>> sortOrderCopy = new ArrayList<TableColumnBase<?,?>>(sortOrder);
+                List<TableColumnBase<?,?>> sortOrderCopy = new ArrayList<>(sortOrder);
                 sortOrderCopy.remove(getTableColumn());
                 sortOrderCopy.add(0, getTableColumn());
                 sortOrder.setAll(getTableColumn());
@@ -1289,7 +1297,7 @@ public class TableColumnHeader extends Region {
      */
      private static class StyleableProperties {
          private static final CssMetaData<TableColumnHeader,Number> SIZE =
-            new CssMetaData<TableColumnHeader,Number>("-fx-size",
+            new CssMetaData<>("-fx-size",
                  SizeConverter.getInstance(), 20.0) {
 
             @Override
@@ -1299,7 +1307,7 @@ public class TableColumnHeader extends Region {
 
             @Override
             public StyleableProperty<Number> getStyleableProperty(TableColumnHeader n) {
-                return (StyleableProperty<Number>)(WritableValue<Number>)n.sizeProperty();
+                return (StyleableProperty<Number>)n.sizeProperty();
             }
         };
 
@@ -1307,7 +1315,7 @@ public class TableColumnHeader extends Region {
          static {
 
             final List<CssMetaData<? extends Styleable, ?>> styleables =
-                new ArrayList<CssMetaData<? extends Styleable, ?>>(Region.getClassCssMetaData());
+                new ArrayList<>(Region.getClassCssMetaData());
             styleables.add(SIZE);
             STYLEABLES = Collections.unmodifiableList(styleables);
 

@@ -96,7 +96,10 @@ class PixelUtils {
                 throw new IllegalArgumentException("non-RGB image format");
             }
             pixels = app.createPixels(image.getWidth(),
-                                      image.getHeight(), bytes);
+                                      image.getHeight(),
+                                      bytes,
+                                      image.getPixelScale(),
+                                      image.getPixelScale());
             return pixels;
         } else if (pixelType == PixelFormat.DataType.INT) {
             if (ByteOrder.nativeOrder() != ByteOrder.LITTLE_ENDIAN) {
@@ -109,7 +112,10 @@ class PixelUtils {
              */
             IntBuffer ints = (IntBuffer)image.getPixelBuffer();
             pixels = app.createPixels(image.getWidth(),
-                                      image.getHeight(), ints);
+                                      image.getHeight(),
+                                      ints,
+                                      image.getPixelScale(),
+                                      image.getPixelScale());
             return pixels;
         } else {
             throw new IllegalArgumentException("unhandled image type: " + pixelType);

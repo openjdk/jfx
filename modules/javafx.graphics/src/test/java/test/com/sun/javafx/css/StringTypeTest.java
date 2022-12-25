@@ -55,19 +55,19 @@ public class StringTypeTest {
     @Test
     public void testConvert() {
         //System.out.println("convert");
-        ParsedValue<String,String> value = new ParsedValueImpl<String,String>("test", StyleConverter.getStringConverter());
+        ParsedValue<String,String> value = new ParsedValueImpl<>("test", StyleConverter.getStringConverter());
         Font font = null;
         String expResult = "test";
         String result = value.convert(font);
         assertEquals(expResult, result);
 
         ParsedValue<String,String>[] values = new ParsedValue[] {
-            new ParsedValueImpl<String,String>("hello", StyleConverter.getStringConverter()),
-            new ParsedValueImpl<String,String>("world", StyleConverter.getStringConverter())
+            new ParsedValueImpl<>("hello", StyleConverter.getStringConverter()),
+            new ParsedValueImpl<>("world", StyleConverter.getStringConverter())
         };
 
         ParsedValue<ParsedValue<String,String>[], String[]> seq =
-            new ParsedValueImpl<ParsedValue<String,String>[], String[]>(values, StringConverter.SequenceConverter.getInstance());
+            new ParsedValueImpl<>(values, StringConverter.SequenceConverter.getInstance());
 
         String[] strings = seq.convert(font);
         assertEquals("hello", strings[0]);

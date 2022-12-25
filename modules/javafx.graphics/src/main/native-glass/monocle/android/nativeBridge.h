@@ -24,11 +24,13 @@
  */
 #include <android/native_window_jni.h>
 #include <android/log.h>
+#include <stdbool.h>
 
 // the following functions can be invoked by native code invoked by Android Activity code
 void androidJfx_setNativeWindow(ANativeWindow* nativeWindow);
 void androidJfx_setDensity(float nativeDensity);
 void androidJfx_gotTouchEvent (int count, int* actions, int* ids, int* xs, int* ys, int primary);
+void androidJfx_gotMenuEvent(int x, int y, int xAbs, int yAbs, bool isKeyboardTrigger);
 void androidJfx_requestGlassToRedraw();
 
 #define GLASS_LOG_INFO(...)  ((void)__android_log_print(ANDROID_LOG_INFO,"GLASS", __VA_ARGS__))

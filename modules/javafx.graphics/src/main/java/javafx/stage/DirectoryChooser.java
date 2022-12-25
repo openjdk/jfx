@@ -87,7 +87,7 @@ public final class DirectoryChooser {
     public final ObjectProperty<File> initialDirectoryProperty() {
         if (initialDirectory == null) {
             initialDirectory =
-                    new SimpleObjectProperty<File>(this, "initialDirectory");
+                    new SimpleObjectProperty<>(this, "initialDirectory");
         }
 
         return initialDirectory;

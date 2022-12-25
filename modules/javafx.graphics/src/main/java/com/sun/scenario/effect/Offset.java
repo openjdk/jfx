@@ -163,16 +163,16 @@ public class Offset extends Effect {
     @Override
     public Point2D transform(Point2D p, Effect defaultInput) {
         p = getDefaultedInput(0, defaultInput).transform(p, defaultInput);
-        float x = (float) (p.x + xoff);
-        float y = (float) (p.y + yoff);
+        float x = p.x + xoff;
+        float y = p.y + yoff;
         p = new Point2D(x, y);
         return p;
     }
 
     @Override
     public Point2D untransform(Point2D p, Effect defaultInput) {
-        float x = (float) (p.x - xoff);
-        float y = (float) (p.y - yoff);
+        float x = p.x - xoff;
+        float y = p.y - yoff;
         p = new Point2D(x, y);
         p = getDefaultedInput(0, defaultInput).untransform(p, defaultInput);
         return p;

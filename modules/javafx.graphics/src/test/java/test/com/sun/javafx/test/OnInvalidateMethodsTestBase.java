@@ -28,8 +28,6 @@ package test.com.sun.javafx.test;
 import static org.junit.Assert.assertTrue;
 
 import java.lang.reflect.Method;
-import java.util.List;
-
 import javafx.scene.Node;
 import test.javafx.scene.NodeTest;
 import javafx.scene.shape.MoveTo;

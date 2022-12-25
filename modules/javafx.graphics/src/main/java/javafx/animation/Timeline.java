@@ -91,7 +91,7 @@ public final class Timeline extends Animation {
     public final ObservableList<KeyFrame> getKeyFrames() {
         return keyFrames;
     }
-    private final ObservableList<KeyFrame> keyFrames = new TrackableObservableList<KeyFrame>() {
+    private final ObservableList<KeyFrame> keyFrames = new TrackableObservableList<>() {
         @Override
         protected void onChanged(Change<KeyFrame> c) {
             while (c.next()) {

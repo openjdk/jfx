@@ -39,7 +39,7 @@ public class Variable {
         this.name.set(name);
     }
 
-    private final ObjectProperty<Object> next = new SimpleObjectProperty<Object>() {
+    private final ObjectProperty<Object> next = new SimpleObjectProperty<>() {
         @Override
         public void addListener(InvalidationListener listener) {
             super.addListener(listener);

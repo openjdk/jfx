@@ -51,4 +51,4 @@ class D3DFrameStats {
                 + ", numSetTexture=" + divr(numSetTexture, nFrames)
                 + ", numSetPixelShader=" + divr(numSetPixelShader, nFrames);
     }
-};
+}
