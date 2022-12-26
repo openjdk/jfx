@@ -41,7 +41,7 @@ import java.util.Map;
  * The value of a stylesheet URI can be changed at any time with the {@link WritableValue} wrapper
  * that is returned by {@code addFirst} and {@code addLast}.
  *
- * @since 20
+ * @since 21
  */
 public abstract class ThemeBase implements StyleTheme {
 
