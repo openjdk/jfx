@@ -774,30 +774,43 @@ static void process_dnd_source_selection_req(GdkWindow *window, GdkEvent *gdkEve
 
 }
 
+static gboolean ungrab_destroy_callback(gpointer) {
+    if (dnd_window) {
+        gdk_window_destroy(dnd_window);
+        dnd_window = NULL;
+    }
+
+    DragView::reset_drag_view();
+    glass_gdk_mouse_devices_ungrab();
+
+    return FALSE;
+}
+
+
 static void process_dnd_source_grab_broken(GdkWindow *window, GdkEvent *event) {
     GdkEventGrabBroken *gb_event = &event->grab_broken;
 
+    // grabbed the same window
     if (gb_event->implicit || gb_event->grab_window == dnd_window) {
         return;
     }
 
     gdk_drag_abort(get_drag_context(), GDK_CURRENT_TIME);
+    gdk_threads_add_idle((GSourceFunc) ungrab_destroy_callback, NULL);
 }
 
 static void process_dnd_source_mouse_release(GdkWindow *window, GdkEvent *event) {
     (void)window;
 
     GdkDragContext* ctx = get_drag_context();
-    DragView::reset_drag_view();
-    glass_gdk_mouse_devices_ungrab();
 
-    gboolean success;
     if (gdk_drag_context_get_selected_action(ctx)) {
-        gdk_drag_drop(ctx, GDK_CURRENT_TIME);
+        gdk_drag_drop(ctx, event->dnd.time);
     } else {
-        gdk_drag_abort(ctx, GDK_CURRENT_TIME);
+        gdk_drag_abort(ctx, event->dnd.time);
     }
 
+    gdk_threads_add_idle((GSourceFunc) ungrab_destroy_callback, NULL);
 }
 
 static void process_drag_motion(gint x_root, gint y_root, guint state) {
@@ -899,15 +912,10 @@ static void process_dnd_source_drop_finished(GdkWindow *window, GdkEvent *event)
     (void)window;
     (void)event;
 
-    if (dnd_window) {
-        dnd_set_performed_action(
-                translate_gdk_action_to_glass(
-                    gdk_drag_context_get_selected_action(
-                        get_drag_context())));
-
-        gdk_window_destroy(dnd_window);
-        dnd_window = NULL;
-    }
+    dnd_set_performed_action(
+            translate_gdk_action_to_glass(
+                gdk_drag_context_get_selected_action(
+                    get_drag_context())));
 }
 
 static void add_target_from_jstring(JNIEnv *env, GList **list, jstring string) {
