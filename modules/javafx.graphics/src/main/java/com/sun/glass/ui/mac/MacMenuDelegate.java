@@ -86,7 +86,7 @@ class MacMenuDelegate implements MenuDelegate, MenuItemDelegate {
 
     @Override public boolean insert(MenuItemDelegate item, int pos) {
         MacMenuDelegate macMenu = (MacMenuDelegate)item;
-        if(macMenu != null) {
+        if (macMenu != null) {
             macMenu.isInserted = true;
             macMenu.updateCallback();
         }
@@ -111,7 +111,7 @@ class MacMenuDelegate implements MenuDelegate, MenuItemDelegate {
     @Override public boolean remove(MenuItemDelegate item, int pos) {
         MacMenuDelegate macMenu = (MacMenuDelegate)item;
         _remove(ptr, macMenu == null ? 0L : macMenu.ptr, pos);
-        if(macMenu != null) {
+        if (macMenu != null) {
             macMenu.isInserted = false;
             macMenu.callback = null;
             Platform.runLater(() -> {
@@ -156,12 +156,12 @@ class MacMenuDelegate implements MenuDelegate, MenuItemDelegate {
     private native void _setCallback(long menuPtr, Callback callback);
     private void updateCallback() {
         if (isInserted) {
-            if(lastSetCallback != callback) {
+            if (lastSetCallback != callback) {
                 _setCallback(ptr, callback);
                 lastSetCallback = callback;
             }
         } else {
-            if(lastSetCallback != null) {
+            if (lastSetCallback != null) {
                 _setCallback(ptr, null);
                 lastSetCallback = null;
             }
