@@ -56,10 +56,8 @@ public:
         GdkPixbuf* pixbuf;
         gint width, height;
         gboolean is_raw_image;
-        gboolean is_offset_set;
-        gint offset_x, offset_y;
     public:
-        View(GdkPixbuf* pixbuf, gboolean is_raw_image, gboolean is_offset_set, gint offset_x, gint offset_y);
+        View(GdkPixbuf* pixbuf, gboolean is_raw_image);
         void screen_changed();
         void expose(cairo_t* context);
         void move(gint x, gint y);

@@ -1163,12 +1163,7 @@ void DragView::set_drag_view() {
     GdkPixbuf* pixbuf = get_drag_image(&is_raw_image, &w, &h);
 
     if (GDK_IS_PIXBUF(pixbuf)) {
-        gint offset_x = w / 2;
-        gint offset_y = h / 2;
-
-        gboolean is_offset_set = get_drag_image_offset(&offset_x, &offset_y);
-
-        DragView::view = new DragView::View(pixbuf, is_raw_image, is_offset_set, offset_x, offset_y);
+        DragView::view = new DragView::View(pixbuf, is_raw_image);
     }
 }
 
@@ -1200,13 +1195,10 @@ static gboolean on_expose(GtkWidget *widget, GdkEventExpose *event, gpointer vie
     return FALSE;
 }
 
-DragView::View::View(GdkPixbuf* _pixbuf, gboolean _is_raw_image,
-                                gboolean _is_offset_set, gint _offset_x, gint _offset_y) :
+DragView::View::View(GdkPixbuf* _pixbuf, gboolean _is_raw_image) :
         pixbuf(_pixbuf),
-        is_raw_image(_is_raw_image),
-        is_offset_set(_is_offset_set),
-        offset_x(_offset_x),
-        offset_y(_offset_y) {
+        is_raw_image(_is_raw_image) {
+
     width = gdk_pixbuf_get_width(pixbuf);
     height = gdk_pixbuf_get_height(pixbuf);
 
@@ -1234,13 +1226,6 @@ DragView::View::View(GdkPixbuf* _pixbuf, gboolean _is_raw_image,
 void DragView::View::screen_changed() {
     GdkScreen *screen = gtk_widget_get_screen(widget);
     glass_configure_window_transparency(widget, true);
-
-    if (!gdk_screen_is_composited(screen)) {
-        if (!is_offset_set) {
-            offset_x = 1;
-            offset_y = 1;
-        }
-    }
 }
 
 void DragView::View::expose(cairo_t *context) {
@@ -1276,7 +1261,7 @@ void DragView::View::expose(cairo_t *context) {
 }
 
 void DragView::View::move(gint x, gint y) {
-    gtk_window_move(GTK_WINDOW(widget), x - offset_x, y - offset_y);
+    gtk_window_move(GTK_WINDOW(widget), x + 1, y + 1);
 
     if (!gtk_widget_get_visible(widget)) {
         gtk_widget_show(widget);
