@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -49,35 +49,29 @@ public class ListMapSetEventsTestController
     }
 
     @FXML
-    @SuppressWarnings("unchecked")
     protected void handleChildListChange(ListChangeListener.Change<Widget> event) {
         listWithParamCalled = true;
     }
     @FXML
-    @SuppressWarnings("unchecked")
     protected void handleChildListChange() {
         listNoParamCalled = true;
     }
 
     @FXML
-    @SuppressWarnings("unchecked")
     protected void handlePropertiesChange(MapChangeListener.Change<String, Object> event) {
         mapWithParamCalled = true;
     }
 
     @FXML
-    @SuppressWarnings("unchecked")
     protected void handlePropertiesChange() {
         mapNoParamCalled = true;
     }
 
     @FXML
-    @SuppressWarnings("unchecked")
     protected void handleSetChange(SetChangeListener.Change<String> event) {
         setWithParamCalled = true;
     }
     @FXML
-    @SuppressWarnings("unchecked")
     protected void handleSetChange() {
         setNoParamCalled = true;
     }

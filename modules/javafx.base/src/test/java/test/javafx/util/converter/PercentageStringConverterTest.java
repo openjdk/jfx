@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,10 +25,8 @@
 
 package test.javafx.util.converter;
 
-import java.text.DecimalFormat;
 import java.text.NumberFormat;
 import java.util.Locale;
-import javafx.util.converter.LocalTimeStringConverterShim;
 import javafx.util.converter.NumberStringConverterShim;
 import javafx.util.converter.PercentageStringConverter;
 import static org.junit.Assert.*;

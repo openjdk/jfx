@@ -25,6 +25,9 @@
 
 package test.javafx.scene.control;
 
+import java.lang.ref.WeakReference;
+import java.util.concurrent.CountDownLatch;
+
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.scene.Scene;
@@ -33,16 +36,12 @@ import javafx.scene.control.TitledPane;
 import javafx.scene.layout.StackPane;
 import javafx.stage.Stage;
 
-import test.util.Util;
-
-import java.lang.ref.WeakReference;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-
-import junit.framework.Assert;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
+
+import test.util.Util;
 
 public class AccordionTitlePaneLeakTest {
 
@@ -68,16 +67,12 @@ public class AccordionTitlePaneLeakTest {
     @BeforeClass
     public static void initFX() throws Exception {
         startupLatch = new CountDownLatch(1);
-        new Thread(() -> Application.launch(TestApp.class, (String[])null)).start();
-        Assert.assertTrue("Timeout waiting for FX runtime to start", startupLatch.await(15, TimeUnit.SECONDS));
+        Util.launch(startupLatch, TestApp.class);
     }
 
     @AfterClass
     public static void teardownOnce() {
-        Platform.runLater(() -> {
-            stage.hide();
-            Platform.exit();
-        });
+        Util.shutdown(stage);
     }
 
     @Test

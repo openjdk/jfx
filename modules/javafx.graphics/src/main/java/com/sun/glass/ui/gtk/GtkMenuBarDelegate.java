@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -32,18 +32,22 @@ class GtkMenuBarDelegate implements MenuBarDelegate {
     public GtkMenuBarDelegate() {
     }
 
+    @Override
     public boolean createMenuBar() {
         return true;
     }
 
+    @Override
     public boolean insert(MenuDelegate menu, int pos) {
         return true;
     }
 
+    @Override
     public boolean remove(MenuDelegate menu, int pos) {
         return true;
     }
 
+    @Override
     public long getNativeMenu() {
         return 0;
     }

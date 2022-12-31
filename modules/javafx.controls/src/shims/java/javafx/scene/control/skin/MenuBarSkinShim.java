@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2015, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,12 +26,8 @@
 package javafx.scene.control.skin;
 
 import com.sun.javafx.scene.control.ContextMenuContent;
-import javafx.scene.control.ContextMenu;
 import javafx.scene.control.MenuButton;
 import javafx.scene.control.Skin;
-import javafx.scene.control.skin.MenuBarSkin;
-import javafx.scene.control.skin.MenuButtonSkinBase;
-import javafx.scene.layout.VBox;
 
 
 /**

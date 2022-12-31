@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -39,7 +39,6 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.net.URL;
-import java.nio.file.Files;
 import java.util.Base64;
 import java.util.Collections;
 import java.util.List;
@@ -546,13 +545,13 @@ public class StylesheetTest {
                         if ("-fx-shape".equals(prop)) {
                             StringConverter.getInstance().convert(pv, null);
                         } else if ("-fx-font-smoothing-type".equals(prop)) {
-                            (new EnumConverter<FontSmoothingType>(FontSmoothingType.class)).convert(pv, null);
+                            (new EnumConverter<>(FontSmoothingType.class)).convert(pv, null);
                         } else if ("-fx-text-alignment".equals(prop)) {
-                            (new EnumConverter<TextAlignment>(TextAlignment.class)).convert(pv, null);
+                            (new EnumConverter<>(TextAlignment.class)).convert(pv, null);
                         } else if ("-fx-alignment".equals(prop)) {
-                            (new EnumConverter<Pos>(Pos.class)).convert(pv, null);
+                            (new EnumConverter<>(Pos.class)).convert(pv, null);
                         } else if ("-fx-text-origin".equals(prop)) {
-                            (new EnumConverter<VPos>(VPos.class)).convert(pv, null);
+                            (new EnumConverter<>(VPos.class)).convert(pv, null);
                         } else if ("-fx-text-overrun".equals(prop)) {
                             Class cl = null;
                             try {
@@ -564,7 +563,7 @@ public class StylesheetTest {
                                 (new EnumConverter(cl)).convert(pv, null);
                             }
                         } else if ("-fx-orientation".equals(prop)) {
-                            (new EnumConverter<Orientation>(Orientation.class)).convert(pv, null);
+                            (new EnumConverter<>(Orientation.class)).convert(pv, null);
                         } else if ("-fx-content-display".equals(prop)) {
                             Class cl = null;
                             try {

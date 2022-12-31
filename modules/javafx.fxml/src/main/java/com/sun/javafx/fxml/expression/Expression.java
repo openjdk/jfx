@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -79,7 +79,7 @@ public abstract class Expression<T> {
         public Expression parse(Reader reader) throws IOException {
             LinkedList<Token> tokens = tokenize(new PushbackReader(reader, PUSHBACK_BUFFER_SIZE));
 
-            LinkedList<Expression> stack = new LinkedList<Expression>();
+            LinkedList<Expression> stack = new LinkedList<>();
 
             for (Token token : tokens) {
                 Expression<?> expression;
@@ -193,8 +193,8 @@ public abstract class Expression<T> {
 
         private LinkedList<Token> tokenize(PushbackReader reader) throws IOException {
             // Read the string into a postfix list of tokens
-            LinkedList<Token> tokens = new LinkedList<Token>();
-            LinkedList<Token> stack = new LinkedList<Token>();
+            LinkedList<Token> tokens = new LinkedList<>();
+            LinkedList<Token> stack = new LinkedList<>();
 
             c = reader.read();
             boolean unary = true;
@@ -547,7 +547,7 @@ public abstract class Expression<T> {
      * Returns a list of arguments to this expression.
      */
     public List<KeyPath> getArguments() {
-        ArrayList<KeyPath> arguments = new ArrayList<KeyPath>();
+        ArrayList<KeyPath> arguments = new ArrayList<>();
         getArguments(arguments);
 
         return arguments;

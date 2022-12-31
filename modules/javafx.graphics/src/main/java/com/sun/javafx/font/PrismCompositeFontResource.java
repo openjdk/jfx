@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -60,10 +60,12 @@ class PrismCompositeFontResource implements CompositeFontResource {
               FallbackResource.getFallbackResource(bold, italic, aaMode);
     }
 
+    @Override
     public int getNumSlots() {
         return fallbackResource.getNumSlots()+1;
     }
 
+    @Override
     public int getSlotForFont(String fontName) {
         if (primaryResource.getFullName().equalsIgnoreCase(fontName)) {
             return 0;
@@ -71,6 +73,7 @@ class PrismCompositeFontResource implements CompositeFontResource {
         return fallbackResource.getSlotForFont(fontName) + 1;
     }
 
+    @Override
     public FontResource getSlotResource(int slot) {
         if (slot == 0) {
             return primaryResource;
@@ -84,63 +87,78 @@ class PrismCompositeFontResource implements CompositeFontResource {
         }
     }
 
+    @Override
     public String getFullName() {
         return primaryResource.getFullName();
     }
 
+    @Override
     public String getPSName() {
         return primaryResource.getPSName();
     }
 
+    @Override
     public String getFamilyName() {
         return primaryResource.getFamilyName();
     }
 
+    @Override
     public String getStyleName() {
         return primaryResource.getStyleName();
     }
 
+    @Override
     public String getLocaleFullName() {
         return primaryResource.getLocaleFullName();
     }
 
+    @Override
     public String getLocaleFamilyName() {
         return primaryResource.getLocaleFamilyName();
     }
 
+    @Override
     public String getLocaleStyleName() {
         return primaryResource.getLocaleStyleName();
     }
 
+    @Override
     public String getFileName() {
         return primaryResource.getFileName();
     }
 
+    @Override
     public int getFeatures() {
         return primaryResource.getFeatures();
     }
 
+    @Override
     public Object getPeer() {
         return primaryResource.getPeer();
     }
 
+    @Override
     public void setPeer(Object peer) {
         throw new UnsupportedOperationException("Not supported");
     }
 
+    @Override
     public boolean isEmbeddedFont() {
         return primaryResource.isEmbeddedFont();
     }
 
+    @Override
     public boolean isBold() {
         return primaryResource.isBold();
     }
 
+    @Override
     public boolean isItalic() {
         return primaryResource.isItalic();
     }
 
     CompositeGlyphMapper mapper;
+    @Override
     public CharToGlyphMapper getGlyphMapper() {
         if (mapper == null) {
             mapper = new CompositeGlyphMapper(this);
@@ -148,6 +166,7 @@ class PrismCompositeFontResource implements CompositeFontResource {
         return mapper;
     }
 
+    @Override
     public float[] getGlyphBoundingBox(int glyphCode,
                                 float size, float[] retArr) {
         int slot = (glyphCode >>> 24);
@@ -156,6 +175,7 @@ class PrismCompositeFontResource implements CompositeFontResource {
         return slotResource.getGlyphBoundingBox(slotglyphCode, size, retArr);
     }
 
+    @Override
     public float getAdvance(int glyphCode, float size) {
         int slot = (glyphCode >>> 24);
         int slotglyphCode = glyphCode & CompositeGlyphMapper.GLYPHMASK;
@@ -163,21 +183,24 @@ class PrismCompositeFontResource implements CompositeFontResource {
         return slotResource.getAdvance(slotglyphCode, size);
     }
 
-    Map<FontStrikeDesc, WeakReference<FontStrike>> strikeMap =
-        new ConcurrentHashMap<FontStrikeDesc, WeakReference<FontStrike>>();
+    Map<FontStrikeDesc, WeakReference<FontStrike>> strikeMap = new ConcurrentHashMap<>();
 
+    @Override
     public Map<FontStrikeDesc, WeakReference<FontStrike>> getStrikeMap() {
         return strikeMap;
     }
 
+    @Override
     public int getDefaultAAMode() {
         return getSlotResource(0).getDefaultAAMode();
     }
 
+    @Override
     public FontStrike getStrike(float size, BaseTransform transform) {
         return getStrike(size, transform, getDefaultAAMode());
     }
 
+    @Override
     public FontStrike getStrike(float size, BaseTransform transform,
                                 int aaMode) {
         FontStrikeDesc desc = new FontStrikeDesc(size, transform, aaMode);
@@ -191,7 +214,7 @@ class PrismCompositeFontResource implements CompositeFontResource {
             if (strike.disposer != null) {
                 ref = Disposer.addRecord(strike, strike.disposer);
             } else {
-                ref = new WeakReference<FontStrike>(strike);
+                ref = new WeakReference<>(strike);
             }
             strikeMap.put(desc, ref);
         }

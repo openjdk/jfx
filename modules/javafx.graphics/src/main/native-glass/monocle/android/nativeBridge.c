@@ -37,6 +37,7 @@ static jclass jScreenClass;
 
 static jmethodID monocle_gotTouchEventFromNative;
 static jmethodID monocle_dispatchKeyEventFromNative;
+static jmethodID monocle_dispatchMenuEventFromNative;
 static jmethodID monocle_repaintAll;
 static jmethodID monocle_registerDevice;
 static jmethodID screen_init;
@@ -63,6 +64,9 @@ void initializeFromJava (JNIEnv *env) {
     monocle_dispatchKeyEventFromNative = (*env)->GetStaticMethodID(
                                             env, jAndroidInputDeviceRegistryClass, "dispatchKeyEventFromNative",
                                             "(II[CI)V");
+    monocle_dispatchMenuEventFromNative = (*env)->GetStaticMethodID(
+                                             env, jAndroidInputDeviceRegistryClass, "dispatchMenuEventFromNative",
+                                             "(IIIIZ)V");
     monocle_registerDevice = (*env)->GetStaticMethodID(env, jAndroidInputDeviceRegistryClass, "registerDevice","()V");
     screen_init = (*env)->GetMethodID(env, jScreenClass,"<init>", "(JIIIIIIIIIIIIIIIFFFF)V");
     GLASS_LOG_FINE("Initializing native Android Bridge done");
@@ -137,6 +141,21 @@ void androidJfx_gotKeyEvent (int action, int keyCode, jchar* chars, int count, i
     (*javaEnv)->SetCharArrayRegion(javaEnv, jchars, 0, count, chars);
     (*javaEnv)->CallStaticVoidMethod(javaEnv, jAndroidInputDeviceRegistryClass, monocle_dispatchKeyEventFromNative,
                                      action, keyCode, jchars, mods);
+}
+
+void androidJfx_gotMenuEvent(int x, int y, int xAbs, int yAbs, bool isKeyboardTrigger) {
+    initializeFromNative();
+    if (javaEnv == NULL) {
+        GLASS_LOG_FINE("javaEnv still null, not ready to process menu events");
+        return;
+    }
+    if (deviceRegistered == 0) {
+        deviceRegistered = 1;
+        GLASS_LOG_FINE("This is the first time we have a menu event, register device now");
+        (*javaEnv)->CallStaticVoidMethod(javaEnv, jAndroidInputDeviceRegistryClass, monocle_registerDevice);
+    }
+    (*javaEnv)->CallStaticVoidMethod(javaEnv, jAndroidInputDeviceRegistryClass, monocle_dispatchMenuEventFromNative,
+                                     x, y, xAbs, yAbs, isKeyboardTrigger);
 }
 
 void androidJfx_requestGlassToRedraw() {

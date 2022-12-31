@@ -242,7 +242,7 @@ public abstract class LightBase extends Node {
 
     public final ObjectProperty<Color> colorProperty() {
         if (color == null) {
-            color = new SimpleObjectProperty<Color>(LightBase.this, "color") {
+            color = new SimpleObjectProperty<>(LightBase.this, "color") {
                 @Override
                 protected void invalidated() {
                     NodeHelper.markDirty(LightBase.this, DirtyBits.NODE_LIGHT);
@@ -399,7 +399,7 @@ public abstract class LightBase extends Node {
     private void markChildrenDirty(Node node) {
         if (node instanceof Shape3D) {
             // Dirty using a lightweight DirtyBits.NODE_DRAWMODE bit
-            NodeHelper.markDirty(((Shape3D) node), DirtyBits.NODE_DRAWMODE);
+            NodeHelper.markDirty(node, DirtyBits.NODE_DRAWMODE);
         } else if (node instanceof Parent) {
             for (Node child : ((Parent) node).getChildren()) {
                 if ((scope != null && getScope().contains(child)) ||

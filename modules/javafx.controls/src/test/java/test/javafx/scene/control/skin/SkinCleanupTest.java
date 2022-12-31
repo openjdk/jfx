@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2020, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,32 +25,42 @@
 
 package test.javafx.scene.control.skin;
 
+import static javafx.collections.FXCollections.observableArrayList;
+import static javafx.scene.control.ControlShim.installDefaultSkin;
+import static javafx.scene.control.SkinBaseShim.unregisterChangeListeners;
+import static javafx.scene.control.skin.TableSkinShim.getCells;
+import static javafx.scene.control.skin.TableSkinShim.getTableViewSkin;
+import static javafx.scene.control.skin.TableSkinShim.getVirtualFlow;
+import static javafx.scene.control.skin.TableSkinShim.isDirty;
+import static javafx.scene.control.skin.TableSkinShim.isFixedCellSizeEnabled;
+import static javafx.scene.control.skin.TextInputSkinShim.getPromptNode;
+import static javafx.scene.control.skin.TextInputSkinShim.getScrollPane;
+import static javafx.scene.control.skin.TextInputSkinShim.getTextNode;
+import static javafx.scene.control.skin.TextInputSkinShim.getTextTranslateX;
+import static javafx.scene.control.skin.TextInputSkinShim.setHandlePressed;
+import static javafx.scene.layout.Region.USE_COMPUTED_SIZE;
+import static javafx.scene.layout.Region.USE_PREF_SIZE;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertTrue;
+import static test.com.sun.javafx.scene.control.infrastructure.ControlSkinFactory.attemptGC;
+import static test.com.sun.javafx.scene.control.infrastructure.ControlSkinFactory.replaceSkin;
+import static test.com.sun.javafx.scene.control.infrastructure.VirtualFlowTestUtils.getCell;
+
 import java.lang.ref.WeakReference;
 import java.util.List;
 import java.util.stream.Collectors;
-
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Ignore;
-import org.junit.Test;
-
-import com.sun.javafx.tk.Toolkit;
-
-import static javafx.collections.FXCollections.*;
-import static javafx.scene.control.ControlShim.*;
-import static javafx.scene.control.SkinBaseShim.*;
-import static javafx.scene.control.skin.TableSkinShim.*;
-import static javafx.scene.control.skin.TableSkinShim.getVirtualFlow;
-import static javafx.scene.control.skin.TextInputSkinShim.*;
-import static org.junit.Assert.*;
-import static test.com.sun.javafx.scene.control.infrastructure.ControlSkinFactory.*;
-import static test.com.sun.javafx.scene.control.infrastructure.VirtualFlowTestUtils.*;
 
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.Event;
 import javafx.event.EventHandler;
+import javafx.geometry.Point2D;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
@@ -67,6 +77,7 @@ import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableColumnBase;
 import javafx.scene.control.TableRow;
 import javafx.scene.control.TableView;
+import javafx.scene.control.TableViewShim;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.control.ToolBar;
@@ -82,13 +93,23 @@ import javafx.scene.control.skin.TableRowSkin;
 import javafx.scene.control.skin.TreeTableRowSkin;
 import javafx.scene.control.skin.VirtualFlow;
 import javafx.scene.input.InputMethodEvent;
+import javafx.scene.input.InputMethodRequests;
 import javafx.scene.input.ScrollEvent;
 import javafx.scene.layout.Pane;
+import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Font;
 import javafx.scene.text.Text;
 import javafx.stage.Stage;
+
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Ignore;
+import org.junit.Test;
+
+import com.sun.javafx.tk.Toolkit;
+
 import test.com.sun.javafx.scene.control.infrastructure.VirtualFlowTestUtils;
 import test.com.sun.javafx.scene.control.test.Person;
 
@@ -256,7 +277,7 @@ public class SkinCleanupTest {
     }
 
     @Test
-    public void testTreeTableRowVirtualFlowWidthListenerReplaceSkin() {
+    public void testTreeTableRowTracksVirtualFlowReplaceSkin() {
         TreeTableView<Person> tableView = createPersonTreeTable(false);
         showControl(tableView, true);
         VirtualFlow<?> flow = getVirtualFlow(tableView);
@@ -264,22 +285,35 @@ public class SkinCleanupTest {
         replaceSkin(tableRow);
         Toolkit.getToolkit().firePulse();
         TreeTableRowSkin<?> rowSkin = (TreeTableRowSkin<?>) tableRow.getSkin();
-        assertNotNull("row skin must have listener to virtualFlow width",
-                unregisterChangeListeners(rowSkin, flow.widthProperty()));
+        checkFollowsWidth(flow, (Region) rowSkin.getNode());
     }
 
     /**
-     * Sanity: listener to flow's width is registered.
+     * Sanity test checks that tree table row skin tracks the virtual flow width.
      */
     @Test
-    public void testTreeTableRowVirtualFlowWidthListener() {
+    public void testTreeTableRowTracksVirtualFlowWidth() {
         TreeTableView<Person> tableView = createPersonTreeTable(false);
         showControl(tableView, true);
         VirtualFlow<?> flow = getVirtualFlow(tableView);
         TreeTableRow<?> tableRow = (TreeTableRow<?>) getCell(tableView, 1);
         TreeTableRowSkin<?> rowSkin = (TreeTableRowSkin<?>) tableRow.getSkin();
-        assertNotNull("row skin must have listener to virtualFlow width",
-                unregisterChangeListeners(rowSkin, flow.widthProperty()));
+        checkFollowsWidth(flow, (Region) rowSkin.getNode());
+    }
+
+    protected void checkFollowsWidth(Region owner, Region skin) {
+        owner.resize(10000, 1000);
+        Toolkit.getToolkit().firePulse();
+        double widthBefore = skin.getWidth();
+
+        owner.resize(100, 1000);
+        Toolkit.getToolkit().firePulse();
+        double widthAfter = skin.getWidth();
+
+        // since we are dealing with tree/tables with unconstrained resize policies,
+        // the row skin may not follow the width exactly. we'll check that the width
+        // simply changes.
+        assertTrue("TreeTableRowSkin must follow the VirtualFlow width", widthAfter < (widthBefore - 10));
     }
 
     /**
@@ -1264,7 +1298,6 @@ public class SkinCleanupTest {
      * Test that handler installed by skin is reset on replacing skin.
      * Here we test the effect by firing an inputEvent.
      */
-    @Ignore("JDK-8268877")
     @Test
     public void testTextInputOnInputMethodTextChangedEvent() {
         String initialText = "some text";
@@ -1281,18 +1314,72 @@ public class SkinCleanupTest {
     }
 
     /**
-     * Test that handler installed by skin is reset on replacing skin.
-     * Here we test the instance of the handler.
+     * Test that handler installed by the user is not reset on replacing skin.
      */
-    @Ignore("JDK-8268877")
     @Test
-    public void testTextInputOnInputMethodTextChangedHandler() {
+    public void testTextInputUserOnInputMethodTextChangedHandler() {
         TextField field = new TextField("some text");
+        EventHandler<InputMethodEvent> h = (ev) -> { };
+        field.setOnInputMethodTextChanged(h);
+
         installDefaultSkin(field);
+
         EventHandler<? super InputMethodEvent> handler = field.getOnInputMethodTextChanged();
+
         replaceSkin(field);
-        assertNotSame("replaced skin must replace skin handler", handler, field.getOnInputMethodTextChanged());
-        assertNotNull("handler must not be null  ", field.getOnInputMethodTextChanged());
+
+        assertSame("user handler must not be changed", h, handler);
+        assertSame("replaced skin must not change handler", handler, field.getOnInputMethodTextChanged());
+    }
+
+    /**
+     * Test that input method requests installed by skin is reset on replacing skin.
+     */
+    @Test
+    public void testTextInput_InputMethodRequestsIsResetOnReplacingSkin() {
+        TextField t = new TextField();
+        installDefaultSkin(t);
+        InputMethodRequests im = t.getInputMethodRequests();
+
+        replaceSkin(t);
+        InputMethodRequests im2 = t.getInputMethodRequests();
+
+        assertNotEquals("InputMethodRequests set by an old skin must be replaced by the new skin", im, im2);
+    }
+
+    /**
+     * Test that the user input method requests is not affected by the skin.
+     */
+    @Test
+    public void testTextInput_UserMethodRequestsNotAffectedBySkin() {
+        InputMethodRequests im = createInputMethodRequests();
+        TextField t = new TextField();
+        t.setInputMethodRequests(im);
+        installDefaultSkin(t);
+        assertEquals("skin must not alter user-set InputMethodRequests", im, t.getInputMethodRequests());
+    }
+
+    protected static InputMethodRequests createInputMethodRequests() {
+        return new InputMethodRequests() {
+            @Override
+            public Point2D getTextLocation(int offset) {
+                return new Point2D(0, 0);
+            }
+
+            @Override
+            public int getLocationOffset(int x, int y) {
+                return 0;
+            }
+
+            @Override
+            public void cancelLatestCommittedText() {
+            }
+
+            @Override
+            public String getSelectedText() {
+                return "";
+            }
+        };
     }
 
 

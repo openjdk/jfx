@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -49,6 +49,7 @@ final class SWPresentable extends SWRTTexture implements Presentable {
                 getPhysicalHeight() != pState.getRenderHeight());
     }
 
+    @Override
     public boolean prepare(Rectangle dirtyregion) {
         if (!pState.isViewClosed()) {
             /*
@@ -69,6 +70,7 @@ final class SWPresentable extends SWRTTexture implements Presentable {
         }
     }
 
+    @Override
     public boolean present() {
         pixelSource.enqueuePixels(pixels);
         pState.uploadPixels(pixelSource);
@@ -85,10 +87,12 @@ final class SWPresentable extends SWRTTexture implements Presentable {
         return pState.getRenderScaleY();
     }
 
+    @Override
     public int getContentWidth() {
         return pState.getOutputWidth();
     }
 
+    @Override
     public int getContentHeight() {
         return pState.getOutputHeight();
     }

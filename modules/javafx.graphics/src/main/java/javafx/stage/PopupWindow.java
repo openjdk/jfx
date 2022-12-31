@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -122,7 +122,7 @@ public abstract class PopupWindow extends Window {
     /**
      * A private list of all child popups.
      */
-    private final List<PopupWindow> children = new ArrayList<PopupWindow>();
+    private final List<PopupWindow> children = new ArrayList<>();
 
     /**
      * Keeps track of the bounds of the content, and adjust the position and
@@ -226,7 +226,7 @@ public abstract class PopupWindow extends Window {
      * owner window.
      */
     private ReadOnlyObjectWrapper<Window> ownerWindow =
-            new ReadOnlyObjectWrapper<Window>(this, "ownerWindow");
+            new ReadOnlyObjectWrapper<>(this, "ownerWindow");
     public final Window getOwnerWindow() {
         return ownerWindow.get();
     }
@@ -241,7 +241,7 @@ public abstract class PopupWindow extends Window {
      * doesn't cause the Popup to hide.
      */
     private ReadOnlyObjectWrapper<Node> ownerNode =
-            new ReadOnlyObjectWrapper<Node>(this, "ownerNode");
+            new ReadOnlyObjectWrapper<>(this, "ownerNode");
     public final Node getOwnerNode() {
         return ownerNode.get();
     }
@@ -321,7 +321,7 @@ public abstract class PopupWindow extends Window {
      * Called after autoHide is run.
      */
     private ObjectProperty<EventHandler<Event>> onAutoHide =
-            new SimpleObjectProperty<EventHandler<Event>>(this, "onAutoHide");
+            new SimpleObjectProperty<>(this, "onAutoHide");
     public final void setOnAutoHide(EventHandler<Event> value) { onAutoHide.set(value); }
     public final EventHandler<Event> getOnAutoHide() { return onAutoHide.get(); }
     public final ObjectProperty<EventHandler<Event>> onAutoHideProperty() { return onAutoHide; }
@@ -689,7 +689,7 @@ public abstract class PopupWindow extends Window {
         boolean isContentLocation() {
             return contentLocation;
         }
-    };
+    }
 
     @Override
     void setXInternal(final double value) {

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,7 +28,6 @@ package test.javafx.scene.transform;
 //import java.awt.geom.AffineTransform;
 //import com.sun.javafx.geom.transform.Affine3D;
 import java.util.Collection;
-import javafx.beans.Observable;
 import org.junit.runners.Parameterized.Parameters;
 import org.junit.runners.Parameterized;
 import java.util.Arrays;
@@ -36,8 +35,6 @@ import javafx.geometry.Point3D;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import test.com.sun.javafx.test.TransformHelper;
-import javafx.beans.InvalidationListener;
-import javafx.event.EventHandler;
 import javafx.geometry.Point2D;
 import javafx.scene.transform.Affine;
 import javafx.scene.transform.AffineShim;

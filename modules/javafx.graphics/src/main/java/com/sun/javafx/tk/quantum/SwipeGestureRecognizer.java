@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -215,8 +215,7 @@ class SwipeGestureRecognizer implements GestureRecognizer {
 
     private class MultiTouchTracker {
         SwipeRecognitionState state = SwipeRecognitionState.IDLE;
-        Map<Long, TouchPointTracker> trackers =
-                new HashMap<Long, TouchPointTracker>();
+        Map<Long, TouchPointTracker> trackers = new HashMap<>();
         CenterComputer cc = new CenterComputer();
         int modifiers;
         boolean direct;

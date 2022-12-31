@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -143,7 +143,7 @@ public class TableRow<T> extends IndexedCell<T> {
 
     private ReadOnlyObjectWrapper<TableView<T>> tableViewPropertyImpl() {
         if (tableView == null) {
-            tableView = new ReadOnlyObjectWrapper<TableView<T>>() {
+            tableView = new ReadOnlyObjectWrapper<>() {
                 private WeakReference<TableView<T>> weakTableViewRef;
                 @Override protected void invalidated() {
                     TableView.TableViewSelectionModel<T> sm;
@@ -182,7 +182,7 @@ public class TableRow<T> extends IndexedCell<T> {
 
                         tableView.editingCellProperty().addListener(weakEditingListener);
 
-                        weakTableViewRef = new WeakReference<TableView<T>>(get());
+                        weakTableViewRef = new WeakReference<>(get());
                     }
                 }
 

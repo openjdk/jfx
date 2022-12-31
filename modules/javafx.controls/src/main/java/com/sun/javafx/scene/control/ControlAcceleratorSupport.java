@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -75,24 +75,18 @@ public class ControlAcceleratorSupport {
             throw new IllegalArgumentException("Anchor cannot be null");
         }
 
-        final Scene scene = anchor.getScene();
-        if (scene != null) {
-            doAcceleratorInstall(items, scene);
-        }
-        // Scene change listener is added to the anchor for scenarios like,
-        // 1. Installing accelerators when Control is added to Scene
-        // 2. Removing accelerators when Control is removed from Scene
-        // Remove previously added listener if any
+
         WeakReference<ChangeListener<Scene>> listenerW = sceneChangeListenerMap.get(anchor);
-        if (listenerW != null) {
-            ChangeListener<Scene> listener = listenerW.get();
-            if (listener != null) {
-                anchor.sceneProperty().removeListener(listener);
+        if (listenerW == null || listenerW.get() == null) {
+            final Scene scene = anchor.getScene();
+            if (scene != null) {
+                doAcceleratorInstall(items, scene);
             }
-            sceneChangeListenerMap.remove(anchor);
+            // Scene change listener is added to the anchor for scenarios like,
+            // 1. Installing accelerators when Control is added to Scene
+            // 2. Removing accelerators when Control is removed from Scene
+            anchor.sceneProperty().addListener(getSceneChangeListener(anchor, items));
         }
-        // Add a new listener
-        anchor.sceneProperty().addListener(getSceneChangeListener(anchor, items));
     }
 
     private static void addAcceleratorsIntoScene(ObservableList<MenuItem> items, Object anchor) {

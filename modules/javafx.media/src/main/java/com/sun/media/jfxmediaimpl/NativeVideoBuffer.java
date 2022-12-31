@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -59,7 +59,7 @@ final class NativeVideoBuffer implements VideoDataBuffer {
 
     public static NativeVideoBuffer createVideoBuffer(long nativePeer) {
         NativeVideoBuffer buffer = new NativeVideoBuffer(nativePeer);
-        MediaDisposer.addResourceDisposer(buffer, (Long)nativePeer, disposer);
+        MediaDisposer.addResourceDisposer(buffer, nativePeer, disposer);
         return buffer;
     }
 
@@ -90,7 +90,7 @@ final class NativeVideoBuffer implements VideoDataBuffer {
                 }
 
                 // last reference released, dispose and clear our native handle
-                MediaDisposer.removeResourceDisposer((Long)nativePeer);
+                MediaDisposer.removeResourceDisposer(nativePeer);
                 nativeDisposeBuffer(nativePeer);
                 nativePeer = 0;
             }

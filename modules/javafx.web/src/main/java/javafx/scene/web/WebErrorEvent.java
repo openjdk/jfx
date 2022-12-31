@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -43,7 +43,7 @@ public final class WebErrorEvent extends Event {
      * Common supertype for all {@code WebErrorEvent} types.
      */
     public static final EventType<WebErrorEvent> ANY =
-            new EventType<WebErrorEvent>(Event.ANY, "WEB_ERROR");
+            new EventType<>(Event.ANY, "WEB_ERROR");
 
     /**
      * This event occurs when a {@link WebEngine} detects that its
@@ -70,7 +70,7 @@ public final class WebErrorEvent extends Event {
      * user data directory.
      */
     public static final EventType<WebErrorEvent>
-            USER_DATA_DIRECTORY_ALREADY_IN_USE = new EventType<WebErrorEvent>(
+            USER_DATA_DIRECTORY_ALREADY_IN_USE = new EventType<>(
                     WebErrorEvent.ANY, "USER_DATA_DIRECTORY_ALREADY_IN_USE");
 
     /**
@@ -94,7 +94,7 @@ public final class WebErrorEvent extends Event {
      * user data directory.
      */
     public static final EventType<WebErrorEvent>
-            USER_DATA_DIRECTORY_IO_ERROR = new EventType<WebErrorEvent>(
+            USER_DATA_DIRECTORY_IO_ERROR = new EventType<>(
                     WebErrorEvent.ANY, "USER_DATA_DIRECTORY_IO_ERROR");
 
     /**
@@ -118,7 +118,7 @@ public final class WebErrorEvent extends Event {
      * user data directory.
      */
     public static final EventType<WebErrorEvent>
-            USER_DATA_DIRECTORY_SECURITY_ERROR = new EventType<WebErrorEvent>(
+            USER_DATA_DIRECTORY_SECURITY_ERROR = new EventType<>(
                     WebErrorEvent.ANY, "USER_DATA_DIRECTORY_SECURITY_ERROR");
 
 

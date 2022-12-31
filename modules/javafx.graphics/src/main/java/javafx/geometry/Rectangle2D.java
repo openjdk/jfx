@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -243,7 +243,7 @@ public class Rectangle2D {
      * The returned string might be empty but cannot be {@code null}.
      */
     @Override public String toString() {
-        return "Rectangle2D [minX = " + minX
+        return "Rectangle2D [minX=" + minX
                 + ", minY=" + minY
                 + ", maxX=" + maxX
                 + ", maxY=" + maxY

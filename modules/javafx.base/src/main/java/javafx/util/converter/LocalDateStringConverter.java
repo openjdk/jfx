@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -63,7 +63,7 @@ public class LocalDateStringConverter extends StringConverter<LocalDate> {
      * parsed leniently as expected in these locales.</p>
      */
     public LocalDateStringConverter() {
-        ldtConverter = new LdtConverter<LocalDate>(LocalDate.class, null, null,
+        ldtConverter = new LdtConverter<>(LocalDate.class, null, null,
                                                   null, null, null, null);
     }
 
@@ -76,7 +76,7 @@ public class LocalDateStringConverter extends StringConverter<LocalDate> {
      * formatter and parser. If null then {@link FormatStyle#SHORT} will be used.
      */
     public LocalDateStringConverter(FormatStyle dateStyle) {
-        ldtConverter = new LdtConverter<LocalDate>(LocalDate.class, null, null,
+        ldtConverter = new LdtConverter<>(LocalDate.class, null, null,
                                                   dateStyle, null, null, null);
     }
 
@@ -104,7 +104,7 @@ public class LocalDateStringConverter extends StringConverter<LocalDate> {
      * then a default parser will be used.
      */
     public LocalDateStringConverter(DateTimeFormatter formatter, DateTimeFormatter parser) {
-        ldtConverter = new LdtConverter<LocalDate>(LocalDate.class, formatter, parser,
+        ldtConverter = new LdtConverter<>(LocalDate.class, formatter, parser,
                                                    null, null, null, null);
     }
 
@@ -123,7 +123,7 @@ public class LocalDateStringConverter extends StringConverter<LocalDate> {
      * formatter and parser. If null then {@link IsoChronology#INSTANCE} will be used.
      */
     public LocalDateStringConverter(FormatStyle dateStyle, Locale locale, Chronology chronology) {
-        ldtConverter = new LdtConverter<LocalDate>(LocalDate.class, null, null,
+        ldtConverter = new LdtConverter<>(LocalDate.class, null, null,
                                                   dateStyle, null, locale, chronology);
     }
 

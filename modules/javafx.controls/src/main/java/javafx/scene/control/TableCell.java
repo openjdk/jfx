@@ -184,7 +184,7 @@ public class TableCell<S,T> extends IndexedCell<T> {
     private final WeakListChangeListener<TableColumn<S,?>> weakVisibleLeafColumnsListener =
             new WeakListChangeListener<>(visibleLeafColumnsListener);
     private final WeakListChangeListener<String> weakColumnStyleClassListener =
-            new WeakListChangeListener<String>(columnStyleClassListener);
+            new WeakListChangeListener<>(columnStyleClassListener);
 
 
     /* *************************************************************************
@@ -194,7 +194,7 @@ public class TableCell<S,T> extends IndexedCell<T> {
      **************************************************************************/
 
     // --- TableColumn
-    private ReadOnlyObjectWrapper<TableColumn<S,T>> tableColumn = new ReadOnlyObjectWrapper<TableColumn<S,T>>() {
+    private ReadOnlyObjectWrapper<TableColumn<S,T>> tableColumn = new ReadOnlyObjectWrapper<>() {
         @Override protected void invalidated() {
             updateColumnIndex();
         }
@@ -235,7 +235,7 @@ public class TableCell<S,T> extends IndexedCell<T> {
 
     private ReadOnlyObjectWrapper<TableView<S>> tableViewPropertyImpl() {
         if (tableView == null) {
-            tableView = new ReadOnlyObjectWrapper<TableView<S>>() {
+            tableView = new ReadOnlyObjectWrapper<>() {
                 private WeakReference<TableView<S>> weakTableViewRef;
                 @Override protected void invalidated() {
                     TableView.TableViewSelectionModel<S> sm;
@@ -259,7 +259,7 @@ public class TableCell<S,T> extends IndexedCell<T> {
                         get().editingCellProperty().addListener(weakEditingListener);
                         get().getVisibleLeafColumns().addListener(weakVisibleLeafColumnsListener);
 
-                        weakTableViewRef = new WeakReference<TableView<S>>(get());
+                        weakTableViewRef = new WeakReference<>(get());
                     }
 
                     updateColumnIndex();
@@ -438,7 +438,7 @@ public class TableCell<S,T> extends IndexedCell<T> {
 
     /** {@inheritDoc} */
     @Override protected Skin<?> createDefaultSkin() {
-        return new TableCellSkin<S,T>(this);
+        return new TableCellSkin<>(this);
     }
 
 //    @Override public void dispose() {

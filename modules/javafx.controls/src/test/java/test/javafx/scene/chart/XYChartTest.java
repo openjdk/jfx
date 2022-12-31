@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -32,7 +32,6 @@ import org.junit.Test;
 import javafx.collections.*;
 import javafx.scene.chart.Axis.TickMark;
 import javafx.css.ParsedValue;
-import javafx.css.CssMetaData;
 import javafx.css.StyleableProperty;
 import javafx.css.CssParserShim;
 import javafx.scene.Node;
@@ -52,7 +51,6 @@ import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.scene.text.Text;
 import javafx.stage.Stage;
-import org.junit.Assert;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertSame;
 import test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils;

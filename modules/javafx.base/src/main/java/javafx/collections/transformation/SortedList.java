@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -73,11 +73,11 @@ public final class SortedList<E> extends TransformationList<E, E>{
     @SuppressWarnings("unchecked")
     public SortedList(@NamedArg("source") ObservableList<? extends E> source, @NamedArg("comparator") Comparator<? super E> comparator) {
         super(source);
-        sorted = (Element<E>[]) new Element[source.size() *3/2 + 1];
+        sorted = new Element[source.size() *3/2 + 1];
         perm = new int[sorted.length];
         size = source.size();
         for (int i = 0; i < size; ++i) {
-            sorted[i] = new Element<E>(source.get(i), i);
+            sorted[i] = new Element<>(source.get(i), i);
             perm[i] = i;
         }
         if (comparator != null) {
@@ -113,7 +113,7 @@ public final class SortedList<E> extends TransformationList<E, E>{
             updateUnsorted(c);
             fireChange(new SourceAdapterChange<>(this, c));
         }
-    };
+    }
 
     /**
      * The comparator that denotes the order of this SortedList.
@@ -123,7 +123,7 @@ public final class SortedList<E> extends TransformationList<E, E>{
 
     public final ObjectProperty<Comparator<? super E>> comparatorProperty() {
         if (comparator == null) {
-            comparator = new ObjectPropertyBase<Comparator<? super E>>() {
+            comparator = new ObjectPropertyBase<>() {
 
                 @Override
                 protected void invalidated() {
@@ -267,7 +267,7 @@ public final class SortedList<E> extends TransformationList<E, E>{
                 System.arraycopy(perm, c.getFrom(), perm, c.getTo(), size - c.getFrom());
                 size += c.getAddedSize();
                 for (int i = c.getFrom(); i < c.getTo(); ++i) {
-                    sorted[i] = new Element<E>(c.getList().get(i), i);
+                    sorted[i] = new Element<>(c.getList().get(i), i);
                     perm[i] = i;
                 }
             }
@@ -294,7 +294,6 @@ public final class SortedList<E> extends TransformationList<E, E>{
         }
 
         @Override
-        @SuppressWarnings("unchecked")
         public int compare(Element<E> o1, Element<E> o2) {
             return comparator.compare(o1.e, o2.e);
         }
@@ -352,7 +351,7 @@ public final class SortedList<E> extends TransformationList<E, E>{
         ensureSize(to);
         size = to;
         for (int i = 0; i < to; ++i) {
-            sorted[i] = new Element<E>(list.get(i), i);
+            sorted[i] = new Element<>(list.get(i), i);
         }
         int[] perm = helper.sort(sorted, 0, size, elementComparator);
         System.arraycopy(perm, 0, this.perm, 0, size);

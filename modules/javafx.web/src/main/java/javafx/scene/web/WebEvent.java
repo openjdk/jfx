@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -47,34 +47,34 @@ final public class WebEvent<T> extends Event {
      * Common supertype for all Web event types.
      */
     public static final EventType<WebEvent> ANY =
-            new EventType<WebEvent>(Event.ANY, "WEB");
+            new EventType<>(Event.ANY, "WEB");
 
     /**
      * This event occurs when a script changes location of the JavaScript
      * {@code window} object.
      */
     public static final EventType<WebEvent> RESIZED =
-            new EventType<WebEvent>(WebEvent.ANY, "WEB_RESIZED");
+            new EventType<>(WebEvent.ANY, "WEB_RESIZED");
 
     /**
      * This event occurs when a script changes status line text.
      */
     public static final EventType<WebEvent> STATUS_CHANGED =
-            new EventType<WebEvent>(WebEvent.ANY, "WEB_STATUS_CHANGED");
+            new EventType<>(WebEvent.ANY, "WEB_STATUS_CHANGED");
 
     /**
      * This event occurs when a script changes visibility of the JavaScript
      * {@code window} object.
      */
     public static final EventType<WebEvent> VISIBILITY_CHANGED =
-            new EventType<WebEvent>(WebEvent.ANY, "WEB_VISIBILITY_CHANGED");
+            new EventType<>(WebEvent.ANY, "WEB_VISIBILITY_CHANGED");
 
     /**
      * This event occurs when a script calls the JavaScript {@code alert}
      * function.
      */
     public static final EventType<WebEvent> ALERT =
-            new EventType<WebEvent>(WebEvent.ANY, "WEB_ALERT");
+            new EventType<>(WebEvent.ANY, "WEB_ALERT");
 
     private final T data;
 

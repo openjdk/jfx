@@ -713,8 +713,25 @@ static GstFlowReturn videodecoder_chain(GstPad *pad, GstObject *parent, GstBuffe
                 base->context->reordered_opaque = GST_BUFFER_TIMESTAMP(buf);
             else
                 base->context->reordered_opaque = AV_NOPTS_VALUE;
+#if USE_SEND_RECEIVE
+            num_dec = avcodec_send_packet(base->context, &decoder->packet);
+            if (num_dec == 0)
+            {
+                num_dec = avcodec_receive_frame(base->context, base->frame);
+                if (num_dec == 0)
+                    decoder->frame_finished = 1;
+                else
+                    decoder->frame_finished = 0;
+            }
+#else
             num_dec = avcodec_decode_video2(base->context, base->frame, &decoder->frame_finished, &decoder->packet);
+#endif
+
+#if PACKET_UNREF
+            av_packet_unref(&decoder->packet);
+#else
             av_free_packet(&decoder->packet);
+#endif
         }
         else
         {
@@ -732,7 +749,19 @@ static GstFlowReturn videodecoder_chain(GstPad *pad, GstObject *parent, GstBuffe
         else
             base->context->reordered_opaque = AV_NOPTS_VALUE;
 
+#if USE_SEND_RECEIVE
+        num_dec = avcodec_send_packet(base->context, &decoder->packet);
+        if (num_dec == 0)
+        {
+            num_dec = avcodec_receive_frame(base->context, base->frame);
+            if (num_dec == 0)
+                decoder->frame_finished = 1;
+            else
+                decoder->frame_finished = 0;
+        }
+#else
         num_dec = avcodec_decode_video2(base->context, base->frame, &decoder->frame_finished, &decoder->packet);
+#endif
     }
 
     if (num_dec < 0)

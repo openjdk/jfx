@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -82,17 +82,17 @@ import java.security.PrivilegedAction;
  */
 public final class ReadOnlyJavaBeanStringProperty extends ReadOnlyStringPropertyBase implements ReadOnlyJavaBeanProperty<String> {
 
-    private final ReadOnlyPropertyDescriptor descriptor;
-    private final ReadOnlyPropertyDescriptor.ReadOnlyListener<String> listener;
+    private final ReadOnlyPropertyDescriptor<String> descriptor;
+    private final ReadOnlyPropertyDescriptor<String>.ReadOnlyListener listener;
 
     @SuppressWarnings("removal")
     private final AccessControlContext acc = AccessController.getContext();
 
-    ReadOnlyJavaBeanStringProperty(ReadOnlyPropertyDescriptor descriptor, Object bean) {
+    ReadOnlyJavaBeanStringProperty(ReadOnlyPropertyDescriptor<String> descriptor, Object bean) {
         this.descriptor = descriptor;
-        this.listener = descriptor.new ReadOnlyListener<String>(bean, this);
+        this.listener = descriptor.new ReadOnlyListener(bean, this);
         descriptor.addListener(listener);
-        Disposer.addRecord(this, new DescriptorListenerCleaner(descriptor, listener));
+        Disposer.addRecord(this, new DescriptorListenerCleaner<>(descriptor, listener));
     }
 
     /**
