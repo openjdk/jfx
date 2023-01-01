@@ -674,10 +674,9 @@ public class FXCollections {
      * @param list the list to be sorted
      * @see Collections#sort(java.util.List)
      */
-    @SuppressWarnings("unchecked")
     public static <T extends Comparable<? super T>> void sort(ObservableList<T> list) {
-        if (list instanceof SortableList) {
-            ((SortableList<? extends T>)list).sort();
+        if (list instanceof SortableList<?> sortableList) {
+            sortableList.sort();
         } else {
             List<T> newContent = new ArrayList<>(list);
             Collections.sort(newContent);
