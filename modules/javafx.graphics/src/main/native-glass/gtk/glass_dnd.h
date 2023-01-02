@@ -54,11 +54,9 @@ class DragView {
     GdkPixbuf* pixbuf;
     gint width, height;
     gboolean is_raw_image;
-    gboolean is_offset_set;
     gint offset_x, offset_y;
 public:
-    DragView(GdkPixbuf* pixbuf, gboolean is_raw_image, gboolean is_offset_set,
-             gint offset_x, gint offset_y);
+    DragView(GdkPixbuf* pixbuf, gboolean is_raw_image, gint offset_x, gint offset_y);
     void expose();
     void move(gint x, gint y);
     GdkWindow * get_window();

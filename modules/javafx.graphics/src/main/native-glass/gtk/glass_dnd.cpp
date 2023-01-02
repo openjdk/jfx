@@ -1019,7 +1019,6 @@ void process_dnd_source(GdkWindow *window, GdkEvent *event) {
         } else {
             gtk_main_do_event(event);
         }
-
         return;
     }
 
@@ -1183,17 +1182,15 @@ void DragView::set_drag_view() {
         gint offset_x = w / 2;
         gint offset_y = h / 2;
 
-        gboolean is_offset_set = get_drag_image_offset(&offset_x, &offset_y);
-
-        drag_view = new DragView(pixbuf, is_raw_image, is_offset_set, offset_x, offset_y);
+        get_drag_image_offset(&offset_x, &offset_y);
+        drag_view = new DragView(pixbuf, is_raw_image, offset_x, offset_y);
     }
 }
 
 DragView::DragView(GdkPixbuf* _pixbuf, gboolean _is_raw_image,
-                   gboolean _is_offset_set, gint _offset_x, gint _offset_y) :
+                   gint _offset_x, gint _offset_y) :
         pixbuf(_pixbuf),
         is_raw_image(_is_raw_image),
-        is_offset_set(_is_offset_set),
         offset_x(_offset_x),
         offset_y(_offset_y) {
     width = gdk_pixbuf_get_width(pixbuf);
@@ -1202,8 +1199,6 @@ DragView::DragView(GdkPixbuf* _pixbuf, gboolean _is_raw_image,
     GdkScreen* screen = gdk_screen_get_default();
     GdkWindowAttr attrs;
 
-    attrs.x = 0;
-    attrs.y = 0;
     attrs.width = width;
     attrs.height = height;
     attrs.wclass = GDK_INPUT_OUTPUT;
@@ -1216,6 +1211,11 @@ DragView::DragView(GdkPixbuf* _pixbuf, gboolean _is_raw_image,
     }
 
     int mask = GDK_WA_X | GDK_WA_Y | GDK_WA_VISUAL | GDK_WA_TYPE_HINT;
+    glass_gdk_master_pointer_get_position(&attrs.x, &attrs.y);
+
+    attrs.x -= offset_x;
+    attrs.y -= offset_y;
+
     window = gdk_window_new(gdk_screen_get_root_window(screen), &attrs, mask);
 
 #ifdef GLASS_GTK3
@@ -1247,7 +1247,7 @@ void DragView::expose() {
             width, height, width * 4);
 
     cairo_set_source_surface(context, cairo_surface, 0, 0);
-    cairo_set_operator(context, CAIRO_OPERATOR_OVER);
+    cairo_set_operator(context, CAIRO_OPERATOR_SOURCE);
     cairo_paint(context);
 
     if (is_raw_image) {
