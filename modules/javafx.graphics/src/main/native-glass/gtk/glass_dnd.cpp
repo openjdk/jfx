@@ -489,6 +489,7 @@ jobject dnd_target_get_data(JNIEnv *env, jstring mime) {
 
 /************************* SOURCE *********************************************/
 static GdkWindow *dnd_window = NULL;
+static DragView *drag_view = NULL;
 static jint dnd_performed_action;
 
 const char * const SOURCE_DND_CONTEXT = "fx-dnd-context";
@@ -818,7 +819,9 @@ static void process_drag_motion(gint x_root, gint y_root, guint state) {
     GdkWindow *dest_window;
     GdkDragProtocol prot;
 
-    DragView::move(x_root, y_root);
+    if (drag_view) {
+        drag_view->move(x_root, y_root);
+    }
 
     gdk_drag_find_window_for_screen(ctx, NULL, gdk_screen_get_default(),
             x_root, y_root, &dest_window, &prot);
@@ -1010,6 +1013,20 @@ jint execute_dnd(JNIEnv *env, jobject data, jint supported) {
 }
 
 void process_dnd_source(GdkWindow *window, GdkEvent *event) {
+    if (drag_view != NULL && window == drag_view->get_window()) {
+        if(event->type == GDK_EXPOSE) {
+            drag_view->expose();
+        } else {
+            gtk_main_do_event(event);
+        }
+
+        return;
+    }
+
+    if (window != dnd_window) {
+        return;
+    }
+
     switch(event->type) {
         case GDK_GRAB_BROKEN:
             process_dnd_source_grab_broken(window, event);
@@ -1043,11 +1060,11 @@ void process_dnd_source(GdkWindow *window, GdkEvent *event) {
 }
 
 /******************** DRAG VIEW ***************************/
-DragView::View* DragView::view = NULL;
+
 
 void DragView::reset_drag_view() {
-    delete view;
-    view = NULL;
+    delete drag_view;
+    drag_view = NULL;
 }
 
 gboolean DragView::get_drag_image_offset(int* x, int* y) {
@@ -1168,40 +1185,12 @@ void DragView::set_drag_view() {
 
         gboolean is_offset_set = get_drag_image_offset(&offset_x, &offset_y);
 
-        DragView::view = new DragView::View(pixbuf, is_raw_image, is_offset_set, offset_x, offset_y);
+        drag_view = new DragView(pixbuf, is_raw_image, is_offset_set, offset_x, offset_y);
     }
 }
 
-void DragView::move(gint x, gint y) {
-    if (view) {
-        view->move(x, y);
-    }
-}
-
-static void on_screen_changed(GtkWidget *widget, GdkScreen *previous_screen, gpointer view) {
-    (void)widget;
-    (void)previous_screen;
-
-    ((DragView::View*) view)->screen_changed();
-}
-
-static gboolean on_draw(GtkWidget *widget, cairo_t *cr, gpointer view) {
-    (void)widget;
-
-    ((DragView::View*) view)->expose(cr);
-    return FALSE;
-}
-
-static gboolean on_expose(GtkWidget *widget, GdkEventExpose *event, gpointer view) {
-    (void)widget;
-    (void)event;
-
-    ((DragView::View*) view)->expose(NULL);
-    return FALSE;
-}
-
-DragView::View::View(GdkPixbuf* _pixbuf, gboolean _is_raw_image,
-                                gboolean _is_offset_set, gint _offset_x, gint _offset_y) :
+DragView::DragView(GdkPixbuf* _pixbuf, gboolean _is_raw_image,
+                   gboolean _is_offset_set, gint _offset_x, gint _offset_y) :
         pixbuf(_pixbuf),
         is_raw_image(_is_raw_image),
         is_offset_set(_is_offset_set),
@@ -1210,44 +1199,41 @@ DragView::View::View(GdkPixbuf* _pixbuf, gboolean _is_raw_image,
     width = gdk_pixbuf_get_width(pixbuf);
     height = gdk_pixbuf_get_height(pixbuf);
 
-    widget = gtk_window_new(GTK_WINDOW_POPUP);
-    gtk_window_set_type_hint(GTK_WINDOW(widget), GDK_WINDOW_TYPE_HINT_DND);
-    gtk_widget_set_events(widget, GDK_BUTTON_PRESS_MASK | GDK_BUTTON_RELEASE_MASK);
+    GdkScreen* screen = gdk_screen_get_default();
+    GdkWindowAttr attrs;
 
-    screen_changed();
+    attrs.x = 0;
+    attrs.y = 0;
+    attrs.width = width;
+    attrs.height = height;
+    attrs.wclass = GDK_INPUT_OUTPUT;
+    attrs.window_type = GDK_WINDOW_TEMP;
+    attrs.type_hint = GDK_WINDOW_TYPE_HINT_DND;
+    attrs.visual = gdk_screen_get_rgba_visual(screen);
 
-    gtk_widget_realize(widget);
-    gtk_widget_set_app_paintable(widget, TRUE);
+    if (!attrs.visual) {
+        attrs.visual = gdk_screen_get_system_visual(screen);
+    }
+
+    int mask = GDK_WA_X | GDK_WA_Y | GDK_WA_VISUAL | GDK_WA_TYPE_HINT;
+    window = gdk_window_new(gdk_screen_get_root_window(screen), &attrs, mask);
 
 #ifdef GLASS_GTK3
-    g_signal_connect(G_OBJECT(widget), "draw", G_CALLBACK(on_draw), this);
-#else
-    g_signal_connect(G_OBJECT(widget), "expose-event", G_CALLBACK(on_expose), this);
+    gdk_window_set_opaque_region(window, NULL);
 #endif
-    g_signal_connect(G_OBJECT(widget), "screen-changed", G_CALLBACK(on_screen_changed), this);
-
-    gtk_widget_set_size_request(widget, width, height);
-    gtk_window_set_decorated(GTK_WINDOW(widget), FALSE);
-    gtk_window_set_opacity(GTK_WINDOW(widget), .7);
+    gdk_window_set_opacity(window, 0);
 }
 
-void DragView::View::screen_changed() {
-    GdkScreen *screen = gtk_widget_get_screen(widget);
-    glass_configure_window_transparency(widget, true);
-
-    if (!gdk_screen_is_composited(screen)) {
-        if (!is_offset_set) {
-            offset_x = 1;
-            offset_y = 1;
-        }
-    }
-}
-
-void DragView::View::expose(cairo_t *context) {
-#ifndef GLASS_GTK3
-    context = gdk_cairo_create(gtk_widget_get_window(widget));
+void DragView::expose() {
+#ifdef GLASS_GTK3
+    cairo_region_t *region = gdk_window_get_clip_region(window);
+    gdk_window_begin_paint_region(window, region);
 #endif
-    cairo_surface_t* cairo_surface;
+
+    cairo_t *context;
+    cairo_surface_t *cairo_surface;
+
+    context = gdk_cairo_create(window);
 
     guchar* pixels = is_raw_image
             ? (guchar*) convert_BGRA_to_RGBA((const int*) gdk_pixbuf_get_pixels(pixbuf),
@@ -1261,36 +1247,42 @@ void DragView::View::expose(cairo_t *context) {
             width, height, width * 4);
 
     cairo_set_source_surface(context, cairo_surface, 0, 0);
-    cairo_set_operator(context, CAIRO_OPERATOR_SOURCE);
+    cairo_set_operator(context, CAIRO_OPERATOR_OVER);
     cairo_paint(context);
 
     if (is_raw_image) {
         g_free(pixels);
     }
 
-    cairo_surface_destroy(cairo_surface);
-
-#ifndef GLASS_GTK3
-    cairo_destroy(context);
+#ifdef GLASS_GTK3
+    gdk_window_end_paint(window);
+    cairo_region_destroy(region);
 #endif
+
+    cairo_surface_destroy(cairo_surface);
+    cairo_destroy(context);
 }
 
-void DragView::View::move(gint x, gint y) {
-    gtk_window_move(GTK_WINDOW(widget), x - offset_x, y - offset_y);
+void DragView::move(gint x, gint y) {
+    gdk_window_move(window, x - offset_x, y - offset_y);
 
-    if (!gtk_widget_get_visible(widget)) {
-        gtk_widget_show(widget);
-        gdk_window_raise(gtk_widget_get_window(widget));
+    if (!gdk_window_is_visible(window)) {
+        gdk_window_show(window);
+        gdk_window_raise(window);
     }
 }
 
-DragView::View::~View() {
-    if (widget) {
-        gtk_widget_destroy(widget);
-        widget == NULL;
+GdkWindow* DragView::get_window() {
+    return window;
+}
+
+DragView::~DragView() {
+    if (window) {
+        gdk_window_destroy(window);
+        window = NULL;
     }
     if (pixbuf) {
         g_object_unref(pixbuf);
-        pixbuf == NULL;
+        pixbuf = NULL;
     }
 }
