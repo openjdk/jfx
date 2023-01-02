@@ -1022,10 +1022,6 @@ void process_dnd_source(GdkWindow *window, GdkEvent *event) {
         return;
     }
 
-    if (window != dnd_window) {
-        return;
-    }
-
     switch(event->type) {
         case GDK_GRAB_BROKEN:
             process_dnd_source_grab_broken(window, event);
