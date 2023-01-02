@@ -47,7 +47,7 @@ public class CheckBoxTreeEditor extends Application {
 //
 //      c2.setSelected(false);
 //      c2.setIndeterminate(true);
-//      
+//
 //      c1.setIndeterminate(false);
 //      c2.setIndeterminate(false);
     }
