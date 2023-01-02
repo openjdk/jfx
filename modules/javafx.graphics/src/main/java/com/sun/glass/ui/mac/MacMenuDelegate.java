@@ -29,7 +29,6 @@ import com.sun.glass.ui.MenuItem.Callback;
 import com.sun.glass.ui.Pixels;
 import com.sun.glass.ui.delegate.MenuDelegate;
 import com.sun.glass.ui.delegate.MenuItemDelegate;
-import javafx.application.Platform;
 
 class MacMenuDelegate implements MenuDelegate, MenuItemDelegate {
 
@@ -43,11 +42,6 @@ class MacMenuDelegate implements MenuDelegate, MenuItemDelegate {
 
     // GlassMenu <-> Menu
     private Menu menu;
-
-    boolean isInserted = false;
-    Callback callback = null;
-
-    private Callback lastSetCallback = null;
     public MacMenuDelegate(final Menu menu) {
         this.menu = menu;
     }
@@ -70,26 +64,18 @@ class MacMenuDelegate implements MenuDelegate, MenuItemDelegate {
                                             boolean enabled, boolean checked) {
         ptr = _createMenuItem(title, (char)shortcutKey, shortcutModifiers,
                 pixels, enabled, checked, callback);
-        this.callback = callback;
-        isInserted = true;
         return ptr != 0;
     }
 
     private native void _insert(long menuPtr, long submenuPtr, int pos);
     @Override public boolean insert(MenuDelegate menu, int pos) {
         MacMenuDelegate macMenu = (MacMenuDelegate)menu;
-        macMenu.isInserted = true;
-        macMenu.updateCallback();
         _insert(ptr, macMenu.ptr, pos);
         return true;
     }
 
     @Override public boolean insert(MenuItemDelegate item, int pos) {
         MacMenuDelegate macMenu = (MacMenuDelegate)item;
-        if (macMenu != null) {
-            macMenu.isInserted = true;
-            macMenu.updateCallback();
-        }
         _insert(ptr, macMenu != null ? macMenu.ptr : 0, pos);
         return true;
     }
@@ -97,29 +83,13 @@ class MacMenuDelegate implements MenuDelegate, MenuItemDelegate {
     private native void _remove(long menuPtr, long submenuPtr, int pos);
     @Override public boolean remove(MenuDelegate menu, int pos) {
         MacMenuDelegate macMenu = (MacMenuDelegate)menu;
-        macMenu.isInserted = false;
-        macMenu.callback = null;
         _remove(ptr, macMenu.ptr, pos);
-        Platform.runLater(() -> {
-            // runLater seems to be important, because otherwise sometimes the callable isn't called.
-            // This is probably, because the menu is closed before the callback is called.
-            macMenu.updateCallback();
-        });
         return true;
     }
 
     @Override public boolean remove(MenuItemDelegate item, int pos) {
         MacMenuDelegate macMenu = (MacMenuDelegate)item;
         _remove(ptr, macMenu == null ? 0L : macMenu.ptr, pos);
-        if (macMenu != null) {
-            macMenu.isInserted = false;
-            macMenu.callback = null;
-            Platform.runLater(() -> {
-                // runLater seems to be important, because otherwise sometimes the callable isn't called.
-                // This is probably, because the menu is closed before the callback is called.
-                macMenu.updateCallback();
-            });
-        }
         return true;
     }
 
@@ -154,22 +124,8 @@ class MacMenuDelegate implements MenuDelegate, MenuItemDelegate {
     }
 
     private native void _setCallback(long menuPtr, Callback callback);
-    private void updateCallback() {
-        if (isInserted) {
-            if (lastSetCallback != callback) {
-                _setCallback(ptr, callback);
-                lastSetCallback = callback;
-            }
-        } else {
-            if (lastSetCallback != null) {
-                _setCallback(ptr, null);
-                lastSetCallback = null;
-            }
-        }
-    }
     @Override public boolean setCallback(Callback callback) {
-        this.callback = callback;
-        updateCallback();
+        _setCallback(ptr, callback);
         return true;
     }
 
