@@ -896,6 +896,10 @@ static void process_dnd_source_drag_status(GdkWindow *window, GdkEvent *event) {
         if (cursor == NULL) {
             cursor = gdk_cursor_new_from_name(gdk_display_get_default(), "link");
         }
+
+        if (cursor == NULL) {
+            cursor = gdk_cursor_new_from_name(gdk_display_get_default(), "alias");
+        }
     } else {
         cursor = gdk_cursor_new_from_name(gdk_display_get_default(), "dnd-no-drop");
 
@@ -905,7 +909,11 @@ static void process_dnd_source_drag_status(GdkWindow *window, GdkEvent *event) {
     }
 
     if (cursor == NULL) {
-        cursor = gdk_cursor_new_from_name(gdk_display_get_default(), "default");
+        cursor = gdk_cursor_new_from_name(gdk_display_get_default(), "dnd-none");
+
+        if (cursor == NULL) {
+            cursor = gdk_cursor_new_from_name(gdk_display_get_default(), "grabbing");
+        }
     }
 
     dnd_pointer_grab(cursor);
