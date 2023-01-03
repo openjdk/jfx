@@ -25,8 +25,6 @@
 
 package main;
 
-import java.io.IOException;
-
 import javafx.application.Application;
 import javafx.geometry.Pos;
 import javafx.scene.Parent;
@@ -46,7 +44,7 @@ public class CheckBoxTreeEditor extends Application {
     private int childNum;
 
     @Override
-    public void start(Stage stage) throws IOException {
+    public void start(Stage stage) {
         setupTree();
         var borderPane = new BorderPane(tree);
         borderPane.setTop(createToolbar());
