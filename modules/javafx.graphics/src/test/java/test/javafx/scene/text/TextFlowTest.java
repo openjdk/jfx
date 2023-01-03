@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2019, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,18 +26,14 @@
 package test.javafx.scene.text;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertNotNull;
-
 import javafx.scene.text.Text;
 import javafx.scene.text.TextFlow;
-import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
-
 import test.com.sun.javafx.pgstub.StubToolkit;
+
 import com.sun.javafx.tk.Toolkit;
 
 import org.junit.Test;
@@ -45,7 +41,10 @@ import org.junit.Test;
 public class TextFlowTest {
 
     @Test public void testTabSize() {
-        Toolkit tk = (StubToolkit) Toolkit.getToolkit();
+        Toolkit tk = Toolkit.getToolkit();
+
+        assertTrue(tk instanceof StubToolkit);  // Ensure it's StubToolkit
+
         VBox root = new VBox();
         Scene scene = new Scene(root);
         Stage stage = new Stage();

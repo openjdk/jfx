@@ -1796,7 +1796,7 @@ void testInterpreter()
     data.append(1);
     data.append(0);
 
-    if (shouldBeVerbose())
+    if (shouldBeVerbose(proc))
         dataLog("data = ", listDump(data), "\n");
 
     // We'll write a program that prints the numbers 1..100.
@@ -1832,7 +1832,7 @@ void testInterpreter()
 
     code.append(Stop);
 
-    if (shouldBeVerbose())
+    if (shouldBeVerbose(proc))
         dataLog("code = ", listDump(code), "\n");
 
     CHECK(!invoke<intptr_t>(*interpreter, data.data(), code.data(), &stream));
@@ -1841,7 +1841,7 @@ void testInterpreter()
     for (unsigned i = 0; i < 100; ++i)
         CHECK(stream[i] == i + 1);
 
-    if (shouldBeVerbose())
+    if (shouldBeVerbose(proc))
         dataLog("stream = ", listDump(stream), "\n");
 }
 
@@ -2602,7 +2602,7 @@ void testMemoryFence()
     auto code = compileProc(proc);
     CHECK_EQ(invoke<int>(*code), 42);
     if (isX86())
-        checkUsesInstruction(*code, "lock or $0x0, (%rsp)");
+        checkUsesInstruction(*code, "lock orl $0x0, (%rsp)");
     if (isARM64())
         checkUsesInstruction(*code, dmbIsh);
     checkDoesNotUseInstruction(*code, "mfence");
@@ -2783,14 +2783,14 @@ void testMoveConstants()
     auto check = [] (Procedure& proc) {
         proc.resetReachability();
 
-        if (shouldBeVerbose()) {
+        if (shouldBeVerbose(proc)) {
             dataLog("IR before:\n");
             dataLog(proc);
         }
 
         moveConstants(proc);
 
-        if (shouldBeVerbose()) {
+        if (shouldBeVerbose(proc)) {
             dataLog("IR after:\n");
             dataLog(proc);
         }
@@ -2837,6 +2837,32 @@ void testMoveConstants()
         root->appendNew<Value>(proc, Return, Origin());
         check(proc);
     }
+}
+
+extern "C" {
+static JSC_DECLARE_JIT_OPERATION_WITHOUT_WTF_INTERNAL(testMoveConstantsWithLargeOffsetsFunc, double, (double));
+}
+JSC_DEFINE_JIT_OPERATION(testMoveConstantsWithLargeOffsetsFunc, double, (double a))
+{
+    return a;
+}
+
+void testMoveConstantsWithLargeOffsets()
+{
+    Procedure proc;
+    BasicBlock* root = proc.addBlock();
+    Value* result = root->appendNew<ConstDoubleValue>(proc, Origin(), 0);
+    double rhs = 0;
+    for (size_t i = 0; i < 4100; i++) {
+        rhs += i;
+        Value* callResult = root->appendNew<CCallValue>(proc, Double, Origin(),
+            root->appendNew<ConstPtrValue>(proc, Origin(), tagCFunction<OperationPtrTag>(testMoveConstantsWithLargeOffsetsFunc)),
+            root->appendNew<ConstDoubleValue>(proc, Origin(), i));
+        result = root->appendNew<Value>(proc, Add, Origin(), result, callResult);
+    }
+    root->appendNewControlValue(proc, Return, Origin(), result);
+
+    CHECK_EQ(compileAndRun<double>(proc), rhs);
 }
 
 void testPCOriginMapDoesntInsertNops()

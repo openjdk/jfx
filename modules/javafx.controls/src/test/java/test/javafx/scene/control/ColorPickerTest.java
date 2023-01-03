@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,18 +28,10 @@ package test.javafx.scene.control;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.scene.Scene;
-import javafx.scene.input.KeyCode;
-import javafx.scene.input.MouseEvent;
-import javafx.scene.layout.GridPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.stage.Stage;
 import test.com.sun.javafx.pgstub.StubToolkit;
-import test.com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
-import test.com.sun.javafx.scene.control.infrastructure.MouseEventFirer;
-import test.com.sun.javafx.scene.control.infrastructure.MouseEventGenerator;
-import javafx.scene.control.skin.ColorPickerPaletteShim;
-import javafx.scene.control.skin.ColorPickerSkin;
 import com.sun.javafx.tk.Toolkit;
 import javafx.scene.control.ColorPicker;
 import org.junit.Before;
@@ -59,7 +51,10 @@ public class ColorPickerTest {
     private VBox root;
 
     @Before public void setup() {
-        tk = (StubToolkit)Toolkit.getToolkit();
+        tk = Toolkit.getToolkit();
+
+        assertTrue(tk instanceof StubToolkit);  // Ensure it's StubToolkit
+
         colorPicker = new ColorPicker();
         Scene scene = new Scene(new VBox(20), 800, 600);
         VBox box = (VBox)scene.getRoot();

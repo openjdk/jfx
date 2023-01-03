@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,7 +25,6 @@
 
 package test.javafx.fxml;
 
-import java.io.IOException;
 import javafx.fxml.FXMLLoaderShim;
 import org.junit.Test;
 
@@ -33,7 +32,7 @@ import static org.junit.Assert.*;
 
 public class CompareVersionsTest {
     @Test
-    public void testCompareJFXVersions() throws IOException {
+    public void testCompareJFXVersions() {
         assertTrue(FXMLLoaderShim.compareJFXVersions("1.1", "1.0") > 0);
         assertTrue(FXMLLoaderShim.compareJFXVersions("1.1", "0.9.9") > 0);
         assertTrue(FXMLLoaderShim.compareJFXVersions("2", "1.0") > 0);

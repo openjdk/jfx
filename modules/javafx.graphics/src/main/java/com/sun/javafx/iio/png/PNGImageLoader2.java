@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -292,6 +292,7 @@ public final class PNGImageLoader2 extends ImageLoaderImpl {
         }
     }
 
+    @Override
     public void dispose() {
     }
 
@@ -626,6 +627,7 @@ public final class PNGImageLoader2 extends ImageLoaderImpl {
         return bitDepth == 16 ? 2 : 1;
     }
 
+    @Override
     public ImageFrame load(int imageIndex, int rWidth, int rHeight,
             boolean preserveAspectRatio, boolean smooth) throws IOException {
 

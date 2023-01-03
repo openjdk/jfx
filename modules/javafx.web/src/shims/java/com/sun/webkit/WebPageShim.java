@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2017, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,13 +27,9 @@ package com.sun.webkit;
 
 import com.sun.javafx.webkit.prism.WCBufferedContextShim;
 import com.sun.javafx.webkit.prism.PrismInvokerShim;
-import com.sun.webkit.WebPage;
 import com.sun.webkit.event.WCMouseEvent;
 import com.sun.webkit.event.WCMouseWheelEvent;
 import com.sun.webkit.graphics.WCGraphicsContext;
-import com.sun.webkit.graphics.WCGraphicsManager;
-import com.sun.webkit.graphics.WCGraphicsManagerShim;
-import com.sun.webkit.graphics.WCPageBackBuffer;
 import com.sun.webkit.graphics.WCRectangle;
 import java.awt.image.BufferedImage;
 

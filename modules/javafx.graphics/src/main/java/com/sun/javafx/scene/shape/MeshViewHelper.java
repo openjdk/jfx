@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2016, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -77,6 +77,7 @@ public class MeshViewHelper extends Shape3DHelper {
         return meshViewAccessor.doComputeContains(node, localX, localY);
     }
 
+    @Override
     protected boolean computeIntersectsImpl(Node node, PickRay pickRay,
             PickResultChooser pickResult) {
         return meshViewAccessor.doComputeIntersects(node, pickRay, pickResult);

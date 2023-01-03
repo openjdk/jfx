@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2020, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -376,7 +376,7 @@ public class ChoiceBoxLabelTextTest {
     }
 
     protected static StringConverter<String> createStringConverter() {
-        return new StringConverter<String>() {
+        return new StringConverter<>() {
 
             @Override
             public String toString(String object) {
@@ -427,7 +427,7 @@ public class ChoiceBoxLabelTextTest {
         scene = new Scene(root);
         stage = new Stage();
         stage.setScene(scene);
-        box = new ChoiceBox<String>(FXCollections.observableArrayList("Apple", "Orange", "Banana"));
+        box = new ChoiceBox<>(FXCollections.observableArrayList("Apple", "Orange", "Banana"));
         box.setConverter(converter);
         root.getChildren().addAll(box);
     }

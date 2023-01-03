@@ -1,4 +1,4 @@
-## Independent JPEG Group (IJG) JPEG v9d
+## Independent JPEG Group (IJG) JPEG v9e
 
 ### IJG License
 ```
@@ -18,7 +18,7 @@ with respect to this software, its quality, accuracy, merchantability, or
 fitness for a particular purpose.  This software is provided "AS IS", and you,
 its user, assume the entire risk as to its quality and accuracy.
 
-This software is copyright (C) 1991-2020, Thomas G. Lane, Guido Vollbeding.
+This software is copyright (C) 1991-2022, Thomas G. Lane, Guido Vollbeding.
 All Rights Reserved except as specified below.
 
 Permission is hereby granted to use, copy, modify, and distribute this

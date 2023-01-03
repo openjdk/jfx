@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -90,7 +90,7 @@ public class TextFieldBehavior extends TextInputControlBehavior<TextField> {
                 textField.selectRange(0, 0);
             }
         };
-        weakFocusOwnerListener = new WeakChangeListener<Node>(focusOwnerListener);
+        weakFocusOwnerListener = new WeakChangeListener<>(focusOwnerListener);
 
         sceneListener = (observable, oldValue, newValue) -> {
             if (oldValue != null) {
@@ -100,7 +100,7 @@ public class TextFieldBehavior extends TextInputControlBehavior<TextField> {
                 newValue.focusOwnerProperty().addListener(weakFocusOwnerListener);
             }
         };
-        weakSceneListener = new WeakChangeListener<Scene>(sceneListener);
+        weakSceneListener = new WeakChangeListener<>(sceneListener);
 
         textField.sceneProperty().addListener(weakSceneListener);
         if (textField.getScene() != null) {

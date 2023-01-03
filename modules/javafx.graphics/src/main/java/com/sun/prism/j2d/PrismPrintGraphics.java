@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -71,27 +71,33 @@ public final class PrismPrintGraphics
             return false;
         }
 
+        @Override
         public boolean prepare(Rectangle dirtyregion) {
             throw new UnsupportedOperationException("Cannot prepare an image");
         }
 
+        @Override
         public boolean present() {
             throw new UnsupportedOperationException("Cannot present on image");
         }
 
+        @Override
         public int getContentWidth() {
             return width;
         }
 
+        @Override
         public int getContentHeight() {
             return height;
         }
 
         private boolean opaque;
+        @Override
         public void setOpaque(boolean opaque) {
             this.opaque = opaque;
         }
 
+        @Override
         public boolean isOpaque() {
             return opaque;
         }
@@ -100,6 +106,7 @@ public final class PrismPrintGraphics
     // The FX code thinks it can call setTransform() without
     // doing harm. Need to intercept all such calls and convert
     // them into a concatenation on the original/default transform.
+    @Override
     protected void setTransformG2D(java.awt.geom.AffineTransform tx) {
         g2d.setTransform(origTx2D);
         g2d.transform(tx);
@@ -111,6 +118,7 @@ public final class PrismPrintGraphics
     // I could make the caller of the constructor pass it, but it
     // really shouldn't have to be responsible for the necessity
     private java.awt.geom.AffineTransform origTx2D;
+    @Override
     protected void captureTransform(java.awt.Graphics2D g2d) {
         origTx2D = g2d.getTransform();
     }

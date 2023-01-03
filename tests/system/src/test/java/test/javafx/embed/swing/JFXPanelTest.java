@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2019, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,32 +24,29 @@
  */
 package test.javafx.embed.swing;
 
-import com.sun.javafx.PlatformUtil;
-import org.junit.Assume;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Test;
-import junit.framework.AssertionFailedError;
-
-import javax.swing.JFrame;
-import javax.swing.JMenu;
-import javax.swing.JMenuItem;
-import javax.swing.JMenuBar;
-import javax.swing.JPanel;
-import javax.swing.SwingUtilities;
-import javafx.application.Application;
-import javafx.application.Platform;
-import javafx.embed.swing.JFXPanel;
-import javafx.stage.Stage;
-import javafx.scene.Group;
-import javafx.scene.Scene;
 import java.awt.Dimension;
-import java.awt.event.InputEvent;
 import java.awt.event.MouseEvent;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+
+import javax.swing.JFrame;
+import javax.swing.JPanel;
+import javax.swing.SwingUtilities;
+
+import javafx.application.Application;
+import javafx.application.Platform;
+import javafx.embed.swing.JFXPanel;
+import javafx.scene.Group;
+import javafx.scene.Scene;
+import javafx.stage.Stage;
+
+import org.junit.After;
+import org.junit.AfterClass;
+import org.junit.Assert;
+import org.junit.BeforeClass;
+import org.junit.Test;
+
+import test.util.Util;
 
 public class JFXPanelTest {
     // Used to launch the application before running any test
@@ -72,19 +69,13 @@ public class JFXPanelTest {
 
     @BeforeClass
     public static void doSetupOnce() throws Exception {
-        // Start the Application
-        new Thread(() -> Application.launch(MyApp.class, (String[]) null)).start();
-
-        if (!launchLatch.await(5000, TimeUnit.MILLISECONDS)) {
-            throw new AssertionFailedError("Timeout waiting for Application to launch");
-        }
-
+        Util.launch(launchLatch, MyApp.class);
         Assert.assertEquals(0, launchLatch.getCount());
     }
 
     @AfterClass
     public static void doTeardownOnce() {
-        Platform.exit();
+        Util.shutdown();
     }
 
     @After

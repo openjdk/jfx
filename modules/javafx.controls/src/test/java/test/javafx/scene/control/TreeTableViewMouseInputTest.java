@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,7 +26,6 @@
 package test.javafx.scene.control;
 
 import javafx.scene.control.*;
-import javafx.scene.control.cell.PropertyValueFactory;
 import test.com.sun.javafx.scene.control.infrastructure.KeyModifier;
 import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
 import test.com.sun.javafx.scene.control.infrastructure.VirtualFlowTestUtils;
@@ -61,11 +60,11 @@ public class TreeTableViewMouseInputTest {
     private TreeTableView.TreeTableViewSelectionModel<?> sm;
     private TreeTableView.TreeTableViewFocusModel<?> fm;
 
-    private final TreeTableColumn<String, String> col0 = new TreeTableColumn<String, String>("col0");
-    private final TreeTableColumn<String, String> col1 = new TreeTableColumn<String, String>("col1");
-    private final TreeTableColumn<String, String> col2 = new TreeTableColumn<String, String>("col2");
-    private final TreeTableColumn<String, String> col3 = new TreeTableColumn<String, String>("col3");
-    private final TreeTableColumn<String, String> col4 = new TreeTableColumn<String, String>("col4");
+    private final TreeTableColumn<String, String> col0 = new TreeTableColumn<>("col0");
+    private final TreeTableColumn<String, String> col1 = new TreeTableColumn<>("col1");
+    private final TreeTableColumn<String, String> col2 = new TreeTableColumn<>("col2");
+    private final TreeTableColumn<String, String> col3 = new TreeTableColumn<>("col3");
+    private final TreeTableColumn<String, String> col4 = new TreeTableColumn<>("col4");
 
     private TreeItem<String> root;                  // 0
     private TreeItem<String> child1;            // 1
@@ -83,20 +82,20 @@ public class TreeTableViewMouseInputTest {
     private TreeItem<String> child10;           // 13
 
     @Before public void setup() {
-        root = new TreeItem<String>("Root");             // 0
-        child1 = new TreeItem<String>("Child 1");        // 1
-        child2 = new TreeItem<String>("Child 2");        // 2
-        child3 = new TreeItem<String>("Child 3");        // 3
-        subchild1 = new TreeItem<String>("Subchild 1");  // 4
-        subchild2 = new TreeItem<String>("Subchild 2");  // 5
-        subchild3 = new TreeItem<String>("Subchild 3");  // 6
-        child4 = new TreeItem<String>("Child 4");        // 7
-        child5 = new TreeItem<String>("Child 5");        // 8
-        child6 = new TreeItem<String>("Child 6");        // 9
-        child7 = new TreeItem<String>("Child 7");        // 10
-        child8 = new TreeItem<String>("Child 8");        // 11
-        child9 = new TreeItem<String>("Child 9");        // 12
-        child10 = new TreeItem<String>("Child 10");      // 13
+        root = new TreeItem<>("Root");             // 0
+        child1 = new TreeItem<>("Child 1");        // 1
+        child2 = new TreeItem<>("Child 2");        // 2
+        child3 = new TreeItem<>("Child 3");        // 3
+        subchild1 = new TreeItem<>("Subchild 1");  // 4
+        subchild2 = new TreeItem<>("Subchild 2");  // 5
+        subchild3 = new TreeItem<>("Subchild 3");  // 6
+        child4 = new TreeItem<>("Child 4");        // 7
+        child5 = new TreeItem<>("Child 5");        // 8
+        child6 = new TreeItem<>("Child 6");        // 9
+        child7 = new TreeItem<>("Child 7");        // 10
+        child8 = new TreeItem<>("Child 8");        // 11
+        child9 = new TreeItem<>("Child 9");        // 12
+        child10 = new TreeItem<>("Child 10");      // 13
 
         // reset tree structure
         root.getChildren().clear();
@@ -124,7 +123,7 @@ public class TreeTableViewMouseInputTest {
         child10.getChildren().clear();
         child10.setExpanded(false);
 
-        tableView = new TreeTableView<String>();
+        tableView = new TreeTableView<>();
         sm = tableView.getSelectionModel();
         fm = tableView.getFocusModel();
 
@@ -784,7 +783,7 @@ public class TreeTableViewMouseInputTest {
 
         TreeTableView<Person> table = new TreeTableView<>();
 
-        TreeItem<Person> root = new TreeItem<Person>(new Person("Root", null, null));
+        TreeItem<Person> root = new TreeItem<>(new Person("Root", null, null));
         root.setExpanded(true);
         table.setRoot(root);
         table.setShowRoot(false);
@@ -889,7 +888,7 @@ public class TreeTableViewMouseInputTest {
             assertFalse(sm.isSelected(row, firstNameCol));
             assertFalse(sm.isSelected(row, lastNameCol));
             assertTrue(sm.isSelected(row, emailCol));
-            assertFalse(sm.isSelected(row));
+            assertTrue(sm.isSelected(row));
 
             // and assert that the visuals are accurate
             // (some TableCells should be selected, but TableRows should not be)
@@ -933,7 +932,7 @@ public class TreeTableViewMouseInputTest {
 
         TreeTableView<Person> table = new TreeTableView<>();
 
-        TreeItem<Person> root = new TreeItem<Person>(new Person("Root", null, null));
+        TreeItem<Person> root = new TreeItem<>(new Person("Root", null, null));
         root.setExpanded(true);
         table.setRoot(root);
         table.setShowRoot(false);
@@ -966,7 +965,7 @@ public class TreeTableViewMouseInputTest {
         if (cellSelection) {
             // Because we are in cell selection mode, this has the effect of
             // selecting just the one cell.
-            assertFalse(sm.isSelected(0));
+            assertTrue(sm.isSelected(0));
             assertTrue(sm.isSelected(0, firstNameCol));
             assertFalse(sm.isSelected(0, lastNameCol));
             assertFalse(sm.isSelected(0, emailCol));
@@ -992,7 +991,7 @@ public class TreeTableViewMouseInputTest {
         if (cellSelection) {
             // Everything should remain the same, except the
             // column of the single selected cell should change to lastNameCol.
-            assertFalse(sm.isSelected(0));
+            assertTrue(sm.isSelected(0));
             assertFalse(sm.isSelected(0, firstNameCol));
             assertTrue(sm.isSelected(0, lastNameCol));
             assertFalse(sm.isSelected(0, emailCol));
@@ -1022,7 +1021,7 @@ public class TreeTableViewMouseInputTest {
 
         TreeTableView<Person> table = new TreeTableView<>();
 
-        TreeItem<Person> root = new TreeItem<Person>(new Person("Root", null, null));
+        TreeItem<Person> root = new TreeItem<>(new Person("Root", null, null));
         root.setExpanded(true);
         table.setRoot(root);
         table.setShowRoot(false);

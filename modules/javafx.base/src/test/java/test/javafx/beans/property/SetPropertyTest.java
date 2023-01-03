@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -52,8 +52,8 @@ public class SetPropertyTest {
 
     @Test
     public void testBindBidirectional() {
-        final SetProperty<Object> p1 = new SimpleSetProperty<Object>(VALUE_2);
-        final SetProperty<Object> p2 = new SimpleSetProperty<Object>(VALUE_1);
+        final SetProperty<Object> p1 = new SimpleSetProperty<>(VALUE_2);
+        final SetProperty<Object> p2 = new SimpleSetProperty<>(VALUE_1);
 
         p1.bindBidirectional(p2);
         assertEquals(VALUE_1, p1.get());

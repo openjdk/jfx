@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,21 +24,23 @@
 
 package test.robot.javafx.scene.layout;
 
-import test.robot.javafx.scene.layout.RegionUITestBase;
-import javafx.geometry.Bounds;
-import javafx.scene.paint.Color;
-import org.junit.Ignore;
-import org.junit.Test;
-import com.sun.javafx.PlatformUtil;
 import static org.junit.Assume.assumeTrue;
 
+import javafx.geometry.Bounds;
+import javafx.scene.paint.Color;
+
+import org.junit.Ignore;
+import org.junit.Test;
+
+import com.sun.javafx.PlatformUtil;
+
+/**************************************************************************
+ *                                                                        *
+ * Tests for aligned background images. The test image in use is chosen   *
+ * to align naturally with the edge of the test region.                   *
+ *                                                                        *
+ *************************************************************************/
 public class RegionBackgroundImageUITest extends RegionUITestBase {
-    /**************************************************************************
-     *                                                                        *
-     * Tests for aligned background images. The test image in use is chosen   *
-     * to align naturally with the edge of the test region.                   *
-     *                                                                        *
-     *************************************************************************/
 
     @Test(timeout = 20000)
     public void alignedImage() {

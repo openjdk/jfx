@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -33,7 +33,6 @@ import java.util.WeakHashMap;
 
 import com.sun.javafx.scene.control.behavior.BehaviorBase;
 import javafx.beans.property.DoubleProperty;
-import javafx.beans.value.WritableValue;
 import javafx.geometry.HPos;
 import javafx.geometry.VPos;
 import javafx.scene.Node;
@@ -80,7 +79,7 @@ public class TreeCellSkin<T> extends CellSkinBase<TreeCell<T>> {
      * which has a disclosureNode. Once we scroll and encounter one, indentation
      * happens in a displeasing way.
      */
-    private static final Map<TreeView<?>, Double> maxDisclosureWidthMap = new WeakHashMap<TreeView<?>, Double>();
+    private static final Map<TreeView<?>, Double> maxDisclosureWidthMap = new WeakHashMap<>();
 
 
     /* *************************************************************************
@@ -366,7 +365,7 @@ public class TreeCellSkin<T> extends CellSkinBase<TreeCell<T>> {
     private static class StyleableProperties {
 
         private static final CssMetaData<TreeCell<?>,Number> INDENT =
-            new CssMetaData<TreeCell<?>,Number>("-fx-indent",
+            new CssMetaData<>("-fx-indent",
                 SizeConverter.getInstance(), 10.0) {
 
             @Override public boolean isSettable(TreeCell<?> n) {
@@ -376,14 +375,14 @@ public class TreeCellSkin<T> extends CellSkinBase<TreeCell<T>> {
 
             @Override public StyleableProperty<Number> getStyleableProperty(TreeCell<?> n) {
                 final TreeCellSkin<?> skin = (TreeCellSkin<?>) n.getSkin();
-                return (StyleableProperty<Number>)(WritableValue<Number>)skin.indentProperty();
+                return (StyleableProperty<Number>)skin.indentProperty();
             }
         };
 
         private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
         static {
             final List<CssMetaData<? extends Styleable, ?>> styleables =
-                new ArrayList<CssMetaData<? extends Styleable, ?>>(CellSkinBase.getClassCssMetaData());
+                new ArrayList<>(CellSkinBase.getClassCssMetaData());
             styleables.add(INDENT);
             STYLEABLES = Collections.unmodifiableList(styleables);
         }

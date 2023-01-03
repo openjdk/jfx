@@ -28,6 +28,7 @@ package test.javafx.scene;
 
 import com.sun.javafx.scene.SceneHelper;
 import javafx.event.Event;
+import javafx.event.EventTarget;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import test.com.sun.javafx.pgstub.StubScene;
@@ -41,6 +42,7 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import javafx.scene.Group;
@@ -49,6 +51,11 @@ import javafx.scene.ParentShim;
 import javafx.scene.Scene;
 import javafx.scene.SceneShim;
 
+import javafx.scene.input.MouseButton;
+import javafx.scene.input.MouseEvent;
+import javafx.scene.input.PickResult;
+import javafx.scene.input.TouchEvent;
+import javafx.scene.input.TouchPoint;
 import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
 
@@ -110,16 +117,24 @@ public class FocusTest {
         return n(T, T, T);
     }
 
-    private void assertIsFocused(Scene s, Node n) {
-        assertEquals(n, s.getFocusOwner());
+    private void assertIsFocused(Node n) {
         assertTrue(n.isFocused());
         assertTrue(n.getPseudoClassStates().stream().anyMatch(pc -> pc.getPseudoClassName().equals("focused")));
     }
 
-    private void assertNotFocused(Scene s, Node n) {
-        assertTrue(n != s.getFocusOwner());
+    private void assertIsFocused(Scene s, Node n) {
+        assertEquals(n, s.getFocusOwner());
+        assertIsFocused(n);
+    }
+
+    private void assertNotFocused(Node n) {
         assertFalse(n.isFocused());
         assertFalse(n.getPseudoClassStates().stream().anyMatch(pc -> pc.getPseudoClassName().equals("focused")));
+    }
+
+    private void assertNotFocused(Scene s, Node n) {
+        assertTrue(n != s.getFocusOwner());
+        assertNotFocused(n);
     }
 
     private void assertNullFocus(Scene s) {
@@ -775,6 +790,25 @@ public class FocusTest {
         Event.fireEvent(node, new KeyEvent(KeyEvent.KEY_RELEASED, null, null, KeyCode.TAB, false, false, false, false));
     }
 
+    private void fireMousePressedEvent(EventTarget target) {
+        double x = 10, y = 10;
+        PickResult pickResult = new PickResult(target, x, y);
+        Event.fireEvent(target, new MouseEvent(
+                MouseEvent.MOUSE_PRESSED, x, y, x, y, MouseButton.PRIMARY, 1,
+                false, false, false, false,
+                true, false, false,
+                false, false, false, pickResult));
+    }
+
+    private void fireTouchPressedEvent(EventTarget target) {
+        double x = 10, y = 10;
+        PickResult pickResult = new PickResult(scene, x, y);
+        Event.fireEvent(target, new TouchEvent(
+                TouchEvent.TOUCH_PRESSED,
+                new TouchPoint(0, TouchPoint.State.PRESSED, x, y, x, y, target, pickResult),
+                Collections.emptyList(), 0, false, false, false, false));
+    }
+
     /**
      * If a node acquires focus by calling {@link Node#requestFocus()}, it does not acquire visible focus.
      */
@@ -846,6 +880,44 @@ public class FocusTest {
         assertNotFocusVisible(node1);
         assertIsFocused(scene, node2);
         assertNotFocusVisible(node2);
+    }
+
+    /**
+     * When any region of the window is clicked, the focus owner loses visible focus
+     * even when the focus owner doesn't change.
+     */
+    @Test public void testMousePressedClearsFocusVisible() {
+        Node node1 = n(), node2 = n();
+        Group g = new Group(node1, node2);
+        scene.setRoot(g);
+        fireTabKeyEvent(g);
+
+        assertIsFocused(scene, node1);
+        assertIsFocusVisible(node1);
+
+        fireMousePressedEvent(scene);
+
+        assertIsFocused(scene, node1);
+        assertNotFocusVisible(node1);
+    }
+
+    /**
+     * When any region of the window is touched, the focus owner loses visible focus
+     * even when the focus owner doesn't change.
+     */
+    @Test public void testTouchPressedClearsFocusVisible() {
+        Node node1 = n(), node2 = n();
+        Group g = new Group(node1, node2);
+        scene.setRoot(g);
+        fireTabKeyEvent(g);
+
+        assertIsFocused(scene, node1);
+        assertIsFocusVisible(node1);
+
+        fireTouchPressedEvent(scene);
+
+        assertIsFocused(scene, node1);
+        assertNotFocusVisible(node1);
     }
 
     /**
@@ -932,6 +1004,51 @@ public class FocusTest {
         g2.getChildren().remove(0);
         assertNotFocusWithin(g1);
         assertNotFocusWithin(g2);
+    }
+
+    /**
+     * When a scene graph contains multiple nested focused nodes, the focusWithin bits that are
+     * cleared when a focused node is removed must only be cleared as long as we don't encounter
+     * another focused node up the tree.
+     */
+    @Test public void testMultiLevelFocusWithinIsPreserved() {
+        class N extends Group {
+            N(Node... children) {
+                super(children);
+                setFocusTraversable(true);
+            }
+
+            void setFocused() {
+                setFocused(true);
+            }
+        }
+
+        N node1, node2, node3, node4;
+
+        scene.setRoot(
+            node1 = new N(
+                node2 = new N(
+                    node3 = new N(
+                        node4 = new N()
+                    )
+                )
+            ));
+
+        node2.setFocused();
+        node4.setFocused();
+
+        // Remove node4 from the scene graph
+        node3.getChildren().clear();
+
+        assertIsFocusWithin(node1);
+        assertIsFocusWithin(node2);
+        assertNotFocusWithin(node3);
+        assertIsFocusWithin(node4);
+
+        assertNotFocused(node1);
+        assertIsFocused(node2);
+        assertNotFocused(node3);
+        assertIsFocused(node4);
     }
 
 }

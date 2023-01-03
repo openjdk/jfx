@@ -84,6 +84,7 @@ public class WebColorFieldSkin extends InputFieldSkin {
         super.dispose();
     }
 
+    //  "^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$";
     @Override
     protected boolean accept(String text) {
         return PARTIAL_PATTERN.matcher(text).matches();

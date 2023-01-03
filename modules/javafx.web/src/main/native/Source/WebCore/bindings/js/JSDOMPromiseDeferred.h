@@ -274,7 +274,8 @@ public:
         m_promise->resolve<IDLType>(std::forward<typename IDLType::ParameterType>(value));
     }
 
-    void settle(ExceptionOr<typename IDLType::ParameterType>&& result)
+    template<typename U>
+    void settle(ExceptionOr<U>&& result)
     {
         if (result.hasException()) {
             reject(result.releaseException());

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -53,7 +53,6 @@ import test.javafx.binding.DependencyUtils;
 import org.junit.Before;
 import org.junit.Test;
 
-@SuppressWarnings("WebTest")
 public class StringFormatterTest {
 
     private double double0;
@@ -104,7 +103,7 @@ public class StringFormatterTest {
         intV = new SimpleIntegerProperty(int0);
         booleanV = new SimpleBooleanProperty(boolean0);
         stringV = new SimpleStringProperty(string0);
-        dateV = new SimpleObjectProperty<Date>(date0);
+        dateV = new SimpleObjectProperty<>(date0);
     }
 
     @Test

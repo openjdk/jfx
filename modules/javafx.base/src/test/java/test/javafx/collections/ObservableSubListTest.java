@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -66,7 +66,7 @@ public class ObservableSubListTest {
     @Before
     public void setup() throws Exception {
         list = listFactory.call();
-        mlo = new MockListObserver<String>();
+        mlo = new MockListObserver<>();
         list.addListener(mlo);
         useListData("a", "b", "c", "d", "e", "f");
         sublist = list.subList(1, 5);
@@ -133,6 +133,7 @@ public class ObservableSubListTest {
         mlo.check1AddRemove(list, Arrays.asList("b", "c", "d", "e"), 1, 1);
     }
 
+    @SuppressWarnings("unlikely-arg-type")
     @Test
     public void testContains() {
         assertTrue(sublist.contains("c"));
@@ -154,6 +155,7 @@ public class ObservableSubListTest {
         assertTrue(sublist.contains(null));
     }
 
+    @SuppressWarnings("unlikely-arg-type")
     @Test
     public void testEqualsOnAnotherType() {
         assertFalse(sublist.equals(Integer.valueOf(7)));

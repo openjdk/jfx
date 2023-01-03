@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -64,7 +64,7 @@ public final class EventHandlerProperties {
     public ObjectProperty<EventHandler<? super ContextMenuEvent>>
             onContextMenuRequestedProperty() {
         if (onMenuContextRequested == null) {
-            onMenuContextRequested = new EventHandlerProperty<ContextMenuEvent>(
+            onMenuContextRequested = new EventHandlerProperty<>(
                                     bean,
                                     "onMenuContextRequested",
                                     ContextMenuEvent.CONTEXT_MENU_REQUESTED);
@@ -81,7 +81,7 @@ public final class EventHandlerProperties {
     public ObjectProperty<EventHandler<? super MouseEvent>>
             onMouseClickedProperty() {
         if (onMouseClicked == null) {
-            onMouseClicked = new EventHandlerProperty<MouseEvent>(
+            onMouseClicked = new EventHandlerProperty<>(
                                      bean,
                                      "onMouseClicked",
                                      MouseEvent.MOUSE_CLICKED);
@@ -98,7 +98,7 @@ public final class EventHandlerProperties {
     public ObjectProperty<EventHandler<? super MouseEvent>>
             onMouseDraggedProperty() {
         if (onMouseDragged == null) {
-            onMouseDragged = new EventHandlerProperty<MouseEvent>(
+            onMouseDragged = new EventHandlerProperty<>(
                                      bean,
                                      "onMouseDragged",
                                      MouseEvent.MOUSE_DRAGGED);
@@ -115,7 +115,7 @@ public final class EventHandlerProperties {
     public ObjectProperty<EventHandler<? super MouseEvent>>
             onMouseEnteredProperty() {
         if (onMouseEntered == null) {
-            onMouseEntered = new EventHandlerProperty<MouseEvent>(
+            onMouseEntered = new EventHandlerProperty<>(
                                      bean,
                                      "onMouseEntered",
                                      MouseEvent.MOUSE_ENTERED);
@@ -132,7 +132,7 @@ public final class EventHandlerProperties {
     public ObjectProperty<EventHandler<? super MouseEvent>>
             onMouseExitedProperty() {
         if (onMouseExited == null) {
-            onMouseExited = new EventHandlerProperty<MouseEvent>(
+            onMouseExited = new EventHandlerProperty<>(
                                      bean,
                                      "onMouseExited",
                                      MouseEvent.MOUSE_EXITED);
@@ -149,7 +149,7 @@ public final class EventHandlerProperties {
     public ObjectProperty<EventHandler<? super MouseEvent>>
             onMouseMovedProperty() {
         if (onMouseMoved == null) {
-            onMouseMoved = new EventHandlerProperty<MouseEvent>(
+            onMouseMoved = new EventHandlerProperty<>(
                                      bean,
                                      "onMouseMoved",
                                      MouseEvent.MOUSE_MOVED);
@@ -166,7 +166,7 @@ public final class EventHandlerProperties {
     public ObjectProperty<EventHandler<? super MouseEvent>>
             onMousePressedProperty() {
         if (onMousePressed == null) {
-            onMousePressed = new EventHandlerProperty<MouseEvent>(
+            onMousePressed = new EventHandlerProperty<>(
                                      bean,
                                      "onMousePressed",
                                      MouseEvent.MOUSE_PRESSED);
@@ -183,7 +183,7 @@ public final class EventHandlerProperties {
     public ObjectProperty<EventHandler<? super MouseEvent>>
             onMouseReleasedProperty() {
         if (onMouseReleased == null) {
-            onMouseReleased = new EventHandlerProperty<MouseEvent>(
+            onMouseReleased = new EventHandlerProperty<>(
                                      bean,
                                      "onMouseReleased",
                                      MouseEvent.MOUSE_RELEASED);
@@ -200,7 +200,7 @@ public final class EventHandlerProperties {
     public ObjectProperty<EventHandler<? super MouseEvent>>
             onDragDetectedProperty() {
         if (onDragDetected == null) {
-            onDragDetected = new EventHandlerProperty<MouseEvent>(
+            onDragDetected = new EventHandlerProperty<>(
                                      bean,
                                      "onDragDetected",
                                      MouseEvent.DRAG_DETECTED);
@@ -217,7 +217,7 @@ public final class EventHandlerProperties {
     public ObjectProperty<EventHandler<? super ScrollEvent>>
             onScrollProperty() {
         if (onScroll == null) {
-            onScroll = new EventHandlerProperty<ScrollEvent>(
+            onScroll = new EventHandlerProperty<>(
                                      bean,
                                      "onScroll",
                                      ScrollEvent.SCROLL);
@@ -234,7 +234,7 @@ public final class EventHandlerProperties {
     public ObjectProperty<EventHandler<? super ScrollEvent>>
             onScrollStartedProperty() {
         if (onScrollStarted == null) {
-            onScrollStarted = new EventHandlerProperty<ScrollEvent>(
+            onScrollStarted = new EventHandlerProperty<>(
                                      bean,
                                      "onScrollStarted",
                                      ScrollEvent.SCROLL_STARTED);
@@ -251,7 +251,7 @@ public final class EventHandlerProperties {
     public ObjectProperty<EventHandler<? super ScrollEvent>>
             onScrollFinishedProperty() {
         if (onScrollFinished == null) {
-            onScrollFinished = new EventHandlerProperty<ScrollEvent>(
+            onScrollFinished = new EventHandlerProperty<>(
                                      bean,
                                      "onScrollFinished",
                                      ScrollEvent.SCROLL_FINISHED);
@@ -268,7 +268,7 @@ public final class EventHandlerProperties {
     public ObjectProperty<EventHandler<? super RotateEvent>>
             onRotationStartedProperty() {
         if (onRotationStarted == null) {
-            onRotationStarted = new EventHandlerProperty<RotateEvent>(
+            onRotationStarted = new EventHandlerProperty<>(
                                      bean,
                                      "onRotationStarted",
                                      RotateEvent.ROTATION_STARTED);
@@ -285,7 +285,7 @@ public final class EventHandlerProperties {
     public ObjectProperty<EventHandler<? super RotateEvent>>
             onRotateProperty() {
         if (onRotate == null) {
-            onRotate = new EventHandlerProperty<RotateEvent>(
+            onRotate = new EventHandlerProperty<>(
                                      bean,
                                      "onRotate",
                                      RotateEvent.ROTATE);
@@ -302,7 +302,7 @@ public final class EventHandlerProperties {
     public ObjectProperty<EventHandler<? super RotateEvent>>
             onRotationFinishedProperty() {
         if (onRotationFinished == null) {
-            onRotationFinished = new EventHandlerProperty<RotateEvent>(
+            onRotationFinished = new EventHandlerProperty<>(
                                      bean,
                                      "onRotationFinished",
                                      RotateEvent.ROTATION_FINISHED);
@@ -319,7 +319,7 @@ public final class EventHandlerProperties {
     public ObjectProperty<EventHandler<? super ZoomEvent>>
             onZoomStartedProperty() {
         if (onZoomStarted == null) {
-            onZoomStarted = new EventHandlerProperty<ZoomEvent>(
+            onZoomStarted = new EventHandlerProperty<>(
                                      bean,
                                      "onZoomStarted",
                                      ZoomEvent.ZOOM_STARTED);
@@ -336,7 +336,7 @@ public final class EventHandlerProperties {
     public ObjectProperty<EventHandler<? super ZoomEvent>>
             onZoomProperty() {
         if (onZoom == null) {
-            onZoom = new EventHandlerProperty<ZoomEvent>(
+            onZoom = new EventHandlerProperty<>(
                                      bean,
                                      "onZoom",
                                      ZoomEvent.ZOOM);
@@ -353,7 +353,7 @@ public final class EventHandlerProperties {
     public ObjectProperty<EventHandler<? super ZoomEvent>>
             onZoomFinishedProperty() {
         if (onZoomFinished == null) {
-            onZoomFinished = new EventHandlerProperty<ZoomEvent>(
+            onZoomFinished = new EventHandlerProperty<>(
                                      bean,
                                      "onZoomFinished",
                                      ZoomEvent.ZOOM_FINISHED);
@@ -370,7 +370,7 @@ public final class EventHandlerProperties {
     public ObjectProperty<EventHandler<? super SwipeEvent>>
             onSwipeUpProperty() {
         if (onSwipeUp == null) {
-            onSwipeUp = new EventHandlerProperty<SwipeEvent>(
+            onSwipeUp = new EventHandlerProperty<>(
                                      bean,
                                      "onSwipeUp",
                                      SwipeEvent.SWIPE_UP);
@@ -387,7 +387,7 @@ public final class EventHandlerProperties {
     public ObjectProperty<EventHandler<? super SwipeEvent>>
             onSwipeDownProperty() {
         if (onSwipeDown == null) {
-            onSwipeDown = new EventHandlerProperty<SwipeEvent>(
+            onSwipeDown = new EventHandlerProperty<>(
                                      bean,
                                      "onSwipeDown",
                                      SwipeEvent.SWIPE_DOWN);
@@ -404,7 +404,7 @@ public final class EventHandlerProperties {
     public ObjectProperty<EventHandler<? super SwipeEvent>>
             onSwipeLeftProperty() {
         if (onSwipeLeft == null) {
-            onSwipeLeft = new EventHandlerProperty<SwipeEvent>(
+            onSwipeLeft = new EventHandlerProperty<>(
                                      bean,
                                      "onSwipeLeft",
                                      SwipeEvent.SWIPE_LEFT);
@@ -421,7 +421,7 @@ public final class EventHandlerProperties {
     public ObjectProperty<EventHandler<? super SwipeEvent>>
             onSwipeRightProperty() {
         if (onSwipeRight == null) {
-            onSwipeRight = new EventHandlerProperty<SwipeEvent>(
+            onSwipeRight = new EventHandlerProperty<>(
                                      bean,
                                      "onSwipeRight",
                                      SwipeEvent.SWIPE_RIGHT);
@@ -438,7 +438,7 @@ public final class EventHandlerProperties {
     public ObjectProperty<EventHandler<? super MouseDragEvent>>
             onMouseDragOverProperty() {
         if (onMouseDragOver == null) {
-            onMouseDragOver = new EventHandlerProperty<MouseDragEvent>(
+            onMouseDragOver = new EventHandlerProperty<>(
                                      bean,
                                      "onMouseDragOver",
                                      MouseDragEvent.MOUSE_DRAG_OVER);
@@ -455,7 +455,7 @@ public final class EventHandlerProperties {
     public ObjectProperty<EventHandler<? super MouseDragEvent>>
             onMouseDragReleasedProperty() {
         if (onMouseDragReleased == null) {
-            onMouseDragReleased = new EventHandlerProperty<MouseDragEvent>(
+            onMouseDragReleased = new EventHandlerProperty<>(
                                      bean,
                                      "onMouseDragReleased",
                                      MouseDragEvent.MOUSE_DRAG_RELEASED);
@@ -472,7 +472,7 @@ public final class EventHandlerProperties {
     public ObjectProperty<EventHandler<? super MouseDragEvent>>
             onMouseDragEnteredProperty() {
         if (onMouseDragEntered == null) {
-            onMouseDragEntered = new EventHandlerProperty<MouseDragEvent>(
+            onMouseDragEntered = new EventHandlerProperty<>(
                                      bean,
                                      "onMouseDragEntered",
                                      MouseDragEvent.MOUSE_DRAG_ENTERED);
@@ -489,7 +489,7 @@ public final class EventHandlerProperties {
     public ObjectProperty<EventHandler<? super MouseDragEvent>>
             onMouseDragExitedProperty() {
         if (onMouseDragExited == null) {
-            onMouseDragExited = new EventHandlerProperty<MouseDragEvent>(
+            onMouseDragExited = new EventHandlerProperty<>(
                                      bean,
                                      "onMouseDragExited",
                                      MouseDragEvent.MOUSE_DRAG_EXITED);
@@ -506,7 +506,7 @@ public final class EventHandlerProperties {
     public ObjectProperty<EventHandler<? super KeyEvent>>
             onKeyPressedProperty() {
         if (onKeyPressed == null) {
-            onKeyPressed = new EventHandlerProperty<KeyEvent>(
+            onKeyPressed = new EventHandlerProperty<>(
                                      bean,
                                      "onKeyPressed",
                                      KeyEvent.KEY_PRESSED);
@@ -523,7 +523,7 @@ public final class EventHandlerProperties {
     public ObjectProperty<EventHandler<? super KeyEvent>>
             onKeyReleasedProperty() {
         if (onKeyReleased == null) {
-            onKeyReleased = new EventHandlerProperty<KeyEvent>(
+            onKeyReleased = new EventHandlerProperty<>(
                                      bean,
                                      "onKeyReleased",
                                      KeyEvent.KEY_RELEASED);
@@ -540,7 +540,7 @@ public final class EventHandlerProperties {
     public ObjectProperty<EventHandler<? super KeyEvent>>
             onKeyTypedProperty() {
         if (onKeyTyped == null) {
-            onKeyTyped = new EventHandlerProperty<KeyEvent>(
+            onKeyTyped = new EventHandlerProperty<>(
                                      bean,
                                      "onKeyTyped",
                                      KeyEvent.KEY_TYPED);
@@ -560,7 +560,7 @@ public final class EventHandlerProperties {
             onInputMethodTextChangedProperty() {
         if (onInputMethodTextChanged == null) {
             onInputMethodTextChanged =
-                    new EventHandlerProperty<InputMethodEvent>(
+                    new EventHandlerProperty<>(
                             bean,
                             "onInputMethodTextChanged",
                             InputMethodEvent.INPUT_METHOD_TEXT_CHANGED);
@@ -577,7 +577,7 @@ public final class EventHandlerProperties {
     public ObjectProperty<EventHandler<? super DragEvent>>
             onDragEnteredProperty() {
         if (onDragEntered == null) {
-            onDragEntered = new EventHandlerProperty<DragEvent>(
+            onDragEntered = new EventHandlerProperty<>(
                                     bean,
                                     "onDragEntered",
                                     DragEvent.DRAG_ENTERED);
@@ -594,7 +594,7 @@ public final class EventHandlerProperties {
     public ObjectProperty<EventHandler<? super DragEvent>>
             onDragExitedProperty() {
         if (onDragExited == null) {
-            onDragExited = new EventHandlerProperty<DragEvent>(
+            onDragExited = new EventHandlerProperty<>(
                                     bean,
                                     "onDragExited",
                                     DragEvent.DRAG_EXITED);
@@ -611,7 +611,7 @@ public final class EventHandlerProperties {
     public ObjectProperty<EventHandler<? super DragEvent>>
             onDragOverProperty() {
         if (onDragOver == null) {
-            onDragOver = new EventHandlerProperty<DragEvent>(
+            onDragOver = new EventHandlerProperty<>(
                                     bean,
                                     "onDragOver",
                                     DragEvent.DRAG_OVER);
@@ -645,7 +645,7 @@ public final class EventHandlerProperties {
     public ObjectProperty<EventHandler<? super DragEvent>>
             onDragDroppedProperty() {
         if (onDragDropped == null) {
-            onDragDropped = new EventHandlerProperty<DragEvent>(
+            onDragDropped = new EventHandlerProperty<>(
                                     bean,
                                     "onDragDropped",
                                     DragEvent.DRAG_DROPPED);
@@ -662,7 +662,7 @@ public final class EventHandlerProperties {
     public ObjectProperty<EventHandler<? super DragEvent>>
             onDragDoneProperty() {
         if (onDragDone == null) {
-            onDragDone = new EventHandlerProperty<DragEvent>(
+            onDragDone = new EventHandlerProperty<>(
                                     bean,
                                     "onDragDone",
                                     DragEvent.DRAG_DONE);
@@ -696,7 +696,7 @@ public final class EventHandlerProperties {
     public ObjectProperty<EventHandler<? super TouchEvent>>
             onTouchPressedProperty() {
         if (onTouchPressed == null) {
-            onTouchPressed = new EventHandlerProperty<TouchEvent>(
+            onTouchPressed = new EventHandlerProperty<>(
                                      bean,
                                      "onTouchPressed",
                                      TouchEvent.TOUCH_PRESSED);
@@ -713,7 +713,7 @@ public final class EventHandlerProperties {
     public ObjectProperty<EventHandler<? super TouchEvent>>
             onTouchMovedProperty() {
         if (onTouchMoved == null) {
-            onTouchMoved = new EventHandlerProperty<TouchEvent>(
+            onTouchMoved = new EventHandlerProperty<>(
                                      bean,
                                      "onTouchMoved",
                                      TouchEvent.TOUCH_MOVED);
@@ -730,7 +730,7 @@ public final class EventHandlerProperties {
     public ObjectProperty<EventHandler<? super TouchEvent>>
             onTouchReleasedProperty() {
         if (onTouchReleased == null) {
-            onTouchReleased = new EventHandlerProperty<TouchEvent>(
+            onTouchReleased = new EventHandlerProperty<>(
                                      bean,
                                      "onTouchReleased",
                                      TouchEvent.TOUCH_RELEASED);
@@ -747,7 +747,7 @@ public final class EventHandlerProperties {
     public ObjectProperty<EventHandler<? super TouchEvent>>
             onTouchStationaryProperty() {
         if (onTouchStationary == null) {
-            onTouchStationary = new EventHandlerProperty<TouchEvent>(
+            onTouchStationary = new EventHandlerProperty<>(
                                      bean,
                                      "onTouchStationary",
                                      TouchEvent.TOUCH_STATIONARY);

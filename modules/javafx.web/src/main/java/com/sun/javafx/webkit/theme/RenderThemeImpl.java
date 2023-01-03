@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -73,7 +73,7 @@ public final class RenderThemeImpl extends RenderTheme {
         METER          (8),
         SCROLLBAR      (9);
 
-        private static final HashMap<Integer, WidgetType> map = new HashMap<Integer, WidgetType>();
+        private static final HashMap<Integer, WidgetType> map = new HashMap<>();
         private final int value;
 
         private WidgetType(int value) { this.value = value; }
@@ -81,7 +81,7 @@ public final class RenderThemeImpl extends RenderTheme {
         static { for (WidgetType v: values()) map.put(v.value, v); }
 
         private static WidgetType convert(int index) { return map.get(index); }
-    };
+    }
 
     private Accessor accessor;
     private boolean isDefault; // indicates if the instance is used in non-page context
@@ -172,7 +172,7 @@ public final class RenderThemeImpl extends RenderTheme {
                 }
             }
             ids.put(id, updateContentCycleID);
-            pool.put(id, new WeakReference<T>(control));
+            pool.put(id, new WeakReference<>(control));
         }
 
         void clear() {
@@ -232,7 +232,7 @@ public final class RenderThemeImpl extends RenderTheme {
 
     public RenderThemeImpl(final Accessor accessor) {
         this.accessor = accessor;
-        pool = new Pool<FormControl>(fc -> {
+        pool = new Pool<>(fc -> {
             // Remove the control from WebView when it's removed from the pool.
             accessor.removeChild(fc.asControl());
         }, FormControl.class);
@@ -413,7 +413,7 @@ public final class RenderThemeImpl extends RenderTheme {
         private final WeakReference<FormControl> fcRef;
 
         private FormControlRef(FormControl fc) {
-            this.fcRef = new WeakReference<FormControl>(fc);
+            this.fcRef = new WeakReference<>(fc);
         }
 
         private FormControl asFormControl() {
@@ -442,7 +442,7 @@ public final class RenderThemeImpl extends RenderTheme {
             if (isPressed()) arm(); else disarm();
         }
 
-        @Override public WidgetType getType() { return WidgetType.BUTTON; };
+        @Override public WidgetType getType() { return WidgetType.BUTTON; }
     }
 
     private static final class FormTextField extends TextField implements FormControl {
@@ -460,7 +460,7 @@ public final class RenderThemeImpl extends RenderTheme {
             setHover(hasState(state, RenderTheme.HOVERED) && !isDisabled());
         }
 
-        @Override public WidgetType getType() { return WidgetType.TEXTFIELD; };
+        @Override public WidgetType getType() { return WidgetType.TEXTFIELD; }
     }
 
     private static final class FormCheckBox extends CheckBox implements FormControl {
@@ -474,7 +474,7 @@ public final class RenderThemeImpl extends RenderTheme {
             setSelected(hasState(state, RenderTheme.CHECKED));
         }
 
-        @Override public WidgetType getType() { return WidgetType.CHECKBOX; };
+        @Override public WidgetType getType() { return WidgetType.CHECKBOX; }
     }
 
     private static final class FormRadioButton extends RadioButton implements FormControl {
@@ -488,7 +488,7 @@ public final class RenderThemeImpl extends RenderTheme {
             setSelected(hasState(state, RenderTheme.CHECKED));
         }
 
-        @Override public WidgetType getType() { return WidgetType.RADIOBUTTON; };
+        @Override public WidgetType getType() { return WidgetType.RADIOBUTTON; }
     }
 
     private static final class FormSlider extends Slider implements FormControl {
@@ -501,7 +501,7 @@ public final class RenderThemeImpl extends RenderTheme {
             setHover(hasState(state, RenderTheme.HOVERED) && !isDisabled());
         }
 
-        @Override public WidgetType getType() { return WidgetType.SLIDER; };
+        @Override public WidgetType getType() { return WidgetType.SLIDER; }
     }
 
     private static final class FormProgressBar extends ProgressBar implements FormControl {
@@ -519,14 +519,14 @@ public final class RenderThemeImpl extends RenderTheme {
             setHover(hasState(state, RenderTheme.HOVERED) && !isDisabled());
         }
 
-        @Override public WidgetType getType() { return type; };
+        @Override public WidgetType getType() { return type; }
     }
 
     private static final class FormMenuList extends ChoiceBox implements FormControl {
 
         private FormMenuList() {
             // Adding a dummy item to please ChoiceBox.
-            List<String> l = new ArrayList<String>();
+            List<String> l = new ArrayList<>();
             l.add("");
             setItems(FXCollections.observableList(l));
         }
@@ -539,7 +539,7 @@ public final class RenderThemeImpl extends RenderTheme {
             setHover(hasState(state, RenderTheme.HOVERED) && !isDisabled());
         }
 
-        @Override public WidgetType getType() { return WidgetType.MENULIST; };
+        @Override public WidgetType getType() { return WidgetType.MENULIST; }
     }
 
     private static final class FormMenuListButton extends Button implements FormControl {
@@ -589,6 +589,6 @@ public final class RenderThemeImpl extends RenderTheme {
             }
         }
 
-        @Override public WidgetType getType() { return WidgetType.MENULISTBUTTON; };
+        @Override public WidgetType getType() { return WidgetType.MENULISTBUTTON; }
     }
 }

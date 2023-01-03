@@ -136,6 +136,7 @@ template<typename CharacterType> static std::optional<int> parseIntWithinLimits(
     return value;
 }
 
+// https://html.spec.whatwg.org/multipage/common-microsyntaxes.html#months
 template<typename CharacterType> bool DateComponents::parseYear(StringParsingBuffer<CharacterType>& buffer)
 {
     unsigned digitsLength = countDigits(buffer);
@@ -337,6 +338,7 @@ bool DateComponents::addMinute(int minute)
     return true;
 }
 
+// https://html.spec.whatwg.org/multipage/common-microsyntaxes.html#time-zones
 // Parses a timezone part, and adjust year, month, monthDay, hour, minute, second, millisecond.
 template<typename CharacterType> bool DateComponents::parseTimeZone(StringParsingBuffer<CharacterType>& buffer)
 {
@@ -373,6 +375,7 @@ template<typename CharacterType> bool DateComponents::parseTimeZone(StringParsin
     return true;
 }
 
+// https://html.spec.whatwg.org/multipage/common-microsyntaxes.html#months
 template<typename CharacterType> bool DateComponents::parseMonth(StringParsingBuffer<CharacterType>& buffer)
 {
     if (!parseYear(buffer))
@@ -394,6 +397,7 @@ template<typename CharacterType> bool DateComponents::parseMonth(StringParsingBu
     return true;
 }
 
+// https://html.spec.whatwg.org/multipage/common-microsyntaxes.html#dates
 template<typename CharacterType> bool DateComponents::parseDate(StringParsingBuffer<CharacterType>& buffer)
 {
     if (!parseMonth(buffer))
@@ -414,6 +418,7 @@ template<typename CharacterType> bool DateComponents::parseDate(StringParsingBuf
     return true;
 }
 
+// https://html.spec.whatwg.org/multipage/common-microsyntaxes.html#weeks
 template<typename CharacterType> bool DateComponents::parseWeek(StringParsingBuffer<CharacterType>& buffer)
 {
     if (!parseYear(buffer))
@@ -436,6 +441,7 @@ template<typename CharacterType> bool DateComponents::parseWeek(StringParsingBuf
     return true;
 }
 
+// https://html.spec.whatwg.org/multipage/common-microsyntaxes.html#times
 template<typename CharacterType> bool DateComponents::parseTime(StringParsingBuffer<CharacterType>& buffer)
 {
     auto hour = parseIntWithinLimits(buffer, 2, 0, 23);
@@ -471,12 +477,10 @@ template<typename CharacterType> bool DateComponents::parseTime(StringParsingBuf
                     } else if (digitsLength == 2) {
                         millisecond = parseInt(temporaryBuffer, 2);
                         *millisecond *= 10;
-                    } else {
-                        // Regardless of the number of digits, we only ever parse at most 3. All other
-                        // digits after that are ignored, but the buffer is incremented as if they were
-                        // all parsed.
+                    } else if (digitsLength == 3)
                         millisecond = parseInt(temporaryBuffer, 3);
-                    }
+                    else
+                        return false;
 
                     // Due to the countDigits above, the parseInt calls should all be successful.
                     ASSERT(millisecond);
@@ -496,12 +500,20 @@ template<typename CharacterType> bool DateComponents::parseTime(StringParsingBuf
     return true;
 }
 
+// Gecko allows both 'T' and a space as datetime-local separator (see https://github.com/whatwg/html/issues/2276).
+// WPT tests also expect this behavior.
+template<typename CharacterType> static bool isDateTimeLocalSeparator(CharacterType c)
+{
+    return c == 'T' || c == ' ';
+}
+
+// https://html.spec.whatwg.org/multipage/common-microsyntaxes.html#local-dates-and-times
 template<typename CharacterType> bool DateComponents::parseDateTimeLocal(StringParsingBuffer<CharacterType>& buffer)
 {
     if (!parseDate(buffer))
         return false;
 
-    if (!skipExactly(buffer, 'T'))
+    if (!skipExactly<isDateTimeLocalSeparator>(buffer))
         return false;
 
     if (!parseTime(buffer))
@@ -753,8 +765,14 @@ String DateComponents::toStringForTime(SecondFormat format) const
         return makeString(pad('0', 2, m_hour), ':', pad('0', 2, m_minute));
     case SecondFormat::Second:
         return makeString(pad('0', 2, m_hour), ':', pad('0', 2, m_minute), ':', pad('0', 2, m_second));
-    case SecondFormat::Millisecond:
-        return makeString(pad('0', 2, m_hour), ':', pad('0', 2, m_minute), ':', pad('0', 2, m_second), '.', pad('0', 3, m_millisecond));
+    case SecondFormat::Millisecond: {
+        auto resultWithoutMilliseconds = makeString(pad('0', 2, m_hour), ':', pad('0', 2, m_minute), ':', pad('0', 2, m_second), '.');
+        if (!(m_millisecond % 100))
+            return makeString(resultWithoutMilliseconds, m_millisecond / 100);
+        if (!(m_millisecond % 10))
+            return makeString(resultWithoutMilliseconds, pad('0', 2, m_millisecond / 10));
+        return makeString(resultWithoutMilliseconds, pad('0', 3, m_millisecond));
+    }
     }
 }
 

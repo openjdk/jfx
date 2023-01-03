@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -51,6 +51,7 @@ public interface SortableList<E> extends List<E> {
      * @throws UnsupportedOperationException if the specified list's
      *         list-iterator does not support the <tt>set</tt> operation.
      */
+    @Override
     public void sort(Comparator<? super E> comparator);
 
 }

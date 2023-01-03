@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -57,6 +57,7 @@ public abstract class AbstractAsyncOperation<V> implements AsyncOperation,
         Callable<V> callable = () -> AbstractAsyncOperation.this.call();
 
         final Runnable completionRunnable = new Runnable() {
+            @Override
             public void run() {
                 if (future.isCancelled()) {
                     listener.onCancel();
@@ -74,7 +75,7 @@ public abstract class AbstractAsyncOperation<V> implements AsyncOperation,
             }
         };
 
-        future = new FutureTask<V>(callable) {
+        future = new FutureTask<>(callable) {
             @Override
             protected void done() {
                 try {
@@ -87,18 +88,22 @@ public abstract class AbstractAsyncOperation<V> implements AsyncOperation,
         };
     }
 
+    @Override
     public boolean isCancelled() {
         return future.isCancelled();
     }
 
+    @Override
     public boolean isDone() {
         return future.isDone();
     }
 
+    @Override
     public void cancel() {
         future.cancel(true);
     }
 
+    @Override
     public void start() {
         BackgroundExecutor.getExecutor().execute(future);
     }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -471,7 +471,7 @@ class ES2Context extends BaseShaderContext {
 
     void renderMeshView(long nativeHandle, Graphics g, ES2MeshView meshView) {
 
-        ES2Shader shader = (ES2Shader) getPhongShader(meshView);
+        ES2Shader shader = getPhongShader(meshView);
         setShaderProgram(shader.getProgramObject());
 
         // Support retina display by scaling the projViewTx and pass it to the shader.

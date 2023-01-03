@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2015, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,10 +24,8 @@
  */
 package javafx.collections;
 
-import com.sun.javafx.collections.ListListenerHelper;
 import com.sun.javafx.collections.ObservableListWrapper;
 import java.util.List;
-import javafx.beans.InvalidationListener;
 
 public class ObservableListWrapperShim<E> extends ObservableListWrapper<E> {
 

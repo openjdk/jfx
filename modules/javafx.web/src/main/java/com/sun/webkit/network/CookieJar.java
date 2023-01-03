@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -54,8 +54,8 @@ final class CookieJar {
                 return;
             }
 
-            Map<String, List<String>> headers = new HashMap<String, List<String>>();
-            List<String> val = new ArrayList<String>();
+            Map<String, List<String>> headers = new HashMap<>();
+            List<String> val = new ArrayList<>();
             val.add(cookie);
             headers.put("Set-Cookie", val);
             try {
@@ -80,7 +80,7 @@ final class CookieJar {
                 return null;
             }
 
-            Map<String, List<String>> headers = new HashMap<String, List<String>>();
+            Map<String, List<String>> headers = new HashMap<>();
             Map<String, List<String>> val = null;
             try {
                 val = handler.get(uri, headers);

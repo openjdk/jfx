@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -37,6 +37,7 @@ class FTDisposer implements DisposerRecord  {
         this.face = face;
     }
 
+    @Override
     public synchronized void dispose() {
         if (face != 0) {
             OSFreetype.FT_Done_Face(face);

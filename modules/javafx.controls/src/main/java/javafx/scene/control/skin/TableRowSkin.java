@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -60,7 +60,6 @@ public class TableRowSkin<T> extends TableRowSkinBase<T, TableRow<T>, TableCell<
      *                                                                         *
      **************************************************************************/
 
-    private TableViewSkin<T> tableViewSkin;
     private final BehaviorBase<TableRow<T>> behavior;
 
 
@@ -83,13 +82,8 @@ public class TableRowSkin<T> extends TableRowSkinBase<T, TableRow<T>, TableCell<
 
         // install default input map for the TableRow control
         behavior = new TableRowBehavior<>(control);
-//        control.setInputMap(behavior.getInputMap());
-
-        updateTableViewSkin();
 
         registerChangeListener(control.tableViewProperty(), e -> {
-            updateTableViewSkin();
-
             for (int i = 0, max = cells.size(); i < max; i++) {
                 Node n = cells.get(i);
                 if (n instanceof TableCell) {
@@ -123,7 +117,10 @@ public class TableRowSkin<T> extends TableRowSkinBase<T, TableRow<T>, TableCell<
                 // When in fixed cell size mode, we must listen to the width of the virtual flow, so
                 // that when it changes, we can appropriately add / remove cells that may or may not
                 // be required (because we remove all cells that are not visible).
-                registerChangeListener(getVirtualFlow().widthProperty(), e -> tableView.requestLayout());
+                VirtualFlow<TableRow<T>> virtualFlow = getVirtualFlow();
+                if (virtualFlow != null) {
+                    registerChangeListener(virtualFlow.widthProperty(), e -> tableView.requestLayout());
+                }
             }
         }
     }
@@ -147,22 +144,25 @@ public class TableRowSkin<T> extends TableRowSkinBase<T, TableRow<T>, TableCell<
     @Override protected Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
         switch (attribute) {
             case SELECTED_ITEMS: {
-                // FIXME this could be optimised to iterate over cellsMap only
-                // (selectedCells could be big, cellsMap is much smaller)
-                List<Node> selection = new ArrayList<>();
-                int index = getSkinnable().getIndex();
-                for (TablePosition<T,?> pos : getTableView().getSelectionModel().getSelectedCells()) {
-                    if (pos.getRow() == index) {
-                        TableColumn<T,?> column = pos.getTableColumn();
-                        if (column == null) {
-                            /* This is the row-based case */
-                            column = getTableView().getVisibleLeafColumn(0);
+                if (getTableView().getSelectionModel() != null) {
+                    // FIXME this could be optimised to iterate over cellsMap only
+                    // (selectedCells could be big, cellsMap is much smaller)
+                    List<Node> selection = new ArrayList<>();
+                    int index = getSkinnable().getIndex();
+                    for (TablePosition<T,?> pos : getTableView().getSelectionModel().getSelectedCells()) {
+                        if (pos.getRow() == index) {
+                            TableColumn<T,?> column = pos.getTableColumn();
+                            if (column == null) {
+                                /* This is the row-based case */
+                                column = getTableView().getVisibleLeafColumn(0);
+                            }
+                            TableCell<T,?> cell = cellsMap.get(column).get();
+                            if (cell != null) selection.add(cell);
                         }
-                        TableCell<T,?> cell = cellsMap.get(column).get();
-                        if (cell != null) selection.add(cell);
+                        return FXCollections.observableArrayList(selection);
                     }
-                    return FXCollections.observableArrayList(selection);
                 }
+                return FXCollections.observableArrayList();
             }
             case CELL_AT_ROW_COLUMN: {
                 int colIndex = (Integer)parameters[1];
@@ -185,7 +185,8 @@ public class TableRowSkin<T> extends TableRowSkinBase<T, TableRow<T>, TableCell<
                 }
                 return null;
             }
-            default: return super.queryAccessibleAttribute(attribute, parameters);
+            default:
+                return super.queryAccessibleAttribute(attribute, parameters);
         }
     }
 
@@ -229,16 +230,12 @@ public class TableRowSkin<T> extends TableRowSkinBase<T, TableRow<T>, TableCell<
         return getSkinnable().getTableView();
     }
 
-    private void updateTableViewSkin() {
-        TableView<T> tableView = getSkinnable().getTableView();
-        if (tableView != null && tableView.getSkin() instanceof TableViewSkin) {
-            tableViewSkin = (TableViewSkin)tableView.getSkin();
-        }
-    }
-
     // test-only
     TableViewSkin<T> getTableViewSkin() {
-        return tableViewSkin;
+        TableView<T> tableView = getSkinnable().getTableView();
+        if (tableView != null && tableView.getSkin() instanceof TableViewSkin) {
+            return (TableViewSkin)tableView.getSkin();
+        }
+        return null;
     }
-
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -182,7 +182,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
      * <p>
      * This is package private ONLY FOR TESTING
      */
-    final ArrayLinkedList<T> cells = new ArrayLinkedList<T>();
+    final ArrayLinkedList<T> cells = new ArrayLinkedList<>();
 
     /**
      * A structure containing cells that can be reused later. These are cells
@@ -191,7 +191,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
      * <p>
      * This is package private ONLY FOR TESTING
      */
-    final ArrayLinkedList<T> pile = new ArrayLinkedList<T>();
+    final ArrayLinkedList<T> pile = new ArrayLinkedList<>();
 
     /**
      * A special cell used to accumulate bounds, such that we reduce object
@@ -304,7 +304,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
     private boolean needBreadthBar;
     private boolean needLengthBar;
     private boolean tempVisibility = false;
-
+    private boolean suppressBreadthBar;
 
 
     /* *************************************************************************
@@ -979,7 +979,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
      */
     public final ObjectProperty<Callback<VirtualFlow<T>, T>> cellFactoryProperty() {
         if (cellFactory == null) {
-            cellFactory = new SimpleObjectProperty<Callback<VirtualFlow<T>, T>>(this, "cellFactory") {
+            cellFactory = new SimpleObjectProperty<>(this, "cellFactory") {
                 @Override protected void invalidated() {
                     if (get() != null) {
                         setNeedsLayout(true);
@@ -2072,7 +2072,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
      */
     void addLeadingCells(int currentIndex, double startOffset) {
         // The offset will keep track of the distance from the top of the
-        // viewport to the top of the current index. We will increment it
+        // viewport to the top of the current index. We will decrement it
         // as we lay out leading cells.
         double offset = startOffset;
         // The index is the absolute index of the cell being laid out
@@ -2378,6 +2378,13 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
     }
 
     /**
+     * Suppresses the breadth bar from appearing.
+     */
+    void setSuppressBreadthBar(boolean suppress) {
+        this.suppressBreadthBar = suppress;
+    }
+
+    /**
      * @return true if bar visibility changed
      */
     private boolean computeBarVisiblity() {
@@ -2409,8 +2416,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
                 barVisibilityChanged = true;
             }
 
-            // second conditional removed for RT-36669.
-            final boolean breadthBarVisible = (maxPrefBreadth > viewportBreadth);// || (needLengthBar && maxPrefBreadth > (viewportBreadth - lengthBarBreadth));
+            final boolean breadthBarVisible = !suppressBreadthBar && (maxPrefBreadth > viewportBreadth);
             if (breadthBarVisible ^ needBreadthBar) {
                 needBreadthBar = breadthBarVisible;
                 barVisibilityChanged = true;
@@ -2877,6 +2883,10 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         double p = com.sun.javafx.util.Utils.clamp(0, position, 1);
         double bound = 0d;
         double estSize = estimatedSize / getCellCount();
+        double maxOff = estimatedSize - getViewportLength();
+        if ((maxOff > 0) && (absoluteOffset > maxOff)) {
+            return maxOff - absoluteOffset;
+        }
 
         for (int i = 0; i < getCellCount(); i++) {
             double h = getCellSize(i);
@@ -3069,45 +3079,51 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         recalculateAndImproveEstimatedSize(DEFAULT_IMPROVEMENT);
     }
 
+    private boolean recalculating = false;
+
     private void recalculateAndImproveEstimatedSize(int improve) {
-        int itemCount = getCellCount();
-        int cacheCount = itemSizeCache.size();
-        boolean keepRatio = ((cacheCount > 0) && !Double.isInfinite(this.absoluteOffset));
-        double estSize = estimatedSize / itemCount;
+        if (recalculating) return;
+        recalculating = true;
+        try {
+            int itemCount = getCellCount();
+            int cacheCount = itemSizeCache.size();
+            boolean keepRatio = ((cacheCount > 0) && !Double.isInfinite(this.absoluteOffset));
 
-        int oldIndex = computeCurrentIndex();
-        double oldOffset = computeViewportOffset(getPosition());
-        int added = 0;
-        while ((itemCount > itemSizeCache.size()) && (added < improve)) {
-            getOrCreateCellSize(itemSizeCache.size());
-            added++;
-        }
-        cacheCount = itemSizeCache.size();
-        int cnt = 0;
-        double tot = 0d;
-        for (int i = 0; (i < itemCount && i < cacheCount); i++) {
-            Double il = itemSizeCache.get(i);
-            if (il != null) {
-                tot = tot + il;
-                cnt++;
+            int oldIndex = computeCurrentIndex();
+            double oldOffset = computeViewportOffset(getPosition());
+            int added = 0;
+            while ((itemCount > itemSizeCache.size()) && (added < improve)) {
+                getOrCreateCellSize(itemSizeCache.size());
+                added++;
             }
-        }
-        this.estimatedSize = cnt == 0 ? 1d : tot * itemCount / cnt;
-        estSize = estimatedSize / itemCount;
-
-        if (keepRatio) {
-            double newOffset = 0;
-            for (int i = 0; i < oldIndex; i++) {
-                double h = getCellSize(i);
-                if (h < 0) {
-                    h = estSize;
+            cacheCount = itemSizeCache.size();
+            int cnt = 0;
+            double tot = 0d;
+            for (int i = 0; (i < itemCount && i < cacheCount); i++) {
+                Double il = itemSizeCache.get(i);
+                if (il != null) {
+                    tot = tot + il;
+                    cnt++;
                 }
-                newOffset += h;
             }
-            this.absoluteOffset = newOffset + oldOffset;
-            adjustPosition();
-        }
+            this.estimatedSize = cnt == 0 ? 1d : tot * itemCount / cnt;
+            double estSize = estimatedSize / itemCount;
 
+            if (keepRatio) {
+                double newOffset = 0;
+                for (int i = 0; i < oldIndex; i++) {
+                    double h = getCellSize(i);
+                    if (h < 0) {
+                        h = estSize;
+                    }
+                    newOffset += h;
+                }
+                this.absoluteOffset = newOffset + oldOffset;
+                adjustPosition();
+            }
+        } finally {
+            recalculating = false;
+        }
     }
 
     private void resetSizeEstimates() {
@@ -3216,7 +3232,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         private int lastIndex = -1;
 
         public ArrayLinkedList() {
-            array = new ArrayList<T>(50);
+            array = new ArrayList<>(50);
 
             for (int i = 0; i < 50; i++) {
                 array.add(null);
@@ -3265,14 +3281,17 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
             }
         }
 
+        @Override
         public int size() {
             return firstIndex == -1 ? 0 : lastIndex - firstIndex + 1;
         }
 
+        @Override
         public boolean isEmpty() {
             return firstIndex == -1;
         }
 
+        @Override
         public T get(int index) {
             if (index > (lastIndex - firstIndex) || index < 0) {
                 // Commented out exception due to RT-29111
@@ -3283,6 +3302,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
             return array.get(firstIndex + index);
         }
 
+        @Override
         public void clear() {
             for (int i = 0; i < array.size(); i++) {
                 array.set(i, null);
@@ -3301,6 +3321,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
             return remove(lastIndex - firstIndex);
         }
 
+        @Override
         public T remove(int index) {
             if (index > lastIndex - firstIndex || index < 0) {
                 throw new ArrayIndexOutOfBoundsException();

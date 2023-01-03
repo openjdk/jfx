@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -32,6 +32,7 @@
 #include <MediaManagement/MediaManager.h>
 #include <PipelineManagement/PipelineOptions.h>
 #include <PipelineManagement/VideoFrame.h>
+#include <Locator/Locator.h>
 #include <Locator/LocatorStream.h>
 #include <jni/JniUtils.h>
 #include <jni/JavaInputStreamCallbacks.h>
@@ -48,35 +49,12 @@ using namespace std;
 extern "C" {
 #endif
 
-    static jstring LocatorToString(JNIEnv *env, jobject locator)
-    {
-        static jmethodID mid_toString = 0;
-        jstring result = NULL;
-        CJavaEnvironment javaEnv(env);
-
-        if (mid_toString == 0)
-        {
-            jclass klass = env->GetObjectClass(locator);
-
-            mid_toString = env->GetMethodID(klass, "getStringLocation", "()Ljava/lang/String;");
-            env->DeleteLocalRef(klass);
-            if (javaEnv.clearException())
-                return NULL;
-        }
-
-        result = (jstring)env->CallObjectMethod(locator, mid_toString);
-        if (javaEnv.clearException())
-            return NULL;
-
-        return result;
-    }
-
     static jint InitMedia(JNIEnv *env, CPipelineOptions* pOptions, jobject jLocator, jstring jContentType, jlong jSizeHint,
                           jlongArray jlMediaHandle)
     {
         CMedia*         pMedia = NULL;
         char*           pjContent = (char*)env->GetStringUTFChars(jContentType , NULL);
-        jstring         jLocation = LocatorToString(env, jLocator);
+        jstring         jLocation = CLocator::LocatorGetStringLocation(env, jLocator);
         char*           pjLocation = NULL;
         CMediaManager*  pManager = NULL;
         uint32_t        uErrCode = CMediaManager::GetInstance(&pManager);

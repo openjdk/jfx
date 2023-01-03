@@ -37,17 +37,18 @@ import java.util.function.UnaryOperator;
  * A Formatter describes a format of a {@code TextInputControl} text by using two distinct mechanisms:
  * <ul>
  *     <li>A filter ({@link #getFilter()}) that can intercept and modify user input. This helps to keep the text
- *     in the desired format. A default text supplier can be used to provide the intial text.</li>
+ *     in the desired format. A default text supplier can be used to provide the initial text.</li>
  *     <li>A value converter ({@link #getValueConverter()}) and value ({@link #valueProperty()})
  *     can be used to provide special format that represents a value of type {@code V}.
- *     If the control is editable and the text is changed by the user, the value is then updated to correspond to the text.
+ *     If the control is editable and the text is changed by the user, the value is then updated to correspond to the
+ *     text.
  * </ul>
  * <p>
- * It's possible to have a formatter with just filter or value converter. If value converter is not provided however, setting a value will
- * result in an {@code IllegalStateException} and the value is always null.
+ * It's possible to have a formatter with just a filter or a value converter. If a value converter is not provided,
+ * setting a value will result in an {@code IllegalStateException} and the value is always {@code null}.
  * <p>
- * Since {@code Formatter} contains a value which represents the state of the {@code TextInputControl} to which it is currently assigned, a single
- * {@code Formatter} instance can be used only in one {@code TextInputControl} at a time.
+ * Since {@code Formatter} contains a value that represents the state of the {@code TextInputControl} to which it is
+ * currently assigned, a single {@code Formatter} instance can be used only in one {@code TextInputControl} at a time.
  *
  * @param <V> The type of the value
  * @since JavaFX 8u40
@@ -62,7 +63,7 @@ public class TextFormatter<V> {
      * This string converter converts the text to the same String value. This might be useful for cases where you
      * want to manipulate with the text through the value or you need to provide a default text value.
      */
-    public static final StringConverter<String> IDENTITY_STRING_CONVERTER = new StringConverter<String>() {
+    public static final StringConverter<String> IDENTITY_STRING_CONVERTER = new StringConverter<>() {
         @Override
         public String toString(String object) {
             return object == null ? "" : object;
@@ -144,7 +145,7 @@ public class TextFormatter<V> {
      * The current value for this formatter. When the formatter is set on a {@code TextInputControl} and has a
      * {@code valueConverter}, the value is set by the control, when the text is commited.
      */
-    private final ObjectProperty<V> value = new ObjectPropertyBase<V>() {
+    private final ObjectProperty<V> value = new ObjectPropertyBase<>() {
 
         @Override
         public Object getBean() {

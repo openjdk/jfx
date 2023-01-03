@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -292,10 +292,10 @@ public class DisplacementMap extends CoreEffect<RenderState> {
     @Override
     public Point2D untransform(Point2D p, Effect defaultInput) {
         BaseBounds r = getBounds(BaseTransform.IDENTITY_TRANSFORM, defaultInput);
-        float rw = (float) r.getWidth();
-        float rh = (float) r.getHeight();
-        float x = (float) ((p.x - r.getMinX()) / rw);
-        float y = (float) ((p.y - r.getMinY()) / rh);
+        float rw = r.getWidth();
+        float rh = r.getHeight();
+        float x = (p.x - r.getMinX()) / rw;
+        float y = (p.y - r.getMinY()) / rh;
         // If the coordinates are outside of the effect there is no
         // displacement effect occuring so we do not transform the point.
         if (x >= 0 && y >= 0 && x < 1 && y < 1) {

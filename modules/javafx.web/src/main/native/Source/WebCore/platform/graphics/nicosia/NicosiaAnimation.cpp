@@ -21,6 +21,7 @@
 #include "NicosiaAnimation.h"
 
 #include "LayoutSize.h"
+#include "TranslateTransformOperation.h"
 
 namespace Nicosia {
 
@@ -166,9 +167,35 @@ static const TimingFunction& timingFunctionForAnimationValue(const AnimationValu
     return CubicBezierTimingFunction::defaultTimingFunction();
 }
 
+static KeyframeValueList createThreadsafeKeyFrames(const KeyframeValueList& originalKeyframes, const FloatSize& boxSize)
+{
+    if (originalKeyframes.property() != AnimatedPropertyTransform)
+        return originalKeyframes;
+
+    // Currently translation operations are the only transform operations that store a non-fixed
+    // Length. Some Lengths, in particular those for calc() operations, are not thread-safe or
+    // multiprocess safe, because they maintain indices into a shared HashMap of CalculationValues.
+    // This code converts all possible unsafe Length parameters to fixed Lengths, which are safe to
+    // use in other threads and across IPC channels.
+    KeyframeValueList keyframes = originalKeyframes;
+    for (unsigned i = 0; i < keyframes.size(); i++) {
+        const auto& transformValue = static_cast<const TransformAnimationValue&>(keyframes.at(i));
+        for (auto& operation : transformValue.value().operations()) {
+            if (is<TranslateTransformOperation>(operation)) {
+                TranslateTransformOperation* translation = static_cast<TranslateTransformOperation*>(operation.get());
+                translation->setX(Length(translation->xAsFloat(boxSize), LengthType::Fixed));
+                translation->setY(Length(translation->yAsFloat(boxSize), LengthType::Fixed));
+                translation->setZ(Length(translation->zAsFloat(), LengthType::Fixed));
+            }
+        }
+    }
+
+    return keyframes;
+}
+
 Animation::Animation(const String& name, const KeyframeValueList& keyframes, const FloatSize& boxSize, const WebCore::Animation& animation, bool listsMatch, MonotonicTime startTime, Seconds pauseTime, AnimationState state)
     : m_name(name.isSafeToSendToAnotherThread() ? name : name.isolatedCopy())
-    , m_keyframes(keyframes)
+    , m_keyframes(createThreadsafeKeyFrames(keyframes, boxSize))
     , m_boxSize(boxSize)
     , m_timingFunction(animation.timingFunction()->clone())
     , m_iterationCount(animation.iterationCount())
@@ -248,7 +275,7 @@ void Animation::apply(ApplicationResult& applicationResults, MonotonicTime time)
     }
     if (m_keyframes.size() == 2) {
         auto& timingFunction = timingFunctionForAnimationValue(m_keyframes.at(0), *this);
-        normalizedValue = timingFunction.transformTime(normalizedValue, m_duration);
+        normalizedValue = timingFunction.transformProgress(normalizedValue, m_duration);
         applyInternal(applicationResults, m_keyframes.at(0), m_keyframes.at(1), normalizedValue);
         return;
     }
@@ -261,7 +288,7 @@ void Animation::apply(ApplicationResult& applicationResults, MonotonicTime time)
 
         normalizedValue = (normalizedValue - from.keyTime()) / (to.keyTime() - from.keyTime());
         auto& timingFunction = timingFunctionForAnimationValue(from, *this);
-        normalizedValue = timingFunction.transformTime(normalizedValue, m_duration);
+        normalizedValue = timingFunction.transformProgress(normalizedValue, m_duration);
         applyInternal(applicationResults, from, to, normalizedValue);
         break;
     }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -74,7 +74,7 @@ public class ObservableListTest  {
     @Before
     public void setUp() throws Exception {
         list = listFactory.call();
-        mlo = new MockListObserver<String>();
+        mlo = new MockListObserver<>();
         list.addListener(mlo);
 
         useListData("one", "two", "three");
@@ -97,7 +97,7 @@ public class ObservableListTest  {
 
     @Test
     public void testObserverAddRemove() {
-        MockListObserver<String> mlo2 = new MockListObserver<String>();
+        MockListObserver<String> mlo2 = new MockListObserver<>();
         list.addListener(mlo2);
         list.removeListener(mlo);
         list.add("xyzzy");

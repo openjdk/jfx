@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -36,7 +36,7 @@ import java.util.Map;
 class MacTouchInputSupport extends TouchInputSupport
 {
     private final Map<Long, WeakReference<View>> touchIdToView =
-            new HashMap<Long, WeakReference<View>>();
+            new HashMap<>();
 
     private int curModifiers;
     private boolean curIsDirect;
@@ -60,7 +60,7 @@ class MacTouchInputSupport extends TouchInputSupport
             this.xAbs = xAbs;
             this.yAbs = yAbs;
         }
-    };
+    }
 
     MacTouchInputSupport(TouchCountListener listener,
                          boolean filterTouchCoordinates) {
@@ -72,7 +72,7 @@ class MacTouchInputSupport extends TouchInputSupport
                                       int touchEventCount) {
         curModifiers = modifiers;
         curIsDirect = isDirect;
-        curTouchPoints = new ArrayList<TouchPoint>(touchEventCount);
+        curTouchPoints = new ArrayList<>(touchEventCount);
     }
 
     @Override
@@ -104,7 +104,7 @@ class MacTouchInputSupport extends TouchInputSupport
         View storedView = null;
         if (state == TouchEvent.TOUCH_PRESSED) {
             storedView = view;
-            touchIdToView.put(id, new WeakReference<View>(view));
+            touchIdToView.put(id, new WeakReference<>(view));
         } else {
             storedView = touchIdToView.get(id).get();
             if (state == TouchEvent.TOUCH_RELEASED) {

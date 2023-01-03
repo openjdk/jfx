@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -47,7 +47,7 @@ public class Node_bind_Test {
          Rectangle rectA = new Rectangle(300, 300);
          Rectangle clip1 = new Rectangle(10, 10);
          Rectangle clip2 = new Rectangle(100, 100);
-         ObjectProperty<Node> v = new SimpleObjectProperty<Node>(clip1);
+         ObjectProperty<Node> v = new SimpleObjectProperty<>(clip1);
          rectA.clipProperty().bind(v);
          assertEquals(rectA.getClip(), clip1);
          v.set(clip2);
@@ -67,7 +67,7 @@ public class Node_bind_Test {
          Rectangle clip1 = new Rectangle(10, 10);
          Rectangle clip2 = new Rectangle(100, 100);
          clip2.setClip(rectA);
-         ObjectProperty<Node> v = new SimpleObjectProperty<Node>(clip1);
+         ObjectProperty<Node> v = new SimpleObjectProperty<>(clip1);
          rectA.clipProperty().bind(v);
          assertEquals(rectA.getClip(), clip1);
          v.set(clip2);
@@ -90,7 +90,7 @@ public class Node_bind_Test {
          Rectangle clip1 = new Rectangle(10, 10);
          Rectangle clip2 = new Rectangle(100, 100);
          clip2.setClip(rectA);
-         ObjectProperty<Node> v = new SimpleObjectProperty<Node>(clip1);
+         ObjectProperty<Node> v = new SimpleObjectProperty<>(clip1);
          rectA.clipProperty().bind(v);
          assertEquals(rectA.getClip(), clip1);
          v.set(clip2);
@@ -104,7 +104,7 @@ public class Node_bind_Test {
          Shadow effect1 = new Shadow();
          Blend effect2 = new Blend();
          Rectangle rectA = new Rectangle(100, 100);
-         ObjectProperty<Effect> v = new SimpleObjectProperty<Effect>(effect1);
+         ObjectProperty<Effect> v = new SimpleObjectProperty<>(effect1);
          rectA.effectProperty().bind(v);
          assertEquals(rectA.getEffect(), effect1);
          v.set(effect2);

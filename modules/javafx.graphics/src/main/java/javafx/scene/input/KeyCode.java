@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -1174,7 +1174,7 @@ public enum KeyCode {
 
     // Need to bundle this in another class to avoid "forward reference" compiler error
     private static class KeyCodeClass {
-        private KeyCodeClass() {};
+        private KeyCodeClass() {}
 
         private static final int FUNCTION = 1;
         private static final int NAVIGATION = 1 << 1;
@@ -1314,7 +1314,7 @@ public enum KeyCode {
     private static final Map<String, KeyCode> nameMap;
     static {
 
-        nameMap = new HashMap<String, KeyCode>(KeyCode.values().length);
+        nameMap = new HashMap<>(KeyCode.values().length);
         for (KeyCode c : KeyCode.values()) {
             nameMap.put(c.name, c);
         }

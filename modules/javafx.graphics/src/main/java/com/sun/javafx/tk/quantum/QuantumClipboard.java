@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -41,7 +41,6 @@ import java.net.SocketPermission;
 import java.net.URL;
 import java.nio.ByteBuffer;
 import java.security.AccessControlContext;
-import java.security.Permission;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumSet;
@@ -297,7 +296,7 @@ final class QuantumClipboard implements TKClipboard {
             Object data = assistant.getData(Clipboard.FILE_LIST_TYPE);
             if (data == null) return Collections.emptyList();
             String[] paths = (String[]) data;
-            List<File> list = new ArrayList<File>(paths.length);
+            List<File> list = new ArrayList<>(paths.length);
             for (int i=0; i<paths.length; i++) {
                 list.add(new File(paths[i]));
             }
@@ -455,7 +454,7 @@ final class QuantumClipboard implements TKClipboard {
     }
 
     @Override public Set<DataFormat> getContentTypes() {
-        Set<DataFormat> set = new HashSet<DataFormat>();
+        Set<DataFormat> set = new HashSet<>();
 
         if (dataCache != null) {
             for (Pair<DataFormat, Object> pair : dataCache) {
@@ -682,7 +681,7 @@ final class QuantumClipboard implements TKClipboard {
 
         if (isCaching) {
             if (dataCache == null) {
-                dataCache = new ArrayList<Pair<DataFormat, Object>>(content.length);
+                dataCache = new ArrayList<>(content.length);
             }
             for (Pair<DataFormat, Object> pair : content) {
                 dataCache.add(pair);

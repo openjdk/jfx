@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,8 +25,6 @@
 
 package com.sun.javafx.scene.control;
 
-import com.sun.javafx.scene.control.IntegerField;
-import com.sun.javafx.scene.control.WebColorField;
 import com.sun.javafx.scene.control.skin.IntegerFieldSkin;
 import com.sun.javafx.scene.control.skin.WebColorFieldSkin;
 import javafx.beans.InvalidationListener;
@@ -789,7 +787,7 @@ public class CustomColorDialog extends HBox {
         double offset;
         Stop[] stops = new Stop[255];
         for (int y = 0; y < 255; y++) {
-            offset = (double) (1 - (1.0 / 255) * y);
+            offset = 1 - (1.0 / 255) * y;
             int h = (int) ((y / 255.0) * 360);
             stops[y] = new Stop(offset, Color.hsb(h, 1.0, 1.0));
         }

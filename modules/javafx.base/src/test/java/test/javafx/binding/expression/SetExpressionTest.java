@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -52,10 +52,10 @@ public class SetExpressionTest {
 
     @Before
     public void setUp() {
-        opNull = new SimpleSetProperty<Integer>();
-        opEmpty = new SimpleSetProperty<Integer>(FXCollections.<Integer>observableSet());
-        op1 = new SimpleSetProperty<Integer>(FXCollections.observableSet(data1_0));
-        op2 = new SimpleSetProperty<Integer>(FXCollections.observableSet(data2_0, data2_1));
+        opNull = new SimpleSetProperty<>();
+        opEmpty = new SimpleSetProperty<>(FXCollections.<Integer>observableSet());
+        op1 = new SimpleSetProperty<>(FXCollections.observableSet(data1_0));
+        op2 = new SimpleSetProperty<>(FXCollections.observableSet(data2_0, data2_1));
     }
 
     @Test

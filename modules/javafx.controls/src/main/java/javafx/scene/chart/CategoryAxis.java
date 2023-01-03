@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -37,7 +37,6 @@ import javafx.beans.property.ObjectPropertyBase;
 import javafx.beans.property.ReadOnlyDoubleProperty;
 import javafx.beans.property.ReadOnlyDoubleWrapper;
 import javafx.beans.property.SimpleDoubleProperty;
-import javafx.beans.value.WritableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
@@ -67,7 +66,7 @@ import javafx.css.StyleableProperty;
 public final class CategoryAxis extends Axis<String> {
 
     // -------------- PRIVATE FIELDS -------------------------------------------
-    private List<String> allDataCategories = new ArrayList<String>();
+    private List<String> allDataCategories = new ArrayList<>();
     private boolean changeIsLocal = false;
     /** This is the gap between one category and the next along this axis */
     private final DoubleProperty firstCategoryPos = new SimpleDoubleProperty(this, "firstCategoryPos", 0);
@@ -168,7 +167,7 @@ public final class CategoryAxis extends Axis<String> {
     public final void setGapStartAndEnd(boolean value) { gapStartAndEnd.setValue(value); }
     public final BooleanProperty gapStartAndEndProperty() { return gapStartAndEnd; }
 
-    private ObjectProperty<ObservableList<String>> categories = new ObjectPropertyBase<ObservableList<String>>() {
+    private ObjectProperty<ObservableList<String>> categories = new ObjectPropertyBase<>() {
         ObservableList<String> old;
         @Override protected void invalidated() {
             if (getDuplicate() != null) {
@@ -441,7 +440,7 @@ public final class CategoryAxis extends Axis<String> {
     @Override public void invalidateRange(List<String> data) {
         super.invalidateRange(data);
         // Create unique set of category names
-        List<String> categoryNames = new ArrayList<String>();
+        List<String> categoryNames = new ArrayList<>();
         categoryNames.addAll(allDataCategories);
         //RT-21141 allDataCategories needs to be updated based on data -
         // and should maintain the order it originally had for the categories already present.
@@ -554,7 +553,7 @@ public final class CategoryAxis extends Axis<String> {
 
     private static class StyleableProperties {
         private static final CssMetaData<CategoryAxis,Number> START_MARGIN =
-            new CssMetaData<CategoryAxis,Number>("-fx-start-margin",
+            new CssMetaData<>("-fx-start-margin",
                 SizeConverter.getInstance(), 5.0) {
 
             @Override
@@ -564,12 +563,12 @@ public final class CategoryAxis extends Axis<String> {
 
             @Override
             public StyleableProperty<Number> getStyleableProperty(CategoryAxis n) {
-                return (StyleableProperty<Number>)(WritableValue<Number>)n.startMarginProperty();
+                return (StyleableProperty<Number>)n.startMarginProperty();
             }
         };
 
         private static final CssMetaData<CategoryAxis,Number> END_MARGIN =
-            new CssMetaData<CategoryAxis,Number>("-fx-end-margin",
+            new CssMetaData<>("-fx-end-margin",
                 SizeConverter.getInstance(), 5.0) {
 
             @Override
@@ -579,12 +578,12 @@ public final class CategoryAxis extends Axis<String> {
 
             @Override
             public StyleableProperty<Number> getStyleableProperty(CategoryAxis n) {
-                return (StyleableProperty<Number>)(WritableValue<Number>)n.endMarginProperty();
+                return (StyleableProperty<Number>)n.endMarginProperty();
             }
         };
 
         private static final CssMetaData<CategoryAxis,Boolean> GAP_START_AND_END =
-            new CssMetaData<CategoryAxis,Boolean>("-fx-gap-start-and-end",
+            new CssMetaData<>("-fx-gap-start-and-end",
                 BooleanConverter.getInstance(), Boolean.TRUE) {
 
             @Override
@@ -594,14 +593,14 @@ public final class CategoryAxis extends Axis<String> {
 
             @Override
             public StyleableProperty<Boolean> getStyleableProperty(CategoryAxis n) {
-                return (StyleableProperty<Boolean>)(WritableValue<Boolean>)n.gapStartAndEndProperty();
+                return (StyleableProperty<Boolean>)n.gapStartAndEndProperty();
             }
         };
 
         private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
         static {
         final List<CssMetaData<? extends Styleable, ?>> styleables =
-            new ArrayList<CssMetaData<? extends Styleable, ?>>(Axis.getClassCssMetaData());
+            new ArrayList<>(Axis.getClassCssMetaData());
             styleables.add(START_MARGIN);
             styleables.add(END_MARGIN);
             styleables.add(GAP_START_AND_END);

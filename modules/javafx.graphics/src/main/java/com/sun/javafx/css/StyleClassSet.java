@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -158,11 +158,9 @@ public final class StyleClassSet  extends BitSet<StyleClass> {
    }
 
     // package private for unit test purposes
-    static final Map<String,Integer> styleClassMap =
-            new HashMap<String,Integer>(64);
+    static final Map<String,Integer> styleClassMap = new HashMap<>(64);
 
-    static final List<StyleClass> styleClasses =
-            new ArrayList<StyleClass>();
+    static final List<StyleClass> styleClasses = new ArrayList<>();
 
 }
 

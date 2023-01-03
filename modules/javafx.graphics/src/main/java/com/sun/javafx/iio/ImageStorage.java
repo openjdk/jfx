@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -112,7 +112,7 @@ public class ImageStorage {
          * RGBARGBARGBA...
          */
         RGBA_PRE
-    };
+    }
 //    /**
 //     * A mapping of lower case file extensions to loader factories.
 //     */
@@ -431,7 +431,7 @@ public class ImageStorage {
             double width, double height, boolean preserveAspectRatio,
             float pixelScale, boolean smooth) throws ImageStorageException {
         ImageFrame[] images = null;
-        ArrayList<ImageFrame> list = new ArrayList<ImageFrame>();
+        ArrayList<ImageFrame> list = new ArrayList<>();
         int imageIndex = 0;
         ImageFrame image = null;
         int imgw = (int) Math.round(width * pixelScale);

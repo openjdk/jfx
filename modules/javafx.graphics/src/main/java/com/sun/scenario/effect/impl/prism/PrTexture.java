@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -41,14 +41,17 @@ public class PrTexture<T extends com.sun.prism.Texture> implements LockableResou
         this.bounds = new Rectangle(tex.getPhysicalWidth(), tex.getPhysicalHeight());
     }
 
+    @Override
     public void lock() {
         if (tex != null) tex.lock();
     }
 
+    @Override
     public void unlock() {
         if (tex != null) tex.unlock();
     }
 
+    @Override
     public boolean isLost() {
         return tex.isSurfaceLost();
     }

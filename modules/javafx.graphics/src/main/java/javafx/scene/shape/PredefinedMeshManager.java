@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -45,7 +45,7 @@ final class PredefinedMeshManager {
         private void put(Key key, TriangleMesh mesh) {
             cleanCache();
             if (mesh != null) {
-                cache.put(key, new SoftReference<TriangleMesh>(mesh));
+                cache.put(key, new SoftReference<>(mesh));
             }
         }
 
@@ -231,4 +231,4 @@ final class PredefinedMeshManager {
         private static final TriangleMeshCache INSTANCE = new TriangleMeshCache();
     }
 
-};
+}

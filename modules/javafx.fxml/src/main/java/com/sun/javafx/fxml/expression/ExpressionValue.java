@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,7 +30,6 @@ import java.util.Iterator;
 import java.util.List;
 
 import javafx.beans.InvalidationListener;
-import javafx.beans.property.ReadOnlyProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.beans.value.ObservableValueBase;
@@ -52,7 +51,7 @@ public class ExpressionValue extends ObservableValueBase<Object> {
 
         private Object namespace = null;
 
-        private ListChangeListener<Object> listChangeListener = new ListChangeListener<Object>() {
+        private ListChangeListener<Object> listChangeListener = new ListChangeListener<>() {
             @Override
             public void onChanged(Change<? extends Object> change) {
                 while (change.next()) {
@@ -66,7 +65,7 @@ public class ExpressionValue extends ObservableValueBase<Object> {
             }
         };
 
-        private MapChangeListener<String, Object> mapChangeListener = new MapChangeListener<String, Object>() {
+        private MapChangeListener<String, Object> mapChangeListener = new MapChangeListener<>() {
             @Override
             public void onChanged(Change<? extends String, ? extends Object> change) {
                 if (key.equals(change.getKey())) {
@@ -76,7 +75,7 @@ public class ExpressionValue extends ObservableValueBase<Object> {
             }
         };
 
-        private ChangeListener<Object> propertyChangeListener = new ChangeListener<Object>() {
+        private ChangeListener<Object> propertyChangeListener = new ChangeListener<>() {
             @Override
             public void changed(ObservableValue<? extends Object> observable, Object oldValue, Object newValue) {
                 fireValueChangedEvent();
@@ -180,7 +179,7 @@ public class ExpressionValue extends ObservableValueBase<Object> {
         this.type = type;
 
         List<KeyPath> arguments = expression.getArguments();
-        argumentMonitors = new ArrayList<KeyPathMonitor>(arguments.size());
+        argumentMonitors = new ArrayList<>(arguments.size());
 
         for (KeyPath argument : arguments) {
             argumentMonitors.add(new KeyPathMonitor(argument.iterator()));

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -58,7 +58,7 @@ final class RTImage extends PrismImage implements ResourceFactoryListener {
 
     RTImage(int w, int h, float pixelScale) {
         if (Float.isNaN(pixelScale) || pixelScale <= 0 ||
-                Math.ceil((double)pixelScale) >= (double)Integer.MAX_VALUE) {
+                Math.ceil(pixelScale) >= Integer.MAX_VALUE) {
 
             throw new IllegalArgumentException("pixelScale out of range");
         }
@@ -246,6 +246,7 @@ final class RTImage extends PrismImage implements ResourceFactoryListener {
     @Override
     protected void drawPixelBuffer() {
         PrismInvoker.invokeOnRenderThread(new Runnable() {
+            @Override
             public void run() {
                 //[g] field can be null if it is the first paint
                 //from synthetic ImageData or if the resource factory is disposed

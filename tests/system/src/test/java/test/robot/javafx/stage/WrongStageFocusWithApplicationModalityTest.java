@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2021, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,8 @@
 
 package test.robot.javafx.stage;
 
+import java.util.concurrent.CountDownLatch;
+
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.scene.Scene;
@@ -34,14 +36,12 @@ import javafx.scene.input.MouseButton;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.robot.Robot;
 import javafx.stage.Stage;
+
 import org.junit.AfterClass;
-import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import test.util.Util;
 
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
+import test.util.Util;
 
 public class WrongStageFocusWithApplicationModalityTest {
     private static Robot robot;
@@ -52,8 +52,12 @@ public class WrongStageFocusWithApplicationModalityTest {
 
     @BeforeClass
     public static void initFX() throws Exception {
-        new Thread(() -> Application.launch(TestApp.class, (String[]) null)).start();
-        waitForLatch(startupLatch, 15, "FX runtime failed to start.");
+        Util.launch(startupLatch, TestApp.class);
+    }
+
+    @AfterClass
+    public static void exit() {
+        Util.shutdown(stage);
     }
 
     @Test(timeout = 25000)
@@ -67,19 +71,7 @@ public class WrongStageFocusWithApplicationModalityTest {
         Thread.sleep(500);
         keyPress(KeyCode.ESCAPE);
         Thread.sleep(500);
-        waitForLatch(alertCloseLatch, 10, "Alerts not closed, wrong focus");
-    }
-
-    @AfterClass
-    public static void exit() {
-        Platform.runLater(() -> {
-            stage.hide();
-        });
-        Platform.exit();
-    }
-
-    private static void waitForLatch(CountDownLatch latch, int seconds, String msg) throws Exception {
-        Assert.assertTrue("Timeout: " + msg, latch.await(seconds, TimeUnit.SECONDS));
+        Util.waitForLatch(alertCloseLatch, 10, "Alerts not closed, wrong focus");
     }
 
     private static void keyPress(KeyCode code) throws Exception {
