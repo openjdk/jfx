@@ -35,6 +35,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.WeakHashMap;
+import java.util.function.Function;
 import java.util.function.IntPredicate;
 
 import com.sun.javafx.logging.PlatformLogger.Level;
@@ -2088,8 +2089,6 @@ public class TableView<S> extends Control {
 
         private int itemCount = 0;
 
-        private final MappingChange.Map<TablePosition<S,?>,Integer> cellToIndicesMap = f -> f.getRow();
-
         /* *********************************************************************
          *                                                                     *
          * Constructors                                                        *
@@ -3031,7 +3030,7 @@ public class TableView<S> extends Control {
                 return;
             }
 
-            selectedCellsSeq.callObservers(new MappingChange<>(c, MappingChange.noOpMap(), selectedCellsSeq));
+            selectedCellsSeq.callObservers(new MappingChange<>(c, Function.identity(), selectedCellsSeq));
         }
     }
 
