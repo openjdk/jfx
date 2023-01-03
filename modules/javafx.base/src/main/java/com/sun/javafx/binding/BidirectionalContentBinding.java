@@ -102,7 +102,7 @@ public class BidirectionalContentBinding {
     }
 
     private static class ListContentBinding implements ListChangeListener<Object>, WeakListener {
-        private static final Map<ObservableList<?>, Set<ListContentBinding>> BINDINGS = new WeakHashMap<>();
+        private static final WeakIdentityHashMap<ObservableList<?>, Set<ListContentBinding>> BINDINGS = new WeakIdentityHashMap<>();
 
         private final WeakReference<ObservableList<?>> propertyRef1;
         private final WeakReference<ObservableList<?>> propertyRef2;
@@ -125,7 +125,7 @@ public class BidirectionalContentBinding {
                 .flatMap(Set::stream)
                 .map(binding -> binding.propertyRef2.get())
                 .filter(Objects::nonNull)  // skip if reference is gone
-                .filter(observable -> observable != obj)  // skip if "target" is same same as "source" vertex in a DAG
+                .filter(observable -> observable != obj)  // skip if "target" is same as "source" vertex in a DAG
                 .toList()
             );
 
@@ -159,9 +159,13 @@ public class BidirectionalContentBinding {
             }
         }
 
+        private final int hashCode;
+
         private <E> ListContentBinding(ObservableList<E> list1, ObservableList<E> list2) {
             propertyRef1 = new WeakReference<>(list1);
             propertyRef2 = new WeakReference<>(list2);
+
+            hashCode = System.identityHashCode(list1) ^ System.identityHashCode(list2);
         }
 
         @Override
@@ -211,11 +215,7 @@ public class BidirectionalContentBinding {
 
         @Override
         public int hashCode() {
-            final ObservableList<?> list1 = propertyRef1.get();
-            final ObservableList<?> list2 = propertyRef2.get();
-            final int hc1 = (list1 == null)? 0 : list1.hashCode();
-            final int hc2 = (list2 == null)? 0 : list2.hashCode();
-            return hc1 * hc2;
+            return hashCode;
         }
 
         @Override
