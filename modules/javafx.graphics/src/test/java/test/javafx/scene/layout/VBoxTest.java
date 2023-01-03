@@ -801,39 +801,41 @@ public class VBoxTest {
      * ╚═══════════════════╝
      */
     @Test public void testPixelSnappedContentHeightIsSameAsBoxHeight() {
-        class testPixelSnapConfig {
+        class TestPixelSnapConfig {
             final double expectedHeight;
             final double scale;
             final boolean specifyContainerPrefHeight;
 
-            testPixelSnapConfig(double expectedHeight, double scale, boolean specifyContainerPrefHeight) {
+            TestPixelSnapConfig(double expectedHeight, double scale, boolean specifyContainerPrefHeight) {
                 this.expectedHeight = expectedHeight;
                 this.scale = scale;
                 this.specifyContainerPrefHeight = specifyContainerPrefHeight;
             }
         }
 
-        for (testPixelSnapConfig config : new testPixelSnapConfig[] {
+        var testConfigs = new TestPixelSnapConfig[] {
             // For these tests, VBox.prefHeight is specified, so we expect the final height to be exactly that.
             // Child heights will be adjusted appropriately such that the sum of child widths corresponds to VBox.prefHeight.
-            new testPixelSnapConfig(76.0, 1.0, true),
-            new testPixelSnapConfig(76.0, 1.25, true),
-            new testPixelSnapConfig(76.0, 1.5, true),
-            new testPixelSnapConfig(76.0, 1.75, true),
-            new testPixelSnapConfig(76.0, 2.0, true),
-            new testPixelSnapConfig(76.0, 2.25, true),
-            new testPixelSnapConfig(76.0, 2.5, true),
+            new TestPixelSnapConfig(76.0, 1.0, true),
+            new TestPixelSnapConfig(76.0, 1.25, true),
+            new TestPixelSnapConfig(76.0, 1.5, true),
+            new TestPixelSnapConfig(76.0, 1.75, true),
+            new TestPixelSnapConfig(76.0, 2.0, true),
+            new TestPixelSnapConfig(76.0, 2.25, true),
+            new TestPixelSnapConfig(76.0, 2.5, true),
 
             // For these tests, VBox.prefHeight is not specified, which means that child heights will not be adjusted.
             // The final height will snap slightly differently for each configuration.
-            new testPixelSnapConfig(78.0, 1.0, false),
-            new testPixelSnapConfig(76.8, 1.25, false),
-            new testPixelSnapConfig(76.66666666666667, 1.5, false),
-            new testPixelSnapConfig(77.14285714285714, 1.75, false),
-            new testPixelSnapConfig(76.5, 2.0, false),
-            new testPixelSnapConfig(76.44444444444444, 2.25, false),
-            new testPixelSnapConfig(76.8, 2.5, false),
-        }) {
+            new TestPixelSnapConfig(78.0, 1.0, false),
+            new TestPixelSnapConfig(76.8, 1.25, false),
+            new TestPixelSnapConfig(76.66666666666667, 1.5, false),
+            new TestPixelSnapConfig(77.14285714285714, 1.75, false),
+            new TestPixelSnapConfig(76.5, 2.0, false),
+            new TestPixelSnapConfig(76.44444444444444, 2.25, false),
+            new TestPixelSnapConfig(76.8, 2.5, false)
+        };
+
+        for (TestPixelSnapConfig config : testConfigs) {
             Region r1 = new Region(); r1.setPrefHeight(25.3);
             Region r2 = new Region(); r2.setPrefHeight(25.3);
             Region r3 = new Region(); r3.setPrefHeight(25.4);

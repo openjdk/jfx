@@ -917,39 +917,41 @@ public class HBoxTest {
      * ╚════════════════╧════════════════╧════════════════╝
      */
     @Test public void testPixelSnappedContentWidthIsSameAsBoxWidth() {
-        class testPixelSnapConfig {
+        class TestPixelSnapConfig {
             final double expectedWidth;
             final double scale;
             final boolean specifyContainerPrefWidth;
 
-            testPixelSnapConfig(double expectedWidth, double scale, boolean specifyContainerPrefWidth) {
+            TestPixelSnapConfig(double expectedWidth, double scale, boolean specifyContainerPrefWidth) {
                 this.expectedWidth = expectedWidth;
                 this.scale = scale;
                 this.specifyContainerPrefWidth = specifyContainerPrefWidth;
             }
         }
 
-        for (testPixelSnapConfig config : new testPixelSnapConfig[] {
+        var testConfigs = new TestPixelSnapConfig[] {
             // For these tests, HBox.prefWidth is specified, so we expect the final width to be exactly that.
             // Child widths will be adjusted appropriately such that the sum of child widths corresponds to HBox.prefWidth.
-            new testPixelSnapConfig(76.0, 1.0, true),
-            new testPixelSnapConfig(76.0, 1.25, true),
-            new testPixelSnapConfig(76.0, 1.5, true),
-            new testPixelSnapConfig(76.0, 1.75, true),
-            new testPixelSnapConfig(76.0, 2.0, true),
-            new testPixelSnapConfig(76.0, 2.25, true),
-            new testPixelSnapConfig(76.0, 2.5, true),
+            new TestPixelSnapConfig(76.0, 1.0, true),
+            new TestPixelSnapConfig(76.0, 1.25, true),
+            new TestPixelSnapConfig(76.0, 1.5, true),
+            new TestPixelSnapConfig(76.0, 1.75, true),
+            new TestPixelSnapConfig(76.0, 2.0, true),
+            new TestPixelSnapConfig(76.0, 2.25, true),
+            new TestPixelSnapConfig(76.0, 2.5, true),
 
             // For these tests, HBox.prefWidth is not specified, which means that child widths will not be adjusted.
             // The final width will snap slightly differently for each configuration.
-            new testPixelSnapConfig(78.0, 1.0, false),
-            new testPixelSnapConfig(76.8, 1.25, false),
-            new testPixelSnapConfig(76.66666666666667, 1.5, false),
-            new testPixelSnapConfig(77.14285714285714, 1.75, false),
-            new testPixelSnapConfig(76.5, 2.0, false),
-            new testPixelSnapConfig(76.44444444444444, 2.25, false),
-            new testPixelSnapConfig(76.8, 2.5, false),
-        }) {
+            new TestPixelSnapConfig(78.0, 1.0, false),
+            new TestPixelSnapConfig(76.8, 1.25, false),
+            new TestPixelSnapConfig(76.66666666666667, 1.5, false),
+            new TestPixelSnapConfig(77.14285714285714, 1.75, false),
+            new TestPixelSnapConfig(76.5, 2.0, false),
+            new TestPixelSnapConfig(76.44444444444444, 2.25, false),
+            new TestPixelSnapConfig(76.8, 2.5, false)
+        };
+
+        for (TestPixelSnapConfig config : testConfigs) {
             Region r1 = new Region(); r1.setPrefWidth(25.3);
             Region r2 = new Region(); r2.setPrefWidth(25.3);
             Region r3 = new Region(); r3.setPrefWidth(25.4);
