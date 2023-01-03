@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -61,8 +61,8 @@ public class ReadOnlyObjectWrapperTest {
         readOnlyProperty = property.getReadOnlyProperty();
         internalInvalidationListener = new InvalidationListenerMock();
         publicInvalidationListener = new InvalidationListenerMock();
-        internalChangeListener = new ChangeListenerMock<Object>(UNDEFINED);
-        publicChangeListener = new ChangeListenerMock<Object>(UNDEFINED);
+        internalChangeListener = new ChangeListenerMock<>(UNDEFINED);
+        publicChangeListener = new ChangeListenerMock<>(UNDEFINED);
     }
 
     private void attachInvalidationListeners() {
@@ -88,30 +88,30 @@ public class ReadOnlyObjectWrapperTest {
 
     @Test
     public void testConstructor_NoArguments() {
-        final ReadOnlyObjectWrapper<Object> p1 = new ReadOnlyObjectWrapper<Object>();
+        final ReadOnlyObjectWrapper<Object> p1 = new ReadOnlyObjectWrapper<>();
         assertEquals(DEFAULT, p1.get());
-        assertEquals((Object)DEFAULT, p1.getValue());
+        assertEquals(DEFAULT, p1.getValue());
         assertFalse(property.isBound());
         assertEquals(null, p1.getBean());
         assertEquals("", p1.getName());
         final ReadOnlyObjectProperty<Object> r1 = p1.getReadOnlyProperty();
         assertEquals(DEFAULT, r1.get());
-        assertEquals((Object)DEFAULT, r1.getValue());
+        assertEquals(DEFAULT, r1.getValue());
         assertEquals(null, r1.getBean());
         assertEquals("", r1.getName());
     }
 
     @Test
     public void testConstructor_InitialValue() {
-        final ReadOnlyObjectWrapper<Object> p1 = new ReadOnlyObjectWrapper<Object>(VALUE_1);
+        final ReadOnlyObjectWrapper<Object> p1 = new ReadOnlyObjectWrapper<>(VALUE_1);
         assertEquals(VALUE_1, p1.get());
-        assertEquals((Object)VALUE_1, p1.getValue());
+        assertEquals(VALUE_1, p1.getValue());
         assertFalse(property.isBound());
         assertEquals(null, p1.getBean());
         assertEquals("", p1.getName());
         final ReadOnlyObjectProperty<Object> r1 = p1.getReadOnlyProperty();
         assertEquals(VALUE_1, r1.get());
-        assertEquals((Object)VALUE_1, r1.getValue());
+        assertEquals(VALUE_1, r1.getValue());
         assertEquals(null, r1.getBean());
         assertEquals("", r1.getName());
     }
@@ -120,15 +120,15 @@ public class ReadOnlyObjectWrapperTest {
     public void testConstructor_Bean_Name() {
         final Object bean = new Object();
         final String name = "My name";
-        final ReadOnlyObjectWrapper<Object> p1 = new ReadOnlyObjectWrapper<Object>(bean, name);
+        final ReadOnlyObjectWrapper<Object> p1 = new ReadOnlyObjectWrapper<>(bean, name);
         assertEquals(DEFAULT, p1.get());
-        assertEquals((Object)DEFAULT, p1.getValue());
+        assertEquals(DEFAULT, p1.getValue());
         assertFalse(property.isBound());
         assertEquals(bean, p1.getBean());
         assertEquals(name, p1.getName());
         final ReadOnlyObjectProperty<Object> r1 = p1.getReadOnlyProperty();
         assertEquals(DEFAULT, r1.get());
-        assertEquals((Object)DEFAULT, r1.getValue());
+        assertEquals(DEFAULT, r1.getValue());
         assertEquals(bean, r1.getBean());
         assertEquals(name, r1.getName());
     }
@@ -137,15 +137,15 @@ public class ReadOnlyObjectWrapperTest {
     public void testConstructor_Bean_Name_InitialValue() {
         final Object bean = new Object();
         final String name = "My name";
-        final ReadOnlyObjectWrapper<Object> p1 = new ReadOnlyObjectWrapper<Object>(bean, name, VALUE_1);
+        final ReadOnlyObjectWrapper<Object> p1 = new ReadOnlyObjectWrapper<>(bean, name, VALUE_1);
         assertEquals(VALUE_1, p1.get());
-        assertEquals((Object)VALUE_1, p1.getValue());
+        assertEquals(VALUE_1, p1.getValue());
         assertFalse(property.isBound());
         assertEquals(bean, p1.getBean());
         assertEquals(name, p1.getName());
         final ReadOnlyObjectProperty<Object> r1 = p1.getReadOnlyProperty();
         assertEquals(VALUE_1, r1.get());
-        assertEquals((Object)VALUE_1, r1.getValue());
+        assertEquals(VALUE_1, r1.getValue());
         assertEquals(bean, r1.getBean());
         assertEquals(name, r1.getName());
     }
@@ -320,7 +320,7 @@ public class ReadOnlyObjectWrapperTest {
 
     @Test(expected=RuntimeException.class)
     public void testSetBoundValue() {
-        final ObjectProperty<Object> v = new SimpleObjectProperty<Object>(VALUE_1);
+        final ObjectProperty<Object> v = new SimpleObjectProperty<>(VALUE_1);
         property.bind(v);
         property.set(VALUE_1);
     }
@@ -328,7 +328,7 @@ public class ReadOnlyObjectWrapperTest {
     @Test
     public void testLazyBind_primitive() {
         attachInvalidationListeners();
-        final ObservableObjectValueStub<Object> v = new ObservableObjectValueStub<Object>(VALUE_1);
+        final ObservableObjectValueStub<Object> v = new ObservableObjectValueStub<>(VALUE_1);
 
         property.bind(v);
         assertEquals(VALUE_1, property.get());
@@ -368,7 +368,7 @@ public class ReadOnlyObjectWrapperTest {
     @Test
     public void testInternalEagerBind_primitive() {
         attachInternalChangeListener();
-        final ObservableObjectValueStub<Object> v = new ObservableObjectValueStub<Object>(VALUE_1);
+        final ObservableObjectValueStub<Object> v = new ObservableObjectValueStub<>(VALUE_1);
 
         property.bind(v);
         assertEquals(VALUE_1, property.get());
@@ -404,7 +404,7 @@ public class ReadOnlyObjectWrapperTest {
     @Test
     public void testPublicEagerBind_primitive() {
         attachPublicChangeListener();
-        final ObservableObjectValueStub<Object> v = new ObservableObjectValueStub<Object>(VALUE_1);
+        final ObservableObjectValueStub<Object> v = new ObservableObjectValueStub<>(VALUE_1);
 
         property.bind(v);
         assertEquals(VALUE_1, property.get());
@@ -440,7 +440,7 @@ public class ReadOnlyObjectWrapperTest {
     @Test
     public void testLazyBind_generic() {
         attachInvalidationListeners();
-        final ObservableObjectValueStub<Object> v = new ObservableObjectValueStub<Object>(VALUE_1);
+        final ObservableObjectValueStub<Object> v = new ObservableObjectValueStub<>(VALUE_1);
 
         property.bind(v);
         assertEquals(VALUE_1, property.get());
@@ -480,7 +480,7 @@ public class ReadOnlyObjectWrapperTest {
     @Test
     public void testInternalEagerBind_generic() {
         attachInternalChangeListener();
-        final ObservableObjectValueStub<Object> v = new ObservableObjectValueStub<Object>(VALUE_1);
+        final ObservableObjectValueStub<Object> v = new ObservableObjectValueStub<>(VALUE_1);
 
         property.bind(v);
         assertEquals(VALUE_1, property.get());
@@ -516,7 +516,7 @@ public class ReadOnlyObjectWrapperTest {
     @Test
     public void testPublicEagerBind_generic() {
         attachPublicChangeListener();
-        final ObservableObjectValueStub<Object> v = new ObservableObjectValueStub<Object>(VALUE_1);
+        final ObservableObjectValueStub<Object> v = new ObservableObjectValueStub<>(VALUE_1);
 
         property.bind(v);
         assertEquals(VALUE_1, property.get());
@@ -557,8 +557,8 @@ public class ReadOnlyObjectWrapperTest {
     @Test
     public void testRebind() {
         attachInvalidationListeners();
-        final ObjectProperty<Object> v1 = new SimpleObjectProperty<Object>(VALUE_1);
-        final ObjectProperty<Object> v2 = new SimpleObjectProperty<Object>(VALUE_2);
+        final ObjectProperty<Object> v1 = new SimpleObjectProperty<>(VALUE_1);
+        final ObjectProperty<Object> v2 = new SimpleObjectProperty<>(VALUE_2);
         property.bind(v1);
         property.get();
         readOnlyProperty.get();
@@ -604,7 +604,7 @@ public class ReadOnlyObjectWrapperTest {
     @Test
     public void testUnbind() {
         attachInvalidationListeners();
-        final ObjectProperty<Object> v = new SimpleObjectProperty<Object>(VALUE_1);
+        final ObjectProperty<Object> v = new SimpleObjectProperty<>(VALUE_1);
         property.bind(v);
         property.unbind();
         assertEquals(VALUE_1, property.get());
@@ -633,7 +633,7 @@ public class ReadOnlyObjectWrapperTest {
 
     @Test
     public void testAddingListenerWillAlwaysReceiveInvalidationEvent() {
-        final ObjectProperty<Object> v = new SimpleObjectProperty<Object>(VALUE_1);
+        final ObjectProperty<Object> v = new SimpleObjectProperty<>(VALUE_1);
         final InvalidationListenerMock internalListener2 = new InvalidationListenerMock();
         final InvalidationListenerMock internalListener3 = new InvalidationListenerMock();
         final InvalidationListenerMock publicListener2 = new InvalidationListenerMock();
@@ -687,15 +687,15 @@ public class ReadOnlyObjectWrapperTest {
         internalChangeListener.check(null, UNDEFINED, UNDEFINED, 0);
 
         // no read only property created => no-op
-        final ReadOnlyObjectWrapper<Object> v1 = new ReadOnlyObjectWrapper<Object>();
+        final ReadOnlyObjectWrapper<Object> v1 = new ReadOnlyObjectWrapper<>();
         v1.removeListener(internalInvalidationListener);
         v1.removeListener(internalChangeListener);
     }
 
     @Test
     public void testNoReadOnlyPropertyCreated() {
-        final ObjectProperty<Object> v1 = new SimpleObjectProperty<Object>(VALUE_1);
-        final ReadOnlyObjectWrapper<Object> p1 = new ReadOnlyObjectWrapper<Object>();
+        final ObjectProperty<Object> v1 = new SimpleObjectProperty<>(VALUE_1);
+        final ReadOnlyObjectWrapper<Object> p1 = new ReadOnlyObjectWrapper<>();
 
         p1.set(VALUE_1);
         p1.bind(v1);
@@ -706,7 +706,7 @@ public class ReadOnlyObjectWrapperTest {
 
     @Test
     public void testToString() {
-        final ObjectProperty<Object> v1 = new SimpleObjectProperty<Object>(VALUE_1);
+        final ObjectProperty<Object> v1 = new SimpleObjectProperty<>(VALUE_1);
 
         property.set(VALUE_1);
         assertEquals("ObjectProperty [value: " + VALUE_1 + "]", property.toString());
@@ -727,15 +727,15 @@ public class ReadOnlyObjectWrapperTest {
 
         final Object bean = new Object();
         final String name = "My name";
-        final ReadOnlyObjectWrapper<Object> v2 = new ReadOnlyObjectWrapper<Object>(bean, name);
+        final ReadOnlyObjectWrapper<Object> v2 = new ReadOnlyObjectWrapper<>(bean, name);
         assertEquals("ObjectProperty [bean: " + bean.toString() + ", name: My name, value: " + DEFAULT + "]", v2.toString());
         assertEquals("ReadOnlyObjectProperty [bean: " + bean.toString() + ", name: My name, value: " + DEFAULT + "]", v2.getReadOnlyProperty().toString());
 
-        final ReadOnlyObjectWrapper<Object> v3 = new ReadOnlyObjectWrapper<Object>(bean, "");
+        final ReadOnlyObjectWrapper<Object> v3 = new ReadOnlyObjectWrapper<>(bean, "");
         assertEquals("ObjectProperty [bean: " + bean.toString() + ", value: " + DEFAULT + "]", v3.toString());
         assertEquals("ReadOnlyObjectProperty [bean: " + bean.toString() + ", value: " + DEFAULT + "]", v3.getReadOnlyProperty().toString());
 
-        final ReadOnlyObjectWrapper<Object> v4 = new ReadOnlyObjectWrapper<Object>(null, name);
+        final ReadOnlyObjectWrapper<Object> v4 = new ReadOnlyObjectWrapper<>(null, name);
         assertEquals("ObjectProperty [name: My name, value: " + DEFAULT + "]", v4.toString());
         assertEquals("ReadOnlyObjectProperty [name: My name, value: " + DEFAULT + "]", v4.getReadOnlyProperty().toString());
     }

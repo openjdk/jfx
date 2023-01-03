@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -63,6 +63,7 @@ class J2DResourceFactory extends BaseResourceFactory
         return new J2DPrismGraphics(target, g2d);
     }
 
+    @Override
     public TextureResourcePool getTextureResourcePool() {
         return J2DTexturePool.instance;
     }
@@ -73,30 +74,37 @@ class J2DResourceFactory extends BaseResourceFactory
 
     private static ShapeRep theRep = new BasicShapeRep();
 
+    @Override
     public ShapeRep createArcRep() {
         return theRep;
     }
 
+    @Override
     public ShapeRep createEllipseRep() {
         return theRep;
     }
 
+    @Override
     public ShapeRep createRoundRectRep() {
         return theRep;
     }
 
+    @Override
     public ShapeRep createPathRep() {
         return theRep;
     }
 
+    @Override
     public Presentable createPresentable(PresentableState pState) {
         return J2DPresentable.create(pState, this);
     }
 
+    @Override
     public int getRTTWidth(int w, WrapMode wrapMode) {
         return w;
     }
 
+    @Override
     public int getRTTHeight(int h, WrapMode wrapMode) {
         return h;
     }
@@ -106,6 +114,7 @@ class J2DResourceFactory extends BaseResourceFactory
         return createRTTexture(width, height, wrapMode);
     }
 
+    @Override
     public RTTexture createRTTexture(int width, int height, WrapMode wrapMode) {
         J2DTexturePool pool = J2DTexturePool.instance;
         long size = pool.estimateRTTextureSize(width, height, false);
@@ -115,6 +124,7 @@ class J2DResourceFactory extends BaseResourceFactory
         return new J2DRTTexture(width, height, this);
     }
 
+    @Override
     public Texture createTexture(PixelFormat formatHint,
                                  Usage usageHint, WrapMode wrapMode,
                                  int w, int h)
@@ -122,11 +132,13 @@ class J2DResourceFactory extends BaseResourceFactory
         return J2DTexture.create(formatHint, wrapMode, w, h);
     }
 
+    @Override
     public Texture createTexture(PixelFormat formatHint,
             Usage usageHint, WrapMode wrapMode, int w, int h, boolean useMipmap) {
         return createTexture(formatHint, usageHint, wrapMode, w, h);
     }
 
+    @Override
     public Texture createTexture(MediaFrame vdb) {
         Texture tex;
 
@@ -158,10 +170,12 @@ class J2DResourceFactory extends BaseResourceFactory
         return false;
     }
 
+    @Override
     public int getMaximumTextureSize() {
         return Integer.MAX_VALUE;
     }
 
+    @Override
     public boolean isFormatSupported(PixelFormat format) {
         switch (format) {
             case BYTE_RGB:
@@ -178,17 +192,21 @@ class J2DResourceFactory extends BaseResourceFactory
         }
     }
 
+    @Override
     public void dispose() {
     }
 
+    @Override
     public PhongMaterial createPhongMaterial() {
         throw new UnsupportedOperationException("Not supported yet.");
 }
 
+    @Override
     public MeshView createMeshView(Mesh mesh) {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 
+    @Override
     public Mesh createMesh() {
         throw new UnsupportedOperationException("Not supported yet.");
     }

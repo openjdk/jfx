@@ -170,7 +170,6 @@ ExceptionOr<void> FetchRequest::initializeWith(const String& url, Init&& init)
     m_options.credentials = Credentials::SameOrigin;
     m_referrer = "client"_s;
     m_request.setURL(requestURL);
-    m_request.setRequester(ResourceRequest::Requester::Fetch);
     m_request.setInitiatorIdentifier(scriptExecutionContext()->resourceRequestIdentifier());
 
     auto optionsResult = initializeOptions(init);
@@ -198,6 +197,9 @@ ExceptionOr<void> FetchRequest::initializeWith(const String& url, Init&& init)
             return setBodyResult.releaseException();
     }
 
+    if (requestURL.protocolIsBlob())
+        m_requestBlobURLLifetimeExtender = requestURL;
+
     updateContentType();
     return { };
 }
@@ -205,6 +207,8 @@ ExceptionOr<void> FetchRequest::initializeWith(const String& url, Init&& init)
 ExceptionOr<void> FetchRequest::initializeWith(FetchRequest& input, Init&& init)
 {
     m_request = input.m_request;
+    m_navigationPreloadIdentifier = input.navigationPreloadIdentifier();
+
     m_options = input.m_options;
     m_referrer = input.m_referrer;
 
@@ -233,6 +237,9 @@ ExceptionOr<void> FetchRequest::initializeWith(FetchRequest& input, Init&& init)
     auto setBodyResult = init.body ? setBody(WTFMove(*init.body)) : setBody(input);
     if (setBodyResult.hasException())
         return setBodyResult;
+
+    if (m_request.url().protocolIsBlob())
+        m_requestBlobURLLifetimeExtender = m_request.url();
 
     updateContentType();
     return { };
@@ -273,19 +280,27 @@ ExceptionOr<void> FetchRequest::setBody(FetchRequest& request)
 
 ExceptionOr<Ref<FetchRequest>> FetchRequest::create(ScriptExecutionContext& context, Info&& input, Init&& init)
 {
-    auto request = adoptRef(*new FetchRequest(context, std::nullopt, FetchHeaders::create(FetchHeaders::Guard::Request), { }, { }, { }));
+    auto request = adoptRef(*new FetchRequest(&context, std::nullopt, FetchHeaders::create(FetchHeaders::Guard::Request), { }, { }, { }));
+    request->suspendIfNeeded();
 
-    if (WTF::holds_alternative<String>(input)) {
-        auto result = request->initializeWith(WTF::get<String>(input), WTFMove(init));
+    if (std::holds_alternative<String>(input)) {
+        auto result = request->initializeWith(std::get<String>(input), WTFMove(init));
         if (result.hasException())
             return result.releaseException();
     } else {
-        auto result = request->initializeWith(*WTF::get<RefPtr<FetchRequest>>(input), WTFMove(init));
+        auto result = request->initializeWith(*std::get<RefPtr<FetchRequest>>(input), WTFMove(init));
         if (result.hasException())
             return result.releaseException();
     }
 
     return request;
+}
+
+Ref<FetchRequest> FetchRequest::create(ScriptExecutionContext& context, std::optional<FetchBody>&& body, Ref<FetchHeaders>&& headers, ResourceRequest&& request, FetchOptions&& options, String&& referrer)
+{
+    auto result = adoptRef(*new FetchRequest(&context, WTFMove(body), WTFMove(headers), WTFMove(request), WTFMove(options), WTFMove(referrer)));
+    result->suspendIfNeeded();
+    return result;
 }
 
 String FetchRequest::referrer() const
@@ -317,15 +332,23 @@ ResourceRequest FetchRequest::resourceRequest() const
     return request;
 }
 
-ExceptionOr<Ref<FetchRequest>> FetchRequest::clone(ScriptExecutionContext& context)
+ExceptionOr<Ref<FetchRequest>> FetchRequest::clone()
 {
     if (isDisturbedOrLocked())
         return Exception { TypeError, "Body is disturbed or locked"_s };
 
-    auto clone = adoptRef(*new FetchRequest(context, std::nullopt, FetchHeaders::create(m_headers.get()), ResourceRequest { m_request }, FetchOptions { m_options}, String { m_referrer }));
+    auto clone = adoptRef(*new FetchRequest(scriptExecutionContext(), std::nullopt, FetchHeaders::create(m_headers.get()), ResourceRequest { m_request }, FetchOptions { m_options }, String { m_referrer }));
+    clone->suspendIfNeeded();
     clone->cloneBody(*this);
+    clone->setNavigationPreloadIdentifier(m_navigationPreloadIdentifier);
     clone->m_signal->signalFollow(m_signal);
     return clone;
+}
+
+void FetchRequest::stop()
+{
+    m_requestBlobURLLifetimeExtender.clear();
+    FetchBodyOwner::stop();
 }
 
 const char* FetchRequest::activeDOMObjectName() const

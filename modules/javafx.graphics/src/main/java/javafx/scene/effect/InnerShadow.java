@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -125,7 +125,7 @@ public class InnerShadow extends Effect {
     @Override
     com.sun.scenario.effect.InnerShadow createPeer() {
         return new com.sun.scenario.effect.InnerShadow();
-    };
+    }
 
     /**
      * The input for this {@code Effect}.

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -42,7 +42,7 @@ import javafx.collections.WeakListChangeListener;
  * @param <F> the upper bound of the type of the source list
  * @since JavaFX 8.0
  */
-public abstract class TransformationList<E, F> extends ObservableListBase<E> implements ObservableList<E> {
+public abstract class TransformationList<E, F> extends ObservableListBase<E> {
 
     /**
      * Contains the source list of this transformation list.
@@ -59,7 +59,6 @@ public abstract class TransformationList<E, F> extends ObservableListBase<E> imp
      * Creates a new Transformation list wrapped around the source list.
      * @param source the wrapped list
      */
-    @SuppressWarnings("unchecked")
     protected TransformationList(ObservableList<? extends F> source) {
         if (source == null) {
             throw new NullPointerException();

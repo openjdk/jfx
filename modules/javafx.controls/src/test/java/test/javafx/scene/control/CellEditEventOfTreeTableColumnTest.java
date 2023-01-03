@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2021, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -114,7 +114,7 @@ public class CellEditEventOfTreeTableColumnTest {
 
     @Test
     public void testNullTable() {
-        new CellEditEvent<Object, Object>(null, // null table must not throw NPE
+        new CellEditEvent<>(null, // null table must not throw NPE
                 new TreeTablePosition<>(null, -1, null), editAnyEvent(), null);
     }
 
@@ -145,7 +145,7 @@ public class CellEditEventOfTreeTableColumnTest {
         TreeItem<String> rowValue = table.getTreeItem(editingRow);
         String oldValue = rowValue.getValue();
         TreeTablePosition<String, String> pos = new TreeTablePosition<>(table, editingRow, editingColumn);
-        CellEditEvent<String,String> ev = new CellEditEvent<String, String>(source, pos, editAnyEvent(), editedValue);
+        CellEditEvent<String,String> ev = new CellEditEvent<>(source, pos, editAnyEvent(), editedValue);
         if (source != null) {
             assertEquals(source, ev.getSource());
         }
@@ -181,7 +181,7 @@ public class CellEditEventOfTreeTableColumnTest {
         root.setExpanded(true);
         ObservableList<String> model = FXCollections.observableArrayList("Four", "Five", "Fear");
         root.getChildren().addAll(model.stream().map(TreeItem::new).collect(Collectors.toList()));
-        table = new TreeTableView<String>(root);
+        table = new TreeTableView<>(root);
         editingColumn = new TreeTableColumn<>("TEST");
         table.getColumns().addAll(editingColumn);
         editingColumn.setCellValueFactory(e -> e.getValue().valueProperty());

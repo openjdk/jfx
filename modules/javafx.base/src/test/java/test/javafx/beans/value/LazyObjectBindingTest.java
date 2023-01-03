@@ -52,6 +52,24 @@ public class LazyObjectBindingTest {
         assertFalse(binding.isValid());
     }
 
+    @Test
+    void invalidationWhichBecomesValidDuringCallbacksShouldReturnCorrectValue() {
+        LazyObjectBindingStub<String> binding = new LazyObjectBindingStub<>() {
+            @Override
+            protected String computeValue() {
+                return "A";
+            }
+        };
+
+        binding.addListener(obs -> {
+            assertEquals("A", binding.get());
+        });
+
+        binding.invalidate();  // becomes valid again immediately
+
+        assertEquals("A", binding.get());
+    }
+
     @Nested
     class WhenObservedWithInvalidationListener {
         private InvalidationListener invalidationListener = obs -> {};

@@ -28,7 +28,9 @@
 #include "CertificateInfo.h"
 #include "ContentSecurityPolicyResponseHeaders.h"
 #include "CrossOriginEmbedderPolicy.h"
+#include "NavigationPreloadState.h"
 #include "ScriptBuffer.h"
+#include "ScriptExecutionContextIdentifier.h"
 #include "ServiceWorkerIdentifier.h"
 #include "ServiceWorkerJobDataIdentifier.h"
 #include "ServiceWorkerRegistrationData.h"
@@ -93,18 +95,21 @@ struct ServiceWorkerContextData {
     bool loadedFromDisk;
     std::optional<LastNavigationWasAppInitiated> lastNavigationWasAppInitiated;
     HashMap<URL, ImportedScript> scriptResourceMap;
+    std::optional<ScriptExecutionContextIdentifier> serviceWorkerPageIdentifier;
+    NavigationPreloadState navigationPreloadState;
 
     template<class Encoder> void encode(Encoder&) const;
     template<class Decoder> static std::optional<ServiceWorkerContextData> decode(Decoder&);
 
-    ServiceWorkerContextData isolatedCopy() const;
+    ServiceWorkerContextData isolatedCopy() const &;
+    ServiceWorkerContextData isolatedCopy() &&;
 };
 
 template<class Encoder>
 void ServiceWorkerContextData::encode(Encoder& encoder) const
 {
     encoder << jobDataIdentifier << registration << serviceWorkerIdentifier << script << contentSecurityPolicy << crossOriginEmbedderPolicy << referrerPolicy
-        << scriptURL << workerType << loadedFromDisk << lastNavigationWasAppInitiated << scriptResourceMap << certificateInfo;
+        << scriptURL << workerType << loadedFromDisk << lastNavigationWasAppInitiated << scriptResourceMap << certificateInfo << serviceWorkerPageIdentifier << navigationPreloadState;
 }
 
 template<class Decoder>
@@ -167,6 +172,16 @@ std::optional<ServiceWorkerContextData> ServiceWorkerContextData::decode(Decoder
     if (!certificateInfo)
         return std::nullopt;
 
+    std::optional<std::optional<ScriptExecutionContextIdentifier>> serviceWorkerPageIdentifier;
+    decoder >> serviceWorkerPageIdentifier;
+    if (!serviceWorkerPageIdentifier)
+        return std::nullopt;
+
+    std::optional<NavigationPreloadState> navigationPreloadState;
+    decoder >> navigationPreloadState;
+    if (!navigationPreloadState)
+        return std::nullopt;
+
     return {{
         WTFMove(*jobDataIdentifier),
         WTFMove(*registration),
@@ -180,7 +195,9 @@ std::optional<ServiceWorkerContextData> ServiceWorkerContextData::decode(Decoder
         workerType,
         loadedFromDisk,
         WTFMove(lastNavigationWasAppInitiated),
-        WTFMove(scriptResourceMap)
+        WTFMove(scriptResourceMap),
+        WTFMove(*serviceWorkerPageIdentifier),
+        WTFMove(*navigationPreloadState)
     }};
 }
 

@@ -30,6 +30,9 @@ import com.sun.media.jfxmedia.MediaException;
 import com.sun.media.jfxmedia.events.MediaErrorListener;
 import com.sun.media.jfxmedia.locator.Locator;
 import com.sun.media.jfxmedia.logging.Logger;
+
+import java.net.URI;
+import java.nio.file.Path;
 import java.util.List;
 import java.lang.ref.WeakReference;
 import java.util.ListIterator;
@@ -140,9 +143,15 @@ public class MediaUtils {
                 && (buf[1] & 0xff) == 0x44
                 && (buf[2] & 0xff) == 0x33) { // "ID3"
             contentType = CONTENT_TYPE_MPA;
+        // MP3 header - 4 bytes
+        // AAAAAAAA AAABBCCX XXXXXXXX XXXXXXXX
+        // A - Sync bits (all bits are set)
+        // B - MPEG Audio version ID (01 - reserved, rest is valid)
+        // C - Layer description (00 - reserved, rest is valid)
+        // X - Most bits combination is valid, so nothing to check
         } else if ((buf[0] & 0xff) == 0xff && (buf[1] & 0xe0) == 0xe0 && // sync
-                (buf[2] & 0x18) != 0x08 && // not reserved version
-                (buf[3] & 0x06) != 0x00) { // not reserved layer
+                (buf[1] & 0x18) != 0x08 && // not reserved version
+                (buf[1] & 0x06) != 0x00) { // not reserved layer
             contentType = CONTENT_TYPE_MPA;
         } else if ((((buf[4] & 0xff) << 24)
                 | ((buf[5] & 0xff) << 16)
@@ -173,19 +182,20 @@ public class MediaUtils {
         return contentType;
     }
     /**
-     * Returns the content type given the file name.
+     * Returns the content type given the uri.
      *
-     * @param filename
+     * @param uri
      * @return content type
      */
-    public static String filenameToContentType(String filename) {
-        if (filename == null) {
+    public static String filenameToContentType(URI uri) {
+        String fileName = MediaUtils.getFilenameFromURI(uri);
+        if (fileName == null) {
             return Locator.DEFAULT_CONTENT_TYPE;
         }
 
-        int dotIndex = filename.lastIndexOf(".");
+        int dotIndex = fileName.lastIndexOf(".");
         if (dotIndex != -1) {
-            String extension = filename.toLowerCase().substring(dotIndex + 1);
+            String extension = fileName.toLowerCase().substring(dotIndex + 1);
 
             switch (extension) {
                 case FILE_TYPE_AIF:
@@ -214,6 +224,37 @@ public class MediaUtils {
         }
 
         return Locator.DEFAULT_CONTENT_TYPE;
+    }
+
+    /**
+     * Returns the file name given the uri. Supports special case for JAR URIs.
+     *
+     * @param uri
+     * @return file name or null if file name cannot be extracted
+     */
+    public static String getFilenameFromURI(URI uri) {
+        if (uri.getScheme() == null) {
+            return null;
+        }
+
+        String scheme = uri.getScheme().toLowerCase();
+        if ("jar".equals(scheme)) {
+            // Split to get entry
+            // jar:<url>!/{entry}
+            String[] jarURI = uri.toASCIIString().split("!/");
+            if (jarURI.length != 2) {
+                return null;
+            }
+            Path entry = Path.of(jarURI[1]);
+            Path fileName = entry.getFileName();
+            if (fileName != null) {
+                return fileName.toString();
+            }
+        } else {
+            return uri.getPath();
+        }
+
+        return null;
     }
 
     /**

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,7 @@
 
 package com.sun.javafx.scene.traversal;
 
+import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.scene.ParentHelper;
 import javafx.scene.Node;
 import javafx.scene.Parent;
@@ -64,9 +65,10 @@ public abstract class TopMostTraversalEngine extends TraversalEngine{
      *
      * @param node The starting node to traverse from
      * @param dir the traversal direction
+     * @param method the traversal method
      * @return the new focus owner or null if none found (in that case old focus owner is still valid)
      */
-    public final Node trav(Node node, Direction dir) {
+    public final Node trav(Node node, Direction dir, TraversalMethod method) {
         Node newNode = null;
         Parent p = node.getParent();
         Node traverseNode = node;
@@ -101,13 +103,18 @@ public abstract class TopMostTraversalEngine extends TraversalEngine{
             }
         }
         if (newNode != null) {
-            focusAndNotify(newNode);
+            focusAndNotify(newNode, method);
         }
         return newNode;
     }
 
-    private void focusAndNotify(Node newNode) {
-        newNode.requestFocus();
+    private void focusAndNotify(Node newNode, TraversalMethod method) {
+        if (method == TraversalMethod.KEY) {
+            NodeHelper.requestFocusVisible(newNode);
+        } else {
+            newNode.requestFocus();
+        }
+
         notifyTreeTraversedTo(newNode);
     }
 
@@ -129,7 +136,7 @@ public abstract class TopMostTraversalEngine extends TraversalEngine{
      */
     public final Node traverseToFirst() {
         Node n = selectFirst();
-        if (n != null) focusAndNotify(n);
+        if (n != null) focusAndNotify(n, TraversalMethod.DEFAULT);
         return n;
     }
 
@@ -139,7 +146,7 @@ public abstract class TopMostTraversalEngine extends TraversalEngine{
      */
     public final Node traverseToLast() {
         Node n = selectLast();
-        if (n != null) focusAndNotify(n);
+        if (n != null) focusAndNotify(n, TraversalMethod.DEFAULT);
         return n;
     }
 }

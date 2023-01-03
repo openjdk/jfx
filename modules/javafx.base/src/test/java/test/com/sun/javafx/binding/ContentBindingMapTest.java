@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -52,14 +52,14 @@ public class ContentBindingMapTest {
 
     @Before
     public void setUp() {
-        map0 = new HashMap<String, Integer>();
-        map1 = new HashMap<String, Integer>();
+        map0 = new HashMap<>();
+        map1 = new HashMap<>();
         map1.put(key1, -1);
-        map2 = new HashMap<String, Integer>();
+        map2 = new HashMap<>();
         map2.put(key2_1, 2);
         map2.put(key2_2, 1);
 
-        op1 = new HashMap<String, Integer>(map1);
+        op1 = new HashMap<>(map1);
         op2 = FXCollections.observableMap(map2);
         op3 = FXCollections.observableMap(map0);
     }

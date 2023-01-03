@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -466,6 +466,7 @@ final class BMPImageLoader extends ImageLoaderImpl {
         }
     }
 
+    @Override
     public ImageFrame load(int imageIndex, int width, int height,
             boolean preserveAspectRatio, boolean smooth) throws IOException
     {
@@ -549,10 +550,12 @@ public final class BMPImageLoaderFactory implements ImageLoaderFactory {
         return theInstance;
     }
 
+    @Override
     public ImageFormatDescription getFormatDescription() {
         return BMPDescriptor.theInstance;
     }
 
+    @Override
     public ImageLoader createImageLoader(InputStream input) throws IOException {
         return new BMPImageLoader(input);
     }

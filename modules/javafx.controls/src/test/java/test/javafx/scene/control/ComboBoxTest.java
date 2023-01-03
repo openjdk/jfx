@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -126,7 +126,7 @@ public class ComboBoxTest {
             }
         });
 
-        comboBox = new ComboBox<String>();
+        comboBox = new ComboBox<>();
         comboBox.setSkin(new ComboBoxListViewSkin<>(comboBox));
         sm = comboBox.getSelectionModel();
     }
@@ -201,78 +201,78 @@ public class ComboBoxTest {
     }
 
     @Test public void singleArgConstructorSetsTheStyleClass() {
-        final ComboBox<String> b2 = new ComboBox<String>(FXCollections.observableArrayList("Hi"));
+        final ComboBox<String> b2 = new ComboBox<>(FXCollections.observableArrayList("Hi"));
         assertStyleClassContains(b2, "combo-box");
     }
 
     @Test public void singleArgConstructorSetsNonNullSelectionModel() {
-        final ComboBox<String> b2 = new ComboBox<String>(FXCollections.observableArrayList("Hi"));
+        final ComboBox<String> b2 = new ComboBox<>(FXCollections.observableArrayList("Hi"));
         assertNotNull(b2.getSelectionModel());
     }
 
     @Test public void singleArgConstructorAllowsNullItems() {
-        final ComboBox<String> b2 = new ComboBox<String>(null);
+        final ComboBox<String> b2 = new ComboBox<>(null);
         assertNull(b2.getItems());
     }
 
     @Test public void singleArgConstructorTakesItems() {
         ObservableList<String> items = FXCollections.observableArrayList("Hi");
-        final ComboBox<String> b2 = new ComboBox<String>(items);
+        final ComboBox<String> b2 = new ComboBox<>(items);
         assertSame(items, b2.getItems());
     }
 
     @Test public void singleArgConstructor_selectedItemIsNull() {
-        final ComboBox<String> b2 = new ComboBox<String>(FXCollections.observableArrayList("Hi"));
+        final ComboBox<String> b2 = new ComboBox<>(FXCollections.observableArrayList("Hi"));
         assertNull(b2.getSelectionModel().getSelectedItem());
     }
 
     @Test public void singleArgConstructor_selectedIndexIsNegativeOne() {
-        final ComboBox<String> b2 = new ComboBox<String>(FXCollections.observableArrayList("Hi"));
+        final ComboBox<String> b2 = new ComboBox<>(FXCollections.observableArrayList("Hi"));
         assertEquals(-1, b2.getSelectionModel().getSelectedIndex());
     }
 
     @Test public void singleArgConstructor_valueIsNull() {
-        final ComboBox<String> b2 = new ComboBox<String>(FXCollections.observableArrayList("Hi"));
+        final ComboBox<String> b2 = new ComboBox<>(FXCollections.observableArrayList("Hi"));
         assertNull(b2.getValue());
     }
 
     @Test public void singleArgConstructor_editableIsFalse() {
-        final ComboBox<String> b2 = new ComboBox<String>(FXCollections.observableArrayList("Hi"));
+        final ComboBox<String> b2 = new ComboBox<>(FXCollections.observableArrayList("Hi"));
         assertFalse(b2.isEditable());
     }
 
     @Test public void singleArgConstructor_showingIsFalse() {
-        final ComboBox<String> b2 = new ComboBox<String>(FXCollections.observableArrayList("Hi"));
+        final ComboBox<String> b2 = new ComboBox<>(FXCollections.observableArrayList("Hi"));
         assertFalse(b2.isShowing());
     }
 
     @Test public void singleArgConstructor_promptTextIsEmptyString() {
-        final ComboBox<String> b2 = new ComboBox<String>(FXCollections.observableArrayList("Hi"));
+        final ComboBox<String> b2 = new ComboBox<>(FXCollections.observableArrayList("Hi"));
         assertNull(b2.getPromptText());
     }
 
     @Test public void singleArgConstructor_placeholderIsNull() {
-        final ComboBox<String> b2 = new ComboBox<String>(FXCollections.observableArrayList("Hi"));
+        final ComboBox<String> b2 = new ComboBox<>(FXCollections.observableArrayList("Hi"));
         assertNull(b2.getPlaceholder());
     }
 
     @Test public void singleArgConstructor_armedIsFalse() {
-        final ComboBox<String> b2 = new ComboBox<String>(FXCollections.observableArrayList("Hi"));
+        final ComboBox<String> b2 = new ComboBox<>(FXCollections.observableArrayList("Hi"));
         assertEquals(false, b2.isArmed());
     }
 
     @Test public void singleArgConstructor_converterIsNotNull() {
-        final ComboBox<String> b2 = new ComboBox<String>(FXCollections.observableArrayList("Hi"));
+        final ComboBox<String> b2 = new ComboBox<>(FXCollections.observableArrayList("Hi"));
         assertNotNull(b2.getConverter());
     }
 
     @Test public void singleArgConstructor_cellFactoryIsNull() {
-        final ComboBox<String> b2 = new ComboBox<String>(FXCollections.observableArrayList("Hi"));
+        final ComboBox<String> b2 = new ComboBox<>(FXCollections.observableArrayList("Hi"));
         assertNull(b2.getCellFactory());
     }
 
     @Test public void singleArgConstructor_visibleRowFactoryIs10() {
-        final ComboBox<String> b2 = new ComboBox<String>(FXCollections.observableArrayList("Hi"));
+        final ComboBox<String> b2 = new ComboBox<>(FXCollections.observableArrayList("Hi"));
         assertEquals(10, b2.getVisibleRowCount());
     }
 
@@ -364,7 +364,7 @@ public class ComboBoxTest {
 
     @Test public void selectionModelCanBeBound() {
         SingleSelectionModel<String> sm = ComboBoxShim.<String>get_ComboBoxSelectionModel(comboBox);
-        ObjectProperty<SingleSelectionModel<String>> other = new SimpleObjectProperty<SingleSelectionModel<String>>(sm);
+        ObjectProperty<SingleSelectionModel<String>> other = new SimpleObjectProperty<>(sm);
         comboBox.selectionModelProperty().bind(other);
         assertSame(sm, sm);
     }
@@ -722,7 +722,7 @@ public class ComboBoxTest {
 
     @Test(expected=ClassCastException.class)
     public void defaultConverterCanHandleIncorrectType_2() {
-        ComboBox<Integer> cb = new ComboBox<Integer>();
+        ComboBox<Integer> cb = new ComboBox<>();
         StringConverter<Integer> sc = cb.getConverter();
         Integer value = sc.fromString("42");
     }
@@ -1112,7 +1112,7 @@ public class ComboBoxTest {
             "Option 1", "Option 2", "Option 3"
         );
 
-        ComboBox<String> comboBox = new ComboBox<String>();
+        ComboBox<String> comboBox = new ComboBox<>();
         comboBox.setItems(strings);
         comboBox.setEditable(true);
         comboBox.valueProperty().addListener((ov, t, t1) -> {
@@ -1132,7 +1132,7 @@ public class ComboBoxTest {
     }
 
     @Test public void test_rt31479() {
-        ComboBox<String> comboBox = new ComboBox<String>();
+        ComboBox<String> comboBox = new ComboBox<>();
 
         sl = new StageLoader(comboBox);
 
@@ -1202,7 +1202,7 @@ public class ComboBoxTest {
     @Test public void test_rt34573() {
         final ComboBox<String> comboBox = new ComboBox<>();
 
-        final ListCell<String> customCell = new ListCellShim<String>() {
+        final ListCell<String> customCell = new ListCellShim<>() {
             @Override public void updateItem(String item, boolean empty) {
                 super.updateItem(item, empty);
                 setText(item);
@@ -1225,7 +1225,7 @@ public class ComboBoxTest {
     @Test public void test_rt34566() {
         final ComboBox<String> comboBox = new ComboBox<>();
 
-        final ListCell<String> customCell = new ListCellShim<String>() {
+        final ListCell<String> customCell = new ListCellShim<>() {
             @Override public void updateItem(String item, boolean empty) {
                 super.updateItem(item, empty);
                 setText(item);
@@ -1288,7 +1288,7 @@ public class ComboBoxTest {
     @Test public void test_rt35586() {
         assertEquals(0, test_rt35586_count);
 
-        final ComboBox<String> cb = new ComboBox<String>();
+        final ComboBox<String> cb = new ComboBox<>();
         cb.setEditable(true);
         cb.setOnAction(event -> {
             test_rt35586_count++;
@@ -1336,7 +1336,7 @@ public class ComboBoxTest {
     }
 
     @Test public void test_rt35840() {
-        final ComboBox<String> cb = new ComboBox<String>();
+        final ComboBox<String> cb = new ComboBox<>();
         cb.setEditable(true);
         sl = new StageLoader(cb);
         cb.requestFocus();

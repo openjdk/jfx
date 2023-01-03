@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,7 +27,6 @@ package javafx.scene.control;
 
 import javafx.scene.control.skin.ProgressBarSkin;
 
-import javafx.beans.value.WritableValue;
 import javafx.css.StyleableProperty;
 import javafx.scene.AccessibleAttribute;
 import javafx.geometry.Orientation;
@@ -79,7 +78,7 @@ public class ProgressBar extends ProgressIndicator {
         // makes it look to css like the user set the value and css will not
         // override. Initializing focusTraversable by calling set on the
         // CssMetaData ensures that css will be able to override the value.
-        ((StyleableProperty<Boolean>)(WritableValue<Boolean>)focusTraversableProperty()).applyStyle(null, Boolean.FALSE);
+        ((StyleableProperty<Boolean>)focusTraversableProperty()).applyStyle(null, Boolean.FALSE);
         setProgress(progress);
         getStyleClass().setAll(DEFAULT_STYLE_CLASS);
     }

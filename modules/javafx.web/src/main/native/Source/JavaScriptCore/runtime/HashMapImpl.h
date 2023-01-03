@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -73,7 +73,7 @@ public:
     static const ClassInfo s_info; // This is never accessed directly, since that would break linkage on some compilers.
 
     template<typename CellType, SubspaceAccess mode>
-    static IsoSubspace* subspaceFor(VM& vm)
+    static GCClient::IsoSubspace* subspaceFor(VM& vm)
     {
         if constexpr (Type == HashTableType::Key)
             return vm.setBucketSpace<mode>();
@@ -96,7 +96,7 @@ public:
 
     static HashMapBucket* create(VM& vm)
     {
-        HashMapBucket* bucket = new (NotNull, allocateCell<HashMapBucket<Data>>(vm.heap)) HashMapBucket(vm, selectStructure(vm));
+        HashMapBucket* bucket = new (NotNull, allocateCell<HashMapBucket<Data>>(vm)) HashMapBucket(vm, selectStructure(vm));
         bucket->finishCreation(vm);
         ASSERT(!bucket->next());
         ASSERT(!bucket->prev());
@@ -209,11 +209,11 @@ public:
         return bitwise_cast<BucketType**>(this);
     }
 
-    static HashMapBuffer* create(JSGlobalObject* globalObject, VM& vm, JSCell*, uint32_t capacity)
+    static HashMapBuffer* tryCreate(JSGlobalObject* globalObject, VM& vm, uint32_t capacity)
     {
         auto scope = DECLARE_THROW_SCOPE(vm);
         size_t allocationSize = HashMapBuffer::allocationSize(capacity);
-        void* data = vm.jsValueGigacageAuxiliarySpace.allocateNonVirtual(vm, allocationSize, nullptr, AllocationFailureMode::ReturnNull);
+        void* data = vm.jsValueGigacageAuxiliarySpace().allocate(vm, allocationSize, nullptr, AllocationFailureMode::ReturnNull);
         if (!data) {
             throwOutOfMemoryError(globalObject, scope);
             return nullptr;
@@ -239,7 +239,7 @@ ALWAYS_INLINE uint32_t wangsInt64Hash(uint64_t key);
 ALWAYS_INLINE uint32_t jsMapHash(JSBigInt*);
 ALWAYS_INLINE uint32_t jsMapHash(JSGlobalObject*, VM&, JSValue);
 ALWAYS_INLINE uint32_t shouldShrink(uint32_t capacity, uint32_t keyCount);
-ALWAYS_INLINE uint32_t shouldRehashAfterAdd(uint32_t capacity, uint32_t keyCount, uint32_t deleteCount);
+ALWAYS_INLINE uint32_t shouldRehash(uint32_t capacity, uint32_t keyCount, uint32_t deleteCount);
 ALWAYS_INLINE uint32_t nextCapacity(uint32_t capacity, uint32_t keyCount);
 
 template <typename HashMapBucketType>
@@ -256,20 +256,7 @@ public:
 
     HashMapImpl(VM& vm, Structure* structure)
         : Base(vm, structure)
-        , m_keyCount(0)
-        , m_deleteCount(0)
-        , m_capacity(4)
     {
-    }
-
-    HashMapImpl(VM& vm, Structure* structure, uint32_t sizeHint)
-        : Base(vm, structure)
-        , m_keyCount(0)
-        , m_deleteCount(0)
-    {
-        uint32_t capacity = (Checked<uint32_t>(sizeHint) * 2) + 1;
-        capacity = std::max<uint32_t>(WTF::roundUpToPowerOfTwo(capacity), 4U);
-        m_capacity = capacity;
     }
 
     ALWAYS_INLINE HashMapBucketType** buffer() const
@@ -277,7 +264,7 @@ public:
         return m_buffer->buffer();
     }
 
-    void finishCreation(JSGlobalObject*, VM&);
+    void finishCreation(VM&);
     void finishCreation(JSGlobalObject*, VM&, HashMapImpl* base);
 
     static HashMapBucketType* emptyValue()
@@ -320,7 +307,7 @@ public:
         return m_keyCount;
     }
 
-    ALWAYS_INLINE void clear(JSGlobalObject*);
+    ALWAYS_INLINE void clear(VM&);
 
     ALWAYS_INLINE size_t bufferSizeInBytes() const
     {
@@ -355,42 +342,39 @@ public:
     }
 
 private:
-    ALWAYS_INLINE uint32_t shouldRehashAfterAdd() const
-    {
-        return JSC::shouldRehashAfterAdd(m_capacity, m_keyCount, m_deleteCount);
-    }
-
     ALWAYS_INLINE uint32_t shouldShrink() const
     {
         return JSC::shouldShrink(m_capacity, m_keyCount);
     }
 
-    ALWAYS_INLINE void setUpHeadAndTail(JSGlobalObject*, VM&);
+    ALWAYS_INLINE void setUpHeadAndTail(VM&);
 
     ALWAYS_INLINE void addNormalizedNonExistingForCloning(JSGlobalObject*, JSValue key, JSValue = JSValue());
+    ALWAYS_INLINE HashMapBucketType* addNormalizedNonExistingForCloningInternal(JSGlobalObject*, JSValue key, JSValue, uint32_t hash);
 
     template<typename CanUseBucket>
     ALWAYS_INLINE void addNormalizedInternal(JSGlobalObject*, JSValue key, JSValue, const CanUseBucket&);
 
     template<typename CanUseBucket>
-    ALWAYS_INLINE HashMapBucketType* addNormalizedInternal(VM&, JSValue key, JSValue, uint32_t hash, const CanUseBucket&);
+    ALWAYS_INLINE HashMapBucketType* addNormalizedInternal(JSGlobalObject*, JSValue key, JSValue, uint32_t hash, const CanUseBucket&);
 
     ALWAYS_INLINE HashMapBucketType** findBucketAlreadyHashedAndNormalized(JSGlobalObject*, JSValue key, uint32_t hash);
 
-    void rehash(JSGlobalObject*);
+    enum class RehashMode { BeforeAddition, AfterRemoval };
+    void rehash(JSGlobalObject*, RehashMode);
 
     ALWAYS_INLINE void checkConsistency() const;
 
-    void makeAndSetNewBuffer(JSGlobalObject*, VM&);
+    void makeAndSetNewBuffer(JSGlobalObject*, uint32_t newCapacity, VM&);
 
-    ALWAYS_INLINE void assertBufferIsEmpty() const;
+    ALWAYS_INLINE static void assertBufferIsEmpty(HashMapBucketType**, uint32_t capacity);
 
     WriteBarrier<HashMapBucketType> m_head;
     WriteBarrier<HashMapBucketType> m_tail;
     AuxiliaryBarrier<HashMapBufferType*> m_buffer;
-    uint32_t m_keyCount;
-    uint32_t m_deleteCount;
-    uint32_t m_capacity;
+    uint32_t m_keyCount { 0 };
+    uint32_t m_deleteCount { 0 };
+    uint32_t m_capacity { 0 };
 };
 
 } // namespace JSC

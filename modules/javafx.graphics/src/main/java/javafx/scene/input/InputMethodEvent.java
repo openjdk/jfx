@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -62,7 +62,7 @@ public final class InputMethodEvent extends InputEvent{
      * The only valid EventType for the InputMethodEvent.
      */
     public static final EventType<InputMethodEvent> INPUT_METHOD_TEXT_CHANGED =
-            new EventType<InputMethodEvent>(InputEvent.ANY, "INPUT_METHOD_TEXT_CHANGED");
+            new EventType<>(InputEvent.ANY, "INPUT_METHOD_TEXT_CHANGED");
 
     /**
      * Common supertype for all input method event types.

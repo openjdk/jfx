@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -36,7 +36,7 @@ class RQRef : public RefCounted<RQRef> {
 public:
     inline static RefPtr<RQRef> create(const JLObject &obj)
     {
-        return obj ? adoptRef(new RQRef(obj)) : 0;
+        return obj ? adoptRef(new RQRef(obj)) : nullptr;
     }
     operator jint();
     operator jobject() {return m_ref;}

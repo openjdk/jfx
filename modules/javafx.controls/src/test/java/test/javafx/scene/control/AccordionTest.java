@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -55,7 +55,10 @@ public class AccordionTest {
     private StackPane root;
 
     @Before public void setup() {
-        tk = (StubToolkit)Toolkit.getToolkit();//This step is not needed (Just to make sure StubToolkit is loaded into VM)
+        tk = Toolkit.getToolkit();
+
+        assertTrue(tk instanceof StubToolkit);  // Ensure it's StubToolkit
+
         accordion = new Accordion();
         root = new StackPane();
         scene = new Scene(root);
@@ -150,7 +153,7 @@ public class AccordionTest {
         TitledPane a = new TitledPane();
         TitledPane b = new TitledPane();
         TitledPane c = new TitledPane();
-        ObservableValue<TitledPane> value = new SimpleObjectProperty<TitledPane>(b);
+        ObservableValue<TitledPane> value = new SimpleObjectProperty<>(b);
         accordion.getPanes().addAll(a, b, c);
         accordion.expandedPaneProperty().bind(value);
         accordion.getPanes().removeAll(b, c);

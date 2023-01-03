@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -39,7 +39,6 @@ import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
 import javafx.beans.value.ChangeListener;
-import javafx.beans.value.WritableValue;
 import javafx.geometry.Dimension2D;
 import javafx.geometry.Side;
 import javafx.util.Duration;
@@ -266,6 +265,7 @@ public final class NumberAxis extends ValueAxis<Number> {
      *
      * @return List of data values where to draw minor tick marks
      */
+    @Override
     protected List<Number> calculateMinorTickMarks() {
         final List<Number> minorTickMarks = new ArrayList<>();
         final double lowerBound = getLowerBound();
@@ -384,7 +384,7 @@ public final class NumberAxis extends ValueAxis<Number> {
             paddedMax = 0;
         }
         // calculate tick unit for the number of ticks can have in the given data range
-        double tickUnit = paddedRange/(double)numOfTickMarks;
+        double tickUnit = paddedRange/numOfTickMarks;
         // search for the best tick unit that fits
         double tickUnitRounded = 0;
         double minRounded = 0;
@@ -458,7 +458,7 @@ public final class NumberAxis extends ValueAxis<Number> {
 
     private static class StyleableProperties {
         private static final CssMetaData<NumberAxis,Number> TICK_UNIT =
-            new CssMetaData<NumberAxis,Number>("-fx-tick-unit",
+            new CssMetaData<>("-fx-tick-unit",
                 SizeConverter.getInstance(), 5.0) {
 
             @Override
@@ -468,14 +468,14 @@ public final class NumberAxis extends ValueAxis<Number> {
 
             @Override
             public StyleableProperty<Number> getStyleableProperty(NumberAxis n) {
-                return (StyleableProperty<Number>)(WritableValue<Number>)n.tickUnitProperty();
+                return (StyleableProperty<Number>)n.tickUnitProperty();
             }
         };
 
         private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
         static {
            final List<CssMetaData<? extends Styleable, ?>> styleables =
-               new ArrayList<CssMetaData<? extends Styleable, ?>>(ValueAxis.getClassCssMetaData());
+               new ArrayList<>(ValueAxis.getClassCssMetaData());
            styleables.add(TICK_UNIT);
            STYLEABLES = Collections.unmodifiableList(styleables);
         }

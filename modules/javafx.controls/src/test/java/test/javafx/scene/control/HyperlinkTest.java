@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -226,7 +226,7 @@ public class HyperlinkTest {
 
     @Test public void onActionCanBeBound() {
         final EventHandler<ActionEvent> handler = new EventHandlerStub();
-        ObjectProperty<EventHandler<ActionEvent>> other = new SimpleObjectProperty<EventHandler<ActionEvent>>(handler);
+        ObjectProperty<EventHandler<ActionEvent>> other = new SimpleObjectProperty<>(handler);
         link.onActionProperty().bind(other);
         assertEquals(handler, link.getOnAction());
     }
@@ -247,7 +247,7 @@ public class HyperlinkTest {
         @Override public void handle(ActionEvent event) {
             called = true;
         }
-    };
+    }
 
     /********************************************************************************
      *                                                                              *

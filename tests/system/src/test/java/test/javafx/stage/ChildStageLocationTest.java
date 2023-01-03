@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2016, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,10 +25,11 @@
 
 package test.javafx.stage;
 
-import java.util.TimerTask;
+import static org.junit.Assume.assumeTrue;
+
 import java.util.Timer;
+import java.util.TimerTask;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 
 import javafx.application.Application;
 import javafx.application.Platform;
@@ -39,39 +40,37 @@ import javafx.scene.Scene;
 import javafx.scene.control.Label;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
-
 import javafx.stage.Window;
+
+import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import static junit.framework.Assert.assertTrue;
-import static org.junit.Assert.fail;
-import static org.junit.Assume.assumeTrue;
+import test.util.Util;
 
 public class ChildStageLocationTest {
-    static CountDownLatch startupLatch;
+    static CountDownLatch startupLatch = new CountDownLatch(1);
     static Timer timer;
     static Runnable runNext;
     static volatile Stage stage;
     static volatile Stage childStage;
     static double x, y;
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws Exception {
         initFX();
         new ChildStageLocationTest().testLocation();
+        teardown();
     }
 
     @BeforeClass
-    public static void initFX() {
-        startupLatch = new CountDownLatch(1);
-        new Thread(() -> Application.launch(TestApp.class, (String[])null)).start();
-        try {
-            if (!startupLatch.await(15, TimeUnit.SECONDS)) {
-                fail("Timeout waiting for FX runtime to start");
-            }
-        } catch (InterruptedException ex) {
-            fail("Unexpected exception: " + ex);
-        }
+    public static void initFX() throws Exception {
+        Util.launch(startupLatch, TestApp.class);
+    }
+
+    @AfterClass
+    public static void teardown() {
+        Util.shutdown();
     }
 
     @Test
@@ -82,15 +81,15 @@ public class ChildStageLocationTest {
         double minX = bounds.getMinX() + (bounds.getWidth() - window.getWidth())/2 - 50;
         double minY = bounds.getMinY() + (bounds.getHeight() - window.getHeight())/3 - 100;
         System.out.println("Primary stage location: " + stage.getX() + " " + stage.getY());
-        assertTrue("Primary stage X location should be >" + minX, stage.getX() > minX);
-        assertTrue("Primary stage Y location should be >" + minY, stage.getY() > minY);
+        Assert.assertTrue("Primary stage X location should be >" + minX, stage.getX() > minX);
+        Assert.assertTrue("Primary stage Y location should be >" + minY, stage.getY() > minY);
 
         window = childStage.getScene().getWindow();
         minX = bounds.getMinX() + (bounds.getWidth() - window.getWidth())/2 - 50;
         minY = bounds.getMinY() + (bounds.getHeight() - window.getHeight())/3 - 100;
         System.out.println("Child stage location: " + childStage.getX() + " " + childStage.getY());
-        assertTrue("Child stage X location should be >" + minX, childStage.getX() > minX);
-        assertTrue("Child stage Y location should be >" + minY, childStage.getY() > minY);
+        Assert.assertTrue("Child stage X location should be >" + minX, childStage.getX() > minX);
+        Assert.assertTrue("Child stage Y location should be >" + minY, childStage.getY() > minY);
     }
 
     public static class TestApp extends Application implements ChangeListener {
@@ -104,6 +103,7 @@ public class ChildStageLocationTest {
             stage.heightProperty().addListener(this);
             ChildStageLocationTest.stage = stage;
             runNext = () -> {
+                // FIX unsynchronized access from multiple threads
                 runNext = () -> {};
                 Platform.runLater(this::createChildStage);
             };
@@ -136,5 +136,4 @@ public class ChildStageLocationTest {
             childStage.showAndWait();
         }
     }
-
 }

@@ -26,8 +26,9 @@
 #pragma once
 
 #include <wtf/ForbidHeapAllocation.h>
+#include <wtf/Platform.h>
 
-#if (defined(USE_SYSTEM_MALLOC) && USE_SYSTEM_MALLOC)
+#if USE(SYSTEM_MALLOC) || !USE(ISO_MALLOC)
 
 #include <wtf/FastMalloc.h>
 

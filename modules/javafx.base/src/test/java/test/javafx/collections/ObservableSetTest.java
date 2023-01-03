@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,7 +29,6 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Set;
 import javafx.collections.ObservableSet;
 import javafx.collections.SetChangeListener;
@@ -71,7 +70,7 @@ public class ObservableSetTest {
     @Before
     public void setUp() throws Exception {
         observableSet = setFactory.call();
-        observer = new MockSetObserver<String>();
+        observer = new MockSetObserver<>();
         observableSet.addListener(observer);
 
         useSetData("one", "two", "foo");
@@ -113,7 +112,7 @@ public class ObservableSetTest {
     @Test
     @SuppressWarnings("unchecked")
     public void testAddAll() {
-        Set<String> set = new HashSet<String>();
+        Set<String> set = new HashSet<>();
         set.add("oFoo");
         set.add("pFoo");
         set.add("foo");

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,7 +27,6 @@ package com.sun.glass.ui.monocle;
 
 import com.sun.glass.ui.Size;
 
-import java.io.IOException;
 import java.nio.ByteBuffer;
 
 /** Provides a native cursor for use with X11. Since X11 doesn't provide any

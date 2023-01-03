@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -171,7 +171,7 @@ public final class PrinterJob {
 
     private ObjectProperty<Printer> createPrinterProperty(Printer printer) {
 
-        return new SimpleObjectProperty<Printer>(printer) {
+        return new SimpleObjectProperty<>(printer) {
 
             @Override
             public void set(Printer value) {
@@ -470,7 +470,7 @@ public final class PrinterJob {
          * as it cannot be re-used.
          */
         DONE
-    };
+    }
 
     private ReadOnlyObjectWrapper<JobStatus> jobStatus =
         new ReadOnlyObjectWrapper(JobStatus.NOT_STARTED);

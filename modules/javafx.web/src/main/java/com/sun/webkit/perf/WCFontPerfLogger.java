@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -53,10 +53,12 @@ public final class WCFontPerfLogger extends WCFont {
         logger.reset();
     }
 
+    @Override
     public Object getPlatformFont() {
         return fnt.getPlatformFont();
     }
 
+    @Override
     public WCFont deriveFont(float size) {
         logger.resumeCount("DERIVEFONT");
         WCFont res = fnt.deriveFont(size);
@@ -64,6 +66,7 @@ public final class WCFontPerfLogger extends WCFont {
         return res;
     }
 
+    @Override
     public WCTextRun[] getTextRuns(String str) {
         logger.resumeCount("GETTEXTRUNS");
         final WCTextRun runs[] = fnt.getTextRuns(str);
@@ -71,6 +74,7 @@ public final class WCFontPerfLogger extends WCFont {
         return runs;
     }
 
+    @Override
     public int[] getGlyphCodes(char[] chars) {
         logger.resumeCount("GETGLYPHCODES");
         int[] res = fnt.getGlyphCodes(chars);
@@ -78,6 +82,7 @@ public final class WCFontPerfLogger extends WCFont {
         return res;
     }
 
+    @Override
     public float getXHeight() {
         logger.resumeCount("GETXHEIGHT");
         float res = fnt.getXHeight();
@@ -85,6 +90,7 @@ public final class WCFontPerfLogger extends WCFont {
         return res;
     }
 
+    @Override
     public double getGlyphWidth(int glyph) {
         logger.resumeCount("GETGLYPHWIDTH");
         double res = fnt.getGlyphWidth(glyph);
@@ -92,6 +98,7 @@ public final class WCFontPerfLogger extends WCFont {
         return res;
     }
 
+    @Override
     public float[] getGlyphBoundingBox(int glyph) {
         logger.resumeCount("GETGLYPHBOUNDINGBOX");
         float[] res = fnt.getGlyphBoundingBox(glyph);
@@ -99,6 +106,7 @@ public final class WCFontPerfLogger extends WCFont {
         return res;
     }
 
+    @Override
     public int hashCode() {
         logger.resumeCount("HASH");
         int res = fnt.hashCode();
@@ -106,6 +114,7 @@ public final class WCFontPerfLogger extends WCFont {
         return res;
     }
 
+    @Override
     public boolean equals(Object object) {
         logger.resumeCount("COMPARE");
         boolean res = fnt.equals(object);
@@ -113,6 +122,7 @@ public final class WCFontPerfLogger extends WCFont {
         return res;
     }
 
+    @Override
     public float getAscent() {
         logger.resumeCount("GETASCENT");
         float res = fnt.getAscent();
@@ -120,6 +130,7 @@ public final class WCFontPerfLogger extends WCFont {
         return res;
     }
 
+    @Override
     public float getDescent() {
         logger.resumeCount("GETDESCENT");
         float res = fnt.getDescent();
@@ -127,6 +138,7 @@ public final class WCFontPerfLogger extends WCFont {
         return res;
     }
 
+    @Override
     public float getLineSpacing() {
         logger.resumeCount("GETLINESPACING");
         float res = fnt.getLineSpacing();
@@ -134,6 +146,7 @@ public final class WCFontPerfLogger extends WCFont {
         return res;
     }
 
+    @Override
     public float getLineGap() {
         logger.resumeCount("GETLINEGAP");
         float res = fnt.getLineGap();
@@ -141,6 +154,7 @@ public final class WCFontPerfLogger extends WCFont {
         return res;
     }
 
+    @Override
     public boolean hasUniformLineMetrics() {
         logger.resumeCount("HASUNIFORMLINEMETRICS");
         boolean res = fnt.hasUniformLineMetrics();
@@ -148,6 +162,7 @@ public final class WCFontPerfLogger extends WCFont {
         return res;
     }
 
+    @Override
     public float getCapHeight() {
         logger.resumeCount("GETCAPHEIGHT");
         float res = fnt.getCapHeight();

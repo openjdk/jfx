@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -91,6 +91,17 @@ class WinTextRangeProvider {
         peer = 0L;
     }
 
+    private void validateRange(String text) {
+        if (text == null) {
+            start = end = 0;
+            return;
+        }
+
+        int length = text.length();
+        start = Math.max(0, Math.min(start, length));
+        end = Math.max(start, Math.min(end, length));
+    }
+
     void setRange(int start, int end) {
         this.start = start;
         this.end = end;
@@ -105,7 +116,7 @@ class WinTextRangeProvider {
     }
 
     @Override public String toString() {
-        return "Range(start: "+start+", end: "+end+", id: " + id + ")";
+        return "Range(start: " + start + ", end: " + end + ", id: " + id + ")";
     }
 
     private Object getAttribute(AccessibleAttribute attribute, Object... parameters) {
@@ -114,7 +125,7 @@ class WinTextRangeProvider {
 
     private boolean isWordStart(BreakIterator bi, String text, int offset) {
         if (offset == 0) return true;
-        if (offset == text.length()) return true;
+        if (offset >= text.length()) return true;
         if (offset == BreakIterator.DONE) return true;
         return bi.isBoundary(offset) && Character.isLetterOrDigit(text.charAt(offset));
     }
@@ -149,6 +160,7 @@ class WinTextRangeProvider {
         if (text == null) return;
         int length = text.length();
         if (length == 0) return;
+        validateRange(text);
 
         switch (unit) {
             case TextUnit_Character: {
@@ -220,8 +232,7 @@ class WinTextRangeProvider {
         }
 
         /* Always ensure range consistency */
-        start = Math.max(0, Math.min(start, length));
-        end = Math.max(start, Math.min(end, length));
+        validateRange(text);
     }
 
     private long FindAttribute(int attributeId, WinVariant val, boolean backward) {
@@ -307,6 +318,7 @@ class WinTextRangeProvider {
         String text = (String)getAttribute(TEXT);
         if (text == null) return null;
         int length = text.length();
+        validateRange(text);
 
         /* Narrator will not focus an empty text control if the bounds are NULL */
         if (length == 0) return new double[0];
@@ -326,10 +338,16 @@ class WinTextRangeProvider {
             int index = 0;
             for (int i = 0; i < bounds.length; i++) {
                 Bounds b = bounds[i];
-                result[index++] = b.getMinX();
-                result[index++] = b.getMinY();
-                result[index++] = b.getWidth();
-                result[index++] = b.getHeight();
+                float[] platformBounds = accessible.getPlatformBounds(
+                        (float) b.getMinX(),
+                        (float) b.getMinY(),
+                        (float) b.getWidth(),
+                        (float) b.getHeight());
+
+                result[index++] = platformBounds[0];
+                result[index++] = platformBounds[1];
+                result[index++] = platformBounds[2];
+                result[index++] = platformBounds[3];
             }
             return result;
         }
@@ -343,6 +361,7 @@ class WinTextRangeProvider {
     private String GetText(int maxLength) {
         String text = (String)getAttribute(TEXT);
         if (text == null) return null;
+        validateRange(text);
         int endOffset = maxLength != -1 ? Math.min(end, start + maxLength) : end;
 //        System.out.println("+GetText [" + text.substring(start, endOffset)+"]");
         return text.substring(start, endOffset);
@@ -447,8 +466,7 @@ class WinTextRangeProvider {
         }
 
         /* Always ensure range consistency */
-        start = Math.max(0, Math.min(start, length));
-        end = Math.max(start, Math.min(end, length));
+        validateRange(text);
         return actualCount;
     }
 
@@ -457,6 +475,7 @@ class WinTextRangeProvider {
         String text = (String)getAttribute(TEXT);
         if (text == null) return 0;
         int length = text.length();
+        validateRange(text);
 
         int actualCount = 0;
         int offset = endpoint == TextPatternRangeEndpoint_Start ? start : end;
@@ -552,8 +571,7 @@ class WinTextRangeProvider {
         }
 
         /* Always ensure range consistency */
-        start = Math.max(0, Math.min(start, length));
-        end = Math.max(start, Math.min(end, length));
+        validateRange(text);
         return actualCount;
     }
 
@@ -573,8 +591,7 @@ class WinTextRangeProvider {
         }
 
         /* Always ensure range consistency */
-        start = Math.max(0, Math.min(start, length));
-        end = Math.max(start, Math.min(end, length));
+        validateRange(text);
     }
 
     private void Select() {

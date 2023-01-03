@@ -55,6 +55,7 @@
 #include "Settings.h"
 #include "SharedBuffer.h"
 #include "StyleScope.h"
+#include "TextResourceDecoder.h"
 #include "TransformSource.h"
 #include "XMLNSNames.h"
 #include "XMLDocumentParserScope.h"
@@ -563,7 +564,7 @@ RefPtr<XMLParserContext> XMLParserContext::createMemoryParser(xmlSAXHandlerPtr h
     xmlParserCtxtPtr parser = xmlCreateMemoryParserCtxt(chunk.data(), chunk.length());
 
     if (!parser)
-        return 0;
+        return nullptr;
 
     memcpy(parser->sax, handlers, sizeof(xmlSAXHandler));
 
@@ -1325,6 +1326,9 @@ void XMLDocumentParser::doEnd()
     }
 
 #if ENABLE(XSLT)
+    if (isDetached())
+        return;
+
     bool xmlViewerMode = !m_sawError && !m_sawCSS && !m_sawXSLTransform && shouldRenderInXMLTreeViewerMode(*document());
     if (xmlViewerMode) {
         XMLTreeViewer xmlTreeViewer(*document());

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,18 +25,27 @@
 
 package test.javafx.scene.control;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertTrue;
+import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.assertStyleClassContains;
+
 import javafx.scene.control.SelectionMode;
 import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeTableCell;
+import javafx.scene.control.TreeTableColumn;
 import javafx.scene.control.TreeTableRow;
 import javafx.scene.control.TreeTableView;
 import javafx.scene.control.skin.TreeTableRowSkin;
+
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
 
-import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.*;
-import static org.junit.Assert.*;
+import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
 
 public class TreeTableRowTest {
     private TreeTableRow<String> cell;
@@ -52,8 +61,17 @@ public class TreeTableRowTest {
     private TreeItem<String> oranges;
     private TreeItem<String> pears;
 
+    StageLoader stageLoader;
+
+    @After
+    public void after() {
+        if (stageLoader != null) {
+            stageLoader.dispose();
+        }
+    }
+
     @Before public void setup() {
-        cell = new TreeTableRow<String>();
+        cell = new TreeTableRow<>();
 
         root = new TreeItem<>(ROOT);
         apples = new TreeItem<>(APPLES);
@@ -61,7 +79,7 @@ public class TreeTableRowTest {
         pears = new TreeItem<>(PEARS);
         root.getChildren().addAll(apples, oranges, pears);
 
-        tree = new TreeTableView<String>(root);
+        tree = new TreeTableView<>(root);
         root.setExpanded(true);
     }
 
@@ -215,7 +233,7 @@ public class TreeTableRowTest {
     @Test public void itemIsUpdatedWhenItWasOutOfRangeButUpdatesToTreeTableViewItemsMakesItInRange() {
         cell.updateIndex(4);
         cell.updateTreeTableView(tree);
-        root.getChildren().addAll(new TreeItem<String>("Pumpkin"), new TreeItem<>("Lemon"));
+        root.getChildren().addAll(new TreeItem<>("Pumpkin"), new TreeItem<>("Lemon"));
         assertSame("Pumpkin", cell.getItem());
     }
 
@@ -277,7 +295,7 @@ public class TreeTableRowTest {
         TreeItem<String> newRoot = new TreeItem<>();
         newRoot.setExpanded(true);
         newRoot.getChildren().setAll(new TreeItem<>("Water"), new TreeItem<>("Juice"), new TreeItem<>("Soda"));
-        TreeTableView<String> treeView2 = new TreeTableView<String>(newRoot);
+        TreeTableView<String> treeView2 = new TreeTableView<>(newRoot);
         cell.updateTreeTableView(treeView2);
         assertEquals("Juice", cell.getItem());
     }
@@ -320,7 +338,7 @@ public class TreeTableRowTest {
         cell.updateTreeTableView(tree);
         cell.updateIndex(0);
 
-        TreeTableCell<String,String> other = new TreeTableCell<String,String>();
+        TreeTableCell<String,String> other = new TreeTableCell<>();
         other.updateTreeTableView(tree);
         other.updateIndex(1);
 
@@ -334,7 +352,7 @@ public class TreeTableRowTest {
         cell.updateTreeTableView(tree);
         cell.updateIndex(0);
 
-        TreeTableCell<String,String> other = new TreeTableCell<String,String>();
+        TreeTableCell<String,String> other = new TreeTableCell<>();
         other.updateTreeTableView(tree);
         other.updateIndex(1);
 
@@ -372,7 +390,7 @@ public class TreeTableRowTest {
         cell.updateTreeTableView(tree);
         cell.updateIndex(0);
 
-        TreeTableCell<String,String> other = new TreeTableCell<String,String>();
+        TreeTableCell<String,String> other = new TreeTableCell<>();
         other.updateTreeTableView(tree);
         other.updateIndex(1);
 
@@ -429,7 +447,7 @@ public class TreeTableRowTest {
         cell.updateTreeTableView(tree);
 
         // Other is configured to represent row 1 which is not selected.
-        TreeTableCell<String,String> other = new TreeTableCell<String,String>();
+        TreeTableCell<String,String> other = new TreeTableCell<>();
         other.updateTreeTableView(tree);
         other.updateIndex(1);
 
@@ -457,7 +475,7 @@ public class TreeTableRowTest {
         cell.updateTreeTableView(tree);
         cell.updateIndex(0);
 
-        TreeTableCell<String,String> other = new TreeTableCell<String,String>();
+        TreeTableCell<String,String> other = new TreeTableCell<>();
         other.updateTreeTableView(tree);
         other.updateIndex(1);
 
@@ -471,7 +489,7 @@ public class TreeTableRowTest {
         cell.updateTreeTableView(tree);
         cell.updateIndex(0);
 
-        TreeTableCell<String,String> other = new TreeTableCell<String,String>();
+        TreeTableCell<String,String> other = new TreeTableCell<>();
         other.updateTreeTableView(tree);
         other.updateIndex(1);
 
@@ -527,7 +545,7 @@ public class TreeTableRowTest {
         cell.updateTreeTableView(tree);
 
         // Other is configured to represent row 1 which is not focused.
-        TreeTableCell<String,String> other = new TreeTableCell<String,String>();
+        TreeTableCell<String,String> other = new TreeTableCell<>();
         other.updateTreeTableView(tree);
         other.updateIndex(1);
 
@@ -684,7 +702,7 @@ public class TreeTableRowTest {
         cell.updateIndex(0);
         cell.startEdit();
 
-        TreeTableCell<String,String> other = new TreeTableCell<String,String>();
+        TreeTableCell<String,String> other = new TreeTableCell<>();
         other.updateTreeTableView(tree);
         other.updateIndex(1);
         tree.edit(1, null);
@@ -808,8 +826,6 @@ public class TreeTableRowTest {
         assertEquals("treeTableView", cell.treeTableViewProperty().getName());
     }
 
-
-
     @Test public void test_rt_33106() {
         cell.updateTreeTableView(tree);
         tree.setRoot(null);
@@ -819,5 +835,108 @@ public class TreeTableRowTest {
     @Test public void test_jdk_8151524() {
         TreeTableRow cell = new TreeTableRow();
         cell.setSkin(new TreeTableRowSkin(cell));
+    }
+
+    /** TreeTableView with cell selection enabled should not select TreeTableRows, see JDK-8292353 */
+    @Test
+    public void test_TreeTableView_select_all() {
+        TreeTableView<String> tree = ControlUtils.createTreeTableView();
+
+        stageLoader = new StageLoader(tree);
+        TreeTableView.TreeTableViewSelectionModel<String> sm = tree.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+        sm.setCellSelectionEnabled(true);
+        sm.clearSelection();
+
+        TreeTableColumn<String,?> col0 = tree.getColumns().get(0);
+        TreeTableColumn<String,?> col1 = tree.getColumns().get(1);
+        TreeTableColumn<String,?> col2 = tree.getColumns().get(2);
+        TreeTableRow row = ControlUtils.getTreeTableRow(tree, 0);
+        TreeTableCell c0 = ControlUtils.getTreeTableCell(tree, 0, 0);
+        TreeTableCell c1 = ControlUtils.getTreeTableCell(tree, 0, 1);
+        TreeTableCell c2 = ControlUtils.getTreeTableCell(tree, 0, 2);
+
+        assertFalse(c0.isSelected());
+        assertFalse(c1.isSelected());
+        assertFalse(c2.isSelected());
+        assertFalse(row.isSelected());
+
+        // select all cells in the first row
+        sm.select(0, col0);
+        sm.select(0, col1);
+        sm.select(0, col2);
+
+        assertTrue(c0.isSelected());
+        assertTrue(c1.isSelected());
+        assertTrue(c2.isSelected());
+        assertFalse(row.isSelected()); // JDK-8292353 failure
+    }
+
+    /**
+     * TreeTableView with cell selection enabled should not select TreeTableRows,
+     * even when selected as a group, see JDK-8292353
+     */
+    @Test
+    public void test_TreeTableView_select_all_as_group() {
+        TreeTableView<String> tree = ControlUtils.createTreeTableView();
+
+        stageLoader = new StageLoader(tree);
+        TreeTableView.TreeTableViewSelectionModel<String> sm = tree.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+        sm.setCellSelectionEnabled(true);
+        sm.clearSelection();
+
+        TreeTableColumn<String,?> col0 = tree.getColumns().get(0);
+        TreeTableColumn<String,?> col1 = tree.getColumns().get(1);
+        TreeTableColumn<String,?> col2 = tree.getColumns().get(2);
+        TreeTableRow row = ControlUtils.getTreeTableRow(tree, 0);
+        TreeTableCell c0 = ControlUtils.getTreeTableCell(tree, 0, 0);
+        TreeTableCell c1 = ControlUtils.getTreeTableCell(tree, 0, 1);
+        TreeTableCell c2 = ControlUtils.getTreeTableCell(tree, 0, 2);
+
+        assertFalse(c0.isSelected());
+        assertFalse(c1.isSelected());
+        assertFalse(c2.isSelected());
+        assertFalse(row.isSelected());
+
+        // select all cells in the first row as a group
+        sm.select(0, null);
+
+        assertTrue(c0.isSelected());
+        assertTrue(c1.isSelected());
+        assertTrue(c2.isSelected());
+        assertFalse(row.isSelected()); // JDK-8292353 failure
+    }
+
+    /** TreeTableView with cell selection enabled should not select TreeTableRows, see JDK-8292353 */
+    @Test
+    public void test_TreeTableView_select_all_but_one() {
+        TreeTableView<String> tree = ControlUtils.createTreeTableView();
+
+        stageLoader = new StageLoader(tree);
+        TreeTableView.TreeTableViewSelectionModel<String> sm = tree.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+        sm.setCellSelectionEnabled(true);
+        sm.clearSelection();
+
+        TreeTableColumn<String,?> col1 = tree.getColumns().get(1);
+        TreeTableRow row = ControlUtils.getTreeTableRow(tree, 0);
+        TreeTableCell c0 = ControlUtils.getTreeTableCell(tree, 0, 0);
+        TreeTableCell c1 = ControlUtils.getTreeTableCell(tree, 0, 1);
+        TreeTableCell c2 = ControlUtils.getTreeTableCell(tree, 0, 2);
+
+        assertFalse(c0.isSelected());
+        assertFalse(c1.isSelected());
+        assertFalse(c2.isSelected());
+        assertFalse(row.isSelected());
+
+        // select 0:0 and 0:2
+        sm.select(0, null);
+        sm.clearSelection(0, col1);
+
+        assertTrue(c0.isSelected());
+        assertFalse(c1.isSelected());
+        assertTrue(c2.isSelected());
+        assertFalse(row.isSelected()); // JDK-8292353 failure
     }
 }

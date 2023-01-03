@@ -263,7 +263,8 @@ private:
 
         auto optionalOwnerThread = vm.ownerThread();
         if (optionalOwnerThread) {
-            sendMessage(*optionalOwnerThread.value().get(), [&] (PlatformRegisters& registers) -> void {
+            ThreadSuspendLocker locker;
+            sendMessage(locker, *optionalOwnerThread.value().get(), [&] (PlatformRegisters& registers) -> void {
                 auto signalContext = SignalContext::tryCreate(registers);
                 if (!signalContext)
                     return;
@@ -348,6 +349,7 @@ void VMTraps::handleTraps(VMTraps::BitField mask)
     auto scope = DECLARE_THROW_SCOPE(vm);
     ASSERT(onlyContainsAsyncEvents(mask));
     ASSERT(needHandling(mask));
+    ASSERT(!hasTrapBit(DeferTrapHandling));
 
     if (isDeferringTermination())
         mask &= ~NeedTermination;
@@ -389,6 +391,7 @@ void VMTraps::handleTraps(VMTraps::BitField mask)
             return;
 
         case NeedExceptionHandling:
+        case DeferTrapHandling:
         default:
             RELEASE_ASSERT_NOT_REACHED();
         }
@@ -401,7 +404,7 @@ auto VMTraps::takeTopPriorityTrap(VMTraps::BitField mask) -> Event
 
     // Note: the EventBitShift is already sorted in highest to lowest priority
     // i.e. a bit shift of 0 is highest priority, etc.
-    for (int i = 0; i < NumberOfEvents; ++i) {
+    for (unsigned i = 0; i < NumberOfEvents; ++i) {
         Event event = static_cast<Event>(1 << i);
         if (hasTrapBit(event, mask)) {
             clearTrapBit(event);

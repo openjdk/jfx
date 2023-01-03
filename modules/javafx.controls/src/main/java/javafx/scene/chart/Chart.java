@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -158,7 +158,7 @@ public abstract class Chart extends Region {
      * The node to display as the Legend. Subclasses can set a node here to be displayed on a side as the legend. If
      * no legend is wanted then this can be set to null
      */
-    private final ObjectProperty<Node> legend = new ObjectPropertyBase<Node>() {
+    private final ObjectProperty<Node> legend = new ObjectPropertyBase<>() {
         private Node old = null;
         @Override protected void invalidated() {
             Node newLegend = get();
@@ -435,8 +435,8 @@ public abstract class Chart extends Region {
 
     private static class StyleableProperties {
         private static final CssMetaData<Chart,Side> TITLE_SIDE =
-            new CssMetaData<Chart,Side>("-fx-title-side",
-                new EnumConverter<Side>(Side.class),
+            new CssMetaData<>("-fx-title-side",
+                new EnumConverter<>(Side.class),
                 Side.TOP) {
 
             @Override
@@ -451,8 +451,8 @@ public abstract class Chart extends Region {
         };
 
         private static final CssMetaData<Chart,Side> LEGEND_SIDE =
-            new CssMetaData<Chart,Side>("-fx-legend-side",
-                new EnumConverter<Side>(Side.class),
+            new CssMetaData<>("-fx-legend-side",
+                new EnumConverter<>(Side.class),
                 Side.BOTTOM) {
 
             @Override
@@ -467,7 +467,7 @@ public abstract class Chart extends Region {
         };
 
         private static final CssMetaData<Chart,Boolean> LEGEND_VISIBLE =
-            new CssMetaData<Chart,Boolean>("-fx-legend-visible",
+            new CssMetaData<>("-fx-legend-visible",
                 BooleanConverter.getInstance(), Boolean.TRUE) {
 
             @Override
@@ -477,14 +477,14 @@ public abstract class Chart extends Region {
 
             @Override
             public StyleableProperty<Boolean> getStyleableProperty(Chart node) {
-                return (StyleableProperty<Boolean>)(WritableValue<Boolean>)node.legendVisibleProperty();
+                return (StyleableProperty<Boolean>)node.legendVisibleProperty();
             }
         };
 
         private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
         static {
             final List<CssMetaData<? extends Styleable, ?>> styleables =
-                new ArrayList<CssMetaData<? extends Styleable, ?>>(Region.getClassCssMetaData());
+                new ArrayList<>(Region.getClassCssMetaData());
             styleables.add(TITLE_SIDE);
             styleables.add(LEGEND_VISIBLE);
             styleables.add(LEGEND_SIDE);

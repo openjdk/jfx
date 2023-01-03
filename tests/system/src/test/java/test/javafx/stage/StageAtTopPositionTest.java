@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2021, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,7 +25,11 @@
 
 package test.javafx.stage;
 
-import com.sun.javafx.PlatformUtil;
+import static org.junit.Assume.assumeTrue;
+
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.beans.value.ChangeListener;
@@ -34,20 +38,18 @@ import javafx.scene.layout.VBox;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
 import javafx.stage.WindowEvent;
+
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
+import com.sun.javafx.PlatformUtil;
 
-import static org.junit.Assert.fail;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assume.assumeTrue;
+import test.util.Util;
 
 public class StageAtTopPositionTest {
-    static CountDownLatch startupLatch;
+    static CountDownLatch startupLatch = new CountDownLatch(1);
     static Stage stage;
 
     public static void main(String[] args) throws Exception {
@@ -77,11 +79,13 @@ public class StageAtTopPositionTest {
     }
 
     @BeforeClass
-    public static void initFX() throws Exception {
-        startupLatch = new CountDownLatch(1);
-        new Thread(() -> Application.launch(TestApp.class, (String[])null)).start();
-        assertTrue("Timeout waiting for FX runtime to start",
-                   startupLatch.await(15, TimeUnit.SECONDS));
+    public static void initFX() {
+        Util.launch(startupLatch, TestApp.class);
+    }
+
+    @AfterClass
+    public static void teardown() {
+        Util.shutdown(stage);
     }
 
     @Test
@@ -114,11 +118,5 @@ public class StageAtTopPositionTest {
         stage.xProperty().removeListener(listenerY);
 
         Assert.assertEquals("Window was moved twice", minY, stage.getY(), 0.1);
-    }
-
-    @AfterClass
-    public static void teardown() {
-        Platform.runLater(stage::hide);
-        Platform.exit();
     }
 }

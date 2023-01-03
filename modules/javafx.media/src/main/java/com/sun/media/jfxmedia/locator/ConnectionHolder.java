@@ -62,7 +62,7 @@ public abstract class ConnectionHolder {
         return new FileConnectionHolder(uri);
     }
 
-    static ConnectionHolder createHLSConnectionHolder(URI uri) throws IOException {
+    static ConnectionHolder createHLSConnectionHolder(URI uri) {
         return new HLSConnectionHolder(uri);
     }
 
@@ -164,18 +164,22 @@ public abstract class ConnectionHolder {
             channel = openFile(uri);
         }
 
+        @Override
         boolean needBuffer() {
             return false;
         }
 
+        @Override
         boolean isRandomAccess() {
             return true;
         }
 
+        @Override
         boolean isSeekable() {
             return true;
         }
 
+        @Override
         public long seek(long position) {
             try {
                 ((FileChannel)channel).position(position);
@@ -185,6 +189,7 @@ public abstract class ConnectionHolder {
             }
         }
 
+        @Override
         int readBlock(long position, int size) throws IOException {
             if (null == channel) {
                 throw new ClosedChannelException();
@@ -239,25 +244,30 @@ public abstract class ConnectionHolder {
             channel = openChannel(null);
         }
 
+        @Override
         boolean needBuffer() {
             String scheme = uri.getScheme().toLowerCase();
             return ("http".equals(scheme) || "https".equals(scheme));
         }
 
+        @Override
         boolean isSeekable() {
             return (urlConnection instanceof HttpURLConnection) ||
                    (urlConnection instanceof JarURLConnection) ||
                    isJRT() || isResource();
         }
 
+        @Override
         boolean isRandomAccess() {
             return false;
         }
 
+        @Override
         int readBlock(long position, int size) throws IOException {
             throw new IOException();
         }
 
+        @Override
         public long seek(long position) {
             if (urlConnection instanceof HttpURLConnection) {
                 URLConnection tmpURLConnection = null;
@@ -364,6 +374,7 @@ public abstract class ConnectionHolder {
             // readNextBlock should never be called since we're random access
             // but just to be safe (and for unit tests...)
             channel = new ReadableByteChannel() {
+                @Override
                 public int read(ByteBuffer bb) throws IOException {
                     if (backingBuffer.remaining() <= 0) {
                         return -1; // EOS
@@ -389,10 +400,12 @@ public abstract class ConnectionHolder {
                     return actual;
                 }
 
+                @Override
                 public boolean isOpen() {
                     return true; // open 24/7/365
                 }
 
+                @Override
                 public void close() throws IOException {
                     // never closed...
                 }

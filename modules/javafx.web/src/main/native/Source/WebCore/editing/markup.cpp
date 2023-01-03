@@ -159,7 +159,7 @@ struct ElementAttribute {
     QualifiedName attributeName;
 };
 
-void removeSubresourceURLAttributes(Ref<DocumentFragment>&& fragment, WTF::Function<bool(const URL&)> shouldRemoveURL)
+void removeSubresourceURLAttributes(Ref<DocumentFragment>&& fragment, Function<bool(const URL&)> shouldRemoveURL)
 {
     Vector<ElementAttribute> attributesToRemove;
     for (auto& element : descendantsOfType<Element>(fragment)) {
@@ -208,7 +208,7 @@ std::unique_ptr<Page> createPageForSanitizingWebContent()
     return page;
 }
 
-String sanitizeMarkup(const String& rawHTML, MSOListQuirks msoListQuirks, std::optional<WTF::Function<void(DocumentFragment&)>> fragmentSanitizer)
+String sanitizeMarkup(const String& rawHTML, MSOListQuirks msoListQuirks, std::optional<Function<void(DocumentFragment&)>> fragmentSanitizer)
 {
     auto page = createPageForSanitizingWebContent();
     Document* stagingDocument = page->mainFrame().document();
@@ -383,8 +383,8 @@ void StyledMarkupAccumulator::wrapWithStyleNode(StyleProperties* style, Document
 
 void StyledMarkupAccumulator::appendStyleNodeOpenTag(StringBuilder& out, StyleProperties* style, Document& document, bool isBlock)
 {
-    // wrappingStyleForSerialization should have removed -webkit-text-decorations-in-effect
-    ASSERT(propertyMissingOrEqualToNone(style, CSSPropertyWebkitTextDecorationsInEffect));
+    // With AnnotateForInterchange::Yes, wrappingStyleForSerialization should have removed -webkit-text-decorations-in-effect
+    ASSERT(!shouldAnnotate() || propertyMissingOrEqualToNone(style, CSSPropertyWebkitTextDecorationsInEffect));
     if (isBlock)
         out.append("<div style=\"");
     else
@@ -894,7 +894,7 @@ static String serializePreservingVisualAppearanceInternal(const Position& start,
     VisiblePosition visibleStart { start };
     VisiblePosition visibleEnd { end };
 
-    auto body = makeRefPtr(enclosingElementWithTag(firstPositionInNode(commonAncestor), bodyTag));
+    RefPtr body = enclosingElementWithTag(firstPositionInNode(commonAncestor), bodyTag);
     RefPtr<Element> fullySelectedRoot;
     // FIXME: Do this for all fully selected blocks, not just the body.
     if (body && VisiblePosition(firstPositionInNode(body.get())) == visibleStart && VisiblePosition(lastPositionInNode(body.get())) == visibleEnd)
@@ -1005,7 +1005,7 @@ String sanitizedMarkupForFragmentInDocument(Ref<DocumentFragment>&& fragment, Do
     MSOListMode msoListMode = msoListQuirks == MSOListQuirks::CheckIfNeeded && shouldPreserveMSOLists(originalMarkup)
         ? MSOListMode::Preserve : MSOListMode::DoNotPreserve;
 
-    auto bodyElement = makeRefPtr(document.body());
+    RefPtr bodyElement { document.body() };
     ASSERT(bodyElement);
     bodyElement->appendChild(fragment.get());
 
@@ -1253,7 +1253,7 @@ String urlToMarkup(const URL& url, const String& title)
 enum class DocumentFragmentMode { New, ReuseForInnerOuterHTML };
 static ALWAYS_INLINE ExceptionOr<Ref<DocumentFragment>> createFragmentForMarkup(Element& contextElement, const String& markup, DocumentFragmentMode mode, ParserContentPolicy parserContentPolicy)
 {
-    auto document = makeRef(contextElement.hasTagName(templateTag) ? contextElement.document().ensureTemplateDocument() : contextElement.document());
+    Ref document = contextElement.hasTagName(templateTag) ? contextElement.document().ensureTemplateDocument() : contextElement.document();
     auto fragment = mode == DocumentFragmentMode::New ? DocumentFragment::create(document.get()) : document->documentFragmentForInnerOuterHTML();
     ASSERT(!fragment->hasChildNodes());
     if (document->isHTMLDocument()) {

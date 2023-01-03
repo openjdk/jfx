@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -33,9 +33,7 @@ import java.security.PrivilegedAction;
 import java.util.HashMap;
 import java.util.Map;
 import javafx.util.Duration;
-import javafx.event.EventType;
 import javafx.scene.input.ZoomEvent;
-import javafx.animation.Animation;
 import javafx.animation.Interpolator;
 import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
@@ -77,8 +75,7 @@ class ZoomGestureRecognizer implements GestureRecognizer {
 
     private ZoomRecognitionState state = ZoomRecognitionState.IDLE;
 
-    private Map<Long, TouchPointTracker> trackers =
-            new HashMap<Long, TouchPointTracker>();
+    private Map<Long, TouchPointTracker> trackers = new HashMap<>();
 
     private int modifiers;
     private boolean direct;

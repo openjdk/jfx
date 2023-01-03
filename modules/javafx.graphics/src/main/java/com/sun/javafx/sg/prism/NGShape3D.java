@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,7 +26,6 @@
 package com.sun.javafx.sg.prism;
 
 import com.sun.javafx.geom.Vec3d;
-import com.sun.javafx.geom.Vec3f;
 import com.sun.javafx.geom.transform.Affine3D;
 import com.sun.javafx.util.Utils;
 import com.sun.prism.Graphics;
@@ -36,7 +35,6 @@ import com.sun.prism.ResourceFactory;
 
 import javafx.application.ConditionalFeature;
 import javafx.application.Platform;
-import javafx.geometry.Point3D;
 import javafx.scene.shape.CullFace;
 import javafx.scene.shape.DrawMode;
 

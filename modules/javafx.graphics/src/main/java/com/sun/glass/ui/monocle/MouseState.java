@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -92,8 +92,7 @@ class MouseState {
      */
     MonocleWindow getWindow(boolean recalculateCache, MonocleWindow fallback) {
         if (recalculateCache) {
-            window = (MonocleWindow)
-                    MonocleWindowManager.getInstance().getWindowForLocation(x, y);
+            window = MonocleWindowManager.getInstance().getWindowForLocation(x, y);
         }
         if (window == null) {
             window = fallback;
@@ -149,6 +148,7 @@ class MouseState {
         return buttonsPressed;
     }
 
+    @Override
     public String toString() {
         return "MouseState[x="
                 + x + ",y=" + y

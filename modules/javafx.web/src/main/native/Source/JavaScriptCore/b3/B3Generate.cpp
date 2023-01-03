@@ -48,14 +48,14 @@
 #include "B3ReduceDoubleToFloat.h"
 #include "B3ReduceLoopStrength.h"
 #include "B3ReduceStrength.h"
-#include "B3TimingScope.h"
 #include "B3Validate.h"
+#include "CompilerTimingScope.h"
 
 namespace JSC { namespace B3 {
 
 void prepareForGeneration(Procedure& procedure)
 {
-    TimingScope timingScope("prepareForGeneration");
+    CompilerTimingScope timingScope("Total B3+Air", "prepareForGeneration");
 
     generateToAir(procedure);
     Air::prepareForGeneration(procedure.code());
@@ -68,9 +68,9 @@ void generate(Procedure& procedure, CCallHelpers& jit)
 
 void generateToAir(Procedure& procedure)
 {
-    TimingScope timingScope("generateToAir");
+    CompilerTimingScope timingScope("Total B3", "generateToAir");
 
-    if (shouldDumpIR(B3Mode) && !shouldDumpIRAtEachPhase(B3Mode)) {
+    if (shouldDumpIR(procedure, B3Mode) && !shouldDumpIRAtEachPhase(B3Mode)) {
         dataLog(tierName, "Initial B3:\n");
         dataLog(procedure);
     }
@@ -118,6 +118,7 @@ void generateToAir(Procedure& procedure)
     lowerMacrosAfterOptimizations(procedure);
     legalizeMemoryOffsets(procedure);
     moveConstants(procedure);
+    legalizeMemoryOffsets(procedure);
     if (Options::useB3CanonicalizePrePostIncrements() && procedure.optLevel() >= 2)
         canonicalizePrePostIncrements(procedure);
     eliminateDeadCode(procedure);
@@ -130,7 +131,7 @@ void generateToAir(Procedure& procedure)
 
     // If we're doing super verbose dumping, the phase scope of any phase will already do a dump.
     // Note that lowerToAir() acts like a phase in this regard.
-    if (shouldDumpIR(B3Mode) && !shouldDumpIRAtEachPhase(B3Mode)) {
+    if (shouldDumpIR(procedure, B3Mode) && !shouldDumpIRAtEachPhase(B3Mode)) {
         dataLog("B3 after ", procedure.lastPhaseName(), ", before generation:\n");
         dataLog(procedure);
     }

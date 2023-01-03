@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,7 +25,6 @@
 
 package test.javafx.scene.effect;
 
-import test.javafx.scene.effect.EffectsTestBase;
 import static org.junit.Assert.assertEquals;
 
 import java.lang.reflect.Method;
@@ -57,8 +56,7 @@ public class FloatMapTest extends EffectsTestBase {
         floatMap.setWidth(2);
         assertEquals(2, floatMap.getWidth());
         pulse();
-        assertEquals(2, ((com.sun.scenario.effect.FloatMap)
-                FloatMapShim.getImpl(floatMap)).getWidth());
+        assertEquals(2, FloatMapShim.getImpl(floatMap).getWidth());
     }
 
     @Test
@@ -67,8 +65,7 @@ public class FloatMapTest extends EffectsTestBase {
         assertEquals(1, floatMap.getWidth());
         assertEquals(1, floatMap.widthProperty().get());
         pulse();
-        assertEquals(1, ((com.sun.scenario.effect.FloatMap)
-                FloatMapShim.getImpl(floatMap)).getWidth());
+        assertEquals(1, FloatMapShim.getImpl(floatMap).getWidth());
     }
 
     @Test
@@ -79,8 +76,7 @@ public class FloatMapTest extends EffectsTestBase {
         floatMap.setWidth(0);
         assertEquals(0, floatMap.getWidth());
         pulse();
-        assertEquals(1, ((com.sun.scenario.effect.FloatMap)
-                FloatMapShim.getImpl(floatMap)).getWidth());
+        assertEquals(1, FloatMapShim.getImpl(floatMap).getWidth());
     }
 
     @Test
@@ -91,8 +87,7 @@ public class FloatMapTest extends EffectsTestBase {
         floatMap.setWidth(4097);
         assertEquals(4097, floatMap.getWidth());
         pulse();
-        assertEquals(4096, ((com.sun.scenario.effect.FloatMap)
-                FloatMapShim.getImpl(floatMap)).getWidth());
+        assertEquals(4096, FloatMapShim.getImpl(floatMap).getWidth());
     }
 
     @Test
@@ -101,8 +96,7 @@ public class FloatMapTest extends EffectsTestBase {
         floatMap.setHeight(5);
         assertEquals(5, floatMap.getHeight());
         pulse();
-        assertEquals(5, ((com.sun.scenario.effect.FloatMap)
-                FloatMapShim.getImpl(floatMap)).getHeight());
+        assertEquals(5, FloatMapShim.getImpl(floatMap).getHeight());
     }
 
     @Test
@@ -111,8 +105,7 @@ public class FloatMapTest extends EffectsTestBase {
         assertEquals(1, floatMap.getHeight());
         assertEquals(1, floatMap.heightProperty().get());
         pulse();
-        assertEquals(1, ((com.sun.scenario.effect.FloatMap)
-                FloatMapShim.getImpl(floatMap)).getHeight());
+        assertEquals(1, FloatMapShim.getImpl(floatMap).getHeight());
     }
 
     @Test
@@ -123,8 +116,7 @@ public class FloatMapTest extends EffectsTestBase {
         floatMap.setHeight(0);
         assertEquals(0, floatMap.getHeight());
         pulse();
-        assertEquals(1, ((com.sun.scenario.effect.FloatMap)
-                FloatMapShim.getImpl(floatMap)).getHeight());
+        assertEquals(1, FloatMapShim.getImpl(floatMap).getHeight());
     }
 
     @Test
@@ -135,8 +127,7 @@ public class FloatMapTest extends EffectsTestBase {
         floatMap.setHeight(4097);
         assertEquals(4097, floatMap.getHeight());
         pulse();
-        assertEquals(4096, ((com.sun.scenario.effect.FloatMap)
-                FloatMapShim.getImpl(floatMap)).getHeight());
+        assertEquals(4096, FloatMapShim.getImpl(floatMap).getHeight());
     }
 
     @Test
@@ -254,10 +245,8 @@ public class FloatMapTest extends EffectsTestBase {
         assertEquals(2, floatMap.getWidth(), 1e-100);
         assertEquals(3, floatMap.getHeight(), 1e-100);
         pulse();
-        assertEquals(2, ((com.sun.scenario.effect.FloatMap)
-                FloatMapShim.getImpl(floatMap)).getWidth());
-        assertEquals(3, ((com.sun.scenario.effect.FloatMap)
-                FloatMapShim.getImpl(floatMap)).getHeight());
+        assertEquals(2, FloatMapShim.getImpl(floatMap).getWidth());
+        assertEquals(3, FloatMapShim.getImpl(floatMap).getHeight());
     }
 
     @Test
@@ -269,10 +258,8 @@ public class FloatMapTest extends EffectsTestBase {
         assertEquals(1, floatMap.getWidth(), 1e-100);
         assertEquals(1, floatMap.getHeight(), 1e-100);
         pulse();
-        assertEquals(1, ((com.sun.scenario.effect.FloatMap)
-                FloatMapShim.getImpl(floatMap)).getWidth());
-        assertEquals(1, ((com.sun.scenario.effect.FloatMap)
-                FloatMapShim.getImpl(floatMap)).getHeight());
+        assertEquals(1, FloatMapShim.getImpl(floatMap).getWidth());
+        assertEquals(1, FloatMapShim.getImpl(floatMap).getHeight());
     }
 
 }

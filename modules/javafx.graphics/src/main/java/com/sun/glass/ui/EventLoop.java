@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -32,7 +32,7 @@ import java.util.Deque;
  */
 public final class EventLoop {
 
-    private static final Deque<EventLoop> stack = new ArrayDeque<EventLoop>();
+    private static final Deque<EventLoop> stack = new ArrayDeque<>();
 
     /**
      * Possible states for a nested event loop object.

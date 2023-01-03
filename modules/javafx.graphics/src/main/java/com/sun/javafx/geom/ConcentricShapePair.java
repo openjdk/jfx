@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -108,10 +108,12 @@ public final class ConcentricShapePair extends ShapePair {
             this.inner = inner;
         }
 
+        @Override
         public int getWindingRule() {
             return WIND_EVEN_ODD;
         }
 
+        @Override
         public int currentSegment(float[] coords) {
             if (outer.isDone()) {
                 return inner.currentSegment(coords);
@@ -120,10 +122,12 @@ public final class ConcentricShapePair extends ShapePair {
             }
         }
 
+        @Override
         public boolean isDone() {
             return outer.isDone() && inner.isDone();
         }
 
+        @Override
         public void next() {
             if (outer.isDone()) {
                 inner.next();

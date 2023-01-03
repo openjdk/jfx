@@ -41,17 +41,15 @@ struct InlineContent;
 
 class InlineContentBuilder {
 public:
-    InlineContentBuilder(const Layout::LayoutState&, const RenderBlockFlow&, const BoxTree&);
+    InlineContentBuilder(const RenderBlockFlow&, BoxTree&);
 
-    void build(const Layout::InlineFormattingState&, InlineContent&) const;
+    void build(Layout::InlineFormattingState&, InlineContent&) const;
 
 private:
-    void createDisplayRuns(const Layout::InlineRuns&, InlineContent&) const;
-    void createDisplayLines(const Layout::InlineLines&, InlineContent&) const;
+    void createDisplayLines(Layout::InlineFormattingState&, InlineContent&) const;
 
-    const Layout::LayoutState& m_layoutState;
     const RenderBlockFlow& m_blockFlow;
-    const BoxTree& m_boxTree;
+    BoxTree& m_boxTree;
 };
 
 }

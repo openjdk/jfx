@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2019, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,26 +25,26 @@
 
 package test.robot.javafx.scene.dialog;
 
+import java.util.concurrent.CountDownLatch;
+
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.Dialog;
+import javafx.scene.input.MouseButton;
 import javafx.scene.robot.Robot;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 import javafx.stage.WindowEvent;
-import javafx.scene.input.MouseButton;
 
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import test.util.Util;
 
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
+import test.util.Util;
 
 //see JDK-8193502
 public class DialogWithOwnerSizingTest {
@@ -54,7 +54,7 @@ public class DialogWithOwnerSizingTest {
     static Scene scene;
     static Dialog<ButtonType> dialog;
     static Dialog<ButtonType> dialog2;
-    static CountDownLatch startupLatch;
+    static CountDownLatch startupLatch = new CountDownLatch(1);
     static CountDownLatch dialogShownLatch;
     static CountDownLatch dialogHideLatch;
 
@@ -76,7 +76,7 @@ public class DialogWithOwnerSizingTest {
         dialogShownLatch = new CountDownLatch(2);
         mouseClick(button.getLayoutX() + button.getWidth() / 2, button.getLayoutY() + button.getHeight() / 2);
 
-        waitForLatch(dialogShownLatch, 10, "Failed to show Dialog");
+        Util.waitForLatch(dialogShownLatch, 10, "Failed to show Dialog");
     }
 
     private void hide() throws Exception {
@@ -85,20 +85,17 @@ public class DialogWithOwnerSizingTest {
             dialog.close();
             dialog2.close();
         });
-        waitForLatch(dialogHideLatch, 10, "Failed to hide Dialog");
+        Util.waitForLatch(dialogHideLatch, 10, "Failed to hide Dialog");
     }
 
     @BeforeClass
     public static void initFX() throws Exception {
-        startupLatch = new CountDownLatch(1);
-        new Thread(() -> Application.launch(SizingTestApp.class, (String[]) null)).start();
-        waitForLatch(startupLatch, 15, "FX runtime failed to start.");
+        Util.launch(startupLatch, SizingTestApp.class);
     }
 
     @AfterClass
     public static void exit() {
-        Platform.runLater(() -> stage.hide());
-        Platform.exit();
+        Util.shutdown(stage);
     }
 
     private void mouseClick(double x, double y) {
@@ -154,9 +151,5 @@ public class DialogWithOwnerSizingTest {
 
             return testDialog;
         }
-    }
-
-    public static void waitForLatch(CountDownLatch latch, int seconds, String msg) throws Exception {
-        Assert.assertTrue("Timeout: " + msg, latch.await(seconds, TimeUnit.SECONDS));
     }
 }

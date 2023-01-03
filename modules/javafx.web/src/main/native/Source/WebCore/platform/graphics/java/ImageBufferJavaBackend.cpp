@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2020, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -159,7 +159,7 @@ IntSize ImageBufferJavaBackend::backendSize() const
 
 RefPtr<NativeImage> ImageBufferJavaBackend::copyNativeImage(BackingStoreCopy) const
 {
-    return NativeImage::create(makeRefPtr(m_image.get()));
+    return NativeImage::create((m_image.get()));
 }
 
 RefPtr<Image> ImageBufferJavaBackend::copyImage(BackingStoreCopy, PreserveResolution) const

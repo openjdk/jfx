@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -80,7 +80,7 @@ public class ObservableListWithExtractor {
             observedList = modifiedList = FXCollections.observableArrayList(callback);
         } else {
             modifiedList = FXCollections.observableArrayList();
-            observedList = new ElementObservableListDecorator<Person>(modifiedList, callback);
+            observedList = new ElementObservableListDecorator<>(modifiedList, callback);
         }
 
         modifiedList.add(p0);
@@ -334,7 +334,7 @@ public class ObservableListWithExtractor {
 
     @Test
     public void testPreFilledList() {
-        ArrayList<Person> arrayList = new ArrayList<Person>();
+        ArrayList<Person> arrayList = new ArrayList<>();
         arrayList.add(p0);
         obs = new MockListObserver();
         Callback<Person, Observable[]> callback = param -> new Observable[]{param.name};
@@ -342,7 +342,7 @@ public class ObservableListWithExtractor {
             observedList = modifiedList = FXCollections.observableList(arrayList, callback);
         } else {
             modifiedList = FXCollections.observableArrayList(arrayList);
-            observedList = new ElementObservableListDecorator<Person>(modifiedList, callback);
+            observedList = new ElementObservableListDecorator<>(modifiedList, callback);
         }
 
         observedList.addListener(obs);

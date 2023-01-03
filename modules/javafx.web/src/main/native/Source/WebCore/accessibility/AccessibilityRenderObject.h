@@ -50,7 +50,6 @@ class Node;
 class RenderTextControl;
 class RenderView;
 class VisibleSelection;
-class Widget;
 
 class AccessibilityRenderObject : public AccessibilityNodeObject, public CanMakeWeakPtr<AccessibilityRenderObject> {
 public:
@@ -60,8 +59,6 @@ public:
     void init() override;
 
     bool isAttachment() const override;
-    bool isFileUploadButton() const override;
-
     bool isSelected() const override;
     bool isFocused() const override;
     bool isLoaded() const override;
@@ -86,7 +83,7 @@ public:
     AccessibilityObjectInclusion defaultObjectInclusion() const override;
 
     int layoutCount() const override;
-    double estimatedLoadingProgress() const override;
+    double loadingProgress() const override;
 
     AccessibilityObject* firstChild() const override;
     AccessibilityObject* lastChild() const override;
@@ -94,11 +91,10 @@ public:
     AccessibilityObject* nextSibling() const override;
     AccessibilityObject* parentObject() const override;
     AccessibilityObject* parentObjectIfExists() const override;
+    AXCoreObject* parentObjectUnignored() const override;
     AccessibilityObject* observableObject() const override;
     void linkedUIElements(AccessibilityChildrenVector&) const override;
     AccessibilityObject* titleUIElement() const override;
-    AccessibilityObject* correspondingControlForLabelElement() const override;
-    AccessibilityObject* correspondingLabelForControlElement() const override;
 
     bool supportsARIAOwns() const override;
     bool isPresentationalChildOfAriaRole() const override;
@@ -122,7 +118,6 @@ public:
 
     RenderView* topRenderer() const;
     RenderTextControl* textControl() const;
-    HTMLLabelElement* labelElementContainer() const;
 
     URL url() const override;
     PlainTextRange selectedTextRange() const override;
@@ -135,7 +130,8 @@ public:
     int textLength() const override;
     String selectedText() const override;
     String accessKey() const override;
-    String actionVerb() const override;
+
+    bool isWidget() const override;
     Widget* widget() const override;
     Widget* widgetForAttachmentView() const override;
     AccessibilityChildrenVector documentLinks() override;
@@ -211,8 +207,6 @@ protected:
     AccessibilityRole determineAccessibilityRole() override;
     bool computeAccessibilityIsIgnored() const override;
 
-    bool exposesTitleUIElement() const override;
-
 #if ENABLE(MATHML)
     virtual bool isIgnoredElementWithinMathTree() const;
 #endif
@@ -224,7 +218,6 @@ private:
     void ariaListboxSelectedChildren(AccessibilityChildrenVector&);
     void ariaListboxVisibleChildren(AccessibilityChildrenVector&);
     bool isAllowedChildOfTree() const;
-    bool hasTextAlternative() const;
     String positionalDescriptionForMSAA() const;
     PlainTextRange documentBasedSelectedTextRange() const;
     Element* rootEditableElementForPosition(const Position&) const;
@@ -245,8 +238,9 @@ private:
 
     bool renderObjectIsObservable(RenderObject&) const;
     RenderObject* renderParentObject() const;
-    bool isDescendantOfElementType(const QualifiedName& tagName) const;
-    bool isDescendantOfElementType(const HashSet<QualifiedName>&) const;
+#if USE(ATSPI)
+    RenderObject* markerRenderer() const;
+#endif
 
     bool isSVGImage() const;
     void detachRemoteSVGRoot();
@@ -262,6 +256,9 @@ private:
     void addCanvasChildren();
     void addAttachmentChildren();
     void addRemoteSVGChildren();
+#if USE(ATSPI)
+    void addListItemMarker();
+#endif
 #if PLATFORM(COCOA)
     void updateAttachmentViewParents();
 #endif

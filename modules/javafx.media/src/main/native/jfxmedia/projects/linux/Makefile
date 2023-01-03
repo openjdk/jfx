@@ -72,7 +72,7 @@ ifdef HOST_COMPILE
                   -fstack-protector \
                   -Werror=trampolines \
 	          -DGSTREAMER_LITE
-        ifneq ($(ARCH), aarch64)
+        ifneq (,$(findstring $(ARCH), x64 x32))
             CFLAGS += -msse2
         endif
 

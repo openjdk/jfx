@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1997, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 1997, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -60,6 +60,7 @@ class RoundRectIterator implements PathIterator {
      * @see #WIND_EVEN_ODD
      * @see #WIND_NON_ZERO
      */
+    @Override
     public int getWindingRule() {
         return WIND_NON_ZERO;
     }
@@ -68,6 +69,7 @@ class RoundRectIterator implements PathIterator {
      * Tests if there are more points to read.
      * @return true if there are more points to read
      */
+    @Override
     public boolean isDone() {
         return index >= ctrlpts.length;
     }
@@ -77,6 +79,7 @@ class RoundRectIterator implements PathIterator {
      * along the primary direction of traversal as long as there are
      * more points in that direction.
      */
+    @Override
     public void next() {
         ++index;
         if (index < ctrlpts.length &&
@@ -147,6 +150,7 @@ class RoundRectIterator implements PathIterator {
      * @see #SEG_CUBICTO
      * @see #SEG_CLOSE
      */
+    @Override
     public int currentSegment(float[] coords) {
         if (isDone()) {
             throw new NoSuchElementException("roundrect iterator out of bounds");

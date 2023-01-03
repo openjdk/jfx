@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -63,6 +63,6 @@ public class IntegerStringConverter extends StringConverter<Integer> {
             return "";
         }
 
-        return (Integer.toString(((Integer)value).intValue()));
+        return (Integer.toString(value.intValue()));
     }
 }

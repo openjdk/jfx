@@ -105,6 +105,7 @@ void GenericLabel<JSGeneratorTraits>::setLocation(BytecodeGenerator& generator, 
         CASE(OpJeq)
         CASE(OpJstricteq)
         CASE(OpJneq)
+        CASE(OpJeqPtr)
         CASE(OpJneqPtr)
         CASE(OpJnstricteq)
         CASE(OpJless)
@@ -147,7 +148,7 @@ FinallyContext::FinallyContext(BytecodeGenerator& generator, Label& finallyLabel
     generator.moveEmptyValue(completionValueRegister());
 }
 
-ParserError BytecodeGenerator::generate()
+ParserError BytecodeGenerator::generate(unsigned& size)
 {
     if (UNLIKELY(m_outOfMemoryDuringConstruction))
         return ParserError(ParserError::OutOfMemory);
@@ -284,6 +285,7 @@ ParserError BytecodeGenerator::generate()
         performGeneratorification(*this, m_codeBlock.get(), m_writer, m_generatorFrameSymbolTable.get(), m_generatorFrameSymbolTableIndex);
 
     RELEASE_ASSERT(m_codeBlock->numCalleeLocals() < static_cast<unsigned>(FirstConstantRegisterIndex));
+    size = instructions().size();
     m_codeBlock->finalize(m_writer.finalize());
     if (m_expressionTooDeep)
         return ParserError(ParserError::OutOfMemory);
@@ -1497,6 +1499,16 @@ void BytecodeGenerator::emitJumpIfNotFunctionApply(RegisterID* cond, Label& targ
     OpJneqPtr::emit(this, cond, moveLinkTimeConstant(nullptr, LinkTimeConstant::applyFunction), target.bind(this));
 }
 
+void BytecodeGenerator::emitJumpIfEmptyPropertyNameEnumerator(RegisterID* cond, Label& target)
+{
+    OpJeqPtr::emit(this, cond, moveLinkTimeConstant(nullptr, LinkTimeConstant::emptyPropertyNameEnumerator), target.bind(this));
+}
+
+void BytecodeGenerator::emitJumpIfSentinelString(RegisterID* cond, Label& target)
+{
+    OpJeqPtr::emit(this, cond, moveLinkTimeConstant(nullptr, LinkTimeConstant::sentinelString), target.bind(this));
+}
+
 unsigned BytecodeGenerator::emitWideJumpIfNotFunctionHasOwnProperty(RegisterID* cond, Label& target)
 {
     OpJneqPtr::emit<OpcodeSize::Wide32>(this, cond, moveLinkTimeConstant(nullptr, LinkTimeConstant::hasOwnPropertyFunction), target.bind(this));
@@ -1598,7 +1610,7 @@ RegisterID* BytecodeGenerator::emitUnaryOp(OpcodeID opcodeID, RegisterID* dst, R
         emitUnaryOp<OpNot>(dst, src);
         break;
     case op_negate:
-        OpNegate::emit(this, dst, src, type);
+        OpNegate::emit(this, dst, src, m_codeBlock->addUnaryArithProfile(), type);
         break;
     case op_bitnot:
         emitUnaryOp<OpBitnot>(dst, src);
@@ -1696,13 +1708,13 @@ RegisterID* BytecodeGenerator::emitTypeOf(RegisterID* dst, RegisterID* src)
 
 RegisterID* BytecodeGenerator::emitInc(RegisterID* srcDst)
 {
-    OpInc::emit(this, srcDst);
+    OpInc::emit(this, srcDst, m_codeBlock->addUnaryArithProfile());
     return srcDst;
 }
 
 RegisterID* BytecodeGenerator::emitDec(RegisterID* srcDst)
 {
-    OpDec::emit(this, srcDst);
+    OpDec::emit(this, srcDst, m_codeBlock->addUnaryArithProfile());
     return srcDst;
 }
 
@@ -3513,7 +3525,7 @@ RegisterID* BytecodeGenerator::emitCall(RegisterID* dst, RegisterID* func, Expec
         m_codeBlock->setUsesCallEval();
         CallOp::emit(this, dst, func, callArguments.argumentCountIncludingThis(), callArguments.stackOffset(), ecmaMode());
     } else
-    CallOp::emit(this, dst, func, callArguments.argumentCountIncludingThis(), callArguments.stackOffset());
+        CallOp::emit(this, dst, func, callArguments.argumentCountIncludingThis(), callArguments.stackOffset());
 
     if (expectedFunction != NoExpectedFunction)
         emitLabel(done.get());
@@ -4169,7 +4181,8 @@ static void prepareJumpTableForStringSwitch(UnlinkedStringJumpTable& jumpTable, 
         ASSERT(!labels[i]->isForward());
 
         ASSERT(nodes[i]->isString());
-        StringImpl* clause = static_cast<StringNode*>(nodes[i])->value().impl();
+        UniquedStringImpl* clause = static_cast<StringNode*>(nodes[i])->value().impl();
+        ASSERT(clause->isAtom());
         auto result = jumpTable.m_offsetTable.add(clause, UnlinkedStringJumpTable::OffsetLocation { labels[i]->bind(switchAddress), 0 });
         if (result.isNewEntry)
             result.iterator->value.m_indexInTable = jumpTable.m_offsetTable.size() - 1;
@@ -5314,29 +5327,29 @@ void BytecodeGenerator::emitOptionalCheck(RegisterID* src)
 template <typename OldOpType, typename NewOpType, typename TupleType>
 ALWAYS_INLINE void rewriteOp(BytecodeGenerator& generator, TupleType& instTuple)
 {
-        unsigned instIndex = std::get<0>(instTuple);
-        int propertyRegIndex = std::get<1>(instTuple);
-        auto instruction = generator.m_writer.ref(instIndex);
-        auto end = instIndex + instruction->size();
-        ASSERT(instruction->isWide32());
+    unsigned instIndex = std::get<0>(instTuple);
+    int propertyRegIndex = std::get<1>(instTuple);
+    auto instruction = generator.m_writer.ref(instIndex);
+    auto end = instIndex + instruction->size();
+    ASSERT(instruction->isWide32());
 
-        generator.m_writer.seek(instIndex);
+    generator.m_writer.seek(instIndex);
 
     auto bytecode = instruction->as<OldOpType>();
 
     generator.disablePeepholeOptimization();
 
-        // Change the opcode to get_by_val.
-        // 1. dst stays the same.
-        // 2. base stays the same.
-        // 3. property gets switched to the original property.
+    // Change the opcode to get_by_val.
+    // 1. dst stays the same.
+    // 2. base stays the same.
+    // 3. property gets switched to the original property.
 
     static_assert(sizeof(NewOpType) <= sizeof(OldOpType));
     NewOpType::emit(&generator, bytecode.m_dst, bytecode.m_base, VirtualRegister(propertyRegIndex));
 
-        // 4. nop out the remaining bytes
-        while (generator.m_writer.position() < end)
-            OpNop::emit<OpcodeSize::Narrow>(&generator);
+    // 4. nop out the remaining bytes
+    while (generator.m_writer.position() < end)
+        OpNop::emit<OpcodeSize::Narrow>(&generator);
 }
 
 void ForInContext::finalize(BytecodeGenerator& generator, UnlinkedCodeBlockGenerator* codeBlock, unsigned bodyBytecodeEndOffset)
