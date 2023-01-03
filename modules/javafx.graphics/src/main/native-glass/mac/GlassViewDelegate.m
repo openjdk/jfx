@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -263,7 +263,9 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
     (*env)->CallVoidMethod(env, self->jView, jViewNotifyResize, (int)newSize.width, (int)newSize.height);
     GLASS_CHECK_EXCEPTION(env);
 
-    [self->nsView removeTrackingRect:self->trackingRect];
+    if (self->trackingRect) {
+        [self->nsView removeTrackingRect:self->trackingRect];
+    }
     self->trackingRect = [self->nsView addTrackingRect:[self->nsView bounds] owner:self->nsView userData:nil assumeInside:NO];
 }
 
@@ -277,13 +279,17 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
     (*env)->CallVoidMethod(env, self->jView, jViewNotifyResize, (int)frameRect.size.width, (int)frameRect.size.height);
     GLASS_CHECK_EXCEPTION(env);
 
-    [self->nsView removeTrackingRect:self->trackingRect];
+    if (self->trackingRect) {
+        [self->nsView removeTrackingRect:self->trackingRect];
+    }
     self->trackingRect = [self->nsView addTrackingRect:[self->nsView bounds] owner:self->nsView userData:nil assumeInside:NO];
 }
 
 - (void)updateTrackingAreas
 {
-    [self->nsView removeTrackingRect:self->trackingRect];
+    if (self->trackingRect) {
+        [self->nsView removeTrackingRect:self->trackingRect];
+    }
     self->trackingRect = [self->nsView addTrackingRect:[self->nsView bounds] owner:self->nsView userData:nil assumeInside:NO];
 }
 
