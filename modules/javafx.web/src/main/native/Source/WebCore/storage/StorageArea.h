@@ -35,7 +35,7 @@ class Frame;
 class SecurityOrigin;
 class StorageSyncManager;
 
-enum class StorageType;
+enum class StorageType : uint8_t;
 
 struct SecurityOriginData;
 
@@ -58,6 +58,7 @@ public:
     virtual void incrementAccessCount() { }
     virtual void decrementAccessCount() { }
     virtual void closeDatabaseIfIdle() { }
+    virtual void prewarm() { }
 };
 
 } // namespace WebCore

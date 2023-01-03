@@ -99,6 +99,9 @@ gst_video_tile_get_index (GstVideoTileMode mode, gint x, gint y,
         offset += GST_ROUND_DOWN_4 (x + 2);
       }
       break;
+    case GST_VIDEO_TILE_MODE_LINEAR:
+      offset = y * x_tiles + x;
+      break;
     default:
       offset = 0;
       break;

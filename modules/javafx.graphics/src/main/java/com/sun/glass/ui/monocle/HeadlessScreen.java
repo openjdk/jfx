@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -50,6 +50,7 @@ class HeadlessScreen implements NativeScreen {
         this.width = defaultWidth;
         this.height = defaultHeight;
         this.depth = defaultDepth;
+        @SuppressWarnings("removal")
         String geometry = AccessController.doPrivileged((PrivilegedAction<String>) () -> System.getProperty("headless.geometry"));
         if (geometry != null && geometry.indexOf('x') > 0) {
             try {

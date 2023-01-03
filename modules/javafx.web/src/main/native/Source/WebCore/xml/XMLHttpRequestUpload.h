@@ -40,7 +40,11 @@ public:
 
     void dispatchProgressEvent(const AtomString& type, unsigned long long loaded, unsigned long long total);
 
+    bool hasRelevantEventListener() const;
+
 private:
+    // EventTarget.
+    void eventListenersDidChange() final;
     void refEventTarget() final { ref(); }
     void derefEventTarget() final { deref(); }
 

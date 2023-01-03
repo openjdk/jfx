@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -43,7 +43,6 @@ import javafx.beans.property.ReadOnlyIntegerProperty;
 import javafx.beans.property.ReadOnlyIntegerWrapper;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleObjectProperty;
-import javafx.beans.value.WritableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ListChangeListener.Change;
@@ -223,7 +222,7 @@ import javafx.util.Pair;
 @DefaultProperty("items")
 public class ListView<T> extends Control {
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Static properties and methods                                           *
      *                                                                         *
@@ -284,7 +283,7 @@ public class ListView<T> extends Control {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Fields                                                                  *
      *                                                                         *
@@ -297,7 +296,7 @@ public class ListView<T> extends Control {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
@@ -337,10 +336,10 @@ public class ListView<T> extends Control {
 
         // Install default....
         // ...selection model
-        setSelectionModel(new ListView.ListViewBitSetSelectionModel<T>(this));
+        setSelectionModel(new ListView.ListViewBitSetSelectionModel<>(this));
 
         // ...focus model
-        setFocusModel(new ListView.ListViewFocusModel<T>(this));
+        setFocusModel(new ListView.ListViewFocusModel<>(this));
 
         // ...edit commit handler
         setOnEditCommit(DEFAULT_EDIT_COMMIT_HANDLER);
@@ -356,11 +355,13 @@ public class ListView<T> extends Control {
                 selectFirstRowByDefault = _selectFirstRowByDefault;
             }
         });
+
+        pseudoClassStateChanged(PSEUDO_CLASS_VERTICAL, true);
     }
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Callbacks and Events                                                    *
      *                                                                         *
@@ -375,7 +376,7 @@ public class ListView<T> extends Control {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Properties                                                              *
      *                                                                         *
@@ -431,7 +432,7 @@ public class ListView<T> extends Control {
      */
     public final ObjectProperty<Node> placeholderProperty() {
         if (placeholder == null) {
-            placeholder = new SimpleObjectProperty<Node>(this, "placeholder");
+            placeholder = new SimpleObjectProperty<>(this, "placeholder");
         }
         return placeholder;
     }
@@ -444,7 +445,7 @@ public class ListView<T> extends Control {
 
 
     // --- Selection Model
-    private ObjectProperty<MultipleSelectionModel<T>> selectionModel = new SimpleObjectProperty<MultipleSelectionModel<T>>(this, "selectionModel");
+    private ObjectProperty<MultipleSelectionModel<T>> selectionModel = new SimpleObjectProperty<>(this, "selectionModel");
 
     /**
      * Sets the {@link MultipleSelectionModel} to be used in the ListView.
@@ -505,7 +506,7 @@ public class ListView<T> extends Control {
      */
     public final ObjectProperty<FocusModel<T>> focusModelProperty() {
         if (focusModel == null) {
-            focusModel = new SimpleObjectProperty<FocusModel<T>>(this, "focusModel");
+            focusModel = new SimpleObjectProperty<>(this, "focusModel");
         }
         return focusModel;
     }
@@ -521,7 +522,7 @@ public class ListView<T> extends Control {
      */
     public final void setOrientation(Orientation value) {
         orientationProperty().set(value);
-    };
+    }
 
     /**
      * Returns the current orientation of the ListView, which dictates whether
@@ -601,7 +602,7 @@ public class ListView<T> extends Control {
      */
     public final ObjectProperty<Callback<ListView<T>, ListCell<T>>> cellFactoryProperty() {
         if (cellFactory == null) {
-            cellFactory = new SimpleObjectProperty<Callback<ListView<T>, ListCell<T>>>(this, "cellFactory");
+            cellFactory = new SimpleObjectProperty<>(this, "cellFactory");
         }
         return cellFactory;
     }
@@ -769,7 +770,7 @@ public class ListView<T> extends Control {
      */
     public final ObjectProperty<EventHandler<ListView.EditEvent<T>>> onEditStartProperty() {
         if (onEditStart == null) {
-            onEditStart = new ObjectPropertyBase<EventHandler<ListView.EditEvent<T>>>() {
+            onEditStart = new ObjectPropertyBase<>() {
                 @Override protected void invalidated() {
                     setEventHandler(ListView.<T>editStartEvent(), get());
                 }
@@ -828,7 +829,7 @@ public class ListView<T> extends Control {
      */
     public final ObjectProperty<EventHandler<ListView.EditEvent<T>>> onEditCommitProperty() {
         if (onEditCommit == null) {
-            onEditCommit = new ObjectPropertyBase<EventHandler<ListView.EditEvent<T>>>() {
+            onEditCommit = new ObjectPropertyBase<>() {
                 @Override protected void invalidated() {
                     setEventHandler(ListView.<T>editCommitEvent(), get());
                 }
@@ -876,7 +877,7 @@ public class ListView<T> extends Control {
      */
     public final ObjectProperty<EventHandler<ListView.EditEvent<T>>> onEditCancelProperty() {
         if (onEditCancel == null) {
-            onEditCancel = new ObjectPropertyBase<EventHandler<ListView.EditEvent<T>>>() {
+            onEditCancel = new ObjectPropertyBase<>() {
                 @Override protected void invalidated() {
                     setEventHandler(ListView.<T>editCancelEvent(), get());
                 }
@@ -898,7 +899,7 @@ public class ListView<T> extends Control {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Public API                                                              *
      *                                                                         *
@@ -965,7 +966,7 @@ public class ListView<T> extends Control {
 
     public ObjectProperty<EventHandler<ScrollToEvent<Integer>>> onScrollToProperty() {
         if( onScrollTo == null ) {
-            onScrollTo = new ObjectPropertyBase<EventHandler<ScrollToEvent<Integer>>>() {
+            onScrollTo = new ObjectPropertyBase<>() {
                 @Override protected void invalidated() {
                     setEventHandler(ScrollToEvent.scrollToTopIndex(), get());
                 }
@@ -984,7 +985,7 @@ public class ListView<T> extends Control {
 
     /** {@inheritDoc} */
     @Override protected Skin<?> createDefaultSkin() {
-        return new ListViewSkin<T>(this);
+        return new ListViewSkin<>(this);
     }
 
     /**
@@ -1002,7 +1003,7 @@ public class ListView<T> extends Control {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Private Implementation                                                  *
      *                                                                         *
@@ -1010,7 +1011,7 @@ public class ListView<T> extends Control {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Stylesheet Handling                                                     *
      *                                                                         *
@@ -1020,8 +1021,8 @@ public class ListView<T> extends Control {
 
     private static class StyleableProperties {
         private static final CssMetaData<ListView<?>,Orientation> ORIENTATION =
-            new CssMetaData<ListView<?>,Orientation>("-fx-orientation",
-                new EnumConverter<Orientation>(Orientation.class),
+            new CssMetaData<>("-fx-orientation",
+                new EnumConverter<>(Orientation.class),
                 Orientation.VERTICAL) {
 
             @Override
@@ -1043,7 +1044,7 @@ public class ListView<T> extends Control {
         };
 
         private static final CssMetaData<ListView<?>,Number> FIXED_CELL_SIZE =
-            new CssMetaData<ListView<?>,Number>("-fx-fixed-cell-size",
+            new CssMetaData<>("-fx-fixed-cell-size",
                                                 SizeConverter.getInstance(),
                                                 Region.USE_COMPUTED_SIZE) {
 
@@ -1056,14 +1057,14 @@ public class ListView<T> extends Control {
                 }
 
                 @Override public StyleableProperty<Number> getStyleableProperty(ListView<?> n) {
-                    return (StyleableProperty<Number>)(WritableValue<Number>)n.fixedCellSizeProperty();
+                    return (StyleableProperty<Number>)n.fixedCellSizeProperty();
                 }
             };
 
         private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
         static {
             final List<CssMetaData<? extends Styleable, ?>> styleables =
-                new ArrayList<CssMetaData<? extends Styleable, ?>>(Control.getClassCssMetaData());
+                new ArrayList<>(Control.getClassCssMetaData());
             styleables.add(ORIENTATION);
             styleables.add(FIXED_CELL_SIZE);
             STYLEABLES = Collections.unmodifiableList(styleables);
@@ -1071,8 +1072,9 @@ public class ListView<T> extends Control {
     }
 
     /**
-     * @return The CssMetaData associated with this class, which may include the
-     * CssMetaData of its superclasses.
+     * Gets the {@code CssMetaData} associated with this class, which may include the
+     * {@code CssMetaData} of its superclasses.
+     * @return the {@code CssMetaData}
      * @since JavaFX 8.0
      */
     public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
@@ -1095,7 +1097,7 @@ public class ListView<T> extends Control {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Accessibility handling                                                  *
      *                                                                         *
@@ -1114,7 +1116,7 @@ public class ListView<T> extends Control {
     }
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Support Interfaces                                                      *
      *                                                                         *
@@ -1122,7 +1124,7 @@ public class ListView<T> extends Control {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Support Classes                                                         *
      *                                                                         *
@@ -1207,7 +1209,7 @@ public class ListView<T> extends Control {
     // package for testing
     static class ListViewBitSetSelectionModel<T> extends MultipleSelectionModelBase<T> {
 
-        /***********************************************************************
+        /* *********************************************************************
          *                                                                     *
          * Constructors                                                        *
          *                                                                     *
@@ -1249,7 +1251,7 @@ public class ListView<T> extends Control {
         }
 
         // watching for changes to the items list content
-        private final ListChangeListener<T> itemsContentObserver = new ListChangeListener<T>() {
+        private final ListChangeListener<T> itemsContentObserver = new ListChangeListener<>() {
             @Override public void onChanged(Change<? extends T> c) {
                 updateItemCount();
 
@@ -1303,7 +1305,7 @@ public class ListView<T> extends Control {
 
 
 
-        /***********************************************************************
+        /* *********************************************************************
          *                                                                     *
          * Internal properties                                                 *
          *                                                                     *
@@ -1379,20 +1381,20 @@ public class ListView<T> extends Control {
 
                     // (1)
                     int length = c.getTo() - c.getFrom();
-                    HashMap<Integer, Integer> pMap = new HashMap<Integer, Integer>(length);
+                    HashMap<Integer, Integer> pMap = new HashMap<>(length);
                     for (int i = c.getFrom(); i < c.getTo(); i++) {
                         pMap.put(i, c.getPermutation(i));
                     }
 
                     // (2)
-                    List<Integer> selectedIndices = new ArrayList<Integer>(getSelectedIndices());
+                    List<Integer> selectedIndices = new ArrayList<>(getSelectedIndices());
 
 
                     // (3)
                     clearSelection();
 
                     // (4)
-                    List<Integer> newIndices = new ArrayList<Integer>(getSelectedIndices().size());
+                    List<Integer> newIndices = new ArrayList<>(getSelectedIndices().size());
 
                     // (5)
                     for (int i = 0; i < selectedIndices.size(); i++) {
@@ -1428,7 +1430,7 @@ public class ListView<T> extends Control {
 
 
 
-        /***********************************************************************
+        /* *********************************************************************
          *                                                                     *
          * Public selection API                                                *
          *                                                                     *
@@ -1477,7 +1479,7 @@ public class ListView<T> extends Control {
 
 
 
-        /***********************************************************************
+        /* *********************************************************************
          *                                                                     *
          * Private implementation                                              *
          *                                                                     *
@@ -1619,7 +1621,7 @@ public class ListView<T> extends Control {
         };
 
         private WeakListChangeListener<T> weakItemsContentListener
-                = new WeakListChangeListener<T>(itemsContentListener);
+                = new WeakListChangeListener<>(itemsContentListener);
 
         @Override protected int getItemCount() {
             return itemCount;

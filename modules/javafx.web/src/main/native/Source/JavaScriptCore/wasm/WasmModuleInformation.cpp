@@ -29,7 +29,6 @@
 #if ENABLE(WEBASSEMBLY)
 
 #include "WasmNameSection.h"
-#include <wtf/SHA1.h>
 
 namespace JSC { namespace Wasm {
 
@@ -37,6 +36,7 @@ ModuleInformation::ModuleInformation()
     : nameSection(NameSection::create())
 {
 }
+
 ModuleInformation::~ModuleInformation() { }
 
 } } // namespace JSC::Wasm

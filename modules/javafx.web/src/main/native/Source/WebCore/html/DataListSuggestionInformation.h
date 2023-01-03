@@ -26,22 +26,100 @@
 #pragma once
 
 #include "IntRect.h"
+#include <wtf/EnumTraits.h>
 #include <wtf/Vector.h>
 
 #if ENABLE(DATALIST_ELEMENT)
+
 namespace WebCore {
 
-enum class DataListSuggestionActivationType {
+enum class DataListSuggestionActivationType : uint8_t {
     ControlClicked,
     IndicatorClicked,
     TextChanged,
 };
 
-struct DataListSuggestionInformation {
-    DataListSuggestionActivationType activationType;
-    Vector<String> suggestions;
-    IntRect elementRect;
+struct DataListSuggestion {
+    String value;
+    String label;
+
+    template<class Encoder> void encode(Encoder&) const;
+    template<class Decoder> static std::optional<DataListSuggestion> decode(Decoder&);
 };
 
+template<class Encoder>
+void DataListSuggestion::encode(Encoder& encoder) const
+{
+    encoder << value;
+    encoder << label;
 }
-#endif
+
+template<class Decoder>
+std::optional<DataListSuggestion> DataListSuggestion::decode(Decoder& decoder)
+{
+    std::optional<String> value;
+    decoder >> value;
+    if (!value)
+        return std::nullopt;
+
+    std::optional<String> label;
+    decoder >> label;
+    if (!label)
+        return std::nullopt;
+
+    return {{ *value, *label }};
+}
+
+struct DataListSuggestionInformation {
+    DataListSuggestionActivationType activationType;
+    Vector<DataListSuggestion> suggestions;
+    IntRect elementRect;
+
+    template<class Encoder> void encode(Encoder&) const;
+    template<class Decoder> static std::optional<DataListSuggestionInformation> decode(Decoder&);
+};
+
+template<class Encoder>
+void DataListSuggestionInformation::encode(Encoder& encoder) const
+{
+    encoder << activationType;
+    encoder << suggestions;
+    encoder << elementRect;
+}
+
+template<class Decoder>
+std::optional<DataListSuggestionInformation> DataListSuggestionInformation::decode(Decoder& decoder)
+{
+    DataListSuggestionActivationType activationType;
+    if (!decoder.decode(activationType))
+        return std::nullopt;
+
+    std::optional<Vector<DataListSuggestion>> suggestions;
+    decoder >> suggestions;
+    if (!suggestions)
+        return std::nullopt;
+
+    std::optional<IntRect> elementRect;
+    decoder >> elementRect;
+    if (!elementRect)
+        return std::nullopt;
+
+    return {{ activationType, *suggestions, *elementRect }};
+}
+
+} // namespace WebCore
+
+namespace WTF {
+
+template<> struct EnumTraits<WebCore::DataListSuggestionActivationType> {
+    using values = EnumValues<
+        WebCore::DataListSuggestionActivationType,
+        WebCore::DataListSuggestionActivationType::ControlClicked,
+        WebCore::DataListSuggestionActivationType::IndicatorClicked,
+        WebCore::DataListSuggestionActivationType::TextChanged
+    >;
+};
+
+} // namespace WTF
+
+#endif // ENABLE(DATALIST_ELEMENT)

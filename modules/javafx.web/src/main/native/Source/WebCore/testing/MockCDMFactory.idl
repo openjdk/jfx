@@ -25,7 +25,7 @@
 
 [
     Conditional=ENCRYPTED_MEDIA,
-    NoInterfaceObject,
+    LegacyNoInterfaceObject,
     ExportMacro=WEBCORE_TESTSUPPORT_EXPORT,
 ] interface MockCDMFactory {
     attribute sequence<DOMString> supportedDataTypes;
@@ -38,6 +38,6 @@
     attribute boolean supportsSessions;
     attribute sequence<MediaKeyEncryptionScheme> supportedEncryptionSchemes;
 
-    void unregister();
+    undefined unregister();
 };
 

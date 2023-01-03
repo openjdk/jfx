@@ -33,12 +33,13 @@
 #include "FetchEvent.h"
 #include "FetchRequest.h"
 #include "FetchResponse.h"
+#include "JSDOMPromise.h"
 #include "MIMETypeRegistry.h"
-#include "ReadableStreamChunk.h"
 #include "ResourceRequest.h"
+#include "ScriptExecutionContextIdentifier.h"
 #include "ServiceWorker.h"
-#include "ServiceWorkerClientIdentifier.h"
 #include "ServiceWorkerGlobalScope.h"
+#include "ServiceWorkerThread.h"
 #include "WorkerGlobalScope.h"
 
 namespace WebCore {
@@ -46,28 +47,35 @@ namespace WebCore {
 namespace ServiceWorkerFetch {
 
 // https://fetch.spec.whatwg.org/#http-fetch step 3.3
-static inline Optional<ResourceError> validateResponse(const ResourceResponse& response, FetchOptions::Mode mode, FetchOptions::Redirect redirect)
+static inline ResourceError validateResponse(const ResourceResponse& response, FetchOptions::Mode mode, FetchOptions::Redirect redirect)
 {
     if (response.type() == ResourceResponse::Type::Error)
-        return ResourceError { errorDomainWebKitInternal, 0, response.url(), "Response served by service worker is an error"_s, ResourceError::Type::General };
+        return ResourceError { errorDomainWebKitInternal, 0, response.url(), "Response served by service worker is an error"_s, ResourceError::Type::General, ResourceError::IsSanitized::Yes };
 
     if (mode != FetchOptions::Mode::NoCors && response.tainting() == ResourceResponse::Tainting::Opaque)
-        return ResourceError { errorDomainWebKitInternal, 0, response.url(), "Response served by service worker is opaque"_s, ResourceError::Type::AccessControl };
+        return ResourceError { errorDomainWebKitInternal, 0, response.url(), "Response served by service worker is opaque"_s, ResourceError::Type::AccessControl, ResourceError::IsSanitized::Yes };
 
     // Navigate mode induces manual redirect.
     if (redirect != FetchOptions::Redirect::Manual && mode != FetchOptions::Mode::Navigate && response.tainting() == ResourceResponse::Tainting::Opaqueredirect)
-        return ResourceError { errorDomainWebKitInternal, 0, response.url(), "Response served by service worker is opaque redirect"_s, ResourceError::Type::AccessControl };
+        return ResourceError { errorDomainWebKitInternal, 0, response.url(), "Response served by service worker is opaque redirect"_s, ResourceError::Type::AccessControl, ResourceError::IsSanitized::Yes };
 
     if ((redirect != FetchOptions::Redirect::Follow || mode == FetchOptions::Mode::Navigate) && response.isRedirected())
-        return ResourceError { errorDomainWebKitInternal, 0, response.url(), "Response served by service worker has redirections"_s, ResourceError::Type::AccessControl };
+        return ResourceError { errorDomainWebKitInternal, 0, response.url(), "Response served by service worker has redirections"_s, ResourceError::Type::AccessControl, ResourceError::IsSanitized::Yes };
 
     return { };
 }
 
-static void processResponse(Ref<Client>&& client, Expected<Ref<FetchResponse>, ResourceError>&& result, FetchOptions::Mode mode, FetchOptions::Redirect redirect, const URL& requestURL)
+static void processResponse(Ref<Client>&& client, Expected<Ref<FetchResponse>, std::optional<ResourceError>>&& result, FetchOptions::Mode mode, FetchOptions::Redirect redirect, const URL& requestURL, CertificateInfo&& certificateInfo, DeferredPromise& promise)
 {
     if (!result.has_value()) {
-        client->didFail(result.error());
+        auto& error = result.error();
+        if (!error) {
+            client->didNotHandle();
+            promise.resolve();
+            return;
+        }
+        client->didFail(*error);
+        promise.reject(Exception { ExceptionCode::NetworkError });
         return;
     }
     auto response = WTFMove(result.value());
@@ -75,21 +83,23 @@ static void processResponse(Ref<Client>&& client, Expected<Ref<FetchResponse>, R
     auto loadingError = response->loadingError();
     if (!loadingError.isNull()) {
         client->didFail(loadingError);
+        promise.reject(Exception { ExceptionCode::NetworkError });
         return;
     }
 
     auto resourceResponse = response->resourceResponse();
-    if (auto error = validateResponse(resourceResponse, mode, redirect)) {
-        client->didFail(error.value());
+    if (auto error = validateResponse(resourceResponse, mode, redirect); !error.isNull()) {
+        client->didFail(error);
+        promise.reject(Exception { ExceptionCode::NetworkError });
         return;
     }
+
+    promise.resolve();
 
     if (resourceResponse.isRedirection() && resourceResponse.httpHeaderFields().contains(HTTPHeaderName::Location)) {
         client->didReceiveRedirection(resourceResponse);
         return;
     }
-
-    resourceResponse.setSource(ResourceResponse::Source::ServiceWorker);
 
     // In case of main resource and mime type is the default one, we set it to text/html to pass more service worker WPT tests.
     // FIXME: We should refine our MIME type sniffing strategy for synthetic responses.
@@ -98,6 +108,9 @@ static void processResponse(Ref<Client>&& client, Expected<Ref<FetchResponse>, R
             resourceResponse.setMimeType("text/html"_s);
             resourceResponse.setTextEncodingName("UTF-8"_s);
         }
+
+        if (!resourceResponse.certificateInfo())
+            resourceResponse.setCertificateInfo(WTFMove(certificateInfo));
     }
 
     // As per https://fetch.spec.whatwg.org/#main-fetch step 9, copy request's url list in response's url list if empty.
@@ -107,16 +120,17 @@ static void processResponse(Ref<Client>&& client, Expected<Ref<FetchResponse>, R
     client->didReceiveResponse(resourceResponse);
 
     if (response->isBodyReceivedByChunk()) {
-        response->consumeBodyReceivedByChunk([client = WTFMove(client)] (auto&& result) mutable {
+        response->consumeBodyReceivedByChunk([client = WTFMove(client), response = WeakPtr { response.get() }] (auto&& result) mutable {
             if (result.hasException()) {
-                client->didFail(FetchEvent::createResponseError(URL { }, result.exception().message()));
+                auto error = FetchEvent::createResponseError(URL { }, result.exception().message(), ResourceError::IsSanitized::Yes);
+                client->didFail(error);
                 return;
             }
 
-            if (auto chunk = result.returnValue())
-                client->didReceiveData(SharedBuffer::create(reinterpret_cast<const char*>(chunk->data), chunk->size));
+            if (auto* chunk = result.returnValue())
+                client->didReceiveData(SharedBuffer::create(chunk->data(), chunk->size()));
             else
-                client->didFinish();
+                client->didFinish(response ? response->networkLoadMetrics() : NetworkLoadMetrics { });
         });
         return;
     }
@@ -126,13 +140,13 @@ static void processResponse(Ref<Client>&& client, Expected<Ref<FetchResponse>, R
         client->didReceiveFormDataAndFinish(WTFMove(formData));
     }, [&] (Ref<SharedBuffer>& buffer) {
         client->didReceiveData(WTFMove(buffer));
-        client->didFinish();
+        client->didFinish(response->networkLoadMetrics());
     }, [&] (std::nullptr_t&) {
-        client->didFinish();
+        client->didFinish(response->networkLoadMetrics());
     });
 }
 
-void dispatchFetchEvent(Ref<Client>&& client, ServiceWorkerGlobalScope& globalScope, Optional<ServiceWorkerClientIdentifier> clientId, ResourceRequest&& request, String&& referrer, FetchOptions&& options)
+void dispatchFetchEvent(Ref<Client>&& client, ServiceWorkerGlobalScope& globalScope, ResourceRequest&& request, String&& referrer, FetchOptions&& options, FetchIdentifier fetchIdentifier, bool isServiceWorkerNavigationPreloadEnabled, String&& clientIdentifier, String&& resultingClientIdentifier)
 {
     auto requestHeaders = FetchHeaders::create(FetchHeaders::Guard::Immutable, HTTPHeaderMap { request.httpHeaderFields() });
 
@@ -140,16 +154,15 @@ void dispatchFetchEvent(Ref<Client>&& client, ServiceWorkerGlobalScope& globalSc
     FetchOptions::Redirect redirect = options.redirect;
 
     bool isNavigation = options.mode == FetchOptions::Mode::Navigate;
-    bool isNonSubresourceRequest = WebCore::isNonSubresourceRequest(options.destination);
 
     ASSERT(globalScope.registration().active());
     ASSERT(globalScope.registration().active()->identifier() == globalScope.thread().identifier());
     ASSERT(globalScope.registration().active()->state() == ServiceWorkerState::Activated);
 
     auto* formData = request.httpBody();
-    Optional<FetchBody> body;
+    std::optional<FetchBody> body;
     if (formData && !formData->isEmpty()) {
-        body = FetchBody::fromFormData(globalScope.sessionID(), *formData);
+        body = FetchBody::fromFormData(globalScope, *formData);
         if (!body) {
             client->didNotHandle();
             return;
@@ -162,36 +175,50 @@ void dispatchFetchEvent(Ref<Client>&& client, ServiceWorkerGlobalScope& globalSc
     URL requestURL = request.url();
     auto fetchRequest = FetchRequest::create(globalScope, WTFMove(body), WTFMove(requestHeaders),  WTFMove(request), WTFMove(options), WTFMove(referrer));
 
+    // If service worker navigation preload is not enabled, we do not want to reuse any preload directly.
+    if (!isServiceWorkerNavigationPreloadEnabled)
+        fetchRequest->setNavigationPreloadIdentifier(fetchIdentifier);
+
     FetchEvent::Init init;
     init.request = WTFMove(fetchRequest);
-    if (isNavigation) {
-        // FIXME: Set reservedClientId.
-        if (clientId)
-            init.targetClientId = clientId->toString();
-    } else if (clientId)
-        init.clientId = clientId->toString();
+    init.resultingClientId = WTFMove(resultingClientIdentifier);
+    init.clientId = WTFMove(clientIdentifier);
     init.cancelable = true;
-    auto event = FetchEvent::create(eventNames().fetchEvent, WTFMove(init), Event::IsTrusted::Yes);
 
-    event->onResponse([client = client.copyRef(), mode, redirect, requestURL] (auto&& result) mutable {
-        processResponse(WTFMove(client), WTFMove(result), mode, redirect, requestURL);
+    auto& jsDOMGlobalObject = *JSC::jsCast<JSDOMGlobalObject*>(globalScope.globalObject());
+    JSC::JSLockHolder lock(jsDOMGlobalObject.vm());
+
+    auto* promise = JSC::JSPromise::create(jsDOMGlobalObject.vm(), jsDOMGlobalObject.promiseStructure());
+    ASSERT(promise);
+
+    auto deferredPromise = DeferredPromise::create(jsDOMGlobalObject, *promise);
+    init.handled = DOMPromise::create(jsDOMGlobalObject, *promise);
+
+    auto event = FetchEvent::create(*globalScope.globalObject(), eventNames().fetchEvent, WTFMove(init), Event::IsTrusted::Yes);
+
+    if (isServiceWorkerNavigationPreloadEnabled)
+        event->setNavigationPreloadIdentifier(fetchIdentifier);
+
+    CertificateInfo certificateInfo = globalScope.certificateInfo();
+
+    event->onResponse([client, mode, redirect, requestURL, certificateInfo = WTFMove(certificateInfo), deferredPromise] (auto&& result) mutable {
+        processResponse(WTFMove(client), WTFMove(result), mode, redirect, requestURL, WTFMove(certificateInfo), deferredPromise.get());
     });
 
     globalScope.dispatchEvent(event);
 
     if (!event->respondWithEntered()) {
         if (event->defaultPrevented()) {
-            client->didFail(ResourceError { errorDomainWebKitInternal, 0, requestURL, "Fetch event was canceled"_s });
+            ResourceError error { errorDomainWebKitInternal, 0, requestURL, "Fetch event was canceled"_s, ResourceError::Type::General, ResourceError::IsSanitized::Yes };
+            client->didFail(error);
+            deferredPromise->reject(Exception { NetworkError });
             return;
         }
         client->didNotHandle();
+        deferredPromise->resolve();
     }
 
     globalScope.updateExtendedEventsSet(event.ptr());
-
-    auto& registration = globalScope.registration();
-    if (isNonSubresourceRequest || registration.needsUpdate())
-        registration.scheduleSoftUpdate();
 }
 
 } // namespace ServiceWorkerFetch

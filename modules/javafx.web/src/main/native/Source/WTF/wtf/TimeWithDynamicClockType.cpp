@@ -26,10 +26,8 @@
 #include "config.h"
 #include <wtf/TimeWithDynamicClockType.h>
 
-#include <cfloat>
 #include <cmath>
 #include <wtf/Condition.h>
-#include <wtf/DataLog.h>
 #include <wtf/PrintStream.h>
 #include <wtf/Lock.h>
 
@@ -42,6 +40,8 @@ TimeWithDynamicClockType TimeWithDynamicClockType::now(ClockType type)
         return WallTime::now();
     case ClockType::Monotonic:
         return MonotonicTime::now();
+    case ClockType::Approximate:
+        return ApproximateTime::now();
     }
     RELEASE_ASSERT_NOT_REACHED();
     return TimeWithDynamicClockType();
@@ -64,6 +64,12 @@ MonotonicTime TimeWithDynamicClockType::monotonicTime() const
     return MonotonicTime::fromRawSeconds(m_value);
 }
 
+ApproximateTime TimeWithDynamicClockType::approximateTime() const
+{
+    RELEASE_ASSERT(m_type == ClockType::Approximate);
+    return ApproximateTime::fromRawSeconds(m_value);
+}
+
 WallTime TimeWithDynamicClockType::approximateWallTime() const
 {
     switch (m_type) {
@@ -71,6 +77,8 @@ WallTime TimeWithDynamicClockType::approximateWallTime() const
         return wallTime();
     case ClockType::Monotonic:
         return monotonicTime().approximateWallTime();
+    case ClockType::Approximate:
+        return approximateTime().approximateWallTime();
     }
     RELEASE_ASSERT_NOT_REACHED();
     return WallTime();
@@ -83,6 +91,8 @@ MonotonicTime TimeWithDynamicClockType::approximateMonotonicTime() const
         return wallTime().approximateMonotonicTime();
     case ClockType::Monotonic:
         return monotonicTime();
+    case ClockType::Approximate:
+        return approximateTime().approximateMonotonicTime();
     }
     RELEASE_ASSERT_NOT_REACHED();
     return MonotonicTime();
@@ -127,7 +137,7 @@ void sleep(const TimeWithDynamicClockType& time)
 {
     Lock fakeLock;
     Condition fakeCondition;
-    LockHolder fakeLocker(fakeLock);
+    Locker fakeLocker { fakeLock };
     fakeCondition.waitUntil(fakeLock, time);
 }
 

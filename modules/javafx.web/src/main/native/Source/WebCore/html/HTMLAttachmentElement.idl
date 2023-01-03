@@ -25,7 +25,10 @@
 
 [
     Conditional=ATTACHMENT_ELEMENT,
-    EnabledAtRuntime=AttachmentElement,
+    JSGenerateToNativeObject,
+    ExportMacro=WEBCORE_EXPORT,
+    EnabledAtRuntime=AttachmentElementEnabled,
+    Exposed=Window
 ] interface HTMLAttachmentElement : HTMLElement {
     attribute File? file;
     readonly attribute DOMString uniqueIdentifier;

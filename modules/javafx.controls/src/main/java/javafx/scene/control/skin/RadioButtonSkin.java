@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,9 +28,6 @@ package javafx.scene.control.skin;
 import com.sun.javafx.scene.control.behavior.BehaviorBase;
 import com.sun.javafx.scene.control.behavior.ToggleButtonBehavior;
 import com.sun.javafx.scene.control.skin.Utils;
-import javafx.scene.Node;
-import javafx.scene.control.Accordion;
-import javafx.scene.control.Button;
 import javafx.scene.control.Control;
 import javafx.scene.control.RadioButton;
 import javafx.scene.layout.StackPane;
@@ -43,7 +40,7 @@ import javafx.scene.layout.StackPane;
  */
 public class RadioButtonSkin extends LabeledSkinBase<RadioButton> {
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Private fields                                                          *
      *                                                                         *
@@ -55,7 +52,7 @@ public class RadioButtonSkin extends LabeledSkinBase<RadioButton> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
@@ -81,7 +78,7 @@ public class RadioButtonSkin extends LabeledSkinBase<RadioButton> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Public API                                                              *
      *                                                                         *
@@ -146,7 +143,7 @@ public class RadioButtonSkin extends LabeledSkinBase<RadioButton> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Private implementation                                                  *
      *                                                                         *

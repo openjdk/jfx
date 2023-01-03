@@ -38,11 +38,11 @@ RandomizingFuzzerAgent::RandomizingFuzzerAgent(VM&)
 
 SpeculatedType RandomizingFuzzerAgent::getPrediction(CodeBlock* codeBlock, const CodeOrigin& codeOrigin, SpeculatedType original)
 {
-    auto locker = holdLock(m_lock);
+    Locker locker { m_lock };
     uint32_t high = m_random.getUint32();
     uint32_t low = m_random.getUint32();
     SpeculatedType generated = static_cast<SpeculatedType>((static_cast<uint64_t>(high) << 32) | low) & SpecFullTop;
-    if (Options::dumpRandomizingFuzzerAgentPredictions())
+    if (Options::dumpFuzzerAgentPredictions())
         dataLogLn("getPrediction name:(", codeBlock->inferredName(), "#", codeBlock->hashAsStringIfPossible(), "),bytecodeIndex:(", codeOrigin.bytecodeIndex(), "),original:(", SpeculationDump(original), "),generated:(", SpeculationDump(generated), ")");
     return generated;
 }

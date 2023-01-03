@@ -1,6 +1,6 @@
 /*
  *  Copyright (C) 1999-2000 Harri Porten (porten@kde.org)
- *  Copyright (C) 2007, 2008 Apple Inc. All rights reserved.
+ *  Copyright (C) 2007-2022 Apple Inc. All rights reserved.
  *  Copyright (C) 2015 Yusuke Suzuki <utatane.tea@gmail.com>.
  *
  *  This library is free software; you can redistribute it and/or
@@ -30,16 +30,22 @@ class SymbolObject final : public JSWrapperObject {
 public:
     using Base = JSWrapperObject;
 
+    template<typename, SubspaceAccess mode>
+    static GCClient::IsoSubspace* subspaceFor(VM& vm)
+    {
+        return vm.symbolObjectSpace<mode>();
+    }
+
     static SymbolObject* create(VM& vm, Structure* structure)
     {
         Symbol* symbol = Symbol::create(vm);
-        SymbolObject* object = new (NotNull, allocateCell<SymbolObject>(vm.heap)) SymbolObject(vm, structure);
+        SymbolObject* object = new (NotNull, allocateCell<SymbolObject>(vm)) SymbolObject(vm, structure);
         object->finishCreation(vm, symbol);
         return object;
     }
     static SymbolObject* create(VM& vm, Structure* structure, Symbol* symbol)
     {
-        SymbolObject* object = new (NotNull, allocateCell<SymbolObject>(vm.heap)) SymbolObject(vm, structure);
+        SymbolObject* object = new (NotNull, allocateCell<SymbolObject>(vm)) SymbolObject(vm, structure);
         object->finishCreation(vm, symbol);
         return object;
     }
@@ -54,13 +60,10 @@ public:
         return Structure::create(vm, globalObject, prototype, TypeInfo(ObjectType, StructureFlags), info());
     }
 
-    static JSValue defaultValue(const JSObject*, ExecState*, PreferredPrimitiveType);
-
-    static String toStringName(const JSObject*, ExecState*);
-
-protected:
+private:
     JS_EXPORT_PRIVATE void finishCreation(VM&, Symbol*);
     JS_EXPORT_PRIVATE SymbolObject(VM&, Structure*);
 };
+static_assert(sizeof(SymbolObject) == sizeof(JSWrapperObject));
 
 } // namespace JSC

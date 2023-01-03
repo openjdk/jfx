@@ -30,6 +30,7 @@
 #include "RenderObject.h"
 #include "RenderSVGResource.h"
 #include "RenderSVGText.h"
+#include "SVGElementTypeHelpers.h"
 #include "SVGNames.h"
 #include "SVGPoint.h"
 #include "SVGRect.h"
@@ -44,7 +45,6 @@ WTF_MAKE_ISO_ALLOCATED_IMPL(SVGTextContentElement);
 
 SVGTextContentElement::SVGTextContentElement(const QualifiedName& tagName, Document& document)
     : SVGGraphicsElement(tagName, document)
-    , SVGExternalResourcesRequired(this)
 {
     static std::once_flag onceFlag;
     std::call_once(onceFlag, [] {
@@ -141,24 +141,24 @@ ExceptionOr<void> SVGTextContentElement::selectSubString(unsigned charnum, unsig
     return { };
 }
 
-bool SVGTextContentElement::isPresentationAttribute(const QualifiedName& name) const
+bool SVGTextContentElement::hasPresentationalHintsForAttribute(const QualifiedName& name) const
 {
     if (name.matches(XMLNames::spaceAttr))
         return true;
-    return SVGGraphicsElement::isPresentationAttribute(name);
+    return SVGGraphicsElement::hasPresentationalHintsForAttribute(name);
 }
 
-void SVGTextContentElement::collectStyleForPresentationAttribute(const QualifiedName& name, const AtomString& value, MutableStyleProperties& style)
+void SVGTextContentElement::collectPresentationalHintsForAttribute(const QualifiedName& name, const AtomString& value, MutableStyleProperties& style)
 {
     if (name.matches(XMLNames::spaceAttr)) {
         if (value == "preserve")
-            addPropertyToPresentationAttributeStyle(style, CSSPropertyWhiteSpace, CSSValuePre);
+            addPropertyToPresentationalHintStyle(style, CSSPropertyWhiteSpace, CSSValuePre);
         else
-            addPropertyToPresentationAttributeStyle(style, CSSPropertyWhiteSpace, CSSValueNowrap);
+            addPropertyToPresentationalHintStyle(style, CSSPropertyWhiteSpace, CSSValueNowrap);
         return;
     }
 
-    SVGGraphicsElement::collectStyleForPresentationAttribute(name, value, style);
+    SVGGraphicsElement::collectPresentationalHintsForAttribute(name, value, style);
 }
 
 void SVGTextContentElement::parseAttribute(const QualifiedName& name, const AtomString& value)
@@ -170,12 +170,11 @@ void SVGTextContentElement::parseAttribute(const QualifiedName& name, const Atom
         if (propertyValue > 0)
             m_lengthAdjust->setBaseValInternal<SVGLengthAdjustType>(propertyValue);
     } else if (name == SVGNames::textLengthAttr)
-        m_textLength->setBaseValInternal(SVGLengthValue::construct(LengthModeOther, value, parseError, ForbidNegativeLengths));
+        m_textLength->setBaseValInternal(SVGLengthValue::construct(SVGLengthMode::Other, value, parseError, SVGLengthNegativeValuesMode::Forbid));
 
     reportAttributeParsingError(parseError, name, value);
 
     SVGGraphicsElement::parseAttribute(name, value);
-    SVGExternalResourcesRequired::parseAttribute(name, value);
 }
 
 void SVGTextContentElement::svgAttributeChanged(const QualifiedName& attrName)
@@ -192,14 +191,13 @@ void SVGTextContentElement::svgAttributeChanged(const QualifiedName& attrName)
     }
 
     SVGGraphicsElement::svgAttributeChanged(attrName);
-    SVGExternalResourcesRequired::svgAttributeChanged(attrName);
 }
 
 SVGAnimatedLength& SVGTextContentElement::textLengthAnimated()
 {
-    static NeverDestroyed<SVGLengthValue> defaultTextLength(LengthModeOther);
+    static NeverDestroyed<SVGLengthValue> defaultTextLength(SVGLengthMode::Other);
     if (m_textLength->baseVal()->value() == defaultTextLength)
-        m_textLength->baseVal()->value().newValueSpecifiedUnits(LengthTypeNumber, getComputedTextLength());
+        m_textLength->baseVal()->value() = { getComputedTextLength(), SVGLengthType::Number };
     return m_textLength;
 }
 

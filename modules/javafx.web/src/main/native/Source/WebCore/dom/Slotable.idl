@@ -24,9 +24,7 @@
  *
  */
 
-[
-    NoInterfaceObject,
-    EnabledAtRuntime=ShadowDOM,
-] interface Slotable {
+// https://dom.spec.whatwg.org/#slotable
+interface mixin Slotable {
     [ImplementedAs=assignedSlotForBindings] readonly attribute HTMLSlotElement? assignedSlot;
 };

@@ -28,7 +28,6 @@
 
 #include "CodeBlock.h"
 #include "ExecutableAllocator.h"
-#include "JSCInlines.h"
 #include "VMInlines.h"
 
 namespace JSC {
@@ -160,7 +159,7 @@ bool ExecutionCounter<countingVariant>::setThreshold(CodeBlock* codeBlock)
         return true;
     }
 
-    threshold = clippedThreshold(codeBlock ? codeBlock->globalObject() : nullptr, threshold);
+    threshold = clippedThreshold(threshold);
 
     m_counter = static_cast<int32_t>(-threshold);
 

@@ -96,21 +96,27 @@ void FontCascadeFonts::GlyphPageCacheEntry::setSingleFontPage(RefPtr<GlyphPage>&
     m_singleFont = page;
 }
 
+DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(FontCascadeFonts);
+
 FontCascadeFonts::FontCascadeFonts(RefPtr<FontSelector>&& fontSelector)
     : m_cachedPrimaryFont(nullptr)
     , m_fontSelector(fontSelector)
     , m_fontSelectorVersion(m_fontSelector ? m_fontSelector->version() : 0)
-    , m_generation(FontCache::singleton().generation())
+    , m_generation(FontCache::forCurrentThread().generation())
 {
+#if ASSERT_ENABLED
+    if (!isMainThread())
+        m_thread = Thread::current();
+#endif
 }
 
 FontCascadeFonts::FontCascadeFonts(const FontPlatformData& platformData)
     : m_cachedPrimaryFont(nullptr)
     , m_fontSelectorVersion(0)
-    , m_generation(FontCache::singleton().generation())
+    , m_generation(FontCache::forCurrentThread().generation())
     , m_isForPlatformFont(true)
 {
-    m_realizedFallbackRanges.append(FontRanges(FontCache::singleton().fontForPlatformData(platformData)));
+    m_realizedFallbackRanges.append(FontRanges(FontCache::forCurrentThread().fontForPlatformData(platformData)));
 }
 
 FontCascadeFonts::~FontCascadeFonts() = default;
@@ -138,7 +144,7 @@ static FontRanges realizeNextFallback(const FontCascadeDescription& description,
 {
     ASSERT(index < description.effectiveFamilyCount());
 
-    auto& fontCache = FontCache::singleton();
+    auto& fontCache = FontCache::forCurrentThread();
     while (index < description.effectiveFamilyCount()) {
         auto visitor = WTF::makeVisitor([&](const AtomString& family) -> FontRanges {
             if (family.isEmpty())
@@ -155,7 +161,7 @@ static FontRanges realizeNextFallback(const FontCascadeDescription& description,
             return fontFamilySpecification.fontRanges(description);
         });
         const auto& currentFamily = description.effectiveFamilyAt(index++);
-        auto ranges = WTF::visit(visitor, currentFamily);
+        auto ranges = std::visit(visitor, currentFamily);
         if (!ranges.isNull())
             return ranges;
     }
@@ -175,7 +181,7 @@ const FontRanges& FontCascadeFonts::realizeFallbackRangesAt(const FontCascadeDes
         return m_realizedFallbackRanges[index];
 
     ASSERT(index == m_realizedFallbackRanges.size());
-    ASSERT(FontCache::singleton().generation() == m_generation);
+    ASSERT(FontCache::forCurrentThread().generation() == m_generation);
 
     m_realizedFallbackRanges.append(FontRanges());
     auto& fontRanges = m_realizedFallbackRanges.last();
@@ -183,9 +189,9 @@ const FontRanges& FontCascadeFonts::realizeFallbackRangesAt(const FontCascadeDes
     if (!index) {
         fontRanges = realizeNextFallback(description, m_lastRealizedFallbackIndex, m_fontSelector.get());
         if (fontRanges.isNull() && m_fontSelector)
-            fontRanges = m_fontSelector->fontRangesForFamily(description, standardFamily);
+            fontRanges = m_fontSelector->fontRangesForFamily(description, familyNamesData->at(FamilyNamesIndex::StandardFamily));
         if (fontRanges.isNull())
-            fontRanges = FontRanges(FontCache::singleton().lastResortFallbackFont(description));
+            fontRanges = FontRanges(FontCache::forCurrentThread().lastResortFallbackFont(description));
         return fontRanges;
     }
 
@@ -349,10 +355,6 @@ GlyphData FontCascadeFonts::glyphDataForSystemFallback(UChar32 character, const 
     if (!systemFallbackFont)
         return GlyphData();
 
-#if HAVE(DISALLOWABLE_USER_INSTALLED_FONTS)
-    ASSERT(!systemFallbackFont->isUserInstalledFont() || description.shouldAllowUserInstalledFonts() == AllowUserInstalledFonts::Yes);
-#endif
-
     if (systemFallbackShouldBeInvisible)
         systemFallbackFont = const_cast<Font*>(&systemFallbackFont->invisibleFont());
 
@@ -490,7 +492,7 @@ static RefPtr<GlyphPage> glyphPageFromFontRanges(unsigned pageNumber, const Font
 
 GlyphData FontCascadeFonts::glyphDataForCharacter(UChar32 c, const FontCascadeDescription& description, FontVariant variant)
 {
-    ASSERT(isMainThread());
+    ASSERT(m_thread ? m_thread->ptr() == &Thread::current() : isMainThread());
     ASSERT(variant != AutoVariant);
 
     if (variant != NormalVariant)

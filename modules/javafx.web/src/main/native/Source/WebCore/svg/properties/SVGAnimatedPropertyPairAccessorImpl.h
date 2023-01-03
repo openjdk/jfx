@@ -39,6 +39,8 @@ class SVGAnimatedAngleOrientAccessor final : public SVGAnimatedPropertyPairAcces
     using Base = SVGAnimatedPropertyPairAccessor<OwnerType, SVGAnimatedAngleAccessor<OwnerType>, SVGAnimatedOrientTypeAccessor<OwnerType>>;
     using Base::property1;
     using Base::property2;
+    using Base::m_accessor1;
+    using Base::m_accessor2;
 
 public:
     using Base::Base;
@@ -46,12 +48,22 @@ public:
     constexpr static const SVGMemberAccessor<OwnerType>& singleton() { return Base::template singleton<SVGAnimatedAngleOrientAccessor, property1, property2>(); }
 
 private:
-    Optional<String> synchronize(const OwnerType& owner) const final
+    void setDirty(const OwnerType& owner, SVGAnimatedProperty& animatedProperty) const final
+    {
+        auto type = property2(owner)->baseVal();
+        if (m_accessor1.matches(owner, animatedProperty) && type != SVGMarkerOrientAngle)
+            property2(owner)->setBaseValInternal(SVGMarkerOrientAngle);
+        else if (m_accessor2.matches(owner, animatedProperty) && type != SVGMarkerOrientAngle)
+            property1(owner)->setBaseValInternal({ });
+        animatedProperty.setDirty();
+    }
+
+    std::optional<String> synchronize(const OwnerType& owner) const final
     {
         bool dirty1 = property1(owner)->isDirty();
         bool dirty2 = property2(owner)->isDirty();
         if (!(dirty1 || dirty2))
-            return WTF::nullopt;
+            return std::nullopt;
 
         auto type = property2(owner)->baseVal();
 
@@ -83,12 +95,12 @@ public:
     constexpr static const SVGMemberAccessor<OwnerType>& singleton() { return Base::template singleton<SVGAnimatedIntegerPairAccessor, property1, property2>(); }
 
 private:
-    Optional<String> synchronize(const OwnerType& owner) const final
+    std::optional<String> synchronize(const OwnerType& owner) const final
     {
         bool dirty1 = property1(owner)->isDirty();
         bool dirty2 = property2(owner)->isDirty();
         if (!(dirty1 || dirty2))
-            return WTF::nullopt;
+            return std::nullopt;
 
         String string1 = dirty1 ? *property1(owner)->synchronize() : property1(owner)->baseValAsString();
         String string2 = dirty2 ? *property2(owner)->synchronize() : property2(owner)->baseValAsString();
@@ -118,12 +130,12 @@ public:
     constexpr static const SVGMemberAccessor<OwnerType>& singleton() { return Base::template singleton<SVGAnimatedNumberPairAccessor, property1, property2>(); }
 
 private:
-    Optional<String> synchronize(const OwnerType& owner) const final
+    std::optional<String> synchronize(const OwnerType& owner) const final
     {
         bool dirty1 = property1(owner)->isDirty();
         bool dirty2 = property2(owner)->isDirty();
         if (!(dirty1 || dirty2))
-            return WTF::nullopt;
+            return std::nullopt;
 
         String string1 = dirty1 ? *property1(owner)->synchronize() : property1(owner)->baseValAsString();
         String string2 = dirty2 ? *property2(owner)->synchronize() : property2(owner)->baseValAsString();

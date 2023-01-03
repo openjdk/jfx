@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -38,7 +38,6 @@ void JITRightShiftGenerator::generateFastPath(CCallHelpers& jit)
 #if USE(JSVALUE32_64)
     ASSERT(m_scratchGPR != m_left.tagGPR());
     ASSERT(m_scratchGPR != m_right.tagGPR());
-    ASSERT(m_scratchFPR != InvalidFPRReg);
 #endif
 
     ASSERT(!m_leftOperand.isConstInt32() || !m_rightOperand.isConstInt32());
@@ -57,7 +56,7 @@ void JITRightShiftGenerator::generateFastPath(CCallHelpers& jit)
             else
                 jit.urshift32(CCallHelpers::Imm32(shiftAmount), m_result.payloadGPR());
 #if USE(JSVALUE64)
-            jit.or64(GPRInfo::tagTypeNumberRegister, m_result.payloadGPR());
+            jit.or64(GPRInfo::numberTagRegister, m_result.payloadGPR());
 #endif
         }
 
@@ -69,7 +68,7 @@ void JITRightShiftGenerator::generateFastPath(CCallHelpers& jit)
 
             m_slowPathJumpList.append(jit.branchIfNotNumber(m_left, m_scratchGPR));
 
-            jit.unboxDoubleNonDestructive(m_left, m_leftFPR, m_scratchGPR, m_scratchFPR);
+            jit.unboxDoubleNonDestructive(m_left, m_leftFPR, m_scratchGPR);
 #if CPU(ARM64)
             if (MacroAssemblerARM64::supportsDoubleToInt32ConversionUsingJavaScriptSemantics())
                 jit.convertDoubleToInt32UsingJavaScriptSemantics(m_leftFPR, m_scratchGPR);
@@ -116,7 +115,7 @@ void JITRightShiftGenerator::generateFastPath(CCallHelpers& jit)
         else
             jit.urshift32(rightOperandGPR, m_result.payloadGPR());
 #if USE(JSVALUE64)
-        jit.or64(GPRInfo::tagTypeNumberRegister, m_result.payloadGPR());
+        jit.or64(GPRInfo::numberTagRegister, m_result.payloadGPR());
 #endif
         if (m_leftOperand.isConstInt32())
             return;
@@ -128,7 +127,7 @@ void JITRightShiftGenerator::generateFastPath(CCallHelpers& jit)
             leftNotInt.link(&jit);
 
             m_slowPathJumpList.append(jit.branchIfNotNumber(m_left, m_scratchGPR));
-            jit.unboxDoubleNonDestructive(m_left, m_leftFPR, m_scratchGPR, m_scratchFPR);
+            jit.unboxDoubleNonDestructive(m_left, m_leftFPR, m_scratchGPR);
 #if CPU(ARM64)
             if (MacroAssemblerARM64::supportsDoubleToInt32ConversionUsingJavaScriptSemantics())
                 jit.convertDoubleToInt32UsingJavaScriptSemantics(m_leftFPR, m_scratchGPR);

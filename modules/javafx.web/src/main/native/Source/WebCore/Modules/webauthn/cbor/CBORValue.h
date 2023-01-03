@@ -1,5 +1,5 @@
 // Copyright 2017 The Chromium Authors. All rights reserved.
-// Copyright (C) 2018 Apple Inc. All rights reserved.
+// Copyright (C) 2018-2021 Apple Inc. All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
@@ -36,6 +36,10 @@
 #include <wtf/StdMap.h>
 #include <wtf/Vector.h>
 #include <wtf/text/WTFString.h>
+
+namespace WebCore {
+class BufferSource;
+}
 
 namespace cbor {
 
@@ -127,6 +131,8 @@ public:
     explicit CBORValue(const BinaryValue&);
     explicit CBORValue(BinaryValue&&);
 
+    explicit CBORValue(const WebCore::BufferSource&);
+
     explicit CBORValue(const char*);
     explicit CBORValue(String&&);
     explicit CBORValue(const String&);
@@ -164,6 +170,7 @@ public:
     bool isSimple() const { return type() == Type::SimpleValue; }
     bool isBool() const { return isSimple() && (m_simpleValue == SimpleValue::TrueValue || m_simpleValue == SimpleValue::FalseValue); }
 
+    // FIXME(183535): Considering adding && getter for better performance.
     // These will all fatally assert if the type doesn't match.
     SimpleValue getSimpleValue() const;
     bool getBool() const;

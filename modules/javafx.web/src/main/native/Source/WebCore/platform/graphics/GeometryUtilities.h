@@ -31,6 +31,9 @@
 
 namespace WebCore {
 
+class FloatQuad;
+
+float euclidianDistance(const FloatSize&);
 float euclidianDistance(const FloatPoint&, const FloatPoint&);
 
 float findSlope(const FloatPoint& p1, const FloatPoint& p2, float& c);
@@ -38,8 +41,10 @@ float findSlope(const FloatPoint& p1, const FloatPoint& p2, float& c);
 // Find point where lines through the two pairs of points intersect. Returns false if the lines don't intersect.
 WEBCORE_EXPORT bool findIntersection(const FloatPoint& p1, const FloatPoint& p2, const FloatPoint& d1, const FloatPoint& d2, FloatPoint& intersection);
 
-IntRect unionRect(const Vector<IntRect>&);
+WEBCORE_EXPORT IntRect unionRect(const Vector<IntRect>&);
+WEBCORE_EXPORT IntRect unionRectIgnoringZeroRects(const Vector<IntRect>&);
 WEBCORE_EXPORT FloatRect unionRect(const Vector<FloatRect>&);
+WEBCORE_EXPORT FloatRect unionRectIgnoringZeroRects(const Vector<FloatRect>&);
 
 // Map point from srcRect to an equivalent point in destRect.
 FloatPoint mapPoint(FloatPoint, const FloatRect& srcRect, const FloatRect& destRect);
@@ -56,4 +61,15 @@ FloatSize sizeWithAreaAndAspectRatio(float area, float aspectRatio);
 FloatRect boundsOfRotatingRect(const FloatRect&);
 
 bool ellipseContainsPoint(const FloatPoint& center, const FloatSize& radii, const FloatPoint&);
+
+FloatPoint midPoint(const FloatPoint&, const FloatPoint&);
+
+struct RotatedRect {
+    FloatPoint center;
+    FloatSize size;
+    float angleInRadians;
+};
+
+WEBCORE_EXPORT RotatedRect rotatedBoundingRectWithMinimumAngleOfRotation(const FloatQuad&, std::optional<float> minRotationInRadians = std::nullopt);
+
 }

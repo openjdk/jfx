@@ -27,8 +27,9 @@
 
 #if ENABLE(WEBASSEMBLY)
 
-#include "B3Compilation.h"
 #include "B3Procedure.h"
+#include "JITCompilation.h"
+#include "VirtualRegister.h"
 #include "WasmFormat.h"
 #include "WasmLimits.h"
 #include "WasmModuleInformation.h"
@@ -38,6 +39,7 @@
 #include <wtf/Expected.h>
 #include <wtf/LEBDecoder.h>
 #include <wtf/StdLibExtras.h>
+#include <wtf/StringPrintStream.h>
 #include <wtf/text/WTFString.h>
 #include <wtf/unicode/UTF8Conversion.h>
 
@@ -45,9 +47,8 @@ namespace JSC { namespace Wasm {
 
 namespace FailureHelper {
 // FIXME We should move this to makeString. It's in its own namespace to enable C++ Argument Dependent Lookup à la std::swap: user code can deblare its own "boxFailure" and the fail() helper will find it.
-static inline auto makeString(const char *failure) { return failure; }
-template <typename Int, typename = typename std::enable_if<std::is_integral<Int>::value>::type>
-static inline auto makeString(Int failure) { return String::number(failure); }
+template<typename T>
+inline String makeString(const T& failure) { return WTF::toString(failure); }
 }
 
 template<typename SuccessType>
@@ -71,6 +72,7 @@ protected:
 
     bool WARN_UNUSED_RETURN parseVarUInt1(uint8_t&);
     bool WARN_UNUSED_RETURN parseInt7(int8_t&);
+    bool WARN_UNUSED_RETURN peekInt7(int8_t&);
     bool WARN_UNUSED_RETURN parseUInt7(uint8_t&);
     bool WARN_UNUSED_RETURN parseUInt8(uint8_t&);
     bool WARN_UNUSED_RETURN parseUInt32(uint32_t&);
@@ -81,9 +83,11 @@ protected:
     bool WARN_UNUSED_RETURN parseVarInt32(int32_t&);
     bool WARN_UNUSED_RETURN parseVarInt64(int64_t&);
 
-    bool WARN_UNUSED_RETURN parseResultType(Type&);
-    bool WARN_UNUSED_RETURN parseValueType(Type&);
+    PartialResult WARN_UNUSED_RETURN parseBlockSignature(const ModuleInformation&, BlockSignature&);
+    bool WARN_UNUSED_RETURN parseValueType(const ModuleInformation&, Type&);
+    bool WARN_UNUSED_RETURN parseRefType(const ModuleInformation&, Type&);
     bool WARN_UNUSED_RETURN parseExternalKind(ExternalKind&);
+    bool WARN_UNUSED_RETURN parseHeapType(const ModuleInformation&, int32_t&);
 
     size_t m_offset = 0;
 
@@ -107,12 +111,15 @@ protected:
 private:
     const uint8_t* m_source;
     size_t m_sourceLength;
+    // We keep a local reference to the global table so we don't have to fetch it to find thunk signatures.
+    const SignatureInformation& m_signatureInformation;
 };
 
 template<typename SuccessType>
 ALWAYS_INLINE Parser<SuccessType>::Parser(const uint8_t* sourceBuffer, size_t sourceLength)
     : m_source(sourceBuffer)
     , m_sourceLength(sourceLength)
+    , m_signatureInformation(SignatureInformation::singleton())
 {
 }
 
@@ -236,6 +243,16 @@ ALWAYS_INLINE bool Parser<SuccessType>::parseInt7(int8_t& result)
 }
 
 template<typename SuccessType>
+ALWAYS_INLINE bool Parser<SuccessType>::peekInt7(int8_t& result)
+{
+    if (m_offset >= length())
+        return false;
+    uint8_t v = source()[m_offset];
+    result = (v & 0x40) ? WTF::bitwise_cast<int8_t>(uint8_t(v | 0x80)) : v;
+    return (v & 0x80) == 0;
+}
+
+template<typename SuccessType>
 ALWAYS_INLINE bool Parser<SuccessType>::parseUInt7(uint8_t& result)
 {
     if (m_offset >= length())
@@ -257,21 +274,87 @@ ALWAYS_INLINE bool Parser<SuccessType>::parseVarUInt1(uint8_t& result)
 }
 
 template<typename SuccessType>
-ALWAYS_INLINE bool Parser<SuccessType>::parseResultType(Type& result)
+ALWAYS_INLINE typename Parser<SuccessType>::PartialResult Parser<SuccessType>::parseBlockSignature(const ModuleInformation& info, BlockSignature& result)
 {
-    int8_t value;
-    if (!parseInt7(value))
+    int8_t typeKind;
+    if (peekInt7(typeKind) && isValidTypeKind(typeKind)) {
+        Type type = {static_cast<TypeKind>(typeKind), Nullable::Yes, 0};
+        WASM_PARSER_FAIL_IF(!(isValueType(type) || type.isVoid()), "result type of block: ", makeString(type.kind), " is not a value type or Void");
+        result = m_signatureInformation.thunkFor(type);
+        m_offset++;
+        return { };
+    }
+
+    int64_t index;
+    WASM_PARSER_FAIL_IF(!parseVarInt64(index), "Block-like instruction doesn't return value type but can't decode type section index");
+    WASM_PARSER_FAIL_IF(index < 0, "Block-like instruction signature index is negative");
+    WASM_PARSER_FAIL_IF(static_cast<size_t>(index) >= info.usedSignatures.size(), "Block-like instruction signature index is out of bounds. Index: ", index, " type index space: ", info.usedSignatures.size());
+
+    result = &info.usedSignatures[index].get();
+    return { };
+}
+
+template<typename SuccessType>
+ALWAYS_INLINE bool Parser<SuccessType>::parseHeapType(const ModuleInformation& info, int32_t& result)
+{
+    if (!Options::useWebAssemblyTypedFunctionReferences())
         return false;
-    if (!isValidType(value))
+
+    int32_t heapType;
+    if (!parseVarInt32(heapType))
         return false;
-    result = static_cast<Type>(value);
+
+    if (heapType < 0) {
+        if (isValidHeapTypeKind(static_cast<TypeKind>(heapType))) {
+            result = heapType;
+            return true;
+        }
+        return false;
+    }
+
+    if (static_cast<size_t>(heapType) >= info.usedSignatures.size())
+        return false;
+
+    result = heapType;
     return true;
 }
 
 template<typename SuccessType>
-ALWAYS_INLINE bool Parser<SuccessType>::parseValueType(Type& result)
+ALWAYS_INLINE bool Parser<SuccessType>::parseValueType(const ModuleInformation& info, Type& result)
 {
-    return parseResultType(result) && isValueType(result);
+    int8_t kind;
+    if (!parseInt7(kind))
+        return false;
+    if (!isValidTypeKind(kind))
+        return false;
+
+    TypeKind typeKind = static_cast<TypeKind>(kind);
+    bool isNullable = true;
+    SignatureIndex sigIndex = 0;
+
+    if (Options::useWebAssemblyTypedFunctionReferences() && (typeKind == TypeKind::Funcref || typeKind == TypeKind::Externref)) {
+        sigIndex = static_cast<SignatureIndex>(typeKind);
+        typeKind = TypeKind::RefNull;
+    } else if (typeKind == TypeKind::Ref || typeKind == TypeKind::RefNull) {
+        isNullable = typeKind == TypeKind::RefNull;
+        int32_t heapType;
+        if (!parseHeapType(info, heapType))
+            return false;
+        sigIndex = heapType < 0 ? static_cast<SignatureIndex>(heapType) : SignatureInformation::get(info.usedSignatures[heapType].get());
+    }
+
+    Type type = { typeKind, static_cast<Nullable>(isNullable), sigIndex };
+    if (!isValueType(type))
+        return false;
+    result = type;
+    return true;
+}
+
+template<typename SuccessType>
+ALWAYS_INLINE bool Parser<SuccessType>::parseRefType(const ModuleInformation& info, Type& result)
+{
+    const bool parsed = parseValueType(info, result);
+    return parsed && isRefType(result);
 }
 
 template<typename SuccessType>

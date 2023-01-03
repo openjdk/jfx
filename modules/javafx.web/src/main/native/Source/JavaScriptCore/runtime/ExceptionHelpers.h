@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,6 +28,7 @@
 
 #pragma once
 
+#include "DeferTermination.h"
 #include "ErrorInstance.h"
 #include "Exception.h"
 #include "JSObject.h"
@@ -35,59 +36,58 @@
 
 namespace JSC {
 
-typedef JSObject* (*ErrorFactory)(ExecState*, const String&, ErrorInstance::SourceAppender);
+typedef JSObject* (*ErrorFactory)(JSGlobalObject*, const String&, ErrorInstance::SourceAppender);
 
 String defaultSourceAppender(const String&, const String&, RuntimeType, ErrorInstance::SourceTextWhereErrorOccurred);
 
-JSObject* createTerminatedExecutionException(VM*);
-JS_EXPORT_PRIVATE bool isTerminatedExecutionException(VM&, Exception*);
-JS_EXPORT_PRIVATE JSObject* createError(ExecState*, JSValue, const String&, ErrorInstance::SourceAppender);
-JS_EXPORT_PRIVATE JSObject* createStackOverflowError(ExecState*);
-JSObject* createStackOverflowError(ExecState*, JSGlobalObject*);
-JSObject* createUndefinedVariableError(ExecState*, const Identifier&);
-JSObject* createTDZError(ExecState*);
-JSObject* createNotAnObjectError(ExecState*, JSValue);
-JSObject* createInvalidFunctionApplyParameterError(ExecState*, JSValue);
-JSObject* createInvalidInParameterError(ExecState*, JSValue);
-JSObject* createInvalidInstanceofParameterErrorNotFunction(ExecState*, JSValue);
-JSObject* createInvalidInstanceofParameterErrorHasInstanceValueNotFunction(ExecState*, JSValue);
-JSObject* createNotAConstructorError(ExecState*, JSValue);
-JSObject* createNotAFunctionError(ExecState*, JSValue);
-JSObject* createErrorForInvalidGlobalAssignment(ExecState*, const String&);
-String errorDescriptionForValue(ExecState*, JSValue);
+JS_EXPORT_PRIVATE JSObject* createError(JSGlobalObject*, JSValue, const String&, ErrorInstance::SourceAppender);
+JS_EXPORT_PRIVATE JSObject* createStackOverflowError(JSGlobalObject*);
+JSObject* createUndefinedVariableError(JSGlobalObject*, const Identifier&);
+JSObject* createTDZError(JSGlobalObject*);
+JSObject* createNotAnObjectError(JSGlobalObject*, JSValue);
+JSObject* createInvalidFunctionApplyParameterError(JSGlobalObject*, JSValue);
+JSObject* createInvalidInParameterError(JSGlobalObject*, JSValue);
+JSObject* createInvalidInstanceofParameterErrorNotFunction(JSGlobalObject*, JSValue);
+JSObject* createInvalidInstanceofParameterErrorHasInstanceValueNotFunction(JSGlobalObject*, JSValue);
+JSObject* createNotAConstructorError(JSGlobalObject*, JSValue);
+JSObject* createNotAFunctionError(JSGlobalObject*, JSValue);
+JSObject* createInvalidPrototypeError(JSGlobalObject*, JSValue);
+JSObject* createErrorForInvalidGlobalAssignment(JSGlobalObject*, const String&);
+JSObject* createInvalidPrivateNameError(JSGlobalObject*);
+JSObject* createRedefinedPrivateNameError(JSGlobalObject*);
+String errorDescriptionForValue(JSGlobalObject*, JSValue);
 
-JS_EXPORT_PRIVATE Exception* throwOutOfMemoryError(ExecState*, ThrowScope&);
-JS_EXPORT_PRIVATE Exception* throwStackOverflowError(ExecState*, ThrowScope&);
-JS_EXPORT_PRIVATE Exception* throwTerminatedExecutionException(ExecState*, ThrowScope&);
+JS_EXPORT_PRIVATE Exception* throwOutOfMemoryError(JSGlobalObject*, ThrowScope&);
+JS_EXPORT_PRIVATE Exception* throwOutOfMemoryError(JSGlobalObject*, ThrowScope&, const String&);
+JS_EXPORT_PRIVATE Exception* throwStackOverflowError(JSGlobalObject*, ThrowScope&);
 
+#if ASSERT_ENABLED
 
-class TerminatedExecutionError final : public JSNonFinalObject {
-public:
-    typedef JSNonFinalObject Base;
-    static const unsigned StructureFlags = Base::StructureFlags | StructureIsImmortal;
+#define DEFER_TERMINATION_AND_ASSERT(vm, assertion, ...) do { \
+        JSC::DeferTerminationForAWhile deferScope(vm); \
+        ASSERT(assertion, __VA_ARGS__); \
+    } while (false)
 
-    static TerminatedExecutionError* create(VM& vm)
-    {
-        TerminatedExecutionError* error = new (NotNull, allocateCell<TerminatedExecutionError>(vm.heap)) TerminatedExecutionError(vm);
-        error->finishCreation(vm);
-        return error;
-    }
+#define DEFER_TERMINATION_AND_ASSERT_WITH_MESSAGE(vm, assertion, ...) do { \
+        JSC::DeferTerminationForAWhile deferScope(vm); \
+        ASSERT_WITH_MESSAGE(assertion, __VA_ARGS__); \
+    } while (false)
 
-    static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
-    {
-        return Structure::create(vm, globalObject, prototype, TypeInfo(ObjectType, StructureFlags), info());
-    }
+#else
 
-    DECLARE_EXPORT_INFO;
+#define DEFER_TERMINATION_AND_ASSERT(vm, assertion, ...) UNUSED_PARAM(vm)
+#define DEFER_TERMINATION_AND_ASSERT_WITH_MESSAGE(vm, assertion, ...) UNUSED_PARAM(vm)
 
-private:
-    explicit TerminatedExecutionError(VM& vm)
-        : JSNonFinalObject(vm, vm.terminatedExecutionErrorStructure.get())
-    {
-    }
+#endif // ASSERT_ENABLED
 
-    static JSValue defaultValue(const JSObject*, ExecState*, PreferredPrimitiveType);
+#define DEFER_TERMINATION_AND_RELEASE_ASSERT(vm, assertion, ...) do { \
+        JSC::DeferTerminationForAWhile deferScope(vm); \
+        RELEASE_ASSERT(assertion, __VA_ARGS__); \
+    } while (false)
 
-};
+#define DEFER_TERMINATION_AND_RELEASE_ASSERT_WITH_MESSAGE(vm, assertion, ...) do { \
+        JSC::DeferTerminationForAWhile deferScope(vm); \
+        RELEASE_ASSERT_WITH_MESSAGE(assertion, __VA_ARGS__); \
+    } while (false)
 
 } // namespace JSC

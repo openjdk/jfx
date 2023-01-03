@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,7 +25,6 @@
 
 package com.sun.javafx.application;
 
-import java.awt.Desktop;
 import java.io.File;
 import java.net.URI;
 import javafx.application.Application;
@@ -136,7 +135,8 @@ public abstract class HostServicesDelegate {
             String osName = System.getProperty("os.name");
             try {
                 if (osName.startsWith("Mac OS")) {
-                    Desktop.getDesktop().browse(URI.create(uri));
+                    Runtime.getRuntime().exec(
+                            "open " + uri);
                 } else if (osName.startsWith("Windows")) {
                     Runtime.getRuntime().exec(
                             "rundll32 url.dll,FileProtocolHandler " + uri);

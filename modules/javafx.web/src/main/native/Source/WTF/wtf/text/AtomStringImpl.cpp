@@ -24,13 +24,8 @@
 #include "config.h"
 #include <wtf/text/AtomStringImpl.h>
 
-#include <wtf/CommaPrinter.h>
-#include <wtf/DataLog.h>
-#include <wtf/HashSet.h>
-#include <wtf/StringPrintStream.h>
 #include <wtf/Threading.h>
 #include <wtf/text/AtomStringTable.h>
-#include <wtf/text/IntegerToStringConversion.h>
 #include <wtf/text/StringHash.h>
 #include <wtf/unicode/UTF8Conversion.h>
 
@@ -50,7 +45,7 @@ class AtomStringTableLocker : public LockHolder {
     static Lock s_stringTableLock;
 public:
     AtomStringTableLocker()
-        : LockHolder(&s_stringTableLock)
+        : LockHolder(s_stringTableLock)
     {
     }
 };
@@ -67,7 +62,7 @@ public:
 
 #endif // USE(WEB_THREAD)
 
-using StringTableImpl = HashSet<StringImpl*>;
+using StringTableImpl = AtomStringTable::StringTableImpl;
 
 static ALWAYS_INLINE StringTableImpl& stringTable()
 {
@@ -82,8 +77,8 @@ static inline Ref<AtomStringImpl> addToStringTable(AtomStringTableLocker&, Strin
     // If the string is newly-translated, then we need to adopt it.
     // The boolean in the pair tells us if that is so.
     if (addResult.isNewEntry)
-        return adoptRef(static_cast<AtomStringImpl&>(**addResult.iterator));
-    return *static_cast<AtomStringImpl*>(*addResult.iterator);
+        return adoptRef(static_cast<AtomStringImpl&>(*addResult.iterator->get()));
+    return *static_cast<AtomStringImpl*>(addResult.iterator->get());
 }
 
 template<typename T, typename HashTranslator>
@@ -99,16 +94,17 @@ struct CStringTranslator {
         return StringHasher::computeHashAndMaskTop8Bits(characters);
     }
 
-    static inline bool equal(StringImpl* str, const LChar* characters)
+    static inline bool equal(PackedPtr<StringImpl> str, const LChar* characters)
     {
-        return WTF::equal(str, characters);
+        return WTF::equal(str.get(), characters);
     }
 
-    static void translate(StringImpl*& location, const LChar* const& characters, unsigned hash)
+    static void translate(PackedPtr<StringImpl>& location, const LChar* const& characters, unsigned hash)
     {
-        location = &StringImpl::create(characters).leakRef();
-        location->setHash(hash);
-        location->setIsAtom(true);
+        auto* pointer = &StringImpl::create(characters).leakRef();
+        pointer->setHash(hash);
+        pointer->setIsAtom(true);
+        location = pointer;
     }
 };
 
@@ -122,27 +118,6 @@ RefPtr<AtomStringImpl> AtomStringImpl::add(const LChar* characters)
     return addToStringTable<const LChar*, CStringTranslator>(characters);
 }
 
-template<typename CharacterType>
-struct HashTranslatorCharBuffer {
-    const CharacterType* characters;
-    unsigned length;
-    unsigned hash;
-
-    HashTranslatorCharBuffer(const CharacterType* characters, unsigned length)
-        : characters(characters)
-        , length(length)
-        , hash(StringHasher::computeHashAndMaskTop8Bits(characters, length))
-    {
-    }
-
-    HashTranslatorCharBuffer(const CharacterType* characters, unsigned length, unsigned hash)
-        : characters(characters)
-        , length(length)
-        , hash(hash)
-    {
-    }
-};
-
 using UCharBuffer = HashTranslatorCharBuffer<UChar>;
 struct UCharBufferTranslator {
     static unsigned hash(const UCharBuffer& buf)
@@ -150,16 +125,17 @@ struct UCharBufferTranslator {
         return buf.hash;
     }
 
-    static bool equal(StringImpl* const& str, const UCharBuffer& buf)
+    static bool equal(PackedPtr<StringImpl> const& str, const UCharBuffer& buf)
     {
-        return WTF::equal(str, buf.characters, buf.length);
+        return WTF::equal(str.get(), buf.characters, buf.length);
     }
 
-    static void translate(StringImpl*& location, const UCharBuffer& buf, unsigned hash)
+    static void translate(PackedPtr<StringImpl>& location, const UCharBuffer& buf, unsigned hash)
     {
-        location = &StringImpl::create8BitIfPossible(buf.characters, buf.length).leakRef();
-        location->setHash(hash);
-        location->setIsAtom(true);
+        auto* pointer = &StringImpl::create8BitIfPossible(buf.characters, buf.length).leakRef();
+        pointer->setHash(hash);
+        pointer->setIsAtom(true);
+        location = pointer;
     }
 };
 
@@ -176,8 +152,9 @@ struct HashAndUTF8CharactersTranslator {
         return buffer.hash;
     }
 
-    static bool equal(StringImpl* const& string, const HashAndUTF8Characters& buffer)
+    static bool equal(PackedPtr<StringImpl> const& passedString, const HashAndUTF8Characters& buffer)
     {
+        auto* string = passedString.get();
         if (buffer.utf16Length != string->length())
             return false;
 
@@ -212,7 +189,7 @@ struct HashAndUTF8CharactersTranslator {
         return true;
     }
 
-    static void translate(StringImpl*& location, const HashAndUTF8Characters& buffer, unsigned hash)
+    static void translate(PackedPtr<StringImpl>& location, const HashAndUTF8Characters& buffer, unsigned hash)
     {
         UChar* target;
         auto newString = StringImpl::createUninitialized(buffer.utf16Length, target);
@@ -220,14 +197,15 @@ struct HashAndUTF8CharactersTranslator {
         bool isAllASCII;
         const char* source = buffer.characters;
         if (!convertUTF8ToUTF16(source, source + buffer.length, &target, target + buffer.utf16Length, &isAllASCII))
-            ASSERT_NOT_REACHED();
+            RELEASE_ASSERT_NOT_REACHED();
 
         if (isAllASCII)
             newString = StringImpl::create(buffer.characters, buffer.length);
 
-        location = &newString.leakRef();
-        location->setHash(hash);
-        location->setIsAtom(true);
+        auto* pointer = &newString.leakRef();
+        pointer->setHash(hash);
+        pointer->setIsAtom(true);
+        location = pointer;
     }
 };
 
@@ -266,11 +244,12 @@ struct SubstringLocation {
 };
 
 struct SubstringTranslator {
-    static void translate(StringImpl*& location, const SubstringLocation& buffer, unsigned hash)
+    static void translate(PackedPtr<StringImpl>& location, const SubstringLocation& buffer, unsigned hash)
     {
-        location = &StringImpl::createSubstringSharingImpl(*buffer.baseString, buffer.start, buffer.length).leakRef();
-        location->setHash(hash);
-        location->setIsAtom(true);
+        auto* pointer = &StringImpl::createSubstringSharingImpl(*buffer.baseString, buffer.start, buffer.length).leakRef();
+        pointer->setHash(hash);
+        pointer->setIsAtom(true);
+        location = pointer;
     }
 };
 
@@ -280,9 +259,9 @@ struct SubstringTranslator8 : SubstringTranslator {
         return StringHasher::computeHashAndMaskTop8Bits(buffer.baseString->characters8() + buffer.start, buffer.length);
     }
 
-    static bool equal(StringImpl* const& string, const SubstringLocation& buffer)
+    static bool equal(PackedPtr<StringImpl> const& string, const SubstringLocation& buffer)
     {
-        return WTF::equal(string, buffer.baseString->characters8() + buffer.start, buffer.length);
+        return WTF::equal(string.get(), buffer.baseString->characters8() + buffer.start, buffer.length);
     }
 };
 
@@ -292,9 +271,9 @@ struct SubstringTranslator16 : SubstringTranslator {
         return StringHasher::computeHashAndMaskTop8Bits(buffer.baseString->characters16() + buffer.start, buffer.length);
     }
 
-    static bool equal(StringImpl* const& string, const SubstringLocation& buffer)
+    static bool equal(PackedPtr<StringImpl> const& string, const SubstringLocation& buffer)
     {
-        return WTF::equal(string, buffer.baseString->characters16() + buffer.start, buffer.length);
+        return WTF::equal(string.get(), buffer.baseString->characters16() + buffer.start, buffer.length);
     }
 };
 
@@ -326,16 +305,17 @@ struct LCharBufferTranslator {
         return buf.hash;
     }
 
-    static bool equal(StringImpl* const& str, const LCharBuffer& buf)
+    static bool equal(PackedPtr<StringImpl> const& str, const LCharBuffer& buf)
     {
-        return WTF::equal(str, buf.characters, buf.length);
+        return WTF::equal(str.get(), buf.characters, buf.length);
     }
 
-    static void translate(StringImpl*& location, const LCharBuffer& buf, unsigned hash)
+    static void translate(PackedPtr<StringImpl>& location, const LCharBuffer& buf, unsigned hash)
     {
-        location = &StringImpl::create(buf.characters, buf.length).leakRef();
-        location->setHash(hash);
-        location->setIsAtom(true);
+        auto* pointer = &StringImpl::create(buf.characters, buf.length).leakRef();
+        pointer->setHash(hash);
+        pointer->setIsAtom(true);
+        location = pointer;
     }
 };
 
@@ -347,16 +327,17 @@ struct BufferFromStaticDataTranslator {
         return buf.hash;
     }
 
-    static bool equal(StringImpl* const& str, const Buffer& buf)
+    static bool equal(PackedPtr<StringImpl> const& str, const Buffer& buf)
     {
-        return WTF::equal(str, buf.characters, buf.length);
+        return WTF::equal(str.get(), buf.characters, buf.length);
     }
 
-    static void translate(StringImpl*& location, const Buffer& buf, unsigned hash)
+    static void translate(PackedPtr<StringImpl>& location, const Buffer& buf, unsigned hash)
     {
-        location = &StringImpl::createWithoutCopying(buf.characters, buf.length).leakRef();
-        location->setHash(hash);
-        location->setIsAtom(true);
+        auto* pointer = &StringImpl::createWithoutCopying(buf.characters, buf.length).leakRef();
+        pointer->setHash(hash);
+        pointer->setIsAtom(true);
+        location = pointer;
     }
 };
 
@@ -443,11 +424,11 @@ Ref<AtomStringImpl> AtomStringImpl::addSlowCase(StringImpl& string)
     auto addResult = stringTable().add(&string);
 
     if (addResult.isNewEntry) {
-        ASSERT(*addResult.iterator == &string);
+        ASSERT(addResult.iterator->get() == &string);
         string.setIsAtom(true);
     }
 
-    return *static_cast<AtomStringImpl*>(*addResult.iterator);
+    return *static_cast<AtomStringImpl*>(addResult.iterator->get());
 }
 
 Ref<AtomStringImpl> AtomStringImpl::addSlowCase(AtomStringTable& stringTable, StringImpl& string)
@@ -473,11 +454,11 @@ Ref<AtomStringImpl> AtomStringImpl::addSlowCase(AtomStringTable& stringTable, St
     auto addResult = stringTable.table().add(&string);
 
     if (addResult.isNewEntry) {
-        ASSERT(*addResult.iterator == &string);
+        ASSERT(addResult.iterator->get() == &string);
         string.setIsAtom(true);
     }
 
-    return *static_cast<AtomStringImpl*>(*addResult.iterator);
+    return *static_cast<AtomStringImpl*>(addResult.iterator->get());
 }
 
 void AtomStringImpl::remove(AtomStringImpl* string)
@@ -487,7 +468,7 @@ void AtomStringImpl::remove(AtomStringImpl* string)
     auto& atomStringTable = stringTable();
     auto iterator = atomStringTable.find(string);
     ASSERT_WITH_MESSAGE(iterator != atomStringTable.end(), "The string being removed is an atom in the string table of an other thread!");
-    ASSERT(string == *iterator);
+    ASSERT(string == iterator->get());
     atomStringTable.remove(iterator);
 }
 
@@ -502,7 +483,7 @@ RefPtr<AtomStringImpl> AtomStringImpl::lookUpSlowCase(StringImpl& string)
     auto& atomStringTable = stringTable();
     auto iterator = atomStringTable.find(&string);
     if (iterator != atomStringTable.end())
-        return static_cast<AtomStringImpl*>(*iterator);
+        return static_cast<AtomStringImpl*>(iterator->get());
     return nullptr;
 }
 
@@ -526,7 +507,7 @@ RefPtr<AtomStringImpl> AtomStringImpl::lookUp(const LChar* characters, unsigned 
     LCharBuffer buffer = { characters, length };
     auto iterator = table.find<LCharBufferTranslator>(buffer);
     if (iterator != table.end())
-        return static_cast<AtomStringImpl*>(*iterator);
+        return static_cast<AtomStringImpl*>(iterator->get());
     return nullptr;
 }
 
@@ -538,11 +519,11 @@ RefPtr<AtomStringImpl> AtomStringImpl::lookUp(const UChar* characters, unsigned 
     UCharBuffer buffer { characters, length };
     auto iterator = table.find<UCharBufferTranslator>(buffer);
     if (iterator != table.end())
-        return static_cast<AtomStringImpl*>(*iterator);
+        return static_cast<AtomStringImpl*>(iterator->get());
     return nullptr;
 }
 
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
 bool AtomStringImpl::isInAtomStringTable(StringImpl* string)
 {
     AtomStringTableLocker locker;

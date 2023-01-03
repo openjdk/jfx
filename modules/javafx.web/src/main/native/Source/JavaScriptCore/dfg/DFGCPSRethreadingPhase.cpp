@@ -28,14 +28,14 @@
 
 #if ENABLE(DFG_JIT)
 
-#include "DFGBasicBlockInlines.h"
 #include "DFGGraph.h"
 #include "DFGPhase.h"
-#include "JSCInlines.h"
+#include "JSCJSValueInlines.h"
 
 namespace JSC { namespace DFG {
 
 class CPSRethreadingPhase : public Phase {
+    static constexpr bool verbose = false;
 public:
     CPSRethreadingPhase(Graph& graph)
         : Phase(graph, "CPS rethreading")
@@ -54,8 +54,9 @@ public:
         m_graph.clearReplacements();
         canonicalizeLocalsInBlocks();
         specialCaseArguments();
-        propagatePhis<LocalOperand>();
-        propagatePhis<ArgumentOperand>();
+        propagatePhis<OperandKind::Local>();
+        propagatePhis<OperandKind::Argument>();
+        propagatePhis<OperandKind::Tmp>();
         computeIsFlushed();
 
         m_graph.m_form = ThreadedCPS;
@@ -211,10 +212,20 @@ private:
     void canonicalizeGetLocal(Node* node)
     {
         VariableAccessData* variable = node->variableAccessData();
-        if (variable->local().isArgument())
-            canonicalizeGetLocalFor<ArgumentOperand>(node, variable, variable->local().toArgument());
-        else
-            canonicalizeGetLocalFor<LocalOperand>(node, variable, variable->local().toLocal());
+        switch (variable->operand().kind()) {
+        case OperandKind::Argument: {
+            canonicalizeGetLocalFor<OperandKind::Argument>(node, variable, variable->operand().toArgument());
+            break;
+        }
+        case OperandKind::Local: {
+            canonicalizeGetLocalFor<OperandKind::Local>(node, variable, variable->operand().toLocal());
+            break;
+        }
+        case OperandKind::Tmp: {
+            canonicalizeGetLocalFor<OperandKind::Tmp>(node, variable, variable->operand().value());
+            break;
+        }
+        }
     }
 
     template<NodeType nodeType, OperandKind operandKind>
@@ -229,6 +240,7 @@ private:
             case Flush:
             case PhantomLocal:
             case GetLocal:
+                ASSERT(otherNode->child1().node());
                 otherNode = otherNode->child1().node();
                 break;
             default:
@@ -270,15 +282,25 @@ private:
     void canonicalizeFlushOrPhantomLocal(Node* node)
     {
         VariableAccessData* variable = node->variableAccessData();
-        if (variable->local().isArgument())
-            canonicalizeFlushOrPhantomLocalFor<nodeType, ArgumentOperand>(node, variable, variable->local().toArgument());
-        else
-            canonicalizeFlushOrPhantomLocalFor<nodeType, LocalOperand>(node, variable, variable->local().toLocal());
+        switch (variable->operand().kind()) {
+        case OperandKind::Argument: {
+            canonicalizeFlushOrPhantomLocalFor<nodeType, OperandKind::Argument>(node, variable, variable->operand().toArgument());
+            break;
+        }
+        case OperandKind::Local: {
+            canonicalizeFlushOrPhantomLocalFor<nodeType, OperandKind::Local>(node, variable, variable->operand().toLocal());
+            break;
+        }
+        case OperandKind::Tmp: {
+            canonicalizeFlushOrPhantomLocalFor<nodeType, OperandKind::Tmp>(node, variable, variable->operand().value());
+            break;
+        }
+        }
     }
 
     void canonicalizeSet(Node* node)
     {
-        m_block->variablesAtTail.setOperand(node->local(), node);
+        m_block->variablesAtTail.setOperand(node->operand(), node);
     }
 
     void canonicalizeLocalsInBlock()
@@ -287,8 +309,9 @@ private:
             return;
         ASSERT(m_block->isReachable);
 
-        clearVariables<ArgumentOperand>();
-        clearVariables<LocalOperand>();
+        clearVariables<OperandKind::Argument>();
+        clearVariables<OperandKind::Local>();
+        clearVariables<OperandKind::Tmp>();
 
         // Assumes that all phi references have been removed. Assumes that things that
         // should be live have a non-zero ref count, but doesn't assume that the ref
@@ -388,10 +411,10 @@ private:
     template<OperandKind operandKind>
     void propagatePhis()
     {
-        Vector<PhiStackEntry, 128>& phiStack = operandKind == ArgumentOperand ? m_argumentPhiStack : m_localPhiStack;
+        Vector<PhiStackEntry, 128>& phiStack = phiStackFor<operandKind>();
 
         // Ensure that attempts to use this fail instantly.
-        m_block = 0;
+        m_block = nullptr;
 
         while (!phiStack.isEmpty()) {
             PhiStackEntry entry = phiStack.last();
@@ -403,6 +426,11 @@ private:
             VariableAccessData* variable = currentPhi->variableAccessData();
             size_t index = entry.m_index;
 
+            if (verbose) {
+                dataLog(" Iterating on phi from block ", block, " ");
+                m_graph.dump(WTF::dataFile(), "", currentPhi);
+            }
+
             for (size_t i = predecessors.size(); i--;) {
                 BasicBlock* predecessorBlock = predecessors[i];
 
@@ -411,11 +439,13 @@ private:
                     variableInPrevious = addPhi<operandKind>(predecessorBlock, currentPhi->origin, variable, index);
                     predecessorBlock->variablesAtTail.atFor<operandKind>(index) = variableInPrevious;
                     predecessorBlock->variablesAtHead.atFor<operandKind>(index) = variableInPrevious;
+                    dataLogLnIf(verbose, "    No variable in predecessor ", predecessorBlock, " creating a new phi: ", variableInPrevious);
                 } else {
                     switch (variableInPrevious->op()) {
                     case GetLocal:
                     case PhantomLocal:
                     case Flush:
+                        dataLogLnIf(verbose, "    Variable in predecessor ", predecessorBlock, " ", variableInPrevious, " needs to be forwarded to first child ", variableInPrevious->child1().node());
                         ASSERT(variableInPrevious->variableAccessData() == variableInPrevious->child1()->variableAccessData());
                         variableInPrevious = variableInPrevious->child1().node();
                         break;
@@ -429,6 +459,9 @@ private:
                     || variableInPrevious->op() == Phi
                     || variableInPrevious->op() == SetArgumentDefinitely
                     || variableInPrevious->op() == SetArgumentMaybe);
+
+                if (verbose)
+                    m_graph.dump(WTF::dataFile(), "    Adding new variable from predecessor ", variableInPrevious);
 
                 if (!currentPhi->child1()) {
                     currentPhi->children.setChild1(Edge(variableInPrevious));
@@ -445,7 +478,7 @@ private:
 
                 Node* newPhi = addPhiSilently(block, currentPhi->origin, variable);
                 newPhi->children = currentPhi->children;
-                currentPhi->children.initialize(newPhi, variableInPrevious, 0);
+                currentPhi->children.initialize(newPhi, variableInPrevious, nullptr);
             }
         }
     }
@@ -466,9 +499,12 @@ private:
     template<OperandKind operandKind>
     Vector<PhiStackEntry, 128>& phiStackFor()
     {
-        if (operandKind == ArgumentOperand)
-            return m_argumentPhiStack;
-        return m_localPhiStack;
+        switch (operandKind) {
+        case OperandKind::Argument: return m_argumentPhiStack;
+        case OperandKind::Local: return m_localPhiStack;
+        case OperandKind::Tmp: return m_tmpPhiStack;
+        }
+        RELEASE_ASSERT_NOT_REACHED();
     }
 
     void computeIsFlushed()
@@ -521,6 +557,7 @@ private:
     BasicBlock* m_block;
     Vector<PhiStackEntry, 128> m_argumentPhiStack;
     Vector<PhiStackEntry, 128> m_localPhiStack;
+    Vector<PhiStackEntry, 128> m_tmpPhiStack;
     Vector<Node*, 128> m_flushedLocalOpWorklist;
 };
 

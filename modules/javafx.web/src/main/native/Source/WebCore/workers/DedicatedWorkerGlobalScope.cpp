@@ -35,8 +35,17 @@
 #include "ContentSecurityPolicyResponseHeaders.h"
 #include "DOMWindow.h"
 #include "DedicatedWorkerThread.h"
+#include "EventNames.h"
+#include "JSRTCRtpScriptTransformer.h"
 #include "MessageEvent.h"
+#include "RTCTransformEvent.h"
+#include "RequestAnimationFrameCallback.h"
 #include "SecurityOrigin.h"
+#include "StructuredSerializeOptions.h"
+#include "Worker.h"
+#if ENABLE(OFFSCREEN_CANVAS)
+#include "WorkerAnimationController.h"
+#endif
 #include "WorkerObjectProxy.h"
 #include <wtf/IsoMallocInlines.h>
 
@@ -44,17 +53,17 @@ namespace WebCore {
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(DedicatedWorkerGlobalScope);
 
-Ref<DedicatedWorkerGlobalScope> DedicatedWorkerGlobalScope::create(const URL& url, Ref<SecurityOrigin>&& origin, const String& name, const String& identifier, const String& userAgent, bool isOnline, DedicatedWorkerThread& thread, const ContentSecurityPolicyResponseHeaders& contentSecurityPolicyResponseHeaders, bool shouldBypassMainWorldContentSecurityPolicy, Ref<SecurityOrigin>&& topOrigin, MonotonicTime timeOrigin, IDBClient::IDBConnectionProxy* connectionProxy, SocketProvider* socketProvider, PAL::SessionID sessionID)
+Ref<DedicatedWorkerGlobalScope> DedicatedWorkerGlobalScope::create(const WorkerParameters& params, Ref<SecurityOrigin>&& origin, DedicatedWorkerThread& thread, Ref<SecurityOrigin>&& topOrigin, IDBClient::IDBConnectionProxy* connectionProxy, SocketProvider* socketProvider)
 {
-    auto context = adoptRef(*new DedicatedWorkerGlobalScope(url, WTFMove(origin), name, identifier, userAgent, isOnline, thread, shouldBypassMainWorldContentSecurityPolicy, WTFMove(topOrigin), timeOrigin, connectionProxy, socketProvider, sessionID));
-    if (!shouldBypassMainWorldContentSecurityPolicy)
-        context->applyContentSecurityPolicyResponseHeaders(contentSecurityPolicyResponseHeaders);
+    auto context = adoptRef(*new DedicatedWorkerGlobalScope(params, WTFMove(origin), thread, WTFMove(topOrigin), connectionProxy, socketProvider));
+    if (!params.shouldBypassMainWorldContentSecurityPolicy)
+        context->applyContentSecurityPolicyResponseHeaders(params.contentSecurityPolicyResponseHeaders);
     return context;
 }
 
-DedicatedWorkerGlobalScope::DedicatedWorkerGlobalScope(const URL& url, Ref<SecurityOrigin>&& origin, const String& name, const String& identifier, const String& userAgent, bool isOnline, DedicatedWorkerThread& thread, bool shouldBypassMainWorldContentSecurityPolicy, Ref<SecurityOrigin>&& topOrigin, MonotonicTime timeOrigin, IDBClient::IDBConnectionProxy* connectionProxy, SocketProvider* socketProvider, PAL::SessionID sessionID)
-    : WorkerGlobalScope(url, WTFMove(origin), identifier, userAgent, isOnline, thread, shouldBypassMainWorldContentSecurityPolicy, WTFMove(topOrigin), timeOrigin, connectionProxy, socketProvider, sessionID)
-    , m_name(name)
+DedicatedWorkerGlobalScope::DedicatedWorkerGlobalScope(const WorkerParameters& params, Ref<SecurityOrigin>&& origin, DedicatedWorkerThread& thread, Ref<SecurityOrigin>&& topOrigin, IDBClient::IDBConnectionProxy* connectionProxy, SocketProvider* socketProvider)
+    : WorkerGlobalScope(WorkerThreadType::DedicatedWorker, params, WTFMove(origin), thread, WTFMove(topOrigin), connectionProxy, socketProvider)
+    , m_name(params.name)
 {
 }
 
@@ -65,10 +74,15 @@ EventTargetInterface DedicatedWorkerGlobalScope::eventTargetInterface() const
     return DedicatedWorkerGlobalScopeEventTargetInterfaceType;
 }
 
-ExceptionOr<void> DedicatedWorkerGlobalScope::postMessage(JSC::ExecState& state, JSC::JSValue messageValue, Vector<JSC::Strong<JSC::JSObject>>&& transfer)
+void DedicatedWorkerGlobalScope::prepareForDestruction()
+{
+    WorkerGlobalScope::prepareForDestruction();
+}
+
+ExceptionOr<void> DedicatedWorkerGlobalScope::postMessage(JSC::JSGlobalObject& state, JSC::JSValue messageValue, StructuredSerializeOptions&& options)
 {
     Vector<RefPtr<MessagePort>> ports;
-    auto message = SerializedScriptValue::create(state, messageValue, WTFMove(transfer), ports, SerializationContext::WorkerPostMessage);
+    auto message = SerializedScriptValue::create(state, messageValue, WTFMove(options.transfer), ports, SerializationContext::WorkerPostMessage);
     if (message.hasException())
         return message.releaseException();
 
@@ -81,7 +95,7 @@ ExceptionOr<void> DedicatedWorkerGlobalScope::postMessage(JSC::ExecState& state,
     return { };
 }
 
-ExceptionOr<void> DedicatedWorkerGlobalScope::importScripts(const Vector<String>& urls)
+ExceptionOr<void> DedicatedWorkerGlobalScope::importScripts(const FixedVector<String>& urls)
 {
     auto result = Base::importScripts(urls);
     thread().workerObjectProxy().reportPendingActivity(hasPendingActivity());
@@ -92,5 +106,32 @@ DedicatedWorkerThread& DedicatedWorkerGlobalScope::thread()
 {
     return static_cast<DedicatedWorkerThread&>(Base::thread());
 }
+
+#if ENABLE(OFFSCREEN_CANVAS)
+CallbackId DedicatedWorkerGlobalScope::requestAnimationFrame(Ref<RequestAnimationFrameCallback>&& callback)
+{
+    if (!m_workerAnimationController)
+        m_workerAnimationController = WorkerAnimationController::create(*this);
+    return m_workerAnimationController->requestAnimationFrame(WTFMove(callback));
+}
+
+void DedicatedWorkerGlobalScope::cancelAnimationFrame(CallbackId callbackId)
+{
+    if (m_workerAnimationController)
+        m_workerAnimationController->cancelAnimationFrame(callbackId);
+}
+#endif
+
+#if ENABLE(WEB_RTC)
+RefPtr<RTCRtpScriptTransformer> DedicatedWorkerGlobalScope::createRTCRtpScriptTransformer(MessageWithMessagePorts&& options)
+{
+    auto transformerOrException = RTCRtpScriptTransformer::create(*this, WTFMove(options));
+    if (transformerOrException.hasException())
+        return nullptr;
+    auto transformer = transformerOrException.releaseReturnValue();
+    dispatchEvent(RTCTransformEvent::create(eventNames().rtctransformEvent, transformer.copyRef(), Event::IsTrusted::Yes));
+    return transformer;
+}
+#endif
 
 } // namespace WebCore

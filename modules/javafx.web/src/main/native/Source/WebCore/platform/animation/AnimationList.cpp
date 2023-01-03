@@ -22,6 +22,8 @@
 #include "config.h"
 #include "AnimationList.h"
 
+#include <wtf/text/TextStream.h>
+
 namespace WebCore {
 
 #define FILL_UNSET_PROPERTY(test, propGet, propSet) \
@@ -31,25 +33,31 @@ if (i) { \
         animation(i).propSet(animation(j).propGet()); \
 }
 
-AnimationList::AnimationList(const AnimationList& other)
+AnimationList::AnimationList() = default;
+
+AnimationList::AnimationList(const AnimationList& other, CopyBehavior copyBehavior)
 {
-    m_animations.reserveInitialCapacity(other.size());
-    for (auto& animation : other.m_animations)
-        m_animations.uncheckedAppend(Animation::create(animation.get()));
+    if (copyBehavior == CopyBehavior::Reference)
+        m_animations = other.m_animations;
+    else {
+        m_animations = other.m_animations.map([](auto& animation) {
+            return Animation::create(animation.get());
+        });
+    }
 }
 
 void AnimationList::fillUnsetProperties()
 {
     size_t i;
-    FILL_UNSET_PROPERTY(isDelaySet, delay, setDelay);
-    FILL_UNSET_PROPERTY(isDirectionSet, direction, setDirection);
-    FILL_UNSET_PROPERTY(isDurationSet, duration, setDuration);
-    FILL_UNSET_PROPERTY(isFillModeSet, fillMode, setFillMode);
-    FILL_UNSET_PROPERTY(isIterationCountSet, iterationCount, setIterationCount);
-    FILL_UNSET_PROPERTY(isPlayStateSet, playState, setPlayState);
-    FILL_UNSET_PROPERTY(isNameSet, name, setName);
-    FILL_UNSET_PROPERTY(isTimingFunctionSet, timingFunction, setTimingFunction);
-    FILL_UNSET_PROPERTY(isPropertySet, property, setProperty);
+    FILL_UNSET_PROPERTY(isDelaySet, delay, fillDelay);
+    FILL_UNSET_PROPERTY(isDirectionSet, direction, fillDirection);
+    FILL_UNSET_PROPERTY(isDurationSet, duration, fillDuration);
+    FILL_UNSET_PROPERTY(isFillModeSet, fillMode, fillFillMode);
+    FILL_UNSET_PROPERTY(isIterationCountSet, iterationCount, fillIterationCount);
+    FILL_UNSET_PROPERTY(isPlayStateSet, playState, fillPlayState);
+    FILL_UNSET_PROPERTY(isTimingFunctionSet, timingFunction, fillTimingFunction);
+    FILL_UNSET_PROPERTY(isPropertySet, property, fillProperty);
+    FILL_UNSET_PROPERTY(isCompositeOperationSet, compositeOperation, fillCompositeOperation);
 }
 
 bool AnimationList::operator==(const AnimationList& other) const
@@ -61,6 +69,18 @@ bool AnimationList::operator==(const AnimationList& other) const
             return false;
     }
     return true;
+}
+
+TextStream& operator<<(TextStream& ts, const AnimationList& animationList)
+{
+    ts << "[";
+    for (size_t i = 0; i < animationList.size(); ++i) {
+        if (i > 0)
+            ts << ", ";
+        ts << animationList.animation(i);
+    }
+    ts << "]";
+    return ts;
 }
 
 } // namespace WebCore

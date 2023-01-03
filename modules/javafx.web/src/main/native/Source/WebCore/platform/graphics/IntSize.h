@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2003-2016 Apple Inc.  All rights reserved.
+ * Copyright (C) 2003-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,10 +29,6 @@
 #include <wtf/JSONValues.h>
 #include <wtf/Forward.h>
 
-#if PLATFORM(MAC) && defined __OBJC__
-#import <Foundation/NSGeometry.h>
-#endif
-
 #if USE(CG)
 typedef struct CGSize CGSize;
 #endif
@@ -53,12 +49,6 @@ typedef struct _NSSize NSSize;
 
 #if PLATFORM(WIN)
 typedef struct tagSIZE SIZE;
-
-struct D2D_SIZE_U;
-typedef D2D_SIZE_U D2D1_SIZE_U;
-
-struct D2D_SIZE_F;
-typedef D2D_SIZE_F D2D1_SIZE_F;
 #endif
 
 namespace WTF {
@@ -71,20 +61,23 @@ class FloatSize;
 
 class IntSize {
 public:
-    IntSize() : m_width(0), m_height(0) { }
-    IntSize(int width, int height) : m_width(width), m_height(height) { }
+    constexpr IntSize() = default;
+    constexpr IntSize(int width, int height) : m_width(width), m_height(height) { }
     WEBCORE_EXPORT explicit IntSize(const FloatSize&); // don't do this implicitly since it's lossy
 
-    int width() const { return m_width; }
-    int height() const { return m_height; }
+    constexpr int width() const { return m_width; }
+    constexpr int height() const { return m_height; }
+
+    constexpr int minDimension() const { return std::min(m_width, m_height); }
+    constexpr int maxDimension() const { return std::max(m_width, m_height); }
 
     void setWidth(int width) { m_width = width; }
     void setHeight(int height) { m_height = height; }
 
-    bool isEmpty() const { return m_width <= 0 || m_height <= 0; }
-    bool isZero() const { return !m_width && !m_height; }
+    constexpr bool isEmpty() const { return m_width <= 0 || m_height <= 0; }
+    constexpr bool isZero() const { return !m_width && !m_height; }
 
-    float aspectRatio() const { return static_cast<float>(m_width) / static_cast<float>(m_height); }
+    constexpr float aspectRatio() const { return static_cast<float>(m_width) / static_cast<float>(m_height); }
 
     void expand(int width, int height)
     {
@@ -109,12 +102,12 @@ public:
         this->scale(scale, scale);
     }
 
-    IntSize expandedTo(const IntSize& other) const
+    constexpr IntSize expandedTo(const IntSize& other) const
     {
         return IntSize(std::max(m_width, other.m_width), std::max(m_height, other.m_height));
     }
 
-    IntSize shrunkTo(const IntSize& other) const
+    constexpr IntSize shrunkTo(const IntSize& other) const
     {
         return IntSize(std::min(m_width, other.m_width), std::min(m_height, other.m_height));
     }
@@ -134,23 +127,22 @@ public:
 
     WEBCORE_EXPORT IntSize constrainedBetween(const IntSize& min, const IntSize& max) const;
 
-    template <typename T = WTF::CrashOnOverflow>
-    Checked<unsigned, T> area() const
+    template<typename T = CrashOnOverflow> Checked<unsigned, T> area() const
     {
         return Checked<unsigned, T>(abs(m_width)) * abs(m_height);
     }
 
-    size_t unclampedArea() const
+    uint64_t unclampedArea() const
     {
-        return static_cast<size_t>(abs(m_width)) * abs(m_height);
+        return static_cast<uint64_t>(abs(m_width)) * abs(m_height);
     }
 
-    int diagonalLengthSquared() const
+    constexpr int diagonalLengthSquared() const
     {
         return m_width * m_width + m_height * m_height;
     }
 
-    IntSize transposedSize() const
+    constexpr IntSize transposedSize() const
     {
         return IntSize(m_height, m_width);
     }
@@ -168,17 +160,14 @@ public:
 #if PLATFORM(WIN)
     IntSize(const SIZE&);
     operator SIZE() const;
-    IntSize(const D2D1_SIZE_U&);
-    explicit IntSize(const D2D1_SIZE_F&); // don't do this implicitly since it's lossy;
-    operator D2D1_SIZE_U() const;
-    operator D2D1_SIZE_F() const;
 #endif
 
     String toJSONString() const;
     Ref<JSON::Object> toJSONObject() const;
 
 private:
-    int m_width, m_height;
+    int m_width { 0 };
+    int m_height { 0 };
 };
 
 inline IntSize& operator+=(IntSize& a, const IntSize& b)
@@ -195,27 +184,27 @@ inline IntSize& operator-=(IntSize& a, const IntSize& b)
     return a;
 }
 
-inline IntSize operator+(const IntSize& a, const IntSize& b)
+constexpr IntSize operator+(const IntSize& a, const IntSize& b)
 {
     return IntSize(a.width() + b.width(), a.height() + b.height());
 }
 
-inline IntSize operator-(const IntSize& a, const IntSize& b)
+constexpr IntSize operator-(const IntSize& a, const IntSize& b)
 {
     return IntSize(a.width() - b.width(), a.height() - b.height());
 }
 
-inline IntSize operator-(const IntSize& size)
+constexpr IntSize operator-(const IntSize& size)
 {
     return IntSize(-size.width(), -size.height());
 }
 
-inline bool operator==(const IntSize& a, const IntSize& b)
+constexpr bool operator==(const IntSize& a, const IntSize& b)
 {
     return a.width() == b.width() && a.height() == b.height();
 }
 
-inline bool operator!=(const IntSize& a, const IntSize& b)
+constexpr bool operator!=(const IntSize& a, const IntSize& b)
 {
     return a.width() != b.width() || a.height() != b.height();
 }
@@ -225,16 +214,13 @@ WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, const IntSize&);
 } // namespace WebCore
 
 namespace WTF {
+
 template<> struct DefaultHash<WebCore::IntSize>;
 template<> struct HashTraits<WebCore::IntSize>;
 
-template<typename Type> struct LogArgument;
-template <>
-struct LogArgument<WebCore::IntSize> {
-    static String toString(const WebCore::IntSize& size)
-    {
-        return size.toJSONString();
-    }
+template<typename> struct LogArgument;
+template<> struct LogArgument<WebCore::IntSize> {
+    static String toString(const WebCore::IntSize& size) { return size.toJSONString(); }
 };
-}
 
+}

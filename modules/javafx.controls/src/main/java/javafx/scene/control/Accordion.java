@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -35,7 +35,6 @@ import javafx.scene.Node;
 import javafx.scene.control.skin.AccordionSkin;
 
 import javafx.beans.property.ObjectPropertyBase;
-import javafx.beans.value.WritableValue;
 import javafx.css.StyleableProperty;
 
 import java.util.List;
@@ -71,7 +70,7 @@ public class Accordion extends Control {
     private boolean biasDirty = true;
     private Orientation bias;
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
@@ -101,17 +100,17 @@ public class Accordion extends Control {
         // makes it look to css like the user set the value and css will not
         // override. Initializing focusTraversable by calling applyStyle with null
         // StyleOrigin ensures that css will be able to override the value.
-        ((StyleableProperty<Boolean>)(WritableValue<Boolean>)focusTraversableProperty()).applyStyle(null, Boolean.FALSE);
+        ((StyleableProperty<Boolean>)focusTraversableProperty()).applyStyle(null, Boolean.FALSE);
     }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Instance Variables                                                      *
      *                                                                         *
      **************************************************************************/
 
     // The ObservableList of TitlePanes to use in this Accordion.
-    private final ObservableList<TitledPane> panes = new TrackableObservableList<TitledPane>() {
+    private final ObservableList<TitledPane> panes = new TrackableObservableList<>() {
         @Override protected void onChanged(ListChangeListener.Change<TitledPane> c) {
             // If one of the removed panes was the expandedPane, then clear
             // the expandedPane property. This can only be done if expandedPane
@@ -130,14 +129,14 @@ public class Accordion extends Control {
         }
     };
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Properties                                                              *
      *                                                                         *
      **************************************************************************/
 
     // --- Expanded Pane
-    private ObjectProperty<TitledPane> expandedPane = new ObjectPropertyBase<TitledPane>() {
+    private ObjectProperty<TitledPane> expandedPane = new ObjectPropertyBase<>() {
 
         private TitledPane oldValue;
 
@@ -193,7 +192,7 @@ public class Accordion extends Control {
      */
     public final ObjectProperty<TitledPane> expandedPaneProperty() { return expandedPane; }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Public API                                                              *
      *                                                                         *
@@ -239,7 +238,7 @@ public class Accordion extends Control {
         return bias;
     }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Stylesheet Handling                                                     *
      *                                                                         *

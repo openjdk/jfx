@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -41,7 +41,6 @@ import java.net.SocketPermission;
 import java.net.URL;
 import java.nio.ByteBuffer;
 import java.security.AccessControlContext;
-import java.security.Permission;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumSet;
@@ -85,6 +84,7 @@ final class QuantumClipboard implements TKClipboard {
      *      javafx.scene.input.Clipboard
      *          ... user code ...
      */
+    @SuppressWarnings("removal")
     private AccessControlContext accessContext = null;
 
     /**
@@ -126,13 +126,14 @@ final class QuantumClipboard implements TKClipboard {
     private QuantumClipboard() {
     }
 
-    @Override public void setSecurityContext(AccessControlContext acc) {
+    @Override public void setSecurityContext(@SuppressWarnings("removal") AccessControlContext acc) {
         if (accessContext != null) {
             throw new RuntimeException("Clipboard security context has been already set!");
         }
         accessContext = acc;
     }
 
+    @SuppressWarnings("removal")
     private AccessControlContext getAccessControlContext() {
         if (accessContext == null) {
             throw new RuntimeException("Clipboard security context has not been set!");
@@ -295,7 +296,7 @@ final class QuantumClipboard implements TKClipboard {
             Object data = assistant.getData(Clipboard.FILE_LIST_TYPE);
             if (data == null) return Collections.emptyList();
             String[] paths = (String[]) data;
-            List<File> list = new ArrayList<File>(paths.length);
+            List<File> list = new ArrayList<>(paths.length);
             for (int i=0; i<paths.length; i++) {
                 list.add(new File(paths[i]));
             }
@@ -371,8 +372,10 @@ final class QuantumClipboard implements TKClipboard {
                 String url = parseIMG(htmlData);
                 if (url != null) {
                     try {
+                        @SuppressWarnings("removal")
                         SecurityManager sm = System.getSecurityManager();
                         if (sm != null) {
+                            @SuppressWarnings("removal")
                             AccessControlContext context = getAccessControlContext();
                             URL u = new URL(url);
                             String protocol = u.getProtocol();
@@ -451,7 +454,7 @@ final class QuantumClipboard implements TKClipboard {
     }
 
     @Override public Set<DataFormat> getContentTypes() {
-        Set<DataFormat> set = new HashSet<DataFormat>();
+        Set<DataFormat> set = new HashSet<>();
 
         if (dataCache != null) {
             for (Pair<DataFormat, Object> pair : dataCache) {
@@ -678,7 +681,7 @@ final class QuantumClipboard implements TKClipboard {
 
         if (isCaching) {
             if (dataCache == null) {
-                dataCache = new ArrayList<Pair<DataFormat, Object>>(content.length);
+                dataCache = new ArrayList<>(content.length);
             }
             for (Pair<DataFormat, Object> pair : content) {
                 dataCache.add(pair);

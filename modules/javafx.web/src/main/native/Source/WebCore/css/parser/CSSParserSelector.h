@@ -60,9 +60,10 @@ public:
     const CSSSelectorList* selectorList() const { return m_selector->selectorList(); }
 
     void setPseudoElementType(CSSSelector::PseudoElementType type) { m_selector->setPseudoElementType(type); }
+    void setPseudoClassType(CSSSelector::PseudoClassType type) { m_selector->setPseudoClassType(type); }
 
     void adoptSelectorVector(Vector<std::unique_ptr<CSSParserSelector>>&&);
-    void setLangArgumentList(std::unique_ptr<Vector<AtomString>>);
+    void setArgumentList(std::unique_ptr<Vector<AtomString>>);
     void setSelectorList(std::unique_ptr<CSSSelectorList>);
 
     CSSSelector::PseudoClassType pseudoClassType() const { return m_selector->pseudoClassType(); }
@@ -70,7 +71,6 @@ public:
 
     bool isPseudoElementCueFunction() const;
 
-    bool hasShadowDescendant() const;
     bool matchesPseudoElement() const;
 
     bool isHostPseudoSelector() const;
@@ -95,24 +95,21 @@ private:
     std::unique_ptr<CSSParserSelector> m_tagHistory;
 };
 
-inline bool CSSParserSelector::hasShadowDescendant() const
-{
-    return m_selector->relation() == CSSSelector::ShadowDescendant;
-}
-
 inline bool CSSParserSelector::needsImplicitShadowCombinatorForMatching() const
 {
     return match() == CSSSelector::PseudoElement
         && (pseudoElementType() == CSSSelector::PseudoElementWebKitCustom
-#if ENABLE(VIDEO_TRACK)
+#if ENABLE(VIDEO)
             || pseudoElementType() == CSSSelector::PseudoElementCue
 #endif
+            || pseudoElementType() == CSSSelector::PseudoElementPart
+            || pseudoElementType() == CSSSelector::PseudoElementSlotted
             || pseudoElementType() == CSSSelector::PseudoElementWebKitCustomLegacyPrefixed);
 }
 
 inline bool CSSParserSelector::isPseudoElementCueFunction() const
 {
-#if ENABLE(VIDEO_TRACK)
+#if ENABLE(VIDEO)
     return m_selector->match() == CSSSelector::PseudoElement && m_selector->pseudoElementType() == CSSSelector::PseudoElementCue;
 #else
     return false;

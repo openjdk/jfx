@@ -27,12 +27,8 @@
 
 #if ENABLE(APPLE_PAY)
 
+#include "ApplePayPaymentContact.h"
 #include "ApplePayPaymentPass.h"
-#include <wtf/Optional.h>
-
-#if USE(APPLE_INTERNAL_SDK)
-#include <WebKitAdditions/ApplePayPaymentMethodAdditions.h>
-#endif
 
 namespace WebCore {
 
@@ -43,13 +39,10 @@ struct ApplePayPaymentMethod {
 
     String displayName;
     String network;
-    Optional<Type> type;
-    Optional<ApplePayPaymentPass> paymentPass;
-
-#if defined(APPLEPAYPAYMENTMETHOD_ADDITIONS)
-APPLEPAYPAYMENTMETHOD_ADDITIONS
-#undef APPLEPAYPAYMENTMETHOD_ADDITIONS
-#endif
+    std::optional<Type> type;
+    std::optional<ApplePayPaymentPass> paymentPass;
+    std::optional<ApplePayPaymentContact> billingContact;
+    String bindToken;
 };
 
 }

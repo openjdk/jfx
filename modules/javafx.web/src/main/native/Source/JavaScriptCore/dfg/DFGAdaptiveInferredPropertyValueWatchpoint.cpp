@@ -30,7 +30,6 @@
 
 #include "CodeBlock.h"
 #include "DFGCommon.h"
-#include "JSCInlines.h"
 
 namespace JSC { namespace DFG {
 
@@ -38,6 +37,12 @@ AdaptiveInferredPropertyValueWatchpoint::AdaptiveInferredPropertyValueWatchpoint
     : Base(key)
     , m_codeBlock(codeBlock)
 {
+}
+
+void AdaptiveInferredPropertyValueWatchpoint::initialize(const ObjectPropertyCondition& key, CodeBlock* codeBlock)
+{
+    Base::initialize(key);
+    m_codeBlock = codeBlock;
 }
 
 void AdaptiveInferredPropertyValueWatchpoint::handleFire(VM&, const FireDetail& detail)

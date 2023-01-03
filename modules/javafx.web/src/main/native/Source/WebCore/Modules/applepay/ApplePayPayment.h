@@ -30,10 +30,6 @@
 #include "ApplePayPaymentContact.h"
 #include "ApplePayPaymentMethod.h"
 
-#if USE(APPLE_INTERNAL_SDK)
-#include <WebKitAdditions/ApplePayPaymentAdditions.h>
-#endif
-
 namespace WebCore {
 
 struct ApplePayPayment {
@@ -44,13 +40,9 @@ struct ApplePayPayment {
     };
 
     Token token;
-    Optional<ApplePayPaymentContact> billingContact;
-    Optional<ApplePayPaymentContact> shippingContact;
-
-#if defined(APPLEPAYPAYMENT_ADDITIONS)
-APPLEPAYPAYMENT_ADDITIONS
-#undef APPLEPAYPAYMENT_ADDITIONS
-#endif
+    std::optional<ApplePayPaymentContact> billingContact;
+    std::optional<ApplePayPaymentContact> shippingContact;
+    String installmentAuthorizationToken;
 };
 
 }

@@ -40,12 +40,14 @@
 #include "ServiceWorkerGlobalScope.h"
 #include "ServiceWorkerProvider.h"
 #include "ServiceWorkerThread.h"
+#include "StructuredSerializeOptions.h"
+#include "WorkerSWClientConnection.h"
 #include <JavaScriptCore/JSCJSValueInlines.h>
 #include <wtf/IsoMallocInlines.h>
 #include <wtf/NeverDestroyed.h>
 
-#define WORKER_RELEASE_LOG_IF_ALLOWED(fmt, ...) RELEASE_LOG_IF(isAlwaysOnLoggingAllowed(), ServiceWorker, "%p - ServiceWorker::" fmt, this, ##__VA_ARGS__)
-#define WORKER_RELEASE_LOG_ERROR_IF_ALLOWED(fmt, ...) RELEASE_LOG_ERROR_IF(isAlwaysOnLoggingAllowed(), ServiceWorker, "%p - ServiceWorker::" fmt, this, ##__VA_ARGS__)
+#define WORKER_RELEASE_LOG(fmt, ...) RELEASE_LOG(ServiceWorker, "%p - ServiceWorker::" fmt, this, ##__VA_ARGS__)
+#define WORKER_RELEASE_LOG_ERROR(fmt, ...) RELEASE_LOG_ERROR(ServiceWorker, "%p - ServiceWorker::" fmt, this, ##__VA_ARGS__)
 
 namespace WebCore {
 
@@ -55,21 +57,21 @@ Ref<ServiceWorker> ServiceWorker::getOrCreate(ScriptExecutionContext& context, S
 {
     if (auto existingServiceWorker = context.serviceWorker(data.identifier))
         return *existingServiceWorker;
-    return adoptRef(*new ServiceWorker(context, WTFMove(data)));
+    auto serviceWorker = adoptRef(*new ServiceWorker(context, WTFMove(data)));
+    serviceWorker->suspendIfNeeded();
+    return serviceWorker;
 }
 
 ServiceWorker::ServiceWorker(ScriptExecutionContext& context, ServiceWorkerData&& data)
     : ActiveDOMObject(&context)
     , m_data(WTFMove(data))
 {
-    suspendIfNeeded();
-
     context.registerServiceWorker(*this);
 
     relaxAdoptionRequirement();
     updatePendingActivityForEventDispatch();
 
-    WORKER_RELEASE_LOG_IF_ALLOWED("ServiceWorker: ID: %llu, state: %hhu", identifier().toUInt64(), m_data.state);
+    WORKER_RELEASE_LOG("serviceWorkerID=%llu, state=%hhu", identifier().toUInt64(), m_data.state);
 }
 
 ServiceWorker::~ServiceWorker()
@@ -80,7 +82,7 @@ ServiceWorker::~ServiceWorker()
 
 void ServiceWorker::updateState(State state)
 {
-    WORKER_RELEASE_LOG_IF_ALLOWED("updateState: Updating service worker %llu state from %hhu to %hhu. Registration ID: %llu", identifier().toUInt64(), m_data.state, state, registrationIdentifier().toUInt64());
+    WORKER_RELEASE_LOG("updateState: Updating service worker %llu state from %hhu to %hhu. registrationID=%llu", identifier().toUInt64(), m_data.state, state, registrationIdentifier().toUInt64());
     m_data.state = state;
     if (state != State::Installing && !m_isStopped) {
         ASSERT(m_pendingActivityForEventDispatch);
@@ -90,21 +92,21 @@ void ServiceWorker::updateState(State state)
     updatePendingActivityForEventDispatch();
 }
 
-ExceptionOr<void> ServiceWorker::postMessage(ScriptExecutionContext& context, JSC::JSValue messageValue, Vector<JSC::Strong<JSC::JSObject>>&& transfer)
+SWClientConnection& ServiceWorker::swConnection()
 {
-    if (m_isStopped || !context.sessionID().isValid())
+    ASSERT(scriptExecutionContext());
+    if (is<WorkerGlobalScope>(scriptExecutionContext()))
+        return downcast<WorkerGlobalScope>(scriptExecutionContext())->swClientConnection();
+    return ServiceWorkerProvider::singleton().serviceWorkerConnection();
+}
+
+ExceptionOr<void> ServiceWorker::postMessage(JSC::JSGlobalObject& globalObject, JSC::JSValue messageValue, StructuredSerializeOptions&& options)
+{
+    if (m_isStopped)
         return Exception { InvalidStateError };
 
-    if (state() == State::Redundant)
-        return Exception { InvalidStateError, "Service Worker state is redundant"_s };
-
-    // FIXME: Invoke Run Service Worker algorithm with serviceWorker as the argument.
-
-    auto* execState = context.execState();
-    ASSERT(execState);
-
     Vector<RefPtr<MessagePort>> ports;
-    auto messageData = SerializedScriptValue::create(*execState, messageValue, WTFMove(transfer), ports, SerializationContext::WorkerPostMessage);
+    auto messageData = SerializedScriptValue::create(globalObject, messageValue, WTFMove(options.transfer), ports, SerializationContext::WorkerPostMessage);
     if (messageData.hasException())
         return messageData.releaseException();
 
@@ -113,19 +115,16 @@ ExceptionOr<void> ServiceWorker::postMessage(ScriptExecutionContext& context, JS
     if (portsOrException.hasException())
         return portsOrException.releaseException();
 
+    auto& context = *scriptExecutionContext();
+    // FIXME: Maybe we could use a ScriptExecutionContextIdentifier for service workers too.
     ServiceWorkerOrClientIdentifier sourceIdentifier;
     if (is<ServiceWorkerGlobalScope>(context))
         sourceIdentifier = downcast<ServiceWorkerGlobalScope>(context).thread().identifier();
-    else {
-        auto& connection = ServiceWorkerProvider::singleton().serviceWorkerConnectionForSession(context.sessionID());
-        sourceIdentifier = ServiceWorkerClientIdentifier { connection.serverConnectionIdentifier(), downcast<Document>(context).identifier() };
-    }
+    else
+        sourceIdentifier = context.identifier();
 
-    MessageWithMessagePorts message = { messageData.releaseReturnValue(), portsOrException.releaseReturnValue() };
-    callOnMainThread([sessionID = context.sessionID(), destinationIdentifier = identifier(), message = WTFMove(message), sourceIdentifier = WTFMove(sourceIdentifier)]() mutable {
-        auto& connection = ServiceWorkerProvider::singleton().serviceWorkerConnectionForSession(sessionID);
-        connection.postMessageToServiceWorker(destinationIdentifier, WTFMove(message), sourceIdentifier);
-    });
+    MessageWithMessagePorts message { messageData.releaseReturnValue(), portsOrException.releaseReturnValue() };
+    swConnection().postMessageToServiceWorker(identifier(), WTFMove(message), sourceIdentifier);
     return { };
 }
 
@@ -142,12 +141,6 @@ ScriptExecutionContext* ServiceWorker::scriptExecutionContext() const
 const char* ServiceWorker::activeDOMObjectName() const
 {
     return "ServiceWorker";
-}
-
-bool ServiceWorker::canSuspendForDocumentSuspension() const
-{
-    // FIXME: We should do better as this prevents the page from entering PageCache when there is a Service Worker.
-    return !hasPendingActivity();
 }
 
 void ServiceWorker::stop()
@@ -168,19 +161,6 @@ void ServiceWorker::updatePendingActivityForEventDispatch()
     if (m_pendingActivityForEventDispatch)
         return;
     m_pendingActivityForEventDispatch = makePendingActivity(*this);
-}
-
-bool ServiceWorker::isAlwaysOnLoggingAllowed() const
-{
-    auto* context = scriptExecutionContext();
-    if (!context)
-        return false;
-
-    auto* container = context->serviceWorkerContainer();
-    if (!container)
-        return false;
-
-    return container->isAlwaysOnLoggingAllowed();
 }
 
 } // namespace WebCore

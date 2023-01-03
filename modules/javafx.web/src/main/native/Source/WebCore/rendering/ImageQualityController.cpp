@@ -31,7 +31,6 @@
 #include "Page.h"
 #include "RenderBoxModelObject.h"
 #include "RenderView.h"
-#include <wtf/Optional.h>
 
 namespace WebCore {
 
@@ -98,29 +97,29 @@ void ImageQualityController::restartTimer()
     m_timer.startOneShot(lowQualityTimeThreshold);
 }
 
-Optional<InterpolationQuality> ImageQualityController::interpolationQualityFromStyle(const RenderStyle& style)
+std::optional<InterpolationQuality> ImageQualityController::interpolationQualityFromStyle(const RenderStyle& style)
 {
     switch (style.imageRendering()) {
     case ImageRendering::OptimizeSpeed:
-        return InterpolationLow;
+        return InterpolationQuality::Low;
     case ImageRendering::CrispEdges:
     case ImageRendering::Pixelated:
-        return InterpolationNone;
+        return InterpolationQuality::DoNotInterpolate;
     case ImageRendering::OptimizeQuality:
-        return InterpolationDefault; // FIXME: CSS 3 Images says that optimizeQuality should behave like 'auto', but that prevents authors from overriding this low quality rendering behavior.
+        return InterpolationQuality::Default; // FIXME: CSS 3 Images says that optimizeQuality should behave like 'auto', but that prevents authors from overriding this low quality rendering behavior.
     case ImageRendering::Auto:
         break;
     }
-    return WTF::nullopt;
+    return std::nullopt;
 }
 
 InterpolationQuality ImageQualityController::chooseInterpolationQuality(GraphicsContext& context, RenderBoxModelObject* object, Image& image, const void* layer, const LayoutSize& size)
 {
     // If the image is not a bitmap image, then none of this is relevant and we just paint at high quality.
     if (!(image.isBitmapImage() || image.isPDFDocumentImage()) || context.paintingDisabled())
-        return InterpolationDefault;
+        return InterpolationQuality::Default;
 
-    if (Optional<InterpolationQuality> styleInterpolation = interpolationQualityFromStyle(object->style()))
+    if (std::optional<InterpolationQuality> styleInterpolation = interpolationQualityFromStyle(object->style()))
         return styleInterpolation.value();
 
     // Make sure to use the unzoomed image size, since if a full page zoom is in effect, the image
@@ -147,10 +146,10 @@ InterpolationQuality ImageQualityController::chooseInterpolationQuality(Graphics
             set(object, innerMap, layer, size);
             restartTimer();
             m_liveResizeOptimizationIsActive = true;
-            return InterpolationLow;
+            return InterpolationQuality::Low;
         }
         if (m_liveResizeOptimizationIsActive)
-            return InterpolationDefault;
+            return InterpolationQuality::Default;
     }
 
     const AffineTransform& currentTransform = context.getCTM();
@@ -158,21 +157,21 @@ InterpolationQuality ImageQualityController::chooseInterpolationQuality(Graphics
     if (!contextIsScaled && size == imageSize) {
         // There is no scale in effect. If we had a scale in effect before, we can just remove this object from the list.
         removeLayer(object, innerMap, layer);
-        return InterpolationDefault;
+        return InterpolationQuality::Default;
     }
 
     // There is no need to hash scaled images that always use low quality mode when the page demands it. This is the iChat case.
     if (m_renderView.page().inLowQualityImageInterpolationMode()) {
         double totalPixels = static_cast<double>(image.width()) * static_cast<double>(image.height());
         if (totalPixels > cInterpolationCutoff)
-            return InterpolationLow;
+            return InterpolationQuality::Low;
     }
 
     // If an animated resize is active, paint in low quality and kick the timer ahead.
     if (m_animatedResizeIsActive) {
         set(object, innerMap, layer, size);
         restartTimer();
-        return InterpolationLow;
+        return InterpolationQuality::Low;
     }
     // If this is the first time resizing this image, or its size is the
     // same as the last resize, draw at high res, but record the paint
@@ -180,13 +179,13 @@ InterpolationQuality ImageQualityController::chooseInterpolationQuality(Graphics
     if (isFirstResize || oldSize == size) {
         restartTimer();
         set(object, innerMap, layer, size);
-        return InterpolationDefault;
+        return InterpolationQuality::Default;
     }
     // If the timer is no longer active, draw at high quality and don't
     // set the timer.
     if (!m_timer.isActive()) {
         removeLayer(object, innerMap, layer);
-        return InterpolationDefault;
+        return InterpolationQuality::Default;
     }
     // This object has been resized to two different sizes while the timer
     // is active, so draw at low quality, set the flag for animated resizes and
@@ -194,7 +193,7 @@ InterpolationQuality ImageQualityController::chooseInterpolationQuality(Graphics
     set(object, innerMap, layer, size);
     m_animatedResizeIsActive = true;
     restartTimer();
-    return InterpolationLow;
+    return InterpolationQuality::Low;
 }
 
 }

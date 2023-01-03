@@ -35,6 +35,7 @@
 #include "RenderText.h"
 #include "SVGAElement.h"
 #include "SVGDescElement.h"
+#include "SVGElementTypeHelpers.h"
 #include "SVGGElement.h"
 #include "SVGTitleElement.h"
 #include "SVGUseElement.h"
@@ -141,13 +142,6 @@ String AccessibilitySVGElement::accessibilityDescription() const
             return xlinkTitle;
     }
 
-    if (m_renderer->isSVGText()) {
-        AccessibilityTextUnderElementMode mode;
-        String text = textUnderElement(mode);
-        if (!text.isEmpty())
-            return text;
-    }
-
     if (is<SVGUseElement>(element())) {
         if (AccessibilityObject* target = targetForUseElement())
             return target->accessibilityDescription();
@@ -188,18 +182,9 @@ String AccessibilitySVGElement::helpText() const
             return target->helpText();
     }
 
-    String description = accessibilityDescription();
-
-    if (m_renderer->isSVGText()) {
-        AccessibilityTextUnderElementMode mode;
-        String text = textUnderElement(mode);
-        if (!text.isEmpty() && text != description)
-            return text;
-    }
-
     auto titleElements = childrenOfType<SVGTitleElement>(*element());
     if (auto titleChild = childElementWithMatchingLanguage(titleElements)) {
-        if (titleChild->textContent() != description)
+        if (titleChild->textContent() != accessibilityDescription())
             return titleChild->textContent();
     }
 
@@ -245,10 +230,10 @@ bool AccessibilitySVGElement::computeAccessibilityIsIgnored() const
 
     // SVG shapes should not be included unless there's a concrete reason for inclusion.
     // https://rawgit.com/w3c/aria/master/svg-aam/svg-aam.html#exclude_elements
-    if (m_renderer->isSVGShape()) {
+    if (m_renderer->isSVGShapeOrLegacySVGShape()) {
         if (canSetFocusAttribute() || element()->hasEventListeners())
             return false;
-        if (auto svgParent = AccessibilityObject::matchedParent(*this, true, [] (const AccessibilityObject& object) {
+        if (auto* svgParent = Accessibility::findAncestor<AccessibilityObject>(*this, true, [] (const AccessibilityObject& object) {
             return object.hasAttributesRequiredForInclusion() || object.isAccessibilitySVGRoot();
         }))
             return !svgParent->hasAttributesRequiredForInclusion();
@@ -268,7 +253,7 @@ bool AccessibilitySVGElement::inheritsPresentationalRole() const
         return false;
 
     for (AccessibilityObject* parent = parentObject(); parent; parent = parent->parentObject()) {
-        if (is<AccessibilityRenderObject>(*parent) && parent->element()->hasTagName(SVGNames::textTag))
+        if (is<AccessibilityRenderObject>(*parent) && parent->hasTagName(SVGNames::textTag))
             return parent->roleValue() == AccessibilityRole::Presentational;
     }
 
@@ -299,7 +284,7 @@ AccessibilityRole AccessibilitySVGElement::determineAccessibilityRole()
 
     Element* svgElement = element();
 
-    if (m_renderer->isSVGShape() || m_renderer->isSVGPath() || m_renderer->isSVGImage() || is<SVGUseElement>(svgElement))
+    if (m_renderer->isSVGShapeOrLegacySVGShape() || m_renderer->isSVGPath() || m_renderer->isSVGImage() || is<SVGUseElement>(svgElement))
         return AccessibilityRole::Image;
     if (m_renderer->isSVGForeignObject() || is<SVGGElement>(svgElement))
         return AccessibilityRole::Group;

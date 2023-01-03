@@ -43,8 +43,12 @@ inline bool JSArrayBufferView::isShared()
     }
 }
 
-inline ArrayBuffer* JSArrayBufferView::possiblySharedBuffer()
+template<JSArrayBufferView::Requester requester>
+inline ArrayBuffer* JSArrayBufferView::possiblySharedBufferImpl()
 {
+    if (requester == ConcurrentThread)
+        ASSERT(m_mode != FastTypedArray && m_mode != OversizeTypedArray);
+
     switch (m_mode) {
     case WastefulTypedArray:
         return existingBufferInButterfly();
@@ -58,6 +62,11 @@ inline ArrayBuffer* JSArrayBufferView::possiblySharedBuffer()
     return nullptr;
 }
 
+inline ArrayBuffer* JSArrayBufferView::possiblySharedBuffer()
+{
+    return possiblySharedBufferImpl<Mutator>();
+}
+
 inline ArrayBuffer* JSArrayBufferView::existingBufferInButterfly()
 {
     ASSERT(m_mode == WastefulTypedArray);
@@ -67,24 +76,48 @@ inline ArrayBuffer* JSArrayBufferView::existingBufferInButterfly()
 inline RefPtr<ArrayBufferView> JSArrayBufferView::unsharedImpl()
 {
     RefPtr<ArrayBufferView> result = possiblySharedImpl();
-    RELEASE_ASSERT(!result->isShared());
+    RELEASE_ASSERT(!result || !result->isShared());
     return result;
 }
 
-inline unsigned JSArrayBufferView::byteOffset()
+template<JSArrayBufferView::Requester requester, typename ResultType>
+inline ResultType JSArrayBufferView::byteOffsetImpl()
 {
     if (!hasArrayBuffer())
         return 0;
 
-    ArrayBuffer* buffer = possiblySharedBuffer();
-    ASSERT(!vector() == !buffer->data());
+    if (requester == ConcurrentThread)
+        WTF::loadLoadFence();
+
+    ArrayBuffer* buffer = possiblySharedBufferImpl<requester>();
+    ASSERT(buffer);
+    if (requester == Mutator) {
+        ASSERT(!isCompilationThread());
+        ASSERT(!vector() == !buffer->data());
+    }
 
     ptrdiff_t delta =
-        bitwise_cast<uint8_t*>(vector()) - static_cast<uint8_t*>(buffer->data());
+        bitwise_cast<uint8_t*>(vectorWithoutPACValidation()) - static_cast<uint8_t*>(buffer->data());
 
-    unsigned result = static_cast<unsigned>(delta);
-    ASSERT(static_cast<ptrdiff_t>(result) == delta);
+    size_t result = static_cast<size_t>(delta);
+    if (requester == Mutator)
+        ASSERT(static_cast<ptrdiff_t>(result) == delta);
+    else {
+        if (static_cast<ptrdiff_t>(result) != delta)
+            return { };
+    }
+
     return result;
+}
+
+inline size_t JSArrayBufferView::byteOffset()
+{
+    return byteOffsetImpl<Mutator, size_t>();
+}
+
+inline std::optional<size_t> JSArrayBufferView::byteOffsetConcurrently()
+{
+    return byteOffsetImpl<ConcurrentThread, std::optional<size_t>>();
 }
 
 inline RefPtr<ArrayBufferView> JSArrayBufferView::toWrapped(VM& vm, JSValue value)
@@ -95,5 +128,13 @@ inline RefPtr<ArrayBufferView> JSArrayBufferView::toWrapped(VM& vm, JSValue valu
     }
     return nullptr;
 }
+
+inline RefPtr<ArrayBufferView> JSArrayBufferView::toWrappedAllowShared(VM& vm, JSValue value)
+{
+    if (JSArrayBufferView* view = jsDynamicCast<JSArrayBufferView*>(vm, value))
+        return view->possiblySharedImpl();
+    return nullptr;
+}
+
 
 } // namespace JSC

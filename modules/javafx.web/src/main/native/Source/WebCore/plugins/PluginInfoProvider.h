@@ -26,7 +26,7 @@
 #pragma once
 
 #include "PluginData.h"
-#include <wtf/HashSet.h>
+#include <wtf/WeakHashSet.h>
 
 namespace WebCore {
 
@@ -40,13 +40,13 @@ public:
     void removePage(Page&);
     void clearPagesPluginData();
 
-    virtual Vector<PluginInfo> pluginInfo(Page&, Optional<Vector<SupportedPluginIdentifier>>&) = 0;
+    virtual Vector<PluginInfo> pluginInfo(Page&, std::optional<Vector<SupportedPluginIdentifier>>&) = 0;
     virtual Vector<PluginInfo> webVisiblePluginInfo(Page&, const URL&) = 0;
 
 private:
     virtual void refreshPlugins() = 0;
 
-    HashSet<Page*> m_pages;
+    WeakHashSet<Page> m_pages;
 };
 
 }

@@ -21,12 +21,15 @@
 #include "unicode/strenum.h"
 #include "unicode/vtzone.h"
 
+#include "bytesinkutil.h"
+#include "charstr.h"
 #include "cmemory.h"
 #include "cstring.h"
 #include "mutex.h"
 #include "uhash.h"
 #include "uassert.h"
 #include "umutex.h"
+#include "ulocimp.h"
 #include "uresimp.h"
 #include "ureslocs.h"
 #include "zonemeta.h"
@@ -192,7 +195,7 @@ public:
     GNameSearchHandler(uint32_t types);
     virtual ~GNameSearchHandler();
 
-    UBool handleMatch(int32_t matchLength, const CharacterNode *node, UErrorCode &status);
+    UBool handleMatch(int32_t matchLength, const CharacterNode *node, UErrorCode &status) override;
     UVector* getMatches(int32_t& maxMatchLen);
 
 private:
@@ -226,30 +229,27 @@ GNameSearchHandler::handleMatch(int32_t matchLength, const CharacterNode *node, 
             if ((nameinfo->type & fTypes) != 0) {
                 // matches a requested type
                 if (fResults == NULL) {
-                    fResults = new UVector(uprv_free, NULL, status);
-                    if (fResults == NULL) {
-                        status = U_MEMORY_ALLOCATION_ERROR;
+                    LocalPointer<UVector> lpResults(new UVector(uprv_free, NULL, status), status);
+                    if (U_FAILURE(status)) {
+                        return false;
                     }
+                    fResults = lpResults.orphan();
                 }
-                if (U_SUCCESS(status)) {
-                    U_ASSERT(fResults != NULL);
-                    GMatchInfo *gmatch = (GMatchInfo *)uprv_malloc(sizeof(GMatchInfo));
-                    if (gmatch == NULL) {
-                        status = U_MEMORY_ALLOCATION_ERROR;
-                    } else {
-                        // add the match to the vector
-                        gmatch->gnameInfo = nameinfo;
-                        gmatch->matchLength = matchLength;
-                        gmatch->timeType = UTZFMT_TIME_TYPE_UNKNOWN;
-                        fResults->addElement(gmatch, status);
-                        if (U_FAILURE(status)) {
-                            uprv_free(gmatch);
-                        } else {
-                            if (matchLength > fMaxMatchLen) {
-                                fMaxMatchLen = matchLength;
-                            }
-                        }
-                    }
+                GMatchInfo *gmatch = (GMatchInfo *)uprv_malloc(sizeof(GMatchInfo));
+                if (gmatch == NULL) {
+                    status = U_MEMORY_ALLOCATION_ERROR;
+                    return false;
+                }
+                // add the match to the vector
+                gmatch->gnameInfo = nameinfo;
+                gmatch->matchLength = matchLength;
+                gmatch->timeType = UTZFMT_TIME_TYPE_UNKNOWN;
+                fResults->adoptElement(gmatch, status);
+                if (U_FAILURE(status)) {
+                    return false;
+                }
+                if (matchLength > fMaxMatchLen) {
+                    fMaxMatchLen = matchLength;
                 }
             }
         }
@@ -269,10 +269,7 @@ GNameSearchHandler::getMatches(int32_t& maxMatchLen) {
     return results;
 }
 
-static UMutex *gLock() {
-    static UMutex m = U_MUTEX_INITIALIZER;
-    return &m;
-}
+static UMutex gLock;
 
 class TZGNCore : public UMemory {
 public:
@@ -328,7 +325,7 @@ private:
 
 
 // ---------------------------------------------------
-// TZGNCore - core implmentation of TimeZoneGenericNames
+// TZGNCore - core implementation of TimeZoneGenericNames
 //
 // TimeZoneGenericNames is parallel to TimeZoneNames,
 // but handles run-time generated time zone names.
@@ -412,10 +409,13 @@ TZGNCore::initialize(const Locale& locale, UErrorCode& status) {
     const char* region = fLocale.getCountry();
     int32_t regionLen = static_cast<int32_t>(uprv_strlen(region));
     if (regionLen == 0) {
-        char loc[ULOC_FULLNAME_CAPACITY];
-        uloc_addLikelySubtags(fLocale.getName(), loc, sizeof(loc), &status);
+        CharString loc;
+        {
+            CharStringByteSink sink(&loc);
+            ulocimp_addLikelySubtags(fLocale.getName(), sink, &status);
+        }
 
-        regionLen = uloc_getCountry(loc, fTargetRegion, sizeof(fTargetRegion), &status);
+        regionLen = uloc_getCountry(loc.data(), fTargetRegion, sizeof(fTargetRegion), &status);
         if (U_SUCCESS(status)) {
             fTargetRegion[regionLen] = 0;
         } else {
@@ -488,11 +488,11 @@ TZGNCore::getGenericLocationName(const UnicodeString& tzCanonicalID, UnicodeStri
 
     const UChar *locname = NULL;
     TZGNCore *nonConstThis = const_cast<TZGNCore *>(this);
-    umtx_lock(gLock());
+    umtx_lock(&gLock);
     {
         locname = nonConstThis->getGenericLocationName(tzCanonicalID);
     }
-    umtx_unlock(gLock());
+    umtx_unlock(&gLock);
 
     if (locname == NULL) {
         name.setToBogus();
@@ -551,7 +551,7 @@ TZGNCore::getGenericLocationName(const UnicodeString& tzCanonicalID) {
             // If this is not the primary zone in the country,
             // use the exemplar city name.
 
-            // getExemplarLocationName should retur non-empty string
+            // getExemplarLocationName should return non-empty string
             // if the time zone is associated with a region
 
             UnicodeString city;
@@ -743,11 +743,11 @@ TZGNCore::getPartialLocationName(const UnicodeString& tzCanonicalID,
 
     const UChar *uplname = NULL;
     TZGNCore *nonConstThis = const_cast<TZGNCore *>(this);
-    umtx_lock(gLock());
+    umtx_lock(&gLock);
     {
         uplname = nonConstThis->getPartialLocationName(tzCanonicalID, mzID, isLong, mzDisplayName);
     }
-    umtx_unlock(gLock());
+    umtx_unlock(&gLock);
 
     if (uplname == NULL) {
         name.setToBogus();
@@ -1010,11 +1010,11 @@ TZGNCore::findLocal(const UnicodeString& text, int32_t start, uint32_t types, UE
 
     TZGNCore *nonConstThis = const_cast<TZGNCore *>(this);
 
-    umtx_lock(gLock());
+    umtx_lock(&gLock);
     {
         fGNamesTrie.search(text, start, (TextTrieMapSearchResultHandler *)&handler, status);
     }
-    umtx_unlock(gLock());
+    umtx_unlock(&gLock);
 
     if (U_FAILURE(status)) {
         return NULL;
@@ -1041,7 +1041,7 @@ TZGNCore::findLocal(const UnicodeString& text, int32_t start, uint32_t types, UE
 
     // All names are not yet loaded into the local trie.
     // Load all available names into the trie. This could be very heavy.
-    umtx_lock(gLock());
+    umtx_lock(&gLock);
     {
         if (!fGNamesTrieFullyLoaded) {
             StringEnumeration *tzIDs = TimeZone::createTimeZoneIDEnumeration(UCAL_ZONE_TYPE_CANONICAL, NULL, NULL, status);
@@ -1063,18 +1063,18 @@ TZGNCore::findLocal(const UnicodeString& text, int32_t start, uint32_t types, UE
             }
         }
     }
-    umtx_unlock(gLock());
+    umtx_unlock(&gLock);
 
     if (U_FAILURE(status)) {
         return NULL;
     }
 
-    umtx_lock(gLock());
+    umtx_lock(&gLock);
     {
         // now try it again
         fGNamesTrie.search(text, start, (TextTrieMapSearchResultHandler *)&handler, status);
     }
-    umtx_unlock(gLock());
+    umtx_unlock(&gLock);
 
     results = handler.getMatches(maxLen);
     if (results != NULL && maxLen > 0) {
@@ -1115,10 +1115,7 @@ typedef struct TZGNCoreRef {
 } TZGNCoreRef;
 
 // TZGNCore object cache handling
-static UMutex *gTZGNLock() {
-    static UMutex m = U_MUTEX_INITIALIZER;
-    return &m;
-}
+static UMutex gTZGNLock;
 static UHashtable *gTZGNCoreCache = NULL;
 static UBool gTZGNCoreCacheInitialized = FALSE;
 
@@ -1184,13 +1181,13 @@ TimeZoneGenericNames::TimeZoneGenericNames()
 }
 
 TimeZoneGenericNames::~TimeZoneGenericNames() {
-    umtx_lock(gTZGNLock());
+    umtx_lock(&gTZGNLock);
     {
         U_ASSERT(fRef->refCount > 0);
         // Just decrement the reference count
         fRef->refCount--;
     }
-    umtx_unlock(gTZGNLock());
+    umtx_unlock(&gTZGNLock);
 }
 
 TimeZoneGenericNames*
@@ -1206,7 +1203,7 @@ TimeZoneGenericNames::createInstance(const Locale& locale, UErrorCode& status) {
 
     TZGNCoreRef *cacheEntry = NULL;
     {
-        Mutex lock(gTZGNLock());
+        Mutex lock(&gTZGNLock);
 
         if (!gTZGNCoreCacheInitialized) {
             // Create empty hashtable
@@ -1287,7 +1284,7 @@ TimeZoneGenericNames::createInstance(const Locale& locale, UErrorCode& status) {
     return instance;
 }
 
-UBool
+bool
 TimeZoneGenericNames::operator==(const TimeZoneGenericNames& other) const {
     // Just compare if the other object also use the same
     // ref entry
@@ -1298,13 +1295,13 @@ TimeZoneGenericNames*
 TimeZoneGenericNames::clone() const {
     TimeZoneGenericNames* other = new TimeZoneGenericNames();
     if (other) {
-        umtx_lock(gTZGNLock());
+        umtx_lock(&gTZGNLock);
         {
             // Just increments the reference count
             fRef->refCount++;
             other->fRef = fRef;
         }
-        umtx_unlock(gTZGNLock());
+        umtx_unlock(&gTZGNLock);
     }
     return other;
 }

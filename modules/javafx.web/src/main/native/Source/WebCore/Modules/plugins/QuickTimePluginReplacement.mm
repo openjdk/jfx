@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #import "config.h"
@@ -145,7 +145,7 @@ bool QuickTimePluginReplacement::ensureReplacementScriptInjected()
 {
     if (!m_parentElement->document().frame())
         return false;
-    
+
     DOMWrapperWorld& world = isolatedWorld();
     ScriptController& scriptController = m_parentElement->document().frame()->script();
     JSDOMGlobalObject* globalObject = JSC::jsCast<JSDOMGlobalObject*>(scriptController.globalObject(world));
@@ -153,18 +153,18 @@ bool QuickTimePluginReplacement::ensureReplacementScriptInjected()
     JSC::JSLockHolder lock(vm);
     auto scope = DECLARE_CATCH_SCOPE(vm);
     JSC::ExecState* exec = globalObject->globalExec();
-    
+
     JSC::JSValue replacementFunction = globalObject->get(exec, JSC::Identifier::fromString(vm, "createPluginReplacement"));
     if (replacementFunction.isFunction(vm))
         return true;
-    
+
     scriptController.evaluateInWorld(ScriptSourceCode(quickTimePluginReplacementScript()), world);
     if (UNLIKELY(scope.exception())) {
         LOG(Plugins, "%p - Exception when evaluating QuickTime plugin replacement script", this);
         scope.clearException();
         return false;
     }
-    
+
     return true;
 }
 
@@ -348,7 +348,7 @@ static JSValue *jsValueWithAVMetadataItemInContext(AVMetadataItem *item, JSConte
         if (auto timeDictionary = adoptCF(PAL::CMTimeCopyAsDictionary(item.time, kCFAllocatorDefault)))
             [dictionary setObject:(__bridge NSDictionary *)timeDictionary.get() forKey:@"timestamp"];
     }
-    
+
     if (item.value) {
         id value = item.value;
         NSString *mimeType = [[item extraAttributes] objectForKey:@"MIMEtype"];

@@ -26,11 +26,12 @@
 #ifndef PlatformLocale_h
 #define PlatformLocale_h
 
-#include "DateComponents.h"
 #include <wtf/Language.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
+
+class DateComponents;
 
 #if PLATFORM(IOS_FAMILY)
 class FontCascade;
@@ -107,6 +108,8 @@ public:
     // localized string of January, and the last item is a localized string of
     // December. These strings should not be abbreviations.
     virtual const Vector<String>& monthLabels() = 0;
+
+    String localizedDecimalSeparator();
 #endif
 
 #if ENABLE(DATE_AND_TIME_INPUT_TYPES)
@@ -116,11 +119,7 @@ public:
     // display to the user. If an implementation doesn't support
     // localized dates the function should return an empty string.
     // FormatType can be used to specify if you want the short format.
-#if !PLATFORM(IOS_FAMILY)
-    String formatDateTime(const DateComponents&, FormatType = FormatTypeUnspecified);
-#else
-    virtual String formatDateTime(const DateComponents&, FormatType = FormatTypeUnspecified) = 0;
-#endif // !PLATFORM(IOS_FAMILY)
+    virtual String formatDateTime(const DateComponents&, FormatType = FormatTypeUnspecified);
 #endif
 
     virtual ~Locale();

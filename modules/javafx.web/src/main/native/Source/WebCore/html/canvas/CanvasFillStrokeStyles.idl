@@ -23,25 +23,27 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-// FIXME: This should include SVGImageElement and ImageBitmap.
-#if defined(ENABLE_VIDEO) && ENABLE_VIDEO && defined(ENABLE_CSS_TYPED_OM) && ENABLE_CSS_TYPED_OM
-typedef (HTMLImageElement or HTMLVideoElement or HTMLCanvasElement or ImageBitmap or TypedOMCSSImageValue) CanvasImageSource;
-#elif defined(ENABLE_VIDEO) && ENABLE_VIDEO
-typedef (HTMLImageElement or HTMLVideoElement or HTMLCanvasElement or ImageBitmap) CanvasImageSource;
-#else
-typedef (HTMLImageElement or HTMLCanvasElement or ImageBitmap) CanvasImageSource;
+// FIXME: This should include SVGImageElement.
+typedef (HTMLImageElement or HTMLCanvasElement or ImageBitmap
+#if defined(ENABLE_CSS_TYPED_OM) && ENABLE_CSS_TYPED_OM
+    or CSSStyleImageValue
 #endif
+#if defined(ENABLE_OFFSCREEN_CANVAS) && ENABLE_OFFSCREEN_CANVAS
+    or OffscreenCanvas
+#endif
+#if defined(ENABLE_VIDEO) && ENABLE_VIDEO
+    or HTMLVideoElement
+#endif
+) CanvasImageSource;
 
-[
-    NoInterfaceObject,
-    Exposed=(Window,Worker)
-] interface CanvasFillStrokeStyles {
+// https://html.spec.whatwg.org/multipage/canvas.html#canvasfillstrokestyles
+interface mixin CanvasFillStrokeStyles {
     // colors and styles (see also the CanvasPathDrawingStyles and CanvasTextDrawingStyles interfaces)
     attribute (DOMString or CanvasGradient or CanvasPattern) strokeStyle; // (default black)
     attribute (DOMString or CanvasGradient or CanvasPattern) fillStyle; // (default black)
 
-    // FIXME: All the float parameters below should be doubles.
-    [MayThrowException] CanvasGradient createLinearGradient(float x0, float y0, float x1, float y1);
-    [MayThrowException] CanvasGradient createRadialGradient(float x0, float y0, float r0, float x1, float y1, float r1);
-    [MayThrowException] CanvasPattern? createPattern(CanvasImageSource image, [TreatNullAs=EmptyString] DOMString repetition);
+    CanvasGradient createLinearGradient(double x0, double y0, double x1, double y1);
+    CanvasGradient createRadialGradient(double x0, double y0, double r0, double x1, double y1, double r1);
+    CanvasGradient createConicGradient(double angle, double x, double y);
+    CanvasPattern? createPattern(CanvasImageSource image, [LegacyNullToEmptyString] DOMString repetition);
 };

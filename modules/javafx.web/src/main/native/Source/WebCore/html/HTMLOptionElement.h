@@ -2,7 +2,7 @@
  * Copyright (C) 1999 Lars Knoll (knoll@kde.org)
  *           (C) 1999 Antti Koivisto (koivisto@kde.org)
  *           (C) 2000 Dirk Mueller (mueller@kde.org)
- * Copyright (C) 2004, 2005, 2006, 2010, 2011, 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2020 Apple Inc. All rights reserved.
  * Copyright (C) 2010 Google Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
@@ -28,15 +28,16 @@
 
 namespace WebCore {
 
-class HTMLDataListElement;
 class HTMLSelectElement;
+
+enum class AllowStyleInvalidation { Yes, No };
 
 class HTMLOptionElement final : public HTMLElement {
     WTF_MAKE_ISO_ALLOCATED(HTMLOptionElement);
 public:
     static Ref<HTMLOptionElement> create(Document&);
     static Ref<HTMLOptionElement> create(const QualifiedName&, Document&);
-    static ExceptionOr<Ref<HTMLOptionElement>> createForJSConstructor(Document&, const String& text, const String& value, bool defaultSelected, bool selected);
+    static ExceptionOr<Ref<HTMLOptionElement>> createForLegacyFactoryFunction(Document&, const String& text, const String& value, bool defaultSelected, bool selected);
 
     WEBCORE_EXPORT String text() const;
     void setText(const String&);
@@ -46,12 +47,9 @@ public:
     WEBCORE_EXPORT String value() const;
     WEBCORE_EXPORT void setValue(const String&);
 
-    WEBCORE_EXPORT bool selected();
+    WEBCORE_EXPORT bool selected(AllowStyleInvalidation = AllowStyleInvalidation::Yes) const;
     WEBCORE_EXPORT void setSelected(bool);
 
-#if ENABLE(DATALIST_ELEMENT)
-    WEBCORE_EXPORT HTMLDataListElement* ownerDataListElement() const;
-#endif
     WEBCORE_EXPORT HTMLSelectElement* ownerSelectElement() const;
 
     WEBCORE_EXPORT String label() const;
@@ -64,7 +62,8 @@ public:
 
     String textIndentedToRespectGroupLabel() const;
 
-    void setSelectedState(bool);
+    void setSelectedState(bool, AllowStyleInvalidation = AllowStyleInvalidation::Yes);
+    bool selectedWithoutUpdate() const { return m_isSelected; }
 
 private:
     HTMLOptionElement(const QualifiedName&, Document&);
@@ -75,8 +74,7 @@ private:
 
     void parseAttribute(const QualifiedName&, const AtomString&) final;
 
-    InsertedIntoAncestorResult insertedIntoAncestor(InsertionType, ContainerNode&) final;
-    void accessKeyAction(bool) final;
+    bool accessKeyAction(bool) final;
 
     void childrenChanged(const ChildChange&) final;
 
@@ -84,8 +82,9 @@ private:
 
     String collectOptionInnerText() const;
 
-    bool m_disabled;
-    bool m_isSelected;
+    bool m_disabled { false };
+    bool m_isSelected { false };
+    bool m_isDefault { false };
 };
 
 } // namespace

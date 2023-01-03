@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2014-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -40,7 +40,7 @@
 #define BOS_DARWIN 1
 #endif
 
-#ifdef __unix
+#if defined(__unix) || defined(__unix__)
 #define BOS_UNIX 1
 #endif
 
@@ -58,9 +58,13 @@
 
 #if BOS(DARWIN) && !defined(BUILDING_WITH_CMAKE)
 #if TARGET_OS_IOS
+#define BOS_IOS 1
 #define BPLATFORM_IOS 1
 #if TARGET_OS_SIMULATOR
 #define BPLATFORM_IOS_SIMULATOR 1
+#endif
+#if defined(TARGET_OS_MACCATALYST) && TARGET_OS_MACCATALYST
+#define BPLATFORM_MACCATALYST 1
 #endif
 #endif
 #if TARGET_OS_IPHONE
@@ -69,6 +73,7 @@
 #define BPLATFORM_IOS_FAMILY_SIMULATOR 1
 #endif
 #elif TARGET_OS_MAC
+#define BOS_MAC 1
 #define BPLATFORM_MAC 1
 #endif
 #endif
@@ -78,12 +83,32 @@
 #endif
 
 #if defined(TARGET_OS_WATCH) && TARGET_OS_WATCH
+#define BOS_WATCHOS 1
 #define BPLATFORM_WATCHOS 1
 #endif
 
 #if defined(TARGET_OS_TV) && TARGET_OS_TV
+#define BOS_APPLETV 1
 #define BPLATFORM_APPLETV 1
 #endif
+
+#if defined(__SCE__)
+#define BPLATFORM_PLAYSTATION 1
+#endif
+
+#if defined(BUILDING_GTK__)
+#define BPLATFORM_GTK 1
+#elif defined(BUILDING_WPE__)
+#define BPLATFORM_WPE 1
+#elif defined(BUILDING_JSCONLY__)
+/* JSCOnly does not provide BPLATFORM() macro */
+#elif BOS(WINDOWS)
+#define BPLATFORM_WIN 1
+#endif
+
+/* ==== Feature decision macros: these define feature choices for a particular port. ==== */
+
+#define BENABLE(WTF_FEATURE) (defined BENABLE_##WTF_FEATURE && BENABLE_##WTF_FEATURE)
 
 /* ==== Policy decision macros: these define policy choices for a particular port. ==== */
 
@@ -115,9 +140,12 @@
 #define BCPU_X86_64 1
 #endif
 
-/* BCPU(ARM64) - Apple */
-#if (defined(__arm64__) && defined(__APPLE__)) || defined(__aarch64__)
+/* BCPU(ARM64) */
+#if defined(__arm64__) || defined(__aarch64__)
 #define BCPU_ARM64 1
+#if defined(__arm64e__)
+#define BCPU_ARM64E 1
+#endif
 #endif
 
 /* BCPU(ARM) - ARM, any version*/
@@ -230,14 +258,57 @@
 
 #endif /* ARM */
 
+
+#if BCOMPILER(GCC_COMPATIBLE)
+/* __LP64__ is not defined on 64bit Windows since it uses LLP64. Using __SIZEOF_POINTER__ is simpler. */
+#if __SIZEOF_POINTER__ == 8
+#define BCPU_ADDRESS64 1
+#elif __SIZEOF_POINTER__ == 4
+#define BCPU_ADDRESS32 1
+#else
+#error "Unsupported pointer width"
+#endif
+#else
+#error "Unsupported compiler for bmalloc"
+#endif
+
+#if BCOMPILER(GCC_COMPATIBLE)
+#if __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
+#define BCPU_BIG_ENDIAN 1
+#elif __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
+#define BCPU_LITTLE_ENDIAN 1
+#elif __BYTE_ORDER__ == __ORDER_PDP_ENDIAN__
+#define BCPU_MIDDLE_ENDIAN 1
+#else
+#error "Unknown endian"
+#endif
+#else
+#error "Unsupported compiler for bmalloc"
+#endif
+
+#if BCPU(ADDRESS64)
+#if BOS(DARWIN)
+#define BOS_EFFECTIVE_ADDRESS_WIDTH (bmalloc::getMSBSetConstexpr(MACH_VM_MAX_ADDRESS) + 1)
+#else
+/* We strongly assume that effective address width is <= 48 in 64bit architectures (e.g. NaN boxing). */
+#define BOS_EFFECTIVE_ADDRESS_WIDTH 48
+#endif
+#else
+#define BOS_EFFECTIVE_ADDRESS_WIDTH 32
+#endif
+
 #define BATTRIBUTE_PRINTF(formatStringArgument, extraArguments) __attribute__((__format__(printf, formatStringArgument, extraArguments)))
+
+/* Export macro support. Detects the attributes available for shared library symbol export
+   decorations. */
+#if BOS(WINDOWS) || (BCOMPILER_HAS_CLANG_DECLSPEC(dllimport) && BCOMPILER_HAS_CLANG_DECLSPEC(dllexport))
+#define BUSE_DECLSPEC_ATTRIBUTE 1
+#elif BCOMPILER(GCC_COMPATIBLE)
+#define BUSE_VISIBILITY_ATTRIBUTE 1
+#endif
 
 #if BPLATFORM(MAC) || BPLATFORM(IOS_FAMILY)
 #define BUSE_OS_LOG 1
-#endif
-
-#if !defined(BUSE_EXPORT_MACROS) && (BPLATFORM(MAC) || BPLATFORM(IOS_FAMILY))
-#define BUSE_EXPORT_MACROS 1
 #endif
 
 /* BUNUSED_PARAM */
@@ -245,12 +316,55 @@
 #define BUNUSED_PARAM(variable) (void)variable
 #endif
 
+/* Enable this to put each IsoHeap and other allocation categories into their own malloc heaps, so that tools like vmmap can show how big each heap is. */
+#define BENABLE_MALLOC_HEAP_BREAKDOWN 0
+
 /* This is used for debugging when hacking on how bmalloc calculates its physical footprint. */
 #define ENABLE_PHYSICAL_PAGE_MAP 0
 
-#if BPLATFORM(IOS_FAMILY) && (BCPU(ARM64) || BCPU(ARM))
-#define BUSE_CHECK_NANO_MALLOC 1
+/* BENABLE(LIBPAS) is enabling libpas build. But this does not mean we use libpas for bmalloc replacement. */
+#if !defined(BENABLE_LIBPAS)
+#if BCPU(ADDRESS64) && (BOS(DARWIN) || (!BOS(LINUX) && !BPLATFORM(GTK) && !BPLATFORM(WPE)))
+#define BENABLE_LIBPAS 1
+#ifndef PAS_BMALLOC
+#define PAS_BMALLOC 1
+#endif
 #else
-#define BUSE_CHECK_NANO_MALLOC 0
+#define BENABLE_LIBPAS 0
+#endif
 #endif
 
+/* BUSE(LIBPAS) is using libpas for bmalloc replacement. */
+#if !defined(BUSE_LIBPAS)
+#if defined(BENABLE_LIBPAS) && BENABLE_LIBPAS
+#define BUSE_LIBPAS 1
+#else
+#define BUSE_LIBPAS 0
+#endif
+#endif
+
+#if !defined(BUSE_PRECOMPUTED_CONSTANTS_VMPAGE4K)
+#define BUSE_PRECOMPUTED_CONSTANTS_VMPAGE4K 1
+#endif
+
+#if !defined(BUSE_PRECOMPUTED_CONSTANTS_VMPAGE16K)
+#define BUSE_PRECOMPUTED_CONSTANTS_VMPAGE16K 1
+#endif
+
+/* The unified Config record feature is not available for Windows because the
+   Windows port puts WTF in a separate DLL, and the offlineasm code accessing
+   the config record expects the config record to be directly accessible like
+   a global variable (and not have to go thru DLL shenanigans). C++ code would
+   resolve these DLL bindings automatically, but offlineasm does not.
+
+   The permanently freezing feature also currently relies on the Config records
+   being unified, and the Windows port also does not currently have an
+   implementation for the freezing mechanism anyway. For simplicity, we just
+   disable both the use of unified Config record and config freezing for the
+   Windows port.
+*/
+#if BOS(WINDOWS)
+#define BENABLE_UNIFIED_AND_FREEZABLE_CONFIG_RECORD 0
+#else
+#define BENABLE_UNIFIED_AND_FREEZABLE_CONFIG_RECORD 1
+#endif

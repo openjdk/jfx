@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -52,6 +52,11 @@ final public class Style {
         return declaration;
     }
 
+    /**
+     * Constructs a {@code Style} object.
+     * @param selector selector for this {@code Style}
+     * @param declaration declaration for this {@code Style}
+     */
     public Style(Selector selector, Declaration declaration) {
         this.selector = selector;
         this.declaration = declaration;

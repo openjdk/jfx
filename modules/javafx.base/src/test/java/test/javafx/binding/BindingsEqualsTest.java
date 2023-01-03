@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -218,8 +218,8 @@ public class BindingsEqualsTest<T> {
         final String[] stringData = new String[] {null, "Hello", "Hello World"};
         final String[] ciStringData = new String[] {null, "hello", "HELLO"};
 
-        final ObjectProperty<Object> object1 = new SimpleObjectProperty<Object>();
-        final ObjectProperty<Object> object2 = new SimpleObjectProperty<Object>();
+        final ObjectProperty<Object> object1 = new SimpleObjectProperty<>();
+        final ObjectProperty<Object> object2 = new SimpleObjectProperty<>();
         final Object[] objectData = new Object[] {new Object(), new Object(), new Object()};
 
         return Arrays.asList(new Object[][] {
@@ -1342,6 +1342,6 @@ public class BindingsEqualsTest<T> {
                 objectData
             },
         });
-    };
+    }
 
 }

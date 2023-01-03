@@ -54,7 +54,7 @@ static const float cTargetPrunePercentage = .95f; // Percentage of capacity towa
 
 MemoryCache& MemoryCache::singleton()
 {
-    ASSERT(WTF::isMainThread());
+    ASSERT(isMainThread());
     static NeverDestroyed<MemoryCache> memoryCache;
     return memoryCache;
 }
@@ -114,7 +114,10 @@ bool MemoryCache::add(CachedResource& resource)
     if (disabled())
         return false;
 
-    ASSERT(WTF::isMainThread());
+    if (resource.resourceRequest().httpMethod() != "GET")
+        return false;
+
+    ASSERT(isMainThread());
 
     auto key = std::make_pair(resource.url(), resource.cachePartition());
 
@@ -164,7 +167,7 @@ void MemoryCache::revalidationSucceeded(CachedResource& revalidatingResource, co
 
 void MemoryCache::revalidationFailed(CachedResource& revalidatingResource)
 {
-    ASSERT(WTF::isMainThread());
+    ASSERT(isMainThread());
     LOG(ResourceLoading, "Revalidation failed for %p", &revalidatingResource);
     ASSERT(revalidatingResource.resourceToRevalidate());
     revalidatingResource.clearResourceToRevalidate();
@@ -182,7 +185,7 @@ CachedResource* MemoryCache::resourceForRequest(const ResourceRequest& request, 
 
 CachedResource* MemoryCache::resourceForRequestImpl(const ResourceRequest& request, CachedResourceMap& resources)
 {
-    ASSERT(WTF::isMainThread());
+    ASSERT(isMainThread());
     URL url = removeFragmentIdentifierIfNeeded(request.url());
 
     auto key = std::make_pair(url, request.cachePartition());
@@ -204,52 +207,6 @@ unsigned MemoryCache::liveCapacity() const
     return m_capacity - deadCapacity();
 }
 
-static CachedImageClient& dummyCachedImageClient()
-{
-    static NeverDestroyed<CachedImageClient> client;
-    return client;
-}
-
-bool MemoryCache::addImageToCache(NativeImagePtr&& image, const URL& url, const String& domainForCachePartition, const PAL::SessionID& sessionID, const CookieJar* cookieJar)
-{
-    ASSERT(image);
-    removeImageFromCache(url, domainForCachePartition); // Remove cache entry if it already exists.
-
-    auto bitmapImage = BitmapImage::create(WTFMove(image), nullptr);
-    auto cachedImage = makeUnique<CachedImage>(url, bitmapImage.ptr(), sessionID, cookieJar, domainForCachePartition);
-
-    cachedImage->addClient(dummyCachedImageClient());
-    cachedImage->setDecodedSize(bitmapImage->decodedSize());
-
-    return add(*cachedImage.release());
-}
-
-void MemoryCache::removeImageFromCache(const URL& url, const String& domainForCachePartition)
-{
-    auto* resources = sessionResourceMap(PAL::SessionID::defaultSessionID());
-    if (!resources)
-        return;
-
-    auto key = std::make_pair(url, ResourceRequest::partitionName(domainForCachePartition));
-
-    CachedResource* resource = resources->get(key);
-    if (!resource)
-        return;
-
-    // A resource exists and is not a manually cached image, so just remove it.
-    if (!is<CachedImage>(*resource) || !downcast<CachedImage>(*resource).isManuallyCached()) {
-        remove(*resource);
-        return;
-    }
-
-    // Removing the last client of a CachedImage turns the resource
-    // into a dead resource which will eventually be evicted when
-    // dead resources are pruned. That might be immediately since
-    // removing the last client triggers a MemoryCache::prune, so the
-    // resource may be deleted after this call.
-    downcast<CachedImage>(*resource).removeClient(dummyCachedImageClient());
-}
-
 void MemoryCache::pruneLiveResources(bool shouldDestroyDecodedDataForAllLiveResources)
 {
     unsigned capacity = shouldDestroyDecodedDataForAllLiveResources ? 0 : liveCapacity();
@@ -261,7 +218,7 @@ void MemoryCache::pruneLiveResources(bool shouldDestroyDecodedDataForAllLiveReso
     pruneLiveResourcesToSize(targetSize, shouldDestroyDecodedDataForAllLiveResources);
 }
 
-void MemoryCache::forEachResource(const WTF::Function<void(CachedResource&)>& function)
+void MemoryCache::forEachResource(const Function<void(CachedResource&)>& function)
 {
     for (auto& unprotectedLRUList : m_allResources) {
         for (auto& resource : copyToVector(*unprotectedLRUList))
@@ -269,7 +226,7 @@ void MemoryCache::forEachResource(const WTF::Function<void(CachedResource&)>& fu
     }
 }
 
-void MemoryCache::forEachSessionResource(PAL::SessionID sessionID, const WTF::Function<void (CachedResource&)>& function)
+void MemoryCache::forEachSessionResource(PAL::SessionID sessionID, const Function<void(CachedResource&)>& function)
 {
     auto it = m_sessionResources.find(sessionID);
     if (it == m_sessionResources.end())
@@ -434,7 +391,7 @@ void MemoryCache::setCapacities(unsigned minDeadBytes, unsigned maxDeadBytes, un
 
 void MemoryCache::remove(CachedResource& resource)
 {
-    ASSERT(WTF::isMainThread());
+    ASSERT(isMainThread());
     LOG(ResourceLoading, "Evicting resource %p for '%.255s' from cache", &resource, resource.url().string().latin1().data());
     // The resource may have already been removed by someone other than our caller,
     // who needed a fresh copy for a reload. See <http://bugs.webkit.org/show_bug.cgi?id=12479#c6>.
@@ -442,6 +399,8 @@ void MemoryCache::remove(CachedResource& resource)
         auto key = std::make_pair(resource.url(), resource.cachePartition());
 
         if (resource.inCache()) {
+            ASSERT_WITH_MESSAGE(resource.response().source() != ResourceResponse::Source::InspectorOverride, "InspectorOverride responses should not get into the MemoryCache");
+
             // Remove resource from the resource map.
             resources->remove(key);
             resource.setInCache(false);
@@ -460,14 +419,15 @@ void MemoryCache::remove(CachedResource& resource)
         }
     }
 
-    resource.deleteIfPossible();
+    if (resource.canDelete())
+        resource.deleteThis();
 }
 
 auto MemoryCache::lruListFor(CachedResource& resource) -> LRUList&
 {
     unsigned accessCount = std::max(resource.accessCount(), 1U);
     unsigned queueIndex = WTF::fastLog2(resource.size() / accessCount);
-#ifndef NDEBUG
+#if ASSERT_ENABLED
     resource.m_lruIndex = queueIndex;
 #endif
 
@@ -483,7 +443,7 @@ void MemoryCache::removeFromLRUList(CachedResource& resource)
     if (!resource.accessCount())
         return;
 
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
     unsigned oldListIndex = resource.m_lruIndex;
 #endif
 
@@ -687,9 +647,7 @@ MemoryCache::Statistics MemoryCache::getStatistics()
                 stats.xslStyleSheets.addResource(*resource);
                 break;
 #endif
-#if ENABLE(SVG_FONTS)
             case CachedResource::Type::SVGFontResource:
-#endif
             case CachedResource::Type::FontResource:
                 stats.fonts.addResource(*resource);
                 break;

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,8 +28,8 @@
 
 #include "CodeBlock.h"
 #include "DebuggerPrimitives.h"
-#include "JSCInlines.h"
-#include <wtf/text/StringBuilder.h>
+#include "JSCellInlines.h"
+#include <wtf/text/StringConcatenateNumbers.h>
 
 namespace JSC {
 
@@ -38,10 +38,10 @@ StackFrame::StackFrame(VM& vm, JSCell* owner, JSCell* callee)
 {
 }
 
-StackFrame::StackFrame(VM& vm, JSCell* owner, JSCell* callee, CodeBlock* codeBlock, unsigned bytecodeOffset)
+StackFrame::StackFrame(VM& vm, JSCell* owner, JSCell* callee, CodeBlock* codeBlock, BytecodeIndex bytecodeIndex)
     : m_callee(vm, owner, callee)
     , m_codeBlock(vm, owner, codeBlock)
-    , m_bytecodeOffset(bytecodeOffset)
+    , m_bytecodeIndex(bytecodeIndex)
 {
 }
 
@@ -51,7 +51,7 @@ StackFrame::StackFrame(Wasm::IndexOrName indexOrName)
 {
 }
 
-intptr_t StackFrame::sourceID() const
+SourceID StackFrame::sourceID() const
 {
     if (!m_codeBlock)
         return noSourceID;
@@ -111,44 +111,25 @@ void StackFrame::computeLineAndColumn(unsigned& line, unsigned& column) const
     int divot = 0;
     int unusedStartOffset = 0;
     int unusedEndOffset = 0;
-    m_codeBlock->expressionRangeForBytecodeOffset(m_bytecodeOffset, divot, unusedStartOffset, unusedEndOffset, line, column);
+    m_codeBlock->expressionRangeForBytecodeIndex(m_bytecodeIndex, divot, unusedStartOffset, unusedEndOffset, line, column);
 
     ScriptExecutable* executable = m_codeBlock->ownerExecutable();
-    if (Optional<int> overrideLineNumber = executable->overrideLineNumber(m_codeBlock->vm()))
+    if (std::optional<int> overrideLineNumber = executable->overrideLineNumber(m_codeBlock->vm()))
         line = overrideLineNumber.value();
 }
 
 String StackFrame::toString(VM& vm) const
 {
-    StringBuilder traceBuild;
     String functionName = this->functionName(vm);
     String sourceURL = this->sourceURL();
-    traceBuild.append(functionName);
-    if (!sourceURL.isEmpty()) {
-        if (!functionName.isEmpty())
-            traceBuild.append('@');
-        traceBuild.append(sourceURL);
-        if (hasLineAndColumnInfo()) {
-            unsigned line;
-            unsigned column;
-            computeLineAndColumn(line, column);
 
-            traceBuild.append(':');
-            traceBuild.appendNumber(line);
-            traceBuild.append(':');
-            traceBuild.appendNumber(column);
-        }
-    }
-    return traceBuild.toString().impl();
-}
+    if (sourceURL.isEmpty() || !hasLineAndColumnInfo())
+        return makeString(functionName, '@', sourceURL);
 
-void StackFrame::visitChildren(SlotVisitor& visitor)
-{
-    if (m_callee)
-        visitor.append(m_callee);
-    if (m_codeBlock)
-        visitor.append(m_codeBlock);
+    unsigned line;
+    unsigned column;
+    computeLineAndColumn(line, column);
+    return makeString(functionName, '@', sourceURL, ':', line, ':', column);
 }
 
 } // namespace JSC
-

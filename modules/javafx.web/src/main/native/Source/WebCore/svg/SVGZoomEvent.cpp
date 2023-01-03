@@ -24,8 +24,12 @@
 
 #include "SVGPoint.h"
 #include "SVGRect.h"
+#include <wtf/IsoMallocInlines.h>
+#include <wtf/text/StringConcatenateNumbers.h>
 
 namespace WebCore {
+
+WTF_MAKE_ISO_ALLOCATED_IMPL(SVGZoomEvent);
 
 SVGZoomEvent::SVGZoomEvent()
     : m_newScale(0.0f)

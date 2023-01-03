@@ -107,6 +107,8 @@ enum class CtapDeviceResponseCode : uint8_t {
 
 bool isCtapDeviceResponseCode(CtapDeviceResponseCode);
 
+const size_t kResponseCodeLength = 1;
+
 // Commands supported by CTAPHID device as specified in
 // https://fidoalliance.org/specs/fido-v2.0-ps-20170927/fido-client-to-authenticator-protocol-v2.0-ps-20170927.html#ctaphid-commands
 enum class FidoHidDeviceCommand : uint8_t {
@@ -222,6 +224,13 @@ const char kU2fVersion[] = "U2F_V2";
 // https://fidoalliance.org/specs/fido-v2.0-ps-20170927/fido-client-to-authenticator-protocol-v2.0-ps-20170927.html#hid-report-descriptor-and-device-discovery
 const uint32_t kCtapHidUsagePage = 0xF1D0;
 const uint32_t kCtapHidUsage = 0x01;
+
+// U2F_VERSION command
+// https://fidoalliance.org/specs/fido-u2f-v1.2-ps-20170411/fido-u2f-raw-message-formats-v1.2-ps-20170411.html#getversion-request-and-response---u2f_version
+const uint8_t kCtapNfcU2fVersionCommand[] = {
+    0x00, 0x03, 0x00, 0x00, // CLA, INS, P1, P2
+    0x00, // L
+};
 
 // CTAPNFC Applet selection command and responses
 // https://fidoalliance.org/specs/fido-v2.0-ps-20190130/fido-client-to-authenticator-protocol-v2.0-ps-20190130.html#nfc-applet-selection

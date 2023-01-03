@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,7 +26,7 @@
 package javafx.animation;
 
 import com.sun.javafx.tk.Toolkit;
-import com.sun.scenario.animation.AbstractMasterTimer;
+import com.sun.scenario.animation.AbstractPrimaryTimer;
 import com.sun.scenario.animation.shared.TimerReceiver;
 import java.security.AccessControlContext;
 import java.security.AccessController;
@@ -48,6 +48,7 @@ import java.security.PrivilegedAction;
 public abstract class AnimationTimer {
 
     private class AnimationTimerReceiver implements TimerReceiver {
+        @SuppressWarnings("removal")
         @Override public void handle(final long now) {
             if (accessCtrlCtx == null) {
                 throw new IllegalStateException("Error: AccessControlContext not captured");
@@ -60,22 +61,23 @@ public abstract class AnimationTimer {
         }
     }
 
-    private final AbstractMasterTimer timer;
+    private final AbstractPrimaryTimer timer;
     private final AnimationTimerReceiver timerReceiver = new AnimationTimerReceiver();
     private boolean active;
 
     // Access control context, captured in start()
+    @SuppressWarnings("removal")
     private AccessControlContext accessCtrlCtx = null;
 
     /**
      * Creates a new timer.
      */
     public AnimationTimer() {
-        timer = Toolkit.getToolkit().getMasterTimer();
+        timer = Toolkit.getToolkit().getPrimaryTimer();
     }
 
     // For testing only
-    AnimationTimer(AbstractMasterTimer timer) {
+    AnimationTimer(AbstractPrimaryTimer timer) {
         this.timer = timer;
     }
 
@@ -97,6 +99,7 @@ public abstract class AnimationTimer {
      *
      * The {@code AnimationTimer} can be stopped by calling {@link #stop()}.
      */
+    @SuppressWarnings("removal")
     public void start() {
         if (!active) {
             // Capture the Access Control Context to be used during the animation pulse

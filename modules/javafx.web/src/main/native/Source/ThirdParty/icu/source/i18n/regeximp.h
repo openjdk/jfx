@@ -37,7 +37,7 @@ U_NAMESPACE_BEGIN
 #define REGEX_DUMP_DEBUG
 #define REGEX_RUN_DEBUG
 
-//  End of #defines inteded to be directly set.
+//  End of #defines intended to be directly set.
 
 #include <stdio.h>
 #endif
@@ -123,7 +123,7 @@ enum {
                                //     saved input position, FAIL rather than taking
                                //     the JMP
      URX_LA_START      = 37,   // Starting a LookAround expression.
-                               //   Save InputPos and SP in static data.
+                               //   Save InputPos, SP and active region in static data.
                                //   Operand:  Static data offset for the save
      URX_LA_END        = 38,   // Ending a Lookaround expression.
                                //   Restore InputPos and Stack to saved values.
@@ -140,7 +140,7 @@ enum {
      URX_DOLLAR_M      = 42,   // $ in multi-line mode.
      URX_CARET_M       = 43,   // ^ in multi-line mode.
      URX_LB_START      = 44,   // LookBehind Start.
-                               //   Paramater is data location
+                               //   Parameter is data location
      URX_LB_CONT       = 45,   // LookBehind Continue.
                                //   Param 0:  the data location
                                //   Param 1:  The minimum length of the look-behind match
@@ -371,7 +371,7 @@ class CaseFoldingUTextIterator: public UMemory {
 
         UBool   inExpansion();    // True if last char returned from next() and the
                                   //  next to be returned both originated from a string
-                                  //  folding of the same code point from the orignal UText.
+                                  //  folding of the same code point from the original UText.
       private:
         UText             &fUText;
         const  UChar      *fFoldChars;
@@ -395,7 +395,7 @@ class CaseFoldingUCharIterator: public UMemory {
 
         UBool   inExpansion();    // True if last char returned from next() and the
                                   //  next to be returned both originated from a string
-                                  //  folding of the same code point from the orignal UText.
+                                  //  folding of the same code point from the original UText.
 
         int64_t  getIndex();      // Return the current input buffer index.
 

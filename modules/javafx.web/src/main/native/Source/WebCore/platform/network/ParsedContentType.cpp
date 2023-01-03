@@ -56,14 +56,14 @@ static bool isTokenCharacter(UChar c)
 
 using CharacterMeetsCondition = bool (*)(UChar);
 
-static Optional<StringView> parseToken(StringView input, unsigned& startIndex, CharacterMeetsCondition characterMeetsCondition, Mode mode, bool skipTrailingWhitespace = false)
+static StringView parseToken(StringView input, unsigned& startIndex, CharacterMeetsCondition characterMeetsCondition, Mode mode, bool skipTrailingWhitespace = false)
 {
     unsigned inputLength = input.length();
     unsigned tokenStart = startIndex;
     unsigned& tokenEnd = startIndex;
 
     if (tokenEnd >= inputLength)
-        return WTF::nullopt;
+        return StringView();
 
     while (tokenEnd < inputLength && characterMeetsCondition(input[tokenEnd])) {
         if (mode == Mode::Rfc2045 && !isTokenCharacter(input[tokenEnd]))
@@ -72,10 +72,15 @@ static Optional<StringView> parseToken(StringView input, unsigned& startIndex, C
     }
 
     if (tokenEnd == tokenStart)
-        return WTF::nullopt;
+        return StringView();
     if (skipTrailingWhitespace) {
-        while (input[tokenEnd - 1] == ' ')
-            --tokenEnd;
+        if (mode == Mode::Rfc2045) {
+            while (input[tokenEnd - 1] == ' ')
+                --tokenEnd;
+        } else {
+            while (isHTTPSpace(input[tokenEnd - 1]))
+                --tokenEnd;
+        }
     }
     return input.substring(tokenStart, tokenEnd - tokenStart);
 }
@@ -117,7 +122,7 @@ static String collectHTTPQuotedString(StringView input, unsigned& startIndex)
 static bool containsNonTokenCharacters(StringView input, Mode mode)
 {
     if (mode == Mode::MimeSniff)
-        return !isValidHTTPToken(input.toStringWithoutCopying());
+        return !isValidHTTPToken(input);
     for (unsigned index = 0; index < input.length(); ++index) {
         if (!isTokenCharacter(input[index]))
             return true;
@@ -125,23 +130,23 @@ static bool containsNonTokenCharacters(StringView input, Mode mode)
     return false;
 }
 
-static Optional<StringView> parseQuotedString(StringView input, unsigned& startIndex)
+static StringView parseQuotedString(StringView input, unsigned& startIndex)
 {
     unsigned inputLength = input.length();
     unsigned quotedStringStart = startIndex + 1;
     unsigned& quotedStringEnd = startIndex;
 
     if (quotedStringEnd >= inputLength)
-        return WTF::nullopt;
+        return StringView();
 
     if (input[quotedStringEnd++] != '"' || quotedStringEnd >= inputLength)
-        return WTF::nullopt;
+        return StringView();
 
     bool lastCharacterWasBackslash = false;
     char currentCharacter;
     while ((currentCharacter = input[quotedStringEnd++]) != '"' || lastCharacterWasBackslash) {
         if (quotedStringEnd >= inputLength)
-            return WTF::nullopt;
+            return StringView();
         if (currentCharacter == '\\' && !lastCharacterWasBackslash) {
             lastCharacterWasBackslash = true;
             continue;
@@ -234,7 +239,7 @@ bool ParsedContentType::parseContentType(Mode mode)
 
     unsigned contentTypeStart = index;
     auto typeRange = parseToken(m_contentType, index, isNotForwardSlash, mode);
-    if (!typeRange || containsNonTokenCharacters(*typeRange, mode)) {
+    if (typeRange.isNull() || containsNonTokenCharacters(typeRange, mode)) {
         LOG_ERROR("Invalid Content-Type, invalid type value.");
         return false;
     }
@@ -245,7 +250,7 @@ bool ParsedContentType::parseContentType(Mode mode)
     }
 
     auto subTypeRange = parseToken(m_contentType, index, isNotSemicolon, mode, mode == Mode::MimeSniff);
-    if (!subTypeRange || containsNonTokenCharacters(*subTypeRange, mode)) {
+    if (subTypeRange.isNull() || containsNonTokenCharacters(subTypeRange, mode)) {
         LOG_ERROR("Invalid Content-Type, invalid subtype value.");
         return false;
     }
@@ -262,7 +267,7 @@ bool ParsedContentType::parseContentType(Mode mode)
     while (true) {
         skipSpaces(m_contentType, index);
         auto keyRange = parseToken(m_contentType, index, isNotSemicolonOrEqualSign, mode);
-        if (mode == Mode::Rfc2045 && (!keyRange || index >= contentTypeLength)) {
+        if (mode == Mode::Rfc2045 && (keyRange.isNull() || index >= contentTypeLength)) {
             LOG_ERROR("Invalid Content-Type parameter name.");
             return false;
         }
@@ -283,11 +288,10 @@ bool ParsedContentType::parseContentType(Mode mode)
             if (m_contentType[index++] == ';')
                 continue;
         }
-        String parameterName = keyRange->toString();
 
         // Should we tolerate spaces here?
         String parameterValue;
-        Optional<StringView> valueRange;
+        StringView valueRange;
         if (index < contentTypeLength && m_contentType[index] == '"') {
             if (mode == Mode::MimeSniff) {
                 parameterValue = collectHTTPQuotedString(m_contentType, index);
@@ -297,15 +301,14 @@ bool ParsedContentType::parseContentType(Mode mode)
         } else
             valueRange = parseToken(m_contentType, index, isNotSemicolon, mode, mode == Mode::MimeSniff);
 
-
         if (parameterValue.isNull()) {
-            if (!valueRange) {
+            if (valueRange.isNull()) {
                 if (mode == Mode::MimeSniff)
                     continue;
                 LOG_ERROR("Invalid Content-Type, invalid parameter value.");
                 return false;
             }
-            parameterValue = valueRange->toString();
+            parameterValue = valueRange.toString();
         }
 
         // Should we tolerate spaces here?
@@ -314,7 +317,8 @@ bool ParsedContentType::parseContentType(Mode mode)
             return false;
         }
 
-        setContentTypeParameter(parameterName, parameterValue, mode);
+        if (!keyRange.isNull())
+            setContentTypeParameter(keyRange.toString(), parameterValue, mode);
 
         if (index >= contentTypeLength)
             return true;
@@ -323,17 +327,17 @@ bool ParsedContentType::parseContentType(Mode mode)
     return true;
 }
 
-Optional<ParsedContentType> ParsedContentType::create(const String& contentType, Mode mode)
+std::optional<ParsedContentType> ParsedContentType::create(const String& contentType, Mode mode)
 {
     ParsedContentType parsedContentType(mode == Mode::Rfc2045 ? contentType : stripLeadingAndTrailingHTTPSpaces(contentType));
     if (!parsedContentType.parseContentType(mode))
-        return WTF::nullopt;
+        return std::nullopt;
     return { WTFMove(parsedContentType) };
 }
 
 bool isValidContentType(const String& contentType, Mode mode)
 {
-    return ParsedContentType::create(contentType, mode) != WTF::nullopt;
+    return ParsedContentType::create(contentType, mode) != std::nullopt;
 }
 
 ParsedContentType::ParsedContentType(const String& contentType)

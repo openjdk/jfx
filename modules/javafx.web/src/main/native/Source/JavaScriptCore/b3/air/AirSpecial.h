@@ -56,7 +56,7 @@ public:
     virtual bool isValid(Inst&) = 0;
     virtual bool admitsStack(Inst&, unsigned argIndex) = 0;
     virtual bool admitsExtendedOffsetAddr(Inst&, unsigned argIndex) = 0;
-    virtual Optional<unsigned> shouldTryAliasingDef(Inst&);
+    virtual std::optional<unsigned> shouldTryAliasingDef(Inst&);
 
     // This gets called on for each Inst that uses this Special. Note that there is no way to
     // guarantee that a Special gets used from just one Inst, because Air might taildup late. So,
@@ -83,7 +83,7 @@ public:
     // Currently, we do (1) for B3 stackmaps.
     virtual void reportUsedRegisters(Inst&, const RegisterSet&) = 0;
 
-    virtual CCallHelpers::Jump generate(Inst&, CCallHelpers&, GenerationContext&) = 0;
+    virtual MacroAssembler::Jump generate(Inst&, CCallHelpers&, GenerationContext&) = 0;
 
     virtual RegisterSet extraEarlyClobberedRegs(Inst&) = 0;
     virtual RegisterSet extraClobberedRegs(Inst&) = 0;

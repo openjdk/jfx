@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -372,7 +372,6 @@ String contextMenuItemTagEnterVideoFullscreen()
     return String(); // UNSUPPORTED: getLocalizedProperty("contextMenuItemTagEnterVideoFullscreen");
 }
 
-#if ENABLE(VIDEO_TRACK)
 String textTrackSubtitlesText()
 {
     return String::fromUTF8("Subtitles");
@@ -388,6 +387,11 @@ String textTrackAutomaticMenuItemText()
     return String::fromUTF8("Auto");
 }
 
+String trackNoLabelText()
+{
+    return String::fromUTF8("No label");
+}
+
 String textTrackNoLabelText()
 {
     return String::fromUTF8("No label");
@@ -397,7 +401,6 @@ String audioTrackNoLabelText()
 {
     return String::fromUTF8("No label");
 }
-#endif
 
 String contextMenuItemTagMediaPlay()
 {
@@ -502,6 +505,12 @@ String AXListMarkerText()
     return getLocalizedProperty("AXListMarkerText");
 }
 
+String AXAttachmentRoleText()
+{
+    notImplemented();
+    return String();
+}
+
 String AXImageMapText()
 {
     return getLocalizedProperty("AXImageMapText");
@@ -520,6 +529,16 @@ String AXDefinitionListTermText()
 String AXDefinitionListDefinitionText()
 {
     return getLocalizedProperty("AXDefinitionListDefinitionText");
+}
+
+String AXFigureText()
+{
+    return getLocalizedProperty("AXFigureText");
+}
+
+String AXARIAContentGroupText(const String& ariaType)
+{
+    return getLocalizedProperty(String("AXARIAContentGroupText") + ariaType);
 }
 
 String AXButtonActionVerb()
@@ -717,8 +736,17 @@ String pluginTooSmallText()
     return String::fromUTF8("Plug-In too small");
 }
 
+#if USE(CF) && !PLATFORM(WIN)
+String localizedString(CFStringRef key)
+{
+     notImplemented();
+     return String::fromUTF8("localizedString(CFStringRef key)"); //Need to add implementation
+}
+#else
 String localizedString(const char* key)
 {
     return String::fromUTF8(key, strlen(key));
 }
+#endif
+
 } // namespace WebCore

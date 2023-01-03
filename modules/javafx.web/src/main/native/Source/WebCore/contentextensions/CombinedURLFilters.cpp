@@ -43,7 +43,7 @@ struct PrefixTreeEdge {
     std::unique_ptr<PrefixTreeVertex> child;
 };
 
-typedef Vector<PrefixTreeEdge, 0, WTF::CrashOnOverflow, 1> PrefixTreeEdges;
+typedef Vector<PrefixTreeEdge, 0, CrashOnOverflow, 1> PrefixTreeEdges;
 
 struct PrefixTreeVertex {
     WTF_MAKE_STRUCT_FAST_ALLOCATED;
@@ -56,7 +56,7 @@ struct ReverseSuffixTreeEdge {
     const Term* term;
     std::unique_ptr<ReverseSuffixTreeVertex> child;
 };
-typedef Vector<ReverseSuffixTreeEdge, 0, WTF::CrashOnOverflow, 1> ReverseSuffixTreeEdges;
+typedef Vector<ReverseSuffixTreeEdge, 0, CrashOnOverflow, 1> ReverseSuffixTreeEdges;
 
 struct ReverseSuffixTreeVertex {
     ReverseSuffixTreeEdges edges;
@@ -98,15 +98,13 @@ static String prefixTreeVertexToString(const PrefixTreeVertex& vertex, const Has
 {
     StringBuilder builder;
     while (depth--)
-        builder.appendLiteral("  ");
-    builder.appendLiteral("vertex actions: ");
+        builder.append("  ");
+    builder.append("vertex actions: ");
 
     auto actionsSlot = actions.find(&vertex);
     if (actionsSlot != actions.end()) {
-        for (uint64_t action : actionsSlot->value) {
-            builder.appendNumber(action);
-            builder.append(',');
-        }
+        for (uint64_t action : actionsSlot->value)
+            builder.append(action, ',');
     }
     builder.append('\n');
     return builder.toString();
@@ -144,48 +142,6 @@ bool CombinedURLFilters::isEmpty() const
     return m_prefixTreeRoot->edges.isEmpty();
 }
 
-void CombinedURLFilters::addDomain(uint64_t actionId, const String& domain)
-{
-    unsigned domainLength = domain.length();
-    if (domainLength && domain[0] == '*') {
-        // If domain starts with a '*' then it means match domain and its subdomains, like (^|.)domain$
-        // This way a domain of "*webkit.org" will match "bugs.webkit.org" and "webkit.org".
-        Vector<Term> prependDot;
-        Vector<Term> prependBeginningOfLine;
-        prependDot.reserveInitialCapacity(domainLength + 2);
-        prependBeginningOfLine.reserveInitialCapacity(domainLength); // This is just no .* at the beginning.
-
-        Term canonicalDotStar(Term::UniversalTransition);
-        canonicalDotStar.quantify(AtomQuantifier::ZeroOrMore);
-        prependDot.uncheckedAppend(canonicalDotStar);
-        prependDot.uncheckedAppend(Term('.', true));
-
-        for (unsigned i = 1; i < domainLength; i++) {
-            ASSERT(isASCII(domain[i]));
-            ASSERT(!isASCIIUpper(domain[i]));
-            prependDot.uncheckedAppend(Term(domain[i], true));
-            prependBeginningOfLine.uncheckedAppend(Term(domain[i], true));
-        }
-        prependDot.uncheckedAppend(Term::EndOfLineAssertionTerm);
-        prependBeginningOfLine.uncheckedAppend(Term::EndOfLineAssertionTerm);
-
-        addPattern(actionId, prependDot);
-        addPattern(actionId, prependBeginningOfLine);
-    } else {
-        // This is like adding ^domain$, but interpreting domain as a series of characters, not a regular expression.
-        // "webkit.org" will match "webkit.org" but not "bugs.webkit.org".
-        Vector<Term> prependBeginningOfLine;
-        prependBeginningOfLine.reserveInitialCapacity(domainLength + 1); // This is just no .* at the beginning.
-        for (unsigned i = 0; i < domainLength; i++) {
-            ASSERT(isASCII(domain[i]));
-            ASSERT(!isASCIIUpper(domain[i]));
-            prependBeginningOfLine.uncheckedAppend(Term(domain[i], true));
-        }
-        prependBeginningOfLine.uncheckedAppend(Term::EndOfLineAssertionTerm);
-        addPattern(actionId, prependBeginningOfLine);
-    }
-}
-
 void CombinedURLFilters::addPattern(uint64_t actionId, const Vector<Term>& pattern)
 {
     ASSERT_WITH_MESSAGE(!pattern.isEmpty(), "The parser should have excluded empty patterns before reaching CombinedURLFilters.");
@@ -197,14 +153,14 @@ void CombinedURLFilters::addPattern(uint64_t actionId, const Vector<Term>& patte
     PrefixTreeVertex* lastPrefixTree = m_prefixTreeRoot.get();
 
     for (const Term& term : pattern) {
-        size_t nextEntryIndex = WTF::notFound;
+        size_t nextEntryIndex = notFound;
         for (size_t i = 0; i < lastPrefixTree->edges.size(); ++i) {
             if (*lastPrefixTree->edges[i].term == term) {
                 nextEntryIndex = i;
                 break;
             }
         }
-        if (nextEntryIndex != WTF::notFound)
+        if (nextEntryIndex != notFound)
             lastPrefixTree = lastPrefixTree->edges[nextEntryIndex].child.get();
         else {
             lastPrefixTree->edges.append(PrefixTreeEdge({m_alphabet.interned(term), makeUnique<PrefixTreeVertex>()}));
@@ -214,7 +170,7 @@ void CombinedURLFilters::addPattern(uint64_t actionId, const Vector<Term>& patte
 
     auto addResult = m_actions.add(lastPrefixTree, ActionList());
     ActionList& actions = addResult.iterator->value;
-    if (actions.find(actionId) == WTF::notFound)
+    if (actions.find(actionId) == notFound)
         actions.append(actionId);
 }
 
@@ -444,7 +400,7 @@ static void generateNFAForSubtree(NFA& nfa, ImmutableCharNFANodeBuilder&& subtre
     clearReverseSuffixTree(reverseSuffixTreeRoots);
 }
 
-void CombinedURLFilters::processNFAs(size_t maxNFASize, const WTF::Function<void(NFA&&)>& handler)
+bool CombinedURLFilters::processNFAs(size_t maxNFASize, Function<bool(NFA&&)>&& handler)
 {
 #if CONTENT_EXTENSIONS_STATE_MACHINE_DEBUGGING
     print();
@@ -487,9 +443,9 @@ void CombinedURLFilters::processNFAs(size_t maxNFASize, const WTF::Function<void
             ASSERT(stack.last());
             generateNFAForSubtree(nfa, WTFMove(lastNode), *stack.last(), m_actions, maxNFASize);
         }
-        nfa.finalize();
 
-        handler(WTFMove(nfa));
+        if (!handler(WTFMove(nfa)))
+            return false;
 
         // Clean up any processed leaf nodes.
         while (true) {
@@ -503,6 +459,7 @@ void CombinedURLFilters::processNFAs(size_t maxNFASize, const WTF::Function<void
                 break; // Leave the empty root.
         }
     }
+    return true;
 }
 
 } // namespace ContentExtensions

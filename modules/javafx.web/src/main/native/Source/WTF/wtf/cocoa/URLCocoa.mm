@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004, 2008 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -20,16 +20,16 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #import "config.h"
 #import <wtf/URL.h>
 
-#import <wtf/ObjCRuntimeExtras.h>
 #import <wtf/URLParser.h>
 #import <wtf/cf/CFURLExtras.h>
 #import <wtf/cocoa/NSURLExtras.h>
+#import <wtf/cocoa/TypeCastsCocoa.h>
 #import <wtf/text/CString.h>
 
 @interface NSString (WTFNSURLExtras)
@@ -38,18 +38,9 @@
 
 namespace WTF {
 
-URL::URL(NSURL *url)
+URL::URL(NSURL *cocoaURL)
+    : URL(bridge_cast(cocoaURL))
 {
-    if (!url) {
-        invalidate();
-        return;
-    }
-
-    // FIXME: Why is it OK to ignore base URL here?
-    CString urlBytes;
-    WTF::getURLBytes((__bridge CFURLRef)url, urlBytes);
-    URLParser parser(urlBytes.data());
-    *this = parser.result();
 }
 
 URL::operator NSURL *() const
@@ -59,37 +50,28 @@ URL::operator NSURL *() const
     return createCFURL().bridgingAutorelease();
 }
 
-RetainPtr<CFURLRef> URL::createCFURL() const
+RetainPtr<CFURLRef> URL::emptyCFURL()
 {
-    if (isNull())
-        return nullptr;
-
-    if (isEmpty()) {
-        // We use the toll-free bridge between NSURL and CFURL to create a CFURLRef supporting both empty and null values.
-        return (__bridge CFURLRef)adoptNS([[NSURL alloc] initWithString:@""]).get();
-    }
-
-    RetainPtr<CFURLRef> cfURL;
-
-    // Fast path if the input data is 8-bit to avoid copying into a temporary buffer.
-    if (LIKELY(m_string.is8Bit()))
-        cfURL = WTF::createCFURLFromBuffer(reinterpret_cast<const char*>(m_string.characters8()), m_string.length());
-    else {
-        // Slower path.
-        WTF::URLCharBuffer buffer;
-        copyToBuffer(buffer);
-        cfURL = WTF::createCFURLFromBuffer(buffer.data(), buffer.size());
-    }
-
-    if (protocolIsInHTTPFamily() && !WTF::isCFURLSameOrigin(cfURL.get(), *this))
-        return nullptr;
-
-    return cfURL;
+    // We use the toll-free bridge to create an empty value that is distinct from null that no CFURL function can create.
+    // FIXME: When we originally wrote this, we thought that creating empty CF URLs was valuable; can we do without it now?
+    return bridge_cast(adoptNS([[NSURL alloc] initWithString:@""]));
 }
 
 bool URL::hostIsIPAddress(StringView host)
 {
     return [host.createNSStringWithoutCopying().get() _web_looksLikeIPAddress];
+}
+
+RetainPtr<id> makeNSArrayElement(const URL& vectorElement)
+{
+    return bridge_cast(vectorElement.createCFURL());
+}
+
+std::optional<URL> makeVectorElement(const URL*, id arrayElement)
+{
+    if (![arrayElement isKindOfClass:NSURL.class])
+        return std::nullopt;
+    return { { arrayElement } };
 }
 
 }

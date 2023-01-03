@@ -2,7 +2,7 @@
  * Copyright (C) 1999 Lars Knoll (knoll@kde.org)
  *           (C) 1999 Antti Koivisto (koivisto@kde.org)
  *           (C) 2001 Dirk Mueller ( mueller@kde.org )
- * Copyright (C) 2003-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2003-2020 Apple Inc. All rights reserved.
  * Copyright (C) 2006 Andrew Wellington (proton@wiretapped.net)
  *
  * This library is free software; you can redistribute it and/or
@@ -25,13 +25,11 @@
 #include "config.h"
 #include <wtf/text/StringImpl.h>
 
-#include <wtf/ProcessID.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/text/AtomString.h>
 #include <wtf/text/CString.h>
 #include <wtf/text/ExternalStringImpl.h>
 #include <wtf/text/StringBuffer.h>
-#include <wtf/text/StringHash.h>
 #include <wtf/text/StringView.h>
 #include <wtf/text/SymbolImpl.h>
 #include <wtf/text/SymbolRegistry.h>
@@ -102,6 +100,8 @@ void StringStats::printStats()
 }
 #endif
 
+DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(StringImpl);
+
 StringImpl::StaticStringImpl StringImpl::s_emptyAtomString("", StringImpl::StringAtom);
 
 StringImpl::~StringImpl()
@@ -130,7 +130,7 @@ StringImpl::~StringImpl()
     if (ownership == BufferOwned) {
         // We use m_data8, but since it is a union with m_data16 this works either way.
         ASSERT(m_data8);
-        fastFree(const_cast<LChar*>(m_data8));
+        StringImplMalloc::free(const_cast<LChar*>(m_data8));
         return;
     }
     if (ownership == BufferExternal) {
@@ -148,19 +148,24 @@ StringImpl::~StringImpl()
 void StringImpl::destroy(StringImpl* stringImpl)
 {
     stringImpl->~StringImpl();
-    fastFree(stringImpl);
+    StringImplMalloc::free(stringImpl);
 }
 
 Ref<StringImpl> StringImpl::createFromLiteral(const char* characters, unsigned length)
 {
     ASSERT_WITH_MESSAGE(length, "Use StringImpl::empty() to create an empty string");
-    ASSERT(charactersAreAllASCII<LChar>(reinterpret_cast<const LChar*>(characters), length));
+    ASSERT(charactersAreAllASCII(reinterpret_cast<const LChar*>(characters), length));
     return adoptRef(*new StringImpl(reinterpret_cast<const LChar*>(characters), length, ConstructWithoutCopying));
 }
 
 Ref<StringImpl> StringImpl::createFromLiteral(const char* characters)
 {
     return createFromLiteral(characters, strlen(characters));
+}
+
+Ref<StringImpl> StringImpl::createFromLiteral(ASCIILiteral literal)
+{
+    return createFromLiteral(literal.characters(), literal.length());
 }
 
 Ref<StringImpl> StringImpl::createWithoutCopying(const UChar* characters, unsigned length)
@@ -180,7 +185,7 @@ Ref<StringImpl> StringImpl::createWithoutCopying(const LChar* characters, unsign
 template<typename CharacterType> inline Ref<StringImpl> StringImpl::createUninitializedInternal(unsigned length, CharacterType*& data)
 {
     if (!length) {
-        data = 0;
+        data = nullptr;
         return *empty();
     }
     return createUninitializedInternalNonEmpty(length, data);
@@ -195,8 +200,7 @@ template<typename CharacterType> inline Ref<StringImpl> StringImpl::createUninit
     // heap allocation from this call.
     if (length > maxInternalLength<CharacterType>())
         CRASH();
-    StringImpl* string = static_cast<StringImpl*>(fastMalloc(allocationSize<CharacterType>(length)));
-
+    StringImpl* string = static_cast<StringImpl*>(StringImplMalloc::malloc(allocationSize<CharacterType>(length)));
     data = string->tailPointer<CharacterType>();
     return constructInternal<CharacterType>(*string, length);
 }
@@ -217,7 +221,7 @@ template<typename CharacterType> inline Expected<Ref<StringImpl>, UTF8Conversion
     ASSERT(originalString->bufferOwnership() == BufferInternal);
 
     if (!length) {
-        data = 0;
+        data = nullptr;
         return Ref<StringImpl>(*empty());
     }
 
@@ -226,8 +230,8 @@ template<typename CharacterType> inline Expected<Ref<StringImpl>, UTF8Conversion
         return makeUnexpected(UTF8ConversionError::OutOfMemory);
 
     originalString->~StringImpl();
-    StringImpl* string;
-    if (!tryFastRealloc(&originalString.leakRef(), allocationSize<CharacterType>(length)).getValue(string))
+    auto* string = static_cast<StringImpl*>(StringImplMalloc::tryRealloc(&originalString.leakRef(), allocationSize<CharacterType>(length)));
+    if (!string)
         return makeUnexpected(UTF8ConversionError::OutOfMemory);
 
     data = string->tailPointer<CharacterType>();
@@ -278,6 +282,26 @@ Ref<StringImpl> StringImpl::create(const UChar* characters, unsigned length)
 Ref<StringImpl> StringImpl::create(const LChar* characters, unsigned length)
 {
     return createInternal(characters, length);
+}
+
+Ref<StringImpl> StringImpl::createStaticStringImpl(const LChar* characters, unsigned length)
+{
+    if (!length)
+        return *empty();
+    Ref<StringImpl> result = createInternal(characters, length);
+    result->hash();
+    result->m_refCount |= s_refCountFlagIsStaticString;
+    return result;
+}
+
+Ref<StringImpl> StringImpl::createStaticStringImpl(const UChar* characters, unsigned length)
+{
+    if (!length)
+        return *empty();
+    Ref<StringImpl> result = create8BitIfPossible(characters, length);
+    result->hash();
+    result->m_refCount |= s_refCountFlagIsStaticString;
+    return result;
 }
 
 Ref<StringImpl> StringImpl::create8BitIfPossible(const UChar* characters, unsigned length)
@@ -349,7 +373,7 @@ Ref<StringImpl> StringImpl::convertToLowercaseWithoutLocale()
     if (is8Bit()) {
         for (unsigned i = 0; i < m_length; ++i) {
             LChar character = m_data8[i];
-            if (UNLIKELY((character & ~0x7F) || isASCIIUpper(character)))
+            if (UNLIKELY(!isASCII(character) || isASCIIUpper(character)))
                 return convertToLowercaseWithoutLocaleStartingAtFailingIndex8Bit(i);
         }
 
@@ -405,13 +429,14 @@ Ref<StringImpl> StringImpl::convertToLowercaseWithoutLocaleStartingAtFailingInde
     auto newImpl = createUninitializedInternalNonEmpty(m_length, data8);
 
     for (unsigned i = 0; i < failingIndex; ++i) {
-        ASSERT(!(m_data8[i] & ~0x7F) && !isASCIIUpper(m_data8[i]));
+        ASSERT(isASCII(m_data8[i]));
+        ASSERT(!isASCIIUpper(m_data8[i]));
         data8[i] = m_data8[i];
     }
 
     for (unsigned i = failingIndex; i < m_length; ++i) {
         LChar character = m_data8[i];
-        if (!(character & ~0x7F))
+        if (isASCII(character))
             data8[i] = toASCIILower(character);
         else {
             ASSERT(isLatin1(u_tolower(character)));
@@ -751,43 +776,6 @@ Ref<StringImpl> StringImpl::stripLeadingAndTrailingCharacters(CodeUnitMatchFunct
     return stripMatchedCharacters(predicate);
 }
 
-template<typename CharacterType> ALWAYS_INLINE Ref<StringImpl> StringImpl::removeCharacters(const CharacterType* characters, CodeUnitMatchFunction findMatch)
-{
-    auto* from = characters;
-    auto* fromEnd = from + m_length;
-
-    // Assume the common case will not remove any characters
-    while (from != fromEnd && !findMatch(*from))
-        ++from;
-    if (from == fromEnd)
-        return *this;
-
-    StringBuffer<CharacterType> data(m_length);
-    auto* to = data.characters();
-    unsigned outc = from - characters;
-
-    if (outc)
-        copyCharacters(to, characters, outc);
-
-    do {
-        while (from != fromEnd && findMatch(*from))
-            ++from;
-        while (from != fromEnd && !findMatch(*from))
-            to[outc++] = *from++;
-    } while (from != fromEnd);
-
-    data.shrink(outc);
-
-    return adopt(WTFMove(data));
-}
-
-Ref<StringImpl> StringImpl::removeCharacters(CodeUnitMatchFunction findMatch)
-{
-    if (is8Bit())
-        return removeCharacters(characters8(), findMatch);
-    return removeCharacters(characters16(), findMatch);
-}
-
 template<typename CharacterType, class UCharPredicate> inline Ref<StringImpl> StringImpl::simplifyMatchedCharactersToSpace(UCharPredicate predicate)
 {
     StringBuffer<CharacterType> data(m_length);
@@ -836,76 +824,6 @@ Ref<StringImpl> StringImpl::simplifyWhiteSpace(CodeUnitMatchFunction isWhiteSpac
     if (is8Bit())
         return StringImpl::simplifyMatchedCharactersToSpace<LChar>(isWhiteSpace);
     return StringImpl::simplifyMatchedCharactersToSpace<UChar>(isWhiteSpace);
-}
-
-int StringImpl::toIntStrict(bool* ok, int base)
-{
-    if (is8Bit())
-        return charactersToIntStrict(characters8(), m_length, ok, base);
-    return charactersToIntStrict(characters16(), m_length, ok, base);
-}
-
-unsigned StringImpl::toUIntStrict(bool* ok, int base)
-{
-    if (is8Bit())
-        return charactersToUIntStrict(characters8(), m_length, ok, base);
-    return charactersToUIntStrict(characters16(), m_length, ok, base);
-}
-
-int64_t StringImpl::toInt64Strict(bool* ok, int base)
-{
-    if (is8Bit())
-        return charactersToInt64Strict(characters8(), m_length, ok, base);
-    return charactersToInt64Strict(characters16(), m_length, ok, base);
-}
-
-uint64_t StringImpl::toUInt64Strict(bool* ok, int base)
-{
-    if (is8Bit())
-        return charactersToUInt64Strict(characters8(), m_length, ok, base);
-    return charactersToUInt64Strict(characters16(), m_length, ok, base);
-}
-
-intptr_t StringImpl::toIntPtrStrict(bool* ok, int base)
-{
-    if (is8Bit())
-        return charactersToIntPtrStrict(characters8(), m_length, ok, base);
-    return charactersToIntPtrStrict(characters16(), m_length, ok, base);
-}
-
-int StringImpl::toInt(bool* ok)
-{
-    if (is8Bit())
-        return charactersToInt(characters8(), m_length, ok);
-    return charactersToInt(characters16(), m_length, ok);
-}
-
-unsigned StringImpl::toUInt(bool* ok)
-{
-    if (is8Bit())
-        return charactersToUInt(characters8(), m_length, ok);
-    return charactersToUInt(characters16(), m_length, ok);
-}
-
-int64_t StringImpl::toInt64(bool* ok)
-{
-    if (is8Bit())
-        return charactersToInt64(characters8(), m_length, ok);
-    return charactersToInt64(characters16(), m_length, ok);
-}
-
-uint64_t StringImpl::toUInt64(bool* ok)
-{
-    if (is8Bit())
-        return charactersToUInt64(characters8(), m_length, ok);
-    return charactersToUInt64(characters16(), m_length, ok);
-}
-
-intptr_t StringImpl::toIntPtr(bool* ok)
-{
-    if (is8Bit())
-        return charactersToIntPtr(characters8(), m_length, ok);
-    return charactersToIntPtr(characters16(), m_length, ok);
 }
 
 double StringImpl::toDouble(bool* ok)
@@ -1171,7 +1089,7 @@ ALWAYS_INLINE static bool equalInner(const StringImpl& string, unsigned startOff
 
 bool StringImpl::startsWith(const StringImpl* string) const
 {
-    return string && ::WTF::startsWith(*this, *string);
+    return !string || ::WTF::startsWith(*this, *string);
 }
 
 bool StringImpl::startsWith(const StringImpl& string) const
@@ -1290,11 +1208,12 @@ Ref<StringImpl> StringImpl::replace(UChar target, UChar replacement)
     UChar* data;
     auto newImpl = createUninitializedInternalNonEmpty(m_length, data);
 
-    for (i = 0; i != m_length; ++i) {
-        UChar character = m_data16[i];
+    copyCharacters(data, m_data16, i);
+    for (unsigned j = i; j != m_length; ++j) {
+        UChar character = m_data16[j];
         if (character == target)
             character = replacement;
-        data[i] = character;
+        data[j] = character;
     }
     return newImpl;
 }
@@ -1697,8 +1616,8 @@ bool equalIgnoringASCIICaseNonNull(const StringImpl* a, const StringImpl* b)
 
 UCharDirection StringImpl::defaultWritingDirection(bool* hasStrongDirectionality)
 {
-    for (unsigned i = 0; i < m_length; ++i) {
-        auto charDirection = u_charDirection(is8Bit() ? m_data8[i] : m_data16[i]);
+    for (auto codePoint : StringView(this).codePoints()) {
+        auto charDirection = u_charDirection(codePoint);
         if (charDirection == U_LEFT_TO_RIGHT) {
             if (hasStrongDirectionality)
                 *hasStrongDirectionality = true;
@@ -1710,6 +1629,7 @@ UCharDirection StringImpl::defaultWritingDirection(bool* hasStrongDirectionality
             return U_RIGHT_TO_LEFT;
         }
     }
+
     if (hasStrongDirectionality)
         *hasStrongDirectionality = false;
     return U_LEFT_TO_RIGHT;

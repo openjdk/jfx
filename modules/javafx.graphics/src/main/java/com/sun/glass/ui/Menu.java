@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,7 +28,6 @@ import java.util.List;
 import java.util.ArrayList;
 import java.util.Collections;
 
-import com.sun.glass.ui.Pixels;
 import com.sun.glass.ui.delegate.MenuDelegate;
 import com.sun.glass.ui.delegate.MenuItemDelegate;
 
@@ -58,7 +57,7 @@ public final class Menu {
 
     private String title;
     private boolean enabled;
-    private final List<Object> items = new ArrayList<Object>();
+    private final List<Object> items = new ArrayList<>();
 
     private EventHandler eventHandler;
 

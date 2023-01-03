@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011 Apple Inc.  All rights reserved.
+ * Copyright (C) 2011-2019 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -23,45 +23,70 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef AnimationUtilities_h
-#define AnimationUtilities_h
+#pragma once
 
+#include "CompositeOperation.h"
 #include "IntPoint.h"
-#include "LayoutUnit.h"
+#include "LayoutPoint.h"
 
 namespace WebCore {
 
-inline int blend(int from, int to, double progress)
+struct BlendingContext {
+    double progress { 0 };
+    bool isDiscrete { false };
+    CompositeOperation compositeOperation { CompositeOperation::Replace };
+
+    BlendingContext(double progress = 0, bool isDiscrete = false, CompositeOperation compositeOperation = CompositeOperation::Replace)
+        : progress(progress)
+        , isDiscrete(isDiscrete)
+        , compositeOperation(compositeOperation)
+    {
+    }
+};
+
+inline int blend(int from, int to, const BlendingContext& context)
 {
-    return static_cast<int>(lround(static_cast<double>(from) + static_cast<double>(to - from) * progress));
+    if (context.compositeOperation == CompositeOperation::Replace)
+        return static_cast<int>(roundTowardsPositiveInfinity(from + (static_cast<double>(to) - from) * context.progress));
+    return static_cast<int>(roundTowardsPositiveInfinity(static_cast<double>(from) + static_cast<double>(from) + static_cast<double>(to - from) * context.progress));
 }
 
-inline unsigned blend(unsigned from, unsigned to, double progress)
+inline unsigned blend(unsigned from, unsigned to, const BlendingContext& context)
 {
-    return static_cast<unsigned>(lround(to > from ? static_cast<double>(from) + static_cast<double>(to - from) * progress : static_cast<double>(from) - static_cast<double>(from - to) * progress));
+    if (context.compositeOperation == CompositeOperation::Replace)
+        return static_cast<unsigned>(lround(from + (static_cast<double>(to) - from) * context.progress));
+    return static_cast<unsigned>(lround(from + from + (static_cast<double>(to) - from) * context.progress));
 }
 
-inline double blend(double from, double to, double progress)
+inline double blend(double from, double to, const BlendingContext& context)
 {
-    return from + (to - from) * progress;
+    if (context.compositeOperation == CompositeOperation::Replace)
+        return from + (to - from) * context.progress;
+    return from + from + (to - from) * context.progress;
 }
 
-inline float blend(float from, float to, double progress)
+inline float blend(float from, float to, const BlendingContext& context)
 {
-    return static_cast<float>(from + (to - from) * progress);
+    if (context.compositeOperation == CompositeOperation::Replace)
+        return static_cast<float>(from + (to - from) * context.progress);
+    return static_cast<float>(from + from + (to - from) * context.progress);
 }
 
-inline LayoutUnit blend(LayoutUnit from, LayoutUnit to, double progress)
+inline LayoutUnit blend(LayoutUnit from, LayoutUnit to, const BlendingContext& context)
 {
-    return LayoutUnit(from + (to - from) * progress);
+    return LayoutUnit(blend(from.toFloat(), to.toFloat(), context));
 }
 
-inline IntPoint blend(const IntPoint& from, const IntPoint& to, double progress)
+inline IntPoint blend(const IntPoint& from, const IntPoint& to, const BlendingContext& context)
 {
-    return IntPoint(blend(from.x(), to.x(), progress),
-                    blend(from.y(), to.y(), progress));
+    return IntPoint(blend(from.x(), to.x(), context),
+        blend(from.y(), to.y(), context));
+}
+
+inline LayoutPoint blend(const LayoutPoint& from, const LayoutPoint& to, const BlendingContext& context)
+{
+    return LayoutPoint(blend(from.x(), to.x(), context),
+        blend(from.y(), to.y(), context));
 }
 
 } // namespace WebCore
-
-#endif // AnimationUtilities_h

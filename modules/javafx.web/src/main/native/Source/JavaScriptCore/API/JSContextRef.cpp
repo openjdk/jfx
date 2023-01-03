@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006, 2007, 2013, 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,20 +28,18 @@
 #include "JSContextRefInternal.h"
 
 #include "APICast.h"
-#include "APIUtils.h"
 #include "CallFrame.h"
 #include "InitializeThreading.h"
 #include "JSAPIGlobalObject.h"
+#include "JSAPIWrapperObject.h"
 #include "JSCallbackObject.h"
 #include "JSClassRef.h"
-#include "JSObject.h"
-#include "JSCInlines.h"
-#include "SourceProvider.h"
+#include "JSObjectInlines.h"
 #include "StackVisitor.h"
 #include "StrongInlines.h"
+#include "StructureInlines.h"
 #include "Watchdog.h"
 #include <wtf/text/StringBuilder.h>
-#include <wtf/text/StringHash.h>
 
 #if ENABLE(REMOTE_INSPECTOR)
 #include "JSGlobalObjectDebuggable.h"
@@ -56,7 +54,7 @@
 #if OS(DARWIN)
 #include <mach-o/dyld.h>
 
-static const int32_t webkitFirstVersionWithConcurrentGlobalContexts = 0x2100500; // 528.5.0
+static constexpr int32_t webkitFirstVersionWithConcurrentGlobalContexts = 0x2100500; // 528.5.0
 #endif
 
 using namespace JSC;
@@ -68,8 +66,7 @@ using namespace JSC;
 
 JSContextGroupRef JSContextGroupCreate()
 {
-    WTF::initializeMainThread();
-    initializeThreading();
+    JSC::initialize();
     return toRef(&VM::createContextGroup().leakRef());
 }
 
@@ -87,10 +84,10 @@ void JSContextGroupRelease(JSContextGroupRef group)
     vm.deref();
 }
 
-static bool internalScriptTimeoutCallback(ExecState* exec, void* callbackPtr, void* callbackData)
+static bool internalScriptTimeoutCallback(JSGlobalObject* globalObject, void* callbackPtr, void* callbackData)
 {
     JSShouldTerminateCallback callback = reinterpret_cast<JSShouldTerminateCallback>(callbackPtr);
-    JSContextRef contextRef = toRef(exec);
+    JSContextRef contextRef = toRef(globalObject);
     ASSERT(callback);
     return callback(contextRef, callbackData);
 }
@@ -119,8 +116,7 @@ void JSContextGroupClearExecutionTimeLimit(JSContextGroupRef group)
 
 JSGlobalContextRef JSGlobalContextCreate(JSClassRef globalObjectClass)
 {
-    WTF::initializeMainThread();
-    initializeThreading();
+    JSC::initialize();
 
 #if OS(DARWIN)
     // If the application was linked before JSGlobalContextCreate was changed to use a unique VM,
@@ -130,13 +126,12 @@ JSGlobalContextRef JSGlobalContextCreate(JSClassRef globalObjectClass)
     }
 #endif // OS(DARWIN)
 
-    return JSGlobalContextCreateInGroup(0, globalObjectClass);
+    return JSGlobalContextCreateInGroup(nullptr, globalObjectClass);
 }
 
 JSGlobalContextRef JSGlobalContextCreateInGroup(JSContextGroupRef group, JSClassRef globalObjectClass)
 {
-    WTF::initializeMainThread();
-    initializeThreading();
+    JSC::initialize();
 
     Ref<VM> vm = group ? Ref<VM>(*toJS(group)) : VM::createContextGroup();
 
@@ -148,12 +143,11 @@ JSGlobalContextRef JSGlobalContextCreateInGroup(JSContextGroupRef group, JSClass
         if (JSRemoteInspectorGetInspectionEnabledByDefault())
             globalObject->setRemoteDebuggingEnabled(true);
 #endif
-        return JSGlobalContextRetain(toGlobalRef(globalObject->globalExec()));
+        return JSGlobalContextRetain(toGlobalRef(globalObject));
     }
 
-    JSGlobalObject* globalObject = JSCallbackObject<JSGlobalObject>::create(vm.get(), globalObjectClass, JSCallbackObject<JSGlobalObject>::createStructure(vm.get(), 0, jsNull()));
-    ExecState* exec = globalObject->globalExec();
-    JSValue prototype = globalObjectClass->prototype(exec);
+    JSGlobalObject* globalObject = JSCallbackObject<JSGlobalObject>::create(vm.get(), globalObjectClass, JSCallbackObject<JSGlobalObject>::createStructure(vm.get(), nullptr, jsNull()));
+    JSValue prototype = globalObjectClass->prototype(globalObject);
     if (!prototype)
         prototype = jsNull();
     globalObject->resetPrototype(vm.get(), prototype);
@@ -161,27 +155,27 @@ JSGlobalContextRef JSGlobalContextCreateInGroup(JSContextGroupRef group, JSClass
     if (JSRemoteInspectorGetInspectionEnabledByDefault())
         globalObject->setRemoteDebuggingEnabled(true);
 #endif
-    return JSGlobalContextRetain(toGlobalRef(exec));
+    return JSGlobalContextRetain(toGlobalRef(globalObject));
 }
 
 JSGlobalContextRef JSGlobalContextRetain(JSGlobalContextRef ctx)
 {
-    ExecState* exec = toJS(ctx);
-    VM& vm = exec->vm();
+    JSGlobalObject* globalObject = toJS(ctx);
+    VM& vm = globalObject->vm();
     JSLockHolder locker(vm);
 
-    gcProtect(vm.vmEntryGlobalObject(exec));
+    gcProtect(globalObject);
     vm.ref();
     return ctx;
 }
 
 void JSGlobalContextRelease(JSGlobalContextRef ctx)
 {
-    ExecState* exec = toJS(ctx);
-    VM& vm = exec->vm();
+    JSGlobalObject* globalObject = toJS(ctx);
+    VM& vm = globalObject->vm();
     JSLockHolder locker(vm);
 
-    bool protectCountIsZero = vm.heap.unprotect(vm.vmEntryGlobalObject(exec));
+    bool protectCountIsZero = vm.heap.unprotect(globalObject);
     if (protectCountIsZero)
         vm.heap.reportAbandonedObjectGraph();
     vm.deref();
@@ -191,51 +185,51 @@ JSObjectRef JSContextGetGlobalObject(JSContextRef ctx)
 {
     if (!ctx) {
         ASSERT_NOT_REACHED();
-        return 0;
+        return nullptr;
     }
-    ExecState* exec = toJS(ctx);
-    VM& vm = exec->vm();
+    JSGlobalObject* globalObject = toJS(ctx);
+    VM& vm = globalObject->vm();
     JSLockHolder locker(vm);
 
-    return toRef(jsCast<JSObject*>(exec->lexicalGlobalObject()->methodTable(vm)->toThis(exec->lexicalGlobalObject(), exec, NotStrictMode)));
+    return toRef(jsCast<JSObject*>(globalObject->methodTable(vm)->toThis(globalObject, globalObject, ECMAMode::sloppy())));
 }
 
 JSContextGroupRef JSContextGetGroup(JSContextRef ctx)
 {
     if (!ctx) {
         ASSERT_NOT_REACHED();
-        return 0;
+        return nullptr;
     }
-    ExecState* exec = toJS(ctx);
-    return toRef(&exec->vm());
+    JSGlobalObject* globalObject = toJS(ctx);
+    return toRef(&globalObject->vm());
 }
 
 JSGlobalContextRef JSContextGetGlobalContext(JSContextRef ctx)
 {
     if (!ctx) {
         ASSERT_NOT_REACHED();
-        return 0;
+        return nullptr;
     }
-    ExecState* exec = toJS(ctx);
-    JSLockHolder locker(exec);
+    JSGlobalObject* globalObject = toJS(ctx);
+    JSLockHolder locker(globalObject);
 
-    return toGlobalRef(exec->lexicalGlobalObject()->globalExec());
+    return toGlobalRef(globalObject);
 }
 
 JSStringRef JSGlobalContextCopyName(JSGlobalContextRef ctx)
 {
     if (!ctx) {
         ASSERT_NOT_REACHED();
-        return 0;
+        return nullptr;
     }
 
-    ExecState* exec = toJS(ctx);
-    VM& vm = exec->vm();
+    JSGlobalObject* globalObject = toJS(ctx);
+    VM& vm = globalObject->vm();
     JSLockHolder locker(vm);
 
-    String name = vm.vmEntryGlobalObject(exec)->name();
+    String name = globalObject->name();
     if (name.isNull())
-        return 0;
+        return nullptr;
 
     return OpaqueJSString::tryCreate(name).leakRef();
 }
@@ -247,11 +241,11 @@ void JSGlobalContextSetName(JSGlobalContextRef ctx, JSStringRef name)
         return;
     }
 
-    ExecState* exec = toJS(ctx);
-    VM& vm = exec->vm();
+    JSGlobalObject* globalObject = toJS(ctx);
+    VM& vm = globalObject->vm();
     JSLockHolder locker(vm);
 
-    vm.vmEntryGlobalObject(exec)->setName(name ? name->string() : String());
+    globalObject->setName(name ? name->string() : String());
 }
 
 void JSGlobalContextSetUnhandledRejectionCallback(JSGlobalContextRef ctx, JSObjectRef function, JSValueRef* exception)
@@ -261,17 +255,31 @@ void JSGlobalContextSetUnhandledRejectionCallback(JSGlobalContextRef ctx, JSObje
         return;
     }
 
-    ExecState* exec = toJS(ctx);
-    VM& vm = exec->vm();
+    JSGlobalObject* globalObject = toJS(ctx);
+    VM& vm = globalObject->vm();
     JSLockHolder locker(vm);
 
     JSObject* object = toJS(function);
-    if (!object->isFunction(vm)) {
-        *exception = toRef(createTypeError(exec));
+    if (!object->isCallable(vm)) {
+        *exception = toRef(createTypeError(globalObject));
         return;
     }
 
-    vm.vmEntryGlobalObject(exec)->setUnhandledRejectionCallback(vm, object);
+    globalObject->setUnhandledRejectionCallback(vm, object);
+}
+
+void JSGlobalContextSetEvalEnabled(JSGlobalContextRef ctx, bool enabled, JSStringRef message)
+{
+    if (!ctx) {
+        ASSERT_NOT_REACHED();
+        return;
+    }
+
+    JSGlobalObject* globalObject = toJS(ctx);
+    VM& vm = globalObject->vm();
+    JSLockHolder locker(vm);
+
+    globalObject->setEvalEnabled(enabled, message ? message->string() : String());
 }
 
 class BacktraceFunctor {
@@ -296,18 +304,12 @@ public:
             StringBuilder& builder = m_builder;
             if (!builder.isEmpty())
                 builder.append('\n');
-            builder.append('#');
-            builder.appendNumber(visitor->index());
-            builder.append(' ');
-            builder.append(visitor->functionName());
-            builder.appendLiteral("() at ");
-            builder.append(visitor->sourceURL());
+            builder.append('#', visitor->index(), ' ', visitor->functionName(), "() at ", visitor->sourceURL());
             if (visitor->hasLineAndColumnInfo()) {
-                builder.append(':');
                 unsigned lineNumber;
                 unsigned unusedColumn;
                 visitor->computeLineAndColumn(lineNumber, unusedColumn);
-                builder.appendNumber(lineNumber);
+                builder.append(':', lineNumber);
             }
 
             if (!visitor->callee().rawPtr())
@@ -328,17 +330,17 @@ JSStringRef JSContextCreateBacktrace(JSContextRef ctx, unsigned maxStackSize)
 {
     if (!ctx) {
         ASSERT_NOT_REACHED();
-        return 0;
+        return nullptr;
     }
-    ExecState* exec = toJS(ctx);
-    VM& vm = exec->vm();
+    JSGlobalObject* globalObject = toJS(ctx);
+    VM& vm = globalObject->vm();
     JSLockHolder lock(vm);
     StringBuilder builder;
     CallFrame* frame = vm.topCallFrame;
 
     ASSERT(maxStackSize);
     BacktraceFunctor functor(builder, maxStackSize);
-    frame->iterate(functor);
+    frame->iterate(vm, functor);
 
     return OpaqueJSString::tryCreate(builder.toString()).leakRef();
 }
@@ -350,11 +352,11 @@ bool JSGlobalContextGetRemoteInspectionEnabled(JSGlobalContextRef ctx)
         return false;
     }
 
-    ExecState* exec = toJS(ctx);
-    VM& vm = exec->vm();
+    JSGlobalObject* globalObject = toJS(ctx);
+    VM& vm = globalObject->vm();
     JSLockHolder lock(vm);
 
-    return vm.vmEntryGlobalObject(exec)->remoteDebuggingEnabled();
+    return globalObject->remoteDebuggingEnabled();
 }
 
 void JSGlobalContextSetRemoteInspectionEnabled(JSGlobalContextRef ctx, bool enabled)
@@ -364,11 +366,11 @@ void JSGlobalContextSetRemoteInspectionEnabled(JSGlobalContextRef ctx, bool enab
         return;
     }
 
-    ExecState* exec = toJS(ctx);
-    VM& vm = exec->vm();
+    JSGlobalObject* globalObject = toJS(ctx);
+    VM& vm = globalObject->vm();
     JSLockHolder lock(vm);
 
-    vm.vmEntryGlobalObject(exec)->setRemoteDebuggingEnabled(enabled);
+    globalObject->setRemoteDebuggingEnabled(enabled);
 }
 
 bool JSGlobalContextGetIncludesNativeCallStackWhenReportingExceptions(JSGlobalContextRef ctx)
@@ -379,11 +381,10 @@ bool JSGlobalContextGetIncludesNativeCallStackWhenReportingExceptions(JSGlobalCo
         return false;
     }
 
-    ExecState* exec = toJS(ctx);
-    VM& vm = exec->vm();
+    JSGlobalObject* globalObject = toJS(ctx);
+    VM& vm = globalObject->vm();
     JSLockHolder lock(vm);
 
-    JSGlobalObject* globalObject = vm.vmEntryGlobalObject(exec);
     return globalObject->inspectorController().includesNativeCallStackWhenReportingExceptions();
 #else
     UNUSED_PARAM(ctx);
@@ -399,11 +400,10 @@ void JSGlobalContextSetIncludesNativeCallStackWhenReportingExceptions(JSGlobalCo
         return;
     }
 
-    ExecState* exec = toJS(ctx);
-    VM& vm = exec->vm();
+    JSGlobalObject* globalObject = toJS(ctx);
+    VM& vm = globalObject->vm();
     JSLockHolder lock(vm);
 
-    JSGlobalObject* globalObject = vm.vmEntryGlobalObject(exec);
     globalObject->inspectorController().setIncludesNativeCallStackWhenReportingExceptions(includesNativeCallStack);
 #else
     UNUSED_PARAM(ctx);
@@ -420,11 +420,11 @@ CFRunLoopRef JSGlobalContextGetDebuggerRunLoop(JSGlobalContextRef ctx)
         return nullptr;
     }
 
-    ExecState* exec = toJS(ctx);
-    VM& vm = exec->vm();
+    JSGlobalObject* globalObject = toJS(ctx);
+    VM& vm = globalObject->vm();
     JSLockHolder lock(vm);
 
-    return vm.vmEntryGlobalObject(exec)->inspectorDebuggable().targetRunLoop();
+    return globalObject->inspectorDebuggable().targetRunLoop();
 #else
     UNUSED_PARAM(ctx);
     return nullptr;
@@ -439,11 +439,11 @@ void JSGlobalContextSetDebuggerRunLoop(JSGlobalContextRef ctx, CFRunLoopRef runL
         return;
     }
 
-    ExecState* exec = toJS(ctx);
-    VM& vm = exec->vm();
+    JSGlobalObject* globalObject = toJS(ctx);
+    VM& vm = globalObject->vm();
     JSLockHolder lock(vm);
 
-    vm.vmEntryGlobalObject(exec)->inspectorDebuggable().setTargetRunLoop(runLoop);
+    globalObject->inspectorDebuggable().setTargetRunLoop(runLoop);
 #else
     UNUSED_PARAM(ctx);
     UNUSED_PARAM(runLoop);
@@ -459,10 +459,10 @@ Inspector::AugmentableInspectorController* JSGlobalContextGetAugmentableInspecto
         return nullptr;
     }
 
-    ExecState* exec = toJS(ctx);
-    VM& vm = exec->vm();
+    JSGlobalObject* globalObject = toJS(ctx);
+    VM& vm = globalObject->vm();
     JSLockHolder lock(vm);
 
-    return &vm.vmEntryGlobalObject(exec)->inspectorController();
+    return &globalObject->inspectorController();
 }
 #endif

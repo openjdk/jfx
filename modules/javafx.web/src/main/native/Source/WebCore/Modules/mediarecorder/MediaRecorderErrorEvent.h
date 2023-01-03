@@ -24,7 +24,7 @@
 
 #pragma once
 
-#if ENABLE(MEDIA_STREAM)
+#if ENABLE(MEDIA_RECORDER)
 #include "Event.h"
 
 namespace WebCore {
@@ -32,6 +32,7 @@ namespace WebCore {
 class DOMException;
 
 class MediaRecorderErrorEvent final : public Event {
+    WTF_MAKE_ISO_ALLOCATED(MediaRecorderErrorEvent);
 public:
     struct Init : EventInit {
         RefPtr<DOMException> error;
@@ -54,4 +55,4 @@ private:
 
 } // namespace WebCore
 
-#endif // ENABLE(MEDIA_STREAM)
+#endif // ENABLE(MEDIA_RECORDER)

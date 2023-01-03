@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2016 Canon Inc.
+ * Copyright (C) 2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted, provided that the following conditions
@@ -47,21 +48,23 @@ static inline bool isNullBodyStatus(int status)
     return status == 101 || status == 204 || status == 205 || status == 304;
 }
 
-Ref<FetchResponse> FetchResponse::create(ScriptExecutionContext& context, Optional<FetchBody>&& body, FetchHeaders::Guard guard, ResourceResponse&& response)
+Ref<FetchResponse> FetchResponse::create(ScriptExecutionContext* context, std::optional<FetchBody>&& body, FetchHeaders::Guard guard, ResourceResponse&& response)
 {
     bool isSynthetic = response.type() == ResourceResponse::Type::Default || response.type() == ResourceResponse::Type::Error;
     bool isOpaque = response.tainting() == ResourceResponse::Tainting::Opaque;
     auto headers = isOpaque ? FetchHeaders::create(guard) : FetchHeaders::create(guard, HTTPHeaderMap { response.httpHeaderFields() });
 
     auto fetchResponse = adoptRef(*new FetchResponse(context, WTFMove(body), WTFMove(headers), WTFMove(response)));
+    fetchResponse->suspendIfNeeded();
+    fetchResponse->updateContentType();
     if (!isSynthetic)
-        fetchResponse->m_filteredResponse = ResourceResponseBase::filter(fetchResponse->m_internalResponse);
+        fetchResponse->m_filteredResponse = ResourceResponseBase::filter(fetchResponse->m_internalResponse, ResourceResponse::PerformExposeAllHeadersCheck::Yes);
     if (isOpaque)
         fetchResponse->setBodyAsOpaque();
     return fetchResponse;
 }
 
-ExceptionOr<Ref<FetchResponse>> FetchResponse::create(ScriptExecutionContext& context, Optional<FetchBody::Init>&& body, Init&& init)
+ExceptionOr<Ref<FetchResponse>> FetchResponse::create(ScriptExecutionContext& context, std::optional<FetchBody::Init>&& body, Init&& init)
 {
     // 1. If init’s status member is not in the range 200 to 599, inclusive, then throw a RangeError.
     if (init.status < 200  || init.status > 599)
@@ -90,7 +93,7 @@ ExceptionOr<Ref<FetchResponse>> FetchResponse::create(ScriptExecutionContext& co
             return result.releaseException();
     }
 
-    Optional<FetchBody> extractedBody;
+    std::optional<FetchBody> extractedBody;
 
     // 8. If body is non-null, run these substeps:
     if (body) {
@@ -124,7 +127,8 @@ ExceptionOr<Ref<FetchResponse>> FetchResponse::create(ScriptExecutionContext& co
     // FIXME: Implement.
 
     // 12. Return r.
-    auto r = adoptRef(*new FetchResponse(context, WTFMove(extractedBody), WTFMove(headers), { }));
+    auto r = adoptRef(*new FetchResponse(&context, WTFMove(extractedBody), WTFMove(headers), { }));
+    r->suspendIfNeeded();
 
     r->m_contentType = contentType;
     auto mimeType = extractMIMETypeFromMediaType(contentType);
@@ -139,7 +143,8 @@ ExceptionOr<Ref<FetchResponse>> FetchResponse::create(ScriptExecutionContext& co
 
 Ref<FetchResponse> FetchResponse::error(ScriptExecutionContext& context)
 {
-    auto response = adoptRef(*new FetchResponse(context, { }, FetchHeaders::create(FetchHeaders::Guard::Immutable), { }));
+    auto response = adoptRef(*new FetchResponse(&context, { }, FetchHeaders::create(FetchHeaders::Guard::Immutable), { }));
+    response->suspendIfNeeded();
     response->m_internalResponse.setType(Type::Error);
     return response;
 }
@@ -150,39 +155,47 @@ ExceptionOr<Ref<FetchResponse>> FetchResponse::redirect(ScriptExecutionContext& 
     URL requestURL = context.completeURL(url);
     if (!requestURL.isValid())
         return Exception { TypeError, makeString("Redirection URL '", requestURL.string(), "' is invalid") };
-    if (!requestURL.user().isEmpty() || !requestURL.pass().isEmpty())
+    if (requestURL.hasCredentials())
         return Exception { TypeError, "Redirection URL contains credentials"_s };
     if (!ResourceResponse::isRedirectionStatusCode(status))
         return Exception { RangeError, makeString("Status code ", status, "is not a redirection status code") };
-    auto redirectResponse = adoptRef(*new FetchResponse(context, { }, FetchHeaders::create(FetchHeaders::Guard::Immutable), { }));
+    auto redirectResponse = adoptRef(*new FetchResponse(&context, { }, FetchHeaders::create(FetchHeaders::Guard::Immutable), { }));
+    redirectResponse->suspendIfNeeded();
     redirectResponse->m_internalResponse.setHTTPStatusCode(status);
     redirectResponse->m_internalResponse.setHTTPHeaderField(HTTPHeaderName::Location, requestURL.string());
     redirectResponse->m_headers->fastSet(HTTPHeaderName::Location, requestURL.string());
     return redirectResponse;
 }
 
-FetchResponse::FetchResponse(ScriptExecutionContext& context, Optional<FetchBody>&& body, Ref<FetchHeaders>&& headers, ResourceResponse&& response)
+FetchResponse::FetchResponse(ScriptExecutionContext* context, std::optional<FetchBody>&& body, Ref<FetchHeaders>&& headers, ResourceResponse&& response)
     : FetchBodyOwner(context, WTFMove(body), WTFMove(headers))
     , m_internalResponse(WTFMove(response))
 {
 }
 
-ExceptionOr<Ref<FetchResponse>> FetchResponse::clone(ScriptExecutionContext& context)
+ExceptionOr<Ref<FetchResponse>> FetchResponse::clone()
 {
     if (isDisturbedOrLocked())
         return Exception { TypeError, "Body is disturbed or locked"_s };
 
-    ASSERT(scriptExecutionContext());
-
     // If loading, let's create a stream so that data is teed on both clones.
-    if (isLoading() && !m_readableStreamSource)
-        createReadableStream(*context.execState());
+    if (isLoading() && !m_readableStreamSource) {
+        auto* context = scriptExecutionContext();
+
+        auto* globalObject = context ? context->globalObject() : nullptr;
+        if (!globalObject)
+            return Exception { InvalidStateError, "Context is stopped"_s };
+
+        auto voidOrException = createReadableStream(*globalObject);
+        if (UNLIKELY(voidOrException.hasException()))
+            return voidOrException.releaseException();
+    }
 
     // Synthetic responses do not store headers in m_internalResponse.
     if (m_internalResponse.type() == ResourceResponse::Type::Default)
         m_internalResponse.setHTTPHeaderFields(HTTPHeaderMap { headers().internalHeaders() });
 
-    auto clone = FetchResponse::create(context, WTF::nullopt, headers().guard(), ResourceResponse { m_internalResponse });
+    auto clone = FetchResponse::create(scriptExecutionContext(), std::nullopt, headers().guard(), ResourceResponse { m_internalResponse });
     clone->cloneBody(*this);
     clone->m_opaqueLoadIdentifier = m_opaqueLoadIdentifier;
     clone->m_bodySizeWithPadding = m_bodySizeWithPadding;
@@ -192,7 +205,7 @@ ExceptionOr<Ref<FetchResponse>> FetchResponse::clone(ScriptExecutionContext& con
 void FetchResponse::addAbortSteps(Ref<AbortSignal>&& signal)
 {
     m_abortSignal = WTFMove(signal);
-    m_abortSignal->addAlgorithm([this, weakThis = makeWeakPtr(this)] {
+    m_abortSignal->addAlgorithm([this, weakThis = WeakPtr { *this }] {
         // FIXME: Cancel request body if it is a stream.
         if (!weakThis)
             return;
@@ -222,29 +235,24 @@ void FetchResponse::addAbortSteps(Ref<AbortSignal>&& signal)
     });
 }
 
-void FetchResponse::fetch(ScriptExecutionContext& context, FetchRequest& request, NotificationCallback&& responseCallback)
+void FetchResponse::fetch(ScriptExecutionContext& context, FetchRequest& request, NotificationCallback&& responseCallback, const String& initiator)
 {
-    if (request.signal().aborted()) {
-        responseCallback(Exception { AbortError, "Request signal is aborted"_s });
-        // FIXME: Cancel request body if it is a stream.
-        return;
-    }
-
-    if (request.hasReadableStreamBody()) {
+    if (request.isReadableStreamBody()) {
         responseCallback(Exception { NotSupportedError, "ReadableStream uploading is not supported"_s });
         return;
     }
 
-    InspectorInstrumentation::willFetch(context, request.url());
+    InspectorInstrumentation::willFetch(context, request.url().string());
 
-    auto response = adoptRef(*new FetchResponse(context, FetchBody { }, FetchHeaders::create(FetchHeaders::Guard::Immutable), { }));
+    auto response = adoptRef(*new FetchResponse(&context, FetchBody { }, FetchHeaders::create(FetchHeaders::Guard::Immutable), { }));
+    response->suspendIfNeeded();
 
     response->body().consumer().setAsLoading();
 
     response->addAbortSteps(request.signal());
 
     response->m_bodyLoader = makeUnique<BodyLoader>(response.get(), WTFMove(responseCallback));
-    if (!response->m_bodyLoader->start(context, request))
+    if (!response->m_bodyLoader->start(context, request, initiator))
         response->m_bodyLoader = nullptr;
 }
 
@@ -265,19 +273,18 @@ const ResourceResponse& FetchResponse::filteredResponse() const
     return m_internalResponse;
 }
 
-void FetchResponse::BodyLoader::didSucceed()
+void FetchResponse::BodyLoader::didSucceed(const NetworkLoadMetrics& metrics)
 {
     ASSERT(m_response.hasPendingActivity());
-    m_response.m_body->loadingSucceeded();
-
-#if ENABLE(STREAMS_API)
+    m_response.m_body->loadingSucceeded(m_response.contentType());
+    m_response.setNetworkLoadMetrics(metrics);
     if (m_response.m_readableStreamSource) {
         if (m_response.body().consumer().hasData())
             m_response.m_readableStreamSource->enqueue(m_response.body().consumer().takeAsArrayBuffer());
 
         m_response.closeStream();
     }
-#endif
+
     if (auto consumeDataCallback = WTFMove(m_consumeDataCallback))
         consumeDataCallback(nullptr);
 
@@ -294,18 +301,19 @@ void FetchResponse::BodyLoader::didFail(const ResourceError& error)
     m_response.setLoadingError(ResourceError { error });
 
     if (auto responseCallback = WTFMove(m_responseCallback))
-        responseCallback(Exception { TypeError, error.localizedDescription() });
+        responseCallback(Exception { TypeError, error.sanitizedDescription() });
 
     if (auto consumeDataCallback = WTFMove(m_consumeDataCallback))
-        consumeDataCallback(Exception { TypeError, error.localizedDescription() });
+        consumeDataCallback(Exception { TypeError, error.sanitizedDescription() });
 
-#if ENABLE(STREAMS_API)
     if (m_response.m_readableStreamSource) {
         if (!m_response.m_readableStreamSource->isCancelling())
             m_response.m_readableStreamSource->error(*m_response.loadingException());
         m_response.m_readableStreamSource = nullptr;
     }
-#endif
+
+    if (m_response.m_body)
+        m_response.m_body->loadingFailed(*m_response.loadingException());
 
     // Check whether didFail is called as part of FetchLoader::start.
     if (m_loader && m_loader->isStarted()) {
@@ -328,7 +336,8 @@ FetchResponse::BodyLoader::~BodyLoader()
 static uint64_t nextOpaqueLoadIdentifier { 0 };
 void FetchResponse::BodyLoader::didReceiveResponse(const ResourceResponse& resourceResponse)
 {
-    m_response.m_filteredResponse = ResourceResponseBase::filter(resourceResponse);
+    auto performCheck = m_credentials == FetchOptions::Credentials::Include ? ResourceResponse::PerformExposeAllHeadersCheck::No : ResourceResponse::PerformExposeAllHeadersCheck::Yes;
+    m_response.m_filteredResponse = ResourceResponseBase::filter(resourceResponse, performCheck);
     m_response.m_internalResponse = resourceResponse;
     m_response.m_internalResponse.setType(m_response.m_filteredResponse->type());
     if (resourceResponse.tainting() == ResourceResponse::Tainting::Opaque) {
@@ -340,28 +349,23 @@ void FetchResponse::BodyLoader::didReceiveResponse(const ResourceResponse& resou
     m_response.updateContentType();
 
     if (auto responseCallback = WTFMove(m_responseCallback))
-        responseCallback(m_response);
+        responseCallback(Ref { m_response });
 }
 
-void FetchResponse::BodyLoader::didReceiveData(const char* data, size_t size)
+void FetchResponse::BodyLoader::didReceiveData(const SharedBuffer& buffer)
 {
-#if ENABLE(STREAMS_API)
     ASSERT(m_response.m_readableStreamSource || m_consumeDataCallback);
-#else
-    ASSERT(m_consumeDataCallback);
-#endif
 
     if (m_consumeDataCallback) {
-        ReadableStreamChunk chunk { reinterpret_cast<const uint8_t*>(data), size };
+        Span chunk { buffer.data(), buffer.size() };
         m_consumeDataCallback(&chunk);
         return;
     }
 
-#if ENABLE(STREAMS_API)
     auto& source = *m_response.m_readableStreamSource;
 
     if (!source.isPulling()) {
-        m_response.body().consumer().append(data, size);
+        m_response.body().consumer().append(buffer);
         return;
     }
 
@@ -369,21 +373,18 @@ void FetchResponse::BodyLoader::didReceiveData(const char* data, size_t size)
         stop();
         return;
     }
-    if (!source.enqueue(ArrayBuffer::tryCreate(data, size))) {
+    if (!source.enqueue(buffer.tryCreateArrayBuffer())) {
         stop();
         return;
     }
     source.resolvePullPromise();
-#else
-    UNUSED_PARAM(data);
-    UNUSED_PARAM(size);
-#endif
 }
 
-bool FetchResponse::BodyLoader::start(ScriptExecutionContext& context, const FetchRequest& request)
+bool FetchResponse::BodyLoader::start(ScriptExecutionContext& context, const FetchRequest& request, const String& initiator)
 {
+    m_credentials = request.fetchOptions().credentials;
     m_loader = makeUnique<FetchLoader>(*this, &m_response.m_body->consumer());
-    m_loader->start(context, request);
+    m_loader->start(context, request, initiator);
     return m_loader->isStarted();
 }
 
@@ -402,7 +403,8 @@ void FetchResponse::BodyLoader::consumeDataByChunk(ConsumeDataByChunkCallback&& 
     if (!data)
         return;
 
-    ReadableStreamChunk chunk { reinterpret_cast<const uint8_t*>(data->data()), data->size() };
+    auto contiguousBuffer = data->makeContiguous();
+    Span chunk { contiguousBuffer->data(), data->size() };
     m_consumeDataCallback(&chunk);
 }
 
@@ -453,10 +455,9 @@ void FetchResponse::setBodyData(ResponseData&& data, uint64_t bodySizeWithPaddin
     );
 }
 
-#if ENABLE(STREAMS_API)
 void FetchResponse::consumeChunk(Ref<JSC::Uint8Array>&& chunk)
 {
-    body().consumer().append(chunk->data(), chunk->byteLength());
+    body().consumer().append(SharedBuffer::create(chunk->data(), chunk->byteLength()));
 }
 
 void FetchResponse::consumeBodyAsStream()
@@ -506,7 +507,7 @@ void FetchResponse::feedStream()
     closeStream();
 }
 
-RefPtr<SharedBuffer> FetchResponse::BodyLoader::startStreaming()
+RefPtr<FragmentedSharedBuffer> FetchResponse::BodyLoader::startStreaming()
 {
     ASSERT(m_loader);
     return m_loader->startStreaming();
@@ -517,8 +518,6 @@ void FetchResponse::cancel()
     m_isDisturbed = true;
     stop();
 }
-
-#endif
 
 void FetchResponse::stop()
 {
@@ -533,12 +532,6 @@ const char* FetchResponse::activeDOMObjectName() const
     return "Response";
 }
 
-bool FetchResponse::canSuspendForDocumentSuspension() const
-{
-    // FIXME: We can probably do the same strategy as XHR.
-    return !isActive();
-}
-
 ResourceResponse FetchResponse::resourceResponse() const
 {
     auto response = m_internalResponse;
@@ -550,6 +543,25 @@ ResourceResponse FetchResponse::resourceResponse() const
     }
 
     return response;
+}
+
+bool FetchResponse::isCORSSameOrigin() const
+{
+    // https://html.spec.whatwg.org/#cors-same-origin
+    // A response whose type is "basic", "cors", or "default" is CORS-same-origin.
+    switch (type()) {
+    case ResourceResponse::Type::Basic:
+    case ResourceResponse::Type::Cors:
+    case ResourceResponse::Type::Default:
+        return true;
+    default:
+        return false;
+    }
+}
+
+bool FetchResponse::hasWasmMIMEType() const
+{
+    return equalLettersIgnoringASCIICase(m_headers->fastGet(HTTPHeaderName::ContentType), "application/wasm");
 }
 
 } // namespace WebCore

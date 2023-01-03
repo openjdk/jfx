@@ -5,21 +5,27 @@ list(APPEND WebCore_PRIVATE_INCLUDE_DIRECTORIES
 
 list(APPEND WebCore_SOURCES
     platform/graphics/nicosia/NicosiaAnimation.cpp
+
+    platform/graphics/texmap/ANGLEContext.cpp
     platform/graphics/texmap/BitmapTexture.cpp
     platform/graphics/texmap/BitmapTexturePool.cpp
-    platform/graphics/texmap/GraphicsContext3DTextureMapper.cpp
+    platform/graphics/texmap/GraphicsContextGLTextureMapper.cpp
+    platform/graphics/texmap/GraphicsContextGLTextureMapperANGLE.cpp
     platform/graphics/texmap/TextureMapper.cpp
     platform/graphics/texmap/TextureMapperBackingStore.cpp
     platform/graphics/texmap/TextureMapperFPSCounter.cpp
-    platform/graphics/texmap/TextureMapperGC3DPlatformLayer.cpp
+    platform/graphics/texmap/TextureMapperGCGLPlatformLayer.cpp
     platform/graphics/texmap/TextureMapperLayer.cpp
     platform/graphics/texmap/TextureMapperTile.cpp
 )
 
 list(APPEND WebCore_PRIVATE_FRAMEWORK_HEADERS
     platform/graphics/nicosia/NicosiaAnimation.h
+
+    platform/graphics/texmap/ANGLEContext.h
     platform/graphics/texmap/BitmapTexture.h
     platform/graphics/texmap/ClipStack.h
+    platform/graphics/texmap/GraphicsContextGLTextureMapper.h
     platform/graphics/texmap/GraphicsLayerTextureMapper.h
     platform/graphics/texmap/TextureMapper.h
     platform/graphics/texmap/TextureMapperBackingStore.h
@@ -30,7 +36,9 @@ list(APPEND WebCore_PRIVATE_FRAMEWORK_HEADERS
     platform/graphics/texmap/TextureMapperLayer.h
     platform/graphics/texmap/TextureMapperPlatformLayer.h
     platform/graphics/texmap/TextureMapperPlatformLayerProxy.h
+    platform/graphics/texmap/TextureMapperPlatformLayerProxyGL.h
     platform/graphics/texmap/TextureMapperPlatformLayerProxyProvider.h
+    platform/graphics/texmap/TextureMapperSolidColorLayer.h
     platform/graphics/texmap/TextureMapperTile.h
     platform/graphics/texmap/TextureMapperTiledBackingStore.h
 )
@@ -52,7 +60,9 @@ if (USE_COORDINATED_GRAPHICS)
     )
     list(APPEND WebCore_SOURCES
         platform/graphics/texmap/TextureMapperPlatformLayerBuffer.cpp
+        platform/graphics/texmap/TextureMapperPlatformLayerDmabuf.cpp
         platform/graphics/texmap/TextureMapperPlatformLayerProxy.cpp
+        platform/graphics/texmap/TextureMapperPlatformLayerProxyGL.cpp
 
         platform/graphics/texmap/coordinated/CoordinatedBackingStore.cpp
         platform/graphics/texmap/coordinated/CoordinatedGraphicsLayer.cpp
@@ -76,6 +86,7 @@ if (USE_COORDINATED_GRAPHICS)
     )
     list(APPEND WebCore_SOURCES
         platform/graphics/nicosia/NicosiaBuffer.cpp
+        platform/graphics/nicosia/NicosiaImageBufferPipe.cpp
         platform/graphics/nicosia/NicosiaPaintingContext.cpp
         platform/graphics/nicosia/NicosiaPaintingEngine.cpp
         platform/graphics/nicosia/NicosiaPaintingEngineBasic.cpp
@@ -90,12 +101,12 @@ if (USE_COORDINATED_GRAPHICS)
         platform/graphics/nicosia/texmap/NicosiaBackingStoreTextureMapperImpl.cpp
         platform/graphics/nicosia/texmap/NicosiaCompositionLayerTextureMapperImpl.cpp
         platform/graphics/nicosia/texmap/NicosiaContentLayerTextureMapperImpl.cpp
-        platform/graphics/nicosia/texmap/NicosiaGC3DLayer.cpp
+        platform/graphics/nicosia/texmap/NicosiaGCGLLayer.cpp
         platform/graphics/nicosia/texmap/NicosiaImageBackingTextureMapperImpl.cpp
     )
     list(APPEND WebCore_PRIVATE_FRAMEWORK_HEADERS
         page/scrolling/nicosia/ScrollingTreeFixedNode.h
-        page/scrolling/nicosia/ScrollingTreeStickyNode.h
+        page/scrolling/nicosia/ScrollingTreeStickyNodeNicosia.h
 
         platform/graphics/nicosia/NicosiaAnimatedBackingStoreClient.h
         platform/graphics/nicosia/NicosiaBuffer.h
@@ -113,5 +124,20 @@ else ()
     list(APPEND WebCore_SOURCES
         platform/graphics/texmap/GraphicsLayerTextureMapper.cpp
         platform/graphics/texmap/TextureMapperTiledBackingStore.cpp
+    )
+endif ()
+
+if (USE_ANGLE_WEBGL)
+    list(APPEND WebCore_SOURCES
+        platform/graphics/nicosia/texmap/NicosiaGCGLANGLELayer.cpp
+    )
+endif ()
+
+if (USE_GRAPHICS_LAYER_WC)
+    list(APPEND WebCore_SOURCES
+        platform/graphics/texmap/TextureMapperSparseBackingStore.cpp
+    )
+    list(APPEND WebCore_PRIVATE_FRAMEWORK_HEADERS
+        platform/graphics/texmap/TextureMapperSparseBackingStore.h
     )
 endif ()

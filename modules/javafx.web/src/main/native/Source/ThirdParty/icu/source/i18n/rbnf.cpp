@@ -99,8 +99,8 @@ public:
         return NULL;
     }
 
-    virtual UBool operator==(const LocalizationInfo* rhs) const;
-    inline  UBool operator!=(const LocalizationInfo* rhs) const { return !operator==(rhs); }
+    virtual bool operator==(const LocalizationInfo* rhs) const;
+    inline  bool operator!=(const LocalizationInfo* rhs) const { return !operator==(rhs); }
 
     virtual int32_t getNumberOfRuleSets(void) const = 0;
     virtual const UChar* getRuleSetName(int32_t index) const = 0;
@@ -131,18 +131,18 @@ streq(const UChar* lhs, const UChar* rhs) {
     return FALSE;
 }
 
-UBool
+bool
 LocalizationInfo::operator==(const LocalizationInfo* rhs) const {
     if (rhs) {
         if (this == rhs) {
-            return TRUE;
+            return true;
         }
 
         int32_t rsc = getNumberOfRuleSets();
         if (rsc == rhs->getNumberOfRuleSets()) {
             for (int i = 0; i < rsc; ++i) {
                 if (!streq(getRuleSetName(i), rhs->getRuleSetName(i))) {
-                    return FALSE;
+                    return false;
                 }
             }
             int32_t dlc = getNumberOfDisplayLocales();
@@ -152,19 +152,19 @@ LocalizationInfo::operator==(const LocalizationInfo* rhs) const {
                     int32_t ix = rhs->indexForLocale(locale);
                     // if no locale, ix is -1, getLocaleName returns null, so streq returns false
                     if (!streq(locale, rhs->getLocaleName(ix))) {
-                        return FALSE;
+                        return false;
                     }
                     for (int j = 0; j < rsc; ++j) {
                         if (!streq(getDisplayName(i, j), rhs->getDisplayName(ix, j))) {
-                            return FALSE;
+                            return false;
                         }
                     }
                 }
-                return TRUE;
+                return true;
             }
         }
     }
-    return FALSE;
+    return false;
 }
 
 int32_t
@@ -271,11 +271,11 @@ public:
     static StringLocalizationInfo* create(const UnicodeString& info, UParseError& perror, UErrorCode& status);
 
     virtual ~StringLocalizationInfo();
-    virtual int32_t getNumberOfRuleSets(void) const { return numRuleSets; }
-    virtual const UChar* getRuleSetName(int32_t index) const;
-    virtual int32_t getNumberOfDisplayLocales(void) const { return numLocales; }
-    virtual const UChar* getLocaleName(int32_t index) const;
-    virtual const UChar* getDisplayName(int32_t localeIndex, int32_t ruleIndex) const;
+    virtual int32_t getNumberOfRuleSets(void) const override { return numRuleSets; }
+    virtual const UChar* getRuleSetName(int32_t index) const override;
+    virtual int32_t getNumberOfDisplayLocales(void) const override { return numLocales; }
+    virtual const UChar* getLocaleName(int32_t index) const override;
+    virtual const UChar* getDisplayName(int32_t localeIndex, int32_t ruleIndex) const override;
 
 //    virtual UClassID getDynamicClassID() const;
 //    static UClassID getStaticClassID(void);
@@ -355,10 +355,16 @@ private:
 };
 
 #ifdef RBNF_DEBUG
-#define ERROR(msg) parseError(msg); return NULL;
+#define ERROR(msg) UPRV_BLOCK_MACRO_BEGIN { \
+    parseError(msg); \
+    return NULL; \
+} UPRV_BLOCK_MACRO_END
 #define EXPLANATION_ARG explanationArg
 #else
-#define ERROR(msg) parseError(NULL); return NULL;
+#define ERROR(msg) UPRV_BLOCK_MACRO_BEGIN { \
+    parseError(NULL); \
+    return NULL; \
+} UPRV_BLOCK_MACRO_END
 #define EXPLANATION_ARG
 #endif
 
@@ -924,17 +930,17 @@ RuleBasedNumberFormat::~RuleBasedNumberFormat()
     dispose();
 }
 
-Format*
-RuleBasedNumberFormat::clone(void) const
+RuleBasedNumberFormat*
+RuleBasedNumberFormat::clone() const
 {
     return new RuleBasedNumberFormat(*this);
 }
 
-UBool
+bool
 RuleBasedNumberFormat::operator==(const Format& other) const
 {
     if (this == &other) {
-        return TRUE;
+        return true;
     }
 
     if (typeid(*this) == typeid(other)) {
@@ -947,7 +953,7 @@ RuleBasedNumberFormat::operator==(const Format& other) const
             (localizations == NULL
                 ? rhs.localizations == NULL
                 : (rhs.localizations == NULL
-                    ? FALSE
+                    ? false
                     : *localizations == rhs.localizations))) {
 
             NFRuleSet** p = fRuleSets;
@@ -955,7 +961,7 @@ RuleBasedNumberFormat::operator==(const Format& other) const
             if (p == NULL) {
                 return q == NULL;
             } else if (q == NULL) {
-                return FALSE;
+                return false;
             }
             while (*p && *q && (**p == **q)) {
                 ++p;
@@ -965,7 +971,7 @@ RuleBasedNumberFormat::operator==(const Format& other) const
         }
     }
 
-    return FALSE;
+    return false;
 }
 
 UnicodeString
@@ -1071,7 +1077,7 @@ RuleBasedNumberFormat::getRuleSetDisplayName(int32_t index, const Locale& locale
                 return name;
             }
 
-            // trim trailing portion, skipping over ommitted sections
+            // trim trailing portion, skipping over omitted sections
             do { --len;} while (len > 0 && localeStr[len] != 0x005f); // underscore
             while (len > 0 && localeStr[len-1] == 0x005F) --len;
         }
@@ -1109,45 +1115,6 @@ RuleBasedNumberFormat::findRuleSet(const UnicodeString& name, UErrorCode& status
     }
     return NULL;
 }
-
-UnicodeString&
-RuleBasedNumberFormat::format(const DecimalQuantity &number,
-                      UnicodeString &appendTo,
-                      FieldPositionIterator *posIter,
-                      UErrorCode &status) const {
-    if (U_FAILURE(status)) {
-        return appendTo;
-    }
-    DecimalQuantity copy(number);
-    if (copy.fitsInLong()) {
-        format(number.toLong(), appendTo, posIter, status);
-    }
-    else {
-        copy.roundToMagnitude(0, number::impl::RoundingMode::UNUM_ROUND_HALFEVEN, status);
-        if (copy.fitsInLong()) {
-            format(number.toDouble(), appendTo, posIter, status);
-        }
-        else {
-            // We're outside of our normal range that this framework can handle.
-            // The DecimalFormat will provide more accurate results.
-
-            // TODO this section should probably be optimized. The DecimalFormat is shared in ICU4J.
-            LocalPointer<NumberFormat> decimalFormat(NumberFormat::createInstance(locale, UNUM_DECIMAL, status), status);
-            if (decimalFormat.isNull()) {
-                return appendTo;
-            }
-            Formattable f;
-            LocalPointer<DecimalQuantity> decimalQuantity(new DecimalQuantity(number), status);
-            if (decimalQuantity.isNull()) {
-                return appendTo;
-            }
-            f.adoptDecimalQuantity(decimalQuantity.orphan()); // f now owns decimalQuantity.
-            decimalFormat->format(f, appendTo, posIter, status);
-        }
-    }
-    return appendTo;
-}
-
 
 UnicodeString&
 RuleBasedNumberFormat::format(const DecimalQuantity &number,
@@ -1534,7 +1501,7 @@ RuleBasedNumberFormat::init(const UnicodeString& rules, LocalizationInfo* locali
     }
 
     // start by stripping the trailing whitespace from all the rules
-    // (this is all the whitespace follwing each semicolon in the
+    // (this is all the whitespace following each semicolon in the
     // description).  This allows us to look for rule-set boundaries
     // by searching for ";%" without having to worry about whitespace
     // between the ; and the %

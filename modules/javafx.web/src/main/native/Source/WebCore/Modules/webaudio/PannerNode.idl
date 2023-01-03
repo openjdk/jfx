@@ -24,43 +24,38 @@
 
 [
     Conditional=WEB_AUDIO,
-    ImplementedAs=PanningModelType
-] enum PanningModelType {
-    "equalpower",
-    "HRTF"
-};
-
-[
-    Conditional=WEB_AUDIO,
-    ImplementedAs=DistanceModelType
-] enum DistanceModelType {
-    "linear",
-    "inverse",
-    "exponential"
-};
-
-[
-    Conditional=WEB_AUDIO,
     JSGenerateToJSObject,
-    InterfaceName=webkitAudioPannerNode,
+    EnabledBySetting=WebAudioEnabled,
+    Exposed=Window
 ] interface PannerNode : AudioNode {
-    // Default model for stereo is HRTF 
-    attribute PanningModelType panningModel;
+    constructor (BaseAudioContext context, optional PannerOptions options);
+
+    // Default model for stereo is equalpower
+    [ImplementedAs=panningModelForBindings] attribute PanningModelType panningModel;
 
     // Uses a 3D cartesian coordinate system 
-    void setPosition(unrestricted float x, unrestricted float y, unrestricted float z);
-    void setOrientation(unrestricted float x, unrestricted float y, unrestricted float z);
-    void setVelocity(unrestricted float x, unrestricted float y, unrestricted float z);
+    undefined setPosition(float x, float y, float z);
+    undefined setOrientation(float x, float y, float z);
+    
+    // Default distance model is inverse
+    [ImplementedAs=distanceModelForBindings] attribute DistanceModelType distanceModel;
 
-    // Distance model
-    attribute DistanceModelType distanceModel;
-
-    attribute unrestricted double refDistance;
-    attribute unrestricted double maxDistance;
-    attribute unrestricted double rolloffFactor;
+    [ImplementedAs=refDistanceForBindings] attribute double refDistance;
+    [ImplementedAs=maxDistanceForBindings] attribute double maxDistance;
+    [ImplementedAs=rolloffFactorForBindings] attribute double rolloffFactor;
 
     // Directional sound cone
-    attribute unrestricted double coneInnerAngle;
-    attribute unrestricted double coneOuterAngle;
-    attribute unrestricted double coneOuterGain;
+    [ImplementedAs=coneInnerAngleForBindings] attribute double coneInnerAngle;
+    [ImplementedAs=coneOuterAngleForBindings] attribute double coneOuterAngle;
+    [ImplementedAs=coneOuterGainForBindings] attribute double coneOuterGain;
+    
+    // Position of audio source in 3D Cartesian system
+    readonly attribute AudioParam positionX;
+    readonly attribute AudioParam positionY;
+    readonly attribute AudioParam positionZ;
+    
+    // Vector of direction of audio source in 3D cartesian system
+    readonly attribute AudioParam orientationX;
+    readonly attribute AudioParam orientationY;
+    readonly attribute AudioParam orientationZ;
 };

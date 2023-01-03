@@ -63,13 +63,7 @@ private:
     RenderPtr<RenderElement> createElementRenderer(RenderStyle&&, const RenderTreePosition&) override;
     bool rendererIsNeeded(const RenderStyle&) override;
 };
-
-inline Ref<ProgressInnerElement> ProgressInnerElement::create(Document& document)
-{
-    Ref<ProgressInnerElement> result = adoptRef(*new ProgressInnerElement(document));
-    result->setPseudo(AtomString("-webkit-progress-inner-element", AtomString::ConstructFromLiteral));
-    return result;
-}
+static_assert(sizeof(ProgressInnerElement) == sizeof(ProgressShadowElement));
 
 class ProgressBarElement final : public ProgressShadowElement {
 public:
@@ -78,13 +72,7 @@ public:
 private:
     ProgressBarElement(Document&);
 };
-
-inline Ref<ProgressBarElement> ProgressBarElement::create(Document& document)
-{
-    Ref<ProgressBarElement> result = adoptRef(*new ProgressBarElement(document));
-    result->setPseudo(AtomString("-webkit-progress-bar", AtomString::ConstructFromLiteral));
-    return result;
-}
+static_assert(sizeof(ProgressBarElement) == sizeof(ProgressShadowElement));
 
 class ProgressValueElement final : public ProgressShadowElement {
 public:
@@ -94,12 +82,6 @@ public:
 private:
     ProgressValueElement(Document&);
 };
-
-inline Ref<ProgressValueElement> ProgressValueElement::create(Document& document)
-{
-    Ref<ProgressValueElement> result = adoptRef(*new ProgressValueElement(document));
-    result->setPseudo(AtomString("-webkit-progress-value", AtomString::ConstructFromLiteral));
-    return result;
-}
+static_assert(sizeof(ProgressValueElement) == sizeof(ProgressShadowElement));
 
 } // namespace WebCore

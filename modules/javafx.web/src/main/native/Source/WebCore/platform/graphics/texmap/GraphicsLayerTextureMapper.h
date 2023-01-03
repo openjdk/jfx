@@ -17,14 +17,15 @@
     Boston, MA 02110-1301, USA.
 */
 
-#ifndef GraphicsLayerTextureMapper_h
-#define GraphicsLayerTextureMapper_h
+#pragma once
 
 #if !USE(COORDINATED_GRAPHICS)
 
 #include "GraphicsLayer.h"
 #include "GraphicsLayerClient.h"
+#include "GraphicsLayerContentsDisplayDelegate.h"
 #include "Image.h"
+#include "NativeImage.h"
 #include "TextureMapperLayer.h"
 #include "TextureMapperPlatformLayer.h"
 #include "TextureMapperTiledBackingStore.h"
@@ -59,13 +60,17 @@ public:
     void setContentsVisible(bool) override;
     void setContentsOpaque(bool) override;
     void setBackfaceVisibility(bool) override;
+    void setBackgroundColor(const Color&) override;
     void setOpacity(float) override;
     bool setFilters(const FilterOperations&) override;
+    bool setBackdropFilters(const FilterOperations&) override;
+    void setBackdropFiltersRect(const FloatRoundedRect&) override;
 
     void setNeedsDisplay() override;
     void setNeedsDisplayInRect(const FloatRect&, ShouldClipToLayer = ClipToLayer) override;
     void setContentsNeedsDisplay() override;
     void setContentsRect(const FloatRect&) override;
+    void setContentsClippingRect(const FloatRoundedRect&) override;
 
     bool addAnimation(const KeyframeValueList&, const FloatSize&, const Animation*, const String&, double) override;
     void pauseAnimation(const String&, double) override;
@@ -74,6 +79,7 @@ public:
     void setContentsToImage(Image*) override;
     void setContentsToSolidColor(const Color&) override;
     void setContentsToPlatformLayer(PlatformLayer*, ContentsLayerPurpose) override;
+    void setContentsDisplayDelegate(RefPtr<GraphicsLayerContentsDisplayDelegate>&&, ContentsLayerPurpose) override;
     bool usesContentsLayer() const override { return m_contentsLayer; }
     PlatformLayer* platformLayer() const override { return m_contentsLayer; }
 
@@ -84,7 +90,7 @@ public:
     void flushCompositingState(const FloatRect&) override;
     void flushCompositingStateForThisLayerOnly() override;
 
-    void updateBackingStoreIncludingSubLayers();
+    void updateBackingStoreIncludingSubLayers(TextureMapper&);
 
     TextureMapperLayer& layer() { return m_layer; }
 
@@ -101,7 +107,7 @@ private:
 
     void commitLayerChanges();
     void updateDebugBorderAndRepaintCount();
-    void updateBackingStoreIfNeeded();
+    void updateBackingStoreIfNeeded(TextureMapper&);
     void prepareBackingStoreIfNeeded();
     bool shouldHaveBackingStore() const;
 
@@ -145,12 +151,15 @@ private:
         RepaintCountChange =        (1L << 25),
 
         AnimationStarted =          (1L << 26),
+        BackdropLayerChange =       (1L << 27),
+        SolidColorChange =          (1L << 28),
     };
     void notifyChange(ChangeMask);
 
     TextureMapperLayer m_layer;
+    std::unique_ptr<TextureMapperLayer> m_backdropLayer;
     RefPtr<TextureMapperTiledBackingStore> m_compositedImage;
-    NativeImagePtr m_compositedNativeImagePtr;
+    RefPtr<NativeImage> m_compositedNativeImage;
     RefPtr<TextureMapperTiledBackingStore> m_backingStore;
 
     int m_changeMask;
@@ -170,6 +179,4 @@ private:
 
 SPECIALIZE_TYPE_TRAITS_GRAPHICSLAYER(WebCore::GraphicsLayerTextureMapper, isGraphicsLayerTextureMapper())
 
-#endif
-
-#endif // GraphicsLayerTextureMapper_h
+#endif // !USE(COORDINATED_GRAPHICS)

@@ -26,11 +26,16 @@
 #include "config.h"
 #include "StructureCache.h"
 
-#include "JSGlobalObject.h"
 #include "JSCInlines.h"
 #include <wtf/Locker.h>
 
 namespace JSC {
+
+void StructureCache::clear()
+{
+    Locker locker { m_lock };
+    m_structures.clear();
+}
 
 inline Structure* StructureCache::createEmptyStructure(JSGlobalObject* globalObject, JSObject* prototype, const TypeInfo& typeInfo, const ClassInfo* classInfo, IndexingType indexingType, unsigned inlineCapacity, bool makePolyProtoStructure, FunctionExecutable* executable)
 {
@@ -59,7 +64,7 @@ inline Structure* StructureCache::createEmptyStructure(JSGlobalObject* globalObj
         structure = Structure::create(
             vm, globalObject, prototype, typeInfo, classInfo, indexingType, inlineCapacity);
     }
-    auto locker = holdLock(m_lock);
+    Locker locker { m_lock };
     m_structures.set(key, structure);
     return structure;
 }
@@ -69,7 +74,7 @@ Structure* StructureCache::emptyObjectStructureConcurrently(JSGlobalObject* glob
     RELEASE_ASSERT(!!prototype); // We use nullptr inside the HashMap for prototype to mean poly proto, so user's of this API must provide non-null prototypes.
 
     PrototypeKey key { prototype, nullptr, inlineCapacity, JSFinalObject::info(), globalObject };
-    auto locker = holdLock(m_lock);
+    Locker locker { m_lock };
     if (Structure* structure = m_structures.get(key)) {
         ASSERT(prototype->mayBePrototype());
         return structure;

@@ -25,7 +25,7 @@
 
 #pragma once
 
-#if ENABLE(WEBGL)
+#if ENABLE(WEBGL) && !USE(ANGLE)
 
 #if USE(LIBEPOXY)
 // libepoxy headers have to be included before <ANGLE/ShaderLang.h> in order to avoid
@@ -36,19 +36,7 @@
 #include <ANGLE/ShaderLang.h>
 #include <wtf/text/WTFString.h>
 
-#if PLATFORM(COCOA)
-
-#if USE(OPENGL_ES)
-#import <OpenGLES/ES2/glext.h>
-#elif USE(OPENGL)
-#include <OpenGL/gl.h>
-#elif USE(ANGLE)
-#include <ANGLE/gl2.h>
-#else
-#error Unsupported configuration
-#endif
-
-#elif PLATFORM(WIN)
+#if PLATFORM(WIN)
 #include "OpenGLESShims.h"
 
 #elif USE(LIBEPOXY)
@@ -107,4 +95,4 @@ private:
 
 } // namespace WebCore
 
-#endif
+#endif // ENABLE(WEBGL) && !USE(ANGLE)

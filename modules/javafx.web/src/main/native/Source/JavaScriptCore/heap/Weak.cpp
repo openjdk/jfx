@@ -26,17 +26,14 @@
 #include "config.h"
 #include "Weak.h"
 
-#include "JSCInlines.h"
-#include "WeakSetInlines.h"
+#include "WeakSet.h"
 
 namespace JSC {
 
-void weakClearSlowCase(WeakImpl*& impl)
+void weakClearSlowCase(WeakImpl* impl)
 {
     ASSERT(impl);
-
     WeakSet::deallocate(impl);
-    impl = 0;
 }
 
 } // namespace JSC

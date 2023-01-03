@@ -79,7 +79,7 @@ static LayoutUnit axisHeight(const RenderStyle& style)
 
     // Otherwise, the idea is to try and use the middle of operators as the math axis which we thus approximate by "half of the x-height".
     // Note that Gecko has a slower but more accurate version that measures half of the height of U+2212 MINUS SIGN.
-    return LayoutUnit(style.fontMetrics().xHeight() / 2);
+    return LayoutUnit(style.metricsOfPrimaryFont().xHeight() / 2);
 }
 
 LayoutUnit RenderMathMLBlock::mathAxisHeight() const
@@ -95,14 +95,14 @@ LayoutUnit RenderMathMLBlock::mirrorIfNeeded(LayoutUnit horizontalOffset, Layout
     return horizontalOffset;
 }
 
-int RenderMathMLBlock::baselinePosition(FontBaseline baselineType, bool firstLine, LineDirectionMode direction, LinePositionMode linePositionMode) const
+LayoutUnit RenderMathMLBlock::baselinePosition(FontBaseline baselineType, bool firstLine, LineDirectionMode direction, LinePositionMode linePositionMode) const
 {
     // mathml.css sets math { -webkit-line-box-contain: glyphs replaced; line-height: 0; }, so when linePositionMode == PositionOfInteriorLineBoxes we want to
-    // return 0 here to match our line-height. This matters when RootInlineBox::ascentAndDescentForBox is called on a RootInlineBox for an inline-block.
+    // return 0 here to match our line-height. This matters when LegacyRootInlineBox::ascentAndDescentForBox is called on a RootInlineBox for an inline-block.
     if (linePositionMode == PositionOfInteriorLineBoxes)
         return 0;
 
-    return firstLineBaseline().valueOr(RenderBlock::baselinePosition(baselineType, firstLine, direction, linePositionMode));
+    return firstLineBaseline().value_or(RenderBlock::baselinePosition(baselineType, firstLine, direction, linePositionMode));
 }
 
 #if ENABLE(DEBUG_MATH_LAYOUT)
@@ -119,7 +119,7 @@ void RenderMathMLBlock::paint(PaintInfo& info, const LayoutPoint& paintOffset)
 
     info.context().setStrokeThickness(1.0f);
     info.context().setStrokeStyle(SolidStroke);
-    info.context().setStrokeColor(Color(0, 0, 255));
+    info.context().setStrokeColor(Color::blue);
 
     info.context().drawLine(adjustedPaintOffset, IntPoint(adjustedPaintOffset.x() + pixelSnappedOffsetWidth(), adjustedPaintOffset.y()));
     info.context().drawLine(IntPoint(adjustedPaintOffset.x() + pixelSnappedOffsetWidth(), adjustedPaintOffset.y()), IntPoint(adjustedPaintOffset.x() + pixelSnappedOffsetWidth(), adjustedPaintOffset.y() + pixelSnappedOffsetHeight()));
@@ -128,13 +128,13 @@ void RenderMathMLBlock::paint(PaintInfo& info, const LayoutPoint& paintOffset)
 
     int topStart = paddingTop();
 
-    info.context().setStrokeColor(Color(0, 255, 0));
+    info.context().setStrokeColor(Color::green);
 
     info.context().drawLine(IntPoint(adjustedPaintOffset.x(), adjustedPaintOffset.y() + topStart), IntPoint(adjustedPaintOffset.x() + pixelSnappedOffsetWidth(), adjustedPaintOffset.y() + topStart));
 
     int baseline = roundToInt(baselinePosition(AlphabeticBaseline, true, HorizontalLine));
 
-    info.context().setStrokeColor(Color(255, 0, 0));
+    info.context().setStrokeColor(Color::red);
 
     info.context().drawLine(IntPoint(adjustedPaintOffset.x(), adjustedPaintOffset.y() + baseline), IntPoint(adjustedPaintOffset.x() + pixelSnappedOffsetWidth(), adjustedPaintOffset.y() + baseline));
 }
@@ -161,7 +161,7 @@ LayoutUnit toUserUnits(const MathMLElement::Length& length, const RenderStyle& s
     case MathMLElement::LengthType::Em:
         return LayoutUnit(length.value * style.fontCascade().size());
     case MathMLElement::LengthType::Ex:
-        return LayoutUnit(length.value * style.fontMetrics().xHeight());
+        return LayoutUnit(length.value * style.metricsOfPrimaryFont().xHeight());
     case MathMLElement::LengthType::MathUnit:
         return LayoutUnit(length.value * style.fontCascade().size() / 18);
     case MathMLElement::LengthType::Percentage:
@@ -170,19 +170,17 @@ LayoutUnit toUserUnits(const MathMLElement::Length& length, const RenderStyle& s
         return LayoutUnit(referenceValue * length.value);
     case MathMLElement::LengthType::ParsingFailed:
         return referenceValue;
-    case MathMLElement::LengthType::Infinity:
-        return intMaxForLayoutUnit;
     default:
         ASSERT_NOT_REACHED();
         return referenceValue;
     }
 }
 
-Optional<int> RenderMathMLTable::firstLineBaseline() const
+std::optional<LayoutUnit> RenderMathMLTable::firstLineBaseline() const
 {
     // By default the vertical center of <mtable> is aligned on the math axis.
     // This is different than RenderTable::firstLineBoxBaseline, which returns the baseline of the first row of a <table>.
-    return Optional<int>(logicalHeight() / 2 + axisHeight(style()));
+    return LayoutUnit { (logicalHeight() / 2 + axisHeight(style())).toInt() };
 }
 
 void RenderMathMLBlock::layoutItems(bool relayoutChildren)
@@ -269,6 +267,15 @@ void RenderMathMLBlock::layoutInvalidMarkup(bool relayoutChildren)
     layoutPositionedObjects(relayoutChildren);
     updateScrollInfoAfterLayout();
     clearNeedsLayout();
+}
+
+void RenderMathMLBlock::styleDidChange(StyleDifference diff, const RenderStyle* oldStyle)
+{
+    RenderBlock::styleDidChange(diff, oldStyle);
+
+    // MathML displaystyle changes can affect layout.
+    if (oldStyle && style().mathStyle() != oldStyle->mathStyle())
+        setNeedsLayoutAndPrefWidthsRecalc();
 }
 
 }

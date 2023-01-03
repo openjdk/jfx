@@ -23,7 +23,7 @@ list(APPEND WebCore_INCLUDE_DIRECTORIES
     "${WEBCORE_DIR}/bindings/java"
     "${WEBCORE_DIR}/page/java"
     "${WEBCORE_DIR}/bridge/jni"
-    "${WEBKIT_DIR}"
+    "${WEBKITLEGACY_DIR}"
     # JNI headers
     "${JAVA_JNI_GENSRC_PATH}"
 )
@@ -31,64 +31,6 @@ list(APPEND WebCore_INCLUDE_DIRECTORIES
 list(APPEND WebCore_SYSTEM_INCLUDE_DIRECTORIES
     ${JAVA_INCLUDE_PATH}
     ${JAVA_INCLUDE_PATH2}
-)
-
-set(WebCore_FORWARDING_HEADERS_DIRECTORIES
-    bindings/js
-    bridge
-    bridge/jni
-    bridge/jni/jsc
-    css
-    dom
-    editing
-    history
-    html
-    inspector
-    loader
-    page
-    platform
-    platform/animation
-    platform/graphics
-    platform/mediastream/libwebrtc
-    platform/network
-    platform/network/java
-    platform/sql
-    platform/text
-    rendering
-    storage
-    xml
-)
-
-set(WebCore_FORWARDING_HEADERS_FILES
-    Modules/notifications/NotificationClient.h
-    Modules/notifications/NotificationController.h
-    bindings/java/JavaDOMUtils.h
-    bindings/java/JavaEventListener.h
-    bindings/java/JavaNodeFilterCondition.h
-    bridge/jni/jsc/BridgeUtils.h
-    dom/DOMStringList.h
-    html/forms/FileIconLoader.h
-    platform/graphics/java/ImageBufferDataJava.h
-    platform/graphics/java/PlatformContextJava.h
-    platform/graphics/java/RQRef.h
-    platform/graphics/java/RenderingQueue.h
-    platform/graphics/texmap/BitmapTextureJava.h
-    platform/graphics/texmap/GraphicsLayerTextureMapper.h
-    platform/graphics/texmap/TextureMapperJava.h
-    platform/graphics/texmap/TextureMapperLayer.h
-    platform/java/DataObjectJava.h
-    platform/java/PageSupplementJava.h
-    platform/java/PlatformJavaClasses.h
-    platform/java/PluginWidgetJava.h
-    platform/mock/GeolocationClientMock.h
-    platform/network/java/AuthenticationChallenge.h
-    platform/network/java/CertificateInfo.h
-    platform/network/java/ResourceError.h
-    platform/network/java/ResourceRequest.h
-    platform/network/java/ResourceResponse.h
-    svg/SVGTests.h
-    testing/js/WebCoreTestSupport.h
-    workers/WorkerThread.h
 )
 
 if (WIN32)
@@ -113,16 +55,15 @@ elseif (APPLE)
 endif ()
 
 #FIXME: Workaround
-list(APPEND WebCoreTestSupport_LIBRARIES ${SQLITE_LIBRARIES})
+list(APPEND WebCoreTestSupport_LIBRARIES ${SQLite3_LIBRARIES})
 
 list(APPEND WebCore_USER_AGENT_STYLE_SHEETS
-    ${WEBCORE_DIR}/css/mediaControlsGtk.css
+    ${WEBCORE_DIR}/Modules/mediacontrols/mediaControlsAdwaita.css
+    ${WEBCORE_DIR}/css/themeAdwaita.css
 )
 
 set(WebCore_USER_AGENT_SCRIPTS
-    ${WEBCORE_DIR}/en.lproj/mediaControlsLocalizedStrings.js
-    ${WEBCORE_DIR}/Modules/mediacontrols/mediaControlsBase.js
-    ${WEBCORE_DIR}/Modules/mediacontrols/mediaControlsGtk.js
+    ${WEBCORE_DIR}/Modules/mediacontrols/mediaControlsAdwaita.js
 )
 
 add_definitions(-DMAX_DOM_TREE_DEPTH=2000)
@@ -137,14 +78,20 @@ list(APPEND WebCore_LIBRARIES
 
 add_definitions(-DSTATICALLY_LINKED_WITH_JavaScriptCore)
 add_definitions(-DSTATICALLY_LINKED_WITH_WTF)
+if (USE_SYSTEM_MALLOC)
+    message(STATUS "Using system malloc")
+    add_definitions(-DUSE_SYSTEM_MALLOC)
+endif ()
 
 list(APPEND WebCore_PRIVATE_FRAMEWORK_HEADERS
     bindings/java/JavaDOMUtils.h
     bindings/java/JavaEventListener.h
+    bindings/java/EventListenerManager.h
     bindings/java/JavaNodeFilterCondition.h
     bridge/jni/jsc/BridgeUtils.h
     dom/DOMStringList.h
-    platform/graphics/java/ImageBufferDataJava.h
+    platform/graphics/java/ImageBufferJavaBackend.h
+    platform/graphics/java/ImageJava.h
     platform/graphics/java/PlatformContextJava.h
     platform/graphics/java/RQRef.h
     platform/graphics/java/RenderingQueue.h
@@ -164,5 +111,5 @@ list(APPEND WebCore_PRIVATE_FRAMEWORK_HEADERS
 )
 
 list(APPEND WebCore_UNIFIED_SOURCE_LIST_FILES
-    "SourcesPlatformJava.txt"
+    "SourcesJava.txt"
 )

@@ -50,25 +50,26 @@ def usage(message)
     puts "--generate-xcfilelists               Generate .xcfilelist files"
     puts "--input-xcfilelist-path              Path of the generated input .xcfilelist file"
     puts "--output-xcfilelist-path             Path of the generated output .xcfilelist file"
-    puts "--feature-flags                 (-f) Space or semicolon separated list of enabled feature flags"
     puts
     puts "Generation options:"
     puts "--max-cpp-bundle-count               Use global sequential numbers for cpp bundle filenames and set the limit on the number"
     puts "--max-obj-c-bundle-count             Use global sequential numbers for Obj-C bundle filenames and set the limit on the number"
+    puts "--dense-bundle-filter                Densely bundle files matching the given path glob"
     exit 1
 end
 
 MAX_BUNDLE_SIZE = 8
+MAX_DENSE_BUNDLE_SIZE = 64
 $derivedSourcesPath = nil
 $unifiedSourceOutputPath = nil
 $sourceTreePath = nil
-$featureFlags = {}
 $verbose = false
 $mode = :GenerateBundles
 $inputXCFilelistPath = nil
 $outputXCFilelistPath = nil
 $maxCppBundleCount = nil
 $maxObjCBundleCount = nil
+$denseBundleFilters = []
 
 def log(text)
     $stderr.puts text if $verbose
@@ -78,14 +79,14 @@ GetoptLong.new(['--help', '-h', GetoptLong::NO_ARGUMENT],
                ['--verbose', '-v', GetoptLong::NO_ARGUMENT],
                ['--derived-sources-path', '-d', GetoptLong::REQUIRED_ARGUMENT],
                ['--source-tree-path', '-s', GetoptLong::REQUIRED_ARGUMENT],
-               ['--feature-flags', '-f', GetoptLong::REQUIRED_ARGUMENT],
                ['--print-bundled-sources', GetoptLong::NO_ARGUMENT],
                ['--print-all-sources', GetoptLong::NO_ARGUMENT],
                ['--generate-xcfilelists', GetoptLong::NO_ARGUMENT],
                ['--input-xcfilelist-path', GetoptLong::REQUIRED_ARGUMENT],
                ['--output-xcfilelist-path', GetoptLong::REQUIRED_ARGUMENT],
                ['--max-cpp-bundle-count', GetoptLong::REQUIRED_ARGUMENT],
-               ['--max-obj-c-bundle-count', GetoptLong::REQUIRED_ARGUMENT]).each {
+               ['--max-obj-c-bundle-count', GetoptLong::REQUIRED_ARGUMENT],
+               ['--dense-bundle-filter', GetoptLong::REQUIRED_ARGUMENT]).each {
     | opt, arg |
     case opt
     when '--help'
@@ -97,8 +98,6 @@ GetoptLong.new(['--help', '-h', GetoptLong::NO_ARGUMENT],
     when '--source-tree-path'
         $sourceTreePath = Pathname.new(arg)
         usage("Source tree #{arg} does not exist.") if !$sourceTreePath.exist?
-    when '--feature-flags'
-        arg.gsub(/\s+/, ";").split(";").map { |x| $featureFlags[x] = true }
     when '--print-bundled-sources'
         $mode = :PrintBundledSources
     when '--print-all-sources'
@@ -113,6 +112,8 @@ GetoptLong.new(['--help', '-h', GetoptLong::NO_ARGUMENT],
         $maxCppBundleCount = arg.to_i
     when '--max-obj-c-bundle-count'
         $maxObjCBundleCount = arg.to_i
+    when '--dense-bundle-filter'
+        $denseBundleFilters.push(arg)
     end
 }
 
@@ -122,7 +123,6 @@ FileUtils.mkpath($unifiedSourceOutputPath) if !$unifiedSourceOutputPath.exist? &
 usage("--derived-sources-path must be specified.") if !$unifiedSourceOutputPath
 usage("--source-tree-path must be specified.") if !$sourceTreePath
 log("Putting unified sources in #{$unifiedSourceOutputPath}")
-log("Active Feature flags: #{$featureFlags.keys.inspect}")
 
 usage("At least one source list file must be specified.") if ARGV.length == 0
 # Even though CMake will only pass us a single semicolon separated arguemnts, we separate all the arguments for simplicity.
@@ -194,6 +194,7 @@ class BundleManager
         @maxCount = max
         @extraFiles = []
         @currentDirectory = nil
+        @lastBundlingPrefix = nil
     end
 
     def writeFile(file, text)
@@ -241,19 +242,31 @@ class BundleManager
     def addFile(sourceFile)
         path = sourceFile.path
         raise "wrong extension: #{path.extname} expected #{@extension}" unless path.extname == ".#{@extension}"
-        if (TopLevelDirectoryForPath(@currentDirectory) != TopLevelDirectoryForPath(path.dirname))
+        bundlePrefix, bundleSize = BundlePrefixAndSizeForPath(path)
+        if (@lastBundlingPrefix != bundlePrefix)
             log("Flushing because new top level directory; old: #{@currentDirectory}, new: #{path.dirname}")
             flush
+            @lastBundlingPrefix = bundlePrefix
             @currentDirectory = path.dirname
             @bundleCount = 0 unless @maxCount
         end
-        if @fileCount == MAX_BUNDLE_SIZE
+        if @fileCount >= bundleSize
             log("Flushing because new bundle is full (#{@fileCount} sources)")
             flush
         end
         @currentBundleText += "#include \"#{sourceFile}\"\n"
         @fileCount += 1
     end
+end
+
+def BundlePrefixAndSizeForPath(path)
+    topLevelDirectory = TopLevelDirectoryForPath(path.dirname)
+    $denseBundleFilters.each { |filter|
+        if path.fnmatch(filter)
+            return filter, MAX_DENSE_BUNDLE_SIZE
+        end
+    }
+    return topLevelDirectory, MAX_BUNDLE_SIZE
 end
 
 def TopLevelDirectoryForPath(path)
@@ -294,7 +307,6 @@ sourceListFiles.each_with_index {
     | path, sourceFileIndex |
     log("Reading #{path}")
     result = []
-    inDisabledLines = false
     File.read(path).lines.each {
         | line |
         commentStart = line =~ COMMENT_REGEXP
@@ -304,26 +316,16 @@ sourceListFiles.each_with_index {
             log("After: #{line}")
         end
         line.strip!
-        if line == "#endif"
-            inDisabledLines = false
-            next
-        end
 
-        next if line.empty? || inDisabledLines
+        next if line.empty?
 
-        if line =~ /\A#if/
-            raise "malformed #if" unless line =~ /\A#if\s+(\S+)/
-            inDisabledLines = !$featureFlags[$1]
-        else
-            if seen[line]
-                next if $mode == :GenerateXCFilelists
-                raise "duplicate line: #{line} in #{path}"
-            end
-            seen[line] = true
-            result << SourceFile.new(line, sourceFileIndex)
+        if seen[line]
+            next if $mode == :GenerateXCFilelists
+            raise "duplicate line: #{line} in #{path}"
         end
+        seen[line] = true
+        result << SourceFile.new(line, sourceFileIndex)
     }
-    raise "Couldn't find closing \"#endif\"" if inDisabledLines
 
     log("Found #{result.length} source files in #{path}")
     sourceFiles += result

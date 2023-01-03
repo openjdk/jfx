@@ -31,30 +31,28 @@
 
 #include "AXObjectCache.h"
 #include "AccessibilityListBox.h"
-#include "Element.h"
-#include "HTMLElement.h"
+#include "ElementInlines.h"
 #include "HTMLNames.h"
 #include "HTMLOptGroupElement.h"
 #include "HTMLOptionElement.h"
 #include "HTMLSelectElement.h"
 #include "IntRect.h"
 #include "RenderListBox.h"
-#include "RenderObject.h"
 
 namespace WebCore {
 
 using namespace HTMLNames;
 
-AccessibilityListBoxOption::AccessibilityListBoxOption()
-    : m_optionElement(nullptr)
+AccessibilityListBoxOption::AccessibilityListBoxOption(HTMLElement& element)
+    : m_optionElement(element)
 {
 }
 
 AccessibilityListBoxOption::~AccessibilityListBoxOption() = default;
 
-Ref<AccessibilityListBoxOption> AccessibilityListBoxOption::create()
+Ref<AccessibilityListBoxOption> AccessibilityListBoxOption::create(HTMLElement& element)
 {
-    return adoptRef(*new AccessibilityListBoxOption());
+    return adoptRef(*new AccessibilityListBoxOption(element));
 }
 
 bool AccessibilityListBoxOption::isEnabled() const
@@ -118,7 +116,8 @@ bool AccessibilityListBoxOption::computeAccessibilityIsIgnored() const
     if (accessibilityIsIgnoredByDefault())
         return true;
 
-    return parentObject()->accessibilityIsIgnored();
+    auto* parent = parentObject();
+    return parent ? parent->accessibilityIsIgnored() : true;
 }
 
 bool AccessibilityListBoxOption::canSetSelectedAttribute() const
@@ -156,7 +155,12 @@ String AccessibilityListBoxOption::stringValue() const
 
 Element* AccessibilityListBoxOption::actionElement() const
 {
-    return m_optionElement;
+    return m_optionElement.get();
+}
+
+Node* AccessibilityListBoxOption::node() const
+{
+    return m_optionElement.get();
 }
 
 AccessibilityObject* AccessibilityListBoxOption::parentObject() const

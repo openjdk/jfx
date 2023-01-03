@@ -26,6 +26,7 @@
 #pragma once
 
 #include "AccessibilityObject.h"
+#include "ScrollView.h"
 
 namespace WebCore {
 
@@ -37,29 +38,31 @@ class AccessibilityScrollView final : public AccessibilityObject {
 public:
     static Ref<AccessibilityScrollView> create(ScrollView*);
     AccessibilityRole roleValue() const override { return AccessibilityRole::ScrollArea; }
-    ScrollView* scrollView() const { return m_scrollView; }
+    ScrollView* scrollView() const override { return currentScrollView(); }
 
     virtual ~AccessibilityScrollView();
-    void detach(AccessibilityDetachmentType, AXObjectCache*) override;
 
-    AccessibilityObject* webAreaObject() const;
+    AccessibilityObject* webAreaObject() const override;
 
 private:
     explicit AccessibilityScrollView(ScrollView*);
+    void detachRemoteParts(AccessibilityDetachmentType) override;
 
-    ScrollableArea* getScrollableAreaIfScrollable() const override;
+    ScrollView* currentScrollView() const;
+    ScrollableArea* getScrollableAreaIfScrollable() const override { return currentScrollView(); }
     void scrollTo(const IntPoint&) const override;
     bool computeAccessibilityIsIgnored() const override;
-    bool isAccessibilityScrollView() const override { return true; }
+    bool isAccessibilityScrollViewInstance() const override { return true; }
     bool isEnabled() const override { return true; }
 
     bool isAttachment() const override;
-    Widget* widgetForAttachmentView() const override;
+    PlatformWidget platformWidget() const override;
+    Widget* widgetForAttachmentView() const override { return currentScrollView(); }
 
     AccessibilityObject* scrollBar(AccessibilityOrientation) override;
     void addChildren() override;
     void clearChildren() override;
-    AccessibilityObjectInterface* accessibilityHitTest(const IntPoint&) const override;
+    AXCoreObject* accessibilityHitTest(const IntPoint&) const override;
     void updateChildrenIfNecessary() override;
     void setNeedsToUpdateChildren() override { m_childrenDirty = true; }
     void updateScrollbars();
@@ -67,16 +70,18 @@ private:
     bool canSetFocusAttribute() const override;
     bool isFocused() const override;
 
+    Document* document() const override;
     FrameView* documentFrameView() const override;
     LayoutRect elementRect() const override;
     AccessibilityObject* parentObject() const override;
-    AccessibilityObject* parentObjectIfExists() const override;
+    AccessibilityObject* parentObjectIfExists() const override { return parentObject(); }
 
     AccessibilityObject* firstChild() const override { return webAreaObject(); }
     AccessibilityScrollbar* addChildScrollbar(Scrollbar*);
     void removeChildScrollbar(AccessibilityObject*);
 
-    ScrollView* m_scrollView;
+    WeakPtr<ScrollView> m_scrollView;
+    WeakPtr<HTMLFrameOwnerElement> m_frameOwnerElement;
     RefPtr<AccessibilityObject> m_horizontalScrollbar;
     RefPtr<AccessibilityObject> m_verticalScrollbar;
     bool m_childrenDirty;
@@ -84,4 +89,4 @@ private:
 
 } // namespace WebCore
 
-SPECIALIZE_TYPE_TRAITS_ACCESSIBILITY(AccessibilityScrollView, isAccessibilityScrollView())
+SPECIALIZE_TYPE_TRAITS_ACCESSIBILITY(AccessibilityScrollView, isAccessibilityScrollViewInstance())

@@ -26,6 +26,8 @@
 
 #include "unicode/utypes.h"
 
+#if U_SHOW_CPLUSPLUS_API
+
 /**
  * \file
  * \brief C++ API: FieldPosition identifies the fields in a formatted output.
@@ -159,18 +161,18 @@ public:
     /**
      * Equality operator.
      * @param that    the object to be compared with.
-     * @return        TRUE if the two field positions are equal, FALSE otherwise.
+     * @return        true if the two field positions are equal, false otherwise.
      * @stable ICU 2.0
      */
-    UBool              operator==(const FieldPosition& that) const;
+    bool               operator==(const FieldPosition& that) const;
 
     /**
      * Equality operator.
      * @param that    the object to be compared with.
-     * @return        TRUE if the two field positions are not equal, FALSE otherwise.
+     * @return        true if the two field positions are not equal, false otherwise.
      * @stable ICU 2.0
      */
-    UBool              operator!=(const FieldPosition& that) const;
+    bool               operator!=(const FieldPosition& that) const;
 
     /**
      * Clone this object.
@@ -234,7 +236,7 @@ public:
      *
      * @stable ICU 2.2
      */
-    virtual UClassID getDynamicClassID() const;
+    virtual UClassID getDynamicClassID() const override;
 
     /**
      * ICU "poor man's RTTI", returns a UClassID for this class.
@@ -272,7 +274,7 @@ FieldPosition::operator=(const FieldPosition& copy)
     return *this;
 }
 
-inline UBool
+inline bool
 FieldPosition::operator==(const FieldPosition& copy) const
 {
     return (fField == copy.fField &&
@@ -280,7 +282,7 @@ FieldPosition::operator==(const FieldPosition& copy) const
         fBeginIndex == copy.fBeginIndex);
 }
 
-inline UBool
+inline bool
 FieldPosition::operator!=(const FieldPosition& copy) const
 {
     return !operator==(copy);
@@ -289,6 +291,8 @@ FieldPosition::operator!=(const FieldPosition& copy) const
 U_NAMESPACE_END
 
 #endif /* #if !UCONFIG_NO_FORMATTING */
+
+#endif /* U_SHOW_CPLUSPLUS_API */
 
 #endif // _FIELDPOS
 //eof

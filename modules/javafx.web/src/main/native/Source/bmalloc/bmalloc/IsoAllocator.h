@@ -27,6 +27,8 @@
 
 #include "FreeList.h"
 
+#if !BUSE(LIBPAS)
+
 namespace bmalloc {
 
 template<typename Config> class IsoPage;
@@ -40,16 +42,16 @@ public:
     IsoAllocator(IsoHeapImpl<Config>&);
     ~IsoAllocator();
 
-    void* allocate(bool abortOnFailure);
-    void scavenge();
+    void* allocate(IsoHeapImpl<Config>&, bool abortOnFailure);
+    void scavenge(IsoHeapImpl<Config>&);
 
 private:
-    void* allocateSlow(bool abortOnFailure);
+    void* allocateSlow(IsoHeapImpl<Config>&, bool abortOnFailure);
 
-    IsoHeapImpl<Config>* m_heap { nullptr };
     FreeList m_freeList;
     IsoPage<Config>* m_currentPage { nullptr };
 };
 
 } // namespace bmalloc
 
+#endif

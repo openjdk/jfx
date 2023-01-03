@@ -41,7 +41,9 @@ class ScriptExecutionContext;
 class PerformanceObserver : public RefCounted<PerformanceObserver> {
 public:
     struct Init {
-        Vector<String> entryTypes;
+        std::optional<Vector<String>> entryTypes;
+        std::optional<String> type;
+        bool buffered;
     };
 
     static Ref<PerformanceObserver> create(ScriptExecutionContext& context, Ref<PerformanceObserverCallback>&& callback)
@@ -49,14 +51,18 @@ public:
         return adoptRef(*new PerformanceObserver(context, WTFMove(callback)));
     }
 
-    static Vector<String> supportedEntryTypes();
+    static Vector<String> supportedEntryTypes(ScriptExecutionContext&);
 
     void disassociate();
 
     ExceptionOr<void> observe(Init&&);
     void disconnect();
+    Vector<RefPtr<PerformanceEntry>> takeRecords();
 
     OptionSet<PerformanceEntry::Type> typeFilter() const { return m_typeFilter; }
+
+    bool hasNavigationTiming() const { return m_hasNavigationTiming; }
+    void addedNavigationTiming() { m_hasNavigationTiming = true; }
 
     void queueEntry(PerformanceEntry&);
     void deliver();
@@ -72,6 +78,8 @@ private:
     Ref<PerformanceObserverCallback> m_callback;
     OptionSet<PerformanceEntry::Type> m_typeFilter;
     bool m_registered { false };
+    bool m_isTypeObserver { false };
+    bool m_hasNavigationTiming { false };
 };
 
 } // namespace WebCore

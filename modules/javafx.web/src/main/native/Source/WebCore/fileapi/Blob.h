@@ -32,13 +32,14 @@
 #pragma once
 
 #include "BlobPropertyBag.h"
+#include "BlobURL.h"
+#include "FileReaderLoader.h"
 #include "ScriptExecutionContext.h"
 #include "ScriptWrappable.h"
+#include "URLRegistry.h"
+#include <variant>
 #include <wtf/IsoMalloc.h>
 #include <wtf/URL.h>
-#include "URLRegistry.h"
-#include <pal/SessionID.h>
-#include <wtf/Variant.h>
 
 namespace JSC {
 class ArrayBufferView;
@@ -48,43 +49,51 @@ class ArrayBuffer;
 namespace WebCore {
 
 class Blob;
+class BlobLoader;
+class DeferredPromise;
+class ReadableStream;
 class ScriptExecutionContext;
-class SharedBuffer;
+class FragmentedSharedBuffer;
 
-using BlobPartVariant = Variant<RefPtr<JSC::ArrayBufferView>, RefPtr<JSC::ArrayBuffer>, RefPtr<Blob>, String>;
+template<typename> class ExceptionOr;
 
-class Blob : public ScriptWrappable, public URLRegistrable, public RefCounted<Blob> {
+using BlobPartVariant = std::variant<RefPtr<JSC::ArrayBufferView>, RefPtr<JSC::ArrayBuffer>, RefPtr<Blob>, String>;
+
+class Blob : public ScriptWrappable, public URLRegistrable, public RefCounted<Blob>, public ActiveDOMObject {
     WTF_MAKE_ISO_ALLOCATED_EXPORT(Blob, WEBCORE_EXPORT);
 public:
-    static Ref<Blob> create(PAL::SessionID sessionID)
+    static Ref<Blob> create(ScriptExecutionContext* context)
     {
-        return adoptRef(*new Blob(sessionID));
+        auto blob = adoptRef(*new Blob(context));
+        blob->suspendIfNeeded();
+        return blob;
     }
 
     static Ref<Blob> create(ScriptExecutionContext& context, Vector<BlobPartVariant>&& blobPartVariants, const BlobPropertyBag& propertyBag)
     {
-        return adoptRef(*new Blob(context.sessionID(), WTFMove(blobPartVariants), propertyBag));
+        auto blob = adoptRef(*new Blob(context, WTFMove(blobPartVariants), propertyBag));
+        blob->suspendIfNeeded();
+        return blob;
     }
 
-    static Ref<Blob> create(PAL::SessionID sessionID, const SharedBuffer& buffer, const String& contentType)
+    static Ref<Blob> create(ScriptExecutionContext* context, Vector<uint8_t>&& data, const String& contentType)
     {
-        return adoptRef(*new Blob(sessionID, buffer, contentType));
+        auto blob = adoptRef(*new Blob(context, WTFMove(data), contentType));
+        blob->suspendIfNeeded();
+        return blob;
     }
 
-    static Ref<Blob> create(PAL::SessionID sessionID, Vector<uint8_t>&& data, const String& contentType)
-    {
-        return adoptRef(*new Blob(sessionID, WTFMove(data), contentType));
-    }
-
-    static Ref<Blob> deserialize(PAL::SessionID sessionID, const URL& srcURL, const String& type, long long size, const String& fileBackedPath)
+    static Ref<Blob> deserialize(ScriptExecutionContext* context, const URL& srcURL, const String& type, long long size, const String& fileBackedPath)
     {
         ASSERT(Blob::isNormalizedContentType(type));
-        return adoptRef(*new Blob(deserializationContructor, sessionID, srcURL, type, size, fileBackedPath));
+        auto blob = adoptRef(*new Blob(deserializationContructor, context, srcURL, type, size, fileBackedPath));
+        blob->suspendIfNeeded();
+        return blob;
     }
 
     virtual ~Blob();
 
-    const URL& url() const { return m_internalURL; }
+    URL url() const { return m_internalURL; }
     const String& type() const { return m_type; }
 
     WEBCORE_EXPORT unsigned long long size() const;
@@ -94,7 +103,7 @@ public:
     static bool isValidContentType(const String&);
     // The normalization procedure described in the File API spec.
     static String normalizedContentType(const String&);
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
     static bool isNormalizedContentType(const String&);
     static bool isNormalizedContentType(const CString&);
 #endif
@@ -102,40 +111,47 @@ public:
     // URLRegistrable
     URLRegistry& registry() const override;
 
-    Ref<Blob> slice(long long start = 0, long long end = std::numeric_limits<long long>::max(), const String& contentType = String()) const
-    {
-        return adoptRef(*new Blob(m_sessionID, m_internalURL, start, end, contentType));
-    }
+    Ref<Blob> slice(long long start, long long end, const String& contentType) const;
+
+    void text(Ref<DeferredPromise>&&);
+    void arrayBuffer(Ref<DeferredPromise>&&);
+    ExceptionOr<Ref<ReadableStream>> stream();
+
+    // Keeping the handle alive will keep the Blob data alive (but not the Blob object).
+    BlobURLHandle handle() const;
 
 protected:
-    WEBCORE_EXPORT explicit Blob(PAL::SessionID);
-    Blob(PAL::SessionID, Vector<BlobPartVariant>&&, const BlobPropertyBag&);
-    Blob(PAL::SessionID, const SharedBuffer&, const String& contentType);
-    Blob(PAL::SessionID, Vector<uint8_t>&&, const String& contentType);
+    WEBCORE_EXPORT explicit Blob(ScriptExecutionContext*);
+    Blob(ScriptExecutionContext&, Vector<BlobPartVariant>&&, const BlobPropertyBag&);
+    Blob(ScriptExecutionContext*, Vector<uint8_t>&&, const String& contentType);
 
     enum ReferencingExistingBlobConstructor { referencingExistingBlobConstructor };
-    Blob(ReferencingExistingBlobConstructor, const Blob&);
+    Blob(ReferencingExistingBlobConstructor, ScriptExecutionContext*, const Blob&);
 
     enum UninitializedContructor { uninitializedContructor };
-    Blob(UninitializedContructor, PAL::SessionID, URL&&, String&& type);
+    Blob(UninitializedContructor, ScriptExecutionContext*, URL&&, String&& type);
 
     enum DeserializationContructor { deserializationContructor };
-    Blob(DeserializationContructor, PAL::SessionID, const URL& srcURL, const String& type, Optional<unsigned long long> size, const String& fileBackedPath);
+    Blob(DeserializationContructor, ScriptExecutionContext*, const URL& srcURL, const String& type, std::optional<unsigned long long> size, const String& fileBackedPath);
 
     // For slicing.
-    Blob(PAL::SessionID, const URL& srcURL, long long start, long long end, const String& contentType);
+    Blob(ScriptExecutionContext*, const URL& srcURL, long long start, long long end, const String& contentType);
 
 private:
-    PAL::SessionID m_sessionID;
+    void loadBlob(FileReaderLoader::ReadType, CompletionHandler<void(BlobLoader&)>&&);
+
+    // ActiveDOMObject.
+    const char* activeDOMObjectName() const override;
+
+    String m_type;
+    mutable std::optional<unsigned long long> m_size;
 
     // This is an internal URL referring to the blob data associated with this object. It serves
     // as an identifier for this blob. The internal URL is never used to source the blob's content
     // into an HTML or for FileRead'ing, public blob URLs must be used for those purposes.
     URL m_internalURL;
 
-    String m_type;
-
-    mutable Optional<unsigned long long> m_size;
+    HashSet<std::unique_ptr<BlobLoader>> m_blobLoaders;
 };
 
 } // namespace WebCore

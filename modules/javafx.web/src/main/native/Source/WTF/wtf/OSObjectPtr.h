@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2014-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,10 +28,18 @@
 #include <os/object.h>
 #include <wtf/StdLibExtras.h>
 
+// Because ARC enablement is a compile-time choice, and we compile this header
+// both ways, we need a separate copy of our code when ARC is enabled.
+#if __has_feature(objc_arc)
+#define adoptOSObject adoptOSObjectArc
+#define retainOSObject retainOSObjectArc
+#define releaseOSObject releaseOSObjectArc
+#endif
+
 namespace WTF {
 
 template<typename> class OSObjectPtr;
-template<typename T> OSObjectPtr<T> adoptOSObject(T);
+template<typename T> OSObjectPtr<T> adoptOSObject(T) WARN_UNUSED_RETURN;
 
 template<typename T> static inline void retainOSObject(T ptr)
 {
@@ -128,7 +136,7 @@ public:
         return std::exchange(m_ptr, nullptr);
     }
 
-    friend OSObjectPtr adoptOSObject<T>(T);
+    friend OSObjectPtr adoptOSObject<T>(T) WARN_UNUSED_RETURN;
 
 private:
     struct AdoptOSObject { };

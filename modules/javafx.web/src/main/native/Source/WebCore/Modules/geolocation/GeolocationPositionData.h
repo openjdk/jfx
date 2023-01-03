@@ -26,11 +26,10 @@
 #pragma once
 
 #include <cmath>
-#include <wtf/Optional.h>
 #include <wtf/Ref.h>
 #include <wtf/RefCounted.h>
 
-#if PLATFORM(IOS_FAMILY)
+#if PLATFORM(COCOA)
 OBJC_CLASS CLLocation;
 #endif
 
@@ -48,7 +47,7 @@ public:
     {
     }
 
-#if PLATFORM(IOS_FAMILY)
+#if PLATFORM(COCOA)
     WEBCORE_EXPORT explicit GeolocationPositionData(CLLocation*);
 #endif
 
@@ -58,16 +57,16 @@ public:
     double longitude { std::numeric_limits<double>::quiet_NaN() };
     double accuracy { std::numeric_limits<double>::quiet_NaN() };
 
-    Optional<double> altitude;
-    Optional<double> altitudeAccuracy;
-    Optional<double> heading;
-    Optional<double> speed;
-    Optional<double> floorLevel;
+    std::optional<double> altitude;
+    std::optional<double> altitudeAccuracy;
+    std::optional<double> heading;
+    std::optional<double> speed;
+    std::optional<double> floorLevel;
 
     bool isValid() const;
 
     template<class Encoder> void encode(Encoder&) const;
-    template<class Decoder> static bool decode(Decoder&, GeolocationPositionData&);
+    template<class Decoder> static WARN_UNUSED_RETURN bool decode(Decoder&, GeolocationPositionData&);
 };
 
 template<class Encoder>

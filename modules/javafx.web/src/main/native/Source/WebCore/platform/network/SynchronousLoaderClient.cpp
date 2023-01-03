@@ -29,9 +29,13 @@
 #include "AuthenticationChallenge.h"
 #include "ResourceHandle.h"
 #include "ResourceRequest.h"
+#include "SharedBuffer.h"
 #include <wtf/CompletionHandler.h>
 
 namespace WebCore {
+
+SynchronousLoaderClient::SynchronousLoaderClient()
+    : m_messageQueue(SynchronousLoaderMessageQueue::create()) { }
 
 SynchronousLoaderClient::~SynchronousLoaderClient() = default;
 
@@ -68,23 +72,35 @@ void SynchronousLoaderClient::didReceiveResponseAsync(ResourceHandle*, ResourceR
     completionHandler();
 }
 
-void SynchronousLoaderClient::didReceiveData(ResourceHandle*, const char* data, unsigned length, int /*encodedDataLength*/)
+void SynchronousLoaderClient::didReceiveData(ResourceHandle*, const SharedBuffer& buffer, int /*encodedDataLength*/)
 {
-    m_data.append(data, length);
+    m_data.append(buffer.data(), buffer.size());
 }
 
-void SynchronousLoaderClient::didFinishLoading(ResourceHandle*)
+void SynchronousLoaderClient::didFinishLoading(ResourceHandle* handle, const NetworkLoadMetrics&)
 {
-    m_messageQueue.kill();
+    m_messageQueue->kill();
+#if PLATFORM(COCOA)
+    if (handle)
+        handle->releaseDelegate();
+#else
+    UNUSED_PARAM(handle);
+#endif
 }
 
-void SynchronousLoaderClient::didFail(ResourceHandle*, const ResourceError& error)
+void SynchronousLoaderClient::didFail(ResourceHandle* handle, const ResourceError& error)
 {
     ASSERT(m_error.isNull());
 
     m_error = error;
 
-    m_messageQueue.kill();
+    m_messageQueue->kill();
+#if PLATFORM(COCOA)
+    if (handle)
+        handle->releaseDelegate();
+#else
+    UNUSED_PARAM(handle);
+#endif
 }
 
 }

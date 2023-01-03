@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -59,6 +59,13 @@ public class NGTriangleMesh {
     private int[] faceSmoothingGroupsFromAndLengthIndices = new int[2];
 
     Mesh createMesh(ResourceFactory rf) {
+
+        // Check whether the mesh is valid; dispose and recreate if needed
+        if (mesh != null && !mesh.isValid()) {
+            mesh.dispose();
+            mesh = null;
+        }
+
         if (mesh == null) {
             mesh = rf.createMesh();
             meshDirty = true;

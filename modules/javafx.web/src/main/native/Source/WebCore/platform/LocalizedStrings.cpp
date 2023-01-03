@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2003, 2006, 2009, 2010, 2012, 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2003-2021 Apple Inc. All rights reserved.
  * Copyright (C) 2010 Igalia S.L
  *
  * Redistribution and use in source and binary forms, with or without
@@ -34,6 +34,9 @@
 #include <wtf/unicode/CharacterNames.h>
 
 #if USE(CF)
+#if PLATFORM(WIN)
+#include "WebCoreBundleWin.h"
+#endif
 #include <wtf/RetainPtr.h>
 #endif
 
@@ -43,24 +46,38 @@
 
 namespace WebCore {
 
-// Because |format| is used as the second parameter to va_start, it cannot be a reference
-// type according to section 18.7/3 of the C++ N1905 standard.
-String formatLocalizedString(String format, ...)
+#if USE(CF) && !PLATFORM(WIN)
+String formatLocalizedString(CFStringRef format, ...)
 {
-#if USE(CF)
     va_list arguments;
     va_start(arguments, format);
 
-    ALLOW_NONLITERAL_FORMAT_BEGIN
-    auto result = adoptCF(CFStringCreateWithFormatAndArguments(0, 0, format.createCFString().get(), arguments));
-    ALLOW_NONLITERAL_FORMAT_END
+    auto localizedFormat = copyLocalizedString(format);
+ALLOW_NONLITERAL_FORMAT_BEGIN
+    // The 'format' parameter is already checked for correct placeholders and parameters.
+    auto result = adoptCF(CFStringCreateWithFormatAndArguments(0, 0, localizedFormat.get(), arguments));
+ALLOW_NONLITERAL_FORMAT_END
 
+    va_end(arguments);
+    return result.get();
+}
+#else
+// Because |format| is used as the second parameter to va_start, it cannot be a reference
+// type according to section 18.7/3 of the C++ N1905 standard.
+String formatLocalizedString(const char* format, ...)
+{
+#if USE(CF) && PLATFORM(WIN)
+    auto cfFormat = adoptCF(CFStringCreateWithCStringNoCopy(nullptr, format, kCFStringEncodingUTF8, kCFAllocatorNull));
+    va_list arguments;
+    va_start(arguments, format);
+    auto localizedFormat = copyLocalizedString(cfFormat.get());
+    auto result = adoptCF(CFStringCreateWithFormatAndArguments(0, 0, localizedFormat.get(), arguments));
     va_end(arguments);
     return result.get();
 #elif USE(GLIB)
     va_list arguments;
     va_start(arguments, format);
-    GUniquePtr<gchar> result(g_strdup_vprintf(format.utf8().data(), arguments));
+    GUniquePtr<gchar> result(g_strdup_vprintf(format, arguments));
     va_end(arguments);
     return String::fromUTF8(result.get());
 #else
@@ -68,19 +85,67 @@ String formatLocalizedString(String format, ...)
     return format;
 #endif
 }
+#endif
 
-#if !USE(CF)
+#if USE(CF)
+#if !PLATFORM(WIN)
+static CFBundleRef webCoreBundle()
+{
+    static NeverDestroyed<RetainPtr<CFBundleRef>> bundle = CFBundleGetBundleWithIdentifier(CFSTR("com.apple.WebCore"));
+    ASSERT(bundle.get());
+    return bundle.get().get();
+}
+#endif
 
+RetainPtr<CFStringRef> copyLocalizedString(CFStringRef key)
+{
+#if !PLATFORM(IOS_FAMILY)
+    // Can be called on a dispatch queue when initializing strings on iOS.
+    // See LoadWebLocalizedStrings and <rdar://problem/7902473>.
+    ASSERT(isMainThread());
+#endif
+
+    static CFStringRef notFound = CFSTR("localized string not found");
+
+#if PLATFORM(WIN)
+    CFBundleRef bundle = webKitBundle();
+#else
+    CFBundleRef bundle = webCoreBundle();
+#endif
+    auto result = adoptCF(CFBundleCopyLocalizedString(bundle, key, notFound, nullptr));
+
+#if ASSERT_ENABLED
+    if (result.get() == notFound) {
+        char keyCString[256];
+        CFStringGetCString(key, keyCString, sizeof(keyCString), kCFStringEncodingUTF8);
+        ASSERT_WITH_MESSAGE(result.get() != notFound, "Could not find localizable string '%s' in bundle", keyCString);
+    }
+#endif
+
+    return result;
+}
+#endif
+
+#if USE(CF) && !PLATFORM(WIN)
+String localizedString(CFStringRef key)
+{
+    return copyLocalizedString(key).get();
+}
+#else
 String localizedString(const char* key)
 {
+#if USE(CF)
+    auto keyString = adoptCF(CFStringCreateWithCStringNoCopy(nullptr, key, kCFStringEncodingUTF8, kCFAllocatorNull));
+    return copyLocalizedString(keyString.get()).get();
+#else
     return String::fromUTF8(key, strlen(key));
+#endif
 }
-
 #endif
 
 #if ENABLE(CONTEXT_MENUS)
 
-static String truncatedStringForLookupMenuItem(const String& original)
+static String truncatedStringForMenuItem(const String& original)
 {
     // Truncate the string if it's too long. This number is roughly the same as the one used by AppKit.
     unsigned maxNumberOfGraphemeClustersInLookupMenuItem = 24;
@@ -232,14 +297,24 @@ String contextMenuItemTagLearnSpelling()
 String contextMenuItemTagLookUpInDictionary(const String& selectedString)
 {
 #if USE(CF)
-    auto selectedCFString = truncatedStringForLookupMenuItem(selectedString).createCFString();
-    return formatLocalizedString(WEB_UI_CFSTRING("Look Up “%@”", "Look Up context menu item with selected word"), selectedCFString.get());
+    auto selectedCFString = truncatedStringForMenuItem(selectedString).createCFString();
+    return WEB_UI_FORMAT_CFSTRING("Look Up “%@”", "Look Up context menu item with selected word", selectedCFString.get());
 #elif USE(GLIB)
-    return formatLocalizedString(WEB_UI_STRING("Look Up “%s”", "Look Up context menu item with selected word"), truncatedStringForLookupMenuItem(selectedString).utf8().data());
+    return WEB_UI_FORMAT_STRING("Look Up “%s”", "Look Up context menu item with selected word", truncatedStringForMenuItem(selectedString).utf8().data());
 #else
-    return WEB_UI_STRING("Look Up “<selection>”", "Look Up context menu item with selected word").replace("<selection>", truncatedStringForLookupMenuItem(selectedString));
+    return WEB_UI_STRING("Look Up “<selection>”", "Look Up context menu item with selected word").replace("<selection>", truncatedStringForMenuItem(selectedString));
 #endif
 }
+
+#if HAVE(TRANSLATION_UI_SERVICES)
+
+String contextMenuItemTagTranslate(const String& selectedString)
+{
+    auto selectedCFString = truncatedStringForMenuItem(selectedString).createCFString();
+    return WEB_UI_FORMAT_CFSTRING("Translate “%@”", "Translate context menu item with selected word", selectedCFString.get());
+}
+
+#endif
 
 String contextMenuItemTagOpenLink()
 {
@@ -580,6 +655,63 @@ String AXWeekFieldText()
     return WEB_UI_STRING("week and year field", "accessibility role description for a time field.");
 }
 
+String AXARIAContentGroupText(const String& ariaType)
+{
+    if (ariaType == "ARIAApplicationAlert")
+        return WEB_UI_STRING("alert", "An ARIA accessibility group that acts as an alert.");
+    if (ariaType == "ARIAApplicationAlertDialog")
+        return WEB_UI_STRING("web alert dialog", "An ARIA accessibility group that acts as an alert dialog.");
+    if (ariaType == "ARIAApplicationDialog")
+        return WEB_UI_STRING("web dialog", "An ARIA accessibility group that acts as an dialog.");
+    if (ariaType == "ARIAApplicationLog")
+        return WEB_UI_STRING("log", "An ARIA accessibility group that acts as a console log.");
+    if (ariaType == "ARIAApplicationMarquee")
+        return WEB_UI_STRING("marquee", "An ARIA accessibility group that acts as a marquee.");
+    if (ariaType == "ARIAApplicationStatus")
+        return WEB_UI_STRING("application status", "An ARIA accessibility group that acts as a status update.");
+    if (ariaType == "ARIAApplicationTimer")
+        return WEB_UI_STRING("timer", "An ARIA accessibility group that acts as an updating timer.");
+    if (ariaType == "ARIADocument")
+        return WEB_UI_STRING("document", "An ARIA accessibility group that acts as a document.");
+    if (ariaType == "ARIADocumentArticle")
+        return WEB_UI_STRING("article", "An ARIA accessibility group that acts as an article.");
+    if (ariaType == "ARIADocumentNote")
+        return WEB_UI_STRING("note", "An ARIA accessibility group that acts as a note in a document.");
+    if (ariaType == "ARIAWebApplication")
+        return WEB_UI_STRING("web application", "An ARIA accessibility group that acts as an application.");
+    if (ariaType == "ARIALandmarkBanner")
+        return WEB_UI_STRING("banner", "An ARIA accessibility group that acts as a banner.");
+    if (ariaType == "ARIALandmarkComplementary")
+        return WEB_UI_STRING("complementary", "An ARIA accessibility group that acts as a region of complementary information.");
+    if (ariaType == "ARIALandmarkContentInfo")
+        return WEB_UI_STRING("content information", "An ARIA accessibility group that contains content.");
+    if (ariaType == "ARIALandmarkMain")
+        return WEB_UI_STRING("main", "An ARIA accessibility group that is the main portion of the website.");
+    if (ariaType == "ARIALandmarkNavigation")
+        return WEB_UI_STRING("navigation", "An ARIA accessibility group that contains the main navigation elements of a website.");
+    if (ariaType == "ARIALandmarkRegion")
+        return WEB_UI_STRING("region", "An ARIA accessibility group that acts as a distinct region in a document.");
+    if (ariaType == "ARIALandmarkSearch")
+        return WEB_UI_STRING("search", "An ARIA accessibility group that contains a search feature of a website.");
+    if (ariaType == "ARIAUserInterfaceTooltip")
+        return WEB_UI_STRING("tooltip", "An ARIA accessibility group that acts as a tooltip.");
+    if (ariaType == "ARIATabPanel")
+        return WEB_UI_STRING("tab panel", "An ARIA accessibility group that contains the content of a tab.");
+    if (ariaType == "ARIADocumentMath")
+        return WEB_UI_STRING("math", "An ARIA accessibility group that contains mathematical symbols.");
+    return String();
+}
+
+String AXHorizontalRuleDescriptionText()
+{
+    return WEB_UI_STRING("separator", "accessibility role description for a horizontal rule [<hr>]");
+}
+
+String AXMarkText()
+{
+    return WEB_UI_STRING("highlighted", "accessibility role description for a mark element");
+}
+
 String AXButtonActionVerb()
 {
     return WEB_UI_STRING("press", "Verb stating the action that will occur when a button is pressed, as used by accessibility");
@@ -663,6 +795,41 @@ String AXApplePaySubscribeLabel()
 {
     return WEB_UI_STRING("Subscribe with Apple Pay", "Label for the subcribe with Apple Pay button.");
 }
+
+#if ENABLE(APPLE_PAY_NEW_BUTTON_TYPES)
+String AXApplePayReloadLabel()
+{
+    return WEB_UI_STRING("Reload with Apple Pay", "Label for the reload with Apple Pay button.");
+}
+String AXApplePayAddMoneyLabel()
+{
+    return WEB_UI_STRING("Add money with Apple Pay", "Label for the add money with Apple Pay button.");
+}
+String AXApplePayTopUpLabel()
+{
+    return WEB_UI_STRING("Top up with Apple Pay", "Label for the top up with Apple Pay button.");
+}
+String AXApplePayOrderLabel()
+{
+    return WEB_UI_STRING("Order with Apple Pay", "Label for the order with Apple Pay button.");
+}
+String AXApplePayRentLabel()
+{
+    return WEB_UI_STRING("Rent with Apple Pay", "Label for the rent with Apple Pay button.");
+}
+String AXApplePaySupportLabel()
+{
+    return WEB_UI_STRING("Support with Apple Pay", "Label for the support with Apple Pay button.");
+}
+String AXApplePayContributeLabel()
+{
+    return WEB_UI_STRING("Contribute with Apple Pay", "Label for the contribute with Apple Pay button.");
+}
+String AXApplePayTipLabel()
+{
+    return WEB_UI_STRING("Tip with Apple Pay", "Label for the tip with Apple Pay button.");
+}
+#endif
 #endif
 
 String AXAutoFillCredentialsLabel()
@@ -722,7 +889,7 @@ String pluginTooSmallText()
 
 String multipleFileUploadText(unsigned numberOfFiles)
 {
-    return formatLocalizedString(WEB_UI_STRING("%d files", "Label to describe the number of files selected in a file upload control that allows multiple files"), numberOfFiles);
+    return WEB_UI_FORMAT_STRING("%d files", "Label to describe the number of files selected in a file upload control that allows multiple files", numberOfFiles);
 }
 
 String unknownFileSizeText()
@@ -744,11 +911,11 @@ String imageTitle(const String& filename, const IntSize& size)
     auto height = adoptCF(CFNumberCreate(0, kCFNumberIntType, &heightInt));
     auto heightString = adoptCF(CFNumberFormatterCreateStringWithNumber(0, formatter.get(), height.get()));
 
-    return formatLocalizedString(WEB_UI_CFSTRING("%@ %@×%@ pixels", "window title for a standalone image (uses multiplication symbol, not x)"), filename.createCFString().get(), widthString.get(), heightString.get());
+    return WEB_UI_FORMAT_CFSTRING("%@ %@×%@ pixels", "window title for a standalone image (uses multiplication symbol, not x)", filename.createCFString().get(), widthString.get(), heightString.get());
 #elif USE(GLIB)
-    return formatLocalizedString(WEB_UI_STRING("%s %d×%d pixels", "window title for a standalone image (uses multiplication symbol, not x)"), filename.utf8().data(), size.width(), size.height());
+    return WEB_UI_FORMAT_STRING("%s %d×%d pixels", "window title for a standalone image (uses multiplication symbol, not x)", filename.utf8().data(), size.width(), size.height());
 #else
-    return formatLocalizedString(WEB_UI_STRING("<filename> %d×%d pixels", "window title for a standalone image (uses multiplication symbol, not x)"), size.width(), size.height()).replace("<filename>", filename);
+    return WEB_UI_FORMAT_STRING("<filename> %d×%d pixels", "window title for a standalone image (uses multiplication symbol, not x)", size.width(), size.height()).replace("<filename>", filename);
 #endif
 }
 
@@ -783,7 +950,7 @@ String localizedMediaControlElementString(const String& name)
     if (name == "RewindButton")
         return WEB_UI_STRING("back 30 seconds", "accessibility label for seek back 30 seconds button");
     if (name == "ReturnToRealtimeButton")
-        return WEB_UI_STRING("return to realtime", "accessibility label for return to real time button");
+        return WEB_UI_STRING("return to real time", "accessibility label for return to real time button");
     if (name == "CurrentTimeDisplay")
         return WEB_UI_STRING("elapsed time", "accessibility label for elapsed time display");
     if (name == "TimeRemainingDisplay")
@@ -870,12 +1037,12 @@ String localizedMediaTimeDescription(float time)
     seconds %= 60;
 
     if (days)
-        return formatLocalizedString(WEB_UI_STRING("%1$d days %2$d hours %3$d minutes %4$d seconds", "accessibility help text for media controller time value >= 1 day"), days, hours, minutes, seconds);
+        return WEB_UI_FORMAT_STRING("%1$d days %2$d hours %3$d minutes %4$d seconds", "accessibility help text for media controller time value >= 1 day", days, hours, minutes, seconds);
     if (hours)
-        return formatLocalizedString(WEB_UI_STRING("%1$d hours %2$d minutes %3$d seconds", "accessibility help text for media controller time value >= 60 minutes"), hours, minutes, seconds);
+        return WEB_UI_FORMAT_STRING("%1$d hours %2$d minutes %3$d seconds", "accessibility help text for media controller time value >= 60 minutes", hours, minutes, seconds);
     if (minutes)
-        return formatLocalizedString(WEB_UI_STRING("%1$d minutes %2$d seconds", "accessibility help text for media controller time value >= 60 seconds"), minutes, seconds);
-    return formatLocalizedString(WEB_UI_STRING("%1$d seconds", "accessibility help text for media controller time value < 60 seconds"), seconds);
+        return WEB_UI_FORMAT_STRING("%1$d minutes %2$d seconds", "accessibility help text for media controller time value >= 60 seconds", minutes, seconds);
+    return WEB_UI_FORMAT_STRING("%1$d seconds", "accessibility help text for media controller time value < 60 seconds", seconds);
 }
 
 String validationMessageValueMissingText()
@@ -936,13 +1103,13 @@ String validationMessagePatternMismatchText()
 #if !PLATFORM(GTK)
 String validationMessageTooShortText(int, int minLength)
 {
-    return formatLocalizedString(WEB_UI_STRING("Use at least %d characters", "Validation message for form control elements with a value shorter than minimum allowed length"), minLength);
+    return WEB_UI_FORMAT_STRING("Use at least %d characters", "Validation message for form control elements with a value shorter than minimum allowed length", minLength);
 }
 
 #if !PLATFORM(COCOA)
 String validationMessageTooLongText(int, int maxLength)
 {
-    return formatLocalizedString(WEB_UI_STRING("Use no more than %d characters", "Validation message for form control elements with a value shorter than maximum allowed length"), maxLength);
+    return WEB_UI_FORMAT_STRING("Use no more than %d characters", "Validation message for form control elements with a value shorter than maximum allowed length", maxLength);
 }
 #endif
 #endif
@@ -950,9 +1117,9 @@ String validationMessageTooLongText(int, int maxLength)
 String validationMessageRangeUnderflowText(const String& minimum)
 {
 #if USE(CF)
-    return formatLocalizedString(WEB_UI_CFSTRING("Value must be greater than or equal to %@", "Validation message for input form controls with value lower than allowed minimum"), minimum.createCFString().get());
+    return WEB_UI_FORMAT_CFSTRING("Value must be greater than or equal to %@", "Validation message for input form controls with value lower than allowed minimum", minimum.createCFString().get());
 #elif USE(GLIB)
-    return formatLocalizedString(WEB_UI_STRING("Value must be greater than or equal to %s", "Validation message for input form controls with value lower than allowed minimum"), minimum.utf8().data());
+    return WEB_UI_FORMAT_STRING("Value must be greater than or equal to %s", "Validation message for input form controls with value lower than allowed minimum", minimum.utf8().data());
 #else
     UNUSED_PARAM(minimum);
     return WEB_UI_STRING("range underflow", "Validation message for input form controls with value lower than allowed minimum");
@@ -962,9 +1129,9 @@ String validationMessageRangeUnderflowText(const String& minimum)
 String validationMessageRangeOverflowText(const String& maximum)
 {
 #if USE(CF)
-    return formatLocalizedString(WEB_UI_CFSTRING("Value must be less than or equal to %@", "Validation message for input form controls with value higher than allowed maximum"), maximum.createCFString().get());
+    return WEB_UI_FORMAT_CFSTRING("Value must be less than or equal to %@", "Validation message for input form controls with value higher than allowed maximum", maximum.createCFString().get());
 #elif USE(GLIB)
-    return formatLocalizedString(WEB_UI_STRING("Value must be less than or equal to %s", "Validation message for input form controls with value higher than allowed maximum"), maximum.utf8().data());
+    return WEB_UI_FORMAT_STRING("Value must be less than or equal to %s", "Validation message for input form controls with value higher than allowed maximum", maximum.utf8().data());
 #else
     UNUSED_PARAM(maximum);
     return WEB_UI_STRING("range overflow", "Validation message for input form controls with value higher than allowed maximum");
@@ -986,73 +1153,153 @@ String clickToExitFullScreenText()
     return WEB_UI_STRING("Click to Exit Full Screen", "Message to display in browser window when in webkit full screen mode.");
 }
 
-#if ENABLE(VIDEO_TRACK)
+#if ENABLE(VIDEO)
 
-String textTrackSubtitlesText()
+String trackNoLabelText()
 {
-    return WEB_UI_STRING("Subtitles", "Menu section heading for subtitles");
+    return WEB_UI_STRING_KEY("Unknown", "Unknown (audio/text track)", "Menu item label for a audio/text track that has no other name.");
 }
 
 String textTrackOffMenuItemText()
 {
-    return WEB_UI_STRING("Off", "Menu item label for the track that represents disabling closed captions");
+    return WEB_UI_STRING_KEY("Off", "Off (text track)", "Menu item label for the track that represents disabling closed captions.");
 }
 
 String textTrackAutomaticMenuItemText()
 {
-    return formatLocalizedString(WEB_UI_STRING("Auto (Recommended)", "Menu item label for automatic track selection behavior"));
+    return WEB_UI_STRING_KEY("Auto (Recommended)", "Auto (Recommended) (text track)", "Menu item label for automatic track selection behavior.");
 }
 
-String textTrackNoLabelText()
+#if USE(CF)
+
+String addTrackLabelAsSuffix(const String& text, const String& label)
 {
-    return WEB_UI_STRING_KEY("Unknown", "Unknown (text track)", "Menu item label for a text track that has no other name");
+    return WEB_UI_FORMAT_CFSTRING_KEY("%@ (%@)", "%@ (%@) (audio/text track)", "Audio/Text track display name format that includes the label and language of the track, in the form of 'Language (Label)'.", text.createCFString().get(), label.createCFString().get());
 }
 
-String audioTrackNoLabelText()
+String textTrackKindClosedCaptionsDisplayName()
 {
-    return WEB_UI_STRING_KEY("Unknown", "Unknown (audio track)", "Menu item label for an audio track that has no other name");
+    return WEB_UI_CFSTRING_KEY("CC", "CC (text track)", "Display name for closed captions text tracks.");
 }
 
-#endif
-
-#if ENABLE(VIDEO_TRACK) && USE(CF)
-
-String textTrackCountryAndLanguageMenuItemText(const String& title, const String& country, const String& language)
+String addTextTrackKindClosedCaptionsSuffix(const String& text)
 {
-    return formatLocalizedString(WEB_UI_CFSTRING("%@ (%@-%@)", "Text track display name format that includes the country and language of the subtitle, in the form of 'Title (Language-Country)'"), title.createCFString().get(), language.createCFString().get(), country.createCFString().get());
+    if (text.isEmpty())
+        return textTrackKindClosedCaptionsDisplayName();
+    return WEB_UI_FORMAT_CFSTRING_KEY("%@ CC", "%@ CC (text track)", "Closed captions text track display name format that includes the language and/or locale (e.g. 'English CC').", text.createCFString().get());
 }
 
-String textTrackLanguageMenuItemText(const String& title, const String& language)
+String textTrackKindCaptionsDisplayName()
 {
-    return formatLocalizedString(WEB_UI_CFSTRING("%@ (%@)", "Text track display name format that includes the language of the subtitle, in the form of 'Title (Language)'"), title.createCFString().get(), language.createCFString().get());
+    return WEB_UI_CFSTRING_KEY("Captions", "Captions (text track)", "Display name for text track kind 'captions'.");
 }
 
-String closedCaptionTrackMenuItemText(const String& title)
+String addTextTrackKindCaptionsSuffix(const String& text)
 {
-    return formatLocalizedString(WEB_UI_CFSTRING("%@ CC", "Text track contains closed captions"), title.createCFString().get());
+    if (text.isEmpty())
+        return textTrackKindCaptionsDisplayName();
+    return WEB_UI_FORMAT_CFSTRING_KEY("%@ Captions", "%@ Captions (text track)", "Captions text track display name format that includes the language and/or locale (e.g. 'English Captions').", text.createCFString().get());
 }
 
-String sdhTrackMenuItemText(const String& title)
+String textTrackKindDescriptionsDisplayName()
 {
-    return formatLocalizedString(WEB_UI_CFSTRING("%@ SDH", "Text track contains subtitles for the deaf and hard of hearing"), title.createCFString().get());
+    return WEB_UI_CFSTRING_KEY("Descriptions", "Descriptions (text track)", "Display name for text track kind 'descriptions'.");
 }
 
-String easyReaderTrackMenuItemText(const String& title)
+String addTextTrackKindDescriptionsSuffix(const String& text)
 {
-    return formatLocalizedString(WEB_UI_CFSTRING("%@ Easy Reader", "Text track contains simplified (3rd grade level) subtitles"), title.createCFString().get());
+    if (text.isEmpty())
+        return textTrackKindDescriptionsDisplayName();
+    return WEB_UI_FORMAT_CFSTRING_KEY("%@ Descriptions", "%@ Descriptions (text track)", "Descriptions text track display name format that includes the language and/or locale (e.g. 'English Descriptions').", text.createCFString().get());
 }
 
-String forcedTrackMenuItemText(const String& title)
+String textTrackKindChaptersDisplayName()
 {
-    return formatLocalizedString(WEB_UI_CFSTRING("%@ Forced", "Text track contains forced subtitles"), title.createCFString().get());
+    return WEB_UI_CFSTRING_KEY("Chapters", "Chapters (text track)", "Display name for text track kind 'chapters'.");
 }
 
-String audioDescriptionTrackSuffixText(const String& title)
+String addTextTrackKindChaptersSuffix(const String& text)
 {
-    return formatLocalizedString(WEB_UI_CFSTRING("%@ AD", "Text track contains Audio Descriptions"), title.createCFString().get());
+    if (text.isEmpty())
+        return textTrackKindChaptersDisplayName();
+    return WEB_UI_FORMAT_CFSTRING_KEY("%@ Chapters", "%@ Chapters (text track)", "Chapters text track display name format that includes the language and/or locale (e.g. 'English Chapters').", text.createCFString().get());
 }
 
-#endif
+String textTrackKindMetadataDisplayName()
+{
+    return WEB_UI_CFSTRING_KEY("Metadata", "Metadata (text track)", "Display name for text track kind 'metadata'.");
+}
+
+String addTextTrackKindMetadataSuffix(const String& text)
+{
+    if (text.isEmpty())
+        return textTrackKindMetadataDisplayName();
+    return WEB_UI_FORMAT_CFSTRING_KEY("%@ Metadata", "%@ Metadata (text track)", "Metadata text track display name format that includes the language and/or locale (e.g. 'English Metadata').", text.createCFString().get());
+}
+
+String textTrackKindSDHDisplayName()
+{
+    return WEB_UI_CFSTRING_KEY("SDH", "SDH (text track)", "Display name for SDH (i.e. deaf and/or hard of hearing) text tracks.");
+}
+
+String addTextTrackKindSDHSuffix(const String& text)
+{
+    if (text.isEmpty())
+        return textTrackKindSDHDisplayName();
+    return WEB_UI_FORMAT_CFSTRING_KEY("%@ SDH", "%@ SDH (text track)", "SDH (i.e. deaf and/or hard of hearing) text track display name format that includes the language and/or locale (e.g. 'English SDH').", text.createCFString().get());
+}
+
+String textTrackKindEasyReaderDisplayName()
+{
+    return WEB_UI_CFSTRING_KEY("Easy Reader", "Easy Reader (text track)", "Display name for easy reader (i.e. 3rd-grade level) text tracks.");
+}
+
+String addTextTrackKindEasyReaderSuffix(const String& text)
+{
+    if (text.isEmpty())
+        return textTrackKindEasyReaderDisplayName();
+    return WEB_UI_FORMAT_CFSTRING_KEY("%@ Easy Reader", "%@ Easy Reader (text track)", "Easy Reader (i.e. 3rd-grade level) text track display name format that includes the language and/or locale (e.g. 'English Easy Reader').", text.createCFString().get());
+}
+
+String textTrackKindForcedDisplayName()
+{
+    return WEB_UI_CFSTRING_KEY("Forced", "Forced (text track)", "Display name for text track kind 'forced'.");
+}
+
+String addTextTrackKindForcedSuffix(const String& text)
+{
+    if (text.isEmpty())
+        return textTrackKindForcedDisplayName();
+    return WEB_UI_FORMAT_CFSTRING_KEY("%@ Forced", "%@ Forced (text track)", "Forced text track display name format that includes the language and/or locale (e.g. 'English Forced').", text.createCFString().get());
+}
+
+String audioTrackKindDescriptionsDisplayName()
+{
+    return WEB_UI_CFSTRING_KEY("Descriptions", "Descriptions (audio track)", "Display name for audio track kind 'descriptions'.");
+}
+
+String addAudioTrackKindDescriptionsSuffix(const String& text)
+{
+    if (text.isEmpty())
+        return audioTrackKindDescriptionsDisplayName();
+    return WEB_UI_FORMAT_CFSTRING_KEY("%@ Descriptions", "%@ Descriptions (audio track)", "Descriptions audio track display name format that includes the language and/or locale (e.g. 'English Descriptions').", text.createCFString().get());
+}
+
+String audioTrackKindCommentaryDisplayName()
+{
+    return WEB_UI_CFSTRING_KEY("Commentary", "Commentary (audio track)", "Display name for audio track kind 'commentary'.");
+}
+
+String addAudioTrackKindCommentarySuffix(const String& text)
+{
+    if (text.isEmpty())
+        return audioTrackKindCommentaryDisplayName();
+    return WEB_UI_FORMAT_CFSTRING_KEY("%@ Commentary", "%@ Commentary (audio track)", "Commentary audio track display name format that includes the language and/or locale (e.g. 'English Commentary').", text.createCFString().get());
+}
+
+#endif // USE(CF)
+
+#endif // ENABLE(VIDEO)
 
 String snapshottedPlugInLabelTitle()
 {
@@ -1066,7 +1313,7 @@ String snapshottedPlugInLabelSubtitle()
 
 String useBlockedPlugInContextMenuTitle()
 {
-    return formatLocalizedString(WEB_UI_STRING("Show in blocked plug-in", "Title of the context menu item to show when PDFPlugin was used instead of a blocked plugin"));
+    return WEB_UI_STRING("Show in blocked plug-in", "Title of the context menu item to show when PDFPlugin was used instead of a blocked plugin");
 }
 
 #if ENABLE(WEB_CRYPTO)
@@ -1074,11 +1321,11 @@ String useBlockedPlugInContextMenuTitle()
 String webCryptoMasterKeyKeychainLabel(const String& localizedApplicationName)
 {
 #if USE(CF)
-    return formatLocalizedString(WEB_UI_CFSTRING("%@ WebCrypto Master Key", "Name of application's single WebCrypto master key in Keychain"), localizedApplicationName.createCFString().get());
+    return WEB_UI_FORMAT_CFSTRING("%@ WebCrypto Master Key", "Name of application's single WebCrypto master key in Keychain", localizedApplicationName.createCFString().get());
 #elif USE(GLIB)
-    return formatLocalizedString(WEB_UI_STRING("%s WebCrypto Master Key", "Name of application's single WebCrypto master key in Keychain"), localizedApplicationName.utf8().data());
+    return WEB_UI_FORMAT_STRING("%s WebCrypto Master Key", "Name of application's single WebCrypto master key in Keychain", localizedApplicationName.utf8().data());
 #else
-    return String::fromUTF8("<application> WebCrypto Master Key", "Name of application's single WebCrypto master key in Keychain").replace("<application>", localizedApplicationName);
+    return WEB_UI_STRING("<application> WebCrypto Master Key", "Name of application's single WebCrypto master key in Keychain").replace("<application>", localizedApplicationName);
 #endif
 }
 
@@ -1094,11 +1341,6 @@ String webCryptoMasterKeyKeychainComment()
 String numberPadOKButtonTitle()
 {
     return WEB_UI_STRING_KEY("OK", "OK (OK button title in extra zoomed number pad)", "Title of the OK button for the number pad in zoomed form controls.");
-}
-
-String formControlDoneButtonTitle()
-{
-    return WEB_UI_STRING("Done", "Title of the Done button for zoomed form controls.");
 }
 
 String formControlCancelButtonTitle()
@@ -1149,5 +1391,24 @@ String unacceptableTLSCertificate()
     return WEB_UI_STRING("Unacceptable TLS certificate", "Unacceptable TLS certificate error");
 }
 #endif
+
+#if ENABLE(WEB_AUTHN)
+// On macOS, Touch ID prompt is not guaranteed to show on top of the UI client, and therefore additional
+// information is provided to help users to make decisions.
+String makeCredentialTouchIDPromptTitle(const String& bundleName, const String& domain)
+{
+    return WEB_UI_FORMAT_CFSTRING("“%@” would like to use Touch ID for “%@”.", "Allow the specified bundle to use Touch ID to sign in to the specified website on this device", bundleName.createCFString().get(), domain.createCFString().get());
+}
+
+String getAssertionTouchIDPromptTitle(const String& bundleName, const String& domain)
+{
+    return WEB_UI_FORMAT_CFSTRING("“%@” would like to sign in to “%@”.", "Allow the specified bundle to sign in to the specified website", bundleName.createCFString().get(), domain.createCFString().get());
+}
+
+String genericTouchIDPromptTitle()
+{
+    return WEB_UI_STRING("Continue with Touch ID.", "Continue with Touch ID.");
+}
+#endif // ENABLE(WEB_AUTHN)
 
 } // namespace WebCore

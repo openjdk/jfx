@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,14 +26,10 @@
 package javafx.scene.control.skin;
 
 import javafx.geometry.Orientation;
-import javafx.scene.Node;
-import javafx.scene.control.Accordion;
 import javafx.scene.control.Control;
 import javafx.scene.control.Separator;
 import javafx.scene.control.SkinBase;
 import javafx.scene.layout.Region;
-
-import java.util.Collections;
 
 /**
  * Default skin implementation for the {@link Separator} control.
@@ -43,7 +39,7 @@ import java.util.Collections;
  */
 public class SeparatorSkin extends SkinBase<Separator> {
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Static fields                                                           *
      *                                                                         *
@@ -59,7 +55,7 @@ public class SeparatorSkin extends SkinBase<Separator> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Private fields                                                          *
      *                                                                         *
@@ -74,7 +70,7 @@ public class SeparatorSkin extends SkinBase<Separator> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
@@ -103,11 +99,18 @@ public class SeparatorSkin extends SkinBase<Separator> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Public API                                                              *
      *                                                                         *
      **************************************************************************/
+
+
+    @Override
+    public void dispose() {
+        getChildren().remove(line);
+        super.dispose();
+    }
 
     /**
      * We only need to deal with the single "line" child region. The important

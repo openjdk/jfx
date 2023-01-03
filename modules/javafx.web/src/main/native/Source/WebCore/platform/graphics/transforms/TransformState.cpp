@@ -26,7 +26,7 @@
 #include "config.h"
 #include "TransformState.h"
 
-#include <wtf/Optional.h>
+#include <wtf/text/TextStream.h>
 
 namespace WebCore {
 
@@ -39,10 +39,7 @@ TransformState& TransformState::operator=(const TransformState& other)
         m_lastPlanarPoint = other.m_lastPlanarPoint;
     if (m_mapQuad) {
         m_lastPlanarQuad = other.m_lastPlanarQuad;
-        if (other.m_lastPlanarSecondaryQuad)
-            m_lastPlanarSecondaryQuad = makeUnique<FloatQuad>(*other.m_lastPlanarSecondaryQuad);
-        else
-            m_lastPlanarSecondaryQuad = nullptr;
+        m_lastPlanarSecondaryQuad = other.m_lastPlanarSecondaryQuad;
     }
     m_accumulatingTransform = other.m_accumulatingTransform;
     m_direction = other.m_direction;
@@ -172,7 +169,7 @@ FloatPoint TransformState::mappedPoint(bool* wasClamped) const
     if (m_direction == ApplyTransformDirection)
         return m_accumulatedTransform->mapPoint(point);
 
-    return m_accumulatedTransform->inverse().valueOr(TransformationMatrix()).projectPoint(point, wasClamped);
+    return valueOrDefault(m_accumulatedTransform->inverse()).projectPoint(point, wasClamped);
 }
 
 FloatQuad TransformState::mappedQuad(bool* wasClamped) const
@@ -185,30 +182,30 @@ FloatQuad TransformState::mappedQuad(bool* wasClamped) const
     return quad;
 }
 
-Optional<FloatQuad> TransformState::mappedSecondaryQuad(bool* wasClamped) const
+std::optional<FloatQuad> TransformState::mappedSecondaryQuad(bool* wasClamped) const
 {
     if (wasClamped)
         *wasClamped = false;
 
     if (!m_lastPlanarSecondaryQuad)
-        return Optional<FloatQuad>();
+        return std::nullopt;
 
     FloatQuad quad = *m_lastPlanarSecondaryQuad;
     mapQuad(quad, m_direction, wasClamped);
     return quad;
 }
 
-void TransformState::setLastPlanarSecondaryQuad(const FloatQuad* quad)
+void TransformState::setLastPlanarSecondaryQuad(const std::optional<FloatQuad>& quad)
 {
     if (!quad) {
-        m_lastPlanarSecondaryQuad = nullptr;
+        m_lastPlanarSecondaryQuad = std::nullopt;
         return;
     }
 
     // Map the quad back through any transform or offset back into the last flattening coordinate space.
     FloatQuad backMappedQuad(*quad);
     mapQuad(backMappedQuad, inverseDirection());
-    m_lastPlanarSecondaryQuad = makeUnique<FloatQuad>(backMappedQuad);
+    m_lastPlanarSecondaryQuad = backMappedQuad;
 }
 
 void TransformState::mapQuad(FloatQuad& quad, TransformDirection direction, bool* wasClamped) const
@@ -217,10 +214,12 @@ void TransformState::mapQuad(FloatQuad& quad, TransformDirection direction, bool
     if (!m_accumulatedTransform)
         return;
 
-    if (direction == ApplyTransformDirection)
+    if (direction == ApplyTransformDirection) {
         quad = m_accumulatedTransform->mapQuad(quad);
+        return;
+    }
 
-    quad = m_accumulatedTransform->inverse().valueOr(TransformationMatrix()).projectQuad(quad, wasClamped);
+    quad = valueOrDefault(m_accumulatedTransform->inverse()).projectQuad(quad, wasClamped);
 }
 
 void TransformState::flattenWithTransform(const TransformationMatrix& t, bool* wasClamped)
@@ -231,17 +230,16 @@ void TransformState::flattenWithTransform(const TransformationMatrix& t, bool* w
         if (m_mapQuad) {
             m_lastPlanarQuad = t.mapQuad(m_lastPlanarQuad);
             if (m_lastPlanarSecondaryQuad)
-                *m_lastPlanarSecondaryQuad = t.mapQuad(*m_lastPlanarSecondaryQuad);
+                m_lastPlanarSecondaryQuad = t.mapQuad(*m_lastPlanarSecondaryQuad);
         }
-
     } else {
-        TransformationMatrix inverseTransform = t.inverse().valueOr(TransformationMatrix());
+        TransformationMatrix inverseTransform = valueOrDefault(t.inverse());
         if (m_mapPoint)
             m_lastPlanarPoint = inverseTransform.projectPoint(m_lastPlanarPoint);
         if (m_mapQuad) {
             m_lastPlanarQuad = inverseTransform.projectQuad(m_lastPlanarQuad, wasClamped);
             if (m_lastPlanarSecondaryQuad)
-                *m_lastPlanarSecondaryQuad = inverseTransform.projectQuad(*m_lastPlanarSecondaryQuad, wasClamped);
+                m_lastPlanarSecondaryQuad = inverseTransform.projectQuad(*m_lastPlanarSecondaryQuad, wasClamped);
         }
     }
 
@@ -251,6 +249,27 @@ void TransformState::flattenWithTransform(const TransformationMatrix& t, bool* w
     if (m_accumulatedTransform)
         m_accumulatedTransform->makeIdentity();
     m_accumulatingTransform = false;
+}
+
+TextStream& operator<<(TextStream& ts, const TransformState& state)
+{
+    TextStream multilineStream;
+    multilineStream.setIndent(ts.indent() + 2);
+
+    multilineStream.dumpProperty("last planar point", state.lastPlanarPoint());
+    multilineStream.dumpProperty("last planar quad", state.lastPlanarQuad());
+
+    if (state.lastPlanarSecondaryQuad())
+        multilineStream.dumpProperty("last planar secondary quad", *state.lastPlanarSecondaryQuad());
+
+    if (state.accumulatedTransform())
+        multilineStream.dumpProperty("accumulated transform", ValueOrNull(state.accumulatedTransform()));
+
+    {
+        TextStream::GroupScope scope(ts);
+        ts << "TransformState " << multilineStream.release();
+    }
+    return ts;
 }
 
 } // namespace WebCore

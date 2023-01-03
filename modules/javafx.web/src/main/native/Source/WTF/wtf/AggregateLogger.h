@@ -26,7 +26,10 @@
 #pragma once
 
 #include <wtf/Algorithms.h>
+#include <wtf/HashSet.h>
 #include <wtf/Logger.h>
+#include <wtf/Ref.h>
+#include <wtf/RefPtr.h>
 
 namespace WTF {
 
@@ -104,7 +107,7 @@ private:
 
         Logger::log(channel, level, arguments...);
 
-        for (auto logger : m_loggers) {
+        for (const auto& logger : m_loggers) {
             for (Observer& observer : logger->observers())
                 observer.didLogMessage(channel, level, { ConsoleLogValue<Argument>::toValue(arguments)... });
         }

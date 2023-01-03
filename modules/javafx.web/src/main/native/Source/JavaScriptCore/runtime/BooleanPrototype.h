@@ -1,6 +1,6 @@
 /*
  *  Copyright (C) 1999-2000 Harri Porten (porten@kde.org)
- *  Copyright (C) 2008, 2011 Apple Inc. All rights reserved.
+ *  Copyright (C) 2008-2021 Apple Inc. All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public
@@ -26,12 +26,12 @@ namespace JSC {
 
 class BooleanPrototype final : public BooleanObject {
 public:
-    typedef BooleanObject Base;
-    static const unsigned StructureFlags = Base::StructureFlags | HasStaticPropertyTable;
+    using Base = BooleanObject;
+    static constexpr unsigned StructureFlags = Base::StructureFlags | HasStaticPropertyTable;
 
     static BooleanPrototype* create(VM& vm, JSGlobalObject* globalObject, Structure* structure)
     {
-        BooleanPrototype* prototype = new (NotNull, allocateCell<BooleanPrototype>(vm.heap)) BooleanPrototype(vm, structure);
+        BooleanPrototype* prototype = new (NotNull, allocateCell<BooleanPrototype>(vm)) BooleanPrototype(vm, structure);
         prototype->finishCreation(vm, globalObject);
         return prototype;
     }
@@ -40,14 +40,13 @@ public:
 
     static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
     {
-        return Structure::create(vm, globalObject, prototype, TypeInfo(ObjectType, StructureFlags), info());
+        return Structure::create(vm, globalObject, prototype, TypeInfo(BooleanObjectType, StructureFlags), info());
     }
-
-protected:
-    void finishCreation(VM&, JSGlobalObject*);
 
 private:
     BooleanPrototype(VM&, Structure*);
+    void finishCreation(VM&, JSGlobalObject*);
 };
+STATIC_ASSERT_ISO_SUBSPACE_SHARABLE(BooleanPrototype, BooleanObject);
 
 } // namespace JSC

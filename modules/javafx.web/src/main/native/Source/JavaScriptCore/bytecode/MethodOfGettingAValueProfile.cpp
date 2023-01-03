@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,7 +31,7 @@
 #include "ArithProfile.h"
 #include "CCallHelpers.h"
 #include "CodeBlock.h"
-#include "JSCInlines.h"
+#include "JSCJSValueInlines.h"
 
 namespace JSC {
 
@@ -41,12 +41,12 @@ MethodOfGettingAValueProfile MethodOfGettingAValueProfile::fromLazyOperand(
     MethodOfGettingAValueProfile result;
     result.m_kind = LazyOperand;
     result.u.lazyOperand.codeBlock = codeBlock;
-    result.u.lazyOperand.bytecodeOffset = key.bytecodeOffset();
-    result.u.lazyOperand.operand = key.operand().offset();
+    result.u.lazyOperand.bytecodeOffset = key.bytecodeIndex();
+    result.u.lazyOperand.operand = key.operand();
     return result;
 }
 
-void MethodOfGettingAValueProfile::emitReportValue(CCallHelpers& jit, JSValueRegs regs) const
+void MethodOfGettingAValueProfile::emitReportValue(CCallHelpers& jit, JSValueRegs regs, GPRReg tempGPR, TagRegistersMode mode) const
 {
     switch (m_kind) {
     case None:
@@ -57,7 +57,7 @@ void MethodOfGettingAValueProfile::emitReportValue(CCallHelpers& jit, JSValueReg
         return;
 
     case LazyOperand: {
-        LazyOperandValueProfileKey key(u.lazyOperand.bytecodeOffset, VirtualRegister(u.lazyOperand.operand));
+        LazyOperandValueProfileKey key(u.lazyOperand.bytecodeOffset, u.lazyOperand.operand);
 
         ConcurrentJSLocker locker(u.lazyOperand.codeBlock->m_lock);
         LazyOperandValueProfile* profile =
@@ -66,10 +66,16 @@ void MethodOfGettingAValueProfile::emitReportValue(CCallHelpers& jit, JSValueReg
         return;
     }
 
-    case ArithProfileReady: {
-        u.arithProfile->emitObserveResult(jit, regs, DoNotHaveTagRegisters);
+    case UnaryArithProfileReady: {
+        u.unaryArithProfile->emitObserveResult(jit, regs, tempGPR, mode);
         return;
-    } }
+    }
+
+    case BinaryArithProfileReady: {
+        u.binaryArithProfile->emitObserveResult(jit, regs, tempGPR, mode);
+        return;
+    }
+    }
 
     RELEASE_ASSERT_NOT_REACHED();
 }
@@ -85,7 +91,7 @@ void MethodOfGettingAValueProfile::reportValue(JSValue value)
         return;
 
     case LazyOperand: {
-        LazyOperandValueProfileKey key(u.lazyOperand.bytecodeOffset, VirtualRegister(u.lazyOperand.operand));
+        LazyOperandValueProfileKey key(u.lazyOperand.bytecodeOffset, u.lazyOperand.operand);
 
         ConcurrentJSLocker locker(u.lazyOperand.codeBlock->m_lock);
         LazyOperandValueProfile* profile =
@@ -94,10 +100,16 @@ void MethodOfGettingAValueProfile::reportValue(JSValue value)
         return;
     }
 
-    case ArithProfileReady: {
-        u.arithProfile->observeResult(value);
+    case UnaryArithProfileReady: {
+        u.unaryArithProfile->observeResult(value);
         return;
-    } }
+    }
+
+    case BinaryArithProfileReady: {
+        u.binaryArithProfile->observeResult(value);
+        return;
+    }
+    }
 
     RELEASE_ASSERT_NOT_REACHED();
 }

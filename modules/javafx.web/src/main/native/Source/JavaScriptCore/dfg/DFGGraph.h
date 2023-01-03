@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -36,14 +36,15 @@
 #include "DFGNode.h"
 #include "DFGPlan.h"
 #include "DFGPropertyTypeKey.h"
-#include "DFGScannable.h"
 #include "FullBytecodeLiveness.h"
+#include "JITScannable.h"
 #include "MethodOfGettingAValueProfile.h"
 #include <wtf/BitVector.h>
+#include <wtf/GenericHashKey.h>
 #include <wtf/HashMap.h>
-#include <wtf/Vector.h>
+#include <wtf/StackCheck.h>
 #include <wtf/StdLibExtras.h>
-#include <wtf/StdUnorderedMap.h>
+#include <wtf/Vector.h>
 
 namespace WTF {
 template <typename T> class SingleRootGraph;
@@ -52,7 +53,7 @@ template <typename T> class SingleRootGraph;
 namespace JSC {
 
 class CodeBlock;
-class ExecState;
+class CallFrame;
 
 namespace DFG {
 
@@ -158,10 +159,10 @@ private:
 //
 // The order may be significant for nodes with side-effects (property accesses, value conversions).
 // Nodes that are 'dead' remain in the vector with refCount 0.
-class Graph : public virtual Scannable {
+class Graph final : public virtual Scannable {
 public:
     Graph(VM&, Plan&);
-    ~Graph();
+    ~Graph() final;
 
     void changeChild(Edge& edge, Node* newNode)
     {
@@ -245,6 +246,17 @@ public:
     void convertToConstant(Node* node, JSValue value);
     void convertToStrongConstant(Node* node, JSValue value);
 
+    // Use this to produce a value you know won't be accessed but the compiler
+    // might think is live. For exmaple, in our op_iterator_next parsing
+    // value VirtualRegister is only read if we are not "done". Because the
+    // done control flow is not in the op_iterator_next bytecode this is not
+    // obvious to the compiler.
+    // FIXME: This isn't quite a true bottom value. For example, any object
+    // speculation will now be Object|Other as this returns null. We should
+    // fix this when we can allocate on the Compiler thread.
+    // https://bugs.webkit.org/show_bug.cgi?id=210627
+    FrozenValue* bottomValueMatchingSpeculation(SpeculatedType);
+
     RegisteredStructure registerStructure(Structure* structure)
     {
         StructureRegistrationResult ignored;
@@ -255,14 +267,14 @@ public:
     void assertIsRegistered(Structure* structure);
 
     // CodeBlock is optional, but may allow additional information to be dumped (e.g. Identifier names).
-    void dump(PrintStream& = WTF::dataFile(), DumpContext* = 0);
+    void dump(PrintStream& = WTF::dataFile(), DumpContext* = nullptr);
 
     bool terminalsAreValid();
 
     enum PhiNodeDumpMode { DumpLivePhisOnly, DumpAllPhis };
     void dumpBlockHeader(PrintStream&, const char* prefix, BasicBlock*, PhiNodeDumpMode, DumpContext*);
     void dump(PrintStream&, Edge);
-    void dump(PrintStream&, const char* prefix, Node*, DumpContext* = 0);
+    void dump(PrintStream&, const char* prefix, Node*, DumpContext* = nullptr);
     static int amountOfNodeWhiteSpace(Node*);
     static void printNodeWhiteSpace(PrintStream&, Node*);
 
@@ -399,6 +411,26 @@ public:
             && !hasExitSite(node, Int52Overflow);
     }
 
+#if USE(BIGINT32)
+    bool binaryArithShouldSpeculateBigInt32(Node* node, PredictionPass pass)
+    {
+        if (!node->canSpeculateBigInt32(pass))
+            return false;
+        if (hasExitSite(node, BigInt32Overflow))
+            return false;
+        return Node::shouldSpeculateBigInt32(node->child1().node(), node->child2().node());
+    }
+
+    bool unaryArithShouldSpeculateBigInt32(Node* node, PredictionPass pass)
+    {
+        if (!node->canSpeculateBigInt32(pass))
+            return false;
+        if (hasExitSite(node, BigInt32Overflow))
+            return false;
+        return node->child1()->shouldSpeculateBigInt32();
+    }
+#endif
+
     bool canOptimizeStringObjectAccess(const CodeOrigin&);
 
     bool getRegExpPrototypeProperty(JSObject* regExpPrototype, Structure* regExpPrototypeStructure, UniquedStringImpl* uid, JSValue& returnJSValue);
@@ -409,7 +441,7 @@ public:
         return arithRound->canSpeculateInt32(pass) && !hasExitSite(arithRound->origin.semantic, Overflow) && !hasExitSite(arithRound->origin.semantic, NegativeZero);
     }
 
-    static const char *opName(NodeType);
+    static const char* opName(NodeType);
 
     RegisteredStructureSet* addStructureSet(const StructureSet& structureSet)
     {
@@ -441,7 +473,7 @@ public:
     JSObject* globalThisObjectFor(CodeOrigin codeOrigin)
     {
         JSGlobalObject* object = globalObjectFor(codeOrigin);
-        return jsCast<JSObject*>(object->methodTable(m_vm)->toThis(object, object->globalExec(), NotStrictMode));
+        return jsCast<JSObject*>(object->methodTable(m_vm)->toThis(object, object, ECMAMode::sloppy()));
     }
 
     ScriptExecutable* executableFor(InlineCallFrame* inlineCallFrame)
@@ -467,18 +499,6 @@ public:
     CodeBlock* baselineCodeBlockFor(const CodeOrigin& codeOrigin)
     {
         return baselineCodeBlockForOriginAndBaselineCodeBlock(codeOrigin, m_profiledBlock);
-    }
-
-    bool isStrictModeFor(CodeOrigin codeOrigin)
-    {
-        if (!codeOrigin.inlineCallFrame())
-            return m_codeBlock->isStrictMode();
-        return codeOrigin.inlineCallFrame()->isStrictMode();
-    }
-
-    ECMAMode ecmaModeFor(CodeOrigin codeOrigin)
-    {
-        return isStrictModeFor(codeOrigin) ? StrictMode : NotStrictMode;
     }
 
     bool masqueradesAsUndefinedWatchpointIsStillValid(const CodeOrigin& codeOrigin)
@@ -666,7 +686,7 @@ public:
         {
         }
 
-        NaturalBlockIterable(Graph& graph)
+        NaturalBlockIterable(const Graph& graph)
             : m_graph(&graph)
         {
         }
@@ -679,7 +699,7 @@ public:
             {
             }
 
-            iterator(Graph& graph, BlockIndex index)
+            iterator(const Graph& graph, BlockIndex index)
                 : m_graph(&graph)
                 , m_index(findNext(index))
             {
@@ -714,7 +734,7 @@ public:
                 return index;
             }
 
-            Graph* m_graph;
+            const Graph* m_graph;
             BlockIndex m_index;
         };
 
@@ -729,10 +749,10 @@ public:
         }
 
     private:
-        Graph* m_graph;
+        const Graph* m_graph;
     };
 
-    NaturalBlockIterable blocksInNaturalOrder()
+    NaturalBlockIterable blocksInNaturalOrder() const
     {
         return NaturalBlockIterable(*this);
     }
@@ -815,7 +835,6 @@ public:
 
     DesiredIdentifiers& identifiers() { return m_plan.identifiers(); }
     DesiredWatchpoints& watchpoints() { return m_plan.watchpoints(); }
-    DesiredGlobalProperties& globalProperties() { return m_plan.globalProperties(); }
 
     // Returns false if the key is already invalid or unwatchable. If this is a Presence condition,
     // this also makes it cheap to query if the condition holds. Also makes sure that the GC knows
@@ -840,13 +859,13 @@ public:
     // Quickly query if a single local is live at the given point. This is faster than calling
     // forAllLiveInBytecode() if you will only query one local. But, if you want to know all of the
     // locals live, then calling this for each local is much slower than forAllLiveInBytecode().
-    bool isLiveInBytecode(VirtualRegister, CodeOrigin);
+    bool isLiveInBytecode(Operand, CodeOrigin);
 
-    // Quickly get all of the non-argument locals live at the given point. This doesn't give you
+    // Quickly get all of the non-argument locals and tmps live at the given point. This doesn't give you
     // any arguments because those are all presumed live. You can call forAllLiveInBytecode() to
     // also get the arguments. This is much faster than calling isLiveInBytecode() for each local.
     template<typename Functor>
-    void forAllLocalsLiveInBytecode(CodeOrigin codeOrigin, const Functor& functor)
+    void forAllLocalsAndTmpsLiveInBytecode(CodeOrigin codeOrigin, const Functor& functor)
     {
         // Support for not redundantly reporting arguments. Necessary because in case of a varargs
         // call, only the callee knows that arguments are live while in the case of a non-varargs
@@ -856,6 +875,7 @@ public:
 
         CodeOrigin* codeOriginPtr = &codeOrigin;
 
+        bool isCallerOrigin = false;
         for (;;) {
             InlineCallFrame* inlineCallFrame = codeOriginPtr->inlineCallFrame();
             VirtualRegister stackOffset(inlineCallFrame ? inlineCallFrame->stackOffset : 0);
@@ -864,12 +884,12 @@ public:
                 if (inlineCallFrame->isClosureCall)
                     functor(stackOffset + CallFrameSlot::callee);
                 if (inlineCallFrame->isVarargs())
-                    functor(stackOffset + CallFrameSlot::argumentCount);
+                    functor(stackOffset + CallFrameSlot::argumentCountIncludingThis);
             }
 
             CodeBlock* codeBlock = baselineCodeBlockFor(inlineCallFrame);
             FullBytecodeLiveness& fullLiveness = livenessFor(codeBlock);
-            const FastBitVector& liveness = fullLiveness.getLiveness(codeOriginPtr->bytecodeIndex());
+            const auto& livenessAtBytecode = fullLiveness.getLiveness(codeOriginPtr->bytecodeIndex(), appropriateLivenessCalculationPoint(*codeOriginPtr, isCallerOrigin));
             for (unsigned relativeLocal = codeBlock->numCalleeLocals(); relativeLocal--;) {
                 VirtualRegister reg = stackOffset + virtualRegisterForLocal(relativeLocal);
 
@@ -877,8 +897,16 @@ public:
                 if (reg >= exclusionStart && reg < exclusionEnd)
                     continue;
 
-                if (liveness[relativeLocal])
+                if (livenessAtBytecode[relativeLocal])
                     functor(reg);
+            }
+
+            if (codeOriginPtr->bytecodeIndex().checkpoint()) {
+                ASSERT(codeBlock->numTmps());
+                auto liveTmps = tmpLivenessForCheckpoint(*codeBlock, codeOriginPtr->bytecodeIndex());
+                liveTmps.forEachSetBit([&] (size_t tmp) {
+                    functor(remapOperand(inlineCallFrame, Operand::tmp(tmp)));
+                });
             }
 
             if (!inlineCallFrame)
@@ -887,7 +915,7 @@ public:
             // Arguments are always live. This would be redundant if it wasn't for our
             // op_call_varargs inlining. See the comment above.
             exclusionStart = stackOffset + CallFrame::argumentOffsetIncludingThis(0);
-            exclusionEnd = stackOffset + CallFrame::argumentOffsetIncludingThis(inlineCallFrame->argumentsWithFixup.size());
+            exclusionEnd = stackOffset + CallFrame::argumentOffsetIncludingThis(inlineCallFrame->m_argumentsWithFixup.size());
 
             // We will always have a "this" argument and exclusionStart should be a smaller stack
             // offset than exclusionEnd.
@@ -899,27 +927,55 @@ public:
             // We need to handle tail callers because we may decide to exit to the
             // the return bytecode following the tail call.
             codeOriginPtr = &inlineCallFrame->directCaller;
+            isCallerOrigin = true;
         }
     }
 
-    // Get a BitVector of all of the non-argument locals live right now. This is mostly useful if
+    // Get a BitVector of all of the locals and tmps live right now. This is mostly useful if
     // you want to compare two sets of live locals from two different CodeOrigins.
-    BitVector localsLiveInBytecode(CodeOrigin);
+    BitVector localsAndTmpsLiveInBytecode(CodeOrigin);
 
-    // Tells you all of the arguments and locals live at the given CodeOrigin. This is a small
-    // extension to forAllLocalsLiveInBytecode(), since all arguments are always presumed live.
+    LivenessCalculationPoint appropriateLivenessCalculationPoint(CodeOrigin origin, bool isCallerOrigin)
+    {
+        if (isCallerOrigin) {
+            // We do not need to keep used registers of call bytecodes live when terminating in inlined function,
+            // except for inlining invoked by non call bytecodes including getter/setter calls.
+            BytecodeIndex bytecodeIndex = origin.bytecodeIndex();
+            InlineCallFrame* inlineCallFrame = origin.inlineCallFrame();
+            CodeBlock* codeBlock = baselineCodeBlockFor(inlineCallFrame);
+            auto instruction = codeBlock->instructions().at(bytecodeIndex.offset());
+            switch (instruction->opcodeID()) {
+            case op_call_varargs:
+            case op_tail_call_varargs:
+            case op_construct_varargs:
+                // When inlining varargs call, uses include array used for varargs. But when we are in inlined function,
+                // the content of this is already read and flushed to the stack. So, at this point, we no longer need to
+                // keep these use registers. We can use the liveness at LivenessCalculationPoint::AfterUse point.
+                // This is important to kill arguments allocations in DFG (not in FTL) when calling a function in a
+                // `func.apply(undefined, arguments)` manner.
+                return LivenessCalculationPoint::AfterUse;
+            default:
+                // We could list up the other bytecodes here, like, `op_call`, `op_get_by_id` (getter inlining). But we don't do that.
+                // To list up bytecodes here, we must ensure that these bytecodes never use `uses` registers after inlining. So we cannot
+                // return LivenessCalculationPoint::AfterUse blindly if isCallerOrigin = true. And since excluding liveness in the other
+                // bytecodes does not offer practical benefit, we do not try it.
+                break;
+            }
+        }
+        return LivenessCalculationPoint::BeforeUse;
+    }
+
+    // Tells you all of the operands live at the given CodeOrigin. This is a small
+    // extension to forAllLocalsOrTmpsLiveInBytecode(), since all arguments are always presumed live.
     template<typename Functor>
     void forAllLiveInBytecode(CodeOrigin codeOrigin, const Functor& functor)
     {
-        forAllLocalsLiveInBytecode(codeOrigin, functor);
+        forAllLocalsAndTmpsLiveInBytecode(codeOrigin, functor);
 
         // Report all arguments as being live.
         for (unsigned argument = block(0)->variablesAtHead.numberOfArguments(); argument--;)
-            functor(virtualRegisterForArgument(argument));
+            functor(virtualRegisterForArgumentIncludingThis(argument));
     }
-
-    BytecodeKills& killsFor(CodeBlock*);
-    BytecodeKills& killsFor(InlineCallFrame*);
 
     static unsigned parameterSlotsForArgCount(unsigned);
 
@@ -944,7 +1000,8 @@ public:
 
     void registerFrozenValues();
 
-    void visitChildren(SlotVisitor&) override;
+    void visitChildren(AbstractSlotVisitor&) final;
+    void visitChildren(SlotVisitor&) final;
 
     void logAssertionFailure(
         std::nullptr_t, const char* file, int line, const char* function,
@@ -978,8 +1035,8 @@ public:
     }
     bool willCatchExceptionInMachineFrame(CodeOrigin, CodeOrigin& opCatchOriginOut, HandlerInfo*& catchHandlerOut);
 
-    bool needsScopeRegister() const { return m_hasDebuggerEnabled || m_codeBlock->usesEval(); }
-    bool needsFlushedThis() const { return m_codeBlock->usesEval(); }
+    bool needsScopeRegister() const { return m_hasDebuggerEnabled || m_codeBlock->usesCallEval(); }
+    bool needsFlushedThis() const { return m_codeBlock->usesCallEval(); }
 
     void clearCPSCFGData();
 
@@ -1006,6 +1063,20 @@ public:
     Prefix& prefix() { return m_prefix; }
     void nextPhase() { m_prefix.phaseNumber++; }
 
+    const UnlinkedSimpleJumpTable& unlinkedSwitchJumpTable(unsigned index) const { return *m_unlinkedSwitchJumpTables[index]; }
+    SimpleJumpTable& switchJumpTable(unsigned index) { return m_switchJumpTables[index]; }
+
+    const UnlinkedStringJumpTable& unlinkedStringSwitchJumpTable(unsigned index) const { return *m_unlinkedStringSwitchJumpTables[index]; }
+    StringJumpTable& stringSwitchJumpTable(unsigned index) { return m_stringSwitchJumpTables[index]; }
+
+    void appendCatchEntrypoint(BytecodeIndex bytecodeIndex, MacroAssemblerCodePtr<ExceptionHandlerPtrTag> machineCode, Vector<FlushFormat>&& argumentFormats)
+    {
+        m_catchEntrypoints.append(CatchEntrypointData { machineCode, FixedVector<FlushFormat>(WTFMove(argumentFormats)), bytecodeIndex });
+    }
+
+    void freeDFGIRAfterLowering();
+
+    StackCheck m_stackChecker;
     VM& m_vm;
     Plan& m_plan;
     CodeBlock* m_codeBlock;
@@ -1014,6 +1085,12 @@ public:
     Vector<RefPtr<BasicBlock>, 8> m_blocks;
     Vector<BasicBlock*, 1> m_roots;
     Vector<Edge, 16> m_varArgChildren;
+
+    // UnlinkedSimpleJumpTable/UnlinkedStringJumpTable are kept by UnlinkedCodeBlocks retained by baseline CodeBlocks handled by DFG / FTL.
+    Vector<const UnlinkedSimpleJumpTable*> m_unlinkedSwitchJumpTables;
+    Vector<SimpleJumpTable> m_switchJumpTables;
+    Vector<const UnlinkedStringJumpTable*> m_unlinkedStringSwitchJumpTables;
+    Vector<StringJumpTable> m_stringSwitchJumpTables;
 
     HashMap<EncodedJSValue, FrozenValue*, EncodedJSValueHash, EncodedJSValueHashTraits> m_frozenValueMap;
     Bag<FrozenValue> m_frozenValues;
@@ -1060,6 +1137,7 @@ public:
     Bag<SwitchData> m_switchData;
     Bag<MultiGetByOffsetData> m_multiGetByOffsetData;
     Bag<MultiPutByOffsetData> m_multiPutByOffsetData;
+    Bag<MultiDeleteByOffsetData> m_multiDeleteByOffsetData;
     Bag<MatchStructureData> m_matchStructureData;
     Bag<ObjectMaterializationData> m_objectMaterializationData;
     Bag<CallVarargsData> m_callVarargsData;
@@ -1070,7 +1148,6 @@ public:
     Bag<BitVector> m_bitVectors;
     Vector<InlineVariableData, 4> m_inlineVariableData;
     HashMap<CodeBlock*, std::unique_ptr<FullBytecodeLiveness>> m_bytecodeLiveness;
-    HashMap<CodeBlock*, std::unique_ptr<BytecodeKills>> m_bytecodeKills;
     HashSet<std::pair<JSObject*, PropertyOffset>> m_safeToLoad;
     Vector<Ref<Snippet>> m_domJITSnippets;
     std::unique_ptr<CPSDominators> m_cpsDominators;
@@ -1082,6 +1159,7 @@ public:
     std::unique_ptr<BackwardsCFG> m_backwardsCFG;
     std::unique_ptr<BackwardsDominators> m_backwardsDominators;
     std::unique_ptr<ControlEquivalenceAnalysis> m_controlEquivalenceAnalysis;
+    unsigned m_tmps;
     unsigned m_localVars;
     unsigned m_nextMachineLocal;
     unsigned m_parameterSlots;
@@ -1094,14 +1172,15 @@ public:
 
     // This maps an entrypoint index to a particular op_catch bytecode offset. By convention,
     // it'll never have zero as a key because we use zero to mean the op_enter entrypoint.
-    HashMap<unsigned, unsigned> m_entrypointIndexToCatchBytecodeOffset;
+    HashMap<unsigned, BytecodeIndex> m_entrypointIndexToCatchBytecodeIndex;
+    Vector<CatchEntrypointData> m_catchEntrypoints;
 
     HashSet<String> m_localStrings;
-    HashMap<const StringImpl*, String> m_copiedStrings;
+    HashSet<String> m_copiedStrings;
 
 #if USE(JSVALUE32_64)
-    StdUnorderedMap<int64_t, double*> m_doubleConstantsMap;
-    std::unique_ptr<Bag<double>> m_doubleConstants;
+    HashMap<GenericHashKey<int64_t>, double*> m_doubleConstantsMap;
+    Bag<double> m_doubleConstants;
 #endif
 
     OptimizationFixpointState m_fixpointState;
@@ -1113,7 +1192,8 @@ public:
     bool m_hasDebuggerEnabled;
     bool m_hasExceptionHandlers { false };
     bool m_isInSSAConversion { false };
-    Optional<uint32_t> m_maxLocalsForCatchOSREntry;
+    bool m_isValidating { false };
+    std::optional<uint32_t> m_maxLocalsForCatchOSREntry;
     std::unique_ptr<FlowIndexing> m_indexingCache;
     std::unique_ptr<FlowMap<AbstractValue>> m_abstractValuesCache;
     Bag<EntrySwitchData> m_entrySwitchData;
@@ -1121,7 +1201,12 @@ public:
     RegisteredStructure stringStructure;
     RegisteredStructure symbolStructure;
 
+    HashSet<Node*> m_slowGetByVal;
+    HashSet<Node*> m_slowPutByVal;
+
 private:
+    template<typename Visitor> void visitChildrenImpl(Visitor&);
+
     bool isStringPrototypeMethodSane(JSGlobalObject*, UniquedStringImpl*);
 
     void handleSuccessor(Vector<BasicBlock*, 16>& worklist, BasicBlock*, BasicBlock* successor);

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -48,6 +48,7 @@ public class StubTextLayout implements TextLayout {
     private Font font;
     private int tabSize = DEFAULT_TAB_SIZE;
     private int nullFontSize = 0;
+    private float spacing;
 
     @Override
     public boolean setContent(String text, Object font) {
@@ -69,6 +70,8 @@ public class StubTextLayout implements TextLayout {
 
     @Override
     public boolean setLineSpacing(float spacing) {
+        this.spacing = spacing;
+
         return true;
     }
 
@@ -89,10 +92,10 @@ public class StubTextLayout implements TextLayout {
 
     @Override
     public BaseBounds getBounds(TextSpan filter, BaseBounds bounds) {
-        final double fontSize = (font == null ? nullFontSize : ((Font)font).getSize());
+        final double fontSize = (font == null ? nullFontSize : font.getSize());
         final String[] lines = getText().split("\n");
         double width = 0.0;
-        double height = fontSize * lines.length;
+        double height = fontSize * lines.length + spacing * (lines.length - 1);
         for (String line : lines) {
             final int length;
             if (line.contains("\t")) {
@@ -161,7 +164,7 @@ public class StubTextLayout implements TextLayout {
             return new Hit(0, -1, true);
         }
 
-        final double fontSize = (font == null ? nullFontSize : ((Font)font).getSize());
+        final double fontSize = (font == null ? nullFontSize : font.getSize());
         final String[] lines = text.split("\n");
         int lineIndex = Math.min(lines.length - 1, (int) (y / fontSize));
         if (lineIndex >= lines.length) {

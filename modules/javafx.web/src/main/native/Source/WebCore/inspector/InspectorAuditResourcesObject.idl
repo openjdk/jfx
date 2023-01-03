@@ -24,12 +24,11 @@
  */
 
 [
-    ImplementationLacksVTable,
     JSGenerateToJSObject,
-    NoInterfaceObject,
+    LegacyNoInterfaceObject,
 ] interface InspectorAuditResourcesObject {
-    [CallWith=Document, MayThrowException] sequence<Resource> getResources();
-    [CallWith=Document, MayThrowException] ResourceContent getResourceContent(DOMString id);
+    [CallWith=CurrentDocument] sequence<Resource> getResources();
+    [CallWith=CurrentDocument] ResourceContent getResourceContent(DOMString id);
 };
 
 [

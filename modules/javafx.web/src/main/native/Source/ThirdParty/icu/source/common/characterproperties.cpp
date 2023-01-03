@@ -14,6 +14,7 @@
 #include "unicode/uscript.h"
 #include "unicode/uset.h"
 #include "cmemory.h"
+#include "emojiprops.h"
 #include "mutex.h"
 #include "normalizer2impl.h"
 #include "uassert.h"
@@ -38,8 +39,8 @@ UBool U_CALLCONV characterproperties_cleanup();
 constexpr int32_t NUM_INCLUSIONS = UPROPS_SRC_COUNT + UCHAR_INT_LIMIT - UCHAR_INT_START;
 
 struct Inclusion {
-    UnicodeSet  *fSet;
-    UInitOnce    fInitOnce;
+    UnicodeSet  *fSet = nullptr;
+    UInitOnce    fInitOnce = U_INITONCE_INITIALIZER;
 };
 Inclusion gInclusions[NUM_INCLUSIONS]; // cached getInclusions()
 
@@ -47,10 +48,7 @@ UnicodeSet *sets[UCHAR_BINARY_LIMIT] = {};
 
 UCPMap *maps[UCHAR_INT_LIMIT - UCHAR_INT_START] = {};
 
-icu::UMutex *cpMutex() {
-    static icu::UMutex m = U_MUTEX_INITIALIZER;
-    return &m;
-}
+icu::UMutex cpMutex;
 
 //----------------------------------------------------------------
 // Inclusions list
@@ -173,6 +171,13 @@ void U_CALLCONV initInclusion(UPropertySource src, UErrorCode &errorCode) {
     case UPROPS_SRC_VO:
         uprops_addPropertyStarts((UPropertySource)src, &sa, &errorCode);
         break;
+    case UPROPS_SRC_EMOJI: {
+        const icu::EmojiProps *ep = icu::EmojiProps::getSingleton(errorCode);
+        if (U_SUCCESS(errorCode)) {
+            ep->addPropertyStarts(&sa, errorCode);
+        }
+        break;
+    }
     default:
         errorCode = U_INTERNAL_PROGRAM_ERROR;
         break;
@@ -271,6 +276,26 @@ UnicodeSet *makeSet(UProperty property, UErrorCode &errorCode) {
         errorCode = U_MEMORY_ALLOCATION_ERROR;
         return nullptr;
     }
+    if (UCHAR_BASIC_EMOJI <= property && property <= UCHAR_RGI_EMOJI) {
+        // property of strings
+        const icu::EmojiProps *ep = icu::EmojiProps::getSingleton(errorCode);
+        if (U_FAILURE(errorCode)) { return nullptr; }
+        USetAdder sa = {
+            (USet *)set.getAlias(),
+            _set_add,
+            _set_addRange,
+            _set_addString,
+            nullptr, // don't need remove()
+            nullptr // don't need removeRange()
+        };
+        ep->addStrings(&sa, property, errorCode);
+        if (property != UCHAR_BASIC_EMOJI && property != UCHAR_RGI_EMOJI) {
+            // property of _only_ strings
+            set->freeze();
+            return set.orphan();
+        }
+    }
+
     const UnicodeSet *inclusions =
         icu::CharacterProperties::getInclusionsForProperty(property, errorCode);
     if (U_FAILURE(errorCode)) { return nullptr; }
@@ -361,7 +386,7 @@ u_getBinaryPropertySet(UProperty property, UErrorCode *pErrorCode) {
         *pErrorCode = U_ILLEGAL_ARGUMENT_ERROR;
         return nullptr;
     }
-    Mutex m(cpMutex());
+    Mutex m(&cpMutex);
     UnicodeSet *set = sets[property];
     if (set == nullptr) {
         sets[property] = set = makeSet(property, *pErrorCode);
@@ -377,7 +402,7 @@ u_getIntPropertyMap(UProperty property, UErrorCode *pErrorCode) {
         *pErrorCode = U_ILLEGAL_ARGUMENT_ERROR;
         return nullptr;
     }
-    Mutex m(cpMutex());
+    Mutex m(&cpMutex);
     UCPMap *map = maps[property - UCHAR_INT_START];
     if (map == nullptr) {
         maps[property - UCHAR_INT_START] = map = makeMap(property, *pErrorCode);

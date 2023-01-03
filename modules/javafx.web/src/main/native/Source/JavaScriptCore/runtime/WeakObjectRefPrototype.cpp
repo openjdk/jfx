@@ -26,7 +26,6 @@
 #include "config.h"
 #include "WeakObjectRefPrototype.h"
 
-#include "Error.h"
 #include "JSCInlines.h"
 #include "JSWeakObjectRef.h"
 
@@ -34,7 +33,7 @@ namespace JSC {
 
 const ClassInfo WeakObjectRefPrototype::s_info = { "WeakRef", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(WeakObjectRefPrototype) };
 
-static EncodedJSValue JSC_HOST_CALL protoFuncWeakRefDeref(ExecState*);
+static JSC_DECLARE_HOST_FUNCTION(protoFuncWeakRefDeref);
 
 void WeakObjectRefPrototype::finishCreation(VM& vm, JSGlobalObject* globalObject)
 {
@@ -44,16 +43,16 @@ void WeakObjectRefPrototype::finishCreation(VM& vm, JSGlobalObject* globalObject
     // FIXME: It wouldn't be hard to make this an intrinsic.
     JSC_NATIVE_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->deref, protoFuncWeakRefDeref, static_cast<unsigned>(PropertyAttribute::DontEnum), 0);
 
-    putDirectWithoutTransition(vm, vm.propertyNames->toStringTagSymbol, jsString(vm, "WeakRef"), PropertyAttribute::DontEnum | PropertyAttribute::ReadOnly);
+    JSC_TO_STRING_TAG_WITHOUT_TRANSITION();
 }
 
-ALWAYS_INLINE static JSWeakObjectRef* getWeakRef(CallFrame* callFrame, JSValue value)
+ALWAYS_INLINE static JSWeakObjectRef* getWeakRef(JSGlobalObject* globalObject, JSValue value)
 {
-    VM& vm = callFrame->vm();
+    VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     if (UNLIKELY(!value.isObject())) {
-        throwTypeError(callFrame, scope, "Called WeakRef function on non-object"_s);
+        throwTypeError(globalObject, scope, "Called WeakRef function on non-object"_s);
         return nullptr;
     }
 
@@ -61,19 +60,19 @@ ALWAYS_INLINE static JSWeakObjectRef* getWeakRef(CallFrame* callFrame, JSValue v
     if (LIKELY(ref))
         return ref;
 
-    throwTypeError(callFrame, scope, "Called WeakRef function on a non-WeakRef object"_s);
+    throwTypeError(globalObject, scope, "Called WeakRef function on a non-WeakRef object"_s);
     return nullptr;
 }
 
-EncodedJSValue JSC_HOST_CALL protoFuncWeakRefDeref(CallFrame* callFrame)
+JSC_DEFINE_HOST_FUNCTION(protoFuncWeakRefDeref, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
-    VM& vm = callFrame->vm();
-    auto* ref = getWeakRef(callFrame, callFrame->thisValue());
+    VM& vm = globalObject->vm();
+    auto* ref = getWeakRef(globalObject, callFrame->thisValue());
     if (!ref)
         return JSValue::encode(jsUndefined());
 
     auto* value = ref->deref(vm);
-    return value ? JSValue::encode(value) : JSValue::encode(jsNull());
+    return value ? JSValue::encode(value) : JSValue::encode(jsUndefined());
 }
 
 }

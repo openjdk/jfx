@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,14 +28,12 @@
 
 #if ENABLE(DFG_JIT)
 
+#include "ButterflyInlines.h"
 #include "DFGAbstractHeap.h"
 #include "DFGClobberize.h"
 #include "DFGGraph.h"
 #include "DFGInsertionSet.h"
 #include "DFGPhase.h"
-#include "DFGPredictionPropagationPhase.h"
-#include "DFGVariableAccessDataDump.h"
-#include "JSCInlines.h"
 #include "MathCommon.h"
 #include "RegExpObject.h"
 #include "StringPrototype.h"
@@ -45,7 +43,7 @@
 namespace JSC { namespace DFG {
 
 class StrengthReductionPhase : public Phase {
-    static const bool verbose = false;
+    static constexpr bool verbose = false;
 
 public:
     StrengthReductionPhase(Graph& graph)
@@ -93,7 +91,7 @@ private:
             break;
 
         case ArithBitLShift:
-        case BitRShift:
+        case ArithBitRShift:
         case BitURShift:
             if (m_node->child1().useKind() != UntypedUse && m_node->child2()->isInt32Constant() && !(m_node->child2()->asInt32() & 0x1f)) {
                 convertToIdentityOverChild1();
@@ -125,7 +123,8 @@ private:
         case ValueBitOr:
         case ValueBitAnd:
         case ValueBitXor: {
-            if (m_node->binaryUseKind() == BigIntUse)
+            // FIXME: we should maybe support the case where one operand is always HeapBigInt and the other is always BigInt32?
+            if (m_node->binaryUseKind() == AnyBigIntUse || m_node->binaryUseKind() == BigInt32Use || m_node->binaryUseKind() == HeapBigIntUse)
                 handleCommutativity();
             break;
         }
@@ -198,8 +197,15 @@ private:
                 && m_node->child2()->isInt32Constant()
                 && m_node->child1()->op() == ArithMod
                 && m_node->child1()->binaryUseKind() == Int32Use
-                && m_node->child1()->child2()->isInt32Constant()
-                && std::abs(m_node->child1()->child2()->asInt32()) <= std::abs(m_node->child2()->asInt32())) {
+                && m_node->child1()->child2()->isInt32Constant()) {
+
+                int32_t const1 = m_node->child1()->child2()->asInt32();
+                int32_t const2 = m_node->child2()->asInt32();
+
+                if (const1 == INT_MIN || const2 == INT_MIN)
+                    break; // std::abs(INT_MIN) is undefined.
+
+                if (std::abs(const1) <= std::abs(const2))
                     convertToIdentityOverChild1();
             }
             break;
@@ -213,7 +219,7 @@ private:
             if (m_node->isBinaryUseKind(DoubleRepUse)
                 && m_node->child2()->isNumberConstant()) {
 
-                if (Optional<double> reciprocal = safeReciprocalForDivByConst(m_node->child2()->asNumber())) {
+                if (std::optional<double> reciprocal = safeReciprocalForDivByConst(m_node->child2()->asNumber())) {
                     Node* reciprocalNode = m_insertionSet.insertConstant(m_nodeIndex, m_node->origin, jsDoubleNumber(*reciprocal), DoubleConstant);
                     m_node->setOp(ArithMul);
                     m_node->child2() = Edge(reciprocalNode, DoubleRepUse);
@@ -285,17 +291,17 @@ private:
             }
 
             Node* setLocal = nullptr;
-            VirtualRegister local = m_node->local();
+            Operand operand = m_node->operand();
 
             for (unsigned i = m_nodeIndex; i--;) {
                 Node* node = m_block->at(i);
 
-                if (node->op() == SetLocal && node->local() == local) {
+                if (node->op() == SetLocal && node->operand() == operand) {
                     setLocal = node;
                     break;
                 }
 
-                if (accessesOverlap(m_graph, node, AbstractHeap(Stack, local)))
+                if (accessesOverlap(m_graph, node, AbstractHeap(Stack, operand)))
                     break;
 
             }
@@ -375,7 +381,7 @@ private:
                 break;
             }
 
-            if (m_node->binaryUseKind() == BigIntUse)
+            if (m_node->binaryUseKind() == BigInt32Use || m_node->binaryUseKind() == HeapBigIntUse || m_node->binaryUseKind() == AnyBigIntUse)
                 handleCommutativity();
 
             break;
@@ -492,13 +498,29 @@ private:
 
             Node* regExpObjectNode = nullptr;
             RegExp* regExp = nullptr;
+            bool regExpObjectNodeIsConstant = false;
             if (m_node->op() == RegExpExec || m_node->op() == RegExpTest || m_node->op() == RegExpMatchFast) {
                 regExpObjectNode = m_node->child2().node();
-                if (RegExpObject* regExpObject = regExpObjectNode->dynamicCastConstant<RegExpObject*>(vm()))
+                if (RegExpObject* regExpObject = regExpObjectNode->dynamicCastConstant<RegExpObject*>(vm())) {
+                    JSGlobalObject* globalObject = regExpObject->globalObject(vm());
+                    if (globalObject->isRegExpRecompiled()) {
+                        if (verbose)
+                            dataLog("Giving up because RegExp recompile happens.\n");
+                        break;
+                    }
+                    m_graph.watchpoints().addLazily(globalObject->regExpRecompiledWatchpoint());
                     regExp = regExpObject->regExp();
-                else if (regExpObjectNode->op() == NewRegexp)
+                    regExpObjectNodeIsConstant = true;
+                } else if (regExpObjectNode->op() == NewRegexp) {
+                    JSGlobalObject* globalObject = m_graph.globalObjectFor(regExpObjectNode->origin.semantic);
+                    if (globalObject->isRegExpRecompiled()) {
+                        if (verbose)
+                            dataLog("Giving up because RegExp recompile happens.\n");
+                        break;
+                    }
+                    m_graph.watchpoints().addLazily(globalObject->regExpRecompiledWatchpoint());
                     regExp = regExpObjectNode->castOperand<RegExp*>();
-                else {
+                } else {
                     if (verbose)
                         dataLog("Giving up because the regexp is unknown.\n");
                     break;
@@ -535,6 +557,41 @@ private:
 
             ASSERT(m_node->op() != RegExpMatchFast);
 
+            unsigned lastIndex = UINT_MAX;
+            if (m_node->op() != RegExpExecNonGlobalOrSticky) {
+                // This will only work if we can prove what the value of lastIndex is. To do this
+                // safely, we need to execute the insertion set so that we see any previous strength
+                // reductions. This is needed for soundness since otherwise the effectfulness of any
+                // previous strength reductions would be invisible to us.
+                ASSERT(regExpObjectNode);
+                executeInsertionSet();
+                for (unsigned otherNodeIndex = m_nodeIndex; otherNodeIndex--;) {
+                    Node* otherNode = m_block->at(otherNodeIndex);
+                    if (otherNode == regExpObjectNode) {
+                        if (regExpObjectNodeIsConstant)
+                            break;
+                        lastIndex = 0;
+                        break;
+                    }
+                    if (otherNode->op() == SetRegExpObjectLastIndex
+                        && otherNode->child1() == regExpObjectNode
+                        && otherNode->child2()->isInt32Constant()
+                        && otherNode->child2()->asInt32() >= 0) {
+                        lastIndex = otherNode->child2()->asUInt32();
+                        break;
+                    }
+                    if (writesOverlap(m_graph, otherNode, RegExpObject_lastIndex))
+                        break;
+                }
+                if (lastIndex == UINT_MAX) {
+                    if (verbose)
+                        dataLog("Giving up because the last index is not known.\n");
+                    break;
+                }
+            }
+            if (!regExp->globalOrSticky())
+                lastIndex = 0;
+
             auto foldToConstant = [&] {
                 Node* stringNode = nullptr;
                 if (m_node->op() == RegExpExecNonGlobalOrSticky)
@@ -563,55 +620,27 @@ private:
                     return false;
                 }
 
-                if ((m_node->op() == RegExpExec || m_node->op() == RegExpExecNonGlobalOrSticky) && regExp->hasNamedCaptures()) {
-                    // FIXME: https://bugs.webkit.org/show_bug.cgi?id=176464
-                    // Implement strength reduction optimization for named capture groups.
-                    if (verbose)
-                        dataLog("Giving up because of named capture groups.\n");
-                    return false;
-                }
-
-                unsigned lastIndex;
-                if (regExp->globalOrSticky()) {
-                    // This will only work if we can prove what the value of lastIndex is. To do this
-                    // safely, we need to execute the insertion set so that we see any previous strength
-                    // reductions. This is needed for soundness since otherwise the effectfulness of any
-                    // previous strength reductions would be invisible to us.
-                    ASSERT(regExpObjectNode);
-                    executeInsertionSet();
-                    lastIndex = UINT_MAX;
-                    for (unsigned otherNodeIndex = m_nodeIndex; otherNodeIndex--;) {
-                        Node* otherNode = m_block->at(otherNodeIndex);
-                        if (otherNode == regExpObjectNode) {
-                            lastIndex = 0;
-                            break;
-                        }
-                        if (otherNode->op() == SetRegExpObjectLastIndex
-                            && otherNode->child1() == regExpObjectNode
-                            && otherNode->child2()->isInt32Constant()
-                            && otherNode->child2()->asInt32() >= 0) {
-                            lastIndex = static_cast<unsigned>(otherNode->child2()->asInt32());
-                            break;
-                        }
-                        if (writesOverlap(m_graph, otherNode, RegExpObject_lastIndex))
-                            break;
-                    }
-                    if (lastIndex == UINT_MAX) {
+                if ((m_node->op() == RegExpExec || m_node->op() == RegExpExecNonGlobalOrSticky)) {
+                    if (regExp->hasNamedCaptures()) {
+                        // FIXME: https://bugs.webkit.org/show_bug.cgi?id=176464
+                        // Implement strength reduction optimization for named capture groups.
                         if (verbose)
-                            dataLog("Giving up because the last index is not known.\n");
+                            dataLog("Giving up because of named capture groups.\n");
                         return false;
                     }
-                } else
-                    lastIndex = 0;
+
+                    if (regExp->hasIndices()) {
+                        // FIXME: https://bugs.webkit.org/show_bug.cgi?id=220930
+                        // Implement strength reduction optimization for RegExp with match indices.
+                        if (verbose)
+                            dataLog("Giving up because of match indices.\n");
+                        return false;
+                    }
+                }
 
                 m_graph.watchpoints().addLazily(globalObject->havingABadTimeWatchpoint());
 
-                Structure* structure;
-                if ((m_node->op() == RegExpExec || m_node->op() == RegExpExecNonGlobalOrSticky) && regExp->hasNamedCaptures())
-                    structure = globalObject->regExpMatchesArrayWithGroupsStructure();
-                else
-                    structure = globalObject->regExpMatchesArrayStructure();
-
+                Structure* structure = globalObject->regExpMatchesArrayStructure();
                 if (structure->indexingType() != ArrayWithContiguous) {
                     // This is further protection against a race with haveABadTime.
                     if (verbose)
@@ -674,8 +703,10 @@ private:
 
                         UniquedStringImpl* indexUID = vm().propertyNames->index.impl();
                         UniquedStringImpl* inputUID = vm().propertyNames->input.impl();
+                        UniquedStringImpl* groupsUID = vm().propertyNames->groups.impl();
                         unsigned indexIndex = m_graph.identifiers().ensure(indexUID);
                         unsigned inputIndex = m_graph.identifiers().ensure(inputUID);
+                        unsigned groupsIndex = m_graph.identifiers().ensure(groupsUID);
 
                         unsigned firstChild = m_graph.m_varArgChildren.size();
                         m_graph.m_varArgChildren.append(
@@ -702,6 +733,14 @@ private:
                         m_graph.m_varArgChildren.append(Edge(stringNode, UntypedUse));
                         data->m_properties.append(
                             PromotedLocationDescriptor(NamedPropertyPLoc, inputIndex));
+
+                        // FIXME: https://bugs.webkit.org/show_bug.cgi?id=176464
+                        // Implement strength reduction optimization for named capture groups.
+                        m_graph.m_varArgChildren.append(
+                            m_insertionSet.insertConstantForUse(
+                                m_nodeIndex, origin, jsUndefined(), UntypedUse));
+                        data->m_properties.append(
+                            PromotedLocationDescriptor(NamedPropertyPLoc, groupsIndex));
 
                         auto materializeString = [&] (const String& string) -> Node* {
                             if (string.isNull())
@@ -777,6 +816,45 @@ private:
                 return true;
             };
 
+#if ENABLE(YARR_JIT_REGEXP_TEST_INLINE)
+            auto convertTestToTestInline = [&] {
+                if (m_node->op() != RegExpTest)
+                    return false;
+
+                if (regExp->globalOrSticky())
+                    return false;
+
+                if (regExp->unicode())
+                    return false;
+
+                auto jitCodeBlock = regExp->getRegExpJITCodeBlock();
+                if (!jitCodeBlock)
+                    return false;
+
+                auto inlineCodeStats8Bit = jitCodeBlock->get8BitInlineStats();
+
+                if (!inlineCodeStats8Bit.canInline())
+                    return false;
+
+                unsigned codeSize = inlineCodeStats8Bit.codeSize();
+
+                if (codeSize > Options::maximumRegExpTestInlineCodesize())
+                    return false;
+
+                unsigned alignedFrameSize = WTF::roundUpToMultipleOf(stackAlignmentBytes(), inlineCodeStats8Bit.stackSize());
+
+                if (alignedFrameSize)
+                    m_graph.m_parameterSlots = std::max(m_graph.m_parameterSlots, argumentCountForStackSize(alignedFrameSize));
+
+                NodeOrigin origin = m_node->origin;
+                m_insertionSet.insertNode(
+                    m_nodeIndex, SpecNone, Check, origin, m_node->children.justChecks());
+                m_node->convertToRegExpTestInline(m_graph.freeze(globalObject), m_graph.freeze(regExp));
+                m_changed = true;
+                return true;
+            };
+#endif
+
             auto convertToStatic = [&] {
                 if (m_node->op() != RegExpExec)
                     return false;
@@ -795,6 +873,11 @@ private:
             if (foldToConstant())
                 break;
 
+#if ENABLE(YARR_JIT_REGEXP_TEST_INLINE)
+            if (convertTestToTestInline())
+                break;
+#endif
+
             if (convertToStatic())
                 break;
 
@@ -810,11 +893,25 @@ private:
 
             Node* regExpObjectNode = m_node->child2().node();
             RegExp* regExp;
-            if (RegExpObject* regExpObject = regExpObjectNode->dynamicCastConstant<RegExpObject*>(vm()))
+            if (RegExpObject* regExpObject = regExpObjectNode->dynamicCastConstant<RegExpObject*>(vm())) {
+                JSGlobalObject* globalObject = regExpObject->globalObject(vm());
+                if (globalObject->isRegExpRecompiled()) {
+                    if (verbose)
+                        dataLog("Giving up because RegExp recompile happens.\n");
+                    break;
+                }
+                m_graph.watchpoints().addLazily(globalObject->regExpRecompiledWatchpoint());
                 regExp = regExpObject->regExp();
-            else if (regExpObjectNode->op() == NewRegexp)
+            } else if (regExpObjectNode->op() == NewRegexp) {
+                JSGlobalObject* globalObject = m_graph.globalObjectFor(regExpObjectNode->origin.semantic);
+                if (globalObject->isRegExpRecompiled()) {
+                    if (verbose)
+                        dataLog("Giving up because RegExp recompile happens.\n");
+                    break;
+                }
+                m_graph.watchpoints().addLazily(globalObject->regExpRecompiledWatchpoint());
                 regExp = regExpObjectNode->castOperand<RegExp*>();
-            else {
+            } else {
                 if (verbose)
                     dataLog("Giving up because the regexp is unknown.\n");
                 break;
@@ -898,9 +995,7 @@ private:
             if (!lastIndex && builder.isEmpty())
                 m_node->convertToIdentityOn(stringNode);
             else {
-                if (lastIndex < string.length())
-                    builder.appendSubstring(string, lastIndex, string.length() - lastIndex);
-
+                builder.appendSubstring(string, lastIndex);
                 m_node->convertToLazyJSConstant(m_graph, LazyJSValue::newString(m_graph, builder.toString()));
             }
 
@@ -924,6 +1019,12 @@ private:
             }
 
             if (!executable)
+                break;
+
+            // FIXME: Support wasm IC.
+            // DirectCall to wasm function has suboptimal implementation. We avoid using DirectCall if we know that function is a wasm function.
+            // https://bugs.webkit.org/show_bug.cgi?id=220339
+            if (executable->intrinsic() == WasmFunctionIntrinsic)
                 break;
 
             if (FunctionExecutable* functionExecutable = jsDynamicCast<FunctionExecutable*>(vm(), executable)) {

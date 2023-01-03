@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2006, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2006, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -144,7 +144,7 @@ public abstract class JSObject {
 
                 // Comment out MAYSCRIPT check because Internet Explorer doesn't support
                 // it.
-//              if (obj != null && (obj.equals("") || (new Boolean(obj).booleanValue() == true)))
+//              if (obj != null && (obj.equals("") || (Boolean.valueOf(obj).booleanValue() == true)))
                 {
                     // MAYSCRIPT is enabled
 

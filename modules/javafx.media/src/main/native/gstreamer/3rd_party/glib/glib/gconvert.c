@@ -40,6 +40,7 @@
 #endif
 
 #include "gconvert.h"
+#include "gconvertprivate.h"
 
 #include "gcharsetprivate.h"
 #include "gslist.h"
@@ -49,6 +50,7 @@
 #include "gthreadprivate.h"
 #include "gunicode.h"
 #include "gfileutils.h"
+#include "genviron.h"
 
 #include "glibintl.h"
 
@@ -140,7 +142,7 @@
  *    "Unknown file name" in its title bar but still let the user save
  *    the file, as it would keep the raw file name internally. This
  *    can happen if the user has not set the `G_FILENAME_ENCODING`
- *    environment variable even though he has files whose names are
+ *    environment variable even though they have files whose names are
  *    not encoded in UTF-8.
  *
  * 3. If your user interface lets the user type a file name for saving
@@ -352,7 +354,7 @@ close_converter (GIConv cd)
  *                 Even if the conversion was successful, this may be
  *                 less than @len if there were partial characters
  *                 at the end of the input. If the error
- *                 #G_CONVERT_ERROR_ILLEGAL_SEQUENCE occurs, the value
+ *                 %G_CONVERT_ERROR_ILLEGAL_SEQUENCE occurs, the value
  *                 stored will be the byte offset after the last valid
  *                 input sequence.
  * @bytes_written: (out) (optional): the number of bytes stored in
@@ -497,7 +499,7 @@ g_convert_with_iconv (const gchar *str,
     }
 
   if (bytes_written)
-    *bytes_written = outp - dest; /* Doesn't include '\0' */
+    *bytes_written = outp - dest;   /* Doesn't include '\0' */
 
   if (have_error)
     {
@@ -523,7 +525,7 @@ g_convert_with_iconv (const gchar *str,
  *                 Even if the conversion was successful, this may be
  *                 less than @len if there were partial characters
  *                 at the end of the input. If the error
- *                 #G_CONVERT_ERROR_ILLEGAL_SEQUENCE occurs, the value
+ *                 %G_CONVERT_ERROR_ILLEGAL_SEQUENCE occurs, the value
  *                 stored will be the byte offset after the last valid
  *                 input sequence.
  * @bytes_written: (out) (optional): the number of bytes stored in
@@ -824,7 +826,7 @@ g_convert_with_fallback (const gchar *str,
   close_converter (cd);
 
   if (bytes_written)
-    *bytes_written = outp - dest; /* Doesn't include '\0' */
+    *bytes_written = outp - dest;   /* Doesn't include '\0' */
 
   g_free (utf8);
 
@@ -1014,6 +1016,52 @@ g_locale_to_utf8 (const gchar  *opsysstring,
                             bytes_read, bytes_written, error);
 }
 
+/*
+ * Do the exact same as g_locale_to_utf8 except that the charset would
+ * be retrieved from _g_get_time_charset (which uses LC_TIME)
+ *
+ * Returns: The converted string, or %NULL on an error.
+ */
+gchar *
+_g_time_locale_to_utf8 (const gchar *opsysstring,
+                        gssize       len,
+                        gsize       *bytes_read,
+                        gsize       *bytes_written,
+                        GError     **error)
+{
+  const char *charset;
+
+  if (_g_get_time_charset (&charset))
+    return strdup_len (opsysstring, len, bytes_read, bytes_written, error);
+  else
+    return convert_checked (opsysstring, len, "UTF-8", charset,
+                            CONVERT_CHECK_NO_NULS_IN_OUTPUT,
+                            bytes_read, bytes_written, error);
+}
+
+/*
+ * Do the exact same as g_locale_to_utf8 except that the charset would
+ * be retrieved from _g_get_ctype_charset (which uses LC_CTYPE)
+ *
+ * Returns: The converted string, or %NULL on an error.
+ */
+gchar *
+_g_ctype_locale_to_utf8 (const gchar *opsysstring,
+                         gssize       len,
+                         gsize       *bytes_read,
+                         gsize       *bytes_written,
+                         GError     **error)
+{
+  const char *charset;
+
+  if (_g_get_ctype_charset (&charset))
+    return strdup_len (opsysstring, len, bytes_read, bytes_written, error);
+  else
+    return convert_checked (opsysstring, len, "UTF-8", charset,
+                            CONVERT_CHECK_NO_NULS_IN_OUTPUT,
+                            bytes_read, bytes_written, error);
+}
+
 /**
  * g_locale_from_utf8:
  * @utf8string:    a UTF-8 encoded string
@@ -1131,14 +1179,14 @@ g_get_filename_charsets (const gchar ***filename_charsets)
   if (!(cache->charset && strcmp (cache->charset, charset) == 0))
     {
       const gchar *new_charset;
-      gchar *p;
+      const gchar *p;
       gint i;
 
       g_free (cache->charset);
       g_strfreev (cache->filename_charsets);
       cache->charset = g_strdup (charset);
 
-      p = getenv ("G_FILENAME_ENCODING");
+      p = g_getenv ("G_FILENAME_ENCODING");
       if (p != NULL && p[0] != '\0')
   {
     cache->filename_charsets = g_strsplit (p, ",", 0);
@@ -1154,7 +1202,7 @@ g_get_filename_charsets (const gchar ***filename_charsets)
     }
       }
   }
-      else if (getenv ("G_BROKEN_FILENAMES") != NULL)
+      else if (g_getenv ("G_BROKEN_FILENAMES") != NULL)
   {
     cache->filename_charsets = g_new0 (gchar *, 2);
     cache->is_utf8 = g_get_charset (&new_charset);
@@ -1372,7 +1420,7 @@ static const guchar acceptable[96] = {
   0x3F,0x3F,0x3F,0x3F,0x3F,0x3F,0x3F,0x3F,0x3F,0x3F,0x3F,0x20,0x20,0x20,0x3F,0x20
 };
 
-static const gchar hex[16] = "0123456789ABCDEF";
+static const gchar hex[] = "0123456789ABCDEF";
 
 /* Note: This escape function works on file: URIs, but if you want to
  * escape something else, please read RFC-2396 */
@@ -1806,12 +1854,10 @@ g_filename_to_uri (const gchar *filename,
 gchar **
 g_uri_list_extract_uris (const gchar *uri_list)
 {
-  GSList *uris, *u;
+  GPtrArray *uris;
   const gchar *p, *q;
-  gchar **result;
-  gint n_uris = 0;
 
-  uris = NULL;
+  uris = g_ptr_array_new ();
 
   p = uri_list;
 
@@ -1840,26 +1886,17 @@ g_uri_list_extract_uris (const gchar *uri_list)
     q--;
 
         if (q > p)
-    {
-      uris = g_slist_prepend (uris, g_strndup (p, q - p + 1));
-      n_uris++;
+                g_ptr_array_add (uris, g_strndup (p, q - p + 1));
     }
       }
-  }
       p = strchr (p, '\n');
       if (p)
   p++;
     }
 
-  result = g_new (gchar *, n_uris + 1);
+  g_ptr_array_add (uris, NULL);
 
-  result[n_uris--] = NULL;
-  for (u = uris; u; u = u->next)
-    result[n_uris--] = u->data;
-
-  g_slist_free (uris);
-
-  return result;
+  return (gchar **) g_ptr_array_free (uris, FALSE);
 }
 
 /**

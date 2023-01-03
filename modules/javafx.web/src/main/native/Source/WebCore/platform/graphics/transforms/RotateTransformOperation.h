@@ -29,6 +29,8 @@
 
 namespace WebCore {
 
+struct BlendingContext;
+
 class RotateTransformOperation final : public TransformOperation {
 public:
     static Ref<RotateTransformOperation> create(double angle, OperationType type)
@@ -51,20 +53,30 @@ public:
     double z() const { return m_z; }
     double angle() const { return m_angle; }
 
-private:
-    bool isIdentity() const override { return m_angle == 0; }
-    bool isAffectedByTransformOrigin() const override { return !isIdentity(); }
+    // The 2D rotation primitive doesn't handle any direction vectors other than [0, 0, 1],
+    // so even if the rotation is representable in 2D, it might be a 3D rotation.
+    OperationType primitiveType() const final { return (isRepresentableIn2D() && z() == 1.0) ? ROTATE : ROTATE_3D; }
+
+    bool operator==(const RotateTransformOperation& other) const { return operator==(static_cast<const TransformOperation&>(other)); }
+    bool operator==(const TransformOperation&) const override;
+
+    Ref<TransformOperation> blend(const TransformOperation* from, const BlendingContext&, bool blendToIdentity = false) final;
+
+    bool isIdentity() const final { return !m_angle; }
+
     bool isRepresentableIn2D() const final { return (!m_x && !m_y) || !m_angle; }
 
-    bool operator==(const TransformOperation&) const override;
+private:
+    bool isAffectedByTransformOrigin() const override { return !isIdentity(); }
 
     bool apply(TransformationMatrix& transform, const FloatSize& /*borderBoxSize*/) const override
     {
-        transform.rotate3d(m_x, m_y, m_z, m_angle);
+        if (type() == TransformOperation::ROTATE)
+            transform.rotate(m_angle);
+        else
+            transform.rotate3d(m_x, m_y, m_z, m_angle);
         return false;
     }
-
-    Ref<TransformOperation> blend(const TransformOperation* from, double progress, bool blendToIdentity = false) override;
 
     void dump(WTF::TextStream&) const final;
 

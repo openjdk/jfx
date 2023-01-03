@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,7 +28,6 @@ package test.javafx.scene.control;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.event.ActionEvent;
-import javafx.event.EventHandler;
 import javafx.scene.Scene;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.MouseButton;
@@ -40,7 +39,6 @@ import javafx.scene.paint.LinearGradient;
 import javafx.scene.paint.Stop;
 import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
-import javafx.stage.WindowEvent;
 import java.util.List;
 import test.com.sun.javafx.pgstub.StubToolkit;
 import test.com.sun.javafx.scene.control.infrastructure.ContextMenuEventFirer;
@@ -53,7 +51,6 @@ import javafx.scene.control.MenuItem;
 import javafx.scene.control.Skin;
 import org.junit.Before;
 import org.junit.After;
-import org.junit.Ignore;
 import org.junit.Test;
 import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.assertPseudoClassDoesNotExist;
 import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.assertPseudoClassExists;
@@ -65,8 +62,6 @@ import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
-//import com.sun.javafx.test.MouseEventGenerator;
-
 /**
  * action (which can be bound, and can be null),
  * and that action is called when the button is fired.
@@ -77,21 +72,27 @@ public class ButtonTest {
     private Scene scene;
     private Stage stage;
     private StackPane root;
-    private MouseEventFirer mouse;
+    private MouseEventFirer mouse; //Note : It is created and used by individual tests that need it
+
 
     @Before public void setup() {
         btn = new Button();
-        tk = (StubToolkit)Toolkit.getToolkit();//This step is not needed (Just to make sure StubToolkit is loaded into VM)
+        tk = Toolkit.getToolkit();
+
+        assertTrue(tk instanceof StubToolkit);  // Ensure it's StubToolkit
+
         root = new StackPane();
         scene = new Scene(root);
         stage = new Stage();
         stage.setScene(scene);
-        mouse = new MouseEventFirer(btn);
     }
 
     @After public void after() {
         stage.hide();
-        mouse.dispose();
+
+        if (mouse != null) {
+            mouse.dispose();
+        }
     }
 
     /*********************************************************************
@@ -204,10 +205,21 @@ public class ButtonTest {
         assertPseudoClassDoesNotExist(btn, "default");
     }
 
-    @Ignore("impl_cssSet API removed")
     @Test public void cannotSpecifyDefaultButtonViaCSS() {
-//        btn.impl_cssSet("-fx-default-button", true);
+        // By default, 'btn' is not a default button
+        // Making it a default button via CSS should not succeed
+        btn.setStyle("-fx-default-button: true;");
+        btn.applyCss();
         assertFalse(btn.isDefaultButton());
+
+        // Set button to be a default button
+        btn.setDefaultButton(true);
+        assertTrue(btn.isDefaultButton());
+
+        // Making it a non-default button via CSS should not succeed
+        btn.setStyle("-fx-default-button: false;");
+        btn.applyCss();
+        assertTrue(btn.isDefaultButton());
     }
 
     @Test public void defaultButtonPropertyHasBeanReference() {
@@ -346,10 +358,21 @@ public class ButtonTest {
         tk.firePulse();
     }
 
-    @Ignore("impl_cssSet API removed")
     @Test public void cannotSpecifyCancelButtonViaCSS() {
-//        btn.impl_cssSet("-fx-cancel-button", true);
+        // By default, 'btn' is not a cancel button
+        // Making it a cancel button via CSS should not succeed
+        btn.setStyle("-fx-cancel-button: true;");
+        btn.applyCss();
         assertFalse(btn.isCancelButton());
+
+        // Make button a cancel-button
+        btn.setCancelButton(true);
+        assertTrue(btn.isCancelButton());
+
+        // Making it a non-cancel button via CSS should not succeed
+        btn.setStyle("-fx-cancel-button: false;");
+        btn.applyCss();
+        assertTrue(btn.isCancelButton());
     }
 
     @Test public void cancelButtonPropertyHasBeanReference() {
@@ -399,6 +422,8 @@ public class ButtonTest {
         btn.fireEvent(new ActionEvent());
         btn.fire();
 
+        mouse = new MouseEventFirer(btn);
+
         mouse.fireMousePressed();
         mouse.fireMouseReleased();
         mouse.fireMouseClicked();
@@ -410,7 +435,6 @@ public class ButtonTest {
         MenuItem item1 = new MenuItem("_About");
         popupMenu.getItems().add(item1);
         popupMenu.setOnShown(w -> {
-            System.out.println("popup shown");
             count++;
         });
 
@@ -425,6 +449,8 @@ public class ButtonTest {
         });
 
         assertEquals(0, count);
+
+        mouse = new MouseEventFirer(btn);
 
         /* Note that right-mouse press events don't force the popup open */
         mouse.fireMousePressed(MouseButton.SECONDARY);

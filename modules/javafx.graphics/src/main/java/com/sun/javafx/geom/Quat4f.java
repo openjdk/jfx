@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -135,7 +135,7 @@ public class Quat4f {
 
         if (ww >= 0) {
             if (ww >= EPS2) {
-                this.w = (float) Math.sqrt((double) ww);
+                this.w = (float) Math.sqrt(ww);
                 ww = 0.25f / this.w;
                 this.x = (m1.m21 - m1.m12) * ww;
                 this.y = (m1.m02 - m1.m20) * ww;
@@ -154,7 +154,7 @@ public class Quat4f {
         ww = -0.5f * (m1.m11 + m1.m22);
         if (ww >= 0) {
             if (ww >= EPS2) {
-                this.x = (float) Math.sqrt((double) ww);
+                this.x = (float) Math.sqrt(ww);
                 ww = 0.5f / this.x;
                 this.y = m1.m10 * ww;
                 this.z = m1.m20 * ww;
@@ -170,7 +170,7 @@ public class Quat4f {
         this.x = 0;
         ww = 0.5f * (1.0f - m1.m22);
         if (ww >= EPS2) {
-            this.y = (float) Math.sqrt((double) ww);
+            this.y = (float) Math.sqrt(ww);
             this.z = m1.m21 / (2.0f * this.y);
             return;
         }
@@ -189,7 +189,7 @@ public class Quat4f {
 
         if (ww >= 0) {
             if (ww >= EPS2) {
-                this.w = (float) Math.sqrt((double) ww);
+                this.w = (float) Math.sqrt(ww);
                 ww = 0.25f / this.w;
                 this.x = (m1[2][1] - m1[1][2]) * ww;
                 this.y = (m1[0][2] - m1[2][0]) * ww;
@@ -208,7 +208,7 @@ public class Quat4f {
         ww = -0.5f * (m1[1][1] + m1[2][2]);
         if (ww >= 0) {
             if (ww >= EPS2) {
-                this.x = (float) Math.sqrt((double) ww);
+                this.x = (float) Math.sqrt(ww);
                 ww = 0.5f / this.x;
                 this.y = m1[1][0] * ww;
                 this.z = m1[2][0] * ww;
@@ -224,7 +224,7 @@ public class Quat4f {
         this.x = 0;
         ww = 0.5f * (1.0f - m1[2][2]);
         if (ww >= EPS2) {
-            this.y = (float) Math.sqrt((double) ww);
+            this.y = (float) Math.sqrt(ww);
             this.z = m1[2][1] / (2.0f * this.y);
             return;
         }

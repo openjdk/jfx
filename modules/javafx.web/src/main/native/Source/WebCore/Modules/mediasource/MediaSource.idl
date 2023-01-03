@@ -42,10 +42,11 @@ enum ReadyState {
 [
     ActiveDOMObject,
     Conditional=MEDIA_SOURCE,
-    Constructor,
-    ConstructorCallWith=ScriptExecutionContext,
-    EnabledBySetting=MediaSource,
+    EnabledBySetting=MediaSourceEnabled,
+    Exposed=Window
 ] interface MediaSource : EventTarget {
+    [CallWith=CurrentScriptExecutionContext] constructor();
+
     // All the source buffers created by this object.
     readonly attribute SourceBufferList sourceBuffers;
 
@@ -54,17 +55,17 @@ enum ReadyState {
 
     attribute unrestricted double duration;
 
-    [NewObject, MayThrowException] SourceBuffer addSourceBuffer(DOMString type);
-    [MayThrowException] void removeSourceBuffer(SourceBuffer buffer);
+    [NewObject] SourceBuffer addSourceBuffer(DOMString type);
+    undefined removeSourceBuffer(SourceBuffer buffer);
 
     readonly attribute ReadyState readyState;
     
-    [MayThrowException] void endOfStream(optional EndOfStreamError error);
+    undefined endOfStream(optional EndOfStreamError error);
 
-    static boolean isTypeSupported (DOMString type);
+    [CallWith=CurrentScriptExecutionContext] static boolean isTypeSupported (DOMString type);
 
-    [MayThrowException] void setLiveSeekableRange(double start, double end);
-    [MayThrowException] void clearLiveSeekableRange();
+    undefined setLiveSeekableRange(double start, double end);
+    undefined clearLiveSeekableRange();
 
     attribute EventHandler onsourceopen;
     attribute EventHandler onsourceended;

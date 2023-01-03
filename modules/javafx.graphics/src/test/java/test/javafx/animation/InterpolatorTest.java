@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,7 +30,6 @@ import com.sun.scenario.animation.shared.InterpolationInterval;
 import javafx.animation.Interpolatable;
 import javafx.animation.Interpolator;
 import javafx.animation.KeyValue;
-import javafx.beans.property.Property;
 import javafx.beans.property.SimpleLongProperty;
 import javafx.util.Duration;
 import static org.junit.Assert.assertEquals;

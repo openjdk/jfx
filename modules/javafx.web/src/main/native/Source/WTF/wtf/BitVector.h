@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011, 2014, 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -247,7 +247,7 @@ public:
     size_t findBit(size_t index, bool value) const
     {
         size_t result = findBitFast(index, value);
-        if (!ASSERT_DISABLED) {
+        if (ASSERT_ENABLED) {
             size_t expectedResult = findBitSimple(index, value);
             if (result != expectedResult) {
                 dataLog("findBit(", index, ", ", value, ") on ", *this, " should have gotten ", expectedResult, " but got ", result, "\n");
@@ -349,6 +349,13 @@ public:
     // Use this to iterate over set bits.
     iterator begin() const { return iterator(*this, findBit(0, true)); }
     iterator end() const { return iterator(*this, size()); }
+
+    unsigned outOfLineMemoryUse() const
+    {
+        if (isInline())
+            return 0;
+        return byteCount(size());
+    }
 
 private:
     friend class JSC::CachedBitVector;
@@ -489,13 +496,11 @@ private:
 struct BitVectorHash {
     static unsigned hash(const BitVector& vector) { return vector.hash(); }
     static bool equal(const BitVector& a, const BitVector& b) { return a == b; }
-    static const bool safeToCompareToEmptyOrDeleted = false;
+    static constexpr bool safeToCompareToEmptyOrDeleted = false;
 };
 
 template<typename T> struct DefaultHash;
-template<> struct DefaultHash<BitVector> {
-    typedef BitVectorHash Hash;
-};
+template<> struct DefaultHash<BitVector> : BitVectorHash { };
 
 template<> struct HashTraits<BitVector> : public CustomHashTraits<BitVector> { };
 

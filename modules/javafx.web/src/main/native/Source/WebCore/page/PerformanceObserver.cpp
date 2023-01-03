@@ -31,6 +31,7 @@
 #include "InspectorInstrumentation.h"
 #include "Performance.h"
 #include "PerformanceObserverEntryList.h"
+#include "RuntimeEnabledFeatures.h"
 #include "WorkerGlobalScope.h"
 
 namespace WebCore {
@@ -60,26 +61,56 @@ ExceptionOr<void> PerformanceObserver::observe(Init&& init)
     if (!m_performance)
         return Exception { TypeError };
 
-    if (init.entryTypes.isEmpty())
-        return Exception { TypeError, "entryTypes cannot be an empty list"_s };
-
+    bool isBuffered = false;
     OptionSet<PerformanceEntry::Type> filter;
-    for (const String& entryType : init.entryTypes) {
-        if (auto type = PerformanceEntry::parseEntryTypeString(entryType))
+    if (init.entryTypes) {
+        if (init.type)
+            return Exception { TypeError, "either entryTypes or type must be provided"_s };
+        if (m_registered && m_isTypeObserver)
+            return Exception { InvalidModificationError, "observer type can't be changed once registered"_s };
+        for (auto& entryType : *init.entryTypes) {
+            if (auto type = PerformanceEntry::parseEntryTypeString(entryType))
+                filter.add(*type);
+        }
+        if (filter.isEmpty())
+            return { };
+        m_typeFilter = filter;
+    } else {
+        if (!init.type)
+            return Exception { TypeError, "no type or entryTypes were provided"_s };
+        if (m_registered && !m_isTypeObserver)
+            return Exception { InvalidModificationError, "observer type can't be changed once registered"_s };
+        m_isTypeObserver = true;
+        if (auto type = PerformanceEntry::parseEntryTypeString(*init.type))
             filter.add(*type);
+        else
+            return { };
+        if (init.buffered) {
+            isBuffered = true;
+            auto oldSize = m_entriesToDeliver.size();
+            m_performance->appendBufferedEntriesByType(*init.type, m_entriesToDeliver, *this);
+            auto begin = m_entriesToDeliver.begin();
+            auto oldEnd = begin + oldSize;
+            auto end = m_entriesToDeliver.end();
+            std::stable_sort(oldEnd, end, PerformanceEntry::startTimeCompareLessThan);
+            std::inplace_merge(begin, oldEnd, end, PerformanceEntry::startTimeCompareLessThan);
+        }
+        m_typeFilter.add(filter);
     }
-
-    if (filter.isEmpty())
-        return Exception { TypeError, "entryTypes contained only unsupported types"_s };
-
-    m_typeFilter = filter;
 
     if (!m_registered) {
         m_performance->registerPerformanceObserver(*this);
         m_registered = true;
     }
+    if (isBuffered)
+        deliver();
 
     return { };
+}
+
+Vector<RefPtr<PerformanceEntry>> PerformanceObserver::takeRecords()
+{
+    return std::exchange(m_entriesToDeliver, { });
 }
 
 void PerformanceObserver::disconnect()
@@ -89,6 +120,7 @@ void PerformanceObserver::disconnect()
 
     m_registered = false;
     m_entriesToDeliver.clear();
+    m_typeFilter = { };
 }
 
 void PerformanceObserver::queueEntry(PerformanceEntry& entry)
@@ -105,23 +137,30 @@ void PerformanceObserver::deliver()
     if (!context)
         return;
 
-    Vector<RefPtr<PerformanceEntry>> entries = WTFMove(m_entriesToDeliver);
+    Vector<RefPtr<PerformanceEntry>> entries = std::exchange(m_entriesToDeliver, { });
     auto list = PerformanceObserverEntryList::create(WTFMove(entries));
 
-    InspectorInstrumentationCookie cookie = InspectorInstrumentation::willFireObserverCallback(*context, "PerformanceObserver"_s);
-    m_callback->handleEvent(list, *this);
-    InspectorInstrumentation::didFireObserverCallback(cookie);
+    InspectorInstrumentation::willFireObserverCallback(*context, "PerformanceObserver"_s);
+    m_callback->handleEvent(*this, list, *this);
+    InspectorInstrumentation::didFireObserverCallback(*context);
 }
 
-Vector<String> PerformanceObserver::supportedEntryTypes()
+Vector<String> PerformanceObserver::supportedEntryTypes(ScriptExecutionContext& context)
 {
-    return {
-        // FIXME: <https://webkit.org/b/184363> Add support for Navigation Timing Level 2
-        // "navigation"_s,
+    Vector<String> entryTypes = {
         "mark"_s,
         "measure"_s,
-        "resource"_s
     };
+
+    if (context.settingsValues().performanceNavigationTimingAPIEnabled)
+        entryTypes.append("navigation"_s);
+
+    if (is<Document>(context) && downcast<Document>(context).supportsPaintTiming())
+        entryTypes.append("paint"_s);
+
+    entryTypes.append("resource"_s);
+
+    return entryTypes;
 }
 
 } // namespace WebCore

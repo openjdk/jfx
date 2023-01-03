@@ -62,8 +62,8 @@ g_thread_abort (gint         status,
 }
 
 /* Starting with Vista and Windows 2008, we have access to the
- * CONDITION_VARIABLE and SRWLock primatives on Windows, which are
- * pretty reasonable approximations of the primatives specified in
+ * CONDITION_VARIABLE and SRWLock primitives on Windows, which are
+ * pretty reasonable approximations of the primitives specified in
  * POSIX 2001 (pthread_cond_t and pthread_mutex_t respectively).
  *
  * Both of these types are structs containing a single pointer.  That
@@ -301,25 +301,35 @@ struct _GPrivateDestructor
   GPrivateDestructor *next;
 };
 
-static GPrivateDestructor * volatile g_private_destructors;
+static GPrivateDestructor *g_private_destructors;  /* (atomic) prepend-only */
 static CRITICAL_SECTION g_private_lock;
 
 static DWORD
 g_private_get_impl (GPrivate *key)
 {
-  DWORD impl = (DWORD) key->p;
+  DWORD impl = (DWORD) GPOINTER_TO_UINT(key->p);
 
   if G_UNLIKELY (impl == 0)
     {
       EnterCriticalSection (&g_private_lock);
-      impl = (DWORD) key->p;
+      impl = (UINT_PTR) key->p;
       if (impl == 0)
         {
           GPrivateDestructor *destructor;
 
           impl = TlsAlloc ();
 
-          if (impl == TLS_OUT_OF_INDEXES)
+          if G_UNLIKELY (impl == 0)
+            {
+              /* Ignore TLS index 0 temporarily (as 0 is the indicator that we
+               * haven't allocated TLS yet) and alloc again;
+               * See https://gitlab.gnome.org/GNOME/glib/-/issues/2058 */
+              DWORD impl2 = TlsAlloc ();
+              TlsFree (impl);
+              impl = impl2;
+            }
+
+          if (impl == TLS_OUT_OF_INDEXES || impl == 0)
             g_thread_abort (0, "TlsAlloc");
 
           if (key->notify != NULL)
@@ -329,7 +339,7 @@ g_private_get_impl (GPrivate *key)
                 g_thread_abort (errno, "malloc");
               destructor->index = impl;
               destructor->notify = key->notify;
-              destructor->next = g_private_destructors;
+              destructor->next = g_atomic_pointer_get (&g_private_destructors);
 
               /* We need to do an atomic store due to the unlocked
                * access to the destructor list from the thread exit
@@ -337,13 +347,14 @@ g_private_get_impl (GPrivate *key)
                *
                * It can double as a sanity check...
                */
-              if (InterlockedCompareExchangePointer (&g_private_destructors, destructor,
-                                                     destructor->next) != destructor->next)
+              if (!g_atomic_pointer_compare_and_exchange (&g_private_destructors,
+                                                          destructor->next,
+                                                          destructor))
                 g_thread_abort (0, "g_private_get_impl(1)");
             }
 
           /* Ditto, due to the unlocked access on the fast path */
-          if (InterlockedCompareExchangePointer (&key->p, impl, NULL) != NULL)
+          if (!g_atomic_pointer_compare_and_exchange (&key->p, NULL, impl))
             g_thread_abort (0, "g_private_get_impl(2)");
         }
       LeaveCriticalSection (&g_private_lock);
@@ -373,9 +384,9 @@ g_private_replace (GPrivate *key,
   gpointer old;
 
   old = TlsGetValue (impl);
+  TlsSetValue (impl, value);
   if (old && key->notify)
     key->notify (old);
-  TlsSetValue (impl, value);
 }
 
 /* {{{1 GThread */
@@ -411,6 +422,28 @@ g_system_thread_free (GRealThread *thread)
 void
 g_system_thread_exit (void)
 {
+  /* In static compilation, DllMain doesn't exist and so DLL_THREAD_DETACH
+   * case is never called and thread destroy notifications are not triggered.
+   * To ensure that notifications are correctly triggered in static
+   * compilation mode, we call directly the "detach" function here right
+   * before terminating the thread.
+   * As all win32 threads initialized through the glib API are run through
+   * the same proxy function g_thread_win32_proxy() which calls systematically
+   * g_system_thread_exit() when finishing, we obtain the same behavior as
+   * with dynamic compilation.
+   *
+   * WARNING: unfortunately this mechanism cannot work with threads created
+   * directly from the Windows API using CreateThread() or _beginthread/ex().
+   * It only works with threads created by using the glib API with
+   * g_system_thread_new(). If users need absolutely to use a thread NOT
+   * created with glib API under Windows and in static compilation mode, they
+   * should not use glib functions within their thread or they may encounter
+   * memory leaks when the thread finishes.
+   */
+#ifdef GLIB_STATIC_COMPILATION
+  g_thread_win32_thread_detach ();
+#endif
+
   _endthreadex (0);
 }
 
@@ -428,20 +461,33 @@ g_thread_win32_proxy (gpointer data)
   return 0;
 }
 
+gboolean
+g_system_thread_get_scheduler_settings (GThreadSchedulerSettings *scheduler_settings)
+{
+  HANDLE current_thread = GetCurrentThread ();
+  scheduler_settings->thread_prio = GetThreadPriority (current_thread);
+
+  return TRUE;
+}
+
 GRealThread *
-g_system_thread_new (GThreadFunc   proxy,
-                     gulong        stack_size,
-                     const char   *name,
-                     GThreadFunc   func,
-                     gpointer      data,
-                     GError      **error)
+g_system_thread_new (GThreadFunc proxy,
+                     gulong stack_size,
+                     const GThreadSchedulerSettings *scheduler_settings,
+                     const char *name,
+                     GThreadFunc func,
+                     gpointer data,
+                     GError **error)
 {
   GThreadWin32 *thread;
   GRealThread *base_thread;
   guint ignore;
+  const gchar *message = NULL;
+  int thread_prio;
 
   thread = g_slice_new0 (GThreadWin32);
   thread->proxy = proxy;
+  thread->handle = (HANDLE) NULL;
   base_thread = (GRealThread*)thread;
   base_thread->ref_count = 2;
   base_thread->ours = TRUE;
@@ -450,19 +496,65 @@ g_system_thread_new (GThreadFunc   proxy,
   base_thread->thread.data = data;
   base_thread->name = g_strdup (name);
 
-  thread->handle = (HANDLE) _beginthreadex (NULL, stack_size, g_thread_win32_proxy, thread, 0, &ignore);
+  thread->handle = (HANDLE) _beginthreadex (NULL, stack_size, g_thread_win32_proxy, thread,
+                                            CREATE_SUSPENDED, &ignore);
 
   if (thread->handle == NULL)
     {
-      gchar *win_error = g_win32_error_message (GetLastError ());
-      g_set_error (error, G_THREAD_ERROR, G_THREAD_ERROR_AGAIN,
-                   "Error creating thread: %s", win_error);
-      g_free (win_error);
-      g_slice_free (GThreadWin32, thread);
-      return NULL;
+      message = "Error creating thread";
+      goto error;
+    }
+
+  /* For thread priority inheritance we need to manually set the thread
+   * priority of the new thread to the priority of the current thread. We
+   * also have to start the thread suspended and resume it after actually
+   * setting the priority here.
+   *
+   * On Windows, by default all new threads are created with NORMAL thread
+   * priority.
+   */
+
+  if (scheduler_settings)
+    {
+      thread_prio = scheduler_settings->thread_prio;
+    }
+  else
+    {
+      HANDLE current_thread = GetCurrentThread ();
+      thread_prio = GetThreadPriority (current_thread);
+    }
+
+  if (thread_prio == THREAD_PRIORITY_ERROR_RETURN)
+    {
+      message = "Error getting current thread priority";
+      goto error;
+    }
+
+  if (SetThreadPriority (thread->handle, thread_prio) == 0)
+    {
+      message = "Error setting new thread priority";
+      goto error;
+    }
+
+  if (ResumeThread (thread->handle) == (DWORD) -1)
+    {
+      message = "Error resuming new thread";
+      goto error;
     }
 
   return (GRealThread *) thread;
+
+error:
+  {
+    gchar *win_error = g_win32_error_message (GetLastError ());
+    g_set_error (error, G_THREAD_ERROR, G_THREAD_ERROR_AGAIN,
+                 "%s: %s", message, win_error);
+    g_free (win_error);
+    if (thread->handle)
+      CloseHandle (thread->handle);
+    g_slice_free (GThreadWin32, thread);
+    return NULL;
+  }
 }
 
 void
@@ -520,7 +612,8 @@ SetThreadName (DWORD  dwThreadID,
 #ifdef _MSC_VER
    __try
      {
-       RaiseException (EXCEPTION_SET_THREAD_NAME, 0, infosize, (DWORD *) &info);
+       RaiseException (EXCEPTION_SET_THREAD_NAME, 0, infosize,
+                       (const ULONG_PTR *) &info);
      }
    __except (EXCEPTION_EXECUTE_HANDLER)
      {
@@ -532,14 +625,66 @@ SetThreadName (DWORD  dwThreadID,
    if ((!IsDebuggerPresent ()) && (SetThreadName_VEH_handle == NULL))
      return;
 
-   RaiseException (EXCEPTION_SET_THREAD_NAME, 0, infosize, (DWORD *) &info);
+   RaiseException (EXCEPTION_SET_THREAD_NAME, 0, infosize, (const ULONG_PTR *) &info);
 #endif
+}
+
+typedef HRESULT (WINAPI *pSetThreadDescription) (HANDLE hThread,
+                                                 PCWSTR lpThreadDescription);
+static pSetThreadDescription SetThreadDescriptionFunc = NULL;
+static HMODULE kernel32_module = NULL;
+
+static gboolean
+g_thread_win32_load_library (void)
+{
+  /* FIXME: Add support for UWP app */
+#if !defined(G_WINAPI_ONLY_APP)
+  static gsize _init_once = 0;
+  if (g_once_init_enter (&_init_once))
+    {
+      kernel32_module = LoadLibraryW (L"kernel32.dll");
+      if (kernel32_module)
+        {
+          SetThreadDescriptionFunc =
+              (pSetThreadDescription) GetProcAddress (kernel32_module,
+                                                      "SetThreadDescription");
+          if (!SetThreadDescriptionFunc)
+            FreeLibrary (kernel32_module);
+        }
+      g_once_init_leave (&_init_once, 1);
+    }
+#endif
+
+  return !!SetThreadDescriptionFunc;
+}
+
+static gboolean
+g_thread_win32_set_thread_desc (const gchar *name)
+{
+  HRESULT hr;
+  wchar_t *namew;
+
+  if (!g_thread_win32_load_library () || !name)
+    return FALSE;
+
+  namew = g_utf8_to_utf16 (name, -1, NULL, NULL, NULL);
+  if (!namew)
+    return FALSE;
+
+  hr = SetThreadDescriptionFunc (GetCurrentThread (), namew);
+
+  g_free (namew);
+  return SUCCEEDED (hr);
 }
 
 void
 g_system_thread_set_name (const gchar *name)
 {
-  SetThreadName ((DWORD) -1, name);
+  /* Prefer SetThreadDescription over exception based way if available,
+   * since thread description set by SetThreadDescription will be preserved
+   * in dump file */
+  if (!g_thread_win32_set_thread_desc (name))
+    SetThreadName ((DWORD) -1, name);
 }
 
 /* {{{1 Epilogue */
@@ -576,7 +721,7 @@ g_thread_win32_thread_detach (void)
        */
       dtors_called = FALSE;
 
-      for (dtor = g_private_destructors; dtor; dtor = dtor->next)
+      for (dtor = g_atomic_pointer_get (&g_private_destructors); dtor; dtor = dtor->next)
         {
           gpointer value;
 

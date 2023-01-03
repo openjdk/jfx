@@ -69,9 +69,9 @@ AccessibilityOrientation AccessibilityScrollbar::orientation() const
     if (!m_scrollbar)
         return AccessibilityOrientation::Vertical;
 
-    if (m_scrollbar->orientation() == HorizontalScrollbar)
+    if (m_scrollbar->orientation() == ScrollbarOrientation::Horizontal)
         return AccessibilityOrientation::Horizontal;
-    if (m_scrollbar->orientation() == VerticalScrollbar)
+    if (m_scrollbar->orientation() == ScrollbarOrientation::Vertical)
         return AccessibilityOrientation::Vertical;
 
     return AccessibilityOrientation::Vertical;
@@ -92,13 +92,14 @@ float AccessibilityScrollbar::valueForRange() const
     return m_scrollbar->currentPos() / m_scrollbar->maximum();
 }
 
-void AccessibilityScrollbar::setValue(float value)
+bool AccessibilityScrollbar::setValue(float value)
 {
     if (!m_scrollbar)
-        return;
+        return false;
 
     float newValue = value * m_scrollbar->maximum();
     m_scrollbar->scrollableArea().scrollToOffsetWithoutAnimation(m_scrollbar->orientation(), newValue);
+    return true;
 }
 
 } // namespace WebCore

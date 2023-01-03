@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -31,7 +31,6 @@ import com.sun.javafx.scene.NodeHelper;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ObjectPropertyBase;
 import javafx.beans.value.ChangeListener;
-import javafx.beans.value.WritableValue;
 import javafx.css.StyleableProperty;
 import javafx.scene.AccessibleRole;
 import javafx.scene.Node;
@@ -55,7 +54,7 @@ import javafx.scene.Node;
  */
 public class Label extends Labeled {
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
@@ -95,10 +94,10 @@ public class Label extends Labeled {
         // makes it look to css like the user set the value and css will not
         // override. Initializing focusTraversable by calling set on the
         // CssMetaData ensures that css will be able to override the value.
-        ((StyleableProperty<Boolean>)(WritableValue<Boolean>)focusTraversableProperty()).applyStyle(null, Boolean.FALSE);
+        ((StyleableProperty<Boolean>)focusTraversableProperty()).applyStyle(null, Boolean.FALSE);
     }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Properties                                                              *
      *                                                                         *
@@ -116,7 +115,7 @@ public class Label extends Labeled {
      */
     public ObjectProperty<Node> labelForProperty() {
         if (labelFor == null) {
-            labelFor = new ObjectPropertyBase<Node>() {
+            labelFor = new ObjectPropertyBase<>() {
                 Node oldValue = null;
                 @Override protected void invalidated() {
                     if (oldValue != null) {
@@ -151,7 +150,7 @@ public class Label extends Labeled {
     public final void setLabelFor(Node value) { labelForProperty().setValue(value); }
     public final Node getLabelFor() { return labelFor == null ? null : labelFor.getValue(); }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Methods                                                                 *
      *                                                                         *
@@ -162,7 +161,7 @@ public class Label extends Labeled {
         return new LabelSkin(this);
     }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * CSS Support                                                             *
      *                                                                         *

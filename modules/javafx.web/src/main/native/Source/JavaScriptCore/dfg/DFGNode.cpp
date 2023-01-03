@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,12 +30,14 @@
 
 #include "DFGGraph.h"
 #include "DFGPromotedHeapLocation.h"
-#include "JSCInlines.h"
+#include "DOMJITSignature.h"
 #include "JSImmutableButterfly.h"
 
 namespace JSC { namespace DFG {
 
 const char Node::HashSetTemplateInstantiationString[] = "::JSC::DFG::Node*";
+
+DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(DFGNode);
 
 bool MultiPutByOffsetData::writesStructures() const
 {
@@ -53,6 +55,24 @@ bool MultiPutByOffsetData::reallocatesStorage() const
             return true;
     }
     return false;
+}
+
+bool MultiDeleteByOffsetData::writesStructures() const
+{
+    for (unsigned i = variants.size(); i--;) {
+        if (variants[i].writesStructures())
+            return true;
+    }
+    return false;
+}
+
+bool MultiDeleteByOffsetData::allVariantsStoreEmpty() const
+{
+    for (unsigned i = variants.size(); i--;) {
+        if (!variants[i].newStructure())
+            return false;
+    }
+    return true;
 }
 
 void BranchTarget::dump(PrintStream& out) const
@@ -301,6 +321,17 @@ void Node::convertToRegExpMatchFastGlobalWithoutChecks(FrozenValue* regExp)
     m_opInfo = regExp;
 }
 
+void Node::convertToRegExpTestInline(FrozenValue* globalObject, FrozenValue* regExp)
+{
+    ASSERT(op() == RegExpTest);
+    setOpAndDefaultFlags(RegExpTestInline);
+    children.child1() = Edge(children.child1().node(), KnownCellUse);
+    children.child2() = Edge(children.child2().node(), RegExpObjectUse);
+    // We keep the existing child3.
+    m_opInfo = globalObject;
+    m_opInfo2 = regExp;
+}
+
 String Node::tryGetString(Graph& graph)
 {
     if (hasConstant())
@@ -347,7 +378,7 @@ void printInternal(PrintStream& out, Node* node)
         out.print("-");
         return;
     }
-    out.print("@", node->index());
+    out.print("D@", node->index());
     if (node->hasDoubleResult())
         out.print("<Double>");
     else if (node->hasInt52Result())

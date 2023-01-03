@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -52,7 +52,7 @@ public class ProgressBarTreeTableCellTest {
         tableColumn = new TreeTableColumn<>();
         booleanProperty = new SimpleBooleanProperty(false);
         callback = param -> booleanProperty;
-        converter = new StringConverter<Object>() {
+        converter = new StringConverter<>() {
             @Override public String toString(Object object) {
                 return null;
             }
@@ -65,7 +65,7 @@ public class ProgressBarTreeTableCellTest {
 
     private void setTableViewAndTreeTableColumn(TreeTableCell cell) {
         cell.updateTreeTableView(tableView);
-        cell.updateTreeTableColumn(tableColumn);
+        cell.updateTableColumn(tableColumn);
     }
 
 

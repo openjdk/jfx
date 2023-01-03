@@ -28,32 +28,10 @@
 
 #if ENABLE(WEBASSEMBLY)
 
-#include "WasmCallingConvention.h"
 #include "WasmContextInlines.h"
-#include "WasmMemory.h"
 #include <wtf/NeverDestroyed.h>
 
 namespace JSC { namespace Wasm {
-
-static Vector<GPRReg> getPinnedRegisters(unsigned remainingPinnedRegisters)
-{
-    Vector<GPRReg> registers;
-    jscCallingConvention().m_calleeSaveRegisters.forEach([&] (Reg reg) {
-        if (!reg.isGPR())
-            return;
-        GPRReg gpr = reg.gpr();
-        if (!remainingPinnedRegisters || RegisterSet::stackRegisters().get(reg))
-            return;
-        if (RegisterSet::runtimeTagRegisters().get(reg)) {
-            // Since we don't need to, we currently don't pick from the tag registers to allow
-            // JS->Wasm stubs to freely use these registers.
-            return;
-        }
-        --remainingPinnedRegisters;
-        registers.append(gpr);
-    });
-    return registers;
-}
 
 const PinnedRegisterInfo& PinnedRegisterInfo::get()
 {
@@ -63,30 +41,29 @@ const PinnedRegisterInfo& PinnedRegisterInfo::get()
         unsigned numberOfPinnedRegisters = 2;
         if (!Context::useFastTLS())
             ++numberOfPinnedRegisters;
-        Vector<GPRReg> pinnedRegs = getPinnedRegisters(numberOfPinnedRegisters);
-
-        GPRReg baseMemoryPointer = pinnedRegs.takeLast();
-        GPRReg sizeRegister = pinnedRegs.takeLast();
+        GPRReg baseMemoryPointer = GPRInfo::regCS3;
+        GPRReg boundsCheckingSizeRegister = GPRInfo::regCS4;
         GPRReg wasmContextInstancePointer = InvalidGPRReg;
         if (!Context::useFastTLS())
-            wasmContextInstancePointer = pinnedRegs.takeLast();
+            wasmContextInstancePointer = GPRInfo::regCS0;
 
-        staticPinnedRegisterInfo.construct(sizeRegister, baseMemoryPointer, wasmContextInstancePointer);
+        staticPinnedRegisterInfo.construct(boundsCheckingSizeRegister, baseMemoryPointer, wasmContextInstancePointer);
     });
 
     return staticPinnedRegisterInfo.get();
 }
 
-PinnedRegisterInfo::PinnedRegisterInfo(GPRReg sizeRegister, GPRReg baseMemoryPointer, GPRReg wasmContextInstancePointer)
-    : sizeRegister(sizeRegister)
+PinnedRegisterInfo::PinnedRegisterInfo(GPRReg boundsCheckingSizeRegister, GPRReg baseMemoryPointer, GPRReg wasmContextInstancePointer)
+    : boundsCheckingSizeRegister(boundsCheckingSizeRegister)
     , baseMemoryPointer(baseMemoryPointer)
     , wasmContextInstancePointer(wasmContextInstancePointer)
 {
 }
 
-MemoryInformation::MemoryInformation(PageCount initial, PageCount maximum, bool isImport)
+MemoryInformation::MemoryInformation(PageCount initial, PageCount maximum, bool isShared, bool isImport)
     : m_initial(initial)
     , m_maximum(maximum)
+    , m_isShared(isShared)
     , m_isImport(isImport)
 {
     RELEASE_ASSERT(!!m_initial);

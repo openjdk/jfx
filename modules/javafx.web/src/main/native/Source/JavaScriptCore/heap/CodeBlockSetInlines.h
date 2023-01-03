@@ -38,13 +38,17 @@ inline void CodeBlockSet::mark(const AbstractLocker&, CodeBlock* codeBlock)
     if (!codeBlock)
         return;
 
+    // Conservative root scanning in Eden collection can only find PreciseAllocation that is allocated in this Eden cycle.
+    // Since CodeBlockSet::m_currentlyExecuting is strongly assuming that this catches all the currently executing CodeBlock,
+    // we now have a restriction that all CodeBlock needs to be a non-precise-allocation.
+    ASSERT(!codeBlock->isPreciseAllocation());
     m_currentlyExecuting.add(codeBlock);
 }
 
 template<typename Functor>
 void CodeBlockSet::iterate(const Functor& functor)
 {
-    auto locker = holdLock(m_lock);
+    Locker locker { m_lock };
     iterate(locker, functor);
 }
 
@@ -56,21 +60,9 @@ void CodeBlockSet::iterate(const AbstractLocker&, const Functor& functor)
 }
 
 template<typename Functor>
-void CodeBlockSet::iterateViaSubspaces(VM& vm, const Functor& functor)
-{
-    vm.forEachCodeBlockSpace(
-        [&] (auto& spaceAndSet) {
-            spaceAndSet.space.forEachLiveCell(
-                [&] (HeapCell* cell, HeapCell::Kind) {
-                    functor(jsCast<CodeBlock*>(static_cast<JSCell*>(cell)));
-                });
-        });
-}
-
-template<typename Functor>
 void CodeBlockSet::iterateCurrentlyExecuting(const Functor& functor)
 {
-    LockHolder locker(&m_lock);
+    Locker locker { m_lock };
     for (CodeBlock* codeBlock : m_currentlyExecuting)
         functor(codeBlock);
 }

@@ -28,7 +28,9 @@
 
 #include "CachedResourceLoader.h"
 #include "CrossOriginAccessControl.h"
+#include "DefaultResourceLoadPriority.h"
 #include "Document.h"
+#include "ScriptElementCachedScriptFetcher.h"
 
 #include "MediaQueryEvaluator.h"
 #include "RenderView.h"
@@ -57,12 +59,16 @@ CachedResourceRequest PreloadRequest::resourceRequest(Document& document)
     String crossOriginMode = m_crossOriginMode;
     if (m_moduleScript == ModuleScript::Yes) {
         if (crossOriginMode.isNull())
-            crossOriginMode = "omit"_s;
+            crossOriginMode = ScriptElementCachedScriptFetcher::defaultCrossOriginModeForModule;
     }
-    if (m_resourceType == CachedResource::Type::Script)
+    if (m_resourceType == CachedResource::Type::Script || m_resourceType == CachedResource::Type::ImageResource)
         options.referrerPolicy = m_referrerPolicy;
-    auto request = createPotentialAccessControlRequest(completeURL(document), document, crossOriginMode, WTFMove(options));
+    auto request = createPotentialAccessControlRequest(completeURL(document), WTFMove(options), document, crossOriginMode);
     request.setInitiator(m_initiator);
+
+    if (m_scriptIsAsync && m_resourceType == CachedResource::Type::Script && m_moduleScript == ModuleScript::No)
+        request.setPriority(DefaultResourceLoadPriority::asyncScript);
+
     return request;
 }
 

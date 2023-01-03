@@ -112,9 +112,7 @@ GST_API
 gboolean gst_stream_collection_add_stream (GstStreamCollection *collection,
                                            GstStream *stream);
 
-#ifdef G_DEFINE_AUTOPTR_CLEANUP_FUNC
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(GstStreamCollection, gst_object_unref)
-#endif
 
 G_END_DECLS
 

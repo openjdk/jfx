@@ -30,19 +30,25 @@
 
 namespace WebCore {
 
-ServiceWorkerJobData::ServiceWorkerJobData(const Identifier& identifier)
-    : m_identifier(identifier)
+static inline ServiceWorkerOrClientIdentifier serviceWorkerOrClientIdentifier(const ServiceWorkerOrClientIdentifier& localSourceContext)
+{
+    return WTF::switchOn(localSourceContext, [&](ScriptExecutionContextIdentifier contextIdentifier) -> ServiceWorkerOrClientIdentifier {
+        return contextIdentifier;
+    }, [&](ServiceWorkerIdentifier serviceWorkerIdentifier) -> ServiceWorkerOrClientIdentifier {
+        return serviceWorkerIdentifier;
+    });
+}
+
+ServiceWorkerJobData::ServiceWorkerJobData(SWServerConnectionIdentifier connectionIdentifier, const ServiceWorkerOrClientIdentifier& localSourceContext)
+    : sourceContext(serviceWorkerOrClientIdentifier(localSourceContext))
+    , m_identifier { connectionIdentifier, ServiceWorkerJobIdentifier::generateThreadSafe() }
 {
 }
 
-ServiceWorkerJobData::ServiceWorkerJobData(SWServerConnectionIdentifier connectionIdentifier, const DocumentOrWorkerIdentifier& localSourceContext)
-    : m_identifier { connectionIdentifier, ServiceWorkerJobIdentifier::generateThreadSafe() }
+ServiceWorkerJobData::ServiceWorkerJobData(Identifier identifier, const ServiceWorkerOrClientIdentifier& localSourceContext)
+    : sourceContext(serviceWorkerOrClientIdentifier(localSourceContext))
+    , m_identifier { identifier }
 {
-    WTF::switchOn(localSourceContext, [&](DocumentIdentifier documentIdentifier) {
-        sourceContext = ServiceWorkerClientIdentifier { connectionIdentifier, documentIdentifier };
-    }, [&](ServiceWorkerIdentifier serviceWorkerIdentifier) {
-        sourceContext = serviceWorkerIdentifier;
-    });
 }
 
 ServiceWorkerRegistrationKey ServiceWorkerJobData::registrationKey() const
@@ -52,11 +58,21 @@ ServiceWorkerRegistrationKey ServiceWorkerJobData::registrationKey() const
     return { SecurityOriginData { topOrigin }, WTFMove(scope) };
 }
 
+std::optional<ScriptExecutionContextIdentifier> ServiceWorkerJobData::serviceWorkerPageIdentifier() const
+{
+    if (isFromServiceWorkerPage && std::holds_alternative<ScriptExecutionContextIdentifier>(sourceContext))
+        return std::get<ScriptExecutionContextIdentifier>(sourceContext);
+    return std::nullopt;
+}
+
 ServiceWorkerJobData ServiceWorkerJobData::isolatedCopy() const
 {
-    ServiceWorkerJobData result { identifier() };
+    ServiceWorkerJobData result;
+    result.m_identifier = identifier();
     result.sourceContext = sourceContext;
+    result.workerType = workerType;
     result.type = type;
+    result.isFromServiceWorkerPage = isFromServiceWorkerPage;
 
     result.scriptURL = scriptURL.isolatedCopy();
     result.clientCreationURL = clientCreationURL.isolatedCopy();
@@ -65,6 +81,25 @@ ServiceWorkerJobData ServiceWorkerJobData::isolatedCopy() const
     result.registrationOptions = registrationOptions.isolatedCopy();
 
     return result;
+}
+
+// https://w3c.github.io/ServiceWorker/#dfn-job-equivalent
+bool ServiceWorkerJobData::isEquivalent(const ServiceWorkerJobData& job) const
+{
+    if (type != job.type)
+        return false;
+
+    switch (type) {
+    case ServiceWorkerJobType::Register:
+    case ServiceWorkerJobType::Update:
+        return scopeURL == job.scopeURL
+            && scriptURL == job.scriptURL
+            && workerType == job.workerType
+            && registrationOptions.updateViaCache == job.registrationOptions.updateViaCache;
+    case ServiceWorkerJobType::Unregister:
+        return scopeURL == job.scopeURL;
+    }
+    return false;
 }
 
 } // namespace WebCore

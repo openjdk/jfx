@@ -1,4 +1,4 @@
-# Copyright (C) 2012-2018 Apple Inc. All rights reserved.
+# Copyright (C) 2012-2021 Apple Inc. All rights reserved.
 # Copyright (C) 2012 MIPS Technologies, Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -43,6 +43,8 @@ require 'risc'
 # $t8 =>            (scratch)
 # $t9 =>            (stores the callee of a call opcode)
 # $gp =>            (globals)
+# $s0 => csr0       (callee-save, metadataTable)
+# $s1 => csr1       (callee-save, PB)
 # $s4 =>            (callee-save used to preserve $gp across calls)
 # $ra => lr
 # $sp => sp
@@ -60,12 +62,6 @@ require 'risc'
 # $f14 =>        fa1
 # $f16 =>            (scratch)
 # $f18 =>            (scratch)
-
-class Assembler
-    def putStr(str)
-        @outp.puts str
-    end
-end
 
 class Node
     def mipsSingleHi
@@ -99,6 +95,7 @@ MIPS_ZERO_REG = SpecialRegister.new("$zero")
 MIPS_GP_REG = SpecialRegister.new("$gp")
 MIPS_GPSAVE_REG = SpecialRegister.new("$s4")
 MIPS_CALL_REG = SpecialRegister.new("$t9")
+MIPS_RETURN_ADDRESS_REG = SpecialRegister.new("$ra")
 MIPS_TEMP_FPRS = [SpecialRegister.new("$f16")]
 MIPS_SCRATCH_FPR = SpecialRegister.new("$f18")
 
@@ -137,6 +134,8 @@ class RegisterID
             "$fp"
         when "csr0"
             "$s0"
+        when "csr1"
+            "$s1"
         when "lr"
             "$ra"
         when "sp"
@@ -527,7 +526,7 @@ def mipsLowerMisplacedImmediates(list)
                 end
             when /^(addi|subi)/
                 newList << node.riscLowerMalformedImmediatesRecurse(newList, -0x7fff..0x7fff)
-            when "andi", "andp", "ori", "orp", "xori", "xorp"
+            when "andi", "andp", "ori", "orp", "orh", "xori", "xorp"
                 newList << node.riscLowerMalformedImmediatesRecurse(newList, 0..0xffff)
             else
                 newList << node
@@ -549,22 +548,27 @@ class LocalLabelReference
     end
 end
 
-def mipsAsRegister(preList, postList, operand, needRestore)
-    tmp = MIPS_CALL_REG
-    if operand.address?
-        preList << Instruction.new(operand.codeOrigin, "loadp", [operand, MIPS_CALL_REG])
-    elsif operand.is_a? LabelReference
-        preList << Instruction.new(operand.codeOrigin, "la", [operand, MIPS_CALL_REG])
-    elsif operand.register? and operand != MIPS_CALL_REG
-        preList << Instruction.new(operand.codeOrigin, "move", [operand, MIPS_CALL_REG])
-    else
-        needRestore = false
-        tmp = operand
+class Instruction
+    # Replace operands with a single register operand.
+    # Note: in contrast to the risc version, this method drops all other operands.
+    def mipsCloneWithOperandLowered(preList, postList, operandIndex, needRestore)
+        operand = self.operands[operandIndex]
+        tmp = MIPS_CALL_REG
+        if operand.address?
+            preList << Instruction.new(self.codeOrigin, "loadp", [operand, MIPS_CALL_REG])
+        elsif operand.is_a? LabelReference
+            preList << Instruction.new(self.codeOrigin, "la", [operand, MIPS_CALL_REG])
+        elsif operand.register? and operand != MIPS_CALL_REG
+            preList << Instruction.new(self.codeOrigin, "move", [operand, MIPS_CALL_REG])
+        else
+            needRestore = false
+            tmp = operand
+        end
+        if needRestore
+            postList << Instruction.new(self.codeOrigin, "move", [MIPS_GPSAVE_REG, MIPS_GP_REG])
+        end
+        cloneWithNewOperands([tmp])
     end
-    if needRestore
-        postList << Instruction.new(operand.codeOrigin, "move", [MIPS_GPSAVE_REG, MIPS_GP_REG])
-    end
-    tmp
 end
 
 def mipsLowerMisplacedAddresses(list)
@@ -576,30 +580,21 @@ def mipsLowerMisplacedAddresses(list)
             annotation = node.annotation
             case node.opcode
             when "jmp"
-                newList << Instruction.new(node.codeOrigin,
-                                           node.opcode,
-                                           [mipsAsRegister(newList, [], node.operands[0], false)])
+                newList << node.mipsCloneWithOperandLowered(newList, [], 0, false)
             when "call"
-                newList << Instruction.new(node.codeOrigin,
-                                           node.opcode,
-                                           [mipsAsRegister(newList, postInstructions, node.operands[0], true)])
+                newList << node.mipsCloneWithOperandLowered(newList, postInstructions, 0, true)
             when "slt", "sltu"
-                newList << Instruction.new(node.codeOrigin,
-                                           node.opcode,
-                                           riscAsRegisters(newList, [], node.operands, "i"))
+                newList << node.riscCloneWithOperandsLowered(newList, [], "i")
             when "sltub", "sltb"
-                newList << Instruction.new(node.codeOrigin,
-                                           node.opcode,
-                                           riscAsRegisters(newList, [], node.operands, "b"))
+                newList << node.riscCloneWithOperandsLowered(newList, [], "b")
             when "andb"
                 newList << Instruction.new(node.codeOrigin,
                                            "andi",
-                                           riscAsRegisters(newList, [], node.operands, "b"))
+                                           riscLowerOperandsToRegisters(node, newList, [], "b"),
+                                           node.annotation)
             when /^(bz|bnz|bs|bo)/
                 tl = $~.post_match == "" ? "i" : $~.post_match
-                newList << Instruction.new(node.codeOrigin,
-                                           node.opcode,
-                                           riscAsRegisters(newList, [], node.operands, tl))
+                newList << node.riscCloneWithOperandsLowered(newList, [], tl)
             else
                 newList << node
             end
@@ -680,7 +675,7 @@ def mipsAddPICCode(list)
         | node |
         myList << node
         if node.is_a? Label
-            myList << Instruction.new(node.codeOrigin, "pichdr", [])
+            myList << Instruction.new(node.codeOrigin, "pichdr", [MIPS_CALL_REG])
         end
     }
     myList
@@ -723,7 +718,7 @@ class Sequence
         result = riscLowerMalformedAddressesDouble(result)
         result = riscLowerMisplacedImmediates(result, ["storeb", "storei", "storep"])
         result = mipsLowerMisplacedImmediates(result)
-        result = riscLowerMalformedImmediates(result, -0x7fff..0x7fff)
+        result = riscLowerMalformedImmediates(result, -0x7fff..0x7fff, -0x7fff..0x7fff)
         result = mipsLowerMisplacedAddresses(result)
         result = riscLowerMisplacedAddresses(result)
         result = riscLowerRegisterReuse(result)
@@ -806,6 +801,16 @@ def emitMIPS(opcode, operands)
     end
 end
 
+def emitMIPSDoubleCompare(branchOpcode, neg, operands)
+    mipsMoveImmediate(1, operands[2])
+    $asm.puts "c.#{branchOpcode}.d $fcc0, #{mipsOperands(operands[0..1])}"
+    if (!neg)
+        $asm.puts "movf #{operands[2].mipsOperand}, $zero, $fcc0"
+    else
+        $asm.puts "movt #{operands[2].mipsOperand}, $zero, $fcc0"
+    end
+end
+
 def emitMIPSDoubleBranch(branchOpcode, neg, operands)
     $asm.puts "c.#{branchOpcode}.d #{mipsOperands(operands[0..1])}"
     if (!neg)
@@ -854,7 +859,7 @@ class Instruction
             end
         when "andi", "andp"
             emitMIPSCompact("and", "and", operands)
-        when "ori", "orp"
+        when "ori", "orp", "orh"
             emitMIPSCompact("or", "orr", operands)
         when "oris"
             emitMIPSCompact("or", "orrs", operands)
@@ -889,7 +894,7 @@ class Instruction
         when "loadhsi"
             $asm.puts "lh #{mipsFlippedOperands(operands)}"
         when "storeh"
-            $asm.puts "shv #{mipsOperands(operands)}"
+            $asm.puts "sh #{mipsOperands(operands)}"
         when "loadd"
             $asm.puts "ldc1 #{mipsFlippedOperands(operands)}"
         when "stored"
@@ -906,7 +911,7 @@ class Instruction
             emitMIPS("mul.d", operands)
         when "sqrtd"
             $asm.puts "sqrt.d #{mipsFlippedOperands(operands)}"
-        when "ci2d"
+        when "ci2ds"
             raise "invalid ops of #{self.inspect} at #{codeOriginString}" unless operands[1].is_a? FPRegisterID and operands[0].register?
             $asm.puts "mtc1 #{operands[0].mipsOperand}, #{operands[1].mipsOperand}"
             $asm.puts "cvt.d.w #{operands[1].mipsOperand}, #{operands[1].mipsOperand}"
@@ -1010,6 +1015,14 @@ class Instruction
         when "cilteq", "cplteq", "cblteq"
             $asm.puts "slt #{operands[2].mipsOperand}, #{operands[1].mipsOperand}, #{operands[0].mipsOperand}"
             $asm.puts "xori #{operands[2].mipsOperand}, 1"
+        when "cdgt"
+            emitMIPSDoubleCompare("ule", true, operands)
+        when "cdgteq"
+            emitMIPSDoubleCompare("ult", true, operands)
+        when "cdlt"
+            emitMIPSDoubleCompare("olt", false, operands)
+        when "cdlteq"
+            emitMIPSDoubleCompare("ole", false, operands)
         when "peek"
             $asm.puts "lw #{operands[1].mipsOperand}, #{operands[0].value * 4}($sp)"
         when "poke"
@@ -1039,8 +1052,10 @@ class Instruction
         when "leai", "leap"
             if operands[0].is_a? LabelReference
                 labelRef = operands[0]
-                raise unless labelRef.offset == 0
                 $asm.puts "lw #{operands[1].mipsOperand}, %got(#{labelRef.asmLabel})($gp)"
+                if labelRef.offset > 0
+                    $asm.puts "addu #{operands[1].mipsOperand}, #{operands[1].mipsOperand}, #{labelRef.offset}"
+                end
             else
                 operands[0].mipsEmitLea(operands[1])
             end
@@ -1061,7 +1076,7 @@ class Instruction
         when "sltu", "sltub"
             $asm.puts "sltu #{operands[0].mipsOperand}, #{operands[1].mipsOperand}, #{operands[2].mipsOperand}"
         when "pichdr"
-            $asm.putStr("OFFLINE_ASM_CPLOAD(#{MIPS_CALL_REG.mipsOperand})")
+            $asm.putStr("OFFLINE_ASM_CPLOAD(#{operands[0].mipsOperand})")
         when "memfence"
             $asm.puts "sync"
         else

@@ -88,6 +88,8 @@ gst_tracer_factory_get_list (void)
  *
  * Returns: the #GType for tracers managed by this factory or 0 if
  * the factory is not loaded.
+ *
+ * Since: 1.14
  */
 GType
 gst_tracer_factory_get_tracer_type (GstTracerFactory * factory)

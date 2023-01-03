@@ -59,6 +59,7 @@ enum class EditAction : uint8_t {
     Subscript,
     Superscript,
     Underline,
+    StrikeThrough,
     Outline,
     Unscript,
     DeleteByDrag,
@@ -92,8 +93,7 @@ enum class EditAction : uint8_t {
     ConvertToOrderedList,
     ConvertToUnorderedList,
     Indent,
-    Outdent,
-    InsertEditableImage
+    Outdent
 };
 
 WTF::String undoRedoLabel(EditAction);

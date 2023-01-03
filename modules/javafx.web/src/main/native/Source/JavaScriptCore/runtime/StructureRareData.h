@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013, 2014 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,31 +30,52 @@
 #include "JSTypeInfo.h"
 #include "PropertyOffset.h"
 #include "PropertySlot.h"
+#include <wtf/FixedVector.h>
 
 namespace JSC {
 
 class JSPropertyNameEnumerator;
+class LLIntOffsetsExtractor;
 class Structure;
-class ObjectToStringAdaptiveInferredPropertyValueWatchpoint;
-class ObjectToStringAdaptiveStructureWatchpoint;
+class StructureChain;
+class CachedSpecialPropertyAdaptiveStructureWatchpoint;
+class CachedSpecialPropertyAdaptiveInferredPropertyValueWatchpoint;
+struct SpecialPropertyCache;
+enum class CachedPropertyNamesKind : uint8_t {
+    Keys = 0,
+    GetOwnPropertyNames,
+};
+static constexpr unsigned numberOfCachedPropertyNames = 2;
+
+enum class CachedSpecialPropertyKey : uint8_t {
+    ToStringTag = 0,
+    ToString,
+    ValueOf,
+    ToPrimitive,
+    ToJSON,
+};
+static constexpr unsigned numberOfCachedSpecialPropertyKeys = 5;
+
+class StructureRareData;
+class StructureChainInvalidationWatchpoint;
 
 class StructureRareData final : public JSCell {
 public:
     typedef JSCell Base;
-    static const unsigned StructureFlags = Base::StructureFlags | StructureIsImmortal;
+    static constexpr unsigned StructureFlags = Base::StructureFlags | StructureIsImmortal;
 
     template<typename CellType, SubspaceAccess>
-    static IsoSubspace* subspaceFor(VM& vm)
+    static GCClient::IsoSubspace* subspaceFor(VM& vm)
     {
-        return &vm.structureRareDataSpace;
+        return &vm.structureRareDataSpace();
     }
 
     static StructureRareData* create(VM&, Structure*);
 
-    static const bool needsDestruction = true;
+    static constexpr bool needsDestruction = true;
     static void destroy(JSCell*);
 
-    static void visitChildren(JSCell*, SlotVisitor&);
+    DECLARE_VISIT_CHILDREN;
 
     static Structure* createStructure(VM&, JSGlobalObject*, JSValue prototype);
 
@@ -65,55 +86,79 @@ public:
     void setPreviousID(VM&, Structure*);
     void clearPreviousID();
 
-    JSString* objectToStringValue() const;
-    void setObjectToStringValue(ExecState*, VM&, Structure* baseStructure, JSString* value, PropertySlot toStringTagSymbolSlot);
+    JSValue cachedSpecialProperty(CachedSpecialPropertyKey) const;
+    void cacheSpecialProperty(JSGlobalObject*, VM&, Structure* baseStructure, JSValue, CachedSpecialPropertyKey, const PropertySlot&);
 
     JSPropertyNameEnumerator* cachedPropertyNameEnumerator() const;
-    void setCachedPropertyNameEnumerator(VM&, JSPropertyNameEnumerator*);
+    uintptr_t cachedPropertyNameEnumeratorAndFlag() const;
+    void setCachedPropertyNameEnumerator(VM&, Structure*, JSPropertyNameEnumerator*, StructureChain*);
+    void clearCachedPropertyNameEnumerator();
 
-    JSImmutableButterfly* cachedOwnKeys() const;
-    JSImmutableButterfly* cachedOwnKeysIgnoringSentinel() const;
-    JSImmutableButterfly* cachedOwnKeysConcurrently() const;
-    void setCachedOwnKeys(VM&, JSImmutableButterfly*);
+    JSImmutableButterfly* cachedPropertyNames(CachedPropertyNamesKind) const;
+    JSImmutableButterfly* cachedPropertyNamesIgnoringSentinel(CachedPropertyNamesKind) const;
+    JSImmutableButterfly* cachedPropertyNamesConcurrently(CachedPropertyNamesKind) const;
+    void setCachedPropertyNames(VM&, CachedPropertyNamesKind, JSImmutableButterfly*);
 
     Box<InlineWatchpointSet> copySharedPolyProtoWatchpoint() const { return m_polyProtoWatchpoint; }
     const Box<InlineWatchpointSet>& sharedPolyProtoWatchpoint() const { return m_polyProtoWatchpoint; }
     void setSharedPolyProtoWatchpoint(Box<InlineWatchpointSet>&& sharedPolyProtoWatchpoint) { m_polyProtoWatchpoint = WTFMove(sharedPolyProtoWatchpoint); }
     bool hasSharedPolyProtoWatchpoint() const { return static_cast<bool>(m_polyProtoWatchpoint); }
 
-    static JSImmutableButterfly* cachedOwnKeysSentinel() { return bitwise_cast<JSImmutableButterfly*>(static_cast<uintptr_t>(1)); }
+    static JSImmutableButterfly* cachedPropertyNamesSentinel() { return bitwise_cast<JSImmutableButterfly*>(static_cast<uintptr_t>(1)); }
 
-    static ptrdiff_t offsetOfCachedOwnKeys()
+    static ptrdiff_t offsetOfCachedPropertyNames(CachedPropertyNamesKind kind)
     {
-        return OBJECT_OFFSETOF(StructureRareData, m_cachedOwnKeys);
+        return OBJECT_OFFSETOF(StructureRareData, m_cachedPropertyNames) + sizeof(WriteBarrier<JSImmutableButterfly>) * static_cast<unsigned>(kind);
+    }
+
+    static ptrdiff_t offsetOfCachedPropertyNameEnumeratorAndFlag()
+    {
+        return OBJECT_OFFSETOF(StructureRareData, m_cachedPropertyNameEnumeratorAndFlag);
     }
 
     DECLARE_EXPORT_INFO;
 
     void finalizeUnconditionally(VM&);
 
-private:
-    friend class Structure;
-    friend class ObjectToStringAdaptiveStructureWatchpoint;
-    friend class ObjectToStringAdaptiveInferredPropertyValueWatchpoint;
+    static constexpr uintptr_t cachedPropertyNameEnumeratorIsValidatedViaTraversingFlag = 1;
+    static constexpr uintptr_t cachedPropertyNameEnumeratorMask = ~static_cast<uintptr_t>(1);
 
-    void clearObjectToStringValue();
+private:
+    friend class LLIntOffsetsExtractor;
+    friend class Structure;
+    friend class CachedSpecialPropertyAdaptiveStructureWatchpoint;
+    friend class CachedSpecialPropertyAdaptiveInferredPropertyValueWatchpoint;
 
     StructureRareData(VM&, Structure*);
 
-    WriteBarrier<Structure> m_previous;
-    WriteBarrier<JSString> m_objectToStringValue;
+    void clearCachedSpecialProperty(CachedSpecialPropertyKey);
+    void cacheSpecialPropertySlow(JSGlobalObject*, VM&, Structure* baseStructure, JSValue, CachedSpecialPropertyKey, const PropertySlot&);
+
+    SpecialPropertyCache& ensureSpecialPropertyCache();
+    SpecialPropertyCache& ensureSpecialPropertyCacheSlow();
+    bool canCacheSpecialProperty(CachedSpecialPropertyKey);
+    void giveUpOnSpecialPropertyCache(CachedSpecialPropertyKey);
+
+    bool tryCachePropertyNameEnumeratorViaWatchpoint(VM&, Structure*, StructureChain*);
+
     // FIXME: We should have some story for clearing these property names caches in GC.
     // https://bugs.webkit.org/show_bug.cgi?id=192659
-    WriteBarrier<JSPropertyNameEnumerator> m_cachedPropertyNameEnumerator;
-    WriteBarrier<JSImmutableButterfly> m_cachedOwnKeys;
+    uintptr_t m_cachedPropertyNameEnumeratorAndFlag { 0 };
+    FixedVector<StructureChainInvalidationWatchpoint> m_cachedPropertyNameEnumeratorWatchpoints;
+    WriteBarrier<JSImmutableButterfly> m_cachedPropertyNames[numberOfCachedPropertyNames] { };
 
     typedef HashMap<PropertyOffset, RefPtr<WatchpointSet>, WTF::IntHash<PropertyOffset>, WTF::UnsignedWithZeroKeyHashTraits<PropertyOffset>> PropertyWatchpointMap;
-    std::unique_ptr<PropertyWatchpointMap> m_replacementWatchpointSets;
-    Bag<ObjectToStringAdaptiveStructureWatchpoint> m_objectToStringAdaptiveWatchpointSet;
-    std::unique_ptr<ObjectToStringAdaptiveInferredPropertyValueWatchpoint> m_objectToStringAdaptiveInferredValueWatchpoint;
+#ifdef NDEBUG
+    static_assert(sizeof(PropertyWatchpointMap) == sizeof(void*), "StructureRareData should remain small");
+#endif
+
+    PropertyWatchpointMap m_replacementWatchpointSets;
+    std::unique_ptr<SpecialPropertyCache> m_specialPropertyCache;
     Box<InlineWatchpointSet> m_polyProtoWatchpoint;
-    bool m_giveUpOnObjectToStringValueCache;
+
+    WriteBarrierStructureID m_previous;
+    PropertyOffset m_maxOffset;
+    PropertyOffset m_transitionOffset;
 };
 
 } // namespace JSC

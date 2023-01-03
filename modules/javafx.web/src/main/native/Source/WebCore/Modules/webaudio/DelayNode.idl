@@ -24,7 +24,11 @@
 
 [
     Conditional=WEB_AUDIO,
-    JSGenerateToJSObject
+    EnabledBySetting=WebAudioEnabled,
+    JSGenerateToJSObject,
+    Exposed=Window
 ] interface DelayNode : AudioNode {
+    [EnabledBySetting=WebAudioEnabled] constructor (BaseAudioContext context, optional DelayOptions options);
+
     readonly attribute AudioParam delayTime;
 };

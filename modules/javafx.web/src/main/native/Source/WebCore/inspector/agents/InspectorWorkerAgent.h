@@ -30,49 +30,48 @@
 #include <JavaScriptCore/InspectorBackendDispatchers.h>
 #include <JavaScriptCore/InspectorFrontendDispatchers.h>
 #include <wtf/HashMap.h>
+#include <wtf/WeakPtr.h>
 
 namespace WebCore {
 
 class Page;
-
-typedef String ErrorString;
 
 class InspectorWorkerAgent final : public InspectorAgentBase, public Inspector::WorkerBackendDispatcherHandler, public WorkerInspectorProxy::PageChannel {
     WTF_MAKE_NONCOPYABLE(InspectorWorkerAgent);
     WTF_MAKE_FAST_ALLOCATED;
 public:
     InspectorWorkerAgent(PageAgentContext&);
-    virtual ~InspectorWorkerAgent();
+    ~InspectorWorkerAgent();
 
     // InspectorAgentBase
     void didCreateFrontendAndBackend(Inspector::FrontendRouter*, Inspector::BackendDispatcher*);
     void willDestroyFrontendAndBackend(Inspector::DisconnectReason);
 
     // WorkerBackendDispatcherHandler
-    void enable(ErrorString&);
-    void disable(ErrorString&);
-    void initialized(ErrorString&, const String& workerId);
-    void sendMessageToWorker(ErrorString&, const String& workerId, const String& message);
+    Inspector::Protocol::ErrorStringOr<void> enable();
+    Inspector::Protocol::ErrorStringOr<void> disable();
+    Inspector::Protocol::ErrorStringOr<void> initialized(const String& workerId);
+    Inspector::Protocol::ErrorStringOr<void> sendMessageToWorker(const String& workerId, const String& message);
 
     // WorkerInspectorProxy::PageChannel
-    void sendMessageFromWorkerToFrontend(WorkerInspectorProxy*, const String& message);
+    void sendMessageFromWorkerToFrontend(WorkerInspectorProxy&, const String& message);
 
     // InspectorInstrumentation
     bool shouldWaitForDebuggerOnStart() const;
-    void workerStarted(WorkerInspectorProxy*, const URL&);
-    void workerTerminated(WorkerInspectorProxy*);
+    void workerStarted(WorkerInspectorProxy&);
+    void workerTerminated(WorkerInspectorProxy&);
 
 private:
     void connectToAllWorkerInspectorProxiesForPage();
     void disconnectFromAllWorkerInspectorProxies();
-    void connectToWorkerInspectorProxy(WorkerInspectorProxy*);
-    void disconnectFromWorkerInspectorProxy(WorkerInspectorProxy*);
+    void connectToWorkerInspectorProxy(WorkerInspectorProxy&);
+    void disconnectFromWorkerInspectorProxy(WorkerInspectorProxy&);
 
     std::unique_ptr<Inspector::WorkerFrontendDispatcher> m_frontendDispatcher;
     RefPtr<Inspector::WorkerBackendDispatcher> m_backendDispatcher;
 
     Page& m_page;
-    HashMap<String, WorkerInspectorProxy*> m_connectedProxies;
+    HashMap<String, WeakPtr<WorkerInspectorProxy>> m_connectedProxies;
     bool m_enabled { false };
 };
 

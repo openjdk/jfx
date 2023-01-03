@@ -21,11 +21,7 @@
 
 #pragma once
 
-#include "FloatQuad.h"
-#include "FloatRect.h"
-#include "LayoutRect.h"
 #include "RoundedRect.h"
-#include <wtf/Forward.h>
 
 namespace WebCore {
 
@@ -33,10 +29,10 @@ class HitTestLocation {
 public:
     WEBCORE_EXPORT HitTestLocation();
     HitTestLocation(const LayoutPoint&);
-    WEBCORE_EXPORT HitTestLocation(const FloatPoint&);
     HitTestLocation(const FloatPoint&, const FloatQuad&);
-    // Pass non-zero padding values to perform a rect-based hit test.
-    HitTestLocation(const LayoutPoint& centerPoint, unsigned topPadding, unsigned rightPadding, unsigned bottomPadding, unsigned leftPadding);
+
+    HitTestLocation(const LayoutRect&);
+
     // Make a copy the HitTestLocation in a new region by applying given offset to internal point and area.
     HitTestLocation(const HitTestLocation&, const LayoutSize& offset);
     WEBCORE_EXPORT HitTestLocation(const HitTestLocation&);
@@ -49,15 +45,14 @@ public:
     // Rect-based hit test related methods.
     bool isRectBasedTest() const { return m_isRectBased; }
     bool isRectilinear() const { return m_isRectilinear; }
-    IntRect boundingBox() const { return m_boundingBox; }
+    LayoutRect boundingBox() const { return m_boundingBox; }
 
-    WEBCORE_EXPORT static IntRect rectForPoint(const LayoutPoint&, unsigned topPadding, unsigned rightPadding, unsigned bottomPadding, unsigned leftPadding);
     int topPadding() const { return roundedPoint().y() - m_boundingBox.y(); }
     int rightPadding() const { return m_boundingBox.maxX() - roundedPoint().x() - 1; }
     int bottomPadding() const { return m_boundingBox.maxY() - roundedPoint().y() - 1; }
     int leftPadding() const { return roundedPoint().x() - m_boundingBox.x(); }
 
-    bool intersects(const LayoutRect&) const;
+    WEBCORE_EXPORT bool intersects(const LayoutRect&) const;
     bool intersects(const FloatRect&) const;
     bool intersects(const RoundedRect&) const;
 
@@ -65,19 +60,19 @@ public:
     const FloatQuad& transformedRect() const { return m_transformedRect; }
 
 private:
-    template<typename RectType>
-    bool intersectsRect(const RectType&) const;
-    void move(const LayoutSize& offset);
+    template<typename RectType> bool intersectsRect(const RectType&) const;
 
-    // This is cached forms of the more accurate point and area below.
+    void move(const LayoutSize&);
+
+    // These are the cached forms of the more accurate point and rect below.
     LayoutPoint m_point;
-    IntRect m_boundingBox;
+    LayoutRect m_boundingBox;
 
     FloatPoint m_transformedPoint;
     FloatQuad m_transformedRect;
 
-    bool m_isRectBased;
-    bool m_isRectilinear;
+    bool m_isRectBased { false };
+    bool m_isRectilinear { true };
 };
 
 } // namespace WebCore

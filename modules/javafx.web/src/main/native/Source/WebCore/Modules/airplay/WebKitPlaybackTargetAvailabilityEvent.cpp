@@ -26,16 +26,19 @@
 #include "config.h"
 #include "WebKitPlaybackTargetAvailabilityEvent.h"
 
+#include <wtf/IsoMallocInlines.h>
 #include <wtf/NeverDestroyed.h>
 
 #if ENABLE(WIRELESS_PLAYBACK_TARGET)
 
 namespace WebCore {
 
+WTF_MAKE_ISO_ALLOCATED_IMPL(WebKitPlaybackTargetAvailabilityEvent);
+
 static const AtomString& stringForPlaybackTargetAvailability(bool available)
 {
-    static NeverDestroyed<AtomString> availableString("available", AtomString::ConstructFromLiteral);
-    static NeverDestroyed<AtomString> notAvailableString("not-available", AtomString::ConstructFromLiteral);
+    static MainThreadNeverDestroyed<const AtomString> availableString("available", AtomString::ConstructFromLiteral);
+    static MainThreadNeverDestroyed<const AtomString> notAvailableString("not-available", AtomString::ConstructFromLiteral);
 
     return available ? availableString : notAvailableString;
 }

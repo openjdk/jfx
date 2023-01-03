@@ -35,9 +35,11 @@
 #include "SubtleCrypto.h"
 #include <JavaScriptCore/ArrayBufferView.h>
 #include <wtf/CryptographicallyRandomNumber.h>
+#include <wtf/UUID.h>
 
 #if OS(DARWIN)
-#include "CommonCryptoUtilities.h"
+#include <CommonCrypto/CommonCryptor.h>
+#include <CommonCrypto/CommonRandom.h>
 #endif
 
 namespace WebCore {
@@ -54,7 +56,7 @@ Crypto::~Crypto() = default;
 
 ExceptionOr<void> Crypto::getRandomValues(ArrayBufferView& array)
 {
-    if (!isInt(array.getType()))
+    if (!isInt(array.getType()) && !isBigInt(array.getType()))
         return Exception { TypeMismatchError };
     if (array.byteLength() > 65536)
         return Exception { QuotaExceededError };
@@ -65,6 +67,11 @@ ExceptionOr<void> Crypto::getRandomValues(ArrayBufferView& array)
     cryptographicallyRandomValues(array.baseAddress(), array.byteLength());
 #endif
     return { };
+}
+
+String Crypto::randomUUID() const
+{
+    return createVersion4UUIDString();
 }
 
 #if ENABLE(WEB_CRYPTO)

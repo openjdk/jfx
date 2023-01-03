@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "ArrayStorage.h"
+#include "ArrayStorageInlines.h"
 #include "Butterfly.h"
 #include "JSObject.h"
 #include "Structure.h"
@@ -77,7 +77,7 @@ ALWAYS_INLINE unsigned Butterfly::optimalContiguousVectorLength(Structure* struc
 inline Butterfly* Butterfly::tryCreateUninitialized(VM& vm, JSObject*, size_t preCapacity, size_t propertyCapacity, bool hasIndexingHeader, size_t indexingPayloadSizeInBytes, GCDeferralContext* deferralContext)
 {
     size_t size = totalSize(preCapacity, propertyCapacity, hasIndexingHeader, indexingPayloadSizeInBytes);
-    void* base = vm.jsValueGigacageAuxiliarySpace.allocateNonVirtual(vm, size, deferralContext, AllocationFailureMode::ReturnNull);
+    void* base = vm.jsValueGigacageAuxiliarySpace().allocate(vm, size, deferralContext, AllocationFailureMode::ReturnNull);
     if (UNLIKELY(!base))
         return nullptr;
 
@@ -89,7 +89,7 @@ inline Butterfly* Butterfly::tryCreateUninitialized(VM& vm, JSObject*, size_t pr
 inline Butterfly* Butterfly::createUninitialized(VM& vm, JSObject*, size_t preCapacity, size_t propertyCapacity, bool hasIndexingHeader, size_t indexingPayloadSizeInBytes)
 {
     size_t size = totalSize(preCapacity, propertyCapacity, hasIndexingHeader, indexingPayloadSizeInBytes);
-    void* base = vm.jsValueGigacageAuxiliarySpace.allocateNonVirtual(vm, size, nullptr, AllocationFailureMode::Assert);
+    void* base = vm.jsValueGigacageAuxiliarySpace().allocate(vm, size, nullptr, AllocationFailureMode::Assert);
     Butterfly* result = fromBase(base, preCapacity, propertyCapacity);
 
     return result;
@@ -98,13 +98,13 @@ inline Butterfly* Butterfly::createUninitialized(VM& vm, JSObject*, size_t preCa
 inline Butterfly* Butterfly::tryCreate(VM& vm, JSObject*, size_t preCapacity, size_t propertyCapacity, bool hasIndexingHeader, const IndexingHeader& indexingHeader, size_t indexingPayloadSizeInBytes)
 {
     size_t size = totalSize(preCapacity, propertyCapacity, hasIndexingHeader, indexingPayloadSizeInBytes);
-    void* base = vm.jsValueGigacageAuxiliarySpace.allocateNonVirtual(vm, size, nullptr, AllocationFailureMode::ReturnNull);
+    void* base = vm.jsValueGigacageAuxiliarySpace().allocate(vm, size, nullptr, AllocationFailureMode::ReturnNull);
     if (!base)
         return nullptr;
     Butterfly* result = fromBase(base, preCapacity, propertyCapacity);
     if (hasIndexingHeader)
         *result->indexingHeader() = indexingHeader;
-    memset(result->propertyStorage() - propertyCapacity, 0, propertyCapacity * sizeof(EncodedJSValue));
+    gcSafeZeroMemory(result->propertyStorage() - propertyCapacity, propertyCapacity * sizeof(EncodedJSValue));
     return result;
 }
 
@@ -139,13 +139,12 @@ inline Butterfly* Butterfly::createOrGrowPropertyStorage(
     size_t indexingPayloadSizeInBytes = oldButterfly->indexingHeader()->indexingPayloadSizeInBytes(structure);
     bool hasIndexingHeader = structure->hasIndexingHeader(intendedOwner);
     Butterfly* result = createUninitialized(vm, intendedOwner, preCapacity, newPropertyCapacity, hasIndexingHeader, indexingPayloadSizeInBytes);
-    memcpy(
+    gcSafeMemcpy(
         result->propertyStorage() - oldPropertyCapacity,
         oldButterfly->propertyStorage() - oldPropertyCapacity,
         totalSize(0, oldPropertyCapacity, hasIndexingHeader, indexingPayloadSizeInBytes));
-    memset(
+    gcSafeZeroMemory(
         result->propertyStorage() - newPropertyCapacity,
-        0,
         (newPropertyCapacity - oldPropertyCapacity) * sizeof(EncodedJSValue));
     return result;
 }
@@ -175,11 +174,11 @@ inline Butterfly* Butterfly::growArrayRight(
     void* theBase = base(0, propertyCapacity);
     size_t oldSize = totalSize(0, propertyCapacity, hadIndexingHeader, oldIndexingPayloadSizeInBytes);
     size_t newSize = totalSize(0, propertyCapacity, true, newIndexingPayloadSizeInBytes);
-    void* newBase = vm.jsValueGigacageAuxiliarySpace.allocateNonVirtual(vm, newSize, nullptr, AllocationFailureMode::ReturnNull);
+    void* newBase = vm.jsValueGigacageAuxiliarySpace().allocate(vm, newSize, nullptr, AllocationFailureMode::ReturnNull);
     if (!newBase)
         return nullptr;
     // FIXME: This probably shouldn't be a memcpy.
-    memcpy(newBase, theBase, oldSize);
+    gcSafeMemcpy(static_cast<JSValue*>(newBase), static_cast<JSValue*>(theBase), oldSize);
     return fromBase(newBase, 0, propertyCapacity);
 }
 
@@ -207,21 +206,21 @@ inline Butterfly* Butterfly::reallocArrayRightIfPossible(
     size_t newSize = totalSize(0, propertyCapacity, true, newIndexingPayloadSizeInBytes);
     ASSERT(newSize >= oldSize);
 
-    // We can eagerly destroy butterfly backed by LargeAllocation if (1) concurrent collector is not active and (2) the butterfly does not contain any property storage.
+    // We can eagerly destroy butterfly backed by PreciseAllocation if (1) concurrent collector is not active and (2) the butterfly does not contain any property storage.
     // This is because during deallocation concurrent collector can access butterfly and DFG concurrent compilers accesses properties.
     // Objects with no properties are common in arrays, and we are focusing on very large array crafted by repeating Array#push, so... that's fine!
-    bool canRealloc = !propertyCapacity && !vm.heap.mutatorShouldBeFenced() && bitwise_cast<HeapCell*>(theBase)->isLargeAllocation();
+    bool canRealloc = !propertyCapacity && !vm.heap.mutatorShouldBeFenced() && bitwise_cast<HeapCell*>(theBase)->isPreciseAllocation();
     if (canRealloc) {
-        void* newBase = vm.jsValueGigacageAuxiliarySpace.reallocateLargeAllocationNonVirtual(vm, bitwise_cast<HeapCell*>(theBase), newSize, &deferralContext, AllocationFailureMode::ReturnNull);
+        void* newBase = vm.jsValueGigacageAuxiliarySpace().reallocatePreciseAllocationNonVirtual(vm, bitwise_cast<HeapCell*>(theBase), newSize, &deferralContext, AllocationFailureMode::ReturnNull);
         if (!newBase)
             return nullptr;
         return fromBase(newBase, 0, propertyCapacity);
     }
 
-    void* newBase = vm.jsValueGigacageAuxiliarySpace.allocateNonVirtual(vm, newSize, &deferralContext, AllocationFailureMode::ReturnNull);
+    void* newBase = vm.jsValueGigacageAuxiliarySpace().allocate(vm, newSize, &deferralContext, AllocationFailureMode::ReturnNull);
     if (!newBase)
         return nullptr;
-    memcpy(newBase, theBase, oldSize);
+    gcSafeMemcpy(static_cast<JSValue*>(newBase), static_cast<JSValue*>(theBase), oldSize);
     return fromBase(newBase, 0, propertyCapacity);
 }
 
@@ -238,7 +237,7 @@ inline Butterfly* Butterfly::resizeArray(
     size_t size = std::min(
         totalSize(0, propertyCapacity, oldHasIndexingHeader, oldIndexingPayloadSizeInBytes),
         totalSize(0, propertyCapacity, newHasIndexingHeader, newIndexingPayloadSizeInBytes));
-    memcpy(to, from, size);
+    gcSafeMemcpy(static_cast<JSValue*>(to), static_cast<JSValue*>(from), size);
     return result;
 }
 
@@ -265,7 +264,7 @@ inline Butterfly* Butterfly::unshift(Structure* structure, size_t numberOfSlots)
     // inline memmove (particularly since the size argument is likely to be variable), nor can
     // we rely on the compiler to recognize the ordering of the pointer arguments (since
     // propertyCapacity is variable and could cause wrap-around as far as the compiler knows).
-    memmove(
+    gcSafeMemmove(
         propertyStorage() - numberOfSlots - propertyCapacity,
         propertyStorage() - propertyCapacity,
         sizeof(EncodedJSValue) * propertyCapacity + sizeof(IndexingHeader) + ArrayStorage::sizeFor(0));
@@ -277,7 +276,7 @@ inline Butterfly* Butterfly::shift(Structure* structure, size_t numberOfSlots)
     ASSERT(hasAnyArrayStorage(structure->indexingType()));
     unsigned propertyCapacity = structure->outOfLineCapacity();
     // FIXME: See comment in unshift(), above.
-    memmove(
+    gcSafeMemmove(
         propertyStorage() - propertyCapacity + numberOfSlots,
         propertyStorage() - propertyCapacity,
         sizeof(EncodedJSValue) * propertyCapacity + sizeof(IndexingHeader) + ArrayStorage::sizeFor(0));

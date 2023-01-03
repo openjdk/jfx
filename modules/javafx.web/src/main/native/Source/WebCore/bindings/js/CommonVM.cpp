@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,7 +27,6 @@
 #include "CommonVM.h"
 
 #include "DOMWindow.h"
-#include "DeprecatedGlobalSettings.h"
 #include "Frame.h"
 #include "ScriptController.h"
 #include "WebCoreJSClientData.h"
@@ -35,6 +34,7 @@
 #include <JavaScriptCore/MachineStackMarker.h>
 #include <JavaScriptCore/VM.h>
 #include <wtf/MainThread.h>
+#include <wtf/RunLoop.h>
 #include <wtf/text/AtomString.h>
 
 #if PLATFORM(IOS_FAMILY)
@@ -50,9 +50,18 @@ JSC::VM& commonVMSlow()
     ASSERT(isMainThread());
     ASSERT(!g_commonVMOrNull);
 
-    ScriptController::initializeThreading();
+    // FIXME: Remove this call to ScriptController::initializeMainThread(). The
+    // main thread should have been initialized by a WebKit entrypoint already.
+    // Also, initializeMainThread() does nothing on iOS.
+    ScriptController::initializeMainThread();
 
-    auto& vm = JSC::VM::create(JSC::LargeHeap).leakRef();
+#if PLATFORM(IOS_FAMILY)
+    RunLoop* runLoop = RunLoop::webIfExists();
+#else
+    RunLoop* runLoop = nullptr;
+#endif
+
+    auto& vm = JSC::VM::create(JSC::HeapType::Large, runLoop).leakRef();
 
     g_commonVMOrNull = &vm;
 
@@ -61,27 +70,25 @@ JSC::VM& commonVMSlow()
 #if PLATFORM(IOS_FAMILY)
     if (WebThreadIsEnabled())
         vm.apiLock().makeWebThreadAware();
-    vm.setRunLoop(WebThreadRunLoop());
     vm.heap.machineThreads().addCurrentThread();
 #endif
 
-    vm.setGlobalConstRedeclarationShouldThrow(DeprecatedGlobalSettings::globalConstRedeclarationShouldThrow());
-
-    JSVMClientData::initNormalWorld(&vm);
+    JSVMClientData::initNormalWorld(&vm, WorkerThreadType::Main);
 
     return vm;
 }
 
 Frame* lexicalFrameFromCommonVM()
 {
-    if (auto* topCallFrame = commonVM().topCallFrame) {
+    JSC::VM& vm = commonVM();
+    if (auto* topCallFrame = vm.topCallFrame) {
 #if PLATFORM(JAVA) && ENABLE(C_LOOP)
         if (!topCallFrame->codeBlock()) {
             return nullptr;
         }
 #endif
-        if (auto* globalObject = JSC::jsCast<JSDOMGlobalObject*>(topCallFrame->lexicalGlobalObject())) {
-            if (auto* window = JSC::jsDynamicCast<JSDOMWindow*>(commonVM(), globalObject)) {
+        if (auto* globalObject = JSC::jsCast<JSDOMGlobalObject*>(topCallFrame->lexicalGlobalObject(vm))) {
+            if (auto* window = JSC::jsDynamicCast<JSDOMWindow*>(vm, globalObject)) {
                 if (auto* frame = window->wrapped().frame())
                     return frame;
             }
@@ -92,7 +99,7 @@ Frame* lexicalFrameFromCommonVM()
 
 void addImpureProperty(const AtomString& propertyName)
 {
-    commonVM().addImpureProperty(propertyName);
+    commonVM().addImpureProperty(propertyName.impl());
 }
 
 } // namespace WebCore

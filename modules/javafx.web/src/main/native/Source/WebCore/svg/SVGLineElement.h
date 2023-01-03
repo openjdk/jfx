@@ -21,13 +21,12 @@
 
 #pragma once
 
-#include "SVGExternalResourcesRequired.h"
 #include "SVGGeometryElement.h"
 #include "SVGNames.h"
 
 namespace WebCore {
 
-class SVGLineElement final : public SVGGeometryElement, public SVGExternalResourcesRequired {
+class SVGLineElement final : public SVGGeometryElement {
     WTF_MAKE_ISO_ALLOCATED(SVGLineElement);
 public:
     static Ref<SVGLineElement> create(const QualifiedName&, Document&);
@@ -45,7 +44,7 @@ public:
 private:
     SVGLineElement(const QualifiedName&, Document&);
 
-    using PropertyRegistry = SVGPropertyOwnerRegistry<SVGLineElement, SVGGeometryElement, SVGExternalResourcesRequired>;
+    using PropertyRegistry = SVGPropertyOwnerRegistry<SVGLineElement, SVGGeometryElement>;
     const SVGPropertyRegistry& propertyRegistry() const final { return m_propertyRegistry; }
 
     void parseAttribute(const QualifiedName&, const AtomString&) final;
@@ -56,10 +55,10 @@ private:
     bool selfHasRelativeLengths() const final;
 
     PropertyRegistry m_propertyRegistry { *this };
-    Ref<SVGAnimatedLength> m_x1 { SVGAnimatedLength::create(this, LengthModeWidth) };
-    Ref<SVGAnimatedLength> m_y1 { SVGAnimatedLength::create(this, LengthModeHeight) };
-    Ref<SVGAnimatedLength> m_x2 { SVGAnimatedLength::create(this, LengthModeWidth) };
-    Ref<SVGAnimatedLength> m_y2 { SVGAnimatedLength::create(this, LengthModeHeight) };
+    Ref<SVGAnimatedLength> m_x1 { SVGAnimatedLength::create(this, SVGLengthMode::Width) };
+    Ref<SVGAnimatedLength> m_y1 { SVGAnimatedLength::create(this, SVGLengthMode::Height) };
+    Ref<SVGAnimatedLength> m_x2 { SVGAnimatedLength::create(this, SVGLengthMode::Width) };
+    Ref<SVGAnimatedLength> m_y2 { SVGAnimatedLength::create(this, SVGLengthMode::Height) };
 };
 
 } // namespace WebCore

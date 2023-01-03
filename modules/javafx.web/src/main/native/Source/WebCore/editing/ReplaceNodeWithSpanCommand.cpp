@@ -68,13 +68,13 @@ void ReplaceNodeWithSpanCommand::doApply()
 
 void ReplaceNodeWithSpanCommand::doUnapply()
 {
-    if (!m_spanElement->isConnected())
+    if (!m_spanElement || !m_spanElement->isConnected())
         return;
     swapInNodePreservingAttributesAndChildren(m_elementToReplace, *m_spanElement);
 }
 
 #ifndef NDEBUG
-void ReplaceNodeWithSpanCommand::getNodesInCommand(HashSet<Node*>& nodes)
+void ReplaceNodeWithSpanCommand::getNodesInCommand(HashSet<Ref<Node>>& nodes)
 {
     addNodeAndDescendants(m_elementToReplace.ptr(), nodes);
     addNodeAndDescendants(m_spanElement.get(), nodes);

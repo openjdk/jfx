@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,8 +30,6 @@
 
 namespace WTF {
 
-class PrintStream;
-
 #define CASE(__type) \
     case JSC::__type: \
         out.print(#__type); \
@@ -41,9 +39,10 @@ void printInternal(PrintStream& out, JSC::JSType type)
 {
     switch (type) {
     CASE(CellType)
+    CASE(StructureType)
     CASE(StringType)
     CASE(SymbolType)
-    CASE(BigIntType)
+    CASE(HeapBigIntType)
     CASE(CustomGetterSetterType)
     CASE(APIValueWrapperType)
     CASE(NativeExecutableType)
@@ -57,7 +56,6 @@ void printInternal(PrintStream& out, JSC::JSType type)
     CASE(UnlinkedEvalCodeBlockType)
     CASE(UnlinkedFunctionCodeBlockType)
     CASE(CodeBlockType)
-    CASE(JSFixedArrayType)
     CASE(JSImmutableButterflyType)
     CASE(JSSourceCodeType)
     CASE(JSScriptFetcherType)
@@ -67,10 +65,11 @@ void printInternal(PrintStream& out, JSC::JSType type)
     CASE(JSCalleeType)
     CASE(JSFunctionType)
     CASE(InternalFunctionType)
+    CASE(NullSetterFunctionType)
+    CASE(BooleanObjectType)
     CASE(NumberObjectType)
     CASE(ErrorInstanceType)
     CASE(PureForwardingProxyType)
-    CASE(ImpureProxyType)
     CASE(DirectArgumentsType)
     CASE(ScopedArgumentsType)
     CASE(ClonedArgumentsType)
@@ -86,6 +85,8 @@ void printInternal(PrintStream& out, JSC::JSType type)
     CASE(Uint32ArrayType)
     CASE(Float32ArrayType)
     CASE(Float64ArrayType)
+    CASE(BigInt64ArrayType)
+    CASE(BigUint64ArrayType)
     CASE(DataViewType)
     CASE(GetterSetterType)
     CASE(GlobalObjectType)
@@ -94,14 +95,25 @@ void printInternal(PrintStream& out, JSC::JSType type)
     CASE(ModuleEnvironmentType)
     CASE(StrictEvalActivationType)
     CASE(WithScopeType)
+    CASE(ModuleNamespaceObjectType)
+    CASE(ShadowRealmType)
     CASE(RegExpObjectType)
+    CASE(JSDateType)
     CASE(ProxyObjectType)
+    CASE(JSGeneratorType)
+    CASE(JSAsyncGeneratorType)
+    CASE(JSArrayIteratorType)
+    CASE(JSMapIteratorType)
+    CASE(JSSetIteratorType)
+    CASE(JSStringIteratorType)
+    CASE(JSPromiseType)
     CASE(JSMapType)
     CASE(JSSetType)
     CASE(JSWeakMapType)
     CASE(JSWeakSetType)
-    CASE(WebAssemblyToJSCalleeType)
+    CASE(WebAssemblyModuleType)
     CASE(StringObjectType)
+    CASE(DerivedStringObjectType)
     CASE(MaxJSType)
     }
 }

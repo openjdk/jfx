@@ -25,20 +25,19 @@
 
 typedef (BufferSource or Blob or USVString) BlobPart;
 
-// FIXME: This should be exposed on Workers as well.
 [
-    Constructor(sequence<BlobPart> fileBits, USVString fileName, optional FilePropertyBag options),
-    ConstructorCallWith=ScriptExecutionContext,
     ExportMacro=WEBCORE_EXPORT,
-    Exposed=(Window),
+    Exposed=(Window,Worker),
     JSGenerateToJSObject,
     JSGenerateToNativeObject,
 ] interface File : Blob {
+    [CallWith=CurrentScriptExecutionContext] constructor(sequence<BlobPart> fileBits, USVString fileName, optional FilePropertyBag options);
+
     readonly attribute DOMString name;
     readonly attribute long long lastModified;
 
     // https://wicg.github.io/entries-api/#file-interface
-    [EnabledAtRuntime=DirectoryUpload, ImplementedAs=relativePath] readonly attribute USVString webkitRelativePath;
+    [EnabledAtRuntime=DirectoryUploadEnabled, ImplementedAs=relativePath] readonly attribute USVString webkitRelativePath;
 };
 
 dictionary FilePropertyBag : BlobPropertyBag {

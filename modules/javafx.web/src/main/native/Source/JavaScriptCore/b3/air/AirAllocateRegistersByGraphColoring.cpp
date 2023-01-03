@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -35,25 +35,29 @@
 #include "AirLiveness.h"
 #include "AirPadInterference.h"
 #include "AirPhaseScope.h"
-#include "AirTmpInlines.h"
-#include "AirTmpWidth.h"
+#include "AirTmpWidthInlines.h"
 #include "AirUseCounts.h"
-#include <wtf/ListDump.h>
+#include <wtf/HashSet.h>
+#include <wtf/HashTraits.h>
+#include <wtf/InterferenceGraph.h>
+#include <wtf/SmallSet.h>
+#include <wtf/Vector.h>
 
 namespace JSC { namespace B3 { namespace Air {
 
 namespace {
 
-bool debug = false;
-bool traceDebug = false;
-bool reportStats = false;
+static constexpr bool debug = false;
+static constexpr bool traceDebug = false;
+static constexpr bool reportStats = false;
+static constexpr bool reportInterferenceGraphMemoryUse = false;
 
 // The AbstractColoringAllocator defines all the code that is independant
 // from the bank or register and can be shared when allocating registers.
-template<typename IndexType, typename TmpMapper>
+template<typename IndexType, typename InterferenceSet, Bank bank>
 class AbstractColoringAllocator {
 public:
-    AbstractColoringAllocator(Code& code, const Vector<Reg>& regsInPriorityOrder, IndexType lastPrecoloredRegisterIndex, unsigned tmpArraySize, const HashSet<unsigned>& unspillableTmps, const UseCounts<Tmp>& useCounts)
+    AbstractColoringAllocator(Code& code, const Vector<Reg>& regsInPriorityOrder, IndexType lastPrecoloredRegisterIndex, unsigned tmpArraySize, const BitVector& unspillableTmps, const UseCounts& useCounts)
         : m_regsInPriorityOrder(regsInPriorityOrder)
         , m_lastPrecoloredRegisterIndex(lastPrecoloredRegisterIndex)
         , m_unspillableTmps(unspillableTmps)
@@ -70,6 +74,14 @@ public:
     }
 
 protected:
+    using TmpMapper = AbsoluteTmpMapper<bank>;
+
+    IndexType tmpToIndex(Tmp tmp) const
+    {
+        unsigned index = TmpMapper::absoluteIndex(tmp);
+        ASSERT(std::numeric_limits<IndexType>::max() > index);
+        return static_cast<IndexType>(index);
+    }
 
     unsigned registerCount() const { return m_regsInPriorityOrder.size(); }
 
@@ -90,7 +102,7 @@ protected:
 
     void addToSpill(unsigned toSpill)
     {
-        if (m_unspillableTmps.contains(toSpill))
+        if (m_unspillableTmps.quickGet(toSpill))
             return;
 
         m_spillWorklist.add(toSpill);
@@ -108,15 +120,15 @@ protected:
         // All precolored registers have  an "infinite" degree.
         unsigned firstNonRegIndex = m_lastPrecoloredRegisterIndex + 1;
         for (unsigned i = 0; i < firstNonRegIndex; ++i)
-            m_degrees[i] = std::numeric_limits<unsigned>::max();
+            m_degrees[i] = std::numeric_limits<IndexType>::max();
 
-        memset(m_degrees.data() + firstNonRegIndex, 0, (tmpArraySize - firstNonRegIndex) * sizeof(unsigned));
+        memset(m_degrees.data() + firstNonRegIndex, 0, (tmpArraySize - firstNonRegIndex) * sizeof(IndexType));
     }
 
     void addEdgeDistinct(IndexType a, IndexType b)
     {
         ASSERT(a != b);
-        bool isNewEdge = addInterferenceEdge(InterferenceEdge(a, b));
+        bool isNewEdge = addInterferenceEdge(a, b);
         if (isNewEdge) {
             if (!isPrecolored(a)) {
                 ASSERT(!m_adjacencyList[a].contains(b));
@@ -135,7 +147,7 @@ protected:
     bool addEdgeDistinctWithoutDegreeChange(IndexType a, IndexType b)
     {
         ASSERT(a != b);
-        bool isNewEdge = addInterferenceEdge(InterferenceEdge(a, b));
+        bool isNewEdge = addInterferenceEdge(a, b);
         if (isNewEdge) {
             if (!isPrecolored(a)) {
                 ASSERT(!m_adjacencyList[a].contains(b));
@@ -162,7 +174,7 @@ protected:
 
     bool hasBeenSimplified(IndexType tmpIndex)
     {
-        if (!ASSERT_DISABLED) {
+        if (ASSERT_ENABLED) {
             if (!!m_coalescedTmps[tmpIndex])
                 ASSERT(getAlias(tmpIndex) != tmpIndex);
         }
@@ -192,32 +204,45 @@ protected:
         const auto& adjacentsOfU = m_adjacencyList[u];
         const auto& adjacentsOfV = m_adjacencyList[v];
 
-        if (adjacentsOfU.size() + adjacentsOfV.size() < registerCount()) {
+        Vector<IndexType, MacroAssembler::numGPRs + MacroAssembler::numFPRs> highOrderAdjacents;
+        RELEASE_ASSERT(registerCount() <= MacroAssembler::numGPRs + MacroAssembler::numFPRs);
+        unsigned numCandidates = adjacentsOfU.size() + adjacentsOfV.size();
+        if (numCandidates < registerCount()) {
             // Shortcut: if the total number of adjacents is less than the number of register, the condition is always met.
             return true;
         }
 
-        HashSet<IndexType> highOrderAdjacents;
-
         for (IndexType adjacentTmpIndex : adjacentsOfU) {
             ASSERT(adjacentTmpIndex != v);
             ASSERT(adjacentTmpIndex != u);
+            numCandidates--;
             if (!hasBeenSimplified(adjacentTmpIndex) && m_degrees[adjacentTmpIndex] >= registerCount()) {
-                auto addResult = highOrderAdjacents.add(adjacentTmpIndex);
-                if (addResult.isNewEntry && highOrderAdjacents.size() >= registerCount())
+                ASSERT(std::find(highOrderAdjacents.begin(), highOrderAdjacents.end(), adjacentTmpIndex) == highOrderAdjacents.end());
+                highOrderAdjacents.uncheckedAppend(adjacentTmpIndex);
+                if (highOrderAdjacents.size() >= registerCount())
                     return false;
-            }
+            } else if (highOrderAdjacents.size() + numCandidates < registerCount())
+                return true;
         }
+        ASSERT(numCandidates == adjacentsOfV.size());
+
+        auto iteratorEndHighOrderAdjacentsOfU = highOrderAdjacents.end();
         for (IndexType adjacentTmpIndex : adjacentsOfV) {
             ASSERT(adjacentTmpIndex != u);
             ASSERT(adjacentTmpIndex != v);
-            if (!hasBeenSimplified(adjacentTmpIndex) && m_degrees[adjacentTmpIndex] >= registerCount()) {
-                auto addResult = highOrderAdjacents.add(adjacentTmpIndex);
-                if (addResult.isNewEntry && highOrderAdjacents.size() >= registerCount())
+            numCandidates--;
+            if (!hasBeenSimplified(adjacentTmpIndex)
+                && m_degrees[adjacentTmpIndex] >= registerCount()
+                && std::find(highOrderAdjacents.begin(), iteratorEndHighOrderAdjacentsOfU, adjacentTmpIndex) == iteratorEndHighOrderAdjacentsOfU) {
+                ASSERT(std::find(iteratorEndHighOrderAdjacentsOfU, highOrderAdjacents.end(), adjacentTmpIndex) == highOrderAdjacents.end());
+                highOrderAdjacents.uncheckedAppend(adjacentTmpIndex);
+                if (highOrderAdjacents.size() >= registerCount())
                     return false;
-            }
+            } else if (highOrderAdjacents.size() + numCandidates < registerCount())
+                return true;
         }
 
+        ASSERT(!numCandidates);
         ASSERT(highOrderAdjacents.size() < registerCount());
         return true;
     }
@@ -237,7 +262,7 @@ protected:
             if (!isPrecolored(adjacentTmpIndex)
                 && !hasBeenSimplified(adjacentTmpIndex)
                 && m_degrees[adjacentTmpIndex] >= registerCount()
-                && !hasInterferenceEdge(InterferenceEdge(u, adjacentTmpIndex)))
+                && !hasInterferenceEdge(u, adjacentTmpIndex))
                 return false;
         }
         return true;
@@ -272,52 +297,40 @@ protected:
         auto iterator = m_spillWorklist.begin();
 
         RELEASE_ASSERT_WITH_MESSAGE(iterator != m_spillWorklist.end(), "selectSpill() called when there was no spill.");
-        RELEASE_ASSERT_WITH_MESSAGE(!m_unspillableTmps.contains(*iterator), "trying to spill unspillable tmp");
+        RELEASE_ASSERT_WITH_MESSAGE(!m_unspillableTmps.get(*iterator), "trying to spill unspillable tmp");
 
-        // Higher score means more desirable to spill. Lower scores maximize the likelihood that a tmp
-        // gets a register.
-        auto score = [&] (Tmp tmp) -> double {
-            // Air exposes the concept of "fast tmps", and we interpret that to mean that the tmp
-            // should always be in a register.
-            if (m_code.isFastTmp(tmp))
-                return 0;
+        IndexType victimIndex = *iterator;
+        float maxScore = 0;
 
-            // All else being equal, the score should be directly related to the degree.
-            double degree = static_cast<double>(m_degrees[TmpMapper::absoluteIndex(tmp)]);
+        for (;iterator != m_spillWorklist.end(); ++iterator) {
+            IndexType index = *iterator;
 
-            // All else being equal, the score should be inversely related to the number of warm uses and
-            // defs.
-            const UseCounts<Tmp>::Counts* counts = m_useCounts[tmp];
-            if (!counts)
-                return std::numeric_limits<double>::infinity();
+            float uses = m_useCounts.numWarmUsesAndDefs<bank>(index);
+            if (!uses) {
+                victimIndex = index;
+                break;
+            }
 
-            double uses = counts->numWarmUses + counts->numDefs;
+            // Higher score means more desirable to spill. Lower scores maximize the likelihood that a tmp
+            // gets a register.
+            float degree = static_cast<float>(m_degrees[index]);
+            float tmpScore = degree / uses;
 
             // If it's a constant, then it's not as bad to spill. We can rematerialize it in many
             // cases.
-            if (counts->numConstDefs == 1 && counts->numDefs == 1)
-                uses /= 2;
+            if (m_useCounts.isConstDef<bank>(index))
+                tmpScore *= 2;
 
-            return degree / uses;
-        };
-
-        auto victimIterator = iterator;
-        double maxScore = score(TmpMapper::tmpFromAbsoluteIndex(*iterator));
-
-        ++iterator;
-        for (;iterator != m_spillWorklist.end(); ++iterator) {
-            double tmpScore = score(TmpMapper::tmpFromAbsoluteIndex(*iterator));
             if (tmpScore > maxScore) {
-                ASSERT(!m_unspillableTmps.contains(*iterator));
-                victimIterator = iterator;
+                victimIndex = index;
                 maxScore = tmpScore;
             }
         }
 
-        IndexType victimIndex = *victimIterator;
+        ASSERT(!m_unspillableTmps.get(victimIndex));
+        ASSERT(!isPrecolored(victimIndex));
         if (traceDebug)
             dataLogLn("Selecting spill ", victimIndex);
-        ASSERT(!isPrecolored(victimIndex));
         return victimIndex;
     }
 
@@ -327,7 +340,7 @@ protected:
         ASSERT(m_spillWorklist.isEmpty());
 
         // Reclaim as much memory as possible.
-        m_interferenceEdges.clear();
+        clearInterferenceEdges();
 
         m_degrees.clear();
         m_moveList.clear();
@@ -409,15 +422,31 @@ protected:
             m_coloredTmp.clear();
     }
 
+    bool addInterferenceEdge(IndexType u, IndexType v)
+    {
+        return m_interferenceEdges.addAndReturnIsNewEntry(u, v);
+    }
+
+    bool hasInterferenceEdge(IndexType u, IndexType v)
+    {
+        return m_interferenceEdges.contains(u, v);
+    }
+
+    void clearInterferenceEdges()
+    {
+        m_interferenceEdges.clear();
+    }
+
     void dumpInterferenceGraphInDot(PrintStream& out)
     {
         out.print("graph InterferenceGraph { \n");
 
         HashSet<Tmp> tmpsWithInterferences;
-        for (const auto& edge : m_interferenceEdges) {
-            tmpsWithInterferences.add(TmpMapper::tmpFromAbsoluteIndex(edge.first()));
-            tmpsWithInterferences.add(TmpMapper::tmpFromAbsoluteIndex(edge.second()));
-        }
+
+        m_interferenceEdges.forEach([&tmpsWithInterferences] (std::pair<IndexType, IndexType> edge) {
+            tmpsWithInterferences.add(TmpMapper::tmpFromAbsoluteIndex(edge.first));
+            tmpsWithInterferences.add(TmpMapper::tmpFromAbsoluteIndex(edge.second));
+        });
 
         for (const auto& tmp : tmpsWithInterferences) {
             unsigned tmpIndex = TmpMapper::absoluteIndex(tmp);
@@ -427,98 +456,23 @@ protected:
                 out.print("    ", tmp.internalValue(), " [label=\"", tmp, "\"];\n");
         }
 
-        for (const auto& edge : m_interferenceEdges)
-            out.print("    ", edge.first(), " -- ", edge.second(), ";\n");
+        m_interferenceEdges.forEach([&out] (std::pair<IndexType, IndexType> edge) {
+            out.print("    ", edge.first, " -- ", edge.second, ";\n");
+        });
         out.print("}\n");
     }
-
-    // Interference edges are not directed. An edge between any two Tmps is represented
-    // by the concatenated values of the smallest Tmp followed by the bigger Tmp.
-    class InterferenceEdge {
-    public:
-        InterferenceEdge()
-        {
-        }
-
-        InterferenceEdge(IndexType a, IndexType b)
-        {
-            ASSERT(a);
-            ASSERT(b);
-            ASSERT_WITH_MESSAGE(a != b, "A Tmp can never interfere with itself. Doing so would force it to be the superposition of two registers.");
-
-            if (b < a)
-                std::swap(a, b);
-            m_value = static_cast<uint64_t>(a) << 32 | b;
-        }
-
-        InterferenceEdge(WTF::HashTableDeletedValueType)
-            : m_value(std::numeric_limits<uint64_t>::max())
-        {
-        }
-
-        IndexType first() const
-        {
-            return m_value >> 32 & 0xffffffff;
-        }
-
-        IndexType second() const
-        {
-            return m_value & 0xffffffff;
-        }
-
-        bool operator==(const InterferenceEdge& other) const
-        {
-            return m_value == other.m_value;
-        }
-
-        bool isHashTableDeletedValue() const
-        {
-            return *this == InterferenceEdge(WTF::HashTableDeletedValue);
-        }
-
-        unsigned hash() const
-        {
-            return WTF::IntHash<uint64_t>::hash(m_value);
-        }
-
-        void dump(PrintStream& out) const
-        {
-            out.print(first(), "<=>", second());
-        }
-
-    private:
-        uint64_t m_value { 0 };
-    };
-
-    bool addInterferenceEdge(InterferenceEdge edge)
-    {
-        return m_interferenceEdges.add(edge).isNewEntry;
-    }
-
-    bool hasInterferenceEdge(InterferenceEdge edge)
-    {
-        return m_interferenceEdges.contains(edge);
-    }
-
-    struct InterferenceEdgeHash {
-        static unsigned hash(const InterferenceEdge& key) { return key.hash(); }
-        static bool equal(const InterferenceEdge& a, const InterferenceEdge& b) { return a == b; }
-        static const bool safeToCompareToEmptyOrDeleted = true;
-    };
-    typedef SimpleClassHashTraits<InterferenceEdge> InterferenceEdgeHashTraits;
 
     Vector<Reg> m_regsInPriorityOrder;
     IndexType m_lastPrecoloredRegisterIndex { 0 };
 
-    // The interference graph.
-    HashSet<InterferenceEdge, InterferenceEdgeHash, InterferenceEdgeHashTraits> m_interferenceEdges;
+    InterferenceSet m_interferenceEdges;
 
     Vector<Vector<IndexType, 0, UnsafeVectorOverflow, 4>, 0, UnsafeVectorOverflow> m_adjacencyList;
     Vector<IndexType, 0, UnsafeVectorOverflow> m_degrees;
 
-    using IndexTypeSet = HashSet<IndexType, typename DefaultHash<IndexType>::Hash, WTF::UnsignedWithZeroKeyHashTraits<IndexType>>;
+    using IndexTypeSet = SmallSet<IndexType, IntHash<IndexType>>;
 
-    HashMap<IndexType, IndexTypeSet, typename DefaultHash<IndexType>::Hash, WTF::UnsignedWithZeroKeyHashTraits<IndexType>> m_biases;
+    HashMap<IndexType, IndexTypeSet, DefaultHash<IndexType>, WTF::UnsignedWithZeroKeyHashTraits<IndexType>> m_biases;
 
     // Instead of keeping track of the move instructions, we just keep their operands around and use the index
     // in the vector as the "identifier" for the move.
@@ -529,7 +483,7 @@ protected:
     Vector<MoveOperands, 0, UnsafeVectorOverflow> m_coalescingCandidates;
 
     // List of every move instruction associated with a Tmp.
-    Vector<IndexTypeSet> m_moveList;
+    Vector<SmallSet<unsigned, IntHash<unsigned>>> m_moveList;
 
     // Colors.
     Vector<Reg, 0, UnsafeVectorOverflow> m_coloredTmp;
@@ -553,17 +507,18 @@ protected:
     // The mapping of Tmp to their alias for Moves that are always coalescing regardless of spilling.
     Vector<IndexType, 0, UnsafeVectorOverflow> m_coalescedTmpsAtSpill;
 
-    const HashSet<unsigned>& m_unspillableTmps;
-    const UseCounts<Tmp>& m_useCounts;
+    const BitVector& m_unspillableTmps;
+    const UseCounts& m_useCounts;
     Code& m_code;
 
     Vector<Tmp, 4> m_pinnedRegs;
 };
 
-template <typename IndexType, typename TmpMapper>
-class Briggs : public AbstractColoringAllocator<IndexType, TmpMapper> {
-    using Base = AbstractColoringAllocator<IndexType, TmpMapper>;
+template <typename IndexType, typename InterferenceSet, Bank bank>
+class Briggs : public AbstractColoringAllocator<IndexType, InterferenceSet, bank> {
+    using Base = AbstractColoringAllocator<IndexType, InterferenceSet, bank>;
 protected:
+    using TmpMapper = typename Base::TmpMapper;
     using Base::m_isOnSelectStack;
     using Base::m_selectStack;
     using Base::m_simplifyWorklist;
@@ -582,7 +537,6 @@ protected:
     using Base::m_lastPrecoloredRegisterIndex;
     using Base::m_coloredTmp;
     using Base::m_code;
-    using InterferenceEdge = typename Base::InterferenceEdge;
     using Base::m_unspillableTmps;
     using Base::hasInterferenceEdge;
     using Base::getAlias;
@@ -593,13 +547,13 @@ protected:
     using Base::forEachAdjacent;
     using Base::hasBeenSimplified;
     using Base::addToSpill;
-    using Base::m_interferenceEdges;
     using Base::addBias;
+    using Base::m_interferenceEdges;
     using Base::m_pinnedRegs;
     using Base::m_regsInPriorityOrder;
 
 public:
-    Briggs(Code& code, const Vector<Reg>& regsInPriorityOrder, IndexType lastPrecoloredRegisterIndex, unsigned tmpArraySize, const HashSet<unsigned>& unspillableTmps, const UseCounts<Tmp>& useCounts)
+    Briggs(Code& code, const Vector<Reg>& regsInPriorityOrder, IndexType lastPrecoloredRegisterIndex, unsigned tmpArraySize, const BitVector& unspillableTmps, const UseCounts& useCounts)
         : Base(code, regsInPriorityOrder, lastPrecoloredRegisterIndex, tmpArraySize, unspillableTmps, useCounts)
     {
     }
@@ -635,7 +589,7 @@ public:
         // added to the select stack, it's not on either list, but only on the select stack.
         // Once on the select stack, logically, it's no longer in the interference graph.
         auto assertInvariants = [&] () {
-            if (ASSERT_DISABLED)
+            if (!ASSERT_ENABLED)
                 return;
             if (!shouldValidateIRAtEachPhase())
                 return;
@@ -651,7 +605,7 @@ public:
                 }
                 unsigned degree = m_degrees[i];
                 if (degree >= registerCount) {
-                    ASSERT(m_unspillableTmps.contains(i) || m_spillWorklist.contains(i));
+                    ASSERT(m_unspillableTmps.get(i) || m_spillWorklist.contains(i));
                     ASSERT(!m_simplifyWorklist.contains(i));
                     continue;
                 }
@@ -676,7 +630,7 @@ public:
             }
         } while (changed);
 
-        if (!ASSERT_DISABLED) {
+        if (ASSERT_ENABLED) {
             ASSERT(!m_simplifyWorklist.size());
             ASSERT(m_spillWorklist.isEmpty());
             IndexType firstNonRegIndex = m_lastPrecoloredRegisterIndex + 1;
@@ -707,14 +661,12 @@ protected:
             return false;
         }
 
-        if (isPrecolored(v)
-            || hasInterferenceEdge(InterferenceEdge(u, v))) {
-
+        if (isPrecolored(v) || hasInterferenceEdge(u, v)) {
             // No need to ever consider this move again if it interferes.
             // No coalescing will remove the interference.
             moveIndex = UINT_MAX;
 
-            if (!ASSERT_DISABLED) {
+            if (ASSERT_ENABLED) {
                 if (isPrecolored(v))
                     ASSERT(isPrecolored(u));
             }
@@ -748,7 +700,8 @@ protected:
         m_coalescedTmps[v] = u;
 
         auto& vMoves = m_moveList[v];
-        m_moveList[u].add(vMoves.begin(), vMoves.end());
+        for (unsigned move : vMoves)
+            m_moveList[u].add(move);
 
         forEachAdjacent(v, [this, u] (IndexType adjacentTmpIndex) {
             if (addEdgeDistinctWithoutDegreeChange(adjacentTmpIndex, u)) {
@@ -897,8 +850,8 @@ protected:
             if (traceDebug)
                 dataLogLn("Moving tmp ", tmpIndex, " from spill list to simplify list because it's degree is now less than k");
 
-            if (!ASSERT_DISABLED)
-                ASSERT(m_unspillableTmps.contains(tmpIndex) || m_spillWorklist.contains(tmpIndex));
+            if (ASSERT_ENABLED)
+                ASSERT(m_unspillableTmps.get(tmpIndex) || m_spillWorklist.contains(tmpIndex));
             m_spillWorklist.quickClear(tmpIndex);
 
             ASSERT(!m_simplifyWorklist.contains(tmpIndex));
@@ -916,10 +869,11 @@ protected:
     MoveSet m_worklistMoves;
 };
 
-template <typename IndexType, typename TmpMapper>
-class IRC : public AbstractColoringAllocator<IndexType, TmpMapper> {
-    using Base = AbstractColoringAllocator<IndexType, TmpMapper>;
+template <typename IndexType, typename InterferenceSet, Bank bank>
+class IRC : public AbstractColoringAllocator<IndexType, InterferenceSet, bank> {
+    using Base = AbstractColoringAllocator<IndexType, InterferenceSet, bank>;
 protected:
+    using TmpMapper = typename Base::TmpMapper;
     using Base::m_isOnSelectStack;
     using Base::m_selectStack;
     using Base::m_simplifyWorklist;
@@ -938,7 +892,6 @@ protected:
     using Base::m_lastPrecoloredRegisterIndex;
     using Base::m_coloredTmp;
     using Base::m_code;
-    using InterferenceEdge = typename Base::InterferenceEdge;
     using Base::m_unspillableTmps;
     using Base::hasInterferenceEdge;
     using Base::getAlias;
@@ -949,16 +902,17 @@ protected:
     using Base::forEachAdjacent;
     using Base::hasBeenSimplified;
     using Base::addToSpill;
-    using Base::m_interferenceEdges;
     using Base::m_adjacencyList;
     using Base::dumpInterferenceGraphInDot;
     using Base::addBias;
+    using Base::m_interferenceEdges;
     using Base::m_pinnedRegs;
     using Base::m_regsInPriorityOrder;
 
 public:
-    IRC(Code& code, const Vector<Reg>& regsInPriorityOrder, IndexType lastPrecoloredRegisterIndex, unsigned tmpArraySize, const HashSet<unsigned>& unspillableTmps, const UseCounts<Tmp>& useCounts)
+    IRC(Code& code, const Vector<Reg>& regsInPriorityOrder, IndexType lastPrecoloredRegisterIndex, unsigned tmpArraySize, const BitVector& unspillableTmps, const UseCounts& useCounts)
         : Base(code, regsInPriorityOrder, lastPrecoloredRegisterIndex, tmpArraySize, unspillableTmps, useCounts)
+        , m_movesToEnable(tmpArraySize)
     {
     }
 
@@ -988,6 +942,8 @@ public:
 
             if (!m_simplifyWorklist.isEmpty())
                 simplify();
+            else if (!m_movesToEnable.isEmpty())
+                enableMoves();
             else if (!m_worklistMoves.isEmpty())
                 coalesce();
             else if (!m_freezeWorklist.isEmpty())
@@ -1021,7 +977,7 @@ protected:
     }
 
     // Low-degree vertex can always be colored: just pick any of the color taken by any
-    // other adjacent verices.
+    // other adjacent vertices.
     // The "Simplify" phase takes a low-degree out of the interference graph to simplify it.
     void simplify()
     {
@@ -1055,8 +1011,7 @@ protected:
 
             if (traceDebug)
                 dataLog("    Coalesced\n");
-        } else if (isPrecolored(v)
-            || hasInterferenceEdge(InterferenceEdge(u, v))) {
+        } else if (isPrecolored(v) || hasInterferenceEdge(u, v)) {
             addWorkList(u);
             addWorkList(v);
 
@@ -1095,7 +1050,8 @@ protected:
         m_coalescedTmps[v] = u;
 
         auto& vMoves = m_moveList[v];
-        m_moveList[u].add(vMoves.begin(), vMoves.end());
+        for (unsigned move : vMoves)
+            m_moveList[u].add(move);
 
         forEachAdjacent(v, [this, u] (IndexType adjacentTmpIndex) {
             if (addEdgeDistinctWithoutDegreeChange(adjacentTmpIndex, u)) {
@@ -1150,7 +1106,7 @@ protected:
 
         unsigned oldDegree = m_degrees[tmpIndex]--;
         if (oldDegree == registerCount()) {
-            enableMovesOnValueAndAdjacents(tmpIndex);
+            lazyEnableMovesOnValueAndAdjacents(tmpIndex);
             m_spillWorklist.quickClear(tmpIndex);
             if (isMoveRelated(tmpIndex))
                 m_freezeWorklist.add(tmpIndex);
@@ -1193,6 +1149,14 @@ protected:
         }
     }
 
+    void lazyEnableMovesOnValueAndAdjacents(IndexType tmpIndex)
+    {
+        m_movesToEnable.quickSet(tmpIndex);
+        forEachAdjacent(tmpIndex, [this] (IndexType adjacentTmpIndex) {
+            m_movesToEnable.quickSet(adjacentTmpIndex);
+        });
+    }
+
     void enableMovesOnValue(IndexType tmpIndex)
     {
         for (unsigned moveIndex : m_moveList[tmpIndex]) {
@@ -1201,13 +1165,11 @@ protected:
         }
     }
 
-    void enableMovesOnValueAndAdjacents(IndexType tmpIndex)
+    void enableMoves()
     {
-        enableMovesOnValue(tmpIndex);
-
-        forEachAdjacent(tmpIndex, [this] (IndexType adjacentTmpIndex) {
-            enableMovesOnValue(adjacentTmpIndex);
-        });
+        for (IndexType tmpIndex : m_movesToEnable)
+            enableMovesOnValue(tmpIndex);
+        m_movesToEnable.clearAll();
     }
 
     struct OrderedMoveSet {
@@ -1356,13 +1318,16 @@ protected:
     OrderedMoveSet m_worklistMoves;
     // Set of "move" not yet ready for coalescing.
     BitVector m_activeMoves;
+    // Set of Tmps whose moves are now ready for possible coalescing.
+    BitVector m_movesToEnable;
 };
 
 // This perform all the tasks that are specific to certain register type.
-template<Bank bank, template<typename, typename> class AllocatorType>
-class ColoringAllocator : public AllocatorType<unsigned, AbsoluteTmpMapper<bank>> {
-    using TmpMapper = AbsoluteTmpMapper<bank>;
-    using Base = AllocatorType<unsigned, TmpMapper>;
+template<typename IndexType, Bank bank, template<typename, typename, Bank> class AllocatorType, typename InterferenceSet>
+class ColoringAllocator : public AllocatorType<IndexType, InterferenceSet, bank> {
+    using Base = AllocatorType<IndexType, InterferenceSet, bank>;
+    using TmpMapper = typename Base::TmpMapper;
+    using Base::tmpToIndex;
     using Base::m_isOnSelectStack;
     using Base::m_selectStack;
     using Base::m_simplifyWorklist;
@@ -1381,7 +1346,6 @@ class ColoringAllocator : public AllocatorType<unsigned, AbsoluteTmpMapper<bank>
     using Base::m_lastPrecoloredRegisterIndex;
     using Base::m_coloredTmp;
     using Base::m_code;
-    using InterferenceEdge = typename Base::InterferenceEdge;
     using Base::m_worklistMoves;
     using Base::hasInterferenceEdge;
     using Base::getAlias;
@@ -1392,7 +1356,7 @@ class ColoringAllocator : public AllocatorType<unsigned, AbsoluteTmpMapper<bank>
 
 public:
 
-    ColoringAllocator(Code& code, TmpWidth& tmpWidth, const UseCounts<Tmp>& useCounts, const HashSet<unsigned>& unspillableTmp)
+    ColoringAllocator(Code& code, TmpWidth& tmpWidth, const UseCounts& useCounts, const BitVector& unspillableTmp)
         : Base(code, code.regsInPriorityOrder(bank), TmpMapper::lastMachineRegisterIndex(), tmpArraySize(code), unspillableTmp, useCounts)
         , m_tmpWidth(tmpWidth)
     {
@@ -1404,13 +1368,21 @@ public:
             }
         }
 
+        m_interferenceEdges.setMaxIndex(AbsoluteTmpMapper<bank>::absoluteIndex(m_code.numTmps(bank)));
+
         initializePrecoloredTmp();
         build();
+
+        if constexpr (reportInterferenceGraphMemoryUse && (std::is_same<InterferenceSet, LargeInterferenceGraph>::value || std::is_same<InterferenceSet, HugeInterferenceGraph>::value)) {
+            dataLog("numTmps|numEdges|memoryUse(kB): ", m_code.numTmps(bank), " | ", m_interferenceEdges.size(), " | ");
+            m_interferenceEdges.dumpMemoryUseInKB();
+            dataLog("\n");
+        }
     }
 
     Tmp getAlias(Tmp tmp) const
     {
-        return TmpMapper::tmpFromAbsoluteIndex(getAlias(TmpMapper::absoluteIndex(tmp)));
+        return TmpMapper::tmpFromAbsoluteIndex(getAlias(tmpToIndex(tmp)));
     }
 
     // This tells you if a Move will be coalescable if the src and dst end up matching. This method
@@ -1433,8 +1405,8 @@ public:
         if (m_coalescedTmpsAtSpill.isEmpty())
             return tmp;
 
-        unsigned aliasIndex = TmpMapper::absoluteIndex(tmp);
-        while (unsigned nextAliasIndex = m_coalescedTmpsAtSpill[aliasIndex])
+        IndexType aliasIndex = tmpToIndex(tmp);
+        while (IndexType nextAliasIndex = m_coalescedTmpsAtSpill[aliasIndex])
             aliasIndex = nextAliasIndex;
 
         Tmp alias = TmpMapper::tmpFromAbsoluteIndex(aliasIndex);
@@ -1491,7 +1463,7 @@ public:
         const Collection& m_collection;
     };
 
-    IndexToTmpIterableAdaptor<Vector<unsigned>> spilledTmps() const { return m_spilledTmps; }
+    IndexToTmpIterableAdaptor<Vector<IndexType>> spilledTmps() const { return m_spilledTmps; }
 
     bool requiresSpilling() const { return !m_spilledTmps.isEmpty(); }
 
@@ -1542,10 +1514,10 @@ protected:
         if (leftTmp.isGP() != (bank == GP) || rightTmp.isGP() != (bank == GP))
             return false;
 
-        unsigned leftIndex = TmpMapper::absoluteIndex(leftTmp);
-        unsigned rightIndex = TmpMapper::absoluteIndex(rightTmp);
+        IndexType leftIndex = tmpToIndex(leftTmp);
+        IndexType rightIndex = tmpToIndex(rightTmp);
 
-        return !hasInterferenceEdge(InterferenceEdge(leftIndex, rightIndex));
+        return !hasInterferenceEdge(leftIndex, rightIndex);
     }
 
     void addToLowPriorityCoalescingCandidates(Arg left, Arg right)
@@ -1554,8 +1526,8 @@ protected:
         Tmp leftTmp = left.tmp();
         Tmp rightTmp = right.tmp();
 
-        unsigned leftIndex = TmpMapper::absoluteIndex(leftTmp);
-        unsigned rightIndex = TmpMapper::absoluteIndex(rightTmp);
+        IndexType leftIndex = tmpToIndex(leftTmp);
+        IndexType rightIndex = tmpToIndex(rightTmp);
 
         unsigned nextMoveIndex = m_coalescingCandidates.size();
         m_coalescingCandidates.append({ leftIndex, rightIndex });
@@ -1633,7 +1605,7 @@ protected:
             ASSERT(useTmp);
 
             unsigned nextMoveIndex = m_coalescingCandidates.size();
-            m_coalescingCandidates.append({ TmpMapper::absoluteIndex(useTmp), TmpMapper::absoluteIndex(defTmp) });
+            m_coalescingCandidates.append({ tmpToIndex(useTmp), tmpToIndex(defTmp) });
             if (traceDebug)
                 dataLogLn("Move at index ", nextMoveIndex, " is: ", *prevInst);
 
@@ -1673,7 +1645,7 @@ protected:
         m_worklistMoves.startAddingLowPriorityMoves();
         for (BasicBlock* block : m_code) {
             for (Inst& inst : *block) {
-                if (Optional<unsigned> defArgIndex = inst.shouldTryAliasingDef()) {
+                if (std::optional<unsigned> defArgIndex = inst.shouldTryAliasingDef()) {
                     Arg op1 = inst.args[*defArgIndex - 2];
                     Arg op2 = inst.args[*defArgIndex - 1];
                     Arg dest = inst.args[*defArgIndex];
@@ -1702,13 +1674,14 @@ protected:
                 for (Tmp liveTmp : liveTmps) {
                     ASSERT(liveTmp.isGP() == (bank == GP));
 
-                    if (traceDebug)
-                        dataLog("    Adding def-live edge: ", arg, ", ", liveTmp, "\n");
+                    dataLogLnIf(traceDebug, "    Adding def-live edge: ", arg, ", ", liveTmp);
 
                     addEdge(arg, liveTmp);
                 }
-                for (const Tmp& pinnedRegTmp : m_pinnedRegs)
+                for (const Tmp& pinnedRegTmp : m_pinnedRegs) {
+                    dataLogLnIf(traceDebug, "    Adding def-pinned edge: ", arg, ", ", pinnedRegTmp);
                     addEdge(arg, pinnedRegTmp);
+                }
             });
     }
 
@@ -1716,7 +1689,7 @@ protected:
     {
         ASSERT_WITH_MESSAGE(a.isGP() == b.isGP(), "An interference between registers of different types does not make sense, it can lead to non-colorable graphs.");
 
-        addEdge(TmpMapper::absoluteIndex(a), TmpMapper::absoluteIndex(b));
+        addEdge(tmpToIndex(a), tmpToIndex(b));
     }
 
     // Calling this without a tmpWidth will perform a more conservative coalescing analysis that assumes
@@ -1778,7 +1751,7 @@ protected:
 
 class GraphColoringRegisterAllocation {
 public:
-    GraphColoringRegisterAllocation(Code& code, UseCounts<Tmp>& useCounts)
+    GraphColoringRegisterAllocation(Code& code, UseCounts& useCounts)
         : m_code(code)
         , m_useCounts(useCounts)
     {
@@ -1789,31 +1762,30 @@ public:
         padInterference(m_code);
 
         allocateOnBank<GP>();
-        m_numIterations = 0;
         allocateOnBank<FP>();
 
         fixSpillsAfterTerminals(m_code);
-
-        if (reportStats)
-            dataLog("Num iterations = ", m_numIterations, "\n");
     }
 
 private:
     template<Bank bank>
     void allocateOnBank()
     {
-        HashSet<unsigned> unspillableTmps = computeUnspillableTmps<bank>();
+        BitVector unspillableTmps = computeUnspillableTmps<bank>();
 
         // FIXME: If a Tmp is used only from a Scratch role and that argument is !admitsStack, then
         // we should add the Tmp to unspillableTmps. That will help avoid relooping only to turn the
         // Tmp into an unspillable Tmp.
         // https://bugs.webkit.org/show_bug.cgi?id=152699
 
-        while (true) {
-            ++m_numIterations;
+        unsigned numIterations = 0;
+        bool done = false;
+
+        while (!done) {
+            ++numIterations;
 
             if (traceDebug)
-                dataLog("Code at iteration ", m_numIterations, ":\n", m_code);
+                dataLog("Code at iteration ", numIterations, ":\n", m_code);
 
             // FIXME: One way to optimize this code is to remove the recomputation inside the fixpoint.
             // We need to recompute because spilling adds tmps, but we could just update tmpWidth when we
@@ -1822,20 +1794,19 @@ private:
             // spill code we emit. Since we currently recompute TmpWidth after spilling, the newly
             // created Tmps may get narrower use/def widths. On the other hand, the spiller already
             // selects which move instruction to use based on the original Tmp's widths, so it may not
-            // matter than a subsequent iteration sees a coservative width for the new Tmps. Also, the
-            // recomputation may not actually be a performance problem; it's likely that a better way to
-            // improve performance of TmpWidth is to replace its HashMap with something else. It's
-            // possible that most of the TmpWidth overhead is from queries of TmpWidth rather than the
-            // recomputation, in which case speeding up the lookup would be a bigger win.
+            // matter than a subsequent iteration sees a conservative width for the new Tmps. Also, the
+            // recomputation may not actually be a performance problem: we spend roughly 3 to 4% of the
+            // register allocator in m_tmpWidth.recompute. In comparison we spend more than 40% building
+            // the interference graph
             // https://bugs.webkit.org/show_bug.cgi?id=152478
-            m_tmpWidth.recompute(m_code);
+            m_tmpWidth.recompute<bank>(m_code);
 
             auto doAllocation = [&] (auto& allocator) -> bool {
                 allocator.allocate();
                 if (!allocator.requiresSpilling()) {
                     this->assignRegistersToTmp<bank>(allocator);
                     if (traceDebug)
-                        dataLog("Successfull allocation at iteration ", m_numIterations, ":\n", m_code);
+                        dataLog("Successfull allocation at iteration ", numIterations, ":\n", m_code);
 
                     return true;
                 }
@@ -1844,25 +1815,49 @@ private:
                 return false;
             };
 
-            bool done;
-            if (useIRC()) {
-                ColoringAllocator<bank, IRC> allocator(m_code, m_tmpWidth, m_useCounts, unspillableTmps);
-                done = doAllocation(allocator);
+            auto useIRC = [&] {
+                if (Options::airForceBriggsAllocator())
+                    return false;
+                if (m_code.forceIRCRegisterAllocation() || Options::airForceIRCAllocator())
+                    return true;
+                if (isARM64())
+                    return false;
+                return true;
+            };
+
+            if (m_code.numTmps(bank) < WTF::maxSizeForSmallInterferenceGraph) {
+                if (useIRC()) {
+                    ColoringAllocator<uint16_t, bank, IRC, SmallInterferenceGraph> allocator(m_code, m_tmpWidth, m_useCounts, unspillableTmps);
+                    done = doAllocation(allocator);
+                } else {
+                    ColoringAllocator<uint16_t, bank, Briggs, SmallInterferenceGraph> allocator(m_code, m_tmpWidth, m_useCounts, unspillableTmps);
+                    done = doAllocation(allocator);
+                }
+            } else if (m_code.numTmps(bank) < std::numeric_limits<uint16_t>::max()) {
+                if (useIRC()) {
+                    ColoringAllocator<uint16_t, bank, IRC, LargeInterferenceGraph> allocator(m_code, m_tmpWidth, m_useCounts, unspillableTmps);
+                    done = doAllocation(allocator);
+                } else {
+                    ColoringAllocator<uint16_t, bank, Briggs, LargeInterferenceGraph> allocator(m_code, m_tmpWidth, m_useCounts, unspillableTmps);
+                    done = doAllocation(allocator);
+                }
             } else {
-                ColoringAllocator<bank, Briggs> allocator(m_code, m_tmpWidth, m_useCounts, unspillableTmps);
-                done = doAllocation(allocator);
+                // Having more than 2**16 numTmps can occur even with Options::maxTmpsForGraphColoring() < 2**16, because of spilling
+                if (useIRC()) {
+                    ColoringAllocator<uint32_t, bank, IRC, HugeInterferenceGraph> allocator(m_code, m_tmpWidth, m_useCounts, unspillableTmps);
+                    done = doAllocation(allocator);
+                } else {
+                    ColoringAllocator<uint32_t, bank, Briggs, HugeInterferenceGraph> allocator(m_code, m_tmpWidth, m_useCounts, unspillableTmps);
+                    done = doAllocation(allocator);
+                }
             }
-            if (done)
-                return;
         }
+        dataLogLnIf(reportStats, "Num iterations = ", numIterations, " for bank: ", bank);
     }
 
     template<Bank bank>
-    HashSet<unsigned> computeUnspillableTmps()
+    BitVector computeUnspillableTmps()
     {
-
-        HashSet<unsigned> unspillableTmps;
-
         struct Range {
             unsigned first { std::numeric_limits<unsigned>::max() };
             unsigned last { 0 };
@@ -1915,11 +1910,19 @@ private:
             }
             ++globalIndex;
         }
+
+        BitVector unspillableTmps;
+        unspillableTmps.ensureSize(arraySize);
         for (unsigned i = AbsoluteTmpMapper<bank>::lastMachineRegisterIndex() + 1; i < ranges.size(); ++i) {
             Range& range = ranges[i];
             if (range.last - range.first <= 1 && range.count > range.admitStackCount)
-                unspillableTmps.add(i);
+                unspillableTmps.quickSet(i);
         }
+
+        m_code.forEachFastTmp([&](Tmp tmp) {
+            if (tmp.bank() == bank)
+                unspillableTmps.quickSet(AbsoluteTmpMapper<bank>::absoluteIndex(tmp));
+        });
 
         return unspillableTmps;
     }
@@ -1982,12 +1985,12 @@ private:
     }
 
     template<Bank bank, typename AllocatorType>
-    void addSpillAndFill(const AllocatorType& allocator, HashSet<unsigned>& unspillableTmps)
+    void addSpillAndFill(const AllocatorType& allocator, BitVector& unspillableTmps)
     {
         HashMap<Tmp, StackSlot*> stackSlots;
         for (Tmp tmp : allocator.spilledTmps()) {
             // All the spilled values become unspillable.
-            unspillableTmps.add(AbsoluteTmpMapper<bank>::absoluteIndex(tmp));
+            unspillableTmps.set(AbsoluteTmpMapper<bank>::absoluteIndex(tmp));
 
             // Allocate stack slot for each spilled value.
             StackSlot* stackSlot = m_code.addStackSlot(
@@ -2060,11 +2063,8 @@ private:
                         // value rather than loading it from the stack. In order for that
                         // optimization to kick in, we need to avoid placing the Tmp's stack
                         // address into the instruction.
-                        if (!Arg::isColdUse(role)) {
-                            const UseCounts<Tmp>::Counts* counts = m_useCounts[arg.tmp()];
-                            if (counts && counts->numConstDefs == 1 && counts->numDefs == 1)
-                                return;
-                        }
+                        if (!Arg::isColdUse(role) && m_useCounts.isConstDef<bank>(AbsoluteTmpMapper<bank>::absoluteIndex(arg.tmp())))
+                            return;
 
                         Width spillWidth = m_tmpWidth.requiredWidth(arg.tmp());
                         if (Arg::isAnyDef(role) && width < spillWidth) {
@@ -2117,7 +2117,7 @@ private:
                     RELEASE_ASSERT(instBank == bank);
 
                     Tmp tmp = m_code.newTmp(bank);
-                    unspillableTmps.add(AbsoluteTmpMapper<bank>::absoluteIndex(tmp));
+                    unspillableTmps.set(AbsoluteTmpMapper<bank>::absoluteIndex(tmp));
                     inst.args.append(tmp);
                     RELEASE_ASSERT(inst.args.size() == 3);
 
@@ -2162,7 +2162,7 @@ private:
                     }
 
                     tmp = m_code.newTmp(bank);
-                    unspillableTmps.add(AbsoluteTmpMapper<bank>::absoluteIndex(tmp));
+                    unspillableTmps.set(AbsoluteTmpMapper<bank>::absoluteIndex(tmp));
 
                     if (role == Arg::Scratch)
                         return;
@@ -2186,8 +2186,7 @@ private:
 
     Code& m_code;
     TmpWidth m_tmpWidth;
-    UseCounts<Tmp>& m_useCounts;
-    unsigned m_numIterations { 0 };
+    UseCounts& m_useCounts;
 };
 
 } // anonymous namespace
@@ -2196,10 +2195,10 @@ void allocateRegistersByGraphColoring(Code& code)
 {
     PhaseScope phaseScope(code, "allocateRegistersByGraphColoring");
 
-    if (false)
+    if (traceDebug)
         dataLog("Code before graph coloring:\n", code);
 
-    UseCounts<Tmp> useCounts(code);
+    UseCounts useCounts(code);
     GraphColoringRegisterAllocation graphColoringRegisterAllocation(code, useCounts);
     graphColoringRegisterAllocation.run();
 }

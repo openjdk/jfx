@@ -126,7 +126,7 @@ static inline int64_t uTextUTF16ContextAwareNativeLength(UText* text)
 static UBool uTextUTF16ContextAwareAccess(UText* text, int64_t nativeIndex, UBool forward)
 {
     if (!text->context)
-        return FALSE;
+        return false;
     int64_t nativeLength = uTextUTF16ContextAwareNativeLength(text);
     UBool isAccessible;
     if (uTextAccessInChunkOrOutOfRange(text, nativeIndex, nativeLength, forward, isAccessible))
@@ -146,7 +146,7 @@ static UBool uTextUTF16ContextAwareAccess(UText* text, int64_t nativeIndex, UBoo
         ASSERT(newContext == UTextProviderContext::PriorContext);
         textUTF16ContextAwareSwitchToPriorContext(text, nativeIndex, nativeLength, forward);
     }
-    return TRUE;
+    return true;
 }
 
 static int32_t uTextUTF16ContextAwareExtract(UText*, int64_t, int64_t, UChar*, int32_t, UErrorCode* errorCode)
@@ -166,15 +166,15 @@ static void uTextUTF16ContextAwareClose(UText* text)
 UText* openUTF16ContextAwareUTextProvider(UText* text, const UChar* string, unsigned length, const UChar* priorContext, int priorContextLength, UErrorCode* status)
 {
     if (U_FAILURE(*status))
-        return 0;
+        return nullptr;
     if (!string || length > static_cast<unsigned>(std::numeric_limits<int32_t>::max())) {
         *status = U_ILLEGAL_ARGUMENT_ERROR;
-        return 0;
+        return nullptr;
     }
     text = utext_setup(text, 0, status);
     if (U_FAILURE(*status)) {
         ASSERT(!text);
-        return 0;
+        return nullptr;
     }
 
     initializeContextAwareUTextProvider(text, &textUTF16ContextAwareFuncs, string, length, priorContext, priorContextLength);

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,47 +28,31 @@
 
 #if ENABLE(WEBASSEMBLY)
 
-#include "B3Compilation.h"
-#include "WasmB3IRGenerator.h"
-#include "WasmBinding.h"
 #include "WasmCallee.h"
-#include "WasmCallingConvention.h"
-#include "WasmFaultSignalHandler.h"
-#include "WasmMemory.h"
-#include "WasmModuleParser.h"
-#include "WasmValidate.h"
+#include "WasmCalleeGroup.h"
+#include "WasmMachineThreads.h"
 #include <wtf/DataLog.h>
 #include <wtf/Locker.h>
-#include <wtf/MonotonicTime.h>
 #include <wtf/StdLibExtras.h>
-#include <wtf/SystemTracing.h>
 
 namespace JSC { namespace Wasm {
 
 namespace WasmPlanInternal {
-static const bool verbose = false;
-}
-
-Plan::Plan(Context* context, Ref<ModuleInformation> info, CompletionTask&& task, CreateEmbedderWrapper&& createEmbedderWrapper, ThrowWasmException throwWasmException)
-    : m_moduleInformation(WTFMove(info))
-    , m_createEmbedderWrapper(WTFMove(createEmbedderWrapper))
-    , m_throwWasmException(throwWasmException)
-{
-    m_completionTasks.append(std::make_pair(context, WTFMove(task)));
+static constexpr bool verbose = false;
 }
 
 Plan::Plan(Context* context, Ref<ModuleInformation> info, CompletionTask&& task)
-    : Plan(context, WTFMove(info), WTFMove(task), nullptr, nullptr)
+    : m_moduleInformation(WTFMove(info))
 {
+    m_completionTasks.append(std::make_pair(context, WTFMove(task)));
 }
-
 Plan::Plan(Context* context, CompletionTask&& task)
     : m_moduleInformation(ModuleInformation::create())
 {
     m_completionTasks.append(std::make_pair(context, WTFMove(task)));
 }
 
-void Plan::runCompletionTasks(const AbstractLocker&)
+void Plan::runCompletionTasks()
 {
     ASSERT(isComplete() && !hasWork());
 
@@ -80,7 +64,7 @@ void Plan::runCompletionTasks(const AbstractLocker&)
 
 void Plan::addCompletionTask(Context* context, CompletionTask&& task)
 {
-    LockHolder locker(m_lock);
+    Locker locker { m_lock };
     if (!isComplete())
         m_completionTasks.append(std::make_pair(context, WTFMove(task)));
     else
@@ -89,7 +73,7 @@ void Plan::addCompletionTask(Context* context, CompletionTask&& task)
 
 void Plan::waitForCompletion()
 {
-    LockHolder locker(m_lock);
+    Locker locker { m_lock };
     if (!isComplete()) {
         m_completed.wait(m_lock);
     }
@@ -97,9 +81,9 @@ void Plan::waitForCompletion()
 
 bool Plan::tryRemoveContextAndCancelIfLast(Context& context)
 {
-    LockHolder locker(m_lock);
+    Locker locker { m_lock };
 
-    if (!ASSERT_DISABLED) {
+    if (ASSERT_ENABLED) {
         // We allow the first completion task to not have a Context.
         for (unsigned i = 1; i < m_completionTasks.size(); ++i)
             ASSERT(m_completionTasks[i].first);
@@ -122,19 +106,89 @@ bool Plan::tryRemoveContextAndCancelIfLast(Context& context)
 
     // FIXME: Make 0 index not so magical: https://bugs.webkit.org/show_bug.cgi?id=171395
     if (m_completionTasks.isEmpty() || (m_completionTasks.size() == 1 && !m_completionTasks[0].first)) {
-        fail(locker, "WebAssembly Plan was cancelled. If you see this error message please file a bug at bugs.webkit.org!"_s);
+        fail("WebAssembly Plan was cancelled. If you see this error message please file a bug at bugs.webkit.org!"_s);
         return true;
     }
 
     return false;
 }
 
-void Plan::fail(const AbstractLocker& locker, String&& errorMessage)
+void Plan::fail(String&& errorMessage)
 {
+    if (failed())
+        return;
+    ASSERT(errorMessage);
     dataLogLnIf(WasmPlanInternal::verbose, "failing with message: ", errorMessage);
     m_errorMessage = WTFMove(errorMessage);
-    complete(locker);
+    complete();
 }
+
+#if ENABLE(WEBASSEMBLY_B3JIT)
+void Plan::updateCallSitesToCallUs(const AbstractLocker& calleeGroupLocker, CalleeGroup& calleeGroup, CodeLocationLabel<WasmEntryPtrTag> entrypoint, uint32_t functionIndex, uint32_t functionIndexSpace)
+{
+    HashMap<void*, CodeLocationLabel<WasmEntryPtrTag>> stagedCalls;
+    auto stageRepatch = [&] (const auto& callsites) {
+        for (auto& call : callsites) {
+            if (call.functionIndexSpace == functionIndexSpace) {
+                CodeLocationLabel<WasmEntryPtrTag> target = MacroAssembler::prepareForAtomicRepatchNearCallConcurrently(call.callLocation, entrypoint);
+                stagedCalls.add(call.callLocation.dataLocation(), target);
+            }
+        }
+    };
+    for (unsigned i = 0; i < calleeGroup.m_wasmToWasmCallsites.size(); ++i) {
+        stageRepatch(calleeGroup.m_wasmToWasmCallsites[i]);
+        if (calleeGroup.m_llintCallees) {
+            LLIntCallee& llintCallee = calleeGroup.m_llintCallees->at(i).get();
+            if (JITCallee* replacementCallee = llintCallee.replacement(calleeGroup.mode()))
+                stageRepatch(replacementCallee->wasmToWasmCallsites());
+            if (OSREntryCallee* osrEntryCallee = llintCallee.osrEntryCallee(calleeGroup.mode()))
+                stageRepatch(osrEntryCallee->wasmToWasmCallsites());
+        }
+        if (BBQCallee* bbqCallee = calleeGroup.bbqCallee(calleeGroupLocker, i)) {
+            if (OMGCallee* replacementCallee = bbqCallee->replacement())
+                stageRepatch(replacementCallee->wasmToWasmCallsites());
+            if (OSREntryCallee* osrEntryCallee = bbqCallee->osrEntryCallee())
+                stageRepatch(osrEntryCallee->wasmToWasmCallsites());
+        }
+    }
+
+    // It's important to make sure we do this before we make any of the code we just compiled visible. If we didn't, we could end up
+    // where we are tiering up some function A to A' and we repatch some function B to call A' instead of A. Another CPU could see
+    // the updates to B but still not have reset its cache of A', which would lead to all kinds of badness.
+    resetInstructionCacheOnAllThreads();
+    WTF::storeStoreFence(); // This probably isn't necessary but it's good to be paranoid.
+
+    calleeGroup.m_wasmIndirectCallEntryPoints[functionIndex] = entrypoint;
+
+    auto repatchCalls = [&] (const auto& callsites) {
+        for (auto& call : callsites) {
+            dataLogLnIf(WasmPlanInternal::verbose, "Considering repatching call at: ", RawPointer(call.callLocation.dataLocation()), " that targets ", call.functionIndexSpace);
+            if (call.functionIndexSpace == functionIndexSpace) {
+                dataLogLnIf(WasmPlanInternal::verbose, "Repatching call at: ", RawPointer(call.callLocation.dataLocation()), " to ", RawPointer(entrypoint.executableAddress()));
+                MacroAssembler::repatchNearCall(call.callLocation, stagedCalls.get(call.callLocation.dataLocation()));
+            }
+        }
+    };
+
+    for (unsigned i = 0; i < calleeGroup.m_wasmToWasmCallsites.size(); ++i) {
+        repatchCalls(calleeGroup.m_wasmToWasmCallsites[i]);
+        if (calleeGroup.m_llintCallees) {
+            LLIntCallee& llintCallee = calleeGroup.m_llintCallees->at(i).get();
+            if (JITCallee* replacementCallee = llintCallee.replacement(calleeGroup.mode()))
+                repatchCalls(replacementCallee->wasmToWasmCallsites());
+            if (OSREntryCallee* osrEntryCallee = llintCallee.osrEntryCallee(calleeGroup.mode()))
+                repatchCalls(osrEntryCallee->wasmToWasmCallsites());
+        }
+        if (BBQCallee* bbqCallee = calleeGroup.bbqCallee(calleeGroupLocker, i)) {
+            if (OMGCallee* replacementCallee = bbqCallee->replacement())
+                repatchCalls(replacementCallee->wasmToWasmCallsites());
+            if (OSREntryCallee* osrEntryCallee = bbqCallee->osrEntryCallee())
+                repatchCalls(osrEntryCallee->wasmToWasmCallsites());
+        }
+    }
+
+}
+#endif
 
 Plan::~Plan() { }
 

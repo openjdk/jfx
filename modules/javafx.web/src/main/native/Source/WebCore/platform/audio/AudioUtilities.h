@@ -25,9 +25,14 @@
 #ifndef AudioUtilities_h
 #define AudioUtilities_h
 
+#include <cmath>
+
 namespace WebCore {
 
 namespace AudioUtilities {
+
+// https://www.w3.org/TR/webaudio/#render-quantum-size
+constexpr size_t renderQuantumSize = 128;
 
 // Standard functions for converting to and from decibel values from linear.
 float linearToDecibels(float);
@@ -38,8 +43,27 @@ float decibelsToLinear(float);
 // discreteTimeConstantForSampleRate() will return the discrete time-constant for the specific sampleRate.
 double discreteTimeConstantForSampleRate(double timeConstant, double sampleRate);
 
+// How to do rounding when converting time to sample frame.
+enum class SampleFrameRounding {
+    Nearest,
+    Down,
+    Up
+};
+
 // Convert the time to a sample frame at the given sample rate.
-size_t timeToSampleFrame(double time, double sampleRate);
+size_t timeToSampleFrame(double time, double sampleRate, SampleFrameRounding = SampleFrameRounding::Nearest);
+
+inline float linearToDecibels(float linear)
+{
+    ASSERT(linear >= 0);
+    return 20 * log10f(linear);
+}
+
+inline float decibelsToLinear(float decibels)
+{
+    return powf(10, 0.05f * decibels);
+}
+
 } // AudioUtilites
 
 } // WebCore

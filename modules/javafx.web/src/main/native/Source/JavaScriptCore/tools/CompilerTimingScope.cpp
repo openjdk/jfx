@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,8 +28,9 @@
 
 #include "Options.h"
 #include <wtf/DataLog.h>
-#include <wtf/HashMap.h>
 #include <wtf/Lock.h>
+#include <wtf/Vector.h>
+#include <wtf/text/WTFString.h>
 
 namespace JSC {
 
@@ -43,12 +44,30 @@ public:
 
     Seconds addToTotal(const char* compilerName, const char* name, Seconds duration)
     {
-        auto locker = holdLock(lock);
-        return totals.add(std::make_pair(compilerName, name), Seconds(0)).iterator->value += duration;
+        Locker locker { lock };
+
+        for (auto& tuple : totals) {
+            if (String(std::get<0>(tuple)) == String(compilerName) && String(std::get<1>(tuple)) == String(name)) {
+                std::get<2>(tuple) += duration;
+                std::get<3>(tuple) = std::max(std::get<3>(tuple), duration);
+                return std::get<2>(tuple);
+            }
+        }
+
+        totals.append({ compilerName, name, duration, duration });
+        return duration;
+    }
+
+    void logTotals()
+    {
+        for (auto& tuple : totals) {
+            dataLogLn(
+                "total ms: ", FixedWidthDouble(std::get<2>(tuple).milliseconds(), 8, 3), " max ms: ", FixedWidthDouble(std::get<3>(tuple).milliseconds(), 7, 3), " [", std::get<0>(tuple), "] ", std::get<1>(tuple));
+        }
     }
 
 private:
-    HashMap<std::pair<const char*, const char*>, Seconds> totals;
+    Vector<std::tuple<const char*, const char*, Seconds, Seconds>> totals;
     Lock lock;
 };
 
@@ -64,21 +83,27 @@ CompilerTimingScope::CompilerTimingScope(const char* compilerName, const char* n
     : m_compilerName(compilerName)
     , m_name(name)
 {
-    if (Options::logPhaseTimes())
+    if (UNLIKELY(Options::logPhaseTimes() || Options::reportTotalPhaseTimes()))
         m_before = MonotonicTime::now();
 }
 
 CompilerTimingScope::~CompilerTimingScope()
 {
-    if (Options::logPhaseTimes()) {
+    if (UNLIKELY(Options::logPhaseTimes() || Options::reportTotalPhaseTimes())) {
         Seconds duration = MonotonicTime::now() - m_before;
-        dataLog(
-            "[", m_compilerName, "] ", m_name, " took: ", duration.milliseconds(), " ms ",
-            "(total: ", compilerTimingScopeState().addToTotal(m_compilerName, m_name, duration).milliseconds(),
-            " ms).\n");
+        auto total = compilerTimingScopeState().addToTotal(m_compilerName, m_name, duration);
+        if (Options::logPhaseTimes()) {
+            dataLog(
+                "[", m_compilerName, "] ", m_name, " took: ", duration.milliseconds(), " ms ",
+                "(total: ", total.milliseconds(),
+                " ms).\n");
+        }
     }
 }
 
+void logTotalPhaseTimes()
+{
+    compilerTimingScopeState().logTotals();
+}
+
 } // namespace JSC
-
-

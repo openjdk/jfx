@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2015 Yusuke Suzuki <utatane.tea@gmail.com>.
+ * Copyright (C) 2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -43,7 +44,7 @@ public:
 
     static GeneratorFunctionConstructor* create(VM& vm, Structure* structure, GeneratorFunctionPrototype* generatorFunctionPrototype)
     {
-        GeneratorFunctionConstructor* constructor = new (NotNull, allocateCell<GeneratorFunctionConstructor>(vm.heap)) GeneratorFunctionConstructor(vm, structure);
+        GeneratorFunctionConstructor* constructor = new (NotNull, allocateCell<GeneratorFunctionConstructor>(vm)) GeneratorFunctionConstructor(vm, structure);
         constructor->finishCreation(vm, generatorFunctionPrototype);
         return constructor;
     }
@@ -59,5 +60,6 @@ private:
     GeneratorFunctionConstructor(VM&, Structure*);
     void finishCreation(VM&, GeneratorFunctionPrototype*);
 };
+STATIC_ASSERT_ISO_SUBSPACE_SHARABLE(GeneratorFunctionConstructor, InternalFunction);
 
 } // namespace JSC

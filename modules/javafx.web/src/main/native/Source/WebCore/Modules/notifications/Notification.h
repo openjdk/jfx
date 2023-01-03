@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2009 Google Inc. All rights reserved.
- * Copyright (C) 2009, 2011, 2012, 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2009, 2011, 2012, 2016, 2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -37,17 +37,22 @@
 #include "EventTarget.h"
 #include "NotificationDirection.h"
 #include "NotificationPermission.h"
-#include "Timer.h"
+#include "ScriptExecutionContextIdentifier.h"
+#include <wtf/Identified.h>
 #include <wtf/URL.h>
 #include "WritingMode.h"
 
 namespace WebCore {
 
+class DeferredPromise;
 class Document;
+class NotificationClient;
 class NotificationPermissionCallback;
 
-class Notification final : public RefCounted<Notification>, public ActiveDOMObject, public EventTargetWithInlineData {
-    WTF_MAKE_ISO_ALLOCATED(Notification);
+struct NotificationData;
+
+class Notification final : public ThreadSafeRefCounted<Notification>, public ActiveDOMObject, public EventTargetWithInlineData, public UUIDIdentified<Notification> {
+    WTF_MAKE_ISO_ALLOCATED_EXPORT(Notification, WEBCORE_EXPORT);
 public:
     using Permission = NotificationPermission;
     using Direction = NotificationDirection;
@@ -59,9 +64,9 @@ public:
         String tag;
         String icon;
     };
-    static Ref<Notification> create(Document&, const String& title, const Options&);
+    static Ref<Notification> create(ScriptExecutionContext&, const String& title, const Options&);
 
-    virtual ~Notification();
+    WEBCORE_EXPORT virtual ~Notification();
 
     void show();
     void close();
@@ -82,26 +87,39 @@ public:
 
     WEBCORE_EXPORT void finalize();
 
-    static Permission permission(Document&);
-    static void requestPermission(Document&, RefPtr<NotificationPermissionCallback>&&);
+    static Permission permission(ScriptExecutionContext&);
+    static void requestPermission(Document&, RefPtr<NotificationPermissionCallback>&&, Ref<DeferredPromise>&&);
 
     ScriptExecutionContext* scriptExecutionContext() const final { return ActiveDOMObject::scriptExecutionContext(); }
 
-    using RefCounted::ref;
-    using RefCounted::deref;
+    WEBCORE_EXPORT NotificationData data() const;
+
+    Ref<Notification> copyForGetNotifications() const;
+
+    using ThreadSafeRefCounted::ref;
+    using ThreadSafeRefCounted::deref;
 
 private:
-    Notification(Document&, const String& title, const Options&);
+    Notification(ScriptExecutionContext&, const String& title, const Options&);
+    Notification(const Notification&);
 
+    void contextDestroyed() final;
+
+    NotificationClient* clientFromContext();
     EventTargetInterface eventTargetInterface() const final { return NotificationEventTargetInterfaceType; }
+
+    void showSoon();
 
     // ActiveDOMObject
     const char* activeDOMObjectName() const final;
-    bool canSuspendForDocumentSuspension() const final;
+    void suspend(ReasonForSuspension);
     void stop() final;
+    bool virtualHasPendingActivity() const final;
 
+    // EventTarget
     void refEventTarget() final { ref(); }
     void derefEventTarget() final { deref(); }
+    void eventListenersDidChange() final;
 
     String m_title;
     Direction m_direction;
@@ -112,8 +130,14 @@ private:
 
     enum State { Idle, Showing, Closed };
     State m_state { Idle };
+    bool m_hasRelevantEventListener { false };
 
-    std::unique_ptr<Timer> m_taskTimer;
+    enum class NotificationSource : bool {
+        Document,
+        ServiceWorker,
+    };
+    NotificationSource m_notificationSource;
+    ScriptExecutionContextIdentifier m_contextIdentifier;
 };
 
 } // namespace WebCore

@@ -34,7 +34,6 @@
 
 #include "ActiveDOMObject.h"
 #include "EventTarget.h"
-#include "GenericEventQueue.h"
 #include <wtf/RefCounted.h>
 #include <wtf/Vector.h>
 
@@ -45,10 +44,7 @@ class SourceBuffer;
 class SourceBufferList final : public RefCounted<SourceBufferList>, public EventTargetWithInlineData, public ActiveDOMObject {
     WTF_MAKE_ISO_ALLOCATED(SourceBufferList);
 public:
-    static Ref<SourceBufferList> create(ScriptExecutionContext* context)
-    {
-        return adoptRef(*new SourceBufferList(context));
-    }
+    static Ref<SourceBufferList> create(ScriptExecutionContext*);
     virtual ~SourceBufferList();
 
     unsigned long length() const { return m_list.size(); }
@@ -78,13 +74,7 @@ private:
     void refEventTarget() override { ref(); }
     void derefEventTarget() override { deref(); }
 
-    bool canSuspendForDocumentSuspension() const final;
-    void suspend(ReasonForSuspension) final;
-    void resume() final;
-    void stop() final;
     const char* activeDOMObjectName() const final;
-
-    GenericEventQueue m_asyncEventQueue;
 
     Vector<RefPtr<SourceBuffer>> m_list;
 };

@@ -55,7 +55,7 @@ void BackingStoreTextureMapperImpl::createTile(uint32_t tileID, float scale)
     auto& update = m_layerState.update;
 
     // Assert no tile with this ID has been registered yet.
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
     auto matchesTile = [tileID](auto& tile) { return tile.tileID == tileID; };
 #endif
     ASSERT(std::none_of(update.tilesToCreate.begin(), update.tilesToCreate.end(), matchesTile));
@@ -101,7 +101,7 @@ void BackingStoreTextureMapperImpl::flushUpdate()
 
     // Incrementally store updates as they are being flushed from the layer-side.
     {
-        LockHolder locker(m_update.lock);
+        Locker locker { m_update.lock };
         m_update.pending.tilesToCreate.appendVector(m_layerState.update.tilesToCreate);
         m_update.pending.tilesToUpdate.appendVector(m_layerState.update.tilesToUpdate);
         m_update.pending.tilesToRemove.appendVector(m_layerState.update.tilesToRemove);
@@ -112,7 +112,7 @@ void BackingStoreTextureMapperImpl::flushUpdate()
 
 auto BackingStoreTextureMapperImpl::takeUpdate() -> TileUpdate
 {
-    LockHolder locker(m_update.lock);
+    Locker locker { m_update.lock };
     return WTFMove(m_update.pending);
 }
 

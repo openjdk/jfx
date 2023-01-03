@@ -25,8 +25,6 @@
 
 #pragma once
 
-#if ENABLE(INDEXED_DATABASE)
-
 #include "IDBIndexInfo.h"
 #include "IDBKeyPath.h"
 #include <wtf/HashMap.h>
@@ -37,19 +35,18 @@ namespace WebCore {
 class IDBObjectStoreInfo {
 public:
     WEBCORE_EXPORT IDBObjectStoreInfo();
-    IDBObjectStoreInfo(uint64_t identifier, const String& name, Optional<IDBKeyPath>&&, bool autoIncrement);
+    IDBObjectStoreInfo(uint64_t identifier, const String& name, std::optional<IDBKeyPath>&&, bool autoIncrement);
 
     uint64_t identifier() const { return m_identifier; }
     const String& name() const { return m_name; }
-    const Optional<IDBKeyPath>& keyPath() const { return m_keyPath; }
+    const std::optional<IDBKeyPath>& keyPath() const { return m_keyPath; }
     bool autoIncrement() const { return m_autoIncrement; }
-    uint64_t maxIndexID() const { return m_maxIndexID; }
 
     void rename(const String& newName) { m_name = newName; }
 
-    IDBObjectStoreInfo isolatedCopy() const;
+    WEBCORE_EXPORT IDBObjectStoreInfo isolatedCopy() const;
 
-    IDBIndexInfo createNewIndex(const String& name, IDBKeyPath&&, bool unique, bool multiEntry);
+    IDBIndexInfo createNewIndex(uint64_t indexID, const String& name, IDBKeyPath&&, bool unique, bool multiEntry);
     void addExistingIndex(const IDBIndexInfo&);
     bool hasIndex(const String& name) const;
     bool hasIndex(uint64_t indexIdentifier) const;
@@ -63,7 +60,7 @@ public:
     void deleteIndex(uint64_t indexIdentifier);
 
     template<class Encoder> void encode(Encoder&) const;
-    template<class Decoder> static bool decode(Decoder&, IDBObjectStoreInfo&);
+    template<class Decoder> static WARN_UNUSED_RETURN bool decode(Decoder&, IDBObjectStoreInfo&);
 
 #if !LOG_DISABLED
     String loggingString(int indent = 0) const;
@@ -73,9 +70,8 @@ public:
 private:
     uint64_t m_identifier { 0 };
     String m_name;
-    Optional<IDBKeyPath> m_keyPath;
+    std::optional<IDBKeyPath> m_keyPath;
     bool m_autoIncrement { false };
-    uint64_t m_maxIndexID { 0 };
 
     HashMap<uint64_t, IDBIndexInfo> m_indexMap;
 };
@@ -83,7 +79,7 @@ private:
 template<class Encoder>
 void IDBObjectStoreInfo::encode(Encoder& encoder) const
 {
-    encoder << m_identifier << m_name << m_keyPath << m_autoIncrement << m_maxIndexID << m_indexMap;
+    encoder << m_identifier << m_name << m_keyPath << m_autoIncrement << m_indexMap;
 }
 
 template<class Decoder>
@@ -101,9 +97,6 @@ bool IDBObjectStoreInfo::decode(Decoder& decoder, IDBObjectStoreInfo& info)
     if (!decoder.decode(info.m_autoIncrement))
         return false;
 
-    if (!decoder.decode(info.m_maxIndexID))
-        return false;
-
     if (!decoder.decode(info.m_indexMap))
         return false;
 
@@ -111,5 +104,3 @@ bool IDBObjectStoreInfo::decode(Decoder& decoder, IDBObjectStoreInfo& info)
 }
 
 } // namespace WebCore
-
-#endif // ENABLE(INDEXED_DATABASE)

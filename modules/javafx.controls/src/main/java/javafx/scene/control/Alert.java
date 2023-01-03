@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -109,7 +109,7 @@ import javafx.collections.ObservableList;
  */
 public class Alert extends Dialog<ButtonType> {
 
-    /**************************************************************************
+    /* ************************************************************************
      *
      * Static enums
      *
@@ -166,7 +166,7 @@ public class Alert extends Dialog<ButtonType> {
 
 
 
-    /**************************************************************************
+    /* ************************************************************************
      *
      * Fields
      *
@@ -193,7 +193,7 @@ public class Alert extends Dialog<ButtonType> {
 
 
 
-    /**************************************************************************
+    /* ************************************************************************
      *
      * Constructors
      *
@@ -269,7 +269,7 @@ public class Alert extends Dialog<ButtonType> {
 
 
 
-    /**************************************************************************
+    /* ************************************************************************
      *
      * Properties
      *
@@ -285,7 +285,7 @@ public class Alert extends Dialog<ButtonType> {
      * a dialog of the given type.
      */
     // --- alertType
-    private final ObjectProperty<AlertType> alertType = new SimpleObjectProperty<AlertType>(null) {
+    private final ObjectProperty<AlertType> alertType = new SimpleObjectProperty<>(null) {
         final String[] styleClasses = new String[] { "information", "warning", "error", "confirmation" };
 
         @Override
@@ -383,7 +383,7 @@ public class Alert extends Dialog<ButtonType> {
 
 
 
-    /**************************************************************************
+    /* ************************************************************************
      *
      * Private Implementation
      *
@@ -408,6 +408,6 @@ public class Alert extends Dialog<ButtonType> {
             newPane.getButtonTypes().addListener(buttonsListener);
         }
 
-        dialogPaneRef = new WeakReference<DialogPane>(newPane);
+        dialogPaneRef = new WeakReference<>(newPane);
     }
 }

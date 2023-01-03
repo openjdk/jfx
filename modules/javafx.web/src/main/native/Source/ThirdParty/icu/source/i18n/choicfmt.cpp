@@ -132,11 +132,11 @@ ChoiceFormat::ChoiceFormat(const UnicodeString& newPattern,
 }
 // -------------------------------------
 
-UBool
+bool
 ChoiceFormat::operator==(const Format& that) const
 {
-    if (this == &that) return TRUE;
-    if (!NumberFormat::operator==(that)) return FALSE;
+    if (this == &that) return true;
+    if (!NumberFormat::operator==(that)) return false;
     ChoiceFormat& thatAlias = (ChoiceFormat&)that;
     return msgPattern == thatAlias.msgPattern;
 }
@@ -563,7 +563,7 @@ ChoiceFormat::matchStringUntilLimitPart(
 
 // -------------------------------------
 
-Format*
+ChoiceFormat*
 ChoiceFormat::clone() const
 {
     ChoiceFormat *aCopy = new ChoiceFormat(*this);

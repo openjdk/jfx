@@ -29,6 +29,7 @@
 
 #include "DFGCommon.h"
 #include "DFGFrozenValue.h"
+#include "GPRInfo.h"
 #include <wtf/text/StringImpl.h>
 
 namespace JSC {
@@ -65,7 +66,7 @@ public:
         return result;
     }
 
-    static LazyJSValue knownStringImpl(StringImpl* string)
+    static LazyJSValue knownStringImpl(AtomStringImpl* string)
     {
         LazyJSValue result;
         result.m_kind = KnownStringImpl;
@@ -76,6 +77,7 @@ public:
     static LazyJSValue newString(Graph&, const String&);
 
     LazinessKind kind() const { return m_kind; }
+    SpeculatedType speculatedType() const { return kind() == KnownValue ? SpecBytecodeTop : SpecString; }
 
     FrozenValue* tryGetValue(Graph&) const
     {
@@ -98,8 +100,6 @@ public:
         return u.character;
     }
 
-    const StringImpl* tryGetStringImpl(VM&) const;
-
     String tryGetString(Graph&) const;
 
     StringImpl* stringImpl() const
@@ -118,6 +118,8 @@ public:
     void dumpInContext(PrintStream&, DumpContext*) const;
 
 private:
+    const StringImpl* tryGetStringImpl(VM&) const;
+
     union {
         FrozenValue* value;
         UChar character;

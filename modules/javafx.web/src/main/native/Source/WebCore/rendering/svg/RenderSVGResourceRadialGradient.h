@@ -22,7 +22,6 @@
 
 #include "RadialGradientAttributes.h"
 #include "RenderSVGResourceGradient.h"
-#include "SVGRadialGradientElement.h"
 
 namespace WebCore {
 
@@ -34,13 +33,7 @@ public:
     RenderSVGResourceRadialGradient(SVGRadialGradientElement&, RenderStyle&&);
     virtual ~RenderSVGResourceRadialGradient();
 
-    SVGRadialGradientElement& radialGradientElement() const { return downcast<SVGRadialGradientElement>(RenderSVGResourceGradient::gradientElement()); }
-
-    RenderSVGResourceType resourceType() const override { return RadialGradientResourceType; }
-
-    SVGUnitTypes::SVGUnitType gradientUnits() const override { return m_attributes.gradientUnits(); }
-    void calculateGradientTransform(AffineTransform& transform) override { transform = m_attributes.gradientTransform(); }
-    void buildGradient(GradientData*, const RenderStyle&) const override;
+    inline SVGRadialGradientElement& radialGradientElement() const;
 
     FloatPoint centerPoint(const RadialGradientAttributes&) const;
     FloatPoint focalPoint(const RadialGradientAttributes&) const;
@@ -48,10 +41,16 @@ public:
     float focalRadius(const RadialGradientAttributes&) const;
 
 private:
+    RenderSVGResourceType resourceType() const final { return RadialGradientResourceType; }
+
+    SVGUnitTypes::SVGUnitType gradientUnits() const final { return m_attributes.gradientUnits(); }
+    AffineTransform gradientTransform() const final { return m_attributes.gradientTransform(); }
+    Ref<Gradient> buildGradient(const RenderStyle&) const final;
+
     void gradientElement() const = delete;
 
-    const char* renderName() const override { return "RenderSVGResourceRadialGradient"; }
-    bool collectGradientAttributes() override;
+    const char* renderName() const final { return "RenderSVGResourceRadialGradient"; }
+    bool collectGradientAttributes() final;
 
     RadialGradientAttributes m_attributes;
 };

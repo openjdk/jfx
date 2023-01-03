@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,7 +29,6 @@
 #include "JSDOMGlobalObject.h"
 #include "JSDOMPromiseDeferred.h"
 #include <wtf/Function.h>
-#include <wtf/Optional.h>
 #include <wtf/Vector.h>
 
 namespace WebCore {
@@ -43,39 +42,41 @@ public:
     DOMPromiseProxy() = default;
     ~DOMPromiseProxy() = default;
 
-    JSC::JSValue promise(JSC::ExecState&, JSDOMGlobalObject&);
+    JSC::JSValue promise(JSC::JSGlobalObject&, JSDOMGlobalObject&);
 
     void clear();
 
     bool isFulfilled() const;
 
-    void resolve(typename IDLType::ParameterType);
-    void resolveWithNewlyCreated(typename IDLType::ParameterType);
-    void reject(Exception);
+    void resolve(typename IDLType::StorageType);
+    void resolveWithNewlyCreated(typename IDLType::StorageType);
+    void reject(Exception, RejectAsHandled = RejectAsHandled::No);
 
 private:
-    Optional<ExceptionOr<Value>> m_valueOrException;
+    JSC::JSValue resolvePromise(JSC::JSGlobalObject&, JSDOMGlobalObject&, const Function<void(DeferredPromise&)>&);
+
+    std::optional<ExceptionOr<Value>> m_valueOrException;
     Vector<Ref<DeferredPromise>, 1> m_deferredPromises;
 };
 
 template<>
-class DOMPromiseProxy<IDLVoid> {
+class DOMPromiseProxy<IDLUndefined> {
     WTF_MAKE_FAST_ALLOCATED;
 public:
     DOMPromiseProxy() = default;
     ~DOMPromiseProxy() = default;
 
-    JSC::JSValue promise(JSC::ExecState&, JSDOMGlobalObject&);
+    JSC::JSValue promise(JSC::JSGlobalObject&, JSDOMGlobalObject&);
 
     void clear();
 
     bool isFulfilled() const;
 
     void resolve();
-    void reject(Exception);
+    void reject(Exception, RejectAsHandled = RejectAsHandled::No);
 
 private:
-    Optional<ExceptionOr<void>> m_valueOrException;
+    std::optional<ExceptionOr<void>> m_valueOrException;
     Vector<Ref<DeferredPromise>, 1> m_deferredPromises;
 };
 
@@ -87,14 +88,14 @@ template<typename IDLType>
 class DOMPromiseProxyWithResolveCallback {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    using ResolveCallback = WTF::Function<typename IDLType::ParameterType ()>;
+    using ResolveCallback = Function<typename IDLType::ParameterType()>;
 
     template <typename Class, typename BaseClass>
     DOMPromiseProxyWithResolveCallback(Class&, typename IDLType::ParameterType (BaseClass::*)());
     DOMPromiseProxyWithResolveCallback(ResolveCallback&&);
     ~DOMPromiseProxyWithResolveCallback() = default;
 
-    JSC::JSValue promise(JSC::ExecState&, JSDOMGlobalObject&);
+    JSC::JSValue promise(JSC::JSGlobalObject&, JSDOMGlobalObject&);
 
     void clear();
 
@@ -102,27 +103,27 @@ public:
 
     void resolve(typename IDLType::ParameterType);
     void resolveWithNewlyCreated(typename IDLType::ParameterType);
-    void reject(Exception);
+    void reject(Exception, RejectAsHandled = RejectAsHandled::No);
 
 private:
     ResolveCallback m_resolveCallback;
-    Optional<ExceptionOr<void>> m_valueOrException;
+    std::optional<ExceptionOr<void>> m_valueOrException;
     Vector<Ref<DeferredPromise>, 1> m_deferredPromises;
 };
-
 
 // MARK: - DOMPromiseProxy<IDLType> generic implementation
 
 template<typename IDLType>
-inline JSC::JSValue DOMPromiseProxy<IDLType>::promise(JSC::ExecState& state, JSDOMGlobalObject& globalObject)
+inline JSC::JSValue DOMPromiseProxy<IDLType>::resolvePromise(JSC::JSGlobalObject& lexicalGlobalObject, JSDOMGlobalObject& globalObject, const Function<void(DeferredPromise&)>& resolvePromiseCallback)
 {
+    UNUSED_PARAM(lexicalGlobalObject);
     for (auto& deferredPromise : m_deferredPromises) {
         if (deferredPromise->globalObject() == &globalObject)
             return deferredPromise->promise();
     }
 
     // DeferredPromise can fail construction during worker abrupt termination.
-    auto deferredPromise = DeferredPromise::create(state, globalObject, DeferredPromise::Mode::RetainPromiseOnResolve);
+    auto deferredPromise = DeferredPromise::create(globalObject, DeferredPromise::Mode::RetainPromiseOnResolve);
     if (!deferredPromise)
         return JSC::jsUndefined();
 
@@ -130,7 +131,7 @@ inline JSC::JSValue DOMPromiseProxy<IDLType>::promise(JSC::ExecState& state, JSD
         if (m_valueOrException->hasException())
             deferredPromise->reject(m_valueOrException->exception());
         else
-            deferredPromise->template resolve<IDLType>(m_valueOrException->returnValue());
+            resolvePromiseCallback(*deferredPromise);
     }
 
     auto result = deferredPromise->promise();
@@ -139,60 +140,87 @@ inline JSC::JSValue DOMPromiseProxy<IDLType>::promise(JSC::ExecState& state, JSD
 }
 
 template<typename IDLType>
+inline JSC::JSValue DOMPromiseProxy<IDLType>::promise(JSC::JSGlobalObject& lexicalGlobalObject, JSDOMGlobalObject& globalObject)
+{
+    return resolvePromise(lexicalGlobalObject, globalObject, [this](auto& deferredPromise) {
+        deferredPromise.template resolve<IDLType>(m_valueOrException->returnValue());
+    });
+}
+
+template<>
+inline JSC::JSValue DOMPromiseProxy<IDLAny>::promise(JSC::JSGlobalObject& lexicalGlobalObject, JSDOMGlobalObject& globalObject)
+{
+    return resolvePromise(lexicalGlobalObject, globalObject, [this](auto& deferredPromise) {
+        deferredPromise.resolveWithJSValue(m_valueOrException->returnValue().get());
+    });
+}
+
+template<typename IDLType>
 inline void DOMPromiseProxy<IDLType>::clear()
 {
-    m_valueOrException = WTF::nullopt;
+    m_valueOrException = std::nullopt;
     m_deferredPromises.clear();
 }
 
 template<typename IDLType>
 inline bool DOMPromiseProxy<IDLType>::isFulfilled() const
 {
-    return m_valueOrException.hasValue();
+    return m_valueOrException.has_value();
 }
 
 template<typename IDLType>
-inline void DOMPromiseProxy<IDLType>::resolve(typename IDLType::ParameterType value)
+inline void DOMPromiseProxy<IDLType>::resolve(typename IDLType::StorageType value)
 {
     ASSERT(!m_valueOrException);
 
-    m_valueOrException = ExceptionOr<Value> { std::forward<typename IDLType::ParameterType>(value) };
+    m_valueOrException = ExceptionOr<Value> { std::forward<typename IDLType::StorageType>(value) };
     for (auto& deferredPromise : m_deferredPromises)
         deferredPromise->template resolve<IDLType>(m_valueOrException->returnValue());
 }
 
-template<typename IDLType>
-inline void DOMPromiseProxy<IDLType>::resolveWithNewlyCreated(typename IDLType::ParameterType value)
+template<>
+inline void DOMPromiseProxy<IDLAny>::resolve(typename IDLAny::StorageType value)
 {
     ASSERT(!m_valueOrException);
 
-    m_valueOrException = ExceptionOr<Value> { std::forward<typename IDLType::ParameterType>(value) };
+    m_valueOrException = ExceptionOr<Value> { std::forward<typename IDLAny::StorageType>(value) };
+    for (auto& deferredPromise : m_deferredPromises)
+        deferredPromise->resolveWithJSValue(m_valueOrException->returnValue().get());
+}
+
+template<typename IDLType>
+inline void DOMPromiseProxy<IDLType>::resolveWithNewlyCreated(typename IDLType::StorageType value)
+{
+    ASSERT(!m_valueOrException);
+
+    m_valueOrException = ExceptionOr<Value> { std::forward<typename IDLType::StorageType>(value) };
     for (auto& deferredPromise : m_deferredPromises)
         deferredPromise->template resolveWithNewlyCreated<IDLType>(m_valueOrException->returnValue());
 }
 
 template<typename IDLType>
-inline void DOMPromiseProxy<IDLType>::reject(Exception exception)
+inline void DOMPromiseProxy<IDLType>::reject(Exception exception, RejectAsHandled rejectAsHandled)
 {
     ASSERT(!m_valueOrException);
 
     m_valueOrException = ExceptionOr<Value> { WTFMove(exception) };
     for (auto& deferredPromise : m_deferredPromises)
-        deferredPromise->reject(m_valueOrException->exception());
+        deferredPromise->reject(m_valueOrException->exception(), rejectAsHandled);
 }
 
 
-// MARK: - DOMPromiseProxy<IDLVoid> specialization
+// MARK: - DOMPromiseProxy<IDLUndefined> specialization
 
-inline JSC::JSValue DOMPromiseProxy<IDLVoid>::promise(JSC::ExecState& state, JSDOMGlobalObject& globalObject)
+inline JSC::JSValue DOMPromiseProxy<IDLUndefined>::promise(JSC::JSGlobalObject& lexicalGlobalObject, JSDOMGlobalObject& globalObject)
 {
+    UNUSED_PARAM(lexicalGlobalObject);
     for (auto& deferredPromise : m_deferredPromises) {
         if (deferredPromise->globalObject() == &globalObject)
             return deferredPromise->promise();
     }
 
     // DeferredPromise can fail construction during worker abrupt termination.
-    auto deferredPromise = DeferredPromise::create(state, globalObject, DeferredPromise::Mode::RetainPromiseOnResolve);
+    auto deferredPromise = DeferredPromise::create(globalObject, DeferredPromise::Mode::RetainPromiseOnResolve);
     if (!deferredPromise)
         return JSC::jsUndefined();
 
@@ -208,18 +236,18 @@ inline JSC::JSValue DOMPromiseProxy<IDLVoid>::promise(JSC::ExecState& state, JSD
     return result;
 }
 
-inline void DOMPromiseProxy<IDLVoid>::clear()
+inline void DOMPromiseProxy<IDLUndefined>::clear()
 {
-    m_valueOrException = WTF::nullopt;
+    m_valueOrException = std::nullopt;
     m_deferredPromises.clear();
 }
 
-inline bool DOMPromiseProxy<IDLVoid>::isFulfilled() const
+inline bool DOMPromiseProxy<IDLUndefined>::isFulfilled() const
 {
-    return m_valueOrException.hasValue();
+    return m_valueOrException.has_value();
 }
 
-inline void DOMPromiseProxy<IDLVoid>::resolve()
+inline void DOMPromiseProxy<IDLUndefined>::resolve()
 {
     ASSERT(!m_valueOrException);
     m_valueOrException = ExceptionOr<void> { };
@@ -227,12 +255,12 @@ inline void DOMPromiseProxy<IDLVoid>::resolve()
         deferredPromise->resolve();
 }
 
-inline void DOMPromiseProxy<IDLVoid>::reject(Exception exception)
+inline void DOMPromiseProxy<IDLUndefined>::reject(Exception exception, RejectAsHandled rejectAsHandled)
 {
     ASSERT(!m_valueOrException);
     m_valueOrException = ExceptionOr<void> { WTFMove(exception) };
     for (auto& deferredPromise : m_deferredPromises)
-        deferredPromise->reject(m_valueOrException->exception());
+        deferredPromise->reject(m_valueOrException->exception(), rejectAsHandled);
 }
 
 // MARK: - DOMPromiseProxyWithResolveCallback<IDLType> implementation
@@ -251,15 +279,16 @@ inline DOMPromiseProxyWithResolveCallback<IDLType>::DOMPromiseProxyWithResolveCa
 }
 
 template<typename IDLType>
-inline JSC::JSValue DOMPromiseProxyWithResolveCallback<IDLType>::promise(JSC::ExecState& state, JSDOMGlobalObject& globalObject)
+inline JSC::JSValue DOMPromiseProxyWithResolveCallback<IDLType>::promise(JSC::JSGlobalObject& lexicalGlobalObject, JSDOMGlobalObject& globalObject)
 {
+    UNUSED_PARAM(lexicalGlobalObject);
     for (auto& deferredPromise : m_deferredPromises) {
         if (deferredPromise->globalObject() == &globalObject)
             return deferredPromise->promise();
     }
 
     // DeferredPromise can fail construction during worker abrupt termination.
-    auto deferredPromise = DeferredPromise::create(state, globalObject, DeferredPromise::Mode::RetainPromiseOnResolve);
+    auto deferredPromise = DeferredPromise::create(globalObject, DeferredPromise::Mode::RetainPromiseOnResolve);
     if (!deferredPromise)
         return JSC::jsUndefined();
 
@@ -278,14 +307,14 @@ inline JSC::JSValue DOMPromiseProxyWithResolveCallback<IDLType>::promise(JSC::Ex
 template<typename IDLType>
 inline void DOMPromiseProxyWithResolveCallback<IDLType>::clear()
 {
-    m_valueOrException = WTF::nullopt;
+    m_valueOrException = std::nullopt;
     m_deferredPromises.clear();
 }
 
 template<typename IDLType>
 inline bool DOMPromiseProxyWithResolveCallback<IDLType>::isFulfilled() const
 {
-    return m_valueOrException.hasValue();
+    return m_valueOrException.has_value();
 }
 
 template<typename IDLType>
@@ -309,13 +338,13 @@ inline void DOMPromiseProxyWithResolveCallback<IDLType>::resolveWithNewlyCreated
 }
 
 template<typename IDLType>
-inline void DOMPromiseProxyWithResolveCallback<IDLType>::reject(Exception exception)
+inline void DOMPromiseProxyWithResolveCallback<IDLType>::reject(Exception exception, RejectAsHandled rejectAsHandled)
 {
     ASSERT(!m_valueOrException);
 
     m_valueOrException = ExceptionOr<void> { WTFMove(exception) };
     for (auto& deferredPromise : m_deferredPromises)
-        deferredPromise->reject(m_valueOrException->exception());
+        deferredPromise->reject(m_valueOrException->exception(), rejectAsHandled);
 }
 
 }

@@ -35,36 +35,42 @@ namespace WebCore {
 class UserScript {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    UserScript() = default;
     ~UserScript() = default;
+    UserScript(const UserScript&) = default;
+    UserScript(UserScript&&) = default;
+    UserScript& operator=(const UserScript&) = default;
+    UserScript& operator=(UserScript&&) = default;
 
-    UserScript(String&& source, URL&& url, Vector<String>&& whitelist, Vector<String>&& blacklist, UserScriptInjectionTime injectionTime, UserContentInjectedFrames injectedFrames)
+    UserScript(String&& source, URL&& url, Vector<String>&& allowlist, Vector<String>&& blocklist, UserScriptInjectionTime injectionTime, UserContentInjectedFrames injectedFrames, WaitForNotificationBeforeInjecting waitForNotification)
         : m_source(WTFMove(source))
         , m_url(WTFMove(url))
-        , m_whitelist(WTFMove(whitelist))
-        , m_blacklist(WTFMove(blacklist))
+        , m_allowlist(WTFMove(allowlist))
+        , m_blocklist(WTFMove(blocklist))
         , m_injectionTime(injectionTime)
         , m_injectedFrames(injectedFrames)
+        , m_waitForNotificationBeforeInjecting(waitForNotification)
     {
     }
 
     const String& source() const { return m_source; }
     const URL& url() const { return m_url; }
-    const Vector<String>& whitelist() const { return m_whitelist; }
-    const Vector<String>& blacklist() const { return m_blacklist; }
+    const Vector<String>& allowlist() const { return m_allowlist; }
+    const Vector<String>& blocklist() const { return m_blocklist; }
     UserScriptInjectionTime injectionTime() const { return m_injectionTime; }
     UserContentInjectedFrames injectedFrames() const { return m_injectedFrames; }
+    WaitForNotificationBeforeInjecting waitForNotificationBeforeInjecting() const { return m_waitForNotificationBeforeInjecting; }
 
     template<class Encoder> void encode(Encoder&) const;
-    template<class Decoder> static bool decode(Decoder&, UserScript&);
+    template<class Decoder> static std::optional<UserScript> decode(Decoder&);
 
 private:
     String m_source;
     URL m_url;
-    Vector<String> m_whitelist;
-    Vector<String> m_blacklist;
-    UserScriptInjectionTime m_injectionTime { InjectAtDocumentStart };
-    UserContentInjectedFrames m_injectedFrames { InjectInAllFrames };
+    Vector<String> m_allowlist;
+    Vector<String> m_blocklist;
+    UserScriptInjectionTime m_injectionTime { UserScriptInjectionTime::DocumentStart };
+    UserContentInjectedFrames m_injectedFrames { UserContentInjectedFrames::InjectInAllFrames };
+    WaitForNotificationBeforeInjecting m_waitForNotificationBeforeInjecting { WaitForNotificationBeforeInjecting::No };
 };
 
 template<class Encoder>
@@ -72,41 +78,60 @@ void UserScript::encode(Encoder& encoder) const
 {
     encoder << m_source;
     encoder << m_url;
-    encoder << m_whitelist;
-    encoder << m_blacklist;
-    encoder.encodeEnum(m_injectionTime);
-    encoder.encodeEnum(m_injectedFrames);
+    encoder << m_allowlist;
+    encoder << m_blocklist;
+    encoder << m_injectionTime;
+    encoder << m_injectedFrames;
+    encoder << m_waitForNotificationBeforeInjecting;
 }
 
 template<class Decoder>
-bool UserScript::decode(Decoder& decoder, UserScript& userScript)
+std::optional<UserScript> UserScript::decode(Decoder& decoder)
 {
-    String source;
-    if (!decoder.decode(source))
-        return false;
+    std::optional<String> source;
+    decoder >> source;
+    if (!source)
+        return std::nullopt;
 
-    URL url;
-    if (!decoder.decode(url))
-        return false;
+    std::optional<URL> url;
+    decoder >> url;
+    if (!url)
+        return std::nullopt;
 
-    Vector<String> whitelist;
-    if (!decoder.decode(whitelist))
-        return false;
+    std::optional<Vector<String>> allowlist;
+    decoder >> allowlist;
+    if (!allowlist)
+        return std::nullopt;
 
-    Vector<String> blacklist;
-    if (!decoder.decode(blacklist))
-        return false;
+    std::optional<Vector<String>> blocklist;
+    decoder >> blocklist;
+    if (!blocklist)
+        return std::nullopt;
 
-    UserScriptInjectionTime injectionTime;
-    if (!decoder.decodeEnum(injectionTime))
-        return false;
+    std::optional<UserScriptInjectionTime> injectionTime;
+    decoder >> injectionTime;
+    if (!injectionTime)
+        return std::nullopt;
 
-    UserContentInjectedFrames injectedFrames;
-    if (!decoder.decodeEnum(injectedFrames))
-        return false;
+    std::optional<UserContentInjectedFrames> injectedFrames;
+    decoder >> injectedFrames;
+    if (!injectedFrames)
+        return std::nullopt;
 
-    userScript = { WTFMove(source), WTFMove(url), WTFMove(whitelist), WTFMove(blacklist), injectionTime, injectedFrames };
-    return true;
+    std::optional<WaitForNotificationBeforeInjecting> waitForNotification;
+    decoder >> waitForNotification;
+    if (!waitForNotification)
+        return std::nullopt;
+
+    return {{
+        WTFMove(*source),
+        WTFMove(*url),
+        WTFMove(*allowlist),
+        WTFMove(*blocklist),
+        WTFMove(*injectionTime),
+        WTFMove(*injectedFrames),
+        WTFMove(*waitForNotification)
+    }};
 }
 
 } // namespace WebCore

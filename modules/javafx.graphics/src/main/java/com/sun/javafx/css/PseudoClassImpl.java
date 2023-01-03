@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -32,23 +32,38 @@ import javafx.css.PseudoClass;
  */
 final class PseudoClassImpl extends PseudoClass {
 
-
+    /**
+     * Constructs a {@code PseudoClassImpl} object.
+     * @param pseudoClassName name of the pseudo-class
+     * @param index index of this PseudoClass in pseudoClasses list
+     * @return a {@code PseudoClassImpl} object
+     */
     PseudoClassImpl(String pseudoClassName, int index) {
         this.pseudoClassName = pseudoClassName;
         this.index = index;
     }
 
-    /** @return the pseudo-class state */
+    /**
+     * Gets the pseudo class name.
+     * @return the pseudo class name
+     */
     @Override
     public String getPseudoClassName() {
         return pseudoClassName;
     }
 
-    /** @return the pseudo-class state */
+    /**
+     * Gets the pseudo class name.
+     * @return the pseudo class name
+     */
     @Override public String toString() {
         return pseudoClassName;
     }
 
+    /**
+     * Returns the index of this {@code PseudoClass} in the styleClasses list.
+     * @return index
+     */
     public int getIndex() {
        return index;
     }

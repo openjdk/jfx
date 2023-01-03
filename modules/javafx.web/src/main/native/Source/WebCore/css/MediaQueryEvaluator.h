@@ -27,21 +27,38 @@
 
 #pragma once
 
+#include "IntSize.h"
 #include "MediaQueryExpression.h"
 #include <wtf/WeakPtr.h>
 
 namespace WebCore {
 
 class Document;
-class Frame;
 class MediaQuerySet;
 class RenderStyle;
-class StyleResolver;
 
 struct MediaQueryResult {
     MediaQueryExpression expression;
     bool result;
 };
+
+struct MediaQueryDynamicResults {
+    Vector<MediaQueryResult> viewport;
+    Vector<MediaQueryResult> appearance;
+    Vector<MediaQueryResult> accessibilitySettings;
+
+    void append(const MediaQueryDynamicResults& other)
+    {
+        viewport.appendVector(other.viewport);
+        appearance.appendVector(other.appearance);
+        accessibilitySettings.appendVector(other.accessibilitySettings);
+    }
+    bool isEmpty() const { return viewport.isEmpty() && appearance.isEmpty() && accessibilitySettings.isEmpty(); }
+};
+
+using MediaQueryViewportState = std::tuple<IntSize, float, bool>;
+
+MediaQueryViewportState mediaQueryViewportStateForDocument(const Document&);
 
 // Some of the constructors are used for cases where the device characteristics are not known.
 // These  can be used to prune the loading of stylesheets to only those which are not already known to not match.
@@ -62,14 +79,12 @@ public:
     bool mediaTypeMatch(const String& mediaTypeToMatch) const;
     bool mediaTypeMatchSpecific(const char* mediaTypeToMatch) const;
 
-    // Evaluates a list of media queries.
-    WEBCORE_EXPORT bool evaluate(const MediaQuerySet&, StyleResolver* = nullptr) const;
-
     // Evaluates media query subexpression, ie "and (media-feature: value)" part.
     bool evaluate(const MediaQueryExpression&) const;
+    bool evaluateForChanges(const MediaQueryDynamicResults&) const;
 
-    // Evaluates a list of media queries and fills in vectors with any viewport or dark mode dependent results found.
-    bool evaluate(const MediaQuerySet&, Vector<MediaQueryResult>& viewportDependentResults, Vector<MediaQueryResult>& appearanceDependentResults) const;
+    enum class Mode { Normal, AlwaysMatchDynamic };
+    WEBCORE_EXPORT bool evaluate(const MediaQuerySet&, MediaQueryDynamicResults* = nullptr, Mode = Mode::Normal) const;
 
     static bool mediaAttributeMatches(Document&, const String& attributeValue);
 

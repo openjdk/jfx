@@ -671,7 +671,7 @@ done:
  *
  * The width, height and pixel-aspect-ratio can also be specified in the output caps.
  *
- * @callback will be called after conversion, when an error occured or if conversion didn't
+ * @callback will be called after conversion, when an error occurred or if conversion didn't
  * finish after @timeout. @callback will always be called from the thread default
  * %GMainContext, see g_main_context_get_thread_default(). If GLib before 2.22 is used,
  * this will always be the global default main context.

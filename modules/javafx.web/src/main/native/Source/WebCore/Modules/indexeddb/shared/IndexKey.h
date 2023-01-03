@@ -25,9 +25,8 @@
 
 #pragma once
 
-#if ENABLE(INDEXED_DATABASE)
-
 #include "IDBKeyData.h"
+#include <wtf/HashMap.h>
 #include <wtf/Vector.h>
 
 namespace WebCore {
@@ -48,6 +47,6 @@ private:
     Vector<IDBKeyData> m_keys;
 };
 
-} // namespace WebCore
+typedef HashMap<uint64_t, IndexKey> IndexIDToIndexKeyMap;
 
-#endif // ENABLE(INDEXED_DATABASE)
+} // namespace WebCore

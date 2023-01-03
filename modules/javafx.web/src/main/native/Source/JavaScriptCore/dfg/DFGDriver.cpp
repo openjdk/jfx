@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,26 +26,17 @@
 #include "config.h"
 #include "DFGDriver.h"
 
-#include "JSObject.h"
-#include "JSString.h"
-
 #include "CodeBlock.h"
 #include "DFGJITCode.h"
 #include "DFGPlan.h"
 #include "DFGThunks.h"
-#include "DFGWorklist.h"
-#include "FunctionWhitelist.h"
+#include "FunctionAllowlist.h"
 #include "JITCode.h"
-#include "JSCInlines.h"
+#include "JITWorklist.h"
 #include "Options.h"
 #include "ThunkGenerators.h"
 #include "TypeProfilerLog.h"
-#include <wtf/Atomics.h>
 #include <wtf/NeverDestroyed.h>
-
-#if ENABLE(FTL_JIT)
-#include "FTLThunks.h"
-#endif
 
 namespace JSC { namespace DFG {
 
@@ -57,44 +48,35 @@ unsigned getNumCompilations()
 }
 
 #if ENABLE(DFG_JIT)
-static FunctionWhitelist& ensureGlobalDFGWhitelist()
+static FunctionAllowlist& ensureGlobalDFGAllowlist()
 {
-    static LazyNeverDestroyed<FunctionWhitelist> dfgWhitelist;
-    static std::once_flag initializeWhitelistFlag;
-    std::call_once(initializeWhitelistFlag, [] {
-        const char* functionWhitelistFile = Options::dfgWhitelist();
-        dfgWhitelist.construct(functionWhitelistFile);
+    static LazyNeverDestroyed<FunctionAllowlist> dfgAllowlist;
+    static std::once_flag initializeAllowlistFlag;
+    std::call_once(initializeAllowlistFlag, [] {
+        const char* functionAllowlistFile = Options::dfgAllowlist();
+        dfgAllowlist.construct(functionAllowlistFile);
     });
-    return dfgWhitelist;
+    return dfgAllowlist;
 }
 
 static CompilationResult compileImpl(
-    VM& vm, CodeBlock* codeBlock, CodeBlock* profiledDFGCodeBlock, CompilationMode mode,
-    unsigned osrEntryBytecodeIndex, const Operands<Optional<JSValue>>& mustHandleValues,
+    VM& vm, CodeBlock* codeBlock, CodeBlock* profiledDFGCodeBlock, JITCompilationMode mode,
+    BytecodeIndex osrEntryBytecodeIndex, const Operands<std::optional<JSValue>>& mustHandleValues,
     Ref<DeferredCompilationCallback>&& callback)
 {
     if (!Options::bytecodeRangeToDFGCompile().isInRange(codeBlock->instructionsSize())
-        || !ensureGlobalDFGWhitelist().contains(codeBlock))
+        || !ensureGlobalDFGAllowlist().contains(codeBlock))
         return CompilationFailed;
 
     numCompilations++;
 
     ASSERT(codeBlock);
     ASSERT(codeBlock->alternative());
-    ASSERT(codeBlock->alternative()->jitType() == JITType::BaselineJIT);
+    ASSERT(JITCode::isBaselineCode(codeBlock->alternative()->jitType()));
     ASSERT(!profiledDFGCodeBlock || profiledDFGCodeBlock->jitType() == JITType::DFGJIT);
 
     if (logCompilationChanges(mode))
         dataLog("DFG(Driver) compiling ", *codeBlock, " with ", mode, ", instructions size = ", codeBlock->instructionsSize(), "\n");
-
-    // Make sure that any stubs that the DFG is going to use are initialized. We want to
-    // make sure that all JIT code generation does finalization on the main thread.
-    vm.getCTIStub(arityFixupGenerator);
-    vm.getCTIStub(osrExitThunkGenerator);
-    vm.getCTIStub(osrExitGenerationThunkGenerator);
-    vm.getCTIStub(throwExceptionFromCallSlowPathGenerator);
-    vm.getCTIStub(linkCallThunkGenerator);
-    vm.getCTIStub(linkPolymorphicCallThunkGenerator);
 
     if (vm.typeProfiler())
         vm.typeProfilerLog()->processLogEntries(vm, "Preparing for DFG compilation."_s);
@@ -103,20 +85,13 @@ static CompilationResult compileImpl(
         *new Plan(codeBlock, profiledDFGCodeBlock, mode, osrEntryBytecodeIndex, mustHandleValues));
 
     plan->setCallback(WTFMove(callback));
-    if (Options::useConcurrentJIT()) {
-        Worklist& worklist = ensureGlobalWorklistFor(mode);
-        if (logCompilationChanges(mode))
-            dataLog("Deferring DFG compilation of ", *codeBlock, " with queue length ", worklist.queueLength(), ".\n");
-        worklist.enqueue(WTFMove(plan));
-        return CompilationDeferred;
-    }
-
-    plan->compileInThread(nullptr);
-    return plan->finalizeWithoutNotifyingCallback();
+    JITWorklist& worklist = JITWorklist::ensureGlobalWorklist();
+    dataLogLnIf(Options::useConcurrentJIT() && logCompilationChanges(mode), "Deferring DFG compilation of ", *codeBlock, " with queue length ", worklist.queueLength(), ".\n");
+    return worklist.enqueue(WTFMove(plan));
 }
 #else // ENABLE(DFG_JIT)
 static CompilationResult compileImpl(
-    VM&, CodeBlock*, CodeBlock*, CompilationMode, unsigned, const Operands<Optional<JSValue>>&,
+    VM&, CodeBlock*, CodeBlock*, JITCompilationMode, BytecodeIndex, const Operands<std::optional<JSValue>>&,
     Ref<DeferredCompilationCallback>&&)
 {
     return CompilationFailed;
@@ -124,15 +99,13 @@ static CompilationResult compileImpl(
 #endif // ENABLE(DFG_JIT)
 
 CompilationResult compile(
-    VM& vm, CodeBlock* codeBlock, CodeBlock* profiledDFGCodeBlock, CompilationMode mode,
-    unsigned osrEntryBytecodeIndex, const Operands<Optional<JSValue>>& mustHandleValues,
+    VM& vm, CodeBlock* codeBlock, CodeBlock* profiledDFGCodeBlock, JITCompilationMode mode,
+    BytecodeIndex osrEntryBytecodeIndex, const Operands<std::optional<JSValue>>& mustHandleValues,
     Ref<DeferredCompilationCallback>&& callback)
 {
     CompilationResult result = compileImpl(
         vm, codeBlock, profiledDFGCodeBlock, mode, osrEntryBytecodeIndex, mustHandleValues,
         callback.copyRef());
-    if (result != CompilationDeferred)
-        callback->compilationDidComplete(codeBlock, profiledDFGCodeBlock, result);
     return result;
 }
 

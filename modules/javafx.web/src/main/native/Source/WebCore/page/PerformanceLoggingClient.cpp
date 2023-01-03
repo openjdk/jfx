@@ -26,31 +26,21 @@
 #include "config.h"
 #include "PerformanceLoggingClient.h"
 
-#include "ScrollingCoordinator.h"
-#include <wtf/text/StringBuilder.h>
-
 namespace WebCore {
 
-String PerformanceLoggingClient::synchronousScrollingReasonsAsString(SynchronousScrollingReasons synchronousScrollingReasons)
+String PerformanceLoggingClient::synchronousScrollingReasonsAsString(OptionSet<SynchronousScrollingReason> reasons)
 {
-    if (!synchronousScrollingReasons)
+    if (reasons.isEmpty())
         return emptyString();
 
-    StringBuilder reasons;
-
-    if (synchronousScrollingReasons & ScrollingCoordinator::ForcedOnMainThread)
-        reasons.appendLiteral("forced,");
-    if (synchronousScrollingReasons & ScrollingCoordinator::HasSlowRepaintObjects)
-        reasons.appendLiteral("slow-repaint objects,");
-    if (synchronousScrollingReasons & ScrollingCoordinator::HasViewportConstrainedObjectsWithoutSupportingFixedLayers)
-        reasons.appendLiteral("viewport-constrained objects,");
-    if (synchronousScrollingReasons & ScrollingCoordinator::HasNonLayerViewportConstrainedObjects)
-        reasons.appendLiteral("non-layer viewport-constrained objects,");
-    if (synchronousScrollingReasons & ScrollingCoordinator::IsImageDocument)
-        reasons.appendLiteral("image document,");
+    auto string = makeString(reasons.contains(SynchronousScrollingReason::ForcedOnMainThread) ? "forced," : "",
+        reasons.contains(SynchronousScrollingReason::HasSlowRepaintObjects) ? "slow-repaint objects," : "",
+        reasons.contains(SynchronousScrollingReason::HasViewportConstrainedObjectsWithoutSupportingFixedLayers) ? "viewport-constrained objects," : "",
+        reasons.contains(SynchronousScrollingReason::HasNonLayerViewportConstrainedObjects) ? "non-layer viewport-constrained objects," : "",
+        reasons.contains(SynchronousScrollingReason::IsImageDocument) ? "image document," : "");
 
     // Strip the trailing comma.
-    return reasons.toString().left(reasons.length() - 1);
+    return string.left(string.length() - 1);
 }
 
 } // namespace WebCore

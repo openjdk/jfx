@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,6 +28,7 @@
 
 #if ENABLE(WEBASSEMBLY)
 
+#include "AuxiliaryBarrierInlines.h"
 #include "JSCInlines.h"
 
 #include "WebAssemblyModulePrototype.lut.h"
@@ -43,7 +44,7 @@ const ClassInfo WebAssemblyModulePrototype::s_info = { "WebAssembly.Module", &Ba
 
 WebAssemblyModulePrototype* WebAssemblyModulePrototype::create(VM& vm, JSGlobalObject*, Structure* structure)
 {
-    auto* object = new (NotNull, allocateCell<WebAssemblyModulePrototype>(vm.heap)) WebAssemblyModulePrototype(vm, structure);
+    auto* object = new (NotNull, allocateCell<WebAssemblyModulePrototype>(vm)) WebAssemblyModulePrototype(vm, structure);
     object->finishCreation(vm);
     return object;
 }
@@ -56,6 +57,8 @@ Structure* WebAssemblyModulePrototype::createStructure(VM& vm, JSGlobalObject* g
 void WebAssemblyModulePrototype::finishCreation(VM& vm)
 {
     Base::finishCreation(vm);
+    ASSERT(inherits(vm, info()));
+    JSC_TO_STRING_TAG_WITHOUT_TRANSITION();
 }
 
 WebAssemblyModulePrototype::WebAssemblyModulePrototype(VM& vm, Structure* structure)

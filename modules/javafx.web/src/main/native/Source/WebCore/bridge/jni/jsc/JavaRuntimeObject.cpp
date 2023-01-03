@@ -35,7 +35,7 @@ namespace Bindings {
 
 const ClassInfo JavaRuntimeObject::s_info = { "JavaRuntimeObject", &RuntimeObject::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JavaRuntimeObject) };
 
-JavaRuntimeObject::JavaRuntimeObject(ExecState*, JSGlobalObject* globalObject, Structure* structure, RefPtr<JavaInstance> instance)
+JavaRuntimeObject::JavaRuntimeObject(JSGlobalObject* globalObject, Structure* structure, RefPtr<JavaInstance> instance)
     : RuntimeObject(globalObject->vm(), structure, instance) // todo tav
 {
 }

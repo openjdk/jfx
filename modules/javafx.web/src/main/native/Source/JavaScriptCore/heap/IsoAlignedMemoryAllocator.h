@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,33 +25,33 @@
 
 #pragma once
 
-#include "AlignedMemoryAllocator.h"
-#include <wtf/FastBitVector.h>
+#include "IsoMemoryAllocatorBase.h"
+#include <wtf/BitVector.h>
+#include <wtf/DebugHeap.h>
 #include <wtf/HashMap.h>
 #include <wtf/Vector.h>
 
+
 namespace JSC {
 
-class IsoAlignedMemoryAllocator : public AlignedMemoryAllocator {
+class IsoAlignedMemoryAllocator final : public IsoMemoryAllocatorBase {
 public:
-    IsoAlignedMemoryAllocator();
-    ~IsoAlignedMemoryAllocator();
+    using Base = IsoMemoryAllocatorBase;
 
-    void* tryAllocateAlignedMemory(size_t alignment, size_t size) override;
-    void freeAlignedMemory(void*) override;
+    IsoAlignedMemoryAllocator(CString);
+    ~IsoAlignedMemoryAllocator() final;
 
-    void dump(PrintStream&) const override;
+    void dump(PrintStream&) const final;
 
-    void* tryAllocateMemory(size_t) override;
-    void freeMemory(void*) override;
-    void* tryReallocateMemory(void*, size_t) override;
+    void* tryAllocateMemory(size_t) final;
+    void freeMemory(void*) final;
+    void* tryReallocateMemory(void*, size_t) final;
 
-private:
-    Vector<void*> m_blocks;
-    HashMap<void*, unsigned> m_blockIndices;
-    FastBitVector m_committed;
-    unsigned m_firstUncommitted { 0 };
-    Lock m_lock;
+protected:
+    void* tryMallocBlock() final;
+    void freeBlock(void* block) final;
+    void commitBlock(void* block) final;
+    void decommitBlock(void* block) final;
 };
 
 } // namespace JSC

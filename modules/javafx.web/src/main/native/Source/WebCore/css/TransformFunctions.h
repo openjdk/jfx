@@ -29,18 +29,22 @@
 
 #pragma once
 
+#include "Length.h"
+#include "RotateTransformOperation.h"
+#include "ScaleTransformOperation.h"
 #include "TransformOperations.h"
+#include "TranslateTransformOperation.h"
 
 namespace WebCore {
 
 class CSSPrimitiveValue;
 class CSSToLengthConversionData;
 class CSSValue;
-class RenderStyle;
-
-struct Length;
 
 bool transformsForValue(const CSSValue&, const CSSToLengthConversionData&, TransformOperations&);
 Length convertToFloatLength(const CSSPrimitiveValue*, const CSSToLengthConversionData&);
+RefPtr<TranslateTransformOperation> translateForValue(const CSSValue&, const CSSToLengthConversionData&);
+RefPtr<RotateTransformOperation> rotateForValue(const CSSValue&);
+RefPtr<ScaleTransformOperation> scaleForValue(const CSSValue&);
 
 } // namespace WebCore

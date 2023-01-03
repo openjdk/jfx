@@ -45,18 +45,19 @@ class Element;
 class InspectorPageAgent;
 class InspectorStyleSheet;
 
-typedef String ErrorString;
-
 class InspectorCSSId {
 public:
     InspectorCSSId() = default;
 
     explicit InspectorCSSId(const JSON::Object& value)
     {
-        if (!value.getString("styleSheetId"_s, m_styleSheetId))
+        m_styleSheetId = value.getString("styleSheetId"_s);
+        if (!m_styleSheetId)
             return;
 
-        if (!value.getInteger("ordinal"_s, m_ordinal))
+        if (auto ordinal = value.getInteger("ordinal"_s))
+            m_ordinal = *ordinal;
+        else
             m_styleSheetId = String();
     }
 
@@ -126,7 +127,7 @@ public:
     ~InspectorStyle();
 
     CSSStyleDeclaration& cssStyle() const { return m_style.get(); }
-    RefPtr<Inspector::Protocol::CSS::CSSStyle> buildObjectForStyle() const;
+    Ref<Inspector::Protocol::CSS::CSSStyle> buildObjectForStyle() const;
     Ref<JSON::ArrayOf<Inspector::Protocol::CSS::CSSComputedStyleProperty>> buildArrayForComputedStyle() const;
 
     ExceptionOr<String> text() const;
@@ -135,7 +136,7 @@ public:
 private:
     InspectorStyle(const InspectorCSSId& styleId, Ref<CSSStyleDeclaration>&&, InspectorStyleSheet* parentStyleSheet);
 
-    void populateAllProperties(Vector<InspectorStyleProperty>* result) const;
+    Vector<InspectorStyleProperty> collectProperties(bool includeAll) const;
     Ref<Inspector::Protocol::CSS::CSSStyle> styleWithProperties() const;
     RefPtr<CSSRuleSourceData> extractSourceData() const;
     String shorthandValue(const String& shorthandProperty) const;
@@ -174,8 +175,8 @@ public:
     CSSStyleRule* ruleForId(const InspectorCSSId&) const;
     RefPtr<Inspector::Protocol::CSS::CSSStyleSheetBody> buildObjectForStyleSheet();
     RefPtr<Inspector::Protocol::CSS::CSSStyleSheetHeader> buildObjectForStyleSheetInfo();
-    RefPtr<Inspector::Protocol::CSS::CSSRule> buildObjectForRule(CSSStyleRule*, Element*);
-    RefPtr<Inspector::Protocol::CSS::CSSStyle> buildObjectForStyle(CSSStyleDeclaration*);
+    RefPtr<Inspector::Protocol::CSS::CSSRule> buildObjectForRule(CSSStyleRule*);
+    Ref<Inspector::Protocol::CSS::CSSStyle> buildObjectForStyle(CSSStyleDeclaration*);
     ExceptionOr<void> setStyleText(const InspectorCSSId&, const String& text, String* oldText);
 
     virtual ExceptionOr<String> text() const;
@@ -192,7 +193,7 @@ protected:
     InspectorCSSId ruleOrStyleId(CSSStyleDeclaration*) const;
     virtual Document* ownerDocument() const;
     virtual RefPtr<CSSRuleSourceData> ruleSourceDataFor(CSSStyleDeclaration*) const;
-    virtual unsigned ruleIndexByStyle(CSSStyleDeclaration*) const;
+    virtual unsigned ruleIndexByStyle(CSSStyleDeclaration*, bool combineSplitRules = false) const;
     virtual bool ensureParsedDataReady();
     virtual RefPtr<InspectorStyle> inspectorStyleForId(const InspectorCSSId&);
 
@@ -213,9 +214,13 @@ private:
     bool originalStyleSheetText(String* result) const;
     bool resourceStyleSheetText(String* result) const;
     bool inlineStyleSheetText(String* result) const;
+    bool extensionStyleSheetText(String* result) const;
     Ref<JSON::ArrayOf<Inspector::Protocol::CSS::CSSRule>> buildArrayForRuleList(CSSRuleList*);
-    Ref<Inspector::Protocol::CSS::CSSSelector> buildObjectForSelector(const CSSSelector*, Element*);
-    Ref<Inspector::Protocol::CSS::SelectorList> buildObjectForSelectorList(CSSStyleRule*, Element*, int& endingLine);
+    Ref<Inspector::Protocol::CSS::CSSSelector> buildObjectForSelector(const CSSSelector*);
+    Ref<Inspector::Protocol::CSS::SelectorList> buildObjectForSelectorList(CSSStyleRule*, int& endingLine);
+
+    Vector<Ref<CSSStyleRule>> cssStyleRulesSplitFromSameRule(CSSStyleRule&);
+    Vector<const CSSSelector*> selectorsForCSSStyleRule(CSSStyleRule&);
 
     InspectorPageAgent* m_pageAgent;
     String m_id;
@@ -235,12 +240,12 @@ public:
     ExceptionOr<String> text() const final;
     CSSStyleDeclaration* styleForId(const InspectorCSSId& id) const final { ASSERT_UNUSED(id, !id.ordinal()); return &inlineStyle(); }
 
-protected:
+private:
     InspectorStyleSheetForInlineStyle(InspectorPageAgent*, const String& id, Ref<StyledElement>&&, Inspector::Protocol::CSS::StyleSheetOrigin, Listener*);
 
     Document* ownerDocument() const final;
     RefPtr<CSSRuleSourceData> ruleSourceDataFor(CSSStyleDeclaration* style) const final { ASSERT_UNUSED(style, style == &inlineStyle()); return m_ruleSourceData; }
-    unsigned ruleIndexByStyle(CSSStyleDeclaration*) const final { return 0; }
+    unsigned ruleIndexByStyle(CSSStyleDeclaration*, bool) const final { return 0; }
     bool ensureParsedDataReady() final;
     RefPtr<InspectorStyle> inspectorStyleForId(const InspectorCSSId&) final;
 
@@ -248,7 +253,6 @@ protected:
     ExceptionOr<void> setStyleText(CSSStyleDeclaration*, const String&) final;
     Vector<size_t> lineEndings() const final;
 
-private:
     CSSStyleDeclaration& inlineStyle() const;
     const String& elementStyleText() const;
     Ref<CSSRuleSourceData> ruleSourceData() const;

@@ -111,10 +111,10 @@ static void setCairoFontOptionsFromFontConfigPattern(cairo_font_options_t* optio
 #endif
 }
 
-FontPlatformData::FontPlatformData(cairo_font_face_t* fontFace, FcPattern* pattern, float size, bool fixedWidth, bool syntheticBold, bool syntheticOblique, FontOrientation orientation)
+FontPlatformData::FontPlatformData(cairo_font_face_t* fontFace, RefPtr<FcPattern>&& pattern, float size, bool fixedWidth, bool syntheticBold, bool syntheticOblique, FontOrientation orientation)
     : FontPlatformData(size, syntheticBold, syntheticOblique, orientation)
 {
-    m_pattern = pattern;
+    m_pattern = WTFMove(pattern);
     m_fixedWidth = fixedWidth;
 
     buildScaledFont(fontFace);
@@ -262,7 +262,7 @@ RefPtr<SharedBuffer> FontPlatformData::openTypeTable(uint32_t table) const
     if (FT_Load_Sfnt_Table(freeTypeFace, tag, 0, 0, &tableSize))
         return nullptr;
 
-    Vector<char> data(tableSize);
+    Vector<uint8_t> data(tableSize);
     FT_ULong expectedTableSize = tableSize;
     FT_Error error = FT_Load_Sfnt_Table(freeTypeFace, tag, 0, reinterpret_cast<FT_Byte*>(data.data()), &tableSize);
     if (error || tableSize != expectedTableSize)

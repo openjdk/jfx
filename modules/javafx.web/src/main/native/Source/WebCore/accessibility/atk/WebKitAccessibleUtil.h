@@ -21,12 +21,13 @@
 
 #pragma once
 
-#if ENABLE(ACCESSIBILITY)
+#if ENABLE(ACCESSIBILITY) && USE(ATK)
 
 #include <atk/atk.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
+class AXCoreObject;
 class AccessibilityObject;
 class IntRect;
 class VisibleSelection;
@@ -66,6 +67,6 @@ String accessibilityDescription(WebCore::AccessibilityObject*);
 
 bool selectionBelongsToObject(WebCore::AccessibilityObject*, WebCore::VisibleSelection&);
 
-WebCore::AccessibilityObject* objectFocusedAndCaretOffsetUnignored(WebCore::AccessibilityObject*, int& offset);
+WebCore::AXCoreObject* objectFocusedAndCaretOffsetUnignored(WebCore::AXCoreObject*, int& offset);
 
-#endif // ENABLE(ACCESSIBILITY)
+#endif // ENABLE(ACCESSIBILITY) && USE(ATK)

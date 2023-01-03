@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017, 2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,27 +27,25 @@
 
 #include <wtf/Algorithms.h>
 #include <wtf/HashSet.h>
-#include <wtf/HashTraits.h>
 #include <wtf/WeakPtr.h>
 
 namespace WTF {
 
-template<> struct HashTraits<Ref<WeakPtrImpl>> : RefHashTraits<WeakPtrImpl> {
-    static const bool hasIsReleasedWeakValueFunction = true;
-    static bool isReleasedWeakValue(const Ref<WeakPtrImpl>& value)
-    {
-        return !value.isHashTableDeletedValue() && !value.isHashTableEmptyValue() && !value.get();
-    }
-};
-
-template <typename T>
+template<typename T, typename Counter = EmptyCounter, EnableWeakPtrThreadingAssertions assertionsPolicy = EnableWeakPtrThreadingAssertions::Yes>
 class WeakHashSet final {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    typedef HashSet<Ref<WeakPtrImpl>> WeakPtrImplSet;
+    typedef HashSet<Ref<WeakPtrImpl<Counter>>> WeakPtrImplSet;
     typedef typename WeakPtrImplSet::AddResult AddResult;
 
-    class WeakHashSetConstIterator : public std::iterator<std::forward_iterator_tag, T, std::ptrdiff_t, const T*, const T&> {
+    class WeakHashSetConstIterator {
+    public:
+        using iterator_category = std::forward_iterator_tag;
+        using value_type = T;
+        using difference_type = ptrdiff_t;
+        using pointer = const value_type*;
+        using reference = const value_type&;
+
     private:
         WeakHashSetConstIterator(const WeakPtrImplSet& set, typename WeakPtrImplSet::const_iterator position)
             : m_position(position), m_endPosition(set.end())
@@ -85,7 +83,7 @@ public:
         }
 
     private:
-        template <typename> friend class WeakHashSet;
+        template <typename, typename, EnableWeakPtrThreadingAssertions> friend class WeakHashSet;
 
         typename WeakPtrImplSet::const_iterator m_position;
         typename WeakPtrImplSet::const_iterator m_endPosition;
@@ -100,7 +98,7 @@ public:
     template <typename U>
     AddResult add(const U& value)
     {
-        return m_set.add(*makeWeakPtr<T>(const_cast<U&>(value)).m_impl);
+        return m_set.add(*static_cast<const T&>(value).weakPtrFactory().template createWeakPtr<T>(const_cast<U&>(value), assertionsPolicy).m_impl);
     }
 
     template <typename U>
@@ -138,15 +136,49 @@ public:
         return m_set.size();
     }
 
-#if ASSERT_DISABLED
-    void checkConsistency() const { }
-#else
+    void forEach(const Function<void(T&)>& callback)
+    {
+        auto items = map(m_set, [](const Ref<WeakPtrImpl<Counter>>& item) {
+            auto* pointer = static_cast<T*>(item->template get<T>());
+            return WeakPtr { pointer };
+        });
+        for (auto& item : items) {
+            if (item && m_set.contains(*item.m_impl))
+                callback(*item);
+        }
+    }
+
+#if ASSERT_ENABLED
     void checkConsistency() const { m_set.checkConsistency(); }
+#else
+    void checkConsistency() const { }
 #endif
 
 private:
     WeakPtrImplSet m_set;
 };
+
+template<typename MapFunction, typename T>
+struct Mapper<MapFunction, const WeakHashSet<T> &, void> {
+    using SourceItemType = T&;
+    using DestinationItemType = typename std::invoke_result<MapFunction, SourceItemType&>::type;
+
+    static Vector<DestinationItemType> map(const WeakHashSet<T>& source, const MapFunction& mapFunction)
+    {
+        Vector<DestinationItemType> result;
+        result.reserveInitialCapacity(source.computeSize());
+        for (auto& item : source)
+            result.uncheckedAppend(mapFunction(item));
+        return result;
+    }
+};
+
+template<typename T>
+inline auto copyToVector(const WeakHashSet<T>& collection) -> Vector<WeakPtr<T>>
+{
+    return WTF::map(collection, [] (auto& v) -> WeakPtr<T> { return WeakPtr<T> { v }; });
+}
+
 
 } // namespace WTF
 

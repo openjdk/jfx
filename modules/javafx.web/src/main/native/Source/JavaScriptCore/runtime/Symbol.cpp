@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012, 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2021 Apple Inc. All rights reserved.
  * Copyright (C) 2015-2016 Yusuke Suzuki <utatane.tea@gmail.com>.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,8 +27,7 @@
 #include "config.h"
 #include "Symbol.h"
 
-#include "Error.h"
-#include "JSCInlines.h"
+#include "JSCJSValueInlines.h"
 #include "SymbolObject.h"
 
 namespace JSC {
@@ -63,33 +62,26 @@ void Symbol::finishCreation(VM& vm)
 
 inline SymbolObject* SymbolObject::create(VM& vm, JSGlobalObject* globalObject, Symbol* symbol)
 {
-    SymbolObject* object = new (NotNull, allocateCell<SymbolObject>(vm.heap)) SymbolObject(vm, globalObject->symbolObjectStructure());
+    SymbolObject* object = new (NotNull, allocateCell<SymbolObject>(vm)) SymbolObject(vm, globalObject->symbolObjectStructure());
     object->finishCreation(vm, symbol);
     return object;
 }
 
-JSValue Symbol::toPrimitive(ExecState*, PreferredPrimitiveType) const
+JSValue Symbol::toPrimitive(JSGlobalObject*, PreferredPrimitiveType) const
 {
     return const_cast<Symbol*>(this);
 }
 
-bool Symbol::getPrimitiveNumber(ExecState* exec, double& number, JSValue& result) const
+JSObject* Symbol::toObject(JSGlobalObject* globalObject) const
 {
-    result = this;
-    number = toNumber(exec);
-    return true;
+    return SymbolObject::create(globalObject->vm(), globalObject, const_cast<Symbol*>(this));
 }
 
-JSObject* Symbol::toObject(ExecState* exec, JSGlobalObject* globalObject) const
+double Symbol::toNumber(JSGlobalObject* globalObject) const
 {
-    return SymbolObject::create(exec->vm(), globalObject, const_cast<Symbol*>(this));
-}
-
-double Symbol::toNumber(ExecState* exec) const
-{
-    VM& vm = exec->vm();
+    VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
-    throwTypeError(exec, scope, "Cannot convert a symbol to a number"_s);
+    throwTypeError(globalObject, scope, "Cannot convert a symbol to a number"_s);
     return 0.0;
 }
 
@@ -111,14 +103,14 @@ String Symbol::description() const
 
 Symbol* Symbol::create(VM& vm)
 {
-    Symbol* symbol = new (NotNull, allocateCell<Symbol>(vm.heap)) Symbol(vm);
+    Symbol* symbol = new (NotNull, allocateCell<Symbol>(vm)) Symbol(vm);
     symbol->finishCreation(vm);
     return symbol;
 }
 
 Symbol* Symbol::createWithDescription(VM& vm, const String& description)
 {
-    Symbol* symbol = new (NotNull, allocateCell<Symbol>(vm.heap)) Symbol(vm, description);
+    Symbol* symbol = new (NotNull, allocateCell<Symbol>(vm)) Symbol(vm, description);
     symbol->finishCreation(vm);
     return symbol;
 }
@@ -128,7 +120,7 @@ Symbol* Symbol::create(VM& vm, SymbolImpl& uid)
     if (Symbol* symbol = vm.symbolImplToSymbolMap.get(&uid))
         return symbol;
 
-    Symbol* symbol = new (NotNull, allocateCell<Symbol>(vm.heap)) Symbol(vm, uid);
+    Symbol* symbol = new (NotNull, allocateCell<Symbol>(vm)) Symbol(vm, uid);
     symbol->finishCreation(vm);
     return symbol;
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,15 +29,20 @@ import com.sun.javafx.css.BitSetShim;
 import com.sun.javafx.css.PseudoClassState;
 import com.sun.javafx.css.PseudoClassStateShim;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import javafx.collections.ObservableSet;
 import javafx.collections.SetChangeListener;
 import javafx.css.PseudoClass;
 import static org.junit.Assert.*;
+
+import org.junit.AfterClass;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 /**
@@ -46,7 +51,37 @@ import org.junit.Test;
  */
 public class PseudoClassTest {
 
-    public PseudoClassTest() {
+    private static Map<String, Integer> initialPseudoClassMap;
+    private static List<PseudoClass> initialPseudoClasses;
+
+    /**
+     * Before we run any of the tests in this class, we must store the current content
+     * of both the 'PseudoClassState.pseudoClassMap' and 'PseudoClassState.pseudoClasses'
+     * static fields, and restore the exact content after we have completed all tests.
+     *
+     * Once a pseudo-class has been loaded via 'PseudoClass.getPseudoClass(String)', the
+     * returned singleton 'PseudoClassImpl' instance will be stored in the static list
+     * 'PseudoClassState.pseudoClasses', and the instance will store the index of itself
+     * in this list.
+     *
+     * Clearing the content of 'pseudoClassMap' and 'pseudoClasses' will therefore break
+     * existing 'PseudoClass' instances, because their stored index will no longer refer
+     * to the correct instance in the 'pseudoClasses' list. This can cause other tests
+     * that happen to use a broken pseudo-class instance to fail undeterministically,
+     * depending on whether or not they are executed before or after this class.
+     */
+    @BeforeClass
+    public static void beforeClass() {
+        initialPseudoClassMap = new HashMap<>(PseudoClassStateShim.pseudoClassMap);
+        initialPseudoClasses = new ArrayList<>(PseudoClassStateShim.pseudoClasses);
+    }
+
+    @AfterClass
+    public static void afterClass() {
+        PseudoClassStateShim.pseudoClassMap.clear();
+        PseudoClassStateShim.pseudoClassMap.putAll(initialPseudoClassMap);
+        PseudoClassStateShim.pseudoClasses.clear();
+        PseudoClassStateShim.pseudoClasses.addAll(initialPseudoClasses);
     }
 
     @Before
@@ -108,7 +143,7 @@ public class PseudoClassTest {
         PseudoClassState states = new PseudoClassState();
         BitSetShim.add(states, state);
 
-        List<PseudoClass> stateList = new ArrayList<PseudoClass>();
+        List<PseudoClass> stateList = new ArrayList<>();
         Iterator<PseudoClass> iter = BitSetShim.iterator(states);
         while (iter.hasNext()) {
             stateList.add(iter.next());
@@ -130,7 +165,7 @@ public class PseudoClassTest {
             BitSetShim.add(states, state);
         }
 
-        List<PseudoClass> stateList = new ArrayList<PseudoClass>();
+        List<PseudoClass> stateList = new ArrayList<>();
         Iterator<PseudoClass> iter = BitSetShim.iterator(states);
         while (iter.hasNext()) {
             stateList.add(iter.next());
@@ -541,7 +576,7 @@ public class PseudoClassTest {
         };
 
         BitSetShim.retainAll(aStates, bStates);
-        List<PseudoClass> states = new ArrayList<PseudoClass>();
+        List<PseudoClass> states = new ArrayList<>();
         Iterator<PseudoClass> iter = BitSetShim.iterator(aStates);
         while (iter.hasNext()) {
             states.add(iter.next());
@@ -561,7 +596,7 @@ public class PseudoClassTest {
         PseudoClassState bStates = new PseudoClassState();
         PseudoClassState aStates = new PseudoClassState();
         BitSetShim.retainAll(aStates, bStates);
-        List<PseudoClass> states = new ArrayList<PseudoClass>();
+        List<PseudoClass> states = new ArrayList<>();
         Iterator<PseudoClass> iter = BitSetShim.iterator(aStates);
         while (iter.hasNext()) {
             states.add(iter.next());
@@ -575,7 +610,7 @@ public class PseudoClassTest {
         PseudoClassState aStates = new PseudoClassState();
         PseudoClassState bStates = null;
         BitSetShim.retainAll(aStates, bStates);
-        List<PseudoClass> states = new ArrayList<PseudoClass>();
+        List<PseudoClass> states = new ArrayList<>();
         Iterator<PseudoClass> iter = BitSetShim.iterator(aStates);
         while (iter.hasNext()) {
             states.add(iter.next());
@@ -607,7 +642,7 @@ public class PseudoClassTest {
         String[] expected = new String[0];
 
         BitSetShim.retainAll(aStates, bStates);
-        List<PseudoClass> states = new ArrayList<PseudoClass>();
+        List<PseudoClass> states = new ArrayList<>();
         Iterator<PseudoClass> iter = BitSetShim.iterator(aStates);
         while (iter.hasNext()) {
             states.add(iter.next());
@@ -647,7 +682,7 @@ public class PseudoClassTest {
         };
 
         BitSetShim.addAll(aStates, bStates);
-        List<PseudoClass> states = new ArrayList<PseudoClass>();
+        List<PseudoClass> states = new ArrayList<>();
         Iterator<PseudoClass> iter = BitSetShim.iterator(aStates);
         while (iter.hasNext()) {
             states.add(iter.next());
@@ -667,7 +702,7 @@ public class PseudoClassTest {
         PseudoClassState bStates = new PseudoClassState();
         PseudoClassState aStates = new PseudoClassState();
         BitSetShim.addAll(aStates, bStates);
-        List<PseudoClass> states = new ArrayList<PseudoClass>();
+        List<PseudoClass> states = new ArrayList<>();
         Iterator<PseudoClass> iter = BitSetShim.iterator(aStates);
         while (iter.hasNext()) {
             states.add(iter.next());
@@ -681,7 +716,7 @@ public class PseudoClassTest {
         PseudoClassState aStates = new PseudoClassState();
         PseudoClassState bStates = null;
         BitSetShim.addAll(aStates, bStates);
-        List<PseudoClass> states = new ArrayList<PseudoClass>();
+        List<PseudoClass> states = new ArrayList<>();
         Iterator<PseudoClass> iter = BitSetShim.iterator(aStates);
         while (iter.hasNext()) {
             states.add(iter.next());
@@ -696,7 +731,7 @@ public class PseudoClassTest {
         String[] pseudoClasses = new String[] {
             "zero", "one", "two", "three"
         };
-        List<PseudoClass> expected = new ArrayList<PseudoClass>();
+        List<PseudoClass> expected = new ArrayList<>();
         PseudoClassState states = new PseudoClassState();
         for(int n=0; n<pseudoClasses.length; n++) {
             PseudoClass state = PseudoClass.getPseudoClass(pseudoClasses[n]);
@@ -704,7 +739,7 @@ public class PseudoClassTest {
             expected.add(state);
         }
 
-        List<PseudoClass> stateList = new ArrayList<PseudoClass>();
+        List<PseudoClass> stateList = new ArrayList<>();
         Iterator<PseudoClass> iter = BitSetShim.iterator(states);
         while (iter.hasNext()) {
             stateList.add(iter.next());
@@ -725,7 +760,7 @@ public class PseudoClassTest {
             BitSetShim.add(states, PseudoClass.getPseudoClass(pseudoClasses[n]));
         }
 
-        List<PseudoClass> stateList = new ArrayList<PseudoClass>();
+        List<PseudoClass> stateList = new ArrayList<>();
         Iterator<PseudoClass> iter = BitSetShim.iterator(states);
         while (iter.hasNext()) {
             stateList.add(iter.next());
@@ -745,7 +780,7 @@ public class PseudoClassTest {
         for (int n=0; n<pseudoClasses.length; n++) {
             pseudoClasses[n] = PseudoClass.getPseudoClass(Integer.toString(n));
             BitSetShim.add(states, pseudoClasses[n]);
-        };
+        }
 
         int iterations = 0;
         Iterator<PseudoClass> iter = BitSetShim.iterator(states);
@@ -770,7 +805,7 @@ public class PseudoClassTest {
         for (int n=0; n<pseudoClasses.length; n++) {
             pseudoClasses[n] = PseudoClass.getPseudoClass(Integer.toString(n));
             BitSetShim.add(states, pseudoClasses[n]);
-        };
+        }
 
         int iterations = 0;
         Iterator<PseudoClass> iter = BitSetShim.iterator(states);
@@ -795,7 +830,7 @@ public class PseudoClassTest {
         for (int n=0; n<pseudoClasses.length; n++) {
             pseudoClasses[n] = PseudoClass.getPseudoClass(Integer.toString(n));
             BitSetShim.add(states, pseudoClasses[n]);
-        };
+        }
 
         int iterations = 0;
         int nPseudoClasses = pseudoClasses.length;
@@ -823,7 +858,7 @@ public class PseudoClassTest {
         for (int n=0; n<pseudoClasses.length; n++) {
             pseudoClasses[n] = PseudoClass.getPseudoClass(Integer.toString(n));
             BitSetShim.add(states, pseudoClasses[n]);
-        };
+        }
 
         int iterations = 0;
         int nPseudoClasses = pseudoClasses.length;
@@ -871,7 +906,7 @@ public class PseudoClassTest {
 
         for (int n=0; n<expectedObservations.length; n++) {
             pseudoClasses.add(expectedObservations[n]);
-        };
+        }
 
         assertEquals(nObservationsExpected, nObservations);
 
@@ -892,7 +927,7 @@ public class PseudoClassTest {
         ObservableSet<PseudoClass> pseudoClasses = new PseudoClassState();
         for (int n=0; n<expectedObservations.length; n++) {
             pseudoClasses.add(expectedObservations[n]);
-        };
+        }
 
         pseudoClasses.addListener((SetChangeListener.Change<? extends PseudoClass> change) -> {
             if (change.wasRemoved()) {
@@ -907,7 +942,7 @@ public class PseudoClassTest {
 
         for (int n=0; n<expectedObservations.length; n++) {
             pseudoClasses.remove(expectedObservations[n]);
-        };
+        }
 
         assertEquals(nObservationsExpected, nObservations);
 
@@ -928,7 +963,7 @@ public class PseudoClassTest {
         ObservableSet<PseudoClass> pseudoClasses = new PseudoClassState();
         for (int n=0; n<expectedObservations.length; n++) {
             pseudoClasses.add(expectedObservations[n]);
-        };
+        }
 
         pseudoClasses.addListener((SetChangeListener.Change<? extends PseudoClass> change) -> {
             if (change.wasRemoved()) {
@@ -943,7 +978,7 @@ public class PseudoClassTest {
 
         for (Iterator<PseudoClass> iter = pseudoClasses.iterator(); iter.hasNext();) {
             iter.remove();
-        };
+        }
 
         assertEquals(nObservationsExpected, nObservations);
 
@@ -964,7 +999,7 @@ public class PseudoClassTest {
         Set<PseudoClass> pseudoClassesToAdd = new PseudoClassState();
         for (int n=0; n<expectedObservations.length; n++) {
             pseudoClassesToAdd.add(expectedObservations[n]);
-        };
+        }
 
         ObservableSet<PseudoClass> pseudoClasses = new PseudoClassState();
         pseudoClasses.addListener((SetChangeListener.Change<? extends PseudoClass> change) -> {
@@ -1007,14 +1042,14 @@ public class PseudoClassTest {
         Set<PseudoClass> other = new PseudoClassState();
         for (int n=0; n<pseudoClassesToRemove.length; n++) {
             other.add(pseudoClassesToRemove[n]);
-        };
+        }
 
-        ObservableSet<PseudoClass> master = new PseudoClassState();
+        ObservableSet<PseudoClass> primary = new PseudoClassState();
         for (int n=0; n<pseudoClasses.length; n++) {
-            master.add(pseudoClasses[n]);
-        };
+            primary.add(pseudoClasses[n]);
+        }
 
-        master.addListener((SetChangeListener.Change<? extends PseudoClass> change) -> {
+        primary.addListener((SetChangeListener.Change<? extends PseudoClass> change) -> {
             if (change.wasRemoved()) {
                 assert (nObservations < nObservationsExpected);
                 PseudoClass observed = change.getElementRemoved();
@@ -1025,10 +1060,10 @@ public class PseudoClassTest {
             }
         });
 
-        master.removeAll(other);
+        primary.removeAll(other);
 
         assertEquals(nObservationsExpected, nObservations);
-        assertEquals(pseudoClasses.length-pseudoClassesToRemove.length, master.size());
+        assertEquals(pseudoClasses.length-pseudoClassesToRemove.length, primary.size());
 
     }
 
@@ -1061,14 +1096,14 @@ public class PseudoClassTest {
         Set<PseudoClass> other = new PseudoClassState();
         for (int n=0; n<pseudoClassesToRetain.length; n++) {
             other.add(pseudoClassesToRetain[n]);
-        };
+        }
 
-        ObservableSet<PseudoClass> master = new PseudoClassState();
+        ObservableSet<PseudoClass> primary = new PseudoClassState();
         for (int n=0; n<pseudoClasses.length; n++) {
-            master.add(pseudoClasses[n]);
-        };
+            primary.add(pseudoClasses[n]);
+        }
 
-        master.addListener((SetChangeListener.Change<? extends PseudoClass> change) -> {
+        primary.addListener((SetChangeListener.Change<? extends PseudoClass> change) -> {
             if (change.wasRemoved()) {
                 assert (nObservations < nObservationsExpected);
                 PseudoClass observed = change.getElementRemoved();
@@ -1079,10 +1114,10 @@ public class PseudoClassTest {
             }
         });
 
-        master.retainAll(other);
+        primary.retainAll(other);
 
         assertEquals(nObservationsExpected, nObservations);
-        assertEquals(pseudoClassesToRetain.length, master.size());
+        assertEquals(pseudoClassesToRetain.length, primary.size());
 
     }
 
@@ -1100,12 +1135,12 @@ public class PseudoClassTest {
         final int nObservationsExpected = pseudoClasses.length;
         nObservations = 0;
 
-        ObservableSet<PseudoClass> master = new PseudoClassState();
+        ObservableSet<PseudoClass> primary = new PseudoClassState();
         for (int n=0; n<pseudoClasses.length; n++) {
-            master.add(pseudoClasses[n]);
-        };
+            primary.add(pseudoClasses[n]);
+        }
 
-        master.addListener((SetChangeListener.Change<? extends PseudoClass> change) -> {
+        primary.addListener((SetChangeListener.Change<? extends PseudoClass> change) -> {
             if (change.wasRemoved()) {
                 assert (nObservations < nObservationsExpected);
                 PseudoClass observed = change.getElementRemoved();
@@ -1116,22 +1151,22 @@ public class PseudoClassTest {
             }
         });
 
-        master.clear();
+        primary.clear();
 
         assertEquals(nObservationsExpected, nObservations);
-        assertTrue(master.isEmpty());
+        assertTrue(primary.isEmpty());
 
     }
 
     @Test public void testObservablePseudoClass_listener_getSet_unmodifiable() {
 
-        final ObservableSet<PseudoClass> master = new PseudoClassState();
+        final ObservableSet<PseudoClass> primary = new PseudoClassState();
 
-        master.addListener(new SetChangeListener<PseudoClass>() {
+        primary.addListener(new SetChangeListener<PseudoClass>() {
 
             @Override
             public void onChanged(SetChangeListener.Change<? extends PseudoClass> change) {
-                master.removeListener(this);
+                primary.removeListener(this);
                 try {
                     ObservableSet set = change.getSet();
                     set.add(PseudoClass.getPseudoClass("TWO"));
@@ -1144,7 +1179,7 @@ public class PseudoClassTest {
             }
         });
 
-        master.add(PseudoClass.getPseudoClass("ONE"));
+        primary.add(PseudoClass.getPseudoClass("ONE"));
 
     }
 
@@ -1161,7 +1196,7 @@ public class PseudoClassTest {
         Set<PseudoClass> setA = new PseudoClassState();
         for (int n=0; n<pseudoClasses.length; n++) {
             setA.add(pseudoClasses[n]);
-        };
+        }
 
         Set<PseudoClass> setB = new PseudoClassState();
 
@@ -1183,7 +1218,7 @@ public class PseudoClassTest {
         Set<PseudoClass> setA = new PseudoClassState();
         for (int n=0; n<pseudoClasses.length; n++) {
             setA.add(pseudoClasses[n]);
-        };
+        }
 
         assertTrue(setA.removeAll(setA));
 
@@ -1204,11 +1239,11 @@ public class PseudoClassTest {
         Set<PseudoClass> setA = new PseudoClassState();
         for (int n=0; n<pseudoClasses.length; n++) {
             setA.add(pseudoClasses[n]);
-        };
+        }
 
         for (int n=0; n<pseudoClasses.length; n++) {
             assertTrue(setA.remove(pseudoClasses[n]));
-        };
+        }
 
         assertArrayEquals(new long[0], BitSetShim.getBits((PseudoClassState)setA));
 
@@ -1227,7 +1262,7 @@ public class PseudoClassTest {
         Set<PseudoClass> setA = new PseudoClassState();
         for (int n=0; n<pseudoClasses.length; n++) {
             setA.add(pseudoClasses[n]);
-        };
+        }
 
         Iterator<PseudoClass> iterator = setA.iterator();
         while (iterator.hasNext()) {

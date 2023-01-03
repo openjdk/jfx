@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,6 +29,12 @@
 #include <wtf/WallTime.h>
 
 namespace WebCore {
+
+enum class EventHandling : uint8_t {
+    DispatchedToDOM     = 1 << 0,
+    DefaultPrevented    = 1 << 1,
+    DefaultHandled      = 1 << 2,
+};
 
 class PlatformEvent {
 public:
@@ -104,15 +110,15 @@ protected:
     }
 
     PlatformEvent(Type type, OptionSet<Modifier> modifiers, WallTime timestamp)
-        : m_type(type)
+        : m_timestamp(timestamp)
+        , m_type(type)
         , m_modifiers(modifiers)
-        , m_timestamp(timestamp)
     {
     }
 
     PlatformEvent(Type type, bool shiftKey, bool ctrlKey, bool altKey, bool metaKey, WallTime timestamp)
-        : m_type(type)
-        , m_timestamp(timestamp)
+        : m_timestamp(timestamp)
+        , m_type(type)
     {
         if (shiftKey)
             m_modifiers.add(Modifier::ShiftKey);
@@ -128,9 +134,25 @@ protected:
     // delete a PlatformEvent.
     ~PlatformEvent() = default;
 
+    WallTime m_timestamp;
     unsigned m_type;
     OptionSet<Modifier> m_modifiers;
-    WallTime m_timestamp;
 };
 
 } // namespace WebCore
+
+namespace WTF {
+
+template<> struct EnumTraits<WebCore::PlatformEvent::Modifier> {
+    using values = EnumValues<
+        WebCore::PlatformEvent::Modifier,
+        WebCore::PlatformEvent::Modifier::AltKey,
+        WebCore::PlatformEvent::Modifier::ControlKey,
+        WebCore::PlatformEvent::Modifier::MetaKey,
+        WebCore::PlatformEvent::Modifier::ShiftKey,
+        WebCore::PlatformEvent::Modifier::CapsLockKey,
+        WebCore::PlatformEvent::Modifier::AltGraphKey
+    >;
+};
+
+} // namespace WTF

@@ -28,10 +28,9 @@
 
 #if ENABLE(DFG_JIT)
 
-#include "DFGBasicBlockInlines.h"
 #include "DFGGraph.h"
 #include "DFGPhase.h"
-#include "JSCInlines.h"
+#include "JSCJSValueInlines.h"
 
 namespace JSC { namespace DFG {
 
@@ -76,6 +75,7 @@ public:
             data->find()->mergeShouldNeverUnbox(data->shouldNeverUnbox());
             data->find()->mergeIsLoadedFrom(data->isLoadedFrom());
             data->find()->mergeIsProfitableToUnbox(data->isProfitableToUnbox());
+            data->find()->mergeFlags(data->flags());
         }
 
         m_graph.m_unificationState = GloballyUnified;

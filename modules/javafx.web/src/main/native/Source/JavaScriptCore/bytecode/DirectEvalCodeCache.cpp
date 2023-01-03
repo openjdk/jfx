@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,32 +26,34 @@
 #include "config.h"
 #include "DirectEvalCodeCache.h"
 
-#include "JSCInlines.h"
+#include "JSCellInlines.h"
 
 namespace JSC {
 
-void DirectEvalCodeCache::setSlow(ExecState* exec, JSCell* owner, const String& evalSource, CallSiteIndex callSiteIndex, DirectEvalExecutable* evalExecutable)
+void DirectEvalCodeCache::setSlow(JSGlobalObject* globalObject, JSCell* owner, const String& evalSource, CallSiteIndex callSiteIndex, DirectEvalExecutable* evalExecutable)
 {
     if (!evalExecutable->allowDirectEvalCache())
         return;
 
-    LockHolder locker(m_lock);
-    m_cacheMap.set(CacheKey(evalSource, callSiteIndex), WriteBarrier<DirectEvalExecutable>(exec->vm(), owner, evalExecutable));
+    Locker locker { m_lock };
+    m_cacheMap.set(CacheKey(evalSource, callSiteIndex), WriteBarrier<DirectEvalExecutable>(globalObject->vm(), owner, evalExecutable));
 }
 
 void DirectEvalCodeCache::clear()
 {
-    LockHolder locker(m_lock);
+    Locker locker { m_lock };
     m_cacheMap.clear();
 }
 
-void DirectEvalCodeCache::visitAggregate(SlotVisitor& visitor)
+template<typename Visitor>
+void DirectEvalCodeCache::visitAggregateImpl(Visitor& visitor)
 {
-    LockHolder locker(m_lock);
+    Locker locker { m_lock };
     EvalCacheMap::iterator end = m_cacheMap.end();
     for (EvalCacheMap::iterator ptr = m_cacheMap.begin(); ptr != end; ++ptr)
         visitor.append(ptr->value);
 }
 
-} // namespace JSC
+DEFINE_VISIT_AGGREGATE(DirectEvalCodeCache);
 
+} // namespace JSC

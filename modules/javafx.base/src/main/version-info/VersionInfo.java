@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -37,7 +37,7 @@ package com.sun.javafx.runtime;
  * System Properties at the loading of the JavaFX Toolkit. The JavaFX properties
  * are javafx.version and javafx.runtime.version. Their formats follow the
  * specification of java.version and java.runtime.version respectively.
- * See http://openjdk.java.net/jeps/223 for details.
+ * See https://openjdk.org/jeps/223 for details.
  *
  * For example, an early access build of JavaFX 9 build 76 will contain
  * the following properties:
@@ -54,18 +54,13 @@ package com.sun.javafx.runtime;
  * These methods can be used to uniquely identify a particular build
  * for internal test and deployment:
  *
- * The method getHudsonJobName() will returns the name of the hudson job.
- * For example, a master build will have the name as "presidio", and a
- * graphics-scrum will have the name as "presidio-graphics" and so for.
- * An empty string is returned if the build isn't build on Hudson, such as a
+ * The method getHudsonJobName() returns the name of the Hudson job.
+ * An empty string is returned if the build isn't built on Hudson, such as a
  * local build on a developer machine.
  *
- * The method getHudsonBuildNumber() will returns the number of the hudson job
- * on a particular build scrum. The job number is sequentially incremented for
- * each build job.
- * For example, a master build job number of 25 was built before master job
- * number 26.
- * A string of zeros is returned if the build isn't build on Hudson, such as a
+ * The method getHudsonBuildNumber() returns the number of the Hudson build
+ * for a particular job.
+ * A string of zeros is returned if the build isn't built on Hudson, such as a
  * local build on a developer machine.
  *
  * The method getBuildTimestamp() will returns the timestamp of the build.
@@ -152,7 +147,7 @@ public class VersionInfo {
      * The format of the value strings of javafx.version and javafx.runtime.version
      * will follow the same pattern as java.version and java.runtime.version
      * respectively.
-     * See http://openjdk.java.net/jeps/223 for details.
+     * See https://openjdk.org/jeps/223 for details.
      */
     public static synchronized void setupSystemProperties() {
         if (System.getProperty("javafx.version") == null) {

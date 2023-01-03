@@ -68,15 +68,36 @@ bool AccessibilityMenuListPopup::computeAccessibilityIsIgnored() const
     return accessibilityIsIgnoredByDefault();
 }
 
+bool AccessibilityMenuListPopup::canHaveSelectedChildren() const
+{
+#if USE(ATSPI)
+    return true;
+#else
+    return false;
+#endif
+}
+
+void AccessibilityMenuListPopup::selectedChildren(AccessibilityChildrenVector& result)
+{
+    ASSERT(result.isEmpty());
+    if (!canHaveSelectedChildren())
+        return;
+
+    if (!childrenInitialized())
+        addChildren();
+
+    for (const auto& child : m_children) {
+        if (child->isMenuListOption() && child->isSelected())
+            result.append(child.get());
+    }
+}
+
 AccessibilityMenuListOption* AccessibilityMenuListPopup::menuListOptionAccessibilityObject(HTMLElement* element) const
 {
-    if (!is<HTMLOptionElement>(element) || !element->inRenderedDocument())
+    if (!element || !element->inRenderedDocument())
         return nullptr;
 
-    auto& option = downcast<AccessibilityMenuListOption>(*document()->axObjectCache()->getOrCreate(AccessibilityRole::MenuListOption));
-    option.setElement(element);
-
-    return &option;
+    return downcast<AccessibilityMenuListOption>(document()->axObjectCache()->getOrCreate(element));
 }
 
 bool AccessibilityMenuListPopup::press()
@@ -97,30 +118,29 @@ void AccessibilityMenuListPopup::addChildren()
     if (!selectNode)
         return;
 
-    m_haveChildren = true;
+    m_childrenInitialized = true;
 
     for (const auto& listItem : downcast<HTMLSelectElement>(*selectNode).listItems()) {
-        AccessibilityMenuListOption* option = menuListOptionAccessibilityObject(listItem);
-        if (option) {
-            option->setParent(this);
-            m_children.append(option);
+        if (auto* menuListOptionObject = menuListOptionAccessibilityObject(listItem)) {
+            menuListOptionObject->setParent(this);
+            addChild(menuListOptionObject, DescendIfIgnored::No);
         }
     }
 }
 
-void AccessibilityMenuListPopup::childrenChanged()
+void AccessibilityMenuListPopup::handleChildrenChanged()
 {
     AXObjectCache* cache = axObjectCache();
     for (size_t i = m_children.size(); i > 0 ; --i) {
-        AccessibilityObject* child = m_children[i - 1].get();
+        AXCoreObject* child = m_children[i - 1].get();
         if (child->actionElement() && !child->actionElement()->inRenderedDocument()) {
             child->detachFromParent();
-            cache->remove(child->axObjectID());
+            cache->remove(child->objectID());
         }
     }
 
     m_children.clear();
-    m_haveChildren = false;
+    m_childrenInitialized = false;
     addChildren();
 }
 
@@ -129,11 +149,12 @@ void AccessibilityMenuListPopup::didUpdateActiveOption(int optionIndex)
     ASSERT_ARG(optionIndex, optionIndex >= 0);
     ASSERT_ARG(optionIndex, optionIndex < static_cast<int>(m_children.size()));
 
-    AXObjectCache* cache = axObjectCache();
-    RefPtr<AccessibilityObject> child = m_children[optionIndex].get();
+    RefPtr<AXCoreObject> child = m_children[optionIndex].get();
 
-    cache->postNotification(child.get(), document(), AXObjectCache::AXFocusedUIElementChanged, TargetElement, PostSynchronously);
-    cache->postNotification(child.get(), document(), AXObjectCache::AXMenuListItemSelected, TargetElement, PostSynchronously);
+    if (auto* cache = axObjectCache()) {
+        cache->postNotification(child.get(), document(), AXObjectCache::AXFocusedUIElementChanged);
+        cache->postNotification(child.get(), document(), AXObjectCache::AXMenuListItemSelected);
+    }
 }
 
 } // namespace WebCore

@@ -40,7 +40,7 @@ bool isTokenCharacter(UChar c)
         || c == '`' || c == '|' || c == '~';
 }
 
-static bool isDelimiter(UChar c)
+bool isDelimiter(UChar c)
 {
     return c == '(' || c == ')' || c == ','
         || c == '/' || c == ':' || c == ';'
@@ -80,14 +80,14 @@ static bool isQuotedTextCharacter(UChar c)
         || isOBSText(c);
 }
 
-static bool isQuotedPairSecondOctet(UChar c)
+bool isQuotedPairSecondOctet(UChar c)
 {
     return isWhitespace(c)
         || isVisibleCharacter(c)
         || isOBSText(c);
 }
 
-static bool isCommentText(UChar c)
+bool isCommentText(UChar c)
 {
     return isWhitespace(c)
         || isInRange<0x21, 0x27>(c)
@@ -202,12 +202,12 @@ static bool isValidValue(StringView value)
 
 } // namespace RFC7230
 
-Optional<HTTPHeaderField> HTTPHeaderField::create(String&& unparsedName, String&& unparsedValue)
+std::optional<HTTPHeaderField> HTTPHeaderField::create(String&& unparsedName, String&& unparsedValue)
 {
     StringView strippedName = StringView(unparsedName).stripLeadingAndTrailingMatchedCharacters(RFC7230::isWhitespace);
     StringView strippedValue = StringView(unparsedValue).stripLeadingAndTrailingMatchedCharacters(RFC7230::isWhitespace);
     if (!RFC7230::isValidName(strippedName) || !RFC7230::isValidValue(strippedValue))
-        return WTF::nullopt;
+        return std::nullopt;
 
     String name = strippedName.length() == unparsedName.length() ? WTFMove(unparsedName) : strippedName.toString();
     String value = strippedValue.length() == unparsedValue.length() ? WTFMove(unparsedValue) : strippedValue.toString();

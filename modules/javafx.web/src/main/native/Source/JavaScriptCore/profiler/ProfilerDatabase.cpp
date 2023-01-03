@@ -26,11 +26,10 @@
 #include "config.h"
 #include "ProfilerDatabase.h"
 
-#include "CatchScope.h"
 #include "CodeBlock.h"
+#include "JSCInlines.h"
 #include "JSONObject.h"
 #include "ObjectConstructor.h"
-#include "JSCInlines.h"
 #include <wtf/FilePrintStream.h>
 
 namespace JSC { namespace Profiler {
@@ -45,7 +44,7 @@ Database::Database(VM& vm)
     : m_databaseID(++databaseCounter)
     , m_vm(vm)
     , m_shouldSaveAtExit(false)
-    , m_nextRegisteredDatabase(0)
+    , m_nextRegisteredDatabase(nullptr)
 {
 }
 
@@ -59,7 +58,7 @@ Database::~Database()
 
 Bytecodes* Database::ensureBytecodesFor(CodeBlock* codeBlock)
 {
-    LockHolder locker(m_lock);
+    Locker locker { m_lock };
     return ensureBytecodesFor(locker, codeBlock);
 }
 
@@ -81,7 +80,7 @@ Bytecodes* Database::ensureBytecodesFor(const AbstractLocker&, CodeBlock* codeBl
 
 void Database::notifyDestruction(CodeBlock* codeBlock)
 {
-    LockHolder locker(m_lock);
+    Locker locker { m_lock };
 
     m_bytecodesMap.remove(codeBlock);
     m_compilationMap.remove(codeBlock);
@@ -89,45 +88,44 @@ void Database::notifyDestruction(CodeBlock* codeBlock)
 
 void Database::addCompilation(CodeBlock* codeBlock, Ref<Compilation>&& compilation)
 {
-    LockHolder locker(m_lock);
-    ASSERT(!isCompilationThread());
+    Locker locker { m_lock };
 
     m_compilations.append(compilation.copyRef());
     m_compilationMap.set(codeBlock, WTFMove(compilation));
 }
 
-JSValue Database::toJS(ExecState* exec) const
+JSValue Database::toJS(JSGlobalObject* globalObject) const
 {
-    VM& vm = exec->vm();
+    VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
-    JSObject* result = constructEmptyObject(exec);
+    JSObject* result = constructEmptyObject(globalObject);
 
-    JSArray* bytecodes = constructEmptyArray(exec, 0);
+    JSArray* bytecodes = constructEmptyArray(globalObject, nullptr);
     RETURN_IF_EXCEPTION(scope, { });
     for (unsigned i = 0; i < m_bytecodes.size(); ++i) {
-        auto value = m_bytecodes[i].toJS(exec);
+        auto value = m_bytecodes[i].toJS(globalObject);
         RETURN_IF_EXCEPTION(scope, { });
-        bytecodes->putDirectIndex(exec, i, value);
+        bytecodes->putDirectIndex(globalObject, i, value);
         RETURN_IF_EXCEPTION(scope, { });
     }
     result->putDirect(vm, vm.propertyNames->bytecodes, bytecodes);
 
-    JSArray* compilations = constructEmptyArray(exec, 0);
+    JSArray* compilations = constructEmptyArray(globalObject, nullptr);
     RETURN_IF_EXCEPTION(scope, { });
     for (unsigned i = 0; i < m_compilations.size(); ++i) {
-        auto value = m_compilations[i]->toJS(exec);
+        auto value = m_compilations[i]->toJS(globalObject);
         RETURN_IF_EXCEPTION(scope, { });
-        compilations->putDirectIndex(exec, i, value);
+        compilations->putDirectIndex(globalObject, i, value);
         RETURN_IF_EXCEPTION(scope, { });
     }
     result->putDirect(vm, vm.propertyNames->compilations, compilations);
 
-    JSArray* events = constructEmptyArray(exec, 0);
+    JSArray* events = constructEmptyArray(globalObject, nullptr);
     RETURN_IF_EXCEPTION(scope, { });
     for (unsigned i = 0; i < m_events.size(); ++i) {
-        auto value = m_events[i].toJS(exec);
+        auto value = m_events[i].toJS(globalObject);
         RETURN_IF_EXCEPTION(scope, { });
-        events->putDirectIndex(exec, i, value);
+        events->putDirectIndex(globalObject, i, value);
         RETURN_IF_EXCEPTION(scope, { });
     }
     result->putDirect(vm, vm.propertyNames->events, events);
@@ -141,9 +139,9 @@ String Database::toJSON() const
     JSGlobalObject* globalObject = JSGlobalObject::create(
         m_vm, JSGlobalObject::createStructure(m_vm, jsNull()));
 
-    auto value = toJS(globalObject->globalExec());
+    auto value = toJS(globalObject);
     RETURN_IF_EXCEPTION(scope, String());
-    RELEASE_AND_RETURN(scope, JSONStringify(globalObject->globalExec(), value, 0));
+    RELEASE_AND_RETURN(scope, JSONStringify(globalObject, value, 0));
 }
 
 bool Database::save(const char* filename) const
@@ -175,7 +173,7 @@ void Database::registerToSaveAtExit(const char* filename)
 
 void Database::logEvent(CodeBlock* codeBlock, const char* summary, const CString& detail)
 {
-    LockHolder locker(m_lock);
+    Locker locker { m_lock };
 
     Bytecodes* bytecodes = ensureBytecodesFor(locker, codeBlock);
     Compilation* compilation = m_compilationMap.get(codeBlock);
@@ -187,19 +185,19 @@ void Database::addDatabaseToAtExit()
     if (++didRegisterAtExit == 1)
         atexit(atExitCallback);
 
-    LockHolder holder(registrationLock);
+    Locker locker { registrationLock };
     m_nextRegisteredDatabase = firstDatabase;
     firstDatabase = this;
 }
 
 void Database::removeDatabaseFromAtExit()
 {
-    LockHolder holder(registrationLock);
+    Locker locker { registrationLock };
     for (Database** current = &firstDatabase; *current; current = &(*current)->m_nextRegisteredDatabase) {
         if (*current != this)
             continue;
         *current = m_nextRegisteredDatabase;
-        m_nextRegisteredDatabase = 0;
+        m_nextRegisteredDatabase = nullptr;
         m_shouldSaveAtExit = false;
         break;
     }
@@ -213,11 +211,11 @@ void Database::performAtExitSave() const
 
 Database* Database::removeFirstAtExitDatabase()
 {
-    LockHolder holder(registrationLock);
+    Locker locker { registrationLock };
     Database* result = firstDatabase;
     if (result) {
         firstDatabase = result->m_nextRegisteredDatabase;
-        result->m_nextRegisteredDatabase = 0;
+        result->m_nextRegisteredDatabase = nullptr;
         result->m_shouldSaveAtExit = false;
     }
     return result;

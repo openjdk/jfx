@@ -38,9 +38,9 @@ public:
     {
     }
 
-    bool nonZero(bool checkStyle = true) const
+    bool nonZero() const
     {
-        return width() && (!checkStyle || style() != BorderStyle::None);
+        return width() && style() != BorderStyle::None;
     }
 
     bool isTransparent() const
@@ -48,9 +48,9 @@ public:
         return m_color.isValid() && !m_color.isVisible();
     }
 
-    bool isVisible(bool checkStyle = true) const
+    bool isVisible() const
     {
-        return nonZero(checkStyle) && !isTransparent() && (!checkStyle || style() != BorderStyle::Hidden);
+        return nonZero() && !isTransparent() && style() != BorderStyle::Hidden;
     }
 
     bool operator==(const BorderValue& o) const
@@ -73,8 +73,6 @@ public:
     float width() const { return m_width; }
     BorderStyle style() const { return static_cast<BorderStyle>(m_style); }
 
-    float boxModelWidth() const;
-
 protected:
     Color m_color;
 
@@ -85,14 +83,5 @@ protected:
     // This is only used by OutlineValue but moved here to keep the bits packed.
     unsigned m_isAuto : 1; // OutlineIsAuto
 };
-
-inline float BorderValue::boxModelWidth() const
-{
-    auto style = this->style();
-    if (style == BorderStyle::None || style == BorderStyle::Hidden)
-        return 0;
-
-    return width();
-}
 
 } // namespace WebCore

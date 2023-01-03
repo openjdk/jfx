@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -109,9 +109,9 @@ public class CheckBoxTreeItem<T> extends TreeItem<T> {
         return (EventType<TreeModificationEvent<T>>) CHECK_BOX_SELECTION_CHANGED_EVENT;
     }
     private static final EventType<? extends Event> CHECK_BOX_SELECTION_CHANGED_EVENT
-            = new EventType<Event>(TreeModificationEvent.ANY, "checkBoxSelectionChangedEvent");
+            = new EventType<>(TreeModificationEvent.ANY, "checkBoxSelectionChangedEvent");
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
@@ -184,7 +184,7 @@ public class CheckBoxTreeItem<T> extends TreeItem<T> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Callbacks                                                               *
      *                                                                         *
@@ -194,7 +194,7 @@ public class CheckBoxTreeItem<T> extends TreeItem<T> {
     };
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Properties                                                              *
      *                                                                         *
@@ -274,7 +274,7 @@ public class CheckBoxTreeItem<T> extends TreeItem<T> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Private Implementation                                                  *
      *                                                                         *
@@ -338,7 +338,7 @@ public class CheckBoxTreeItem<T> extends TreeItem<T> {
     }
 
     private void fireEvent(CheckBoxTreeItem<T> item, boolean selectionChanged) {
-        Event evt = new CheckBoxTreeItem.TreeModificationEvent<T>(CHECK_BOX_SELECTION_CHANGED_EVENT, item, selectionChanged);
+        Event evt = new CheckBoxTreeItem.TreeModificationEvent<>(CHECK_BOX_SELECTION_CHANGED_EVENT, item, selectionChanged);
         Event.fireEvent(this, evt);
     }
 
@@ -363,7 +363,7 @@ public class CheckBoxTreeItem<T> extends TreeItem<T> {
          * Common supertype for all tree modification event types.
          */
         public static final EventType<Event> ANY =
-                new EventType<Event> (Event.ANY, "TREE_MODIFICATION");
+                new EventType<> (Event.ANY, "TREE_MODIFICATION");
 
         /**
          * Creates a default TreeModificationEvent instance to represent the

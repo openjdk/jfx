@@ -29,36 +29,38 @@
 namespace JSC {
 
 class ArgList;
-class ExecState;
+class CallFrame;
 class JSObject;
 
 // FIXME: These functions should really be in JSGlobalObject.cpp, but putting them there
 // is a 0.5% reduction.
 
 extern const ASCIILiteral ObjectProtoCalledOnNullOrUndefinedError;
+extern const ASCIILiteral RestrictedPropertyAccessError;
 
-EncodedJSValue JSC_HOST_CALL globalFuncEval(ExecState*);
-EncodedJSValue JSC_HOST_CALL globalFuncParseInt(ExecState*);
-EncodedJSValue JSC_HOST_CALL globalFuncParseFloat(ExecState*);
-EncodedJSValue JSC_HOST_CALL globalFuncDecodeURI(ExecState*);
-EncodedJSValue JSC_HOST_CALL globalFuncDecodeURIComponent(ExecState*);
-EncodedJSValue JSC_HOST_CALL globalFuncEncodeURI(ExecState*);
-EncodedJSValue JSC_HOST_CALL globalFuncEncodeURIComponent(ExecState*);
-EncodedJSValue JSC_HOST_CALL globalFuncEscape(ExecState*);
-EncodedJSValue JSC_HOST_CALL globalFuncUnescape(ExecState*);
-EncodedJSValue JSC_HOST_CALL globalFuncThrowTypeError(ExecState*);
-EncodedJSValue JSC_HOST_CALL globalFuncThrowTypeErrorArgumentsCalleeAndCaller(ExecState*);
-EncodedJSValue JSC_HOST_CALL globalFuncMakeTypeError(ExecState*);
-EncodedJSValue JSC_HOST_CALL globalFuncProtoGetter(ExecState*);
-EncodedJSValue JSC_HOST_CALL globalFuncProtoSetter(ExecState*);
-EncodedJSValue JSC_HOST_CALL globalFuncHostPromiseRejectionTracker(ExecState*);
-EncodedJSValue JSC_HOST_CALL globalFuncBuiltinLog(ExecState*);
-EncodedJSValue JSC_HOST_CALL globalFuncBuiltinDescribe(ExecState*);
-EncodedJSValue JSC_HOST_CALL globalFuncImportModule(ExecState*);
-EncodedJSValue JSC_HOST_CALL globalFuncPropertyIsEnumerable(ExecState*);
-EncodedJSValue JSC_HOST_CALL globalFuncOwnKeys(ExecState*);
-EncodedJSValue JSC_HOST_CALL globalFuncDateTimeFormat(ExecState*);
+JSC_DECLARE_HOST_FUNCTION(globalFuncEval);
+JSC_DECLARE_HOST_FUNCTION(globalFuncParseInt);
+JSC_DECLARE_HOST_FUNCTION(globalFuncParseFloat);
+JSC_DECLARE_HOST_FUNCTION(globalFuncDecodeURI);
+JSC_DECLARE_HOST_FUNCTION(globalFuncDecodeURIComponent);
+JSC_DECLARE_HOST_FUNCTION(globalFuncEncodeURI);
+JSC_DECLARE_HOST_FUNCTION(globalFuncEncodeURIComponent);
+JSC_DECLARE_HOST_FUNCTION(globalFuncEscape);
+JSC_DECLARE_HOST_FUNCTION(globalFuncUnescape);
+JSC_DECLARE_HOST_FUNCTION(globalFuncThrowTypeError);
+JSC_DECLARE_HOST_FUNCTION(globalFuncThrowTypeErrorArgumentsCalleeAndCaller);
+JSC_DECLARE_HOST_FUNCTION(globalFuncMakeTypeError);
+JSC_DECLARE_HOST_FUNCTION(globalFuncProtoGetter);
+JSC_DECLARE_HOST_FUNCTION(globalFuncProtoSetter);
+JSC_DECLARE_HOST_FUNCTION(globalFuncSetPrototypeDirect);
+JSC_DECLARE_HOST_FUNCTION(globalFuncSetPrototypeDirectOrThrow);
+JSC_DECLARE_HOST_FUNCTION(globalFuncHostPromiseRejectionTracker);
+JSC_DECLARE_HOST_FUNCTION(globalFuncBuiltinLog);
+JSC_DECLARE_HOST_FUNCTION(globalFuncBuiltinDescribe);
+JSC_DECLARE_HOST_FUNCTION(globalFuncImportModule);
+JSC_DECLARE_HOST_FUNCTION(globalFuncCopyDataProperties);
+JSC_DECLARE_HOST_FUNCTION(globalFuncDateTimeFormat);
 
-double jsToNumber(StringView);
+JS_EXPORT_PRIVATE double jsToNumber(StringView);
 
 } // namespace JSC

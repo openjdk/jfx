@@ -18,11 +18,10 @@
  */
 
 #include "config.h"
-
-#if ENABLE(SVG_FONTS)
 #include "SVGFontFaceNameElement.h"
 
 #include "CSSFontFaceSrcValue.h"
+#include "SVGElementInlines.h"
 #include "SVGNames.h"
 #include <wtf/IsoMallocInlines.h>
 
@@ -47,6 +46,3 @@ Ref<CSSFontFaceSrcValue> SVGFontFaceNameElement::srcValue() const
 }
 
 }
-
-#endif // ENABLE(SVG_FONTS)
-

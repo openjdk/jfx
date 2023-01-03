@@ -27,48 +27,27 @@
 #include "DebuggerParseData.h"
 
 #include "Parser.h"
-#include <wtf/Optional.h>
 
 namespace JSC {
 
-Optional<JSTextPosition> DebuggerPausePositions::breakpointLocationForLineColumn(int line, int column)
+std::optional<JSTextPosition> DebuggerPausePositions::breakpointLocationForLineColumn(int line, int column)
 {
-    unsigned start = 0;
-    unsigned end = m_positions.size();
-    while (start != end) {
-        unsigned middle = start + ((end - start) / 2);
-        DebuggerPausePosition& pausePosition = m_positions[middle];
-        int pauseLine = pausePosition.position.line;
-        int pauseColumn = pausePosition.position.offset - pausePosition.position.lineStartOffset;
+    DebuggerPausePosition position = { DebuggerPausePositionType::Invalid, JSTextPosition(line, column, 0) };
+    auto it = std::lower_bound(m_positions.begin(), m_positions.end(), position, [] (const DebuggerPausePosition& a, const DebuggerPausePosition& b) {
+        if (a.position.line == b.position.line)
+            return a.position.column() < b.position.column();
+        return a.position.line < b.position.line;
+    });
+    if (it == m_positions.end())
+        return std::nullopt;
 
-        if (line < pauseLine) {
-            end = middle;
-            continue;
-        }
-        if (line > pauseLine) {
-            start = middle + 1;
-            continue;
-        }
-
-        if (column == pauseColumn) {
-            // Found an exact position match. Roll forward if this was a function Entry.
-            // We are guarenteed to have a Leave for an Entry so we don't need to bounds check.
-            while (true) {
-                if (pausePosition.type != DebuggerPausePositionType::Enter)
-                    return Optional<JSTextPosition>(pausePosition.position);
-                pausePosition = m_positions[middle++];
-            }
-        }
-
-        if (column < pauseColumn)
-            end = middle;
-        else
-            start = middle + 1;
+    if (line == it->position.line && column == it->position.column()) {
+        // Found an exact position match. Roll forward if this was a function Entry.
+        // We are guaranteed to have a Leave for an Entry so we don't need to bounds check.
+        while (it->type == DebuggerPausePositionType::Enter)
+            ++it;
+        return it->position;
     }
-
-    // Past the end, no possible pause locations.
-    if (start >= m_positions.size())
-        return WTF::nullopt;
 
     // If the next location is a function Entry we will need to decide if we should go into
     // the function or go past the function. We decide to go into the function if the
@@ -86,16 +65,17 @@ Optional<JSTextPosition> DebuggerPausePositions::breakpointLocationForLineColumn
     // If the input was line 3, go into the function to pause on line 4.
 
     // Valid pause location. Use it.
-    DebuggerPausePosition& firstSlidePosition = m_positions[start];
+    auto& firstSlidePosition = *it;
     if (firstSlidePosition.type != DebuggerPausePositionType::Enter)
-        return Optional<JSTextPosition>(firstSlidePosition.position);
+        return std::optional<JSTextPosition>(firstSlidePosition.position);
 
     // Determine if we should enter this function or skip past it.
     // If entryStackSize is > 0 we are skipping functions.
     bool shouldEnterFunction = firstSlidePosition.position.line == line;
     int entryStackSize = shouldEnterFunction ? 0 : 1;
-    for (unsigned i = start + 1; i < m_positions.size(); ++i) {
-        DebuggerPausePosition& slidePosition = m_positions[i];
+    ++it;
+    for (; it != m_positions.end(); ++it) {
+        auto& slidePosition = *it;
         ASSERT(entryStackSize >= 0);
 
         // Already skipping functions.
@@ -114,16 +94,18 @@ Optional<JSTextPosition> DebuggerPausePositions::breakpointLocationForLineColumn
         }
 
         // Found pause position.
-        return Optional<JSTextPosition>(slidePosition.position);
+        return std::optional<JSTextPosition>(slidePosition.position);
     }
 
     // No pause positions found.
-    return WTF::nullopt;
+    return std::nullopt;
 }
 
 void DebuggerPausePositions::sort()
 {
     std::sort(m_positions.begin(), m_positions.end(), [] (const DebuggerPausePosition& a, const DebuggerPausePosition& b) {
+        if (a.position.offset == b.position.offset)
+            return a.type < b.type;
         return a.position.offset < b.position.offset;
     });
 }
@@ -133,16 +115,16 @@ template <DebuggerParseInfoTag T> struct DebuggerParseInfo { };
 
 template <> struct DebuggerParseInfo<Program> {
     typedef JSC::ProgramNode RootNode;
-    static const SourceParseMode parseMode = SourceParseMode::ProgramMode;
-    static const JSParserStrictMode strictMode = JSParserStrictMode::NotStrict;
-    static const JSParserScriptMode scriptMode = JSParserScriptMode::Classic;
+    static constexpr SourceParseMode parseMode = SourceParseMode::ProgramMode;
+    static constexpr JSParserStrictMode strictMode = JSParserStrictMode::NotStrict;
+    static constexpr JSParserScriptMode scriptMode = JSParserScriptMode::Classic;
 };
 
 template <> struct DebuggerParseInfo<Module> {
     typedef JSC::ModuleProgramNode RootNode;
-    static const SourceParseMode parseMode = SourceParseMode::ModuleEvaluateMode;
-    static const JSParserStrictMode strictMode = JSParserStrictMode::Strict;
-    static const JSParserScriptMode scriptMode = JSParserScriptMode::Module;
+    static constexpr SourceParseMode parseMode = SourceParseMode::ModuleEvaluateMode;
+    static constexpr JSParserStrictMode strictMode = JSParserStrictMode::Strict;
+    static constexpr JSParserScriptMode scriptMode = JSParserScriptMode::Module;
 };
 
 template <DebuggerParseInfoTag T>

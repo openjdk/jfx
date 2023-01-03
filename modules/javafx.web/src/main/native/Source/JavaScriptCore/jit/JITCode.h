@@ -30,10 +30,13 @@
 #include "CodeOrigin.h"
 #include "JSCJSValue.h"
 #include "MacroAssemblerCodeRef.h"
+#include "RegisterAtOffsetList.h"
 #include "RegisterSet.h"
-#include <wtf/Optional.h>
+
 
 namespace JSC {
+
+class PCToCodeOriginMap;
 
 namespace DFG {
 class CommonData;
@@ -52,13 +55,15 @@ class TrackedReferences;
 class VM;
 
 enum class JITType : uint8_t {
-    None,
-    HostCallThunk,
-    InterpreterThunk,
-    BaselineJIT,
-    DFGJIT,
-    FTLJIT
+    None = 0b000,
+    HostCallThunk = 0b001,
+    InterpreterThunk = 0b010,
+    BaselineJIT = 0b011,
+    DFGJIT = 0b100,
+    FTLJIT = 0b101,
 };
+static constexpr unsigned widthOfJITType = 3;
+static_assert(WTF::getMSBSetConstexpr(static_cast<std::underlying_type_t<JITType>>(JITType::FTLJIT)) + 1 == widthOfJITType);
 
 class JITCode : public ThreadSafeRefCounted<JITCode> {
 public:
@@ -156,6 +161,15 @@ public:
         return jitType == JITType::InterpreterThunk || jitType == JITType::BaselineJIT;
     }
 
+    static bool useDataIC(JITType jitType)
+    {
+        if (JITCode::isBaselineCode(jitType))
+            return true;
+        if (!Options::useDataIC())
+            return false;
+        return Options::useDataICInOptimizingJIT();
+    }
+
     virtual const DOMJIT::Signature* signature() const { return nullptr; }
 
     enum class ShareAttribute : uint8_t {
@@ -192,6 +206,7 @@ public:
     virtual DFG::JITCode* dfg();
     virtual FTL::JITCode* ftl();
     virtual FTL::ForOSREntryJITCode* ftlForOSREntry();
+    virtual void shrinkToFit(const ConcurrentJSLocker&);
 
     virtual void validateReferences(const TrackedReferences&);
 
@@ -205,16 +220,20 @@ public:
 
 #if ENABLE(JIT)
     virtual RegisterSet liveRegistersToPreserveAtExceptionHandlingCallSite(CodeBlock*, CallSiteIndex);
-    virtual Optional<CodeOrigin> findPC(CodeBlock*, void* pc) { UNUSED_PARAM(pc); return WTF::nullopt; }
+    virtual std::optional<CodeOrigin> findPC(CodeBlock*, void* pc) { UNUSED_PARAM(pc); return std::nullopt; }
 #endif
 
     Intrinsic intrinsic() { return m_intrinsic; }
 
     bool isShared() const { return m_shareAttribute == ShareAttribute::Shared; }
 
+    virtual PCToCodeOriginMap* pcToCodeOriginMap() { return nullptr; }
+
+    const RegisterAtOffsetList* calleeSaveRegisters() const;
+
 private:
-    JITType m_jitType;
-    ShareAttribute m_shareAttribute;
+    const JITType m_jitType;
+    const ShareAttribute m_shareAttribute;
 protected:
     Intrinsic m_intrinsic { NoIntrinsic }; // Effective only in NativeExecutable.
 };
@@ -225,7 +244,7 @@ protected:
     JITCodeWithCodeRef(CodeRef<JSEntryPtrTag>, JITType, JITCode::ShareAttribute);
 
 public:
-    virtual ~JITCodeWithCodeRef();
+    ~JITCodeWithCodeRef() override;
 
     void* executableAddressAtOffset(size_t offset) override;
     void* dataAddressAtOffset(size_t offset) override;
@@ -237,12 +256,14 @@ protected:
     CodeRef<JSEntryPtrTag> m_ref;
 };
 
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(DirectJITCode);
 class DirectJITCode : public JITCodeWithCodeRef {
+    WTF_MAKE_STRUCT_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(DirectJITCode);
 public:
     DirectJITCode(JITType);
     DirectJITCode(CodeRef<JSEntryPtrTag>, CodePtr<JSEntryPtrTag> withArityCheck, JITType, JITCode::ShareAttribute = JITCode::ShareAttribute::NotShared);
     DirectJITCode(CodeRef<JSEntryPtrTag>, CodePtr<JSEntryPtrTag> withArityCheck, JITType, Intrinsic, JITCode::ShareAttribute = JITCode::ShareAttribute::NotShared); // For generated thunk.
-    virtual ~DirectJITCode();
+    ~DirectJITCode() override;
 
     CodePtr<JSEntryPtrTag> addressForCall(ArityCheckMode) override;
 
@@ -257,7 +278,7 @@ class NativeJITCode : public JITCodeWithCodeRef {
 public:
     NativeJITCode(JITType);
     NativeJITCode(CodeRef<JSEntryPtrTag>, JITType, Intrinsic, JITCode::ShareAttribute = JITCode::ShareAttribute::NotShared);
-    virtual ~NativeJITCode();
+    ~NativeJITCode() override;
 
     CodePtr<JSEntryPtrTag> addressForCall(ArityCheckMode) override;
 };
@@ -265,9 +286,9 @@ public:
 class NativeDOMJITCode final : public NativeJITCode {
 public:
     NativeDOMJITCode(CodeRef<JSEntryPtrTag>, JITType, Intrinsic, const DOMJIT::Signature*);
-    virtual ~NativeDOMJITCode() = default;
+    ~NativeDOMJITCode() final = default;
 
-    const DOMJIT::Signature* signature() const override { return m_signature; }
+    const DOMJIT::Signature* signature() const final { return m_signature; }
 
 private:
     const DOMJIT::Signature* m_signature;

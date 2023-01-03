@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,13 +28,19 @@ import static junit.framework.Assert.*;
 
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import org.junit.After;
+import org.junit.AfterClass;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.temporal.ChronoUnit;
+
+import java.util.Locale;
+
 import javafx.scene.control.Button;
 import javafx.scene.control.skin.SpinnerSkin;
 import javafx.scene.control.Spinner;
@@ -82,6 +88,16 @@ public class SpinnerTest {
     // used in tests for counting events, reset to zero in setup()
     private int eventCount;
 
+    private static Locale defaultLocale;
+
+    @BeforeClass public static void setupOnce() {
+        defaultLocale = Locale.getDefault();
+        Locale.setDefault(Locale.US);
+    }
+
+    @AfterClass public static void tearDownOnce() {
+        Locale.setDefault(defaultLocale);
+    }
 
     @Before public void setup() {
         eventCount = 0;
@@ -107,8 +123,20 @@ public class SpinnerTest {
                 LocalTime.MIN, LocalTime.MAX,
                 LocalTime.now(), 1, ChronoUnit.HOURS);
         localTimeValueFactory = localTimeSpinner.getValueFactory();
+
+        Thread.currentThread().setUncaughtExceptionHandler((thread, throwable) -> {
+            if (throwable instanceof RuntimeException) {
+                throw (RuntimeException)throwable;
+            } else {
+                Thread.currentThread().getThreadGroup().uncaughtException(thread, throwable);
+            }
+        });
     }
 
+    @After
+    public void tearDown() {
+        Thread.currentThread().setUncaughtExceptionHandler(null);
+    }
 
     /***************************************************************************
      *                                                                         *
@@ -150,21 +178,21 @@ public class SpinnerTest {
      **************************************************************************/
 
     @Test public void createIntSpinner_createValidValueFactory() {
-        Spinner<Integer> intSpinner = new Spinner<Integer>(0, 10, 5, 1);
+        Spinner<Integer> intSpinner = new Spinner<>(0, 10, 5, 1);
         assertTrue(intSpinner.getValueFactory() instanceof IntegerSpinnerValueFactory);
         IntegerSpinnerValueFactory valueFactory = (IntegerSpinnerValueFactory) intSpinner.getValueFactory();
         assertEquals(5, (int) valueFactory.getValue());
     }
 
     @Test public void createIntSpinner_setInitialValueOutsideMaxBounds() {
-        Spinner<Integer> intSpinner = new Spinner<Integer>(0, 10, 100, 1);
+        Spinner<Integer> intSpinner = new Spinner<>(0, 10, 100, 1);
         assertTrue(intSpinner.getValueFactory() instanceof IntegerSpinnerValueFactory);
         IntegerSpinnerValueFactory valueFactory = (IntegerSpinnerValueFactory) intSpinner.getValueFactory();
         assertEquals(0, (int) valueFactory.getValue());
     }
 
     @Test public void createIntSpinner_setInitialValueOutsideMinBounds() {
-        Spinner<Integer> intSpinner = new Spinner<Integer>(0, 10, -100, 1);
+        Spinner<Integer> intSpinner = new Spinner<>(0, 10, -100, 1);
         assertTrue(intSpinner.getValueFactory() instanceof IntegerSpinnerValueFactory);
         IntegerSpinnerValueFactory valueFactory = (IntegerSpinnerValueFactory) intSpinner.getValueFactory();
         assertEquals(0, (int) valueFactory.getValue());
@@ -178,7 +206,7 @@ public class SpinnerTest {
     }
 
     @Test public void createListSpinner_emptyListResultsInNullValue() {
-        Spinner<String> stringSpinner = new Spinner<String>(FXCollections.observableArrayList());
+        Spinner<String> stringSpinner = new Spinner<>(FXCollections.observableArrayList());
         assertTrue(stringSpinner.getValueFactory() instanceof ListSpinnerValueFactory);
         ListSpinnerValueFactory valueFactory = (ListSpinnerValueFactory) stringSpinner.getValueFactory();
         assertNull(valueFactory.getValue());
@@ -1354,7 +1382,10 @@ public class SpinnerTest {
     boolean enterDefaultPass = false;
     boolean escapeCancelPass = false;
     @Test public void testEnterEscapeKeysWithDefaultCancelButtons() {
-        Toolkit tk = (StubToolkit)Toolkit.getToolkit();
+        Toolkit tk = Toolkit.getToolkit();
+
+        assertTrue(tk instanceof StubToolkit);  // Ensure it's StubToolkit
+
         VBox root = new VBox();
         Scene scene = new Scene(root);
         Stage stage = new Stage();
@@ -1432,7 +1463,10 @@ public class SpinnerTest {
 
     // Test for JDK-8185937
     @Test public void testIncDecKeys() {
-        Toolkit tk = (StubToolkit)Toolkit.getToolkit();
+        Toolkit tk = Toolkit.getToolkit();
+
+        assertTrue(tk instanceof StubToolkit);  // Ensure it's StubToolkit
+
         VBox root = new VBox();
         Scene scene = new Scene(root);
         Stage stage = new Stage();
@@ -1463,5 +1497,30 @@ public class SpinnerTest {
         } finally {
             stage.hide();
         }
+    }
+
+    @Test public void testSetValueNull_IntegerSpinner() {
+        intValueFactory.setValue(null);
+        assertNull(intSpinner.getValue());
+    }
+
+    @Test public void testSetValueNull_DoubleSpinner() {
+        dblValueFactory.setValue(null);
+        assertNull(dblSpinner.getValue());
+    }
+
+    @Test public void testSetValueNull_ListSpinner() {
+        listValueFactory.setValue(null);
+        assertNull(listSpinner.getValue());
+    }
+
+    @Test public void testSetValueNull_LocalDateSpinner() {
+        localDateValueFactory.setValue(null);
+        assertNull(localDateSpinner.getValue());
+    }
+
+    @Test public void testSetValueNull_LocalTimeSpinner() {
+        localTimeValueFactory.setValue(null);
+        assertNull(localTimeSpinner.getValue());
     }
 }

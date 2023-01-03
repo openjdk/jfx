@@ -101,7 +101,7 @@ void RegistrationStore::updateRegistration(const ServiceWorkerContextData& data)
 {
     ASSERT(isMainThread());
     ASSERT(!data.registration.key.isEmpty());
-    if (data.registration.key.isEmpty())
+    if (data.registration.key.isEmpty() || data.serviceWorkerPageIdentifier)
         return;
 
     m_updatedRegistrations.set(data.registration.key, data);
@@ -115,7 +115,7 @@ void RegistrationStore::removeRegistration(const ServiceWorkerRegistrationKey& k
     if (key.isEmpty())
         return;
 
-    m_updatedRegistrations.set(key, WTF::nullopt);
+    m_updatedRegistrations.set(key, std::nullopt);
     scheduleDatabasePushIfNecessary();
 }
 
@@ -126,6 +126,11 @@ void RegistrationStore::addRegistrationFromDatabase(ServiceWorkerContextData&& d
         return;
 
     m_server.addRegistrationFromStore(WTFMove(data));
+}
+
+void RegistrationStore::didSaveWorkerScriptsToDisk(ServiceWorkerIdentifier serviceWorkerIdentifier, ScriptBuffer&& mainScript, HashMap<URL, ScriptBuffer>&& importedScripts)
+{
+    m_server.didSaveWorkerScriptsToDisk(serviceWorkerIdentifier, WTFMove(mainScript), WTFMove(importedScripts));
 }
 
 void RegistrationStore::databaseFailedToOpen()

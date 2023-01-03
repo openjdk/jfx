@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,12 +27,41 @@
 
 namespace JSC {
 
-ALWAYS_INLINE void* IsoSubspace::allocateNonVirtual(VM&, size_t size, GCDeferralContext* deferralContext, AllocationFailureMode failureMode)
+namespace GCClient {
+
+ALWAYS_INLINE void* IsoSubspace::allocate(VM& vm, size_t size, GCDeferralContext* deferralContext, AllocationFailureMode failureMode)
 {
-    RELEASE_ASSERT(size == this->size());
-    Allocator allocator = allocatorForNonVirtual(size, AllocatorForMode::MustAlreadyHaveAllocator);
-    void* result = allocator.allocate(deferralContext, failureMode);
+    RELEASE_ASSERT(WTF::roundUpToMultipleOf<MarkedBlock::atomSize>(size) == cellSize());
+    Allocator allocator = allocatorFor(size, AllocatorForMode::MustAlreadyHaveAllocator);
+    void* result = allocator.allocate(vm.heap, deferralContext, failureMode);
     return result;
+}
+
+} // namespace GCClient
+
+inline void IsoSubspace::clearIsoCellSetBit(PreciseAllocation* preciseAllocation)
+{
+    unsigned lowerTierIndex = preciseAllocation->lowerTierIndex();
+    m_cellSets.forEach(
+        [&](IsoCellSet* set) {
+            set->clearLowerTierCell(lowerTierIndex);
+        });
+}
+
+inline void IsoSubspace::sweep()
+{
+    Subspace::sweepBlocks();
+    // We sweep precise-allocations eagerly, but we do not free it immediately.
+    // This part should be done by MarkedSpace::sweepPreciseAllocations.
+    m_preciseAllocations.forEach([&](PreciseAllocation* allocation) {
+        allocation->sweep();
+    });
+}
+
+template<typename Func>
+void IsoSubspace::forEachLowerTierFreeListedPreciseAllocation(const Func& func)
+{
+    m_lowerTierFreeList.forEach(func);
 }
 
 } // namespace JSC

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2014-2019 Apple Inc. All Rights Reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include "SourceID.h"
 #include "TypeLocation.h"
 #include "TypeLocationCache.h"
 #include <wtf/Bag.h>
@@ -50,21 +51,21 @@ struct QueryKey {
         , m_searchDescriptor(TypeProfilerSearchDescriptorFunctionReturn)
     { }
 
-    QueryKey(intptr_t sourceID, unsigned divot, TypeProfilerSearchDescriptor searchDescriptor)
+    QueryKey(SourceID sourceID, unsigned divot, TypeProfilerSearchDescriptor searchDescriptor)
         : m_sourceID(sourceID)
         , m_divot(divot)
         , m_searchDescriptor(searchDescriptor)
     { }
 
     QueryKey(WTF::HashTableDeletedValueType)
-        : m_sourceID(INTPTR_MAX)
+        : m_sourceID(UINT_MAX)
         , m_divot(UINT_MAX)
         , m_searchDescriptor(TypeProfilerSearchDescriptorFunctionReturn)
     { }
 
     bool isHashTableDeletedValue() const
     {
-        return m_sourceID == INTPTR_MAX
+        return m_sourceID == UINT_MAX
             && m_divot == UINT_MAX
             && m_searchDescriptor == TypeProfilerSearchDescriptorFunctionReturn;
     }
@@ -78,11 +79,11 @@ struct QueryKey {
 
     unsigned hash() const
     {
-        unsigned hash = m_sourceID + m_divot * m_searchDescriptor;
+        unsigned hash = static_cast<unsigned>(m_sourceID) + m_divot * m_searchDescriptor;
         return hash;
     }
 
-    intptr_t m_sourceID;
+    SourceID m_sourceID;
     unsigned m_divot;
     TypeProfilerSearchDescriptor m_searchDescriptor;
 };
@@ -90,7 +91,7 @@ struct QueryKey {
 struct QueryKeyHash {
     static unsigned hash(const QueryKey& key) { return key.hash(); }
     static bool equal(const QueryKey& a, const QueryKey& b) { return a == b; }
-    static const bool safeToCompareToEmptyOrDeleted = true;
+    static constexpr bool safeToCompareToEmptyOrDeleted = true;
 };
 
 } // namespace JSC
@@ -98,13 +99,11 @@ struct QueryKeyHash {
 namespace WTF {
 
 template<typename T> struct DefaultHash;
-template<> struct DefaultHash<JSC::QueryKey> {
-    typedef JSC::QueryKeyHash Hash;
-};
+template<> struct DefaultHash<JSC::QueryKey> : JSC::QueryKeyHash { };
 
 template<typename T> struct HashTraits;
 template<> struct HashTraits<JSC::QueryKey> : SimpleClassHashTraits<JSC::QueryKey> {
-    static const bool emptyValueIsZero = false;
+    static constexpr bool emptyValueIsZero = false;
 };
 
 } // namespace WTF
@@ -118,17 +117,17 @@ class TypeProfiler {
 public:
     TypeProfiler();
     void logTypesForTypeLocation(TypeLocation*, VM&);
-    JS_EXPORT_PRIVATE String typeInformationForExpressionAtOffset(TypeProfilerSearchDescriptor, unsigned offset, intptr_t sourceID, VM&);
+    JS_EXPORT_PRIVATE String typeInformationForExpressionAtOffset(TypeProfilerSearchDescriptor, unsigned offset, SourceID, VM&);
     void insertNewLocation(TypeLocation*);
     TypeLocationCache* typeLocationCache() { return &m_typeLocationCache; }
-    TypeLocation* findLocation(unsigned divot, intptr_t sourceID, TypeProfilerSearchDescriptor, VM&);
+    TypeLocation* findLocation(unsigned divot, SourceID, TypeProfilerSearchDescriptor, VM&);
     GlobalVariableID getNextUniqueVariableID() { return m_nextUniqueVariableID++; }
     TypeLocation* nextTypeLocation();
     void invalidateTypeSetCache(VM&);
     void dumpTypeProfilerData(VM&);
 
 private:
-    typedef HashMap<intptr_t, Vector<TypeLocation*>> SourceIDToLocationBucketMap;
+    typedef HashMap<SourceID, Vector<TypeLocation*>> SourceIDToLocationBucketMap;
     SourceIDToLocationBucketMap m_bucketMap;
     TypeLocationCache m_typeLocationCache;
     typedef HashMap<QueryKey, TypeLocation*> TypeLocationQueryCache;

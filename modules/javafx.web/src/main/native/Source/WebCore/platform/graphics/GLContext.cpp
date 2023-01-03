@@ -18,25 +18,28 @@
 
 #include "config.h"
 
-#if ENABLE(GRAPHICS_CONTEXT_3D)
-#include "GLContext.h"
-#include <wtf/ThreadSpecific.h>
+#if USE(OPENGL) || USE(OPENGL_ES)
 
-#if USE(EGL)
-#include "GLContextEGL.h"
-#endif
+#include "GLContext.h"
+
+#include <wtf/ThreadSpecific.h>
+#include <wtf/text/StringToIntegerConversion.h>
 
 #if USE(LIBEPOXY)
 #include <epoxy/gl.h>
 #elif USE(OPENGL_ES)
 #include <GLES2/gl2.h>
+#else
+#include "OpenGLShims.h"
+#endif
+
+#if USE(EGL)
+#include "GLContextEGL.h"
 #endif
 
 #if USE(GLX)
 #include "GLContextGLX.h"
 #endif
-
-using WTF::ThreadSpecific;
 
 namespace WebCore {
 
@@ -62,7 +65,7 @@ inline ThreadGlobalGLContext* currentContext()
 
 static bool initializeOpenGLShimsIfNeeded()
 {
-#if USE(OPENGL_ES) || USE(LIBEPOXY)
+#if USE(OPENGL_ES) || USE(LIBEPOXY) || (USE(ANGLE) && !(PLATFORM(GTK) || PLATFORM(WPE)))
     return true;
 #else
     static bool initialized = false;
@@ -188,7 +191,8 @@ unsigned GLContext::version()
             versionDigits = versionStringComponents[0].split('.');
         }
 
-        m_version = versionDigits[0].toUInt() * 100 + versionDigits[1].toUInt() * 10;
+        m_version = parseIntegerAllowingTrailingJunk<unsigned>(versionDigits[0]).value_or(0) * 100
+            + parseIntegerAllowingTrailingJunk<unsigned>(versionDigits[1]).value_or(0) * 10;
     }
     return m_version;
 }

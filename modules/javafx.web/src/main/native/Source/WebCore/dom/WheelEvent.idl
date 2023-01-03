@@ -20,8 +20,10 @@
  */
 
 [
-    Constructor(DOMString type, optional WheelEventInit eventInitDict),
+    Exposed=Window
 ] interface WheelEvent : MouseEvent {
+    constructor(DOMString type, optional WheelEventInit eventInitDict);
+
     // DeltaModeCode
     const unsigned long DOM_DELTA_PIXEL = 0x00;
     const unsigned long DOM_DELTA_LINE = 0x01;
@@ -39,7 +41,7 @@
 
     readonly attribute boolean webkitDirectionInvertedFromDevice;
 
-    void initWebKitWheelEvent(optional long wheelDeltaX = 0, optional long wheelDeltaY = 0, optional WindowProxy? view = null,
+    undefined initWebKitWheelEvent(optional long wheelDeltaX = 0, optional long wheelDeltaY = 0, optional WindowProxy? view = null,
         optional long screenX = 0, optional long screenY = 0, optional long clientX = 0, optional long clientY = 0,
         optional boolean ctrlKey = false, optional boolean altKey = false,
         optional boolean shiftKey = false, optional boolean metaKey = false);

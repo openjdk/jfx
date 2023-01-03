@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2013 Google Inc. All rights reserved.
+ * Copyright (C) 2013-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,15 +26,13 @@
 
 #pragma once
 
-#if ENABLE(INDEXED_DATABASE)
-
 #include <wtf/EnumTraits.h>
 
 namespace WebCore {
 
 namespace IndexedDB {
 
-enum class TransactionState {
+enum class TransactionState : uint8_t {
     Active,
     Inactive,
     Committing,
@@ -41,7 +40,7 @@ enum class TransactionState {
     Finished,
 };
 
-enum class CursorDirection {
+enum class CursorDirection : uint8_t {
     Next,
     Nextunique,
     Prev,
@@ -49,34 +48,34 @@ enum class CursorDirection {
 };
 const unsigned CursorDirectionMaximum = 3;
 
-enum class CursorType {
-    KeyAndValue = 0,
-    KeyOnly = 1,
+enum class CursorType : bool {
+    KeyAndValue,
+    KeyOnly,
 };
 const unsigned CursorTypeMaximum = 1;
 
-enum class CursorSource {
+enum class CursorSource : bool {
     Index,
     ObjectStore,
 };
 
-enum class VersionNullness {
+enum class VersionNullness : uint8_t {
     Null,
     NonNull,
 };
 
-enum class ObjectStoreOverwriteMode {
+enum class ObjectStoreOverwriteMode : uint8_t {
     Overwrite,
     OverwriteForCursor,
     NoOverwrite,
 };
 
-enum class IndexRecordType {
+enum class IndexRecordType : bool {
     Key,
     Value,
 };
 
-enum class ObjectStoreRecordType {
+enum class ObjectStoreRecordType : uint8_t {
     ValueOnly,
     KeyOnly,
 };
@@ -93,15 +92,22 @@ enum KeyType {
     Min,
 };
 
-enum class RequestType {
+enum class RequestType : uint8_t {
     Open,
     Delete,
     Other,
 };
 
-enum class GetAllType {
+enum class GetAllType : uint8_t {
     Keys,
     Values,
+};
+
+enum class ConnectionClosedOnBehalfOfServer : bool { No, Yes };
+
+enum class CursorIterateOption : bool {
+    DoNotReply,
+    Reply,
 };
 
 } // namespace IndexedDB
@@ -109,6 +115,30 @@ enum class GetAllType {
 } // namespace WebCore
 
 namespace WTF {
+
+template<> struct EnumTraits<WebCore::IndexedDB::CursorDirection> {
+    using values = EnumValues<
+        WebCore::IndexedDB::CursorDirection,
+        WebCore::IndexedDB::CursorDirection::Next,
+        WebCore::IndexedDB::CursorDirection::Nextunique,
+        WebCore::IndexedDB::CursorDirection::Prev,
+        WebCore::IndexedDB::CursorDirection::Prevunique
+    >;
+};
+
+template<> struct EnumTraits<WebCore::IndexedDB::KeyType> {
+    using values = EnumValues<
+        WebCore::IndexedDB::KeyType,
+        WebCore::IndexedDB::KeyType::Max,
+        WebCore::IndexedDB::KeyType::Invalid,
+        WebCore::IndexedDB::KeyType::Array,
+        WebCore::IndexedDB::KeyType::Binary,
+        WebCore::IndexedDB::KeyType::String,
+        WebCore::IndexedDB::KeyType::Date,
+        WebCore::IndexedDB::KeyType::Number,
+        WebCore::IndexedDB::KeyType::Min
+    >;
+};
 
 template<> struct EnumTraits<WebCore::IndexedDB::ObjectStoreOverwriteMode> {
     using values = EnumValues<
@@ -119,6 +149,13 @@ template<> struct EnumTraits<WebCore::IndexedDB::ObjectStoreOverwriteMode> {
     >;
 };
 
-}
+template<> struct EnumTraits<WebCore::IndexedDB::RequestType> {
+    using values = EnumValues<
+        WebCore::IndexedDB::RequestType,
+        WebCore::IndexedDB::RequestType::Open,
+        WebCore::IndexedDB::RequestType::Delete,
+        WebCore::IndexedDB::RequestType::Other
+    >;
+};
 
-#endif // ENABLED(INDEXED_DATABASE)
+} // namespace WTF

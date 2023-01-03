@@ -213,7 +213,7 @@ template<class E>
 class bad_expected_access : public bad_expected_access<void> {
 public:
     explicit bad_expected_access(E val) : val(val) { }
-    virtual const char* what() const noexcept override { return std::exception::what(); }
+    const char* what() const noexcept override { return std::exception::what(); }
     E& error() & { return val; }
     const E& error() const& { return val; }
     E&& error() && { return std::move(val); }
@@ -452,7 +452,7 @@ public:
 
     expected& operator=(const expected& e) { type(e).swap(*this); return *this; }
     expected& operator=(expected&& e) { type(std::move(e)).swap(*this); return *this; }
-    template<class U> expected& operator=(U&& u) { type(std::move(u)).swap(*this); return *this; }
+    template<class U> expected& operator=(U&& u) { type(std::forward<U>(u)).swap(*this); return *this; }
     expected& operator=(const unexpected_type& u) { type(u).swap(*this); return *this; }
     expected& operator=(unexpected_type&& u) { type(std::move(u)).swap(*this); return *this; }
     // template<class... Args> void emplace(Args&&...);

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -34,7 +34,6 @@ import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleIntegerProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ObservableValue;
-import javafx.beans.value.WritableValue;
 import javafx.css.CssMetaData;
 import javafx.css.StyleableIntegerProperty;
 import javafx.css.Styleable;
@@ -57,14 +56,15 @@ import javafx.scene.control.skin.PaginationSkin;
  * setting the style class {@link #STYLE_CLASS_BULLET}.  The
  * {@link #maxPageIndicatorCountProperty() maxPageIndicatorCountProperty} can be used to change
  * the maximum number of page indicators.  The property value can also be changed
- * via CSS using -fx-max-page-indicator-count.
+ * via CSS using {@code -fx-max-page-indicator-count}. By default, page indicator numbering starts from 1 (corresponding to
+ * page index 0).
  *</p>
  *
  * <h2>Page count</h2>
  * <p>
  * The {@link #pageCountProperty() pageCountProperty} controls the number of
  * pages this pagination control has.  If the page count is
- * not known {@link #INDETERMINATE} should be used as the page count.
+ * not known, {@link #INDETERMINATE} should be used as the page count.
  * </p>
  *
  * <h2>Page factory</h2>
@@ -73,7 +73,7 @@ import javafx.scene.control.skin.PaginationSkin;
  * that is called when a page has been selected by the application or
  * the user.  The function is required for the functionality of the pagination
  * control.  The callback function should load and return the contents of the selected page.
- * Null should be returned if the selected page index does not exist.
+ * {@code null} should be returned if the selected page index does not exist.
  * </p>
  *
  * <h2>Creating a Pagination control:</h2>
@@ -86,12 +86,20 @@ import javafx.scene.control.skin.PaginationSkin;
  * pagination.setPageFactory(new Callback&lt;Integer, Node&gt;() {
  *     &#064;Override
  *     public Node call(Integer pageIndex) {
- *         return new Label(pageIndex+1 + ". Lorem ipsum dolor sit amet,\n"
+ *         return new Label(pageIndex + 1 + ". Lorem ipsum dolor sit amet,\n"
  *                      + "consectetur adipiscing elit,\n"
  *                      + "sed do eiusmod tempor incididunt ut\n"
  *                      + "labore et dolore magna aliqua.");
  *     }
  * });</code></pre>
+ * or using lambdas
+ * <pre><code> Pagination pagination = new Pagination(10, 0);
+ * pagination.setPageFactory(pageIndex -&gt;
+ *         new Label(pageIndex + 1 + ". Lorem ipsum dolor sit amet,\n"
+ *                      + "consectetur adipiscing elit,\n"
+ *                      + "sed do eiusmod tempor incididunt ut\n"
+ *                      + "labore et dolore magna aliqua.");
+ * );</code></pre>
  *
  * <img src="doc-files/Pagination.png" alt="Image of the Pagination control">
  *
@@ -148,7 +156,7 @@ public class Pagination extends Control {
         this(INDETERMINATE, 0);
     }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Properties                                                              *
      *                                                                         *
@@ -294,7 +302,7 @@ public class Pagination extends Control {
     public final IntegerProperty currentPageIndexProperty() { return currentPageIndex; }
 
     private ObjectProperty<Callback<Integer, Node>> pageFactory =
-            new SimpleObjectProperty<Callback<Integer, Node>>(this, "pageFactory");
+            new SimpleObjectProperty<>(this, "pageFactory");
 
     /**
      * Sets the page factory callback function.
@@ -323,7 +331,7 @@ public class Pagination extends Control {
     public final ObjectProperty<Callback<Integer, Node>> pageFactoryProperty() { return pageFactory; }
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Methods                                                                 *
      *                                                                         *
@@ -334,7 +342,7 @@ public class Pagination extends Control {
         return new PaginationSkin(this);
     }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      *                         Stylesheet Handling                             *
      *                                                                         *
@@ -344,7 +352,7 @@ public class Pagination extends Control {
 
     private static class StyleableProperties {
         private static final CssMetaData<Pagination,Number> MAX_PAGE_INDICATOR_COUNT =
-            new CssMetaData<Pagination,Number>("-fx-max-page-indicator-count",
+            new CssMetaData<>("-fx-max-page-indicator-count",
                 SizeConverter.getInstance(), DEFAULT_MAX_PAGE_INDICATOR_COUNT) {
 
             @Override
@@ -354,21 +362,22 @@ public class Pagination extends Control {
 
             @Override
             public StyleableProperty<Number> getStyleableProperty(Pagination n) {
-                return (StyleableProperty<Number>)(WritableValue<Number>)n.maxPageIndicatorCountProperty();
+                return (StyleableProperty<Number>)n.maxPageIndicatorCountProperty();
             }
         };
         private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
         static {
             final List<CssMetaData<? extends Styleable, ?>> styleables =
-                new ArrayList<CssMetaData<? extends Styleable, ?>>(Control.getClassCssMetaData());
+                new ArrayList<>(Control.getClassCssMetaData());
             styleables.add(MAX_PAGE_INDICATOR_COUNT);
             STYLEABLES = Collections.unmodifiableList(styleables);
         }
     }
 
     /**
-     * @return The CssMetaData associated with this class, which may include the
-     * CssMetaData of its superclasses.
+     * Gets the {@code CssMetaData} associated with this class, which may include the
+     * {@code CssMetaData} of its superclasses.
+     * @return the {@code CssMetaData}
      * @since JavaFX 8.0
      */
     public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {

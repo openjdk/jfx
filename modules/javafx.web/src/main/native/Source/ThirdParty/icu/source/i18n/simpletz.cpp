@@ -33,6 +33,7 @@
 #include "unicode/gregocal.h"
 #include "unicode/smpdtfmt.h"
 
+#include "cmemory.h"
 #include "gregoimp.h"
 #include "umutex.h"
 
@@ -41,7 +42,7 @@ U_NAMESPACE_BEGIN
 UOBJECT_DEFINE_RTTI_IMPLEMENTATION(SimpleTimeZone)
 
 // Use only for decodeStartRule() and decodeEndRule() where the year is not
-// available. Set February to 29 days to accomodate rules with that date
+// available. Set February to 29 days to accommodate rules with that date
 // and day-of-week-on-or-before-that-date mode (DOW_LE_DOM_MODE).
 // The compareToRule() method adjusts to February 28 in non-leap years.
 //
@@ -230,7 +231,7 @@ SimpleTimeZone::operator=(const SimpleTimeZone &right)
 
 // -------------------------------------
 
-UBool
+bool
 SimpleTimeZone::operator==(const TimeZone& that) const
 {
     return ((this == &that) ||
@@ -242,7 +243,7 @@ SimpleTimeZone::operator==(const TimeZone& that) const
 // -------------------------------------
 
 // Called by TimeZone::createDefault() inside a Mutex - be careful.
-TimeZone*
+SimpleTimeZone*
 SimpleTimeZone::clone() const
 {
     return new SimpleTimeZone(*this);
@@ -288,7 +289,7 @@ SimpleTimeZone::setStartYear(int32_t year)
  *       month, regardless of what day of the week it is (e.g., (-2, 0) is the
  *       next-to-last day of the month).
  *   <li>If dayOfWeek is negative and dayOfWeekInMonth is positive, they specify the
- *       first specified day of the week on or after the specfied day of the month.
+ *       first specified day of the week on or after the specified day of the month.
  *       (e.g., (15, -SUNDAY) is the first Sunday after the 15th of the month
  *       [or the 15th itself if the 15th is a Sunday].)
  *   <li>If dayOfWeek and DayOfWeekInMonth are both negative, they specify the
@@ -508,8 +509,10 @@ SimpleTimeZone::getOffset(uint8_t era, int32_t year, int32_t month, int32_t day,
 }
 
 void
-SimpleTimeZone::getOffsetFromLocal(UDate date, int32_t nonExistingTimeOpt, int32_t duplicatedTimeOpt,
-                                   int32_t& rawOffsetGMT, int32_t& savingsDST, UErrorCode& status) const {
+SimpleTimeZone::getOffsetFromLocal(UDate date, UTimeZoneLocalOption nonExistingTimeOpt,
+                                   UTimeZoneLocalOption duplicatedTimeOpt, int32_t& rawOffsetGMT,
+                                   int32_t& savingsDST, UErrorCode& status) const
+{
     if (U_FAILURE(status)) {
         return;
     }
@@ -582,7 +585,7 @@ SimpleTimeZone::compareToRule(int8_t month, int8_t monthLen, int8_t prevMonthLen
         dayOfWeek = (int8_t)(1 + (dayOfWeek % 7)); // dayOfWeek is one-based
         if (dayOfMonth > monthLen) {
             dayOfMonth = 1;
-            /* When incrementing the month, it is desirible to overflow
+            /* When incrementing the month, it is desirable to overflow
              * from DECEMBER to DECEMBER+1, since we use the result to
              * compare against a real month. Wraparound of the value
              * leads to bug 4173604. */
@@ -1083,7 +1086,7 @@ SimpleTimeZone::checkTransitionRules(UErrorCode& status) const {
     if (U_FAILURE(status)) {
         return;
     }
-    static UMutex gLock = U_MUTEX_INITIALIZER;
+    static UMutex gLock;
     umtx_lock(&gLock);
     if (!transitionRulesInitialized) {
         SimpleTimeZone *ncThis = const_cast<SimpleTimeZone*>(this);

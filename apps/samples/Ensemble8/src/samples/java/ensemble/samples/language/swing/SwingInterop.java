@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2018, Oracle and/or its affiliates.
+ * Copyright (c) 2008, 2021, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -218,8 +218,8 @@ public class SwingInterop extends JPanel {
     }
 
     private Pane createBrowser() {
-        Double widthDouble = new Integer(PANEL_WIDTH).doubleValue();
-        Double heightDouble = new Integer(PANEL_HEIGHT).doubleValue();
+        Double widthDouble = Double.valueOf(PANEL_WIDTH);
+        Double heightDouble = Double.valueOf(PANEL_HEIGHT);
         WebView view = new WebView();
         view.setMinSize(widthDouble, heightDouble);
         view.setPrefSize(widthDouble, heightDouble);

@@ -50,6 +50,10 @@
 GST_DEBUG_CATEGORY_STATIC (audiofilter_dbg);
 #define GST_CAT_DEFAULT audiofilter_dbg
 
+/* cached quark to avoid contention on the global quark table lock */
+#define META_TAG_AUDIO meta_tag_audio_quark
+static GQuark meta_tag_audio_quark;
+
 static GstStateChangeReturn gst_audio_filter_change_state (GstElement * element,
     GstStateChange transition);
 static gboolean gst_audio_filter_set_caps (GstBaseTransform * btrans,
@@ -67,8 +71,8 @@ G_DEFINE_ABSTRACT_TYPE_WITH_CODE (GstAudioFilter, gst_audio_filter,
     GST_TYPE_BASE_TRANSFORM, do_init);
 
 static gboolean
-gst_audio_filter_transform_meta (GstBaseTransform * trans, GstBuffer * inbuf,
-    GstMeta * meta, GstBuffer * outbuf)
+gst_audio_filter_transform_meta (GstBaseTransform * trans, GstBuffer * outbuf,
+    GstMeta * meta, GstBuffer * inbuf)
 {
   const GstMetaInfo *info = meta->info;
   const gchar *const *tags;
@@ -76,13 +80,12 @@ gst_audio_filter_transform_meta (GstBaseTransform * trans, GstBuffer * inbuf,
   tags = gst_meta_api_type_get_tags (info->api);
 
   if (!tags || (g_strv_length ((gchar **) tags) == 1
-          && gst_meta_api_type_has_tag (info->api,
-              g_quark_from_string (GST_META_TAG_AUDIO_STR))))
+          && gst_meta_api_type_has_tag (info->api, META_TAG_AUDIO)))
     return TRUE;
 
   return
       GST_BASE_TRANSFORM_CLASS (gst_audio_filter_parent_class)->transform_meta
-      (trans, inbuf, meta, outbuf);
+      (trans, outbuf, meta, inbuf);
 }
 
 static void
@@ -98,6 +101,8 @@ gst_audio_filter_class_init (GstAudioFilterClass * klass)
       GST_DEBUG_FUNCPTR (gst_audio_filter_get_unit_size);
   basetrans_class->transform_meta = gst_audio_filter_transform_meta;
   basetrans_class->submit_input_buffer = gst_audio_filter_submit_input_buffer;
+
+  meta_tag_audio_quark = g_quark_from_static_string (GST_META_TAG_AUDIO_STR);
 }
 
 static void

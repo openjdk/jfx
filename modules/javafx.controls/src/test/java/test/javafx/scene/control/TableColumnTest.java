@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -51,7 +51,6 @@ import java.util.Comparator;
 import java.util.List;
 import javafx.scene.control.CellShim;
 import javafx.scene.control.ContextMenu;
-import javafx.scene.control.Control;
 import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableColumnShim;
@@ -60,7 +59,6 @@ import javafx.scene.control.TableView;
 
 import test.com.sun.javafx.scene.control.test.Person;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import static org.junit.Assert.*;
@@ -77,14 +75,14 @@ public class TableColumnTest {
     private ObservableList<Person> model;
 
     @Before public void setup() {
-        column = new TableColumn<Person,String>("");
+        column = new TableColumn<>("");
         model = FXCollections.observableArrayList(
                 new Person("Humphrey McPhee", 76),
                 new Person("Justice Caldwell", 30),
                 new Person("Orrin Davies", 30),
                 new Person("Emma Wilson", 8)
         );
-        table = new TableView<Person>(model);
+        table = new TableView<>(model);
     }
 
     /*********************************************************************
@@ -141,11 +139,11 @@ public class TableColumnTest {
     }
 
     @Test public void whenTableViewIsChangedChildColumnsAreUpdated() {
-        TableColumn<Person,String> child = new TableColumn<Person,String>();
+        TableColumn<Person,String> child = new TableColumn<>();
         column.getColumns().add(child);
         table.getColumns().add(column);
 
-        TableView<Person> other = new TableView<Person>();
+        TableView<Person> other = new TableView<>();
         table.getColumns().clear();
         other.getColumns().add(column);
 
@@ -319,7 +317,7 @@ public class TableColumnTest {
     }
 
     @Test public void childVisibleChangesAccordingToParentVisibleWhenParentVisibleIsBound() {
-        TableColumn<Person,String> child = new TableColumn<Person,String>();
+        TableColumn<Person,String> child = new TableColumn<>();
         column.getColumns().add(child);
         BooleanProperty other = new SimpleBooleanProperty(false);
         column.visibleProperty().bind(other);
@@ -364,7 +362,7 @@ public class TableColumnTest {
 
     @Test public void contextMenuCanBeBound() {
         ContextMenu ctx = new ContextMenu();
-        ObjectProperty<ContextMenu> other = new SimpleObjectProperty<ContextMenu>(ctx);
+        ObjectProperty<ContextMenu> other = new SimpleObjectProperty<>(ctx);
         column.contextMenuProperty().bind(other);
         assertSame(ctx, column.getContextMenu());
         assertSame(ctx, column.contextMenuProperty().get());
@@ -410,7 +408,7 @@ public class TableColumnTest {
     @Test public void cellValueFactoryCanBeBound() {
         CellValueFactory<Person,String> factory = param -> param.getValue().firstNameProperty();
         ObjectProperty<CellValueFactory<Person,String>> other =
-                new SimpleObjectProperty<CellValueFactory<Person, String>>(factory);
+                new SimpleObjectProperty<>(factory);
         column.cellValueFactoryProperty().bind(other);
         assertSame(factory, column.getCellValueFactory());
         assertSame(factory, column.cellValueFactoryProperty().get());
@@ -449,7 +447,7 @@ public class TableColumnTest {
     @Test public void cellFactoryCanBeBound() {
         CellFactory<Person,String> factory = param -> null;
         ObjectProperty<CellFactory<Person,String>> other =
-                new SimpleObjectProperty<CellFactory<Person, String>>(factory);
+                new SimpleObjectProperty<>(factory);
         column.cellFactoryProperty().bind(other);
         assertSame(factory, column.getCellFactory());
         assertSame(factory, column.cellFactoryProperty().get());
@@ -462,10 +460,9 @@ public class TableColumnTest {
      * minWidth Tests                                                           *
      ***************************************************************************/
 
-    @Ignore ("Fails with hardcoded value of 10")
-    @Test public void minWidthIs_USE_COMPUTED_SIZE_ByDefault() {
-        assertEquals(Control.USE_COMPUTED_SIZE, column.getMinWidth(), 0);
-        assertEquals(Control.USE_COMPUTED_SIZE, column.minWidthProperty().get(), 0);
+    @Test public void minWidthIs_DEFAULT_MIN_WIDTH_ByDefault() {
+        assertEquals(TableColumnShim.DEFAULT_MIN_WIDTH, column.getMinWidth(), 0);
+        assertEquals(TableColumnShim.DEFAULT_MIN_WIDTH, column.minWidthProperty().get(), 0);
     }
 
     @Test public void minWidthCanBeSet() {
@@ -494,10 +491,9 @@ public class TableColumnTest {
      * maxWidth Tests                                                           *
      ***************************************************************************/
 
-    @Ignore ("Fails with hardcoded value of 5000")
-    @Test public void maxWidthIs_USE_COMPUTED_SIZE_ByDefault() {
-        assertEquals(Control.USE_COMPUTED_SIZE, column.getMaxWidth(), 0);
-        assertEquals(Control.USE_COMPUTED_SIZE, column.maxWidthProperty().get(), 0);
+    @Test public void maxWidthIs_DEFAULT_MAX_WIDTH_ByDefault() {
+        assertEquals(TableColumnShim.DEFAULT_MAX_WIDTH, column.getMaxWidth(), 0);
+        assertEquals(TableColumnShim.DEFAULT_MAX_WIDTH, column.maxWidthProperty().get(), 0);
     }
 
     @Test public void maxWidthCanBeSet() {
@@ -526,10 +522,9 @@ public class TableColumnTest {
      * prefWidth Tests                                                          *
      ***************************************************************************/
 
-    @Ignore ("Fails with hardcoded value of 80")
-    @Test public void prefWidthIs_USE_COMPUTED_SIZE_ByDefault() {
-        assertEquals(Control.USE_COMPUTED_SIZE, column.getPrefWidth(), 0);
-        assertEquals(Control.USE_COMPUTED_SIZE, column.prefWidthProperty().get(), 0);
+    @Test public void prefWidthIs_DEFAULT_WIDTH_ByDefault() {
+        assertEquals(TableColumnShim.DEFAULT_WIDTH, column.getPrefWidth(), 0);
+        assertEquals(TableColumnShim.DEFAULT_WIDTH, column.prefWidthProperty().get(), 0);
     }
 
     @Test public void prefWidthCanBeSet() {
@@ -651,7 +646,7 @@ public class TableColumnTest {
 
     @Test public void sortTypeCanBeBound() {
         ObjectProperty<TableColumn.SortType> other =
-                new SimpleObjectProperty<TableColumn.SortType>(TableColumn.SortType.DESCENDING);
+                new SimpleObjectProperty<>(TableColumn.SortType.DESCENDING);
         column.sortTypeProperty().bind(other);
         assertSame(TableColumn.SortType.DESCENDING, column.getSortType());
         assertSame(TableColumn.SortType.DESCENDING, column.sortTypeProperty().get());
@@ -756,7 +751,7 @@ public class TableColumnTest {
     @Test public void comparatorCanBeBound() {
         Comparator<String> comparator = (o1, o2) -> o1.compareTo(o2);
         ObjectProperty<Comparator<String>> other =
-                new SimpleObjectProperty<Comparator<String>>(comparator);
+                new SimpleObjectProperty<>(comparator);
         column.comparatorProperty().bind(other);
         assertSame(comparator, column.getComparator());
         assertSame(comparator, column.comparatorProperty().get());
@@ -806,7 +801,7 @@ public class TableColumnTest {
                 event -> {
                 };
         ObjectProperty<EventHandler<TableColumn.CellEditEvent<Person,String>>> other =
-                new SimpleObjectProperty<EventHandler<TableColumn.CellEditEvent<Person, String>>>(handler);
+                new SimpleObjectProperty<>(handler);
         column.onEditStartProperty().bind(other);
         assertSame(handler, column.getOnEditStart());
         assertSame(handler, column.onEditStartProperty().get());
@@ -856,7 +851,7 @@ public class TableColumnTest {
                 event -> {
                 };
         ObjectProperty<EventHandler<TableColumn.CellEditEvent<Person,String>>> other =
-                new SimpleObjectProperty<EventHandler<TableColumn.CellEditEvent<Person, String>>>(handler);
+                new SimpleObjectProperty<>(handler);
         column.onEditCancelProperty().bind(other);
         assertSame(handler, column.getOnEditCancel());
         assertSame(handler, column.onEditCancelProperty().get());
@@ -906,7 +901,7 @@ public class TableColumnTest {
                 event -> {
                 };
         ObjectProperty<EventHandler<TableColumn.CellEditEvent<Person,String>>> other =
-                new SimpleObjectProperty<EventHandler<TableColumn.CellEditEvent<Person, String>>>(handler);
+                new SimpleObjectProperty<>(handler);
         column.onEditCommitProperty().bind(other);
         assertSame(handler, column.getOnEditCommit());
         assertSame(handler, column.onEditCommitProperty().get());
@@ -1030,61 +1025,60 @@ public class TableColumnTest {
     @Test public void defaultOnEditCommitHandlerWillSaveToWritableValue() {
         table.getColumns().add(column);
         column.setCellValueFactory(param -> param.getValue().firstNameProperty());
-        TablePosition<Person,String> pos = new TablePosition<Person, String>(table, 0, column);
+        TablePosition<Person,String> pos = new TablePosition<>(table, 0, column);
         EventType<TableColumn.CellEditEvent<Person,String>> eventType = TableColumn.editCommitEvent();
-        column.getOnEditCommit().handle(new TableColumn.CellEditEvent<Person,String>(
-                table, pos, (EventType)eventType, "Richard Bair"));
+        column.getOnEditCommit().handle(new TableColumn.CellEditEvent<>(
+                table, pos, eventType, "Richard Bair"));
         assertEquals("Richard Bair", table.getItems().get(0).getFirstName());
     }
 
     @Test public void defaultOnEditCommitHandlerWillIgnoreReadOnlyValue() {
-        TableColumn<Person,Number> ageColumn = new TableColumn<Person,Number>();
+        TableColumn<Person,Number> ageColumn = new TableColumn<>();
         table.getColumns().add(ageColumn);
         ageColumn.setCellValueFactory(param -> param.getValue().ageProperty());
-        TablePosition<Person,Number> pos = new TablePosition<Person, Number>(table, 0, ageColumn);
+        TablePosition<Person,Number> pos = new TablePosition<>(table, 0, ageColumn);
         EventType<TableColumn.CellEditEvent<Person,Number>> eventType = TableColumn.editCommitEvent();
-        ageColumn.getOnEditCommit().handle(new TableColumn.CellEditEvent<Person,Number>(
-                table, pos, (EventType)eventType, 109));
+        ageColumn.getOnEditCommit().handle(new TableColumn.CellEditEvent<>(
+                table, pos, eventType, 109));
         assertEquals(76, table.getItems().get(0).getAge());
     }
 
-    @Test(expected=NullPointerException.class)
+    @Test
     public void defaultOnEditCommitHandlerDealsWithNullTableView() {
         table.getColumns().add(column);
         column.setCellValueFactory(param -> param.getValue().firstNameProperty());
-        TablePosition<Person,String> pos = new TablePosition<Person, String>(table, 0, column);
+        TablePosition<Person,String> pos = new TablePosition<>(table, 0, column);
         EventType<TableColumn.CellEditEvent<Person,String>> eventType = TableColumn.editCommitEvent();
-        column.getOnEditCommit().handle(new TableColumn.CellEditEvent<Person, String>(
-                null, pos, (EventType) eventType, "Richard Bair"));
+        column.getOnEditCommit().handle(new TableColumn.CellEditEvent<>(
+                null, pos, eventType, "Richard Bair"));
     }
 
-    @Test(expected=NullPointerException.class)
+    @Test
     public void defaultOnEditCommitHandlerDealsWithNullTablePosition() {
         table.getColumns().add(column);
         column.setCellValueFactory(param -> param.getValue().firstNameProperty());
-        TablePosition<Person,String> pos = new TablePosition<Person, String>(table, 0, column);
         EventType<TableColumn.CellEditEvent<Person,String>> eventType = TableColumn.editCommitEvent();
-        column.getOnEditCommit().handle(new TableColumn.CellEditEvent<Person, String>(
-                table, null, (EventType) eventType, "Richard Bair"));
+        column.getOnEditCommit().handle(new TableColumn.CellEditEvent<>(
+                table, null, eventType, "Richard Bair"));
     }
 
     @Test public void defaultOnEditCommitHandlerDealsWithInvalidTablePosition_indexIsNegative() {
         table.getColumns().add(column);
         column.setCellValueFactory(param -> param.getValue().firstNameProperty());
-        TablePosition<Person,String> pos = new TablePosition<Person, String>(table, -1, column);
+        TablePosition<Person,String> pos = new TablePosition<>(table, -1, column);
         EventType<TableColumn.CellEditEvent<Person,String>> eventType = TableColumn.editCommitEvent();
-        column.getOnEditCommit().handle(new TableColumn.CellEditEvent<Person,String>(
-                table, pos, (EventType)eventType, "Richard Bair"));
+        column.getOnEditCommit().handle(new TableColumn.CellEditEvent<>(
+                table, pos, eventType, "Richard Bair"));
         assertEquals("Humphrey McPhee", table.getItems().get(0).getFirstName());
     }
 
     @Test public void defaultOnEditCommitHandlerDealsWithInvalidTablePosition_indexIsTooLarge() {
         table.getColumns().add(column);
         column.setCellValueFactory(param -> param.getValue().firstNameProperty());
-        TablePosition<Person,String> pos = new TablePosition<Person, String>(table, 100, column);
+        TablePosition<Person,String> pos = new TablePosition<>(table, 100, column);
         EventType<TableColumn.CellEditEvent<Person,String>> eventType = TableColumn.editCommitEvent();
-        column.getOnEditCommit().handle(new TableColumn.CellEditEvent<Person, String>(
-                table, pos, (EventType) eventType, "Richard Bair"));
+        column.getOnEditCommit().handle(new TableColumn.CellEditEvent<>(
+                table, pos, eventType, "Richard Bair"));
         assertEquals("Humphrey McPhee", table.getItems().get(0).getFirstName());
     }
 
@@ -1123,7 +1117,6 @@ public class TableColumnTest {
         assertSame(wilma, items.get(2));
     }
 
-    @Ignore("This started failing when I upgraded to Java 7")
     @Test public void sortingMixOfComparableAndNonComparable() {
         Person fred = new Person("Fred", 36);
         Person wilma = new Person("Wilma", 34);
@@ -1190,10 +1183,10 @@ public class TableColumnTest {
     }
 
     @Test public void defaultCellFactorySetsGraphicToItemWhenItemIsNode() {
-        TableView<Node> nodeTable = new TableView<Node>();
+        TableView<Node> nodeTable = new TableView<>();
         Rectangle rect = new Rectangle();
         nodeTable.getItems().add(rect);
-        TableColumn<Node,Node> nodeColumn = new TableColumn<Node,Node>();
+        TableColumn<Node,Node> nodeColumn = new TableColumn<>();
         nodeTable.getColumns().add(nodeColumn);
         TableCell<Node,Node> cell = nodeColumn.getCellFactory().call(nodeColumn);
         cell.updateIndex(0);
@@ -1202,10 +1195,10 @@ public class TableColumnTest {
     }
 
     @Test public void defaultCellFactorySetsTextToNullWhenItemIsNode() {
-        TableView<Node> nodeTable = new TableView<Node>();
+        TableView<Node> nodeTable = new TableView<>();
         Rectangle rect = new Rectangle();
         nodeTable.getItems().add(rect);
-        TableColumn<Node,Node> nodeColumn = new TableColumn<Node,Node>();
+        TableColumn<Node,Node> nodeColumn = new TableColumn<>();
         nodeTable.getColumns().add(nodeColumn);
         TableCell<Node,Node> cell = nodeColumn.getCellFactory().call(nodeColumn);
         cell.updateIndex(0);

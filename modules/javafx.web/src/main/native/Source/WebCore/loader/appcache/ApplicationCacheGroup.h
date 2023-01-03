@@ -31,6 +31,7 @@
 #include <wtf/HashMap.h>
 #include <wtf/HashSet.h>
 #include <wtf/URL.h>
+#include <wtf/WeakPtr.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
@@ -48,7 +49,7 @@ enum ApplicationCacheUpdateOption {
     ApplicationCacheUpdateWithoutBrowsingContext
 };
 
-class ApplicationCacheGroup {
+class ApplicationCacheGroup : public CanMakeWeakPtr<ApplicationCacheGroup> {
     WTF_MAKE_NONCOPYABLE(ApplicationCacheGroup);
     WTF_MAKE_FAST_ALLOCATED;
 public:
@@ -158,7 +159,7 @@ private:
 
     // Frame used for fetching resources when updating.
     // FIXME: An update started by a particular frame should not stop if it is destroyed, but there are other frames associated with the same cache group.
-    Frame* m_frame { nullptr };
+    WeakPtr<Frame> m_frame;
 
     // An obsolete cache group is never stored, but the opposite is not true - storing may fail for multiple reasons, such as exceeding disk quota.
     unsigned m_storageID { 0 };
@@ -180,7 +181,7 @@ private:
 
     RefPtr<ApplicationCacheResource> m_currentResource;
     RefPtr<ApplicationCacheResourceLoader> m_entryLoader;
-    unsigned long m_currentResourceIdentifier;
+    ResourceLoaderIdentifier m_currentResourceIdentifier;
 
     RefPtr<ApplicationCacheResource> m_manifestResource;
     RefPtr<ApplicationCacheResourceLoader> m_manifestLoader;

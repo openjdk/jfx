@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -36,7 +36,6 @@ import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.security.AccessController;
@@ -81,7 +80,9 @@ public class LauncherImpl {
     private static final boolean trace = false;
 
     // set system property javafx.verbose to true to make the launcher noisy
-    private static final boolean verbose;
+    @SuppressWarnings("removal")
+    private static final boolean verbose = AccessController.doPrivileged((PrivilegedAction<Boolean>) () ->
+        Boolean.getBoolean("javafx.verbose"));
 
     private static final String MF_MAIN_CLASS = "Main-Class";
     private static final String MF_JAVAFX_MAIN = "JavaFX-Application-Class";
@@ -117,11 +118,6 @@ public class LauncherImpl {
     // is started.
     private static ClassLoader savedMainCcl = null;
 
-    static {
-        verbose = AccessController.doPrivileged((PrivilegedAction<Boolean>) () ->
-                Boolean.getBoolean("javafx.verbose"));
-    }
-
     /**
      * This method is called by the Application.launch method.
      * It must not be called more than once or an exception will be thrown.
@@ -139,6 +135,7 @@ public class LauncherImpl {
         Class<? extends Preloader> preloaderClass = savedPreloaderClass;
 
         if (preloaderClass == null) {
+            @SuppressWarnings("removal")
             String preloaderByProperty = AccessController.doPrivileged((PrivilegedAction<String>) () ->
                     System.getProperty("javafx.preloader"));
             if (preloaderByProperty != null) {
@@ -171,6 +168,9 @@ public class LauncherImpl {
             final Class<? extends Preloader> preloaderClass,
             final String[] args) {
 
+        if (com.sun.glass.ui.Application.isEventThread()) {
+            throw new IllegalStateException("Application launch must not be called on the JavaFX Application Thread");
+        }
         if (launchCalled.getAndSet(true)) {
             throw new IllegalStateException("Application launch must not be called more than once");
         }
@@ -532,7 +532,7 @@ public class LauncherImpl {
 
             // don't bother if there's nothing to add
             if (!jcpList.isEmpty()) {
-                ArrayList<URL> urlList = new ArrayList<URL>();
+                ArrayList<URL> urlList = new ArrayList<>();
 
                 // prepend the existing classpath
                 // this will already have the app jar, so no need to worry about it
@@ -555,7 +555,7 @@ public class LauncherImpl {
                 // and finally append the JavaFX-Class-Path entries
                 urlList.addAll(jcpList);
 
-                URL[] urls = (URL[])urlList.toArray(new URL[0]);
+                URL[] urls = urlList.toArray(new URL[0]);
                 if (verbose) {
                     System.err.println("===== URL list");
                     for (int i = 0; i < urls.length; i++) {
@@ -574,38 +574,31 @@ public class LauncherImpl {
         return null;
     }
 
-    private static String decodeBase64(String inp) throws IOException {
+    private static String decodeBase64(String inp) {
         return new String(Base64.getDecoder().decode(inp));
     }
 
     private static String[] getAppArguments(Attributes attrs) {
         List args = new LinkedList();
 
-        try {
-            int idx = 1;
-            String argNamePrefix = MF_JAVAFX_ARGUMENT_PREFIX;
-            while (attrs.getValue(argNamePrefix + idx) != null) {
-                args.add(decodeBase64(attrs.getValue(argNamePrefix + idx)));
-                idx++;
-            }
+        int idx = 1;
+        String argNamePrefix = MF_JAVAFX_ARGUMENT_PREFIX;
+        while (attrs.getValue(argNamePrefix + idx) != null) {
+            args.add(decodeBase64(attrs.getValue(argNamePrefix + idx)));
+            idx++;
+        }
 
-            String paramNamePrefix = MF_JAVAFX_PARAMETER_NAME_PREFIX;
-            String paramValuePrefix = MF_JAVAFX_PARAMETER_VALUE_PREFIX;
-            idx = 1;
-            while (attrs.getValue(paramNamePrefix + idx) != null) {
-                String k = decodeBase64(attrs.getValue(paramNamePrefix + idx));
-                String v = null;
-                if (attrs.getValue(paramValuePrefix + idx) != null) {
-                    v = decodeBase64(attrs.getValue(paramValuePrefix + idx));
-                }
-                args.add("--" + k + "=" + (v != null ? v : ""));
-                idx++;
+        String paramNamePrefix = MF_JAVAFX_PARAMETER_NAME_PREFIX;
+        String paramValuePrefix = MF_JAVAFX_PARAMETER_VALUE_PREFIX;
+        idx = 1;
+        while (attrs.getValue(paramNamePrefix + idx) != null) {
+            String k = decodeBase64(attrs.getValue(paramNamePrefix + idx));
+            String v = null;
+            if (attrs.getValue(paramValuePrefix + idx) != null) {
+                v = decodeBase64(attrs.getValue(paramValuePrefix + idx));
             }
-        } catch (IOException ioe) {
-            if (verbose) {
-                System.err.println("Failed to extract application parameters");
-            }
-            ioe.printStackTrace();
+            args.add("--" + k + "=" + (v != null ? v : ""));
+            idx++;
         }
 
         return (String[]) args.toArray(new String[0]);
@@ -787,7 +780,7 @@ public class LauncherImpl {
                 if (currentPreloader != null) {
                     if (simulateSlowProgress) {
                         for (int i = 0; i < 100; i++) {
-                            notifyProgress(currentPreloader, (double)i / 100.0);
+                            notifyProgress(currentPreloader, i / 100.0);
                             Thread.sleep(10);
                         }
                     }

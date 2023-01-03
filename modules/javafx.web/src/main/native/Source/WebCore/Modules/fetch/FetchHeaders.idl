@@ -29,18 +29,16 @@
 typedef (sequence<sequence<ByteString>> or record<ByteString, ByteString>) HeadersInit;
 
 [
-    EnabledAtRuntime=FetchAPI,
     Exposed=(Window,Worker),
-    ImplementationLacksVTable,
     InterfaceName=Headers,
-    Constructor(optional HeadersInit init),
-    ConstructorMayThrowException,
 ] interface FetchHeaders {
-    [MayThrowException] void append(ByteString name, ByteString value);
-    [MayThrowException, ImplementedAs=remove] void delete(ByteString name);
-    [MayThrowException] ByteString? get(ByteString name);
-    [MayThrowException] boolean has(ByteString name);
-    [MayThrowException] void set(ByteString name, ByteString value);
+    constructor(optional HeadersInit init);
+
+    undefined append(ByteString name, ByteString value);
+    [ImplementedAs=remove] undefined delete(ByteString name);
+    ByteString? get(ByteString name);
+    boolean has(ByteString name);
+    undefined set(ByteString name, ByteString value);
 
     iterable<ByteString, ByteString>;
 };

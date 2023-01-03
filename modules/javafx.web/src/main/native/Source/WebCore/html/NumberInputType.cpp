@@ -32,6 +32,8 @@
 #include "config.h"
 #include "NumberInputType.h"
 
+#include "Decimal.h"
+#include "ElementInlines.h"
 #include "HTMLInputElement.h"
 #include "HTMLNames.h"
 #include "HTMLParserIdioms.h"
@@ -40,6 +42,7 @@
 #include "LocalizedStrings.h"
 #include "PlatformLocale.h"
 #include "RenderTextControl.h"
+#include "StepRange.h"
 #include <limits>
 #include <wtf/ASCIICType.h>
 #include <wtf/MathExtras.h>
@@ -144,7 +147,10 @@ StepRange NumberInputType::createStepRange(AnyStepHandling anyStepHandling) cons
     static NeverDestroyed<const StepRange::StepDescription> stepDescription(numberDefaultStep, numberDefaultStepBase, numberStepScaleFactor);
 
     ASSERT(element());
-    const Decimal stepBase = parseToDecimalForNumberType(element()->attributeWithoutSynchronization(minAttr), numberDefaultStepBase);
+    Decimal stepBase = parseToDecimalForNumberType(element()->attributeWithoutSynchronization(minAttr), Decimal::nan());
+    if (stepBase.isNaN())
+        stepBase = parseToDecimalForNumberType(element()->attributeWithoutSynchronization(valueAttr), numberDefaultStepBase);
+
     // FIXME: We should use numeric_limits<double>::max for number input type.
     const Decimal floatMax = Decimal::fromDouble(std::numeric_limits<float>::max());
     const Element& element = *this->element();
@@ -206,11 +212,6 @@ float NumberInputType::decorationWidth() const
         width += spinButton->computedStyle()->logicalWidth().value();
     }
     return width;
-}
-
-bool NumberInputType::isSteppable() const
-{
-    return true;
 }
 
 auto NumberInputType::handleKeydownEvent(KeyboardEvent& event) -> ShouldCallBaseEventHandler
@@ -286,11 +287,6 @@ String NumberInputType::badInputText() const
 }
 
 bool NumberInputType::supportsPlaceholder() const
-{
-    return true;
-}
-
-bool NumberInputType::isNumberField() const
 {
     return true;
 }

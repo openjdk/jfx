@@ -53,7 +53,7 @@ U_NAMESPACE_BEGIN
 //
 //------------------------------------------------------------------------------
 RegexCompile::RegexCompile(RegexPattern *rxp, UErrorCode &status) :
-   fParenStack(status), fSetStack(status), fSetOpStack(status)
+   fParenStack(status), fSetStack(uprv_deleteUObject, nullptr, status), fSetOpStack(status)
 {
     // Lazy init of all shared global sets (needed for init()'s empty text)
     RegexStaticSets::initGlobals(&status);
@@ -148,9 +148,6 @@ void    RegexCompile::compile(
     if (U_FAILURE(*fStatus)) {
         return;
     }
-    fRXPat->fStaticSets     = RegexStaticSets::gStaticSets->fPropSets;
-    fRXPat->fStaticSets8    = RegexStaticSets::gStaticSets->fPropSets8;
-
 
     // Initialize the pattern scanning state machine
     fPatternLength = utext_nativeLength(pat);
@@ -281,11 +278,6 @@ void    RegexCompile::compile(
 
     if (U_FAILURE(*fStatus)) {
         // Bail out if the pattern had errors.
-        //   Set stack cleanup:  a successful compile would have left it empty,
-        //   but errors can leave temporary sets hanging around.
-        while (!fSetStack.empty()) {
-            delete (UnicodeSet *)fSetStack.pop();
-        }
         return;
     }
 
@@ -476,7 +468,7 @@ UBool RegexCompile::doParseActions(int32_t action)
             appendOp(URX_START_CAPTURE, varsLoc);
             appendOp(URX_NOP, 0);
 
-            // On the Parentheses stack, start a new frame and add the postions
+            // On the Parentheses stack, start a new frame and add the positions
             //   of the two NOPs.  Depending on what follows in the pattern, the
             //   NOPs may be changed to SAVE_STATE or JMP ops, with a target
             //   address of the end of the parenthesized group.
@@ -490,6 +482,12 @@ UBool RegexCompile::doParseActions(int32_t action)
 
             // If this is a named capture group, add the name->group number mapping.
             if (fCaptureName != NULL) {
+                if (!fRXPat->initNamedCaptureMap()) {
+                    if (U_SUCCESS(*fStatus)) {
+                        error(fRXPat->fDeferredStatus);
+                    }
+                    break;
+                }
                 int32_t groupNumber = fRXPat->fGroupMap->size();
                 int32_t previousMapping = uhash_puti(fRXPat->fNamedCaptureMap, fCaptureName, groupNumber, fStatus);
                 fCaptureName = NULL;    // hash table takes ownership of the name (key) string.
@@ -512,7 +510,7 @@ UBool RegexCompile::doParseActions(int32_t action)
             appendOp(URX_NOP, 0);
             appendOp(URX_NOP, 0);
 
-            // On the Parentheses stack, start a new frame and add the postions
+            // On the Parentheses stack, start a new frame and add the positions
             //   of the two NOPs.
             fParenStack.push(fModeFlags, *fStatus);                       // Match mode state
             fParenStack.push(plain,      *fStatus);                       // Begin a new frame.
@@ -537,7 +535,7 @@ UBool RegexCompile::doParseActions(int32_t action)
             appendOp(URX_STO_SP, varLoc);
             appendOp(URX_NOP, 0);
 
-            // On the Parentheses stack, start a new frame and add the postions
+            // On the Parentheses stack, start a new frame and add the positions
             //   of the two NOPs.  Depending on what follows in the pattern, the
             //   NOPs may be changed to SAVE_STATE or JMP ops, with a target
             //   address of the end of the parenthesized group.
@@ -554,14 +552,14 @@ UBool RegexCompile::doParseActions(int32_t action)
         //
         //   Note:   Addition of transparent input regions, with the need to
         //           restore the original regions when failing out of a lookahead
-        //           block, complicated this sequence.  Some conbined opcodes
+        //           block, complicated this sequence.  Some combined opcodes
         //           might make sense - or might not, lookahead aren't that common.
         //
         //      Caution:  min match length optimization knows about this
         //               sequence; don't change without making updates there too.
         //
         // Compiles to
-        //    1    START_LA     dataLoc     Saves SP, Input Pos
+        //    1    LA_START     dataLoc     Saves SP, Input Pos, Active input region.
         //    2.   STATE_SAVE   4            on failure of lookahead, goto 4
         //    3    JMP          6           continue ...
         //
@@ -575,10 +573,14 @@ UBool RegexCompile::doParseActions(int32_t action)
         //    8.     code for parenthesized stuff.
         //    9.   LA_END
         //
-        //  Two data slots are reserved, for saving the stack ptr and the input position.
+        //  Four data slots are reserved, for saving state on entry to the look-around
+        //    0:   stack pointer on entry.
+        //    1:   input position on entry.
+        //    2:   fActiveStart, the active bounds start on entry.
+        //    3:   fActiveLimit, the active bounds limit on entry.
         {
             fixLiterals();
-            int32_t dataLoc = allocateData(2);
+            int32_t dataLoc = allocateData(4);
             appendOp(URX_LA_START, dataLoc);
             appendOp(URX_STATE_SAVE, fRXPat->fCompiledPat->size()+ 2);
             appendOp(URX_JMP, fRXPat->fCompiledPat->size()+ 3);
@@ -587,7 +589,7 @@ UBool RegexCompile::doParseActions(int32_t action)
             appendOp(URX_NOP, 0);
             appendOp(URX_NOP, 0);
 
-            // On the Parentheses stack, start a new frame and add the postions
+            // On the Parentheses stack, start a new frame and add the positions
             //   of the NOPs.
             fParenStack.push(fModeFlags, *fStatus);                       // Match mode state
             fParenStack.push(lookAhead, *fStatus);                        // Frame type.
@@ -599,23 +601,28 @@ UBool RegexCompile::doParseActions(int32_t action)
     case doOpenLookAheadNeg:
         // Negated Lookahead.   (?! stuff )
         // Compiles to
-        //    1.    START_LA    dataloc
+        //    1.    LA_START    dataloc
         //    2.    SAVE_STATE  7         // Fail within look-ahead block restores to this state,
         //                                //   which continues with the match.
         //    3.    NOP                   // Std. Open Paren sequence, for possible '|'
         //    4.       code for parenthesized stuff.
-        //    5.    END_LA                // Cut back stack, remove saved state from step 2.
+        //    5.    LA_END                // Cut back stack, remove saved state from step 2.
         //    6.    BACKTRACK             // code in block succeeded, so neg. lookahead fails.
         //    7.    END_LA                // Restore match region, in case look-ahead was using
         //                                        an alternate (transparent) region.
+        //  Four data slots are reserved, for saving state on entry to the look-around
+        //    0:   stack pointer on entry.
+        //    1:   input position on entry.
+        //    2:   fActiveStart, the active bounds start on entry.
+        //    3:   fActiveLimit, the active bounds limit on entry.
         {
             fixLiterals();
-            int32_t dataLoc = allocateData(2);
+            int32_t dataLoc = allocateData(4);
             appendOp(URX_LA_START, dataLoc);
             appendOp(URX_STATE_SAVE, 0);    // dest address will be patched later.
             appendOp(URX_NOP, 0);
 
-            // On the Parentheses stack, start a new frame and add the postions
+            // On the Parentheses stack, start a new frame and add the positions
             //   of the StateSave and NOP.
             fParenStack.push(fModeFlags, *fStatus);                       // Match mode state
             fParenStack.push(negLookAhead, *fStatus);                    // Frame type
@@ -644,14 +651,16 @@ UBool RegexCompile::doParseActions(int32_t action)
             //          Allocate a block of matcher data, to contain (when running a match)
             //              0:    Stack ptr on entry
             //              1:    Input Index on entry
-            //              2:    Start index of match current match attempt.
-            //              3:    Original Input String len.
+            //              2:    fActiveStart, the active bounds start on entry.
+            //              3:    fActiveLimit, the active bounds limit on entry.
+            //              4:    Start index of match current match attempt.
+            //          The first four items must match the layout of data for LA_START / LA_END
 
             // Generate match code for any pending literals.
             fixLiterals();
 
             // Allocate data space
-            int32_t dataLoc = allocateData(4);
+            int32_t dataLoc = allocateData(5);
 
             // Emit URX_LB_START
             appendOp(URX_LB_START, dataLoc);
@@ -665,7 +674,7 @@ UBool RegexCompile::doParseActions(int32_t action)
             appendOp(URX_NOP, 0);
             appendOp(URX_NOP, 0);
 
-            // On the Parentheses stack, start a new frame and add the postions
+            // On the Parentheses stack, start a new frame and add the positions
             //   of the URX_LB_CONT and the NOP.
             fParenStack.push(fModeFlags, *fStatus);                       // Match mode state
             fParenStack.push(lookBehind, *fStatus);                       // Frame type
@@ -696,14 +705,16 @@ UBool RegexCompile::doParseActions(int32_t action)
             //          Allocate a block of matcher data, to contain (when running a match)
             //              0:    Stack ptr on entry
             //              1:    Input Index on entry
-            //              2:    Start index of match current match attempt.
-            //              3:    Original Input String len.
+            //              2:    fActiveStart, the active bounds start on entry.
+            //              3:    fActiveLimit, the active bounds limit on entry.
+            //              4:    Start index of match current match attempt.
+            //          The first four items must match the layout of data for LA_START / LA_END
 
             // Generate match code for any pending literals.
             fixLiterals();
 
             // Allocate data space
-            int32_t dataLoc = allocateData(4);
+            int32_t dataLoc = allocateData(5);
 
             // Emit URX_LB_START
             appendOp(URX_LB_START, dataLoc);
@@ -718,7 +729,7 @@ UBool RegexCompile::doParseActions(int32_t action)
             appendOp(URX_NOP, 0);
             appendOp(URX_NOP, 0);
 
-            // On the Parentheses stack, start a new frame and add the postions
+            // On the Parentheses stack, start a new frame and add the positions
             //   of the URX_LB_CONT and the NOP.
             fParenStack.push(fModeFlags, *fStatus);                       // Match mode state
             fParenStack.push(lookBehindN, *fStatus);                      // Frame type
@@ -732,7 +743,7 @@ UBool RegexCompile::doParseActions(int32_t action)
     case doConditionalExpr:
         // Conditionals such as (?(1)a:b)
     case doPerlInline:
-        // Perl inline-condtionals.  (?{perl code}a|b) We're not perl, no way to do them.
+        // Perl inline-conditionals.  (?{perl code}a|b) We're not perl, no way to do them.
         error(U_REGEX_UNIMPLEMENTED);
         break;
 
@@ -993,7 +1004,7 @@ UBool RegexCompile::doParseActions(int32_t action)
 
     case doIntervalInit:
         // The '{' opening an interval quantifier was just scanned.
-        // Init the counter varaiables that will accumulate the values as the digits
+        // Init the counter variables that will accumulate the values as the digits
         //    are scanned.
         fIntervalLow = 0;
         fIntervalUpper = -1;
@@ -1238,10 +1249,13 @@ UBool RegexCompile::doParseActions(int32_t action)
         break;
 
     case doBackslashX:
+        #if  UCONFIG_NO_BREAK_ITERATION==1
+        // Grapheme Cluster Boundary requires ICU break iteration.
+        error(U_UNSUPPORTED_ERROR);
+        #endif
         fixLiterals(FALSE);
         appendOp(URX_BACKSLASH_X, 0);
         break;
-
 
     case doBackslashZ:
         fixLiterals(FALSE);
@@ -1332,7 +1346,8 @@ UBool RegexCompile::doParseActions(int32_t action)
 
     case doCompleteNamedBackRef:
         {
-        int32_t groupNumber = uhash_geti(fRXPat->fNamedCaptureMap, fCaptureName);
+        int32_t groupNumber =
+            fRXPat->fNamedCaptureMap ? uhash_geti(fRXPat->fNamedCaptureMap, fCaptureName) : 0;
         if (groupNumber == 0) {
             // Group name has not been defined.
             //   Could be a forward reference. If we choose to support them at some
@@ -1465,8 +1480,8 @@ UBool RegexCompile::doParseActions(int32_t action)
             case 0x78: /* 'x' */   bit = UREGEX_COMMENTS;         break;
             case 0x2d: /* '-' */   fSetModeFlag = FALSE;          break;
             default:
-                UPRV_UNREACHABLE;   // Should never happen.  Other chars are filtered out
-                                   // by the scanner.
+                UPRV_UNREACHABLE_EXIT;  // Should never happen.  Other chars are filtered out
+                                        // by the scanner.
             }
             if (fSetModeFlag) {
                 fNewModeFlags |= bit;
@@ -1502,9 +1517,9 @@ UBool RegexCompile::doParseActions(int32_t action)
             appendOp(URX_NOP, 0);
             appendOp(URX_NOP, 0);
 
-            // On the Parentheses stack, start a new frame and add the postions
+            // On the Parentheses stack, start a new frame and add the positions
             //   of the two NOPs (a normal non-capturing () frame, except for the
-            //   saving of the orignal mode flags.)
+            //   saving of the original mode flags.)
             fParenStack.push(fModeFlags, *fStatus);
             fParenStack.push(flags, *fStatus);                            // Frame Marker
             fParenStack.push(fRXPat->fCompiledPat->size()-2, *fStatus);   // The first NOP
@@ -1545,15 +1560,15 @@ UBool RegexCompile::doParseActions(int32_t action)
      case doSetBackslash_s:
         {
          UnicodeSet *set = (UnicodeSet *)fSetStack.peek();
-         set->addAll(*RegexStaticSets::gStaticSets->fPropSets[URX_ISSPACE_SET]);
+         set->addAll(RegexStaticSets::gStaticSets->fPropSets[URX_ISSPACE_SET]);
          break;
         }
 
      case doSetBackslash_S:
         {
             UnicodeSet *set = (UnicodeSet *)fSetStack.peek();
-            UnicodeSet SSet(*RegexStaticSets::gStaticSets->fPropSets[URX_ISSPACE_SET]);
-            SSet.complement();
+            UnicodeSet SSet;
+            SSet.addAll(RegexStaticSets::gStaticSets->fPropSets[URX_ISSPACE_SET]).complement();
             set->addAll(SSet);
             break;
         }
@@ -1622,27 +1637,30 @@ UBool RegexCompile::doParseActions(int32_t action)
     case doSetBackslash_w:
         {
             UnicodeSet *set = (UnicodeSet *)fSetStack.peek();
-            set->addAll(*RegexStaticSets::gStaticSets->fPropSets[URX_ISWORD_SET]);
+            set->addAll(RegexStaticSets::gStaticSets->fPropSets[URX_ISWORD_SET]);
             break;
         }
 
     case doSetBackslash_W:
         {
             UnicodeSet *set = (UnicodeSet *)fSetStack.peek();
-            UnicodeSet SSet(*RegexStaticSets::gStaticSets->fPropSets[URX_ISWORD_SET]);
-            SSet.complement();
+            UnicodeSet SSet;
+            SSet.addAll(RegexStaticSets::gStaticSets->fPropSets[URX_ISWORD_SET]).complement();
             set->addAll(SSet);
             break;
         }
 
     case doSetBegin:
-        fixLiterals(FALSE);
-        fSetStack.push(new UnicodeSet(), *fStatus);
-        fSetOpStack.push(setStart, *fStatus);
-        if ((fModeFlags & UREGEX_CASE_INSENSITIVE) != 0) {
-            fSetOpStack.push(setCaseClose, *fStatus);
+        {
+            fixLiterals(FALSE);
+            LocalPointer<UnicodeSet> lpSet(new UnicodeSet(), *fStatus);
+            fSetStack.push(lpSet.orphan(), *fStatus);
+            fSetOpStack.push(setStart, *fStatus);
+            if ((fModeFlags & UREGEX_CASE_INSENSITIVE) != 0) {
+                fSetOpStack.push(setCaseClose, *fStatus);
+            }
+            break;
         }
-        break;
 
     case doSetBeginDifference1:
         //  We have scanned something like [[abc]-[
@@ -1840,7 +1858,7 @@ UBool RegexCompile::doParseActions(int32_t action)
         }
 
     default:
-        UPRV_UNREACHABLE;
+        UPRV_UNREACHABLE_EXIT;
     }
 
     if (U_FAILURE(*fStatus)) {
@@ -1947,17 +1965,17 @@ int32_t RegexCompile::buildOp(int32_t type, int32_t val) {
         return 0;
     }
     if (type < 0 || type > 255) {
-        UPRV_UNREACHABLE;
+        UPRV_UNREACHABLE_EXIT;
     }
     if (val > 0x00ffffff) {
-        UPRV_UNREACHABLE;
+        UPRV_UNREACHABLE_EXIT;
     }
     if (val < 0) {
         if (!(type == URX_RESERVED_OP_N || type == URX_RESERVED_OP)) {
-            UPRV_UNREACHABLE;
+            UPRV_UNREACHABLE_EXIT;
         }
         if (URX_TYPE(val) != 0xff) {
-            UPRV_UNREACHABLE;
+            UPRV_UNREACHABLE_EXIT;
         }
         type = URX_RESERVED_OP_N;
     }
@@ -2285,7 +2303,7 @@ void  RegexCompile::handleCloseParen() {
                 error(U_REGEX_LOOK_BEHIND_LIMIT);
                 break;
             }
-            if (minML == INT32_MAX && maxML == 0) {
+            if (minML == INT32_MAX) {
                 // This condition happens when no match is possible, such as with a
                 // [set] expression containing no elements.
                 // In principle, the generated code to evaluate the expression could be deleted,
@@ -2328,7 +2346,7 @@ void  RegexCompile::handleCloseParen() {
                 error(U_REGEX_LOOK_BEHIND_LIMIT);
                 break;
             }
-            if (minML == INT32_MAX && maxML == 0) {
+            if (minML == INT32_MAX) {
                 // This condition happens when no match is possible, such as with a
                 // [set] expression containing no elements.
                 // In principle, the generated code to evaluate the expression could be deleted,
@@ -2353,7 +2371,7 @@ void  RegexCompile::handleCloseParen() {
 
 
     default:
-        UPRV_UNREACHABLE;
+        UPRV_UNREACHABLE_EXIT;
     }
 
     // remember the next location in the compiled pattern.
@@ -2376,8 +2394,8 @@ void        RegexCompile::compileSet(UnicodeSet *theSet)
         return;
     }
     //  Remove any strings from the set.
-    //  There shoudn't be any, but just in case.
-    //     (Case Closure can add them; if we had a simple case closure avaialble that
+    //  There shouldn't be any, but just in case.
+    //     (Case Closure can add them; if we had a simple case closure available that
     //      ignored strings, that would be better.)
     theSet->removeAllStrings();
     int32_t  setSize = theSet->size();
@@ -2405,9 +2423,14 @@ void        RegexCompile::compileSet(UnicodeSet *theSet)
         {
             //  The set contains two or more chars.  (the normal case)
             //  Put it into the compiled pattern as a set.
+            theSet->freeze();
             int32_t setNumber = fRXPat->fSets->size();
             fRXPat->fSets->addElement(theSet, *fStatus);
-            appendOp(URX_SETREF, setNumber);
+            if (U_SUCCESS(*fStatus)) {
+                appendOp(URX_SETREF, setNumber);
+            } else {
+                delete theSet;
+            }
         }
     }
 }
@@ -2464,7 +2487,7 @@ void        RegexCompile::compileInterval(int32_t InitOp,  int32_t LoopOp)
     fRXPat->fCompiledPat->setElementAt(fIntervalLow, topOfBlock+2);
     fRXPat->fCompiledPat->setElementAt(fIntervalUpper, topOfBlock+3);
 
-    // Apend the CTR_LOOP op.  The operand is the location of the CTR_INIT op.
+    // Append the CTR_LOOP op.  The operand is the location of the CTR_INIT op.
     //   Goes at end of the block being looped over, so just append to the code so far.
     appendOp(LoopOp, topOfBlock);
 
@@ -2558,7 +2581,7 @@ UBool RegexCompile::compileInlineInterval() {
 //             The pattern could match a string beginning with a German sharp-s
 //
 //           To the ordinary case closure for a character c, we add all other
-//           characters cx where the case closure of cx incudes a string form that begins
+//           characters cx where the case closure of cx includes a string form that begins
 //           with the original character c.
 //
 //           This function could be made smarter. The full pattern string is available
@@ -2572,7 +2595,8 @@ void  RegexCompile::findCaseInsensitiveStarters(UChar32 c, UnicodeSet *starterCh
 // Machine Generated below.
 // It may need updating with new versions of Unicode.
 // Intltest test RegexTest::TestCaseInsensitiveStarters will fail if an update is needed.
-// The update tool is here: svn+ssh://source.icu-project.org/repos/icu/tools/trunk/unicode/c/genregexcasing
+// The update tool is here:
+// https://github.com/unicode-org/icu/tree/main/tools/unicode/c/genregexcasing
 
 // Machine Generated Data. Do not hand edit.
     static const UChar32 RECaseFixCodePoints[] = {
@@ -2613,7 +2637,7 @@ void  RegexCompile::findCaseInsensitiveStarters(UChar32 c, UnicodeSet *starterCh
 
     if (c < UCHAR_MIN_VALUE || c > UCHAR_MAX_VALUE) {
         // This function should never be called with an invalid input character.
-        UPRV_UNREACHABLE;
+        UPRV_UNREACHABLE_EXIT;
     } else if (u_hasBinaryProperty(c, UCHAR_CASE_SENSITIVE)) {
         UChar32 caseFoldedC  = u_foldCase(c, U_FOLD_CASE_DEFAULT);
         starterChars->set(caseFoldedC, caseFoldedC);
@@ -2798,8 +2822,8 @@ void   RegexCompile::matchStartType() {
             if (currentLen == 0) {
                 int32_t  sn = URX_VAL(op);
                 U_ASSERT(sn>0 && sn<URX_LAST_SET);
-                const UnicodeSet *s = fRXPat->fStaticSets[sn];
-                fRXPat->fInitialChars->addAll(*s);
+                const UnicodeSet &s = RegexStaticSets::gStaticSets->fPropSets[sn];
+                fRXPat->fInitialChars->addAll(s);
                 numInitialStrings += 2;
             }
             currentLen = safeIncrement(currentLen, 1);
@@ -2811,9 +2835,8 @@ void   RegexCompile::matchStartType() {
         case URX_STAT_SETREF_N:
             if (currentLen == 0) {
                 int32_t  sn = URX_VAL(op);
-                const UnicodeSet *s = fRXPat->fStaticSets[sn];
-                UnicodeSet sc(*s);
-                sc.complement();
+                UnicodeSet sc;
+                sc.addAll(RegexStaticSets::gStaticSets->fPropSets[sn]).complement();
                 fRXPat->fInitialChars->addAll(sc);
                 numInitialStrings += 2;
             }
@@ -2899,7 +2922,7 @@ void   RegexCompile::matchStartType() {
             break;
 
 
-        case URX_BACKSLASH_X:   // Grahpeme Cluster.  Minimum is 1, max unbounded.
+        case URX_BACKSLASH_X:   // Grapheme Cluster.  Minimum is 1, max unbounded.
         case URX_DOTANY_ALL:    // . matches one or two.
         case URX_DOTANY:
         case URX_DOTANY_UNIX:
@@ -3107,10 +3130,10 @@ void   RegexCompile::matchStartType() {
         case URX_LB_END:
         case URX_LBN_CONT:
         case URX_LBN_END:
-            UPRV_UNREACHABLE;     // Shouldn't get here.  These ops should be
-                                 //  consumed by the scan in URX_LA_START and LB_START
+            UPRV_UNREACHABLE_EXIT;  // Shouldn't get here.  These ops should be
+                                    //  consumed by the scan in URX_LA_START and LB_START
         default:
-            UPRV_UNREACHABLE;
+            UPRV_UNREACHABLE_EXIT;
             }
 
         }
@@ -3266,7 +3289,7 @@ int32_t   RegexCompile::minMatchLength(int32_t start, int32_t end) {
         case URX_BACKSLASH_R:
         case URX_BACKSLASH_V:
         case URX_ONECHAR_I:
-        case URX_BACKSLASH_X:   // Grahpeme Cluster.  Minimum is 1, max unbounded.
+        case URX_BACKSLASH_X:   // Grapheme Cluster.  Minimum is 1, max unbounded.
         case URX_DOTANY_ALL:    // . matches one or two.
         case URX_DOTANY:
         case URX_DOTANY_UNIX:
@@ -3381,12 +3404,12 @@ int32_t   RegexCompile::minMatchLength(int32_t start, int32_t end) {
                 //   it assumes that the look-ahead match might be zero-length.
                 //   TODO:  Positive lookahead could recursively do the block, then continue
                 //          with the longer of the block or the value coming in.  Ticket 6060
-                int32_t  depth = (opType == URX_LA_START? 2: 1);;
+                int32_t  depth = (opType == URX_LA_START? 2: 1);
                 for (;;) {
                     loc++;
                     op = (int32_t)fRXPat->fCompiledPat->elementAti(loc);
                     if (URX_TYPE(op) == URX_LA_START) {
-                        // The boilerplate for look-ahead includes two LA_END insturctions,
+                        // The boilerplate for look-ahead includes two LA_END instructions,
                         //    Depth will be decremented by each one when it is seen.
                         depth += 2;
                     }
@@ -3430,7 +3453,7 @@ int32_t   RegexCompile::minMatchLength(int32_t start, int32_t end) {
             break;
 
         default:
-            UPRV_UNREACHABLE;
+            UPRV_UNREACHABLE_EXIT;
             }
 
         }
@@ -3455,6 +3478,9 @@ int32_t   RegexCompile::minMatchLength(int32_t start, int32_t end) {
 //                     value may be longer than the actual maximum; it must
 //                     never be shorter.
 //
+//                     start, end: the range of the pattern to check.
+//                     end is inclusive.
+//
 //------------------------------------------------------------------------------
 int32_t   RegexCompile::maxMatchLength(int32_t start, int32_t end) {
     if (U_FAILURE(*fStatus)) {
@@ -3462,7 +3488,6 @@ int32_t   RegexCompile::maxMatchLength(int32_t start, int32_t end) {
     }
     U_ASSERT(start <= end);
     U_ASSERT(end < fRXPat->fCompiledPat->size());
-
 
     int32_t    loc;
     int32_t    op;
@@ -3524,7 +3549,7 @@ int32_t   RegexCompile::maxMatchLength(int32_t start, int32_t end) {
             //   Call the max length unbounded, and stop further checking.
         case URX_BACKREF:         // BackRef.  Must assume that it might be a zero length match
         case URX_BACKREF_I:
-        case URX_BACKSLASH_X:   // Grahpeme Cluster.  Minimum is 1, max unbounded.
+        case URX_BACKSLASH_X:   // Grapheme Cluster.  Minimum is 1, max unbounded.
             currentLen = INT32_MAX;
             break;
 
@@ -3672,9 +3697,9 @@ int32_t   RegexCompile::maxMatchLength(int32_t start, int32_t end) {
 
         case URX_CTR_LOOP:
         case URX_CTR_LOOP_NG:
-            // These opcodes will be skipped over by code for URX_CRT_INIT.
+            // These opcodes will be skipped over by code for URX_CTR_INIT.
             // We shouldn't encounter them here.
-            UPRV_UNREACHABLE;
+            UPRV_UNREACHABLE_EXIT;
 
         case URX_LOOP_SR_I:
         case URX_LOOP_DOT_I:
@@ -3694,32 +3719,26 @@ int32_t   RegexCompile::maxMatchLength(int32_t start, int32_t end) {
 
             // End of look-ahead ops should always be consumed by the processing at
             //  the URX_LA_START op.
-            // UPRV_UNREACHABLE;
+            // UPRV_UNREACHABLE_EXIT;
 
         case URX_LB_START:
             {
                 // Look-behind.  Scan forward until the matching look-around end,
                 //   without processing the look-behind block.
-                int32_t  depth = 0;
-                for (;;) {
-                    loc++;
+                int32_t dataLoc = URX_VAL(op);
+                for (loc = loc + 1; loc <= end; ++loc) {
                     op = (int32_t)fRXPat->fCompiledPat->elementAti(loc);
-                    if (URX_TYPE(op) == URX_LA_START || URX_TYPE(op) == URX_LB_START) {
-                        depth++;
+                    int32_t opType = URX_TYPE(op);
+                    if ((opType == URX_LA_END || opType == URX_LBN_END) && (URX_VAL(op) == dataLoc)) {
+                        break;
                     }
-                    if (URX_TYPE(op) == URX_LA_END || URX_TYPE(op)==URX_LBN_END) {
-                        if (depth == 0) {
-                            break;
-                        }
-                        depth--;
-                    }
-                    U_ASSERT(loc < end);
                 }
+                U_ASSERT(loc <= end);
             }
             break;
 
         default:
-            UPRV_UNREACHABLE;
+            UPRV_UNREACHABLE_EXIT;
         }
 
 
@@ -3874,7 +3893,7 @@ void RegexCompile::stripNOPs() {
 
         default:
             // Some op is unaccounted for.
-            UPRV_UNREACHABLE;
+            UPRV_UNREACHABLE_EXIT;
         }
     }
 
@@ -3911,7 +3930,7 @@ void RegexCompile::error(UErrorCode e) {
         UErrorCode status = U_ZERO_ERROR; // throwaway status for extracting context
 
         // Fill in the context.
-        //   Note: extractBetween() pins supplied indicies to the string bounds.
+        //   Note: extractBetween() pins supplied indices to the string bounds.
         uprv_memset(fParseErr->preContext,  0, sizeof(fParseErr->preContext));
         uprv_memset(fParseErr->postContext, 0, sizeof(fParseErr->postContext));
         utext_extract(fRXPat->fPattern, fScanIndex-U_PARSE_CONTEXT_LEN+1, fScanIndex, fParseErr->preContext, U_PARSE_CONTEXT_LEN, &status);
@@ -4041,7 +4060,7 @@ void RegexCompile::nextChar(RegexPatternChar &c) {
             //
             // We are in free-spacing and comments mode.
             //  Scan through any white space and comments, until we
-            //  reach a significant character or the end of inut.
+            //  reach a significant character or the end of input.
             for (;;) {
                 if (c.fChar == (UChar32)-1) {
                     break;     // End of Input
@@ -4369,7 +4388,7 @@ static inline void addIdentifierIgnorable(UnicodeSet *set, UErrorCode& ec) {
 
 //
 //  Create a Unicode Set from a Unicode Property expression.
-//     This is common code underlying both \p{...} ane [:...:] expressions.
+//     This is common code underlying both \p{...} and [:...:] expressions.
 //     Includes trying the Java "properties" that aren't supported as
 //     normal ICU UnicodeSet properties
 //
@@ -4407,7 +4426,8 @@ UnicodeSet *RegexCompile::createSetForProperty(const UnicodeString &propName, UB
 
         status = U_ZERO_ERROR;
         if (propName.caseCompare(u"word", -1, 0) == 0) {
-            set.adoptInsteadAndCheckErrorCode(new UnicodeSet(*(fRXPat->fStaticSets[URX_ISWORD_SET])), status);
+            set.adoptInsteadAndCheckErrorCode(
+                RegexStaticSets::gStaticSets->fPropSets[URX_ISWORD_SET].cloneAsThawed(), status);
             break;
         }
         if (propName.compare(u"all", -1) == 0) {
@@ -4561,6 +4581,13 @@ UnicodeSet *RegexCompile::createSetForProperty(const UnicodeString &propName, UB
     } while (false);   // End of do loop block. Code above breaks out of the block on success or hard failure.
 
     if (U_SUCCESS(status)) {
+        // ICU 70 adds emoji properties of strings, but as long as Java does not say how to
+        // deal with properties of strings and character classes with strings, we ignore them.
+        // Just in case something downstream might stumble over the strings,
+        // we remove them from the set.
+        // Note that when we support strings, the complement of a property (as with \P)
+        // should be implemented as .complement().removeAllStrings() (code point complement).
+        set->removeAllStrings();
         U_ASSERT(set.isValid());
         if (negated) {
             set->complement();
@@ -4594,6 +4621,13 @@ void RegexCompile::setEval(int32_t nextOp) {
         fSetOpStack.popi();
         U_ASSERT(fSetStack.empty() == FALSE);
         rightOperand = (UnicodeSet *)fSetStack.peek();
+        // ICU 70 adds emoji properties of strings, but createSetForProperty() removes all strings
+        // (see comments there).
+        // We also do not yet support string literals in character classes,
+        // so there should not be any strings.
+        // Note that when we support strings, the complement of a set (as with ^ or \P)
+        // should be implemented as .complement().removeAllStrings() (code point complement).
+        U_ASSERT(!rightOperand->hasStrings());
         switch (pendingSetOperation) {
             case setNegation:
                 rightOperand->complement();
@@ -4624,7 +4658,7 @@ void RegexCompile::setEval(int32_t nextOp) {
                 delete rightOperand;
                 break;
             default:
-                UPRV_UNREACHABLE;
+                UPRV_UNREACHABLE_EXIT;
             }
         }
     }
@@ -4632,7 +4666,8 @@ void RegexCompile::setEval(int32_t nextOp) {
 void RegexCompile::setPushOp(int32_t op) {
     setEval(op);
     fSetOpStack.push(op, *fStatus);
-    fSetStack.push(new UnicodeSet(), *fStatus);
+    LocalPointer<UnicodeSet> lpSet(new UnicodeSet(), *fStatus);
+    fSetStack.push(lpSet.orphan(), *fStatus);
 }
 
 U_NAMESPACE_END

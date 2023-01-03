@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -133,7 +133,7 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
     };
 
     private final ChangeListener<MultipleSelectionModel<TreeItem<T>>> selectionModelListener =
-            new ChangeListener<MultipleSelectionModel<TreeItem<T>>>() {
+            new ChangeListener<>() {
         @Override public void changed(ObservableValue<? extends MultipleSelectionModel<TreeItem<T>>> observable,
                     MultipleSelectionModel<TreeItem<T>> oldValue,
                     MultipleSelectionModel<TreeItem<T>> newValue) {
@@ -153,14 +153,6 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
 
     public TreeViewBehavior(TreeView<T> control) {
         super(control);
-
-//        // Fix for RT-16565
-//        getNode().selectionModelProperty().addListener(weakSelectionModelListener);
-//        if (control.getSelectionModel() != null) {
-//            control.getSelectionModel().getSelectedIndices().addListener(weakSelectedIndicesListener);
-//        }
-
-
 
         // create a map for treeView-specific mappings
         treeViewInputMap = createInputMap();
@@ -255,6 +247,12 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
     }
 
     @Override public void dispose() {
+        getNode().selectionModelProperty().removeListener(weakSelectionModelListener);
+        MultipleSelectionModel<TreeItem<T>> sm = getNode().getSelectionModel();
+        if (sm != null) {
+            sm.getSelectedIndices().removeListener(weakSelectedIndicesListener);
+        }
+        getNode().removeEventFilter(KeyEvent.ANY, keyEventListener);
         TreeCellBehavior.removeAnchor(getNode());
         super.dispose();
     }
@@ -446,7 +444,7 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
         int min = Math.min(start, end);
         int max = Math.max(start, end);
 
-        List<Integer> indices = new ArrayList<Integer>(sm.getSelectedIndices());
+        List<Integer> indices = new ArrayList<>(sm.getSelectedIndices());
 
         selectionChanging = true;
         for (int i = 0; i < indices.size(); i++) {

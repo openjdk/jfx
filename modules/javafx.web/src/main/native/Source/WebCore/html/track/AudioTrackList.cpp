@@ -25,7 +25,7 @@
 
 #include "config.h"
 
-#if ENABLE(VIDEO_TRACK)
+#if ENABLE(VIDEO)
 
 #include "AudioTrackList.h"
 
@@ -33,8 +33,8 @@
 
 namespace WebCore {
 
-AudioTrackList::AudioTrackList(HTMLMediaElement* element, ScriptExecutionContext* context)
-    : TrackListBase(element, context)
+AudioTrackList::AudioTrackList(ScriptExecutionContext* context)
+    : TrackListBase(context, TrackListBase::VideoTrackList)
 {
 }
 
@@ -52,11 +52,19 @@ void AudioTrackList::append(Ref<AudioTrack>&& track)
     }
     m_inbandTracks.insert(insertionIndex, track.ptr());
 
-
-    ASSERT(!track->mediaElement() || track->mediaElement() == mediaElement());
-    track->setMediaElement(mediaElement());
+    if (!track->trackList())
+        track->setTrackList(*this);
 
     scheduleAddTrackEvent(WTFMove(track));
+}
+
+void AudioTrackList::remove(TrackBase& track, bool scheduleEvent)
+{
+    auto& audioTrack = downcast<AudioTrack>(track);
+    if (audioTrack.trackList() == this)
+        audioTrack.clearTrackList();
+
+    TrackListBase::remove(track, scheduleEvent);
 }
 
 AudioTrack* AudioTrackList::item(unsigned index) const

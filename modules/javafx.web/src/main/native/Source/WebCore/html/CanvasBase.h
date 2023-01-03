@@ -25,8 +25,10 @@
 
 #pragma once
 
+#include "IntSize.h"
 #include <wtf/HashSet.h>
 #include <wtf/TypeCasts.h>
+#include <wtf/WeakHashSet.h>
 
 namespace WebCore {
 
@@ -35,9 +37,9 @@ class CanvasBase;
 class CanvasRenderingContext;
 class Element;
 class GraphicsContext;
+class GraphicsContextStateSaver;
 class Image;
 class ImageBuffer;
-class IntSize;
 class FloatRect;
 class ScriptExecutionContext;
 class SecurityOrigin;
@@ -48,9 +50,16 @@ public:
 
     virtual bool isCanvasObserverProxy() const { return false; }
 
-    virtual void canvasChanged(CanvasBase&, const FloatRect& changedRect) = 0;
+    virtual void canvasChanged(CanvasBase&, const std::optional<FloatRect>& changedRect) = 0;
     virtual void canvasResized(CanvasBase&) = 0;
     virtual void canvasDestroyed(CanvasBase&) = 0;
+};
+
+class CanvasDisplayBufferObserver : public CanMakeWeakPtr<CanvasDisplayBufferObserver> {
+public:
+    virtual ~CanvasDisplayBufferObserver() = default;
+
+    virtual void canvasDisplayBufferPrepared(CanvasBase&) = 0;
 };
 
 class CanvasBase {
@@ -64,10 +73,18 @@ public:
     virtual bool isOffscreenCanvas() const { return false; }
     virtual bool isCustomPaintCanvas() const { return false; }
 
-    virtual unsigned width() const = 0;
-    virtual unsigned height() const = 0;
-    virtual const IntSize& size() const  = 0;
-    virtual void setSize(const IntSize&) = 0;
+    virtual unsigned width() const { return m_size.width(); }
+    virtual unsigned height() const { return m_size.height(); }
+    const IntSize& size() const { return m_size; }
+
+    ImageBuffer* buffer() const;
+
+    virtual AffineTransform baseTransform() const;
+
+    void makeRenderingResultsAvailable();
+
+    size_t memoryCost() const;
+    size_t externalMemoryCost() const;
 
     void setOriginClean() { m_originClean = true; }
     void setOriginTainted() { m_originClean = false; }
@@ -76,40 +93,58 @@ public:
     virtual SecurityOrigin* securityOrigin() const { return nullptr; }
     ScriptExecutionContext* scriptExecutionContext() const { return canvasBaseScriptExecutionContext();  }
 
-    CanvasRenderingContext* renderingContext() const;
+    virtual CanvasRenderingContext* renderingContext() const = 0;
 
     void addObserver(CanvasObserver&);
     void removeObserver(CanvasObserver&);
-    void notifyObserversCanvasChanged(const FloatRect&);
+    void notifyObserversCanvasChanged(const std::optional<FloatRect>&);
     void notifyObserversCanvasResized();
     void notifyObserversCanvasDestroyed(); // Must be called in destruction before clearing m_context.
+    void addDisplayBufferObserver(CanvasDisplayBufferObserver&);
+    void removeDisplayBufferObserver(CanvasDisplayBufferObserver&);
+    void notifyObserversCanvasDisplayBufferPrepared();
+    bool hasDisplayBufferObservers() const { return !m_displayBufferObservers.computesEmpty(); }
 
     HashSet<Element*> cssCanvasClients() const;
 
-    virtual GraphicsContext* drawingContext() const = 0;
-    virtual GraphicsContext* existingDrawingContext() const = 0;
+    virtual GraphicsContext* drawingContext() const;
+    virtual GraphicsContext* existingDrawingContext() const;
 
-    virtual void makeRenderingResultsAvailable() = 0;
-    virtual void didDraw(const FloatRect&) = 0;
+    virtual void didDraw(const std::optional<FloatRect>&) = 0;
 
-    virtual AffineTransform baseTransform() const = 0;
     virtual Image* copiedImage() const = 0;
+    virtual void clearCopiedImage() const = 0;
 
-    bool callTracingActive() const;
+    bool hasActiveInspectorCanvasCallTracer() const;
 
 protected:
-    CanvasBase();
+    explicit CanvasBase(IntSize);
 
     virtual ScriptExecutionContext* canvasBaseScriptExecutionContext() const = 0;
 
-    std::unique_ptr<CanvasRenderingContext> m_context;
+    virtual void setSize(const IntSize& size) { m_size = size; }
+
+    RefPtr<ImageBuffer> setImageBuffer(RefPtr<ImageBuffer>&&) const;
+    virtual bool hasCreatedImageBuffer() const { return false; }
+    static size_t activePixelMemory();
+
+    void resetGraphicsContextState() const;
 
 private:
+    virtual void createImageBuffer() const { }
+
+    mutable IntSize m_size;
+    mutable Lock m_imageBufferAssignmentLock;
+    mutable RefPtr<ImageBuffer> m_imageBuffer;
+    mutable size_t m_imageBufferCost { 0 };
+    mutable std::unique_ptr<GraphicsContextStateSaver> m_contextStateSaver;
+
     bool m_originClean { true };
-#ifndef NDEBUG
+#if ASSERT_ENABLED
     bool m_didNotifyObserversCanvasDestroyed { false };
 #endif
     HashSet<CanvasObserver*> m_observers;
+    WeakHashSet<CanvasDisplayBufferObserver> m_displayBufferObservers;
 };
 
 } // namespace WebCore

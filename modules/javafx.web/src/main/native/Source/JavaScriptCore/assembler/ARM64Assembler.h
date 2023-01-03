@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -41,8 +41,8 @@
 #include <zircon/syscalls.h>
 #endif
 
-#define CHECK_DATASIZE_OF(datasize) ASSERT(datasize == 32 || datasize == 64)
-#define CHECK_MEMOPSIZE_OF(size) ASSERT(size == 8 || size == 16 || size == 32 || size == 64 || size == 128);
+#define CHECK_DATASIZE_OF(datasize) static_assert(datasize == 32 || datasize == 64)
+#define CHECK_MEMOPSIZE_OF(size) static_assert(size == 8 || size == 16 || size == 32 || size == 64 || size == 128);
 #define DATASIZE_OF(datasize) ((datasize == 64) ? Datasize_64 : Datasize_32)
 #define MEMOPSIZE_OF(datasize) ((datasize == 8 || datasize == 128) ? MemOpSize_8_or_128 : (datasize == 16) ? MemOpSize_16 : (datasize == 32) ? MemOpSize_32 : MemOpSize_64)
 #define CHECK_DATASIZE() CHECK_DATASIZE_OF(datasize)
@@ -340,43 +340,80 @@ public:
 
     class LinkRecord {
     public:
-        LinkRecord(intptr_t from, intptr_t to, JumpType type, Condition condition)
+        LinkRecord(const ARM64Assembler* assembler, intptr_t from, intptr_t to, JumpType type, Condition condition)
         {
             data.realTypes.m_from = from;
+#if CPU(ARM64E)
+            data.realTypes.m_to = tagInt(to, static_cast<PtrTag>(from ^ bitwise_cast<intptr_t>(assembler)));
+#else
+            UNUSED_PARAM(assembler);
             data.realTypes.m_to = to;
+#endif
             data.realTypes.m_type = type;
             data.realTypes.m_linkType = LinkInvalid;
             data.realTypes.m_condition = condition;
         }
-        LinkRecord(intptr_t from, intptr_t to, JumpType type, Condition condition, bool is64Bit, RegisterID compareRegister)
+        LinkRecord(const ARM64Assembler* assembler, intptr_t from, intptr_t to, JumpType type, Condition condition, bool is64Bit, RegisterID compareRegister)
         {
             data.realTypes.m_from = from;
+#if CPU(ARM64E)
+            data.realTypes.m_to = tagInt(to, static_cast<PtrTag>(from ^ bitwise_cast<intptr_t>(assembler)));
+#else
+            UNUSED_PARAM(assembler);
             data.realTypes.m_to = to;
+#endif
             data.realTypes.m_type = type;
             data.realTypes.m_linkType = LinkInvalid;
             data.realTypes.m_condition = condition;
             data.realTypes.m_is64Bit = is64Bit;
             data.realTypes.m_compareRegister = compareRegister;
         }
-        LinkRecord(intptr_t from, intptr_t to, JumpType type, Condition condition, unsigned bitNumber, RegisterID compareRegister)
+        LinkRecord(const ARM64Assembler* assembler, intptr_t from, intptr_t to, JumpType type, Condition condition, unsigned bitNumber, RegisterID compareRegister)
         {
             data.realTypes.m_from = from;
+#if CPU(ARM64E)
+            data.realTypes.m_to = tagInt(to, static_cast<PtrTag>(from ^ bitwise_cast<intptr_t>(assembler)));
+#else
+            UNUSED_PARAM(assembler);
             data.realTypes.m_to = to;
+#endif
             data.realTypes.m_type = type;
             data.realTypes.m_linkType = LinkInvalid;
             data.realTypes.m_condition = condition;
             data.realTypes.m_bitNumber = bitNumber;
             data.realTypes.m_compareRegister = compareRegister;
         }
-        void operator=(const LinkRecord& other)
+        // We are defining a copy constructor and assignment operator
+        // because the ones provided by the compiler are not
+        // optimal. See https://bugs.webkit.org/show_bug.cgi?id=90930
+        LinkRecord(const LinkRecord& other)
         {
-            data.copyTypes.content[0] = other.data.copyTypes.content[0];
-            data.copyTypes.content[1] = other.data.copyTypes.content[1];
-            data.copyTypes.content[2] = other.data.copyTypes.content[2];
+            data.copyTypes = other.data.copyTypes;
+        }
+        LinkRecord& operator=(const LinkRecord& other)
+        {
+            data.copyTypes = other.data.copyTypes;
+            return *this;
         }
         intptr_t from() const { return data.realTypes.m_from; }
-        void setFrom(intptr_t from) { data.realTypes.m_from = from; }
-        intptr_t to() const { return data.realTypes.m_to; }
+        void setFrom(const ARM64Assembler* assembler, intptr_t from)
+        {
+#if CPU(ARM64E)
+            data.realTypes.m_to = tagInt(to(assembler), static_cast<PtrTag>(from ^ bitwise_cast<intptr_t>(assembler)));
+#else
+            UNUSED_PARAM(assembler);
+#endif
+            data.realTypes.m_from = from;
+        }
+        intptr_t to(const ARM64Assembler* assembler) const
+        {
+#if CPU(ARM64E)
+            return untagInt(data.realTypes.m_to, static_cast<PtrTag>(data.realTypes.m_from ^ bitwise_cast<intptr_t>(assembler)));
+#else
+            UNUSED_PARAM(assembler);
+            return data.realTypes.m_to;
+#endif
+        }
         JumpType type() const { return data.realTypes.m_type; }
         JumpLinkType linkType() const { return data.realTypes.m_linkType; }
         void setLinkType(JumpLinkType linkType) { ASSERT(data.realTypes.m_linkType == LinkInvalid); data.realTypes.m_linkType = linkType; }
@@ -740,7 +777,6 @@ public:
     {
         ASSERT(!(offset & 0xfff));
         insn(pcRelative(true, offset >> 12, rd));
-        nopCortexA53Fix843419();
     }
 
     template<int datasize, SetFlags setFlags = DontSetFlags>
@@ -783,12 +819,9 @@ public:
         insn(dataProcessing2Source(DATASIZE, rm, DataOp_ASRV, rn, rd));
     }
 
-    ALWAYS_INLINE void b(int32_t offset = 0)
+    ALWAYS_INLINE void b()
     {
-        ASSERT(!(offset & 3));
-        offset >>= 2;
-        ASSERT(offset == (offset << 6) >> 6);
-        insn(unconditionalBranchImmediate(false, offset));
+        insn(unconditionalBranchImmediate(false, 0));
     }
 
     ALWAYS_INLINE void b_cond(Condition cond, int32_t offset = 0)
@@ -797,6 +830,12 @@ public:
         offset >>= 2;
         ASSERT(offset == (offset << 13) >> 13);
         insn(conditionalBranchImmediate(offset, cond));
+    }
+
+    template<int datasize>
+    ALWAYS_INLINE void bfc(RegisterID rd, int lsb, int width)
+    {
+        bfi<datasize>(rd, ARM64Registers::zr, lsb, width);
     }
 
     template<int datasize>
@@ -831,11 +870,9 @@ public:
         insn(logicalShiftedRegister(DATASIZE, setFlags ? LogicalOp_ANDS : LogicalOp_AND, shift, true, rm, amount, rn, rd));
     }
 
-    ALWAYS_INLINE void bl(int32_t offset = 0)
+    ALWAYS_INLINE void bl()
     {
-        ASSERT(!(offset & 3));
-        offset >>= 2;
-        insn(unconditionalBranchImmediate(true, offset));
+        insn(unconditionalBranchImmediate(true, 0));
     }
 
     ALWAYS_INLINE void blr(RegisterID rn)
@@ -1084,6 +1121,20 @@ public:
     }
 
     template<int datasize>
+    ALWAYS_INLINE static bool isValidLDPImm(int immediate)
+    {
+        unsigned immedShiftAmount = memPairOffsetShift(false, MEMPAIROPSIZE_INT(datasize));
+        return isValidSignedImm7(immediate, immedShiftAmount);
+    }
+
+    template<int datasize>
+    ALWAYS_INLINE static bool isValidLDPFPImm(int immediate)
+    {
+        unsigned immedShiftAmount = memPairOffsetShift(true, MEMPAIROPSIZE_FP(datasize));
+        return isValidSignedImm7(immediate, immedShiftAmount);
+    }
+
+    template<int datasize>
     ALWAYS_INLINE void ldp(RegisterID rt, RegisterID rt2, RegisterID rn, PairPostIndex simm)
     {
         CHECK_DATASIZE();
@@ -1098,17 +1149,45 @@ public:
     }
 
     template<int datasize>
-    ALWAYS_INLINE void ldp(RegisterID rt, RegisterID rt2, RegisterID rn, unsigned pimm = 0)
+    ALWAYS_INLINE void ldp(RegisterID rt, RegisterID rt2, RegisterID rn, int simm = 0)
     {
         CHECK_DATASIZE();
-        insn(loadStoreRegisterPairOffset(MEMPAIROPSIZE_INT(datasize), false, MemOp_LOAD, pimm, rn, rt, rt2));
+        insn(loadStoreRegisterPairOffset(MEMPAIROPSIZE_INT(datasize), false, MemOp_LOAD, simm, rn, rt, rt2));
     }
 
     template<int datasize>
-    ALWAYS_INLINE void ldnp(RegisterID rt, RegisterID rt2, RegisterID rn, unsigned pimm = 0)
+    ALWAYS_INLINE void ldnp(RegisterID rt, RegisterID rt2, RegisterID rn, int simm = 0)
     {
         CHECK_DATASIZE();
-        insn(loadStoreRegisterPairNonTemporal(MEMPAIROPSIZE_INT(datasize), false, MemOp_LOAD, pimm, rn, rt, rt2));
+        insn(loadStoreRegisterPairNonTemporal(MEMPAIROPSIZE_INT(datasize), false, MemOp_LOAD, simm, rn, rt, rt2));
+    }
+
+    template<int datasize>
+    ALWAYS_INLINE void ldp(FPRegisterID rt, FPRegisterID rt2, RegisterID rn, PairPostIndex simm)
+    {
+        CHECK_DATASIZE();
+        insn(loadStoreRegisterPairPostIndex(MEMPAIROPSIZE_FP(datasize), true, MemOp_LOAD, simm, rn, rt, rt2));
+    }
+
+    template<int datasize>
+    ALWAYS_INLINE void ldp(FPRegisterID rt, FPRegisterID rt2, RegisterID rn, PairPreIndex simm)
+    {
+        CHECK_DATASIZE();
+        insn(loadStoreRegisterPairPreIndex(MEMPAIROPSIZE_FP(datasize), true, MemOp_LOAD, simm, rn, rt, rt2));
+    }
+
+    template<int datasize>
+    ALWAYS_INLINE void ldp(FPRegisterID rt, FPRegisterID rt2, RegisterID rn, int simm = 0)
+    {
+        CHECK_DATASIZE();
+        insn(loadStoreRegisterPairOffset(MEMPAIROPSIZE_FP(datasize), true, MemOp_LOAD, simm, rn, rt, rt2));
+    }
+
+    template<int datasize>
+    ALWAYS_INLINE void ldnp(FPRegisterID rt, FPRegisterID rt2, RegisterID rn, int simm = 0)
+    {
+        CHECK_DATASIZE();
+        insn(loadStoreRegisterPairNonTemporal(MEMPAIROPSIZE_FP(datasize), true, MemOp_LOAD, simm, rn, rt, rt2));
     }
 
     template<int datasize>
@@ -1390,7 +1469,6 @@ public:
     ALWAYS_INLINE void madd(RegisterID rd, RegisterID rn, RegisterID rm, RegisterID ra)
     {
         CHECK_DATASIZE();
-        nopCortexA53Fix835769<datasize>();
         insn(dataProcessing3Source(DATASIZE, DataOp_MADD, rm, ra, rn, rd));
     }
 
@@ -1443,7 +1521,6 @@ public:
     ALWAYS_INLINE void msub(RegisterID rd, RegisterID rn, RegisterID rm, RegisterID ra)
     {
         CHECK_DATASIZE();
-        nopCortexA53Fix835769<datasize>();
         insn(dataProcessing3Source(DATASIZE, DataOp_MSUB, rm, ra, rn, rd));
     }
 
@@ -1494,8 +1571,11 @@ public:
         insn(nopPseudo());
     }
 
-    template <typename CopyFunction>
-    static void fillNops(void* base, size_t size, CopyFunction copy)
+    enum BranchTargetType { DirectBranch, IndirectBranch  };
+    using CopyFunction = void*(&)(void*, const void*, size_t);
+
+    template <CopyFunction copy>
+    ALWAYS_INLINE static void fillNops(void* base, size_t size)
     {
         RELEASE_ASSERT(!(size % sizeof(int32_t)));
         size_t n = size / sizeof(int32_t);
@@ -1688,7 +1768,6 @@ public:
 
     ALWAYS_INLINE void smaddl(RegisterID rd, RegisterID rn, RegisterID rm, RegisterID ra)
     {
-        nopCortexA53Fix835769<64>();
         insn(dataProcessing3Source(Datasize_64, DataOp_SMADDL, rm, ra, rn, rd));
     }
 
@@ -1699,7 +1778,6 @@ public:
 
     ALWAYS_INLINE void smsubl(RegisterID rd, RegisterID rn, RegisterID rm, RegisterID ra)
     {
-        nopCortexA53Fix835769<64>();
         insn(dataProcessing3Source(Datasize_64, DataOp_SMSUBL, rm, ra, rn, rd));
     }
 
@@ -1711,6 +1789,18 @@ public:
     ALWAYS_INLINE void smull(RegisterID rd, RegisterID rn, RegisterID rm)
     {
         smaddl(rd, rn, rm, ARM64Registers::zr);
+    }
+
+    template<int datasize>
+    ALWAYS_INLINE static bool isValidSTPImm(int immediate)
+    {
+        return isValidLDPImm<datasize>(immediate);
+    }
+
+    template<int datasize>
+    ALWAYS_INLINE static bool isValidSTPFPImm(int immediate)
+    {
+        return isValidLDPFPImm<datasize>(immediate);
     }
 
     template<int datasize>
@@ -1728,17 +1818,45 @@ public:
     }
 
     template<int datasize>
-    ALWAYS_INLINE void stp(RegisterID rt, RegisterID rt2, RegisterID rn, unsigned pimm = 0)
+    ALWAYS_INLINE void stp(RegisterID rt, RegisterID rt2, RegisterID rn, int simm = 0)
     {
         CHECK_DATASIZE();
-        insn(loadStoreRegisterPairOffset(MEMPAIROPSIZE_INT(datasize), false, MemOp_STORE, pimm, rn, rt, rt2));
+        insn(loadStoreRegisterPairOffset(MEMPAIROPSIZE_INT(datasize), false, MemOp_STORE, simm, rn, rt, rt2));
     }
 
     template<int datasize>
-    ALWAYS_INLINE void stnp(RegisterID rt, RegisterID rt2, RegisterID rn, unsigned pimm = 0)
+    ALWAYS_INLINE void stnp(RegisterID rt, RegisterID rt2, RegisterID rn, int simm = 0)
     {
         CHECK_DATASIZE();
-        insn(loadStoreRegisterPairNonTemporal(MEMPAIROPSIZE_INT(datasize), false, MemOp_STORE, pimm, rn, rt, rt2));
+        insn(loadStoreRegisterPairNonTemporal(MEMPAIROPSIZE_INT(datasize), false, MemOp_STORE, simm, rn, rt, rt2));
+    }
+
+    template<int datasize>
+    ALWAYS_INLINE void stp(FPRegisterID rt, FPRegisterID rt2, RegisterID rn, PairPostIndex simm)
+    {
+        CHECK_DATASIZE();
+        insn(loadStoreRegisterPairPostIndex(MEMPAIROPSIZE_FP(datasize), true, MemOp_STORE, simm, rn, rt, rt2));
+    }
+
+    template<int datasize>
+    ALWAYS_INLINE void stp(FPRegisterID rt, FPRegisterID rt2, RegisterID rn, PairPreIndex simm)
+    {
+        CHECK_DATASIZE();
+        insn(loadStoreRegisterPairPreIndex(MEMPAIROPSIZE_FP(datasize), true, MemOp_STORE, simm, rn, rt, rt2));
+    }
+
+    template<int datasize>
+    ALWAYS_INLINE void stp(FPRegisterID rt, FPRegisterID rt2, RegisterID rn, int simm = 0)
+    {
+        CHECK_DATASIZE();
+        insn(loadStoreRegisterPairOffset(MEMPAIROPSIZE_FP(datasize), true, MemOp_STORE, simm, rn, rt, rt2));
+    }
+
+    template<int datasize>
+    ALWAYS_INLINE void stnp(FPRegisterID rt, FPRegisterID rt2, RegisterID rn, int simm = 0)
+    {
+        CHECK_DATASIZE();
+        insn(loadStoreRegisterPairNonTemporal(MEMPAIROPSIZE_FP(datasize), true, MemOp_STORE, simm, rn, rt, rt2));
     }
 
     template<int datasize>
@@ -1957,7 +2075,6 @@ public:
 
     ALWAYS_INLINE void umaddl(RegisterID rd, RegisterID rn, RegisterID rm, RegisterID ra)
     {
-        nopCortexA53Fix835769<64>();
         insn(dataProcessing3Source(Datasize_64, DataOp_UMADDL, rm, ra, rn, rd));
     }
 
@@ -1968,7 +2085,6 @@ public:
 
     ALWAYS_INLINE void umsubl(RegisterID rd, RegisterID rn, RegisterID rm, RegisterID ra)
     {
-        nopCortexA53Fix835769<64>();
         insn(dataProcessing3Source(Datasize_64, DataOp_UMSUBL, rm, ra, rn, rd));
     }
 
@@ -2476,17 +2592,17 @@ public:
     AssemblerLabel labelForWatchpoint()
     {
         AssemblerLabel result = m_buffer.label();
-        if (static_cast<int>(result.m_offset) != m_indexOfLastWatchpoint)
+        if (static_cast<int>(result.offset()) != m_indexOfLastWatchpoint)
             result = label();
-        m_indexOfLastWatchpoint = result.m_offset;
-        m_indexOfTailOfLastWatchpoint = result.m_offset + maxJumpReplacementSize();
+        m_indexOfLastWatchpoint = result.offset();
+        m_indexOfTailOfLastWatchpoint = result.offset() + maxJumpReplacementSize();
         return result;
     }
 
     AssemblerLabel label()
     {
         AssemblerLabel result = m_buffer.label();
-        while (UNLIKELY(static_cast<int>(result.m_offset) < m_indexOfTailOfLastWatchpoint)) {
+        while (UNLIKELY(static_cast<int>(result.offset()) < m_indexOfTailOfLastWatchpoint)) {
             nop();
             result = m_buffer.label();
         }
@@ -2504,12 +2620,12 @@ public:
     static void* getRelocatedAddress(void* code, AssemblerLabel label)
     {
         ASSERT(label.isSet());
-        return reinterpret_cast<void*>(reinterpret_cast<ptrdiff_t>(code) + label.m_offset);
+        return reinterpret_cast<void*>(reinterpret_cast<ptrdiff_t>(code) + label.offset());
     }
 
     static int getDifferenceBetweenLabels(AssemblerLabel a, AssemblerLabel b)
     {
-        return b.m_offset - a.m_offset;
+        return b.offset() - a.offset();
     }
 
     size_t codeSize() const { return m_buffer.codeSize(); }
@@ -2517,7 +2633,7 @@ public:
     static unsigned getCallReturnOffset(AssemblerLabel call)
     {
         ASSERT(call.isSet());
-        return call.m_offset;
+        return call.offset();
     }
 
     // Linking & patching:
@@ -2532,33 +2648,33 @@ public:
     {
         ASSERT(to.isSet());
         ASSERT(from.isSet());
-        m_jumpsToLink.append(LinkRecord(from.m_offset, to.m_offset, type, condition));
+        m_jumpsToLink.append(LinkRecord(this, from.offset(), to.offset(), type, condition));
     }
 
     void linkJump(AssemblerLabel from, AssemblerLabel to, JumpType type, Condition condition, bool is64Bit, RegisterID compareRegister)
     {
         ASSERT(to.isSet());
         ASSERT(from.isSet());
-        m_jumpsToLink.append(LinkRecord(from.m_offset, to.m_offset, type, condition, is64Bit, compareRegister));
+        m_jumpsToLink.append(LinkRecord(this, from.offset(), to.offset(), type, condition, is64Bit, compareRegister));
     }
 
     void linkJump(AssemblerLabel from, AssemblerLabel to, JumpType type, Condition condition, unsigned bitNumber, RegisterID compareRegister)
     {
         ASSERT(to.isSet());
         ASSERT(from.isSet());
-        m_jumpsToLink.append(LinkRecord(from.m_offset, to.m_offset, type, condition, bitNumber, compareRegister));
+        m_jumpsToLink.append(LinkRecord(this, from.offset(), to.offset(), type, condition, bitNumber, compareRegister));
     }
 
     static void linkJump(void* code, AssemblerLabel from, void* to)
     {
         ASSERT(from.isSet());
-        relinkJumpOrCall<false>(addressOf(code, from), addressOf(code, from), to);
+        relinkJumpOrCall<BranchType_JMP>(addressOf(code, from), addressOf(code, from), to);
     }
 
     static void linkCall(void* code, AssemblerLabel from, void* to)
     {
         ASSERT(from.isSet());
-        linkJumpOrCall<true>(addressOf(code, from) - 1, addressOf(code, from) - 1, to);
+        linkJumpOrCall<BranchType_CALL>(addressOf(code, from) - 1, addressOf(code, from) - 1, to);
     }
 
     static void linkPointer(void* code, AssemblerLabel where, void* valuePtr)
@@ -2579,6 +2695,15 @@ public:
     {
         intptr_t offset = (reinterpret_cast<intptr_t>(to) - reinterpret_cast<intptr_t>(where)) >> 2;
         ASSERT(static_cast<int>(offset) == offset);
+
+#if ENABLE(JUMP_ISLANDS)
+        if (!isInt<26>(offset)) {
+            to = ExecutableAllocator::singleton().getJumpIslandTo(where, to);
+            offset = (bitwise_cast<intptr_t>(to) - bitwise_cast<intptr_t>(where)) >> 2;
+            RELEASE_ASSERT(isInt<26>(offset));
+        }
+#endif
+
         int insn = unconditionalBranchImmediate(false, static_cast<int>(offset));
         RELEASE_ASSERT(roundUpToMultipleOf<instructionSize>(where) == where);
         performJITMemcpy(where, &insn, sizeof(int));
@@ -2615,7 +2740,7 @@ public:
             performJITMemcpy(where, &insn, sizeof(int));
             cacheFlush(where, sizeof(int));
         }
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
         else {
             MemOpSize size;
             bool V;
@@ -2629,7 +2754,7 @@ public:
             ASSERT(opc == MemOp_LOAD);
             ASSERT(!(imm12 & ~0x1ff));
         }
-#endif
+#endif // ASSERT_ENABLED
     }
 
     static void replaceWithAddressComputation(void* where)
@@ -2650,7 +2775,7 @@ public:
             performJITMemcpy(where, &insn, sizeof(int));
             cacheFlush(where, sizeof(int));
         }
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
         else {
             Datasize sf;
             AddOp op;
@@ -2666,7 +2791,7 @@ public:
             ASSERT(!shift);
             ASSERT(!(imm12 & ~0xff8));
         }
-#endif
+#endif // ASSERT_ENABLED
     }
 
     static void repatchPointer(void* where, void* valuePtr)
@@ -2754,20 +2879,34 @@ public:
     // computation.
     static void relinkJump(void* from, void* to)
     {
-        relinkJumpOrCall<false>(reinterpret_cast<int*>(from), reinterpret_cast<const int*>(from), to);
+        relinkJumpOrCall<BranchType_JMP>(reinterpret_cast<int*>(from), reinterpret_cast<const int*>(from), to);
         cacheFlush(from, sizeof(int));
-    }
-
-    static void relinkJumpToNop(void* from)
-    {
-        relinkJump(from, static_cast<char*>(from) + 4);
     }
 
     static void relinkCall(void* from, void* to)
     {
-        relinkJumpOrCall<true>(reinterpret_cast<int*>(from) - 1, reinterpret_cast<const int*>(from) - 1, to);
+        relinkJumpOrCall<BranchType_CALL>(reinterpret_cast<int*>(from) - 1, reinterpret_cast<const int*>(from) - 1, to);
         cacheFlush(reinterpret_cast<int*>(from) - 1, sizeof(int));
     }
+
+#if ENABLE(JUMP_ISLANDS)
+    static void* prepareForAtomicRelinkJumpConcurrently(void* from, void* to)
+    {
+        intptr_t offset = (bitwise_cast<intptr_t>(to) - bitwise_cast<intptr_t>(from)) >> 2;
+        ASSERT(static_cast<int>(offset) == offset);
+
+        if (isInt<26>(offset))
+            return to;
+
+        return ExecutableAllocator::singleton().getJumpIslandToConcurrently(from, to);
+    }
+
+    static void* prepareForAtomicRelinkCallConcurrently(void* from, void* to)
+    {
+        from = static_cast<void*>(bitwise_cast<int*>(from) - 1);
+        return prepareForAtomicRelinkJumpConcurrently(from, to);
+    }
+#endif
 
     static void repatchCompact(void* where, int32_t value)
     {
@@ -2804,7 +2943,7 @@ public:
 
     static void cacheFlush(void* code, size_t size)
     {
-#if OS(IOS_FAMILY)
+#if OS(DARWIN)
         sys_cache_control(kCacheFunctionPrepareForExecution, code, size);
 #elif OS(FUCHSIA)
         zx_cache_flush(code, size, ZX_CACHE_FLUSH_INSN);
@@ -2869,7 +3008,7 @@ public:
                 return LinkJumpConditionDirect;
 
             return LinkJumpCondition;
-            }
+        }
         case JumpCompareAndBranch:  {
             ASSERT(is4ByteAligned(from));
             ASSERT(is4ByteAligned(to));
@@ -2910,57 +3049,42 @@ public:
         return m_jumpsToLink;
     }
 
-#if CPU(ARM64E)
-    class CopyFunction {
-        typedef void* (*Func)(void*, const void*, size_t);
-    public:
-        CopyFunction(Func func)
-            : m_func(func)
-        {
-            assertIsNullOrTaggedWith(func, CopyFunctionPtrTag);
-        }
-
-        void* operator()(void* dst, const void* src, size_t size)
-        {
-            return ptrauth_auth_function(m_func, ptrauth_key_process_dependent_code, CopyFunctionPtrTag)(dst, src, size);
-        }
-
-    private:
-        Func m_func;
-    };
-#else
-    typedef void* (*CopyFunction)(void*, const void*, size_t);
-#endif
-
-    static void ALWAYS_INLINE link(LinkRecord& record, uint8_t* from, const uint8_t* fromInstruction8, uint8_t* to, CopyFunction copy)
+    template<CopyFunction copy>
+    static void ALWAYS_INLINE link(LinkRecord& record, uint8_t* from, const uint8_t* fromInstruction8, uint8_t* to)
     {
         const int* fromInstruction = reinterpret_cast<const int*>(fromInstruction8);
         switch (record.linkType()) {
         case LinkJumpNoCondition:
-            linkJumpOrCall<false>(reinterpret_cast<int*>(from), fromInstruction, to, copy);
+            linkJumpOrCall<BranchType_JMP, copy>(reinterpret_cast<int*>(from), fromInstruction, to);
             break;
         case LinkJumpConditionDirect:
-            linkConditionalBranch<true>(record.condition(), reinterpret_cast<int*>(from), fromInstruction, to, copy);
+            linkConditionalBranch<DirectBranch, copy>(record.condition(), reinterpret_cast<int*>(from), fromInstruction, to);
             break;
         case LinkJumpCondition:
-            linkConditionalBranch<false>(record.condition(), reinterpret_cast<int*>(from) - 1, fromInstruction - 1, to, copy);
+            linkConditionalBranch<IndirectBranch, copy>(record.condition(), reinterpret_cast<int*>(from) - 1, fromInstruction - 1, to);
             break;
         case LinkJumpCompareAndBranchDirect:
-            linkCompareAndBranch<true>(record.condition(), record.is64Bit(), record.compareRegister(), reinterpret_cast<int*>(from), fromInstruction, to, copy);
+            linkCompareAndBranch<DirectBranch, copy>(record.condition(), record.is64Bit(), record.compareRegister(), reinterpret_cast<int*>(from), fromInstruction, to);
             break;
         case LinkJumpCompareAndBranch:
-            linkCompareAndBranch<false>(record.condition(), record.is64Bit(), record.compareRegister(), reinterpret_cast<int*>(from) - 1, fromInstruction - 1, to, copy);
+            linkCompareAndBranch<IndirectBranch, copy>(record.condition(), record.is64Bit(), record.compareRegister(), reinterpret_cast<int*>(from) - 1, fromInstruction - 1, to);
             break;
         case LinkJumpTestBitDirect:
-            linkTestAndBranch<true>(record.condition(), record.bitNumber(), record.compareRegister(), reinterpret_cast<int*>(from), fromInstruction, to, copy);
+            linkTestAndBranch<DirectBranch, copy>(record.condition(), record.bitNumber(), record.compareRegister(), reinterpret_cast<int*>(from), fromInstruction, to);
             break;
         case LinkJumpTestBit:
-            linkTestAndBranch<false>(record.condition(), record.bitNumber(), record.compareRegister(), reinterpret_cast<int*>(from) - 1, fromInstruction - 1, to, copy);
+            linkTestAndBranch<IndirectBranch, copy>(record.condition(), record.bitNumber(), record.compareRegister(), reinterpret_cast<int*>(from) - 1, fromInstruction - 1, to);
             break;
         default:
             ASSERT_NOT_REACHED();
             break;
         }
+    }
+
+    static ALWAYS_INLINE bool canEmitJump(void* from, void* to)
+    {
+        intptr_t diff = (bitwise_cast<intptr_t>(from) - bitwise_cast<intptr_t>(to)) >> 2;
+        return isInt<26>(diff);
     }
 
 protected:
@@ -2996,43 +3120,54 @@ protected:
         setPointer(address, valuePtr, rd, flush);
     }
 
-    template<bool isCall>
-    static void linkJumpOrCall(int* from, const int* fromInstruction, void* to, CopyFunction copy = tagCFunctionPtr<CopyFunctionPtrTag>(performJITMemcpy))
+    template<BranchType type, CopyFunction copy = performJITMemcpy>
+    static void linkJumpOrCall(int* from, const int* fromInstruction, void* to)
     {
+        static_assert(type == BranchType_JMP || type == BranchType_CALL, "");
+
         bool link;
         int imm26;
         bool isUnconditionalBranchImmediateOrNop = disassembleUnconditionalBranchImmediate(from, link, imm26) || disassembleNop(from);
 
         ASSERT_UNUSED(isUnconditionalBranchImmediateOrNop, isUnconditionalBranchImmediateOrNop);
+        constexpr bool isCall = (type == BranchType_CALL);
         ASSERT_UNUSED(isCall, (link == isCall) || disassembleNop(from));
         ASSERT(!(reinterpret_cast<intptr_t>(from) & 3));
         ASSERT(!(reinterpret_cast<intptr_t>(to) & 3));
         assertIsNotTagged(to);
         assertIsNotTagged(fromInstruction);
-        intptr_t offset = (reinterpret_cast<intptr_t>(to) - reinterpret_cast<intptr_t>(fromInstruction)) >> 2;
+        intptr_t offset = (bitwise_cast<intptr_t>(to) - bitwise_cast<intptr_t>(fromInstruction)) >> 2;
         ASSERT(static_cast<int>(offset) == offset);
+
+#if ENABLE(JUMP_ISLANDS)
+        if (!isInt<26>(offset)) {
+            to = ExecutableAllocator::singleton().getJumpIslandTo(bitwise_cast<void*>(fromInstruction), to);
+            offset = (bitwise_cast<intptr_t>(to) - bitwise_cast<intptr_t>(fromInstruction)) >> 2;
+            RELEASE_ASSERT(isInt<26>(offset));
+        }
+#endif
 
         int insn = unconditionalBranchImmediate(isCall, static_cast<int>(offset));
         RELEASE_ASSERT(roundUpToMultipleOf<instructionSize>(from) == from);
         copy(from, &insn, sizeof(int));
     }
 
-    template<bool isDirect>
-    static void linkCompareAndBranch(Condition condition, bool is64Bit, RegisterID rt, int* from, const int* fromInstruction, void* to, CopyFunction copy = tagCFunctionPtr<CopyFunctionPtrTag>(performJITMemcpy))
+    template<BranchTargetType type, CopyFunction copy = performJITMemcpy>
+    static void linkCompareAndBranch(Condition condition, bool is64Bit, RegisterID rt, int* from, const int* fromInstruction, void* to)
     {
         ASSERT(!(reinterpret_cast<intptr_t>(from) & 3));
         ASSERT(!(reinterpret_cast<intptr_t>(to) & 3));
         intptr_t offset = (reinterpret_cast<intptr_t>(to) - reinterpret_cast<intptr_t>(fromInstruction)) >> 2;
-        ASSERT(isInt<26>(offset));
 
         bool useDirect = isInt<19>(offset);
-        ASSERT(!isDirect || useDirect);
+        ASSERT(type == IndirectBranch || useDirect);
 
-        if (useDirect || isDirect) {
+        if (useDirect || type == DirectBranch) {
+            ASSERT(isInt<19>(offset));
             int insn = compareAndBranchImmediate(is64Bit ? Datasize_64 : Datasize_32, condition == ConditionNE, static_cast<int>(offset), rt);
             RELEASE_ASSERT(roundUpToMultipleOf<instructionSize>(from) == from);
             copy(from, &insn, sizeof(int));
-            if (!isDirect) {
+            if (type == IndirectBranch) {
                 insn = nopPseudo();
                 RELEASE_ASSERT(roundUpToMultipleOf<instructionSize>(from + 1) == (from + 1));
                 copy(from + 1, &insn, sizeof(int));
@@ -3041,26 +3176,26 @@ protected:
             int insn = compareAndBranchImmediate(is64Bit ? Datasize_64 : Datasize_32, invert(condition) == ConditionNE, 2, rt);
             RELEASE_ASSERT(roundUpToMultipleOf<instructionSize>(from) == from);
             copy(from, &insn, sizeof(int));
-            linkJumpOrCall<false>(from + 1, fromInstruction + 1, to, copy);
+            linkJumpOrCall<BranchType_JMP, copy>(from + 1, fromInstruction + 1, to);
         }
     }
 
-    template<bool isDirect>
-    static void linkConditionalBranch(Condition condition, int* from, const int* fromInstruction, void* to, CopyFunction copy = tagCFunctionPtr<CopyFunctionPtrTag>(performJITMemcpy))
+    template<BranchTargetType type, CopyFunction copy = performJITMemcpy>
+    static void linkConditionalBranch(Condition condition, int* from, const int* fromInstruction, void* to)
     {
         ASSERT(!(reinterpret_cast<intptr_t>(from) & 3));
         ASSERT(!(reinterpret_cast<intptr_t>(to) & 3));
         intptr_t offset = (reinterpret_cast<intptr_t>(to) - reinterpret_cast<intptr_t>(fromInstruction)) >> 2;
-        ASSERT(isInt<26>(offset));
 
         bool useDirect = isInt<19>(offset);
-        ASSERT(!isDirect || useDirect);
+        ASSERT(type == IndirectBranch || useDirect);
 
-        if (useDirect || isDirect) {
+        if (useDirect || type == DirectBranch) {
+            ASSERT(isInt<19>(offset));
             int insn = conditionalBranchImmediate(static_cast<int>(offset), condition);
             RELEASE_ASSERT(roundUpToMultipleOf<instructionSize>(from) == from);
             copy(from, &insn, sizeof(int));
-            if (!isDirect) {
+            if (type == IndirectBranch) {
                 insn = nopPseudo();
                 RELEASE_ASSERT(roundUpToMultipleOf<instructionSize>(from + 1) == (from + 1));
                 copy(from + 1, &insn, sizeof(int));
@@ -3069,27 +3204,27 @@ protected:
             int insn = conditionalBranchImmediate(2, invert(condition));
             RELEASE_ASSERT(roundUpToMultipleOf<instructionSize>(from) == from);
             copy(from, &insn, sizeof(int));
-            linkJumpOrCall<false>(from + 1, fromInstruction + 1, to, copy);
+            linkJumpOrCall<BranchType_JMP, copy>(from + 1, fromInstruction + 1, to);
         }
     }
 
-    template<bool isDirect>
-    static void linkTestAndBranch(Condition condition, unsigned bitNumber, RegisterID rt, int* from, const int* fromInstruction, void* to, CopyFunction copy = tagCFunctionPtr<CopyFunctionPtrTag>(performJITMemcpy))
+    template<BranchTargetType type, CopyFunction copy = performJITMemcpy>
+    static void linkTestAndBranch(Condition condition, unsigned bitNumber, RegisterID rt, int* from, const int* fromInstruction, void* to)
     {
         ASSERT(!(reinterpret_cast<intptr_t>(from) & 3));
         ASSERT(!(reinterpret_cast<intptr_t>(to) & 3));
         intptr_t offset = (reinterpret_cast<intptr_t>(to) - reinterpret_cast<intptr_t>(fromInstruction)) >> 2;
         ASSERT(static_cast<int>(offset) == offset);
-        ASSERT(isInt<26>(offset));
 
         bool useDirect = isInt<14>(offset);
-        ASSERT(!isDirect || useDirect);
+        ASSERT(type == IndirectBranch || useDirect);
 
-        if (useDirect || isDirect) {
+        if (useDirect || type == DirectBranch) {
+            ASSERT(isInt<14>(offset));
             int insn = testAndBranchImmediate(condition == ConditionNE, static_cast<int>(bitNumber), static_cast<int>(offset), rt);
             RELEASE_ASSERT(roundUpToMultipleOf<instructionSize>(from) == from);
             copy(from, &insn, sizeof(int));
-            if (!isDirect) {
+            if (type == IndirectBranch) {
                 insn = nopPseudo();
                 RELEASE_ASSERT(roundUpToMultipleOf<instructionSize>(from + 1) == (from + 1));
                 copy(from + 1, &insn, sizeof(int));
@@ -3098,14 +3233,15 @@ protected:
             int insn = testAndBranchImmediate(invert(condition) == ConditionNE, static_cast<int>(bitNumber), 2, rt);
             RELEASE_ASSERT(roundUpToMultipleOf<instructionSize>(from) == from);
             copy(from, &insn, sizeof(int));
-            linkJumpOrCall<false>(from + 1, fromInstruction + 1, to, copy);
+            linkJumpOrCall<BranchType_JMP, copy>(from + 1, fromInstruction + 1, to);
         }
     }
 
-    template<bool isCall>
+    template<BranchType type>
     static void relinkJumpOrCall(int* from, const int* fromInstruction, void* to)
     {
-        if (!isCall && disassembleNop(from)) {
+        static_assert(type == BranchType_JMP || type == BranchType_CALL, "");
+        if ((type == BranchType_JMP) && disassembleNop(from)) {
             unsigned op01;
             int imm19;
             Condition condition;
@@ -3113,12 +3249,12 @@ protected:
 
             if (isConditionalBranchImmediate) {
                 ASSERT_UNUSED(op01, !op01);
-                ASSERT_UNUSED(isCall, !isCall);
+                ASSERT(type == BranchType_JMP);
 
                 if (imm19 == 8)
                     condition = invert(condition);
 
-                linkConditionalBranch<false>(condition, from - 1, fromInstruction - 1, to);
+                linkConditionalBranch<IndirectBranch>(condition, from - 1, fromInstruction - 1, to);
                 return;
             }
 
@@ -3131,7 +3267,7 @@ protected:
                 if (imm19 == 8)
                     op = !op;
 
-                linkCompareAndBranch<false>(op ? ConditionNE : ConditionEQ, opSize == Datasize_64, rt, from - 1, fromInstruction - 1, to);
+                linkCompareAndBranch<IndirectBranch>(op ? ConditionNE : ConditionEQ, opSize == Datasize_64, rt, from - 1, fromInstruction - 1, to);
                 return;
             }
 
@@ -3143,17 +3279,17 @@ protected:
                 if (imm14 == 8)
                     op = !op;
 
-                linkTestAndBranch<false>(op ? ConditionNE : ConditionEQ, bitNumber, rt, from - 1, fromInstruction - 1, to);
+                linkTestAndBranch<IndirectBranch>(op ? ConditionNE : ConditionEQ, bitNumber, rt, from - 1, fromInstruction - 1, to);
                 return;
             }
         }
 
-        linkJumpOrCall<isCall>(from, fromInstruction, to);
+        linkJumpOrCall<type>(from, fromInstruction, to);
     }
 
     static int* addressOf(void* code, AssemblerLabel label)
     {
-        return reinterpret_cast<int*>(static_cast<char*>(code) + label.m_offset);
+        return reinterpret_cast<int*>(static_cast<char*>(code) + label.offset());
     }
 
     static RegisterID disassembleXOrSp(int reg) { return reg == 31 ? ARM64Registers::sp : static_cast<RegisterID>(reg); }
@@ -3244,13 +3380,13 @@ protected:
     static int xOrSp(RegisterID reg)
     {
         ASSERT(!isZr(reg));
-        ASSERT(!isIOS() || reg != ARM64Registers::x18);
+        ASSERT(!isDarwin() || reg != ARM64Registers::x18);
         return reg;
     }
     static int xOrZr(RegisterID reg)
     {
         ASSERT(!isSp(reg));
-        ASSERT(!isIOS() || reg != ARM64Registers::x18);
+        ASSERT(!isDarwin() || reg != ARM64Registers::x18);
         return reg & 31;
     }
     static FPRegisterID xOrZrAsFPR(RegisterID reg) { return static_cast<FPRegisterID>(xOrZr(reg)); }
@@ -3491,6 +3627,7 @@ protected:
         ASSERT(opc == (opc & 1)); // Only load or store, load signed 64 is handled via size.
         ASSERT(V || (size != MemPairOp_LoadSigned_32) || (opc == MemOp_LOAD)); // There isn't an integer store signed.
         unsigned immedShiftAmount = memPairOffsetShift(V, size);
+        RELEASE_ASSERT(isValidSignedImm7(immediate, immedShiftAmount));
         int imm7 = immediate >> immedShiftAmount;
         ASSERT((imm7 << immedShiftAmount) == immediate && isInt<7>(imm7));
         return (0x28800000 | size << 30 | V << 26 | opc << 22 | (imm7 & 0x7f) << 15 | rt2 << 10 | xOrSp(rn) << 5 | rt);
@@ -3522,6 +3659,7 @@ protected:
         ASSERT(opc == (opc & 1)); // Only load or store, load signed 64 is handled via size.
         ASSERT(V || (size != MemPairOp_LoadSigned_32) || (opc == MemOp_LOAD)); // There isn't an integer store signed.
         unsigned immedShiftAmount = memPairOffsetShift(V, size);
+        RELEASE_ASSERT(isValidSignedImm7(immediate, immedShiftAmount));
         int imm7 = immediate >> immedShiftAmount;
         ASSERT((imm7 << immedShiftAmount) == immediate && isInt<7>(imm7));
         return (0x29800000 | size << 30 | V << 26 | opc << 22 | (imm7 & 0x7f) << 15 | rt2 << 10 | xOrSp(rn) << 5 | rt);
@@ -3539,6 +3677,7 @@ protected:
         ASSERT(opc == (opc & 1)); // Only load or store, load signed 64 is handled via size.
         ASSERT(V || (size != MemPairOp_LoadSigned_32) || (opc == MemOp_LOAD)); // There isn't an integer store signed.
         unsigned immedShiftAmount = memPairOffsetShift(V, size);
+        RELEASE_ASSERT(isValidSignedImm7(immediate, immedShiftAmount));
         int imm7 = immediate >> immedShiftAmount;
         ASSERT((imm7 << immedShiftAmount) == immediate && isInt<7>(imm7));
         return (0x29000000 | size << 30 | V << 26 | opc << 22 | (imm7 & 0x7f) << 15 | rt2 << 10 | xOrSp(rn) << 5 | rt);
@@ -3556,6 +3695,7 @@ protected:
         ASSERT(opc == (opc & 1)); // Only load or store, load signed 64 is handled via size.
         ASSERT(V || (size != MemPairOp_LoadSigned_32) || (opc == MemOp_LOAD)); // There isn't an integer store signed.
         unsigned immedShiftAmount = memPairOffsetShift(V, size);
+        RELEASE_ASSERT(isValidSignedImm7(immediate, immedShiftAmount));
         int imm7 = immediate >> immedShiftAmount;
         ASSERT((imm7 << immedShiftAmount) == immediate && isInt<7>(imm7));
         return (0x28000000 | size << 30 | V << 26 | opc << 22 | (imm7 & 0x7f) << 15 | rt2 << 10 | xOrSp(rn) << 5 | rt);
@@ -3705,37 +3845,6 @@ protected:
         return 0x1e7e0000 | (dn << 5) | rd;
     }
 
-    // Workaround for Cortex-A53 erratum (835769). Emit an extra nop if the
-    // last instruction in the buffer is a load, store or prefetch. Needed
-    // before 64-bit multiply-accumulate instructions.
-    template<int datasize>
-    ALWAYS_INLINE void nopCortexA53Fix835769()
-    {
-#if CPU(ARM64_CORTEXA53)
-        CHECK_DATASIZE();
-        if (datasize == 64) {
-            if (LIKELY(m_buffer.codeSize() >= sizeof(int32_t))) {
-                // From ARMv8 Reference Manual, Section C4.1: the encoding of the
-                // instructions in the Loads and stores instruction group is:
-                // ---- 1-0- ---- ---- ---- ---- ---- ----
-                if (UNLIKELY((*reinterpret_cast_ptr<int32_t*>(reinterpret_cast_ptr<char*>(m_buffer.data()) + m_buffer.codeSize() - sizeof(int32_t)) & 0x0a000000) == 0x08000000))
-                    nop();
-            }
-        }
-#endif
-    }
-
-    // Workaround for Cortex-A53 erratum (843419). Emit extra nops to avoid
-    // wrong address access after ADRP instruction.
-    ALWAYS_INLINE void nopCortexA53Fix843419()
-    {
-#if CPU(ARM64_CORTEXA53)
-        nop();
-        nop();
-        nop();
-#endif
-    }
-
     Vector<LinkRecord, 0, UnsafeVectorOverflow> m_jumpsToLink;
     int m_indexOfLastWatchpoint;
     int m_indexOfTailOfLastWatchpoint;
@@ -3748,6 +3857,7 @@ public:
 } // namespace JSC
 
 #undef CHECK_DATASIZE_OF
+#undef CHECK_MEMOPSIZE_OF
 #undef DATASIZE_OF
 #undef MEMOPSIZE_OF
 #undef CHECK_DATASIZE

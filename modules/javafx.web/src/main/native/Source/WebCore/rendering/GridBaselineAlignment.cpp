@@ -65,7 +65,7 @@ LayoutUnit GridBaselineAlignment::logicalAscentForChild(const RenderBox& child, 
 LayoutUnit GridBaselineAlignment::ascentForChild(const RenderBox& child, GridAxis baselineAxis) const
 {
     LayoutUnit margin = isDescentBaselineForChild(child, baselineAxis) ? marginUnderForChild(child, baselineAxis) : marginOverForChild(child, baselineAxis);
-    LayoutUnit baseline(isParallelToBaselineAxisForChild(child, baselineAxis) ? child.firstLineBaseline().valueOr(-1) : -1);
+    LayoutUnit baseline(isParallelToBaselineAxisForChild(child, baselineAxis) ? child.firstLineBaseline().value_or(LayoutUnit(-1)) : LayoutUnit(-1));
     // We take border-box's under edge if no valid baseline.
     if (baseline == -1) {
         if (isHorizontalBaselineAxis(baselineAxis))
@@ -176,12 +176,12 @@ void BaselineGroup::update(const RenderBox& child, LayoutUnit ascent, LayoutUnit
 bool BaselineGroup::isOppositeBlockFlow(WritingMode blockFlow) const
 {
     switch (blockFlow) {
-    case WritingMode::TopToBottomWritingMode:
+    case WritingMode::TopToBottom:
         return false;
-    case WritingMode::LeftToRightWritingMode:
-        return m_blockFlow == WritingMode::RightToLeftWritingMode;
-    case WritingMode::RightToLeftWritingMode:
-        return m_blockFlow == WritingMode::LeftToRightWritingMode;
+    case WritingMode::LeftToRight:
+        return m_blockFlow == WritingMode::RightToLeft;
+    case WritingMode::RightToLeft:
+        return m_blockFlow == WritingMode::LeftToRight;
     default:
         ASSERT_NOT_REACHED();
         return false;
@@ -191,11 +191,11 @@ bool BaselineGroup::isOppositeBlockFlow(WritingMode blockFlow) const
 bool BaselineGroup::isOrthogonalBlockFlow(WritingMode blockFlow) const
 {
     switch (blockFlow) {
-    case WritingMode::TopToBottomWritingMode:
-        return m_blockFlow != WritingMode::TopToBottomWritingMode;
-    case WritingMode::LeftToRightWritingMode:
-    case WritingMode::RightToLeftWritingMode:
-        return m_blockFlow == WritingMode::TopToBottomWritingMode;
+    case WritingMode::TopToBottom:
+        return m_blockFlow != WritingMode::TopToBottom;
+    case WritingMode::LeftToRight:
+    case WritingMode::RightToLeft:
+        return m_blockFlow == WritingMode::TopToBottom;
     default:
         ASSERT_NOT_REACHED();
         return false;

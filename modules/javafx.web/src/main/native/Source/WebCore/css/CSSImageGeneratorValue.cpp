@@ -138,13 +138,13 @@ RefPtr<Image> CSSImageGeneratorValue::image(RenderElement& renderer, const Float
 {
     switch (classType()) {
     case CanvasClass:
-        return downcast<CSSCanvasValue>(*this).image(&renderer, size);
+        return downcast<CSSCanvasValue>(*this).image(renderer, size);
     case NamedImageClass:
-        return downcast<CSSNamedImageValue>(*this).image(&renderer, size);
+        return downcast<CSSNamedImageValue>(*this).image(renderer, size);
     case CrossfadeClass:
         return downcast<CSSCrossfadeValue>(*this).image(renderer, size);
     case FilterImageClass:
-        return downcast<CSSFilterImageValue>(*this).image(&renderer, size);
+        return downcast<CSSFilterImageValue>(*this).image(renderer, size);
     case LinearGradientClass:
         return downcast<CSSLinearGradientValue>(*this).image(renderer, size);
     case RadialGradientClass:
@@ -192,11 +192,11 @@ FloatSize CSSImageGeneratorValue::fixedSize(const RenderElement& renderer)
 {
     switch (classType()) {
     case CanvasClass:
-        return downcast<CSSCanvasValue>(*this).fixedSize(&renderer);
+        return downcast<CSSCanvasValue>(*this).fixedSize(renderer);
     case CrossfadeClass:
         return downcast<CSSCrossfadeValue>(*this).fixedSize(renderer);
     case FilterImageClass:
-        return downcast<CSSFilterImageValue>(*this).fixedSize(&renderer);
+        return downcast<CSSFilterImageValue>(*this).fixedSize(renderer);
     case LinearGradientClass:
         return downcast<CSSLinearGradientValue>(*this).fixedSize(renderer);
     case RadialGradientClass:
@@ -296,6 +296,35 @@ void CSSImageGeneratorValue::loadSubimages(CachedResourceLoader& cachedResourceL
     default:
         ASSERT_NOT_REACHED();
     }
+}
+
+bool CSSImageGeneratorValue::operator==(const CSSImageGeneratorValue& other) const
+{
+    if (classType() != other.classType())
+        return false;
+
+    switch (classType()) {
+    case CrossfadeClass:
+        return downcast<CSSCrossfadeValue>(*this).equals(downcast<CSSCrossfadeValue>(other));
+    case CanvasClass:
+        return downcast<CSSCanvasValue>(*this).equals(downcast<CSSCanvasValue>(other));
+    case FilterImageClass:
+        return downcast<CSSFilterImageValue>(*this).equals(downcast<CSSFilterImageValue>(other));
+    case LinearGradientClass:
+        return downcast<CSSLinearGradientValue>(*this).equals(downcast<CSSLinearGradientValue>(other));
+    case RadialGradientClass:
+        return downcast<CSSRadialGradientValue>(*this).equals(downcast<CSSRadialGradientValue>(other));
+    case ConicGradientClass:
+        return downcast<CSSConicGradientValue>(*this).equals(downcast<CSSConicGradientValue>(other));
+#if ENABLE(CSS_PAINTING_API)
+    case PaintImageClass:
+        return downcast<CSSPaintImageValue>(*this).equals(downcast<CSSPaintImageValue>(other));
+#endif
+    default:
+        ASSERT_NOT_REACHED();
+    }
+
+    return false;
 }
 
 bool CSSImageGeneratorValue::subimageIsPending(const CSSValue& value)

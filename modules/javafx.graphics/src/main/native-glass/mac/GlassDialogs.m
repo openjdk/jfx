@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -187,8 +187,11 @@
 
 static jobject convertNSURLtoFile(JNIEnv *env, NSURL *url)
 {
-    LOG("   url: %s", [[url path] UTF8String]);
-    jstring path = (*env)->NewStringUTF(env, [[url path] UTF8String]);
+#ifdef VERBOSE
+    NSLog(@"   url: %@", [url path]);
+#endif // VERBOSE
+    NSData *data = [[url path] dataUsingEncoding:NSUTF16LittleEndianStringEncoding];
+    jstring path = (*env)->NewString(env, (jchar *)[data bytes], data.length/2);
 
     jobject ret = NULL;
 

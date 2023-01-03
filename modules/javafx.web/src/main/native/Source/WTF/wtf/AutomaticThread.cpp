@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,7 +31,7 @@
 
 namespace WTF {
 
-static const bool verbose = false;
+static constexpr bool verbose = false;
 
 Ref<AutomaticThreadCondition> AutomaticThreadCondition::create()
 {
@@ -105,9 +105,15 @@ bool AutomaticThreadCondition::contains(const AbstractLocker&, AutomaticThread* 
 }
 
 AutomaticThread::AutomaticThread(const AbstractLocker& locker, Box<Lock> lock, Ref<AutomaticThreadCondition>&& condition, Seconds timeout)
+    : AutomaticThread(locker, lock, WTFMove(condition), ThreadType::Unknown, timeout)
+{
+}
+
+AutomaticThread::AutomaticThread(const AbstractLocker& locker, Box<Lock> lock, Ref<AutomaticThreadCondition>&& condition, ThreadType type, Seconds timeout)
     : m_lock(lock)
     , m_condition(WTFMove(condition))
     , m_timeout(timeout)
+    , m_threadType(type)
 {
     if (verbose)
         dataLog(RawPointer(this), ": Allocated AutomaticThread.\n");
@@ -118,7 +124,7 @@ AutomaticThread::~AutomaticThread()
 {
     if (verbose)
         dataLog(RawPointer(this), ": Deleting AutomaticThread.\n");
-    LockHolder locker(*m_lock);
+    Locker locker { *m_lock };
 
     // It's possible that we're in a waiting state with the thread shut down. This is a goofy way to
     // die, but it could happen.
@@ -149,7 +155,7 @@ bool AutomaticThread::notify(const AbstractLocker& locker)
 
 void AutomaticThread::join()
 {
-    LockHolder locker(*m_lock);
+    Locker locker { *m_lock };
     while (m_isRunning)
         m_isRunningCondition.wait(*m_lock);
 }
@@ -171,8 +177,8 @@ void AutomaticThread::start(const AbstractLocker&)
             RefPtr<AutomaticThread> thread = preserveThisForThread;
             thread->threadDidStart();
 
-            if (!ASSERT_DISABLED) {
-                LockHolder locker(*m_lock);
+            if (ASSERT_ENABLED) {
+                Locker locker { *m_lock };
                 ASSERT(m_condition->contains(locker, this));
             }
 
@@ -193,7 +199,7 @@ void AutomaticThread::start(const AbstractLocker&)
 
             for (;;) {
                 {
-                    LockHolder locker(*m_lock);
+                    Locker locker { *m_lock };
                     for (;;) {
                         PollResult result = poll(locker);
                         if (result == PollResult::Work)
@@ -222,12 +228,12 @@ void AutomaticThread::start(const AbstractLocker&)
 
                 WorkResult result = work();
                 if (result == WorkResult::Stop) {
-                    LockHolder locker(*m_lock);
+                    Locker locker { *m_lock };
                     return stopPermanently(locker);
                 }
                 RELEASE_ASSERT(result == WorkResult::Continue);
             }
-        })->detach();
+        }, m_threadType)->detach();
 }
 
 void AutomaticThread::threadDidStart()

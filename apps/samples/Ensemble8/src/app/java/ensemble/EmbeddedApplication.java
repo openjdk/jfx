@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2014, Oracle and/or its affiliates.
+ * Copyright (c) 2008, 2021, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -52,7 +52,7 @@ public class EmbeddedApplication {
 //            Class appClass = EmbeddedApplication.class.getClassLoader().loadClass(className);
             Class appClass = InterpolatorApp.class;
             System.out.println("appClass = " + appClass);
-            Application app = (Application)appClass.newInstance();
+            Application app = (Application)appClass.getDeclaredConstructor().newInstance();
             System.out.println("app = " + app);
             app.init();
             app.start(TEMP_STAGE);

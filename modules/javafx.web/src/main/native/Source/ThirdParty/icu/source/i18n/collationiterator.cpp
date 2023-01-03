@@ -168,7 +168,7 @@ CollationIterator::~CollationIterator() {
     delete skipped;
 }
 
-UBool
+bool
 CollationIterator::operator==(const CollationIterator &other) const {
     // Subclasses: Call this method and then add more specific checks.
     // Compare the iterator state but not the collation data (trie & data fields):
@@ -180,12 +180,12 @@ CollationIterator::operator==(const CollationIterator &other) const {
             cesIndex == other.cesIndex &&
             numCpFwd == other.numCpFwd &&
             isNumeric == other.isNumeric)) {
-        return FALSE;
+        return false;
     }
     for(int32_t i = 0; i < ceBuffer.length; ++i) {
-        if(ceBuffer.get(i) != other.ceBuffer.get(i)) { return FALSE; }
+        if(ceBuffer.get(i) != other.ceBuffer.get(i)) { return false; }
     }
-    return TRUE;
+    return true;
 }
 
 void
@@ -872,7 +872,7 @@ CollationIterator::previousCE(UVector32 &offsets, UErrorCode &errorCode) {
             // consistent with forward iteration.
             while(offsets.size() <= ceBuffer.length) {
                 offsets.addElement(limitOffset, errorCode);
-            };
+            }
         }
         return ceBuffer.get(--ceBuffer.length);
     } else {
@@ -932,7 +932,7 @@ CollationIterator::previousCEUnsafe(UChar32 c, UVector32 &offsets, UErrorCode &e
         offset = getOffset();
         while(offsets.size() < ceBuffer.length) {
             offsets.addElement(offset, errorCode);
-        };
+        }
     }
     U_ASSERT(offsets.size() == ceBuffer.length);
     // End offset corresponding to just after the unsafe-backwards segment.

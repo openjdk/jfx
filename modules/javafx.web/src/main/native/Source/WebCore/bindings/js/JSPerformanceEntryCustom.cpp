@@ -35,32 +35,41 @@
 #include "JSDOMBinding.h"
 #include "JSPerformanceMark.h"
 #include "JSPerformanceMeasure.h"
+#include "JSPerformanceNavigationTiming.h"
+#include "JSPerformancePaintTiming.h"
 #include "JSPerformanceResourceTiming.h"
 #include "PerformanceMark.h"
 #include "PerformanceMeasure.h"
+#include "PerformanceNavigationTiming.h"
+#include "PerformancePaintTiming.h"
 #include "PerformanceResourceTiming.h"
 
 
 namespace WebCore {
 using namespace JSC;
 
-JSValue toJSNewlyCreated(ExecState*, JSDOMGlobalObject* globalObject, Ref<PerformanceEntry>&& entry)
+JSValue toJSNewlyCreated(JSGlobalObject*, JSDOMGlobalObject* globalObject, Ref<PerformanceEntry>&& entry)
 {
-    if (is<PerformanceResourceTiming>(entry))
-        return createWrapper<PerformanceResourceTiming>(globalObject, WTFMove(entry));
-
-    if (is<PerformanceMark>(entry))
+    switch (entry->performanceEntryType()) {
+    case PerformanceEntry::Type::Navigation:
+        return createWrapper<PerformanceNavigationTiming>(globalObject, WTFMove(entry));
+    case PerformanceEntry::Type::Mark:
         return createWrapper<PerformanceMark>(globalObject, WTFMove(entry));
-
-    if (is<PerformanceMeasure>(entry))
+    case PerformanceEntry::Type::Measure:
         return createWrapper<PerformanceMeasure>(globalObject, WTFMove(entry));
+    case PerformanceEntry::Type::Resource:
+        return createWrapper<PerformanceResourceTiming>(globalObject, WTFMove(entry));
+    case PerformanceEntry::Type::Paint:
+        return createWrapper<PerformancePaintTiming>(globalObject, WTFMove(entry));
+    }
 
+    ASSERT_NOT_REACHED();
     return createWrapper<PerformanceEntry>(globalObject, WTFMove(entry));
 }
 
-JSValue toJS(JSC::ExecState* state, JSDOMGlobalObject* globalObject, PerformanceEntry& entry)
+JSValue toJS(JSC::JSGlobalObject* lexicalGlobalObject, JSDOMGlobalObject* globalObject, PerformanceEntry& entry)
 {
-    return wrap(state, globalObject, entry);
+    return wrap(lexicalGlobalObject, globalObject, entry);
 }
 
 } // namespace WebCore

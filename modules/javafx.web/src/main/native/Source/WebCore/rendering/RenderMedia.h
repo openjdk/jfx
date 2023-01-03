@@ -41,6 +41,8 @@ public:
 
     HTMLMediaElement& mediaElement() const { return downcast<HTMLMediaElement>(nodeForNonAnonymous()); }
 
+    bool shouldDisplayBrokenImageIcon() const final { return false; }
+
 protected:
     void layout() override;
 
@@ -54,7 +56,6 @@ private:
     bool isImage() const final { return false; }
     void paintReplaced(PaintInfo&, const LayoutPoint&) override;
 
-    bool shadowControlsNeedCustomLayoutMetrics() const override { return true; }
     void styleDidChange(StyleDifference, const RenderStyle* oldStyle) final;
 };
 

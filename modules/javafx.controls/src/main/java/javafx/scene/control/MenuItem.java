@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -96,7 +96,7 @@ MenuBar menuBar = new MenuBar(menu);</code></pre>
 @IDProperty("id")
 public class MenuItem implements EventTarget, Styleable {
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
@@ -134,7 +134,7 @@ public class MenuItem implements EventTarget, Styleable {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Instance Variables                                                      *
      *                                                                         *
@@ -148,7 +148,7 @@ public class MenuItem implements EventTarget, Styleable {
     private Object userData;
     private ObservableMap<Object, Object> properties;
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Properties                                                              *
      *                                                                         *
@@ -212,7 +212,7 @@ public class MenuItem implements EventTarget, Styleable {
 
     private ReadOnlyObjectWrapper<Menu> parentMenuPropertyImpl() {
         if (parentMenu == null) {
-            parentMenu = new ReadOnlyObjectWrapper<Menu>(this, "parentMenu");
+            parentMenu = new ReadOnlyObjectWrapper<>(this, "parentMenu");
         }
         return parentMenu;
     }
@@ -238,7 +238,7 @@ public class MenuItem implements EventTarget, Styleable {
 
     private ReadOnlyObjectWrapper<ContextMenu> parentPopupPropertyImpl() {
         if (parentPopup == null) {
-            parentPopup = new ReadOnlyObjectWrapper<ContextMenu>(this, "parentPopup");
+            parentPopup = new ReadOnlyObjectWrapper<>(this, "parentPopup");
         }
         return parentPopup;
     }
@@ -284,7 +284,7 @@ public class MenuItem implements EventTarget, Styleable {
 
     public final ObjectProperty<Node> graphicProperty() {
         if (graphic == null) {
-            graphic = new SimpleObjectProperty<Node>(this, "graphic");
+            graphic = new SimpleObjectProperty<>(this, "graphic");
         }
         return graphic;
     }
@@ -309,7 +309,7 @@ public class MenuItem implements EventTarget, Styleable {
 
     public final ObjectProperty<EventHandler<ActionEvent>> onActionProperty() {
         if (onAction == null) {
-            onAction = new ObjectPropertyBase<EventHandler<ActionEvent>>() {
+            onAction = new ObjectPropertyBase<>() {
                 @Override protected void invalidated() {
                     eventHandlerManager.setEventHandler(ActionEvent.ACTION, get());
                 }
@@ -332,7 +332,7 @@ public class MenuItem implements EventTarget, Styleable {
      * <p>Called when a accelerator for the Menuitem is invoked</p>
      * @since JavaFX 2.2
      */
-    public static final EventType<Event> MENU_VALIDATION_EVENT = new EventType<Event>
+    public static final EventType<Event> MENU_VALIDATION_EVENT = new EventType<>
             (Event.ANY, "MENU_VALIDATION_EVENT");
 
     /**
@@ -353,7 +353,7 @@ public class MenuItem implements EventTarget, Styleable {
 
     public final ObjectProperty<EventHandler<Event>> onMenuValidationProperty() {
         if (onMenuValidation == null) {
-            onMenuValidation = new ObjectPropertyBase<EventHandler<Event>>() {
+            onMenuValidation = new ObjectPropertyBase<>() {
                 @Override protected void invalidated() {
                     eventHandlerManager.setEventHandler(MENU_VALIDATION_EVENT, get());
                 }
@@ -411,7 +411,7 @@ public class MenuItem implements EventTarget, Styleable {
     }
     public final ObjectProperty<KeyCombination> acceleratorProperty() {
         if (accelerator == null) {
-            accelerator = new SimpleObjectProperty<KeyCombination>(this, "accelerator");
+            accelerator = new SimpleObjectProperty<>(this, "accelerator");
         }
         return accelerator;
     }
@@ -442,7 +442,7 @@ public class MenuItem implements EventTarget, Styleable {
         return mnemonicParsing;
     }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Public API                                                              *
      *                                                                         *
@@ -503,24 +503,20 @@ public class MenuItem implements EventTarget, Styleable {
     }
 
     /**
-     * Returns a previously set Object property, or null if no such property
-     * has been set using the {@link MenuItem#setUserData(java.lang.Object)} method.
+     * Returns the {@code Object} that was set by {@link #setUserData(Object)}, or {@code null} if no object has been
+     * set.
      *
-     * @return The Object that was previously set, or null if no property
-     *          has been set or if null was set.
+     * @return the user object that was stored (including {@code null}), or {@code null} if no object has been set
      */
     public Object getUserData() {
         return userData;
     }
 
     /**
-     * Convenience method for setting a single Object property that can be
-     * retrieved at a later date. This is functionally equivalent to calling
-     * the getProperties().put(Object key, Object value) method. This can later
-     * be retrieved by calling {@link Node#getUserData()}.
+     * Stores a user object that contains data at their discretion. It can later be retrieved by calling
+     * {@link #getUserData()}.
      *
-     * @param value The value to be stored - this can later be retrieved by calling
-     *          {@link Node#getUserData()}.
+     * @param value the user object to be stored
      */
     public void setUserData(Object value) {
         this.userData = value;
@@ -535,12 +531,12 @@ public class MenuItem implements EventTarget, Styleable {
      */
     public ObservableMap<Object, Object> getProperties() {
         if (properties == null) {
-            properties = FXCollections.observableMap(new HashMap<Object, Object>());
+            properties = FXCollections.observableMap(new HashMap<>());
         }
         return properties;
     }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Stylesheet Handling                                                     *
      *                                                                         *

@@ -32,27 +32,25 @@
 [
     Exposed=(Window,Worker),
     ActiveDOMObject,
-    Constructor,
-    ConstructorCallWith=ScriptExecutionContext,
 ] interface FileReader : EventTarget {
+    [CallWith=CurrentScriptExecutionContext] constructor();
+
     // ready states
     const unsigned short EMPTY = 0;
     const unsigned short LOADING = 1;
     const unsigned short DONE = 2;
     readonly attribute unsigned short readyState;
 
-    // FIXME: In all four methods found below, the blob parameter should not be nullable.
-    // async read methods
-    [MayThrowException] void readAsArrayBuffer(Blob? blob);
-    [MayThrowException] void readAsBinaryString(Blob? blob);
-    [MayThrowException] void readAsText(Blob? blob, optional DOMString encoding);
-    [MayThrowException] void readAsDataURL(Blob? blob);
+    undefined readAsArrayBuffer(Blob blob);
+    undefined readAsBinaryString(Blob blob);
+    undefined readAsText(Blob blob, optional DOMString encoding);
+    undefined readAsDataURL(Blob blob);
 
-    void abort();
+    undefined abort();
 
     readonly attribute (DOMString or ArrayBuffer)? result;
 
-    readonly attribute FileError error;
+    readonly attribute DOMException? error;
 
     attribute EventHandler onloadstart;
     attribute EventHandler onprogress;

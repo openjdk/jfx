@@ -30,12 +30,12 @@
 
 namespace WebCore {
 
-class SVGLengthList : public SVGValuePropertyList<SVGLength> {
+class SVGLengthList final : public SVGValuePropertyList<SVGLength> {
     using Base = SVGValuePropertyList<SVGLength>;
     using Base::Base;
 
 public:
-    static Ref<SVGLengthList> create(SVGLengthMode lengthMode = LengthModeOther)
+    static Ref<SVGLengthList> create(SVGLengthMode lengthMode = SVGLengthMode::Other)
     {
         return adoptRef(*new SVGLengthList(lengthMode));
     }
@@ -52,45 +52,9 @@ public:
 
     SVGLengthMode lengthMode() const { return m_lengthMode; }
 
-    bool parse(const String& value)
-    {
-        clearItems();
+    bool parse(StringView);
 
-        auto upconvertedCharacters = StringView(value).upconvertedCharacters();
-        const UChar* ptr = upconvertedCharacters;
-        const UChar* end = ptr + value.length();
-        while (ptr < end) {
-            const UChar* start = ptr;
-            while (ptr < end && *ptr != ',' && !isSVGSpace(*ptr))
-                ptr++;
-            if (ptr == start)
-                break;
-
-            String valueString(start, ptr - start);
-            SVGLengthValue value(m_lengthMode);
-            if (value.setValueAsString(valueString).hasException())
-                break;
-
-            append(SVGLength::create(value));
-            skipOptionalSVGSpacesOrDelimiter(ptr, end);
-        }
-
-        return ptr == end;
-    }
-
-    String valueAsString() const override
-    {
-        StringBuilder builder;
-
-        for (const auto& length : m_items) {
-            if (builder.length())
-                builder.append(' ');
-
-            builder.append(length->value().valueAsString());
-        }
-
-        return builder.toString();
-    }
+    String valueAsString() const override;
 
 private:
     SVGLengthList(SVGLengthMode lengthMode)
@@ -110,7 +74,7 @@ private:
     {
     }
 
-    SVGLengthMode m_lengthMode { LengthModeOther };
+    SVGLengthMode m_lengthMode { SVGLengthMode::Other };
 };
 
 } // namespace WebCore

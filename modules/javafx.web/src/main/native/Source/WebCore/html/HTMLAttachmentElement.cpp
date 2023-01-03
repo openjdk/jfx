@@ -28,9 +28,11 @@
 
 #if ENABLE(ATTACHMENT_ELEMENT)
 
+#include "AttachmentElementClient.h"
 #include "DOMURL.h"
 #include "Document.h"
 #include "Editor.h"
+#include "ElementInlines.h"
 #include "File.h"
 #include "Frame.h"
 #include "HTMLImageElement.h"
@@ -116,7 +118,7 @@ void HTMLAttachmentElement::setFile(RefPtr<File>&& file, UpdateDisplayAttributes
     if (updateAttributes == UpdateDisplayAttributes::Yes) {
         if (m_file) {
             setAttributeWithoutSynchronization(HTMLNames::titleAttr, m_file->name());
-            setAttributeWithoutSynchronization(HTMLNames::subtitleAttr, fileSizeDescription(m_file->size()));
+            setAttributeWithoutSynchronization(HTMLNames::subtitleAttr, PAL::fileSizeDescription(m_file->size()));
             setAttributeWithoutSynchronization(HTMLNames::typeAttr, m_file->type());
         } else {
             removeAttribute(HTMLNames::titleAttr);
@@ -147,13 +149,16 @@ void HTMLAttachmentElement::removedFromAncestor(RemovalType type, ContainerNode&
 const String& HTMLAttachmentElement::ensureUniqueIdentifier()
 {
     if (m_uniqueIdentifier.isEmpty())
-        m_uniqueIdentifier = createCanonicalUUIDString();
+        m_uniqueIdentifier = createVersion4UUIDString();
     return m_uniqueIdentifier;
 }
 
-bool HTMLAttachmentElement::hasEnclosingImage() const
+RefPtr<HTMLImageElement> HTMLAttachmentElement::enclosingImageElement() const
 {
-    return is<HTMLImageElement>(shadowHost());
+    if (auto hostElement = shadowHost(); is<HTMLImageElement>(hostElement))
+        return downcast<HTMLImageElement>(hostElement);
+
+    return { };
 }
 
 void HTMLAttachmentElement::parseAttribute(const QualifiedName& name, const AtomString& value)
@@ -177,22 +182,17 @@ String HTMLAttachmentElement::attachmentTitle() const
 String HTMLAttachmentElement::attachmentTitleForDisplay() const
 {
     auto title = attachmentTitle();
-
     auto indexOfLastDot = title.reverseFind('.');
     if (indexOfLastDot == notFound)
         return title;
 
-    String name = title.left(indexOfLastDot);
-    String extension = title.substring(indexOfLastDot);
-
-    StringBuilder builder;
-    builder.append(leftToRightMark);
-    builder.append(firstStrongIsolate);
-    builder.append(name);
-    builder.append(popDirectionalIsolate);
-    builder.append(extension);
-
-    return builder.toString();
+    return makeString(
+        leftToRightMark,
+        firstStrongIsolate,
+        StringView(title).left(indexOfLastDot),
+        popDirectionalIsolate,
+        StringView(title).substring(indexOfLastDot)
+    );
 }
 
 String HTMLAttachmentElement::attachmentType() const
@@ -205,12 +205,17 @@ String HTMLAttachmentElement::attachmentPath() const
     return attributeWithoutSynchronization(webkitattachmentpathAttr);
 }
 
-void HTMLAttachmentElement::updateAttributes(Optional<uint64_t>&& newFileSize, const String& newContentType, const String& newFilename)
+void HTMLAttachmentElement::updateAttributes(std::optional<uint64_t>&& newFileSize, const String& newContentType, const String& newFilename)
 {
-    if (!newFilename.isNull())
+    if (!newFilename.isNull()) {
+        if (auto enclosingImage = enclosingImageElement())
+            enclosingImage->setAttributeWithoutSynchronization(HTMLNames::altAttr, newFilename);
         setAttributeWithoutSynchronization(HTMLNames::titleAttr, newFilename);
-    else
+    } else {
+        if (auto enclosingImage = enclosingImageElement())
+            enclosingImage->removeAttribute(HTMLNames::altAttr);
         removeAttribute(HTMLNames::titleAttr);
+    }
 
     if (!newContentType.isNull())
         setAttributeWithoutSynchronization(HTMLNames::typeAttr, newContentType);
@@ -218,7 +223,7 @@ void HTMLAttachmentElement::updateAttributes(Optional<uint64_t>&& newFileSize, c
         removeAttribute(HTMLNames::typeAttr);
 
     if (newFileSize)
-        setAttributeWithoutSynchronization(HTMLNames::subtitleAttr, fileSizeDescription(*newFileSize));
+        setAttributeWithoutSynchronization(HTMLNames::subtitleAttr, PAL::fileSizeDescription(*newFileSize));
     else
         removeAttribute(HTMLNames::subtitleAttr);
 
@@ -231,10 +236,13 @@ static bool mimeTypeIsSuitableForInlineImageAttachment(const String& mimeType)
     return MIMETypeRegistry::isSupportedImageMIMEType(mimeType) || MIMETypeRegistry::isPDFMIMEType(mimeType);
 }
 
-void HTMLAttachmentElement::updateEnclosingImageWithData(const String& contentType, Ref<SharedBuffer>&& data)
+void HTMLAttachmentElement::updateEnclosingImageWithData(const String& contentType, Ref<FragmentedSharedBuffer>&& buffer)
 {
-    auto* hostElement = shadowHost();
-    if (!is<HTMLImageElement>(hostElement) || !data->size())
+    if (buffer->isEmpty())
+        return;
+
+    auto enclosingImage = enclosingImageElement();
+    if (!enclosingImage)
         return;
 
     String mimeType = contentType;
@@ -246,7 +254,32 @@ void HTMLAttachmentElement::updateEnclosingImageWithData(const String& contentTy
     if (!mimeTypeIsSuitableForInlineImageAttachment(mimeType))
         return;
 
-    hostElement->setAttributeWithoutSynchronization(HTMLNames::srcAttr, DOMURL::createObjectURL(document(), Blob::create(document().sessionID(), WTFMove(data), mimeType)));
+    enclosingImage->setAttributeWithoutSynchronization(HTMLNames::srcAttr, DOMURL::createObjectURL(document(), Blob::create(&document(), buffer->extractData(), mimeType)));
+}
+
+void HTMLAttachmentElement::updateThumbnail(const RefPtr<Image>& thumbnail)
+{
+    m_thumbnail = thumbnail;
+
+    if (auto* renderer = this->renderer())
+        renderer->invalidate();
+}
+
+void HTMLAttachmentElement::updateIcon(const RefPtr<Image>& icon, const WebCore::FloatSize& iconSize)
+{
+    m_icon = icon;
+    m_iconSize = iconSize;
+
+    if (auto* renderer = this->renderer())
+        renderer->invalidate();
+}
+
+void HTMLAttachmentElement::requestIconWithSize(const FloatSize& size) const
+{
+    if (!document().page() || !document().page()->attachmentElementClient())
+        return;
+
+    document().page()->attachmentElementClient()->requestAttachmentIcon(uniqueIdentifier(), size);
 }
 
 } // namespace WebCore

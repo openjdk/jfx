@@ -31,9 +31,7 @@
 #include "B3ValueRep.h"
 #include "FTLSaveRestore.h"
 #include "RegisterSet.h"
-#include <wtf/CommaPrinter.h>
 #include <wtf/DataLog.h>
-#include <wtf/ListDump.h>
 
 namespace JSC { namespace FTL {
 
@@ -101,10 +99,10 @@ void Location::restoreInto(MacroAssembler& jit, char* savedRegisters, GPRReg res
             jit.move(MacroAssembler::framePointerRegister, result);
 
             for (unsigned i = numFramesToPop - 1; i--;)
-                jit.loadPtr(result, result);
+                jit.loadPtr(MacroAssembler::Address(result), result);
 
             if (gpr() == MacroAssembler::framePointerRegister)
-                jit.loadPtr(result, result);
+                jit.loadPtr(MacroAssembler::Address(result), result);
             else
                 jit.addPtr(MacroAssembler::TrustedImmPtr(sizeof(void*) * 2), result);
         } else

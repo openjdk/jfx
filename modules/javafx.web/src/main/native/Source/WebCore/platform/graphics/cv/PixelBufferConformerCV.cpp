@@ -26,8 +26,7 @@
 #include "config.h"
 #include "PixelBufferConformerCV.h"
 
-#if HAVE(CORE_VIDEO)
-
+#include "CVUtilities.h"
 #include "GraphicsContextCG.h"
 #include "ImageBufferUtilitiesCG.h"
 #include "Logging.h"
@@ -39,15 +38,10 @@ namespace WebCore {
 
 PixelBufferConformerCV::PixelBufferConformerCV(CFDictionaryRef attributes)
 {
-#if USE(VIDEOTOOLBOX)
     VTPixelBufferConformerRef conformer = nullptr;
     VTPixelBufferConformerCreateWithAttributes(kCFAllocatorDefault, attributes, &conformer);
     ASSERT(conformer);
     m_pixelConformer = adoptCF(conformer);
-#else
-    UNUSED_PARAM(attributes);
-    ASSERT(!attributes);
-#endif
 }
 
 struct CVPixelBufferInfo {
@@ -138,7 +132,6 @@ static void CVPixelBufferReleaseInfoCallback(void* refcon)
 
 RetainPtr<CVPixelBufferRef> PixelBufferConformerCV::convert(CVPixelBufferRef rawBuffer)
 {
-#if USE(VIDEOTOOLBOX)
     RetainPtr<CVPixelBufferRef> buffer { rawBuffer };
 
     if (!VTPixelBufferConformerIsConformantPixelBuffer(m_pixelConformer.get(), buffer.get())) {
@@ -148,9 +141,6 @@ RetainPtr<CVPixelBufferRef> PixelBufferConformerCV::convert(CVPixelBufferRef raw
             return nullptr;
         return adoptCF(outputBuffer);
     }
-#else
-    UNUSED_PARAM(rawBuffer);
-#endif
     return nullptr;
 }
 
@@ -160,7 +150,6 @@ RetainPtr<CGImageRef> PixelBufferConformerCV::createImageFromPixelBuffer(CVPixel
     size_t width = CVPixelBufferGetWidth(buffer.get());
     size_t height = CVPixelBufferGetHeight(buffer.get());
 
-#if USE(VIDEOTOOLBOX)
     if (!VTPixelBufferConformerIsConformantPixelBuffer(m_pixelConformer.get(), buffer.get())) {
         CVPixelBufferRef outputBuffer = nullptr;
         OSStatus status = VTPixelBufferConformerCopyConformedPixelBuffer(m_pixelConformer.get(), buffer.get(), false, &outputBuffer);
@@ -168,15 +157,16 @@ RetainPtr<CGImageRef> PixelBufferConformerCV::createImageFromPixelBuffer(CVPixel
             return nullptr;
         buffer = adoptCF(outputBuffer);
     }
-#endif
 
-    CGBitmapInfo bitmapInfo = kCGBitmapByteOrder32Little | kCGImageAlphaFirst;
+    CGBitmapInfo bitmapInfo = static_cast<CGBitmapInfo>(kCGBitmapByteOrder32Little) | static_cast<CGBitmapInfo>(kCGImageAlphaFirst);
     size_t bytesPerRow = CVPixelBufferGetBytesPerRow(buffer.get());
     size_t byteLength = bytesPerRow * height;
 
     ASSERT(byteLength);
     if (!byteLength)
         return nullptr;
+
+    auto colorSpace = createCGColorSpaceForCVPixelBuffer(rawBuffer);
 
     CVPixelBufferInfo* info = new CVPixelBufferInfo();
     info->pixelBuffer = WTFMove(buffer);
@@ -185,9 +175,7 @@ RetainPtr<CGImageRef> PixelBufferConformerCV::createImageFromPixelBuffer(CVPixel
     CGDataProviderDirectCallbacks providerCallbacks = { 0, CVPixelBufferGetBytePointerCallback, CVPixelBufferReleaseBytePointerCallback, 0, CVPixelBufferReleaseInfoCallback };
     RetainPtr<CGDataProviderRef> provider = adoptCF(CGDataProviderCreateDirect(info, byteLength, &providerCallbacks));
 
-    return adoptCF(CGImageCreate(width, height, 8, 32, bytesPerRow, sRGBColorSpaceRef(), bitmapInfo, provider.get(), nullptr, false, kCGRenderingIntentDefault));
+    return adoptCF(CGImageCreate(width, height, 8, 32, bytesPerRow, colorSpace.get(), bitmapInfo, provider.get(), nullptr, false, kCGRenderingIntentDefault));
 }
 
 }
-
-#endif // HAVE(CORE_VIDEO)

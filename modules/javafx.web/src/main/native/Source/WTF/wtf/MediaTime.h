@@ -53,10 +53,9 @@ public:
         DoubleValue = 1 << 5,
     };
 
-    MediaTime();
-    MediaTime(int64_t value, uint32_t scale, uint8_t flags = Valid);
+    constexpr MediaTime();
+    constexpr MediaTime(int64_t value, uint32_t scale, uint8_t flags = Valid);
     MediaTime(const MediaTime& rhs);
-    ~MediaTime();
 
     static MediaTime createWithFloat(float floatTime);
     static MediaTime createWithFloat(float floatTime, uint32_t timeScale);
@@ -97,6 +96,7 @@ public:
     bool isPositiveInfinite() const { return m_timeFlags & PositiveInfinite; }
     bool isNegativeInfinite() const { return m_timeFlags & NegativeInfinite; }
     bool isIndefinite() const { return m_timeFlags & Indefinite; }
+    bool isFinite() const { return !isInvalid() && !isIndefinite() && !isPositiveInfinite() && !isNegativeInfinite(); }
     bool hasDoubleValue() const { return m_timeFlags & DoubleValue; }
     uint8_t timeFlags() const { return m_timeFlags; }
 
@@ -136,7 +136,7 @@ public:
     MediaTime toTimeScale(uint32_t, RoundingFlags = RoundingFlags::HalfAwayFromZero) const;
 
     template<class Encoder> void encode(Encoder&) const;
-    template<class Decoder> static bool decode(Decoder&, MediaTime&);
+    template<class Decoder> static WARN_UNUSED_RETURN bool decode(Decoder&, MediaTime&);
 
 private:
     void setTimeScale(uint32_t, RoundingFlags = RoundingFlags::HalfAwayFromZero);
@@ -148,6 +148,34 @@ private:
     uint32_t m_timeScale;
     uint8_t m_timeFlags;
 };
+
+constexpr MediaTime::MediaTime()
+    : m_timeValue(0)
+    , m_timeScale(DefaultTimeScale)
+    , m_timeFlags(Valid)
+{
+}
+
+constexpr MediaTime::MediaTime(int64_t value, uint32_t scale, uint8_t flags)
+    : m_timeValue(value)
+    , m_timeScale(scale)
+    , m_timeFlags(flags)
+{
+    if (scale || !(flags & Valid))
+        return;
+
+    if (value < 0) {
+        // Negative infinite time
+        m_timeValue = -1;
+        m_timeScale = 1;
+        m_timeFlags = NegativeInfinite | Valid;
+    } else {
+        // Positive infinite time
+        m_timeValue = 0;
+        m_timeScale = 1;
+        m_timeFlags = PositiveInfinite | Valid;
+    }
+}
 
 inline MediaTime operator*(int32_t lhs, const MediaTime& rhs) { return rhs.operator*(lhs); }
 
@@ -176,24 +204,16 @@ bool MediaTime::decode(Decoder& decoder, MediaTime& time)
         && decoder.decode(time.m_timeFlags);
 }
 
-template<typename Type>
-struct LogArgument;
+template<typename> struct LogArgument;
 
-template <>
-struct LogArgument<MediaTime> {
-    static String toString(const MediaTime& time)
-    {
-        return time.toJSONString();
-    }
+template<> struct LogArgument<MediaTime> {
+    static String toString(const MediaTime& time) { return time.toJSONString(); }
+};
+template<> struct LogArgument<MediaTimeRange> {
+    static String toString(const MediaTimeRange& range) { return range.toJSONString(); }
 };
 
-template <>
-struct LogArgument<MediaTimeRange> {
-    static String toString(const MediaTimeRange& range)
-    {
-        return range.toJSONString();
-    }
-};
+WTF_EXPORT_PRIVATE TextStream& operator<<(TextStream&, const MediaTime&);
 
 }
 

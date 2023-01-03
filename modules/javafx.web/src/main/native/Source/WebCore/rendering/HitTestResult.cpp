@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006, 2008, 2011 Apple Inc. All rights reserved.
+ * Copyright (C) 2006, 2008, 2011-2020 Apple Inc. All rights reserved.
  * Copyright (C) 2012 Nokia Corporation and/or its subsidiary(-ies)
  *
  * This library is free software; you can redistribute it and/or
@@ -25,28 +25,27 @@
 #include "CachedImage.h"
 #include "DocumentMarkerController.h"
 #include "Editor.h"
+#include "ElementInlines.h"
 #include "File.h"
 #include "Frame.h"
 #include "FrameSelection.h"
-#include "FrameTree.h"
 #include "HTMLAnchorElement.h"
 #include "HTMLAttachmentElement.h"
 #include "HTMLEmbedElement.h"
 #include "HTMLImageElement.h"
 #include "HTMLInputElement.h"
-#include "HTMLMediaElement.h"
-#include "HTMLNames.h"
 #include "HTMLObjectElement.h"
 #include "HTMLParserIdioms.h"
-#include "HTMLPlugInImageElement.h"
 #include "HTMLTextAreaElement.h"
 #include "HTMLVideoElement.h"
-#include "HitTestLocation.h"
+#include "ImageOverlay.h"
 #include "PseudoElement.h"
+#include "Range.h"
 #include "RenderBlockFlow.h"
 #include "RenderImage.h"
 #include "RenderInline.h"
 #include "SVGAElement.h"
+#include "SVGElementTypeHelpers.h"
 #include "SVGImageElement.h"
 #include "Scrollbar.h"
 #include "ShadowRoot.h"
@@ -55,33 +54,37 @@
 #include "VisibleUnits.h"
 #include "XLinkNames.h"
 
+#if ENABLE(SERVICE_CONTROLS)
+#include "ImageControlsMac.h"
+#endif
+
 namespace WebCore {
 
 using namespace HTMLNames;
 
-HitTestResult::HitTestResult()
-    : m_isOverWidget(false)
+static inline void appendToNodeSet(const HitTestResult::NodeSet& source, HitTestResult::NodeSet& destination)
 {
+    for (auto& node : source)
+        destination.add(node.copyRef());
 }
+
+HitTestResult::HitTestResult() = default;
 
 HitTestResult::HitTestResult(const LayoutPoint& point)
     : m_hitTestLocation(point)
     , m_pointInInnerNodeFrame(point)
-    , m_isOverWidget(false)
 {
 }
 
-HitTestResult::HitTestResult(const LayoutPoint& centerPoint, unsigned topPadding, unsigned rightPadding, unsigned bottomPadding, unsigned leftPadding)
-    : m_hitTestLocation(centerPoint, topPadding, rightPadding, bottomPadding, leftPadding)
-    , m_pointInInnerNodeFrame(centerPoint)
-    , m_isOverWidget(false)
+HitTestResult::HitTestResult(const LayoutRect& rect)
+    : m_hitTestLocation { rect }
+    , m_pointInInnerNodeFrame { rect.center() }
 {
 }
 
 HitTestResult::HitTestResult(const HitTestLocation& other)
     : m_hitTestLocation(other)
     , m_pointInInnerNodeFrame(m_hitTestLocation.point())
-    , m_isOverWidget(false)
 {
 }
 
@@ -96,7 +99,10 @@ HitTestResult::HitTestResult(const HitTestResult& other)
     , m_isOverWidget(other.isOverWidget())
 {
     // Only copy the NodeSet in case of list hit test.
-    m_listBasedTestResult = other.m_listBasedTestResult ? makeUnique<NodeSet>(*other.m_listBasedTestResult) : nullptr;
+    if (other.m_listBasedTestResult) {
+        m_listBasedTestResult = makeUnique<NodeSet>();
+        appendToNodeSet(*other.m_listBasedTestResult, *m_listBasedTestResult);
+    }
 }
 
 HitTestResult::~HitTestResult() = default;
@@ -113,7 +119,10 @@ HitTestResult& HitTestResult::operator=(const HitTestResult& other)
     m_isOverWidget = other.isOverWidget();
 
     // Only copy the NodeSet in case of list hit test.
-    m_listBasedTestResult = other.m_listBasedTestResult ? makeUnique<NodeSet>(*other.m_listBasedTestResult) : nullptr;
+    if (other.m_listBasedTestResult) {
+        m_listBasedTestResult = makeUnique<NodeSet>();
+        appendToNodeSet(*other.m_listBasedTestResult, *m_listBasedTestResult);
+    }
 
     return *this;
 }
@@ -207,8 +216,12 @@ String HitTestResult::selectedText() const
     if (!frame)
         return emptyString();
 
+    auto range = frame->selection().selection().toNormalizedRange();
+    if (!range)
+        return emptyString();
+
     // Look for a character that's not just a separator.
-    for (TextIterator it(frame->selection().toNormalizedRange().get()); !it.atEnd(); it.advance()) {
+    for (TextIterator it(*range); !it.atEnd(); it.advance()) {
         int length = it.text().length();
         for (int i = 0; i < length; ++i) {
             if (!(U_GET_GC_MASK(it.text()[i]) & U_GC_Z_MASK))
@@ -278,7 +291,7 @@ String HitTestResult::innerTextIfTruncated(TextDirection& dir) const
             if (is<RenderBlockFlow>(*renderer)) {
                 RenderBlockFlow& block = downcast<RenderBlockFlow>(*renderer);
                 if (block.style().textOverflow() == TextOverflow::Ellipsis) {
-                    for (RootInlineBox* line = block.firstRootBox(); line; line = line->nextRootBox()) {
+                    for (auto* line = block.firstRootBox(); line; line = line->nextRootBox()) {
                         if (line->hasEllipsisBox()) {
                             dir = block.style().direction();
                             return downcast<Element>(*truncatedNode).innerText();
@@ -319,13 +332,29 @@ String HitTestResult::altDisplayString() const
     return String();
 }
 
-Image* HitTestResult::image() const
+RefPtr<Node> HitTestResult::nodeForImageData() const
 {
     if (!m_innerNonSharedNode)
         return nullptr;
 
-    auto* renderer = m_innerNonSharedNode->renderer();
-    if (is<RenderImage>(renderer)) {
+    if (ImageOverlay::isInsideOverlay(*m_innerNonSharedNode))
+        return m_innerNonSharedNode->shadowHost();
+
+#if ENABLE(SERVICE_CONTROLS)
+    if (ImageControlsMac::isInsideImageControls(*m_innerNonSharedNode))
+        return m_innerNonSharedNode->shadowHost();
+#endif
+
+    return m_innerNonSharedNode;
+}
+
+Image* HitTestResult::image() const
+{
+    auto imageNode = nodeForImageData();
+    if (!imageNode)
+        return nullptr;
+
+    if (auto renderer = imageNode->renderer(); is<RenderImage>(renderer)) {
         auto& image = downcast<RenderImage>(*renderer);
         if (image.cachedImage() && !image.cachedImage()->errorOccurred())
             return image.cachedImage()->imageForRenderer(&image);
@@ -338,28 +367,32 @@ IntRect HitTestResult::imageRect() const
 {
     if (!image())
         return IntRect();
-    return m_innerNonSharedNode->renderBox()->absoluteContentQuad().enclosingBoundingBox();
+
+    auto imageNode = nodeForImageData();
+    if (!imageNode)
+        return { };
+
+    return imageNode->renderBox()->absoluteContentQuad().enclosingBoundingBox();
 }
 
 URL HitTestResult::absoluteImageURL() const
 {
-    if (!m_innerNonSharedNode)
-        return URL();
+    auto imageNode = nodeForImageData();
+    if (!imageNode)
+        return { };
 
-    if (!(m_innerNonSharedNode->renderer() && m_innerNonSharedNode->renderer()->isImage()))
-        return URL();
+    auto renderer = imageNode->renderer();
+    if (!renderer || !renderer->isImage())
+        return { };
 
-    AtomString urlString;
-    if (is<HTMLEmbedElement>(*m_innerNonSharedNode)
-        || is<HTMLImageElement>(*m_innerNonSharedNode)
-        || is<HTMLInputElement>(*m_innerNonSharedNode)
-        || is<HTMLObjectElement>(*m_innerNonSharedNode)
-        || is<SVGImageElement>(*m_innerNonSharedNode)) {
-        urlString = downcast<Element>(*m_innerNonSharedNode).imageSourceURL();
-    } else
-        return URL();
+    if (is<HTMLEmbedElement>(*imageNode)
+        || is<HTMLImageElement>(*imageNode)
+        || is<HTMLInputElement>(*imageNode)
+        || is<HTMLObjectElement>(*imageNode)
+        || is<SVGImageElement>(*imageNode))
+        return imageNode->document().completeURL(downcast<Element>(*imageNode).imageSourceURL());
 
-    return m_innerNonSharedNode->document().completeURL(stripLeadingAndTrailingHTMLSpaces(urlString));
+    return { };
 }
 
 URL HitTestResult::absolutePDFURL() const
@@ -461,7 +494,7 @@ void HitTestResult::enterFullscreenForVideo() const
         HTMLVideoElement& videoElement = downcast<HTMLVideoElement>(*mediaElement);
         if (!videoElement.isFullscreen() && mediaElement->supportsFullscreen(HTMLMediaElementEnums::VideoFullscreenModeStandard)) {
             UserGestureIndicator indicator(ProcessingUserGesture, &mediaElement->document());
-            videoElement.enterFullscreen();
+            videoElement.webkitEnterFullscreen();
         }
     }
 #endif
@@ -568,11 +601,8 @@ bool HitTestResult::isOverTextInsideFormControlElement() const
     if (position.isNull())
         return false;
 
-    RefPtr<Range> wordRange = enclosingTextUnitOfGranularity(position, WordGranularity, DirectionForward);
-    if (!wordRange)
-        return false;
-
-    return !wordRange->text().isEmpty();
+    auto wordRange = enclosingTextUnitOfGranularity(position, TextGranularity::WordGranularity, SelectionDirection::Forward);
+    return wordRange && hasAnyPlainText(*wordRange);
 }
 
 URL HitTestResult::absoluteLinkURL() const
@@ -620,7 +650,8 @@ bool HitTestResult::isContentEditable() const
     return m_innerNonSharedNode->hasEditableStyle();
 }
 
-HitTestProgress HitTestResult::addNodeToListBasedTestResult(Node* node, const HitTestRequest& request, const HitTestLocation& locationInContainer, const LayoutRect& rect)
+template<typename RectType>
+inline HitTestProgress HitTestResult::addNodeToListBasedTestResultCommon(Node* node, const HitTestRequest& request, const HitTestLocation& locationInContainer, const RectType& rect)
 {
     // If it is not a list-based hit test, this method has to be no-op.
     if (!request.resultIsElementList()) {
@@ -631,10 +662,11 @@ HitTestProgress HitTestResult::addNodeToListBasedTestResult(Node* node, const Hi
     if (!node)
         return HitTestProgress::Continue;
 
-    if (request.disallowsUserAgentShadowContent() && node->isInUserAgentShadowTree())
+    if ((request.disallowsUserAgentShadowContent() && node->isInUserAgentShadowTree())
+        || (request.disallowsUserAgentShadowContentExceptForImageOverlays() && !ImageOverlay::isInsideOverlay(*node) && node->isInUserAgentShadowTree()))
         node = node->document().ancestorNodeInThisScope(node);
 
-    mutableListBasedTestResult().add(node);
+    mutableListBasedTestResult().add(*node);
 
     if (request.includesAllElementsUnderPoint())
         return HitTestProgress::Continue;
@@ -643,27 +675,14 @@ HitTestProgress HitTestResult::addNodeToListBasedTestResult(Node* node, const Hi
     return regionFilled ? HitTestProgress::Stop : HitTestProgress::Continue;
 }
 
+HitTestProgress HitTestResult::addNodeToListBasedTestResult(Node* node, const HitTestRequest& request, const HitTestLocation& locationInContainer, const LayoutRect& rect)
+{
+    return addNodeToListBasedTestResultCommon(node, request, locationInContainer, rect);
+}
+
 HitTestProgress HitTestResult::addNodeToListBasedTestResult(Node* node, const HitTestRequest& request, const HitTestLocation& locationInContainer, const FloatRect& rect)
 {
-    // If it is not a list-based hit test, this method has to be no-op.
-    if (!request.resultIsElementList()) {
-        ASSERT(!isRectBasedTest());
-        return HitTestProgress::Stop;
-    }
-
-    if (!node)
-        return HitTestProgress::Continue;
-
-    if (request.disallowsUserAgentShadowContent() && node->isInUserAgentShadowTree())
-        node = node->document().ancestorNodeInThisScope(node);
-
-    mutableListBasedTestResult().add(node);
-
-    if (request.includesAllElementsUnderPoint())
-        return HitTestProgress::Continue;
-
-    bool regionFilled = rect.contains(locationInContainer.boundingBox());
-    return regionFilled ? HitTestProgress::Stop : HitTestProgress::Continue;
+    return addNodeToListBasedTestResultCommon(node, request, locationInContainer, rect);
 }
 
 void HitTestResult::append(const HitTestResult& other, const HitTestRequest& request)
@@ -680,11 +699,8 @@ void HitTestResult::append(const HitTestResult& other, const HitTestRequest& req
         m_isOverWidget = other.isOverWidget();
     }
 
-    if (other.m_listBasedTestResult) {
-        NodeSet& set = mutableListBasedTestResult();
-        for (const auto& node : *other.m_listBasedTestResult)
-            set.add(node.get());
-    }
+    if (other.m_listBasedTestResult)
+        appendToNodeSet(*other.m_listBasedTestResult, mutableListBasedTestResult());
 }
 
 const HitTestResult::NodeSet& HitTestResult::listBasedTestResult() const
@@ -722,7 +738,7 @@ Node* HitTestResult::targetNode() const
 {
     Node* node = innerNode();
     if (!node)
-        return 0;
+        return nullptr;
     if (node->isConnected())
         return node;
 
@@ -789,10 +805,10 @@ void HitTestResult::toggleEnhancedFullscreenForVideo() const
 
     HTMLVideoElement& videoElement = downcast<HTMLVideoElement>(*mediaElement);
     UserGestureIndicator indicator(ProcessingUserGesture, &mediaElement->document());
-    if (videoElement.fullscreenMode() == HTMLMediaElementEnums::VideoFullscreenModePictureInPicture)
-        videoElement.exitFullscreen();
+    if (videoElement.webkitPresentationMode() == HTMLVideoElement::VideoPresentationMode::PictureInPicture)
+        videoElement.webkitSetPresentationMode(HTMLVideoElement::VideoPresentationMode::Inline);
     else
-        videoElement.enterFullscreen(HTMLMediaElementEnums::VideoFullscreenModePictureInPicture);
+        videoElement.webkitSetPresentationMode(HTMLVideoElement::VideoPresentationMode::PictureInPicture);
 #endif
 }
 

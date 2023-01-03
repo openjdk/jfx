@@ -34,7 +34,8 @@
 
 #include "Attr.h"
 #include "Document.h"
-#include "Element.h"
+#include "ElementInlines.h"
+#include "Frame.h"
 #include "HTMLFrameOwnerElement.h"
 #include "NodeList.h"
 #include "NodeTraversal.h"
@@ -158,7 +159,7 @@ bool InspectorNodeFinder::matchesElement(const Element& element)
 
 void InspectorNodeFinder::searchUsingXPath(Node& parentNode)
 {
-    auto evaluateResult = parentNode.document().evaluate(m_query, &parentNode, nullptr, XPathResult::ORDERED_NODE_SNAPSHOT_TYPE, nullptr);
+    auto evaluateResult = parentNode.document().evaluate(m_query, parentNode, nullptr, XPathResult::ORDERED_NODE_SNAPSHOT_TYPE, nullptr);
     if (evaluateResult.hasException())
         return;
     auto result = evaluateResult.releaseReturnValue();

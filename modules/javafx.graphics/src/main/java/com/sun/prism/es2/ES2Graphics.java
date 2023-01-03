@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,12 +27,10 @@ package com.sun.prism.es2;
 
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.sg.prism.NGCamera;
-import com.sun.prism.CompositeMode;
 import com.sun.prism.GraphicsPipeline;
 import com.sun.prism.RenderTarget;
 import com.sun.prism.impl.ps.BaseShaderGraphics;
 import com.sun.prism.paint.Color;
-import com.sun.prism.paint.Paint;
 
 public class ES2Graphics extends BaseShaderGraphics {
 
@@ -55,24 +53,6 @@ public class ES2Graphics extends BaseShaderGraphics {
         context.getGLContext().clearBuffers(color, clearColor, clearDepth,
                 ignoreScissor);
 
-    }
-
-    @Override
-    public void clearQuad(float x1, float y1, float x2, float y2) {
-        // note that unlike clear(), this method does not currently
-        // attempt to clear the depth buffer...
-        context.setRenderTarget(this);
-        context.flushVertexBuffer();
-        CompositeMode mode = getCompositeMode();
-        // set the blend mode to CLEAR
-        context.updateCompositeMode(CompositeMode.CLEAR);
-        Paint oldPaint = getPaint();
-        setPaint(Color.BLACK); // any color will do...
-        fillQuad(x1, y1, x2, y2);
-        context.flushVertexBuffer();
-        setPaint(oldPaint);
-        // restore default blend mode
-        context.updateCompositeMode(mode);
     }
 
     @Override

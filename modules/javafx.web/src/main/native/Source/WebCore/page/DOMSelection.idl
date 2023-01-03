@@ -30,8 +30,8 @@
 // https://www.w3.org/TR/selection-api/#idl-def-Selection
 [
     GenerateIsReachable=ReachableFromDOMWindow,
-    ImplementationLacksVTable,
     InterfaceName=Selection,
+    Exposed=Window
 ] interface DOMSelection {
     readonly attribute Node? anchorNode;
     readonly attribute unsigned long anchorOffset;
@@ -41,34 +41,34 @@
     readonly attribute boolean isCollapsed;
     readonly attribute unsigned long rangeCount;
 
-    void collapse(Node? node, optional unsigned long offset = 0);
-    [MayThrowException] void collapseToEnd();
-    [MayThrowException] void collapseToStart();
+    readonly attribute DOMString type;
 
-    [CEReactions] void deleteFromDocument();
-    boolean containsNode(Node node, optional boolean allowPartial = false);
-    void selectAllChildren(Node node);
+    Range getRangeAt(unsigned long index);
+    undefined addRange(Range range);
+    [EnabledBySetting=LiveRangeSelectionEnabled] undefined removeRange(Range range);
+    undefined removeAllRanges();
 
-    [MayThrowException] void extend(Node node, optional unsigned long offset = 0);
+    undefined empty();
 
-    [MayThrowException] Range getRangeAt(unsigned long index);
-    void removeAllRanges();
-    void addRange(Range range);
+    undefined collapse(Node? node, optional unsigned long offset = 0);
+    undefined setPosition(Node? node, optional unsigned long offset = 0);
+
+    undefined collapseToStart();
+    undefined collapseToEnd();
+
+    undefined extend(Node node, optional unsigned long offset = 0);
+
+    undefined setBaseAndExtent(Node? baseNode, unsigned long baseOffset, Node? extentNode, unsigned long extentOffset);
+    undefined selectAllChildren(Node node);
+
+    [CEReactions] undefined deleteFromDocument();
+    boolean containsNode(Node node, optional boolean allowPartialContainment = false);
 
     [NotEnumerable] DOMString toString();
 
-    readonly attribute DOMString type;
+    // Non-standard methods and attributes.
 
-    void setBaseAndExtent(Node? baseNode, unsigned long baseOffset, Node? extentNode, unsigned long extentOffset);
-    void setPosition(Node? node, optional unsigned long offset = 0);
-
-    void empty();
-
-    // FIXME: The following operation should be implemented.
-    // void removeRange(Range range);
-
-    // FIXME: Using "undefined" as default parameter value is wrong.
-    void modify(optional DOMString alter = "undefined", optional DOMString direction = "undefined", optional DOMString granularity = "undefined");
+    undefined modify(optional DOMString alter, optional DOMString direction, optional DOMString granularity);
 
     readonly attribute Node? baseNode;
     readonly attribute unsigned long baseOffset;

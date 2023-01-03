@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -56,7 +56,6 @@ import java.security.PrivilegedAction;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.concurrent.CountDownLatch;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.InflaterInputStream;
 import javax.net.ssl.SSLHandshakeException;
@@ -122,6 +121,7 @@ final class URLLoader extends URLLoaderBase implements Runnable {
     /**
      * {@inheritDoc}
      */
+    @SuppressWarnings("removal")
     @Override
     public void run() {
         // Run the loader in the page's access control context
@@ -185,7 +185,7 @@ final class URLLoader extends URLLoaderBase implements Runnable {
         } catch (MalformedURLException ex) {
             error = ex;
             errorCode = LoadListenerClient.MALFORMED_URL;
-        } catch (AccessControlException ex) {
+        } catch (@SuppressWarnings("removal") AccessControlException ex) {
             error = ex;
             errorCode = LoadListenerClient.PERMISSION_DENIED;
         } catch (UnknownHostException ex) {
@@ -619,7 +619,7 @@ final class URLLoader extends URLLoaderBase implements Runnable {
         twkDidSendData(totalBytesSent, totalBytesToBeSent, data);
     }
 
-    private void willSendRequest(URLConnection c) throws InterruptedException
+    private void willSendRequest(URLConnection c)
     {
         final int status = extractStatus(c);
         final String contentType = c.getContentType();
@@ -867,13 +867,15 @@ final class URLLoader extends URLLoaderBase implements Runnable {
      */
     private static String extractHeaders(URLConnection c) {
         StringBuilder sb = new StringBuilder();
-        Map<String, List<String>> headers = c.getHeaderFields();
-        for (Map.Entry<String, List<String>> entry: headers.entrySet()) {
-            String key = entry.getKey();
-            List<String> values = entry.getValue();
-            for (String value : values) {
-                sb.append(key != null ? key : "");
-                sb.append(':').append(value).append('\n');
+        if (c instanceof HttpURLConnection) {
+            Map<String, List<String>> headers = c.getHeaderFields();
+            for (Map.Entry<String, List<String>> entry: headers.entrySet()) {
+                String key = entry.getKey();
+                List<String> values = entry.getValue();
+                for (String value : values) {
+                    sb.append(key != null ? key : "");
+                    sb.append(':').append(value).append('\n');
+                }
             }
         }
         return sb.toString();

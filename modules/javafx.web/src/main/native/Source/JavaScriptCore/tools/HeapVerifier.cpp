@@ -26,9 +26,8 @@
 #include "config.h"
 #include "HeapVerifier.h"
 
+#include "ButterflyInlines.h"
 #include "CodeBlockInlines.h"
-#include "HeapIterationScope.h"
-#include "JSCInlines.h"
 #include "JSObject.h"
 #include "MarkedSpaceInlines.h"
 #include "VMInspector.h"
@@ -231,14 +230,10 @@ bool HeapVerifier::validateJSCell(VM* expectedVM, JSCell* cell, CellProfile* pro
 
         // 2. Validate the cell's structure
 
-        Structure* structure = vm.getStructure(structureID);
+        Structure* structure = structureID.decode();
         if (!structure) {
             printHeaderAndCell();
-#if USE(JSVALUE64)
-            uint32_t structureIDAsUint32 = structureID;
-#else
-            uint32_t structureIDAsUint32 = reinterpret_cast<uint32_t>(structureID);
-#endif
+            uint32_t structureIDAsUint32 = structureID.bits();
             dataLog(" with structureID ", structureIDAsUint32, " maps to a NULL Structure pointer\n");
             return false;
         }
@@ -286,7 +281,7 @@ bool HeapVerifier::validateJSCell(VM* expectedVM, JSCell* cell, CellProfile* pro
 
         // 3. Validate the cell's structure's structure.
 
-        Structure* structureStructure = vm.getStructure(structureID);
+        Structure* structureStructure = structureID.decode();
         if (!structureStructure) {
             printHeaderAndCell();
             dataLog(" has structure ", RawPointer(structure), " whose structure is NULL\n");
@@ -408,7 +403,7 @@ void HeapVerifier::checkIfRecorded(HeapCell* cell)
 {
     bool found = false;
     const char* const prefix = "  ";
-    static const bool verbose = true;
+    static constexpr bool verbose = true;
 
     for (int cycleIndex = 0; cycleIndex > -m_numberOfCycles; cycleIndex--) {
         GCCycle& cycle = cycleForIndex(cycleIndex);
@@ -443,16 +438,13 @@ void HeapVerifier::checkIfRecorded(uintptr_t candidateCell)
 {
     HeapCell* candidateHeapCell = reinterpret_cast<HeapCell*>(candidateCell);
 
-    VMInspector& inspector = VMInspector::instance();
-    auto expectedLocker = inspector.lock(Seconds(2));
-    if (!expectedLocker) {
-        ASSERT(expectedLocker.error() == VMInspector::Error::TimedOut);
+    auto& inspector = VMInspector::instance();
+    if (!inspector.getLock().tryLockWithTimeout(2_s)) {
         dataLog("ERROR: Timed out while waiting to iterate VMs.");
         return;
     }
-
-    auto& locker = expectedLocker.value();
-    inspector.iterate(locker, [&] (VM& vm) {
+    Locker locker { AdoptLock, inspector.getLock() };
+    inspector.iterate([&] (VM& vm) {
         if (!vm.heap.m_verifier)
             return VMInspector::FunctorStatus::Continue;
 

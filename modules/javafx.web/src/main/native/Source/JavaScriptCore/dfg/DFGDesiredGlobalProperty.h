@@ -94,7 +94,7 @@ private:
 struct DesiredGlobalPropertyHash {
     static unsigned hash(const DesiredGlobalProperty& key) { return key.hash(); }
     static bool equal(const DesiredGlobalProperty& a, const DesiredGlobalProperty& b) { return a == b; }
-    static const bool safeToCompareToEmptyOrDeleted = true;
+    static constexpr bool safeToCompareToEmptyOrDeleted = true;
 };
 
 } } // namespace JSC::DFG
@@ -102,9 +102,7 @@ struct DesiredGlobalPropertyHash {
 namespace WTF {
 
 template<typename T> struct DefaultHash;
-template<> struct DefaultHash<JSC::DFG::DesiredGlobalProperty> {
-    typedef JSC::DFG::DesiredGlobalPropertyHash Hash;
-};
+template<> struct DefaultHash<JSC::DFG::DesiredGlobalProperty> : JSC::DFG::DesiredGlobalPropertyHash { };
 
 template<typename T> struct HashTraits;
 template<> struct HashTraits<JSC::DFG::DesiredGlobalProperty> : SimpleClassHashTraits<JSC::DFG::DesiredGlobalProperty> { };

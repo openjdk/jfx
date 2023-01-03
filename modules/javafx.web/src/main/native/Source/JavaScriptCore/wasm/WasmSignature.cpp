@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,86 +29,157 @@
 #if ENABLE(WEBASSEMBLY)
 
 #include "WasmSignatureInlines.h"
+#include <wtf/CommaPrinter.h>
 #include <wtf/FastMalloc.h>
-#include <wtf/HashFunctions.h>
-#include <wtf/PrintStream.h>
-#include <wtf/text/WTFString.h>
+#include <wtf/StringPrintStream.h>
 
 namespace JSC { namespace Wasm {
-
-namespace {
-namespace WasmSignatureInternal {
-static const bool verbose = false;
-}
-}
 
 SignatureInformation* SignatureInformation::theOne { nullptr };
 std::once_flag SignatureInformation::signatureInformationFlag;
 
 String Signature::toString() const
 {
-    String result(makeString(returnType()));
-    result.append(" (");
-    for (SignatureArgCount arg = 0; arg < argumentCount(); ++arg) {
-        if (arg)
-            result.append(", ");
-        result.append(makeString(argument(arg)));
-    }
-    result.append(')');
-    return result;
+    return WTF::toString(*this);
 }
 
 void Signature::dump(PrintStream& out) const
 {
-    out.print(toString());
+    {
+        out.print("(");
+        CommaPrinter comma;
+        for (SignatureArgCount arg = 0; arg < argumentCount(); ++arg)
+            out.print(comma, makeString(argument(arg).kind));
+        out.print(")");
+    }
+
+    {
+        CommaPrinter comma;
+        out.print(" -> [");
+        for (SignatureArgCount ret = 0; ret < returnCount(); ++ret)
+            out.print(comma, makeString(returnType(ret).kind));
+        out.print("]");
+    }
+}
+
+static unsigned computeHash(size_t returnCount, const Type* returnTypes, size_t argumentCount, const Type* argumentTypes)
+{
+    unsigned accumulator = 0xa1bcedd8u;
+    for (uint32_t i = 0; i < argumentCount; ++i) {
+        accumulator = WTF::pairIntHash(accumulator, WTF::IntHash<uint8_t>::hash(static_cast<uint8_t>(argumentTypes[i].kind)));
+        accumulator = WTF::pairIntHash(accumulator, WTF::IntHash<uint8_t>::hash(static_cast<uint8_t>(argumentTypes[i].nullable)));
+        accumulator = WTF::pairIntHash(accumulator, WTF::IntHash<unsigned>::hash(argumentTypes[i].index));
+    }
+    for (uint32_t i = 0; i < returnCount; ++i) {
+        accumulator = WTF::pairIntHash(accumulator, WTF::IntHash<uint8_t>::hash(static_cast<uint8_t>(returnTypes[i].kind)));
+        accumulator = WTF::pairIntHash(accumulator, WTF::IntHash<uint8_t>::hash(static_cast<uint8_t>(returnTypes[i].nullable)));
+        accumulator = WTF::pairIntHash(accumulator, WTF::IntHash<unsigned>::hash(returnTypes[i].index));
+    }
+    return accumulator;
 }
 
 unsigned Signature::hash() const
 {
-    unsigned accumulator = 0xa1bcedd8u;
-    for (uint32_t i = 0; i < argumentCount(); ++i)
-        accumulator = WTF::pairIntHash(accumulator, WTF::IntHash<uint8_t>::hash(static_cast<uint8_t>(argument(i))));
-    accumulator = WTF::pairIntHash(accumulator, WTF::IntHash<uint8_t>::hash(static_cast<uint8_t>(returnType())));
-    return accumulator;
+    return computeHash(returnCount(), storage(0), argumentCount(), storage(returnCount()));
 }
 
-RefPtr<Signature> Signature::tryCreate(SignatureArgCount argumentCount)
+RefPtr<Signature> Signature::tryCreate(SignatureArgCount returnCount, SignatureArgCount argumentCount)
 {
     // We use WTF_MAKE_FAST_ALLOCATED for this class.
-    auto result = tryFastMalloc(allocatedSize(argumentCount));
+    auto result = tryFastMalloc(allocatedSize(returnCount, argumentCount));
     void* memory = nullptr;
     if (!result.getValue(memory))
         return nullptr;
-    Signature* signature = new (NotNull, memory) Signature(argumentCount);
+    Signature* signature = new (NotNull, memory) Signature(returnCount, argumentCount);
     return adoptRef(signature);
 }
 
 SignatureInformation::SignatureInformation()
 {
+#define MAKE_THUNK_SIGNATURE(type, enc, str, val, _)                       \
+    do {                                                                   \
+        if (TypeKind::type != TypeKind::Void) {                            \
+            RefPtr<Signature> sig = Signature::tryCreate(1, 0);            \
+            sig->ref();                                                    \
+            sig->getReturnType(0) = Types::type;                           \
+            thunkSignatures[linearizeType(TypeKind::type)] = sig.get();    \
+            m_signatureSet.add(SignatureHash { sig.releaseNonNull() });    \
+        }                                                                  \
+    } while (false);
+
+    FOR_EACH_WASM_TYPE(MAKE_THUNK_SIGNATURE);
+
+    // Make Void again because we don't use the one that has void in it.
+    {
+        RefPtr<Signature> sig = Signature::tryCreate(0, 0);
+        sig->ref();
+        thunkSignatures[linearizeType(TypeKind::Void)] = sig.get();
+        m_signatureSet.add(SignatureHash { sig.releaseNonNull() });
+    }
 }
 
-Ref<Signature> SignatureInformation::adopt(Ref<Signature>&& signature)
-{
-    SignatureInformation& info = singleton();
-    LockHolder lock(info.m_lock);
 
-    SignatureIndex nextValue = signature->index();
-    auto addResult = info.m_signatureSet.add(SignatureHash { signature.copyRef() });
-    if (addResult.isNewEntry) {
-        if (WasmSignatureInternal::verbose)
-            dataLogLn("Adopt new signature ", signature.get(), " with index ", nextValue, " hash: ", signature->hash());
-        return WTFMove(signature);
+
+struct ParameterTypes {
+    const Vector<Type, 1>& returnTypes;
+    const Vector<Type>& argumentTypes;
+
+    static unsigned hash(const ParameterTypes& params)
+    {
+        return computeHash(params.returnTypes.size(), params.returnTypes.data(), params.argumentTypes.size(), params.argumentTypes.data());
     }
-    nextValue = addResult.iterator->key->index();
-    if (WasmSignatureInternal::verbose)
-        dataLogLn("Existing signature ", signature.get(), " with index ", nextValue, " hash: ", signature->hash());
-    return Ref<Signature>(*addResult.iterator->key);
+
+    static bool equal(const SignatureHash& sig, const ParameterTypes& params)
+    {
+        if (sig.key->argumentCount() != params.argumentTypes.size())
+            return false;
+        if (sig.key->returnCount() != params.returnTypes.size())
+            return false;
+
+        for (unsigned i = 0; i < sig.key->argumentCount(); ++i) {
+            if (sig.key->argument(i) != params.argumentTypes[i])
+                return false;
+        }
+
+        for (unsigned i = 0; i < sig.key->returnCount(); ++i) {
+            if (sig.key->returnType(i) != params.returnTypes[i])
+                return false;
+        }
+        return true;
+    }
+
+    static void translate(SignatureHash& entry, const ParameterTypes& params, unsigned)
+    {
+        RefPtr<Signature> signature = Signature::tryCreate(params.returnTypes.size(), params.argumentTypes.size());
+        RELEASE_ASSERT(signature);
+
+        for (unsigned i = 0; i < params.returnTypes.size(); ++i)
+            signature->getReturnType(i) = params.returnTypes[i];
+
+        for (unsigned i = 0; i < params.argumentTypes.size(); ++i)
+            signature->getArgument(i) = params.argumentTypes[i];
+
+        entry.key = WTFMove(signature);
+    }
+};
+
+RefPtr<Signature> SignatureInformation::signatureFor(const Vector<Type, 1>& results, const Vector<Type>& args)
+{
+    if constexpr (ASSERT_ENABLED) {
+        ASSERT(!results.contains(Wasm::Types::Void));
+        ASSERT(!args.contains(Wasm::Types::Void));
+    }
+    SignatureInformation& info = singleton();
+    Locker locker { info.m_lock };
+
+    auto addResult = info.m_signatureSet.template add<ParameterTypes>(ParameterTypes { results, args });
+    return addResult.iterator->key;
 }
 
 void SignatureInformation::tryCleanup()
 {
     SignatureInformation& info = singleton();
-    LockHolder lock(info.m_lock);
+    Locker locker { info.m_lock };
 
     info.m_signatureSet.removeIf([&] (auto& hash) {
         const auto& signature = hash.key;

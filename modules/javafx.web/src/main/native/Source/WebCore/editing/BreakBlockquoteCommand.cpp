@@ -27,6 +27,7 @@
 #include "BreakBlockquoteCommand.h"
 
 #include "Editing.h"
+#include "ElementInlines.h"
 #include "HTMLBRElement.h"
 #include "HTMLNames.h"
 #include "NodeTraversal.h"
@@ -78,7 +79,7 @@ void BreakBlockquoteCommand::doApply()
     // Instead, insert the break before the blockquote, unless the position is as the end of the quoted content.
     if (isFirstVisiblePositionInNode(visiblePos, topBlockquote) && !isLastVisPosInNode) {
         insertNodeBefore(breakNode.copyRef(), *topBlockquote);
-        setEndingSelection(VisibleSelection(positionBeforeNode(breakNode.ptr()), DOWNSTREAM, endingSelection().isDirectional()));
+        setEndingSelection(VisibleSelection(positionBeforeNode(breakNode.ptr()), Affinity::Downstream, endingSelection().isDirectional()));
         rebalanceWhitespace();
         return;
     }
@@ -88,7 +89,7 @@ void BreakBlockquoteCommand::doApply()
 
     // If we're inserting the break at the end of the quoted content, we don't need to break the quote.
     if (isLastVisPosInNode) {
-        setEndingSelection(VisibleSelection(positionBeforeNode(breakNode.ptr()), DOWNSTREAM, endingSelection().isDirectional()));
+        setEndingSelection(VisibleSelection(positionBeforeNode(breakNode.ptr()), Affinity::Downstream, endingSelection().isDirectional()));
         rebalanceWhitespace();
         return;
     }
@@ -109,14 +110,15 @@ void BreakBlockquoteCommand::doApply()
     if (is<Text>(*startNode)) {
         Text& textNode = downcast<Text>(*startNode);
         if ((unsigned)pos.deprecatedEditingOffset() >= textNode.length()) {
-            startNode = NodeTraversal::next(*startNode);
-            ASSERT(startNode);
+            if (auto* nextNode = NodeTraversal::next(*startNode))
+                startNode = nextNode;
         } else if (pos.deprecatedEditingOffset() > 0)
             splitTextNode(textNode, pos.deprecatedEditingOffset());
     } else if (pos.deprecatedEditingOffset() > 0) {
-        Node* childAtOffset = startNode->traverseToChildAt(pos.deprecatedEditingOffset());
-        startNode = childAtOffset ? childAtOffset : NodeTraversal::next(*startNode);
-        ASSERT(startNode);
+        if (auto* child = startNode->traverseToChildAt(pos.deprecatedEditingOffset()))
+            startNode = child;
+        else if (auto* next = NodeTraversal::next(*startNode))
+            startNode = next;
     }
 
     // If there's nothing inside topBlockquote to move, we're finished.
@@ -166,9 +168,12 @@ void BreakBlockquoteCommand::doApply()
         RefPtr<Element> ancestor;
         RefPtr<Element> clonedParent;
         for (ancestor = ancestors.first(), clonedParent = clonedAncestor->parentElement();
-             ancestor && ancestor != topBlockquote;
-             ancestor = ancestor->parentElement(), clonedParent = clonedParent->parentElement())
+            ancestor && ancestor != topBlockquote;
+            ancestor = ancestor->parentElement(), clonedParent = clonedParent->parentElement()) {
+            if (!clonedParent)
+                break;
             moveRemainingSiblingsToNewParent(ancestor->nextSibling(), 0, *clonedParent);
+        }
 
         // If the startNode's original parent is now empty, remove it
         Node* originalParent = ancestors.first().get();
@@ -180,7 +185,7 @@ void BreakBlockquoteCommand::doApply()
     addBlockPlaceholderIfNeeded(clonedBlockquote.ptr());
 
     // Put the selection right before the break.
-    setEndingSelection(VisibleSelection(positionBeforeNode(breakNode.ptr()), DOWNSTREAM, endingSelection().isDirectional()));
+    setEndingSelection(VisibleSelection(positionBeforeNode(breakNode.ptr()), Affinity::Downstream, endingSelection().isDirectional()));
     rebalanceWhitespace();
 }
 

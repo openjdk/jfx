@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -38,9 +38,11 @@ class DispmanAcceleratedScreen extends AcceleratedScreen {
 
     @Override
     protected long platformGetNativeWindow() {
+        @SuppressWarnings("removal")
         int displayID = AccessController.doPrivileged(
                 (PrivilegedAction<Integer>)
                         () -> Integer.getInteger("dispman.display", 0 /* LCD */));
+        @SuppressWarnings("removal")
         int layerID = AccessController.doPrivileged(
                 (PrivilegedAction<Integer>)
                         () -> Integer.getInteger("dispman.layer", 1));

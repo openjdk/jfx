@@ -33,8 +33,8 @@ class HTMLAllCollection final : public AllDescendantsCollection {
 public:
     static Ref<HTMLAllCollection> create(Document&, CollectionType);
 
-    Optional<Variant<RefPtr<HTMLCollection>, RefPtr<Element>>> namedOrIndexedItemOrItems(const AtomString& nameOrIndex) const;
-    Optional<Variant<RefPtr<HTMLCollection>, RefPtr<Element>>> namedItemOrItems(const AtomString&) const;
+    std::optional<std::variant<RefPtr<HTMLCollection>, RefPtr<Element>>> namedOrIndexedItemOrItems(const AtomString& nameOrIndex) const;
+    std::optional<std::variant<RefPtr<HTMLCollection>, RefPtr<Element>>> namedItemOrItems(const AtomString&) const;
 
 private:
     HTMLAllCollection(Document&, CollectionType);
@@ -54,7 +54,7 @@ public:
 
 private:
     HTMLAllNamedSubCollection(Document& document, CollectionType type, const AtomString& name)
-        : CachedHTMLCollection<HTMLAllNamedSubCollection, CollectionTraversalType::Descendants>(document, type)
+        : CachedHTMLCollection(document, type)
         , m_name(name)
     {
         ASSERT(type == DocumentAllNamedItems);

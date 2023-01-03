@@ -26,19 +26,21 @@
 #include "config.h"
 #include "IDBDatabaseInfo.h"
 
+#include <wtf/IsoMallocInlines.h>
 #include <wtf/text/StringBuilder.h>
 
-#if ENABLE(INDEXED_DATABASE)
-
 namespace WebCore {
+
+WTF_MAKE_ISO_ALLOCATED_IMPL(IDBDatabaseInfo);
 
 IDBDatabaseInfo::IDBDatabaseInfo()
 {
 }
 
-IDBDatabaseInfo::IDBDatabaseInfo(const String& name, uint64_t version)
+IDBDatabaseInfo::IDBDatabaseInfo(const String& name, uint64_t version, uint64_t maxIndexID)
     : m_name(name)
     , m_version(version)
+    , m_maxIndexID(maxIndexID)
 {
 }
 
@@ -46,6 +48,7 @@ IDBDatabaseInfo::IDBDatabaseInfo(const IDBDatabaseInfo& other, IsolatedCopyTag)
     : m_name(other.m_name.isolatedCopy())
     , m_version(other.m_version)
     , m_maxObjectStoreID(other.m_maxObjectStoreID)
+    , m_maxIndexID(other.m_maxIndexID)
 {
     for (const auto& entry : other.m_objectStoreMap)
         m_objectStoreMap.set(entry.key, entry.value.isolatedCopy());
@@ -66,7 +69,7 @@ bool IDBDatabaseInfo::hasObjectStore(const String& name) const
     return false;
 }
 
-IDBObjectStoreInfo IDBDatabaseInfo::createNewObjectStore(const String& name, Optional<IDBKeyPath>&& keyPath, bool autoIncrement)
+IDBObjectStoreInfo IDBDatabaseInfo::createNewObjectStore(const String& name, std::optional<IDBKeyPath>&& keyPath, bool autoIncrement)
 {
     IDBObjectStoreInfo info(++m_maxObjectStoreID, name, WTFMove(keyPath), autoIncrement);
     m_objectStoreMap.set(info.identifier(), info);
@@ -133,12 +136,9 @@ void IDBDatabaseInfo::renameObjectStore(uint64_t objectStoreIdentifier, const St
 
 Vector<String> IDBDatabaseInfo::objectStoreNames() const
 {
-    Vector<String> names;
-    names.reserveCapacity(m_objectStoreMap.size());
-    for (auto& objectStore : m_objectStoreMap.values())
-        names.uncheckedAppend(objectStore.name());
-
-    return names;
+    return WTF::map(m_objectStoreMap, [](auto& pair) {
+        return pair.value.name();
+    });
 }
 
 void IDBDatabaseInfo::deleteObjectStore(const String& objectStoreName)
@@ -168,6 +168,10 @@ String IDBDatabaseInfo::loggingString() const
 
 #endif
 
-} // namespace WebCore
+void IDBDatabaseInfo::setMaxIndexID(uint64_t maxIndexID)
+{
+    ASSERT(maxIndexID > m_maxIndexID || (!maxIndexID && !m_maxIndexID));
+    m_maxIndexID = maxIndexID;
+}
 
-#endif // ENABLE(INDEXED_DATABASE)
+} // namespace WebCore

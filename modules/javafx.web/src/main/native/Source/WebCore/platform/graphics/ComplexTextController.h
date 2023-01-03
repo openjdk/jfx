@@ -70,7 +70,7 @@ public:
     // Returns the width of everything we've consumed so far.
     float runWidthSoFar() const { return m_runWidthSoFar; }
 
-    float totalWidth() const { return m_totalWidth; }
+    FloatSize totalAdvance() const { return m_totalAdvance; }
 
     float minGlyphBoundingBoxX() const { return m_minGlyphBoundingBoxX; }
     float maxGlyphBoundingBoxX() const { return m_maxGlyphBoundingBoxX; }
@@ -117,33 +117,6 @@ public:
         unsigned endOffsetAt(unsigned i) const { ASSERT(!m_isMonotonic); return m_glyphEndOffsets[i]; }
         const CGGlyph* glyphs() const { return m_glyphs.data(); }
 
-        /*
-         * This is the format of the information CoreText gives us about each run:
-         *
-         *                                        ----->X (Paint glyph position)   X (Paint glyph position)   X (Paint glyph position)
-         *                                       /     7                          7                          7
-         *                                      /     /                          /                          /
-         *                   (Initial advance) /     / (Glyph origin)           / (Glyph origin)           / (Glyph origin)
-         *                  -------------------     /                          /                          /
-         *                 /                       /                          /                          /
-         *                X                       X--------------------------X--------------------------X--------------------------X
-         * (text position ^)                             (base advance)             (base advance)             (base advance)
-         *
-         *
-         *
-         *
-         *
-         * And here is the output we transform this into (for each run):
-         *
-         *                                        ----->X------------------------->X------------------------->X
-         *                                       /            (Paint advance)            (Paint advance)       \
-         *                                      /                                                               \
-         *                   (Initial advance) /                                                                 \ (Paint advance)
-         *                  -------------------                                                                   ----------------
-         *                 /                                                                                                      \
-         *                X--------------------------------------------------X--------------------------X--------------------------X
-         * (text position ^)                (layout advance)                       (layout advance)           (layout advance)
-         */
         void growInitialAdvanceHorizontally(float delta) { m_initialAdvance.expand(delta, 0); }
         FloatSize initialAdvance() const { return m_initialAdvance; }
         const FloatSize* baseAdvances() const { return m_baseAdvances.data(); }
@@ -230,7 +203,7 @@ private:
     unsigned m_currentCharacter { 0 };
     unsigned m_end { 0 };
 
-    float m_totalWidth { 0 };
+    FloatSize m_totalAdvance;
     float m_runWidthSoFar { 0 };
     unsigned m_numGlyphsSoFar { 0 };
     unsigned m_currentRun { 0 };

@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2011 Google Inc. All rights reserved.
+ * Copyright (C) 2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -41,7 +42,7 @@ namespace WebCore {
 
 namespace {
 
-static void visitNodeList(JSC::SlotVisitor& visitor, NodeList& nodeList)
+static void visitNodeList(JSC::AbstractSlotVisitor& visitor, NodeList& nodeList)
 {
     ASSERT(!nodeList.isLiveNodeList());
     unsigned length = nodeList.length();
@@ -68,7 +69,7 @@ private:
     Node* previousSibling() override { return m_previousSibling.get(); }
     Node* nextSibling() override { return m_nextSibling.get(); }
 
-    void visitNodesConcurrently(JSC::SlotVisitor& visitor) const final
+    void visitNodesConcurrently(JSC::AbstractSlotVisitor& visitor) const final
     {
         visitor.addOpaqueRoot(root(m_target.ptr()));
         if (m_addedNodes)
@@ -105,7 +106,7 @@ private:
         return nodeList.get();
     }
 
-    void visitNodesConcurrently(JSC::SlotVisitor& visitor) const final
+    void visitNodesConcurrently(JSC::AbstractSlotVisitor& visitor) const final
     {
         visitor.addOpaqueRoot(root(m_target.ptr()));
     }
@@ -164,7 +165,7 @@ private:
 
     String oldValue() override { return String(); }
 
-    void visitNodesConcurrently(JSC::SlotVisitor& visitor) const final
+    void visitNodesConcurrently(JSC::AbstractSlotVisitor& visitor) const final
     {
         m_record->visitNodesConcurrently(visitor);
     }
@@ -174,19 +175,19 @@ private:
 
 const AtomString& ChildListRecord::type()
 {
-    static NeverDestroyed<AtomString> childList("childList", AtomString::ConstructFromLiteral);
+    static MainThreadNeverDestroyed<const AtomString> childList("childList", AtomString::ConstructFromLiteral);
     return childList;
 }
 
 const AtomString& AttributesRecord::type()
 {
-    static NeverDestroyed<AtomString> attributes("attributes", AtomString::ConstructFromLiteral);
+    static MainThreadNeverDestroyed<const AtomString> attributes("attributes", AtomString::ConstructFromLiteral);
     return attributes;
 }
 
 const AtomString& CharacterDataRecord::type()
 {
-    static NeverDestroyed<AtomString> characterData("characterData", AtomString::ConstructFromLiteral);
+    static MainThreadNeverDestroyed<const AtomString> characterData("characterData", AtomString::ConstructFromLiteral);
     return characterData;
 }
 

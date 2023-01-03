@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -40,7 +40,7 @@ public abstract class WCRenderQueue extends Ref {
             PlatformLogger.getLogger(WCRenderQueue.class.getName());
     @Native public final static int MAX_QUEUE_SIZE = 0x80000;
 
-    private final LinkedList<BufferData> buffers = new LinkedList<BufferData>();
+    private final LinkedList<BufferData> buffers = new LinkedList<>();
     private BufferData currentBuffer = new BufferData();
     private final WCRectangle clip;
     private int size = 0;
@@ -87,6 +87,11 @@ public abstract class WCRenderQueue extends Ref {
     }
 
     public synchronized void decode(WCGraphicsContext gc) {
+        if (gc == null || !gc.isValid()) {
+            log.fine("WCRenderQueue::decode : GC is " + (gc == null ? "null" : " invalid"));
+            return;
+        }
+
         for (BufferData bdata : buffers) {
             try {
                 GraphicsDecoder.decode(
@@ -99,13 +104,19 @@ public abstract class WCRenderQueue extends Ref {
     }
 
     public synchronized void decode() {
-        assert (gc != null);
+        if (gc == null || !gc.isValid()) {
+            log.fine("WCRenderQueue::decode : GC is " + (gc == null ? "null" : " invalid"));
+            return;
+        }
         decode(gc);
         gc.flush();
     }
 
     public synchronized void decode(int fontSmoothingType) {
-        assert (gc != null);
+        if (gc == null || !gc.isValid()) {
+            log.fine("WCRenderQueue::decode : GC is " + (gc == null ? "null" : " invalid"));
+            return;
+        }
         gc.setFontSmoothingType(fontSmoothingType);
         decode();
     }
@@ -184,11 +195,11 @@ final class BufferData {
     /* For passing data that does not fit into the queue */
     private final AtomicInteger idCount = new AtomicInteger(0);
     private final HashMap<Integer,String> strMap =
-            new HashMap<Integer,String>();
+            new HashMap<>();
     private final HashMap<Integer,int[]> intArrMap =
-            new HashMap<Integer,int[]>();
+            new HashMap<>();
     private final HashMap<Integer,float[]> floatArrMap =
-            new HashMap<Integer,float[]>();
+            new HashMap<>();
 
     private ByteBuffer buffer;
 

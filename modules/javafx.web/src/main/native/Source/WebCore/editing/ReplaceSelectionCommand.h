@@ -31,6 +31,7 @@
 namespace WebCore {
 
 class DocumentFragment;
+class Range;
 class ReplacementFragment;
 
 class ReplaceSelectionCommand : public CompositeEditCommand {
@@ -51,6 +52,9 @@ public:
     }
 
     VisibleSelection visibleSelectionForInsertedText() const { return m_visibleSelectionForInsertedText; }
+    String documentFragmentPlainText() const { return m_documentFragmentPlainText; }
+
+    std::optional<SimpleRange> insertedContentRange() const;
 
 private:
     ReplaceSelectionCommand(Document&, RefPtr<DocumentFragment>&&, OptionSet<CommandOption>, EditAction);
@@ -64,6 +68,7 @@ private:
     public:
         void respondToNodeInsertion(Node*);
         void willRemoveNodePreservingChildren(Node*);
+        void willRemovePossibleAncestorNode(Node*);
         void willRemoveNode(Node*);
         void didReplaceNode(Node*, Node* newNode);
 
@@ -99,6 +104,7 @@ private:
     void removeUnrenderedTextNodesAtEnds(InsertedNodes&);
 
     void removeRedundantStylesAndKeepStyleSpanInline(InsertedNodes&);
+    void inverseTransformColor(InsertedNodes&);
     void makeInsertedContentRoundTrippableWithHTMLTreeBuilder(InsertedNodes&);
     void moveNodeOutOfAncestor(Node&, Node& ancestor, InsertedNodes&);
     void handleStyleSpans(InsertedNodes&);

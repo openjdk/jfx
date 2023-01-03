@@ -26,11 +26,11 @@
 #pragma once
 
 #include "QualifiedName.h"
+#include "SVGAnimatedProperty.h"
 #include "SVGAttributeAnimator.h"
 
 namespace WebCore {
 
-class SVGAnimatedProperty;
 class SVGProperty;
 
 template<typename OwnerType>
@@ -45,7 +45,8 @@ public:
 
     virtual bool matches(const OwnerType&, const SVGProperty&) const { return false; }
     virtual bool matches(const OwnerType&, const SVGAnimatedProperty&) const { return false; }
-    virtual Optional<String> synchronize(const OwnerType&) const { return WTF::nullopt; }
+    virtual void setDirty(const OwnerType&, SVGAnimatedProperty& animatedProperty) const { animatedProperty.setDirty(); }
+    virtual std::optional<String> synchronize(const OwnerType&) const { return std::nullopt; }
 
     virtual RefPtr<SVGAttributeAnimator> createAnimator(OwnerType&, const QualifiedName&, AnimationMode, CalcMode, bool, bool) const { return nullptr; }
     virtual void appendAnimatedInstance(OwnerType&, SVGAttributeAnimator&) const { }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,6 +30,11 @@
 #ifndef TARGET_OS_MAC
 #define TARGET_OS_MAC   1
 #endif
+#if defined(__arm64__)
+#ifndef TARGET_OS_MAC_ARM64
+#define TARGET_OS_MAC_ARM64   1
+#endif
+#endif // __arm64__
 #elif defined(LINUX)
 #ifndef TARGET_OS_LINUX
 #define TARGET_OS_LINUX 1

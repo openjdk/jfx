@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,31 +25,29 @@
 
 package test.javafx.scene.control;
 
-import com.sun.javafx.application.PlatformImpl;
-import com.sun.javafx.scene.control.behavior.TreeCellBehavior;
-import javafx.beans.property.ReadOnlyStringWrapper;
-import javafx.scene.control.*;
-import test.com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
-import test.com.sun.javafx.scene.control.infrastructure.KeyModifier;
-import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
-import test.com.sun.javafx.scene.control.infrastructure.VirtualFlowTestUtils;
-import javafx.scene.control.skin.TextFieldSkin;
-import test.com.sun.javafx.scene.control.test.Employee;
-import test.com.sun.javafx.scene.control.test.Person;
-import test.com.sun.javafx.scene.control.test.RT_22463_Person;
-import com.sun.javafx.tk.Toolkit;
-
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
+
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Ignore;
+import org.junit.Test;
+
+import com.sun.javafx.application.PlatformImpl;
+import com.sun.javafx.scene.control.VirtualScrollBar;
+import com.sun.javafx.scene.control.behavior.TreeCellBehavior;
+import com.sun.javafx.tk.Toolkit;
+
+import static org.junit.Assert.*;
+import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.*;
 
 import javafx.application.Platform;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
-import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.assertStyleClassContains;
-import static org.junit.Assert.*;
-import static org.junit.Assert.assertEquals;
-
 import javafx.beans.binding.Bindings;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
@@ -61,9 +59,21 @@ import javafx.event.ActionEvent;
 import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.Scene;
+import javafx.scene.control.Button;
+import javafx.scene.control.FocusModel;
+import javafx.scene.control.IndexedCell;
+import javafx.scene.control.MultipleSelectionModel;
+import javafx.scene.control.SelectionMode;
+import javafx.scene.control.SelectionModel;
+import javafx.scene.control.TextField;
+import javafx.scene.control.TreeCell;
+import javafx.scene.control.TreeCellShim;
+import javafx.scene.control.TreeItem;
+import javafx.scene.control.TreeView;
+import javafx.scene.control.TreeViewShim;
 import javafx.scene.control.cell.CheckBoxTreeCell;
 import javafx.scene.control.cell.TextFieldTreeCell;
-import com.sun.javafx.scene.control.VirtualScrollBar;
+import javafx.scene.control.skin.TextFieldSkin;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.KeyCode;
 import javafx.scene.layout.VBox;
@@ -72,10 +82,14 @@ import javafx.scene.shape.Circle;
 import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
 import javafx.util.Callback;
-
-import org.junit.Before;
-import org.junit.Ignore;
-import org.junit.Test;
+import test.com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
+import test.com.sun.javafx.scene.control.infrastructure.KeyModifier;
+import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
+import test.com.sun.javafx.scene.control.infrastructure.VirtualFlowTestUtils;
+import test.com.sun.javafx.scene.control.test.Employee;
+import test.com.sun.javafx.scene.control.test.Person;
+import test.com.sun.javafx.scene.control.test.RT_22463_Person;
+import test.javafx.collections.MockListObserver;
 
 public class TreeViewTest {
     private TreeView<String> treeView;
@@ -118,24 +132,32 @@ public class TreeViewTest {
     }
 
     @Before public void setup() {
-        treeView = new TreeView<String>();
+        Thread.currentThread().setUncaughtExceptionHandler((thread, throwable) -> {
+            if (throwable instanceof RuntimeException) {
+                throw (RuntimeException)throwable;
+            } else {
+                Thread.currentThread().getThreadGroup().uncaughtException(thread, throwable);
+            }
+        });
+
+        treeView = new TreeView<>();
         sm = treeView.getSelectionModel();
         fm = treeView.getFocusModel();
 
         // build sample data #2, even though it may not be used...
-        myCompanyRootNode = new TreeItem<String>("MyCompany Human Resources");
-        salesDepartment = new TreeItem<String>("Sales Department");
-            ethanWilliams = new TreeItem<String>("Ethan Williams");
-            emmaJones = new TreeItem<String>("Emma Jones");
-            michaelBrown = new TreeItem<String>("Michael Brown");
-            annaBlack = new TreeItem<String>("Anna Black");
-            rodgerYork = new TreeItem<String>("Rodger York");
-            susanCollins = new TreeItem<String>("Susan Collins");
+        myCompanyRootNode = new TreeItem<>("MyCompany Human Resources");
+        salesDepartment = new TreeItem<>("Sales Department");
+            ethanWilliams = new TreeItem<>("Ethan Williams");
+            emmaJones = new TreeItem<>("Emma Jones");
+            michaelBrown = new TreeItem<>("Michael Brown");
+            annaBlack = new TreeItem<>("Anna Black");
+            rodgerYork = new TreeItem<>("Rodger York");
+            susanCollins = new TreeItem<>("Susan Collins");
 
-        itSupport = new TreeItem<String>("IT Support");
-            mikeGraham = new TreeItem<String>("Mike Graham");
-            judyMayer = new TreeItem<String>("Judy Mayer");
-            gregorySmith = new TreeItem<String>("Gregory Smith");
+        itSupport = new TreeItem<>("IT Support");
+            mikeGraham = new TreeItem<>("Mike Graham");
+            judyMayer = new TreeItem<>("Judy Mayer");
+            gregorySmith = new TreeItem<>("Gregory Smith");
 
         myCompanyRootNode.getChildren().setAll(
             salesDepartment,
@@ -156,11 +178,16 @@ public class TreeViewTest {
         );
     }
 
+    @After
+    public void cleanup() {
+        Thread.currentThread().setUncaughtExceptionHandler(null);
+    }
+
     private void installChildren() {
-        root = new TreeItem<String>("Root");
-        child1 = new TreeItem<String>("Child 1");
-        child2 = new TreeItem<String>("Child 2");
-        child3 = new TreeItem<String>("Child 3");
+        root = new TreeItem<>("Root");
+        child1 = new TreeItem<>("Child 1");
+        child2 = new TreeItem<>("Child 2");
+        child3 = new TreeItem<>("Child 3");
         root.setExpanded(true);
         root.getChildren().setAll(child1, child2, child3);
         treeView.setRoot(root);
@@ -236,7 +263,7 @@ public class TreeViewTest {
     @Test public void selectionModelCanBeBound() {
         MultipleSelectionModel<TreeItem<String>> sm =
                 TreeViewShim.<String>get_TreeViewBitSetSelectionModel(treeView);
-        ObjectProperty<MultipleSelectionModel<TreeItem<String>>> other = new SimpleObjectProperty<MultipleSelectionModel<TreeItem<String>>>(sm);
+        ObjectProperty<MultipleSelectionModel<TreeItem<String>>> other = new SimpleObjectProperty<>(sm);
         treeView.selectionModelProperty().bind(other);
         assertSame(sm, treeView.getSelectionModel());
     }
@@ -249,7 +276,7 @@ public class TreeViewTest {
     }
 
     @Test public void canSetSelectedItemToAnItemEvenWhenThereAreNoItems() {
-        TreeItem<String> element = new TreeItem<String>("I AM A CRAZY RANDOM STRING");
+        TreeItem<String> element = new TreeItem<>("I AM A CRAZY RANDOM STRING");
         treeView.getSelectionModel().select(element);
         assertEquals(-1, treeView.getSelectionModel().getSelectedIndex());
         assertSame(element, treeView.getSelectionModel().getSelectedItem());
@@ -257,7 +284,7 @@ public class TreeViewTest {
 
     @Test public void canSetSelectedItemToAnItemNotInTheDataModel() {
         installChildren();
-        TreeItem<String> element = new TreeItem<String>("I AM A CRAZY RANDOM STRING");
+        TreeItem<String> element = new TreeItem<>("I AM A CRAZY RANDOM STRING");
         treeView.getSelectionModel().select(element);
         assertEquals(-1, treeView.getSelectionModel().getSelectedIndex());
         assertSame(element, treeView.getSelectionModel().getSelectedItem());
@@ -304,10 +331,10 @@ public class TreeViewTest {
         assertNull(treeView.getSelectionModel().getSelectedItem());
         assertEquals(-1, treeView.getSelectionModel().getSelectedIndex());
 
-        TreeItem<String> newRoot = new TreeItem<String>("New Root");
-        TreeItem<String> newChild1 = new TreeItem<String>("New Child 1");
-        TreeItem<String> newChild2 = new TreeItem<String>("New Child 2");
-        TreeItem<String> newChild3 = new TreeItem<String>("New Child 3");
+        TreeItem<String> newRoot = new TreeItem<>("New Root");
+        TreeItem<String> newChild1 = new TreeItem<>("New Child 1");
+        TreeItem<String> newChild2 = new TreeItem<>("New Child 2");
+        TreeItem<String> newChild3 = new TreeItem<>("New Child 3");
         newRoot.setExpanded(true);
         newRoot.getChildren().setAll(newChild1, newChild2, newChild3);
         treeView.setRoot(root);
@@ -391,7 +418,7 @@ public class TreeViewTest {
     @Test public void removingLastTest() {
         TreeView tree_view = new TreeView();
         MultipleSelectionModel sm = tree_view.getSelectionModel();
-        TreeItem<String> tree_model = new TreeItem<String>("Root");
+        TreeItem<String> tree_model = new TreeItem<>("Root");
         TreeItem node = new TreeItem("Data item");
         tree_model.getChildren().add(node);
         tree_view.setRoot(tree_model);
@@ -412,7 +439,7 @@ public class TreeViewTest {
      * Tests from bug reports                                            *
      ********************************************************************/
     @Ignore @Test public void test_rt17112() {
-        TreeItem<String> root1 = new TreeItem<String>("Root");
+        TreeItem<String> root1 = new TreeItem<>("Root");
         root1.setExpanded(true);
         addChildren(root1, "child");
         for (TreeItem child : root1.getChildren()) {
@@ -455,7 +482,7 @@ public class TreeViewTest {
     }
     private void addChildren(TreeItem parent, String name) {
         for (int i=0; i<3; i++) {
-            TreeItem<String> ti = new TreeItem<String>(name+"-"+i);
+            TreeItem<String> ti = new TreeItem<>(name+"-"+i);
             parent.getChildren().add(ti);
         }
     }
@@ -603,7 +630,6 @@ public class TreeViewTest {
         assertEquals(mikeGraham, treeView.getFocusModel().getFocusedItem());
     }
 
-    @Ignore("Bug hasn't been fixed yet")
     @Test public void test_rt28114() {
         myCompanyRootNode.setExpanded(true);
         treeView.setRoot(myCompanyRootNode);
@@ -619,8 +645,6 @@ public class TreeViewTest {
         itSupport.getChildren().remove(mikeGraham);
         assertEquals(itSupport, treeView.getFocusModel().getFocusedItem());
         assertEquals(itSupport, treeView.getSelectionModel().getSelectedItem());
-        assertTrue(itSupport.isLeaf());
-        assertTrue(!itSupport.isExpanded());
     }
 
     @Test public void test_rt27820_1() {
@@ -707,7 +731,7 @@ public class TreeViewTest {
                 new TreeItem(new Person("Michael", "Brown", "michael.brown@example.com")));
         root.setExpanded(true);
 
-        TreeView<Person> tree = new TreeView<Person>(root);
+        TreeView<Person> tree = new TreeView<>(root);
 
         VirtualFlowTestUtils.assertRowsNotEmpty(tree, 0, 6); // rows 0 - 6 should be filled
         VirtualFlowTestUtils.assertRowsEmpty(tree, 6, -1); // rows 6+ should be empty
@@ -736,16 +760,16 @@ public class TreeViewTest {
             new Employee("Jacob Smith", "Accounts Department"),
             new Employee("Isabella Johnson", "Accounts Department"));
 
-        TreeItem<String> rootNode = new TreeItem<String>("MyCompany Human Resources");
+        TreeItem<String> rootNode = new TreeItem<>("MyCompany Human Resources");
         rootNode.setExpanded(true);
 
         List<TreeItem<String>> nodeList = FXCollections.observableArrayList();
         for (Employee employee : employees) {
-            nodeList.add(new TreeItem<String>(employee.getName()));
+            nodeList.add(new TreeItem<>(employee.getName()));
         }
         rootNode.getChildren().setAll(nodeList);
 
-        TreeView<String> treeView = new TreeView<String>(rootNode);
+        TreeView<String> treeView = new TreeView<>(rootNode);
 
         final double indent = PlatformImpl.isCaspian() ? 31 :
                         PlatformImpl.isModena()  ? 35 :
@@ -772,10 +796,10 @@ public class TreeViewTest {
     @Test public void test_rt22463() {
         RT_22463_Person rootPerson = new RT_22463_Person();
         rootPerson.setName("Root");
-        TreeItem<RT_22463_Person> root = new TreeItem<RT_22463_Person>(rootPerson);
+        TreeItem<RT_22463_Person> root = new TreeItem<>(rootPerson);
         root.setExpanded(true);
 
-        final TreeView<RT_22463_Person> tree = new TreeView<RT_22463_Person>();
+        final TreeView<RT_22463_Person> tree = new TreeView<>();
         tree.setRoot(root);
 
         // before the change things display fine
@@ -786,8 +810,8 @@ public class TreeViewTest {
         p2.setId(2l);
         p2.setName("name2");
         root.getChildren().addAll(
-                new TreeItem<RT_22463_Person>(p1),
-                new TreeItem<RT_22463_Person>(p2));
+                new TreeItem<>(p1),
+                new TreeItem<>(p2));
         VirtualFlowTestUtils.assertCellTextEquals(tree, 1, "name1");
         VirtualFlowTestUtils.assertCellTextEquals(tree, 2, "name2");
 
@@ -801,8 +825,8 @@ public class TreeViewTest {
         new_p2.setName("updated name2");
         root.getChildren().clear();
         root.getChildren().setAll(
-                new TreeItem<RT_22463_Person>(new_p1),
-                new TreeItem<RT_22463_Person>(new_p2));
+                new TreeItem<>(new_p1),
+                new TreeItem<>(new_p2));
         VirtualFlowTestUtils.assertCellTextEquals(tree, 1, "updated name1");
         VirtualFlowTestUtils.assertCellTextEquals(tree, 2, "updated name2");
     }
@@ -810,27 +834,27 @@ public class TreeViewTest {
     @Test public void test_rt28637() {
         TreeItem<String> s1, s2, s3, s4;
         ObservableList<TreeItem<String>> items = FXCollections.observableArrayList(
-                s1 = new TreeItem<String>("String1"),
-                s2 = new TreeItem<String>("String2"),
-                s3 = new TreeItem<String>("String3"),
-                s4 = new TreeItem<String>("String4"));
+                s1 = new TreeItem<>("String1"),
+                s2 = new TreeItem<>("String2"),
+                s3 = new TreeItem<>("String3"),
+                s4 = new TreeItem<>("String4"));
 
-        final TreeView<String> treeView = new TreeView<String>();
+        final TreeView<String> treeView = new TreeView<>();
 
-        TreeItem<String> root = new TreeItem<String>("Root");
+        TreeItem<String> root = new TreeItem<>("Root");
         root.setExpanded(true);
         treeView.setRoot(root);
         treeView.setShowRoot(false);
         root.getChildren().addAll(items);
 
         treeView.getSelectionModel().select(0);
-        assertEquals((Object)s1, treeView.getSelectionModel().getSelectedItem());
-        assertEquals((Object)s1, treeView.getSelectionModel().getSelectedItems().get(0));
+        assertEquals(s1, treeView.getSelectionModel().getSelectedItem());
+        assertEquals(s1, treeView.getSelectionModel().getSelectedItems().get(0));
         assertEquals(0, treeView.getSelectionModel().getSelectedIndex());
 
         root.getChildren().remove(treeView.getSelectionModel().getSelectedItem());
-        assertEquals((Object)s2, treeView.getSelectionModel().getSelectedItem());
-        assertEquals((Object)s2, treeView.getSelectionModel().getSelectedItems().get(0));
+        assertEquals(s2, treeView.getSelectionModel().getSelectedItem());
+        assertEquals(s2, treeView.getSelectionModel().getSelectedItems().get(0));
         assertEquals(0, treeView.getSelectionModel().getSelectedIndex());
     }
 
@@ -838,14 +862,14 @@ public class TreeViewTest {
     @Test public void test_rt28678() {
         TreeItem<String> s1, s2, s3, s4;
         ObservableList<TreeItem<String>> items = FXCollections.observableArrayList(
-                s1 = new TreeItem<String>("String1"),
-                s2 = new TreeItem<String>("String2"),
-                s3 = new TreeItem<String>("String3"),
-                s4 = new TreeItem<String>("String4"));
+                s1 = new TreeItem<>("String1"),
+                s2 = new TreeItem<>("String2"),
+                s3 = new TreeItem<>("String3"),
+                s4 = new TreeItem<>("String4"));
 
-        final TreeView<String> treeView = new TreeView<String>();
+        final TreeView<String> treeView = new TreeView<>();
 
-        TreeItem<String> root = new TreeItem<String>("Root");
+        TreeItem<String> root = new TreeItem<>("Root");
         root.setExpanded(true);
         treeView.setRoot(root);
         treeView.setShowRoot(false);
@@ -866,29 +890,29 @@ public class TreeViewTest {
 
     @Test public void test_rt29390() {
         ObservableList<TreeItem<Person>> persons = FXCollections.observableArrayList(
-                new TreeItem<Person>(new Person("Jacob", "Smith", "jacob.smith@example.com")),
-                new TreeItem<Person>(new Person("Isabella", "Johnson", "isabella.johnson@example.com")),
-                new TreeItem<Person>(new Person("Ethan", "Williams", "ethan.williams@example.com")),
-                new TreeItem<Person>(new Person("Emma", "Jones", "emma.jones@example.com")),
-                new TreeItem<Person>(new Person("Jacob", "Smith", "jacob.smith@example.com")),
-                new TreeItem<Person>(new Person("Isabella", "Johnson", "isabella.johnson@example.com")),
-                new TreeItem<Person>(new Person("Ethan", "Williams", "ethan.williams@example.com")),
-                new TreeItem<Person>(new Person("Emma", "Jones", "emma.jones@example.com")),
-                new TreeItem<Person>(new Person("Jacob", "Smith", "jacob.smith@example.com")),
-                new TreeItem<Person>(new Person("Isabella", "Johnson", "isabella.johnson@example.com")),
-                new TreeItem<Person>(new Person("Ethan", "Williams", "ethan.williams@example.com")),
-                new TreeItem<Person>(new Person("Emma", "Jones", "emma.jones@example.com")),
-                new TreeItem<Person>(new Person("Jacob", "Smith", "jacob.smith@example.com")),
-                new TreeItem<Person>(new Person("Isabella", "Johnson", "isabella.johnson@example.com")),
-                new TreeItem<Person>(new Person("Ethan", "Williams", "ethan.williams@example.com")),
-                new TreeItem<Person>(new Person("Emma", "Jones", "emma.jones@example.com")
+                new TreeItem<>(new Person("Jacob", "Smith", "jacob.smith@example.com")),
+                new TreeItem<>(new Person("Isabella", "Johnson", "isabella.johnson@example.com")),
+                new TreeItem<>(new Person("Ethan", "Williams", "ethan.williams@example.com")),
+                new TreeItem<>(new Person("Emma", "Jones", "emma.jones@example.com")),
+                new TreeItem<>(new Person("Jacob", "Smith", "jacob.smith@example.com")),
+                new TreeItem<>(new Person("Isabella", "Johnson", "isabella.johnson@example.com")),
+                new TreeItem<>(new Person("Ethan", "Williams", "ethan.williams@example.com")),
+                new TreeItem<>(new Person("Emma", "Jones", "emma.jones@example.com")),
+                new TreeItem<>(new Person("Jacob", "Smith", "jacob.smith@example.com")),
+                new TreeItem<>(new Person("Isabella", "Johnson", "isabella.johnson@example.com")),
+                new TreeItem<>(new Person("Ethan", "Williams", "ethan.williams@example.com")),
+                new TreeItem<>(new Person("Emma", "Jones", "emma.jones@example.com")),
+                new TreeItem<>(new Person("Jacob", "Smith", "jacob.smith@example.com")),
+                new TreeItem<>(new Person("Isabella", "Johnson", "isabella.johnson@example.com")),
+                new TreeItem<>(new Person("Ethan", "Williams", "ethan.williams@example.com")),
+                new TreeItem<>(new Person("Emma", "Jones", "emma.jones@example.com")
         ));
 
         TreeView<Person> treeView = new TreeView<>();
         treeView.setMaxHeight(50);
         treeView.setPrefHeight(50);
 
-        TreeItem<Person> root = new TreeItem<Person>(new Person("Root", null, null));
+        TreeItem<Person> root = new TreeItem<>(new Person("Root", null, null));
         root.setExpanded(true);
         treeView.setRoot(root);
         treeView.setShowRoot(false);
@@ -906,7 +930,9 @@ public class TreeViewTest {
 
         // this next test is likely to be brittle, but we'll see...If it is the
         // cause of failure then it can be commented out
-        assertEquals(0.125, scrollBar.getVisibleAmount(), 0.0);
+        // assertEquals(0.125, scrollBar.getVisibleAmount(), 0.0);
+        assertTrue(scrollBar.getVisibleAmount() > 0.15);
+        assertTrue(scrollBar.getVisibleAmount() < 0.17);
     }
 
     @Test public void test_rt27180_collapseBranch_childSelected_singleSelection() {
@@ -1087,12 +1113,12 @@ public class TreeViewTest {
     private int rt_31200_count = 0;
     @Test public void test_rt_31200_tableRow() {
         installChildren();
-        treeView.setCellFactory(new Callback<TreeView<String>, TreeCell<String>>() {
+        treeView.setCellFactory(new Callback<>() {
             @Override
             public TreeCell<String> call(TreeView<String> param) {
-                return new TreeCellShim<String>() {
+                return new TreeCellShim<>() {
                     ImageView view = new ImageView();
-                    { setGraphic(view); };
+                    { setGraphic(view); }
 
                     @Override
                     public void updateItem(String item, boolean empty) {
@@ -1127,11 +1153,11 @@ public class TreeViewTest {
 
     @Test public void test_rt_30484() {
         installChildren();
-        treeView.setCellFactory(new Callback<TreeView<String>, TreeCell<String>>() {
+        treeView.setCellFactory(new Callback<>() {
             @Override public TreeCell<String> call(TreeView<String> param) {
-                return new TreeCellShim<String>() {
+                return new TreeCellShim<>() {
                     Rectangle graphic = new Rectangle(10, 10, Color.RED);
-                    { setGraphic(graphic); };
+                    { setGraphic(graphic); }
 
                     @Override public void updateItem(String item, boolean empty) {
                         super.updateItem(item, empty);
@@ -1166,7 +1192,8 @@ public class TreeViewTest {
         treeView.setOnEditStart(t -> {
             rt_29650_start_count++;
         });
-        treeView.setOnEditCommit(t -> {
+        // Note: must add a commit handler to not replace the default (saving) handler
+        treeView.addEventHandler(TreeView.editCommitEvent(), t -> {
             rt_29650_commit_count++;
         });
         treeView.setOnEditCancel(t -> {
@@ -1205,7 +1232,6 @@ public class TreeViewTest {
 
         treeView.getSelectionModel().getSelectedItems().addListener((ListChangeListener) c -> {
             while (c.next()) {
-                System.out.println(c);
                 rt_33559_count++;
             }
         });
@@ -1506,10 +1532,10 @@ public class TreeViewTest {
     }
 
     @Test public void test_rt23245_itemIsInTree() {
-        final TreeView<String> view = new TreeView<String>();
+        final TreeView<String> view = new TreeView<>();
         final List<TreeItem<String>> items = new ArrayList<>();
         for (int i = 0; i < 10; i++) {
-            final TreeItem<String> item = new TreeItem<String>("Item" + i);
+            final TreeItem<String> item = new TreeItem<>("Item" + i);
             item.setExpanded(true);
             items.add(item);
         }
@@ -1541,10 +1567,10 @@ public class TreeViewTest {
     }
 
     @Test public void test_rt23245_itemIsNotInTree_noRootNode() {
-        final TreeView<String> view = new TreeView<String>();
+        final TreeView<String> view = new TreeView<>();
         final List<TreeItem<String>> items = new ArrayList<>();
         for (int i = 0; i < 10; i++) {
-            final TreeItem<String> item = new TreeItem<String>("Item" + i);
+            final TreeItem<String> item = new TreeItem<>("Item" + i);
             item.setExpanded(true);
             items.add(item);
         }
@@ -1567,10 +1593,10 @@ public class TreeViewTest {
     }
 
     @Test public void test_rt23245_itemIsNotInTree_withUnrelatedRootNode() {
-        final TreeView<String> view = new TreeView<String>();
+        final TreeView<String> view = new TreeView<>();
         final List<TreeItem<String>> items = new ArrayList<>();
         for (int i = 0; i < 10; i++) {
-            final TreeItem<String> item = new TreeItem<String>("Item" + i);
+            final TreeItem<String> item = new TreeItem<>("Item" + i);
             item.setExpanded(true);
             items.add(item);
         }
@@ -1649,6 +1675,68 @@ public class TreeViewTest {
         sl.dispose();
     }
 
+    //--------- regression testing of JDK-8093144 (was: RT-35857)
+
+    /**
+     * Note: 8093144 is not an issue for the current implementation of TreeView/SelectionModel
+     * because selectedItems.getModelItem delegates to TreeView.getRow which is implemented
+     * to look into its cached items.
+     * <p>
+     * These regression tests guard agains potential future changes in implementation.
+     */
+    @Test
+    public void test_rt35857_selectLast_retainAllSelected() {
+        TreeView<String> treeView = new TreeView<>(createTreeItem());
+        treeView.getSelectionModel().select(treeView.getRoot().getChildren().size());
+
+        assert_rt35857(treeView.getRoot().getChildren(), treeView.getSelectionModel(), true);
+    }
+
+    @Test
+    public void test_rt35857_selectLast_removeAllSelected() {
+        TreeView<String> treeView = new TreeView<>(createTreeItem());
+        treeView.getSelectionModel().select(treeView.getRoot().getChildren().size());
+
+        assert_rt35857(treeView.getRoot().getChildren(), treeView.getSelectionModel(), false);
+    }
+
+    @Test
+    public void test_rt35857_selectFirst_retainAllSelected() {
+        TreeView<String> treeView = new TreeView<>(createTreeItem());
+        treeView.getSelectionModel().select(1);
+
+        assert_rt35857(treeView.getRoot().getChildren(), treeView.getSelectionModel(), true);
+    }
+
+    /**
+     * Creates and returns an expanded TreeItem with 3 children.
+     */
+    protected TreeItem<String> createTreeItem() {
+        TreeItem<String> root = new TreeItem<>("Root");
+        root.setExpanded(true);
+        root.getChildren().setAll(new TreeItem("A"), new TreeItem("B"), new TreeItem("C"));
+        return root;
+    }
+
+    /**
+     * Modifies the items by retain/removeAll (depending on the given flag) selectedItems
+     * of the selectionModels and asserts the state of the items.
+     */
+    protected <T> void assert_rt35857(ObservableList<T> items, MultipleSelectionModel<T> sm, boolean retain) {
+        T selectedItem = sm.getSelectedItem();
+        ObservableList<T> expected;
+        if (retain) {
+            expected = FXCollections.observableArrayList(selectedItem);
+            items.retainAll(sm.getSelectedItems());
+        } else {
+            expected = FXCollections.observableArrayList(items);
+            expected.remove(selectedItem);
+            items.removeAll(sm.getSelectedItems());
+        }
+        String modified = (retain ? " retainAll " : " removeAll ") + " selectedItems ";
+        assertEquals("expected list after" + modified, expected, items);
+    }
+
     @Test public void test_rt35857() {
         TreeItem<String> root = new TreeItem<>("Root");
         root.setExpanded(true);
@@ -1657,7 +1745,7 @@ public class TreeViewTest {
         TreeItem c = new TreeItem("C");
         root.getChildren().setAll(a, b, c);
 
-        final TreeView<String> treeTableView = new TreeView<String>(root);
+        final TreeView<String> treeTableView = new TreeView<>(root);
 
         treeTableView.getSelectionModel().select(1);
 
@@ -1670,6 +1758,7 @@ public class TreeViewTest {
         assertEquals("B", root.getChildren().get(0).getValue());
         assertEquals("C", root.getChildren().get(1).getValue());
     }
+  //--------- end regression testing of JDK-8093144 (was: RT-35857)
 
     private int rt_35889_cancel_count = 0;
     @Test public void test_rt35889() {
@@ -1679,12 +1768,11 @@ public class TreeViewTest {
         root.setExpanded(true);
         root.getChildren().setAll(a, b);
 
-        final TreeView<String> textFieldTreeView = new TreeView<String>(root);
+        final TreeView<String> textFieldTreeView = new TreeView<>(root);
         textFieldTreeView.setEditable(true);
         textFieldTreeView.setCellFactory(TextFieldTreeCell.forTreeView());
         textFieldTreeView.setOnEditCancel(t -> {
             rt_35889_cancel_count++;
-            System.out.println("On Edit Cancel: " + t);
         });
 
         TreeCell cell0 = (TreeCell) VirtualFlowTestUtils.getCell(textFieldTreeView, 0);
@@ -1786,11 +1874,11 @@ public class TreeViewTest {
         b.setExpanded(true);
         b.getChildren().addAll(b1, b2);
 
-        final TreeView<String> treeView = new TreeView<String>(root);
+        final TreeView<String> treeView = new TreeView<>(root);
 
-        treeView.getFocusModel().focusedIndexProperty().addListener((observable, oldValue, newValue) -> {
-            System.out.println("focusedIndex: " + oldValue + " to " + newValue);
-        });
+        //treeView.getFocusModel().focusedIndexProperty().addListener((observable, oldValue, newValue) -> {
+        //    System.out.println("focusedIndex: " + oldValue + " to " + newValue);
+        //});
 
         MultipleSelectionModel<TreeItem<String>> sm = treeView.getSelectionModel();
         FocusModel<TreeItem<String>> fm = treeView.getFocusModel();
@@ -1958,10 +2046,10 @@ public class TreeViewTest {
 
     @Test public void test_rt_37502() {
         final TreeView<Long> tree = new TreeView<>(new NumberTreeItem(1));
-        tree.setCellFactory(new Callback<TreeView<Long>, TreeCell<Long>>() {
+        tree.setCellFactory(new Callback<>() {
             @Override
             public TreeCell<Long> call(TreeView<Long> param) {
-                return new TreeCellShim<Long>() {
+                return new TreeCellShim<>() {
                     @Override
                     public void updateItem(Long item, boolean empty) {
                         super.updateItem(item, empty);
@@ -2078,7 +2166,7 @@ public class TreeViewTest {
         if (useFixedCellSize) {
             treeView.setFixedCellSize(24);
         }
-        treeView.setCellFactory(tv -> new TreeCellShim<String>() {
+        treeView.setCellFactory(tv -> new TreeCellShim<>() {
             @Override public void updateItem(String color, boolean empty) {
                 rt_35395_counter += 1;
                 super.updateItem(color, empty);
@@ -2221,10 +2309,10 @@ public class TreeViewTest {
         TreeItem<String> root = new TreeItem<>("Root");
         root.setExpanded(true);
         root.getChildren().addAll(
-                a = new TreeItem<String>("a"),
-                b = new TreeItem<String>("b"),
-                c = new TreeItem<String>("c"),
-                d = new TreeItem<String>("d")
+                a = new TreeItem<>("a"),
+                b = new TreeItem<>("b"),
+                c = new TreeItem<>("c"),
+                d = new TreeItem<>("d")
         );
 
         TreeView<String> stringTreeView = new TreeView<>(root);
@@ -2271,7 +2359,7 @@ public class TreeViewTest {
             return root;
         };
 
-        final TreeItem<String> root = new TreeItem<String>();
+        final TreeItem<String> root = new TreeItem<>();
         root.setExpanded(true);
         root.getChildren().addAll(callback.call(1), callback.call(2));
 
@@ -2660,7 +2748,6 @@ public class TreeViewTest {
     private void test_rt_39482_selectRow(String expectedString,
                                          MultipleSelectionModel<TreeItem<String>> sm,
                                          int rowToSelect) {
-        System.out.println("\nSelect row " + rowToSelect);
         sm.selectAll();
         assertEquals(4, sm.getSelectedIndices().size());
         assertEquals(4, sm.getSelectedItems().size());
@@ -2911,7 +2998,7 @@ public class TreeViewTest {
         ObservableList<String> rawItems = test_rt_39661_setup();
         int index = 2;
 
-        TreeItem child = (TreeItem) root.getChildren().get(index);
+        TreeItem child = root.getChildren().get(index);
         assertEquals(index + 1, treeView.getRow(child));
     }
 
@@ -2988,6 +3075,11 @@ public class TreeViewTest {
         @Override public boolean equals(Object obj) {
             if (obj == null) return false;
             return id == ((RT22599_DataType)obj).id;
+        }
+
+        @Override
+        public int hashCode() {
+            return id;
         }
     }
 
@@ -3248,7 +3340,7 @@ public class TreeViewTest {
     }
 
     private TreeItem<Integer> createTreeItem(final int index) {
-        final TreeItem<Integer> node = new TreeItem<Integer>(index) {
+        final TreeItem<Integer> node = new TreeItem<>(index) {
             private boolean isLeaf;
             private boolean isFirstTimeChildren = true;
             private boolean isFirstTimeLeaf = true;
@@ -3397,7 +3489,7 @@ public class TreeViewTest {
         root.setExpanded(true);
 
         for (int i = 0; i < 10; i++) {
-            root.getChildren().add(new TreeItem<Integer>(i));
+            root.getChildren().add(new TreeItem<>(i));
         }
 
         final TreeView<Integer> view = new TreeView<>(root);
@@ -3417,7 +3509,6 @@ public class TreeViewTest {
             // number of items selected
             c.reset();
             c.next();
-            System.out.println("Added items: " + c.getAddedSubList());
             assertEquals(indices.length, c.getAddedSize());
             assertArrayEquals(indices, c.getAddedSubList().stream().mapToInt(i -> i).toArray());
         };
@@ -3562,7 +3653,6 @@ public class TreeViewTest {
         assertEquals(1, itemsEventCount.get());
 
         step.set(1);
-        System.out.println("about to collapse now");
         childNode1.setExpanded(false); // collapse Child Node 1 and expect both children to be deselected
         assertTrue(sm.isSelected(1));
         assertFalse(sm.isSelected(2));
@@ -3600,8 +3690,8 @@ public class TreeViewTest {
 
         view.expandedItemCountProperty().addListener((observable, oldCount, newCount) -> {
             if (childNode1.isExpanded()) return;
-            System.out.println(sm.getSelectedIndices());
-            System.out.println(sm.getSelectedItems());
+            //System.out.println(sm.getSelectedIndices());
+            //System.out.println(sm.getSelectedItems());
             assertTrue(sm.isSelected(1));
             assertFalse(sm.isSelected(2));
             assertFalse(sm.isSelected(3));
@@ -3621,4 +3711,244 @@ public class TreeViewTest {
         // in the selectedIndices and selectedItems list
         childNode1.setExpanded(false);
     }
+
+    @Test public void testRemovedSelectedItemsWhenBranchIsCollapsed() {
+        TreeItem<String> c1, c2, c3;
+        TreeItem<String> root = new TreeItem<>("foo");
+        root.getChildren().add(c1 = new TreeItem<>("bar"));
+        root.getChildren().add(c2 = new TreeItem<>("baz"));
+        root.getChildren().add(c3 = new TreeItem<>("qux"));
+        root.setExpanded(true);
+
+        TreeView<String> treeView = new TreeView<>(root);
+        treeView.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
+        treeView.getSelectionModel().selectAll();
+
+        MockListObserver<TreeItem<String>> observer = new MockListObserver<>();
+        treeView.getSelectionModel().getSelectedItems().addListener(observer);
+        root.setExpanded(false);
+
+        observer.check1();
+        observer.checkAddRemove(0, treeView.getSelectionModel().getSelectedItems(), List.of(c1, c2, c3), 1, 1);
+    }
+
+
+
+    /**
+     * Test that cell.cancelEdit can switch tree editing off
+     * even if a subclass violates its contract.
+     *
+     * For details, see https://bugs.openjdk.org/browse/JDK-8265206
+     *
+     */
+    @Test
+    public void testMisbehavingCancelEditTerminatesEdit() {
+        // setup for editing
+        TreeCell<String> cell = new MisbehavingOnCancelTreeCell<>();
+        treeView.setEditable(true);
+        installChildren();
+        cell.updateTreeView(treeView);
+        // test editing: first round
+        // switch cell off editing by table api
+        int editingIndex = 1;
+        int intermediate = 0;
+        cell.updateIndex(editingIndex);
+        TreeItem editingItem = treeView.getTreeItem(editingIndex);
+        TreeItem intermediateTreeItem = treeView.getTreeItem(intermediate);
+        treeView.edit(editingItem);
+        assertTrue("sanity: ", cell.isEditing());
+        try {
+            treeView.edit(intermediateTreeItem);
+        } catch (Exception ex) {
+            // catching to test in finally
+        } finally {
+            assertFalse("cell must not be editing", cell.isEditing());
+            assertEquals("table must be editing at intermediate index",
+                    intermediateTreeItem, treeView.getEditingItem());
+        }
+        // test editing: second round
+        // switch cell off editing by cell api
+        treeView.edit(editingItem);
+        assertTrue("sanity: ", cell.isEditing());
+        try {
+            cell.cancelEdit();
+        } catch (Exception ex) {
+            // catching to test in finally
+        } finally {
+            assertFalse("cell must not be editing", cell.isEditing());
+            assertNull("table editing must be cancelled by cell", treeView.getEditingItem());
+        }
+    }
+
+    // JDK-8187596
+    @Test
+    public void testRemoveTreeItemShiftSelection() {
+        TreeItem<String> a, b, a1, a2, a3;
+        TreeItem<String> root = new TreeItem<>("root");
+        root.getChildren().addAll(
+                a = new TreeItem<>("a"),
+                b = new TreeItem<>("b")
+        );
+        root.setExpanded(true);
+
+        a.getChildren().addAll(
+                a1 = new TreeItem<>("a1"),
+                a2 = new TreeItem<>("a2"),
+                a3 = new TreeItem<>("a3")
+        );
+        a.setExpanded(true);
+
+        TreeView<String> stringTreeView = new TreeView<>(root);
+        stringTreeView.setShowRoot(false);
+        SelectionModel sm = stringTreeView.getSelectionModel();
+
+        sm.clearAndSelect(3); //select a3
+        assertEquals(a3, sm.getSelectedItem()); //verify
+        root.getChildren().remove(b); //remove b
+        //a3 should remain selected
+        assertEquals(3, sm.getSelectedIndex());
+        assertEquals(a3, sm.getSelectedItem());
+    }
+
+    // JDK-8193442
+    @Test
+    public void testRemoveTreeItemChangesSelectedItem() {
+        TreeItem<String> rootNode = new TreeItem<>("Root");
+        rootNode.setExpanded(true);
+        for (int i = 0; i < 3; i++) {
+            rootNode.getChildren().add(new TreeItem<>("Node " + i));
+        }
+        for (int i = 0; i < 2; i++) {
+            TreeItem<String> node = rootNode.getChildren().get(i);
+            node.setExpanded(true);
+            for (int j = 0; j < 2; j++) {
+                node.getChildren().add(new TreeItem<>("Sub Node " + i + "-" + j));
+            }
+        }
+
+        TreeView<String> table = new TreeView<>(rootNode);
+
+        int selectIndex = 4; // select "Node 1"
+        int removeIndex = 2; // remove "Node 2"
+        table.getSelectionModel().select(selectIndex);
+        assertEquals(4, table.getSelectionModel().getSelectedIndex());
+        assertEquals("Node 1", table.getSelectionModel().getSelectedItem().getValue());
+        table.getRoot().getChildren().remove(removeIndex);
+        assertEquals(4, table.getSelectionModel().getSelectedIndex());
+        assertEquals("Node 1", table.getSelectionModel().getSelectedItem().getValue());
+    }
+
+    // JDK-8286261
+    @Test
+    public void testAddTreeItemToCollapsedAncestorKeepsSelectedItem() {
+        TreeItem<String> rootNode = new TreeItem<>("Root");
+        rootNode.setExpanded(true);
+        TreeItem<String> level1 = new TreeItem<>("Node 0");
+        level1.setExpanded(false);
+        TreeItem<String> level2 = new TreeItem<>("Node 1");
+        level2.getChildren().add(new TreeItem<>("Node 2"));
+        level2.setExpanded(true);
+
+        rootNode.getChildren().add(level1);
+        rootNode.getChildren().add(new TreeItem<>("Node 3"));
+
+        level1.getChildren().add(level2);
+
+        TreeView<String> table = new TreeView<>(rootNode);
+        table.setShowRoot(false);
+        table.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
+
+        table.getSelectionModel().select(level1);
+        assertEquals(0, table.getSelectionModel().getSelectedIndex());
+        assertEquals("Node 0", table.getSelectionModel().getSelectedItem().getValue());
+        assertEquals(0, table.getFocusModel().getFocusedIndex());
+        assertEquals("Node 0", table.getFocusModel().getFocusedItem().getValue());
+
+        // add new node at level 3, that has a collapsed ancestor
+        level2.getChildren().add(new TreeItem<>("Node 4"));
+
+        // selection and focus remain at level1
+        assertEquals(0, table.getSelectionModel().getSelectedIndex());
+        assertEquals("Node 0", table.getSelectionModel().getSelectedItem().getValue());
+        assertEquals(0, table.getFocusModel().getFocusedIndex());
+        assertEquals("Node 0", table.getFocusModel().getFocusedItem().getValue());
+    }
+
+    // JDK-8286261
+    @Test
+    public void testRemoveTreeItemFromCollapsedAncestorKeepsSelectedItem() {
+        TreeItem<String> rootNode = new TreeItem<>("Root");
+        rootNode.setExpanded(true);
+        TreeItem<String> level1 = new TreeItem<>("Node 0");
+        level1.setExpanded(false);
+        TreeItem<String> level2 = new TreeItem<>("Node 1");
+        level2.getChildren().add(new TreeItem<>("Node 2"));
+        level2.getChildren().add(new TreeItem<>("Node 3"));
+
+        level2.setExpanded(true);
+
+        rootNode.getChildren().add(level1);
+        rootNode.getChildren().add(new TreeItem<>("Node 4"));
+
+        level1.getChildren().add(level2);
+
+        TreeView<String> table = new TreeView<>(rootNode);
+        table.setShowRoot(false);
+        table.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
+
+        table.getSelectionModel().select(level1);
+        assertEquals(0, table.getSelectionModel().getSelectedIndex());
+        assertEquals("Node 0", table.getSelectionModel().getSelectedItem().getValue());
+        assertEquals(0, table.getFocusModel().getFocusedIndex());
+        assertEquals("Node 0", table.getFocusModel().getFocusedItem().getValue());
+
+        // remove Node 2 at level 3, that has a collapsed ancestor
+        level2.getChildren().remove(0);
+
+        // selection and focus remain at level1
+        assertEquals(0, table.getSelectionModel().getSelectedIndex());
+        assertEquals("Node 0", table.getSelectionModel().getSelectedItem().getValue());
+        assertEquals(0, table.getFocusModel().getFocusedIndex());
+        assertEquals("Node 0", table.getFocusModel().getFocusedItem().getValue());
+    }
+
+    private List<TreeItem<String>> generateChildren(int lvl) {
+        List<TreeItem<String>> children = new ArrayList<>();
+        for (int idx = 0; idx < 10; idx++) {
+            TreeItem<String> child = new TreeItem<>("Child lvl. " + lvl + " idx. " + idx);
+            child.setExpanded(true);
+            if (lvl <= 2) {
+                child.getChildren().addAll(generateChildren(lvl + 1));
+            }
+            children.add(child);
+        }
+        return children;
+    }
+
+    // JDK-8290348
+    @Test
+    public void testCheckPositionAfterCollapsed() {
+        TreeItem<String> rootNode = new TreeItem<>("Root");
+        rootNode.setExpanded(true);
+        rootNode.getChildren().addAll(generateChildren(1));
+        TreeView<String> treeView = new TreeView<>(rootNode);
+        treeView.scrollTo(100);
+        IndexedCell expandedCell = VirtualFlowTestUtils.getCell(treeView, 100);
+        Toolkit.getToolkit().firePulse();
+        rootNode.getChildren().get(1).setExpanded(false);
+        Toolkit.getToolkit().firePulse();
+        IndexedCell scrolledCell = VirtualFlowTestUtils.getCell(treeView, 100);
+        assertTrue(scrolledCell.isVisible());
+    }
+
+    public static class MisbehavingOnCancelTreeCell<S> extends TreeCell<S> {
+
+        @Override
+        public void cancelEdit() {
+            super.cancelEdit();
+            throw new RuntimeException("violating contract");
+        }
+
+    }
+
 }

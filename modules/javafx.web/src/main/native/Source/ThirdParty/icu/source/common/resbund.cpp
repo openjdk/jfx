@@ -51,6 +51,7 @@
 #include "unicode/utypes.h"
 #include "unicode/resbund.h"
 
+#include "cmemory.h"
 #include "mutex.h"
 #include "uassert.h"
 #include "umutex.h"
@@ -134,7 +135,7 @@ U_NAMESPACE_BEGIN
  * so forth, until the chain is exhausted or the tag is found.
  *
  * Thread-safety is implemented around caches, both the cache that
- * stores all the resouce data, and the cache that stores flags
+ * stores all the resource data, and the cache that stores flags
  * indicating whether or not a file has been visited.  These caches
  * delete their storage at static cleanup time, when the process
  * quits.
@@ -377,7 +378,7 @@ void ResourceBundle::getVersion(UVersionInfo versionInfo) const {
 }
 
 const Locale &ResourceBundle::getLocale(void) const {
-    static UMutex gLocaleLock = U_MUTEX_INITIALIZER;
+    static UMutex gLocaleLock;
     Mutex lock(&gLocaleLock);
     if (fLocale != NULL) {
         return *fLocale;

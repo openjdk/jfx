@@ -1,6 +1,6 @@
 /*
  *  Copyright (C) 1999-2000 Harri Porten (porten@kde.org)
- *  Copyright (C) 2008-2018 Apple Inc. All rights reserved.
+ *  Copyright (C) 2008-2021 Apple Inc. All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public
@@ -22,7 +22,6 @@
 
 #include "Error.h"
 #include "InternalFunction.h"
-#include "JSGlobalObject.h"
 #include "NativeErrorPrototype.h"
 
 namespace JSC {
@@ -56,16 +55,14 @@ class NativeErrorConstructor final : public NativeErrorConstructorBase {
 public:
     static NativeErrorConstructor* create(VM& vm, Structure* structure, NativeErrorPrototype* prototype)
     {
-        NativeErrorConstructor* constructor = new (NotNull, allocateCell<NativeErrorConstructor>(vm.heap)) NativeErrorConstructor(vm, structure);
+        NativeErrorConstructor* constructor = new (NotNull, allocateCell<NativeErrorConstructor>(vm)) NativeErrorConstructor(vm, structure);
         constructor->finishCreation(vm, prototype, errorType);
         return constructor;
     }
 
-    Structure* errorStructure(VM& vm) { return globalObject(vm)->errorStructure(errorType); }
+    static EncodedJSValue callImpl(JSGlobalObject*, CallFrame*);
+    static EncodedJSValue constructImpl(JSGlobalObject*, CallFrame*);
 private:
-    static EncodedJSValue JSC_HOST_CALL callNativeErrorConstructor(ExecState*);
-    static EncodedJSValue JSC_HOST_CALL constructNativeErrorConstructor(ExecState*);
-
     NativeErrorConstructor(VM&, Structure*);
 };
 
@@ -76,11 +73,11 @@ using SyntaxErrorConstructor = NativeErrorConstructor<ErrorType::SyntaxError>;
 using TypeErrorConstructor = NativeErrorConstructor<ErrorType::TypeError>;
 using URIErrorConstructor = NativeErrorConstructor<ErrorType::URIError>;
 
-static_assert(sizeof(EvalErrorConstructor) == sizeof(InternalFunction), "");
-static_assert(sizeof(RangeErrorConstructor) == sizeof(InternalFunction), "");
-static_assert(sizeof(ReferenceErrorConstructor) == sizeof(InternalFunction), "");
-static_assert(sizeof(SyntaxErrorConstructor) == sizeof(InternalFunction), "");
-static_assert(sizeof(TypeErrorConstructor) == sizeof(InternalFunction), "");
-static_assert(sizeof(URIErrorConstructor) == sizeof(InternalFunction), "");
+STATIC_ASSERT_ISO_SUBSPACE_SHARABLE(EvalErrorConstructor, InternalFunction);
+STATIC_ASSERT_ISO_SUBSPACE_SHARABLE(RangeErrorConstructor, InternalFunction);
+STATIC_ASSERT_ISO_SUBSPACE_SHARABLE(ReferenceErrorConstructor, InternalFunction);
+STATIC_ASSERT_ISO_SUBSPACE_SHARABLE(SyntaxErrorConstructor, InternalFunction);
+STATIC_ASSERT_ISO_SUBSPACE_SHARABLE(TypeErrorConstructor, InternalFunction);
+STATIC_ASSERT_ISO_SUBSPACE_SHARABLE(URIErrorConstructor, InternalFunction);
 
 } // namespace JSC

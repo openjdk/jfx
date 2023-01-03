@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2008 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,21 +31,19 @@
 #include <wtf/Platform.h>
 #include <wtf/Vector.h>
 
-#if PLATFORM(COCOA)
-#ifdef __OBJC__
-typedef id PlatformUIElement;
-#else
-typedef struct objc_object* PlatformUIElement;
+#if PLATFORM(MAC)
+OBJC_CLASS NSString;
 #endif
+
+#if PLATFORM(COCOA)
+#include <wtf/RetainPtr.h>
 #elif PLATFORM(WIN)
 #undef _WINSOCKAPI_
 #define _WINSOCKAPI_ // Prevent inclusion of winsock.h in windows.h
-
 #include <WebCore/COMPtr.h>
 #include <oleacc.h>
-
 typedef COMPtr<IAccessible> PlatformUIElement;
-#elif HAVE(ACCESSIBILITY) && PLATFORM(GTK)
+#elif ENABLE(ACCESSIBILITY) && PLATFORM(GTK)
 #include "AccessibilityNotificationHandlerAtk.h"
 #include <atk/atk.h>
 typedef AtkObject* PlatformUIElement;
@@ -53,21 +51,22 @@ typedef AtkObject* PlatformUIElement;
 typedef void* PlatformUIElement;
 #endif
 
-#if PLATFORM(COCOA)
-#ifdef __OBJC__
-typedef id NotificationHandler;
-#else
-typedef struct objc_object* NotificationHandler;
-#endif
-#endif
-
 class AccessibilityUIElement {
 public:
+#if PLATFORM(COCOA)
+    AccessibilityUIElement(id);
+#endif
+#if !PLATFORM(COCOA)
     AccessibilityUIElement(PlatformUIElement);
-    AccessibilityUIElement(const AccessibilityUIElement&);
-    ~AccessibilityUIElement();
+#endif
 
+#if PLATFORM(COCOA)
+    id platformUIElement() const { return m_element.get(); }
+#endif
+
+#if !PLATFORM(COCOA)
     PlatformUIElement platformUIElement() const { return m_element; }
+#endif
 
     static JSObjectRef makeJSAccessibilityUIElement(JSContextRef, const AccessibilityUIElement&);
 
@@ -77,6 +76,12 @@ public:
     void getDocumentLinks(Vector<AccessibilityUIElement>&);
     void getChildren(Vector<AccessibilityUIElement>&);
     void getChildrenWithRange(Vector<AccessibilityUIElement>&, unsigned location, unsigned length);
+
+    bool hasDocumentRoleAncestor() const;
+    bool hasWebApplicationAncestor() const;
+    bool isInDescriptionListDetail() const;
+    bool isInDescriptionListTerm() const;
+    bool isInCell() const;
 
     AccessibilityUIElement elementAtPoint(int x, int y);
     AccessibilityUIElement getChildAtIndex(unsigned);
@@ -102,6 +107,7 @@ public:
     void decrement();
     void showMenu();
     void press();
+    void dismiss();
 
     // Attributes - platform-independent implementations
     JSRetainPtr<JSStringRef> stringAttributeValue(JSStringRef attribute);
@@ -109,6 +115,11 @@ public:
     void uiElementArrayAttributeValue(JSStringRef attribute, Vector<AccessibilityUIElement>& elements) const;
     AccessibilityUIElement uiElementAttributeValue(JSStringRef attribute) const;
     bool boolAttributeValue(JSStringRef attribute);
+#if PLATFORM(MAC)
+    bool boolAttributeValue(NSString *attribute) const;
+    JSRetainPtr<JSStringRef> stringAttributeValue(NSString *attribute) const;
+    double numberAttributeValue(NSString *attribute) const;
+#endif
     void setBoolAttributeValue(JSStringRef attribute, bool value);
     bool isAttributeSupported(JSStringRef attribute);
     bool isAttributeSettable(JSStringRef attribute);
@@ -157,6 +168,7 @@ public:
     bool isExpanded() const;
     bool isChecked() const;
     bool isVisible() const;
+    bool isOnScreen() const;
     bool isOffScreen() const;
     bool isCollapsed() const;
     bool isIgnored() const;
@@ -172,6 +184,7 @@ public:
     JSRetainPtr<JSStringRef> documentURI();
     JSRetainPtr<JSStringRef> url();
     JSRetainPtr<JSStringRef> classList() const;
+    JSRetainPtr<JSStringRef> domIdentifier() const;
 
     // CSS3-speech properties.
     JSRetainPtr<JSStringRef> speakAs();
@@ -257,6 +270,7 @@ public:
 
     // Text markers.
     AccessibilityTextMarkerRange lineTextMarkerRangeForTextMarker(AccessibilityTextMarker*);
+    AccessibilityTextMarkerRange misspellingTextMarkerRange(AccessibilityTextMarkerRange* start, bool forward);
     AccessibilityTextMarkerRange textMarkerRangeForElement(AccessibilityUIElement*);
     AccessibilityTextMarkerRange textMarkerRangeForMarkers(AccessibilityTextMarker* startMarker, AccessibilityTextMarker* endMarker);
     AccessibilityTextMarker startTextMarkerForTextMarkerRange(AccessibilityTextMarkerRange*);
@@ -281,7 +295,7 @@ public:
     AccessibilityTextMarker nextSentenceEndTextMarkerForTextMarker(AccessibilityTextMarker*);
     AccessibilityTextMarkerRange selectedTextMarkerRange();
     void resetSelectedTextMarkerRange();
-    bool setSelectedVisibleTextRange(AccessibilityTextMarkerRange*);
+    bool setSelectedTextMarkerRange(AccessibilityTextMarkerRange*);
     bool replaceTextInRange(JSStringRef, int position, int length);
     bool insertText(JSStringRef);
 
@@ -317,10 +331,13 @@ public:
     bool isSearchField() const;
 
     AccessibilityTextMarkerRange textMarkerRangeMatchesTextNearMarkers(JSStringRef, AccessibilityTextMarker*, AccessibilityTextMarker*);
-
 #endif // PLATFORM(IOS_FAMILY)
 
-#if PLATFORM(MAC) && !PLATFORM(IOS_FAMILY)
+#if PLATFORM(COCOA)
+    JSRetainPtr<JSStringRef> embeddedImageDescription() const;
+#endif
+
+#if PLATFORM(MAC)
     // Returns an ordered list of supported actions for an element.
     JSRetainPtr<JSStringRef> supportedActions();
 
@@ -331,14 +348,17 @@ public:
 
 private:
     static JSClassRef getJSClass();
-    PlatformUIElement m_element;
 
-#if PLATFORM(COCOA)
-    // A retained, platform specific object used to help manage notifications for this object.
-    NotificationHandler m_notificationHandler;
+#if !PLATFORM(COCOA)
+    PlatformUIElement m_element;
 #endif
 
-#if HAVE(ACCESSIBILITY) && PLATFORM(GTK)
+#if PLATFORM(COCOA)
+    RetainPtr<id> m_element;
+    RetainPtr<id> m_notificationHandler;
+#endif
+
+#if ENABLE(ACCESSIBILITY) && PLATFORM(GTK)
     RefPtr<AccessibilityNotificationHandler> m_notificationHandler;
 #endif
 };

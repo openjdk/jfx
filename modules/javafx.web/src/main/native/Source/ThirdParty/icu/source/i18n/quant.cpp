@@ -47,7 +47,7 @@ Quantifier::~Quantifier() {
 /**
  * Implement UnicodeFunctor
  */
-UnicodeFunctor* Quantifier::clone() const {
+Quantifier* Quantifier::clone() const {
     return new Quantifier(*this);
 }
 
@@ -99,7 +99,7 @@ UMatchDegree Quantifier::matches(const Replaceable& text,
  */
 UnicodeString& Quantifier::toPattern(UnicodeString& result,
                                      UBool escapeUnprintable) const {
-    result.truncate(0);
+        result.truncate(0);
     matcher->toMatcher()->toPattern(result, escapeUnprintable);
     if (minCount == 0) {
         if (maxCount == 1) {
@@ -141,7 +141,7 @@ void Quantifier::addMatchSetTo(UnicodeSet& toUnionTo) const {
  * Implement UnicodeFunctor
  */
 void Quantifier::setData(const TransliterationRuleData* d) {
-        matcher->setData(d);
+                matcher->setData(d);
 }
 
 U_NAMESPACE_END

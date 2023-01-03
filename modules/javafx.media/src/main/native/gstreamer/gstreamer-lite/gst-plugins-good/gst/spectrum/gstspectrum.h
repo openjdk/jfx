@@ -40,6 +40,15 @@ typedef struct _GstSpectrumChannel GstSpectrumChannel;
 typedef void (*GstSpectrumInputData)(const guint8 * in, gfloat * out,
     guint len, guint channels, gfloat max_value, guint op, guint nfft);
 
+#if defined (GSTREAMER_LITE) && defined (OSX)
+// Used to overwrite post_message callback to get spectrum messages in OSXPlatform.
+// We cannot use GST_ELEMENT_GET_CLASS(spectrum)->post_message, since it will
+// change callback for all instances of spectrum elements and it will conflict
+// with GStreamer platform.
+typedef gboolean (*PostMessageCallbackProc)(GstElement * element,
+                                            GstMessage * message);
+#endif // GSTREAMER_LITE and OSX
+
 struct _GstSpectrumChannel
 {
   gfloat *input;
@@ -62,7 +71,7 @@ struct _GstSpectrum
   guint64 frames_per_interval;  /* how many frames per interval */
   guint64 frames_todo;
   guint bands;                  /* number of spectrum bands */
-  gint threshold;               /* energy level treshold */
+  gint threshold;               /* energy level threshold */
   gboolean multi_channel;       /* send separate channel results */
 
   guint64 num_frames;           /* frame count (1 sample per channel)
@@ -86,6 +95,7 @@ struct _GstSpectrum
   guint bps_user; // User provided values to avoid more complex spectrum initialization
   guint bpf_user;
   void *user_data;
+  PostMessageCallbackProc post_message_callback;
 #endif // GSTREAMER_LITE and OSX
 };
 
@@ -103,6 +113,8 @@ GST_EXPORT gboolean gst_spectrum_setup_api (GstAudioFilter * base,
 GST_EXPORT GstFlowReturn
 gst_spectrum_transform_ip_api (GstBaseTransform * trans, GstBuffer * buffer);
 #endif // GSTREAMER_LITE and OSX
+
+GST_ELEMENT_REGISTER_DECLARE (spectrum);
 
 G_END_DECLS
 

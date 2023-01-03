@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2007-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -37,7 +37,7 @@
 namespace WebCore {
 using namespace JSC;
 
-bool JSNodeListOwner::isReachableFromOpaqueRoots(JSC::Handle<JSC::Unknown> handle, void*, SlotVisitor& visitor, const char** reason)
+bool JSNodeListOwner::isReachableFromOpaqueRoots(JSC::Handle<JSC::Unknown> handle, void*, AbstractSlotVisitor& visitor, const char** reason)
 {
     JSNodeList* jsNodeList = jsCast<JSNodeList*>(handle.slot()->asCell());
     if (!jsNodeList->hasCustomProperties(jsNodeList->vm()))
@@ -74,7 +74,7 @@ JSC::JSValue createWrapper(JSDOMGlobalObject& globalObject, Ref<NodeList>&& node
     return createWrapper<NodeList>(&globalObject, WTFMove(nodeList));
 }
 
-JSC::JSValue toJSNewlyCreated(ExecState*, JSDOMGlobalObject* globalObject, Ref<NodeList>&& nodeList)
+JSC::JSValue toJSNewlyCreated(JSGlobalObject*, JSDOMGlobalObject* globalObject, Ref<NodeList>&& nodeList)
 {
     return createWrapper(*globalObject, WTFMove(nodeList));
 }

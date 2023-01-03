@@ -202,6 +202,16 @@ public:
         return attributeName;
     }
 
+    void setAnimatedPropertyDirty(const QualifiedName& attributeName, SVGAnimatedProperty& animatedProperty) const override
+    {
+        enumerateRecursively([&](const auto& entry) -> bool {
+            if (!entry.key.matches(attributeName))
+                return true;
+            entry.value->setDirty(m_owner, animatedProperty);
+            return false;
+        });
+    }
+
     // Detach all the properties recursively from their OwnerTypes.
     void detachAllProperties() const override
     {
@@ -213,9 +223,9 @@ public:
 
     // Finds the property whose name is attributeName and returns the synchronize
     // string through the associated SVGMemberAccessor.
-    Optional<String> synchronize(const QualifiedName& attributeName) const override
+    std::optional<String> synchronize(const QualifiedName& attributeName) const override
     {
-        Optional<String> value;
+        std::optional<String> value;
         enumerateRecursively([&](const auto& entry) -> bool {
             if (!entry.key.matches(attributeName))
                 return true;

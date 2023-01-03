@@ -21,12 +21,13 @@
 
 #pragma once
 
+#include <mutex>
+#include <variant>
 #include <wtf/NeverDestroyed.h>
-#include <wtf/Variant.h>
 #include <wtf/text/StringView.h>
 #include <wtf/text/icu/TextBreakIteratorICU.h>
 
-#if PLATFORM(MAC) || PLATFORM(IOS_FAMILY)
+#if PLATFORM(COCOA)
 #include <wtf/text/cf/TextBreakIteratorCF.h>
 #else
 #include <wtf/text/NullTextBreakIterator.h>
@@ -34,7 +35,7 @@
 
 namespace WTF {
 
-#if PLATFORM(MAC) || PLATFORM(IOS_FAMILY)
+#if PLATFORM(COCOA)
 typedef TextBreakIteratorCF TextBreakIteratorPlatform;
 #else
 typedef NullTextBreakIterator TextBreakIteratorPlatform;
@@ -57,14 +58,14 @@ public:
     TextBreakIterator& operator=(const TextBreakIterator&) = delete;
     TextBreakIterator& operator=(TextBreakIterator&&) = default;
 
-    Optional<unsigned> preceding(unsigned location) const
+    std::optional<unsigned> preceding(unsigned location) const
     {
         return switchOn(m_backing, [&](const auto& iterator) {
             return iterator.preceding(location);
         });
     }
 
-    Optional<unsigned> following(unsigned location) const
+    std::optional<unsigned> following(unsigned location) const
     {
         return switchOn(m_backing, [&](const auto& iterator) {
             return iterator.following(location);
@@ -82,7 +83,7 @@ private:
     friend class TextBreakIteratorCache;
 
     // Use CachedTextBreakIterator instead of constructing one of these directly.
-    WTF_EXPORT TextBreakIterator(StringView, Mode, const AtomString& locale);
+    WTF_EXPORT_PRIVATE TextBreakIterator(StringView, Mode, const AtomString& locale);
 
     void setText(StringView string)
     {
@@ -101,7 +102,7 @@ private:
         return m_locale;
     }
 
-    Variant<TextBreakIteratorICU, TextBreakIteratorPlatform> m_backing;
+    std::variant<TextBreakIteratorICU, TextBreakIteratorPlatform> m_backing;
     Mode m_mode;
     AtomString m_locale;
 };
@@ -112,14 +113,10 @@ class TextBreakIteratorCache {
     WTF_MAKE_FAST_ALLOCATED;
 // Use CachedTextBreakIterator instead of dealing with the cache directly.
 private:
-    friend class NeverDestroyed<TextBreakIteratorCache>;
+    friend class LazyNeverDestroyed<TextBreakIteratorCache>;
     friend class CachedTextBreakIterator;
 
-    static TextBreakIteratorCache& singleton()
-    {
-        static NeverDestroyed<TextBreakIteratorCache> cache;
-        return cache.get();
-    }
+    WTF_EXPORT_PRIVATE static TextBreakIteratorCache& singleton();
 
     TextBreakIteratorCache(const TextBreakIteratorCache&) = delete;
     TextBreakIteratorCache(TextBreakIteratorCache&&) = delete;
@@ -176,12 +173,12 @@ public:
     CachedTextBreakIterator& operator=(const CachedTextBreakIterator&) = delete;
     CachedTextBreakIterator& operator=(CachedTextBreakIterator&&) = default;
 
-    Optional<unsigned> preceding(unsigned location) const
+    std::optional<unsigned> preceding(unsigned location) const
     {
         return m_backing.preceding(location);
     }
 
-    Optional<unsigned> following(unsigned location) const
+    std::optional<unsigned> following(unsigned location) const
     {
         return m_backing.following(location);
     }
@@ -285,7 +282,7 @@ public:
     UBreakIterator* get(unsigned priorContextLength)
     {
         ASSERT(priorContextLength <= priorContextCapacity);
-        const UChar* priorContext = priorContextLength ? &m_priorContext[priorContextCapacity - priorContextLength] : 0;
+        const UChar* priorContext = priorContextLength ? &m_priorContext[priorContextCapacity - priorContextLength] : nullptr;
         if (!m_iterator) {
             m_iterator = acquireLineBreakIterator(m_stringView, m_locale, priorContext, priorContextLength, m_mode);
             m_cachedPriorContext = priorContext;

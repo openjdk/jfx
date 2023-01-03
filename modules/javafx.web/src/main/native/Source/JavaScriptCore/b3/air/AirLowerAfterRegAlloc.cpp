@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,12 +28,10 @@
 
 #if ENABLE(B3_JIT)
 
-#include "AirArgInlines.h"
 #include "AirCCallingConvention.h"
 #include "AirCode.h"
 #include "AirEmitShuffle.h"
 #include "AirInsertionSet.h"
-#include "AirInstInlines.h"
 #include "AirPadInterference.h"
 #include "AirRegLiveness.h"
 #include "AirPhaseScope.h"
@@ -48,7 +46,7 @@ namespace JSC { namespace B3 { namespace Air {
 namespace {
 
 namespace AirLowerAfterRegAllocInternal {
-static const bool verbose = false;
+static constexpr bool verbose = false;
 }
 
 } // anonymous namespace
@@ -113,10 +111,10 @@ void lowerAfterRegAlloc(Code& code)
     // If we run after stack allocation then we cannot use those callee saves that aren't in
     // the callee save list. Note that we are only run after stack allocation in -O1, so this
     // kind of slop is OK.
-    RegisterSet blacklistedCalleeSaves;
+    RegisterSet disallowedCalleeSaves;
     if (code.stackIsAllocated()) {
-        blacklistedCalleeSaves = RegisterSet::calleeSaveRegisters();
-        blacklistedCalleeSaves.exclude(code.calleeSaveRegisters());
+        disallowedCalleeSaves = RegisterSet::calleeSaveRegisters();
+        disallowedCalleeSaves.exclude(code.calleeSaveRegisters());
     }
 
     auto getScratches = [&] (RegisterSet set, Bank bank) -> std::array<Arg, 2> {
@@ -124,7 +122,7 @@ void lowerAfterRegAlloc(Code& code)
         for (unsigned i = 0; i < 2; ++i) {
             bool found = false;
             for (Reg reg : code.regsInPriorityOrder(bank)) {
-                if (!set.get(reg) && !blacklistedCalleeSaves.get(reg)) {
+                if (!set.get(reg) && !disallowedCalleeSaves.get(reg)) {
                     result[i] = Tmp(reg);
                     set.set(reg);
                     found = true;

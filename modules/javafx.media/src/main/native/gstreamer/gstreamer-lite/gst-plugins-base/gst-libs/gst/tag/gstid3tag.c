@@ -146,17 +146,25 @@ gst_tag_from_id3_tag (const gchar * id3_tag)
 
 static const GstTagEntryMatch user_tag_matches[] = {
   /* musicbrainz identifiers being used in the real world (foobar2000) */
+  {GST_TAG_MUSICBRAINZ_RELEASETRACKID, "TXXX|musicbrainz_trackid"},
   {GST_TAG_MUSICBRAINZ_ARTISTID, "TXXX|musicbrainz_artistid"},
   {GST_TAG_MUSICBRAINZ_ALBUMID, "TXXX|musicbrainz_albumid"},
   {GST_TAG_MUSICBRAINZ_ALBUMARTISTID, "TXXX|musicbrainz_albumartistid"},
+  {GST_TAG_MUSICBRAINZ_RELEASEGROUPID, "TXXX|musicbrainz_releasegroupid"},
   {GST_TAG_MUSICBRAINZ_TRMID, "TXXX|musicbrainz_trmid"},
   {GST_TAG_CDDA_MUSICBRAINZ_DISCID, "TXXX|musicbrainz_discid"},
   /* musicbrainz identifiers according to spec no one pays
    * attention to (http://musicbrainz.org/docs/specs/metadata_tags.html) */
+  {GST_TAG_MUSICBRAINZ_RELEASETRACKID, "TXXX|MusicBrainz Release Track Id"},
   {GST_TAG_MUSICBRAINZ_ARTISTID, "TXXX|MusicBrainz Artist Id"},
   {GST_TAG_MUSICBRAINZ_ALBUMID, "TXXX|MusicBrainz Album Id"},
   {GST_TAG_MUSICBRAINZ_ALBUMARTISTID, "TXXX|MusicBrainz Album Artist Id"},
+  {GST_TAG_MUSICBRAINZ_RELEASEGROUPID, "TXXX|MusicBrainz Release Group Id"},
   {GST_TAG_MUSICBRAINZ_TRMID, "TXXX|MusicBrainz TRM Id"},
+  /* acoustid identifiers according to the official musicbrainz mapping
+   * https://picard.musicbrainz.org/docs/mappings/ */
+  {GST_TAG_ACOUSTID_ID, "TXXX|Acoustid Id"},
+  {GST_TAG_ACOUSTID_FINGERPRINT, "TXXX|Acoustid Fingerprint"},
   /* according to: http://wiki.musicbrainz.org/MusicBrainzTag (yes, no space
    * before 'ID' and not 'Id' either this time, yay for consistency) */
   {GST_TAG_CDDA_MUSICBRAINZ_DISCID, "TXXX|MusicBrainz DiscID"},

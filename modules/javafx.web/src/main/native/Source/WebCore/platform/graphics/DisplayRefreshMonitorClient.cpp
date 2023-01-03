@@ -26,25 +26,33 @@
 #include "config.h"
 #include "DisplayRefreshMonitorClient.h"
 
-#if USE(REQUEST_ANIMATION_FRAME_DISPLAY_MONITOR)
-
 #include "DisplayRefreshMonitor.h"
 #include "DisplayRefreshMonitorManager.h"
 
 namespace WebCore {
 
-DisplayRefreshMonitorClient::DisplayRefreshMonitorClient()
-{
-}
+DisplayRefreshMonitorClient::DisplayRefreshMonitorClient() = default;
 
 DisplayRefreshMonitorClient::~DisplayRefreshMonitorClient()
 {
     DisplayRefreshMonitorManager::sharedManager().unregisterClient(*this);
 }
 
-void DisplayRefreshMonitorClient::fireDisplayRefreshIfNeeded()
+void DisplayRefreshMonitorClient::setPreferredFramesPerSecond(FramesPerSecond preferredFrameRate)
+{
+    if (preferredFrameRate == m_preferredFramesPerSecond)
+        return;
+
+    m_preferredFramesPerSecond = preferredFrameRate;
+    DisplayRefreshMonitorManager::sharedManager().clientPreferredFramesPerSecondChanged(*this);
+}
+
+void DisplayRefreshMonitorClient::fireDisplayRefreshIfNeeded(const DisplayUpdate& displayUpdate)
 {
     if (!m_scheduled)
+        return;
+
+    if (!displayUpdate.relevantForUpdateFrequency(m_preferredFramesPerSecond))
         return;
 
     m_scheduled = false;
@@ -52,5 +60,3 @@ void DisplayRefreshMonitorClient::fireDisplayRefreshIfNeeded()
 }
 
 }
-
-#endif // USE(REQUEST_ANIMATION_FRAME_DISPLAY_MONITOR)

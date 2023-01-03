@@ -40,6 +40,7 @@
 #include "MathMLNames.h"
 #include "RenderMathMLBlock.h"
 #include "RenderTableCell.h"
+#include "SVGElementTypeHelpers.h"
 #include "SVGSVGElement.h"
 #include <wtf/IsoMallocInlines.h>
 
@@ -86,7 +87,6 @@ bool MathMLPresentationElement::isPhrasingContent(const Node& node)
     }
 
     if (is<HTMLElement>(node)) {
-        // FIXME: add the <data> and <time> tags when they are implemented.
         auto& htmlElement = downcast<HTMLElement>(node);
         return htmlElement.hasTagName(HTMLNames::aTag)
             || htmlElement.hasTagName(HTMLNames::abbrTag)
@@ -101,6 +101,7 @@ bool MathMLPresentationElement::isPhrasingContent(const Node& node)
             || htmlElement.hasTagName(HTMLNames::citeTag)
             || htmlElement.hasTagName(HTMLNames::codeTag)
             || htmlElement.hasTagName(HTMLNames::datalistTag)
+            || htmlElement.hasTagName(HTMLNames::dataTag)
             || htmlElement.hasTagName(HTMLNames::delTag)
             || htmlElement.hasTagName(HTMLNames::dfnTag)
             || htmlElement.hasTagName(HTMLNames::emTag)
@@ -111,7 +112,6 @@ bool MathMLPresentationElement::isPhrasingContent(const Node& node)
             || htmlElement.hasTagName(HTMLNames::inputTag)
             || htmlElement.hasTagName(HTMLNames::insTag)
             || htmlElement.hasTagName(HTMLNames::kbdTag)
-            || htmlElement.hasTagName(HTMLNames::keygenTag)
             || htmlElement.hasTagName(HTMLNames::labelTag)
             || htmlElement.hasTagName(HTMLNames::mapTag)
             || htmlElement.hasTagName(HTMLNames::markTag)
@@ -133,6 +133,7 @@ bool MathMLPresentationElement::isPhrasingContent(const Node& node)
             || htmlElement.hasTagName(HTMLNames::supTag)
             || htmlElement.hasTagName(HTMLNames::templateTag)
             || htmlElement.hasTagName(HTMLNames::textareaTag)
+            || htmlElement.hasTagName(HTMLNames::timeTag)
             || htmlElement.hasTagName(HTMLNames::uTag)
             || htmlElement.hasTagName(HTMLNames::varTag)
             || htmlElement.hasTagName(HTMLNames::videoTag)
@@ -154,12 +155,12 @@ bool MathMLPresentationElement::isFlowContent(const Node& node)
         return false;
 
     auto& htmlElement = downcast<HTMLElement>(node);
-    // FIXME add the <dialog> tag when it is implemented.
     return htmlElement.hasTagName(HTMLNames::addressTag)
         || htmlElement.hasTagName(HTMLNames::articleTag)
         || htmlElement.hasTagName(HTMLNames::asideTag)
         || htmlElement.hasTagName(HTMLNames::blockquoteTag)
         || htmlElement.hasTagName(HTMLNames::detailsTag)
+        || htmlElement.hasTagName(HTMLNames::dialogTag)
         || htmlElement.hasTagName(HTMLNames::divTag)
         || htmlElement.hasTagName(HTMLNames::dlTag)
         || htmlElement.hasTagName(HTMLNames::fieldsetTag)
@@ -185,7 +186,7 @@ bool MathMLPresentationElement::isFlowContent(const Node& node)
         || htmlElement.hasTagName(HTMLNames::ulTag);
 }
 
-const MathMLElement::BooleanValue& MathMLPresentationElement::cachedBooleanAttribute(const QualifiedName& name, Optional<BooleanValue>& attribute)
+const MathMLElement::BooleanValue& MathMLPresentationElement::cachedBooleanAttribute(const QualifiedName& name, std::optional<BooleanValue>& attribute)
 {
     if (attribute)
         return attribute.value();
@@ -202,7 +203,7 @@ const MathMLElement::BooleanValue& MathMLPresentationElement::cachedBooleanAttri
     return attribute.value();
 }
 
-MathMLElement::Length MathMLPresentationElement::parseNumberAndUnit(const StringView& string)
+MathMLElement::Length MathMLPresentationElement::parseNumberAndUnit(StringView string)
 {
     LengthType lengthType = LengthType::UnitLess;
     unsigned stringLength = string.length();
@@ -244,7 +245,7 @@ MathMLElement::Length MathMLPresentationElement::parseNumberAndUnit(const String
     return length;
 }
 
-MathMLElement::Length MathMLPresentationElement::parseNamedSpace(const StringView& string)
+MathMLElement::Length MathMLPresentationElement::parseNamedSpace(StringView string)
 {
     // Named space values are case-sensitive.
     int namedSpaceValue;
@@ -310,25 +311,12 @@ MathMLElement::Length MathMLPresentationElement::parseMathMLLength(const String&
     return parseNamedSpace(strippedLength);
 }
 
-const MathMLElement::Length& MathMLPresentationElement::cachedMathMLLength(const QualifiedName& name, Optional<Length>& length)
+const MathMLElement::Length& MathMLPresentationElement::cachedMathMLLength(const QualifiedName& name, std::optional<Length>& length)
 {
     if (length)
         return length.value();
     length = parseMathMLLength(attributeWithoutSynchronization(name));
     return length.value();
-}
-
-bool MathMLPresentationElement::acceptsDisplayStyleAttribute()
-{
-    return hasTagName(mtableTag);
-}
-
-Optional<bool> MathMLPresentationElement::specifiedDisplayStyle()
-{
-    if (!acceptsDisplayStyleAttribute())
-        return WTF::nullopt;
-    const MathMLElement::BooleanValue& specifiedDisplayStyle = cachedBooleanAttribute(displaystyleAttr, m_displayStyle);
-    return toOptionalBool(specifiedDisplayStyle);
 }
 
 MathMLElement::MathVariant MathMLPresentationElement::parseMathVariantAttribute(const AtomString& attributeValue)
@@ -373,24 +361,21 @@ MathMLElement::MathVariant MathMLPresentationElement::parseMathVariantAttribute(
     return MathVariant::None;
 }
 
-Optional<MathMLElement::MathVariant> MathMLPresentationElement::specifiedMathVariant()
+std::optional<MathMLElement::MathVariant> MathMLPresentationElement::specifiedMathVariant()
 {
     if (!acceptsMathVariantAttribute())
-        return WTF::nullopt;
+        return std::nullopt;
     if (!m_mathVariant)
         m_mathVariant = parseMathVariantAttribute(attributeWithoutSynchronization(mathvariantAttr));
-    return m_mathVariant.value() == MathVariant::None ? WTF::nullopt : m_mathVariant;
+    return m_mathVariant.value() == MathVariant::None ? std::nullopt : m_mathVariant;
 }
 
 void MathMLPresentationElement::parseAttribute(const QualifiedName& name, const AtomString& value)
 {
-    bool displayStyleAttribute = name == displaystyleAttr && acceptsDisplayStyleAttribute();
     bool mathVariantAttribute = name == mathvariantAttr && acceptsMathVariantAttribute();
-    if (displayStyleAttribute)
-        m_displayStyle = WTF::nullopt;
     if (mathVariantAttribute)
-        m_mathVariant = WTF::nullopt;
-    if ((displayStyleAttribute || mathVariantAttribute) && renderer())
+        m_mathVariant = std::nullopt;
+    if ((mathVariantAttribute) && renderer())
         MathMLStyle::resolveMathMLStyleTree(renderer());
 
     MathMLElement::parseAttribute(name, value);

@@ -16,10 +16,12 @@
  */
 
 #include "unicode/utypes.h"
-#include "unicode/uregion.h"
+
+#if U_SHOW_CPLUSPLUS_API
 
 #if !UCONFIG_NO_FORMATTING
 
+#include "unicode/uregion.h"
 #include "unicode/uobject.h"
 #include "unicode/uniset.h"
 #include "unicode/unistr.h"
@@ -79,13 +81,13 @@ public:
      * Returns true if the two regions are equal.
      * @stable ICU 51
      */
-    UBool operator==(const Region &that) const;
+    bool operator==(const Region &that) const;
 
     /**
      * Returns true if the two regions are NOT equal; that is, if operator ==() returns false.
      * @stable ICU 51
      */
-    UBool operator!=(const Region &that) const;
+    bool operator!=(const Region &that) const;
 
     /**
      * Returns a pointer to a Region using the given region code.  The region code can be either 2-letter ISO code,
@@ -219,6 +221,9 @@ private:
 U_NAMESPACE_END
 
 #endif /* #if !UCONFIG_NO_FORMATTING */
+
+#endif /* U_SHOW_CPLUSPLUS_API */
+
 #endif // REGION_H
 
 //eof

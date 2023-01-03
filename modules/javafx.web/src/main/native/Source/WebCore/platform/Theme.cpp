@@ -26,10 +26,10 @@
 #include "config.h"
 #include "Theme.h"
 
+#include "Color.h"
 #include "GraphicsContext.h"
 #include "LengthBox.h"
 #include "LengthSize.h"
-#include <wtf/Optional.h>
 
 namespace WebCore {
 
@@ -38,9 +38,9 @@ int Theme::baselinePositionAdjustment(ControlPart) const
     return 0;
 }
 
-Optional<FontCascadeDescription> Theme::controlFont(ControlPart, const FontCascade&, float) const
+std::optional<FontCascadeDescription> Theme::controlFont(ControlPart, const FontCascade&, float) const
 {
-    return WTF::nullopt;
+    return std::nullopt;
 }
 
 LengthSize Theme::controlSize(ControlPart, const FontCascade&, const LengthSize& zoomedSize, float) const
@@ -48,9 +48,21 @@ LengthSize Theme::controlSize(ControlPart, const FontCascade&, const LengthSize&
     return zoomedSize;
 }
 
-LengthSize Theme::minimumControlSize(ControlPart, const FontCascade&, float) const
+LengthSize Theme::minimumControlSize(ControlPart part, const FontCascade& fontCascade, const LengthSize& zoomedSize, const LengthSize& nonShrinkableZoomedSize, float zoom) const
 {
-    return { { 0, Fixed }, { 0, Fixed } };
+    auto minSize = minimumControlSize(part, fontCascade, zoomedSize, zoom);
+    if (part == ControlPart::RadioPart) {
+        if (zoomedSize.width.isIntrinsicOrAuto())
+            minSize.width = nonShrinkableZoomedSize.width;
+        if (zoomedSize.height.isIntrinsicOrAuto())
+            minSize.height = nonShrinkableZoomedSize.height;
+    }
+    return minSize;
+}
+
+LengthSize Theme::minimumControlSize(ControlPart, const FontCascade&, const LengthSize&, float) const
+{
+    return { { 0, LengthType::Fixed }, { 0, LengthType::Fixed } };
 }
 
 bool Theme::controlRequiresPreWhiteSpace(ControlPart) const
@@ -58,7 +70,7 @@ bool Theme::controlRequiresPreWhiteSpace(ControlPart) const
     return false;
 }
 
-void Theme::paint(ControlPart, ControlStates&, GraphicsContext&, const FloatRect&, float, ScrollView*, float, float, bool, bool)
+void Theme::paint(ControlPart, ControlStates&, GraphicsContext&, const FloatRect&, float, ScrollView*, float, float, bool, bool, const Color&)
 {
 }
 
@@ -70,6 +82,12 @@ bool Theme::userPrefersReducedMotion() const
 {
     return false;
 }
+
+bool Theme::userPrefersContrast() const
+{
+    return false;
+}
+
 
 LengthBox Theme::controlBorder(ControlPart part, const FontCascade&, const LengthBox& zoomedBox, float) const
 {
@@ -98,7 +116,7 @@ LengthBox Theme::controlPadding(ControlPart part, const FontCascade&, const Leng
     }
 }
 
-void Theme::drawNamedImage(const String& name, GraphicsContext& context, const FloatRect& rect) const
+void Theme::drawNamedImage(const String& name, GraphicsContext& context, const FloatSize& size) const
 {
     // We only handle one icon at the moment.
     if (name != "wireless-playback")
@@ -109,7 +127,7 @@ void Theme::drawNamedImage(const String& name, GraphicsContext& context, const F
 
     // Draw a generic Wireless Playback icon.
 
-    context.scale(rect.size() / 100);
+    context.scale(size / 100);
     context.translate(8, 1);
 
     Path outline;

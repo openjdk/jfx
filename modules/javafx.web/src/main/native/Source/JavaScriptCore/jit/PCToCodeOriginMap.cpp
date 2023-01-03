@@ -31,7 +31,7 @@
 #include "B3PCToOriginMap.h"
 #include "DFGNode.h"
 #include "LinkBuffer.h"
-#include <wtf/Optional.h>
+#include "WasmOpcodeOrigin.h"
 
 #if COMPILER(MSVC)
 // See https://msdn.microsoft.com/en-us/library/4wz07268.aspx
@@ -55,7 +55,7 @@ public:
     void write(T item)
     {
         RELEASE_ASSERT(m_offset + sizeof(T) <= m_maxSize);
-        static const uint8_t mask = std::numeric_limits<uint8_t>::max();
+        static constexpr uint8_t mask = std::numeric_limits<uint8_t>::max();
         for (unsigned i = 0; i < sizeof(T); i++) {
             *(m_buffer + m_offset) = static_cast<uint8_t>(item & mask);
             item = item >> (sizeof(uint8_t) * 8);
@@ -100,20 +100,17 @@ private:
 } // anonymous namespace
 
 PCToCodeOriginMapBuilder::PCToCodeOriginMapBuilder(VM& vm)
-    : m_vm(vm)
-    , m_shouldBuildMapping(vm.shouldBuilderPCToCodeOriginMapping())
+    : m_shouldBuildMapping(vm.shouldBuilderPCToCodeOriginMapping())
 { }
 
 PCToCodeOriginMapBuilder::PCToCodeOriginMapBuilder(PCToCodeOriginMapBuilder&& other)
-    : m_vm(other.m_vm)
-    , m_codeRanges(WTFMove(other.m_codeRanges))
+    : m_codeRanges(WTFMove(other.m_codeRanges))
     , m_shouldBuildMapping(other.m_shouldBuildMapping)
 { }
 
 #if ENABLE(FTL_JIT)
-PCToCodeOriginMapBuilder::PCToCodeOriginMapBuilder(VM& vm, B3::PCToOriginMap&& b3PCToOriginMap)
-    : m_vm(vm)
-    , m_shouldBuildMapping(vm.shouldBuilderPCToCodeOriginMapping())
+PCToCodeOriginMapBuilder::PCToCodeOriginMapBuilder(JSTag, VM& vm, B3::PCToOriginMap b3PCToOriginMap)
+    : m_shouldBuildMapping(vm.shouldBuilderPCToCodeOriginMapping())
 {
     if (!m_shouldBuildMapping)
         return;
@@ -123,6 +120,22 @@ PCToCodeOriginMapBuilder::PCToCodeOriginMapBuilder(VM& vm, B3::PCToOriginMap&& b
         if (node)
             appendItem(originRange.label, node->origin.semantic);
         else
+            appendItem(originRange.label, PCToCodeOriginMapBuilder::defaultCodeOrigin());
+    }
+}
+#endif
+
+#if ENABLE(WEBASSEMBLY_B3JIT)
+PCToCodeOriginMapBuilder::PCToCodeOriginMapBuilder(WasmTag, B3::PCToOriginMap b3PCToOriginMap)
+    : m_shouldBuildMapping(true)
+{
+    for (const B3::PCToOriginMap::OriginRange& originRange : b3PCToOriginMap.ranges()) {
+        B3::Origin b3Origin = originRange.origin;
+        if (b3Origin) {
+            Wasm::OpcodeOrigin wasmOrigin { b3Origin };
+            // We stash the location into a BytecodeIndex.
+            appendItem(originRange.label, CodeOrigin(BytecodeIndex(wasmOrigin.location())));
+        } else
             appendItem(originRange.label, PCToCodeOriginMapBuilder::defaultCodeOrigin());
     }
 }
@@ -145,8 +158,8 @@ void PCToCodeOriginMapBuilder::appendItem(MacroAssembler::Label label, const Cod
 }
 
 
-static const uint8_t sentinelPCDelta = 0;
-static const int8_t sentinelBytecodeDelta = 0;
+static constexpr uint8_t sentinelPCDelta = 0;
+static constexpr int8_t sentinelBytecodeDelta = 0;
 
 PCToCodeOriginMap::PCToCodeOriginMap(PCToCodeOriginMapBuilder&& builder, LinkBuffer& linkBuffer)
 {
@@ -189,9 +202,9 @@ PCToCodeOriginMap::PCToCodeOriginMap(PCToCodeOriginMapBuilder&& builder, LinkBuf
     };
 
     DeltaCompressionBuilder codeOriginCompressor((sizeof(intptr_t) + sizeof(int8_t) + sizeof(int8_t) + sizeof(InlineCallFrame*)) * builder.m_codeRanges.size());
-    CodeOrigin lastCodeOrigin(0, nullptr);
+    CodeOrigin lastCodeOrigin(BytecodeIndex(0));
     auto buildCodeOriginTable = [&] (const CodeOrigin& codeOrigin) {
-        intptr_t delta = static_cast<intptr_t>(codeOrigin.bytecodeIndex()) - static_cast<intptr_t>(lastCodeOrigin.bytecodeIndex());
+        intptr_t delta = static_cast<intptr_t>(codeOrigin.bytecodeIndex().offset()) - static_cast<intptr_t>(lastCodeOrigin.bytecodeIndex().offset());
         lastCodeOrigin = codeOrigin;
         if (delta > std::numeric_limits<int8_t>::max() || delta < std::numeric_limits<int8_t>::min() || delta == sentinelBytecodeDelta) {
             codeOriginCompressor.write<int8_t>(sentinelBytecodeDelta);
@@ -247,14 +260,14 @@ double PCToCodeOriginMap::memorySize()
     return size;
 }
 
-Optional<CodeOrigin> PCToCodeOriginMap::findPC(void* pc) const
+std::optional<CodeOrigin> PCToCodeOriginMap::findPC(void* pc) const
 {
     uintptr_t pcAsInt = bitwise_cast<uintptr_t>(pc);
     if (!(m_pcRangeStart <= pcAsInt && pcAsInt <= m_pcRangeEnd))
-        return WTF::nullopt;
+        return std::nullopt;
 
     uintptr_t currentPC = 0;
-    unsigned currentBytecodeIndex = 0;
+    BytecodeIndex currentBytecodeIndex = BytecodeIndex(0);
     InlineCallFrame* currentInlineCallFrame = nullptr;
 
     DeltaCompresseionReader pcReader(m_compressedPCs, m_compressedPCBufferSize);
@@ -280,7 +293,7 @@ Optional<CodeOrigin> PCToCodeOriginMap::findPC(void* pc) const
             else
                 delta = static_cast<intptr_t>(value);
 
-            currentBytecodeIndex = static_cast<unsigned>(static_cast<intptr_t>(currentBytecodeIndex) + delta);
+            currentBytecodeIndex = BytecodeIndex(static_cast<intptr_t>(currentBytecodeIndex.offset()) + delta);
 
             int8_t hasInlineFrame = codeOriginReader.read<int8_t>();
             ASSERT(hasInlineFrame == 0 || hasInlineFrame == 1);
@@ -295,12 +308,12 @@ Optional<CodeOrigin> PCToCodeOriginMap::findPC(void* pc) const
             // We subtract 1 because we generate end points inclusively in this table, even though we are interested in ranges of the form: [previousPC, currentPC)
             uintptr_t endOfRange = currentPC - 1;
             if (startOfRange <= pcAsInt && pcAsInt <= endOfRange)
-                return Optional<CodeOrigin>(previousOrigin); // We return previousOrigin here because CodeOrigin's are mapped to the startValue of the range.
+                return std::optional<CodeOrigin>(previousOrigin); // We return previousOrigin here because CodeOrigin's are mapped to the startValue of the range.
         }
     }
 
     RELEASE_ASSERT_NOT_REACHED();
-    return WTF::nullopt;
+    return std::nullopt;
 }
 
 } // namespace JSC

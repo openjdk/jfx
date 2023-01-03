@@ -1,5 +1,5 @@
 // Copyright 2015 The Chromium Authors. All rights reserved.
-// Copyright (C) 2016 Apple Inc. All rights reserved.
+// Copyright (C) 2016-2021 Apple Inc. All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
@@ -29,9 +29,7 @@
 
 #pragma once
 
-#include "CSSPropertyNames.h"
 #include "CSSValue.h"
-#include "CSSVariableReferenceValue.h"
 
 namespace WebCore {
 
@@ -42,18 +40,11 @@ public:
         return adoptRef(*new CSSPendingSubstitutionValue(shorthandPropertyId, WTFMove(shorthandValue)));
     }
 
-    CSSVariableReferenceValue* shorthandValue() const
-    {
-        return m_shorthandValue.get();
-    }
+    CSSVariableReferenceValue& shorthandValue() const { return m_shorthandValue; }
+    CSSPropertyID shorthandPropertyId() const { return m_shorthandPropertyId; }
 
-    CSSPropertyID shorthandPropertyId() const
-    {
-        return m_shorthandPropertyId;
-    }
-
-    bool equals(const CSSPendingSubstitutionValue& other) const { return m_shorthandValue == other.m_shorthandValue; }
-    String customCSSText() const;
+    bool equals(const CSSPendingSubstitutionValue& other) const { return m_shorthandValue.ptr() == other.m_shorthandValue.ptr(); }
+    static String customCSSText() { return emptyString(); }
 
 private:
     CSSPendingSubstitutionValue(CSSPropertyID shorthandPropertyId, Ref<CSSVariableReferenceValue>&& shorthandValue)
@@ -63,11 +54,10 @@ private:
     {
     }
 
-    CSSPropertyID m_shorthandPropertyId;
-    RefPtr<CSSVariableReferenceValue> m_shorthandValue;
+    const CSSPropertyID m_shorthandPropertyId;
+    Ref<CSSVariableReferenceValue> m_shorthandValue;
 };
 
 } // namespace WebCore
 
 SPECIALIZE_TYPE_TRAITS_CSS_VALUE(CSSPendingSubstitutionValue, isPendingSubstitutionValue())
-

@@ -23,12 +23,13 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef Map_h
-#define Map_h
+#pragma once
 
 #include "BInline.h"
 #include "Sizes.h"
 #include "Vector.h"
+
+#if !BUSE(LIBPAS)
 
 namespace bmalloc {
 
@@ -80,10 +81,10 @@ public:
     }
 
 private:
-    static const unsigned minCapacity = 16;
-    static const unsigned maxLoad = 2;
-    static const unsigned rehashLoad = 4;
-    static const unsigned minLoad = 8;
+    static constexpr unsigned minCapacity = 16;
+    static constexpr unsigned maxLoad = 2;
+    static constexpr unsigned rehashLoad = 4;
+    static constexpr unsigned minLoad = 8;
 
     bool shouldGrow() { return m_keyCount * maxLoad >= capacity(); }
     bool shouldShrink() { return m_keyCount * minLoad <= capacity() && capacity() > minCapacity; }
@@ -131,4 +132,4 @@ template<typename Key, typename Value, typename Hash> const unsigned Map<Key, Va
 
 } // namespace bmalloc
 
-#endif // Map_h
+#endif

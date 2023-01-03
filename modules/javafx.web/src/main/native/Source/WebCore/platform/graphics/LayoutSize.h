@@ -136,6 +136,11 @@ public:
         return LayoutSize(width(), width() * aspectRatio.height() / aspectRatio.width());
     }
 
+    bool mightBeSaturated() const
+    {
+        return m_width.mightBeSaturated() || m_height.mightBeSaturated();
+    }
+
 private:
     LayoutUnit m_width;
     LayoutUnit m_height;
@@ -185,6 +190,11 @@ inline IntSize flooredIntSize(const LayoutSize& s)
     return IntSize(s.width().floor(), s.height().floor());
 }
 
+inline IntSize ceiledIntSize(const LayoutSize& s)
+{
+    return IntSize(s.width().ceil(), s.height().ceil());
+}
+
 inline IntSize roundedIntSize(const LayoutSize& s)
 {
     return IntSize(s.width().round(), s.height().round());
@@ -193,6 +203,11 @@ inline IntSize roundedIntSize(const LayoutSize& s)
 inline FloatSize floorSizeToDevicePixels(const LayoutSize& size, float pixelSnappingFactor)
 {
     return FloatSize(floorToDevicePixel(size.width(), pixelSnappingFactor), floorToDevicePixel(size.height(), pixelSnappingFactor));
+}
+
+inline FloatSize roundSizeToDevicePixels(const LayoutSize& size, float pixelSnappingFactor)
+{
+    return FloatSize(roundToDevicePixel(size.width(), pixelSnappingFactor), roundToDevicePixel(size.height(), pixelSnappingFactor));
 }
 
 WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, const LayoutSize&);

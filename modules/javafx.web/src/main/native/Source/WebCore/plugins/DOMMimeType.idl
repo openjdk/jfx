@@ -19,7 +19,9 @@
 */
 
 [
-    InterfaceName=MimeType
+    InterfaceName=MimeType,
+    GenerateIsReachable=ReachableFromNavigator,
+    Exposed=Window
 ] interface DOMMimeType {
     readonly attribute DOMString type;
     readonly attribute DOMString suffixes;

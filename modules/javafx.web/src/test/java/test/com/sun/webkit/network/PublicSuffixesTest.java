@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -69,9 +69,9 @@ public class PublicSuffixesTest {
      */
     @Test
     public void testWildcardRule() {
-        test("ar", true);
-        test("foo.ar", true);
-        test("bar.foo.ar", false);
+        test("mm", true);
+        test("foo.mm", true);
+        test("bar.foo.mm", false);
     }
 
     /**

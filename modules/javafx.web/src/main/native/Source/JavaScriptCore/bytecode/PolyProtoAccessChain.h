@@ -25,6 +25,9 @@
 
 #pragma once
 
+#include "StructureID.h"
+#include "VM.h"
+#include <wtf/FixedVector.h>
 #include <wtf/Vector.h>
 
 namespace JSC {
@@ -35,22 +38,13 @@ class JSObject;
 class PropertySlot;
 class Structure;
 
-class PolyProtoAccessChain {
-    WTF_MAKE_FAST_ALLOCATED;
-
+class PolyProtoAccessChain final : public ThreadSafeRefCounted<PolyProtoAccessChain> {
 public:
-    PolyProtoAccessChain(PolyProtoAccessChain&) = default;
-
     // Returns nullptr when invalid.
-    static std::unique_ptr<PolyProtoAccessChain> create(JSGlobalObject*, JSCell* base, const PropertySlot&, bool& usesPolyProto);
-    static std::unique_ptr<PolyProtoAccessChain> create(JSGlobalObject*, JSCell* base, JSObject* target, bool& usesPolyProto);
+    static RefPtr<PolyProtoAccessChain> tryCreate(JSGlobalObject*, JSCell* base, const PropertySlot&);
+    static RefPtr<PolyProtoAccessChain> tryCreate(JSGlobalObject*, JSCell* base, JSObject* target);
 
-    std::unique_ptr<PolyProtoAccessChain> clone()
-    {
-        return makeUnique<PolyProtoAccessChain>(*this);
-    }
-
-    const Vector<Structure*>& chain() const { return m_chain; }
+    const FixedVector<StructureID>& chain() const { return m_chain; }
 
     void dump(Structure* baseStructure, PrintStream& out) const;
 
@@ -60,25 +54,35 @@ public:
         return !(*this == other);
     }
 
-    bool needImpurePropertyWatchpoint() const;
+    bool needImpurePropertyWatchpoint(VM&) const;
 
     template <typename Func>
-    void forEach(Structure* baseStructure, const Func& func) const
+    void forEach(VM&, Structure* baseStructure, const Func& func) const
     {
         bool atEnd = !m_chain.size();
         func(baseStructure, atEnd);
         for (unsigned i = 0; i < m_chain.size(); ++i) {
             atEnd = i + 1 == m_chain.size();
-            func(m_chain[i], atEnd);
+            func(m_chain[i].decode(), atEnd);
         }
     }
 
+    Structure* slotBaseStructure(VM&, Structure* baseStructure) const
+    {
+        if (m_chain.size())
+            return m_chain.last().decode();
+        return baseStructure;
+    }
+
 private:
-    PolyProtoAccessChain() = default;
+    explicit PolyProtoAccessChain(Vector<StructureID>&& chain)
+        : m_chain(WTFMove(chain))
+    {
+    }
 
     // This does not include the base. We rely on AccessCase providing it for us. That said, this data
     // structure is tied to the base that it was created with.
-    Vector<Structure*> m_chain;
+    FixedVector<StructureID> m_chain;
 };
 
 }

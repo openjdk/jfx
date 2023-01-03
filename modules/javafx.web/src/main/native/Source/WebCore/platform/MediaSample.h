@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -23,55 +23,61 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef MediaSample_h
-#define MediaSample_h
+#pragma once
 
 #include "FloatSize.h"
 #include <JavaScriptCore/TypedArrays.h>
 #include <wtf/EnumTraits.h>
 #include <wtf/MediaTime.h>
-#include <wtf/RefCounted.h>
+#include <wtf/ThreadSafeRefCounted.h>
 #include <wtf/text/AtomString.h>
 
 typedef struct opaqueCMSampleBuffer *CMSampleBufferRef;
+typedef struct __CVBuffer *CVPixelBufferRef;
 typedef struct _GstSample GstSample;
+typedef struct OpaqueMTPluginByteSource *MTPluginByteSourceRef;
+typedef const struct opaqueCMFormatDescription *CMFormatDescriptionRef;
 
 namespace WebCore {
 
 class MockSampleBox;
 
 struct PlatformSample {
-    enum {
+    enum Type {
         None,
         MockSampleBoxType,
         CMSampleBufferType,
         GStreamerSampleType,
+        ByteRangeSampleType,
+        VideoFrameType, // FIXME: To be removed when VideoFrame is not MediaSample.
     } type;
     union {
-        MockSampleBox* mockSampleBox;
+        const MockSampleBox* mockSampleBox;
         CMSampleBufferRef cmSampleBuffer;
         GstSample* gstSample;
+        std::pair<MTPluginByteSourceRef, CMFormatDescriptionRef> byteRangeSample;
     } sample;
 };
 
-class MediaSample : public RefCounted<MediaSample> {
+class MediaSample : public ThreadSafeRefCounted<MediaSample> {
 public:
     virtual ~MediaSample() = default;
 
     virtual MediaTime presentationTime() const = 0;
-    virtual MediaTime outputPresentationTime() const { return presentationTime(); }
     virtual MediaTime decodeTime() const = 0;
     virtual MediaTime duration() const = 0;
-    virtual MediaTime outputDuration() const { return duration(); }
     virtual AtomString trackID() const = 0;
-    virtual void setTrackID(const String&) = 0;
     virtual size_t sizeInBytes() const = 0;
     virtual FloatSize presentationSize() const = 0;
     virtual void offsetTimestampsBy(const MediaTime&) = 0;
     virtual void setTimestamps(const MediaTime&, const MediaTime&) = 0;
     virtual bool isDivisable() const = 0;
     enum DivideFlags { BeforePresentationTime, AfterPresentationTime };
-    virtual std::pair<RefPtr<MediaSample>, RefPtr<MediaSample>> divide(const MediaTime& presentationTime) = 0;
+    enum class UseEndTime : bool {
+        DoNotUse,
+        Use,
+    };
+    virtual std::pair<RefPtr<MediaSample>, RefPtr<MediaSample>> divide(const MediaTime& presentationTime, UseEndTime = UseEndTime::DoNotUse) = 0;
     virtual Ref<MediaSample> createNonDisplayingCopy() const = 0;
 
     virtual RefPtr<JSC::Uint8ClampedArray> getRGBAImageData() const { return nullptr; }
@@ -81,9 +87,17 @@ public:
         IsSync = 1 << 0,
         IsNonDisplaying = 1 << 1,
         HasAlpha = 1 << 2,
+        HasSyncInfo = 1 << 3,
     };
     virtual SampleFlags flags() const = 0;
-    virtual PlatformSample platformSample() = 0;
+    virtual PlatformSample platformSample() const = 0;
+    virtual PlatformSample::Type platformSampleType() const = 0;
+
+    struct ByteRange {
+        size_t byteOffset { 0 };
+        size_t byteLength { 0 };
+    };
+    virtual std::optional<ByteRange> byteRange() const = 0;
 
     enum class VideoRotation {
         None = 0,
@@ -94,13 +108,28 @@ public:
     virtual VideoRotation videoRotation() const { return VideoRotation::None; }
     virtual bool videoMirrored() const { return false; }
     virtual uint32_t videoPixelFormat() const { return 0; }
+#if PLATFORM(COCOA)
+    virtual CVPixelBufferRef pixelBuffer() const { return nullptr; };
+#endif
 
     bool isSync() const { return flags() & IsSync; }
     bool isNonDisplaying() const { return flags() & IsNonDisplaying; }
     bool hasAlpha() const { return flags() & HasAlpha; }
+    bool hasSyncInfo() const { return flags() & HasSyncInfo; }
 
     virtual void dump(PrintStream&) const = 0;
-    virtual String toJSONString() const { return { }; }
+    String toJSONString() const
+    {
+        auto object = JSON::Object::create();
+
+        object->setObject("pts"_s, presentationTime().toJSONObject());
+        object->setObject("dts"_s, decodeTime().toJSONObject());
+        object->setObject("duration"_s, duration().toJSONObject());
+        object->setInteger("flags"_s, static_cast<unsigned>(flags()));
+        object->setObject("presentationSize"_s, presentationSize().toJSONObject());
+
+        return object->toJSONString();
+    }
 };
 
 } // namespace WebCore
@@ -127,5 +156,3 @@ struct LogArgument<WebCore::MediaSample> {
 };
 
 } // namespace WTF
-
-#endif

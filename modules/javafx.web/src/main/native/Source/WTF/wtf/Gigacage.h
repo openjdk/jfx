@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,31 +28,21 @@
 #include <wtf/FastMalloc.h>
 #include <wtf/StdLibExtras.h>
 
-#if defined(USE_SYSTEM_MALLOC) && USE_SYSTEM_MALLOC
+#if USE(SYSTEM_MALLOC)
 #define GIGACAGE_ENABLED 0
 
 namespace Gigacage {
 
+constexpr bool hasCapacityToUseLargeGigacage = OS_CONSTANT(EFFECTIVE_ADDRESS_WIDTH) > 36;
+
 const size_t primitiveGigacageMask = 0;
 const size_t jsValueGigacageMask = 0;
-const size_t gigacageBasePtrsSize = 8 * KB;
-
-extern "C" alignas(void*) WTF_EXPORT_PRIVATE char g_gigacageBasePtrs[gigacageBasePtrsSize];
-
-struct BasePtrs {
-    uintptr_t reservedForFlags;
-    void* primitive;
-    void* jsValue;
-};
 
 enum Kind {
-    ReservedForFlagsAndNotABasePtr = 0,
     Primitive,
     JSValue,
+    NumberOfKinds
 };
-
-static_assert(offsetof(BasePtrs, primitive) == Kind::Primitive * sizeof(void*), "");
-static_assert(offsetof(BasePtrs, jsValue) == Kind::JSValue * sizeof(void*), "");
 
 inline void ensureGigacage() { }
 inline void disablePrimitiveGigacage() { }
@@ -61,56 +51,30 @@ inline bool shouldBeEnabled() { return false; }
 inline void addPrimitiveDisableCallback(void (*)(void*), void*) { }
 inline void removePrimitiveDisableCallback(void (*)(void*), void*) { }
 
-inline void disableDisablingPrimitiveGigacageIfShouldBeEnabled() { }
-
-inline bool isDisablingPrimitiveGigacageDisabled() { return false; }
-inline bool isPrimitiveGigacagePermanentlyEnabled() { return false; }
-inline bool canPrimitiveGigacageBeDisabled() { return true; }
+inline void forbidDisablingPrimitiveGigacage() { }
 
 ALWAYS_INLINE const char* name(Kind kind)
 {
     switch (kind) {
-    case ReservedForFlagsAndNotABasePtr:
-        RELEASE_ASSERT_NOT_REACHED();
     case Primitive:
         return "Primitive";
     case JSValue:
         return "JSValue";
+    case NumberOfKinds:
+        break;
     }
     RELEASE_ASSERT_NOT_REACHED();
     return nullptr;
 }
 
-ALWAYS_INLINE void*& basePtr(BasePtrs& basePtrs, Kind kind)
-{
-    switch (kind) {
-    case ReservedForFlagsAndNotABasePtr:
-        RELEASE_ASSERT_NOT_REACHED();
-    case Primitive:
-        return basePtrs.primitive;
-    case JSValue:
-        return basePtrs.jsValue;
-    }
-    RELEASE_ASSERT_NOT_REACHED();
-    return basePtrs.primitive;
-}
-
-ALWAYS_INLINE BasePtrs& basePtrs()
-{
-    return *reinterpret_cast<BasePtrs*>(reinterpret_cast<void*>(g_gigacageBasePtrs));
-}
-
-ALWAYS_INLINE void*& basePtr(Kind kind)
-{
-    return basePtr(basePtrs(), kind);
-}
-
-ALWAYS_INLINE bool isEnabled(Kind kind)
-{
-    return !!basePtr(kind);
-}
-
+ALWAYS_INLINE bool contains(const void*) { return false; }
+ALWAYS_INLINE bool disablingPrimitiveGigacageIsForbidden() { return false; }
+ALWAYS_INLINE bool isEnabled() { return false; }
+ALWAYS_INLINE bool isEnabled(Kind) { return false; }
 ALWAYS_INLINE size_t mask(Kind) { return 0; }
+ALWAYS_INLINE size_t footprint(Kind) { return 0; }
+ALWAYS_INLINE size_t maxSize(Kind) { return 0; }
+ALWAYS_INLINE size_t size(Kind) { return 0; }
 
 template<typename T>
 inline T* caged(Kind, T* ptr) { return ptr; }

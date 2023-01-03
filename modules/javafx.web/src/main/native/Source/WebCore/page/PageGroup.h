@@ -25,14 +25,14 @@
 
 #pragma once
 
-#include <wtf/HashSet.h>
 #include <wtf/Noncopyable.h>
+#include <wtf/WeakHashSet.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
 class Page;
-#if ENABLE(VIDEO_TRACK)
+#if ENABLE(VIDEO)
 class CaptionUserPreferences;
 #endif
 
@@ -45,7 +45,7 @@ public:
 
     WEBCORE_EXPORT static PageGroup* pageGroup(const String& groupName);
 
-    const HashSet<Page*>& pages() const { return m_pages; }
+    const WeakHashSet<Page>& pages() const { return m_pages; }
 
     void addPage(Page&);
     void removePage(Page&);
@@ -53,24 +53,21 @@ public:
     const String& name() { return m_name; }
     unsigned identifier() { return m_identifier; }
 
-#if ENABLE(VIDEO_TRACK)
+#if ENABLE(VIDEO)
     WEBCORE_EXPORT void captionPreferencesChanged();
-    WEBCORE_EXPORT CaptionUserPreferences& captionPreferences();
+    WEBCORE_EXPORT CaptionUserPreferences& ensureCaptionPreferences();
+    CaptionUserPreferences* captionPreferences() const { return m_captionPreferences.get(); }
 #endif
-
-    WEBCORE_EXPORT void enableLegacyPrivateBrowsingForTesting(bool);
 
 private:
     String m_name;
-    HashSet<Page*> m_pages;
+    WeakHashSet<Page> m_pages;
 
     unsigned m_identifier;
 
-#if ENABLE(VIDEO_TRACK)
-    std::unique_ptr<CaptionUserPreferences> m_captionPreferences;
+#if ENABLE(VIDEO)
+    RefPtr<CaptionUserPreferences> m_captionPreferences;
 #endif
-
-    bool m_isLegacyPrivateBrowsingEnabledForTesting { false };
 };
 
 } // namespace WebCore

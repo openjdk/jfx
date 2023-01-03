@@ -36,6 +36,7 @@ RefPtr<ApplicationCacheResourceLoader> ApplicationCacheResourceLoader::create(un
     options.storedCredentialsPolicy = StoredCredentialsPolicy::Use;
     options.credentials = FetchOptions::Credentials::Include;
     options.applicationCacheMode = ApplicationCacheMode::Bypass;
+    options.certificateInfoPolicy = CertificateInfoPolicy::IncludeCertificateInfo;
     CachedResourceRequest cachedResourceRequest { WTFMove(request), options };
     auto resource = loader.requestRawResource(WTFMove(cachedResourceRequest));
     if (!resource.has_value()) {
@@ -64,7 +65,7 @@ ApplicationCacheResourceLoader::~ApplicationCacheResourceLoader()
 
 void ApplicationCacheResourceLoader::cancel(Error error)
 {
-    auto protectedThis = makeRef(*this);
+    Ref protectedThis { *this };
 
     if (auto callback = WTFMove(m_callback))
         callback(makeUnexpected(error));
@@ -86,7 +87,7 @@ void ApplicationCacheResourceLoader::responseReceived(CachedResource& resource, 
     }
 
     if (response.httpStatusCode() == 304) {
-        notifyFinished(*m_resource);
+        notifyFinished(*m_resource, { });
         return;
     }
 
@@ -98,9 +99,9 @@ void ApplicationCacheResourceLoader::responseReceived(CachedResource& resource, 
     m_applicationCacheResource = ApplicationCacheResource::create(m_resource->url(), response, m_type);
 }
 
-void ApplicationCacheResourceLoader::dataReceived(CachedResource&, const char* data, int length)
+void ApplicationCacheResourceLoader::dataReceived(CachedResource&, const SharedBuffer& buffer)
 {
-    m_applicationCacheResource->data().append(data, length);
+    m_applicationCacheResource->append(buffer);
 }
 
 void ApplicationCacheResourceLoader::redirectReceived(CachedResource&, ResourceRequest&& newRequest, const ResourceResponse&, CompletionHandler<void(ResourceRequest&&)>&& callback)
@@ -116,9 +117,9 @@ void ApplicationCacheResourceLoader::redirectReceived(CachedResource&, ResourceR
     callback(WTFMove(newRequest));
 }
 
-void ApplicationCacheResourceLoader::notifyFinished(CachedResource& resource)
+void ApplicationCacheResourceLoader::notifyFinished(CachedResource& resource, const NetworkLoadMetrics&)
 {
-    auto protectedThis = makeRef(*this);
+    Ref protectedThis { *this };
 
     ASSERT_UNUSED(resource, &resource == m_resource);
 

@@ -26,7 +26,10 @@
 #include "config.h"
 #include "MessagePortChannelProvider.h"
 
+#include "Document.h"
 #include "MessagePortChannelProviderImpl.h"
+#include "WorkerGlobalScope.h"
+#include "WorkletGlobalScope.h"
 #include <wtf/MainThread.h>
 
 namespace WebCore {
@@ -35,6 +38,7 @@ static MessagePortChannelProvider* globalProvider;
 
 MessagePortChannelProvider& MessagePortChannelProvider::singleton()
 {
+    ASSERT(isMainThread());
     static std::once_flag onceFlag;
     std::call_once(onceFlag, [] {
         if (!globalProvider)
@@ -49,6 +53,17 @@ void MessagePortChannelProvider::setSharedProvider(MessagePortChannelProvider& p
     RELEASE_ASSERT(isMainThread());
     RELEASE_ASSERT(!globalProvider);
     globalProvider = &provider;
+}
+
+MessagePortChannelProvider& MessagePortChannelProvider::fromContext(ScriptExecutionContext& context)
+{
+    if (auto document = dynamicDowncast<Document>(context))
+        return document->messagePortChannelProvider();
+
+    if (auto workletScope = dynamicDowncast<WorkletGlobalScope>(context))
+        return workletScope->messagePortChannelProvider();
+
+    return downcast<WorkerGlobalScope>(context).messagePortChannelProvider();
 }
 
 } // namespace WebCore

@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include <optional>
 #include <wtf/HashFunctions.h>
 #include <wtf/HashTraits.h>
 
@@ -55,6 +56,11 @@ public:
     {
     }
 
+    explicit SessionID(uint64_t identifier)
+        : m_identifier(identifier)
+    {
+    }
+
     PAL_EXPORT static SessionID generateEphemeralSessionID();
     PAL_EXPORT static SessionID generatePersistentSessionID();
     PAL_EXPORT static void enableGenerationProtection();
@@ -69,18 +75,13 @@ public:
     bool isAlwaysOnLoggingAllowed() const { return !isEphemeral(); }
 
     template<class Encoder> void encode(Encoder&) const;
-    template<class Decoder> static Optional<SessionID> decode(Decoder&);
+    template<class Decoder> static std::optional<SessionID> decode(Decoder&);
 
     SessionID isolatedCopy() const { return *this; }
 
     explicit operator bool() const { return m_identifier; }
 
 private:
-    explicit SessionID(uint64_t identifier)
-        : m_identifier(identifier)
-    {
-    }
-
     static bool isValidSessionIDValue(uint64_t sessionID) { return sessionID != HashTableEmptyValueID && sessionID != HashTableDeletedValueID; }
 
     uint64_t m_identifier;
@@ -94,13 +95,12 @@ void SessionID::encode(Encoder& encoder) const
 }
 
 template<class Decoder>
-Optional<SessionID> SessionID::decode(Decoder& decoder)
+std::optional<SessionID> SessionID::decode(Decoder& decoder)
 {
-    Optional<uint64_t> sessionID;
+    std::optional<uint64_t> sessionID;
     decoder >> sessionID;
-    if (!sessionID)
-        return WTF::nullopt;
-    ASSERT(isValidSessionIDValue(*sessionID));
+    if (!sessionID || !isValidSessionIDValue(*sessionID))
+        return std::nullopt;
     return SessionID { *sessionID };
 }
 
@@ -116,12 +116,10 @@ struct SessionIDHash {
 
 template<> struct HashTraits<PAL::SessionID> : GenericHashTraits<PAL::SessionID> {
     static PAL::SessionID emptyValue() { return PAL::SessionID(HashTableEmptyValue); }
-    static void constructDeletedValue(PAL::SessionID& slot) { slot = PAL::SessionID(HashTableDeletedValue); }
+    static void constructDeletedValue(PAL::SessionID& slot) { new (NotNull, &slot) PAL::SessionID(HashTableDeletedValue); }
     static bool isDeletedValue(const PAL::SessionID& slot) { return slot.isHashTableDeletedValue(); }
 };
 
-template<> struct DefaultHash<PAL::SessionID> {
-    typedef SessionIDHash Hash;
-};
+template<> struct DefaultHash<PAL::SessionID> : SessionIDHash { };
 
 } // namespace WTF

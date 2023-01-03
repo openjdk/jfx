@@ -29,20 +29,24 @@
 #include "config.h"
 #include "AccessibilityNodeObject.h"
 
+#include "AXLogger.h"
 #include "AXObjectCache.h"
 #include "AccessibilityImageMapLink.h"
+#include "AccessibilityLabel.h"
 #include "AccessibilityList.h"
 #include "AccessibilityListBox.h"
 #include "AccessibilitySpinButton.h"
 #include "AccessibilityTable.h"
 #include "Editing.h"
 #include "ElementIterator.h"
+#include "Event.h"
 #include "EventNames.h"
 #include "FloatRect.h"
 #include "Frame.h"
 #include "FrameLoader.h"
 #include "FrameSelection.h"
 #include "FrameView.h"
+#include "HTMLAudioElement.h"
 #include "HTMLCanvasElement.h"
 #include "HTMLDetailsElement.h"
 #include "HTMLFieldSetElement.h"
@@ -52,10 +56,14 @@
 #include "HTMLLabelElement.h"
 #include "HTMLLegendElement.h"
 #include "HTMLNames.h"
+#include "HTMLOptionElement.h"
 #include "HTMLParserIdioms.h"
 #include "HTMLSelectElement.h"
+#include "HTMLSummaryElement.h"
 #include "HTMLTextAreaElement.h"
 #include "HTMLTextFormControlElement.h"
+#include "HTMLVideoElement.h"
+#include "KeyboardEvent.h"
 #include "LabelableElement.h"
 #include "LocalizedStrings.h"
 #include "MathMLElement.h"
@@ -70,7 +78,6 @@
 #include "TextControlInnerElements.h"
 #include "UserGestureIndicator.h"
 #include "VisibleUnits.h"
-#include "Widget.h"
 #include <wtf/StdLibExtras.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/unicode/CharacterNames.h>
@@ -106,66 +113,16 @@ Ref<AccessibilityNodeObject> AccessibilityNodeObject::create(Node* node)
     return adoptRef(*new AccessibilityNodeObject(node));
 }
 
-void AccessibilityNodeObject::detach(AccessibilityDetachmentType detachmentType, AXObjectCache* cache)
+void AccessibilityNodeObject::detachRemoteParts(AccessibilityDetachmentType detachmentType)
 {
     // AccessibilityObject calls clearChildren.
-    AccessibilityObject::detach(detachmentType, cache);
+    AccessibilityObject::detachRemoteParts(detachmentType);
     m_node = nullptr;
-}
-
-void AccessibilityNodeObject::childrenChanged()
-{
-    // This method is meant as a quick way of marking a portion of the accessibility tree dirty.
-    if (!node() && !renderer())
-        return;
-
-    AXObjectCache* cache = axObjectCache();
-    if (!cache)
-        return;
-    cache->postNotification(this, document(), AXObjectCache::AXChildrenChanged);
-
-    // Should make the sub tree dirty so that everything below will be updated correctly.
-    this->setNeedsToUpdateSubtree();
-    bool shouldStopUpdatingParent = false;
-
-    // Go up the accessibility parent chain, but only if the element already exists. This method is
-    // called during render layouts, minimal work should be done.
-    // If AX elements are created now, they could interrogate the render tree while it's in a funky state.
-    // At the same time, process ARIA live region changes.
-    for (AccessibilityObject* parent = this; parent; parent = parent->parentObjectIfExists()) {
-        if (!shouldStopUpdatingParent)
-            parent->setNeedsToUpdateChildren();
-
-
-        // These notifications always need to be sent because screenreaders are reliant on them to perform.
-        // In other words, they need to be sent even when the screen reader has not accessed this live region since the last update.
-
-        // If this element supports ARIA live regions, then notify the AT of changes.
-        // Sometimes this function can be called many times within a short period of time, leading to posting too many AXLiveRegionChanged
-        // notifications. To fix this, we used a timer to make sure we only post one notification for the children changes within a pre-defined
-        // time interval.
-        if (parent->supportsLiveRegion())
-            cache->postLiveRegionChangeNotification(parent);
-
-        // If this element is an ARIA text control, notify the AT of changes.
-        if (parent->isNonNativeTextControl()) {
-            cache->postNotification(parent, parent->document(), AXObjectCache::AXValueChanged);
-
-            // Do not let the parent that's above the editable ancestor update its children
-            // since we already notify the AT of changes.
-            shouldStopUpdatingParent = true;
-        }
-    }
 }
 
 void AccessibilityNodeObject::updateAccessibilityRole()
 {
-    bool ignoredStatus = accessibilityIsIgnored();
     m_role = determineAccessibilityRole();
-
-    // The AX hierarchy only needs to be updated if the ignored status of an element has changed.
-    if (ignoredStatus != accessibilityIsIgnored())
-        childrenChanged();
 }
 
 AccessibilityObject* AccessibilityNodeObject::firstChild() const
@@ -280,19 +237,41 @@ Document* AccessibilityNodeObject::document() const
 
 AccessibilityRole AccessibilityNodeObject::determineAccessibilityRole()
 {
-    if (!node())
-        return AccessibilityRole::Unknown;
-
+    AXTRACE("AccessibilityNodeObject::determineAccessibilityRole");
     if ((m_ariaRole = determineAriaRoleAttribute()) != AccessibilityRole::Unknown)
         return m_ariaRole;
+
+    return determineAccessibilityRoleFromNode();
+}
+
+AccessibilityRole AccessibilityNodeObject::determineAccessibilityRoleFromNode(TreatStyleFormatGroupAsInline treatStyleFormatGroupAsInline) const
+{
+    if (!node())
+        return AccessibilityRole::Unknown;
 
     if (node()->isLink())
         return AccessibilityRole::WebCoreLink;
     if (node()->isTextNode())
         return AccessibilityRole::StaticText;
+    if (node()->hasTagName(selectTag)) {
+        auto& selectElement = downcast<HTMLSelectElement>(*node());
+        return selectElement.multiple() ? AccessibilityRole::ListBox : AccessibilityRole::PopUpButton;
+    }
+    if (is<HTMLTextAreaElement>(*node()))
+        return AccessibilityRole::TextArea;
+    if (is<HTMLImageElement>(*node()) && downcast<HTMLImageElement>(*node()).hasAttributeWithoutSynchronization(usemapAttr))
+        return AccessibilityRole::ImageMap;
+    if (node()->hasTagName(liTag))
+        return AccessibilityRole::ListItem;
     if (node()->hasTagName(buttonTag))
         return buttonRoleType();
-    if (is<HTMLInputElement>(*node())) {
+    if (node()->hasTagName(legendTag))
+        return AccessibilityRole::Legend;
+    if (node()->hasTagName(canvasTag))
+        return AccessibilityRole::Canvas;
+    if (isFileUploadButton())
+        return AccessibilityRole::Button;
+    if (is<HTMLInputElement>(node())) {
         HTMLInputElement& input = downcast<HTMLInputElement>(*node());
         if (input.isCheckbox())
             return AccessibilityRole::CheckBox;
@@ -300,50 +279,169 @@ AccessibilityRole AccessibilityNodeObject::determineAccessibilityRole()
             return AccessibilityRole::RadioButton;
         if (input.isTextButton())
             return buttonRoleType();
-        if (input.isRangeControl())
-            return AccessibilityRole::Slider;
-        if (input.isInputTypeHidden())
-            return AccessibilityRole::Ignored;
-        if (input.isSearchField())
-            return AccessibilityRole::SearchField;
+        // On iOS, the date field and time field are popup buttons. On other platforms they are text fields.
+#if PLATFORM(IOS_FAMILY)
+        if (input.isDateField() || input.isTimeField())
+            return AccessibilityRole::PopUpButton;
+#endif
 #if ENABLE(INPUT_TYPE_COLOR)
         if (input.isColorControl())
             return AccessibilityRole::ColorWell;
 #endif
+        if (input.isInputTypeHidden())
+            return AccessibilityRole::Ignored;
+        if (input.isRangeControl())
+            return AccessibilityRole::Slider;
+        if (input.isSearchField())
+            return AccessibilityRole::SearchField;
+
         return AccessibilityRole::TextField;
     }
-    if (node()->hasTagName(selectTag)) {
-        HTMLSelectElement& selectElement = downcast<HTMLSelectElement>(*node());
-        return selectElement.multiple() ? AccessibilityRole::ListBox : AccessibilityRole::PopUpButton;
-    }
-    if (is<HTMLTextAreaElement>(*node()))
+
+    if (hasContentEditableAttributeSet())
         return AccessibilityRole::TextArea;
+
     if (headingLevel())
         return AccessibilityRole::Heading;
-    if (node()->hasTagName(blockquoteTag))
-        return AccessibilityRole::Blockquote;
-    if (node()->hasTagName(divTag))
-        return AccessibilityRole::Div;
+
+    if (isStyleFormatGroup()) {
+        if (node()->hasTagName(delTag))
+            return AccessibilityRole::Deletion;
+        if (node()->hasTagName(insTag))
+            return AccessibilityRole::Insertion;
+        if (node()->hasTagName(subTag))
+            return AccessibilityRole::Subscript;
+        if (node()->hasTagName(supTag))
+            return AccessibilityRole::Superscript;
+        return treatStyleFormatGroupAsInline == TreatStyleFormatGroupAsInline::Yes ? AccessibilityRole::Inline : AccessibilityRole::TextGroup;
+    }
+
+    if (node()->hasTagName(ddTag))
+        return AccessibilityRole::DescriptionListDetail;
+    if (node()->hasTagName(dtTag))
+        return AccessibilityRole::DescriptionListTerm;
+    if (node()->hasTagName(dlTag))
+        return AccessibilityRole::DescriptionList;
+    if (node()->hasTagName(olTag) || node()->hasTagName(ulTag))
+        return AccessibilityRole::List;
+    if (node()->hasTagName(fieldsetTag))
+        return AccessibilityRole::Group;
+    if (node()->hasTagName(figureTag))
+        return AccessibilityRole::Figure;
     if (node()->hasTagName(pTag))
         return AccessibilityRole::Paragraph;
-    if (is<HTMLLabelElement>(*node()))
+    if (is<HTMLLabelElement>(node()))
         return AccessibilityRole::Label;
+    if (node()->hasTagName(dfnTag))
+        return AccessibilityRole::Definition;
+    if (node()->hasTagName(divTag))
+        return AccessibilityRole::Div;
+    if (is<HTMLFormElement>(node()))
+        return AccessibilityRole::Form;
+    if (node()->hasTagName(articleTag))
+        return AccessibilityRole::DocumentArticle;
+    if (node()->hasTagName(mainTag))
+        return AccessibilityRole::LandmarkMain;
+    if (node()->hasTagName(navTag))
+        return AccessibilityRole::LandmarkNavigation;
+    if (node()->hasTagName(asideTag))
+        return AccessibilityRole::LandmarkComplementary;
+
+    // The default role attribute value for the section element, region, became a landmark in ARIA 1.1.
+    // The HTML AAM spec says it is "strongly recommended" that ATs only convey and provide navigation
+    // for section elements which have names.
+    if (node()->hasTagName(sectionTag))
+        return hasAttribute(aria_labelAttr) || hasAttribute(aria_labelledbyAttr) ? AccessibilityRole::LandmarkRegion : AccessibilityRole::TextGroup;
+    if (node()->hasTagName(addressTag))
+        return AccessibilityRole::Group;
+    if (node()->hasTagName(blockquoteTag))
+        return AccessibilityRole::Blockquote;
+    if (node()->hasTagName(captionTag))
+        return AccessibilityRole::Caption;
+    if (node()->hasTagName(dialogTag))
+        return AccessibilityRole::ApplicationDialog;
+    if (node()->hasTagName(markTag))
+        return AccessibilityRole::Mark;
+    if (node()->hasTagName(preTag))
+        return AccessibilityRole::Pre;
+    if (is<HTMLDetailsElement>(node()))
+        return AccessibilityRole::Details;
+    if (is<HTMLSummaryElement>(node()))
+        return AccessibilityRole::Summary;
+
+    // http://rawgit.com/w3c/aria/master/html-aam/html-aam.html
+    // Output elements should be mapped to status role.
+    if (isOutput())
+        return AccessibilityRole::ApplicationStatus;
+
+#if ENABLE(VIDEO)
+    if (is<HTMLVideoElement>(node()))
+        return AccessibilityRole::Video;
+    if (is<HTMLAudioElement>(node()))
+        return AccessibilityRole::Audio;
+#endif
+
+#if ENABLE(MODEL_ELEMENT)
+    if (node()->hasTagName(modelTag))
+        return AccessibilityRole::Model;
+#endif
+
+    // The HTML element should not be exposed as an element. That's what the RenderView element does.
+    if (node()->hasTagName(htmlTag))
+        return AccessibilityRole::Ignored;
+
+    // There should only be one banner/contentInfo per page. If header/footer are being used within an article or section
+    // then it should not be exposed as whole page's banner/contentInfo
+    if (node()->hasTagName(headerTag) && !isDescendantOfElementType({ articleTag, sectionTag }))
+        return AccessibilityRole::LandmarkBanner;
+
+    // http://webkit.org/b/190138 Footers should become contentInfo's if scoped to body (and consequently become a landmark).
+    // It should remain a footer if scoped to main, sectioning elements (article, section) or root sectioning element (blockquote, details, dialog, fieldset, figure, td).
+    if (node()->hasTagName(footerTag)) {
+        if (!isDescendantOfElementType({ articleTag, sectionTag, mainTag, blockquoteTag, detailsTag, fieldsetTag, figureTag, tdTag }))
+            return AccessibilityRole::LandmarkContentInfo;
+        return AccessibilityRole::Footer;
+    }
+
+    // menu tags with toolbar type should have Toolbar role.
+    if (node()->hasTagName(menuTag) && equalLettersIgnoringASCIICase(getAttribute(typeAttr), "toolbar"))
+        return AccessibilityRole::Toolbar;
+    if (node()->hasTagName(timeTag))
+        return AccessibilityRole::Time;
+    if (node()->hasTagName(hrTag))
+        return AccessibilityRole::HorizontalRule;
+
+    // If the element does not have role, but it has ARIA attributes, or accepts tab focus, accessibility should fallback to exposing it as a group.
+    if (supportsARIAAttributes() || canSetFocusAttribute())
+        return AccessibilityRole::Group;
     if (is<Element>(*node()) && downcast<Element>(*node()).isFocusable())
         return AccessibilityRole::Group;
 
     return AccessibilityRole::Unknown;
 }
 
+bool AccessibilityNodeObject::isDescendantOfElementType(const HashSet<QualifiedName>& tagNames) const
+{
+    if (!m_node)
+        return false;
+
+    for (auto& ancestorElement : ancestorsOfType<Element>(*m_node)) {
+        if (tagNames.contains(ancestorElement.tagQName()))
+            return true;
+    }
+    return false;
+}
+
 void AccessibilityNodeObject::addChildren()
 {
     // If the need to add more children in addition to existing children arises,
     // childrenChanged should have been called, leaving the object with no children.
-    ASSERT(!m_haveChildren);
+    ASSERT(!m_childrenInitialized);
 
     if (!m_node)
         return;
 
-    m_haveChildren = true;
+    m_childrenInitialized = true;
 
     // The only time we add children from the DOM tree to a node with a renderer is when it's a canvas.
     if (renderer() && !m_node->hasTagName(canvasTag))
@@ -373,7 +471,6 @@ bool AccessibilityNodeObject::canHaveChildren() const
 
     // Elements that should not have children
     switch (roleValue()) {
-    case AccessibilityRole::Image:
     case AccessibilityRole::Button:
     case AccessibilityRole::PopUpButton:
     case AccessibilityRole::CheckBox:
@@ -389,11 +486,6 @@ bool AccessibilityNodeObject::canHaveChildren() const
     case AccessibilityRole::MenuItemRadio:
     case AccessibilityRole::Splitter:
     case AccessibilityRole::Meter:
-        return false;
-    case AccessibilityRole::DocumentMath:
-#if ENABLE(MATHML)
-        return node()->isMathMLElement();
-#endif
         return false;
     default:
         return true;
@@ -518,11 +610,6 @@ bool AccessibilityNodeObject::isNativeImage() const
     }
 
     return false;
-}
-
-bool AccessibilityNodeObject::isImage() const
-{
-    return roleValue() == AccessibilityRole::Image;
 }
 
 bool AccessibilityNodeObject::isPasswordField() const
@@ -692,6 +779,7 @@ bool AccessibilityNodeObject::isChecked() const
     case AccessibilityRole::MenuItemCheckbox:
     case AccessibilityRole::MenuItemRadio:
     case AccessibilityRole::Switch:
+    case AccessibilityRole::TreeItem:
         validRole = true;
         break;
     default:
@@ -766,17 +854,16 @@ bool AccessibilityNodeObject::supportsRequiredAttribute() const
     }
 }
 
-int AccessibilityNodeObject::headingLevel() const
+unsigned AccessibilityNodeObject::headingLevel() const
 {
     // headings can be in block flow and non-block flow
     Node* node = this->node();
     if (!node)
-        return false;
+        return 0;
 
     if (isHeading()) {
-        int ariaLevel = getAttribute(aria_levelAttr).toInt();
-        if (ariaLevel > 0)
-            return ariaLevel;
+        if (auto level = getIntegralAttribute(aria_levelAttr); level > 0)
+            return level;
     }
 
     if (node->hasTagName(h1Tag))
@@ -912,7 +999,7 @@ bool AccessibilityNodeObject::isGroup() const
     return role == AccessibilityRole::Group || role == AccessibilityRole::TextGroup || role == AccessibilityRole::ApplicationGroup || role == AccessibilityRole::ApplicationTextGroup;
 }
 
-AccessibilityObject* AccessibilityNodeObject::selectedRadioButton()
+AXCoreObject* AccessibilityNodeObject::selectedRadioButton()
 {
     if (!isRadioGroup())
         return nullptr;
@@ -925,14 +1012,14 @@ AccessibilityObject* AccessibilityNodeObject::selectedRadioButton()
     return nullptr;
 }
 
-AccessibilityObject* AccessibilityNodeObject::selectedTabItem()
+AXCoreObject* AccessibilityNodeObject::selectedTabItem()
 {
     if (!isTabList())
         return nullptr;
 
     // FIXME: Is this valid? ARIA tab items support aria-selected; not aria-checked.
     // Find the child tab item that is selected (ie. the intValue == 1).
-    AccessibilityObject::AccessibilityChildrenVector tabs;
+    AXCoreObject::AccessibilityChildrenVector tabs;
     tabChildren(tabs);
 
     for (const auto& child : children()) {
@@ -1044,7 +1131,7 @@ Element* AccessibilityNodeObject::mouseButtonListener(MouseButtonListenerResultF
 
     // check if our parent is a mouse button listener
     // FIXME: Do the continuation search like anchorElement does
-    for (auto& element : elementLineage(is<Element>(*node) ? downcast<Element>(node) : node->parentElement())) {
+    for (auto& element : lineageOfType<Element>(is<Element>(*node) ? downcast<Element>(*node) : *node->parentElement())) {
         // If we've reached the body and this is not a control element, do not expose press action for this element unless filter is IncludeBodyElement.
         // It can cause false positives, where every piece of text is labeled as accepting press actions.
         if (element.hasTagName(bodyTag) && isStaticText() && filter == ExcludeBodyElement)
@@ -1097,18 +1184,85 @@ void AccessibilityNodeObject::decrement()
     alterSliderValue(false);
 }
 
+static bool dispatchSimulatedKeyboardUpDownEvent(AccessibilityObject* object, const KeyboardEvent::Init& keyInit)
+{
+    // In case the keyboard event causes this element to be removed.
+    Ref<AccessibilityObject> protectedObject(*object);
+
+    bool handled = false;
+    if (auto* node = object->node()) {
+        auto event = KeyboardEvent::create(eventNames().keydownEvent, keyInit, Event::IsTrusted::Yes);
+        node->dispatchEvent(event);
+        handled |= event->defaultHandled();
+    }
+
+    // Ensure node is still valid and wasn't removed after the keydown.
+    if (auto* node = object->node()) {
+        auto event = KeyboardEvent::create(eventNames().keyupEvent, keyInit, Event::IsTrusted::Yes);
+        node->dispatchEvent(event);
+        handled |= event->defaultHandled();
+    }
+    return handled;
+}
+
+static void InitializeLegacyKeyInitProperties(KeyboardEvent::Init &keyInit, const AccessibilityObject& object)
+{
+    keyInit.which = keyInit.keyCode;
+    keyInit.code = keyInit.key;
+
+    keyInit.view = object.document()->windowProxy();
+    keyInit.cancelable = true;
+    keyInit.composed = true;
+    keyInit.bubbles = true;
+}
+
+bool AccessibilityNodeObject::performDismissAction()
+{
+    auto keyInit = KeyboardEvent::Init();
+    keyInit.key = "Escape"_s;
+    keyInit.keyCode = 0x1b;
+    keyInit.keyIdentifier = "U+001B"_s;
+    InitializeLegacyKeyInitProperties(keyInit, *this);
+
+    return dispatchSimulatedKeyboardUpDownEvent(this, keyInit);
+}
+
+// Fire a keyboard event if we were not able to set this value natively.
+bool AccessibilityNodeObject::postKeyboardKeysForValueChange(bool increase)
+{
+    auto keyInit = KeyboardEvent::Init();
+    bool vertical = orientation() == AccessibilityOrientation::Vertical;
+    bool isLTR = page()->userInterfaceLayoutDirection() == UserInterfaceLayoutDirection::LTR;
+
+    // The goal is to mimic existing keyboard dispatch completely, so that this is indistinguishable from a real key press.
+    typedef enum { left = 37, up = 38, right = 39, down = 40 } keyCode;
+    keyInit.key = increase ? (vertical ? "ArrowUp"_s : (isLTR ? "ArrowRight"_s : "ArrowLeft"_s)) : (vertical ? "ArrowDown"_s : (isLTR ? "ArrowLeft"_s : "ArrowRight"_s));
+    keyInit.keyCode = increase ? (vertical ? keyCode::up : (isLTR ? keyCode::right : keyCode::left)) : (vertical ? keyCode::down : (isLTR ? keyCode::left : keyCode::right));
+    keyInit.keyIdentifier = increase ? (vertical ? "Up"_s : (isLTR ? "Right"_s : "Left"_s)) : (vertical ? "Down"_s : (isLTR ? "Left"_s : "Right"_s));
+
+    InitializeLegacyKeyInitProperties(keyInit, *this);
+
+    return dispatchSimulatedKeyboardUpDownEvent(this, keyInit);
+}
+
+void AccessibilityNodeObject::setNodeValue(bool increase, float value)
+{
+    bool didSet = setValue(String::number(value));
+
+    if (didSet) {
+        if (auto* cache = axObjectCache())
+            cache->postNotification(this, document(), AXObjectCache::AXValueChanged);
+    } else
+        postKeyboardKeysForValueChange(increase);
+}
+
 void AccessibilityNodeObject::changeValueByStep(bool increase)
 {
     float step = stepValueForRange();
     float value = valueForRange();
 
     value += increase ? step : -step;
-
-    setValue(String::numberToStringFixedPrecision(value));
-
-    auto objectCache = axObjectCache();
-    if (objectCache)
-        objectCache->postNotification(node(), AXObjectCache::AXValueChanged);
+    setNodeValue(increase, value);
 }
 
 void AccessibilityNodeObject::changeValueByPercent(float percentChange)
@@ -1122,11 +1276,7 @@ void AccessibilityNodeObject::changeValueByPercent(float percentChange)
         step = std::abs(percentChange) * (1 / percentChange);
 
     value += step;
-    setValue(String::numberToStringFixedPrecision(value));
-
-    auto objectCache = axObjectCache();
-    if (objectCache)
-        objectCache->postNotification(node(), AXObjectCache::AXValueChanged);
+    setNodeValue(percentChange > 0, value);
 }
 
 bool AccessibilityNodeObject::isGenericFocusableElement() const
@@ -1166,6 +1316,37 @@ bool AccessibilityNodeObject::isGenericFocusableElement() const
         return false;
 
     return true;
+}
+
+AccessibilityObject* AccessibilityNodeObject::correspondingControlForLabelElement() const
+{
+    auto* labelElement = labelElementContainer();
+    if (!labelElement)
+        return nullptr;
+
+    auto correspondingControl = labelElement->control();
+    if (!correspondingControl)
+        return nullptr;
+
+    // Make sure the corresponding control isn't a descendant of this label that's in the middle of being destroyed.
+    if (correspondingControl->renderer() && !correspondingControl->renderer()->parent())
+        return nullptr;
+
+    return axObjectCache()->getOrCreate(correspondingControl.get());
+}
+
+AccessibilityObject* AccessibilityNodeObject::correspondingLabelForControlElement() const
+{
+    // ARIA: section 2A, bullet #3 says if aria-labeledby or aria-label appears, it should
+    // override the "label" element association.
+    if (hasTextAlternative())
+        return nullptr;
+
+    if (is<HTMLElement>(m_node)) {
+        if (HTMLLabelElement* label = labelForElement(downcast<HTMLElement>(m_node)))
+            return axObjectCache()->getOrCreate(label);
+    }
+    return nullptr;
 }
 
 HTMLLabelElement* AccessibilityNodeObject::labelForElement(Element* element) const
@@ -1270,7 +1451,11 @@ AccessibilityObject* AccessibilityNodeObject::captionForFigure() const
 
 bool AccessibilityNodeObject::usesAltTagForTextComputation() const
 {
-    return isImage() || isInputImage() || isNativeImage() || isCanvas() || (node() && node()->hasTagName(imgTag));
+    bool usesAltTag = isImage() || isInputImage() || isNativeImage() || isCanvas() || (node() && node()->hasTagName(imgTag));
+#if ENABLE(MODEL_ELEMENT)
+    usesAltTag |= isModel();
+#endif
+    return usesAltTag;
 }
 
 bool AccessibilityNodeObject::isLabelable() const
@@ -1279,7 +1464,7 @@ bool AccessibilityNodeObject::isLabelable() const
     if (!node)
         return false;
 
-    return is<HTMLInputElement>(*node) || AccessibilityObject::isARIAInput(ariaRoleAttribute()) || isControl() || isProgressIndicator() || isMeter();
+    return is<HTMLInputElement>(*node) || isControl() || isProgressIndicator() || isMeter();
 }
 
 String AccessibilityNodeObject::textForLabelElement(Element* element) const
@@ -1300,6 +1485,20 @@ String AccessibilityNodeObject::textForLabelElement(Element* element) const
     return !result.isEmpty() ? result : accessibleNameForNode(label);
 }
 
+HTMLLabelElement* AccessibilityNodeObject::labelElementContainer() const
+{
+    // The control element should not be considered part of the label.
+    if (isControl())
+        return nullptr;
+
+    // Find an ancestor label element.
+    for (auto* parentNode = m_node; parentNode; parentNode = parentNode->parentNode()) {
+        if (is<HTMLLabelElement>(*parentNode))
+            return downcast<HTMLLabelElement>(parentNode);
+    }
+    return nullptr;
+}
+
 void AccessibilityNodeObject::titleElementText(Vector<AccessibilityText>& textOrder) const
 {
     Node* node = this->node();
@@ -1313,14 +1512,55 @@ void AccessibilityNodeObject::titleElementText(Vector<AccessibilityText>& textOr
             auto objectCache = axObjectCache();
             // Only use the <label> text if there's no ARIA override.
             if (objectCache && !innerText.isEmpty() && !ariaAccessibilityDescription())
-                textOrder.append(AccessibilityText(innerText, isMeter() ? AccessibilityTextSource::Alternative : AccessibilityTextSource::LabelByElement, objectCache->getOrCreate(label)));
+                textOrder.append(AccessibilityText(innerText, isMeter() ? AccessibilityTextSource::Alternative : AccessibilityTextSource::LabelByElement));
             return;
         }
     }
 
     AccessibilityObject* titleUIElement = this->titleUIElement();
     if (titleUIElement)
-        textOrder.append(AccessibilityText(String(), AccessibilityTextSource::LabelByElement, titleUIElement));
+        textOrder.append(AccessibilityText(String(), AccessibilityTextSource::LabelByElement));
+}
+
+bool AccessibilityNodeObject::exposesTitleUIElement() const
+{
+    if (!isControl() && !isFigureElement())
+        return false;
+
+    // If this control is ignored (because it's invisible),
+    // then the label needs to be exposed so it can be visible to accessibility.
+    if (accessibilityIsIgnored())
+        return true;
+
+    // When controls have their own descriptions, the title element should be ignored.
+    if (hasTextAlternative())
+        return false;
+
+    // When <label> element has aria-label or aria-labelledby on it, we shouldn't expose it as the
+    // titleUIElement, otherwise its inner text will be announced by a screenreader.
+    if (isLabelable()) {
+        if (HTMLLabelElement* label = labelForElement(downcast<Element>(m_node))) {
+            if (!label->attributeWithoutSynchronization(aria_labelAttr).isEmpty())
+                return false;
+            if (AccessibilityObject* labelObject = axObjectCache()->getOrCreate(label)) {
+                if (!labelObject->ariaLabeledByAttribute().isEmpty())
+                    return false;
+                // To simplify instances where the labeling element includes widget descendants
+                // which it does not label.
+                if (is<AccessibilityLabel>(*labelObject)
+                    && downcast<AccessibilityLabel>(*labelObject).containsUnrelatedControls())
+                    return false;
+            }
+        }
+    }
+    return true;
+}
+
+bool AccessibilityNodeObject::hasTextAlternative() const
+{
+    // ARIA: section 2A, bullet #3 says if aria-labeledby or aria-label appears, it should
+    // override the "label" element association.
+    return ariaAccessibilityDescription().length();
 }
 
 void AccessibilityNodeObject::alternativeText(Vector<AccessibilityText>& textOrder) const
@@ -1467,7 +1707,7 @@ void AccessibilityNodeObject::helpText(Vector<AccessibilityText>& textOrder) con
         auto matchFunc = [] (const AccessibilityObject& object) {
             return object.isFieldset() && !object.ariaDescribedByAttribute().isEmpty();
         };
-        if (const auto* parent = AccessibilityObject::matchedParent(*this, false, WTFMove(matchFunc)))
+        if (const auto* parent = Accessibility::findAncestor<AccessibilityObject>(*this, false, WTFMove(matchFunc)))
             textOrder.append(AccessibilityText(parent->ariaDescribedByAttribute(), AccessibilityTextSource::Summary));
     }
 
@@ -1513,11 +1753,11 @@ void AccessibilityNodeObject::ariaLabeledByText(Vector<AccessibilityText>& textO
         Vector<Element*> elements;
         ariaLabeledByElements(elements);
 
-        Vector<RefPtr<AccessibilityObject>> axElements;
+        Vector<AXCoreObject*> axElements;
         for (const auto& element : elements)
             axElements.append(objectCache->getOrCreate(element));
 
-        textOrder.append(AccessibilityText(ariaLabeledBy, AccessibilityTextSource::Alternative, WTFMove(axElements)));
+        textOrder.append(AccessibilityText(ariaLabeledBy, AccessibilityTextSource::Alternative));
     }
 }
 
@@ -1591,8 +1831,12 @@ String AccessibilityNodeObject::accessibilityDescription() const
     // If this point is reached (i.e. there's no accessibilityDescription) and there's no title(), we should fallback to using the title attribute.
     // The title attribute is normally used as help text (because it is a tooltip), but if there is nothing else available, this should be used (according to ARIA).
     // https://bugs.webkit.org/show_bug.cgi?id=170475: An exception is when the element is semantically unimportant. In those cases, title text should remain as help text.
-    if (title().isEmpty() && !roleIgnoresTitle())
-        return getAttribute(titleAttr);
+    if (!roleIgnoresTitle()) {
+        // title() can be an expensive operation because it can invoke textUnderElement for all descendants. Thus call it last.
+        auto titleAttribute = getAttribute(titleAttr);
+        if (!titleAttribute.isEmpty() && title().isEmpty())
+            return titleAttribute;
+    }
 
     return String();
 }
@@ -1661,10 +1905,10 @@ unsigned AccessibilityNodeObject::hierarchicalLevel() const
     Node* node = this->node();
     if (!is<Element>(node))
         return 0;
-    Element& element = downcast<Element>(*node);
-    const AtomString& ariaLevel = element.attributeWithoutSynchronization(aria_levelAttr);
-    if (!ariaLevel.isEmpty())
-        return ariaLevel.toInt();
+
+    auto& element = downcast<Element>(*node);
+    if (!element.attributeWithoutSynchronization(aria_levelAttr).isEmpty())
+        return element.getIntegralAttribute(aria_levelAttr);
 
     // Only tree item will calculate its level through the DOM currently.
     if (roleValue() != AccessibilityRole::TreeItem)
@@ -1739,11 +1983,16 @@ static bool shouldUseAccessibilityObjectInnerText(AccessibilityObject* obj, Acce
     if (is<AccessibilityList>(*obj))
         return false;
 
-    if (is<AccessibilityTable>(*obj) && downcast<AccessibilityTable>(*obj).isExposableThroughAccessibility())
+    if (is<AccessibilityTable>(*obj) && downcast<AccessibilityTable>(*obj).isExposable())
         return false;
 
     if (obj->isTree() || obj->isCanvas())
         return false;
+
+#if ENABLE(MODEL_ELEMENT)
+    if (obj->isModel())
+        return false;
+#endif
 
     return true;
 }
@@ -1770,7 +2019,7 @@ String AccessibilityNodeObject::textUnderElement(AccessibilityTextUnderElementMo
     if (is<Text>(node))
         return downcast<Text>(*node).wholeText();
 
-    bool isAriaVisible = AccessibilityObject::matchedParent(*this, true, [] (const AccessibilityObject& object) {
+    bool isAriaVisible = Accessibility::findAncestor<AccessibilityObject>(*this, true, [] (const AccessibilityObject& object) {
         return equalLettersIgnoringASCIICase(object.getAttribute(aria_hiddenAttr), "false");
     }) != nullptr;
 
@@ -1896,17 +2145,15 @@ String AccessibilityNodeObject::text() const
     if (!isTextControl())
         return String();
 
-    Node* node = this->node();
-    if (!node)
+    auto node = this->node();
+    if (!is<Element>(node))
         return String();
 
-    if (isNativeTextControl() && is<HTMLTextFormControlElement>(*node))
-        return downcast<HTMLTextFormControlElement>(*node).value();
+    auto& element = downcast<Element>(*node);
+    if (isNativeTextControl() && is<HTMLTextFormControlElement>(element))
+        return downcast<HTMLTextFormControlElement>(element).value();
 
-    if (!node->isElementNode())
-        return String();
-
-    return downcast<Element>(node)->innerText();
+    return element.innerText();
 }
 
 String AccessibilityNodeObject::stringValue() const
@@ -1949,23 +2196,18 @@ String AccessibilityNodeObject::stringValue() const
     return String();
 }
 
-void AccessibilityNodeObject::colorValue(int& r, int& g, int& b) const
+SRGBA<uint8_t> AccessibilityNodeObject::colorValue() const
 {
-    r = 0;
-    g = 0;
-    b = 0;
-
-#if ENABLE(INPUT_TYPE_COLOR)
+#if !ENABLE(INPUT_TYPE_COLOR)
+    return Color::transparentBlack;
+#else
     if (!isColorWell())
-        return;
+        return Color::transparentBlack;
 
     if (!is<HTMLInputElement>(node()))
-        return;
+        return Color::transparentBlack;
 
-    auto color = downcast<HTMLInputElement>(*node()).valueAsColor();
-    r = color.red();
-    g = color.green();
-    b = color.blue();
+    return downcast<HTMLInputElement>(*node()).valueAsColor().toColorTypeLossy<SRGBA<uint8_t>>();
 #endif
 }
 
@@ -1988,7 +2230,7 @@ static String accessibleNameForNode(Node* node, Node* labelledbyNode)
 
     // If the node can be turned into an AX object, we can use standard name computation rules.
     // If however, the node cannot (because there's no renderer e.g.) fallback to using the basic text underneath.
-    AccessibilityObject* axObject = node->document().axObjectCache()->getOrCreate(node);
+    auto axObject = element.document().axObjectCache()->getOrCreate(&element);
     if (axObject) {
         String valueDescription = axObject->valueDescription();
         if (!valueDescription.isEmpty())
@@ -2018,8 +2260,10 @@ static String accessibleNameForNode(Node* node, Node* labelledbyNode)
             return childText;
     }
 
-    if (is<HTMLInputElement>(*node))
-        return downcast<HTMLInputElement>(*node).value();
+    if (is<HTMLInputElement>(element))
+        return downcast<HTMLInputElement>(element).value();
+    if (is<HTMLOptionElement>(element))
+        return downcast<HTMLOptionElement>(element).value();
 
     String text;
     if (axObject) {
@@ -2161,7 +2405,7 @@ bool AccessibilityNodeObject::canSetValueAttribute() const
     if (isProgressIndicator() || isSlider() || isScrollbar())
         return true;
 
-#if USE(ATK)
+#if USE(ATK) || USE(ATSPI)
     // In ATK, input types which support aria-readonly are treated as having a
     // settable value if the user can modify the widget's value or its state.
     if (supportsReadOnly())

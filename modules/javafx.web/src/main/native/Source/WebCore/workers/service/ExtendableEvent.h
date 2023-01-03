@@ -36,6 +36,7 @@ namespace WebCore {
 class DOMPromise;
 
 class ExtendableEvent : public Event, public CanMakeWeakPtr<ExtendableEvent> {
+    WTF_MAKE_ISO_ALLOCATED(ExtendableEvent);
 public:
     static Ref<ExtendableEvent> create(const AtomString& type, const ExtendableEventInit& initializer, IsTrusted isTrusted = IsTrusted::No)
     {
@@ -49,7 +50,7 @@ public:
     ExceptionOr<void> waitUntil(Ref<DOMPromise>&&);
     unsigned pendingPromiseCount() const { return m_pendingPromiseCount; }
 
-    WEBCORE_EXPORT void whenAllExtendLifetimePromisesAreSettled(WTF::Function<void(HashSet<Ref<DOMPromise>>&&)>&&);
+    WEBCORE_EXPORT void whenAllExtendLifetimePromisesAreSettled(Function<void(HashSet<Ref<DOMPromise>>&&)>&&);
 
 protected:
     WEBCORE_EXPORT ExtendableEvent(const AtomString&, const ExtendableEventInit&, IsTrusted);
@@ -60,7 +61,7 @@ protected:
 private:
     unsigned m_pendingPromiseCount { 0 };
     HashSet<Ref<DOMPromise>> m_extendLifetimePromises;
-    WTF::Function<void(HashSet<Ref<DOMPromise>>&&)> m_whenAllExtendLifetimePromisesAreSettledHandler;
+    Function<void(HashSet<Ref<DOMPromise>>&&)> m_whenAllExtendLifetimePromisesAreSettledHandler;
 };
 
 } // namespace WebCore

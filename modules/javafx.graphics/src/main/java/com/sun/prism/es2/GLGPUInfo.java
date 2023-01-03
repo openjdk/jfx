@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -40,10 +40,10 @@ class GLGPUInfo {
     }
 
     /**
-     * Check this GPU information against an entry stored in the whiteList and
-     * blackList of ES2Qualifier
+     * Check this GPU information against an entry stored in the preQualificationFilter and
+     * rejectList of ES2Qualifier
      *
-     * @param gi entry stored in the whiteList or blackList of ES2Qualifier
+     * @param gi entry stored in the preQualificationFilter or rejectList of ES2Qualifier
      * @return true if sub-string matches otherwise false
      */
     boolean matches(GLGPUInfo gi) {

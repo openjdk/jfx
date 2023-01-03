@@ -24,10 +24,9 @@
  */
 
 [
-    EnabledBySetting=MediaCapabilities,
+    EnabledBySetting=MediaCapabilitiesEnabled,
     JSGenerateToJSObject,
-]
-dictionary MediaCapabilitiesInfo {
+] dictionary MediaCapabilitiesInfo {
   required boolean supported;
   required boolean smooth;
   required boolean powerEfficient;

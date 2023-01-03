@@ -42,6 +42,7 @@
 #include <wtf/IsoMallocInlines.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/text/StringConcatenateNumbers.h>
+#include <wtf/text/StringToIntegerConversion.h>
 #include <wtf/unicode/CharacterNames.h>
 
 namespace WebCore {
@@ -60,9 +61,6 @@ public:
 private:
     void append(RefPtr<StringImpl>&&) override;
     void finish() override;
-
-    // FIXME: Why do we need this?
-    bool isWaitingForScripts() const override { return false; }
 
     void checkBuffer(int len = 10)
     {
@@ -135,6 +133,7 @@ void FTPDirectoryDocumentParser::appendEntry(const String& filename, const Strin
     sizeElement->appendChild(Text::create(document, size));
     sizeElement->setAttributeWithoutSynchronization(HTMLNames::classAttr, AtomString("ftpDirectoryFileSize", AtomString::ConstructFromLiteral));
     rowElement->appendChild(sizeElement);
+    document.setHasVisuallyNonEmptyCustomContent();
 }
 
 Ref<Element> FTPDirectoryDocumentParser::createTDForFilename(const String& filename)
@@ -154,7 +153,7 @@ Ref<Element> FTPDirectoryDocumentParser::createTDForFilename(const String& filen
     auto tdElement = HTMLTableCellElement::create(tdTag, document);
     tdElement->appendChild(anchorElement);
 
-    return WTFMove(tdElement);
+    return tdElement;
 }
 
 static String processFilesizeString(const String& size, bool isDirectory)
@@ -162,18 +161,15 @@ static String processFilesizeString(const String& size, bool isDirectory)
     if (isDirectory)
         return "--"_s;
 
-    bool valid;
-    int64_t bytes = size.toUInt64(&valid);
-    if (!valid)
+    auto bytes = parseIntegerAllowingTrailingJunk<uint64_t>(size);
+    if (!bytes)
         return unknownFileSizeText();
 
-    if (bytes < 1000000)
-        return makeString(FormattedNumber::fixedWidth(bytes / 1000., 2), " KB");
-
-    if (bytes < 1000000000)
-        return makeString(FormattedNumber::fixedWidth(bytes / 1000000., 2), " MB");
-
-    return makeString(FormattedNumber::fixedWidth(bytes / 1000000000., 2), " GB");
+    if (*bytes < 1000000)
+        return makeString(FormattedNumber::fixedWidth(*bytes / 1000.0, 2), " KB");
+    if (*bytes < 1000000000)
+        return makeString(FormattedNumber::fixedWidth(*bytes / 1000000.0, 2), " MB");
+    return makeString(FormattedNumber::fixedWidth(*bytes / 1000000000.0, 2), " GB");
 }
 
 static bool wasLastDayOfMonth(int year, int month, int day)
@@ -303,7 +299,7 @@ bool FTPDirectoryDocumentParser::loadDocumentTemplate()
 
     auto& document = *this->document();
 
-    auto foundElement = makeRefPtr(document.getElementById(String("ftpDirectoryTable"_s)));
+    RefPtr foundElement = document.getElementById(StringView { "ftpDirectoryTable"_s });
     if (!foundElement)
         LOG_ERROR("Unable to find element by id \"ftpDirectoryTable\" in the template document.");
     else if (!is<HTMLTableElement>(foundElement))
@@ -318,7 +314,7 @@ bool FTPDirectoryDocumentParser::loadDocumentTemplate()
 
     // If we didn't find the table element, lets try to append our own to the body.
     // If that fails for some reason, cram it on the end of the document as a last ditch effort.
-    if (auto body = makeRefPtr(document.bodyOrFrameset()))
+    if (RefPtr body = document.bodyOrFrameset())
         body->appendChild(*m_tableElement);
     else
         document.appendChild(*m_tableElement);
@@ -421,8 +417,8 @@ void FTPDirectoryDocumentParser::finish()
     HTMLDocumentParser::finish();
 }
 
-FTPDirectoryDocument::FTPDirectoryDocument(PAL::SessionID sessionID, Frame* frame, const URL& url)
-    : HTMLDocument(sessionID, frame, url)
+FTPDirectoryDocument::FTPDirectoryDocument(Frame* frame, const Settings& settings, const URL& url)
+    : HTMLDocument(frame, settings, url, { })
 {
 #if !LOG_DISABLED
     LogFTP.state = WTFLogChannelState::On;

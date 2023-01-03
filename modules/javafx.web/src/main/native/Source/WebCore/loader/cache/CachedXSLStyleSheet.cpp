@@ -36,7 +36,7 @@ namespace WebCore {
 
 #if ENABLE(XSLT)
 
-CachedXSLStyleSheet::CachedXSLStyleSheet(CachedResourceRequest&& request, const PAL::SessionID& sessionID, const CookieJar* cookieJar)
+CachedXSLStyleSheet::CachedXSLStyleSheet(CachedResourceRequest&& request, PAL::SessionID sessionID, const CookieJar* cookieJar)
     : CachedResource(WTFMove(request), Type::XSLStyleSheet, sessionID, cookieJar)
     , m_decoder(TextResourceDecoder::create("text/xsl"))
 {
@@ -48,7 +48,7 @@ void CachedXSLStyleSheet::didAddClient(CachedResourceClient& client)
 {
     ASSERT(client.resourceClientType() == CachedStyleSheetClient::expectedType());
     if (!isLoading())
-        static_cast<CachedStyleSheetClient&>(client).setXSLStyleSheet(m_resourceRequest.url(), m_response.url(), m_sheet);
+        static_cast<CachedStyleSheetClient&>(client).setXSLStyleSheet(m_resourceRequest.url().string(), m_response.url(), m_sheet);
 }
 
 void CachedXSLStyleSheet::setEncoding(const String& chs)
@@ -61,24 +61,29 @@ String CachedXSLStyleSheet::encoding() const
     return m_decoder->encoding().name();
 }
 
-void CachedXSLStyleSheet::finishLoading(SharedBuffer* data)
+void CachedXSLStyleSheet::finishLoading(const FragmentedSharedBuffer* data, const NetworkLoadMetrics& metrics)
 {
-    m_data = data;
-    setEncodedSize(data ? data->size() : 0);
-    if (data)
-        m_sheet = m_decoder->decodeAndFlush(data->data(), encodedSize());
+    if (data) {
+        auto contiguousData = data->makeContiguous();
+        setEncodedSize(data->size());
+        m_sheet = m_decoder->decodeAndFlush(contiguousData->data(), encodedSize());
+        m_data = WTFMove(contiguousData);
+    } else {
+        m_data = nullptr;
+        setEncodedSize(0);
+    }
     setLoading(false);
-    checkNotify();
+    checkNotify(metrics);
 }
 
-void CachedXSLStyleSheet::checkNotify()
+void CachedXSLStyleSheet::checkNotify(const NetworkLoadMetrics&)
 {
     if (isLoading())
         return;
 
     CachedResourceClientWalker<CachedStyleSheetClient> w(m_clients);
     while (CachedStyleSheetClient* c = w.next())
-        c->setXSLStyleSheet(m_resourceRequest.url(), m_response.url(), m_sheet);
+        c->setXSLStyleSheet(m_resourceRequest.url().string(), m_response.url(), m_sheet);
 }
 
 #endif

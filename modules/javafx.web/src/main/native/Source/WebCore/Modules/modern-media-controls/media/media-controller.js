@@ -37,13 +37,13 @@ class MediaController
         this.hasPlayed = false;
 
         this.container = shadowRoot.appendChild(document.createElement("div"));
-        this.container.className = "media-controls-container";
 
         this._updateControlsIfNeeded();
         this._usesLTRUserInterfaceLayoutDirection = false;
 
         if (host) {
-            host.controlsDependOnPageScaleFactor = this.layoutTraits & LayoutTraits.iOS;
+            this.container.className = host.mediaControlsContainerClassName;
+            host.controlsDependOnPageScaleFactor = this.layoutTraits.controlsDependOnPageScaleFactor();
             this.container.insertBefore(host.textTrackContainer, this.controls.element);
             if (host.isInMediaDocument)
                 this.mediaDocumentController = new MediaDocumentController(this);
@@ -96,13 +96,16 @@ class MediaController
 
     get layoutTraits()
     {
-        if (this.host && this.host.compactMode)
-            return LayoutTraits.Compact;
-
-        let traits = window.isIOSFamily ? LayoutTraits.iOS : LayoutTraits.macOS;
-        if (this.isFullscreen)
-            return traits | LayoutTraits.Fullscreen;
-        return traits;
+        let mode = this.isFullscreen ? LayoutTraits.Mode.Fullscreen : LayoutTraits.Mode.Inline;
+    
+        if (this.host) {
+            let LayoutTraitsClass = window.layoutTraitsClasses[this.host.layoutTraitsClassName];
+            return new LayoutTraitsClass(mode);
+        }
+        
+        // Default for when host is not defined.
+        // FIXME: Always require a host and add a JS implemented TestMediaControlsHost for unit tests.
+        return new MacOSLayoutTraits(mode);
     }
 
     togglePlayback()
@@ -111,6 +114,29 @@ class MediaController
             this.media.play().catch(e => {});
         else
             this.media.pause();
+    }
+
+    get canShowMediaControlsContextMenu()
+    {
+        return !!this.host?.showMediaControlsContextMenu;
+    }
+
+    showMediaControlsContextMenu(button, options = {})
+    {
+        if (!this.canShowMediaControlsContextMenu)
+            return false;
+
+        let autoHideController = this.controls.autoHideController;
+
+        let willShowContextMenu = this.host.showMediaControlsContextMenu(button.element, {...button.contextMenuOptions, ...options}, () => {
+            button.on = false;
+            autoHideController.hasSecondaryUIAttached = false;
+        });
+        if (willShowContextMenu) {
+            button.on = true;
+            autoHideController.hasSecondaryUIAttached = true;
+        }
+        return willShowContextMenu;
     }
 
     // Protected
@@ -173,8 +199,6 @@ class MediaController
                 this.hasPlayed = true;
             this._updateControlsIfNeeded();
             this._updateControlsAvailability();
-            if (event.type === "webkitpresentationmodechanged")
-                this._returnMediaLayerToInlineIfNeeded();
         } else if (event.type === "keydown" && this.isFullscreen && event.key === " ") {
             this.togglePlayback();
             event.preventDefault();
@@ -185,17 +209,25 @@ class MediaController
 
     _supportingObjectClasses()
     {
-        if (this.layoutTraits & LayoutTraits.Compact)
-            return [CompactMediaControlsSupport];
+        let overridenSupportingObjectClasses = this.layoutTraits.overridenSupportingObjectClasses();
+        if (overridenSupportingObjectClasses)
+            return overridenSupportingObjectClasses;
 
-        return [AirplaySupport, AudioSupport, ControlsVisibilitySupport, FullscreenSupport, MuteSupport, PiPSupport, PlacardSupport, PlaybackSupport, ScrubbingSupport, SeekBackwardSupport, SeekForwardSupport, SkipBackSupport, SkipForwardSupport, StartSupport, StatusSupport, TimeControlSupport, TracksSupport, VolumeSupport, VolumeDownSupport, VolumeUpSupport];
+        let classes = [AirplaySupport, AudioSupport, BrightnessSupport, CloseSupport, ControlsVisibilitySupport, FullscreenSupport, OverflowSupport, PiPSupport, PlacardSupport, PlaybackSupport, ScrubbingSupport, SeekBackwardSupport, SeekForwardSupport, SkipBackSupport, SkipForwardSupport, StartSupport, StatusSupport, TimeControlSupport, TracksSupport]
+
+        if (this.controls.usesSingleMuteAndVolumeButton)
+            classes.push(MuteAndVolumeSupport);
+        else
+            classes.push(MuteSupport, VolumeSupport);
+
+        return classes;
     }
 
     _updateControlsIfNeeded()
     {
         const layoutTraits = this.layoutTraits;
         const previousControls = this.controls;
-        const ControlsClass = this._controlsClassForLayoutTraits(layoutTraits);
+        const ControlsClass = layoutTraits.mediaControlsClass();
         if (previousControls && previousControls.constructor === ControlsClass) {
             this._updateTextTracksClassList();
             this._updateControlsSize();
@@ -281,30 +313,12 @@ class MediaController
         this.controls.shouldCenterControlsVertically = this.isAudio;
     }
 
-    _returnMediaLayerToInlineIfNeeded()
-    {
-        if (this.host)
-            this.host.setPreparedToReturnVideoLayerToInline(this.media.webkitPresentationMode !== PiPMode);
-    }
-
-    _controlsClassForLayoutTraits(layoutTraits)
-    {
-        if (layoutTraits & LayoutTraits.Compact)
-            return CompactMediaControls;
-        if (layoutTraits & LayoutTraits.iOS)
-            return IOSInlineMediaControls;
-        if (layoutTraits & LayoutTraits.Fullscreen)
-            return MacOSFullscreenMediaControls;
-        return MacOSInlineMediaControls;
-    }
-
     _updateTextTracksClassList()
     {
         if (!this.host)
             return;
 
-        const layoutTraits = this.layoutTraits;
-        if (layoutTraits & LayoutTraits.Fullscreen)
+        if (this.layoutTraits.isFullscreen)
             return;
 
         this.host.textTrackContainer.classList.toggle("visible-controls-bar", !this.controls.faded);
@@ -320,13 +334,11 @@ class MediaController
 
     _shouldControlsBeAvailable()
     {
-        // Controls are always available with compact layout.
-        if (this.layoutTraits & LayoutTraits.Compact)
+        if (this.layoutTraits.controlsAlwaysAvailable())
             return true;
 
-        // Controls are always available while in fullscreen on macOS, and they are never available when in fullscreen on iOS.
-        if (this.isFullscreen)
-            return !!(this.layoutTraits & LayoutTraits.macOS);
+        if (this.layoutTraits.controlsNeverAvailable())
+            return false;
 
         // Otherwise, for controls to be available, the controls attribute must be present on the media element
         // or the MediaControlsHost must indicate that controls are forced.
@@ -342,6 +354,13 @@ class MediaController
             this._supportingObjects.forEach(supportingObject => supportingObject.enable());
 
         this.controls.visible = shouldControlsBeAvailable;
+    }
+
+    // Testing
+
+    set maximumRightContainerButtonCountOverride(count)
+    {
+        this.controls.maximumRightContainerButtonCountOverride = count;
     }
 
 }

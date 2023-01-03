@@ -40,8 +40,14 @@ class CSSToLengthConversionData;
 class CSSPrimitiveValue;
 class RenderStyle;
 
-Ref<CSSPrimitiveValue> valueForBasicShape(const RenderStyle&, const BasicShape&);
-Ref<BasicShape> basicShapeForValue(const CSSToLengthConversionData&, const CSSBasicShape&);
+// Specifies a conversion done to an SVG path.
+enum class SVGPathConversion : uint8_t {
+    None,
+    ForceAbsolute
+};
+
+Ref<CSSPrimitiveValue> valueForBasicShape(const RenderStyle&, const BasicShape&, SVGPathConversion = SVGPathConversion::None);
+Ref<BasicShape> basicShapeForValue(const CSSToLengthConversionData&, const CSSBasicShape&, float zoom = 1);
 float floatValueForCenterCoordinate(const BasicShapeCenterCoordinate&, float);
 
 }

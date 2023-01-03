@@ -29,6 +29,7 @@
 
 #include "AirLiveness.h"
 #include "AirTmpMap.h"
+#include <wtf/Nonmovable.h>
 
 namespace JSC {
 
@@ -43,7 +44,7 @@ class GenerateAndAllocateRegisters {
     WTF_MAKE_NONMOVABLE(GenerateAndAllocateRegisters);
 
     struct TmpData {
-        StackSlot* spillSlot;
+        StackSlot* spillSlot { nullptr };
         Reg reg;
     };
 
@@ -55,6 +56,7 @@ public:
 
 private:
     void insertBlocksForFlushAfterTerminalPatchpoints();
+    void release(Tmp, Reg);
     void flush(Tmp, Reg);
     void spill(Tmp, Reg);
     void alloc(Tmp, Reg, bool isDef);
@@ -63,12 +65,14 @@ private:
     void buildLiveRanges(UnifiedTmpLiveness&);
     bool isDisallowedRegister(Reg);
 
+    void checkConsistency();
+
     Code& m_code;
     CCallHelpers* m_jit { nullptr };
 
     TmpMap<TmpData> m_map;
 
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
     Vector<Tmp> m_allTmps[numBanks];
 #endif
 
@@ -81,10 +85,11 @@ private:
     RegisterSet m_namedUsedRegs;
     RegisterSet m_namedDefdRegs;
     RegisterSet m_allowedRegisters;
+    std::unique_ptr<UnifiedTmpLiveness> m_liveness;
 
     struct PatchSpillData {
-        CCallHelpers::Jump jump;
-        CCallHelpers::Label continueLabel;
+        MacroAssembler::Jump jump;
+        MacroAssembler::Label continueLabel;
         HashMap<Tmp, Arg*> defdTmps;
     };
 

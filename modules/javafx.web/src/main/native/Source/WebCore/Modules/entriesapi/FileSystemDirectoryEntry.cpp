@@ -28,13 +28,22 @@
 
 #include "DOMException.h"
 #include "DOMFileSystem.h"
+#include "Document.h"
 #include "ErrorCallback.h"
 #include "FileSystemDirectoryReader.h"
 #include "FileSystemEntryCallback.h"
 #include "FileSystemFileEntry.h"
 #include "ScriptExecutionContext.h"
+#include "WindowEventLoop.h"
 
 namespace WebCore {
+
+Ref<FileSystemDirectoryEntry> FileSystemDirectoryEntry::create(ScriptExecutionContext& context, DOMFileSystem& filesystem, const String& virtualPath)
+{
+    auto result = adoptRef(*new FileSystemDirectoryEntry(context, filesystem, virtualPath));
+    result->suspendIfNeeded();
+    return result;
+}
 
 FileSystemDirectoryEntry::FileSystemDirectoryEntry(ScriptExecutionContext& context, DOMFileSystem& filesystem, const String& virtualPath)
     : FileSystemEntry(context, filesystem, virtualPath)
@@ -51,20 +60,30 @@ void FileSystemDirectoryEntry::getEntry(ScriptExecutionContext& context, const S
     if (!successCallback && !errorCallback)
         return;
 
-    filesystem().getEntry(context, *this, path, flags, [pendingActivity = makePendingActivity(*this), matches = WTFMove(matches), successCallback = WTFMove(successCallback), errorCallback = WTFMove(errorCallback)](auto&& result) {
+    filesystem().getEntry(context, *this, path, flags, [this, pendingActivity = makePendingActivity(*this), matches = WTFMove(matches), successCallback = WTFMove(successCallback), errorCallback = WTFMove(errorCallback)](auto&& result) mutable {
+        auto* document = this->document();
         if (result.hasException()) {
-            if (errorCallback)
-                errorCallback->handleEvent(DOMException::create(result.releaseException()));
+            if (errorCallback && document) {
+                document->eventLoop().queueTask(TaskSource::Networking, [errorCallback = WTFMove(errorCallback), exception = result.releaseException(), pendingActivity = WTFMove(pendingActivity)]() mutable {
+                    errorCallback->handleEvent(DOMException::create(WTFMove(exception)));
+                });
+            }
             return;
         }
         auto entry = result.releaseReturnValue();
         if (!matches(entry)) {
-            if (errorCallback)
-                errorCallback->handleEvent(DOMException::create(Exception { TypeMismatchError, "Entry at given path does not match expected type"_s }));
+            if (errorCallback && document) {
+                document->eventLoop().queueTask(TaskSource::Networking, [errorCallback = WTFMove(errorCallback), pendingActivity = WTFMove(pendingActivity)]() mutable {
+                    errorCallback->handleEvent(DOMException::create(Exception { TypeMismatchError, "Entry at given path does not match expected type"_s }));
+                });
+            }
             return;
         }
-        if (successCallback)
-            successCallback->handleEvent(WTFMove(entry));
+        if (successCallback && document) {
+            document->eventLoop().queueTask(TaskSource::Networking, [successCallback = WTFMove(successCallback), entry = WTFMove(entry), pendingActivity = WTFMove(pendingActivity)]() mutable {
+                successCallback->handleEvent(WTFMove(entry));
+            });
+        }
     });
 }
 

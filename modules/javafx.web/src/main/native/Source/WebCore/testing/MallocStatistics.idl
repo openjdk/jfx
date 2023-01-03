@@ -24,8 +24,7 @@
  */
 
 [
-    NoInterfaceObject,
-    ImplementationLacksVTable,
+    LegacyNoInterfaceObject,
     ExportMacro=WEBCORE_TESTSUPPORT_EXPORT,
 ] interface MallocStatistics {
     readonly attribute unsigned long reservedVMBytes;

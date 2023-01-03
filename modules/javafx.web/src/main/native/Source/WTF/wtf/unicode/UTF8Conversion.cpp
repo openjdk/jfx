@@ -87,16 +87,22 @@ ConversionResult convertUTF16ToUTF8(const UChar** sourceStart, const UChar* sour
     return result;
 }
 
-bool convertUTF8ToUTF16(const char* source, const char* sourceEnd, UChar** targetStart, UChar* targetEnd, bool* sourceAllASCII)
+template<bool replaceInvalidSequences>
+bool convertUTF8ToUTF16Impl(const char* source, const char* sourceEnd, UChar** targetStart, UChar* targetEnd, bool* sourceAllASCII)
 {
     RELEASE_ASSERT(sourceEnd - source <= std::numeric_limits<int>::max());
     UBool error = false;
     UChar* target = *targetStart;
+    RELEASE_ASSERT(targetEnd - target <= std::numeric_limits<int>::max());
     UChar32 orAllData = 0;
     int targetOffset = 0;
     for (int sourceOffset = 0; sourceOffset < sourceEnd - source; ) {
         UChar32 character;
-        U8_NEXT(reinterpret_cast<const uint8_t*>(source), sourceOffset, sourceEnd - source, character);
+        if constexpr (replaceInvalidSequences) {
+            U8_NEXT_OR_FFFD(reinterpret_cast<const uint8_t*>(source), sourceOffset, sourceEnd - source, character);
+        } else {
+            U8_NEXT(reinterpret_cast<const uint8_t*>(source), sourceOffset, sourceEnd - source, character);
+        }
         if (character < 0)
             return false;
         U16_APPEND(target, targetOffset, targetEnd - target, character, error);
@@ -104,10 +110,21 @@ bool convertUTF8ToUTF16(const char* source, const char* sourceEnd, UChar** targe
             return false;
         orAllData |= character;
     }
+    RELEASE_ASSERT(target + targetOffset <= targetEnd);
     *targetStart = target + targetOffset;
     if (sourceAllASCII)
         *sourceAllASCII = isASCII(orAllData);
     return true;
+}
+
+bool convertUTF8ToUTF16(const char* source, const char* sourceEnd, UChar** targetStart, UChar* targetEnd, bool* sourceAllASCII)
+{
+    return convertUTF8ToUTF16Impl<false>(source, sourceEnd, targetStart, targetEnd, sourceAllASCII);
+}
+
+bool convertUTF8ToUTF16ReplacingInvalidSequences(const char* source, const char* sourceEnd, UChar** targetStart, UChar* targetEnd, bool* sourceAllASCII)
+{
+    return convertUTF8ToUTF16Impl<true>(source, sourceEnd, targetStart, targetEnd, sourceAllASCII);
 }
 
 unsigned calculateStringHashAndLengthFromUTF8MaskingTop8Bits(const char* data, const char* dataEnd, unsigned& dataLength, unsigned& utf16Length)

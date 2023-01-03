@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,12 +33,15 @@
 
 namespace JSC {
 
-class JSAPIWrapperObject : public JSDestructibleObject {
+class JSAPIWrapperObject : public JSNonFinalObject {
 public:
-    typedef JSDestructibleObject Base;
+    using Base = JSNonFinalObject;
+
+    template<typename, SubspaceAccess>
+    static void subspaceFor(VM&) { RELEASE_ASSERT_NOT_REACHED(); }
 
     void finishCreation(VM&);
-    static void visitChildren(JSCell*, JSC::SlotVisitor&);
+    DECLARE_VISIT_CHILDREN_WITH_MODIFIER(JS_EXPORT_PRIVATE);
 
     void* wrappedObject() { return m_wrappedObject; }
     void setWrappedObject(void*);

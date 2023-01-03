@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2017 Yusuke Suzuki <utatane.tea@gmail.com>
- * Copyright (C) 2018-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -37,10 +37,16 @@ class JSScriptFetcher final : public JSCell {
 public:
     using Base = JSCell;
 
-    static const unsigned StructureFlags = Base::StructureFlags | StructureIsImmortal;
-    static const bool needsDestruction = true;
+    static constexpr unsigned StructureFlags = Base::StructureFlags | StructureIsImmortal;
+    static constexpr bool needsDestruction = true;
 
     DECLARE_EXPORT_INFO;
+
+    template<typename CellType, SubspaceAccess mode>
+    static GCClient::IsoSubspace* subspaceFor(VM& vm)
+    {
+        return vm.scriptFetcherSpace<mode>();
+    }
 
     static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
     {
@@ -49,7 +55,7 @@ public:
 
     static JSScriptFetcher* create(VM& vm, Structure* structure, RefPtr<ScriptFetcher>&& scriptFetcher)
     {
-        auto* result = new (NotNull, allocateCell<JSScriptFetcher>(vm.heap)) JSScriptFetcher(vm, structure, WTFMove(scriptFetcher));
+        auto* result = new (NotNull, allocateCell<JSScriptFetcher>(vm)) JSScriptFetcher(vm, structure, WTFMove(scriptFetcher));
         result->finishCreation(vm);
         return result;
     }

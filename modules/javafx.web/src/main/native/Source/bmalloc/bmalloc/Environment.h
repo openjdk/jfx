@@ -23,8 +23,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef Environment_h
-#define Environment_h
+#pragma once
 
 #include "Mutex.h"
 #include "StaticPerProcess.h"
@@ -33,7 +32,7 @@ namespace bmalloc {
 
 class Environment : public StaticPerProcess<Environment> {
 public:
-    BEXPORT Environment(std::lock_guard<Mutex>&);
+    BEXPORT Environment(const LockHolder&);
 
     bool isDebugHeapEnabled() { return m_isDebugHeapEnabled; }
 
@@ -45,5 +44,3 @@ private:
 DECLARE_STATIC_PER_PROCESS_STORAGE(Environment);
 
 } // namespace bmalloc
-
-#endif // Environment_h

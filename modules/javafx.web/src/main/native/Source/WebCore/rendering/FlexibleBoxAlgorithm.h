@@ -41,7 +41,7 @@ class RenderBox;
 
 class FlexItem {
 public:
-    FlexItem(RenderBox&, LayoutUnit flexBaseContentSize, LayoutUnit hypotheticalMainContentSize, LayoutUnit mainAxisBorderAndPadding, LayoutUnit mainAxisMargin);
+    FlexItem(RenderBox&, LayoutUnit flexBaseContentSize, LayoutUnit mainAxisBorderAndPadding, LayoutUnit mainAxisMargin, std::pair<LayoutUnit, LayoutUnit> minMaxSizes, bool everHadLayout);
 
     LayoutUnit hypotheticalMainAxisMarginBoxSize() const
     {
@@ -58,20 +58,24 @@ public:
         return flexedContentSize + mainAxisBorderAndPadding + mainAxisMargin;
     }
 
+    LayoutUnit constrainSizeByMinMax(const LayoutUnit) const;
+
     RenderBox& box;
     const LayoutUnit flexBaseContentSize;
-    const LayoutUnit hypotheticalMainContentSize;
     const LayoutUnit mainAxisBorderAndPadding;
     const LayoutUnit mainAxisMargin;
+    const std::pair<LayoutUnit, LayoutUnit> minMaxSizes;
+    const LayoutUnit hypotheticalMainContentSize;
     LayoutUnit flexedContentSize;
-    bool frozen;
+    bool frozen { false };
+    bool everHadLayout { false };
 };
 
 class FlexLayoutAlgorithm {
     WTF_MAKE_NONCOPYABLE(FlexLayoutAlgorithm);
 
 public:
-    FlexLayoutAlgorithm(const RenderStyle&, LayoutUnit lineBreakLength, const Vector<FlexItem>& allItems);
+    FlexLayoutAlgorithm(const RenderStyle&, LayoutUnit lineBreakLength, const Vector<FlexItem>& allItems, LayoutUnit gapBetweenItems, LayoutUnit gapBetweenLines);
 
     // The hypothetical main size of an item is the flex base size clamped
     // according to its min and max main size properties
@@ -83,6 +87,9 @@ private:
     const RenderStyle& m_style;
     LayoutUnit m_lineBreakLength;
     const Vector<FlexItem>& m_allItems;
+
+    const LayoutUnit m_gapBetweenItems;
+    const LayoutUnit m_gapBetweenLines;
 };
 
 } // namespace WebCore

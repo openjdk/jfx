@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,12 +25,8 @@
 
 package javafx.beans.value;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import com.sun.javafx.binding.ExpressionHelper;
 import javafx.beans.InvalidationListener;
-import javafx.beans.Observable;
 
 /**
  * A convenience class for creating implementations of {@link ObservableValue}.
@@ -46,6 +42,12 @@ import javafx.beans.Observable;
 public abstract class ObservableValueBase<T> implements ObservableValue<T> {
 
     private ExpressionHelper<T> helper;
+
+    /**
+     * Creates a default {@code ObservableValueBase}.
+     */
+    public ObservableValueBase() {
+    }
 
     /**
      * {@inheritDoc}

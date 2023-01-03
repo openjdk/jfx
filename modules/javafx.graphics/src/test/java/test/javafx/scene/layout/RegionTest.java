@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,12 +25,11 @@
 
 package test.javafx.scene.layout;
 
-import test.javafx.scene.layout.MockBiased;
-import test.javafx.scene.layout.MockRegion;
 import javafx.geometry.HPos;
 import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
 import javafx.geometry.VPos;
+import javafx.scene.Scene;
 import javafx.scene.image.Image;
 import test.javafx.scene.image.ImageForTesting;
 import javafx.scene.image.WritableImage;
@@ -39,6 +38,8 @@ import javafx.scene.shape.ClosePath;
 import javafx.scene.shape.LineTo;
 import javafx.scene.shape.MoveTo;
 import javafx.scene.shape.Path;
+import javafx.stage.Stage;
+import java.util.Random;
 import java.util.concurrent.atomic.AtomicBoolean;
 import com.sun.javafx.scene.DirtyBits;
 import com.sun.javafx.scene.NodeHelper;
@@ -1218,7 +1219,7 @@ public class RegionTest {
         public void clearDirty() {
             NodeShim.clearDirty(this, DirtyBits.NODE_CONTENTS);
         }
-    };
+    }
 
     // Test for RT-13820
     @Test public void changingShapeElementsShouldResultInRender() {
@@ -1247,5 +1248,59 @@ public class RegionTest {
         NodeHelper.syncPeer(p);
         NodeHelper.syncPeer(r);
         assertFalse(peer.isClean());
+    }
+
+    // Test for JDK-8255415
+    @Test public void snappingASnappedValueGivesTheSameValueTest() {
+        Stage stage = new Stage();
+        Region region = new Region();
+        Scene scene = new Scene(region);
+        stage.setScene(scene);
+
+        double[] scales = new double[] {1.0, 1.25, 1.5, 1.75, 2.0, 1.374562997};
+
+        // test snapSizeX/snapSizeY methods
+
+        for (double scale : scales) {
+            stage.setRenderScaleX(scale);
+            for (int j = 0; j < 1000; j++) {
+                double value = new Random().nextDouble() * 100 - 50;
+                double snappedValue = region.snapSizeX(value);
+                double snapOfSnappedValue = region.snapSizeX(snappedValue);
+                assertEquals(snappedValue, snapOfSnappedValue, 1.0e-14);
+            }
+        }
+
+        for (double scale : scales) {
+            stage.setRenderScaleY(scale);
+            for (int j = 0; j < 1000; j++) {
+                double value = new Random().nextDouble() * 100 - 50;
+                double snappedValue = region.snapSizeY(value);
+                double snapOfSnappedValue = region.snapSizeY(snappedValue);
+                assertEquals(snappedValue, snapOfSnappedValue, 1.0e-14);
+            }
+        }
+
+        // test snapPortionX/snapPortionY methods
+
+        for (double scale : scales) {
+            stage.setRenderScaleX(scale);
+            for (int j = 0; j < 1000; j++) {
+                double value = new Random().nextDouble() * 100 - 50;
+                double snappedValue = RegionShim.snapPortionX(region, value);
+                double snapOfSnappedValue = RegionShim.snapPortionX(region, snappedValue);
+                assertEquals(snappedValue, snapOfSnappedValue, 1.0e-14);
+            }
+        }
+
+        for (double scale : scales) {
+            stage.setRenderScaleY(scale);
+            for (int j = 0; j < 1000; j++) {
+                double value = new Random().nextDouble() * 100 - 50;
+                double snappedValue = RegionShim.snapPortionY(region, value);
+                double snapOfSnappedValue = RegionShim.snapPortionY(region, snappedValue);
+                assertEquals(snappedValue, snapOfSnappedValue, 1.0e-14);
+            }
+        }
     }
 }

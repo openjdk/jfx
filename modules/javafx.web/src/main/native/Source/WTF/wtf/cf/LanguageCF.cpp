@@ -30,92 +30,90 @@
 #include <mutex>
 #include <unicode/uloc.h>
 #include <wtf/Assertions.h>
-#include <wtf/Lock.h>
-#include <wtf/NeverDestroyed.h>
+#include <wtf/Logging.h>
 #include <wtf/RetainPtr.h>
 #include <wtf/spi/cf/CFBundleSPI.h>
+#include <wtf/text/TextStream.h>
 #include <wtf/text/WTFString.h>
 
 namespace WTF {
 
-static Lock preferredLanguagesMutex;
-
-static Vector<String>& preferredLanguages()
-{
-    static NeverDestroyed<Vector<String>> languages;
-    return languages;
-}
-
-static String httpStyleLanguageCode(CFStringRef language)
-{
-    SInt32 languageCode;
-    SInt32 regionCode;
-    SInt32 scriptCode;
-    CFStringEncoding stringEncoding;
-
-    // FIXME: This transformation is very wrong:
-    // 1. There is no reason why CFBundle localization names would be at all related to language names as used on the Web.
-    // 2. Script Manager codes cannot represent all languages that are now supported by the platform, so the conversion is lossy.
-    // 3. This should probably match what is sent by the network layer as Accept-Language, but currently, that's implemented separately.
-    CFBundleGetLocalizationInfoForLocalization(language, &languageCode, &regionCode, &scriptCode, &stringEncoding);
-    RetainPtr<CFStringRef> preferredLanguageCode = adoptCF(CFBundleCopyLocalizationForLocalizationInfo(languageCode, regionCode, scriptCode, stringEncoding));
-    if (preferredLanguageCode)
-        language = preferredLanguageCode.get();
-
-    // Turn a '_' into a '-' if it appears after a 2-letter language code
-    if (CFStringGetLength(language) >= 3 && CFStringGetCharacterAtIndex(language, 2) == '_') {
-        auto mutableLanguageCode = adoptCF(CFStringCreateMutableCopy(kCFAllocatorDefault, 0, language));
-        CFStringReplace(mutableLanguageCode.get(), CFRangeMake(2, 1), CFSTR("-"));
-        return mutableLanguageCode.get();
-    }
-
-    return language;
-}
-
 #if PLATFORM(MAC)
 static void languagePreferencesDidChange(CFNotificationCenterRef, void*, CFStringRef, const void*, CFDictionaryRef)
 {
-    {
-        std::lock_guard<Lock> lock(preferredLanguagesMutex);
-        preferredLanguages().clear();
-    }
-
     languageDidChange();
 }
 #endif
 
-Vector<String> platformUserPreferredLanguages()
+static String httpStyleLanguageCode(CFStringRef language, ShouldMinimizeLanguages shouldMinimizeLanguages)
+{
+    RetainPtr<CFStringRef> preferredLanguageCode;
+#if !PLATFORM(JAVA)
+    // If we can minimize the language list to reduce fingerprinting, we can afford to be more lossless when canonicalizing the locale list.
+    if (shouldMinimizeLanguages == ShouldMinimizeLanguages::No || canMinimizeLanguages())
+        preferredLanguageCode = adoptCF(CFLocaleCreateCanonicalLanguageIdentifierFromString(kCFAllocatorDefault, language));
+    else {
+#endif
+        SInt32 languageCode;
+        SInt32 regionCode;
+        SInt32 scriptCode;
+        CFStringEncoding stringEncoding;
+
+        // FIXME: This transformation is very wrong:
+        // 1. There is no reason why CFBundle localization names would be at all related to language names as used on the Web.
+        // 2. Script Manager codes cannot represent all languages that are now supported by the platform, so the conversion is lossy.
+        // 3. This should probably match what is sent by the network layer as Accept-Language, but currently, that's implemented separately.
+        CFBundleGetLocalizationInfoForLocalization(language, &languageCode, &regionCode, &scriptCode, &stringEncoding);
+        preferredLanguageCode = adoptCF(CFBundleCopyLocalizationForLocalizationInfo(languageCode, regionCode, scriptCode, stringEncoding));
+#if !PLATFORM(JAVA)
+    }
+#endif
+
+    if (!preferredLanguageCode)
+        preferredLanguageCode = language;
+    auto mutableLanguageCode = adoptCF(CFStringCreateMutableCopy(kCFAllocatorDefault, 0, preferredLanguageCode.get()));
+
+    // Turn a '_' into a '-' if it appears after a 2-letter language code
+    if (CFStringGetLength(mutableLanguageCode.get()) >= 3 && CFStringGetCharacterAtIndex(mutableLanguageCode.get(), 2) == '_')
+        CFStringReplace(mutableLanguageCode.get(), CFRangeMake(2, 1), CFSTR("-"));
+
+    return mutableLanguageCode.get();
+}
+
+void listenForLanguageChangeNotifications()
 {
 #if PLATFORM(MAC)
     static dispatch_once_t onceToken;
-    dispatch_once(&onceToken, ^ {
+    dispatch_once(&onceToken, ^{
         CFNotificationCenterAddObserver(CFNotificationCenterGetDistributedCenter(), nullptr, &languagePreferencesDidChange, CFSTR("AppleLanguagePreferencesChangedNotification"), nullptr, CFNotificationSuspensionBehaviorCoalesce);
     });
 #endif
+}
 
-    std::lock_guard<Lock> lock(preferredLanguagesMutex);
-    Vector<String>& userPreferredLanguages = preferredLanguages();
+Vector<String> platformUserPreferredLanguages(ShouldMinimizeLanguages shouldMinimizeLanguages)
+{
+    auto platformLanguages = adoptCF(CFLocaleCopyPreferredLanguages());
 
-    if (userPreferredLanguages.isEmpty()) {
-        RetainPtr<CFArrayRef> languages = adoptCF(CFLocaleCopyPreferredLanguages());
-        CFIndex languageCount = CFArrayGetCount(languages.get());
-        if (!languageCount)
-            userPreferredLanguages.append("en");
-        else {
-            for (CFIndex i = 0; i < languageCount; i++)
-                userPreferredLanguages.append(httpStyleLanguageCode(static_cast<CFStringRef>(CFArrayGetValueAtIndex(languages.get(), i))));
-        }
+    LOG_WITH_STREAM(Language, stream << "CFLocaleCopyPreferredLanguages() returned: " << reinterpret_cast<id>(const_cast<CFMutableArrayRef>(platformLanguages.get())));
+#if !PLATFORM(JAVA)
+    if (shouldMinimizeLanguages == ShouldMinimizeLanguages::Yes)
+        platformLanguages = minimizedLanguagesFromLanguages(platformLanguages.get());
+    LOG_WITH_STREAM(Language, stream << "Minimized languages: " << reinterpret_cast<id>(const_cast<CFMutableArrayRef>(platformLanguages.get())));
+#endif
+
+    CFIndex platformLanguagesCount = CFArrayGetCount(platformLanguages.get());
+    if (!platformLanguagesCount)
+        return { "en"_s };
+
+    Vector<String> languages;
+    for (CFIndex i = 0; i < platformLanguagesCount; i++) {
+        auto platformLanguage = static_cast<CFStringRef>(CFArrayGetValueAtIndex(platformLanguages.get(), i));
+        languages.append(httpStyleLanguageCode(platformLanguage, shouldMinimizeLanguages));
     }
 
-    Vector<String> userPreferredLanguagesCopy;
-    userPreferredLanguagesCopy.reserveInitialCapacity(userPreferredLanguages.size());
+    LOG_WITH_STREAM(Language, stream << "After passing through httpStyleLanguageCode: " << languages);
 
-    for (auto& language : userPreferredLanguages)
-        userPreferredLanguagesCopy.uncheckedAppend(language.isolatedCopy());
-
-    return userPreferredLanguagesCopy;
-
-    return Vector<String>();
+    return languages;
 }
 
 } // namespace WTF

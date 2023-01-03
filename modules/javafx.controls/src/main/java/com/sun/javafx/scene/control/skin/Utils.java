@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -31,7 +31,7 @@
 package com.sun.javafx.scene.control.skin;
 
 import com.sun.javafx.scene.NodeHelper;
-import com.sun.javafx.scene.control.behavior.TextBinding;
+import com.sun.javafx.scene.control.behavior.MnemonicInfo;
 import com.sun.javafx.scene.text.TextLayout;
 import com.sun.javafx.tk.Toolkit;
 import javafx.application.ConditionalFeature;
@@ -57,7 +57,6 @@ import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.scene.text.Text;
 import javafx.scene.text.TextBoundsType;
-import javafx.scene.text.HitInfo;
 
 import java.text.Bidi;
 import java.util.List;
@@ -134,7 +133,6 @@ public class Utils {
         return computeTextHeight(font, text, wrappingWidth, 0, boundsType);
     }
 
-    @SuppressWarnings("deprecation")
     public static double computeTextHeight(Font font, String text, double wrappingWidth, double lineSpacing, TextBoundsType boundsType) {
         layout.setContent(text != null ? text : "", FontHelper.getNativeFont(font));
         layout.setWrapWidth((float)wrappingWidth);
@@ -417,17 +415,27 @@ public class Utils {
     }
 
     public static String computeClippedWrappedText(Font font, String text, double width,
-                                            double height, OverrunStyle truncationStyle,
+                                            double height, double lineSpacing, OverrunStyle truncationStyle,
                                             String ellipsisString, TextBoundsType boundsType) {
         if (font == null) {
             throw new IllegalArgumentException("Must specify a font");
         }
 
+        // The height given does not need to include the line spacing after
+        // the last line to be able to render that last line correctly.
+        //
+        // However the calculations include the line spacing as part of a
+        // line's height.  In order to not cut off the last line because its
+        // line spacing wouldn't fit, the height used for the calculation
+        // is increased here with the line spacing amount.
+
+        height += lineSpacing;
+
         String ellipsis = (truncationStyle == CLIP) ? "" : ellipsisString;
         int eLen = ellipsis.length();
         // Do this before using helper, as it's not reentrant.
         double eWidth = computeTextWidth(font, ellipsis, 0);
-        double eHeight = computeTextHeight(font, ellipsis, 0, boundsType);
+        double eHeight = computeTextHeight(font, ellipsis, 0, lineSpacing, boundsType);
 
         if (width < eWidth || height < eHeight) {
             // The ellipsis doesn't fit.
@@ -438,7 +446,7 @@ public class Utils {
         helper.setFont(font);
         helper.setWrappingWidth((int)Math.ceil(width));
         helper.setBoundsType(boundsType);
-        helper.setLineSpacing(0);
+        helper.setLineSpacing(lineSpacing);
 
         boolean leading =  (truncationStyle == LEADING_ELLIPSIS ||
                             truncationStyle == LEADING_WORD_ELLIPSIS);
@@ -716,10 +724,10 @@ public class Utils {
                 */
                 if (menuitem.isMnemonicParsing()) {
 
-                    TextBinding bindings = new TextBinding(menuitem.getText());
-                    int mnemonicIndex = bindings.getMnemonicIndex() ;
+                    MnemonicInfo mnemonicInfo = new MnemonicInfo(menuitem.getText());
+                    int mnemonicIndex = mnemonicInfo.getMnemonicIndex() ;
                     if (mnemonicIndex >= 0) {
-                        KeyCombination mnemonicKeyCombo = bindings.getMnemonicKeyCombination();
+                        KeyCombination mnemonicKeyCombo = mnemonicInfo.getMnemonicKeyCombination();
                         Mnemonic myMnemonic = new Mnemonic(cmContent.getLabelAt(i), mnemonicKeyCombo);
                         scene.addMnemonic(myMnemonic);
                         NodeHelper.setShowMnemonics(cmContent.getLabelAt(i), initialState);
@@ -748,10 +756,10 @@ public class Utils {
                 */
                 if (menuitem.isMnemonicParsing()) {
 
-                    TextBinding bindings = new TextBinding(menuitem.getText());
-                    int mnemonicIndex = bindings.getMnemonicIndex() ;
+                    MnemonicInfo mnemonicInfo = new MnemonicInfo(menuitem.getText());
+                    int mnemonicIndex = mnemonicInfo.getMnemonicIndex() ;
                     if (mnemonicIndex >= 0) {
-                        KeyCombination mnemonicKeyCombo = bindings.getMnemonicKeyCombination();
+                        KeyCombination mnemonicKeyCombo = mnemonicInfo.getMnemonicKeyCombination();
 
                         ObservableList<Mnemonic> mnemonicsList = scene.getMnemonics().get(mnemonicKeyCombo);
                         if (mnemonicsList != null) {

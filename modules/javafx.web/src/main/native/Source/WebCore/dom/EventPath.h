@@ -24,37 +24,39 @@
 #include "PseudoElement.h"
 #include "SVGElement.h"
 #include "SVGUseElement.h"
+#include <wtf/CheckedPtr.h>
 #include <wtf/Forward.h>
 #include <wtf/Vector.h>
 
 namespace WebCore {
 
-class EventPath {
+class Touch;
+
+class EventPath : public CanMakeCheckedPtr {
 public:
     EventPath(Node& origin, Event&);
     explicit EventPath(const Vector<EventTarget*>&);
-    explicit EventPath(const Vector<Element*>&);
 
     bool isEmpty() const { return m_path.isEmpty(); }
     size_t size() const { return m_path.size(); }
-    const EventContext& contextAt(size_t i) const { return *m_path[i]; }
-    EventContext& contextAt(size_t i) { return *m_path[i]; }
+    const EventContext& contextAt(size_t i) const { return m_path[i]; }
+    EventContext& contextAt(size_t i) { return m_path[i]; }
 
-    Vector<EventTarget*> computePathUnclosedToTarget(const EventTarget&) const;
+    Vector<Ref<EventTarget>> computePathUnclosedToTarget(const EventTarget&) const;
 
     static Node* eventTargetRespectingTargetRules(Node&);
 
 private:
     void buildPath(Node& origin, Event&);
-    void setRelatedTarget(Node& origin, EventTarget&);
+    void setRelatedTarget(Node& origin, Node&);
 
 #if ENABLE(TOUCH_EVENTS)
-    void retargetTouch(TouchEventContext::TouchListType, const Touch&);
-    void retargetTouchList(TouchEventContext::TouchListType, const TouchList*);
+    void retargetTouch(EventContext::TouchListType, const Touch&);
+    void retargetTouchList(EventContext::TouchListType, const TouchList*);
     void retargetTouchLists(const TouchEvent&);
 #endif
 
-    Vector<std::unique_ptr<EventContext>, 32> m_path;
+    Vector<EventContext, 16> m_path;
 };
 
 inline Node* EventPath::eventTargetRespectingTargetRules(Node& referenceNode)

@@ -27,8 +27,6 @@
 #include "CodeBlockSet.h"
 
 #include "CodeBlock.h"
-#include "JSCInlines.h"
-#include "SuperSampler.h"
 #include <wtf/CommaPrinter.h>
 
 namespace JSC {
@@ -55,6 +53,11 @@ void CodeBlockSet::clearCurrentlyExecuting()
     m_currentlyExecuting.clear();
 }
 
+bool CodeBlockSet::isCurrentlyExecuting(CodeBlock* codeBlock)
+{
+    return m_currentlyExecuting.contains(codeBlock);
+}
+
 void CodeBlockSet::dump(PrintStream& out) const
 {
     CommaPrinter comma;
@@ -70,14 +73,14 @@ void CodeBlockSet::dump(PrintStream& out) const
 
 void CodeBlockSet::add(CodeBlock* codeBlock)
 {
-    auto locker = holdLock(m_lock);
+    Locker locker { m_lock };
     auto result = m_codeBlocks.add(codeBlock);
     RELEASE_ASSERT(result);
 }
 
 void CodeBlockSet::remove(CodeBlock* codeBlock)
 {
-    auto locker = holdLock(m_lock);
+    Locker locker { m_lock };
     bool result = m_codeBlocks.remove(codeBlock);
     RELEASE_ASSERT(result);
 }

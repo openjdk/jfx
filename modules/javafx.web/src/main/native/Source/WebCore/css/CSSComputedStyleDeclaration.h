@@ -20,6 +20,7 @@
 
 #pragma once
 
+#include "Animation.h"
 #include "CSSStyleDeclaration.h"
 #include "RenderStyleConstants.h"
 #include "SVGRenderStyleDefs.h"
@@ -75,17 +76,12 @@ public:
     static Ref<CSSPrimitiveValue> fontNonKeywordStretchFromStyleValue(FontSelectionValue);
     static Ref<CSSPrimitiveValue> fontStretchFromStyleValue(FontSelectionValue);
     static Ref<CSSFontStyleValue> fontNonKeywordStyleFromStyleValue(FontSelectionValue);
-    static Ref<CSSFontStyleValue> fontStyleFromStyleValue(Optional<FontSelectionValue>, FontStyleAxis);
+    static Ref<CSSFontStyleValue> fontStyleFromStyleValue(std::optional<FontSelectionValue>, FontStyleAxis);
+
+    static void addValueForAnimationPropertyToList(CSSValueList&, CSSPropertyID, const Animation*);
 
 private:
-    // The styled element is either the element passed into
-    // computedPropertyValue, or the PseudoElement for :before and :after if
-    // they exist.
-    Element* styledElement() const;
-
     // The renderer we should use for resolving layout-dependent properties.
-    // Note that it differs from styledElement()->renderer() in the case we have
-    // no pseudo-element.
     RenderElement* styledRenderer() const;
 
     RefPtr<CSSValue> svgPropertyValue(CSSPropertyID);
@@ -96,7 +92,11 @@ private:
     Ref<CSSValueList> getCSSPropertyValuesForShorthandProperties(const StylePropertyShorthand&);
     RefPtr<CSSValueList> getCSSPropertyValuesFor2SidesShorthand(const StylePropertyShorthand&);
     RefPtr<CSSValueList> getCSSPropertyValuesFor4SidesShorthand(const StylePropertyShorthand&);
-    Ref<CSSValueList> getBackgroundShorthandValue();
+
+    size_t getLayerCount(CSSPropertyID);
+    Ref<CSSValue> getFillLayerPropertyShorthandValue(CSSPropertyID, const StylePropertyShorthand& propertiesBeforeSlashSeparator, const StylePropertyShorthand& propertiesAfterSlashSeparator, CSSPropertyID lastLayerProperty);
+    Ref<CSSValue> getBackgroundShorthandValue();
+    Ref<CSSValue> getMaskShorthandValue();
     Ref<CSSValueList> getCSSPropertyValuesForGridShorthand(const StylePropertyShorthand&);
 
     RefPtr<Element> m_element;
@@ -133,10 +133,12 @@ private:
     ExceptionOr<void> setCssText(const String&) final;
     RefPtr<CSSValue> getPropertyCSSValueInternal(CSSPropertyID) final;
     String getPropertyValueInternal(CSSPropertyID) final;
-    ExceptionOr<bool> setPropertyInternal(CSSPropertyID, const String& value, bool important) final;
+    ExceptionOr<void> setPropertyInternal(CSSPropertyID, const String& value, bool important) final;
     Ref<MutableStyleProperties> copyProperties() const final;
 
     RefPtr<CSSValue> getPropertyCSSValue(CSSPropertyID, EUpdateLayout = UpdateLayout) const;
+
+    const Settings* settings() const final;
 
     mutable Ref<Element> m_element;
     PseudoId m_pseudoElementSpecifier;

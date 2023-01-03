@@ -25,12 +25,14 @@
 
 #pragma once
 
-#include "CallTracerTypes.h"
+#include "InspectorCanvasCallTracer.h"
 #include <JavaScriptCore/InspectorProtocolObjects.h>
+#include <JavaScriptCore/JSCInlines.h>
 #include <JavaScriptCore/ScriptCallFrame.h>
 #include <JavaScriptCore/ScriptCallStack.h>
 #include <initializer_list>
-#include <wtf/Variant.h>
+#include <variant>
+#include <wtf/HashSet.h>
 #include <wtf/Vector.h>
 #include <wtf/text/WTFString.h>
 
@@ -38,33 +40,47 @@ namespace WebCore {
 
 class CanvasGradient;
 class CanvasPattern;
-class CanvasRenderingContext;
+class Element;
 class HTMLCanvasElement;
 class HTMLImageElement;
 class HTMLVideoElement;
 class ImageBitmap;
 class ImageData;
-#if ENABLE(CSS_TYPED_OM)
-class TypedOMCSSImageValue;
+#if ENABLE(OFFSCREEN_CANVAS)
+class OffscreenCanvas;
 #endif
-
-typedef String ErrorString;
+#if ENABLE(CSS_TYPED_OM)
+class CSSStyleImageValue;
+#endif
 
 class InspectorCanvas final : public RefCounted<InspectorCanvas> {
 public:
     static Ref<InspectorCanvas> create(CanvasRenderingContext&);
 
-    const String& identifier() { return m_identifier; }
-    CanvasRenderingContext& context() { return m_context; }
+    const String& identifier() const { return m_identifier; }
 
-    HTMLCanvasElement* canvasElement();
+    CanvasRenderingContext* canvasContext() const;
+    HTMLCanvasElement* canvasElement() const;
+
+    ScriptExecutionContext* scriptExecutionContext() const;
+
+    JSC::JSValue resolveContext(JSC::JSGlobalObject*) const;
+
+    HashSet<Element*> clientNodes() const;
 
     void canvasChanged();
 
     void resetRecordingData();
     bool hasRecordingData() const;
     bool currentFrameHasData() const;
-    void recordAction(const String&, std::initializer_list<RecordCanvasActionVariant>&& = { });
+
+    // InspectorCanvasCallTracer
+#define PROCESS_ARGUMENT_DECLARATION(ArgumentType) \
+    std::optional<InspectorCanvasCallTracer::ProcessedArgument> processArgument(ArgumentType); \
+// end of PROCESS_ARGUMENT_DECLARATION
+    FOR_EACH_INSPECTOR_CANVAS_CALL_TRACER_ARGUMENT(PROCESS_ARGUMENT_DECLARATION)
+#undef PROCESS_ARGUMENT_DECLARATION
+    void recordAction(String&&, InspectorCanvasCallTracer::ProcessedArguments&& = { });
 
     Ref<JSON::ArrayOf<Inspector::Protocol::Recording::Frame>> releaseFrames() { return m_frames.releaseNonNull(); }
 
@@ -83,13 +99,14 @@ public:
     Ref<Inspector::Protocol::Canvas::Canvas> buildObjectForCanvas(bool captureBacktrace);
     Ref<Inspector::Protocol::Recording::Recording> releaseObjectForRecording();
 
-    String getCanvasContentAsDataURL(ErrorString&);
+    String getCanvasContentAsDataURL(Inspector::Protocol::ErrorString&);
 
 private:
     InspectorCanvas(CanvasRenderingContext&);
+
     void appendActionSnapshotIfNeeded();
 
-    using DuplicateDataVariant = Variant<
+    using DuplicateDataVariant = std::variant<
         RefPtr<CanvasGradient>,
         RefPtr<CanvasPattern>,
         RefPtr<HTMLCanvasElement>,
@@ -101,22 +118,30 @@ private:
         RefPtr<ImageBitmap>,
         RefPtr<Inspector::ScriptCallStack>,
 #if ENABLE(CSS_TYPED_OM)
-        RefPtr<TypedOMCSSImageValue>,
+        RefPtr<CSSStyleImageValue>,
 #endif
         Inspector::ScriptCallFrame,
+#if ENABLE(OFFSCREEN_CANVAS)
+        RefPtr<OffscreenCanvas>,
+#endif
         String
     >;
 
     int indexForData(DuplicateDataVariant);
+    Ref<JSON::Value> valueIndexForData(DuplicateDataVariant);
     String stringIndexForKey(const String&);
     Ref<Inspector::Protocol::Recording::InitialState> buildInitialState();
-    Ref<JSON::ArrayOf<JSON::Value>> buildAction(const String&, std::initializer_list<RecordCanvasActionVariant>&& = { });
+    Ref<JSON::ArrayOf<JSON::Value>> buildAction(String&&, InspectorCanvasCallTracer::ProcessedArguments&& = { });
     Ref<JSON::ArrayOf<JSON::Value>> buildArrayForCanvasGradient(const CanvasGradient&);
     Ref<JSON::ArrayOf<JSON::Value>> buildArrayForCanvasPattern(const CanvasPattern&);
     Ref<JSON::ArrayOf<JSON::Value>> buildArrayForImageData(const ImageData&);
 
     String m_identifier;
-    CanvasRenderingContext& m_context;
+
+    std::variant<
+        std::reference_wrapper<CanvasRenderingContext>,
+        std::monostate
+    > m_context;
 
     RefPtr<Inspector::Protocol::Recording::InitialState> m_initialState;
     RefPtr<JSON::ArrayOf<Inspector::Protocol::Recording::Frame>> m_frames;
@@ -129,7 +154,7 @@ private:
     MonotonicTime m_currentFrameStartTime { MonotonicTime::nan() };
     size_t m_bufferLimit { 100 * 1024 * 1024 };
     size_t m_bufferUsed { 0 };
-    Optional<size_t> m_frameCount;
+    std::optional<size_t> m_frameCount;
     size_t m_framesCaptured { 0 };
     bool m_contentChanged { false };
 };

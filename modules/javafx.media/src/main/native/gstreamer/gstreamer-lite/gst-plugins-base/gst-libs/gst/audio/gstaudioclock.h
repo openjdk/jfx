@@ -108,9 +108,7 @@ GstClockTime    gst_audio_clock_adjust          (GstAudioClock * clock, GstClock
 GST_AUDIO_API
 void            gst_audio_clock_invalidate      (GstAudioClock * clock);
 
-#ifdef G_DEFINE_AUTOPTR_CLEANUP_FUNC
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(GstAudioClock, gst_object_unref)
-#endif
 
 G_END_DECLS
 

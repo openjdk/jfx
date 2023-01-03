@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2014-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -49,27 +49,37 @@ enum LocationKind {
     HasIndexedPropertyLoc,
     IndexedPropertyDoubleLoc,
     IndexedPropertyDoubleSaneChainLoc,
+    IndexedPropertyDoubleOutOfBoundsSaneChainLoc,
+    IndexedPropertyDoubleOrOtherOutOfBoundsSaneChainLoc,
     IndexedPropertyInt32Loc,
+    IndexedPropertyInt32OutOfBoundsSaneChainLoc,
     IndexedPropertyInt52Loc,
+    IndexedPropertyJSOutOfBoundsSaneChainLoc,
     IndexedPropertyJSLoc,
     IndexedPropertyStorageLoc,
     InvalidationPointLoc,
-    IsFunctionLoc,
-    IsObjectOrNullLoc,
+    IsCallableLoc,
+    IsConstructorLoc,
+    TypeOfIsObjectLoc,
+    TypeOfIsFunctionLoc,
     NamedPropertyLoc,
     RegExpObjectLastIndexLoc,
     SetterLoc,
     StructureLoc,
     TypedArrayByteOffsetLoc,
+    TypedArrayByteOffsetInt52Loc,
+    TypedArrayLengthInt52Loc,
     PrototypeLoc,
     StackLoc,
     StackPayloadLoc,
+    DateFieldLoc,
     MapBucketLoc,
     MapBucketHeadLoc,
     MapBucketValueLoc,
     MapBucketKeyLoc,
     MapBucketNextLoc,
     WeakMapGetLoc,
+    InternalFieldObjectLoc,
     DOMStateLoc,
 };
 
@@ -148,7 +158,7 @@ private:
 struct HeapLocationHash {
     static unsigned hash(const HeapLocation& key) { return key.hash(); }
     static bool equal(const HeapLocation& a, const HeapLocation& b) { return a == b; }
-    static const bool safeToCompareToEmptyOrDeleted = true;
+    static constexpr bool safeToCompareToEmptyOrDeleted = true;
 };
 
 LocationKind indexedPropertyLocForResultType(NodeFlags);
@@ -183,13 +193,11 @@ namespace WTF {
 void printInternal(PrintStream&, JSC::DFG::LocationKind);
 
 template<typename T> struct DefaultHash;
-template<> struct DefaultHash<JSC::DFG::HeapLocation> {
-    typedef JSC::DFG::HeapLocationHash Hash;
-};
+template<> struct DefaultHash<JSC::DFG::HeapLocation> : JSC::DFG::HeapLocationHash { };
 
 template<typename T> struct HashTraits;
 template<> struct HashTraits<JSC::DFG::HeapLocation> : SimpleClassHashTraits<JSC::DFG::HeapLocation> {
-    static const bool emptyValueIsZero = false;
+    static constexpr bool emptyValueIsZero = false;
 };
 
 } // namespace WTF

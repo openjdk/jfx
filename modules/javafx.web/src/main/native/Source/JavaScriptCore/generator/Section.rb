@@ -43,7 +43,7 @@ class Section
   end
 
   def create_opcode(name, config)
-      Opcode.new(self, name, config[:args], config[:metadata], config[:metadata_initializers])
+      Opcode.new(self, name, config[:extras], config[:args], config[:metadata], config[:metadata_initializers], config[:tmps], config[:checkpoints])
   end
 
   def add_opcode_group(name, opcodes, config)
@@ -53,8 +53,22 @@ class Section
   end
 
   def sort!
-      @opcodes = @opcodes.sort { |a, b| a.metadata.empty? ? b.metadata.empty? ? 0 : 1 : -1 }
+      @opcodes = @opcodes.sort { |a, b|
+          result = nil
+          if a.checkpoints or b.checkpoints
+              raise "Bytecodes with checkpoints should have metadata: #{a.name}" if a.checkpoints and a.metadata.empty?
+              raise "Bytecodes with checkpoints should have metadata: #{b.name}" if b.checkpoints and b.metadata.empty?
+              result = a.checkpoints ? b.checkpoints ? 0 : -1 : 1
+          elsif
+              result = a.metadata.empty? ? b.metadata.empty? ? 0 : 1 : -1
+          end
+          result
+      }
       @opcodes.each(&:create_id!)
+  end
+
+  def is_wasm?
+    @name == :Wasm
   end
 
   def header_helpers(num_opcodes)
@@ -65,9 +79,25 @@ class Section
           out << "\n"
 
           out.write("#define NUMBER_OF_#{config[:macro_name_component]}_IDS #{opcodes.length}\n")
+          out.write("#define MAX_LENGTH_OF_#{config[:macro_name_component]}_IDS #{(opcodes.max {|a, b| a.length <=> b.length }).length}\n")
       end
 
       if config[:emit_in_structs_file]
+          i = 0
+          out.write("static constexpr unsigned #{config[:macro_name_component].downcase}CheckpointCountTable[] = {\n")
+          while true
+              if !opcodes[i].checkpoints
+                  out << "    0, // this unused entry is needed since MSVC won't compile empty arrays\n"
+                  out << "};\n\n"
+                  out << "#define NUMBER_OF_#{config[:macro_name_component]}_WITH_CHECKPOINTS #{i}\n"
+                  break
+              end
+
+              out.write("    #{opcodes[i].checkpoints.length},\n")
+              i += 1
+          end
+          out << "\n"
+
           out.write("#define FOR_EACH_#{config[:macro_name_component]}_METADATA_SIZE(macro) \\\n")
           i = 0
           while true
@@ -108,4 +138,14 @@ class Section
       end
       out.string
   end
+
+    def for_each_struct
+        <<-EOF
+#define FOR_EACH_#{config[:macro_name_component]}_STRUCT(macro) \\
+#{opcodes.map do |op|
+    "    macro(#{op.capitalized_name}) \\"
+end.join("\n")}
+EOF
+    end
+
 end

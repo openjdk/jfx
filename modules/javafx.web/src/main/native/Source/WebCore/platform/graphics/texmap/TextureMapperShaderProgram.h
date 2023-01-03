@@ -27,25 +27,62 @@
 #include "TransformationMatrix.h"
 #include <wtf/HashMap.h>
 #include <wtf/NeverDestroyed.h>
+#include <wtf/OptionSet.h>
 #include <wtf/Ref.h>
 #include <wtf/text/AtomStringHash.h>
 
 namespace WebCore {
 
+#define TEXMAP_ATTRIBUTE_VARIABLES(macro) \
+    macro(vertex) \
+
+#define TEXMAP_UNIFORM_VARIABLES(macro) \
+    macro(modelViewMatrix) \
+    macro(projectionMatrix) \
+    macro(textureSpaceMatrix) \
+    macro(textureColorSpaceMatrix) \
+    macro(opacity) \
+    macro(color) \
+    macro(expandedQuadEdgesInScreenSpace) \
+    macro(yuvToRgb) \
+    macro(filterAmount) \
+    macro(gaussianKernel) \
+    macro(blurRadius) \
+    macro(shadowOffset) \
+    macro(roundedRectNumber) \
+    macro(roundedRect) \
+    macro(roundedRectInverseTransformMatrix)
+
+#define TEXMAP_SAMPLER_VARIABLES(macro)           \
+    macro(sampler)                                \
+    macro(samplerY)                               \
+    macro(samplerU)                               \
+    macro(samplerV)                               \
+    macro(samplerA)                               \
+    macro(mask)                                   \
+    macro(contentTexture)                         \
+    macro(externalOESTexture)
+
+#define TEXMAP_VARIABLES(macro) \
+    TEXMAP_ATTRIBUTE_VARIABLES(macro) \
+    TEXMAP_UNIFORM_VARIABLES(macro) \
+    TEXMAP_SAMPLER_VARIABLES(macro) \
+
 #define TEXMAP_DECLARE_VARIABLE(Accessor, Name, Type) \
     GLuint Accessor##Location() { \
-        static NeverDestroyed<const AtomString> name(Name, AtomString::ConstructFromLiteral); \
-        return getLocation(name.get(), Type); \
+        return getLocation(VariableID::Accessor, Name, Type); \
     }
 
-#define TEXMAP_DECLARE_UNIFORM(Accessor) TEXMAP_DECLARE_VARIABLE(Accessor, "u_"#Accessor, UniformVariable)
-#define TEXMAP_DECLARE_ATTRIBUTE(Accessor) TEXMAP_DECLARE_VARIABLE(Accessor, "a_"#Accessor, AttribVariable)
-#define TEXMAP_DECLARE_SAMPLER(Accessor) TEXMAP_DECLARE_VARIABLE(Accessor, "s_"#Accessor, UniformVariable)
+#define TEXMAP_DECLARE_UNIFORM(Accessor) TEXMAP_DECLARE_VARIABLE(Accessor, "u_"#Accessor""_s, UniformVariable)
+#define TEXMAP_DECLARE_ATTRIBUTE(Accessor) TEXMAP_DECLARE_VARIABLE(Accessor, "a_"#Accessor""_s, AttribVariable)
+#define TEXMAP_DECLARE_SAMPLER(Accessor) TEXMAP_DECLARE_VARIABLE(Accessor, "s_"#Accessor""_s, UniformVariable)
+
+#define TEXMAP_DECLARE_VARIABLE_ENUM(name) name,
 
 class TextureMapperShaderProgram : public RefCounted<TextureMapperShaderProgram> {
 public:
     enum Option {
-        Texture          = 1L << 0,
+        TextureRGB       = 1L << 0,
         Rect             = 1L << 1,
         SolidColor       = 1L << 2,
         Opacity          = 1L << 3,
@@ -61,33 +98,32 @@ public:
         BlurFilter       = 1L << 14,
         AlphaBlur        = 1L << 15,
         ContentTexture   = 1L << 16,
-        ManualRepeat     = 1L << 17
+        ManualRepeat     = 1L << 17,
+        TextureYUV       = 1L << 18,
+        TextureNV12      = 1L << 19,
+        TextureNV21      = 1L << 20,
+        TexturePackedYUV = 1L << 21,
+        TextureExternalOES = 1L << 22,
+        RoundedRectClip  = 1L << 23,
+        Premultiply      = 1L << 24,
+        TextureYUVA      = 1L << 25,
     };
 
-    typedef unsigned Options;
+    enum class VariableID {
+        TEXMAP_VARIABLES(TEXMAP_DECLARE_VARIABLE_ENUM)
+    };
+
+    using Options = OptionSet<Option>;
 
     static Ref<TextureMapperShaderProgram> create(Options);
     virtual ~TextureMapperShaderProgram();
 
     GLuint programID() const { return m_id; }
 
-    TEXMAP_DECLARE_ATTRIBUTE(vertex)
 
-    TEXMAP_DECLARE_UNIFORM(modelViewMatrix)
-    TEXMAP_DECLARE_UNIFORM(projectionMatrix)
-    TEXMAP_DECLARE_UNIFORM(textureSpaceMatrix)
-    TEXMAP_DECLARE_UNIFORM(textureColorSpaceMatrix)
-    TEXMAP_DECLARE_UNIFORM(opacity)
-    TEXMAP_DECLARE_UNIFORM(color)
-    TEXMAP_DECLARE_UNIFORM(expandedQuadEdgesInScreenSpace)
-    TEXMAP_DECLARE_SAMPLER(sampler)
-    TEXMAP_DECLARE_SAMPLER(mask)
-
-    TEXMAP_DECLARE_UNIFORM(filterAmount)
-    TEXMAP_DECLARE_UNIFORM(gaussianKernel)
-    TEXMAP_DECLARE_UNIFORM(blurRadius)
-    TEXMAP_DECLARE_UNIFORM(shadowOffset)
-    TEXMAP_DECLARE_SAMPLER(contentTexture)
+    TEXMAP_ATTRIBUTE_VARIABLES(TEXMAP_DECLARE_ATTRIBUTE)
+    TEXMAP_UNIFORM_VARIABLES(TEXMAP_DECLARE_UNIFORM)
+    TEXMAP_SAMPLER_VARIABLES(TEXMAP_DECLARE_SAMPLER)
 
     void setMatrix(GLuint, const TransformationMatrix&);
 
@@ -98,13 +134,49 @@ private:
     GLuint m_fragmentShader;
 
     enum VariableType { UniformVariable, AttribVariable };
-    GLuint getLocation(const AtomString&, VariableType);
+    GLuint getLocation(VariableID, ASCIILiteral, VariableType);
 
     GLuint m_id;
-    HashMap<AtomString, GLuint> m_variables;
+    HashMap<VariableID, GLuint, IntHash<VariableID>, WTF::StrongEnumHashTraits<VariableID>> m_variables;
 };
 
-}
+} // namespace WebCore
+
+namespace WTF {
+
+template<> struct EnumTraits<WebCore::TextureMapperShaderProgram::Option> {
+    using values = EnumValues<
+        WebCore::TextureMapperShaderProgram::Option,
+        WebCore::TextureMapperShaderProgram::TextureRGB,
+        WebCore::TextureMapperShaderProgram::Rect,
+        WebCore::TextureMapperShaderProgram::SolidColor,
+        WebCore::TextureMapperShaderProgram::Opacity,
+        WebCore::TextureMapperShaderProgram::Antialiasing,
+        WebCore::TextureMapperShaderProgram::GrayscaleFilter,
+        WebCore::TextureMapperShaderProgram::SepiaFilter,
+        WebCore::TextureMapperShaderProgram::SaturateFilter,
+        WebCore::TextureMapperShaderProgram::HueRotateFilter,
+        WebCore::TextureMapperShaderProgram::BrightnessFilter,
+        WebCore::TextureMapperShaderProgram::ContrastFilter,
+        WebCore::TextureMapperShaderProgram::InvertFilter,
+        WebCore::TextureMapperShaderProgram::OpacityFilter,
+        WebCore::TextureMapperShaderProgram::BlurFilter,
+        WebCore::TextureMapperShaderProgram::AlphaBlur,
+        WebCore::TextureMapperShaderProgram::ContentTexture,
+        WebCore::TextureMapperShaderProgram::ManualRepeat,
+        WebCore::TextureMapperShaderProgram::TextureYUV,
+        WebCore::TextureMapperShaderProgram::TextureNV12,
+        WebCore::TextureMapperShaderProgram::TextureNV21,
+        WebCore::TextureMapperShaderProgram::TexturePackedYUV,
+        WebCore::TextureMapperShaderProgram::TextureExternalOES,
+        WebCore::TextureMapperShaderProgram::RoundedRectClip,
+        WebCore::TextureMapperShaderProgram::Premultiply,
+        WebCore::TextureMapperShaderProgram::TextureYUVA
+    >;
+};
+
+} // namespace WTF
+
 #endif // USE(TEXTURE_MAPPER_GL)
 
 #endif // TextureMapperShaderProgram_h

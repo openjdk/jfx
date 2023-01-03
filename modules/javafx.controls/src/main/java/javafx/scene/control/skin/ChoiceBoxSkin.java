@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,13 +27,8 @@ package javafx.scene.control.skin;
 
 import com.sun.javafx.scene.control.ContextMenuContent;
 import com.sun.javafx.scene.control.behavior.BehaviorBase;
-import javafx.beans.WeakInvalidationListener;
-import javafx.scene.Node;
-import javafx.scene.control.Accordion;
-import javafx.scene.control.Button;
 import javafx.scene.control.Control;
 import javafx.scene.control.SkinBase;
-import javafx.util.StringConverter;
 import javafx.beans.InvalidationListener;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
@@ -64,7 +59,7 @@ import javafx.collections.WeakListChangeListener;
  */
 public class ChoiceBoxSkin<T> extends SkinBase<ChoiceBox<T>> {
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Private fields                                                          *
      *                                                                         *
@@ -91,13 +86,13 @@ public class ChoiceBoxSkin<T> extends SkinBase<ChoiceBox<T>> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Listeners                                                               *
      *                                                                         *
      **************************************************************************/
 
-    private final ListChangeListener<T> choiceBoxItemsListener = new ListChangeListener<T>() {
+    private final ListChangeListener<T> choiceBoxItemsListener = new ListChangeListener<>() {
         @Override public void onChanged(Change<? extends T> c) {
             while (c.next()) {
                 if (c.getRemovedSize() > 0 || c.wasPermutated()) {
@@ -121,13 +116,13 @@ public class ChoiceBoxSkin<T> extends SkinBase<ChoiceBox<T>> {
     };
 
     private final WeakListChangeListener<T> weakChoiceBoxItemsListener =
-            new WeakListChangeListener<T>(choiceBoxItemsListener);
+            new WeakListChangeListener<>(choiceBoxItemsListener);
 
     private final InvalidationListener itemsObserver;
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
@@ -150,26 +145,17 @@ public class ChoiceBoxSkin<T> extends SkinBase<ChoiceBox<T>> {
         initialize();
 
         itemsObserver = observable -> updateChoiceBoxItems();
-        control.itemsProperty().addListener(new WeakInvalidationListener(itemsObserver));
+        control.itemsProperty().addListener(itemsObserver);
 
         control.requestLayout();
         registerChangeListener(control.selectionModelProperty(), e -> updateSelectionModel());
         registerChangeListener(control.showingProperty(), e -> {
             if (getSkinnable().isShowing()) {
-                MenuItem item = null;
 
-                SelectionModel sm = getSkinnable().getSelectionModel();
+                SelectionModel<T> sm = getSkinnable().getSelectionModel();
                 if (sm == null) return;
 
                 long currentSelectedIndex = sm.getSelectedIndex();
-                int itemInControlCount = choiceBoxItems.size();
-                boolean hasSelection = currentSelectedIndex >= 0 && currentSelectedIndex < itemInControlCount;
-                if (hasSelection) {
-                    item = popup.getItems().get((int) currentSelectedIndex);
-                    if (item != null && item instanceof RadioMenuItem) ((RadioMenuItem)item).setSelected(true);
-                } else {
-                    if (itemInControlCount > 0) item = popup.getItems().get(0);
-                }
 
                 // This is a fix for RT-9071. Ideally this won't be necessary in
                 // the long-run, but for now at least this resolves the
@@ -197,28 +183,20 @@ public class ChoiceBoxSkin<T> extends SkinBase<ChoiceBox<T>> {
             updatePopupItems();
             updateSelectionModel();
             updateSelection();
-            if(selectionModel != null && selectionModel.getSelectedIndex() == -1) {
-                label.setText(""); // clear label text when selectedIndex is -1
-            }
-        });
-        registerChangeListener(control.getSelectionModel().selectedItemProperty(), e -> {
-            if (getSkinnable().getSelectionModel() != null) {
-                int index = getSkinnable().getSelectionModel().getSelectedIndex();
-                if (index != -1) {
-                    MenuItem item = popup.getItems().get(index);
-                    if (item instanceof RadioMenuItem) ((RadioMenuItem)item).setSelected(true);
-                }
-            }
         });
         registerChangeListener(control.converterProperty(), e -> {
             updateChoiceBoxItems();
             updatePopupItems();
+            updateLabelText();
+        });
+        registerChangeListener(control.valueProperty(), e -> {
+            updateLabelText();
         });
     }
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Public API                                                              *
      *                                                                         *
@@ -226,6 +204,20 @@ public class ChoiceBoxSkin<T> extends SkinBase<ChoiceBox<T>> {
 
     /** {@inheritDoc} */
     @Override public void dispose() {
+        if (getSkinnable() == null) return;
+        // removing itemsObserver fixes NP on setting items
+        getSkinnable().itemsProperty().removeListener(itemsObserver);
+         // removing the content listener fixes NPE from listener
+        if (choiceBoxItems != null) {
+            choiceBoxItems.removeListener(weakChoiceBoxItemsListener);
+            choiceBoxItems = null;
+        }
+        // removing the path listener fixes the memory leak on replacing skin
+        if (selectionModel != null) {
+            selectionModel.selectedIndexProperty().removeListener(selectionChangeListener);
+            selectionModel = null;
+        }
+
         super.dispose();
 
         if (behavior != null) {
@@ -266,7 +258,7 @@ public class ChoiceBoxSkin<T> extends SkinBase<ChoiceBox<T>> {
         double popupWidth = popup.prefWidth(-1);
         if (popupWidth <= 0) { // first time: when the popup has not shown yet
             if (popup.getItems().size() > 0){
-                popupWidth = (new Text(((MenuItem)popup.getItems().get(0)).getText())).prefWidth(-1);
+                popupWidth = (new Text(popup.getItems().get(0).getText())).prefWidth(-1);
             }
         }
         return (popup.getItems().size() == 0) ? 50 : leftInset + Math.max(boxWidth, popupWidth)
@@ -294,7 +286,7 @@ public class ChoiceBoxSkin<T> extends SkinBase<ChoiceBox<T>> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Private implementation                                                  *
      *                                                                         *
@@ -344,9 +336,19 @@ public class ChoiceBoxSkin<T> extends SkinBase<ChoiceBox<T>> {
 
         updateSelectionModel();
         updateSelection();
-        if(selectionModel != null && selectionModel.getSelectedIndex() == -1) {
-            label.setText(""); // clear label text when selectedIndex is -1
+        updateLabelText();
+    }
+
+    private void updateLabelText() {
+        T value = getSkinnable().getValue();
+        label.setText(getDisplayText(value));
+    }
+
+    private String getDisplayText(T value) {
+        if (getSkinnable().getConverter() != null) {
+            return getSkinnable().getConverter().toString(value);
         }
+        return value == null ? "" : value.toString();
     }
 
     private void updateChoiceBoxItems() {
@@ -364,6 +366,11 @@ public class ChoiceBoxSkin<T> extends SkinBase<ChoiceBox<T>> {
         return label.getText();
     }
 
+    // Test only purpose
+    ContextMenu getChoiceBoxPopup() {
+        return popup;
+    }
+
     private void addPopupItem(final T o, int i) {
         MenuItem popupItem = null;
         if (o instanceof Separator) {
@@ -372,9 +379,7 @@ public class ChoiceBoxSkin<T> extends SkinBase<ChoiceBox<T>> {
         } else if (o instanceof SeparatorMenuItem) {
             popupItem = (SeparatorMenuItem) o;
         } else {
-            StringConverter<T> c = getSkinnable().getConverter();
-            String displayString = (c == null) ? ((o == null) ? "" : o.toString()) :  c.toString(o);
-            final RadioMenuItem item = new RadioMenuItem(displayString);
+            final RadioMenuItem item = new RadioMenuItem(getDisplayText(o));
             item.setId("choice-box-menu-item");
             item.setToggleGroup(toggleGroup);
             item.setOnAction(e -> {
@@ -417,21 +422,22 @@ public class ChoiceBoxSkin<T> extends SkinBase<ChoiceBox<T>> {
     private void updateSelection() {
         if (selectionModel == null || selectionModel.isEmpty()) {
             toggleGroup.selectToggle(null);
-            label.setText("");
-        } else {
+         } else {
             int selectedIndex = selectionModel.getSelectedIndex();
             if (selectedIndex == -1 || selectedIndex > popup.getItems().size()) {
-                label.setText(""); // clear label text
+                // FIXME: when do we get here?
+                // and if, shouldn't we unselect the toggles?
                 return;
             }
             if (selectedIndex < popup.getItems().size()) {
                 MenuItem selectedItem = popup.getItems().get(selectedIndex);
                 if (selectedItem instanceof RadioMenuItem) {
                     ((RadioMenuItem) selectedItem).setSelected(true);
+                } else {
+                    // need to unselect toggles if selectionModel allows a Separator/MenuItem
+                    // to be selected
                     toggleGroup.selectToggle(null);
                 }
-                // update the label
-                label.setText(popup.getItems().get(selectedIndex).getText());
             }
         }
     }

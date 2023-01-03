@@ -29,8 +29,9 @@
 #include "InspectorFrontendRouter.h"
 #include "InspectorProtocolTypes.h"
 #include <functional>
-#include <wtf/Optional.h>
+#include <wtf/Function.h>
 #include <wtf/RefCounted.h>
+#include <wtf/RefPtr.h>
 #include <wtf/text/WTFString.h>
 
 namespace Inspector {
@@ -59,7 +60,7 @@ public:
         bool isActive() const;
         void disable() { m_alreadySent = true; }
 
-        void sendSuccess(RefPtr<JSON::Object>&&);
+        void sendSuccess(Ref<JSON::Object>&&);
         void sendFailure(const ErrorString&);
 
     private:
@@ -87,27 +88,28 @@ public:
     // Note that 'unused' is a workaround so the compiler can pick the right sendResponse based on arity.
     // When <http://webkit.org/b/179847> is fixed or this class is renamed for the JSON::Object case,
     // then this alternate method with a dummy parameter can be removed in favor of the one without it.
-    void sendResponse(long requestId, RefPtr<JSON::Object>&& result, bool unused);
     void sendResponse(long requestId, RefPtr<JSON::Object>&& result);
+    void sendResponse(long requestId, RefPtr<JSON::Object>&& result, bool unused);
+    void sendResponse(long requestId, Ref<JSON::Object>&& result);
+    void sendResponse(long requestId, Ref<JSON::Object>&& result, bool unused);
     void sendPendingErrors();
 
     void reportProtocolError(CommonErrorCode, const String& errorMessage);
-    void reportProtocolError(Optional<long> relatedRequestId, CommonErrorCode, const String& errorMessage);
+    void reportProtocolError(std::optional<long> relatedRequestId, CommonErrorCode, const String& errorMessage);
 
-    template<typename T>
-    WTF_INTERNAL
-    T getPropertyValue(JSON::Object*, const String& name, bool* out_optionalValueFound, T defaultValue, std::function<bool(JSON::Value&, T&)>, const char* typeName);
-
-    int getInteger(JSON::Object*, const String& name, bool* valueFound);
-    double getDouble(JSON::Object*, const String& name, bool* valueFound);
-    String getString(JSON::Object*, const String& name, bool* valueFound);
-    bool getBoolean(JSON::Object*, const String& name, bool* valueFound);
-    RefPtr<JSON::Value> getValue(JSON::Object*, const String& name, bool* valueFound);
-    RefPtr<JSON::Object> getObject(JSON::Object*, const String& name, bool* valueFound);
-    RefPtr<JSON::Array> getArray(JSON::Object*, const String& name, bool* valueFound);
+    std::optional<bool> getBoolean(JSON::Object*, const String& name, bool required);
+    std::optional<int> getInteger(JSON::Object*, const String& name, bool required);
+    std::optional<double> getDouble(JSON::Object*, const String& name, bool required);
+    String getString(JSON::Object*, const String& name, bool required);
+    RefPtr<JSON::Value> getValue(JSON::Object*, const String& name, bool required);
+    RefPtr<JSON::Object> getObject(JSON::Object*, const String& name, bool required);
+    RefPtr<JSON::Array> getArray(JSON::Object*, const String& name, bool required);
 
 private:
     BackendDispatcher(Ref<FrontendRouter>&&);
+
+    template<typename T>
+    T getPropertyValue(JSON::Object*, const String& name, bool required, std::function<T(JSON::Value&)> converter, const char* typeName);
 
     Ref<FrontendRouter> m_frontendRouter;
     HashMap<String, SupplementalBackendDispatcher*> m_dispatchers;
@@ -119,7 +121,7 @@ private:
 
     // For synchronously handled requests, avoid plumbing requestId through every
     // call that could potentially fail with a protocol error.
-    Optional<long> m_currentRequestId { WTF::nullopt };
+    std::optional<long> m_currentRequestId { std::nullopt };
 };
 
 } // namespace Inspector

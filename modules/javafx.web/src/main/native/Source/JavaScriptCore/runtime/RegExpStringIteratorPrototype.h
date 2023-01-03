@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2019 Alexey Shvayka <shvaikalesh@gmail.com>.
+ * Copyright (C) 2019-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,11 +33,18 @@ namespace JSC {
 class RegExpStringIteratorPrototype final : public JSNonFinalObject {
 public:
     using Base = JSNonFinalObject;
-    static const unsigned StructureFlags = Base::StructureFlags | HasStaticPropertyTable;
+    static constexpr unsigned StructureFlags = Base::StructureFlags | HasStaticPropertyTable;
+
+    template<typename CellType, SubspaceAccess>
+    static GCClient::IsoSubspace* subspaceFor(VM& vm)
+    {
+        STATIC_ASSERT_ISO_SUBSPACE_SHARABLE(RegExpStringIteratorPrototype, Base);
+        return &vm.plainObjectSpace();
+    }
 
     static RegExpStringIteratorPrototype* create(VM& vm, JSGlobalObject* globalObject, Structure* structure)
     {
-        auto prototype = new (NotNull, allocateCell<RegExpStringIteratorPrototype>(vm.heap)) RegExpStringIteratorPrototype(vm, structure);
+        auto prototype = new (NotNull, allocateCell<RegExpStringIteratorPrototype>(vm)) RegExpStringIteratorPrototype(vm, structure);
         prototype->finishCreation(vm, globalObject);
         return prototype;
     }

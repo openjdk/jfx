@@ -24,9 +24,9 @@
  */
 
 [
-    EnabledAtRuntime=WebAnimations,
     ExportMacro=WEBCORE_EXPORT,
-    CustomToJSObject
+    CustomToJSObject,
+    Exposed=Window
 ] interface AnimationTimeline {
     [ImplementedAs=bindingsCurrentTime] readonly attribute double? currentTime;
 };

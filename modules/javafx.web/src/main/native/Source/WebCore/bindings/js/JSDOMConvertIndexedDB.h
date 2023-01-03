@@ -25,8 +25,6 @@
 
 #pragma once
 
-#if ENABLE(INDEXED_DATABASE)
-
 #include "IDBBindingUtilities.h"
 #include "IDLTypes.h"
 #include "JSDOMConvertBase.h"
@@ -38,9 +36,9 @@ template<> struct JSConverter<IDLIDBKey> {
     static constexpr bool needsGlobalObject = true;
 
     template <typename U>
-    static JSC::JSValue convert(JSC::ExecState& state, JSDOMGlobalObject& globalObject, U&& value)
+    static JSC::JSValue convert(JSC::JSGlobalObject& lexicalGlobalObject, JSDOMGlobalObject& globalObject, U&& value)
     {
-        return toJS(state, globalObject, std::forward<U>(value));
+        return toJS(lexicalGlobalObject, globalObject, std::forward<U>(value));
     }
 };
 
@@ -49,9 +47,9 @@ template<> struct JSConverter<IDLIDBKeyData> {
     static constexpr bool needsGlobalObject = true;
 
     template <typename U>
-    static JSC::JSValue convert(JSC::ExecState& state, JSDOMGlobalObject& globalObject, U&& value)
+    static JSC::JSValue convert(JSC::JSGlobalObject& lexicalGlobalObject, JSDOMGlobalObject& globalObject, U&& value)
     {
-        return toJS(&state, &globalObject, std::forward<U>(value));
+        return toJS(&lexicalGlobalObject, &globalObject, std::forward<U>(value));
     }
 };
 
@@ -60,12 +58,10 @@ template<> struct JSConverter<IDLIDBValue> {
     static constexpr bool needsGlobalObject = true;
 
     template <typename U>
-    static JSC::JSValue convert(JSC::ExecState& state, JSDOMGlobalObject& globalObject, U&& value)
+    static JSC::JSValue convert(JSC::JSGlobalObject& lexicalGlobalObject, JSDOMGlobalObject& globalObject, U&& value)
     {
-        return toJS(&state, &globalObject, std::forward<U>(value));
+        return toJS(&lexicalGlobalObject, &globalObject, std::forward<U>(value));
     }
 };
 
 } // namespace WebCore
-
-#endif

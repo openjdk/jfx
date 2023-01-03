@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008, 2009, 2013, 2014 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2021 Apple Inc. All rights reserved.
  * Copyright (C) 2008 Cameron Zwarich <cwzwarich@uwaterloo.ca>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -36,6 +36,7 @@
 #include <string.h>
 
 #include <wtf/Assertions.h>
+#include <wtf/MathExtras.h>
 
 namespace JSC {
 
@@ -53,33 +54,44 @@ namespace JSC {
     )
 
 
-const int maxOpcodeLength = 40;
 #if ENABLE(C_LOOP)
 const int numOpcodeIDs = NUMBER_OF_BYTECODE_IDS + NUMBER_OF_CLOOP_BYTECODE_HELPER_IDS + NUMBER_OF_BYTECODE_HELPER_IDS;
 #else
 const int numOpcodeIDs = NUMBER_OF_BYTECODE_IDS + NUMBER_OF_BYTECODE_HELPER_IDS;
 #endif
 
+constexpr int numWasmOpcodeIDs = NUMBER_OF_WASM_IDS + NUMBER_OF_BYTECODE_HELPER_IDS;
+
 #define OPCODE_ID_ENUM(opcode, length) opcode,
     enum OpcodeID : unsigned { FOR_EACH_OPCODE_ID(OPCODE_ID_ENUM) };
+    enum WasmOpcodeID : unsigned { FOR_EACH_WASM_ID(OPCODE_ID_ENUM) };
 #undef OPCODE_ID_ENUM
 
 #if ENABLE(C_LOOP) && !HAVE(COMPUTED_GOTO)
 
 #define OPCODE_ID_ENUM(opcode, length) opcode##_wide16 = numOpcodeIDs + opcode,
     enum OpcodeIDWide16 : unsigned { FOR_EACH_OPCODE_ID(OPCODE_ID_ENUM) };
+    enum WasmOpcodeIDWide16 : unsigned { FOR_EACH_WASM_ID(OPCODE_ID_ENUM) };
 #undef OPCODE_ID_ENUM
 
 #define OPCODE_ID_ENUM(opcode, length) opcode##_wide32 = numOpcodeIDs * 2 + opcode,
     enum OpcodeIDWide32 : unsigned { FOR_EACH_OPCODE_ID(OPCODE_ID_ENUM) };
+    enum WasmOpcodeIDWide32 : unsigned { FOR_EACH_WASM_ID(OPCODE_ID_ENUM) };
 #undef OPCODE_ID_ENUM
 #endif
 
 extern const unsigned opcodeLengths[];
+extern const unsigned wasmOpcodeLengths[];
 
 #define OPCODE_ID_LENGTHS(id, length) const int id##_length = length;
     FOR_EACH_OPCODE_ID(OPCODE_ID_LENGTHS);
+    FOR_EACH_WASM_ID(OPCODE_ID_LENGTHS);
 #undef OPCODE_ID_LENGTHS
+
+static constexpr unsigned maxJSOpcodeLength = /* Opcode */ 1 + /* Wide32 Opcode */ 1 + /* Operands */ (MAX_LENGTH_OF_BYTECODE_IDS - 1) * 4;
+static constexpr unsigned maxWasmOpcodeLength = /* Opcode */ 1 + /* Wide32 Opcode */ 1 + /* Operands */ (MAX_LENGTH_OF_WASM_IDS - 1) * 4;
+static constexpr unsigned maxOpcodeLength = std::max(maxJSOpcodeLength, maxWasmOpcodeLength);
+static constexpr unsigned bitWidthForMaxOpcodeLength = WTF::getMSBSetConstexpr(maxOpcodeLength) + 1;
 
 #define FOR_EACH_OPCODE_WITH_VALUE_PROFILE(macro) \
     macro(OpCallVarargs) \
@@ -87,16 +99,19 @@ extern const unsigned opcodeLengths[];
     macro(OpTailCallForwardArguments) \
     macro(OpConstructVarargs) \
     macro(OpGetByVal) \
-    macro(OpGetDirectPname) \
+    macro(OpEnumeratorGetByVal) \
     macro(OpGetById) \
     macro(OpGetByIdWithThis) \
     macro(OpTryGetById) \
     macro(OpGetByIdDirect) \
     macro(OpGetByValWithThis) \
+    macro(OpGetPrototypeOf) \
     macro(OpGetFromArguments) \
     macro(OpToNumber) \
+    macro(OpToNumeric) \
     macro(OpToObject) \
     macro(OpGetArgument) \
+    macro(OpGetInternalField) \
     macro(OpToThis) \
     macro(OpCall) \
     macro(OpTailCall) \
@@ -108,17 +123,31 @@ extern const unsigned opcodeLengths[];
     macro(OpBitnot) \
     macro(OpBitxor) \
     macro(OpLshift) \
+    macro(OpRshift) \
+    macro(OpGetPrivateName) \
 
-#define FOR_EACH_OPCODE_WITH_ARRAY_PROFILE(macro) \
-    macro(OpHasIndexedProperty) \
+#define FOR_EACH_OPCODE_WITH_CALL_LINK_INFO(macro) \
+    macro(OpCall) \
+    macro(OpTailCall) \
+    macro(OpCallEval) \
+    macro(OpConstruct) \
+    macro(OpIteratorOpen) \
+    macro(OpIteratorNext) \
     macro(OpCallVarargs) \
     macro(OpTailCallVarargs) \
     macro(OpTailCallForwardArguments) \
     macro(OpConstructVarargs) \
+
+#define FOR_EACH_OPCODE_WITH_ARRAY_PROFILE(macro) \
     macro(OpGetByVal) \
     macro(OpInByVal) \
     macro(OpPutByVal) \
     macro(OpPutByValDirect) \
+    macro(OpEnumeratorNext) \
+    macro(OpEnumeratorGetByVal) \
+    macro(OpEnumeratorInByVal) \
+    macro(OpEnumeratorHasOwnProperty) \
+    FOR_EACH_OPCODE_WITH_CALL_LINK_INFO(macro) \
 
 #define FOR_EACH_OPCODE_WITH_ARRAY_ALLOCATION_PROFILE(macro) \
     macro(OpNewArray) \
@@ -128,11 +157,17 @@ extern const unsigned opcodeLengths[];
 #define FOR_EACH_OPCODE_WITH_OBJECT_ALLOCATION_PROFILE(macro) \
     macro(OpNewObject) \
 
-#define FOR_EACH_OPCODE_WITH_LLINT_CALL_LINK_INFO(macro) \
-    macro(OpCall) \
-    macro(OpTailCall) \
-    macro(OpCallEval) \
-    macro(OpConstruct) \
+#define FOR_EACH_OPCODE_WITH_BINARY_ARITH_PROFILE(macro) \
+    macro(OpAdd) \
+    macro(OpMul) \
+    macro(OpDiv) \
+    macro(OpSub) \
+
+#define FOR_EACH_OPCODE_WITH_UNARY_ARITH_PROFILE(macro) \
+    macro(OpInc) \
+    macro(OpDec) \
+    macro(OpNegate) \
+
 
 IGNORE_WARNINGS_BEGIN("type-limits")
 
@@ -149,6 +184,7 @@ typedef OpcodeID Opcode;
 #endif
 
 extern const char* const opcodeNames[];
+extern const char* const wasmOpcodeNames[];
 
 #if ENABLE(OPCODE_STATS)
 
@@ -175,6 +211,7 @@ inline bool isBranch(OpcodeID opcodeID)
     case op_jneq_null:
     case op_jundefined_or_null:
     case op_jnundefined_or_null:
+    case op_jeq_ptr:
     case op_jneq_ptr:
     case op_jless:
     case op_jlesseq:

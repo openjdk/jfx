@@ -25,41 +25,49 @@
 
 #pragma once
 
-#if ENABLE(MEDIA_CONTROLS_SCRIPT)
+#if ENABLE(VIDEO)
 
+#include <variant>
+#include <wtf/Ref.h>
 #include <wtf/RefCounted.h>
-#include <wtf/Variant.h>
-#include <wtf/Vector.h>
-#include <wtf/text/WTFString.h>
+#include <wtf/RefPtr.h>
+#include <wtf/WeakPtr.h>
 
 namespace WebCore {
 
 class AudioTrack;
 class AudioTrackList;
 class Element;
+class HTMLElement;
 class HTMLMediaElement;
 class MediaControlTextTrackContainerElement;
 class TextTrack;
 class TextTrackList;
+class VoidCallback;
 
-class MediaControlsHost : public RefCounted<MediaControlsHost> {
+class MediaControlsHost final : public RefCounted<MediaControlsHost>, public CanMakeWeakPtr<MediaControlsHost> {
+    WTF_MAKE_FAST_ALLOCATED(MediaControlsHost);
 public:
-    static Ref<MediaControlsHost> create(HTMLMediaElement*);
+    static Ref<MediaControlsHost> create(HTMLMediaElement&);
     ~MediaControlsHost();
 
     static const AtomString& automaticKeyword();
     static const AtomString& forcedOnlyKeyword();
-    static const AtomString& alwaysOnKeyword();
-    static const AtomString& manualKeyword();
+
+    String layoutTraitsClassName() const;
+    const AtomString& mediaControlsContainerClassName() const;
+
+    double brightness() const { return 1; }
+    void setBrightness(double) { }
 
     Vector<RefPtr<TextTrack>> sortedTrackListForMenu(TextTrackList&);
     Vector<RefPtr<AudioTrack>> sortedTrackListForMenu(AudioTrackList&);
 
-    using TextOrAudioTrack = WTF::Variant<RefPtr<TextTrack>, RefPtr<AudioTrack>>;
-    String displayNameForTrack(const Optional<TextOrAudioTrack>&);
+    using TextOrAudioTrack = std::variant<RefPtr<TextTrack>, RefPtr<AudioTrack>>;
+    String displayNameForTrack(const std::optional<TextOrAudioTrack>&);
 
-    TextTrack* captionMenuOffItem();
-    TextTrack* captionMenuAutomaticItem();
+    static TextTrack& captionMenuOffItem();
+    static TextTrack& captionMenuAutomaticItem();
     AtomString captionDisplayMode() const;
     void setSelectedTextTrack(TextTrack*);
     Element* textTrackContainer();
@@ -70,9 +78,10 @@ public:
     bool isInMediaDocument() const;
     bool userGestureRequired() const;
     bool shouldForceControlsDisplay() const;
-    void setPreparedToReturnVideoLayerToInline(bool);
 
-    void updateCaptionDisplaySizes();
+    enum class ForceUpdate { Yes, No };
+    void updateCaptionDisplaySizes(ForceUpdate = ForceUpdate::No);
+    void updateTextTrackRepresentationImageIfNeeded();
     void enteredFullscreen();
     void exitedFullscreen();
 
@@ -81,26 +90,32 @@ public:
     enum class DeviceType { None, Airplay, Tvout };
     DeviceType externalDeviceType() const;
 
-    bool compactMode() const;
-    void setSimulateCompactMode(bool value) { m_simulateCompactMode = value; }
-
     bool controlsDependOnPageScaleFactor() const;
     void setControlsDependOnPageScaleFactor(bool v);
 
-    String generateUUID() const;
+    static String generateUUID();
 
-    String shadowRootCSSText() const;
-    String base64StringForIconNameAndType(const String& iconName, const String& iconType) const;
-    String formattedStringForDuration(double) const;
+#if ENABLE(MODERN_MEDIA_CONTROLS)
+    static String shadowRootCSSText();
+    static String base64StringForIconNameAndType(const String& iconName, const String& iconType);
+    static String formattedStringForDuration(double);
+#if ENABLE(MEDIA_CONTROLS_CONTEXT_MENUS)
+    bool showMediaControlsContextMenu(HTMLElement&, String&& optionsJSONString, Ref<VoidCallback>&&);
+#endif // ENABLE(MEDIA_CONTROLS_CONTEXT_MENUS)
+#endif // ENABLE(MODERN_MEDIA_CONTROLS)
 
 private:
-    MediaControlsHost(HTMLMediaElement*);
+    explicit MediaControlsHost(HTMLMediaElement&);
 
-    HTMLMediaElement* m_mediaElement;
+    WeakPtr<HTMLMediaElement> m_mediaElement;
     RefPtr<MediaControlTextTrackContainerElement> m_textTrackContainer;
-    bool m_simulateCompactMode { false };
+
+#if ENABLE(MEDIA_CONTROLS_CONTEXT_MENUS)
+    RefPtr<VoidCallback> m_showMediaControlsContextMenuCallback;
+#endif // ENABLE(MEDIA_CONTROLS_CONTEXT_MENUS)
 };
 
-}
+} // namespace WebCore
 
-#endif
+#endif // ENABLE(VIDEO)
+

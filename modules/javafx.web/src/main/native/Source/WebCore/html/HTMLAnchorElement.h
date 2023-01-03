@@ -23,25 +23,28 @@
 
 #pragma once
 
+#include "Document.h"
 #include "HTMLElement.h"
 #include "HTMLNames.h"
 #include "SharedStringHash.h"
-#include "URLUtils.h"
+#include "URLDecomposition.h"
 #include <wtf/OptionSet.h>
 
 namespace WebCore {
 
-class AdClickAttribution;
+class PrivateClickMeasurement;
 class DOMTokenList;
 
+enum class ReferrerPolicy : uint8_t;
+
 // Link relation bitmask values.
-enum class Relation {
+enum class Relation : uint8_t {
     NoReferrer = 1 << 0,
     NoOpener = 1 << 1,
     Opener = 1 << 2,
 };
 
-class HTMLAnchorElement : public HTMLElement, public URLUtils<HTMLAnchorElement> {
+class HTMLAnchorElement : public HTMLElement, public URLDecomposition {
     WTF_MAKE_ISO_ALLOCATED(HTMLAnchorElement);
 public:
     static Ref<HTMLAnchorElement> create(Document&);
@@ -65,13 +68,17 @@ public:
 
     bool hasRel(Relation) const;
 
-    SharedStringHash visitedLinkHash() const;
+    inline SharedStringHash visitedLinkHash() const;
 
-    WEBCORE_EXPORT DOMTokenList& relList() const;
+    WEBCORE_EXPORT DOMTokenList& relList();
 
 #if USE(SYSTEM_PREVIEW)
-    WEBCORE_EXPORT bool isSystemPreviewLink() const;
+    WEBCORE_EXPORT bool isSystemPreviewLink();
 #endif
+
+    void setReferrerPolicyForBindings(const AtomString&);
+    String referrerPolicyForBindings() const;
+    ReferrerPolicy referrerPolicy() const;
 
 protected:
     HTMLAnchorElement(const QualifiedName&, Document&);
@@ -83,8 +90,7 @@ private:
     bool isMouseFocusable() const override;
     bool isKeyboardFocusable(KeyboardEvent*) const override;
     void defaultEventHandler(Event&) final;
-    void setActive(bool active = true, bool pause = false) final;
-    void accessKeyAction(bool sendMouseEvents) final;
+    void setActive(bool active, bool pause, Style::InvalidationScope) final;
     bool isURLAttribute(const Attribute&) const final;
     bool canStartSelection() const final;
     String target() const override;
@@ -96,7 +102,7 @@ private:
 
     void sendPings(const URL& destinationURL);
 
-    Optional<AdClickAttribution> parseAdClickAttribution() const;
+    std::optional<PrivateClickMeasurement> parsePrivateClickMeasurement() const;
 
     void handleClick(Event&);
 
@@ -112,23 +118,18 @@ private:
     void setRootEditableElementForSelectionOnMouseDown(Element*);
     void clearRootEditableElementForSelectionOnMouseDown();
 
-    bool m_hasRootEditableElementForSelectionOnMouseDown;
-    bool m_wasShiftKeyDownOnMouseDown;
+    URL fullURL() const final { return href(); }
+    void setFullURL(const URL& fullURL) final { setHref(fullURL.string()); }
+
+    bool m_hasRootEditableElementForSelectionOnMouseDown { false };
+    bool m_wasShiftKeyDownOnMouseDown { false };
     OptionSet<Relation> m_linkRelations;
 
     // This is computed only once and must not be affected by subsequent URL changes.
-    mutable Optional<SharedStringHash> m_storedVisitedLinkHash;
+    mutable Markable<SharedStringHash, SharedStringHashMarkableTraits> m_storedVisitedLinkHash;
 
-    mutable std::unique_ptr<DOMTokenList> m_relList;
+    std::unique_ptr<DOMTokenList> m_relList;
 };
-
-inline SharedStringHash HTMLAnchorElement::visitedLinkHash() const
-{
-    ASSERT(isLink());
-    if (!m_storedVisitedLinkHash)
-        m_storedVisitedLinkHash = computeVisitedLinkHash(document().baseURL(), attributeWithoutSynchronization(HTMLNames::hrefAttr));
-    return *m_storedVisitedLinkHash;
-}
 
 // Functions shared with the other anchor elements (i.e., SVG).
 

@@ -25,8 +25,6 @@
 
 #pragma once
 
-#if ENABLE(INDEXED_DATABASE)
-
 #include "DOMException.h"
 #include "ExceptionCode.h"
 #include <wtf/text/WTFString.h>
@@ -35,7 +33,7 @@ namespace WebCore {
 
 class IDBError {
 public:
-    WEBCORE_EXPORT explicit IDBError(Optional<ExceptionCode> = WTF::nullopt, const String& message = { });
+    WEBCORE_EXPORT explicit IDBError(std::optional<ExceptionCode> = std::nullopt, const String& message = { });
 
     static IDBError userDeleteError()
     {
@@ -49,19 +47,20 @@ public:
 
     RefPtr<DOMException> toDOMException() const;
 
-    Optional<ExceptionCode> code() const { return m_code; }
+    std::optional<ExceptionCode> code() const { return m_code; }
     String name() const;
     String message() const;
 
     bool isNull() const { return !m_code; }
+    operator bool() const { return !isNull(); }
 
-    IDBError isolatedCopy() const;
+    WEBCORE_EXPORT IDBError isolatedCopy() const;
 
     template<class Encoder> void encode(Encoder&) const;
-    template<class Decoder> static bool decode(Decoder&, IDBError&);
+    template<class Decoder> static WARN_UNUSED_RETURN bool decode(Decoder&, IDBError&);
 
 private:
-    Optional<ExceptionCode> m_code;
+    std::optional<ExceptionCode> m_code;
     String m_message;
 };
 
@@ -70,7 +69,7 @@ void IDBError::encode(Encoder& encoder) const
 {
     if (m_code) {
         encoder << true;
-        encoder.encodeEnum(m_code.value());
+        encoder << m_code.value();
     } else
         encoder << false;
     encoder << m_message;
@@ -85,11 +84,11 @@ bool IDBError::decode(Decoder& decoder, IDBError& error)
 
     if (hasCode) {
         ExceptionCode ec;
-        if (!decoder.decodeEnum(ec))
+        if (!decoder.decode(ec))
             return false;
         error.m_code = ec;
     } else
-        error.m_code = WTF::nullopt;
+        error.m_code = std::nullopt;
 
     if (!decoder.decode(error.m_message))
         return false;
@@ -98,5 +97,3 @@ bool IDBError::decode(Decoder& decoder, IDBError& error)
 }
 
 } // namespace WebCore
-
-#endif // ENABLE(INDEXED_DATABASE)

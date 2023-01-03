@@ -31,9 +31,13 @@
 #include <limits>
 #include <unicode/utypes.h>
 #include <wtf/Assertions.h>
+#include <wtf/DebugHeap.h>
 #include <wtf/MallocPtr.h>
+#include <wtf/Noncopyable.h>
 
 namespace WTF {
+
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(StringBuffer);
 
 template <typename CharType>
 class StringBuffer {
@@ -42,13 +46,13 @@ class StringBuffer {
 public:
     explicit StringBuffer(unsigned length)
         : m_length(length)
-        , m_data(m_length ? static_cast<CharType*>(fastMalloc((Checked<size_t>(m_length) * sizeof(CharType)).unsafeGet())) : nullptr)
+        , m_data(m_length ? static_cast<CharType*>(StringBufferMalloc::malloc(Checked<size_t>(m_length) * sizeof(CharType))) : nullptr)
     {
     }
 
     ~StringBuffer()
     {
-        fastFree(m_data);
+        StringBufferMalloc::free(m_data);
     }
 
     void shrink(unsigned newLength)
@@ -59,11 +63,8 @@ public:
 
     void resize(unsigned newLength)
     {
-        if (newLength > m_length) {
-            if (newLength > std::numeric_limits<unsigned>::max() / sizeof(UChar))
-                CRASH();
-            m_data = static_cast<UChar*>(fastRealloc(m_data, newLength * sizeof(UChar)));
-        }
+        if (newLength > m_length)
+            m_data = static_cast<CharType*>(StringBufferMalloc::realloc(m_data, Checked<size_t>(newLength) * sizeof(CharType)));
         m_length = newLength;
     }
 
@@ -72,11 +73,11 @@ public:
 
     CharType& operator[](unsigned i) { ASSERT_WITH_SECURITY_IMPLICATION(i < m_length); return m_data[i]; }
 
-    MallocPtr<CharType> release()
+    MallocPtr<CharType, StringBufferMalloc> release()
     {
         CharType* data = m_data;
-        m_data = 0;
-        return adoptMallocPtr(data);
+        m_data = nullptr;
+        return adoptMallocPtr<CharType, StringBufferMalloc>(data);
     }
 
 private:

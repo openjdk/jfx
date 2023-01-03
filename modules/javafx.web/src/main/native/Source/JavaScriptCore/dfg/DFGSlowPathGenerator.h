@@ -51,8 +51,8 @@ public:
         jit->m_outOfLineStreamIndex = m_streamIndex;
         jit->m_origin = m_origin;
         generateInternal(jit);
-        jit->m_outOfLineStreamIndex = WTF::nullopt;
-        if (!ASSERT_DISABLED)
+        jit->m_outOfLineStreamIndex = std::nullopt;
+        if (ASSERT_ENABLED)
             jit->m_jit.abortWithReason(DFGSlowPathGeneratorFellThrough);
     }
     MacroAssembler::Label label() const { return m_label; }
@@ -63,6 +63,7 @@ public:
     }
 
     const NodeOrigin& origin() const  { return m_origin; }
+    Node* currentNode() const { return m_currentNode; }
 
 protected:
     virtual void generateInternal(SpeculativeJIT*) = 0;
@@ -102,17 +103,16 @@ enum class ExceptionCheckRequirement : uint8_t {
     CheckNotNeeded
 };
 
-template<typename JumpType, typename FunctionType, typename ResultType>
+template<typename JumpType, typename ResultType>
 class CallSlowPathGenerator : public JumpingSlowPathGenerator<JumpType> {
 public:
     CallSlowPathGenerator(
-        JumpType from, SpeculativeJIT* jit, FunctionType function,
+        JumpType from, SpeculativeJIT* jit,
         SpillRegistersMode spillMode, ExceptionCheckRequirement requirement, ResultType result)
         : JumpingSlowPathGenerator<JumpType>(from, jit)
         , m_spillMode(spillMode)
         , m_exceptionCheckRequirement(requirement)
         , m_result(result)
-        , m_function(function)
     {
         if (m_spillMode == NeedToSpill)
             jit->silentSpillAllRegistersImpl(false, m_plans, extractResult(result));
@@ -153,37 +153,39 @@ protected:
     SpillRegistersMode m_spillMode;
     ExceptionCheckRequirement m_exceptionCheckRequirement;
     ResultType m_result;
-    FunctionType m_function;
     Vector<SilentRegisterSavePlan, 2> m_plans;
 };
 
 template<typename JumpType, typename FunctionType, typename ResultType, typename... Arguments>
-class CallResultAndArgumentsSlowPathGenerator
-    : public CallSlowPathGenerator<JumpType, FunctionType, ResultType> {
+class CallResultAndArgumentsSlowPathGenerator final : public CallSlowPathGenerator<JumpType, ResultType> {
 public:
     CallResultAndArgumentsSlowPathGenerator(
         JumpType from, SpeculativeJIT* jit, FunctionType function,
         SpillRegistersMode spillMode, ExceptionCheckRequirement requirement, ResultType result, Arguments... arguments)
-        : CallSlowPathGenerator<JumpType, FunctionType, ResultType>(
-            from, jit, function, spillMode, requirement, result)
+        : CallSlowPathGenerator<JumpType, ResultType>(from, jit, spillMode, requirement, result)
+        , m_function(function)
         , m_arguments(std::forward<Arguments>(arguments)...)
     {
     }
 
-protected:
+private:
     template<size_t... ArgumentsIndex>
     void unpackAndGenerate(SpeculativeJIT* jit, std::index_sequence<ArgumentsIndex...>)
     {
         this->setUp(jit);
-        this->recordCall(jit->callOperation(this->m_function, extractResult(this->m_result), std::get<ArgumentsIndex>(m_arguments)...));
+        if constexpr (std::is_same<ResultType, NoResultTag>::value)
+            this->recordCall(jit->callOperation(this->m_function, std::get<ArgumentsIndex>(m_arguments)...));
+        else
+            this->recordCall(jit->callOperation(this->m_function, extractResult(this->m_result), std::get<ArgumentsIndex>(m_arguments)...));
         this->tearDown(jit);
     }
 
-    void generateInternal(SpeculativeJIT* jit) override
+    void generateInternal(SpeculativeJIT* jit) final
     {
         unpackAndGenerate(jit, std::make_index_sequence<std::tuple_size<std::tuple<Arguments...>>::value>());
     }
 
+    FunctionType m_function;
     std::tuple<Arguments...> m_arguments;
 };
 
@@ -207,7 +209,7 @@ inline std::unique_ptr<SlowPathGenerator> slowPathCall(
 }
 
 template<typename JumpType, typename DestinationType, typename SourceType, unsigned numberOfAssignments>
-class AssigningSlowPathGenerator : public JumpingSlowPathGenerator<JumpType> {
+class AssigningSlowPathGenerator final : public JumpingSlowPathGenerator<JumpType> {
 public:
     AssigningSlowPathGenerator(
         JumpType from, SpeculativeJIT* jit,
@@ -221,8 +223,8 @@ public:
         }
     }
 
-protected:
-    void generateInternal(SpeculativeJIT* jit) override
+private:
+    void generateInternal(SpeculativeJIT* jit) final
     {
         this->linkFrom(jit);
         for (unsigned i = numberOfAssignments; i--;)
@@ -230,7 +232,6 @@ protected:
         this->jumpTo(jit);
     }
 
-private:
     DestinationType m_destination[numberOfAssignments];
     SourceType m_source[numberOfAssignments];
 };
@@ -261,6 +262,65 @@ inline std::unique_ptr<SlowPathGenerator> slowPathMove(
     DestinationType destinationArray[2] = { destination1, destination2 };
     return makeUnique<AssigningSlowPathGenerator<JumpType, DestinationType, SourceType, 2>>(
         from, jit, destinationArray, sourceArray);
+}
+
+template<typename JumpType, typename FunctionType, typename ResultType, typename... Arguments>
+class CallResultAndArgumentsSlowPathICGenerator final : public CallSlowPathGenerator<JumpType, ResultType> {
+public:
+    CallResultAndArgumentsSlowPathICGenerator(
+        JumpType from, SpeculativeJIT* jit, StructureStubInfo* stubInfo, GPRReg stubInfoGPR, CCallHelpers::Address slowPathOperationAddress, FunctionType function,
+        SpillRegistersMode spillMode, ExceptionCheckRequirement requirement, ResultType result, Arguments... arguments)
+        : CallSlowPathGenerator<JumpType, ResultType>(from, jit, spillMode, requirement, result)
+        , m_stubInfoGPR(stubInfoGPR)
+        , m_slowPathOperationAddress(slowPathOperationAddress)
+        , m_function(function)
+        , m_arguments(std::forward<Arguments>(arguments)...)
+        , m_stubInfo(stubInfo)
+    {
+    }
+
+private:
+    template<size_t... ArgumentsIndex>
+    void unpackAndGenerate(SpeculativeJIT* jit, std::index_sequence<ArgumentsIndex...>)
+    {
+        ASSERT(JITCode::useDataIC(JITType::DFGJIT));
+        this->setUp(jit);
+        m_stubInfo->m_slowOperation = m_function;
+        jit->m_jit.move(CCallHelpers::TrustedImmPtr(m_stubInfo), m_stubInfoGPR);
+        if constexpr (std::is_same<ResultType, NoResultTag>::value)
+            jit->callOperation<FunctionType>(m_slowPathOperationAddress, std::get<ArgumentsIndex>(m_arguments)...);
+        else
+            jit->callOperation<FunctionType>(m_slowPathOperationAddress, extractResult(this->m_result), std::get<ArgumentsIndex>(m_arguments)...);
+        this->tearDown(jit);
+    }
+
+    void generateInternal(SpeculativeJIT* jit) final
+    {
+        unpackAndGenerate(jit, std::make_index_sequence<std::tuple_size<std::tuple<Arguments...>>::value>());
+    }
+
+    GPRReg m_stubInfoGPR;
+    CCallHelpers::Address m_slowPathOperationAddress;
+    FunctionType m_function;
+    std::tuple<Arguments...> m_arguments;
+    StructureStubInfo* m_stubInfo;
+};
+
+template<typename JumpType, typename FunctionType, typename ResultType, typename... Arguments>
+inline std::unique_ptr<SlowPathGenerator> slowPathICCall(
+    JumpType from, SpeculativeJIT* jit, StructureStubInfo* stubInfo, GPRReg stubInfoGPR, CCallHelpers::Address slowPathOperationAddress, FunctionType function,
+    SpillRegistersMode spillMode, ExceptionCheckRequirement requirement,
+    ResultType result, Arguments... arguments)
+{
+    return makeUnique<CallResultAndArgumentsSlowPathICGenerator<JumpType, FunctionType, ResultType, Arguments...>>(from, jit, stubInfo, stubInfoGPR, slowPathOperationAddress, function, spillMode, requirement, result, arguments...);
+}
+
+template<typename JumpType, typename FunctionType, typename ResultType, typename... Arguments>
+inline std::unique_ptr<SlowPathGenerator> slowPathICCall(
+    JumpType from, SpeculativeJIT* jit, StructureStubInfo* stubInfo, GPRReg stubInfoGPR, CCallHelpers::Address slowPathOperationAddress, FunctionType function,
+    ResultType result, Arguments... arguments)
+{
+    return slowPathICCall(from, jit, stubInfo, stubInfoGPR, slowPathOperationAddress, function, NeedToSpill, ExceptionCheckRequirement::CheckNeeded, result, arguments...);
 }
 
 } } // namespace JSC::DFG

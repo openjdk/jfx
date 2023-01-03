@@ -22,20 +22,30 @@
 
 #pragma once
 
-#if ENABLE(IOS_AUTOCORRECT_AND_AUTOCAPITALIZE)
+#include "HTMLNames.h"
+#include "InputMode.h"
+#include "StyledElement.h"
+#include "ElementInlines.h"
+
+#if ENABLE(AUTOCAPITALIZE)
 #include "Autocapitalize.h"
 #endif
 
-#include "InputMode.h"
-#include "StyledElement.h"
-
 namespace WebCore {
 
-class DocumentFragment;
 class FormAssociatedElement;
 class FormNamedItem;
-class HTMLCollection;
 class HTMLFormElement;
+class VisibleSelection;
+struct SimpleRange;
+struct TextRecognitionResult;
+
+enum class PageIsEditable : bool;
+enum class EnterKeyHint : uint8_t;
+
+#if PLATFORM(IOS_FAMILY)
+enum class SelectionRenderingBehavior : bool;
+#endif
 
 class HTMLElement : public StyledElement {
     WTF_MAKE_ISO_ALLOCATED(HTMLElement);
@@ -53,10 +63,11 @@ public:
     WEBCORE_EXPORT String contentEditable() const;
     WEBCORE_EXPORT ExceptionOr<void> setContentEditable(const String&);
 
-    static Editability editabilityFromContentEditableAttr(const Node&);
+    static Editability editabilityFromContentEditableAttr(const Node&, PageIsEditable);
 
     virtual bool draggable() const;
     WEBCORE_EXPORT void setDraggable(bool);
+    virtual bool isDraggableIgnoringAttributes() const { return false; }
 
     WEBCORE_EXPORT bool spellcheck() const;
     WEBCORE_EXPORT void setSpellcheck(bool);
@@ -66,10 +77,12 @@ public:
 
     WEBCORE_EXPORT void click();
 
-    void accessKeyAction(bool sendMouseEvents) override;
+    bool accessKeyAction(bool sendMouseEvents) override;
 
-    bool rendererIsNeeded(const RenderStyle&) override;
+    String accessKeyLabel() const;
+
     RenderPtr<RenderElement> createElementRenderer(RenderStyle&&, const RenderTreePosition&) override;
+    bool rendererIsEverNeeded() final;
 
     WEBCORE_EXPORT virtual HTMLFormElement* form() const;
 
@@ -79,8 +92,8 @@ public:
     bool hasDirectionAuto() const;
     TextDirection directionalityIfhasDirAutoAttribute(bool& isAuto) const;
 
-    virtual bool isHTMLUnknownElement() const { return false; }
     virtual bool isTextControlInnerTextElement() const { return false; }
+    virtual bool isSearchFieldResultsButtonElement() const { return false; }
 
     bool willRespondToMouseMoveEvents() override;
     bool willRespondToMouseWheelEvents() override;
@@ -100,11 +113,13 @@ public:
     bool canBeActuallyDisabled() const;
     bool isActuallyDisabled() const;
 
-#if ENABLE(IOS_AUTOCORRECT_AND_AUTOCAPITALIZE)
+#if ENABLE(AUTOCAPITALIZE)
     WEBCORE_EXPORT virtual AutocapitalizeType autocapitalizeType() const;
     WEBCORE_EXPORT const AtomString& autocapitalize() const;
     WEBCORE_EXPORT void setAutocapitalize(const AtomString& value);
+#endif
 
+#if ENABLE(AUTOCORRECT)
     bool autocorrect() const { return shouldAutocorrect(); }
     WEBCORE_EXPORT virtual bool shouldAutocorrect() const;
     WEBCORE_EXPORT void setAutocorrect(bool);
@@ -114,26 +129,42 @@ public:
     const AtomString& inputMode() const;
     void setInputMode(const AtomString& value);
 
+    WEBCORE_EXPORT EnterKeyHint canonicalEnterKeyHint() const;
+    String enterKeyHint() const;
+    void setEnterKeyHint(const String& value);
+
+    WEBCORE_EXPORT static bool shouldExtendSelectionToTargetNode(const Node& targetNode, const VisibleSelection& selectionBeforeUpdate);
+
+#if PLATFORM(IOS_FAMILY)
+    static SelectionRenderingBehavior selectionRenderingBehavior(const Node*);
+#endif
+
 protected:
     HTMLElement(const QualifiedName& tagName, Document&, ConstructionType);
 
-    void addHTMLLengthToStyle(MutableStyleProperties&, CSSPropertyID, const String& value);
+    enum class AllowZeroValue : bool { No, Yes };
+    void addHTMLLengthToStyle(MutableStyleProperties&, CSSPropertyID, StringView value, AllowZeroValue = AllowZeroValue::Yes);
+    void addHTMLMultiLengthToStyle(MutableStyleProperties&, CSSPropertyID, StringView value);
+    void addHTMLPixelsToStyle(MutableStyleProperties&, CSSPropertyID, StringView value);
+    void addHTMLNumberToStyle(MutableStyleProperties&, CSSPropertyID, StringView value);
+
     void addHTMLColorToStyle(MutableStyleProperties&, CSSPropertyID, const String& color);
 
+    void applyAspectRatioFromWidthAndHeightAttributesToStyle(StringView widthAttribute, StringView heightAttribute, MutableStyleProperties&);
     void applyAlignmentAttributeToStyle(const AtomString&, MutableStyleProperties&);
     void applyBorderAttributeToStyle(const AtomString&, MutableStyleProperties&);
 
     bool matchesReadWritePseudoClass() const override;
     void parseAttribute(const QualifiedName&, const AtomString&) override;
-    bool isPresentationAttribute(const QualifiedName&) const override;
-    void collectStyleForPresentationAttribute(const QualifiedName&, const AtomString&, MutableStyleProperties&) override;
+    Node::InsertedIntoAncestorResult insertedIntoAncestor(InsertionType , ContainerNode& parentOfInsertedTree) override;
+    bool hasPresentationalHintsForAttribute(const QualifiedName&) const override;
+    void collectPresentationalHintsForAttribute(const QualifiedName&, const AtomString&, MutableStyleProperties&) override;
     unsigned parseBorderWidthAttribute(const AtomString&) const;
 
     void childrenChanged(const ChildChange&) override;
     void calculateAndAdjustDirectionality();
 
-    typedef HashMap<AtomStringImpl*, AtomString> EventHandlerNameMap;
-    template<size_t tableSize> static void populateEventHandlerNameMap(EventHandlerNameMap&, const QualifiedName* const (&table)[tableSize]);
+    using EventHandlerNameMap = HashMap<AtomStringImpl*, AtomString>;
     static const AtomString& eventNameForEventHandlerAttribute(const QualifiedName& attributeName, const EventHandlerNameMap&);
 
 private:
@@ -143,22 +174,19 @@ private:
 
     void dirAttributeChanged(const AtomString&);
     void adjustDirectionalityIfNeededAfterChildAttributeChanged(Element* child);
-    void adjustDirectionalityIfNeededAfterChildrenChanged(Element* beforeChange, ChildChangeType);
+    void adjustDirectionalityIfNeededAfterChildrenChanged(Element* beforeChange, ChildChange::Type);
     TextDirection directionality(Node** strongDirectionalityTextNode= 0) const;
 
-    static void populateEventHandlerNameMap(EventHandlerNameMap&, const QualifiedName* const table[], size_t tableSize);
-    static EventHandlerNameMap createEventHandlerNameMap();
+    enum class AllowPercentage : bool { No, Yes };
+    enum class UseCSSPXAsUnitType : bool { No, Yes };
+    enum class IsMultiLength : bool { No, Yes };
+    void addHTMLLengthToStyle(MutableStyleProperties&, CSSPropertyID, StringView value, AllowPercentage, UseCSSPXAsUnitType, IsMultiLength, AllowZeroValue = AllowZeroValue::Yes);
 };
 
 inline HTMLElement::HTMLElement(const QualifiedName& tagName, Document& document, ConstructionType type = CreateHTMLElement)
     : StyledElement(tagName, document, type)
 {
     ASSERT(tagName.localName().impl());
-}
-
-template<size_t tableSize> inline void HTMLElement::populateEventHandlerNameMap(EventHandlerNameMap& map, const QualifiedName* const (&table)[tableSize])
-{
-    populateEventHandlerNameMap(map, table, tableSize);
 }
 
 inline bool Node::hasTagName(const HTMLQualifiedName& name) const

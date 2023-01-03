@@ -619,12 +619,11 @@ _audio_stream_change_format (AudioStreamID stream_id,
    * it is also not atomic in its behaviour.
    * Therefore we check 4 times before we really give up. */
   for (i = 0; i < 4; i++) {
-    GTimeVal timeout;
+    gint64 timeout;
 
-    g_get_current_time (&timeout);
-    g_time_val_add (&timeout, 250000);
+    timeout = g_get_monotonic_time () + 250000;
 
-    if (!g_cond_wait_until (&prop_mutex.cond, &prop_mutex.lock, timeout.tv_sec)) {
+    if (!g_cond_wait_until (&prop_mutex.cond, &prop_mutex.lock, timeout)) {
       GST_LOG ("timeout...");
     }
 

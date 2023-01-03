@@ -32,9 +32,12 @@
 
 namespace JSC {
 
+DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(RegisterAtOffsetList);
+
 RegisterAtOffsetList::RegisterAtOffsetList() { }
 
 RegisterAtOffsetList::RegisterAtOffsetList(RegisterSet registerSet, OffsetBaseType offsetBaseType)
+    : m_registers(registerSet.numberOfSetRegisters())
 {
     size_t numberOfRegisters = registerSet.numberOfSetRegisters();
     ptrdiff_t offset = 0;
@@ -42,10 +45,11 @@ RegisterAtOffsetList::RegisterAtOffsetList(RegisterSet registerSet, OffsetBaseTy
     if (offsetBaseType == FramePointerBased)
         offset = -(static_cast<ptrdiff_t>(numberOfRegisters) * sizeof(CPURegister));
 
-    m_registers.reserveInitialCapacity(numberOfRegisters);
+    unsigned index = 0;
     registerSet.forEach([&] (Reg reg) {
-        m_registers.append(RegisterAtOffset(reg, offset));
+        m_registers[index] = RegisterAtOffset(reg, offset);
         offset += sizeof(CPURegister);
+        ++index;
     });
 }
 
@@ -72,6 +76,16 @@ const RegisterAtOffsetList& RegisterAtOffsetList::llintBaselineCalleeSaveRegiste
     static LazyNeverDestroyed<RegisterAtOffsetList> result;
     std::call_once(onceKey, [] {
         result.construct(RegisterSet::llintBaselineCalleeSaveRegisters());
+    });
+    return result.get();
+}
+
+const RegisterAtOffsetList& RegisterAtOffsetList::dfgCalleeSaveRegisters()
+{
+    static std::once_flag onceKey;
+    static LazyNeverDestroyed<RegisterAtOffsetList> result;
+    std::call_once(onceKey, [] {
+        result.construct(RegisterSet::dfgCalleeSaveRegisters());
     });
     return result.get();
 }

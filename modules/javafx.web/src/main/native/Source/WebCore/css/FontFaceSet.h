@@ -27,24 +27,27 @@
 
 #include "ActiveDOMObject.h"
 #include "CSSFontFaceSet.h"
-#include "DOMPromiseProxy.h"
 #include "EventTarget.h"
-#include "JSDOMPromiseDeferred.h"
+#include "IDLTypes.h"
+#include <wtf/UniqueRef.h>
 
 namespace WebCore {
 
+template<typename IDLType> class DOMPromiseDeferred;
+template<typename IDLType> class DOMPromiseProxyWithResolveCallback;
+
 class DOMException;
 
-class FontFaceSet final : public RefCounted<FontFaceSet>, private CSSFontFaceSetClient, public EventTargetWithInlineData, private  ActiveDOMObject {
+class FontFaceSet final : public RefCounted<FontFaceSet>, private CSSFontFaceSet::FontEventClient, public EventTargetWithInlineData, public ActiveDOMObject {
     WTF_MAKE_ISO_ALLOCATED(FontFaceSet);
 public:
-    static Ref<FontFaceSet> create(Document&, const Vector<RefPtr<FontFace>>& initialFaces);
-    static Ref<FontFaceSet> create(Document&, CSSFontFaceSet& backing);
+    static Ref<FontFaceSet> create(ScriptExecutionContext&, const Vector<RefPtr<FontFace>>& initialFaces);
+    static Ref<FontFaceSet> create(ScriptExecutionContext&, CSSFontFaceSet& backing);
     virtual ~FontFaceSet();
 
     bool has(FontFace&) const;
-    size_t size() const;
-    FontFaceSet& add(FontFace&);
+    size_t size();
+    ExceptionOr<FontFaceSet&> add(FontFace&);
     bool remove(FontFace&);
     void clear();
 
@@ -56,8 +59,8 @@ public:
     LoadStatus status() const;
 
     using ReadyPromise = DOMPromiseProxyWithResolveCallback<IDLInterface<FontFaceSet>>;
-    ReadyPromise& ready() { return m_readyPromise; }
-    void didFirstLayout();
+    ReadyPromise& ready() { return m_readyPromise.get(); }
+    void documentDidFinishLoading();
 
     CSSFontFaceSet& backing() { return m_backing; }
 
@@ -88,21 +91,20 @@ private:
 
     public:
         Vector<Ref<FontFace>> faces;
-        LoadPromise promise;
+        UniqueRef<LoadPromise> promise;
         bool hasReachedTerminalState { false };
     };
 
-    FontFaceSet(Document&, const Vector<RefPtr<FontFace>>&);
-    FontFaceSet(Document&, CSSFontFaceSet&);
+    FontFaceSet(ScriptExecutionContext&, const Vector<RefPtr<FontFace>>&);
+    FontFaceSet(ScriptExecutionContext&, CSSFontFaceSet&);
 
-    // CSSFontFaceSetClient
+    // CSSFontFaceSet::FontEventClient
+    void faceFinished(CSSFontFace&, CSSFontFace::Status) final;
     void startedLoading() final;
     void completedLoading() final;
-    void faceFinished(CSSFontFace&, CSSFontFace::Status) final;
 
     // ActiveDOMObject
     const char* activeDOMObjectName() const final { return "FontFaceSet"; }
-    bool canSuspendForDocumentSuspension() const final;
 
     // EventTarget
     EventTargetInterface eventTargetInterface() const final { return FontFaceSetEventTargetInterfaceType; }
@@ -115,8 +117,9 @@ private:
 
     Ref<CSSFontFaceSet> m_backing;
     HashMap<RefPtr<FontFace>, Vector<Ref<PendingPromise>>> m_pendingPromises;
-    ReadyPromise m_readyPromise;
-    bool m_isFirstLayoutDone { true };
+    UniqueRef<ReadyPromise> m_readyPromise;
+
+    bool m_isDocumentLoaded { true };
 };
 
 }

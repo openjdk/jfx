@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -72,7 +72,7 @@ import javafx.scene.control.skin.ListCellSkin;
 // TODO add code examples
 public class ListCell<T> extends IndexedCell<T> {
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
@@ -87,7 +87,7 @@ public class ListCell<T> extends IndexedCell<T> {
     }
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Listeners                                                               *
      *     We have to listen to a number of properties on the ListView itself  *
@@ -122,7 +122,7 @@ public class ListCell<T> extends IndexedCell<T> {
      * Listens to the selectionModel property on the ListView. Whenever the entire model is changed,
      * we have to unhook the weakSelectedListener and update the selection.
      */
-    private final ChangeListener<MultipleSelectionModel<T>> selectionModelPropertyListener = new ChangeListener<MultipleSelectionModel<T>>() {
+    private final ChangeListener<MultipleSelectionModel<T>> selectionModelPropertyListener = new ChangeListener<>() {
         @Override
         public void changed(
                 ObservableValue<? extends MultipleSelectionModel<T>> observable,
@@ -205,7 +205,7 @@ public class ListCell<T> extends IndexedCell<T> {
      * Listens to the focusModel property on the ListView. Whenever the entire model is changed,
      * we have to unhook the weakFocusedListener and update the focus.
      */
-    private final ChangeListener<FocusModel<T>> focusModelPropertyListener = new ChangeListener<FocusModel<T>>() {
+    private final ChangeListener<FocusModel<T>> focusModelPropertyListener = new ChangeListener<>() {
         @Override public void changed(ObservableValue<? extends FocusModel<T>> observable,
                                       FocusModel<T> oldValue,
                                       FocusModel<T> newValue) {
@@ -221,14 +221,14 @@ public class ListCell<T> extends IndexedCell<T> {
 
 
     private final WeakInvalidationListener weakEditingListener = new WeakInvalidationListener(editingListener);
-    private final WeakListChangeListener<Integer> weakSelectedListener = new WeakListChangeListener<Integer>(selectedListener);
-    private final WeakChangeListener<MultipleSelectionModel<T>> weakSelectionModelPropertyListener = new WeakChangeListener<MultipleSelectionModel<T>>(selectionModelPropertyListener);
-    private final WeakListChangeListener<T> weakItemsListener = new WeakListChangeListener<T>(itemsListener);
+    private final WeakListChangeListener<Integer> weakSelectedListener = new WeakListChangeListener<>(selectedListener);
+    private final WeakChangeListener<MultipleSelectionModel<T>> weakSelectionModelPropertyListener = new WeakChangeListener<>(selectionModelPropertyListener);
+    private final WeakListChangeListener<T> weakItemsListener = new WeakListChangeListener<>(itemsListener);
     private final WeakInvalidationListener weakItemsPropertyListener = new WeakInvalidationListener(itemsPropertyListener);
     private final WeakInvalidationListener weakFocusedListener = new WeakInvalidationListener(focusedListener);
-    private final WeakChangeListener<FocusModel<T>> weakFocusModelPropertyListener = new WeakChangeListener<FocusModel<T>>(focusModelPropertyListener);
+    private final WeakChangeListener<FocusModel<T>> weakFocusModelPropertyListener = new WeakChangeListener<>(focusModelPropertyListener);
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Properties                                                              *
      *                                                                         *
@@ -237,11 +237,11 @@ public class ListCell<T> extends IndexedCell<T> {
     /**
      * The ListView associated with this Cell.
      */
-    private ReadOnlyObjectWrapper<ListView<T>> listView = new ReadOnlyObjectWrapper<ListView<T>>(this, "listView") {
+    private ReadOnlyObjectWrapper<ListView<T>> listView = new ReadOnlyObjectWrapper<>(this, "listView") {
         /**
          * A weak reference to the ListView itself, such that whenever the ...
          */
-        private WeakReference<ListView<T>> weakListViewRef = new WeakReference<ListView<T>>(null);
+        private WeakReference<ListView<T>> weakListViewRef = new WeakReference<>(null);
 
         @Override protected void invalidated() {
             // Get the current and old list view references
@@ -300,7 +300,7 @@ public class ListCell<T> extends IndexedCell<T> {
                 currentListView.focusModelProperty().addListener(weakFocusModelPropertyListener);
                 currentListView.selectionModelProperty().addListener(weakSelectionModelPropertyListener);
 
-                weakListViewRef = new WeakReference<ListView<T>>(currentListView);
+                weakListViewRef = new WeakReference<>(currentListView);
             }
 
             updateItem(-1);
@@ -315,7 +315,7 @@ public class ListCell<T> extends IndexedCell<T> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Public API                                                              *
      *                                                                         *
@@ -337,23 +337,27 @@ public class ListCell<T> extends IndexedCell<T> {
             updateItem(oldIndex);
             updateSelection();
             updateFocus();
+            updateEditing();
         }
     }
 
     /** {@inheritDoc} */
     @Override protected Skin<?> createDefaultSkin() {
-        return new ListCellSkin<T>(this);
+        return new ListCellSkin<>(this);
     }
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Editing API                                                             *
      *                                                                         *
      **************************************************************************/
+    // index at time of startEdit - fix for JDK-8165214
+    private int indexAtStartEdit;
 
     /** {@inheritDoc} */
     @Override public void startEdit() {
+        if (isEditing()) return;
         final ListView<T> list = getListView();
         if (!isEditable() || (list != null && ! list.isEditable())) {
             return;
@@ -364,29 +368,24 @@ public class ListCell<T> extends IndexedCell<T> {
         // by calling super.startEdit().
         super.startEdit();
 
+        if (!isEditing()) return;
+
+        indexAtStartEdit = getIndex();
          // Inform the ListView of the edit starting.
         if (list != null) {
-            list.fireEvent(new ListView.EditEvent<T>(list,
+            list.fireEvent(new ListView.EditEvent<>(list,
                     ListView.<T>editStartEvent(),
                     null,
-                    getIndex()));
-            list.edit(getIndex());
+                    indexAtStartEdit));
+            list.edit(indexAtStartEdit);
             list.requestFocus();
         }
+
     }
 
     /** {@inheritDoc} */
     @Override public void commitEdit(T newValue) {
         if (! isEditing()) return;
-        ListView<T> list = getListView();
-
-        if (list != null) {
-            // Inform the ListView of the edit being ready to be committed.
-            list.fireEvent(new ListView.EditEvent<T>(list,
-                    ListView.<T>editCommitEvent(),
-                    newValue,
-                    list.getEditingIndex()));
-        }
 
         // inform parent classes of the commit, so that they can switch us
         // out of the editing state.
@@ -394,6 +393,16 @@ public class ListCell<T> extends IndexedCell<T> {
         // call cancelEdit(), resulting in both commit and cancel events being
         // fired (as identified in RT-29650)
         super.commitEdit(newValue);
+
+        ListView<T> list = getListView();
+        // JDK-8187307: fire the commit after updating cell's editing state
+        if (list != null) {
+            // Inform the ListView of the edit being ready to be committed.
+            list.fireEvent(new ListView.EditEvent<>(list,
+                    ListView.<T>editCommitEvent(),
+                    newValue,
+                    list.getEditingIndex()));
+        }
 
         // update the item within this cell, so that it represents the new value
         updateItem(newValue, false);
@@ -417,13 +426,11 @@ public class ListCell<T> extends IndexedCell<T> {
     @Override public void cancelEdit() {
         if (! isEditing()) return;
 
-         // Inform the ListView of the edit being cancelled.
-        ListView<T> list = getListView();
-
         super.cancelEdit();
 
+        // Inform the ListView of the edit being cancelled.
+        ListView<T> list = getListView();
         if (list != null) {
-            int editingIndex = list.getEditingIndex();
 
             // reset the editing index on the ListView
             if (updateEditingIndex) list.edit(-1);
@@ -434,10 +441,10 @@ public class ListCell<T> extends IndexedCell<T> {
             // It would be rude of us to request it back again.
             ControlUtils.requestFocusOnControlOnlyIfCurrentFocusOwnerIsChild(list);
 
-            list.fireEvent(new ListView.EditEvent<T>(list,
+            list.fireEvent(new ListView.EditEvent<>(list,
                     ListView.<T>editCancelEvent(),
                     null,
-                    editingIndex));
+                    indexAtStartEdit));
         }
     }
 
@@ -483,7 +490,7 @@ public class ListCell<T> extends IndexedCell<T> {
             // refer to Ensemble8PopUpTree.png - in this case the arrows are being
             // shown as the new cells are instantiated with the arrows in the
             // children list, and are only hidden in updateItem.
-            if ((!isEmpty && oldValue != null) || firstRun) {
+            if (!isEmpty || firstRun) {
                 updateItem(null, true);
                 firstRun = false;
             }
@@ -539,22 +546,22 @@ public class ListCell<T> extends IndexedCell<T> {
         final ListView<T> list = getListView();
         final int editIndex = list == null ? -1 : list.getEditingIndex();
         final boolean editing = isEditing();
+        final boolean match = (list != null) && (index != -1) && (index == editIndex);
 
-        // Check that the list is specified, and my index is not -1
-        if (index != -1 && list != null) {
-            // If my index is the index being edited and I'm not currently in
-            // the edit mode, then I need to enter the edit mode
-            if (index == editIndex && !editing) {
-                startEdit();
-            } else if (index != editIndex && editing) {
-                // If my index is not the one being edited then I need to cancel
-                // the edit. The tricky thing here is that as part of this call
-                // I cannot end up calling list.edit(-1) the way that the standard
-                // cancelEdit method would do. Yet, I need to call cancelEdit
-                // so that subclasses which override cancelEdit can execute. So,
-                // I have to use a kind of hacky flag workaround.
+        if (match && !editing) {
+            startEdit();
+        } else if (!match && editing) {
+            // If my index is not the one being edited then I need to cancel
+            // the edit. The tricky thing here is that as part of this call
+            // I cannot end up calling list.edit(-1) the way that the standard
+            // cancelEdit method would do. Yet, I need to call cancelEdit
+            // so that subclasses which override cancelEdit can execute. So,
+            // I have to use a kind of hacky flag workaround.
+            try {
+                // try-finally to make certain that the flag is reliably reset to true
                 updateEditingIndex = false;
                 cancelEdit();
+            } finally {
                 updateEditingIndex = true;
             }
         }
@@ -562,7 +569,7 @@ public class ListCell<T> extends IndexedCell<T> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Stylesheet Handling                                                     *
      *                                                                         *
@@ -572,7 +579,7 @@ public class ListCell<T> extends IndexedCell<T> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Accessibility handling                                                  *
      *                                                                         *

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -40,6 +40,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 
 /**
+ * Converter to convert a parsed representation of a {@code Font} to a {@code Font}.
  * @since 9
  */
 public final class FontConverter extends StyleConverter<ParsedValue[], Font> {
@@ -49,6 +50,10 @@ public final class FontConverter extends StyleConverter<ParsedValue[], Font> {
         static final FontConverter INSTANCE = new FontConverter();
     }
 
+    /**
+     * Gets the {@code FontConverter} instance.
+     * @return the {@code FontConverter} instance
+     */
     public static StyleConverter<ParsedValue[], Font> getInstance() {
         return Holder.INSTANCE;
     }
@@ -110,6 +115,11 @@ public final class FontConverter extends StyleConverter<ParsedValue[], Font> {
         return "FontConverter";
     }
 
+    /**
+     * Converter to convert a {@code String} value to a {@code FontPosture} object.
+     *
+     * @since 9
+     */
     public static final class FontStyleConverter extends StyleConverter<String, FontPosture> {
 
         // lazy, thread-safe instatiation
@@ -117,6 +127,10 @@ public final class FontConverter extends StyleConverter<ParsedValue[], Font> {
             static final FontStyleConverter INSTANCE = new FontStyleConverter();
         }
 
+        /**
+         * Gets the {@code FontStyleConverter} instance.
+         * @return the {@code FontStyleConverter} instance
+         */
         public static FontStyleConverter getInstance() {
             return Holder.INSTANCE;
         }
@@ -156,6 +170,11 @@ public final class FontConverter extends StyleConverter<ParsedValue[], Font> {
         }
     }
 
+    /**
+     * Converter to convert a {@code String} value to a {@code FontWeight} object.
+     *
+     * @since 9
+     */
     public static final class FontWeightConverter extends StyleConverter<String, FontWeight> {
 
         // lazy, thread-safe instatiation
@@ -163,6 +182,10 @@ public final class FontConverter extends StyleConverter<ParsedValue[], Font> {
             static final FontWeightConverter INSTANCE = new FontWeightConverter();
         }
 
+        /**
+         * Gets the {@code FontWeightConverter} instance.
+         * @return the {@code FontWeightConverter} instance
+         */
         public static FontWeightConverter getInstance() {
             return Holder.INSTANCE;
         }
@@ -203,6 +226,11 @@ public final class FontConverter extends StyleConverter<ParsedValue[], Font> {
         }
     }
 
+    /**
+     * Converter to convert a parsed font size value to a {@code Number} object.
+     *
+     * @since 9
+     */
     public static final class FontSizeConverter extends StyleConverter<ParsedValue<?, Size>, Number> {
 
         // lazy, thread-safe instatiation
@@ -210,6 +238,10 @@ public final class FontConverter extends StyleConverter<ParsedValue[], Font> {
             static final FontSizeConverter INSTANCE = new FontSizeConverter();
         }
 
+        /**
+         * Gets the {@code FontSizeConverter} instance.
+         * @return the {@code FontSizeConverter} instance
+         */
         public static FontSizeConverter getInstance() {
             return Holder.INSTANCE;
         }

@@ -39,7 +39,9 @@ class SVGElement;
 class SVGSMILElement;
 class SVGSVGElement;
 
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(SMILTimeContainer);
 class SMILTimeContainer final : public RefCounted<SMILTimeContainer>  {
+    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(SMILTimeContainer);
 public:
     static Ref<SMILTimeContainer> create(SVGSVGElement& owner) { return adoptRef(*new SMILTimeContainer(owner)); }
 
@@ -69,12 +71,11 @@ private:
     void startTimer(SMILTime elapsed, SMILTime fireTime, SMILTime minimumDelay = 0);
     void updateAnimations(SMILTime elapsed, bool seekToTime = false);
 
-    typedef std::pair<SVGElement*, QualifiedName> ElementAttributePair;
-    typedef Vector<SVGSMILElement*> AnimationsVector;
-    typedef HashMap<ElementAttributePair, std::unique_ptr<AnimationsVector>> GroupedAnimationsMap;
+    using ElementAttributePair = std::pair<SVGElement*, QualifiedName>;
+    using AnimationsVector = Vector<SVGSMILElement*>;
+    using GroupedAnimationsMap = HashMap<ElementAttributePair, AnimationsVector>;
 
-    void processAnimations(const AnimationsVector&, Function<void(SVGSMILElement*)>&&);
-    void processScheduledAnimations(Function<void(SVGSMILElement*)>&&);
+    void processScheduledAnimations(const Function<void(SVGSMILElement&)>&);
     void updateDocumentOrderIndexes();
     void sortByPriority(AnimationsVector& smilElements, SMILTime elapsed);
 

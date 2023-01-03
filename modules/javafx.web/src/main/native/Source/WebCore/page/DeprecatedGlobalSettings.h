@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2003-2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2003-2021 Apple Inc. All rights reserved.
  *           (C) 2006 Graham Dennis (graham.dennis@gmail.com)
  *
  * Redistribution and use in source and binary forms, with or without
@@ -39,15 +39,6 @@ public:
     static bool shouldUseHighResolutionTimers() { return gShouldUseHighResolutionTimers; }
 #endif
 
-    static bool isPostLoadCPUUsageMeasurementEnabled();
-    static bool isPostBackgroundingCPUUsageMeasurementEnabled();
-    static bool isPerActivityStateCPUUsageMeasurementEnabled();
-
-    static bool isPostLoadMemoryUsageMeasurementEnabled();
-    static bool isPostBackgroundingMemoryUsageMeasurementEnabled();
-
-    static bool globalConstRedeclarationShouldThrow();
-
 #if USE(AVFOUNDATION)
     WEBCORE_EXPORT static void setAVFoundationEnabled(bool flag);
     static bool isAVFoundationEnabled() { return gAVFoundationEnabled; }
@@ -65,12 +56,6 @@ public:
 
     WEBCORE_EXPORT static void setUsesOverlayScrollbars(bool flag);
     static bool usesOverlayScrollbars();
-
-    WEBCORE_EXPORT static void setUsesMockScrollAnimator(bool);
-    static bool usesMockScrollAnimator();
-
-    WEBCORE_EXPORT static void setShouldRespectPriorityInCSSAttributeSetters(bool);
-    static bool shouldRespectPriorityInCSSAttributeSetters();
 
     static bool lowPowerVideoAudioBufferSizeEnabled() { return gLowPowerVideoAudioBufferSizeEnabled; }
     WEBCORE_EXPORT static void setLowPowerVideoAudioBufferSizeEnabled(bool);
@@ -90,18 +75,14 @@ public:
 
     static void setDisableScreenSizeOverride(bool flag) { gDisableScreenSizeOverride = flag; }
     static bool disableScreenSizeOverride() { return gDisableScreenSizeOverride; }
-#if HAVE(AVKIT)
-    static void setAVKitEnabled(bool flag) { gAVKitEnabled = flag; }
-#endif
-    static bool avKitEnabled() { return gAVKitEnabled; }
 
     static void setShouldOptOutOfNetworkStateObservation(bool flag) { gShouldOptOutOfNetworkStateObservation = flag; }
     static bool shouldOptOutOfNetworkStateObservation() { return gShouldOptOutOfNetworkStateObservation; }
 #endif
 
 #if USE(AUDIO_SESSION)
-    static void setShouldManageAudioSessionCategory(bool flag) { gManageAudioSession = flag; }
-    static bool shouldManageAudioSessionCategory() { return gManageAudioSession; }
+    WEBCORE_EXPORT static void setShouldManageAudioSessionCategory(bool flag);
+    WEBCORE_EXPORT static bool shouldManageAudioSessionCategory();
 #endif
 
     WEBCORE_EXPORT static void setAllowsAnySSLCertificate(bool);
@@ -119,68 +100,20 @@ private:
 
     static bool gMockScrollbarsEnabled;
     static bool gUsesOverlayScrollbars;
-    static bool gMockScrollAnimatorEnabled;
 
 #if PLATFORM(WIN)
     static bool gShouldUseHighResolutionTimers;
 #endif
-    static bool gShouldRespectPriorityInCSSAttributeSetters;
 #if PLATFORM(IOS_FAMILY)
     static bool gNetworkDataUsageTrackingEnabled;
-    WEBCORE_EXPORT static bool gAVKitEnabled;
     WEBCORE_EXPORT static bool gShouldOptOutOfNetworkStateObservation;
     WEBCORE_EXPORT static bool gDisableScreenSizeOverride;
 #endif
     WEBCORE_EXPORT static bool gManageAudioSession;
 
     static bool gLowPowerVideoAudioBufferSizeEnabled;
-    static bool gResourceLoadStatisticsEnabledEnabled;
+    WEBCORE_EXPORT static bool gResourceLoadStatisticsEnabledEnabled;
     static bool gAllowsAnySSLCertificate;
 };
-
-inline bool DeprecatedGlobalSettings::isPostLoadCPUUsageMeasurementEnabled()
-{
-#if PLATFORM(COCOA)
-    return true;
-#else
-    return false;
-#endif
-}
-
-inline bool DeprecatedGlobalSettings::isPostBackgroundingCPUUsageMeasurementEnabled()
-{
-#if PLATFORM(MAC)
-    return true;
-#else
-    return false;
-#endif
-}
-
-inline bool DeprecatedGlobalSettings::isPerActivityStateCPUUsageMeasurementEnabled()
-{
-#if PLATFORM(MAC)
-    return true;
-#else
-    return false;
-#endif
-}
-
-inline bool DeprecatedGlobalSettings::isPostLoadMemoryUsageMeasurementEnabled()
-{
-#if PLATFORM(COCOA)
-    return true;
-#else
-    return false;
-#endif
-}
-
-inline bool DeprecatedGlobalSettings::isPostBackgroundingMemoryUsageMeasurementEnabled()
-{
-#if PLATFORM(MAC)
-    return true;
-#else
-    return false;
-#endif
-}
 
 } // namespace WebCore

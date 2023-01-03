@@ -21,7 +21,6 @@
 #pragma once
 
 #include "SVGPropertyOwner.h"
-#include <wtf/Optional.h>
 #include <wtf/RefCounted.h>
 #include <wtf/text/WTFString.h>
 
@@ -36,7 +35,7 @@ public:
 
     // Managing the relationship with the owner.
     bool isAttached() const { return m_owner; }
-    void attach(SVGPropertyOwner* owner, SVGPropertyAccess access)
+    virtual void attach(SVGPropertyOwner* owner, SVGPropertyAccess access)
     {
         ASSERT(!m_owner);
         ASSERT(m_state == SVGPropertyState::Clean);
@@ -44,10 +43,17 @@ public:
         m_access = access;
     }
 
-    void detach()
+    virtual void detach()
     {
         m_owner = nullptr;
         m_access = SVGPropertyAccess::ReadWrite;
+        m_state = SVGPropertyState::Clean;
+    }
+
+    void reattach(SVGPropertyOwner* owner, SVGPropertyAccess access)
+    {
+        ASSERT_UNUSED(owner, owner == m_owner);
+        m_access = access;
         m_state = SVGPropertyState::Clean;
     }
 
@@ -72,10 +78,10 @@ public:
     // Synchronizing the SVG attribute and its reflection here.
     bool isDirty() const { return m_state == SVGPropertyState::Dirty; }
     void setDirty() { m_state = SVGPropertyState::Dirty; }
-    Optional<String> synchronize()
+    std::optional<String> synchronize()
     {
         if (m_state == SVGPropertyState::Clean)
-            return WTF::nullopt;
+            return std::nullopt;
         m_state = SVGPropertyState::Clean;
         return valueAsString();
     }

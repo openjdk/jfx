@@ -117,7 +117,7 @@ bool AccessibilityList::childHasPseudoVisibleListItemMarkers(RenderObject* listI
 
     // Platforms which expose rendered text content through the parent element will treat
     // those renderers as "ignored" objects.
-#if USE(ATK)
+#if USE(ATK) || USE(ATSPI)
     String text = axObj->textUnderElement();
     return !text.isEmpty() && !text.isAllSpecialCharacters<isHTMLSpace>();
 #else
@@ -185,8 +185,13 @@ AccessibilityRole AccessibilityList::determineAccessibilityRole()
     if (ariaRoleAttribute() != AccessibilityRole::Unknown) {
         if (!listItemCount)
             role = AccessibilityRole::ApplicationGroup;
-    } else if (!hasVisibleMarkers)
-        role = AccessibilityRole::Group;
+    } else if (!hasVisibleMarkers) {
+        // http://webkit.org/b/193382 lists inside of navigation hierarchies should still be considered lists.
+        if (Accessibility::findAncestor<AXCoreObject>(*this, false, [] (auto& object) { return object.roleValue() == AccessibilityRole::LandmarkNavigation; }))
+            role = AccessibilityRole::List;
+        else
+            role = AccessibilityRole::Group;
+    }
 
     return role;
 }

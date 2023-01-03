@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -51,7 +51,6 @@ import java.time.temporal.TemporalUnit;
 import javafx.css.CssMetaData;
 import javafx.css.converter.DurationConverter;
 import javafx.css.Styleable;
-import javafx.css.StyleableObjectProperty;
 import javafx.css.StyleableProperty;
 import javafx.css.SimpleStyleableObjectProperty;
 
@@ -130,7 +129,7 @@ public class Spinner<T> extends Control {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
@@ -352,7 +351,7 @@ public class Spinner<T> extends Control {
      * @param items A list of items that will be stepped through in the Spinner.
      */
     public Spinner(@NamedArg("items") ObservableList<T> items) {
-        this(new SpinnerValueFactory.ListSpinnerValueFactory<T>(items));
+        this(new SpinnerValueFactory.ListSpinnerValueFactory<>(items));
     }
 
     /**
@@ -368,7 +367,7 @@ public class Spinner<T> extends Control {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Public API                                                              *
      *                                                                         *
@@ -483,7 +482,7 @@ public class Spinner<T> extends Control {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Properties                                                              *
      *                                                                         *
@@ -506,7 +505,7 @@ public class Spinner<T> extends Control {
      * spinner.getValueFactory().setValue(newValue);
      * }</pre>
      */
-    private ReadOnlyObjectWrapper<T> value = new ReadOnlyObjectWrapper<T>(this, "value");
+    private ReadOnlyObjectWrapper<T> value = new ReadOnlyObjectWrapper<>(this, "value");
     public final T getValue() {
         return value.get();
     }
@@ -533,7 +532,7 @@ public class Spinner<T> extends Control {
      * </ul>
      */
     private ObjectProperty<SpinnerValueFactory<T>> valueFactory =
-            new SimpleObjectProperty<SpinnerValueFactory<T>>(this, "valueFactory") {
+            new SimpleObjectProperty<>(this, "valueFactory") {
                 @Override protected void invalidated() {
                     value.unbind();
 
@@ -568,13 +567,15 @@ public class Spinner<T> extends Control {
      * {@link SpinnerValueFactory#setValue(Object)} method. If the value
      * is valid, it will remain as the value. If it is invalid, the value factory
      * will need to react accordingly and back out this change.
+     *
+     * @defaultValue {@code false}
      */
     private BooleanProperty editable;
     public final void setEditable(boolean value) {
         editableProperty().set(value);
     }
     public final boolean isEditable() {
-        return editable == null ? true : editable.get();
+        return editable == null ? false : editable.get();
     }
     public final BooleanProperty editableProperty() {
         if (editable == null) {
@@ -611,6 +612,7 @@ public class Spinner<T> extends Control {
      * {@code null} if no prompt text is displayed.
      * @return the prompt text property
      * @since 9
+     * @defaultValue Empty string
      */
     public final StringProperty promptTextProperty() { return getEditor().promptTextProperty(); }
     public final String getPromptText() { return getEditor().getPromptText(); }
@@ -625,7 +627,7 @@ public class Spinner<T> extends Control {
      * before the next value steps. Successive step duration is set using
      * {@link #repeatDelayProperty() repeat delay}.
      *
-     * @return inital delay property
+     * @return initial delay property
      * @since 11
      * @defaultValue 300ms
      */
@@ -670,14 +672,14 @@ public class Spinner<T> extends Control {
         return repeatDelay.get();
     }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Stylesheet Handling                                                     *
      *                                                                         *
      **************************************************************************/
 
     private static final CssMetaData<Spinner<?>,Duration> INITIAL_DELAY =
-                                    new CssMetaData<Spinner<?>,Duration>("-fx-initial-delay",
+                                    new CssMetaData<>("-fx-initial-delay",
                                         DurationConverter.getInstance(), new Duration(300)) {
 
         @Override
@@ -692,7 +694,7 @@ public class Spinner<T> extends Control {
     };
 
     private static final CssMetaData<Spinner<?>,Duration> REPEAT_DELAY =
-                                   new CssMetaData<Spinner<?>,Duration>("-fx-repeat-delay",
+                                   new CssMetaData<>("-fx-repeat-delay",
                                         DurationConverter.getInstance(), new Duration(60)) {
 
         @Override
@@ -715,9 +717,10 @@ public class Spinner<T> extends Control {
         STYLEABLES = Collections.unmodifiableList(styleables);
     }
 
-    /*
-     * @return The CssMetaData associated with this class, which may include the
-     * CssMetaData of its superclasses.
+    /**
+     * Gets the {@code CssMetaData} associated with this class, which may include the
+     * {@code CssMetaData} of its superclasses.
+     * @return the {@code CssMetaData}
      * @since 11
      */
     public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
@@ -733,7 +736,7 @@ public class Spinner<T> extends Control {
         return getClassCssMetaData();
     }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Implementation                                                          *
      *                                                                         *
@@ -808,7 +811,7 @@ public class Spinner<T> extends Control {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Accessibility handling                                                  *
      *                                                                         *

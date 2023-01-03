@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -65,16 +65,9 @@ public class ParameterisedPrebuiltCellTest {
         this.cellClass = cellClass;
     }
 
-    @Before public void setup() {
+    @Before public void setup() throws Exception {
         count = 0;
-
-        try {
-            cell = cellClass.newInstance();
-        } catch (InstantiationException e) {
-            e.printStackTrace();
-        } catch (IllegalAccessException e) {
-            e.printStackTrace();
-        }
+        cell = cellClass.getDeclaredConstructor().newInstance();
     }
 
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -56,10 +56,11 @@ public final class Disposer implements Runnable {
     private static final ReferenceQueue queue = new ReferenceQueue();
     private static final Disposer disposerInstance = new Disposer();
     private static final Set<WeakDisposerRecord> records =
-            new HashSet<WeakDisposerRecord>();
+            new HashSet<>();
 
     static {
-        java.security.AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+        @SuppressWarnings("removal")
+        var dummy = java.security.AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
             /*
              * The thread must be a member of a thread group
              * which will not get GCed before VM exit.
@@ -116,6 +117,7 @@ public final class Disposer implements Runnable {
         records.add(rec);
     }
 
+    @Override
     public void run() {
         while (true) {
             try {
@@ -139,7 +141,7 @@ public final class Disposer implements Runnable {
         private boolean isRunning = false;
         private final Object disposerLock = new Object();
         private final LinkedBlockingQueue<WeakDisposerRecord> disposerQueue
-                = new LinkedBlockingQueue<WeakDisposerRecord>();
+                = new LinkedBlockingQueue<>();
 
         private void enqueueAll(Collection<WeakDisposerRecord> objs) {
             synchronized (disposerLock) {

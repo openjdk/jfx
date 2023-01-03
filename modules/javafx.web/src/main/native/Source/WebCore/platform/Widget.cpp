@@ -50,7 +50,7 @@ void Widget::setParent(ScrollView* view)
     ASSERT(!view || !m_parent);
     if (!view || !view->isVisible())
         setParentVisible(false);
-    m_parent = makeWeakPtr(view);
+    m_parent = view;
     if (view && view->isVisible())
         setParentVisible(true);
 }
@@ -263,7 +263,10 @@ IntPoint Widget::convertFromContainingView(const IntPoint& parentPoint) const
 
 FloatPoint Widget::convertToContainingView(const FloatPoint& localPoint) const
 {
-    return convertToContainingView(IntPoint(localPoint));
+    if (const ScrollView* parentScrollView = parent())
+        return parentScrollView->convertChildToSelf(this, localPoint);
+
+    return localPoint;
 }
 
 FloatPoint Widget::convertFromContainingView(const FloatPoint& parentPoint) const
@@ -271,7 +274,7 @@ FloatPoint Widget::convertFromContainingView(const FloatPoint& parentPoint) cons
     return convertFromContainingView(IntPoint(parentPoint));
 }
 
-#if !PLATFORM(COCOA) && !PLATFORM(GTK) && !PLATFORM(WIN) && !PLATFORM(JAVA)
+#if !PLATFORM(COCOA) && !PLATFORM(GTK) && !PLATFORM(WIN) && !PLATFORM(PLAYSTATION) && !PLATFORM(JAVA)
 
 Widget::~Widget()
 {
@@ -285,7 +288,7 @@ void Widget::setFrameRect(const IntRect& rect)
     notImplemented();
 }
 
-void Widget::paint(GraphicsContext&, const IntRect&, SecurityOriginPaintPolicy)
+void Widget::paint(GraphicsContext&, const IntRect&, SecurityOriginPaintPolicy, EventRegionContext*)
 {
     notImplemented();
 }
@@ -315,6 +318,6 @@ void Widget::setIsSelected(bool)
     notImplemented();
 }
 
-#endif // !PLATFORM(COCOA) && !PLATFORM(GTK) && !PLATFORM(WIN)
+#endif // !PLATFORM(COCOA) && !PLATFORM(GTK) && !PLATFORM(WIN) && !PLATFORM(PLAYSTATION) && !PLATFORM(JAVA)
 
 } // namespace WebCore

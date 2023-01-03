@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -88,7 +88,7 @@ float4 main(ObjectPsIn objAttr, LocalBump  lSpace) : color {
     float3 diff = 0;
     float3 spec = 0;
 
-    phong(n, nEye, sPower, lSpace.lights, diff, spec, 0, nSpecular);
+    phong(n, nEye, sPower, lSpace.lights, lSpace.lightDirs, diff, spec, 0, nSpecular);
 
     float3 rez = (ambColor.xyz+diff)*tDiff.xyz + spec*tSpec.rgb;
 

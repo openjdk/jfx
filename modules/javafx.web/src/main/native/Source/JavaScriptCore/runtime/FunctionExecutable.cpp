@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2009-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,25 +25,17 @@
 
 #include "config.h"
 
-#include "BatchedTransitionOptimizer.h"
 #include "CodeBlock.h"
-#include "Debugger.h"
 #include "FunctionCodeBlock.h"
 #include "FunctionOverrides.h"
-#include "JIT.h"
-#include "JSCInlines.h"
-#include "LLIntEntrypoint.h"
-#include "Parser.h"
-#include "TypeProfiler.h"
-#include "VMInlines.h"
-#include <wtf/CommaPrinter.h>
+#include "JSCJSValueInlines.h"
 
 namespace JSC {
 
 const ClassInfo FunctionExecutable::s_info = { "FunctionExecutable", &ScriptExecutable::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(FunctionExecutable) };
 
-FunctionExecutable::FunctionExecutable(VM& vm, const SourceCode& source, UnlinkedFunctionExecutable* unlinkedExecutable, Intrinsic intrinsic)
-    : ScriptExecutable(vm.functionExecutableStructure.get(), vm, source, unlinkedExecutable->isInStrictContext(), unlinkedExecutable->derivedContextType(), false, EvalContextType::None, intrinsic)
+FunctionExecutable::FunctionExecutable(VM& vm, const SourceCode& source, UnlinkedFunctionExecutable* unlinkedExecutable, Intrinsic intrinsic, bool isInsideOrdinaryFunction)
+    : ScriptExecutable(vm.functionExecutableStructure.get(), vm, source, unlinkedExecutable->lexicalScopeFeatures(), unlinkedExecutable->derivedContextType(), false, isInsideOrdinaryFunction || !unlinkedExecutable->isArrowFunction(), EvalContextType::None, intrinsic)
     , m_unlinkedExecutable(vm, this, unlinkedExecutable)
 {
     RELEASE_ASSERT(!source.isNull());
@@ -71,11 +63,12 @@ FunctionCodeBlock* FunctionExecutable::baselineCodeBlockFor(CodeSpecializationKi
         edge = m_codeBlockForConstruct.get();
     }
     if (!edge)
-        return 0;
+        return nullptr;
     return static_cast<FunctionCodeBlock*>(edge->codeBlock()->baselineAlternative());
 }
 
-void FunctionExecutable::visitChildren(JSCell* cell, SlotVisitor& visitor)
+template<typename Visitor>
+void FunctionExecutable::visitChildrenImpl(JSCell* cell, Visitor& visitor)
 {
     FunctionExecutable* thisObject = jsCast<FunctionExecutable*>(cell);
     ASSERT_GC_OBJECT_INHERITS(thisObject, info());
@@ -85,26 +78,29 @@ void FunctionExecutable::visitChildren(JSCell* cell, SlotVisitor& visitor)
     visitor.append(thisObject->m_codeBlockForConstruct);
     visitor.append(thisObject->m_unlinkedExecutable);
     if (RareData* rareData = thisObject->m_rareData.get()) {
-        visitor.append(rareData->m_cachedPolyProtoStructure);
+        visitor.append(rareData->m_cachedPolyProtoStructureID);
+        visitor.append(rareData->m_asString);
         if (TemplateObjectMap* map = rareData->m_templateObjectMap.get()) {
-            auto locker = holdLock(thisObject->cellLock());
+            Locker locker { thisObject->cellLock() };
             for (auto& entry : *map)
                 visitor.append(entry.value);
         }
     }
 }
 
+DEFINE_VISIT_CHILDREN(FunctionExecutable);
+
 FunctionExecutable* FunctionExecutable::fromGlobalCode(
-    const Identifier& name, ExecState& exec, const SourceCode& source,
-    JSObject*& exception, int overrideLineNumber, Optional<int> functionConstructorParametersEndPosition)
+    const Identifier& name, JSGlobalObject* globalObject, const SourceCode& source,
+    JSObject*& exception, int overrideLineNumber, std::optional<int> functionConstructorParametersEndPosition)
 {
     UnlinkedFunctionExecutable* unlinkedExecutable =
         UnlinkedFunctionExecutable::fromGlobalCode(
-            name, exec, source, exception, overrideLineNumber, functionConstructorParametersEndPosition);
+            name, globalObject, source, exception, overrideLineNumber, functionConstructorParametersEndPosition);
     if (!unlinkedExecutable)
         return nullptr;
 
-    return unlinkedExecutable->link(exec.vm(), nullptr, source, overrideLineNumber);
+    return unlinkedExecutable->link(globalObject->vm(), nullptr, source, overrideLineNumber);
 }
 
 FunctionExecutable::RareData& FunctionExecutable::ensureRareDataSlow()
@@ -119,6 +115,81 @@ FunctionExecutable::RareData& FunctionExecutable::ensureRareDataSlow()
     WTF::storeStoreFence();
     m_rareData = WTFMove(rareData);
     return *m_rareData;
+}
+
+JSString* FunctionExecutable::toStringSlow(JSGlobalObject* globalObject)
+{
+    VM& vm = getVM(globalObject);
+    ASSERT(m_rareData && !m_rareData->m_asString);
+
+    auto throwScope = DECLARE_THROW_SCOPE(vm);
+
+    const auto& cache = [&](JSString* asString) {
+        WTF::storeStoreFence();
+        m_rareData->m_asString.set(vm, this, asString);
+        return asString;
+    };
+
+    const auto& cacheIfNoException = [&](JSValue value) -> JSString* {
+        RETURN_IF_EXCEPTION(throwScope, nullptr);
+        return cache(::JSC::asString(value));
+    };
+
+    if (isBuiltinFunction())
+        return cacheIfNoException(jsMakeNontrivialString(globalObject, "function ", name().string(), "() {\n    [native code]\n}"));
+
+    if (isClass())
+        return cache(jsString(vm, classSource().view().toString()));
+
+    String functionHeader;
+    switch (parseMode()) {
+    case SourceParseMode::GeneratorWrapperFunctionMode:
+    case SourceParseMode::GeneratorWrapperMethodMode:
+        functionHeader = "function* ";
+        break;
+
+    case SourceParseMode::NormalFunctionMode:
+    case SourceParseMode::GetterMode:
+    case SourceParseMode::SetterMode:
+    case SourceParseMode::MethodMode:
+    case SourceParseMode::ProgramMode:
+    case SourceParseMode::ModuleAnalyzeMode:
+    case SourceParseMode::ModuleEvaluateMode:
+    case SourceParseMode::GeneratorBodyMode:
+    case SourceParseMode::AsyncGeneratorBodyMode:
+    case SourceParseMode::AsyncFunctionBodyMode:
+    case SourceParseMode::AsyncArrowFunctionBodyMode:
+        functionHeader = "function ";
+        break;
+
+    case SourceParseMode::ArrowFunctionMode:
+    case SourceParseMode::ClassFieldInitializerMode:
+        functionHeader = "";
+        break;
+
+    case SourceParseMode::AsyncFunctionMode:
+    case SourceParseMode::AsyncMethodMode:
+        functionHeader = "async function ";
+        break;
+
+    case SourceParseMode::AsyncArrowFunctionMode:
+        functionHeader = "async ";
+        break;
+
+    case SourceParseMode::AsyncGeneratorWrapperFunctionMode:
+    case SourceParseMode::AsyncGeneratorWrapperMethodMode:
+        functionHeader = "async function* ";
+        break;
+    }
+
+    StringView src = source().provider()->getRange(
+        parametersStartOffset(),
+        parametersStartOffset() + source().length());
+
+    String name = this->name().string();
+    if (name == vm.propertyNames->starDefaultPrivateName.string())
+        name = emptyString();
+    return cacheIfNoException(jsMakeNontrivialString(globalObject, functionHeader, name, src));
 }
 
 void FunctionExecutable::overrideInfo(const FunctionOverrideInfo& overrideInfo)

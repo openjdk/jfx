@@ -25,8 +25,8 @@
 
 #pragma once
 
-#include <wtf/DumbPtrTraits.h>
 #include <wtf/HashCountedSet.h>
+#include <wtf/RawPtrTraits.h>
 #include <wtf/RefPtr.h>
 
 namespace WebCore {
@@ -74,7 +74,7 @@ public:
 
     // Hash table deleted values, which are only constructed and never copied or destroyed.
     GCReachableRef(WTF::HashTableDeletedValueType)
-        : m_ptr(RefPtr<T>::hashTableDeletedValue())
+        : m_ptr(RefPtr<T>::PtrTraits::hashTableDeletedValue())
     { }
     bool isHashTableDeletedValue() const { return m_ptr.isHashTableDeletedValue(); }
 
@@ -124,8 +124,8 @@ template<typename P> struct HashTraits<WebCore::GCReachableRef<P>> : SimpleClass
     static PeekType peek(const Ref<P>& value) { return const_cast<PeekType>(value.ptrAllowingHashTableEmptyValue()); }
     static PeekType peek(P* value) { return value; }
 
-    typedef Optional<Ref<P>> TakeType;
-    static TakeType take(Ref<P>&& value) { return isEmptyValue(value) ? WTF::nullopt : Optional<Ref<P>>(WTFMove(value)); }
+    typedef std::optional<Ref<P>> TakeType;
+    static TakeType take(Ref<P>&& value) { return isEmptyValue(value) ? std::nullopt : std::optional<Ref<P>>(WTFMove(value)); }
 };
 
 template <typename T, typename U>
@@ -143,9 +143,7 @@ template<typename P> struct PtrHash<WebCore::GCReachableRef<P>> : PtrHashBase<We
     static const bool safeToCompareToEmptyOrDeleted = false;
 };
 
-template<typename P> struct DefaultHash<WebCore::GCReachableRef<P>> {
-    typedef PtrHash<WebCore::GCReachableRef<P>> Hash;
-};
+template<typename P> struct DefaultHash<WebCore::GCReachableRef<P>> : PtrHash<WebCore::GCReachableRef<P>> { };
 
 } // namespace WTF
 

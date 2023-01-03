@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -50,6 +50,7 @@
 #include <WebCore/NodeList.h>
 #include <WebCore/ProcessingInstruction.h>
 #include <WebCore/Range.h>
+#include <WebCore/SecurityOrigin.h>
 #include <WebCore/ScrollIntoViewOptions.h>
 #include <WebCore/StyleSheetList.h>
 #include <WebCore/Text.h>
@@ -191,7 +192,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_DocumentImpl_getDomainImpl(JNI
 JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_DocumentImpl_getURLImpl(JNIEnv* env, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<String>(env, IMPL->urlForBindings());
+    return JavaReturn<String>(env, IMPL->urlForBindings().string());
 }
 
 JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_DocumentImpl_getCookieImpl(JNIEnv* env, jclass, jlong peer)
@@ -365,9 +366,6 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_DocumentImpl_getVisibilityStat
     case WebCore::VisibilityState::Visible:
         visibility = "visible";
         break;
-    case WebCore::VisibilityState::Prerender:
-        visibility = "prerender";
-        break;
     }
     return JavaReturn<String>(env, String(visibility));
 }
@@ -381,13 +379,16 @@ JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_DocumentImpl_getHiddenImpl(JN
 JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_DocumentImpl_getCurrentScriptImpl(JNIEnv* env, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<HTMLScriptElement>(env, WTF::getPtr(IMPL->currentScript()));
+    WebCore::Element* element = IMPL->currentScript();
+    if (!is<WebCore::HTMLScriptElement>(element))
+        return 0;
+    return JavaReturn<HTMLScriptElement>(env, WTF::getPtr(downcast<WebCore::HTMLScriptElement>(element)));
 }
 
 JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_DocumentImpl_getOriginImpl(JNIEnv* env, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<String>(env, IMPL->origin());
+    return JavaReturn<String>(env, IMPL->securityOrigin().toString());
 }
 
 JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_DocumentImpl_getScrollingElementImpl(JNIEnv* env, jclass, jlong peer)
@@ -1416,7 +1417,10 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_DocumentImpl_createNSResolverImp
     , jlong nodeResolver)
 {
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<XPathNSResolver>(env, WTF::getPtr(IMPL->createNSResolver(static_cast<Node*>(jlong_to_ptr(nodeResolver)))));
+    if (!nodeResolver)
+        return 0;
+
+    return JavaReturn<XPathNSResolver>(env, WTF::getPtr(IMPL->createNSResolver(*static_cast<Node*>(jlong_to_ptr(nodeResolver)))));
 }
 
 // - (DOMXPathResult *)evaluate:(NSString *)expression
@@ -1434,7 +1438,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_DocumentImpl_evaluateImpl(JNIEnv
 {
     WebCore::JSMainThreadNullState state;
     return JavaReturn<XPathResult>(env, WTF::getPtr(raiseOnDOMError(env, IMPL->evaluate(String(env, expression)
-            , static_cast<Node*>(jlong_to_ptr(contextNode))
+            , *static_cast<Node*>(jlong_to_ptr(contextNode))
             , static_cast<XPathNSResolver*>(jlong_to_ptr(resolver))
             , type
             , static_cast<XPathResult*>(jlong_to_ptr(inResult))))));
@@ -1449,7 +1453,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_DocumentImpl_execCommandImpl(
     WebCore::JSMainThreadNullState state;
     return IMPL->execCommand(String(env, command)
             , userInterface
-            , String(env, value));
+            , String(env, value)).returnValue();
 }
 
 
@@ -1457,7 +1461,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_DocumentImpl_queryCommandEnab
     , jstring command)
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->queryCommandEnabled(String(env, command));
+    return IMPL->queryCommandEnabled(String(env, command)).returnValue();
 }
 
 
@@ -1465,7 +1469,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_DocumentImpl_queryCommandInde
     , jstring command)
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->queryCommandIndeterm(String(env, command));
+    return IMPL->queryCommandIndeterm(String(env, command)).returnValue();
 }
 
 
@@ -1473,7 +1477,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_DocumentImpl_queryCommandStat
     , jstring command)
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->queryCommandState(String(env, command));
+    return IMPL->queryCommandState(String(env, command)).returnValue();
 }
 
 
@@ -1481,7 +1485,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_DocumentImpl_queryCommandSupp
     , jstring command)
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->queryCommandSupported(String(env, command));
+    return IMPL->queryCommandSupported(String(env, command)).returnValue();
 }
 
 
@@ -1489,7 +1493,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_DocumentImpl_queryCommandValue
     , jstring command)
 {
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<String>(env, IMPL->queryCommandValue(String(env, command)));
+    return JavaReturn<String>(env, IMPL->queryCommandValue(String(env, command)).returnValue());
 }
 
 

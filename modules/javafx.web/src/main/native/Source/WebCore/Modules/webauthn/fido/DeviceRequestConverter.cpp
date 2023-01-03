@@ -1,5 +1,5 @@
 // Copyright 2017 The Chromium Authors. All rights reserved.
-// Copyright (C) 2018 Apple Inc. All rights reserved.
+// Copyright (C) 2018-2021 Apple Inc. All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
@@ -61,21 +61,19 @@ static CBORValue convertUserEntityToCBOR(const PublicKeyCredentialCreationOption
     userMap.emplace(CBORValue(kEntityNameMapKey), CBORValue(userEntity.name));
     if (!userEntity.icon.isEmpty())
         userMap.emplace(CBORValue(kIconUrlMapKey), CBORValue(userEntity.icon));
-    userMap.emplace(CBORValue(kEntityIdMapKey), CBORValue(userEntity.idVector));
+    userMap.emplace(CBORValue(kEntityIdMapKey), CBORValue(userEntity.id));
     userMap.emplace(CBORValue(kDisplayNameMapKey), CBORValue(userEntity.displayName));
     return CBORValue(WTFMove(userMap));
 }
 
 static CBORValue convertParametersToCBOR(const Vector<PublicKeyCredentialCreationOptions::Parameters>& parameters)
 {
-    CBORValue::ArrayValue credentialParamArray;
-    credentialParamArray.reserveInitialCapacity(parameters.size());
-    for (const auto& credential : parameters) {
+    auto credentialParamArray = parameters.map([](auto& credential) {
         CBORValue::MapValue cborCredentialMap;
         cborCredentialMap.emplace(CBORValue(kCredentialTypeMapKey), CBORValue(publicKeyCredentialTypeToString(credential.type)));
         cborCredentialMap.emplace(CBORValue(kCredentialAlgorithmMapKey), CBORValue(credential.alg));
-        credentialParamArray.append(WTFMove(cborCredentialMap));
-    }
+        return CBORValue { WTFMove(cborCredentialMap) };
+    });
     return CBORValue(WTFMove(credentialParamArray));
 }
 
@@ -83,11 +81,11 @@ static CBORValue convertDescriptorToCBOR(const PublicKeyCredentialDescriptor& de
 {
     CBORValue::MapValue cborDescriptorMap;
     cborDescriptorMap[CBORValue(kCredentialTypeKey)] = CBORValue(publicKeyCredentialTypeToString(descriptor.type));
-    cborDescriptorMap[CBORValue(kCredentialIdKey)] = CBORValue(descriptor.idVector);
+    cborDescriptorMap[CBORValue(kCredentialIdKey)] = CBORValue(descriptor.id);
     return CBORValue(WTFMove(cborDescriptorMap));
 }
 
-Vector<uint8_t> encodeMakeCredenitalRequestAsCBOR(const Vector<uint8_t>& hash, const PublicKeyCredentialCreationOptions& options, UVAvailability uvCapability)
+Vector<uint8_t> encodeMakeCredenitalRequestAsCBOR(const Vector<uint8_t>& hash, const PublicKeyCredentialCreationOptions& options, UVAvailability uvCapability, std::optional<PinParameters> pin)
 {
     CBORValue::MapValue cborMap;
     cborMap[CBORValue(1)] = CBORValue(hash);
@@ -111,18 +109,23 @@ Vector<uint8_t> encodeMakeCredenitalRequestAsCBOR(const Vector<uint8_t>& hash, c
         bool requireUserVerification = false;
         switch (options.authenticatorSelection->userVerification) {
         case UserVerificationRequirement::Required:
-            requireUserVerification = true;
-            break;
         case UserVerificationRequirement::Preferred:
-            requireUserVerification = uvCapability == UVAvailability::kNotSupported ? false : true;
+            requireUserVerification = uvCapability == UVAvailability::kSupportedAndConfigured;
             break;
         case UserVerificationRequirement::Discouraged:
             requireUserVerification = false;
         }
-        optionMap[CBORValue(kUserVerificationMapKey)] = CBORValue(requireUserVerification);
+        if (requireUserVerification)
+            optionMap[CBORValue(kUserVerificationMapKey)] = CBORValue(requireUserVerification);
     }
     if (!optionMap.empty())
         cborMap[CBORValue(7)] = CBORValue(WTFMove(optionMap));
+
+    if (pin) {
+        ASSERT(pin->protocol >= 0);
+        cborMap[CBORValue(8)] = CBORValue(WTFMove(pin->auth));
+        cborMap[CBORValue(9)] = CBORValue(pin->protocol);
+    }
 
     auto serializedParam = CBORWriter::write(CBORValue(WTFMove(cborMap)));
     ASSERT(serializedParam);
@@ -132,7 +135,7 @@ Vector<uint8_t> encodeMakeCredenitalRequestAsCBOR(const Vector<uint8_t>& hash, c
     return cborRequest;
 }
 
-Vector<uint8_t> encodeGetAssertionRequestAsCBOR(const Vector<uint8_t>& hash, const PublicKeyCredentialRequestOptions& options, UVAvailability uvCapability)
+Vector<uint8_t> encodeGetAssertionRequestAsCBOR(const Vector<uint8_t>& hash, const PublicKeyCredentialRequestOptions& options, UVAvailability uvCapability, std::optional<PinParameters> pin)
 {
     CBORValue::MapValue cborMap;
     cborMap[CBORValue(1)] = CBORValue(options.rpId);
@@ -150,19 +153,24 @@ Vector<uint8_t> encodeGetAssertionRequestAsCBOR(const Vector<uint8_t>& hash, con
     bool requireUserVerification = false;
     switch (options.userVerification) {
     case UserVerificationRequirement::Required:
-        requireUserVerification = true;
-        break;
     case UserVerificationRequirement::Preferred:
-        requireUserVerification = uvCapability == UVAvailability::kNotSupported ? false : true;
+        requireUserVerification = uvCapability == UVAvailability::kSupportedAndConfigured;
         break;
     case UserVerificationRequirement::Discouraged:
         requireUserVerification = false;
     }
-    optionMap[CBORValue(kUserVerificationMapKey)] = CBORValue(requireUserVerification);
+    if (requireUserVerification)
+        optionMap[CBORValue(kUserVerificationMapKey)] = CBORValue(requireUserVerification);
     optionMap[CBORValue(kUserPresenceMapKey)] = CBORValue(true);
 
     if (!optionMap.empty())
         cborMap[CBORValue(5)] = CBORValue(WTFMove(optionMap));
+
+    if (pin) {
+        ASSERT(pin->protocol >= 0);
+        cborMap[CBORValue(6)] = CBORValue(WTFMove(pin->auth));
+        cborMap[CBORValue(7)] = CBORValue(pin->protocol);
+    }
 
     auto serializedParam = CBORWriter::write(CBORValue(WTFMove(cborMap)));
     ASSERT(serializedParam);

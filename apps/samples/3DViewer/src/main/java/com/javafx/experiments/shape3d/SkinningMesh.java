@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2014, Oracle and/or its affiliates.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -107,7 +107,7 @@ public class SkinningMesh extends PolygonMesh {
             weightIndices[j] = new ArrayList<Integer>();
             for (int i = 0; i < nPoints; i++) {
                 if (weights[j][i] != 0.0f) {
-                    weightIndices[j].add(new Integer(i));
+                    weightIndices[j].add(i);
                 }
             }
         }

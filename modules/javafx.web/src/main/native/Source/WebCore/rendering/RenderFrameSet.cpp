@@ -46,6 +46,10 @@
 
 namespace WebCore {
 
+static constexpr auto borderStartEdgeColor = SRGBA<uint8_t> { 170, 170, 170 };
+static constexpr auto borderEndEdgeColor = Color::black;
+static constexpr auto borderFillColor = SRGBA<uint8_t> { 208, 208, 208 };
+
 WTF_MAKE_ISO_ALLOCATED_IMPL(RenderFrameSet);
 
 RenderFrameSet::RenderFrameSet(HTMLFrameSetElement& frameSet, RenderStyle&& style)
@@ -68,24 +72,6 @@ RenderFrameSet::GridAxis::GridAxis()
 {
 }
 
-static const Color& borderStartEdgeColor()
-{
-    static NeverDestroyed<Color> color(170, 170, 170);
-    return color;
-}
-
-static const Color& borderEndEdgeColor()
-{
-    static NeverDestroyed<Color> color = Color::black;
-    return color;
-}
-
-static const Color& borderFillColor()
-{
-    static NeverDestroyed<Color> color(208, 208, 208);
-    return color;
-}
-
 void RenderFrameSet::paintColumnBorder(const PaintInfo& paintInfo, const IntRect& borderRect)
 {
     if (!paintInfo.rect.intersects(borderRect))
@@ -95,13 +81,13 @@ void RenderFrameSet::paintColumnBorder(const PaintInfo& paintInfo, const IntRect
 
     // Fill first.
     GraphicsContext& context = paintInfo.context();
-    context.fillRect(borderRect, frameSetElement().hasBorderColor() ? style().visitedDependentColorWithColorFilter(CSSPropertyBorderLeftColor) : borderFillColor());
+    context.fillRect(borderRect, frameSetElement().hasBorderColor() ? style().visitedDependentColorWithColorFilter(CSSPropertyBorderLeftColor) : borderFillColor);
 
     // Now stroke the edges but only if we have enough room to paint both edges with a little
     // bit of the fill color showing through.
     if (borderRect.width() >= 3) {
-        context.fillRect(IntRect(borderRect.location(), IntSize(1, height())), borderStartEdgeColor());
-        context.fillRect(IntRect(IntPoint(borderRect.maxX() - 1, borderRect.y()), IntSize(1, height())), borderEndEdgeColor());
+        context.fillRect(IntRect(borderRect.location(), IntSize(1, height())), borderStartEdgeColor);
+        context.fillRect(IntRect(IntPoint(borderRect.maxX() - 1, borderRect.y()), IntSize(1, height())), borderEndEdgeColor);
     }
 }
 
@@ -114,13 +100,13 @@ void RenderFrameSet::paintRowBorder(const PaintInfo& paintInfo, const IntRect& b
 
     // Fill first.
     GraphicsContext& context = paintInfo.context();
-    context.fillRect(borderRect, frameSetElement().hasBorderColor() ? style().visitedDependentColorWithColorFilter(CSSPropertyBorderLeftColor) : borderFillColor());
+    context.fillRect(borderRect, frameSetElement().hasBorderColor() ? style().visitedDependentColorWithColorFilter(CSSPropertyBorderLeftColor) : borderFillColor);
 
     // Now stroke the edges but only if we have enough room to paint both edges with a little
     // bit of the fill color showing through.
     if (borderRect.height() >= 3) {
-        context.fillRect(IntRect(borderRect.location(), IntSize(width(), 1)), borderStartEdgeColor());
-        context.fillRect(IntRect(IntPoint(borderRect.x(), borderRect.maxY() - 1), IntSize(width(), 1)), borderEndEdgeColor());
+        context.fillRect(IntRect(borderRect.location(), IntSize(width(), 1)), borderStartEdgeColor);
+        context.fillRect(IntRect(IntPoint(borderRect.x(), borderRect.maxY() - 1), IntSize(width(), 1)), borderEndEdgeColor);
     }
 }
 
@@ -494,7 +480,7 @@ void RenderFrameSet::layout()
     clearNeedsLayout();
 }
 
-static void resetFrameRendererAndDescendents(RenderBox* frameSetChild, RenderFrameSet& parentFrameSet)
+static void resetFrameRendererAndDescendants(RenderBox* frameSetChild, RenderFrameSet& parentFrameSet)
 {
     if (!frameSetChild)
         return;
@@ -544,7 +530,7 @@ void RenderFrameSet::positionFrames()
         yPos += height + borderThickness;
     }
 
-    resetFrameRendererAndDescendents(child, *this);
+    resetFrameRendererAndDescendants(child, *this);
 }
 
 void RenderFrameSet::positionFramesWithFlattening()
@@ -647,7 +633,7 @@ void RenderFrameSet::positionFramesWithFlattening()
     if (repaintNeeded)
         repaint();
 
-    resetFrameRendererAndDescendents(child, *this);
+    resetFrameRendererAndDescendants(child, *this);
 }
 
 bool RenderFrameSet::flattenFrameSet() const

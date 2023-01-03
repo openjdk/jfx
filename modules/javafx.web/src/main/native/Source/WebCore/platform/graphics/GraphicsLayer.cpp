@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009 Apple Inc. All rights reserved.
+ * Copyright (C) 2009-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -24,18 +24,18 @@
  */
 
 #include "config.h"
-
 #include "GraphicsLayer.h"
 
+#include "ColorSerialization.h"
 #include "FloatPoint.h"
 #include "FloatRect.h"
 #include "GraphicsContext.h"
+#include "GraphicsLayerContentsDisplayDelegate.h"
 #include "LayoutRect.h"
 #include "RotateTransformOperation.h"
 #include <wtf/HashMap.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/text/CString.h>
-#include <wtf/text/StringBuilder.h>
 #include <wtf/text/TextStream.h>
 #include <wtf/text/WTFString.h>
 
@@ -88,6 +88,11 @@ bool GraphicsLayer::supportsLayerType(Type type)
     return false;
 }
 
+bool GraphicsLayer::supportsRoundedClip()
+{
+    return false;
+}
+
 bool GraphicsLayer::supportsBackgroundColorContent()
 {
 #if USE(TEXTURE_MAPPER)
@@ -135,6 +140,7 @@ GraphicsLayer::GraphicsLayer(Type type, GraphicsLayerClient& layerClient)
     , m_masksToBounds(false)
     , m_drawsContent(false)
     , m_contentsVisible(true)
+    , m_contentsRectClipsDescendants(false)
     , m_acceleratesDrawing(false)
     , m_usesDisplayListDrawing(false)
     , m_appliesPageScale(false)
@@ -144,6 +150,13 @@ GraphicsLayer::GraphicsLayer(Type type, GraphicsLayerClient& layerClient)
     , m_isTrackingDisplayListReplay(false)
     , m_userInteractionEnabled(true)
     , m_canDetachBackingStore(true)
+#if HAVE(CORE_ANIMATION_SEPARATED_LAYERS)
+    , m_isSeparated(false)
+#if HAVE(CORE_ANIMATION_SEPARATED_PORTALS)
+    , m_isSeparatedPortal(false)
+    , m_isDescendentOfSeparatedPortal(false)
+#endif
+#endif
 {
 #ifndef NDEBUG
     client().verifyNotPainting();
@@ -191,12 +204,17 @@ void GraphicsLayer::willBeDestroyed()
     }
 
     removeAllChildren();
-    removeFromParent();
+    removeFromParentInternal();
 }
 
 void GraphicsLayer::clearClient()
 {
     m_client = &EmptyGraphicsLayerClient::singleton();
+}
+
+String GraphicsLayer::debugName() const
+{
+    return name();
 }
 
 void GraphicsLayer::setClient(GraphicsLayerClient& client)
@@ -321,7 +339,7 @@ void GraphicsLayer::removeAllChildren()
     }
 }
 
-void GraphicsLayer::removeFromParent()
+void GraphicsLayer::removeFromParentInternal()
 {
     if (m_parent) {
         GraphicsLayer* parent = m_parent;
@@ -359,6 +377,13 @@ void GraphicsLayer::setChildrenTransform(const TransformationMatrix& matrix)
         m_childrenTransform = makeUnique<TransformationMatrix>(matrix);
 }
 
+void GraphicsLayer::removeFromParent()
+{
+    // removeFromParentInternal is nonvirtual, for use in willBeDestroyed,
+    // which is called from destructors.
+    removeFromParentInternal();
+}
+
 void GraphicsLayer::setMaskLayer(RefPtr<GraphicsLayer>&& layer)
 {
     if (layer == m_maskLayer)
@@ -374,6 +399,11 @@ void GraphicsLayer::setMaskLayer(RefPtr<GraphicsLayer>&& layer)
     }
 
     m_maskLayer = WTFMove(layer);
+}
+
+void GraphicsLayer::setMasksToBoundsRect(const FloatRoundedRect& roundedRect)
+{
+    m_masksToBoundsRect = roundedRect;
 }
 
 Path GraphicsLayer::shapeLayerPath() const
@@ -508,7 +538,7 @@ void GraphicsLayer::paintGraphicsLayerContents(GraphicsContext& context, const F
     FloatRect clipRect(clip);
     clipRect.move(offset);
 
-    client().paintContents(this, context, m_paintingPhase, clipRect, layerPaintBehavior);
+    client().paintContents(this, context, clipRect, layerPaintBehavior);
 }
 
 FloatRect GraphicsLayer::adjustCoverageRectForMovement(const FloatRect& coverageRect, const FloatRect& previousVisibleRect, const FloatRect& currentVisibleRect)
@@ -572,11 +602,7 @@ FloatRect GraphicsLayer::adjustCoverageRectForMovement(const FloatRect& coverage
 String GraphicsLayer::animationNameForTransition(AnimatedPropertyID property)
 {
     // | is not a valid identifier character in CSS, so this can never conflict with a keyframe identifier.
-    StringBuilder id;
-    id.appendLiteral("-|transition");
-    id.appendNumber(static_cast<int>(property));
-    id.append('-');
-    return id.toString();
+    return makeString("-|transition", static_cast<int>(property), '-');
 }
 
 void GraphicsLayer::suspendAnimations(MonotonicTime)
@@ -587,39 +613,43 @@ void GraphicsLayer::resumeAnimations()
 {
 }
 
+void GraphicsLayer::setContentsDisplayDelegate(RefPtr<GraphicsLayerContentsDisplayDelegate>&&, ContentsLayerPurpose)
+{
+}
+
 void GraphicsLayer::getDebugBorderInfo(Color& color, float& width) const
 {
     width = 2;
 
     if (needsBackdrop()) {
-        color = Color(255, 0, 255, 128); // has backdrop: magenta
+        color = Color::magenta.colorWithAlphaByte(128); // has backdrop: magenta
         width = 12;
         return;
     }
 
     if (drawsContent()) {
         if (tiledBacking()) {
-            color = Color(255, 128, 0, 128); // tiled layer: orange
+            color = Color::orange.colorWithAlphaByte(128); // tiled layer: orange
             return;
         }
 
-        color = Color(0, 128, 32, 128); // normal layer: green
+        color = SRGBA<uint8_t> { 0, 128, 32, 128 }; // normal layer: green
         return;
     }
 
     if (usesContentsLayer()) {
-        color = Color(0, 64, 128, 150); // non-painting layer with contents: blue
+        color = SRGBA<uint8_t> { 0, 64, 128, 150 }; // non-painting layer with contents: blue
         width = 8;
         return;
     }
 
     if (masksToBounds()) {
-        color = Color(128, 255, 255, 48); // masking layer: pale blue
+        color = SRGBA<uint8_t> { 128, 255, 255, 48 }; // masking layer: pale blue
         width = 16;
         return;
     }
 
-    color = Color(255, 255, 0, 192); // container: yellow
+    color = Color::yellow.colorWithAlphaByte(192); // container: yellow
 }
 
 void GraphicsLayer::updateDebugIndicators()
@@ -636,30 +666,6 @@ void GraphicsLayer::updateDebugIndicators()
 void GraphicsLayer::setZPosition(float position)
 {
     m_zPosition = position;
-}
-
-float GraphicsLayer::accumulatedOpacity() const
-{
-    if (!preserves3D())
-        return 1;
-
-    return m_opacity * (parent() ? parent()->accumulatedOpacity() : 1);
-}
-
-void GraphicsLayer::distributeOpacity(float accumulatedOpacity)
-{
-    // If this is a transform layer we need to distribute our opacity to all our children
-
-    // Incoming accumulatedOpacity is the contribution from our parent(s). We mutiply this by our own
-    // opacity to get the total contribution
-    accumulatedOpacity *= m_opacity;
-
-    setOpacityInternal(accumulatedOpacity);
-
-    if (preserves3D()) {
-        for (auto& layer : children())
-            layer->distributeOpacity(accumulatedOpacity);
-    }
 }
 
 static inline const FilterOperations& filterOperationsAt(const KeyframeValueList& valueList, size_t index)
@@ -704,79 +710,35 @@ int GraphicsLayer::validateFilterOperations(const KeyframeValueList& valueList)
     return firstIndex;
 }
 
-// An "invalid" list is one whose functions don't match, and therefore has to be animated as a Matrix
-// The hasBigRotation flag will always return false if isValid is false. Otherwise hasBigRotation is
-// true if the rotation between any two keyframes is >= 180 degrees.
-
 static inline const TransformOperations& operationsAt(const KeyframeValueList& valueList, size_t index)
 {
     return static_cast<const TransformAnimationValue&>(valueList.at(index)).value();
 }
 
-int GraphicsLayer::validateTransformOperations(const KeyframeValueList& valueList, bool& hasBigRotation)
+// A sequence of keyframes with a list of transforms can be represented without matrix interpolation
+// if each transform is compatible with all other transforms at the same index in other keyframes.
+// Two transforms are compatible if they share a primitive defined by the CSS Transforms Level 2
+// specification. For instance, the shared primitive of a translateX and translate3D operation is
+// TransformOperation::TRANSLATE_3D. This function returns true if the TransformOperations in each
+// keyframe share a primitive operation type and stores the compatible OperationTypes in
+// sharedPrimitives. If the keyframes do not share a list of compatible primitives, false is
+// returned.
+bool GraphicsLayer::getSharedPrimitivesForTransformKeyframes(const KeyframeValueList& valueList, Vector<TransformOperation::OperationType>& sharedPrimitives)
 {
-    ASSERT(valueList.property() == AnimatedPropertyTransform);
-
-    hasBigRotation = false;
+    ASSERT(animatedPropertyIsTransformOrRelated(valueList.property()));
 
     if (valueList.size() < 2)
-        return -1;
+        return false;
 
-    // Empty transforms match anything, so find the first non-empty entry as the reference.
-    size_t firstIndex = 0;
-    for ( ; firstIndex < valueList.size(); ++firstIndex) {
-        if (!operationsAt(valueList, firstIndex).operations().isEmpty())
-            break;
+    sharedPrimitives.clear();
+    sharedPrimitives.reserveInitialCapacity(operationsAt(valueList, 0).size());
+
+    for (size_t i = 0; i < valueList.size(); ++i) {
+        if (!operationsAt(valueList, i).updateSharedPrimitives(sharedPrimitives))
+            return false;
     }
 
-    if (firstIndex >= valueList.size())
-        return -1;
-
-    const TransformOperations& firstVal = operationsAt(valueList, firstIndex);
-
-    // See if the keyframes are valid.
-    for (size_t i = firstIndex + 1; i < valueList.size(); ++i) {
-        const TransformOperations& val = operationsAt(valueList, i);
-
-        // An empty transform list matches anything.
-        if (val.operations().isEmpty())
-            continue;
-
-        if (!firstVal.operationsMatch(val))
-            return -1;
-    }
-
-    // Keyframes are valid, check for big rotations.
-    double lastRotationAngle = 0.0;
-    double maxRotationAngle = -1.0;
-
-    for (size_t j = 0; j < firstVal.operations().size(); ++j) {
-        TransformOperation::OperationType type = firstVal.operations().at(j)->type();
-
-        // if this is a rotation entry, we need to see if any angle differences are >= 180 deg
-        if (type == TransformOperation::ROTATE_X ||
-            type == TransformOperation::ROTATE_Y ||
-            type == TransformOperation::ROTATE_Z ||
-            type == TransformOperation::ROTATE_3D) {
-            lastRotationAngle = downcast<RotateTransformOperation>(*firstVal.operations().at(j)).angle();
-
-            if (maxRotationAngle < 0)
-                maxRotationAngle = fabs(lastRotationAngle);
-
-            for (size_t i = firstIndex + 1; i < valueList.size(); ++i) {
-                const TransformOperations& val = operationsAt(valueList, i);
-                double rotationAngle = val.operations().isEmpty() ? 0 : downcast<RotateTransformOperation>(*val.operations().at(j)).angle();
-                double diffAngle = fabs(rotationAngle - lastRotationAngle);
-                if (diffAngle > maxRotationAngle)
-                    maxRotationAngle = diffAngle;
-                lastRotationAngle = rotationAngle;
-            }
-        }
-    }
-
-    hasBigRotation = maxRotationAngle >= 180.0;
-
-    return firstIndex;
+    return true;
 }
 
 double GraphicsLayer::backingStoreMemoryEstimate() const
@@ -811,7 +773,7 @@ void GraphicsLayer::addRepaintRect(const FloatRect& repaintRect)
     }
 }
 
-void GraphicsLayer::traverse(GraphicsLayer& layer, const WTF::Function<void (GraphicsLayer&)>& traversalFunc)
+void GraphicsLayer::traverse(GraphicsLayer& layer, const Function<void(GraphicsLayer&)>& traversalFunc)
 {
     traversalFunc(layer);
 
@@ -825,42 +787,36 @@ void GraphicsLayer::traverse(GraphicsLayer& layer, const WTF::Function<void (Gra
         traverse(*maskLayer, traversalFunc);
 }
 
-GraphicsLayer::EmbeddedViewID GraphicsLayer::nextEmbeddedViewID()
-{
-    static GraphicsLayer::EmbeddedViewID nextEmbeddedViewID;
-    return ++nextEmbeddedViewID;
-}
-
-void GraphicsLayer::dumpLayer(TextStream& ts, LayerTreeAsTextBehavior behavior) const
+void GraphicsLayer::dumpLayer(TextStream& ts, OptionSet<LayerTreeAsTextOptions> options) const
 {
     ts << indent << "(" << "GraphicsLayer";
 
-    if (behavior & LayerTreeAsTextDebug) {
+    if (options & LayerTreeAsTextOptions::Debug) {
         ts << " " << static_cast<void*>(const_cast<GraphicsLayer*>(this));
         ts << " \"" << m_name << "\"";
     }
 
     ts << "\n";
-    dumpProperties(ts, behavior);
+    dumpProperties(ts, options);
     ts << indent << ")\n";
 }
 
-static void dumpChildren(TextStream& ts, const Vector<Ref<GraphicsLayer>>& children, unsigned& totalChildCount, LayerTreeAsTextBehavior behavior)
+static void dumpChildren(TextStream& ts, const Vector<Ref<GraphicsLayer>>& children, unsigned& totalChildCount, OptionSet<LayerTreeAsTextOptions> options)
 {
     totalChildCount += children.size();
     for (auto& child : children) {
-        if ((behavior & LayerTreeAsTextDebug) || !child->client().shouldSkipLayerInDump(child.ptr(), behavior)) {
+        if ((options & LayerTreeAsTextOptions::Debug) || !child->client().shouldSkipLayerInDump(child.ptr(), options)) {
             TextStream::IndentScope indentScope(ts);
-            child->dumpLayer(ts, behavior);
+            child->dumpLayer(ts, options);
             continue;
         }
 
         totalChildCount--;
-        dumpChildren(ts, child->children(), totalChildCount, behavior);
+        dumpChildren(ts, child->children(), totalChildCount, options);
     }
 }
 
-void GraphicsLayer::dumpProperties(TextStream& ts, LayerTreeAsTextBehavior behavior) const
+void GraphicsLayer::dumpProperties(TextStream& ts, OptionSet<LayerTreeAsTextOptions> options) const
 {
     TextStream::IndentScope indentScope(ts);
     if (!m_offsetFromRenderer.isZero())
@@ -893,7 +849,7 @@ void GraphicsLayer::dumpProperties(TextStream& ts, LayerTreeAsTextBehavior behav
 
 #if ENABLE(CSS_COMPOSITING)
     if (m_blendMode != BlendMode::Normal)
-        ts << indent << "(blendMode " << compositeOperatorName(CompositeSourceOver, m_blendMode) << ")\n";
+        ts << indent << "(blendMode " << compositeOperatorName(CompositeOperator::SourceOver, m_blendMode) << ")\n";
 #endif
 
     if (type() == Type::Normal && tiledBacking())
@@ -906,13 +862,13 @@ void GraphicsLayer::dumpProperties(TextStream& ts, LayerTreeAsTextBehavior behav
     if (m_supportsSubpixelAntialiasedText)
         ts << indent << "(supports subpixel antialiased text " << m_supportsSubpixelAntialiasedText << ")\n";
 
-    if (m_masksToBounds && behavior & LayerTreeAsTextIncludeClipping)
+    if (m_masksToBounds && options & LayerTreeAsTextOptions::IncludeClipping)
         ts << indent << "(clips " << m_masksToBounds << ")\n";
 
     if (m_preserves3D)
         ts << indent << "(preserves3D " << m_preserves3D << ")\n";
 
-    if (m_drawsContent && client().shouldDumpPropertyForLayer(this, "drawsContent", behavior))
+    if (m_drawsContent && client().shouldDumpPropertyForLayer(this, "drawsContent", options))
         ts << indent << "(drawsContent " << m_drawsContent << ")\n";
 
     if (!m_contentsVisible)
@@ -921,16 +877,16 @@ void GraphicsLayer::dumpProperties(TextStream& ts, LayerTreeAsTextBehavior behav
     if (!m_backfaceVisibility)
         ts << indent << "(backfaceVisibility " << (m_backfaceVisibility ? "visible" : "hidden") << ")\n";
 
-    if (behavior & LayerTreeAsTextDebug)
+    if (options & LayerTreeAsTextOptions::Debug)
         ts << indent << "(primary-layer-id " << primaryLayerID() << ")\n";
 
-    if (m_backgroundColor.isValid() && client().shouldDumpPropertyForLayer(this, "backgroundColor", behavior))
-        ts << indent << "(backgroundColor " << m_backgroundColor.nameForRenderTreeAsText() << ")\n";
+    if (m_backgroundColor.isValid() && client().shouldDumpPropertyForLayer(this, "backgroundColor", options))
+        ts << indent << "(backgroundColor " << serializationForRenderTreeAsText(m_backgroundColor) << ")\n";
 
-    if (behavior & LayerTreeAsTextIncludeAcceleratesDrawing && m_acceleratesDrawing)
+    if (options & LayerTreeAsTextOptions::IncludeAcceleratesDrawing && m_acceleratesDrawing)
         ts << indent << "(acceleratesDrawing " << m_acceleratesDrawing << ")\n";
 
-    if (behavior & LayerTreeAsTextIncludeBackingStoreAttached)
+    if (options & LayerTreeAsTextOptions::IncludeBackingStoreAttached)
         ts << indent << "(backingStoreAttached " << backingStoreAttachedForTesting() << ")\n";
 
     if (m_transform && !m_transform->isIdentity()) {
@@ -953,32 +909,32 @@ void GraphicsLayer::dumpProperties(TextStream& ts, LayerTreeAsTextBehavior behav
 
     if (m_maskLayer) {
         ts << indent << "(mask layer";
-        if (behavior & LayerTreeAsTextDebug)
-            ts << " " << m_maskLayer;
+        if (options & LayerTreeAsTextOptions::Debug)
+            ts << " " << m_maskLayer.get();
         ts << ")\n";
 
         TextStream::IndentScope indentScope(ts);
-        m_maskLayer->dumpLayer(ts, behavior);
+        m_maskLayer->dumpLayer(ts, options);
     }
 
     if (m_replicaLayer) {
         ts << indent << "(replica layer";
-        if (behavior & LayerTreeAsTextDebug)
-            ts << " " << m_replicaLayer;
+        if (options & LayerTreeAsTextOptions::Debug)
+            ts << " " << m_replicaLayer.get();
         ts << ")\n";
 
         TextStream::IndentScope indentScope(ts);
-        m_replicaLayer->dumpLayer(ts, behavior);
+        m_replicaLayer->dumpLayer(ts, options);
     }
 
     if (m_replicatedLayer) {
         ts << indent << "(replicated layer";
-        if (behavior & LayerTreeAsTextDebug)
+        if (options & LayerTreeAsTextOptions::Debug)
             ts << " " << m_replicatedLayer;
         ts << ")\n";
     }
 
-    if (behavior & LayerTreeAsTextIncludeRepaintRects && repaintRectMap().contains(this) && !repaintRectMap().get(this).isEmpty() && client().shouldDumpPropertyForLayer(this, "repaintRects", behavior)) {
+    if (options & LayerTreeAsTextOptions::IncludeRepaintRects && repaintRectMap().contains(this) && !repaintRectMap().get(this).isEmpty() && client().shouldDumpPropertyForLayer(this, "repaintRects", options)) {
         ts << indent << "(repaint rects\n";
         for (size_t i = 0; i < repaintRectMap().get(this).size(); ++i) {
             if (repaintRectMap().get(this)[i].isEmpty())
@@ -995,22 +951,27 @@ void GraphicsLayer::dumpProperties(TextStream& ts, LayerTreeAsTextBehavior behav
         ts << indent << ")\n";
     }
 
-    if (behavior & LayerTreeAsTextIncludeEventRegion && !m_eventRegion.isEmpty()) {
+    if (options & LayerTreeAsTextOptions::IncludeEventRegion && !m_eventRegion.isEmpty()) {
         ts << indent << "(event region" << m_eventRegion;
         ts << indent << ")\n";
     }
 
-    if (behavior & LayerTreeAsTextIncludePaintingPhases && paintingPhase())
+#if ENABLE(SCROLLING_THREAD)
+    if ((options & LayerTreeAsTextOptions::Debug) && m_scrollingNodeID)
+        ts << indent << "(scrolling node " << m_scrollingNodeID << ")\n";
+#endif
+
+    if (options & LayerTreeAsTextOptions::IncludePaintingPhases && paintingPhase())
         ts << indent << "(paintingPhases " << paintingPhase() << ")\n";
 
-    dumpAdditionalProperties(ts, behavior);
+    dumpAdditionalProperties(ts, options);
 
     if (m_children.size()) {
         TextStream childrenStream;
 
         childrenStream.increaseIndent(ts.indent());
         unsigned totalChildCount = 0;
-        dumpChildren(childrenStream, m_children, totalChildCount, behavior);
+        dumpChildren(childrenStream, m_children, totalChildCount, options);
 
         if (totalChildCount) {
             ts << indent << "(children " << totalChildCount << "\n";
@@ -1058,11 +1019,11 @@ TextStream& operator<<(TextStream& ts, const GraphicsLayer::CustomAppearance& cu
     return ts;
 }
 
-String GraphicsLayer::layerTreeAsText(LayerTreeAsTextBehavior behavior) const
+String GraphicsLayer::layerTreeAsText(OptionSet<LayerTreeAsTextOptions> options) const
 {
     TextStream ts(TextStream::LineMode::MultipleLine, TextStream::Formatting::SVGStyleRect);
 
-    dumpLayer(ts, behavior);
+    dumpLayer(ts, options);
     return ts.release();
 }
 
@@ -1074,7 +1035,7 @@ void showGraphicsLayerTree(const WebCore::GraphicsLayer* layer)
     if (!layer)
         return;
 
-    String output = layer->layerTreeAsText(WebCore::LayerTreeAsTextShowAll);
+    String output = layer->layerTreeAsText(WebCore::AllLayerTreeAsTextOptions);
     WTFLogAlways("%s\n", output.utf8().data());
 }
 #endif

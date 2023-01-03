@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -87,7 +87,7 @@ import static com.sun.javafx.scene.control.skin.resources.ControlResources.getSt
  */
 public class ToolBarSkin extends SkinBase<ToolBar> {
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Private fields                                                          *
      *                                                                         *
@@ -105,9 +105,9 @@ public class ToolBarSkin extends SkinBase<ToolBar> {
     private final ParentTraversalEngine engine;
     private final BehaviorBase<ToolBar> behavior;
 
+    private ListChangeListener<Node> itemsListener;
 
-
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
@@ -228,8 +228,8 @@ public class ToolBarSkin extends SkinBase<ToolBar> {
         });
         ParentHelper.setTraversalEngine(getSkinnable(), engine);
 
-        control.focusedProperty().addListener((observable, oldValue, newValue) -> {
-            if (newValue) {
+        registerChangeListener(control.focusedProperty(), ov -> {
+            if (getSkinnable().isFocused()) {
                 // TODO need to detect the focus direction
                 // to selected the first control in the toolbar when TAB is pressed
                 // or select the last control in the toolbar when SHIFT TAB is pressed.
@@ -241,7 +241,7 @@ public class ToolBarSkin extends SkinBase<ToolBar> {
             }
         });
 
-        control.getItems().addListener((ListChangeListener<Node>) c -> {
+        itemsListener = (ListChangeListener<Node>) c -> {
             while (c.next()) {
                 for (Node n: c.getRemoved()) {
                     box.getChildren().remove(n);
@@ -250,12 +250,13 @@ public class ToolBarSkin extends SkinBase<ToolBar> {
             }
             needsUpdate = true;
             getSkinnable().requestLayout();
-        });
+        };
+        control.getItems().addListener(itemsListener);
     }
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Properties                                                              *
      *                                                                         *
@@ -357,7 +358,7 @@ public class ToolBarSkin extends SkinBase<ToolBar> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Public API                                                              *
      *                                                                         *
@@ -365,6 +366,8 @@ public class ToolBarSkin extends SkinBase<ToolBar> {
 
     /** {@inheritDoc} */
     @Override public void dispose() {
+        if (getSkinnable() == null) return;
+        getSkinnable().getItems().removeListener(itemsListener);
         super.dispose();
 
         if (behavior != null) {
@@ -540,7 +543,7 @@ public class ToolBarSkin extends SkinBase<ToolBar> {
         }
     }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Private implementation                                                  *
      *                                                                         *
@@ -715,7 +718,7 @@ public class ToolBarSkin extends SkinBase<ToolBar> {
         return hasOverflow;
     }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Support classes                                                         *
      *                                                                         *
@@ -789,10 +792,10 @@ public class ToolBarSkin extends SkinBase<ToolBar> {
         }
 
         @Override protected void layoutChildren() {
-            double w = snapSize(downArrow.prefWidth(-1));
-            double h = snapSize(downArrow.prefHeight(-1));
-            double x = (snapSize(getWidth()) - w)/2;
-            double y = (snapSize(getHeight()) - h)/2;
+            double w = snapSizeX(downArrow.prefWidth(-1));
+            double h = snapSizeY(downArrow.prefHeight(-1));
+            double x = (snapSizeX(getWidth()) - w)/2;
+            double y = (snapSizeY(getHeight()) - h)/2;
 
             // TODO need to provide support for when the toolbar is on the right
             // or bottom
@@ -815,7 +818,7 @@ public class ToolBarSkin extends SkinBase<ToolBar> {
         }
     }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      *                         Stylesheet Handling                             *
      *                                                                         *
@@ -826,7 +829,7 @@ public class ToolBarSkin extends SkinBase<ToolBar> {
       */
      private static class StyleableProperties {
          private static final CssMetaData<ToolBar,Number> SPACING =
-             new CssMetaData<ToolBar,Number>("-fx-spacing",
+             new CssMetaData<>("-fx-spacing",
                  SizeConverter.getInstance(), 0.0) {
 
             @Override
@@ -838,13 +841,13 @@ public class ToolBarSkin extends SkinBase<ToolBar> {
             @Override
             public StyleableProperty<Number> getStyleableProperty(ToolBar n) {
                 final ToolBarSkin skin = (ToolBarSkin) n.getSkin();
-                return (StyleableProperty<Number>)(WritableValue<Number>)skin.spacingProperty();
+                return (StyleableProperty<Number>)skin.spacingProperty();
             }
         };
 
         private static final CssMetaData<ToolBar,Pos>ALIGNMENT =
-                new CssMetaData<ToolBar,Pos>("-fx-alignment",
-                new EnumConverter<Pos>(Pos.class), Pos.TOP_LEFT ) {
+                new CssMetaData<>("-fx-alignment",
+                new EnumConverter<>(Pos.class), Pos.TOP_LEFT ) {
 
             @Override
             public boolean isSettable(ToolBar n) {
@@ -864,7 +867,7 @@ public class ToolBarSkin extends SkinBase<ToolBar> {
          static {
 
             final List<CssMetaData<? extends Styleable, ?>> styleables =
-                new ArrayList<CssMetaData<? extends Styleable, ?>>(SkinBase.getClassCssMetaData());
+                new ArrayList<>(SkinBase.getClassCssMetaData());
 
             // StackPane also has -fx-alignment. Replace it with
             // ToolBarSkin's.

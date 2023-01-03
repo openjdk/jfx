@@ -26,17 +26,16 @@
 #include "config.h"
 #include "ProfilerBytecode.h"
 
-#include "JSGlobalObject.h"
+#include "JSCInlines.h"
 #include "ObjectConstructor.h"
 #include "Opcode.h"
-#include "JSCInlines.h"
 
 namespace JSC { namespace Profiler {
 
-JSValue Bytecode::toJS(ExecState* exec) const
+JSValue Bytecode::toJS(JSGlobalObject* globalObject) const
 {
-    VM& vm = exec->vm();
-    JSObject* result = constructEmptyObject(exec);
+    VM& vm = globalObject->vm();
+    JSObject* result = constructEmptyObject(globalObject);
     result->putDirect(vm, vm.propertyNames->bytecodeIndex, jsNumber(m_bytecodeIndex));
     result->putDirect(vm, vm.propertyNames->opcode, jsString(vm, String::fromUTF8(opcodeNames[m_opcodeID])));
     result->putDirect(vm, vm.propertyNames->description, jsString(vm, String::fromUTF8(m_description)));

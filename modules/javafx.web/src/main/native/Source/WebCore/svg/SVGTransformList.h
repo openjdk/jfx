@@ -21,6 +21,7 @@
 
 #pragma once
 
+#include "DOMMatrix2DInit.h"
 #include "SVGTransform.h"
 #include "SVGTransformable.h"
 #include "SVGValuePropertyList.h"
@@ -48,90 +49,23 @@ public:
         return adoptRef(*new SVGTransformList(other, access));
     }
 
-    ExceptionOr<Ref<SVGTransform>> createSVGTransformFromMatrix(const Ref<SVGMatrix>& matrix)
+    ExceptionOr<Ref<SVGTransform>> createSVGTransformFromMatrix(DOMMatrix2DInit&& matrixInit)
     {
-        return SVGTransform::create(matrix->value());
+        auto svgTransform =  SVGTransform::create();
+        svgTransform->setMatrix(WTFMove(matrixInit));
+        return svgTransform;
     }
 
-    ExceptionOr<RefPtr<SVGTransform>> consolidate()
-    {
-        auto result = canAlterList();
-        if (result.hasException())
-            return result.releaseException();
-        ASSERT(result.releaseReturnValue());
+    ExceptionOr<RefPtr<SVGTransform>> consolidate();
+    AffineTransform concatenate() const;
 
-        // Spec: If the list was empty, then a value of null is returned.
-        if (m_items.isEmpty())
-            return nullptr;
-
-        if (m_items.size() == 1)
-            return makeRefPtr(at(0).get());
-
-        auto newItem = SVGTransform::create(concatenate());
-        clearItems();
-
-        auto item = append(WTFMove(newItem));
-        commitChange();
-        return makeRefPtr(item.get());
-    }
-
-    void parse(const String& value)
-    {
-        clearItems();
-
-        auto upconvertedCharacters = StringView(value).upconvertedCharacters();
-        const UChar* start = upconvertedCharacters;
-        if (!parse(start, start + value.length()))
-            clearItems();
-    }
-
-    AffineTransform concatenate() const
-    {
-        AffineTransform result;
-        for (const auto& transform : m_items)
-            result *= transform->matrix()->value();
-        return result;
-    }
-
-    String valueAsString() const override
-    {
-        StringBuilder builder;
-        for (const auto& transfrom : m_items) {
-            if (builder.length())
-                builder.append(' ');
-
-            builder.append(transfrom->value().valueAsString());
-        }
-        return builder.toString();
-    }
+    void parse(StringView);
+    String valueAsString() const override;
 
 private:
-    bool parse(const UChar*& start, const UChar* end)
-    {
-        bool delimParsed = false;
-        while (start < end) {
-            delimParsed = false;
-            SVGTransformValue::SVGTransformType type = SVGTransformValue::SVG_TRANSFORM_UNKNOWN;
-            skipOptionalSVGSpaces(start, end);
-
-            if (!SVGTransformable::parseAndSkipType(start, end, type))
-                return false;
-
-            Ref<SVGTransform> transform = SVGTransform::create(type);
-            if (!SVGTransformable::parseTransformValue(type, start, end, transform->value()))
-                return false;
-
-            append(WTFMove(transform));
-            skipOptionalSVGSpaces(start, end);
-            if (start < end && *start == ',') {
-                delimParsed = true;
-                ++start;
-            }
-
-            skipOptionalSVGSpaces(start, end);
-        }
-        return !delimParsed;
-    }
+    template<typename CharacterType> bool parseGeneric(StringParsingBuffer<CharacterType>&);
+    bool parse(StringParsingBuffer<LChar>&);
+    bool parse(StringParsingBuffer<UChar>&);
 };
 
 } // namespace WebCore

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Apple, Inc. All rights reserved.
+ * Copyright (C) 2013-2021 Apple, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -38,7 +38,7 @@ public:
 
     static WeakMapConstructor* create(VM& vm, Structure* structure, WeakMapPrototype* prototype, GetterSetter*)
     {
-        WeakMapConstructor* constructor = new (NotNull, allocateCell<WeakMapConstructor>(vm.heap)) WeakMapConstructor(vm, structure);
+        WeakMapConstructor* constructor = new (NotNull, allocateCell<WeakMapConstructor>(vm)) WeakMapConstructor(vm, structure);
         constructor->finishCreation(vm, prototype);
         return constructor;
     }
@@ -54,5 +54,6 @@ private:
     WeakMapConstructor(VM&, Structure*);
     void finishCreation(VM&, WeakMapPrototype*);
 };
+STATIC_ASSERT_ISO_SUBSPACE_SHARABLE(WeakMapConstructor, InternalFunction);
 
 } // namespace JSC

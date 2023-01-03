@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -50,6 +50,12 @@ public abstract class ObjectExpression<T> implements ObservableObjectValue<T> {
     }
 
     /**
+     * Creates a default {@code ObjectExpression}.
+     */
+    public ObjectExpression() {
+    }
+
+    /**
      * Returns an {@code ObjectExpression} that wraps an
      * {@link javafx.beans.value.ObservableObjectValue}. If the
      * {@code ObservableObjectValue} is already an {@code ObjectExpression}, it
@@ -71,7 +77,7 @@ public abstract class ObjectExpression<T> implements ObservableObjectValue<T> {
             throw new NullPointerException("Value must be specified.");
         }
         return value instanceof ObjectExpression ? (ObjectExpression<T>) value
-                : new ObjectBinding<T>() {
+                : new ObjectBinding<>() {
                     {
                         super.bind(value);
                     }

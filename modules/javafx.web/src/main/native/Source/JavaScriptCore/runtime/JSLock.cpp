@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2005-2022 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -21,22 +21,20 @@
 #include "config.h"
 #include "JSLock.h"
 
-#include "Heap.h"
-#include "CallFrame.h"
+#include "HeapInlines.h"
 #include "JSGlobalObject.h"
-#include "JSObject.h"
-#include "JSCInlines.h"
 #include "MachineStackMarker.h"
 #include "SamplingProfiler.h"
-#include "WasmCapabilities.h"
-#include "WasmMachineThreads.h"
-#include <thread>
 #include <wtf/StackPointer.h>
 #include <wtf/Threading.h>
 #include <wtf/threads/Signals.h>
 
 #if USE(WEB_THREAD)
 #include <wtf/ios/WebCoreThread.h>
+#endif
+
+#if PLATFORM(COCOA)
+#include <wtf/cocoa/RuntimeApplicationChecksCocoa.h>
 #endif
 
 namespace JSC {
@@ -53,8 +51,8 @@ GlobalJSLock::~GlobalJSLock()
     s_sharedInstanceMutex.unlock();
 }
 
-JSLockHolder::JSLockHolder(ExecState* exec)
-    : JSLockHolder(exec->vm())
+JSLockHolder::JSLockHolder(JSGlobalObject* globalObject)
+    : JSLockHolder(globalObject->vm())
 {
 }
 
@@ -99,7 +97,9 @@ void JSLock::lock()
     lock(1);
 }
 
-void JSLock::lock(intptr_t lockCount)
+// Use WTF_IGNORES_THREAD_SAFETY_ANALYSIS because this function conditionally unlocks m_lock, which
+// is not supported by analysis.
+void JSLock::lock(intptr_t lockCount) WTF_IGNORES_THREAD_SAFETY_ANALYSIS
 {
     ASSERT(lockCount > 0);
 #if USE(WEB_THREAD)
@@ -138,8 +138,7 @@ void JSLock::didAcquireLock()
     m_entryAtomStringTable = thread.setCurrentAtomStringTable(m_vm->atomStringTable());
     ASSERT(m_entryAtomStringTable);
 
-    m_vm->setLastStackTop(thread.savedLastStackTop());
-    ASSERT(thread.stack().contains(m_vm->lastStackTop()));
+    m_vm->setLastStackTop(thread);
 
     if (m_vm->heap.hasAccess())
         m_shouldReleaseHeapAccess = false;
@@ -152,28 +151,23 @@ void JSLock::didAcquireLock()
     void* p = currentStackPointer();
     m_vm->setStackPointerAtVMEntry(p);
 
-    if (m_vm->heap.machineThreads().addCurrentThread()) {
-        if (isKernTCSMAvailable())
-            enableKernTCSM();
+    if (thread.uid() != m_lastOwnerThread) {
+        m_lastOwnerThread = thread.uid();
+        if (m_vm->heap.machineThreads().addCurrentThread()) {
+            if (isKernTCSMAvailable())
+                enableKernTCSM();
+        }
     }
-
-#if ENABLE(WEBASSEMBLY)
-    if (Wasm::isSupported())
-        Wasm::startTrackingCurrentThread();
-#endif
-
-#if HAVE(MACH_EXCEPTIONS)
-    registerThreadForMachExceptionHandling(Thread::current());
-#endif
 
     // Note: everything below must come after addCurrentThread().
     m_vm->traps().notifyGrabAllLocks();
 
-    m_vm->firePrimitiveGigacageEnabledIfNecessary();
-
 #if ENABLE(SAMPLING_PROFILER)
-    if (SamplingProfiler* samplingProfiler = m_vm->samplingProfiler())
-        samplingProfiler->noticeJSLockAcquisition();
+    {
+        SamplingProfiler* samplingProfiler = m_vm->samplingProfiler();
+        if (UNLIKELY(samplingProfiler))
+            samplingProfiler->noticeJSLockAcquisition();
+    }
 #endif
 }
 
@@ -182,7 +176,9 @@ void JSLock::unlock()
     unlock(1);
 }
 
-void JSLock::unlock(intptr_t unlockCount)
+// Use WTF_IGNORES_THREAD_SAFETY_ANALYSIS because this function conditionally unlocks m_lock, which
+// is not supported by analysis.
+void JSLock::unlock(intptr_t unlockCount) WTF_IGNORES_THREAD_SAFETY_ANALYSIS
 {
     RELEASE_ASSERT(currentThreadIsHoldingLock());
     ASSERT(m_lockCount >= unlockCount);
@@ -204,7 +200,16 @@ void JSLock::willReleaseLock()
 {
     RefPtr<VM> vm = m_vm;
     if (vm) {
-        vm->drainMicrotasks();
+        static bool useLegacyDrain = false;
+#if PLATFORM(COCOA)
+        static std::once_flag once;
+        std::call_once(once, [] {
+            useLegacyDrain = !linkedOnOrAfter(SDKVersion::FirstThatDoesNotDrainTheMicrotaskQueueWhenCallingObjC);
+        });
+#endif
+
+        if (!m_lockDropDepth || useLegacyDrain)
+            vm->drainMicrotasks();
 
         if (!vm->topCallFrame)
             vm->clearLastException();
@@ -222,14 +227,14 @@ void JSLock::willReleaseLock()
     }
 }
 
-void JSLock::lock(ExecState* exec)
+void JSLock::lock(JSGlobalObject* globalObject)
 {
-    exec->vm().apiLock().lock();
+    globalObject->vm().apiLock().lock();
 }
 
-void JSLock::unlock(ExecState* exec)
+void JSLock::unlock(JSGlobalObject* globalObject)
 {
-    exec->vm().apiLock().unlock();
+    globalObject->vm().apiLock().unlock();
 }
 
 // This function returns the number of locks that were dropped.
@@ -271,7 +276,7 @@ void JSLock::grabAllLocks(DropAllLocks* dropper, unsigned droppedLockCount)
 
     Thread& thread = Thread::current();
     m_vm->setStackPointerAtVMEntry(thread.savedStackPointerAtVMEntry());
-    m_vm->setLastStackTop(thread.savedLastStackTop());
+    m_vm->setLastStackTop(thread);
 }
 
 JSLock::DropAllLocks::DropAllLocks(VM* vm)
@@ -279,7 +284,7 @@ JSLock::DropAllLocks::DropAllLocks(VM* vm)
     // If the VM is in the middle of being destroyed then we don't want to resurrect it
     // by allowing DropAllLocks to ref it. By this point the JSLock has already been
     // released anyways, so it doesn't matter that DropAllLocks is a no-op.
-    , m_vm(vm->refCount() ? vm : nullptr)
+    , m_vm(vm->heap.isShuttingDown() ? nullptr : vm)
 {
     if (!m_vm)
         return;
@@ -287,8 +292,8 @@ JSLock::DropAllLocks::DropAllLocks(VM* vm)
     m_droppedLockCount = m_vm->apiLock().dropAllLocks(this);
 }
 
-JSLock::DropAllLocks::DropAllLocks(ExecState* exec)
-    : DropAllLocks(exec ? &exec->vm() : nullptr)
+JSLock::DropAllLocks::DropAllLocks(JSGlobalObject* globalObject)
+    : DropAllLocks(globalObject ? &globalObject->vm() : nullptr)
 {
 }
 

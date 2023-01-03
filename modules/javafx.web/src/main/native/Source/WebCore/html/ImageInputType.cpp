@@ -25,6 +25,7 @@
 
 #include "CachedImage.h"
 #include "DOMFormData.h"
+#include "ElementInlines.h"
 #include "HTMLFormElement.h"
 #include "HTMLImageLoader.h"
 #include "HTMLInputElement.h"
@@ -40,7 +41,7 @@ namespace WebCore {
 using namespace HTMLNames;
 
 ImageInputType::ImageInputType(HTMLInputElement& element)
-    : BaseButtonInputType(element)
+    : BaseButtonInputType(Type::Image, element)
 {
 }
 
@@ -54,7 +55,7 @@ bool ImageInputType::isFormDataAppendable() const
     return true;
 }
 
-bool ImageInputType::appendFormData(DOMFormData& formData, bool) const
+bool ImageInputType::appendFormData(DOMFormData& formData) const
 {
     ASSERT(element());
     if (!element()->isActivatedSubmit())
@@ -70,16 +71,7 @@ bool ImageInputType::appendFormData(DOMFormData& formData, bool) const
     formData.append(makeString(name, ".x"), String::number(m_clickLocation.x()));
     formData.append(makeString(name, ".y"), String::number(m_clickLocation.y()));
 
-    auto value = element()->value();
-    if (!value.isEmpty())
-        formData.append(name, value);
-
     return true;
-}
-
-bool ImageInputType::supportsValidation() const
-{
-    return false;
 }
 
 void ImageInputType::handleDOMActivateEvent(Event& event)
@@ -108,7 +100,7 @@ void ImageInputType::handleDOMActivateEvent(Event& event)
     protectedElement->document().updateLayoutIgnorePendingStylesheets();
 
     if (auto currentForm = protectedElement->form())
-        currentForm->prepareForSubmission(event); // Event handlers can run.
+        currentForm->submitIfPossible(&event, element()); // Event handlers can run.
 
     protectedElement->setActivatedSubmit(false);
     event.setDefaultHandled();
@@ -171,16 +163,6 @@ bool ImageInputType::canBeSuccessfulSubmitButton()
     return true;
 }
 
-bool ImageInputType::isImageButton() const
-{
-    return true;
-}
-
-bool ImageInputType::isEnumeratable()
-{
-    return false;
-}
-
 bool ImageInputType::shouldRespectHeightAndWidthAttributes()
 {
     return true;
@@ -228,6 +210,11 @@ unsigned ImageInputType::width() const
         return imageLoader->image()->imageSizeForRenderer(element->renderer(), 1).width().toUnsigned();
 
     return 0;
+}
+
+String ImageInputType::resultForDialogSubmit() const
+{
+    return makeString(m_clickLocation.x(), ',', m_clickLocation.y());
 }
 
 } // namespace WebCore

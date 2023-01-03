@@ -29,27 +29,16 @@ import javafx.animation.Animation;
 import javafx.animation.Animation.Status;
 import javafx.util.Duration;
 
-public class InfiniteClipEnvelope extends ClipEnvelope {
-
-    private boolean autoReverse;
-    private long pos;
+/**
+ * Clip envelope implementation for infinite cycles: cycleCount = indefinite
+ */
+public class InfiniteClipEnvelope extends MultiLoopClipEnvelope {
 
     protected InfiniteClipEnvelope(Animation animation) {
         super(animation);
         if (animation != null) {
             autoReverse = animation.isAutoReverse();
         }
-    }
-
-    @Override
-    public void setAutoReverse(boolean autoReverse) {
-        this.autoReverse = autoReverse;
-    }
-
-    @Override
-    protected double calculateCurrentRate() {
-        return !autoReverse? rate
-                : (ticks % (2 * cycleTicks) < cycleTicks)? rate : -rate;
     }
 
     @Override
@@ -63,23 +52,29 @@ public class InfiniteClipEnvelope extends ClipEnvelope {
 
     @Override
     public ClipEnvelope setCycleCount(int cycleCount) {
-       return (cycleCount != Animation.INDEFINITE)? create(animation) : this;
+       return (cycleCount != Animation.INDEFINITE) ? create(animation) : this;
     }
 
     @Override
-    public void setRate(double rate) {
+    public void setRate(double newRate) {
         final Status status = animation.getStatus();
         if (status != Status.STOPPED) {
-            setInternalCurrentRate((Math.abs(currentRate - this.rate) < EPSILON) ? rate : -rate);
-            deltaTicks = ticks - Math.round((ticks - deltaTicks) * Math.abs(rate / this.rate));
-            if (rate * this.rate < 0) {
-                final long delta = 2 * cycleTicks - pos;
+            setInternalCurrentRate((Math.abs(currentRate - rate) < EPSILON) ? newRate : -newRate);
+            deltaTicks = ticks - ticksRateChange(newRate);
+            if (isDirectionChanged(newRate)) {
+                final long delta = 2 * cycleTicks - cyclePos;
                 deltaTicks += delta;
                 ticks += delta;
             }
             abortCurrentPulse();
         }
-        this.rate = rate;
+        rate = newRate;
+    }
+
+    @Override
+    protected double calculateCurrentRate() {
+        return !autoReverse ? rate
+                : isDuringEvenCycle() ? rate : -rate;
     }
 
     @Override
@@ -92,20 +87,21 @@ public class InfiniteClipEnvelope extends ClipEnvelope {
 
         try {
             final long oldTicks = ticks;
-            ticks = Math.max(0, deltaTicks + Math.round(currentTick * Math.abs(rate)));
+            long ticksChange = Math.round(currentTick * Math.abs(rate));
+            ticks = Math.max(0, deltaTicks + ticksChange);
 
             long overallDelta = ticks - oldTicks; // overall delta between current position and new position
             if (overallDelta == 0) {
                 return;
             }
 
-            long cycleDelta = (currentRate > 0)? cycleTicks - pos : pos; // delta to reach end of cycle
+            long cycleDelta = (currentRate > 0) ? cycleTicks - cyclePos : cyclePos; // delta to reach end of cycle
 
             while (overallDelta >= cycleDelta) {
                 if (cycleDelta > 0) {
-                    pos = (currentRate > 0)? cycleTicks : 0;
+                    cyclePos = (currentRate > 0) ? cycleTicks : 0;
                     overallDelta -= cycleDelta;
-                    AnimationAccessor.getDefault().playTo(animation, pos, cycleTicks);
+                    AnimationAccessor.getDefault().playTo(animation, cyclePos, cycleTicks);
                     if (aborted) {
                         return;
                     }
@@ -113,15 +109,15 @@ public class InfiniteClipEnvelope extends ClipEnvelope {
                 if (autoReverse) {
                     setCurrentRate(-currentRate);
                 } else {
-                    pos = (currentRate > 0)? 0 : cycleTicks;
-                    AnimationAccessor.getDefault().jumpTo(animation, pos, cycleTicks, false);
+                    cyclePos = (currentRate > 0) ? 0 : cycleTicks;
+                    AnimationAccessor.getDefault().jumpTo(animation, cyclePos, cycleTicks, false);
                 }
                 cycleDelta = cycleTicks;
             }
 
             if (overallDelta > 0) {
-                pos += (currentRate > 0)? overallDelta : -overallDelta;
-                AnimationAccessor.getDefault().playTo(animation, pos, cycleTicks);
+                cyclePos += (currentRate > 0) ? overallDelta : -overallDelta;
+                AnimationAccessor.getDefault().playTo(animation, cyclePos, cycleTicks);
             }
 
         } finally {
@@ -141,23 +137,23 @@ public class InfiniteClipEnvelope extends ClipEnvelope {
             deltaTicks += delta;
             if (autoReverse) {
                 if (ticks > cycleTicks) {
-                    pos = 2 * cycleTicks - ticks;
+                    cyclePos = 2 * cycleTicks - ticks;
                     if (animation.getStatus() == Status.RUNNING) {
                         setCurrentRate(-rate);
                     }
                 } else {
-                    pos = ticks;
+                    cyclePos = ticks;
                     if (animation.getStatus() == Status.RUNNING) {
                         setCurrentRate(rate);
                     }
                 }
             } else {
-                pos = ticks % cycleTicks;
-                if (pos == 0) {
-                    pos = ticks;
+                cyclePos = ticks % cycleTicks;
+                if (cyclePos == 0) {
+                    cyclePos = ticks;
                 }
             }
-            AnimationAccessor.getDefault().jumpTo(animation, pos, cycleTicks, false);
+            AnimationAccessor.getDefault().jumpTo(animation, cyclePos, cycleTicks, false);
             abortCurrentPulse();
         }
     }

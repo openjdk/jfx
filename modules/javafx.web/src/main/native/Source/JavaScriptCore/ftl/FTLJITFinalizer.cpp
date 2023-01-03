@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,9 +31,8 @@
 #include "CodeBlockWithJITType.h"
 #include "DFGPlan.h"
 #include "FTLState.h"
-#include "FTLThunks.h"
-#include "JSCInlines.h"
 #include "ProfilerDatabase.h"
+#include "ThunkGenerators.h"
 
 namespace JSC { namespace FTL {
 
@@ -61,34 +60,21 @@ size_t JITFinalizer::codeSize()
 
 bool JITFinalizer::finalize()
 {
-    return finalizeCommon();
-}
+    VM& vm = *m_plan.vm();
+    WTF::crossModifyingCodeFence();
 
-bool JITFinalizer::finalizeFunction()
-{
-    return finalizeCommon();
-}
+    b3CodeLinkBuffer->runMainThreadFinalizationTasks();
 
-bool JITFinalizer::finalizeCommon()
-{
-    bool dumpDisassembly = shouldDumpDisassembly() || Options::asyncDisassembly();
+    CodeBlock* codeBlock = m_plan.codeBlock();
 
-    MacroAssemblerCodeRef<JSEntryPtrTag> b3CodeRef =
-        FINALIZE_CODE_IF(dumpDisassembly, *b3CodeLinkBuffer, JSEntryPtrTag,
-            "FTL B3 code for %s", toCString(CodeBlockWithJITType(m_plan.codeBlock(), JITType::FTLJIT)).data());
-
-    MacroAssemblerCodeRef<JSEntryPtrTag> arityCheckCodeRef = entrypointLinkBuffer
-        ? FINALIZE_CODE_IF(dumpDisassembly, *entrypointLinkBuffer, JSEntryPtrTag,
-            "FTL entrypoint thunk for %s with B3 generated code at %p", toCString(CodeBlockWithJITType(m_plan.codeBlock(), JITType::FTLJIT)).data(), function)
-        : MacroAssemblerCodeRef<JSEntryPtrTag>::createSelfManagedCodeRef(b3CodeRef.code());
-
-    jitCode->initializeB3Code(b3CodeRef);
-    jitCode->initializeArityCheckEntrypoint(arityCheckCodeRef);
-
-    m_plan.codeBlock()->setJITCode(*jitCode);
+    codeBlock->setJITCode(*jitCode);
 
     if (UNLIKELY(m_plan.compilation()))
-        m_plan.vm()->m_perBytecodeProfiler->addCompilation(m_plan.codeBlock(), *m_plan.compilation());
+        vm.m_perBytecodeProfiler->addCompilation(codeBlock, *m_plan.compilation());
+
+    // The codeBlock is now responsible for keeping many things alive (e.g. frozen values)
+    // that were previously kept alive by the plan.
+    vm.writeBarrier(codeBlock);
 
     return true;
 }
@@ -96,4 +82,3 @@ bool JITFinalizer::finalizeCommon()
 } } // namespace JSC::FTL
 
 #endif // ENABLE(FTL_JIT)
-

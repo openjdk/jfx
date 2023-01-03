@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,7 +29,7 @@
 #include "JSCast.h"
 #include "MarkedBlock.h"
 #include "MarkedSpace.h"
-#include "Operations.h"
+#include "Scribble.h"
 #include "SuperSampler.h"
 #include "VM.h"
 
@@ -168,7 +168,7 @@ ALWAYS_INLINE bool MarkedBlock::Handle::isLive(HeapVersion markingVersion, HeapV
         }
     }
 
-    auto locker = holdLock(footer.m_lock);
+    Locker locker { footer.m_lock };
 
     ASSERT(!isFreeListed());
 
@@ -213,7 +213,7 @@ inline bool MarkedBlock::Handle::areMarksStaleForSweep()
 // sweepMode == SweepToFreeList
 // scribbleMode == DontScribble
 // newlyAllocatedMode == DoesNotHaveNewlyAllocated
-// destructionMode != BlockHasDestrictorsAndCollectorIsRunning
+// destructionMode != BlockHasDestructorsAndCollectorIsRunning
 //
 // emptyMode = IsEmpty
 //     destructionMode = DoesNotNeedDestruction
@@ -306,7 +306,7 @@ void MarkedBlock::Handle::specializedSweep(FreeList* freeList, MarkedBlock::Hand
     // This produces a free list that is ordered in reverse through the block.
     // This is fine, since the allocation code makes no assumptions about the
     // order of the free list.
-    FreeCell* head = 0;
+    FreeCell* head = nullptr;
     size_t count = 0;
     uintptr_t secret;
     cryptographicallyRandomValues(&secret, sizeof(uintptr_t));
@@ -481,6 +481,12 @@ inline MarkedBlock::Handle::MarksMode MarkedBlock::Handle::marksMode()
     if (space()->isMarking())
         marksAreUseful |= block().marksConveyLivenessDuringMarking(markingVersion);
     return marksAreUseful ? MarksNotStale : MarksStale;
+}
+
+inline void MarkedBlock::Handle::setIsFreeListed()
+{
+    m_directory->setIsEmpty(NoLockingNecessary, this, false);
+    m_isFreeListed = true;
 }
 
 template <typename Functor>

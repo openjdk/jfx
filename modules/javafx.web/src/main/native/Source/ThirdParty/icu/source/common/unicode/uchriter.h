@@ -11,6 +11,9 @@
 #define UCHRITER_H
 
 #include "unicode/utypes.h"
+
+#if U_SHOW_CPLUSPLUS_API
+
 #include "unicode/chariter.h"
 
 /**
@@ -53,7 +56,7 @@ public:
    * The starting
    * position is specified by "position". If "position" is outside the valid
    * iteration range, the behavior of this object is undefined.
-   * @param textPtr The char16_t array to be iteratd over
+   * @param textPtr The char16_t array to be iterated over
    * @param length The length of the char16_t array
    * @param position The starting position of the iteration
    * @stable ICU 2.0
@@ -116,14 +119,14 @@ public:
    * same string and are pointing at the same character.
    * @stable ICU 2.0
    */
-  virtual UBool          operator==(const ForwardCharacterIterator& that) const;
+  virtual bool           operator==(const ForwardCharacterIterator& that) const override;
 
   /**
    * Generates a hash code for this iterator.
    * @return the hash code.
    * @stable ICU 2.0
    */
-  virtual int32_t         hashCode(void) const;
+  virtual int32_t         hashCode(void) const override;
 
   /**
    * Returns a new UCharCharacterIterator referring to the same
@@ -132,7 +135,7 @@ public:
    * @return the CharacterIterator newly created
    * @stable ICU 2.0
    */
-  virtual CharacterIterator* clone(void) const;
+  virtual UCharCharacterIterator* clone() const override;
 
   /**
    * Sets the iterator to refer to the first code unit in its
@@ -141,7 +144,7 @@ public:
    * @return the first code unit in its iteration range.
    * @stable ICU 2.0
    */
-  virtual char16_t         first(void);
+  virtual char16_t         first(void) override;
 
   /**
    * Sets the iterator to refer to the first code unit in its
@@ -151,7 +154,7 @@ public:
    * @return the first code unit in its iteration range
    * @stable ICU 2.0
    */
-  virtual char16_t         firstPostInc(void);
+  virtual char16_t         firstPostInc(void) override;
 
   /**
    * Sets the iterator to refer to the first code point in its
@@ -162,7 +165,7 @@ public:
    * @return the first code point in its iteration range
    * @stable ICU 2.0
    */
-  virtual UChar32       first32(void);
+  virtual UChar32       first32(void) override;
 
   /**
    * Sets the iterator to refer to the first code point in its
@@ -172,7 +175,7 @@ public:
    * @return the first code point in its iteration range.
    * @stable ICU 2.0
    */
-  virtual UChar32       first32PostInc(void);
+  virtual UChar32       first32PostInc(void) override;
 
   /**
    * Sets the iterator to refer to the last code unit in its
@@ -181,7 +184,7 @@ public:
    * @return the last code unit in its iteration range.
    * @stable ICU 2.0
    */
-  virtual char16_t         last(void);
+  virtual char16_t         last(void) override;
 
   /**
    * Sets the iterator to refer to the last code point in its
@@ -190,7 +193,7 @@ public:
    * @return the last code point in its iteration range.
    * @stable ICU 2.0
    */
-  virtual UChar32       last32(void);
+  virtual UChar32       last32(void) override;
 
   /**
    * Sets the iterator to refer to the "position"-th code unit
@@ -200,7 +203,7 @@ public:
    * @return the code unit
    * @stable ICU 2.0
    */
-  virtual char16_t         setIndex(int32_t position);
+  virtual char16_t         setIndex(int32_t position) override;
 
   /**
    * Sets the iterator to refer to the beginning of the code point
@@ -213,21 +216,21 @@ public:
    * @return the code unit
    * @stable ICU 2.0
    */
-  virtual UChar32       setIndex32(int32_t position);
+  virtual UChar32       setIndex32(int32_t position) override;
 
   /**
    * Returns the code unit the iterator currently refers to.
    * @return the code unit the iterator currently refers to.
    * @stable ICU 2.0
    */
-  virtual char16_t         current(void) const;
+  virtual char16_t         current(void) const override;
 
   /**
    * Returns the code point the iterator currently refers to.
    * @return the code point the iterator currently refers to.
    * @stable ICU 2.0
    */
-  virtual UChar32       current32(void) const;
+  virtual UChar32       current32(void) const override;
 
   /**
    * Advances to the next code unit in the iteration range (toward
@@ -236,7 +239,7 @@ public:
    * @return the next code unit in the iteration range.
    * @stable ICU 2.0
    */
-  virtual char16_t         next(void);
+  virtual char16_t         next(void) override;
 
   /**
    * Gets the current code unit for returning and advances to the next code unit
@@ -246,7 +249,7 @@ public:
    * @return the current code unit.
    * @stable ICU 2.0
    */
-  virtual char16_t         nextPostInc(void);
+  virtual char16_t         nextPostInc(void) override;
 
   /**
    * Advances to the next code point in the iteration range (toward
@@ -258,7 +261,7 @@ public:
    * @return the next code point in the iteration range.
    * @stable ICU 2.0
    */
-  virtual UChar32       next32(void);
+  virtual UChar32       next32(void) override;
 
   /**
    * Gets the current code point for returning and advances to the next code point
@@ -268,18 +271,18 @@ public:
    * @return the current point.
    * @stable ICU 2.0
    */
-  virtual UChar32       next32PostInc(void);
+  virtual UChar32       next32PostInc(void) override;
 
   /**
-   * Returns FALSE if there are no more code units or code points
+   * Returns false if there are no more code units or code points
    * at or after the current position in the iteration range.
    * This is used with nextPostInc() or next32PostInc() in forward
    * iteration.
-   * @return FALSE if there are no more code units or code points
+   * @return false if there are no more code units or code points
    * at or after the current position in the iteration range.
    * @stable ICU 2.0
    */
-  virtual UBool        hasNext();
+  virtual UBool        hasNext() override;
 
   /**
    * Advances to the previous code unit in the iteration range (toward
@@ -288,7 +291,7 @@ public:
    * @return the previous code unit in the iteration range.
    * @stable ICU 2.0
    */
-  virtual char16_t         previous(void);
+  virtual char16_t         previous(void) override;
 
   /**
    * Advances to the previous code point in the iteration range (toward
@@ -297,18 +300,18 @@ public:
    * @return the previous code point in the iteration range.
    * @stable ICU 2.0
    */
-  virtual UChar32       previous32(void);
+  virtual UChar32       previous32(void) override;
 
   /**
-   * Returns FALSE if there are no more code units or code points
+   * Returns false if there are no more code units or code points
    * before the current position in the iteration range.
    * This is used with previous() or previous32() in backward
    * iteration.
-   * @return FALSE if there are no more code units or code points
+   * @return false if there are no more code units or code points
    * before the current position in the iteration range.
    * @stable ICU 2.0
    */
-  virtual UBool        hasPrevious();
+  virtual UBool        hasPrevious() override;
 
   /**
    * Moves the current position relative to the start or end of the
@@ -321,7 +324,7 @@ public:
    * @return the new position
    * @stable ICU 2.0
    */
-  virtual int32_t      move(int32_t delta, EOrigin origin);
+  virtual int32_t      move(int32_t delta, EOrigin origin) override;
 
   /**
    * Moves the current position relative to the start or end of the
@@ -338,7 +341,7 @@ public:
    // One of the system headers right now is sometimes defining a conflicting macro we don't use
 #undef move32
 #endif
-  virtual int32_t      move32(int32_t delta, EOrigin origin);
+  virtual int32_t      move32(int32_t delta, EOrigin origin) override;
 
   /**
    * Sets the iterator to iterate over a new range of text
@@ -353,7 +356,7 @@ public:
    * @param result Receives a copy of the text under iteration.
    * @stable ICU 2.0
    */
-  virtual void            getText(UnicodeString& result);
+  virtual void            getText(UnicodeString& result) override;
 
   /**
    * Return a class ID for this class (not really public)
@@ -367,7 +370,7 @@ public:
    * @return a class ID for this object.
    * @stable ICU 2.0
    */
-  virtual UClassID        getDynamicClassID(void) const;
+  virtual UClassID        getDynamicClassID(void) const override;
 
 protected:
   /**
@@ -384,4 +387,7 @@ protected:
 };
 
 U_NAMESPACE_END
+
+#endif /* U_SHOW_CPLUSPLUS_API */
+
 #endif

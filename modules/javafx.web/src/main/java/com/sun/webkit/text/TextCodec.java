@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -70,7 +70,7 @@ final class TextCodec {
      * @return  an array of charset alias/name pairs
      */
     private static String[] getEncodings() {
-        List<String> encodings = new ArrayList<String>();
+        List<String> encodings = new ArrayList<>();
         Map<String, Charset> ac = Charset.availableCharsets();
         for (Map.Entry<String, Charset> entry: ac.entrySet()) {
             String e = entry.getKey();
@@ -78,7 +78,7 @@ final class TextCodec {
             encodings.add(e);
             Charset c = entry.getValue();
             for (String a : c.aliases()) {
-                // 8859_1 is blacklisted in TextEncodingRegistry.cpp:isUndesiredAlias()
+                // 8859_1 is rejected in TextEncodingRegistry.cpp:isUndesiredAlias()
                 // See also https://bugs.webkit.org/show_bug.cgi?id=43554
                 if (a.equals("8859_1")) continue;
 

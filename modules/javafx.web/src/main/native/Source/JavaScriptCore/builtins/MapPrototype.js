@@ -23,48 +23,6 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-@constructor
-@globalPrivate
-function MapIterator(iteratedObject, kind)
-{
-    "use strict";
-
-    @assert(@isMap(iteratedObject));
-    @putByIdDirectPrivate(this, "iteratedObject", iteratedObject);
-    @putByIdDirectPrivate(this, "mapIteratorKind", kind);
-    @putByIdDirectPrivate(this, "mapBucket", @mapBucketHead(iteratedObject));
-}
-
-function values()
-{
-    "use strict";
-
-    if (!@isMap(this))
-        @throwTypeError("Map.prototype.values requires that |this| be Map");
-
-    return new @MapIterator(this, @iterationKindValue);
-}
-
-function keys()
-{
-    "use strict";
-
-    if (!@isMap(this))
-        @throwTypeError("Map.prototype.keys requires that |this| be Map");
-
-    return new @MapIterator(this, @iterationKindKey);
-}
-
-function entries()
-{
-    "use strict";
-
-    if (!@isMap(this))
-        @throwTypeError("Map.prototype.entries requires that |this| be Map");
-
-    return new @MapIterator(this, @iterationKindKeyValue);
-}
-
 function forEach(callback /*, thisArg */)
 {
     "use strict";
@@ -72,7 +30,7 @@ function forEach(callback /*, thisArg */)
     if (!@isMap(this))
         @throwTypeError("Map operation called on non-Map object");
 
-    if (typeof callback !== 'function')
+    if (!@isCallable(callback))
         @throwTypeError("Map.prototype.forEach callback must be a function");
 
     var thisArg = @argument(1);

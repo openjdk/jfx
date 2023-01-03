@@ -146,8 +146,10 @@ bool RenderMathMLUnderOver::isValid() const
     }
 }
 
-bool RenderMathMLUnderOver::shouldMoveLimits()
+bool RenderMathMLUnderOver::shouldMoveLimits() const
 {
+    if (style().mathStyle() == MathStyle::Normal)
+        return false;
     if (auto* renderOperator = unembellishedOperator())
         return renderOperator->shouldMoveLimits();
     return false;
@@ -246,7 +248,7 @@ RenderMathMLUnderOver::VerticalParameters RenderMathMLUnderOver::verticalParamet
         parameters.overGapMin = 3 * defaultLineThickness;
         parameters.underExtraDescender = defaultLineThickness;
         parameters.overExtraAscender = defaultLineThickness;
-        parameters.accentBaseHeight = style().fontMetrics().xHeight();
+        parameters.accentBaseHeight = style().metricsOfPrimaryFont().xHeight();
         parameters.useUnderOverBarFallBack = true;
         return parameters;
     }

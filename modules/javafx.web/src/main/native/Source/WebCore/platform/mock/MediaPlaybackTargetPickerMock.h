@@ -34,7 +34,7 @@
 
 namespace WebCore {
 
-class MediaPlaybackTargetPickerMock final : public MediaPlaybackTargetPicker {
+class MediaPlaybackTargetPickerMock final : public MediaPlaybackTargetPicker, public CanMakeWeakPtr<MediaPlaybackTargetPickerMock> {
     WTF_MAKE_FAST_ALLOCATED;
     WTF_MAKE_NONCOPYABLE(MediaPlaybackTargetPickerMock);
 public:
@@ -42,22 +42,20 @@ public:
 
     virtual ~MediaPlaybackTargetPickerMock();
 
-    void showPlaybackTargetPicker(const FloatRect&, bool checkActiveRoute, bool useDarkAppearance) override;
+    void showPlaybackTargetPicker(PlatformView*, const FloatRect&, bool checkActiveRoute, bool useDarkAppearance, bool) override;
     void startingMonitoringPlaybackTargets() override;
     void stopMonitoringPlaybackTargets() override;
     void invalidatePlaybackTargets() override;
 
-    void setState(const String&, MediaPlaybackTargetContext::State);
+    void setState(const String&, MediaPlaybackTargetContext::MockState);
+    void dismissPopup();
 
 private:
     bool externalOutputDeviceAvailable() override;
     Ref<MediaPlaybackTarget> playbackTarget() override;
 
-    void timerFired();
-
     String m_deviceName;
-    RunLoop::Timer<MediaPlaybackTargetPickerMock> m_timer;
-    MediaPlaybackTargetContext::State m_state { MediaPlaybackTargetContext::Unknown };
+    MediaPlaybackTargetContext::MockState m_state { MediaPlaybackTargetContext::MockState::Unknown };
     bool m_showingMenu { false };
 };
 

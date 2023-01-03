@@ -58,6 +58,28 @@ public:
 
     WEBCORE_EXPORT explicit LayoutRect(const FloatRect&); // don't do this implicitly since it's lossy
 
+    template<class Encoder>
+    void encode(Encoder& encoder) const
+    {
+        encoder << m_location << m_size;
+    }
+
+    template<class Decoder>
+    static std::optional<LayoutRect> decode(Decoder& decoder)
+    {
+        std::optional<LayoutPoint> layoutPoint;
+        decoder >> layoutPoint;
+        if (!layoutPoint)
+            return std::nullopt;
+
+        std::optional<LayoutSize> layoutSize;
+        decoder >> layoutSize;
+        if (!layoutSize)
+            return std::nullopt;
+
+        return {{ *layoutPoint, *layoutSize }};
+    }
+
     LayoutPoint location() const { return m_location; }
     LayoutSize size() const { return m_size; }
 
@@ -107,21 +129,36 @@ public:
         setX(edge);
         setWidth(std::max<LayoutUnit>(0, width() - delta));
     }
+
     void shiftMaxXEdgeTo(LayoutUnit edge)
     {
         LayoutUnit delta = edge - maxX();
         setWidth(std::max<LayoutUnit>(0, width() + delta));
     }
+
     void shiftYEdgeTo(LayoutUnit edge)
     {
         LayoutUnit delta = edge - y();
         setY(edge);
         setHeight(std::max<LayoutUnit>(0, height() - delta));
     }
+
     void shiftMaxYEdgeTo(LayoutUnit edge)
     {
         LayoutUnit delta = edge - maxY();
         setHeight(std::max<LayoutUnit>(0, height() + delta));
+    }
+
+    void shiftXEdgeBy(LayoutUnit delta)
+    {
+        move(delta, 0);
+        setWidth(std::max<LayoutUnit>(0, width() - delta));
+    }
+
+    void shiftYEdgeBy(LayoutUnit delta)
+    {
+        move(0, delta);
+        setHeight(std::max<LayoutUnit>(0, height() - delta));
     }
 
     template<typename T> void shiftXEdgeTo(T edge) { shiftXEdgeTo(LayoutUnit(edge)); }
@@ -153,6 +190,7 @@ public:
     void intersect(const LayoutRect&);
     bool edgeInclusiveIntersect(const LayoutRect&);
     WEBCORE_EXPORT void unite(const LayoutRect&);
+    void uniteEvenIfEmpty(const LayoutRect&);
     void uniteIfNonZero(const LayoutRect&);
     bool checkedUnite(const LayoutRect&);
 
@@ -186,6 +224,8 @@ public:
     operator FloatRect() const { return FloatRect(m_location, m_size); }
 
 private:
+    void setLocationAndSizeFromEdges(LayoutUnit left, LayoutUnit top, LayoutUnit right, LayoutUnit bottom);
+
     LayoutPoint m_location;
     LayoutSize m_size;
 };
@@ -219,6 +259,13 @@ inline bool operator!=(const LayoutRect& a, const LayoutRect& b)
 inline bool LayoutRect::isInfinite() const
 {
     return *this == LayoutRect::infiniteRect();
+}
+
+inline void LayoutRect::setLocationAndSizeFromEdges(LayoutUnit left, LayoutUnit top, LayoutUnit right, LayoutUnit bottom)
+{
+    m_location = { left, top };
+    m_size.setWidth(right - left);
+    m_size.setHeight(bottom - top);
 }
 
 // Integral snapping functions.

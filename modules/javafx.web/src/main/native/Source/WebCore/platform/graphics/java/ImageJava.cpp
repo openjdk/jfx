@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -45,24 +45,29 @@ class ImageBuffer;
 namespace WebCore {
 
 void Image::drawImage(GraphicsContext& gc, const FloatRect &dstRect, const FloatRect &srcRect,
-                       CompositeOperator, BlendMode)
+                       CompositeOperator compositeOperator, BlendMode)
 {
     if (gc.paintingDisabled()) {
         return;
     }
 
-    NativeImagePtr currFrame = nativeImageForCurrentFrame();
-    if (!currFrame) {
+    auto nativeImage = nativeImageForCurrentFrame();
+    if (!nativeImage) {
         return;
     }
 
+    CompositeOperator oldCompositeOperator = gc.compositeOperation();
+    gc.setCompositeOperation(compositeOperator);
+
     gc.platformContext()->rq().freeSpace(72)
     << (jint)com_sun_webkit_graphics_GraphicsDecoder_DRAWIMAGE
-    << currFrame
+    << nativeImage->platformImage()->getImage()
     << dstRect.x() << dstRect.y()
     << dstRect.width() << dstRect.height()
     << srcRect.x() << srcRect.y()
     << srcRect.width() << srcRect.height();
+
+    gc.setCompositeOperation(oldCompositeOperator);
 
     if (imageObserver())
         imageObserver()->didDraw(*this);
@@ -86,6 +91,9 @@ NativeImagePtr ImageFrame::asNewNativeImage() const
             m_bytes,
             width() * height() * sizeof(PixelData)));
     ASSERT(data);
+    if (!data) {
+        return nullptr;
+    }
 
     JLObject frame(env->CallObjectMethod(
         PL_GetGraphicsManager(env),
@@ -94,7 +102,9 @@ NativeImagePtr ImageFrame::asNewNativeImage() const
         height(),
         (jobject)data));
     ASSERT(frame);
-    WTF::CheckAndClearException(env);
+    if (WTF::CheckAndClearException(env) || !frame) {
+        return nullptr;
+    }
 
     return RQRef::create(frame);
 }

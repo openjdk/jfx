@@ -42,7 +42,7 @@ class RTCRtpSender;
 class RTCDTMFSender final : public RefCounted<RTCDTMFSender>, public EventTargetWithInlineData, public ActiveDOMObject {
     WTF_MAKE_ISO_ALLOCATED(RTCDTMFSender);
 public:
-    static Ref<RTCDTMFSender> create(ScriptExecutionContext& context, RTCRtpSender& sender, std::unique_ptr<RTCDTMFSenderBackend>&& backend) { return adoptRef(* new RTCDTMFSender(context, sender, WTFMove(backend))); }
+    static Ref<RTCDTMFSender> create(ScriptExecutionContext&, RTCRtpSender&, std::unique_ptr<RTCDTMFSenderBackend>&&);
     virtual ~RTCDTMFSender();
 
     bool canInsertDTMF() const;
@@ -58,7 +58,6 @@ private:
 
     void stop() final;
     const char* activeDOMObjectName() const final;
-    bool canSuspendForDocumentSuspension() const final;
 
     EventTargetInterface eventTargetInterface() const final { return RTCDTMFSenderEventTargetInterfaceType; }
     ScriptExecutionContext* scriptExecutionContext() const final { return ActiveDOMObject::scriptExecutionContext(); }

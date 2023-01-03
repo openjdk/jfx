@@ -30,16 +30,21 @@
 
 #pragma once
 
+#include "ExceptionCode.h"
+#include "SharedBuffer.h"
+#include <wtf/WeakPtr.h>
+
 namespace WebCore {
 
-class FileReaderLoaderClient {
+class FileReaderLoaderClient : public CanMakeWeakPtr<FileReaderLoaderClient> {
 public:
     virtual ~FileReaderLoaderClient() = default;
 
     virtual void didStartLoading() = 0;
     virtual void didReceiveData() = 0;
+    virtual void didReceiveBinaryChunk(const SharedBuffer&) { }
     virtual void didFinishLoading() = 0;
-    virtual void didFail(int errorCode) = 0;
+    virtual void didFail(ExceptionCode errorCode) = 0;
 };
 
 } // namespace WebCore

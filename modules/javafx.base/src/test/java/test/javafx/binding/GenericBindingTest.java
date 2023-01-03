@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -80,7 +80,7 @@ public class GenericBindingTest<T> {
         binding2 = bindingMockClassConstructor.newInstance((Object)new Observable[] {dependency1, dependency2});
 
         invalidationListener = new InvalidationListenerMock();
-        changeListener = new ChangeListenerMock<Object>(UNDEFINED);
+        changeListener = new ChangeListenerMock<>(UNDEFINED);
         binding0.setValue(value2);
         binding1.setValue(value2);
         binding2.setValue(value2);
@@ -421,6 +421,7 @@ public class GenericBindingTest<T> {
             return value;
         }
 
+        @Override
         public ObservableList<?> getDependencies() {
             fail("Should not reach here");
             return null;
@@ -457,6 +458,7 @@ public class GenericBindingTest<T> {
             return value;
         }
 
+        @Override
         public ObservableList<?> getDependencies() {
             fail("Should not reach here");
             return null;
@@ -493,6 +495,7 @@ public class GenericBindingTest<T> {
             return value;
         }
 
+        @Override
         public ObservableList<?> getDependencies() {
             fail("Should not reach here");
             return null;
@@ -529,6 +532,7 @@ public class GenericBindingTest<T> {
             return value;
         }
 
+        @Override
         public ObservableList<?> getDependencies() {
             fail("Should not reach here");
             return null;
@@ -565,6 +569,7 @@ public class GenericBindingTest<T> {
             return value;
         }
 
+        @Override
         public ObservableList<?> getDependencies() {
             fail("Should not reach here");
             return null;
@@ -601,6 +606,7 @@ public class GenericBindingTest<T> {
             return value;
         }
 
+        @Override
         public ObservableList<?> getDependencies() {
             fail("Should not reach here");
             return null;
@@ -637,6 +643,7 @@ public class GenericBindingTest<T> {
             return value;
         }
 
+        @Override
         public ObservableList<?> getDependencies() {
             fail("Should not reach here");
             return null;
@@ -673,6 +680,7 @@ public class GenericBindingTest<T> {
             return value;
         }
 
+        @Override
         public ObservableList<?> getDependencies() {
             fail("Should not reach here");
             return null;

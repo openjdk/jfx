@@ -28,7 +28,7 @@ function of(/* items... */)
     "use strict";
 
     var length = arguments.length;
-    var array = @isConstructor(this) ? new this(length) : @newArrayWithSize(length);
+    var array = this !== @Array && @isConstructor(this) ? new this(length) : @newArrayWithSize(length);
     for (var k = 0; k < length; ++k)
         @putByValDirect(array, k, arguments[k]);
     array.length = length;
@@ -39,14 +39,12 @@ function from(items /*, mapFn, thisArg */)
 {
     "use strict";
 
-    var thisObj = this;
-
     var mapFn = @argument(1);
 
     var thisArg;
 
     if (mapFn !== @undefined) {
-        if (typeof mapFn !== "function")
+        if (!@isCallable(mapFn))
             @throwTypeError("Array.from requires that the second argument, when provided, be a function");
 
         thisArg = @argument(2);
@@ -54,12 +52,12 @@ function from(items /*, mapFn, thisArg */)
 
     var arrayLike = @toObject(items, "Array.from requires an array-like object - not null or undefined");
 
-    var iteratorMethod = items.@iteratorSymbol;
-    if (iteratorMethod != null) {
-        if (typeof iteratorMethod !== "function")
+    var iteratorMethod = items.@@iterator;
+    if (!@isUndefinedOrNull(iteratorMethod)) {
+        if (!@isCallable(iteratorMethod))
             @throwTypeError("Array.from requires that the property of the first argument, items[Symbol.iterator], when exists, be a function");
 
-        var result = @isConstructor(thisObj) ? new thisObj() : [];
+        var result = this !== @Array && @isConstructor(this) ? new this() : [];
 
         var k = 0;
         var iterator = iteratorMethod.@call(items);
@@ -68,9 +66,11 @@ function from(items /*, mapFn, thisArg */)
         // it could be observable if the user defines a getter for @@iterator.
         // To avoid this situation, we define a wrapper object that @@iterator just returns a given iterator.
         var wrapper = {}
-        wrapper.@iteratorSymbol = function() { return iterator; };
+        wrapper.@@iterator = function() { return iterator; };
 
         for (var value of wrapper) {
+            if (k >= @MAX_SAFE_INTEGER)
+                @throwTypeError("Length exceeded the maximum array length");
             if (mapFn)
                 @putByValDirect(result, k, thisArg === @undefined ? mapFn(value, k) : mapFn.@call(thisArg, value, k));
             else
@@ -84,7 +84,7 @@ function from(items /*, mapFn, thisArg */)
 
     var arrayLikeLength = @toLength(arrayLike.length);
 
-    var result = @isConstructor(thisObj) ? new thisObj(arrayLikeLength) : @newArrayWithSize(arrayLikeLength);
+    var result = this !== @Array && @isConstructor(this) ? new this(arrayLikeLength) : @newArrayWithSize(arrayLikeLength);
 
     var k = 0;
     while (k < arrayLikeLength) {

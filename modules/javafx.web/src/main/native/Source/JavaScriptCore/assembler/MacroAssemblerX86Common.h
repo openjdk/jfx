@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,7 +30,6 @@
 #include "X86Assembler.h"
 #include "AbstractMacroAssembler.h"
 #include <array>
-#include <wtf/Optional.h>
 
 namespace JSC {
 
@@ -40,7 +39,7 @@ class MacroAssemblerX86Common : public AbstractMacroAssembler<Assembler> {
 public:
 #if CPU(X86_64)
     // Use this directly only if you're not generating code with it.
-    static const X86Registers::RegisterID s_scratchRegister = X86Registers::r11;
+    static constexpr X86Registers::RegisterID s_scratchRegister = X86Registers::r11;
 
     // Use this when generating code so that we get enforcement of the disallowing of scratch register
     // usage.
@@ -52,9 +51,9 @@ public:
 #endif
 
 protected:
-    static const int DoubleConditionBitInvert = 0x10;
-    static const int DoubleConditionBitSpecial = 0x20;
-    static const int DoubleConditionBits = DoubleConditionBitInvert | DoubleConditionBitSpecial;
+    static constexpr int DoubleConditionBitInvert = 0x10;
+    static constexpr int DoubleConditionBitSpecial = 0x20;
+    static constexpr int DoubleConditionBits = DoubleConditionBitInvert | DoubleConditionBitSpecial;
 
 public:
     typedef X86Assembler::XMMRegisterID XMMRegisterID;
@@ -88,12 +87,12 @@ public:
     // FIXME: it would be neat to rename this to FloatingPointCondition in every assembler.
     enum DoubleCondition {
         // These conditions will only evaluate to true if the comparison is ordered - i.e. neither operand is NaN.
-        DoubleEqual = X86Assembler::ConditionE | DoubleConditionBitSpecial,
-        DoubleNotEqual = X86Assembler::ConditionNE,
-        DoubleGreaterThan = X86Assembler::ConditionA,
-        DoubleGreaterThanOrEqual = X86Assembler::ConditionAE,
-        DoubleLessThan = X86Assembler::ConditionA | DoubleConditionBitInvert,
-        DoubleLessThanOrEqual = X86Assembler::ConditionAE | DoubleConditionBitInvert,
+        DoubleEqualAndOrdered = X86Assembler::ConditionE | DoubleConditionBitSpecial,
+        DoubleNotEqualAndOrdered = X86Assembler::ConditionNE,
+        DoubleGreaterThanAndOrdered = X86Assembler::ConditionA,
+        DoubleGreaterThanOrEqualAndOrdered = X86Assembler::ConditionAE,
+        DoubleLessThanAndOrdered = X86Assembler::ConditionA | DoubleConditionBitInvert,
+        DoubleLessThanOrEqualAndOrdered = X86Assembler::ConditionAE | DoubleConditionBitInvert,
         // If either operand is NaN, these conditions always evaluate to true.
         DoubleEqualOrUnordered = X86Assembler::ConditionE,
         DoubleNotEqualOrUnordered = X86Assembler::ConditionNE | DoubleConditionBitSpecial,
@@ -106,12 +105,12 @@ public:
         !((X86Assembler::ConditionE | X86Assembler::ConditionNE | X86Assembler::ConditionA | X86Assembler::ConditionAE | X86Assembler::ConditionB | X86Assembler::ConditionBE) & DoubleConditionBits),
         DoubleConditionBits_should_not_interfere_with_X86Assembler_Condition_codes);
 
-    static const RegisterID stackPointerRegister = X86Registers::esp;
-    static const RegisterID framePointerRegister = X86Registers::ebp;
+    static constexpr RegisterID stackPointerRegister = X86Registers::esp;
+    static constexpr RegisterID framePointerRegister = X86Registers::ebp;
 
-    static bool canBlind() { return true; }
-    static bool shouldBlindForSpecificArch(uint32_t value) { return value >= 0x00ffffff; }
-    static bool shouldBlindForSpecificArch(uint64_t value) { return value >= 0x00ffffff; }
+    static bool constexpr canBlind() { return true; }
+    static bool constexpr shouldBlindForSpecificArch(uint32_t value) { return value >= 0x00ffffff; }
+    static bool constexpr shouldBlindForSpecificArch(uint64_t value) { return value >= 0x00ffffff; }
 
     // Integer arithmetic operations:
     //
@@ -208,7 +207,7 @@ public:
     void add32(TrustedImm32 imm, RegisterID src, RegisterID dest)
     {
         if (!imm.m_value) {
-            zeroExtend32ToPtr(src, dest);
+            zeroExtend32ToWord(src, dest);
             return;
         }
 
@@ -333,7 +332,7 @@ public:
     void and32(RegisterID op1, RegisterID op2, RegisterID dest)
     {
         if (op1 == op2)
-            zeroExtend32ToPtr(op1, dest);
+            zeroExtend32ToWord(op1, dest);
         else if (op1 == dest)
             and32(op2, dest);
         else {
@@ -350,7 +349,7 @@ public:
             load32(op1, dest);
             and32(op2, dest);
         } else {
-            zeroExtend32ToPtr(op2, dest);
+            zeroExtend32ToWord(op2, dest);
             and32(op1, dest);
         }
     }
@@ -494,7 +493,7 @@ public:
             load32(op1, dest);
             mul32(op2, dest);
         } else {
-            zeroExtend32ToPtr(op2, dest);
+            zeroExtend32ToWord(op2, dest);
             mul32(op1, dest);
         }
     }
@@ -626,6 +625,12 @@ public:
         m_assembler.orb_rm(src, dest.offset, dest.base, dest.index, dest.scale);
     }
 
+    void or8(RegisterID src, AbsoluteAddress address)
+    {
+        move(TrustedImmPtr(address.m_ptr), scratchRegister());
+        or8(src, Address(scratchRegister()));
+    }
+
     void or32(Address src, RegisterID dest)
     {
         m_assembler.orl_mr(src.offset, src.base, dest);
@@ -666,10 +671,16 @@ public:
         m_assembler.orb_im(static_cast<int8_t>(imm.m_value), address.offset, address.base, address.index, address.scale);
     }
 
+    void or8(TrustedImm32 imm, AbsoluteAddress address)
+    {
+        move(TrustedImmPtr(address.m_ptr), scratchRegister());
+        or8(imm, Address(scratchRegister()));
+    }
+
     void or32(RegisterID op1, RegisterID op2, RegisterID dest)
     {
         if (op1 == op2)
-            zeroExtend32ToPtr(op1, dest);
+            zeroExtend32ToWord(op1, dest);
         else if (op1 == dest)
             or32(op2, dest);
         else {
@@ -686,7 +697,7 @@ public:
             load32(op1, dest);
             or32(op2, dest);
         } else {
-            zeroExtend32ToPtr(op2, dest);
+            zeroExtend32ToWord(op2, dest);
             or32(op1, dest);
         }
     }
@@ -822,6 +833,12 @@ public:
             add32(left, dest);
             return;
         }
+        move(left, dest);
+        sub32(right, dest);
+    }
+
+    void sub32(RegisterID left, TrustedImm32 right, RegisterID dest)
+    {
         move(left, dest);
         sub32(right, dest);
     }
@@ -1029,7 +1046,7 @@ public:
             load32(op1, dest);
             xor32(op2, dest);
         } else {
-            zeroExtend32ToPtr(op2, dest);
+            zeroExtend32ToWord(op2, dest);
             xor32(op1, dest);
         }
     }
@@ -1103,7 +1120,7 @@ public:
     void absDouble(FPRegisterID src, FPRegisterID dst)
     {
         ASSERT(src != dst);
-        static const double negativeZeroConstant = -0.0;
+        static constexpr double negativeZeroConstant = -0.0;
         loadDouble(TrustedImmPtr(&negativeZeroConstant), dst);
         m_assembler.andnpd_rr(src, dst);
     }
@@ -1111,7 +1128,7 @@ public:
     void negateDouble(FPRegisterID src, FPRegisterID dst)
     {
         ASSERT(src != dst);
-        static const double negativeZeroConstant = -0.0;
+        static constexpr double negativeZeroConstant = -0.0;
         loadDouble(TrustedImmPtr(&negativeZeroConstant), dst);
         m_assembler.xorpd_rr(src, dst);
     }
@@ -1193,7 +1210,7 @@ public:
     // operand objects to loads and store will be implicitly constructed if a
     // register is passed.
 
-    void load32(ImplicitAddress address, RegisterID dest)
+    void load32(Address address, RegisterID dest)
     {
         m_assembler.movl_mr(address.offset, address.base, dest);
     }
@@ -1208,7 +1225,7 @@ public:
         load32(address, dest);
     }
 
-    void load16Unaligned(ImplicitAddress address, RegisterID dest)
+    void load16Unaligned(Address address, RegisterID dest)
     {
         load16(address, dest);
     }
@@ -1216,20 +1233,6 @@ public:
     void load16Unaligned(BaseIndex address, RegisterID dest)
     {
         load16(address, dest);
-    }
-
-    DataLabel32 load32WithAddressOffsetPatch(Address address, RegisterID dest)
-    {
-        padBeforePatch();
-        m_assembler.movl_mr_disp32(address.offset, address.base, dest);
-        return DataLabel32(this);
-    }
-
-    DataLabelCompact load32WithCompactAddressOffsetPatch(Address address, RegisterID dest)
-    {
-        padBeforePatch();
-        m_assembler.movl_mr_disp8(address.offset, address.base, dest);
-        return DataLabelCompact(this);
     }
 
     template<PtrTag tag>
@@ -1251,7 +1254,7 @@ public:
         m_assembler.movzbl_mr(address.offset, address.base, address.index, address.scale, dest);
     }
 
-    void load8(ImplicitAddress address, RegisterID dest)
+    void load8(Address address, RegisterID dest)
     {
         m_assembler.movzbl_mr(address.offset, address.base, dest);
     }
@@ -1261,7 +1264,7 @@ public:
         m_assembler.movsbl_mr(address.offset, address.base, address.index, address.scale, dest);
     }
 
-    void load8SignedExtendTo32(ImplicitAddress address, RegisterID dest)
+    void load8SignedExtendTo32(Address address, RegisterID dest)
     {
         m_assembler.movsbl_mr(address.offset, address.base, dest);
     }
@@ -1276,7 +1279,7 @@ public:
         m_assembler.movsbl_rr(src, dest);
     }
 
-    void load16(ImplicitAddress address, RegisterID dest)
+    void load16(Address address, RegisterID dest)
     {
         m_assembler.movzwl_mr(address.offset, address.base, dest);
     }
@@ -1284,11 +1287,6 @@ public:
     void load16(BaseIndex address, RegisterID dest)
     {
         m_assembler.movzwl_mr(address.offset, address.base, address.index, address.scale, dest);
-    }
-
-    void load16(Address address, RegisterID dest)
-    {
-        m_assembler.movzwl_mr(address.offset, address.base, dest);
     }
 
     void load16SignedExtendTo32(BaseIndex address, RegisterID dest)
@@ -1301,6 +1299,23 @@ public:
         m_assembler.movswl_mr(address.offset, address.base, dest);
     }
 
+    void loadPair32(RegisterID src, RegisterID dest1, RegisterID dest2)
+    {
+        loadPair32(src, TrustedImm32(0), dest1, dest2);
+    }
+
+    void loadPair32(RegisterID src, TrustedImm32 offset, RegisterID dest1, RegisterID dest2)
+    {
+        ASSERT(dest1 != dest2); // If it is the same, ldp becomes illegal instruction.
+        if (src == dest1) {
+            load32(Address(src, offset.m_value + 4), dest2);
+            load32(Address(src, offset.m_value), dest1);
+        } else {
+            load32(Address(src, offset.m_value), dest1);
+            load32(Address(src, offset.m_value + 4), dest2);
+        }
+    }
+
     void zeroExtend16To32(RegisterID src, RegisterID dest)
     {
         m_assembler.movzwl_rr(src, dest);
@@ -1311,14 +1326,7 @@ public:
         m_assembler.movswl_rr(src, dest);
     }
 
-    DataLabel32 store32WithAddressOffsetPatch(RegisterID src, Address address)
-    {
-        padBeforePatch();
-        m_assembler.movl_rm_disp32(src, address.offset, address.base);
-        return DataLabel32(this);
-    }
-
-    void store32(RegisterID src, ImplicitAddress address)
+    void store32(RegisterID src, Address address)
     {
         m_assembler.movl_rm(src, address.offset, address.base);
     }
@@ -1328,7 +1336,7 @@ public:
         m_assembler.movl_rm(src, address.offset, address.base, address.index, address.scale);
     }
 
-    void store32(TrustedImm32 imm, ImplicitAddress address)
+    void store32(TrustedImm32 imm, Address address)
     {
         m_assembler.movl_i32m(imm.m_value, address.offset, address.base);
     }
@@ -1336,26 +1344,6 @@ public:
     void store32(TrustedImm32 imm, BaseIndex address)
     {
         m_assembler.movl_i32m(imm.m_value, address.offset, address.base, address.index, address.scale);
-    }
-
-    void storeZero32(ImplicitAddress address)
-    {
-        store32(TrustedImm32(0), address);
-    }
-
-    void storeZero32(BaseIndex address)
-    {
-        store32(TrustedImm32(0), address);
-    }
-
-    void storeZero16(ImplicitAddress address)
-    {
-        store16(TrustedImm32(0), address);
-    }
-
-    void storeZero16(BaseIndex address)
-    {
-        store16(TrustedImm32(0), address);
     }
 
     void store8(TrustedImm32 imm, Address address)
@@ -1368,6 +1356,17 @@ public:
     {
         TrustedImm32 imm8(static_cast<int8_t>(imm.m_value));
         m_assembler.movb_i8m(imm8.m_value, address.offset, address.base, address.index, address.scale);
+    }
+
+    void storePair32(RegisterID src1, RegisterID src2, RegisterID dest)
+    {
+        storePair32(src1, src2, dest, TrustedImm32(0));
+    }
+
+    void storePair32(RegisterID src1, RegisterID src2, RegisterID dest, TrustedImm32 offset)
+    {
+        store32(src1, Address(dest, offset.m_value));
+        store32(src2, Address(dest, offset.m_value + 4));
     }
 
     static ALWAYS_INLINE RegisterID getUnusedRegister(BaseIndex address)
@@ -1444,7 +1443,7 @@ public:
         m_assembler.movw_im(static_cast<int16_t>(imm.m_value), address.offset, address.base, address.index, address.scale);
     }
 
-    void store16(TrustedImm32 imm, ImplicitAddress address)
+    void store16(TrustedImm32 imm, Address address)
     {
         m_assembler.movw_im(static_cast<int16_t>(imm.m_value), address.offset, address.base);
     }
@@ -1463,11 +1462,11 @@ public:
         m_assembler.movsd_mr(address.asPtr(), dest);
 #else
         move(address, scratchRegister());
-        loadDouble(scratchRegister(), dest);
+        loadDouble(Address(scratchRegister()), dest);
 #endif
     }
 
-    void loadDouble(ImplicitAddress address, FPRegisterID dest)
+    void loadDouble(Address address, FPRegisterID dest)
     {
         m_assembler.movsd_mr(address.offset, address.base, dest);
     }
@@ -1483,11 +1482,11 @@ public:
         m_assembler.movss_mr(address.asPtr(), dest);
 #else
         move(address, scratchRegister());
-        loadFloat(scratchRegister(), dest);
+        loadFloat(Address(scratchRegister()), dest);
 #endif
     }
 
-    void loadFloat(ImplicitAddress address, FPRegisterID dest)
+    void loadFloat(Address address, FPRegisterID dest)
     {
         m_assembler.movss_mr(address.offset, address.base, dest);
     }
@@ -1497,7 +1496,7 @@ public:
         m_assembler.movss_mr(address.offset, address.base, address.index, address.scale, dest);
     }
 
-    void storeDouble(FPRegisterID src, ImplicitAddress address)
+    void storeDouble(FPRegisterID src, Address address)
     {
         m_assembler.movsd_rm(src, address.offset, address.base);
     }
@@ -1507,7 +1506,7 @@ public:
         m_assembler.movsd_rm(src, address.offset, address.base, address.index, address.scale);
     }
 
-    void storeFloat(FPRegisterID src, ImplicitAddress address)
+    void storeFloat(FPRegisterID src, Address address)
     {
         m_assembler.movss_rm(src, address.offset, address.base);
     }
@@ -2080,7 +2079,7 @@ public:
     Jump branchDoubleNonZero(FPRegisterID reg, FPRegisterID scratch)
     {
         m_assembler.xorpd_rr(scratch, scratch);
-        return branchDouble(DoubleNotEqual, reg, scratch);
+        return branchDouble(DoubleNotEqualAndOrdered, reg, scratch);
     }
 
     Jump branchDoubleZeroOrNaN(FPRegisterID reg, FPRegisterID scratch)
@@ -2287,12 +2286,12 @@ public:
         m_assembler.movsxd_rr(src, dest);
     }
 
-    void zeroExtend32ToPtr(RegisterID src, RegisterID dest)
+    void zeroExtend32ToWord(RegisterID src, RegisterID dest)
     {
         m_assembler.movl_rr(src, dest);
     }
 
-    void zeroExtend32ToPtr(TrustedImm32 src, RegisterID dest)
+    void zeroExtend32ToWord(TrustedImm32 src, RegisterID dest)
     {
         m_assembler.movl_i32r(src.m_value, dest);
     }
@@ -2324,7 +2323,7 @@ public:
         else
             m_assembler.ucomisd_rr(right, left);
 
-        if (cond == DoubleEqual) {
+        if (cond == DoubleEqualAndOrdered) {
             if (left == right) {
                 m_assembler.cmovnpl_rr(src, dest);
                 return;
@@ -2375,7 +2374,7 @@ public:
         move(src, dest);
     }
 
-    void zeroExtend32ToPtr(RegisterID src, RegisterID dest)
+    void zeroExtend32ToWord(RegisterID src, RegisterID dest)
     {
         move(src, dest);
     }
@@ -2713,6 +2712,12 @@ public:
         return Jump(m_assembler.jCC(x86Condition(cond)));
     }
 
+    Jump branchTest32(ResultCondition cond, AbsoluteAddress address, TrustedImm32 mask = TrustedImm32(-1))
+    {
+        move(TrustedImmPtr(address.m_ptr), scratchRegister());
+        return branchTest32(cond, Address(scratchRegister()), mask);
+    }
+
     Jump branchTest8(ResultCondition cond, Address address, TrustedImm32 mask = TrustedImm32(-1))
     {
         TrustedImm32 mask8(static_cast<int8_t>(mask.m_value));
@@ -2733,6 +2738,26 @@ public:
         return Jump(m_assembler.jCC(x86Condition(cond)));
     }
 
+    Jump branchTest16(ResultCondition cond, Address address, TrustedImm32 mask = TrustedImm32(-1))
+    {
+        TrustedImm32 mask16(static_cast<int16_t>(mask.m_value));
+        if (mask16.m_value == -1)
+            m_assembler.cmpw_im(0, address.offset, address.base);
+        else
+            m_assembler.testw_im(mask16.m_value, address.offset, address.base);
+        return Jump(m_assembler.jCC(x86Condition(cond)));
+    }
+
+    Jump branchTest16(ResultCondition cond, BaseIndex address, TrustedImm32 mask = TrustedImm32(-1))
+    {
+        TrustedImm32 mask16(static_cast<int16_t>(mask.m_value));
+        if (mask16.m_value == -1)
+            m_assembler.cmpw_im(0, address.offset, address.base, address.index, address.scale);
+        else
+            m_assembler.testw_im(mask16.m_value, address.offset, address.base, address.index, address.scale);
+        return Jump(m_assembler.jCC(x86Condition(cond)));
+    }
+
     Jump branch8(RelationalCondition cond, BaseIndex left, TrustedImm32 right)
     {
         TrustedImm32 right8(static_cast<int8_t>(right.m_value));
@@ -2748,6 +2773,12 @@ public:
     void farJump(RegisterID target, PtrTag)
     {
         m_assembler.jmp_r(target);
+    }
+
+    void farJump(TrustedImmPtr target, PtrTag)
+    {
+        move(target, scratchRegister());
+        m_assembler.jmp_r(scratchRegister());
     }
 
     // Address is a memory location containing the address to jump to
@@ -2822,7 +2853,7 @@ public:
             load32(op1, dest);
             return branchAdd32(cond, op2, dest);
         }
-        zeroExtend32ToPtr(op2, dest);
+        zeroExtend32ToWord(op2, dest);
         return branchAdd32(cond, op1, dest);
     }
 
@@ -3037,33 +3068,33 @@ public:
     static DoubleCondition invert(DoubleCondition cond)
     {
         switch (cond) {
-        case DoubleEqual:
+        case DoubleEqualAndOrdered:
             return DoubleNotEqualOrUnordered;
-        case DoubleNotEqual:
+        case DoubleNotEqualAndOrdered:
             return DoubleEqualOrUnordered;
-        case DoubleGreaterThan:
+        case DoubleGreaterThanAndOrdered:
             return DoubleLessThanOrEqualOrUnordered;
-        case DoubleGreaterThanOrEqual:
+        case DoubleGreaterThanOrEqualAndOrdered:
             return DoubleLessThanOrUnordered;
-        case DoubleLessThan:
+        case DoubleLessThanAndOrdered:
             return DoubleGreaterThanOrEqualOrUnordered;
-        case DoubleLessThanOrEqual:
+        case DoubleLessThanOrEqualAndOrdered:
             return DoubleGreaterThanOrUnordered;
         case DoubleEqualOrUnordered:
-            return DoubleNotEqual;
+            return DoubleNotEqualAndOrdered;
         case DoubleNotEqualOrUnordered:
-            return DoubleEqual;
+            return DoubleEqualAndOrdered;
         case DoubleGreaterThanOrUnordered:
-            return DoubleLessThanOrEqual;
+            return DoubleLessThanOrEqualAndOrdered;
         case DoubleGreaterThanOrEqualOrUnordered:
-            return DoubleLessThan;
+            return DoubleLessThanAndOrdered;
         case DoubleLessThanOrUnordered:
-            return DoubleGreaterThanOrEqual;
+            return DoubleGreaterThanOrEqualAndOrdered;
         case DoubleLessThanOrEqualOrUnordered:
-            return DoubleGreaterThan;
+            return DoubleGreaterThanAndOrdered;
         }
         RELEASE_ASSERT_NOT_REACHED();
-        return DoubleEqual; // make compiler happy
+        return DoubleEqualAndOrdered; // make compiler happy
     }
 
     static bool isInvertible(ResultCondition cond)
@@ -3096,7 +3127,7 @@ public:
         }
     }
 
-    static Optional<ResultCondition> commuteCompareToZeroIntoTest(RelationalCondition cond)
+    static std::optional<ResultCondition> commuteCompareToZeroIntoTest(RelationalCondition cond)
     {
         switch (cond) {
         case Equal:
@@ -3109,7 +3140,7 @@ public:
             return PositiveOrZero;
             break;
         default:
-            return WTF::nullopt;
+            return std::nullopt;
         }
     }
 
@@ -3839,37 +3870,31 @@ public:
 
     void atomicXchg8(RegisterID reg, Address address)
     {
-        m_assembler.lock();
         m_assembler.xchgb_rm(reg, address.offset, address.base);
     }
 
     void atomicXchg8(RegisterID reg, BaseIndex address)
     {
-        m_assembler.lock();
         m_assembler.xchgb_rm(reg, address.offset, address.base, address.index, address.scale);
     }
 
     void atomicXchg16(RegisterID reg, Address address)
     {
-        m_assembler.lock();
         m_assembler.xchgw_rm(reg, address.offset, address.base);
     }
 
     void atomicXchg16(RegisterID reg, BaseIndex address)
     {
-        m_assembler.lock();
         m_assembler.xchgw_rm(reg, address.offset, address.base, address.index, address.scale);
     }
 
     void atomicXchg32(RegisterID reg, Address address)
     {
-        m_assembler.lock();
         m_assembler.xchgl_rm(reg, address.offset, address.base);
     }
 
     void atomicXchg32(RegisterID reg, BaseIndex address)
     {
-        m_assembler.lock();
         m_assembler.xchgl_rm(reg, address.offset, address.base, address.index, address.scale);
     }
 
@@ -4122,7 +4147,7 @@ private:
     {
         if (cond & DoubleConditionBitSpecial) {
             ASSERT(!(cond & DoubleConditionBitInvert));
-            if (cond == DoubleEqual) {
+            if (cond == DoubleEqualAndOrdered) {
                 if (left == right) {
                     compare(right, left);
                     set32(X86Assembler::ConditionNP, dest);
@@ -4164,7 +4189,7 @@ private:
 
     Jump jumpAfterFloatingPointCompare(DoubleCondition cond, FPRegisterID left, FPRegisterID right)
     {
-        if (cond == DoubleEqual) {
+        if (cond == DoubleEqualAndOrdered) {
             if (left == right)
                 return Jump(m_assembler.jnp());
             Jump isUnordered(m_assembler.jp());
@@ -4199,7 +4224,7 @@ private:
 #if CPU(X86_64)
     void moveConditionallyAfterFloatingPointCompare(DoubleCondition cond, FPRegisterID left, FPRegisterID right, RegisterID src, RegisterID dest)
     {
-        if (cond == DoubleEqual) {
+        if (cond == DoubleEqualAndOrdered) {
             if (left == right) {
                 m_assembler.cmovnpq_rr(src, dest);
                 return;

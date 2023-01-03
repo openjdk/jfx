@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,7 @@
 
 package com.sun.javafx.webkit.prism;
 
+import com.sun.prism.paint.Color;
 import com.sun.prism.paint.LinearGradient;
 import com.sun.prism.paint.Stop;
 import com.sun.webkit.graphics.WCGradient;
@@ -39,7 +40,7 @@ final class WCLinearGradient extends WCGradient<LinearGradient> {
 
     private final WCPoint p1;
     private final WCPoint p2;
-    private final List<Stop> stops = new ArrayList<Stop>();
+    private final List<Stop> stops = new ArrayList<>();
 
     WCLinearGradient(WCPoint p1, WCPoint p2) {
         this.p1 = p1;
@@ -47,10 +48,11 @@ final class WCLinearGradient extends WCGradient<LinearGradient> {
     }
 
     @Override
-    protected void addStop(int argb, float offset) {
-        this.stops.add(new Stop(WCGraphicsPrismContext.createColor(argb), offset));
+    protected void addStop(Color color, float offset) {
+        this.stops.add(new Stop(color, offset));
     }
 
+    @Override
     public LinearGradient getPlatformGradient() {
         Collections.sort(this.stops, WCRadialGradient.COMPARATOR);
         return new LinearGradient(

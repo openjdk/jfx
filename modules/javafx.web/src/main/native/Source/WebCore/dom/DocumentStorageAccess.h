@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2019-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,8 +25,9 @@
 
 #pragma once
 
-#if ENABLE(RESOURCE_LOAD_STATISTICS)
+#if ENABLE(INTELLIGENT_TRACKING_PREVENTION)
 
+#include "RegistrableDomain.h"
 #include "Supplementable.h"
 #include <wtf/WeakPtr.h>
 
@@ -46,28 +47,58 @@ enum class StorageAccessPromptWasShown : bool {
     Yes
 };
 
-const unsigned maxNumberOfTimesExplicitlyDeniedFrameSpecificStorageAccess = 2;
+enum class StorageAccessScope : bool {
+    PerFrame,
+    PerPage
+};
+
+enum class StorageAccessQuickResult : bool {
+    Grant,
+    Reject
+};
+
+struct RequestStorageAccessResult {
+    StorageAccessWasGranted wasGranted;
+    StorageAccessPromptWasShown promptWasShown;
+    StorageAccessScope scope;
+    RegistrableDomain topFrameDomain;
+    RegistrableDomain subFrameDomain;
+
+    template<class Encoder> void encode(Encoder&) const;
+    template<class Decoder> static std::optional<RequestStorageAccessResult> decode(Decoder&);
+};
+
+const unsigned maxNumberOfTimesExplicitlyDeniedStorageAccess = 2;
 
 class DocumentStorageAccess final : public Supplement<Document>, public CanMakeWeakPtr<DocumentStorageAccess> {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    explicit DocumentStorageAccess(Document& document)
-        : m_document(document)
-    {
-    }
+    explicit DocumentStorageAccess(Document&);
+    ~DocumentStorageAccess();
 
     static void hasStorageAccess(Document&, Ref<DeferredPromise>&&);
+    static bool hasStorageAccessForDocumentQuirk(Document&);
+
     static void requestStorageAccess(Document&, Ref<DeferredPromise>&&);
+    static void requestStorageAccessForDocumentQuirk(Document&, CompletionHandler<void(StorageAccessWasGranted)>&&);
+    static void requestStorageAccessForNonDocumentQuirk(Document& hostingDocument, RegistrableDomain&& requestingDomain, CompletionHandler<void(StorageAccessWasGranted)>&&);
 
 private:
+    std::optional<bool> hasStorageAccessQuickCheck();
     void hasStorageAccess(Ref<DeferredPromise>&&);
+    bool hasStorageAccessQuirk();
+
+    std::optional<StorageAccessQuickResult> requestStorageAccessQuickCheck();
     void requestStorageAccess(Ref<DeferredPromise>&&);
+    void requestStorageAccessForDocumentQuirk(CompletionHandler<void(StorageAccessWasGranted)>&&);
+    void requestStorageAccessForNonDocumentQuirk(RegistrableDomain&& requestingDomain, CompletionHandler<void(StorageAccessWasGranted)>&&);
+    void requestStorageAccessQuirk(RegistrableDomain&& requestingDomain, CompletionHandler<void(StorageAccessWasGranted)>&&);
+
     static DocumentStorageAccess* from(Document&);
     static const char* supplementName();
     bool hasFrameSpecificStorageAccess() const;
-    void setHasFrameSpecificStorageAccess(bool);
     void setWasExplicitlyDeniedFrameSpecificStorageAccess() { ++m_numberOfTimesExplicitlyDeniedFrameSpecificStorageAccess; };
-    bool isAllowedToRequestFrameSpecificStorageAccess() { return m_numberOfTimesExplicitlyDeniedFrameSpecificStorageAccess < maxNumberOfTimesExplicitlyDeniedFrameSpecificStorageAccess; };
+    bool isAllowedToRequestStorageAccess() { return m_numberOfTimesExplicitlyDeniedFrameSpecificStorageAccess < maxNumberOfTimesExplicitlyDeniedStorageAccess; };
     void enableTemporaryTimeUserGesture();
     void consumeTemporaryTimeUserGesture();
 
@@ -76,8 +107,47 @@ private:
     Document& m_document;
 
     uint8_t m_numberOfTimesExplicitlyDeniedFrameSpecificStorageAccess = 0;
+
+    StorageAccessScope m_storageAccessScope = StorageAccessScope::PerPage;
 };
+
+template<class Encoder>
+void RequestStorageAccessResult::encode(Encoder& encoder) const
+{
+    encoder << wasGranted << promptWasShown << scope << topFrameDomain << subFrameDomain;
+}
+
+template<class Decoder>
+std::optional<RequestStorageAccessResult> RequestStorageAccessResult::decode(Decoder& decoder)
+{
+    std::optional<StorageAccessWasGranted> wasGranted;
+    decoder >> wasGranted;
+    if (!wasGranted)
+        return std::nullopt;
+
+    std::optional<StorageAccessPromptWasShown> promptWasShown;
+    decoder >> promptWasShown;
+    if (!promptWasShown)
+        return std::nullopt;
+
+    std::optional<StorageAccessScope> scope;
+    decoder >> scope;
+    if (!scope)
+        return std::nullopt;
+
+    std::optional<RegistrableDomain> topFrameDomain;
+    decoder >> topFrameDomain;
+    if (!topFrameDomain)
+        return std::nullopt;
+
+    std::optional<RegistrableDomain> subFrameDomain;
+    decoder >> subFrameDomain;
+    if (!subFrameDomain)
+        return std::nullopt;
+
+    return { { WTFMove(*wasGranted), WTFMove(*promptWasShown), WTFMove(*scope), WTFMove(*topFrameDomain), WTFMove(*subFrameDomain) } };
+}
 
 } // namespace WebCore
 
-#endif // ENABLE(RESOURCE_LOAD_STATISTICS)
+#endif // ENABLE(INTELLIGENT_TRACKING_PREVENTION)

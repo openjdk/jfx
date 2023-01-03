@@ -26,13 +26,18 @@
 #include "config.h"
 #include "SameSiteInfo.h"
 
+#include "HTTPParsers.h"
 #include "ResourceRequest.h"
 
 namespace WebCore {
 
-SameSiteInfo SameSiteInfo::create(const ResourceRequest& request)
+SameSiteInfo SameSiteInfo::create(const ResourceRequest& request, IsForDOMCookieAccess isForDOMAccess)
 {
-    return { request.isSameSite(), request.isTopSite() };
+    // SameSite=strict cookies should be returned in document.cookie.
+    // See https://github.com/httpwg/http-extensions/issues/769
+    // and https://github.com/httpwg/http-extensions/pull/1428/files.
+    auto isSameSite = request.isSameSite() || (isForDOMAccess == IsForDOMCookieAccess::Yes && request.isTopSite());
+    return { isSameSite, request.isTopSite(), isSafeMethod(request.httpMethod()) };
 }
 
 } // namespace WebCore

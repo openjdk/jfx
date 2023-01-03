@@ -24,6 +24,7 @@
 
 #include "CairoUtilities.h"
 #include "FontCacheFreeType.h"
+#include "FontCreationContext.h"
 #include "FontDescription.h"
 #include "FontPlatformData.h"
 #include "SharedBuffer.h"
@@ -37,12 +38,12 @@ namespace WebCore {
 
 static void releaseCustomFontData(void* data)
 {
-    static_cast<SharedBuffer*>(data)->deref();
+    static_cast<FragmentedSharedBuffer*>(data)->deref();
 }
 
 static cairo_user_data_key_t freeTypeFaceKey;
 
-FontCustomPlatformData::FontCustomPlatformData(FT_Face freeTypeFace, SharedBuffer& buffer)
+FontCustomPlatformData::FontCustomPlatformData(FT_Face freeTypeFace, FragmentedSharedBuffer& buffer)
     : m_fontFace(adoptRef(cairo_ft_font_face_create_for_ft_face(freeTypeFace, FT_LOAD_DEFAULT)))
 {
     buffer.ref(); // This is balanced by the buffer->deref() in releaseCustomFontData.
@@ -56,12 +57,10 @@ FontCustomPlatformData::FontCustomPlatformData(FT_Face freeTypeFace, SharedBuffe
         reinterpret_cast<cairo_destroy_func_t>(reinterpret_cast<void(*)(void)>(FT_Done_Face)));
 }
 
-static FcPattern* defaultFontconfigOptions()
+static RefPtr<FcPattern> defaultFontconfigOptions()
 {
     // Get some generic default settings from fontconfig for web fonts. Strategy
     // from Behdad Esfahbod in https://code.google.com/p/chromium/issues/detail?id=173207#c35
-    // For web fonts, the hint style is overridden in FontCustomPlatformData::FontCustomPlatformData
-    // so Fontconfig will not affect the hint style, but it may disable hinting completely.
     static FcPattern* pattern = nullptr;
     static std::once_flag flag;
     std::call_once(flag, [](FcPattern*) {
@@ -72,22 +71,33 @@ static FcPattern* defaultFontconfigOptions()
         FcPatternDel(pattern, FC_FAMILY);
         FcConfigSubstitute(nullptr, pattern, FcMatchFont);
     }, pattern);
-    return pattern;
+    return adoptRef(FcPatternDuplicate(pattern));
 }
 
-FontPlatformData FontCustomPlatformData::fontPlatformData(const FontDescription& description, bool bold, bool italic, const FontFeatureSettings&, const FontVariantSettings&, FontSelectionSpecifiedCapabilities)
+FontPlatformData FontCustomPlatformData::fontPlatformData(const FontDescription& description, bool bold, bool italic, const FontCreationContext& fontCreationContext)
 {
     auto* freeTypeFace = static_cast<FT_Face>(cairo_font_face_get_user_data(m_fontFace.get(), &freeTypeFaceKey));
     ASSERT(freeTypeFace);
     RefPtr<FcPattern> pattern = defaultFontconfigOptions();
+    FcPatternAddString(pattern.get(), FC_FAMILY, reinterpret_cast<const FcChar8*>(freeTypeFace->family_name));
+
+    if (fontCreationContext.fontFaceFeatures()) {
+        for (auto& fontFaceFeature : *fontCreationContext.fontFaceFeatures()) {
+            if (fontFaceFeature.enabled()) {
+                const auto& tag = fontFaceFeature.tag();
+                const char buffer[] = { tag[0], tag[1], tag[2], tag[3], '\0' };
+                FcPatternAddString(pattern.get(), FC_FONT_FEATURES, reinterpret_cast<const FcChar8*>(buffer));
+            }
+        }
+    }
+
 #if ENABLE(VARIATION_FONTS)
     auto variants = buildVariationSettings(freeTypeFace, description);
     if (!variants.isEmpty()) {
-        pattern = adoptRef(FcPatternDuplicate(pattern.get()));
         FcPatternAddString(pattern.get(), FC_FONT_VARIATIONS, reinterpret_cast<const FcChar8*>(variants.utf8().data()));
     }
 #endif
-    return FontPlatformData(m_fontFace.get(), pattern.get(), description.computedPixelSize(), freeTypeFace->face_flags & FT_FACE_FLAG_FIXED_WIDTH, bold, italic, description.orientation());
+    return FontPlatformData(m_fontFace.get(), WTFMove(pattern), description.computedPixelSize(), freeTypeFace->face_flags & FT_FACE_FLAG_FIXED_WIDTH, bold, italic, description.orientation());
 }
 
 static bool initializeFreeTypeLibrary(FT_Library& library)

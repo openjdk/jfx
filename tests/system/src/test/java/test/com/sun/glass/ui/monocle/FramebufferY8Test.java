@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2019, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -190,7 +190,7 @@ public class FramebufferY8Test {
     private void printTime(Object source, String method, long duration) {
         float msPerFrame = (float) duration / ITERATIONS;
         System.out.println(String.format(
-                "Converted %,d frames of %,d × %,d px to RGB565 in %,d ms (%,.0f ms/frame): %s.%s",
+                "Converted %,d frames of %,d x %,d px to RGB565 in %,d ms (%,.0f ms/frame): %s.%s",
                 ITERATIONS, WIDTH, HEIGHT, duration, msPerFrame,
                 source.getClass().getSuperclass().getSimpleName(), method));
     }

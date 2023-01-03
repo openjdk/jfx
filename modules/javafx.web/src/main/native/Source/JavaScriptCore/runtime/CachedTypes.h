@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -39,6 +39,7 @@ class CachedBytecode;
 class SourceCodeKey;
 class UnlinkedCodeBlock;
 class UnlinkedFunctionCodeBlock;
+class UnlinkedFunctionExecutable;
 
 enum class SourceCodeType;
 
@@ -46,6 +47,7 @@ enum class SourceCodeType;
 // cache, since this will only be filled in when we parse the function
 struct CachedFunctionExecutableMetadata {
     CodeFeatures m_features;
+    LexicalScopeFeatures m_lexicalScopeFeatures;
     bool m_hasCapturedVariables;
 };
 
@@ -88,10 +90,10 @@ public:
 
     ptrdiff_t offsetOf(const void*);
     void cacheOffset(ptrdiff_t, void*);
-    WTF::Optional<void*> cachedPtrForOffset(ptrdiff_t);
+    std::optional<void*> cachedPtrForOffset(ptrdiff_t);
     const void* ptrForOffsetFromBase(ptrdiff_t);
-    CompactVariableMap::Handle handleForEnvironment(CompactVariableEnvironment*) const;
-    void setHandleForEnvironment(CompactVariableEnvironment*, const CompactVariableMap::Handle&);
+    CompactTDZEnvironmentMap::Handle handleForTDZEnvironment(CompactTDZEnvironment*) const;
+    void setHandleForTDZEnvironment(CompactTDZEnvironment*, const CompactTDZEnvironmentMap::Handle&);
     void addLeafExecutable(const UnlinkedFunctionExecutable*, ptrdiff_t);
     RefPtr<SourceProvider> provider() const;
 
@@ -105,7 +107,7 @@ private:
     Ref<CachedBytecode> m_cachedBytecode;
     HashMap<ptrdiff_t, void*> m_offsetToPtrMap;
     Vector<std::function<void()>> m_finalizers;
-    HashMap<CompactVariableEnvironment*, CompactVariableMap::Handle> m_environmentToHandleMap;
+    HashMap<CompactTDZEnvironment*, CompactTDZEnvironmentMap::Handle> m_environmentToHandleMap;
     RefPtr<SourceProvider> m_provider;
 };
 

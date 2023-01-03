@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -34,14 +34,21 @@ import javafx.scene.text.Font;
 import java.util.Map;
 
 /**
- * Converts an SVG shape string into a Shape object.
+ * Converter to convert a SVG shape string into a {@code Shape} object.
  *
  * @since 9
  */
 public class ShapeConverter extends StyleConverter<String, Shape> {
     private static final ShapeConverter INSTANCE = new ShapeConverter();
 
+    /**
+     * Gets the {@code ShapeConverter} instance.
+     * @return the {@code ShapeConverter} instance
+     */
     public static StyleConverter<String, Shape> getInstance() { return INSTANCE; }
+
+    private ShapeConverter() {
+    }
 
     @Override public Shape convert(ParsedValue<String, Shape> value, Font font) {
 
@@ -60,6 +67,9 @@ public class ShapeConverter extends StyleConverter<String, Shape> {
 
     private static Map<ParsedValue<String, Shape>, Shape> cache;
 
+    /**
+     * Clears the {@code ShapeConverter} cache.
+     */
     public static void clearCache() { if (cache != null) cache.clear(); }
 
 }

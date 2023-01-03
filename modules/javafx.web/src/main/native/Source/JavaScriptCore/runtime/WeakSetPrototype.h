@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 Apple, Inc. All rights reserved.
+ * Copyright (C) 2015-2022 Apple, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,13 +29,24 @@
 
 namespace JSC {
 
+extern const ASCIILiteral WeakSetNonObjectValueError;
+
+JSC_DECLARE_HOST_FUNCTION(protoFuncWeakSetAdd);
+
 class WeakSetPrototype final : public JSNonFinalObject {
 public:
-    typedef JSNonFinalObject Base;
+    using Base = JSNonFinalObject;
+
+    template<typename CellType, SubspaceAccess>
+    static GCClient::IsoSubspace* subspaceFor(VM& vm)
+    {
+        STATIC_ASSERT_ISO_SUBSPACE_SHARABLE(WeakSetPrototype, Base);
+        return &vm.plainObjectSpace();
+    }
 
     static WeakSetPrototype* create(VM& vm, JSGlobalObject* globalObject, Structure* structure)
     {
-        WeakSetPrototype* prototype = new (NotNull, allocateCell<WeakSetPrototype>(vm.heap)) WeakSetPrototype(vm, structure);
+        WeakSetPrototype* prototype = new (NotNull, allocateCell<WeakSetPrototype>(vm)) WeakSetPrototype(vm, structure);
         prototype->finishCreation(vm, globalObject);
         return prototype;
     }

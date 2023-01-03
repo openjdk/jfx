@@ -46,10 +46,10 @@ SHA1::SHA1()
     ALLOW_DEPRECATED_DECLARATIONS_END
 }
 
-void SHA1::addBytes(const uint8_t* input, size_t length)
+void SHA1::addBytes(Span<const std::byte> input)
 {
     ALLOW_DEPRECATED_DECLARATIONS_BEGIN
-    CC_SHA1_Update(&m_context, input, length);
+    CC_SHA1_Update(&m_context, input.data(), input.size());
     ALLOW_DEPRECATED_DECLARATIONS_END
 }
 
@@ -101,11 +101,11 @@ SHA1::SHA1()
     reset();
 }
 
-void SHA1::addBytes(const uint8_t* input, size_t length)
+void SHA1::addBytes(Span<const std::byte> input)
 {
-    while (length--) {
+    for (auto byte : input) {
         ASSERT(m_cursor < 64);
-        m_buffer[m_cursor++] = *input++;
+        m_buffer[m_cursor++] = std::to_integer<uint8_t>(byte);
         ++m_totalBytes;
         if (m_cursor == 64)
             processBlock();
@@ -204,7 +204,7 @@ void SHA1::reset()
 
 CString SHA1::hexDigest(const Digest& digest)
 {
-    char* start = 0;
+    char* start = nullptr;
     CString result = CString::newUninitialized(40, start);
     char* buffer = start;
     for (size_t i = 0; i < hashSize; ++i) {

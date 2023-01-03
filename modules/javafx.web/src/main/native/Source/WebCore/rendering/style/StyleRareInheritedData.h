@@ -25,12 +25,15 @@
 #pragma once
 
 #include "Color.h"
-#include "DataRef.h"
 #include "Length.h"
+#include "RenderStyleConstants.h"
 #include "StyleCustomPropertyData.h"
 #include "TabSize.h"
 #include "TextDecorationThickness.h"
 #include "TextUnderlineOffset.h"
+#include "TouchAction.h"
+#include <wtf/DataRef.h>
+#include <wtf/OptionSet.h>
 #include <wtf/RefCounted.h>
 #include <wtf/text/AtomString.h>
 
@@ -53,7 +56,9 @@ class StyleImage;
 // This struct is for rarely used inherited CSS3, CSS2, and WebKit-specific properties.
 // By grouping them together, we save space, and only allocate this object when someone
 // actually uses one of these properties.
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(StyleRareInheritedData);
 class StyleRareInheritedData : public RefCounted<StyleRareInheritedData> {
+    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(StyleRareInheritedData);
 public:
     static Ref<StyleRareInheritedData> create() { return adoptRef(*new StyleRareInheritedData); }
     Ref<StyleRareInheritedData> copy() const;
@@ -68,6 +73,7 @@ public:
     bool hasColorFilters() const;
 
     RefPtr<StyleImage> listStyleImage;
+    AtomString listStyleStringValue;
 
     Color textStrokeColor;
     float textStrokeWidth;
@@ -80,6 +86,8 @@ public:
 
     Color caretColor;
     Color visitedLinkCaretColor;
+
+    Color accentColor;
 
     std::unique_ptr<ShadowData> textShadow; // Our text shadow information for shadowed text drawing.
 
@@ -95,34 +103,31 @@ public:
     DataRef<StyleCustomPropertyData> customProperties;
 
     // Paged media properties.
-    short widows;
-    short orphans;
+    unsigned short widows;
+    unsigned short orphans;
     unsigned hasAutoWidows : 1;
     unsigned hasAutoOrphans : 1;
 
     unsigned textSecurity : 2; // TextSecurity
     unsigned userModify : 2; // UserModify (editing)
     unsigned wordBreak : 2; // WordBreak
-    unsigned overflowWrap : 1; // OverflowWrap
+    unsigned overflowWrap : 2; // OverflowWrap
     unsigned nbspMode : 1; // NBSPMode
     unsigned lineBreak : 3; // LineBreak
     unsigned userSelect : 2; // UserSelect
     unsigned colorSpace : 1; // ColorSpace
     unsigned speakAs : 4; // ESpeakAs
     unsigned hyphens : 2; // Hyphens
+    unsigned textCombine : 1; // text-combine-upright
     unsigned textEmphasisFill : 1; // TextEmphasisFill
     unsigned textEmphasisMark : 3; // TextEmphasisMark
     unsigned textEmphasisPosition : 4; // TextEmphasisPosition
     unsigned textOrientation : 2; // TextOrientation
-#if ENABLE(CSS3_TEXT)
     unsigned textIndentLine : 1; // TextIndentLine
     unsigned textIndentType : 1; // TextIndentType
-#endif
-    unsigned lineBoxContain: 7; // LineBoxContain
+    unsigned lineBoxContain: 7; // OptionSet<LineBoxContain>
     // CSS Image Values Level 3
-#if ENABLE(CSS_IMAGE_ORIENTATION)
-    unsigned imageOrientation : 4; // ImageOrientation
-#endif
+    unsigned imageOrientation : 1; // ImageOrientation
     unsigned imageRendering : 3; // ImageRendering
     unsigned lineSnap : 2; // LineSnap
     unsigned lineAlign : 1; // LineAlign
@@ -137,7 +142,7 @@ public:
     unsigned textAlignLast : 3; // TextAlignLast
     unsigned textJustify : 2; // TextJustify
 #endif
-    unsigned textDecorationSkip : 5; // TextDecorationSkip
+    unsigned textDecorationSkipInk : 2; // TextDecorationSkipInk
     unsigned textUnderlinePosition : 2; // TextUnderlinePosition
     unsigned rubyPosition : 2; // RubyPosition
     unsigned textZoom: 1; // TextZoom
@@ -154,9 +159,19 @@ public:
     unsigned hasSetStrokeWidth : 1;
     unsigned hasSetStrokeColor : 1;
 
-#if ENABLE(POINTER_EVENTS)
-    unsigned effectiveTouchActions : 6; // OptionSet<TouchAction>
-#endif
+    unsigned mathStyle : 1;
+
+    unsigned hasAutoCaretColor : 1;
+    unsigned hasVisitedLinkAutoCaretColor : 1;
+
+    unsigned hasAutoAccentColor : 1;
+
+    unsigned effectiveInert : 1;
+
+    unsigned isInSubtreeWithBlendMode : 1;
+
+    OptionSet<TouchAction> effectiveTouchActions;
+    OptionSet<EventListenerRegionType> eventListenerRegionTypes;
 
     Length strokeWidth;
     Color strokeColor;

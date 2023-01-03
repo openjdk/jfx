@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -65,7 +65,13 @@ import javafx.collections.SetChangeListener;
  */
 public abstract class SetBinding<E> extends SetExpression<E> implements Binding<ObservableSet<E>> {
 
-    private final SetChangeListener<E> setChangeListener = new SetChangeListener<E>() {
+    /**
+     * Creates a default {@code SetBinding}.
+     */
+    public SetBinding() {
+    }
+
+    private final SetChangeListener<E> setChangeListener = new SetChangeListener<>() {
         @Override
         public void onChanged(Change<? extends E> change) {
             invalidateProperties();
@@ -106,6 +112,7 @@ public abstract class SetBinding<E> extends SetExpression<E> implements Binding<
             return "size";
         }
 
+        @Override
         protected void fireValueChangedEvent() {
             super.fireValueChangedEvent();
         }
@@ -136,6 +143,7 @@ public abstract class SetBinding<E> extends SetExpression<E> implements Binding<
             return "empty";
         }
 
+        @Override
         protected void fireValueChangedEvent() {
             super.fireValueChangedEvent();
         }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -55,11 +55,30 @@ public class NGPhongMaterial {
     private TextureMap selfIllumMap = new TextureMap(PhongMaterial.MapType.SELF_ILLUM);
 
     Material createMaterial(ResourceFactory f) {
+
+        // Check whether the material is valid; dispose and recreate if needed
+        if (material != null && !material.isValid()) {
+            disposeMaterial();
+        }
+
         if (material == null) {
             material = f.createPhongMaterial();
         }
         validate(f);
         return material;
+    }
+
+    private void disposeMaterial() {
+        diffuseColorDirty = true;
+        specularColorDirty = true;
+        specularPowerDirty = true;
+        diffuseMap.setDirty(true);
+        specularMap.setDirty(true);
+        bumpMap.setDirty(true);
+        selfIllumMap.setDirty(true);
+
+        material.dispose();
+        material = null;
     }
 
     private void validate(ResourceFactory f) {

@@ -1,7 +1,7 @@
 /*
  *  Copyright (C) 1999-2001 Harri Porten (porten@kde.org)
  *  Copyright (C) 2001 Peter Kelly (pmk@post.com)
- *  Copyright (C) 2003-2019 Apple Inc. All rights reserved.
+ *  Copyright (C) 2003-2022 Apple Inc. All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Library General Public
@@ -40,12 +40,12 @@ class JSObject;
 // that if a property holding a GetterSetter reference is constant-inferred and
 // that constant is observed to have a non-null setter (or getter) then we can
 // constant fold that setter (or getter).
-class GetterSetter final : public JSNonFinalObject {
+class GetterSetter final : public JSCell {
     friend class JIT;
-    typedef JSNonFinalObject Base;
+    using Base = JSCell;
 private:
     GetterSetter(VM& vm, JSGlobalObject* globalObject, JSObject* getter, JSObject* setter)
-        : Base(vm, globalObject->getterSetterStructure())
+        : Base(vm, vm.getterSetterStructure.get())
     {
         WTF::storeStoreFence();
         m_getter.set(vm, this, getter ? getter : globalObject->nullGetterFunction());
@@ -54,11 +54,17 @@ private:
 
 public:
 
-    static const unsigned StructureFlags = Base::StructureFlags | OverridesGetOwnPropertySlot | StructureIsImmortal;
+    static constexpr unsigned StructureFlags = Base::StructureFlags | OverridesGetOwnPropertySlot | OverridesPut | StructureIsImmortal;
+
+    template<typename CellType, SubspaceAccess>
+    static GCClient::IsoSubspace* subspaceFor(VM& vm)
+    {
+        return &vm.getterSetterSpace();
+    }
 
     static GetterSetter* create(VM& vm, JSGlobalObject* globalObject, JSObject* getter, JSObject* setter)
     {
-        GetterSetter* getterSetter = new (NotNull, allocateCell<GetterSetter>(vm.heap)) GetterSetter(vm, globalObject, getter, setter);
+        GetterSetter* getterSetter = new (NotNull, allocateCell<GetterSetter>(vm)) GetterSetter(vm, globalObject, getter, setter);
         getterSetter->finishCreation(vm);
         return getterSetter;
     }
@@ -76,14 +82,14 @@ public:
         return create(vm, globalObject, getterObject, setterObject);
     }
 
-    static void visitChildren(JSCell*, SlotVisitor&);
+    DECLARE_VISIT_CHILDREN;
 
     JSObject* getter() const { return m_getter.get(); }
 
     JSObject* getterConcurrently() const
     {
         JSObject* result = getter();
-        WTF::loadLoadFence();
+        WTF::dependentLoadLoadFence();
         return result;
     }
 
@@ -99,9 +105,12 @@ public:
         return result;
     }
 
+    JSValue callGetter(JSGlobalObject*, JSValue thisValue);
+    bool callSetter(JSGlobalObject*, JSValue thisValue, JSValue, bool shouldThrow);
+
     static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
     {
-        return Structure::create(vm, globalObject, prototype, TypeInfo(GetterSetterType), info());
+        return Structure::create(vm, globalObject, prototype, TypeInfo(GetterSetterType, StructureFlags), info());
     }
 
     static ptrdiff_t offsetOfGetter()
@@ -116,19 +125,16 @@ public:
 
     DECLARE_EXPORT_INFO;
 
-    static bool getOwnPropertySlot(JSObject*, ExecState*, PropertyName, PropertySlot&) { RELEASE_ASSERT_NOT_REACHED(); return false; }
-    static bool put(JSCell*, ExecState*, PropertyName, JSValue, PutPropertySlot&) { RELEASE_ASSERT_NOT_REACHED(); return false; }
-    static bool putByIndex(JSCell*, ExecState*, unsigned, JSValue, bool) { RELEASE_ASSERT_NOT_REACHED(); return false; }
-    static bool setPrototype(JSObject*, ExecState*, JSValue, bool) { RELEASE_ASSERT_NOT_REACHED(); return false; }
-    static bool defineOwnProperty(JSObject*, ExecState*, PropertyName, const PropertyDescriptor&, bool) { RELEASE_ASSERT_NOT_REACHED(); return false; }
-    static bool deleteProperty(JSCell*, ExecState*, PropertyName) { RELEASE_ASSERT_NOT_REACHED(); return false; }
+    static bool getOwnPropertySlot(JSObject*, JSGlobalObject*, PropertyName, PropertySlot&) { RELEASE_ASSERT_NOT_REACHED(); return false; }
+    static bool put(JSCell*, JSGlobalObject*, PropertyName, JSValue, PutPropertySlot&) { RELEASE_ASSERT_NOT_REACHED(); return false; }
+    static bool putByIndex(JSCell*, JSGlobalObject*, unsigned, JSValue, bool) { RELEASE_ASSERT_NOT_REACHED(); return false; }
+    static bool setPrototype(JSObject*, JSGlobalObject*, JSValue, bool) { RELEASE_ASSERT_NOT_REACHED(); return false; }
+    static bool defineOwnProperty(JSObject*, JSGlobalObject*, PropertyName, const PropertyDescriptor&, bool) { RELEASE_ASSERT_NOT_REACHED(); return false; }
+    static bool deleteProperty(JSCell*, JSGlobalObject*, PropertyName, DeletePropertySlot&) { RELEASE_ASSERT_NOT_REACHED(); return false; }
 
 private:
     WriteBarrier<JSObject> m_getter;
     WriteBarrier<JSObject> m_setter;
 };
-
-JSValue callGetter(ExecState*, JSValue base, JSValue getterSetter);
-JS_EXPORT_PRIVATE bool callSetter(ExecState*, JSValue base, JSValue getterSetter, JSValue, ECMAMode);
 
 } // namespace JSC

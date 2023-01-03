@@ -30,22 +30,32 @@
 #include "ActiveDOMObject.h"
 #include "EventTarget.h"
 #include "JSDOMPromiseDeferred.h"
+#include "Notification.h"
+#include "NotificationOptions.h"
+#include "PushPermissionState.h"
+#include "PushSubscription.h"
 #include "SWClientConnection.h"
 #include "ServiceWorkerRegistrationData.h"
+#include "Supplementable.h"
 #include "Timer.h"
+#include <wtf/ListHashSet.h>
+#include <wtf/Vector.h>
+#include <wtf/WeakHashSet.h>
 
 namespace WebCore {
 
+class DeferredPromise;
+class NavigationPreloadManager;
 class ScriptExecutionContext;
 class ServiceWorker;
 class ServiceWorkerContainer;
 
-class ServiceWorkerRegistration final : public RefCounted<ServiceWorkerRegistration>, public EventTargetWithInlineData, public ActiveDOMObject {
-    WTF_MAKE_ISO_ALLOCATED(ServiceWorkerRegistration);
+class ServiceWorkerRegistration final : public RefCounted<ServiceWorkerRegistration>, public Supplementable<ServiceWorkerRegistration>, public EventTargetWithInlineData, public ActiveDOMObject {
+    WTF_MAKE_ISO_ALLOCATED_EXPORT(ServiceWorkerRegistration, WEBCORE_EXPORT);
 public:
     static Ref<ServiceWorkerRegistration> getOrCreate(ScriptExecutionContext&, Ref<ServiceWorkerContainer>&&, ServiceWorkerRegistrationData&&);
 
-    ~ServiceWorkerRegistration();
+    WEBCORE_EXPORT ~ServiceWorkerRegistration();
 
     ServiceWorkerRegistrationIdentifier identifier() const { return m_registrationData.identifier; }
 
@@ -53,7 +63,7 @@ public:
     ServiceWorker* waiting();
     ServiceWorker* active();
 
-    ServiceWorker* getNewestWorker();
+    ServiceWorker* getNewestWorker() const;
 
     const String& scope() const;
 
@@ -68,7 +78,10 @@ public:
     void update(Ref<DeferredPromise>&&);
     void unregister(Ref<DeferredPromise>&&);
 
-    void scheduleSoftUpdate();
+    void subscribeToPushService(const Vector<uint8_t>& applicationServerKey, DOMPromiseDeferred<IDLInterface<PushSubscription>>&&);
+    void unsubscribeFromPushService(PushSubscriptionIdentifier, DOMPromiseDeferred<IDLBoolean>&&);
+    void getPushSubscription(DOMPromiseDeferred<IDLNullable<IDLInterface<PushSubscription>>>&&);
+    void getPushPermissionState(DOMPromiseDeferred<IDLEnumeration<PushPermissionState>>&&);
 
     using RefCounted::ref;
     using RefCounted::deref;
@@ -76,23 +89,36 @@ public:
     const ServiceWorkerRegistrationData& data() const { return m_registrationData; }
 
     void updateStateFromServer(ServiceWorkerRegistrationState, RefPtr<ServiceWorker>&&);
-    void fireUpdateFoundEvent();
+    void queueTaskToFireUpdateFoundEvent();
+
+    NavigationPreloadManager& navigationPreload();
+    ServiceWorkerContainer& container() { return m_container.get(); }
+
+#if ENABLE(NOTIFICATION_EVENT)
+    struct GetNotificationOptions {
+        String tag;
+    };
+
+    void showNotification(ScriptExecutionContext&, const String& title, const NotificationOptions&, DOMPromiseDeferred<void>&&);
+    void getNotifications(ScriptExecutionContext&, const GetNotificationOptions& filter, DOMPromiseDeferred<IDLSequence<IDLInterface<Notification>>>);
+
+    void addNotificationToList(Notification&);
+    void removeNotificationFromList(Notification&);
+    Vector<Ref<Notification>> filteredNotificationList(const String& filteredTag);
+#endif
 
 private:
     ServiceWorkerRegistration(ScriptExecutionContext&, Ref<ServiceWorkerContainer>&&, ServiceWorkerRegistrationData&&);
-    void updatePendingActivityForEventDispatch();
 
     EventTargetInterface eventTargetInterface() const final;
     ScriptExecutionContext* scriptExecutionContext() const final;
     void refEventTarget() final { ref(); }
     void derefEventTarget() final { deref(); }
 
-    void softUpdate();
-
     // ActiveDOMObject.
     const char* activeDOMObjectName() const final;
-    bool canSuspendForDocumentSuspension() const final;
     void stop() final;
+    bool virtualHasPendingActivity() const final;
 
     ServiceWorkerRegistrationData m_registrationData;
     Ref<ServiceWorkerContainer> m_container;
@@ -101,9 +127,12 @@ private:
     RefPtr<ServiceWorker> m_waitingWorker;
     RefPtr<ServiceWorker> m_activeWorker;
 
-    bool m_isStopped { false };
-    RefPtr<PendingActivity<ServiceWorkerRegistration>> m_pendingActivityForEventDispatch;
-    Timer m_softUpdateTimer;
+    std::unique_ptr<NavigationPreloadManager> m_navigationPreload;
+
+#if ENABLE(NOTIFICATION_EVENT)
+    ListHashSet<Notification*> m_notificationList;
+    WeakHashSet<Notification> m_notificationSet;
+#endif
 };
 
 } // namespace WebCore

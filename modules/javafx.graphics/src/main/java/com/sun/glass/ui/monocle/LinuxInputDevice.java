@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -83,12 +83,12 @@ class LinuxInputDevice implements Runnable, InputDevice {
         this.sysPath = sysPath;
         this.udevManifest = udevManifest;
         this.capabilities = SysFS.readCapabilities(sysPath);
-        this.absCaps = LinuxAbsoluteInputCapabilities.getCapabilities(
-                devNode, capabilities.get("abs"));
         fd = system.open(devNode.getPath(), LinuxSystem.O_RDONLY);
         if (fd == -1) {
             throw new IOException(system.getErrorMessage() + " on " + devNode);
         }
+        this.absCaps = LinuxAbsoluteInputCapabilities.getCapabilities(
+                devNode, capabilities.get("abs"));
         // attempt to grab the device. If the grab fails, keep going.
         int EVIOCGRAB = system.IOW('E', 0x90, 4);
         system.ioctl(fd, EVIOCGRAB, 1);
@@ -173,6 +173,7 @@ class LinuxInputDevice implements Runnable, InputDevice {
     class EventProcessor implements Runnable {
         boolean scheduled;
 
+        @Override
         public void run() {
             buffer.startIteration();
             // Do not lock the buffer while processing events. We still want to be
@@ -211,6 +212,7 @@ class LinuxInputDevice implements Runnable, InputDevice {
     /**
      * @return a string describing this input device
      */
+    @Override
     public String toString() {
         return devNode == null ? "Robot" : devNode.toString();
     }

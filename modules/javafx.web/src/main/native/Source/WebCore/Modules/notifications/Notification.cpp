@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2009 Google Inc. All rights reserved.
- * Copyright (C) 2009, 2011, 2012, 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2009, 2011, 2012, 2016, 2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -35,46 +35,101 @@
 
 #include "Notification.h"
 
-#include "Document.h"
 #include "Event.h"
 #include "EventNames.h"
+#include "JSDOMPromiseDeferred.h"
 #include "NotificationClient.h"
-#include "NotificationController.h"
+#include "NotificationData.h"
+#include "NotificationEvent.h"
 #include "NotificationPermissionCallback.h"
+#include "ServiceWorkerGlobalScope.h"
+#include "WindowEventLoop.h"
 #include "WindowFocusAllowedIndicator.h"
+#include <wtf/CompletionHandler.h>
 #include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(Notification);
 
-Ref<Notification> Notification::create(Document& context, const String& title, const Options& options)
+Ref<Notification> Notification::create(ScriptExecutionContext& context, const String& title, const Options& options)
 {
     auto notification = adoptRef(*new Notification(context, title, options));
     notification->suspendIfNeeded();
+    notification->showSoon();
     return notification;
 }
 
-Notification::Notification(Document& document, const String& title, const Options& options)
-    : ActiveDOMObject(document)
-    , m_title(title)
+Notification::Notification(ScriptExecutionContext& context, const String& title, const Options& options)
+    : ActiveDOMObject(&context)
+    , m_title(title.isolatedCopy())
     , m_direction(options.dir)
-    , m_lang(options.lang)
-    , m_body(options.body)
-    , m_tag(options.tag)
+    , m_lang(options.lang.isolatedCopy())
+    , m_body(options.body.isolatedCopy())
+    , m_tag(options.tag.isolatedCopy())
     , m_state(Idle)
-    , m_taskTimer(makeUnique<Timer>([this] () { show(); }))
+    , m_contextIdentifier(context.identifier())
 {
+    if (context.isDocument())
+        m_notificationSource = NotificationSource::Document;
+    else if (context.isServiceWorkerGlobalScope()) {
+        m_notificationSource = NotificationSource::ServiceWorker;
+        downcast<ServiceWorkerGlobalScope>(context).registration().addNotificationToList(*this);
+    } else
+        RELEASE_ASSERT_NOT_REACHED();
+
     if (!options.icon.isEmpty()) {
-        auto iconURL = document.completeURL(options.icon);
+        auto iconURL = context.completeURL(options.icon);
         if (iconURL.isValid())
             m_icon = iconURL;
     }
-
-    m_taskTimer->startOneShot(0_s);
 }
 
-Notification::~Notification()  = default;
+Notification::Notification(const Notification& other)
+    : ActiveDOMObject(other.scriptExecutionContext())
+    , m_title(other.m_title.isolatedCopy())
+    , m_direction(other.m_direction)
+    , m_lang(other.m_lang.isolatedCopy())
+    , m_body(other.m_body.isolatedCopy())
+    , m_tag(other.m_tag.isolatedCopy())
+    , m_icon(other.m_icon.isolatedCopy())
+    , m_state(other.m_state)
+    , m_notificationSource(other.m_notificationSource)
+    , m_contextIdentifier(other.m_contextIdentifier)
+{
+    suspendIfNeeded();
+}
+
+Notification::~Notification()
+{
+    if (auto* context = scriptExecutionContext()) {
+        if (context->isServiceWorkerGlobalScope())
+            downcast<ServiceWorkerGlobalScope>(context)->registration().removeNotificationFromList(*this);
+    }
+}
+
+Ref<Notification> Notification::copyForGetNotifications() const
+{
+    return adoptRef(*new Notification(*this));
+}
+
+void Notification::contextDestroyed()
+{
+    auto* context = scriptExecutionContext();
+    RELEASE_ASSERT(context);
+    if (context->isServiceWorkerGlobalScope())
+        downcast<ServiceWorkerGlobalScope>(context)->registration().removeNotificationFromList(*this);
+
+    ActiveDOMObject::contextDestroyed();
+}
+
+
+void Notification::showSoon()
+{
+    queueTaskKeepingObjectAlive(*this, TaskSource::UserInteraction, [this] {
+        show();
+    });
+}
 
 void Notification::show()
 {
@@ -82,20 +137,26 @@ void Notification::show()
     if (m_state != Idle)
         return;
 
-    auto* page = downcast<Document>(*scriptExecutionContext()).page();
-    if (!page)
+    auto* client = clientFromContext();
+    if (!client)
         return;
 
-    auto& client = NotificationController::from(page)->client();
+    if (client->checkPermission(scriptExecutionContext()) != Permission::Granted) {
+        switch (m_notificationSource) {
+        case NotificationSource::Document:
+            dispatchErrorEvent();
+            break;
+        case NotificationSource::ServiceWorker:
+            // We did a permission check when ServiceWorkerRegistration::showNotification() was called.
+            // If permission has since been revoked, then silently failing here is expected behavior.
+            break;
+        }
 
-    if (client.checkPermission(scriptExecutionContext()) != Permission::Granted) {
-        dispatchErrorEvent();
         return;
     }
-    if (client.show(this)) {
+
+    if (client->show(*this))
         m_state = Showing;
-        setPendingActivity(*this);
-    }
 }
 
 void Notification::close()
@@ -104,9 +165,12 @@ void Notification::close()
     case Idle:
         break;
     case Showing: {
-        auto* page = downcast<Document>(*scriptExecutionContext()).page();
-        if (page)
-            NotificationController::from(page)->client().cancel(this);
+        if (auto* client = clientFromContext())
+            client->cancel(*this);
+        if (auto* context = scriptExecutionContext()) {
+            if (context->isServiceWorkerGlobalScope())
+                downcast<ServiceWorkerGlobalScope>(context)->registration().removeNotificationFromList(*this);
+        }
         break;
     }
     case Closed:
@@ -114,24 +178,29 @@ void Notification::close()
     }
 }
 
+NotificationClient* Notification::clientFromContext()
+{
+    if (auto* context = scriptExecutionContext())
+        return context->notificationClient();
+    return nullptr;
+}
+
 const char* Notification::activeDOMObjectName() const
 {
     return "Notification";
-}
-
-bool Notification::canSuspendForDocumentSuspension() const
-{
-    // We can suspend if the Notification is not shown yet or after it is closed.
-    return m_state == Idle || m_state == Closed;
 }
 
 void Notification::stop()
 {
     ActiveDOMObject::stop();
 
-    auto* page = downcast<Document>(*scriptExecutionContext()).page();
-    if (page)
-        NotificationController::from(page)->client().notificationObjectDestroyed(this);
+    if (auto* client = clientFromContext())
+        client->notificationObjectDestroyed(*this);
+}
+
+void Notification::suspend(ReasonForSuspension)
+{
+    close();
 }
 
 void Notification::finalize()
@@ -139,47 +208,129 @@ void Notification::finalize()
     if (m_state == Closed)
         return;
     m_state = Closed;
-    unsetPendingActivity(*this);
 }
 
 void Notification::dispatchShowEvent()
 {
-    dispatchEvent(Event::create(eventNames().showEvent, Event::CanBubble::No, Event::IsCancelable::No));
+    ASSERT(isMainThread());
+
+    if (m_notificationSource != NotificationSource::Document)
+        return;
+
+    queueTaskToDispatchEvent(*this, TaskSource::UserInteraction, Event::create(eventNames().showEvent, Event::CanBubble::No, Event::IsCancelable::No));
 }
 
 void Notification::dispatchClickEvent()
 {
-    WindowFocusAllowedIndicator windowFocusAllowed;
-    dispatchEvent(Event::create(eventNames().clickEvent, Event::CanBubble::No, Event::IsCancelable::No));
+    ASSERT(isMainThread());
+
+    switch (m_notificationSource) {
+    case NotificationSource::Document:
+        queueTaskKeepingObjectAlive(*this, TaskSource::UserInteraction, [this] {
+            WindowFocusAllowedIndicator windowFocusAllowed;
+            dispatchEvent(Event::create(eventNames().clickEvent, Event::CanBubble::No, Event::IsCancelable::No));
+        });
+        break;
+    case NotificationSource::ServiceWorker:
+        ServiceWorkerGlobalScope::ensureOnContextThread(m_contextIdentifier, [this, protectedThis = Ref { *this }](auto& context) {
+            downcast<ServiceWorkerGlobalScope>(context).postTaskToFireNotificationEvent(NotificationEventType::Click, *this, { });
+        });
+        break;
+    }
 }
 
 void Notification::dispatchCloseEvent()
 {
-    dispatchEvent(Event::create(eventNames().closeEvent, Event::CanBubble::No, Event::IsCancelable::No));
+    ASSERT(isMainThread());
+
+    switch (m_notificationSource) {
+    case NotificationSource::Document:
+        queueTaskToDispatchEvent(*this, TaskSource::UserInteraction, Event::create(eventNames().closeEvent, Event::CanBubble::No, Event::IsCancelable::No));
+        break;
+    case NotificationSource::ServiceWorker:
+        ServiceWorkerGlobalScope::ensureOnContextThread(m_contextIdentifier, [this, protectedThis = Ref { *this }](auto& context) {
+            downcast<ServiceWorkerGlobalScope>(context).postTaskToFireNotificationEvent(NotificationEventType::Close, *this, { });
+        });
+        break;
+    }
+
     finalize();
 }
 
 void Notification::dispatchErrorEvent()
 {
-    dispatchEvent(Event::create(eventNames().errorEvent, Event::CanBubble::No, Event::IsCancelable::No));
+    ASSERT(isMainThread());
+    ASSERT(m_notificationSource == NotificationSource::Document);
+
+    queueTaskToDispatchEvent(*this, TaskSource::UserInteraction, Event::create(eventNames().errorEvent, Event::CanBubble::No, Event::IsCancelable::No));
 }
 
-auto Notification::permission(Document& document) -> Permission
+auto Notification::permission(ScriptExecutionContext& context) -> Permission
 {
-    auto* page = document.page();
-    if (!page)
+    auto* client = context.notificationClient();
+    if (!client)
         return Permission::Default;
 
-    return NotificationController::from(document.page())->client().checkPermission(&document);
+    if (!context.isSecureContext())
+        return Permission::Denied;
+
+    return client->checkPermission(&context);
 }
 
-void Notification::requestPermission(Document& document, RefPtr<NotificationPermissionCallback>&& callback)
+void Notification::requestPermission(Document& document, RefPtr<NotificationPermissionCallback>&& callback, Ref<DeferredPromise>&& promise)
 {
-    auto* page = document.page();
-    if (!page)
-        return;
+    auto resolvePromiseAndCallback = [document = Ref { document }, callback = WTFMove(callback), promise = WTFMove(promise)](Permission permission) mutable {
+        document->eventLoop().queueTask(TaskSource::DOMManipulation, [callback = WTFMove(callback), promise = WTFMove(promise), permission]() mutable {
+            if (callback)
+                callback->handleEvent(permission);
+            promise->resolve<IDLEnumeration<NotificationPermission>>(permission);
+        });
+    };
 
-    NotificationController::from(page)->client().requestPermission(&document, WTFMove(callback));
+    auto* client = static_cast<ScriptExecutionContext&>(document).notificationClient();
+    if (!client)
+        return resolvePromiseAndCallback(Permission::Denied);
+
+    if (!document.isSecureContext()) {
+        document.addConsoleMessage(MessageSource::Security, MessageLevel::Error, "The Notification permission may only be requested in a secure context."_s);
+        return resolvePromiseAndCallback(Permission::Denied);
+    }
+
+    client->requestPermission(document, WTFMove(resolvePromiseAndCallback));
+}
+
+void Notification::eventListenersDidChange()
+{
+    m_hasRelevantEventListener = hasEventListeners(eventNames().clickEvent)
+        || hasEventListeners(eventNames().closeEvent)
+        || hasEventListeners(eventNames().errorEvent)
+        || hasEventListeners(eventNames().showEvent);
+}
+
+// A Notification object must not be garbage collected while the list of notifications contains its corresponding
+// notification and it has an event listener whose type is click, show, close, or error.
+// See https://notifications.spec.whatwg.org/#garbage-collection
+bool Notification::virtualHasPendingActivity() const
+{
+    return m_state == Showing && m_hasRelevantEventListener;
+}
+
+NotificationData Notification::data() const
+{
+    auto sessionID = scriptExecutionContext()->sessionID();
+    RELEASE_ASSERT(sessionID);
+
+    return {
+        m_title.isolatedCopy(),
+        m_body.isolatedCopy(),
+        m_icon.string().isolatedCopy(),
+        m_tag,
+        m_lang,
+        m_direction,
+        scriptExecutionContext()->securityOrigin()->toString().isolatedCopy(),
+        identifier(),
+        *sessionID,
+    };
 }
 
 } // namespace WebCore

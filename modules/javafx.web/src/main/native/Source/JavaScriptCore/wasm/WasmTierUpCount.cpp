@@ -26,7 +26,7 @@
 #include "config.h"
 #include "WasmTierUpCount.h"
 
-#if ENABLE(WEBASSEMBLY)
+#if ENABLE(WEBASSEMBLY_B3JIT)
 
 #include "WasmOSREntryData.h"
 
@@ -34,17 +34,17 @@ namespace JSC { namespace Wasm {
 
 TierUpCount::TierUpCount()
 {
-    setNewThreshold(Options::thresholdForOMGOptimizeAfterWarmUp(), nullptr);
+    setNewThreshold(Options::thresholdForOMGOptimizeAfterWarmUp());
 }
 
 TierUpCount::~TierUpCount() = default;
 
-OSREntryData& TierUpCount::addOSREntryData(uint32_t functionIndex, uint32_t loopIndex)
+OSREntryData& TierUpCount::addOSREntryData(uint32_t functionIndex, uint32_t loopIndex, StackMap&& stackMap)
 {
-    m_osrEntryData.append(makeUnique<OSREntryData>(functionIndex, loopIndex));
+    m_osrEntryData.append(makeUnique<OSREntryData>(functionIndex, loopIndex, WTFMove(stackMap)));
     return *m_osrEntryData.last().get();
 }
 
-} } // namespace JSC::Table
+} } // namespace JSC::Wasm
 
-#endif // ENABLE(WEBASSEMBLY)
+#endif // ENABLE(WEBASSEMBLY_B3JIT)

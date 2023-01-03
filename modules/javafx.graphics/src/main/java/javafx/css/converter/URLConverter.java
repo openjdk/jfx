@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,6 +30,7 @@ import javafx.css.ParsedValue;
 import javafx.css.StyleConverter;
 import javafx.scene.text.Font;
 import com.sun.javafx.logging.PlatformLogger;
+import com.sun.javafx.util.DataURI;
 
 import java.net.MalformedURLException;
 import java.net.URI;
@@ -42,7 +43,7 @@ import java.security.PrivilegedExceptionAction;
 import java.security.ProtectionDomain;
 
 /**
- * Converts a parsed value representing  URL to a URL string that is
+ * Converter to convert a parsed value representing URL to a URL string that is
  * resolved relative to the location of the stylesheet.
  * The input value is in the form: {@code url("<path>")}.
  *
@@ -56,6 +57,10 @@ public final class URLConverter extends StyleConverter<ParsedValue[], String> {
         static final SequenceConverter SEQUENCE_INSTANCE = new SequenceConverter();
     }
 
+    /**
+     * Gets the {@code URLConverter} instance.
+     * @return the {@code URLConverter} instance
+     */
     public static StyleConverter<ParsedValue[], String> getInstance() {
         return Holder.INSTANCE;
     }
@@ -72,38 +77,35 @@ public final class URLConverter extends StyleConverter<ParsedValue[], String> {
         ParsedValue[] values = value.getValue();
 
         String resource = values.length > 0 ? StringConverter.getInstance().convert(values[0], font) : null;
+        resource = resource != null ? resource.trim() : null;
 
-        if (resource != null && resource.trim().isEmpty() == false) {
-
+        if (resource != null && !resource.isEmpty()) {
             if (resource.startsWith("url(")) {
                 resource = com.sun.javafx.util.Utils.stripQuotes(resource.substring(4, resource.length() - 1));
             } else {
                 resource = com.sun.javafx.util.Utils.stripQuotes(resource);
             }
 
-            String stylesheetURL = values.length > 1 && values[1] != null ? (String)values[1].getValue() : null;
-            URL resolvedURL = resolve(stylesheetURL, resource);
+            if (DataURI.matchScheme(resource)) {
+                url = resource;
+            } else if (!resource.isEmpty()) {
+                String stylesheetURL = values.length > 1 && values[1] != null ? (String) values[1].getValue() : null;
+                URL resolvedURL = resolve(stylesheetURL, resource);
 
-            if (resolvedURL != null) url = resolvedURL.toExternalForm();
+                if (resolvedURL != null) url = resolvedURL.toExternalForm();
+            }
         }
 
         return url;
     }
 
-    // package for testing
-    URL resolve(String stylesheetUrl, String resource) {
-
-
-        final String resourcePath = (resource != null) ? resource.trim() : null;
-        if (resourcePath == null || resourcePath.isEmpty()) return null;
-
+    private URL resolve(String stylesheetUrl, String resource) {
         try {
-
             // Note: the same code (pretty much) also appears in StyleManager
 
             // if stylesheetUri is null, then we're dealing with an in-line style.
             // If there is no scheme part, then the url is interpreted as being relative to the application's class-loader.
-            URI resourceUri = new URI(resourcePath);
+            URI resourceUri = new URI(resource);
 
             if (resourceUri.isAbsolute()) {
                 return resourceUri.toURL();
@@ -180,6 +182,7 @@ public final class URLConverter extends StyleConverter<ParsedValue[], String> {
 
             System.err.println("WARNING: resolveRuntimeImport cannot resolve: " + resourcePath);
 
+            @SuppressWarnings("removal")
             final SecurityManager sm = System.getSecurityManager();
             if (sm == null) {
                 // If the SecurityManager is not null, then just look up the resource on the class-path.
@@ -193,6 +196,7 @@ public final class URLConverter extends StyleConverter<ParsedValue[], String> {
 
             // check whether the path is file from our runtime jar
             try {
+                @SuppressWarnings("removal")
                 final URL rtJarURL = AccessController.doPrivileged((PrivilegedExceptionAction<URL>) () -> {
                     // getProtectionDomain either throws a SecurityException or returns a non-null value
                     final ProtectionDomain protectionDomain = Application.class.getProtectionDomain();
@@ -246,8 +250,16 @@ public final class URLConverter extends StyleConverter<ParsedValue[], String> {
         return "URLType";
     }
 
+    /**
+     * Converter to convert a sequence of URLs to an array of {@code String}s.
+     * @since 9
+     */
     public static final class SequenceConverter extends StyleConverter<ParsedValue<ParsedValue[], String>[], String[]> {
 
+        /**
+         * Gets the {@code SequenceConverter} instance.
+         * @return the {@code SequenceConverter} instance
+         */
         public static SequenceConverter getInstance() {
             return Holder.SEQUENCE_INSTANCE;
         }

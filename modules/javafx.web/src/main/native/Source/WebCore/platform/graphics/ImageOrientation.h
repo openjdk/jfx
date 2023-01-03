@@ -28,6 +28,13 @@
 
 #include "AffineTransform.h"
 #include "FloatSize.h"
+#include <wtf/EnumTraits.h>
+
+// X11 headers define a bunch of macros with common terms, interfering with WebCore and WTF enum values.
+// As a workaround, we explicitly undef them here.
+#if defined(None)
+#undef None
+#endif
 
 namespace WebCore {
 
@@ -101,6 +108,36 @@ struct ImageOrientation {
         return AffineTransform();
     }
 
+    ImageOrientation withFlippedY() const
+    {
+        ASSERT(isValidEXIFOrientation(m_orientation));
+
+        switch (m_orientation) {
+        case FromImage:
+            ASSERT_NOT_REACHED();
+            return None;
+        case OriginTopLeft:
+            return OriginBottomLeft;
+        case OriginTopRight:
+            return OriginBottomRight;
+        case OriginBottomRight:
+            return OriginTopRight;
+        case OriginBottomLeft:
+            return OriginTopLeft;
+        case OriginLeftTop:
+            return OriginLeftBottom;
+        case OriginRightTop:
+            return OriginRightBottom;
+        case OriginRightBottom:
+            return OriginRightTop;
+        case OriginLeftBottom:
+            return OriginLeftTop;
+        }
+
+        ASSERT_NOT_REACHED();
+        return None;
+    }
+
 private:
     static const Orientation EXIFFirst = OriginTopLeft;
     static const Orientation EXIFLast = OriginLeftBottom;
@@ -121,3 +158,22 @@ private:
 };
 
 } // namespace WebCore
+
+namespace WTF {
+
+template<> struct EnumTraits<WebCore::ImageOrientation::Orientation> {
+    using values = EnumValues<
+    WebCore::ImageOrientation::Orientation,
+    WebCore::ImageOrientation::Orientation::FromImage,
+    WebCore::ImageOrientation::Orientation::OriginTopLeft,
+    WebCore::ImageOrientation::Orientation::OriginTopRight,
+    WebCore::ImageOrientation::Orientation::OriginBottomRight,
+    WebCore::ImageOrientation::Orientation::OriginBottomLeft,
+    WebCore::ImageOrientation::Orientation::OriginLeftTop,
+    WebCore::ImageOrientation::Orientation::OriginRightTop,
+    WebCore::ImageOrientation::Orientation::OriginRightBottom,
+    WebCore::ImageOrientation::Orientation::OriginLeftBottom
+    >;
+};
+
+} // namespace WTF

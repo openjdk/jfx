@@ -82,8 +82,19 @@ gst_tag_register_tags_internal (gpointer unused)
   gst_tag_register_static (GST_TAG_MUSICBRAINZ_ALBUMARTISTID, GST_TAG_FLAG_META,
       G_TYPE_STRING,
       _("album artist ID"), _("MusicBrainz album artist ID"), NULL);
+  gst_tag_register_static (GST_TAG_MUSICBRAINZ_RELEASEGROUPID,
+      GST_TAG_FLAG_META, G_TYPE_STRING, _("release group ID"),
+      _("MusicBrainz release group ID"), NULL);
+  gst_tag_register_static (GST_TAG_MUSICBRAINZ_RELEASETRACKID,
+      GST_TAG_FLAG_META, G_TYPE_STRING, _("release track ID"),
+      _("MusicBrainz release track ID"), NULL);
   gst_tag_register_static (GST_TAG_MUSICBRAINZ_TRMID, GST_TAG_FLAG_META,
       G_TYPE_STRING, _("track TRM ID"), _("MusicBrainz TRM ID"), NULL);
+  gst_tag_register_static (GST_TAG_ACOUSTID_ID, GST_TAG_FLAG_META,
+      G_TYPE_STRING, _("AcoustID ID"), _("AcoustID ID"), NULL);
+  gst_tag_register_static (GST_TAG_ACOUSTID_FINGERPRINT,
+      GST_TAG_FLAG_META, G_TYPE_STRING, _("AcoustID fingerprint (chromaprint)"),
+      _("AcoustID fingerprint (chromaprint)"), NULL);
 
   /* CDDA tags */
   gst_tag_register_static (GST_TAG_CDDA_CDDB_DISCID, GST_TAG_FLAG_META,
@@ -497,7 +508,7 @@ beach:
  * In GStreamer, image tags are #GstSample<!-- -->s containing the raw image
  * data, with the sample caps describing the content type of the image
  * (e.g. image/jpeg, image/png, text/uri-list). The sample info may contain
- * an additional 'image-type' field of #GST_TYPE_TAG_IMAGE_TYPE to describe
+ * an additional 'image-type' field of #GstTagImageType to describe
  * the type of image (front cover, back cover etc.). #GST_TAG_PREVIEW_IMAGE
  * tags should not carry an image type, their type is already indicated via
  * the special tag name.

@@ -151,7 +151,7 @@ int32_t SelectFormat::findSubMessage(const MessagePattern& pattern, int32_t part
     return msgStart;
 }
 
-Format* SelectFormat::clone() const
+SelectFormat* SelectFormat::clone() const
 {
     return new SelectFormat(*this);
 }
@@ -164,19 +164,19 @@ SelectFormat::operator=(const SelectFormat& other) {
     return *this;
 }
 
-UBool
+bool
 SelectFormat::operator==(const Format& other) const {
     if (this == &other) {
-        return TRUE;
+        return true;
     }
     if (!Format::operator==(other)) {
-        return FALSE;
+        return false;
     }
     const SelectFormat& o = (const SelectFormat&)other;
     return msgPattern == o.msgPattern;
 }
 
-UBool
+bool
 SelectFormat::operator!=(const Format& other) const {
     return  !operator==(other);
 }

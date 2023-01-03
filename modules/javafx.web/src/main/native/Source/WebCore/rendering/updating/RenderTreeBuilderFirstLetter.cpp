@@ -34,14 +34,14 @@
 #include "RenderTable.h"
 #include "RenderTextFragment.h"
 #include "RenderTreeBuilder.h"
+#include "StyleChange.h"
 
 namespace WebCore {
 
 static RenderStyle styleForFirstLetter(const RenderBlock& firstLetterBlock, const RenderObject& firstLetterContainer)
 {
     auto* containerFirstLetterStyle = firstLetterBlock.getCachedPseudoStyle(PseudoId::FirstLetter, &firstLetterContainer.firstLineStyle());
-    // FIXME: There appears to be some path where we have a first letter renderer without first letter style.
-    ASSERT(containerFirstLetterStyle);
+    // FIXME: first-letter style needs to be computed eagerly.
     auto firstLetterStyle = RenderStyle::clone(containerFirstLetterStyle ? *containerFirstLetterStyle : firstLetterContainer.firstLineStyle());
 
     // If we have an initial letter drop that is >= 1, then we need to force floating to be on.
@@ -50,41 +50,43 @@ static RenderStyle styleForFirstLetter(const RenderBlock& firstLetterBlock, cons
 
     // We have to compute the correct font-size for the first-letter if it has an initial letter height set.
     auto* paragraph = firstLetterContainer.isRenderBlockFlow() ? &firstLetterContainer : firstLetterContainer.containingBlock();
-    if (firstLetterStyle.initialLetterHeight() >= 1 && firstLetterStyle.fontMetrics().hasCapHeight() && paragraph->style().fontMetrics().hasCapHeight()) {
+    if (firstLetterStyle.initialLetterHeight() >= 1 && firstLetterStyle.metricsOfPrimaryFont().hasCapHeight() && paragraph->style().metricsOfPrimaryFont().hasCapHeight()) {
         // FIXME: For ideographic baselines, we want to go from line edge to line edge. This is equivalent to (N-1)*line-height + the font height.
         // We don't yet support ideographic baselines.
         // For an N-line first-letter and for alphabetic baselines, the cap-height of the first letter needs to equal (N-1)*line-height of paragraph lines + cap-height of the paragraph
         // Mathematically we can't rely on font-size, since font().height() doesn't necessarily match. For reliability, the best approach is simply to
         // compare the final measured cap-heights of the two fonts in order to get to the closest possible value.
-        firstLetterStyle.setLineBoxContain(LineBoxContainInitialLetter);
+        firstLetterStyle.setLineBoxContain({ LineBoxContain::InitialLetter });
         int lineHeight = paragraph->style().computedLineHeight();
 
         // Set the font to be one line too big and then ratchet back to get to a precise fit. We can't just set the desired font size based off font height metrics
         // because many fonts bake ascent into the font metrics. Therefore we have to look at actual measured cap height values in order to know when we have a good fit.
         auto newFontDescription = firstLetterStyle.fontDescription();
-        float capRatio = firstLetterStyle.fontMetrics().floatCapHeight() / firstLetterStyle.computedFontPixelSize();
-        float startingFontSize = ((firstLetterStyle.initialLetterHeight() - 1) * lineHeight + paragraph->style().fontMetrics().capHeight()) / capRatio;
+        float capRatio = firstLetterStyle.metricsOfPrimaryFont().floatCapHeight() / firstLetterStyle.computedFontPixelSize();
+        float startingFontSize = ((firstLetterStyle.initialLetterHeight() - 1) * lineHeight + paragraph->style().metricsOfPrimaryFont().capHeight()) / capRatio;
         newFontDescription.setSpecifiedSize(startingFontSize);
         newFontDescription.setComputedSize(startingFontSize);
         firstLetterStyle.setFontDescription(WTFMove(newFontDescription));
         firstLetterStyle.fontCascade().update(firstLetterStyle.fontCascade().fontSelector());
 
-        int desiredCapHeight = (firstLetterStyle.initialLetterHeight() - 1) * lineHeight + paragraph->style().fontMetrics().capHeight();
-        int actualCapHeight = firstLetterStyle.fontMetrics().capHeight();
+        int desiredCapHeight = (firstLetterStyle.initialLetterHeight() - 1) * lineHeight + paragraph->style().metricsOfPrimaryFont().capHeight();
+        int actualCapHeight = firstLetterStyle.metricsOfPrimaryFont().capHeight();
         while (actualCapHeight > desiredCapHeight) {
             auto newFontDescription = firstLetterStyle.fontDescription();
             newFontDescription.setSpecifiedSize(newFontDescription.specifiedSize() - 1);
             newFontDescription.setComputedSize(newFontDescription.computedSize() -1);
             firstLetterStyle.setFontDescription(WTFMove(newFontDescription));
             firstLetterStyle.fontCascade().update(firstLetterStyle.fontCascade().fontSelector());
-            actualCapHeight = firstLetterStyle.fontMetrics().capHeight();
+            actualCapHeight = firstLetterStyle.metricsOfPrimaryFont().capHeight();
         }
     }
 
+    firstLetterStyle.setStyleType(PseudoId::FirstLetter);
     // Force inline display (except for floating first-letters).
     firstLetterStyle.setDisplay(firstLetterStyle.isFloating() ? DisplayType::Block : DisplayType::Inline);
     // CSS2 says first-letter can't be positioned.
     firstLetterStyle.setPosition(PositionType::Static);
+
     return firstLetterStyle;
 }
 
@@ -155,7 +157,7 @@ void RenderTreeBuilder::FirstLetter::cleanupOnDestroy(RenderTextFragment& textFr
 {
     if (!textFragment.firstLetter())
         return;
-    m_builder.destroy(*textFragment.firstLetter());
+    m_builder.destroy(*textFragment.firstLetter(), CanCollapseAnonymousBlock::No);
 }
 
 void RenderTreeBuilder::FirstLetter::updateStyle(RenderBlock& firstLetterBlock, RenderObject& currentChild)
@@ -167,7 +169,7 @@ void RenderTreeBuilder::FirstLetter::updateStyle(RenderBlock& firstLetterBlock, 
     auto pseudoStyle = styleForFirstLetter(firstLetterBlock, *firstLetterContainer);
     ASSERT(firstLetter->isFloating() || firstLetter->isInline());
 
-    if (Style::determineChange(firstLetter->style(), pseudoStyle) == Style::Detach) {
+    if (Style::determineChange(firstLetter->style(), pseudoStyle) == Style::Change::Renderer) {
         // The first-letter renderer needs to be replaced. Create a new renderer of the right type.
         RenderPtr<RenderBoxModelObject> newFirstLetter;
         if (pseudoStyle.display() == DisplayType::Inline)
@@ -191,7 +193,7 @@ void RenderTreeBuilder::FirstLetter::updateStyle(RenderBlock& firstLetterBlock, 
             remainingText->setFirstLetter(*newFirstLetter);
             newFirstLetter->setFirstLetterRemainingText(*remainingText);
         }
-        WeakPtr<RenderObject> nextSibling = makeWeakPtr(firstLetter->nextSibling());
+        WeakPtr nextSibling = firstLetter->nextSibling();
         m_builder.destroy(*firstLetter);
         m_builder.attach(*firstLetterContainer, WTFMove(newFirstLetter), nextSibling.get());
         return;
@@ -249,8 +251,8 @@ void RenderTreeBuilder::FirstLetter::createRenderers(RenderBlock& firstLetterBlo
         }
 
         auto* textNode = currentTextChild.textNode();
-        auto* beforeChild = currentTextChild.nextSibling();
-        auto inlineWrapperForDisplayContents = makeWeakPtr(currentTextChild.inlineWrapperForDisplayContents());
+        WeakPtr beforeChild = currentTextChild.nextSibling();
+        WeakPtr inlineWrapperForDisplayContents = currentTextChild.inlineWrapperForDisplayContents();
         auto hasInlineWrapperForDisplayContents = inlineWrapperForDisplayContents.get();
         m_builder.destroy(currentTextChild);
 
@@ -266,7 +268,7 @@ void RenderTreeBuilder::FirstLetter::createRenderers(RenderBlock& firstLetterBlo
         RenderTextFragment& remainingText = *newRemainingText;
         ASSERT_UNUSED(hasInlineWrapperForDisplayContents, hasInlineWrapperForDisplayContents == inlineWrapperForDisplayContents.get());
         remainingText.setInlineWrapperForDisplayContents(inlineWrapperForDisplayContents.get());
-        m_builder.attach(*textContentParent, WTFMove(newRemainingText), beforeChild);
+        m_builder.attach(*textContentParent, WTFMove(newRemainingText), beforeChild.get());
 
         // FIXME: Make attach the final step so that we don't need to keep firstLetter around.
         auto& firstLetter = *newFirstLetter;

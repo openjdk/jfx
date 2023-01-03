@@ -1,5 +1,5 @@
 // Copyright 2018 The Chromium Authors. All rights reserved.
-// Copyright (C) 2018 Apple Inc. All rights reserved.
+// Copyright (C) 2018-2021 Apple Inc. All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
@@ -32,14 +32,17 @@
 #if ENABLE(WEB_AUTHN)
 
 #include "AttestationConveyancePreference.h"
+#include "AuthenticatorAssertionResponse.h"
+#include "AuthenticatorAttestationResponse.h"
 #include "AuthenticatorGetInfoResponse.h"
 #include "FidoConstants.h"
-#include "PublicKeyCredentialData.h"
 
 // Converts response from authenticators to CTAPResponse objects. If the
 // response of the authenticator does not conform to format specified by the
 // CTAP protocol, null optional is returned.
 namespace fido {
+
+std::optional<cbor::CBORValue> decodeResponseMap(const Vector<uint8_t>&);
 
 // Parses response code from response received from the authenticator. If
 // unknown response code value is received, then CTAP2_ERR_OTHER is returned.
@@ -49,18 +52,16 @@ WEBCORE_EXPORT CtapDeviceResponseCode getResponseCode(const Vector<uint8_t>&);
 // and converts response to AuthenticatorMakeCredentialResponse object with
 // CBOR map keys that conform to format of attestation object defined by the
 // WebAuthN spec : https://w3c.github.io/webauthn/#fig-attStructs
-WEBCORE_EXPORT Optional<WebCore::PublicKeyCredentialData> readCTAPMakeCredentialResponse(const Vector<uint8_t>&, const WebCore::AttestationConveyancePreference& attestation = WebCore::AttestationConveyancePreference::Direct);
+WEBCORE_EXPORT RefPtr<WebCore::AuthenticatorAttestationResponse> readCTAPMakeCredentialResponse(const Vector<uint8_t>&, WebCore::AuthenticatorAttachment, const WebCore::AttestationConveyancePreference& = WebCore::AttestationConveyancePreference::Direct);
 
 // De-serializes CBOR encoded response to AuthenticatorGetAssertion /
 // AuthenticatorGetNextAssertion request to AuthenticatorGetAssertionResponse
 // object.
-// FIXME(190783): Probably need to remake AuthenticatorResponse to include more fields like numberOfCredentials,
-// and use it here instead of PublicKeyCredentialData.
-WEBCORE_EXPORT Optional<WebCore::PublicKeyCredentialData> readCTAPGetAssertionResponse(const Vector<uint8_t>&);
+WEBCORE_EXPORT RefPtr<WebCore::AuthenticatorAssertionResponse> readCTAPGetAssertionResponse(const Vector<uint8_t>&, WebCore::AuthenticatorAttachment);
 
 // De-serializes CBOR encoded response to AuthenticatorGetInfo request to
 // AuthenticatorGetInfoResponse object.
-WEBCORE_EXPORT Optional<AuthenticatorGetInfoResponse> readCTAPGetInfoResponse(const Vector<uint8_t>&);
+WEBCORE_EXPORT std::optional<AuthenticatorGetInfoResponse> readCTAPGetInfoResponse(const Vector<uint8_t>&);
 
 } // namespace fido
 

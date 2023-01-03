@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -46,7 +46,8 @@ import java.lang.reflect.Method;
 public final class PlatformManager {
     private static String enabledPlatforms;
     static {
-        AccessController.doPrivileged((PrivilegedAction) () -> {
+        @SuppressWarnings("removal")
+        var dummy = AccessController.doPrivileged((PrivilegedAction) () -> {
             getPlatformSettings();
             return null;
         });
@@ -164,7 +165,7 @@ public final class PlatformManager {
     }
 
     public List<String> getSupportedContentTypes() {
-        ArrayList<String> outTypes = new ArrayList<String>();
+        ArrayList<String> outTypes = new ArrayList<>();
 
         if (!platforms.isEmpty()) {
             for (Platform platty : platforms) {
@@ -186,7 +187,7 @@ public final class PlatformManager {
     }
 
     public List<String> getSupportedProtocols() {
-        ArrayList<String> outProtocols = new ArrayList<String>();
+        ArrayList<String> outProtocols = new ArrayList<>();
 
         if (!platforms.isEmpty()) {
             for (Platform platty : platforms) {

@@ -27,23 +27,27 @@
 
 #if ENABLE(WEBASSEMBLY)
 
+#include "Error.h"
 #include "JSArrayBuffer.h"
+#include "JSArrayBufferView.h"
 #include "JSCJSValue.h"
 #include "JSSourceCode.h"
+#include "JSWebAssemblyRuntimeError.h"
+#include "WasmFormat.h"
 #include "WebAssemblyFunction.h"
 #include "WebAssemblyWrapperFunction.h"
 
 namespace JSC {
 
-ALWAYS_INLINE uint32_t toNonWrappingUint32(ExecState* exec, JSValue value)
+ALWAYS_INLINE uint32_t toNonWrappingUint32(JSGlobalObject* globalObject, JSValue value)
 {
-    VM& vm = exec->vm();
+    VM& vm = getVM(globalObject);
     auto throwScope = DECLARE_THROW_SCOPE(vm);
 
     if (value.isUInt32())
         return value.asUInt32();
 
-    double doubleValue = value.toNumber(exec);
+    double doubleValue = value.toNumber(globalObject);
     RETURN_IF_EXCEPTION(throwScope, { });
 
     if (!std::isnan(doubleValue) && !std::isinf(doubleValue)) {
@@ -52,13 +56,13 @@ ALWAYS_INLINE uint32_t toNonWrappingUint32(ExecState* exec, JSValue value)
             return static_cast<uint32_t>(truncedValue);
     }
 
-    throwException(exec, throwScope, createTypeError(exec, "Expect an integer argument in the range: [0, 2^32 - 1]"_s));
+    throwException(globalObject, throwScope, createTypeError(globalObject, "Expect an integer argument in the range: [0, 2^32 - 1]"_s));
     return { };
 }
 
-ALWAYS_INLINE std::pair<const uint8_t*, size_t> getWasmBufferFromValue(ExecState* exec, JSValue value)
+ALWAYS_INLINE std::pair<const uint8_t*, size_t> getWasmBufferFromValue(JSGlobalObject* globalObject, JSValue value)
 {
-    VM& vm = exec->vm();
+    VM& vm = getVM(globalObject);
     auto throwScope = DECLARE_THROW_SCOPE(vm);
 
     if (auto* source = jsDynamicCast<JSSourceCode*>(vm, value)) {
@@ -70,31 +74,31 @@ ALWAYS_INLINE std::pair<const uint8_t*, size_t> getWasmBufferFromValue(ExecState
     JSArrayBuffer* arrayBuffer = value.getObject() ? jsDynamicCast<JSArrayBuffer*>(vm, value.getObject()) : nullptr;
     JSArrayBufferView* arrayBufferView = value.getObject() ? jsDynamicCast<JSArrayBufferView*>(vm, value.getObject()) : nullptr;
     if (!(arrayBuffer || arrayBufferView)) {
-        throwException(exec, throwScope, createTypeError(exec,
+        throwException(globalObject, throwScope, createTypeError(globalObject,
             "first argument must be an ArrayBufferView or an ArrayBuffer"_s, defaultSourceAppender, runtimeTypeForValue(vm, value)));
         return { nullptr, 0 };
     }
 
-    if (arrayBufferView ? arrayBufferView->isNeutered() : arrayBuffer->impl()->isNeutered()) {
-        throwException(exec, throwScope, createTypeError(exec,
+    if (arrayBufferView ? arrayBufferView->isDetached() : arrayBuffer->impl()->isDetached()) {
+        throwException(globalObject, throwScope, createTypeError(globalObject,
             "underlying TypedArray has been detatched from the ArrayBuffer"_s, defaultSourceAppender, runtimeTypeForValue(vm, value)));
         return { nullptr, 0 };
     }
 
     uint8_t* base = arrayBufferView ? static_cast<uint8_t*>(arrayBufferView->vector()) : static_cast<uint8_t*>(arrayBuffer->impl()->data());
-    size_t byteSize = arrayBufferView ? arrayBufferView->length() : arrayBuffer->impl()->byteLength();
+    size_t byteSize = arrayBufferView ? arrayBufferView->byteLength() : arrayBuffer->impl()->byteLength();
     return { base, byteSize };
 }
 
-ALWAYS_INLINE Vector<uint8_t> createSourceBufferFromValue(VM& vm, ExecState* exec, JSValue value)
+ALWAYS_INLINE Vector<uint8_t> createSourceBufferFromValue(VM& vm, JSGlobalObject* globalObject, JSValue value)
 {
     auto throwScope = DECLARE_THROW_SCOPE(vm);
-    auto [data, byteSize] = getWasmBufferFromValue(exec, value);
+    auto [data, byteSize] = getWasmBufferFromValue(globalObject, value);
     RETURN_IF_EXCEPTION(throwScope, Vector<uint8_t>());
 
     Vector<uint8_t> result;
     if (!result.tryReserveCapacity(byteSize)) {
-        throwException(exec, throwScope, createOutOfMemoryError(exec));
+        throwException(globalObject, throwScope, createOutOfMemoryError(globalObject));
         return result;
     }
 
@@ -125,12 +129,78 @@ ALWAYS_INLINE bool isWebAssemblyHostFunction(VM& vm, JSValue value, WebAssemblyF
     return isWebAssemblyHostFunction(vm, jsCast<JSObject*>(value), wasmFunction, wasmWrapperFunction);
 }
 
-
 ALWAYS_INLINE bool isWebAssemblyHostFunction(VM& vm, JSValue object)
 {
     WebAssemblyFunction* unused;
     WebAssemblyWrapperFunction* unused2;
     return isWebAssemblyHostFunction(vm, object, unused, unused2);
+}
+
+ALWAYS_INLINE JSValue defaultValueForReferenceType(const Wasm::Type type)
+{
+    ASSERT(Wasm::isRefType(type));
+    if (Wasm::isExternref(type))
+        return jsUndefined();
+    ASSERT(Wasm::isFuncref(type));
+    return jsNull();
+}
+
+ALWAYS_INLINE JSValue toJSValue(JSGlobalObject* globalObject, const Wasm::Type type, uint64_t bits)
+{
+    switch (type.kind) {
+    case Wasm::TypeKind::Void:
+        return jsUndefined();
+    case Wasm::TypeKind::I32:
+        return jsNumber(static_cast<int32_t>(bits));
+    case Wasm::TypeKind::F32:
+        return jsNumber(bitwise_cast<float>(static_cast<int32_t>(bits)));
+    case Wasm::TypeKind::F64:
+        return jsNumber(bitwise_cast<double>(bits));
+    case Wasm::TypeKind::I64:
+        return JSBigInt::createFrom(globalObject, static_cast<int64_t>(bits));
+    case Wasm::TypeKind::Externref:
+    case Wasm::TypeKind::Funcref:
+        return bitwise_cast<JSValue>(bits);
+    default:
+        break;
+    }
+    RELEASE_ASSERT_NOT_REACHED();
+    return JSValue();
+}
+
+ALWAYS_INLINE uint64_t fromJSValue(JSGlobalObject* globalObject, const Wasm::Type type, JSValue value)
+{
+    VM& vm = globalObject->vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
+    switch (type.kind) {
+    case Wasm::TypeKind::I32:
+        RELEASE_AND_RETURN(scope, value.toInt32(globalObject));
+    case Wasm::TypeKind::I64:
+        RELEASE_AND_RETURN(scope, bitwise_cast<uint64_t>(value.toBigInt64(globalObject)));
+    case Wasm::TypeKind::F32:
+        RELEASE_AND_RETURN(scope, bitwise_cast<uint32_t>(value.toFloat(globalObject)));
+    case Wasm::TypeKind::F64:
+        RELEASE_AND_RETURN(scope, bitwise_cast<uint64_t>(value.toNumber(globalObject)));
+    default: {
+        if (Wasm::isExternref(type)) {
+            if (!type.isNullable() && value.isNull())
+                return throwVMException(globalObject, scope, createJSWebAssemblyRuntimeError(globalObject, vm, "Non-null Externref cannot be null"));
+        } else if (Wasm::isFuncref(type) || isRefWithTypeIndex(type)) {
+            WebAssemblyFunction* wasmFunction = nullptr;
+            WebAssemblyWrapperFunction* wasmWrapperFunction = nullptr;
+            if (!isWebAssemblyHostFunction(vm, value, wasmFunction, wasmWrapperFunction) && (!type.isNullable() || !value.isNull()))
+                return throwVMException(globalObject, scope, createJSWebAssemblyRuntimeError(globalObject, vm, "Funcref must be an exported wasm function"));
+            if (isRefWithTypeIndex(type) && !value.isNull()) {
+                Wasm::SignatureIndex paramIndex = type.index;
+                Wasm::SignatureIndex argIndex = wasmFunction ? wasmFunction->signatureIndex() : wasmWrapperFunction->signatureIndex();
+                if (paramIndex != argIndex)
+                    return throwVMException(globalObject, scope, createJSWebAssemblyRuntimeError(globalObject, vm, "Argument function did not match the reference type"));
+            }
+        } else
+            RELEASE_ASSERT_NOT_REACHED();
+    }
+    }
+    RELEASE_AND_RETURN(scope, JSValue::encode(value));
 }
 
 } // namespace JSC

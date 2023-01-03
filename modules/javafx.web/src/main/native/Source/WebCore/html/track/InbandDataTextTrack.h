@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2014 Cable Television Labs Inc. All rights reserved.
- * Copyright (C) 2014-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2014-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,7 +26,7 @@
 
 #pragma once
 
-#if ENABLE(VIDEO_TRACK)
+#if ENABLE(VIDEO)
 
 #include "InbandTextTrack.h"
 
@@ -37,25 +37,29 @@ class DataCue;
 class InbandDataTextTrack final : public InbandTextTrack {
     WTF_MAKE_ISO_ALLOCATED(InbandDataTextTrack);
 public:
-    static Ref<InbandDataTextTrack> create(ScriptExecutionContext&, TextTrackClient&, InbandTextTrackPrivate&);
+    static Ref<InbandDataTextTrack> create(Document&, InbandTextTrackPrivate&);
     virtual ~InbandDataTextTrack();
 
 private:
-    InbandDataTextTrack(ScriptExecutionContext&, TextTrackClient&, InbandTextTrackPrivate&);
+    InbandDataTextTrack(Document&, InbandTextTrackPrivate&);
 
     void addDataCue(const MediaTime& start, const MediaTime& end, const void*, unsigned) final;
+
+    bool shouldPurgeCuesFromUnbufferedRanges() const final { return true; }
 
 #if !RELEASE_LOG_DISABLED
     const char* logClassName() const final { return "DataCue"; }
 #endif
 
 #if ENABLE(DATACUE_VALUE)
-    void addDataCue(const MediaTime& start, const MediaTime& end, Ref<SerializedPlatformRepresentation>&&, const String&) final;
-    void updateDataCue(const MediaTime& start, const MediaTime& end, SerializedPlatformRepresentation&) final;
-    void removeDataCue(const MediaTime& start, const MediaTime& end, SerializedPlatformRepresentation&) final;
+    void addDataCue(const MediaTime& start, const MediaTime& end, Ref<SerializedPlatformDataCue>&&, const String&) final;
+    void updateDataCue(const MediaTime& start, const MediaTime& end, SerializedPlatformDataCue&) final;
+    void removeDataCue(const MediaTime& start, const MediaTime& end, SerializedPlatformDataCue&) final;
     ExceptionOr<void> removeCue(TextTrackCue&) final;
 
-    HashMap<RefPtr<SerializedPlatformRepresentation>, RefPtr<DataCue>> m_incompleteCueMap;
+    RefPtr<DataCue> findIncompleteCue(const SerializedPlatformDataCue&);
+
+    Vector<RefPtr<DataCue>> m_incompleteCueMap;
 #endif
 };
 

@@ -31,18 +31,16 @@
 
 namespace WebCore {
 
-typedef String ErrorString;
-
 class PageHeapAgent final : public WebHeapAgent {
     WTF_MAKE_NONCOPYABLE(PageHeapAgent);
     WTF_MAKE_FAST_ALLOCATED;
 public:
     PageHeapAgent(PageAgentContext&);
-    virtual ~PageHeapAgent();
+    ~PageHeapAgent();
 
     // HeapBackendDispatcherHandler
-    void enable(ErrorString&);
-    void disable(ErrorString&);
+    Inspector::Protocol::ErrorStringOr<void> enable();
+    Inspector::Protocol::ErrorStringOr<void> disable();
 
     // InspectorInstrumentation
     void mainFrameNavigated();

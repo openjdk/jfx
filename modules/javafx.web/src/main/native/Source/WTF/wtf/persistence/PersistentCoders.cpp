@@ -37,14 +37,14 @@ void Coder<AtomString>::encode(Encoder& encoder, const AtomString& atomString)
     encoder << atomString.string();
 }
 
-bool Coder<AtomString>::decode(Decoder& decoder, AtomString& atomString)
+std::optional<AtomString> Coder<AtomString>::decode(Decoder& decoder)
 {
-    String string;
-    if (!decoder.decode(string))
-        return false;
+    std::optional<String> string;
+    decoder >> string;
+    if (!string)
+        return std::nullopt;
 
-    atomString = string;
-    return true;
+    return {{ WTFMove(*string) }};
 }
 
 void Coder<CString>::encode(Encoder& encoder, const CString& string)
@@ -57,34 +57,32 @@ void Coder<CString>::encode(Encoder& encoder, const CString& string)
 
     uint32_t length = string.length();
     encoder << length;
-    encoder.encodeFixedLengthData(reinterpret_cast<const uint8_t*>(string.data()), length);
+    encoder.encodeFixedLengthData({ string.dataAsUInt8Ptr(), length });
 }
 
-bool Coder<CString>::decode(Decoder& decoder, CString& result)
+std::optional<CString> Coder<CString>::decode(Decoder& decoder)
 {
-    uint32_t length;
-    if (!decoder.decode(length))
-        return false;
+    std::optional<uint32_t> length;
+    decoder >> length;
+    if (!length)
+        return std::nullopt;
 
     if (length == std::numeric_limits<uint32_t>::max()) {
         // This is the null string.
-        result = CString();
-        return true;
+        return CString();
     }
 
     // Before allocating the string, make sure that the decoder buffer is big enough.
-    if (!decoder.bufferIsLargeEnoughToContain<char>(length))
-        return false;
+    if (!decoder.bufferIsLargeEnoughToContain<char>(*length))
+        return std::nullopt;
 
     char* buffer;
-    CString string = CString::newUninitialized(length, buffer);
-    if (!decoder.decodeFixedLengthData(reinterpret_cast<uint8_t*>(buffer), length))
-        return false;
+    CString string = CString::newUninitialized(*length, buffer);
+    if (!decoder.decodeFixedLengthData({ reinterpret_cast<uint8_t*>(buffer), *length }))
+        return std::nullopt;
 
-    result = string;
-    return true;
+    return string;
 }
-
 
 void Coder<String>::encode(Encoder& encoder, const String& string)
 {
@@ -100,56 +98,59 @@ void Coder<String>::encode(Encoder& encoder, const String& string)
     encoder << length << is8Bit;
 
     if (is8Bit)
-        encoder.encodeFixedLengthData(reinterpret_cast<const uint8_t*>(string.characters8()), length * sizeof(LChar));
+        encoder.encodeFixedLengthData({ string.characters8(), length });
     else
-        encoder.encodeFixedLengthData(reinterpret_cast<const uint8_t*>(string.characters16()), length * sizeof(UChar));
+        encoder.encodeFixedLengthData({ reinterpret_cast<const uint8_t*>(string.characters16()), length * sizeof(UChar) });
 }
 
 template <typename CharacterType>
-static inline bool decodeStringText(Decoder& decoder, uint32_t length, String& result)
+static inline std::optional<String> decodeStringText(Decoder& decoder, uint32_t length)
 {
     // Before allocating the string, make sure that the decoder buffer is big enough.
     if (!decoder.bufferIsLargeEnoughToContain<CharacterType>(length))
-        return false;
+        return std::nullopt;
 
     CharacterType* buffer;
     String string = String::createUninitialized(length, buffer);
-    if (!decoder.decodeFixedLengthData(reinterpret_cast<uint8_t*>(buffer), length * sizeof(CharacterType)))
-        return false;
+    if (!decoder.decodeFixedLengthData({ reinterpret_cast<uint8_t*>(buffer), length * sizeof(CharacterType) }))
+        return std::nullopt;
 
-    result = string;
-    return true;
+    return string;
 }
 
-bool Coder<String>::decode(Decoder& decoder, String& result)
+std::optional<String> Coder<String>::decode(Decoder& decoder)
 {
-    uint32_t length;
-    if (!decoder.decode(length))
-        return false;
+    std::optional<uint32_t> length;
+    decoder >> length;
+    if (!length)
+        return std::nullopt;
 
-    if (length == std::numeric_limits<uint32_t>::max()) {
+    if (*length == std::numeric_limits<uint32_t>::max()) {
         // This is the null string.
-        result = String();
-        return true;
+        return String();
     }
 
-    bool is8Bit;
-    if (!decoder.decode(is8Bit))
-        return false;
+    std::optional<bool> is8Bit;
+    decoder >> is8Bit;
+    if (!is8Bit)
+        return std::nullopt;
 
-    if (is8Bit)
-        return decodeStringText<LChar>(decoder, length, result);
-    return decodeStringText<UChar>(decoder, length, result);
+    if (*is8Bit)
+        return decodeStringText<LChar>(decoder, *length);
+    return decodeStringText<UChar>(decoder, *length);
 }
 
 void Coder<SHA1::Digest>::encode(Encoder& encoder, const SHA1::Digest& digest)
 {
-    encoder.encodeFixedLengthData(digest.data(), sizeof(digest));
+    encoder.encodeFixedLengthData({ digest.data(), sizeof(digest) });
 }
 
-bool Coder<SHA1::Digest>::decode(Decoder& decoder, SHA1::Digest& digest)
+std::optional<SHA1::Digest> Coder<SHA1::Digest>::decode(Decoder& decoder)
 {
-    return decoder.decodeFixedLengthData(digest.data(), sizeof(digest));
+    SHA1::Digest tmp;
+    if (!decoder.decodeFixedLengthData({ tmp.data(), sizeof(tmp) }))
+        return std::nullopt;
+    return tmp;
 }
 
 }

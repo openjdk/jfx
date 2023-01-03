@@ -50,15 +50,15 @@ const ConstantPropertyMap::Values& ConstantPropertyMap::values() const
 
 const AtomString& ConstantPropertyMap::nameForProperty(ConstantProperty property) const
 {
-    static NeverDestroyed<AtomString> safeAreaInsetTopName("safe-area-inset-top", AtomString::ConstructFromLiteral);
-    static NeverDestroyed<AtomString> safeAreaInsetRightName("safe-area-inset-right", AtomString::ConstructFromLiteral);
-    static NeverDestroyed<AtomString> safeAreaInsetBottomName("safe-area-inset-bottom", AtomString::ConstructFromLiteral);
-    static NeverDestroyed<AtomString> safeAreaInsetLeftName("safe-area-inset-left", AtomString::ConstructFromLiteral);
-    static NeverDestroyed<AtomString> fullscreenInsetTopName("fullscreen-inset-top", AtomString::ConstructFromLiteral);
-    static NeverDestroyed<AtomString> fullscreenInsetLeftName("fullscreen-inset-left", AtomString::ConstructFromLiteral);
-    static NeverDestroyed<AtomString> fullscreenInsetBottomName("fullscreen-inset-bottom", AtomString::ConstructFromLiteral);
-    static NeverDestroyed<AtomString> fullscreenInsetRightName("fullscreen-inset-right", AtomString::ConstructFromLiteral);
-    static NeverDestroyed<AtomString> fullscreenAutoHideDurationName("fullscreen-auto-hide-duration", AtomString::ConstructFromLiteral);
+    static MainThreadNeverDestroyed<const AtomString> safeAreaInsetTopName("safe-area-inset-top", AtomString::ConstructFromLiteral);
+    static MainThreadNeverDestroyed<const AtomString> safeAreaInsetRightName("safe-area-inset-right", AtomString::ConstructFromLiteral);
+    static MainThreadNeverDestroyed<const AtomString> safeAreaInsetBottomName("safe-area-inset-bottom", AtomString::ConstructFromLiteral);
+    static MainThreadNeverDestroyed<const AtomString> safeAreaInsetLeftName("safe-area-inset-left", AtomString::ConstructFromLiteral);
+    static MainThreadNeverDestroyed<const AtomString> fullscreenInsetTopName("fullscreen-inset-top", AtomString::ConstructFromLiteral);
+    static MainThreadNeverDestroyed<const AtomString> fullscreenInsetLeftName("fullscreen-inset-left", AtomString::ConstructFromLiteral);
+    static MainThreadNeverDestroyed<const AtomString> fullscreenInsetBottomName("fullscreen-inset-bottom", AtomString::ConstructFromLiteral);
+    static MainThreadNeverDestroyed<const AtomString> fullscreenInsetRightName("fullscreen-inset-right", AtomString::ConstructFromLiteral);
+    static MainThreadNeverDestroyed<const AtomString> fullscreenAutoHideDurationName("fullscreen-auto-hide-duration", AtomString::ConstructFromLiteral);
 
     switch (property) {
     case ConstantProperty::SafeAreaInsetTop:
@@ -105,7 +105,7 @@ static Ref<CSSVariableData> variableDataForPositivePixelLength(float lengthInPx)
 {
     ASSERT(lengthInPx >= 0);
 
-    CSSParserToken token(NumberToken, lengthInPx, NumberValueType, NoSign);
+    CSSParserToken token(lengthInPx, NumberValueType, NoSign, { });
     token.convertToDimensionWithUnit("px");
 
     Vector<CSSParserToken> tokens { token };
@@ -117,7 +117,7 @@ static Ref<CSSVariableData> variableDataForPositiveDuration(Seconds durationInSe
 {
     ASSERT(durationInSeconds >= 0_s);
 
-    CSSParserToken token(NumberToken, durationInSeconds.value(), NumberValueType, NoSign);
+    CSSParserToken token(durationInSeconds.value(), NumberValueType, NoSign, { });
     token.convertToDimensionWithUnit("s");
 
     Vector<CSSParserToken> tokens { token };

@@ -39,6 +39,7 @@
 namespace WebCore {
 
 class CaptureDevice;
+class Document;
 class Page;
 class UserMediaRequest;
 
@@ -53,7 +54,7 @@ public:
 
     enum DeviceChangeObserverTokenType { };
     using DeviceChangeObserverToken = ObjectIdentifier<DeviceChangeObserverTokenType>;
-    virtual DeviceChangeObserverToken addDeviceChangeObserver(WTF::Function<void()>&&) = 0;
+    virtual DeviceChangeObserverToken addDeviceChangeObserver(Function<void()>&&) = 0;
     virtual void removeDeviceChangeObserver(DeviceChangeObserverToken) = 0;
 
 protected:

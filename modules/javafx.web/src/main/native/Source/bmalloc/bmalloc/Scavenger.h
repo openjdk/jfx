@@ -38,11 +38,13 @@
 #include <dispatch/dispatch.h>
 #endif
 
+#if !BUSE(LIBPAS)
+
 namespace bmalloc {
 
 class Scavenger : public StaticPerProcess<Scavenger> {
 public:
-    BEXPORT Scavenger(std::lock_guard<Mutex>&);
+    BEXPORT Scavenger(const LockHolder&);
 
     ~Scavenger() = delete;
 
@@ -59,7 +61,6 @@ public:
     bool willRunSoon() { return m_state > State::Sleep; }
     void runSoon();
 
-    BEXPORT void didStartGrowing();
     BEXPORT void scheduleIfUnderMemoryPressure(size_t bytes);
     BEXPORT void schedule(size_t bytes);
 
@@ -74,13 +75,16 @@ public:
 
     void enableMiniMode();
 
+    // Used for debugging only.
+    void disable() { m_isEnabled = false; }
+
 private:
     enum class State { Sleep, Run, RunSoon };
 
-    void runHoldingLock();
-    void runSoonHoldingLock();
+    void run(const LockHolder&);
+    void runSoon(const LockHolder&);
 
-    void scheduleIfUnderMemoryPressureHoldingLock(size_t bytes);
+    void scheduleIfUnderMemoryPressure(const LockHolder&, size_t bytes);
 
     BNO_RETURN static void threadEntryPoint(Scavenger*);
     BNO_RETURN void threadRunLoop();
@@ -93,7 +97,6 @@ private:
     std::atomic<State> m_state { State::Sleep };
     size_t m_scavengerBytes { 0 };
     std::chrono::milliseconds m_waitTime;
-    bool m_isProbablyGrowing { false };
     bool m_isInMiniMode { false };
 
     Mutex m_scavengingMutex;
@@ -107,10 +110,21 @@ private:
     qos_class_t m_requestedScavengerThreadQOSClass { QOS_CLASS_USER_INITIATED };
 #endif
 
+#if BPLATFORM(MAC)
+    const unsigned s_newWaitMultiplier = 300;
+    const unsigned s_minWaitTimeMilliseconds = 750;
+    const unsigned s_maxWaitTimeMilliseconds = 20000;
+#else
+    const unsigned s_newWaitMultiplier = 150;
+    const unsigned s_minWaitTimeMilliseconds = 100;
+    const unsigned s_maxWaitTimeMilliseconds = 10000;
+#endif
+
     Vector<DeferredDecommit> m_deferredDecommits;
+    bool m_isEnabled { true };
 };
 DECLARE_STATIC_PER_PROCESS_STORAGE(Scavenger);
 
 } // namespace bmalloc
 
-
+#endif

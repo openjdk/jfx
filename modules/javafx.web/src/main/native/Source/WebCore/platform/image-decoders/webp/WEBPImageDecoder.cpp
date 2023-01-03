@@ -47,7 +47,7 @@ WEBPImageDecoder::WEBPImageDecoder(AlphaOption alphaOption, GammaAndColorProfile
 
 WEBPImageDecoder::~WEBPImageDecoder() = default;
 
-void WEBPImageDecoder::setData(SharedBuffer& data, bool allDataReceived)
+void WEBPImageDecoder::setData(const FragmentedSharedBuffer& data, bool allDataReceived)
 {
     if (failed())
         return;
@@ -132,8 +132,8 @@ void WEBPImageDecoder::decode(size_t frameIndex, bool allDataReceived)
     // This can be executed both in the main thread (when not using async decoding) or in the decoding thread.
     // When executed in the decoding thread, a call to setData() from the main thread may change the data
     // the WebPDemuxer is using, leaving it in an inconsistent state, so we need to protect the data.
-    RefPtr<SharedBuffer::DataSegment> protectedData(m_data);
-    WebPData inputData = { reinterpret_cast<const uint8_t*>(protectedData->data()), protectedData->size() };
+    RefPtr<const SharedBuffer> protectedData(m_data);
+    WebPData inputData = { protectedData->data(), protectedData->size() };
     WebPDemuxState demuxerState;
     WebPDemuxer* demuxer = WebPDemuxPartial(&inputData, &demuxerState);
     if (!demuxer) {
@@ -210,7 +210,7 @@ void WEBPImageDecoder::decodeFrame(size_t frameIndex, WebPDemuxer* demuxer)
             buffer.setDecodingStatus(DecodingStatus::Partial);
             break;
         }
-        // Fallthrough.
+        FALLTHROUGH;
     default:
         setFailed();
     }
@@ -298,7 +298,7 @@ void WEBPImageDecoder::parseHeader()
     if (m_data->size() < webpHeaderSize)
         return; // Await VP8X header so WebPDemuxPartial succeeds.
 
-    WebPData inputData = { reinterpret_cast<const uint8_t*>(m_data->data()), m_data->size() };
+    WebPData inputData = { m_data->data(), m_data->size() };
     WebPDemuxState demuxerState;
     WebPDemuxer* demuxer = WebPDemuxPartial(&inputData, &demuxerState);
     if (!demuxer) {

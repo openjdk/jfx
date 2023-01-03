@@ -1,6 +1,6 @@
 /*
  * (C) 1999-2003 Lars Knoll (knoll@kde.org)
- * Copyright (C) 2004-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2021 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -24,8 +24,8 @@
 #include "CSSImportRule.h"
 #include "CSSParser.h"
 #include "CSSStyleSheet.h"
+#include "CachePolicy.h"
 #include "CachedCSSStyleSheet.h"
-#include "ContentRuleListResults.h"
 #include "Document.h"
 #include "Frame.h"
 #include "FrameLoader.h"
@@ -43,6 +43,7 @@
 #include <wtf/Ref.h>
 
 #if ENABLE(CONTENT_EXTENSIONS)
+#include "ContentRuleListResults.h"
 #include "UserContentController.h"
 #endif
 
@@ -52,7 +53,7 @@ namespace WebCore {
 unsigned StyleSheetContents::estimatedSizeInBytes() const
 {
     // Note that this does not take into account size of the strings hanging from various objects.
-    // The assumption is that nearly all of of them are atomic and would exist anyway.
+    // The assumption is that nearly all of of them are atoms that would exist anyway.
     unsigned size = sizeof(*this);
 
     // FIXME: This ignores the children of media and region rules.
@@ -77,7 +78,7 @@ StyleSheetContents::StyleSheetContents(StyleRuleImport* ownerRule, const String&
 
 StyleSheetContents::StyleSheetContents(const StyleSheetContents& o)
     : RefCounted<StyleSheetContents>()
-    , m_ownerRule(0)
+    , m_ownerRule(nullptr)
     , m_originalURL(o.m_originalURL)
     , m_encodingFromCharsetRule(o.m_encodingFromCharsetRule)
     , m_importRules(o.m_importRules.size())
@@ -132,6 +133,14 @@ void StyleSheetContents::parserAppendRule(Ref<StyleRuleBase>&& rule)
 {
     ASSERT(!rule->isCharsetRule());
 
+    if (is<StyleRuleLayer>(rule) && m_importRules.isEmpty() && m_childRules.isEmpty() && m_namespaceRules.isEmpty()) {
+        auto& layerRule = downcast<StyleRuleLayer>(rule.get());
+        if (layerRule.isStatement()) {
+            m_layerRulesBeforeImportRules.append(&layerRule);
+            return;
+        }
+    }
+
     if (is<StyleRuleImport>(rule)) {
         // Parser enforces that @import rules come before anything else except @charset.
         ASSERT(m_childRules.isEmpty());
@@ -145,19 +154,19 @@ void StyleSheetContents::parserAppendRule(Ref<StyleRuleBase>&& rule)
         // Parser enforces that @namespace rules come before all rules other than
         // import/charset rules
         ASSERT(m_childRules.isEmpty());
-        StyleRuleNamespace& namespaceRule = downcast<StyleRuleNamespace>(rule.get());
+        auto& namespaceRule = downcast<StyleRuleNamespace>(rule.get());
         parserAddNamespace(namespaceRule.prefix(), namespaceRule.uri());
-        m_namespaceRules.append(downcast<StyleRuleNamespace>(rule.ptr()));
+        m_namespaceRules.append(&namespaceRule);
         return;
     }
 
     if (is<StyleRuleMedia>(rule))
-        reportMediaQueryWarningIfNeeded(singleOwnerDocument(), downcast<StyleRuleMedia>(rule.get()).mediaQueries());
+        reportMediaQueryWarningIfNeeded(singleOwnerDocument(), &downcast<StyleRuleMedia>(rule.get()).mediaQueries());
 
     // NOTE: The selector list has to fit into RuleData. <http://webkit.org/b/118369>
     // If we're adding a rule with a huge number of selectors, split it up into multiple rules
-    if (is<StyleRule>(rule) && downcast<StyleRule>(rule.get()).selectorList().componentCount() > RuleData::maximumSelectorComponentCount) {
-        m_childRules.appendVector(downcast<StyleRule>(rule.get()).splitIntoMultipleRulesWithMaximumSelectorComponentCount(RuleData::maximumSelectorComponentCount));
+    if (is<StyleRule>(rule) && downcast<StyleRule>(rule.get()).selectorList().componentCount() > Style::RuleData::maximumSelectorComponentCount) {
+        m_childRules.appendVector(downcast<StyleRule>(rule.get()).splitIntoMultipleRulesWithMaximumSelectorComponentCount(Style::RuleData::maximumSelectorComponentCount));
         return;
     }
 
@@ -169,6 +178,11 @@ StyleRuleBase* StyleSheetContents::ruleAt(unsigned index) const
     ASSERT_WITH_SECURITY_IMPLICATION(index < ruleCount());
 
     unsigned childVectorIndex = index;
+    if (childVectorIndex < m_layerRulesBeforeImportRules.size())
+        return m_layerRulesBeforeImportRules[childVectorIndex].get();
+
+    childVectorIndex -= m_layerRulesBeforeImportRules.size();
+
     if (childVectorIndex < m_importRules.size())
         return m_importRules[childVectorIndex].get();
 
@@ -185,6 +199,7 @@ StyleRuleBase* StyleSheetContents::ruleAt(unsigned index) const
 unsigned StyleSheetContents::ruleCount() const
 {
     unsigned result = 0;
+    result += m_layerRulesBeforeImportRules.size();
     result += m_importRules.size();
     result += m_namespaceRules.size();
     result += m_childRules.size();
@@ -202,6 +217,7 @@ void StyleSheetContents::clearRules()
         ASSERT(m_importRules.at(i)->parentStyleSheet() == this);
         m_importRules[i]->clearParentStyleSheet();
     }
+    m_layerRulesBeforeImportRules.clear();
     m_importRules.clear();
     m_namespaceRules.clear();
     m_childRules.clear();
@@ -222,7 +238,33 @@ bool StyleSheetContents::wrapperInsertRule(Ref<StyleRuleBase>&& rule, unsigned i
     // Parser::parseRule doesn't currently allow @charset so we don't need to deal with it.
     ASSERT(!rule->isCharsetRule());
 
+    // Maybe the insert will be legal if we treat early layer statement rules as normal child rules?
+    auto shouldMoveLayerRulesBeforeImportToNormalChildRules = [&] {
+        if (index >= m_layerRulesBeforeImportRules.size())
+            return false;
+        if (!m_importRules.isEmpty() || !m_namespaceRules.isEmpty())
+            return false;
+        bool isLayerStatement = is<StyleRuleLayer>(rule) && downcast<StyleRuleLayer>(rule.get()).isStatement();
+        return !rule->isImportRule() && !rule->isNamespaceRule() && !isLayerStatement;
+    };
+
+    if (shouldMoveLayerRulesBeforeImportToNormalChildRules())
+        m_childRules.insertVector(0, std::exchange(m_layerRulesBeforeImportRules, { }));
+
     unsigned childVectorIndex = index;
+    if (childVectorIndex < m_layerRulesBeforeImportRules.size() || (childVectorIndex == m_layerRulesBeforeImportRules.size() && is<StyleRuleLayer>(rule))) {
+        if (!is<StyleRuleLayer>(rule))
+            return false;
+        auto& layerRule = downcast<StyleRuleLayer>(rule.get());
+        if (layerRule.isStatement()) {
+            m_layerRulesBeforeImportRules.insert(childVectorIndex, &layerRule);
+            return true;
+        }
+        if (childVectorIndex < m_layerRulesBeforeImportRules.size())
+            return false;
+    }
+    childVectorIndex -= m_layerRulesBeforeImportRules.size();
+
     if (childVectorIndex < m_importRules.size() || (childVectorIndex == m_importRules.size() && rule->isImportRule())) {
         // Inserting non-import rule before @import is not allowed.
         if (!is<StyleRuleImport>(rule))
@@ -238,9 +280,8 @@ bool StyleSheetContents::wrapperInsertRule(Ref<StyleRuleBase>&& rule, unsigned i
         return false;
     childVectorIndex -= m_importRules.size();
 
-
     if (childVectorIndex < m_namespaceRules.size() || (childVectorIndex == m_namespaceRules.size() && rule->isNamespaceRule())) {
-        // Inserting non-namespace rules other than import rule before @namespace is
+        // Inserting non-namespace rules other than import and layer statement rules before @namespace is
         // not allowed.
         if (!is<StyleRuleNamespace>(rule))
             return false;
@@ -264,7 +305,7 @@ bool StyleSheetContents::wrapperInsertRule(Ref<StyleRuleBase>&& rule, unsigned i
     childVectorIndex -= m_namespaceRules.size();
 
     // If the number of selectors would overflow RuleData, we drop the operation.
-    if (is<StyleRule>(rule) && downcast<StyleRule>(rule.get()).selectorList().componentCount() > RuleData::maximumSelectorComponentCount)
+    if (is<StyleRule>(rule) && downcast<StyleRule>(rule.get()).selectorList().componentCount() > Style::RuleData::maximumSelectorComponentCount)
         return false;
 
     m_childRules.insert(childVectorIndex, WTFMove(rule));
@@ -277,7 +318,14 @@ void StyleSheetContents::wrapperDeleteRule(unsigned index)
     ASSERT_WITH_SECURITY_IMPLICATION(index < ruleCount());
 
     unsigned childVectorIndex = index;
+    if (childVectorIndex < m_layerRulesBeforeImportRules.size()) {
+        m_layerRulesBeforeImportRules.remove(childVectorIndex);
+        return;
+    }
+    childVectorIndex -= m_layerRulesBeforeImportRules.size();
+
     if (childVectorIndex < m_importRules.size()) {
+        m_importRules[childVectorIndex]->cancelLoad();
         m_importRules[childVectorIndex]->clearParentStyleSheet();
         m_importRules.remove(childVectorIndex);
         return;
@@ -316,7 +364,7 @@ const AtomString& StyleSheetContents::namespaceURIFromPrefix(const AtomString& p
     return it->value;
 }
 
-void StyleSheetContents::parseAuthorStyleSheet(const CachedCSSStyleSheet* cachedStyleSheet, const SecurityOrigin* securityOrigin)
+bool StyleSheetContents::parseAuthorStyleSheet(const CachedCSSStyleSheet* cachedStyleSheet, const SecurityOrigin* securityOrigin)
 {
     bool isSameOriginRequest = securityOrigin && securityOrigin->canRequest(baseURL());
     CachedCSSStyleSheet::MIMETypeCheckHint mimeTypeCheckHint = isStrictParserMode(m_parserContext.mode) || !isSameOriginRequest ? CachedCSSStyleSheet::MIMETypeCheckHint::Strict : CachedCSSStyleSheet::MIMETypeCheckHint::Lax;
@@ -330,21 +378,22 @@ void StyleSheetContents::parseAuthorStyleSheet(const CachedCSSStyleSheet* cached
                 if (isStrictParserMode(m_parserContext.mode))
                     page->console().addMessage(MessageSource::Security, MessageLevel::Error, makeString("Did not parse stylesheet at '", cachedStyleSheet->url().stringCenterEllipsizedToLength(), "' because non CSS MIME types are not allowed in strict mode."));
                 else if (!cachedStyleSheet->mimeTypeAllowedByNosniff())
-                    page->console().addMessage(MessageSource::Security, MessageLevel::Error, makeString("Did not parse stylesheet at '", cachedStyleSheet->url().stringCenterEllipsizedToLength(), "' because non CSS MIME types are not allowed when 'X-Content-Type: nosniff' is given."));
+                    page->console().addMessage(MessageSource::Security, MessageLevel::Error, makeString("Did not parse stylesheet at '", cachedStyleSheet->url().stringCenterEllipsizedToLength(), "' because non CSS MIME types are not allowed when 'X-Content-Type-Options: nosniff' is given."));
                 else
                     page->console().addMessage(MessageSource::Security, MessageLevel::Error, makeString("Did not parse stylesheet at '", cachedStyleSheet->url().stringCenterEllipsizedToLength(), "' because non CSS MIME types are not allowed for cross-origin stylesheets."));
             }
         }
-        return;
+        return false;
     }
 
-    CSSParser(parserContext()).parseSheet(this, sheetText, CSSParser::RuleParsing::Deferred);
+    CSSParser(parserContext()).parseSheet(*this, sheetText, CSSParser::RuleParsing::Deferred);
+    return true;
 }
 
 bool StyleSheetContents::parseString(const String& sheetText)
 {
     CSSParser p(parserContext());
-    p.parseSheet(this, sheetText, parserContext().mode != UASheetMode ? CSSParser::RuleParsing::Deferred : CSSParser::RuleParsing::Normal);
+    p.parseSheet(*this, sheetText, parserContext().mode != UASheetMode ? CSSParser::RuleParsing::Deferred : CSSParser::RuleParsing::Normal);
     return true;
 }
 
@@ -404,7 +453,7 @@ Node* StyleSheetContents::singleOwnerNode() const
 {
     StyleSheetContents* root = rootStyleSheet();
     if (root->m_clients.isEmpty())
-        return 0;
+        return nullptr;
     ASSERT(root->m_clients.size() == 1);
     return root->m_clients[0]->ownerNode();
 }
@@ -412,48 +461,24 @@ Node* StyleSheetContents::singleOwnerNode() const
 Document* StyleSheetContents::singleOwnerDocument() const
 {
     Node* ownerNode = singleOwnerNode();
-    return ownerNode ? &ownerNode->document() : 0;
+    return ownerNode ? &ownerNode->document() : nullptr;
 }
 
-URL StyleSheetContents::completeURL(const String& url) const
-{
-    return m_parserContext.completeURL(url);
-}
-
-static bool traverseRulesInVector(const Vector<RefPtr<StyleRuleBase>>& rules, const WTF::Function<bool (const StyleRuleBase&)>& handler)
+static bool traverseRulesInVector(const Vector<RefPtr<StyleRuleBase>>& rules, const Function<bool(const StyleRuleBase&)>& handler)
 {
     for (auto& rule : rules) {
         if (handler(*rule))
             return true;
-        switch (rule->type()) {
-        case StyleRuleBase::Media: {
-            auto* childRules = downcast<StyleRuleMedia>(*rule).childRulesWithoutDeferredParsing();
-            if (childRules && traverseRulesInVector(*childRules, handler))
-                return true;
-            break;
-        }
-        case StyleRuleBase::Import:
-            ASSERT_NOT_REACHED();
-            break;
-        case StyleRuleBase::Style:
-        case StyleRuleBase::FontFace:
-        case StyleRuleBase::Page:
-        case StyleRuleBase::Keyframes:
-        case StyleRuleBase::Namespace:
-        case StyleRuleBase::Unknown:
-        case StyleRuleBase::Charset:
-        case StyleRuleBase::Keyframe:
-        case StyleRuleBase::Supports:
-#if ENABLE(CSS_DEVICE_ADAPTATION)
-        case StyleRuleBase::Viewport:
-#endif
-            break;
-        }
+        if (!rule->isGroupRule())
+            continue;
+        auto* childRules = downcast<StyleRuleGroup>(*rule).childRulesWithoutDeferredParsing();
+        if (childRules && traverseRulesInVector(*childRules, handler))
+            return true;
     }
     return false;
 }
 
-bool StyleSheetContents::traverseRules(const WTF::Function<bool (const StyleRuleBase&)>& handler) const
+bool StyleSheetContents::traverseRules(const Function<bool(const StyleRuleBase&)>& handler) const
 {
     for (auto& importRule : m_importRules) {
         if (handler(*importRule))
@@ -465,31 +490,35 @@ bool StyleSheetContents::traverseRules(const WTF::Function<bool (const StyleRule
     return traverseRulesInVector(m_childRules, handler);
 }
 
-bool StyleSheetContents::traverseSubresources(const WTF::Function<bool (const CachedResource&)>& handler) const
+bool StyleSheetContents::traverseSubresources(const Function<bool(const CachedResource&)>& handler) const
 {
     return traverseRules([&] (const StyleRuleBase& rule) {
         switch (rule.type()) {
-        case StyleRuleBase::Style: {
+        case StyleRuleType::Style: {
             auto* properties = downcast<StyleRule>(rule).propertiesWithoutDeferredParsing();
             return properties && properties->traverseSubresources(handler);
         }
-        case StyleRuleBase::FontFace:
+        case StyleRuleType::FontFace:
             return downcast<StyleRuleFontFace>(rule).properties().traverseSubresources(handler);
-        case StyleRuleBase::Import:
+        case StyleRuleType::Import:
             if (auto* cachedResource = downcast<StyleRuleImport>(rule).cachedCSSStyleSheet())
                 return handler(*cachedResource);
             return false;
-        case StyleRuleBase::Media:
-        case StyleRuleBase::Page:
-        case StyleRuleBase::Keyframes:
-        case StyleRuleBase::Namespace:
-        case StyleRuleBase::Unknown:
-        case StyleRuleBase::Charset:
-        case StyleRuleBase::Keyframe:
-        case StyleRuleBase::Supports:
-#if ENABLE(CSS_DEVICE_ADAPTATION)
-        case StyleRuleBase::Viewport:
-#endif
+        case StyleRuleType::CounterStyle:
+            return m_parserContext.counterStyleAtRuleImageSymbolsEnabled;
+        case StyleRuleType::Media:
+        case StyleRuleType::Page:
+        case StyleRuleType::Keyframes:
+        case StyleRuleType::Namespace:
+        case StyleRuleType::Unknown:
+        case StyleRuleType::Charset:
+        case StyleRuleType::Keyframe:
+        case StyleRuleType::Supports:
+        case StyleRuleType::LayerBlock:
+        case StyleRuleType::LayerStatement:
+        case StyleRuleType::Container:
+        case StyleRuleType::FontPaletteValues:
+        case StyleRuleType::Margin:
             return false;
         };
         ASSERT_NOT_REACHED();
@@ -512,7 +541,7 @@ bool StyleSheetContents::subresourcesAllowReuse(CachePolicy cachePolicy, FrameLo
         auto* documentLoader = loader.documentLoader();
         if (page && documentLoader) {
             const auto& request = resource.resourceRequest();
-            auto results = page->userContentProvider().processContentRuleListsForLoad(request.url(), ContentExtensions::toResourceType(resource.type()), *documentLoader);
+            auto results = page->userContentProvider().processContentRuleListsForLoad(*page, request.url(), ContentExtensions::toResourceType(resource.type(), resource.resourceRequest().requester()), *documentLoader);
             if (results.summary.blockedLoad || results.summary.madeHTTPS)
                 return true;
         }
@@ -534,7 +563,7 @@ bool StyleSheetContents::isLoadingSubresources() const
 
 StyleSheetContents* StyleSheetContents::parentStyleSheet() const
 {
-    return m_ownerRule ? m_ownerRule->parentStyleSheet() : 0;
+    return m_ownerRule ? m_ownerRule->parentStyleSheet() : nullptr;
 }
 
 void StyleSheetContents::registerClient(CSSStyleSheet* sheet)

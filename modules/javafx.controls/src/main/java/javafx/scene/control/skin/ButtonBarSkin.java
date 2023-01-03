@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,11 +29,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import com.sun.javafx.scene.control.Properties;
-import com.sun.javafx.scene.control.behavior.BehaviorBase;
 import javafx.beans.InvalidationListener;
 import javafx.beans.property.ObjectProperty;
-import javafx.collections.ListChangeListener;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
@@ -46,6 +43,9 @@ import javafx.scene.layout.Pane;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 
+import com.sun.javafx.scene.control.ListenerHelper;
+import com.sun.javafx.scene.control.Properties;
+
 /**
  * Default skin implementation for the {@link ButtonBar} control.
  *
@@ -54,7 +54,7 @@ import javafx.scene.layout.Region;
  */
 public class ButtonBarSkin extends SkinBase<ButtonBar> {
 
-    /**************************************************************************
+    /* ************************************************************************
      *
      * Static fields
      *
@@ -68,7 +68,7 @@ public class ButtonBarSkin extends SkinBase<ButtonBar> {
     private static final double DO_NOT_CHANGE_SIZE = Double.MAX_VALUE - 100;
 
 
-    /**************************************************************************
+    /* ************************************************************************
      *
      * fields
      *
@@ -79,7 +79,7 @@ public class ButtonBarSkin extends SkinBase<ButtonBar> {
 
 
 
-    /**************************************************************************
+    /* ************************************************************************
      *
      * Constructors
      *
@@ -107,8 +107,10 @@ public class ButtonBarSkin extends SkinBase<ButtonBar> {
 
         layoutButtons();
 
+        ListenerHelper lh = ListenerHelper.get(this);
+
         updateButtonListeners(control.getButtons(), true);
-        control.getButtons().addListener((ListChangeListener<Node>) c -> {
+        lh.addListChangeListener(control.getButtons(), (c) -> {
             while (c.next()) {
                 updateButtonListeners(c.getRemoved(), false);
                 updateButtonListeners(c.getAddedSubList(), true);
@@ -116,17 +118,29 @@ public class ButtonBarSkin extends SkinBase<ButtonBar> {
             layoutButtons();
         });
 
-        registerChangeListener(control.buttonOrderProperty(), e -> layoutButtons());
-        registerChangeListener(control.buttonMinWidthProperty(), e -> resizeButtons());
+        lh.addChangeListener(control.buttonOrderProperty(), (ev) -> layoutButtons());
+        lh.addChangeListener(control.buttonMinWidthProperty(), (ev) -> resizeButtons());
     }
 
 
 
-    /**************************************************************************
+    /* ************************************************************************
      *
      * Implementation
      *
      **************************************************************************/
+
+    @Override
+    public void dispose() {
+        if (getSkinnable() == null) {
+            return;
+        }
+
+        updateButtonListeners(getSkinnable().getButtons(), false);
+        getChildren().remove(layout);
+
+        super.dispose();
+    }
 
     private void updateButtonListeners(List<? extends Node> list, boolean buttonsAdded) {
         if (list != null) {
@@ -301,7 +315,7 @@ public class ButtonBarSkin extends SkinBase<ButtonBar> {
             String type =  getButtonType(btn);
             List<Node> typedButtons = buttonMap.get(type);
             if ( typedButtons == null ) {
-                typedButtons = new ArrayList<Node>();
+                typedButtons = new ArrayList<>();
                 buttonMap.put(type, typedButtons);
             }
             typedButtons.add( btn );
@@ -311,7 +325,7 @@ public class ButtonBarSkin extends SkinBase<ButtonBar> {
 
 
 
-    /**************************************************************************
+    /* ************************************************************************
      *
      * Support classes / enums
      *

@@ -58,17 +58,24 @@ CrossOriginPreflightChecker::~CrossOriginPreflightChecker()
         m_resource->removeClient(*this);
 }
 
-void CrossOriginPreflightChecker::validatePreflightResponse(DocumentThreadableLoader& loader, ResourceRequest&& request, unsigned long identifier, const ResourceResponse& response)
+void CrossOriginPreflightChecker::validatePreflightResponse(DocumentThreadableLoader& loader, ResourceRequest&& request, ResourceLoaderIdentifier identifier, const ResourceResponse& response)
 {
     auto* frame = loader.document().frame();
-    ASSERT(frame);
+    if (!frame) {
+        ASSERT_NOT_REACHED();
+        return;
+    }
 
-    String errorDescription;
-    if (!WebCore::validatePreflightResponse(request, response, loader.options().storedCredentialsPolicy, loader.securityOrigin(), errorDescription)) {
-        if (auto* document = frame->document())
-            document->addConsoleMessage(MessageSource::Security, MessageLevel::Error, errorDescription);
+    auto* page = loader.document().page();
+    if (!page) {
+        ASSERT_NOT_REACHED();
+        return;
+    }
 
-        loader.preflightFailure(identifier, ResourceError(errorDomainWebKitInternal, 0, request.url(), errorDescription, ResourceError::Type::AccessControl));
+    auto result = WebCore::validatePreflightResponse(page->sessionID(), request, response, loader.options().storedCredentialsPolicy, loader.securityOrigin(), &CrossOriginAccessControlCheckDisabler::singleton());
+    if (!result) {
+        loader.document().addConsoleMessage(MessageSource::Security, MessageLevel::Error, result.error());
+        loader.preflightFailure(identifier, ResourceError(errorDomainWebKitInternal, 0, request.url(), result.error(), ResourceError::Type::AccessControl));
         return;
     }
 
@@ -82,7 +89,7 @@ void CrossOriginPreflightChecker::validatePreflightResponse(DocumentThreadableLo
     loader.preflightSuccess(WTFMove(request));
 }
 
-void CrossOriginPreflightChecker::notifyFinished(CachedResource& resource)
+void CrossOriginPreflightChecker::notifyFinished(CachedResource& resource, const NetworkLoadMetrics&)
 {
     ASSERT_UNUSED(resource, &resource == m_resource);
     if (m_resource->loadFailedOrCanceled()) {
@@ -116,8 +123,7 @@ void CrossOriginPreflightChecker::startPreflight()
     options.initiatorContext = m_loader.options().initiatorContext;
 
     CachedResourceRequest preflightRequest(createAccessControlPreflightRequest(m_request, m_loader.securityOrigin(), m_loader.referrer()), options);
-    if (RuntimeEnabledFeatures::sharedFeatures().resourceTimingEnabled())
-        preflightRequest.setInitiator(m_loader.options().initiator);
+    preflightRequest.setInitiator(m_loader.options().initiator);
 
     ASSERT(!m_resource);
     m_resource = m_loader.document().cachedResourceLoader().requestRawResource(WTFMove(preflightRequest)).value_or(nullptr);
@@ -135,7 +141,7 @@ void CrossOriginPreflightChecker::doPreflight(DocumentThreadableLoader& loader, 
     ResourceResponse response;
     RefPtr<SharedBuffer> data;
 
-    unsigned identifier = loader.document().frame()->loader().loadResourceSynchronously(preflightRequest, ClientCredentialPolicy::CannotAskClientForCredentials, FetchOptions { }, { }, error, response, data);
+    auto identifier = loader.document().frame()->loader().loadResourceSynchronously(preflightRequest, ClientCredentialPolicy::CannotAskClientForCredentials, FetchOptions { }, { }, error, response, data);
 
     if (!error.isNull()) {
         // If the preflight was cancelled by underlying code, it probably means the request was blocked due to some access control policy.
@@ -153,7 +159,7 @@ void CrossOriginPreflightChecker::doPreflight(DocumentThreadableLoader& loader, 
     // FIXME: Ideally, we should ask platformLoadResourceSynchronously to set ResourceResponse isRedirected and use it here.
     bool isRedirect = preflightRequest.url().strippedForUseAsReferrer() != response.url().strippedForUseAsReferrer();
     if (isRedirect || !response.isSuccessful()) {
-        auto errorMessage = "Preflight response is not successful"_s;
+        auto errorMessage = makeString("Preflight response is not successful. Status code: ", response.httpStatusCode());
         loader.document().addConsoleMessage(MessageSource::Security, MessageLevel::Error, errorMessage);
 
         loader.preflightFailure(identifier, ResourceError { errorDomainWebKitInternal, 0, request.url(), errorMessage, ResourceError::Type::AccessControl });
@@ -167,11 +173,6 @@ void CrossOriginPreflightChecker::setDefersLoading(bool value)
 {
     if (m_resource)
         m_resource->setDefersLoading(value);
-}
-
-bool CrossOriginPreflightChecker::isXMLHttpRequest() const
-{
-    return m_loader.isXMLHttpRequest();
 }
 
 } // namespace WebCore

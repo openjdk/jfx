@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2015-2022 Apple Inc. All Rights Reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,27 +30,31 @@
 namespace JSC {
 
 class JSGlobalLexicalEnvironment final : public JSSegmentedVariableObject {
-
 public:
     using Base = JSSegmentedVariableObject;
 
-    static const unsigned StructureFlags = Base::StructureFlags | OverridesGetOwnPropertySlot;
+    static constexpr unsigned StructureFlags = Base::StructureFlags | OverridesGetOwnPropertySlot | OverridesPut;
+
+    template<typename CellType, SubspaceAccess mode>
+    static GCClient::IsoSubspace* subspaceFor(VM& vm)
+    {
+        return &vm.globalLexicalEnvironmentSpace();
+    }
 
     static JSGlobalLexicalEnvironment* create(VM& vm, Structure* structure, JSScope* parentScope)
     {
         JSGlobalLexicalEnvironment* result =
-            new (NotNull, allocateCell<JSGlobalLexicalEnvironment>(vm.heap)) JSGlobalLexicalEnvironment(vm, structure, parentScope);
+            new (NotNull, allocateCell<JSGlobalLexicalEnvironment>(vm)) JSGlobalLexicalEnvironment(vm, structure, parentScope);
         result->finishCreation(vm);
         result->symbolTable()->setScopeType(SymbolTable::ScopeType::GlobalLexicalScope);
         return result;
     }
 
-    static bool getOwnPropertySlot(JSObject*, ExecState*, PropertyName, PropertySlot&);
-    static bool put(JSCell*, ExecState*, PropertyName, JSValue, PutPropertySlot&);
+    static bool getOwnPropertySlot(JSObject*, JSGlobalObject*, PropertyName, PropertySlot&);
+    static bool put(JSCell*, JSGlobalObject*, PropertyName, JSValue, PutPropertySlot&);
 
     static void destroy(JSCell*);
-    // We don't need a destructor because we use a finalizer instead.
-    static const bool needsDestruction = false;
+    static constexpr bool needsDestruction = true;
 
     bool isEmpty() const { return !symbolTable()->size(); }
     bool isConstVariable(UniquedStringImpl*);
@@ -62,7 +66,7 @@ public:
         return Structure::create(vm, globalObject, jsNull(), TypeInfo(GlobalLexicalEnvironmentType, StructureFlags), info());
     }
 
-protected:
+private:
     JSGlobalLexicalEnvironment(VM& vm, Structure* structure, JSScope* scope)
         : Base(vm, structure, scope)
     {

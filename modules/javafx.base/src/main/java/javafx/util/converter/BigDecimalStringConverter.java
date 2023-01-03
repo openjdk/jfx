@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -34,6 +34,12 @@ import javafx.util.StringConverter;
  */
 public class BigDecimalStringConverter extends StringConverter<BigDecimal> {
 
+    /**
+     * Creates a default {@code BigDecimalStringConverter}.
+     */
+    public BigDecimalStringConverter() {
+    }
+
     /** {@inheritDoc} */
     @Override public BigDecimal fromString(String value) {
         // If the specified value is null or zero-length, return null
@@ -57,6 +63,6 @@ public class BigDecimalStringConverter extends StringConverter<BigDecimal> {
             return "";
         }
 
-        return ((BigDecimal)value).toString();
+        return value.toString();
     }
 }

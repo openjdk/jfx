@@ -26,29 +26,13 @@
 #include "config.h"
 #include "PointerEvent.h"
 
-#if ENABLE(POINTER_EVENTS)
-
-#import "EventNames.h"
+#include "EventNames.h"
+#include "Node.h"
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
 
-const String& PointerEvent::mousePointerType()
-{
-    static NeverDestroyed<const String> mouseType(MAKE_STATIC_STRING_IMPL("mouse"));
-    return mouseType;
-}
-
-const String& PointerEvent::penPointerType()
-{
-    static NeverDestroyed<const String> penType(MAKE_STATIC_STRING_IMPL("pen"));
-    return penType;
-}
-
-const String& PointerEvent::touchPointerType()
-{
-    static NeverDestroyed<const String> touchType(MAKE_STATIC_STRING_IMPL("touch"));
-    return touchType;
-}
+WTF_MAKE_ISO_ALLOCATED_IMPL(PointerEvent);
 
 static AtomString pointerEventType(const AtomString& mouseEventType)
 {
@@ -71,18 +55,18 @@ static AtomString pointerEventType(const AtomString& mouseEventType)
     return nullAtom();
 }
 
-RefPtr<PointerEvent> PointerEvent::create(short button, const MouseEvent& mouseEvent)
+RefPtr<PointerEvent> PointerEvent::create(short button, const MouseEvent& mouseEvent, PointerID pointerId, const String& pointerType)
 {
     auto type = pointerEventType(mouseEvent.type());
     if (type.isEmpty())
         return nullptr;
 
-    return create(type, button, mouseEvent);
+    return create(type, button, mouseEvent, pointerId, pointerType);
 }
 
-Ref<PointerEvent> PointerEvent::create(const String& type, short button, const MouseEvent& mouseEvent)
+Ref<PointerEvent> PointerEvent::create(const String& type, short button, const MouseEvent& mouseEvent, PointerID pointerId, const String& pointerType)
 {
-    return adoptRef(*new PointerEvent(type, button, mouseEvent));
+    return adoptRef(*new PointerEvent(type, button, mouseEvent, pointerId, pointerType));
 }
 
 Ref<PointerEvent> PointerEvent::create(const String& type, PointerID pointerId, const String& pointerType, IsPrimary isPrimary)
@@ -107,8 +91,10 @@ PointerEvent::PointerEvent(const AtomString& type, Init&& initializer)
 {
 }
 
-PointerEvent::PointerEvent(const AtomString& type, short button, const MouseEvent& mouseEvent)
+PointerEvent::PointerEvent(const AtomString& type, short button, const MouseEvent& mouseEvent, PointerID pointerId, const String& pointerType)
     : MouseEvent(type, typeCanBubble(type), typeIsCancelable(type), typeIsComposed(type), mouseEvent.view(), mouseEvent.detail(), mouseEvent.screenLocation(), { mouseEvent.clientX(), mouseEvent.clientY() }, mouseEvent.modifierKeys(), button, mouseEvent.buttons(), mouseEvent.syntheticClickType(), mouseEvent.relatedTarget())
+    , m_pointerId(pointerId)
+    , m_pointerType(pointerType)
     , m_isPrimary(true)
 {
 }
@@ -129,5 +115,3 @@ EventInterface PointerEvent::eventInterface() const
 }
 
 } // namespace WebCore
-
-#endif // ENABLE(POINTER_EVENTS)

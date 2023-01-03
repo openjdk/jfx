@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -46,6 +46,8 @@ import javafx.util.Callback;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Predicate;
+import java.util.function.Supplier;
 
 import static com.sun.javafx.scene.control.inputmap.InputMap.*;
 import static javafx.scene.input.KeyCode.*;
@@ -78,12 +80,19 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
         listViewInputMap = createInputMap();
 
         // add focus traversal mappings
-        addDefaultMapping(listViewInputMap, FocusTraversalInputMap.getFocusTraversalMappings());
+        Supplier<Boolean> isListViewOfComboBox =
+                (Supplier<Boolean>) control.getProperties().get("editableComboBox");
+        Predicate<KeyEvent> isInComboBox = e -> isListViewOfComboBox != null;
+        Predicate<KeyEvent> isInEditableComboBox =
+                e -> isListViewOfComboBox != null && isListViewOfComboBox.get();
+        if (isListViewOfComboBox == null) {
+            addDefaultMapping(listViewInputMap, FocusTraversalInputMap.getFocusTraversalMappings());
+        }
         addDefaultMapping(listViewInputMap,
-            new KeyMapping(HOME, e -> selectFirstRow()),
-            new KeyMapping(END, e -> selectLastRow()),
-            new KeyMapping(new KeyBinding(HOME).shift(), e -> selectAllToFirstRow()),
-            new KeyMapping(new KeyBinding(END).shift(), e -> selectAllToLastRow()),
+            new KeyMapping(new KeyBinding(HOME), e -> selectFirstRow(), isInEditableComboBox),
+            new KeyMapping(new KeyBinding(END), e -> selectLastRow(), isInEditableComboBox),
+            new KeyMapping(new KeyBinding(HOME).shift(), e -> selectAllToFirstRow(), isInComboBox),
+            new KeyMapping(new KeyBinding(END).shift(), e -> selectAllToLastRow(), isInComboBox),
             new KeyMapping(new KeyBinding(PAGE_UP).shift(), e -> selectAllPageUp()),
             new KeyMapping(new KeyBinding(PAGE_DOWN).shift(), e -> selectAllPageDown()),
 
@@ -98,9 +107,9 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
             new KeyMapping(F2, e -> activate()),
             new KeyMapping(ESCAPE, e -> cancelEdit()),
 
-            new KeyMapping(new KeyBinding(A).shortcut(), e -> selectAll()),
-            new KeyMapping(new KeyBinding(HOME).shortcut(), e -> focusFirstRow()),
-            new KeyMapping(new KeyBinding(END).shortcut(), e -> focusLastRow()),
+            new KeyMapping(new KeyBinding(A).shortcut(), e -> selectAll(), isInComboBox),
+            new KeyMapping(new KeyBinding(HOME).shortcut(), e -> focusFirstRow(), isInComboBox),
+            new KeyMapping(new KeyBinding(END).shortcut(), e -> focusLastRow(), isInComboBox),
             new KeyMapping(new KeyBinding(PAGE_UP).shortcut(), e -> focusPageUp()),
             new KeyMapping(new KeyBinding(PAGE_DOWN).shortcut(), e -> focusPageDown()),
 
@@ -145,10 +154,9 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
             new KeyMapping(new KeyBinding(DOWN).shortcut().shift(), e -> discontinuousSelectNextRow()),
             new KeyMapping(new KeyBinding(PAGE_UP).shortcut().shift(), e -> discontinuousSelectPageUp()),
             new KeyMapping(new KeyBinding(PAGE_DOWN).shortcut().shift(), e -> discontinuousSelectPageDown()),
-            new KeyMapping(new KeyBinding(HOME).shortcut().shift(), e -> discontinuousSelectAllToFirstRow()),
-            new KeyMapping(new KeyBinding(END).shortcut().shift(), e -> discontinuousSelectAllToLastRow())
+            new KeyMapping(new KeyBinding(HOME).shortcut().shift(), e -> discontinuousSelectAllToFirstRow(), isInComboBox),
+            new KeyMapping(new KeyBinding(END).shortcut().shift(), e -> discontinuousSelectAllToLastRow(), isInComboBox)
         );
-
         addDefaultChildMap(listViewInputMap, verticalListInputMap);
 
         // --- horizontal listview
@@ -198,7 +206,6 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
     }
 
 
-
     /***************************************************************************
      *                                                                         *
      * Implementation of BehaviorBase API                                      *
@@ -213,15 +220,19 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
         ListView<T> control = getNode();
 
         ListCellBehavior.removeAnchor(control);
+        control.selectionModelProperty().removeListener(weakSelectionModelListener);
+        if (control.getSelectionModel() != null) {
+            control.getSelectionModel().getSelectedIndices().removeListener(weakSelectedIndicesListener);
+        }
+        control.itemsProperty().removeListener(weakItemsListener);
+        if (control.getItems() != null) {
+            control.getItems().removeListener(weakItemsListListener);
+        }
+
         if (tlFocus != null) tlFocus.dispose();
+        control.removeEventFilter(KeyEvent.ANY, keyEventListener);
         super.dispose();
-
-        control.removeEventHandler(KeyEvent.ANY, keyEventListener);
     }
-
-
-
-
 
     /**************************************************************************
      *                         State and Functions                            *
@@ -251,6 +262,10 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
     private boolean selectionChanging = false;
 
     private final ListChangeListener<Integer> selectedIndicesListener = c -> {
+        if (getNode().getFocusModel() == null) {
+            return;
+        }
+
         int newAnchor = getAnchor();
 
         while (c.next()) {
@@ -288,6 +303,10 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
     };
 
     private final ListChangeListener<T> itemsListListener = c -> {
+        if (getNode().getFocusModel() == null) {
+            return;
+        }
+
         while (c.next()) {
             if (!hasAnchor()) continue;
 
@@ -303,7 +322,7 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
         }
     };
 
-    private final ChangeListener<ObservableList<T>> itemsListener = new ChangeListener<ObservableList<T>>() {
+    private final ChangeListener<ObservableList<T>> itemsListener = new ChangeListener<>() {
         @Override
         public void changed(
                 ObservableValue<? extends ObservableList<T>> observable,
@@ -316,7 +335,7 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
         }
     };
 
-    private final ChangeListener<MultipleSelectionModel<T>> selectionModelListener = new ChangeListener<MultipleSelectionModel<T>>() {
+    private final ChangeListener<MultipleSelectionModel<T>> selectionModelListener = new ChangeListener<>() {
         @Override public void changed(
                 ObservableValue<? extends MultipleSelectionModel<T>> observable,
                 MultipleSelectionModel<T> oldValue,
@@ -331,13 +350,13 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
     };
 
     private final WeakChangeListener<ObservableList<T>> weakItemsListener =
-            new WeakChangeListener<ObservableList<T>>(itemsListener);
+            new WeakChangeListener<>(itemsListener);
     private final WeakListChangeListener<Integer> weakSelectedIndicesListener =
-            new WeakListChangeListener<Integer>(selectedIndicesListener);
+            new WeakListChangeListener<>(selectedIndicesListener);
     private final WeakListChangeListener<T> weakItemsListListener =
             new WeakListChangeListener<>(itemsListListener);
     private final WeakChangeListener<MultipleSelectionModel<T>> weakSelectionModelListener =
-            new WeakChangeListener<MultipleSelectionModel<T>>(selectionModelListener);
+            new WeakChangeListener<>(selectionModelListener);
 
     private TwoLevelFocusListBehavior tlFocus;
 
@@ -355,8 +374,11 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
 
     private void mousePressed(MouseEvent e) {
         if (! e.isShiftDown() && ! e.isSynthesized()) {
-            int index = getNode().getSelectionModel().getSelectedIndex();
-            setAnchor(index);
+            MultipleSelectionModel<T> selectionModel = getNode().getSelectionModel();
+            if (selectionModel != null) {
+                int index = selectionModel.getSelectedIndex();
+                setAnchor(index);
+            }
         }
 
         if (! getNode().isFocused() && getNode().isFocusTraversable()) {
@@ -369,30 +391,35 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
     }
 
     private void clearSelection() {
-        getNode().getSelectionModel().clearSelection();
+        MultipleSelectionModel<T> selectionModel = getNode().getSelectionModel();
+        if (selectionModel != null) {
+            selectionModel.clearSelection();
+        }
     }
 
     private void scrollPageUp() {
+        MultipleSelectionModel<T> sm = getNode().getSelectionModel();
+        if (sm == null) return;
+
         int newSelectedIndex = -1;
         if (onScrollPageUp != null) {
             newSelectedIndex = onScrollPageUp.call(false);
         }
         if (newSelectedIndex == -1) return;
 
-        MultipleSelectionModel<T> sm = getNode().getSelectionModel();
-        if (sm == null) return;
         sm.clearAndSelect(newSelectedIndex);
     }
 
     private void scrollPageDown() {
+        MultipleSelectionModel<T> sm = getNode().getSelectionModel();
+        if (sm == null) return;
+
         int newSelectedIndex = -1;
         if (onScrollPageDown != null) {
             newSelectedIndex = onScrollPageDown.call(false);
         }
         if (newSelectedIndex == -1) return;
 
-        MultipleSelectionModel<T> sm = getNode().getSelectionModel();
-        if (sm == null) return;
         sm.clearAndSelect(newSelectedIndex);
     }
 
@@ -551,9 +578,14 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
         if (focusIndex <= 0) {
             return;
         }
-
         setAnchor(focusIndex - 1);
-        getNode().getSelectionModel().clearAndSelect(focusIndex - 1);
+
+        MultipleSelectionModel<T> selectionModel = getNode().getSelectionModel();
+        if (selectionModel == null) {
+            return;
+        }
+
+        selectionModel.clearAndSelect(focusIndex - 1);
         onSelectPreviousRow.run();
     }
 
@@ -566,24 +598,34 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
         if (focusIndex == getRowCount() - 1) {
             return;
         }
+        setAnchor(focusIndex + 1);
 
         MultipleSelectionModel<T> sm = listView.getSelectionModel();
         if (sm == null) return;
 
-        setAnchor(focusIndex + 1);
         sm.clearAndSelect(focusIndex + 1);
         if (onSelectNextRow != null) onSelectNextRow.run();
     }
 
     private void selectFirstRow() {
+        MultipleSelectionModel<T> selectionModel = getNode().getSelectionModel();
+        if (selectionModel == null) {
+            return;
+        }
+
         if (getRowCount() > 0) {
-            getNode().getSelectionModel().clearAndSelect(0);
+            selectionModel.clearAndSelect(0);
             if (onMoveToFirstCell != null) onMoveToFirstCell.run();
         }
     }
 
     private void selectLastRow() {
-        getNode().getSelectionModel().clearAndSelect(getRowCount() - 1);
+        MultipleSelectionModel<T> selectionModel = getNode().getSelectionModel();
+        if (selectionModel == null) {
+            return;
+        }
+
+        selectionModel.clearAndSelect(getRowCount() - 1);
         if (onMoveToLastCell != null) onMoveToLastCell.run();
     }
 
@@ -724,8 +766,17 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
     }
 
     private void activate() {
-        int focusedIndex = getNode().getFocusModel().getFocusedIndex();
-        getNode().getSelectionModel().select(focusedIndex);
+        FocusModel<T> focusModel = getNode().getFocusModel();
+        if (focusModel == null) {
+            return;
+        }
+
+        int focusedIndex = focusModel.getFocusedIndex();
+
+        MultipleSelectionModel<T> selectionModel = getNode().getSelectionModel();
+        if (selectionModel != null) {
+            selectionModel.select(focusedIndex);
+        }
         setAnchor(focusedIndex);
 
         // edit this row also

@@ -34,7 +34,6 @@
 #include "Region.h"
 #include "TransformationMatrix.h"
 #include <wtf/MathExtras.h>
-#include <wtf/Optional.h>
 #include <wtf/text/TextStream.h>
 
 namespace WebCore {
@@ -85,12 +84,12 @@ bool AffineTransform::isIdentity() const
 
 double AffineTransform::xScale() const
 {
-    return sqrt(m_transform[0] * m_transform[0] + m_transform[1] * m_transform[1]);
+    return std::hypot(m_transform[0], m_transform[1]);
 }
 
 double AffineTransform::yScale() const
 {
-    return sqrt(m_transform[2] * m_transform[2] + m_transform[3] * m_transform[3]);
+    return std::hypot(m_transform[2], m_transform[3]);
 }
 
 static double det(const std::array<double, 6>& transform)
@@ -105,11 +104,11 @@ bool AffineTransform::isInvertible() const
     return std::isfinite(determinant) && determinant != 0;
 }
 
-Optional<AffineTransform> AffineTransform::inverse() const
+std::optional<AffineTransform> AffineTransform::inverse() const
 {
     double determinant = det(m_transform);
     if (!std::isfinite(determinant) || determinant == 0)
-        return WTF::nullopt;
+        return std::nullopt;
 
     AffineTransform result;
     if (isIdentityOrTranslation()) {
@@ -350,7 +349,7 @@ Region AffineTransform::mapRegion(const Region& region) const
     return mappedRegion;
 }
 
-void AffineTransform::blend(const AffineTransform& from, double progress)
+void AffineTransform::blend(const AffineTransform& from, double progress, CompositeOperation compositeOperation)
 {
     DecomposedType srA, srB;
 
@@ -384,6 +383,18 @@ void AffineTransform::blend(const AffineTransform& from, double progress)
     srA.remainderD += progress * (srB.remainderD - srA.remainderD);
     srA.translateX += progress * (srB.translateX - srA.translateX);
     srA.translateY += progress * (srB.translateY - srA.translateY);
+
+    if (compositeOperation != CompositeOperation::Replace) {
+        srA.scaleX += srA.scaleX;
+        srA.scaleY += srA.scaleY;
+        srA.angle += srA.angle;
+        srA.remainderA += srA.remainderA;
+        srA.remainderB += srA.remainderB;
+        srA.remainderC += srA.remainderC;
+        srA.remainderD += srA.remainderD;
+        srA.translateX += srA.translateX;
+        srA.translateY += srA.translateY;
+    }
 
     this->recompose(srA);
 }

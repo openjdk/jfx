@@ -29,10 +29,9 @@
 #if ENABLE(DFG_JIT)
 
 #include "DFGAtTailAbstractState.h"
-#include "DFGGraph.h"
 #include "DFGNode.h"
 #include "DFGNullAbstractState.h"
-#include "Operations.h"
+#include "JSCJSValueInlines.h"
 
 namespace JSC { namespace DFG {
 
@@ -66,11 +65,11 @@ ExitMode mayExitImpl(Graph& graph, Node* node, StateType& state)
     case LoopHint:
     case Phi:
     case Upsilon:
-    case ZombieHint:
     case ExitOK:
     case BottomValue:
     case PutHint:
     case PhantomNewObject:
+    case PhantomNewInternalFieldObject:
     case PutStack:
     case KillStack:
     case GetStack:
@@ -94,6 +93,7 @@ ExitMode mayExitImpl(Graph& graph, Node* node, StateType& state)
     case ExtractOSREntryLocal:
     case ExtractCatchLocal:
     case ClearCatchLocals:
+    case ToBoolean:
     case LogicalNot:
     case NotifyWrite:
     case PutStructure:
@@ -101,14 +101,21 @@ ExitMode mayExitImpl(Graph& graph, Node* node, StateType& state)
     case FencedStoreBarrier:
     case PutByOffset:
     case PutClosureVar:
+    case PutInternalField:
     case RecordRegExpCachedResult:
     case NukeStructureAndSetButterfly:
     case FilterCallLinkStatus:
-    case FilterGetByIdStatus:
-    case FilterPutByIdStatus:
-    case FilterInByIdStatus:
+    case FilterGetByStatus:
+    case FilterPutByStatus:
+    case FilterInByStatus:
+    case FilterDeleteByStatus:
+    case FilterCheckPrivateBrandStatus:
+    case FilterSetPrivateBrandStatus:
+    case EnumeratorNextExtractMode:
+    case EnumeratorNextExtractIndex:
         break;
 
+    case EnumeratorNextUpdatePropertyName:
     case StrCat:
     case Call:
     case Construct:
@@ -120,14 +127,17 @@ ExitMode mayExitImpl(Graph& graph, Node* node, StateType& state)
     case CreateActivation:
     case MaterializeCreateActivation:
     case MaterializeNewObject:
+    case MaterializeNewInternalFieldObject:
     case NewFunction:
     case NewGeneratorFunction:
     case NewAsyncFunction:
     case NewAsyncGeneratorFunction:
     case NewStringObject:
-    case NewSymbol:
+    case NewInternalFieldObject:
     case NewRegexp:
     case ToNumber:
+    case ToNumeric:
+    case ToObject:
     case RegExpExecNonGlobalOrSticky:
     case RegExpMatchFastGlobal:
         result = ExitsForExceptions;

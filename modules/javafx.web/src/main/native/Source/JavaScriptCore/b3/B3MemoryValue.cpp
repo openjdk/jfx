@@ -28,7 +28,6 @@
 
 #if ENABLE(B3_JIT)
 
-#include "B3AtomicValue.h"
 #include "B3MemoryValueInlines.h"
 #include "B3ValueInlines.h"
 
@@ -81,7 +80,7 @@ MemoryValue::MemoryValue(MemoryValue::MemoryValueLoad, Kind kind, Type type, Ori
     , m_range(range)
     , m_fenceRange(fenceRange)
 {
-    if (!ASSERT_DISABLED) {
+    if (ASSERT_ENABLED) {
         switch (kind.opcode()) {
         case Load:
             break;
@@ -106,7 +105,7 @@ MemoryValue::MemoryValue(MemoryValue::MemoryValueLoad, Kind kind, Type type, Ori
 MemoryValue::MemoryValue(MemoryValue::MemoryValueLoadImplied, Kind kind, Origin origin, Value* pointer, MemoryValue::OffsetType offset, HeapRange range, HeapRange fenceRange)
     : MemoryValue(kind, Int32, origin, pointer, offset, range, fenceRange)
 {
-    if (!ASSERT_DISABLED) {
+    if (ASSERT_ENABLED) {
         switch (kind.opcode()) {
         case Load8Z:
         case Load8S:

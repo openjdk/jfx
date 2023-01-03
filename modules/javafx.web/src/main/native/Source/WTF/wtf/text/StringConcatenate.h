@@ -150,35 +150,39 @@ public:
     }
 };
 
-template<> class StringTypeAdapter<Vector<char>, void> {
+template<typename CharType, size_t N>
+class StringTypeAdapter<Vector<CharType, N>, void> {
 public:
-    StringTypeAdapter(const Vector<char>& vector)
+    using CharTypeForString = std::conditional_t<sizeof(CharType) == sizeof(LChar), LChar, UChar>;
+    static_assert(sizeof(CharTypeForString) == sizeof(CharType));
+
+    StringTypeAdapter(const Vector<CharType, N>& vector)
         : m_vector { vector }
     {
     }
 
     size_t length() const { return m_vector.size(); }
-    bool is8Bit() const { return true; }
+    bool is8Bit() const { return sizeof(CharType) == 1; }
     template<typename CharacterType> void writeTo(CharacterType* destination) const { StringImpl::copyCharacters(destination, characters(), length()); }
 
 private:
-    const LChar* characters() const
+    const CharTypeForString* characters() const
     {
-        return reinterpret_cast<const LChar*>(m_vector.data());
+        return reinterpret_cast<const CharTypeForString*>(m_vector.data());
     }
 
-    const Vector<char>& m_vector;
+    const Vector<CharType, N>& m_vector;
 };
 
-template<> class StringTypeAdapter<String, void> {
+template<> class StringTypeAdapter<StringImpl*, void> {
 public:
-    StringTypeAdapter(const String& string)
+    StringTypeAdapter(StringImpl* string)
         : m_string { string }
     {
     }
 
-    unsigned length() const { return m_string.length(); }
-    bool is8Bit() const { return m_string.isNull() || m_string.is8Bit(); }
+    unsigned length() const { return m_string ? m_string->length() : 0; }
+    bool is8Bit() const { return !m_string || m_string->is8Bit(); }
     template<typename CharacterType> void writeTo(CharacterType* destination) const
     {
         StringView { m_string }.getCharactersWithUpconvert(destination);
@@ -186,7 +190,23 @@ public:
     }
 
 private:
-    const String& m_string;
+    StringImpl* const m_string;
+};
+
+template<> class StringTypeAdapter<AtomStringImpl*, void> : public StringTypeAdapter<StringImpl*, void> {
+public:
+    StringTypeAdapter(AtomStringImpl* string)
+        : StringTypeAdapter<StringImpl*, void> { static_cast<StringImpl*>(string) }
+    {
+    }
+};
+
+template<> class StringTypeAdapter<String, void> : public StringTypeAdapter<StringImpl*, void> {
+public:
+    StringTypeAdapter(const String& string)
+        : StringTypeAdapter<StringImpl*, void> { string.impl() }
+    {
+    }
 };
 
 template<> class StringTypeAdapter<AtomString, void> : public StringTypeAdapter<String, void> {
@@ -195,6 +215,71 @@ public:
         : StringTypeAdapter<String, void> { string.string() }
     {
     }
+};
+
+template<> class StringTypeAdapter<StringImpl&, void> {
+public:
+    StringTypeAdapter(StringImpl& string)
+        : m_string { string }
+    {
+    }
+
+    unsigned length() const { return m_string.length(); }
+    bool is8Bit() const { return m_string.is8Bit(); }
+    template<typename CharacterType> void writeTo(CharacterType* destination) const
+    {
+        StringView { m_string }.getCharactersWithUpconvert(destination);
+        WTF_STRINGTYPEADAPTER_COPIED_WTF_STRING();
+    }
+
+private:
+    StringImpl& m_string;
+};
+
+template<> class StringTypeAdapter<AtomStringImpl&, void> : public StringTypeAdapter<StringImpl&, void> {
+public:
+    StringTypeAdapter(StringImpl& string)
+        : StringTypeAdapter<StringImpl&, void> { string }
+    {
+    }
+};
+
+template<typename... StringTypes> class StringTypeAdapter<std::tuple<StringTypes...>, void> {
+public:
+    StringTypeAdapter(std::tuple<StringTypes...> tuple)
+        : m_tuple { tuple }
+        , m_length { std::apply(computeLength, tuple) }
+        , m_is8Bit { std::apply(computeIs8Bit, tuple) }
+    {
+    }
+
+    unsigned length() const { return m_length; }
+    bool is8Bit() const { return m_is8Bit; }
+    template<typename CharacterType> void writeTo(CharacterType* destination) const
+    {
+        std::apply([&](StringTypes... strings) {
+            unsigned offset = 0;
+            (..., (
+                StringTypeAdapter<StringTypes>(strings).writeTo(destination + (offset * sizeof(CharacterType))),
+                offset += StringTypeAdapter<StringTypes>(strings).length()
+            ));
+        }, m_tuple);
+    }
+
+private:
+    static unsigned computeLength(StringTypes... strings)
+    {
+        return (... + StringTypeAdapter<StringTypes>(strings).length());
+    }
+
+    static bool computeIs8Bit(StringTypes... strings)
+    {
+        return (... && StringTypeAdapter<StringTypes>(strings).is8Bit());
+    }
+
+    std::tuple<StringTypes...> m_tuple;
+    unsigned m_length;
+    bool m_is8Bit;
 };
 
 template<typename UnderlyingElementType> struct PaddingSpecification {
@@ -287,6 +372,39 @@ private:
     Indentation<N> m_indentation;
 };
 
+struct ASCIICaseConverter {
+    StringView::CaseConvertType type;
+    StringView string;
+};
+
+inline ASCIICaseConverter lowercase(StringView stringView)
+{
+    return { StringView::CaseConvertType::Lower, stringView };
+}
+
+inline ASCIICaseConverter uppercase(StringView stringView)
+{
+    return { StringView::CaseConvertType::Upper, stringView };
+}
+
+template<> class StringTypeAdapter<ASCIICaseConverter, void> {
+public:
+    StringTypeAdapter(const ASCIICaseConverter& converter)
+        : m_converter { converter }
+    {
+    }
+
+    unsigned length() const { return m_converter.string.length(); }
+    bool is8Bit() const { return m_converter.string.is8Bit(); }
+    template<typename CharacterType> void writeTo(CharacterType* destination) const
+    {
+        m_converter.string.getCharactersWithASCIICase(m_converter.type, destination);
+    }
+
+private:
+    const ASCIICaseConverter& m_converter;
+};
+
 template<typename Adapter>
 inline bool are8Bit(Adapter adapter)
 {
@@ -320,7 +438,7 @@ String tryMakeStringFromAdapters(StringTypeAdapter adapter, StringTypeAdapters .
     if (sum.hasOverflowed())
         return String();
 
-    unsigned length = sum.unsafeGet();
+    unsigned length = sum;
     ASSERT(length <= String::MaxLength);
     if (are8Bit(adapter, adapters...)) {
         LChar* buffer;
@@ -328,7 +446,8 @@ String tryMakeStringFromAdapters(StringTypeAdapter adapter, StringTypeAdapters .
         if (!resultImpl)
             return String();
 
-        stringTypeAdapterAccumulator(buffer, adapter, adapters...);
+        if (buffer)
+            stringTypeAdapterAccumulator(buffer, adapter, adapters...);
 
         return resultImpl;
     }
@@ -338,7 +457,8 @@ String tryMakeStringFromAdapters(StringTypeAdapter adapter, StringTypeAdapters .
     if (!resultImpl)
         return String();
 
-    stringTypeAdapterAccumulator(buffer, adapter, adapters...);
+    if (buffer)
+        stringTypeAdapterAccumulator(buffer, adapter, adapters...);
 
     return resultImpl;
 }
@@ -364,6 +484,8 @@ using WTF::Indentation;
 using WTF::IndentationScope;
 using WTF::makeString;
 using WTF::pad;
+using WTF::lowercase;
 using WTF::tryMakeString;
+using WTF::uppercase;
 
 #include <wtf/text/StringOperators.h>

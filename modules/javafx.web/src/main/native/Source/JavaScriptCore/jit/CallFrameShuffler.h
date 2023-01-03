@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -35,6 +35,8 @@
 
 namespace JSC {
 
+class CCallHelpers;
+
 class CallFrameShuffler {
     WTF_MAKE_FAST_ALLOCATED;
 public:
@@ -44,6 +46,7 @@ public:
 
     // Any register that has been locked or acquired must be released
     // before calling prepareForTailCall() or prepareForSlowPath().
+    // Unless you know the register is not the target of a recovery.
     void lockGPR(GPRReg gpr)
     {
         ASSERT(!m_lockedRegisters.get(gpr));
@@ -102,10 +105,11 @@ public:
         CallFrameShuffleData data;
         data.numLocals = numLocals();
         data.numPassedArgs = m_numPassedArgs;
+        data.numParameters = m_numParameters;
         data.callee = getNew(VirtualRegister { CallFrameSlot::callee })->recovery();
         data.args.resize(argCount());
         for (size_t i = 0; i < argCount(); ++i)
-            data.args[i] = getNew(virtualRegisterForArgument(i))->recovery();
+            data.args[i] = getNew(virtualRegisterForArgumentIncludingThis(i))->recovery();
         for (Reg reg = Reg::first(); reg <= Reg::last(); reg = reg.next()) {
             CachedRecovery* cachedRecovery { m_newRegisters[reg] };
             if (!cachedRecovery)
@@ -113,6 +117,15 @@ public:
 
 #if USE(JSVALUE64)
             data.registers[reg] = cachedRecovery->recovery();
+#elif USE(JSVALUE32_64)
+            ValueRecovery recovery = cachedRecovery->recovery();
+            if (recovery.technique() == DisplacedInJSStack) {
+                JSValueRegs wantedJSValueReg = cachedRecovery->wantedJSValueRegs();
+                ASSERT(reg == wantedJSValueReg.payloadGPR() || reg == wantedJSValueReg.tagGPR());
+                bool inTag = reg == wantedJSValueReg.tagGPR();
+                data.registers[reg] = ValueRecovery::calleeSaveRegDisplacedInJSStack(recovery.virtualRegister(), inTag);
+            } else
+                data.registers[reg] = recovery;
 #else
             RELEASE_ASSERT_NOT_REACHED();
 #endif
@@ -128,7 +141,7 @@ public:
     {
         ASSERT(isUndecided());
         ASSERT(!getNew(jsValueRegs));
-        CachedRecovery* cachedRecovery { getNew(VirtualRegister(CallFrameSlot::callee)) };
+        CachedRecovery* cachedRecovery { getNew(CallFrameSlot::callee) };
         ASSERT(cachedRecovery);
         addNew(jsValueRegs, cachedRecovery->recovery());
     }
@@ -141,7 +154,7 @@ public:
     void assumeCalleeIsCell()
     {
 #if USE(JSVALUE32_64)
-        CachedRecovery& calleeCachedRecovery = *getNew(VirtualRegister(CallFrameSlot::callee));
+        CachedRecovery& calleeCachedRecovery = *getNew(CallFrameSlot::callee);
         switch (calleeCachedRecovery.recovery().technique()) {
         case InPair:
             updateRecovery(
@@ -185,7 +198,7 @@ public:
     void prepareForSlowPath();
 
 private:
-    static const bool verbose = false;
+    static constexpr bool verbose = false;
 
     CCallHelpers& m_jit;
 
@@ -412,9 +425,9 @@ private:
     RegisterMap<CachedRecovery*> m_registers;
 
 #if USE(JSVALUE64)
-    mutable GPRReg m_tagTypeNumber;
+    mutable GPRReg m_numberTagRegister;
 
-    bool tryAcquireTagTypeNumber();
+    bool tryAcquireNumberTagRegister();
 #endif
 
     // This stores, for each register, information about the recovery
@@ -448,11 +461,11 @@ private:
         }
 
 #if USE(JSVALUE64)
-        if (!nonTemp && m_tagTypeNumber != InvalidGPRReg && check(Reg { m_tagTypeNumber })) {
-            ASSERT(m_lockedRegisters.get(m_tagTypeNumber));
-            m_lockedRegisters.clear(m_tagTypeNumber);
-            nonTemp = Reg { m_tagTypeNumber };
-            m_tagTypeNumber = InvalidGPRReg;
+        if (!nonTemp && m_numberTagRegister != InvalidGPRReg && check(Reg { m_numberTagRegister })) {
+            ASSERT(m_lockedRegisters.get(m_numberTagRegister));
+            m_lockedRegisters.clear(m_numberTagRegister);
+            nonTemp = Reg { m_numberTagRegister };
+            m_numberTagRegister = InvalidGPRReg;
         }
 #endif
         return nonTemp;
@@ -660,6 +673,32 @@ private:
         cachedRecovery->setWantedJSValueRegs(jsValueRegs);
     }
 
+#if USE(JSVALUE32_64)
+    void addNew(GPRReg gpr, ValueRecovery recovery)
+    {
+        ASSERT(gpr != InvalidGPRReg && !m_newRegisters[gpr]);
+        ASSERT(recovery.technique() == Int32DisplacedInJSStack
+            || recovery.technique() == Int32TagDisplacedInJSStack);
+        CachedRecovery* cachedRecovery = addCachedRecovery(recovery);
+        if (JSValueRegs oldRegs { cachedRecovery->wantedJSValueRegs() }) {
+            // Combine with the other CSR in the same virtual register slot
+            ASSERT(oldRegs.tagGPR() == InvalidGPRReg);
+            ASSERT(oldRegs.payloadGPR() != InvalidGPRReg && oldRegs.payloadGPR() != gpr);
+            if (recovery.technique() == Int32DisplacedInJSStack) {
+                ASSERT(cachedRecovery->recovery().technique() == Int32TagDisplacedInJSStack);
+                cachedRecovery->setWantedJSValueRegs(JSValueRegs(oldRegs.payloadGPR(), gpr));
+            } else {
+                ASSERT(cachedRecovery->recovery().technique() == Int32DisplacedInJSStack);
+                cachedRecovery->setWantedJSValueRegs(JSValueRegs(gpr, oldRegs.payloadGPR()));
+            }
+            cachedRecovery->setRecovery(
+                ValueRecovery::displacedInJSStack(recovery.virtualRegister(), DataFormatJS));
+        } else
+            cachedRecovery->setWantedJSValueRegs(JSValueRegs::payloadOnly(gpr));
+        m_newRegisters[gpr] = cachedRecovery;
+    }
+#endif
+
     void addNew(FPRReg fpr, ValueRecovery recovery)
     {
         ASSERT(fpr != InvalidFPRReg && !m_newRegisters[fpr]);
@@ -796,6 +835,7 @@ private:
     bool performSafeWrites();
 
     unsigned m_numPassedArgs { UINT_MAX };
+    unsigned m_numParameters { UINT_MAX };
 };
 
 } // namespace JSC

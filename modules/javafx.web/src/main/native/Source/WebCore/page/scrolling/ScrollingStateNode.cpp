@@ -51,7 +51,7 @@ ScrollingStateNode::ScrollingStateNode(const ScrollingStateNode& stateNode, Scro
     , m_changedProperties(stateNode.changedProperties())
     , m_scrollingStateTree(adoptiveTree)
 {
-    if (hasChangedProperty(Layer))
+    if (hasChangedProperty(Property::Layer))
         setLayer(stateNode.layer().toRepresentation(adoptiveTree.preferredLayerRepresentation()));
 
     scrollingStateTree().addNode(*this);
@@ -59,19 +59,24 @@ ScrollingStateNode::ScrollingStateNode(const ScrollingStateNode& stateNode, Scro
 
 ScrollingStateNode::~ScrollingStateNode() = default;
 
-void ScrollingStateNode::setPropertyChanged(unsigned propertyBit)
+void ScrollingStateNode::setPropertyChanged(Property property)
 {
-    if (hasChangedProperty(propertyBit))
+    if (hasChangedProperty(property))
         return;
 
-    setPropertyChangedBit(propertyBit);
+    setPropertyChangedInternal(property);
     m_scrollingStateTree.setHasChangedProperties();
 }
 
-void ScrollingStateNode::setPropertyChangedBitsAfterReattach()
+OptionSet<ScrollingStateNode::Property> ScrollingStateNode::applicableProperties() const
 {
-    setPropertyChangedBit(Layer);
-    setPropertyChangedBit(ChildNodes);
+    return { Property::Layer, Property::ChildNodes };
+}
+
+void ScrollingStateNode::setPropertyChangesAfterReattach()
+{
+    auto allPropertiesForNodeType = applicableProperties();
+    setPropertiesChangedInternal(allPropertiesForNodeType);
     m_scrollingStateTree.setHasChangedProperties();
 }
 
@@ -103,7 +108,7 @@ void ScrollingStateNode::appendChild(Ref<ScrollingStateNode>&& childNode)
     if (!m_children)
         m_children = makeUnique<Vector<RefPtr<ScrollingStateNode>>>();
     m_children->append(WTFMove(childNode));
-    setPropertyChanged(ChildNodes);
+    setPropertyChanged(Property::ChildNodes);
 }
 
 void ScrollingStateNode::insertChild(Ref<ScrollingStateNode>&& childNode, size_t index)
@@ -121,7 +126,7 @@ void ScrollingStateNode::insertChild(Ref<ScrollingStateNode>&& childNode, size_t
     } else
         m_children->insert(index, WTFMove(childNode));
 
-    setPropertyChanged(ChildNodes);
+    setPropertyChanged(Property::ChildNodes);
 }
 
 void ScrollingStateNode::removeFromParent()
@@ -145,7 +150,7 @@ void ScrollingStateNode::removeChildAtIndex(size_t index)
     ASSERT(m_children && index < m_children->size());
     if (m_children && index < m_children->size()) {
         m_children->remove(index);
-        setPropertyChanged(ChildNodes);
+        setPropertyChanged(Property::ChildNodes);
     }
 }
 
@@ -164,19 +169,19 @@ void ScrollingStateNode::setLayer(const LayerRepresentation& layerRepresentation
 
     m_layer = layerRepresentation;
 
-    setPropertyChanged(Layer);
+    setPropertyChanged(Property::Layer);
 }
 
-void ScrollingStateNode::dumpProperties(TextStream& ts, ScrollingStateTreeAsTextBehavior behavior) const
+void ScrollingStateNode::dumpProperties(TextStream& ts, OptionSet<ScrollingStateTreeAsTextBehavior> behavior) const
 {
-    if (behavior & ScrollingStateTreeAsTextBehaviorIncludeNodeIDs)
+    if (behavior & ScrollingStateTreeAsTextBehavior::IncludeNodeIDs)
         ts.dumpProperty("nodeID", scrollingNodeID());
 
-    if (behavior & ScrollingStateTreeAsTextBehaviorIncludeLayerIDs)
+    if (behavior & ScrollingStateTreeAsTextBehavior::IncludeLayerIDs)
         ts.dumpProperty("layerID", layer().layerID());
 }
 
-void ScrollingStateNode::dump(TextStream& ts, ScrollingStateTreeAsTextBehavior behavior) const
+void ScrollingStateNode::dump(TextStream& ts, OptionSet<ScrollingStateTreeAsTextBehavior> behavior) const
 {
     ts << "\n";
     ts << indent << "(";
@@ -200,7 +205,7 @@ void ScrollingStateNode::dump(TextStream& ts, ScrollingStateTreeAsTextBehavior b
     ts << indent << ")";
 }
 
-String ScrollingStateNode::scrollingStateTreeAsText(ScrollingStateTreeAsTextBehavior behavior) const
+String ScrollingStateNode::scrollingStateTreeAsText(OptionSet<ScrollingStateTreeAsTextBehavior> behavior) const
 {
     TextStream ts(TextStream::LineMode::MultipleLine, TextStream::Formatting::SVGStyleRect);
 

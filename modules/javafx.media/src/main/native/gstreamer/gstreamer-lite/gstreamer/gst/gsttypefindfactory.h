@@ -65,9 +65,7 @@ GST_API
 void            gst_type_find_factory_call_function     (GstTypeFindFactory *factory,
                                                          GstTypeFind *find);
 
-#ifdef G_DEFINE_AUTOPTR_CLEANUP_FUNC
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(GstTypeFindFactory, gst_object_unref)
-#endif
 
 G_END_DECLS
 

@@ -33,11 +33,8 @@
 
 #define CONTENT_EXTENSIONS_PERFORMANCE_REPORTING 0
 
-#define CONTENT_EXTENSIONS_MEMORY_REPORTING 0
-#define CONTENT_EXTENSIONS_PAGE_SIZE 16384
-
 #if CONTENT_EXTENSIONS_STATE_MACHINE_DEBUGGING
-typedef WTF::CrashOnOverflow ContentExtensionsOverflowHandler;
+typedef CrashOnOverflow ContentExtensionsOverflowHandler;
 #else
 typedef UnsafeVectorOverflow ContentExtensionsOverflowHandler;
 #endif

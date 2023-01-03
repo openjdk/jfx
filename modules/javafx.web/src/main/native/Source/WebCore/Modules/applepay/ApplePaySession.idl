@@ -26,12 +26,11 @@
 [
     ActiveDOMObject,
     Conditional=APPLE_PAY,
-    Constructor(unsigned long version, ApplePayPaymentRequest paymentRequest),
-    ConstructorCallWith=Document,
-    ConstructorMayThrowException,
-    EnabledBySetting=ApplePay,
-    EnabledForContext,
+    EnabledBySetting=ApplePayEnabled,
+    Exposed=Window
 ] interface ApplePaySession : EventTarget {
+    [CallWith=CurrentDocument] constructor(unsigned long version, ApplePayPaymentRequest paymentRequest);
+
     const unsigned short STATUS_SUCCESS = 0;
     const unsigned short STATUS_FAILURE = 1;
     const unsigned short STATUS_INVALID_BILLING_POSTAL_ADDRESS = 2;
@@ -41,28 +40,30 @@
     const unsigned short STATUS_PIN_INCORRECT = 6;
     const unsigned short STATUS_PIN_LOCKOUT = 7;
 
-    [CallWith=Document, MayThrowException] static boolean supportsVersion(unsigned long version);
-    [CallWith=Document, MayThrowException] static boolean canMakePayments();
-    [CallWith=Document, MayThrowException] static Promise<boolean> canMakePaymentsWithActiveCard(DOMString merchantIdentifier);
-    [CallWith=Document, MayThrowException] static Promise<boolean> openPaymentSetup(DOMString merchantIdentifier);
+    [CallWith=CurrentDocument] static boolean supportsVersion(unsigned long version);
+    [CallWith=CurrentDocument] static boolean canMakePayments();
+    [CallWith=CurrentDocument] static Promise<boolean> canMakePaymentsWithActiveCard(DOMString merchantIdentifier);
+    [CallWith=CurrentDocument] static Promise<boolean> openPaymentSetup(DOMString merchantIdentifier);
 
-    [CallWith=Document, MayThrowException] void begin();
-    [MayThrowException] void abort();
-    [MayThrowException, CallWith=ExecState] void completeMerchantValidation(any merchantSession);
-    [MayThrowException, Conditional=APPLE_PAY_SESSION_V3] void completeShippingMethodSelection(ApplePayShippingMethodUpdate update);
-    [MayThrowException, Conditional=APPLE_PAY_SESSION_V3] void completeShippingContactSelection(ApplePayShippingContactUpdate update);
-    [MayThrowException, Conditional=APPLE_PAY_SESSION_V3] void completePaymentMethodSelection(ApplePayPaymentMethodUpdate update);
-    [MayThrowException, Conditional=APPLE_PAY_SESSION_V3] void completePayment(ApplePayPaymentAuthorizationResult result);
+    [CallWith=CurrentDocument] undefined begin();
+    undefined abort();
+    [CallWith=CurrentGlobalObject] undefined completeMerchantValidation(any merchantSession);
+    undefined completeShippingMethodSelection(ApplePayShippingMethodUpdate update);
+    undefined completeShippingContactSelection(ApplePayShippingContactUpdate update);
+    undefined completePaymentMethodSelection(ApplePayPaymentMethodUpdate update);
+    [Conditional=APPLE_PAY_COUPON_CODE] undefined completeCouponCodeChange(ApplePayCouponCodeUpdate update);
+    undefined completePayment(ApplePayPaymentAuthorizationResult result);
 
-    [MayThrowException] void completeShippingMethodSelection(unsigned short status, ApplePayLineItem newTotal, sequence<ApplePayLineItem> newLineItems);
-    [MayThrowException] void completeShippingContactSelection(unsigned short status, sequence<ApplePayShippingMethod> newShippingMethods, ApplePayLineItem newTotal, sequence<ApplePayLineItem> newLineItems);
-    [MayThrowException] void completePaymentMethodSelection(ApplePayLineItem newTotal, sequence<ApplePayLineItem> newLineItems);
-    [MayThrowException] void completePayment(unsigned short status);
+    undefined completeShippingMethodSelection(unsigned short status, ApplePayLineItem newTotal, sequence<ApplePayLineItem> newLineItems);
+    undefined completeShippingContactSelection(unsigned short status, sequence<ApplePayShippingMethod> newShippingMethods, ApplePayLineItem newTotal, sequence<ApplePayLineItem> newLineItems);
+    undefined completePaymentMethodSelection(ApplePayLineItem newTotal, sequence<ApplePayLineItem> newLineItems);
+    undefined completePayment(unsigned short status);
 
     attribute EventHandler onvalidatemerchant;
     attribute EventHandler onpaymentmethodselected;
     attribute EventHandler onpaymentauthorized;
     attribute EventHandler onshippingmethodselected;
     attribute EventHandler onshippingcontactselected;
+    [Conditional=APPLE_PAY_COUPON_CODE] attribute EventHandler oncouponcodechanged;
     attribute EventHandler oncancel;
 };

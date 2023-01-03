@@ -1169,7 +1169,7 @@ uregex_replaceAll(URegularExpression    *regexp2,
 
     uregex_reset(regexp2, 0, status);
 
-    // Note: Seperate error code variables for findNext() and appendReplacement()
+    // Note: Separate error code variables for findNext() and appendReplacement()
     //       are used so that destination buffer overflow errors
     //       in appendReplacement won't stop findNext() from working.
     //       appendReplacement() and appendTail() special case incoming buffer
@@ -1353,7 +1353,7 @@ int32_t RegexCImpl::appendReplacement(RegularExpression    *regexp,
     }
 
     //
-    // Validate all paramters
+    // Validate all parameters
     //
     if (validateRE(regexp, TRUE, status) == FALSE) {
         return 0;
@@ -1508,7 +1508,8 @@ int32_t RegexCImpl::appendReplacement(RegularExpression    *regexp,
                         (c32 >= 0x31 && c32 <= 0x39)) {       // 0..9
                     groupName.append(c32);
                 } else if (c32 == RIGHTBRACKET) {
-                    groupNum = uhash_geti(regexp->fPat->fNamedCaptureMap, &groupName);
+                    groupNum = regexp->fPat->fNamedCaptureMap ?
+                            uhash_geti(regexp->fPat->fNamedCaptureMap, &groupName) : 0;
                     if (groupNum == 0) {
                         // Name not defined by pattern.
                         *status = U_REGEX_INVALID_CAPTURE_GROUP_NAME;

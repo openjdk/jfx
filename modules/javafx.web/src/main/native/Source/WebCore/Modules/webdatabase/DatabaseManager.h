@@ -87,8 +87,8 @@ private:
     DatabaseManagerClient* m_client { nullptr };
     bool m_databaseIsAvailable { true };
 
-    Lock m_proposedDatabasesMutex;
-    HashSet<ProposedDatabase*> m_proposedDatabases;
+    Lock m_proposedDatabasesLock;
+    HashSet<ProposedDatabase*> m_proposedDatabases WTF_GUARDED_BY_LOCK(m_proposedDatabasesLock);
 };
 
 } // namespace WebCore

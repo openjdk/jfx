@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,7 +30,6 @@ import javafx.beans.DefaultProperty;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.binding.IntegerBinding;
-import javafx.beans.binding.StringBinding;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ObjectPropertyBase;
@@ -120,7 +119,9 @@ public abstract class TextInputControl extends Control {
         public int length();
     }
 
-    /***************************************************************************
+    private boolean blockSelectedTextUpdate;
+
+    /* *************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
@@ -154,21 +155,8 @@ public abstract class TextInputControl extends Control {
         });
 
         // Bind the selected text to be based on the selection and text properties
-        selectedText.bind(new StringBinding() {
-            { bind(selection, text); }
-            @Override protected String computeValue() {
-                String txt = text.get();
-                IndexRange sel = selection.get();
-                if (txt == null || sel == null) return "";
-
-                int start = sel.getStart();
-                int end = sel.getEnd();
-                int length = txt.length();
-                if (end > start + length) end = length;
-                if (start > length-1) start = end = 0;
-                return txt.substring(start, end);
-            }
-        });
+        selection.addListener((ob, o, n) -> updateSelectedText());
+        text.addListener((ob, o, n) -> updateSelectedText());
 
         focusedProperty().addListener((ob, o, n) -> {
             if (n) {
@@ -184,7 +172,21 @@ public abstract class TextInputControl extends Control {
         getStyleClass().add("text-input");
     }
 
-    /***************************************************************************
+    private void updateSelectedText() {
+        if (!blockSelectedTextUpdate) {
+            String txt = text.get();
+            IndexRange sel = selection.get();
+            if (txt == null || sel == null) {
+                selectedText.set("");
+            } else {
+                int start = sel.getStart();
+                int end = sel.getEnd();
+                selectedText.set(txt.substring(start, end));
+            }
+        }
+    }
+
+    /* *************************************************************************
      *                                                                         *
      * Properties                                                              *
      *                                                                         *
@@ -296,7 +298,7 @@ public abstract class TextInputControl extends Control {
      * @defaultValue null
      * @since JavaFX 8u40
      */
-    private final ObjectProperty<TextFormatter<?>> textFormatter = new ObjectPropertyBase<TextFormatter<?>>() {
+    private final ObjectProperty<TextFormatter<?>> textFormatter = new ObjectPropertyBase<>() {
 
         private TextFormatter<?> oldFormatter = null;
 
@@ -380,7 +382,7 @@ public abstract class TextInputControl extends Control {
     /**
      * The current selection.
      */
-    private ReadOnlyObjectWrapper<IndexRange> selection = new ReadOnlyObjectWrapper<IndexRange>(this, "selection", new IndexRange(0, 0));
+    private ReadOnlyObjectWrapper<IndexRange> selection = new ReadOnlyObjectWrapper<>(this, "selection", new IndexRange(0, 0));
     public final IndexRange getSelection() { return selection.getValue(); }
     public final ReadOnlyObjectProperty<IndexRange> selectionProperty() { return selection.getReadOnlyProperty(); }
 
@@ -438,7 +440,7 @@ public abstract class TextInputControl extends Control {
     public final boolean isRedoable() { return redoable.get(); }
     public final ReadOnlyBooleanProperty redoableProperty() { return redoable.getReadOnlyProperty(); }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Methods                                                                 *
      *                                                                         *
@@ -1139,18 +1141,24 @@ public abstract class TextInputControl extends Control {
             final String newText = undoChange.newText;
             final String oldText = undoChange.oldText;
 
-            if (newText != null) {
-                getContent().delete(start, start + newText.length(), oldText.isEmpty());
-            }
+            blockSelectedTextUpdate = true;
+            try {
+                if (newText != null) {
+                    getContent().delete(start, start + newText.length(), oldText.isEmpty());
+                }
 
-            if (oldText != null) {
-                getContent().insert(start, oldText, true);
-                doSelectRange(start, start + oldText.length());
-            } else {
-                doSelectRange(start, start + newText.length());
-            }
+                if (oldText != null) {
+                    getContent().insert(start, oldText, true);
+                    doSelectRange(start, start + oldText.length());
+                } else {
+                    doSelectRange(start, start + newText.length());
+                }
 
-            undoChange = undoChange.prev;
+                undoChange = undoChange.prev;
+            } finally {
+                blockSelectedTextUpdate = false;
+                updateSelectedText();
+            }
         }
         updateUndoRedoState();
     }
@@ -1168,15 +1176,21 @@ public abstract class TextInputControl extends Control {
             final String newText = undoChange.newText;
             final String oldText = undoChange.oldText;
 
-            if (oldText != null) {
-                getContent().delete(start, start + oldText.length(), newText.isEmpty());
-            }
+            blockSelectedTextUpdate = true;
+            try {
+                if (oldText != null) {
+                    getContent().delete(start, start + oldText.length(), newText.isEmpty());
+                }
 
-            if (newText != null) {
-                getContent().insert(start, newText, true);
-                doSelectRange(start + newText.length(), start + newText.length());
-            } else {
-                doSelectRange(start, start);
+                if (newText != null) {
+                    getContent().insert(start, newText, true);
+                    doSelectRange(start + newText.length(), start + newText.length());
+                } else {
+                    doSelectRange(start, start);
+                }
+            } finally {
+                blockSelectedTextUpdate = false;
+                updateSelectedText();
             }
         }
         updateUndoRedoState();
@@ -1237,20 +1251,26 @@ public abstract class TextInputControl extends Control {
     private int replaceText(int start, int end, String value, int anchor, int caretPosition) {
         // RT-16566: Need to take into account stripping of chars into the
         // final anchor & caret position
-        int length = getLength();
-        int adjustmentAmount = 0;
-        if (end != start) {
-            getContent().delete(start, end, value.isEmpty());
-            length -= (end - start);
+        blockSelectedTextUpdate = true;
+        try {
+            int length = getLength();
+            int adjustmentAmount = 0;
+            if (end != start) {
+                getContent().delete(start, end, value.isEmpty());
+                length -= (end - start);
+            }
+            if (value != null) {
+                getContent().insert(start, value, true);
+                adjustmentAmount = value.length() - (getLength() - length);
+                anchor -= adjustmentAmount;
+                caretPosition -= adjustmentAmount;
+            }
+            doSelectRange(anchor, caretPosition);
+            return adjustmentAmount;
+        } finally {
+            blockSelectedTextUpdate = false;
+            updateSelectedText();
         }
-        if (value != null) {
-            getContent().insert(start, value, true);
-            adjustmentAmount = value.length() - (getLength() - length);
-            anchor -= adjustmentAmount;
-            caretPosition -= adjustmentAmount;
-        }
-        doSelectRange(anchor, caretPosition);
-        return adjustmentAmount;
     }
 
     private <T> void updateText(TextFormatter<T> formatter) {
@@ -1559,7 +1579,7 @@ public abstract class TextInputControl extends Control {
         }
     }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Stylesheet Handling                                                     *
      *                                                                         *
@@ -1571,7 +1591,7 @@ public abstract class TextInputControl extends Control {
 
     private static class StyleableProperties {
         private static final FontCssMetaData<TextInputControl> FONT =
-            new FontCssMetaData<TextInputControl>("-fx-font", Font.getDefault()) {
+            new FontCssMetaData<>("-fx-font", Font.getDefault()) {
 
             @Override
             public boolean isSettable(TextInputControl n) {
@@ -1587,15 +1607,16 @@ public abstract class TextInputControl extends Control {
         private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
         static {
             final List<CssMetaData<? extends Styleable, ?>> styleables =
-                new ArrayList<CssMetaData<? extends Styleable, ?>>(Control.getClassCssMetaData());
+                new ArrayList<>(Control.getClassCssMetaData());
             styleables.add(FONT);
             STYLEABLES = Collections.unmodifiableList(styleables);
         }
     }
 
     /**
-     * @return The CssMetaData associated with this class, which may include the
-     * CssMetaData of its superclasses.
+     * Gets the {@code CssMetaData} associated with this class, which may include the
+     * {@code CssMetaData} of its superclasses.
+     * @return the {@code CssMetaData}
      * @since JavaFX 8.0
      */
     public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
@@ -1612,7 +1633,7 @@ public abstract class TextInputControl extends Control {
     }
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Accessibility handling                                                  *
      *                                                                         *

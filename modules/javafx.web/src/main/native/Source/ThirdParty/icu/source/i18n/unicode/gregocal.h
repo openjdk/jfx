@@ -28,6 +28,8 @@
 
 #include "unicode/utypes.h"
 
+#if U_SHOW_CPLUSPLUS_API
+
 #if !UCONFIG_NO_FORMATTING
 
 #include "unicode/calendar.h"
@@ -76,9 +78,9 @@ U_NAMESPACE_BEGIN
  * \code
  *     // get the supported ids for GMT-08:00 (Pacific Standard Time)
  *     UErrorCode success = U_ZERO_ERROR;
- *     const StringEnumeration *ids = TimeZone::createEnumeration(-8 * 60 * 60 * 1000);
+ *     const StringEnumeration *ids = TimeZone::createEnumeration(-8 * 60 * 60 * 1000, success);
  *     // if no ids were returned, something is wrong. get out.
- *     if (ids == 0 || ids->count(success) == 0) {
+ *     if (U_FAILURE(success)) {
  *         return;
  *     }
  *
@@ -139,7 +141,7 @@ U_NAMESPACE_BEGIN
  *     cout << "DST_OFFSET: " << (calendar->get( UCAL_DST_OFFSET, success )/(60*60*1000)) << endl; // in hours
  *
  *     if (U_FAILURE(success)) {
- *         cout << "An error occured. success=" << u_errorName(success) << endl;
+ *         cout << "An error occurred. success=" << u_errorName(success) << endl;
  *     }
  *
  *     delete ids;
@@ -301,7 +303,7 @@ public:
      * @return    return a polymorphic copy of this calendar.
      * @stable ICU 2.0
      */
-    virtual Calendar* clone(void) const;
+    virtual GregorianCalendar* clone() const override;
 
     /**
      * Sets the GregorianCalendar change date. This is the point when the switch from
@@ -342,14 +344,15 @@ public:
     UBool isLeapYear(int32_t year) const;
 
     /**
-     * Returns TRUE if the given Calendar object is equivalent to this
+     * Returns true if the given Calendar object is equivalent to this
      * one.  Calendar override.
      *
      * @param other the Calendar to be compared with this Calendar
      * @stable ICU 2.4
      */
-    virtual UBool isEquivalentTo(const Calendar& other) const;
+    virtual UBool isEquivalentTo(const Calendar& other) const override;
 
+#ifndef U_FORCE_HIDE_DEPRECATED_API
     /**
      * (Overrides Calendar) Rolls up or down by the given amount in the specified field.
      * For more information, see the documentation for Calendar::roll().
@@ -361,7 +364,8 @@ public:
      *                an error status.
      * @deprecated ICU 2.6. Use roll(UCalendarDateFields field, int32_t amount, UErrorCode& status) instead.
      */
-    virtual void roll(EDateFields field, int32_t amount, UErrorCode& status);
+    virtual void roll(EDateFields field, int32_t amount, UErrorCode& status) override;
+#endif  // U_FORCE_HIDE_DEPRECATED_API
 
     /**
      * (Overrides Calendar) Rolls up or down by the given amount in the specified field.
@@ -374,7 +378,7 @@ public:
      *                an error status.
      * @stable ICU 2.6.
      */
-    virtual void roll(UCalendarDateFields field, int32_t amount, UErrorCode& status);
+    virtual void roll(UCalendarDateFields field, int32_t amount, UErrorCode& status) override;
 
 #ifndef U_HIDE_DEPRECATED_API
     /**
@@ -405,7 +409,7 @@ public:
      * @return         the minimum value that this field could have, given the current date.
      * @stable ICU 3.0
      */
-    int32_t getActualMinimum(UCalendarDateFields field, UErrorCode &status) const;
+    int32_t getActualMinimum(UCalendarDateFields field, UErrorCode &status) const override;
 
 #ifndef U_HIDE_DEPRECATED_API
     /**
@@ -430,7 +434,7 @@ public:
      * @return         the maximum value that this field could have, given the current date.
      * @stable ICU 2.6
      */
-    virtual int32_t getActualMaximum(UCalendarDateFields field, UErrorCode& status) const;
+    virtual int32_t getActualMaximum(UCalendarDateFields field, UErrorCode& status) const override;
 
     /**
      * (Overrides Calendar) Return true if the current date for this Calendar is in
@@ -441,7 +445,7 @@ public:
      *           false, otherwise.
      * @stable ICU 2.0
      */
-    virtual UBool inDaylightTime(UErrorCode& status) const;
+    virtual UBool inDaylightTime(UErrorCode& status) const override;
 
 public:
 
@@ -455,7 +459,7 @@ public:
      *           same class ID. Objects of other classes have different class IDs.
      * @stable ICU 2.0
      */
-    virtual UClassID getDynamicClassID(void) const;
+    virtual UClassID getDynamicClassID(void) const override;
 
     /**
      * Return the class ID for this class. This is useful only for comparing to a return
@@ -480,7 +484,7 @@ public:
      * @return legacy calendar type name string
      * @stable ICU 49
      */
-    virtual const char * getType() const;
+    virtual const char * getType() const override;
 
  private:
     GregorianCalendar(); // default constructor not implemented
@@ -508,7 +512,7 @@ public:
      * @internal
      */
     virtual int32_t handleComputeMonthStart(int32_t eyear, int32_t month,
-                                                   UBool useMonth) const;
+                                                   UBool useMonth) const override;
 
     /**
      * Subclasses may override this.  This method calls
@@ -518,7 +522,7 @@ public:
      * @return julian day specified by calendar fields.
      * @internal
      */
-    virtual int32_t handleComputeJulianDay(UCalendarDateFields bestField)  ;
+    virtual int32_t handleComputeJulianDay(UCalendarDateFields bestField) override;
 
     /**
      * Return the number of days in the given month of the given extended
@@ -527,7 +531,7 @@ public:
      * implementation than the default implementation in Calendar.
      * @internal
      */
-    virtual int32_t handleGetMonthLength(int32_t extendedYear, int32_t month) const;
+    virtual int32_t handleGetMonthLength(int32_t extendedYear, int32_t month) const override;
 
     /**
      * Return the number of days in the given extended year of this
@@ -536,7 +540,7 @@ public:
      * default implementation in Calendar.
      * @stable ICU 2.0
      */
-    virtual int32_t handleGetYearLength(int32_t eyear) const;
+    virtual int32_t handleGetYearLength(int32_t eyear) const override;
 
     /**
      * return the length of the given month.
@@ -611,7 +615,7 @@ public:
      * <code>LEAST_MAXIMUM</code>, or <code>MAXIMUM</code>
      * @internal
      */
-    virtual int32_t handleGetLimit(UCalendarDateFields field, ELimitType limitType) const;
+    virtual int32_t handleGetLimit(UCalendarDateFields field, ELimitType limitType) const override;
 
     /**
      * Return the extended year defined by the current fields.  This will
@@ -621,7 +625,7 @@ public:
      * @return the extended year
      * @internal
      */
-    virtual int32_t handleGetExtendedYear();
+    virtual int32_t handleGetExtendedYear() override;
 
     /**
      * Subclasses may override this to convert from week fields
@@ -631,7 +635,7 @@ public:
      * @return the extended year, UCAL_EXTENDED_YEAR
      * @internal
      */
-    virtual int32_t handleGetExtendedYearFromWeekFields(int32_t yearWoy, int32_t woy);
+    virtual int32_t handleGetExtendedYearFromWeekFields(int32_t yearWoy, int32_t woy) override;
 
 
     /**
@@ -649,7 +653,7 @@ public:
      * a calendar with the specified Julian/Gregorian cutover date.
      * @internal
      */
-    virtual void handleComputeFields(int32_t julianDay, UErrorCode &status);
+    virtual void handleComputeFields(int32_t julianDay, UErrorCode &status) override;
 
  private:
     /**
@@ -752,27 +756,29 @@ public:
  public: // internal implementation
 
     /**
-     * @return TRUE if this calendar has the notion of a default century
+     * @return true if this calendar has the notion of a default century
      * @internal
      */
-    virtual UBool haveDefaultCentury() const;
+    virtual UBool haveDefaultCentury() const override;
 
     /**
      * @return the start of the default century
      * @internal
      */
-    virtual UDate defaultCenturyStart() const;
+    virtual UDate defaultCenturyStart() const override;
 
     /**
      * @return the beginning year of the default century
      * @internal
      */
-    virtual int32_t defaultCenturyStartYear() const;
+    virtual int32_t defaultCenturyStartYear() const override;
 };
 
 U_NAMESPACE_END
 
 #endif /* #if !UCONFIG_NO_FORMATTING */
+
+#endif /* U_SHOW_CPLUSPLUS_API */
 
 #endif // _GREGOCAL
 //eof

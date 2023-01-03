@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -31,7 +31,6 @@ import com.sun.javafx.scene.control.WebColorField;
 import javafx.beans.InvalidationListener;
 import javafx.geometry.NodeOrientation;
 import javafx.scene.Node;
-import javafx.scene.control.skin.ColorPickerSkin;
 import javafx.scene.paint.Color;
 
 /**
@@ -82,6 +81,7 @@ public class WebColorFieldSkin extends InputFieldSkin {
     }
 
     //  "^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$";
+    @Override
     protected boolean accept(String text) {
         if (text.length() == 0) return true;
         if (text.matches("#[a-fA-F0-9]{0,6}") || text.matches("[a-fA-F0-9]{0,6}")) {
@@ -90,12 +90,14 @@ public class WebColorFieldSkin extends InputFieldSkin {
         return false;
     }
 
+    @Override
     protected void updateText() {
         Color color = ((WebColorField) control).getValue();
         if (color == null) color = Color.BLACK;
         getTextField().setText(Utils.formatHexString(color));
     }
 
+    @Override
     protected void updateValue() {
         if (noChangeInValue) return;
         Color value = ((WebColorField) control).getValue();

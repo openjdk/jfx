@@ -27,8 +27,15 @@
 
 #include "Environment.h"
 #include "IsoHeapImpl.h"
+#include "IsoMallocFallback.h"
 #include "IsoTLS.h"
 #include "bmalloc.h"
+
+#if !BUSE(LIBPAS)
+
+#if BOS(DARWIN)
+#include <malloc/malloc.h>
+#endif
 
 namespace bmalloc {
 
@@ -56,7 +63,7 @@ void IsoTLS::scavenge(api::IsoHeap<Type>& handle)
         return;
     unsigned offset = handle.allocatorOffset();
     if (offset < tls->m_extent)
-        reinterpret_cast<IsoAllocator<typename api::IsoHeap<Type>::Config>*>(tls->m_data + offset)->scavenge();
+        reinterpret_cast<IsoAllocator<typename api::IsoHeap<Type>::Config>*>(tls->m_data + offset)->scavenge(handle.impl());
     offset = handle.deallocatorOffset();
     if (offset < tls->m_extent)
         reinterpret_cast<IsoDeallocator<typename api::IsoHeap<Type>::Config>*>(tls->m_data + offset)->scavenge();
@@ -70,37 +77,33 @@ void* IsoTLS::allocateImpl(api::IsoHeap<Type>& handle, bool abortOnFailure)
     IsoTLS* tls = get();
     if (!tls || offset >= tls->m_extent)
         return allocateSlow<Config>(handle, abortOnFailure);
-    return tls->allocateFast<Config>(offset, abortOnFailure);
+    return tls->allocateFast<Config>(handle, offset, abortOnFailure);
 }
 
-template<typename Config>
-void* IsoTLS::allocateFast(unsigned offset, bool abortOnFailure)
+template<typename Config, typename Type>
+void* IsoTLS::allocateFast(api::IsoHeap<Type>& handle, unsigned offset, bool abortOnFailure)
 {
-    return reinterpret_cast<IsoAllocator<Config>*>(m_data + offset)->allocate(abortOnFailure);
+    return reinterpret_cast<IsoAllocator<Config>*>(m_data + offset)->allocate(handle.impl(), abortOnFailure);
 }
 
 template<typename Config, typename Type>
 BNO_INLINE void* IsoTLS::allocateSlow(api::IsoHeap<Type>& handle, bool abortOnFailure)
 {
-    for (;;) {
-        switch (s_mallocFallbackState) {
-        case MallocFallbackState::Undecided:
-            determineMallocFallbackState();
-            continue;
-        case MallocFallbackState::FallBackToMalloc:
-            return api::tryMalloc(Config::objectSize);
-        case MallocFallbackState::DoNotFallBack:
-            break;
-        }
-        break;
-    }
+    IsoMallocFallback::MallocResult fallbackResult = IsoMallocFallback::tryMalloc(
+        Config::objectSize
+#if BENABLE_MALLOC_HEAP_BREAKDOWN
+        , handle.m_zone
+#endif
+        );
+    if (fallbackResult.didFallBack)
+        return fallbackResult.ptr;
 
-    // If debug heap is enabled, s_mallocFallbackState becomes MallocFallbackState::FallBackToMalloc.
+    // If debug heap is enabled, IsoMallocFallback::mallocFallbackState becomes MallocFallbackState::FallBackToMalloc.
     BASSERT(!Environment::get()->isDebugHeapEnabled());
 
     IsoTLS* tls = ensureHeapAndEntries(handle);
 
-    return tls->allocateFast<Config>(handle.allocatorOffset(), abortOnFailure);
+    return tls->allocateFast<Config>(handle, handle.allocatorOffset(), abortOnFailure);
 }
 
 template<typename Config, typename Type>
@@ -125,20 +128,16 @@ void IsoTLS::deallocateFast(api::IsoHeap<Type>& handle, unsigned offset, void* p
 template<typename Config, typename Type>
 BNO_INLINE void IsoTLS::deallocateSlow(api::IsoHeap<Type>& handle, void* p)
 {
-    for (;;) {
-        switch (s_mallocFallbackState) {
-        case MallocFallbackState::Undecided:
-            determineMallocFallbackState();
-            continue;
-        case MallocFallbackState::FallBackToMalloc:
-            return api::free(p);
-        case MallocFallbackState::DoNotFallBack:
-            break;
-        }
-        break;
-    }
+    bool result = IsoMallocFallback::tryFree(
+        p
+#if BENABLE_MALLOC_HEAP_BREAKDOWN
+        , handle.m_zone
+#endif
+        );
+    if (result)
+        return;
 
-    // If debug heap is enabled, s_mallocFallbackState becomes MallocFallbackState::FallBackToMalloc.
+    // If debug heap is enabled, IsoMallocFallback::mallocFallbackState becomes MallocFallbackState::FallBackToMalloc.
     BASSERT(!Environment::get()->isDebugHeapEnabled());
 
     RELEASE_BASSERT(handle.isInitialized());
@@ -172,7 +171,7 @@ template<typename Type>
 void IsoTLS::ensureHeap(api::IsoHeap<Type>& handle)
 {
     if (!handle.isInitialized()) {
-        std::lock_guard<Mutex> locker(handle.m_initializationLock);
+        LockHolder locker(handle.m_initializationLock);
         if (!handle.isInitialized())
             handle.initialize();
     }
@@ -191,3 +190,4 @@ BNO_INLINE IsoTLS* IsoTLS::ensureHeapAndEntries(api::IsoHeap<Type>& handle)
 
 } // namespace bmalloc
 
+#endif

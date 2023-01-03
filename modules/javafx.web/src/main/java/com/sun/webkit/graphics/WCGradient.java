@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,6 +24,8 @@
  */
 
 package com.sun.webkit.graphics;
+
+import com.sun.prism.paint.Color;
 
 public abstract class WCGradient<G> {
 
@@ -56,7 +58,7 @@ public abstract class WCGradient<G> {
         return this.proportional;
     }
 
-    protected abstract void addStop(int argb, float offset);
+    protected abstract void addStop(Color color, float offset);
 
     public abstract G getPlatformGradient();
 }

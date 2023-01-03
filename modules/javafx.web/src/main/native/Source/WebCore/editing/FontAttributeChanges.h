@@ -28,7 +28,6 @@
 #include "Color.h"
 #include "FontShadow.h"
 #include <wtf/Forward.h>
-#include <wtf/Optional.h>
 
 namespace WebCore {
 
@@ -41,7 +40,7 @@ enum class VerticalAlignChange : uint8_t { Superscript, Baseline, Subscript };
 class FontChanges {
 public:
     template<class Encoder> void encode(Encoder&) const;
-    template<class Decoder> static bool decode(Decoder&, FontChanges&);
+    template<class Decoder> static WARN_UNUSED_RETURN bool decode(Decoder&, FontChanges&);
 
     void setFontName(const String& fontName) { m_fontName = fontName; }
     void setFontFamily(const String& fontFamily) { m_fontFamily = fontFamily; }
@@ -63,16 +62,16 @@ private:
 
     String m_fontName;
     String m_fontFamily;
-    Optional<double> m_fontSize;
-    Optional<double> m_fontSizeDelta;
-    Optional<bool> m_bold;
-    Optional<bool> m_italic;
+    std::optional<double> m_fontSize;
+    std::optional<double> m_fontSizeDelta;
+    std::optional<bool> m_bold;
+    std::optional<bool> m_italic;
 };
 
 class FontAttributeChanges {
 public:
     template<class Encoder> void encode(Encoder&) const;
-    template<class Decoder> static bool decode(Decoder&, FontAttributeChanges&);
+    template<class Decoder> static WARN_UNUSED_RETURN bool decode(Decoder&, FontAttributeChanges&);
 
     void setVerticalAlign(VerticalAlignChange align) { m_verticalAlign = align; }
     void setBackgroundColor(const Color& color) { m_backgroundColor = color; }
@@ -86,12 +85,12 @@ public:
     WEBCORE_EXPORT EditAction editAction() const;
 
 private:
-    Optional<VerticalAlignChange> m_verticalAlign;
-    Optional<Color> m_backgroundColor;
-    Optional<Color> m_foregroundColor;
-    Optional<FontShadow> m_shadow;
-    Optional<bool> m_strikeThrough;
-    Optional<bool> m_underline;
+    std::optional<VerticalAlignChange> m_verticalAlign;
+    std::optional<Color> m_backgroundColor;
+    std::optional<Color> m_foregroundColor;
+    std::optional<FontShadow> m_shadow;
+    std::optional<bool> m_strikeThrough;
+    std::optional<bool> m_underline;
     FontChanges m_fontChanges;
 };
 

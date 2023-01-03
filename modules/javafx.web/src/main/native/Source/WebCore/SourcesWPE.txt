@@ -39,7 +39,25 @@ accessibility/atk/WebKitAccessibleInterfaceText.cpp
 accessibility/atk/WebKitAccessibleInterfaceValue.cpp
 accessibility/atk/WebKitAccessibleUtil.cpp
 
+accessibility/atspi/AccessibilityAtspi.cpp
+accessibility/atspi/AccessibilityObjectAtspi.cpp
+accessibility/atspi/AccessibilityObjectActionAtspi.cpp
+accessibility/atspi/AccessibilityObjectCollectionAtspi.cpp
+accessibility/atspi/AccessibilityObjectComponentAtspi.cpp
+accessibility/atspi/AccessibilityObjectDocumentAtspi.cpp
+accessibility/atspi/AccessibilityObjectHyperlinkAtspi.cpp
+accessibility/atspi/AccessibilityObjectHypertextAtspi.cpp
+accessibility/atspi/AccessibilityObjectImageAtspi.cpp
+accessibility/atspi/AccessibilityObjectSelectionAtspi.cpp
+accessibility/atspi/AccessibilityObjectTableAtspi.cpp
+accessibility/atspi/AccessibilityObjectTableCellAtspi.cpp
+accessibility/atspi/AccessibilityObjectTextAtspi.cpp
+accessibility/atspi/AccessibilityObjectValueAtspi.cpp
+accessibility/atspi/AccessibilityRootAtspi.cpp
+accessibility/atspi/AXObjectCacheAtspi.cpp
+
 editing/atk/FrameSelectionAtk.cpp
+editing/atspi/FrameSelectionAtspi.cpp
 editing/libwpe/EditorLibWPE.cpp
 
 loader/soup/ResourceLoaderSoup.cpp
@@ -52,26 +70,29 @@ page/scrolling/nicosia/ScrollingStateNodeNicosia.cpp
 page/scrolling/nicosia/ScrollingTreeFixedNode.cpp
 page/scrolling/nicosia/ScrollingTreeFrameScrollingNodeNicosia.cpp
 page/scrolling/nicosia/ScrollingTreeNicosia.cpp
-page/scrolling/nicosia/ScrollingTreeStickyNode.cpp
-
-page/scrolling/generic/ScrollingThreadGeneric.cpp
+page/scrolling/nicosia/ScrollingTreeOverflowScrollProxyNode.cpp
+page/scrolling/nicosia/ScrollingTreeOverflowScrollingNodeNicosia.cpp
+page/scrolling/nicosia/ScrollingTreePositionedNode.cpp
+page/scrolling/nicosia/ScrollingTreeScrollingNodeDelegateNicosia.cpp
+page/scrolling/nicosia/ScrollingTreeStickyNodeNicosia.cpp
 
 platform/UserAgentQuirks.cpp
 
+platform/adwaita/ScrollbarThemeAdwaita.cpp
+platform/adwaita/ThemeAdwaita.cpp
+
+platform/generic/ScrollbarsControllerGeneric.cpp
+
+platform/graphics/ANGLEWebKitBridge.cpp
 platform/graphics/GLContext.cpp
-platform/graphics/GraphicsContext3DPrivate.cpp
 platform/graphics/PlatformDisplay.cpp
 
 platform/graphics/egl/GLContextEGL.cpp
 platform/graphics/egl/GLContextEGLLibWPE.cpp
 
-platform/graphics/libwpe/PlatformDisplayLibWPE.cpp
+platform/graphics/gbm/GBMDevice.cpp
 
-platform/graphics/opengl/Extensions3DOpenGLCommon.cpp
-platform/graphics/opengl/Extensions3DOpenGLES.cpp @no-unify
-platform/graphics/opengl/GraphicsContext3DOpenGLCommon.cpp
-platform/graphics/opengl/GraphicsContext3DOpenGLES.cpp
-platform/graphics/opengl/TemporaryOpenGLSetting.cpp
+platform/graphics/libwpe/PlatformDisplayLibWPE.cpp
 
 platform/graphics/opentype/OpenTypeVerticalData.cpp
 
@@ -85,8 +106,7 @@ platform/text/LocaleICU.cpp
 platform/unix/LoggingUnix.cpp
 
 platform/wpe/PlatformScreenWPE.cpp
-platform/wpe/RenderThemeWPE.cpp
-platform/wpe/ScrollbarThemeWPE.cpp
-platform/wpe/ThemeWPE.cpp
 
 platform/xdg/MIMETypeRegistryXdg.cpp
+
+rendering/RenderThemeAdwaita.cpp

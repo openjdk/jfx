@@ -53,8 +53,12 @@ bool canBlendSVGPathByteStreams(const SVGPathByteStream& from, const SVGPathByte
 bool buildAnimatedSVGPathByteStream(const SVGPathByteStream& from, const SVGPathByteStream& to, SVGPathByteStream& result, float progress);
 bool addToSVGPathByteStream(SVGPathByteStream& streamToAppendTo, const SVGPathByteStream& from, unsigned repeatCount = 1);
 
-bool getSVGPathSegAtLengthFromSVGPathByteStream(const SVGPathByteStream&, float length, unsigned& pathSeg);
-bool getTotalLengthOfSVGPathByteStream(const SVGPathByteStream&, float& totalLength);
-bool getPointAtLengthOfSVGPathByteStream(const SVGPathByteStream&, float length, FloatPoint&);
+unsigned getSVGPathSegAtLengthFromSVGPathByteStream(const SVGPathByteStream&, float length);
+float getTotalLengthOfSVGPathByteStream(const SVGPathByteStream&);
+FloatPoint getPointAtLengthOfSVGPathByteStream(const SVGPathByteStream&, float length);
+
+// Convert an SVG path byte stream containing a mixed of relative/absolute draw commands into another byte stream
+// such that all draw commands are absolute. Returns nullptr if an error occurs.
+std::unique_ptr<SVGPathByteStream> convertSVGPathByteStreamToAbsoluteCoordinates(const SVGPathByteStream&);
 
 } // namespace WebCore

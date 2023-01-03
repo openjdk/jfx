@@ -32,10 +32,10 @@
 #include "MessagePort.h"
 #include "ServiceWorker.h"
 #include "ServiceWorkerClient.h"
-#include <wtf/Variant.h>
+#include <variant>
 
 namespace JSC {
-class ExecState;
+class CallFrame;
 class JSValue;
 }
 
@@ -45,43 +45,44 @@ class MessagePort;
 class ServiceWorker;
 class ServiceWorkerClient;
 
-using ExtendableMessageEventSource = Variant<RefPtr<ServiceWorkerClient>, RefPtr<ServiceWorker>, RefPtr<MessagePort>>;
+using ExtendableMessageEventSource = std::variant<RefPtr<ServiceWorkerClient>, RefPtr<ServiceWorker>, RefPtr<MessagePort>>;
 
 class ExtendableMessageEvent final : public ExtendableEvent {
+    WTF_MAKE_ISO_ALLOCATED(ExtendableMessageEvent);
 public:
     struct Init : ExtendableEventInit {
         JSC::JSValue data;
         String origin;
         String lastEventId;
-        Optional<ExtendableMessageEventSource> source;
+        std::optional<ExtendableMessageEventSource> source;
         Vector<RefPtr<MessagePort>> ports;
     };
 
-    static Ref<ExtendableMessageEvent> create(JSC::ExecState& state, const AtomString& type, const Init& initializer, IsTrusted isTrusted = IsTrusted::No)
+    static Ref<ExtendableMessageEvent> create(JSC::JSGlobalObject& state, const AtomString& type, const Init& initializer, IsTrusted isTrusted = IsTrusted::No)
     {
         return adoptRef(*new ExtendableMessageEvent(state, type, initializer, isTrusted));
     }
 
-    static Ref<ExtendableMessageEvent> create(Vector<RefPtr<MessagePort>>&&, RefPtr<SerializedScriptValue>&&, const String& origin = { }, const String& lastEventId = { }, Optional<ExtendableMessageEventSource>&& source = WTF::nullopt);
+    static Ref<ExtendableMessageEvent> create(Vector<RefPtr<MessagePort>>&&, RefPtr<SerializedScriptValue>&&, const String& origin = { }, const String& lastEventId = { }, std::optional<ExtendableMessageEventSource>&& source = std::nullopt);
 
     ~ExtendableMessageEvent();
 
     SerializedScriptValue* data() const { return m_data.get(); }
     const String& origin() const { return m_origin; }
     const String& lastEventId() const { return m_lastEventId; }
-    const Optional<ExtendableMessageEventSource>& source() const { return m_source; }
+    const std::optional<ExtendableMessageEventSource>& source() const { return m_source; }
     const Vector<RefPtr<MessagePort>>& ports() const { return m_ports; }
 
     EventInterface eventInterface() const final { return ExtendableMessageEventInterfaceType; }
 
 private:
-    ExtendableMessageEvent(JSC::ExecState&, const AtomString&, const Init&, IsTrusted);
-    ExtendableMessageEvent(RefPtr<SerializedScriptValue>&& data, const String& origin, const String& lastEventId, Optional<ExtendableMessageEventSource>&&, Vector<RefPtr<MessagePort>>&&);
+    ExtendableMessageEvent(JSC::JSGlobalObject&, const AtomString&, const Init&, IsTrusted);
+    ExtendableMessageEvent(RefPtr<SerializedScriptValue>&& data, const String& origin, const String& lastEventId, std::optional<ExtendableMessageEventSource>&&, Vector<RefPtr<MessagePort>>&&);
 
     RefPtr<SerializedScriptValue> m_data;
     String m_origin;
     String m_lastEventId;
-    Optional<ExtendableMessageEventSource> m_source;
+    std::optional<ExtendableMessageEventSource> m_source;
     Vector<RefPtr<MessagePort>> m_ports;
 };
 

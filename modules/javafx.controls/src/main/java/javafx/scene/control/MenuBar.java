@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -34,7 +34,6 @@ import java.util.List;
 import javafx.beans.DefaultProperty;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.value.ObservableValue;
-import javafx.beans.value.WritableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.css.CssMetaData;
@@ -75,7 +74,7 @@ import javafx.scene.AccessibleRole;
 @DefaultProperty("menus")
 public class MenuBar extends Control {
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
@@ -106,12 +105,12 @@ public class MenuBar extends Control {
         // makes it look to css like the user set the value and css will not
         // override. Initializing focusTraversable by calling applyStyle with null
         // StyleOrigin ensures that css will be able to override the value.
-        ((StyleableProperty<Boolean>)(WritableValue<Boolean>)focusTraversableProperty()).applyStyle(null, Boolean.FALSE);
+        ((StyleableProperty<Boolean>)focusTraversableProperty()).applyStyle(null, Boolean.FALSE);
     }
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Instance variables                                                      *
      *                                                                         *
@@ -119,7 +118,7 @@ public class MenuBar extends Control {
     private ObservableList<Menu> menus = FXCollections.<Menu>observableArrayList();
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Properties                                                              *
      *                                                                         *
@@ -181,7 +180,7 @@ public class MenuBar extends Control {
     }
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Public API                                                              *
      *                                                                         *
@@ -202,7 +201,7 @@ public class MenuBar extends Control {
         return new MenuBarSkin(this);
     }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Stylesheet Handling                                                     *
      *                                                                         *
@@ -212,7 +211,7 @@ public class MenuBar extends Control {
 
     private static class StyleableProperties {
         private static final CssMetaData<MenuBar, Boolean> USE_SYSTEM_MENU_BAR =
-                new CssMetaData<MenuBar, Boolean>("-fx-use-system-menu-bar",
+                new CssMetaData<>("-fx-use-system-menu-bar",
                                                         BooleanConverter.getInstance(),
                                                         false) {
             @Override public boolean isSettable(MenuBar n) {
@@ -220,22 +219,23 @@ public class MenuBar extends Control {
             }
 
             @Override public StyleableProperty<Boolean> getStyleableProperty(MenuBar n) {
-                return (StyleableProperty<Boolean>)(WritableValue<Boolean>)n.useSystemMenuBarProperty();
+                return (StyleableProperty<Boolean>)n.useSystemMenuBarProperty();
             }
         };
 
         private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
         static {
             final List<CssMetaData<? extends Styleable, ?>> styleables =
-                new ArrayList<CssMetaData<? extends Styleable, ?>>(Control.getClassCssMetaData());
+                new ArrayList<>(Control.getClassCssMetaData());
             styleables.add(USE_SYSTEM_MENU_BAR);
             STYLEABLES = Collections.unmodifiableList(styleables);
         }
     }
 
     /**
-     * @return The CssMetaData associated with this class, which may include the
-     * CssMetaData of its superclasses.
+     * Gets the {@code CssMetaData} associated with this class, which may include the
+     * {@code CssMetaData} of its superclasses.
+     * @return the {@code CssMetaData}
      * @since JavaFX 8.0
      */
     public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {

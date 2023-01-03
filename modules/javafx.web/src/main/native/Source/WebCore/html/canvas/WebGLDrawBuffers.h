@@ -32,6 +32,7 @@
 namespace WebCore {
 
 class WebGLDrawBuffers final : public WebGLExtension {
+    WTF_MAKE_ISO_ALLOCATED(WebGLDrawBuffers);
 public:
     explicit WebGLDrawBuffers(WebGLRenderingContextBase&);
     virtual ~WebGLDrawBuffers();
@@ -40,7 +41,7 @@ public:
 
     ExtensionName getName() const override;
 
-    void drawBuffersWEBGL(const Vector<GC3Denum>& buffers);
+    void drawBuffersWEBGL(const Vector<GCGLenum>& buffers);
 
 private:
     static bool satisfiesWebGLRequirements(WebGLRenderingContextBase&);

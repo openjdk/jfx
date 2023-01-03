@@ -24,10 +24,19 @@
 
 [
     Conditional=WEB_AUDIO,
+    EnabledBySetting=WebAudioEnabled,
     JSGenerateToJSObject,
-    Constructor(unsigned long numberOfChannels, unsigned long numberOfFrames, unrestricted float sampleRate),
-    ConstructorMayThrowException,
-    ConstructorCallWith=ScriptExecutionContext,
-    InterfaceName=webkitOfflineAudioContext
-] interface OfflineAudioContext : AudioContext {
+    Exposed=Window
+] interface OfflineAudioContext : BaseAudioContext {
+    [CallWith=CurrentScriptExecutionContext] constructor(OfflineAudioContextOptions contextOptions);
+    [CallWith=CurrentScriptExecutionContext] constructor(unsigned long numberOfChannels, unsigned long length, float sampleRate);
+    
+    Promise<AudioBuffer> startRendering();
+
+    [ImplementedAs=resumeRendering] Promise<undefined> resume();
+    [ImplementedAs=suspendRendering] Promise<undefined> suspend(double suspendTime);
+
+    readonly attribute unsigned long length;
+
+    attribute EventHandler oncomplete;
 };

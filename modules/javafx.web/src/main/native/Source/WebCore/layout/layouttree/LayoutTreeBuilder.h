@@ -27,8 +27,13 @@
 
 #if ENABLE(LAYOUT_FORMATTING_CONTEXT)
 
+#include "LayoutContainerBox.h"
+#include <wtf/IsoMalloc.h>
+
 namespace WebCore {
 
+class RenderBlockFlow;
+class RenderBox;
 class RenderElement;
 class RenderObject;
 class RenderTable;
@@ -36,23 +41,42 @@ class RenderView;
 
 namespace Layout {
 
-class Box;
-class Container;
 class LayoutState;
+
+class LayoutTree {
+    WTF_MAKE_ISO_ALLOCATED(LayoutTree);
+public:
+    LayoutTree(std::unique_ptr<ContainerBox>);
+    ~LayoutTree() = default;
+
+    const ContainerBox& root() const { return *m_root; }
+
+private:
+    std::unique_ptr<ContainerBox> m_root;
+};
 
 class TreeBuilder {
 public:
-    static std::unique_ptr<Container> createLayoutTree(const RenderView&);
+    static std::unique_ptr<Layout::LayoutTree> buildLayoutTree(const RenderView&);
 
 private:
-    static void createSubTree(const RenderElement& rootRenderer, Container& rootContainer);
-    static void createTableStructure(const RenderTable& tableRenderer, Container& tableWrapperBox);
-    static std::unique_ptr<Box> createLayoutBox(const RenderElement& parentRenderer, const RenderObject& childRenderer);
+    TreeBuilder();
+
+    void buildSubTree(const RenderElement& parentRenderer, ContainerBox& parentContainer);
+    void buildTableStructure(const RenderTable& tableRenderer, ContainerBox& tableWrapperBox);
+    std::unique_ptr<Box> createLayoutBox(const ContainerBox& parentContainer, const RenderObject& childRenderer);
+
+    std::unique_ptr<Box> createReplacedBox(std::optional<Box::ElementAttributes>, RenderStyle&&);
+    std::unique_ptr<Box> createTextBox(String text, bool canUseSimplifiedTextMeasuring, bool canUseSimpleFontCodePath, RenderStyle&&);
+    std::unique_ptr<Box> createLineBreakBox(bool isOptional, RenderStyle&&);
+    std::unique_ptr<ContainerBox> createContainer(std::optional<Box::ElementAttributes>, RenderStyle&&);
 };
 
 #if ENABLE(TREE_DEBUGGING)
+String layoutTreeAsText(const Box&, const LayoutState*);
 void showLayoutTree(const Box&, const LayoutState*);
 void showLayoutTree(const Box&);
+void showInlineTreeAndRuns(TextStream&, const LayoutState&, const ContainerBox& inlineFormattingRoot, size_t depth);
 void printLayoutTreeForLiveDocuments();
 #endif
 

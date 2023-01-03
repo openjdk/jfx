@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -36,7 +36,7 @@ import javafx.beans.property.ReadOnlyObjectWrapper;
  */
 public abstract class FocusModel<T> {
 
-    /***********************************************************************
+    /* *********************************************************************
      *                                                                     *
      * Constructors                                                        *
      *                                                                     *
@@ -55,7 +55,7 @@ public abstract class FocusModel<T> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Focus Properties                                                        *
      *                                                                         *
@@ -82,14 +82,14 @@ public abstract class FocusModel<T> {
      * reference the item that would receive the keyboard focus if the control
      * itself were focused.
      */
-    private ReadOnlyObjectWrapper<T> focusedItem = new ReadOnlyObjectWrapper<T>(this, "focusedItem");
+    private ReadOnlyObjectWrapper<T> focusedItem = new ReadOnlyObjectWrapper<>(this, "focusedItem");
     public final ReadOnlyObjectProperty<T> focusedItemProperty() { return focusedItem.getReadOnlyProperty(); }
     public final T getFocusedItem() { return focusedItemProperty().get(); }
     final void setFocusedItem(T value) { focusedItem.set(value); }
 
 
 
-    /***********************************************************************
+    /* *********************************************************************
      *                                                                     *
      * Public Focus API                                                    *
      *                                                                     *

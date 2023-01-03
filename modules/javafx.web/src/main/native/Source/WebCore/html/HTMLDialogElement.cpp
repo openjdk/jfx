@@ -26,47 +26,138 @@
 #include "config.h"
 #include "HTMLDialogElement.h"
 
+#include "DocumentInlines.h"
+#include "EventLoop.h"
+#include "EventNames.h"
+#include "FocusOptions.h"
+#include "GCReachableRef.h"
+#include "HTMLNames.h"
+#include "RenderElement.h"
+#include "TypedElementDescendantIterator.h"
 #include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(HTMLDialogElement);
 
+using namespace HTMLNames;
+
 HTMLDialogElement::HTMLDialogElement(const QualifiedName& tagName, Document& document)
     : HTMLElement(tagName, document)
 {
 }
 
-bool HTMLDialogElement::open()
-{
-    return m_open;
-}
-
-void HTMLDialogElement::setOpen(bool open)
-{
-    m_open = open;
-}
-
-const String& HTMLDialogElement::returnValue()
-{
-    return m_returnValue;
-}
-
-void HTMLDialogElement::setReturnValue(String&& returnValue)
-{
-    m_returnValue = WTFMove(returnValue);
-}
-
 void HTMLDialogElement::show()
 {
+    // If the element already has an open attribute, then return.
+    if (isOpen())
+        return;
+
+    setBooleanAttribute(openAttr, true);
+
+    m_previouslyFocusedElement = document().focusedElement();
+
+    runFocusingSteps();
 }
 
-void HTMLDialogElement::showModal()
+ExceptionOr<void> HTMLDialogElement::showModal()
 {
+    // If subject already has an open attribute, then throw an "InvalidStateError" DOMException.
+    if (isOpen())
+        return Exception { InvalidStateError };
+
+    // If subject is not connected, then throw an "InvalidStateError" DOMException.
+    if (!isConnected())
+        return Exception { InvalidStateError };
+
+    setBooleanAttribute(openAttr, true);
+
+    m_isModal = true;
+
+    if (!isInTopLayer())
+        addToTopLayer();
+
+    m_previouslyFocusedElement = document().focusedElement();
+
+    runFocusingSteps();
+
+    return { };
 }
 
-void HTMLDialogElement::close(const String&)
+void HTMLDialogElement::close(const String& result)
 {
+    if (!isOpen())
+        return;
+
+    setBooleanAttribute(openAttr, false);
+
+    m_isModal = false;
+
+    if (!result.isNull())
+        m_returnValue = result;
+
+    if (isInTopLayer())
+        removeFromTopLayer();
+
+    if (RefPtr element = std::exchange(m_previouslyFocusedElement, nullptr).get()) {
+        FocusOptions options;
+        options.preventScroll = true;
+        element->focus(options);
+    }
+
+    document().eventLoop().queueTask(TaskSource::UserInteraction, [protectedThis = GCReachableRef { *this }] {
+        protectedThis->dispatchEvent(Event::create(eventNames().closeEvent, Event::CanBubble::No, Event::IsCancelable::No));
+    });
+}
+
+void HTMLDialogElement::queueCancelTask()
+{
+    document().eventLoop().queueTask(TaskSource::UserInteraction, [protectedThis = GCReachableRef { *this }] {
+        auto cancelEvent = Event::create(eventNames().cancelEvent, Event::CanBubble::No, Event::IsCancelable::Yes);
+        protectedThis->dispatchEvent(cancelEvent);
+        if (!cancelEvent->defaultPrevented())
+            protectedThis->close(nullString());
+    });
+}
+
+// https://html.spec.whatwg.org/multipage/interactive-elements.html#dialog-focusing-steps
+void HTMLDialogElement::runFocusingSteps()
+{
+    RefPtr<Element> control;
+    for (auto& element : descendantsOfType<Element>(*this)) {
+        if (!element.isFocusable())
+            continue;
+
+        if (element.hasAttribute(autofocusAttr)) {
+            control = &element;
+            break;
+        }
+
+        // FIXME: Potentially remove this and adjust related WPTs after https://github.com/whatwg/html/pull/4184.
+        if (!control)
+            control = &element;
+    }
+
+    if (!control)
+        control = this;
+
+    if (control->isFocusable())
+        control->runFocusingStepsForAutofocus();
+    else if (m_isModal)
+        document().setFocusedElement(nullptr); // Focus fixup rule
+
+    if (!control->document().isSameOriginAsTopDocument())
+        return;
+
+    Ref topDocument = control->document().topDocument();
+    topDocument->clearAutofocusCandidates();
+    topDocument->setAutofocusProcessed();
+}
+
+void HTMLDialogElement::removedFromAncestor(RemovalType removalType, ContainerNode& oldParentOfRemovedTree)
+{
+    HTMLElement::removedFromAncestor(removalType, oldParentOfRemovedTree);
+    m_isModal = false;
 }
 
 }

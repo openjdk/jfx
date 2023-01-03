@@ -30,11 +30,14 @@
 #include "B3ConstrainedValue.h"
 #include "B3Value.h"
 #include "B3ValueRep.h"
-#include "CCallHelpers.h"
 #include "RegisterSet.h"
 #include <wtf/SharedTask.h>
 
-namespace JSC { namespace B3 {
+namespace JSC {
+
+class CCallHelpers;
+
+namespace B3 {
 
 class StackmapGenerationParams;
 
@@ -58,7 +61,7 @@ public:
         }
     }
 
-    ~StackmapValue();
+    ~StackmapValue() override;
 
     // Use this to add children.
     void append(const ConstrainedValue& value)

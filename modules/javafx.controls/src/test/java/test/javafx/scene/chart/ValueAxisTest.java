@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -86,7 +86,7 @@ public class ValueAxisTest {
             };
         }
 
-        formatter = new StringConverter<Number>() {
+        formatter = new StringConverter<>() {
             @Override
             public String toString(Number object) { return null; }
             @Override
@@ -168,6 +168,7 @@ public class ValueAxisTest {
         assertEquals("minorTickCountProperty cannot be bound", axis.minorTickCountProperty().getValue(),23.0,0.0);
     }
 
+    @SuppressWarnings("cast")
     @Test public void checkScaleIsReadOnlyPropertyAndHenceCannotBeBound() {
         assertTrue(axis.scaleProperty() instanceof ReadOnlyDoubleProperty);
     }
@@ -259,7 +260,7 @@ public class ValueAxisTest {
     /*********************************************************************
      * CSS related Tests                                                 *
      ********************************************************************/
-    @Test public void whenMinorTickVisibleIsBound_impl_cssSettable_ReturnsFalse() {
+    @Test public void whenMinorTickVisibleIsBound_CssMetaData_isSettable_ReturnsFalse() {
         CssMetaData styleable = ((StyleableProperty)axis.minorTickVisibleProperty()).getCssMetaData();
         assertTrue(styleable.isSettable(axis));
         BooleanProperty other = new SimpleBooleanProperty();
@@ -267,7 +268,7 @@ public class ValueAxisTest {
         assertFalse(styleable.isSettable(axis));
     }
 
-    @Test public void whenMinorTickVisibleIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
+    @Test public void whenMinorTickVisibleIsSpecifiedViaCSSAndIsNotBound_CssMetaData_isSettable_ReturnsTrue() {
         CssMetaData styleable = ((StyleableProperty)axis.minorTickVisibleProperty()).getCssMetaData();
         assertTrue(styleable.isSettable(axis));
     }
@@ -277,7 +278,7 @@ public class ValueAxisTest {
         assertSame(true, axis.isMinorTickVisible());
     }
 
-    @Test public void whenMinorTickLengthIsBound_impl_cssSettable_ReturnsFalse() {
+    @Test public void whenMinorTickLengthIsBound_CssMetaData_isSettable_ReturnsFalse() {
         CssMetaData styleable = ((StyleableProperty)axis.minorTickLengthProperty()).getCssMetaData();
         assertTrue(styleable.isSettable(axis));
         DoubleProperty other = new SimpleDoubleProperty();
@@ -285,7 +286,7 @@ public class ValueAxisTest {
         assertFalse(styleable.isSettable(axis));
     }
 
-    @Test public void whenMinorTickLengthIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
+    @Test public void whenMinorTickLengthIsSpecifiedViaCSSAndIsNotBound_CssMetaData_isSettable_ReturnsTrue() {
         CssMetaData styleable = ((StyleableProperty)axis.minorTickLengthProperty()).getCssMetaData();
         assertTrue(styleable.isSettable(axis));
     }
@@ -295,7 +296,7 @@ public class ValueAxisTest {
         assertEquals(10.34, axis.getMinorTickLength(), 0.0);
     }
 
-    @Test public void whenMinorTickCountIsBound_impl_cssSettable_ReturnsFalse() {
+    @Test public void whenMinorTickCountIsBound_CssMetaData_isSettable_ReturnsFalse() {
         CssMetaData styleable = ((StyleableProperty)axis.minorTickCountProperty()).getCssMetaData();
         assertTrue(styleable.isSettable(axis));
         DoubleProperty other = new SimpleDoubleProperty();
@@ -303,7 +304,7 @@ public class ValueAxisTest {
         assertFalse(styleable.isSettable(axis));
     }
 
-    @Test public void whenMinorTickCountIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
+    @Test public void whenMinorTickCountIsSpecifiedViaCSSAndIsNotBound_CssMetaData_isSettable_ReturnsTrue() {
         CssMetaData styleable = ((StyleableProperty)axis.minorTickCountProperty()).getCssMetaData();
         assertTrue(styleable.isSettable(axis));
     }

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013, 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,33 +26,33 @@
 #include "config.h"
 #include "DataView.h"
 
-#include "JSCInlines.h"
+#include "HeapInlines.h"
 #include "JSDataView.h"
 #include "JSGlobalObject.h"
 
 namespace JSC {
 
-DataView::DataView(RefPtr<ArrayBuffer>&& buffer, unsigned byteOffset, unsigned byteLength)
+DataView::DataView(RefPtr<ArrayBuffer>&& buffer, size_t byteOffset, size_t byteLength)
     : ArrayBufferView(WTFMove(buffer), byteOffset, byteLength)
 {
 }
 
 Ref<DataView> DataView::create(
-    RefPtr<ArrayBuffer>&& buffer, unsigned byteOffset, unsigned byteLength)
+    RefPtr<ArrayBuffer>&& buffer, size_t byteOffset, size_t byteLength)
 {
     return adoptRef(*new DataView(WTFMove(buffer), byteOffset, byteLength));
 }
 
 Ref<DataView> DataView::create(RefPtr<ArrayBuffer>&& buffer)
 {
-    unsigned byteLength = buffer->byteLength();
+    size_t byteLength = buffer->byteLength();
     return create(WTFMove(buffer), 0, byteLength);
 }
 
-JSArrayBufferView* DataView::wrap(ExecState* exec, JSGlobalObject* globalObject)
+JSArrayBufferView* DataView::wrap(JSGlobalObject* lexicalGlobalObject, JSGlobalObject* globalObject)
 {
     return JSDataView::create(
-        exec, globalObject->typedArrayStructure(TypeDataView), possiblySharedBuffer(), byteOffset(),
+        lexicalGlobalObject, globalObject->typedArrayStructure(TypeDataView), possiblySharedBuffer(), byteOffset(),
         byteLength());
 }
 

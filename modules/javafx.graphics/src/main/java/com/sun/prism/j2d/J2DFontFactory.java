@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -55,36 +55,44 @@ final class J2DFontFactory implements FontFactory {
         prismFontFactory = fontFactory;
     }
 
+    @Override
     public PGFont createFont(String name, float size) {
         return prismFontFactory.createFont(name, size);
     }
 
+    @Override
     public PGFont createFont(String family,
                              boolean bold, boolean italic, float size) {
         return prismFontFactory.createFont(family, bold, italic, size);
     }
 
+    @Override
     public synchronized PGFont deriveFont(PGFont font, boolean bold,
                                           boolean italic, float size) {
         return prismFontFactory.deriveFont(font, bold, italic, size);
     }
 
+    @Override
     public String[] getFontFamilyNames() {
         return prismFontFactory.getFontFamilyNames();
     }
 
+    @Override
     public String[] getFontFullNames() {
         return prismFontFactory.getFontFullNames();
     }
 
+    @Override
     public String[] getFontFullNames(String family) {
         return prismFontFactory.getFontFullNames(family);
     }
 
+    @Override
     public boolean isPlatformFont(String name) {
         return prismFontFactory.isPlatformFont(name);
     }
 
+    @Override
     public final boolean hasPermission() {
         return prismFontFactory.hasPermission();
     }
@@ -95,6 +103,7 @@ final class J2DFontFactory implements FontFactory {
      * input streams on it to both prism and 2D, then when they are done,
      * remove it.
      */
+    @Override
     public PGFont[] loadEmbeddedFont(String name, InputStream fontStream,
                                      float size,
                                      boolean register,
@@ -123,6 +132,7 @@ final class J2DFontFactory implements FontFactory {
      * printing begins, so grabs a copy of the file holding an
      * embedded font to 2D on first use.
      */
+    @SuppressWarnings("removal")
     public static void registerFont(final FontResource fr) {
 
         AccessController.doPrivileged((PrivilegedAction<Object>) () -> {
@@ -146,6 +156,7 @@ final class J2DFontFactory implements FontFactory {
         });
     }
 
+    @Override
     public PGFont[] loadEmbeddedFont(String name, String path,
                                      float size,
                                      boolean register,
@@ -165,7 +176,9 @@ final class J2DFontFactory implements FontFactory {
         // REMIND: this needs to be upgraded to use JDK9 createFont
         // which can handle a collection.
         final FontResource fr = fonts[0].getFontResource();
-        AccessController.doPrivileged(new PrivilegedAction<Object>() {
+        @SuppressWarnings("removal")
+        var dummy = AccessController.doPrivileged(new PrivilegedAction<Object>() {
+            @Override
             public Object run() {
                 try {
                     File file = new File(fr.getFileName());
@@ -195,7 +208,8 @@ final class J2DFontFactory implements FontFactory {
         }
         synchronized (J2DFontFactory.class) {
             if (!compositeFontMethodsInitialized) {
-                AccessController.doPrivileged(
+                @SuppressWarnings("removal")
+                var dummy = AccessController.doPrivileged(
                         (PrivilegedAction<Void>) () -> {
                             compositeFontMethodsInitialized = true;
                             Class<?> fontMgrCls;

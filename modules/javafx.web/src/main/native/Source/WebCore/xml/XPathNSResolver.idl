@@ -18,11 +18,11 @@
  * Boston, MA 02110-1301, USA.
  */
 
+// https://dom.spec.whatwg.org/#callbackdef-xpathnsresolver
+// FIXME: This should be a callback interface.
 [
-    JSCustomToNativeObject,
-    NoInterfaceObject,
+    LegacyNoInterfaceObject,
     SkipVTableValidation,
 ] interface XPathNSResolver {
-    // FIXME: Using "undefined" as default parameter value is wrong.
-    DOMString? lookupNamespaceURI(optional DOMString prefix = "undefined");
+    DOMString? lookupNamespaceURI(DOMString? prefix);
 };

@@ -20,6 +20,7 @@
 
 #pragma once
 
+#include "Frame.h"
 #include "HTMLElement.h"
 #include "ReferrerPolicy.h"
 #include <wtf/HashCountedSet.h>
@@ -27,20 +28,18 @@
 
 namespace WebCore {
 
-class Frame;
 class RenderWidget;
-class SVGDocument;
 
 class HTMLFrameOwnerElement : public HTMLElement {
     WTF_MAKE_ISO_ALLOCATED(HTMLFrameOwnerElement);
 public:
     virtual ~HTMLFrameOwnerElement();
 
-    Frame* contentFrame() const { return m_contentFrame; }
+    Frame* contentFrame() const { return m_contentFrame.get(); }
     WEBCORE_EXPORT WindowProxy* contentWindow() const;
     WEBCORE_EXPORT Document* contentDocument() const;
 
-    void setContentFrame(Frame*);
+    void setContentFrame(Frame&);
     void clearContentFrame();
 
     void disconnectContentFrame();
@@ -52,7 +51,7 @@ public:
 
     ExceptionOr<Document&> getSVGDocument() const;
 
-    virtual ScrollbarMode scrollingMode() const { return ScrollbarAuto; }
+    virtual ScrollbarMode scrollingMode() const { return ScrollbarMode::Auto; }
 
     SandboxFlags sandboxFlags() const { return m_sandboxFlags; }
 
@@ -61,6 +60,9 @@ public:
     virtual bool canLoadScriptURL(const URL&) const = 0;
 
     virtual ReferrerPolicy referrerPolicy() const { return ReferrerPolicy::EmptyString; }
+
+    virtual bool shouldLoadFrameLazily() { return false; }
+    virtual bool isLazyLoadObserverActive() const { return false; }
 
 protected:
     HTMLFrameOwnerElement(const QualifiedName& tagName, Document&);
@@ -71,7 +73,7 @@ private:
     bool isKeyboardFocusable(KeyboardEvent*) const override;
     bool isFrameOwnerElement() const final { return true; }
 
-    Frame* m_contentFrame { nullptr };
+    WeakPtr<Frame> m_contentFrame;
     SandboxFlags m_sandboxFlags { SandboxNone };
 };
 

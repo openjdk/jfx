@@ -27,67 +27,25 @@
 #include "JSRunLoopTimer.h"
 
 #include "IncrementalSweeper.h"
-#include "JSCInlines.h"
-#include "JSObject.h"
-#include "JSString.h"
-
-#include <wtf/MainThread.h>
+#include "VM.h"
+#include <mutex>
 #include <wtf/NoTailCalls.h>
-#include <wtf/Threading.h>
 
 #if USE(GLIB_EVENT_LOOP)
 #include <glib.h>
 #include <wtf/glib/RunLoopSourcePriority.h>
 #endif
 
-#include <mutex>
-
 namespace JSC {
-
-const Seconds JSRunLoopTimer::s_decade { 60 * 60 * 24 * 365 * 10 };
 
 static inline JSRunLoopTimer::Manager::EpochTime epochTime(Seconds delay)
 {
-#if USE(CF)
-    return Seconds { CFAbsoluteTimeGetCurrent() + delay.value() };
-#else
     return MonotonicTime::now().secondsSinceEpoch() + delay;
-#endif
 }
 
-#if USE(CF)
-void JSRunLoopTimer::Manager::timerDidFireCallback(CFRunLoopTimerRef, void* contextPtr)
-{
-    static_cast<JSRunLoopTimer::Manager*>(contextPtr)->timerDidFire();
-}
-
-void JSRunLoopTimer::Manager::PerVMData::setRunLoop(Manager* manager, CFRunLoopRef newRunLoop)
-{
-    if (runLoop) {
-        CFRunLoopRemoveTimer(runLoop.get(), timer.get(), kCFRunLoopCommonModes);
-        CFRunLoopTimerInvalidate(timer.get());
-        runLoop.clear();
-        timer.clear();
-    }
-
-    if (newRunLoop) {
-        runLoop = newRunLoop;
-        memset(&context, 0, sizeof(CFRunLoopTimerContext));
-        RELEASE_ASSERT(manager);
-        context.info = manager;
-        timer = adoptCF(CFRunLoopTimerCreate(kCFAllocatorDefault, CFAbsoluteTimeGetCurrent() + s_decade.seconds(), CFAbsoluteTimeGetCurrent() + s_decade.seconds(), 0, 0, JSRunLoopTimer::Manager::timerDidFireCallback, &context));
-        CFRunLoopAddTimer(runLoop.get(), timer.get(), kCFRunLoopCommonModes);
-
-        EpochTime scheduleTime = epochTime(s_decade);
-        for (auto& pair : timers)
-            scheduleTime = std::min(pair.second, scheduleTime);
-        CFRunLoopTimerSetNextFireDate(timer.get(), scheduleTime.value());
-    }
-}
-#else
-JSRunLoopTimer::Manager::PerVMData::PerVMData(Manager& manager)
-    : runLoop(&RunLoop::current())
-    , timer(makeUnique<RunLoop::Timer<Manager>>(*runLoop, &manager, &JSRunLoopTimer::Manager::timerDidFireCallback))
+JSRunLoopTimer::Manager::PerVMData::PerVMData(Manager& manager, RunLoop& runLoop)
+    : runLoop(runLoop)
+    , timer(makeUnique<RunLoop::Timer<Manager>>(runLoop, &manager, &JSRunLoopTimer::Manager::timerDidFireCallback))
 {
 #if USE(GLIB_EVENT_LOOP)
     timer->setPriority(RunLoopSourcePriority::JavascriptTimer);
@@ -99,13 +57,14 @@ void JSRunLoopTimer::Manager::timerDidFireCallback()
 {
     timerDidFire();
 }
-#endif
 
 JSRunLoopTimer::Manager::PerVMData::~PerVMData()
 {
-#if USE(CF)
-    setRunLoop(nullptr, nullptr);
-#endif
+    // Because RunLoop::Timer is not reference counted, we need to deallocate it
+    // on the same thread on which it fires; otherwise, we might deallocate it
+    // while it's firing.
+    runLoop->dispatch([timer = WTFMove(timer)] {
+    });
 }
 
 void JSRunLoopTimer::Manager::timerDidFire()
@@ -113,22 +72,13 @@ void JSRunLoopTimer::Manager::timerDidFire()
     Vector<Ref<JSRunLoopTimer>> timersToFire;
 
     {
-        auto locker = holdLock(m_lock);
-#if USE(CF)
-        CFRunLoopRef currentRunLoop = CFRunLoopGetCurrent();
-#else
+        Locker locker { m_lock };
         RunLoop* currentRunLoop = &RunLoop::current();
-#endif
         EpochTime nowEpochTime = epochTime(0_s);
         for (auto& entry : m_mapping) {
             PerVMData& data = *entry.value;
-#if USE(CF)
-            if (data.runLoop.get() != currentRunLoop)
+            if (data.runLoop.ptr() != currentRunLoop)
                 continue;
-#else
-            if (data.runLoop != currentRunLoop)
-                continue;
-#endif
 
             EpochTime scheduleTime = epochTime(s_decade);
             for (size_t i = 0; i < data.timers.size(); ++i) {
@@ -148,11 +98,7 @@ void JSRunLoopTimer::Manager::timerDidFire()
                 timersToFire.append(WTFMove(pair.first));
             }
 
-#if USE(CF)
-            CFRunLoopTimerSetNextFireDate(data.timer.get(), scheduleTime.value());
-#else
             data.timer->startOneShot(std::max(0_s, scheduleTime - MonotonicTime::now().secondsSinceEpoch()));
-#endif
         }
     }
 
@@ -172,19 +118,16 @@ JSRunLoopTimer::Manager& JSRunLoopTimer::Manager::shared()
 
 void JSRunLoopTimer::Manager::registerVM(VM& vm)
 {
-    auto data = makeUnique<PerVMData>(*this);
-#if USE(CF)
-    data->setRunLoop(this, vm.runLoop());
-#endif
+    auto data = makeUnique<PerVMData>(*this, vm.runLoop());
 
-    auto locker = holdLock(m_lock);
+    Locker locker { m_lock };
     auto addResult = m_mapping.add({ vm.apiLock() }, WTFMove(data));
     RELEASE_ASSERT(addResult.isNewEntry);
 }
 
 void JSRunLoopTimer::Manager::unregisterVM(VM& vm)
 {
-    auto locker = holdLock(m_lock);
+    Locker locker { m_lock };
 
     auto iter = m_mapping.find({ vm.apiLock() });
     RELEASE_ASSERT(iter != m_mapping.end());
@@ -195,7 +138,7 @@ void JSRunLoopTimer::Manager::scheduleTimer(JSRunLoopTimer& timer, Seconds delay
 {
     EpochTime fireEpochTime = epochTime(delay);
 
-    auto locker = holdLock(m_lock);
+    Locker locker { m_lock };
     auto iter = m_mapping.find(timer.m_apiLock);
     RELEASE_ASSERT(iter != m_mapping.end()); // We don't allow calling this after the VM dies.
 
@@ -213,16 +156,12 @@ void JSRunLoopTimer::Manager::scheduleTimer(JSRunLoopTimer& timer, Seconds delay
     if (!found)
         data.timers.append({ timer, fireEpochTime });
 
-#if USE(CF)
-    CFRunLoopTimerSetNextFireDate(data.timer.get(), scheduleTime.value());
-#else
     data.timer->startOneShot(std::max(0_s, scheduleTime - MonotonicTime::now().secondsSinceEpoch()));
-#endif
 }
 
 void JSRunLoopTimer::Manager::cancelTimer(JSRunLoopTimer& timer)
 {
-    auto locker = holdLock(m_lock);
+    Locker locker { m_lock };
     auto iter = m_mapping.find(timer.m_apiLock);
     if (iter == m_mapping.end()) {
         // It's trivial to allow this to be called after the VM dies, so we allow for it.
@@ -248,16 +187,12 @@ void JSRunLoopTimer::Manager::cancelTimer(JSRunLoopTimer& timer)
         scheduleTime = std::min(scheduleTime, data.timers[i].second);
     }
 
-#if USE(CF)
-    CFRunLoopTimerSetNextFireDate(data.timer.get(), scheduleTime.value());
-#else
     data.timer->startOneShot(std::max(0_s, scheduleTime - MonotonicTime::now().secondsSinceEpoch()));
-#endif
 }
 
-Optional<Seconds> JSRunLoopTimer::Manager::timeUntilFire(JSRunLoopTimer& timer)
+std::optional<Seconds> JSRunLoopTimer::Manager::timeUntilFire(JSRunLoopTimer& timer)
 {
-    auto locker = holdLock(m_lock);
+    Locker locker { m_lock };
     auto iter = m_mapping.find(timer.m_apiLock);
     RELEASE_ASSERT(iter != m_mapping.end()); // We only allow this to be called with a live VM.
 
@@ -269,27 +204,15 @@ Optional<Seconds> JSRunLoopTimer::Manager::timeUntilFire(JSRunLoopTimer& timer)
         }
     }
 
-    return WTF::nullopt;
+    return std::nullopt;
 }
-
-#if USE(CF)
-void JSRunLoopTimer::Manager::didChangeRunLoop(VM& vm, CFRunLoopRef newRunLoop)
-{
-    auto locker = holdLock(m_lock);
-    auto iter = m_mapping.find({ vm.apiLock() });
-    RELEASE_ASSERT(iter != m_mapping.end());
-
-    PerVMData& data = *iter->value;
-    data.setRunLoop(this, newRunLoop);
-}
-#endif
 
 void JSRunLoopTimer::timerDidFire()
 {
     NO_TAIL_CALLS();
 
     {
-        auto locker = holdLock(m_lock);
+        Locker locker { m_lock };
         if (!m_isScheduled) {
             // We raced between this callback being called and cancel() being called.
             // That's fine, we just don't do anything here.
@@ -297,7 +220,7 @@ void JSRunLoopTimer::timerDidFire()
         }
     }
 
-    std::lock_guard<JSLock> lock(m_apiLock.get());
+    Locker locker { m_apiLock.get() };
     RefPtr<VM> vm = m_apiLock->vm();
     if (!vm) {
         // The VM has been destroyed, so we should just give up.
@@ -316,7 +239,7 @@ JSRunLoopTimer::~JSRunLoopTimer()
 {
 }
 
-Optional<Seconds> JSRunLoopTimer::timeUntilFire()
+std::optional<Seconds> JSRunLoopTimer::timeUntilFire()
 {
     return Manager::shared().timeUntilFire(*this);
 }
@@ -324,32 +247,32 @@ Optional<Seconds> JSRunLoopTimer::timeUntilFire()
 void JSRunLoopTimer::setTimeUntilFire(Seconds intervalInSeconds)
 {
     {
-        auto locker = holdLock(m_lock);
+        Locker locker { m_lock };
         m_isScheduled = true;
         Manager::shared().scheduleTimer(*this, intervalInSeconds);
     }
 
-    auto locker = holdLock(m_timerCallbacksLock);
+    Locker locker { m_timerCallbacksLock };
     for (auto& task : m_timerSetCallbacks)
         task->run();
 }
 
 void JSRunLoopTimer::cancelTimer()
 {
-    auto locker = holdLock(m_lock);
+    Locker locker { m_lock };
     m_isScheduled = false;
     Manager::shared().cancelTimer(*this);
 }
 
 void JSRunLoopTimer::addTimerSetNotification(TimerNotificationCallback callback)
 {
-    auto locker = holdLock(m_timerCallbacksLock);
+    Locker locker { m_timerCallbacksLock };
     m_timerSetCallbacks.add(callback);
 }
 
 void JSRunLoopTimer::removeTimerSetNotification(TimerNotificationCallback callback)
 {
-    auto locker = holdLock(m_timerCallbacksLock);
+    Locker locker { m_timerCallbacksLock };
     m_timerSetCallbacks.remove(callback);
 }
 

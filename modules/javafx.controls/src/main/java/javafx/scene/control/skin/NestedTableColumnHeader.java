@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -35,8 +35,6 @@ import javafx.scene.Cursor;
 import javafx.scene.Node;
 import javafx.scene.control.ResizeFeaturesBase;
 import javafx.scene.control.TableColumnBase;
-import javafx.scene.control.TableView;
-import javafx.scene.control.TreeTableView;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
@@ -61,7 +59,7 @@ import java.util.WeakHashMap;
  */
 public class NestedTableColumnHeader extends TableColumnHeader {
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Static Fields                                                           *
      *                                                                         *
@@ -76,7 +74,7 @@ public class NestedTableColumnHeader extends TableColumnHeader {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Private Fields                                                          *
      *                                                                         *
@@ -104,7 +102,7 @@ public class NestedTableColumnHeader extends TableColumnHeader {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Constructor                                                             *
      *                                                                         *
@@ -135,7 +133,7 @@ public class NestedTableColumnHeader extends TableColumnHeader {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Listeners                                                               *
      *                                                                         *
@@ -231,7 +229,7 @@ public class NestedTableColumnHeader extends TableColumnHeader {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Public Methods                                                          *
      *                                                                         *
@@ -390,7 +388,7 @@ public class NestedTableColumnHeader extends TableColumnHeader {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Private Implementation                                                  *
      *                                                                         *
@@ -515,6 +513,7 @@ public class NestedTableColumnHeader extends TableColumnHeader {
 
     // Used to test whether this column header properly represents the given column.
     // In particular, whether it has child column headers for all child columns
+    @Override
     boolean represents(TableColumnBase<?, ?> column) {
         if (column.getColumns().isEmpty()) {
             // this column has no children, but we are in a NestedTableColumnHeader instance,
@@ -564,7 +563,7 @@ public class NestedTableColumnHeader extends TableColumnHeader {
     private void updateContent() {
         // create a temporary list so we only do addAll into the main content
         // observableArrayList once.
-        final List<Node> content = new ArrayList<Node>();
+        final List<Node> content = new ArrayList<>();
 
         // the label is the region that sits above the children columns
         content.add(label);
@@ -598,15 +597,9 @@ public class NestedTableColumnHeader extends TableColumnHeader {
             return;
         }
 
-        boolean isConstrainedResize = false;
         TableViewSkinBase tableSkin = getTableSkin();
         Callback<ResizeFeaturesBase,Boolean> columnResizePolicy = TableSkinUtils.columnResizePolicyProperty(tableSkin).get();
-        if (columnResizePolicy != null) {
-            isConstrainedResize =
-                    tableSkin instanceof TableViewSkin ? TableView.CONSTRAINED_RESIZE_POLICY.equals(columnResizePolicy) :
-                    tableSkin instanceof TreeTableViewSkin ? TreeTableView.CONSTRAINED_RESIZE_POLICY.equals(columnResizePolicy) :
-                    false;
-        }
+        boolean isConstrainedResize = TableSkinUtils.isConstrainedResizePolicy(columnResizePolicy);
 
         // RT-32547 - don't show resize cursor when in constrained resize mode
         // and there is only one column
@@ -653,7 +646,7 @@ public class NestedTableColumnHeader extends TableColumnHeader {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Private Implementation: Column Resizing                                 *
      *                                                                         *

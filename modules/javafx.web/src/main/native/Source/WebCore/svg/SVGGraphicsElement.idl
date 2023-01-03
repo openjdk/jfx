@@ -23,7 +23,9 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-interface SVGGraphicsElement : SVGElement {
+[
+    Exposed=Window
+] interface SVGGraphicsElement : SVGElement {
     readonly attribute SVGAnimatedTransformList transform;
 
     readonly attribute SVGElement nearestViewportElement;
@@ -34,7 +36,7 @@ interface SVGGraphicsElement : SVGElement {
     [ImplementedAs=getScreenCTMForBindings, NewObject] SVGMatrix getScreenCTM();
 
     // FIXME: This is not in the specification and has been dropped by Blink.
-    [MayThrowException, NewObject] SVGMatrix getTransformToElement(optional SVGElement? element = null);
+    [NewObject] SVGMatrix getTransformToElement(optional SVGElement? element = null);
 };
 
-SVGGraphicsElement implements SVGTests;
+SVGGraphicsElement includes SVGTests;

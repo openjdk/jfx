@@ -36,25 +36,24 @@
 
 namespace WebCore {
 
-class WorkerGlobalScope;
-typedef String ErrorString;
+class WorkerOrWorkletGlobalScope;
 
 class WorkerRuntimeAgent final : public Inspector::InspectorRuntimeAgent {
     WTF_MAKE_NONCOPYABLE(WorkerRuntimeAgent);
     WTF_MAKE_FAST_ALLOCATED;
 public:
     WorkerRuntimeAgent(WorkerAgentContext&);
-    virtual ~WorkerRuntimeAgent();
+    ~WorkerRuntimeAgent();
 
 private:
-    Inspector::InjectedScript injectedScriptForEval(ErrorString&, const int* executionContextId);
+    Inspector::InjectedScript injectedScriptForEval(Inspector::Protocol::ErrorString&, std::optional<Inspector::Protocol::Runtime::ExecutionContextId>&&);
 
     // We don't need to mute console for workers.
     void muteConsole() { }
     void unmuteConsole() { }
 
     RefPtr<Inspector::RuntimeBackendDispatcher> m_backendDispatcher;
-    WorkerGlobalScope& m_workerGlobalScope;
+    WorkerOrWorkletGlobalScope& m_globalScope;
 };
 
 } // namespace WebCore

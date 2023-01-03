@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2021 Apple Inc. All rights reserved.
  * Copyright (C) 2009 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -36,22 +36,22 @@
 #include "JSLock.h"
 #include <wtf/text/WTFString.h>
 
-using namespace JSC;
-
 namespace Deprecated {
+
+using namespace JSC;
 
 void ScriptCallArgumentHandler::appendArgument(const String& argument)
 {
-    VM& vm = m_exec->vm();
+    VM& vm = m_globalObject->vm();
     JSLockHolder lock(vm);
     m_arguments.append(jsString(vm, argument));
 }
 
 void ScriptCallArgumentHandler::appendArgument(const char* argument)
 {
-    VM& vm = m_exec->vm();
+    VM& vm = m_globalObject->vm();
     JSLockHolder lock(vm);
-    m_arguments.append(jsString(vm, String(argument)));
+    m_arguments.append(jsString(vm, argument));
 }
 
 void ScriptCallArgumentHandler::appendArgument(JSValue argument)
@@ -61,31 +61,31 @@ void ScriptCallArgumentHandler::appendArgument(JSValue argument)
 
 void ScriptCallArgumentHandler::appendArgument(long argument)
 {
-    JSLockHolder lock(m_exec);
+    JSLockHolder lock(m_globalObject);
     m_arguments.append(jsNumber(argument));
 }
 
 void ScriptCallArgumentHandler::appendArgument(long long argument)
 {
-    JSLockHolder lock(m_exec);
+    JSLockHolder lock(m_globalObject);
     m_arguments.append(jsNumber(argument));
 }
 
 void ScriptCallArgumentHandler::appendArgument(unsigned int argument)
 {
-    JSLockHolder lock(m_exec);
+    JSLockHolder lock(m_globalObject);
     m_arguments.append(jsNumber(argument));
 }
 
 void ScriptCallArgumentHandler::appendArgument(uint64_t argument)
 {
-    JSLockHolder lock(m_exec);
+    JSLockHolder lock(m_globalObject);
     m_arguments.append(jsNumber(argument));
 }
 
 void ScriptCallArgumentHandler::appendArgument(int argument)
 {
-    JSLockHolder lock(m_exec);
+    JSLockHolder lock(m_globalObject);
     m_arguments.append(jsNumber(argument));
 }
 
@@ -95,52 +95,50 @@ void ScriptCallArgumentHandler::appendArgument(bool argument)
 }
 
 ScriptFunctionCall::ScriptFunctionCall(const Deprecated::ScriptObject& thisObject, const String& name, ScriptFunctionCallHandler callHandler)
-    : ScriptCallArgumentHandler(thisObject.scriptState())
+    : ScriptCallArgumentHandler(thisObject.globalObject())
     , m_callHandler(callHandler)
     , m_thisObject(thisObject)
     , m_name(name)
 {
 }
 
-JSValue ScriptFunctionCall::call(bool& hadException)
+Expected<JSValue, NakedPtr<Exception>> ScriptFunctionCall::call()
 {
     JSObject* thisObject = m_thisObject.jsObject();
 
-    VM& vm = m_exec->vm();
+    VM& vm = m_globalObject->vm();
     JSLockHolder lock(vm);
-    auto scope = DECLARE_THROW_SCOPE(vm);
+    auto scope = DECLARE_CATCH_SCOPE(vm);
 
-    JSValue function = thisObject->get(m_exec, Identifier::fromString(vm, m_name));
-    if (UNLIKELY(scope.exception())) {
-        hadException = true;
+    auto makeExceptionResult = [&] (Exception* exception) -> Expected<JSValue, NakedPtr<Exception>> {
+        // Do not treat a terminated execution exception as having an exception. Just treat it as an empty result.
+        if (!vm.isTerminationException(exception))
+            return makeUnexpected(exception);
         return { };
+    };
+
+    JSValue function = thisObject->get(m_globalObject, Identifier::fromString(vm, m_name));
+    Exception* exception = scope.exception();
+    if (UNLIKELY(exception)) {
+        scope.clearException();
+        return makeExceptionResult(exception);
     }
 
-    CallData callData;
-    CallType callType = getCallData(vm, function, callData);
-    if (callType == CallType::None)
+    auto callData = getCallData(vm, function);
+    if (callData.type == CallData::Type::None)
         return { };
 
     JSValue result;
-    NakedPtr<Exception> exception;
+    NakedPtr<Exception> uncaughtException;
     if (m_callHandler)
-        result = m_callHandler(m_exec, function, callType, callData, thisObject, m_arguments, exception);
+        result = m_callHandler(m_globalObject, function, callData, thisObject, m_arguments, uncaughtException);
     else
-        result = JSC::call(m_exec, function, callType, callData, thisObject, m_arguments, exception);
+        result = JSC::call(m_globalObject, function, callData, thisObject, m_arguments, uncaughtException);
 
-    if (exception) {
-        // Do not treat a terminated execution exception as having an exception. Just treat it as an empty result.
-        hadException = !isTerminatedExecutionException(vm, exception);
-        return { };
-    }
+    if (uncaughtException)
+        return makeExceptionResult(uncaughtException);
 
     return result;
-}
-
-JSC::JSValue ScriptFunctionCall::call()
-{
-    bool hadException;
-    return call(hadException);
 }
 
 } // namespace Deprecated

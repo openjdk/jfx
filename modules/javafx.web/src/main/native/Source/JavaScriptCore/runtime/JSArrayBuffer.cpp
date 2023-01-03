@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,9 +27,7 @@
 #include "JSArrayBuffer.h"
 
 #include "JSCInlines.h"
-#include "TypeError.h"
 #include "TypedArrayController.h"
-#include <wtf/Gigacage.h>
 
 namespace JSC {
 
@@ -54,7 +52,7 @@ JSArrayBuffer* JSArrayBuffer::create(
     VM& vm, Structure* structure, RefPtr<ArrayBuffer>&& buffer)
 {
     JSArrayBuffer* result =
-        new (NotNull, allocateCell<JSArrayBuffer>(vm.heap))
+        new (NotNull, allocateCell<JSArrayBuffer>(vm))
         JSArrayBuffer(vm, structure, WTFMove(buffer));
     result->finishCreation(vm, structure->globalObject());
     return result;

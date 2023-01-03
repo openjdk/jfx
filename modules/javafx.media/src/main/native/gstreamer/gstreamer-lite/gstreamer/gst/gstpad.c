@@ -43,7 +43,7 @@
  * then a guaranteed unique name will be assigned to it.
  *
  * A #GstElement creating a pad will typically use the various
- * gst_pad_set_*_function() calls to register callbacks for events, queries or
+ * gst_pad_set_*_function\() calls to register callbacks for events, queries or
  * dataflow on the pads.
  *
  * gst_pad_get_parent() will retrieve the #GstElement that owns the pad.
@@ -344,7 +344,7 @@ gst_pad_class_init (GstPadClass * klass)
   gst_pad_signals[PAD_LINKED] =
       g_signal_new ("linked", G_TYPE_FROM_CLASS (klass), G_SIGNAL_RUN_LAST,
       G_STRUCT_OFFSET (GstPadClass, linked), NULL, NULL,
-      g_cclosure_marshal_generic, G_TYPE_NONE, 1, GST_TYPE_PAD);
+      NULL, G_TYPE_NONE, 1, GST_TYPE_PAD);
   /**
    * GstPad::unlinked:
    * @pad: the pad that emitted the signal
@@ -355,7 +355,7 @@ gst_pad_class_init (GstPadClass * klass)
   gst_pad_signals[PAD_UNLINKED] =
       g_signal_new ("unlinked", G_TYPE_FROM_CLASS (klass), G_SIGNAL_RUN_LAST,
       G_STRUCT_OFFSET (GstPadClass, unlinked), NULL, NULL,
-      g_cclosure_marshal_generic, G_TYPE_NONE, 1, GST_TYPE_PAD);
+      NULL, G_TYPE_NONE, 1, GST_TYPE_PAD);
 
   pspec_caps = g_param_spec_boxed ("caps", "Caps",
       "The capabilities of the pad", GST_TYPE_CAPS,
@@ -723,9 +723,8 @@ gst_pad_dispose (GObject * object)
 
   GST_OBJECT_LOCK (pad);
   remove_events (pad);
-  GST_OBJECT_UNLOCK (pad);
-
   g_hook_list_clear (&pad->probes);
+  GST_OBJECT_UNLOCK (pad);
 
   G_OBJECT_CLASS (parent_class)->dispose (object);
 }
@@ -1372,8 +1371,10 @@ cleanup_hook (GstPad * pad, GHook * hook)
   GST_DEBUG_OBJECT (pad,
       "cleaning up hook %lu with flags %08x", hook->hook_id, hook->flags);
 
-  if (!G_HOOK_IS_VALID (hook))
+  if (!G_HOOK_IS_VALID (hook)) {
+    /* We've already destroyed this hook */
     return;
+  }
 
   type = (hook->flags) >> G_HOOK_FLAG_USER_SHIFT;
 
@@ -1493,6 +1494,9 @@ gst_pad_add_probe (GstPad * pad, GstPadProbeType mask,
       gst_object_ref (pad);
       pad->priv->idle_running++;
 
+      /* Ref the hook, it could be destroyed by the callback or concurrently */
+      g_hook_ref (&pad->probes, hook);
+
       /* the pad is idle now, we can signal the idle callback now */
       GST_CAT_LOG_OBJECT (GST_CAT_SCHEDULING, pad,
           "pad is idle, trigger idle callback");
@@ -1524,6 +1528,7 @@ gst_pad_add_probe (GstPad * pad, GstPadProbeType mask,
           GST_DEBUG_OBJECT (pad, "probe returned %d", ret);
           break;
       }
+      g_hook_unref (&pad->probes, hook);
       pad->priv->idle_running--;
       if (pad->priv->idle_running == 0) {
         GST_PAD_BLOCK_BROADCAST (pad);
@@ -2851,6 +2856,72 @@ no_peer:
 }
 
 /**
+ * gst_pad_get_single_internal_link:
+ * @pad: the #GstPad to get the internal link of.
+ *
+ * If there is a single internal link of the given pad, this function will
+ * return it. Otherwise, it will return NULL.
+ *
+ * Returns: (transfer full) (nullable): a #GstPad, or %NULL if @pad has none
+ * or more than one internal links. Unref returned pad with
+ * gst_object_unref().
+ *
+ * Since: 1.18
+ */
+GstPad *
+gst_pad_get_single_internal_link (GstPad * pad)
+{
+  GstIterator *iter;
+  gboolean done = FALSE;
+  GValue item = { 0, };
+  GstPad *ret = NULL;
+
+  g_return_val_if_fail (GST_IS_PAD (pad), NULL);
+
+  iter = gst_pad_iterate_internal_links (pad);
+
+  if (!iter)
+    return NULL;
+
+  while (!done) {
+    switch (gst_iterator_next (iter, &item)) {
+      case GST_ITERATOR_OK:
+      {
+        if (ret == NULL) {
+          ret = g_value_dup_object (&item);
+        } else {
+          /* More than one internal link found - don't bother reffing */
+          gst_clear_object (&ret);
+          GST_DEBUG_OBJECT (pad,
+              "Requested single internally linked pad, multiple found");
+          done = TRUE;
+        }
+        g_value_reset (&item);
+        break;
+      }
+      case GST_ITERATOR_RESYNC:
+        gst_clear_object (&ret);
+        gst_iterator_resync (iter);
+        break;
+      case GST_ITERATOR_ERROR:
+        GST_ERROR_OBJECT (pad, "Could not iterate over internally linked pads");
+        return NULL;
+      case GST_ITERATOR_DONE:
+        if (ret == NULL) {
+          GST_DEBUG_OBJECT (pad,
+              "Requested single internally linked pad, none found");
+        }
+        done = TRUE;
+        break;
+    }
+  }
+  g_value_unset (&item);
+  gst_iterator_free (iter);
+
+  return ret;
+}
+
+/**
  * gst_pad_iterate_internal_links_default:
  * @pad: the #GstPad to get the internal links of.
  * @parent: (allow-none): the parent of @pad or %NULL
@@ -3160,11 +3231,17 @@ gst_pad_query_accept_caps_default (GstPad * pad, GstQuery * query)
           GST_PTR_FORMAT, allowed, caps);
       result = gst_caps_is_subset (caps, allowed);
     }
+    if (!result) {
+      GST_CAT_WARNING_OBJECT (GST_CAT_CAPS, pad, "caps: %" GST_PTR_FORMAT
+          " were not compatible with: %" GST_PTR_FORMAT, caps, allowed);
+    }
     gst_caps_unref (allowed);
   } else {
-    GST_DEBUG_OBJECT (pad, "no compatible caps allowed on the pad");
+    GST_CAT_DEBUG_OBJECT (GST_CAT_CAPS, pad,
+        "no compatible caps allowed on the pad");
     result = FALSE;
   }
+
   gst_query_set_accept_caps_result (query, result);
 
 done:
@@ -3461,15 +3538,13 @@ gst_pad_query_default (GstPad * pad, GstObject * parent, GstQuery * query)
 
 #define N_STACK_ALLOCATE_PROBES (16)
 
-static void
-probe_hook_marshal (GHook * hook, ProbeMarshall * data)
+/* A helper that checks if a probe was already
+ * in the called_probes list, and adds it if
+ * not. Used to avoid calling probes a 2nd time when
+ * looping again after probe removal */
+static gboolean
+check_probe_already_called (GHook * hook, ProbeMarshall * data)
 {
-  GstPad *pad = data->pad;
-  GstPadProbeInfo *info = data->info;
-  GstPadProbeType type, flags;
-  GstPadProbeCallback callback;
-  GstPadProbeReturn ret;
-  gpointer original_data;
   guint i;
 
   /* if we have called this callback, do nothing. But only check
@@ -3477,9 +3552,7 @@ probe_hook_marshal (GHook * hook, ProbeMarshall * data)
   if (data->retry) {
     for (i = 0; i < data->n_called_probes; i++) {
       if (data->called_probes[i] == hook->hook_id) {
-        GST_CAT_LOG_OBJECT (GST_CAT_SCHEDULING, pad,
-            "hook %lu already called", hook->hook_id);
-        return;
+        return TRUE;
       }
     }
   }
@@ -3500,6 +3573,20 @@ probe_hook_marshal (GHook * hook, ProbeMarshall * data)
     }
   }
   data->called_probes[data->n_called_probes++] = hook->hook_id;
+
+  /* This probe was not alraedy called */
+  return FALSE;
+}
+
+static void
+probe_hook_marshal (GHook * hook, ProbeMarshall * data)
+{
+  GstPad *pad = data->pad;
+  GstPadProbeInfo *info = data->info;
+  GstPadProbeType type, flags;
+  GstPadProbeCallback callback;
+  GstPadProbeReturn ret;
+  gpointer original_data;
 
   flags = hook->flags >> G_HOOK_FLAG_USER_SHIFT;
   type = info->type;
@@ -3546,14 +3633,26 @@ probe_hook_marshal (GHook * hook, ProbeMarshall * data)
       (flags & GST_PAD_PROBE_TYPE_EVENT_FLUSH & type) == 0)
     goto no_match;
 
+  if (check_probe_already_called (hook, data)) {
+    /* Reset marshalled = TRUE here, because the probe
+     * was already called and set it the first time around,
+     * and we may want to keep blocking on it.
+     *
+     * https://gitlab.freedesktop.org/gstreamer/gstreamer/-/issues/658
+     */
+    data->marshalled = TRUE;
+    goto already_called;
+  }
+
   GST_CAT_LOG_OBJECT (GST_CAT_SCHEDULING, pad,
       "hook %lu with flags 0x%08x matches", hook->hook_id, flags);
 
-  data->marshalled = TRUE;
-
   callback = (GstPadProbeCallback) hook->func;
-  if (callback == NULL)
+  if (callback == NULL) {
+    /* No callback is equivalent to just returning GST_PAD_PROBE_OK */
+    data->marshalled = TRUE;
     return;
+  }
 
   info->id = hook->hook_id;
 
@@ -3565,6 +3664,18 @@ probe_hook_marshal (GHook * hook, ProbeMarshall * data)
   ret = callback (pad, info, hook->data);
 
   GST_OBJECT_LOCK (pad);
+
+  /* If the probe callback asked for the
+   * probe to be removed, don't set the marshalled flag
+   * otherwise, you can get a case where you return
+   * GST_PAD_PROBE_REMOVE from a buffer probe and
+   * then the pad blocks anyway if there's any other
+   * blocking probes installed.
+   *
+   * https://gitlab.freedesktop.org/gstreamer/gstreamer/-/issues/658
+   */
+  if (ret != GST_PAD_PROBE_REMOVE)
+    data->marshalled = TRUE;
 
   if ((flags & GST_PAD_PROBE_TYPE_IDLE))
     pad->priv->idle_running--;
@@ -3612,6 +3723,12 @@ no_match:
     GST_CAT_LOG_OBJECT (GST_CAT_SCHEDULING, pad,
         "hook %lu with flags 0x%08x does not match %08x",
         hook->hook_id, flags, info->type);
+    return;
+  }
+already_called:
+  {
+    GST_CAT_LOG_OBJECT (GST_CAT_SCHEDULING, pad,
+        "hook %lu already called", hook->hook_id);
     return;
   }
 }
@@ -3702,7 +3819,6 @@ do_probe_callbacks (GstPad * pad, GstPadProbeInfo * info,
   data.info = info;
   data.pass = FALSE;
   data.handled = FALSE;
-  data.marshalled = FALSE;
   data.dropped = FALSE;
 
   /* We stack-allocate for N_STACK_ALLOCATE_PROBES hooks as a first step. If more are needed,
@@ -3724,6 +3840,10 @@ do_probe_callbacks (GstPad * pad, GstPadProbeInfo * info,
 again:
   GST_CAT_LOG_OBJECT (GST_CAT_SCHEDULING, pad, "do probes");
   cookie = pad->priv->probe_list_cookie;
+
+  /* Clear the marshalled flag before doing callbacks. Only if
+   * there are matching callbacks still will it get set */
+  data.marshalled = FALSE;
 
   g_hook_list_marshal (&pad->probes, TRUE,
       (GHookMarshaller) probe_hook_marshal, &data);
@@ -4346,6 +4466,8 @@ gst_pad_chain_data_unchecked (GstPad * pad, GstPadProbeType type, void *data)
         GST_DEBUG_FUNCPTR_NAME (chainlistfunc), gst_flow_get_name (ret));
   }
 
+  pad->ABI.abi.last_flowret = ret;
+
   RELEASE_PARENT (parent);
 
   GST_PAD_STREAM_UNLOCK (pad);
@@ -4357,6 +4479,7 @@ flushing:
   {
     GST_CAT_LOG_OBJECT (GST_CAT_SCHEDULING, pad,
         "chaining, but pad was flushing");
+    pad->ABI.abi.last_flowret = GST_FLOW_FLUSHING;
     GST_OBJECT_UNLOCK (pad);
     GST_PAD_STREAM_UNLOCK (pad);
     gst_mini_object_unref (GST_MINI_OBJECT_CAST (data));
@@ -4365,6 +4488,7 @@ flushing:
 eos:
   {
     GST_CAT_LOG_OBJECT (GST_CAT_SCHEDULING, pad, "chaining, but pad was EOS");
+    pad->ABI.abi.last_flowret = GST_FLOW_EOS;
     GST_OBJECT_UNLOCK (pad);
     GST_PAD_STREAM_UNLOCK (pad);
     gst_mini_object_unref (GST_MINI_OBJECT_CAST (data));
@@ -4374,6 +4498,7 @@ wrong_mode:
   {
     g_critical ("chain on pad %s:%s but it was not in push mode",
         GST_DEBUG_PAD_NAME (pad));
+    pad->ABI.abi.last_flowret = GST_FLOW_ERROR;
     GST_OBJECT_UNLOCK (pad);
     GST_PAD_STREAM_UNLOCK (pad);
     gst_mini_object_unref (GST_MINI_OBJECT_CAST (data));
@@ -4384,8 +4509,6 @@ probe_handled:
   /* PASSTHROUGH */
 probe_stopped:
   {
-    GST_OBJECT_UNLOCK (pad);
-    GST_PAD_STREAM_UNLOCK (pad);
     /* We unref the buffer, except if the probe handled it (CUSTOM_SUCCESS_1) */
     if (!handled)
       gst_mini_object_unref (GST_MINI_OBJECT_CAST (data));
@@ -4400,11 +4523,15 @@ probe_stopped:
         GST_DEBUG_OBJECT (pad, "an error occurred %s", gst_flow_get_name (ret));
         break;
     }
+    pad->ABI.abi.last_flowret = ret;
+    GST_OBJECT_UNLOCK (pad);
+    GST_PAD_STREAM_UNLOCK (pad);
     return ret;
   }
 no_parent:
   {
     GST_DEBUG_OBJECT (pad, "No parent when chaining %" GST_PTR_FORMAT, data);
+    pad->ABI.abi.last_flowret = GST_FLOW_FLUSHING;
     gst_mini_object_unref (GST_MINI_OBJECT_CAST (data));
     GST_OBJECT_UNLOCK (pad);
     GST_PAD_STREAM_UNLOCK (pad);
@@ -4412,6 +4539,7 @@ no_parent:
   }
 no_function:
   {
+    pad->ABI.abi.last_flowret = GST_FLOW_NOT_SUPPORTED;
     RELEASE_PARENT (parent);
     gst_mini_object_unref (GST_MINI_OBJECT_CAST (data));
     g_critical ("chain on pad %s:%s but it has no chainfunction",
@@ -4466,7 +4594,7 @@ gst_pad_chain_list_default (GstPad * pad, GstObject * parent,
   GstBuffer *buffer;
   GstFlowReturn ret;
 
-  GST_INFO_OBJECT (pad, "chaining each buffer in list individually");
+  GST_LOG_OBJECT (pad, "chaining each buffer in list individually");
 
   len = gst_buffer_list_length (list);
 
@@ -4806,6 +4934,10 @@ probed_data:
 
   GST_PAD_STREAM_UNLOCK (pad);
 
+  /* If the caller provided a buffer it must be filled by the getrange
+   * function instead of it returning a new buffer */
+  g_return_val_if_fail (!*buffer || res_buf == *buffer, GST_FLOW_ERROR);
+
   *buffer = res_buf;
 
   return ret;
@@ -5144,7 +5276,7 @@ store_sticky_event (GstPad * pad, GstEvent * event)
   GstEventType type;
   GArray *events;
   gboolean res = FALSE;
-  const gchar *name = NULL;
+  GQuark name_id = 0;
   gboolean insert = TRUE;
 
   type = GST_EVENT_TYPE (event);
@@ -5161,9 +5293,10 @@ store_sticky_event (GstPad * pad, GstEvent * event)
   /* Unset the EOS flag when received STREAM_START event, so pad can
    * store sticky event and then push it later */
   if (type == GST_EVENT_STREAM_START) {
-    GST_LOG_OBJECT (pad, "Removing pending EOS and StreamGroupDone events");
+    GST_LOG_OBJECT (pad, "Removing pending EOS, StreamGroupDone, TAG events");
     remove_event_by_type (pad, GST_EVENT_EOS);
     remove_event_by_type (pad, GST_EVENT_STREAM_GROUP_DONE);
+    remove_event_by_type (pad, GST_EVENT_TAG);
     GST_OBJECT_FLAG_UNSET (pad, GST_PAD_FLAG_EOS);
   }
 
@@ -5171,7 +5304,7 @@ store_sticky_event (GstPad * pad, GstEvent * event)
     goto eos;
 
   if (type & GST_EVENT_TYPE_STICKY_MULTI)
-    name = gst_structure_get_name (gst_event_get_structure (event));
+    name_id = gst_structure_get_name_id (gst_event_get_structure (event));
 
   events = pad->priv->events;
   len = events->len;
@@ -5184,7 +5317,7 @@ store_sticky_event (GstPad * pad, GstEvent * event)
 
     if (type == GST_EVENT_TYPE (ev->event)) {
       /* matching types, check matching name if needed */
-      if (name && !gst_event_has_name (ev->event, name))
+      if (name_id && !gst_event_has_name_id (ev->event, name_id))
         continue;
 
       /* overwrite */
@@ -5621,7 +5754,7 @@ pre_eventfunc_check (GstPad * pad, GstEvent * event)
   /* ERRORS */
 not_accepted:
   {
-    GST_CAT_DEBUG_OBJECT (GST_CAT_CAPS, pad,
+    GST_CAT_WARNING_OBJECT (GST_CAT_CAPS, pad,
         "caps %" GST_PTR_FORMAT " not accepted", caps);
     return GST_FLOW_NOT_NEGOTIATED;
   }
@@ -5706,6 +5839,7 @@ gst_pad_send_event_unchecked (GstPad * pad, GstEvent * event,
           GST_LOG_OBJECT (pad, "Removing pending EOS events");
           remove_event_by_type (pad, GST_EVENT_EOS);
           remove_event_by_type (pad, GST_EVENT_STREAM_GROUP_DONE);
+          remove_event_by_type (pad, GST_EVENT_TAG);
           GST_OBJECT_FLAG_UNSET (pad, GST_PAD_FLAG_EOS);
           break;
         default:
@@ -6081,14 +6215,12 @@ do_stream_status (GstPad * pad, GstStreamStatusType type,
       GValue value = { 0 };
 
       if (type == GST_STREAM_STATUS_TYPE_ENTER) {
-        gchar *tname, *ename, *pname;
+        gchar *tname;
 
-        /* create a good task name */
-        ename = gst_element_get_name (parent);
-        pname = gst_pad_get_name (pad);
-        tname = g_strdup_printf ("%s:%s", ename, pname);
-        g_free (ename);
-        g_free (pname);
+        /* create a good task name (we can directly grab the parent and pad
+         * names since they both exist at this point, and changing the name of
+         * parent and pad when a pad is activating is a big no-no). */
+        tname = g_strdup_printf ("%s:%s", GST_DEBUG_PAD_NAME (pad));
 
         gst_object_set_name (GST_OBJECT_CAST (task), tname);
         g_free (tname);

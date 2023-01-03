@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013, 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,22 +27,31 @@
 #include "JSMap.h"
 
 #include "JSCInlines.h"
-#include "MapPrototype.h"
 
 namespace JSC {
 
 const ClassInfo JSMap::s_info = { "Map", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSMap) };
 
-String JSMap::toStringName(const JSObject*, ExecState*)
+JSMap* JSMap::clone(JSGlobalObject* globalObject, VM& vm, Structure* structure)
 {
-    return "Object"_s;
+    JSMap* instance = new (NotNull, allocateCell<JSMap>(vm)) JSMap(vm, structure);
+    instance->finishCreation(globalObject, vm, this);
+    return instance;
 }
 
-JSMap* JSMap::clone(ExecState* exec, VM& vm, Structure* structure)
+bool JSMap::isSetFastAndNonObservable(Structure* structure)
 {
-    JSMap* instance = new (NotNull, allocateCell<JSMap>(vm.heap)) JSMap(vm, structure);
-    instance->finishCreation(exec, vm, this);
-    return instance;
+    JSGlobalObject* globalObject = structure->globalObject();
+    if (!globalObject->isMapPrototypeSetFastAndNonObservable())
+        return false;
+
+    if (structure->hasPolyProto())
+        return false;
+
+    if (structure->storedPrototype() != globalObject->mapPrototype())
+        return false;
+
+    return true;
 }
 
 bool JSMap::isIteratorProtocolFastAndNonObservable()
@@ -64,25 +73,6 @@ bool JSMap::isIteratorProtocolFastAndNonObservable()
         return false;
 
     return true;
-}
-
-bool JSMap::canCloneFastAndNonObservable(Structure* structure)
-{
-    auto setFastAndNonObservable = [&] (Structure* structure) {
-        JSGlobalObject* globalObject = structure->globalObject();
-        if (!globalObject->isMapPrototypeSetFastAndNonObservable())
-            return false;
-
-        if (structure->hasPolyProto())
-            return false;
-
-        if (structure->storedPrototype() != globalObject->mapPrototype())
-            return false;
-
-        return true;
-    };
-
-    return isIteratorProtocolFastAndNonObservable() && setFastAndNonObservable(structure);
 }
 
 }

@@ -65,6 +65,8 @@ public:
 
     const Vector<Element*>* getAllElementsById(const AtomStringImpl&, const TreeScope&) const;
 
+    const Vector<AtomString> keys() const;
+
 private:
     template <typename KeyMatchingFunction>
     Element* get(const AtomStringImpl&, const TreeScope&, const KeyMatchingFunction&) const;
@@ -79,7 +81,7 @@ private:
         Element* element { nullptr };
         unsigned count { 0 };
         Vector<Element*> orderedList;
-#if !ASSERT_DISABLED || ENABLE(SECURITY_ASSERTIONS)
+#if ASSERT_ENABLED || ENABLE(SECURITY_ASSERTIONS)
         HashSet<Element*> registeredElements;
 #endif
     };

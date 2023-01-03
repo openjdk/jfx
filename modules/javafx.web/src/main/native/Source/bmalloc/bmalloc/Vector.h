@@ -23,8 +23,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef Vector_h
-#define Vector_h
+#pragma once
 
 #include "BInline.h"
 #include "VMAllocate.h"
@@ -72,8 +71,8 @@ public:
     void shrinkToFit();
 
 private:
-    static const size_t growFactor = 2;
-    static const size_t shrinkFactor = 4;
+    static constexpr size_t growFactor = 2;
+    static constexpr size_t shrinkFactor = 4;
     static size_t initialCapacity() { return vmPageSize() / sizeof(T); }
 
     void growCapacity();
@@ -233,5 +232,3 @@ void Vector<T>::shrinkToFit()
 }
 
 } // namespace bmalloc
-
-#endif // Vector_h

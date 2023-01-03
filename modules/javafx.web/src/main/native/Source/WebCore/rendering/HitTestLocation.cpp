@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006, 2008, 2011 Apple Inc. All rights reserved.
+ * Copyright (C) 2006, 2008, 2011, 2020 Apple Inc. All rights reserved.
  * Copyright (C) 2012 Nokia Corporation and/or its subsidiary(-ies)
  *
  * This library is free software; you can redistribute it and/or
@@ -24,50 +24,33 @@
 
 namespace WebCore {
 
-HitTestLocation::HitTestLocation()
-    : m_isRectBased(false)
-    , m_isRectilinear(true)
-{
-}
+HitTestLocation::HitTestLocation() = default;
 
 HitTestLocation::HitTestLocation(const LayoutPoint& point)
     : m_point(point)
-    , m_boundingBox(rectForPoint(point, 0, 0, 0, 0))
+    , m_boundingBox(LayoutRect { flooredIntPoint(point), LayoutSize { 1, 1 } })
     , m_transformedPoint(point)
     , m_transformedRect(m_boundingBox)
-    , m_isRectBased(false)
-    , m_isRectilinear(true)
-{
-}
-
-HitTestLocation::HitTestLocation(const FloatPoint& point)
-    : m_point(flooredLayoutPoint(point))
-    , m_boundingBox(rectForPoint(m_point, 0, 0, 0, 0))
-    , m_transformedPoint(point)
-    , m_transformedRect(m_boundingBox)
-    , m_isRectBased(false)
-    , m_isRectilinear(true)
 {
 }
 
 HitTestLocation::HitTestLocation(const FloatPoint& point, const FloatQuad& quad)
-    : m_transformedPoint(point)
-    , m_transformedRect(quad)
-    , m_isRectBased(true)
+    : m_point { flooredLayoutPoint(point) }
+    , m_boundingBox { quad.enclosingBoundingBox() }
+    , m_transformedPoint { point }
+    , m_transformedRect { quad }
+    , m_isRectBased { true }
+    , m_isRectilinear { quad.isRectilinear() }
 {
-    m_point = flooredLayoutPoint(point);
-    m_boundingBox = enclosingIntRect(quad.boundingBox());
-    m_isRectilinear = quad.isRectilinear();
 }
 
-HitTestLocation::HitTestLocation(const LayoutPoint& centerPoint, unsigned topPadding, unsigned rightPadding, unsigned bottomPadding, unsigned leftPadding)
-    : m_point(centerPoint)
-    , m_boundingBox(rectForPoint(centerPoint, topPadding, rightPadding, bottomPadding, leftPadding))
-    , m_transformedPoint(centerPoint)
-    , m_isRectBased(topPadding || rightPadding || bottomPadding || leftPadding)
-    , m_isRectilinear(true)
+HitTestLocation::HitTestLocation(const LayoutRect& rect)
+    : m_point { rect.center() } // Rounded to an integer point; it may not be the exact center.
+    , m_boundingBox { rect }
+    , m_transformedPoint { rect.center() }
+    , m_transformedRect { FloatQuad { m_boundingBox } }
+    , m_isRectBased { true }
 {
-    m_transformedRect = FloatQuad(m_boundingBox);
 }
 
 HitTestLocation::HitTestLocation(const HitTestLocation& other, const LayoutSize& offset)
@@ -148,19 +131,6 @@ bool HitTestLocation::intersects(const FloatRect& rect) const
 bool HitTestLocation::intersects(const RoundedRect& rect) const
 {
     return rect.intersectsQuad(m_transformedRect);
-}
-
-IntRect HitTestLocation::rectForPoint(const LayoutPoint& point, unsigned topPadding, unsigned rightPadding, unsigned bottomPadding, unsigned leftPadding)
-{
-    IntPoint actualPoint(flooredIntPoint(point));
-    actualPoint -= IntSize(leftPadding, topPadding);
-
-    IntSize actualPadding(leftPadding + rightPadding, topPadding + bottomPadding);
-    // As IntRect is left inclusive and right exclusive (seeing IntRect::contains(x, y)), adding "1".
-    // FIXME: Remove this once non-rect based hit-detection stops using IntRect:intersects.
-    actualPadding += IntSize(1, 1);
-
-    return IntRect(actualPoint, actualPadding);
 }
 
 } // namespace WebCore

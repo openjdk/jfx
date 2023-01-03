@@ -30,18 +30,36 @@
 #include "ResourceResponse.h"
 #include <wtf/Function.h>
 #include <wtf/MessageQueue.h>
+#include <wtf/ThreadSafeRefCounted.h>
 
 namespace WebCore {
 
+class SharedBuffer;
+
+class SynchronousLoaderMessageQueue : public ThreadSafeRefCounted<SynchronousLoaderMessageQueue> {
+public:
+    static Ref<SynchronousLoaderMessageQueue> create() { return adoptRef(*new SynchronousLoaderMessageQueue); }
+
+    void append(std::unique_ptr<Function<void()>>&& task) { m_queue.append(WTFMove(task)); }
+    void kill() { m_queue.kill(); }
+    bool killed() const { return m_queue.killed(); }
+    std::unique_ptr<Function<void()>> waitForMessage() { return m_queue.waitForMessage(); }
+
+private:
+    SynchronousLoaderMessageQueue() = default;
+    MessageQueue<Function<void()>> m_queue;
+};
+
 class SynchronousLoaderClient final : public ResourceHandleClient {
 public:
+    SynchronousLoaderClient();
     virtual ~SynchronousLoaderClient();
 
     void setAllowStoredCredentials(bool allow) { m_allowStoredCredentials = allow; }
     const ResourceResponse& response() const { return m_response; }
-    Vector<char>& mutableData() { return m_data; }
+    Vector<uint8_t>& mutableData() { return m_data; }
     const ResourceError& error() const { return m_error; }
-    MessageQueue<Function<void()>>& messageQueue() { return m_messageQueue; }
+    SynchronousLoaderMessageQueue& messageQueue() { return m_messageQueue.get(); }
 
     WEBCORE_EXPORT static ResourceError platformBadResponseError();
 
@@ -50,8 +68,8 @@ private:
     bool shouldUseCredentialStorage(ResourceHandle*) override;
     void didReceiveAuthenticationChallenge(ResourceHandle*, const AuthenticationChallenge&) override;
     void didReceiveResponseAsync(ResourceHandle*, ResourceResponse&&, CompletionHandler<void()>&&) override;
-    void didReceiveData(ResourceHandle*, const char*, unsigned, int /*encodedDataLength*/) override;
-    void didFinishLoading(ResourceHandle*) override;
+    void didReceiveData(ResourceHandle*, const SharedBuffer&, int /*encodedDataLength*/) override;
+    void didFinishLoading(ResourceHandle*, const NetworkLoadMetrics&) override;
     void didFail(ResourceHandle*, const ResourceError&) override;
 #if USE(PROTECTION_SPACE_AUTH_CALLBACK)
     void canAuthenticateAgainstProtectionSpaceAsync(ResourceHandle*, const ProtectionSpace&, CompletionHandler<void(bool)>&&) override;
@@ -59,8 +77,8 @@ private:
 
     bool m_allowStoredCredentials { false };
     ResourceResponse m_response;
-    Vector<char> m_data;
+    Vector<uint8_t> m_data;
     ResourceError m_error;
-    MessageQueue<Function<void()>> m_messageQueue;
+    Ref<SynchronousLoaderMessageQueue> m_messageQueue;
 };
 }

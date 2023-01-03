@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,10 +25,7 @@
 
 package javafx.print;
 
-import java.util.Arrays;
-
 import javafx.beans.NamedArg;
-import javafx.beans.property.IntegerProperty;
 import javafx.beans.property.ReadOnlyIntegerProperty;
 import javafx.beans.property.ReadOnlyIntegerWrapper;
 
@@ -87,18 +84,14 @@ public final class PageRange {
 
     /**
      * <code>IntegerProperty</code> representing the starting
-     * page number of the range. See {@link getStartPage getStartPage()}
-     * for more information.
+     * page number of the range.
      * @return the starting page number of the range
      */
-    public ReadOnlyIntegerProperty startPageProperty() {
+    public final ReadOnlyIntegerProperty startPageProperty() {
         return startPageImplProperty().getReadOnlyProperty();
     }
 
-    /**
-     * @return the starting page of the range.
-     */
-    public int getStartPage() {
+    public final int getStartPage() {
         return startPageProperty().get();
     }
 
@@ -123,18 +116,19 @@ public final class PageRange {
 
     /**
      * <code>IntegerProperty</code> representing the ending
-     * page number of the range. See {@link #getEndPage getEndPage()}
-     * for more information.
+     * page number of the range.
      * @return the ending page number of the range
      */
-    public ReadOnlyIntegerProperty endPageProperty() {
+    public final ReadOnlyIntegerProperty endPageProperty() {
         return endPageImplProperty().getReadOnlyProperty();
     }
 
-    /**
-     * @return the ending page of the range.
-     */
-    public int getEndPage() {
+    public final int getEndPage() {
         return endPageProperty().get();
+    }
+
+    @Override
+    public String toString() {
+       return "Pages " + getStartPage() + " to " + getEndPage();
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -38,7 +38,6 @@ import javafx.scene.layout.HBox;
 
 import com.sun.javafx.util.Utils;
 import javafx.scene.control.skin.ButtonBarSkin;
-import javafx.beans.value.WritableValue;
 import javafx.css.StyleableProperty;
 
 import java.util.Map;
@@ -145,7 +144,7 @@ public class ButtonBar extends Control {
     // TODO add support for BUTTON_ORDER_NONE
     // TODO test and document what happens with unexpected button order strings
 
-    /**************************************************************************
+    /* ************************************************************************
      *
      * Static fields
      *
@@ -176,7 +175,7 @@ public class ButtonBar extends Control {
 
 
 
-    /**************************************************************************
+    /* ************************************************************************
      *
      * Static enumerations
      *
@@ -432,7 +431,7 @@ public class ButtonBar extends Control {
 
 
 
-    /**************************************************************************
+    /* ************************************************************************
      *
      * Private fields
      *
@@ -442,7 +441,7 @@ public class ButtonBar extends Control {
 
 
 
-    /**************************************************************************
+    /* ************************************************************************
      *
      * Constructors
      *
@@ -471,7 +470,7 @@ public class ButtonBar extends Control {
         // makes it look to css like the user set the value and css will not
         // override. Initializing focusTraversable by calling set on the
         // CssMetaData ensures that css will be able to override the value.
-        ((StyleableProperty<Boolean>)(WritableValue<Boolean>)focusTraversableProperty()).applyStyle(null, Boolean.FALSE);
+        ((StyleableProperty<Boolean>)focusTraversableProperty()).applyStyle(null, Boolean.FALSE);
 
         final boolean buttonOrderEmpty = buttonOrder == null || buttonOrder.isEmpty();
 
@@ -490,7 +489,7 @@ public class ButtonBar extends Control {
 
 
 
-    /**************************************************************************
+    /* ************************************************************************
      *
      * Public API
      *
@@ -519,7 +518,7 @@ public class ButtonBar extends Control {
 
 
 
-    /**************************************************************************
+    /* ************************************************************************
      *
      * Properties
      *
@@ -586,7 +585,7 @@ public class ButtonBar extends Control {
 
 
 
-    /**************************************************************************
+    /* ************************************************************************
      *
      * Implementation
      *
@@ -606,7 +605,7 @@ public class ButtonBar extends Control {
 
 
 
-    /**************************************************************************
+    /* ************************************************************************
      *
      * Support classes / enums
      *

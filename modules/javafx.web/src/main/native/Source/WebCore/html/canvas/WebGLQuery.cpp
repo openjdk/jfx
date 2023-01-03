@@ -30,6 +30,8 @@
 
 #include "WebGLContextGroup.h"
 #include "WebGLRenderingContextBase.h"
+#include <wtf/Lock.h>
+#include <wtf/Locker.h>
 
 namespace WebCore {
 
@@ -40,20 +42,21 @@ Ref<WebGLQuery> WebGLQuery::create(WebGLRenderingContextBase& ctx)
 
 WebGLQuery::~WebGLQuery()
 {
-    deleteObject(0);
+    if (!contextGroup())
+        return;
+
+    runDestructor();
 }
 
 WebGLQuery::WebGLQuery(WebGLRenderingContextBase& ctx)
     : WebGLSharedObject(ctx)
 {
-    // FIXME: Call createQuery from GraphicsContext3D.
+    setObject(ctx.graphicsContextGL()->createQuery());
 }
 
-void WebGLQuery::deleteObjectImpl(GraphicsContext3D* context3d, Platform3DObject object)
+void WebGLQuery::deleteObjectImpl(const AbstractLocker&, GraphicsContextGL* context3d, PlatformGLObject object)
 {
-    UNUSED_PARAM(context3d);
-    UNUSED_PARAM(object);
-    // FIXME: Call deleteQuery from GraphicsContext3D.
+    context3d->deleteQuery(object);
 }
 
 }

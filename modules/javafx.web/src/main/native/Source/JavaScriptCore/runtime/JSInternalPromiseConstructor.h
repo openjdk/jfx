@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -34,8 +34,8 @@ class JSInternalPromisePrototype;
 
 class JSInternalPromiseConstructor final : public JSPromiseConstructor {
 public:
-    typedef JSPromiseConstructor Base;
-    static const unsigned StructureFlags = Base::StructureFlags | HasStaticPropertyTable;
+    using Base = JSPromiseConstructor;
+    static constexpr unsigned StructureFlags = Base::StructureFlags | HasStaticPropertyTable;
 
     static JSInternalPromiseConstructor* create(VM&, Structure*, JSInternalPromisePrototype*, GetterSetter*);
     static Structure* createStructure(VM&, JSGlobalObject*, JSValue);
@@ -43,7 +43,8 @@ public:
     DECLARE_INFO;
 
 private:
-    JSInternalPromiseConstructor(VM&, Structure*);
+    JSInternalPromiseConstructor(VM&, FunctionExecutable*, JSGlobalObject*, Structure*);
 };
+static_assert(sizeof(JSInternalPromiseConstructor) == sizeof(JSFunction), "Allocate JSInternalPromiseConstructor in JSFunction IsoSubspace");
 
 } // namespace JSC

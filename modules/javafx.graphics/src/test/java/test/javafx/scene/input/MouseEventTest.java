@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -109,6 +109,44 @@ public class MouseEventTest {
         assertFalse(e.isSynthesized());
         assertTrue(e.isPopupTrigger());
         assertFalse(e.isStillSincePress());
+    }
+
+    @Test public void testToStringMatchingBrackets() {
+        Rectangle node = new Rectangle();
+        node.setTranslateX(3);
+        node.setTranslateY(2);
+        node.setTranslateZ(50);
+
+        PickResult pickRes = new PickResult(node, new Point3D(15, 25, 100), 33);
+
+        MouseEvent e = new MouseEvent(MouseEvent.MOUSE_PRESSED,
+                10, 20, 30, 40, MouseButton.PRIMARY, 1,
+                false, false, false, false,
+                true, false, false,
+                false, false, false, pickRes);
+
+        assertSame(pickRes, e.getPickResult());
+
+        // Check the String returned by MouseEvent::toString method to ensure
+        // that all of the square brackets are matching.
+        // Note that this will fail if the toString method of any of the
+        // components that make up the MouseEvent returns a String with
+        // mismatched brackets, including the source and target
+        // objects, the PickResult, the picked Node, or the picked Point3D.
+        String str = e.toString();
+        int bracketCount = 0;
+        for (int i = 0; i < str.length(); i++) {
+            switch (str.charAt(i)) {
+                case '[':
+                    ++bracketCount;
+                    break;
+                case ']':
+                    --bracketCount;
+                    assertTrue("Too many closing brackets: " + str, bracketCount >= 0);
+                    break;
+            }
+        }
+        assertEquals("Too few closing brackets: " + str, 0, bracketCount);
     }
 
     @Test public void testShortConstructorWithoutPickResult() {

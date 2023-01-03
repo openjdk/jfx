@@ -42,7 +42,7 @@ GST_DEBUG_CATEGORY_EXTERN (riff_debug);
  *        data that is within the range of strf.size, but excluding any
  *        additional data withint this chunk but outside strf.size.
  * @strf_data: a #GstBuffer containing the additional data in the strf
- *             chunk outside reach of strf.size. Ususally a palette.
+ *             chunk outside reach of strf.size. Usually a palette.
  * @strd_data: a #GstBuffer containing the data in the strd stream header
  *             chunk. Usually codec initialization data.
  * @codec_name: if given, will be filled with a human-readable codec name.
@@ -353,6 +353,17 @@ gst_riff_create_video_caps (guint32 codec_fcc,
         *codec_name = g_strdup ("ITU H.264");
       break;
 
+    case GST_MAKE_FOURCC ('X', '2', '6', '5'):
+    case GST_MAKE_FOURCC ('x', '2', '6', '5'):
+    case GST_MAKE_FOURCC ('H', '2', '6', '5'):
+    case GST_MAKE_FOURCC ('h', '2', '6', '5'):
+    case GST_MAKE_FOURCC ('h', 'v', 'c', '1'):
+    case GST_MAKE_FOURCC ('H', 'V', 'C', '1'):
+      caps = gst_caps_new_empty_simple ("video/x-h265");
+      if (codec_name)
+        *codec_name = g_strdup ("H.265");
+      break;
+
     case GST_RIFF_VSSH:
       caps = gst_caps_new_simple ("video/x-h264",
           "variant", G_TYPE_STRING, "videosoft", NULL);
@@ -507,6 +518,12 @@ gst_riff_create_video_caps (guint32 codec_fcc,
           "msmpegversion", G_TYPE_INT, 43, NULL);
       if (codec_name)
         *codec_name = g_strdup ("Microsoft MPEG-4 4.3");        /* FIXME? */
+      break;
+
+    case GST_MAKE_FOURCC ('C', 'F', 'H', 'D'):
+      caps = gst_caps_new_empty_simple ("video/x-cineform");
+      if (codec_name)
+        *codec_name = g_strdup ("CineForm");
       break;
 
     case GST_MAKE_FOURCC ('D', 'V', 'S', 'D'):
@@ -1864,6 +1881,7 @@ gst_riff_create_video_template_caps (void)
     GST_MAKE_FOURCC ('3', 'I', 'V', '1'),
     GST_MAKE_FOURCC ('A', 'S', 'V', '1'),
     GST_MAKE_FOURCC ('A', 'S', 'V', '2'),
+    GST_MAKE_FOURCC ('C', 'F', 'H', 'D'),
     GST_MAKE_FOURCC ('C', 'L', 'J', 'R'),
     GST_MAKE_FOURCC ('C', 'S', 'C', 'D'),
     GST_MAKE_FOURCC ('C', 'Y', 'U', 'V'),
@@ -1880,6 +1898,7 @@ gst_riff_create_video_template_caps (void)
     GST_MAKE_FOURCC ('H', '2', '6', '3'),
     GST_MAKE_FOURCC ('V', 'X', '1', 'K'),
     GST_MAKE_FOURCC ('H', '2', '6', '4'),
+    GST_MAKE_FOURCC ('H', '2', '6', '5'),
     GST_MAKE_FOURCC ('H', 'F', 'Y', 'U'),
     GST_MAKE_FOURCC ('I', '2', '6', '3'),
     GST_MAKE_FOURCC ('I', '4', '2', '0'),

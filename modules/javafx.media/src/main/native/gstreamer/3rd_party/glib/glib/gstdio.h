@@ -61,7 +61,7 @@ typedef struct stat GStatBuf;
  * A few functions can't be handled in this way, since they are not defined
  * in a portable system header that we could include here.
  *
- * #G_STDIO_WRAP_ON_UNIX is not public API and its behaviour is not guaranteed
+ * G_STDIO_WRAP_ON_UNIX is not public API and its behaviour is not guaranteed
  * in future.
  */
 
@@ -76,6 +76,7 @@ typedef struct stat GStatBuf;
 #define g_remove  remove
 #define g_fopen   fopen
 #define g_freopen freopen
+#define g_fsync   fsync
 #define g_utime   utime
 #endif
 
@@ -158,9 +159,12 @@ FILE *g_freopen (const gchar *filename,
                  const gchar *mode,
                  FILE        *stream);
 
-struct utimbuf;     /* Don't need the real definition of struct utimbuf when just
-         * including this header.
-         */
+GLIB_AVAILABLE_IN_2_64
+gint g_fsync    (gint fd);
+
+struct utimbuf;         /* Don't need the real definition of struct utimbuf when just
+                                 * including this header.
+                                 */
 
 GLIB_AVAILABLE_IN_ALL
 int g_utime     (const gchar    *filename,

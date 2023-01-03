@@ -61,30 +61,53 @@ void Grid::ensureGridSize(unsigned maximumRowSize, unsigned maximumColumnSize)
     }
 }
 
-void Grid::insert(RenderBox& child, const GridArea& area)
+GridArea Grid::insert(RenderBox& child, const GridArea& area)
 {
-    ASSERT(area.rows.isTranslatedDefinite() && area.columns.isTranslatedDefinite());
-    ensureGridSize(area.rows.endLine(), area.columns.endLine());
+    GridArea clampedArea = area;
+    if (m_maxRows)
+        clampedArea.rows.clamp(m_maxRows);
+    if (m_maxColumns)
+        clampedArea.columns.clamp(m_maxColumns);
 
-    for (auto row : area.rows) {
-        for (auto column : area.columns)
-            m_grid[row][column].append(makeWeakPtr(child));
+    ASSERT(clampedArea.rows.isTranslatedDefinite() && clampedArea.columns.isTranslatedDefinite());
+    ensureGridSize(clampedArea.rows.endLine(), clampedArea.columns.endLine());
+
+    for (auto row : clampedArea.rows) {
+        for (auto column : clampedArea.columns)
+            m_grid[row][column].append(child);
     }
 
-    setGridItemArea(child, area);
+    setGridItemArea(child, clampedArea);
+    return clampedArea;
 }
 
-void Grid::setSmallestTracksStart(int rowStart, int columnStart)
+void Grid::setExplicitGridStart(unsigned rowStart, unsigned columnStart)
 {
-    ASSERT(rowStart > GridPosition::min() && rowStart < GridPosition::max() - 1);
-    ASSERT(columnStart > GridPosition::min() && columnStart < GridPosition::max() - 1);
-    m_smallestRowStart = rowStart;
-    m_smallestColumnStart = columnStart;
+    m_explicitRowStart = rowStart;
+    m_explicitColumnStart = columnStart;
 }
 
-int Grid::smallestTrackStart(GridTrackSizingDirection direction) const
+unsigned Grid::explicitGridStart(GridTrackSizingDirection direction) const
 {
-    return direction == ForRows ? m_smallestRowStart : m_smallestColumnStart;
+    return direction == ForRows ? m_explicitRowStart : m_explicitColumnStart;
+}
+
+void Grid::setClampingForSubgrid(unsigned maxRows, unsigned maxColumns)
+{
+    m_maxRows = maxRows;
+    m_maxColumns = maxColumns;
+}
+
+void Grid::clampAreaToSubgridIfNeeded(GridArea& area)
+{
+    if (!area.rows.isIndefinite()) {
+        if (m_maxRows)
+            area.rows.clamp(m_maxRows);
+    }
+    if (!area.columns.isIndefinite()) {
+        if (m_maxColumns)
+            area.columns.clamp(m_maxColumns);
+    }
 }
 
 GridArea Grid::gridItemArea(const RenderBox& item) const
@@ -157,12 +180,14 @@ void Grid::setNeedsItemsPlacement(bool needsItemsPlacement)
 
     m_grid.shrink(0);
     m_gridItemArea.clear();
-    m_smallestRowStart = 0;
-    m_smallestColumnStart = 0;
+    m_explicitRowStart = 0;
+    m_explicitColumnStart = 0;
     m_autoRepeatEmptyColumns = nullptr;
     m_autoRepeatEmptyRows = nullptr;
     m_autoRepeatColumns = 0;
     m_autoRepeatRows = 0;
+    m_maxColumns = 0;
+    m_maxRows = 0;
 }
 
 GridIterator::GridIterator(const Grid& grid, GridTrackSizingDirection direction, unsigned fixedTrackIndex, unsigned varyingTrackIndex)
@@ -240,6 +265,22 @@ std::unique_ptr<GridArea> GridIterator::nextEmptyGridArea(unsigned fixedTrackSpa
         }
     }
     return nullptr;
+}
+
+GridIterator GridIterator::createForSubgrid(const RenderGrid& subgrid, const GridIterator& outer)
+{
+    ASSERT(subgrid.isSubgridInParentDirection(outer.direction()));
+    GridSpan fixedSpan = downcast<RenderGrid>(subgrid.parent())->gridSpanForChild(subgrid, outer.direction());
+
+    // Translate the current row/column indices into the coordinate
+    // space of the subgrid.
+    unsigned fixedIndex = (outer.direction() == ForColumns) ? outer.m_columnIndex : outer.m_rowIndex;
+    fixedIndex -= fixedSpan.startLine();
+
+    GridTrackSizingDirection innerDirection = GridLayoutFunctions::flowAwareDirectionForChild(*downcast<RenderGrid>(subgrid.parent()), subgrid, outer.direction());
+    ASSERT(subgrid.isSubgrid(innerDirection));
+
+    return GridIterator(subgrid.currentGrid(), innerDirection, fixedIndex);
 }
 
 } // namespace WebCore

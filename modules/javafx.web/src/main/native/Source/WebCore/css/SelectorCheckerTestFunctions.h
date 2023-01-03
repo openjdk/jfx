@@ -27,22 +27,33 @@
 #pragma once
 
 #include "FocusController.h"
+#include "Frame.h"
+#include "FrameSelection.h"
 #include "FullscreenManager.h"
+#include "HTMLDialogElement.h"
 #include "HTMLFrameElement.h"
 #include "HTMLIFrameElement.h"
+#include "HTMLImageElement.h"
 #include "HTMLInputElement.h"
 #include "HTMLOptionElement.h"
-#include "RenderScrollbar.h"
-#include "ScrollableArea.h"
-#include "ScrollbarTheme.h"
+#include "InspectorInstrumentation.h"
+#include "Page.h"
+#include "SelectorChecker.h"
+#include "Settings.h"
+#include "ShadowRoot.h"
 #include <wtf/Compiler.h>
 
 #if ENABLE(ATTACHMENT_ELEMENT)
 #include "HTMLAttachmentElement.h"
 #endif
 
-#if ENABLE(VIDEO_TRACK)
+#if ENABLE(VIDEO)
+#include "HTMLMediaElement.h"
 #include "WebVTTElement.h"
+#endif
+
+#if ENABLE(PICTURE_IN_PICTURE_API)
+#include "HTMLVideoElement.h"
 #endif
 
 namespace WebCore {
@@ -60,6 +71,11 @@ ALWAYS_INLINE bool isAutofilledStrongPassword(const Element& element)
 ALWAYS_INLINE bool isAutofilledStrongPasswordViewable(const Element& element)
 {
     return is<HTMLInputElement>(element) && downcast<HTMLInputElement>(element).isAutoFilledAndViewable();
+}
+
+ALWAYS_INLINE bool isAutofilledAndObscured(const Element& element)
+{
+    return is<HTMLInputElement>(element) && downcast<HTMLInputElement>(element).isAutoFilledAndObscured();
 }
 
 ALWAYS_INLINE bool matchesDefaultPseudoClass(const Element& element)
@@ -99,7 +115,7 @@ ALWAYS_INLINE bool isChecked(const Element& element)
         return inputElement.shouldAppearChecked() && !inputElement.shouldAppearIndeterminate();
     }
     if (is<HTMLOptionElement>(element))
-        return const_cast<HTMLOptionElement&>(downcast<HTMLOptionElement>(element)).selected();
+        return const_cast<HTMLOptionElement&>(downcast<HTMLOptionElement>(element)).selected(AllowStyleInvalidation::No);
 
     return false;
 }
@@ -182,7 +198,7 @@ ALWAYS_INLINE bool containslanguageSubtagMatchingRange(StringView language, Stri
 ALWAYS_INLINE bool matchesLangPseudoClass(const Element& element, const Vector<AtomString>& argumentList)
 {
     AtomString language;
-#if ENABLE(VIDEO_TRACK)
+#if ENABLE(VIDEO)
     if (is<WebVTTElement>(element))
         language = downcast<WebVTTElement>(element).language();
     else
@@ -249,105 +265,122 @@ ALWAYS_INLINE bool matchesIndeterminatePseudoClass(const Element& element)
 
 ALWAYS_INLINE bool scrollbarMatchesEnabledPseudoClass(const SelectorChecker::CheckingContext& context)
 {
-    return context.scrollbar && context.scrollbar->enabled();
+    return context.scrollbarState && context.scrollbarState->enabled;
 }
 
 ALWAYS_INLINE bool scrollbarMatchesDisabledPseudoClass(const SelectorChecker::CheckingContext& context)
 {
-    return context.scrollbar && !context.scrollbar->enabled();
+    return context.scrollbarState && !context.scrollbarState->enabled;
 }
 
 ALWAYS_INLINE bool scrollbarMatchesHoverPseudoClass(const SelectorChecker::CheckingContext& context)
 {
-    if (!context.scrollbar)
+    if (!context.scrollbarState)
         return false;
-    ScrollbarPart hoveredPart = context.scrollbar->hoveredPart();
-    if (context.scrollbarPart == ScrollbarBGPart)
+    auto scrollbarPart = context.scrollbarState->scrollbarPart;
+    auto hoveredPart = context.scrollbarState->hoveredPart;
+    if (scrollbarPart == ScrollbarBGPart)
         return hoveredPart != NoPart;
-    if (context.scrollbarPart == TrackBGPart)
+    if (scrollbarPart == TrackBGPart)
         return hoveredPart == BackTrackPart || hoveredPart == ForwardTrackPart || hoveredPart == ThumbPart;
-    return context.scrollbarPart == hoveredPart;
+    return scrollbarPart == hoveredPart;
 }
 
 ALWAYS_INLINE bool scrollbarMatchesActivePseudoClass(const SelectorChecker::CheckingContext& context)
 {
-    if (!context.scrollbar)
+    if (!context.scrollbarState)
         return false;
-    ScrollbarPart pressedPart = context.scrollbar->pressedPart();
-    if (context.scrollbarPart == ScrollbarBGPart)
+    auto scrollbarPart = context.scrollbarState->scrollbarPart;
+    auto pressedPart = context.scrollbarState->pressedPart;
+    if (scrollbarPart == ScrollbarBGPart)
         return pressedPart != NoPart;
-    if (context.scrollbarPart == TrackBGPart)
+    if (scrollbarPart == TrackBGPart)
         return pressedPart == BackTrackPart || pressedPart == ForwardTrackPart || pressedPart == ThumbPart;
-    return context.scrollbarPart == pressedPart;
+    return scrollbarPart == pressedPart;
 }
 
 ALWAYS_INLINE bool scrollbarMatchesHorizontalPseudoClass(const SelectorChecker::CheckingContext& context)
 {
-    return context.scrollbar && context.scrollbar->orientation() == HorizontalScrollbar;
+    return context.scrollbarState && context.scrollbarState->orientation == ScrollbarOrientation::Horizontal;
 }
 
 ALWAYS_INLINE bool scrollbarMatchesVerticalPseudoClass(const SelectorChecker::CheckingContext& context)
 {
-    return context.scrollbar && context.scrollbar->orientation() == VerticalScrollbar;
+    return context.scrollbarState && context.scrollbarState->orientation == ScrollbarOrientation::Vertical;
 }
 
 ALWAYS_INLINE bool scrollbarMatchesDecrementPseudoClass(const SelectorChecker::CheckingContext& context)
 {
-    return context.scrollbarPart == BackButtonStartPart || context.scrollbarPart == BackButtonEndPart || context.scrollbarPart == BackTrackPart;
+    if (!context.scrollbarState)
+        return false;
+    auto scrollbarPart = context.scrollbarState->scrollbarPart;
+    return scrollbarPart == BackButtonStartPart || scrollbarPart == BackButtonEndPart || scrollbarPart == BackTrackPart;
 }
 
 ALWAYS_INLINE bool scrollbarMatchesIncrementPseudoClass(const SelectorChecker::CheckingContext& context)
 {
-    return context.scrollbarPart == ForwardButtonStartPart || context.scrollbarPart == ForwardButtonEndPart || context.scrollbarPart == ForwardTrackPart;
+    if (!context.scrollbarState)
+        return false;
+    auto scrollbarPart = context.scrollbarState->scrollbarPart;
+    return scrollbarPart == ForwardButtonStartPart || scrollbarPart == ForwardButtonEndPart || scrollbarPart == ForwardTrackPart;
 }
 
 ALWAYS_INLINE bool scrollbarMatchesStartPseudoClass(const SelectorChecker::CheckingContext& context)
 {
-    return context.scrollbarPart == BackButtonStartPart || context.scrollbarPart == ForwardButtonStartPart || context.scrollbarPart == BackTrackPart;
+    if (!context.scrollbarState)
+        return false;
+    auto scrollbarPart = context.scrollbarState->scrollbarPart;
+    return scrollbarPart == BackButtonStartPart || scrollbarPart == ForwardButtonStartPart || scrollbarPart == BackTrackPart;
 }
 
 ALWAYS_INLINE bool scrollbarMatchesEndPseudoClass(const SelectorChecker::CheckingContext& context)
 {
-    return context.scrollbarPart == BackButtonEndPart || context.scrollbarPart == ForwardButtonEndPart || context.scrollbarPart == ForwardTrackPart;
+    if (!context.scrollbarState)
+        return false;
+    auto scrollbarPart = context.scrollbarState->scrollbarPart;
+    return scrollbarPart == BackButtonEndPart || scrollbarPart == ForwardButtonEndPart || scrollbarPart == ForwardTrackPart;
 }
 
 ALWAYS_INLINE bool scrollbarMatchesDoubleButtonPseudoClass(const SelectorChecker::CheckingContext& context)
 {
-    if (!context.scrollbar)
+    if (!context.scrollbarState)
         return false;
-    ScrollbarButtonsPlacement buttonsPlacement = context.scrollbar->theme().buttonsPlacement();
-    if (context.scrollbarPart == BackButtonStartPart || context.scrollbarPart == ForwardButtonStartPart || context.scrollbarPart == BackTrackPart)
+    auto scrollbarPart = context.scrollbarState->scrollbarPart;
+    auto buttonsPlacement = context.scrollbarState->buttonsPlacement;
+    if (scrollbarPart == BackButtonStartPart || scrollbarPart == ForwardButtonStartPart || scrollbarPart == BackTrackPart)
         return buttonsPlacement == ScrollbarButtonsDoubleStart || buttonsPlacement == ScrollbarButtonsDoubleBoth;
-    if (context.scrollbarPart == BackButtonEndPart || context.scrollbarPart == ForwardButtonEndPart || context.scrollbarPart == ForwardTrackPart)
+    if (scrollbarPart == BackButtonEndPart || scrollbarPart == ForwardButtonEndPart || scrollbarPart == ForwardTrackPart)
         return buttonsPlacement == ScrollbarButtonsDoubleEnd || buttonsPlacement == ScrollbarButtonsDoubleBoth;
     return false;
 }
 
 ALWAYS_INLINE bool scrollbarMatchesSingleButtonPseudoClass(const SelectorChecker::CheckingContext& context)
 {
-    if (!context.scrollbar)
+    if (!context.scrollbarState)
         return false;
-    ScrollbarButtonsPlacement buttonsPlacement = context.scrollbar->theme().buttonsPlacement();
-    if (context.scrollbarPart == BackButtonStartPart || context.scrollbarPart == ForwardButtonEndPart || context.scrollbarPart == BackTrackPart || context.scrollbarPart == ForwardTrackPart)
+    auto scrollbarPart = context.scrollbarState->scrollbarPart;
+    auto buttonsPlacement = context.scrollbarState->buttonsPlacement;
+    if (scrollbarPart == BackButtonStartPart || scrollbarPart == ForwardButtonEndPart || scrollbarPart == BackTrackPart || scrollbarPart == ForwardTrackPart)
         return buttonsPlacement == ScrollbarButtonsSingle;
     return false;
 }
 
 ALWAYS_INLINE bool scrollbarMatchesNoButtonPseudoClass(const SelectorChecker::CheckingContext& context)
 {
-    if (!context.scrollbar)
+    if (!context.scrollbarState)
         return false;
-    ScrollbarButtonsPlacement buttonsPlacement = context.scrollbar->theme().buttonsPlacement();
-    if (context.scrollbarPart == BackTrackPart)
+    auto scrollbarPart = context.scrollbarState->scrollbarPart;
+    auto buttonsPlacement = context.scrollbarState->buttonsPlacement;
+    if (scrollbarPart == BackTrackPart)
         return buttonsPlacement == ScrollbarButtonsNone || buttonsPlacement == ScrollbarButtonsDoubleEnd;
-    if (context.scrollbarPart == ForwardTrackPart)
+    if (scrollbarPart == ForwardTrackPart)
         return buttonsPlacement == ScrollbarButtonsNone || buttonsPlacement == ScrollbarButtonsDoubleStart;
     return false;
 }
 
 ALWAYS_INLINE bool scrollbarMatchesCornerPresentPseudoClass(const SelectorChecker::CheckingContext& context)
 {
-    return context.scrollbar && context.scrollbar->scrollableArea().isScrollCornerVisible();
+    return context.scrollbarState && context.scrollbarState->scrollCornerIsVisible;
 }
 
 #if ENABLE(FULLSCREEN_API)
@@ -395,7 +428,16 @@ ALWAYS_INLINE bool matchesFullScreenControlsHiddenPseudoClass(const Element& ele
 
 #endif
 
-#if ENABLE(VIDEO_TRACK)
+#if ENABLE(PICTURE_IN_PICTURE_API)
+
+ALWAYS_INLINE bool matchesPictureInPicturePseudoClass(const Element& element)
+{
+    return is<HTMLVideoElement>(element) && element.document().pictureInPictureElement() == &element;
+}
+
+#endif
+
+#if ENABLE(VIDEO)
 
 ALWAYS_INLINE bool matchesFutureCuePseudoClass(const Element& element)
 {
@@ -407,6 +449,93 @@ ALWAYS_INLINE bool matchesPastCuePseudoClass(const Element& element)
     return is<WebVTTElement>(element) && downcast<WebVTTElement>(element).isPastNode();
 }
 
+ALWAYS_INLINE bool matchesPlayingPseudoClass(const Element& element)
+{
+    return is<HTMLMediaElement>(element) && !downcast<HTMLMediaElement>(element).paused();
+}
+
+ALWAYS_INLINE bool matchesPausedPseudoClass(const Element& element)
+{
+    return is<HTMLMediaElement>(element) && downcast<HTMLMediaElement>(element).paused();
+}
+
+ALWAYS_INLINE bool matchesSeekingPseudoClass(const Element& element)
+{
+    return is<HTMLMediaElement>(element) && downcast<HTMLMediaElement>(element).seeking();
+}
+
+ALWAYS_INLINE bool matchesBufferingPseudoClass(const Element& element)
+{
+    return is<HTMLMediaElement>(element) && downcast<HTMLMediaElement>(element).buffering();
+}
+
+ALWAYS_INLINE bool matchesStalledPseudoClass(const Element& element)
+{
+    return is<HTMLMediaElement>(element) && downcast<HTMLMediaElement>(element).stalled();
+}
+
+ALWAYS_INLINE bool matchesMutedPseudoClass(const Element& element)
+{
+    return is<HTMLMediaElement>(element) && downcast<HTMLMediaElement>(element).muted();
+}
+
+ALWAYS_INLINE bool matchesVolumeLockedPseudoClass(const Element& element)
+{
+    return is<HTMLMediaElement>(element) && downcast<HTMLMediaElement>(element).volumeLocked();
+}
 #endif
+
+ALWAYS_INLINE bool isFrameFocused(const Element& element)
+{
+    return element.document().frame() && element.document().frame()->selection().isFocusedAndActive();
+}
+
+ALWAYS_INLINE bool matchesLegacyDirectFocusPseudoClass(const Element& element)
+{
+    if (InspectorInstrumentation::forcePseudoState(element, CSSSelector::PseudoClassFocus))
+        return true;
+
+    return element.focused() && isFrameFocused(element);
+}
+
+ALWAYS_INLINE bool doesShadowTreeContainFocusedElement(const Element& element)
+{
+    auto* shadowRoot = element.shadowRoot();
+    return shadowRoot && shadowRoot->containsFocusedElement();
+}
+
+ALWAYS_INLINE bool matchesFocusPseudoClass(const Element& element)
+{
+    if (InspectorInstrumentation::forcePseudoState(element, CSSSelector::PseudoClassFocus))
+        return true;
+
+    return (element.focused() || doesShadowTreeContainFocusedElement(element)) && isFrameFocused(element);
+}
+
+ALWAYS_INLINE bool matchesFocusVisiblePseudoClass(const Element& element)
+{
+    if (!element.document().settings().focusVisibleEnabled())
+        return matchesLegacyDirectFocusPseudoClass(element);
+
+    if (InspectorInstrumentation::forcePseudoState(element, CSSSelector::PseudoClassFocusVisible))
+        return true;
+
+    return element.hasFocusVisible() && isFrameFocused(element);
+}
+
+ALWAYS_INLINE bool matchesFocusWithinPseudoClass(const Element& element)
+{
+    if (InspectorInstrumentation::forcePseudoState(element, CSSSelector::PseudoClassFocusWithin))
+        return true;
+
+    return element.hasFocusWithin() && isFrameFocused(element);
+}
+
+ALWAYS_INLINE bool matchesModalDialogPseudoClass(const Element& element)
+{
+    if (is<HTMLDialogElement>(element))
+        return downcast<HTMLDialogElement>(element).isModal();
+    return false;
+}
 
 } // namespace WebCore

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -155,17 +155,19 @@ class GlassWindowEventHandler extends Window.EventHandler implements PrivilegedA
         return null;
     }
 
+    @SuppressWarnings("removal")
     @Override
     public void handleLevelEvent(int level) {
         QuantumToolkit.runWithoutRenderLock(() -> {
             AccessControlContext acc = stage.getAccessControlContext();
             return AccessController.doPrivileged((PrivilegedAction<Void>)() -> {
                 stage.stageListener.changedAlwaysOnTop(level != Level.NORMAL);
-                return (Void)null;
+                return null;
             } , acc);
         });
     }
 
+    @SuppressWarnings("removal")
     @Override
     public void handleWindowEvent(final Window window, final long time, final int type) {
         this.window = window;
@@ -177,6 +179,7 @@ class GlassWindowEventHandler extends Window.EventHandler implements PrivilegedA
         });
     }
 
+    @SuppressWarnings("removal")
     @Override
     public void handleScreenChangedEvent(Window window, long time, Screen oldScreen, Screen newScreen) {
         GlassScene scene = stage.getScene();
@@ -192,7 +195,7 @@ class GlassWindowEventHandler extends Window.EventHandler implements PrivilegedA
             AccessControlContext acc = stage.getAccessControlContext();
             return AccessController.doPrivileged((PrivilegedAction<Void>)() -> {
                 stage.stageListener.changedScreen(oldScreen, newScreen);
-                return (Void)null;
+                return null;
             } , acc);
         });
     }

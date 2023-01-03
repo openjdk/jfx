@@ -31,7 +31,6 @@
 #include "config.h"
 #include "PerformanceNavigation.h"
 
-#include "CustomHeaderFields.h"
 #include "DocumentLoader.h"
 #include "Frame.h"
 #include "FrameLoader.h"
@@ -75,11 +74,14 @@ unsigned short PerformanceNavigation::redirectCount() const
     if (!loader)
         return 0;
 
-    LoadTiming& timing = loader->timing();
-    if (timing.hasCrossOriginRedirect())
+    auto* metrics = loader->response().deprecatedNetworkLoadMetricsOrNull();
+    if (!metrics)
         return 0;
 
-    return timing.redirectCount();
+    if (metrics->failsTAOCheck)
+        return 0;
+
+    return metrics->redirectCount;
 }
 
 } // namespace WebCore

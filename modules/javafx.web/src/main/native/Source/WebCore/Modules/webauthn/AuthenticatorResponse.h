@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2019-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,11 +27,16 @@
 
 #if ENABLE(WEB_AUTHN)
 
-#include <JavaScriptCore/ArrayBuffer.h>
+#include "AuthenticationExtensionsClientOutputs.h"
+#include "IDLTypes.h"
 #include <wtf/RefCounted.h>
 #include <wtf/TypeCasts.h>
 
 namespace WebCore {
+
+enum class AuthenticatorAttachment;
+
+struct AuthenticatorResponseData;
 
 class AuthenticatorResponse : public RefCounted<AuthenticatorResponse> {
 public:
@@ -40,18 +45,27 @@ public:
         Attestation
     };
 
-    explicit AuthenticatorResponse(Ref<ArrayBuffer>&& clientDataJSON)
-        : m_clientDataJSON(WTFMove(clientDataJSON))
-    {
-    }
+    static RefPtr<AuthenticatorResponse> tryCreate(AuthenticatorResponseData&&, AuthenticatorAttachment);
     virtual ~AuthenticatorResponse() = default;
 
     virtual Type type() const = 0;
+    virtual AuthenticatorResponseData data() const;
 
-    ArrayBuffer* clientDataJSON() const { return m_clientDataJSON.ptr(); }
+    WEBCORE_EXPORT ArrayBuffer* rawId() const;
+    WEBCORE_EXPORT void setExtensions(AuthenticationExtensionsClientOutputs&&);
+    AuthenticationExtensionsClientOutputs extensions() const;
+    void setClientDataJSON(Ref<ArrayBuffer>&&);
+    ArrayBuffer* clientDataJSON() const;
+    WEBCORE_EXPORT AuthenticatorAttachment attachment() const;
+
+protected:
+    AuthenticatorResponse(Ref<ArrayBuffer>&&, AuthenticatorAttachment);
 
 private:
-    Ref<ArrayBuffer> m_clientDataJSON;
+    Ref<ArrayBuffer> m_rawId;
+    AuthenticationExtensionsClientOutputs m_extensions;
+    RefPtr<ArrayBuffer> m_clientDataJSON;
+    AuthenticatorAttachment m_attachment;
 };
 
 } // namespace WebCore

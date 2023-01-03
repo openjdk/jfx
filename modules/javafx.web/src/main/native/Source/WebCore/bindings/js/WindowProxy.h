@@ -20,10 +20,11 @@
 
 #pragma once
 
-#include "DOMWrapperWorld.h"
 #include <JavaScriptCore/Strong.h>
 #include <wtf/HashMap.h>
 #include <wtf/RefCounted.h>
+#include <wtf/UniqueRef.h>
+#include <wtf/WeakPtr.h>
 
 namespace JSC {
 class Debugger;
@@ -33,6 +34,7 @@ namespace WebCore {
 
 class AbstractDOMWindow;
 class AbstractFrame;
+class DOMWrapperWorld;
 class JSDOMGlobalObject;
 class JSWindowProxy;
 
@@ -48,37 +50,43 @@ public:
 
     WEBCORE_EXPORT ~WindowProxy();
 
-    AbstractFrame* frame() const { return m_frame; }
+    WEBCORE_EXPORT AbstractFrame* frame() const;
     void detachFromFrame();
 
     void destroyJSWindowProxy(DOMWrapperWorld&);
 
-    ProxyMap::ValuesConstIteratorRange jsWindowProxies() const { return m_jsWindowProxies.values(); }
+    ProxyMap::ValuesConstIteratorRange jsWindowProxies() const;
     Vector<JSC::Strong<JSWindowProxy>> jsWindowProxiesAsVector() const;
 
-    ProxyMap releaseJSWindowProxies() { return std::exchange(m_jsWindowProxies, ProxyMap()); }
-    void setJSWindowProxies(ProxyMap&& windowProxies) { m_jsWindowProxies = WTFMove(windowProxies); }
+    WEBCORE_EXPORT ProxyMap releaseJSWindowProxies();
+    WEBCORE_EXPORT void setJSWindowProxies(ProxyMap&&);
 
     JSWindowProxy* jsWindowProxy(DOMWrapperWorld& world)
     {
         if (!m_frame)
             return nullptr;
 
-        if (auto* existingProxy = existingJSWindowProxy(world))
+        if (auto* existingProxy = existingJSWindowProxy(world)) {
+#if PLATFORM(JAVA)
+            set_existing_window_proxy(true, world);
+#endif
             return existingProxy;
-
+        }
+#if PLATFORM(JAVA)
+        set_existing_window_proxy(false, world);
+#endif
         return &createJSWindowProxyWithInitializedScript(world);
     }
 
     JSWindowProxy* existingJSWindowProxy(DOMWrapperWorld& world) const
     {
-        auto it = m_jsWindowProxies.find(&world);
-        return (it != m_jsWindowProxies.end()) ? it->value.get() : nullptr;
+        auto it = m_jsWindowProxies->find(&world);
+        return (it != m_jsWindowProxies->end()) ? it->value.get() : nullptr;
     }
 
     WEBCORE_EXPORT JSDOMGlobalObject* globalObject(DOMWrapperWorld&);
 
-    void clearJSWindowProxiesNotMatchingDOMWindow(AbstractDOMWindow*, bool goingIntoPageCache);
+    void clearJSWindowProxiesNotMatchingDOMWindow(AbstractDOMWindow*, bool goingIntoBackForwardCache);
 
     WEBCORE_EXPORT void setDOMWindow(AbstractDOMWindow*);
 
@@ -92,9 +100,12 @@ private:
 
     JSWindowProxy& createJSWindowProxy(DOMWrapperWorld&);
     WEBCORE_EXPORT JSWindowProxy& createJSWindowProxyWithInitializedScript(DOMWrapperWorld&);
+#if PLATFORM(JAVA)
+    void set_existing_window_proxy(bool existingWindowProxy_, DOMWrapperWorld& world);
+#endif
 
-    AbstractFrame* m_frame;
-    ProxyMap m_jsWindowProxies;
+    WeakPtr<AbstractFrame> m_frame;
+    UniqueRef<ProxyMap> m_jsWindowProxies;
 };
 
 } // namespace WebCore

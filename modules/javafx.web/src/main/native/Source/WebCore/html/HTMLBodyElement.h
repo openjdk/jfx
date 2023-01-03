@@ -30,7 +30,7 @@ namespace WebCore {
 class HTMLBodyElement final : public HTMLElement {
     WTF_MAKE_ISO_ALLOCATED(HTMLBodyElement);
 public:
-    static Ref<HTMLBodyElement> create(Document&);
+    WEBCORE_EXPORT static Ref<HTMLBodyElement> create(Document&);
     static Ref<HTMLBodyElement> create(const QualifiedName&, Document&);
     virtual ~HTMLBodyElement();
 
@@ -40,8 +40,8 @@ private:
     HTMLBodyElement(const QualifiedName&, Document&);
 
     void parseAttribute(const QualifiedName&, const AtomString&) final;
-    bool isPresentationAttribute(const QualifiedName&) const final;
-    void collectStyleForPresentationAttribute(const QualifiedName&, const AtomString&, MutableStyleProperties&) final;
+    bool hasPresentationalHintsForAttribute(const QualifiedName&) const final;
+    void collectPresentationalHintsForAttribute(const QualifiedName&, const AtomString&, MutableStyleProperties&) final;
 
     InsertedIntoAncestorResult insertedIntoAncestor(InsertionType, ContainerNode&) final;
     void didFinishInsertingNode() final;
@@ -51,8 +51,6 @@ private:
     bool supportsFocus() const final;
 
     void addSubresourceAttributeURLs(ListHashSet<URL>&) const final;
-
-    static EventHandlerNameMap createWindowEventHandlerNameMap();
 };
 
 } //namespace

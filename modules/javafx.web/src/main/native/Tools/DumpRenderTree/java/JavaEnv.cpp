@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -107,9 +107,9 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* vm, void* reserved)
     JNIEnv *env;
     if (jvm->GetEnv((void **)&env, JNI_VERSION_1_2)) {
         fprintf(stderr, "DumpRenderTree::JNI_OnLoad() failed \n");
-             return JNI_ERR; /* JNI version not supported */
-         }
-     initRefs(env);
+        return JNI_ERR; /* JNI version not supported */
+    }
+    initRefs(env);
     return JNI_VERSION_1_2;
 }
 

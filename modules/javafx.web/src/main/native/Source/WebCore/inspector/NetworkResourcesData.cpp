@@ -33,7 +33,6 @@
 #include "CachedResource.h"
 #include "InspectorNetworkAgent.h"
 #include "ResourceResponse.h"
-#include "SharedBuffer.h"
 #include "TextResourceDecoder.h"
 #include <wtf/text/Base64.h>
 
@@ -58,23 +57,18 @@ void NetworkResourcesData::ResourceData::setContent(const String& content, bool 
     m_base64Encoded = base64Encoded;
 }
 
-static size_t contentSizeInBytes(const String& content)
-{
-    return content.isNull() ? 0 : content.impl()->sizeInBytes();
-}
-
 unsigned NetworkResourcesData::ResourceData::removeContent()
 {
     unsigned result = 0;
     if (hasData()) {
         ASSERT(!hasContent());
-        result = m_dataBuffer->size();
-        m_dataBuffer = nullptr;
+        result = m_dataBuffer.size();
+        m_dataBuffer.reset();
     }
 
     if (hasContent()) {
         ASSERT(!hasData());
-        result = contentSizeInBytes(m_content);
+        result = m_content.sizeInBytes();
         m_content = String();
     }
     return result;
@@ -86,39 +80,38 @@ unsigned NetworkResourcesData::ResourceData::evictContent()
     return removeContent();
 }
 
+bool NetworkResourcesData::ResourceData::hasData() const
+{
+    return !!m_dataBuffer;
+}
+
 size_t NetworkResourcesData::ResourceData::dataLength() const
 {
-    return m_dataBuffer ? m_dataBuffer->size() : 0;
+    return m_dataBuffer.size();
 }
 
-void NetworkResourcesData::ResourceData::appendData(const char* data, size_t dataLength)
+void NetworkResourcesData::ResourceData::appendData(const SharedBuffer& data)
 {
     ASSERT(!hasContent());
-    if (!m_dataBuffer)
-        m_dataBuffer = SharedBuffer::create(data, dataLength);
-    else
-        m_dataBuffer->append(data, dataLength);
+    m_dataBuffer.append(data);
 }
 
-size_t NetworkResourcesData::ResourceData::decodeDataToContent()
+unsigned NetworkResourcesData::ResourceData::decodeDataToContent()
 {
     ASSERT(!hasContent());
 
-    size_t dataLength = m_dataBuffer->size();
+    auto buffer = m_dataBuffer.takeAsContiguous();
+    size_t dataLength = buffer->size();
 
     if (m_decoder) {
         m_base64Encoded = false;
-        m_content = m_decoder->decodeAndFlush(m_dataBuffer->data(), dataLength);
+        m_content = m_decoder->decodeAndFlush(buffer->data(), dataLength);
     } else {
         m_base64Encoded = true;
-        m_content = base64Encode(m_dataBuffer->data(), dataLength);
+        m_content = base64EncodeToString(buffer->data(), dataLength);
     }
 
-    m_dataBuffer = nullptr;
-
-    size_t decodedLength = contentSizeInBytes(m_content);
-    ASSERT(decodedLength >= dataLength);
-    return decodedLength - dataLength;
+    return m_content.sizeInBytes() - dataLength;
 }
 
 NetworkResourcesData::NetworkResourcesData()
@@ -157,10 +150,13 @@ void NetworkResourcesData::responseReceived(const String& requestId, const Strin
         return;
 
     resourceData->setFrameId(frameId);
-    resourceData->setURL(response.url());
+    resourceData->setURL(response.url().string());
     resourceData->setHTTPStatusCode(response.httpStatusCode());
+    resourceData->setHTTPStatusText(response.httpStatusText());
     resourceData->setType(type);
     resourceData->setForceBufferData(forceBufferData);
+    resourceData->setMIMEType(response.mimeType());
+    resourceData->setResponseTimestamp(WallTime::now());
 
     if (InspectorNetworkAgent::shouldTreatAsText(response.mimeType()))
         resourceData->setDecoder(InspectorNetworkAgent::createTextDecoder(response.mimeType(), response.textEncodingName()));
@@ -194,7 +190,7 @@ void NetworkResourcesData::setResourceContent(const String& requestId, const Str
     if (!resourceData)
         return;
 
-    size_t dataLength = contentSizeInBytes(content);
+    size_t dataLength = content.sizeInBytes();
     if (dataLength > m_maximumSingleResourceContentSize)
         return;
     if (resourceData->isContentEvicted())
@@ -225,7 +221,7 @@ static bool shouldBufferResourceData(const NetworkResourcesData::ResourceData& r
     return false;
 }
 
-NetworkResourcesData::ResourceData const* NetworkResourcesData::maybeAddResourceData(const String& requestId, const char* data, size_t dataLength)
+NetworkResourcesData::ResourceData const* NetworkResourcesData::maybeAddResourceData(const String& requestId, const SharedBuffer& data)
 {
     ResourceData* resourceData = resourceDataForRequestId(requestId);
     if (!resourceData)
@@ -234,15 +230,15 @@ NetworkResourcesData::ResourceData const* NetworkResourcesData::maybeAddResource
     if (!shouldBufferResourceData(*resourceData))
         return resourceData;
 
-    if (resourceData->dataLength() + dataLength > m_maximumSingleResourceContentSize)
+    if (resourceData->dataLength() + data.size() > m_maximumSingleResourceContentSize)
         m_contentSize -= resourceData->evictContent();
     if (resourceData->isContentEvicted())
         return resourceData;
 
-    if (ensureFreeSpace(dataLength) && !resourceData->isContentEvicted()) {
+    if (ensureFreeSpace(data.size()) && !resourceData->isContentEvicted()) {
         m_requestIdsDeque.append(requestId);
-        resourceData->appendData(data, dataLength);
-        m_contentSize += dataLength;
+        resourceData->appendData(data);
+        m_contentSize += data.size();
     }
 
     return resourceData;
@@ -258,7 +254,7 @@ void NetworkResourcesData::maybeDecodeDataToContent(const String& requestId)
         return;
 
     m_contentSize += resourceData->decodeDataToContent();
-    size_t dataLength = contentSizeInBytes(resourceData->content());
+    size_t dataLength = resourceData->content().sizeInBytes();
     if (dataLength > m_maximumSingleResourceContentSize)
         m_contentSize -= resourceData->evictContent();
 }
@@ -271,7 +267,7 @@ void NetworkResourcesData::addCachedResource(const String& requestId, CachedReso
     resourceData->setCachedResource(cachedResource);
 }
 
-void NetworkResourcesData::addResourceSharedBuffer(const String& requestId, RefPtr<SharedBuffer>&& buffer, const String& textEncodingName)
+void NetworkResourcesData::addResourceSharedBuffer(const String& requestId, RefPtr<FragmentedSharedBuffer>&& buffer, const String& textEncodingName)
 {
     ResourceData* resourceData = resourceDataForRequestId(requestId);
     if (!resourceData)
@@ -283,6 +279,22 @@ void NetworkResourcesData::addResourceSharedBuffer(const String& requestId, RefP
 NetworkResourcesData::ResourceData const* NetworkResourcesData::data(const String& requestId)
 {
     return resourceDataForRequestId(requestId);
+}
+
+NetworkResourcesData::ResourceData const* NetworkResourcesData::dataForURL(const String& url)
+{
+    if (url.isNull())
+        return nullptr;
+
+    NetworkResourcesData::ResourceData* mostRecentResourceData = nullptr;
+
+    for (auto* resourceData : resources()) {
+        // responseTimestamp is checked so that we only grab the most recent response for the URL, instead of potentionally getting a more stale response.
+        if (resourceData->url() == url && resourceData->httpStatusCode() != 304 && (!mostRecentResourceData || (resourceData->responseTimestamp() > mostRecentResourceData->responseTimestamp())))
+            mostRecentResourceData = resourceData;
+    }
+
+    return mostRecentResourceData;
 }
 
 Vector<String> NetworkResourcesData::removeCachedResource(CachedResource* cachedResource)
@@ -299,7 +311,7 @@ Vector<String> NetworkResourcesData::removeCachedResource(CachedResource* cached
     return result;
 }
 
-void NetworkResourcesData::clear(Optional<String> preservedLoaderId)
+void NetworkResourcesData::clear(std::optional<String> preservedLoaderId)
 {
     m_requestIdsDeque.clear();
     m_contentSize = 0;

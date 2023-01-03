@@ -24,6 +24,7 @@
 #include "config.h"
 #include "FloatingObjects.h"
 
+#include "PODIntervalTree.h"
 #include "RenderBlockFlow.h"
 #include "RenderBox.h"
 #include "RenderView.h"
@@ -33,7 +34,8 @@
 namespace WebCore {
 
 struct SameSizeAsFloatingObject {
-    void* pointers[2];
+    WeakPtr<RenderBox> renderer;
+    WeakPtr<LegacyRootInlineBox> originatingLine;
     LayoutRect rect;
     int paginationStrut;
     LayoutSize size;
@@ -41,33 +43,37 @@ struct SameSizeAsFloatingObject {
 };
 
 COMPILE_ASSERT(sizeof(FloatingObject) == sizeof(SameSizeAsFloatingObject), FloatingObject_should_stay_small);
+#if !ASSERT_ENABLED
+COMPILE_ASSERT(sizeof(WeakPtr<RenderBox>) == sizeof(void*), WeakPtr_should_be_same_size_as_raw_pointer);
+COMPILE_ASSERT(sizeof(WeakPtr<LegacyRootInlineBox>) == sizeof(void*), WeakPtr_should_be_same_size_as_raw_pointer);
+#endif
 
 FloatingObject::FloatingObject(RenderBox& renderer)
-    : m_renderer(makeWeakPtr(renderer))
-    , m_shouldPaint(true)
+    : m_renderer(renderer)
+    , m_paintsFloat(true)
     , m_isDescendant(false)
     , m_isPlaced(false)
-#ifndef NDEBUG
+#if ASSERT_ENABLED
     , m_isInPlacedTree(false)
 #endif
 {
-    Float type = renderer.style().floating();
-    ASSERT(type != Float::No);
-    if (type == Float::Left)
+    UsedFloat type = RenderStyle::usedFloat(renderer);
+    ASSERT(type != UsedFloat::None);
+    if (type == UsedFloat::Left)
         m_type = FloatLeft;
-    else if (type == Float::Right)
+    else if (type == UsedFloat::Right)
         m_type = FloatRight;
 }
 
 FloatingObject::FloatingObject(RenderBox& renderer, Type type, const LayoutRect& frameRect, const LayoutSize& marginOffset, bool shouldPaint, bool isDescendant)
-    : m_renderer(makeWeakPtr(renderer))
+    : m_renderer(renderer)
     , m_frameRect(frameRect)
     , m_marginOffset(marginOffset)
     , m_type(type)
-    , m_shouldPaint(shouldPaint)
+    , m_paintsFloat(shouldPaint)
     , m_isDescendant(isDescendant)
     , m_isPlaced(true)
-#ifndef NDEBUG
+#if ASSERT_ENABLED
     , m_isInPlacedTree(false)
 #endif
 {
@@ -76,7 +82,6 @@ FloatingObject::FloatingObject(RenderBox& renderer, Type type, const LayoutRect&
 std::unique_ptr<FloatingObject> FloatingObject::create(RenderBox& renderer)
 {
     auto object = makeUnique<FloatingObject>(renderer);
-    object->setShouldPaint(!renderer.hasSelfPaintingLayer()); // If a layer exists, the float will paint itself. Otherwise someone else will.
     object->setIsDescendant(true);
     return object;
 }
@@ -88,10 +93,18 @@ std::unique_ptr<FloatingObject> FloatingObject::copyToNewContainer(LayoutSize of
 
 std::unique_ptr<FloatingObject> FloatingObject::cloneForNewParent() const
 {
-    auto cloneObject = makeUnique<FloatingObject>(renderer(), type(), m_frameRect, m_marginOffset, m_shouldPaint, m_isDescendant);
+    auto cloneObject = makeUnique<FloatingObject>(renderer(), type(), m_frameRect, m_marginOffset, m_paintsFloat, m_isDescendant);
     cloneObject->m_paginationStrut = m_paginationStrut;
     cloneObject->m_isPlaced = m_isPlaced;
     return cloneObject;
+}
+
+bool FloatingObject::shouldPaint() const
+{
+    if (!m_renderer)
+        return false;
+
+    return !m_renderer->hasSelfPaintingLayer() && m_paintsFloat;
 }
 
 LayoutSize FloatingObject::translationOffsetToAncestor() const
@@ -99,11 +112,16 @@ LayoutSize FloatingObject::translationOffsetToAncestor() const
     return locationOffsetOfBorderBox() - renderer().locationOffset();
 }
 
-#ifndef NDEBUG
+#if ENABLE(TREE_DEBUGGING)
 
-String FloatingObject::debugString() const
+TextStream& operator<<(TextStream& stream, const FloatingObject& object)
 {
-    return makeString("0x", hex(reinterpret_cast<uintptr_t>(this)), " (", frameRect().x().toInt(), 'x', frameRect().y().toInt(), ' ', frameRect().maxX().toInt(), 'x', frameRect().maxY().toInt(), ')');
+    stream << &object << " renderer " << &object.renderer();
+    if (object.isPlaced())
+        stream << " " << object.frameRect();
+    else
+        stream << " (not placed yet)";
+    return stream << " paintsFloat " << object.paintsFloat() << " shouldPaint " << object.shouldPaint();
 }
 
 #endif
@@ -134,7 +152,7 @@ public:
     typedef FloatingObjectInterval IntervalType;
 
     ComputeFloatOffsetAdapter(const RenderBlockFlow& renderer, LayoutUnit lineTop, LayoutUnit lineBottom, LayoutUnit offset)
-        : m_renderer(makeWeakPtr(renderer))
+        : m_renderer(renderer)
         , m_lineTop(lineTop)
         , m_lineBottom(lineBottom)
         , m_offset(offset)
@@ -195,7 +213,7 @@ public:
     typedef FloatingObjectInterval IntervalType;
 
     FindNextFloatLogicalBottomAdapter(const RenderBlockFlow& renderer, LayoutUnit belowLogicalHeight)
-        : m_renderer(makeWeakPtr(renderer))
+        : m_renderer(renderer)
         , m_belowLogicalHeight(belowLogicalHeight)
     {
     }
@@ -204,14 +222,14 @@ public:
     LayoutUnit highValue() const { return LayoutUnit::max(); }
     void collectIfNeeded(const IntervalType&);
 
-    LayoutUnit nextLogicalBottom() const { return m_nextLogicalBottom.valueOr(0); }
-    LayoutUnit nextShapeLogicalBottom() const { return m_nextShapeLogicalBottom.valueOr(nextLogicalBottom()); }
+    LayoutUnit nextLogicalBottom() const { return m_nextLogicalBottom.value_or(0); }
+    LayoutUnit nextShapeLogicalBottom() const { return m_nextShapeLogicalBottom.value_or(nextLogicalBottom()); }
 
 private:
     WeakPtr<const RenderBlockFlow> m_renderer;
     LayoutUnit m_belowLogicalHeight;
-    Optional<LayoutUnit> m_nextLogicalBottom;
-    Optional<LayoutUnit> m_nextShapeLogicalBottom;
+    std::optional<LayoutUnit> m_nextLogicalBottom;
+    std::optional<LayoutUnit> m_nextShapeLogicalBottom;
 };
 
 inline void FindNextFloatLogicalBottomAdapter::collectIfNeeded(const IntervalType& interval)
@@ -256,10 +274,8 @@ LayoutUnit FloatingObjects::findNextFloatLogicalBottomBelowForBlock(LayoutUnit l
 }
 
 FloatingObjects::FloatingObjects(const RenderBlockFlow& renderer)
-    : m_leftObjectsCount(0)
-    , m_rightObjectsCount(0)
-    , m_horizontalWritingMode(renderer.isHorizontalWritingMode())
-    , m_renderer(makeWeakPtr(renderer))
+    : m_horizontalWritingMode(renderer.isHorizontalWritingMode())
+    , m_renderer(renderer)
 {
 }
 
@@ -327,7 +343,7 @@ void FloatingObjects::addPlacedObject(FloatingObject* floatingObject)
     if (m_placedFloatsTree)
         m_placedFloatsTree->add(intervalForFloatingObject(floatingObject));
 
-#ifndef NDEBUG
+#if ASSERT_ENABLED
     floatingObject->setIsInPlacedTree(true);
 #endif
 }
@@ -342,7 +358,7 @@ void FloatingObjects::removePlacedObject(FloatingObject* floatingObject)
     }
 
     floatingObject->setIsPlaced(false);
-#ifndef NDEBUG
+#if ASSERT_ENABLED
     floatingObject->setIsInPlacedTree(false);
 #endif
 }

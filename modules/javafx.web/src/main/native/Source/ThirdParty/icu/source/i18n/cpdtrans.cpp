@@ -282,6 +282,7 @@ void CompoundTransliterator::freeTransliterators(void) {
 CompoundTransliterator& CompoundTransliterator::operator=(
                                              const CompoundTransliterator& t)
 {
+    if (this == &t) { return *this; }  // self-assignment: no-op
     Transliterator::operator=(t);
     int32_t i = 0;
     UBool failed = FALSE;
@@ -323,7 +324,7 @@ CompoundTransliterator& CompoundTransliterator::operator=(
 /**
  * Transliterator API.
  */
-Transliterator* CompoundTransliterator::clone(void) const {
+CompoundTransliterator* CompoundTransliterator::clone() const {
     return new CompoundTransliterator(*this);
 }
 

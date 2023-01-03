@@ -47,14 +47,6 @@ enum HitTestAction {
     HitTestForeground
 };
 
-// Sides used when drawing borders and outlines. The values should run clockwise from top.
-enum BoxSide {
-    BSTop,
-    BSRight,
-    BSBottom,
-    BSLeft
-};
-
 enum MarkingBehavior {
     MarkOnlyThis,
     MarkContainingBlockChain,
@@ -65,8 +57,8 @@ enum class ScheduleRelayout { No, Yes };
 enum MapCoordinatesMode {
     IsFixed             = 1 << 0,
     UseTransforms       = 1 << 1,
-    ApplyContainerFlip  = 1 << 2
+    ApplyContainerFlip  = 1 << 2,
+    IgnoreStickyOffsets = 1 << 3,
 };
-typedef unsigned MapCoordinatesFlags;
 
 }

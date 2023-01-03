@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -76,7 +76,7 @@ public class TimelineTest {
         assertEquals(DEFAULT_REPEAT_COUNT, timeline0.getCycleCount());
         assertEquals(DEFAULT_AUTO_REVERSE, timeline0.isAutoReverse());
         assertEquals(Status.STOPPED, timeline0.getStatus());
-        assertEquals(6000.0 / Toolkit.getToolkit().getMasterTimer().getDefaultResolution(), timeline0.getTargetFramerate(), EPSILON);
+        assertEquals(6000.0 / Toolkit.getToolkit().getPrimaryTimer().getDefaultResolution(), timeline0.getTargetFramerate(), EPSILON);
         assertEquals(null, timeline0.getOnFinished());
         assertTrue(timeline0.getCuePoints().isEmpty());
 
@@ -106,7 +106,7 @@ public class TimelineTest {
         assertEquals(DEFAULT_REPEAT_COUNT, timeline2.getCycleCount());
         assertEquals(DEFAULT_AUTO_REVERSE, timeline2.isAutoReverse());
         assertEquals(Status.STOPPED, timeline2.getStatus());
-        assertEquals(6000.0 / Toolkit.getToolkit().getMasterTimer().getDefaultResolution(), timeline2.getTargetFramerate(), EPSILON);
+        assertEquals(6000.0 / Toolkit.getToolkit().getPrimaryTimer().getDefaultResolution(), timeline2.getTargetFramerate(), EPSILON);
         assertEquals(null, timeline2.getOnFinished());
         assertEquals(Collections.singletonMap("oneSec", oneSec), timeline2.getCuePoints());
 

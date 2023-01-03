@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2014-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -69,9 +69,10 @@ inline bool Heap::worldIsStopped() const
 
 ALWAYS_INLINE bool Heap::isMarked(const void* rawCell)
 {
+    ASSERT(!m_isMarkingForGCVerifier);
     HeapCell* cell = bitwise_cast<HeapCell*>(rawCell);
-    if (cell->isLargeAllocation())
-        return cell->largeAllocation().isMarked();
+    if (cell->isPreciseAllocation())
+        return cell->preciseAllocation().isMarked();
     MarkedBlock& block = cell->markedBlock();
     return block.isMarked(m_objectSpace.markingVersion(), cell);
 }
@@ -79,8 +80,8 @@ ALWAYS_INLINE bool Heap::isMarked(const void* rawCell)
 ALWAYS_INLINE bool Heap::testAndSetMarked(HeapVersion markingVersion, const void* rawCell)
 {
     HeapCell* cell = bitwise_cast<HeapCell*>(rawCell);
-    if (cell->isLargeAllocation())
-        return cell->largeAllocation().testAndSetMarked();
+    if (cell->isPreciseAllocation())
+        return cell->preciseAllocation().testAndSetMarked();
     MarkedBlock& block = cell->markedBlock();
     Dependency dependency = block.aboutToMark(markingVersion);
     return block.testAndSetMarked(cell, dependency);
@@ -108,9 +109,9 @@ inline void Heap::writeBarrier(const JSCell* from, JSCell* to)
 #endif
     if (!from)
         return;
-    if (!isWithinThreshold(from->cellState(), barrierThreshold()))
-        return;
     if (LIKELY(!to))
+        return;
+    if (!isWithinThreshold(from->cellState(), barrierThreshold()))
         return;
     writeBarrierSlowPath(from);
 }
@@ -122,15 +123,6 @@ inline void Heap::writeBarrier(const JSCell* from)
         return;
     if (UNLIKELY(isWithinThreshold(from->cellState(), barrierThreshold())))
         writeBarrierSlowPath(from);
-}
-
-inline void Heap::writeBarrierWithoutFence(const JSCell* from)
-{
-    ASSERT_GC_OBJECT_LOOKS_VALID(const_cast<JSCell*>(from));
-    if (!from)
-        return;
-    if (UNLIKELY(isWithinThreshold(from->cellState(), blackThreshold)))
-        addToRememberedSet(from);
 }
 
 inline void Heap::mutatorFence()
@@ -188,7 +180,7 @@ inline void Heap::decrementDeferralDepthAndGCIfNeeded()
     ASSERT(!Thread::mayBeGCThread() || m_worldIsStopped);
     m_deferralDepth--;
 
-    if (UNLIKELY(m_didDeferGCWork)) {
+    if (UNLIKELY(m_didDeferGCWork) || Options::forceDidDeferGCWork()) {
         decrementDeferralDepthAndGCIfNeededSlow();
 
         // Here are the possible relationships between m_deferralDepth and m_didDeferGCWork.
@@ -214,10 +206,10 @@ inline void Heap::decrementDeferralDepthAndGCIfNeeded()
     }
 }
 
-inline HashSet<MarkedArgumentBuffer*>& Heap::markListSet()
+inline HashSet<MarkedArgumentBufferBase*>& Heap::markListSet()
 {
     if (!m_markListSet)
-        m_markListSet = makeUnique<HashSet<MarkedArgumentBuffer*>>();
+        m_markListSet = makeUnique<HashSet<MarkedArgumentBufferBase*>>();
     return *m_markListSet;
 }
 
@@ -235,8 +227,8 @@ inline void Heap::deprecatedReportExtraMemory(size_t size)
 
 inline void Heap::acquireAccess()
 {
-    if (validateDFGDoesGC)
-        RELEASE_ASSERT(expectDoesGC());
+    if constexpr (validateDFGDoesGC)
+        vm().verifyCanGC();
 
     if (m_worldState.compareExchangeWeak(0, hasAccessBit))
         return;
@@ -262,8 +254,8 @@ inline bool Heap::mayNeedToStop()
 
 inline void Heap::stopIfNecessary()
 {
-    if (validateDFGDoesGC)
-        RELEASE_ASSERT(expectDoesGC());
+    if constexpr (validateDFGDoesGC)
+        vm().verifyCanGC();
 
     if (mayNeedToStop())
         stopIfNecessarySlow();
@@ -274,8 +266,17 @@ void Heap::forEachSlotVisitor(const Func& func)
 {
     func(*m_collectorSlotVisitor);
     func(*m_mutatorSlotVisitor);
-    for (auto& slotVisitor : m_parallelSlotVisitors)
-        func(*slotVisitor);
+    for (auto& visitor : m_parallelSlotVisitors)
+        func(*visitor);
 }
+
+namespace GCClient {
+
+ALWAYS_INLINE VM& Heap::vm() const
+{
+    return *bitwise_cast<VM*>(bitwise_cast<uintptr_t>(this) - OBJECT_OFFSETOF(VM, clientHeap));
+}
+
+} // namespace GCClient
 
 } // namespace JSC

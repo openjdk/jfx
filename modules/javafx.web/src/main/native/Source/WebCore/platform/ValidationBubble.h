@@ -31,6 +31,7 @@
 
 #if PLATFORM(COCOA)
 #include <wtf/RetainPtr.h>
+#include <wtf/WeakObjCPtr.h>
 #endif
 
 #if PLATFORM(MAC)
@@ -39,6 +40,7 @@ OBJC_CLASS NSPopover;
 OBJC_CLASS UIViewController;
 OBJC_CLASS WebValidationBubbleDelegate;
 OBJC_CLASS WebValidationBubbleTapRecognizer;
+OBJC_CLASS WebValidationBubbleViewController;
 #endif
 
 #if PLATFORM(MAC)
@@ -47,6 +49,8 @@ using PlatformView = NSView;
 #elif PLATFORM(IOS_FAMILY)
 OBJC_CLASS UIView;
 using PlatformView = UIView;
+#elif PLATFORM(GTK)
+using PlatformView = GtkWidget;
 #else
 using PlatformView = void;
 #endif
@@ -59,10 +63,18 @@ public:
         double minimumFontSize { 0 };
     };
 
+#if PLATFORM(GTK)
+    using ShouldNotifyFocusEventsCallback = Function<void(PlatformView*, bool shouldNotifyFocusEvents)>;
+    static Ref<ValidationBubble> create(PlatformView* view, const String& message, const Settings& settings, ShouldNotifyFocusEventsCallback&& callback)
+    {
+        return adoptRef(*new ValidationBubble(view, message, settings, WTFMove(callback)));
+    }
+#else
     static Ref<ValidationBubble> create(PlatformView* view, const String& message, const Settings& settings)
     {
         return adoptRef(*new ValidationBubble(view, message, settings));
     }
+#endif
 
     WEBCORE_EXPORT ~ValidationBubble();
 
@@ -77,7 +89,12 @@ public:
 #endif
 
 private:
+#if PLATFORM(GTK)
+    WEBCORE_EXPORT ValidationBubble(PlatformView*, const String& message, const Settings&, ShouldNotifyFocusEventsCallback&&);
+    void invalidate();
+#else
     WEBCORE_EXPORT ValidationBubble(PlatformView*, const String& message, const Settings&);
+#endif
 
     PlatformView* m_view;
     String m_message;
@@ -85,10 +102,13 @@ private:
 #if PLATFORM(MAC)
     RetainPtr<NSPopover> m_popover;
 #elif PLATFORM(IOS_FAMILY)
-    RetainPtr<UIViewController> m_popoverController;
+    RetainPtr<WebValidationBubbleViewController> m_popoverController;
     RetainPtr<WebValidationBubbleTapRecognizer> m_tapRecognizer;
     RetainPtr<WebValidationBubbleDelegate> m_popoverDelegate;
-    UIViewController *m_presentingViewController;
+    WeakObjCPtr<UIViewController> m_presentingViewController;
+#elif PLATFORM(GTK)
+    GtkWidget* m_popover { nullptr };
+    ShouldNotifyFocusEventsCallback m_shouldNotifyFocusEventsCallback { nullptr };
 #endif
 };
 

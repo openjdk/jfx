@@ -42,54 +42,29 @@ namespace JSC {
 
 class TrackedReferences;
 
+struct SimpleJumpTable;
+struct StringJumpTable;
+
 namespace DFG {
 
 class JITCompiler;
 
-class JITCode : public DirectJITCode {
+class JITCode final : public DirectJITCode {
 public:
     JITCode();
-    virtual ~JITCode();
+    ~JITCode() final;
 
-    CommonData* dfgCommon() override;
-    JITCode* dfg() override;
+    CommonData* dfgCommon() final;
+    JITCode* dfg() final;
 
-    OSREntryData* appendOSREntryData(unsigned bytecodeIndex, CodeLocationLabel<OSREntryPtrTag> machineCode)
+    OSREntryData* osrEntryDataForBytecodeIndex(BytecodeIndex bytecodeIndex)
     {
-        DFG::OSREntryData entry;
-        entry.m_bytecodeIndex = bytecodeIndex;
-        entry.m_machineCode = machineCode;
-        osrEntry.append(entry);
-        return &osrEntry.last();
-    }
-
-    OSREntryData* osrEntryDataForBytecodeIndex(unsigned bytecodeIndex)
-    {
-        return tryBinarySearch<OSREntryData, unsigned>(
-            osrEntry, osrEntry.size(), bytecodeIndex,
+        return tryBinarySearch<OSREntryData, BytecodeIndex>(
+            m_osrEntry, m_osrEntry.size(), bytecodeIndex,
             getOSREntryDataBytecodeIndex);
     }
 
-    void finalizeOSREntrypoints();
-
-    unsigned appendOSRExit(const OSRExit& exit)
-    {
-        unsigned result = osrExit.size();
-        osrExit.append(exit);
-        return result;
-    }
-
-    OSRExit& lastOSRExit()
-    {
-        return osrExit.last();
-    }
-
-    unsigned appendSpeculationRecovery(const SpeculationRecovery& recovery)
-    {
-        unsigned result = speculationRecovery.size();
-        speculationRecovery.append(recovery);
-        return result;
-    }
+    void finalizeOSREntrypoints(Vector<DFG::OSREntryData>&&);
 
     void reconstruct(
         CodeBlock*, CodeOrigin, unsigned streamIndex, Operands<ValueRecovery>& result);
@@ -98,7 +73,7 @@ public:
     // stack. Currently, it also has the restriction that the values must be in their
     // bytecode-designated stack slots.
     void reconstruct(
-        ExecState*, CodeBlock*, CodeOrigin, unsigned streamIndex, Operands<Optional<JSValue>>& result);
+        CallFrame*, CodeBlock*, CodeOrigin, unsigned streamIndex, Operands<std::optional<JSValue>>& result);
 
 #if ENABLE(FTL_JIT)
     // NB. All of these methods take CodeBlock* because they may want to use
@@ -113,11 +88,11 @@ public:
     void setOptimizationThresholdBasedOnCompilationResult(CodeBlock*, CompilationResult);
 #endif // ENABLE(FTL_JIT)
 
-    void validateReferences(const TrackedReferences&) override;
+    void validateReferences(const TrackedReferences&) final;
 
-    void shrinkToFit();
+    void shrinkToFit(const ConcurrentJSLocker&) final;
 
-    RegisterSet liveRegistersToPreserveAtExceptionHandlingCallSite(CodeBlock*, CallSiteIndex) override;
+    RegisterSet liveRegistersToPreserveAtExceptionHandlingCallSite(CodeBlock*, CallSiteIndex) final;
 #if ENABLE(FTL_JIT)
     CodeBlock* osrEntryBlock() { return m_osrEntryBlock.get(); }
     void setOSREntryBlock(VM&, const JSCell* owner, CodeBlock* osrEntryBlock);
@@ -126,18 +101,22 @@ public:
 
     static ptrdiff_t commonDataOffset() { return OBJECT_OFFSETOF(JITCode, common); }
 
-    Optional<CodeOrigin> findPC(CodeBlock*, void* pc) override;
+    std::optional<CodeOrigin> findPC(CodeBlock*, void* pc) final;
 
     using DirectJITCode::initializeCodeRefForDFG;
+
+    PCToCodeOriginMap* pcToCodeOriginMap() override { return common.m_pcToCodeOriginMap.get(); }
 
 private:
     friend class JITCompiler; // Allow JITCompiler to call setCodeRef().
 
 public:
     CommonData common;
-    Vector<DFG::OSREntryData> osrEntry;
-    SegmentedVector<DFG::OSRExit, 8> osrExit;
-    Vector<DFG::SpeculationRecovery> speculationRecovery;
+    FixedVector<DFG::OSREntryData> m_osrEntry;
+    FixedVector<DFG::OSRExit> m_osrExit;
+    FixedVector<DFG::SpeculationRecovery> m_speculationRecovery;
+    FixedVector<SimpleJumpTable> m_switchJumpTables;
+    FixedVector<StringJumpTable> m_stringSwitchJumpTables;
     DFG::VariableEventStream variableEventStream;
     DFG::MinifiedGraph minifiedDFG;
 
@@ -151,10 +130,10 @@ public:
     //
     // The key may not always be a target for OSR Entry but the list in the value is guaranteed
     // to be usable for OSR Entry.
-    HashMap<unsigned, Vector<unsigned>> tierUpInLoopHierarchy;
+    HashMap<BytecodeIndex, FixedVector<BytecodeIndex>> tierUpInLoopHierarchy;
 
     // Map each bytecode of CheckTierUpAndOSREnter to its stream index.
-    HashMap<unsigned, unsigned, WTF::IntHash<unsigned>, WTF::UnsignedWithZeroKeyHashTraits<unsigned>> bytecodeIndexToStreamIndex;
+    HashMap<BytecodeIndex, unsigned> bytecodeIndexToStreamIndex;
 
     enum class TriggerReason : uint8_t {
         DontTrigger,
@@ -165,7 +144,7 @@ public:
     // Map each bytecode of CheckTierUpAndOSREnter to its trigger forcing OSR Entry.
     // This can never be modified after it has been initialized since the addresses of the triggers
     // are used by the JIT.
-    HashMap<unsigned, TriggerReason> tierUpEntryTriggers;
+    HashMap<BytecodeIndex, TriggerReason> tierUpEntryTriggers;
 
     WriteBarrier<CodeBlock> m_osrEntryBlock;
     unsigned osrEntryRetry;

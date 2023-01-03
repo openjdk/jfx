@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Apple, Inc. All rights reserved.
+ * Copyright (C) 2019-2022 Apple, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -42,7 +42,7 @@ public:
 
     static JSWeakObjectRef* create(VM& vm, Structure* structure, JSObject* target)
     {
-        JSWeakObjectRef* instance = new (NotNull, allocateCell<JSWeakObjectRef>(vm.heap)) JSWeakObjectRef(vm, structure);
+        JSWeakObjectRef* instance = new (NotNull, allocateCell<JSWeakObjectRef>(vm)) JSWeakObjectRef(vm, structure);
         instance->finishCreation(vm, target);
         return instance;
     }
@@ -52,20 +52,20 @@ public:
         if (m_value && vm.currentWeakRefVersion() != m_lastAccessVersion) {
             m_lastAccessVersion = vm.currentWeakRefVersion();
             // Perform a GC barrier here so we rescan this object and keep the object alive if we wouldn't otherwise.
-            vm.heap.writeBarrier(this);
+            vm.writeBarrier(this);
         }
 
         return m_value.get();
     }
 
     template<typename CellType, SubspaceAccess mode>
-    static IsoSubspace* subspaceFor(VM& vm)
+    static GCClient::IsoSubspace* subspaceFor(VM& vm)
     {
         return vm.weakObjectRefSpace<mode>();
     }
 
     void finalizeUnconditionally(VM&);
-    static void visitChildren(JSCell*, SlotVisitor&);
+    DECLARE_VISIT_CHILDREN;
 
 private:
     JSWeakObjectRef(VM& vm, Structure* structure)
@@ -74,8 +74,6 @@ private:
     }
 
     JS_EXPORT_PRIVATE void finishCreation(VM&, JSObject* value);
-
-    static String toStringName(const JSObject*, ExecState*);
 
     uintptr_t m_lastAccessVersion;
     WriteBarrier<JSObject> m_value;

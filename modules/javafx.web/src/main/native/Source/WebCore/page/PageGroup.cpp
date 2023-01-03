@@ -26,17 +26,17 @@
 #include "config.h"
 #include "PageGroup.h"
 
+#include "BackForwardCache.h"
 #include "DOMWrapperWorld.h"
 #include "Document.h"
 #include "Frame.h"
 #include "Page.h"
-#include "PageCache.h"
 #include "StorageNamespace.h"
 #include <JavaScriptCore/HeapInlines.h>
 #include <JavaScriptCore/StructureInlines.h>
 #include <wtf/StdLibExtras.h>
 
-#if ENABLE(VIDEO_TRACK)
+#if ENABLE(VIDEO)
 #if PLATFORM(MAC) || HAVE(MEDIA_ACCESSIBILITY_FRAMEWORK)
 #include "CaptionUserPreferencesMediaAF.h"
 #else
@@ -91,50 +91,36 @@ PageGroup* PageGroup::pageGroup(const String& groupName)
 
 void PageGroup::addPage(Page& page)
 {
-    ASSERT(!m_pages.contains(&page));
-    m_pages.add(&page);
-
-    if (m_isLegacyPrivateBrowsingEnabledForTesting)
-        page.enableLegacyPrivateBrowsing(true);
+    ASSERT(!m_pages.contains(page));
+    m_pages.add(page);
 }
 
 void PageGroup::removePage(Page& page)
 {
-    ASSERT(m_pages.contains(&page));
-    m_pages.remove(&page);
+    ASSERT(m_pages.contains(page));
+    m_pages.remove(page);
 }
 
-#if ENABLE(VIDEO_TRACK)
+#if ENABLE(VIDEO)
 void PageGroup::captionPreferencesChanged()
 {
     for (auto& page : m_pages)
-        page->captionPreferencesChanged();
-    PageCache::singleton().markPagesForCaptionPreferencesChanged();
+        page.captionPreferencesChanged();
+    BackForwardCache::singleton().markPagesForCaptionPreferencesChanged();
 }
 
-CaptionUserPreferences& PageGroup::captionPreferences()
+CaptionUserPreferences& PageGroup::ensureCaptionPreferences()
 {
     if (!m_captionPreferences) {
 #if PLATFORM(MAC) || HAVE(MEDIA_ACCESSIBILITY_FRAMEWORK)
-        m_captionPreferences = makeUnique<CaptionUserPreferencesMediaAF>(*this);
+        m_captionPreferences = CaptionUserPreferencesMediaAF::create(*this);
 #else
-        m_captionPreferences = makeUnique<CaptionUserPreferences>(*this);
+        m_captionPreferences = CaptionUserPreferences::create(*this);
 #endif
     }
 
     return *m_captionPreferences.get();
 }
 #endif
-
-void PageGroup::enableLegacyPrivateBrowsingForTesting(bool enabled)
-{
-    if (m_isLegacyPrivateBrowsingEnabledForTesting == enabled)
-        return;
-
-    m_isLegacyPrivateBrowsingEnabledForTesting = enabled;
-
-    for (auto* page : m_pages)
-        page->enableLegacyPrivateBrowsing(enabled);
-}
 
 } // namespace WebCore

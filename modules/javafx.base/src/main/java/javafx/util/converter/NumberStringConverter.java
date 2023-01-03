@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -33,34 +33,60 @@ import java.util.Locale;
 import javafx.util.StringConverter;
 
 /**
- * <p>{@link StringConverter} implementation for {@link Number} values.</p>
+ * A {@link StringConverter} implementation for {@link Number} values. Instances of this class are immutable.
+ *
  * @since JavaFX 2.1
  */
 public class NumberStringConverter extends StringConverter<Number> {
-
-    // ------------------------------------------------------ Private properties
 
     final Locale locale;
     final String pattern;
     final NumberFormat numberFormat;
 
-    // ------------------------------------------------------------ Constructors
+    /**
+     * Constructs a {@code NumberStringConverter} with the default locale and format.
+     */
     public NumberStringConverter() {
         this(Locale.getDefault());
     }
 
+    /**
+     * Constructs a {@code NumberStringConverter} with the given locale and the default format.
+     *
+     * @param locale the locale used in determining the number format used to format the string
+     */
     public NumberStringConverter(Locale locale) {
         this(locale, null);
     }
 
+    /**
+     * Constructs a {@code NumberStringConverter} with the default locale and the given decimal format pattern.
+     *
+     * @param pattern the string pattern used in determining the number format used to format the string
+     *
+     * @see java.text.DecimalFormat
+     */
     public NumberStringConverter(String pattern) {
         this(Locale.getDefault(), pattern);
     }
 
+    /**
+     * Constructs a {@code NumberStringConverter} with the given locale and decimal format pattern.
+     *
+     * @param locale the locale used in determining the number format used to format the string
+     * @param pattern the string pattern used in determining the number format used to format the string
+     *
+     * @see java.text.DecimalFormat
+     */
     public NumberStringConverter(Locale locale, String pattern) {
         this(locale, pattern, null);
     }
 
+    /**
+     * Constructs a {@code NumberStringConverter} with the given number format.
+     *
+     * @param numberFormat the number format used to format the string
+     */
     public NumberStringConverter(NumberFormat numberFormat) {
         this(null, null, numberFormat);
     }
@@ -70,8 +96,6 @@ public class NumberStringConverter extends StringConverter<Number> {
         this.pattern = pattern;
         this.numberFormat = numberFormat;
     }
-
-    // ------------------------------------------------------- Converter Methods
 
     /** {@inheritDoc} */
     @Override public Number fromString(String value) {
@@ -112,11 +136,11 @@ public class NumberStringConverter extends StringConverter<Number> {
     }
 
     /**
-     * <p>Return a <code>NumberFormat</code> instance to use for formatting
-     * and parsing in this {@link StringConverter}.</p>
+     * Returns a {@code NumberFormat} instance to use for formatting
+     * and parsing in this {@code StringConverter}.
      *
      * @return a {@code NumberFormat} instance for formatting and parsing in this
-     * {@link StringConverter}
+     * {@code StringConverter}
      */
     protected NumberFormat getNumberFormat() {
         Locale _locale = locale == null ? Locale.getDefault() : locale;

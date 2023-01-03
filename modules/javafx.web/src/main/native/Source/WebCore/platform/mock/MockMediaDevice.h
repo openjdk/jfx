@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -43,15 +43,42 @@ struct MockMicrophoneProperties {
     }
 
     template <class Decoder>
-    static Optional<MockMicrophoneProperties> decode(Decoder& decoder)
+    static std::optional<MockMicrophoneProperties> decode(Decoder& decoder)
     {
-        Optional<int32_t> defaultSampleRate;
+        std::optional<int32_t> defaultSampleRate;
         decoder >> defaultSampleRate;
         if (!defaultSampleRate)
-            return WTF::nullopt;
+            return std::nullopt;
         return MockMicrophoneProperties { *defaultSampleRate };
     }
 
+    int defaultSampleRate { 44100 };
+};
+
+struct MockSpeakerProperties {
+    template<class Encoder>
+    void encode(Encoder& encoder) const
+    {
+        encoder << relatedMicrophoneId << static_cast<int32_t>(defaultSampleRate);
+    }
+
+    template <class Decoder>
+    static std::optional<MockSpeakerProperties> decode(Decoder& decoder)
+    {
+        std::optional<int32_t> defaultSampleRate;
+        decoder >> defaultSampleRate;
+        if (!defaultSampleRate)
+            return std::nullopt;
+
+        std::optional<String> relatedMicrophoneId;
+        decoder >> relatedMicrophoneId;
+        if (!relatedMicrophoneId)
+            return std::nullopt;
+
+        return MockSpeakerProperties { WTFMove(*relatedMicrophoneId), *defaultSampleRate };
+    }
+
+    String relatedMicrophoneId;
     int defaultSampleRate { 44100 };
 };
 
@@ -67,27 +94,27 @@ struct MockCameraProperties {
     }
 
     template <class Decoder>
-    static Optional<MockCameraProperties> decode(Decoder& decoder)
+    static std::optional<MockCameraProperties> decode(Decoder& decoder)
     {
-        Optional<double> defaultFrameRate;
+        std::optional<double> defaultFrameRate;
         decoder >> defaultFrameRate;
         if (!defaultFrameRate)
-            return WTF::nullopt;
+            return std::nullopt;
 
-        Optional<RealtimeMediaSourceSettings::VideoFacingMode> facingMode;
+        std::optional<RealtimeMediaSourceSettings::VideoFacingMode> facingMode;
         decoder >> facingMode;
         if (!facingMode)
-            return WTF::nullopt;
+            return std::nullopt;
 
-        Optional<Vector<VideoPresetData>> presets;
+        std::optional<Vector<VideoPresetData>> presets;
         decoder >> presets;
         if (!presets)
-            return WTF::nullopt;
+            return std::nullopt;
 
-        Optional<Color> fillColor;
+        std::optional<Color> fillColor;
         decoder >> fillColor;
         if (!fillColor)
-            return WTF::nullopt;
+            return std::nullopt;
 
         return MockCameraProperties { *defaultFrameRate, *facingMode, WTFMove(*presets), *fillColor };
     }
@@ -102,27 +129,27 @@ struct MockDisplayProperties {
     template<class Encoder>
     void encode(Encoder& encoder) const
     {
-        encoder.encodeEnum(type);
+        encoder << type;
         encoder << fillColor;
         encoder << defaultSize;
     }
 
     template <class Decoder>
-    static Optional<MockDisplayProperties> decode(Decoder& decoder)
+    static std::optional<MockDisplayProperties> decode(Decoder& decoder)
     {
-        Optional<CaptureDevice::DeviceType> type;
+        std::optional<CaptureDevice::DeviceType> type;
         decoder >> type;
-            return WTF::nullopt;
+            return std::nullopt;
 
-        Optional<Color> fillColor;
+        std::optional<Color> fillColor;
         decoder >> fillColor;
         if (!fillColor)
-            return WTF::nullopt;
+            return std::nullopt;
 
-        Optional<IntSize> defaultSize;
+        std::optional<IntSize> defaultSize;
         decoder >> defaultSize;
         if (!defaultSize)
-            return WTF::nullopt;
+            return std::nullopt;
 
         return MockDisplayProperties { *type, *fillColor, *defaultSize };
     }
@@ -133,19 +160,40 @@ struct MockDisplayProperties {
 };
 
 struct MockMediaDevice {
-    bool isMicrophone() const { return WTF::holds_alternative<MockMicrophoneProperties>(properties); }
-    bool isCamera() const { return WTF::holds_alternative<MockCameraProperties>(properties); }
-    bool isDisplay() const { return WTF::holds_alternative<MockDisplayProperties>(properties); }
+    bool isMicrophone() const { return std::holds_alternative<MockMicrophoneProperties>(properties); }
+    bool isSpeaker() const { return std::holds_alternative<MockSpeakerProperties>(properties); }
+    bool isCamera() const { return std::holds_alternative<MockCameraProperties>(properties); }
+    bool isDisplay() const { return std::holds_alternative<MockDisplayProperties>(properties); }
+
+    CaptureDevice captureDevice() const
+    {
+        if (isMicrophone())
+            return CaptureDevice { persistentId, CaptureDevice::DeviceType::Microphone, label, persistentId, true };
+        if (isSpeaker())
+            return CaptureDevice { persistentId, CaptureDevice::DeviceType::Speaker, label, speakerProperties()->relatedMicrophoneId, true };
+        if (isCamera())
+            return CaptureDevice { persistentId, CaptureDevice::DeviceType::Camera, label, persistentId, true };
+
+        ASSERT(isDisplay());
+        return CaptureDevice { persistentId, std::get<MockDisplayProperties>(properties).type, label, emptyString(), true };
+    }
 
     CaptureDevice::DeviceType type() const
     {
         if (isMicrophone())
             return CaptureDevice::DeviceType::Microphone;
+        if (isSpeaker())
+            return CaptureDevice::DeviceType::Speaker;
         if (isCamera())
             return CaptureDevice::DeviceType::Camera;
 
         ASSERT(isDisplay());
-        return WTF::get<MockDisplayProperties>(properties).type;
+        return std::get<MockDisplayProperties>(properties).type;
+    }
+
+    const MockSpeakerProperties* speakerProperties() const
+    {
+        return isSpeaker() ? &std::get<MockSpeakerProperties>(properties) : nullptr;
     }
 
     template<class Encoder>
@@ -153,60 +201,65 @@ struct MockMediaDevice {
     {
         encoder << persistentId;
         encoder << label;
-        switchOn(properties, [&](const MockMicrophoneProperties& properties) {
+        WTF::switchOn(properties, [&](const MockMicrophoneProperties& properties) {
             encoder << (uint8_t)1;
             encoder << properties;
-        }, [&](const MockCameraProperties& properties) {
+        }, [&](const MockSpeakerProperties& properties) {
             encoder << (uint8_t)2;
             encoder << properties;
-        }, [&](const MockDisplayProperties& properties) {
+        }, [&](const MockCameraProperties& properties) {
             encoder << (uint8_t)3;
+            encoder << properties;
+        }, [&](const MockDisplayProperties& properties) {
+            encoder << (uint8_t)4;
             encoder << properties;
         });
     }
 
     template <typename Properties, typename Decoder>
-    static Optional<MockMediaDevice> decodeMockMediaDevice(Decoder& decoder, String&& persistentId, String&& label)
+    static std::optional<MockMediaDevice> decodeMockMediaDevice(Decoder& decoder, String&& persistentId, String&& label)
     {
-        Optional<Properties> properties;
+        std::optional<Properties> properties;
         decoder >> properties;
         if (!properties)
-            return WTF::nullopt;
+            return std::nullopt;
         return MockMediaDevice { WTFMove(persistentId), WTFMove(label), WTFMove(*properties) };
     }
 
     template <class Decoder>
-    static Optional<MockMediaDevice> decode(Decoder& decoder)
+    static std::optional<MockMediaDevice> decode(Decoder& decoder)
     {
-        Optional<String> persistentId;
+        std::optional<String> persistentId;
         decoder >> persistentId;
         if (!persistentId)
-            return WTF::nullopt;
+            return std::nullopt;
 
-        Optional<String> label;
+        std::optional<String> label;
         decoder >> label;
         if (!label)
-            return WTF::nullopt;
+            return std::nullopt;
 
-        Optional<uint8_t> index;
+        std::optional<uint8_t> index;
         decoder >> index;
         if (!index)
-            return WTF::nullopt;
+            return std::nullopt;
 
         switch (*index) {
         case 1:
             return decodeMockMediaDevice<MockMicrophoneProperties>(decoder, WTFMove(*persistentId), WTFMove(*label));
         case 2:
-            return decodeMockMediaDevice<MockCameraProperties>(decoder, WTFMove(*persistentId), WTFMove(*label));
+            return decodeMockMediaDevice<MockSpeakerProperties>(decoder, WTFMove(*persistentId), WTFMove(*label));
         case 3:
+            return decodeMockMediaDevice<MockCameraProperties>(decoder, WTFMove(*persistentId), WTFMove(*label));
+        case 4:
             return decodeMockMediaDevice<MockDisplayProperties>(decoder, WTFMove(*persistentId), WTFMove(*label));
         }
-        return WTF::nullopt;
+        return std::nullopt;
     }
 
     String persistentId;
     String label;
-    Variant<MockMicrophoneProperties, MockCameraProperties, MockDisplayProperties> properties;
+    std::variant<MockMicrophoneProperties, MockSpeakerProperties, MockCameraProperties, MockDisplayProperties> properties;
 };
 
 } // namespace WebCore

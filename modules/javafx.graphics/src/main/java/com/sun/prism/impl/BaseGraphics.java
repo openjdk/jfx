@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -112,6 +112,7 @@ public abstract class BaseGraphics implements RectShadowGraphics {
         return camera;
     }
 
+    @Override
     public RenderTarget getRenderTarget() {
         return renderTarget;
     }
@@ -126,14 +127,17 @@ public abstract class BaseGraphics implements RectShadowGraphics {
         return state3D;
     }
 
+    @Override
     public Screen getAssociatedScreen() {
         return context.getAssociatedScreen();
     }
 
+    @Override
     public ResourceFactory getResourceFactory() {
         return context.getResourceFactory();
     }
 
+    @Override
     public BaseTransform getTransformNoClone() {
         return transform3D;
     }
@@ -143,6 +147,7 @@ public abstract class BaseGraphics implements RectShadowGraphics {
         context.setPerspectiveTransform(transform);
     }
 
+    @Override
     public void setTransform(BaseTransform transform) {
         if (transform == null) {
             transform3D.setToIdentity();
@@ -152,6 +157,7 @@ public abstract class BaseGraphics implements RectShadowGraphics {
         validateTransformAndPaint();
     }
 
+    @Override
     public void setTransform(double m00, double m10,
                              double m01, double m11,
                              double m02, double m12)
@@ -160,6 +166,7 @@ public abstract class BaseGraphics implements RectShadowGraphics {
         validateTransformAndPaint();
     }
 
+    @Override
     public void setTransform3D(double mxx, double mxy, double mxz, double mxt,
                                double myx, double myy, double myz, double myt,
                                double mzx, double mzy, double mzz, double mzt)
@@ -170,11 +177,13 @@ public abstract class BaseGraphics implements RectShadowGraphics {
         validateTransformAndPaint();
     }
 
+    @Override
     public void transform(BaseTransform transform) {
         transform3D.concatenate(transform);
         validateTransformAndPaint();
     }
 
+    @Override
     public void translate(float tx, float ty) {
         if (tx != 0f || ty != 0f) {
             transform3D.translate(tx, ty);
@@ -182,6 +191,7 @@ public abstract class BaseGraphics implements RectShadowGraphics {
         }
     }
 
+    @Override
     public void translate(float tx, float ty, float tz) {
         if (tx != 0f || ty != 0f || tz != 0f) {
             transform3D.translate(tx, ty, tz);
@@ -189,6 +199,7 @@ public abstract class BaseGraphics implements RectShadowGraphics {
         }
     }
 
+    @Override
     public void scale(float sx, float sy) {
         if (sx != 1f || sy != 1f) {
             transform3D.scale(sx, sy);
@@ -196,6 +207,7 @@ public abstract class BaseGraphics implements RectShadowGraphics {
         }
     }
 
+    @Override
     public void scale(float sx, float sy, float sz) {
         if (sx != 1f || sy != 1f || sz != 1f) {
             transform3D.scale(sx, sy, sz);
@@ -203,17 +215,21 @@ public abstract class BaseGraphics implements RectShadowGraphics {
         }
     }
 
+    @Override
     public void setClipRectIndex(int index) {
         this.clipRectIndex = index;
     }
+    @Override
     public int getClipRectIndex() {
         return this.clipRectIndex;
     }
 
+    @Override
     public void setHasPreCullingBits(boolean hasBits) {
         this.hasPreCullingBits = hasBits;
     }
 
+    @Override
     public boolean hasPreCullingBits() {
         return hasPreCullingBits;
     }
@@ -246,36 +262,44 @@ public abstract class BaseGraphics implements RectShadowGraphics {
         }
     }
 
+    @Override
     public NGCamera getCameraNoClone() {
         return camera;
     }
 
+    @Override
     public void setDepthTest(boolean depthTest) {
         this.depthTest = depthTest;
     }
 
+    @Override
     public boolean isDepthTest() {
         return depthTest;
     }
 
+    @Override
     public void setDepthBuffer(boolean depthBuffer) {
         this.depthBuffer = depthBuffer;
     }
 
+    @Override
     public boolean isDepthBuffer() {
         return depthBuffer;
     }
 
     // If true use fragment shader that does alpha testing (i.e. discard if alpha == 0.0)
     // Currently it is required when depth testing is in use.
+    @Override
     public boolean isAlphaTestShader() {
         return (PrismSettings.forceAlphaTestShader || (isDepthTest() && isDepthBuffer()));
     }
 
+    @Override
     public void setAntialiasedShape(boolean aa) {
         antialiasedShape = aa;
     }
 
+    @Override
     public boolean isAntialiasedShape() {
         return antialiasedShape;
     }
@@ -296,22 +320,27 @@ public abstract class BaseGraphics implements RectShadowGraphics {
         return pixelScaleY;
     }
 
+    @Override
     public void setCamera(NGCamera camera) {
         this.camera = camera;
     }
 
+    @Override
     public Rectangle getClipRect() {
         return (clipRect != null) ? new Rectangle(clipRect) : null;
     }
 
+    @Override
     public Rectangle getClipRectNoClone() {
         return clipRect;
     }
 
+    @Override
     public RectBounds getFinalClipNoClone() {
         return finalClipRect;
     }
 
+    @Override
     public void setClipRect(Rectangle clipRect) {
         this.finalClipRect.setBounds(devClipRect);
         if (clipRect == null) {
@@ -322,39 +351,48 @@ public abstract class BaseGraphics implements RectShadowGraphics {
         }
     }
 
+    @Override
     public float getExtraAlpha() {
         return extraAlpha;
     }
 
+    @Override
     public void setExtraAlpha(float extraAlpha) {
         this.extraAlpha = extraAlpha;
     }
 
+    @Override
     public CompositeMode getCompositeMode() {
         return compMode;
     }
 
+    @Override
     public void setCompositeMode(CompositeMode compMode) {
         this.compMode = compMode;
     }
 
+    @Override
     public Paint getPaint() {
         return paint;
     }
 
+    @Override
     public void setPaint(Paint paint) {
         this.paint = paint;
         validateTransformAndPaint();
     }
 
+    @Override
     public BasicStroke getStroke() {
         return stroke;
     }
 
+    @Override
     public void setStroke(BasicStroke stroke) {
         this.stroke = stroke;
     }
 
+    @Override
     public void clear() {
         clear(Color.TRANSPARENT);
     }
@@ -362,6 +400,7 @@ public abstract class BaseGraphics implements RectShadowGraphics {
     protected abstract void renderShape(Shape shape, BasicStroke stroke,
                                         float bx, float by, float bw, float bh);
 
+    @Override
     public void fill(Shape shape) {
         float bx = 0f, by = 0f, bw = 0f, bh = 0f;
         if (paint.isProportional()) {
@@ -385,6 +424,7 @@ public abstract class BaseGraphics implements RectShadowGraphics {
         renderShape(shape, null, bx, by, bw, bh);
     }
 
+    @Override
     public void draw(Shape shape) {
         float bx = 0f, by = 0f, bw = 0f, bh = 0f;
         if (paint.isProportional()) {
@@ -643,6 +683,7 @@ public abstract class BaseGraphics implements RectShadowGraphics {
         }
     }
 
+    @Override
     public void drawTextureVO(Texture tex,
                               float topopacity, float botopacity,
                               float dx1, float dy1, float dx2, float dy2,
@@ -691,6 +732,7 @@ public abstract class BaseGraphics implements RectShadowGraphics {
         }
     }
 
+    @Override
     public void drawTextureRaw(Texture tex,
                                float dx1, float dy1, float dx2, float dy2,
                                float tx1, float ty1, float tx2, float ty2)
@@ -732,6 +774,7 @@ public abstract class BaseGraphics implements RectShadowGraphics {
                    tx1, ty1, tx2, ty2);
     }
 
+    @Override
     public void drawMappedTextureRaw(Texture tex,
                                      float dx1, float dy1, float dx2, float dy2,
                                      float tx11, float ty11, float tx21, float ty21,

@@ -29,18 +29,17 @@
 #include "SourceCode.h"
 #include <wtf/ASCIICType.h>
 #include <wtf/Vector.h>
+#include <wtf/unicode/CharacterNames.h>
 
 namespace JSC {
 
-enum LexerFlags {
-    LexerFlagsIgnoreReservedWords = 1,
-    LexerFlagsDontBuildStrings = 2,
-    LexexFlagsDontBuildKeywords = 4
-};
-
-enum class LexerEscapeParseMode { Template, String };
-
 struct ParsedUnicodeEscapeValue;
+
+enum class LexerFlags : uint8_t {
+    IgnoreReservedWords = 1 << 0,
+    DontBuildStrings = 1 << 1,
+    DontBuildKeywords = 1 << 2
+};
 
 bool isLexerKeyword(const Identifier&);
 
@@ -64,8 +63,8 @@ public:
     void setIsReparsingFunction() { m_isReparsingFunction = true; }
     bool isReparsingFunction() const { return m_isReparsingFunction; }
 
-    JSTokenType lex(JSToken*, unsigned, bool strictMode);
-    JSTokenType lexWithoutClearingLineTerminator(JSToken*, unsigned, bool strictMode);
+    JSTokenType lex(JSToken*, OptionSet<LexerFlags>, bool strictMode);
+    JSTokenType lexWithoutClearingLineTerminator(JSToken*, OptionSet<LexerFlags>, bool strictMode);
     bool nextTokenIsColon();
     int lineNumber() const { return m_lineNumber; }
     ALWAYS_INLINE int currentOffset() const { return offsetFromSourcePtr(m_code); }
@@ -109,6 +108,7 @@ public:
     }
     void setLineNumber(int line)
     {
+        ASSERT(line >= 0);
         m_lineNumber = line;
     }
     void setHasLineTerminatorBeforeToken(bool terminator)
@@ -116,7 +116,7 @@ public:
         m_hasLineTerminatorBeforeToken = terminator;
     }
 
-    JSTokenType lexExpectIdentifier(JSToken*, unsigned, bool strictMode);
+    JSTokenType lexExpectIdentifier(JSToken*, OptionSet<LexerFlags>, bool strictMode);
 
     ALWAYS_INLINE StringView getToken(const JSToken& token)
     {
@@ -124,6 +124,8 @@ public:
         ASSERT_WITH_MESSAGE(token.m_location.startOffset <= token.m_location.endOffset, "Calling this function with the baked token.");
         return sourceProvider->getRange(token.m_location.startOffset, token.m_location.endOffset);
     }
+
+    size_t codeLength() { return m_codeEnd - m_codeStart; }
 
 private:
     void record8(int);
@@ -134,6 +136,7 @@ private:
     void append16(const LChar*, size_t);
     void append16(const UChar* characters, size_t length) { m_buffer16.append(characters, length); }
 
+    UChar32 currentCodePoint() const;
     ALWAYS_INLINE void shift();
     ALWAYS_INLINE bool atEnd() const;
     ALWAYS_INLINE T peek(int offset) const;
@@ -146,9 +149,8 @@ private:
 
     String invalidCharacterMessage() const;
     ALWAYS_INLINE const T* currentSourcePtr() const;
-    ALWAYS_INLINE void setOffsetFromSourcePtr(const T* sourcePtr, unsigned lineStartOffset) { setOffset(offsetFromSourcePtr(sourcePtr), lineStartOffset); }
 
-    ALWAYS_INLINE void setCodeStart(const StringView&);
+    ALWAYS_INLINE void setCodeStart(StringView);
 
     ALWAYS_INLINE const Identifier* makeIdentifier(const LChar* characters, size_t length);
     ALWAYS_INLINE const Identifier* makeIdentifier(const UChar* characters, size_t length);
@@ -164,8 +166,8 @@ private:
 
     template <int shiftAmount> void internalShift();
     template <bool shouldCreateIdentifier> ALWAYS_INLINE JSTokenType parseKeyword(JSTokenData*);
-    template <bool shouldBuildIdentifiers> ALWAYS_INLINE JSTokenType parseIdentifier(JSTokenData*, unsigned lexerFlags, bool strictMode);
-    template <bool shouldBuildIdentifiers> NEVER_INLINE JSTokenType parseIdentifierSlowCase(JSTokenData*, unsigned lexerFlags, bool strictMode);
+    template <bool shouldBuildIdentifiers> ALWAYS_INLINE JSTokenType parseIdentifier(JSTokenData*, OptionSet<LexerFlags>, bool strictMode);
+    template <bool shouldBuildIdentifiers> NEVER_INLINE JSTokenType parseIdentifierSlowCase(JSTokenData*, OptionSet<LexerFlags>, bool strictMode, const T* identifierStart);
     enum StringParseResult {
         StringParsedSuccessfully,
         StringUnterminated,
@@ -175,14 +177,14 @@ private:
     template <bool shouldBuildStrings> NEVER_INLINE StringParseResult parseStringSlowCase(JSTokenData*, bool strictMode);
 
 
-    template <bool shouldBuildStrings, LexerEscapeParseMode escapeParseMode> ALWAYS_INLINE StringParseResult parseComplexEscape(bool strictMode, T stringQuoteCharacter);
+    template <bool shouldBuildStrings> ALWAYS_INLINE StringParseResult parseComplexEscape(bool strictMode);
     ALWAYS_INLINE StringParseResult parseTemplateLiteral(JSTokenData*, RawStringsBuildMode);
 
-    using NumberParseResult = Variant<double, const Identifier*>;
-    ALWAYS_INLINE Optional<NumberParseResult> parseHex();
-    ALWAYS_INLINE Optional<NumberParseResult> parseBinary();
-    ALWAYS_INLINE Optional<NumberParseResult> parseOctal();
-    ALWAYS_INLINE Optional<NumberParseResult> parseDecimal();
+    using NumberParseResult = std::variant<double, const Identifier*>;
+    ALWAYS_INLINE std::optional<NumberParseResult> parseHex();
+    ALWAYS_INLINE std::optional<NumberParseResult> parseBinary();
+    ALWAYS_INLINE std::optional<NumberParseResult> parseOctal();
+    ALWAYS_INLINE std::optional<NumberParseResult> parseDecimal();
     ALWAYS_INLINE bool parseNumberAfterDecimalPoint();
     ALWAYS_INLINE bool parseNumberAfterExponentIndicator();
     ALWAYS_INLINE bool parseMultilineComment();
@@ -195,7 +197,7 @@ private:
 
     void fillTokenInfo(JSToken*, JSTokenType, int lineNumber, int endOffset, int lineStartOffset, JSTextPosition endPosition);
 
-    static const size_t initialReadBufferCapacity = 32;
+    static constexpr size_t initialReadBufferCapacity = 32;
 
     int m_lineNumber;
     int m_lastLineNumber;
@@ -241,7 +243,7 @@ ALWAYS_INLINE bool Lexer<LChar>::isWhiteSpace(LChar ch)
 template <>
 ALWAYS_INLINE bool Lexer<UChar>::isWhiteSpace(UChar ch)
 {
-    return isLatin1(ch) ? Lexer<LChar>::isWhiteSpace(static_cast<LChar>(ch)) : (u_charType(ch) == U_SPACE_SEPARATOR || ch == 0xFEFF);
+    return isLatin1(ch) ? Lexer<LChar>::isWhiteSpace(static_cast<LChar>(ch)) : (u_charType(ch) == U_SPACE_SEPARATOR || ch == byteOrderMark);
 }
 
 template <>
@@ -302,14 +304,14 @@ ALWAYS_INLINE const Identifier* Lexer<T>::makeEmptyIdentifier()
 }
 
 template <>
-ALWAYS_INLINE void Lexer<LChar>::setCodeStart(const StringView& sourceString)
+ALWAYS_INLINE void Lexer<LChar>::setCodeStart(StringView sourceString)
 {
     ASSERT(sourceString.is8Bit());
     m_codeStart = sourceString.characters8();
 }
 
 template <>
-ALWAYS_INLINE void Lexer<UChar>::setCodeStart(const StringView& sourceString)
+ALWAYS_INLINE void Lexer<UChar>::setCodeStart(StringView sourceString)
 {
     ASSERT(!sourceString.is8Bit());
     m_codeStart = sourceString.characters16();
@@ -333,18 +335,18 @@ ALWAYS_INLINE const Identifier* Lexer<T>::makeLCharIdentifier(const UChar* chara
     return &m_arena->makeIdentifierLCharFromUChar(m_vm, characters, length);
 }
 
-#if ASSERT_DISABLED
-ALWAYS_INLINE bool isSafeBuiltinIdentifier(VM&, const Identifier*) { return true; }
-#else
+#if ASSERT_ENABLED
 bool isSafeBuiltinIdentifier(VM&, const Identifier*);
-#endif
+#else
+ALWAYS_INLINE bool isSafeBuiltinIdentifier(VM&, const Identifier*) { return true; }
+#endif // ASSERT_ENABLED
 
 template <typename T>
-ALWAYS_INLINE JSTokenType Lexer<T>::lexExpectIdentifier(JSToken* tokenRecord, unsigned lexerFlags, bool strictMode)
+ALWAYS_INLINE JSTokenType Lexer<T>::lexExpectIdentifier(JSToken* tokenRecord, OptionSet<LexerFlags> lexerFlags, bool strictMode)
 {
     JSTokenData* tokenData = &tokenRecord->m_data;
     JSTokenLocation* tokenLocation = &tokenRecord->m_location;
-    ASSERT((lexerFlags & LexerFlagsIgnoreReservedWords));
+    ASSERT(lexerFlags.contains(LexerFlags::IgnoreReservedWords));
     const T* start = m_code;
     const T* ptr = start;
     const T* end = m_codeEnd;
@@ -374,12 +376,12 @@ ALWAYS_INLINE JSTokenType Lexer<T>::lexExpectIdentifier(JSToken* tokenRecord, un
     ASSERT(currentOffset() >= currentLineStartOffset());
 
     // Create the identifier if needed
-    if (lexerFlags & LexexFlagsDontBuildKeywords
-#if !ASSERT_DISABLED
+    if (lexerFlags.contains(LexerFlags::DontBuildKeywords)
+#if ASSERT_ENABLED
         && !m_parsingBuiltinFunction
 #endif
         )
-        tokenData->ident = 0;
+        tokenData->ident = nullptr;
     else
         tokenData->ident = makeLCharIdentifier(start, ptr - start);
 
@@ -390,7 +392,7 @@ ALWAYS_INLINE JSTokenType Lexer<T>::lexExpectIdentifier(JSToken* tokenRecord, un
     ASSERT(tokenLocation->startOffset >= tokenLocation->lineStartOffset);
     tokenRecord->m_startPosition = startPosition;
     tokenRecord->m_endPosition = currentPosition();
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
     if (m_parsingBuiltinFunction) {
         if (!isSafeBuiltinIdentifier(m_vm, tokenData->ident))
             return ERRORTOK;
@@ -405,7 +407,7 @@ slowCase:
 }
 
 template <typename T>
-ALWAYS_INLINE JSTokenType Lexer<T>::lex(JSToken* tokenRecord, unsigned lexerFlags, bool strictMode)
+ALWAYS_INLINE JSTokenType Lexer<T>::lex(JSToken* tokenRecord, OptionSet<LexerFlags> lexerFlags, bool strictMode)
 {
     m_hasLineTerminatorBeforeToken = false;
     return lexWithoutClearingLineTerminator(tokenRecord, lexerFlags, strictMode);

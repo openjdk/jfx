@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,7 +28,6 @@ package com.sun.javafx.tk;
 import javafx.application.ConditionalFeature;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.geometry.Dimension2D;
-import javafx.scene.Scene;
 import javafx.scene.effect.BlurType;
 import javafx.scene.image.Image;
 import javafx.scene.image.PixelFormat;
@@ -51,11 +50,9 @@ import javafx.scene.shape.StrokeLineJoin;
 import javafx.scene.shape.StrokeType;
 import javafx.stage.FileChooser.ExtensionFilter;
 import javafx.stage.Modality;
-import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 import javafx.stage.Window;
 import java.io.File;
-import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.security.AccessControlContext;
@@ -63,7 +60,6 @@ import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -82,18 +78,18 @@ import com.sun.javafx.perf.PerformanceTracker;
 import com.sun.javafx.runtime.VersionInfo;
 import com.sun.javafx.runtime.async.AsyncOperation;
 import com.sun.javafx.runtime.async.AsyncOperationListener;
-import com.sun.javafx.scene.SceneHelper;
 import com.sun.javafx.scene.text.TextLayoutFactory;
 import com.sun.javafx.sg.prism.NGCamera;
 import com.sun.javafx.sg.prism.NGLightBase;
 import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.util.Utils;
 import com.sun.scenario.DelayedRunnable;
-import com.sun.scenario.animation.AbstractMasterTimer;
+import com.sun.scenario.animation.AbstractPrimaryTimer;
 import com.sun.scenario.effect.AbstractShadow.ShadowMode;
 import com.sun.scenario.effect.Color4f;
 import com.sun.scenario.effect.FilterContext;
 import com.sun.scenario.effect.Filterable;
+import java.util.Optional;
 
 
 public abstract class Toolkit {
@@ -106,10 +102,12 @@ public abstract class Toolkit {
 
     private static final Map gradientMap = new WeakHashMap();
 
+    @SuppressWarnings("removal")
     private static final boolean verbose = AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> Boolean.getBoolean("javafx.verbose"));
 
     private static final String[] msLibNames = {
         "api-ms-win-core-console-l1-1-0",
+        "api-ms-win-core-console-l1-2-0",
         "api-ms-win-core-datetime-l1-1-0",
         "api-ms-win-core-debug-l1-1-0",
         "api-ms-win-core-errorhandling-l1-1-0",
@@ -153,8 +151,10 @@ public abstract class Toolkit {
 
         // Finally load VS 2017 DLLs in the following order
         "vcruntime140",
+        "vcruntime140_1",
         "msvcp140",
-        "concrt140"
+        "msvcp140_1",
+        "msvcp140_2"
 };
 
     private static String lookupToolkitClass(String name) {
@@ -200,14 +200,15 @@ public abstract class Toolkit {
             return TOOLKIT;
         }
 
-        AccessController.doPrivileged((PrivilegedAction<Object>) () -> {
+        @SuppressWarnings("removal")
+        var dummy = AccessController.doPrivileged((PrivilegedAction<Object>) () -> {
             // Get the javafx.version and javafx.runtime.version from a preconstructed
             // java class, VersionInfo, created at build time.
             VersionInfo.setupSystemProperties();
             return null;
         });
 
-        // This loading of msvcp140.dll and vcruntime140.dll (VS2017) is required on Windows platforms
+        // Load required Microsoft runtime DLLs on Windows platforms
         if (PlatformUtil.isWindows()) {
             loadMSWindowsLibraries();
         }
@@ -215,7 +216,9 @@ public abstract class Toolkit {
         boolean userSpecifiedToolkit = true;
 
         // Check a system property to see if there is a specific toolkit to use.
-        // This is not a doPriviledged check so that applets cannot use this.
+        // This is not a doPriviledged check so that applications running
+        // with a security manager cannot use this unless they have permission
+        // to read system properties.
         String forcedToolkit = null;
         try {
             forcedToolkit = System.getProperty("javafx.toolkit");
@@ -256,7 +259,7 @@ public abstract class Toolkit {
                         + forcedToolkit);
             }
 
-            TOOLKIT = (Toolkit)clz.newInstance();
+            TOOLKIT = (Toolkit)clz.getDeclaredConstructor().newInstance();
             if (TOOLKIT.init()) {
                 if (printToolkit) {
                     System.err.println("JavaFX: using " + forcedToolkit);
@@ -366,41 +369,24 @@ public abstract class Toolkit {
 
     public abstract boolean isNestedLoopRunning();
 
-    public abstract TKStage createTKStage(Window peerWindow, boolean securityDialog, StageStyle stageStyle, boolean primary, Modality modality, TKStage owner, boolean rtl, AccessControlContext acc);
+    public abstract TKStage createTKStage(Window peerWindow, boolean securityDialog, StageStyle stageStyle, boolean primary, Modality modality, TKStage owner, boolean rtl, @SuppressWarnings("removal") AccessControlContext acc);
 
-    public abstract TKStage createTKPopupStage(Window peerWindow, StageStyle popupStyle, TKStage owner, AccessControlContext acc);
-    public abstract TKStage createTKEmbeddedStage(HostInterface host, AccessControlContext acc);
+    public abstract TKStage createTKPopupStage(Window peerWindow, StageStyle popupStyle, TKStage owner, @SuppressWarnings("removal") AccessControlContext acc);
+    public abstract TKStage createTKEmbeddedStage(HostInterface host, @SuppressWarnings("removal") AccessControlContext acc);
 
-    /**
-     * Creates an AppletWindow using the provided window pointer as the parent
-     * window.
-     *
-     * @param parent the native parent which will contain the primary stage
-     * window(s). Used on Windows/Linux platforms.
-     *
-     * @param serverName the name of CARemoteLayerServer which
-     * will be used to register native layer. Used on Mac platform.
-     */
-    public abstract AppletWindow createAppletWindow(long parent, String serverName);
-
-    /**
-     * Perform cleanup in preparation for applet termination, including closing
-     * the applet window.
-     */
-    public abstract void closeAppletWindow();
-
-    private final Map<TKPulseListener,AccessControlContext> stagePulseListeners =
-            new WeakHashMap<TKPulseListener,AccessControlContext>();
-    private final Map<TKPulseListener,AccessControlContext> scenePulseListeners =
-            new WeakHashMap<TKPulseListener,AccessControlContext>();
-    private final Map<TKPulseListener,AccessControlContext> postScenePulseListeners =
-            new WeakHashMap<TKPulseListener,AccessControlContext>();
-    private final Map<TKListener,AccessControlContext> toolkitListeners =
-            new WeakHashMap<TKListener,AccessControlContext>();
+    @SuppressWarnings("removal")
+    private final Map<TKPulseListener,AccessControlContext> stagePulseListeners = new WeakHashMap<>();
+    @SuppressWarnings("removal")
+    private final Map<TKPulseListener,AccessControlContext> scenePulseListeners = new WeakHashMap<>();
+    @SuppressWarnings("removal")
+    private final Map<TKPulseListener,AccessControlContext> postScenePulseListeners = new WeakHashMap<>();
+    @SuppressWarnings("removal")
+    private final Map<TKListener,AccessControlContext> toolkitListeners = new WeakHashMap<>();
 
     // The set of shutdown hooks is strongly held to avoid premature GC.
-    private final Set<Runnable> shutdownHooks = new HashSet<Runnable>();
+    private final Set<Runnable> shutdownHooks = new HashSet<>();
 
+    @SuppressWarnings("removal")
     private void runPulse(final TKPulseListener listener,
             final AccessControlContext acc) {
 
@@ -419,25 +405,28 @@ public abstract class Toolkit {
         // and those changes propogated to scene before it gets its pulse to update
 
         // Copy of listener map
+        @SuppressWarnings("removal")
         final Map<TKPulseListener,AccessControlContext> stagePulseList =
-                new WeakHashMap<TKPulseListener,AccessControlContext>();
+                new WeakHashMap<>();
+        @SuppressWarnings("removal")
         final Map<TKPulseListener,AccessControlContext> scenePulseList =
-                new WeakHashMap<TKPulseListener,AccessControlContext>();
+                new WeakHashMap<>();
+        @SuppressWarnings("removal")
         final Map<TKPulseListener,AccessControlContext> postScenePulseList =
-                new WeakHashMap<TKPulseListener,AccessControlContext>();
+                new WeakHashMap<>();
 
         synchronized (this) {
             stagePulseList.putAll(stagePulseListeners);
             scenePulseList.putAll(scenePulseListeners);
             postScenePulseList.putAll(postScenePulseListeners);
         }
-        for (Map.Entry<TKPulseListener,AccessControlContext> entry : stagePulseList.entrySet()) {
+        for (@SuppressWarnings("removal") Map.Entry<TKPulseListener,AccessControlContext> entry : stagePulseList.entrySet()) {
             runPulse(entry.getKey(), entry.getValue());
         }
-        for (Map.Entry<TKPulseListener,AccessControlContext> entry : scenePulseList.entrySet()) {
+        for (@SuppressWarnings("removal") Map.Entry<TKPulseListener,AccessControlContext> entry : scenePulseList.entrySet()) {
             runPulse(entry.getKey(), entry.getValue());
         }
-        for (Map.Entry<TKPulseListener,AccessControlContext> entry : postScenePulseList.entrySet()) {
+        for (@SuppressWarnings("removal") Map.Entry<TKPulseListener,AccessControlContext> entry : postScenePulseList.entrySet()) {
             runPulse(entry.getKey(), entry.getValue());
         }
 
@@ -450,6 +439,7 @@ public abstract class Toolkit {
             return;
         }
         synchronized (this) {
+            @SuppressWarnings("removal")
             AccessControlContext acc = AccessController.getContext();
             stagePulseListeners.put(listener, acc);
         }
@@ -464,6 +454,7 @@ public abstract class Toolkit {
             return;
         }
         synchronized (this) {
+            @SuppressWarnings("removal")
             AccessControlContext acc = AccessController.getContext();
             scenePulseListeners.put(listener, acc);
         }
@@ -478,6 +469,7 @@ public abstract class Toolkit {
             return;
         }
         synchronized (this) {
+            @SuppressWarnings("removal")
             AccessControlContext acc = AccessController.getContext();
             postScenePulseListeners.put(listener, acc);
         }
@@ -492,6 +484,7 @@ public abstract class Toolkit {
         if (listener == null) {
             return;
         }
+        @SuppressWarnings("removal")
         AccessControlContext acc = AccessController.getContext();
         toolkitListeners.put(listener, acc);
     }
@@ -501,7 +494,9 @@ public abstract class Toolkit {
     }
 
     private TKPulseListener lastTkPulseListener = null;
+    @SuppressWarnings("removal")
     private AccessControlContext lastTkPulseAcc = null;
+    @SuppressWarnings("removal")
     public void setLastTkPulseListener(TKPulseListener listener) {
         lastTkPulseAcc = AccessController.getContext();
         lastTkPulseListener = listener;
@@ -525,7 +520,7 @@ public abstract class Toolkit {
     protected void notifyShutdownHooks() {
         List<Runnable> hooks;
         synchronized (shutdownHooks) {
-            hooks = new ArrayList<Runnable>(shutdownHooks);
+            hooks = new ArrayList<>(shutdownHooks);
             shutdownHooks.clear();
         }
 
@@ -534,6 +529,7 @@ public abstract class Toolkit {
         }
     }
 
+    @SuppressWarnings("removal")
     public void notifyWindowListeners(final List<TKStage> windows) {
         for (Map.Entry<TKListener,AccessControlContext> entry : toolkitListeners.entrySet()) {
             final TKListener listener = entry.getKey();
@@ -714,7 +710,7 @@ public abstract class Toolkit {
     public abstract boolean isForwardTraversalKey(KeyEvent e);
     public abstract boolean isBackwardTraversalKey(KeyEvent e);
 
-    public abstract AbstractMasterTimer getMasterTimer();
+    public abstract AbstractPrimaryTimer getPrimaryTimer();
 
     public abstract FontLoader getFontLoader();
     public abstract TextLayoutFactory getTextLayoutFactory();
@@ -871,6 +867,13 @@ public abstract class Toolkit {
     public KeyCode getPlatformShortcutKey() {
         return PlatformUtil.isMac() ? KeyCode.META : KeyCode.CONTROL;
     }
+
+    /**
+     * Returns the lock state for the given keyCode.
+     * @param keyCode the keyCode to check
+     * @return the lock state for the given keyCode.
+     */
+    public abstract Optional<Boolean> isKeyLocked(KeyCode keyCode);
 
     public abstract FileChooserResult showFileChooser(
             TKStage ownerWindow,

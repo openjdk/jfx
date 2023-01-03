@@ -43,11 +43,15 @@ JITCode::JITCode()
 JITCode::~JITCode()
 {
     if (FTL::shouldDumpDisassembly()) {
-        dataLog("Destroying FTL JIT code at ");
-        CommaPrinter comma;
-        dataLog(comma, m_b3Code);
-        dataLog(comma, m_arityCheckEntrypoint);
-        dataLog("\n");
+        if (m_b3Code || m_arityCheckEntrypoint) {
+            dataLog("Destroying FTL JIT code at ");
+            CommaPrinter comma;
+            if (m_b3Code)
+                dataLog(comma, m_b3Code);
+            if (m_arityCheckEntrypoint)
+                dataLog(comma, m_arityCheckEntrypoint);
+            dataLog("\n");
+        }
     }
 }
 
@@ -97,7 +101,7 @@ void* JITCode::dataAddressAtOffset(size_t)
     // We can't patch FTL code, yet. Even if we did, it's not clear that we would do so
     // through this API.
     RELEASE_ASSERT_NOT_REACHED();
-    return 0;
+    return nullptr;
 }
 
 unsigned JITCode::offsetOf(void*)
@@ -131,17 +135,25 @@ DFG::CommonData* JITCode::dfgCommon()
     return &common;
 }
 
+void JITCode::shrinkToFit(const ConcurrentJSLocker&)
+{
+    common.shrinkToFit();
+    m_osrExit.shrinkToFit();
+    osrExitDescriptors.shrinkToFit();
+    lazySlowPaths.shrinkToFit();
+}
+
 void JITCode::validateReferences(const TrackedReferences& trackedReferences)
 {
     common.validateReferences(trackedReferences);
 
-    for (OSRExit& exit : osrExit)
+    for (OSRExit& exit : m_osrExit)
         exit.m_descriptor->validateReferences(trackedReferences);
 }
 
 RegisterSet JITCode::liveRegistersToPreserveAtExceptionHandlingCallSite(CodeBlock*, CallSiteIndex callSiteIndex)
 {
-    for (OSRExit& exit : osrExit) {
+    for (OSRExit& exit : m_osrExit) {
         if (exit.m_exceptionHandlerCallSiteIndex.bits() == callSiteIndex.bits()) {
             RELEASE_ASSERT(exit.isExceptionHandler());
             RELEASE_ASSERT(exit.isGenericUnwindHandler());
@@ -151,23 +163,23 @@ RegisterSet JITCode::liveRegistersToPreserveAtExceptionHandlingCallSite(CodeBloc
     return { };
 }
 
-Optional<CodeOrigin> JITCode::findPC(CodeBlock* codeBlock, void* pc)
+std::optional<CodeOrigin> JITCode::findPC(CodeBlock* codeBlock, void* pc)
 {
-    for (OSRExit& exit : osrExit) {
+    for (OSRExit& exit : m_osrExit) {
         if (ExecutableMemoryHandle* handle = exit.m_code.executableMemory()) {
             if (handle->start().untaggedPtr() <= pc && pc < handle->end().untaggedPtr())
-                return Optional<CodeOrigin>(exit.m_codeOriginForExitProfile);
+                return std::optional<CodeOrigin>(exit.m_codeOriginForExitProfile);
         }
     }
 
     for (std::unique_ptr<LazySlowPath>& lazySlowPath : lazySlowPaths) {
         if (ExecutableMemoryHandle* handle = lazySlowPath->stub().executableMemory()) {
             if (handle->start().untaggedPtr() <= pc && pc < handle->end().untaggedPtr())
-                return Optional<CodeOrigin>(codeBlock->codeOrigin(lazySlowPath->callSiteIndex()));
+                return std::optional<CodeOrigin>(codeBlock->codeOrigin(lazySlowPath->callSiteIndex()));
         }
     }
 
-    return WTF::nullopt;
+    return std::nullopt;
 }
 
 } } // namespace JSC::FTL

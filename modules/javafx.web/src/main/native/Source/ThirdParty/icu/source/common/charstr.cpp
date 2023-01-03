@@ -14,12 +14,15 @@
 *   created by: Markus W. Scherer
 */
 
+#include <cstdlib>
+
 #include "unicode/utypes.h"
 #include "unicode/putil.h"
 #include "charstr.h"
 #include "cmemory.h"
 #include "cstring.h"
 #include "uinvchar.h"
+#include "ustr_imp.h"
 
 U_NAMESPACE_BEGIN
 
@@ -33,6 +36,30 @@ CharString& CharString::operator=(CharString&& src) U_NOEXCEPT {
     len = src.len;
     src.len = 0;  // not strictly necessary because we make no guarantees on the source string
     return *this;
+}
+
+char *CharString::cloneData(UErrorCode &errorCode) const {
+    if (U_FAILURE(errorCode)) { return nullptr; }
+    char *p = static_cast<char *>(uprv_malloc(len + 1));
+    if (p == nullptr) {
+        errorCode = U_MEMORY_ALLOCATION_ERROR;
+        return nullptr;
+    }
+    uprv_memcpy(p, buffer.getAlias(), len + 1);
+    return p;
+}
+
+int32_t CharString::extract(char *dest, int32_t capacity, UErrorCode &errorCode) const {
+    if (U_FAILURE(errorCode)) { return len; }
+    if (capacity < 0 || (capacity > 0 && dest == nullptr)) {
+        errorCode = U_ILLEGAL_ARGUMENT_ERROR;
+        return len;
+    }
+    const char *src = buffer.getAlias();
+    if (0 < len && len <= capacity && src != dest) {
+        uprv_memcpy(dest, src, len);
+    }
+    return u_terminateChars(dest, capacity, len, &errorCode);
 }
 
 CharString &CharString::copyFrom(const CharString &s, UErrorCode &errorCode) {
@@ -50,6 +77,18 @@ int32_t CharString::lastIndexOf(char c) const {
         }
     }
     return -1;
+}
+
+bool CharString::contains(StringPiece s) const {
+    if (s.empty()) { return false; }
+    const char *p = buffer.getAlias();
+    int32_t lastStart = len - s.length();
+    for (int32_t i = 0; i <= lastStart; ++i) {
+        if (uprv_memcmp(p + i, s.data(), s.length()) == 0) {
+            return true;
+        }
+    }
+    return false;
 }
 
 CharString &CharString::truncate(int32_t newLength) {
@@ -101,6 +140,38 @@ CharString &CharString::append(const char *s, int32_t sLength, UErrorCode &error
             buffer[len+=sLength]=0;
         }
     }
+    return *this;
+}
+
+CharString &CharString::appendNumber(int32_t number, UErrorCode &status) {
+    if (number < 0) {
+        this->append('-', status);
+        if (U_FAILURE(status)) {
+            return *this;
+        }
+    }
+
+    if (number == 0) {
+        this->append('0', status);
+        return *this;
+    }
+
+    int32_t numLen = 0;
+    while (number != 0) {
+        int32_t residue = number % 10;
+        number /= 10;
+        this->append(std::abs(residue) + '0', status);
+        numLen++;
+        if (U_FAILURE(status)) {
+            return *this;
+        }
+    }
+
+    int32_t start = this->length() - numLen, end = this->length() - 1;
+    while(start < end) {
+        std::swap(this->data()[start++], this->data()[end--]);
+    }
+
     return *this;
 }
 
@@ -174,7 +245,7 @@ CharString &CharString::appendPathPart(StringPiece s, UErrorCode &errorCode) {
     }
     char c;
     if(len>0 && (c=buffer[len-1])!=U_FILE_SEP_CHAR && c!=U_FILE_ALT_SEP_CHAR) {
-        append(U_FILE_SEP_CHAR, errorCode);
+        append(getDirSepChar(), errorCode);
     }
     append(s, errorCode);
     return *this;
@@ -184,9 +255,19 @@ CharString &CharString::ensureEndsWithFileSeparator(UErrorCode &errorCode) {
     char c;
     if(U_SUCCESS(errorCode) && len>0 &&
             (c=buffer[len-1])!=U_FILE_SEP_CHAR && c!=U_FILE_ALT_SEP_CHAR) {
-        append(U_FILE_SEP_CHAR, errorCode);
+        append(getDirSepChar(), errorCode);
     }
     return *this;
+}
+
+char CharString::getDirSepChar() const {
+    char dirSepChar = U_FILE_SEP_CHAR;
+#if (U_FILE_SEP_CHAR != U_FILE_ALT_SEP_CHAR)
+    // We may need to return a different directory separator when building for Cygwin or MSYS2.
+    if(len>0 && !uprv_strchr(data(), U_FILE_SEP_CHAR) && uprv_strchr(data(), U_FILE_ALT_SEP_CHAR))
+        dirSepChar = U_FILE_ALT_SEP_CHAR;
+#endif
+    return dirSepChar;
 }
 
 U_NAMESPACE_END

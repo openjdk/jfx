@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2019, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -93,14 +93,15 @@ class FramebufferY8 extends Framebuffer {
      * which defines the same primaries and white point as the sRGB color space.
      * <pre>{@code
      * Simple average:  Y' = (R' + G' + B') / 3
-     * Rec. 601 (SDTV): Y' = 0.299  × R' + 0.587  × G' + 0.114  × B'
-     * Rec. 709 (HDTV): Y' = 0.2126 × R' + 0.7152 × G' + 0.0722 × B'
-     * Rec. 2100 (HDR): Y' = 0.2627 × R' + 0.6780 × G' + 0.0593 × B'
+     * Rec. 601 (SDTV): Y' = 0.299  * R' + 0.587  * G' + 0.114  * B'
+     * Rec. 709 (HDTV): Y' = 0.2126 * R' + 0.7152 * G' + 0.0722 * B'
+     * Rec. 2100 (HDR): Y' = 0.2627 * R' + 0.6780 * G' + 0.0593 * B'
      * }</pre>
      *
      * @implNote Java rounds toward zero when converting a {@code float} to an
-     * {@code int}, so this method adds 0.5 before the type conversion to round
-     * to the nearest integer.
+     * {@code int}. The calculation of luma could be rounded to the nearest
+     * integer by adding 0.5 before the type conversion, but the extra operation
+     * seems unnecessary for a display with only 16 levels of gray.
      *
      * @param source the source integer buffer in ARGB32 format
      * @param target the target byte buffer in Y8 format
@@ -110,7 +111,7 @@ class FramebufferY8 extends Framebuffer {
         int r = (pixel32 >> 16) & 0xFF;
         int g = (pixel32 >> 8) & 0xFF;
         int b = pixel32 & 0xFF;
-        int y = (int) (0.2126f * r + 0.7152f * g + 0.0722f * b + 0.5f);
+        int y = (int) (0.2126f * r + 0.7152f * g + 0.0722f * b);
         target.put((byte) y);
     }
 
@@ -187,7 +188,6 @@ class FramebufferY8 extends Framebuffer {
                 String msg = MessageFormat.format("byteDepth={0}", byteDepth);
                 logger.severe(msg);
                 throw new IllegalStateException(msg);
-
         }
     }
 
@@ -247,7 +247,6 @@ class FramebufferY8 extends Framebuffer {
                 String msg = MessageFormat.format("byteDepth={0}", byteDepth);
                 logger.severe(msg);
                 throw new IllegalStateException(msg);
-
         }
     }
 

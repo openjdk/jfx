@@ -34,21 +34,21 @@
 
 namespace JSC { namespace DFG {
 
-class SaneStringGetByValSlowPathGenerator : public JumpingSlowPathGenerator<MacroAssembler::Jump> {
+class SaneStringGetByValSlowPathGenerator final : public JumpingSlowPathGenerator<MacroAssembler::Jump> {
 public:
     SaneStringGetByValSlowPathGenerator(
-        const MacroAssembler::Jump& from, SpeculativeJIT* jit, JSValueRegs resultRegs,
-        GPRReg baseReg, GPRReg propertyReg)
+        const MacroAssembler::Jump& from, SpeculativeJIT* jit, JSValueRegs resultRegs, CCallHelpers::TrustedImmPtr globalObject, GPRReg baseReg, GPRReg propertyReg)
         : JumpingSlowPathGenerator<MacroAssembler::Jump>(from, jit)
         , m_resultRegs(resultRegs)
+        , m_globalObject(globalObject)
         , m_baseReg(baseReg)
         , m_propertyReg(propertyReg)
     {
         jit->silentSpillAllRegistersImpl(false, m_plans, extractResult(resultRegs));
     }
 
-protected:
-    void generateInternal(SpeculativeJIT* jit) override
+private:
+    void generateInternal(SpeculativeJIT* jit) final
     {
         linkFrom(jit);
 
@@ -70,7 +70,7 @@ protected:
 
         for (unsigned i = 0; i < m_plans.size(); ++i)
             jit->silentSpill(m_plans[i]);
-        jit->callOperation(operationGetByValStringInt, extractResult(m_resultRegs), m_baseReg, m_propertyReg);
+        jit->callOperation(operationGetByValStringInt, extractResult(m_resultRegs), m_globalObject, m_baseReg, m_propertyReg);
         for (unsigned i = m_plans.size(); i--;)
             jit->silentFill(m_plans[i]);
         jit->m_jit.exceptionCheck();
@@ -78,8 +78,8 @@ protected:
         jumpTo(jit);
     }
 
-private:
     JSValueRegs m_resultRegs;
+    CCallHelpers::TrustedImmPtr m_globalObject;
     GPRReg m_baseReg;
     GPRReg m_propertyReg;
     Vector<SilentRegisterSavePlan, 2> m_plans;

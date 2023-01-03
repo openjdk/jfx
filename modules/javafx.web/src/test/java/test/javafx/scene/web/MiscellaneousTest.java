@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,8 +25,6 @@
 
 package test.javafx.scene.web;
 
-import java.awt.Color;
-import java.awt.image.BufferedImage;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
@@ -34,14 +32,11 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.Random;
-import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import javafx.application.Platform;
 import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.concurrent.Worker.State;
 import javafx.scene.web.WebEngine;
 import javafx.scene.web.WebView;
@@ -56,11 +51,6 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-
-import javafx.scene.web.WebEngineShim;
-import com.sun.webkit.WebPage;
-import com.sun.webkit.WebPageShim;
-import com.sun.webkit.graphics.WCGraphicsContext;
 
 public class MiscellaneousTest extends TestBase {
 
@@ -100,7 +90,7 @@ public class MiscellaneousTest extends TestBase {
                 this.location = location;
             }
         }
-        final ArrayList<Record> records = new ArrayList<Record>();
+        final ArrayList<Record> records = new ArrayList<>();
         ChangeListener<State> listener = (ov, oldValue, newValue) -> {
             if (newValue == State.SUCCEEDED) {
                 records.add(new Record(
@@ -273,7 +263,7 @@ public class MiscellaneousTest extends TestBase {
             assertNotNull(ttfFileContent);
             while (offset < length) {
                 final int available = ttfFileStream.available();
-                ttfFileStream.read(ttfFileContent, (int)offset, available);
+                ttfFileStream.read(ttfFileContent, offset, available);
                 offset += available;
             }
             assertEquals("Offset must equal to file length", length, offset);
@@ -404,6 +394,25 @@ public class MiscellaneousTest extends TestBase {
         }
     }
 
+    private void verifyUserAgentString(String userAgentString) {
+        final String fxVersion = System.getProperty("javafx.runtime.version");
+        final String numericStr = fxVersion.split("[^0-9]")[0];
+        final String fxVersionString = "JavaFX/" + numericStr;
+        assertTrue("UserAgentString does not contain " + fxVersionString, userAgentString.contains(fxVersionString));
+
+        File webkitLicense = new File("src/main/legal/webkit.md");
+        assertTrue("File does not exist: " + webkitLicense, webkitLicense.exists());
+
+        try (final BufferedReader licenseText = new BufferedReader(new FileReader(webkitLicense))) {
+            final String firstLine = licenseText.readLine().trim();
+            final String webkitVersion = firstLine.substring(firstLine.lastIndexOf(" ") + 2);
+            assertTrue("webkitVersion should not be empty", webkitVersion.length() > 0);
+            assertTrue("UserAgentString does not contain: " + webkitVersion, userAgentString.contains(webkitVersion));
+        } catch (IOException ex){
+            throw new AssertionError(ex);
+        }
+    }
+
     /**
      * @test
      * @bug 8193207
@@ -412,22 +421,24 @@ public class MiscellaneousTest extends TestBase {
     @Test public void testUserAgentString() {
         submit(() -> {
             final String userAgentString = getEngine().getUserAgent();
-            final String fxVersion = System.getProperty("javafx.runtime.version");
-            final String numericStr = fxVersion.split("[^0-9]")[0];
-            final String fxVersionString = "JavaFX/" + numericStr;
-            assertTrue("UserAgentString does not contain " + fxVersionString, userAgentString.contains(fxVersionString));
+            verifyUserAgentString(userAgentString);
+        });
+    }
 
-            File webkitLicense = new File("src/main/legal/webkit.md");
-            assertTrue("File does not exist: " + webkitLicense, webkitLicense.exists());
-
-            try (final BufferedReader licenseText = new BufferedReader(new FileReader(webkitLicense))) {
-                final String firstLine = licenseText.readLine().trim();
-                final String webkitVersion = firstLine.substring(firstLine.lastIndexOf(" ") + 2);
-                assertTrue("webkitVersion should not be empty", webkitVersion.length() > 0);
-                assertTrue("UserAgentString does not contain: " + webkitVersion, userAgentString.contains(webkitVersion));
-            } catch (IOException ex){
-                throw new AssertionError(ex);
-            }
+    /**
+     * @test
+     * @bug 8275138
+     * Check UserAgentString from JavaScript for javafx runtime version and webkit version
+     */
+    @Test public void testUserAgentStringJS() {
+        final WebEngine webEngine = createWebEngine();
+        submit(() -> {
+            final JSObject window = (JSObject) webEngine.executeScript("window");
+            assertNotNull(window);
+            webEngine.executeScript("var userAgent = navigator.userAgent");
+            String userAgentString = (String)window.getMember("userAgent");
+            assertNotNull(userAgentString);
+            verifyUserAgentString(userAgentString);
         });
     }
 
@@ -470,6 +481,20 @@ public class MiscellaneousTest extends TestBase {
             // WebKit injects error message into body incase of encoding error, otherwise
             // body should be null.
             assertNull(getEngine().executeScript("window.xmlDoc.body"));
+        });
+    }
+
+    @Test public void jrtCssFileIsNotRejected() {
+        submit(() -> {
+            try {
+                getEngine().setUserStyleSheetLocation("jrt:/javafx.web/html/imported-styles.css");
+            } catch (IllegalArgumentException e) {
+                // A jrt file is supposed to be a valid argument
+                throw new AssertionError(e);
+            } catch (RuntimeException e) {
+                // The css file cannot be loaded in the tests (since they are not modularized).
+                // We thus simply ignore this exception here
+            }
         });
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2018 Apple Inc.  All rights reserved.
+ * Copyright (C) 2007-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,46 +26,74 @@
 #pragma once
 
 #include <limits.h>
+#include <wtf/EnumTraits.h>
 #include <wtf/Forward.h>
+#include <wtf/OptionSet.h>
 
 namespace WebCore {
 
-// WebCoreDragDestinationAction should be kept in sync with WebDragDestinationAction.
-typedef enum {
-    DragDestinationActionNone    = 0,
-    DragDestinationActionDHTML   = 1,
-    DragDestinationActionEdit    = 2,
-    DragDestinationActionLoad    = 4,
-    DragDestinationActionAny     = UINT_MAX
-} DragDestinationAction;
+// See WebDragDestinationAction and WKDragDestinationAction.
+enum class DragDestinationAction : uint8_t {
+    DHTML = 1,
+    Edit  = 2,
+    Load  = 4
+};
 
-// WebCoreDragSourceAction should be kept in sync with WebDragSourceAction.
-typedef enum {
-    DragSourceActionNone         = 0,
-    DragSourceActionDHTML        = 1,
-    DragSourceActionImage        = 2,
-    DragSourceActionLink         = 4,
-    DragSourceActionSelection    = 8,
+constexpr OptionSet<DragDestinationAction> anyDragDestinationAction()
+{
+    return OptionSet<DragDestinationAction> { DragDestinationAction::DHTML, DragDestinationAction::Edit, DragDestinationAction::Load };
+}
+
+// See WebDragSourceAction.
+enum class DragSourceAction : uint8_t {
+    DHTML      = 1 << 0,
+    Image      = 1 << 1,
+    Link       = 1 << 2,
+    Selection  = 1 << 3,
 #if ENABLE(ATTACHMENT_ELEMENT)
-    DragSourceActionAttachment   = 16,
+    Attachment = 1 << 4,
 #endif
 #if ENABLE(INPUT_TYPE_COLOR)
-    DragSourceActionColor        = 32,
+    Color      = 1 << 5,
 #endif
-    DragSourceActionAny          = UINT_MAX
-} DragSourceAction;
+#if ENABLE(MODEL_ELEMENT)
+    Model      = 1 << 6,
+#endif
+};
 
-// Matches NSDragOperation.
-typedef enum {
-    DragOperationNone    = 0,
-    DragOperationCopy    = 1,
-    DragOperationLink    = 2,
-    DragOperationGeneric = 4,
-    DragOperationPrivate = 8,
-    DragOperationMove    = 16,
-    DragOperationDelete  = 32,
-    DragOperationEvery   = UINT_MAX
-} DragOperation;
+constexpr OptionSet<DragSourceAction> anyDragSourceAction()
+{
+    return OptionSet<DragSourceAction> {
+        DragSourceAction::DHTML,
+        DragSourceAction::Image,
+        DragSourceAction::Link,
+        DragSourceAction::Selection
+#if ENABLE(ATTACHMENT_ELEMENT)
+        , DragSourceAction::Attachment
+#endif
+#if ENABLE(INPUT_TYPE_COLOR)
+        , DragSourceAction::Color
+#endif
+#if ENABLE(MODEL_ELEMENT)
+        , DragSourceAction::Model
+#endif
+    };
+}
+
+// See NSDragOperation, _UIDragOperation and UIDropOperation.
+enum class DragOperation : uint8_t {
+    Copy    = 1,
+    Link    = 2,
+    Generic = 4,
+    Private = 8,
+    Move    = 16,
+    Delete  = 32,
+};
+
+constexpr OptionSet<DragOperation> anyDragOperation()
+{
+    return { DragOperation::Copy, DragOperation::Link, DragOperation::Generic, DragOperation::Private, DragOperation::Move, DragOperation::Delete };
+}
 
 enum class MayExtendDragSession : bool { No, Yes };
 enum class HasNonDefaultPasteboardData : bool { No, Yes };
@@ -74,6 +102,15 @@ enum class DragHandlingMethod : uint8_t { None, EditPlainText, EditRichText, Upl
 } // namespace WebCore
 
 namespace WTF {
+
+template<> struct EnumTraits<WebCore::DragDestinationAction> {
+    using values = EnumValues<
+        WebCore::DragDestinationAction,
+        WebCore::DragDestinationAction::DHTML,
+        WebCore::DragDestinationAction::Edit,
+        WebCore::DragDestinationAction::Load
+    >;
+};
 
 template<> struct EnumTraits<WebCore::DragHandlingMethod> {
     using values = EnumValues<
@@ -85,6 +122,37 @@ template<> struct EnumTraits<WebCore::DragHandlingMethod> {
         WebCore::DragHandlingMethod::PageLoad,
         WebCore::DragHandlingMethod::SetColor,
         WebCore::DragHandlingMethod::NonDefault
+    >;
+};
+
+template<> struct EnumTraits<WebCore::DragOperation> {
+    using values = EnumValues<
+        WebCore::DragOperation,
+        WebCore::DragOperation::Copy,
+        WebCore::DragOperation::Link,
+        WebCore::DragOperation::Generic,
+        WebCore::DragOperation::Private,
+        WebCore::DragOperation::Move,
+        WebCore::DragOperation::Delete
+    >;
+};
+
+template<> struct EnumTraits<WebCore::DragSourceAction> {
+    using values = EnumValues<
+        WebCore::DragSourceAction,
+        WebCore::DragSourceAction::DHTML,
+        WebCore::DragSourceAction::Image,
+        WebCore::DragSourceAction::Link,
+        WebCore::DragSourceAction::Selection
+#if ENABLE(ATTACHMENT_ELEMENT)
+        , WebCore::DragSourceAction::Attachment
+#endif
+#if ENABLE(INPUT_TYPE_COLOR)
+        , WebCore::DragSourceAction::Color
+#endif
+#if ENABLE(MODEL_ELEMENT)
+        , WebCore::DragSourceAction::Model
+#endif
     >;
 };
 

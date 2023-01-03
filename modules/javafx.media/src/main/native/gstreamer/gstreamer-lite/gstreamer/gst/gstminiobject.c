@@ -59,6 +59,8 @@
 #include "gst/gstinfo.h"
 #include <gobject/gvaluecollector.h>
 
+GType _gst_mini_object_type = 0;
+
 /* Mutex used for weak referencing */
 G_LOCK_DEFINE_STATIC (qdata_mutex);
 static GQuark weak_ref_quark;
@@ -71,6 +73,14 @@ static GQuark weak_ref_quark;
 #define FLAG_MASK (GST_LOCK_FLAG_LAST - 1)
 #define LOCK_MASK ((SHARE_ONE - 1) - FLAG_MASK)
 #define LOCK_FLAG_MASK (SHARE_ONE - 1)
+
+/**
+ * GST_TYPE_MINI_OBJECT:
+ *
+ * The #GType associated with #GstMiniObject.
+ *
+ * Since: 1.20
+ */
 
 /* For backwards compatibility reasons we use the
  * guint and gpointer in the GstMiniObject struct in
@@ -126,9 +136,12 @@ typedef struct
 #define QDATA_DATA(o,i)     (QDATA(o,i).data)
 #define QDATA_DESTROY(o,i)  (QDATA(o,i).destroy)
 
+GST_DEFINE_MINI_OBJECT_TYPE (GstMiniObject, gst_mini_object);
+
 void
 _priv_gst_mini_object_initialize (void)
 {
+  _gst_mini_object_type = gst_mini_object_get_type ();
   weak_ref_quark = g_quark_from_static_string ("GstMiniObjectWeakRefQuark");
 }
 
@@ -722,7 +735,7 @@ gst_mini_object_replace (GstMiniObject ** olddata, GstMiniObject * newdata)
       *olddata, *olddata ? (*olddata)->refcount : 0,
       newdata, newdata ? newdata->refcount : 0);
 
-  olddata_val = g_atomic_pointer_get ((gpointer *) olddata);
+  olddata_val = (GstMiniObject *) g_atomic_pointer_get ((gpointer *) olddata);
 
   if (G_UNLIKELY (olddata_val == newdata))
     return FALSE;
@@ -731,7 +744,7 @@ gst_mini_object_replace (GstMiniObject ** olddata, GstMiniObject * newdata)
     gst_mini_object_ref (newdata);
 
   while (G_UNLIKELY (!g_atomic_pointer_compare_and_exchange ((gpointer *)
-              olddata, olddata_val, newdata))) {
+              olddata, (gpointer) olddata_val, newdata))) {
     olddata_val = g_atomic_pointer_get ((gpointer *) olddata);
     if (G_UNLIKELY (olddata_val == newdata))
       break;
@@ -764,11 +777,11 @@ gst_mini_object_steal (GstMiniObject ** olddata)
       *olddata, *olddata ? (*olddata)->refcount : 0);
 
   do {
-    olddata_val = g_atomic_pointer_get ((gpointer *) olddata);
+    olddata_val = (GstMiniObject *) g_atomic_pointer_get ((gpointer *) olddata);
     if (olddata_val == NULL)
       break;
   } while (G_UNLIKELY (!g_atomic_pointer_compare_and_exchange ((gpointer *)
-              olddata, olddata_val, NULL)));
+              olddata, (gpointer) olddata_val, NULL)));
 
   return olddata_val;
 }
@@ -800,11 +813,11 @@ gst_mini_object_take (GstMiniObject ** olddata, GstMiniObject * newdata)
       newdata, newdata ? newdata->refcount : 0);
 
   do {
-    olddata_val = g_atomic_pointer_get ((gpointer *) olddata);
+    olddata_val = (GstMiniObject *) g_atomic_pointer_get ((gpointer *) olddata);
     if (G_UNLIKELY (olddata_val == newdata))
       break;
   } while (G_UNLIKELY (!g_atomic_pointer_compare_and_exchange ((gpointer *)
-              olddata, olddata_val, newdata)));
+              olddata, (gpointer) olddata_val, newdata)));
 
   if (olddata_val)
     gst_mini_object_unref (olddata_val);
@@ -953,7 +966,7 @@ gst_mini_object_get_qdata (GstMiniObject * object, GQuark quark)
  * @quark: A #GQuark, naming the user data pointer
  *
  * This function gets back user data pointers stored via gst_mini_object_set_qdata()
- * and removes the data from @object without invoking its destroy() function (if
+ * and removes the data from @object without invoking its `destroy()` function (if
  * any was set).
  *
  * Returns: (transfer full) (nullable): The user data pointer set, or

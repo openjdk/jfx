@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,22 +27,21 @@
 #include "LLIntSlowPaths.h"
 
 #include "ArrayConstructor.h"
+#include "BaselineJITPlan.h"
+#include "BytecodeGenerator.h"
+#include "BytecodeOperandsForCheckpoint.h"
 #include "CallFrame.h"
-#include "CommonSlowPaths.h"
+#include "CheckpointOSRExitSideState.h"
+#include "CodeBlockInlines.h"
+#include "CommonSlowPathsInlines.h"
 #include "Error.h"
 #include "ErrorHandlingScope.h"
-#include "EvalCodeBlock.h"
 #include "Exception.h"
 #include "ExceptionFuzz.h"
-#include "ExecutableBaseInlines.h"
 #include "FrameTracers.h"
+#include "FunctionAllowlist.h"
 #include "FunctionCodeBlock.h"
-#include "FunctionWhitelist.h"
 #include "GetterSetter.h"
-#include "HostCallReturnValue.h"
-#include "InterpreterInlines.h"
-#include "IteratorOperations.h"
-#include "JIT.h"
 #include "JITExceptions.h"
 #include "JITWorklist.h"
 #include "JSAsyncFunction.h"
@@ -53,41 +52,42 @@
 #include "JSGlobalObjectFunctions.h"
 #include "JSLexicalEnvironment.h"
 #include "JSString.h"
-#include "JSWithScope.h"
 #include "LLIntCommon.h"
 #include "LLIntData.h"
+#include "LLIntEntrypoint.h"
 #include "LLIntExceptions.h"
 #include "LLIntPrototypeLoadAdaptiveStructureWatchpoint.h"
-#include "LowLevelInterpreter.h"
-#include "ModuleProgramCodeBlock.h"
+#include "LLIntThunks.h"
 #include "ObjectConstructor.h"
 #include "ObjectPropertyConditionSet.h"
-#include "OpcodeInlines.h"
-#include "ProgramCodeBlock.h"
-#include "ProtoCallFrame.h"
+#include "ProtoCallFrameInlines.h"
 #include "RegExpObject.h"
+#include "RepatchInlines.h"
 #include "ShadowChicken.h"
-#include "StructureRareDataInlines.h"
 #include "SuperSampler.h"
 #include "VMInlines.h"
+#include "VMTrapsInlines.h"
 #include <wtf/NeverDestroyed.h>
 #include <wtf/StringPrintStream.h>
 
 namespace JSC { namespace LLInt {
 
 #define LLINT_BEGIN_NO_SET_PC() \
-    VM& vm = exec->vm();      \
-    NativeCallFrameTracer tracer(vm, exec); \
+    CodeBlock* codeBlock = callFrame->codeBlock(); \
+    JSGlobalObject* globalObject = codeBlock->globalObject(); \
+    VM& vm = codeBlock->vm(); \
+    SlowPathFrameTracer tracer(vm, callFrame); \
+    dataLogLnIf(LLINT_TRACING && Options::traceLLIntSlowPath(), "Calling slow path ", WTF_PRETTY_FUNCTION); \
     auto throwScope = DECLARE_THROW_SCOPE(vm)
 
 #ifndef NDEBUG
 #define LLINT_SET_PC_FOR_STUBS() do { \
-        exec->codeBlock()->bytecodeOffset(pc); \
-        exec->setCurrentVPC(pc); \
+        codeBlock->bytecodeOffset(pc); \
+        callFrame->setCurrentVPC(pc); \
     } while (false)
 #else
 #define LLINT_SET_PC_FOR_STUBS() do { \
-        exec->setCurrentVPC(pc); \
+        callFrame->setCurrentVPC(pc); \
     } while (false)
 #endif
 
@@ -95,25 +95,25 @@ namespace JSC { namespace LLInt {
     LLINT_BEGIN_NO_SET_PC();                    \
     LLINT_SET_PC_FOR_STUBS()
 
-inline JSValue getNonConstantOperand(ExecState* exec, const VirtualRegister& operand) { return exec->uncheckedR(operand.offset()).jsValue(); }
-inline JSValue getOperand(ExecState* exec, const VirtualRegister& operand) { return exec->r(operand.offset()).jsValue(); }
+inline JSValue getNonConstantOperand(CallFrame* callFrame, VirtualRegister operand) { return callFrame->uncheckedR(operand).jsValue(); }
+inline JSValue getOperand(CallFrame* callFrame, VirtualRegister operand) { return callFrame->r(operand).jsValue(); }
 
 #define LLINT_RETURN_TWO(first, second) do {       \
         return encodeResult(first, second);        \
     } while (false)
 
-#define LLINT_END_IMPL() LLINT_RETURN_TWO(pc, 0)
+#define LLINT_END_IMPL() LLINT_RETURN_TWO(pc, nullptr)
 
 #define LLINT_THROW(exceptionToThrow) do {                        \
-        throwException(exec, throwScope, exceptionToThrow);       \
-        pc = returnToThrow(exec);                                 \
+        throwException(globalObject, throwScope, exceptionToThrow);       \
+        pc = returnToThrow(vm);                                 \
         LLINT_END_IMPL();                                         \
     } while (false)
 
 #define LLINT_CHECK_EXCEPTION() do {                    \
-        doExceptionFuzzingIfEnabled(exec, throwScope, "LLIntSlowPaths", pc);    \
+        doExceptionFuzzingIfEnabled(globalObject, throwScope, "LLIntSlowPaths", pc);    \
         if (UNLIKELY(throwScope.exception())) {         \
-            pc = returnToThrow(exec);                   \
+            pc = returnToThrow(vm);                   \
             LLINT_END_IMPL();                           \
         }                                               \
     } while (false)
@@ -124,7 +124,7 @@ inline JSValue getOperand(ExecState* exec, const VirtualRegister& operand) { ret
     } while (false)
 
 #define JUMP_OFFSET(targetOffset) \
-    ((targetOffset) ? (targetOffset) : exec->codeBlock()->outOfLineJumpOffset(pc))
+    ((targetOffset) ? (targetOffset) : codeBlock->outOfLineJumpOffset(pc))
 
 #define JUMP_TO(target) do { \
         pc = reinterpret_cast<const Instruction*>(reinterpret_cast<const uint8_t*>(pc) + (target)); \
@@ -143,50 +143,49 @@ inline JSValue getOperand(ExecState* exec, const VirtualRegister& operand) { ret
 #define LLINT_RETURN(value) do {                \
         JSValue __r_returnValue = (value);      \
         LLINT_CHECK_EXCEPTION();                \
-        exec->uncheckedR(bytecode.m_dst) = __r_returnValue;          \
+        callFrame->uncheckedR(bytecode.m_dst) = __r_returnValue;          \
         LLINT_END_IMPL();                       \
     } while (false)
 
 #define LLINT_RETURN_PROFILED(value) do {               \
         JSValue __rp_returnValue = (value);                     \
         LLINT_CHECK_EXCEPTION();                                \
-        exec->uncheckedR(bytecode.m_dst) = __rp_returnValue;                         \
+        callFrame->uncheckedR(bytecode.m_dst) = __rp_returnValue;                         \
         LLINT_PROFILE_VALUE(__rp_returnValue);          \
         LLINT_END_IMPL();                                       \
     } while (false)
 
 #define LLINT_PROFILE_VALUE(value) do { \
-        bytecode.metadata(exec).m_profile.m_buckets[0] = JSValue::encode(value); \
+        bytecode.metadata(codeBlock).m_profile.m_buckets[0] = JSValue::encode(value); \
     } while (false)
 
-#define LLINT_CALL_END_IMPL(exec, callTarget, callTargetTag) \
-    LLINT_RETURN_TWO(retagCodePtr((callTarget), callTargetTag, SlowPathPtrTag), (exec))
+#define LLINT_CALL_END_IMPL(callFrame, callTarget, callTargetTag) \
+    LLINT_RETURN_TWO((retagCodePtr<callTargetTag, JSEntrySlowPathPtrTag>(callTarget)), (callFrame))
 
-#define LLINT_CALL_THROW(exec, exceptionToThrow) do {                   \
-        ExecState* __ct_exec = (exec);                                  \
-        throwException(__ct_exec, throwScope, exceptionToThrow);        \
-        LLINT_CALL_END_IMPL(0, callToThrow(__ct_exec), ExceptionHandlerPtrTag);                 \
+#define LLINT_CALL_THROW(globalObject, exceptionToThrow) do {                   \
+        JSGlobalObject* __ct_globalObject = (globalObject);                                  \
+        throwException(__ct_globalObject, throwScope, exceptionToThrow);        \
+        LLINT_CALL_END_IMPL(nullptr, callToThrow(vm).code().executableAddress(), ExceptionHandlerPtrTag);                 \
     } while (false)
 
-#define LLINT_CALL_CHECK_EXCEPTION(exec, execCallee) do {               \
-        ExecState* __cce_exec = (exec);                                 \
-        ExecState* __cce_execCallee = (execCallee);                     \
-        doExceptionFuzzingIfEnabled(__cce_exec, throwScope, "LLIntSlowPaths/call", nullptr); \
+#define LLINT_CALL_CHECK_EXCEPTION(globalObject) do {               \
+        JSGlobalObject* __cce_globalObject = (globalObject);                                 \
+        doExceptionFuzzingIfEnabled(__cce_globalObject, throwScope, "LLIntSlowPaths/call", nullptr); \
         if (UNLIKELY(throwScope.exception()))                           \
-            LLINT_CALL_END_IMPL(0, callToThrow(__cce_execCallee), ExceptionHandlerPtrTag); \
+            LLINT_CALL_END_IMPL(nullptr, callToThrow(vm).code().executableAddress(), ExceptionHandlerPtrTag); \
     } while (false)
 
-#define LLINT_CALL_RETURN(exec, execCallee, callTarget, callTargetTag) do { \
-        ExecState* __cr_exec = (exec);                                  \
-        ExecState* __cr_execCallee = (execCallee);                      \
-        void* __cr_callTarget = (callTarget);                           \
-        LLINT_CALL_CHECK_EXCEPTION(__cr_exec, __cr_execCallee);         \
-        LLINT_CALL_END_IMPL(__cr_execCallee, __cr_callTarget, callTargetTag); \
+#define LLINT_CALL_RETURN(globalObject, calleeFrame, callTarget, callTargetTag) do { \
+        JSGlobalObject* __cr_globalObject = (globalObject); \
+        CallFrame* __cr_calleeFrame = (calleeFrame); \
+        void* __cr_callTarget = (callTarget); \
+        LLINT_CALL_CHECK_EXCEPTION(__cr_globalObject);         \
+        LLINT_CALL_END_IMPL(__cr_calleeFrame, __cr_callTarget, callTargetTag); \
     } while (false)
 
-#define LLINT_RETURN_CALLEE_FRAME(execCallee) do {                      \
-        ExecState* __rcf_exec = (execCallee);                           \
-        LLINT_RETURN_TWO(pc, __rcf_exec);                               \
+#define LLINT_RETURN_CALLEE_FRAME(calleeFrame) do { \
+        CallFrame* __rcf_calleeFrame = (calleeFrame); \
+        LLINT_RETURN_TWO(pc, __rcf_calleeFrame); \
     } while (false)
 
 #if LLINT_TRACING
@@ -222,7 +221,7 @@ template<typename... Types> void slowPathLogF(const char*, const Types&...) { }
 
 #endif // LLINT_TRACING
 
-extern "C" SlowPathReturnType llint_trace_operand(ExecState* exec, const Instruction* pc, int fromWhere, int operand)
+extern "C" SlowPathReturnType llint_trace_operand(CallFrame* callFrame, const Instruction* pc, int fromWhere, int operand)
 {
     if (!Options::traceLLIntExecution())
         LLINT_END_IMPL();
@@ -231,21 +230,21 @@ extern "C" SlowPathReturnType llint_trace_operand(ExecState* exec, const Instruc
     dataLogF(
         "<%p> %p / %p: executing bc#%zu, op#%u: Trace(%d): %d\n",
         &Thread::current(),
-        exec->codeBlock(),
-        exec,
-        static_cast<intptr_t>(exec->codeBlock()->bytecodeOffset(pc)),
+        callFrame->codeBlock(),
+        globalObject,
+        static_cast<intptr_t>(callFrame->codeBlock()->bytecodeOffset(pc)),
         pc->opcodeID(),
         fromWhere,
         operand);
     LLINT_END();
 }
 
-extern "C" SlowPathReturnType llint_trace_value(ExecState* exec, const Instruction* pc, int fromWhere, VirtualRegister operand)
+extern "C" SlowPathReturnType llint_trace_value(CallFrame* callFrame, const Instruction* pc, int fromWhere, VirtualRegister operand)
 {
     if (!Options::traceLLIntExecution())
         LLINT_END_IMPL();
 
-    JSValue value = getOperand(exec, operand);
+    JSValue value = getOperand(callFrame, operand);
     union {
         struct {
             uint32_t tag;
@@ -257,9 +256,9 @@ extern "C" SlowPathReturnType llint_trace_value(ExecState* exec, const Instructi
     dataLogF(
         "<%p> %p / %p: executing bc#%zu, op#%u: Trace(%d): %d: %08x:%08x: %s\n",
         &Thread::current(),
-        exec->codeBlock(),
-        exec,
-        static_cast<intptr_t>(exec->codeBlock()->bytecodeOffset(pc)),
+        callFrame->codeBlock(),
+        callFrame,
+        static_cast<intptr_t>(callFrame->codeBlock()->bytecodeOffset(pc)),
         pc->opcodeID(),
         fromWhere,
         operand.offset(),
@@ -274,46 +273,47 @@ LLINT_SLOW_PATH_DECL(trace_prologue)
     if (!Options::traceLLIntExecution())
         LLINT_END_IMPL();
 
-    dataLogF("<%p> %p / %p: in prologue of ", &Thread::current(), exec->codeBlock(), exec);
-    dataLog(exec->codeBlock(), "\n");
+    CodeBlock* codeBlock = callFrame->codeBlock();
+    dataLogF("<%p> %p / %p: in prologue of ", &Thread::current(), codeBlock, callFrame);
+    dataLog(codeBlock, "\n");
     LLINT_END_IMPL();
 }
 
-static void traceFunctionPrologue(ExecState* exec, const char* comment, CodeSpecializationKind kind)
+static void traceFunctionPrologue(CallFrame* callFrame, const char* comment, CodeSpecializationKind kind)
 {
     if (!Options::traceLLIntExecution())
         return;
 
-    JSFunction* callee = jsCast<JSFunction*>(exec->jsCallee());
+    JSFunction* callee = jsCast<JSFunction*>(callFrame->jsCallee());
     FunctionExecutable* executable = callee->jsExecutable();
     CodeBlock* codeBlock = executable->codeBlockFor(kind);
-    dataLogF("<%p> %p / %p: in %s of ", &Thread::current(), codeBlock, exec, comment);
+    dataLogF("<%p> %p / %p: in %s of ", &Thread::current(), codeBlock, callFrame, comment);
     dataLog(codeBlock);
     dataLogF(" function %p, executable %p; numVars = %u, numParameters = %u, numCalleeLocals = %u, caller = %p.\n",
-        callee, executable, codeBlock->numVars(), codeBlock->numParameters(), codeBlock->numCalleeLocals(), exec->callerFrame());
+        callee, executable, codeBlock->numVars(), codeBlock->numParameters(), codeBlock->numCalleeLocals(), callFrame->callerFrame());
 }
 
 LLINT_SLOW_PATH_DECL(trace_prologue_function_for_call)
 {
-    traceFunctionPrologue(exec, "call prologue", CodeForCall);
+    traceFunctionPrologue(callFrame, "call prologue", CodeForCall);
     LLINT_END_IMPL();
 }
 
 LLINT_SLOW_PATH_DECL(trace_prologue_function_for_construct)
 {
-    traceFunctionPrologue(exec, "construct prologue", CodeForConstruct);
+    traceFunctionPrologue(callFrame, "construct prologue", CodeForConstruct);
     LLINT_END_IMPL();
 }
 
 LLINT_SLOW_PATH_DECL(trace_arityCheck_for_call)
 {
-    traceFunctionPrologue(exec, "call arity check", CodeForCall);
+    traceFunctionPrologue(callFrame, "call arity check", CodeForCall);
     LLINT_END_IMPL();
 }
 
 LLINT_SLOW_PATH_DECL(trace_arityCheck_for_construct)
 {
-    traceFunctionPrologue(exec, "construct arity check", CodeForConstruct);
+    traceFunctionPrologue(callFrame, "construct arity check", CodeForConstruct);
     LLINT_END_IMPL();
 }
 
@@ -322,21 +322,22 @@ LLINT_SLOW_PATH_DECL(trace)
     if (!Options::traceLLIntExecution())
         LLINT_END_IMPL();
 
+    CodeBlock* codeBlock = callFrame->codeBlock();
     OpcodeID opcodeID = pc->opcodeID();
     dataLogF("<%p> %p / %p: executing bc#%zu, %s, pc = %p\n",
             &Thread::current(),
-            exec->codeBlock(),
-            exec,
-            static_cast<intptr_t>(exec->codeBlock()->bytecodeOffset(pc)),
+            codeBlock,
+            callFrame,
+            static_cast<intptr_t>(codeBlock->bytecodeOffset(pc)),
             pc->name(),
             pc);
     if (opcodeID == op_enter) {
-        dataLogF("Frame will eventually return to %p\n", exec->returnPC().value());
-        *removeCodePtrTag<volatile char*>(exec->returnPC().value());
+        dataLogF("Frame will eventually return to %p\n", callFrame->returnPC().value());
+        *removeCodePtrTag<volatile char*>(callFrame->returnPC().value());
     }
     if (opcodeID == op_ret) {
-        dataLogF("Will be returning to %p\n", exec->returnPC().value());
-        dataLogF("The new cfr will be %p\n", exec->callerFrame());
+        dataLogF("Will be returning to %p\n", callFrame->returnPC().value());
+        dataLogF("The new cfr will be %p\n", callFrame->callerFrame());
     }
     LLINT_END_IMPL();
 }
@@ -344,152 +345,166 @@ LLINT_SLOW_PATH_DECL(trace)
 enum EntryKind { Prologue, ArityCheck };
 
 #if ENABLE(JIT)
-static FunctionWhitelist& ensureGlobalJITWhitelist()
+static FunctionAllowlist& ensureGlobalJITAllowlist()
 {
-    static LazyNeverDestroyed<FunctionWhitelist> baselineWhitelist;
-    static std::once_flag initializeWhitelistFlag;
-    std::call_once(initializeWhitelistFlag, [] {
-        const char* functionWhitelistFile = Options::jitWhitelist();
-        baselineWhitelist.construct(functionWhitelistFile);
+    static LazyNeverDestroyed<FunctionAllowlist> baselineAllowlist;
+    static std::once_flag initializeAllowlistFlag;
+    std::call_once(initializeAllowlistFlag, [] {
+        const char* functionAllowlistFile = Options::jitAllowlist();
+        baselineAllowlist.construct(functionAllowlistFile);
     });
-    return baselineWhitelist;
+    return baselineAllowlist;
 }
 
 inline bool shouldJIT(CodeBlock* codeBlock)
 {
     if (!Options::bytecodeRangeToJITCompile().isInRange(codeBlock->instructionsSize())
-        || !ensureGlobalJITWhitelist().contains(codeBlock))
+        || !ensureGlobalJITAllowlist().contains(codeBlock))
         return false;
 
-    return VM::canUseJIT() && Options::useBaselineJIT();
+    return Options::useBaselineJIT();
 }
 
 // Returns true if we should try to OSR.
-inline bool jitCompileAndSetHeuristics(CodeBlock* codeBlock, ExecState* exec, unsigned loopOSREntryBytecodeOffset = 0)
+inline bool jitCompileAndSetHeuristics(VM& vm, CodeBlock* codeBlock, BytecodeIndex loopOSREntryBytecodeIndex = BytecodeIndex(0))
 {
-    VM& vm = exec->vm();
-    DeferGCForAWhile deferGC(vm.heap); // My callers don't set top callframe, so we don't want to GC here at all.
-    ASSERT(VM::canUseJIT());
+    DeferGCForAWhile deferGC(vm); // My callers don't set top callframe, so we don't want to GC here at all.
+    ASSERT(Options::useJIT());
 
     codeBlock->updateAllValueProfilePredictions();
 
+    if (codeBlock->jitType() != JITType::BaselineJIT) {
+        if (RefPtr<BaselineJITCode> baselineRef = codeBlock->unlinkedCodeBlock()->m_unlinkedBaselineCode) {
+            codeBlock->setupWithUnlinkedBaselineCode(baselineRef.releaseNonNull());
+            codeBlock->ownerExecutable()->installCode(codeBlock);
+            codeBlock->jitNextInvocation();
+            return true;
+        }
+    }
+
     if (!codeBlock->checkIfJITThresholdReached()) {
         CODEBLOCK_LOG_EVENT(codeBlock, "delayJITCompile", ("threshold not reached, counter = ", codeBlock->llintExecuteCounter()));
-        if (Options::verboseOSR())
-            dataLogF("    JIT threshold should be lifted.\n");
+        dataLogLnIf(Options::verboseOSR(), "    JIT threshold should be lifted.");
         return false;
     }
 
-    JITWorklist::ensureGlobalWorklist().poll(vm);
+    JITWorklist::State worklistState = JITWorklist::ensureGlobalWorklist().completeAllReadyPlansForVM(vm, JITCompilationKey(codeBlock->unlinkedCodeBlock(), JITCompilationMode::Baseline));
 
-    switch (codeBlock->jitType()) {
-    case JITType::BaselineJIT: {
-        if (Options::verboseOSR())
-            dataLogF("    Code was already compiled.\n");
+    if (codeBlock->jitType() == JITType::BaselineJIT) {
+        dataLogLnIf(Options::verboseOSR(), "    Code was already compiled.");
         codeBlock->jitSoon();
         return true;
     }
-    case JITType::InterpreterThunk: {
-        JITWorklist::ensureGlobalWorklist().compileLater(codeBlock, loopOSREntryBytecodeOffset);
+
+    if (worklistState == JITWorklist::NotKnown) {
+        Ref<BaselineJITPlan> plan = adoptRef(*new BaselineJITPlan(codeBlock, loopOSREntryBytecodeIndex));
+        JITWorklist::ensureGlobalWorklist().enqueue(WTFMove(plan));
         return codeBlock->jitType() == JITType::BaselineJIT;
     }
-    default:
-        dataLog("Unexpected code block in LLInt: ", *codeBlock, "\n");
-        RELEASE_ASSERT_NOT_REACHED();
-        return false;
-    }
+
+    return false;
 }
 
-static SlowPathReturnType entryOSR(ExecState* exec, const Instruction*, CodeBlock* codeBlock, const char *name, EntryKind kind)
+static SlowPathReturnType entryOSR(CodeBlock* codeBlock, const char *name, EntryKind kind)
 {
-    if (Options::verboseOSR()) {
-        dataLog(
-            *codeBlock, ": Entered ", name, " with executeCounter = ",
-            codeBlock->llintExecuteCounter(), "\n");
-    }
+    dataLogLnIf(Options::verboseOSR(),
+        *codeBlock, ": Entered ", name, " with executeCounter = ",
+        codeBlock->llintExecuteCounter());
 
     if (!shouldJIT(codeBlock)) {
         codeBlock->dontJITAnytimeSoon();
-        LLINT_RETURN_TWO(0, 0);
+        LLINT_RETURN_TWO(nullptr, nullptr);
     }
-    if (!jitCompileAndSetHeuristics(codeBlock, exec))
-        LLINT_RETURN_TWO(0, 0);
+    VM& vm = codeBlock->vm();
+    if (!jitCompileAndSetHeuristics(vm, codeBlock))
+        LLINT_RETURN_TWO(nullptr, nullptr);
 
     CODEBLOCK_LOG_EVENT(codeBlock, "OSR entry", ("in prologue"));
 
     if (kind == Prologue)
-        LLINT_RETURN_TWO(codeBlock->jitCode()->executableAddress(), 0);
+        LLINT_RETURN_TWO(codeBlock->jitCode()->executableAddress(), nullptr);
     ASSERT(kind == ArityCheck);
-    LLINT_RETURN_TWO(codeBlock->jitCode()->addressForCall(MustCheckArity).executableAddress(), 0);
+    LLINT_RETURN_TWO(codeBlock->jitCode()->addressForCall(MustCheckArity).executableAddress(), nullptr);
 }
 #else // ENABLE(JIT)
-static SlowPathReturnType entryOSR(ExecState* exec, const Instruction*, CodeBlock* codeBlock, const char*, EntryKind)
+static SlowPathReturnType entryOSR(CodeBlock* codeBlock, const char*, EntryKind)
 {
     codeBlock->dontJITAnytimeSoon();
-    LLINT_RETURN_TWO(0, exec);
+    LLINT_RETURN_TWO(nullptr, nullptr);
 }
 #endif // ENABLE(JIT)
 
 LLINT_SLOW_PATH_DECL(entry_osr)
 {
-    return entryOSR(exec, pc, exec->codeBlock(), "entry_osr", Prologue);
+    UNUSED_PARAM(pc);
+    return entryOSR(callFrame->codeBlock(), "entry_osr", Prologue);
 }
 
 LLINT_SLOW_PATH_DECL(entry_osr_function_for_call)
 {
-    return entryOSR(exec, pc, jsCast<JSFunction*>(exec->jsCallee())->jsExecutable()->codeBlockForCall(), "entry_osr_function_for_call", Prologue);
+    UNUSED_PARAM(pc);
+    return entryOSR(jsCast<JSFunction*>(callFrame->jsCallee())->jsExecutable()->codeBlockForCall(), "entry_osr_function_for_call", Prologue);
 }
 
 LLINT_SLOW_PATH_DECL(entry_osr_function_for_construct)
 {
-    return entryOSR(exec, pc, jsCast<JSFunction*>(exec->jsCallee())->jsExecutable()->codeBlockForConstruct(), "entry_osr_function_for_construct", Prologue);
+    UNUSED_PARAM(pc);
+    return entryOSR(jsCast<JSFunction*>(callFrame->jsCallee())->jsExecutable()->codeBlockForConstruct(), "entry_osr_function_for_construct", Prologue);
 }
 
 LLINT_SLOW_PATH_DECL(entry_osr_function_for_call_arityCheck)
 {
-    return entryOSR(exec, pc, jsCast<JSFunction*>(exec->jsCallee())->jsExecutable()->codeBlockForCall(), "entry_osr_function_for_call_arityCheck", ArityCheck);
+    UNUSED_PARAM(pc);
+    return entryOSR(jsCast<JSFunction*>(callFrame->jsCallee())->jsExecutable()->codeBlockForCall(), "entry_osr_function_for_call_arityCheck", ArityCheck);
 }
 
 LLINT_SLOW_PATH_DECL(entry_osr_function_for_construct_arityCheck)
 {
-    return entryOSR(exec, pc, jsCast<JSFunction*>(exec->jsCallee())->jsExecutable()->codeBlockForConstruct(), "entry_osr_function_for_construct_arityCheck", ArityCheck);
+    UNUSED_PARAM(pc);
+    return entryOSR(jsCast<JSFunction*>(callFrame->jsCallee())->jsExecutable()->codeBlockForConstruct(), "entry_osr_function_for_construct_arityCheck", ArityCheck);
 }
 
 LLINT_SLOW_PATH_DECL(loop_osr)
 {
     LLINT_BEGIN_NO_SET_PC();
     UNUSED_PARAM(throwScope);
-    CodeBlock* codeBlock = exec->codeBlock();
+    UNUSED_PARAM(globalObject);
 
 #if ENABLE(JIT)
-    if (Options::verboseOSR()) {
-        dataLog(
+    dataLogLnIf(Options::verboseOSR(),
             *codeBlock, ": Entered loop_osr with executeCounter = ",
-            codeBlock->llintExecuteCounter(), "\n");
+            codeBlock->llintExecuteCounter());
+
+    if (UNLIKELY(Options::returnEarlyFromInfiniteLoopsForFuzzing() && codeBlock->loopHintsAreEligibleForFuzzingEarlyReturn())) {
+        uintptr_t* ptr = vm.getLoopHintExecutionCounter(pc);
+        *ptr += codeBlock->llintExecuteCounter().m_activeThreshold;
+        if (*ptr >= Options::earlyReturnFromInfiniteLoopsLimit())
+            LLINT_RETURN_TWO(LLInt::fuzzerReturnEarlyFromLoopHintEntrypoint().code().executableAddress(), callFrame->topOfFrame());
     }
 
-    unsigned loopOSREntryBytecodeOffset = codeBlock->bytecodeOffset(pc);
+
+    auto loopOSREntryBytecodeIndex = BytecodeIndex(codeBlock->bytecodeOffset(pc));
 
     if (!shouldJIT(codeBlock)) {
         codeBlock->dontJITAnytimeSoon();
-        LLINT_RETURN_TWO(0, 0);
+        LLINT_RETURN_TWO(nullptr, nullptr);
     }
 
-    if (!jitCompileAndSetHeuristics(codeBlock, exec, loopOSREntryBytecodeOffset))
-        LLINT_RETURN_TWO(0, 0);
+    if (!jitCompileAndSetHeuristics(vm, codeBlock, loopOSREntryBytecodeIndex))
+        LLINT_RETURN_TWO(nullptr, nullptr);
 
-    CODEBLOCK_LOG_EVENT(codeBlock, "osrEntry", ("at bc#", loopOSREntryBytecodeOffset));
+    CODEBLOCK_LOG_EVENT(codeBlock, "osrEntry", ("at ", loopOSREntryBytecodeIndex));
 
-    ASSERT(codeBlock->jitType() == JITType::BaselineJIT);
+    RELEASE_ASSERT(codeBlock->jitType() == JITType::BaselineJIT);
 
     const JITCodeMap& codeMap = codeBlock->jitCodeMap();
-    CodeLocationLabel<JSEntryPtrTag> codeLocation = codeMap.find(loopOSREntryBytecodeOffset);
+    CodeLocationLabel<JSEntryPtrTag> codeLocation = codeMap.find(loopOSREntryBytecodeIndex);
     ASSERT(codeLocation);
 
     void* jumpTarget = codeLocation.executableAddress();
     ASSERT(jumpTarget);
 
-    LLINT_RETURN_TWO(jumpTarget, exec->topOfFrame());
+    LLINT_RETURN_TWO(jumpTarget, callFrame->topOfFrame());
 #else // ENABLE(JIT)
     UNUSED_PARAM(pc);
     codeBlock->dontJITAnytimeSoon();
@@ -501,17 +516,15 @@ LLINT_SLOW_PATH_DECL(replace)
 {
     LLINT_BEGIN_NO_SET_PC();
     UNUSED_PARAM(throwScope);
-    CodeBlock* codeBlock = exec->codeBlock();
+    UNUSED_PARAM(globalObject);
 
 #if ENABLE(JIT)
-    if (Options::verboseOSR()) {
-        dataLog(
-            *codeBlock, ": Entered replace with executeCounter = ",
-            codeBlock->llintExecuteCounter(), "\n");
-    }
+    dataLogLnIf(Options::verboseOSR(),
+        *codeBlock, ": Entered replace with executeCounter = ",
+        codeBlock->llintExecuteCounter());
 
     if (shouldJIT(codeBlock))
-        jitCompileAndSetHeuristics(codeBlock, exec);
+        jitCompileAndSetHeuristics(vm, codeBlock);
     else
         codeBlock->dontJITAnytimeSoon();
     LLINT_END_IMPL();
@@ -523,18 +536,19 @@ LLINT_SLOW_PATH_DECL(replace)
 
 LLINT_SLOW_PATH_DECL(stack_check)
 {
-    VM& vm = exec->vm();
+    CodeBlock* codeBlock = callFrame->codeBlock();
+    JSGlobalObject* globalObject = codeBlock->globalObject();
+    VM& vm = codeBlock->vm();
     auto throwScope = DECLARE_THROW_SCOPE(vm);
 
-    // It's ok to create the NativeCallFrameTracer here before we
+    // It's ok to create the SlowPathFrameTracer here before we
     // convertToStackOverflowFrame() because this function is always called
     // after the frame has been propulated with a proper CodeBlock and callee.
-    NativeCallFrameTracer tracer(vm, exec);
+    SlowPathFrameTracer tracer(vm, callFrame);
 
     LLINT_SET_PC_FOR_STUBS();
 
-    CodeBlock* codeBlock = exec->codeBlock();
-    slowPathLogF("Checking stack height with exec = %p.\n", exec);
+    slowPathLogF("Checking stack height with callFrame = %p.\n", callFrame);
     slowPathLog("CodeBlock = ", codeBlock, "\n");
     if (codeBlock) {
         slowPathLogF("Num callee registers = %u.\n", codeBlock->numCalleeLocals());
@@ -553,90 +567,121 @@ LLINT_SLOW_PATH_DECL(stack_check)
     // Hence, if we get here, then we know a stack overflow is imminent. So, just
     // throw the StackOverflowError unconditionally.
 #if ENABLE(C_LOOP)
-    Register* topOfFrame = exec->topOfFrame();
-    if (LIKELY(topOfFrame < reinterpret_cast<Register*>(exec))) {
+    Register* topOfFrame = callFrame->topOfFrame();
+    if (LIKELY(topOfFrame < reinterpret_cast<Register*>(callFrame))) {
         ASSERT(!vm.interpreter->cloopStack().containsAddress(topOfFrame));
         if (LIKELY(vm.ensureStackCapacityFor(topOfFrame)))
             LLINT_RETURN_TWO(pc, 0);
     }
 #endif
 
-    exec->convertToStackOverflowFrame(vm, codeBlock);
+    callFrame->convertToStackOverflowFrame(vm, codeBlock);
     ErrorHandlingScope errorScope(vm);
-    throwStackOverflowError(exec, throwScope);
-    pc = returnToThrow(exec);
-    LLINT_RETURN_TWO(pc, exec);
+    throwStackOverflowError(globalObject, throwScope);
+    pc = returnToThrow(vm);
+    LLINT_RETURN_TWO(pc, callFrame);
+}
+
+extern "C" SlowPathReturnType llint_link_call(CallFrame* calleeFrame, JSCell* globalObject, CallLinkInfo* callLinkInfo)
+{
+    return linkFor(calleeFrame, jsCast<JSGlobalObject*>(globalObject), callLinkInfo);
+}
+
+extern "C" SlowPathReturnType llint_virtual_call(CallFrame* calleeFrame, JSCell* globalObject, CallLinkInfo* callLinkInfo)
+{
+    JSCell* calleeAsFunctionCellIgnored;
+    return virtualForWithFunction(jsCast<JSGlobalObject*>(globalObject), calleeFrame, callLinkInfo, calleeAsFunctionCellIgnored);
 }
 
 LLINT_SLOW_PATH_DECL(slow_path_new_object)
 {
     LLINT_BEGIN();
     auto bytecode = pc->as<OpNewObject>();
-    auto& metadata = bytecode.metadata(exec);
-    LLINT_RETURN(constructEmptyObject(exec, metadata.m_objectAllocationProfile.structure()));
+    auto& metadata = bytecode.metadata(codeBlock);
+    LLINT_RETURN(constructEmptyObject(vm, metadata.m_objectAllocationProfile.structure()));
 }
 
 LLINT_SLOW_PATH_DECL(slow_path_new_array)
 {
     LLINT_BEGIN();
     auto bytecode = pc->as<OpNewArray>();
-    auto& metadata = bytecode.metadata(exec);
-    LLINT_RETURN(constructArrayNegativeIndexed(exec, &metadata.m_arrayAllocationProfile, bitwise_cast<JSValue*>(&exec->uncheckedR(bytecode.m_argv)), bytecode.m_argc));
+    auto& metadata = bytecode.metadata(codeBlock);
+    LLINT_RETURN(constructArrayNegativeIndexed(globalObject, &metadata.m_arrayAllocationProfile, bitwise_cast<JSValue*>(&callFrame->uncheckedR(bytecode.m_argv)), bytecode.m_argc));
 }
 
 LLINT_SLOW_PATH_DECL(slow_path_new_array_with_size)
 {
     LLINT_BEGIN();
     auto bytecode = pc->as<OpNewArrayWithSize>();
-    auto& metadata = bytecode.metadata(exec);
-    LLINT_RETURN(constructArrayWithSizeQuirk(exec, &metadata.m_arrayAllocationProfile, exec->lexicalGlobalObject(), getOperand(exec, bytecode.m_length)));
+    auto& metadata = bytecode.metadata(codeBlock);
+    LLINT_RETURN(constructArrayWithSizeQuirk(globalObject, &metadata.m_arrayAllocationProfile, getOperand(callFrame, bytecode.m_length)));
 }
 
 LLINT_SLOW_PATH_DECL(slow_path_new_regexp)
 {
     LLINT_BEGIN();
     auto bytecode = pc->as<OpNewRegexp>();
-    RegExp* regExp = jsCast<RegExp*>(getOperand(exec, bytecode.m_regexp));
+    RegExp* regExp = jsCast<RegExp*>(getOperand(callFrame, bytecode.m_regexp));
     ASSERT(regExp->isValid());
-    LLINT_RETURN(RegExpObject::create(vm, exec->lexicalGlobalObject()->regExpStructure(), regExp));
+    static constexpr bool areLegacyFeaturesEnabled = true;
+    LLINT_RETURN(RegExpObject::create(vm, globalObject->regExpStructure(), regExp, areLegacyFeaturesEnabled));
 }
 
 LLINT_SLOW_PATH_DECL(slow_path_instanceof)
 {
     LLINT_BEGIN();
     auto bytecode = pc->as<OpInstanceof>();
-    JSValue value = getOperand(exec, bytecode.m_value);
-    JSValue proto = getOperand(exec, bytecode.m_prototype);
-    LLINT_RETURN(jsBoolean(JSObject::defaultHasInstance(exec, value, proto)));
-}
-
-LLINT_SLOW_PATH_DECL(slow_path_instanceof_custom)
-{
-    LLINT_BEGIN();
-
-    auto bytecode = pc->as<OpInstanceofCustom>();
-    JSValue value = getOperand(exec, bytecode.m_value);
-    JSValue constructor = getOperand(exec, bytecode.m_constructor);
-    JSValue hasInstanceValue = getOperand(exec, bytecode.m_hasInstanceValue);
-
-    ASSERT(constructor.isObject());
-    ASSERT(hasInstanceValue != exec->lexicalGlobalObject()->functionProtoHasInstanceSymbolFunction() || !constructor.getObject()->structure(vm)->typeInfo().implementsDefaultHasInstance());
-
-    JSValue result = jsBoolean(constructor.getObject()->hasInstance(exec, value, hasInstanceValue));
-    LLINT_RETURN(result);
+    JSValue value = getOperand(callFrame, bytecode.m_value);
+    JSValue proto = getOperand(callFrame, bytecode.m_prototype);
+    LLINT_RETURN(jsBoolean(JSObject::defaultHasInstance(globalObject, value, proto)));
 }
 
 LLINT_SLOW_PATH_DECL(slow_path_try_get_by_id)
 {
     LLINT_BEGIN();
     auto bytecode = pc->as<OpTryGetById>();
-    CodeBlock* codeBlock = exec->codeBlock();
     const Identifier& ident = codeBlock->identifier(bytecode.m_property);
-    JSValue baseValue = getOperand(exec, bytecode.m_base);
-    PropertySlot slot(baseValue, PropertySlot::PropertySlot::InternalMethodType::VMInquiry);
+    JSValue baseValue = getOperand(callFrame, bytecode.m_base);
+    PropertySlot slot(baseValue, PropertySlot::PropertySlot::InternalMethodType::VMInquiry, &vm);
 
-    baseValue.getPropertySlot(exec, ident, slot);
+    baseValue.getPropertySlot(globalObject, ident, slot);
     JSValue result = slot.getPureResult();
+
+    if (!LLINT_ALWAYS_ACCESS_SLOW && slot.isCacheable() && !slot.isUnset()) {
+        ASSERT(!slot.isTaintedByOpaqueObject());
+        ASSERT(baseValue.isCell());
+
+        auto& metadata = bytecode.metadata(codeBlock);
+        {
+            StructureID oldStructureID = metadata.m_structureID;
+            if (oldStructureID) {
+                Structure* a = oldStructureID.decode();
+                Structure* b = baseValue.asCell()->structure(vm);
+
+                if (Structure::shouldConvertToPolyProto(a, b)) {
+                    ASSERT(a->rareData()->sharedPolyProtoWatchpoint().get() == b->rareData()->sharedPolyProtoWatchpoint().get());
+                    a->rareData()->sharedPolyProtoWatchpoint()->invalidate(vm, StringFireDetail("Detected poly proto opportunity."));
+                }
+            }
+        }
+
+        JSCell* baseCell = baseValue.asCell();
+        Structure* structure = baseCell->structure(vm);
+        if (slot.isValue() && slot.slotBase() == baseValue) {
+            // Start out by clearing out the old cache.
+            metadata.m_structureID = StructureID();
+            metadata.m_offset = 0;
+
+            if (structure->propertyAccessesAreCacheable() && !structure->needImpurePropertyWatchpoint()) {
+                {
+                    ConcurrentJSLocker locker(codeBlock->m_lock);
+                    metadata.m_structureID = structure->id();
+                    metadata.m_offset = slot.cachedOffset();
+                }
+                vm.writeBarrier(codeBlock);
+            }
+        }
+    }
 
     LLINT_RETURN_PROFILED(result);
 }
@@ -645,22 +690,21 @@ LLINT_SLOW_PATH_DECL(slow_path_get_by_id_direct)
 {
     LLINT_BEGIN();
     auto bytecode = pc->as<OpGetByIdDirect>();
-    CodeBlock* codeBlock = exec->codeBlock();
     const Identifier& ident = codeBlock->identifier(bytecode.m_property);
-    JSValue baseValue = getOperand(exec, bytecode.m_base);
+    JSValue baseValue = getOperand(callFrame, bytecode.m_base);
     PropertySlot slot(baseValue, PropertySlot::PropertySlot::InternalMethodType::GetOwnProperty);
 
-    bool found = baseValue.getOwnPropertySlot(exec, ident, slot);
+    bool found = baseValue.getOwnPropertySlot(globalObject, ident, slot);
     LLINT_CHECK_EXCEPTION();
-    JSValue result = found ? slot.getValue(exec, ident) : jsUndefined();
+    JSValue result = found ? slot.getValue(globalObject, ident) : jsUndefined();
     LLINT_CHECK_EXCEPTION();
 
-    if (!LLINT_ALWAYS_ACCESS_SLOW && slot.isCacheable()) {
-        auto& metadata = bytecode.metadata(exec);
+    if (!LLINT_ALWAYS_ACCESS_SLOW && slot.isCacheable() && !slot.isUnset()) {
+        auto& metadata = bytecode.metadata(codeBlock);
         {
             StructureID oldStructureID = metadata.m_structureID;
             if (oldStructureID) {
-                Structure* a = vm.heap.structureIDTable().get(oldStructureID);
+                Structure* a = oldStructureID.decode();
                 Structure* b = baseValue.asCell()->structure(vm);
 
                 if (Structure::shouldConvertToPolyProto(a, b)) {
@@ -674,7 +718,7 @@ LLINT_SLOW_PATH_DECL(slow_path_get_by_id_direct)
         Structure* structure = baseCell->structure(vm);
         if (slot.isValue()) {
             // Start out by clearing out the old cache.
-            metadata.m_structureID = 0;
+            metadata.m_structureID = StructureID();
             metadata.m_offset = 0;
 
             if (structure->propertyAccessesAreCacheable() && !structure->needImpurePropertyWatchpoint()) {
@@ -683,7 +727,7 @@ LLINT_SLOW_PATH_DECL(slow_path_get_by_id_direct)
                     metadata.m_structureID = structure->id();
                     metadata.m_offset = slot.cachedOffset();
                 }
-                vm.heap.writeBarrier(codeBlock);
+                vm.writeBarrier(codeBlock);
             }
         }
     }
@@ -691,10 +735,20 @@ LLINT_SLOW_PATH_DECL(slow_path_get_by_id_direct)
     LLINT_RETURN_PROFILED(result);
 }
 
-
-static void setupGetByIdPrototypeCache(ExecState* exec, VM& vm, const Instruction* pc, OpGetById::Metadata& metadata, JSCell* baseCell, PropertySlot& slot, const Identifier& ident)
+LLINT_SLOW_PATH_DECL(slow_path_get_by_id_with_this)
 {
-    CodeBlock* codeBlock = exec->codeBlock();
+    LLINT_BEGIN();
+    auto bytecode = pc->as<OpGetByIdWithThis>();
+    const Identifier& ident = codeBlock->identifier(bytecode.m_property);
+    JSValue baseValue = getOperand(callFrame, bytecode.m_base);
+    JSValue thisVal = getOperand(callFrame, bytecode.m_thisValue);
+    PropertySlot slot(thisVal, PropertySlot::PropertySlot::InternalMethodType::Get);
+    JSValue result = baseValue.get(globalObject, ident, slot);
+    LLINT_RETURN_PROFILED(result);
+}
+
+static void setupGetByIdPrototypeCache(JSGlobalObject* globalObject, VM& vm, CodeBlock* codeBlock, const Instruction* pc, GetByIdModeMetadata& metadata, JSCell* baseCell, PropertySlot& slot, const Identifier& ident)
+{
     Structure* structure = baseCell->structure(vm);
 
     if (structure->typeInfo().prohibitsPropertyCaching())
@@ -709,11 +763,13 @@ static void setupGetByIdPrototypeCache(ExecState* exec, VM& vm, const Instructio
         structure->flattenDictionaryStructure(vm, jsCast<JSObject*>(baseCell));
     }
 
+    prepareChainForCaching(globalObject, baseCell, slot);
+
     ObjectPropertyConditionSet conditions;
     if (slot.isUnset())
-        conditions = generateConditionsForPropertyMiss(vm, codeBlock, exec, structure, ident.impl());
+        conditions = generateConditionsForPropertyMiss(vm, codeBlock, globalObject, structure, ident.impl());
     else
-        conditions = generateConditionsForPrototypePropertyHit(vm, codeBlock, exec, structure, slot.slotBase(), ident.impl());
+        conditions = generateConditionsForPrototypePropertyHit(vm, codeBlock, globalObject, structure, slot.slotBase(), ident.impl());
 
     if (!conditions.isValid())
         return;
@@ -721,15 +777,16 @@ static void setupGetByIdPrototypeCache(ExecState* exec, VM& vm, const Instructio
     unsigned bytecodeOffset = codeBlock->bytecodeOffset(pc);
     PropertyOffset offset = invalidOffset;
     CodeBlock::StructureWatchpointMap& watchpointMap = codeBlock->llintGetByIdWatchpointMap();
-    Vector<LLIntPrototypeLoadAdaptiveStructureWatchpoint> watchpoints;
-    watchpoints.reserveInitialCapacity(conditions.size());
+    FixedVector<LLIntPrototypeLoadAdaptiveStructureWatchpoint> watchpoints(conditions.size());
+    unsigned index = 0;
     for (ObjectPropertyCondition condition : conditions) {
+        auto& watchpoint = watchpoints[index++];
         if (!condition.isWatchable())
             return;
         if (condition.condition().kind() == PropertyCondition::Presence)
             offset = condition.condition().offset();
-        watchpoints.uncheckedConstructAndAppend(codeBlock, condition, bytecodeOffset);
-        watchpoints.last().install(vm);
+        watchpoint.initialize(codeBlock, condition, bytecodeOffset);
+        watchpoint.install(vm);
     }
 
     ASSERT((offset == invalidOffset) == slot.isUnset());
@@ -739,50 +796,45 @@ static void setupGetByIdPrototypeCache(ExecState* exec, VM& vm, const Instructio
     {
         ConcurrentJSLocker locker(codeBlock->m_lock);
         if (slot.isUnset())
-            metadata.m_modeMetadata.setUnsetMode(structure);
+            metadata.setUnsetMode(structure);
         else {
             ASSERT(slot.isValue());
-            metadata.m_modeMetadata.setProtoLoadMode(structure, offset, slot.slotBase());
+            metadata.setProtoLoadMode(structure, offset, slot.slotBase());
         }
     }
-    vm.heap.writeBarrier(codeBlock);
+    vm.writeBarrier(codeBlock);
 }
 
-
-LLINT_SLOW_PATH_DECL(slow_path_get_by_id)
+static JSValue performLLIntGetByID(const Instruction* pc, CodeBlock* codeBlock, JSGlobalObject* globalObject, JSValue baseValue, const Identifier& ident, GetByIdModeMetadata& metadata)
 {
-    LLINT_BEGIN();
-    auto bytecode = pc->as<OpGetById>();
-    auto& metadata = bytecode.metadata(exec);
-    CodeBlock* codeBlock = exec->codeBlock();
-    const Identifier& ident = codeBlock->identifier(bytecode.m_property);
-    JSValue baseValue = getOperand(exec, bytecode.m_base);
+    VM& vm = globalObject->vm();
+    auto throwScope = DECLARE_THROW_SCOPE(vm);
     PropertySlot slot(baseValue, PropertySlot::PropertySlot::InternalMethodType::Get);
 
-    JSValue result = baseValue.get(exec, ident, slot);
-    LLINT_CHECK_EXCEPTION();
-    exec->uncheckedR(bytecode.m_dst) = result;
+    JSValue result = baseValue.get(globalObject, ident, slot);
+    RETURN_IF_EXCEPTION(throwScope, { });
 
     if (!LLINT_ALWAYS_ACCESS_SLOW
         && baseValue.isCell()
-        && slot.isCacheable()) {
+        && slot.isCacheable()
+        && !slot.isUnset()) {
         {
             StructureID oldStructureID;
-            switch (metadata.m_modeMetadata.mode) {
+            switch (metadata.mode) {
             case GetByIdMode::Default:
-                oldStructureID = metadata.m_modeMetadata.defaultMode.structureID;
+                oldStructureID = metadata.defaultMode.structureID;
                 break;
             case GetByIdMode::Unset:
-                oldStructureID = metadata.m_modeMetadata.unsetMode.structureID;
+                oldStructureID = metadata.unsetMode.structureID;
                 break;
             case GetByIdMode::ProtoLoad:
-                oldStructureID = metadata.m_modeMetadata.protoLoadMode.structureID;
+                oldStructureID = metadata.protoLoadMode.structureID;
                 break;
             default:
-                oldStructureID = 0;
+                oldStructureID = StructureID();
             }
             if (oldStructureID) {
-                Structure* a = vm.heap.structureIDTable().get(oldStructureID);
+                Structure* a = oldStructureID.decode();
                 Structure* b = baseValue.asCell()->structure(vm);
 
                 if (Structure::shouldConvertToPolyProto(a, b)) {
@@ -797,32 +849,99 @@ LLINT_SLOW_PATH_DECL(slow_path_get_by_id)
         if (slot.isValue() && slot.slotBase() == baseValue) {
             ConcurrentJSLocker locker(codeBlock->m_lock);
             // Start out by clearing out the old cache.
-            metadata.m_modeMetadata.clearToDefaultModeWithoutCache();
+            metadata.clearToDefaultModeWithoutCache();
 
             // Prevent the prototype cache from ever happening.
-            metadata.m_modeMetadata.hitCountForLLIntCaching = 0;
+            metadata.hitCountForLLIntCaching = 0;
 
             if (structure->propertyAccessesAreCacheable() && !structure->needImpurePropertyWatchpoint()) {
-                metadata.m_modeMetadata.defaultMode.structureID = structure->id();
-                metadata.m_modeMetadata.defaultMode.cachedOffset = slot.cachedOffset();
-                vm.heap.writeBarrier(codeBlock);
+                metadata.defaultMode.structureID = structure->id();
+                metadata.defaultMode.cachedOffset = slot.cachedOffset();
+                vm.writeBarrier(codeBlock);
             }
-        } else if (UNLIKELY(metadata.m_modeMetadata.hitCountForLLIntCaching && (slot.isValue() || slot.isUnset()))) {
+        } else if (UNLIKELY(metadata.hitCountForLLIntCaching && slot.isValue())) {
             ASSERT(slot.slotBase() != baseValue);
 
-            if (!(--metadata.m_modeMetadata.hitCountForLLIntCaching))
-                setupGetByIdPrototypeCache(exec, vm, pc, metadata, baseCell, slot, ident);
+            if (!(--metadata.hitCountForLLIntCaching))
+                setupGetByIdPrototypeCache(globalObject, vm, codeBlock, pc, metadata, baseCell, slot, ident);
         }
     } else if (!LLINT_ALWAYS_ACCESS_SLOW && isJSArray(baseValue) && ident == vm.propertyNames->length) {
         {
             ConcurrentJSLocker locker(codeBlock->m_lock);
-            metadata.m_modeMetadata.setArrayLengthMode();
-            metadata.m_modeMetadata.arrayLengthMode.arrayProfile.observeStructure(baseValue.asCell()->structure(vm));
+            metadata.setArrayLengthMode();
+            metadata.arrayLengthMode.arrayProfile.observeStructure(baseValue.asCell()->structure(vm));
         }
-        vm.heap.writeBarrier(codeBlock);
+        vm.writeBarrier(codeBlock);
     }
 
-    LLINT_PROFILE_VALUE(result);
+    return result;
+}
+
+LLINT_SLOW_PATH_DECL(slow_path_get_by_id)
+{
+    LLINT_BEGIN();
+    auto bytecode = pc->as<OpGetById>();
+    auto& metadata = bytecode.metadata(codeBlock);
+    const Identifier& ident = codeBlock->identifier(bytecode.m_property);
+    JSValue baseValue = getOperand(callFrame, bytecode.m_base);
+
+    JSValue result = performLLIntGetByID(pc, codeBlock, globalObject, baseValue, ident, metadata.m_modeMetadata);
+    LLINT_RETURN_PROFILED(result);
+}
+
+LLINT_SLOW_PATH_DECL(slow_path_iterator_open_get_next)
+{
+    LLINT_BEGIN();
+
+    auto bytecode = pc->as<OpIteratorOpen>();
+    auto& metadata = bytecode.metadata(codeBlock);
+    JSValue iterator = getOperand(callFrame, bytecode.m_iterator);
+    Register& nextRegister = callFrame->uncheckedR(bytecode.m_next);
+
+    if (!iterator.isObject())
+        LLINT_THROW(createTypeError(globalObject, "Iterator result interface is not an object."_s));
+
+    JSValue result = performLLIntGetByID(pc, codeBlock, globalObject, iterator, vm.propertyNames->next, metadata.m_modeMetadata);
+    LLINT_CHECK_EXCEPTION();
+    nextRegister = result;
+    bytecode.metadata(codeBlock).m_nextProfile.m_buckets[0] = JSValue::encode(result);
+    LLINT_END();
+}
+
+LLINT_SLOW_PATH_DECL(slow_path_iterator_next_get_done)
+{
+    LLINT_BEGIN();
+
+    auto bytecode = pc->as<OpIteratorNext>();
+    auto& metadata = bytecode.metadata(codeBlock);
+    // We use m_value to hold the iterator return value since it's either not live past this bytecode or it's going to be filled later.
+    JSValue iteratorReturn = getOperand(callFrame, bytecode.m_value);
+    Register& doneRegister = callFrame->uncheckedR(bytecode.m_done);
+
+    if (!iteratorReturn.isObject())
+        LLINT_THROW(createTypeError(globalObject, "Iterator result interface is not an object."_s));
+
+    JSValue result = performLLIntGetByID(pc, codeBlock, globalObject, iteratorReturn, vm.propertyNames->done, metadata.m_doneModeMetadata);
+    LLINT_CHECK_EXCEPTION();
+    doneRegister = result;
+    bytecode.metadata(codeBlock).m_doneProfile.m_buckets[0] = JSValue::encode(result);
+    LLINT_END();
+}
+
+LLINT_SLOW_PATH_DECL(slow_path_iterator_next_get_value)
+{
+    LLINT_BEGIN();
+
+    auto bytecode = pc->as<OpIteratorNext>();
+    auto& metadata = bytecode.metadata(codeBlock);
+    // We use m_value to hold the iterator return value tmp since it's either not live past this bytecode or it's going to be filled later.
+    Register& valueRegister = callFrame->uncheckedR(bytecode.m_value);
+    JSValue iteratorReturn = valueRegister.jsValue();
+
+    JSValue result = performLLIntGetByID(pc, codeBlock, globalObject, iteratorReturn, vm.propertyNames->value, metadata.m_valueModeMetadata);
+    LLINT_CHECK_EXCEPTION();
+    valueRegister = result;
+    bytecode.metadata(codeBlock).m_valueProfile.m_buckets[0] = JSValue::encode(result);
     LLINT_END();
 }
 
@@ -830,26 +949,27 @@ LLINT_SLOW_PATH_DECL(slow_path_put_by_id)
 {
     LLINT_BEGIN();
     auto bytecode = pc->as<OpPutById>();
-    auto& metadata = bytecode.metadata(exec);
-    CodeBlock* codeBlock = exec->codeBlock();
+    auto& metadata = bytecode.metadata(codeBlock);
     const Identifier& ident = codeBlock->identifier(bytecode.m_property);
 
-    JSValue baseValue = getOperand(exec, bytecode.m_base);
-    PutPropertySlot slot(baseValue, codeBlock->isStrictMode(), codeBlock->putByIdContext());
-    if (bytecode.m_flags & PutByIdIsDirect)
-        CommonSlowPaths::putDirectWithReify(vm, exec, asObject(baseValue), ident, getOperand(exec, bytecode.m_value), slot);
+    JSValue baseValue = getOperand(callFrame, bytecode.m_base);
+    PutPropertySlot slot(baseValue, bytecode.m_flags.ecmaMode().isStrict(), codeBlock->putByIdContext());
+
+    Structure* oldStructure = baseValue.isCell() ? baseValue.asCell()->structure(vm) : nullptr;
+    if (bytecode.m_flags.isDirect())
+        CommonSlowPaths::putDirectWithReify(vm, globalObject, asObject(baseValue), ident, getOperand(callFrame, bytecode.m_value), slot);
     else
-        baseValue.putInline(exec, ident, getOperand(exec, bytecode.m_value), slot);
+        baseValue.putInline(globalObject, ident, getOperand(callFrame, bytecode.m_value), slot);
     LLINT_CHECK_EXCEPTION();
 
     if (!LLINT_ALWAYS_ACCESS_SLOW
         && baseValue.isCell()
-        && slot.isCacheablePut()) {
-
+        && slot.isCacheablePut()
+        && oldStructure->propertyAccessesAreCacheable()) {
         {
             StructureID oldStructureID = metadata.m_oldStructureID;
             if (oldStructureID) {
-                Structure* a = vm.heap.structureIDTable().get(oldStructureID);
+                Structure* a = oldStructureID.decode();
                 Structure* b = baseValue.asCell()->structure(vm);
                 if (slot.type() == PutPropertySlot::NewProperty)
                     b = b->previousID();
@@ -862,43 +982,53 @@ LLINT_SLOW_PATH_DECL(slow_path_put_by_id)
         }
 
         // Start out by clearing out the old cache.
-        metadata.m_oldStructureID = 0;
+        metadata.m_oldStructureID = StructureID();
         metadata.m_offset = 0;
-        metadata.m_newStructureID = 0;
+        metadata.m_newStructureID = StructureID();
         metadata.m_structureChain.clear();
 
         JSCell* baseCell = baseValue.asCell();
-        Structure* structure = baseCell->structure(vm);
+        Structure* newStructure = baseCell->structure(vm);
 
-        if (!structure->isUncacheableDictionary() && !structure->typeInfo().prohibitsPropertyCaching() && baseCell == slot.base()) {
+        if (newStructure->propertyAccessesAreCacheable() && baseCell == slot.base()) {
             if (slot.type() == PutPropertySlot::NewProperty) {
-                GCSafeConcurrentJSLocker locker(codeBlock->m_lock, vm.heap);
-                if (!structure->isDictionary() && structure->previousID()->outOfLineCapacity() == structure->outOfLineCapacity()) {
-                    ASSERT(structure->previousID()->transitionWatchpointSetHasBeenInvalidated());
+                GCSafeConcurrentJSLocker locker(codeBlock->m_lock, vm);
+                if (!newStructure->isDictionary() && newStructure->previousID()->outOfLineCapacity() == newStructure->outOfLineCapacity()) {
+                    ASSERT(oldStructure == newStructure->previousID());
+                    if (oldStructure == newStructure->previousID()) {
+                        ASSERT(oldStructure->transitionWatchpointSetHasBeenInvalidated());
 
-                    bool sawPolyProto = false;
-                    auto result = normalizePrototypeChain(exec, baseCell, sawPolyProto);
-                    if (result != InvalidPrototypeChain && !sawPolyProto) {
-                        ASSERT(structure->previousID()->isObject());
-                        metadata.m_oldStructureID = structure->previousID()->id();
-                        metadata.m_offset = slot.cachedOffset();
-                        metadata.m_newStructureID = structure->id();
-                        if (!(bytecode.m_flags & PutByIdIsDirect)) {
-                            StructureChain* chain = structure->prototypeChain(exec, asObject(baseCell));
-                            ASSERT(chain);
-                            metadata.m_structureChain.set(vm, codeBlock, chain);
+                        bool sawPolyProto = false;
+                        auto result = normalizePrototypeChain(globalObject, baseCell, sawPolyProto);
+                        if (result != InvalidPrototypeChain && !sawPolyProto) {
+                            ASSERT(oldStructure->isObject());
+                            metadata.m_oldStructureID = oldStructure->id();
+                            metadata.m_offset = slot.cachedOffset();
+                            metadata.m_newStructureID = newStructure->id();
+                            if (!(bytecode.m_flags.isDirect())) {
+                                StructureChain* chain = newStructure->prototypeChain(vm, globalObject, asObject(baseCell));
+                                ASSERT(chain);
+                                metadata.m_structureChain.set(vm, codeBlock, chain);
+                            }
+                            vm.writeBarrier(codeBlock);
                         }
-                        vm.heap.writeBarrier(codeBlock);
                     }
                 }
             } else {
-                structure->didCachePropertyReplacement(vm, slot.cachedOffset());
+                // This assert helps catch bugs if we accidentally forget to disable caching
+                // when we transition then store to an existing property. This is common among
+                // paths that reify lazy properties. If we reify a lazy property and forget
+                // to disable caching, we may come down this path. The Replace IC does not
+                // know how to model these types of structure transitions (or any structure
+                // transition for that matter).
+                RELEASE_ASSERT(newStructure == oldStructure);
+                newStructure->didCachePropertyReplacement(vm, slot.cachedOffset());
                 {
                     ConcurrentJSLocker locker(codeBlock->m_lock);
-                    metadata.m_oldStructureID = structure->id();
+                    metadata.m_oldStructureID = newStructure->id();
                     metadata.m_offset = slot.cachedOffset();
                 }
-                vm.heap.writeBarrier(codeBlock);
+                vm.writeBarrier(codeBlock);
             }
         }
     }
@@ -910,26 +1040,23 @@ LLINT_SLOW_PATH_DECL(slow_path_del_by_id)
 {
     LLINT_BEGIN();
     auto bytecode = pc->as<OpDelById>();
-    CodeBlock* codeBlock = exec->codeBlock();
-    JSObject* baseObject = getOperand(exec, bytecode.m_base).toObject(exec);
+    JSObject* baseObject = getOperand(callFrame, bytecode.m_base).toObject(globalObject);
     LLINT_CHECK_EXCEPTION();
-    bool couldDelete = baseObject->methodTable(vm)->deleteProperty(baseObject, exec, codeBlock->identifier(bytecode.m_property));
+    bool couldDelete = JSCell::deleteProperty(baseObject, globalObject, codeBlock->identifier(bytecode.m_property));
     LLINT_CHECK_EXCEPTION();
-    if (!couldDelete && codeBlock->isStrictMode())
-        LLINT_THROW(createTypeError(exec, UnableToDeletePropertyError));
+    if (!couldDelete && bytecode.m_ecmaMode.isStrict())
+        LLINT_THROW(createTypeError(globalObject, UnableToDeletePropertyError));
     LLINT_RETURN(jsBoolean(couldDelete));
 }
 
-static ALWAYS_INLINE JSValue getByVal(VM& vm, ExecState* exec, OpGetByVal bytecode)
+static ALWAYS_INLINE JSValue getByVal(VM& vm, JSGlobalObject* globalObject, CodeBlock* codeBlock, JSValue baseValue, JSValue subscript, OpGetByVal bytecode)
 {
-    JSValue baseValue = getOperand(exec, bytecode.m_base);
-    JSValue subscript = getOperand(exec, bytecode.m_property);
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     if (LIKELY(baseValue.isCell() && subscript.isString())) {
         Structure& structure = *baseValue.asCell()->structure(vm);
         if (JSCell::canUseFastGetOwnProperty(structure)) {
-            RefPtr<AtomStringImpl> existingAtomString = asString(subscript)->toExistingAtomString(exec);
+            RefPtr<AtomStringImpl> existingAtomString = asString(subscript)->toExistingAtomString(globalObject);
             RETURN_IF_EXCEPTION(scope, JSValue());
             if (existingAtomString) {
                 if (JSValue result = baseValue.asCell()->fastGetOwnProperty(vm, structure, existingAtomString.get()))
@@ -938,21 +1065,21 @@ static ALWAYS_INLINE JSValue getByVal(VM& vm, ExecState* exec, OpGetByVal byteco
         }
     }
 
-    if (subscript.isUInt32()) {
-        uint32_t i = subscript.asUInt32();
-        auto& metadata = bytecode.metadata(exec);
+    if (std::optional<uint32_t> index = subscript.tryGetAsUint32Index()) {
+        uint32_t i = *index;
+        auto& metadata = bytecode.metadata(codeBlock);
         ArrayProfile* arrayProfile = &metadata.m_arrayProfile;
 
         if (isJSString(baseValue)) {
             if (asString(baseValue)->canGetIndex(i)) {
                 scope.release();
-                return asString(baseValue)->getIndex(exec, i);
+                return asString(baseValue)->getIndex(globalObject, i);
             }
             arrayProfile->setOutOfBounds();
         } else if (baseValue.isObject()) {
             JSObject* object = asObject(baseValue);
-            if (object->canGetIndexQuickly(i))
-                return object->getIndexQuickly(i);
+            if (JSValue result = object->tryGetIndexQuickly(i, arrayProfile))
+                return result;
 
             bool skipMarkingOutOfBounds = false;
 
@@ -968,22 +1095,101 @@ static ALWAYS_INLINE JSValue getByVal(VM& vm, ExecState* exec, OpGetByVal byteco
         }
 
         scope.release();
-        return baseValue.get(exec, i);
+        return baseValue.get(globalObject, i);
     }
 
-    baseValue.requireObjectCoercible(exec);
+    baseValue.requireObjectCoercible(globalObject);
     RETURN_IF_EXCEPTION(scope, JSValue());
-    auto property = subscript.toPropertyKey(exec);
+    auto property = subscript.toPropertyKey(globalObject);
     RETURN_IF_EXCEPTION(scope, JSValue());
     scope.release();
-    return baseValue.get(exec, property);
+    return baseValue.get(globalObject, property);
 }
 
 LLINT_SLOW_PATH_DECL(slow_path_get_by_val)
 {
     LLINT_BEGIN();
     auto bytecode = pc->as<OpGetByVal>();
-    LLINT_RETURN_PROFILED(getByVal(vm, exec, bytecode));
+    JSValue baseValue = getOperand(callFrame, bytecode.m_base);
+    JSValue subscript = getOperand(callFrame, bytecode.m_property);
+
+    if (subscript.isString() || subscript.isSymbol()) {
+        auto& metadata = bytecode.metadata(codeBlock);
+        if (metadata.m_seenIdentifiers.count() <= Options::getByValICMaxNumberOfIdentifiers()) {
+            const UniquedStringImpl* impl = nullptr;
+            if (subscript.isSymbol())
+                impl = &jsCast<Symbol*>(subscript)->privateName().uid();
+            else {
+                JSString* string = asString(subscript);
+                if (auto* maybeUID = string->tryGetValueImpl()) {
+                    if (maybeUID->isAtom())
+                        impl = static_cast<const UniquedStringImpl*>(maybeUID);
+                }
+            }
+
+            metadata.m_seenIdentifiers.observe(impl);
+        }
+    }
+
+    LLINT_RETURN_PROFILED(getByVal(vm, globalObject, codeBlock, baseValue, subscript, bytecode));
+}
+
+LLINT_SLOW_PATH_DECL(slow_path_get_private_name)
+{
+    LLINT_BEGIN();
+
+    auto bytecode = pc->as<OpGetPrivateName>();
+    JSValue baseValue = getOperand(callFrame, bytecode.m_base);
+    JSValue subscript = getOperand(callFrame, bytecode.m_property);
+    ASSERT(subscript.isSymbol());
+
+    JSObject* baseObject = baseValue.toObject(globalObject);
+    LLINT_CHECK_EXCEPTION();
+    auto property = subscript.toPropertyKey(globalObject);
+    LLINT_CHECK_EXCEPTION();
+    ASSERT(property.isPrivateName());
+
+    PropertySlot slot(baseObject, PropertySlot::InternalMethodType::GetOwnProperty);
+    baseObject->getPrivateField(globalObject, property, slot);
+    LLINT_CHECK_EXCEPTION();
+
+    if (!LLINT_ALWAYS_ACCESS_SLOW && baseValue.isCell() && slot.isCacheable() && !slot.isUnset()) {
+        auto& metadata = bytecode.metadata(codeBlock);
+        {
+            StructureID oldStructureID = metadata.m_structureID;
+            if (oldStructureID) {
+                Structure* a = oldStructureID.decode();
+                Structure* b = baseValue.asCell()->structure(vm);
+
+                if (Structure::shouldConvertToPolyProto(a, b)) {
+                    ASSERT(a->rareData()->sharedPolyProtoWatchpoint().get() == b->rareData()->sharedPolyProtoWatchpoint().get());
+                    a->rareData()->sharedPolyProtoWatchpoint()->invalidate(vm, StringFireDetail("Detected poly proto opportunity."));
+                }
+            }
+        }
+
+        JSCell* baseCell = baseValue.asCell();
+        Structure* structure = baseCell->structure(vm);
+        if (slot.isValue()) {
+            // Start out by clearing out the old cache.
+            metadata.m_structureID = StructureID();
+            metadata.m_offset = 0;
+
+            if (!structure->isUncacheableDictionary()) {
+                {
+                    ConcurrentJSLocker locker(codeBlock->m_lock);
+                    metadata.m_structureID = structure->id();
+                    metadata.m_offset = slot.cachedOffset();
+
+                    //  Update the cached private symbol
+                    metadata.m_property.set(vm, codeBlock, subscript.asCell());
+                }
+                vm.writeBarrier(codeBlock);
+            }
+        }
+    }
+
+    LLINT_RETURN_PROFILED(slot.getValue(globalObject, property));
 }
 
 LLINT_SLOW_PATH_DECL(slow_path_put_by_val)
@@ -991,29 +1197,28 @@ LLINT_SLOW_PATH_DECL(slow_path_put_by_val)
     LLINT_BEGIN();
 
     auto bytecode = pc->as<OpPutByVal>();
-    JSValue baseValue = getOperand(exec, bytecode.m_base);
-    JSValue subscript = getOperand(exec, bytecode.m_property);
-    JSValue value = getOperand(exec, bytecode.m_value);
-    bool isStrictMode = exec->codeBlock()->isStrictMode();
+    JSValue baseValue = getOperand(callFrame, bytecode.m_base);
+    JSValue subscript = getOperand(callFrame, bytecode.m_property);
+    JSValue value = getOperand(callFrame, bytecode.m_value);
+    bool isStrictMode = bytecode.m_ecmaMode.isStrict();
+    auto& metadata = bytecode.metadata(codeBlock);
 
-    if (LIKELY(subscript.isUInt32())) {
-        uint32_t i = subscript.asUInt32();
+    if (std::optional<uint32_t> index = subscript.tryGetAsUint32Index()) {
+        uint32_t i = *index;
         if (baseValue.isObject()) {
             JSObject* object = asObject(baseValue);
-            if (object->canSetIndexQuickly(i, value))
-                object->setIndexQuickly(vm, i, value);
-            else
-                object->methodTable(vm)->putByIndex(object, exec, i, value, isStrictMode);
+            if (!object->trySetIndexQuickly(vm, i, value, &metadata.m_arrayProfile))
+                object->methodTable(vm)->putByIndex(object, globalObject, i, value, isStrictMode);
             LLINT_END();
         }
-        baseValue.putByIndex(exec, i, value, isStrictMode);
+        baseValue.putByIndex(globalObject, i, value, isStrictMode);
         LLINT_END();
     }
 
-    auto property = subscript.toPropertyKey(exec);
+    auto property = subscript.toPropertyKey(globalObject);
     LLINT_CHECK_EXCEPTION();
     PutPropertySlot slot(baseValue, isStrictMode);
-    baseValue.put(exec, property, value, slot);
+    baseValue.put(globalObject, property, value, slot);
     LLINT_END();
 }
 
@@ -1022,39 +1227,202 @@ LLINT_SLOW_PATH_DECL(slow_path_put_by_val_direct)
     LLINT_BEGIN();
 
     auto bytecode = pc->as<OpPutByValDirect>();
-    JSValue baseValue = getOperand(exec, bytecode.m_base);
-    JSValue subscript = getOperand(exec, bytecode.m_property);
-    JSValue value = getOperand(exec, bytecode.m_value);
+    JSValue baseValue = getOperand(callFrame, bytecode.m_base);
+    JSValue subscript = getOperand(callFrame, bytecode.m_property);
+    JSValue value = getOperand(callFrame, bytecode.m_value);
     RELEASE_ASSERT(baseValue.isObject());
     JSObject* baseObject = asObject(baseValue);
-    bool isStrictMode = exec->codeBlock()->isStrictMode();
-    if (LIKELY(subscript.isUInt32())) {
-        // Despite its name, JSValue::isUInt32 will return true only for positive boxed int32_t; all those values are valid array indices.
-        ASSERT(isIndex(subscript.asUInt32()));
-        baseObject->putDirectIndex(exec, subscript.asUInt32(), value, 0, isStrictMode ? PutDirectIndexShouldThrow : PutDirectIndexShouldNotThrow);
+    bool isStrictMode = bytecode.m_ecmaMode.isStrict();
+    if (std::optional<uint32_t> index = subscript.tryGetAsUint32Index()) {
+        baseObject->putDirectIndex(globalObject, *index, value, 0, isStrictMode ? PutDirectIndexShouldThrow : PutDirectIndexShouldNotThrow);
         LLINT_END();
-    }
-
-    if (subscript.isDouble()) {
-        double subscriptAsDouble = subscript.asDouble();
-        uint32_t subscriptAsUInt32 = static_cast<uint32_t>(subscriptAsDouble);
-        if (subscriptAsDouble == subscriptAsUInt32 && isIndex(subscriptAsUInt32)) {
-            baseObject->putDirectIndex(exec, subscriptAsUInt32, value, 0, isStrictMode ? PutDirectIndexShouldThrow : PutDirectIndexShouldNotThrow);
-            LLINT_END();
-        }
     }
 
     // Don't put to an object if toString threw an exception.
-    auto property = subscript.toPropertyKey(exec);
+    auto property = subscript.toPropertyKey(globalObject);
     if (UNLIKELY(throwScope.exception()))
         LLINT_END();
 
-    if (Optional<uint32_t> index = parseIndex(property))
-        baseObject->putDirectIndex(exec, index.value(), value, 0, isStrictMode ? PutDirectIndexShouldThrow : PutDirectIndexShouldNotThrow);
+    if (std::optional<uint32_t> index = parseIndex(property))
+        baseObject->putDirectIndex(globalObject, index.value(), value, 0, isStrictMode ? PutDirectIndexShouldThrow : PutDirectIndexShouldNotThrow);
     else {
         PutPropertySlot slot(baseObject, isStrictMode);
-        CommonSlowPaths::putDirectWithReify(vm, exec, baseObject, property, value, slot);
+        CommonSlowPaths::putDirectWithReify(vm, globalObject, baseObject, property, value, slot);
     }
+    LLINT_END();
+}
+
+LLINT_SLOW_PATH_DECL(slow_path_put_private_name)
+{
+    LLINT_BEGIN();
+
+    auto bytecode = pc->as<OpPutPrivateName>();
+    auto& metadata = bytecode.metadata(codeBlock);
+    JSValue baseValue = getOperand(callFrame, bytecode.m_base);
+    JSValue subscript = getOperand(callFrame, bytecode.m_property);
+    JSValue value = getOperand(callFrame, bytecode.m_value);
+
+    JSObject* baseObject = baseValue.toObject(globalObject);
+    LLINT_CHECK_EXCEPTION();
+
+    auto property = subscript.toPropertyKey(globalObject);
+    LLINT_CHECK_EXCEPTION();
+    ASSERT(property.isPrivateName());
+
+    Structure* oldStructure = baseValue.isCell() ? baseValue.asCell()->structure(vm) : nullptr;
+
+    // Private fields can only be accessed within class lexical scope
+    // and class methods are always in strict mode
+    const bool isStrictMode = true;
+    PutPropertySlot slot(baseObject, isStrictMode);
+    if (bytecode.m_putKind.isDefine())
+        baseObject->definePrivateField(globalObject, property, value, slot);
+    else {
+        ASSERT(bytecode.m_putKind.isSet());
+        baseObject->setPrivateField(globalObject, property, value, slot);
+    }
+    LLINT_CHECK_EXCEPTION();
+
+    if (!LLINT_ALWAYS_ACCESS_SLOW
+        && baseValue.isCell()
+        && slot.isCacheablePut()
+        && subscript.isCell()
+        && oldStructure->propertyAccessesAreCacheable()) {
+        {
+            StructureID oldStructureID = metadata.m_oldStructureID;
+            if (oldStructureID) {
+                Structure* a = oldStructureID.decode();
+                Structure* b = baseValue.asCell()->structure(vm);
+                if (slot.type() == PutPropertySlot::NewProperty)
+                    b = b->previousID();
+
+                if (Structure::shouldConvertToPolyProto(a, b)) {
+                    a->rareData()->sharedPolyProtoWatchpoint()->invalidate(vm, StringFireDetail("Detected poly proto opportunity."));
+                    b->rareData()->sharedPolyProtoWatchpoint()->invalidate(vm, StringFireDetail("Detected poly proto opportunity."));
+                }
+            }
+        }
+
+        // Start out by clearing out the old cache.
+        metadata.m_oldStructureID = StructureID();
+        metadata.m_offset = 0;
+        metadata.m_newStructureID = StructureID();
+        metadata.m_property.clear();
+
+        JSCell* baseCell = baseValue.asCell();
+        Structure* newStructure = baseCell->structure(vm);
+
+        if (newStructure->propertyAccessesAreCacheable() && baseCell == slot.base()) {
+            if (slot.type() == PutPropertySlot::NewProperty) {
+                GCSafeConcurrentJSLocker locker(codeBlock->m_lock, vm);
+                if (!newStructure->isDictionary() && newStructure->previousID()->outOfLineCapacity() == newStructure->outOfLineCapacity()) {
+                    ASSERT(oldStructure == newStructure->previousID());
+                    if (oldStructure == newStructure->previousID()) {
+                        ASSERT(oldStructure->transitionWatchpointSetHasBeenInvalidated());
+
+                        bool sawPolyProto = false;
+                        auto result = normalizePrototypeChain(globalObject, baseCell, sawPolyProto);
+                        if (result != InvalidPrototypeChain && !sawPolyProto) {
+                            ASSERT(oldStructure->isObject());
+                            metadata.m_oldStructureID = oldStructure->id();
+                            metadata.m_offset = slot.cachedOffset();
+                            metadata.m_newStructureID = newStructure->id();
+                            metadata.m_property.set(vm, codeBlock, subscript.asCell());
+                            vm.writeBarrier(codeBlock);
+                        }
+                    }
+                }
+            } else {
+                // This assert helps catch bugs if we accidentally forget to disable caching
+                // when we transition then store to an existing property. This is common among
+                // paths that reify lazy properties. If we reify a lazy property and forget
+                // to disable caching, we may come down this path. The Replace IC does not
+                // know how to model these types of structure transitions (or any structure
+                // transition for that matter).
+                RELEASE_ASSERT(newStructure == oldStructure);
+                newStructure->didCachePropertyReplacement(vm, slot.cachedOffset());
+                {
+                    ConcurrentJSLocker locker(codeBlock->m_lock);
+                    metadata.m_oldStructureID = newStructure->id();
+                    metadata.m_offset = slot.cachedOffset();
+                    metadata.m_property.set(vm, codeBlock, subscript.asCell());
+                }
+                vm.writeBarrier(codeBlock);
+            }
+        }
+    }
+
+    LLINT_END();
+}
+
+LLINT_SLOW_PATH_DECL(slow_path_set_private_brand)
+{
+    LLINT_BEGIN();
+
+    auto bytecode = pc->as<OpSetPrivateBrand>();
+    JSValue baseValue = getOperand(callFrame, bytecode.m_base);
+    JSValue brand = getOperand(callFrame, bytecode.m_brand);
+    auto& metadata = bytecode.metadata(codeBlock);
+    ASSERT(baseValue.isObject());
+    ASSERT(brand.isSymbol());
+
+    JSObject* baseObject = asObject(baseValue);
+    Structure* oldStructure = baseObject->structure(vm);
+
+    baseObject->setPrivateBrand(globalObject, brand);
+    LLINT_CHECK_EXCEPTION();
+
+    if (!LLINT_ALWAYS_ACCESS_SLOW && !oldStructure->isDictionary()) {
+        GCSafeConcurrentJSLocker locker(codeBlock->m_lock, vm);
+        Structure* newStructure = baseObject->structure(vm);
+
+        ASSERT(oldStructure == newStructure->previousID());
+        ASSERT(oldStructure->transitionWatchpointSetHasBeenInvalidated());
+
+        // Start out by clearing out the old cache.
+        metadata.m_oldStructureID = StructureID();
+        metadata.m_newStructureID = StructureID();
+        metadata.m_brand.clear();
+
+        if (!newStructure->isDictionary()) {
+            metadata.m_oldStructureID = oldStructure->id();
+            metadata.m_newStructureID = newStructure->id();
+            metadata.m_brand.set(vm, codeBlock, brand.asCell());
+        }
+        vm.writeBarrier(codeBlock);
+    }
+
+    LLINT_END();
+}
+
+LLINT_SLOW_PATH_DECL(slow_path_check_private_brand)
+{
+    LLINT_BEGIN();
+
+    auto bytecode = pc->as<OpCheckPrivateBrand>();
+    auto& metadata = bytecode.metadata(codeBlock);
+    JSValue baseValue = getOperand(callFrame, bytecode.m_base);
+    JSValue brand = getOperand(callFrame, bytecode.m_brand);
+
+    JSObject* baseObject = baseValue.toObject(globalObject);
+    LLINT_CHECK_EXCEPTION();
+
+    ASSERT(brand.isSymbol());
+
+    baseObject->checkPrivateBrand(globalObject, brand);
+    LLINT_CHECK_EXCEPTION();
+
+    // Since a brand can't ever be removed from an object, it's safe to
+    // rely on StructureID even if it's an uncacheable dictionary.
+    Structure* structure = baseObject->structure(vm);
+    if (!LLINT_ALWAYS_ACCESS_SLOW) {
+        GCSafeConcurrentJSLocker locker(codeBlock->m_lock, vm);
+
+        metadata.m_structureID = structure->id();
+        metadata.m_brand.set(vm, codeBlock, brand.asCell());
+        vm.writeBarrier(codeBlock);
+    }
+
     LLINT_END();
 }
 
@@ -1062,44 +1430,93 @@ LLINT_SLOW_PATH_DECL(slow_path_del_by_val)
 {
     LLINT_BEGIN();
     auto bytecode = pc->as<OpDelByVal>();
-    JSValue baseValue = getOperand(exec, bytecode.m_base);
-    JSObject* baseObject = baseValue.toObject(exec);
+    JSValue baseValue = getOperand(callFrame, bytecode.m_base);
+    JSObject* baseObject = baseValue.toObject(globalObject);
     LLINT_CHECK_EXCEPTION();
 
-    JSValue subscript = getOperand(exec, bytecode.m_property);
+    JSValue subscript = getOperand(callFrame, bytecode.m_property);
 
     bool couldDelete;
 
     uint32_t i;
     if (subscript.getUInt32(i))
-        couldDelete = baseObject->methodTable(vm)->deletePropertyByIndex(baseObject, exec, i);
+        couldDelete = baseObject->methodTable(vm)->deletePropertyByIndex(baseObject, globalObject, i);
     else {
         LLINT_CHECK_EXCEPTION();
-        auto property = subscript.toPropertyKey(exec);
+        auto property = subscript.toPropertyKey(globalObject);
         LLINT_CHECK_EXCEPTION();
-        couldDelete = baseObject->methodTable(vm)->deleteProperty(baseObject, exec, property);
+        couldDelete = JSCell::deleteProperty(baseObject, globalObject, property);
     }
     LLINT_CHECK_EXCEPTION();
 
-    if (!couldDelete && exec->codeBlock()->isStrictMode())
-        LLINT_THROW(createTypeError(exec, UnableToDeletePropertyError));
+    if (!couldDelete && bytecode.m_ecmaMode.isStrict())
+        LLINT_THROW(createTypeError(globalObject, UnableToDeletePropertyError));
 
     LLINT_RETURN(jsBoolean(couldDelete));
+}
+
+LLINT_SLOW_PATH_DECL(slow_path_in_by_id)
+{
+    LLINT_BEGIN();
+
+    auto bytecode = pc->as<OpInById>();
+    JSValue baseValue = getOperand(callFrame, bytecode.m_base);
+    if (!baseValue.isObject())
+        LLINT_THROW(createInvalidInParameterError(globalObject, baseValue));
+
+    LLINT_RETURN(jsBoolean(asObject(baseValue)->hasProperty(globalObject, codeBlock->identifier(bytecode.m_property))));
+}
+
+LLINT_SLOW_PATH_DECL(slow_path_in_by_val)
+{
+    LLINT_BEGIN();
+    auto bytecode = pc->as<OpInByVal>();
+    auto& metadata = bytecode.metadata(codeBlock);
+    LLINT_RETURN(jsBoolean(CommonSlowPaths::opInByVal(globalObject, getOperand(callFrame, bytecode.m_base), getOperand(callFrame, bytecode.m_property), &metadata.m_arrayProfile)));
+}
+
+LLINT_SLOW_PATH_DECL(slow_path_has_private_name)
+{
+    LLINT_BEGIN();
+
+    auto bytecode = pc->as<OpHasPrivateName>();
+    auto baseValue = getOperand(callFrame, bytecode.m_base);
+    if (!baseValue.isObject())
+        LLINT_THROW(createInvalidInParameterError(globalObject, baseValue));
+
+    auto propertyValue = getOperand(callFrame, bytecode.m_property);
+    ASSERT(propertyValue.isSymbol());
+    auto property = propertyValue.toPropertyKey(globalObject);
+    LLINT_CHECK_EXCEPTION();
+
+    LLINT_RETURN(jsBoolean(asObject(baseValue)->hasPrivateField(globalObject, property)));
+}
+
+LLINT_SLOW_PATH_DECL(slow_path_has_private_brand)
+{
+    LLINT_BEGIN();
+
+    auto bytecode = pc->as<OpHasPrivateBrand>();
+    auto baseValue = getOperand(callFrame, bytecode.m_base);
+    if (!baseValue.isObject())
+        LLINT_THROW(createInvalidInParameterError(globalObject, baseValue));
+
+    LLINT_RETURN(jsBoolean(asObject(baseValue)->hasPrivateBrand(globalObject, getOperand(callFrame, bytecode.m_brand))));
 }
 
 LLINT_SLOW_PATH_DECL(slow_path_put_getter_by_id)
 {
     LLINT_BEGIN();
     auto bytecode = pc->as<OpPutGetterById>();
-    ASSERT(getNonConstantOperand(exec, bytecode.m_base).isObject());
-    JSObject* baseObj = asObject(getNonConstantOperand(exec, bytecode.m_base));
+    ASSERT(getNonConstantOperand(callFrame, bytecode.m_base).isObject());
+    JSObject* baseObj = asObject(getNonConstantOperand(callFrame, bytecode.m_base));
 
     unsigned options = bytecode.m_attributes;
 
-    JSValue getter = getNonConstantOperand(exec, bytecode.m_accessor);
+    JSValue getter = getNonConstantOperand(callFrame, bytecode.m_accessor);
     ASSERT(getter.isObject());
 
-    baseObj->putGetter(exec, exec->codeBlock()->identifier(bytecode.m_property), asObject(getter), options);
+    baseObj->putGetter(globalObject, codeBlock->identifier(bytecode.m_property), asObject(getter), options);
     LLINT_END();
 }
 
@@ -1107,15 +1524,15 @@ LLINT_SLOW_PATH_DECL(slow_path_put_setter_by_id)
 {
     LLINT_BEGIN();
     auto bytecode = pc->as<OpPutSetterById>();
-    ASSERT(getNonConstantOperand(exec, bytecode.m_base).isObject());
-    JSObject* baseObj = asObject(getNonConstantOperand(exec, bytecode.m_base));
+    ASSERT(getNonConstantOperand(callFrame, bytecode.m_base).isObject());
+    JSObject* baseObj = asObject(getNonConstantOperand(callFrame, bytecode.m_base));
 
     unsigned options = bytecode.m_attributes;
 
-    JSValue setter = getNonConstantOperand(exec, bytecode.m_accessor);
+    JSValue setter = getNonConstantOperand(callFrame, bytecode.m_accessor);
     ASSERT(setter.isObject());
 
-    baseObj->putSetter(exec, exec->codeBlock()->identifier(bytecode.m_property), asObject(setter), options);
+    baseObj->putSetter(globalObject, codeBlock->identifier(bytecode.m_property), asObject(setter), options);
     LLINT_END();
 }
 
@@ -1123,15 +1540,15 @@ LLINT_SLOW_PATH_DECL(slow_path_put_getter_setter_by_id)
 {
     LLINT_BEGIN();
     auto bytecode = pc->as<OpPutGetterSetterById>();
-    ASSERT(getNonConstantOperand(exec, bytecode.m_base).isObject());
-    JSObject* baseObject = asObject(getNonConstantOperand(exec, bytecode.m_base));
+    ASSERT(getNonConstantOperand(callFrame, bytecode.m_base).isObject());
+    JSObject* baseObject = asObject(getNonConstantOperand(callFrame, bytecode.m_base));
 
-    JSValue getter = getNonConstantOperand(exec, bytecode.m_getter);
-    JSValue setter = getNonConstantOperand(exec, bytecode.m_setter);
+    JSValue getter = getNonConstantOperand(callFrame, bytecode.m_getter);
+    JSValue setter = getNonConstantOperand(callFrame, bytecode.m_setter);
     ASSERT(getter.isObject() || setter.isObject());
-    GetterSetter* accessor = GetterSetter::create(vm, exec->lexicalGlobalObject(), getter, setter);
+    GetterSetter* accessor = GetterSetter::create(vm, globalObject, getter, setter);
 
-    CommonSlowPaths::putDirectAccessorWithReify(vm, exec, baseObject, exec->codeBlock()->identifier(bytecode.m_property), accessor, bytecode.m_attributes);
+    CommonSlowPaths::putDirectAccessorWithReify(vm, globalObject, baseObject, codeBlock->identifier(bytecode.m_property), accessor, bytecode.m_attributes);
     LLINT_END();
 }
 
@@ -1139,19 +1556,19 @@ LLINT_SLOW_PATH_DECL(slow_path_put_getter_by_val)
 {
     LLINT_BEGIN();
     auto bytecode = pc->as<OpPutGetterByVal>();
-    ASSERT(getNonConstantOperand(exec, bytecode.m_base).isObject());
-    JSObject* baseObj = asObject(getNonConstantOperand(exec, bytecode.m_base));
-    JSValue subscript = getOperand(exec, bytecode.m_property);
+    ASSERT(getNonConstantOperand(callFrame, bytecode.m_base).isObject());
+    JSObject* baseObj = asObject(getNonConstantOperand(callFrame, bytecode.m_base));
+    JSValue subscript = getOperand(callFrame, bytecode.m_property);
 
     unsigned options = bytecode.m_attributes;
 
-    JSValue getter = getNonConstantOperand(exec, bytecode.m_accessor);
+    JSValue getter = getNonConstantOperand(callFrame, bytecode.m_accessor);
     ASSERT(getter.isObject());
 
-    auto property = subscript.toPropertyKey(exec);
+    auto property = subscript.toPropertyKey(globalObject);
     LLINT_CHECK_EXCEPTION();
 
-    baseObj->putGetter(exec, property, asObject(getter), options);
+    baseObj->putGetter(globalObject, property, asObject(getter), options);
     LLINT_END();
 }
 
@@ -1159,19 +1576,19 @@ LLINT_SLOW_PATH_DECL(slow_path_put_setter_by_val)
 {
     LLINT_BEGIN();
     auto bytecode = pc->as<OpPutSetterByVal>();
-    ASSERT(getNonConstantOperand(exec, bytecode.m_base).isObject());
-    JSObject* baseObj = asObject(getNonConstantOperand(exec, bytecode.m_base));
-    JSValue subscript = getOperand(exec, bytecode.m_property);
+    ASSERT(getNonConstantOperand(callFrame, bytecode.m_base).isObject());
+    JSObject* baseObj = asObject(getNonConstantOperand(callFrame, bytecode.m_base));
+    JSValue subscript = getOperand(callFrame, bytecode.m_property);
 
     unsigned options = bytecode.m_attributes;
 
-    JSValue setter = getNonConstantOperand(exec, bytecode.m_accessor);
+    JSValue setter = getNonConstantOperand(callFrame, bytecode.m_accessor);
     ASSERT(setter.isObject());
 
-    auto property = subscript.toPropertyKey(exec);
+    auto property = subscript.toPropertyKey(globalObject);
     LLINT_CHECK_EXCEPTION();
 
-    baseObj->putSetter(exec, property, asObject(setter), options);
+    baseObj->putSetter(globalObject, property, asObject(setter), options);
     LLINT_END();
 }
 
@@ -1179,113 +1596,112 @@ LLINT_SLOW_PATH_DECL(slow_path_jtrue)
 {
     LLINT_BEGIN();
     auto bytecode = pc->as<OpJtrue>();
-    LLINT_BRANCH(getOperand(exec, bytecode.m_condition).toBoolean(exec));
+    LLINT_BRANCH(getOperand(callFrame, bytecode.m_condition).toBoolean(globalObject));
 }
 
 LLINT_SLOW_PATH_DECL(slow_path_jfalse)
 {
     LLINT_BEGIN();
     auto bytecode = pc->as<OpJfalse>();
-    LLINT_BRANCH(!getOperand(exec, bytecode.m_condition).toBoolean(exec));
+    LLINT_BRANCH(!getOperand(callFrame, bytecode.m_condition).toBoolean(globalObject));
 }
 
 LLINT_SLOW_PATH_DECL(slow_path_jless)
 {
     LLINT_BEGIN();
     auto bytecode = pc->as<OpJless>();
-    LLINT_BRANCH(jsLess<true>(exec, getOperand(exec, bytecode.m_lhs), getOperand(exec, bytecode.m_rhs)));
+    LLINT_BRANCH(jsLess<true>(globalObject, getOperand(callFrame, bytecode.m_lhs), getOperand(callFrame, bytecode.m_rhs)));
 }
 
 LLINT_SLOW_PATH_DECL(slow_path_jnless)
 {
     LLINT_BEGIN();
     auto bytecode = pc->as<OpJnless>();
-    LLINT_BRANCH(!jsLess<true>(exec, getOperand(exec, bytecode.m_lhs), getOperand(exec, bytecode.m_rhs)));
+    LLINT_BRANCH(!jsLess<true>(globalObject, getOperand(callFrame, bytecode.m_lhs), getOperand(callFrame, bytecode.m_rhs)));
 }
 
 LLINT_SLOW_PATH_DECL(slow_path_jgreater)
 {
     LLINT_BEGIN();
     auto bytecode = pc->as<OpJgreater>();
-    LLINT_BRANCH(jsLess<false>(exec, getOperand(exec, bytecode.m_rhs), getOperand(exec, bytecode.m_lhs)));
+    LLINT_BRANCH(jsLess<false>(globalObject, getOperand(callFrame, bytecode.m_rhs), getOperand(callFrame, bytecode.m_lhs)));
 }
 
 LLINT_SLOW_PATH_DECL(slow_path_jngreater)
 {
     LLINT_BEGIN();
     auto bytecode = pc->as<OpJngreater>();
-    LLINT_BRANCH(!jsLess<false>(exec, getOperand(exec, bytecode.m_rhs), getOperand(exec, bytecode.m_lhs)));
+    LLINT_BRANCH(!jsLess<false>(globalObject, getOperand(callFrame, bytecode.m_rhs), getOperand(callFrame, bytecode.m_lhs)));
 }
 
 LLINT_SLOW_PATH_DECL(slow_path_jlesseq)
 {
     LLINT_BEGIN();
     auto bytecode = pc->as<OpJlesseq>();
-    LLINT_BRANCH(jsLessEq<true>(exec, getOperand(exec, bytecode.m_lhs), getOperand(exec, bytecode.m_rhs)));
+    LLINT_BRANCH(jsLessEq<true>(globalObject, getOperand(callFrame, bytecode.m_lhs), getOperand(callFrame, bytecode.m_rhs)));
 }
 
 LLINT_SLOW_PATH_DECL(slow_path_jnlesseq)
 {
     LLINT_BEGIN();
     auto bytecode = pc->as<OpJnlesseq>();
-    LLINT_BRANCH(!jsLessEq<true>(exec, getOperand(exec, bytecode.m_lhs), getOperand(exec, bytecode.m_rhs)));
+    LLINT_BRANCH(!jsLessEq<true>(globalObject, getOperand(callFrame, bytecode.m_lhs), getOperand(callFrame, bytecode.m_rhs)));
 }
 
 LLINT_SLOW_PATH_DECL(slow_path_jgreatereq)
 {
     LLINT_BEGIN();
     auto bytecode = pc->as<OpJgreatereq>();
-    LLINT_BRANCH(jsLessEq<false>(exec, getOperand(exec, bytecode.m_rhs), getOperand(exec, bytecode.m_lhs)));
+    LLINT_BRANCH(jsLessEq<false>(globalObject, getOperand(callFrame, bytecode.m_rhs), getOperand(callFrame, bytecode.m_lhs)));
 }
 
 LLINT_SLOW_PATH_DECL(slow_path_jngreatereq)
 {
     LLINT_BEGIN();
     auto bytecode = pc->as<OpJngreatereq>();
-    LLINT_BRANCH(!jsLessEq<false>(exec, getOperand(exec, bytecode.m_rhs), getOperand(exec, bytecode.m_lhs)));
+    LLINT_BRANCH(!jsLessEq<false>(globalObject, getOperand(callFrame, bytecode.m_rhs), getOperand(callFrame, bytecode.m_lhs)));
 }
 
 LLINT_SLOW_PATH_DECL(slow_path_jeq)
 {
     LLINT_BEGIN();
     auto bytecode = pc->as<OpJeq>();
-    LLINT_BRANCH(JSValue::equal(exec, getOperand(exec, bytecode.m_lhs), getOperand(exec, bytecode.m_rhs)));
+    LLINT_BRANCH(JSValue::equal(globalObject, getOperand(callFrame, bytecode.m_lhs), getOperand(callFrame, bytecode.m_rhs)));
 }
 
 LLINT_SLOW_PATH_DECL(slow_path_jneq)
 {
     LLINT_BEGIN();
     auto bytecode = pc->as<OpJneq>();
-    LLINT_BRANCH(!JSValue::equal(exec, getOperand(exec, bytecode.m_lhs), getOperand(exec, bytecode.m_rhs)));
+    LLINT_BRANCH(!JSValue::equal(globalObject, getOperand(callFrame, bytecode.m_lhs), getOperand(callFrame, bytecode.m_rhs)));
 }
 
 LLINT_SLOW_PATH_DECL(slow_path_jstricteq)
 {
     LLINT_BEGIN();
     auto bytecode = pc->as<OpJstricteq>();
-    LLINT_BRANCH(JSValue::strictEqual(exec, getOperand(exec, bytecode.m_lhs), getOperand(exec, bytecode.m_rhs)));
+    LLINT_BRANCH(JSValue::strictEqual(globalObject, getOperand(callFrame, bytecode.m_lhs), getOperand(callFrame, bytecode.m_rhs)));
 }
 
 LLINT_SLOW_PATH_DECL(slow_path_jnstricteq)
 {
     LLINT_BEGIN();
     auto bytecode = pc->as<OpJnstricteq>();
-    LLINT_BRANCH(!JSValue::strictEqual(exec, getOperand(exec, bytecode.m_lhs), getOperand(exec, bytecode.m_rhs)));
+    LLINT_BRANCH(!JSValue::strictEqual(globalObject, getOperand(callFrame, bytecode.m_lhs), getOperand(callFrame, bytecode.m_rhs)));
 }
 
 LLINT_SLOW_PATH_DECL(slow_path_switch_imm)
 {
     LLINT_BEGIN();
     auto bytecode = pc->as<OpSwitchImm>();
-    JSValue scrutinee = getOperand(exec, bytecode.m_scrutinee);
+    JSValue scrutinee = getOperand(callFrame, bytecode.m_scrutinee);
     ASSERT(scrutinee.isDouble());
     double value = scrutinee.asDouble();
     int32_t intValue = static_cast<int32_t>(value);
     int defaultOffset = JUMP_OFFSET(bytecode.m_defaultOffset);
-    if (value == intValue) {
-        CodeBlock* codeBlock = exec->codeBlock();
-        JUMP_TO(codeBlock->switchJumpTable(bytecode.m_tableIndex).offsetForValue(intValue, defaultOffset));
-    } else
+    if (value == intValue)
+        JUMP_TO(codeBlock->unlinkedSwitchJumpTable(bytecode.m_tableIndex).offsetForValue(intValue, defaultOffset));
+    else
         JUMP_TO(defaultOffset);
     LLINT_END();
 }
@@ -1294,14 +1710,13 @@ LLINT_SLOW_PATH_DECL(slow_path_switch_char)
 {
     LLINT_BEGIN();
     auto bytecode = pc->as<OpSwitchChar>();
-    JSValue scrutinee = getOperand(exec, bytecode.m_scrutinee);
+    JSValue scrutinee = getOperand(callFrame, bytecode.m_scrutinee);
     ASSERT(scrutinee.isString());
     JSString* string = asString(scrutinee);
     ASSERT(string->length() == 1);
     int defaultOffset = JUMP_OFFSET(bytecode.m_defaultOffset);
-    StringImpl* impl = string->value(exec).impl();
-    CodeBlock* codeBlock = exec->codeBlock();
-    JUMP_TO(codeBlock->switchJumpTable(bytecode.m_tableIndex).offsetForValue((*impl)[0], defaultOffset));
+    StringImpl* impl = string->value(globalObject).impl();
+    JUMP_TO(codeBlock->unlinkedSwitchJumpTable(bytecode.m_tableIndex).offsetForValue((*impl)[0], defaultOffset));
     LLINT_END();
 }
 
@@ -1309,18 +1724,16 @@ LLINT_SLOW_PATH_DECL(slow_path_switch_string)
 {
     LLINT_BEGIN();
     auto bytecode = pc->as<OpSwitchString>();
-    JSValue scrutinee = getOperand(exec, bytecode.m_scrutinee);
+    JSValue scrutinee = getOperand(callFrame, bytecode.m_scrutinee);
     int defaultOffset = JUMP_OFFSET(bytecode.m_defaultOffset);
     if (!scrutinee.isString())
         JUMP_TO(defaultOffset);
     else {
-        StringImpl* scrutineeStringImpl = asString(scrutinee)->value(exec).impl();
+        StringImpl* scrutineeStringImpl = asString(scrutinee)->value(globalObject).impl();
 
         LLINT_CHECK_EXCEPTION();
 
-        CodeBlock* codeBlock = exec->codeBlock();
-
-        JUMP_TO(codeBlock->stringSwitchJumpTable(bytecode.m_tableIndex).offsetForValue(scrutineeStringImpl, defaultOffset));
+        JUMP_TO(codeBlock->unlinkedStringSwitchJumpTable(bytecode.m_tableIndex).offsetForValue(scrutineeStringImpl, defaultOffset));
     }
     LLINT_END();
 }
@@ -1329,8 +1742,7 @@ LLINT_SLOW_PATH_DECL(slow_path_new_func)
 {
     LLINT_BEGIN();
     auto bytecode = pc->as<OpNewFunc>();
-    CodeBlock* codeBlock = exec->codeBlock();
-    JSScope* scope = exec->uncheckedR(bytecode.m_scope).Register::scope();
+    JSScope* scope = callFrame->uncheckedR(bytecode.m_scope).Register::scope();
     slowPathLogF("Creating function!\n");
     LLINT_RETURN(JSFunction::create(vm, codeBlock->functionDecl(bytecode.m_functionDecl), scope));
 }
@@ -1339,8 +1751,7 @@ LLINT_SLOW_PATH_DECL(slow_path_new_generator_func)
 {
     LLINT_BEGIN();
     auto bytecode = pc->as<OpNewGeneratorFunc>();
-    CodeBlock* codeBlock = exec->codeBlock();
-    JSScope* scope = exec->uncheckedR(bytecode.m_scope).Register::scope();
+    JSScope* scope = callFrame->uncheckedR(bytecode.m_scope).Register::scope();
     slowPathLogF("Creating function!\n");
     LLINT_RETURN(JSGeneratorFunction::create(vm, codeBlock->functionDecl(bytecode.m_functionDecl), scope));
 }
@@ -1349,8 +1760,7 @@ LLINT_SLOW_PATH_DECL(slow_path_new_async_func)
 {
     LLINT_BEGIN();
     auto bytecode = pc->as<OpNewAsyncFunc>();
-    CodeBlock* codeBlock = exec->codeBlock();
-    JSScope* scope = exec->uncheckedR(bytecode.m_scope).Register::scope();
+    JSScope* scope = callFrame->uncheckedR(bytecode.m_scope).Register::scope();
     slowPathLogF("Creating async function!\n");
     LLINT_RETURN(JSAsyncFunction::create(vm, codeBlock->functionDecl(bytecode.m_functionDecl), scope));
 }
@@ -1359,8 +1769,7 @@ LLINT_SLOW_PATH_DECL(slow_path_new_async_generator_func)
 {
     LLINT_BEGIN();
     auto bytecode = pc->as<OpNewAsyncGeneratorFunc>();
-    CodeBlock* codeBlock = exec->codeBlock();
-    JSScope* scope = exec->uncheckedR(bytecode.m_scope).Register::scope();
+    JSScope* scope = callFrame->uncheckedR(bytecode.m_scope).Register::scope();
     slowPathLogF("Creating async generator function!\n");
     LLINT_RETURN(JSAsyncGeneratorFunction::create(vm, codeBlock->functionDecl(bytecode.m_functionDecl), scope));
 }
@@ -1370,8 +1779,7 @@ LLINT_SLOW_PATH_DECL(slow_path_new_func_exp)
     LLINT_BEGIN();
 
     auto bytecode = pc->as<OpNewFuncExp>();
-    CodeBlock* codeBlock = exec->codeBlock();
-    JSScope* scope = exec->uncheckedR(bytecode.m_scope).Register::scope();
+    JSScope* scope = callFrame->uncheckedR(bytecode.m_scope).Register::scope();
     FunctionExecutable* executable = codeBlock->functionExpr(bytecode.m_functionDecl);
 
     LLINT_RETURN(JSFunction::create(vm, executable, scope));
@@ -1382,8 +1790,7 @@ LLINT_SLOW_PATH_DECL(slow_path_new_generator_func_exp)
     LLINT_BEGIN();
 
     auto bytecode = pc->as<OpNewGeneratorFuncExp>();
-    CodeBlock* codeBlock = exec->codeBlock();
-    JSScope* scope = exec->uncheckedR(bytecode.m_scope).Register::scope();
+    JSScope* scope = callFrame->uncheckedR(bytecode.m_scope).Register::scope();
     FunctionExecutable* executable = codeBlock->functionExpr(bytecode.m_functionDecl);
 
     LLINT_RETURN(JSGeneratorFunction::create(vm, executable, scope));
@@ -1394,8 +1801,7 @@ LLINT_SLOW_PATH_DECL(slow_path_new_async_func_exp)
     LLINT_BEGIN();
 
     auto bytecode = pc->as<OpNewAsyncFuncExp>();
-    CodeBlock* codeBlock = exec->codeBlock();
-    JSScope* scope = exec->uncheckedR(bytecode.m_scope).Register::scope();
+    JSScope* scope = callFrame->uncheckedR(bytecode.m_scope).Register::scope();
     FunctionExecutable* executable = codeBlock->functionExpr(bytecode.m_functionDecl);
 
     LLINT_RETURN(JSAsyncFunction::create(vm, executable, scope));
@@ -1406,8 +1812,7 @@ LLINT_SLOW_PATH_DECL(slow_path_new_async_generator_func_exp)
     LLINT_BEGIN();
 
     auto bytecode = pc->as<OpNewAsyncGeneratorFuncExp>();
-    CodeBlock* codeBlock = exec->codeBlock();
-    JSScope* scope = exec->uncheckedR(bytecode.m_scope).Register::scope();
+    JSScope* scope = callFrame->uncheckedR(bytecode.m_scope).Register::scope();
     FunctionExecutable* executable = codeBlock->functionExpr(bytecode.m_functionDecl);
 
     LLINT_RETURN(JSAsyncGeneratorFunction::create(vm, executable, scope));
@@ -1417,111 +1822,110 @@ LLINT_SLOW_PATH_DECL(slow_path_set_function_name)
 {
     LLINT_BEGIN();
     auto bytecode = pc->as<OpSetFunctionName>();
-    JSFunction* func = jsCast<JSFunction*>(getNonConstantOperand(exec, bytecode.m_function));
-    JSValue name = getOperand(exec, bytecode.m_name);
-    func->setFunctionName(exec, name);
+    JSFunction* func = jsCast<JSFunction*>(getNonConstantOperand(callFrame, bytecode.m_function));
+    JSValue name = getOperand(callFrame, bytecode.m_name);
+    func->setFunctionName(globalObject, name);
     LLINT_END();
 }
 
-static SlowPathReturnType handleHostCall(ExecState* execCallee, JSValue callee, CodeSpecializationKind kind)
+static SlowPathReturnType handleHostCall(CallFrame* calleeFrame, JSValue callee, CodeSpecializationKind kind)
 {
     slowPathLog("Performing host call.\n");
 
-    ExecState* exec = execCallee->callerFrame();
-    VM& vm = exec->vm();
+    CallFrame* callFrame = calleeFrame->callerFrame();
+    CodeBlock* callerCodeBlock = callFrame->codeBlock();
+    JSGlobalObject* globalObject = callerCodeBlock->globalObject();
+    VM& vm = callerCodeBlock->vm();
     auto throwScope = DECLARE_THROW_SCOPE(vm);
 
-    execCallee->setCodeBlock(0);
-    execCallee->clearReturnPC();
+    calleeFrame->setCodeBlock(nullptr);
+    calleeFrame->clearReturnPC();
 
     if (kind == CodeForCall) {
-        CallData callData;
-        CallType callType = getCallData(vm, callee, callData);
+        auto callData = getCallData(vm, callee);
+        ASSERT(callData.type != CallData::Type::JS);
 
-        ASSERT(callType != CallType::JS);
-
-        if (callType == CallType::Host) {
-            NativeCallFrameTracer tracer(vm, execCallee);
-            execCallee->setCallee(asObject(callee));
-            vm.hostCallReturnValue = JSValue::decode(callData.native.function(execCallee));
-            LLINT_CALL_RETURN(execCallee, execCallee, LLInt::getCodePtr(getHostCallReturnValue), CFunctionPtrTag);
+        if (callData.type == CallData::Type::Native) {
+            SlowPathFrameTracer tracer(vm, calleeFrame);
+            calleeFrame->setCallee(asObject(callee));
+            vm.encodedHostCallReturnValue = callData.native.function(asObject(callee)->globalObject(vm), calleeFrame);
+            DisallowGC disallowGC;
+            auto* callerSP = calleeFrame + CallerFrameAndPC::sizeInRegisters;
+            LLINT_CALL_RETURN(globalObject, callerSP, LLInt::getHostCallReturnValueEntrypoint().code().executableAddress(), JSEntryPtrTag);
         }
 
         slowPathLog("Call callee is not a function: ", callee, "\n");
 
-        ASSERT(callType == CallType::None);
-        LLINT_CALL_THROW(exec, createNotAFunctionError(exec, callee));
+        ASSERT(callData.type == CallData::Type::None);
+        LLINT_CALL_THROW(globalObject, createNotAFunctionError(globalObject, callee));
     }
 
     ASSERT(kind == CodeForConstruct);
 
-    ConstructData constructData;
-    ConstructType constructType = getConstructData(vm, callee, constructData);
+    auto constructData = getConstructData(vm, callee);
+    ASSERT(constructData.type != CallData::Type::JS);
 
-    ASSERT(constructType != ConstructType::JS);
-
-    if (constructType == ConstructType::Host) {
-        NativeCallFrameTracer tracer(vm, execCallee);
-        execCallee->setCallee(asObject(callee));
-        vm.hostCallReturnValue = JSValue::decode(constructData.native.function(execCallee));
-        LLINT_CALL_RETURN(execCallee, execCallee, LLInt::getCodePtr(getHostCallReturnValue), CFunctionPtrTag);
+    if (constructData.type == CallData::Type::Native) {
+        SlowPathFrameTracer tracer(vm, calleeFrame);
+        calleeFrame->setCallee(asObject(callee));
+        vm.encodedHostCallReturnValue = constructData.native.function(asObject(callee)->globalObject(vm), calleeFrame);
+        DisallowGC disallowGC;
+        auto* callerSP = calleeFrame + CallerFrameAndPC::sizeInRegisters;
+        LLINT_CALL_RETURN(globalObject, callerSP, LLInt::getHostCallReturnValueEntrypoint().code().executableAddress(), JSEntryPtrTag);
     }
 
     slowPathLog("Constructor callee is not a function: ", callee, "\n");
 
-    ASSERT(constructType == ConstructType::None);
-    LLINT_CALL_THROW(exec, createNotAConstructorError(exec, callee));
+    ASSERT(constructData.type == CallData::Type::None);
+    LLINT_CALL_THROW(globalObject, createNotAConstructorError(globalObject, callee));
 }
 
-inline SlowPathReturnType setUpCall(ExecState* execCallee, CodeSpecializationKind kind, JSValue calleeAsValue, LLIntCallLinkInfo* callLinkInfo = nullptr)
+inline SlowPathReturnType setUpCall(CallFrame* calleeFrame, CodeSpecializationKind kind, JSValue calleeAsValue)
 {
-    ExecState* exec = execCallee->callerFrame();
-    VM& vm = exec->vm();
+    CallFrame* callFrame = calleeFrame->callerFrame();
+    CodeBlock* callerCodeBlock = callFrame->codeBlock();
+    JSGlobalObject* globalObject = callerCodeBlock->globalObject();
+    VM& vm = callerCodeBlock->vm();
     auto throwScope = DECLARE_THROW_SCOPE(vm);
 
-    slowPathLogF("Performing call with recorded PC = %p\n", exec->currentVPC());
+    slowPathLogF("Performing call with recorded PC = %p\n", callFrame->currentVPC());
 
     JSCell* calleeAsFunctionCell = getJSFunction(calleeAsValue);
     if (!calleeAsFunctionCell) {
-        if (auto* internalFunction = jsDynamicCast<InternalFunction*>(vm, calleeAsValue)) {
+        if (calleeAsValue.inherits<InternalFunction>(vm)) {
             MacroAssemblerCodePtr<JSEntryPtrTag> codePtr = vm.getCTIInternalFunctionTrampolineFor(kind);
             ASSERT(!!codePtr);
-
-            if (!LLINT_ALWAYS_ACCESS_SLOW && callLinkInfo) {
-                CodeBlock* callerCodeBlock = exec->codeBlock();
-
-                ConcurrentJSLocker locker(callerCodeBlock->m_lock);
-                callLinkInfo->link(vm, callerCodeBlock, internalFunction, codePtr);
-            }
-
-            assertIsTaggedWith(codePtr.executableAddress(), JSEntryPtrTag);
-            LLINT_CALL_RETURN(exec, execCallee, codePtr.executableAddress(), JSEntryPtrTag);
+            assertIsTaggedWith<JSEntryPtrTag>(codePtr.executableAddress());
+            auto* callerSP = calleeFrame + CallerFrameAndPC::sizeInRegisters;
+            LLINT_CALL_RETURN(globalObject, callerSP, codePtr.executableAddress(), JSEntryPtrTag);
         }
-        RELEASE_AND_RETURN(throwScope, handleHostCall(execCallee, calleeAsValue, kind));
+        RELEASE_AND_RETURN(throwScope, handleHostCall(calleeFrame, calleeAsValue, kind));
     }
     JSFunction* callee = jsCast<JSFunction*>(calleeAsFunctionCell);
     JSScope* scope = callee->scopeUnchecked();
     ExecutableBase* executable = callee->executable();
 
+    DeferTraps deferTraps(vm); // We can't jettison this code if we're about to run it.
+
     MacroAssemblerCodePtr<JSEntryPtrTag> codePtr;
-    CodeBlock* codeBlock = 0;
+    // FIXME: Support wasm IC.
+    // https://bugs.webkit.org/show_bug.cgi?id=220339
     if (executable->isHostFunction())
         codePtr = executable->entrypointFor(kind, MustCheckArity);
     else {
         FunctionExecutable* functionExecutable = static_cast<FunctionExecutable*>(executable);
-
         if (!isCall(kind) && functionExecutable->constructAbility() == ConstructAbility::CannotConstruct)
-            LLINT_CALL_THROW(exec, createNotAConstructorError(exec, callee));
+            LLINT_CALL_THROW(globalObject, createNotAConstructorError(globalObject, callee));
 
-        CodeBlock** codeBlockSlot = execCallee->addressOfCodeBlock();
-        Exception* error = functionExecutable->prepareForExecution<FunctionExecutable>(vm, callee, scope, kind, *codeBlockSlot);
-        EXCEPTION_ASSERT(throwScope.exception() == error);
-        if (UNLIKELY(error))
-            LLINT_CALL_THROW(exec, error);
-        codeBlock = *codeBlockSlot;
+        CodeBlock** codeBlockSlot = calleeFrame->addressOfCodeBlock();
+        functionExecutable->prepareForExecution<FunctionExecutable>(vm, callee, scope, kind, *codeBlockSlot);
+        LLINT_CALL_CHECK_EXCEPTION(globalObject);
+
+        CodeBlock* codeBlock = *codeBlockSlot;
         ASSERT(codeBlock);
+
         ArityCheckMode arity;
-        if (execCallee->argumentCountIncludingThis() < static_cast<size_t>(codeBlock->numParameters()))
+        if (calleeFrame->argumentCountIncludingThis() < static_cast<size_t>(codeBlock->numParameters()))
             arity = MustCheckArity;
         else
             arity = ArityCheckNotRequired;
@@ -1529,57 +1933,9 @@ inline SlowPathReturnType setUpCall(ExecState* execCallee, CodeSpecializationKin
     }
 
     ASSERT(!!codePtr);
-
-    if (!LLINT_ALWAYS_ACCESS_SLOW && callLinkInfo) {
-        CodeBlock* callerCodeBlock = exec->codeBlock();
-
-        ConcurrentJSLocker locker(callerCodeBlock->m_lock);
-        callLinkInfo->link(vm, callerCodeBlock, callee, codePtr);
-        if (codeBlock)
-            codeBlock->linkIncomingCall(exec, callLinkInfo);
-    }
-
-    assertIsTaggedWith(codePtr.executableAddress(), JSEntryPtrTag);
-    LLINT_CALL_RETURN(exec, execCallee, codePtr.executableAddress(), JSEntryPtrTag);
-}
-
-template<typename Op>
-inline SlowPathReturnType genericCall(ExecState* exec, Op&& bytecode, CodeSpecializationKind kind)
-{
-    // This needs to:
-    // - Set up a call frame.
-    // - Figure out what to call and compile it if necessary.
-    // - If possible, link the call's inline cache.
-    // - Return a tuple of machine code address to call and the new call frame.
-
-    JSValue calleeAsValue = getOperand(exec, bytecode.m_callee);
-
-    ExecState* execCallee = exec - bytecode.m_argv;
-
-    execCallee->setArgumentCountIncludingThis(bytecode.m_argc);
-    execCallee->uncheckedR(CallFrameSlot::callee) = calleeAsValue;
-    execCallee->setCallerFrame(exec);
-
-    auto& metadata = bytecode.metadata(exec);
-    return setUpCall(execCallee, kind, calleeAsValue, &metadata.m_callLinkInfo);
-}
-
-LLINT_SLOW_PATH_DECL(slow_path_call)
-{
-    LLINT_BEGIN_NO_SET_PC();
-    RELEASE_AND_RETURN(throwScope, genericCall(exec, pc->as<OpCall>(), CodeForCall));
-}
-
-LLINT_SLOW_PATH_DECL(slow_path_tail_call)
-{
-    LLINT_BEGIN_NO_SET_PC();
-    RELEASE_AND_RETURN(throwScope, genericCall(exec, pc->as<OpTailCall>(), CodeForCall));
-}
-
-LLINT_SLOW_PATH_DECL(slow_path_construct)
-{
-    LLINT_BEGIN_NO_SET_PC();
-    RELEASE_AND_RETURN(throwScope, genericCall(exec, pc->as<OpConstruct>(), CodeForConstruct));
+    assertIsTaggedWith<JSEntryPtrTag>(codePtr.executableAddress());
+    auto* callerSP = calleeFrame + CallerFrameAndPC::sizeInRegisters;
+    LLINT_CALL_RETURN(globalObject, callerSP, codePtr.executableAddress(), JSEntryPtrTag);
 }
 
 LLINT_SLOW_PATH_DECL(slow_path_size_frame_for_varargs)
@@ -1595,35 +1951,35 @@ LLINT_SLOW_PATH_DECL(slow_path_size_frame_for_varargs)
     case op_call_varargs: {
         auto bytecode = pc->as<OpCallVarargs>();
         numUsedStackSlots = -bytecode.m_firstFree.offset();
-        arguments = getOperand(exec, bytecode.m_arguments);
+        arguments = getOperand(callFrame, bytecode.m_arguments);
         firstVarArg = bytecode.m_firstVarArg;
         break;
     }
     case op_tail_call_varargs: {
         auto bytecode = pc->as<OpTailCallVarargs>();
         numUsedStackSlots = -bytecode.m_firstFree.offset();
-        arguments = getOperand(exec, bytecode.m_arguments);
+        arguments = getOperand(callFrame, bytecode.m_arguments);
         firstVarArg = bytecode.m_firstVarArg;
         break;
     }
     case op_construct_varargs: {
         auto bytecode = pc->as<OpConstructVarargs>();
         numUsedStackSlots = -bytecode.m_firstFree.offset();
-        arguments = getOperand(exec, bytecode.m_arguments);
+        arguments = getOperand(callFrame, bytecode.m_arguments);
         firstVarArg = bytecode.m_firstVarArg;
         break;
     }
     default:
         RELEASE_ASSERT_NOT_REACHED();
     }
-    unsigned length = sizeFrameForVarargs(exec, vm, arguments, numUsedStackSlots, firstVarArg);
-    LLINT_CALL_CHECK_EXCEPTION(exec, exec);
+    unsigned length = sizeFrameForVarargs(globalObject, callFrame, vm, arguments, numUsedStackSlots, firstVarArg);
+    LLINT_CALL_CHECK_EXCEPTION(globalObject);
 
-    ExecState* execCallee = calleeFrameForVarargs(exec, numUsedStackSlots, length + 1);
+    CallFrame* calleeFrame = calleeFrameForVarargs(callFrame, numUsedStackSlots, length + 1);
     vm.varargsLength = length;
-    vm.newCallFrameReturnValue = execCallee;
+    vm.newCallFrameReturnValue = calleeFrame;
 
-    LLINT_RETURN_CALLEE_FRAME(execCallee);
+    LLINT_RETURN_CALLEE_FRAME(calleeFrame);
 }
 
 LLINT_SLOW_PATH_DECL(slow_path_size_frame_for_forward_arguments)
@@ -1635,15 +1991,15 @@ LLINT_SLOW_PATH_DECL(slow_path_size_frame_for_forward_arguments)
     auto bytecode = pc->as<OpTailCallForwardArguments>();
     unsigned numUsedStackSlots = -bytecode.m_firstFree.offset();
 
-    unsigned arguments = sizeFrameForForwardArguments(exec, vm, numUsedStackSlots);
-    LLINT_CALL_CHECK_EXCEPTION(exec, exec);
+    unsigned arguments = sizeFrameForForwardArguments(globalObject, callFrame, vm, numUsedStackSlots);
+    LLINT_CALL_CHECK_EXCEPTION(globalObject);
 
-    ExecState* execCallee = calleeFrameForVarargs(exec, numUsedStackSlots, arguments + 1);
+    CallFrame* calleeFrame = calleeFrameForVarargs(callFrame, numUsedStackSlots, arguments + 1);
 
     vm.varargsLength = arguments;
-    vm.newCallFrameReturnValue = execCallee;
+    vm.newCallFrameReturnValue = calleeFrame;
 
-    LLINT_RETURN_CALLEE_FRAME(execCallee);
+    LLINT_RETURN_CALLEE_FRAME(calleeFrame);
 }
 
 enum class SetArgumentsWith {
@@ -1651,133 +2007,140 @@ enum class SetArgumentsWith {
     CurrentArguments
 };
 
-template<typename Op>
-inline SlowPathReturnType varargsSetup(ExecState* exec, const Instruction* pc, CodeSpecializationKind kind, SetArgumentsWith set)
+template<typename Op, SetArgumentsWith set>
+inline SlowPathReturnType varargsSetup(CallFrame* callFrame, const Instruction* pc, CodeSpecializationKind)
 {
     LLINT_BEGIN_NO_SET_PC();
+
     // This needs to:
     // - Figure out what to call and compile it if necessary.
     // - Return a tuple of machine code address to call and the new call frame.
 
     auto bytecode = pc->as<Op>();
-    JSValue calleeAsValue = getOperand(exec, bytecode.m_callee);
+    auto& metadata = bytecode.metadata(codeBlock);
+    JSValue calleeAsValue = getOperand(callFrame, bytecode.m_callee);
 
-    ExecState* execCallee = vm.newCallFrameReturnValue;
-
-    if (set == SetArgumentsWith::Object) {
-        setupVarargsFrameAndSetThis(exec, execCallee, getOperand(exec, bytecode.m_thisValue), getOperand(exec, bytecode.m_arguments), bytecode.m_firstVarArg, vm.varargsLength);
-        LLINT_CALL_CHECK_EXCEPTION(exec, exec);
+    CallFrame* calleeFrame = vm.newCallFrameReturnValue;
+    unsigned argumentCountIncludingThis = vm.varargsLength + 1;
+    if constexpr (set == SetArgumentsWith::Object) {
+        setupVarargsFrameAndSetThis(globalObject, callFrame, calleeFrame, getOperand(callFrame, bytecode.m_thisValue), getOperand(callFrame, bytecode.m_arguments), bytecode.m_firstVarArg, vm.varargsLength);
+        LLINT_CALL_CHECK_EXCEPTION(globalObject);
     } else
-        setupForwardArgumentsFrameAndSetThis(exec, execCallee, getOperand(exec, bytecode.m_thisValue), vm.varargsLength);
+        setupForwardArgumentsFrameAndSetThis(globalObject, callFrame, calleeFrame, getOperand(callFrame, bytecode.m_thisValue), vm.varargsLength);
 
-    execCallee->setCallerFrame(exec);
-    execCallee->uncheckedR(CallFrameSlot::callee) = calleeAsValue;
-    exec->setCurrentVPC(pc);
+    calleeFrame->setCallerFrame(callFrame);
+    calleeFrame->uncheckedR(VirtualRegister(CallFrameSlot::callee)) = calleeAsValue;
+    callFrame->setCurrentVPC(pc);
 
-    RELEASE_AND_RETURN(throwScope, setUpCall(execCallee, kind, calleeAsValue));
+    metadata.m_callLinkInfo.updateMaxArgumentCountIncludingThis(argumentCountIncludingThis);
+
+    auto* callerSP = calleeFrame + CallerFrameAndPC::sizeInRegisters;
+    LLINT_RETURN_TWO(pc, callerSP);
 }
 
 LLINT_SLOW_PATH_DECL(slow_path_call_varargs)
 {
-    return varargsSetup<OpCallVarargs>(exec, pc, CodeForCall, SetArgumentsWith::Object);
+    return varargsSetup<OpCallVarargs, SetArgumentsWith::Object>(callFrame, pc, CodeForCall);
 }
 
 LLINT_SLOW_PATH_DECL(slow_path_tail_call_varargs)
 {
-    return varargsSetup<OpTailCallVarargs>(exec, pc, CodeForCall, SetArgumentsWith::Object);
+    return varargsSetup<OpTailCallVarargs, SetArgumentsWith::Object>(callFrame, pc, CodeForCall);
 }
 
 LLINT_SLOW_PATH_DECL(slow_path_tail_call_forward_arguments)
 {
-    return varargsSetup<OpTailCallForwardArguments>(exec, pc, CodeForCall, SetArgumentsWith::CurrentArguments);
+    return varargsSetup<OpTailCallForwardArguments, SetArgumentsWith::CurrentArguments>(callFrame, pc, CodeForCall);
 }
 
 LLINT_SLOW_PATH_DECL(slow_path_construct_varargs)
 {
-    return varargsSetup<OpConstructVarargs>(exec, pc, CodeForConstruct, SetArgumentsWith::Object);
+    return varargsSetup<OpConstructVarargs, SetArgumentsWith::Object>(callFrame, pc, CodeForConstruct);
 }
 
-inline SlowPathReturnType commonCallEval(ExecState* exec, const Instruction* pc, MacroAssemblerCodePtr<JSEntryPtrTag> returnPoint)
+inline SlowPathReturnType commonCallEval(CallFrame* callFrame, const Instruction* pc, MacroAssemblerCodeRef<JSEntryPtrTag> returnPoint)
 {
     LLINT_BEGIN_NO_SET_PC();
     auto bytecode = pc->as<OpCallEval>();
-    JSValue calleeAsValue = getNonConstantOperand(exec, bytecode.m_callee);
+    JSValue calleeAsValue = getNonConstantOperand(callFrame, bytecode.m_callee);
 
-    ExecState* execCallee = exec - bytecode.m_argv;
+    CallFrame* calleeFrame = callFrame - bytecode.m_argv;
 
-    execCallee->setArgumentCountIncludingThis(bytecode.m_argc);
-    execCallee->setCallerFrame(exec);
-    execCallee->uncheckedR(CallFrameSlot::callee) = calleeAsValue;
-    execCallee->setReturnPC(returnPoint.executableAddress());
-    execCallee->setCodeBlock(0);
-    exec->setCurrentVPC(pc);
+    calleeFrame->setArgumentCountIncludingThis(bytecode.m_argc);
+    calleeFrame->setCallerFrame(callFrame);
+    calleeFrame->uncheckedR(VirtualRegister(CallFrameSlot::callee)) = calleeAsValue;
+    calleeFrame->setReturnPC(returnPoint.code().executableAddress());
+    calleeFrame->setCodeBlock(nullptr);
+    callFrame->setCurrentVPC(pc);
 
     if (!isHostFunction(calleeAsValue, globalFuncEval))
-        RELEASE_AND_RETURN(throwScope, setUpCall(execCallee, CodeForCall, calleeAsValue));
+        RELEASE_AND_RETURN(throwScope, setUpCall(calleeFrame, CodeForCall, calleeAsValue));
 
-    vm.hostCallReturnValue = eval(execCallee);
-    LLINT_CALL_RETURN(exec, execCallee, LLInt::getCodePtr(getHostCallReturnValue), CFunctionPtrTag);
+    vm.encodedHostCallReturnValue = JSValue::encode(eval(globalObject, calleeFrame, bytecode.m_ecmaMode));
+    DisallowGC disallowGC;
+    auto* callerSP = calleeFrame + CallerFrameAndPC::sizeInRegisters;
+    LLINT_CALL_RETURN(globalObject, callerSP, LLInt::getHostCallReturnValueEntrypoint().code().executableAddress(), JSEntryPtrTag);
 }
 
 LLINT_SLOW_PATH_DECL(slow_path_call_eval)
 {
-    return commonCallEval(exec, pc, LLInt::getCodePtr<JSEntryPtrTag>(llint_generic_return_point));
+    return commonCallEval(callFrame, pc, LLInt::genericReturnPointEntrypoint(OpcodeSize::Narrow));
 }
 
 LLINT_SLOW_PATH_DECL(slow_path_call_eval_wide16)
 {
-    return commonCallEval(exec, pc, LLInt::getWide16CodePtr<JSEntryPtrTag>(llint_generic_return_point));
+    return commonCallEval(callFrame, pc, LLInt::genericReturnPointEntrypoint(OpcodeSize::Wide16));
 }
 
 LLINT_SLOW_PATH_DECL(slow_path_call_eval_wide32)
 {
-    return commonCallEval(exec, pc, LLInt::getWide32CodePtr<JSEntryPtrTag>(llint_generic_return_point));
+    return commonCallEval(callFrame, pc, LLInt::genericReturnPointEntrypoint(OpcodeSize::Wide32));
 }
 
 LLINT_SLOW_PATH_DECL(slow_path_strcat)
 {
     LLINT_BEGIN();
     auto bytecode = pc->as<OpStrcat>();
-    LLINT_RETURN(jsStringFromRegisterArray(exec, &exec->uncheckedR(bytecode.m_src), bytecode.m_count));
+    LLINT_RETURN(jsStringFromRegisterArray(globalObject, &callFrame->uncheckedR(bytecode.m_src), bytecode.m_count));
 }
 
 LLINT_SLOW_PATH_DECL(slow_path_to_primitive)
 {
     LLINT_BEGIN();
     auto bytecode = pc->as<OpToPrimitive>();
-    LLINT_RETURN(getOperand(exec, bytecode.m_src).toPrimitive(exec));
+    LLINT_RETURN(getOperand(callFrame, bytecode.m_src).toPrimitive(globalObject));
 }
 
 LLINT_SLOW_PATH_DECL(slow_path_throw)
 {
     LLINT_BEGIN();
     auto bytecode = pc->as<OpThrow>();
-    LLINT_THROW(getOperand(exec, bytecode.m_value));
+    LLINT_THROW(getOperand(callFrame, bytecode.m_value));
 }
 
 LLINT_SLOW_PATH_DECL(slow_path_handle_traps)
 {
     LLINT_BEGIN_NO_SET_PC();
-    ASSERT(vm.needTrapHandling());
-    vm.handleTraps(exec);
+    ASSERT(vm.traps().needHandling(VMTraps::AsyncEvents));
+    vm.traps().handleTraps(VMTraps::AsyncEvents);
     UNUSED_PARAM(pc);
-    LLINT_RETURN_TWO(throwScope.exception(), exec);
+    LLINT_RETURN_TWO(throwScope.exception(), globalObject);
 }
 
 LLINT_SLOW_PATH_DECL(slow_path_debug)
 {
     LLINT_BEGIN();
     auto bytecode = pc->as<OpDebug>();
-    vm.interpreter->debug(exec, bytecode.m_debugHookType);
+    vm.interpreter->debug(callFrame, bytecode.m_debugHookType);
 
     LLINT_END();
 }
 
 LLINT_SLOW_PATH_DECL(slow_path_handle_exception)
 {
-    LLINT_BEGIN_NO_SET_PC();
-    UNUSED_PARAM(throwScope);
-    genericUnwind(vm, exec);
+    VM& vm = callFrame->deprecatedVM();
+    SlowPathFrameTracer tracer(vm, callFrame);
+    genericUnwind(vm, callFrame);
     LLINT_END_IMPL();
 }
 
@@ -1785,32 +2148,32 @@ LLINT_SLOW_PATH_DECL(slow_path_get_from_scope)
 {
     LLINT_BEGIN();
     auto bytecode = pc->as<OpGetFromScope>();
-    auto& metadata = bytecode.metadata(exec);
-    const Identifier& ident = exec->codeBlock()->identifier(bytecode.m_var);
-    JSObject* scope = jsCast<JSObject*>(getNonConstantOperand(exec, bytecode.m_scope));
+    auto& metadata = bytecode.metadata(codeBlock);
+    const Identifier& ident = codeBlock->identifier(bytecode.m_var);
+    JSObject* scope = jsCast<JSObject*>(getNonConstantOperand(callFrame, bytecode.m_scope));
 
     // ModuleVar is always converted to ClosureVar for get_from_scope.
     ASSERT(metadata.m_getPutInfo.resolveType() != ModuleVar);
 
-    LLINT_RETURN(scope->getPropertySlot(exec, ident, [&] (bool found, PropertySlot& slot) -> JSValue {
+    LLINT_RETURN(scope->getPropertySlot(globalObject, ident, [&] (bool found, PropertySlot& slot) -> JSValue {
         if (!found) {
             if (metadata.m_getPutInfo.resolveMode() == ThrowIfNotFound)
-                return throwException(exec, throwScope, createUndefinedVariableError(exec, ident));
+                return throwException(globalObject, throwScope, createUndefinedVariableError(globalObject, ident));
             return jsUndefined();
         }
 
         JSValue result = JSValue();
         if (scope->isGlobalLexicalEnvironment()) {
             // When we can't statically prove we need a TDZ check, we must perform the check on the slow path.
-            result = slot.getValue(exec, ident);
+            result = slot.getValue(globalObject, ident);
             if (result == jsTDZValue())
-                return throwException(exec, throwScope, createTDZError(exec));
+                return throwException(globalObject, throwScope, createTDZError(globalObject));
         }
 
-        CommonSlowPaths::tryCacheGetFromScopeGlobal(exec, vm, bytecode, scope, slot, ident);
+        CommonSlowPaths::tryCacheGetFromScopeGlobal(globalObject, codeBlock, vm, bytecode, scope, slot, ident);
 
         if (!result)
-            return slot.getValue(exec, ident);
+            return slot.getValue(globalObject, ident);
         return result;
     }));
 }
@@ -1820,12 +2183,11 @@ LLINT_SLOW_PATH_DECL(slow_path_put_to_scope)
     LLINT_BEGIN();
 
     auto bytecode = pc->as<OpPutToScope>();
-    auto& metadata = bytecode.metadata(exec);
-    CodeBlock* codeBlock = exec->codeBlock();
+    auto& metadata = bytecode.metadata(codeBlock);
     const Identifier& ident = codeBlock->identifier(bytecode.m_var);
-    JSObject* scope = jsCast<JSObject*>(getNonConstantOperand(exec, bytecode.m_scope));
-    JSValue value = getOperand(exec, bytecode.m_value);
-    if (metadata.m_getPutInfo.resolveType() == LocalClosureVar) {
+    JSObject* scope = jsCast<JSObject*>(getNonConstantOperand(callFrame, bytecode.m_scope));
+    JSValue value = getOperand(callFrame, bytecode.m_value);
+    if (metadata.m_getPutInfo.resolveType() == ResolvedClosureVar) {
         JSLexicalEnvironment* environment = jsCast<JSLexicalEnvironment*>(scope);
         environment->variableAt(ScopeOffset(metadata.m_operand)).set(vm, environment, value);
 
@@ -1833,41 +2195,48 @@ LLINT_SLOW_PATH_DECL(slow_path_put_to_scope)
         // to have already changed the value of the variable. Otherwise we might watch and constant-fold
         // to the Undefined value from before the assignment.
         if (metadata.m_watchpointSet)
-            metadata.m_watchpointSet->touch(vm, "Executed op_put_scope<LocalClosureVar>");
+            metadata.m_watchpointSet->touch(vm, "Executed op_put_scope<ResolvedClosureVar>");
         LLINT_END();
     }
 
-    bool hasProperty = scope->hasProperty(exec, ident);
+    bool hasProperty = scope->hasProperty(globalObject, ident);
     LLINT_CHECK_EXCEPTION();
     if (hasProperty
         && scope->isGlobalLexicalEnvironment()
         && !isInitialization(metadata.m_getPutInfo.initializationMode())) {
         // When we can't statically prove we need a TDZ check, we must perform the check on the slow path.
         PropertySlot slot(scope, PropertySlot::InternalMethodType::Get);
-        JSGlobalLexicalEnvironment::getOwnPropertySlot(scope, exec, ident, slot);
-        if (slot.getValue(exec, ident) == jsTDZValue())
-            LLINT_THROW(createTDZError(exec));
+        JSGlobalLexicalEnvironment::getOwnPropertySlot(scope, globalObject, ident, slot);
+        if (slot.getValue(globalObject, ident) == jsTDZValue())
+            LLINT_THROW(createTDZError(globalObject));
     }
 
     if (metadata.m_getPutInfo.resolveMode() == ThrowIfNotFound && !hasProperty)
-        LLINT_THROW(createUndefinedVariableError(exec, ident));
+        LLINT_THROW(createUndefinedVariableError(globalObject, ident));
 
-    PutPropertySlot slot(scope, codeBlock->isStrictMode(), PutPropertySlot::UnknownContext, isInitialization(metadata.m_getPutInfo.initializationMode()));
-    scope->methodTable(vm)->put(scope, exec, ident, value, slot);
+    PutPropertySlot slot(scope, metadata.m_getPutInfo.ecmaMode().isStrict(), PutPropertySlot::UnknownContext, isInitialization(metadata.m_getPutInfo.initializationMode()));
+    scope->methodTable(vm)->put(scope, globalObject, ident, value, slot);
 
-    CommonSlowPaths::tryCachePutToScopeGlobal(exec, codeBlock, bytecode, scope, slot, ident);
+    CommonSlowPaths::tryCachePutToScopeGlobal(globalObject, codeBlock, bytecode, scope, slot, ident);
 
     LLINT_END();
 }
 
-LLINT_SLOW_PATH_DECL(slow_path_check_if_exception_is_uncatchable_and_notify_profiler)
+LLINT_SLOW_PATH_DECL(slow_path_retrieve_and_clear_exception_if_catchable)
 {
     LLINT_BEGIN();
+    UNUSED_PARAM(globalObject);
     RELEASE_ASSERT(!!throwScope.exception());
 
-    if (isTerminatedExecutionException(vm, throwScope.exception()))
-        LLINT_RETURN_TWO(pc, bitwise_cast<void*>(static_cast<uintptr_t>(1)));
-    LLINT_RETURN_TWO(pc, 0);
+    Exception* exception = throwScope.exception();
+    if (vm.isTerminationException(exception))
+        LLINT_RETURN_TWO(pc, nullptr);
+
+    // We want to clear the exception here rather than in the catch prologue
+    // JIT code because clearing it also entails clearing a bit in an Atomic
+    // bit field in VMTraps.
+    throwScope.clearException();
+    LLINT_RETURN_TWO(pc, exception);
 }
 
 LLINT_SLOW_PATH_DECL(slow_path_log_shadow_chicken_prologue)
@@ -1875,10 +2244,10 @@ LLINT_SLOW_PATH_DECL(slow_path_log_shadow_chicken_prologue)
     LLINT_BEGIN();
 
     auto bytecode = pc->as<OpLogShadowChickenPrologue>();
-    JSScope* scope = exec->uncheckedR(bytecode.m_scope).Register::scope();
+    JSScope* scope = callFrame->uncheckedR(bytecode.m_scope).Register::scope();
     ShadowChicken* shadowChicken = vm.shadowChicken();
     RELEASE_ASSERT(shadowChicken);
-    shadowChicken->log(vm, exec, ShadowChicken::Packet::prologue(exec->jsCallee(), exec, exec->callerFrame(), scope));
+    shadowChicken->log(vm, callFrame, ShadowChicken::Packet::prologue(callFrame->jsCallee(), callFrame, callFrame->callerFrame(), scope));
 
     LLINT_END();
 }
@@ -1888,17 +2257,14 @@ LLINT_SLOW_PATH_DECL(slow_path_log_shadow_chicken_tail)
     LLINT_BEGIN();
 
     auto bytecode = pc->as<OpLogShadowChickenTail>();
-    JSValue thisValue = getNonConstantOperand(exec, bytecode.m_thisValue);
-    JSScope* scope = exec->uncheckedR(bytecode.m_scope).Register::scope();
+    JSValue thisValue = getNonConstantOperand(callFrame, bytecode.m_thisValue);
+    JSScope* scope = callFrame->uncheckedR(bytecode.m_scope).Register::scope();
 
-#if USE(JSVALUE64)
-    CallSiteIndex callSiteIndex(exec->codeBlock()->bytecodeOffset(pc));
-#else
-    CallSiteIndex callSiteIndex(pc);
-#endif
+    CallSiteIndex callSiteIndex(BytecodeIndex(codeBlock->bytecodeOffset(pc)));
+
     ShadowChicken* shadowChicken = vm.shadowChicken();
     RELEASE_ASSERT(shadowChicken);
-    shadowChicken->log(vm, exec, ShadowChicken::Packet::tail(exec, thisValue, scope, exec->codeBlock(), callSiteIndex));
+    shadowChicken->log(vm, callFrame, ShadowChicken::Packet::tail(callFrame, thisValue, scope, codeBlock, callSiteIndex));
 
     LLINT_END();
 }
@@ -1907,12 +2273,12 @@ LLINT_SLOW_PATH_DECL(slow_path_profile_catch)
 {
     LLINT_BEGIN();
 
-    exec->codeBlock()->ensureCatchLivenessIsComputedForBytecodeOffset(exec->bytecodeOffset());
+    codeBlock->ensureCatchLivenessIsComputedForBytecodeIndex(callFrame->bytecodeIndex());
 
     auto bytecode = pc->as<OpCatch>();
-    auto& metadata = bytecode.metadata(exec);
-    metadata.m_buffer->forEach([&] (ValueProfileAndOperand& profile) {
-        profile.m_buckets[0] = JSValue::encode(exec->uncheckedR(profile.m_operand).jsValue());
+    auto& metadata = bytecode.metadata(codeBlock);
+    metadata.m_buffer->forEach([&] (ValueProfileAndVirtualRegister& profile) {
+        profile.m_buckets[0] = JSValue::encode(callFrame->uncheckedR(profile.m_operand).jsValue());
     });
 
     LLINT_END();
@@ -1922,7 +2288,7 @@ LLINT_SLOW_PATH_DECL(slow_path_super_sampler_begin)
 {
     // FIXME: It seems like we should be able to do this in asm but llint doesn't seem to like global variables.
     // See: https://bugs.webkit.org/show_bug.cgi?id=179438
-    UNUSED_PARAM(exec);
+    UNUSED_PARAM(callFrame);
     g_superSamplerCount++;
     LLINT_END_IMPL();
 }
@@ -1931,27 +2297,216 @@ LLINT_SLOW_PATH_DECL(slow_path_super_sampler_end)
 {
     // FIXME: It seems like we should be able to do this in asm but llint doesn't seem to like global variables.
     // See: https://bugs.webkit.org/show_bug.cgi?id=179438
-    UNUSED_PARAM(exec);
+    UNUSED_PARAM(callFrame);
     g_superSamplerCount--;
     LLINT_END_IMPL();
 }
 
 LLINT_SLOW_PATH_DECL(slow_path_out_of_line_jump_target)
 {
-    CodeBlock* codeBlock = exec->codeBlock();
-    pc = codeBlock->outOfLineJumpTarget(pc);
+    pc = callFrame->codeBlock()->outOfLineJumpTarget(pc);
     LLINT_END_IMPL();
+}
+
+template<typename Opcode>
+static void handleVarargsCheckpoint(VM& vm, CallFrame* callFrame, JSGlobalObject* globalObject, const Opcode& bytecode, CheckpointOSRExitSideState& sideState)
+{
+    auto scope = DECLARE_THROW_SCOPE(vm);
+    unsigned argumentCountIncludingThis = sideState.tmps[Opcode::argCountIncludingThis].asUInt32();
+    unsigned firstVarArg = bytecode.m_firstVarArg;
+
+    MarkedArgumentBuffer args;
+    args.fill(argumentCountIncludingThis - 1, [&] (JSValue* buffer) {
+        loadVarargs(globalObject, buffer, callFrame->r(bytecode.m_arguments).jsValue(), firstVarArg, argumentCountIncludingThis - 1);
+    });
+    if (args.hasOverflowed()) {
+        throwStackOverflowError(globalObject, scope);
+        return;
+    }
+
+    RETURN_IF_EXCEPTION(scope, void());
+
+    JSValue result;
+    if (Opcode::opcodeID != op_construct_varargs)
+        result = call(globalObject, getOperand(callFrame, bytecode.m_callee), getOperand(callFrame, bytecode.m_thisValue), args, "");
+    else
+        result = construct(globalObject, getOperand(callFrame, bytecode.m_callee), getOperand(callFrame, bytecode.m_thisValue), args, "");
+
+    RETURN_IF_EXCEPTION(scope, void());
+    callFrame->uncheckedR(bytecode.m_dst) = result;
+}
+
+static void handleIteratorOpenCheckpoint(VM& vm, CallFrame* callFrame, JSGlobalObject* globalObject, const OpIteratorOpen& bytecode)
+{
+    auto scope = DECLARE_THROW_SCOPE(vm);
+    JSValue iterator = callFrame->uncheckedR(bytecode.m_iterator).jsValue();
+    if (!iterator.isObject()) {
+        throwVMTypeError(globalObject, scope, "Iterator result interface is not an object."_s);
+        return;
+    }
+
+    JSValue next = iterator.get(globalObject, vm.propertyNames->next);
+    RETURN_IF_EXCEPTION(scope, void());
+    callFrame->uncheckedR(bytecode.m_next) = next;
+}
+
+static void handleIteratorNextCheckpoint(VM& vm, CallFrame* callFrame, JSGlobalObject* globalObject, const OpIteratorNext& bytecode, CheckpointOSRExitSideState& sideState)
+{
+    auto scope = DECLARE_THROW_SCOPE(vm);
+    unsigned checkpointIndex = sideState.bytecodeIndex.checkpoint();
+
+    auto& valueRegister = callFrame->uncheckedR(bytecode.m_value);
+    auto iteratorResultObject = sideState.tmps[OpIteratorNext::nextResult];
+    auto next = callFrame->uncheckedR(bytecode.m_next).jsValue();
+    RELEASE_ASSERT_WITH_MESSAGE(next, "We should not OSR exit to a checkpoint for fast cases.");
+
+    if (!iteratorResultObject.isObject()) {
+        throwVMTypeError(globalObject, scope, "Iterator result interface is not an object."_s);
+        return;
+    }
+
+    auto& doneRegister = callFrame->uncheckedR(bytecode.m_done);
+    if (checkpointIndex == OpIteratorNext::getDone) {
+        doneRegister = iteratorResultObject.get(globalObject, vm.propertyNames->done);
+        RETURN_IF_EXCEPTION(scope, void());
+    }
+
+    scope.release();
+    if (doneRegister.jsValue().toBoolean(globalObject))
+        valueRegister = jsUndefined();
+    else
+        valueRegister = iteratorResultObject.get(globalObject, vm.propertyNames->value);
+}
+
+inline SlowPathReturnType dispatchToNextInstructionDuringExit(ThrowScope& scope, CodeBlock* codeBlock, InstructionStream::Ref pc)
+{
+    if (scope.exception())
+        return encodeResult(returnToThrow(scope.vm()), nullptr);
+
+    if (Options::forceOSRExitToLLInt() || codeBlock->jitType() == JITType::InterpreterThunk) {
+        const Instruction* nextPC = pc.next().ptr();
+#if ENABLE(JIT)
+        return encodeResult(nextPC, LLInt::normalOSRExitTrampolineThunk().code().executableAddress());
+#else
+        return encodeResult(nextPC, LLInt::getCodeRef<JSEntryPtrTag>(normal_osr_exit_trampoline).code().executableAddress());
+#endif
+    }
+
+#if ENABLE(JIT)
+    ASSERT(codeBlock->jitType() == JITType::BaselineJIT);
+    BytecodeIndex nextBytecodeIndex = pc.next().index();
+    auto nextBytecode = codeBlock->jitCodeMap().find(nextBytecodeIndex);
+    return encodeResult(bitwise_cast<void*>(static_cast<uintptr_t>(1)), nextBytecode.executableAddress());
+#endif
+    RELEASE_ASSERT_NOT_REACHED();
+}
+
+extern "C" SlowPathReturnType llint_slow_path_checkpoint_osr_exit_from_inlined_call(CallFrame* callFrame, EncodedJSValue result)
+{
+    // Since all our calling checkpoints do right now is move result into our dest we can just do that here and return.
+    CodeBlock* codeBlock = callFrame->codeBlock();
+    VM& vm = codeBlock->vm();
+    SlowPathFrameTracer tracer(vm, callFrame);
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    std::unique_ptr<CheckpointOSRExitSideState> sideState = vm.popCheckpointOSRSideState(callFrame);
+    BytecodeIndex bytecodeIndex = sideState->bytecodeIndex;
+    ASSERT(bytecodeIndex.checkpoint());
+
+    auto pc = codeBlock->instructions().at(bytecodeIndex);
+    JSGlobalObject* globalObject = codeBlock->globalObject();
+
+    auto opcode = pc->opcodeID();
+    switch (opcode) {
+    case op_call_varargs: {
+        callFrame->uncheckedR(pc->as<OpCallVarargs>().m_dst) = JSValue::decode(result);
+        break;
+    }
+    case op_construct_varargs: {
+        callFrame->uncheckedR(pc->as<OpConstructVarargs>().m_dst) = JSValue::decode(result);
+        break;
+    }
+    // op_tail_call_varargs should never return if the thing it was calling was inlined.
+
+    case op_iterator_open: {
+        ASSERT(bytecodeIndex.checkpoint() == OpIteratorOpen::getNext);
+        callFrame->uncheckedR(destinationFor(pc->as<OpIteratorOpen>(), bytecodeIndex.checkpoint()).virtualRegister()) = JSValue::decode(result);
+        break;
+    }
+    case op_iterator_next: {
+        callFrame->uncheckedR(destinationFor(pc->as<OpIteratorNext>(), bytecodeIndex.checkpoint()).virtualRegister()) = JSValue::decode(result);
+        if (bytecodeIndex.checkpoint() == OpIteratorNext::getValue)
+            break;
+        ASSERT(bytecodeIndex.checkpoint() == OpIteratorNext::getDone);
+        sideState->bytecodeIndex = bytecodeIndex.withCheckpoint(OpIteratorNext::getValue);
+        handleIteratorNextCheckpoint(vm, callFrame, globalObject, pc->as<OpIteratorNext>(), *sideState.get());
+        break;
+    }
+
+    default:
+        CRASH_WITH_INFO(opcode);
+        break;
+    }
+
+    return dispatchToNextInstructionDuringExit(scope, codeBlock, pc);
+}
+
+extern "C" SlowPathReturnType llint_slow_path_checkpoint_osr_exit(CallFrame* callFrame, EncodedJSValue /* needed for cCall2 in CLoop */)
+{
+    CodeBlock* codeBlock = callFrame->codeBlock();
+    VM& vm = codeBlock->vm();
+    SlowPathFrameTracer tracer(vm, callFrame);
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    JSGlobalObject* globalObject = codeBlock->globalObject();
+
+    std::unique_ptr<CheckpointOSRExitSideState> sideState = vm.popCheckpointOSRSideState(callFrame);
+    BytecodeIndex bytecodeIndex = sideState->bytecodeIndex;
+    ASSERT(bytecodeIndex.checkpoint());
+
+    auto pc = codeBlock->instructions().at(bytecodeIndex);
+
+    auto opcode = pc->opcodeID();
+    switch (opcode) {
+    case op_call_varargs:
+        handleVarargsCheckpoint(vm, callFrame, globalObject, pc->as<OpCallVarargs>(), *sideState.get());
+        break;
+    case op_construct_varargs:
+        handleVarargsCheckpoint(vm, callFrame, globalObject, pc->as<OpConstructVarargs>(), *sideState.get());
+        break;
+    case op_tail_call_varargs:
+        ASSERT_WITH_MESSAGE(pc.next()->opcodeID() == op_ret || pc.next()->opcodeID() == op_jmp, "We strongly assume all tail calls are followed by an op_ret (or sometimes a jmp to a ret).");
+        handleVarargsCheckpoint(vm, callFrame, globalObject, pc->as<OpTailCallVarargs>(), *sideState.get());
+        break;
+
+    case op_iterator_open: {
+        handleIteratorOpenCheckpoint(vm, callFrame, globalObject, pc->as<OpIteratorOpen>());
+        break;
+    }
+    case op_iterator_next: {
+        handleIteratorNextCheckpoint(vm, callFrame, globalObject, pc->as<OpIteratorNext>(), *sideState.get());
+        break;
+    }
+
+    default:
+        RELEASE_ASSERT_NOT_REACHED();
+        break;
+    }
+
+    return dispatchToNextInstructionDuringExit(scope, codeBlock, pc);
 }
 
 extern "C" SlowPathReturnType llint_throw_stack_overflow_error(VM* vm, ProtoCallFrame* protoFrame)
 {
-    ExecState* exec = vm->topCallFrame;
+    CallFrame* callFrame = vm->topCallFrame;
     auto scope = DECLARE_THROW_SCOPE(*vm);
-
-    if (!exec)
-        exec = protoFrame->callee()->globalObject(*vm)->globalExec();
-    throwStackOverflowError(exec, scope);
-    return encodeResult(0, 0);
+    JSGlobalObject* globalObject = nullptr;
+    if (callFrame)
+        globalObject = callFrame->lexicalGlobalObject(*vm);
+    else
+        globalObject = protoFrame->callee()->globalObject(*vm);
+    throwStackOverflowError(globalObject, scope);
+    return encodeResult(nullptr, nullptr);
 }
 
 #if ENABLE(C_LOOP)
@@ -1962,10 +2517,26 @@ extern "C" SlowPathReturnType llint_stack_check_at_vm_entry(VM* vm, Register* ne
 }
 #endif
 
-extern "C" void llint_write_barrier_slow(ExecState* exec, JSCell* cell)
+extern "C" void llint_write_barrier_slow(CallFrame* callFrame, JSCell* cell)
 {
-    VM& vm = exec->vm();
-    vm.heap.writeBarrier(cell);
+    VM& vm = callFrame->codeBlock()->vm();
+    vm.writeBarrier(cell);
+}
+
+extern "C" SlowPathReturnType llint_check_vm_entry_permission(VM* vm, ProtoCallFrame*)
+{
+    ASSERT_UNUSED(vm, vm->disallowVMEntryCount);
+    if (Options::crashOnDisallowedVMEntry())
+        CRASH();
+
+    // Else return, and let doVMEntry return undefined.
+    return encodeResult(nullptr, nullptr);
+}
+
+extern "C" void llint_dump_value(EncodedJSValue value);
+extern "C" void llint_dump_value(EncodedJSValue value)
+{
+    dataLogLn(JSValue::decode(value));
 }
 
 extern "C" NO_RETURN_DUE_TO_CRASH void llint_crash()

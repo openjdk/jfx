@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -43,7 +43,6 @@ import javafx.scene.shape.Rectangle;
 
 import org.junit.Before;
 import org.junit.Test;
-import org.junit.Ignore;
 
 /**
  */
@@ -107,9 +106,9 @@ public class ButtonBaseTest {
         assertFalse(btn.isArmed());
     }
 
-    @Ignore("impl_cssSet API removed")
     @Test public void cannotSpecifyArmedViaCSS() {
-//        btn.impl_cssSet("-fx-armed", true);
+        btn.setStyle("-fx-armed: true;");
+        btn.applyCss();
         assertFalse(btn.isArmed());
     }
 
@@ -162,7 +161,7 @@ public class ButtonBaseTest {
 
     @Test public void onActionCanBeBound() {
         final EventHandler<ActionEvent> handler = new EventHandlerStub();
-        ObjectProperty<EventHandler<ActionEvent>> other = new SimpleObjectProperty<EventHandler<ActionEvent>>(handler);
+        ObjectProperty<EventHandler<ActionEvent>> other = new SimpleObjectProperty<>(handler);
         btn.onActionProperty().bind(other);
         assertEquals(handler, btn.getOnAction());
     }
@@ -180,7 +179,7 @@ public class ButtonBaseTest {
         @Override public void handle(ActionEvent event) {
             called = true;
         }
-    };
+    }
 
     public static final class ButtonBaseMock extends ButtonBase {
         public ButtonBaseMock() { super(); }

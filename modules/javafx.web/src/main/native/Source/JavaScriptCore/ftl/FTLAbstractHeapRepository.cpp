@@ -33,16 +33,15 @@
 #include "B3MemoryValue.h"
 #include "B3PatchpointValue.h"
 #include "B3ValueInlines.h"
+#include "DateInstance.h"
 #include "DirectArguments.h"
 #include "FTLState.h"
 #include "GetterSetter.h"
 #include "JSPropertyNameEnumerator.h"
-#include "JSScope.h"
-#include "JSCInlines.h"
 #include "RegExpObject.h"
 #include "ScopedArguments.h"
-#include "ScopedArgumentsTable.h"
 #include "ShadowChicken.h"
+#include "StructureChain.h"
 
 namespace JSC { namespace FTL {
 
@@ -70,9 +69,13 @@ AbstractHeapRepository::AbstractHeapRepository()
 #undef NUMBERED_ABSTRACT_HEAP_INITIALIZATION
 
     , JSString_value(JSRopeString_fiber0)
+    , JSWrapperObject_internalValue(const_cast<AbstractHeap&>(JSInternalFieldObjectImpl_internalFields[static_cast<unsigned>(JSWrapperObject::Field::WrappedValue)]))
 
     , absolute(&root, "absolute")
 {
+    JSCell_header.changeParent(&JSCellHeaderAndNamedProperties);
+    properties.atAnyNumber().changeParent(&JSCellHeaderAndNamedProperties);
+
     // Make sure that our explicit assumptions about the StructureIDBlob match reality.
     RELEASE_ASSERT(!(JSCell_indexingTypeAndMisc.offset() & (sizeof(int32_t) - 1)));
     RELEASE_ASSERT(JSCell_indexingTypeAndMisc.offset() + 1 == JSCell_typeInfoType.offset());

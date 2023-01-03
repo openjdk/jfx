@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 Apple, Inc. All rights reserved.
+ * Copyright (C) 2015-2021 Apple, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -43,7 +43,7 @@ public:
 
     static JSWeakSet* create(VM& vm, Structure* structure)
     {
-        JSWeakSet* instance = new (NotNull, allocateCell<JSWeakSet>(vm.heap)) JSWeakSet(vm, structure);
+        JSWeakSet* instance = new (NotNull, allocateCell<JSWeakSet>(vm)) JSWeakSet(vm, structure);
         instance->finishCreation(vm);
         return instance;
     }
@@ -53,8 +53,6 @@ private:
         : Base(vm, structure)
     {
     }
-
-    static String toStringName(const JSObject*, ExecState*);
 };
 
 static_assert(std::is_final<JSWeakSet>::value, "Required for JSType based casting");

@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2010 Google Inc. All rights reserved.
- * Copyright (C) 2014, 2015, 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2014-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,13 +26,12 @@
 
 #pragma once
 
-#if ENABLE(INDEXED_DATABASE)
-
 #include "IDBKeyPath.h"
+#include "IndexKey.h"
 #include <wtf/Forward.h>
 
 namespace JSC {
-class ExecState;
+class CallFrame;
 class JSGlobalObject;
 class JSValue;
 }
@@ -42,25 +41,29 @@ namespace WebCore {
 class IDBIndexInfo;
 class IDBKey;
 class IDBKeyData;
+class IDBObjectStoreInfo;
 class IDBValue;
 class IndexKey;
 class JSDOMGlobalObject;
 
-RefPtr<IDBKey> maybeCreateIDBKeyFromScriptValueAndKeyPath(JSC::ExecState&, const JSC::JSValue&, const IDBKeyPath&);
-bool canInjectIDBKeyIntoScriptValue(JSC::ExecState&, const JSC::JSValue&, const IDBKeyPath&);
-bool injectIDBKeyIntoScriptValue(JSC::ExecState&, const IDBKeyData&, JSC::JSValue, const IDBKeyPath&);
+RefPtr<IDBKey> maybeCreateIDBKeyFromScriptValueAndKeyPath(JSC::JSGlobalObject&, JSC::JSValue, const IDBKeyPath&);
+bool canInjectIDBKeyIntoScriptValue(JSC::JSGlobalObject&, JSC::JSValue, const IDBKeyPath&);
+bool injectIDBKeyIntoScriptValue(JSC::JSGlobalObject&, const IDBKeyData&, JSC::JSValue, const IDBKeyPath&);
 
-void generateIndexKeyForValue(JSC::ExecState&, const IDBIndexInfo&, JSC::JSValue, IndexKey& outKey, const Optional<IDBKeyPath>&, const IDBKeyData&);
+void generateIndexKeyForValue(JSC::JSGlobalObject&, const IDBIndexInfo&, JSC::JSValue, IndexKey& outKey, const std::optional<IDBKeyPath>&, const IDBKeyData&);
 
-Ref<IDBKey> scriptValueToIDBKey(JSC::ExecState&, const JSC::JSValue&);
+IndexIDToIndexKeyMap generateIndexKeyMapForValue(JSC::JSGlobalObject&, const IDBObjectStoreInfo&, const IDBKeyData&, const IDBValue&);
 
-JSC::JSValue deserializeIDBValueToJSValue(JSC::ExecState&, const IDBValue&, Vector<std::pair<String, String>>&);
-JSC::JSValue deserializeIDBValueToJSValue(JSC::ExecState&, const IDBValue&);
-JSC::JSValue toJS(JSC::ExecState*, JSDOMGlobalObject*, const IDBValue&);
-JSC::JSValue toJS(JSC::ExecState&, JSC::JSGlobalObject&, IDBKey*);
-JSC::JSValue toJS(JSC::ExecState*, JSDOMGlobalObject*, const IDBKeyData&);
+Ref<IDBKey> scriptValueToIDBKey(JSC::JSGlobalObject&, JSC::JSValue);
 
-Optional<JSC::JSValue> deserializeIDBValueWithKeyInjection(JSC::ExecState&, const IDBValue&, const IDBKeyData&, const Optional<IDBKeyPath>&);
+JSC::JSValue deserializeIDBValueToJSValue(JSC::JSGlobalObject&, const IDBValue&, Vector<std::pair<String, String>>&);
+JSC::JSValue deserializeIDBValueToJSValue(JSC::JSGlobalObject&, const IDBValue&);
+JSC::JSValue toJS(JSC::JSGlobalObject*, JSDOMGlobalObject*, const IDBValue&);
+JSC::JSValue toJS(JSC::JSGlobalObject&, JSC::JSGlobalObject&, IDBKey*);
+JSC::JSValue toJS(JSC::JSGlobalObject*, JSDOMGlobalObject*, const IDBKeyData&);
+
+std::optional<JSC::JSValue> deserializeIDBValueWithKeyInjection(JSC::JSGlobalObject&, const IDBValue&, const IDBKeyData&, const std::optional<IDBKeyPath>&);
+
+void callOnIDBSerializationThreadAndWait(Function<void(JSC::JSGlobalObject&)>&&);
+
 }
-
-#endif // ENABLE(INDEXED_DATABASE)

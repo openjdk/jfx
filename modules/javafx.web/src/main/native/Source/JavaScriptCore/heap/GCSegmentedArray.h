@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014-2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2014-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,11 +25,14 @@
 
 #pragma once
 
+#include <wtf/DebugHeap.h>
 #include <wtf/DoublyLinkedList.h>
 #include <wtf/Forward.h>
 #include <wtf/Noncopyable.h>
 
 namespace JSC {
+
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(GCSegmentedArray);
 
 template <typename T>
 class GCArraySegment : public DoublyLinkedListNode<GCArraySegment<T>> {
@@ -37,7 +40,7 @@ class GCArraySegment : public DoublyLinkedListNode<GCArraySegment<T>> {
 public:
     GCArraySegment()
         : DoublyLinkedListNode<GCArraySegment<T>>()
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
         , m_top(0)
 #endif
     {
@@ -51,11 +54,11 @@ public:
         return bitwise_cast<T*>(this + 1);
     }
 
-    static const size_t blockSize = 4 * KB;
+    static constexpr size_t blockSize = 4 * KB;
 
     GCArraySegment* m_prev;
     GCArraySegment* m_next;
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
     size_t m_top;
 #endif
 };
@@ -78,8 +81,8 @@ public:
     const T removeLast();
     bool refill();
 
-    size_t size();
-    bool isEmpty();
+    size_t size() const;
+    bool isEmpty() const;
 
     void fillVector(Vector<T>&);
     void clear();
@@ -90,7 +93,7 @@ public:
 
 protected:
     template <size_t size> struct CapacityFromSize {
-        static const size_t value = (size - sizeof(GCArraySegment<T>)) / sizeof(T);
+        static constexpr size_t value = (size - sizeof(GCArraySegment<T>)) / sizeof(T);
     };
 
     void expand();
@@ -115,7 +118,7 @@ class GCSegmentedArrayIterator {
     friend class GCSegmentedArray<T>;
 public:
     GCSegmentedArrayIterator()
-        : m_currentSegment(0)
+        : m_currentSegment(nullptr)
         , m_currentOffset(0)
     {
     }
@@ -124,12 +127,12 @@ public:
     T& operator*() { return get(); }
     T& operator->() { return get(); }
 
-    bool operator==(const GCSegmentedArrayIterator& other)
+    bool operator==(const GCSegmentedArrayIterator& other) const
     {
         return m_currentSegment == other.m_currentSegment && m_currentOffset == other.m_currentOffset;
     }
 
-    bool operator!=(const GCSegmentedArrayIterator& other)
+    bool operator!=(const GCSegmentedArrayIterator& other) const
     {
         return !(*this == other);
     }

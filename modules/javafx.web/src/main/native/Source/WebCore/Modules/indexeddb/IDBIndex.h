@@ -25,14 +25,14 @@
 
 #pragma once
 
-#if ENABLE(INDEXED_DATABASE)
-
 #include "IDBCursor.h"
 #include "IDBIndexInfo.h"
 #include "IDBRequest.h"
+#include <wtf/IsoMalloc.h>
+#include <wtf/UniqueRef.h>
 
 namespace JSC {
-class ExecState;
+class CallFrame;
 }
 
 namespace WebCore {
@@ -41,11 +41,10 @@ class IDBKeyRange;
 
 struct IDBKeyRangeData;
 
-class IDBIndex final : private ActiveDOMObject {
-    WTF_MAKE_NONCOPYABLE(IDBIndex);
-    WTF_MAKE_FAST_ALLOCATED;
+class IDBIndex final : public ActiveDOMObject {
+    WTF_MAKE_ISO_ALLOCATED(IDBIndex);
 public:
-    IDBIndex(ScriptExecutionContext&, const IDBIndexInfo&, IDBObjectStore&);
+    static UniqueRef<IDBIndex> create(ScriptExecutionContext&, const IDBIndexInfo&, IDBObjectStore&);
 
     virtual ~IDBIndex();
 
@@ -58,23 +57,23 @@ public:
 
     void rollbackInfoForVersionChangeAbort();
 
-    ExceptionOr<Ref<IDBRequest>> openCursor(JSC::ExecState&, RefPtr<IDBKeyRange>&&, IDBCursorDirection);
-    ExceptionOr<Ref<IDBRequest>> openCursor(JSC::ExecState&, JSC::JSValue key, IDBCursorDirection);
-    ExceptionOr<Ref<IDBRequest>> openKeyCursor(JSC::ExecState&, RefPtr<IDBKeyRange>&&, IDBCursorDirection);
-    ExceptionOr<Ref<IDBRequest>> openKeyCursor(JSC::ExecState&, JSC::JSValue key, IDBCursorDirection);
+    ExceptionOr<Ref<IDBRequest>> openCursor(RefPtr<IDBKeyRange>&&, IDBCursorDirection);
+    ExceptionOr<Ref<IDBRequest>> openCursor(JSC::JSGlobalObject&, JSC::JSValue key, IDBCursorDirection);
+    ExceptionOr<Ref<IDBRequest>> openKeyCursor(RefPtr<IDBKeyRange>&&, IDBCursorDirection);
+    ExceptionOr<Ref<IDBRequest>> openKeyCursor(JSC::JSGlobalObject&, JSC::JSValue key, IDBCursorDirection);
 
-    ExceptionOr<Ref<IDBRequest>> count(JSC::ExecState&, IDBKeyRange*);
-    ExceptionOr<Ref<IDBRequest>> count(JSC::ExecState&, JSC::JSValue key);
+    ExceptionOr<Ref<IDBRequest>> count(IDBKeyRange*);
+    ExceptionOr<Ref<IDBRequest>> count(JSC::JSGlobalObject&, JSC::JSValue key);
 
-    ExceptionOr<Ref<IDBRequest>> get(JSC::ExecState&, IDBKeyRange*);
-    ExceptionOr<Ref<IDBRequest>> get(JSC::ExecState&, JSC::JSValue key);
-    ExceptionOr<Ref<IDBRequest>> getKey(JSC::ExecState&, IDBKeyRange*);
-    ExceptionOr<Ref<IDBRequest>> getKey(JSC::ExecState&, JSC::JSValue key);
+    ExceptionOr<Ref<IDBRequest>> get(IDBKeyRange*);
+    ExceptionOr<Ref<IDBRequest>> get(JSC::JSGlobalObject&, JSC::JSValue key);
+    ExceptionOr<Ref<IDBRequest>> getKey(IDBKeyRange*);
+    ExceptionOr<Ref<IDBRequest>> getKey(JSC::JSGlobalObject&, JSC::JSValue key);
 
-    ExceptionOr<Ref<IDBRequest>> getAll(JSC::ExecState&, RefPtr<IDBKeyRange>&&, Optional<uint32_t> count);
-    ExceptionOr<Ref<IDBRequest>> getAll(JSC::ExecState&, JSC::JSValue key, Optional<uint32_t> count);
-    ExceptionOr<Ref<IDBRequest>> getAllKeys(JSC::ExecState&, RefPtr<IDBKeyRange>&&, Optional<uint32_t> count);
-    ExceptionOr<Ref<IDBRequest>> getAllKeys(JSC::ExecState&, JSC::JSValue key, Optional<uint32_t> count);
+    ExceptionOr<Ref<IDBRequest>> getAll(RefPtr<IDBKeyRange>&&, std::optional<uint32_t> count);
+    ExceptionOr<Ref<IDBRequest>> getAll(JSC::JSGlobalObject&, JSC::JSValue key, std::optional<uint32_t> count);
+    ExceptionOr<Ref<IDBRequest>> getAllKeys(RefPtr<IDBKeyRange>&&, std::optional<uint32_t> count);
+    ExceptionOr<Ref<IDBRequest>> getAllKeys(JSC::JSGlobalObject&, JSC::JSValue key, std::optional<uint32_t> count);
 
     const IDBIndexInfo& info() const { return m_info; }
 
@@ -87,17 +86,19 @@ public:
     void* objectStoreAsOpaqueRoot() { return &m_objectStore; }
 
 private:
-    ExceptionOr<Ref<IDBRequest>> doCount(JSC::ExecState&, const IDBKeyRangeData&);
-    ExceptionOr<Ref<IDBRequest>> doGet(JSC::ExecState&, ExceptionOr<IDBKeyRangeData>);
-    ExceptionOr<Ref<IDBRequest>> doGetKey(JSC::ExecState&, ExceptionOr<IDBKeyRangeData>);
-    ExceptionOr<Ref<IDBRequest>> doOpenCursor(JSC::ExecState&, IDBCursorDirection, WTF::Function<ExceptionOr<RefPtr<IDBKeyRange>>()> &&);
-    ExceptionOr<Ref<IDBRequest>> doOpenKeyCursor(JSC::ExecState&, IDBCursorDirection, WTF::Function<ExceptionOr<RefPtr<IDBKeyRange>>()> &&);
-    ExceptionOr<Ref<IDBRequest>> doGetAll(JSC::ExecState&, Optional<uint32_t> count, WTF::Function<ExceptionOr<RefPtr<IDBKeyRange>>()> &&);
-    ExceptionOr<Ref<IDBRequest>> doGetAllKeys(JSC::ExecState&, Optional<uint32_t> count, WTF::Function<ExceptionOr<RefPtr<IDBKeyRange>>()> &&);
+    IDBIndex(ScriptExecutionContext&, const IDBIndexInfo&, IDBObjectStore&);
 
+    ExceptionOr<Ref<IDBRequest>> doCount(const IDBKeyRangeData&);
+    ExceptionOr<Ref<IDBRequest>> doGet(ExceptionOr<IDBKeyRangeData>);
+    ExceptionOr<Ref<IDBRequest>> doGetKey(ExceptionOr<IDBKeyRangeData>);
+    ExceptionOr<Ref<IDBRequest>> doOpenCursor(IDBCursorDirection, Function<ExceptionOr<RefPtr<IDBKeyRange>>()> &&);
+    ExceptionOr<Ref<IDBRequest>> doOpenKeyCursor(IDBCursorDirection, Function<ExceptionOr<RefPtr<IDBKeyRange>>()> &&);
+    ExceptionOr<Ref<IDBRequest>> doGetAll(std::optional<uint32_t> count, Function<ExceptionOr<RefPtr<IDBKeyRange>>()> &&);
+    ExceptionOr<Ref<IDBRequest>> doGetAllKeys(std::optional<uint32_t> count, Function<ExceptionOr<RefPtr<IDBKeyRange>>()> &&);
+
+    // ActiveDOMObject.
     const char* activeDOMObjectName() const final;
-    bool canSuspendForDocumentSuspension() const final;
-    bool hasPendingActivity() const final;
+    bool virtualHasPendingActivity() const final;
 
     IDBIndexInfo m_info;
     IDBIndexInfo m_originalInfo;
@@ -110,5 +111,3 @@ private:
 };
 
 } // namespace WebCore
-
-#endif // ENABLE(INDEXED_DATABASE)

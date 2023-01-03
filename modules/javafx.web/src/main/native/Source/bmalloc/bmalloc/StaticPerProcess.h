@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include "BExport.h"
 #include "BInline.h"
 #include "Mutex.h"
 #include "Sizes.h"
@@ -53,7 +54,7 @@ namespace bmalloc {
 template<typename T> struct StaticPerProcessStorageTraits;
 
 template<typename T>
-class BEXPORT StaticPerProcess {
+class StaticPerProcess {
 public:
     static T* get()
     {
@@ -79,7 +80,7 @@ private:
     BNO_INLINE static T* getSlowCase()
     {
         using Storage = typename StaticPerProcessStorageTraits<T>::Storage;
-        std::lock_guard<Mutex> lock(Storage::s_mutex);
+        LockHolder lock(Storage::s_mutex);
         if (!Storage::s_object.load(std::memory_order_consume)) {
             T* t = new (&Storage::s_memory) T(lock);
             Storage::s_object.store(t, std::memory_order_release);
@@ -92,9 +93,9 @@ private:
 template<> struct StaticPerProcessStorageTraits<Type> { \
     using Memory = typename std::aligned_storage<sizeof(Type), std::alignment_of<Type>::value>::type; \
     struct BEXPORT Storage { \
-        BEXPORT static std::atomic<Type*> s_object; \
-        BEXPORT static Mutex s_mutex; \
-        BEXPORT static Memory s_memory; \
+        static std::atomic<Type*> s_object; \
+        static Mutex s_mutex; \
+        static Memory s_memory; \
     }; \
 };
 

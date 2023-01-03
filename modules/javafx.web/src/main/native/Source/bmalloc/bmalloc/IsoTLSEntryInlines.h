@@ -27,6 +27,8 @@
 
 #include "IsoTLSEntry.h"
 
+#if !BUSE(LIBPAS)
+
 namespace bmalloc {
 
 template<typename Func>
@@ -43,13 +45,10 @@ void IsoTLSEntry::walkUpToInclusive(IsoTLSEntry* last, const Func& func)
 
 template<typename EntryType>
 DefaultIsoTLSEntry<EntryType>::DefaultIsoTLSEntry()
-    : IsoTLSEntry(alignof(EntryType), sizeof(EntryType))
+    : IsoTLSEntry(sizeof(EntryType))
 {
-}
-
-template<typename EntryType>
-DefaultIsoTLSEntry<EntryType>::~DefaultIsoTLSEntry()
-{
+    static_assert(sizeof(EntryType) <= UINT32_MAX);
+    static_assert(sizeof(void*) == alignof(EntryType), "Because IsoTLSEntry includes vtable, it should be the same to the pointer");
 }
 
 template<typename EntryType>
@@ -67,12 +66,6 @@ void DefaultIsoTLSEntry<EntryType>::destruct(void* passedEntry)
     entry->~EntryType();
 }
 
-template<typename EntryType>
-void DefaultIsoTLSEntry<EntryType>::scavenge(void* passedEntry)
-{
-    EntryType* entry = static_cast<EntryType*>(passedEntry);
-    entry->scavenge();
-}
-
 } // namespace bmalloc
 
+#endif

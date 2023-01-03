@@ -65,19 +65,19 @@ public:
     const AtomString& rules() const;
     const AtomString& summary() const;
 
-    const StyleProperties* additionalCellStyle();
-    const StyleProperties* additionalGroupStyle(bool rows);
+    const StyleProperties* additionalCellStyle() const;
+    const StyleProperties* additionalGroupStyle(bool rows) const;
 
 private:
     HTMLTableElement(const QualifiedName&, Document&);
 
     void parseAttribute(const QualifiedName&, const AtomString&) final;
-    bool isPresentationAttribute(const QualifiedName&) const final;
-    void collectStyleForPresentationAttribute(const QualifiedName&, const AtomString&, MutableStyleProperties&) final;
+    bool hasPresentationalHintsForAttribute(const QualifiedName&) const final;
+    void collectPresentationalHintsForAttribute(const QualifiedName&, const AtomString&, MutableStyleProperties&) final;
     bool isURLAttribute(const Attribute&) const final;
 
     // Used to obtain either a solid or outset border decl and to deal with the frame and rules attributes.
-    const StyleProperties* additionalPresentationAttributeStyle() const final;
+    const StyleProperties* additionalPresentationalHintStyle() const final;
 
     void addSubresourceAttributeURLs(ListHashSet<URL>&) const final;
 
@@ -86,7 +86,7 @@ private:
 
     CellBorders cellBorders() const;
 
-    Ref<StyleProperties> createSharedCellStyle();
+    Ref<StyleProperties> createSharedCellStyle() const;
 
     HTMLTableSectionElement* lastBody() const;
 
@@ -95,7 +95,7 @@ private:
     bool m_frameAttr { false }; // Implies a thin border width if no border is set and then a certain set of solid/hidden borders based off the value.
     TableRules m_rulesAttr { UnsetRules }; // Implies a thin border width, a collapsing border model, and all borders on the table becoming set to hidden (if frame/border are present, to none otherwise).
     unsigned short m_padding { 1 };
-    RefPtr<StyleProperties> m_sharedCellStyle;
+    mutable RefPtr<const StyleProperties> m_sharedCellStyle;
 };
 
 } //namespace

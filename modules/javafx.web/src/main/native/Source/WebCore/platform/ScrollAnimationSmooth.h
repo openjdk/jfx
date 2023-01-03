@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2016 Igalia S.L.
+ * Copyright (C) 2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,85 +28,38 @@
 
 #include "ScrollAnimation.h"
 
-#if ENABLE(SMOOTH_SCROLLING)
-
-#include "Timer.h"
-
 namespace WebCore {
 
 class FloatPoint;
-class ScrollableArea;
-
+class TimingFunction;
 class ScrollAnimationSmooth final: public ScrollAnimation {
 public:
-    ScrollAnimationSmooth(ScrollableArea&, const FloatPoint&, WTF::Function<void (FloatPoint&&)>&& notifyPositionChangedFunction);
+    ScrollAnimationSmooth(ScrollAnimationClient&);
     virtual ~ScrollAnimationSmooth();
 
-    enum class Curve {
-        Linear,
-        Quadratic,
-        Cubic,
-        Quartic,
-        Bounce
-    };
+    bool startAnimatedScrollToDestination(const FloatPoint& fromOffset, const FloatPoint& destinationOffset);
+    bool retargetActiveAnimation(const FloatPoint& newOffset) final;
+
+    std::optional<FloatPoint> destinationOffset() const final { return m_destinationOffset; }
 
 private:
-    bool scroll(ScrollbarOrientation, ScrollGranularity, float step, float multiplier) override;
-    void stop() override;
-    void updateVisibleLengths() override;
-    void setCurrentPosition(const FloatPoint&) override;
 
-    struct PerAxisData {
-        PerAxisData() = delete;
+    void updateScrollExtents() final;
+    void serviceAnimation(MonotonicTime) final;
+    String debugDescription() const final;
 
-        PerAxisData(float position, int length)
-            : currentPosition(position)
-            , desiredPosition(position)
-            , visibleLength(length)
-        {
-        }
+    Seconds durationFromDistance(const FloatSize&) const;
 
-        float currentPosition { 0 };
-        double currentVelocity { 0 };
+    bool animateScroll(MonotonicTime);
 
-        double desiredPosition { 0 };
-        double desiredVelocity { 0 };
+    Seconds m_duration;
 
-        double startPosition { 0 };
-        MonotonicTime startTime;
-        double startVelocity { 0 };
+    FloatPoint m_startOffset;
+    FloatPoint m_destinationOffset;
 
-        Seconds animationTime;
-        MonotonicTime lastAnimationTime;
-
-        double attackPosition { 0 };
-        Seconds attackTime;
-        Curve attackCurve { Curve::Quadratic };
-
-        double releasePosition { 0 };
-        Seconds releaseTime;
-        Curve releaseCurve { Curve::Quadratic };
-
-        int visibleLength { 0 };
-    };
-
-    bool updatePerAxisData(PerAxisData&, ScrollGranularity, float delta, float minScrollPosition, float maxScrollPosition);
-    bool animateScroll(PerAxisData&, MonotonicTime currentTime);
-
-    void requestAnimationTimerFired();
-    void startNextTimer(Seconds delay);
-    void animationTimerFired();
-    bool animationTimerActive() const;
-
-    WTF::Function<void (FloatPoint&&)> m_notifyPositionChangedFunction;
-
-    PerAxisData m_horizontalData;
-    PerAxisData m_verticalData;
-
-    MonotonicTime m_startTime;
-    Timer m_animationTimer;
+    RefPtr<TimingFunction> m_timingFunction;
 };
 
 } // namespace WebCore
 
-#endif // ENABLE(SMOOTH_SCROLLING)
+SPECIALIZE_TYPE_TRAITS_SCROLL_ANIMATION(WebCore::ScrollAnimationSmooth, type() == WebCore::ScrollAnimation::Type::Smooth)

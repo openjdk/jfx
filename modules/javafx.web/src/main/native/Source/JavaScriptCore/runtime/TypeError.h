@@ -30,10 +30,11 @@
 
 namespace JSC {
 
-inline bool typeError(ExecState* exec, ThrowScope& scope, bool throwException, ASCIILiteral message)
+template<typename Message>
+inline bool typeError(JSGlobalObject* globalObject, ThrowScope& scope, bool throwException, Message message)
 {
     if (throwException)
-        throwTypeError(exec, scope, message);
+        throwTypeError(globalObject, scope, message);
     return false;
 }
 

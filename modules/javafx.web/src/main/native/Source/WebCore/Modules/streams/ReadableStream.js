@@ -24,8 +24,6 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-// @conditional=ENABLE(STREAMS_API)
-
 function initializeReadableStream(underlyingSource, strategy)
 {
     "use strict";
@@ -48,6 +46,15 @@ function initializeReadableStream(underlyingSource, strategy)
     // Initialized with null value to enable distinction with undefined case.
     @putByIdDirectPrivate(this, "readableStreamController", null);
 
+    // FIXME: We should introduce https://streams.spec.whatwg.org/#create-readable-stream.
+    // For now, we emulate this with underlyingSource with private properties.
+    if (@getByIdDirectPrivate(underlyingSource, "pull") !== @undefined) {
+        const size = @getByIdDirectPrivate(strategy, "size");
+        const highWaterMark = @getByIdDirectPrivate(strategy, "highWaterMark");
+        @setupReadableStreamDefaultController(this, underlyingSource, size, highWaterMark !== @undefined ? highWaterMark : 1, @getByIdDirectPrivate(underlyingSource, "start"), @getByIdDirectPrivate(underlyingSource, "pull"), @getByIdDirectPrivate(underlyingSource, "cancel"));
+        return this;
+    }
+
     const type = underlyingSource.type;
     const typeString = @toString(type);
 
@@ -65,7 +72,8 @@ function initializeReadableStream(underlyingSource, strategy)
     } else if (type === @undefined) {
         if (strategy.highWaterMark === @undefined)
             strategy.highWaterMark = 1;
-        @putByIdDirectPrivate(this, "readableStreamController", new @ReadableStreamDefaultController(this, underlyingSource, strategy.size, strategy.highWaterMark, @isReadableStream));
+
+        @setupReadableStreamDefaultController(this, underlyingSource, strategy.size, strategy.highWaterMark, underlyingSource.start, underlyingSource.pull, underlyingSource.cancel);
     } else
         @throwRangeError("Invalid type for underlying source");
 
@@ -92,28 +100,60 @@ function getReader(options)
     if (!@isReadableStream(this))
         throw @makeThisTypeError("ReadableStream", "getReader");
 
-    if (options === @undefined)
-         options = { };
-
-    if (options.mode === @undefined)
+    const mode = @toDictionary(options, { }, "ReadableStream.getReader takes an object as first argument").mode;
+    if (mode === @undefined)
         return new @ReadableStreamDefaultReader(this);
 
     // String conversion is required by spec, hence double equals.
-    if (options.mode == 'byob')
+    if (mode == 'byob')
         return new @ReadableStreamBYOBReader(this);
 
-    @throwRangeError("Invalid mode is specified");
+    @throwTypeError("Invalid mode is specified");
 }
 
 function pipeThrough(streams, options)
 {
     "use strict";
 
-    const writable = streams.writable;
-    const readable = streams.readable;
-    const promise = this.pipeTo(writable, options);
-    if (@isPromise(promise))
-        @putByIdDirectPrivate(promise, "promiseIsHandled", true);
+    const transforms = streams;
+
+    const readable = transforms["readable"];
+    if (!@isReadableStream(readable))
+        throw @makeTypeError("readable should be ReadableStream");
+
+    const writable = transforms["writable"];
+    const internalWritable = @getInternalWritableStream(writable);
+    if (!@isWritableStream(internalWritable))
+        throw @makeTypeError("writable should be WritableStream");
+
+    let preventClose = false;
+    let preventAbort = false;
+    let preventCancel = false;
+    let signal;
+    if (!@isUndefinedOrNull(options)) {
+        if (!@isObject(options))
+            throw @makeTypeError("options must be an object");
+
+        preventAbort = !!options["preventAbort"];
+        preventCancel = !!options["preventCancel"];
+        preventClose = !!options["preventClose"];
+
+        signal = options["signal"];
+        if (signal !== @undefined && !@isAbortSignal(signal))
+            throw @makeTypeError("options.signal must be AbortSignal");
+    }
+
+    if (!@isReadableStream(this))
+        throw @makeThisTypeError("ReadableStream", "pipeThrough");
+
+    if (@isReadableStreamLocked(this))
+        throw @makeTypeError("ReadableStream is locked");
+
+    if (@isWritableStreamLocked(internalWritable))
+        throw @makeTypeError("WritableStream is locked");
+
+    @readableStreamPipeToWritableStream(this, internalWritable, preventClose, preventAbort, preventCancel, signal);
+
     return readable;
 }
 
@@ -123,89 +163,44 @@ function pipeTo(destination)
 
     // FIXME: https://bugs.webkit.org/show_bug.cgi?id=159869.
     // Built-in generator should be able to parse function signature to compute the function length correctly.
-    const options = arguments[1];
+    let options = arguments[1];
 
-    // FIXME: rewrite pipeTo so as to require to have 'this' as a ReadableStream and destination be a WritableStream.
-    // See https://github.com/whatwg/streams/issues/407.
-    // We should shield the pipeTo implementation at the same time.
+    let preventClose = false;
+    let preventAbort = false;
+    let preventCancel = false;
+    let signal;
+    if (!@isUndefinedOrNull(options)) {
+        if (!@isObject(options))
+            return @Promise.@reject(@makeTypeError("options must be an object"));
 
-    const preventClose = @isObject(options) && !!options.preventClose;
-    const preventAbort = @isObject(options) && !!options.preventAbort;
-    const preventCancel = @isObject(options) && !!options.preventCancel;
+        try {
+            preventAbort = !!options["preventAbort"];
+            preventCancel = !!options["preventCancel"];
+            preventClose = !!options["preventClose"];
 
-    const source = this;
-
-    let reader;
-    let lastRead;
-    let lastWrite;
-    let closedPurposefully = false;
-    let promiseCapability;
-
-    function doPipe() {
-        lastRead = reader.read();
-        @Promise.prototype.@then.@call(@Promise.all([lastRead, destination.ready]), function([{ value, done }]) {
-            if (done)
-                closeDestination();
-            else if (destination.state === "writable") {
-                lastWrite = destination.write(value);
-                doPipe();
-            }
-        }, function(e) {
-            throw e;
-        });
-    }
-
-    function cancelSource(reason) {
-        if (!preventCancel) {
-            reader.cancel(reason);
-            reader.releaseLock();
-            promiseCapability.@reject.@call(@undefined, reason);
-        } else {
-            @Promise.prototype.@then.@call(lastRead, function() {
-                reader.releaseLock();
-                promiseCapability.@reject.@call(@undefined, reason);
-            });
+            signal = options["signal"];
+        } catch(e) {
+            return @Promise.@reject(e);
         }
+
+        if (signal !== @undefined && !@isAbortSignal(signal))
+            return @Promise.@reject(@makeTypeError("options.signal must be AbortSignal"));
     }
 
-    function closeDestination() {
-        reader.releaseLock();
+    const internalDestination = @getInternalWritableStream(destination);
+    if (!@isWritableStream(internalDestination))
+        return @Promise.@reject(@makeTypeError("ReadableStream pipeTo requires a WritableStream"));
 
-        const destinationState = destination.state;
-        if (!preventClose && (destinationState === "waiting" || destinationState === "writable")) {
-            closedPurposefully = true;
-            @Promise.prototype.@then.@call(destination.close(), promiseCapability.@resolve, promiseCapability.@reject);
-        } else if (lastWrite !== @undefined)
-            @Promise.prototype.@then.@call(lastWrite, promiseCapability.@resolve, promiseCapability.@reject);
-        else
-            promiseCapability.@resolve.@call();
+    if (!@isReadableStream(this))
+        return @Promise.@reject(@makeThisTypeError("ReadableStream", "pipeTo"));
 
-    }
+    if (@isReadableStreamLocked(this))
+        return @Promise.@reject(@makeTypeError("ReadableStream is locked"));
 
-    function abortDestination(reason) {
-        reader.releaseLock();
+    if (@isWritableStreamLocked(internalDestination))
+        return @Promise.@reject(@makeTypeError("WritableStream is locked"));
 
-        if (!preventAbort)
-            destination.abort(reason);
-        promiseCapability.@reject.@call(@undefined, reason);
-    }
-
-    promiseCapability = @newPromiseCapability(@Promise);
-
-    reader = source.getReader();
-
-    @Promise.prototype.@then.@call(reader.closed, @undefined, abortDestination);
-    @Promise.prototype.@then.@call(destination.closed,
-        function() {
-            if (!closedPurposefully)
-                cancelSource(@makeTypeError('destination is closing or closed and cannot be piped to anymore'));
-        },
-        cancelSource
-    );
-
-    doPipe();
-
-    return promiseCapability.@promise;
+    return @readableStreamPipeToWritableStream(this, internalDestination, preventClose, preventAbort, preventCancel, signal);
 }
 
 function tee()

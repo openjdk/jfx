@@ -23,11 +23,11 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
  */
 
-interface SVGEllipseElement : SVGGeometryElement {
+[
+    Exposed=Window
+] interface SVGEllipseElement : SVGGeometryElement {
     readonly attribute SVGAnimatedLength cx;
     readonly attribute SVGAnimatedLength cy;
     readonly attribute SVGAnimatedLength rx;
     readonly attribute SVGAnimatedLength ry;
 };
-
-SVGEllipseElement implements SVGExternalResourcesRequired;

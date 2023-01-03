@@ -27,6 +27,7 @@
 
 #include "IDLTypes.h"
 #include "JSDOMConvertStrings.h"
+#include "JSDOMGlobalObject.h"
 #include <JavaScriptCore/ObjectConstructor.h>
 
 namespace WebCore {
@@ -37,23 +38,23 @@ template<typename IDLStringType>
 struct IdentifierConverter;
 
 template<> struct IdentifierConverter<IDLDOMString> {
-    static String convert(JSC::ExecState&, const JSC::Identifier& identifier)
+    static String convert(JSC::JSGlobalObject& lexicalGlobalObject, const JSC::Identifier& identifier)
     {
-        return identifier.string();
+        return identifierToString(lexicalGlobalObject, identifier);
     }
 };
 
 template<> struct IdentifierConverter<IDLByteString> {
-    static String convert(JSC::ExecState& state, const JSC::Identifier& identifier)
+    static String convert(JSC::JSGlobalObject& lexicalGlobalObject, const JSC::Identifier& identifier)
     {
-        return identifierToByteString(state, identifier);
+        return identifierToByteString(lexicalGlobalObject, identifier);
     }
 };
 
 template<> struct IdentifierConverter<IDLUSVString> {
-    static String convert(JSC::ExecState& state, const JSC::Identifier& identifier)
+    static String convert(JSC::JSGlobalObject& lexicalGlobalObject, const JSC::Identifier& identifier)
     {
-        return identifierToUSVString(state, identifier);
+        return identifierToUSVString(lexicalGlobalObject, identifier);
     }
 };
 
@@ -64,9 +65,21 @@ template<typename K, typename V> struct Converter<IDLRecord<K, V>> : DefaultConv
     using KeyType = typename K::ImplementationType;
     using ValueType = typename V::ImplementationType;
 
-    static ReturnType convert(JSC::ExecState& state, JSC::JSValue value)
+    static ReturnType convert(JSC::JSGlobalObject& lexicalGlobalObject, JSC::JSValue value, JSDOMGlobalObject& globalObject)
     {
-        auto& vm = state.vm();
+        return convertRecord<JSDOMGlobalObject&>(lexicalGlobalObject, value, globalObject);
+    }
+
+    static ReturnType convert(JSC::JSGlobalObject& lexicalGlobalObject, JSC::JSValue value)
+    {
+        return convertRecord(lexicalGlobalObject, value);
+    }
+
+private:
+    template<class...Args>
+    static ReturnType convertRecord(JSC::JSGlobalObject& lexicalGlobalObject, JSC::JSValue value, Args ... args)
+    {
+        auto& vm = JSC::getVM(&lexicalGlobalObject);
         auto scope = DECLARE_THROW_SCOPE(vm);
 
         // 1. Let result be a new empty instance of record<K, V>.
@@ -76,50 +89,64 @@ template<typename K, typename V> struct Converter<IDLRecord<K, V>> : DefaultConv
 
         // 3. If Type(O) is not Object, throw a TypeError.
         if (!value.isObject()) {
-            throwTypeError(&state, scope);
+            throwTypeError(&lexicalGlobalObject, scope);
             return { };
         }
 
         JSC::JSObject* object = JSC::asObject(value);
 
         ReturnType result;
+        HashMap<KeyType, size_t> resultMap;
 
         // 4. Let keys be ? O.[[OwnPropertyKeys]]().
-        JSC::PropertyNameArray keys(vm, JSC::PropertyNameMode::Strings, JSC::PrivateSymbolMode::Exclude);
-        object->methodTable(vm)->getOwnPropertyNames(object, &state, keys, JSC::EnumerationMode(JSC::DontEnumPropertiesMode::Include));
-
+        JSC::PropertyNameArray keys(vm, JSC::PropertyNameMode::StringsAndSymbols, JSC::PrivateSymbolMode::Exclude);
+        object->methodTable(vm)->getOwnPropertyNames(object, &lexicalGlobalObject, keys, JSC::DontEnumPropertiesMode::Include);
         RETURN_IF_EXCEPTION(scope, { });
 
         // 5. Repeat, for each element key of keys in List order:
         for (auto& key : keys) {
             // 1. Let desc be ? O.[[GetOwnProperty]](key).
-            JSC::PropertyDescriptor descriptor;
-            bool didGetDescriptor = object->getOwnPropertyDescriptor(&state, key, descriptor);
+            JSC::PropertySlot slot(object, JSC::PropertySlot::InternalMethodType::GetOwnProperty);
+            bool hasProperty = object->methodTable(vm)->getOwnPropertySlot(object, &lexicalGlobalObject, key, slot);
             RETURN_IF_EXCEPTION(scope, { });
 
             // 2. If desc is not undefined and desc.[[Enumerable]] is true:
 
-            // It's necessary to filter enumerable here rather than using the default EnumerationMode,
+            // It's necessary to filter enumerable here rather than using DontEnumPropertiesMode::Exclude,
             // to prevent an observable extra [[GetOwnProperty]] operation in the case of ProxyObject records.
-            if (didGetDescriptor && descriptor.enumerable()) {
+            if (hasProperty && !(slot.attributes() & JSC::PropertyAttribute::DontEnum)) {
                 // 1. Let typedKey be key converted to an IDL value of type K.
-                auto typedKey = Detail::IdentifierConverter<K>::convert(state, key);
+                auto typedKey = Detail::IdentifierConverter<K>::convert(lexicalGlobalObject, key);
                 RETURN_IF_EXCEPTION(scope, { });
 
                 // 2. Let value be ? Get(O, key).
-                auto subValue = object->get(&state, key);
+                JSC::JSValue subValue;
+                if (LIKELY(!slot.isTaintedByOpaqueObject()))
+                    subValue = slot.getValue(&lexicalGlobalObject, key);
+                else
+                    subValue = object->get(&lexicalGlobalObject, key);
                 RETURN_IF_EXCEPTION(scope, { });
 
                 // 3. Let typedValue be value converted to an IDL value of type V.
-                auto typedValue = Converter<V>::convert(state, subValue);
+                auto typedValue = Converter<V>::convert(lexicalGlobalObject, subValue, args...);
                 RETURN_IF_EXCEPTION(scope, { });
 
-                // 4. If typedKey is already a key in result, set its value to typedValue.
-                // Note: This can happen when O is a proxy object.
-                // FIXME: Handle this case.
+                // 4. Set result[typedKey] to typedValue.
+                // Note: It's possible that typedKey is already in result if K is USVString and key contains unpaired surrogates.
+                if constexpr (std::is_same_v<K, IDLUSVString>) {
+                    if (!typedKey.is8Bit()) {
+                        auto addResult = resultMap.add(typedKey, result.size());
+                        if (!addResult.isNewEntry) {
+                            ASSERT(result[addResult.iterator->value].key == typedKey);
+                            result[addResult.iterator->value].value = WTFMove(typedValue);
+                            continue;
+                        }
+                    }
+                } else
+                    UNUSED_VARIABLE(resultMap);
 
                 // 5. Otherwise, append to result a mapping (typedKey, typedValue).
-                result.append({ typedKey, typedValue });
+                result.append({ WTFMove(typedKey), WTFMove(typedValue) });
             }
         }
 
@@ -133,12 +160,12 @@ template<typename K, typename V> struct JSConverter<IDLRecord<K, V>> {
     static constexpr bool needsGlobalObject = true;
 
     template<typename MapType>
-    static JSC::JSValue convert(JSC::ExecState& state, JSDOMGlobalObject& globalObject, const MapType& map)
+    static JSC::JSValue convert(JSC::JSGlobalObject& lexicalGlobalObject, JSDOMGlobalObject& globalObject, const MapType& map)
     {
-        auto& vm = state.vm();
+        auto& vm = JSC::getVM(&lexicalGlobalObject);
 
         // 1. Let result be ! ObjectCreate(%ObjectPrototype%).
-        auto result = constructEmptyObject(&state, globalObject.objectPrototype());
+        auto result = constructEmptyObject(&lexicalGlobalObject, globalObject.objectPrototype());
 
         // 2. Repeat, for each mapping (key, value) in D:
         for (const auto& keyValuePair : map) {
@@ -147,7 +174,7 @@ template<typename K, typename V> struct JSConverter<IDLRecord<K, V>> {
             // an Identifier, not a JSValue.
 
             // 2. Let esValue be value converted to an ECMAScript value.
-            auto esValue = toJS<V>(state, globalObject, keyValuePair.value);
+            auto esValue = toJS<V>(lexicalGlobalObject, globalObject, keyValuePair.value);
 
             // 3. Let created be ! CreateDataProperty(result, esKey, esValue).
             bool created = result->putDirect(vm, JSC::Identifier::fromString(vm, keyValuePair.key), esValue);

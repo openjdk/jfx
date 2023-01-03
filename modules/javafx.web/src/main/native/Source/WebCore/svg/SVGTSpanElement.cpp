@@ -23,6 +23,7 @@
 
 #include "RenderInline.h"
 #include "RenderSVGTSpan.h"
+#include "SVGElementInlines.h"
 #include "SVGNames.h"
 #include <wtf/IsoMallocInlines.h>
 
@@ -50,9 +51,7 @@ bool SVGTSpanElement::childShouldCreateRenderer(const Node& child) const
 {
     if (child.isTextNode()
         || child.hasTagName(SVGNames::aTag)
-#if ENABLE(SVG_FONTS)
         || child.hasTagName(SVGNames::altGlyphTag)
-#endif
         || child.hasTagName(SVGNames::trefTag)
         || child.hasTagName(SVGNames::tspanTag))
         return true;
@@ -64,9 +63,7 @@ bool SVGTSpanElement::rendererIsNeeded(const RenderStyle& style)
 {
     if (parentNode()
         && (parentNode()->hasTagName(SVGNames::aTag)
-#if ENABLE(SVG_FONTS)
             || parentNode()->hasTagName(SVGNames::altGlyphTag)
-#endif
             || parentNode()->hasTagName(SVGNames::textTag)
             || parentNode()->hasTagName(SVGNames::textPathTag)
             || parentNode()->hasTagName(SVGNames::tspanTag)))

@@ -39,11 +39,9 @@ RenderLayoutState::RenderLayoutState(RenderElement& renderer, IsPaginated isPagi
     : m_clipped(false)
     , m_isPaginated(isPaginated == IsPaginated::Yes)
     , m_pageLogicalHeightChanged(false)
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
     , m_layoutDeltaXSaturated(false)
     , m_layoutDeltaYSaturated(false)
-#endif
-#ifndef NDEBUG
     , m_renderer(&renderer)
 #endif
 {
@@ -51,7 +49,7 @@ RenderLayoutState::RenderLayoutState(RenderElement& renderer, IsPaginated isPagi
         FloatPoint absContentPoint = container->localToAbsolute(FloatPoint(), UseTransforms);
         m_paintOffset = LayoutSize(absContentPoint.x(), absContentPoint.y());
 
-        if (container->hasOverflowClip()) {
+        if (container->hasNonVisibleOverflow()) {
             m_clipped = true;
             auto& containerBox = downcast<RenderBox>(*container);
             m_clipRect = LayoutRect(toLayoutPoint(m_paintOffset), containerBox.cachedSizeForOverflowClip());
@@ -68,11 +66,9 @@ RenderLayoutState::RenderLayoutState(const FrameViewLayoutContext::LayoutStateSt
     : m_clipped(false)
     , m_isPaginated(false)
     , m_pageLogicalHeightChanged(false)
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
     , m_layoutDeltaXSaturated(false)
     , m_layoutDeltaYSaturated(false)
-#endif
-#ifndef NDEBUG
     , m_renderer(&renderer)
 #endif
 {
@@ -105,11 +101,11 @@ void RenderLayoutState::computeOffsets(const RenderLayoutState& ancestor, Render
     if (renderer.isInFlowPositioned() && renderer.hasLayer())
         m_paintOffset += renderer.layer()->offsetForInFlowPosition();
 
-    if (renderer.hasOverflowClip())
+    if (renderer.hasNonVisibleOverflow())
         m_paintOffset -= toLayoutSize(renderer.scrollPosition());
 
     m_layoutDelta = ancestor.layoutDelta();
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
     m_layoutDeltaXSaturated = ancestor.m_layoutDeltaXSaturated;
     m_layoutDeltaYSaturated = ancestor.m_layoutDeltaYSaturated;
 #endif
@@ -120,7 +116,7 @@ void RenderLayoutState::computeClipRect(const RenderLayoutState& ancestor, Rende
     m_clipped = !renderer.isFixedPositioned() && ancestor.isClipped();
     if (m_clipped)
         m_clipRect = ancestor.clipRect();
-    if (!renderer.hasOverflowClip())
+    if (!renderer.hasNonVisibleOverflow())
         return;
 
     auto paintOffsetForClipRect = toLayoutPoint(m_paintOffset + toLayoutSize(renderer.scrollPosition()));
@@ -197,21 +193,20 @@ void RenderLayoutState::computeLineGridPaginationOrigin(const RenderMultiColumnF
     // as established by the line box.
     // FIXME: Need to handle crazy line-box-contain values that cause the root line box to not be considered. I assume
     // the grid should honor line-box-contain.
-    LayoutUnit gridLineHeight = lineGridBox->lineBottomWithLeading() - lineGridBox->lineTopWithLeading();
-    if (!gridLineHeight)
-        return;
-
     bool isHorizontalWritingMode = m_lineGrid->isHorizontalWritingMode();
     LayoutUnit lineGridBlockOffset = isHorizontalWritingMode ? m_lineGridOffset.height() : m_lineGridOffset.width();
-    LayoutUnit firstLineTopWithLeading = lineGridBlockOffset + lineGridBox->lineTopWithLeading();
+    LayoutUnit firstLineTopWithLeading = lineGridBlockOffset + lineGridBox->lineBoxTop();
     LayoutUnit pageLogicalTop = isHorizontalWritingMode ? m_pageOffset.height() : m_pageOffset.width();
     if (pageLogicalTop <= firstLineTopWithLeading)
         return;
 
     // Shift to the next highest line grid multiple past the page logical top. Cache the delta
     // between this new value and the page logical top as the pagination origin.
-    LayoutUnit remainder = roundToInt(pageLogicalTop - firstLineTopWithLeading) % roundToInt(gridLineHeight);
-    LayoutUnit paginationDelta = gridLineHeight - remainder;
+    auto lineBoxHeight = lineGridBox->lineBoxHeight();
+    if (!roundToInt(lineBoxHeight))
+        return;
+    LayoutUnit remainder = roundToInt(pageLogicalTop - firstLineTopWithLeading) % roundToInt(lineBoxHeight);
+    LayoutUnit paginationDelta = lineBoxHeight - remainder;
     if (isHorizontalWritingMode)
         m_lineGridPaginationOrigin.setHeight(paginationDelta);
     else
@@ -225,7 +220,7 @@ void RenderLayoutState::propagateLineGridInfo(const RenderLayoutState& ancestor,
     if (renderer.isUnsplittableForPagination())
         return;
 
-    m_lineGrid = makeWeakPtr(ancestor.lineGrid());
+    m_lineGrid = ancestor.lineGrid();
     m_lineGridOffset = ancestor.lineGridOffset();
     m_lineGridPaginationOrigin = ancestor.lineGridPaginationOrigin();
 }
@@ -237,7 +232,7 @@ void RenderLayoutState::establishLineGrid(const FrameViewLayoutContext::LayoutSt
         if (m_lineGrid->style().lineGrid() == renderer.style().lineGrid())
             return;
         auto* currentGrid = m_lineGrid.get();
-        for (int i = layoutStateStack.size() - 1; i <= 0; --i) {
+        for (int i = layoutStateStack.size() - 1; i >= 0; --i) {
             auto& currentState = *layoutStateStack[i].get();
             if (currentState.m_lineGrid == currentGrid)
                 continue;
@@ -245,7 +240,7 @@ void RenderLayoutState::establishLineGrid(const FrameViewLayoutContext::LayoutSt
             if (!currentGrid)
                 break;
             if (currentGrid->style().lineGrid() == renderer.style().lineGrid()) {
-                m_lineGrid = makeWeakPtr(currentGrid);
+                m_lineGrid = currentGrid;
                 m_lineGridOffset = currentState.m_lineGridOffset;
                 return;
             }
@@ -253,20 +248,20 @@ void RenderLayoutState::establishLineGrid(const FrameViewLayoutContext::LayoutSt
     }
 
     // We didn't find an already-established grid with this identifier. Our render object establishes the grid.
-    m_lineGrid = makeWeakPtr(renderer);
+    m_lineGrid = renderer;
     m_lineGridOffset = m_layoutOffset;
 }
 
 void RenderLayoutState::addLayoutDelta(LayoutSize delta)
 {
     m_layoutDelta += delta;
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
     m_layoutDeltaXSaturated |= m_layoutDelta.width() == LayoutUnit::max() || m_layoutDelta.width() == LayoutUnit::min();
     m_layoutDeltaYSaturated |= m_layoutDelta.height() == LayoutUnit::max() || m_layoutDelta.height() == LayoutUnit::min();
 #endif
 }
 
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
 bool RenderLayoutState::layoutDeltaMatches(LayoutSize delta) const
 {
     return (delta.width() == m_layoutDelta.width() || m_layoutDeltaXSaturated) && (delta.height() == m_layoutDelta.height() || m_layoutDeltaYSaturated);

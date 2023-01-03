@@ -25,8 +25,7 @@
 
 #pragma once
 
-#if ENABLE(INDEXED_DATABASE)
-
+#include "IDBResourceIdentifier.h"
 #include <wtf/WeakPtr.h>
 #include <wtf/text/WTFString.h>
 
@@ -37,17 +36,18 @@ class IDBIndexInfo;
 class IDBKeyData;
 class IDBObjectStoreInfo;
 class IDBRequestData;
-class IDBResourceIdentifier;
 class IDBTransactionInfo;
 class IDBValue;
 
+struct ClientOrigin;
 struct IDBGetAllRecordsData;
 struct IDBGetRecordData;
 struct IDBIterateCursorData;
 struct SecurityOriginData;
 
 namespace IndexedDB {
-enum class ObjectStoreOverwriteMode;
+enum class ObjectStoreOverwriteMode : uint8_t;
+enum class ConnectionClosedOnBehalfOfServer : bool;
 }
 
 struct IDBKeyRangeData;
@@ -58,11 +58,11 @@ class IDBConnectionToServerDelegate : public CanMakeWeakPtr<IDBConnectionToServe
 public:
     virtual ~IDBConnectionToServerDelegate() = default;
 
-    virtual uint64_t identifier() const = 0;
+    virtual IDBConnectionIdentifier identifier() const = 0;
     virtual void deleteDatabase(const IDBRequestData&) = 0;
     virtual void openDatabase(const IDBRequestData&) = 0;
     virtual void abortTransaction(const IDBResourceIdentifier&) = 0;
-    virtual void commitTransaction(const IDBResourceIdentifier&) = 0;
+    virtual void commitTransaction(const IDBResourceIdentifier&, uint64_t pendingRequestCount) = 0;
     virtual void didFinishHandlingVersionChangeTransaction(uint64_t databaseConnectionIdentifier, const IDBResourceIdentifier&) = 0;
     virtual void createObjectStore(const IDBRequestData&, const IDBObjectStoreInfo&) = 0;
     virtual void deleteObjectStore(const IDBRequestData&, const String& objectStoreName) = 0;
@@ -83,17 +83,11 @@ public:
     virtual void databaseConnectionPendingClose(uint64_t databaseConnectionIdentifier) = 0;
     virtual void databaseConnectionClosed(uint64_t databaseConnectionIdentifier) = 0;
     virtual void abortOpenAndUpgradeNeeded(uint64_t databaseConnectionIdentifier, const IDBResourceIdentifier& transactionIdentifier) = 0;
-    virtual void didFireVersionChangeEvent(uint64_t databaseConnectionIdentifier, const IDBResourceIdentifier& requestIdentifier) = 0;
+    virtual void didFireVersionChangeEvent(uint64_t databaseConnectionIdentifier, const IDBResourceIdentifier& requestIdentifier, const IndexedDB::ConnectionClosedOnBehalfOfServer) = 0;
     virtual void openDBRequestCancelled(const IDBRequestData&) = 0;
-    virtual void confirmDidCloseFromServer(uint64_t databaseConnectionIdentifier) = 0;
 
-    virtual void getAllDatabaseNames(const SecurityOriginData& mainFrameOrigin, const SecurityOriginData& openingOrigin, uint64_t callbackID) = 0;
-
-    virtual void ref() = 0;
-    virtual void deref() = 0;
+    virtual void getAllDatabaseNamesAndVersions(const IDBResourceIdentifier&, const ClientOrigin&) = 0;
 };
 
 } // namespace IDBClient
 } // namespace WebCore
-
-#endif // ENABLE(INDEXED_DATABASE)

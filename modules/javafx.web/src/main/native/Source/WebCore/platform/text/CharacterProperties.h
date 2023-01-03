@@ -29,35 +29,27 @@
 
 namespace WebCore {
 
-#define ICU_HEADERS_UNDERSTAND_SUPPLEMENTAL_SYMBOLS_AND_PICTOGRAPHS (U_ICU_VERSION_MAJOR_NUM > 56 || (U_ICU_VERSION_MAJOR_NUM == 56 && U_ICU_VERSION_MINOR_NUM >= 1))
-
-#if ICU_HEADERS_UNDERSTAND_SUPPLEMENTAL_SYMBOLS_AND_PICTOGRAPHS
-static bool icuLibraryUnderstandsSupplementalSymbolsAndPictographs()
-{
-    UVersionInfo versionInfo;
-    u_getVersion(versionInfo);
-    static_assert(U_MAX_VERSION_LENGTH >= 2, "Cannot run ICU version check");
-    return versionInfo[0] > 56 || (versionInfo[0] == 56 && versionInfo[1] >= 1);
-}
-#endif
-
 static inline bool isEmojiGroupCandidate(UChar32 character)
 {
-    auto unicodeBlock = ublock_getCode(character);
-
-    if (unicodeBlock == UBLOCK_MISCELLANEOUS_SYMBOLS
-        || unicodeBlock == UBLOCK_DINGBATS
-        || unicodeBlock == UBLOCK_MISCELLANEOUS_SYMBOLS_AND_PICTOGRAPHS
-        || unicodeBlock == UBLOCK_EMOTICONS
-        || unicodeBlock == UBLOCK_TRANSPORT_AND_MAP_SYMBOLS)
-        return true;
-
-#if ICU_HEADERS_UNDERSTAND_SUPPLEMENTAL_SYMBOLS_AND_PICTOGRAPHS
-    static bool useSupplementalSymbolsAndPictographs = icuLibraryUnderstandsSupplementalSymbolsAndPictographs();
-    if (useSupplementalSymbolsAndPictographs)
-        return unicodeBlock == UBLOCK_SUPPLEMENTAL_SYMBOLS_AND_PICTOGRAPHS;
+#define SYMBOLS_AND_PICTOGRAPHS_EXTENDED_A 298
+#if U_ICU_VERSION_MAJOR_NUM < 64
+#define UBLOCK_SYMBOLS_AND_PICTOGRAPHS_EXTENDED_A SYMBOLS_AND_PICTOGRAPHS_EXTENDED_A
+#else
+static_assert(UBLOCK_SYMBOLS_AND_PICTOGRAPHS_EXTENDED_A == SYMBOLS_AND_PICTOGRAPHS_EXTENDED_A);
 #endif
-    return character >= 0x1F900 && character <= 0x1F9FF;
+
+    switch (static_cast<int>(ublock_getCode(character))) {
+    case UBLOCK_MISCELLANEOUS_SYMBOLS:
+    case UBLOCK_DINGBATS:
+    case UBLOCK_MISCELLANEOUS_SYMBOLS_AND_PICTOGRAPHS:
+    case UBLOCK_EMOTICONS:
+    case UBLOCK_TRANSPORT_AND_MAP_SYMBOLS:
+    case UBLOCK_SUPPLEMENTAL_SYMBOLS_AND_PICTOGRAPHS:
+    case UBLOCK_SYMBOLS_AND_PICTOGRAPHS_EXTENDED_A:
+        return true;
+    default:
+        return false;
+    }
 }
 
 static inline bool isEmojiFitzpatrickModifier(UChar32 character)
@@ -88,22 +80,12 @@ inline bool isEmojiRegionalIndicator(UChar32 character)
 
 inline bool isEmojiWithPresentationByDefault(UChar32 character)
 {
-#if U_ICU_VERSION_MAJOR_NUM >= 57
     return u_hasBinaryProperty(character, UCHAR_EMOJI_PRESENTATION);
-#else
-    UNUSED_PARAM(character);
-    return false;
-#endif
 }
 
 inline bool isEmojiModifierBase(UChar32 character)
 {
-#if U_ICU_VERSION_MAJOR_NUM >= 57
     return u_hasBinaryProperty(character, UCHAR_EMOJI_MODIFIER_BASE);
-#else
-    UNUSED_PARAM(character);
-    return false;
-#endif
 }
 
 inline bool isDefaultIgnorableCodePoint(UChar32 character)

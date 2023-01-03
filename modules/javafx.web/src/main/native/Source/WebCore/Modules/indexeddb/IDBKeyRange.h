@@ -25,15 +25,14 @@
 
 #pragma once
 
-#if ENABLE(INDEXED_DATABASE)
-
 #include "ExceptionOr.h"
 #include "ScriptWrappable.h"
 #include <wtf/RefCounted.h>
 #include <wtf/RefPtr.h>
 
 namespace JSC {
-class ExecState;
+class CallFrame;
+class JSGlobalObject;
 class JSValue;
 }
 
@@ -55,14 +54,14 @@ public:
     bool upperOpen() const { return m_isUpperOpen; }
 
     static ExceptionOr<Ref<IDBKeyRange>> only(RefPtr<IDBKey>&& value);
-    static ExceptionOr<Ref<IDBKeyRange>> only(JSC::ExecState&, JSC::JSValue key);
+    static ExceptionOr<Ref<IDBKeyRange>> only(JSC::JSGlobalObject&, JSC::JSValue key);
 
-    static ExceptionOr<Ref<IDBKeyRange>> lowerBound(JSC::ExecState&, JSC::JSValue bound, bool open);
-    static ExceptionOr<Ref<IDBKeyRange>> upperBound(JSC::ExecState&, JSC::JSValue bound, bool open);
+    static ExceptionOr<Ref<IDBKeyRange>> lowerBound(JSC::JSGlobalObject&, JSC::JSValue bound, bool open);
+    static ExceptionOr<Ref<IDBKeyRange>> upperBound(JSC::JSGlobalObject&, JSC::JSValue bound, bool open);
 
-    static ExceptionOr<Ref<IDBKeyRange>> bound(JSC::ExecState&, JSC::JSValue lower, JSC::JSValue upper, bool lowerOpen, bool upperOpen);
+    static ExceptionOr<Ref<IDBKeyRange>> bound(JSC::JSGlobalObject&, JSC::JSValue lower, JSC::JSValue upper, bool lowerOpen, bool upperOpen);
 
-    ExceptionOr<bool> includes(JSC::ExecState&, JSC::JSValue key);
+    ExceptionOr<bool> includes(JSC::JSGlobalObject&, JSC::JSValue key);
 
     WEBCORE_EXPORT bool isOnlyKey() const;
 
@@ -76,5 +75,3 @@ private:
 };
 
 } // namespace WebCore
-
-#endif

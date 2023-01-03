@@ -26,14 +26,12 @@
 #include "config.h"
 #include "UniqueIDBDatabaseConnection.h"
 
-#if ENABLE(INDEXED_DATABASE)
-
 #include "IDBConnectionToClient.h"
-#include "IDBServer.h"
 #include "IDBTransactionInfo.h"
 #include "Logging.h"
 #include "ServerOpenDBRequest.h"
 #include "UniqueIDBDatabase.h"
+#include "UniqueIDBDatabaseManager.h"
 
 namespace WebCore {
 namespace IDBServer {
@@ -44,20 +42,30 @@ Ref<UniqueIDBDatabaseConnection> UniqueIDBDatabaseConnection::create(UniqueIDBDa
 }
 
 UniqueIDBDatabaseConnection::UniqueIDBDatabaseConnection(UniqueIDBDatabase& database, ServerOpenDBRequest& request)
-    : m_database(makeWeakPtr(database))
-    , m_server(makeWeakPtr(m_database->server()))
+    : m_database(database)
+    , m_manager(database.manager())
     , m_connectionToClient(request.connection())
     , m_openRequestIdentifier(request.requestData().requestIdentifier())
 {
-    m_server->registerDatabaseConnection(*this);
+    if (auto* manager = database.manager()) {
+        m_manager = *manager;
+        m_manager->registerConnection(*this);
+    }
     m_connectionToClient->registerDatabaseConnection(*this);
 }
 
 UniqueIDBDatabaseConnection::~UniqueIDBDatabaseConnection()
 {
-    if (m_server)
-        m_server->unregisterDatabaseConnection(*this);
+    ASSERT(m_transactionMap.isEmpty());
+
+    if (m_manager)
+        m_manager->unregisterConnection(*this);
     m_connectionToClient->unregisterDatabaseConnection(*this);
+}
+
+UniqueIDBDatabaseManager* UniqueIDBDatabaseConnection::manager()
+{
+    return m_manager.get();
 }
 
 bool UniqueIDBDatabaseConnection::hasNonFinishedTransactions() const
@@ -68,15 +76,10 @@ bool UniqueIDBDatabaseConnection::hasNonFinishedTransactions() const
 void UniqueIDBDatabaseConnection::abortTransactionWithoutCallback(UniqueIDBDatabaseTransaction& transaction)
 {
     ASSERT(m_transactionMap.contains(transaction.info().identifier()));
+    ASSERT(m_database);
 
     const auto& transactionIdentifier = transaction.info().identifier();
-    RefPtr<UniqueIDBDatabaseConnection> protectedThis(this);
-
-    ASSERT(m_database);
-    if (!m_database)
-        return;
-
-    m_database->abortTransaction(transaction, UniqueIDBDatabase::WaitForPendingTasks::No, [this, protectedThis, transactionIdentifier](const IDBError&) {
+    m_database->abortTransaction(transaction, [this, transactionIdentifier](const IDBError&) {
         ASSERT(m_transactionMap.contains(transactionIdentifier));
         m_transactionMap.remove(transactionIdentifier);
     });
@@ -94,26 +97,15 @@ void UniqueIDBDatabaseConnection::connectionClosedFromClient()
     LOG(IndexedDB, "UniqueIDBDatabaseConnection::connectionClosedFromClient - %s - %" PRIu64, m_openRequestIdentifier.loggingString().utf8().data(), identifier());
 
     ASSERT(m_database);
-    if (m_database)
-        m_database->connectionClosedFromClient(*this);
+    m_database->connectionClosedFromClient(*this);
 }
 
-void UniqueIDBDatabaseConnection::confirmDidCloseFromServer()
-{
-    LOG(IndexedDB, "UniqueIDBDatabaseConnection::confirmDidCloseFromServer - %s - %" PRIu64, m_openRequestIdentifier.loggingString().utf8().data(), identifier());
-
-    ASSERT(m_database);
-    if (m_database)
-        m_database->confirmDidCloseFromServer(*this);
-}
-
-void UniqueIDBDatabaseConnection::didFireVersionChangeEvent(const IDBResourceIdentifier& requestIdentifier)
+void UniqueIDBDatabaseConnection::didFireVersionChangeEvent(const IDBResourceIdentifier& requestIdentifier, IndexedDB::ConnectionClosedOnBehalfOfServer connectionClosed)
 {
     LOG(IndexedDB, "UniqueIDBDatabaseConnection::didFireVersionChangeEvent - %s - %" PRIu64, m_openRequestIdentifier.loggingString().utf8().data(), identifier());
 
     ASSERT(m_database);
-    if (m_database)
-        m_database->didFireVersionChangeEvent(*this, requestIdentifier);
+    m_database->didFireVersionChangeEvent(*this, requestIdentifier, connectionClosed);
 }
 
 void UniqueIDBDatabaseConnection::didFinishHandlingVersionChange(const IDBResourceIdentifier& transactionIdentifier)
@@ -121,8 +113,7 @@ void UniqueIDBDatabaseConnection::didFinishHandlingVersionChange(const IDBResour
     LOG(IndexedDB, "UniqueIDBDatabaseConnection::didFinishHandlingVersionChange - %s - %" PRIu64, transactionIdentifier.loggingString().utf8().data(), identifier());
 
     ASSERT(m_database);
-    if (m_database)
-        m_database->didFinishHandlingVersionChange(*this, transactionIdentifier);
+    m_database->didFinishHandlingVersionChange(*this, transactionIdentifier);
 }
 
 void UniqueIDBDatabaseConnection::fireVersionChangeEvent(const IDBResourceIdentifier& requestIdentifier, uint64_t requestedVersion)
@@ -154,12 +145,10 @@ void UniqueIDBDatabaseConnection::establishTransaction(const IDBTransactionInfo&
     // the connection is closing.
     ASSERT(!m_closePending);
 
-    if (!m_database || m_database->hardClosedForUserDelete())
-        return;
-
     Ref<UniqueIDBDatabaseTransaction> transaction = UniqueIDBDatabaseTransaction::create(*this, info);
     m_transactionMap.set(transaction->info().identifier(), &transaction.get());
 
+    ASSERT(m_database);
     m_database->enqueueTransaction(WTFMove(transaction));
 }
 
@@ -169,10 +158,9 @@ void UniqueIDBDatabaseConnection::didAbortTransaction(UniqueIDBDatabaseTransacti
 
     auto transactionIdentifier = transaction.info().identifier();
     auto takenTransaction = m_transactionMap.take(transactionIdentifier);
+    ASSERT(takenTransaction);
 
-    ASSERT(takenTransaction || (!m_database && !error.isNull()) || (m_database && m_database->hardClosedForUserDelete()));
-    if (takenTransaction)
-        m_connectionToClient->didAbortTransaction(transactionIdentifier, error);
+    m_connectionToClient->didAbortTransaction(transactionIdentifier, error);
 }
 
 void UniqueIDBDatabaseConnection::didCommitTransaction(UniqueIDBDatabaseTransaction& transaction, const IDBError& error)
@@ -253,5 +241,3 @@ void UniqueIDBDatabaseConnection::deleteTransaction(UniqueIDBDatabaseTransaction
 
 } // namespace IDBServer
 } // namespace WebCore
-
-#endif // ENABLE(INDEXED_DATABASE)

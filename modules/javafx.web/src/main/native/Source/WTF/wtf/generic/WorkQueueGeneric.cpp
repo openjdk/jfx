@@ -30,26 +30,31 @@
 #include "config.h"
 #include <wtf/WorkQueue.h>
 
-#include <wtf/WallTime.h>
-#include <wtf/text/WTFString.h>
 #include <wtf/threads/BinarySemaphore.h>
 
 #if PLATFORM(JAVA)
 #include <wtf/java/JavaEnv.h>
 #endif
 
-void WorkQueue::platformInitialize(const char* name, Type, QOS)
+namespace WTF {
+
+WorkQueueBase::WorkQueueBase(RunLoop& runLoop)
+    : m_runLoop(&runLoop)
+{
+}
+
+void WorkQueueBase::platformInitialize(const char* name, Type, QOS qos)
 {
     BinarySemaphore semaphore;
     Thread::create(name, [&] {
         m_runLoop = &RunLoop::current();
         semaphore.signal();
         m_runLoop->run();
-    })->detach();
+    }, ThreadType::Unknown, qos)->detach();
     semaphore.wait();
 }
 
-void WorkQueue::platformInvalidate()
+void WorkQueueBase::platformInvalidate()
 {
     if (m_runLoop) {
         Ref<RunLoop> protector(*m_runLoop);
@@ -60,10 +65,9 @@ void WorkQueue::platformInvalidate()
     }
 }
 
-void WorkQueue::dispatch(Function<void()>&& function)
+void WorkQueueBase::dispatch(Function<void()>&& function)
 {
-    RefPtr<WorkQueue> protect(this);
-    m_runLoop->dispatch([protect, function = WTFMove(function)] {
+    m_runLoop->dispatch([protectedThis = Ref { *this }, function = WTFMove(function)] {
 #if PLATFORM(JAVA)
         AttachThreadAsDaemonToJavaEnv autoAttach;
 #endif
@@ -71,13 +75,37 @@ void WorkQueue::dispatch(Function<void()>&& function)
     });
 }
 
-void WorkQueue::dispatchAfter(Seconds delay, Function<void()>&& function)
+void WorkQueueBase::dispatchAfter(Seconds delay, Function<void()>&& function)
 {
-    RefPtr<WorkQueue> protect(this);
-    m_runLoop->dispatchAfter(delay, [protect, function = WTFMove(function)] {
+#if OS(WINDOWS) && PLATFORM(JAVA)
+    // From empirical testing, we've seen CreateTimerQueueTimer() sometimes fire up to 5+ ms early.
+    // This causes havoc for clients of this code that expect to not be called back until the
+    // specified duration has expired. Other folks online have also observed some slop in the
+    // firing times of CreateTimerQuqueTimer(). From the data posted at
+    // http://omeg.pl/blog/2011/11/on-winapi-timers-and-their-resolution, it appears that the slop
+    // can be up to about 10 ms. To ensure that we don't fire the timer early, we'll tack on a
+    // slop adjustment to the duration, and we'll use double the worst amount of slop observed
+    // so far.
+    const Seconds slopAdjustment { 20_ms };
+    if (delay)
+        delay += slopAdjustment;
+#endif
+    m_runLoop->dispatchAfter(delay, [protectedThis = Ref { *this }, function = WTFMove(function)] {
 #if PLATFORM(JAVA)
         AttachThreadAsDaemonToJavaEnv autoAttach;
 #endif
         function();
     });
+}
+
+WorkQueue::WorkQueue(RunLoop& loop)
+    : WorkQueueBase(loop)
+{
+}
+
+Ref<WorkQueue> WorkQueue::constructMainWorkQueue()
+{
+    return adoptRef(*new WorkQueue(RunLoop::main()));
+}
+
 }

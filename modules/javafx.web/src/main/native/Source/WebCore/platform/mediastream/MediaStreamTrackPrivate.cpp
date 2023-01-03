@@ -33,10 +33,11 @@
 #include "GraphicsContext.h"
 #include "IntRect.h"
 #include "Logging.h"
+#include "PlatformMediaSessionManager.h"
 #include <wtf/UUID.h>
 
 #if PLATFORM(COCOA)
-#include "WebAudioSourceProviderAVFObjC.h"
+#include "MediaStreamTrackAudioSourceProviderCocoa.h"
 #elif ENABLE(WEB_AUDIO) && ENABLE(MEDIA_STREAM) && USE(LIBWEBRTC) && USE(GSTREAMER)
 #include "AudioSourceProviderGStreamer.h"
 #else
@@ -47,7 +48,7 @@ namespace WebCore {
 
 Ref<MediaStreamTrackPrivate> MediaStreamTrackPrivate::create(Ref<const Logger>&& logger, Ref<RealtimeMediaSource>&& source)
 {
-    return create(WTFMove(logger), WTFMove(source), createCanonicalUUIDString());
+    return create(WTFMove(logger), WTFMove(source), createVersion4UUIDString());
 }
 
 Ref<MediaStreamTrackPrivate> MediaStreamTrackPrivate::create(Ref<const Logger>&& logger, Ref<RealtimeMediaSource>&& source, String&& id)
@@ -55,16 +56,17 @@ Ref<MediaStreamTrackPrivate> MediaStreamTrackPrivate::create(Ref<const Logger>&&
     return adoptRef(*new MediaStreamTrackPrivate(WTFMove(logger), WTFMove(source), WTFMove(id)));
 }
 
-MediaStreamTrackPrivate::MediaStreamTrackPrivate(Ref<const Logger>&& logger, Ref<RealtimeMediaSource>&& source, String&& id)
+MediaStreamTrackPrivate::MediaStreamTrackPrivate(Ref<const Logger>&& trackLogger, Ref<RealtimeMediaSource>&& source, String&& id)
     : m_source(WTFMove(source))
     , m_id(WTFMove(id))
-    , m_logger(WTFMove(logger))
+    , m_logger(WTFMove(trackLogger))
 #if !RELEASE_LOG_DISABLED
     , m_logIdentifier(uniqueLogIdentifier())
 #endif
 {
     ASSERT(isMainThread());
-    UNUSED_PARAM(logger);
+    UNUSED_PARAM(trackLogger);
+    ALWAYS_LOG(LOGIDENTIFIER);
 #if !RELEASE_LOG_DISABLED
     m_source->setLogger(m_logger.copyRef(), m_logIdentifier);
 #endif
@@ -74,35 +76,29 @@ MediaStreamTrackPrivate::MediaStreamTrackPrivate(Ref<const Logger>&& logger, Ref
 MediaStreamTrackPrivate::~MediaStreamTrackPrivate()
 {
     ASSERT(isMainThread());
+
+    ALWAYS_LOG(LOGIDENTIFIER);
     m_source->removeObserver(*this);
 }
 
-void MediaStreamTrackPrivate::forEachObserver(const WTF::Function<void(Observer&)>& apply) const
+void MediaStreamTrackPrivate::forEachObserver(const Function<void(Observer&)>& apply)
 {
-    Vector<Observer*> observersCopy;
-    {
-        auto locker = holdLock(m_observersLock);
-        observersCopy = copyToVector(m_observers);
-    }
-    for (auto* observer : observersCopy) {
-        auto locker = holdLock(m_observersLock);
-        // Make sure the observer has not been destroyed.
-        if (!m_observers.contains(observer))
-            continue;
-        apply(*observer);
-    }
+    ASSERT(isMainThread());
+    ASSERT(!m_observers.hasNullReferences());
+    Ref protectedThis { *this };
+    m_observers.forEach(apply);
 }
 
 void MediaStreamTrackPrivate::addObserver(MediaStreamTrackPrivate::Observer& observer)
 {
-    auto locker = holdLock(m_observersLock);
-    m_observers.add(&observer);
+    ASSERT(isMainThread());
+    m_observers.add(observer);
 }
 
 void MediaStreamTrackPrivate::removeObserver(MediaStreamTrackPrivate::Observer& observer)
 {
-    auto locker = holdLock(m_observersLock);
-    m_observers.remove(&observer);
+    ASSERT(isMainThread());
+    m_observers.remove(observer);
 }
 
 const String& MediaStreamTrackPrivate::label() const
@@ -130,6 +126,8 @@ void MediaStreamTrackPrivate::setEnabled(bool enabled)
     if (m_isEnabled == enabled)
         return;
 
+    ALWAYS_LOG(LOGIDENTIFIER, enabled);
+
     // Always update the enabled state regardless of the track being ended.
     m_isEnabled = enabled;
 
@@ -142,6 +140,8 @@ void MediaStreamTrackPrivate::endTrack()
 {
     if (m_isEnded)
         return;
+
+    ALWAYS_LOG(LOGIDENTIFIER);
 
     // Set m_isEnded to true before telling the source it can stop, so if this is the
     // only track using the source and it does stop, we will only call each observer's
@@ -159,6 +159,8 @@ void MediaStreamTrackPrivate::endTrack()
 Ref<MediaStreamTrackPrivate> MediaStreamTrackPrivate::clone()
 {
     auto clonedMediaStreamTrackPrivate = create(m_logger.copyRef(), m_source->clone());
+
+    ALWAYS_LOG(LOGIDENTIFIER, clonedMediaStreamTrackPrivate->logIdentifier());
 
     clonedMediaStreamTrackPrivate->m_isEnabled = this->m_isEnabled;
     clonedMediaStreamTrackPrivate->m_isEnded = this->m_isEnded;
@@ -191,20 +193,23 @@ void MediaStreamTrackPrivate::applyConstraints(const MediaConstraints& constrain
     m_source->applyConstraints(constraints, WTFMove(completionHandler));
 }
 
-AudioSourceProvider* MediaStreamTrackPrivate::audioSourceProvider()
+RefPtr<WebAudioSourceProvider> MediaStreamTrackPrivate::createAudioSourceProvider()
 {
+    ALWAYS_LOG(LOGIDENTIFIER);
+
 #if PLATFORM(COCOA)
-    if (!m_audioSourceProvider)
-        m_audioSourceProvider = WebAudioSourceProviderAVFObjC::create(*this);
+    return MediaStreamTrackAudioSourceProviderCocoa::create(*this);
 #elif USE(LIBWEBRTC) && USE(GSTREAMER)
-    if (!m_audioSourceProvider)
-        m_audioSourceProvider = AudioSourceProviderGStreamer::create(*this);
+    return AudioSourceProviderGStreamer::create(*this);
+#else
+    return nullptr;
 #endif
-    return m_audioSourceProvider.get();
 }
 
 void MediaStreamTrackPrivate::sourceStarted()
 {
+    ALWAYS_LOG(LOGIDENTIFIER);
+
     forEachObserver([this](auto& observer) {
         observer.trackStarted(*this);
     });
@@ -214,6 +219,8 @@ void MediaStreamTrackPrivate::sourceStopped()
 {
     if (m_isEnded)
         return;
+
+    ALWAYS_LOG(LOGIDENTIFIER);
 
     m_isEnded = true;
     updateReadyState();
@@ -225,6 +232,8 @@ void MediaStreamTrackPrivate::sourceStopped()
 
 void MediaStreamTrackPrivate::sourceMutedChanged()
 {
+    ALWAYS_LOG(LOGIDENTIFIER);
+
     forEachObserver([this](auto& observer) {
         observer.trackMutedChanged(*this);
     });
@@ -232,6 +241,8 @@ void MediaStreamTrackPrivate::sourceMutedChanged()
 
 void MediaStreamTrackPrivate::sourceSettingsChanged()
 {
+    ALWAYS_LOG(LOGIDENTIFIER);
+
     forEachObserver([this](auto& observer) {
         observer.trackSettingsChanged(*this);
     });
@@ -239,47 +250,20 @@ void MediaStreamTrackPrivate::sourceSettingsChanged()
 
 bool MediaStreamTrackPrivate::preventSourceFromStopping()
 {
+    ALWAYS_LOG(LOGIDENTIFIER, m_isEnded);
+
     // Do not allow the source to stop if we are still using it.
     return !m_isEnded;
 }
 
-void MediaStreamTrackPrivate::videoSampleAvailable(MediaSample& mediaSample)
+void MediaStreamTrackPrivate::hasStartedProducingData()
 {
     ASSERT(isMainThread());
-    if (!m_haveProducedData) {
-        m_haveProducedData = true;
-        updateReadyState();
-    }
-
-    if (!enabled())
+    if (m_hasStartedProducingData)
         return;
-
-    mediaSample.setTrackID(id());
-    forEachObserver([&](auto& observer) {
-        observer.sampleBufferUpdated(*this, mediaSample);
-    });
-}
-
-// May get called on a background thread.
-void MediaStreamTrackPrivate::audioSamplesAvailable(const MediaTime& mediaTime, const PlatformAudioData& data, const AudioStreamDescription& description, size_t sampleCount)
-{
-    if (!m_hasSentStartProducedData) {
-        callOnMainThread([this, weakThis = makeWeakPtr(this)] {
-            if (!weakThis)
-                return;
-
-            if (!m_haveProducedData) {
-                m_haveProducedData = true;
-                updateReadyState();
-            }
-            m_hasSentStartProducedData = true;
-        });
-        return;
-    }
-
-    forEachObserver([&](auto& observer) {
-        observer.audioSamplesAvailable(*this, mediaTime, data, description, sampleCount);
-    });
+    ALWAYS_LOG(LOGIDENTIFIER);
+    m_hasStartedProducingData = true;
+    updateReadyState();
 }
 
 void MediaStreamTrackPrivate::updateReadyState()
@@ -288,18 +272,24 @@ void MediaStreamTrackPrivate::updateReadyState()
 
     if (m_isEnded)
         state = ReadyState::Ended;
-    else if (m_haveProducedData)
+    else if (m_hasStartedProducingData)
         state = ReadyState::Live;
 
     if (state == m_readyState)
         return;
 
-    ALWAYS_LOG(LOGIDENTIFIER);
+    ALWAYS_LOG(LOGIDENTIFIER, state == ReadyState::Ended ? "Ended" : "Live");
 
     m_readyState = state;
     forEachObserver([this](auto& observer) {
         observer.readyStateChanged(*this);
     });
+}
+
+void MediaStreamTrackPrivate::audioUnitWillStart()
+{
+    if (!m_isEnded)
+        PlatformMediaSessionManager::sharedManager().sessionCanProduceAudioChanged();
 }
 
 #if !RELEASE_LOG_DISABLED

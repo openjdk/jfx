@@ -1,6 +1,6 @@
 /*
  *  Copyright (C) 1999-2000 Harri Porten (porten@kde.org)
- *  Copyright (C) 2008 Apple Inc. All rights reserved.
+ *  Copyright (C) 2008-2022 Apple Inc. All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public
@@ -32,9 +32,15 @@ protected:
 public:
     using Base = JSWrapperObject;
 
+    template<typename, SubspaceAccess mode>
+    static GCClient::IsoSubspace* subspaceFor(VM& vm)
+    {
+        return &vm.numberObjectSpace();
+    }
+
     static NumberObject* create(VM& vm, Structure* structure)
     {
-        NumberObject* number = new (NotNull, allocateCell<NumberObject>(vm.heap)) NumberObject(vm, structure);
+        NumberObject* number = new (NotNull, allocateCell<NumberObject>(vm)) NumberObject(vm, structure);
         number->finishCreation(vm);
         return number;
     }
@@ -46,7 +52,8 @@ public:
         return Structure::create(vm, globalObject, prototype, TypeInfo(NumberObjectType, StructureFlags), info());
     }
 };
+static_assert(sizeof(NumberObject) == sizeof(JSWrapperObject));
 
-JS_EXPORT_PRIVATE NumberObject* constructNumber(ExecState*, JSGlobalObject*, JSValue);
+JS_EXPORT_PRIVATE NumberObject* constructNumber(JSGlobalObject*, JSValue);
 
 } // namespace JSC

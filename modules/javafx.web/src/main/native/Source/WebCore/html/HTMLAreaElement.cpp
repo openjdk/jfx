@@ -23,6 +23,7 @@
 #include "HTMLAreaElement.h"
 
 #include "AffineTransform.h"
+#include "ElementInlines.h"
 #include "Frame.h"
 #include "HTMLImageElement.h"
 #include "HTMLMapElement.h"
@@ -210,18 +211,18 @@ bool HTMLAreaElement::isMouseFocusable() const
 bool HTMLAreaElement::isFocusable() const
 {
     RefPtr<HTMLImageElement> image = imageElement();
-    if (!image || !image->renderer() || image->renderer()->style().visibility() != Visibility::Visible)
+    if (!image || !image->isVisibleWithoutResolvingFullStyle())
         return false;
 
-    return supportsFocus() && tabIndexSetExplicitly().valueOr(0) >= 0;
+    return supportsFocus() && tabIndexSetExplicitly().value_or(0) >= 0;
 }
 
-void HTMLAreaElement::setFocus(bool shouldBeFocused)
+void HTMLAreaElement::setFocus(bool shouldBeFocused, FocusVisibility visibility)
 {
     if (focused() == shouldBeFocused)
         return;
 
-    HTMLAnchorElement::setFocus(shouldBeFocused);
+    HTMLAnchorElement::setFocus(shouldBeFocused, visibility);
 
     RefPtr<HTMLImageElement> imageElement = this->imageElement();
     if (!imageElement)

@@ -31,27 +31,27 @@
 
 namespace JSC {
 
-class InstanceOfAccessCase : public AccessCase {
+class InstanceOfAccessCase final : public AccessCase {
 public:
     using Base = AccessCase;
+    friend class AccessCase;
 
-    static std::unique_ptr<AccessCase> create(
+    static Ref<AccessCase> create(
         VM&, JSCell*, AccessType, Structure*, const ObjectPropertyConditionSet&,
         JSObject* prototype);
 
     JSObject* prototype() const { return m_prototype.get(); }
 
-    void dumpImpl(PrintStream&, CommaPrinter&) const override;
-    std::unique_ptr<AccessCase> clone() const override;
+    void dumpImpl(PrintStream&, CommaPrinter&, Indenter&) const final;
+    Ref<AccessCase> clone() const final;
 
-    ~InstanceOfAccessCase();
+    ~InstanceOfAccessCase() final;
 
-protected:
+private:
     InstanceOfAccessCase(
         VM&, JSCell*, AccessType, Structure*, const ObjectPropertyConditionSet&,
         JSObject* prototype);
 
-private:
     WriteBarrier<JSObject> m_prototype;
 };
 

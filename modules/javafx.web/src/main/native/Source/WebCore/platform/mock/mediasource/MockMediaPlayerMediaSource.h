@@ -31,13 +31,14 @@
 #include "MediaPlayerPrivate.h"
 #include <wtf/Logger.h>
 #include <wtf/MediaTime.h>
+#include <wtf/WeakPtr.h>
 
 namespace WebCore {
 
 class MediaSource;
 class MockMediaSourcePrivate;
 
-class MockMediaPlayerMediaSource : public MediaPlayerPrivateInterface {
+class MockMediaPlayerMediaSource : public MediaPlayerPrivateInterface, public CanMakeWeakPtr<MockMediaPlayerMediaSource> {
 public:
     explicit MockMediaPlayerMediaSource(MediaPlayer*);
 
@@ -49,6 +50,7 @@ public:
     virtual ~MockMediaPlayerMediaSource();
 
     void advanceCurrentTime();
+    MediaTime currentMediaTime() const override;
     void updateDuration(const MediaTime&);
 
     MediaPlayer::ReadyState readyState() const override;
@@ -65,7 +67,7 @@ public:
 private:
     // MediaPlayerPrivate Overrides
     void load(const String& url) override;
-    void load(const String& url, MediaSourcePrivateClient*) override;
+    void load(const URL&, const ContentType&, MediaSourcePrivateClient*) override;
 #if ENABLE(MEDIA_STREAM)
     void load(MediaStreamPrivate&) override { }
 #endif
@@ -75,7 +77,7 @@ private:
     FloatSize naturalSize() const override;
     bool hasVideo() const override;
     bool hasAudio() const override;
-    void setVisible(bool) override;
+    void setPageIsVisible(bool) final;
     bool seeking() const override;
     bool paused() const override;
     MediaPlayer::NetworkState networkState() const override;
@@ -84,10 +86,10 @@ private:
     bool didLoadingProgress() const override;
     void setSize(const IntSize&) override;
     void paint(GraphicsContext&, const FloatRect&) override;
-    MediaTime currentMediaTime() const override;
     MediaTime durationMediaTime() const override;
     void seekWithTolerance(const MediaTime&, const MediaTime&, const MediaTime&) override;
-    Optional<VideoPlaybackQualityMetrics> videoPlaybackQualityMetrics() override;
+    std::optional<VideoPlaybackQualityMetrics> videoPlaybackQualityMetrics() override;
+    DestinationColorSpace colorSpace() override;
 
     MediaPlayer* m_player;
     RefPtr<MockMediaSourcePrivate> m_mediaSourcePrivate;

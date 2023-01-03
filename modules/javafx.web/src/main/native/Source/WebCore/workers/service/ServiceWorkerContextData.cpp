@@ -31,9 +31,46 @@
 
 namespace WebCore {
 
-ServiceWorkerContextData ServiceWorkerContextData::isolatedCopy() const
+ServiceWorkerContextData ServiceWorkerContextData::isolatedCopy() const &
 {
-    return { jobDataIdentifier, registration.isolatedCopy(), serviceWorkerIdentifier, script.isolatedCopy(), contentSecurityPolicy.isolatedCopy(), referrerPolicy.isolatedCopy(), scriptURL.isolatedCopy(), workerType, sessionID, loadedFromDisk, crossThreadCopy(scriptResourceMap) };
+    return {
+        jobDataIdentifier,
+        registration.isolatedCopy(),
+        serviceWorkerIdentifier,
+        script.isolatedCopy(),
+        certificateInfo.isolatedCopy(),
+        contentSecurityPolicy.isolatedCopy(),
+        crossOriginEmbedderPolicy.isolatedCopy(),
+        referrerPolicy.isolatedCopy(),
+        scriptURL.isolatedCopy(),
+        workerType,
+        loadedFromDisk,
+        lastNavigationWasAppInitiated,
+        crossThreadCopy(scriptResourceMap),
+        serviceWorkerPageIdentifier,
+        crossThreadCopy(navigationPreloadState),
+    };
+}
+
+ServiceWorkerContextData ServiceWorkerContextData::isolatedCopy() &&
+{
+    return {
+        jobDataIdentifier,
+        WTFMove(registration).isolatedCopy(),
+        serviceWorkerIdentifier,
+        WTFMove(script).isolatedCopy(),
+        WTFMove(certificateInfo).isolatedCopy(),
+        WTFMove(contentSecurityPolicy).isolatedCopy(),
+        WTFMove(crossOriginEmbedderPolicy).isolatedCopy(),
+        WTFMove(referrerPolicy).isolatedCopy(),
+        WTFMove(scriptURL).isolatedCopy(),
+        workerType,
+        loadedFromDisk,
+        lastNavigationWasAppInitiated,
+        crossThreadCopy(WTFMove(scriptResourceMap)),
+        serviceWorkerPageIdentifier,
+        crossThreadCopy(WTFMove(navigationPreloadState))
+    };
 }
 
 } // namespace WebCore

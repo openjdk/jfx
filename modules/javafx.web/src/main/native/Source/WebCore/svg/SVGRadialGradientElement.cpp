@@ -29,6 +29,7 @@
 #include "FloatPoint.h"
 #include "RadialGradientAttributes.h"
 #include "RenderSVGResourceRadialGradient.h"
+#include "SVGElementTypeHelpers.h"
 #include "SVGNames.h"
 #include "SVGStopElement.h"
 #include "SVGUnitTypes.h"
@@ -66,17 +67,17 @@ void SVGRadialGradientElement::parseAttribute(const QualifiedName& name, const A
     SVGParsingError parseError = NoError;
 
     if (name == SVGNames::cxAttr)
-        m_cx->setBaseValInternal(SVGLengthValue::construct(LengthModeWidth, value, parseError));
+        m_cx->setBaseValInternal(SVGLengthValue::construct(SVGLengthMode::Width, value, parseError));
     else if (name == SVGNames::cyAttr)
-        m_cy->setBaseValInternal(SVGLengthValue::construct(LengthModeHeight, value, parseError));
+        m_cy->setBaseValInternal(SVGLengthValue::construct(SVGLengthMode::Height, value, parseError));
     else if (name == SVGNames::rAttr)
-        m_r->setBaseValInternal(SVGLengthValue::construct(LengthModeOther, value, parseError, ForbidNegativeLengths));
+        m_r->setBaseValInternal(SVGLengthValue::construct(SVGLengthMode::Other, value, parseError, SVGLengthNegativeValuesMode::Forbid));
     else if (name == SVGNames::fxAttr)
-        m_fx->setBaseValInternal(SVGLengthValue::construct(LengthModeWidth, value, parseError));
+        m_fx->setBaseValInternal(SVGLengthValue::construct(SVGLengthMode::Width, value, parseError));
     else if (name == SVGNames::fyAttr)
-        m_fy->setBaseValInternal(SVGLengthValue::construct(LengthModeHeight, value, parseError));
+        m_fy->setBaseValInternal(SVGLengthValue::construct(SVGLengthMode::Height, value, parseError));
     else if (name == SVGNames::frAttr)
-        m_fr->setBaseValInternal(SVGLengthValue::construct(LengthModeOther, value, parseError, ForbidNegativeLengths));
+        m_fr->setBaseValInternal(SVGLengthValue::construct(SVGLengthMode::Other, value, parseError, SVGLengthNegativeValuesMode::Forbid));
 
     reportAttributeParsingError(parseError, name, value);
 
@@ -112,11 +113,8 @@ static void setGradientAttributes(SVGGradientElement& element, RadialGradientAtt
     if (!attributes.hasGradientTransform() && element.hasAttribute(SVGNames::gradientTransformAttr))
         attributes.setGradientTransform(element.gradientTransform().concatenate());
 
-    if (!attributes.hasStops()) {
-        const Vector<Gradient::ColorStop>& stops(element.buildStops());
-        if (!stops.isEmpty())
-            attributes.setStops(stops);
-    }
+    if (!attributes.hasStops())
+        attributes.setStops(element.buildStops());
 
     if (isRadial) {
         SVGRadialGradientElement& radial = downcast<SVGRadialGradientElement>(element);

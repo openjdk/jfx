@@ -34,6 +34,7 @@
 #include "HTMLNames.h"
 #include "HTMLProgressElement.h"
 #include "RenderProgress.h"
+#include "ShadowPseudoIds.h"
 #include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
@@ -55,7 +56,7 @@ HTMLProgressElement* ProgressShadowElement::progressElement() const
 bool ProgressShadowElement::rendererIsNeeded(const RenderStyle& style)
 {
     RenderObject* progressRenderer = progressElement()->renderer();
-    return progressRenderer && !progressRenderer->style().hasAppearance() && HTMLDivElement::rendererIsNeeded(style);
+    return progressRenderer && !progressRenderer->style().hasEffectiveAppearance() && HTMLDivElement::rendererIsNeeded(style);
 }
 
 ProgressInnerElement::ProgressInnerElement(Document& document)
@@ -71,7 +72,7 @@ RenderPtr<RenderElement> ProgressInnerElement::createElementRenderer(RenderStyle
 bool ProgressInnerElement::rendererIsNeeded(const RenderStyle& style)
 {
     RenderObject* progressRenderer = progressElement()->renderer();
-    return progressRenderer && !progressRenderer->style().hasAppearance() && HTMLDivElement::rendererIsNeeded(style);
+    return progressRenderer && !progressRenderer->style().hasEffectiveAppearance() && HTMLDivElement::rendererIsNeeded(style);
 }
 
 ProgressBarElement::ProgressBarElement(Document& document)
@@ -86,7 +87,28 @@ ProgressValueElement::ProgressValueElement(Document& document)
 
 void ProgressValueElement::setWidthPercentage(double width)
 {
-    setInlineStyleProperty(CSSPropertyWidth, width, CSSPrimitiveValue::CSS_PERCENTAGE);
+    setInlineStyleProperty(CSSPropertyWidth, width, CSSUnitType::CSS_PERCENTAGE);
+}
+
+Ref<ProgressInnerElement> ProgressInnerElement::create(Document& document)
+{
+    Ref<ProgressInnerElement> result = adoptRef(*new ProgressInnerElement(document));
+    result->setPseudo(ShadowPseudoIds::webkitProgressInnerElement());
+    return result;
+}
+
+Ref<ProgressBarElement> ProgressBarElement::create(Document& document)
+{
+    Ref<ProgressBarElement> result = adoptRef(*new ProgressBarElement(document));
+    result->setPseudo(ShadowPseudoIds::webkitProgressBar());
+    return result;
+}
+
+Ref<ProgressValueElement> ProgressValueElement::create(Document& document)
+{
+    Ref<ProgressValueElement> result = adoptRef(*new ProgressValueElement(document));
+    result->setPseudo(ShadowPseudoIds::webkitProgressValue());
+    return result;
 }
 
 }

@@ -35,19 +35,21 @@ class SessionID;
 namespace WebCore {
 
 class Page;
+class SecurityOrigin;
 class StorageArea;
-struct SecurityOriginData;
 
 class StorageNamespace : public RefCounted<StorageNamespace> {
 public:
     virtual ~StorageNamespace() = default;
-    virtual Ref<StorageArea> storageArea(const SecurityOriginData&) = 0;
+    virtual Ref<StorageArea> storageArea(const SecurityOrigin&) = 0;
 
     // FIXME: This is only valid for session storage and should probably be moved to a subclass.
-    virtual Ref<StorageNamespace> copy(Page* newPage) = 0;
+    virtual Ref<StorageNamespace> copy(Page& newPage) = 0;
 
     virtual PAL::SessionID sessionID() const = 0;
     virtual void setSessionIDForTesting(PAL::SessionID) = 0;
+
+    virtual uint64_t storageAreaMapCountForTesting() const { return 0; }
 };
 
 } // namespace WebCore

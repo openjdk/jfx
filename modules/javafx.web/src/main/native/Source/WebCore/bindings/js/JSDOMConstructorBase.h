@@ -1,6 +1,6 @@
 /*
  *  Copyright (C) 2015, 2016 Canon Inc. All rights reserved.
- *  Copyright (C) 2016 Apple Inc. All rights reserved.
+ *  Copyright (C) 2016-2022 Apple Inc. All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public
@@ -19,32 +19,43 @@
 
 #pragma once
 
-#include "JSDOMWrapper.h"
+#include "JSDOMGlobalObject.h"
+#include <JavaScriptCore/InternalFunction.h>
 
 namespace WebCore {
 
-// Base class for all constructor objects in the JSC bindings.
-class JSDOMConstructorBase : public JSDOMObject {
+JSC_DECLARE_HOST_FUNCTION(callThrowTypeErrorForJSDOMConstructor);
+JSC_DECLARE_HOST_FUNCTION(callThrowTypeErrorForJSDOMConstructorNotConstructable);
+
+// Base class for all callable constructor objects in the JSC bindings.
+class JSDOMConstructorBase : public JSC::InternalFunction {
 public:
-    using Base = JSDOMObject;
+    using Base = InternalFunction;
 
-    static const unsigned StructureFlags = Base::StructureFlags | JSC::ImplementsHasInstance | JSC::ImplementsDefaultHasInstance | JSC::OverridesGetCallData;
-    static JSC::Structure* createStructure(JSC::VM&, JSC::JSGlobalObject*, JSC::JSValue);
+    static constexpr unsigned StructureFlags = Base::StructureFlags;
+    static constexpr bool needsDestruction = false;
 
-protected:
-    JSDOMConstructorBase(JSC::Structure* structure, JSDOMGlobalObject& globalObject)
-        : JSDOMObject(structure, globalObject)
+    template<typename CellType, JSC::SubspaceAccess>
+    static JSC::GCClient::IsoSubspace* subspaceFor(JSC::VM& vm)
     {
+        static_assert(sizeof(CellType) == sizeof(JSDOMConstructorBase));
+        STATIC_ASSERT_ISO_SUBSPACE_SHARABLE(CellType, JSDOMConstructorBase);
+        static_assert(CellType::destroy == JSC::JSCell::destroy, "JSDOMConstructor<JSClass> is not destructible actually");
+        return subspaceForImpl(vm);
     }
 
-    static String className(const JSObject*, JSC::VM&);
-    static String toStringName(const JSObject*, JSC::ExecState*);
-    static JSC::CallType getCallData(JSCell*, JSC::CallData&);
-};
+    static JSC::GCClient::IsoSubspace* subspaceForImpl(JSC::VM&);
 
-inline JSC::Structure* JSDOMConstructorBase::createStructure(JSC::VM& vm, JSC::JSGlobalObject* globalObject, JSC::JSValue prototype)
-{
-    return JSC::Structure::create(vm, globalObject, prototype, JSC::TypeInfo(JSC::ObjectType, StructureFlags), info());
-}
+    JSDOMGlobalObject* globalObject() const { return JSC::jsCast<JSDOMGlobalObject*>(Base::globalObject()); }
+    ScriptExecutionContext* scriptExecutionContext() const { return globalObject()->scriptExecutionContext(); }
+
+protected:
+    JSDOMConstructorBase(JSC::VM& vm, JSC::Structure* structure, JSC::NativeFunction functionForConstruct)
+        : Base(vm, structure,
+            functionForConstruct ? callThrowTypeErrorForJSDOMConstructor : callThrowTypeErrorForJSDOMConstructorNotConstructable,
+            functionForConstruct ? functionForConstruct : callThrowTypeErrorForJSDOMConstructorNotConstructable)
+    {
+    }
+};
 
 } // namespace WebCore

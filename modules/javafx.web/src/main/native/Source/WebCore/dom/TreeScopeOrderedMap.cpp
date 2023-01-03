@@ -59,7 +59,7 @@ void TreeScopeOrderedMap::add(const AtomStringImpl& key, Element& element, const
     });
     MapEntry& entry = addResult.iterator->value;
 
-#if !ASSERT_DISABLED || ENABLE(SECURITY_ASSERTIONS)
+#if ASSERT_ENABLED || ENABLE(SECURITY_ASSERTIONS)
     ASSERT_WITH_SECURITY_IMPLICATION(!entry.registeredElements.contains(&element));
     entry.registeredElements.add(&element);
 #endif
@@ -122,7 +122,7 @@ inline Element* TreeScopeOrderedMap::get(const AtomStringImpl& key, const TreeSc
         return &element;
     }
 
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
     // FormAssociatedElement may call getElementById to find its owner form in the middle of a tree removal.
     if (auto* currentScope = ContainerChildRemovalScope::currentScope()) {
         ASSERT(&scope.rootNode() == &currentScope->parentOfRemovedTree().rootNode());
@@ -137,7 +137,7 @@ inline Element* TreeScopeOrderedMap::get(const AtomStringImpl& key, const TreeSc
         }
     }
     ASSERT_NOT_REACHED();
-#endif
+#endif // ASSERT_ENABLED
 
     return nullptr;
 }
@@ -196,28 +196,31 @@ const Vector<Element*>* TreeScopeOrderedMap::getAllElementsById(const AtomString
 {
     m_map.checkConsistency();
 
-    auto it = m_map.find(&key);
-    if (it == m_map.end())
+    auto mapIterator = m_map.find(&key);
+    if (mapIterator == m_map.end())
         return nullptr;
 
-    MapEntry& entry = it->value;
+    auto& entry = mapIterator->value;
     RELEASE_ASSERT_WITH_SECURITY_IMPLICATION(entry.count);
 
     if (entry.orderedList.isEmpty()) {
         entry.orderedList.reserveCapacity(entry.count);
-        auto elementDescandents = descendantsOfType<Element>(scope.rootNode());
-        auto it = entry.element ? elementDescandents.beginAt(*entry.element) : elementDescandents.begin();
-        auto end = elementDescandents.end();
-        for (; it != end; ++it) {
-            auto& element = *it;
-            if (element.getIdAttribute().impl() != &key)
-                continue;
-            entry.orderedList.append(&element);
+        auto elementDescendants = descendantsOfType<Element>(scope.rootNode());
+        for (auto it = entry.element ? elementDescendants.beginAt(*entry.element) : elementDescendants.begin(); it; ++it) {
+            if (it->getIdAttribute().impl() == &key)
+                entry.orderedList.append(&*it);
         }
         RELEASE_ASSERT_WITH_SECURITY_IMPLICATION(entry.orderedList.size() == entry.count);
     }
 
     return &entry.orderedList;
+}
+
+const Vector<AtomString> TreeScopeOrderedMap::keys() const
+{
+    return WTF::map(m_map, [](auto& entry) -> AtomString {
+        return const_cast<AtomStringImpl*>(entry.key);
+    });
 }
 
 } // namespace WebCore

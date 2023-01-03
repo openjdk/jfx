@@ -130,55 +130,69 @@ Value* ConstFloatValue::divConstant(Procedure& proc, const Value* other) const
     return proc.add<ConstFloatValue>(origin(), m_value / other->asFloat());
 }
 
+Value* ConstFloatValue::fMinConstant(Procedure& proc, const Value* other) const
+{
+    if (!other->hasFloat())
+        return nullptr;
+    return proc.add<ConstFloatValue>(origin(), fMin(m_value, other->asFloat()));
+}
+
+Value* ConstFloatValue::fMaxConstant(Procedure& proc, const Value* other) const
+{
+    if (!other->hasFloat())
+        return nullptr;
+    return proc.add<ConstFloatValue>(origin(), fMax(m_value, other->asFloat()));
+}
+
 TriState ConstFloatValue::equalConstant(const Value* other) const
 {
     if (!other->hasFloat())
-        return MixedTriState;
+        return TriState::Indeterminate;
     return triState(m_value == other->asFloat());
 }
 
 TriState ConstFloatValue::notEqualConstant(const Value* other) const
 {
     if (!other->hasFloat())
-        return MixedTriState;
+        return TriState::Indeterminate;
     return triState(m_value != other->asFloat());
 }
 
 TriState ConstFloatValue::lessThanConstant(const Value* other) const
 {
     if (!other->hasFloat())
-        return MixedTriState;
+        return TriState::Indeterminate;
     return triState(m_value < other->asFloat());
 }
 
 TriState ConstFloatValue::greaterThanConstant(const Value* other) const
 {
     if (!other->hasFloat())
-        return MixedTriState;
+        return TriState::Indeterminate;
     return triState(m_value > other->asFloat());
 }
 
 TriState ConstFloatValue::lessEqualConstant(const Value* other) const
 {
     if (!other->hasFloat())
-        return MixedTriState;
+        return TriState::Indeterminate;
     return triState(m_value <= other->asFloat());
 }
 
 TriState ConstFloatValue::greaterEqualConstant(const Value* other) const
 {
     if (!other->hasFloat())
-        return MixedTriState;
+        return TriState::Indeterminate;
     return triState(m_value >= other->asFloat());
 }
 
 TriState ConstFloatValue::equalOrUnorderedConstant(const Value* other) const
 {
     if (std::isnan(m_value))
-        return TrueTriState;
+        return TriState::True;
 
     if (!other->hasFloat())
-        return MixedTriState;
+        return TriState::Indeterminate;
     float otherValue = other->asFloat();
     return triState(std::isunordered(m_value, otherValue) || m_value == otherValue);
 }
@@ -186,7 +200,7 @@ TriState ConstFloatValue::equalOrUnorderedConstant(const Value* other) const
 void ConstFloatValue::dumpMeta(CommaPrinter& comma, PrintStream& out) const
 {
     out.print(comma);
-    out.printf("%le", m_value);
+    out.printf("%le(%u)", m_value, bitwise_cast<uint32_t>(m_value));
 }
 
 } } // namespace JSC::B3

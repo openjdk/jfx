@@ -1,7 +1,7 @@
 /*
  *  Copyright (C) 1999-2000 Harri Porten (porten@kde.org)
  *  Copyright (C) 2001 Peter Kelly (pmk@post.com)
- *  Copyright (C) 2003-2019 Apple Inc. All rights reserved.
+ *  Copyright (C) 2003-2021 Apple Inc. All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public
@@ -24,12 +24,14 @@
 #include "CellAttributes.h"
 #include "DestructionMode.h"
 #include "HeapCell.h"
-#include "IterationStatus.h"
 #include "WeakSet.h"
+#include <algorithm>
 #include <wtf/Atomics.h>
 #include <wtf/Bitmap.h>
-#include <wtf/HashFunctions.h>
 #include <wtf/CountingLock.h>
+#include <wtf/HashFunctions.h>
+#include <wtf/IterationStatus.h>
+#include <wtf/PageBlock.h>
 #include <wtf/StdLibExtras.h>
 
 namespace JSC {
@@ -52,9 +54,11 @@ typedef uint32_t HeapVersion;
 // allocation suffers from internal fragmentation: wasted space whose
 // size is equal to the difference between the cell size and the object
 // size.
-
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(MarkedBlock);
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(MarkedBlockHandle);
 class MarkedBlock {
     WTF_MAKE_NONCOPYABLE(MarkedBlock);
+    WTF_MAKE_STRUCT_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(MarkedBlock);
     friend class LLIntOffsetsExtractor;
     friend struct VerifyMarked;
 
@@ -68,15 +72,14 @@ public:
     static constexpr size_t atomSize = 16; // bytes
 
     // Block size must be at least as large as the system page size.
-#if CPU(PPC64) || CPU(PPC64LE) || CPU(PPC) || CPU(UNKNOWN)
-    static constexpr size_t blockSize = 64 * KB;
-#else
-    static constexpr size_t blockSize = 16 * KB;
-#endif
+    static constexpr size_t blockSize = std::max(16 * KB, CeilingOnPageSize);
 
     static constexpr size_t blockMask = ~(blockSize - 1); // blockSize must be a power of two.
 
     static constexpr size_t atomsPerBlock = blockSize / atomSize;
+
+    static constexpr size_t maxNumberOfLowerTierCells = 8;
+    static_assert(maxNumberOfLowerTierCells <= 256);
 
     static_assert(!(MarkedBlock::atomSize & (MarkedBlock::atomSize - 1)), "MarkedBlock::atomSize must be a power of two.");
     static_assert(!(MarkedBlock::blockSize & (MarkedBlock::blockSize - 1)), "MarkedBlock::blockSize must be a power of two.");
@@ -102,7 +105,7 @@ public:
 
     class Handle {
         WTF_MAKE_NONCOPYABLE(Handle);
-        WTF_MAKE_FAST_ALLOCATED;
+        WTF_MAKE_STRUCT_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(MarkedBlockHandle);
         friend class LLIntOffsetsExtractor;
         friend class MarkedBlock;
         friend struct VerifyMarked;
@@ -148,9 +151,6 @@ public:
 
         void shrink();
 
-        void visitWeakSet(SlotVisitor&);
-        void reapWeakSet();
-
         // While allocating from a free list, MarkedBlock temporarily has bogus
         // cell liveness data. To restore accurate cell liveness data, call one
         // of these functions:
@@ -161,7 +161,7 @@ public:
         size_t cellSize();
         inline unsigned cellsPerBlock();
 
-        const CellAttributes& attributes() const;
+        CellAttributes attributes() const;
         DestructionMode destruction() const;
         bool needsDestruction() const;
         HeapCell::Kind cellKind() const;
@@ -191,15 +191,16 @@ public:
 
         bool isFreeListed() const { return m_isFreeListed; }
 
-        size_t index() const { return m_index; }
+        unsigned index() const { return m_index; }
 
         void removeFromDirectory();
 
-        void didAddToDirectory(BlockDirectory*, size_t index);
+        void didAddToDirectory(BlockDirectory*, unsigned index);
         void didRemoveFromDirectory();
 
         void* start() const { return &m_block->atoms()[0]; }
         void* end() const { return &m_block->atoms()[m_endAtom]; }
+        void* atomAt(size_t i) const { return &m_block->atoms()[i]; }
         bool contains(void* p) const { return start() <= p && p < end(); }
 
         void dumpState(PrintStream&);
@@ -224,18 +225,15 @@ public:
 
         void setIsFreeListed();
 
-        MarkedBlock::Handle* m_prev { nullptr };
-        MarkedBlock::Handle* m_next { nullptr };
-
-        size_t m_atomsPerCell { std::numeric_limits<size_t>::max() };
-        size_t m_endAtom { std::numeric_limits<size_t>::max() }; // This is a fuzzy end. Always test for < m_endAtom.
+        unsigned m_atomsPerCell { std::numeric_limits<unsigned>::max() };
+        unsigned m_endAtom { std::numeric_limits<unsigned>::max() }; // This is a fuzzy end. Always test for < m_endAtom.
 
         CellAttributes m_attributes;
         bool m_isFreeListed { false };
+        unsigned m_index { std::numeric_limits<unsigned>::max() };
 
         AlignedMemoryAllocator* m_alignedMemoryAllocator { nullptr };
         BlockDirectory* m_directory { nullptr };
-        size_t m_index { std::numeric_limits<size_t>::max() };
         WeakSet m_weakSet;
 
         MarkedBlock* m_block { nullptr };
@@ -251,6 +249,8 @@ public:
     public:
         Footer(VM&, Handle&);
         ~Footer();
+
+        static ptrdiff_t offsetOfVM() { return OBJECT_OFFSETOF(Footer, m_vm); }
 
     private:
         friend class LLIntOffsetsExtractor;
@@ -296,6 +296,7 @@ public:
 
         Bitmap<atomsPerBlock> m_marks;
         Bitmap<atomsPerBlock> m_newlyAllocated;
+        void* m_verifierMemo { nullptr };
     };
 
 private:
@@ -308,9 +309,6 @@ public:
     static constexpr size_t footerSize = blockSize - payloadSize;
 
     static_assert(payloadSize == ((blockSize - sizeof(MarkedBlock::Footer)) & ~(atomSize - 1)), "Payload size computed the alternate way should give the same result");
-    // Some of JSCell types assume that the last JSCell in a MarkedBlock has a subsequent memory region (Footer) that can still safely accessed.
-    // For example, JSRopeString assumes that it can safely access up to 2 bytes beyond the JSRopeString cell.
-    static_assert(sizeof(Footer) >= sizeof(uint16_t));
 
     static MarkedBlock::Handle* tryCreate(Heap&, AlignedMemoryAllocator*);
 
@@ -323,7 +321,8 @@ public:
 
     static bool isAtomAligned(const void*);
     static MarkedBlock* blockFor(const void*);
-    size_t atomNumber(const void*);
+    unsigned atomNumber(const void*);
+    size_t candidateAtomNumber(const void*);
 
     size_t markCount();
 
@@ -348,14 +347,14 @@ public:
     void resetAllocated();
 
     size_t cellSize();
-    const CellAttributes& attributes() const;
+    CellAttributes attributes() const;
 
     bool hasAnyMarked() const;
     void noteMarked();
-#if ASSERT_DISABLED
-    void assertValidCell(VM&, HeapCell*) const { }
-#else
+#if ASSERT_ENABLED
     void assertValidCell(VM&, HeapCell*) const;
+#else
+    void assertValidCell(VM&, HeapCell*) const { }
 #endif
 
     WeakSet& weakSet();
@@ -365,10 +364,10 @@ public:
 
     Dependency aboutToMark(HeapVersion markingVersion);
 
-#if ASSERT_DISABLED
-    void assertMarksNotStale() { }
-#else
+#if ASSERT_ENABLED
     JS_EXPORT_PRIVATE void assertMarksNotStale();
+#else
+    void assertMarksNotStale() { }
 #endif
 
     void resetMarks();
@@ -387,7 +386,11 @@ public:
         *bitwise_cast<volatile uint8_t*>(&footer());
     }
 
+    void setVerifierMemo(void*);
+    template<typename T> T verifierMemo() const;
+
     static constexpr size_t offsetOfFooter = endAtom * atomSize;
+    static_assert(offsetOfFooter + sizeof(Footer) <= blockSize);
 
 private:
     MarkedBlock(VM&, Handle&);
@@ -498,16 +501,6 @@ inline void MarkedBlock::Handle::shrink()
     m_weakSet.shrink();
 }
 
-inline void MarkedBlock::Handle::visitWeakSet(SlotVisitor& visitor)
-{
-    return m_weakSet.visit(visitor);
-}
-
-inline void MarkedBlock::Handle::reapWeakSet()
-{
-    m_weakSet.reap();
-}
-
 inline size_t MarkedBlock::Handle::cellSize()
 {
     return m_atomsPerCell * atomSize;
@@ -518,12 +511,12 @@ inline size_t MarkedBlock::cellSize()
     return handle().cellSize();
 }
 
-inline const CellAttributes& MarkedBlock::Handle::attributes() const
+inline CellAttributes MarkedBlock::Handle::attributes() const
 {
     return m_attributes;
 }
 
-inline const CellAttributes& MarkedBlock::attributes() const
+inline CellAttributes MarkedBlock::attributes() const
 {
     return handle().attributes();
 }
@@ -553,9 +546,18 @@ inline size_t MarkedBlock::Handle::size()
     return markCount() * cellSize();
 }
 
-inline size_t MarkedBlock::atomNumber(const void* p)
+inline size_t MarkedBlock::candidateAtomNumber(const void* p)
 {
+    // This function must return size_t instead of unsigned since pointer |p| is not guaranteed that this is within MarkedBlock.
+    // See MarkedBlock::isAtom which can accept out-of-bound pointers.
     return (reinterpret_cast<uintptr_t>(p) - reinterpret_cast<uintptr_t>(this)) / atomSize;
+}
+
+inline unsigned MarkedBlock::atomNumber(const void* p)
+{
+    size_t atomNumber = candidateAtomNumber(p);
+    ASSERT(atomNumber < handle().m_endAtom);
+    return atomNumber;
 }
 
 inline bool MarkedBlock::areMarksStale(HeapVersion markingVersion)
@@ -565,10 +567,11 @@ inline bool MarkedBlock::areMarksStale(HeapVersion markingVersion)
 
 inline Dependency MarkedBlock::aboutToMark(HeapVersion markingVersion)
 {
-    HeapVersion version = footer().m_markingVersion;
+    HeapVersion version;
+    Dependency dependency = Dependency::loadAndFence(&footer().m_markingVersion, version);
     if (UNLIKELY(version != markingVersion))
         aboutToMarkSlow(markingVersion);
-    return Dependency::fence(version);
+    return dependency;
 }
 
 inline void MarkedBlock::Handle::assertMarksNotStale()
@@ -583,10 +586,11 @@ inline bool MarkedBlock::isMarkedRaw(const void* p)
 
 inline bool MarkedBlock::isMarked(HeapVersion markingVersion, const void* p)
 {
-    HeapVersion version = footer().m_markingVersion;
+    HeapVersion version;
+    Dependency dependency = Dependency::loadAndFence(&footer().m_markingVersion, version);
     if (UNLIKELY(version != markingVersion))
         return false;
-    return footer().m_marks.get(atomNumber(p), Dependency::fence(version));
+    return footer().m_marks.get(atomNumber(p), dependency);
 }
 
 inline bool MarkedBlock::isMarked(const void* p, Dependency dependency)
@@ -629,7 +633,7 @@ inline const Bitmap<MarkedBlock::atomsPerBlock>& MarkedBlock::newlyAllocated() c
 inline bool MarkedBlock::isAtom(const void* p)
 {
     ASSERT(MarkedBlock::isAtomAligned(p));
-    size_t atomNumber = this->atomNumber(p);
+    size_t atomNumber = candidateAtomNumber(p);
     if (atomNumber % handle().m_atomsPerCell) // Filters pointers into cell middles.
         return false;
     if (atomNumber >= handle().m_endAtom) // Filters pointers into invalid cells out of the range.
@@ -643,7 +647,7 @@ inline IterationStatus MarkedBlock::Handle::forEachCell(const Functor& functor)
     HeapCell::Kind kind = m_attributes.cellKind;
     for (size_t i = 0; i < m_endAtom; i += m_atomsPerCell) {
         HeapCell* cell = reinterpret_cast_ptr<HeapCell*>(&m_block->atoms()[i]);
-        if (functor(cell, kind) == IterationStatus::Done)
+        if (functor(i, cell, kind) == IterationStatus::Done)
             return IterationStatus::Done;
     }
     return IterationStatus::Continue;
@@ -664,6 +668,17 @@ inline void MarkedBlock::noteMarked()
         noteMarkedSlow();
 }
 
+inline void MarkedBlock::setVerifierMemo(void* p)
+{
+    footer().m_verifierMemo = p;
+}
+
+template<typename T>
+T MarkedBlock::verifierMemo() const
+{
+    return bitwise_cast<T>(footer().m_verifierMemo);
+}
+
 } // namespace JSC
 
 namespace WTF {
@@ -678,9 +693,7 @@ struct MarkedBlockHash : PtrHash<JSC::MarkedBlock*> {
     }
 };
 
-template<> struct DefaultHash<JSC::MarkedBlock*> {
-    typedef MarkedBlockHash Hash;
-};
+template<> struct DefaultHash<JSC::MarkedBlock*> : MarkedBlockHash { };
 
 void printInternal(PrintStream& out, JSC::MarkedBlock::Handle::SweepMode);
 

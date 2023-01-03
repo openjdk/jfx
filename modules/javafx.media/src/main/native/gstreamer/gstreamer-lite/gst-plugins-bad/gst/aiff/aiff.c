@@ -22,20 +22,7 @@
 #include "config.h"
 #endif
 
-#include <gst/tag/tag.h>
-
-#include <gst/gst-i18n-plugin.h>
-
-#include "aiffparse.h"
-#ifndef GSTREAMER_LITE
-#include "aiffmux.h"
-#endif
-
-GST_DEBUG_CATEGORY_STATIC (aiff_debug);
-#define GST_CAT_DEFAULT (aiff_debug)
-
-GST_DEBUG_CATEGORY_EXTERN (aiffparse_debug);
-GST_DEBUG_CATEGORY_EXTERN (aiffmux_debug);
+#include "aiffelements.h"
 
 #ifdef GSTREAMER_LITE
 gboolean
@@ -45,31 +32,12 @@ static gboolean
 plugin_init (GstPlugin * plugin)
 #endif // GSTREAMER_LITE
 {
-  gboolean ret;
+  gboolean ret = FALSE;
 
-#ifdef GSTREAMER_LITE
-  GST_DEBUG_CATEGORY_INIT (aiffparse_debug, "aiffparse", 0, "AIFF parser");
-#else
-  GST_DEBUG_CATEGORY_INIT (aiff_debug, "aiff", 0, "AIFF plugin");
-  GST_DEBUG_CATEGORY_INIT (aiffparse_debug, "aiffparse", 0, "AIFF parser");
-  GST_DEBUG_CATEGORY_INIT (aiffmux_debug, "aiffmux", 0, "AIFF muxer");
-#endif
-
-#ifdef ENABLE_NLS
-  GST_DEBUG ("binding text domain %s to locale dir %s", GETTEXT_PACKAGE,
-      LOCALEDIR);
-  bindtextdomain (GETTEXT_PACKAGE, LOCALEDIR);
-  bind_textdomain_codeset (GETTEXT_PACKAGE, "UTF-8");
-#endif
-
-  ret = gst_element_register (plugin, "aiffparse", GST_RANK_PRIMARY,
-      GST_TYPE_AIFF_PARSE);
+  ret |= GST_ELEMENT_REGISTER (aiffparse, plugin);
 #ifndef GSTREAMER_LITE
-  ret &= gst_element_register (plugin, "aiffmux", GST_RANK_PRIMARY,
-      GST_TYPE_AIFF_MUX);
+  ret |= GST_ELEMENT_REGISTER (aiffmux, plugin);
 #endif
-
-  gst_tag_register_musicbrainz_tags ();
 
   return ret;
 }

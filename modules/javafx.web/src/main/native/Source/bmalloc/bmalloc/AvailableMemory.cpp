@@ -44,16 +44,22 @@
 #import <mach/mach_error.h>
 #import <math.h>
 #elif BOS(UNIX)
+#include <sys/sysinfo.h>
 #if BOS(LINUX)
 #include <algorithm>
 #include <fcntl.h>
+#elif BOS(FREEBSD)
+#include "VMAllocate.h"
+#include <sys/sysctl.h>
+#include <sys/types.h>
+#include <sys/user.h>
 #endif
 #include <unistd.h>
 #endif
 
 namespace bmalloc {
 
-static const size_t availableMemoryGuess = 512 * bmalloc::MB;
+static constexpr size_t availableMemoryGuess = 512 * bmalloc::MB;
 
 #if BOS(DARWIN)
 static size_t memorySizeAccordingToKernel()
@@ -101,13 +107,7 @@ struct LinuxMemory {
         static std::once_flag s_onceFlag;
         std::call_once(s_onceFlag,
             [] {
-                long numPages = sysconf(_SC_PHYS_PAGES);
                 s_singleton.pageSize = sysconf(_SC_PAGE_SIZE);
-                if (numPages == -1 || s_singleton.pageSize == -1)
-                    s_singleton.availableMemory = availableMemoryGuess;
-                else
-                    s_singleton.availableMemory = numPages * s_singleton.pageSize;
-
                 s_singleton.statmFd = open("/proc/self/statm", O_RDONLY | O_CLOEXEC);
             });
         return s_singleton;
@@ -143,8 +143,6 @@ struct LinuxMemory {
     }
 
     long pageSize { 0 };
-    size_t availableMemory { 0 };
-
     int statmFd { -1 };
 };
 #endif
@@ -161,8 +159,11 @@ static size_t computeAvailableMemory()
     // Round up the memory size to a multiple of 128MB because max_mem may not be exactly 512MB
     // (for example) and we have code that depends on those boundaries.
     return ((sizeAccordingToKernel + multiple - 1) / multiple) * multiple;
-#elif BOS(LINUX)
-    return LinuxMemory::singleton().availableMemory;
+#elif BOS(FREEBSD) || BOS(LINUX)
+    struct sysinfo info;
+    if (!sysinfo(&info))
+        return info.totalram * info.mem_unit;
+    return availableMemoryGuess;
 #elif BOS(UNIX)
     long pages = sysconf(_SC_PHYS_PAGES);
     long pageSize = sysconf(_SC_PAGE_SIZE);
@@ -184,7 +185,7 @@ size_t availableMemory()
     return availableMemory;
 }
 
-#if BPLATFORM(IOS_FAMILY) || BOS(LINUX)
+#if BPLATFORM(IOS_FAMILY) || BOS(LINUX) || BOS(FREEBSD)
 MemoryStatus memoryStatus()
 {
 #if BPLATFORM(IOS_FAMILY)
@@ -194,14 +195,25 @@ MemoryStatus memoryStatus()
     size_t memoryFootprint = 0;
     if (KERN_SUCCESS == task_info(mach_task_self(), TASK_VM_INFO, (task_info_t)(&vmInfo), &vmSize))
         memoryFootprint = static_cast<size_t>(vmInfo.phys_footprint);
-
-    double percentInUse = static_cast<double>(memoryFootprint) / static_cast<double>(availableMemory());
 #elif BOS(LINUX)
     auto& memory = LinuxMemory::singleton();
     size_t memoryFootprint = memory.footprint();
-    double percentInUse = static_cast<double>(memoryFootprint) / static_cast<double>(memory.availableMemory);
+#elif BOS(FREEBSD)
+    struct kinfo_proc info;
+    size_t infolen = sizeof(info);
+
+    int mib[4];
+    mib[0] = CTL_KERN;
+    mib[1] = KERN_PROC;
+    mib[2] = KERN_PROC_PID;
+    mib[3] = getpid();
+
+    size_t memoryFootprint = 0;
+    if (!sysctl(mib, 4, &info, &infolen, nullptr, 0))
+        memoryFootprint = static_cast<size_t>(info.ki_rssize) * vmPageSize();
 #endif
 
+    double percentInUse = static_cast<double>(memoryFootprint) / static_cast<double>(availableMemory());
     double percentAvailableMemoryInUse = std::min(percentInUse, 1.0);
     return MemoryStatus(memoryFootprint, percentAvailableMemoryInUse);
 }

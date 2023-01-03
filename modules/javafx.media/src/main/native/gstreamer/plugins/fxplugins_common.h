@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -40,6 +40,27 @@ enum
 #define GETRANGE_QUERY_NAME               "progressive-getrange"
 #define GETRANGE_QUERY_SUPPORTS_FIELDNANE "supports"
 #define GETRANGE_QUERY_SUPPORTS_FIELDTYPE G_TYPE_BOOLEAN
+
+// Do not use CODEC_ID_*, since it will conflict with libavcodec
+enum JFX_CODEC_ID
+{
+    JFX_CODEC_ID_UNKNOWN = 0,
+    JFX_CODEC_ID_AAC,
+    JFX_CODEC_ID_H264, // HLS
+    JFX_CODEC_ID_AVC1, // MP4
+    JFX_CODEC_ID_H265, // MP4
+};
+
+// Custom error codes used by our plugins
+
+// GStreamer enums with error codes does not contains more then 25 error codes,
+// so we will start with 0xFF, so we do not conflict with GStreamer
+enum JFX_GST_ERROR_CODES
+{
+    JFX_GST_ERROR = 0xFF,
+    JFX_GST_MISSING_LIBSWSCALE,
+    JFX_GST_INVALID_LIBSWSCALE,
+};
 
 G_END_DECLS
 

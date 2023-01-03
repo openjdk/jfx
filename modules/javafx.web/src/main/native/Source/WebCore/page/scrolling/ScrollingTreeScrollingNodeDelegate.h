@@ -39,6 +39,11 @@ public:
     ScrollingTreeScrollingNode& scrollingNode() { return m_scrollingNode; }
     const ScrollingTreeScrollingNode& scrollingNode() const { return m_scrollingNode; }
 
+    virtual bool startAnimatedScrollToPosition(FloatPoint) = 0;
+    virtual void stopAnimatedScroll() = 0;
+
+    virtual void serviceScrollAnimation(MonotonicTime) = 0;
+
 protected:
     WEBCORE_EXPORT ScrollingTree& scrollingTree() const;
     WEBCORE_EXPORT FloatPoint lastCommittedScrollPosition() const;
@@ -53,8 +58,8 @@ protected:
     FloatSize scrollableAreaSize() const { return m_scrollingNode.scrollableAreaSize(); }
     FloatSize totalContentsSize() const { return m_scrollingNode.totalContentsSize(); }
 
-    bool hasEnabledHorizontalScrollbar() const { return m_scrollingNode.hasEnabledHorizontalScrollbar(); }
-    bool hasEnabledVerticalScrollbar() const { return m_scrollingNode.hasEnabledVerticalScrollbar(); }
+    bool allowsHorizontalScrolling() const { return m_scrollingNode.allowsHorizontalScrolling(); }
+    bool allowsVerticalScrolling() const { return m_scrollingNode.allowsVerticalScrolling(); }
 
     ScrollElasticity horizontalScrollElasticity() const { return m_scrollingNode.horizontalScrollElasticity(); }
     ScrollElasticity verticalScrollElasticity() const { return m_scrollingNode.verticalScrollElasticity(); }

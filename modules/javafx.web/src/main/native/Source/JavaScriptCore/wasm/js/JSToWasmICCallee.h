@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2019-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,9 +33,18 @@ namespace JSC {
 
 class WebAssemblyFunction;
 
-class JSToWasmICCallee : public JSCallee {
-    using Base = JSCallee;
+// FIXME: Remove this type. Unwinding should just work by using WebAssemblyFunction instead of JSToWasmICCallee.
+// https://bugs.webkit.org/show_bug.cgi?id=204960
+class JSToWasmICCallee final : public JSCallee {
 public:
+    using Base = JSCallee;
+
+    template<typename CellType, SubspaceAccess mode>
+    static GCClient::IsoSubspace* subspaceFor(VM& vm)
+    {
+        return vm.jsToWasmICCalleeSpace<mode>();
+    }
+
     DECLARE_INFO;
 
     static JSToWasmICCallee* create(VM&, JSGlobalObject*, WebAssemblyFunction*);
@@ -47,7 +56,7 @@ private:
     JSToWasmICCallee(VM& vm, JSGlobalObject* globalObject, Structure* structure)
         : Base(vm, globalObject, structure)
     { }
-    static void visitChildren(JSCell*, SlotVisitor&);
+    DECLARE_VISIT_CHILDREN;
 
     WriteBarrier<WebAssemblyFunction> m_function;
 };

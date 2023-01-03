@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -53,8 +53,8 @@ public class Widget {
     private ObservableSet<String> set = FXCollections.observableSet();
     private ObservableMap<String, Object> properties = FXCollections.observableHashMap();
     private BooleanProperty enabledProperty = new SimpleBooleanProperty(true);
-    private ArrayList<String> styles = new ArrayList<String>();
-    private ArrayList<String> values = new ArrayList<String>();
+    private ArrayList<String> styles = new ArrayList<>();
+    private ArrayList<String> values = new ArrayList<>();
     private float[] ratios = new float[]{};
     private String[] names = new String[]{};
 
@@ -139,7 +139,7 @@ public class Widget {
             throw new IllegalArgumentException();
         }
 
-        this.values = new ArrayList<String>();
+        this.values = new ArrayList<>();
         this.values.addAll(values);
     }
 

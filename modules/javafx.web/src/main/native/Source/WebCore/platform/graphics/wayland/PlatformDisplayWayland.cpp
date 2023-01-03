@@ -37,6 +37,14 @@
 #include <EGL/eglext.h>
 #include <wtf/Assertions.h>
 
+#if PLATFORM(GTK)
+#if USE(GTK4)
+#include <gdk/wayland/gdkwayland.h>
+#else
+#include <gdk/gdkwayland.h>
+#endif
+#endif
+
 namespace WebCore {
 
 const struct wl_registry_listener PlatformDisplayWayland::s_registryListener = {
@@ -56,32 +64,55 @@ std::unique_ptr<PlatformDisplay> PlatformDisplayWayland::create()
     if (!display)
         return nullptr;
 
-    auto platformDisplay = std::unique_ptr<PlatformDisplayWayland>(new PlatformDisplayWayland(display, NativeDisplayOwned::Yes));
+    auto platformDisplay = std::unique_ptr<PlatformDisplayWayland>(new PlatformDisplayWayland(display));
     platformDisplay->initialize();
     return platformDisplay;
 }
 
-std::unique_ptr<PlatformDisplay> PlatformDisplayWayland::create(struct wl_display* display)
+#if PLATFORM(GTK)
+std::unique_ptr<PlatformDisplay> PlatformDisplayWayland::create(GdkDisplay* display)
 {
-    auto platformDisplay = std::unique_ptr<PlatformDisplayWayland>(new PlatformDisplayWayland(display, NativeDisplayOwned::No));
+    auto platformDisplay = std::unique_ptr<PlatformDisplayWayland>(new PlatformDisplayWayland(display));
     platformDisplay->initialize();
     return platformDisplay;
 }
+#endif
 
-PlatformDisplayWayland::PlatformDisplayWayland(struct wl_display* display, NativeDisplayOwned displayOwned)
-    : PlatformDisplay(displayOwned)
-    , m_display(display)
+PlatformDisplayWayland::PlatformDisplayWayland(struct wl_display* display)
+    : m_display(display)
 {
 }
+
+#if PLATFORM(GTK)
+PlatformDisplayWayland::PlatformDisplayWayland(GdkDisplay* display)
+    : PlatformDisplay(display)
+    , m_display(display ? gdk_wayland_display_get_wl_display(display) : nullptr)
+{
+}
+#endif
 
 PlatformDisplayWayland::~PlatformDisplayWayland()
 {
-    if (m_nativeDisplayOwned == NativeDisplayOwned::Yes) {
+#if PLATFORM(GTK)
+    bool nativeDisplayOwned = !m_sharedDisplay;
+#else
+    bool nativeDisplayOwned = true;
+#endif
+
+    if (nativeDisplayOwned && m_display) {
         m_compositor = nullptr;
         m_registry = nullptr;
         wl_display_disconnect(m_display);
     }
 }
+
+#if PLATFORM(GTK)
+void PlatformDisplayWayland::sharedDisplayDidClose()
+{
+    PlatformDisplay::sharedDisplayDidClose();
+    m_display = nullptr;
+}
+#endif
 
 void PlatformDisplayWayland::initialize()
 {
@@ -93,16 +124,22 @@ void PlatformDisplayWayland::initialize()
     wl_display_roundtrip(m_display);
 
 #if USE(EGL)
-#if defined(EGL_KHR_platform_wayland)
+#if defined(EGL_KHR_platform_wayland) || defined(EGL_EXT_platform_wayland)
     const char* extensions = eglQueryString(nullptr, EGL_EXTENSIONS);
+#if defined(EGL_KHR_platform_wayland)
     if (GLContext::isExtensionSupported(extensions, "EGL_KHR_platform_base")) {
         if (auto* getPlatformDisplay = reinterpret_cast<PFNEGLGETPLATFORMDISPLAYEXTPROC>(eglGetProcAddress("eglGetPlatformDisplay")))
             m_eglDisplay = getPlatformDisplay(EGL_PLATFORM_WAYLAND_KHR, m_display, nullptr);
-    } else if (GLContext::isExtensionSupported(extensions, "EGL_EXT_platform_base")) {
-        if (auto* getPlatformDisplay = reinterpret_cast<PFNEGLGETPLATFORMDISPLAYEXTPROC>(eglGetProcAddress("eglGetPlatformDisplayEXT")))
-            m_eglDisplay = getPlatformDisplay(EGL_PLATFORM_WAYLAND_KHR, m_display, nullptr);
-    } else
+    }
 #endif
+#if defined(EGL_EXT_platform_wayland)
+    if (m_eglDisplay == EGL_NO_DISPLAY && GLContext::isExtensionSupported(extensions, "EGL_EXT_platform_base")) {
+        if (auto* getPlatformDisplay = reinterpret_cast<PFNEGLGETPLATFORMDISPLAYEXTPROC>(eglGetProcAddress("eglGetPlatformDisplayEXT")))
+            m_eglDisplay = getPlatformDisplay(EGL_PLATFORM_WAYLAND_EXT, m_display, nullptr);
+    }
+#endif
+#endif
+    if (m_eglDisplay == EGL_NO_DISPLAY)
         m_eglDisplay = eglGetDisplay(m_display);
 
     PlatformDisplay::initializeEGLDisplay();

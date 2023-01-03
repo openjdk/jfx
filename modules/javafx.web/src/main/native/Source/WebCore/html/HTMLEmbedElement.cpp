@@ -2,7 +2,7 @@
  * Copyright (C) 1999 Lars Knoll (knoll@kde.org)
  *           (C) 1999 Antti Koivisto (koivisto@kde.org)
  *           (C) 2000 Stefan Schimanski (1Stein@gmx.de)
- * Copyright (C) 2004, 2005, 2006, 2008, 2009, 2011 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2020 Apple Inc. All rights reserved.
  * Copyright (C) 2008 Nokia Corporation and/or its subsidiary(-ies)
  *
  * This library is free software; you can redistribute it and/or
@@ -25,6 +25,7 @@
 #include "HTMLEmbedElement.h"
 
 #include "CSSPropertyNames.h"
+#include "ElementAncestorIterator.h"
 #include "Frame.h"
 #include "FrameLoader.h"
 #include "FrameView.h"
@@ -54,9 +55,7 @@ inline HTMLEmbedElement::HTMLEmbedElement(const QualifiedName& tagName, Document
 
 Ref<HTMLEmbedElement> HTMLEmbedElement::create(const QualifiedName& tagName, Document& document)
 {
-    auto result = adoptRef(*new HTMLEmbedElement(tagName, document));
-    result->finishCreating();
-    return result;
+    return adoptRef(*new HTMLEmbedElement(tagName, document));
 }
 
 Ref<HTMLEmbedElement> HTMLEmbedElement::create(Document& document)
@@ -66,39 +65,29 @@ Ref<HTMLEmbedElement> HTMLEmbedElement::create(Document& document)
 
 static inline RenderWidget* findWidgetRenderer(const Node* node)
 {
-    if (!node->renderer()) {
-        do {
-            node = node->parentNode();
-        } while (node && !is<HTMLObjectElement>(*node));
-    }
-
+    if (!node->renderer())
+        node = ancestorsOfType<HTMLObjectElement>(*node).first();
     if (node && is<RenderWidget>(node->renderer()))
         return downcast<RenderWidget>(node->renderer());
-
     return nullptr;
 }
 
 RenderWidget* HTMLEmbedElement::renderWidgetLoadingPlugin() const
 {
-    RefPtr<FrameView> view = document().view();
-    if (!view || (!view->layoutContext().isInRenderTreeLayout() && !view->isPainting())) {
-        // Needs to load the plugin immediatedly because this function is called
-        // when JavaScript code accesses the plugin.
-        // FIXME: <rdar://16893708> Check if dispatching events here is safe.
-        document().updateLayoutIgnorePendingStylesheets(Document::RunPostLayoutTasks::Synchronously);
-    }
-    return findWidgetRenderer(this);
+    RenderWidget* widget = HTMLPlugInImageElement::renderWidgetLoadingPlugin();
+
+    return widget ? widget : findWidgetRenderer(this);
 }
 
-void HTMLEmbedElement::collectStyleForPresentationAttribute(const QualifiedName& name, const AtomString& value, MutableStyleProperties& style)
+void HTMLEmbedElement::collectPresentationalHintsForAttribute(const QualifiedName& name, const AtomString& value, MutableStyleProperties& style)
 {
     if (name == hiddenAttr) {
         if (equalLettersIgnoringASCIICase(value, "yes") || equalLettersIgnoringASCIICase(value, "true")) {
-            addPropertyToPresentationAttributeStyle(style, CSSPropertyWidth, 0, CSSPrimitiveValue::CSS_PX);
-            addPropertyToPresentationAttributeStyle(style, CSSPropertyHeight, 0, CSSPrimitiveValue::CSS_PX);
+            addPropertyToPresentationalHintStyle(style, CSSPropertyWidth, 0, CSSUnitType::CSS_PX);
+            addPropertyToPresentationalHintStyle(style, CSSPropertyHeight, 0, CSSUnitType::CSS_PX);
         }
     } else
-        HTMLPlugInImageElement::collectStyleForPresentationAttribute(name, value, style);
+        HTMLPlugInImageElement::collectPresentationalHintsForAttribute(name, value, style);
 }
 
 static bool hasTypeOrSrc(const HTMLEmbedElement& embed)
@@ -172,16 +161,6 @@ void HTMLEmbedElement::updateWidget(CreatePlugins createPlugins)
     parametersForPlugin(paramNames, paramValues);
 
     Ref<HTMLEmbedElement> protectedThis(*this); // Loading the plugin might remove us from the document.
-    bool beforeLoadAllowedLoad = guardedDispatchBeforeLoadEvent(m_url);
-    if (!beforeLoadAllowedLoad) {
-        if (is<PluginDocument>(document())) {
-            // Plugins inside plugin documents load differently than other plugins. By the time
-            // we are here in a plugin document, the load of the plugin (which is the plugin document's
-            // main resource) has already started. We need to explicitly cancel the main resource load here.
-            downcast<PluginDocument>(document()).cancelManualPluginLoad();
-        }
-        return;
-    }
     if (!renderer()) // Do not load the plugin if beforeload removed this element or its renderer.
         return;
 

@@ -41,7 +41,7 @@ class ScrollingCoordinator;
 
 struct CompositedClipData {
     CompositedClipData(RenderLayer* layer, LayoutRect rect, bool isOverflowScrollEntry)
-        : clippingLayer(makeWeakPtr(layer))
+        : clippingLayer(layer)
         , clipRect(rect)
         , isOverflowScroll(isOverflowScrollEntry)
     {
@@ -78,6 +78,8 @@ public:
     bool equalToClipData(const Vector<CompositedClipData>&) const;
     bool updateWithClipData(ScrollingCoordinator*, Vector<CompositedClipData>&&);
 
+    Vector<CompositedClipData> compositedClipData() const;
+
     void clear(ScrollingCoordinator*);
     void detachFromScrollingCoordinator(ScrollingCoordinator&);
 
@@ -86,8 +88,6 @@ public:
     GraphicsLayer* firstClippingLayer() const;
     GraphicsLayer* lastClippingLayer() const;
     ScrollingNodeID lastOverflowScrollProxyNodeID() const;
-
-    bool update(LayerAncestorClippingStack&&);
 
     struct ClippingStackEntry {
         CompositedClipData clipData;

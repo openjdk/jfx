@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,53 +29,53 @@
 #include "CachedResourceHandle.h"
 #include "ResourceLoaderOptions.h"
 #include <wtf/Function.h>
+#include <wtf/RefPtr.h>
 
 namespace WebCore {
 
 class CachedImage;
 class CachedResourceLoader;
+class CSSImageValue;
 class Document;
+
+namespace Style {
+class BuilderState;
+}
+
+struct ImageWithScale {
+    RefPtr<CSSValue> value;
+    float scaleFactor { 1 };
+};
 
 class CSSImageSetValue final : public CSSValueList {
 public:
-    static Ref<CSSImageSetValue> create(LoadedFromOpaqueSource loadedFromOpaqueSource)
-    {
-        return adoptRef(*new CSSImageSetValue(loadedFromOpaqueSource));
-    }
+    static Ref<CSSImageSetValue> create();
     ~CSSImageSetValue();
 
-    std::pair<CachedImage*, float>  loadBestFitImage(CachedResourceLoader&, const ResourceLoaderOptions&);
-    CachedImage* cachedImage() const { return m_cachedImage.get(); }
+    ImageWithScale selectBestFitImage(const Document&);
+    CachedImage* cachedImage() const;
 
     String customCSSText() const;
 
-    struct ImageWithScale {
-        URL imageURL;
-        float scaleFactor;
-    };
-
-    bool traverseSubresources(const WTF::Function<bool (const CachedResource&)>& handler) const;
+    bool traverseSubresources(const Function<bool(const CachedResource&)>& handler) const;
 
     void updateDeviceScaleFactor(const Document&);
 
-    URL bestImageForScaleFactorURL() { return bestImageForScaleFactor().imageURL; }
-
-protected:
-    ImageWithScale bestImageForScaleFactor();
+    Ref<CSSImageSetValue> valueWithStylesResolved(Style::BuilderState&);
 
 private:
-    explicit CSSImageSetValue(LoadedFromOpaqueSource);
+    CSSImageSetValue();
+
+    ImageWithScale bestImageForScaleFactor();
 
     void fillImageSet();
     static inline bool compareByScaleFactor(ImageWithScale first, ImageWithScale second) { return first.scaleFactor < second.scaleFactor; }
 
-    CachedResourceHandle<CachedImage> m_cachedImage;
+    RefPtr<CSSValue> m_selectedImageValue;
     bool m_accessedBestFitImage { false };
-    float m_bestFitImageScaleFactor { 1 };
+    ImageWithScale m_bestFitImage;
     float m_deviceScaleFactor { 1 };
-
     Vector<ImageWithScale> m_imagesInSet;
-    LoadedFromOpaqueSource m_loadedFromOpaqueSource { LoadedFromOpaqueSource::No };
 };
 
 } // namespace WebCore

@@ -23,27 +23,43 @@
 #endif
 
 #include <glib/gtypes.h>
+#include <string.h>
 
 G_BEGIN_DECLS
 
 /* slices - fast allocation/release of small memory blocks
  */
 GLIB_AVAILABLE_IN_ALL
-gpointer g_slice_alloc            (gsize         block_size) G_GNUC_MALLOC G_GNUC_ALLOC_SIZE(1);
+gpointer g_slice_alloc              (gsize         block_size) G_GNUC_MALLOC G_GNUC_ALLOC_SIZE(1);
 GLIB_AVAILABLE_IN_ALL
-gpointer g_slice_alloc0           (gsize         block_size) G_GNUC_MALLOC G_GNUC_ALLOC_SIZE(1);
+gpointer g_slice_alloc0             (gsize         block_size) G_GNUC_MALLOC G_GNUC_ALLOC_SIZE(1);
 GLIB_AVAILABLE_IN_ALL
 gpointer g_slice_copy                   (gsize         block_size,
                                          gconstpointer mem_block) G_GNUC_ALLOC_SIZE(1);
 GLIB_AVAILABLE_IN_ALL
-void     g_slice_free1            (gsize         block_size,
-           gpointer      mem_block);
+void     g_slice_free1              (gsize         block_size,
+                                         gpointer      mem_block);
 GLIB_AVAILABLE_IN_ALL
 void     g_slice_free_chain_with_offset (gsize         block_size,
            gpointer      mem_chain,
            gsize         next_offset);
 #define  g_slice_new(type)      ((type*) g_slice_alloc (sizeof (type)))
-#define  g_slice_new0(type)     ((type*) g_slice_alloc0 (sizeof (type)))
+
+/* Allow the compiler to inline memset(). Since the size is a constant, this
+ * can significantly improve performance. */
+#if defined (__GNUC__) && (__GNUC__ >= 2) && defined (__OPTIMIZE__)
+#  define g_slice_new0(type)                                    \
+  (type *) (G_GNUC_EXTENSION ({                                 \
+    gsize __s = sizeof (type);                                  \
+    gpointer __p;                                               \
+    __p = g_slice_alloc (__s);                                  \
+    memset (__p, 0, __s);                                       \
+    __p;                                                        \
+  }))
+#else
+#  define g_slice_new0(type)    ((type*) g_slice_alloc0 (sizeof (type)))
+#endif
+
 /* MemoryBlockType *
  *       g_slice_dup                    (MemoryBlockType,
  *                                   MemoryBlockType *mem_block);
@@ -62,14 +78,14 @@ void     g_slice_free_chain_with_offset (gsize         block_size,
      : ((void) ((type*) 0 == (mem)), (type*) 0))
 #define g_slice_free(type, mem)                                 \
 G_STMT_START {                                                  \
-  if (1) g_slice_free1 (sizeof (type), (mem));      \
-  else   (void) ((type*) 0 == (mem));         \
+  if (1) g_slice_free1 (sizeof (type), (mem));          \
+  else   (void) ((type*) 0 == (mem));               \
 } G_STMT_END
 #define g_slice_free_chain(type, mem_chain, next)               \
 G_STMT_START {                                                  \
-  if (1) g_slice_free_chain_with_offset (sizeof (type),   \
-                 (mem_chain), G_STRUCT_OFFSET (type, next));  \
-  else   (void) ((type*) 0 == (mem_chain));     \
+  if (1) g_slice_free_chain_with_offset (sizeof (type),     \
+                 (mem_chain), G_STRUCT_OFFSET (type, next));    \
+  else   (void) ((type*) 0 == (mem_chain));         \
 } G_STMT_END
 
 /* --- internal debugging API --- */

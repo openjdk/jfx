@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2018 Andy VanWagoner (andy@vanwagoner.family)
+ * Copyright (C) 2021-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,61 +26,84 @@
 
 #pragma once
 
-#if ENABLE(INTL)
-
-#include "JSDestructibleObject.h"
+#include "IntlNumberFormat.h"
 #include <unicode/unum.h>
-#include <unicode/upluralrules.h>
-#include <unicode/uvernum.h>
+#include <wtf/unicode/icu/ICUHelpers.h>
 
-#define HAVE_ICU_PLURALRULES_KEYWORDS (U_ICU_VERSION_MAJOR_NUM >= 59)
-#define HAVE_ICU_PLURALRULES_WITH_FORMAT (U_ICU_VERSION_MAJOR_NUM >= 59)
+struct UPluralRules;
 
 namespace JSC {
 
-class IntlPluralRulesConstructor;
-class JSBoundFunction;
+struct UPluralRulesDeleter {
+    JS_EXPORT_PRIVATE void operator()(UPluralRules*);
+};
 
-class IntlPluralRules final : public JSDestructibleObject {
+enum class RelevantExtensionKey : uint8_t;
+
+class IntlPluralRules final : public JSNonFinalObject {
 public:
-    typedef JSDestructibleObject Base;
+    using Base = JSNonFinalObject;
+
+    static constexpr bool needsDestruction = true;
+
+    static void destroy(JSCell* cell)
+    {
+        static_cast<IntlPluralRules*>(cell)->IntlPluralRules::~IntlPluralRules();
+    }
+
+    template<typename CellType, SubspaceAccess mode>
+    static GCClient::IsoSubspace* subspaceFor(VM& vm)
+    {
+        return vm.intlPluralRulesSpace<mode>();
+    }
 
     static IntlPluralRules* create(VM&, Structure*);
     static Structure* createStructure(VM&, JSGlobalObject*, JSValue);
 
     DECLARE_INFO;
 
-    void initializePluralRules(ExecState&, JSValue locales, JSValue options);
-    JSValue select(ExecState&, double value);
-    JSObject* resolvedOptions(ExecState&);
+    template<typename IntlType>
+    friend void setNumberFormatDigitOptions(JSGlobalObject*, IntlType*, JSObject*, unsigned minimumFractionDigitsDefault, unsigned maximumFractionDigitsDefault, IntlNotation);
+    template<typename IntlType>
+    friend void appendNumberFormatDigitOptionsToSkeleton(IntlType*, StringBuilder&);
 
-protected:
-    IntlPluralRules(VM&, Structure*);
-    void finishCreation(VM&);
-    static void destroy(JSCell*);
-    static void visitChildren(JSCell*, SlotVisitor&);
+    void initializePluralRules(JSGlobalObject*, JSValue locales, JSValue options);
+    JSValue select(JSGlobalObject*, double value) const;
+    JSObject* resolvedOptions(JSGlobalObject*) const;
+
+#if HAVE(ICU_U_NUMBER_RANGE_FORMATTER)
+    JSValue selectRange(JSGlobalObject*, double start, double end) const;
+#endif
 
 private:
-    struct UPluralRulesDeleter {
-        void operator()(UPluralRules*) const;
-    };
-    struct UNumberFormatDeleter {
-        void operator()(UNumberFormat*) const;
-    };
+    IntlPluralRules(VM&, Structure*);
+    void finishCreation(VM&);
+    DECLARE_VISIT_CHILDREN;
 
-    bool m_initializedPluralRules { false };
+    static Vector<String> localeData(const String&, RelevantExtensionKey);
+
+    enum class Type : bool { Cardinal, Ordinal };
+
     std::unique_ptr<UPluralRules, UPluralRulesDeleter> m_pluralRules;
+#if HAVE(ICU_U_NUMBER_FORMATTER)
+    std::unique_ptr<UNumberFormatter, UNumberFormatterDeleter> m_numberFormatter;
+#if HAVE(ICU_U_NUMBER_RANGE_FORMATTER)
+    std::unique_ptr<UNumberRangeFormatter, UNumberRangeFormatterDeleter> m_numberRangeFormatter;
+#endif
+#else
+    using UNumberFormatDeleter = ICUDeleter<unum_close>;
     std::unique_ptr<UNumberFormat, UNumberFormatDeleter> m_numberFormat;
+#endif
 
     String m_locale;
-    UPluralType m_type { UPLURAL_TYPE_CARDINAL };
     unsigned m_minimumIntegerDigits { 1 };
     unsigned m_minimumFractionDigits { 0 };
     unsigned m_maximumFractionDigits { 3 };
-    Optional<unsigned> m_minimumSignificantDigits;
-    Optional<unsigned> m_maximumSignificantDigits;
+    unsigned m_minimumSignificantDigits { 0 };
+    unsigned m_maximumSignificantDigits { 0 };
+    unsigned m_roundingIncrement { 1 };
+    IntlRoundingType m_roundingType { IntlRoundingType::FractionDigits };
+    Type m_type { Type::Cardinal };
 };
 
 } // namespace JSC
-
-#endif // ENABLE(INTL)

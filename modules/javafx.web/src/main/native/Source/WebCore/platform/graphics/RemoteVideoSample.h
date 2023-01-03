@@ -27,16 +27,17 @@
 
 #if ENABLE(MEDIA_STREAM) && PLATFORM(COCOA)
 
+#include "IOSurface.h"
 #include "MediaSample.h"
 #include "RemoteVideoSample.h"
 #include <wtf/MachSendRight.h>
 #include <wtf/MediaTime.h>
 
-#if HAVE(IOSURFACE)
-#include "IOSurface.h"
-#endif
+typedef struct __CVBuffer* CVPixelBufferRef;
 
 namespace WebCore {
+
+class ProcessIdentity;
 
 class RemoteVideoSample {
 public:
@@ -45,23 +46,28 @@ public:
     RemoteVideoSample& operator=(RemoteVideoSample&&) = default;
     ~RemoteVideoSample() = default;
 
-#if HAVE(IOSURFACE)
-    WEBCORE_EXPORT static std::unique_ptr<RemoteVideoSample> create(MediaSample&&);
-    WEBCORE_EXPORT IOSurfaceRef surface();
-#endif
+    enum class ShouldCheckForIOSurface { No, Yes };
+    WEBCORE_EXPORT static std::unique_ptr<RemoteVideoSample> create(MediaSample&, ShouldCheckForIOSurface = ShouldCheckForIOSurface::Yes);
+    WEBCORE_EXPORT static std::unique_ptr<RemoteVideoSample> create(RetainPtr<CVPixelBufferRef>&&, MediaTime&& presentationTime, MediaSample::VideoRotation = MediaSample::VideoRotation::None, ShouldCheckForIOSurface = ShouldCheckForIOSurface::Yes);
+
+    WEBCORE_EXPORT IOSurfaceRef surface() const;
+    CVPixelBufferRef imageBuffer() const { return m_imageBuffer.get(); }
+
+    void setOwnershipIdentity(const ProcessIdentity&);
+    void clearIOSurface() { m_ioSurface = nullptr; }
 
     const MediaTime& time() const { return m_time; }
     uint32_t videoFormat() const { return m_videoFormat; }
     IntSize size() const { return m_size; }
+    MediaSample::VideoRotation rotation() const { return m_rotation; }
+    bool mirrored() const { return m_mirrored; }
 
     template<class Encoder> void encode(Encoder& encoder) const
     {
-#if HAVE(IOSURFACE)
         if (m_ioSurface)
             encoder << m_ioSurface->createSendRight();
         else
-            encoder << WTF::MachSendRight();
-#endif
+            encoder << MachSendRight();
         encoder << m_rotation;
         encoder << m_time;
         encoder << m_videoFormat;
@@ -69,14 +75,13 @@ public:
         encoder << m_mirrored;
     }
 
-    template<class Decoder> static bool decode(Decoder& decoder, RemoteVideoSample& sample)
+    template<class Decoder> static WARN_UNUSED_RETURN bool decode(Decoder& decoder, RemoteVideoSample& sample)
     {
-#if HAVE(IOSURFACE)
         MachSendRight sendRight;
         if (!decoder.decode(sendRight))
             return false;
         sample.m_sendRight = WTFMove(sendRight);
-#endif
+
         MediaSample::VideoRotation rotation;
         if (!decoder.decode(rotation))
             return false;
@@ -106,19 +111,23 @@ public:
     }
 
 private:
-
-#if HAVE(IOSURFACE)
-    RemoteVideoSample(IOSurfaceRef, CGColorSpaceRef, MediaTime&&, MediaSample::VideoRotation, bool);
+    RemoteVideoSample(IOSurfaceRef, RetainPtr<CVPixelBufferRef>&&, const DestinationColorSpace&, MediaTime&&, MediaSample::VideoRotation, bool);
 
     std::unique_ptr<WebCore::IOSurface> m_ioSurface;
-    WTF::MachSendRight m_sendRight;
-#endif
+    RetainPtr<CVPixelBufferRef> m_imageBuffer;
+    MachSendRight m_sendRight;
     MediaSample::VideoRotation m_rotation { MediaSample::VideoRotation::None };
     MediaTime m_time;
     uint32_t m_videoFormat { 0 };
     IntSize m_size;
     bool m_mirrored { false };
 };
+
+inline void RemoteVideoSample::setOwnershipIdentity(const ProcessIdentity& resourceOwner)
+{
+    if (m_ioSurface)
+        m_ioSurface->setOwnershipIdentity(resourceOwner);
+}
 
 }
 

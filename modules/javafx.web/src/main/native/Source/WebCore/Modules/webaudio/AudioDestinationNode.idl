@@ -24,8 +24,10 @@
 
 [
     Conditional=WEB_AUDIO,
+    EnabledBySetting=WebAudioEnabled,
     JSGenerateToJSObject,
-    SkipVTableValidation
+    SkipVTableValidation,
+    Exposed=Window
 ] interface AudioDestinationNode : AudioNode {
     readonly attribute unsigned long maxChannelCount;
 };

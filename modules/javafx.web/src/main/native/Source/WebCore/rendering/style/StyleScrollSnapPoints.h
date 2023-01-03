@@ -25,8 +25,6 @@
 
 #pragma once
 
-#if ENABLE(CSS_SCROLL_SNAP)
-
 #include "LengthBox.h"
 #include "LengthSize.h"
 #include "RenderStyleConstants.h"
@@ -47,59 +45,16 @@ inline bool operator==(const ScrollSnapType& a, const ScrollSnapType& b)
 
 inline bool operator!=(const ScrollSnapType& a, const ScrollSnapType& b) { return !(a == b); }
 
-class StyleScrollSnapPort : public RefCounted<StyleScrollSnapPort> {
-public:
-    static Ref<StyleScrollSnapPort> create() { return adoptRef(*new StyleScrollSnapPort); }
-    Ref<StyleScrollSnapPort> copy() const;
-
-    ScrollSnapType type;
-    LengthBox scrollPadding { 0, 0, 0, 0 };
-
-private:
-    StyleScrollSnapPort();
-    StyleScrollSnapPort(const StyleScrollSnapPort&);
-};
-
-inline bool operator==(const StyleScrollSnapPort& a, const StyleScrollSnapPort& b)
-{
-    return a.type == b.type && a.scrollPadding == b.scrollPadding;
-}
-
-inline bool operator!=(const StyleScrollSnapPort& a, const StyleScrollSnapPort& b) { return !(a == b); }
-
 struct ScrollSnapAlign {
-    ScrollSnapAxisAlignType x { ScrollSnapAxisAlignType::None };
-    ScrollSnapAxisAlignType y { ScrollSnapAxisAlignType::None };
+    ScrollSnapAxisAlignType blockAlign { ScrollSnapAxisAlignType::None };
+    ScrollSnapAxisAlignType inlineAlign { ScrollSnapAxisAlignType::None };
 };
 
 inline bool operator==(const ScrollSnapAlign& a, const ScrollSnapAlign& b)
 {
-    return a.x == b.x && a.y == b.y;
+    return a.blockAlign == b.blockAlign && a.inlineAlign == b.inlineAlign;
 }
 
 inline bool operator!=(const ScrollSnapAlign& a, const ScrollSnapAlign& b) { return !(a == b); }
 
-class StyleScrollSnapArea : public RefCounted<StyleScrollSnapArea> {
-public:
-    static Ref<StyleScrollSnapArea> create() { return adoptRef(*new StyleScrollSnapArea); }
-    Ref<StyleScrollSnapArea> copy() const;
-    bool hasSnapPosition() const { return alignment.x != ScrollSnapAxisAlignType::None || alignment.y != ScrollSnapAxisAlignType::None; }
-
-    ScrollSnapAlign alignment;
-    LengthBox scrollSnapMargin { 0, 0, 0, 0 };
-
-private:
-    StyleScrollSnapArea();
-    StyleScrollSnapArea(const StyleScrollSnapArea&);
-};
-
-inline bool operator==(const StyleScrollSnapArea& a, const StyleScrollSnapArea& b)
-{
-    return a.alignment == b.alignment && a.scrollSnapMargin == b.scrollSnapMargin;
-}
-
-inline bool operator!=(const StyleScrollSnapArea& a, const StyleScrollSnapArea& b) { return !(a == b); }
-
 } // namespace WebCore
-
-#endif // ENABLE(CSS_SCROLL_SNAP)

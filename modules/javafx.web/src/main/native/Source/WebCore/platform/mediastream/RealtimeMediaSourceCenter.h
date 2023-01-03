@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2011 Ericsson AB. All rights reserved.
  * Copyright (C) 2012 Google Inc. All rights reserved.
- * Copyright (C) 2013-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -39,9 +39,16 @@
 #include "RealtimeMediaSource.h"
 #include "RealtimeMediaSourceFactory.h"
 #include "RealtimeMediaSourceSupportedConstraints.h"
+#include "UserMediaClient.h"
 #include <wtf/Function.h>
 #include <wtf/RefPtr.h>
+#include <wtf/RunLoop.h>
 #include <wtf/text/WTFString.h>
+
+#if PLATFORM(COCOA)
+#include <pal/spi/cocoa/TCCSPI.h>
+#include <wtf/OSObjectPtr.h>
+#endif
 
 namespace WebCore {
 
@@ -53,8 +60,15 @@ class TrackSourceInfo;
 
 struct MediaConstraints;
 
-class RealtimeMediaSourceCenter {
+class WEBCORE_EXPORT RealtimeMediaSourceCenter : public ThreadSafeRefCounted<RealtimeMediaSourceCenter, WTF::DestructionThread::MainRunLoop> {
 public:
+    class Observer : public CanMakeWeakPtr<Observer> {
+    public:
+        virtual ~Observer();
+
+        virtual void devicesChanged() = 0;
+    };
+
     ~RealtimeMediaSourceCenter();
 
     WEBCORE_EXPORT static RealtimeMediaSourceCenter& singleton();
@@ -63,10 +77,10 @@ public:
     using InvalidConstraintsHandler = Function<void(const String& invalidConstraint)>;
     WEBCORE_EXPORT void validateRequestConstraints(ValidConstraintsHandler&&, InvalidConstraintsHandler&&, const MediaStreamRequest&, String&&);
 
-    using NewMediaStreamHandler = Function<void(RefPtr<MediaStreamPrivate>&&)>;
+    using NewMediaStreamHandler = Function<void(Expected<Ref<MediaStreamPrivate>, String>&&)>;
     void createMediaStream(Ref<const Logger>&&, NewMediaStreamHandler&&, String&&, CaptureDevice&& audioDevice, CaptureDevice&& videoDevice, const MediaStreamRequest&);
 
-    WEBCORE_EXPORT Vector<CaptureDevice> getMediaStreamDevices();
+    WEBCORE_EXPORT void getMediaStreamDevices(CompletionHandler<void(Vector<CaptureDevice>&&)>&&);
 
     const RealtimeMediaSourceSupportedConstraints& supportedConstraints() { return m_supportedConstraints; }
 
@@ -84,13 +98,22 @@ public:
 
     WEBCORE_EXPORT String hashStringWithSalt(const String& id, const String& hashSalt);
 
-    WEBCORE_EXPORT void setDevicesChangedObserver(std::function<void()>&&);
-
-    void setCapturePageState(bool interrupted, bool pageMuted);
+    WEBCORE_EXPORT void addDevicesChangedObserver(Observer&);
+    WEBCORE_EXPORT void removeDevicesChangedObserver(Observer&);
 
     void captureDevicesChanged();
 
     WEBCORE_EXPORT static bool shouldInterruptAudioOnPageVisibilityChange();
+
+#if ENABLE(APP_PRIVACY_REPORT)
+    void setIdentity(OSObjectPtr<tcc_identity_t>&& identity) { m_identity = WTFMove(identity); }
+    OSObjectPtr<tcc_identity_t> identity() const { return m_identity; }
+#endif
+
+#if HAVE(SCREEN_CAPTURE_KIT)
+    bool useScreenCaptureKit() const;
+    void setUseScreenCaptureKit(bool);
+#endif
 
 private:
     RealtimeMediaSourceCenter();
@@ -105,19 +128,45 @@ private:
         CaptureDevice device;
     };
 
-    void getDisplayMediaDevices(const MediaStreamRequest&, Vector<DeviceInfo>&, String&);
+    void getDisplayMediaDevices(const MediaStreamRequest&, String&&, Vector<DeviceInfo>&, String&);
     void getUserMediaDevices(const MediaStreamRequest&, String&&, Vector<DeviceInfo>& audioDevices, Vector<DeviceInfo>& videoDevices, String&);
+    void validateRequestConstraintsAfterEnumeration(ValidConstraintsHandler&&, InvalidConstraintsHandler&&, const MediaStreamRequest&, String&&);
+    void enumerateDevices(bool shouldEnumerateCamera, bool shouldEnumerateDisplay, bool shouldEnumerateMicrophone, bool shouldEnumerateSpeakers, CompletionHandler<void()>&&);
 
     RealtimeMediaSourceSupportedConstraints m_supportedConstraints;
 
-    WTF::Function<void()> m_deviceChangedObserver;
+    RunLoop::Timer<RealtimeMediaSourceCenter> m_debounceTimer;
+    void triggerDevicesChangedObservers();
+
+    WeakHashSet<Observer> m_observers;
 
     AudioCaptureFactory* m_audioCaptureFactoryOverride { nullptr };
     VideoCaptureFactory* m_videoCaptureFactoryOverride { nullptr };
     DisplayCaptureFactory* m_displayCaptureFactoryOverride { nullptr };
 
     bool m_shouldInterruptAudioOnPageVisibilityChange { false };
+
+#if ENABLE(APP_PRIVACY_REPORT)
+    OSObjectPtr<tcc_identity_t> m_identity;
+#endif
+
+#if HAVE(SCREEN_CAPTURE_KIT)
+    bool m_useScreenCaptureKit { false };
+#endif
+    bool m_useMockCaptureDevices { false };
 };
+
+#if HAVE(SCREEN_CAPTURE_KIT)
+inline bool RealtimeMediaSourceCenter::useScreenCaptureKit() const
+{
+    return m_useScreenCaptureKit;
+}
+
+inline void RealtimeMediaSourceCenter::setUseScreenCaptureKit(bool useScreenCaptureKit)
+{
+    m_useScreenCaptureKit = useScreenCaptureKit;
+}
+#endif
 
 } // namespace WebCore
 

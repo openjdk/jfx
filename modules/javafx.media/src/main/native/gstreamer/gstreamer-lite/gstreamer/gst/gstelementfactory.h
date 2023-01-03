@@ -83,12 +83,40 @@ gboolean                gst_element_factory_has_interface       (GstElementFacto
 GST_API
 GstElement*             gst_element_factory_create              (GstElementFactory *factory,
                                                                  const gchar *name) G_GNUC_MALLOC;
+#if !defined(GSTREAMER_LITE) || (defined(GSTREAMER_LITE) && !defined(LINUX))
+GST_API
+GstElement*             gst_element_factory_create_full         (GstElementFactory * factory,
+                                                                 const gchar * first, ...) G_GNUC_MALLOC;
+GST_API
+GstElement *            gst_element_factory_create_valist       (GstElementFactory * factory,
+                                                                 const gchar * first, va_list properties) G_GNUC_MALLOC;
+GST_API
+GstElement *            gst_element_factory_create_with_properties (GstElementFactory * factory,
+                                                                 guint n, const gchar *names[], const GValue values[]) G_GNUC_MALLOC;
+#endif // GSTREAMER_LITE
 GST_API
 GstElement*             gst_element_factory_make                (const gchar *factoryname, const gchar *name) G_GNUC_MALLOC;
 
+#if !defined(GSTREAMER_LITE) || (defined(GSTREAMER_LITE) && !defined(LINUX))
+GST_API
+GstElement*             gst_element_factory_make_full           (const gchar *factoryname,
+                                                                  const gchar *first, ...) G_GNUC_MALLOC;
+GST_API
+GstElement*             gst_element_factory_make_valist         (const gchar *factoryname,
+                                                                 const gchar *first, va_list properties) G_GNUC_MALLOC;
+GST_API
+GstElement*             gst_element_factory_make_with_properties (const gchar *factoryname,
+                                                                 guint n, const gchar *names[], const GValue values[]) G_GNUC_MALLOC;
+#endif // GSTREAMER_LITE
 GST_API
 gboolean                gst_element_register                    (GstPlugin *plugin, const gchar *name,
                                                                  guint rank, GType type);
+
+GST_API
+void                    gst_element_type_set_skip_documentation (GType type);
+
+GST_API
+gboolean                gst_element_factory_get_skip_documentation (GstElementFactory * factory);
 
 /* Factory list functions */
 
@@ -105,6 +133,7 @@ gboolean                gst_element_register                    (GstPlugin *plug
  * @GST_ELEMENT_FACTORY_TYPE_DEPAYLOADER: Depayloader elements
  * @GST_ELEMENT_FACTORY_TYPE_DECRYPTOR: Elements handling decryption (Since: 1.6)
  * @GST_ELEMENT_FACTORY_TYPE_ENCRYPTOR: Elements handling encryption (Since: 1.6)
+ * @GST_ELEMENT_FACTORY_TYPE_HARDWARE: Hardware based elements (Since: 1.18)
  * @GST_ELEMENT_FACTORY_TYPE_MAX_ELEMENTS: Private, do not use
  * @GST_ELEMENT_FACTORY_TYPE_MEDIA_VIDEO: Elements handling video media types
  * @GST_ELEMENT_FACTORY_TYPE_MEDIA_AUDIO: Elements handling audio media types
@@ -120,6 +149,11 @@ gboolean                gst_element_register                    (GstPlugin *plug
  * matching the specified media types will be selected.
  */
 
+/**
+ * GstElementFactoryListType:
+ *
+ * A type defining the type of an element factory.
+ */
 typedef guint64 GstElementFactoryListType;
 
 #define  GST_ELEMENT_FACTORY_TYPE_DECODER        ((GstElementFactoryListType)(G_GUINT64_CONSTANT (1) << 0))
@@ -134,6 +168,7 @@ typedef guint64 GstElementFactoryListType;
 #define  GST_ELEMENT_FACTORY_TYPE_FORMATTER      ((GstElementFactoryListType)(G_GUINT64_CONSTANT (1) << 9))
 #define  GST_ELEMENT_FACTORY_TYPE_DECRYPTOR      ((GstElementFactoryListType)(G_GUINT64_CONSTANT (1) << 10))
 #define  GST_ELEMENT_FACTORY_TYPE_ENCRYPTOR      ((GstElementFactoryListType)(G_GUINT64_CONSTANT (1) << 11))
+#define  GST_ELEMENT_FACTORY_TYPE_HARDWARE      ((GstElementFactoryListType)(G_GUINT64_CONSTANT (1) << 12))
 
 #define  GST_ELEMENT_FACTORY_TYPE_MAX_ELEMENTS   ((GstElementFactoryListType)(G_GUINT64_CONSTANT (1) << 48))
 
@@ -234,9 +269,7 @@ GST_API
 GList *       gst_element_factory_list_filter       (GList *list, const GstCaps *caps,
                                                      GstPadDirection direction,
                                                      gboolean subsetonly) G_GNUC_MALLOC;
-#ifdef G_DEFINE_AUTOPTR_CLEANUP_FUNC
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(GstElementFactory, gst_object_unref)
-#endif
 
 G_END_DECLS
 

@@ -48,7 +48,7 @@ public:
     FrameView* frameView() const;
 
     bool isSVGImage() const final { return true; }
-    FloatSize size() const final { return m_intrinsicSize; }
+    FloatSize size(ImageOrientation = ImageOrientation::FromImage) const final { return m_intrinsicSize; }
 
     bool hasSingleSecurityOrigin() const final;
 
@@ -62,12 +62,7 @@ public:
 
     void scheduleStartAnimation();
 
-#if USE(CAIRO)
-    NativeImagePtr nativeImageForCurrentFrame(const GraphicsContext* = nullptr) final;
-#endif
-#if USE(DIRECT2D)
-    NativeImagePtr nativeImage(const GraphicsContext* = nullptr) final;
-#endif
+    Page* internalPage() { return m_page.get(); }
 
 private:
     friend class SVGImageChromeClient;
@@ -91,10 +86,12 @@ private:
     // FIXME: Implement this to be less conservative.
     bool currentFrameKnownToBeOpaque() const final { return false; }
 
+    RefPtr<NativeImage> nativeImage(const DestinationColorSpace& = DestinationColorSpace::SRGB()) final;
+
     void startAnimationTimerFired();
 
-    explicit SVGImage(ImageObserver&);
-    ImageDrawResult draw(GraphicsContext&, const FloatRect& fromRect, const FloatRect& toRect, const ImagePaintingOptions& = { }) final;
+    WEBCORE_EXPORT explicit SVGImage(ImageObserver&);
+    ImageDrawResult draw(GraphicsContext&, const FloatRect& destination, const FloatRect& source, const ImagePaintingOptions& = { }) final;
     ImageDrawResult drawForContainer(GraphicsContext&, const FloatSize containerSize, float containerZoom, const URL& initialFragmentURL, const FloatRect& dstRect, const FloatRect& srcRect, const ImagePaintingOptions& = { });
     void drawPatternForContainer(GraphicsContext&, const FloatSize& containerSize, float containerZoom, const URL& initialFragmentURL, const FloatRect& srcRect, const AffineTransform&, const FloatPoint& phase, const FloatSize& spacing, const FloatRect&, const ImagePaintingOptions& = { });
 

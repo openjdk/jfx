@@ -63,7 +63,7 @@ static const gchar qt_lang_map[][4] = {
  * 026 Hungarian
  * 027 Estonian
  * 028 Latvian / Lettish
- * 029 Lappish / Saamish (used code for Nothern Sami)
+ * 029 Lappish / Saamish (used code for Northern Sami)
  */
   "urd", "hin", "tha", "kor", "lit", "pol", "hun", "est", "lav", "sme",
 

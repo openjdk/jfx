@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -92,6 +92,12 @@ public abstract class MapExpression<K, V> implements ObservableMapValue<K, V> {
     }
 
     /**
+     * Creates a default {@code MapExpression}.
+     */
+    public MapExpression() {
+    }
+
+    /**
      * Returns a {@code MapExpression} that wraps a
      * {@link javafx.beans.value.ObservableMapValue}. If the
      * {@code ObservableMapValue} is already a {@code MapExpression}, it
@@ -113,7 +119,7 @@ public abstract class MapExpression<K, V> implements ObservableMapValue<K, V> {
             throw new NullPointerException("Map must be specified.");
         }
         return value instanceof MapExpression ? (MapExpression<K, V>) value
-                : new MapBinding<K, V>() {
+                : new MapBinding<>() {
             {
                 super.bind(value);
             }

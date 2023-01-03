@@ -36,7 +36,7 @@ typedef struct objc_object* id;
 #endif
 
 namespace JSC {
-    class ExecState;
+    class CallFrame;
     class JSGlobalObject;
     class JSObject;
 }
@@ -58,8 +58,6 @@ public:
 
     virtual JSC::JSObject* scriptObject(JSC::JSGlobalObject*) { return 0; }
     virtual void storageBlockingStateChanged() { }
-    virtual void privateBrowsingStateChanged(bool) { }
-    virtual bool getFormValue(String&) { return false; }
     virtual bool scroll(ScrollDirection, ScrollGranularity) { return false; }
 
     // A plug-in can ask WebKit to handle scrollbars for it.
@@ -69,15 +67,10 @@ public:
     // FIXME: This is a hack that works around the fact that the WebKit2 PluginView isn't a ScrollableArea.
     virtual bool wantsWheelEvents() { return false; }
     virtual bool supportsKeyboardFocus() const { return false; }
-    virtual bool canProcessDrag() const { return false; }
-
-    virtual bool shouldAlwaysAutoStart() const { return false; }
-    virtual void beginSnapshottingRunningPlugin() { }
 
     virtual bool shouldAllowNavigationFromDrags() const { return false; }
 
     bool isPluginViewBase() const override { return true; }
-    virtual bool shouldNotAddLayer() const { return false; }
 
     virtual AudioHardwareActivityType audioHardwareActivity() const { return AudioHardwareActivityType::Unknown; }
 

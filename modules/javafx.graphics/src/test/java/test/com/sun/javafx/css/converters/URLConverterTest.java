@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -59,7 +59,7 @@ public class URLConverterTest {
             new ParsedValueImpl<String,String>(null,null)
         };
         ParsedValueImpl<ParsedValue[], String> value =
-            new ParsedValueImpl<ParsedValue[], String>(values, URLConverter.getInstance());
+            new ParsedValueImpl<>(values, URLConverter.getInstance());
 
         Font font = null;
         ClassLoader cl = Thread.currentThread().getContextClassLoader();
@@ -76,7 +76,7 @@ public class URLConverterTest {
             new ParsedValueImpl<String,String>(base,null)
         };
         ParsedValueImpl<ParsedValue[], String> value =
-            new ParsedValueImpl<ParsedValue[], String>(values, URLConverter.getInstance());
+            new ParsedValueImpl<>(values, URLConverter.getInstance());
 
         Font font = null;
         String expResult = cl.getResource("test/javafx/css/converter/some.txt").toExternalForm();
@@ -94,7 +94,7 @@ public class URLConverterTest {
             new ParsedValueImpl<String,String>(null,null)
         };
         ParsedValueImpl<ParsedValue[], String> value =
-            new ParsedValueImpl<ParsedValue[], String>(values, URLConverter.getInstance());
+            new ParsedValueImpl<>(values, URLConverter.getInstance());
 
         Font font = null;
         String result = value.convert(font);
@@ -112,11 +112,22 @@ public class URLConverterTest {
             new ParsedValueImpl<String,String>(baseURL,null)
         };
         ParsedValueImpl<ParsedValue[], String> value =
-            new ParsedValueImpl<ParsedValue[], String>(values, URLConverter.getInstance());
+            new ParsedValueImpl<>(values, URLConverter.getInstance());
 
         Font font = null;
         String result = value.convert(font);
         assertEquals(expResult, result);
+    }
+
+    @Test
+    public void testConvertWithDataURI() {
+        String dataUri = "data:text/plain;charset=utf-8;base64,SGVsbG8sIFdvcmxkIQ==";
+
+        ParsedValue[] values = new ParsedValue[] { new ParsedValueImpl<String,String>(dataUri, null) };
+        ParsedValueImpl<ParsedValue[], String> value = new ParsedValueImpl<>(values, URLConverter.getInstance());
+
+        String result = value.convert(null);
+        assertEquals(dataUri, result);
     }
 
 }

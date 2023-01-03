@@ -25,17 +25,20 @@
 
 #include "config.h"
 
-#if ENABLE(VIDEO_TRACK)
+#if ENABLE(VIDEO)
 
 #include "TrackEvent.h"
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
 
-static inline Optional<TrackEvent::TrackEventTrack> convertToTrackEventTrack(Ref<TrackBase>&& track)
+WTF_MAKE_ISO_ALLOCATED_IMPL(TrackEvent);
+
+static inline std::optional<TrackEvent::TrackEventTrack> convertToTrackEventTrack(Ref<TrackBase>&& track)
 {
     switch (track->type()) {
     case TrackBase::BaseTrack:
-        return WTF::nullopt;
+        return std::nullopt;
     case TrackBase::TextTrack:
         return TrackEvent::TrackEventTrack { RefPtr<TextTrack>(&downcast<TextTrack>(track.get())) };
     case TrackBase::AudioTrack:
@@ -45,7 +48,7 @@ static inline Optional<TrackEvent::TrackEventTrack> convertToTrackEventTrack(Ref
     }
 
     ASSERT_NOT_REACHED();
-    return WTF::nullopt;
+    return std::nullopt;
 }
 
 TrackEvent::TrackEvent(const AtomString& type, CanBubble canBubble, IsCancelable cancelable, Ref<TrackBase>&& track)

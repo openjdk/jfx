@@ -43,6 +43,8 @@ static const SVGRenderStyle& defaultSVGStyle()
     return *style.get();
 }
 
+DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(SVGRenderStyle);
+
 Ref<SVGRenderStyle> SVGRenderStyle::createDefaultStyle()
 {
     return adoptRef(*new SVGRenderStyle(CreateDefault));
@@ -55,9 +57,7 @@ SVGRenderStyle::SVGRenderStyle()
     , m_inheritedResourceData(defaultSVGStyle().m_inheritedResourceData)
     , m_stopData(defaultSVGStyle().m_stopData)
     , m_miscData(defaultSVGStyle().m_miscData)
-    , m_shadowData(defaultSVGStyle().m_shadowData)
     , m_layoutData(defaultSVGStyle().m_layoutData)
-    , m_nonInheritedResourceData(defaultSVGStyle().m_nonInheritedResourceData)
 {
     setBitDefaults();
 }
@@ -69,9 +69,7 @@ SVGRenderStyle::SVGRenderStyle(CreateDefaultType)
     , m_inheritedResourceData(StyleInheritedResourceData::create())
     , m_stopData(StyleStopData::create())
     , m_miscData(StyleMiscData::create())
-    , m_shadowData(StyleShadowSVGData::create())
     , m_layoutData(StyleLayoutData::create())
-    , m_nonInheritedResourceData(StyleResourceData::create())
 {
     setBitDefaults();
 }
@@ -86,9 +84,7 @@ inline SVGRenderStyle::SVGRenderStyle(const SVGRenderStyle& other)
     , m_inheritedResourceData(other.m_inheritedResourceData)
     , m_stopData(other.m_stopData)
     , m_miscData(other.m_miscData)
-    , m_shadowData(other.m_shadowData)
     , m_layoutData(other.m_layoutData)
-    , m_nonInheritedResourceData(other.m_nonInheritedResourceData)
 {
 }
 
@@ -106,21 +102,19 @@ bool SVGRenderStyle::operator==(const SVGRenderStyle& other) const
         && m_textData == other.m_textData
         && m_stopData == other.m_stopData
         && m_miscData == other.m_miscData
-        && m_shadowData == other.m_shadowData
         && m_layoutData == other.m_layoutData
         && m_inheritedResourceData == other.m_inheritedResourceData
-        && m_nonInheritedResourceData == other.m_nonInheritedResourceData
         && m_inheritedFlags == other.m_inheritedFlags
         && m_nonInheritedFlags == other.m_nonInheritedFlags;
 }
 
-bool SVGRenderStyle::inheritedNotEqual(const SVGRenderStyle& other) const
+bool SVGRenderStyle::inheritedEqual(const SVGRenderStyle& other) const
 {
-    return m_fillData != other.m_fillData
-        || m_strokeData != other.m_strokeData
-        || m_textData != other.m_textData
-        || m_inheritedResourceData != other.m_inheritedResourceData
-        || m_inheritedFlags != other.m_inheritedFlags;
+    return m_fillData == other.m_fillData
+        && m_strokeData == other.m_strokeData
+        && m_textData == other.m_textData
+        && m_inheritedResourceData == other.m_inheritedResourceData
+        && m_inheritedFlags == other.m_inheritedFlags;
 }
 
 void SVGRenderStyle::inheritFrom(const SVGRenderStyle& other)
@@ -138,9 +132,7 @@ void SVGRenderStyle::copyNonInheritedFrom(const SVGRenderStyle& other)
     m_nonInheritedFlags = other.m_nonInheritedFlags;
     m_stopData = other.m_stopData;
     m_miscData = other.m_miscData;
-    m_shadowData = other.m_shadowData;
     m_layoutData = other.m_layoutData;
-    m_nonInheritedResourceData = other.m_nonInheritedResourceData;
 }
 
 StyleDifference SVGRenderStyle::diff(const SVGRenderStyle& other) const
@@ -149,10 +141,6 @@ StyleDifference SVGRenderStyle::diff(const SVGRenderStyle& other) const
 
     // If kerning changes, we need a relayout, to force SVGCharacterData to be recalculated in the SVGRootInlineBox.
     if (m_textData != other.m_textData)
-        return StyleDifference::Layout;
-
-    // If resources change, we need a relayout, as the presence of resources influences the repaint rect.
-    if (m_nonInheritedResourceData != other.m_nonInheritedResourceData)
         return StyleDifference::Layout;
 
     // If markers change, we need a relayout, as marker boundaries are cached in RenderSVGPath.
@@ -171,10 +159,6 @@ StyleDifference SVGRenderStyle::diff(const SVGRenderStyle& other) const
     // Text related properties influence layout.
     bool miscNotEqual = m_miscData != other.m_miscData;
     if (miscNotEqual && m_miscData->baselineShiftValue != other.m_miscData->baselineShiftValue)
-        return StyleDifference::Layout;
-
-    // Shadow changes require relayouts, as they affect the repaint rects.
-    if (m_shadowData != other.m_shadowData)
         return StyleDifference::Layout;
 
     // The x or y properties require relayout.
@@ -222,8 +206,7 @@ StyleDifference SVGRenderStyle::diff(const SVGRenderStyle& other) const
         return StyleDifference::Repaint;
 
     // Changes of these flags only cause repaints.
-    if (m_inheritedFlags.colorRendering != other.m_inheritedFlags.colorRendering
-        || m_inheritedFlags.shapeRendering != other.m_inheritedFlags.shapeRendering
+    if (m_inheritedFlags.shapeRendering != other.m_inheritedFlags.shapeRendering
         || m_inheritedFlags.clipRule != other.m_inheritedFlags.clipRule
         || m_inheritedFlags.fillRule != other.m_inheritedFlags.fillRule
         || m_inheritedFlags.colorInterpolation != other.m_inheritedFlags.colorInterpolation

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -67,7 +67,7 @@ import javafx.collections.ObservableMap;
  */
 public abstract class MapBinding<K, V> extends MapExpression<K, V> implements Binding<ObservableMap<K, V>> {
 
-    private final MapChangeListener<K, V> mapChangeListener = new MapChangeListener<K, V>() {
+    private final MapChangeListener<K, V> mapChangeListener = new MapChangeListener<>() {
         @Override
         public void onChanged(Change<? extends K, ? extends V> change) {
             invalidateProperties();
@@ -83,6 +83,12 @@ public abstract class MapBinding<K, V> extends MapExpression<K, V> implements Bi
 
     private SizeProperty size0;
     private EmptyProperty empty0;
+
+    /**
+     * Creates a default {@code MapBinding}.
+     */
+    public MapBinding() {
+    }
 
     @Override
     public ReadOnlyIntegerProperty sizeProperty() {
@@ -108,6 +114,7 @@ public abstract class MapBinding<K, V> extends MapExpression<K, V> implements Bi
             return "size";
         }
 
+        @Override
         protected void fireValueChangedEvent() {
             super.fireValueChangedEvent();
         }
@@ -138,6 +145,7 @@ public abstract class MapBinding<K, V> extends MapExpression<K, V> implements Bi
             return "empty";
         }
 
+        @Override
         protected void fireValueChangedEvent() {
             super.fireValueChangedEvent();
         }

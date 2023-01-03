@@ -29,9 +29,12 @@
 #include "PerProcess.h"
 #include <climits>
 
+#if !BUSE(LIBPAS)
+
 namespace bmalloc {
 
-IsoHeapImplBase::IsoHeapImplBase()
+IsoHeapImplBase::IsoHeapImplBase(Mutex& lock)
+    : lock(lock)
 {
 }
 
@@ -94,3 +97,4 @@ void IsoHeapImplBase::finishScavenging(Vector<DeferredDecommit>& deferredDecommi
 
 } // namespace bmalloc
 
+#endif

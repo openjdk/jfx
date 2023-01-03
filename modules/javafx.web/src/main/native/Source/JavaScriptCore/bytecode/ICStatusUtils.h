@@ -25,6 +25,8 @@
 
 #pragma once
 
+#include "BytecodeIndex.h"
+#include "CacheableIdentifier.h"
 #include "ExitFlag.h"
 
 namespace JSC {
@@ -42,7 +44,7 @@ bool appendICStatusVariant(VariantVectorType& variants, const VariantType& varia
             for (unsigned j = 0; j < variants.size(); ++j) {
                 if (i == j)
                     continue;
-                if (variants[j].structureSet().overlaps(mergedVariant.structureSet()))
+                if (variants[j].overlaps(mergedVariant))
                     return false;
             }
             return true;
@@ -53,7 +55,7 @@ bool appendICStatusVariant(VariantVectorType& variants, const VariantType& varia
     // overlap but it's possible that an inline cache got into a weird state. We are
     // defensive and bail if we detect crazy.
     for (unsigned i = 0; i < variants.size(); ++i) {
-        if (variants[i].structureSet().overlaps(variant.structureSet()))
+        if (variants[i].overlaps(variant))
             return false;
     }
 
@@ -71,7 +73,26 @@ void filterICStatusVariants(VariantVectorType& variants, const StructureSet& set
         });
 }
 
-ExitFlag hasBadCacheExitSite(CodeBlock* profiledBlock, unsigned bytecodeIndex);
+template<typename VariantVectorType>
+CacheableIdentifier singleIdentifierForICStatus(VariantVectorType& variants)
+{
+    if (variants.isEmpty())
+        return nullptr;
+
+    CacheableIdentifier result = variants.first().identifier();
+    if (!result)
+        return nullptr;
+
+    for (size_t i = 1; i < variants.size(); ++i) {
+        CacheableIdentifier identifier = variants[i].identifier();
+        if (!identifier || identifier != result)
+            return nullptr;
+    }
+
+    return result;
+}
+
+ExitFlag hasBadCacheExitSite(CodeBlock* profiledBlock, BytecodeIndex);
 
 } // namespace JSC
 

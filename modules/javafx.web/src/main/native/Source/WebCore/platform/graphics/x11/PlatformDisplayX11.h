@@ -23,31 +23,43 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef PlatformDisplayX11_h
-#define PlatformDisplayX11_h
+#pragma once
 
 #if PLATFORM(X11)
 
 #include "PlatformDisplay.h"
-#include <wtf/Optional.h>
+#include <optional>
 
 typedef struct _XDisplay Display;
+
+// It's not possible to forward declare Visual, and including xlib in headers is problematic,
+// so we use void* for Visual and provide this macro to get the visual easily.
+#define WK_XVISUAL(platformDisplay) (static_cast<Visual*>(platformDisplay.visual()))
 
 namespace WebCore {
 
 class PlatformDisplayX11 final : public PlatformDisplay {
 public:
     static std::unique_ptr<PlatformDisplay> create();
-    static std::unique_ptr<PlatformDisplay> create(Display*);
+#if PLATFORM(GTK)
+    static std::unique_ptr<PlatformDisplay> create(GdkDisplay*);
+#endif
 
     virtual ~PlatformDisplayX11();
 
-    Display* native() const { return m_display; }
+    ::Display* native() const { return m_display; }
+    void* visual() const;
     bool supportsXComposite() const;
-    bool supportsXDamage(Optional<int>& damageEventBase, Optional<int>& damageErrorBase) const;
+    bool supportsXDamage(std::optional<int>& damageEventBase, std::optional<int>& damageErrorBase) const;
+    bool supportsGLX(std::optional<int>& glxErrorBase) const;
 
 private:
-    PlatformDisplayX11(Display*, NativeDisplayOwned);
+    explicit PlatformDisplayX11(::Display*);
+#if PLATFORM(GTK)
+    explicit PlatformDisplayX11(GdkDisplay*);
+
+    void sharedDisplayDidClose() override;
+#endif
 
     Type type() const override { return PlatformDisplay::Type::X11; }
 
@@ -55,11 +67,24 @@ private:
     void initializeEGLDisplay() override;
 #endif
 
-    Display* m_display { nullptr };
-    mutable Optional<bool> m_supportsXComposite;
-    mutable Optional<bool> m_supportsXDamage;
-    mutable Optional<int> m_damageEventBase;
-    mutable Optional<int> m_damageErrorBase;
+#if USE(LCMS)
+    cmsHPROFILE colorProfile() const override;
+#endif
+
+#if USE(ATSPI) || USE(ATK)
+    String plartformAccessibilityBusAddress() const override;
+#endif
+
+    ::Display* m_display { nullptr };
+    mutable std::optional<bool> m_supportsXComposite;
+    mutable std::optional<bool> m_supportsXDamage;
+    mutable std::optional<int> m_damageEventBase;
+    mutable std::optional<int> m_damageErrorBase;
+#if USE(GLX)
+    mutable std::optional<bool> m_supportsGLX;
+    mutable std::optional<int> m_glxErrorBase;
+#endif
+    mutable void* m_visual { nullptr };
 };
 
 } // namespace WebCore
@@ -67,5 +92,3 @@ private:
 SPECIALIZE_TYPE_TRAITS_PLATFORM_DISPLAY(PlatformDisplayX11, X11)
 
 #endif // PLATFORM(X11)
-
-#endif // PlatformDisplayX11

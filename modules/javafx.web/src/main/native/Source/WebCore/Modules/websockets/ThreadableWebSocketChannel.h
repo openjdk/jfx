@@ -30,8 +30,10 @@
 
 #pragma once
 
+#include "WebSocketIdentifier.h"
 #include <wtf/Forward.h>
 #include <wtf/Noncopyable.h>
+#include <wtf/ObjectIdentifier.h>
 #include <wtf/URL.h>
 
 namespace JSC {
@@ -43,31 +45,36 @@ namespace WebCore {
 class Blob;
 class Document;
 class ResourceRequest;
+class ResourceResponse;
 class ScriptExecutionContext;
 class SocketProvider;
+class WebSocketChannel;
 class WebSocketChannelClient;
+
+using WebSocketChannelIdentifier = ObjectIdentifier<WebSocketChannel>;
 
 class ThreadableWebSocketChannel {
     WTF_MAKE_NONCOPYABLE(ThreadableWebSocketChannel);
 public:
     static Ref<ThreadableWebSocketChannel> create(Document&, WebSocketChannelClient&, SocketProvider&);
     static Ref<ThreadableWebSocketChannel> create(ScriptExecutionContext&, WebSocketChannelClient&, SocketProvider&);
-    ThreadableWebSocketChannel() = default;
+    WEBCORE_EXPORT ThreadableWebSocketChannel();
 
-    virtual bool isWebSocketChannel() const { return false; }
+    void ref() { refThreadableWebSocketChannel(); }
+    void deref() { derefThreadableWebSocketChannel(); }
 
-    enum SendResult {
-        SendSuccess,
-        SendFail
-    };
+    WebSocketIdentifier identifier() const { return m_identifier; };
 
     enum class ConnectStatus { KO, OK };
     virtual ConnectStatus connect(const URL&, const String& protocol) = 0;
     virtual String subprotocol() = 0; // Will be available after didConnect() callback is invoked.
     virtual String extensions() = 0; // Will be available after didConnect() callback is invoked.
+
+    enum SendResult { SendSuccess, SendFail };
     virtual SendResult send(const String& message) = 0;
     virtual SendResult send(const JSC::ArrayBuffer&, unsigned byteOffset, unsigned byteLength) = 0;
     virtual SendResult send(Blob&) = 0;
+
     virtual unsigned bufferedAmount() const = 0;
     virtual void close(int code, const String& reason) = 0;
     // Log the reason text and close the connection. Will call didClose().
@@ -77,8 +84,12 @@ public:
     virtual void suspend() = 0;
     virtual void resume() = 0;
 
-    void ref() { refThreadableWebSocketChannel(); }
-    void deref() { derefThreadableWebSocketChannel(); }
+    virtual WebSocketChannelIdentifier progressIdentifier() const = 0;
+    virtual bool hasCreatedHandshake() const = 0;
+    virtual bool isConnected() const = 0;
+    using CookieGetter = Function<String(const URL&)>;
+    virtual ResourceRequest clientHandshakeRequest(const CookieGetter&) const = 0;
+    virtual const ResourceResponse& serverHandshakeResponse() const = 0;
 
 protected:
     virtual ~ThreadableWebSocketChannel() = default;
@@ -89,8 +100,10 @@ protected:
         URL url;
         bool areCookiesAllowed { true };
     };
-    static Optional<ValidatedURL> validateURL(Document&, const URL&);
-    WEBCORE_EXPORT static Optional<ResourceRequest> webSocketConnectRequest(Document&, const URL&);
+    static std::optional<ValidatedURL> validateURL(Document&, const URL&);
+    WEBCORE_EXPORT static std::optional<ResourceRequest> webSocketConnectRequest(Document&, const URL&);
+
+    WebSocketIdentifier m_identifier;
 };
 
 } // namespace WebCore

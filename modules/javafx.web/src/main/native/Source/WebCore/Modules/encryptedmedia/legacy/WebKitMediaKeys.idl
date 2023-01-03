@@ -25,11 +25,12 @@
  
 [
     Conditional=LEGACY_ENCRYPTED_MEDIA,
-    Constructor(DOMString keySystem),
-    ConstructorMayThrowException,
-    EnabledAtRuntime=LegacyEncryptedMediaAPI,
+    EnabledBySetting=LegacyEncryptedMediaAPIEnabled,
+    Exposed=Window
 ] interface WebKitMediaKeys {
-    [CallWith=ScriptExecutionContext, MayThrowException] WebKitMediaKeySession createSession(DOMString type, Uint8Array initData);
+    constructor(DOMString keySystem);
+
+    [CallWith=CurrentDocument] WebKitMediaKeySession createSession(DOMString type, Uint8Array initData);
     static boolean isTypeSupported(DOMString keySystem, optional DOMString type);
     readonly attribute DOMString keySystem;
 };

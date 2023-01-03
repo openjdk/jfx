@@ -26,13 +26,14 @@
 #include "RenderCombineText.h"
 #include "RenderSVGInlineText.h"
 #include "RenderText.h"
-#include "SVGElement.h"
+#include "SVGElementInlines.h"
 #include "SVGNames.h"
 #include "ScopedEventQueue.h"
 #include "ShadowRoot.h"
 #include "StyleInheritedData.h"
 #include "StyleResolver.h"
 #include "StyleUpdate.h"
+#include "TextManipulationController.h"
 #include "TextNodeTraversal.h"
 #include <wtf/CheckedArithmetic.h>
 #include <wtf/IsoMallocInlines.h>
@@ -75,8 +76,7 @@ ExceptionOr<Ref<Text>> Text::splitText(unsigned offset)
 
     document().textNodeSplit(*this);
 
-    if (renderer())
-        renderer()->setTextWithOffset(data(), 0, oldData.length());
+    updateRendererAfterContentChange(0, oldData.length());
 
     return newText;
 }
@@ -214,35 +214,63 @@ Ref<Text> Text::createWithLengthLimit(Document& document, const String& data, un
 
 void Text::updateRendererAfterContentChange(unsigned offsetOfReplacedData, unsigned lengthOfReplacedData)
 {
-    ASSERT(parentNode());
+    if (!isConnected())
+        return;
+
     if (styleValidity() >= Style::Validity::SubtreeAndRenderersInvalid)
         return;
 
     document().updateTextRenderer(*this, offsetOfReplacedData, lengthOfReplacedData);
 }
 
-#if ENABLE(TREE_DEBUGGING)
-void Text::formatForDebugger(char* buffer, unsigned length) const
+static void appendTextRepresentation(StringBuilder& builder, const Text& text)
 {
-    StringBuilder result;
-    String s;
+    String value = text.data();
+    builder.append(" length="_s, value.length());
 
-    result.append(nodeName());
+    value.replaceWithLiteral('\\', "\\\\");
+    value.replaceWithLiteral('\n', "\\n");
 
-    s = data();
-    if (s.length() > 0) {
-        if (result.length())
-            result.appendLiteral("; ");
-        result.appendLiteral("length=");
-        result.appendNumber(s.length());
-        result.appendLiteral("; value=\"");
-        result.append(s);
-        result.append('"');
+    const size_t maxDumpLength = 30;
+    if (value.length() > maxDumpLength) {
+        value.truncate(maxDumpLength - 10);
+        value.append("..."_s);
     }
 
-    strncpy(buffer, result.toString().utf8().data(), length - 1);
-    buffer[length - 1] = '\0';
+    builder.append(" \"", value, '\"');
 }
-#endif
+
+String Text::description() const
+{
+    StringBuilder builder;
+
+    builder.append(CharacterData::description());
+    appendTextRepresentation(builder, *this);
+
+    return builder.toString();
+}
+
+String Text::debugDescription() const
+{
+    StringBuilder builder;
+
+    builder.append(CharacterData::debugDescription());
+    appendTextRepresentation(builder, *this);
+
+    return builder.toString();
+}
+
+void Text::setDataAndUpdate(const String& newData, unsigned offsetOfReplacedData, unsigned oldLength, unsigned newLength, UpdateLiveRanges updateLiveRanges)
+{
+    auto oldData = data();
+    CharacterData::setDataAndUpdate(newData, offsetOfReplacedData, oldLength, newLength, updateLiveRanges);
+
+    // FIXME: Does not seem correct to do this for 0 offset only.
+    if (!offsetOfReplacedData) {
+        auto* textManipulationController = document().textManipulationControllerIfExists();
+        if (UNLIKELY(textManipulationController && oldData != newData))
+            textManipulationController->didUpdateContentForText(*this);
+    }
+}
 
 } // namespace WebCore

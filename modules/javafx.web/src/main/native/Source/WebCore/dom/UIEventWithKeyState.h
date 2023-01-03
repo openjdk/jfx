@@ -30,6 +30,7 @@
 namespace WebCore {
 
 class UIEventWithKeyState : public UIEvent {
+    WTF_MAKE_ISO_ALLOCATED(UIEventWithKeyState);
 public:
     using Modifier = PlatformEvent::Modifier;
 
@@ -61,8 +62,8 @@ protected:
     {
     }
 
-    UIEventWithKeyState(const AtomString& type, const EventModifierInit& initializer)
-        : UIEvent(type, initializer)
+    UIEventWithKeyState(const AtomString& type, const EventModifierInit& initializer, IsTrusted isTrusted = IsTrusted::No)
+        : UIEvent(type, initializer, isTrusted)
         , m_modifiers(modifiersFromInitializer(initializer))
     {
     }

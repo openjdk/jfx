@@ -36,27 +36,29 @@
 
 namespace WebCore {
 
+enum class DOMPasteAccessCategory : uint8_t;
 enum class DOMPasteAccessResponse : uint8_t;
 
+class SharedBuffer;
 class DocumentFragment;
 class Element;
 class Frame;
 class KeyboardEvent;
 class Node;
-class Range;
-class SharedBuffer;
+class FragmentedSharedBuffer;
 class StyleProperties;
 class TextCheckerClient;
 class VisibleSelection;
 
 struct GapRects;
 struct GrammarDetail;
+struct SimpleRange;
 
 class EditorClient {
 public:
     virtual ~EditorClient() = default;
 
-    virtual bool shouldDeleteRange(Range*) = 0;
+    virtual bool shouldDeleteRange(const std::optional<SimpleRange>&) = 0;
     virtual bool smartInsertDeleteEnabled() = 0;
     virtual bool isSelectTrailingWhitespaceEnabled() const = 0;
     virtual bool isContinuousSpellCheckingEnabled() = 0;
@@ -65,18 +67,20 @@ public:
     virtual void toggleGrammarChecking() = 0;
     virtual int spellCheckerDocumentTag() = 0;
 
-    virtual bool shouldBeginEditing(Range*) = 0;
-    virtual bool shouldEndEditing(Range*) = 0;
-    virtual bool shouldInsertNode(Node*, Range*, EditorInsertAction) = 0;
-    virtual bool shouldInsertText(const String&, Range*, EditorInsertAction) = 0;
-    virtual bool shouldChangeSelectedRange(Range* fromRange, Range* toRange, EAffinity, bool stillSelecting) = 0;
+    virtual bool shouldBeginEditing(const SimpleRange&) = 0;
+    virtual bool shouldEndEditing(const SimpleRange&) = 0;
+    virtual bool shouldInsertNode(Node&, const std::optional<SimpleRange>&, EditorInsertAction) = 0;
+    virtual bool shouldInsertText(const String&, const std::optional<SimpleRange>&, EditorInsertAction) = 0;
+    virtual bool shouldChangeSelectedRange(const std::optional<SimpleRange>& fromRange, const std::optional<SimpleRange>& toRange, Affinity, bool stillSelecting) = 0;
+    virtual bool shouldRevealCurrentSelectionAfterInsertion() const { return true; };
+    virtual bool shouldSuppressPasswordEcho() const { return false; };
 
-    virtual bool shouldApplyStyle(StyleProperties*, Range*) = 0;
+    virtual bool shouldApplyStyle(const StyleProperties&, const std::optional<SimpleRange>&) = 0;
     virtual void didApplyStyle() = 0;
-    virtual bool shouldMoveRangeAfterDelete(Range*, Range*) = 0;
+    virtual bool shouldMoveRangeAfterDelete(const SimpleRange&, const SimpleRange&) = 0;
 
 #if ENABLE(ATTACHMENT_ELEMENT)
-    virtual void registerAttachmentIdentifier(const String& /* identifier */, const String& /* contentType */, const String& /* preferredFileName */, Ref<SharedBuffer>&&) { }
+    virtual void registerAttachmentIdentifier(const String& /* identifier */, const String& /* contentType */, const String& /* preferredFileName */, Ref<FragmentedSharedBuffer>&&) { }
     virtual void registerAttachmentIdentifier(const String& /* identifier */, const String& /* contentType */, const String& /* filePath */) { }
     virtual void registerAttachments(Vector<SerializedAttachmentData>&&) { }
     virtual void registerAttachmentIdentifier(const String& /* identifier */) { }
@@ -93,13 +97,13 @@ public:
     virtual void didEndUserTriggeredSelectionChanges() = 0;
     virtual void updateEditorStateAfterLayoutIfEditabilityChanged() = 0;
     virtual void didEndEditing() = 0;
-    virtual void willWriteSelectionToPasteboard(Range*) = 0;
+    virtual void willWriteSelectionToPasteboard(const std::optional<SimpleRange>&) = 0;
     virtual void didWriteSelectionToPasteboard() = 0;
-    virtual void getClientPasteboardDataForRange(Range*, Vector<String>& pasteboardTypes, Vector<RefPtr<SharedBuffer>>& pasteboardData) = 0;
+    virtual void getClientPasteboardData(const std::optional<SimpleRange>&, Vector<String>& pasteboardTypes, Vector<RefPtr<SharedBuffer>>& pasteboardData) = 0;
     virtual void requestCandidatesForSelection(const VisibleSelection&) { }
     virtual void handleAcceptedCandidateWithSoftSpaces(TextCheckingResult) { }
 
-    virtual DOMPasteAccessResponse requestDOMPasteAccess(const String& originIdentifier) = 0;
+    virtual DOMPasteAccessResponse requestDOMPasteAccess(DOMPasteAccessCategory, const String& originIdentifier) = 0;
 
     // Notify an input method that a composition was voluntarily discarded by WebCore, so that it could clean up too.
     // This function is not called when a composition is closed per a request from an input method.
@@ -121,6 +125,7 @@ public:
 
     virtual void handleKeyboardEvent(KeyboardEvent&) = 0;
     virtual void handleInputMethodKeydown(KeyboardEvent&) = 0;
+    virtual void didDispatchInputMethodKeydown(KeyboardEvent&) { }
 
     virtual void textFieldDidBeginEditing(Element*) = 0;
     virtual void textFieldDidEndEditing(Element*) = 0;
@@ -129,6 +134,7 @@ public:
     virtual void textWillBeDeletedInTextField(Element*) = 0;
     virtual void textDidChangeInTextArea(Element*) = 0;
     virtual void overflowScrollPositionChanged() = 0;
+    virtual void subFrameScrollPositionChanged() = 0;
 
 #if PLATFORM(IOS_FAMILY)
     virtual void startDelayingAndCoalescingContentChangeNotifications() = 0;
@@ -177,17 +183,20 @@ public:
     virtual void showSpellingUI(bool show) = 0;
     virtual bool spellingUIIsShowing() = 0;
     virtual void willSetInputMethodState() = 0;
-    virtual void setInputMethodState(bool enabled) = 0;
+    virtual void setInputMethodState(Element*) = 0;
 
     // Support for global selections, used on platforms like the X Window System that treat
     // selection as a type of clipboard.
     virtual bool supportsGlobalSelection() { return false; }
 
-    virtual bool performTwoStepDrop(DocumentFragment&, Range& destination, bool isMove) = 0;
+    virtual bool performTwoStepDrop(DocumentFragment&, const SimpleRange& destination, bool isMove) = 0;
 
     virtual bool canShowFontPanel() const = 0;
 
     virtual bool shouldAllowSingleClickToChangeSelection(Node&, const VisibleSelection&) const { return true; }
+
+    virtual void willChangeSelectionForAccessibility() { }
+    virtual void didChangeSelectionForAccessibility() { }
 };
 
 }

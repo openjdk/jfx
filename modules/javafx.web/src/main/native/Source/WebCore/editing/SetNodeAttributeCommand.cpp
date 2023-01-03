@@ -26,6 +26,7 @@
 #include "config.h"
 #include "SetNodeAttributeCommand.h"
 
+#include "CompositeEditCommand.h"
 #include "Element.h"
 #include <wtf/Assertions.h>
 
@@ -53,7 +54,7 @@ void SetNodeAttributeCommand::doUnapply()
 }
 
 #ifndef NDEBUG
-void SetNodeAttributeCommand::getNodesInCommand(HashSet<Node*>& nodes)
+void SetNodeAttributeCommand::getNodesInCommand(HashSet<Ref<Node>>& nodes)
 {
     addNodeAndDescendants(m_element.ptr(), nodes);
 }

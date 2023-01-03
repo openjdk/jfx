@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -32,7 +32,7 @@ import javafx.scene.text.Font;
 import javafx.util.Duration;
 
 /**
- * Convert a Size to Duration
+ * Converter to Convert a {@code Size} to {@code Duration}.
  *
  * @since 9
  */
@@ -43,6 +43,10 @@ public final class DurationConverter extends StyleConverter<ParsedValue<?, Size>
         static final DurationConverter INSTANCE = new DurationConverter();
     }
 
+    /**
+     * Gets the {@code DurationConverter} instance.
+     * @return the {@code DurationConverter} instance
+     */
     public static StyleConverter<ParsedValue<?, Size>, Duration> getInstance() {
         return Holder.INSTANCE;
     }

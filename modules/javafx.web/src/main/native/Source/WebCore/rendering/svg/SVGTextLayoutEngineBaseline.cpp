@@ -37,7 +37,7 @@ float SVGTextLayoutEngineBaseline::calculateBaselineShift(const SVGRenderStyle& 
 {
     if (style.baselineShift() == BaselineShift::Length) {
         auto baselineShiftValueLength = style.baselineShiftValue();
-        if (baselineShiftValueLength.unitType() == LengthTypePercentage)
+        if (baselineShiftValueLength.lengthType() == SVGLengthType::Percentage)
             return baselineShiftValueLength.valueAsPercentage() * m_font.pixelSize();
 
         SVGLengthContext lengthContext(context);
@@ -48,9 +48,9 @@ float SVGTextLayoutEngineBaseline::calculateBaselineShift(const SVGRenderStyle& 
     case BaselineShift::Baseline:
         return 0;
     case BaselineShift::Sub:
-        return -m_font.fontMetrics().floatHeight() / 2;
+        return -m_font.metricsOfPrimaryFont().floatHeight() / 2;
     case BaselineShift::Super:
-        return m_font.fontMetrics().floatHeight() / 2;
+        return m_font.metricsOfPrimaryFont().floatHeight() / 2;
     case BaselineShift::Length:
         break;
     }
@@ -114,7 +114,7 @@ float SVGTextLayoutEngineBaseline::calculateAlignmentBaselineShift(bool isVertic
         ASSERT(baseline != AlignmentBaseline::Auto);
     }
 
-    const FontMetrics& fontMetrics = m_font.fontMetrics();
+    const FontMetrics& fontMetrics = m_font.metricsOfPrimaryFont();
 
     // Note: http://wiki.apache.org/xmlgraphics-fop/LineLayout/AlignmentHandling
     switch (baseline) {
@@ -162,9 +162,6 @@ float SVGTextLayoutEngineBaseline::calculateGlyphOrientationAngle(bool isVertica
         case U_EA_FULLWIDTH:
         case U_EA_WIDE:
             return 0;
-        case U_EA_COUNT:
-            ASSERT_NOT_REACHED();
-            break;
         }
         ASSERT_NOT_REACHED();
         break;
@@ -198,7 +195,7 @@ float SVGTextLayoutEngineBaseline::calculateGlyphAdvanceAndOrientation(bool isVe
     // Spec: If if the 'glyph-orientation-vertical' results in an orientation angle that is not a multiple of
     // 180 degrees, then the current text position is incremented according to the horizontal metrics of the glyph.
 
-    const FontMetrics& fontMetrics = m_font.fontMetrics();
+    const FontMetrics& fontMetrics = m_font.metricsOfPrimaryFont();
 
     // Vertical orientation handling.
     if (isVerticalText) {

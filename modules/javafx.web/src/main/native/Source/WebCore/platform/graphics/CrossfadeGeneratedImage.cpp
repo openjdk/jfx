@@ -47,7 +47,7 @@ static void drawCrossfadeSubimage(GraphicsContext& context, Image& image, Compos
     FloatSize imageSize = image.size();
 
     // SVGImage resets the opacity when painting, so we have to use transparency layers to accurately paint one at a given opacity.
-    bool useTransparencyLayer = image.isSVGImage();
+    bool useTransparencyLayer = image.drawsSVGImage();
 
     GraphicsContextStateSaver stateSaver(context);
 
@@ -81,8 +81,8 @@ void CrossfadeGeneratedImage::drawCrossfade(GraphicsContext& context)
     context.clip(FloatRect(FloatPoint(), m_crossfadeSize));
     context.beginTransparencyLayer(1);
 
-    drawCrossfadeSubimage(context, m_fromImage.get(), CompositeSourceOver, 1 - m_percentage, m_crossfadeSize);
-    drawCrossfadeSubimage(context, m_toImage.get(), CompositePlusLighter, m_percentage, m_crossfadeSize);
+    drawCrossfadeSubimage(context, m_fromImage.get(), CompositeOperator::SourceOver, 1 - m_percentage, m_crossfadeSize);
+    drawCrossfadeSubimage(context, m_toImage.get(), CompositeOperator::PlusLighter, m_percentage, m_crossfadeSize);
 
     context.endTransparencyLayer();
 }
@@ -103,7 +103,7 @@ ImageDrawResult CrossfadeGeneratedImage::draw(GraphicsContext& context, const Fl
 
 void CrossfadeGeneratedImage::drawPattern(GraphicsContext& context, const FloatRect& dstRect, const FloatRect& srcRect, const AffineTransform& patternTransform, const FloatPoint& phase, const FloatSize& spacing, const ImagePaintingOptions& options)
 {
-    std::unique_ptr<ImageBuffer> imageBuffer = ImageBuffer::create(size(), context.renderingMode());
+    auto imageBuffer = context.createImageBuffer(size());
     if (!imageBuffer)
         return;
 
@@ -112,7 +112,7 @@ void CrossfadeGeneratedImage::drawPattern(GraphicsContext& context, const FloatR
     drawCrossfade(graphicsContext);
 
     // Tile the image buffer into the context.
-    imageBuffer->drawPattern(context, dstRect, srcRect, patternTransform, phase, spacing, options);
+    context.drawPattern(*imageBuffer, dstRect, srcRect, patternTransform, phase, spacing, options);
 }
 
 void CrossfadeGeneratedImage::dump(TextStream& ts) const

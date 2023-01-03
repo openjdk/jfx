@@ -23,7 +23,6 @@
 #include "config.h"
 #include "HTMLCollection.h"
 
-#include "CachedHTMLCollection.h"
 #include "HTMLNames.h"
 #include "NodeRareData.h"
 #include <wtf/IsoMallocInlines.h>
@@ -49,7 +48,7 @@ inline auto HTMLCollection::rootTypeFromCollectionType(CollectionType type) -> R
     case DocumentNamedItems:
     case DocumentAllNamedItems:
     case FormControls:
-        return HTMLCollection::IsRootedAtDocument;
+        return HTMLCollection::IsRootedAtTreeScope;
     case AllDescendants:
     case ByClass:
     case ByTag:
@@ -154,7 +153,7 @@ void HTMLCollection::invalidateNamedElementCache(Document& document) const
     ASSERT(hasNamedElementCache());
     document.collectionWillClearIdNameMap(*this);
     {
-        auto locker = holdLock(m_namedElementCacheAssignmentLock);
+        Locker locker { m_namedElementCacheAssignmentLock };
         m_namedElementCache = nullptr;
     }
 }

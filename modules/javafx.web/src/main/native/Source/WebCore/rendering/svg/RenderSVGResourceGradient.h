@@ -21,7 +21,6 @@
 
 #pragma once
 
-#include "Gradient.h"
 #include "ImageBuffer.h"
 #include "RenderSVGResourceContainer.h"
 #include "SVGGradientElement.h"
@@ -29,13 +28,6 @@
 #include <wtf/HashMap.h>
 
 namespace WebCore {
-
-struct GradientData {
-    WTF_MAKE_FAST_ALLOCATED;
-public:
-    RefPtr<Gradient> gradient;
-    AffineTransform userspaceTransform;
-};
 
 class GraphicsContext;
 
@@ -48,29 +40,32 @@ public:
     void removeClientFromCache(RenderElement&, bool markForInvalidation = true) final;
 
     bool applyResource(RenderElement&, const RenderStyle&, GraphicsContext*&, OptionSet<RenderSVGResourceMode>) final;
-    void postApplyResource(RenderElement&, GraphicsContext*&, OptionSet<RenderSVGResourceMode>, const Path*, const RenderSVGShape*) final;
+    void postApplyResource(RenderElement&, GraphicsContext*&, OptionSet<RenderSVGResourceMode>, const Path*, const RenderElement*) final;
     FloatRect resourceBoundingBox(const RenderObject&) final { return FloatRect(); }
 
 protected:
     RenderSVGResourceGradient(SVGGradientElement&, RenderStyle&&);
 
-    void element() const = delete;
-
-    void addStops(GradientData*, const Vector<Gradient::ColorStop>&, const RenderStyle&) const;
-
-    virtual SVGUnitTypes::SVGUnitType gradientUnits() const = 0;
-    virtual void calculateGradientTransform(AffineTransform&) = 0;
-    virtual bool collectGradientAttributes() = 0;
-    virtual void buildGradient(GradientData*, const RenderStyle&) const = 0;
-
-    GradientSpreadMethod platformSpreadMethodFromSVGType(SVGSpreadMethodType) const;
+    static GradientColorStops stopsByApplyingColorFilter(const GradientColorStops&, const RenderStyle&);
+    static GradientSpreadMethod platformSpreadMethodFromSVGType(SVGSpreadMethodType);
 
 private:
-    HashMap<RenderObject*, std::unique_ptr<GradientData>> m_gradientMap;
+    void element() const = delete;
+
+    virtual SVGUnitTypes::SVGUnitType gradientUnits() const = 0;
+    virtual AffineTransform gradientTransform() const = 0;
+    virtual bool collectGradientAttributes() = 0;
+    virtual Ref<Gradient> buildGradient(const RenderStyle&) const = 0;
+
+    struct GradientData {
+        RefPtr<Gradient> gradient;
+        AffineTransform userspaceTransform;
+    };
+    HashMap<RenderObject*, GradientData> m_gradientMap;
 
 #if USE(CG)
     GraphicsContext* m_savedContext { nullptr };
-    std::unique_ptr<ImageBuffer> m_imageBuffer;
+    RefPtr<ImageBuffer> m_imageBuffer;
 #endif
 
     bool m_shouldCollectGradientAttributes { true };

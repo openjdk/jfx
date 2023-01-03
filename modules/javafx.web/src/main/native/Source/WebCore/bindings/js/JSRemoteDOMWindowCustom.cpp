@@ -26,24 +26,25 @@
 #include "config.h"
 #include "JSRemoteDOMWindow.h"
 
+#include "JSDOMExceptionHandling.h"
 #include "JSDOMWindowCustom.h"
 #include "WebCoreJSClientData.h"
 
 namespace WebCore {
 using namespace JSC;
 
-bool JSRemoteDOMWindow::getOwnPropertySlot(JSObject* object, ExecState* state, PropertyName propertyName, PropertySlot& slot)
+bool JSRemoteDOMWindow::getOwnPropertySlot(JSObject* object, JSGlobalObject* lexicalGlobalObject, PropertyName propertyName, PropertySlot& slot)
 {
-    if (Optional<unsigned> index = parseIndex(propertyName))
-        return getOwnPropertySlotByIndex(object, state, index.value(), slot);
+    if (std::optional<unsigned> index = parseIndex(propertyName))
+        return getOwnPropertySlotByIndex(object, lexicalGlobalObject, index.value(), slot);
 
     auto* thisObject = jsCast<JSRemoteDOMWindow*>(object);
-    return jsDOMWindowGetOwnPropertySlotRestrictedAccess<DOMWindowType::Remote>(thisObject, thisObject->wrapped(), *state, propertyName, slot, String());
+    return jsDOMWindowGetOwnPropertySlotRestrictedAccess<DOMWindowType::Remote>(thisObject, thisObject->wrapped(), *lexicalGlobalObject, propertyName, slot, String());
 }
 
-bool JSRemoteDOMWindow::getOwnPropertySlotByIndex(JSObject* object, ExecState* state, unsigned index, PropertySlot& slot)
+bool JSRemoteDOMWindow::getOwnPropertySlotByIndex(JSObject* object, JSGlobalObject* lexicalGlobalObject, unsigned index, PropertySlot& slot)
 {
-    VM& vm = state->vm();
+    VM& vm = lexicalGlobalObject->vm();
     auto* thisObject = jsCast<JSRemoteDOMWindow*>(object);
 
     // Indexed getters take precendence over regular properties, so caching would be invalid.
@@ -51,12 +52,12 @@ bool JSRemoteDOMWindow::getOwnPropertySlotByIndex(JSObject* object, ExecState* s
 
     // FIXME: Add support for indexed properties.
 
-    return jsDOMWindowGetOwnPropertySlotRestrictedAccess<DOMWindowType::Remote>(thisObject, thisObject->wrapped(), *state, Identifier::from(vm, index), slot, String());
+    return jsDOMWindowGetOwnPropertySlotRestrictedAccess<DOMWindowType::Remote>(thisObject, thisObject->wrapped(), *lexicalGlobalObject, Identifier::from(vm, index), slot, String());
 }
 
-bool JSRemoteDOMWindow::put(JSCell* cell, ExecState* state, PropertyName propertyName, JSValue value, PutPropertySlot& slot)
+bool JSRemoteDOMWindow::put(JSCell* cell, JSGlobalObject* lexicalGlobalObject, PropertyName propertyName, JSValue value, PutPropertySlot& slot)
 {
-    VM& vm = state->vm();
+    VM& vm = lexicalGlobalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     auto* thisObject = jsCast<JSRemoteDOMWindow*>(cell);
@@ -66,71 +67,65 @@ bool JSRemoteDOMWindow::put(JSCell* cell, ExecState* state, PropertyName propert
     String errorMessage;
 
     // We only allow setting "location" attribute cross-origin.
-    if (propertyName == static_cast<JSVMClientData*>(vm.clientData)->builtinNames().locationPublicName()) {
-        bool putResult = false;
-        if (lookupPut(state, propertyName, thisObject, value, *s_info.staticPropHashTable, slot, putResult))
-            return putResult;
-        return false;
+    if (propertyName == builtinNames(vm).locationPublicName()) {
+        auto* setter = s_info.staticPropHashTable->entry(propertyName)->propertyPutter();
+        scope.release();
+        setter(lexicalGlobalObject, JSValue::encode(slot.thisValue()), JSValue::encode(value), propertyName);
+        return true;
     }
-    throwSecurityError(*state, scope, errorMessage);
+
+    throwSecurityError(*lexicalGlobalObject, scope, errorMessage);
     return false;
 }
 
-bool JSRemoteDOMWindow::putByIndex(JSCell*, ExecState*, unsigned, JSValue, bool)
+bool JSRemoteDOMWindow::putByIndex(JSCell*, JSGlobalObject*, unsigned, JSValue, bool)
 {
     return false;
 }
 
-bool JSRemoteDOMWindow::deleteProperty(JSCell*, ExecState* state, PropertyName)
+bool JSRemoteDOMWindow::deleteProperty(JSCell*, JSGlobalObject* lexicalGlobalObject, PropertyName, DeletePropertySlot&)
 {
-    VM& vm = state->vm();
+    VM& vm = lexicalGlobalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    throwSecurityError(*state, scope, String());
+    throwSecurityError(*lexicalGlobalObject, scope, String());
     return false;
 }
 
-bool JSRemoteDOMWindow::deletePropertyByIndex(JSCell*, ExecState* state, unsigned)
+bool JSRemoteDOMWindow::deletePropertyByIndex(JSCell*, JSGlobalObject* lexicalGlobalObject, unsigned)
 {
-    VM& vm = state->vm();
+    VM& vm = lexicalGlobalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    throwSecurityError(*state, scope, String());
+    throwSecurityError(*lexicalGlobalObject, scope, String());
     return false;
 }
 
-void JSRemoteDOMWindow::getOwnPropertyNames(JSObject*, ExecState* exec, PropertyNameArray& propertyNames, EnumerationMode mode)
+void JSRemoteDOMWindow::getOwnPropertyNames(JSObject*, JSGlobalObject* lexicalGlobalObject, PropertyNameArray& propertyNames, DontEnumPropertiesMode mode)
 {
     // FIXME: Add scoped children indexes.
 
-    if (mode.includeDontEnumProperties())
-        addCrossOriginOwnPropertyNames<CrossOriginObject::Window>(*exec, propertyNames);
+    if (mode == DontEnumPropertiesMode::Include)
+        addCrossOriginOwnPropertyNames<CrossOriginObject::Window>(*lexicalGlobalObject, propertyNames);
 }
 
-bool JSRemoteDOMWindow::defineOwnProperty(JSC::JSObject*, JSC::ExecState* state, JSC::PropertyName, const JSC::PropertyDescriptor&, bool)
+bool JSRemoteDOMWindow::defineOwnProperty(JSC::JSObject*, JSC::JSGlobalObject* lexicalGlobalObject, JSC::PropertyName, const JSC::PropertyDescriptor&, bool)
 {
-    VM& vm = state->vm();
+    VM& vm = lexicalGlobalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    throwSecurityError(*state, scope, String());
+    throwSecurityError(*lexicalGlobalObject, scope, String());
     return false;
 }
 
-JSValue JSRemoteDOMWindow::getPrototype(JSObject*, ExecState*)
+JSValue JSRemoteDOMWindow::getPrototype(JSObject*, JSGlobalObject*)
 {
     return jsNull();
 }
 
-bool JSRemoteDOMWindow::preventExtensions(JSObject*, ExecState* exec)
+bool JSRemoteDOMWindow::preventExtensions(JSObject*, JSGlobalObject*)
 {
-    auto scope = DECLARE_THROW_SCOPE(exec->vm());
-    throwTypeError(exec, scope, "Cannot prevent extensions on this object"_s);
     return false;
-}
-
-String JSRemoteDOMWindow::toStringName(const JSObject*, ExecState*)
-{
-    return "Object"_s;
 }
 
 } // namepace WebCore

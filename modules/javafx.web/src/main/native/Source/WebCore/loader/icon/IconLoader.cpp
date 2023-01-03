@@ -30,7 +30,6 @@
 #include "CachedResourceLoader.h"
 #include "CachedResourceRequest.h"
 #include "CachedResourceRequestInitiators.h"
-#include "CustomHeaderFields.h"
 #include "Document.h"
 #include "DocumentLoader.h"
 #include "Frame.h"
@@ -104,7 +103,7 @@ void IconLoader::stopLoading()
     }
 }
 
-void IconLoader::notifyFinished(CachedResource& resource)
+void IconLoader::notifyFinished(CachedResource& resource, const NetworkLoadMetrics&)
 {
     ASSERT_UNUSED(resource, &resource == m_resource);
 
@@ -115,9 +114,8 @@ void IconLoader::notifyFinished(CachedResource& resource)
     if (status && (status < 200 || status > 299))
         data = nullptr;
 
-    static const char pdfMagicNumber[] = "%PDF";
-    static unsigned pdfMagicNumberLength = sizeof(pdfMagicNumber) - 1;
-    if (data && data->size() >= pdfMagicNumberLength && !memcmp(data->data(), pdfMagicNumber, pdfMagicNumberLength)) {
+    constexpr uint8_t pdfMagicNumber[] = { '%', 'P', 'D', 'F' };
+    if (data && data->startsWith(Span { pdfMagicNumber, std::size(pdfMagicNumber) })) {
         LOG(IconDatabase, "IconLoader::finishLoading() - Ignoring icon at %s because it appears to be a PDF", m_resource->url().string().ascii().data());
         data = nullptr;
     }

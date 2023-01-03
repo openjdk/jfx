@@ -60,7 +60,7 @@ Ref<StorageArea> StorageNamespaceProvider::localStorageArea(Document& document)
     else
         storageNamespace = &localStorageNamespace(document.page()->sessionID());
 
-    return storageNamespace->storageArea(document.securityOrigin().data());
+    return storageNamespace->storageArea(document.securityOrigin());
 }
 
 StorageNamespace& StorageNamespaceProvider::localStorageNamespace(PAL::SessionID sessionID)
@@ -82,9 +82,8 @@ StorageNamespace& StorageNamespaceProvider::transientLocalStorageNamespace(Secur
     return *slot;
 }
 
-void StorageNamespaceProvider::enableLegacyPrivateBrowsingForTesting(bool enabled)
+void StorageNamespaceProvider::setSessionIDForTesting(PAL::SessionID newSessionID)
 {
-    auto newSessionID = enabled ? PAL::SessionID::legacyPrivateSessionID() : PAL::SessionID::defaultSessionID();
     if (m_localStorageNamespace && newSessionID != m_localStorageNamespace->sessionID())
         m_localStorageNamespace->setSessionIDForTesting(newSessionID);
 

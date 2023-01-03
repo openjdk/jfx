@@ -30,13 +30,13 @@
 
 // The DOMPointInit constructor exists in https://www.w3.org/TR/geometry-1/ but is removed in https://drafts.fxtf.org/geometry/
 [
-    Constructor(DOMPointInit point),
-    Constructor(optional unrestricted double x = 0, optional unrestricted double y = 0,
-        optional unrestricted double z = 0, optional unrestricted double w = 1),
+    ExportMacro=WEBCORE_EXPORT,
     Exposed=(Window,Worker),
-    ImplementationLacksVTable
-]
-interface DOMPointReadOnly {
+    TaggedWrapper,
+] interface DOMPointReadOnly {
+    constructor(DOMPointInit point);
+    constructor(optional unrestricted double x = 0, optional unrestricted double y = 0, optional unrestricted double z = 0, optional unrestricted double w = 1);
+
     [NewObject] static DOMPointReadOnly fromPoint(optional DOMPointInit other);
 
     readonly attribute unrestricted double x;
@@ -44,7 +44,7 @@ interface DOMPointReadOnly {
     readonly attribute unrestricted double z;
     readonly attribute unrestricted double w;
 
-    [MayThrowException] DOMPoint matrixTransform(optional DOMMatrixInit matrix);
+    DOMPoint matrixTransform(optional DOMMatrixInit matrix);
 
-    serializer = { attribute };
+    [Default] object toJSON();
 };

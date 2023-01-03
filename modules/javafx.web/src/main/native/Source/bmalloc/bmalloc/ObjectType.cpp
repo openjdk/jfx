@@ -30,6 +30,8 @@
 #include "Object.h"
 #include "PerProcess.h"
 
+#if !BUSE(LIBPAS)
+
 namespace bmalloc {
 
 ObjectType objectType(Heap& heap, void* object)
@@ -38,8 +40,7 @@ ObjectType objectType(Heap& heap, void* object)
         if (!object)
             return ObjectType::Small;
 
-        std::unique_lock<Mutex> lock(Heap::mutex());
-        if (heap.isLarge(lock, object))
+        if (heap.isLarge(object))
             return ObjectType::Large;
     }
 
@@ -47,3 +48,5 @@ ObjectType objectType(Heap& heap, void* object)
 }
 
 } // namespace bmalloc
+
+#endif

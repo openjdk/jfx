@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2019 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2015-2021 Apple Inc. All Rights Reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include "ECMAMode.h"
 #include <wtf/text/UniquedStringImpl.h>
 
 namespace JSC {
@@ -38,13 +39,28 @@ enum ResolveMode {
     DoNotThrowIfNotFound
 };
 
+#define FOR_EACH_RESOLVE_TYPE(v) \
+    v(GlobalProperty) \
+    v(GlobalVar) \
+    v(GlobalLexicalVar) \
+    v(ClosureVar) \
+    v(ResolvedClosureVar) \
+    v(ModuleVar) \
+    v(GlobalPropertyWithVarInjectionChecks) \
+    v(GlobalVarWithVarInjectionChecks) \
+    v(GlobalLexicalVarWithVarInjectionChecks) \
+    v(ClosureVarWithVarInjectionChecks) \
+    v(UnresolvedProperty) \
+    v(UnresolvedPropertyWithVarInjectionChecks) \
+    v(Dynamic)
+
 enum ResolveType : unsigned {
     // Lexical scope guaranteed a certain type of variable access.
     GlobalProperty,
     GlobalVar,
     GlobalLexicalVar,
     ClosureVar,
-    LocalClosureVar,
+    ResolvedClosureVar,
     ModuleVar,
 
     // Ditto, but at least one intervening scope used non-strict eval, which
@@ -86,7 +102,7 @@ ALWAYS_INLINE const char* resolveTypeName(ResolveType type)
         "GlobalVar",
         "GlobalLexicalVar",
         "ClosureVar",
-        "LocalClosureVar",
+        "ResolvedClosureVar",
         "ModuleVar",
         "GlobalPropertyWithVarInjectionChecks",
         "GlobalVarWithVarInjectionChecks",
@@ -135,7 +151,7 @@ ALWAYS_INLINE ResolveType makeType(ResolveType type, bool needsVarInjectionCheck
     case GlobalLexicalVar:
         return GlobalLexicalVarWithVarInjectionChecks;
     case ClosureVar:
-    case LocalClosureVar:
+    case ResolvedClosureVar:
         return ClosureVarWithVarInjectionChecks;
     case UnresolvedProperty:
         return UnresolvedPropertyWithVarInjectionChecks;
@@ -160,7 +176,7 @@ ALWAYS_INLINE bool needsVarInjectionChecks(ResolveType type)
     case GlobalVar:
     case GlobalLexicalVar:
     case ClosureVar:
-    case LocalClosureVar:
+    case ResolvedClosureVar:
     case ModuleVar:
     case UnresolvedProperty:
         return false;
@@ -202,18 +218,20 @@ class GetPutInfo {
     typedef unsigned Operand;
 public:
     // Give each field 10 bits for simplicity.
-    static_assert(sizeof(Operand) * 8 > 30, "Not enough bits for GetPutInfo");
-    static const unsigned modeShift = 20;
-    static const unsigned initializationShift = 10;
-    static const unsigned typeBits = (1 << initializationShift) - 1;
-    static const unsigned initializationBits = ((1 << modeShift) - 1) & ~typeBits;
-    static const unsigned modeBits = ((1 << 30) - 1) & ~initializationBits & ~typeBits;
-    static_assert((modeBits & initializationBits & typeBits) == 0x0, "There should be no intersection between ResolveMode ResolveType and InitializationMode");
+    static_assert(sizeof(Operand) * 8 > 31, "Not enough bits for GetPutInfo");
+    static constexpr unsigned isStrictShift = 30;
+    static constexpr unsigned modeShift = 20;
+    static constexpr unsigned initializationShift = 10;
+    static constexpr unsigned typeBits = (1 << initializationShift) - 1;
+    static constexpr unsigned initializationBits = ((1 << modeShift) - 1) & ~typeBits;
+    static constexpr unsigned modeBits = ((1 << 30) - 1) & ~initializationBits & ~typeBits;
+    static constexpr unsigned isStrictBit = 1 << 30;
+    static_assert((modeBits & initializationBits & typeBits & isStrictBit) == 0x0, "There should be no intersection between ResolveMode ResolveType and InitializationMode");
 
     GetPutInfo() = default;
 
-    GetPutInfo(ResolveMode resolveMode, ResolveType resolveType, InitializationMode initializationMode)
-        : m_operand((resolveMode << modeShift) | (static_cast<unsigned>(initializationMode) << initializationShift) | resolveType)
+    GetPutInfo(ResolveMode resolveMode, ResolveType resolveType, InitializationMode initializationMode, ECMAMode ecmaMode)
+        : m_operand((ecmaMode.isStrict() << isStrictShift) | (resolveMode << modeShift) | (static_cast<unsigned>(initializationMode) << initializationShift) | resolveType)
     {
     }
 
@@ -225,6 +243,7 @@ public:
     ResolveType resolveType() const { return static_cast<ResolveType>(m_operand & typeBits); }
     InitializationMode initializationMode() const { return static_cast<InitializationMode>((m_operand & initializationBits) >> initializationShift); }
     ResolveMode resolveMode() const { return static_cast<ResolveMode>((m_operand & modeBits) >> modeShift); }
+    ECMAMode ecmaMode() const { return m_operand & isStrictBit ? ECMAMode::strict() : ECMAMode::sloppy(); }
     unsigned operand() const { return m_operand; }
 
     void dump(PrintStream&) const;

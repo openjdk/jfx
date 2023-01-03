@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2015, Oracle and/or its affiliates.
+ * Copyright (c) 2012, 2021, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -89,7 +89,7 @@ public class PieChartDataVisualizer extends TableView<Data> {
                         return null;
                     }
                     try {
-                        return (Double) new Double(string);
+                        return Double.valueOf(string);
                     } catch (Exception ignored) {
                         return 0;
                     }

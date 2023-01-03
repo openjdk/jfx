@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,9 +25,24 @@
 
 package javafx.scene.control.skin;
 
+import java.lang.ref.WeakReference;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
+import com.sun.javafx.PlatformUtil;
 import com.sun.javafx.scene.control.Properties;
+import com.sun.javafx.scene.control.behavior.TextInputControlBehavior;
 import com.sun.javafx.scene.control.skin.FXVK;
 import com.sun.javafx.scene.input.ExtendedInputMethodRequests;
+import com.sun.javafx.tk.FontMetrics;
+import com.sun.javafx.tk.Toolkit;
+
+import static com.sun.javafx.PlatformUtil.*;
+
+import javafx.animation.Animation.Status;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.application.ConditionalFeature;
@@ -45,6 +60,9 @@ import javafx.css.Styleable;
 import javafx.css.StyleableBooleanProperty;
 import javafx.css.StyleableObjectProperty;
 import javafx.css.StyleableProperty;
+import javafx.css.converter.BooleanConverter;
+import javafx.css.converter.PaintConverter;
+import javafx.event.EventHandler;
 import javafx.geometry.NodeOrientation;
 import javafx.geometry.Point2D;
 import javafx.geometry.Rectangle2D;
@@ -56,6 +74,7 @@ import javafx.scene.control.SkinBase;
 import javafx.scene.control.TextInputControl;
 import javafx.scene.input.InputMethodEvent;
 import javafx.scene.input.InputMethodHighlight;
+import javafx.scene.input.InputMethodRequests;
 import javafx.scene.input.InputMethodTextRun;
 import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
@@ -69,22 +88,8 @@ import javafx.scene.shape.Path;
 import javafx.scene.shape.PathElement;
 import javafx.scene.shape.Shape;
 import javafx.scene.shape.VLineTo;
-import javafx.scene.text.HitInfo;
 import javafx.stage.Window;
 import javafx.util.Duration;
-import java.lang.ref.WeakReference;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import com.sun.javafx.PlatformUtil;
-import javafx.css.converter.BooleanConverter;
-import javafx.css.converter.PaintConverter;
-import com.sun.javafx.scene.control.behavior.TextInputControlBehavior;
-import com.sun.javafx.tk.FontMetrics;
-import com.sun.javafx.tk.Toolkit;
-import static com.sun.javafx.PlatformUtil.isWindows;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 
 /**
  * Abstract base class for text input skins.
@@ -95,7 +100,7 @@ import java.security.PrivilegedAction;
  */
 public abstract class TextInputControlSkin<T extends TextInputControl> extends SkinBase<T> {
 
-    /**************************************************************************
+    /* ************************************************************************
      *
      * Static fields / blocks
      *
@@ -106,18 +111,43 @@ public abstract class TextInputControlSkin<T extends TextInputControl> extends S
      *
      * @see #moveCaret(TextUnit, Direction, boolean)
      */
-    public static enum TextUnit { CHARACTER, WORD, LINE, PARAGRAPH, PAGE };
+    public static enum TextUnit {
+        /** Character unit */
+        CHARACTER,
+        /** Word unit */
+        WORD,
+        /** Line unit */
+        LINE,
+        /** Paragraph unit */
+        PARAGRAPH,
+        /** Page unit */
+        PAGE
+    }
 
     /**
      * Direction names for caret movement.
      *
      * @see #moveCaret(TextUnit, Direction, boolean)
      */
-    public static enum Direction { LEFT, RIGHT, UP, DOWN, BEGINNING, END };
+    public static enum Direction {
+        /** Left Direction */
+        LEFT,
+        /** Right Direction */
+        RIGHT,
+        /** Up Direction */
+        UP,
+        /** Down Direction */
+        DOWN,
+        /** Beginning */
+        BEGINNING,
+        /** End */
+        END
+    }
 
     static boolean preload = false;
     static {
-        AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+        @SuppressWarnings("removal")
+        var dummy = AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
             String s = System.getProperty("com.sun.javafx.virtualKeyboard.preload");
             if (s != null) {
                 if (s.equalsIgnoreCase("PRERENDER")) {
@@ -129,14 +159,13 @@ public abstract class TextInputControlSkin<T extends TextInputControl> extends S
     }
 
     /**
-     * Specifies whether we ought to show handles. We should do it on touch platforms, but not
-     * iOS (and maybe not Android either?)
+     * Specifies whether we ought to show handles. We should do it on touch platforms
      */
-    static final boolean SHOW_HANDLES = Properties.IS_TOUCH_SUPPORTED && !PlatformUtil.isIOS();
+    static final boolean SHOW_HANDLES = Properties.IS_TOUCH_SUPPORTED;
 
     private final static boolean IS_FXVK_SUPPORTED = Platform.isSupported(ConditionalFeature.VIRTUAL_KEYBOARD);
 
-    /**************************************************************************
+    /* ************************************************************************
      *
      * Private fields
      *
@@ -162,11 +191,13 @@ public abstract class TextInputControlSkin<T extends TextInputControl> extends S
     private int imstart;
     private int imlength;
     // Holds concrete attributes for the composition runs
-    private List<Shape> imattrs = new java.util.ArrayList<Shape>();
+    private List<Shape> imattrs = new java.util.ArrayList<>();
+
+    private final EventHandler<InputMethodEvent> inputMethodTextChangedHandler = this::handleInputMethodEvent;
+    private InputMethodRequests inputMethodRequests;
 
 
-
-    /**************************************************************************
+    /* ************************************************************************
      *
      * Constructors
      *
@@ -182,7 +213,7 @@ public abstract class TextInputControlSkin<T extends TextInputControl> extends S
     public TextInputControlSkin(final T control) {
         super(control);
 
-        fontMetrics = new ObjectBinding<FontMetrics>() {
+        fontMetrics = new ObjectBinding<>() {
             { bind(control.fontProperty()); }
             @Override protected FontMetrics computeValue() {
                 invalidateMetrics();
@@ -219,17 +250,25 @@ public abstract class TextInputControlSkin<T extends TextInputControl> extends S
             selectionHandle1.setManaged(false);
             selectionHandle2.setManaged(false);
 
-            caretHandle.visibleProperty().bind(new BooleanBinding() {
-                { bind(control.focusedProperty(), control.anchorProperty(),
-                        control.caretPositionProperty(), control.disabledProperty(),
-                        control.editableProperty(), control.lengthProperty(), displayCaret);}
-                @Override protected boolean computeValue() {
-                    return (displayCaret.get() && control.isFocused() &&
-                            control.getCaretPosition() == control.getAnchor() &&
-                            !control.isDisabled() && control.isEditable() &&
-                            control.getLength() > 0);
-                }
-            });
+            if (PlatformUtil.isIOS()) {
+                caretHandle.setVisible(false);
+            } else {
+                caretHandle.visibleProperty().bind(new BooleanBinding() {
+                    {
+                        bind(control.focusedProperty(), control.anchorProperty(),
+                                control.caretPositionProperty(), control.disabledProperty(),
+                                control.editableProperty(), control.lengthProperty(), displayCaret);
+                    }
+
+                    @Override
+                    protected boolean computeValue() {
+                        return (displayCaret.get() && control.isFocused() &&
+                                control.getCaretPosition() == control.getAnchor() &&
+                                !control.isDisabled() && control.isEditable() &&
+                                control.getLength() > 0);
+                    }
+                });
+            }
 
 
             selectionHandle1.visibleProperty().bind(new BooleanBinding() {
@@ -272,7 +311,7 @@ public abstract class TextInputControlSkin<T extends TextInputControl> extends S
                     }
                 }
             }
-            control.focusedProperty().addListener(observable -> {
+            registerInvalidationListener(control.focusedProperty(), observable -> {
                 if (FXVK.useFXVK()) {
                     Scene scene = getSkinnable().getScene();
                     if (control.isEditable() && control.isFocused()) {
@@ -288,72 +327,91 @@ public abstract class TextInputControlSkin<T extends TextInputControl> extends S
             });
         }
 
-        if (control.getOnInputMethodTextChanged() == null) {
-            control.setOnInputMethodTextChanged(event -> {
-                handleInputMethodEvent(event);
-            });
+        control.addEventHandler(InputMethodEvent.INPUT_METHOD_TEXT_CHANGED, inputMethodTextChangedHandler);
+    }
+
+    @Override
+    public void install() {
+        super.install();
+
+        TextInputControl control = getSkinnable();
+
+        if (control.getInputMethodRequests() == null) {
+            inputMethodRequests = new ExtendedInputMethodRequests() {
+                @Override public Point2D getTextLocation(int offset) {
+                    Scene scene = control.getScene();
+                    Window window = scene != null ? scene.getWindow() : null;
+                    if (window == null) {
+                        return new Point2D(0, 0);
+                    }
+                    // Don't use imstart here because it isn't initialized yet.
+                    Rectangle2D characterBounds = getCharacterBounds(control.getSelection().getStart() + offset);
+                    Point2D p = control.localToScene(characterBounds.getMinX(), characterBounds.getMaxY());
+                    Point2D location = new Point2D(window.getX() + scene.getX() + p.getX(),
+                            window.getY() + scene.getY() + p.getY());
+                    return location;
+                }
+
+                @Override public int getLocationOffset(int x, int y) {
+                    return getInsertionPoint(x, y);
+                }
+
+                @Override public void cancelLatestCommittedText() {
+                    // TODO
+                }
+
+                @Override public String getSelectedText() {
+                    IndexRange selection = control.getSelection();
+                    return control.getText(selection.getStart(), selection.getEnd());
+                }
+
+                @Override public int getInsertPositionOffset() {
+                    int caretPosition = control.getCaretPosition();
+                    if (caretPosition < imstart) {
+                        return caretPosition;
+                    } else if (caretPosition < imstart + imlength) {
+                        return imstart;
+                    } else {
+                        return caretPosition - imlength;
+                    }
+                }
+
+                @Override public String getCommittedText(int begin, int end) {
+                    if (begin < imstart) {
+                        if (end <= imstart) {
+                            return control.getText(begin, end);
+                        } else {
+                            return control.getText(begin, imstart) + control.getText(imstart + imlength, end + imlength);
+                        }
+                    } else {
+                        return control.getText(begin + imlength, end + imlength);
+                    }
+                }
+
+                @Override public int getCommittedTextLength() {
+                    return control.getText().length() - imlength;
+                }
+            };
+            control.setInputMethodRequests(inputMethodRequests);
+        }
+    }
+
+    @Override
+    public void dispose() {
+        if (getSkinnable() == null) {
+            return;
         }
 
-        control.setInputMethodRequests(new ExtendedInputMethodRequests() {
-            @Override public Point2D getTextLocation(int offset) {
-                Scene scene = getSkinnable().getScene();
-                Window window = scene.getWindow();
-                // Don't use imstart here because it isn't initialized yet.
-                Rectangle2D characterBounds = getCharacterBounds(control.getSelection().getStart() + offset);
-                Point2D p = getSkinnable().localToScene(characterBounds.getMinX(), characterBounds.getMaxY());
-                Point2D location = new Point2D(window.getX() + scene.getX() + p.getX(),
-                        window.getY() + scene.getY() + p.getY());
-                return location;
-            }
+        getSkinnable().removeEventHandler(InputMethodEvent.INPUT_METHOD_TEXT_CHANGED, inputMethodTextChangedHandler);
 
-            @Override public int getLocationOffset(int x, int y) {
-                return getInsertionPoint(x, y);
-            }
-
-            @Override public void cancelLatestCommittedText() {
-                // TODO
-            }
-
-            @Override public String getSelectedText() {
-                TextInputControl control = getSkinnable();
-                IndexRange selection = control.getSelection();
-
-                return control.getText(selection.getStart(), selection.getEnd());
-            }
-
-            @Override public int getInsertPositionOffset() {
-                int caretPosition = getSkinnable().getCaretPosition();
-                if (caretPosition < imstart) {
-                    return caretPosition;
-                } else if (caretPosition < imstart + imlength) {
-                    return imstart;
-                } else {
-                    return caretPosition - imlength;
-                }
-            }
-
-            @Override public String getCommittedText(int begin, int end) {
-                TextInputControl control = getSkinnable();
-                if (begin < imstart) {
-                    if (end <= imstart) {
-                        return control.getText(begin, end);
-                    } else {
-                        return control.getText(begin, imstart) + control.getText(imstart + imlength, end + imlength);
-                    }
-                } else {
-                    return control.getText(begin + imlength, end + imlength);
-                }
-            }
-
-            @Override public int getCommittedTextLength() {
-                return getSkinnable().getText().length() - imlength;
-            }
-        });
+        if (getSkinnable().getInputMethodRequests() == inputMethodRequests) {
+            getSkinnable().setInputMethodRequests(null);
+        }
+        super.dispose();
     }
 
 
-
-    /**************************************************************************
+    /* ************************************************************************
      *
      * Properties
      *
@@ -410,7 +468,9 @@ public abstract class TextInputControlSkin<T extends TextInputControl> extends S
         return textFill;
     }
 
-    // --- prompt text fill
+    /**
+     * The fill {@code Paint} used for the foreground of prompt text.
+     */
     private final ObjectProperty<Paint> promptTextFill = new StyleableObjectProperty<Paint>(Color.GRAY) {
         @Override public Object getBean() {
             return TextInputControlSkin.this;
@@ -475,7 +535,9 @@ public abstract class TextInputControlSkin<T extends TextInputControl> extends S
         return highlightFill;
     }
 
-    // --- highlight text fill
+    /**
+     * The fill {@code Paint} used for the foreground of selected text.
+     */
     private final ObjectProperty<Paint> highlightTextFill = new StyleableObjectProperty<Paint>(Color.WHITE) {
         @Override protected void invalidated() {
             updateHighlightTextFill();
@@ -552,30 +614,34 @@ public abstract class TextInputControlSkin<T extends TextInputControl> extends S
 
 
 
-    /**************************************************************************
+    /* ************************************************************************
      *
      * Abstract API
      *
      **************************************************************************/
 
     /**
+     * Gets the path elements describing the shape of the underline for the given range.
      * @param start the start
      * @param end the end
-     * @return the path elements describing the shape of the underline for the given range.
+     * @return the path elements describing the shape of the underline for the given range
      */
     protected abstract PathElement[] getUnderlineShape(int start, int end);
-    /**
+
+    /** Gets the path elements describing the bounding rectangles for the given range of text.
      * @param start the start
      * @param end the end
-     * @return the path elements describing the bounding rectangles for the given range of text.
+     * @return the path elements describing the bounding rectangles for the given range of text
      */
     protected abstract PathElement[] getRangeShape(int start, int end);
+
     /**
      * Adds highlight for composed text from Input Method.
      * @param nodes the list of nodes
      * @param start the start
      */
     protected abstract void addHighlight(List<? extends Node> nodes, int start);
+
     /**
      * Removes highlight for composed text from Input Method.
      * @param nodes the list of nodes
@@ -594,7 +660,7 @@ public abstract class TextInputControlSkin<T extends TextInputControl> extends S
      */
     public abstract void moveCaret(TextUnit unit, Direction dir, boolean select);
 
-    /**************************************************************************
+    /* ************************************************************************
      *
      * Public API
      *
@@ -671,18 +737,22 @@ public abstract class TextInputControlSkin<T extends TextInputControl> extends S
     /**
      * Called when textFill property changes.
      */
-    protected void updateTextFill() {};
+    protected void updateTextFill() {}
 
     /**
      * Called when highlightFill property changes.
      */
-    protected void updateHighlightFill() {};
+    protected void updateHighlightFill() {}
 
     /**
      * Called when highlightTextFill property changes.
      */
-    protected void updateHighlightTextFill() {};
+    protected void updateHighlightTextFill() {}
 
+    /**
+     * Handles an input method event.
+     * @param event the {@code InputMethodEvent} to be handled
+     */
     protected void handleInputMethodEvent(InputMethodEvent event) {
         final TextInputControl textInput = getSkinnable();
         if (textInput.isEditable() && !textInput.textProperty().isBound() && !textInput.isDisabled()) {
@@ -744,7 +814,7 @@ public abstract class TextInputControlSkin<T extends TextInputControl> extends S
 
 
 
-    /**************************************************************************
+    /* ************************************************************************
      *
      * Private implementation
      *
@@ -758,9 +828,14 @@ public abstract class TextInputControlSkin<T extends TextInputControl> extends S
         return caretVisible;
     }
 
+    // for testing only!
+    boolean isCaretBlinking() {
+        return caretBlinking.caretTimeline.getStatus() == Status.RUNNING;
+    }
+
     boolean isRTL() {
         return (getSkinnable().getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT);
-    };
+    }
 
     private void createInputMethodAttributes(InputMethodHighlight highlight, int start, int end) {
         double minX = 0f;
@@ -828,7 +903,7 @@ public abstract class TextInputControlSkin<T extends TextInputControl> extends S
 
 
 
-    /**************************************************************************
+    /* ************************************************************************
      *
      * Support classes
      *
@@ -871,7 +946,7 @@ public abstract class TextInputControlSkin<T extends TextInputControl> extends S
 
     private static class StyleableProperties {
         private static final CssMetaData<TextInputControl,Paint> TEXT_FILL =
-            new CssMetaData<TextInputControl,Paint>("-fx-text-fill",
+            new CssMetaData<>("-fx-text-fill",
                 PaintConverter.getInstance(), Color.BLACK) {
 
             @Override public boolean isSettable(TextInputControl n) {
@@ -887,7 +962,7 @@ public abstract class TextInputControlSkin<T extends TextInputControl> extends S
         };
 
         private static final CssMetaData<TextInputControl,Paint> PROMPT_TEXT_FILL =
-            new CssMetaData<TextInputControl,Paint>("-fx-prompt-text-fill",
+            new CssMetaData<>("-fx-prompt-text-fill",
                 PaintConverter.getInstance(), Color.GRAY) {
 
             @Override public boolean isSettable(TextInputControl n) {
@@ -903,7 +978,7 @@ public abstract class TextInputControlSkin<T extends TextInputControl> extends S
         };
 
         private static final CssMetaData<TextInputControl,Paint> HIGHLIGHT_FILL =
-            new CssMetaData<TextInputControl,Paint>("-fx-highlight-fill",
+            new CssMetaData<>("-fx-highlight-fill",
                 PaintConverter.getInstance(), Color.DODGERBLUE) {
 
             @Override public boolean isSettable(TextInputControl n) {
@@ -919,7 +994,7 @@ public abstract class TextInputControlSkin<T extends TextInputControl> extends S
         };
 
         private static final CssMetaData<TextInputControl,Paint> HIGHLIGHT_TEXT_FILL =
-            new CssMetaData<TextInputControl,Paint>("-fx-highlight-text-fill",
+            new CssMetaData<>("-fx-highlight-text-fill",
                 PaintConverter.getInstance(), Color.WHITE) {
 
             @Override public boolean isSettable(TextInputControl n) {
@@ -935,7 +1010,7 @@ public abstract class TextInputControlSkin<T extends TextInputControl> extends S
         };
 
         private static final CssMetaData<TextInputControl,Boolean> DISPLAY_CARET =
-            new CssMetaData<TextInputControl,Boolean>("-fx-display-caret",
+            new CssMetaData<>("-fx-display-caret",
                 BooleanConverter.getInstance(), Boolean.TRUE) {
 
             @Override public boolean isSettable(TextInputControl n) {
@@ -953,7 +1028,7 @@ public abstract class TextInputControlSkin<T extends TextInputControl> extends S
         private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
         static {
             List<CssMetaData<? extends Styleable, ?>> styleables =
-                new ArrayList<CssMetaData<? extends Styleable, ?>>(SkinBase.getClassCssMetaData());
+                new ArrayList<>(SkinBase.getClassCssMetaData());
             styleables.add(TEXT_FILL);
             styleables.add(PROMPT_TEXT_FILL);
             styleables.add(HIGHLIGHT_FILL);

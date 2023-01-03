@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2007, 2015 Apple Inc.  All rights reserved.
- * Copyright (C) 2011 Google Inc.  All rights reserved.
+ * Copyright (C) 2007-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2011 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,8 +26,8 @@
 
 #pragma once
 
+#include <optional>
 #include <wtf/Forward.h>
-#include <wtf/Optional.h>
 
 namespace Inspector {
 class FrontendChannel;
@@ -60,11 +60,17 @@ public:
     virtual bool overridesShowPaintRects() const { return false; }
     virtual void setShowPaintRects(bool) { }
     virtual void showPaintRect(const FloatRect&) { }
+    virtual unsigned paintRectCount() const { return 0; }
     virtual void didSetSearchingForNode(bool) { }
     virtual void elementSelectionChanged(bool) { }
     virtual void timelineRecordingChanged(bool) { }
 
-    virtual void setMockCaptureDevicesEnabledOverride(Optional<bool>) { }
+    enum class DeveloperPreference {
+        PrivateClickMeasurementDebugModeEnabled,
+        ITPDebugModeEnabled,
+        MockCaptureDevicesEnabled,
+    };
+    virtual void setDeveloperPreferenceOverride(DeveloperPreference, std::optional<bool>) { }
 
 #if ENABLE(REMOTE_INSPECTOR)
     virtual bool allowRemoteInspectionToPageDirectly() const { return false; }
@@ -72,3 +78,16 @@ public:
 };
 
 } // namespace WebCore
+
+namespace WTF {
+
+template<> struct EnumTraits<WebCore::InspectorClient::DeveloperPreference> {
+    using values = EnumValues<
+        WebCore::InspectorClient::DeveloperPreference,
+        WebCore::InspectorClient::DeveloperPreference::PrivateClickMeasurementDebugModeEnabled,
+        WebCore::InspectorClient::DeveloperPreference::ITPDebugModeEnabled,
+        WebCore::InspectorClient::DeveloperPreference::MockCaptureDevicesEnabled
+    >;
+};
+
+} // namespace WTF

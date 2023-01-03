@@ -42,9 +42,12 @@
 #include "ResourceResponse.h"
 #include "ScriptExecutionContext.h"
 #include "SecurityOrigin.h"
+#include "SharedBuffer.h"
 #include "TextResourceDecoder.h"
 #include "ThreadableLoader.h"
 #include <wtf/IsoMallocInlines.h>
+#include <wtf/SetForScope.h>
+#include <wtf/text/StringToIntegerConversion.h>
 
 namespace WebCore {
 
@@ -57,15 +60,13 @@ inline EventSource::EventSource(ScriptExecutionContext& context, const URL& url,
     , m_url(url)
     , m_withCredentials(eventSourceInit.withCredentials)
     , m_decoder(TextResourceDecoder::create("text/plain"_s, "UTF-8"))
-    , m_connectTimer(*this, &EventSource::connect)
+    , m_connectTimer(&context, *this, &EventSource::connect)
 {
+    m_connectTimer.suspendIfNeeded();
 }
 
 ExceptionOr<Ref<EventSource>> EventSource::create(ScriptExecutionContext& context, const String& url, const Init& eventSourceInit)
 {
-    if (url.isEmpty())
-        return Exception { SyntaxError };
-
     URL fullURL = context.completeURL(url);
     if (!fullURL.isValid())
         return Exception { SyntaxError };
@@ -77,7 +78,6 @@ ExceptionOr<Ref<EventSource>> EventSource::create(ScriptExecutionContext& contex
     }
 
     auto source = adoptRef(*new EventSource(context, fullURL, eventSourceInit));
-    source->setPendingActivity(source.get());
     source->scheduleInitialConnect();
     source->suspendIfNeeded();
     return source;
@@ -127,8 +127,6 @@ void EventSource::networkRequestEnded()
 
     if (m_state != CLOSED)
         scheduleReconnect();
-    else
-        unsetPendingActivity(*this);
 }
 
 void EventSource::scheduleInitialConnect()
@@ -141,9 +139,10 @@ void EventSource::scheduleInitialConnect()
 
 void EventSource::scheduleReconnect()
 {
+    RELEASE_ASSERT_WITH_SECURITY_IMPLICATION(!m_isSuspendedForBackForwardCache);
     m_state = CONNECTING;
     m_connectTimer.startOneShot(1_ms * m_reconnectDelay);
-    dispatchEvent(Event::create(eventNames().errorEvent, Event::CanBubble::No, Event::IsCancelable::No));
+    dispatchErrorEvent();
 }
 
 void EventSource::close()
@@ -155,14 +154,12 @@ void EventSource::close()
 
     // Stop trying to connect/reconnect if EventSource was explicitly closed or if ActiveDOMObject::stop() was called.
     if (m_connectTimer.isActive())
-        m_connectTimer.stop();
+        m_connectTimer.cancel();
 
     if (m_requestInFlight)
-        m_loader->cancel();
-    else {
+        doExplicitLoadCancellation();
+    else
         m_state = CLOSED;
-        unsetPendingActivity(*this);
-    }
 }
 
 bool EventSource::responseIsValid(const ResourceResponse& response) const
@@ -180,26 +177,27 @@ bool EventSource::responseIsValid(const ResourceResponse& response) const
         return false;
     }
 
-    // If we have a charset, the only allowed value is UTF-8 (case-insensitive).
+    // The specification states we should always decode as UTF-8. If there is a provided charset and it is not UTF-8, then log a warning
+    // message but keep going anyway.
     auto& charset = response.textEncodingName();
     if (!charset.isEmpty() && !equalLettersIgnoringASCIICase(charset, "utf-8")) {
-        auto message = makeString("EventSource's response has a charset (\"", charset, "\") that is not UTF-8. Aborting the connection.");
+        auto message = makeString("EventSource's response has a charset (\"", charset, "\") that is not UTF-8. The response will be decoded as UTF-8.");
         // FIXME: Console message would be better with a source code location; where would we get that?
         scriptExecutionContext()->addConsoleMessage(MessageSource::JS, MessageLevel::Error, WTFMove(message));
-        return false;
     }
 
     return true;
 }
 
-void EventSource::didReceiveResponse(unsigned long, const ResourceResponse& response)
+void EventSource::didReceiveResponse(ResourceLoaderIdentifier, const ResourceResponse& response)
 {
     ASSERT(m_state == CONNECTING);
     ASSERT(m_requestInFlight);
+    RELEASE_ASSERT_WITH_SECURITY_IMPLICATION(!m_isSuspendedForBackForwardCache);
 
     if (!responseIsValid(response)) {
-        m_loader->cancel();
-        dispatchEvent(Event::create(eventNames().errorEvent, Event::CanBubble::No, Event::IsCancelable::No));
+        doExplicitLoadCancellation();
+        dispatchErrorEvent();
         return;
     }
 
@@ -208,19 +206,26 @@ void EventSource::didReceiveResponse(unsigned long, const ResourceResponse& resp
     dispatchEvent(Event::create(eventNames().openEvent, Event::CanBubble::No, Event::IsCancelable::No));
 }
 
-void EventSource::didReceiveData(const char* data, int length)
+void EventSource::dispatchErrorEvent()
+{
+    dispatchEvent(Event::create(eventNames().errorEvent, Event::CanBubble::No, Event::IsCancelable::No));
+}
+
+void EventSource::didReceiveData(const SharedBuffer& buffer)
 {
     ASSERT(m_state == OPEN);
     ASSERT(m_requestInFlight);
+    RELEASE_ASSERT_WITH_SECURITY_IMPLICATION(!m_isSuspendedForBackForwardCache);
 
-    append(m_receiveBuffer, m_decoder->decode(data, length));
+    append(m_receiveBuffer, m_decoder->decode(buffer.data(), buffer.size()));
     parseEventStream();
 }
 
-void EventSource::didFinishLoading(unsigned long)
+void EventSource::didFinishLoading(ResourceLoaderIdentifier, const NetworkLoadMetrics&)
 {
     ASSERT(m_state == OPEN);
     ASSERT(m_requestInFlight);
+    RELEASE_ASSERT_WITH_SECURITY_IMPLICATION(!m_isSuspendedForBackForwardCache);
 
     append(m_receiveBuffer, m_decoder->flush());
     parseEventStream();
@@ -247,6 +252,14 @@ void EventSource::didFail(const ResourceError& error)
 
     ASSERT(m_requestInFlight);
 
+    // This is the case where the load gets cancelled on navigating away. We only fire an error event and attempt to reconnect
+    // if we end up getting resumed from back/forward cache.
+    if (error.isCancellation() && !m_isDoingExplicitCancellation) {
+        m_shouldReconnectOnResume = true;
+        m_requestInFlight = false;
+        return;
+    }
+
     if (error.isCancellation())
         m_state = CLOSED;
 
@@ -258,16 +271,28 @@ void EventSource::didFail(const ResourceError& error)
 void EventSource::abortConnectionAttempt()
 {
     ASSERT(m_state == CONNECTING);
+    RELEASE_ASSERT_WITH_SECURITY_IMPLICATION(!m_isSuspendedForBackForwardCache);
 
+    auto jsWrapperProtector = makePendingActivity(*this);
     if (m_requestInFlight)
-        m_loader->cancel();
-    else {
+        doExplicitLoadCancellation();
+    else
         m_state = CLOSED;
-        unsetPendingActivity(*this);
-    }
 
     ASSERT(m_state == CLOSED);
     dispatchEvent(Event::create(eventNames().errorEvent, Event::CanBubble::No, Event::IsCancelable::No));
+}
+
+bool EventSource::virtualHasPendingActivity() const
+{
+    return m_state != CLOSED;
+}
+
+void EventSource::doExplicitLoadCancellation()
+{
+    ASSERT(m_requestInFlight);
+    SetForScope<bool> explicitLoadCancellation(m_isDoingExplicitCancellation, true);
+    m_loader->cancel();
 }
 
 void EventSource::parseEventStream()
@@ -281,8 +306,8 @@ void EventSource::parseEventStream()
             m_discardTrailingNewline = false;
         }
 
-        Optional<unsigned> lineLength;
-        Optional<unsigned> fieldLength;
+        std::optional<unsigned> lineLength;
+        std::optional<unsigned> fieldLength;
         for (unsigned i = position; !lineLength && i < size; ++i) {
             switch (m_receiveBuffer[i]) {
             case ':':
@@ -318,7 +343,7 @@ void EventSource::parseEventStream()
         m_receiveBuffer.remove(0, position);
 }
 
-void EventSource::parseEventStreamLine(unsigned position, Optional<unsigned> fieldLength, unsigned lineLength)
+void EventSource::parseEventStreamLine(unsigned position, std::optional<unsigned> fieldLength, unsigned lineLength)
 {
     if (!lineLength) {
         if (!m_data.isEmpty())
@@ -356,12 +381,10 @@ void EventSource::parseEventStreamLine(unsigned position, Optional<unsigned> fie
         if (!valueLength)
             m_reconnectDelay = defaultReconnectDelay;
         else {
-            // FIXME: Do we really want to ignore trailing garbage here? Should we be using the strict version instead?
-            // FIXME: If we can't parse the value, should we leave m_reconnectDelay alone or set it to defaultReconnectDelay?
-            bool ok;
-            auto reconnectDelay = charactersToUInt64(&m_receiveBuffer[position], valueLength, &ok);
-            if (ok)
-                m_reconnectDelay = reconnectDelay;
+            // FIXME: Do we really want to ignore trailing junk here?
+            // FIXME: When we can't parse the value, should we really leave m_reconnectDelay alone? Shouldn't we set it to defaultReconnectDelay?
+            if (auto reconnectDelay = parseIntegerAllowingTrailingJunk<uint64_t>({ &m_receiveBuffer[position], valueLength }))
+                m_reconnectDelay = *reconnectDelay;
         }
     }
 }
@@ -376,14 +399,33 @@ const char* EventSource::activeDOMObjectName() const
     return "EventSource";
 }
 
-bool EventSource::canSuspendForDocumentSuspension() const
+void EventSource::suspend(ReasonForSuspension reason)
 {
-    // FIXME: We should return true here when we can because this object is not actually currently active.
-    return false;
+    if (reason != ReasonForSuspension::BackForwardCache)
+        return;
+
+    m_isSuspendedForBackForwardCache = true;
+    RELEASE_ASSERT_WITH_MESSAGE(!m_requestInFlight, "Loads get cancelled before entering the BackForwardCache.");
+}
+
+void EventSource::resume()
+{
+    if (!m_isSuspendedForBackForwardCache)
+        return;
+
+    m_isSuspendedForBackForwardCache = false;
+    if (std::exchange(m_shouldReconnectOnResume, false)) {
+        scriptExecutionContext()->postTask([this, pendingActivity = makePendingActivity(*this)](ScriptExecutionContext&) {
+            if (!isContextStopped())
+                scheduleReconnect();
+        });
+    }
 }
 
 void EventSource::dispatchMessageEvent()
 {
+    RELEASE_ASSERT_WITH_SECURITY_IMPLICATION(!m_isSuspendedForBackForwardCache);
+
     if (!m_currentlyParsedEventId.isNull())
         m_lastEventId = WTFMove(m_currentlyParsedEventId);
 

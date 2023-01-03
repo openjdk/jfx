@@ -26,14 +26,8 @@
 #include "config.h"
 #include "ArrayIteratorPrototype.h"
 
-#include "IteratorOperations.h"
 #include "JSCBuiltins.h"
 #include "JSCInlines.h"
-#include "JSCJSValueInlines.h"
-#include "JSCellInlines.h"
-#include "JSGlobalObject.h"
-#include "ObjectConstructor.h"
-#include "StructureInlines.h"
 
 namespace JSC {
 
@@ -43,10 +37,8 @@ void ArrayIteratorPrototype::finishCreation(VM& vm, JSGlobalObject* globalObject
 {
     Base::finishCreation(vm);
     ASSERT(inherits(vm, info()));
-    putDirectWithoutTransition(vm, vm.propertyNames->toStringTagSymbol, jsString(vm, "Array Iterator"), PropertyAttribute::DontEnum | PropertyAttribute::ReadOnly);
     JSC_BUILTIN_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->next, arrayIteratorPrototypeNextCodeGenerator, static_cast<unsigned>(PropertyAttribute::DontEnum));
+    JSC_TO_STRING_TAG_WITHOUT_TRANSITION();
 }
-
-// ------------------------------ Array Functions ----------------------------
 
 } // namespace JSC

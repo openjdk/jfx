@@ -24,8 +24,10 @@
  */
 
 [
-    Constructor(DOMString type, optional PageTransitionEventInit eventInitDict),
+    Exposed=Window
 ] interface PageTransitionEvent : Event {
+    constructor(DOMString type, optional PageTransitionEventInit eventInitDict);
+
     readonly attribute boolean persisted;
 };
 

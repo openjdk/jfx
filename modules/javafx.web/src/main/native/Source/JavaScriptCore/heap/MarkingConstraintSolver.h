@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -56,7 +56,7 @@ public:
         NextConstraintFirst
     };
 
-    void execute(SchedulerPreference, ScopedLambda<Optional<unsigned>()> pickNext);
+    void execute(SchedulerPreference, ScopedLambda<std::optional<unsigned>()> pickNext);
 
     void drain(BitVector& unexecuted);
 
@@ -68,7 +68,7 @@ public:
     void addParallelTask(RefPtr<SharedTask<void(SlotVisitor&)>>, MarkingConstraint&);
 
 private:
-    void runExecutionThread(SlotVisitor&, SchedulerPreference, ScopedLambda<Optional<unsigned>()> pickNext);
+    void runExecutionThread(SlotVisitor&, SchedulerPreference, ScopedLambda<std::optional<unsigned>()> pickNext);
 
     struct TaskWithConstraint {
         TaskWithConstraint() { }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,28 +30,21 @@ import java.util.ArrayList;
 import java.util.List;
 
 import com.sun.javafx.scene.control.behavior.BehaviorBase;
-import javafx.beans.InvalidationListener;
-import javafx.beans.Observable;
-import javafx.beans.property.DoubleProperty;
-import javafx.scene.control.Accordion;
-import javafx.scene.control.Button;
-import javafx.scene.control.TableCell;
-import javafx.scene.control.TableColumn;
-import javafx.scene.control.TablePosition;
-import javafx.scene.control.TableRow;
-import javafx.scene.control.TableView;
-
 import com.sun.javafx.scene.control.behavior.TableRowBehavior;
 
-import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.DoubleProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.scene.AccessibleAttribute;
 import javafx.scene.Node;
 import javafx.scene.control.Control;
+import javafx.scene.control.TableCell;
+import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableColumnBase;
+import javafx.scene.control.TablePosition;
+import javafx.scene.control.TableRow;
+import javafx.scene.control.TableView;
 import javafx.scene.control.TableView.TableViewFocusModel;
-import javafx.scene.control.TreeTableView;
 
 /**
  * Default skin implementation for the {@link TableRow} control.
@@ -61,18 +54,17 @@ import javafx.scene.control.TreeTableView;
  */
 public class TableRowSkin<T> extends TableRowSkinBase<T, TableRow<T>, TableCell<T,?>> {
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Private fields                                                          *
      *                                                                         *
      **************************************************************************/
 
-    private TableViewSkin<T> tableViewSkin;
     private final BehaviorBase<TableRow<T>> behavior;
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
@@ -90,13 +82,8 @@ public class TableRowSkin<T> extends TableRowSkinBase<T, TableRow<T>, TableCell<
 
         // install default input map for the TableRow control
         behavior = new TableRowBehavior<>(control);
-//        control.setInputMap(behavior.getInputMap());
-
-        updateTableViewSkin();
 
         registerChangeListener(control.tableViewProperty(), e -> {
-            updateTableViewSkin();
-
             for (int i = 0, max = cells.size(); i < max; i++) {
                 Node n = cells.get(i);
                 if (n instanceof TableCell) {
@@ -108,14 +95,13 @@ public class TableRowSkin<T> extends TableRowSkinBase<T, TableRow<T>, TableCell<
         setupTreeTableViewListeners();
     }
 
+    // FIXME: replace listener to fixedCellSize with direct lookup - JDK-8277000
     private void setupTreeTableViewListeners() {
         TableView<T> tableView = getSkinnable().getTableView();
         if (tableView == null) {
-            getSkinnable().tableViewProperty().addListener(new InvalidationListener() {
-                @Override public void invalidated(Observable observable) {
-                    getSkinnable().tableViewProperty().removeListener(this);
-                    setupTreeTableViewListeners();
-                }
+            registerInvalidationListener(getSkinnable().tableViewProperty(), e -> {
+                unregisterInvalidationListeners(getSkinnable().tableViewProperty());
+                setupTreeTableViewListeners();
             });
         } else {
             DoubleProperty fixedCellSizeProperty = tableView.fixedCellSizeProperty();
@@ -131,14 +117,15 @@ public class TableRowSkin<T> extends TableRowSkinBase<T, TableRow<T>, TableCell<
                 // When in fixed cell size mode, we must listen to the width of the virtual flow, so
                 // that when it changes, we can appropriately add / remove cells that may or may not
                 // be required (because we remove all cells that are not visible).
-                registerChangeListener(getVirtualFlow().widthProperty(), e -> tableView.requestLayout());
+                VirtualFlow<TableRow<T>> virtualFlow = getVirtualFlow();
+                if (virtualFlow != null) {
+                    registerChangeListener(virtualFlow.widthProperty(), e -> tableView.requestLayout());
+                }
             }
         }
     }
 
-
-
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Public API                                                              *
      *                                                                         *
@@ -157,22 +144,25 @@ public class TableRowSkin<T> extends TableRowSkinBase<T, TableRow<T>, TableCell<
     @Override protected Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
         switch (attribute) {
             case SELECTED_ITEMS: {
-                // FIXME this could be optimised to iterate over cellsMap only
-                // (selectedCells could be big, cellsMap is much smaller)
-                List<Node> selection = new ArrayList<>();
-                int index = getSkinnable().getIndex();
-                for (TablePosition<T,?> pos : getTableView().getSelectionModel().getSelectedCells()) {
-                    if (pos.getRow() == index) {
-                        TableColumn<T,?> column = pos.getTableColumn();
-                        if (column == null) {
-                            /* This is the row-based case */
-                            column = getTableView().getVisibleLeafColumn(0);
+                if (getTableView().getSelectionModel() != null) {
+                    // FIXME this could be optimised to iterate over cellsMap only
+                    // (selectedCells could be big, cellsMap is much smaller)
+                    List<Node> selection = new ArrayList<>();
+                    int index = getSkinnable().getIndex();
+                    for (TablePosition<T,?> pos : getTableView().getSelectionModel().getSelectedCells()) {
+                        if (pos.getRow() == index) {
+                            TableColumn<T,?> column = pos.getTableColumn();
+                            if (column == null) {
+                                /* This is the row-based case */
+                                column = getTableView().getVisibleLeafColumn(0);
+                            }
+                            TableCell<T,?> cell = cellsMap.get(column).get();
+                            if (cell != null) selection.add(cell);
                         }
-                        TableCell<T,?> cell = cellsMap.get(column).get();
-                        if (cell != null) selection.add(cell);
+                        return FXCollections.observableArrayList(selection);
                     }
-                    return FXCollections.observableArrayList(selection);
                 }
+                return FXCollections.observableArrayList();
             }
             case CELL_AT_ROW_COLUMN: {
                 int colIndex = (Integer)parameters[1];
@@ -195,13 +185,14 @@ public class TableRowSkin<T> extends TableRowSkinBase<T, TableRow<T>, TableCell<
                 }
                 return null;
             }
-            default: return super.queryAccessibleAttribute(attribute, parameters);
+            default:
+                return super.queryAccessibleAttribute(attribute, parameters);
         }
     }
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Private implementation                                                  *
      *                                                                         *
@@ -239,10 +230,12 @@ public class TableRowSkin<T> extends TableRowSkinBase<T, TableRow<T>, TableCell<
         return getSkinnable().getTableView();
     }
 
-    private void updateTableViewSkin() {
+    // test-only
+    TableViewSkin<T> getTableViewSkin() {
         TableView<T> tableView = getSkinnable().getTableView();
         if (tableView != null && tableView.getSkin() instanceof TableViewSkin) {
-            tableViewSkin = (TableViewSkin)tableView.getSkin();
+            return (TableViewSkin)tableView.getSkin();
         }
+        return null;
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,7 +24,6 @@
  */
 
 package javafx.scene.control;
-
 
 import com.sun.javafx.css.StyleManager;
 import com.sun.javafx.scene.NodeHelper;
@@ -68,7 +67,6 @@ import javafx.css.StyleableObjectProperty;
 import javafx.css.StyleableProperty;
 import javafx.css.StyleableStringProperty;
 
-
 /**
  * A Labeled {@link Control} is one which has as part of its user interface
  * a textual content associated with it. For example, a {@link Button} displays
@@ -99,7 +97,7 @@ public abstract class Labeled extends Control {
     private final static String DEFAULT_ELLIPSIS_STRING = "...";
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
@@ -128,14 +126,16 @@ public abstract class Labeled extends Control {
         ((StyleableProperty<Node>)(WritableValue<Node>)graphicProperty()).applyStyle(null, graphic);
     }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Properties                                                              *
      *                                                                         *
      **************************************************************************/
     /**
      * The text to display in the label. The text may be null.
+     *
      * @return the text to display in the label
+     * @defaultValue empty string
      */
     public final StringProperty textProperty() {
         if (text == null) {
@@ -150,7 +150,9 @@ public abstract class Labeled extends Control {
     /**
      * Specifies how the text and graphic within the Labeled should be
      * aligned when there is empty space within the Labeled.
+     *
      * @return the alignment within this labeled
+     * @defaultValue {@code Pos.CENTER_LEFT}
      */
     public final ObjectProperty<Pos> alignmentProperty() {
         if (alignment == null) {
@@ -182,7 +184,9 @@ public abstract class Labeled extends Control {
      * Specifies the behavior for lines of text <em>when text is multiline</em>.
      * Unlike {@link #contentDisplayProperty} which affects the graphic and text, this setting
      * only affects multiple lines of text relative to the text bounds.
+     *
      * @return the alignment of lines of text within this labeled
+     * @defaultValue {@code TextAlignment.LEFT}
      */
     public final ObjectProperty<TextAlignment> textAlignmentProperty() {
         if (textAlignment == null) {
@@ -213,7 +217,9 @@ public abstract class Labeled extends Control {
     /**
      * Specifies the behavior to use if the text of the {@code Labeled}
      * exceeds the available space for rendering the text.
+     *
      * @return the overrun behavior if the text exceeds the available space
+     * @defaultValue {@code OverrunStyle.ELLIPSIS}
      */
     public final ObjectProperty<OverrunStyle> textOverrunProperty() {
         if (textOverrun == null) {
@@ -259,6 +265,7 @@ public abstract class Labeled extends Control {
      * @return the ellipsis property on the string to display for the ellipsis
      * when text is truncated
      * @see <a href="http://en.wikipedia.org/wiki/Ellipsis#Computer_representations">Wikipedia:ellipsis</a>
+     * @defaultValue {@code "..."}
      * @since JavaFX 2.2
      */
     public final StringProperty ellipsisStringProperty() {
@@ -287,7 +294,9 @@ public abstract class Labeled extends Control {
     /**
      * If a run of text exceeds the width of the Labeled, then this variable
      * indicates whether the text should wrap onto another line.
+     *
      * @return the wrap property if a run of text exceeds the width of the Labeled
+     * @defaultValue {@code false}
      */
     public final BooleanProperty wrapTextProperty() {
         if (wrapText == null) {
@@ -328,7 +337,9 @@ public abstract class Labeled extends Control {
      * rich text then this font may or may not be used depending on the font
      * information embedded in the rich text, but in any case where a default
      * font is required, this font will be used.
+     *
      * @return the default font to use for text in this labeled
+     * @defaultValue {@link Font#getDefault()}
      */
     public final ObjectProperty<Font> fontProperty() {
 
@@ -361,6 +372,7 @@ public abstract class Labeled extends Control {
                     final Font oldValue = get();
                     if (value != null ? !value.equals(oldValue) : oldValue != null) {
                         super.set(value);
+                        NodeHelper.recalculateRelativeSizeProperties(Labeled.this, value);
                     }
 
                 }
@@ -403,12 +415,14 @@ public abstract class Labeled extends Control {
      * text by using {@link #setContentDisplay}.  The node specified for this
      * variable cannot appear elsewhere in the scene graph, otherwise
      * the {@code IllegalArgumentException} is thrown.  See the class
-     * description of {@link javafx.scene.Node Node} for more detail.
+     * description of {@link Node} for more detail.
+     *
      * @return the optional icon for this labeled
+     * @defaultValue {@code null}
      */
     public final ObjectProperty<Node> graphicProperty() {
         if (graphic == null) {
-            graphic = new StyleableObjectProperty<Node>() {
+            graphic = new StyleableObjectProperty<>() {
 
                 // The graphic is styleable by css, but it is the
                 // imageUrlProperty that handles the style value.
@@ -562,7 +576,9 @@ public abstract class Labeled extends Control {
 
     /**
      * Whether all text should be underlined.
+     *
      * @return the underline property of all text in this labeled
+     * @defaultValue {@code false}
      */
     public final BooleanProperty underlineProperty() {
         if (underline == null) {
@@ -592,7 +608,9 @@ public abstract class Labeled extends Control {
 
     /**
      * Specifies the space in pixel between lines.
+     *
      * @return the line spacing property between lines in this labeled
+     * @defaultValue 0
      * @since JavaFX 8.0
      */
     public final DoubleProperty lineSpacingProperty() {
@@ -623,7 +641,9 @@ public abstract class Labeled extends Control {
 
     /**
      * Specifies the positioning of the graphic relative to the text.
+     *
      * @return content display property of this labeled
+     * @defaultValue {@code ContentDisplay.LEFT}
      */
     public final ObjectProperty<ContentDisplay> contentDisplayProperty() {
         if (contentDisplay == null) {
@@ -657,7 +677,9 @@ public abstract class Labeled extends Control {
      * Subclasses may add nodes outside this padding and inside the Labeled's padding.
      *
      * This property can only be set from CSS.
-     * @return  the label padding property of this labeled
+     *
+     * @return the label padding property of this labeled
+     * @defaultValue {@code Insets.EMPTY}
      */
     public final ReadOnlyObjectProperty<Insets> labelPaddingProperty() {
         return labelPaddingPropertyImpl();
@@ -702,7 +724,9 @@ public abstract class Labeled extends Control {
 
     /**
      * The amount of space between the graphic and text
+     *
      * @return the graphics text gap property of this labeled
+     * @defaultValue 4
      */
     public final DoubleProperty graphicTextGapProperty() {
         if (graphicTextGap == null) {
@@ -733,6 +757,8 @@ public abstract class Labeled extends Control {
 
     /**
      * The {@link Paint} used to fill the text.
+     *
+     * @defaultValue {@code Color.BLACK}
      */
     private ObjectProperty<Paint> textFill; // TODO for now change this
 
@@ -776,10 +802,7 @@ public abstract class Labeled extends Control {
      * be determined based on the succeeding character, and the mnemonic
      * added.
      *
-     * <p>
-     * The default value for Labeled is false, but it
-     * is enabled by default on some Controls.
-     * </p>
+     * @defaultValue {@code false}; {@code true} for some {@code Control}s.
      */
     private BooleanProperty mnemonicParsing;
     public final void setMnemonicParsing(boolean value) {
@@ -813,7 +836,7 @@ public abstract class Labeled extends Control {
         return builder.toString();
     }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Stylesheet Handling                                                     *
      *                                                                         *
@@ -833,7 +856,7 @@ public abstract class Labeled extends Control {
 
     private static class StyleableProperties {
         private static final FontCssMetaData<Labeled> FONT =
-            new FontCssMetaData<Labeled>("-fx-font", Font.getDefault()) {
+            new FontCssMetaData<>("-fx-font", Font.getDefault()) {
 
             @Override
             public boolean isSettable(Labeled n) {
@@ -847,8 +870,8 @@ public abstract class Labeled extends Control {
         };
 
         private static final CssMetaData<Labeled,Pos> ALIGNMENT =
-                new CssMetaData<Labeled,Pos>("-fx-alignment",
-                new EnumConverter<Pos>(Pos.class), Pos.CENTER_LEFT ) {
+                new CssMetaData<>("-fx-alignment",
+                new EnumConverter<>(Pos.class), Pos.CENTER_LEFT ) {
 
             @Override
             public boolean isSettable(Labeled n) {
@@ -867,8 +890,8 @@ public abstract class Labeled extends Control {
         };
 
         private static final CssMetaData<Labeled,TextAlignment> TEXT_ALIGNMENT =
-                new CssMetaData<Labeled,TextAlignment>("-fx-text-alignment",
-                new EnumConverter<TextAlignment>(TextAlignment.class),
+                new CssMetaData<>("-fx-text-alignment",
+                new EnumConverter<>(TextAlignment.class),
                 TextAlignment.LEFT) {
 
             @Override
@@ -883,7 +906,7 @@ public abstract class Labeled extends Control {
         };
 
         private static final CssMetaData<Labeled,Paint> TEXT_FILL =
-                new CssMetaData<Labeled,Paint>("-fx-text-fill",
+                new CssMetaData<>("-fx-text-fill",
                 PaintConverter.getInstance(), Color.BLACK) {
 
             @Override
@@ -898,8 +921,8 @@ public abstract class Labeled extends Control {
         };
 
         private static final CssMetaData<Labeled,OverrunStyle> TEXT_OVERRUN =
-                new CssMetaData<Labeled,OverrunStyle>("-fx-text-overrun",
-                new EnumConverter<OverrunStyle>(OverrunStyle.class),
+                new CssMetaData<>("-fx-text-overrun",
+                new EnumConverter<>(OverrunStyle.class),
                 OverrunStyle.ELLIPSIS) {
 
             @Override
@@ -914,7 +937,7 @@ public abstract class Labeled extends Control {
         };
 
         private static final CssMetaData<Labeled,String> ELLIPSIS_STRING =
-                new CssMetaData<Labeled,String>("-fx-ellipsis-string",
+                new CssMetaData<>("-fx-ellipsis-string",
                 StringConverter.getInstance(), DEFAULT_ELLIPSIS_STRING) {
 
             @Override public boolean isSettable(Labeled n) {
@@ -922,12 +945,12 @@ public abstract class Labeled extends Control {
             }
 
             @Override public StyleableProperty<String> getStyleableProperty(Labeled n) {
-                return (StyleableProperty<String>)(WritableValue<String>)n.ellipsisStringProperty();
+                return (StyleableProperty<String>)n.ellipsisStringProperty();
             }
         };
 
         private static final CssMetaData<Labeled,Boolean> WRAP_TEXT =
-                new CssMetaData<Labeled,Boolean>("-fx-wrap-text",
+                new CssMetaData<>("-fx-wrap-text",
                 BooleanConverter.getInstance(), false) {
 
             @Override
@@ -937,12 +960,12 @@ public abstract class Labeled extends Control {
 
             @Override
             public StyleableProperty<Boolean> getStyleableProperty(Labeled n) {
-                return (StyleableProperty<Boolean>)(WritableValue<Boolean>)n.wrapTextProperty();
+                return (StyleableProperty<Boolean>)n.wrapTextProperty();
             }
         };
 
         private static final CssMetaData<Labeled,String> GRAPHIC =
-            new CssMetaData<Labeled,String>("-fx-graphic",
+            new CssMetaData<>("-fx-graphic",
                 StringConverter.getInstance()) {
 
             @Override
@@ -958,7 +981,7 @@ public abstract class Labeled extends Control {
         };
 
         private static final CssMetaData<Labeled,Boolean> UNDERLINE =
-            new CssMetaData<Labeled,Boolean>("-fx-underline",
+            new CssMetaData<>("-fx-underline",
                 BooleanConverter.getInstance(), Boolean.FALSE) {
 
             @Override
@@ -968,12 +991,12 @@ public abstract class Labeled extends Control {
 
             @Override
             public StyleableProperty<Boolean> getStyleableProperty(Labeled n) {
-                return (StyleableProperty<Boolean>)(WritableValue<Boolean>)n.underlineProperty();
+                return (StyleableProperty<Boolean>)n.underlineProperty();
             }
         };
 
         private static final CssMetaData<Labeled,Number> LINE_SPACING =
-            new CssMetaData<Labeled,Number>("-fx-line-spacing",
+            new CssMetaData<>("-fx-line-spacing",
                 SizeConverter.getInstance(), 0) {
 
             @Override
@@ -983,13 +1006,13 @@ public abstract class Labeled extends Control {
 
             @Override
             public StyleableProperty<Number> getStyleableProperty(Labeled n) {
-                return (StyleableProperty<Number>)(WritableValue<Number>)n.lineSpacingProperty();
+                return (StyleableProperty<Number>)n.lineSpacingProperty();
             }
         };
 
         private static final CssMetaData<Labeled,ContentDisplay> CONTENT_DISPLAY =
-            new CssMetaData<Labeled,ContentDisplay>("-fx-content-display",
-                new EnumConverter<ContentDisplay>(ContentDisplay.class),
+            new CssMetaData<>("-fx-content-display",
+                new EnumConverter<>(ContentDisplay.class),
                 ContentDisplay.LEFT) {
 
             @Override
@@ -1004,7 +1027,7 @@ public abstract class Labeled extends Control {
         };
 
         private static final CssMetaData<Labeled,Insets> LABEL_PADDING =
-            new CssMetaData<Labeled,Insets>("-fx-label-padding",
+            new CssMetaData<>("-fx-label-padding",
                 InsetsConverter.getInstance(), Insets.EMPTY) {
 
             @Override
@@ -1019,7 +1042,7 @@ public abstract class Labeled extends Control {
         };
 
         private static final CssMetaData<Labeled,Number> GRAPHIC_TEXT_GAP =
-            new CssMetaData<Labeled,Number>("-fx-graphic-text-gap",
+            new CssMetaData<>("-fx-graphic-text-gap",
                 SizeConverter.getInstance(), 4.0) {
 
             @Override
@@ -1029,14 +1052,14 @@ public abstract class Labeled extends Control {
 
             @Override
             public StyleableProperty<Number> getStyleableProperty(Labeled n) {
-                return (StyleableProperty<Number>)(WritableValue<Number>)n.graphicTextGapProperty();
+                return (StyleableProperty<Number>)n.graphicTextGapProperty();
             }
         };
 
         private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
         static {
             final List<CssMetaData<? extends Styleable, ?>> styleables =
-                new ArrayList<CssMetaData<? extends Styleable, ?>>(Control.getClassCssMetaData());
+                new ArrayList<>(Control.getClassCssMetaData());
             Collections.addAll(styleables,
                 FONT,
                 ALIGNMENT,
@@ -1057,8 +1080,9 @@ public abstract class Labeled extends Control {
     }
 
     /**
-     * @return The CssMetaData associated with this class, which may include the
-     * CssMetaData of its superclasses.
+     * Gets the {@code CssMetaData} associated with this class, which may include the
+     * {@code CssMetaData} of its superclasses.
+     * @return the {@code CssMetaData}
      * @since JavaFX 8.0
      */
     public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {

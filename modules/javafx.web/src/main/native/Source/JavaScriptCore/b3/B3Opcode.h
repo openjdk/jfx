@@ -29,7 +29,6 @@
 
 #include "B3Type.h"
 #include "B3Width.h"
-#include <wtf/Optional.h>
 #include <wtf/StdLibExtras.h>
 
 namespace JSC { namespace B3 {
@@ -55,6 +54,9 @@ enum Opcode : uint8_t {
     Const64,
     ConstDouble,
     ConstFloat,
+
+    // Tuple filled with zeros. This appears when Tuple Patchpoints are replaced with Bottom values.
+    BottomTuple,
 
     // B3 supports non-SSA variables. These are accessed using Get and Set opcodes. Use the
     // VariableValue class. It's a good idea to run fixSSA() to turn these into SSA. The
@@ -109,6 +111,8 @@ enum Opcode : uint8_t {
     Ceil,
     Floor,
     Sqrt,
+    FMax,
+    FMin,
 
     // Casts and such.
     // Bitwise Cast of Double->Int64 or Int64->Double
@@ -296,7 +300,7 @@ enum Opcode : uint8_t {
     // stack.
     Patchpoint,
 
-    // This is a projection out of a tuple. Currently only Patchpoints, Get, and Phi can produce tuples.
+    // This is a projection out of a tuple. Currently only Patchpoints, Get, Phi, and BottomTuple can produce tuples.
     // It's assumumed that each entry in a tuple has a fixed Numeric B3 Type (i.e. not Void or Tuple).
     Extract,
 
@@ -378,7 +382,7 @@ inline bool isCheckMath(Opcode opcode)
     }
 }
 
-Optional<Opcode> invertedCompare(Opcode, Type);
+std::optional<Opcode> invertedCompare(Opcode, Type);
 
 inline Opcode constPtrOpcode()
 {

@@ -23,6 +23,7 @@
 
 #include "gboxed.h"
 #include "gclosure.h"
+#include "gobject.h"
 
 /*< private >
  * GOBJECT_IF_DEBUG:
@@ -92,6 +93,9 @@ void        _g_closure_invoke_va (GClosure       *closure,
           int             n_params,
           GType          *param_types);
 
+gboolean    _g_object_has_signal_handler     (GObject     *object);
+void        _g_object_set_has_signal_handler (GObject     *object);
+
 /**
  * _G_DEFINE_TYPE_EXTENDED_WITH_PRELUDE:
  *
@@ -102,7 +106,7 @@ void        _g_closure_invoke_va (GClosure       *closure,
  *
  * Currently private.
  */
-#define _G_DEFINE_TYPE_EXTENDED_WITH_PRELUDE(TN, t_n, T_P, _f_, _P_, _C_)     _G_DEFINE_TYPE_EXTENDED_BEGIN_PRE (TN, t_n, T_P) {_P_;} _G_DEFINE_TYPE_EXTENDED_BEGIN_REGISTER (TN, t_n, T_P, _f_){_C_;} _G_DEFINE_TYPE_EXTENDED_END()
+#define _G_DEFINE_TYPE_EXTENDED_WITH_PRELUDE(TN, t_n, T_P, _f_, _P_, _C_)       _G_DEFINE_TYPE_EXTENDED_BEGIN_PRE (TN, t_n, T_P) {_P_;} _G_DEFINE_TYPE_EXTENDED_BEGIN_REGISTER (TN, t_n, T_P, _f_){_C_;} _G_DEFINE_TYPE_EXTENDED_END()
 
 G_END_DECLS
 

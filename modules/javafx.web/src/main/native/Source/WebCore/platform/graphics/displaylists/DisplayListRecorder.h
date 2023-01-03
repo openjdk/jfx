@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,8 +26,11 @@
 #pragma once
 
 #include "DisplayList.h"
-#include "GraphicsContextImpl.h"
+#include "DisplayListItems.h"
+#include "DrawGlyphsRecorder.h"
+#include "GraphicsContext.h"
 #include "Image.h" // For Image::TileRule.
+#include "InlinePathData.h"
 #include "TextFlags.h"
 #include <wtf/Noncopyable.h>
 
@@ -35,117 +38,108 @@ namespace WebCore {
 
 class FloatPoint;
 class FloatRect;
-class GlyphBuffer;
-class FloatPoint;
 class Font;
+class GlyphBuffer;
 class Image;
-
-struct GraphicsContextState;
+class SourceImage;
+class DrawGlyphsRecorder;
 struct ImagePaintingOptions;
 
 namespace DisplayList {
 
-class DrawingItem;
-
-class Recorder : public GraphicsContextImpl {
+class Recorder : public GraphicsContext {
     WTF_MAKE_FAST_ALLOCATED;
     WTF_MAKE_NONCOPYABLE(Recorder);
 public:
-    Recorder(GraphicsContext&, DisplayList&, const GraphicsContextState&, const FloatRect& initialClip, const AffineTransform&);
-    virtual ~Recorder();
+    WEBCORE_EXPORT Recorder(const GraphicsContextState&, const FloatRect& initialClip, const AffineTransform&, DrawGlyphsRecorder::DeconstructDrawGlyphs = DrawGlyphsRecorder::DeconstructDrawGlyphs::Yes);
+    WEBCORE_EXPORT virtual ~Recorder();
 
-    size_t itemCount() const { return m_displayList.itemCount(); }
+    virtual void convertToLuminanceMask() = 0;
+    virtual void transformToColorSpace(const DestinationColorSpace&) = 0;
+    virtual void flushContext(GraphicsContextFlushIdentifier) = 0;
 
-private:
-    bool hasPlatformContext() const override { return false; }
-    PlatformGraphicsContext* platformContext() const override { return nullptr; }
+protected:
+    WEBCORE_EXPORT Recorder(Recorder& parent, const GraphicsContextState&, const FloatRect& initialClip, const AffineTransform& initialCTM);
 
-    void updateState(const GraphicsContextState&, GraphicsContextState::StateChangeFlags) override;
-    void clearShadow() override;
-
-    void setLineCap(LineCap) override;
-    void setLineDash(const DashArray&, float dashOffset) override;
-    void setLineJoin(LineJoin) override;
-    void setMiterLimit(float) override;
-
-    void fillRect(const FloatRect&) override;
-    void fillRect(const FloatRect&, const Color&) override;
-    void fillRect(const FloatRect&, Gradient&) override;
-    void fillRect(const FloatRect&, const Color&, CompositeOperator, BlendMode) override;
-    void fillRoundedRect(const FloatRoundedRect&, const Color&, BlendMode) override;
-    void fillRectWithRoundedHole(const FloatRect&, const FloatRoundedRect& roundedHoleRect, const Color&) override;
-    void fillPath(const Path&) override;
-    void fillEllipse(const FloatRect&) override;
-    void strokeRect(const FloatRect&, float lineWidth) override;
-    void strokePath(const Path&) override;
-    void strokeEllipse(const FloatRect&) override;
-    void clearRect(const FloatRect&) override;
-
+    virtual void recordSave() = 0;
+    virtual void recordRestore() = 0;
+    virtual void recordTranslate(float x, float y) = 0;
+    virtual void recordRotate(float angle) = 0;
+    virtual void recordScale(const FloatSize&) = 0;
+    virtual void recordSetCTM(const AffineTransform&) = 0;
+    virtual void recordConcatenateCTM(const AffineTransform&) = 0;
+    virtual void recordSetInlineFillColor(SRGBA<uint8_t>) = 0;
+    virtual void recordSetInlineStrokeColor(SRGBA<uint8_t>) = 0;
+    virtual void recordSetStrokeThickness(float) = 0;
+    virtual void recordSetState(const GraphicsContextState&, GraphicsContextState::StateChangeFlags) = 0;
+    virtual void recordSetLineCap(LineCap) = 0;
+    virtual void recordSetLineDash(const DashArray&, float dashOffset) = 0;
+    virtual void recordSetLineJoin(LineJoin) = 0;
+    virtual void recordSetMiterLimit(float) = 0;
+    virtual void recordClearShadow() = 0;
+    virtual void recordClip(const FloatRect&) = 0;
+    virtual void recordClipOut(const FloatRect&) = 0;
+    virtual void recordClipToImageBuffer(ImageBuffer&, const FloatRect& destinationRect) = 0;
+    virtual void recordClipOutToPath(const Path&) = 0;
+    virtual void recordClipPath(const Path&, WindRule) = 0;
+    virtual void recordDrawFilteredImageBuffer(ImageBuffer*, const FloatRect& sourceImageRect, Filter&) = 0;
+    virtual void recordDrawGlyphs(const Font&, const GlyphBufferGlyph*, const GlyphBufferAdvance*, unsigned count, const FloatPoint& localAnchor, FontSmoothingMode) = 0;
+    virtual void recordDrawImageBuffer(ImageBuffer&, const FloatRect& destRect, const FloatRect& srcRect, const ImagePaintingOptions&) = 0;
+    virtual void recordDrawNativeImage(RenderingResourceIdentifier imageIdentifier, const FloatSize& imageSize, const FloatRect& destRect, const FloatRect& srcRect, const ImagePaintingOptions&) = 0;
+    virtual void recordDrawPattern(RenderingResourceIdentifier, const FloatRect& destRect, const FloatRect& tileRect, const AffineTransform&, const FloatPoint& phase, const FloatSize& spacing, const ImagePaintingOptions& = { }) = 0;
+    virtual void recordBeginTransparencyLayer(float) = 0;
+    virtual void recordEndTransparencyLayer() = 0;
+    virtual void recordDrawRect(const FloatRect&, float) = 0;
+    virtual void recordDrawLine(const FloatPoint& point1, const FloatPoint& point2) = 0;
+    virtual void recordDrawLinesForText(const FloatPoint& blockLocation, const FloatSize& localAnchor, float thickness, const DashArray& widths, bool printing, bool doubleLines) = 0;
+    virtual void recordDrawDotsForDocumentMarker(const FloatRect&, const DocumentMarkerLineStyle&) = 0;
+    virtual void recordDrawEllipse(const FloatRect&) = 0;
+    virtual void recordDrawPath(const Path&) = 0;
+    virtual void recordDrawFocusRingPath(const Path&, float width, float offset, const Color&) = 0;
+    virtual void recordDrawFocusRingRects(const Vector<FloatRect>&, float width, float offset, const Color&) = 0;
+    virtual void recordFillRect(const FloatRect&) = 0;
+    virtual void recordFillRectWithColor(const FloatRect&, const Color&) = 0;
+    virtual void recordFillRectWithGradient(const FloatRect&, Gradient&) = 0;
+    virtual void recordFillCompositedRect(const FloatRect&, const Color&, CompositeOperator, BlendMode) = 0;
+    virtual void recordFillRoundedRect(const FloatRoundedRect&, const Color&, BlendMode) = 0;
+    virtual void recordFillRectWithRoundedHole(const FloatRect&, const FloatRoundedRect&, const Color&) = 0;
+#if ENABLE(INLINE_PATH_DATA)
+    virtual void recordFillLine(const LineData&) = 0;
+    virtual void recordFillArc(const ArcData&) = 0;
+    virtual void recordFillQuadCurve(const QuadCurveData&) = 0;
+    virtual void recordFillBezierCurve(const BezierCurveData&) = 0;
+#endif
+    virtual void recordFillPath(const Path&) = 0;
+    virtual void recordFillEllipse(const FloatRect&) = 0;
+#if ENABLE(VIDEO)
+    virtual void recordPaintFrameForMedia(MediaPlayer&, const FloatRect& destination) = 0;
+#endif
+    virtual void recordStrokeRect(const FloatRect&, float) = 0;
+#if ENABLE(INLINE_PATH_DATA)
+    virtual void recordStrokeLine(const LineData&) = 0;
+    virtual void recordStrokeArc(const ArcData&) = 0;
+    virtual void recordStrokeQuadCurve(const QuadCurveData&) = 0;
+    virtual void recordStrokeBezierCurve(const BezierCurveData&) = 0;
+#endif
+    virtual void recordStrokePath(const Path&) = 0;
+    virtual void recordStrokeEllipse(const FloatRect&) = 0;
+    virtual void recordClearRect(const FloatRect&) = 0;
 #if USE(CG)
-    void applyStrokePattern() override;
-    void applyFillPattern() override;
+    virtual void recordApplyStrokePattern() = 0;
+    virtual void recordApplyFillPattern() = 0;
 #endif
+    virtual void recordApplyDeviceScaleFactor(float) = 0;
 
-    void drawGlyphs(const Font&, const GlyphBuffer&, unsigned from, unsigned numGlyphs, const FloatPoint& anchorPoint, FontSmoothingMode) override;
-
-    ImageDrawResult drawImage(Image&, const FloatRect& destination, const FloatRect& source, const ImagePaintingOptions&) override;
-    ImageDrawResult drawTiledImage(Image&, const FloatRect& destination, const FloatPoint& source, const FloatSize& tileSize, const FloatSize& spacing, const ImagePaintingOptions&) override;
-    ImageDrawResult drawTiledImage(Image&, const FloatRect& destination, const FloatRect& source, const FloatSize& tileScaleFactor, Image::TileRule hRule, Image::TileRule vRule, const ImagePaintingOptions&) override;
-#if USE(CG) || USE(CAIRO) || USE(DIRECT2D)
-    void drawNativeImage(const NativeImagePtr&, const FloatSize& selfSize, const FloatRect& destRect, const FloatRect& srcRect, const ImagePaintingOptions&) override;
-#endif
-    void drawPattern(Image&, const FloatRect& destRect, const FloatRect& srcRect, const AffineTransform&, const FloatPoint& phase, const FloatSize& spacing, const ImagePaintingOptions&) override;
-
-    void drawRect(const FloatRect&, float borderThickness) override;
-    void drawLine(const FloatPoint&, const FloatPoint&) override;
-    void drawLinesForText(const FloatPoint&, float thickness, const DashArray& widths, bool printing, bool doubleLines) override;
-    void drawDotsForDocumentMarker(const FloatRect&, DocumentMarkerLineStyle) override;
-    void drawEllipse(const FloatRect&) override;
-    void drawPath(const Path&) override;
-
-    void drawFocusRing(const Path&, float width, float offset, const Color&) override;
-    void drawFocusRing(const Vector<FloatRect>&, float width, float offset, const Color&) override;
-
-    void save() override;
-    void restore() override;
-
-    void translate(float x, float y) override;
-    void rotate(float angleInRadians) override;
-    void scale(const FloatSize&) override;
-    void concatCTM(const AffineTransform&) override;
-    void setCTM(const AffineTransform&) override;
-    AffineTransform getCTM(GraphicsContext::IncludeDeviceScale) override;
-
-    void beginTransparencyLayer(float opacity) override;
-    void endTransparencyLayer() override;
-
-    void clip(const FloatRect&) override;
-    void clipOut(const FloatRect&) override;
-    void clipOut(const Path&) override;
-    void clipPath(const Path&, WindRule) override;
-    IntRect clipBounds() override;
-    void clipToImageBuffer(ImageBuffer&, const FloatRect&) override;
-
-    void applyDeviceScaleFactor(float) override;
-
-    FloatRect roundToDevicePixels(const FloatRect&, GraphicsContext::RoundingMode) override;
-
-    Item& appendItem(Ref<Item>&&);
-    void willAppendItem(const Item&);
-
-    FloatRect extentFromLocalBounds(const FloatRect&) const;
-    void updateItemExtent(DrawingItem&) const;
-
-    const AffineTransform& ctm() const;
-    const FloatRect& clipBounds() const;
+    virtual bool recordResourceUse(NativeImage&) = 0;
+    virtual bool recordResourceUse(ImageBuffer&) = 0;
+    virtual bool recordResourceUse(const SourceImage&) = 0;
+    virtual bool recordResourceUse(Font&) = 0;
 
     struct ContextState {
         AffineTransform ctm;
         FloatRect clipBounds;
         GraphicsContextStateChange stateChange;
         GraphicsContextState lastDrawingState;
-        bool wasUsedForDrawing { false };
-        size_t saveItemIndex { 0 };
 
         ContextState(const GraphicsContextState& state, const AffineTransform& transform, const FloatRect& clip)
             : ctm(transform)
@@ -154,11 +148,17 @@ private:
         {
         }
 
-        ContextState cloneForSave(size_t saveIndex) const
+        ContextState cloneForSave() const
         {
             ContextState state(lastDrawingState, ctm, clipBounds);
             state.stateChange = stateChange;
-            state.saveItemIndex = saveIndex;
+            return state;
+        }
+
+        ContextState cloneForTransparencyLayer() const
+        {
+            auto state = cloneForSave();
+            state.lastDrawingState.alpha = 1;
             return state;
         }
 
@@ -166,16 +166,118 @@ private:
         void rotate(float angleInRadians);
         void scale(const FloatSize&);
         void concatCTM(const AffineTransform&);
+        void setCTM(const AffineTransform&);
     };
+
+    const Vector<ContextState, 4>& stateStack() const { return m_stateStack; }
 
     const ContextState& currentState() const;
     ContextState& currentState();
 
-    DisplayList& m_displayList;
+    WEBCORE_EXPORT RefPtr<ImageBuffer> createImageBuffer(const FloatSize&, const DestinationColorSpace&, RenderingMode, RenderingMethod) const override;
 
-    Vector<ContextState, 32> m_stateStack;
+private:
+    bool hasPlatformContext() const final { return false; }
+    PlatformGraphicsContext* platformContext() const final { return nullptr; }
+
+#if USE(CG)
+    void setIsCALayerContext(bool) final { }
+    bool isCALayerContext() const final { return false; }
+    void setIsAcceleratedContext(bool) final { }
+#endif
+
+    void fillRoundedRectImpl(const FloatRoundedRect&, const Color&) final { ASSERT_NOT_REACHED(); }
+
+    WEBCORE_EXPORT const GraphicsContextState& state() const final;
+
+    WEBCORE_EXPORT void didUpdateState(const GraphicsContextState&, GraphicsContextState::StateChangeFlags) final;
+
+    WEBCORE_EXPORT void setLineCap(LineCap) final;
+    WEBCORE_EXPORT void setLineDash(const DashArray&, float dashOffset) final;
+    WEBCORE_EXPORT void setLineJoin(LineJoin) final;
+    WEBCORE_EXPORT void setMiterLimit(float) final;
+
+    WEBCORE_EXPORT void fillRect(const FloatRect&) final;
+    WEBCORE_EXPORT void fillRect(const FloatRect&, const Color&) final;
+    WEBCORE_EXPORT void fillRect(const FloatRect&, Gradient&) final;
+    WEBCORE_EXPORT void fillRect(const FloatRect&, const Color&, CompositeOperator, BlendMode) final;
+    WEBCORE_EXPORT void fillRoundedRect(const FloatRoundedRect&, const Color&, BlendMode) final;
+    WEBCORE_EXPORT void fillRectWithRoundedHole(const FloatRect&, const FloatRoundedRect& roundedHoleRect, const Color&) final;
+    WEBCORE_EXPORT void fillPath(const Path&) final;
+    WEBCORE_EXPORT void fillEllipse(const FloatRect&) final;
+    WEBCORE_EXPORT void strokeRect(const FloatRect&, float lineWidth) final;
+    WEBCORE_EXPORT void strokePath(const Path&) final;
+    WEBCORE_EXPORT void strokeEllipse(const FloatRect&) final;
+    WEBCORE_EXPORT void clearRect(const FloatRect&) final;
+
+#if USE(CG)
+    WEBCORE_EXPORT void applyStrokePattern() final;
+    WEBCORE_EXPORT void applyFillPattern() final;
+#endif
+
+    WEBCORE_EXPORT void drawFilteredImageBuffer(ImageBuffer* sourceImage, const FloatRect& sourceImageRect, Filter&, FilterResults&) final;
+
+    WEBCORE_EXPORT void drawGlyphs(const Font&, const GlyphBufferGlyph*, const GlyphBufferAdvance*, unsigned numGlyphs, const FloatPoint& anchorPoint, FontSmoothingMode) final;
+    WEBCORE_EXPORT void drawGlyphsAndCacheFont(const Font&, const GlyphBufferGlyph*, const GlyphBufferAdvance*, unsigned count, const FloatPoint& localAnchor, FontSmoothingMode) final;
+
+    WEBCORE_EXPORT void drawImageBuffer(ImageBuffer&, const FloatRect& destination, const FloatRect& source, const ImagePaintingOptions&) final;
+    WEBCORE_EXPORT void drawNativeImage(NativeImage&, const FloatSize& imageSize, const FloatRect& destRect, const FloatRect& srcRect, const ImagePaintingOptions&) final;
+    WEBCORE_EXPORT void drawPattern(NativeImage&, const FloatRect& destRect, const FloatRect& tileRect, const AffineTransform&, const FloatPoint& phase, const FloatSize& spacing, const ImagePaintingOptions&) final;
+    WEBCORE_EXPORT void drawPattern(ImageBuffer&, const FloatRect& destRect, const FloatRect& tileRect, const AffineTransform&, const FloatPoint& phase, const FloatSize& spacing, const ImagePaintingOptions&) final;
+
+    WEBCORE_EXPORT void drawRect(const FloatRect&, float borderThickness) final;
+    WEBCORE_EXPORT void drawLine(const FloatPoint&, const FloatPoint&) final;
+    WEBCORE_EXPORT void drawLinesForText(const FloatPoint&, float thickness, const DashArray& widths, bool printing, bool doubleLines, StrokeStyle) final;
+    WEBCORE_EXPORT void drawDotsForDocumentMarker(const FloatRect&, DocumentMarkerLineStyle) final;
+    WEBCORE_EXPORT void drawEllipse(const FloatRect&) final;
+
+    WEBCORE_EXPORT void drawPath(const Path&) final;
+
+    WEBCORE_EXPORT void drawFocusRing(const Path&, float width, float offset, const Color&) final;
+    WEBCORE_EXPORT void drawFocusRing(const Vector<FloatRect>&, float width, float offset, const Color&) final;
+
+#if PLATFORM(MAC)
+    WEBCORE_EXPORT void drawFocusRing(const Path&, double timeOffset, bool& needsRedraw, const Color&) final;
+    WEBCORE_EXPORT void drawFocusRing(const Vector<FloatRect>&, double timeOffset, bool& needsRedraw, const Color&) final;
+#endif
+
+    WEBCORE_EXPORT void save() final;
+    WEBCORE_EXPORT void restore() final;
+
+    WEBCORE_EXPORT void translate(float x, float y) final;
+    WEBCORE_EXPORT void rotate(float angleInRadians) final;
+    WEBCORE_EXPORT void scale(const FloatSize&) final;
+    WEBCORE_EXPORT void concatCTM(const AffineTransform&) final;
+    WEBCORE_EXPORT void setCTM(const AffineTransform&) final;
+    WEBCORE_EXPORT AffineTransform getCTM(GraphicsContext::IncludeDeviceScale = PossiblyIncludeDeviceScale) const final;
+
+    WEBCORE_EXPORT void beginTransparencyLayer(float opacity) final;
+    WEBCORE_EXPORT void endTransparencyLayer() final;
+
+    WEBCORE_EXPORT void clip(const FloatRect&) final;
+    WEBCORE_EXPORT void clipOut(const FloatRect&) final;
+    WEBCORE_EXPORT void clipOut(const Path&) final;
+    WEBCORE_EXPORT void clipPath(const Path&, WindRule) final;
+    WEBCORE_EXPORT IntRect clipBounds() const final;
+    WEBCORE_EXPORT void clipToImageBuffer(ImageBuffer&, const FloatRect&) final;
+
+#if ENABLE(VIDEO)
+    WEBCORE_EXPORT void paintFrameForMedia(MediaPlayer&, const FloatRect& destination) final;
+#endif
+
+    WEBCORE_EXPORT void applyDeviceScaleFactor(float) final;
+
+    WEBCORE_EXPORT FloatRect roundToDevicePixels(const FloatRect&, GraphicsContext::RoundingMode) final;
+
+    void appendStateChangeItemIfNecessary();
+    void appendStateChangeItem(const GraphicsContextStateChange&, GraphicsContextState::StateChangeFlags);
+
+    const AffineTransform& ctm() const;
+
+    Vector<ContextState, 4> m_stateStack;
+    DrawGlyphsRecorder m_drawGlyphsRecorder;
 };
 
-}
-}
+} // namespace DisplayList
+} // namespace WebCore
 

@@ -34,6 +34,7 @@
 #include "SliderThumbElement.h"
 
 #include "CSSValueKeywords.h"
+#include "Decimal.h"
 #include "Event.h"
 #include "EventHandler.h"
 #include "EventNames.h"
@@ -44,7 +45,9 @@
 #include "RenderFlexibleBox.h"
 #include "RenderSlider.h"
 #include "RenderTheme.h"
+#include "ShadowPseudoIds.h"
 #include "ShadowRoot.h"
+#include "StepRange.h"
 #include "StyleResolver.h"
 #include <wtf/IsoMallocInlines.h>
 
@@ -64,7 +67,7 @@ WTF_MAKE_ISO_ALLOCATED_IMPL(RenderSliderThumb);
 
 inline static Decimal sliderPosition(HTMLInputElement& element)
 {
-    const StepRange stepRange(element.createStepRange(RejectAny));
+    const StepRange stepRange(element.createStepRange(AnyStepHandling::Reject));
     const Decimal oldValue = parseToDecimalForNumberType(element.value(), stepRange.defaultValue());
     return stepRange.proportionFromValue(stepRange.clampValue(oldValue));
 }
@@ -75,11 +78,11 @@ inline static bool hasVerticalAppearance(HTMLInputElement& input)
     const RenderStyle& sliderStyle = input.renderer()->style();
 
 #if ENABLE(VIDEO)
-    if (sliderStyle.appearance() == MediaVolumeSliderPart && input.renderer()->theme().usesVerticalVolumeSlider())
+    if (sliderStyle.effectiveAppearance() == MediaVolumeSliderPart && input.renderer()->theme().usesVerticalVolumeSlider())
         return true;
 #endif
 
-    return sliderStyle.appearance() == SliderVerticalPart;
+    return sliderStyle.effectiveAppearance() == SliderVerticalPart;
 }
 
 // --------------------------------
@@ -91,17 +94,17 @@ RenderSliderThumb::RenderSliderThumb(SliderThumbElement& element, RenderStyle&& 
 
 void RenderSliderThumb::updateAppearance(const RenderStyle* parentStyle)
 {
-    if (parentStyle->appearance() == SliderVerticalPart)
-        mutableStyle().setAppearance(SliderThumbVerticalPart);
-    else if (parentStyle->appearance() == SliderHorizontalPart)
-        mutableStyle().setAppearance(SliderThumbHorizontalPart);
-    else if (parentStyle->appearance() == MediaSliderPart)
-        mutableStyle().setAppearance(MediaSliderThumbPart);
-    else if (parentStyle->appearance() == MediaVolumeSliderPart)
-        mutableStyle().setAppearance(MediaVolumeSliderThumbPart);
-    else if (parentStyle->appearance() == MediaFullScreenVolumeSliderPart)
-        mutableStyle().setAppearance(MediaFullScreenVolumeSliderThumbPart);
-    if (style().hasAppearance()) {
+    if (parentStyle->effectiveAppearance() == SliderVerticalPart)
+        mutableStyle().setEffectiveAppearance(SliderThumbVerticalPart);
+    else if (parentStyle->effectiveAppearance() == SliderHorizontalPart)
+        mutableStyle().setEffectiveAppearance(SliderThumbHorizontalPart);
+    else if (parentStyle->effectiveAppearance() == MediaSliderPart)
+        mutableStyle().setEffectiveAppearance(MediaSliderThumbPart);
+    else if (parentStyle->effectiveAppearance() == MediaVolumeSliderPart)
+        mutableStyle().setEffectiveAppearance(MediaVolumeSliderThumbPart);
+    else if (parentStyle->effectiveAppearance() == MediaFullScreenVolumeSliderPart)
+        mutableStyle().setEffectiveAppearance(MediaFullScreenVolumeSliderThumbPart);
+    if (style().hasEffectiveAppearance()) {
         ASSERT(element());
         theme().adjustSliderThumbSize(mutableStyle(), element());
     }
@@ -246,9 +249,7 @@ void SliderThumbElement::dragFrom(const LayoutPoint& point)
 {
     Ref<SliderThumbElement> protectedThis(*this);
     setPositionFromPoint(point);
-#if !PLATFORM(IOS_FAMILY)
     startDragging();
-#endif
 }
 
 void SliderThumbElement::setPositionFromPoint(const LayoutPoint& absolutePoint)
@@ -292,13 +293,13 @@ void SliderThumbElement::setPositionFromPoint(const LayoutPoint& absolutePoint)
     position = std::max<LayoutUnit>(0, std::min(position, trackLength));
     auto ratio = Decimal::fromDouble(static_cast<double>(position) / trackLength);
     auto fraction = isVertical || !isLeftToRightDirection ? Decimal(1) - ratio : ratio;
-    auto stepRange = input->createStepRange(RejectAny);
+    auto stepRange = input->createStepRange(AnyStepHandling::Reject);
     auto value = stepRange.clampValue(stepRange.valueFromProportion(fraction));
 
 #if ENABLE(DATALIST_ELEMENT)
     const LayoutUnit snappingThreshold = renderer()->theme().sliderTickSnappingThreshold();
     if (snappingThreshold > 0) {
-        if (Optional<Decimal> closest = input->findClosestTickMarkValue(value)) {
+        if (std::optional<Decimal> closest = input->findClosestTickMarkValue(value)) {
             double closestFraction = stepRange.proportionFromValue(*closest).toDouble();
             double closestRatio = isVertical || !isLeftToRightDirection ? 1.0 - closestFraction : closestFraction;
             LayoutUnit closestPosition { trackLength * closestRatio };
@@ -338,7 +339,6 @@ void SliderThumbElement::stopDragging()
         renderer()->setNeedsLayout();
 }
 
-#if !PLATFORM(IOS_FAMILY)
 void SliderThumbElement::defaultEventHandler(Event& event)
 {
     if (!is<MouseEvent>(event)) {
@@ -376,9 +376,6 @@ void SliderThumbElement::defaultEventHandler(Event& event)
 
     HTMLDivElement::defaultEventHandler(mouseEvent);
 }
-#endif
-
-#if !PLATFORM(IOS_FAMILY)
 
 bool SliderThumbElement::willRespondToMouseMoveEvents()
 {
@@ -398,7 +395,6 @@ bool SliderThumbElement::willRespondToMouseClickEvents()
     return HTMLDivElement::willRespondToMouseClickEvents();
 }
 
-#endif // !PLATFORM(IOS_FAMILY)
 
 void SliderThumbElement::willDetachRenderers()
 {
@@ -590,30 +586,27 @@ RefPtr<HTMLInputElement> SliderThumbElement::hostInput() const
     return downcast<HTMLInputElement>(shadowHost());
 }
 
-Optional<ElementStyle> SliderThumbElement::resolveCustomStyle(const RenderStyle&, const RenderStyle* hostStyle)
+std::optional<Style::ElementStyle> SliderThumbElement::resolveCustomStyle(const Style::ResolutionContext&, const RenderStyle* hostStyle)
 {
     // This doesn't actually compute style. This is just a hack to pick shadow pseudo id when host style is known.
 
-    static NeverDestroyed<const AtomString> sliderThumbShadowPseudoId("-webkit-slider-thumb", AtomString::ConstructFromLiteral);
-    static NeverDestroyed<const AtomString> mediaSliderThumbShadowPseudoId("-webkit-media-slider-thumb", AtomString::ConstructFromLiteral);
-
     if (!hostStyle)
-        return WTF::nullopt;
+        return std::nullopt;
 
-    switch (hostStyle->appearance()) {
+    switch (hostStyle->effectiveAppearance()) {
     case MediaSliderPart:
     case MediaSliderThumbPart:
     case MediaVolumeSliderPart:
     case MediaVolumeSliderThumbPart:
     case MediaFullScreenVolumeSliderPart:
     case MediaFullScreenVolumeSliderThumbPart:
-        m_shadowPseudoId = mediaSliderThumbShadowPseudoId;
+        m_shadowPseudoId = ShadowPseudoIds::webkitMediaSliderThumb();
         break;
     default:
-        m_shadowPseudoId = sliderThumbShadowPseudoId;
+        m_shadowPseudoId = ShadowPseudoIds::webkitSliderThumb();
     }
 
-    return WTF::nullopt;
+    return std::nullopt;
 }
 
 const AtomString& SliderThumbElement::shadowPseudoId() const
@@ -644,30 +637,27 @@ RenderPtr<RenderElement> SliderContainerElement::createElementRenderer(RenderSty
     return createRenderer<RenderSliderContainer>(*this, WTFMove(style));
 }
 
-Optional<ElementStyle> SliderContainerElement::resolveCustomStyle(const RenderStyle&, const RenderStyle* hostStyle)
+std::optional<Style::ElementStyle> SliderContainerElement::resolveCustomStyle(const Style::ResolutionContext&, const RenderStyle* hostStyle)
 {
     // This doesn't actually compute style. This is just a hack to pick shadow pseudo id when host style is known.
 
-    static NeverDestroyed<const AtomString> mediaSliderContainer("-webkit-media-slider-container", AtomString::ConstructFromLiteral);
-    static NeverDestroyed<const AtomString> sliderContainer("-webkit-slider-container", AtomString::ConstructFromLiteral);
-
     if (!hostStyle)
-        return WTF::nullopt;
+        return std::nullopt;
 
-    switch (hostStyle->appearance()) {
+    switch (hostStyle->effectiveAppearance()) {
     case MediaSliderPart:
     case MediaSliderThumbPart:
     case MediaVolumeSliderPart:
     case MediaVolumeSliderThumbPart:
     case MediaFullScreenVolumeSliderPart:
     case MediaFullScreenVolumeSliderThumbPart:
-        m_shadowPseudoId = mediaSliderContainer;
+        m_shadowPseudoId = ShadowPseudoIds::webkitMediaSliderContainer();
         break;
     default:
-        m_shadowPseudoId = sliderContainer;
+        m_shadowPseudoId = ShadowPseudoIds::webkitSliderContainer();
     }
 
-    return WTF::nullopt;
+    return std::nullopt;
 }
 
 const AtomString& SliderContainerElement::shadowPseudoId() const

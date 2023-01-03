@@ -25,12 +25,11 @@
 
 #include "config.h"
 
-#if ENABLE(VIDEO_TRACK)
+#if ENABLE(VIDEO)
 
 #include "TrackListBase.h"
 
 #include "EventNames.h"
-#include "HTMLMediaElement.h"
 #include "ScriptExecutionContext.h"
 #include "TrackEvent.h"
 #include <wtf/IsoMallocInlines.h>
@@ -39,32 +38,21 @@ namespace WebCore {
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(TrackListBase);
 
-TrackListBase::TrackListBase(HTMLMediaElement* element, ScriptExecutionContext* context)
+TrackListBase::TrackListBase(ScriptExecutionContext* context, Type type)
     : ActiveDOMObject(context)
-    , m_element(element)
-    , m_asyncEventQueue(*this)
+    , m_type(type)
 {
-    ASSERT(!context || is<Document>(context));
-    suspendIfNeeded();
 }
 
 TrackListBase::~TrackListBase()
 {
-    clearElement();
 }
 
-void TrackListBase::clearElement()
+void* TrackListBase::opaqueRoot()
 {
-    m_element = nullptr;
-    for (auto& track : m_inbandTracks) {
-        track->setMediaElement(nullptr);
-        track->clearClient();
-    }
-}
-
-Element* TrackListBase::element() const
-{
-    return m_element;
+    if (auto* rootObserver = m_opaqueRootObserver.get())
+        return (*rootObserver)();
+    return this;
 }
 
 unsigned TrackListBase::length() const
@@ -78,10 +66,8 @@ void TrackListBase::remove(TrackBase& track, bool scheduleEvent)
     if (index == notFound)
         return;
 
-    if (track.mediaElement()) {
-        ASSERT(track.mediaElement() == m_element);
-        track.setMediaElement(nullptr);
-    }
+    if (track.trackList() == this)
+        track.clearTrackList();
 
     Ref<TrackBase> trackRef = *m_inbandTracks[index];
 
@@ -98,7 +84,7 @@ bool TrackListBase::contains(TrackBase& track) const
 
 void TrackListBase::scheduleTrackEvent(const AtomString& eventName, Ref<TrackBase>&& track)
 {
-    m_asyncEventQueue.enqueueEvent(TrackEvent::create(eventName, Event::CanBubble::No, Event::IsCancelable::No, WTFMove(track)));
+    queueTaskToDispatchEvent(*this, TaskSource::MediaElement, TrackEvent::create(eventName, Event::CanBubble::No, Event::IsCancelable::No, WTFMove(track)));
 }
 
 void TrackListBase::scheduleAddTrackEvent(Ref<TrackBase>&& track)
@@ -161,12 +147,11 @@ void TrackListBase::scheduleChangeEvent()
     // Whenever a track in a VideoTrackList that was previously not selected is
     // selected, the user agent must queue a task to fire a simple event named
     // change at the VideoTrackList object.
-    m_asyncEventQueue.enqueueEvent(Event::create(eventNames().changeEvent, Event::CanBubble::No, Event::IsCancelable::No));
-}
-
-bool TrackListBase::isChangeEventScheduled() const
-{
-    return m_asyncEventQueue.hasPendingEventsOfType(eventNames().changeEvent);
+    m_isChangeEventScheduled = true;
+    queueTaskKeepingObjectAlive(*this, TaskSource::MediaElement, [this] {
+        m_isChangeEventScheduled = false;
+        dispatchEvent(Event::create(eventNames().changeEvent, Event::CanBubble::No, Event::IsCancelable::No));
+    });
 }
 
 bool TrackListBase::isAnyTrackEnabled() const
@@ -176,35 +161,6 @@ bool TrackListBase::isAnyTrackEnabled() const
             return true;
     }
     return false;
-}
-
-bool TrackListBase::canSuspendForDocumentSuspension() const
-{
-    return !m_asyncEventQueue.hasPendingEvents();
-}
-
-void TrackListBase::suspend(ReasonForSuspension reason)
-{
-    switch (reason) {
-    case ReasonForSuspension::PageCache:
-    case ReasonForSuspension::PageWillBeSuspended:
-        m_asyncEventQueue.suspend();
-        break;
-    case ReasonForSuspension::JavaScriptDebuggerPaused:
-    case ReasonForSuspension::WillDeferLoading:
-        // Do nothing, we don't pause media playback in these cases.
-        break;
-    }
-}
-
-void TrackListBase::resume()
-{
-    m_asyncEventQueue.resume();
-}
-
-void TrackListBase::stop()
-{
-    m_asyncEventQueue.close();
 }
 
 } // namespace WebCore

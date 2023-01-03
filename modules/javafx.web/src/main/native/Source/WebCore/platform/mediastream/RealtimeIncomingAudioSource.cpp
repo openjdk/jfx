@@ -34,6 +34,7 @@
 #if USE(LIBWEBRTC)
 
 #include "LibWebRTCAudioFormat.h"
+#include "LibWebRTCAudioModule.h"
 #include "Logging.h"
 
 namespace WebCore {
@@ -42,37 +43,32 @@ RealtimeIncomingAudioSource::RealtimeIncomingAudioSource(rtc::scoped_refptr<webr
     : RealtimeMediaSource(RealtimeMediaSource::Type::Audio, "remote audio"_s, WTFMove(audioTrackId))
     , m_audioTrack(WTFMove(audioTrack))
 {
-    notifyMutedChange(!m_audioTrack);
+    ASSERT(m_audioTrack);
+    m_audioTrack->RegisterObserver(this);
 }
 
 RealtimeIncomingAudioSource::~RealtimeIncomingAudioSource()
 {
     stop();
+    m_audioTrack->UnregisterObserver(this);
 }
 
 void RealtimeIncomingAudioSource::startProducingData()
 {
-    if (m_audioTrack)
-        m_audioTrack->AddSink(this);
+    m_audioTrack->AddSink(this);
 }
 
 void RealtimeIncomingAudioSource::stopProducingData()
 {
-    if (m_audioTrack)
-        m_audioTrack->RemoveSink(this);
+    m_audioTrack->RemoveSink(this);
 }
 
-void RealtimeIncomingAudioSource::setSourceTrack(rtc::scoped_refptr<webrtc::AudioTrackInterface>&& track)
+void RealtimeIncomingAudioSource::OnChanged()
 {
-    ASSERT(track);
-
-    if (m_audioTrack && isProducingData())
-        m_audioTrack->RemoveSink(this);
-
-    m_audioTrack = WTFMove(track);
-    notifyMutedChange(!m_audioTrack);
-    if (isProducingData())
-        m_audioTrack->AddSink(this);
+    callOnMainThread([protectedThis = Ref { *this }] {
+        if (protectedThis->m_audioTrack->state() == webrtc::MediaStreamTrackInterface::kEnded)
+            protectedThis->end();
+    });
 }
 
 const RealtimeMediaSourceCapabilities& RealtimeIncomingAudioSource::capabilities()
@@ -83,6 +79,12 @@ const RealtimeMediaSourceCapabilities& RealtimeIncomingAudioSource::capabilities
 const RealtimeMediaSourceSettings& RealtimeIncomingAudioSource::settings()
 {
     return m_currentSettings;
+}
+
+void RealtimeIncomingAudioSource::setAudioModule(RefPtr<LibWebRTCAudioModule>&& audioModule)
+{
+    ASSERT(!m_audioModule);
+    m_audioModule = WTFMove(audioModule);
 }
 
 }

@@ -82,7 +82,7 @@ SpoofImpl::SpoofImpl(const SpoofImpl &src, UErrorCode &status)  :
     if (src.fSpoofData != NULL) {
         fSpoofData = src.fSpoofData->addReference();
     }
-    fAllowedCharsSet = static_cast<const UnicodeSet *>(src.fAllowedCharsSet->clone());
+    fAllowedCharsSet = src.fAllowedCharsSet->clone();
     fAllowedLocales = uprv_strdup(src.fAllowedLocales);
     if (fAllowedCharsSet == NULL || fAllowedLocales == NULL) {
         status = U_MEMORY_ALLOCATION_ERROR;
@@ -193,7 +193,7 @@ void SpoofImpl::setAllowedLocales(const char *localesList, UErrorCode &status) {
     }
 
     // Store the updated spoof checker state.
-    tmpSet = static_cast<UnicodeSet *>(allowedChars.clone());
+    tmpSet = allowedChars.clone();
     const char *tmpLocalesList = uprv_strdup(localesList);
     if (tmpSet == NULL || tmpLocalesList == NULL) {
         status = U_MEMORY_ALLOCATION_ERROR;
@@ -729,7 +729,7 @@ void *SpoofData::reserveSpace(int32_t numBytes,  UErrorCode &status) {
         return NULL;
     }
     if (!fDataOwned) {
-        UPRV_UNREACHABLE;
+        UPRV_UNREACHABLE_EXIT;
     }
 
     numBytes = (numBytes + 15) & ~15;   // Round up to a multiple of 16
@@ -945,7 +945,7 @@ uspoof_swap(const UDataSwapper *ds, const void *inData, int32_t length, void *ou
     uint32_t magic = ds->readUInt32(spoofDH->fMagic);
     ds->writeUInt32((uint32_t *)&outputDH->fMagic, magic);
 
-    if (outputDH->fFormatVersion != spoofDH->fFormatVersion) {
+    if (inBytes != outBytes) {
         uprv_memcpy(outputDH->fFormatVersion, spoofDH->fFormatVersion, sizeof(spoofDH->fFormatVersion));
     }
     // swap starting at fLength

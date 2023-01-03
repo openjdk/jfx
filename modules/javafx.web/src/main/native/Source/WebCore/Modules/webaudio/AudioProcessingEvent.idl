@@ -24,9 +24,12 @@
 
 [
     Conditional=WEB_AUDIO,
-    JSGenerateToJSObject
+    EnabledBySetting=WebAudioEnabled,
+    JSGenerateToJSObject,
+    Exposed=Window
 ] interface AudioProcessingEvent : Event {
-    readonly attribute unrestricted double playbackTime;
+    [EnabledBySetting=WebAudioEnabled] constructor (DOMString type, AudioProcessingEventInit eventInitDict);
+    readonly attribute double playbackTime;
     readonly attribute AudioBuffer inputBuffer;
     readonly attribute AudioBuffer outputBuffer; 
 };

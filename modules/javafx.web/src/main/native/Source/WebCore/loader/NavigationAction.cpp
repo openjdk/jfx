@@ -32,18 +32,10 @@
 #include "Document.h"
 #include "Frame.h"
 #include "FrameLoader.h"
-#include "FrameLoaderClient.h"
 #include "HistoryItem.h"
 #include "MouseEvent.h"
 
 namespace WebCore {
-
-NavigationAction::Requester::Requester(const Document& document)
-    : m_url { URL { document.url() } }
-    , m_origin { makeRefPtr(document.securityOrigin()) }
-    , m_pageIDAndFrameIDPair { document.frame() ? std::make_pair(document.frame()->loader().client().pageID().valueOr(PageIdentifier { }), document.frame()->loader().client().frameID().valueOr(FrameIdentifier { })) : std::make_pair<PageIdentifier, FrameIdentifier>({ }, { }) }
-{
-}
 
 NavigationAction::UIEventWithKeyStateData::UIEventWithKeyStateData(const UIEventWithKeyState& uiEvent)
     : isTrusted { uiEvent.isTrusted() }
@@ -78,24 +70,24 @@ static bool shouldTreatAsSameOriginNavigation(const Document& document, const UR
     return url.protocolIsAbout() || url.protocolIsData() || (url.protocolIsBlob() && document.securityOrigin().canRequest(url));
 }
 
-static Optional<NavigationAction::UIEventWithKeyStateData> keyStateDataForFirstEventWithKeyState(Event* event)
+static std::optional<NavigationAction::UIEventWithKeyStateData> keyStateDataForFirstEventWithKeyState(Event* event)
 {
     if (UIEventWithKeyState* uiEvent = findEventWithKeyState(event))
         return NavigationAction::UIEventWithKeyStateData { *uiEvent };
-    return WTF::nullopt;
+    return std::nullopt;
 }
 
-static Optional<NavigationAction::MouseEventData> mouseEventDataForFirstMouseEvent(Event* event)
+static std::optional<NavigationAction::MouseEventData> mouseEventDataForFirstMouseEvent(Event* event)
 {
     for (Event* e = event; e; e = e->underlyingEvent()) {
         if (e->isMouseEvent())
             return NavigationAction::MouseEventData { static_cast<const MouseEvent&>(*e) };
     }
-    return WTF::nullopt;
+    return std::nullopt;
 }
 
 NavigationAction::NavigationAction(Document& requester, const ResourceRequest& resourceRequest, InitiatedByMainFrame initiatedByMainFrame, NavigationType type, ShouldOpenExternalURLsPolicy shouldOpenExternalURLsPolicy, Event* event, const AtomString& downloadAttribute)
-    : m_requester { requester }
+    : m_requester { NavigationRequester::from(requester) }
     , m_resourceRequest { resourceRequest }
     , m_type { type }
     , m_shouldOpenExternalURLsPolicy { shouldOpenExternalURLsPolicy }
@@ -121,7 +113,7 @@ static NavigationType navigationType(FrameLoadType frameLoadType, bool isFormSub
 }
 
 NavigationAction::NavigationAction(Document& requester, const ResourceRequest& resourceRequest, InitiatedByMainFrame initiatedByMainFrame, FrameLoadType frameLoadType, bool isFormSubmission, Event* event, ShouldOpenExternalURLsPolicy shouldOpenExternalURLsPolicy, const AtomString& downloadAttribute)
-    : m_requester { requester }
+    : m_requester { NavigationRequester::from(requester) }
     , m_resourceRequest { resourceRequest }
     , m_type { navigationType(frameLoadType, isFormSubmission, !!event) }
     , m_shouldOpenExternalURLsPolicy { shouldOpenExternalURLsPolicy }
@@ -147,7 +139,7 @@ void NavigationAction::setTargetBackForwardItem(HistoryItem& item)
 
 void NavigationAction::setSourceBackForwardItem(HistoryItem* item)
 {
-    m_sourceBackForwardItemIdentifier = item ? makeOptional(item->identifier()) : WTF::nullopt;
+    m_sourceBackForwardItemIdentifier = item ? std::make_optional(item->identifier()) : std::nullopt;
 }
 
 }

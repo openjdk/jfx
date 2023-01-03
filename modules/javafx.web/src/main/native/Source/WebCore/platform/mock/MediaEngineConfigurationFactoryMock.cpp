@@ -49,14 +49,26 @@ static bool canDecodeMedia(const MediaDecodingConfiguration& configuration)
 
     // Only the "mock-with-alpha" codec supports alphaChannel
     if (videoConfig && videoConfig->alphaChannel && videoConfig->alphaChannel.value()) {
-        if (ContentType(videoConfig->contentType).codecsParameter() != "mock-with-alpha")
+        if (ContentType(videoConfig->contentType).parameter(ContentType::codecsParameter()) != "mock-with-alpha")
+            return false;
+    }
+
+    // Only the "mock-with-hdr" codec supports HDR)
+    if (videoConfig && (videoConfig->colorGamut || videoConfig->hdrMetadataType || videoConfig->transferFunction)) {
+        if (ContentType(videoConfig->contentType).parameter(ContentType::codecsParameter()) != "mock-with-hdr")
             return false;
     }
 
     // Audio decoding support limited to audio/mp4.
     auto audioConfig = configuration.audio;
-    if (audioConfig)
-        return ContentType(audioConfig->contentType).containerType() == "audio/mp4";
+    if (audioConfig) {
+        if (ContentType(audioConfig->contentType).containerType() != "audio/mp4")
+            return false;
+
+        // Can only support spatial rendering of tracks with multichannel audio:
+        if (audioConfig->spatialRendering.value_or(false) && audioConfig->channels.toDouble() <= 2)
+            return false;
+    }
 
     return true;
 }
@@ -68,7 +80,7 @@ static bool canSmoothlyDecodeMedia(const MediaDecodingConfiguration& configurati
         return false;
 
     auto audioConfig = configuration.audio;
-    if (audioConfig)
+    if (audioConfig && !audioConfig->channels.isNull())
         return audioConfig->channels == "2";
 
     return true;
@@ -81,16 +93,16 @@ static bool canPowerEfficientlyDecodeMedia(const MediaDecodingConfiguration& con
         return false;
 
     auto audioConfig = configuration.audio;
-    if (audioConfig)
-        return audioConfig->bitrate <= 1000;
+    if (audioConfig && audioConfig->bitrate)
+        return audioConfig->bitrate.value() <= 1000;
 
     return true;
 }
 
 static bool canEncodeMedia(const MediaEncodingConfiguration& configuration)
 {
-    // The mock implementation supports only local file playback.
-    if (configuration.type == MediaEncodingType::Record)
+    ASSERT(configuration.type == MediaEncodingType::Record);
+    if (configuration.type != MediaEncodingType::Record)
         return false;
 
     // Maxing out video encoding support at 720P.
@@ -100,7 +112,7 @@ static bool canEncodeMedia(const MediaEncodingConfiguration& configuration)
 
     // Only the "mock-with-alpha" codec supports alphaChannel
     if (videoConfig && videoConfig->alphaChannel && videoConfig->alphaChannel.value()) {
-        if (ContentType(videoConfig->contentType).codecsParameter() != "mock-with-alpha")
+        if (ContentType(videoConfig->contentType).parameter(ContentType::codecsParameter()) != "mock-with-alpha")
             return false;
     }
 
@@ -119,7 +131,7 @@ static bool canSmoothlyEncodeMedia(const MediaEncodingConfiguration& configurati
         return false;
 
     auto audioConfig = configuration.audio;
-    if (audioConfig && audioConfig->channels != "2")
+    if (audioConfig && !audioConfig->channels.isNull() && audioConfig->channels != "2")
         return false;
 
     return true;
@@ -132,7 +144,7 @@ static bool canPowerEfficientlyEncodeMedia(const MediaEncodingConfiguration& con
         return false;
 
     auto audioConfig = configuration.audio;
-    if (audioConfig && audioConfig->bitrate > 1000)
+    if (audioConfig && audioConfig->bitrate && audioConfig->bitrate.value() > 1000)
         return false;
 
     return true;

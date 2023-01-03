@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2017, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -97,7 +97,7 @@ ImageDecoderJava::~ImageDecoderJava()
     WTF::CheckAndClearException(env);
 }
 
-void ImageDecoderJava::setData(SharedBuffer& data, bool allDataReceived)
+void ImageDecoderJava::setData(const FragmentedSharedBuffer& data, bool allDataReceived)
 {
     JNIEnv* env = WTF::GetJavaEnv();
     if (!env || !m_nativeDecoder) {
@@ -176,7 +176,7 @@ size_t ImageDecoderJava::frameCount() const
         : count;
 }
 
-NativeImagePtr ImageDecoderJava::createFrameImageAtIndex(size_t idx, SubsamplingLevel, const DecodingOptions&)
+PlatformImagePtr ImageDecoderJava::createFrameImageAtIndex(size_t idx, SubsamplingLevel, const DecodingOptions&)
 {
     JNIEnv* env = WTF::GetJavaEnv();
     if (!env || !m_nativeDecoder) {
@@ -195,7 +195,26 @@ NativeImagePtr ImageDecoderJava::createFrameImageAtIndex(size_t idx, Subsampling
         idx));
     WTF::CheckAndClearException(env);
 
-    return RQRef::create(frame);
+    if(!frame)
+        return nullptr;
+
+    static jmethodID midGetSize = env->GetMethodID(
+        PG_GetImageFrameClass(env),
+        "getSize",
+        "()[I");
+    ASSERT(midGetSize);
+    JLocalRef<jintArray> jsize((jintArray)env->CallObjectMethod(
+                        jobject(frame),
+                        midGetSize));
+    if (!jsize) {
+        return ImageJava::create(RQRef::create(frame), nullptr, 0, 0);
+    }
+
+    jint* size = (jint*)env->GetPrimitiveArrayCritical((jintArray)jsize, 0);
+    IntSize frameSize(size[0], size[1]);
+    env->ReleasePrimitiveArrayCritical(jsize, size, 0);
+
+    return ImageJava::create(RQRef::create(frame), nullptr, frameSize.width(), frameSize.height());
 }
 
 WTF::Seconds ImageDecoderJava::frameDurationAtIndex(size_t idx) const
@@ -286,7 +305,7 @@ bool ImageDecoderJava::frameIsCompleteAtIndex(size_t idx) const
 unsigned ImageDecoderJava::frameBytesAtIndex(size_t idx, SubsamplingLevel samplingLevel) const
 {
     auto frameSize = frameSizeAtIndex(idx, samplingLevel);
-    return (frameSize.area() * 4).unsafeGet();
+    return (frameSize.area() * 4);
 }
 
 RepetitionCount ImageDecoderJava::repetitionCount() const
@@ -315,16 +334,16 @@ String ImageDecoderJava::filenameExtension() const
     return String(env, ext);
 }
 
-Optional<IntPoint> ImageDecoderJava::hotSpot() const
+std::optional<IntPoint> ImageDecoderJava::hotSpot() const
 {
     notImplemented();
     return { };
 }
 
-ImageOrientation ImageDecoderJava::frameOrientationAtIndex(size_t) const
+ImageDecoder::FrameMetadata ImageDecoderJava::frameMetadataAtIndex(size_t) const
 {
     notImplemented();
-    return ImageOrientation(ImageOrientation::None);
+    return { };
 }
 
 size_t ImageDecoderJava::bytesDecodedToDetermineProperties() const

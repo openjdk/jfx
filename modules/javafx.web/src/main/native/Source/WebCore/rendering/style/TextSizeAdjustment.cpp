@@ -49,7 +49,7 @@ bool AutosizeStatus::probablyContainsASmallFixedNumberOfLines(const RenderStyle&
         return false;
 
     auto& maxHeight = style.maxHeight();
-    Optional<Length> heightOrMaxHeightAsLength;
+    std::optional<Length> heightOrMaxHeightAsLength;
     if (maxHeight.isFixed())
         heightOrMaxHeightAsLength = style.maxHeight();
     else if (style.height().isFixed() && (!maxHeight.isSpecified() || maxHeight.isUndefined()))
@@ -79,7 +79,7 @@ bool AutosizeStatus::probablyContainsASmallFixedNumberOfLines(const RenderStyle&
         && approximateNumberOfLines - std::floor(approximateNumberOfLines) <= thresholdForConsideringAnApproximateNumberOfLinesToBeCloseToAnInteger;
 }
 
-void AutosizeStatus::updateStatus(RenderStyle& style)
+auto AutosizeStatus::computeStatus(const RenderStyle& style) -> AutosizeStatus
 {
     auto result = style.autosizeStatus().fields();
 
@@ -113,7 +113,12 @@ void AutosizeStatus::updateStatus(RenderStyle& style)
     if (style.isFloating())
         result.add(Fields::Floating);
 
-    style.setAutosizeStatus(result);
+    return AutosizeStatus(result);
+}
+
+void AutosizeStatus::updateStatus(RenderStyle& style)
+{
+    style.setAutosizeStatus(AutosizeStatus(computeStatus(style)));
 }
 
 float AutosizeStatus::idempotentTextSize(float specifiedSize, float pageScale)

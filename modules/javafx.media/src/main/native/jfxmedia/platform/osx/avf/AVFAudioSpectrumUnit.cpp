@@ -272,10 +272,10 @@ void AVFAudioSpectrumUnit::SetupSpectralProcessor() {
     mSpectrum = GST_SPECTRUM(mSpectrumElement);
     mSpectrum->user_data = (void*)this;
 
-    // Set our own callback for post message
-    GstElementClass *klass;
-    klass = GST_ELEMENT_GET_CLASS(mSpectrumElement);
-    klass->post_message = PostMessageCallback;
+    // Set our own callback for post message, do not use
+    // GST_ELEMENT_GET_CLASS(mSpectrumElement)->post_message, since it will change
+    // callback for all instances of spectrum element.
+    mSpectrum->post_message_callback = PostMessageCallback;
 
     // Configure spectrum element
     // Do send magnitude and phase information, off by default

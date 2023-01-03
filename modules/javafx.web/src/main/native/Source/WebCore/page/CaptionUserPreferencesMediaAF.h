@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2015 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,23 +25,32 @@
 
 #pragma once
 
-#if ENABLE(VIDEO_TRACK)
+#if ENABLE(VIDEO)
 
 #include "CSSPropertyNames.h"
+#include "CaptionPreferencesDelegate.h"
 #include "CaptionUserPreferences.h"
 #include "Color.h"
+
+#if PLATFORM(COCOA)
+OBJC_CLASS WebCaptionUserPreferencesMediaAFWeakObserver;
+#endif
 
 namespace WebCore {
 
 class CaptionUserPreferencesMediaAF : public CaptionUserPreferences {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    CaptionUserPreferencesMediaAF(PageGroup&);
+    static Ref<CaptionUserPreferencesMediaAF> create(PageGroup&);
     virtual ~CaptionUserPreferencesMediaAF();
 
 #if HAVE(MEDIA_ACCESSIBILITY_FRAMEWORK)
     CaptionDisplayMode captionDisplayMode() const override;
     void setCaptionDisplayMode(CaptionDisplayMode) override;
+
+    WEBCORE_EXPORT static CaptionDisplayMode platformCaptionDisplayMode();
+    WEBCORE_EXPORT static void platformSetCaptionDisplayMode(CaptionDisplayMode);
+    WEBCORE_EXPORT static void setCachedCaptionDisplayMode(CaptionDisplayMode);
 
     bool userPrefersCaptions() const override;
     bool userPrefersSubtitles() const override;
@@ -54,24 +63,35 @@ public:
     void setPreferredLanguage(const String&) override;
     Vector<String> preferredLanguages() const override;
 
+    WEBCORE_EXPORT static Vector<String> platformPreferredLanguages();
+    WEBCORE_EXPORT static void platformSetPreferredLanguage(const String&);
+    WEBCORE_EXPORT static void setCachedPreferredLanguages(const Vector<String>&);
+
     void setPreferredAudioCharacteristic(const String&) override;
     Vector<String> preferredAudioCharacteristics() const override;
 
     void captionPreferencesChanged() override;
 
     bool shouldFilterTrackMenu() const { return true; }
+
+    WEBCORE_EXPORT static void setCaptionPreferencesDelegate(std::unique_ptr<CaptionPreferencesDelegate>&&);
 #else
     bool shouldFilterTrackMenu() const { return false; }
 #endif
 
+#if HAVE(MEDIA_ACCESSIBILITY_FRAMEWORK) && PLATFORM(COCOA)
+    static RefPtr<CaptionUserPreferencesMediaAF> extractCaptionUserPreferencesMediaAF(void* observer);
+#endif
+
     String captionsStyleSheetOverride() const override;
-    int textTrackSelectionScore(TextTrack*, HTMLMediaElement*) const override;
     Vector<RefPtr<AudioTrack>> sortedTrackListForMenu(AudioTrackList*) override;
-    Vector<RefPtr<TextTrack>> sortedTrackListForMenu(TextTrackList*) override;
+    Vector<RefPtr<TextTrack>> sortedTrackListForMenu(TextTrackList*, HashSet<TextTrack::Kind>) override;
     String displayNameForTrack(AudioTrack*) const override;
     String displayNameForTrack(TextTrack*) const override;
 
 private:
+    CaptionUserPreferencesMediaAF(PageGroup&);
+
 #if HAVE(MEDIA_ACCESSIBILITY_FRAMEWORK)
     void updateTimerFired();
 
@@ -83,13 +103,21 @@ private:
     String windowRoundedCornerRadiusCSS() const;
     String captionsTextEdgeCSS() const;
     String colorPropertyCSS(CSSPropertyID, const Color&, bool) const;
-    Timer m_updateStyleSheetTimer;
+#endif
 
-    bool m_listeningForPreferenceChanges;
+#if HAVE(MEDIA_ACCESSIBILITY_FRAMEWORK) && PLATFORM(COCOA)
+    static RetainPtr<WebCaptionUserPreferencesMediaAFWeakObserver> createWeakObserver(CaptionUserPreferencesMediaAF*);
+
+    RetainPtr<WebCaptionUserPreferencesMediaAFWeakObserver> m_weakObserver;
+#endif
+
+#if HAVE(MEDIA_ACCESSIBILITY_FRAMEWORK)
+    Timer m_updateStyleSheetTimer;
+    bool m_listeningForPreferenceChanges { false };
     bool m_registeringForNotification { false };
 #endif
 };
 
 } // namespace WebCore
 
-#endif // ENABLE(VIDEO_TRACK)
+#endif // ENABLE(VIDEO)

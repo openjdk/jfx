@@ -26,12 +26,14 @@
 #include "config.h"
 #include "MediaRecorderErrorEvent.h"
 
-#if ENABLE(MEDIA_STREAM)
+#if ENABLE(MEDIA_RECORDER)
 
 #include "DOMException.h"
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
 
+WTF_MAKE_ISO_ALLOCATED_IMPL(MediaRecorderErrorEvent);
 
 Ref<MediaRecorderErrorEvent> MediaRecorderErrorEvent::create(const AtomString& type, Exception&& exception)
 {
@@ -63,4 +65,4 @@ EventInterface MediaRecorderErrorEvent::eventInterface() const
 
 } // namespace WebCore
 
-#endif // ENABLE(MEDIA_STREAM)
+#endif // ENABLE(MEDIA_RECORDER)

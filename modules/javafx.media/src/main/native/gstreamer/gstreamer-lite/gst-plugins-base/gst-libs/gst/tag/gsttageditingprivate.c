@@ -262,7 +262,7 @@ __exif_tag_capturing_white_balance_to_exif_value (const gchar * str)
     return 1;
 
 end:
-  GST_WARNING ("Invalid white balance: %s", str);
+  GST_WARNING ("Invalid white balance: NULL");
   return -1;
 }
 

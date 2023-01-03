@@ -26,10 +26,12 @@
 #include "config.h"
 #include "MacroAssemblerCodeRef.h"
 
+#include "CodeBlock.h"
 #include "Disassembler.h"
-#include "JSCInlines.h"
+#include "JITCode.h"
 #include "JSCPtrTag.h"
-#include <mutex>
+#include "WasmCompilationMode.h"
+#include <wtf/StringPrintStream.h>
 
 namespace JSC {
 
@@ -62,6 +64,24 @@ CString MacroAssemblerCodeRefBase::disassembly(MacroAssemblerCodePtr<Disassembly
     if (!tryToDisassemble(codePtr, size, "", out))
         return CString();
     return out.toCString();
+}
+
+bool shouldDumpDisassemblyFor(CodeBlock* codeBlock)
+{
+    if (codeBlock && JITCode::isOptimizingJIT(codeBlock->jitType()) && Options::dumpDFGDisassembly())
+        return true;
+    return Options::dumpDisassembly();
+}
+
+bool shouldDumpDisassemblyFor(Wasm::CompilationMode mode)
+{
+    if (Options::asyncDisassembly() || Options::dumpDisassembly() || Options::dumpWasmDisassembly())
+        return true;
+    if (Wasm::isAnyBBQ(mode))
+        return Options::dumpBBQDisassembly();
+    if (Wasm::isAnyOMG(mode))
+        return Options::dumpOMGDisassembly();
+    return false;
 }
 
 } // namespace JSC

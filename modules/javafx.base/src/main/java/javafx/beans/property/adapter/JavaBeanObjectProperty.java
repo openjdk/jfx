@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -92,19 +92,20 @@ import java.security.PrivilegedAction;
  */
 public final class JavaBeanObjectProperty<T> extends ObjectProperty<T> implements JavaBeanProperty<T> {
 
-    private final PropertyDescriptor descriptor;
-    private final PropertyDescriptor.Listener<T> listener;
+    private final PropertyDescriptor<T> descriptor;
+    private final PropertyDescriptor<T>.Listener listener;
 
     private ObservableValue<? extends T> observable = null;
     private ExpressionHelper<T> helper = null;
 
+    @SuppressWarnings("removal")
     private final AccessControlContext acc = AccessController.getContext();
 
-    JavaBeanObjectProperty(PropertyDescriptor descriptor, Object bean) {
+    JavaBeanObjectProperty(PropertyDescriptor<T> descriptor, Object bean) {
         this.descriptor = descriptor;
-        this.listener = descriptor.new Listener<T>(bean, this);
+        this.listener = descriptor.new Listener(bean, this);
         descriptor.addListener(listener);
-        Disposer.addRecord(this, new DescriptorListenerCleaner(descriptor, listener));
+        Disposer.addRecord(this, new DescriptorListenerCleaner<>(descriptor, listener));
     }
 
     /**
@@ -114,7 +115,7 @@ public final class JavaBeanObjectProperty<T> extends ObjectProperty<T> implement
      * property throws an {@code IllegalAccessException} or an
      * {@code InvocationTargetException}.
      */
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings({"removal","unchecked"})
     @Override
     public T get() {
         return AccessController.doPrivileged((PrivilegedAction<T>) () -> {
@@ -135,6 +136,7 @@ public final class JavaBeanObjectProperty<T> extends ObjectProperty<T> implement
      * property throws an {@code IllegalAccessException} or an
      * {@code InvocationTargetException}.
      */
+    @SuppressWarnings("removal")
     @Override
     public void set(final T value) {
         if (isBound()) {

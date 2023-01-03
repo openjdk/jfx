@@ -29,7 +29,6 @@
 #if ENABLE(DFG_JIT)
 
 #include "CodeBlock.h"
-#include "JSCInlines.h"
 
 namespace JSC {
 
@@ -47,8 +46,7 @@ void JITToDFGDeferredCompilationCallback::compilationDidBecomeReadyAsynchronousl
     ASSERT_UNUSED(profiledDFGCodeBlock, !profiledDFGCodeBlock);
     ASSERT(codeBlock->alternative()->jitType() == JITType::BaselineJIT);
 
-    if (Options::verboseOSR())
-        dataLog("Optimizing compilation of ", *codeBlock, " did become ready.\n");
+    dataLogLnIf(Options::verboseOSR(), "Optimizing compilation of ", *codeBlock, " did become ready.");
 
     codeBlock->alternative()->forceOptimizationSlowPathConcurrently();
 }
@@ -59,8 +57,7 @@ void JITToDFGDeferredCompilationCallback::compilationDidComplete(
     ASSERT(!profiledDFGCodeBlock);
     ASSERT(codeBlock->alternative()->jitType() == JITType::BaselineJIT);
 
-    if (Options::verboseOSR())
-        dataLog("Optimizing compilation of ", *codeBlock, " result: ", result, "\n");
+    dataLogLnIf(Options::verboseOSR(), "Optimizing compilation of ", *codeBlock, " result: ", result);
 
     if (result == CompilationSuccessful)
         codeBlock->ownerExecutable()->installCode(codeBlock);

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2015-2022 Apple Inc. All Rights Reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,16 +30,20 @@
 namespace JSC {
 
 class ReflectObject final : public JSNonFinalObject {
-private:
-    ReflectObject(VM&, Structure*);
-
 public:
-    typedef JSNonFinalObject Base;
-    static const unsigned StructureFlags = Base::StructureFlags | HasStaticPropertyTable;
+    using Base = JSNonFinalObject;
+    static constexpr unsigned StructureFlags = Base::StructureFlags | HasStaticPropertyTable;
+
+    template<typename CellType, SubspaceAccess>
+    static GCClient::IsoSubspace* subspaceFor(VM& vm)
+    {
+        STATIC_ASSERT_ISO_SUBSPACE_SHARABLE(ReflectObject, Base);
+        return &vm.plainObjectSpace();
+    }
 
     static ReflectObject* create(VM& vm, JSGlobalObject* globalObject, Structure* structure)
     {
-        ReflectObject* object = new (NotNull, allocateCell<ReflectObject>(vm.heap)) ReflectObject(vm, structure);
+        ReflectObject* object = new (NotNull, allocateCell<ReflectObject>(vm)) ReflectObject(vm, structure);
         object->finishCreation(vm, globalObject);
         return object;
     }
@@ -51,7 +55,8 @@ public:
         return Structure::create(vm, globalObject, prototype, TypeInfo(ObjectType, StructureFlags), info());
     }
 
-protected:
+private:
+    ReflectObject(VM&, Structure*);
     void finishCreation(VM&, JSGlobalObject*);
 };
 

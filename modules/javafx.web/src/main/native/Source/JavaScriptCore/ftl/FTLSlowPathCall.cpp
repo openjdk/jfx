@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,15 +32,14 @@
 #include "FTLState.h"
 #include "FTLThunks.h"
 #include "GPRInfo.h"
-#include "JSCInlines.h"
 
 namespace JSC { namespace FTL {
 
 // This code relies on us being 64-bit. FTL is currently always 64-bit.
-static const size_t wordSize = 8;
+static constexpr size_t wordSize = 8;
 
 SlowPathCallContext::SlowPathCallContext(
-    RegisterSet usedRegisters, CCallHelpers& jit, unsigned numArgs, GPRReg returnRegister)
+    RegisterSet usedRegisters, CCallHelpers& jit, unsigned numArgs, GPRReg returnRegister, GPRReg indirectCallTargetRegister)
     : m_jit(jit)
     , m_numArgs(numArgs)
     , m_returnRegister(returnRegister)
@@ -64,6 +63,8 @@ SlowPathCallContext::SlowPathCallContext(
     m_callingConventionRegisters.merge(m_argumentRegisters);
     if (returnRegister != InvalidGPRReg)
         m_callingConventionRegisters.set(GPRInfo::returnValueGPR);
+    if (indirectCallTargetRegister != InvalidGPRReg)
+        m_callingConventionRegisters.set(indirectCallTargetRegister);
     m_callingConventionRegisters.filter(usedRegisters);
 
     unsigned numberOfCallingConventionRegisters =
@@ -115,20 +116,41 @@ SlowPathCallContext::~SlowPathCallContext()
 
 SlowPathCallKey SlowPathCallContext::keyWithTarget(FunctionPtr<CFunctionPtrTag> callTarget) const
 {
-    return SlowPathCallKey(m_thunkSaveSet, callTarget, m_argumentRegisters, m_offset);
+    return SlowPathCallKey(m_thunkSaveSet, callTarget, m_argumentRegisters, m_offset, 0);
+}
+
+SlowPathCallKey SlowPathCallContext::keyWithTarget(CCallHelpers::Address address) const
+{
+    return SlowPathCallKey(m_thunkSaveSet, nullptr, m_argumentRegisters, m_offset, address.offset);
 }
 
 SlowPathCall SlowPathCallContext::makeCall(VM& vm, FunctionPtr<CFunctionPtrTag> callTarget)
 {
     SlowPathCallKey key = keyWithTarget(callTarget);
-    SlowPathCall result = SlowPathCall(m_jit.call(OperationPtrTag), key);
+    SlowPathCall result = SlowPathCall(m_jit.call(JITThunkPtrTag), key);
 
     m_jit.addLinkTask(
         [result, &vm] (LinkBuffer& linkBuffer) {
             MacroAssemblerCodeRef<JITThunkPtrTag> thunk =
-                vm.ftlThunks->getSlowPathCallThunk(result.key());
+                vm.ftlThunks->getSlowPathCallThunk(vm, result.key());
 
-            linkBuffer.link(result.call(), CodeLocationLabel<OperationPtrTag>(thunk.retaggedCode<OperationPtrTag>()));
+            linkBuffer.link(result.call(), CodeLocationLabel<JITThunkPtrTag>(thunk.code()));
+        });
+
+    return result;
+}
+
+SlowPathCall SlowPathCallContext::makeCall(VM& vm, CCallHelpers::Address callTarget)
+{
+    SlowPathCallKey key = keyWithTarget(callTarget);
+    SlowPathCall result = SlowPathCall(m_jit.call(JITThunkPtrTag), key);
+
+    m_jit.addLinkTask(
+        [result, &vm] (LinkBuffer& linkBuffer) {
+            MacroAssemblerCodeRef<JITThunkPtrTag> thunk =
+                vm.ftlThunks->getSlowPathCallThunk(vm, result.key());
+
+            linkBuffer.link(result.call(), CodeLocationLabel<JITThunkPtrTag>(thunk.code()));
         });
 
     return result;
@@ -137,7 +159,7 @@ SlowPathCall SlowPathCallContext::makeCall(VM& vm, FunctionPtr<CFunctionPtrTag> 
 CallSiteIndex callSiteIndexForCodeOrigin(State& state, CodeOrigin codeOrigin)
 {
     if (codeOrigin)
-        return state.jitCode->common.addCodeOrigin(codeOrigin);
+        return state.jitCode->common.codeOrigins->addCodeOrigin(codeOrigin);
     return CallSiteIndex();
 }
 

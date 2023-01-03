@@ -40,6 +40,7 @@ class RenderTableSection;
 class TableLayout;
 
 enum SkipEmptySectionsValue { DoNotSkipEmptySections, SkipEmptySections };
+enum class TableIntrinsics : uint8_t { ForLayout, ForKeyword };
 
 class RenderTable : public RenderBlock {
     WTF_MAKE_ISO_ALLOCATED(RenderTable);
@@ -270,6 +271,8 @@ public:
     void willInsertTableColumn(RenderTableCol& child, RenderObject* beforeChild);
     void willInsertTableSection(RenderTableSection& child, RenderObject* beforeChild);
 
+    LayoutUnit sumCaptionsLogicalHeight() const;
+
 protected:
     void styleDidChange(StyleDifference, const RenderStyle* oldStyle) final;
     void simplifiedNormalFlowLayout() final;
@@ -288,13 +291,15 @@ private:
     void paintBoxDecorations(PaintInfo&, const LayoutPoint&) final;
     void paintMask(PaintInfo&, const LayoutPoint&) final;
     void layout() final;
+    void computeIntrinsicLogicalWidths(LayoutUnit& minWidth, LayoutUnit& maxWidth, TableIntrinsics) const;
     void computeIntrinsicLogicalWidths(LayoutUnit& minWidth, LayoutUnit& maxWidth) const final;
+    void computeIntrinsicKeywordLogicalWidths(LayoutUnit& minWidth, LayoutUnit& maxWidth) const final;
     void computePreferredLogicalWidths() override;
     bool nodeAtPoint(const HitTestRequest&, HitTestResult&, const HitTestLocation& locationInContainer, const LayoutPoint& accumulatedOffset, HitTestAction) override;
 
-    int baselinePosition(FontBaseline, bool firstLine, LineDirectionMode, LinePositionMode = PositionOnContainingLine) const final;
-    Optional<int> firstLineBaseline() const override;
-    Optional<int> inlineBlockBaseline(LineDirectionMode) const final;
+    LayoutUnit baselinePosition(FontBaseline, bool firstLine, LineDirectionMode, LinePositionMode = PositionOnContainingLine) const final;
+    std::optional<LayoutUnit> firstLineBaseline() const override;
+    std::optional<LayoutUnit> inlineBlockBaseline(LineDirectionMode) const final;
 
     RenderTableCol* slowColElement(unsigned col, bool* startEdge, bool* endEdge) const;
 
@@ -310,8 +315,8 @@ private:
     LayoutUnit convertStyleLogicalWidthToComputedWidth(const Length& styleLogicalWidth, LayoutUnit availableWidth);
     LayoutUnit convertStyleLogicalHeightToComputedHeight(const Length& styleLogicalHeight);
 
-    LayoutRect overflowClipRect(const LayoutPoint& location, RenderFragmentContainer*, OverlayScrollbarSizeRelevancy = IgnoreOverlayScrollbarSize, PaintPhase = PaintPhase::BlockBackground) final;
-    LayoutRect overflowClipRectForChildLayers(const LayoutPoint& location, RenderFragmentContainer* fragment, OverlayScrollbarSizeRelevancy relevancy) override { return RenderBox::overflowClipRect(location, fragment, relevancy); }
+    LayoutRect overflowClipRect(const LayoutPoint& location, RenderFragmentContainer*, OverlayScrollbarSizeRelevancy = IgnoreOverlayScrollbarSize, PaintPhase = PaintPhase::BlockBackground) const final;
+    LayoutRect overflowClipRectForChildLayers(const LayoutPoint& location, RenderFragmentContainer* fragment, OverlayScrollbarSizeRelevancy relevancy) const override { return RenderBox::overflowClipRect(location, fragment, relevancy); }
 
     void addOverflowFromChildren() final;
 
@@ -361,13 +366,15 @@ private:
         return false;
     }
 
+    bool shouldResetLogicalHeightBeforeLayout() const override { return true; }
+
     LayoutUnit m_hSpacing;
     LayoutUnit m_vSpacing;
     LayoutUnit m_borderStart;
     LayoutUnit m_borderEnd;
     mutable LayoutUnit m_columnOffsetTop;
     mutable LayoutUnit m_columnOffsetHeight;
-    bool m_inRecursiveSectionMovedWithPagination { false };
+    unsigned m_recursiveSectionMovedWithPaginationLevel { 0 };
 };
 
 inline bool isDirectionSame(const RenderBox* tableItem, const RenderBox* otherTableItem) { return tableItem && otherTableItem ? tableItem->style().direction() == otherTableItem->style().direction() : true; }

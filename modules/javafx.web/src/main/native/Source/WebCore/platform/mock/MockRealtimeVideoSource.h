@@ -48,20 +48,24 @@ class GraphicsContext;
 
 class MockRealtimeVideoSource : public RealtimeVideoCaptureSource, private OrientationNotifier::Observer {
 public:
-
     static CaptureSourceOrError create(String&& deviceID, String&& name, String&& hashSalt, const MediaConstraints*);
+    ~MockRealtimeVideoSource();
+
+    static void setIsInterrupted(bool);
+
+    ImageBuffer* imageBuffer() const;
 
 protected:
     MockRealtimeVideoSource(String&& deviceID, String&& name, String&& hashSalt);
 
     virtual void updateSampleBuffer() = 0;
 
-    void setCurrentFrame(MediaSample&);
-    ImageBuffer* imageBuffer() const;
-
     Seconds elapsedTime();
     void settingsDidChange(OptionSet<RealtimeMediaSourceSettings::Flag>) override;
     MediaSample::VideoRotation sampleRotation() const final { return m_deviceOrientation; }
+    void generatePresets() override;
+
+    IntSize captureSize() const;
 
 private:
     const RealtimeMediaSourceCapabilities& capabilities() final;
@@ -70,13 +74,11 @@ private:
     void startProducingData() final;
     void stopProducingData() final;
     bool isCaptureSource() const final { return true; }
-    CaptureDevice::DeviceType deviceType() const final { return CaptureDevice::DeviceType::Camera; }
-    bool supportsSizeAndFrameRate(Optional<int> width, Optional<int> height, Optional<double>) final;
-    void setSizeAndFrameRate(Optional<int> width, Optional<int> height, Optional<double>) final;
+    CaptureDevice::DeviceType deviceType() const final { return mockCamera() ? CaptureDevice::DeviceType::Camera : CaptureDevice::DeviceType::Screen; }
+    bool supportsSizeAndFrameRate(std::optional<int> width, std::optional<int> height, std::optional<double>) final;
+    void setSizeAndFrameRate(std::optional<int> width, std::optional<int> height, std::optional<double>) final;
     void setFrameRateWithPreset(double, RefPtr<VideoPreset>) final;
-    IntSize captureSize() const;
 
-    void generatePresets() final;
 
     bool isMockSource() const final { return true; }
 
@@ -93,8 +95,8 @@ private:
 
     void delaySamples(Seconds) final;
 
-    bool mockCamera() const { return WTF::holds_alternative<MockCameraProperties>(m_device.properties); }
-    bool mockDisplay() const { return WTF::holds_alternative<MockDisplayProperties>(m_device.properties); }
+    bool mockCamera() const { return std::holds_alternative<MockCameraProperties>(m_device.properties); }
+    bool mockDisplay() const { return std::holds_alternative<MockDisplayProperties>(m_device.properties); }
     bool mockScreen() const { return mockDisplayType(CaptureDevice::DeviceType::Screen); }
     bool mockWindow() const { return mockDisplayType(CaptureDevice::DeviceType::Window); }
     bool mockDisplayType(CaptureDevice::DeviceType) const;
@@ -103,7 +105,7 @@ private:
     float m_bipBopFontSize { 0 };
     float m_statsFontSize { 0 };
 
-    mutable std::unique_ptr<ImageBuffer> m_imageBuffer;
+    mutable RefPtr<ImageBuffer> m_imageBuffer;
 
     Path m_path;
     DashArray m_dashWidths;
@@ -114,8 +116,8 @@ private:
 
     unsigned m_frameNumber { 0 };
     RunLoop::Timer<MockRealtimeVideoSource> m_emitFrameTimer;
-    Optional<RealtimeMediaSourceCapabilities> m_capabilities;
-    Optional<RealtimeMediaSourceSettings> m_currentSettings;
+    std::optional<RealtimeMediaSourceCapabilities> m_capabilities;
+    std::optional<RealtimeMediaSourceSettings> m_currentSettings;
     RealtimeMediaSourceSupportedConstraints m_supportedConstraints;
     Color m_fillColor { Color::black };
     MockMediaDevice m_device;
@@ -124,6 +126,10 @@ private:
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::MockRealtimeVideoSource)
+    static bool isType(const WebCore::RealtimeMediaSource& source) { return source.isCaptureSource() && source.isMockSource() && (source.deviceType() == WebCore::CaptureDevice::DeviceType::Camera || source.deviceType() == WebCore::CaptureDevice::DeviceType::Screen || source.deviceType() == WebCore::CaptureDevice::DeviceType::Window); }
+SPECIALIZE_TYPE_TRAITS_END()
 
 #endif // ENABLE(MEDIA_STREAM)
 

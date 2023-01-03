@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,36 +31,39 @@
 
 namespace WTF {
 
-template<typename SignedInt>
-class StringTypeAdapter<SignedInt, typename std::enable_if_t<std::is_integral<SignedInt>::value && std::is_signed<SignedInt>::value>> {
+template<typename Integer>
+class StringTypeAdapter<Integer, typename std::enable_if_t<std::is_integral_v<Integer>>> {
 public:
-    StringTypeAdapter(SignedInt number)
+    StringTypeAdapter(Integer number)
         : m_number { number }
     {
     }
 
-    unsigned length() const { return lengthOfNumberAsStringSigned(m_number); }
+    unsigned length() const { return lengthOfIntegerAsString(m_number); }
     bool is8Bit() const { return true; }
-    template<typename CharacterType> void writeTo(CharacterType* destination) const { writeNumberToBufferSigned(m_number, destination); }
+    template<typename CharacterType>
+    void writeTo(CharacterType* destination) const { writeIntegerToBuffer(m_number, destination); }
 
 private:
-    SignedInt m_number;
+    Integer m_number;
 };
 
-template<typename UnsignedInt>
-class StringTypeAdapter<UnsignedInt, typename std::enable_if_t<std::is_integral<UnsignedInt>::value && !std::is_signed<UnsignedInt>::value>> {
+template<typename Enum>
+class StringTypeAdapter<Enum, typename std::enable_if_t<std::is_enum_v<Enum>>> {
+using UnderlyingType = typename std::underlying_type_t<Enum>;
 public:
-    StringTypeAdapter(UnsignedInt number)
-        : m_number { number }
+    StringTypeAdapter(Enum enumValue)
+        : m_enum { enumValue }
     {
     }
 
-    unsigned length() const { return lengthOfNumberAsStringUnsigned(m_number); }
+    unsigned length() const { return lengthOfIntegerAsString(static_cast<UnderlyingType>(m_enum)); }
     bool is8Bit() const { return true; }
-    template<typename CharacterType> void writeTo(CharacterType* destination) const { writeNumberToBufferUnsigned(m_number, destination); }
+    template<typename CharacterType>
+    void writeTo(CharacterType* destination) const { writeIntegerToBuffer(static_cast<UnderlyingType>(m_enum), destination); }
 
 private:
-    UnsignedInt m_number;
+    Enum m_enum;
 };
 
 template<typename FloatingPoint>
@@ -125,6 +128,41 @@ private:
     const FormattedNumber& m_number;
 };
 
+class FormattedCSSNumber {
+    WTF_MAKE_FAST_ALLOCATED;
+public:
+    static FormattedCSSNumber create(double number)
+    {
+        FormattedCSSNumber numberFormatter;
+        numberToCSSString(number, numberFormatter.m_buffer);
+        numberFormatter.m_length = std::strlen(&numberFormatter.m_buffer[0]);
+        return numberFormatter;
+    }
+
+    unsigned length() const { return m_length; }
+    const LChar* buffer() const { return reinterpret_cast<const LChar*>(&m_buffer[0]); }
+
+private:
+    NumberToCSSStringBuffer m_buffer;
+    unsigned m_length;
+};
+
+template<> class StringTypeAdapter<FormattedCSSNumber> {
+public:
+    StringTypeAdapter(const FormattedCSSNumber& number)
+        : m_number { number }
+    {
+    }
+
+    unsigned length() const { return m_number.length(); }
+    bool is8Bit() const { return true; }
+    template<typename CharacterType> void writeTo(CharacterType* destination) const { StringImpl::copyCharacters(destination, m_number.buffer(), m_number.length()); }
+
+private:
+    const FormattedCSSNumber& m_number;
+};
+
 }
 
 using WTF::FormattedNumber;
+using WTF::FormattedCSSNumber;

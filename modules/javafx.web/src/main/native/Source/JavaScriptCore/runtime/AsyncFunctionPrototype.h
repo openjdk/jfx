@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2016 Caitlin Potter <caitp@igalia.com>.
+ * Copyright (C) 2021-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,13 +32,20 @@ namespace JSC {
 
 class AsyncFunctionPrototype final : public JSNonFinalObject {
 public:
-    typedef JSNonFinalObject Base;
+    using Base = JSNonFinalObject;
+
+    template<typename CellType, SubspaceAccess>
+    static GCClient::IsoSubspace* subspaceFor(VM& vm)
+    {
+        STATIC_ASSERT_ISO_SUBSPACE_SHARABLE(AsyncFunctionPrototype, Base);
+        return &vm.plainObjectSpace();
+    }
 
     DECLARE_INFO;
 
     static AsyncFunctionPrototype* create(VM& vm, Structure* structure)
     {
-        AsyncFunctionPrototype* prototype = new (NotNull, allocateCell<AsyncFunctionPrototype>(vm.heap)) AsyncFunctionPrototype(vm, structure);
+        AsyncFunctionPrototype* prototype = new (NotNull, allocateCell<AsyncFunctionPrototype>(vm)) AsyncFunctionPrototype(vm, structure);
         prototype->finishCreation(vm);
         return prototype;
     }
@@ -47,11 +55,9 @@ public:
         return Structure::create(vm, globalObject, proto, TypeInfo(ObjectType, StructureFlags), info());
     }
 
-protected:
-    void finishCreation(VM&);
-
 private:
     AsyncFunctionPrototype(VM&, Structure*);
+    void finishCreation(VM&);
 };
 
 } // namespace JSC

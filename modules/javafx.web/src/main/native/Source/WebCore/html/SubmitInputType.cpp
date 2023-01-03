@@ -33,6 +33,7 @@
 #include "SubmitInputType.h"
 
 #include "DOMFormData.h"
+#include "Document.h"
 #include "Event.h"
 #include "HTMLFormElement.h"
 #include "HTMLInputElement.h"
@@ -46,7 +47,7 @@ const AtomString& SubmitInputType::formControlType() const
     return InputTypeNames::submit();
 }
 
-bool SubmitInputType::appendFormData(DOMFormData& formData, bool) const
+bool SubmitInputType::appendFormData(DOMFormData& formData) const
 {
     ASSERT(element());
     if (!element()->isActivatedSubmit())
@@ -74,8 +75,8 @@ void SubmitInputType::handleDOMActivateEvent(Event& event)
     protectedElement->document().updateLayoutIgnorePendingStylesheets();
 
     protectedElement->setActivatedSubmit(true);
-    if (auto currentForm = protectedElement->form())
-        currentForm->prepareForSubmission(event); // Event handlers can run.
+    if (RefPtr currentForm = protectedElement->form())
+        currentForm->submitIfPossible(&event, element()); // Event handlers can run.
     protectedElement->setActivatedSubmit(false);
     event.setDefaultHandled();
 }
@@ -88,16 +89,6 @@ bool SubmitInputType::canBeSuccessfulSubmitButton()
 String SubmitInputType::defaultValue() const
 {
     return submitButtonDefaultLabel();
-}
-
-bool SubmitInputType::isSubmitButton() const
-{
-    return true;
-}
-
-bool SubmitInputType::isTextButton() const
-{
-    return true;
 }
 
 } // namespace WebCore

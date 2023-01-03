@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -43,7 +43,7 @@ import static org.junit.Assert.*;
 
 public class TimelinePlayTest {
 
-    private AbstractMasterTimerMock amt;
+    private AbstractPrimaryTimerMock amt;
     private Timeline timeline;
     private LongProperty property = new SimpleLongProperty();
 
@@ -53,12 +53,12 @@ public class TimelinePlayTest {
 
     @Before
     public void setUp() {
-        amt = new AbstractMasterTimerMock();
+        amt = new AbstractPrimaryTimerMock();
         timeline = TimelineShim.getTimeline(amt);
     }
 
     public void setupTimeline(Timeline a, LongProperty property, Pair<Duration, Long>... values) {
-        ObservableList<KeyFrame> keyFrames = ((Timeline) a).getKeyFrames();
+        ObservableList<KeyFrame> keyFrames = a.getKeyFrames();
         for (Pair<Duration, Long> v : values) {
             keyFrames.add(new KeyFrame(v.getKey(), new KeyValue(property, v.getValue())));
         }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2015, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -148,6 +148,14 @@ public class RegionShim extends Region {
 
     public static void removeImageListener(Region r, Image image) {
         r.addImageListener(image);
+    }
+
+    public static double snapPortionX(Region r, double value) {
+        return r.snapPortionX(value);
+    }
+
+    public static double snapPortionY(Region r, double value) {
+        return r.snapPortionY(value);
     }
 
     //----------------------------------------------------------

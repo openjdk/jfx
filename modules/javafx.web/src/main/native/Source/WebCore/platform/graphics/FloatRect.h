@@ -47,8 +47,6 @@ typedef struct _cairo_rectangle cairo_rectangle_t;
 
 #if PLATFORM(WIN)
 typedef struct tagRECT RECT;
-struct D2D_RECT_F;
-typedef D2D_RECT_F D2D1_RECT_F;
 #endif
 
 namespace WTF {
@@ -124,21 +122,46 @@ public:
         setX(edge);
         setWidth(std::max(0.0f, width() - delta));
     }
+
     void shiftMaxXEdgeTo(float edge)
     {
         float delta = edge - maxX();
         setWidth(std::max(0.0f, width() + delta));
     }
+
     void shiftYEdgeTo(float edge)
     {
         float delta = edge - y();
         setY(edge);
         setHeight(std::max(0.0f, height() - delta));
     }
+
     void shiftMaxYEdgeTo(float edge)
     {
         float delta = edge - maxY();
         setHeight(std::max(0.0f, height() + delta));
+    }
+
+    void shiftXEdgeBy(float delta)
+    {
+        move(delta, 0);
+        setWidth(std::max(0.0f, width() - delta));
+    }
+
+    void shiftMaxXEdgeBy(float delta)
+    {
+        shiftMaxXEdgeTo(maxX() + delta);
+    }
+
+    void shiftYEdgeBy(float delta)
+    {
+        move(0, delta);
+        setHeight(std::max(0.0f, height() - delta));
+    }
+
+    void shiftMaxYEdgeBy(float delta)
+    {
+        shiftMaxYEdgeTo(maxY() + delta);
     }
 
     FloatPoint minXMinYCorner() const { return m_location; } // typically topLeft
@@ -147,6 +170,7 @@ public:
     FloatPoint maxXMaxYCorner() const { return FloatPoint(m_location.x() + m_size.width(), m_location.y() + m_size.height()); } // typically bottomRight
 
     WEBCORE_EXPORT bool intersects(const FloatRect&) const;
+    WEBCORE_EXPORT bool inclusivelyIntersects(const FloatRect&) const;
     WEBCORE_EXPORT bool contains(const FloatRect&) const;
     WEBCORE_EXPORT bool contains(const FloatPoint&, ContainsMode = InsideOrOnStroke) const;
 
@@ -175,6 +199,7 @@ public:
     }
     void inflate(float d) { inflateX(d); inflateY(d); }
     void inflate(FloatSize size) { inflateX(size.width()); inflateY(size.height()); }
+    void inflate(float dx, float dy, float dmaxX, float dmaxY);
 
     void scale(float s) { scale(s, s); }
     WEBCORE_EXPORT void scale(float sx, float sy);
@@ -204,8 +229,6 @@ public:
 
 #if PLATFORM(WIN)
     WEBCORE_EXPORT FloatRect(const RECT&);
-    WEBCORE_EXPORT FloatRect(const D2D1_RECT_F&);
-    WEBCORE_EXPORT operator D2D1_RECT_F() const;
 #endif
 
     static FloatRect infiniteRect();
@@ -273,11 +296,23 @@ inline bool FloatRect::isInfinite() const
     return *this == infiniteRect();
 }
 
+inline void FloatRect::inflate(float deltaX, float deltaY, float deltaMaxX, float deltaMaxY)
+{
+    setX(x() - deltaX);
+    setY(y() - deltaY);
+    setWidth(width() + deltaX + deltaMaxX);
+    setHeight(height() + deltaY + deltaMaxY);
+}
+
+FloatRect normalizeRect(const FloatRect&);
 WEBCORE_EXPORT FloatRect encloseRectToDevicePixels(const FloatRect&, float deviceScaleFactor);
 WEBCORE_EXPORT IntRect enclosingIntRect(const FloatRect&);
 WEBCORE_EXPORT IntRect roundedIntRect(const FloatRect&);
 
 WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, const FloatRect&);
 
-}
+#ifdef __OBJC__
+WEBCORE_EXPORT id makeNSArrayElement(const FloatRect&);
+#endif
 
+}

@@ -24,10 +24,10 @@
  */
 
 [
-    NoInterfaceObject,
+    LegacyNoInterfaceObject,
     Conditional=WEBGL,
     GenerateIsReachable=ImplWebGLRenderingContext,
 ] interface WebGLLoseContext {
-    void loseContext();
-    void restoreContext();
+    undefined loseContext();
+    undefined restoreContext();
 };

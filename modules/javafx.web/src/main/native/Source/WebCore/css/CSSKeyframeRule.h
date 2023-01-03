@@ -37,15 +37,8 @@ class CSSKeyframesRule;
 
 class StyleRuleKeyframe final : public StyleRuleBase {
 public:
-    static Ref<StyleRuleKeyframe> create(Ref<StyleProperties>&& properties)
-    {
-        return adoptRef(*new StyleRuleKeyframe(WTFMove(properties)));
-    }
-
-    static Ref<StyleRuleKeyframe> create(std::unique_ptr<Vector<double>> keys, Ref<StyleProperties>&& properties)
-    {
-        return adoptRef(*new StyleRuleKeyframe(WTFMove(keys), WTFMove(properties)));
-    }
+    static Ref<StyleRuleKeyframe> create(Ref<StyleProperties>&&);
+    static Ref<StyleRuleKeyframe> create(Vector<double>&& keys, Ref<StyleProperties>&&);
     ~StyleRuleKeyframe();
 
     String keyText() const;
@@ -66,7 +59,7 @@ public:
 
 private:
     explicit StyleRuleKeyframe(Ref<StyleProperties>&&);
-    StyleRuleKeyframe(std::unique_ptr<Vector<double>>, Ref<StyleProperties>&&);
+    StyleRuleKeyframe(Vector<double>&&, Ref<StyleProperties>&&);
 
     Ref<StyleProperties> m_properties;
     Vector<double> m_keys;
@@ -87,7 +80,7 @@ public:
 private:
     CSSKeyframeRule(StyleRuleKeyframe&, CSSKeyframesRule* parent);
 
-    CSSRule::Type type() const final { return KEYFRAME_RULE; }
+    StyleRuleType styleRuleType() const final { return StyleRuleType::Keyframe; }
 
     Ref<StyleRuleKeyframe> m_keyframe;
     mutable RefPtr<StyleRuleCSSStyleDeclaration> m_propertiesCSSOMWrapper;

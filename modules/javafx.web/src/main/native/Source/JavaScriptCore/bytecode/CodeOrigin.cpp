@@ -26,10 +26,8 @@
 #include "config.h"
 #include "CodeOrigin.h"
 
-#include "CallFrame.h"
 #include "CodeBlock.h"
 #include "InlineCallFrame.h"
-#include "JSCInlines.h"
 
 namespace JSC {
 
@@ -91,7 +89,7 @@ unsigned CodeOrigin::approximateHash(InlineCallFrame* terminal) const
     unsigned result = 2;
     CodeOrigin codeOrigin = *this;
     for (;;) {
-        result += codeOrigin.bytecodeIndex();
+        result += codeOrigin.bytecodeIndex().asBits();
 
         auto* inlineCallFrame = codeOrigin.inlineCallFrame();
 
@@ -152,7 +150,7 @@ void CodeOrigin::dump(PrintStream& out) const
                 out.print("(closure) ");
         }
 
-        out.print("bc#", stack[i].bytecodeIndex());
+        out.print(stack[i].bytecodeIndex());
     }
 }
 

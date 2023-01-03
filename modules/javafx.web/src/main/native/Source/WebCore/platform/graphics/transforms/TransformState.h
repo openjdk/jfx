@@ -23,14 +23,18 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef TransformState_h
-#define TransformState_h
+#pragma once
 
 #include "AffineTransform.h"
 #include "FloatPoint.h"
 #include "FloatQuad.h"
 #include "LayoutSize.h"
 #include "TransformationMatrix.h"
+#include <optional>
+
+namespace WTF {
+class TextStream;
+}
 
 namespace WebCore {
 
@@ -78,19 +82,14 @@ public:
         m_lastPlanarQuad = quad;
     }
 
-    // FIXME: webkit.org/b/144226 use Optional<FloatQuad>.
-    void setSecondaryQuad(const FloatQuad* quad)
+    void setSecondaryQuad(const std::optional<FloatQuad>& quad)
     {
         // We must be in a flattened state (no accumulated offset) when setting this secondary quad.
         ASSERT(m_accumulatedOffset == LayoutSize());
-        if (quad)
-            m_lastPlanarSecondaryQuad = makeUnique<FloatQuad>(*quad);
-        else
-            m_lastPlanarSecondaryQuad = nullptr;
+        m_lastPlanarSecondaryQuad = quad;
     }
 
-    // FIXME: webkit.org/b/144226 use Optional<FloatQuad>.
-    void setLastPlanarSecondaryQuad(const FloatQuad*);
+    void setLastPlanarSecondaryQuad(const std::optional<FloatQuad>&);
 
     void move(LayoutUnit x, LayoutUnit y, TransformAccumulation accumulate = FlattenTransform)
     {
@@ -105,13 +104,16 @@ public:
     // Return the coords of the point or quad in the last flattened layer
     FloatPoint lastPlanarPoint() const { return m_lastPlanarPoint; }
     FloatQuad lastPlanarQuad() const { return m_lastPlanarQuad; }
-    FloatQuad* lastPlanarSecondaryQuad() const { return m_lastPlanarSecondaryQuad.get(); }
-    bool isMappingSecondaryQuad() const { return m_lastPlanarSecondaryQuad.get(); }
+    std::optional<FloatQuad> lastPlanarSecondaryQuad() const { return m_lastPlanarSecondaryQuad; }
+    bool isMappingSecondaryQuad() const { return m_lastPlanarSecondaryQuad.has_value(); }
 
     // Return the point or quad mapped through the current transform
     FloatPoint mappedPoint(bool* wasClamped = nullptr) const;
     FloatQuad mappedQuad(bool* wasClamped = nullptr) const;
-    Optional<FloatQuad> mappedSecondaryQuad(bool* wasClamped = nullptr) const;
+    std::optional<FloatQuad> mappedSecondaryQuad(bool* wasClamped = nullptr) const;
+
+    TransformationMatrix* accumulatedTransform() const { return m_accumulatedTransform.get(); }
+    TransformDirection direction() const { return m_direction; }
 
 private:
     void translateTransform(const LayoutSize&);
@@ -119,14 +121,13 @@ private:
     void flattenWithTransform(const TransformationMatrix&, bool* wasClamped);
     void applyAccumulatedOffset();
 
-    TransformDirection direction() const { return m_direction; }
     TransformDirection inverseDirection() const;
 
     void mapQuad(FloatQuad&, TransformDirection, bool* clamped = nullptr) const;
 
     FloatPoint m_lastPlanarPoint;
     FloatQuad m_lastPlanarQuad;
-    std::unique_ptr<FloatQuad> m_lastPlanarSecondaryQuad; // Optional second quad to map.
+    std::optional<FloatQuad> m_lastPlanarSecondaryQuad;
 
     // We only allocate the transform if we need to
     std::unique_ptr<TransformationMatrix> m_accumulatedTransform;
@@ -142,6 +143,6 @@ inline TransformState::TransformDirection TransformState::inverseDirection() con
     return m_direction == ApplyTransformDirection ? UnapplyInverseTransformDirection : ApplyTransformDirection;
 }
 
-} // namespace WebCore
+WTF::TextStream& operator<<(WTF::TextStream&, const TransformState&);
 
-#endif // TransformState_h
+} // namespace WebCore

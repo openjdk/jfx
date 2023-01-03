@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -49,19 +49,19 @@ class CellUtils {
 
     static int TREE_VIEW_HBOX_GRAPHIC_PADDING = 3;
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Private fields                                                          *
      *                                                                         *
      **************************************************************************/
 
-    private final static StringConverter<?> defaultStringConverter = new StringConverter<Object>() {
+    private final static StringConverter<?> defaultStringConverter = new StringConverter<>() {
         @Override public String toString(Object t) {
             return t == null ? null : t.toString();
         }
 
         @Override public Object fromString(String string) {
-            return (Object) string;
+            return string;
         }
     };
 
@@ -77,7 +77,7 @@ class CellUtils {
             }
         };
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * General convenience                                                     *
      *                                                                         *
@@ -114,7 +114,7 @@ class CellUtils {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * ChoiceBox convenience                                                   *
      *                                                                         *
@@ -152,13 +152,13 @@ class CellUtils {
                 cell.setGraphic(graphic);
             }
         }
-    };
+    }
 
     static <T> ChoiceBox<T> createChoiceBox(
             final Cell<T> cell,
             final ObservableList<T> items,
             final ObjectProperty<StringConverter<T>> converter) {
-        ChoiceBox<T> choiceBox = new ChoiceBox<T>(items);
+        ChoiceBox<T> choiceBox = new ChoiceBox<>(items);
         choiceBox.setMaxWidth(Double.MAX_VALUE);
         choiceBox.converterProperty().bind(converter);
         choiceBox.showingProperty().addListener(o -> {
@@ -171,7 +171,7 @@ class CellUtils {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * TextField convenience                                                   *
      *                                                                         *
@@ -266,7 +266,7 @@ class CellUtils {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * ComboBox convenience                                                   *
      *                                                                         *
@@ -302,12 +302,12 @@ class CellUtils {
                 cell.setGraphic(graphic);
             }
         }
-    };
+    }
 
     static <T> ComboBox<T> createComboBox(final Cell<T> cell,
                                           final ObservableList<T> items,
                                           final ObjectProperty<StringConverter<T>> converter) {
-        ComboBox<T> comboBox = new ComboBox<T>(items);
+        ComboBox<T> comboBox = new ComboBox<>(items);
         comboBox.converterProperty().bind(converter);
         comboBox.setMaxWidth(Double.MAX_VALUE);
 

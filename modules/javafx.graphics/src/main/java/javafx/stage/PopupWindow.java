@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,7 @@
 
 package javafx.stage;
 
+import com.sun.javafx.scene.TreeShowingExpression;
 import com.sun.javafx.util.Utils;
 import com.sun.javafx.event.DirectEvent;
 import java.util.ArrayList;
@@ -62,7 +63,7 @@ import com.sun.javafx.stage.WindowCloseRequestHandler;
 import com.sun.javafx.stage.WindowEventDispatcher;
 import com.sun.javafx.tk.Toolkit;
 import static com.sun.javafx.FXPermissions.CREATE_TRANSPARENT_WINDOW_PERMISSION;
-import com.sun.javafx.scene.NodeHelper;
+
 import com.sun.javafx.stage.PopupWindowHelper;
 import com.sun.javafx.stage.WindowHelper;
 import javafx.beans.property.ObjectPropertyBase;
@@ -121,7 +122,7 @@ public abstract class PopupWindow extends Window {
     /**
      * A private list of all child popups.
      */
-    private final List<PopupWindow> children = new ArrayList<PopupWindow>();
+    private final List<PopupWindow> children = new ArrayList<>();
 
     /**
      * Keeps track of the bounds of the content, and adjust the position and
@@ -149,7 +150,11 @@ public abstract class PopupWindow extends Window {
     };
 
     private WeakChangeListener<Boolean> weakOwnerNodeListener = new WeakChangeListener(changeListener);
+    private TreeShowingExpression treeShowingExpression;
 
+    /**
+     * Constructor for subclasses to call.
+     */
     public PopupWindow() {
         final Pane popupRoot = new Pane();
         popupRoot.setBackground(Background.EMPTY);
@@ -221,7 +226,7 @@ public abstract class PopupWindow extends Window {
      * owner window.
      */
     private ReadOnlyObjectWrapper<Window> ownerWindow =
-            new ReadOnlyObjectWrapper<Window>(this, "ownerWindow");
+            new ReadOnlyObjectWrapper<>(this, "ownerWindow");
     public final Window getOwnerWindow() {
         return ownerWindow.get();
     }
@@ -236,7 +241,7 @@ public abstract class PopupWindow extends Window {
      * doesn't cause the Popup to hide.
      */
     private ReadOnlyObjectWrapper<Node> ownerNode =
-            new ReadOnlyObjectWrapper<Node>(this, "ownerNode");
+            new ReadOnlyObjectWrapper<>(this, "ownerNode");
     public final Node getOwnerNode() {
         return ownerNode.get();
     }
@@ -316,7 +321,7 @@ public abstract class PopupWindow extends Window {
      * Called after autoHide is run.
      */
     private ObjectProperty<EventHandler<Event>> onAutoHide =
-            new SimpleObjectProperty<EventHandler<Event>>(this, "onAutoHide");
+            new SimpleObjectProperty<>(this, "onAutoHide");
     public final void setOnAutoHide(EventHandler<Event> value) { onAutoHide.set(value); }
     public final EventHandler<Event> getOnAutoHide() { return onAutoHide.get(); }
     public final ObjectProperty<EventHandler<Event>> onAutoHideProperty() { return onAutoHide; }
@@ -410,7 +415,8 @@ public abstract class PopupWindow extends Window {
 
         // PopupWindow should disappear when owner node is not visible
         if (ownerNode != null) {
-            NodeHelper.treeShowingProperty(ownerNode).addListener(weakOwnerNodeListener);
+            treeShowingExpression = new TreeShowingExpression(ownerNode);
+            treeShowingExpression.addListener(weakOwnerNodeListener);
         }
 
         updateWindow(anchorX, anchorY);
@@ -487,7 +493,11 @@ public abstract class PopupWindow extends Window {
 
         // When popup hides, remove listeners; these are added when the popup shows.
         if (getOwnerWindow() != null) getOwnerWindow().showingProperty().removeListener(weakOwnerNodeListener);
-        if (getOwnerNode() != null) NodeHelper.treeShowingProperty(getOwnerNode()).removeListener(weakOwnerNodeListener);
+        if (treeShowingExpression != null) {
+            treeShowingExpression.removeListener(weakOwnerNodeListener);
+            treeShowingExpression.dispose();
+            treeShowingExpression = null;
+        }
     }
 
     /*
@@ -502,6 +512,7 @@ public abstract class PopupWindow extends Window {
             // Setup the peer
             StageStyle popupStyle;
             try {
+                @SuppressWarnings("removal")
                 final SecurityManager securityManager =
                         System.getSecurityManager();
                 if (securityManager != null) {
@@ -678,7 +689,7 @@ public abstract class PopupWindow extends Window {
         boolean isContentLocation() {
             return contentLocation;
         }
-    };
+    }
 
     @Override
     void setXInternal(final double value) {

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -33,10 +33,10 @@ public class AcceleratedScreen {
     private static long glesLibraryHandle;
     private static long eglLibraryHandle;
     private static boolean initialized = false;
-    private long eglSurface;
-    private long eglContext;
-    private long eglDisplay;
-    private long nativeWindow;
+    long eglSurface;
+    long eglContext;
+    long eglDisplay;
+    long nativeWindow;
     protected static final LinuxSystem ls = LinuxSystem.getLinuxSystem();
     private EGL egl;
     long eglConfigs[] = {0};
@@ -53,6 +53,14 @@ public class AcceleratedScreen {
      */
     protected long platformGetNativeWindow() {
         return 0L;
+    }
+
+    /**
+     * Create and initialize an AcceleratedScreen. Subclasses should override
+     * this constructor in case the {@link #AcceleratedScreen(int[]) AcceleratedScreen(int[])}
+     * constructor is not sufficient.
+     */
+    AcceleratedScreen() {
     }
 
     /**

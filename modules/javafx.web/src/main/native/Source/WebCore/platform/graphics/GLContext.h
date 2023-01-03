@@ -20,25 +20,66 @@
 #ifndef GLContext_h
 #define GLContext_h
 
-#include "GraphicsContext3D.h"
 #include "IntSize.h"
 #include "PlatformDisplay.h"
 #include <wtf/Noncopyable.h>
 
 #if USE(EGL) && !PLATFORM(GTK)
-#if PLATFORM(WPE)
 // FIXME: For now default to the GBM EGL platform, but this should really be
-// somehow deducible from the build configuration.
+// somehow deducible from the build configuration. This is needed with libepoxy
+// as it could have been configured with X11 support enabled, resulting in
+// transitive inclusions of headers with definitions that clash with WebCore.
 #define __GBM__ 1
-#endif // PLATFORM(WPE)
+#if USE(LIBEPOXY)
+#include <epoxy/egl.h>
+#else // !USE(LIBEPOXY)
 #include <EGL/eglplatform.h>
+#endif // USE(LIBEPOXY)
 typedef EGLNativeWindowType GLNativeWindowType;
 #else // !USE(EGL) || PLATFORM(GTK)
 typedef uint64_t GLNativeWindowType;
-#endif
+#endif // USE(EGL) && !PLATFORM(GTK)
 
 #if USE(CAIRO)
 typedef struct _cairo_device cairo_device_t;
+#endif
+
+typedef void* GCGLContext;
+
+// X11 headers define a bunch of macros with common terms, interfering with WebCore and WTF enum values.
+// As a workaround, we explicitly undef them here.
+#if defined(None)
+#undef None
+#endif
+#if defined(Above)
+#undef Above
+#endif
+#if defined(Below)
+#undef Below
+#endif
+#if defined(Success)
+#undef Success
+#endif
+#if defined(False)
+#undef False
+#endif
+#if defined(True)
+#undef True
+#endif
+#if defined(Bool)
+#undef Bool
+#endif
+#if defined(Always)
+#undef Always
+#endif
+#if defined(Status)
+#undef Status
+#endif
+#if defined(Continue)
+#undef Continue
+#endif
+#if defined(Region)
+#undef Region
 #endif
 
 namespace WebCore {
@@ -67,20 +108,7 @@ public:
 
     virtual bool isEGLContext() const = 0;
 
-#if USE(CAIRO)
-    virtual cairo_device_t* cairoDevice() = 0;
-#endif
-
-#if ENABLE(GRAPHICS_CONTEXT_3D)
-    virtual PlatformGraphicsContext3D platformContext() = 0;
-#endif
-
-#if PLATFORM(X11)
-private:
-    static void addActiveContext(GLContext*);
-    static void removeActiveContext(GLContext*);
-    static void cleanupActiveContextsAtExit();
-#endif
+    virtual GCGLContext platformContext() = 0;
 
 protected:
     GLContext(PlatformDisplay&);
@@ -90,5 +118,10 @@ protected:
 };
 
 } // namespace WebCore
+
+#define SPECIALIZE_TYPE_TRAITS_GLCONTEXT(ToValueTypeName, predicate) \
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::ToValueTypeName) \
+    static bool isType(const WebCore::GLContext& context) { return context.predicate; } \
+SPECIALIZE_TYPE_TRAITS_END()
 
 #endif // GLContext_h

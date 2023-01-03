@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -86,6 +86,7 @@ public class StylesheetWithSecurityManagerTest {
         }
     };
 
+    @SuppressWarnings("removal")
     @Test
     public void testRT_38395() throws Exception {
 
@@ -112,6 +113,7 @@ public class StylesheetWithSecurityManagerTest {
         assertEquals(expected.getBlue(), base.getBlue(), 1E-6);
     }
 
+    @SuppressWarnings("removal")
     @Test
     public void testRT_38395_import_local() throws Exception {
         System.setSecurityManager(new TestSecurityManager());
@@ -140,6 +142,7 @@ public class StylesheetWithSecurityManagerTest {
     //
     // The code in URLConverter that this attempts to test only checks to see whether or not there is a SecurityManager.
     //
+    @SuppressWarnings("removal")
     static class TestSecurityManager extends SecurityManager {
         @Override
         public void checkPermission(Permission perm) {

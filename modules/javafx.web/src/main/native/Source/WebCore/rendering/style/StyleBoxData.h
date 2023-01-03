@@ -31,7 +31,9 @@
 
 namespace WebCore {
 
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(StyleBoxData);
 class StyleBoxData : public RefCounted<StyleBoxData> {
+    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(StyleBoxData);
 public:
     static Ref<StyleBoxData> create() { return adoptRef(*new StyleBoxData); }
     Ref<StyleBoxData> copy() const;
@@ -53,8 +55,11 @@ public:
 
     const Length& verticalAlign() const { return m_verticalAlign; }
 
-    int zIndex() const { return m_zIndex; }
-    bool hasAutoZIndex() const { return m_hasAutoZIndex; }
+    int specifiedZIndex() const { return m_specifiedZIndex; }
+    bool hasAutoSpecifiedZIndex() const { return m_hasAutoSpecifiedZIndex; }
+
+    int usedZIndex() const { return m_usedZIndex; }
+    bool hasAutoUsedZIndex() const { return m_hasAutoUsedZIndex; }
 
     BoxSizing boxSizing() const { return static_cast<BoxSizing>(m_boxSizing); }
 #if ENABLE(CSS_BOX_DECORATION_BREAK)
@@ -78,8 +83,10 @@ private:
 
     Length m_verticalAlign;
 
-    int m_zIndex;
-    unsigned m_hasAutoZIndex : 1;
+    int m_specifiedZIndex;
+    int m_usedZIndex;
+    unsigned m_hasAutoSpecifiedZIndex : 1;
+    unsigned m_hasAutoUsedZIndex : 1;
     unsigned m_boxSizing : 1; // BoxSizing
 #if ENABLE(CSS_BOX_DECORATION_BREAK)
     unsigned m_boxDecorationBreak : 1; // BoxDecorationBreak

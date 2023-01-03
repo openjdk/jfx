@@ -21,6 +21,9 @@
 #include "config.h"
 #include "AccessibilityObject.h"
 
+#if ENABLE(ACCESSIBILITY) && USE(ATK)
+
+#include "AXObjectCache.h"
 #include "HTMLSpanElement.h"
 #include "RenderBlock.h"
 #include "RenderInline.h"
@@ -28,11 +31,24 @@
 #include "RenderTableCell.h"
 #include "RenderText.h"
 #include "TextControlInnerElements.h"
+#include "WebKitAccessible.h"
 #include <glib-object.h>
 
-#if ENABLE(ACCESSIBILITY)
-
 namespace WebCore {
+
+void AccessibilityObject::detachPlatformWrapper(AccessibilityDetachmentType detachmentType)
+{
+    if (detachmentType != AccessibilityDetachmentType::CacheDestroyed) {
+        if (auto* cache = axObjectCache()) {
+            cache->detachWrapper(this, detachmentType);
+            return;
+        }
+    }
+
+    auto* wrapper = this->wrapper();
+    ASSERT(wrapper);
+    webkitAccessibleDetach(WEBKIT_ACCESSIBLE(wrapper));
+}
 
 bool AccessibilityObject::accessibilityIgnoreAttachment() const
 {
@@ -190,4 +206,4 @@ unsigned AccessibilityObject::getLengthForTextRange() const
 
 } // namespace WebCore
 
-#endif // ENABLE(ACCESSIBILITY)
+#endif // ENABLE(ACCESSIBILITY) && USE(ATK)

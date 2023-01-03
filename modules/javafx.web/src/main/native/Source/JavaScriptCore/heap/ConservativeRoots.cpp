@@ -28,14 +28,11 @@
 
 #include "CodeBlock.h"
 #include "CodeBlockSetInlines.h"
-#include "HeapInlines.h"
 #include "HeapUtil.h"
 #include "JITStubRoutineSet.h"
 #include "JSCast.h"
-#include "JSObject.h"
-#include "JSCInlines.h"
+#include "JSCellInlines.h"
 #include "MarkedBlockInlines.h"
-#include "Structure.h"
 #include <wtf/OSAllocator.h>
 
 namespace JSC {
@@ -56,7 +53,7 @@ ConservativeRoots::~ConservativeRoots()
 
 void ConservativeRoots::grow()
 {
-    size_t newCapacity = m_capacity == inlineCapacity ? nonInlineCapacity : m_capacity * 2;
+    size_t newCapacity = m_capacity * 2;
     HeapCell** newRoots = static_cast<HeapCell**>(OSAllocator::reserveAndCommit(newCapacity * sizeof(HeapCell*)));
     memcpy(newRoots, m_roots, m_size * sizeof(HeapCell*));
     if (m_roots != m_inlineRoots)
@@ -145,7 +142,7 @@ private:
 void ConservativeRoots::add(
     void* begin, void* end, JITStubRoutineSet& jitStubRoutines, CodeBlockSet& codeBlocks)
 {
-    LockHolder locker(codeBlocks.getLock());
+    Locker locker { codeBlocks.getLock() };
     CompositeMarkHook markHook(jitStubRoutines, codeBlocks, locker);
     genericAddSpan(begin, end, markHook);
 }

@@ -31,21 +31,21 @@
 #include "PaymentCoordinator.h"
 #include <wtf/text/StringConcatenateNumbers.h>
 
-#if USE(APPLE_INTERNAL_SDK)
-#include <WebKitAdditions/ApplePayRequestBaseAdditions.cpp>
-#else
 namespace WebCore {
-static void finishConverting(ApplePaySessionPaymentRequest&, ApplePayRequestBase&) { }
-}
-#endif
 
-namespace WebCore {
+static bool requiresSupportedNetworks(unsigned version, const ApplePayRequestBase& request)
+{
+#if ENABLE(APPLE_PAY_INSTALLMENTS)
+    return version < 8 || !request.installmentConfiguration;
+#else
+    UNUSED_PARAM(version);
+    UNUSED_PARAM(request);
+    return true;
+#endif
+}
 
 static ExceptionOr<Vector<String>> convertAndValidate(Document& document, unsigned version, const Vector<String>& supportedNetworks, const PaymentCoordinator& paymentCoordinator)
 {
-    if (supportedNetworks.isEmpty())
-        return Exception { TypeError, "At least one supported network must be provided." };
-
     Vector<String> result;
     result.reserveInitialCapacity(supportedNetworks.size());
     for (auto& supportedNetwork : supportedNetworks) {
@@ -71,6 +71,9 @@ ExceptionOr<ApplePaySessionPaymentRequest> convertAndValidate(Document& document
     if (merchantCapabilities.hasException())
         return merchantCapabilities.releaseException();
     result.setMerchantCapabilities(merchantCapabilities.releaseReturnValue());
+
+    if (requiresSupportedNetworks(version, request) && request.supportedNetworks.isEmpty())
+        return Exception { TypeError, "At least one supported network must be provided." };
 
     auto supportedNetworks = convertAndValidate(document, version, request.supportedNetworks, paymentCoordinator);
     if (supportedNetworks.hasException())
@@ -102,7 +105,23 @@ ExceptionOr<ApplePaySessionPaymentRequest> convertAndValidate(Document& document
     if (version >= 3)
         result.setSupportedCountries(WTFMove(request.supportedCountries));
 
-    finishConverting(result, request);
+#if ENABLE(APPLE_PAY_INSTALLMENTS)
+    if (request.installmentConfiguration) {
+        auto installmentConfiguration = PaymentInstallmentConfiguration::create(*request.installmentConfiguration);
+        if (installmentConfiguration.hasException())
+            return installmentConfiguration.releaseException();
+        result.setInstallmentConfiguration(installmentConfiguration.releaseReturnValue());
+    }
+#endif
+
+#if ENABLE(APPLE_PAY_COUPON_CODE)
+    result.setSupportsCouponCode(request.supportsCouponCode);
+    result.setCouponCode(request.couponCode);
+#endif
+
+#if ENABLE(APPLE_PAY_SHIPPING_CONTACT_EDITING_MODE)
+    result.setShippingContactEditingMode(request.shippingContactEditingMode);
+#endif
 
     return WTFMove(result);
 }

@@ -50,11 +50,13 @@ public:
     typedef Vector<BasicBlock*, 2> PredecessorList;
     typedef Vector<FrequentedBlock, 2> SuccessorList;
 
+    static constexpr unsigned uninsertedIndex = UINT_MAX;
     static const char* const dumpPrefix;
 
     ~BasicBlock();
 
     unsigned index() const { return m_index; }
+    bool isInserted() const { return m_index != uninsertedIndex; }
 
     ValueList::iterator begin() { return m_values.begin(); }
     ValueList::iterator end() { return m_values.end(); }
@@ -142,6 +144,7 @@ public:
     // Update predecessors starting with the successors of this block.
     void updatePredecessorsAfter();
 
+    void setFrequency(double frequency) { m_frequency = frequency; }
     double frequency() const { return m_frequency; }
 
     void dump(PrintStream&) const;

@@ -37,16 +37,9 @@
 
 namespace WebCore {
 
-DistanceEffect::DistanceEffect()
-    : m_model(DistanceModelType::Inverse)
-    , m_isClamped(true)
-    , m_refDistance(1.0)
-    , m_maxDistance(10000.0)
-    , m_rolloffFactor(1.0)
-{
-}
+DistanceEffect::DistanceEffect() = default;
 
-double DistanceEffect::gain(double distance)
+double DistanceEffect::gain(double distance) const
 {
     // don't go beyond maximum distance
     distance = std::min(distance, m_maxDistance);
@@ -67,19 +60,20 @@ double DistanceEffect::gain(double distance)
     return 0.0;
 }
 
-double DistanceEffect::linearGain(double distance)
+double DistanceEffect::linearGain(double distance) const
 {
+    auto clampedRolloffFactor = std::clamp(m_rolloffFactor, 0.0, 1.0);
     // We want a gain that decreases linearly from m_refDistance to
     // m_maxDistance. The gain is 1 at m_refDistance.
-    return (1.0 - m_rolloffFactor * (distance - m_refDistance) / (m_maxDistance - m_refDistance));
+    return (1.0 - clampedRolloffFactor * (distance - m_refDistance) / (m_maxDistance - m_refDistance));
 }
 
-double DistanceEffect::inverseGain(double distance)
+double DistanceEffect::inverseGain(double distance) const
 {
     return m_refDistance / (m_refDistance + m_rolloffFactor * (distance - m_refDistance));
 }
 
-double DistanceEffect::exponentialGain(double distance)
+double DistanceEffect::exponentialGain(double distance) const
 {
     return pow(distance / m_refDistance, -m_rolloffFactor);
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -75,6 +75,7 @@ abstract class GlassScene implements TKScene {
 
     SceneState sceneState;
 
+    @SuppressWarnings("removal")
     private AccessControlContext accessCtrlCtx = null;
 
     protected GlassScene(boolean depthBuffer, boolean msaa) {
@@ -99,6 +100,7 @@ abstract class GlassScene implements TKScene {
     }
 
     // To be used by subclasses to enforce context check
+    @SuppressWarnings("removal")
     @Override
     public final AccessControlContext getAccessControlContext() {
         if (accessCtrlCtx == null) {
@@ -107,6 +109,7 @@ abstract class GlassScene implements TKScene {
         return accessCtrlCtx;
     }
 
+    @SuppressWarnings("removal")
     public final void setSecurityContext(AccessControlContext ctx) {
         if (accessCtrlCtx != null) {
             throw new RuntimeException("Scene security context has been already set!");
@@ -118,6 +121,7 @@ abstract class GlassScene implements TKScene {
                 () -> AccessController.getContext(), acc, ctx);
     }
 
+    @Override
     public void waitForRenderingToComplete() {
         PaintCollector.getInstance().waitForRenderingToComplete();
     }
@@ -191,8 +195,10 @@ abstract class GlassScene implements TKScene {
     // List of all attached PGLights
     private NGLightBase[] lights;
 
+    @Override
     public NGLightBase[] getLights() { return lights; }
 
+    @Override
     public void setLights(NGLightBase[] lights) { this.lights = lights; }
 
     @Override
@@ -217,6 +223,7 @@ abstract class GlassScene implements TKScene {
         sceneChanged();
     }
 
+    @Override
     public void entireSceneNeedsRepaint() {
         if (Platform.isFxApplicationThread()) {
             entireSceneDirty = true;
@@ -240,6 +247,7 @@ abstract class GlassScene implements TKScene {
     @Override
     public TKClipboard createDragboard(boolean isDragSource) {
         ClipboardAssistance assistant = new ClipboardAssistance(Clipboard.DND) {
+            @SuppressWarnings("removal")
             @Override
             public void actionPerformed(final int performedAction) {
                 super.actionPerformed(performedAction);
@@ -331,13 +339,15 @@ abstract class GlassScene implements TKScene {
 
     protected Color getClearColor() {
         WindowStage windowStage = stage instanceof WindowStage ? (WindowStage)stage : null;
-        if (windowStage != null && windowStage.getPlatformWindow().isTransparentWindow()) {
+        if (windowStage != null && windowStage.getPlatformWindow() != null &&
+                windowStage.getPlatformWindow().isTransparentWindow()) {
             return (Color.TRANSPARENT);
         } else {
             if (fillPaint == null) {
                 return Color.WHITE;
             } else if (fillPaint.isOpaque() ||
-                    (windowStage != null && windowStage.getPlatformWindow().isUnifiedWindow())) {
+                    (windowStage != null && windowStage.getPlatformWindow() != null &&
+                    windowStage.getPlatformWindow().isUnifiedWindow())) {
                 //For bare windows the transparent fill is allowed
                 if (fillPaint.getType() == Paint.Type.COLOR) {
                     return (Color)fillPaint;

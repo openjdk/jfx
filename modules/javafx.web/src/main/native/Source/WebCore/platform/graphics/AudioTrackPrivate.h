@@ -25,18 +25,14 @@
 
 #pragma once
 
+#include "AudioTrackPrivateClient.h"
+#include "PlatformAudioTrackConfiguration.h"
 #include "TrackPrivateBase.h"
+#include <wtf/Function.h>
 
-#if ENABLE(VIDEO_TRACK)
+#if ENABLE(VIDEO)
 
 namespace WebCore {
-
-class AudioTrackPrivate;
-
-class AudioTrackPrivateClient : public TrackPrivateBaseClient {
-public:
-    virtual void enabledChanged(bool) = 0;
-};
 
 class AudioTrackPrivate : public TrackPrivateBase {
 public:
@@ -45,8 +41,9 @@ public:
         return adoptRef(*new AudioTrackPrivate);
     }
 
-    void setClient(AudioTrackPrivateClient* client) { m_client = client; }
-    AudioTrackPrivateClient* client() const override { return m_client; }
+    void setClient(AudioTrackPrivateClient& client) { m_client = client; }
+    void clearClient() { m_client = nullptr; }
+    AudioTrackPrivateClient* client() const override { return m_client.get(); }
 
     virtual void setEnabled(bool enabled)
     {
@@ -55,12 +52,29 @@ public:
         m_enabled = enabled;
         if (m_client)
             m_client->enabledChanged(enabled);
+        if (m_enabledChangedCallback)
+            m_enabledChangedCallback(*this, m_enabled);
     }
 
     bool enabled() const { return m_enabled; }
 
     enum Kind { Alternative, Description, Main, MainDesc, Translation, Commentary, None };
     virtual Kind kind() const { return None; }
+
+    virtual bool isBackedByMediaStreamTrack() const { return false; }
+
+    using EnabledChangedCallback = Function<void(AudioTrackPrivate&, bool enabled)>;
+    void setEnabledChangedCallback(EnabledChangedCallback&& callback) { m_enabledChangedCallback = WTFMove(callback); }
+
+    const PlatformAudioTrackConfiguration& configuration() const { return m_configuration; }
+    void setConfiguration(PlatformAudioTrackConfiguration&& configuration)
+    {
+        if (configuration == m_configuration)
+            return;
+        m_configuration = WTFMove(configuration);
+        if (m_client)
+            m_client->configurationChanged(m_configuration);
+    }
 
 #if !RELEASE_LOG_DISABLED
     const char* logClassName() const override { return "AudioTrackPrivate"; }
@@ -70,10 +84,29 @@ protected:
     AudioTrackPrivate() = default;
 
 private:
-    AudioTrackPrivateClient* m_client { nullptr };
+    WeakPtr<AudioTrackPrivateClient> m_client;
     bool m_enabled { false };
+    PlatformAudioTrackConfiguration m_configuration;
+    EnabledChangedCallback m_enabledChangedCallback;
 };
 
 } // namespace WebCore
+
+namespace WTF {
+
+template<> struct EnumTraits<WebCore::AudioTrackPrivate::Kind> {
+    using values = EnumValues<
+        WebCore::AudioTrackPrivate::Kind,
+        WebCore::AudioTrackPrivate::Kind::Alternative,
+        WebCore::AudioTrackPrivate::Kind::Description,
+        WebCore::AudioTrackPrivate::Kind::Main,
+        WebCore::AudioTrackPrivate::Kind::MainDesc,
+        WebCore::AudioTrackPrivate::Kind::Translation,
+        WebCore::AudioTrackPrivate::Kind::Commentary,
+        WebCore::AudioTrackPrivate::Kind::None
+    >;
+};
+
+} // namespace WTF
 
 #endif

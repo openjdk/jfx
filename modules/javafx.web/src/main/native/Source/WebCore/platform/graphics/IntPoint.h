@@ -28,14 +28,9 @@
 #include "IntSize.h"
 #include <cmath>
 
-#if PLATFORM(MAC) && defined __OBJC__
-#import <Foundation/NSGeometry.h>
-#endif
-
 #if USE(CG)
 typedef struct CGPoint CGPoint;
 #endif
-
 
 #if !PLATFORM(IOS_FAMILY)
 #if OS(DARWIN)
@@ -50,12 +45,6 @@ typedef struct _NSPoint NSPoint;
 #if PLATFORM(WIN)
 typedef struct tagPOINT POINT;
 typedef struct tagPOINTS POINTS;
-
-struct D2D_POINT_2U;
-typedef D2D_POINT_2U D2D1_POINT_2U;
-
-struct D2D_POINT_2F;
-typedef D2D_POINT_2F D2D1_POINT_2F;
 #endif
 
 namespace WTF {
@@ -65,6 +54,7 @@ class TextStream;
 namespace WebCore {
 
 class FloatPoint;
+class IntRect;
 
 class IntPoint {
 public:
@@ -114,6 +104,8 @@ public:
 
     WEBCORE_EXPORT IntPoint constrainedBetween(const IntPoint& min, const IntPoint& max) const;
 
+    WEBCORE_EXPORT IntPoint constrainedWithin(const IntRect&) const;
+
     int distanceSquaredToPoint(const IntPoint&) const;
 
     void clampNegativeToZero()
@@ -143,11 +135,6 @@ public:
     operator POINT() const;
     IntPoint(const POINTS&);
     operator POINTS() const;
-
-    IntPoint(const D2D1_POINT_2U&);
-    explicit IntPoint(const D2D1_POINT_2F&); // Don't do this implicitly, since it's lossy.
-    operator D2D1_POINT_2F() const;
-    operator D2D1_POINT_2U() const;
 #endif
 
 private:

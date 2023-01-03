@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -57,6 +57,12 @@ import com.sun.javafx.binding.Logging;
  */
 public abstract class LongProperty extends ReadOnlyLongProperty implements
         Property<Number>, WritableLongValue {
+
+    /**
+     * Creates a default {@code LongProperty}.
+     */
+    public LongProperty() {
+    }
 
     /**
      * {@inheritDoc}

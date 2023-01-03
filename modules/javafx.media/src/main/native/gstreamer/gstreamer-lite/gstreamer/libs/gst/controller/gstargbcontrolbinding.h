@@ -96,9 +96,7 @@ GstControlBinding * gst_argb_control_binding_new   (GstObject * object, const gc
                                                             GstControlSource * cs_a, GstControlSource * cs_r,
                                                             GstControlSource * cs_g, GstControlSource * cs_b);
 
-#ifdef G_DEFINE_AUTOPTR_CLEANUP_FUNC
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(GstARGBControlBinding, gst_object_unref)
-#endif
 
 G_END_DECLS
 

@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2017 Yusuke Suzuki <utatane.tea@gmail.com>.
- * Copyright (C) 2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,7 +29,6 @@
 #include "GPRInfo.h"
 #include "LLIntPCRanges.h"
 #include "MacroAssemblerCodeRef.h"
-#include <wtf/Optional.h>
 #include <wtf/PlatformRegisters.h>
 #include <wtf/PointerPreparations.h>
 #include <wtf/StdLibExtras.h>
@@ -40,12 +39,9 @@ namespace MachineContext {
 template<typename T = void*> T stackPointer(const PlatformRegisters&);
 
 #if OS(WINDOWS) || HAVE(MACHINE_CONTEXT)
-template<typename T = void*> void setStackPointer(PlatformRegisters&, T);
 template<typename T = void*> T framePointer(const PlatformRegisters&);
-template<typename T = void*> void setFramePointer(PlatformRegisters&, T);
 inline MacroAssemblerCodePtr<PlatformRegistersLRPtrTag> linkRegister(const PlatformRegisters&);
-inline void setLinkRegister(PlatformRegisters&, MacroAssemblerCodePtr<CFunctionPtrTag>);
-inline Optional<MacroAssemblerCodePtr<PlatformRegistersPCPtrTag>> instructionPointer(const PlatformRegisters&);
+inline std::optional<MacroAssemblerCodePtr<PlatformRegistersPCPtrTag>> instructionPointer(const PlatformRegisters&);
 inline void setInstructionPointer(PlatformRegisters&, MacroAssemblerCodePtr<CFunctionPtrTag>);
 
 template<size_t N> void*& argumentPointer(PlatformRegisters&);
@@ -58,17 +54,18 @@ void* llintInstructionPointer(const PlatformRegisters&);
 #if HAVE(MACHINE_CONTEXT)
 
 #if !USE(PLATFORM_REGISTERS_WITH_PROFILE)
+
+#if !USE(DARWIN_REGISTER_MACROS)
 static inline void*& stackPointerImpl(mcontext_t&);
-static inline void*& framePointerImpl(mcontext_t&);
 static inline void*& instructionPointerImpl(mcontext_t&);
+#endif // !USE(DARWIN_REGISTER_MACROS)
+
+static inline void*& framePointerImpl(mcontext_t&);
 #endif // !USE(PLATFORM_REGISTERS_WITH_PROFILE)
 
 template<typename T = void*> T stackPointer(const mcontext_t&);
-template<typename T = void*> void setStackPointer(mcontext_t&, T);
 template<typename T = void*> T framePointer(const mcontext_t&);
-template<typename T = void*> void setFramePointer(mcontext_t&, T);
 inline MacroAssemblerCodePtr<PlatformRegistersPCPtrTag> instructionPointer(const mcontext_t&);
-inline void setInstructionPointer(mcontext_t&, MacroAssemblerCodePtr<CFunctionPtrTag>);
 
 template<size_t N> void*& argumentPointer(mcontext_t&);
 template<size_t N> void* argumentPointer(const mcontext_t&);
@@ -81,7 +78,7 @@ void* llintInstructionPointer(const mcontext_t&);
 
 #if OS(WINDOWS) || HAVE(MACHINE_CONTEXT)
 
-#if !USE(PLATFORM_REGISTERS_WITH_PROFILE)
+#if !USE(PLATFORM_REGISTERS_WITH_PROFILE) && !USE(DARWIN_REGISTER_MACROS)
 static inline void*& stackPointerImpl(PlatformRegisters& regs)
 {
 #if OS(DARWIN)
@@ -93,7 +90,7 @@ static inline void*& stackPointerImpl(PlatformRegisters& regs)
     return reinterpret_cast<void*&>(regs.__rsp);
 #elif CPU(PPC) || CPU(PPC64)
     return reinterpret_cast<void*&>(regs.__r1);
-#elif CPU(ARM_THUMB2) || CPU(ARM) || CPU(ARM64)
+#elif CPU(ARM_THUMB2) || CPU(ARM)
     return reinterpret_cast<void*&>(regs.__sp);
 #else
 #error Unknown Architecture
@@ -140,19 +137,10 @@ inline T stackPointer(const PlatformRegisters& regs)
     void* value = WTF_READ_PLATFORM_REGISTERS_SP_WITH_PROFILE(regs);
     assertIsNotTagged(value);
     return bitwise_cast<T>(value);
+#elif USE(DARWIN_REGISTER_MACROS)
+    return bitwise_cast<T>(reinterpret_cast<void*>(__darwin_arm_thread_state64_get_sp(regs)));
 #else
     return bitwise_cast<T>(stackPointerImpl(const_cast<PlatformRegisters&>(regs)));
-#endif
-}
-
-template<typename T>
-inline void setStackPointer(PlatformRegisters& regs, T value)
-{
-#if USE(PLATFORM_REGISTERS_WITH_PROFILE)
-    assertIsNotTagged(bitwise_cast<void*>(value));
-    WTF_WRITE_PLATFORM_REGISTERS_SP_WITH_PROFILE(regs, bitwise_cast<void*>(value));
-#else
-    stackPointerImpl(regs) = bitwise_cast<void*>(value);
 #endif
 }
 
@@ -167,7 +155,7 @@ inline T stackPointer(const PlatformRegisters& regs)
 
 #if HAVE(MACHINE_CONTEXT)
 
-#if !USE(PLATFORM_REGISTERS_WITH_PROFILE)
+#if !USE(PLATFORM_REGISTERS_WITH_PROFILE) && !USE(DARWIN_REGISTER_MACROS)
 static inline void*& stackPointerImpl(mcontext_t& machineContext)
 {
 #if OS(DARWIN)
@@ -188,7 +176,7 @@ static inline void*& stackPointerImpl(mcontext_t& machineContext)
 #error Unknown Architecture
 #endif
 
-#elif OS(FUCHSIA) || defined(__GLIBC__) || defined(__BIONIC__)
+#elif OS(FUCHSIA) || OS(LINUX)
 
 #if CPU(X86)
     return reinterpret_cast<void*&>((uintptr_t&) machineContext.gregs[REG_ESP]);
@@ -200,6 +188,8 @@ static inline void*& stackPointerImpl(mcontext_t& machineContext)
     return reinterpret_cast<void*&>((uintptr_t&) machineContext.sp);
 #elif CPU(MIPS)
     return reinterpret_cast<void*&>((uintptr_t&) machineContext.gregs[29]);
+#elif CPU(RISCV64)
+    return reinterpret_cast<void*&>((uintptr_t&) machineContext.__gregs[REG_SP]);
 #else
 #error Unknown Architecture
 #endif
@@ -214,19 +204,10 @@ inline T stackPointer(const mcontext_t& machineContext)
     void* value = WTF_READ_MACHINE_CONTEXT_SP_WITH_PROFILE(machineContext);
     assertIsNotTagged(value);
     return bitwise_cast<T>(value);
+#elif USE(DARWIN_REGISTER_MACROS)
+    return stackPointer(machineContext->__ss);
 #else
     return bitwise_cast<T>(stackPointerImpl(const_cast<mcontext_t&>(machineContext)));
-#endif
-}
-
-template<typename T>
-inline void setStackPointer(mcontext_t& machineContext, T value)
-{
-#if USE(PLATFORM_REGISTERS_WITH_PROFILE)
-    assertIsNotTagged(bitwise_cast<void*>(value));
-    WTF_WRITE_MACHINE_CONTEXT_SP_WITH_PROFILE(machineContext, bitwise_cast<void*>(value));
-#else
-    stackPointerImpl(machineContext) = bitwise_cast<void*>(value);
 #endif
 }
 #endif // HAVE(MACHINE_CONTEXT)
@@ -298,17 +279,6 @@ inline T framePointer(const PlatformRegisters& regs)
     return bitwise_cast<T>(framePointerImpl(const_cast<PlatformRegisters&>(regs)));
 #endif
 }
-
-template<typename T>
-inline void setFramePointer(PlatformRegisters& regs, T value)
-{
-#if USE(PLATFORM_REGISTERS_WITH_PROFILE)
-    assertIsNotTagged(bitwise_cast<void*>(value));
-    WTF_WRITE_PLATFORM_REGISTERS_FP_WITH_PROFILE(regs, bitwise_cast<void*>(value));
-#else
-    framePointerImpl(regs) = bitwise_cast<void*>(value);
-#endif
-}
 #endif // OS(WINDOWS) || HAVE(MACHINE_CONTEXT)
 
 
@@ -335,7 +305,7 @@ static inline void*& framePointerImpl(mcontext_t& machineContext)
 #error Unknown Architecture
 #endif
 
-#elif OS(FUCHSIA) || defined(__GLIBC__) || defined(__BIONIC__)
+#elif OS(FUCHSIA) || OS(LINUX)
 
 // The following sequence depends on glibc's sys/ucontext.h.
 #if CPU(X86)
@@ -348,6 +318,8 @@ static inline void*& framePointerImpl(mcontext_t& machineContext)
     return reinterpret_cast<void*&>((uintptr_t&) machineContext.regs[29]);
 #elif CPU(MIPS)
     return reinterpret_cast<void*&>((uintptr_t&) machineContext.gregs[30]);
+#elif CPU(RISCV64)
+    return reinterpret_cast<void*&>((uintptr_t&) machineContext.__gregs[REG_S0]);
 #else
 #error Unknown Architecture
 #endif
@@ -369,23 +341,12 @@ inline T framePointer(const mcontext_t& machineContext)
     return bitwise_cast<T>(framePointerImpl(const_cast<mcontext_t&>(machineContext)));
 #endif
 }
-
-template<typename T>
-inline void setFramePointer(mcontext_t& machineContext, T value)
-{
-#if USE(PLATFORM_REGISTERS_WITH_PROFILE)
-    assertIsNotTagged(bitwise_cast<void*>(value));
-    WTF_WRITE_MACHINE_CONTEXT_FP_WITH_PROFILE(machineContext, bitwise_cast<void*>(value));
-#else
-    framePointerImpl(machineContext) = bitwise_cast<void*>(value);
-#endif
-}
 #endif // HAVE(MACHINE_CONTEXT)
 
 
 #if OS(WINDOWS) || HAVE(MACHINE_CONTEXT)
 
-#if !USE(PLATFORM_REGISTERS_WITH_PROFILE)
+#if !USE(PLATFORM_REGISTERS_WITH_PROFILE) && !USE(DARWIN_REGISTER_MACROS)
 static inline void*& instructionPointerImpl(PlatformRegisters& regs)
 {
 #if OS(DARWIN)
@@ -395,7 +356,7 @@ static inline void*& instructionPointerImpl(PlatformRegisters& regs)
     return reinterpret_cast<void*&>(regs.__eip);
 #elif CPU(X86_64)
     return reinterpret_cast<void*&>(regs.__rip);
-#elif CPU(ARM_THUMB2) || CPU(ARM) || CPU(ARM64)
+#elif CPU(ARM_THUMB2) || CPU(ARM)
     return reinterpret_cast<void*&>(regs.__pc);
 #else
 #error Unknown Architecture
@@ -432,26 +393,30 @@ static inline void*& instructionPointerImpl(PlatformRegisters& regs)
 }
 #endif // !USE(PLATFORM_REGISTERS_WITH_PROFILE)
 
-inline Optional<MacroAssemblerCodePtr<PlatformRegistersPCPtrTag>> instructionPointer(const PlatformRegisters& regs)
+inline std::optional<MacroAssemblerCodePtr<PlatformRegistersPCPtrTag>> instructionPointer(const PlatformRegisters& regs)
 {
 #if USE(PLATFORM_REGISTERS_WITH_PROFILE)
     void* value = WTF_READ_PLATFORM_REGISTERS_PC_WITH_PROFILE(regs);
+#elif USE(DARWIN_REGISTER_MACROS)
+    void* value = __darwin_arm_thread_state64_get_pc_fptr(regs);
 #else
     void* value = instructionPointerImpl(const_cast<PlatformRegisters&>(regs));
 #endif
     if (!value)
-        return MacroAssemblerCodePtr<PlatformRegistersPCPtrTag>(nullptr);
+        return std::make_optional(MacroAssemblerCodePtr<PlatformRegistersPCPtrTag>(nullptr));
     if (!usesPointerTagging())
-        return MacroAssemblerCodePtr<PlatformRegistersPCPtrTag>(value);
-    if (isTaggedWith(value, PlatformRegistersPCPtrTag))
-        return MacroAssemblerCodePtr<PlatformRegistersPCPtrTag>(value);
-    return WTF::nullopt;
+        return std::make_optional(MacroAssemblerCodePtr<PlatformRegistersPCPtrTag>(value));
+    if (isTaggedWith<PlatformRegistersPCPtrTag>(value))
+        return std::make_optional(MacroAssemblerCodePtr<PlatformRegistersPCPtrTag>(value));
+    return std::nullopt;
 }
 
 inline void setInstructionPointer(PlatformRegisters& regs, MacroAssemblerCodePtr<CFunctionPtrTag> value)
 {
 #if USE(PLATFORM_REGISTERS_WITH_PROFILE)
     WTF_WRITE_PLATFORM_REGISTERS_PC_WITH_PROFILE(regs, value.executableAddress());
+#elif USE(DARWIN_REGISTER_MACROS)
+    __darwin_arm_thread_state64_set_pc_fptr(regs, value.executableAddress());
 #else
     instructionPointerImpl(regs) = value.executableAddress();
 #endif
@@ -461,7 +426,7 @@ inline void setInstructionPointer(PlatformRegisters& regs, MacroAssemblerCodePtr
 
 #if HAVE(MACHINE_CONTEXT)
 
-#if !USE(PLATFORM_REGISTERS_WITH_PROFILE)
+#if !USE(PLATFORM_REGISTERS_WITH_PROFILE) && !USE(DARWIN_REGISTER_MACROS)
 static inline void*& instructionPointerImpl(mcontext_t& machineContext)
 {
 #if OS(DARWIN)
@@ -482,7 +447,7 @@ static inline void*& instructionPointerImpl(mcontext_t& machineContext)
 #error Unknown Architecture
 #endif
 
-#elif OS(FUCHSIA) || defined(__GLIBC__) || defined(__BIONIC__)
+#elif OS(FUCHSIA) || OS(LINUX)
 
 // The following sequence depends on glibc's sys/ucontext.h.
 #if CPU(X86)
@@ -495,6 +460,8 @@ static inline void*& instructionPointerImpl(mcontext_t& machineContext)
     return reinterpret_cast<void*&>((uintptr_t&) machineContext.pc);
 #elif CPU(MIPS)
     return reinterpret_cast<void*&>((uintptr_t&) machineContext.pc);
+#elif CPU(RISCV64)
+    return reinterpret_cast<void*&>((uintptr_t&) machineContext.__gregs[REG_PC]);
 #else
 #error Unknown Architecture
 #endif
@@ -507,20 +474,17 @@ static inline void*& instructionPointerImpl(mcontext_t& machineContext)
 
 inline MacroAssemblerCodePtr<PlatformRegistersPCPtrTag> instructionPointer(const mcontext_t& machineContext)
 {
+#if USE(DARWIN_REGISTER_MACROS)
+    return *instructionPointer(machineContext->__ss);
+#else
+
 #if USE(PLATFORM_REGISTERS_WITH_PROFILE)
     void* value = WTF_READ_MACHINE_CONTEXT_PC_WITH_PROFILE(machineContext);
 #else
     void* value = instructionPointerImpl(const_cast<mcontext_t&>(machineContext));
 #endif
-    return MacroAssemblerCodePtr<PlatformRegistersPCPtrTag>(value);
-}
 
-inline void setInstructionPointer(mcontext_t& machineContext, MacroAssemblerCodePtr<CFunctionPtrTag> value)
-{
-#if USE(PLATFORM_REGISTERS_WITH_PROFILE)
-    WTF_WRITE_MACHINE_CONTEXT_PC_WITH_PROFILE(machineContext, value.executableAddress());
-#else
-    instructionPointerImpl(machineContext) = value.executableAddress();
+    return MacroAssemblerCodePtr<PlatformRegistersPCPtrTag>(value);
 #endif
 }
 #endif // HAVE(MACHINE_CONTEXT)
@@ -529,31 +493,15 @@ inline void setInstructionPointer(mcontext_t& machineContext, MacroAssemblerCode
 #if OS(WINDOWS) || HAVE(MACHINE_CONTEXT)
 
 #if OS(DARWIN) && __DARWIN_UNIX03 && CPU(ARM64)
-#if !USE(PLATFORM_REGISTERS_WITH_PROFILE)
-inline void*& linkRegisterImpl(PlatformRegisters& regs)
-{
-    return reinterpret_cast<void*&>(regs.__lr);
-}
-#endif // USE(PLATFORM_REGISTERS_WITH_PROFILE)
-
 
 inline MacroAssemblerCodePtr<PlatformRegistersLRPtrTag> linkRegister(const PlatformRegisters& regs)
 {
 #if USE(PLATFORM_REGISTERS_WITH_PROFILE)
     void* value = WTF_READ_PLATFORM_REGISTERS_LR_WITH_PROFILE(regs);
 #else
-    void* value = linkRegisterImpl(const_cast<PlatformRegisters&>(regs));
+    void* value = __darwin_arm_thread_state64_get_lr_fptr(regs);
 #endif
     return MacroAssemblerCodePtr<PlatformRegistersLRPtrTag>(value);
-}
-
-inline void setLinkRegister(PlatformRegisters& regs, MacroAssemblerCodePtr<CFunctionPtrTag> value)
-{
-#if USE(PLATFORM_REGISTERS_WITH_PROFILE)
-    WTF_WRITE_PLATFORM_REGISTERS_PC_WITH_PROFILE(regs, value.executableAddress());
-#else
-    linkRegisterImpl(regs) = value.executableAddress();
-#endif
 }
 #endif // OS(DARWIN) && __DARWIN_UNIX03 && CPU(ARM64)
 
@@ -639,7 +587,7 @@ inline void*& argumentPointer<1>(mcontext_t& machineContext)
 #error Unknown Architecture
 #endif
 
-#elif OS(FUCHSIA) || defined(__GLIBC__) || defined(__BIONIC__)
+#elif OS(FUCHSIA) || OS(LINUX)
 
 // The following sequence depends on glibc's sys/ucontext.h.
 #if CPU(X86)
@@ -652,6 +600,8 @@ inline void*& argumentPointer<1>(mcontext_t& machineContext)
     return reinterpret_cast<void*&>((uintptr_t&) machineContext.regs[1]);
 #elif CPU(MIPS)
     return reinterpret_cast<void*&>((uintptr_t&) machineContext.gregs[5]);
+#elif CPU(RISCV64)
+    return reinterpret_cast<void*&>((uintptr_t&) machineContext.__gregs[REG_A0 + 1]);
 #else
 #error Unknown Architecture
 #endif
@@ -756,7 +706,7 @@ inline void*& llintInstructionPointer(mcontext_t& machineContext)
 #error Unknown Architecture
 #endif
 
-#elif OS(FUCHSIA) || defined(__GLIBC__) || defined(__BIONIC__)
+#elif OS(FUCHSIA) || OS(LINUX)
 
 // The following sequence depends on glibc's sys/ucontext.h.
 #if CPU(X86)
@@ -769,6 +719,8 @@ inline void*& llintInstructionPointer(mcontext_t& machineContext)
     return reinterpret_cast<void*&>((uintptr_t&) machineContext.regs[4]);
 #elif CPU(MIPS)
     return reinterpret_cast<void*&>((uintptr_t&) machineContext.gregs[12]);
+#elif CPU(RISCV64)
+    return reinterpret_cast<void*&>((uintptr_t&) machineContext.__gregs[14]);
 #else
 #error Unknown Architecture
 #endif

@@ -25,14 +25,14 @@
 
 #include "AffineTransform.h"
 #include "FloatRect.h"
-#include "RenderSVGModelObject.h"
+#include "LegacyRenderSVGModelObject.h"
 
 namespace WebCore {
 
 class RenderImageResource;
 class SVGImageElement;
 
-class RenderSVGImage final : public RenderSVGModelObject {
+class RenderSVGImage final : public LegacyRenderSVGModelObject {
     WTF_MAKE_ISO_ALLOCATED(RenderSVGImage);
 public:
     RenderSVGImage(SVGImageElement&, RenderStyle&&);
@@ -62,6 +62,7 @@ private:
 
     const AffineTransform& localToParentTransform() const override { return m_localTransform; }
 
+    FloatRect calculateObjectBoundingBox() const;
     FloatRect objectBoundingBox() const override { return m_objectBoundingBox; }
     FloatRect strokeBoundingBox() const override { return m_objectBoundingBox; }
     FloatRect repaintRectInLocalCoordinates() const override { return m_repaintBoundingBox; }
@@ -85,9 +86,8 @@ private:
     AffineTransform m_localTransform;
     FloatRect m_objectBoundingBox;
     FloatRect m_repaintBoundingBox;
-    FloatRect m_repaintBoundingBoxExcludingShadow;
     std::unique_ptr<RenderImageResource> m_imageResource;
-    std::unique_ptr<ImageBuffer> m_bufferedForeground;
+    RefPtr<ImageBuffer> m_bufferedForeground;
 };
 
 } // namespace WebCore

@@ -148,7 +148,7 @@ static void set(MediaTrackConstraintSetMap& map, ConstraintSetType setType, cons
     map.set(type, WTFMove(constraint));
 }
 
-template<typename T> static inline void set(MediaTrackConstraintSetMap& map, ConstraintSetType setType, const char* typeAsString, MediaConstraintType type, const Optional<T>& value)
+template<typename T> static inline void set(MediaTrackConstraintSetMap& map, ConstraintSetType setType, const char* typeAsString, MediaConstraintType type, const std::optional<T>& value)
 {
     if (!value)
         return;
@@ -178,14 +178,12 @@ static MediaTrackConstraintSetMap convertToInternalForm(ConstraintSetType setTyp
 
 static Vector<MediaTrackConstraintSetMap> convertAdvancedToInternalForm(const Vector<MediaTrackConstraintSet>& vector)
 {
-    Vector<MediaTrackConstraintSetMap> result;
-    result.reserveInitialCapacity(vector.size());
-    for (auto& set : vector)
-        result.uncheckedAppend(convertToInternalForm(ConstraintSetType::Advanced, set));
-    return result;
+    return vector.map([](auto& set) {
+        return convertToInternalForm(ConstraintSetType::Advanced, set);
+    });
 }
 
-static Vector<MediaTrackConstraintSetMap> convertAdvancedToInternalForm(const Optional<Vector<MediaTrackConstraintSet>>& optionalVector)
+static Vector<MediaTrackConstraintSetMap> convertAdvancedToInternalForm(const std::optional<Vector<MediaTrackConstraintSet>>& optionalVector)
 {
     if (!optionalVector)
         return { };

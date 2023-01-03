@@ -119,12 +119,11 @@ public:
     SVGAnimatedEnumeration& methodAnimated() { return m_method; }
     SVGAnimatedEnumeration& spacingAnimated() { return m_spacing; }
 
-protected:
-    void didFinishInsertingNode() override;
-
 private:
     SVGTextPathElement(const QualifiedName&, Document&);
     virtual ~SVGTextPathElement();
+
+    void didFinishInsertingNode() override;
 
     using PropertyRegistry = SVGPropertyOwnerRegistry<SVGTextPathElement, SVGTextContentElement, SVGURIReference>;
     const SVGPropertyRegistry& propertyRegistry() const final { return m_propertyRegistry; }
@@ -144,7 +143,7 @@ private:
     bool selfHasRelativeLengths() const override;
 
     PropertyRegistry m_propertyRegistry { *this };
-    Ref<SVGAnimatedLength> m_startOffset { SVGAnimatedLength::create(this, LengthModeOther) };
+    Ref<SVGAnimatedLength> m_startOffset { SVGAnimatedLength::create(this, SVGLengthMode::Other) };
     Ref<SVGAnimatedEnumeration> m_method { SVGAnimatedEnumeration::create(this, SVGTextPathMethodAlign) };
     Ref<SVGAnimatedEnumeration> m_spacing { SVGAnimatedEnumeration::create(this, SVGTextPathSpacingExact) };
 };

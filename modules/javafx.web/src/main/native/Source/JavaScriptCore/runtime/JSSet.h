@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013, 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -36,39 +36,33 @@ public:
 
     DECLARE_EXPORT_INFO;
 
+    template<typename CellType, SubspaceAccess mode>
+    static GCClient::IsoSubspace* subspaceFor(VM& vm)
+    {
+        return vm.setSpace<mode>();
+    }
+
     static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
     {
         return Structure::create(vm, globalObject, prototype, TypeInfo(JSSetType, StructureFlags), info());
     }
 
-    static JSSet* create(ExecState* exec, VM& vm, Structure* structure)
+    static JSSet* create(VM& vm, Structure* structure)
     {
-        return create(exec, vm, structure, 0);
-    }
-
-    static JSSet* create(ExecState* exec, VM& vm, Structure* structure, uint32_t size)
-    {
-        JSSet* instance = new (NotNull, allocateCell<JSSet>(vm.heap)) JSSet(vm, structure, size);
-        instance->finishCreation(exec, vm);
+        JSSet* instance = new (NotNull, allocateCell<JSSet>(vm)) JSSet(vm, structure);
+        instance->finishCreation(vm);
         return instance;
     }
 
+    static bool isAddFastAndNonObservable(Structure*);
     bool isIteratorProtocolFastAndNonObservable();
-    bool canCloneFastAndNonObservable(Structure*);
-    JSSet* clone(ExecState*, VM&, Structure*);
+    JSSet* clone(JSGlobalObject*, VM&, Structure*);
 
 private:
     JSSet(VM& vm, Structure* structure)
         : Base(vm, structure)
     {
     }
-
-    JSSet(VM& vm, Structure* structure, uint32_t sizeHint)
-        : Base(vm, structure, sizeHint)
-    {
-    }
-
-    static String toStringName(const JSObject*, ExecState*);
 };
 
 static_assert(std::is_final<JSSet>::value, "Required for JSType based casting");

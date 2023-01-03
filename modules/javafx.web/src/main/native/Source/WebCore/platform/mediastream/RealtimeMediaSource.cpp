@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2012 Google Inc. All rights reserved.
- * Copyright (C) 2013-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2022 Apple Inc. All rights reserved.
  * Copyright (C) 2013 Nokia Corporation and/or its subsidiary(-ies).
  * Copyright (C) 2015 Ericsson AB. All rights reserved.
  *
@@ -55,53 +55,72 @@ RealtimeMediaSource::RealtimeMediaSource(Type type, String&& name, String&& devi
     , m_name(WTFMove(name))
 {
     if (m_persistentID.isEmpty())
-        m_persistentID = createCanonicalUUIDString();
+        m_persistentID = createVersion4UUIDString();
 
     m_hashedID = RealtimeMediaSourceCenter::singleton().hashStringWithSalt(m_persistentID, m_idHashSalt);
 }
 
-void RealtimeMediaSource::addObserver(RealtimeMediaSource::Observer& observer)
+void RealtimeMediaSource::addAudioSampleObserver(AudioSampleObserver& observer)
 {
-    auto locker = holdLock(m_observersLock);
-    m_observers.add(&observer);
+    ASSERT(isMainThread());
+    Locker locker { m_audioSampleObserversLock };
+    m_audioSampleObservers.add(&observer);
 }
 
-void RealtimeMediaSource::removeObserver(RealtimeMediaSource::Observer& observer)
+void RealtimeMediaSource::removeAudioSampleObserver(AudioSampleObserver& observer)
 {
-    auto locker = holdLock(m_observersLock);
-    m_observers.remove(&observer);
-    if (m_observers.isEmpty())
+    ASSERT(isMainThread());
+    Locker locker { m_audioSampleObserversLock };
+    m_audioSampleObservers.remove(&observer);
+}
+
+void RealtimeMediaSource::addVideoSampleObserver(VideoSampleObserver& observer)
+{
+    ASSERT(isMainThread());
+    Locker locker { m_videoSampleObserversLock };
+    m_videoSampleObservers.add(&observer);
+}
+
+void RealtimeMediaSource::removeVideoSampleObserver(VideoSampleObserver& observer)
+{
+    ASSERT(isMainThread());
+    Locker locker { m_videoSampleObserversLock };
+    m_videoSampleObservers.remove(&observer);
+}
+
+void RealtimeMediaSource::addObserver(Observer& observer)
+{
+    ASSERT(isMainThread());
+    m_observers.add(observer);
+}
+
+void RealtimeMediaSource::removeObserver(Observer& observer)
+{
+    ASSERT(isMainThread());
+    m_observers.remove(observer);
+    if (m_observers.computesEmpty())
         stopBeingObserved();
-}
-
-void RealtimeMediaSource::setInterrupted(bool interrupted, bool pageMuted)
-{
-    if (interrupted == m_interrupted)
-        return;
-
-    ALWAYS_LOG_IF(m_logger, LOGIDENTIFIER, interrupted, ", page muted : ", pageMuted);
-
-    m_interrupted = interrupted;
-    if (!interrupted && pageMuted)
-        return;
-
-    setMuted(interrupted);
 }
 
 void RealtimeMediaSource::setMuted(bool muted)
 {
-    ALWAYS_LOG_IF(m_logger, LOGIDENTIFIER, muted);
+    // Changed m_muted before calling start/stop so muted() will reflect the correct state.
+    bool changed = m_muted != muted;
 
-    if (muted)
+    ALWAYS_LOG_IF(m_logger && changed, LOGIDENTIFIER, muted);
+    if (changed && !muted && m_isProducingData) {
+        // Let's uninterrupt by doing a stop/start cycle.
         stop();
-    else {
-        if (interrupted())
-            return;
-
-        start();
     }
 
-    notifyMutedChange(muted);
+    m_muted = muted;
+    if (muted)
+        stop();
+    else
+        start();
+
+    if (changed)
+        notifyMutedObservers();
 }
 
 void RealtimeMediaSource::notifyMutedChange(bool muted)
@@ -120,23 +139,14 @@ void RealtimeMediaSource::setInterruptedForTesting(bool interrupted)
     notifyMutedChange(interrupted);
 }
 
-void RealtimeMediaSource::forEachObserver(const WTF::Function<void(Observer&)>& apply) const
+void RealtimeMediaSource::forEachObserver(const Function<void(Observer&)>& apply)
 {
-    Vector<Observer*> observersCopy;
-    {
-        auto locker = holdLock(m_observersLock);
-        observersCopy = copyToVector(m_observers);
-    }
-    for (auto* observer : observersCopy) {
-        auto locker = holdLock(m_observersLock);
-        // Make sure the observer has not been destroyed.
-        if (!m_observers.contains(observer))
-            continue;
-        apply(*observer);
-    }
+    ASSERT(isMainThread());
+    Ref protectedThis { *this };
+    m_observers.forEach(apply);
 }
 
-void RealtimeMediaSource::notifyMutedObservers() const
+void RealtimeMediaSource::notifyMutedObservers()
 {
     forEachObserver([](auto& observer) {
         observer.sourceMutedChanged();
@@ -163,7 +173,25 @@ void RealtimeMediaSource::notifySettingsDidChangeObservers(OptionSet<RealtimeMed
     });
 }
 
-void RealtimeMediaSource::videoSampleAvailable(MediaSample& mediaSample)
+void RealtimeMediaSource::updateHasStartedProducingData()
+{
+    if (m_hasStartedProducingData)
+        return;
+
+    // Heap allocations are forbidden on the audio thread for performance reasons so we need to
+    // explicitly allow the following allocation(s).
+    DisableMallocRestrictionsForCurrentThreadScope disableMallocRestrictions;
+    callOnMainThread([protectedThis = Ref { *this }] {
+        if (protectedThis->m_hasStartedProducingData)
+            return;
+        protectedThis->m_hasStartedProducingData = true;
+        protectedThis->forEachObserver([&](auto& observer) {
+            observer.hasStartedProducingData();
+        });
+    });
+}
+
+void RealtimeMediaSource::videoSampleAvailable(MediaSample& mediaSample, VideoSampleMetadata metadata)
 {
 #if !RELEASE_LOG_DISABLED
     ++m_frameCount;
@@ -179,16 +207,20 @@ void RealtimeMediaSource::videoSampleAvailable(MediaSample& mediaSample)
     }
 #endif
 
-    forEachObserver([&](auto& observer) {
-        observer.videoSampleAvailable(mediaSample);
-    });
+    updateHasStartedProducingData();
+
+    Locker locker { m_videoSampleObserversLock };
+    for (auto* observer : m_videoSampleObservers)
+        observer->videoSampleAvailable(mediaSample, metadata);
 }
 
 void RealtimeMediaSource::audioSamplesAvailable(const MediaTime& time, const PlatformAudioData& audioData, const AudioStreamDescription& description, size_t numberOfFrames)
 {
-    forEachObserver([&](auto& observer) {
-        observer.audioSamplesAvailable(time, audioData, description, numberOfFrames);
-    });
+    updateHasStartedProducingData();
+
+    Locker locker { m_audioSampleObserversLock };
+    for (auto* observer : m_audioSampleObservers)
+        observer->audioSamplesAvailable(time, audioData, description, numberOfFrames);
 }
 
 void RealtimeMediaSource::start()
@@ -222,9 +254,6 @@ void RealtimeMediaSource::stop()
 
 void RealtimeMediaSource::requestToEnd(Observer& callingObserver)
 {
-    if (!m_isProducingData)
-        return;
-
     bool hasObserverPreventingStopping = false;
     forEachObserver([&](auto& observer) {
         if (observer.preventSourceFromStopping())
@@ -233,14 +262,27 @@ void RealtimeMediaSource::requestToEnd(Observer& callingObserver)
     if (hasObserverPreventingStopping)
         return;
 
-    auto protectedThis = makeRef(*this);
+    ALWAYS_LOG_IF(m_logger, LOGIDENTIFIER);
+    end(&callingObserver);
+}
+
+void RealtimeMediaSource::end(Observer* callingObserver)
+{
+    ASSERT(isMainThread());
+
+    if (m_isEnded)
+        return;
+
+    ALWAYS_LOG_IF(m_logger, LOGIDENTIFIER);
+
+    Ref protectedThis { *this };
 
     stop();
     m_isEnded = true;
     hasEnded();
 
-    forEachObserver([callingObserver](auto& observer) {
-        if (&observer != &callingObserver)
+    forEachObserver([&callingObserver](auto& observer) {
+        if (&observer != callingObserver)
             observer.sourceStopped();
     });
 }
@@ -249,21 +291,21 @@ void RealtimeMediaSource::captureFailed()
 {
     ERROR_LOG_IF(m_logger, LOGIDENTIFIER);
 
-    m_isProducingData = false;
     m_captureDidFailed = true;
 
+    stop();
     forEachObserver([](auto& observer) {
         observer.sourceStopped();
     });
 }
 
-bool RealtimeMediaSource::supportsSizeAndFrameRate(Optional<int>, Optional<int>, Optional<double>)
+bool RealtimeMediaSource::supportsSizeAndFrameRate(std::optional<int>, std::optional<int>, std::optional<double>)
 {
     // The size and frame rate are within the capability limits, so they are supported.
     return true;
 }
 
-bool RealtimeMediaSource::supportsSizeAndFrameRate(Optional<IntConstraint> widthConstraint, Optional<IntConstraint> heightConstraint, Optional<DoubleConstraint> frameRateConstraint, String& badConstraint, double& distance)
+bool RealtimeMediaSource::supportsSizeAndFrameRate(std::optional<IntConstraint> widthConstraint, std::optional<IntConstraint> heightConstraint, std::optional<DoubleConstraint> frameRateConstraint, String& badConstraint, double& distance)
 {
     if (!widthConstraint && !heightConstraint && !frameRateConstraint)
         return true;
@@ -272,10 +314,12 @@ bool RealtimeMediaSource::supportsSizeAndFrameRate(Optional<IntConstraint> width
 
     distance = std::numeric_limits<double>::infinity();
 
-    Optional<int> width;
+    std::optional<int> width;
     if (widthConstraint && capabilities.supportsWidth()) {
         double constraintDistance = fitnessDistance(*widthConstraint);
         if (std::isinf(constraintDistance)) {
+            auto range = capabilities.width();
+            WTFLogAlways("RealtimeMediaSource::supportsSizeAndFrameRate failed width constraint, capabilities are [%d, %d]", range.rangeMin().asInt, range.rangeMax().asInt);
             badConstraint = widthConstraint->name();
             return false;
         }
@@ -287,10 +331,12 @@ bool RealtimeMediaSource::supportsSizeAndFrameRate(Optional<IntConstraint> width
         }
     }
 
-    Optional<int> height;
+    std::optional<int> height;
     if (heightConstraint && capabilities.supportsHeight()) {
         double constraintDistance = fitnessDistance(*heightConstraint);
         if (std::isinf(constraintDistance)) {
+            auto range = capabilities.height();
+            WTFLogAlways("RealtimeMediaSource::supportsSizeAndFrameRate failed height constraint, capabilities are [%d, %d]", range.rangeMin().asInt, range.rangeMax().asInt);
             badConstraint = heightConstraint->name();
             return false;
         }
@@ -302,10 +348,12 @@ bool RealtimeMediaSource::supportsSizeAndFrameRate(Optional<IntConstraint> width
         }
     }
 
-    Optional<double> frameRate;
+    std::optional<double> frameRate;
     if (frameRateConstraint && capabilities.supportsFrameRate()) {
         double constraintDistance = fitnessDistance(*frameRateConstraint);
         if (std::isinf(constraintDistance)) {
+            auto range = capabilities.frameRate();
+            WTFLogAlways("RealtimeMediaSource::supportsSizeAndFrameRate failed frame rate constraint, capabilities are [%d, %d]", range.rangeMin().asInt, range.rangeMax().asInt);
             badConstraint = frameRateConstraint->name();
             return false;
         }
@@ -319,6 +367,10 @@ bool RealtimeMediaSource::supportsSizeAndFrameRate(Optional<IntConstraint> width
 
     // Each of the non-null values is supported individually, see if they all can be applied at the same time.
     if (!supportsSizeAndFrameRate(WTFMove(width), WTFMove(height), WTFMove(frameRate))) {
+        // Let's try without frame rate constraint if not mandatory.
+        if (frameRateConstraint && !frameRateConstraint->isMandatory() && supportsSizeAndFrameRate(WTFMove(width), WTFMove(height), { }))
+            return true;
+
         if (widthConstraint)
             badConstraint = widthConstraint->name();
         else if (heightConstraint)
@@ -417,11 +469,9 @@ double RealtimeMediaSource::fitnessDistance(const MediaConstraint& constraint)
         if (!capabilities.supportsFacingMode())
             return 0;
 
-        auto& modes = capabilities.facingMode();
-        Vector<String> supportedModes;
-        supportedModes.reserveInitialCapacity(modes.size());
-        for (auto& mode : modes)
-            supportedModes.uncheckedAppend(RealtimeMediaSourceSettings::facingMode(mode));
+        auto supportedModes = capabilities.facingMode().map([](auto& mode) {
+            return RealtimeMediaSourceSettings::facingMode(mode);
+        });
         return downcast<StringConstraint>(constraint).fitnessDistance(supportedModes);
         break;
     }
@@ -437,6 +487,7 @@ double RealtimeMediaSource::fitnessDistance(const MediaConstraint& constraint)
     }
 
     case MediaConstraintType::DeviceId:
+        ASSERT(constraint.isString());
         ASSERT(!m_hashedID.isEmpty());
         return downcast<StringConstraint>(constraint).fitnessDistance(m_hashedID);
         break;
@@ -463,12 +514,12 @@ double RealtimeMediaSource::fitnessDistance(const MediaConstraint& constraint)
 }
 
 template <typename ValueType>
-static void applyNumericConstraint(const NumericConstraint<ValueType>& constraint, ValueType current, Optional<Vector<ValueType>> discreteCapabilityValues, ValueType capabilityMin, ValueType capabilityMax, RealtimeMediaSource& source, void (RealtimeMediaSource::*applier)(ValueType))
+static void applyNumericConstraint(const NumericConstraint<ValueType>& constraint, ValueType current, std::optional<Vector<ValueType>> discreteCapabilityValues, ValueType capabilityMin, ValueType capabilityMax, RealtimeMediaSource& source, void (RealtimeMediaSource::*applier)(ValueType))
 {
     if (discreteCapabilityValues) {
-        int value = constraint.valueForDiscreteCapabilityValues(current, *discreteCapabilityValues);
-        if (value != current)
-            (source.*applier)(value);
+        auto value = constraint.valueForDiscreteCapabilityValues(current, *discreteCapabilityValues);
+        if (value && *value != current)
+            (source.*applier)(*value);
         return;
     }
 
@@ -477,7 +528,7 @@ static void applyNumericConstraint(const NumericConstraint<ValueType>& constrain
         (source.*applier)(value);
 }
 
-void RealtimeMediaSource::setSizeAndFrameRate(Optional<int> width, Optional<int> height, Optional<double> frameRate)
+void RealtimeMediaSource::setSizeAndFrameRate(std::optional<int> width, std::optional<int> height, std::optional<double> frameRate)
 {
     IntSize size;
     if (width)
@@ -626,7 +677,7 @@ bool RealtimeMediaSource::selectSettings(const MediaConstraints& constraints, Fl
     if (!supportsSizeAndFrameRate(constraints.mandatoryConstraints.width(), constraints.mandatoryConstraints.height(), constraints.mandatoryConstraints.frameRate(), failedConstraint, minimumDistance))
         return false;
 
-    constraints.mandatoryConstraints.filter([&](const MediaConstraint& constraint) {
+    constraints.mandatoryConstraints.filter([&](auto& constraint) {
         if (!supportsConstraint(constraint))
             return false;
 
@@ -637,6 +688,7 @@ bool RealtimeMediaSource::selectSettings(const MediaConstraints& constraints, Fl
 
         double constraintDistance = fitnessDistance(constraint);
         if (std::isinf(constraintDistance)) {
+            WTFLogAlways("RealtimeMediaSource::selectSettings failed constraint %d", static_cast<int>(constraint.constraintType()));
             failedConstraint = constraint.name();
             return true;
         }
@@ -841,7 +893,7 @@ void RealtimeMediaSource::applyConstraints(const FlattenedConstraint& constraint
 
     auto& capabilities = this->capabilities();
 
-    Optional<int> width;
+    std::optional<int> width;
     if (const MediaConstraint* constraint = constraints.find(MediaConstraintType::Width)) {
         ASSERT(constraint->isInt());
         if (capabilities.supportsWidth()) {
@@ -850,7 +902,7 @@ void RealtimeMediaSource::applyConstraints(const FlattenedConstraint& constraint
         }
     }
 
-    Optional<int> height;
+    std::optional<int> height;
     if (const MediaConstraint* constraint = constraints.find(MediaConstraintType::Height)) {
         ASSERT(constraint->isInt());
         if (capabilities.supportsHeight()) {
@@ -859,7 +911,7 @@ void RealtimeMediaSource::applyConstraints(const FlattenedConstraint& constraint
         }
     }
 
-    Optional<double> frameRate;
+    std::optional<double> frameRate;
     if (const MediaConstraint* constraint = constraints.find(MediaConstraintType::FrameRate)) {
         ASSERT(constraint->isDouble());
         if (capabilities.supportsFrameRate()) {
@@ -881,7 +933,7 @@ void RealtimeMediaSource::applyConstraints(const FlattenedConstraint& constraint
     commitConfiguration();
 }
 
-Optional<RealtimeMediaSource::ApplyConstraintsError> RealtimeMediaSource::applyConstraints(const MediaConstraints& constraints)
+std::optional<RealtimeMediaSource::ApplyConstraintsError> RealtimeMediaSource::applyConstraints(const MediaConstraints& constraints)
 {
     ASSERT(constraints.isValid);
 
@@ -928,7 +980,7 @@ const IntSize RealtimeMediaSource::size() const
     return size;
 }
 
-void RealtimeMediaSource::setIntrinsicSize(const IntSize& size)
+void RealtimeMediaSource::setIntrinsicSize(const IntSize& size, bool notifyObservers)
 {
     if (m_intrinsicSize == size)
         return;
@@ -937,12 +989,17 @@ void RealtimeMediaSource::setIntrinsicSize(const IntSize& size)
 
     auto currentSize = this->size();
     m_intrinsicSize = size;
+    if (!notifyObservers)
+        return;
 
-    if (currentSize != this->size())
-        notifySettingsDidChangeObservers({ RealtimeMediaSourceSettings::Flag::Width, RealtimeMediaSourceSettings::Flag::Height });
+    if (currentSize != this->size()) {
+        scheduleDeferredTask([this] {
+            notifySettingsDidChangeObservers({ RealtimeMediaSourceSettings::Flag::Width, RealtimeMediaSourceSettings::Flag::Height });
+        });
+    }
 }
 
-const IntSize RealtimeMediaSource::intrinsicSize() const
+IntSize RealtimeMediaSource::intrinsicSize() const
 {
     return m_intrinsicSize;
 }
@@ -1003,9 +1060,9 @@ void RealtimeMediaSource::setSampleRate(int rate)
     notifySettingsDidChangeObservers(RealtimeMediaSourceSettings::Flag::SampleRate);
 }
 
-Optional<Vector<int>> RealtimeMediaSource::discreteSampleRates() const
+std::optional<Vector<int>> RealtimeMediaSource::discreteSampleRates() const
 {
-    return WTF::nullopt;
+    return std::nullopt;
 }
 
 void RealtimeMediaSource::setSampleSize(int size)
@@ -1019,9 +1076,9 @@ void RealtimeMediaSource::setSampleSize(int size)
     notifySettingsDidChangeObservers(RealtimeMediaSourceSettings::Flag::SampleSize);
 }
 
-Optional<Vector<int>> RealtimeMediaSource::discreteSampleSizes() const
+std::optional<Vector<int>> RealtimeMediaSource::discreteSampleSizes() const
 {
-    return WTF::nullopt;
+    return std::nullopt;
 }
 
 void RealtimeMediaSource::setEchoCancellation(bool echoCancellation)
@@ -1037,20 +1094,36 @@ void RealtimeMediaSource::setEchoCancellation(bool echoCancellation)
 void RealtimeMediaSource::scheduleDeferredTask(Function<void()>&& function)
 {
     ASSERT(function);
-    callOnMainThread([protectedThis = makeRef(*this), function = WTFMove(function)] {
+    callOnMainThread([protectedThis = Ref { *this }, function = WTFMove(function)] {
         function();
     });
 }
 
 const String& RealtimeMediaSource::hashedId() const
 {
+#ifndef NDEBUG
     ASSERT(!m_hashedID.isEmpty());
+#endif
     return m_hashedID;
 }
 
 String RealtimeMediaSource::deviceIDHashSalt() const
 {
     return m_idHashSalt;
+}
+
+void RealtimeMediaSource::setType(Type type)
+{
+    if (type == m_type)
+        return;
+
+    m_type = type;
+
+    scheduleDeferredTask([this] {
+        forEachObserver([](auto& observer) {
+            observer.sourceSettingsChanged();
+        });
+    });
 }
 
 RealtimeMediaSource::Observer::~Observer()
@@ -1077,10 +1150,16 @@ String convertEnumerationToString(RealtimeMediaSource::Type enumerationValue)
         MAKE_STATIC_STRING_IMPL("None"),
         MAKE_STATIC_STRING_IMPL("Audio"),
         MAKE_STATIC_STRING_IMPL("Video"),
+        MAKE_STATIC_STRING_IMPL("Screen"),
+        MAKE_STATIC_STRING_IMPL("Window"),
+        MAKE_STATIC_STRING_IMPL("SystemAudio"),
     };
     static_assert(static_cast<size_t>(RealtimeMediaSource::Type::None) == 0, "RealtimeMediaSource::Type::None is not 0 as expected");
     static_assert(static_cast<size_t>(RealtimeMediaSource::Type::Audio) == 1, "RealtimeMediaSource::Type::Audio is not 1 as expected");
     static_assert(static_cast<size_t>(RealtimeMediaSource::Type::Video) == 2, "RealtimeMediaSource::Type::Video is not 2 as expected");
+    static_assert(static_cast<size_t>(RealtimeMediaSource::Type::Screen) == 3, "RealtimeMediaSource::Type::Screen is not 3 as expected");
+    static_assert(static_cast<size_t>(RealtimeMediaSource::Type::Window) == 4, "RealtimeMediaSource::Type::Window is not 4 as expected");
+    static_assert(static_cast<size_t>(RealtimeMediaSource::Type::SystemAudio) == 5, "RealtimeMediaSource::Type::SystemAudio is not 5 as expected");
     ASSERT(static_cast<size_t>(enumerationValue) < WTF_ARRAY_LENGTH(values));
     return values[static_cast<size_t>(enumerationValue)];
 }

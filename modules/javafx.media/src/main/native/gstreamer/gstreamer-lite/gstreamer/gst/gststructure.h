@@ -36,6 +36,20 @@ GST_EXPORT GType _gst_structure_type;
 
 typedef struct _GstStructure GstStructure;
 
+/**
+ * GstSerializeFlags:
+ * @GST_SERIALIZE_FLAG_NONE: No special flags specified.
+ * @GST_SERIALIZE_FLAG_BACKWARD_COMPAT: Serialize using the old format for
+ *                                      nested structures.
+ *
+ * Since: 1.20
+ */
+typedef enum
+{
+  GST_SERIALIZE_FLAG_NONE = 0,
+  GST_SERIALIZE_FLAG_BACKWARD_COMPAT = (1 << 0),
+} GstSerializeFlags;
+
 #define GST_TYPE_STRUCTURE             (_gst_structure_type)
 #define GST_IS_STRUCTURE(object)       ((object) && (GST_STRUCTURE(object)->type == GST_TYPE_STRUCTURE))
 #define GST_STRUCTURE_CAST(object)     ((GstStructure *)(object))
@@ -141,6 +155,9 @@ GST_API
 void                  gst_clear_structure                (GstStructure **structure_ptr);
 #define               gst_clear_structure(structure_ptr) g_clear_pointer ((structure_ptr), gst_structure_free)
 
+GST_API
+gboolean              gst_structure_take                 (GstStructure ** oldstr_ptr,
+                                                          GstStructure * newstr);
 GST_API
 const gchar *         gst_structure_get_name             (const GstStructure  * structure);
 
@@ -330,7 +347,10 @@ gboolean              gst_structure_get_list             (GstStructure        * 
                                                           const gchar         * fieldname,
                                                           GValueArray        ** array);
 GST_API
-gchar *               gst_structure_to_string    (const GstStructure * structure) G_GNUC_MALLOC;
+gchar *               gst_structure_to_string            (const GstStructure * structure) G_GNUC_MALLOC;
+GST_API
+gchar *               gst_structure_serialize            (const GstStructure * structure,
+                                                          GstSerializeFlags flags) G_GNUC_MALLOC;
 
 GST_API
 GstStructure *        gst_structure_from_string  (const gchar * string,
@@ -375,9 +395,7 @@ GST_API
 GstStructure *        gst_structure_intersect     (const GstStructure * struct1,
                                                    const GstStructure * struct2) G_GNUC_MALLOC;
 
-#ifdef G_DEFINE_AUTOPTR_CLEANUP_FUNC
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(GstStructure, gst_structure_free)
-#endif
 
 G_END_DECLS
 

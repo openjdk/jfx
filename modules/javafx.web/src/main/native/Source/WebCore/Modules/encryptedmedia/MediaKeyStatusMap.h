@@ -38,7 +38,7 @@
 namespace WebCore {
 
 class MediaKeySession;
-class SharedBuffer;
+class FragmentedSharedBuffer;
 
 class MediaKeyStatusMap : public RefCounted<MediaKeyStatusMap> {
 public:
@@ -55,12 +55,12 @@ public:
 
     unsigned long size();
     bool has(const BufferSource&);
-    JSC::JSValue get(JSC::ExecState&, const BufferSource&);
+    JSC::JSValue get(JSC::JSGlobalObject&, const BufferSource&);
 
     class Iterator {
     public:
         explicit Iterator(MediaKeyStatusMap&);
-        Optional<WTF::KeyValuePair<BufferSource::VariantType, MediaKeyStatus>> next();
+        std::optional<KeyValuePair<BufferSource::VariantType, MediaKeyStatus>> next();
 
     private:
         Ref<MediaKeyStatusMap> m_map;

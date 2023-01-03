@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -23,39 +23,30 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef MediaPlaybackTargetMock_h
-#define MediaPlaybackTargetMock_h
+#pragma once
 
 #if ENABLE(WIRELESS_PLAYBACK_TARGET) && !PLATFORM(IOS_FAMILY)
 
 #include "MediaPlaybackTarget.h"
-#include "MediaPlaybackTargetContext.h"
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
 class MediaPlaybackTargetMock : public MediaPlaybackTarget {
 public:
-    WEBCORE_EXPORT static Ref<MediaPlaybackTarget> create(const String&, MediaPlaybackTargetContext::State);
+    WEBCORE_EXPORT static Ref<MediaPlaybackTarget> create(const String&, MediaPlaybackTargetContext::MockState);
 
     virtual ~MediaPlaybackTargetMock();
 
-    TargetType targetType() const override { return Mock; }
+    TargetType targetType() const final { return MediaPlaybackTarget::TargetType::Mock; }
+    const MediaPlaybackTargetContext& targetContext() const final { return m_context; }
 
-    const MediaPlaybackTargetContext& targetContext() const override;
-
-    bool hasActiveRoute() const override { return !m_name.isEmpty(); }
-
-    String deviceName() const override { return m_name; }
-
-    MediaPlaybackTargetContext::State state() const;
+    MediaPlaybackTargetContext::MockState state() const { return m_context.mockState(); }
 
 protected:
-    MediaPlaybackTargetMock(const String&, MediaPlaybackTargetContext::State);
+    MediaPlaybackTargetMock(const String&, MediaPlaybackTargetContext::MockState);
 
-    String m_name;
-    MediaPlaybackTargetContext::State m_state { MediaPlaybackTargetContext::Unknown };
-    mutable MediaPlaybackTargetContext m_context;
+    MediaPlaybackTargetContext m_context;
 };
 
 MediaPlaybackTargetMock* toMediaPlaybackTargetMock(MediaPlaybackTarget*);
@@ -64,5 +55,3 @@ const MediaPlaybackTargetMock* toMediaPlaybackTargetMock(const MediaPlaybackTarg
 }
 
 #endif // ENABLE(WIRELESS_PLAYBACK_TARGET) && !PLATFORM(IOS_FAMILY)
-
-#endif

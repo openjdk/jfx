@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -40,8 +40,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
-/*
- * A selector is a collection of selectors and declarations.
+/**
+ * A Rule is a collection of CSS {@code Selector}s and {@code Declaration}s.
  *
  * @since 9
  */
@@ -55,7 +55,7 @@ final public class Rule {
      */
     List<Selector>  getUnobservedSelectorList() {
         if (selectors == null) {
-            selectors = new ArrayList<Selector>();
+            selectors = new ArrayList<>();
         }
         return selectors;
     }
@@ -74,7 +74,7 @@ final public class Rule {
                 DataInputStream dis = new DataInputStream(bis);
 
                 short nDeclarations = dis.readShort();
-                declarations = new ArrayList<Declaration>(nDeclarations);
+                declarations = new ArrayList<>(nDeclarations);
                 for (int i = 0; i < nDeclarations; i++) {
 
                     Declaration decl = Declaration.readBinary(bssVersion, dis, stylesheet.getStringStore());
@@ -135,8 +135,12 @@ final public class Rule {
         return observables.getSelectors();
     }
 
-    /** The stylesheet this selector belongs to */
     private Stylesheet stylesheet;
+
+    /**
+     * Gets the {@code Stylesheet} this {@code Rule} belongs to.
+     * @return the stylesheet
+     */
     public Stylesheet getStylesheet() {
         return stylesheet;
     }
@@ -156,6 +160,10 @@ final public class Rule {
         }
     }
 
+    /**
+     * Get the {@code StyleOrigin} of this {@code Stylesheet}.
+     * @return the origin of the stylesheet
+     */
     public StyleOrigin getOrigin() {
         return stylesheet != null ? stylesheet.getOrigin() : null;
     }
@@ -211,8 +219,9 @@ final public class Rule {
         return mask;
     }
 
-    /** Converts this object to a string.
-     * @return the converted string
+    /**
+     * Converts this object to a {@code String}.
+     * @return the converted {@code String}
      */
     @Override public String toString() {
         StringBuilder sb = new StringBuilder();
@@ -245,7 +254,7 @@ final public class Rule {
 
             this.rule = rule;
 
-            selectorObservableList = new TrackableObservableList<Selector>(rule.getUnobservedSelectorList()) {
+            selectorObservableList = new TrackableObservableList<>(rule.getUnobservedSelectorList()) {
                 @Override protected void onChanged(Change<Selector> c) {
                     while (c.next()) {
                         if (c.wasAdded()) {
@@ -269,7 +278,7 @@ final public class Rule {
                 }
             };
 
-            declarationObservableList = new TrackableObservableList<Declaration>(rule.getUnobservedDeclarationList()) {
+            declarationObservableList = new TrackableObservableList<>(rule.getUnobservedDeclarationList()) {
                 @Override protected void onChanged(Change<Declaration> c) {
                     while (c.next()) {
                         if (c.wasAdded()) {
@@ -352,7 +361,7 @@ final public class Rule {
             throws IOException
     {
         short nSelectors = is.readShort();
-        List<Selector> selectors = new ArrayList<Selector>(nSelectors);
+        List<Selector> selectors = new ArrayList<>(nSelectors);
         for (int i = 0; i < nSelectors; i++) {
             Selector s = Selector.readBinary(bssVersion, is, strings);
             selectors.add(s);
@@ -360,7 +369,7 @@ final public class Rule {
 
         if (bssVersion < 4) {
             short nDeclarations = is.readShort();
-            List<Declaration> declarations = new ArrayList<Declaration>(nDeclarations);
+            List<Declaration> declarations = new ArrayList<>(nDeclarations);
             for (int i = 0; i < nDeclarations; i++) {
                 Declaration d = Declaration.readBinary(bssVersion, is, strings);
                 declarations.add(d);

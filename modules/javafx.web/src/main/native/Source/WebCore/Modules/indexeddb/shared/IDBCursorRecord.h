@@ -25,8 +25,6 @@
 
 #pragma once
 
-#if ENABLE(INDEXED_DATABASE)
-
 #include "IDBKeyData.h"
 #include "IDBValue.h"
 
@@ -35,10 +33,13 @@ namespace WebCore {
 struct IDBCursorRecord {
     IDBKeyData key;
     IDBKeyData primaryKey;
-    std::unique_ptr<IDBValue> value;
+    IDBValue value;
 
     template<class Encoder> void encode(Encoder&) const;
-    template<class Decoder> static bool decode(Decoder&, IDBCursorRecord&);
+    template<class Decoder> static WARN_UNUSED_RETURN bool decode(Decoder&, IDBCursorRecord&);
+
+    IDBCursorRecord isolatedCopy() const;
+    size_t size() const { return key.size() + primaryKey.size() + value.size(); }
 };
 
 template<class Encoder>
@@ -62,6 +63,9 @@ bool IDBCursorRecord::decode(Decoder& decoder, IDBCursorRecord& record)
     return true;
 }
 
-} // namespace WebCore
+inline IDBCursorRecord IDBCursorRecord::isolatedCopy() const
+{
+    return { key.isolatedCopy(), primaryKey.isolatedCopy(), value.isolatedCopy() };
+}
 
-#endif // ENABLE(INDEXED_DATABASE)
+} // namespace WebCore

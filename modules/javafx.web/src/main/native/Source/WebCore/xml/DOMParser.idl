@@ -18,9 +18,9 @@
  */
 
 [
-    Constructor,
-    ConstructorCallWith=Document,
-    ImplementationLacksVTable,
+    Exposed=Window
 ] interface DOMParser {
-    [MayThrowException, NewObject, CallWith=ScriptExecutionContext] Document parseFromString(DOMString string, DOMString contentType);
+    [CallWith=CurrentDocument] constructor();
+
+    [NewObject] Document parseFromString(DOMString string, DOMString contentType);
 };

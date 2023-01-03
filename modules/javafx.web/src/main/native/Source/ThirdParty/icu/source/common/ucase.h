@@ -56,7 +56,8 @@ enum {
     UCASE_LOC_TURKISH,
     UCASE_LOC_LITHUANIAN,
     UCASE_LOC_GREEK,
-    UCASE_LOC_DUTCH
+    UCASE_LOC_DUTCH,
+    UCASE_LOC_ARMENIAN
 };
 
 /**
@@ -117,7 +118,7 @@ ucase_addCaseClosure(UChar32 c, const USetAdder *sa);
  * the string itself is added as well as part of its code points' closure.
  * It must be length>=0.
  *
- * @return TRUE if the string was found
+ * @return true if the string was found
  */
 U_CFUNC UBool U_EXPORT2
 ucase_addStringCaseClosure(const UChar *s, int32_t length, const USetAdder *sa);
@@ -310,6 +311,21 @@ UCaseMapFull(UChar32 c,
              int32_t caseLocale);
 
 U_CDECL_END
+
+/* for icuexportdata -------------------------------------------------------- */
+
+struct UCaseProps {
+    void *mem;  // TODO: was unused, and type UDataMemory -- remove
+    const int32_t *indexes;
+    const uint16_t *exceptions;
+    const uint16_t *unfold;
+
+    UTrie2 trie;
+    uint8_t formatVersion[4];
+};
+
+U_CAPI const struct UCaseProps * U_EXPORT2
+ucase_getSingleton(int32_t *pExceptionsLength, int32_t *pUnfoldLength);
 
 /* file definitions --------------------------------------------------------- */
 

@@ -28,14 +28,16 @@
 #include "DOMCacheEngine.h"
 
 #include "CacheQueryOptions.h"
+#include "CrossOriginAccessControl.h"
 #include "Exception.h"
 #include "HTTPParsers.h"
+#include "ScriptExecutionContext.h"
 
 namespace WebCore {
 
 namespace DOMCacheEngine {
 
-static inline Exception errorToException(Error error)
+Exception convertToException(Error error)
 {
     switch (error) {
     case Error::NotImplemented:
@@ -48,15 +50,18 @@ static inline Exception errorToException(Error error)
         return Exception { QuotaExceededError, "Quota exceeded"_s };
     case Error::Internal:
         return Exception { TypeError, "Internal error"_s };
-    default:
-        ASSERT_NOT_REACHED();
-        return Exception { TypeError, "Connection stopped"_s };
+    case Error::Stopped:
+        return Exception { TypeError, "Context is stopped"_s };
+    case Error::CORP:
+        return Exception { TypeError, "Cross-Origin-Resource-Policy failure"_s };
     }
+    ASSERT_NOT_REACHED();
+    return Exception { TypeError, "Connection stopped"_s };
 }
 
 Exception convertToExceptionAndLog(ScriptExecutionContext* context, Error error)
 {
-    auto exception = errorToException(error);
+    auto exception = convertToException(error);
     if (context)
         context->addConsoleMessage(MessageSource::JS, MessageLevel::Error, makeString("Cache API operation failed: ", exception.message()));
     return exception;
@@ -70,10 +75,8 @@ static inline bool matchURLs(const ResourceRequest& request, const URL& cachedUR
     URL cachedRequestURL = cachedURL;
 
     if (options.ignoreSearch) {
-        if (requestURL.hasQuery())
-            requestURL.setQuery({ });
-        if (cachedRequestURL.hasQuery())
-            cachedRequestURL.setQuery({ });
+        requestURL.setQuery({ });
+        cachedRequestURL.setQuery({ });
     }
     return equalIgnoringFragmentIdentifier(requestURL, cachedRequestURL);
 }
@@ -99,7 +102,7 @@ bool queryCacheMatch(const ResourceRequest& request, const ResourceRequest& cach
             isVarying = true;
             return;
         }
-        auto name = nameView.toString();
+        auto name = nameView.toStringWithoutCopying();
         isVarying = cachedRequest.httpHeaderField(name) != request.httpHeaderField(name);
     });
 
@@ -126,22 +129,22 @@ bool queryCacheMatch(const ResourceRequest& request, const URL& url, bool hasVar
 
 ResponseBody isolatedResponseBody(const ResponseBody& body)
 {
-    return WTF::switchOn(body, [](const Ref<FormData>& formData) {
+    return WTF::switchOn(body, [](const Ref<FormData>& formData) -> ResponseBody {
         return formData->isolatedCopy();
-    }, [](const Ref<SharedBuffer>& buffer) {
-        return buffer->copy();
-    }, [](const std::nullptr_t&) {
+    }, [](const Ref<SharedBuffer>& buffer) -> ResponseBody {
+        return buffer.copyRef(); // SharedBuffer are immutable and can be returned as-is.
+    }, [](const std::nullptr_t&) -> ResponseBody {
         return DOMCacheEngine::ResponseBody { };
     });
 }
 
 ResponseBody copyResponseBody(const ResponseBody& body)
 {
-    return WTF::switchOn(body, [](const Ref<FormData>& formData) {
+    return WTF::switchOn(body, [](const Ref<FormData>& formData) -> ResponseBody {
         return formData.copyRef();
-    }, [](const Ref<SharedBuffer>& buffer) {
+    }, [](const Ref<SharedBuffer>& buffer) -> ResponseBody {
         return buffer.copyRef();
-    }, [](const std::nullptr_t&) {
+    }, [](const std::nullptr_t&) -> ResponseBody {
         return DOMCacheEngine::ResponseBody { };
     });
 }

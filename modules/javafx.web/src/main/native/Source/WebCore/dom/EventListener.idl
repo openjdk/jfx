@@ -18,8 +18,10 @@
  * Boston, MA 02110-1301, USA.
  */
 
+// https://dom.spec.whatwg.org/#callbackdef-eventlistener
+// FIXME: This should be a callback interface.
 [
-    NoInterfaceObject
+    LegacyNoInterfaceObject
 ] interface EventListener {
-    void handleEvent(Event event);
+    undefined handleEvent(Event event);
 };

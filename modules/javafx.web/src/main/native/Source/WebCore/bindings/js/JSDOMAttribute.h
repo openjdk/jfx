@@ -1,6 +1,6 @@
 /*
  *  Copyright (C) 1999-2001 Harri Porten (porten@kde.org)
- *  Copyright (C) 2003-2006, 2008-2009, 2013, 2016 Apple Inc. All rights reserved.
+ *  Copyright (C) 2003-2020 Apple Inc. All rights reserved.
  *  Copyright (C) 2007 Samuel Weinig <sam@webkit.org>
  *  Copyright (C) 2009 Google, Inc. All rights reserved.
  *  Copyright (C) 2012 Ericsson AB. All rights reserved.
@@ -23,7 +23,7 @@
 
 #pragma once
 
-#include "JSDOMCastedThisErrorBehavior.h"
+#include "JSDOMCastThisValue.h"
 #include "JSDOMExceptionHandling.h"
 
 namespace WebCore {
@@ -31,79 +31,105 @@ namespace WebCore {
 template<typename JSClass>
 class IDLAttribute {
 public:
-    using Setter = bool(JSC::ExecState&, JSClass&, JSC::JSValue, JSC::ThrowScope&);
-    using StaticSetter = bool(JSC::ExecState&, JSC::JSValue, JSC::ThrowScope&);
-    using Getter = JSC::JSValue(JSC::ExecState&, JSClass&, JSC::ThrowScope&);
-    using StaticGetter = JSC::JSValue(JSC::ExecState&, JSC::ThrowScope&);
-
-    static JSClass* cast(JSC::ExecState&, JSC::EncodedJSValue);
+    using Setter = bool(JSC::JSGlobalObject&, JSClass&, JSC::JSValue);
+    using SetterPassingPropertyName = bool(JSC::JSGlobalObject&, JSClass&, JSC::JSValue, JSC::PropertyName);
+    using StaticSetter = bool(JSC::JSGlobalObject&, JSC::JSValue);
+    using Getter = JSC::JSValue(JSC::JSGlobalObject&, JSClass&);
+    using GetterPassingPropertyName = JSC::JSValue(JSC::JSGlobalObject&, JSClass&, JSC::PropertyName);
+    using StaticGetter = JSC::JSValue(JSC::JSGlobalObject&);
 
     template<Setter setter, CastedThisErrorBehavior shouldThrow = CastedThisErrorBehavior::Throw>
-    static bool set(JSC::ExecState& state, JSC::EncodedJSValue thisValue, JSC::EncodedJSValue encodedValue, const char* attributeName)
+    static bool set(JSC::JSGlobalObject& lexicalGlobalObject, JSC::EncodedJSValue thisValue, JSC::EncodedJSValue encodedValue, JSC::PropertyName attributeName)
     {
-        auto throwScope = DECLARE_THROW_SCOPE(state.vm());
+        auto throwScope = DECLARE_THROW_SCOPE(JSC::getVM(&lexicalGlobalObject));
 
-        auto* thisObject = cast(state, thisValue);
-        if (UNLIKELY(!thisObject))
-            return (shouldThrow == CastedThisErrorBehavior::Throw) ? throwSetterTypeError(state, throwScope, JSClass::info()->className, attributeName) : false;
+        auto* thisObject = castThisValue<JSClass>(lexicalGlobalObject, JSC::JSValue::decode(thisValue));
+        if (UNLIKELY(!thisObject)) {
+            if constexpr (shouldThrow == CastedThisErrorBehavior::Throw)
+                return JSC::throwVMDOMAttributeSetterTypeError(&lexicalGlobalObject, throwScope, JSClass::info(), attributeName);
+            else
+                return false;
+        }
 
-        return setter(state, *thisObject, JSC::JSValue::decode(encodedValue), throwScope);
+        RELEASE_AND_RETURN(throwScope, (setter(lexicalGlobalObject, *thisObject, JSC::JSValue::decode(encodedValue))));
+    }
+
+    // FIXME: FIXME: This can be merged with `set` if we replace the explicit setter function template parameter with a generic lambda.
+    template<SetterPassingPropertyName setter, CastedThisErrorBehavior shouldThrow = CastedThisErrorBehavior::Throw>
+    static bool setPassingPropertyName(JSC::JSGlobalObject& lexicalGlobalObject, JSC::EncodedJSValue thisValue, JSC::EncodedJSValue encodedValue, JSC::PropertyName attributeName)
+    {
+        auto throwScope = DECLARE_THROW_SCOPE(JSC::getVM(&lexicalGlobalObject));
+
+        auto* thisObject = castThisValue<JSClass>(lexicalGlobalObject, JSC::JSValue::decode(thisValue));
+        if (UNLIKELY(!thisObject)) {
+            if constexpr (shouldThrow == CastedThisErrorBehavior::Throw)
+                return JSC::throwVMDOMAttributeSetterTypeError(&lexicalGlobalObject, throwScope, JSClass::info(), attributeName);
+            else
+                return false;
+        }
+
+        RELEASE_AND_RETURN(throwScope, (setter(lexicalGlobalObject, *thisObject, JSC::JSValue::decode(encodedValue), attributeName)));
     }
 
     template<StaticSetter setter, CastedThisErrorBehavior shouldThrow = CastedThisErrorBehavior::Throw>
-    static bool setStatic(JSC::ExecState& state, JSC::EncodedJSValue, JSC::EncodedJSValue encodedValue, const char*)
+    static bool setStatic(JSC::JSGlobalObject& lexicalGlobalObject, JSC::EncodedJSValue, JSC::EncodedJSValue encodedValue, JSC::PropertyName)
     {
-        auto throwScope = DECLARE_THROW_SCOPE(state.vm());
-
-        return setter(state, JSC::JSValue::decode(encodedValue), throwScope);
+        return setter(lexicalGlobalObject, JSC::JSValue::decode(encodedValue));
     }
 
     template<Getter getter, CastedThisErrorBehavior shouldThrow = CastedThisErrorBehavior::Throw>
-    static JSC::EncodedJSValue get(JSC::ExecState& state, JSC::EncodedJSValue thisValue, const char* attributeName)
+    static JSC::EncodedJSValue get(JSC::JSGlobalObject& lexicalGlobalObject, JSC::EncodedJSValue thisValue, JSC::PropertyName attributeName)
     {
-        auto throwScope = DECLARE_THROW_SCOPE(state.vm());
+        auto throwScope = DECLARE_THROW_SCOPE(JSC::getVM(&lexicalGlobalObject));
 
-        if (shouldThrow == CastedThisErrorBehavior::Assert) {
-            ASSERT(cast(state, thisValue));
+        if constexpr (shouldThrow == CastedThisErrorBehavior::Assert) {
+            ASSERT(castThisValue<JSClass>(lexicalGlobalObject, JSC::JSValue::decode(thisValue)));
             auto* thisObject = JSC::jsCast<JSClass*>(JSC::JSValue::decode(thisValue));
-            return JSC::JSValue::encode(getter(state, *thisObject, throwScope));
-        }
+            RELEASE_AND_RETURN(throwScope, (JSC::JSValue::encode(getter(lexicalGlobalObject, *thisObject))));
+        } else {
+            auto* thisObject = castThisValue<JSClass>(lexicalGlobalObject, JSC::JSValue::decode(thisValue));
+            if (UNLIKELY(!thisObject)) {
+                if constexpr (shouldThrow == CastedThisErrorBehavior::Throw)
+                    return JSC::throwVMDOMAttributeGetterTypeError(&lexicalGlobalObject, throwScope, JSClass::info(), attributeName);
+                else if constexpr (shouldThrow == CastedThisErrorBehavior::RejectPromise)
+                    RELEASE_AND_RETURN(throwScope, rejectPromiseWithGetterTypeError(lexicalGlobalObject, JSClass::info(), attributeName));
+                else
+                    return JSC::JSValue::encode(JSC::jsUndefined());
+            }
 
-        auto* thisObject = cast(state, thisValue);
-        if (UNLIKELY(!thisObject)) {
-            if (shouldThrow == CastedThisErrorBehavior::Throw)
-                return throwGetterTypeError(state, throwScope, JSClass::info()->className, attributeName);
-            if (shouldThrow == CastedThisErrorBehavior::RejectPromise)
-                return rejectPromiseWithGetterTypeError(state, JSClass::info()->className, attributeName);
-            return JSC::JSValue::encode(JSC::jsUndefined());
+            RELEASE_AND_RETURN(throwScope, (JSC::JSValue::encode(getter(lexicalGlobalObject, *thisObject))));
         }
+    }
 
-        return JSC::JSValue::encode(getter(state, *thisObject, throwScope));
+    // FIXME: This can be merged with `get` if we replace the explicit setter function template parameter with a generic lambda.
+    template<GetterPassingPropertyName getter, CastedThisErrorBehavior shouldThrow = CastedThisErrorBehavior::Throw>
+    static JSC::EncodedJSValue getPassingPropertyName(JSC::JSGlobalObject& lexicalGlobalObject, JSC::EncodedJSValue thisValue, JSC::PropertyName attributeName)
+    {
+        auto throwScope = DECLARE_THROW_SCOPE(JSC::getVM(&lexicalGlobalObject));
+
+        if constexpr (shouldThrow == CastedThisErrorBehavior::Assert) {
+            ASSERT(castThisValue<JSClass>(lexicalGlobalObject, JSC::JSValue::decode(thisValue)));
+            auto* thisObject = JSC::jsCast<JSClass*>(JSC::JSValue::decode(thisValue));
+            RELEASE_AND_RETURN(throwScope, (JSC::JSValue::encode(getter(lexicalGlobalObject, *thisObject, attributeName))));
+        } else {
+            auto* thisObject = castThisValue<JSClass>(lexicalGlobalObject, JSC::JSValue::decode(thisValue));
+            if (UNLIKELY(!thisObject)) {
+                if constexpr (shouldThrow == CastedThisErrorBehavior::Throw)
+                    return JSC::throwVMDOMAttributeGetterTypeError(&lexicalGlobalObject, throwScope, JSClass::info(), attributeName);
+                else if constexpr (shouldThrow == CastedThisErrorBehavior::RejectPromise)
+                    RELEASE_AND_RETURN(throwScope, rejectPromiseWithGetterTypeError(lexicalGlobalObject, JSClass::info(), attributeName));
+                else
+                    return JSC::JSValue::encode(JSC::jsUndefined());
+            }
+
+            RELEASE_AND_RETURN(throwScope, (JSC::JSValue::encode(getter(lexicalGlobalObject, *thisObject, attributeName))));
+        }
     }
 
     template<StaticGetter getter, CastedThisErrorBehavior shouldThrow = CastedThisErrorBehavior::Throw>
-    static JSC::EncodedJSValue getStatic(JSC::ExecState& state, JSC::EncodedJSValue, const char*)
+    static JSC::EncodedJSValue getStatic(JSC::JSGlobalObject& lexicalGlobalObject, JSC::EncodedJSValue, JSC::PropertyName)
     {
-        auto throwScope = DECLARE_THROW_SCOPE(state.vm());
-
-        return JSC::JSValue::encode(getter(state, throwScope));
-    }
-};
-
-struct AttributeSetter {
-    template<typename Functor>
-    static auto call(JSC::ExecState&, JSC::ThrowScope&, Functor&& functor) -> std::enable_if_t<std::is_same<void, decltype(functor())>::value>
-    {
-        functor();
-    }
-
-    template<typename Functor>
-    static auto call(JSC::ExecState& state, JSC::ThrowScope& throwScope, Functor&& functor) -> std::enable_if_t<!std::is_same<void, decltype(functor())>::value>
-    {
-        auto result = functor();
-        if (!result.hasException())
-            return;
-        propagateException(state, throwScope, result.releaseException());
+        return JSC::JSValue::encode(getter(lexicalGlobalObject));
     }
 };
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -106,7 +106,7 @@ private:
 enum class ExtraInitializationLevel;
 
 struct OSRExitState : RefCounted<OSRExitState> {
-    OSRExitState(OSRExitBase& exit, CodeBlock* codeBlock, CodeBlock* baselineCodeBlock, Operands<ValueRecovery>& operands, Vector<UndefinedOperandSpan>&& undefinedOperandSpans, SpeculationRecovery* recovery, ptrdiff_t stackPointerOffset, int32_t activeThreshold, double memoryUsageAdjustedThreshold, void* jumpTarget, ArrayProfile* arrayProfile)
+    OSRExitState(OSRExitBase& exit, CodeBlock* codeBlock, CodeBlock* baselineCodeBlock, Operands<ValueRecovery>& operands, Vector<UndefinedOperandSpan>&& undefinedOperandSpans, SpeculationRecovery* recovery, ptrdiff_t stackPointerOffset, int32_t activeThreshold, double memoryUsageAdjustedThreshold, void* jumpTarget, ArrayProfile* arrayProfile, bool isJumpToLLInt)
         : exit(exit)
         , codeBlock(codeBlock)
         , baselineCodeBlock(baselineCodeBlock)
@@ -118,6 +118,7 @@ struct OSRExitState : RefCounted<OSRExitState> {
         , memoryUsageAdjustedThreshold(memoryUsageAdjustedThreshold)
         , jumpTarget(jumpTarget)
         , arrayProfile(arrayProfile)
+        , isJumpToLLInt(isJumpToLLInt)
     { }
 
     OSRExitBase& exit;
@@ -131,10 +132,15 @@ struct OSRExitState : RefCounted<OSRExitState> {
     double memoryUsageAdjustedThreshold;
     void* jumpTarget;
     ArrayProfile* arrayProfile;
+    bool isJumpToLLInt;
 
     ExtraInitializationLevel extraInitializationLevel;
     Profiler::OSRExit* profilerExit { nullptr };
 };
+
+JSC_DECLARE_JIT_OPERATION(operationCompileOSRExit, void, (CallFrame*, void*));
+JSC_DECLARE_JIT_OPERATION(operationDebugPrintSpeculationFailure, void, (CallFrame*, void*, void*));
+JSC_DECLARE_JIT_OPERATION(operationMaterializeOSRExitSideState, void, (VM*, const OSRExitBase*, EncodedJSValue*));
 
 // === OSRExit ===
 //
@@ -142,9 +148,6 @@ struct OSRExitState : RefCounted<OSRExitState> {
 // going into baseline code.
 struct OSRExit : public OSRExitBase {
     OSRExit(ExitKind, JSValueSource, MethodOfGettingAValueProfile, SpeculativeJIT*, unsigned streamIndex, unsigned recoveryIndex = UINT_MAX);
-
-    static void JIT_OPERATION compileOSRExit(ExecState*) WTF_INTERNAL;
-    static void executeOSRExit(Probe::Context&);
 
     CodeLocationLabel<JSInternalPtrTag> m_patchableJumpLocation;
     MacroAssemblerCodeRef<OSRExitPtrTag> m_code;
@@ -164,17 +167,18 @@ struct OSRExit : public OSRExitBase {
         OSRExitBase::considerAddingAsFrequentExitSite(profiledCodeBlock, ExitFromDFG);
     }
 
-private:
     static void compileExit(CCallHelpers&, VM&, const OSRExit&, const Operands<ValueRecovery>&, SpeculationRecovery*);
-    static void emitRestoreArguments(CCallHelpers&, const Operands<ValueRecovery>&);
-    static void JIT_OPERATION debugOperationPrintSpeculationFailure(ExecState*, void*, void*) WTF_INTERNAL;
+
+private:
+    static void emitRestoreArguments(CCallHelpers&, VM&, const Operands<ValueRecovery>&);
+    friend void JIT_OPERATION_ATTRIBUTES operationDebugPrintSpeculationFailure(CallFrame*, void*, void*);
 };
 
 struct SpeculationFailureDebugInfo {
     WTF_MAKE_STRUCT_FAST_ALLOCATED;
     CodeBlock* codeBlock;
     ExitKind kind;
-    unsigned bytecodeOffset;
+    BytecodeIndex bytecodeIndex;
 };
 
 } } // namespace JSC::DFG

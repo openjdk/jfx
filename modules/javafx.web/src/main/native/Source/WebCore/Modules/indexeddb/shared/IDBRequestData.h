@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,8 +25,6 @@
 
 #pragma once
 
-#if ENABLE(INDEXED_DATABASE)
-
 #include "IDBDatabaseIdentifier.h"
 #include "IDBResourceIdentifier.h"
 #include "IndexedDB.h"
@@ -37,7 +35,7 @@ class IDBOpenDBRequest;
 class IDBTransaction;
 
 namespace IndexedDB {
-enum class IndexRecordType;
+enum class IndexRecordType : bool;
 }
 
 namespace IDBClient {
@@ -49,17 +47,17 @@ class IDBRequestData {
 public:
     IDBRequestData(const IDBClient::IDBConnectionProxy&, const IDBOpenDBRequest&);
     explicit IDBRequestData(IDBClient::TransactionOperation&);
-    IDBRequestData(const IDBRequestData&);
+    WEBCORE_EXPORT IDBRequestData(const IDBRequestData&);
     IDBRequestData(IDBRequestData&&) = default;
     IDBRequestData& operator=(IDBRequestData&&) = default;
 
     enum IsolatedCopyTag { IsolatedCopy };
     IDBRequestData(const IDBRequestData&, IsolatedCopyTag);
-    IDBRequestData isolatedCopy() const;
+    WEBCORE_EXPORT IDBRequestData isolatedCopy() const;
 
-    uint64_t serverConnectionIdentifier() const;
-    IDBResourceIdentifier requestIdentifier() const;
-    IDBResourceIdentifier transactionIdentifier() const;
+    IDBConnectionIdentifier serverConnectionIdentifier() const;
+    WEBCORE_EXPORT IDBResourceIdentifier requestIdentifier() const;
+    WEBCORE_EXPORT IDBResourceIdentifier transactionIdentifier() const;
     uint64_t objectStoreIdentifier() const;
     uint64_t indexIdentifier() const;
     IndexedDB::IndexRecordType indexRecordType() const;
@@ -76,20 +74,20 @@ public:
     WEBCORE_EXPORT IDBRequestData();
 
     template<class Encoder> void encode(Encoder&) const;
-    template<class Decoder> static bool decode(Decoder&, IDBRequestData&);
+    template<class Decoder> static WARN_UNUSED_RETURN bool decode(Decoder&, IDBRequestData&);
 
 private:
     static void isolatedCopy(const IDBRequestData& source, IDBRequestData& destination);
 
-    uint64_t m_serverConnectionIdentifier { 0 };
+    IDBConnectionIdentifier m_serverConnectionIdentifier;
     std::unique_ptr<IDBResourceIdentifier> m_requestIdentifier;
     std::unique_ptr<IDBResourceIdentifier> m_transactionIdentifier;
     std::unique_ptr<IDBResourceIdentifier> m_cursorIdentifier;
     uint64_t m_objectStoreIdentifier { 0 };
     uint64_t m_indexIdentifier { 0 };
-    IndexedDB::IndexRecordType m_indexRecordType;
+    IndexedDB::IndexRecordType m_indexRecordType { IndexedDB::IndexRecordType::Key };
 
-    mutable Optional<IDBDatabaseIdentifier> m_databaseIdentifier;
+    mutable std::optional<IDBDatabaseIdentifier> m_databaseIdentifier;
     uint64_t m_requestedVersion { 0 };
 
     IndexedDB::RequestType m_requestType { IndexedDB::RequestType::Other };
@@ -108,8 +106,8 @@ void IDBRequestData::encode(Encoder& encoder) const
 {
     encoder << m_serverConnectionIdentifier << m_objectStoreIdentifier << m_indexIdentifier << m_databaseIdentifier << m_requestedVersion;
 
-    encoder.encodeEnum(m_indexRecordType);
-    encoder.encodeEnum(m_requestType);
+    encoder << m_indexRecordType;
+    encoder << m_requestType;
 
     encoder << !!m_requestIdentifier;
     if (m_requestIdentifier)
@@ -136,7 +134,7 @@ bool IDBRequestData::decode(Decoder& decoder, IDBRequestData& request)
     if (!decoder.decode(request.m_indexIdentifier))
         return false;
 
-    Optional<Optional<IDBDatabaseIdentifier>> databaseIdentifier;
+    std::optional<std::optional<IDBDatabaseIdentifier>> databaseIdentifier;
     decoder >> databaseIdentifier;
     if (!databaseIdentifier)
         return false;
@@ -145,10 +143,10 @@ bool IDBRequestData::decode(Decoder& decoder, IDBRequestData& request)
     if (!decoder.decode(request.m_requestedVersion))
         return false;
 
-    if (!decoder.decodeEnum(request.m_indexRecordType))
+    if (!decoder.decode(request.m_indexRecordType))
         return false;
 
-    if (!decoder.decodeEnum(request.m_requestType))
+    if (!decoder.decode(request.m_requestType))
         return false;
 
     bool hasObject;
@@ -184,5 +182,3 @@ bool IDBRequestData::decode(Decoder& decoder, IDBRequestData& request)
 }
 
 } // namespace WebCore
-
-#endif // ENABLE(INDEXED_DATABASE)

@@ -37,7 +37,7 @@
 namespace WebCore {
 
 DOMWindowExtension::DOMWindowExtension(DOMWindow* window, DOMWrapperWorld& world)
-    : m_window(makeWeakPtr(window))
+    : m_window(window)
     , m_world(world)
     , m_wasDetached(false)
 {
@@ -57,19 +57,19 @@ Frame* DOMWindowExtension::frame() const
     return m_window ? m_window->frame() : nullptr;
 }
 
-void DOMWindowExtension::suspendForPageCache()
+void DOMWindowExtension::suspendForBackForwardCache()
 {
     // Calling out to the client might result in this DOMWindowExtension being destroyed
     // while there is still work to do.
     Ref<DOMWindowExtension> protectedThis(*this);
 
-    auto frame = makeRef(*this->frame());
+    Ref frame = *this->frame();
     frame->loader().client().dispatchWillDisconnectDOMWindowExtensionFromGlobalObject(this);
 
     m_disconnectedFrame = WTFMove(frame);
 }
 
-void DOMWindowExtension::resumeFromPageCache()
+void DOMWindowExtension::resumeFromBackForwardCache()
 {
     ASSERT(frame());
     ASSERT(m_disconnectedFrame == frame());

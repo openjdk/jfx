@@ -48,8 +48,6 @@ WTF_MAKE_ISO_ALLOCATED_IMPL(RenderHTMLCanvas);
 RenderHTMLCanvas::RenderHTMLCanvas(HTMLCanvasElement& element, RenderStyle&& style)
     : RenderReplaced(element, WTFMove(style), element.size())
 {
-    // Actual size is not known yet, report the default intrinsic size.
-    view().frameView().incrementVisuallyNonEmptyPixelCount(roundedIntSize(intrinsicSize()));
 }
 
 HTMLCanvasElement& RenderHTMLCanvas::canvasElement() const
@@ -73,6 +71,13 @@ void RenderHTMLCanvas::paintReplaced(PaintInfo& paintInfo, const LayoutPoint& pa
     GraphicsContext& context = paintInfo.context();
 
     LayoutRect contentBoxRect = this->contentBoxRect();
+
+    if (context.detectingContentfulPaint()) {
+        if (!context.contenfulPaintDetected() && canvasElement().renderingContext())
+            context.setContentfulPaintDetected();
+        return;
+    }
+
     contentBoxRect.moveBy(paintOffset);
     LayoutRect replacedContentRect = this->replacedContentRect();
     replacedContentRect.moveBy(paintOffset);
@@ -87,7 +92,10 @@ void RenderHTMLCanvas::paintReplaced(PaintInfo& paintInfo, const LayoutPoint& pa
         page().addRelevantRepaintedObject(this, intersection(replacedContentRect, contentBoxRect));
 
     InterpolationQualityMaintainer interpolationMaintainer(context, ImageQualityController::interpolationQualityFromStyle(style()));
+
+    canvasElement().setIsSnapshotting(paintInfo.paintBehavior.contains(PaintBehavior::Snapshotting));
     canvasElement().paint(context, replacedContentRect);
+    canvasElement().setIsSnapshotting(false);
 }
 
 void RenderHTMLCanvas::canvasSizeChanged()

@@ -18,7 +18,7 @@
  */
 
 [
-    Conditional=SVG_FONTS
+    Exposed=Window
 ] interface SVGGlyphRefElement : SVGElement {
     [Reflect=glyphRef] attribute DOMString glyphRef;
     [Reflect] attribute DOMString format;
@@ -28,4 +28,4 @@
     attribute unrestricted float dy;
 };
 
-SVGGlyphRefElement implements SVGURIReference;
+SVGGlyphRefElement includes SVGURIReference;

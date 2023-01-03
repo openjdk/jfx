@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -41,14 +41,15 @@ class X11GLFactory extends GLFactory {
     // Limit es2 pipe qualification check to supported drivers and GPUs
     private GLGPUInfo preQualificationFilter[] = {
         new GLGPUInfo("advanced micro devices", null),
+        new GLGPUInfo("amd", null),
         new GLGPUInfo("ati", null),
-        new GLGPUInfo("intel open source technology center", null),
+        new GLGPUInfo("intel", null),
         new GLGPUInfo("nvidia", null),
         new GLGPUInfo("nouveau", null),
         new GLGPUInfo("x.org", null)
     };
 
-    private GLGPUInfo blackList[] = {
+    private GLGPUInfo rejectList[] = {
         new GLGPUInfo("ati", "radeon x1300"),
         new GLGPUInfo("ati", "radeon x1350"),
         new GLGPUInfo("ati", "radeon x1400"),
@@ -97,8 +98,8 @@ class X11GLFactory extends GLFactory {
     }
 
     @Override
-    GLGPUInfo[] getBlackList() {
-        return blackList;
+    GLGPUInfo[] getRejectList() {
+        return rejectList;
     }
 
     @Override
@@ -166,8 +167,8 @@ class X11GLFactory extends GLFactory {
 
     @Override
     void updateDeviceDetails(HashMap deviceDetails) {
-        deviceDetails.put("XVisualID", new Long(nGetVisualID(nativeCtxInfo)));
-        deviceDetails.put("XDisplay", new Long(nGetDisplay(nativeCtxInfo)));
-        deviceDetails.put("XScreenID", new Integer(nGetDefaultScreen(nativeCtxInfo)));
+        deviceDetails.put("XVisualID", Long.valueOf(nGetVisualID(nativeCtxInfo)));
+        deviceDetails.put("XDisplay", Long.valueOf(nGetDisplay(nativeCtxInfo)));
+        deviceDetails.put("XScreenID", Integer.valueOf(nGetDefaultScreen(nativeCtxInfo)));
     }
 }

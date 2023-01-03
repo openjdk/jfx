@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,11 +30,15 @@
 namespace JSC {
 
 class AtomicsObject final : public JSNonFinalObject {
-private:
-    AtomicsObject(VM&, Structure*);
-
 public:
-    typedef JSNonFinalObject Base;
+    using Base = JSNonFinalObject;
+
+    template<typename CellType, SubspaceAccess>
+    static GCClient::IsoSubspace* subspaceFor(VM& vm)
+    {
+        STATIC_ASSERT_ISO_SUBSPACE_SHARABLE(AtomicsObject, Base);
+        return &vm.plainObjectSpace();
+    }
 
     static AtomicsObject* create(VM&, JSGlobalObject*, Structure*);
 
@@ -42,20 +46,21 @@ public:
 
     static Structure* createStructure(VM&, JSGlobalObject*, JSValue);
 
-protected:
+private:
+    AtomicsObject(VM&, Structure*);
     void finishCreation(VM&, JSGlobalObject*);
 };
 
-EncodedJSValue JIT_OPERATION operationAtomicsAdd(ExecState* exec, EncodedJSValue base, EncodedJSValue index, EncodedJSValue operand);
-EncodedJSValue JIT_OPERATION operationAtomicsAnd(ExecState* exec, EncodedJSValue base, EncodedJSValue index, EncodedJSValue operand);
-EncodedJSValue JIT_OPERATION operationAtomicsCompareExchange(ExecState* exec, EncodedJSValue base, EncodedJSValue index, EncodedJSValue expected, EncodedJSValue newValue);
-EncodedJSValue JIT_OPERATION operationAtomicsExchange(ExecState* exec, EncodedJSValue base, EncodedJSValue index, EncodedJSValue operand);
-EncodedJSValue JIT_OPERATION operationAtomicsIsLockFree(ExecState* exec, EncodedJSValue size);
-EncodedJSValue JIT_OPERATION operationAtomicsLoad(ExecState* exec, EncodedJSValue base, EncodedJSValue index);
-EncodedJSValue JIT_OPERATION operationAtomicsOr(ExecState* exec, EncodedJSValue base, EncodedJSValue index, EncodedJSValue operand);
-EncodedJSValue JIT_OPERATION operationAtomicsStore(ExecState* exec, EncodedJSValue base, EncodedJSValue index, EncodedJSValue operand);
-EncodedJSValue JIT_OPERATION operationAtomicsSub(ExecState* exec, EncodedJSValue base, EncodedJSValue index, EncodedJSValue operand);
-EncodedJSValue JIT_OPERATION operationAtomicsXor(ExecState* exec, EncodedJSValue base, EncodedJSValue index, EncodedJSValue operand);
+JSC_DECLARE_JIT_OPERATION(operationAtomicsAdd, EncodedJSValue, (JSGlobalObject*, EncodedJSValue base, EncodedJSValue index, EncodedJSValue operand));
+JSC_DECLARE_JIT_OPERATION(operationAtomicsAnd, EncodedJSValue, (JSGlobalObject*, EncodedJSValue base, EncodedJSValue index, EncodedJSValue operand));
+JSC_DECLARE_JIT_OPERATION(operationAtomicsCompareExchange, EncodedJSValue, (JSGlobalObject*, EncodedJSValue base, EncodedJSValue index, EncodedJSValue expected, EncodedJSValue newValue));
+JSC_DECLARE_JIT_OPERATION(operationAtomicsExchange, EncodedJSValue, (JSGlobalObject*, EncodedJSValue base, EncodedJSValue index, EncodedJSValue operand));
+JSC_DECLARE_JIT_OPERATION(operationAtomicsIsLockFree, EncodedJSValue, (JSGlobalObject*, EncodedJSValue size));
+JSC_DECLARE_JIT_OPERATION(operationAtomicsLoad, EncodedJSValue, (JSGlobalObject*, EncodedJSValue base, EncodedJSValue index));
+JSC_DECLARE_JIT_OPERATION(operationAtomicsOr, EncodedJSValue, (JSGlobalObject*, EncodedJSValue base, EncodedJSValue index, EncodedJSValue operand));
+JSC_DECLARE_JIT_OPERATION(operationAtomicsStore, EncodedJSValue, (JSGlobalObject*, EncodedJSValue base, EncodedJSValue index, EncodedJSValue operand));
+JSC_DECLARE_JIT_OPERATION(operationAtomicsSub, EncodedJSValue, (JSGlobalObject*, EncodedJSValue base, EncodedJSValue index, EncodedJSValue operand));
+JSC_DECLARE_JIT_OPERATION(operationAtomicsXor, EncodedJSValue, (JSGlobalObject*, EncodedJSValue base, EncodedJSValue index, EncodedJSValue operand));
 
 } // namespace JSC
 

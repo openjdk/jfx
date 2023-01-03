@@ -24,8 +24,11 @@
 #include "UIEvent.h"
 
 #include "Node.h"
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_ISO_ALLOCATED_IMPL(UIEvent);
 
 UIEvent::UIEvent()
     : m_detail(0)
@@ -46,8 +49,8 @@ UIEvent::UIEvent(const AtomString& eventType, CanBubble canBubble, IsCancelable 
 {
 }
 
-UIEvent::UIEvent(const AtomString& eventType, const UIEventInit& initializer)
-    : Event(eventType, initializer, IsTrusted::No)
+UIEvent::UIEvent(const AtomString& eventType, const UIEventInit& initializer, IsTrusted isTrusted)
+    : Event(eventType, initializer, isTrusted)
     , m_view(initializer.view.get())
     , m_detail(initializer.detail)
 {

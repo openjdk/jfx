@@ -23,7 +23,6 @@
 
 #include "Gradient.h"
 #include "SVGElement.h"
-#include "SVGExternalResourcesRequired.h"
 #include "SVGNames.h"
 #include "SVGURIReference.h"
 #include "SVGUnitTypes.h"
@@ -70,7 +69,7 @@ struct SVGPropertyTraits<SVGSpreadMethodType> {
     }
 };
 
-class SVGGradientElement : public SVGElement, public SVGExternalResourcesRequired, public SVGURIReference {
+class SVGGradientElement : public SVGElement, public SVGURIReference {
     WTF_MAKE_ISO_ALLOCATED(SVGGradientElement);
 public:
     enum {
@@ -80,9 +79,9 @@ public:
         SVG_SPREADMETHOD_REPEAT = SVGSpreadMethodUnknown
     };
 
-    Vector<Gradient::ColorStop> buildStops();
+    GradientColorStops buildStops();
 
-    using PropertyRegistry = SVGPropertyOwnerRegistry<SVGGradientElement, SVGElement, SVGExternalResourcesRequired, SVGURIReference>;
+    using PropertyRegistry = SVGPropertyOwnerRegistry<SVGGradientElement, SVGElement, SVGURIReference>;
 
     SVGSpreadMethodType spreadMethod() const { return m_spreadMethod->currentValue<SVGSpreadMethodType>(); }
     SVGUnitTypes::SVGUnitType gradientUnits() const { return m_gradientUnits->currentValue<SVGUnitTypes::SVGUnitType>(); }

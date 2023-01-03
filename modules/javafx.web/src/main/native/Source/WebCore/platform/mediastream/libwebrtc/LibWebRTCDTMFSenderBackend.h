@@ -24,7 +24,7 @@
 
 #pragma once
 
-#if ENABLE(WEB_RTC)
+#if USE(LIBWEBRTC)
 
 #include "LibWebRTCMacros.h"
 #include "RTCDTMFSenderBackend.h"
@@ -32,14 +32,14 @@
 
 ALLOW_UNUSED_PARAMETERS_BEGIN
 
-#include <webrtc/api/dtmfsenderinterface.h>
-#include <webrtc/rtc_base/scoped_ref_ptr.h>
+#include <webrtc/api/dtmf_sender_interface.h>
+#include <webrtc/api/scoped_refptr.h>
 
 ALLOW_UNUSED_PARAMETERS_END
 
 namespace WebCore {
 
-// Use eager initialization for the WeakPtrFactory since we call makeWeakPtr() from another thread.
+// Use eager initialization for the WeakPtrFactory since we construct WeakPtrs on another thread.
 class LibWebRTCDTMFSenderBackend final : public RTCDTMFSenderBackend, private webrtc::DtmfSenderObserverInterface, public CanMakeWeakPtr<LibWebRTCDTMFSenderBackend, WeakPtrFactoryInitialization::Eager> {
     WTF_MAKE_FAST_ALLOCATED;
 public:
@@ -64,4 +64,4 @@ private:
 
 } // namespace WebCore
 
-#endif // ENABLE(WEB_RTC)
+#endif // USE(LIBWEBRTC)

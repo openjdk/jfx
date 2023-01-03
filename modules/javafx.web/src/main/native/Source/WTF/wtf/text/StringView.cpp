@@ -27,33 +27,33 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "config.h"
 #include <wtf/text/StringView.h>
 
-#include <mutex>
 #include <unicode/ubrk.h>
 #include <unicode/unorm2.h>
+#include <wtf/ASCIICType.h>
 #include <wtf/HashMap.h>
 #include <wtf/Lock.h>
-#include <wtf/NeverDestroyed.h>
-#include <wtf/Optional.h>
+#include <wtf/text/StringToIntegerConversion.h>
 #include <wtf/text/TextBreakIterator.h>
+#include <wtf/unicode/icu/ICUHelpers.h>
 
 namespace WTF {
 
-bool StringView::containsIgnoringASCIICase(const StringView& matchString) const
+bool StringView::containsIgnoringASCIICase(StringView matchString) const
 {
     return findIgnoringASCIICase(matchString) != notFound;
 }
 
-bool StringView::containsIgnoringASCIICase(const StringView& matchString, unsigned startOffset) const
+bool StringView::containsIgnoringASCIICase(StringView matchString, unsigned startOffset) const
 {
     return findIgnoringASCIICase(matchString, startOffset) != notFound;
 }
 
-size_t StringView::findIgnoringASCIICase(const StringView& matchString) const
+size_t StringView::findIgnoringASCIICase(StringView matchString) const
 {
     return ::WTF::findIgnoringASCIICase(*this, matchString, 0);
 }
 
-size_t StringView::findIgnoringASCIICase(const StringView& matchString, unsigned startOffset) const
+size_t StringView::findIgnoringASCIICase(StringView matchString, unsigned startOffset) const
 {
     return ::WTF::findIgnoringASCIICase(*this, matchString, startOffset);
 }
@@ -63,22 +63,27 @@ bool StringView::startsWith(UChar character) const
     return m_length && (*this)[0] == character;
 }
 
-bool StringView::startsWith(const StringView& prefix) const
+bool StringView::startsWith(StringView prefix) const
 {
     return ::WTF::startsWith(*this, prefix);
 }
 
-bool StringView::startsWithIgnoringASCIICase(const StringView& prefix) const
+bool StringView::startsWithIgnoringASCIICase(StringView prefix) const
 {
     return ::WTF::startsWithIgnoringASCIICase(*this, prefix);
 }
 
-bool StringView::endsWith(const StringView& suffix) const
+bool StringView::endsWith(UChar character) const
+{
+    return m_length && (*this)[m_length - 1] == character;
+}
+
+bool StringView::endsWith(StringView suffix) const
 {
     return ::WTF::endsWith(*this, suffix);
 }
 
-bool StringView::endsWithIgnoringASCIICase(const StringView& suffix) const
+bool StringView::endsWithIgnoringASCIICase(StringView suffix) const
 {
     return ::WTF::endsWithIgnoringASCIICase(*this, suffix);
 }
@@ -119,7 +124,8 @@ void StringView::SplitResult::Iterator::findNextSubstring()
 
 auto StringView::SplitResult::Iterator::operator++() -> Iterator&
 {
-    ASSERT(m_position <= m_result.m_string.length() && !m_isDone);
+    ASSERT(m_position <= m_result.m_string.length());
+    ASSERT(!m_isDone);
     m_position += m_length;
     if (m_position < m_result.m_string.length()) {
         ++m_position;
@@ -132,7 +138,7 @@ auto StringView::SplitResult::Iterator::operator++() -> Iterator&
 class StringView::GraphemeClusters::Iterator::Impl {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    Impl(const StringView& stringView, Optional<NonSharedCharacterBreakIterator>&& iterator, unsigned index)
+    Impl(StringView stringView, std::optional<NonSharedCharacterBreakIterator>&& iterator, unsigned index)
         : m_stringView(stringView)
         , m_iterator(WTFMove(iterator))
         , m_index(index)
@@ -156,7 +162,8 @@ public:
 
     bool operator==(const Impl& other) const
     {
-        ASSERT(&m_stringView == &other.m_stringView);
+        ASSERT(m_stringView.m_characters == other.m_stringView.m_characters);
+        ASSERT(m_stringView.m_length == other.m_stringView.m_length);
         auto result = m_index == other.m_index;
         ASSERT(!result || m_indexEnd == other.m_indexEnd);
         return result;
@@ -172,14 +179,14 @@ public:
     }
 
 private:
-    const StringView& m_stringView;
-    Optional<NonSharedCharacterBreakIterator> m_iterator;
+    StringView m_stringView;
+    std::optional<NonSharedCharacterBreakIterator> m_iterator;
     unsigned m_index;
     unsigned m_indexEnd;
 };
 
-StringView::GraphemeClusters::Iterator::Iterator(const StringView& stringView, unsigned index)
-    : m_impl(makeUnique<Impl>(stringView, stringView.isNull() ? WTF::nullopt : Optional<NonSharedCharacterBreakIterator>(NonSharedCharacterBreakIterator(stringView)), index))
+StringView::GraphemeClusters::Iterator::Iterator(StringView stringView, unsigned index)
+    : m_impl(makeUnique<Impl>(stringView, stringView.isNull() ? std::nullopt : std::optional<NonSharedCharacterBreakIterator>(NonSharedCharacterBreakIterator(stringView)), index))
 {
 }
 
@@ -242,6 +249,56 @@ String StringView::convertToASCIIUppercase() const
     return convertASCIICase<ASCIICase::Upper>(static_cast<const UChar*>(m_characters), m_length);
 }
 
+template<typename CharacterType>
+static AtomString convertASCIILowercaseAtom(const CharacterType* input, unsigned length)
+{
+    for (unsigned i = 0; i < length; ++i) {
+        if (UNLIKELY(isASCIIUpper(input[i]))) {
+            CharacterType* characters;
+            auto result = String::createUninitialized(length, characters);
+            StringImpl::copyCharacters(characters, input, i);
+            for (; i < length; ++i)
+                characters[i] = toASCIILower(input[i]);
+            return result;
+        }
+    }
+    // Fast path when the StringView is already all lowercase.
+    return AtomString(input, length);
+}
+
+AtomString StringView::convertToASCIILowercaseAtom() const
+{
+    if (m_is8Bit)
+        return convertASCIILowercaseAtom(characters8(), m_length);
+    return convertASCIILowercaseAtom(characters16(), m_length);
+}
+
+template<typename DestinationCharacterType, typename SourceCharacterType>
+void getCharactersWithASCIICaseInternal(StringView::CaseConvertType type, DestinationCharacterType* destination, const SourceCharacterType* source, unsigned length)
+{
+    static_assert(std::is_same<SourceCharacterType, LChar>::value || std::is_same<SourceCharacterType, UChar>::value);
+    static_assert(std::is_same<DestinationCharacterType, LChar>::value || std::is_same<DestinationCharacterType, UChar>::value);
+    static_assert(sizeof(DestinationCharacterType) >= sizeof(SourceCharacterType));
+    auto caseConvert = (type == StringView::CaseConvertType::Lower) ? toASCIILower<SourceCharacterType> : toASCIIUpper<SourceCharacterType>;
+    for (unsigned i = 0; i < length; ++i)
+        destination[i] = caseConvert(source[i]);
+}
+
+void StringView::getCharactersWithASCIICase(CaseConvertType type, LChar* destination) const
+{
+    ASSERT(is8Bit());
+    getCharactersWithASCIICaseInternal(type, destination, characters8(), m_length);
+}
+
+void StringView::getCharactersWithASCIICase(CaseConvertType type, UChar* destination) const
+{
+    if (is8Bit()) {
+        getCharactersWithASCIICaseInternal(type, destination, characters8(), m_length);
+        return;
+    }
+    getCharactersWithASCIICaseInternal(type, destination, characters16(), m_length);
+}
+
 StringViewWithUnderlyingString normalizedNFC(StringView string)
 {
     // Latin-1 characters are unaffected by normalization.
@@ -258,7 +315,7 @@ StringViewWithUnderlyingString normalizedNFC(StringView string)
         return { string, { } };
 
     unsigned normalizedLength = unorm2_normalize(normalizer, string.characters16(), string.length(), nullptr, 0, &status);
-    ASSERT(status == U_BUFFER_OVERFLOW_ERROR);
+    ASSERT(needsToGrowToProduceBuffer(status));
 
     UChar* characters;
     String result = String::createUninitialized(normalizedLength, characters);
@@ -279,6 +336,38 @@ String normalizedNFC(const String& string)
     return result.underlyingString;
 }
 
+bool equalRespectingNullity(StringView a, StringView b)
+{
+    if (a.m_characters == b.m_characters) {
+        ASSERT(a.is8Bit() == b.is8Bit());
+        return a.length() == b.length();
+    }
+
+    if (a.isEmpty() && b.isEmpty())
+        return a.isNull() == b.isNull();
+
+    return equalCommon(a, b);
+}
+
+bool StringView::contains(const char* string) const
+{
+    return find(string) != notFound;
+}
+
+int codePointCompare(StringView lhs, StringView rhs)
+{
+    bool lhsIs8Bit = lhs.is8Bit();
+    bool rhsIs8Bit = rhs.is8Bit();
+    if (lhsIs8Bit) {
+        if (rhsIs8Bit)
+            return codePointCompare(lhs.characters8(), lhs.length(), rhs.characters8(), rhs.length());
+        return codePointCompare(lhs.characters8(), lhs.length(), rhs.characters16(), rhs.length());
+    }
+    if (rhsIs8Bit)
+        return codePointCompare(lhs.characters16(), lhs.length(), rhs.characters8(), rhs.length());
+    return codePointCompare(lhs.characters16(), lhs.length(), rhs.characters16(), rhs.length());
+}
+
 #if CHECK_STRINGVIEW_LIFETIME
 
 // Manage reference count manually so UnderlyingString does not need to be defined in the header.
@@ -296,9 +385,9 @@ StringView::UnderlyingString::UnderlyingString(const StringImpl& string)
 {
 }
 
-static Lock underlyingStringsMutex;
+static Lock underlyingStringsLock;
 
-static HashMap<const StringImpl*, StringView::UnderlyingString*>& underlyingStrings()
+static HashMap<const StringImpl*, StringView::UnderlyingString*>& underlyingStrings() WTF_REQUIRES_LOCK(underlyingStringsLock)
 {
     static NeverDestroyed<HashMap<const StringImpl*, StringView::UnderlyingString*>> map;
     return map;
@@ -308,7 +397,7 @@ void StringView::invalidate(const StringImpl& stringToBeDestroyed)
 {
     UnderlyingString* underlyingString;
     {
-        std::lock_guard<Lock> lock(underlyingStringsMutex);
+        Locker locker { underlyingStringsLock };
         underlyingString = underlyingStrings().take(&stringToBeDestroyed);
         if (!underlyingString)
             return;
@@ -325,7 +414,7 @@ bool StringView::underlyingStringIsValid() const
 void StringView::adoptUnderlyingString(UnderlyingString* underlyingString)
 {
     if (m_underlyingString) {
-        std::lock_guard<Lock> lock(underlyingStringsMutex);
+        Locker locker { underlyingStringsLock };
         if (!--m_underlyingString->refCount) {
             if (m_underlyingString->isValid) {
                 underlyingStrings().remove(&m_underlyingString->string);
@@ -342,7 +431,7 @@ void StringView::setUnderlyingString(const StringImpl* string)
     if (!string)
         underlyingString = nullptr;
     else {
-        std::lock_guard<Lock> lock(underlyingStringsMutex);
+        Locker locker { underlyingStringsLock };
         auto result = underlyingStrings().add(string, nullptr);
         if (result.isNewEntry)
             result.iterator->value = new UnderlyingString(*string);
@@ -356,8 +445,14 @@ void StringView::setUnderlyingString(const StringImpl* string)
 void StringView::setUnderlyingString(const StringView& otherString)
 {
     UnderlyingString* underlyingString = otherString.m_underlyingString;
-    if (underlyingString)
+    if (underlyingString) {
+        // It's safe to inc the refCount here without locking underlyingStringsLock
+        // because UnderlyingString::refCount is a std::atomic_uint, and we're
+        // guaranteed that the StringView we're copying it from will at least
+        // have 1 ref on it, thereby keeping it alive regardless of what other
+        // threads may be doing.
         ++underlyingString->refCount;
+    }
     adoptUnderlyingString(underlyingString);
 }
 

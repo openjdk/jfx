@@ -195,7 +195,7 @@ private:
 struct CallVariantHash {
     static unsigned hash(const CallVariant& key) { return key.hash(); }
     static bool equal(const CallVariant& a, const CallVariant& b) { return a == b; }
-    static const bool safeToCompareToEmptyOrDeleted = true;
+    static constexpr bool safeToCompareToEmptyOrDeleted = true;
 };
 
 typedef Vector<CallVariant, 1> CallVariantList;
@@ -212,9 +212,7 @@ CallVariantList despecifiedVariantList(const CallVariantList&);
 namespace WTF {
 
 template<typename T> struct DefaultHash;
-template<> struct DefaultHash<JSC::CallVariant> {
-    typedef JSC::CallVariantHash Hash;
-};
+template<> struct DefaultHash<JSC::CallVariant> : JSC::CallVariantHash { };
 
 template<typename T> struct HashTraits;
 template<> struct HashTraits<JSC::CallVariant> : SimpleClassHashTraits<JSC::CallVariant> { };

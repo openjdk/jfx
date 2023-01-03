@@ -28,6 +28,7 @@
 #include "Color.h"
 #include "FloatSize.h"
 #include <wtf/RetainPtr.h>
+#include <wtf/text/WTFString.h>
 
 #if PLATFORM(COCOA)
 OBJC_CLASS NSShadow;
@@ -37,7 +38,7 @@ namespace WebCore {
 
 struct FontShadow {
     template<class Encoder> void encode(Encoder&) const;
-    template<class Decoder> static bool decode(Decoder&, FontShadow&);
+    template<class Decoder> static WARN_UNUSED_RETURN bool decode(Decoder&, FontShadow&);
 
 #if PLATFORM(COCOA)
     RetainPtr<NSShadow> createShadow() const;
@@ -68,5 +69,11 @@ bool FontShadow::decode(Decoder& decoder, FontShadow& shadow)
 
     return true;
 }
+
+#if PLATFORM(COCOA)
+WEBCORE_EXPORT FontShadow fontShadowFromNSShadow(NSShadow *);
+#endif
+
+WEBCORE_EXPORT String serializationForCSS(const FontShadow&);
 
 } // namespace WebCore

@@ -33,24 +33,24 @@ namespace JSC {
 class GlobalExecutable : public ScriptExecutable {
 public:
     using Base = ScriptExecutable;
-    static const unsigned StructureFlags = Base::StructureFlags | StructureIsImmortal;
+    static constexpr unsigned StructureFlags = Base::StructureFlags | StructureIsImmortal;
 
     DECLARE_INFO;
 
     unsigned lastLine() const { return m_lastLine; }
     unsigned endColumn() const { return m_endColumn; }
 
-    void recordParse(CodeFeatures features, bool hasCapturedVariables, int lastLine, unsigned endColumn)
+    void recordParse(CodeFeatures features, LexicalScopeFeatures lexicalScopeFeatures, bool hasCapturedVariables, int lastLine, unsigned endColumn)
     {
-        Base::recordParse(features, hasCapturedVariables);
+        Base::recordParse(features, lexicalScopeFeatures, hasCapturedVariables);
         m_lastLine = lastLine;
         m_endColumn = endColumn;
         ASSERT(endColumn != UINT_MAX);
     }
 
 protected:
-    GlobalExecutable(Structure* structure, VM& vm, const SourceCode& sourceCode, bool isInStrictContext, DerivedContextType derivedContextType, bool isInArrowFunctionContext, EvalContextType evalContextType, Intrinsic intrinsic)
-        : Base(structure, vm, sourceCode, isInStrictContext, derivedContextType, isInArrowFunctionContext, evalContextType, intrinsic)
+    GlobalExecutable(Structure* structure, VM& vm, const SourceCode& sourceCode, bool isInStrictContext, DerivedContextType derivedContextType, bool isInArrowFunctionContext, bool isInsideOrdinaryFunction, EvalContextType evalContextType, Intrinsic intrinsic)
+        : Base(structure, vm, sourceCode, isInStrictContext ? StrictModeLexicalFeature : NoLexicalFeatures, derivedContextType, isInArrowFunctionContext, isInsideOrdinaryFunction, evalContextType, intrinsic)
     {
     }
 

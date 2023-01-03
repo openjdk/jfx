@@ -118,9 +118,16 @@ private:
     Vector<BaselineGroup> m_sharedGroups;
 };
 
+enum AllowedBaseLine {FirstLine, LastLine, BothLines};
+
 static inline bool isBaselinePosition(ItemPosition position)
 {
     return position == ItemPosition::Baseline || position == ItemPosition::LastBaseline;
+}
+
+static inline bool isFirstBaselinePosition(ItemPosition position)
+{
+    return position == ItemPosition::Baseline;
 }
 
 // This is the class that implements the Baseline Alignment logic, using internally the BaselineContext and
@@ -163,7 +170,7 @@ private:
     bool isOrthogonalChildForBaseline(const RenderBox&) const;
     bool isParallelToBaselineAxisForChild(const RenderBox&, GridAxis) const;
 
-    typedef HashMap<unsigned, std::unique_ptr<BaselineContext>, DefaultHash<unsigned>::Hash, WTF::UnsignedWithZeroKeyHashTraits<unsigned>> BaselineContextsMap;
+    typedef HashMap<unsigned, std::unique_ptr<BaselineContext>, DefaultHash<unsigned>, WTF::UnsignedWithZeroKeyHashTraits<unsigned>> BaselineContextsMap;
 
     // Grid Container's WritingMode, used to determine grid item's orthogonality.
     WritingMode m_blockFlow;

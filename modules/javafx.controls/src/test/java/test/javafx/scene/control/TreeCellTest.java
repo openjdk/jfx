@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,22 @@
 
 package test.javafx.scene.control;
 
+import java.lang.ref.WeakReference;
+import java.util.ArrayList;
+import java.util.List;
+
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Ignore;
+import org.junit.Test;
+
+import com.sun.javafx.tk.Toolkit;
+
+import static javafx.scene.control.ControlShim.*;
+import static org.junit.Assert.*;
+import static test.com.sun.javafx.scene.control.infrastructure.ControlSkinFactory.*;
+import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.*;
+
 import javafx.beans.InvalidationListener;
 import javafx.collections.ListChangeListener;
 import javafx.scene.control.FocusModel;
@@ -34,13 +50,11 @@ import javafx.scene.control.SelectionMode;
 import javafx.scene.control.TreeCell;
 import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeView;
+import javafx.scene.control.TreeView.EditEvent;
+import javafx.scene.control.cell.TextFieldTreeCell;
 import javafx.scene.control.skin.TreeCellSkin;
-import org.junit.Before;
-import org.junit.Ignore;
-import org.junit.Test;
-
-import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.*;
-import static org.junit.Assert.*;
+import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
+import test.com.sun.javafx.scene.control.infrastructure.VirtualFlowTestUtils;
 
 public class TreeCellTest {
     private TreeCell<String> cell;
@@ -55,9 +69,10 @@ public class TreeCellTest {
     private TreeItem<String> apples;
     private TreeItem<String> oranges;
     private TreeItem<String> pears;
+    private StageLoader stageLoader;
 
     @Before public void setup() {
-        cell = new TreeCell<String>();
+        cell = new TreeCell<>();
 
         root = new TreeItem<>(ROOT);
         apples = new TreeItem<>(APPLES);
@@ -65,8 +80,13 @@ public class TreeCellTest {
         pears = new TreeItem<>(PEARS);
         root.getChildren().addAll(apples, oranges, pears);
 
-        tree = new TreeView<String>(root);
+        tree = new TreeView<>(root);
         root.setExpanded(true);
+    }
+
+    @After
+    public void cleanup() {
+        if (stageLoader != null) stageLoader.dispose();
     }
 
     /*********************************************************************
@@ -219,7 +239,7 @@ public class TreeCellTest {
     @Test public void itemIsUpdatedWhenItWasOutOfRangeButUpdatesToTreeViewItemsMakesItInRange() {
         cell.updateIndex(4);
         cell.updateTreeView(tree);
-        root.getChildren().addAll(new TreeItem<String>("Pumpkin"), new TreeItem<>("Lemon"));
+        root.getChildren().addAll(new TreeItem<>("Pumpkin"), new TreeItem<>("Lemon"));
         assertSame("Pumpkin", cell.getItem());
     }
 
@@ -281,7 +301,7 @@ public class TreeCellTest {
         TreeItem<String> newRoot = new TreeItem<>();
         newRoot.setExpanded(true);
         newRoot.getChildren().setAll(new TreeItem<>("Water"), new TreeItem<>("Juice"), new TreeItem<>("Soda"));
-        TreeView<String> treeView2 = new TreeView<String>(newRoot);
+        TreeView<String> treeView2 = new TreeView<>(newRoot);
         cell.updateTreeView(treeView2);
         assertEquals("Juice", cell.getItem());
     }
@@ -322,7 +342,7 @@ public class TreeCellTest {
         cell.updateTreeView(tree);
         cell.updateIndex(0);
 
-        TreeCell<String> other = new TreeCell<String>();
+        TreeCell<String> other = new TreeCell<>();
         other.updateTreeView(tree);
         other.updateIndex(1);
 
@@ -335,7 +355,7 @@ public class TreeCellTest {
         cell.updateTreeView(tree);
         cell.updateIndex(0);
 
-        TreeCell<String> other = new TreeCell<String>();
+        TreeCell<String> other = new TreeCell<>();
         other.updateTreeView(tree);
         other.updateIndex(1);
 
@@ -354,7 +374,7 @@ public class TreeCellTest {
         tree.getSelectionModel().select(0);
 
         // Other is configured to represent row 1 which is not selected.
-        TreeCell<String> other = new TreeCell<String>();
+        TreeCell<String> other = new TreeCell<>();
         other.updateTreeView(tree);
         other.updateIndex(1);
 
@@ -372,7 +392,7 @@ public class TreeCellTest {
         cell.updateTreeView(tree);
         cell.updateIndex(0);
 
-        TreeCell<String> other = new TreeCell<String>();
+        TreeCell<String> other = new TreeCell<>();
         other.updateTreeView(tree);
         other.updateIndex(1);
 
@@ -389,7 +409,7 @@ public class TreeCellTest {
         tree.getSelectionModel().select(0);
 
         // Other is configured to represent row 1 which is not selected.
-        TreeCell<String> other = new TreeCell<String>();
+        TreeCell<String> other = new TreeCell<>();
         other.updateTreeView(tree);
         other.updateIndex(1);
 
@@ -410,7 +430,7 @@ public class TreeCellTest {
         cell.updateTreeView(tree);
 
         // Other is configured to represent row 1 which is not selected.
-        TreeCell<String> other = new TreeCell<String>();
+        TreeCell<String> other = new TreeCell<>();
         other.updateTreeView(tree);
         other.updateIndex(1);
 
@@ -429,7 +449,7 @@ public class TreeCellTest {
         cell.updateTreeView(tree);
 
         // Other is configured to represent row 1 which is not selected.
-        TreeCell<String> other = new TreeCell<String>();
+        TreeCell<String> other = new TreeCell<>();
         other.updateTreeView(tree);
         other.updateIndex(1);
 
@@ -457,7 +477,7 @@ public class TreeCellTest {
         cell.updateTreeView(tree);
         cell.updateIndex(0);
 
-        TreeCell<String> other = new TreeCell<String>();
+        TreeCell<String> other = new TreeCell<>();
         other.updateTreeView(tree);
         other.updateIndex(1);
 
@@ -470,7 +490,7 @@ public class TreeCellTest {
         cell.updateTreeView(tree);
         cell.updateIndex(0);
 
-        TreeCell<String> other = new TreeCell<String>();
+        TreeCell<String> other = new TreeCell<>();
         other.updateTreeView(tree);
         other.updateIndex(1);
 
@@ -487,7 +507,7 @@ public class TreeCellTest {
         tree.getFocusModel().focus(0);
 
         // Other is configured to represent row 1 which is not focused.
-        TreeCell<String> other = new TreeCell<String>();
+        TreeCell<String> other = new TreeCell<>();
         other.updateTreeView(tree);
         other.updateIndex(1);
 
@@ -507,7 +527,7 @@ public class TreeCellTest {
         cell.updateTreeView(tree);
 
         // Other is configured to represent row 1 which is not focused
-        TreeCell<String> other = new TreeCell<String>();
+        TreeCell<String> other = new TreeCell<>();
         other.updateTreeView(tree);
         other.updateIndex(1);
 
@@ -526,7 +546,7 @@ public class TreeCellTest {
         cell.updateTreeView(tree);
 
         // Other is configured to represent row 1 which is not focused.
-        TreeCell<String> other = new TreeCell<String>();
+        TreeCell<String> other = new TreeCell<>();
         other.updateTreeView(tree);
         other.updateIndex(1);
 
@@ -580,7 +600,6 @@ public class TreeCellTest {
         assertNull(tree.getEditingItem());
     }
 
-    @Ignore // TODO file bug!
     @Test public void editCellWithTreeResultsInUpdatedEditingIndexProperty() {
         tree.setEditable(true);
         cell.updateTreeView(tree);
@@ -685,6 +704,271 @@ public class TreeCellTest {
         assertFalse(cell.isEditing());
     }
 
+    @Test
+    public void testEditCancelEventAfterCancelOnCell() {
+        tree.setEditable(true);
+        cell.updateTreeView(tree);
+        int editingIndex = 1;
+        TreeItem<String> editingItem = tree.getTreeItem(editingIndex);
+        cell.updateIndex(editingIndex);
+        tree.edit(editingItem);
+        List<EditEvent<String>> events = new ArrayList<>();
+        tree.setOnEditCancel(events::add);
+        cell.cancelEdit();
+        assertEquals(1, events.size());
+        assertEquals("editing location of cancel event", editingItem, events.get(0).getTreeItem());
+    }
+
+    @Test
+    public void testEditCancelEventAfterCancelOnTree() {
+        tree.setEditable(true);
+        cell.updateTreeView(tree);
+        int editingIndex = 1;
+        TreeItem<String> editingItem = tree.getTreeItem(editingIndex);
+        cell.updateIndex(editingIndex);
+        tree.edit(editingItem);
+        List<EditEvent<String>> events = new ArrayList<>();
+        tree.setOnEditCancel(events::add);
+        tree.edit(null);
+        assertEquals(1, events.size());
+        assertEquals("editing location of cancel event", editingItem, events.get(0).getTreeItem());
+    }
+
+    @Test
+    public void testEditCancelEventAfterCellReuse() {
+        tree.setEditable(true);
+        cell.updateTreeView(tree);
+        int editingIndex = 1;
+        TreeItem<String> editingItem = tree.getTreeItem(editingIndex);
+        cell.updateIndex(editingIndex);
+        tree.edit(editingItem);
+        List<EditEvent<String>> events = new ArrayList<>();
+        tree.setOnEditCancel(events::add);
+        cell.updateIndex(0);
+        assertEquals(1, events.size());
+        assertEquals("editing location of cancel event", editingItem, events.get(0).getTreeItem());
+    }
+
+    @Test
+    public void testEditCancelEventAfterCollapse() {
+        stageLoader = new StageLoader(tree);
+        tree.setEditable(true);
+        int editingIndex = 1;
+        TreeItem<String> editingItem = tree.getTreeItem(editingIndex);
+        tree.edit(editingItem);
+        List<EditEvent<String>> events = new ArrayList<>();
+        tree.setOnEditCancel(events::add);
+        root.setExpanded(false);
+        Toolkit.getToolkit().firePulse();
+        assertEquals(1, events.size());
+        assertEquals("editing location of cancel event", editingItem, events.get(0).getTreeItem());
+    }
+
+    @Test
+    public void testEditCancelEventAfterModifyItems() {
+        stageLoader = new StageLoader(tree);
+        tree.setEditable(true);
+        int editingIndex = 2;
+        TreeItem<String> editingItem = tree.getTreeItem(editingIndex);
+        tree.edit(editingItem);
+        List<EditEvent<String>> events = new ArrayList<>();
+        tree.setOnEditCancel(events::add);
+        root.getChildren().add(0, new TreeItem<>("added"));
+        Toolkit.getToolkit().firePulse();
+        assertEquals(1, events.size());
+        assertEquals("editing location of cancel event", editingItem, events.get(0).getTreeItem());
+    }
+
+    /**
+     * Test that removing the editing item implicitly cancels an ongoing
+     * edit and fires a correct cancel event.
+     */
+    @Test
+    public void testEditCancelEventAfterRemoveEditingItem() {
+        stageLoader = new StageLoader(tree);
+        tree.setEditable(true);
+        int editingIndex = 2;
+        TreeItem<String> editingItem = tree.getTreeItem(editingIndex);
+        tree.edit(editingItem);
+        List<EditEvent<String>> events = new ArrayList<>();
+        tree.setOnEditCancel(events::add);
+        root.getChildren().remove(editingItem);
+        Toolkit.getToolkit().firePulse();
+        assertNull("removing item must cancel edit on tree", tree.getEditingItem());
+        assertEquals(1, events.size());
+        assertEquals("editing location of cancel event", editingItem, events.get(0).getTreeItem());
+    }
+
+    /**
+     * Test that removing the editing item does not cause a memory leak.
+     */
+    @Test
+    public void testEditCancelMemoryLeakAfterRemoveEditingItem() {
+        stageLoader = new StageLoader(tree);
+        tree.setEditable(true);
+        // the item to test for being gc'ed
+        TreeItem<String> editingItem = new TreeItem<>("added");
+        WeakReference<TreeItem<?>> itemRef = new WeakReference<>(editingItem);
+        root.getChildren().add(0, editingItem);
+        Toolkit.getToolkit().firePulse();
+        tree.edit(editingItem);
+        root.getChildren().remove(editingItem);
+        Toolkit.getToolkit().firePulse();
+        assertNull("removing item must cancel edit on tree", tree.getEditingItem());
+        editingItem = null;
+        attemptGC(itemRef);
+        assertEquals("treeItem must be gc'ed", null, itemRef.get());
+    }
+
+    /**
+     * Test that removing a committed editing item does not cause a memory leak.
+     */
+    @Test
+    public void testEditCommitMemoryLeakAfterRemoveEditingItem() {
+        stageLoader = new StageLoader(tree);
+        tree.setEditable(true);
+        // the item to test for being gc'ed
+        TreeItem<String> editingItem = new TreeItem<>("added");
+        WeakReference<TreeItem<?>> itemRef = new WeakReference<>(editingItem);
+        root.getChildren().add(0, editingItem);
+        int editingIndex = tree.getRow(editingItem);
+        Toolkit.getToolkit().firePulse();
+        tree.edit(editingItem);
+        TreeCell<String> editingCell = (TreeCell<String>) VirtualFlowTestUtils.getCell(tree, editingIndex);
+        editingCell.commitEdit("added changed");
+        root.getChildren().remove(editingItem);
+        Toolkit.getToolkit().firePulse();
+        assertNull("removing item must cancel edit on tree", tree.getEditingItem());
+        editingItem = null;
+        attemptGC(itemRef);
+        assertEquals("treeItem must be gc'ed", null, itemRef.get());
+    }
+
+    @Test
+    public void testStartEditOffRangeMustNotFireStartEdit() {
+        tree.setEditable(true);
+        cell.updateTreeView(tree);
+        // update cell's treeItem so there is something to update
+        cell.updateTreeItem(new TreeItem<>("not-contained"));
+        List<EditEvent<?>> events = new ArrayList<>();
+        tree.addEventHandler(TreeView.editStartEvent(), events::add);
+        cell.startEdit();
+        assertFalse("sanity: off-range cell must not be editing", cell.isEditing());
+        assertEquals("cell must not fire editStart if not editing", 0, events.size());
+    }
+
+    @Test
+    public void testStartEditOffRangeMustNotUpdateEditingLocation() {
+        tree.setEditable(true);
+        cell.updateTreeView(tree);
+        // update cell's treeItem so there is something to update
+        cell.updateTreeItem(new TreeItem<>("not-contained"));
+        cell.startEdit();
+        assertFalse("sanity: off-range cell must not be editing", cell.isEditing());
+        assertNull("tree editing location must not be updated", tree.getEditingItem());
+    }
+
+    @Test
+    public void testCommitEditMustNotFireCancel() {
+        tree.setEditable(true);
+        int editingIndex = 1;
+        TreeItem<String> editingItem = tree.getTreeItem(editingIndex);
+        // JDK-8187307: handler that resets control's editing state
+        tree.setOnEditCommit(e -> {
+            editingItem.setValue(e.getNewValue());
+            tree.edit(null);
+        });
+        cell.updateTreeView(tree);
+        cell.updateIndex(editingIndex);
+        List<EditEvent<String>> events = new ArrayList<>();
+        tree.setOnEditCancel(events::add);
+        tree.edit(editingItem);
+        String value = "edited";
+        cell.commitEdit(value);
+        assertEquals("sanity: value committed", value, tree.getTreeItem(editingIndex).getValue());
+        assertEquals("commit must not have fired editCancel", 0, events.size());
+    }
+
+//------------- JDK-8187309: fix editing mechanics to comply to specification
+
+    @Test
+    public void testTreeHasDefaultCommitHandler() {
+        assertNotNull("treeView must have default commit handler", tree.getOnEditCommit());
+    }
+
+    @Test
+    public void testDefaultCommitUpdatesData() {
+        TreeItem<String> editingItem = setupForEditing(cell);
+        tree.edit(editingItem);
+        String value = "edited";
+        cell.commitEdit(value);
+        assertEquals("value committed", value, editingItem.getValue());
+    }
+
+    @Test
+    public void testDefaultCommitUpdatesCell() {
+        TreeCell<String> cell = TextFieldTreeCell.forTreeView().call(tree);
+        TreeItem<String> editingItem = setupForEditing(cell);
+        tree.edit(editingItem);
+        String value = "edited";
+        cell.commitEdit(value);
+        assertEquals("cell text updated to committed value", value, cell.getText());
+    }
+
+    @Test
+    public void testDoNothingCommitHandlerDoesNotUpdateData() {
+        TreeItem<String> editingItem = setupForEditing(cell);
+        String oldValue = editingItem.getValue();
+        // do nothing handler
+        tree.setOnEditCommit(e -> {});
+        tree.edit(editingItem);
+        String value = "edited";
+        cell.commitEdit(value);
+        assertEquals("edited value must not be committed", oldValue, editingItem.getValue());
+    }
+
+    @Ignore("JDK-8187314")
+    @Test
+    public void testDoNothingCommitHandlerDoesNotUpdateCell() {
+        TreeCell<String> cell = TextFieldTreeCell.forTreeView().call(tree);
+        TreeItem<String> editingItem = setupForEditing(cell);
+        String oldValue = editingItem.getValue();
+        // do nothing handler
+        tree.setOnEditCommit(e -> {});
+        tree.edit(editingItem);
+        String value = "edited";
+        cell.commitEdit(value);
+        assertEquals("cell text must not have changed", oldValue, cell.getText());
+    }
+
+
+    /**
+     * Sets tree editable, configures the given cell for editing in tree at index 1
+     * and returns the treeItem at that index.
+     */
+    private TreeItem<String> setupForEditing(TreeCell<String> editingCell) {
+        tree.setEditable(true);
+        editingCell.updateTreeView(tree);
+        editingCell.updateIndex(1);
+        return editingCell.getTreeItem();
+    }
+
+    /**
+     * Test test setup.
+     */
+    @Test
+    public void testSetupForEditing() {
+        TreeCell<String> cell = new TreeCell<>();
+        TreeItem<String> cellTreeItem = setupForEditing(cell);
+        assertTrue("sanity: tree must be editable", tree.isEditable());
+        assertEquals("sanity: returned treeItem", cellTreeItem, cell.getTreeItem());
+        assertEquals(1, cell.getIndex());
+        assertEquals("sanity: cell configured with tree's treeItem at index",
+                tree.getTreeItem(cell.getIndex()), cell.getTreeItem());
+        assertNull("sanity: config doesn't change tree state", tree.getEditingItem());
+    }
+
+
     // When the tree view item's change and affects a cell that is editing, then what?
     // When the tree cell's index is changed while it is editing, then what?
 
@@ -714,7 +998,7 @@ public class TreeCellTest {
         @Override protected int getFocusedIndex() {
             return tree.getFocusModel().getFocusedIndex();
         }
-    };
+    }
 
     private final class FocusModelMock extends FocusModel {
         @Override protected int getItemCount() {
@@ -730,4 +1014,27 @@ public class TreeCellTest {
         TreeCell cell = new TreeCell();
         cell.setSkin(new TreeCellSkin(cell));
     }
+
+    /**
+     * Test that min/max/pref height respect fixedCellSize.
+     * Sanity test when fixing JDK-8253634.
+     */
+    @Test
+    public void testTreeCellHeights() {
+        TreeCell<Object> cell =  new TreeCell<>();
+        TreeView<Object> treeView = new TreeView<>();
+        cell.updateTreeView(treeView);
+        installDefaultSkin(cell);
+        treeView.setFixedCellSize(100);
+        assertEquals("pref height must be fixedCellSize",
+                treeView.getFixedCellSize(),
+                cell.prefHeight(-1), 1);
+        assertEquals("min height must be fixedCellSize",
+                treeView.getFixedCellSize(),
+                cell.minHeight(-1), 1);
+        assertEquals("max height must be fixedCellSize",
+                treeView.getFixedCellSize(),
+                cell.maxHeight(-1), 1);
+    }
+
 }

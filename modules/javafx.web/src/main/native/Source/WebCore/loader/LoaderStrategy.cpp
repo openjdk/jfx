@@ -32,17 +32,26 @@ namespace WebCore {
 
 LoaderStrategy::~LoaderStrategy() = default;
 
-ResourceResponse LoaderStrategy::responseFromResourceLoadIdentifier(uint64_t /* resourceLoadIdentifier */)
+
+void LoaderStrategy::setResourceLoadSchedulingMode(Page&, LoadSchedulingMode)
+{
+}
+
+void LoaderStrategy::prioritizeResourceLoads(const Vector<SubresourceLoader*>&)
+{
+}
+
+ResourceResponse LoaderStrategy::responseFromResourceLoadIdentifier(ResourceLoaderIdentifier)
 {
     return { };
 }
 
-NetworkLoadMetrics LoaderStrategy::networkMetricsFromResourceLoadIdentifier(uint64_t /* resourceLoadIdentifier */)
+NetworkLoadMetrics LoaderStrategy::networkMetricsFromResourceLoadIdentifier(ResourceLoaderIdentifier)
 {
     return { };
 }
 
-Vector<NetworkTransactionInformation> LoaderStrategy::intermediateLoadInformationFromResourceLoadIdentifier(uint64_t /* resourceLoadIdentifier */)
+Vector<NetworkTransactionInformation> LoaderStrategy::intermediateLoadInformationFromResourceLoadIdentifier(ResourceLoaderIdentifier)
 {
     return { };
 }

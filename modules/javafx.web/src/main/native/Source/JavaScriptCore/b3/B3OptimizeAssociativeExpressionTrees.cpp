@@ -57,7 +57,7 @@ private:
     bool optimizeRootedTree(Value* root, InsertionSet&, size_t indexInBlock, const Vector<unsigned>& useCounts);
 
     Procedure& m_proc;
-    bool verbose { false };
+    static constexpr bool verbose { false };
 };
 
 int64_t OptimizeAssociativeExpressionTrees::neutralElement(Opcode op)
@@ -248,6 +248,8 @@ bool OptimizeAssociativeExpressionTrees::run()
     // In the first one we compute the use counts of each value (of an interesting opcode), and find potential roots of interesting expression trees.
     // In the second one we optimize each such expression tree in turn.
     // We need the use counts to avoid duplicating code.
+
+    m_proc.resetValueOwners();
 
     Vector<unsigned> useCounts(m_proc.values().size(), 0); // Mapping from Value::m_index to use counts.
     HashSet<Value*> expressionTreeRoots;

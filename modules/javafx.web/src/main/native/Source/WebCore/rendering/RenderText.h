@@ -1,7 +1,7 @@
 /*
  * (C) 1999 Lars Knoll (knoll@kde.org)
  * (C) 2000 Dirk Mueller (mueller@kde.org)
- * Copyright (C) 2004-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2021 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -24,7 +24,6 @@
 
 #include "RenderElement.h"
 #include "RenderTextLineBoxes.h"
-#include "SimpleLineLayout.h"
 #include "Text.h"
 #include <wtf/Forward.h>
 #include <wtf/text/TextBreakIterator.h>
@@ -32,8 +31,13 @@
 namespace WebCore {
 
 class Font;
-class InlineTextBox;
+class LegacyInlineTextBox;
 struct GlyphOverflow;
+struct WordTrailingSpace;
+
+namespace LayoutIntegration {
+class LineLayout;
+}
 
 class RenderText : public RenderObject {
     WTF_MAKE_ISO_ALLOCATED(RenderText);
@@ -58,24 +62,25 @@ public:
 
     virtual String originalText() const;
 
-    void extractTextBox(InlineTextBox& box) { m_lineBoxes.extract(box); }
-    void attachTextBox(InlineTextBox& box) { m_lineBoxes.attach(box); }
-    void removeTextBox(InlineTextBox& box) { m_lineBoxes.remove(box); }
+    void extractTextBox(LegacyInlineTextBox& box) { m_lineBoxes.extract(box); }
+    void attachTextBox(LegacyInlineTextBox& box) { m_lineBoxes.attach(box); }
+    void removeTextBox(LegacyInlineTextBox& box) { m_lineBoxes.remove(box); }
 
     StringImpl& text() const { return *m_text.impl(); } // Since m_text can never be null, returning this type means callers won't null check.
     String textWithoutConvertingBackslashToYenSymbol() const;
 
-    InlineTextBox* createInlineTextBox() { return m_lineBoxes.createAndAppendLineBox(*this); }
+    LegacyInlineTextBox* createInlineTextBox() { return m_lineBoxes.createAndAppendLineBox(*this); }
     void dirtyLineBoxes(bool fullLayout);
+    void deleteLineBoxes();
 
     void absoluteRects(Vector<IntRect>&, const LayoutPoint& accumulatedOffset) const final;
     Vector<IntRect> absoluteRectsForRange(unsigned startOffset = 0, unsigned endOffset = UINT_MAX, bool useSelectionHeight = false, bool* wasFixed = nullptr) const;
 #if PLATFORM(IOS_FAMILY)
-    void collectSelectionRects(Vector<SelectionRect>&, unsigned startOffset = 0, unsigned endOffset = std::numeric_limits<unsigned>::max()) final;
+    void collectSelectionGeometries(Vector<SelectionGeometry>&, unsigned startOffset = 0, unsigned endOffset = std::numeric_limits<unsigned>::max()) final;
 #endif
 
     void absoluteQuads(Vector<FloatQuad>&, bool* wasFixed) const final;
-    Vector<FloatQuad> absoluteQuadsForRange(unsigned startOffset = 0, unsigned endOffset = UINT_MAX, bool useSelectionHeight = false, bool* wasFixed = nullptr) const;
+    Vector<FloatQuad> absoluteQuadsForRange(unsigned startOffset = 0, unsigned endOffset = UINT_MAX, bool useSelectionHeight = false, bool ignoreEmptyTextSelections = false, bool* wasFixed = nullptr) const;
 
     Vector<FloatQuad> absoluteQuadsClippedToEllipsis() const;
 
@@ -84,7 +89,7 @@ public:
     UChar characterAt(unsigned) const;
     unsigned length() const final { return text().length(); }
 
-    void positionLineBox(InlineTextBox&);
+    void positionLineBox(LegacyInlineTextBox&);
 
     virtual float width(unsigned from, unsigned length, const FontCascade&, float xPos, HashSet<const Font*>* fallbackFonts = nullptr, GlyphOverflow* = nullptr) const;
     virtual float width(unsigned from, unsigned length, float xPos, bool firstLine = false, HashSet<const Font*>* fallbackFonts = nullptr, GlyphOverflow* = nullptr) const;
@@ -103,6 +108,7 @@ public:
         bool endWS { false };
         bool hasBreakableChar { false };
         bool hasBreak { false };
+        bool endsWithBreak { false };
     };
     Widths trimmedPreferredWidths(float leadWidth, bool& stripFrontSpaces);
 
@@ -113,8 +119,6 @@ public:
     static bool isHangableStopOrComma(UChar);
 
     WEBCORE_EXPORT virtual IntRect linesBoundingBox() const;
-    LayoutRect linesVisualOverflowBoundingBox() const;
-
     WEBCORE_EXPORT IntPoint firstRunLocation() const;
 
     virtual void setText(const String&, bool force = false);
@@ -122,13 +126,13 @@ public:
 
     bool canBeSelectionLeaf() const override { return true; }
 
-    LayoutRect collectSelectionRectsForLineBoxes(const RenderLayerModelObject* repaintContainer, bool clipToVisibleContent, Vector<LayoutRect>&);
+    LayoutRect collectSelectionGeometriesForLineBoxes(const RenderLayerModelObject* repaintContainer, bool clipToVisibleContent, Vector<FloatQuad>&);
 
     LayoutUnit marginLeft() const { return minimumValueForLength(style().marginLeft(), 0); }
     LayoutUnit marginRight() const { return minimumValueForLength(style().marginRight(), 0); }
 
-    InlineTextBox* firstTextBox() const { return m_lineBoxes.first(); }
-    InlineTextBox* lastTextBox() const { return m_lineBoxes.last(); }
+    LegacyInlineTextBox* firstTextBox() const { return m_lineBoxes.first(); }
+    LegacyInlineTextBox* lastTextBox() const { return m_lineBoxes.last(); }
 
     int caretMinOffset() const final;
     int caretMaxOffset() const final;
@@ -142,11 +146,12 @@ public:
     int previousOffsetForBackwardDeletion(int current) const final;
     int nextOffset(int current) const final;
 
-    bool containsReversedText() const { return m_containsReversedText; }
+    bool needsVisualReordering() const { return m_needsVisualReordering; }
+    void setNeedsVisualReordering() { m_needsVisualReordering = true; }
 
     void momentarilyRevealLastTypedCharacter(unsigned offsetAfterLastTypedCharacter);
 
-    InlineTextBox* findNextInlineTextBox(int offset, int& pos) const { return m_lineBoxes.findNext(offset, pos); }
+    LegacyInlineTextBox* findNextInlineTextBox(int offset, int& pos) const { return m_lineBoxes.findNext(offset, pos); }
 
     bool isAllCollapsibleWhitespace() const;
 
@@ -156,20 +161,16 @@ public:
 
     virtual void styleDidChange(StyleDifference, const RenderStyle* oldStyle);
 
-    virtual std::unique_ptr<InlineTextBox> createTextBox();
+    virtual std::unique_ptr<LegacyInlineTextBox> createTextBox();
 
 #if ENABLE(TEXT_AUTOSIZING)
     float candidateComputedTextSize() const { return m_candidateComputedTextSize; }
     void setCandidateComputedTextSize(float size) { m_candidateComputedTextSize = size; }
 #endif
 
-    void ensureLineBoxes();
-    void deleteLineBoxesBeforeSimpleLineLayout();
-    const SimpleLineLayout::Layout* simpleLineLayout() const;
+    bool usesLegacyLineLayoutPath() const;
 
-    StringView stringView(unsigned start = 0, Optional<unsigned> stop = WTF::nullopt) const;
-
-    LayoutUnit topOfFirstText() const;
+    StringView stringView(unsigned start = 0, std::optional<unsigned> stop = std::nullopt) const;
 
     bool containsOnlyHTMLWhitespace(unsigned from, unsigned length) const;
 
@@ -181,6 +182,9 @@ public:
     void setInlineWrapperForDisplayContents(RenderInline*);
 
     static RenderText* findByDisplayContentsInlineWrapperCandidate(RenderElement&);
+
+    template <typename MeasureTextCallback>
+    static float measureTextConsideringPossibleTrailingSpace(bool currentCharacterIsSpace, unsigned startIndex, unsigned wordLength, WordTrailingSpace&, HashSet<const Font*>& fallbackFonts, MeasureTextCallback&&);
 
 protected:
     virtual void computePreferredLogicalWidths(float leadWidth);
@@ -200,10 +204,9 @@ private:
 
     VisiblePosition positionForPoint(const LayoutPoint&, const RenderFragmentContainer*) override;
 
-    void setSelectionState(SelectionState) final;
+    void setSelectionState(HighlightState) final;
     LayoutRect selectionRectForRepaint(const RenderLayerModelObject* repaintContainer, bool clipToVisibleContent = true) final;
-    LayoutRect localCaretRect(InlineBox*, unsigned caretOffset, LayoutUnit* extraWidthToEndOfLine = nullptr) override;
-    LayoutRect clippedOverflowRectForRepaint(const RenderLayerModelObject* repaintContainer) const final;
+    LayoutRect clippedOverflowRect(const RenderLayerModelObject* repaintContainer, VisibleRectContext) const final;
 
     void computePreferredLogicalWidths(float leadWidth, HashSet<const Font*>& fallbackFonts, GlyphOverflow&);
 
@@ -216,12 +219,15 @@ private:
 
     void secureText(UChar mask);
 
-    LayoutRect collectSelectionRectsForLineBoxes(const RenderLayerModelObject* repaintContainer, bool clipToVisibleContent, Vector<LayoutRect>*);
+    LayoutRect collectSelectionGeometriesForLineBoxes(const RenderLayerModelObject* repaintContainer, bool clipToVisibleContent, Vector<FloatQuad>*);
     bool computeCanUseSimplifiedTextMeasuring() const;
 
     void node() const = delete;
     void container() const = delete; // Use parent() instead.
     void container(const RenderLayerModelObject&, bool&) const = delete; // Use parent() instead.
+
+    float maxWordFragmentWidth(const RenderStyle&, const FontCascade&, StringView word, unsigned minimumPrefixLength, unsigned minimumSuffixLength, bool currentCharacterIsSpace, unsigned characterIndex, float xPos, float entireWordWidth, WordTrailingSpace&, HashSet<const Font*>& fallbackFonts, GlyphOverflow&);
+    float widthFromCacheConsideringPossibleTrailingSpace(const RenderStyle&, const FontCascade&, unsigned startIndex, unsigned wordLen, float xPos, bool currentCharacterIsSpace, WordTrailingSpace&, HashSet<const Font*>& fallbackFonts, GlyphOverflow&) const;
 
     // We put the bitfield first to minimize padding on 64-bit.
     unsigned m_hasBreakableChar : 1; // Whether or not we can be broken into multiple lines.
@@ -233,7 +239,7 @@ private:
                            // line boxes, and this hint will enable layoutInlineChildren to avoid
                            // just dirtying everything when character data is modified (e.g., appended/inserted
                            // or removed).
-    unsigned m_containsReversedText : 1;
+    unsigned m_needsVisualReordering : 1;
     unsigned m_isAllASCII : 1;
     unsigned m_canUseSimpleFontCodePath : 1;
     mutable unsigned m_knownToHaveNoOverflowAndNoFallbackFonts : 1;
@@ -275,27 +281,38 @@ inline const RenderStyle& RenderText::firstLineStyle() const
 
 inline const RenderStyle* RenderText::getCachedPseudoStyle(PseudoId pseudoId, const RenderStyle* parentStyle) const
 {
-    return parent()->getCachedPseudoStyle(pseudoId, parentStyle);
+    // Pseudostyle is associated with an element, so ascend the tree until we find a non-anonymous ancestor.
+    if (auto* ancestor = firstNonAnonymousAncestor())
+        return ancestor->getCachedPseudoStyle(pseudoId, parentStyle);
+    return nullptr;
 }
 
 inline Color RenderText::selectionBackgroundColor() const
 {
-    return parent()->selectionBackgroundColor();
+    if (auto* ancestor = firstNonAnonymousAncestor())
+        return ancestor->selectionBackgroundColor();
+    return Color();
 }
 
 inline Color RenderText::selectionForegroundColor() const
 {
-    return parent()->selectionForegroundColor();
+    if (auto* ancestor = firstNonAnonymousAncestor())
+        return ancestor->selectionForegroundColor();
+    return Color();
 }
 
 inline Color RenderText::selectionEmphasisMarkColor() const
 {
-    return parent()->selectionEmphasisMarkColor();
+    if (auto* ancestor = firstNonAnonymousAncestor())
+        return ancestor->selectionEmphasisMarkColor();
+    return Color();
 }
 
 inline std::unique_ptr<RenderStyle> RenderText::selectionPseudoStyle() const
 {
-    return parent()->selectionPseudoStyle();
+    if (auto* ancestor = firstNonAnonymousAncestor())
+        return ancestor->selectionPseudoStyle();
+    return nullptr;
 }
 
 inline RenderText* Text::renderer() const

@@ -21,7 +21,7 @@
 #include "config.h"
 #include "WebKitAccessibleHyperlink.h"
 
-#if ENABLE(ACCESSIBILITY)
+#if ENABLE(ACCESSIBILITY) && USE(ATK)
 
 #include "AXObjectCache.h"
 #include "AccessibilityObject.h"
@@ -98,7 +98,7 @@ static const gchar* webkitAccessibleHyperlinkActionGetKeybinding(AtkAction* acti
         return nullptr;
 
     auto& coreObject = webkitAccessibleGetAccessibilityObject(accessibleHyperlink->priv->hyperlinkImpl);
-    accessibleHyperlink->priv->actionKeyBinding = coreObject.accessKey().string().utf8();
+    accessibleHyperlink->priv->actionKeyBinding = coreObject.accessKey().utf8();
     return accessibleHyperlink->priv->actionKeyBinding.data();
 }
 
@@ -111,7 +111,7 @@ static const gchar* webkitAccessibleHyperlinkActionGetName(AtkAction* action, gi
         return nullptr;
 
     auto& coreObject = webkitAccessibleGetAccessibilityObject(accessibleHyperlink->priv->hyperlinkImpl);
-    accessibleHyperlink->priv->actionName = coreObject.actionVerb().utf8();
+    accessibleHyperlink->priv->actionName = coreObject.localizedActionVerb().utf8();
     return accessibleHyperlink->priv->actionName.data();
 }
 
@@ -151,14 +151,17 @@ static AtkObject* webkitAccessibleHyperlinkGetObject(AtkHyperlink* link, gint in
     return ATK_OBJECT(accessibleHyperlink->priv->hyperlinkImpl);
 }
 
-static gint rangeLengthForObject(AccessibilityObject& obj, Range* range)
+static gint rangeLengthForObject(AccessibilityObject& obj, const std::optional<SimpleRange>& range)
 {
+    if (!range)
+        return 0;
+
     // This is going to be the actual length in most of the cases
-    int baseLength = TextIterator::rangeLength(range, true);
+    int baseLength = characterCount(*range, TextIteratorBehavior::EmitsCharactersBetweenAllVisiblePositions);
 
     // Check whether the current hyperlink belongs to a list item.
     // If so, we need to consider the length of the item's marker
-    AccessibilityObject* parent = obj.parentObjectUnignored();
+    AXCoreObject* parent = obj.parentObjectUnignored();
     if (!parent || !parent->isAccessibilityRenderObject() || !parent->isListItem())
         return baseLength;
 
@@ -166,7 +169,7 @@ static gint rangeLengthForObject(AccessibilityObject& obj, Range* range)
     // Technologies, we need to have a way to measure their length
     // for those cases when it's needed to take it into account
     // separately (as in getAccessibilityObjectForOffset)
-    AccessibilityObject* markerObj = parent->firstChild();
+    AXCoreObject* markerObj = parent->firstChild();
     if (!markerObj)
         return baseLength;
 
@@ -174,8 +177,7 @@ static gint rangeLengthForObject(AccessibilityObject& obj, Range* range)
     if (!is<RenderListMarker>(renderer))
         return baseLength;
 
-    auto& marker = downcast<RenderListMarker>(*renderer);
-    return baseLength + marker.text().length() + marker.suffix().length();
+    return baseLength + downcast<RenderListMarker>(*renderer).textWithSuffix().length();
 }
 
 static gint webkitAccessibleHyperlinkGetStartIndex(AtkHyperlink* link)
@@ -184,7 +186,7 @@ static gint webkitAccessibleHyperlinkGetStartIndex(AtkHyperlink* link)
     returnValIfWebKitAccessibleIsInvalid(accessibleHyperlink->priv->hyperlinkImpl, 0);
 
     auto& coreObject = webkitAccessibleGetAccessibilityObject(accessibleHyperlink->priv->hyperlinkImpl);
-    AccessibilityObject* parentUnignored = coreObject.parentObjectUnignored();
+    AXCoreObject* parentUnignored = coreObject.parentObjectUnignored();
     if (!parentUnignored)
         return 0;
 
@@ -196,8 +198,7 @@ static gint webkitAccessibleHyperlinkGetStartIndex(AtkHyperlink* link)
     if (!parentNode)
         return 0;
 
-    auto range = Range::create(node->document(), firstPositionInOrBeforeNode(parentNode), firstPositionInOrBeforeNode(node));
-    return rangeLengthForObject(coreObject, range.ptr());
+    return rangeLengthForObject(coreObject, makeSimpleRange(firstPositionInOrBeforeNode(parentNode), firstPositionInOrBeforeNode(node)));
 }
 
 static gint webkitAccessibleHyperlinkGetEndIndex(AtkHyperlink* link)
@@ -206,7 +207,7 @@ static gint webkitAccessibleHyperlinkGetEndIndex(AtkHyperlink* link)
     returnValIfWebKitAccessibleIsInvalid(accessibleHyperlink->priv->hyperlinkImpl, 0);
 
     auto& coreObject = webkitAccessibleGetAccessibilityObject(accessibleHyperlink->priv->hyperlinkImpl);
-    AccessibilityObject* parentUnignored = coreObject.parentObjectUnignored();
+    AXCoreObject* parentUnignored = coreObject.parentObjectUnignored();
     if (!parentUnignored)
         return 0;
 
@@ -218,8 +219,7 @@ static gint webkitAccessibleHyperlinkGetEndIndex(AtkHyperlink* link)
     if (!parentNode)
         return 0;
 
-    auto range = Range::create(node->document(), firstPositionInOrBeforeNode(parentNode), lastPositionInOrAfterNode(node));
-    return rangeLengthForObject(coreObject, range.ptr());
+    return rangeLengthForObject(coreObject, makeSimpleRange(firstPositionInOrBeforeNode(parentNode), lastPositionInOrAfterNode(node)));
 }
 
 static gboolean webkitAccessibleHyperlinkIsValid(AtkHyperlink* link)
@@ -313,4 +313,4 @@ WebKitAccessibleHyperlink* webkitAccessibleHyperlinkGetOrCreate(AtkHyperlinkImpl
     return hyperlink;
 }
 
-#endif // ENABLE(ACCESSIBILITY)
+#endif // ENABLE(ACCESSIBILITY) && USE(ATK)

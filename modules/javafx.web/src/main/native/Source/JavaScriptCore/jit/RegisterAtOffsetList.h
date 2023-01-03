@@ -29,11 +29,13 @@
 
 #include "RegisterAtOffset.h"
 #include "RegisterSet.h"
+#include <wtf/FixedVector.h>
 
 namespace JSC {
 
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(RegisterAtOffsetList);
 class RegisterAtOffsetList {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_STRUCT_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(RegisterAtOffsetList);
 public:
     enum OffsetBaseType { FramePointerBased, ZeroBased };
 
@@ -41,11 +43,6 @@ public:
     explicit RegisterAtOffsetList(RegisterSet, OffsetBaseType = FramePointerBased);
 
     void dump(PrintStream&) const;
-
-    void clear()
-    {
-        m_registers.clear();
-    }
 
     size_t size() const
     {
@@ -65,13 +62,14 @@ public:
     RegisterAtOffset* find(Reg) const;
     unsigned indexOf(Reg) const; // Returns UINT_MAX if not found.
 
-    Vector<RegisterAtOffset>::const_iterator begin() const { return m_registers.begin(); }
-    Vector<RegisterAtOffset>::const_iterator end() const { return m_registers.end(); }
+    FixedVector<RegisterAtOffset>::const_iterator begin() const { return m_registers.begin(); }
+    FixedVector<RegisterAtOffset>::const_iterator end() const { return m_registers.end(); }
 
     static const RegisterAtOffsetList& llintBaselineCalleeSaveRegisters(); // Registers and Offsets saved and used by the LLInt.
+    static const RegisterAtOffsetList& dfgCalleeSaveRegisters(); // Registers and Offsets saved and used by DFG.
 
 private:
-    Vector<RegisterAtOffset> m_registers;
+    FixedVector<RegisterAtOffset> m_registers;
 };
 
 } // namespace JSC

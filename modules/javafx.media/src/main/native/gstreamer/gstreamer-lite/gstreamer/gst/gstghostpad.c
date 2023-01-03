@@ -2,7 +2,7 @@
  * Copyright (C) 1999,2000 Erik Walthinsen <omega@cse.ogi.edu>
  *                    2000 Wim Taymans <wtay@chello.be>
  *                    2005 Andy Wingo <wingo@pobox.com>
- *          2006 Edward Hervey <bilboed@bilboed.com>
+ *            2006 Edward Hervey <bilboed@bilboed.com>
  *
  * gstghostpad.c: Proxy pads
  *
@@ -257,19 +257,10 @@ gst_proxy_pad_init (GstProxyPad * ppad)
 /***********************************************************************
  * Ghost pads, implemented as a pair of proxy pads (sort of)
  */
-
-
-#define GST_GHOST_PAD_PRIVATE(obj)  (GST_GHOST_PAD_CAST (obj)->priv)
-
-struct _GstGhostPadPrivate
-{
-  /* with PROXY_LOCK */
-  gboolean constructed;
-};
-
-G_DEFINE_TYPE_WITH_PRIVATE (GstGhostPad, gst_ghost_pad, GST_TYPE_PROXY_PAD);
+G_DEFINE_TYPE (GstGhostPad, gst_ghost_pad, GST_TYPE_PROXY_PAD);
 
 static void gst_ghost_pad_dispose (GObject * object);
+static void gst_ghost_pad_constructed (GObject * object);
 
 static gboolean
 gst_ghost_pad_internal_activate_push_default (GstPad * pad, GstObject * parent,
@@ -459,6 +450,7 @@ gst_ghost_pad_class_init (GstGhostPadClass * klass)
   GObjectClass *gobject_class = (GObjectClass *) klass;
 
   gobject_class->dispose = gst_ghost_pad_dispose;
+  gobject_class->constructed = gst_ghost_pad_constructed;
 
   GST_DEBUG_REGISTER_FUNCPTR (gst_ghost_pad_activate_pull_default);
   GST_DEBUG_REGISTER_FUNCPTR (gst_ghost_pad_activate_push_default);
@@ -467,8 +459,6 @@ gst_ghost_pad_class_init (GstGhostPadClass * klass)
 static void
 gst_ghost_pad_init (GstGhostPad * pad)
 {
-  GST_GHOST_PAD_PRIVATE (pad) = gst_ghost_pad_get_instance_private (pad);
-
   gst_pad_set_activatemode_function (GST_PAD_CAST (pad),
       gst_ghost_pad_activate_mode_default);
 }
@@ -516,32 +506,19 @@ gst_ghost_pad_dispose (GObject * object)
   G_OBJECT_CLASS (gst_ghost_pad_parent_class)->dispose (object);
 }
 
-/**
- * gst_ghost_pad_construct:
- * @gpad: the newly allocated ghost pad
- *
- * Finish initialization of a newly allocated ghost pad.
- *
- * This function is most useful in language bindings and when subclassing
- * #GstGhostPad; plugin and application developers normally will not call this
- * function. Call this function directly after a call to g_object_new
- * (GST_TYPE_GHOST_PAD, "direction", @dir, ..., NULL).
- *
- * Returns: %TRUE if the construction succeeds, %FALSE otherwise.
- */
-gboolean
-gst_ghost_pad_construct (GstGhostPad * gpad)
+static void
+gst_ghost_pad_constructed (GObject * object)
 {
+  GstGhostPad *gpad = GST_GHOST_PAD (object);
   GstPadDirection dir, otherdir;
   GstPadTemplate *templ;
   GstPad *pad, *internal;
 
-  g_return_val_if_fail (GST_IS_GHOST_PAD (gpad), FALSE);
-  g_return_val_if_fail (!GST_GHOST_PAD_PRIVATE (gpad)->constructed, FALSE);
+  G_OBJECT_CLASS (gst_ghost_pad_parent_class)->constructed (object);
 
   g_object_get (gpad, "direction", &dir, "template", &templ, NULL);
 
-  g_return_val_if_fail (dir != GST_PAD_UNKNOWN, FALSE);
+  g_return_if_fail (dir != GST_PAD_UNKNOWN);
 
   pad = GST_PAD (gpad);
 
@@ -577,12 +554,8 @@ gst_ghost_pad_construct (GstGhostPad * gpad)
     gst_pad_set_getrange_function (internal, gst_proxy_pad_getrange_default);
   }
 
-  GST_OBJECT_LOCK (pad);
-
   /* now make the ghostpad a parent of the internal pad */
-  if (!gst_object_set_parent (GST_OBJECT_CAST (internal),
-          GST_OBJECT_CAST (pad)))
-    goto parent_failed;
+  gst_object_set_parent (GST_OBJECT_CAST (internal), GST_OBJECT_CAST (pad));
 
   /* The ghostpad is the parent of the internal pad and is the only object that
    * can have a refcount on the internal pad.
@@ -598,23 +571,31 @@ gst_ghost_pad_construct (GstGhostPad * gpad)
   /* special activation functions for the internal pad */
   gst_pad_set_activatemode_function (internal,
       gst_ghost_pad_internal_activate_mode_default);
-
-  GST_OBJECT_UNLOCK (pad);
-
-  GST_GHOST_PAD_PRIVATE (gpad)->constructed = TRUE;
-  return TRUE;
-
-  /* ERRORS */
-parent_failed:
-  {
-    GST_WARNING_OBJECT (gpad, "Could not set internal pad %s:%s",
-        GST_DEBUG_PAD_NAME (internal));
-    g_critical ("Could not set internal pad %s:%s",
-        GST_DEBUG_PAD_NAME (internal));
-    GST_OBJECT_UNLOCK (pad);
-    return FALSE;
-  }
 }
+
+#ifndef GST_REMOVE_DEPRECATED
+/**
+ * gst_ghost_pad_construct:
+ * @gpad: the newly allocated ghost pad
+ *
+ * Finish initialization of a newly allocated ghost pad.
+ *
+ * This function is most useful in language bindings and when subclassing
+ * #GstGhostPad; plugin and application developers normally will not call this
+ * function. Call this function directly after a call to g_object_new
+ * (GST_TYPE_GHOST_PAD, "direction", @dir, ..., NULL).
+ *
+ * Deprecated: This function is deprecated since 1.18 and does nothing
+ * anymore.
+ *
+ * Returns: %TRUE if the construction succeeds, %FALSE otherwise.
+ */
+gboolean
+gst_ghost_pad_construct (GstGhostPad * gpad)
+{
+  return TRUE;
+}
+#endif
 
 static GstPad *
 gst_ghost_pad_new_full (const gchar * name, GstPadDirection dir,
@@ -638,15 +619,7 @@ gst_ghost_pad_new_full (const gchar * name, GstPadDirection dir,
         "direction", dir, NULL);
   }
 
-  if (!gst_ghost_pad_construct (ret))
-    goto construct_failed;
-
   return GST_PAD_CAST (ret);
-
-construct_failed:
-  /* already logged */
-  gst_object_unref (ret);
-  return NULL;
 }
 
 /**

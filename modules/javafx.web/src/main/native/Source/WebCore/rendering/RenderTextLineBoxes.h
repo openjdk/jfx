@@ -27,26 +27,26 @@
 
 #include "LayoutRect.h"
 #include "RenderObject.h"
-#include "VisiblePosition.h"
 
 namespace WebCore {
 
-class InlineTextBox;
+class LegacyInlineTextBox;
 class RenderStyle;
 class RenderText;
+class VisiblePosition;
 
 class RenderTextLineBoxes {
 public:
     RenderTextLineBoxes();
 
-    InlineTextBox* first() const { return m_first; }
-    InlineTextBox* last() const { return m_last; }
+    LegacyInlineTextBox* first() const { return m_first; }
+    LegacyInlineTextBox* last() const { return m_last; }
 
-    InlineTextBox* createAndAppendLineBox(RenderText&);
+    LegacyInlineTextBox* createAndAppendLineBox(RenderText&);
 
-    void extract(InlineTextBox&);
-    void attach(InlineTextBox&);
-    void remove(InlineTextBox&);
+    void extract(LegacyInlineTextBox&);
+    void attach(LegacyInlineTextBox&);
+    void remove(LegacyInlineTextBox&);
 
     void removeAllFromParent(RenderText&);
     void deleteAll();
@@ -54,32 +54,9 @@ public:
     void dirtyAll();
     bool dirtyRange(RenderText&, unsigned start, unsigned end, int lengthDelta);
 
-    InlineTextBox* findNext(int offset, int& position) const;
+    LegacyInlineTextBox* findNext(int offset, int& position) const;
 
-    bool hasRenderedText() const;
-    int caretMinOffset() const;
-    int caretMaxOffset(const RenderText&) const;
-    enum OffsetType { CaretOffset, CharacterOffset };
-    bool containsOffset(const RenderText&, unsigned, OffsetType) const;
-    unsigned countCharacterOffsetsUntil(unsigned) const;
-
-    VisiblePosition positionForPoint(const RenderText&, const LayoutPoint&) const;
-
-    void setSelectionState(RenderText&, RenderObject::SelectionState);
-    LayoutRect selectionRectForRange(unsigned start, unsigned end);
-    void collectSelectionRectsForRange(unsigned start, unsigned end, Vector<LayoutRect>& rects);
-
-    IntRect boundingBox(const RenderText&) const;
-    IntPoint firstRunLocation() const;
-    LayoutRect visualOverflowBoundingBox(const RenderText&) const;
-
-    Vector<IntRect> absoluteRects(const LayoutPoint& accumulatedOffset) const;
-    Vector<IntRect> absoluteRectsForRange(const RenderText&, unsigned start, unsigned end, bool useSelectionHeight, bool* wasFixed) const;
-    enum ClippingOption { NoClipping, ClipToEllipsis };
-    Vector<FloatQuad> absoluteQuads(const RenderText&, bool* wasFixed, ClippingOption) const;
-    Vector<FloatQuad> absoluteQuadsForRange(const RenderText&, unsigned start, unsigned end, bool useSelectionHeight, bool* wasFixed) const;
-
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
     ~RenderTextLineBoxes();
 #endif
 
@@ -90,8 +67,8 @@ public:
 private:
     void checkConsistency() const;
 
-    InlineTextBox* m_first;
-    InlineTextBox* m_last;
+    LegacyInlineTextBox* m_first;
+    LegacyInlineTextBox* m_last;
 };
 
 } // namespace WebCore

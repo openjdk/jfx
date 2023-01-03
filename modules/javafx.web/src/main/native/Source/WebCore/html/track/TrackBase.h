@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,19 +25,21 @@
 
 #pragma once
 
-#if ENABLE(VIDEO_TRACK)
+#if ENABLE(VIDEO)
 
+#include "ContextDestructionObserver.h"
 #include <wtf/LoggerHelper.h>
+#include <wtf/WeakPtr.h>
 #include <wtf/text/AtomString.h>
 
 namespace WebCore {
 
-class Element;
-class HTMLMediaElement;
 class SourceBuffer;
+class TrackListBase;
 
 class TrackBase
     : public RefCounted<TrackBase>
+    , public ContextDestructionObserver
 #if !RELEASE_LOG_DISABLED
     , private LoggerHelper
 #endif
@@ -48,21 +50,10 @@ public:
     enum Type { BaseTrack, TextTrack, AudioTrack, VideoTrack };
     Type type() const { return m_type; }
 
-    virtual void setMediaElement(HTMLMediaElement*);
-    HTMLMediaElement* mediaElement() { return m_mediaElement; }
-    virtual Element* element();
-
     virtual AtomString id() const { return m_id; }
-    virtual void setId(const AtomString& id) { m_id = id; }
-
     AtomString label() const { return m_label; }
-    void setLabel(const AtomString& label) { m_label = label; }
-
-    AtomString validBCP47Language() const;
+    AtomString validBCP47Language() const { return m_validBCP47Language; }
     AtomString language() const { return m_language; }
-    virtual void setLanguage(const AtomString&);
-
-    virtual void clearClient() = 0;
 
     virtual int uniqueId() const { return m_uniqueId; }
 
@@ -71,18 +62,26 @@ public:
     void setSourceBuffer(SourceBuffer* buffer) { m_sourceBuffer = buffer; }
 #endif
 
+    void setTrackList(TrackListBase&);
+    void clearTrackList();
+    TrackListBase* trackList() const;
+    void* opaqueRoot();
+
     virtual bool enabled() const = 0;
 
 #if !RELEASE_LOG_DISABLED
+    virtual void setLogger(const Logger&, const void*);
     const Logger& logger() const final { ASSERT(m_logger); return *m_logger.get(); }
     const void* logIdentifier() const final { return m_logIdentifier; }
     WTFLogChannel& logChannel() const final;
 #endif
 
 protected:
-    TrackBase(Type, const AtomString& id, const AtomString& label, const AtomString& language);
+    TrackBase(ScriptExecutionContext*, Type, const AtomString& id, const AtomString& label, const AtomString& language);
 
-    HTMLMediaElement* m_mediaElement { nullptr };
+    virtual void setId(const AtomString& id) { m_id = id; }
+    virtual void setLabel(const AtomString& label) { m_label = label; }
+    virtual void setLanguage(const AtomString&);
 
 #if ENABLE(MEDIA_SOURCE)
     SourceBuffer* m_sourceBuffer { nullptr };
@@ -97,8 +96,9 @@ private:
     AtomString m_validBCP47Language;
 #if !RELEASE_LOG_DISABLED
     RefPtr<const Logger> m_logger;
-    const void* m_logIdentifier;
+    const void* m_logIdentifier { nullptr };
 #endif
+    WeakPtr<TrackListBase> m_trackList;
 };
 
 class MediaTrackBase : public TrackBase {
@@ -107,7 +107,7 @@ public:
     virtual void setKind(const AtomString&);
 
 protected:
-    MediaTrackBase(Type, const AtomString& id, const AtomString& label, const AtomString& language);
+    MediaTrackBase(ScriptExecutionContext*, Type, const AtomString& id, const AtomString& label, const AtomString& language);
 
     void setKindInternal(const AtomString&);
 
@@ -116,6 +116,11 @@ private:
 
     AtomString m_kind;
 };
+
+inline void* root(TrackBase* track)
+{
+    return track->opaqueRoot();
+}
 
 } // namespace WebCore
 

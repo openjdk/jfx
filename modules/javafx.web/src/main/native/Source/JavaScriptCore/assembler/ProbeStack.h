@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,7 +30,7 @@
 #include <wtf/StdLibExtras.h>
 #include <wtf/Threading.h>
 
-#if ENABLE(MASM_PROBE)
+#if ENABLE(ASSEMBLER)
 
 namespace JSC {
 
@@ -190,7 +190,7 @@ public:
     bool hasWritesToFlush();
     void flushWrites();
 
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
     bool isValid() { return m_isValid; }
 #endif
 
@@ -211,7 +211,7 @@ private:
     StackBounds m_stackBounds;
     HashMap<void*, std::unique_ptr<Page>> m_pages;
 
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
     bool m_isValid { true };
 #endif
 };
@@ -219,4 +219,4 @@ private:
 } // namespace Probe
 } // namespace JSC
 
-#endif // ENABLE(MASM_PROBE)
+#endif // ENABLE(ASSEMBLER)

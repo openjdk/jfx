@@ -152,9 +152,7 @@ GstCaps *      gst_stream_get_caps (GstStream *stream);
 GST_API
 const gchar *  gst_stream_type_get_name (GstStreamType stype);
 
-#ifdef G_DEFINE_AUTOPTR_CLEANUP_FUNC
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(GstStream, gst_object_unref)
-#endif
 
 G_END_DECLS
 

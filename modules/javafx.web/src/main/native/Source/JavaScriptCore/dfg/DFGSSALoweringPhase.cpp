@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013, 2014 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,16 +28,15 @@
 
 #if ENABLE(DFG_JIT)
 
-#include "DFGBasicBlockInlines.h"
 #include "DFGGraph.h"
 #include "DFGInsertionSet.h"
 #include "DFGPhase.h"
-#include "JSCInlines.h"
+#include "JSCJSValueInlines.h"
 
 namespace JSC { namespace DFG {
 
 class SSALoweringPhase : public Phase {
-    static const bool verbose = false;
+    static constexpr bool verbose = false;
 
 public:
     SSALoweringPhase(Graph& graph)
@@ -76,11 +75,17 @@ private:
         case AtomicsOr:
         case AtomicsStore:
         case AtomicsSub:
-        case AtomicsXor:
+        case AtomicsXor: {
+            unsigned numExtraArgs = numExtraAtomicsArgs(m_node->op());
+            lowerBoundsCheck(m_graph.child(m_node, 0), m_graph.child(m_node, 1), m_graph.child(m_node, 2 + numExtraArgs));
+            break;
+        }
+
         case HasIndexedProperty:
             lowerBoundsCheck(m_graph.child(m_node, 0), m_graph.child(m_node, 1), m_graph.child(m_node, 2));
             break;
 
+        case EnumeratorGetByVal:
         case GetByVal: {
             lowerBoundsCheck(m_graph.varArgChild(m_node, 0), m_graph.varArgChild(m_node, 1), m_graph.varArgChild(m_node, 2));
             break;
@@ -94,12 +99,23 @@ private:
             if (lowerBoundsCheck(base, index, storage))
                 break;
 
-            if (m_node->arrayMode().typedArrayType() != NotTypedArray && m_node->arrayMode().isOutOfBounds()) {
-                Node* length = m_insertionSet.insertNode(
-                    m_nodeIndex, SpecInt32Only, GetArrayLength, m_node->origin,
-                    OpInfo(m_node->arrayMode().asWord()), base, storage);
-
-                m_graph.varArgChild(m_node, 4) = Edge(length, KnownInt32Use);
+            if (m_node->arrayMode().isSomeTypedArrayView() && m_node->arrayMode().isOutOfBounds()) {
+#if USE(LARGE_TYPED_ARRAYS)
+                if (m_node->arrayMode().mayBeLargeTypedArray() || m_graph.hasExitSite(m_node->origin.semantic, Overflow)) {
+                    Node* length = m_insertionSet.insertNode(
+                        m_nodeIndex, SpecInt52Any, GetTypedArrayLengthAsInt52, m_node->origin,
+                        OpInfo(m_node->arrayMode().asWord()), base, storage);
+                    length->setResult(NodeResultInt52);
+                    m_graph.varArgChild(m_node, 4) = Edge(length, Int52RepUse);
+                } else {
+#endif
+                    Node* length = m_insertionSet.insertNode(
+                        m_nodeIndex, SpecInt32Only, GetArrayLength, m_node->origin,
+                        OpInfo(m_node->arrayMode().asWord()), base, storage);
+                    m_graph.varArgChild(m_node, 4) = Edge(length, KnownInt32Use);
+#if USE(LARGE_TYPED_ARRAYS)
+                }
+#endif
                 break;
             }
             break;
@@ -132,12 +148,28 @@ private:
             break;
         }
 
-        Node* length = m_insertionSet.insertNode(
-            m_nodeIndex, SpecInt32Only, op, m_node->origin,
-            OpInfo(m_node->arrayMode().asWord()), Edge(base.node(), KnownCellUse), storage);
-        Node* checkInBounds = m_insertionSet.insertNode(
-            m_nodeIndex, SpecInt32Only, CheckInBounds, m_node->origin,
-            index, Edge(length, KnownInt32Use));
+        Node* checkInBounds;
+#if USE(LARGE_TYPED_ARRAYS)
+        if ((op == GetArrayLength) && m_node->arrayMode().isSomeTypedArrayView() && (m_node->arrayMode().mayBeLargeTypedArray() || m_graph.hasExitSite(m_node->origin.semantic, Overflow))) {
+            Node* length = m_insertionSet.insertNode(
+                m_nodeIndex, SpecInt52Any, GetTypedArrayLengthAsInt52, m_node->origin,
+                OpInfo(m_node->arrayMode().asWord()), Edge(base.node(), KnownCellUse), storage);
+            // The return type is a dummy since this node does not actually return anything.
+            checkInBounds = m_insertionSet.insertNode(
+                m_nodeIndex, SpecInt32Only, CheckInBoundsInt52, m_node->origin,
+                index, Edge(length, Int52RepUse));
+        } else {
+#endif
+            Node* length = m_insertionSet.insertNode(
+                m_nodeIndex, SpecInt32Only, op, m_node->origin,
+                OpInfo(m_node->arrayMode().asWord()), Edge(base.node(), KnownCellUse), storage);
+            checkInBounds = m_insertionSet.insertNode(
+                m_nodeIndex, SpecInt32Only, CheckInBounds, m_node->origin,
+                index, Edge(length, KnownInt32Use));
+#if USE(LARGE_TYPED_ARRAYS)
+        }
+#endif
+
 
         AdjacencyList adjacencyList = m_graph.copyVarargChildren(m_node);
         m_graph.m_varArgChildren.append(Edge(checkInBounds, UntypedUse));

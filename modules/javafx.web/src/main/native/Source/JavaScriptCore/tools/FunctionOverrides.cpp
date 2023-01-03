@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,6 +31,7 @@
 #include <string.h>
 #include <wtf/DataLog.h>
 #include <wtf/NeverDestroyed.h>
+#include <wtf/SafeStrerror.h>
 #include <wtf/text/CString.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/StringHash.h>
@@ -89,11 +90,18 @@ namespace JSC {
      it uses the 'with' keyword instead of the 'override' keyword.
  */
 
+struct FunctionOverridesAssertScope {
+    FunctionOverridesAssertScope() { RELEASE_ASSERT(g_jscConfig.restrictedOptionsEnabled); }
+    ~FunctionOverridesAssertScope() { RELEASE_ASSERT(g_jscConfig.restrictedOptionsEnabled); }
+};
+
 FunctionOverrides& FunctionOverrides::overrides()
 {
+    FunctionOverridesAssertScope assertScope;
     static LazyNeverDestroyed<FunctionOverrides> overrides;
     static std::once_flag initializeListFlag;
     std::call_once(initializeListFlag, [] {
+        FunctionOverridesAssertScope assertScope;
         const char* overridesFileName = Options::functionOverrides();
         overrides.construct(overridesFileName);
     });
@@ -102,12 +110,16 @@ FunctionOverrides& FunctionOverrides::overrides()
 
 FunctionOverrides::FunctionOverrides(const char* overridesFileName)
 {
+    FunctionOverridesAssertScope assertScope;
+    Locker locker { m_lock };
     parseOverridesInFile(overridesFileName);
 }
 
 void FunctionOverrides::reinstallOverrides()
 {
+    FunctionOverridesAssertScope assertScope;
     FunctionOverrides& overrides = FunctionOverrides::overrides();
+    Locker locker { overrides.m_lock };
     const char* overridesFileName = Options::functionOverrides();
     overrides.clear();
     overrides.parseOverridesInFile(overridesFileName);
@@ -115,6 +127,7 @@ void FunctionOverrides::reinstallOverrides()
 
 static void initializeOverrideInfo(const SourceCode& origCode, const String& newBody, FunctionOverrides::OverrideInfo& info)
 {
+    FunctionOverridesAssertScope assertScope;
     String origProviderStr = origCode.provider()->source().toString();
     unsigned origStart = origCode.startOffset();
     unsigned origFunctionStart = origProviderStr.reverseFind("function", origStart);
@@ -126,7 +139,9 @@ static void initializeOverrideInfo(const SourceCode& origCode, const String& new
     newProviderStr.append(origHeader);
     newProviderStr.append(newBody);
 
-    Ref<SourceProvider> newProvider = StringSourceProvider::create(newProviderStr, SourceOrigin { "<overridden>" }, URL({ }, "<overridden>"));
+    auto overridden = "<overridden>"_s;
+    URL url({ }, overridden);
+    Ref<SourceProvider> newProvider = StringSourceProvider::create(newProviderStr, SourceOrigin { url }, overridden);
 
     info.firstLine = 1;
     info.lineCount = 1; // Faking it. This doesn't really matter for now.
@@ -142,7 +157,8 @@ static void initializeOverrideInfo(const SourceCode& origCode, const String& new
 
 bool FunctionOverrides::initializeOverrideFor(const SourceCode& origCode, FunctionOverrides::OverrideInfo& result)
 {
-    ASSERT(Options::functionOverrides());
+    FunctionOverridesAssertScope assertScope;
+    RELEASE_ASSERT(Options::functionOverrides());
     FunctionOverrides& overrides = FunctionOverrides::overrides();
 
     String sourceString = origCode.view().toString();
@@ -151,11 +167,17 @@ bool FunctionOverrides::initializeOverrideFor(const SourceCode& origCode, Functi
         return false;
     String sourceBodyString = sourceString.substring(sourceBodyStart);
 
-    auto it = overrides.m_entries.find(sourceBodyString);
-    if (it == overrides.m_entries.end())
-        return false;
+    String newBody;
+    {
+        Locker locker { overrides.m_lock };
+        auto it = overrides.m_entries.find(sourceBodyString.isolatedCopy());
+        if (it == overrides.m_entries.end())
+            return false;
+        newBody = it->value.isolatedCopy();
+    }
 
-    initializeOverrideInfo(origCode, it->value, result);
+    initializeOverrideInfo(origCode, newBody, result);
+    RELEASE_ASSERT(Options::functionOverrides());
     return true;
 }
 
@@ -183,6 +205,7 @@ static bool hasDisallowedCharacters(const char* str, size_t length)
 
 static String parseClause(const char* keyword, size_t keywordLength, FILE* file, const char* line, char* buffer, size_t bufferSize)
 {
+    FunctionOverridesAssertScope assertScope;
     const char* keywordPos = strstr(line, keyword);
     if (!keywordPos)
         FAIL_WITH_ERROR(SYNTAX_ERROR, ("Expecting '", keyword, "' clause:\n", line, "\n"));
@@ -229,6 +252,7 @@ static String parseClause(const char* keyword, size_t keywordLength, FILE* file,
 
 void FunctionOverrides::parseOverridesInFile(const char* fileName)
 {
+    FunctionOverridesAssertScope assertScope;
     if (!fileName)
         return;
 
@@ -260,7 +284,7 @@ void FunctionOverrides::parseOverridesInFile(const char* fileName)
 
     int result = fclose(file);
     if (result)
-        dataLogF("Failed to close file %s: %s\n", fileName, strerror(errno));
+        dataLogF("Failed to close file %s: %s\n", fileName, safeStrerror(errno).data());
 }
 
 } // namespace JSC

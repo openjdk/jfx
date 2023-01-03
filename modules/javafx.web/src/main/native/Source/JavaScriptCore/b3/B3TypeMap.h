@@ -30,7 +30,7 @@
 #include "B3Type.h"
 #include <wtf/PrintStream.h>
 
-#if ASSERT_DISABLED
+#if !ASSERT_ENABLED
 IGNORE_RETURN_TYPE_WARNINGS_BEGIN
 #endif
 
@@ -39,14 +39,7 @@ namespace JSC { namespace B3 {
 template<typename T>
 class TypeMap {
 public:
-    TypeMap()
-        : m_void()
-        , m_int32()
-        , m_int64()
-        , m_float()
-        , m_double()
-    {
-    }
+    TypeMap() = default;
 
     T& at(Type type)
     {
@@ -93,17 +86,17 @@ public:
     }
 
 private:
-    T m_void;
-    T m_int32;
-    T m_int64;
-    T m_float;
-    T m_double;
-    T m_tuple;
+    T m_void { };
+    T m_int32 { };
+    T m_int64 { };
+    T m_float { };
+    T m_double { };
+    T m_tuple { };
 };
 
 } } // namespace JSC::B3
 
-#if ASSERT_DISABLED
+#if !ASSERT_ENABLED
 IGNORE_RETURN_TYPE_WARNINGS_END
 #endif
 

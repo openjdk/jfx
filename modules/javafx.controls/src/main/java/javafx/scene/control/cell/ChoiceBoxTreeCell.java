@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -55,7 +55,7 @@ import javafx.util.StringConverter;
  */
 public class ChoiceBoxTreeCell<T> extends DefaultTreeCell<T> {
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Static cell factories                                                   *
      *                                                                         *
@@ -150,12 +150,12 @@ public class ChoiceBoxTreeCell<T> extends DefaultTreeCell<T> {
     public static <T> Callback<TreeView<T>, TreeCell<T>> forTreeView(
             final StringConverter<T> converter,
             final ObservableList<T> items) {
-        return list -> new ChoiceBoxTreeCell<T>(converter, items);
+        return list -> new ChoiceBoxTreeCell<>(converter, items);
     }
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Fields                                                                  *
      *                                                                         *
@@ -169,7 +169,7 @@ public class ChoiceBoxTreeCell<T> extends DefaultTreeCell<T> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
@@ -242,7 +242,7 @@ public class ChoiceBoxTreeCell<T> extends DefaultTreeCell<T> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Properties                                                              *
      *                                                                         *
@@ -250,7 +250,7 @@ public class ChoiceBoxTreeCell<T> extends DefaultTreeCell<T> {
 
     // --- converter
     private ObjectProperty<StringConverter<T>> converter =
-            new SimpleObjectProperty<StringConverter<T>>(this, "converter");
+            new SimpleObjectProperty<>(this, "converter");
 
     /**
      * The {@link StringConverter} property.
@@ -278,7 +278,7 @@ public class ChoiceBoxTreeCell<T> extends DefaultTreeCell<T> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Public API                                                              *
      *                                                                         *
@@ -294,12 +294,13 @@ public class ChoiceBoxTreeCell<T> extends DefaultTreeCell<T> {
 
     /** {@inheritDoc} */
     @Override public void startEdit() {
-        if (! isEditable() || ! getTreeView().isEditable()) {
+        TreeItem<T> treeItem = getTreeItem();
+        if (treeItem == null) {
             return;
         }
 
-        TreeItem<T> treeItem = getTreeItem();
-        if (treeItem == null) {
+        super.startEdit();
+        if (!isEditing()) {
             return;
         }
 
@@ -312,18 +313,14 @@ public class ChoiceBoxTreeCell<T> extends DefaultTreeCell<T> {
 
         choiceBox.getSelectionModel().select(treeItem.getValue());
 
-        super.startEdit();
+        setText(null);
 
-        if (isEditing()) {
-            setText(null);
-
-            Node graphic = getTreeItemGraphic();
-            if (graphic != null) {
-                hbox.getChildren().setAll(graphic, choiceBox);
-                setGraphic(hbox);
-            } else {
-                setGraphic(choiceBox);
-            }
+        Node graphic = getTreeItemGraphic();
+        if (graphic != null) {
+            hbox.getChildren().setAll(graphic, choiceBox);
+            setGraphic(hbox);
+        } else {
+            setGraphic(choiceBox);
         }
     }
 
@@ -340,11 +337,11 @@ public class ChoiceBoxTreeCell<T> extends DefaultTreeCell<T> {
         super.updateItem(item, empty);
 
         CellUtils.updateItem(this, getConverter(), hbox, getTreeItemGraphic(), choiceBox);
-    };
+    }
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Private Implementation                                                  *
      *                                                                         *

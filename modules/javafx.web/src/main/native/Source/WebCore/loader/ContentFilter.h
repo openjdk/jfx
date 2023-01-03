@@ -32,10 +32,12 @@
 #include "ResourceError.h"
 #include <functional>
 #include <wtf/Forward.h>
+#include <wtf/UniqueRef.h>
 
 namespace WebCore {
 
 class CachedRawResource;
+class ContentFilterClient;
 class DocumentLoader;
 class ResourceRequest;
 class ResourceResponse;
@@ -48,47 +50,76 @@ class ContentFilter {
 public:
     template <typename T> static void addType() { types().append(type<T>()); }
 
-    static std::unique_ptr<ContentFilter> create(DocumentLoader&);
-    ~ContentFilter();
+    WEBCORE_EXPORT static std::unique_ptr<ContentFilter> create(ContentFilterClient&);
+    WEBCORE_EXPORT ~ContentFilter();
 
     static const char* urlScheme() { return "x-apple-content-filter"; }
 
+#if ENABLE(CONTENT_FILTERING_IN_NETWORKING_PROCESS)
+    WEBCORE_EXPORT void startFilteringMainResource(const URL&);
+#else
     void startFilteringMainResource(CachedRawResource&);
-    void stopFilteringMainResource();
+#endif
+    WEBCORE_EXPORT void stopFilteringMainResource();
 
-    bool continueAfterWillSendRequest(ResourceRequest&, const ResourceResponse&);
-    bool continueAfterResponseReceived(const ResourceResponse&);
-    bool continueAfterDataReceived(const char* data, int length);
+    WEBCORE_EXPORT bool continueAfterWillSendRequest(ResourceRequest&, const ResourceResponse&);
+    WEBCORE_EXPORT bool continueAfterResponseReceived(const ResourceResponse&);
+#if ENABLE(CONTENT_FILTERING_IN_NETWORKING_PROCESS)
+    WEBCORE_EXPORT bool continueAfterDataReceived(const SharedBuffer&, size_t encodedDataLength);
+    WEBCORE_EXPORT bool continueAfterNotifyFinished(const URL& resourceURL);
+#else
+    bool continueAfterDataReceived(const SharedBuffer&);
     bool continueAfterNotifyFinished(CachedResource&);
+#endif
 
     static bool continueAfterSubstituteDataRequest(const DocumentLoader& activeLoader, const SubstituteData&);
     bool willHandleProvisionalLoadFailure(const ResourceError&) const;
-    void handleProvisionalLoadFailure(const ResourceError&);
+    WEBCORE_EXPORT void handleProvisionalLoadFailure(const ResourceError&);
+
+    const ResourceError& blockedError() const { return m_blockedError; }
+    bool isAllowed() const { return m_state == State::Allowed; }
+    bool responseReceived() const { return m_responseReceived; }
 
 private:
     using State = PlatformContentFilter::State;
 
     struct Type {
-        const std::function<std::unique_ptr<PlatformContentFilter>()> create;
+        Function<UniqueRef<PlatformContentFilter>()> create;
     };
     template <typename T> static Type type();
     WEBCORE_EXPORT static Vector<Type>& types();
 
-    using Container = Vector<std::unique_ptr<PlatformContentFilter>>;
-    friend std::unique_ptr<ContentFilter> std::make_unique<ContentFilter>(Container&&, DocumentLoader&);
-    ContentFilter(Container&&, DocumentLoader&);
+    using Container = Vector<UniqueRef<PlatformContentFilter>>;
+    friend std::unique_ptr<ContentFilter> std::make_unique<ContentFilter>(Container&&, ContentFilterClient&);
+    ContentFilter(Container&&, ContentFilterClient&);
 
     template <typename Function> void forEachContentFilterUntilBlocked(Function&&);
     void didDecide(State);
-    void deliverResourceData(CachedResource&);
+    void deliverResourceData(const SharedBuffer&, size_t encodedDataLength = 0);
+#if ENABLE(CONTENT_FILTERING_IN_NETWORKING_PROCESS)
+    void deliverStoredResourceData();
+#endif
 
-    const Container m_contentFilters;
-    DocumentLoader& m_documentLoader;
+    URL url();
+
+    Container m_contentFilters;
+    ContentFilterClient& m_client;
+#if ENABLE(CONTENT_FILTERING_IN_NETWORKING_PROCESS)
+    URL m_mainResourceURL;
+    struct ResourceDataItem {
+        RefPtr<const SharedBuffer> buffer;
+        size_t encodedDataLength;
+    };
+
+    Vector<ResourceDataItem> m_buffers;
+#else
     CachedResourceHandle<CachedRawResource> m_mainResource;
-    PlatformContentFilter* m_blockingContentFilter { nullptr };
+#endif
+    const PlatformContentFilter* m_blockingContentFilter { nullptr };
     State m_state { State::Stopped };
     ResourceError m_blockedError;
     bool m_isLoadingBlockedPage { false };
+    bool m_responseReceived { false };
 };
 
 template <typename T>

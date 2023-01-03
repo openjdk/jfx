@@ -27,6 +27,7 @@
 
 #if ENABLE(REMOTE_INSPECTOR)
 
+#include "JSExportMacros.h"
 #include <wtf/TypeCasts.h>
 #include <wtf/text/WTFString.h>
 
@@ -53,7 +54,14 @@ public:
     TargetID targetIdentifier() const { return m_identifier; }
     void setTargetIdentifier(TargetID identifier) { m_identifier = identifier; }
 
-    enum class Type { JavaScript, ServiceWorker, Web, Automation };
+    enum class Type {
+        Automation,
+        ITML,
+        JavaScript,
+        Page,
+        ServiceWorker,
+        WebPage,
+    };
     virtual Type type() const = 0;
     virtual bool remoteControlAllowed() const = 0;
     virtual void dispatchMessageFromRemote(const String& message) = 0;

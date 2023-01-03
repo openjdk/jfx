@@ -33,7 +33,7 @@
 
 namespace JSC {
 
-JITMathICInlineResult JITSubGenerator::generateInline(CCallHelpers& jit, MathICGenerationState& state, const ArithProfile* arithProfile)
+JITMathICInlineResult JITSubGenerator::generateInline(CCallHelpers& jit, MathICGenerationState& state, const BinaryArithProfile* arithProfile)
 {
     // We default to speculating int32.
     ObservedType lhs = ObservedType().withInt32();
@@ -56,8 +56,8 @@ JITMathICInlineResult JITSubGenerator::generateInline(CCallHelpers& jit, MathICG
             state.slowPathJumps.append(jit.branchIfNotNumber(m_right, m_scratchGPR));
         state.slowPathJumps.append(jit.branchIfInt32(m_left));
         state.slowPathJumps.append(jit.branchIfInt32(m_right));
-        jit.unboxDoubleNonDestructive(m_left, m_leftFPR, m_scratchGPR, m_scratchFPR);
-        jit.unboxDoubleNonDestructive(m_right, m_rightFPR, m_scratchGPR, m_scratchFPR);
+        jit.unboxDoubleNonDestructive(m_left, m_leftFPR, m_scratchGPR);
+        jit.unboxDoubleNonDestructive(m_right, m_rightFPR, m_scratchGPR);
         jit.subDouble(m_rightFPR, m_leftFPR);
         jit.boxDouble(m_leftFPR, m_result);
 
@@ -78,7 +78,7 @@ JITMathICInlineResult JITSubGenerator::generateInline(CCallHelpers& jit, MathICG
     return JITMathICInlineResult::GenerateFullSnippet;
 }
 
-bool JITSubGenerator::generateFastPath(CCallHelpers& jit, CCallHelpers::JumpList& endJumpList, CCallHelpers::JumpList& slowPathJumpList, const ArithProfile* arithProfile, bool shouldEmitProfiling)
+bool JITSubGenerator::generateFastPath(CCallHelpers& jit, CCallHelpers::JumpList& endJumpList, CCallHelpers::JumpList& slowPathJumpList, const BinaryArithProfile* arithProfile, bool shouldEmitProfiling)
 {
     ASSERT(m_scratchGPR != InvalidGPRReg);
     ASSERT(m_scratchGPR != m_left.payloadGPR());
@@ -86,7 +86,6 @@ bool JITSubGenerator::generateFastPath(CCallHelpers& jit, CCallHelpers::JumpList
 #if USE(JSVALUE32_64)
     ASSERT(m_scratchGPR != m_left.tagGPR());
     ASSERT(m_scratchGPR != m_right.tagGPR());
-    ASSERT(m_scratchFPR != InvalidFPRReg);
 #endif
 
     CCallHelpers::Jump leftNotInt = jit.branchIfNotInt32(m_left);
@@ -111,7 +110,7 @@ bool JITSubGenerator::generateFastPath(CCallHelpers& jit, CCallHelpers::JumpList
     if (!m_rightOperand.definitelyIsNumber())
         slowPathJumpList.append(jit.branchIfNotNumber(m_right, m_scratchGPR));
 
-    jit.unboxDoubleNonDestructive(m_left, m_leftFPR, m_scratchGPR, m_scratchFPR);
+    jit.unboxDoubleNonDestructive(m_left, m_leftFPR, m_scratchGPR);
     CCallHelpers::Jump rightIsDouble = jit.branchIfNotInt32(m_right);
 
     jit.convertInt32ToDouble(m_right.payloadGPR(), m_rightFPR);
@@ -124,7 +123,7 @@ bool JITSubGenerator::generateFastPath(CCallHelpers& jit, CCallHelpers::JumpList
     jit.convertInt32ToDouble(m_left.payloadGPR(), m_leftFPR);
 
     rightIsDouble.link(&jit);
-    jit.unboxDoubleNonDestructive(m_right, m_rightFPR, m_scratchGPR, m_scratchFPR);
+    jit.unboxDoubleNonDestructive(m_right, m_rightFPR, m_scratchGPR);
 
     rightWasInteger.link(&jit);
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -91,7 +91,7 @@ import javafx.css.StyleableProperty;
 
  public class ToggleButton extends ButtonBase implements Toggle {
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
@@ -136,7 +136,7 @@ import javafx.css.StyleableProperty;
         ((StyleableProperty<Pos>)(WritableValue<Pos>)alignmentProperty()).applyStyle(null, Pos.CENTER);
         setMnemonicParsing(true);     // enable mnemonic auto-parsing by default
     }
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Properties                                                              *
      *                                                                         *
@@ -146,14 +146,17 @@ import javafx.css.StyleableProperty;
      * programmatically.
      */
     private BooleanProperty selected;
+    @Override
     public final void setSelected(boolean value) {
         selectedProperty().set(value);
     }
 
+    @Override
     public final boolean isSelected() {
         return selected == null ? false : selected.get();
     }
 
+    @Override
     public final BooleanProperty selectedProperty() {
         if (selected == null) {
             selected = new BooleanPropertyBase() {
@@ -193,17 +196,20 @@ import javafx.css.StyleableProperty;
      * being added to the new group.
      */
     private ObjectProperty<ToggleGroup> toggleGroup;
+    @Override
     public final void setToggleGroup(ToggleGroup value) {
         toggleGroupProperty().set(value);
     }
 
+    @Override
     public final ToggleGroup getToggleGroup() {
         return toggleGroup == null ? null : toggleGroup.get();
     }
 
+    @Override
     public final ObjectProperty<ToggleGroup> toggleGroupProperty() {
         if (toggleGroup == null) {
-            toggleGroup = new ObjectPropertyBase<ToggleGroup>() {
+            toggleGroup = new ObjectPropertyBase<>() {
                 private ToggleGroup old;
                 private ChangeListener<Toggle> listener = (o, oV, nV) ->
                     ParentHelper.getTraversalEngine(ToggleButton.this).setOverriddenFocusTraversability(nV != null ? isSelected() : null);
@@ -243,7 +249,7 @@ import javafx.css.StyleableProperty;
         return toggleGroup;
     }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Methods                                                                 *
      *                                                                         *
@@ -264,7 +270,7 @@ import javafx.css.StyleableProperty;
     }
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Stylesheet Handling                                                     *
      *                                                                         *
@@ -286,7 +292,7 @@ import javafx.css.StyleableProperty;
     }
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Accessibility handling                                                  *
      *                                                                         *

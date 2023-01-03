@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -37,15 +37,11 @@
 
 namespace WebCore {
 
-void FontCascade::drawGlyphs(GraphicsContext& gc,
-                      const Font& font,
-                      const GlyphBuffer& glyphBuffer,
-                      unsigned from, unsigned numGlyphs,
-                      const FloatPoint& point,
-                      FontSmoothingMode)
+void FontCascade::drawGlyphs(GraphicsContext& context, const Font& font, const GlyphBufferGlyph* glyphs,
+    const GlyphBufferAdvance* advances, unsigned numGlyphs, const FloatPoint& point, FontSmoothingMode)
 {
     // we need to call freeSpace() before refIntArr() and refFloatArr(), see RT-19695.
-    RenderingQueue& rq = gc.platformContext()->rq().freeSpace(24);
+    RenderingQueue& rq = context.platformContext()->rq().freeSpace(24);
 
     JNIEnv* env = WTF::GetJavaEnv();
 
@@ -55,7 +51,7 @@ void FontCascade::drawGlyphs(GraphicsContext& gc,
     {
         jint *bufArray = (jint*)env->GetPrimitiveArrayCritical(jGlyphs, NULL);
         ASSERT(bufArray);
-        memcpy(bufArray, glyphBuffer.glyphs(from), sizeof(jint)*numGlyphs);
+        memcpy(bufArray, glyphs, sizeof(jint)*numGlyphs);
         env->ReleasePrimitiveArrayCritical(jGlyphs, bufArray, 0);
     }
     static jmethodID refIntArr_mID = env->GetMethodID(
@@ -78,10 +74,8 @@ void FontCascade::drawGlyphs(GraphicsContext& gc,
         jfloat *bufArray = env->GetFloatArrayElements(jAdvance, NULL);
         ASSERT(bufArray);
         for (unsigned i = 0; i < numGlyphs; ++i) {
-            auto pAdvance = glyphBuffer.advances(from + i);
-            if (!pAdvance)
-                continue;
-            bufArray[i] = jfloat(pAdvance->width());
+            auto pAdvance = advances[i];
+            bufArray[i] = jfloat(pAdvance.width());
         }
         env->ReleaseFloatArrayElements(jAdvance, bufArray, 0);
     }

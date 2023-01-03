@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -49,7 +49,7 @@ import javafx.beans.property.ReadOnlyBooleanWrapper;
 
 public abstract class ButtonBase extends Labeled {
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
@@ -78,7 +78,7 @@ public abstract class ButtonBase extends Labeled {
     }
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Properties                                                              *
      *                                                                         *
@@ -123,7 +123,7 @@ public abstract class ButtonBase extends Labeled {
     public final ObjectProperty<EventHandler<ActionEvent>> onActionProperty() { return onAction; }
     public final void setOnAction(EventHandler<ActionEvent> value) { onActionProperty().set(value); }
     public final EventHandler<ActionEvent> getOnAction() { return onActionProperty().get(); }
-    private ObjectProperty<EventHandler<ActionEvent>> onAction = new ObjectPropertyBase<EventHandler<ActionEvent>>() {
+    private ObjectProperty<EventHandler<ActionEvent>> onAction = new ObjectPropertyBase<>() {
         @Override protected void invalidated() {
             setEventHandler(ActionEvent.ACTION, get());
         }
@@ -140,7 +140,7 @@ public abstract class ButtonBase extends Labeled {
     };
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Methods                                                                 *
      *                                                                         *
@@ -182,7 +182,7 @@ public abstract class ButtonBase extends Labeled {
     public abstract void fire();
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Stylesheet Handling                                                     *
      *                                                                         *
@@ -191,7 +191,7 @@ public abstract class ButtonBase extends Labeled {
     private static final PseudoClass ARMED_PSEUDOCLASS_STATE = PseudoClass.getPseudoClass("armed");
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Accessibility handling                                                  *
      *                                                                         *

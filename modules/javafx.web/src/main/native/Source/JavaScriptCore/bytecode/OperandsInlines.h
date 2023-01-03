@@ -30,8 +30,16 @@
 
 namespace JSC {
 
-template<typename T>
-void Operands<T>::dumpInContext(PrintStream& out, DumpContext* context) const
+inline void Operand::dump(PrintStream& out) const
+{
+    if (isTmp())
+        out.print("tmp", value());
+    else
+        out.print(virtualRegister());
+}
+
+template<typename T, typename U>
+void Operands<T, U>::dumpInContext(PrintStream& out, DumpContext* context) const
 {
     CommaPrinter comma(" ");
     for (size_t argumentIndex = numberOfArguments(); argumentIndex--;) {
@@ -44,10 +52,15 @@ void Operands<T>::dumpInContext(PrintStream& out, DumpContext* context) const
             continue;
         out.print(comma, "loc", localIndex, ":", inContext(local(localIndex), context));
     }
+    for (size_t tmpIndex = 0; tmpIndex < numberOfTmps(); ++tmpIndex) {
+        if (!tmp(tmpIndex))
+            continue;
+        out.print(comma, "tmp", tmpIndex, ":", inContext(tmp(tmpIndex), context));
+    }
 }
 
-template<typename T>
-void Operands<T>::dump(PrintStream& out) const
+template<typename T, typename U>
+void Operands<T, U>::dump(PrintStream& out) const
 {
     CommaPrinter comma(" ");
     for (size_t argumentIndex = numberOfArguments(); argumentIndex--;) {
@@ -59,6 +72,11 @@ void Operands<T>::dump(PrintStream& out) const
         if (!local(localIndex))
             continue;
         out.print(comma, "loc", localIndex, ":", local(localIndex));
+    }
+    for (size_t tmpIndex = 0; tmpIndex < numberOfTmps(); ++tmpIndex) {
+        if (!tmp(tmpIndex))
+            continue;
+        out.print(comma, "tmp", tmpIndex, ":", tmp(tmpIndex));
     }
 }
 

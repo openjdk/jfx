@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,7 +31,7 @@
 
 namespace JSC {
 
-class IntrinsicGetterAccessCase : public AccessCase {
+class IntrinsicGetterAccessCase final : public AccessCase {
 public:
     typedef AccessCase Base;
     friend class AccessCase;
@@ -39,17 +39,17 @@ public:
     JSFunction* intrinsicFunction() const { return m_intrinsicFunction.get(); }
     Intrinsic intrinsic() const { return m_intrinsicFunction->intrinsic(); }
 
-    static bool canEmitIntrinsicGetter(JSFunction*, Structure*);
+    static bool canEmitIntrinsicGetter(StructureStubInfo&, JSFunction*, Structure*);
     void emitIntrinsicGetter(AccessGenerationState&);
 
-    static std::unique_ptr<AccessCase> create(VM&, JSCell*, PropertyOffset, Structure*, const ObjectPropertyConditionSet&, JSFunction* intrinsicFunction, std::unique_ptr<PolyProtoAccessChain>);
+    static Ref<AccessCase> create(VM&, JSCell*, CacheableIdentifier, PropertyOffset, Structure*, const ObjectPropertyConditionSet&, JSFunction* intrinsicFunction, RefPtr<PolyProtoAccessChain>&&);
 
-    std::unique_ptr<AccessCase> clone() const override;
+    Ref<AccessCase> clone() const final;
 
-    ~IntrinsicGetterAccessCase();
+    ~IntrinsicGetterAccessCase() final;
 
 private:
-    IntrinsicGetterAccessCase(VM&, JSCell*, PropertyOffset, Structure*, const ObjectPropertyConditionSet&, JSFunction* intrinsicFunction, std::unique_ptr<PolyProtoAccessChain>);
+    IntrinsicGetterAccessCase(VM&, JSCell*, CacheableIdentifier, PropertyOffset, Structure*, const ObjectPropertyConditionSet&, JSFunction* intrinsicFunction, RefPtr<PolyProtoAccessChain>&&);
 
     WriteBarrier<JSFunction> m_intrinsicFunction;
 };

@@ -19,17 +19,8 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-
-audio {
-    width: 200px;
-    height: 25px;
-}
-
-body:-webkit-full-page-media {
-    background-color: rgb(38, 38, 38);
-}
 
 video:-webkit-full-page-media {
     margin: auto;
@@ -92,7 +83,7 @@ audio::-webkit-media-controls-panel {
     direction: ltr;
 
     transition: opacity 0.25s linear;
-    
+
     -webkit-text-zoom: reset
 }
 
@@ -420,7 +411,7 @@ audio::-webkit-media-controls-closed-captions-container h3 {
     margin: 0;
     color: rgb(140, 140, 140);
     text-shadow: 0 1px 0 black;
-    -webkit-margin-start: 16px;
+    margin-inline-start: 16px;
     padding-top: 4px;
     font-size: 11px;
 }

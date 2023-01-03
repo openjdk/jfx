@@ -26,8 +26,6 @@
 #include "config.h"
 #include "IDBRequestData.h"
 
-#if ENABLE(INDEXED_DATABASE)
-
 #include "IDBConnectionToServer.h"
 #include "IDBDatabase.h"
 #include "IDBOpenDBRequest.h"
@@ -109,7 +107,7 @@ void IDBRequestData::isolatedCopy(const IDBRequestData& source, IDBRequestData& 
         destination.m_cursorIdentifier = makeUnique<IDBResourceIdentifier>(*source.m_cursorIdentifier);
 }
 
-uint64_t IDBRequestData::serverConnectionIdentifier() const
+IDBConnectionIdentifier IDBRequestData::serverConnectionIdentifier() const
 {
     ASSERT(m_serverConnectionIdentifier);
     return m_serverConnectionIdentifier;
@@ -157,5 +155,3 @@ uint64_t IDBRequestData::requestedVersion() const
 }
 
 } // namespace WebCore
-
-#endif // ENABLE(INDEXED_DATABASE)

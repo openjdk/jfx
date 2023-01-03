@@ -209,7 +209,7 @@ String PropertySetCSSStyleDeclaration::getPropertyPriority(const String& propert
 
     CSSPropertyID propertyID = cssPropertyID(propertyName);
     if (!propertyID)
-        return String();
+        return emptyString();
     return m_propertySet->propertyIsImportant(propertyID) ? "important"_s : emptyString();
 }
 
@@ -252,7 +252,7 @@ ExceptionOr<void> PropertySetCSSStyleDeclaration::setProperty(const String& prop
 
         if (parentElement())
             document = &parentElement()->document();
-        else
+        else if (parentStyleSheet())
             document = parentStyleSheet()->ownerDocument();
 
         changed = m_propertySet->setCustomProperty(document, propertyName, value, important, cssParserContext());
@@ -300,25 +300,30 @@ RefPtr<CSSValue> PropertySetCSSStyleDeclaration::getPropertyCSSValueInternal(CSS
 String PropertySetCSSStyleDeclaration::getPropertyValueInternal(CSSPropertyID propertyID)
 {
     String value = m_propertySet->getPropertyValue(propertyID);
+    CSSPropertyID relatedPropertyID = getRelatedPropertyId(propertyID);
+    String relatedValue = m_propertySet->getPropertyValue(relatedPropertyID);
+
     if (!value.isEmpty())
         return value;
+    if (!relatedValue.isEmpty())
+        return relatedValue;
 
-    return String();
+    return { };
 }
 
-ExceptionOr<bool> PropertySetCSSStyleDeclaration::setPropertyInternal(CSSPropertyID propertyID, const String& value, bool important)
+ExceptionOr<void> PropertySetCSSStyleDeclaration::setPropertyInternal(CSSPropertyID propertyID, const String& value, bool important)
 {
-    StyleAttributeMutationScope mutationScope(this);
+    StyleAttributeMutationScope mutationScope { this };
     if (!willMutate())
-        return false;
+        return { };
 
-    bool changed = m_propertySet->setProperty(propertyID, value, important, cssParserContext());
-
-    didMutate(changed ? PropertyChanged : NoChanges);
-
-    if (changed)
+    if (m_propertySet->setProperty(propertyID, value, important, cssParserContext())) {
+        didMutate(PropertyChanged);
         mutationScope.enqueueMutationRecord();
-    return changed;
+    } else
+        didMutate(NoChanges);
+
+    return { };
 }
 
 RefPtr<DeprecatedCSSOMValue> PropertySetCSSStyleDeclaration::wrapForDeprecatedCSSOM(CSSValue* internalValue)
@@ -336,7 +341,7 @@ RefPtr<DeprecatedCSSOMValue> PropertySetCSSStyleDeclaration::wrapForDeprecatedCS
         return clonedValue.get();
 
     RefPtr<DeprecatedCSSOMValue> wrapper = internalValue->createDeprecatedCSSOMWrapper(*this);
-    clonedValue = makeWeakPtr(wrapper.get());
+    clonedValue = wrapper;
     return wrapper;
 }
 
@@ -359,6 +364,7 @@ Ref<MutableStyleProperties> PropertySetCSSStyleDeclaration::copyProperties() con
 StyleRuleCSSStyleDeclaration::StyleRuleCSSStyleDeclaration(MutableStyleProperties& propertySet, CSSRule& parentRule)
     : PropertySetCSSStyleDeclaration(propertySet)
     , m_refCount(1)
+    , m_parentRuleType(static_cast<StyleRuleType>(parentRule.type()))
     , m_parentRule(&parentRule)
 {
     m_propertySet->ref();
@@ -412,7 +418,10 @@ CSSParserContext StyleRuleCSSStyleDeclaration::cssParserContext() const
     if (!styleSheet)
         return PropertySetCSSStyleDeclaration::cssParserContext();
 
-    return styleSheet->parserContext();
+    auto context = styleSheet->parserContext();
+    context.enclosingRuleType = m_parentRuleType;
+
+    return context;
 }
 
 void StyleRuleCSSStyleDeclaration::reattach(MutableStyleProperties& propertySet)

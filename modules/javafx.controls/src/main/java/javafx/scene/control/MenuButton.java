@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -80,7 +80,7 @@ import javafx.beans.property.ReadOnlyBooleanWrapper;
 public class MenuButton extends ButtonBase {
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Static properties and methods                                           *
      *                                                                         *
@@ -92,31 +92,31 @@ public class MenuButton extends ButtonBase {
      * @since JavaFX 8u60
      */
     public static final EventType<Event> ON_SHOWING =
-            new EventType<Event>(Event.ANY, "MENU_BUTTON_ON_SHOWING");
+            new EventType<>(Event.ANY, "MENU_BUTTON_ON_SHOWING");
 
     /**
      * Called after the MenuButton has shown its popup.
      * @since JavaFX 8u60
      */
     public static final EventType<Event> ON_SHOWN =
-            new EventType<Event>(Event.ANY, "MENU_BUTTON_ON_SHOWN");
+            new EventType<>(Event.ANY, "MENU_BUTTON_ON_SHOWN");
 
     /**
      * Called when the MenuButton popup <b>will</b> be hidden.
      * @since JavaFX 8u60
      */
     public static final EventType<Event> ON_HIDING =
-            new EventType<Event>(Event.ANY, "MENU_BUTTON_ON_HIDING");
+            new EventType<>(Event.ANY, "MENU_BUTTON_ON_HIDING");
 
     /**
      * Called when the MenuButton popup has been hidden.
      * @since JavaFX 8u60
      */
     public static final EventType<Event> ON_HIDDEN =
-            new EventType<Event>(Event.ANY, "MENU_BUTTON_ON_HIDDEN");
+            new EventType<>(Event.ANY, "MENU_BUTTON_ON_HIDDEN");
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
@@ -181,7 +181,7 @@ public class MenuButton extends ButtonBase {
         pseudoClassStateChanged(PSEUDO_CLASS_OPENVERTICALLY, true);
     }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Properties                                                              *
      *                                                                         *
@@ -278,7 +278,7 @@ public class MenuButton extends ButtonBase {
     public final ObjectProperty<EventHandler<Event>> onShowingProperty() { return onShowing; }
     public final void setOnShowing(EventHandler<Event> value) { onShowingProperty().set(value); }
     public final EventHandler<Event> getOnShowing() { return onShowingProperty().get(); }
-    private ObjectProperty<EventHandler<Event>> onShowing = new ObjectPropertyBase<EventHandler<Event>>() {
+    private ObjectProperty<EventHandler<Event>> onShowing = new ObjectPropertyBase<>() {
         @Override protected void invalidated() {
             setEventHandler(ON_SHOWING, get());
         }
@@ -300,7 +300,7 @@ public class MenuButton extends ButtonBase {
     public final ObjectProperty<EventHandler<Event>> onShownProperty() { return onShown; }
     public final void setOnShown(EventHandler<Event> value) { onShownProperty().set(value); }
     public final EventHandler<Event> getOnShown() { return onShownProperty().get(); }
-    private ObjectProperty<EventHandler<Event>> onShown = new ObjectPropertyBase<EventHandler<Event>>() {
+    private ObjectProperty<EventHandler<Event>> onShown = new ObjectPropertyBase<>() {
         @Override protected void invalidated() {
             setEventHandler(ON_SHOWN, get());
         }
@@ -322,7 +322,7 @@ public class MenuButton extends ButtonBase {
     public final ObjectProperty<EventHandler<Event>> onHidingProperty() { return onHiding; }
     public final void setOnHiding(EventHandler<Event> value) { onHidingProperty().set(value); }
     public final EventHandler<Event> getOnHiding() { return onHidingProperty().get(); }
-    private ObjectProperty<EventHandler<Event>> onHiding = new ObjectPropertyBase<EventHandler<Event>>() {
+    private ObjectProperty<EventHandler<Event>> onHiding = new ObjectPropertyBase<>() {
         @Override protected void invalidated() {
             setEventHandler(ON_HIDING, get());
         }
@@ -344,7 +344,7 @@ public class MenuButton extends ButtonBase {
     public final ObjectProperty<EventHandler<Event>> onHiddenProperty() { return onHidden; }
     public final void setOnHidden(EventHandler<Event> value) { onHiddenProperty().set(value); }
     public final EventHandler<Event> getOnHidden() { return onHiddenProperty().get(); }
-    private ObjectProperty<EventHandler<Event>> onHidden = new ObjectPropertyBase<EventHandler<Event>>() {
+    private ObjectProperty<EventHandler<Event>> onHidden = new ObjectPropertyBase<>() {
         @Override protected void invalidated() {
             setEventHandler(ON_HIDDEN, get());
         }
@@ -359,7 +359,7 @@ public class MenuButton extends ButtonBase {
     };
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Control methods                                                         *
      *                                                                         *
@@ -405,7 +405,7 @@ public class MenuButton extends ButtonBase {
         return new MenuButtonSkin(this);
     }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Stylesheet Handling                                                     *
      *                                                                         *
@@ -417,7 +417,7 @@ public class MenuButton extends ButtonBase {
     private static final PseudoClass PSEUDO_CLASS_SHOWING =
             PseudoClass.getPseudoClass("showing");
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Accessibility handling                                                  *
      *                                                                         *

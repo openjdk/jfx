@@ -28,40 +28,36 @@
 #if ENABLE(WEB_AUTHN)
 
 #include "BasicCredential.h"
-#include "ExceptionOr.h"
-#include "JSDOMPromiseDeferred.h"
-#include <JavaScriptCore/ArrayBuffer.h>
+#include "IDLTypes.h"
 #include <wtf/Forward.h>
 
 namespace WebCore {
 
+enum class AuthenticatorAttachment;
 class AuthenticatorResponse;
 class Document;
 
-struct PublicKeyCredentialData;
+struct AuthenticationExtensionsClientOutputs;
+
+template<typename IDLType> class DOMPromiseDeferred;
 
 class PublicKeyCredential final : public BasicCredential {
 public:
-    struct AuthenticationExtensionsClientOutputs {
-        Optional<bool> appid;
-    };
+    static Ref<PublicKeyCredential> create(Ref<AuthenticatorResponse>&&);
 
-    static RefPtr<PublicKeyCredential> tryCreate(const PublicKeyCredentialData&);
-
-    ArrayBuffer* rawId() const { return m_rawId.ptr(); }
+    ArrayBuffer* rawId() const;
     AuthenticatorResponse* response() const { return m_response.ptr(); }
+    AuthenticatorAttachment authenticatorAttachment() const;
     AuthenticationExtensionsClientOutputs getClientExtensionResults() const;
 
     static void isUserVerifyingPlatformAuthenticatorAvailable(Document&, DOMPromiseDeferred<IDLBoolean>&&);
 
 private:
-    PublicKeyCredential(Ref<ArrayBuffer>&& id, Ref<AuthenticatorResponse>&&, AuthenticationExtensionsClientOutputs&&);
+    PublicKeyCredential(Ref<AuthenticatorResponse>&&);
 
     Type credentialType() const final { return Type::PublicKey; }
 
-    Ref<ArrayBuffer> m_rawId;
     Ref<AuthenticatorResponse> m_response;
-    AuthenticationExtensionsClientOutputs m_extensions;
 };
 
 } // namespace WebCore

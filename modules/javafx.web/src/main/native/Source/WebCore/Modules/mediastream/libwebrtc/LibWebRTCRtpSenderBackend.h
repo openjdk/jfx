@@ -35,8 +35,8 @@
 
 ALLOW_UNUSED_PARAMETERS_BEGIN
 
-#include <webrtc/api/rtpsenderinterface.h>
-#include <webrtc/rtc_base/scoped_ref_ptr.h>
+#include <webrtc/api/rtp_sender_interface.h>
+#include <webrtc/api/scoped_refptr.h>
 
 ALLOW_UNUSED_PARAMETERS_END
 
@@ -44,79 +44,40 @@ namespace WebCore {
 
 class LibWebRTCPeerConnectionBackend;
 
-class LibWebRTCRtpSenderBackend final : public RTCRtpSenderBackend {
+class LibWebRTCRtpSenderBackend final : public RTCRtpSenderBackend, public CanMakeWeakPtr<LibWebRTCRtpSenderBackend> {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    LibWebRTCRtpSenderBackend(LibWebRTCPeerConnectionBackend& backend, rtc::scoped_refptr<webrtc::RtpSenderInterface>&& rtcSender)
-        : m_peerConnectionBackend(makeWeakPtr(&backend))
-        , m_rtcSender(WTFMove(rtcSender))
-    {
-    }
-
-    using Source = Variant<std::nullptr_t, Ref<RealtimeOutgoingAudioSource>, Ref<RealtimeOutgoingVideoSource>>;
-    LibWebRTCRtpSenderBackend(LibWebRTCPeerConnectionBackend& backend, rtc::scoped_refptr<webrtc::RtpSenderInterface>&& rtcSender, Source&& source)
-        : m_peerConnectionBackend(makeWeakPtr(&backend))
-        , m_rtcSender(WTFMove(rtcSender))
-        , m_source(WTFMove(source))
-    {
-    }
+    using Source = std::variant<std::nullptr_t, Ref<RealtimeOutgoingAudioSource>, Ref<RealtimeOutgoingVideoSource>>;
+    LibWebRTCRtpSenderBackend(LibWebRTCPeerConnectionBackend&, rtc::scoped_refptr<webrtc::RtpSenderInterface>&&, Source&&);
+    LibWebRTCRtpSenderBackend(LibWebRTCPeerConnectionBackend&, rtc::scoped_refptr<webrtc::RtpSenderInterface>&&);
+    ~LibWebRTCRtpSenderBackend();
 
     void setRTCSender(rtc::scoped_refptr<webrtc::RtpSenderInterface>&& rtcSender) { m_rtcSender = WTFMove(rtcSender); }
     webrtc::RtpSenderInterface* rtcSender() { return m_rtcSender.get(); }
 
-    RealtimeOutgoingAudioSource* audioSource()
-    {
-        return WTF::switchOn(m_source,
-            [] (Ref<RealtimeOutgoingAudioSource>& source) { return source.ptr(); },
-            [] (const auto&) -> RealtimeOutgoingAudioSource* { return nullptr; }
-        );
-    }
-
-    RealtimeOutgoingVideoSource* videoSource()
-    {
-        return WTF::switchOn(m_source,
-            [] (Ref<RealtimeOutgoingVideoSource>& source) { return source.ptr(); },
-            [] (const auto&) -> RealtimeOutgoingVideoSource* { return nullptr; }
-        );
-    }
-
-    bool hasSource() const
-    {
-        return WTF::switchOn(m_source,
-            [] (const std::nullptr_t&) { return false; },
-            [] (const auto&) { return true; }
-        );
-    }
-
-    void clearSource()
-    {
-        ASSERT(hasSource());
-        m_source = nullptr;
-    }
-
-    void setSource(Source&& source)
-    {
-        ASSERT(!hasSource());
-        m_source = WTFMove(source);
-        ASSERT(hasSource());
-    }
-
-    void takeSource(LibWebRTCRtpSenderBackend& backend)
-    {
-        ASSERT(backend.hasSource());
-        setSource(WTFMove(backend.m_source));
-    }
+    RealtimeOutgoingVideoSource* videoSource();
+    void clearSource() { setSource(nullptr); }
+    void setSource(Source&&);
+    void takeSource(LibWebRTCRtpSenderBackend&);
 
 private:
-    void replaceTrack(ScriptExecutionContext&, RTCRtpSender&, RefPtr<MediaStreamTrack>&&, DOMPromiseDeferred<void>&&) final;
+    bool replaceTrack(RTCRtpSender&, MediaStreamTrack*) final;
     RTCRtpSendParameters getParameters() const final;
     void setParameters(const RTCRtpSendParameters&, DOMPromiseDeferred<void>&&) final;
     std::unique_ptr<RTCDTMFSenderBackend> createDTMFBackend() final;
+    Ref<RTCRtpTransformBackend> rtcRtpTransformBackend() final;
+    std::unique_ptr<RTCDtlsTransportBackend> dtlsTransportBackend() final;
+    void setMediaStreamIds(const FixedVector<String>&) final;
+
+    void startSource();
+    void stopSource();
+    bool hasSource() const;
 
     WeakPtr<LibWebRTCPeerConnectionBackend> m_peerConnectionBackend;
     rtc::scoped_refptr<webrtc::RtpSenderInterface> m_rtcSender;
     Source m_source;
-    mutable Optional<webrtc::RtpParameters> m_currentParameters;
+    RefPtr<RTCRtpTransformBackend> m_transformBackend;
+    mutable std::optional<webrtc::RtpParameters> m_currentParameters;
 };
 
 } // namespace WebCore

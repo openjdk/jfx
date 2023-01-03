@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2016 Yusuke Suzuki <utatane.tea@gmail.com>
- * Copyright (C) 2016-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,11 +28,15 @@
 
 #include "CallFrameClosure.h"
 #include "Exception.h"
+#include "FunctionCodeBlock.h"
+#include "FunctionExecutable.h"
 #include "Instruction.h"
 #include "Interpreter.h"
 #include "JSCPtrTag.h"
 #include "LLIntData.h"
+#include "ProtoCallFrameInlines.h"
 #include "UnlinkedCodeBlock.h"
+#include "VMTrapsInlines.h"
 #include <wtf/UnalignedAccess.h>
 
 namespace JSC {
@@ -42,22 +46,25 @@ inline Opcode Interpreter::getOpcode(OpcodeID id)
     return LLInt::getOpcode(id);
 }
 
+// This function is only available as a debugging tool for development work.
+// It is not currently used except in a RELEASE_ASSERT to ensure that it is
+// working properly.
 inline OpcodeID Interpreter::getOpcodeID(Opcode opcode)
 {
 #if ENABLE(COMPUTED_GOTO_OPCODES)
     ASSERT(isOpcode(opcode));
-#if USE(LLINT_EMBEDDED_OPCODE_ID)
+#if ENABLE(LLINT_EMBEDDED_OPCODE_ID)
     // The OpcodeID is embedded in the int32_t word preceding the location of
     // the LLInt code for the opcode (see the EMBED_OPCODE_ID_IF_NEEDED macro
     // in LowLevelInterpreter.cpp).
-    auto codePtr = MacroAssemblerCodePtr<BytecodePtrTag>::createFromExecutableAddress(opcode);
-    int32_t* opcodeIDAddress = codePtr.dataLocation<int32_t*>() - 1;
+    const void* opcodeAddress = removeCodePtrTag(bitwise_cast<const void*>(opcode));
+    const int32_t* opcodeIDAddress = bitwise_cast<int32_t*>(opcodeAddress) - 1;
     OpcodeID opcodeID = static_cast<OpcodeID>(WTF::unalignedLoad<int32_t>(opcodeIDAddress));
     ASSERT(opcodeID < NUMBER_OF_BYTECODE_IDS);
     return opcodeID;
 #else
     return opcodeIDTable().get(opcode);
-#endif // USE(LLINT_EMBEDDED_OPCODE_ID)
+#endif // ENABLE(LLINT_EMBEDDED_OPCODE_ID)
 
 #else // not ENABLE(COMPUTED_GOTO_OPCODES)
     return opcode;
@@ -74,16 +81,31 @@ ALWAYS_INLINE JSValue Interpreter::execute(CallFrameClosure& closure)
 
     StackStats::CheckPoint stackCheckPoint;
 
-    VMTraps::Mask mask(VMTraps::NeedTermination, VMTraps::NeedWatchdogCheck);
-    if (UNLIKELY(vm.needTrapHandling(mask))) {
-        vm.handleTraps(closure.oldCallFrame, mask);
-        RETURN_IF_EXCEPTION(throwScope, throwScope.exception());
+    if (UNLIKELY(vm.traps().needHandling(VMTraps::NonDebuggerAsyncEvents))) {
+        ASSERT(vm.topCallFrame == closure.oldCallFrame);
+        if (vm.hasExceptionsAfterHandlingTraps())
+            return throwScope.exception();
+    }
+
+    {
+        DeferTraps deferTraps(vm); // We can't jettison this code if we're about to run it.
+
+        // Reload CodeBlock since GC can replace CodeBlock owned by Executable.
+        CodeBlock* codeBlock;
+        closure.functionExecutable->prepareForExecution<FunctionExecutable>(vm, closure.function, closure.scope, CodeForCall, codeBlock);
+        RETURN_IF_EXCEPTION(throwScope, checkedReturn(throwScope.exception()));
+
+        ASSERT(codeBlock);
+        codeBlock->m_shouldAlwaysBeInlined = false;
+        {
+            DisallowGC disallowGC; // Ensure no GC happens. GC can replace CodeBlock in Executable.
+            closure.protoCallFrame->setCodeBlock(codeBlock);
+        }
     }
 
     // Execute the code:
     throwScope.release();
     JSValue result = closure.functionExecutable->generatedJITCodeForCall()->execute(&vm, closure.protoCallFrame);
-
     return checkedReturn(result);
 }
 

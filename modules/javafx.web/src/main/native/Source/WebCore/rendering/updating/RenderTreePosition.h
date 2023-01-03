@@ -26,9 +26,6 @@
 #pragma once
 
 #include "RenderElement.h"
-#include "RenderFragmentedFlow.h"
-#include "RenderText.h"
-#include "RenderView.h"
 
 namespace WebCore {
 
@@ -40,7 +37,7 @@ public:
     }
     RenderTreePosition(RenderElement& parent, RenderObject* nextSibling)
         : m_parent(parent)
-        , m_nextSibling(makeWeakPtr(nextSibling))
+        , m_nextSibling(nextSibling)
         , m_hasValidNextSibling(true)
     {
     }
@@ -59,7 +56,7 @@ private:
     RenderElement& m_parent;
     WeakPtr<RenderObject> m_nextSibling { nullptr };
     bool m_hasValidNextSibling { false };
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
     unsigned m_assertionLimitCounter { 0 };
 #endif
 };

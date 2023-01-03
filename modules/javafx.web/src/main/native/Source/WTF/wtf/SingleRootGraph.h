@@ -29,6 +29,7 @@
 #include <wtf/GraphNodeWorklist.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/StdLibExtras.h>
+#include <wtf/StringPrintStream.h>
 
 namespace WTF {
 
@@ -285,7 +286,7 @@ public:
 private:
     ALWAYS_INLINE void assertIsConsistent() const
     {
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
         // We expect the roots() function to be idempotent while we're alive so we can cache
         // the result in the constructor. If a user of this changes the result of its roots()
         // function, it's expected that the user will create a new instance of this class.

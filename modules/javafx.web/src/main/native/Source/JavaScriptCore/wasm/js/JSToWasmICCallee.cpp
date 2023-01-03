@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2019-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -38,7 +38,7 @@ const ClassInfo JSToWasmICCallee::s_info = { "JSToWasmICCallee", &Base::s_info, 
 JSToWasmICCallee* JSToWasmICCallee::create(VM& vm, JSGlobalObject* globalObject, WebAssemblyFunction* function)
 {
     auto* structure = globalObject->jsToWasmICCalleeStructure();
-    JSToWasmICCallee* result = new (NotNull, allocateCell<JSToWasmICCallee>(vm.heap)) JSToWasmICCallee(vm, globalObject, structure);
+    JSToWasmICCallee* result = new (NotNull, allocateCell<JSToWasmICCallee>(vm)) JSToWasmICCallee(vm, globalObject, structure);
     result->finishCreation(vm);
     result->m_function.set(vm, result, function);
     return result;
@@ -49,7 +49,8 @@ Structure* JSToWasmICCallee::createStructure(VM& vm, JSGlobalObject* globalObjec
     return Structure::create(vm, globalObject, prototype, TypeInfo(JSCalleeType, StructureFlags), info());
 }
 
-void JSToWasmICCallee::visitChildren(JSCell* cell, SlotVisitor& visitor)
+template<typename Visitor>
+void JSToWasmICCallee::visitChildrenImpl(JSCell* cell, Visitor& visitor)
 {
     JSToWasmICCallee* thisObject = jsCast<JSToWasmICCallee*>(cell);
     ASSERT_GC_OBJECT_INHERITS(thisObject, info());
@@ -57,6 +58,8 @@ void JSToWasmICCallee::visitChildren(JSCell* cell, SlotVisitor& visitor)
     Base::visitChildren(thisObject, visitor);
     visitor.append(thisObject->m_function);
 }
+
+DEFINE_VISIT_CHILDREN(JSToWasmICCallee);
 
 } // namespace JSC
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013, 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,13 +31,15 @@ namespace JSC {
 
 class JSArrayBufferPrototype final : public JSNonFinalObject {
 public:
-    typedef JSNonFinalObject Base;
+    using Base = JSNonFinalObject;
 
-protected:
-    JSArrayBufferPrototype(VM&, Structure*, ArrayBufferSharingMode);
-    void finishCreation(VM&, JSGlobalObject*);
+    template<typename CellType, SubspaceAccess>
+    static GCClient::IsoSubspace* subspaceFor(VM& vm)
+    {
+        STATIC_ASSERT_ISO_SUBSPACE_SHARABLE(JSArrayBufferPrototype, Base);
+        return &vm.plainObjectSpace();
+    }
 
-public:
     static JSArrayBufferPrototype* create(VM&, JSGlobalObject*, Structure*, ArrayBufferSharingMode = ArrayBufferSharingMode::Default);
 
     DECLARE_INFO;
@@ -45,7 +47,10 @@ public:
     static Structure* createStructure(VM&, JSGlobalObject*, JSValue prototype);
 
 private:
-    ArrayBufferSharingMode m_sharingMode;
+    JSArrayBufferPrototype(VM&, Structure*);
+    void finishCreation(VM&, JSGlobalObject*, ArrayBufferSharingMode);
 };
+
+std::optional<JSValue> arrayBufferSpeciesConstructorSlow(JSGlobalObject*, JSArrayBuffer*, ArrayBufferSharingMode);
 
 } // namespace JSC

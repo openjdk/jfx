@@ -19,8 +19,6 @@
  */
 
 #include "config.h"
-
-#if ENABLE(SVG_FONTS)
 #include "SVGFontFaceUriElement.h"
 
 #include "CSSFontFaceSrcValue.h"
@@ -28,6 +26,8 @@
 #include "CachedResourceLoader.h"
 #include "CachedResourceRequest.h"
 #include "Document.h"
+#include "SVGElementInlines.h"
+#include "SVGElementTypeHelpers.h"
 #include "SVGFontFaceElement.h"
 #include "SVGNames.h"
 #include "XLinkNames.h"
@@ -79,9 +79,9 @@ void SVGFontFaceUriElement::childrenChanged(const ChildChange& change)
     if (!parentNode() || !parentNode()->hasTagName(font_face_srcTag))
         return;
 
-    auto grandparent = makeRefPtr(parentNode()->parentNode());
-    if (grandparent && grandparent->hasTagName(font_faceTag))
-        downcast<SVGFontFaceElement>(*grandparent).rebuildFontFace();
+    RefPtr grandParent = parentNode()->parentNode();
+    if (grandParent && grandParent->hasTagName(font_faceTag))
+        downcast<SVGFontFaceElement>(*grandParent).rebuildFontFace();
 }
 
 Node::InsertedIntoAncestorResult SVGFontFaceUriElement::insertedIntoAncestor(InsertionType insertionType, ContainerNode& parentOfInsertedTree)
@@ -119,5 +119,3 @@ void SVGFontFaceUriElement::loadFont()
 }
 
 }
-
-#endif // ENABLE(SVG_FONTS)

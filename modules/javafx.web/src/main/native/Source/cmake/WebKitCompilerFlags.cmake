@@ -104,6 +104,8 @@ if (COMPILER_IS_GCC_OR_CLANG)
         WEBKIT_APPEND_GLOBAL_COMPILER_FLAGS(-fno-exceptions)
         WEBKIT_APPEND_GLOBAL_CXX_FLAGS(-fno-rtti)
 
+        WEBKIT_PREPEND_GLOBAL_COMPILER_FLAGS(-Wno-tautological-compare)
+
         if (WIN32)
             WEBKIT_APPEND_GLOBAL_COMPILER_FLAGS(-mno-ms-bitfields)
             WEBKIT_PREPEND_GLOBAL_COMPILER_FLAGS(-Wno-unknown-pragmas)
@@ -123,18 +125,40 @@ if (COMPILER_IS_GCC_OR_CLANG)
     # FIXME: We should probably not be disabling -Wno-maybe-uninitialized?
     WEBKIT_PREPEND_GLOBAL_COMPILER_FLAGS(-Qunused-arguments
                                          -Wno-maybe-uninitialized
-                                         -Wno-noexcept-type
                                          -Wno-parentheses-equality
+                                         -Wno-misleading-indentation
                                          -Wno-psabi)
+
+    WEBKIT_PREPEND_GLOBAL_CXX_FLAGS(-Wno-noexcept-type)
 
     # https://gcc.gnu.org/bugzilla/show_bug.cgi?id=80947
     if (${CMAKE_CXX_COMPILER_VERSION} VERSION_LESS "8.0" AND NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang")
         WEBKIT_PREPEND_GLOBAL_CXX_FLAGS(-Wno-attributes)
     endif ()
 
+    # Since GCC 11, these warnings produce too many false positives to be useful. We'll rely on
+    # developers who build with Clang to notice these warnings.
+    if (CMAKE_CXX_COMPILER_ID MATCHES "GNU" AND ${CMAKE_CXX_COMPILER_VERSION} VERSION_GREATER_EQUAL "11.0")
+        WEBKIT_PREPEND_GLOBAL_CXX_FLAGS(-Wno-array-bounds)
+        WEBKIT_PREPEND_GLOBAL_CXX_FLAGS(-Wno-nonnull)
+    endif ()
+
+    # This triggers warnings in wtf/Packed.h, a header that is included in many places. It does not
+    # respect ignore warning pragmas and we cannot easily suppress it for all affected files.
+    # https://bugs.webkit.org/show_bug.cgi?id=226557
+    if (CMAKE_CXX_COMPILER_ID MATCHES "GNU" AND ${CMAKE_CXX_COMPILER_VERSION} VERSION_GREATER_EQUAL "11.0")
+        WEBKIT_PREPEND_GLOBAL_CXX_FLAGS(-Wno-stringop-overread)
+    endif ()
+
+    # -Wodr trips over our bindings integrity feature when LTO is enabled.
+    # https://bugs.webkit.org/show_bug.cgi?id=229867
+    if (CMAKE_CXX_COMPILER_ID MATCHES "GNU")
+        WEBKIT_PREPEND_GLOBAL_CXX_FLAGS(-Wno-odr)
+    endif ()
+
     # -Wexpansion-to-defined produces false positives with GCC but not Clang
     # https://bugs.webkit.org/show_bug.cgi?id=167643#c13
-    if (CMAKE_COMPILER_IS_GNUCXX)
+    if (CMAKE_CXX_COMPILER_ID MATCHES "GNU")
         WEBKIT_PREPEND_GLOBAL_COMPILER_FLAGS(-Wno-expansion-to-defined)
     endif ()
 
@@ -146,6 +170,10 @@ if (COMPILER_IS_GCC_OR_CLANG)
             message(FATAL_ERROR "SSE2 support is required to compile WebKit")
         endif ()
     endif ()
+
+    # Makes builds faster. The GCC manual warns about the possibility that the assembler being
+    # used may not support input from a pipe, but in practice the toolchains we support all do.
+    WEBKIT_PREPEND_GLOBAL_COMPILER_FLAGS(-pipe)
 endif ()
 
 if (COMPILER_IS_GCC_OR_CLANG AND NOT MSVC)
@@ -197,9 +225,10 @@ if (COMPILER_IS_GCC_OR_CLANG)
                 set(SANITIZER_LINK_FLAGS "-fsanitize=address ${SANITIZER_LINK_FLAGS}")
 
             elseif (${SANITIZER} MATCHES "undefined")
-                WEBKIT_PREPEND_GLOBAL_COMPILER_FLAGS("-fno-omit-frame-pointer -fno-optimize-sibling-calls")
-                # -fsanitize=vptr is incompatible with -fno-rtti
-                set(SANITIZER_COMPILER_FLAGS "-fsanitize=undefined -frtti ${SANITIZER_COMPILER_FLAGS}")
+                # Please keep these options synchronized with Tools/sanitizer/ubsan.xcconfig
+                WEBKIT_PREPEND_GLOBAL_COMPILER_FLAGS("-fno-omit-frame-pointer -fno-delete-null-pointer-checks -fno-optimize-sibling-calls")
+                # -fsanitize=vptr is disabled because incompatible with -fno-rtti
+                set(SANITIZER_COMPILER_FLAGS "-fsanitize=undefined -fno-sanitize=vptr ${SANITIZER_COMPILER_FLAGS}")
                 set(SANITIZER_LINK_FLAGS "-fsanitize=undefined ${SANITIZER_LINK_FLAGS}")
 
             elseif (${SANITIZER} MATCHES "thread" AND NOT MSVC)
@@ -236,20 +265,11 @@ if (UNIX AND NOT APPLE AND NOT ENABLED_COMPILER_SANITIZERS)
 endif ()
 
 
-# CODE_GENERATOR_PREPROCESSOR_WITH_LINEMARKERS only matters with GCC >= 4.7.0.  Since this
-# version, -P does not output empty lines, which currently breaks make_names.pl in
-# WebCore. Investigating whether make_names.pl should be changed instead is left as an exercise to
-# the reader.
 if (MSVC)
-    set(CODE_GENERATOR_PREPROCESSOR_ARGUMENTS "/nologo /EP /TP")
-    set(CODE_GENERATOR_PREPROCESSOR_WITH_LINEMARKERS_ARGUMENTS ${CODE_GENERATOR_PREPROCESSOR_ARGUMENTS})
+    set(CODE_GENERATOR_PREPROCESSOR "\"${CMAKE_CXX_COMPILER}\" /nologo /EP /TP")
 else ()
-    set(CODE_GENERATOR_PREPROCESSOR_ARGUMENTS "-E -P -x c++")
-    set(CODE_GENERATOR_PREPROCESSOR_WITH_LINEMARKERS_ARGUMENTS "-E -x c++")
+    set(CODE_GENERATOR_PREPROCESSOR "\"${CMAKE_CXX_COMPILER}\" -E -P -x c++")
 endif ()
-
-set(CODE_GENERATOR_PREPROCESSOR "\"${CMAKE_CXX_COMPILER}\" ${CODE_GENERATOR_PREPROCESSOR_ARGUMENTS}")
-set(CODE_GENERATOR_PREPROCESSOR_WITH_LINEMARKERS "\"${CMAKE_CXX_COMPILER}\" ${CODE_GENERATOR_PREPROCESSOR_WITH_LINEMARKERS_ARGUMENTS}")
 
 
 # Ensure that the default include system directories are added to the list of CMake implicit includes.
@@ -278,13 +298,122 @@ endif ()
 
 if (COMPILER_IS_GCC_OR_CLANG)
     set(ATOMIC_TEST_SOURCE "
-        #include <atomic>
-        int main() { std::atomic<int64_t> i(0); i++; return 0; }
+#include <stdbool.h>
+#include <stdint.h>
+
+#define COMPILER(FEATURE) (defined COMPILER_##FEATURE  && COMPILER_##FEATURE)
+
+#if defined(__clang__)
+#define COMPILER_CLANG 1
+#endif
+
+#if defined(__GNUC__)
+#define COMPILER_GCC_COMPATIBLE 1
+#endif
+
+#if COMPILER(GCC_COMPATIBLE) && !COMPILER(CLANG)
+#define COMPILER_GCC 1
+#endif
+
+#if defined(_MSC_VER)
+#define COMPILER_MSVC 1
+#endif
+
+#define CPU(_FEATURE) (defined CPU_##_FEATURE && CPU_##_FEATURE)
+
+
+#if COMPILER(GCC_COMPATIBLE)
+/* __LP64__ is not defined on 64bit Windows since it uses LLP64. Using __SIZEOF_POINTER__ is simpler. */
+#if __SIZEOF_POINTER__ == 8
+#define CPU_ADDRESS64 1
+#elif __SIZEOF_POINTER__ == 4
+#define CPU_ADDRESS32 1
+#endif
+#endif
+
+static inline bool compare_and_swap_bool_weak(bool* ptr, bool old_value, bool new_value)
+{
+#if COMPILER(CLANG)
+    return __c11_atomic_compare_exchange_weak((_Atomic bool*)ptr, &old_value, new_value, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST);
+#else
+    return __atomic_compare_exchange_n((bool*)ptr, &old_value, new_value, false, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST);
+#endif
+}
+
+#if CPU(ADDRESS64)
+
+typedef __uint128_t pair;
+
+static inline bool compare_and_swap_pair_weak(void* raw_ptr, pair old_value, pair new_value)
+{
+#if COMPILER(CLANG)
+    return __c11_atomic_compare_exchange_weak((_Atomic pair*)raw_ptr, &old_value, new_value, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST);
+#else
+    return __atomic_compare_exchange_n((pair*)raw_ptr, &old_value, new_value, true, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST);
+#endif
+}
+#endif
+
+static inline bool compare_and_swap_uint64_weak(uint64_t* ptr, uint64_t old_value, uint64_t new_value)
+{
+#if COMPILER(CLANG)
+    return __c11_atomic_compare_exchange_weak((_Atomic uint64_t*)ptr, &old_value, new_value, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST);
+#else
+    return __atomic_compare_exchange_n((uint64_t*)ptr, &old_value, new_value, true, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST);
+#endif
+}
+
+int main() {
+    bool y = false;
+    bool expected = true;
+    bool j = compare_and_swap_bool_weak(&y, expected, false);
+#if CPU(ADDRESS64)
+    pair x = 42;
+    bool k = compare_and_swap_pair_weak(&x, 42, 55);
+#endif
+    uint64_t z = 42;
+    bool l = compare_and_swap_uint64_weak(&z, 42, 56);
+    int result = (j ||
+#if CPU(ADDRESS64)
+                  k ||
+#endif
+                  l) ? 0 : 1;
+    return result;
+}
     ")
-    check_cxx_source_compiles("${ATOMIC_TEST_SOURCE}" ATOMIC_INT64_IS_BUILTIN)
-    if (NOT ATOMIC_INT64_IS_BUILTIN)
+    check_c_source_compiles("${ATOMIC_TEST_SOURCE}" ATOMICS_ARE_BUILTIN)
+    if (NOT ATOMICS_ARE_BUILTIN)
         set(CMAKE_REQUIRED_LIBRARIES atomic)
-        check_cxx_source_compiles("${ATOMIC_TEST_SOURCE}" ATOMIC_INT64_REQUIRES_LIBATOMIC)
+        check_c_source_compiles("${ATOMIC_TEST_SOURCE}" ATOMICS_REQUIRE_LIBATOMIC)
         unset(CMAKE_REQUIRED_LIBRARIES)
     endif ()
+
+    # <filesystem> vs <experimental/filesystem>
+    set(FILESYSTEM_TEST_SOURCE "
+        #include <filesystem>
+        int main() { std::filesystem::path p1(\"\"); std::filesystem::status(p1); }
+    ")
+    set(CMAKE_REQUIRED_FLAGS "--std=c++2a")
+    check_cxx_source_compiles("${FILESYSTEM_TEST_SOURCE}" STD_FILESYSTEM_IS_AVAILABLE)
+    if (NOT STD_FILESYSTEM_IS_AVAILABLE)
+        set(EXPERIMENTAL_FILESYSTEM_TEST_SOURCE "
+            #include <experimental/filesystem>
+            int main() {
+                std::experimental::filesystem::path p1(\"//home\");
+                std::experimental::filesystem::status(p1);
+            }
+        ")
+        set(CMAKE_REQUIRED_LIBRARIES stdc++fs)
+        check_cxx_source_compiles("${EXPERIMENTAL_FILESYSTEM_TEST_SOURCE}" STD_EXPERIMENTAL_FILESYSTEM_IS_AVAILABLE)
+        unset(CMAKE_REQUIRED_LIBRARIES)
+    endif ()
+    unset(CMAKE_REQUIRED_FLAGS)
+endif ()
+
+if (CMAKE_CXX_COMPILER_ID MATCHES "GNU" AND WTF_CPU_MIPS)
+    # Work around https://gcc.gnu.org/bugzilla/show_bug.cgi?id=78176.
+    # This only manifests when executing 32-bit code on a 64-bit
+    # processor. This is a workaround and does not cover all cases
+    # (see comment #28 in the link above).
+    WEBKIT_PREPEND_GLOBAL_COMPILER_FLAGS(-mno-lxc1-sxc1)
 endif ()

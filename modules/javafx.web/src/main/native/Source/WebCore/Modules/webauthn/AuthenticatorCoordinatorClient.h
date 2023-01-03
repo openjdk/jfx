@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,47 +29,37 @@
 
 #include "ExceptionData.h"
 #include <wtf/CompletionHandler.h>
-#include <wtf/HashMap.h>
 #include <wtf/WeakPtr.h>
 
 namespace WebCore {
 
 class DeferredPromise;
+class Frame;
+class SecurityOrigin;
 
+enum class AuthenticatorAttachment;
+enum class MediationRequirement : uint8_t;
+
+struct AuthenticatorResponseData;
 struct PublicKeyCredentialCreationOptions;
-struct PublicKeyCredentialData;
 struct PublicKeyCredentialRequestOptions;
 
-using RequestCompletionHandler = CompletionHandler<void(const WebCore::PublicKeyCredentialData&, const WebCore::ExceptionData&)>;
+using RequestCompletionHandler = CompletionHandler<void(WebCore::AuthenticatorResponseData&&, WebCore::AuthenticatorAttachment, WebCore::ExceptionData&&)>;
 using QueryCompletionHandler = CompletionHandler<void(bool)>;
 
-class WEBCORE_EXPORT AuthenticatorCoordinatorClient : public CanMakeWeakPtr<AuthenticatorCoordinatorClient> {
+class AuthenticatorCoordinatorClient : public CanMakeWeakPtr<AuthenticatorCoordinatorClient> {
     WTF_MAKE_FAST_ALLOCATED;
     WTF_MAKE_NONCOPYABLE(AuthenticatorCoordinatorClient);
 public:
     AuthenticatorCoordinatorClient() = default;
     virtual ~AuthenticatorCoordinatorClient() = default;
 
-    // Senders.
-    virtual void makeCredential(const Vector<uint8_t>& hash, const PublicKeyCredentialCreationOptions&, RequestCompletionHandler&&) = 0;
-    virtual void getAssertion(const Vector<uint8_t>& hash, const PublicKeyCredentialRequestOptions&, RequestCompletionHandler&&) = 0;
+    virtual void makeCredential(const Frame&, const SecurityOrigin&, const Vector<uint8_t>&, const PublicKeyCredentialCreationOptions&, RequestCompletionHandler&&) = 0;
+    virtual void getAssertion(const Frame&, const SecurityOrigin&, const Vector<uint8_t>&, const PublicKeyCredentialRequestOptions&, MediationRequirement, RequestCompletionHandler&&) = 0;
+    virtual void isConditionalMediationAvailable(QueryCompletionHandler&&) = 0;
     virtual void isUserVerifyingPlatformAuthenticatorAvailable(QueryCompletionHandler&&) = 0;
 
-    // Receivers.
-    void requestReply(uint64_t messageId, const WebCore::PublicKeyCredentialData&, const WebCore::ExceptionData&);
-    void isUserVerifyingPlatformAuthenticatorAvailableReply(uint64_t messageId, bool);
-
-protected:
-    // Only one request is allowed at one time. A new request will cancel any pending request.
-    // A message id that is tied to the request wil be generated each time to prevent mismatching responses.
-    uint64_t setRequestCompletionHandler(RequestCompletionHandler&&);
-    uint64_t addQueryCompletionHandler(QueryCompletionHandler&&);
-
-private:
-    uint64_t m_accumulatedRequestMessageId { 1 };
-    RequestCompletionHandler m_pendingCompletionHandler;
-    uint64_t m_accumulatedQueryMessageId { 1 };
-    HashMap<uint64_t, QueryCompletionHandler> m_pendingQueryCompletionHandlers;
+    virtual void resetUserGestureRequirement() { }
 };
 
 } // namespace WebCore

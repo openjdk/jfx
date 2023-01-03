@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,44 +25,43 @@
 
 package test.javafx.scene.control;
 
-import javafx.beans.InvalidationListener;
-import javafx.beans.Observable;
-import javafx.beans.property.BooleanProperty;
-import javafx.beans.property.SimpleBooleanProperty;
-import javafx.beans.property.SimpleStringProperty;
-import javafx.beans.property.StringProperty;
-import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
-import javafx.css.CssMetaData;
-import javafx.css.StyleableProperty;
-import javafx.event.EventHandler;
-import javafx.scene.Scene;
-import javafx.scene.input.KeyCode;
-import javafx.scene.input.KeyEvent;
-import javafx.scene.input.Clipboard;
-import javafx.scene.input.ClipboardContent;
-import javafx.scene.text.Font;
-import javafx.scene.layout.StackPane;
-import javafx.stage.Stage;
-import java.util.Arrays;
-import java.util.Collection;
-import javafx.scene.control.IndexRange;
-import javafx.scene.control.PasswordField;
-import javafx.scene.control.TextArea;
-import javafx.scene.control.TextField;
-import javafx.scene.control.TextInputControl;
-import com.sun.javafx.tk.Toolkit;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import test.com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
-import test.com.sun.javafx.pgstub.StubToolkit;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+
+import java.util.Arrays;
+import java.util.Collection;
+
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+
+import com.sun.javafx.tk.Toolkit;
+
+import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.SimpleBooleanProperty;
+import javafx.beans.property.SimpleStringProperty;
+import javafx.beans.property.StringProperty;
+import javafx.css.CssMetaData;
+import javafx.css.StyleableProperty;
+import javafx.scene.Scene;
+import javafx.scene.control.IndexRange;
+import javafx.scene.control.PasswordField;
+import javafx.scene.control.TextArea;
+import javafx.scene.control.TextField;
+import javafx.scene.control.TextInputControl;
+import javafx.scene.input.Clipboard;
+import javafx.scene.input.ClipboardContent;
+import javafx.scene.input.KeyCode;
+import javafx.scene.layout.StackPane;
+import javafx.scene.text.Font;
+import javafx.stage.Stage;
+import test.com.sun.javafx.pgstub.StubToolkit;
+import test.com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
 /**
  */
 @RunWith(Parameterized.class)
@@ -84,7 +83,26 @@ public class TextInputControlTest {
     }
 
     @Before public void setup() throws Exception {
-        textInput = (TextInputControl) type.newInstance();
+        textInput = (TextInputControl) type.getDeclaredConstructor().newInstance();
+        setUncaughtExceptionHandler();
+    }
+
+    @After public void cleanup() {
+        removeUncaughtExceptionHandler();
+    }
+
+    private void setUncaughtExceptionHandler() {
+        Thread.currentThread().setUncaughtExceptionHandler((thread, throwable) -> {
+            if (throwable instanceof RuntimeException) {
+                throw (RuntimeException)throwable;
+            } else {
+                Thread.currentThread().getThreadGroup().uncaughtException(thread, throwable);
+            }
+        });
+    }
+
+    private void removeUncaughtExceptionHandler() {
+        Thread.currentThread().setUncaughtExceptionHandler(null);
     }
 
     /******************************************************
@@ -376,7 +394,10 @@ public class TextInputControlTest {
 
     // Test for JDK-8178417
     @Test public void caretPositionUndo() {
-        Toolkit tk = (StubToolkit)Toolkit.getToolkit();
+        Toolkit tk = Toolkit.getToolkit();
+
+        assertTrue(tk instanceof StubToolkit);  // Ensure it's StubToolkit
+
         StackPane root = new StackPane();
         Scene scene = new Scene(root);
         Stage stage = new Stage();
@@ -1865,9 +1886,70 @@ public class TextInputControlTest {
         assertEquals("", textInput.getText());
     }
 
+    @Test public void test_redo_replaceText_selectionShortening() {
+        textInput.setText("0123456789");
+        assertEquals("0123456789", textInput.getText());
+
+        textInput.replaceText(8, 10, "x");
+        assertEquals("01234567x", textInput.getText());
+
+        textInput.undo();
+        assertEquals("0123456789", textInput.getText());
+
+        textInput.redo();
+        assertEquals("01234567x", textInput.getText());
+    }
+
+    @Test public void replaceSelectionAtEndWithListener() {
+        StringBuilder selectedTextLog = new StringBuilder();
+        StringBuilder selectionLog = new StringBuilder();
+        textInput.setText("x xxx");
+        textInput.selectRange(2, 5);
+        textInput.selectedTextProperty().addListener((observable, oldValue, newValue) -> selectedTextLog.append("|" + newValue));
+        textInput.selectionProperty().addListener((observable, oldValue, newValue) -> selectionLog.append("|" + newValue.getStart() + "," + newValue.getEnd()));
+        textInput.replaceSelection("a");
+        assertEquals("|", selectedTextLog.toString());
+        assertEquals("|3,3", selectionLog.toString());
+        assertEquals("x a", textInput.getText());
+    }
+
+    @Test public void testSelectionProperties() {
+        textInput.setText("abcdefghij");
+
+        StringBuilder selectedTextLog = new StringBuilder();
+        StringBuilder selectionLog = new StringBuilder();
+        StringBuilder textLog = new StringBuilder();
+        textInput.selectedTextProperty().addListener((observable, oldValue, newValue) -> selectedTextLog.append("|" + newValue));
+        textInput.selectionProperty().addListener((observable, oldValue, newValue) -> selectionLog.append("|" + newValue.getStart() + "," + newValue.getEnd()));
+        textInput.textProperty().addListener((observable, oldValue, newValue) -> textLog.append("|" + newValue));
+
+        textInput.selectRange(3, 6);
+        assertEquals("|def", selectedTextLog.toString());
+        assertEquals("|3,6", selectionLog.toString());
+        assertEquals("", textLog.toString());
+
+        textInput.replaceSelection("xyz");
+        assertEquals("|def|", selectedTextLog.toString());
+        assertEquals("|3,6|6,6", selectionLog.toString());
+        assertEquals("|abcxyzghij", textLog.toString());
+
+        textInput.undo();
+        assertEquals("|def||def", selectedTextLog.toString());
+        assertEquals("|3,6|6,6|3,6", selectionLog.toString());
+        assertEquals("|abcxyzghij|abcdefghij", textLog.toString());
+
+        textInput.redo();
+        assertEquals("|def||def|", selectedTextLog.toString());
+        assertEquals("|3,6|6,6|3,6|6,6", selectionLog.toString());
+        assertEquals("|abcxyzghij|abcdefghij|abcxyzghij", textLog.toString());
+    }
+
     // Test for JDK-8178418
     @Test public void UndoRedoSpaceSequence() {
-        Toolkit tk = (StubToolkit)Toolkit.getToolkit();
+        Toolkit tk = Toolkit.getToolkit();
+
+        assertTrue(tk instanceof StubToolkit);  // Ensure it's StubToolkit
+
         StackPane root = new StackPane();
         Scene scene = new Scene(root);
         Stage stage = new Stage();
@@ -1906,7 +1988,10 @@ public class TextInputControlTest {
 
     // Test for JDK-8178418
     @Test public void UndoRedoReverseSpaceSequence() {
-        Toolkit tk = (StubToolkit)Toolkit.getToolkit();
+        Toolkit tk = Toolkit.getToolkit();
+
+        assertTrue(tk instanceof StubToolkit);  // Ensure it's StubToolkit
+
         StackPane root = new StackPane();
         Scene scene = new Scene(root);
         Stage stage = new Stage();
@@ -1953,7 +2038,10 @@ public class TextInputControlTest {
 
     // Test for JDK-8178418
     @Test public void UndoRedoWords() {
-        Toolkit tk = (StubToolkit)Toolkit.getToolkit();
+        Toolkit tk = Toolkit.getToolkit();
+
+        assertTrue(tk instanceof StubToolkit);  // Ensure it's StubToolkit
+
         StackPane root = new StackPane();
         Scene scene = new Scene(root);
         Stage stage = new Stage();
@@ -2002,7 +2090,10 @@ public class TextInputControlTest {
 
     // Test for JDK-8178418
     @Test public void UndoRedoTimestampBased() {
-        Toolkit tk = (StubToolkit)Toolkit.getToolkit();
+        Toolkit tk = Toolkit.getToolkit();
+
+        assertTrue(tk instanceof StubToolkit);  // Ensure it's StubToolkit
+
         StackPane root = new StackPane();
         Scene scene = new Scene(root);
         Stage stage = new Stage();

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,9 +30,9 @@
 
 #include <wtf/PrintStream.h>
 
-using namespace JSC;
-
 namespace WTF {
+
+using namespace JSC;
 
 void printInternal(PrintStream& out, AbstractMacroAssemblerBase::StatusCondition condition)
 {

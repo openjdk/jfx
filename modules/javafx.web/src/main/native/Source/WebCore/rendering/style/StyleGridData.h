@@ -36,7 +36,7 @@
 namespace WebCore {
 
 typedef HashMap<String, Vector<unsigned>> NamedGridLinesMap;
-typedef HashMap<unsigned, Vector<String>, WTF::IntHash<unsigned>, WTF::UnsignedWithZeroKeyHashTraits<unsigned>> OrderedNamedGridLinesMap;
+typedef HashMap<unsigned, Vector<String>, IntHash<unsigned>, WTF::UnsignedWithZeroKeyHashTraits<unsigned>> OrderedNamedGridLinesMap;
 
 class StyleGridData : public RefCounted<StyleGridData> {
 public:
@@ -51,12 +51,14 @@ public:
             && namedGridColumnLines == o.namedGridColumnLines && namedGridRowLines == o.namedGridRowLines
             && autoRepeatNamedGridColumnLines == o.autoRepeatNamedGridColumnLines && autoRepeatNamedGridRowLines == o.autoRepeatNamedGridRowLines
             && autoRepeatOrderedNamedGridColumnLines == o.autoRepeatOrderedNamedGridColumnLines && autoRepeatOrderedNamedGridRowLines == o.autoRepeatOrderedNamedGridRowLines
+            && implicitNamedGridColumnLines == o.implicitNamedGridColumnLines && implicitNamedGridRowLines == o.implicitNamedGridRowLines
             && namedGridArea == o.namedGridArea && namedGridArea == o.namedGridArea
             && namedGridAreaRowCount == o.namedGridAreaRowCount && namedGridAreaColumnCount == o.namedGridAreaColumnCount
             && orderedNamedGridRowLines == o.orderedNamedGridRowLines && orderedNamedGridColumnLines == o.orderedNamedGridColumnLines
             && gridAutoRepeatColumns == o.gridAutoRepeatColumns && gridAutoRepeatRows == o.gridAutoRepeatRows
             && autoRepeatColumnsInsertionPoint == o.autoRepeatColumnsInsertionPoint && autoRepeatRowsInsertionPoint == o.autoRepeatRowsInsertionPoint
-            && autoRepeatColumnsType == o.autoRepeatColumnsType && autoRepeatRowsType == o.autoRepeatRowsType;
+            && autoRepeatColumnsType == o.autoRepeatColumnsType && autoRepeatRowsType == o.autoRepeatRowsType && subgridRows == o.subgridRows
+            && subgridColumns == o.subgridColumns;
     }
 
     bool operator!=(const StyleGridData& o) const
@@ -78,6 +80,9 @@ public:
     OrderedNamedGridLinesMap autoRepeatOrderedNamedGridColumnLines;
     OrderedNamedGridLinesMap autoRepeatOrderedNamedGridRowLines;
 
+    NamedGridLinesMap implicitNamedGridColumnLines;
+    NamedGridLinesMap implicitNamedGridRowLines;
+
     unsigned gridAutoFlow : GridAutoFlowBits;
 
     Vector<GridTrackSize> gridAutoRows;
@@ -97,6 +102,9 @@ public:
 
     AutoRepeatType autoRepeatColumnsType;
     AutoRepeatType autoRepeatRowsType;
+
+    bool subgridRows;
+    bool subgridColumns;
 
 private:
     StyleGridData();

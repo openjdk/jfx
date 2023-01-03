@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -33,6 +33,7 @@
 #include <jni/Logger.h>
 #include <Common/VSMemory.h>
 #include <Utils/LowLevelPerf.h>
+#include <fxplugins_common.h>
 
 #define MAX_SIZE_BUFFERS_LIMIT 25
 #define MAX_SIZE_BUFFERS_INC   5
@@ -60,6 +61,7 @@ CGstAVPlaybackPipeline::CGstAVPlaybackPipeline(const GstElementContainer& elemen
     m_FrameHeight = 0;
     m_videoCodecErrorCode = ERROR_NONE;
     m_bStaticPipeline = false; // For now all video pipelines are dynamic
+    m_FirstPTS = GST_CLOCK_TIME_NONE;
 }
 
 /**
@@ -154,7 +156,6 @@ void CGstAVPlaybackPipeline::Dispose()
 
 bool CGstAVPlaybackPipeline::IsCodecSupported(GstCaps *pCaps)
 {
-#if TARGET_OS_WIN32
     GstStructure *s = NULL;
     const gchar *mimetype = NULL;
 
@@ -166,10 +167,11 @@ bool CGstAVPlaybackPipeline::IsCodecSupported(GstCaps *pCaps)
             mimetype = gst_structure_get_name (s);
             if (mimetype != NULL)
             {
+#if TARGET_OS_WIN32 | TARGET_OS_LINUX
                 if (strstr(mimetype, "video/x-h264") != NULL) // H.264
                 {
                     gboolean is_supported = FALSE;
-                    g_object_set(m_Elements[VIDEO_DECODER], "codec-id", (gint)CODEC_ID_AVC1, NULL); // Check for AVC1 (MP4). For HLS we should get error early
+                    g_object_set(m_Elements[VIDEO_DECODER], "codec-id", (gint)JFX_CODEC_ID_AVC1, NULL); // Check for AVC1 (MP4). For HLS we should get error early
                     g_object_get(m_Elements[VIDEO_DECODER], "is-supported", &is_supported, NULL);
                     if (is_supported)
                     {
@@ -181,34 +183,33 @@ bool CGstAVPlaybackPipeline::IsCodecSupported(GstCaps *pCaps)
                         return FALSE;
                     }
                 }
-            }
-        }
-    }
-
-    return CGstAudioPlaybackPipeline::IsCodecSupported(pCaps);
-#else // TARGET_OS_WIN32
-    GstStructure *s = NULL;
-    const gchar *mimetype = NULL;
-
-    if (pCaps)
-    {
-        s = gst_caps_get_structure (pCaps, 0);
-        if (s != NULL)
-        {
-            mimetype = gst_structure_get_name (s);
-            if (mimetype != NULL)
-            {
+                else if (strstr(mimetype, "video/x-h265") != NULL) // H.265
+                {
+                    gboolean is_supported = FALSE;
+                    g_object_set(m_Elements[VIDEO_DECODER], "codec-id", (gint)JFX_CODEC_ID_H265, NULL); // Check for H265 (MP4)
+                    g_object_get(m_Elements[VIDEO_DECODER], "is-supported", &is_supported, NULL);
+                    if (is_supported)
+                    {
+                        return TRUE;
+                    }
+                    else
+                    {
+                        m_videoCodecErrorCode = ERROR_MEDIA_H265_FORMAT_UNSUPPORTED;
+                        return FALSE;
+                    }
+                }
+#else // TARGET_OS_WIN32 | TARGET_OS_LINUX
                 if (strstr(mimetype, "video/unsupported") != NULL)
                 {
                     m_videoCodecErrorCode = ERROR_MEDIA_VIDEO_FORMAT_UNSUPPORTED;
                     return FALSE;
                 }
+#endif // TARGET_OS_WIN32 | TARGET_OS_LINUX
             }
         }
     }
 
     return CGstAudioPlaybackPipeline::IsCodecSupported(pCaps);
-#endif // TRAGET_OS_WIN32
 }
 
 bool CGstAVPlaybackPipeline::CheckCodecSupport()
@@ -233,6 +234,54 @@ bool CGstAVPlaybackPipeline::CheckCodecSupport()
         return CGstAudioPlaybackPipeline::CheckCodecSupport();
     }
     return FALSE;
+}
+
+bool CGstAVPlaybackPipeline::LoadDecoder(GstCaps *pCaps)
+{
+#if TARGET_OS_WIN32
+    GstStructure *s = NULL;
+    const gchar *mimetype = NULL;
+    char* strVideoDecoderName = NULL;
+
+    if (m_Elements[VIDEO_BIN] == NULL)
+        return FALSE;
+
+    if (pCaps)
+    {
+        s = gst_caps_get_structure(pCaps, 0);
+        if (s != NULL)
+        {
+            mimetype = gst_structure_get_name(s);
+            if (mimetype != NULL)
+            {
+                if (strstr(mimetype, "video/x-h264") != NULL) // H.264
+                {
+                    strVideoDecoderName = "dshowwrapper";
+                }
+                else if (strstr(mimetype, "video/x-h265") != NULL) // H.265
+                {
+                    strVideoDecoderName = "mfwrapper";
+                }
+                else
+                {
+                    return FALSE;
+                }
+
+                GstElement *videodec = gst_element_factory_make(strVideoDecoderName, NULL);
+                if (videodec == NULL)
+                    return FALSE;
+
+                gst_bin_add_many(GST_BIN(m_Elements[VIDEO_BIN]), videodec, NULL);
+                if (!gst_element_link_many(m_Elements[VIDEO_QUEUE], videodec, m_Elements[VIDEO_SINK], NULL))
+                    return FALSE;
+
+                m_Elements.add(VIDEO_DECODER, videodec);
+            }
+        }
+    }
+#endif // TARGET_OS_WIN32
+
+    return CGstAudioPlaybackPipeline::LoadDecoder(pCaps);
 }
 
 /**
@@ -271,6 +320,18 @@ GstFlowReturn CGstAVPlaybackPipeline::OnAppSinkHaveFrame(GstElement* pElem, CGst
 
     if (pPipeline->m_SendFrameSizeEvent || GST_BUFFER_IS_DISCONT(pBuffer))
         OnAppSinkVideoFrameDiscont(pPipeline, pSample);
+
+    // Update PTS in pBuffer, so first buffer starts with 0. Our rendering
+    // code expects PTS between 0 and duration and will not render anything
+    // beyond duration. For fragmented MP4 PTS starts with N value (usually 10
+    // seconds) and last PTS will be duration + N.
+    if (pPipeline->m_FirstPTS != GST_CLOCK_TIME_NONE &&
+            GST_BUFFER_TIMESTAMP_IS_VALID (pBuffer) &&
+            GST_BUFFER_TIMESTAMP(pBuffer) >= pPipeline->m_FirstPTS)
+    {
+        GST_BUFFER_TIMESTAMP(pBuffer) =
+            GST_BUFFER_TIMESTAMP(pBuffer) - pPipeline->m_FirstPTS;
+    }
 
     //***** Create a VideoFrame object
     CGstVideoFrame* pVideoFrame = new CGstVideoFrame();
@@ -331,12 +392,26 @@ GstFlowReturn CGstAVPlaybackPipeline::OnAppSinkPreroll(GstElement* pElem, CGstAV
         return GST_FLOW_OK;
     }
 
+    if (pPipeline->m_FirstPTS == GST_CLOCK_TIME_NONE &&
+            GST_BUFFER_TIMESTAMP_IS_VALID(pBuffer))
+    {
+        pPipeline->m_FirstPTS = GST_BUFFER_TIMESTAMP(pBuffer);
+    }
+
     if (pPipeline->m_SendFrameSizeEvent || GST_BUFFER_IS_DISCONT(pBuffer))
         OnAppSinkVideoFrameDiscont(pPipeline, pSample);
 
     // Send frome 0 up to use as poster frame.
     if(pPipeline->m_pEventDispatcher != NULL)
     {
+        if (pPipeline->m_FirstPTS != GST_CLOCK_TIME_NONE &&
+                GST_BUFFER_TIMESTAMP_IS_VALID (pBuffer) &&
+                GST_BUFFER_TIMESTAMP(pBuffer) >= pPipeline->m_FirstPTS)
+        {
+            GST_BUFFER_TIMESTAMP(pBuffer) =
+                GST_BUFFER_TIMESTAMP(pBuffer) - pPipeline->m_FirstPTS;
+        }
+
         CGstVideoFrame* pVideoFrame = new CGstVideoFrame();
         if (!pVideoFrame->Init(pSample))
         {
@@ -434,6 +509,7 @@ void CGstAVPlaybackPipeline::on_pad_added(GstElement *element, GstPad *pad, CGst
     const gchar* pstrName = gst_structure_get_name(pStructure);
     GstPad *pPad = NULL;
     GstPadLinkReturn ret = GST_PAD_LINK_OK;
+    GstStateChangeReturn stateRet = GST_STATE_CHANGE_FAILURE;
 
     if (g_str_has_prefix(pstrName, "audio"))
     {
@@ -453,7 +529,20 @@ void CGstAVPlaybackPipeline::on_pad_added(GstElement *element, GstPad *pad, CGst
         {
             pPad = gst_element_get_static_pad(pPipeline->m_Elements[AUDIO_BIN], "sink");
             gst_bin_add(GST_BIN (pPipeline->m_Elements[PIPELINE]), pPipeline->m_Elements[AUDIO_BIN]);
-            gst_element_set_state(pPipeline->m_Elements[AUDIO_BIN], GST_STATE_READY);
+            stateRet = gst_element_set_state(pPipeline->m_Elements[AUDIO_BIN], GST_STATE_READY);
+            if (stateRet == GST_STATE_CHANGE_FAILURE)
+            {
+                gst_object_ref(pPipeline->m_Elements[AUDIO_BIN]);
+                gst_bin_remove(GST_BIN (pPipeline->m_Elements[PIPELINE]), pPipeline->m_Elements[AUDIO_BIN]);
+                // Remove handles, so we do not receive any more notifications about pads being added or
+                // when we done adding new pads. Since we fail to switch bin state we got fatal error and
+                // bus callback will move pipeline into GST_STATE_NULL while holding dispose lock and
+                // demux (qtdemux) might deadlock since it will call on_pad_added or no_more_pads
+                // and these callback will hold dispose lock as well.
+                g_signal_handlers_disconnect_by_func(element, (void*)G_CALLBACK(on_pad_added), pPipeline);
+                g_signal_handlers_disconnect_by_func(element, (void*)G_CALLBACK(no_more_pads), pPipeline);
+                goto Error;
+            }
             if (pPad != NULL)
             {
                 ret = gst_pad_link (pad, pPad);
@@ -462,6 +551,8 @@ void CGstAVPlaybackPipeline::on_pad_added(GstElement *element, GstPad *pad, CGst
                     gst_element_set_state(pPipeline->m_Elements[AUDIO_BIN], GST_STATE_NULL);
                     gst_object_ref(pPipeline->m_Elements[AUDIO_BIN]);
                     gst_bin_remove(GST_BIN (pPipeline->m_Elements[PIPELINE]), pPipeline->m_Elements[AUDIO_BIN]);
+                    // We might need to remove callbacks here as well, but it was not necessary before,
+                    // so to avoid any regression we will not do it here.
                     goto Error;
                 }
             }
@@ -472,11 +563,26 @@ void CGstAVPlaybackPipeline::on_pad_added(GstElement *element, GstPad *pad, CGst
     }
     else if (g_str_has_prefix(pstrName, "video"))
     {
+#if TARGET_OS_WIN32
+        if (pPipeline->m_Elements[VIDEO_DECODER] == NULL)
+        {
+            if (!pPipeline->LoadDecoder(pCaps))
+                goto Error;
+        }
+#endif // TARGET_OS_WIN32
         if (pPipeline->IsCodecSupported(pCaps))
         {
             pPad = gst_element_get_static_pad(pPipeline->m_Elements[VIDEO_BIN], "sink");
             gst_bin_add (GST_BIN (pPipeline->m_Elements[PIPELINE]), pPipeline->m_Elements[VIDEO_BIN]);
-            gst_element_set_state(pPipeline->m_Elements[VIDEO_BIN], GST_STATE_READY);
+            stateRet = gst_element_set_state(pPipeline->m_Elements[VIDEO_BIN], GST_STATE_READY);
+            if (stateRet == GST_STATE_CHANGE_FAILURE)
+            {
+                gst_object_ref(pPipeline->m_Elements[VIDEO_BIN]);
+                gst_bin_remove(GST_BIN (pPipeline->m_Elements[PIPELINE]), pPipeline->m_Elements[VIDEO_BIN]);
+                g_signal_handlers_disconnect_by_func(element, (void*)G_CALLBACK(on_pad_added), pPipeline);
+                g_signal_handlers_disconnect_by_func(element, (void*)G_CALLBACK(no_more_pads), pPipeline);
+                goto Error;
+            }
             if (pPad != NULL)
             {
                 ret = gst_pad_link (pad, pPad);
@@ -762,6 +868,8 @@ GstPadProbeReturn CGstAVPlaybackPipeline::VideoDecoderSrcProbe(GstPad* pPad, Gst
 
         if (strMimeType.find("video/x-h264") != string::npos) {
             encoding = CTrack::H264;
+        } else if (strMimeType.find("video/x-h265") != string::npos) {
+            encoding = CTrack::H265;
         } else {
             encoding = CTrack::CUSTOM;
         }

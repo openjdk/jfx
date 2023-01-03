@@ -38,7 +38,7 @@ public:
     RenderVideo(HTMLVideoElement&, RenderStyle&&);
     virtual ~RenderVideo();
 
-    HTMLVideoElement& videoElement() const;
+    WEBCORE_EXPORT HTMLVideoElement& videoElement() const;
 
     WEBCORE_EXPORT IntRect videoBox() const;
 
@@ -50,6 +50,7 @@ public:
     bool requiresImmediateCompositing() const;
 
     bool shouldDisplayVideo() const;
+    bool failedToLoadPosterImage() const;
 
     void updateFromElement() final;
 

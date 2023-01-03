@@ -185,7 +185,7 @@ fIsGregorian(TRUE), fInvertGregorian(FALSE)
 // -------------------------------------
 
 GregorianCalendar::GregorianCalendar(const Locale& aLocale, UErrorCode& status)
-:   Calendar(TimeZone::createDefault(), aLocale, status),
+:   Calendar(TimeZone::forLocaleOrDefault(aLocale), aLocale, status),
 fGregorianCutover(kPapalCutover),
 fCutoverJulianDay(kCutoverJulianDay), fNormalizedGregorianCutover(fGregorianCutover), fGregorianCutoverYear(1582),
 fIsGregorian(TRUE), fInvertGregorian(FALSE)
@@ -286,7 +286,7 @@ fIsGregorian(source.fIsGregorian), fInvertGregorian(source.fInvertGregorian)
 
 // -------------------------------------
 
-Calendar* GregorianCalendar::clone() const
+GregorianCalendar* GregorianCalendar::clone() const
 {
     return new GregorianCalendar(*this);
 }
@@ -324,26 +324,26 @@ GregorianCalendar::setGregorianChange(UDate date, UErrorCode& status)
     if (U_FAILURE(status))
         return;
 
-    fGregorianCutover = date;
-
     // Precompute two internal variables which we use to do the actual
     // cutover computations.  These are the normalized cutover, which is the
     // midnight at or before the cutover, and the cutover year.  The
     // normalized cutover is in pure date milliseconds; it contains no time
     // of day or timezone component, and it used to compare against other
     // pure date values.
-    int32_t cutoverDay = (int32_t)ClockMath::floorDivide(fGregorianCutover, (double)kOneDay);
-    fNormalizedGregorianCutover = cutoverDay * kOneDay;
+    double cutoverDay = ClockMath::floorDivide(date, (double)kOneDay);
 
-    // Handle the rare case of numeric overflow.  If the user specifies a
-    // change of UDate(Long.MIN_VALUE), in order to get a pure Gregorian
-    // calendar, then the epoch day is -106751991168, which when multiplied
-    // by ONE_DAY gives 9223372036794351616 -- the negative value is too
-    // large for 64 bits, and overflows into a positive value.  We correct
-    // this by using the next day, which for all intents is semantically
-    // equivalent.
-    if (cutoverDay < 0 && fNormalizedGregorianCutover > 0) {
-        fNormalizedGregorianCutover = (cutoverDay + 1) * kOneDay;
+    // Handle the rare case of numeric overflow where the user specifies a time
+    // outside of INT32_MIN .. INT32_MAX number of days.
+
+    if (cutoverDay <= INT32_MIN) {
+        cutoverDay = INT32_MIN;
+        fGregorianCutover = fNormalizedGregorianCutover = cutoverDay * kOneDay;
+    } else if (cutoverDay >= INT32_MAX) {
+        cutoverDay = INT32_MAX;
+        fGregorianCutover = fNormalizedGregorianCutover = cutoverDay * kOneDay;
+    } else {
+        fNormalizedGregorianCutover = cutoverDay * kOneDay;
+        fGregorianCutover = date;
     }
 
     // Normalize the year so BC values are represented as 0 and negative
@@ -360,7 +360,7 @@ GregorianCalendar::setGregorianChange(UDate date, UErrorCode& status)
     fGregorianCutoverYear = cal->get(UCAL_YEAR, status);
     if (cal->get(UCAL_ERA, status) == BC)
         fGregorianCutoverYear = 1 - fGregorianCutoverYear;
-    fCutoverJulianDay = cutoverDay;
+    fCutoverJulianDay = (int32_t)cutoverDay;
     delete cal;
 }
 
@@ -388,7 +388,7 @@ void GregorianCalendar::handleComputeFields(int32_t julianDay, UErrorCode& statu
         // The Julian epoch day (not the same as Julian Day)
         // is zero on Saturday December 30, 0 (Gregorian).
         int32_t julianEpochDay = julianDay - (kJan1_1JulianDay - 2);
-        eyear = (int32_t) ClockMath::floorDivide((4.0*julianEpochDay) + 1464.0, (int32_t) 1461, unusedRemainder);
+                eyear = (int32_t) ClockMath::floorDivide((4.0*julianEpochDay) + 1464.0, (int32_t) 1461, unusedRemainder);
 
         // Compute the Julian calendar day number for January 1, eyear
         int32_t january1 = 365*(eyear-1) + ClockMath::floorDivide(eyear-1, (int32_t)4);
@@ -398,7 +398,7 @@ void GregorianCalendar::handleComputeFields(int32_t julianDay, UErrorCode& statu
         // with 8 AD.  Before 8 AD the spacing is irregular; every 3 years
         // from 45 BC to 9 BC, and then none until 8 AD.  However, we don't
         // implement this historical detail; instead, we implement the
-        // computatinally cleaner proleptic calendar, which assumes
+        // computationally cleaner proleptic calendar, which assumes
         // consistent 4-year cycles throughout time.
         UBool isLeap = ((eyear&0x3) == 0); // equiv. to (eyear%4 == 0)
 

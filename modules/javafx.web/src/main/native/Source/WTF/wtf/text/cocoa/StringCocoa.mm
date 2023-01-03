@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2021 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -18,34 +18,31 @@
  *
  */
 
-#include "config.h"
-#include <wtf/text/WTFString.h>
+#import "config.h"
+#import <wtf/text/WTFString.h>
 
-#include <CoreFoundation/CFString.h>
+#import <CoreFoundation/CFString.h>
+#import <wtf/cocoa/TypeCastsCocoa.h>
 
 namespace WTF {
 
-String::String(NSString *str)
+#if HAVE(SAFARI_FOR_WEBKIT_DEVELOPMENT_REQUIRING_EXTRA_SYMBOLS)
+String::String(NSString *string)
+    : String(bridge_cast(string))
 {
-    if (!str)
-        return;
+}
+#endif
 
-    CFIndex size = CFStringGetLength(reinterpret_cast<CFStringRef>(str));
-    if (!size)
-        m_impl = StringImpl::empty();
-    else {
-        Vector<LChar, 1024> lcharBuffer(size);
-        CFIndex usedBufLen;
-        CFIndex convertedsize = CFStringGetBytes(reinterpret_cast<CFStringRef>(str), CFRangeMake(0, size), kCFStringEncodingISOLatin1, 0, false, lcharBuffer.data(), size, &usedBufLen);
-        if ((convertedsize == size) && (usedBufLen == size)) {
-            m_impl = StringImpl::create(lcharBuffer.data(), size);
-            return;
-        }
+RetainPtr<id> makeNSArrayElement(const String& vectorElement)
+{
+    return bridge_cast(vectorElement.createCFString());
+}
 
-        Vector<UChar, 1024> ucharBuffer(size);
-        CFStringGetCharacters(reinterpret_cast<CFStringRef>(str), CFRangeMake(0, size), ucharBuffer.data());
-        m_impl = StringImpl::create(ucharBuffer.data(), size);
-    }
+std::optional<String> makeVectorElement(const String*, id arrayElement)
+{
+    if (![arrayElement isKindOfClass:NSString.class])
+        return std::nullopt;
+    return { { arrayElement } };
 }
 
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,9 +23,11 @@
  * questions.
  */
 
+import org.gradle.api.tasks.Input
+
 class CompileResourceTask extends NativeCompileTask {
-    List<String> rcParams = new ArrayList<String>();
-    String compiler;
+    @Input List<String> rcParams = new ArrayList<String>();
+    @Input String compiler;
 
     protected File outputFile(File sourceFile) {
         final String outFileName = sourceFile.getName().substring(0, sourceFile.getName().lastIndexOf("."));

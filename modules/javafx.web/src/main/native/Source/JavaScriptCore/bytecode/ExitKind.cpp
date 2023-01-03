@@ -38,8 +38,8 @@ const char* exitKindToString(ExitKind kind)
         return "Unset";
     case BadType:
         return "BadType";
-    case BadCell:
-        return "BadCell";
+    case BadConstantValue:
+        return "BadConstantValue";
     case BadIdent:
         return "BadIdent";
     case BadExecutable:
@@ -56,6 +56,8 @@ const char* exitKindToString(ExitKind kind)
         return "Overflow";
     case NegativeZero:
         return "NegativeZero";
+    case NegativeIndex:
+        return "NegativeIndex";
     case Int52Overflow:
         return "Int52Overflow";
     case StoreToHole:
@@ -88,6 +90,8 @@ const char* exitKindToString(ExitKind kind)
         return "ExceptionCheck";
     case GenericUnwind:
         return "GenericUnwind";
+    case BigInt32Overflow:
+        return "BigInt32Overflow";
     }
     RELEASE_ASSERT_NOT_REACHED();
     return "Unknown";

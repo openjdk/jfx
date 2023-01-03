@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -122,8 +122,8 @@ public class LabeledTest {
      *  - can be null                                                               *
      *  - set is honored                                                            *
      *  - can be bound                                                              *
-     *  - if bound, impl_cssSettable returns false                                  *
-     *  - if specified via CSS and not bound, impl_cssSettable returns true         *
+     *  - if bound, CssMetaData_isSettable returns false                                  *
+     *  - if specified via CSS and not bound, CssMetaData_isSettable returns true         *
      *                                                                              *
      *******************************************************************************/
 
@@ -172,8 +172,8 @@ public class LabeledTest {
      *  - set is honored                                                            *
      *  - can be bound                                                              *
      *  - is BLACK by default                                                       *
-     *  - if bound, impl_cssSettable returns false                                  *
-     *  - if specified via CSS and not bound, impl_cssSettable returns true         *
+     *  - if bound, CssMetaData_isSettable returns false                                  *
+     *  - if specified via CSS and not bound, CssMetaData_isSettable returns true         *
      *                                                                              *
      *******************************************************************************/
 
@@ -198,21 +198,21 @@ public class LabeledTest {
     }
 
     @Test public void textFillCanBeBound() {
-        ObjectProperty<Paint> other = new SimpleObjectProperty<Paint>(Color.RED);
+        ObjectProperty<Paint> other = new SimpleObjectProperty<>(Color.RED);
         labeled.textFillProperty().bind(other);
         assertSame(Color.RED, labeled.getTextFill());
     }
 
-    @Test public void whenTextFillIsBound_impl_cssSettable_ReturnsFalse() {
+    @Test public void whenTextFillIsBound_CssMetaData_isSettable_ReturnsFalse() {
         CssMetaData styleable = ((StyleableProperty)labeled.textFillProperty()).getCssMetaData();
         assertTrue(styleable.isSettable(labeled));
-        ObjectProperty<Paint> other = new SimpleObjectProperty<Paint>(Color.RED);
+        ObjectProperty<Paint> other = new SimpleObjectProperty<>(Color.RED);
         labeled.textFillProperty().bind(other);
         assertFalse(styleable.isSettable(labeled));
 
     }
 
-    @Test public void whenTextFillIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
+    @Test public void whenTextFillIsSpecifiedViaCSSAndIsNotBound_CssMetaData_isSettable_ReturnsTrue() {
         CssMetaData styleable = ((StyleableProperty)labeled.textFillProperty()).getCssMetaData();
         assertTrue(styleable.isSettable(labeled));
     }
@@ -238,8 +238,8 @@ public class LabeledTest {
      *  - set is honored                                                            *
      *  - can be bound                                                              *
      *  - default is "CENTER_LEFT"                                                  *
-     *  - if bound, impl_cssSettable returns false                                  *
-     *  - if specified via CSS and not bound, impl_cssSettable returns true         *
+     *  - if bound, CssMetaData_isSettable returns false                                  *
+     *  - if specified via CSS and not bound, CssMetaData_isSettable returns true         *
      *                                                                              *
      *******************************************************************************/
 
@@ -263,19 +263,19 @@ public class LabeledTest {
     }
 
     @Test public void alignmentCanBeBound() {
-        ObjectProperty<Pos> other = new SimpleObjectProperty<Pos>(Pos.BASELINE_RIGHT);
+        ObjectProperty<Pos> other = new SimpleObjectProperty<>(Pos.BASELINE_RIGHT);
         labeled.alignmentProperty().bind(other);
         assertEquals(Pos.BASELINE_RIGHT, labeled.getAlignment());
     }
 
-    @Test public void whenAlignmentIsBound_impl_cssSettable_ReturnsFalse() {
+    @Test public void whenAlignmentIsBound_CssMetaData_isSettable_ReturnsFalse() {
         CssMetaData styleable = ((StyleableProperty)labeled.alignmentProperty()).getCssMetaData();
-        ObjectProperty<Pos> other = new SimpleObjectProperty<Pos>(Pos.BASELINE_RIGHT);
+        ObjectProperty<Pos> other = new SimpleObjectProperty<>(Pos.BASELINE_RIGHT);
         labeled.alignmentProperty().bind(other);
         assertFalse(styleable.isSettable(labeled));
     }
 
-    @Test public void whenAlignmentIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
+    @Test public void whenAlignmentIsSpecifiedViaCSSAndIsNotBound_CssMetaData_isSettable_ReturnsTrue() {
         CssMetaData styleable = ((StyleableProperty)labeled.alignmentProperty()).getCssMetaData();
         assertTrue(styleable.isSettable(labeled));
     }
@@ -293,8 +293,8 @@ public class LabeledTest {
      *  - set is honored                                                            *
      *  - can be bound                                                              *
      *  - default is "LEFT"                                                         *
-     *  - if bound, impl_cssSettable returns false                                  *
-     *  - if specified via CSS and not bound, impl_cssSettable returns true         *
+     *  - if bound, CssMetaData_isSettable returns false                                  *
+     *  - if specified via CSS and not bound, CssMetaData_isSettable returns true         *
      *                                                                              *
      *******************************************************************************/
 
@@ -319,20 +319,20 @@ public class LabeledTest {
     }
 
     @Test public void textAlignmentCanBeBound() {
-        ObjectProperty<TextAlignment> other = new SimpleObjectProperty<TextAlignment>(TextAlignment.RIGHT);
+        ObjectProperty<TextAlignment> other = new SimpleObjectProperty<>(TextAlignment.RIGHT);
         labeled.textAlignmentProperty().bind(other);
         assertEquals(TextAlignment.RIGHT, labeled.getTextAlignment());
     }
 
-    @Test public void whenTextAlignmentIsBound_impl_cssSettable_ReturnsFalse() {
+    @Test public void whenTextAlignmentIsBound_CssMetaData_isSettable_ReturnsFalse() {
         CssMetaData styleable = ((StyleableProperty)labeled.textAlignmentProperty()).getCssMetaData();
         assertTrue(styleable.isSettable(labeled));
-        ObjectProperty<TextAlignment> other = new SimpleObjectProperty<TextAlignment>(TextAlignment.RIGHT);
+        ObjectProperty<TextAlignment> other = new SimpleObjectProperty<>(TextAlignment.RIGHT);
         labeled.textAlignmentProperty().bind(other);
         assertFalse(styleable.isSettable(labeled));
     }
 
-    @Test public void whenTextAlignmentIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
+    @Test public void whenTextAlignmentIsSpecifiedViaCSSAndIsNotBound_CssMetaData_isSettable_ReturnsTrue() {
         CssMetaData styleable = ((StyleableProperty)labeled.textAlignmentProperty()).getCssMetaData();
         assertTrue(styleable.isSettable(labeled));
     }
@@ -350,8 +350,8 @@ public class LabeledTest {
      *  - set is honored                                                            *
      *  - can be bound                                                              *
      *  - default is "ELLIPSIS"                                                     *
-     *  - if bound, impl_cssSettable returns false                                  *
-     *  - if specified via CSS and not bound, impl_cssSettable returns true         *
+     *  - if bound, CssMetaData_isSettable returns false                                  *
+     *  - if specified via CSS and not bound, CssMetaData_isSettable returns true         *
      *                                                                              *
      *******************************************************************************/
 
@@ -376,20 +376,20 @@ public class LabeledTest {
     }
 
     @Test public void textOverrunCanBeBound() {
-        ObjectProperty<OverrunStyle> other = new SimpleObjectProperty<OverrunStyle>(OverrunStyle.LEADING_WORD_ELLIPSIS);
+        ObjectProperty<OverrunStyle> other = new SimpleObjectProperty<>(OverrunStyle.LEADING_WORD_ELLIPSIS);
         labeled.textOverrunProperty().bind(other);
         assertEquals(OverrunStyle.LEADING_WORD_ELLIPSIS, labeled.getTextOverrun());
     }
 
-    @Test public void whenTextOverrunIsBound_impl_cssSettable_ReturnsFalse() {
+    @Test public void whenTextOverrunIsBound_CssMetaData_isSettable_ReturnsFalse() {
         CssMetaData styleable = ((StyleableProperty)labeled.textOverrunProperty()).getCssMetaData();
         assertTrue(styleable.isSettable(labeled));
-        ObjectProperty<OverrunStyle> other = new SimpleObjectProperty<OverrunStyle>(OverrunStyle.LEADING_WORD_ELLIPSIS);
+        ObjectProperty<OverrunStyle> other = new SimpleObjectProperty<>(OverrunStyle.LEADING_WORD_ELLIPSIS);
         labeled.textOverrunProperty().bind(other);
         assertFalse(styleable.isSettable(labeled));
     }
 
-    @Test public void whenTextOverrunIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
+    @Test public void whenTextOverrunIsSpecifiedViaCSSAndIsNotBound_CssMetaData_isSettable_ReturnsTrue() {
         CssMetaData styleable = ((StyleableProperty)labeled.textOverrunProperty()).getCssMetaData();
         assertTrue(styleable.isSettable(labeled));
     }
@@ -407,8 +407,8 @@ public class LabeledTest {
      *  - can be bound                                                              *
      *  - default is false                                                          *
      *  - contentBias changes based on wrapText                                     *
-     *  - if bound, impl_cssSettable returns false                                  *
-     *  - if specified via CSS and not bound, impl_cssSettable returns true         *
+     *  - if bound, CssMetaData_isSettable returns false                                  *
+     *  - if specified via CSS and not bound, CssMetaData_isSettable returns true         *
      *                                                                              *
      *******************************************************************************/
 
@@ -433,7 +433,7 @@ public class LabeledTest {
         assertTrue(labeled.isWrapText());
     }
 
-    @Test public void whenWrapTextIsBound_impl_cssSettable_ReturnsFalse() {
+    @Test public void whenWrapTextIsBound_CssMetaData_isSettable_ReturnsFalse() {
         CssMetaData styleable = ((StyleableProperty)labeled.wrapTextProperty()).getCssMetaData();
         assertTrue(styleable.isSettable(labeled));
         BooleanProperty other = new SimpleBooleanProperty(true);
@@ -441,7 +441,7 @@ public class LabeledTest {
         assertFalse(styleable.isSettable(labeled));
     }
 
-    @Test public void whenWrapTextIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
+    @Test public void whenWrapTextIsSpecifiedViaCSSAndIsNotBound_CssMetaData_isSettable_ReturnsTrue() {
         CssMetaData styleable = ((StyleableProperty)labeled.wrapTextProperty()).getCssMetaData();
         assertTrue(styleable.isSettable(labeled));
     }
@@ -468,8 +468,8 @@ public class LabeledTest {
      *  - set is honored                                                            *
      *  - can be bound                                                              *
      *  - default is Font.getDefault()                                              *
-     *  - if bound, impl_cssSettable returns false                                  *
-     *  - if specified via CSS and not bound, impl_cssSettable returns true         *
+     *  - if bound, CssMetaData_isSettable returns false                                  *
+     *  - if specified via CSS and not bound, CssMetaData_isSettable returns true         *
      *                                                                              *
      *******************************************************************************/
 
@@ -498,21 +498,21 @@ public class LabeledTest {
 
     @Test public void fontCanBeBound() {
         final Font f = Font.font("Arial", 25);
-        ObjectProperty<Font> other = new SimpleObjectProperty<Font>(f);
+        ObjectProperty<Font> other = new SimpleObjectProperty<>(f);
         labeled.fontProperty().bind(other);
         assertEquals(f, labeled.getFont());
     }
 
-    @Test public void whenFontIsBound_impl_cssSettable_ReturnsFalse() {
+    @Test public void whenFontIsBound_CssMetaData_isSettable_ReturnsFalse() {
         final Font f = Font.font("Arial", 25);
         CssMetaData styleable = ((StyleableProperty)labeled.fontProperty()).getCssMetaData();
         assertTrue(styleable.isSettable(labeled));
-        ObjectProperty<Font> other = new SimpleObjectProperty<Font>(f);
+        ObjectProperty<Font> other = new SimpleObjectProperty<>(f);
         labeled.fontProperty().bind(other);
         assertFalse(styleable.isSettable(labeled));
     }
 
-    @Test public void whenFontIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
+    @Test public void whenFontIsSpecifiedViaCSSAndIsNotBound_CssMetaData_isSettable_ReturnsTrue() {
         final Font f = Font.font("Arial", 25);
         CssMetaData styleable = ((StyleableProperty)labeled.fontProperty()).getCssMetaData();
         assertTrue(styleable.isSettable(labeled));
@@ -532,8 +532,8 @@ public class LabeledTest {
      *  - set is honored                                                            *
      *  - can be bound                                                              *
      *  - default is null                                                           *
-     *  - if bound, impl_cssSettable returns false                                  *
-     *  - if specified via CSS and not bound, impl_cssSettable returns true         *
+     *  - if bound, CssMetaData_isSettable returns false                                  *
+     *  - if specified via CSS and not bound, CssMetaData_isSettable returns true         *
      *                                                                              *
      *******************************************************************************/
 
@@ -562,23 +562,21 @@ public class LabeledTest {
 
     @Test public void graphicCanBeBound() {
         Rectangle r = new Rectangle();
-        ObjectProperty<Node> other = new SimpleObjectProperty<Node>(r);
+        ObjectProperty<Node> other = new SimpleObjectProperty<>(r);
         labeled.graphicProperty().bind(other);
         assertEquals(r, labeled.getGraphic());
     }
 
-    @Ignore ("CSS Graphic must be a URL, and then it will try to load the image. Not sure how to test.")
-    @Test public void whenGraphicIsBound_impl_cssSettable_ReturnsFalse() {
+    @Test public void whenGraphicIsBound_CssMetaData_isSettable_ReturnsFalse() {
         CssMetaData styleable = ((StyleableProperty)labeled.graphicProperty()).getCssMetaData();
         assertTrue(styleable.isSettable(labeled));
         Rectangle r = new Rectangle();
-        ObjectProperty<Node> other = new SimpleObjectProperty<Node>(r);
+        ObjectProperty<Node> other = new SimpleObjectProperty<>(r);
         labeled.graphicProperty().bind(other);
         assertFalse(styleable.isSettable(labeled));
     }
 
-    @Ignore ("CSS Graphic must be a URL, and then it will try to load the image. Not sure how to test.")
-    @Test public void whenGraphicIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
+    @Test public void whenGraphicIsSpecifiedViaCSSAndIsNotBound_CssMetaData_isSettable_ReturnsTrue() {
         CssMetaData styleable = ((StyleableProperty)labeled.graphicProperty()).getCssMetaData();
         assertTrue(styleable.isSettable(labeled));
     }
@@ -596,8 +594,8 @@ public class LabeledTest {
      *  - set is honored                                                            *
      *  - can be bound                                                              *
      *  - default is false                                                          *
-     *  - if bound, impl_cssSettable returns false                                  *
-     *  - if specified via CSS and not bound, impl_cssSettable returns true         *
+     *  - if bound, CssMetaData_isSettable returns false                                  *
+     *  - if specified via CSS and not bound, CssMetaData_isSettable returns true         *
      *                                                                              *
      *******************************************************************************/
 
@@ -622,7 +620,7 @@ public class LabeledTest {
         assertTrue(labeled.isUnderline());
     }
 
-    @Test public void whenUnderlineIsBound_impl_cssSettable_ReturnsFalse() {
+    @Test public void whenUnderlineIsBound_CssMetaData_isSettable_ReturnsFalse() {
         CssMetaData styleable = ((StyleableProperty)labeled.underlineProperty()).getCssMetaData();
         assertTrue(styleable.isSettable(labeled));
         BooleanProperty other = new SimpleBooleanProperty(true);
@@ -630,7 +628,7 @@ public class LabeledTest {
         assertFalse(styleable.isSettable(labeled));
     }
 
-    @Test public void whenUnderlineIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
+    @Test public void whenUnderlineIsSpecifiedViaCSSAndIsNotBound_CssMetaData_isSettable_ReturnsTrue() {
         CssMetaData styleable = ((StyleableProperty)labeled.underlineProperty()).getCssMetaData();
         assertTrue(styleable.isSettable(labeled));
     }
@@ -648,8 +646,8 @@ public class LabeledTest {
      *  - set is honored                                                            *
      *  - can be bound                                                              *
      *  - default is "LEFT"                                                         *
-     *  - if bound, impl_cssSettable returns false                                  *
-     *  - if specified via CSS and not bound, impl_cssSettable returns true         *
+     *  - if bound, CssMetaData_isSettable returns false                                  *
+     *  - if specified via CSS and not bound, CssMetaData_isSettable returns true         *
      *                                                                              *
      *******************************************************************************/
 
@@ -674,20 +672,20 @@ public class LabeledTest {
     }
 
     @Test public void contentDisplayCanBeBound() {
-        ObjectProperty<ContentDisplay> other = new SimpleObjectProperty<ContentDisplay>(ContentDisplay.RIGHT);
+        ObjectProperty<ContentDisplay> other = new SimpleObjectProperty<>(ContentDisplay.RIGHT);
         labeled.contentDisplayProperty().bind(other);
         assertEquals(ContentDisplay.RIGHT, labeled.getContentDisplay());
     }
 
-    @Test public void whenContentDisplayIsBound_impl_cssSettable_ReturnsFalse() {
+    @Test public void whenContentDisplayIsBound_CssMetaData_isSettable_ReturnsFalse() {
         CssMetaData styleable = ((StyleableProperty)labeled.contentDisplayProperty()).getCssMetaData();
         assertTrue(styleable.isSettable(labeled));
-        ObjectProperty<ContentDisplay> other = new SimpleObjectProperty<ContentDisplay>(ContentDisplay.RIGHT);
+        ObjectProperty<ContentDisplay> other = new SimpleObjectProperty<>(ContentDisplay.RIGHT);
         labeled.contentDisplayProperty().bind(other);
         assertFalse(styleable.isSettable(labeled));
     }
 
-    @Test public void whenContentDisplayIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
+    @Test public void whenContentDisplayIsSpecifiedViaCSSAndIsNotBound_CssMetaData_isSettable_ReturnsTrue() {
         CssMetaData styleable = ((StyleableProperty)labeled.contentDisplayProperty()).getCssMetaData();
         assertTrue(styleable.isSettable(labeled));
     }
@@ -704,8 +702,8 @@ public class LabeledTest {
      *  - set is honored                                                            *
      *  - can be bound                                                              *
      *  - default is 4                                                              *
-     *  - if bound, impl_cssSettable returns false                                  *
-     *  - if specified via CSS and not bound, impl_cssSettable returns true         *
+     *  - if bound, CssMetaData_isSettable returns false                                  *
+     *  - if specified via CSS and not bound, CssMetaData_isSettable returns true         *
      *                                                                              *
      *******************************************************************************/
 
@@ -735,7 +733,7 @@ public class LabeledTest {
         assertEquals(25, labeled.getGraphicTextGap(), 0);
     }
 
-    @Test public void whenGraphicTextGapIsBound_impl_cssSettable_ReturnsFalse() {
+    @Test public void whenGraphicTextGapIsBound_CssMetaData_isSettable_ReturnsFalse() {
         CssMetaData styleable = ((StyleableProperty)labeled.graphicTextGapProperty()).getCssMetaData();
         assertTrue(styleable.isSettable(labeled));
         DoubleProperty other = new SimpleDoubleProperty(25);
@@ -743,7 +741,7 @@ public class LabeledTest {
         assertFalse(styleable.isSettable(labeled));
     }
 
-    @Test public void whenGraphicTextGapIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
+    @Test public void whenGraphicTextGapIsSpecifiedViaCSSAndIsNotBound_CssMetaData_isSettable_ReturnsTrue() {
         CssMetaData styleable = ((StyleableProperty)labeled.graphicTextGapProperty()).getCssMetaData();
         assertTrue(styleable.isSettable(labeled));
     }
@@ -766,8 +764,8 @@ public class LabeledTest {
 
     @Test public void canSpecifyLabelPaddingFromCSS() {
         Insets insets = new Insets(5, 4, 3, 2);
-        CssMetaData styleable = ((StyleableProperty)labeled.labelPaddingProperty()).getCssMetaData();
-        styleable.set(labeled, insets, null);
+        StyleableProperty prop = ((StyleableProperty)labeled.labelPaddingProperty());
+        prop.applyStyle(null, insets);
         assertEquals(insets, labeled.getLabelPadding());
         assertEquals(insets, labeled.labelPaddingProperty().get());
     }

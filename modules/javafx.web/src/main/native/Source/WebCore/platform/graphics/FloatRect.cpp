@@ -54,9 +54,15 @@ bool FloatRect::isExpressibleAsIntRect() const
         && isWithinIntRange(maxX()) && isWithinIntRange(maxY());
 }
 
+bool FloatRect::inclusivelyIntersects(const FloatRect& other) const
+{
+    return width() >= 0 && height() >= 0 && other.width() >= 0 && other.height() >= 0
+        && x() <= other.maxX() && other.x() <= maxX() && y() <= other.maxY() && other.y() <= maxY();
+}
+
 bool FloatRect::intersects(const FloatRect& other) const
 {
-    // Checking emptiness handles negative widths as well as zero.
+    // Checking emptiness handles negative widths and heights as well as zero.
     return !isEmpty() && !other.isEmpty()
         && x() < other.maxX() && other.x() < maxX()
         && y() < other.maxY() && other.y() < maxY();
@@ -223,6 +229,14 @@ void FloatRect::fitToPoints(const FloatPoint& p0, const FloatPoint& p1, const Fl
     float bottom = max4(p0.y(), p1.y(), p2.y(), p3.y());
 
     setLocationAndSizeFromEdges(left, top, right, bottom);
+}
+
+FloatRect normalizeRect(const FloatRect& rect)
+{
+    return FloatRect(std::min(rect.x(), rect.maxX()),
+        std::min(rect.y(), rect.maxY()),
+        std::max(rect.width(), -rect.width()),
+        std::max(rect.height(), -rect.height()));
 }
 
 FloatRect encloseRectToDevicePixels(const FloatRect& rect, float deviceScaleFactor)

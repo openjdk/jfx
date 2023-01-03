@@ -29,10 +29,10 @@
 #include "Interpreter.h"
 #include "Label.h"
 #include "OpcodeSize.h"
+#include "PrivateFieldPutKind.h"
 #include "ProfileTypeBytecodeFlag.h"
 #include "PutByIdFlags.h"
 #include "ResultType.h"
-#include "SpecialPointer.h"
 #include "SymbolTableOrScopeDepth.h"
 #include "VirtualRegister.h"
 #include <type_traits>
@@ -50,7 +50,7 @@ struct Fits;
 
 // Implicit conversion for types of the same size
 template<typename T, OpcodeSize size>
-struct Fits<T, size, std::enable_if_t<sizeof(T) == size, std::true_type>> {
+struct Fits<T, size, std::enable_if_t<sizeof(T) == size && std::is_constructible<T>::value, std::true_type>> {
     using TargetType = typename TypeBySize<size>::unsignedType;
 
     static bool check(T) { return true; }
@@ -175,18 +175,20 @@ struct Fits<GetPutInfo, size, std::enable_if_t<size != OpcodeSize::Wide32, std::
     // 13 Resolve Types
     // 3 Initialization Modes
     // 2 Resolve Modes
+    // 1 bit isStrict flag
     //
     // Try to encode encode as
     //
-    //           initialization mode
-    //                    v
-    // free bit-> 0|0000|00|0
-    //                 ^    ^
-    //    resolve  type   resolve mode
+    //            initialization mode
+    //                     v
+    // isStrict -> 0|0000|00|0
+    //                  ^    ^
+    //      resolve  type    resolve mode
     static constexpr int s_resolveTypeMax = 1 << 4;
     static constexpr int s_initializationModeMax = 1 << 2;
     static constexpr int s_resolveModeMax = 1 << 1;
 
+    static constexpr int s_isStrictBit = 1 << 7;
     static constexpr int s_resolveTypeBits = (s_resolveTypeMax - 1) << 3;
     static constexpr int s_initializationModeBits = (s_initializationModeMax - 1) << 1;
     static constexpr int s_resolveModeBits = (s_resolveModeMax - 1);
@@ -207,7 +209,8 @@ struct Fits<GetPutInfo, size, std::enable_if_t<size != OpcodeSize::Wide32, std::
         auto resolveType = static_cast<uint8_t>(gpi.resolveType());
         auto initializationMode = static_cast<uint8_t>(gpi.initializationMode());
         auto resolveMode = static_cast<uint8_t>(gpi.resolveMode());
-        return (resolveType << 3) | (initializationMode << 1) | resolveMode;
+        auto isStrict = static_cast<uint8_t>(gpi.ecmaMode().isStrict());
+        return (isStrict << 7) | (resolveType << 3) | (initializationMode << 1) | resolveMode;
     }
 
     static GetPutInfo convert(TargetType gpi)
@@ -215,7 +218,43 @@ struct Fits<GetPutInfo, size, std::enable_if_t<size != OpcodeSize::Wide32, std::
         auto resolveType = static_cast<ResolveType>((gpi & s_resolveTypeBits) >> 3);
         auto initializationMode = static_cast<InitializationMode>((gpi & s_initializationModeBits) >> 1);
         auto resolveMode = static_cast<ResolveMode>(gpi & s_resolveModeBits);
-        return GetPutInfo(resolveMode, resolveType, initializationMode);
+        auto isStrict = static_cast<bool>(gpi & s_isStrictBit);
+        return GetPutInfo(resolveMode, resolveType, initializationMode, isStrict ? ECMAMode::strict() : ECMAMode::sloppy());
+    }
+};
+
+template<OpcodeSize size>
+struct Fits<PutByIdFlags, size> {
+    using TargetType = typename TypeBySize<size>::unsignedType;
+
+    // PutByIdFlags is just two boolean values encoded as
+    //
+    //        isStrict
+    //           v
+    //    000000|0|0
+    //             ^
+    //         isDirect
+    static constexpr int s_isDirectBit = 1;
+    static constexpr int s_isStrictBit = 2;
+
+    static bool check(PutByIdFlags)
+    {
+        return true;
+    }
+
+    static TargetType convert(PutByIdFlags flags)
+    {
+        auto isDirect = static_cast<uint8_t>(flags.isDirect());
+        auto isStrict = static_cast<uint8_t>(flags.ecmaMode().isStrict());
+        return (isStrict << 1) | isDirect;
+    }
+
+    static PutByIdFlags convert(TargetType gpi)
+    {
+        auto isDirect = static_cast<bool>(gpi & s_isDirectBit);
+        auto isStrict = static_cast<bool>(gpi & s_isStrictBit);
+        auto ecmaMode = isStrict ? ECMAMode::strict() : ECMAMode::sloppy();
+        return isDirect ? PutByIdFlags::createDirect(ecmaMode) : PutByIdFlags::create(ecmaMode);
     }
 };
 
@@ -234,6 +273,18 @@ struct Fits<E, size, std::enable_if_t<sizeof(E) != size && std::is_enum<E>::valu
     {
         return static_cast<E>(Base::convert(e));
     }
+};
+
+template<OpcodeSize size>
+struct Fits<ResultType, size, std::enable_if_t<sizeof(ResultType) != size, std::true_type>> : public Fits<uint8_t, size> {
+    static_assert(sizeof(ResultType) == sizeof(uint8_t));
+    using Base = Fits<uint8_t, size>;
+
+    static bool check(ResultType type) { return Base::check(type.bits()); }
+
+    static typename Base::TargetType convert(ResultType type) { return Base::convert(type.bits()); }
+
+    static ResultType convert(typename Base::TargetType type) { return ResultType(Base::convert(type)); }
 };
 
 template<OpcodeSize size>
@@ -290,8 +341,8 @@ struct Fits<OperandTypes, size, std::enable_if_t<sizeof(OperandTypes) != size, s
     }
 };
 
-template<OpcodeSize size>
-struct Fits<BoundLabel, size> : public Fits<int, size> {
+template<OpcodeSize size, typename GeneratorTraits>
+struct Fits<GenericBoundLabel<GeneratorTraits>, size> : public Fits<int, size> {
     // This is a bit hacky: we need to delay computing jump targets, since we
     // might have to emit `nop`s to align the instructions stream. Additionally,
     // we have to compute the target before we start writing to the instruction
@@ -300,19 +351,59 @@ struct Fits<BoundLabel, size> : public Fits<int, size> {
     // later we use the saved target when we call convert.
 
     using Base = Fits<int, size>;
-    static bool check(BoundLabel& label)
+    static bool check(GenericBoundLabel<GeneratorTraits>& label)
     {
         return Base::check(label.saveTarget());
     }
 
-    static typename Base::TargetType convert(BoundLabel& label)
+    static typename Base::TargetType convert(GenericBoundLabel<GeneratorTraits>& label)
     {
         return Base::convert(label.commitTarget());
     }
 
-    static BoundLabel convert(typename Base::TargetType target)
+    static GenericBoundLabel<GeneratorTraits> convert(typename Base::TargetType target)
     {
-        return BoundLabel(Base::convert(target));
+        return GenericBoundLabel<GeneratorTraits>(Base::convert(target));
+    }
+};
+
+template<OpcodeSize size>
+struct Fits<ECMAMode, size> : public Fits<uint8_t, size> {
+    using Base = Fits<uint8_t, size>;
+
+    static bool check(ECMAMode ecmaMode)
+    {
+        return Base::check(ecmaMode.value());
+    }
+
+    static typename Base::TargetType convert(ECMAMode ecmaMode)
+    {
+        return Base::convert(ecmaMode.value());
+    }
+
+    static ECMAMode convert(typename Base::TargetType ecmaMode)
+    {
+        return ECMAMode::fromByte(Base::convert(ecmaMode));
+    }
+};
+
+template<OpcodeSize size>
+struct Fits<PrivateFieldPutKind, size> : public Fits<uint8_t, size> {
+    using Base = Fits<uint8_t, size>;
+
+    static bool check(PrivateFieldPutKind putMode)
+    {
+        return Base::check(putMode.value());
+    }
+
+    static typename Base::TargetType convert(PrivateFieldPutKind putMode)
+    {
+        return Base::convert(putMode.value());
+    }
+
+    static PrivateFieldPutKind convert(typename Base::TargetType putMode)
+    {
+        return PrivateFieldPutKind::fromByte(Base::convert(putMode));
     }
 };
 

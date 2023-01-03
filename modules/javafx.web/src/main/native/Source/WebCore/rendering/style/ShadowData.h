@@ -27,28 +27,24 @@
 #include "Color.h"
 #include "FloatRect.h"
 #include "LayoutRect.h"
+#include "Length.h"
+#include "LengthPoint.h"
 
 namespace WebCore {
 
-enum ShadowStyle { Normal, Inset };
+enum class ShadowStyle : uint8_t { Normal, Inset };
 
 // This class holds information about shadows for the text-shadow and box-shadow properties.
 
 class ShadowData {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    ShadowData()
-        : m_radius(0)
-        , m_spread(0)
-        , m_style(Normal)
-        , m_isWebkitBoxShadow(false)
-    {
-    }
+    ShadowData() = default;
 
-    ShadowData(const IntPoint& location, int radius, int spread, ShadowStyle style, bool isWebkitBoxShadow, const Color& color)
-        : m_location(location)
-        , m_radius(radius)
+    ShadowData(const LengthPoint& location, Length radius, Length spread, ShadowStyle style, bool isWebkitBoxShadow, const Color& color)
+        : m_location(location.x(), location.y())
         , m_spread(spread)
+        , m_radius(radius)
         , m_color(color)
         , m_style(style)
         , m_isWebkitBoxShadow(isWebkitBoxShadow)
@@ -56,7 +52,7 @@ public:
     }
 
     ShadowData(const ShadowData&);
-    static Optional<ShadowData> clone(const ShadowData*);
+    static std::optional<ShadowData> clone(const ShadowData*);
 
     ShadowData& operator=(ShadowData&&) = default;
 
@@ -66,37 +62,42 @@ public:
         return !(*this == o);
     }
 
-    int x() const { return m_location.x(); }
-    int y() const { return m_location.y(); }
-    IntPoint location() const { return m_location; }
-    int radius() const { return m_radius; }
-    int paintingExtent() const
+    const Length& x() const { return m_location.x(); }
+    const Length& y() const { return m_location.y(); }
+    const LengthPoint& location() const { return m_location; }
+    const Length& radius() const { return m_radius; }
+    LayoutUnit paintingExtent() const
     {
         // Blurring uses a Gaussian function whose std. deviation is m_radius/2, and which in theory
         // extends to infinity. In 8-bit contexts, however, rounding causes the effect to become
         // undetectable at around 1.4x the radius.
         const float radiusExtentMultiplier = 1.4;
-        return ceilf(m_radius * radiusExtentMultiplier);
+        return LayoutUnit(ceilf(m_radius.value() * radiusExtentMultiplier));
     }
-    int spread() const { return m_spread; }
+    const Length& spread() const { return m_spread; }
     ShadowStyle style() const { return m_style; }
+
+    void setColor(const Color& color) { m_color = color; }
     const Color& color() const { return m_color; }
+
     bool isWebkitBoxShadow() const { return m_isWebkitBoxShadow; }
 
     const ShadowData* next() const { return m_next.get(); }
-    void setNext(std::unique_ptr<ShadowData> shadow) { m_next = WTFMove(shadow); }
+    void setNext(std::unique_ptr<ShadowData>&& shadow) { m_next = WTFMove(shadow); }
 
     void adjustRectForShadow(LayoutRect&, int additionalOutlineSize = 0) const;
     void adjustRectForShadow(FloatRect&, int additionalOutlineSize = 0) const;
 
 private:
-    IntPoint m_location;
-    int m_radius; // This is the "blur radius", or twice the standard deviation of the Gaussian blur.
-    int m_spread;
+    LengthPoint m_location;
+    Length m_spread;
+    Length m_radius; // This is the "blur radius", or twice the standard deviation of the Gaussian blur.
     Color m_color;
-    ShadowStyle m_style;
-    bool m_isWebkitBoxShadow;
+    ShadowStyle m_style { ShadowStyle::Normal };
+    bool m_isWebkitBoxShadow { false };
     std::unique_ptr<ShadowData> m_next;
 };
+
+WTF::TextStream& operator<<(WTF::TextStream&, const ShadowData&);
 
 } // namespace WebCore

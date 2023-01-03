@@ -37,7 +37,7 @@ class ScopeExit final {
 public:
     template<typename ExitFunctionParameter>
     explicit ScopeExit(ExitFunctionParameter&& exitFunction)
-        : m_exitFunction(WTFMove(exitFunction))
+        : m_exitFunction(std::forward<ExitFunctionParameter>(exitFunction))
     {
     }
 
@@ -67,6 +67,8 @@ private:
     bool m_executeOnDestruction { true };
 };
 
+
+template<typename ExitFunction> ScopeExit<ExitFunction> makeScopeExit(ExitFunction&&) WARN_UNUSED_RETURN;
 template<typename ExitFunction>
 ScopeExit<ExitFunction> makeScopeExit(ExitFunction&& exitFunction)
 {

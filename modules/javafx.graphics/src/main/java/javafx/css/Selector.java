@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -35,12 +35,18 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * Used by CSSRule to determine whether or not the selector applies to a
+ * Used by {@code CSSRule} to determine whether or not the {@code Selector} applies to a
  * given object.
  *
  * @since 9
  */
 abstract public class Selector {
+
+    /**
+     * Package scoped constructor.
+     */
+    Selector() {
+    }
 
     private static class UniversalSelector {
         private static final Selector INSTANCE =
@@ -52,31 +58,66 @@ abstract public class Selector {
     }
 
     private Rule rule;
+    /**
+     * Sets the {@code Rule} of this Selector.
+     * @param rule the {@code Rule} of this Selector
+     */
     void setRule(Rule rule) {
         this.rule = rule;
     }
+
+    /**
+     * Gets the {@code Rule} of this Selector.
+     * @return rule
+     */
     public Rule getRule() {
         return rule;
     }
 
     private int ordinal = -1;
+    /**
+     * Sets the ordinal of this Selector.
+     * @param ordinal the ordinal of this Selector
+     */
     public void setOrdinal(int ordinal) {
         this.ordinal = ordinal;
     }
+
+    /**
+     * Gets the ordinal of this Selector.
+     * @return the ordinal of this Selector
+     */
     public int getOrdinal() {
         return ordinal;
     }
 
+    /**
+     * Creates a {@code Match}.
+     * @return match
+     */
     public abstract Match createMatch();
 
-    // same as the matches method expect return true/false rather than a match
+    /**
+     * Gets whether this {@code Selector} applies to the given {@code Styleable}.
+     * @param styleable the {@code Styleable} to match
+     * @return {@code true} if this {@code Selector} applies to the given {@code Styleable}
+     */
     public abstract boolean applies(Styleable styleable);
 
-    // same as applies, but will return pseudoclass state that it finds along the way
-    public abstract boolean applies(Styleable styleable, Set<PseudoClass>[] triggerStates, int bit);
+    /**
+     * Gets whether this {@code Selector} applies to the given {@code Styleable}.
+     * It is the same as the {@link applies(Styleable)} method except it also returns
+     * {@code PseudoClass} state that it finds along the way.
+     * @param styleable the {@code Styleable} to match
+     * @param triggerStates a set of {@code PseudoClass} states
+     * @param depth depth of the {@code Node} heirarchy to look for
+     * @return {@code true} if this {@code Selector} and a set of {@code PseudoClass}
+     * applies to the given {@code Styleable}
+     */
+    public abstract boolean applies(Styleable styleable, Set<PseudoClass>[] triggerStates, int depth);
 
     /**
-     * Determines whether the current state of the node and its parents
+     * Determines whether the current state of the {@code Node} and its parents
      * matches the pseudo-classes defined (if any) for this selector.
      * @param styleable the styleable
      * @param state the state
@@ -88,6 +129,12 @@ abstract public class Selector {
     private static final int TYPE_SIMPLE = 1;
     private static final int TYPE_COMPOUND = 2;
 
+    /**
+     * Writes {@code Selector} data in binary form to given {@code DataOutputStream}.
+     * @param os {@code DataOutputStream} to write {@code Selector} data to
+     * @param stringStore unused
+     * @throws IOException if writing to {@code DataOutputStream} fails
+     */
     protected void writeBinary(DataOutputStream os, StyleConverter.StringStore stringStore)
         throws IOException {
         if (this instanceof SimpleSelector) {
@@ -97,6 +144,13 @@ abstract public class Selector {
         }
     }
 
+    /**
+     * Reads binary {@code Selector} data from a given {@code DataInputStream}.
+     * @param bssVersion bss version identifier
+     * @param is {@code DataInputStream} to read {@code Selector} data from
+     * @param strings string array containing selector details
+     * @throws IOException if reading from {@code DataInputStream} fails
+     */
     static Selector readBinary(int bssVersion, DataInputStream is, String[] strings)
         throws IOException {
         final int type = is.readByte();
@@ -106,15 +160,20 @@ abstract public class Selector {
             return CompoundSelector.readBinary(bssVersion, is,strings);
     }
 
+    /**
+     * Creates a {@code Selector} object.
+     * @param cssSelector CSS selector string
+     * @return a {@code Selector}
+     */
     public static Selector createSelector(final String cssSelector) {
         if (cssSelector == null || cssSelector.length() == 0) {
             return null; // actually return a default no-match selector
         }
 
         // A very primitive parser
-        List<SimpleSelector> selectors = new ArrayList<SimpleSelector>();
-        List<Combinator> combinators = new ArrayList<Combinator>();
-        List<String> parts = new ArrayList<String>();
+        List<SimpleSelector> selectors = new ArrayList<>();
+        List<Combinator> combinators = new ArrayList<>();
+        List<String> parts = new ArrayList<>();
         int start = 0;
         int end = -1;
         char combinator = '\0';
@@ -142,7 +201,7 @@ abstract public class Selector {
             if (part != null && !part.equals("")) {
                 // Now we have the parts, we can split off the pseudo classes
                 String[] pseudoClassParts = part.split(":");
-                List<String> pseudoClasses = new ArrayList<String>();
+                List<String> pseudoClasses = new ArrayList<>();
                 for (int j=1; j<pseudoClassParts.length; j++) {
                     if (pseudoClassParts[j] != null && !pseudoClassParts[j].equals("")) {
                         pseudoClasses.add(pseudoClassParts[j].trim());
@@ -154,7 +213,7 @@ abstract public class Selector {
                 final String selector = pseudoClassParts[0].trim();
                 // There might be style classes, so lets peel those off next
                 String[] styleClassParts = selector.split("\\.");
-                List<String> styleClasses = new ArrayList<String>();
+                List<String> styleClasses = new ArrayList<>();
 
                 // If the first one is an empty string, then it started with a pseudo class
                 // If the first one starts with a #, it was an id

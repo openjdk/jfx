@@ -38,15 +38,16 @@ namespace WebCore {
 class CSSValue;
 class Document;
 class MediaQuerySet;
+struct MediaQueryDynamicResults;
 
 class SizesAttributeParser {
 public:
-    explicit SizesAttributeParser(const String&, const Document&);
+    SizesAttributeParser(const String&, const Document&, MediaQueryDynamicResults* = nullptr);
 
     float length();
 
     static float defaultLength(const Document&);
-    static float computeLength(double value, CSSPrimitiveValue::UnitType, const Document&);
+    static float computeLength(double value, CSSUnitType, const Document&);
 
 private:
     bool parse(CSSParserTokenRange);
@@ -57,9 +58,10 @@ private:
 
     const Document& m_document;
     RefPtr<MediaQuerySet> m_mediaCondition;
-    float m_length;
-    bool m_lengthWasSet;
-    bool m_isValid;
+    MediaQueryDynamicResults* m_mediaQueryDynamicResults { nullptr };
+    float m_length { 0 };
+    bool m_lengthWasSet { false };
+    bool m_isValid { false };
 };
 
 } // namespace WebCore

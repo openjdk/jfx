@@ -27,9 +27,9 @@
 #include "SWContextManager.h"
 
 #if ENABLE(SERVICE_WORKER)
+#include "FrameLoaderClient.h"
 #include "Logging.h"
 #include "MessageWithMessagePorts.h"
-#include "ServiceWorkerClientIdentifier.h"
 #include "ServiceWorkerGlobalScope.h"
 
 namespace WebCore {
@@ -42,7 +42,7 @@ SWContextManager& SWContextManager::singleton()
 
 void SWContextManager::setConnection(std::unique_ptr<Connection>&& connection)
 {
-    ASSERT(!m_connection);
+    ASSERT(!m_connection || m_connection->isClosed());
     m_connection = WTFMove(connection);
 }
 
@@ -54,21 +54,25 @@ auto SWContextManager::connection() const -> Connection*
 void SWContextManager::registerServiceWorkerThreadForInstall(Ref<ServiceWorkerThreadProxy>&& serviceWorkerThreadProxy)
 {
     auto serviceWorkerIdentifier = serviceWorkerThreadProxy->identifier();
-    auto jobDataIdentifier = serviceWorkerThreadProxy->thread().contextData().jobDataIdentifier;
+    auto jobDataIdentifier = serviceWorkerThreadProxy->thread().jobDataIdentifier();
     auto* threadProxy = serviceWorkerThreadProxy.ptr();
     auto result = m_workerMap.add(serviceWorkerIdentifier, WTFMove(serviceWorkerThreadProxy));
     ASSERT_UNUSED(result, result.isNewEntry);
 
-    threadProxy->thread().start([jobDataIdentifier, serviceWorkerIdentifier](const String& exceptionMessage) {
-        SWContextManager::singleton().startedServiceWorker(jobDataIdentifier, serviceWorkerIdentifier, exceptionMessage);
+    threadProxy->thread().start([jobDataIdentifier, serviceWorkerIdentifier](const String& exceptionMessage, bool doesHandleFetch) {
+        SWContextManager::singleton().startedServiceWorker(jobDataIdentifier, serviceWorkerIdentifier, exceptionMessage, doesHandleFetch);
     });
 }
 
-void SWContextManager::startedServiceWorker(Optional<ServiceWorkerJobDataIdentifier> jobDataIdentifier, ServiceWorkerIdentifier serviceWorkerIdentifier, const String& exceptionMessage)
+void SWContextManager::startedServiceWorker(std::optional<ServiceWorkerJobDataIdentifier> jobDataIdentifier, ServiceWorkerIdentifier serviceWorkerIdentifier, const String& exceptionMessage, bool doesHandleFetch)
 {
-    connection()->serviceWorkerStartedWithMessage(jobDataIdentifier, serviceWorkerIdentifier, exceptionMessage);
     if (m_serviceWorkerCreationCallback)
         m_serviceWorkerCreationCallback(serviceWorkerIdentifier.toUInt64());
+    if (!exceptionMessage.isEmpty()) {
+        connection()->serviceWorkerFailedToStart(jobDataIdentifier, serviceWorkerIdentifier, exceptionMessage);
+        return;
+    }
+    connection()->serviceWorkerStarted(jobDataIdentifier, serviceWorkerIdentifier, doesHandleFetch);
 }
 
 ServiceWorkerThreadProxy* SWContextManager::serviceWorkerThreadProxy(ServiceWorkerIdentifier identifier) const
@@ -79,11 +83,11 @@ ServiceWorkerThreadProxy* SWContextManager::serviceWorkerThreadProxy(ServiceWork
 void SWContextManager::postMessageToServiceWorker(ServiceWorkerIdentifier destination, MessageWithMessagePorts&& message, ServiceWorkerOrClientData&& sourceData)
 {
     auto* serviceWorker = m_workerMap.get(destination);
-    ASSERT(serviceWorker);
-    ASSERT(!serviceWorker->isTerminatingOrTerminated());
+    if (!serviceWorker)
+        return;
 
     // FIXME: We should pass valid MessagePortChannels.
-    serviceWorker->thread().postMessageToServiceWorker(WTFMove(message), WTFMove(sourceData));
+    serviceWorker->postMessageToServiceWorker(WTFMove(message), WTFMove(sourceData));
 }
 
 void SWContextManager::fireInstallEvent(ServiceWorkerIdentifier identifier)
@@ -92,7 +96,7 @@ void SWContextManager::fireInstallEvent(ServiceWorkerIdentifier identifier)
     if (!serviceWorker)
         return;
 
-    serviceWorker->thread().fireInstallEvent();
+    serviceWorker->fireInstallEvent();
 }
 
 void SWContextManager::fireActivateEvent(ServiceWorkerIdentifier identifier)
@@ -101,8 +105,29 @@ void SWContextManager::fireActivateEvent(ServiceWorkerIdentifier identifier)
     if (!serviceWorker)
         return;
 
-    serviceWorker->thread().fireActivateEvent();
+    serviceWorker->fireActivateEvent();
 }
+
+void SWContextManager::firePushEvent(ServiceWorkerIdentifier identifier, std::optional<Vector<uint8_t>>&& data, CompletionHandler<void(bool)>&& callback)
+{
+    auto* serviceWorker = m_workerMap.get(identifier);
+    if (!serviceWorker) {
+        callback(false);
+        return;
+    }
+
+    serviceWorker->firePushEvent(WTFMove(data), WTFMove(callback));
+}
+
+void SWContextManager::firePushSubscriptionChangeEvent(ServiceWorkerIdentifier identifier, std::optional<PushSubscriptionData>&& newSubscriptionData, std::optional<PushSubscriptionData>&& oldSubscriptionData)
+{
+    auto* serviceWorker = m_workerMap.get(identifier);
+    if (!serviceWorker)
+        return;
+
+    serviceWorker->firePushSubscriptionChangeEvent(WTFMove(newSubscriptionData), WTFMove(oldSubscriptionData));
+}
+
 
 void SWContextManager::terminateWorker(ServiceWorkerIdentifier identifier, Seconds timeout, Function<void()>&& completionHandler)
 {
@@ -112,13 +137,24 @@ void SWContextManager::terminateWorker(ServiceWorkerIdentifier identifier, Secon
             completionHandler();
         return;
     }
+    stopWorker(*serviceWorker, timeout, WTFMove(completionHandler));
+}
 
-    serviceWorker->setAsTerminatingOrTerminated();
+void SWContextManager::didSaveScriptsToDisk(ServiceWorkerIdentifier identifier, ScriptBuffer&& script, HashMap<URL, ScriptBuffer>&& importedScripts)
+{
+    if (auto serviceWorker = m_workerMap.get(identifier))
+        serviceWorker->didSaveScriptsToDisk(WTFMove(script), WTFMove(importedScripts));
+}
+
+void SWContextManager::stopWorker(ServiceWorkerThreadProxy& serviceWorker, Seconds timeout, Function<void()>&& completionHandler)
+{
+    auto identifier = serviceWorker.identifier();
+    serviceWorker.setAsTerminatingOrTerminated();
 
     m_pendingServiceWorkerTerminationRequests.add(identifier, makeUnique<ServiceWorkerTerminationRequest>(*this, identifier, timeout));
 
-    auto& thread = serviceWorker->thread();
-    thread.stop([this, identifier, serviceWorker = WTFMove(serviceWorker), completionHandler = WTFMove(completionHandler)]() mutable {
+    auto& thread = serviceWorker.thread();
+    thread.stop([this, identifier, serviceWorker = Ref { serviceWorker }, completionHandler = WTFMove(completionHandler)]() mutable {
         m_pendingServiceWorkerTerminationRequests.remove(identifier);
 
         if (auto* connection = SWContextManager::singleton().connection())
@@ -133,13 +169,13 @@ void SWContextManager::terminateWorker(ServiceWorkerIdentifier identifier, Secon
     });
 }
 
-void SWContextManager::forEachServiceWorkerThread(const WTF::Function<void(ServiceWorkerThreadProxy&)>& apply)
+void SWContextManager::forEachServiceWorkerThread(const Function<void(ServiceWorkerThreadProxy&)>& apply)
 {
     for (auto& workerThread : m_workerMap.values())
-        apply(*workerThread);
+        apply(workerThread);
 }
 
-bool SWContextManager::postTaskToServiceWorker(ServiceWorkerIdentifier identifier, WTF::Function<void(ServiceWorkerGlobalScope&)>&& task)
+bool SWContextManager::postTaskToServiceWorker(ServiceWorkerIdentifier identifier, Function<void(ServiceWorkerGlobalScope&)>&& task)
 {
     auto* serviceWorker = m_workerMap.get(identifier);
     if (!serviceWorker)
@@ -155,6 +191,7 @@ void SWContextManager::serviceWorkerFailedToTerminate(ServiceWorkerIdentifier se
 {
     UNUSED_PARAM(serviceWorkerIdentifier);
     RELEASE_LOG_ERROR(ServiceWorker, "Failed to terminate service worker with identifier %s, killing the service worker process", serviceWorkerIdentifier.loggingString().utf8().data());
+    ASSERT_NOT_REACHED();
     _exit(EXIT_FAILURE);
 }
 
@@ -162,6 +199,13 @@ SWContextManager::ServiceWorkerTerminationRequest::ServiceWorkerTerminationReque
     : m_timeoutTimer([&manager, serviceWorkerIdentifier] { manager.serviceWorkerFailedToTerminate(serviceWorkerIdentifier); })
 {
     m_timeoutTimer.startOneShot(timeout);
+}
+
+void SWContextManager::stopAllServiceWorkers()
+{
+    auto serviceWorkers = WTFMove(m_workerMap);
+    for (auto& serviceWorker : serviceWorkers.values())
+        stopWorker(serviceWorker, workerTerminationTimeout, [] { });
 }
 
 } // namespace WebCore

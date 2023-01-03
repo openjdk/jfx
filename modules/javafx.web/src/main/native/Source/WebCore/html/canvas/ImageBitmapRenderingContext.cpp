@@ -26,6 +26,7 @@
 #include "config.h"
 #include "ImageBitmapRenderingContext.h"
 
+#include "HTMLCanvasElement.h"
 #include "ImageBitmap.h"
 #include "ImageBuffer.h"
 #include "InspectorInstrumentation.h"
@@ -35,10 +36,10 @@ namespace WebCore {
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(ImageBitmapRenderingContext);
 
-#if USE(IOSURFACE_CANVAS_BACKING_STORE) || ENABLE(ACCELERATED_2D_CANVAS)
-static RenderingMode bufferRenderingMode = Accelerated;
+#if USE(IOSURFACE_CANVAS_BACKING_STORE)
+static RenderingMode bufferRenderingMode = RenderingMode::Accelerated;
 #else
-static RenderingMode bufferRenderingMode = Unaccelerated;
+static RenderingMode bufferRenderingMode = RenderingMode::Unaccelerated;
 #endif
 
 std::unique_ptr<ImageBitmapRenderingContext> ImageBitmapRenderingContext::create(CanvasBase& canvas, ImageBitmapRenderingContextSettings&& settings)
@@ -69,7 +70,7 @@ HTMLCanvasElement* ImageBitmapRenderingContext::canvas() const
 
 bool ImageBitmapRenderingContext::isAccelerated() const
 {
-    return bufferRenderingMode == Accelerated;
+    return bufferRenderingMode == RenderingMode::Accelerated;
 }
 
 void ImageBitmapRenderingContext::setOutputBitmap(RefPtr<ImageBitmap> imageBitmap)
@@ -94,7 +95,7 @@ void ImageBitmapRenderingContext::setOutputBitmap(RefPtr<ImageBitmap> imageBitma
         // only reason I can think of is toDataURL(), but that doesn't seem like
         // a good enough argument to waste memory.
 
-        canvas()->setImageBufferAndMarkDirty(ImageBuffer::create(FloatSize(canvas()->width(), canvas()->height()), bufferRenderingMode));
+        canvas()->setImageBufferAndMarkDirty(ImageBuffer::create(FloatSize(canvas()->width(), canvas()->height()), bufferRenderingMode, 1, DestinationColorSpace::SRGB(), PixelFormat::BGRA8));
 
         // 1.4. Set the output bitmap's origin-clean flag to true.
 
@@ -117,7 +118,7 @@ void ImageBitmapRenderingContext::setOutputBitmap(RefPtr<ImageBitmap> imageBitma
         canvas()->setOriginClean();
     else
         canvas()->setOriginTainted();
-    canvas()->setImageBufferAndMarkDirty(imageBitmap->transferOwnershipAndClose());
+    canvas()->setImageBufferAndMarkDirty(imageBitmap->takeImageBuffer());
 }
 
 ExceptionOr<void> ImageBitmapRenderingContext::transferFromImageBitmap(RefPtr<ImageBitmap> imageBitmap)

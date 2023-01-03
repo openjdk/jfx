@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -65,7 +65,7 @@ import javafx.scene.control.skin.SplitMenuButtonSkin;
  */
 public class SplitMenuButton extends MenuButton {
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
@@ -94,7 +94,7 @@ public class SplitMenuButton extends MenuButton {
         setMnemonicParsing(true);     // enable mnemonic auto-parsing by default
     }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Properties                                                              *
      *                                                                         *
@@ -108,7 +108,7 @@ public class SplitMenuButton extends MenuButton {
         }
     }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Methods                                                                 *
      *                                                                         *
@@ -119,7 +119,7 @@ public class SplitMenuButton extends MenuButton {
         return new SplitMenuButtonSkin(this);
     }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Stylesheet Handling                                                     *
      *                                                                         *
@@ -129,7 +129,7 @@ public class SplitMenuButton extends MenuButton {
 
     // SplitMenuButton adds no new CSS keys.
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Accessibility handling                                                  *
      *                                                                         *

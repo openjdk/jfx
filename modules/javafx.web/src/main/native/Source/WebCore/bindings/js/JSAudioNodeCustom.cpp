@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,35 +26,119 @@
 #include "config.h"
 
 #if ENABLE(WEB_AUDIO)
-
-#include "AudioContext.h"
 #include "JSAudioNode.h"
+
+#include "AnalyserNode.h"
+#include "AudioBufferSourceNode.h"
+#include "AudioDestinationNode.h"
+#include "AudioNode.h"
+#include "AudioWorkletNode.h"
+#include "BiquadFilterNode.h"
+#include "ChannelMergerNode.h"
+#include "ChannelSplitterNode.h"
+#include "ConstantSourceNode.h"
+#include "ConvolverNode.h"
+#include "DelayNode.h"
+#include "DynamicsCompressorNode.h"
+#include "GainNode.h"
+#include "IIRFilterNode.h"
+#include "JSAnalyserNode.h"
+#include "JSAudioBufferSourceNode.h"
+#include "JSAudioDestinationNode.h"
+#include "JSAudioWorkletNode.h"
+#include "JSBiquadFilterNode.h"
+#include "JSChannelMergerNode.h"
+#include "JSChannelSplitterNode.h"
+#include "JSConstantSourceNode.h"
+#include "JSConvolverNode.h"
+#include "JSDelayNode.h"
+#include "JSDynamicsCompressorNode.h"
+#include "JSGainNode.h"
+#include "JSIIRFilterNode.h"
+#include "JSMediaElementAudioSourceNode.h"
+#include "JSMediaStreamAudioDestinationNode.h"
+#include "JSMediaStreamAudioSourceNode.h"
+#include "JSOscillatorNode.h"
+#include "JSPannerNode.h"
+#include "JSScriptProcessorNode.h"
+#include "JSStereoPannerNode.h"
+#include "JSWaveShaperNode.h"
+#include "MediaElementAudioSourceNode.h"
+#include "MediaStreamAudioDestinationNode.h"
+#include "MediaStreamAudioSourceNode.h"
+#include "OscillatorNode.h"
+#include "PannerNode.h"
+#include "ScriptProcessorNode.h"
+#include "StereoPannerNode.h"
+#include "WaveShaperNode.h"
 
 namespace WebCore {
 using namespace JSC;
 
-bool JSAudioNodeOwner::isReachableFromOpaqueRoots(JSC::Handle<JSC::Unknown> handle, void*, SlotVisitor& visitor, const char** reason)
+JSValue toJSNewlyCreated(JSGlobalObject*, JSDOMGlobalObject* globalObject, Ref<AudioNode>&& node)
 {
-    auto& node = jsCast<JSAudioNode*>(handle.slot()->asCell())->wrapped();
-
-    if (node.isFiringEventListeners()) {
-        if (UNLIKELY(reason))
-            *reason = "AudioNode is firing event listeners";
-        return true;
+    switch (node->nodeType()) {
+    case AudioNode::NodeTypeDestination:
+        return createWrapper<AudioDestinationNode>(globalObject, WTFMove(node));
+    case AudioNode::NodeTypeOscillator:
+        return createWrapper<OscillatorNode>(globalObject, WTFMove(node));
+    case AudioNode::NodeTypeAudioBufferSource:
+        return createWrapper<AudioBufferSourceNode>(globalObject, WTFMove(node));
+    case AudioNode::NodeTypeMediaElementAudioSource:
+#if ENABLE(VIDEO)
+        return createWrapper<MediaElementAudioSourceNode>(globalObject, WTFMove(node));
+#else
+        return createWrapper<AudioNode>(globalObject, WTFMove(node));
+#endif
+#if ENABLE(MEDIA_STREAM)
+    case AudioNode::NodeTypeMediaStreamAudioDestination:
+        return createWrapper<MediaStreamAudioDestinationNode>(globalObject, WTFMove(node));
+    case AudioNode::NodeTypeMediaStreamAudioSource:
+        return createWrapper<MediaStreamAudioSourceNode>(globalObject, WTFMove(node));
+#else
+    case AudioNode::NodeTypeMediaStreamAudioDestination:
+    case AudioNode::NodeTypeMediaStreamAudioSource:
+        return createWrapper<AudioNode>(globalObject, WTFMove(node));
+#endif
+    case AudioNode::NodeTypeJavaScript:
+        return createWrapper<ScriptProcessorNode>(globalObject, WTFMove(node));
+    case AudioNode::NodeTypeBiquadFilter:
+        return createWrapper<BiquadFilterNode>(globalObject, WTFMove(node));
+    case AudioNode::NodeTypePanner:
+        return createWrapper<PannerNode>(globalObject, WTFMove(node));
+    case AudioNode::NodeTypeConvolver:
+        return createWrapper<ConvolverNode>(globalObject, WTFMove(node));
+    case AudioNode::NodeTypeDelay:
+        return createWrapper<DelayNode>(globalObject, WTFMove(node));
+    case AudioNode::NodeTypeGain:
+        return createWrapper<GainNode>(globalObject, WTFMove(node));
+    case AudioNode::NodeTypeChannelSplitter:
+        return createWrapper<ChannelSplitterNode>(globalObject, WTFMove(node));
+    case AudioNode::NodeTypeChannelMerger:
+        return createWrapper<ChannelMergerNode>(globalObject, WTFMove(node));
+    case AudioNode::NodeTypeAnalyser:
+        return createWrapper<AnalyserNode>(globalObject, WTFMove(node));
+    case AudioNode::NodeTypeDynamicsCompressor:
+        return createWrapper<DynamicsCompressorNode>(globalObject, WTFMove(node));
+    case AudioNode::NodeTypeWaveShaper:
+        return createWrapper<WaveShaperNode>(globalObject, WTFMove(node));
+    case AudioNode::NodeTypeConstant:
+        return createWrapper<ConstantSourceNode>(globalObject, WTFMove(node));
+    case AudioNode::NodeTypeStereoPanner:
+        return createWrapper<StereoPannerNode>(globalObject, WTFMove(node));
+    case AudioNode::NodeTypeIIRFilter:
+        return createWrapper<IIRFilterNode>(globalObject, WTFMove(node));
+    case AudioNode::NodeTypeWorklet:
+        return createWrapper<AudioWorkletNode>(globalObject, WTFMove(node));
     }
+    RELEASE_ASSERT_NOT_REACHED();
+}
 
-    if (!node.context().hasPendingActivity() || node.context().isClosed())
-        return false;
-
-    if (node.hasEventListeners()) {
-        if (UNLIKELY(reason))
-            *reason = "AudioNode has event listeners";
-        return true;
-    }
-
-    return visitor.containsOpaqueRoot(&node);
+JSValue toJS(JSGlobalObject* lexicalGlobalObject, JSDOMGlobalObject* globalObject, AudioNode& node)
+{
+    return wrap(lexicalGlobalObject, globalObject, node);
 }
 
 } // namespace WebCore
 
-#endif
+#endif // ENABLE(WEB_AUDIO)

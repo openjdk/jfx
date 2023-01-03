@@ -1,6 +1,6 @@
 /*
  *  Copyright (C) 1999-2000 Harri Porten (porten@kde.org)
- *  Copyright (C) 2007, 2008, 2009, 2016 Apple Inc. All rights reserved.
+ *  Copyright (C) 2007-2022 Apple Inc. All rights reserved.
  *  Copyright (C) 2009 Torch Mobile, Inc.
  *
  *  This library is free software; you can redistribute it and/or
@@ -42,47 +42,52 @@ class RegExp final : public JSCell {
     friend class CachedRegExp;
 
 public:
-    typedef JSCell Base;
-    static const unsigned StructureFlags = Base::StructureFlags | StructureIsImmortal;
+    using Base = JSCell;
+    static constexpr unsigned StructureFlags = Base::StructureFlags | StructureIsImmortal;
+    static constexpr bool needsDestruction = true;
+
+    template<typename CellType, SubspaceAccess mode>
+    static GCClient::IsoSubspace* subspaceFor(VM& vm)
+    {
+        return &vm.regExpSpace();
+    }
 
     JS_EXPORT_PRIVATE static RegExp* create(VM&, const String& pattern, OptionSet<Yarr::Flags>);
-    static const bool needsDestruction = true;
     static void destroy(JSCell*);
     static size_t estimatedSize(JSCell*, VM&);
     JS_EXPORT_PRIVATE static void dumpToStream(const JSCell*, PrintStream&);
 
-    bool global() const { return m_flags.contains(Yarr::Flags::Global); }
-    bool ignoreCase() const { return m_flags.contains(Yarr::Flags::IgnoreCase); }
-    bool multiline() const { return m_flags.contains(Yarr::Flags::Multiline); }
-    bool sticky() const { return m_flags.contains(Yarr::Flags::Sticky); }
+    OptionSet<Yarr::Flags> flags() const { return m_flags; }
+#define JSC_DEFINE_REGEXP_FLAG_ACCESSOR(key, name, lowerCaseName, index) bool lowerCaseName() const { return m_flags.contains(Yarr::Flags::name); }
+    JSC_REGEXP_FLAGS(JSC_DEFINE_REGEXP_FLAG_ACCESSOR)
+#undef JSC_DEFINE_REGEXP_FLAG_ACCESSOR
     bool globalOrSticky() const { return global() || sticky(); }
-    bool unicode() const { return m_flags.contains(Yarr::Flags::Unicode); }
-    bool dotAll() const { return m_flags.contains(Yarr::Flags::DotAll); }
 
     const String& pattern() const { return m_patternString; }
 
     bool isValid() const { return !Yarr::hasError(m_constructionErrorCode); }
     const char* errorMessage() const { return Yarr::errorMessage(m_constructionErrorCode); }
-    JSObject* errorToThrow(ExecState* exec) { return Yarr::errorToThrow(exec, m_constructionErrorCode); }
+    JSObject* errorToThrow(JSGlobalObject* globalObject) { return Yarr::errorToThrow(globalObject, m_constructionErrorCode); }
     void reset()
     {
         m_state = NotCompiled;
         m_constructionErrorCode = Yarr::ErrorCode::NoError;
     }
 
-    JS_EXPORT_PRIVATE int match(VM&, const String&, unsigned startOffset, Vector<int>& ovector);
+    JS_EXPORT_PRIVATE int match(JSGlobalObject*, const String&, unsigned startOffset, Vector<int>& ovector);
 
     // Returns false if we couldn't run the regular expression for any reason.
     bool matchConcurrently(VM&, const String&, unsigned startOffset, int& position, Vector<int>& ovector);
 
-    JS_EXPORT_PRIVATE MatchResult match(VM&, const String&, unsigned startOffset);
+    JS_EXPORT_PRIVATE MatchResult match(JSGlobalObject*, const String&, unsigned startOffset);
 
     bool matchConcurrently(VM&, const String&, unsigned startOffset, MatchResult&);
 
     // Call these versions of the match functions if you're desperate for performance.
-    template<typename VectorType>
-    int matchInline(VM&, const String&, unsigned startOffset, VectorType& ovector);
-    MatchResult matchInline(VM&, const String&, unsigned startOffset);
+    template<typename VectorType, Yarr::MatchFrom thread = Yarr::MatchFrom::VMThread>
+    int matchInline(JSGlobalObject* nullOrGlobalObject, VM&, const String&, unsigned startOffset, VectorType& ovector);
+    template<Yarr::MatchFrom thread = Yarr::MatchFrom::VMThread>
+    MatchResult matchInline(JSGlobalObject* nullOrGlobalObject, VM&, const String&, unsigned startOffset);
 
     unsigned numSubpatterns() const { return m_numSubpatterns; }
 
@@ -114,8 +119,8 @@ public:
         return m_state == JITCode || m_state == ByteCode;
     }
 
-    bool hasCodeFor(Yarr::YarrCharSize);
-    bool hasMatchOnlyCodeFor(Yarr::YarrCharSize);
+    bool hasCodeFor(Yarr::CharSize);
+    bool hasMatchOnlyCodeFor(Yarr::CharSize);
 
     void deleteCode();
 
@@ -132,12 +137,21 @@ public:
 
     RegExpKey key() { return RegExpKey(m_flags, m_patternString); }
 
-protected:
-    void finishCreation(VM&);
+    String escapedPattern() const;
+
+    String toSourceString() const;
+
+#if ENABLE(YARR_JIT)
+    Yarr::YarrCodeBlock* getRegExpJITCodeBlock()
+    {
+        return m_regExpJITCode.get();
+    }
+#endif
 
 private:
     friend class RegExpCache;
     RegExp(VM&, const String&, OptionSet<Yarr::Flags>);
+    void finishCreation(VM&);
 
     static RegExp* createWithoutCaching(VM&, const String&, OptionSet<Yarr::Flags>);
 
@@ -150,11 +164,11 @@ private:
 
     void byteCodeCompileIfNecessary(VM*);
 
-    void compile(VM*, Yarr::YarrCharSize);
-    void compileIfNecessary(VM&, Yarr::YarrCharSize);
+    void compile(VM*, Yarr::CharSize);
+    void compileIfNecessary(VM&, Yarr::CharSize);
 
-    void compileMatchOnly(VM*, Yarr::YarrCharSize);
-    void compileIfNecessaryMatchOnly(VM&, Yarr::YarrCharSize);
+    void compileMatchOnly(VM*, Yarr::CharSize);
+    void compileIfNecessaryMatchOnly(VM&, Yarr::CharSize);
 
 #if ENABLE(YARR_JIT_DEBUG)
     void matchCompareWithInterpreter(const String&, int startOffset, int* offsetVector, int jitResult);

@@ -34,6 +34,10 @@
 #include <wtf/RefCounted.h>
 #include <wtf/RefPtr.h>
 
+namespace WTF {
+class TextStream;
+}
+
 namespace WebCore {
 
 class CSSValue;
@@ -137,7 +141,9 @@ enum class MaskType : uint8_t {
 };
 
 // Inherited/Non-Inherited Style Datastructures
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(StyleFillData);
 class StyleFillData : public RefCounted<StyleFillData> {
+    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(StyleFillData);
 public:
     static Ref<StyleFillData> create() { return adoptRef(*new StyleFillData); }
     Ref<StyleFillData> copy() const;
@@ -270,26 +276,6 @@ private:
     StyleShadowSVGData(const StyleShadowSVGData&);
 };
 
-// Non-inherited resources
-class StyleResourceData : public RefCounted<StyleResourceData> {
-public:
-    static Ref<StyleResourceData> create() { return adoptRef(*new StyleResourceData); }
-    Ref<StyleResourceData> copy() const;
-
-    bool operator==(const StyleResourceData&) const;
-    bool operator!=(const StyleResourceData& other) const
-    {
-        return !(*this == other);
-    }
-
-    String clipper;
-    String masker;
-
-private:
-    StyleResourceData();
-    StyleResourceData(const StyleResourceData&);
-};
-
 // Inherited resources
 class StyleInheritedResourceData : public RefCounted<StyleInheritedResourceData> {
 public:
@@ -335,5 +321,28 @@ private:
     StyleLayoutData();
     StyleLayoutData(const StyleLayoutData&);
 };
+
+
+WTF::TextStream& operator<<(WTF::TextStream&, AlignmentBaseline);
+WTF::TextStream& operator<<(WTF::TextStream&, BaselineShift);
+WTF::TextStream& operator<<(WTF::TextStream&, BufferedRendering);
+WTF::TextStream& operator<<(WTF::TextStream&, ColorInterpolation);
+WTF::TextStream& operator<<(WTF::TextStream&, ColorRendering);
+WTF::TextStream& operator<<(WTF::TextStream&, DominantBaseline);
+WTF::TextStream& operator<<(WTF::TextStream&, GlyphOrientation);
+WTF::TextStream& operator<<(WTF::TextStream&, MaskType);
+WTF::TextStream& operator<<(WTF::TextStream&, SVGPaintType);
+WTF::TextStream& operator<<(WTF::TextStream&, ShapeRendering);
+WTF::TextStream& operator<<(WTF::TextStream&, TextAnchor);
+WTF::TextStream& operator<<(WTF::TextStream&, VectorEffect);
+
+WTF::TextStream& operator<<(WTF::TextStream&, const StyleFillData&);
+WTF::TextStream& operator<<(WTF::TextStream&, const StyleStrokeData&);
+WTF::TextStream& operator<<(WTF::TextStream&, const StyleStopData&);
+WTF::TextStream& operator<<(WTF::TextStream&, const StyleTextData&);
+WTF::TextStream& operator<<(WTF::TextStream&, const StyleMiscData&);
+WTF::TextStream& operator<<(WTF::TextStream&, const StyleShadowSVGData&);
+WTF::TextStream& operator<<(WTF::TextStream&, const StyleInheritedResourceData&);
+WTF::TextStream& operator<<(WTF::TextStream&, const StyleLayoutData&);
 
 } // namespace WebCore

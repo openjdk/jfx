@@ -37,47 +37,25 @@
 
 namespace WebCore {
 
-class StyleColor {
-public:
-    StyleColor()
-        : m_currentColor(true) { }
-    StyleColor(Color color)
-        : m_color(color)
-        , m_currentColor(false) { }
-    static StyleColor currentColor() { return StyleColor(); }
-
-    bool isCurrentColor() const { return m_currentColor; }
-    const Color& getColor() const { ASSERT(!isCurrentColor()); return m_color; }
-
-    const Color& resolve(const Color& currentColor) const { return m_currentColor ? currentColor : m_color; }
-
-    enum class Options : uint8_t {
-        ForVisitedLink = 1 << 0,
-        UseSystemAppearance = 1 << 1,
-        UseDarkAppearance = 1 << 2,
-        UseElevatedUserInterfaceLevel = 1 << 3
-    };
-
-    static Color colorFromKeyword(CSSValueID, OptionSet<Options>);
-    static bool isColorKeyword(CSSValueID);
-    static bool isSystemColor(CSSValueID);
-
-private:
-    Color m_color;
-    bool m_currentColor;
+enum class StyleColorOptions : uint8_t {
+    ForVisitedLink = 1 << 0,
+    UseSystemAppearance = 1 << 1,
+    UseDarkAppearance = 1 << 2,
+    UseElevatedUserInterfaceLevel = 1 << 3
 };
 
-inline bool operator==(const StyleColor& a, const StyleColor& b)
-{
-    if (a.isCurrentColor() || b.isCurrentColor())
-        return a.isCurrentColor() && b.isCurrentColor();
-    return a.getColor() == b.getColor();
-}
+struct StyleColor {
+    static Color colorFromKeyword(CSSValueID, OptionSet<StyleColorOptions>);
+    static bool isAbsoluteColorKeyword(CSSValueID);
+    WEBCORE_EXPORT static bool isSystemColorKeyword(CSSValueID);
 
-inline bool operator!=(const StyleColor& a, const StyleColor& b)
-{
-    return !(a == b);
-}
-
+    enum class CSSColorType : uint8_t {
+        Absolute = 1 << 0,
+        Current = 1 << 1,
+        System = 1 << 2,
+    };
+    // https://drafts.csswg.org/css-color-4/#typedef-color
+    static bool isColorKeyword(CSSValueID, OptionSet<CSSColorType> = { CSSColorType::Absolute, CSSColorType::Current, CSSColorType::System });
+};
 
 } // namespace WebCore

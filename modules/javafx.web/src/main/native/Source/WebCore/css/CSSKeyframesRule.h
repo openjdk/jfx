@@ -33,15 +33,14 @@
 
 namespace WebCore {
 
+class CSSKeyframeRule;
 class CSSRuleList;
 class StyleRuleKeyframe;
-class CSSKeyframeRule;
 
 class StyleRuleKeyframes final : public StyleRuleBase {
 public:
-    static Ref<StyleRuleKeyframes> create(const AtomString& name) { return adoptRef(*new StyleRuleKeyframes(name)); }
-    static Ref<StyleRuleKeyframes> create(const AtomString& name, std::unique_ptr<DeferredStyleGroupRuleList>&& deferredRules) { return adoptRef(*new StyleRuleKeyframes(name, WTFMove(deferredRules))); }
-
+    static Ref<StyleRuleKeyframes> create(const AtomString& name);
+    static Ref<StyleRuleKeyframes> create(const AtomString& name, std::unique_ptr<DeferredStyleGroupRuleList>&&);
     ~StyleRuleKeyframes();
 
     const Vector<Ref<StyleRuleKeyframe>>& keyframes() const;
@@ -57,12 +56,14 @@ public:
     const AtomString& name() const { return m_name; }
     void setName(const AtomString& name) { m_name = name; }
 
-    size_t findKeyframeIndex(const String& key) const;
+    std::optional<size_t> findKeyframeIndex(const String& key) const;
 
     Ref<StyleRuleKeyframes> copy() const { return adoptRef(*new StyleRuleKeyframes(*this)); }
 
+    void shrinkToFit();
+
 private:
-    StyleRuleKeyframes(const AtomString&);
+    explicit StyleRuleKeyframes(const AtomString&);
     StyleRuleKeyframes(const AtomString&, std::unique_ptr<DeferredStyleGroupRuleList>&&);
     StyleRuleKeyframes(const StyleRuleKeyframes&);
 
@@ -80,7 +81,7 @@ public:
 
     virtual ~CSSKeyframesRule();
 
-    CSSRule::Type type() const final { return KEYFRAMES_RULE; }
+    StyleRuleType styleRuleType() const final { return StyleRuleType::Keyframes; }
     String cssText() const final;
     void reattach(StyleRuleBase&) final;
 
@@ -108,7 +109,7 @@ private:
 
 } // namespace WebCore
 
-SPECIALIZE_TYPE_TRAITS_CSS_RULE(CSSKeyframesRule, CSSRule::KEYFRAMES_RULE)
+SPECIALIZE_TYPE_TRAITS_CSS_RULE(CSSKeyframesRule, StyleRuleType::Keyframes)
 
 SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::StyleRuleKeyframes)
     static bool isType(const WebCore::StyleRuleBase& rule) { return rule.isKeyframesRule(); }

@@ -18,12 +18,11 @@
  */
 
 #include "config.h"
-
-#if ENABLE(SVG_FONTS)
 #include "SVGAltGlyphDefElement.h"
 
 #include "ElementIterator.h"
 #include "SVGAltGlyphItemElement.h"
+#include "SVGElementTypeHelpers.h"
 #include "SVGGlyphRefElement.h"
 #include "SVGNames.h"
 #include <wtf/IsoMallocInlines.h>
@@ -120,5 +119,3 @@ bool SVGAltGlyphDefElement::hasValidGlyphElements(Vector<String>& glyphNames) co
 }
 
 }
-
-#endif

@@ -1,6 +1,7 @@
 /*
  * Copyright (C) 2011 University of Szeged
  * Copyright (C) 2011 Renata Hodovan <reni@webkit.org>
+ * Copyright (C) 2020, 2021, 2022 Igalia S.L.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -28,6 +29,10 @@
 #include "config.h"
 #include "RenderSVGRect.h"
 
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
+#include "RenderSVGShapeInlines.h"
+#include "SVGElementTypeHelpers.h"
+#include "SVGRectElement.h"
 #include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
@@ -58,24 +63,21 @@ void RenderSVGRect::updateShapeFromElement()
     m_usePathFallback = false;
 
     SVGLengthContext lengthContext(&rectElement());
-    FloatSize boundingBoxSize(lengthContext.valueForLength(style().width(), LengthModeWidth), lengthContext.valueForLength(style().height(), LengthModeHeight));
+    FloatSize boundingBoxSize(lengthContext.valueForLength(style().width(), SVGLengthMode::Width), lengthContext.valueForLength(style().height(), SVGLengthMode::Height));
 
-    // Element is invalid if either dimension is negative.
-    if (boundingBoxSize.width() < 0 || boundingBoxSize.height() < 0)
+    // Spec: "A negative value is illegal. A value of zero disables rendering of the element."
+    if (boundingBoxSize.isEmpty())
         return;
 
-    // Rendering enabled? Spec: "A value of zero disables rendering of the element."
-    if (!boundingBoxSize.isEmpty()) {
-        if (rectElement().rx().value(lengthContext) > 0 || rectElement().ry().value(lengthContext) > 0 || hasNonScalingStroke()) {
-            // Fall back to RenderSVGShape
-            RenderSVGShape::updateShapeFromElement();
-            m_usePathFallback = true;
-            return;
-        }
+    if (rectElement().rx().value(lengthContext) > 0 || rectElement().ry().value(lengthContext) > 0 || hasNonScalingStroke()) {
+        // Fall back to RenderSVGShape
+        RenderSVGShape::updateShapeFromElement();
+        m_usePathFallback = true;
+        return;
     }
 
-    m_fillBoundingBox = FloatRect(FloatPoint(lengthContext.valueForLength(style().svgStyle().x(), LengthModeWidth),
-        lengthContext.valueForLength(style().svgStyle().y(), LengthModeHeight)),
+    m_fillBoundingBox = FloatRect(FloatPoint(lengthContext.valueForLength(style().svgStyle().x(), SVGLengthMode::Width),
+        lengthContext.valueForLength(style().svgStyle().y(), SVGLengthMode::Height)),
         boundingBoxSize);
 
     // To decide if the stroke contains a point we create two rects which represent the inner and
@@ -161,3 +163,5 @@ bool RenderSVGRect::isRenderingDisabled() const
 }
 
 }
+
+#endif // ENABLE(LAYER_BASED_SVG_ENGINE)

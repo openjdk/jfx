@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -43,6 +43,12 @@ import javafx.beans.value.ObservableValue;
 public abstract class FloatExpression extends NumberExpressionBase implements
         ObservableFloatValue {
 
+    /**
+     * Creates a default {@code FloatExpression}.
+     */
+    public FloatExpression() {
+    }
+
     @Override
     public int intValue() {
         return (int) get();
@@ -60,7 +66,7 @@ public abstract class FloatExpression extends NumberExpressionBase implements
 
     @Override
     public double doubleValue() {
-        return (double) get();
+        return get();
     }
 
     @Override
@@ -265,7 +271,7 @@ public abstract class FloatExpression extends NumberExpressionBase implements
      * @since JavaFX 8.0
      */
     public ObjectExpression<Float> asObject() {
-        return new ObjectBinding<Float>() {
+        return new ObjectBinding<>() {
             {
                 bind(FloatExpression.this);
             }

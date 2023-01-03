@@ -30,7 +30,7 @@
 
 namespace JSC {
 
-enum class HandlerType {
+enum class HandlerType : uint8_t {
     Catch = 0,
     Finally = 1,
     SynthesizedCatch = 2,
@@ -65,10 +65,10 @@ struct HandlerInfoBase {
 
     bool isCatchHandler() const { return type() == HandlerType::Catch; }
 
-    template<typename Handler>
-    static Handler* handlerForIndex(Vector<Handler>& exeptionHandlers, unsigned index, RequiredHandler requiredHandler)
+    template<typename Handler, typename Container>
+    static Handler* handlerForIndex(Container& exeptionHandlers, unsigned index, RequiredHandler requiredHandler)
     {
-        for (Handler& handler : exeptionHandlers) {
+        for (auto& handler : exeptionHandlers) {
             if ((requiredHandler == RequiredHandler::CatchHandler) && !handler.isCatchHandler())
                 continue;
 

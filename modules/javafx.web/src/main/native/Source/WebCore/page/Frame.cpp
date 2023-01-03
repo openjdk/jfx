@@ -5,7 +5,7 @@
  *                     2000 Simon Hausmann <hausmann@kde.org>
  *                     2000 Stefan Schimanski <1Stein@gmx.de>
  *                     2001 George Staikos <staikos@kde.org>
- * Copyright (C) 2004-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2020 Apple Inc. All rights reserved.
  * Copyright (C) 2005 Alexey Proskuryakov <ap@nypop.com>
  * Copyright (C) 2008 Nokia Corporation and/or its subsidiary(-ies)
  * Copyright (C) 2008 Eric Seidel <eric@webkit.org>
@@ -31,8 +31,8 @@
 #include "Frame.h"
 
 #include "ApplyStyleCommand.h"
+#include "BackForwardCache.h"
 #include "BackForwardController.h"
-#include "CSSAnimationController.h"
 #include "CSSComputedStyleDeclaration.h"
 #include "CSSPropertyNames.h"
 #include "CachedCSSStyleSheet.h"
@@ -40,11 +40,12 @@
 #include "Chrome.h"
 #include "ChromeClient.h"
 #include "DOMWindow.h"
-#include "DocumentTimeline.h"
+#include "DocumentTimelinesController.h"
 #include "DocumentType.h"
 #include "Editing.h"
 #include "Editor.h"
 #include "EditorClient.h"
+#include "ElementInlines.h"
 #include "Event.h"
 #include "EventHandler.h"
 #include "EventNames.h"
@@ -66,6 +67,7 @@
 #include "HitTestResult.h"
 #include "ImageBuffer.h"
 #include "InspectorInstrumentation.h"
+#include "JSNode.h"
 #include "JSWindowProxy.h"
 #include "Logging.h"
 #include "NavigationScheduler.h"
@@ -73,7 +75,6 @@
 #include "NodeList.h"
 #include "NodeTraversal.h"
 #include "Page.h"
-#include "PageCache.h"
 #include "ProcessWarming.h"
 #include "RenderLayerCompositor.h"
 #include "RenderTableCell.h"
@@ -85,6 +86,7 @@
 #include "RuntimeEnabledFeatures.h"
 #include "SVGDocument.h"
 #include "SVGDocumentExtensions.h"
+#include "SVGElementTypeHelpers.h"
 #include "ScriptController.h"
 #include "ScriptSourceCode.h"
 #include "ScrollingCoordinator.h"
@@ -100,12 +102,25 @@
 #include "UserTypingGestureIndicator.h"
 #include "VisibleUnits.h"
 #include "markup.h"
-#include "npruntime_impl.h"
 #include "runtime_root.h"
+#include <JavaScriptCore/APICast.h>
 #include <JavaScriptCore/RegularExpression.h>
+#include <wtf/HexNumber.h>
 #include <wtf/RefCountedLeakCounter.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/text/StringBuilder.h>
+#include <wtf/text/TextStream.h>
+
+#if ENABLE(DATA_DETECTION)
+#include "DataDetectionResultsStorage.h"
+#endif
+
+#if ENABLE(SERVICE_WORKER)
+#include "JSServiceWorkerGlobalScope.h"
+#include "ServiceWorkerGlobalScope.h"
+#endif
+
+#define FRAME_RELEASE_LOG_ERROR(channel, fmt, ...) RELEASE_LOG_ERROR(channel, "%p - Frame::" fmt, this, ##__VA_ARGS__)
 
 namespace WebCore {
 
@@ -143,18 +158,15 @@ static inline float parentTextZoomFactor(Frame* frame)
     return parent->textZoomFactor();
 }
 
-Frame::Frame(Page& page, HTMLFrameOwnerElement* ownerElement, FrameLoaderClient& frameLoaderClient)
+Frame::Frame(Page& page, HTMLFrameOwnerElement* ownerElement, UniqueRef<FrameLoaderClient>&& frameLoaderClient)
     : m_mainFrame(ownerElement ? page.mainFrame() : *this)
-    , m_page(&page)
+    , m_page(page)
     , m_settings(&page.settings())
     , m_treeNode(*this, parentFromOwnerElement(ownerElement))
-    , m_loader(makeUniqueRef<FrameLoader>(*this, frameLoaderClient))
+    , m_loader(makeUniqueRef<FrameLoader>(*this, WTFMove(frameLoaderClient)))
     , m_navigationScheduler(makeUniqueRef<NavigationScheduler>(*this))
     , m_ownerElement(ownerElement)
     , m_script(makeUniqueRef<ScriptController>(*this))
-    , m_editor(makeUniqueRef<Editor>(*this))
-    , m_selection(makeUniqueRef<FrameSelection>(this))
-    , m_animationController(makeUniqueRef<CSSAnimationController>(*this))
     , m_pageZoomFactor(parentPageZoomFactor(this))
     , m_textZoomFactor(parentTextZoomFactor(this))
     , m_eventHandler(makeUniqueRef<EventHandler>(*this))
@@ -163,8 +175,7 @@ Frame::Frame(Page& page, HTMLFrameOwnerElement* ownerElement, FrameLoaderClient&
 
     if (ownerElement) {
         m_mainFrame.selfOnlyRef();
-        page.incrementSubframeCount();
-        ownerElement->setContentFrame(this);
+        ownerElement->setContentFrame(*this);
     }
 
 #ifndef NDEBUG
@@ -182,17 +193,22 @@ void Frame::init()
     m_loader->init();
 }
 
-Ref<Frame> Frame::create(Page* page, HTMLFrameOwnerElement* ownerElement, FrameLoaderClient* client)
+Ref<Frame> Frame::create(Page* page, HTMLFrameOwnerElement* ownerElement, UniqueRef<FrameLoaderClient>&& client)
 {
     ASSERT(page);
-    ASSERT(client);
-    return adoptRef(*new Frame(*page, ownerElement, *client));
+    return adoptRef(*new Frame(*page, ownerElement, WTFMove(client)));
 }
 
 Frame::~Frame()
 {
     setView(nullptr);
-    loader().cancelAndClear();
+    navigationScheduler().cancel();
+
+    if (!loader().isComplete())
+        loader().closeURL();
+
+    loader().clear(document(), false);
+    script().updatePlatformScriptObjects();
 
     // FIXME: We should not be doing all this work inside the destructor
 
@@ -209,14 +225,24 @@ Frame::~Frame()
         m_mainFrame.selfOnlyDeref();
 }
 
-void Frame::addDestructionObserver(FrameDestructionObserver* observer)
+Page* Frame::page() const
 {
-    m_destructionObservers.add(observer);
+    return m_page.get();
 }
 
-void Frame::removeDestructionObserver(FrameDestructionObserver* observer)
+HTMLFrameOwnerElement* Frame::ownerElement() const
 {
-    m_destructionObservers.remove(observer);
+    return m_ownerElement.get();
+}
+
+void Frame::addDestructionObserver(FrameDestructionObserver& observer)
+{
+    m_destructionObservers.add(&observer);
+}
+
+void Frame::removeDestructionObserver(FrameDestructionObserver& observer)
+{
+    m_destructionObservers.remove(&observer);
 }
 
 void Frame::setView(RefPtr<FrameView>&& view)
@@ -230,8 +256,8 @@ void Frame::setView(RefPtr<FrameView>&& view)
     // Prepare for destruction now, so any unload event handlers get run and the DOMWindow is
     // notified. If we wait until the view is destroyed, then things won't be hooked up enough for
     // these calls to work.
-    if (!view && m_doc && m_doc->pageCacheState() != Document::InPageCache)
-        m_doc->prepareForDestruction();
+    if (!view && m_doc && m_doc->backForwardCacheState() != Document::InBackForwardCache)
+        m_doc->willBeRemovedFromFrame();
 
     if (m_view)
         m_view->layoutContext().unscheduleLayout();
@@ -275,8 +301,8 @@ void Frame::setDocument(RefPtr<Document>&& newDocument)
     }
 #endif
 
-    if (m_doc && m_doc->pageCacheState() != Document::InPageCache)
-        m_doc->prepareForDestruction();
+    if (m_doc && m_doc->backForwardCacheState() != Document::InBackForwardCache)
+        m_doc->willBeRemovedFromFrame();
 
     m_doc = newDocument.copyRef();
     ASSERT(!m_doc || m_doc->domWindow());
@@ -294,23 +320,51 @@ void Frame::setDocument(RefPtr<Document>&& newDocument)
     }
 #endif
 
+    if (m_page && m_doc && isMainFrame() && !loader().stateMachine().isDisplayingInitialEmptyDocument())
+        m_page->mainFrameDidChangeToNonInitialEmptyDocument();
+
     InspectorInstrumentation::frameDocumentUpdated(*this);
 
     m_documentIsBeingReplaced = false;
 }
 
+void Frame::invalidateContentEventRegionsIfNeeded(InvalidateContentEventRegionsReason reason)
+{
+    if (!m_page || !m_doc || !m_doc->renderView())
+        return;
+
+    bool needsUpdateForWheelEventHandlers = false;
+    bool needsUpdateForTouchActionElements = false;
+    bool needsUpdateForEditableElements = false;
+#if ENABLE(WHEEL_EVENT_REGIONS)
+    needsUpdateForWheelEventHandlers = m_doc->hasWheelEventHandlers() || reason == InvalidateContentEventRegionsReason::EventHandlerChange;
+#else
+    UNUSED_PARAM(reason);
+#endif
+#if ENABLE(TOUCH_ACTION_REGIONS)
+    // Document::mayHaveElementsWithNonAutoTouchAction never changes from true to false currently.
+    needsUpdateForTouchActionElements = m_doc->mayHaveElementsWithNonAutoTouchAction();
+#endif
+#if ENABLE(EDITABLE_REGION)
+    // Document::mayHaveEditableElements never changes from true to false currently.
+    needsUpdateForEditableElements = m_doc->mayHaveEditableElements() && m_page->shouldBuildEditableRegion();
+#endif
+    if (!needsUpdateForTouchActionElements && !needsUpdateForEditableElements && !needsUpdateForWheelEventHandlers)
+        return;
+
+    if (!m_doc->renderView()->compositor().viewNeedsToInvalidateEventRegionOfEnclosingCompositingLayerForRepaint())
+        return;
+
+    if (m_ownerElement)
+        m_ownerElement->document().invalidateEventRegionsForFrame(*m_ownerElement);
+}
+
 #if ENABLE(ORIENTATION_EVENTS)
 void Frame::orientationChanged()
 {
-    Vector<Ref<Frame>> frames;
-    for (Frame* frame = this; frame; frame = frame->tree().traverseNext())
-        frames.append(*frame);
-
-    auto newOrientation = orientation();
-    for (auto& frame : frames) {
-        if (Document* document = frame->document())
-            document->orientationChanged(newOrientation);
-    }
+    Page::forEachDocumentFromMainFrame(*this, [newOrientation = orientation()] (Document& document) {
+        document.orientationChanged(newOrientation);
+    });
 }
 
 int Frame::orientation() const
@@ -329,28 +383,19 @@ static JSC::Yarr::RegularExpression createRegExpForLabels(const Vector<String>& 
     static NeverDestroyed<JSC::Yarr::RegularExpression> wordRegExp("\\w");
     StringBuilder pattern;
     pattern.append('(');
-    unsigned int numLabels = labels.size();
-    unsigned int i;
-    for (i = 0; i < numLabels; i++) {
-        String label = labels[i];
+    for (unsigned i = 0, numLabels = labels.size(); i < numLabels; i++) {
+        auto& label = labels[i];
 
-        bool startsWithWordChar = false;
-        bool endsWithWordChar = false;
+        bool startsWithWordCharacter = false;
+        bool endsWithWordCharacter = false;
         if (label.length()) {
-            startsWithWordChar = wordRegExp.get().match(label.substring(0, 1)) >= 0;
-            endsWithWordChar = wordRegExp.get().match(label.substring(label.length() - 1, 1)) >= 0;
+            startsWithWordCharacter = wordRegExp.get().match(label.substring(0, 1)) >= 0;
+            endsWithWordCharacter = wordRegExp.get().match(label.substring(label.length() - 1, 1)) >= 0;
         }
 
-        if (i)
-            pattern.append('|');
         // Search for word boundaries only if label starts/ends with "word characters".
-        // If we always searched for word boundaries, this wouldn't work for languages
-        // such as Japanese.
-        if (startsWithWordChar)
-            pattern.appendLiteral("\\b");
-        pattern.append(label);
-        if (endsWithWordChar)
-            pattern.appendLiteral("\\b");
+        // If we always searched for word boundaries, this wouldn't work for languages such as Japanese.
+        pattern.append(i ? "|" : "", startsWithWordCharacter ? "\\b" : "", label, endsWithWordCharacter ? "\\b" : "");
     }
     pattern.append(')');
     return JSC::Yarr::RegularExpression(pattern.toString(), JSC::Yarr::TextCaseInsensitive);
@@ -510,12 +555,18 @@ bool Frame::selectionChangeCallbacksDisabled() const
 }
 #endif // PLATFORM(IOS_FAMILY)
 
-bool Frame::requestDOMPasteAccess()
+bool Frame::requestDOMPasteAccess(DOMPasteAccessCategory pasteAccessCategory)
 {
-    if (m_settings->javaScriptCanAccessClipboard() && m_settings->DOMPasteAllowed())
+    if (m_settings->javaScriptCanAccessClipboard() && m_settings->domPasteAllowed())
         return true;
 
-    if (!m_settings->domPasteAccessRequestsEnabled() || !m_doc)
+    if (!m_doc)
+        return false;
+
+    if (editor().isPastingFromMenuOrKeyBinding())
+        return true;
+
+    if (!m_settings->domPasteAccessRequestsEnabled())
         return false;
 
     auto gestureToken = UserGestureIndicator::currentUserGesture();
@@ -528,11 +579,11 @@ bool Frame::requestDOMPasteAccess()
     case DOMPasteAccessPolicy::Denied:
         return false;
     case DOMPasteAccessPolicy::NotRequestedYet: {
-        auto* client = m_editor->client();
+        auto* client = editor().client();
         if (!client)
             return false;
 
-        auto response = client->requestDOMPasteAccess(m_doc->originIdentifierForPasteboard());
+        auto response = client->requestDOMPasteAccess(pasteAccessCategory, m_doc->originIdentifierForPasteboard());
         gestureToken->didRequestDOMPasteAccess(response);
         switch (response) {
         case DOMPasteAccessResponse::GrantedForCommand:
@@ -557,10 +608,15 @@ void Frame::setPrinting(bool printing, const FloatSize& pageSize, const FloatSiz
     ResourceCacheValidationSuppressor validationSuppressor(m_doc->cachedResourceLoader());
 
     m_doc->setPrinting(printing);
-    auto& frameView = *view();
-    frameView.adjustMediaTypeForPrinting(printing);
+    view()->adjustMediaTypeForPrinting(printing);
 
+    // FIXME: Consider invoking Page::updateRendering or an equivalent.
     m_doc->styleScope().didChangeStyleSheetEnvironment();
+    m_doc->evaluateMediaQueriesAndReportChanges();
+    if (!view())
+        return;
+
+    auto& frameView = *view();
     if (shouldUsePrintingLayout())
         frameView.forceLayoutForPagination(pageSize, originalPageSize, maximumShrinkRatio, shouldAdjustViewSize);
     else {
@@ -609,27 +665,61 @@ void Frame::injectUserScripts(UserScriptInjectionTime injectionTime)
     if (loader().stateMachine().creatingInitialEmptyDocument() && !settings().shouldInjectUserScriptsInInitialEmptyDocument())
         return;
 
-    m_page->userContentProvider().forEachUserScript([this, protectedThis = makeRef(*this), injectionTime](DOMWrapperWorld& world, const UserScript& script) {
-        if (script.injectionTime() == injectionTime)
-            injectUserScriptImmediately(world, script);
+    bool pageWasNotified = m_page->hasBeenNotifiedToInjectUserScripts();
+    m_page->userContentProvider().forEachUserScript([this, protectedThis = Ref { *this }, injectionTime, pageWasNotified] (DOMWrapperWorld& world, const UserScript& script) {
+        if (script.injectionTime() == injectionTime) {
+            if (script.waitForNotificationBeforeInjecting() == WaitForNotificationBeforeInjecting::Yes && !pageWasNotified)
+                addUserScriptAwaitingNotification(world, script);
+            else
+                injectUserScriptImmediately(world, script);
+        }
     });
 }
 
 void Frame::injectUserScriptImmediately(DOMWrapperWorld& world, const UserScript& script)
 {
+#if ENABLE(APP_BOUND_DOMAINS)
+    if (loader().client().shouldEnableInAppBrowserPrivacyProtections()) {
+        if (auto* document = this->document())
+            document->addConsoleMessage(MessageSource::Security, MessageLevel::Warning, "Ignoring user script injection for non-app bound domain."_s);
+        FRAME_RELEASE_LOG_ERROR(Loading, "injectUserScriptImmediately: Ignoring user script injection for non app-bound domain");
+        return;
+    }
+    loader().client().notifyPageOfAppBoundBehavior();
+#endif
+
     auto* document = this->document();
     if (!document)
         return;
-    if (script.injectedFrames() == InjectInTopFrameOnly && !isMainFrame())
+    if (script.injectedFrames() == UserContentInjectedFrames::InjectInTopFrameOnly && !isMainFrame())
         return;
-    if (!UserContentURLPattern::matchesPatterns(document->url(), script.whitelist(), script.blacklist()))
-        return;
-    if (!m_script->shouldAllowUserAgentScripts(*document))
+    if (!UserContentURLPattern::matchesPatterns(document->url(), script.allowlist(), script.blocklist()))
         return;
 
     document->setAsRunningUserScripts();
     loader().client().willInjectUserScript(world);
-    m_script->evaluateInWorld(ScriptSourceCode(script.source(), URL(script.url())), world);
+    m_script->evaluateInWorldIgnoringException(ScriptSourceCode(script.source(), URL(script.url())), world);
+}
+
+void Frame::addUserScriptAwaitingNotification(DOMWrapperWorld& world, const UserScript& script)
+{
+    m_userScriptsAwaitingNotification.append({ world, makeUniqueRef<UserScript>(script) });
+}
+
+void Frame::injectUserScriptsAwaitingNotification()
+{
+    for (const auto& [world, script] : std::exchange(m_userScriptsAwaitingNotification, { }))
+        injectUserScriptImmediately(world, script.get());
+}
+
+std::optional<PageIdentifier> Frame::pageID() const
+{
+    return loader().pageID();
+}
+
+std::optional<FrameIdentifier> Frame::frameID() const
+{
+    return loader().frameID();
 }
 
 RenderView* Frame::contentRenderer() const
@@ -639,7 +729,7 @@ RenderView* Frame::contentRenderer() const
 
 RenderWidget* Frame::ownerRenderer() const
 {
-    auto* ownerElement = m_ownerElement;
+    auto* ownerElement = m_ownerElement.get();
     if (!ownerElement)
         return nullptr;
     auto* object = ownerElement->renderer();
@@ -666,11 +756,8 @@ void Frame::clearTimers(FrameView *view, Document *document)
 {
     if (view) {
         view->layoutContext().unscheduleLayout();
-        if (RuntimeEnabledFeatures::sharedFeatures().webAnimationsCSSIntegrationEnabled()) {
-            if (auto* timeline = document->existingTimeline())
-                timeline->suspendAnimations();
-        } else
-            view->frame().animation().suspendAnimationsForDocument(document);
+        if (auto* timelines = document->timelinesController())
+            timelines->suspendAnimations();
         view->frame().eventHandler().stopAutoscrollTimer();
     }
 }
@@ -690,8 +777,12 @@ void Frame::willDetachPage()
 
     // FIXME: It's unclear as to why this is called more than once, but it is,
     // so page() could be NULL.
-    if (page() && page()->focusController().focusedFrame() == this)
-        page()->focusController().setFocusedFrame(nullptr);
+    if (page()) {
+        CheckedRef focusController { page()->focusController() };
+        if (focusController->focusedFrame() == this)
+            focusController->setFocusedFrame(nullptr);
+    }
+
 
     if (page() && page()->scrollingCoordinator() && m_view)
         page()->scrollingCoordinator()->willDestroyScrollableArea(*m_view);
@@ -706,7 +797,7 @@ void Frame::willDetachPage()
     // - When calling Frame::setView() with a null FrameView*. This is always done before calling
     //   Frame::willDetachPage (this function.) Hence the assertion below.
     //
-    // - When adding a document to the page cache, the tree is torn down before instantiating
+    // - When adding a document to the back/forward cache, the tree is torn down before instantiating
     //   the CachedPage+CachedFrame object tree.
     ASSERT(!document() || !document()->renderView());
 }
@@ -715,10 +806,8 @@ void Frame::disconnectOwnerElement()
 {
     if (m_ownerElement) {
         m_ownerElement->clearContentFrame();
-        if (m_page)
-            m_page->decrementSubframeCount();
+        m_ownerElement = nullptr;
     }
-    m_ownerElement = nullptr;
 
     if (auto* document = this->document())
         document->frameWasDisconnectedFromOwner();
@@ -731,7 +820,8 @@ String Frame::displayStringModifiedByEncoding(const String& str) const
 
 VisiblePosition Frame::visiblePositionForPoint(const IntPoint& framePoint) const
 {
-    HitTestResult result = eventHandler().hitTestResultAtPoint(framePoint, HitTestRequest::ReadOnly | HitTestRequest::Active | HitTestRequest::AllowChildFrameContent);
+    constexpr OptionSet<HitTestRequest::Type> hitType { HitTestRequest::Type::ReadOnly, HitTestRequest::Type::Active, HitTestRequest::Type::AllowVisibleChildFrameContentOnly };
+    HitTestResult result = eventHandler().hitTestResultAtPoint(framePoint, hitType);
     Node* node = result.innerNonSharedNode();
     if (!node)
         return VisiblePosition();
@@ -752,41 +842,35 @@ Document* Frame::documentAtPoint(const IntPoint& point)
     IntPoint pt = view()->windowToContents(point);
     HitTestResult result = HitTestResult(pt);
 
-    if (contentRenderer())
-        result = eventHandler().hitTestResultAtPoint(pt, HitTestRequest::ReadOnly | HitTestRequest::Active | HitTestRequest::DisallowUserAgentShadowContent | HitTestRequest::AllowChildFrameContent);
+    if (contentRenderer()) {
+        constexpr OptionSet<HitTestRequest::Type> hitType { HitTestRequest::Type::ReadOnly, HitTestRequest::Type::Active, HitTestRequest::Type::DisallowUserAgentShadowContent, HitTestRequest::Type::AllowChildFrameContent };
+        result = eventHandler().hitTestResultAtPoint(pt, hitType);
+    }
     return result.innerNode() ? &result.innerNode()->document() : 0;
 }
 
-RefPtr<Range> Frame::rangeForPoint(const IntPoint& framePoint)
+std::optional<SimpleRange> Frame::rangeForPoint(const IntPoint& framePoint)
 {
-    VisiblePosition position = visiblePositionForPoint(framePoint);
-    if (position.isNull())
-        return nullptr;
+    auto position = visiblePositionForPoint(framePoint);
 
-    Position deepPosition = position.deepEquivalent();
-    Text* containerText = deepPosition.containerText();
-    if (!containerText || !containerText->renderer() || containerText->renderer()->style().userSelect() == UserSelect::None)
-        return nullptr;
+    auto containerText = position.deepEquivalent().containerText();
+    if (!containerText || !containerText->renderer() || containerText->renderer()->style().userSelectIncludingInert() == UserSelect::None)
+        return std::nullopt;
 
-    VisiblePosition previous = position.previous();
-    if (previous.isNotNull()) {
-        RefPtr<Range> previousCharacterRange = makeRange(previous, position);
-        LayoutRect rect = editor().firstRectForRange(previousCharacterRange.get());
-        if (rect.contains(framePoint))
-            return previousCharacterRange;
+    if (auto previousCharacterRange = makeSimpleRange(position.previous(), position)) {
+        if (editor().firstRectForRange(*previousCharacterRange).contains(framePoint))
+            return *previousCharacterRange;
     }
 
-    VisiblePosition next = position.next();
-    if (RefPtr<Range> nextCharacterRange = makeRange(position, next)) {
-        LayoutRect rect = editor().firstRectForRange(nextCharacterRange.get());
-        if (rect.contains(framePoint))
-            return nextCharacterRange;
+    if (auto nextCharacterRange = makeSimpleRange(position, position.next())) {
+        if (editor().firstRectForRange(*nextCharacterRange).contains(framePoint))
+            return *nextCharacterRange;
     }
 
-    return nullptr;
+    return std::nullopt;
 }
 
-void Frame::createView(const IntSize& viewportSize, const Optional<Color>& backgroundColor,
+void Frame::createView(const IntSize& viewportSize, const std::optional<Color>& backgroundColor,
     const IntSize& fixedLayoutSize, const IntRect& fixedVisibleContentRect,
     bool useFixedLayout, ScrollbarMode horizontalScrollbarMode, bool horizontalLock,
     ScrollbarMode verticalScrollbarMode, bool verticalLock)
@@ -826,7 +910,7 @@ void Frame::createView(const IntSize& viewportSize, const Optional<Color>& backg
         ownerRenderer()->setWidget(frameView);
 
     if (HTMLFrameOwnerElement* owner = ownerElement())
-        view()->setCanHaveScrollbars(owner->scrollingMode() != ScrollbarAlwaysOff);
+        view()->setCanHaveScrollbars(owner->scrollingMode() != ScrollbarMode::AlwaysOff);
 }
 
 DOMWindow* Frame::window() const
@@ -837,16 +921,6 @@ DOMWindow* Frame::window() const
 AbstractDOMWindow* Frame::virtualWindow() const
 {
     return window();
-}
-
-String Frame::layerTreeAsText(LayerTreeFlags flags) const
-{
-    document()->updateLayout();
-
-    if (!contentRenderer())
-        return String();
-
-    return contentRenderer()->compositor().layerTreeAsText(flags);
 }
 
 String Frame::trackedRepaintRectsAsText() const
@@ -879,22 +953,21 @@ void Frame::setPageAndTextZoomFactors(float pageZoomFactor, float textZoomFactor
     if (!document)
         return;
 
-    m_editor->dismissCorrectionPanelAsIgnored();
+    editor().dismissCorrectionPanelAsIgnored();
 
     // Respect SVGs zoomAndPan="disabled" property in standalone SVG documents.
     // FIXME: How to handle compound documents + zoomAndPan="disabled"? Needs SVG WG clarification.
     if (is<SVGDocument>(*document) && !downcast<SVGDocument>(*document).zoomAndPanEnabled())
         return;
 
+    std::optional<ScrollPosition> scrollPositionAfterZoomed;
     if (m_pageZoomFactor != pageZoomFactor) {
+        // Compute the scroll position with scale after zooming to stay the same position in the content.
         if (FrameView* view = this->view()) {
-            // Update the scroll position when doing a full page zoom, so the content stays in relatively the same position.
-            LayoutPoint scrollPosition = view->scrollPosition();
-            float percentDifference = (pageZoomFactor / m_pageZoomFactor);
-            view->setScrollPosition(IntPoint(scrollPosition.x() * percentDifference, scrollPosition.y() * percentDifference));
+            scrollPositionAfterZoomed = view->scrollPosition();
+            scrollPositionAfterZoomed->scale(pageZoomFactor / m_pageZoomFactor);
         }
     }
-
     m_pageZoomFactor = pageZoomFactor;
     m_textZoomFactor = textZoomFactor;
 
@@ -906,6 +979,10 @@ void Frame::setPageAndTextZoomFactors(float pageZoomFactor, float textZoomFactor
     if (FrameView* view = this->view()) {
         if (document->renderView() && document->renderView()->needsLayout() && view->didFirstLayout())
             view->layoutContext().layout();
+
+        // Scrolling to the calculated position must be done after the layout.
+        if (scrollPositionAfterZoomed)
+            view->setScrollPosition(scrollPositionAfterZoomed.value());
     }
 }
 
@@ -914,7 +991,10 @@ float Frame::frameScaleFactor() const
     Page* page = this->page();
 
     // Main frame is scaled with respect to he container but inner frames are not scaled with respect to the main frame.
-    if (!page || &page->mainFrame() != this || settings().delegatesPageScaling())
+    if (!page || !isMainFrame())
+        return 1;
+
+    if (page->delegatesScaling())
         return 1;
 
     return page->pageScaleFactor();
@@ -952,7 +1032,9 @@ void Frame::resumeActiveDOMObjectsAndAnimations()
     m_doc->resumeScheduledTasks(ReasonForSuspension::PageWillBeSuspended);
 
     // Frame::clearTimers() suspended animations and pending relayouts.
-    animation().resumeAnimationsForDocument(m_doc.get());
+
+    if (auto* timelines = m_doc->timelinesController())
+        timelines->resumeAnimations();
     if (m_view)
         m_view->layoutContext().scheduleLayout();
 }
@@ -966,11 +1048,6 @@ void Frame::deviceOrPageScaleFactorChanged()
         root->compositor().deviceOrPageScaleFactorChanged();
 }
 
-bool Frame::isAlwaysOnLoggingAllowed() const
-{
-    return page() && page()->isAlwaysOnLoggingAllowed();
-}
-
 void Frame::dropChildren()
 {
     ASSERT(isMainFrame());
@@ -978,17 +1055,21 @@ void Frame::dropChildren()
         tree().removeChild(*child);
 }
 
-void Frame::didPrewarmLocalStorage()
+FloatSize Frame::screenSize() const
 {
-    ASSERT(isMainFrame());
-    ASSERT(m_localStoragePrewarmingCount < maxlocalStoragePrewarmingCount);
-    ++m_localStoragePrewarmingCount;
+    if (!m_overrideScreenSize.isEmpty())
+        return m_overrideScreenSize;
+    return screenRect(view()).size();
 }
 
-bool Frame::mayPrewarmLocalStorage() const
+void Frame::setOverrideScreenSize(FloatSize&& screenSize)
 {
-    ASSERT(isMainFrame());
-    return m_localStoragePrewarmingCount < maxlocalStoragePrewarmingCount;
+    if (m_overrideScreenSize == screenSize)
+        return;
+
+    m_overrideScreenSize = WTFMove(screenSize);
+    if (auto* document = this->document())
+        document->updateViewportArguments();
 }
 
 void Frame::selfOnlyRef()
@@ -1013,9 +1094,78 @@ void Frame::selfOnlyDeref()
     deref();
 }
 
-PAL::SessionID Frame::sessionID() const
+String Frame::debugDescription() const
 {
-    return m_loader->client().sessionID();
+    StringBuilder builder;
+
+    builder.append("Frame 0x"_s, hex(reinterpret_cast<uintptr_t>(this), Lowercase));
+    if (isMainFrame())
+        builder.append(" (main frame)"_s);
+
+    if (auto document = this->document())
+        builder.append(' ', document->documentURI());
+
+    return builder.toString();
 }
 
+TextStream& operator<<(TextStream& ts, const Frame& frame)
+{
+    ts << frame.debugDescription();
+    return ts;
+}
+
+bool Frame::arePluginsEnabled()
+{
+    return settings().arePluginsEnabled();
+}
+
+void Frame::resetScript()
+{
+    resetWindowProxy();
+    m_script = makeUniqueRef<ScriptController>(*this);
+}
+
+Frame* Frame::fromJSContext(JSContextRef context)
+{
+    JSC::JSGlobalObject* globalObjectObj = toJS(context);
+    if (auto* window = JSC::jsDynamicCast<JSDOMWindow*>(globalObjectObj->vm(), globalObjectObj))
+        return window->wrapped().frame();
+#if ENABLE(SERVICE_WORKER)
+    if (auto* serviceWorkerGlobalScope = JSC::jsDynamicCast<JSServiceWorkerGlobalScope*>(globalObjectObj->vm(), globalObjectObj))
+        return serviceWorkerGlobalScope->wrapped().serviceWorkerPage() ? &serviceWorkerGlobalScope->wrapped().serviceWorkerPage()->mainFrame() : nullptr;
+#endif
+    return nullptr;
+}
+
+Frame* Frame::contentFrameFromWindowOrFrameElement(JSContextRef context, JSValueRef valueRef)
+{
+    ASSERT(context);
+    ASSERT(valueRef);
+
+    JSC::JSGlobalObject* globalObject = toJS(context);
+    JSC::JSValue value = toJS(globalObject, valueRef);
+    JSC::VM& vm = globalObject->vm();
+
+    if (auto* window = JSDOMWindow::toWrapped(vm, value))
+        return window->frame();
+
+    auto* jsNode = JSC::jsDynamicCast<JSNode*>(vm, value);
+    if (!jsNode || !is<HTMLFrameOwnerElement>(jsNode->wrapped()))
+        return nullptr;
+    return downcast<HTMLFrameOwnerElement>(jsNode->wrapped()).contentFrame();
+}
+
+#if ENABLE(DATA_DETECTION)
+
+DataDetectionResultsStorage& Frame::dataDetectionResults()
+{
+    if (!m_dataDetectionResults)
+        m_dataDetectionResults = makeUnique<DataDetectionResultsStorage>();
+    return *m_dataDetectionResults;
+}
+
+#endif
+
 } // namespace WebCore
+
+#undef FRAME_RELEASE_LOG_ERROR

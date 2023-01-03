@@ -25,26 +25,37 @@
 
 #pragma once
 
+#if ENABLE(WEBGL)
+
 #include <JavaScriptCore/InspectorProtocolObjects.h>
+#include <variant>
+#include <wtf/Forward.h>
+#include <wtf/RefCounted.h>
 
 namespace WebCore {
 
 class InspectorCanvas;
+
+#if ENABLE(WEBGL)
 class WebGLProgram;
 class WebGLRenderingContextBase;
-class WebGLShader;
-
-typedef String ErrorString;
+#endif
 
 class InspectorShaderProgram final : public RefCounted<InspectorShaderProgram> {
 public:
+#if ENABLE(WEBGL)
     static Ref<InspectorShaderProgram> create(WebGLProgram&, InspectorCanvas&);
+#endif
 
     const String& identifier() const { return m_identifier; }
     InspectorCanvas& canvas() const { return m_canvas; }
-    WebGLRenderingContextBase& context() const;
-    WebGLProgram& program() const { return m_program; }
-    WebGLShader* shaderForType(const String&);
+
+#if ENABLE(WEBGL)
+    WebGLProgram* program() const;
+#endif
+
+    String requestShaderSource(Inspector::Protocol::Canvas::ShaderType);
+    bool updateShader(Inspector::Protocol::Canvas::ShaderType, const String& source);
 
     bool disabled() const { return m_disabled; }
     void setDisabled(bool disabled) { m_disabled = disabled; }
@@ -52,17 +63,27 @@ public:
     bool highlighted() const { return m_highlighted; }
     void setHighlighted(bool value) { m_highlighted = value; }
 
-    ~InspectorShaderProgram() = default;
+    Ref<Inspector::Protocol::Canvas::ShaderProgram> buildObjectForShaderProgram();
 
 private:
+#if ENABLE(WEBGL)
     InspectorShaderProgram(WebGLProgram&, InspectorCanvas&);
+#endif
 
     String m_identifier;
-    WebGLProgram& m_program;
     InspectorCanvas& m_canvas;
+
+    std::variant<
+#if ENABLE(WEBGL)
+        std::reference_wrapper<WebGLProgram>,
+#endif
+        std::monostate
+    > m_program;
 
     bool m_disabled { false };
     bool m_highlighted { false };
 };
 
 } // namespace WebCore
+
+#endif // ENABLE(WEBGL)

@@ -34,8 +34,9 @@
 namespace WebCore {
 
 class CachedFont;
-class Document;
+class FontLoadRequest;
 class SVGFontFaceElement;
+class ScriptExecutionContext;
 
 class CSSFontFaceSrcValue final : public CSSValue {
 public:
@@ -56,19 +57,17 @@ public:
 
     bool isSupportedFormat() const;
 
-#if ENABLE(SVG_FONTS)
     bool isSVGFontFaceSrc() const;
     bool isSVGFontTarget() const;
 
     SVGFontFaceElement* svgFontFaceElement() const { return m_svgFontFaceElement; }
     void setSVGFontFaceElement(SVGFontFaceElement* element) { m_svgFontFaceElement = element; }
-#endif
 
     String customCSSText() const;
 
-    bool traverseSubresources(const WTF::Function<bool (const CachedResource&)>& handler) const;
+    bool traverseSubresources(const Function<bool(const CachedResource&)>& handler) const;
 
-    CachedFont* cachedFont(Document*, bool isSVG, bool isInitiatingElementInUserAgentShadowTree);
+    std::unique_ptr<FontLoadRequest> fontLoadRequest(ScriptExecutionContext*, bool isSVG, bool isInitiatingElementInUserAgentShadowTree);
 
     bool equals(const CSSFontFaceSrcValue&) const;
 
@@ -78,9 +77,7 @@ private:
         , m_resource(resource)
         , m_isLocal(local)
         , m_loadedFromOpaqueSource(loadedFromOpaqueSource)
-#if ENABLE(SVG_FONTS)
         , m_svgFontFaceElement(0)
-#endif
     {
     }
 
@@ -91,9 +88,7 @@ private:
 
     CachedResourceHandle<CachedFont> m_cachedFont;
 
-#if ENABLE(SVG_FONTS)
     SVGFontFaceElement* m_svgFontFaceElement;
-#endif
 };
 
 } // namespace WebCore

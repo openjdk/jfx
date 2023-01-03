@@ -32,32 +32,26 @@
 
 #if ENABLE(CSS_TYPED_OM)
 
+#include "CSSCustomPropertyValue.h"
 #include "CSSImageValue.h"
-#include "TypedOMCSSImageValue.h"
-#include "TypedOMCSSUnitValue.h"
-#include "TypedOMCSSUnparsedValue.h"
-#include <wtf/HashMap.h>
+#include "CSSPrimitiveValue.h"
+#include "CSSStyleImageValue.h"
+#include "CSSStyleValueFactory.h"
+#include "CSSUnitValue.h"
+#include "CSSUnparsedValue.h"
+#include "Document.h"
 
 namespace WebCore {
 
-
-RefPtr<TypedOMCSSStyleValue> StylePropertyMapReadOnly::reifyValue(CSSValue* value, Document& document, Element*)
+RefPtr<CSSStyleValue> StylePropertyMapReadOnly::reifyValue(CSSValue* value, Document& document, Element*)
 {
     if (!value)
         return nullptr;
-
-    // FIXME: Properly reify all length values.
-    if (is<CSSPrimitiveValue>(*value) && downcast<CSSPrimitiveValue>(*value).primitiveType() == CSSPrimitiveValue::CSS_PX)
-        return TypedOMCSSUnitValue::create(downcast<CSSPrimitiveValue>(*value).doubleValue(), "px");
-
-    if (is<CSSImageValue>(*value))
-        return TypedOMCSSImageValue::create(downcast<CSSImageValue>(*value), document);
-
-    // FIXME: should use raw TypedOMCSSStyleValue
-    return TypedOMCSSUnparsedValue::create(value->cssText());
+    auto result = CSSStyleValueFactory::reifyValue(*value, &document);
+    return (result.hasException() ? nullptr : RefPtr<CSSStyleValue> { result.releaseReturnValue() });
 }
 
-RefPtr<TypedOMCSSStyleValue> StylePropertyMapReadOnly::customPropertyValueOrDefault(const String& name, Document& document, CSSValue* inputValue, Element* element)
+RefPtr<CSSStyleValue> StylePropertyMapReadOnly::customPropertyValueOrDefault(const String& name, Document& document, CSSValue* inputValue, Element* element)
 {
     if (!inputValue) {
         auto* registered = document.getCSSRegisteredCustomPropertySet().get(name);
@@ -67,7 +61,7 @@ RefPtr<TypedOMCSSStyleValue> StylePropertyMapReadOnly::customPropertyValueOrDefa
             return StylePropertyMapReadOnly::reifyValue(value.get(), document, element);
         }
 
-        return TypedOMCSSUnparsedValue::create(emptyString());
+        return nullptr;
     }
 
     return StylePropertyMapReadOnly::reifyValue(inputValue, document, element);

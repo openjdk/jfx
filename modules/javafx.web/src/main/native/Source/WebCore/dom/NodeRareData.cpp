@@ -36,7 +36,8 @@
 namespace WebCore {
 
 struct SameSizeAsNodeRareData {
-    unsigned m_frameCountAndIsElementRareDataFlag;
+    uint32_t m_tabIndex;
+    uint32_t m_childIndexAndIsElementRareDataFlag;
     void* m_pointer[2];
 };
 
@@ -44,5 +45,8 @@ COMPILE_ASSERT(sizeof(NodeRareData) == sizeof(SameSizeAsNodeRareData), NodeRareD
 
 // Ensure the 10 bits reserved for the m_connectedFrameCount cannot overflow
 static_assert(Page::maxNumberOfFrames < 1024, "Frame limit should fit in rare data count");
+
+DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(NodeListsNodeData);
+DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(NodeRareData);
 
 } // namespace WebCore

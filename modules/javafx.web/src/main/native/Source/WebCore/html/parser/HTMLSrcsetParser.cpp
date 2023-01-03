@@ -134,14 +134,14 @@ static bool parseDescriptors(Vector<StringView>& descriptors, DescriptorParsingR
         if (descriptorChar == 'x') {
             if (result.hasDensity() || result.hasHeight() || result.hasWidth())
                 return false;
-            Optional<double> density = parseValidHTMLFloatingPointNumber(descriptor);
+            std::optional<double> density = parseValidHTMLFloatingPointNumber(descriptor);
             if (!density || density.value() < 0)
                 return false;
             result.setDensity(density.value());
         } else if (descriptorChar == 'w') {
             if (result.hasDensity() || result.hasWidth())
                 return false;
-            Optional<int> resourceWidth = parseValidHTMLNonNegativeInteger(descriptor);
+            std::optional<int> resourceWidth = parseValidHTMLNonNegativeInteger(descriptor);
             if (!resourceWidth || resourceWidth.value() <= 0)
                 return false;
             result.setResourceWidth(resourceWidth.value());
@@ -150,7 +150,7 @@ static bool parseDescriptors(Vector<StringView>& descriptors, DescriptorParsingR
             // The value of the 'h' descriptor is not used.
             if (result.hasDensity() || result.hasHeight())
                 return false;
-            Optional<int> resourceHeight = parseValidHTMLNonNegativeInteger(descriptor);
+            std::optional<int> resourceHeight = parseValidHTMLNonNegativeInteger(descriptor);
             if (!resourceHeight || resourceHeight.value() <= 0)
                 return false;
             result.setResourceHeight(resourceHeight.value());
@@ -170,7 +170,7 @@ static Vector<ImageCandidate> parseImageCandidatesFromSrcsetAttribute(const Char
 
     for (const CharType* position = attributeStart; position < attributeEnd;) {
         // 4. Splitting loop: Collect a sequence of characters that are space characters or U+002C COMMA characters.
-        skipWhile<CharType, isHTMLSpaceOrComma<CharType> >(position, attributeEnd);
+        skipWhile<isHTMLSpaceOrComma>(position, attributeEnd);
         if (position == attributeEnd) {
             // Contrary to spec language - descriptor parsing happens on each candidate, so when we reach the attributeEnd, we can exit.
             break;
@@ -178,7 +178,7 @@ static Vector<ImageCandidate> parseImageCandidatesFromSrcsetAttribute(const Char
         const CharType* imageURLStart = position;
         // 6. Collect a sequence of characters that are not space characters, and let that be url.
 
-        skipUntil<CharType, isHTMLSpace<CharType> >(position, attributeEnd);
+        skipUntil<isHTMLSpace>(position, attributeEnd);
         const CharType* imageURLEnd = position;
 
         DescriptorParsingResult result;
@@ -187,13 +187,13 @@ static Vector<ImageCandidate> parseImageCandidatesFromSrcsetAttribute(const Char
         if (isComma(*(position - 1))) {
             // Remove all trailing U+002C COMMA characters from url.
             imageURLEnd = position - 1;
-            reverseSkipWhile<CharType, isComma>(imageURLEnd, imageURLStart);
+            reverseSkipWhile<isComma>(imageURLEnd, imageURLStart);
             ++imageURLEnd;
             // If url is empty, then jump to the step labeled splitting loop.
             if (imageURLStart == imageURLEnd)
                 continue;
         } else {
-            skipWhile<CharType, isHTMLSpace<CharType>>(position, attributeEnd);
+            skipWhile<isHTMLSpace>(position, attributeEnd);
             Vector<StringView> descriptorTokens;
             tokenizeDescriptors(position, attributeEnd, descriptorTokens);
             // Contrary to spec language - descriptor parsing happens on each candidate.

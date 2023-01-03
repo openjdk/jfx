@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,7 +26,7 @@
 package com.sun.media.jfxmedia.effects;
 
 /**
- * Provides a master audio equalizer with up to 15 bands.  Each band can have the center frequency,
+ * Provides an audio equalizer with up to 15 bands.  Each band can have the center frequency,
  * bandwidth, and gain set.
  */
 public interface AudioEqualizer

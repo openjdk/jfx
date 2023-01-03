@@ -1,6 +1,8 @@
 {
     "domain": "Heap",
     "description": "Heap domain exposes JavaScript heap attributes and capabilities.",
+    "debuggableTypes": ["itml", "javascript", "page", "service-worker", "web-page"],
+    "targetTypes": ["itml", "javascript", "page", "service-worker", "worker"],
     "types": [
         {
             "id": "GarbageCollection",

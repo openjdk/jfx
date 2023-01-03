@@ -38,6 +38,7 @@
 #include "ScriptController.h"
 #include "SecurityOrigin.h"
 #include "SecurityOriginData.h"
+#include "WindowEventLoop.h"
 #include <wtf/NeverDestroyed.h>
 
 namespace WebCore {
@@ -59,7 +60,7 @@ private:
 DatabaseManager::ProposedDatabase::ProposedDatabase(DatabaseManager& manager, SecurityOrigin& origin, const String& name, const String& displayName, unsigned long estimatedSize)
     : m_manager(manager)
     , m_origin(origin.isolatedCopy())
-    , m_details(name.isolatedCopy(), displayName.isolatedCopy(), estimatedSize, 0, WTF::nullopt, WTF::nullopt)
+    , m_details(name.isolatedCopy(), displayName.isolatedCopy(), estimatedSize, 0, std::nullopt, std::nullopt)
 {
     m_manager.addProposedDatabase(*this);
 }
@@ -101,7 +102,9 @@ Ref<DatabaseContext> DatabaseManager::databaseContext(Document& document)
 {
     if (auto databaseContext = document.databaseContext())
         return *databaseContext;
-    return adoptRef(*new DatabaseContext(document));
+    auto context = adoptRef(*new DatabaseContext(document));
+    context->suspendIfNeeded();
+    return context;
 }
 
 #if LOG_DISABLED
@@ -180,19 +183,24 @@ ExceptionOr<Ref<Database>> DatabaseManager::tryToOpenDatabaseBackend(Document& d
 
 void DatabaseManager::addProposedDatabase(ProposedDatabase& database)
 {
-    std::lock_guard<Lock> lock { m_proposedDatabasesMutex };
+    Locker locker { m_proposedDatabasesLock };
     m_proposedDatabases.add(&database);
 }
 
 void DatabaseManager::removeProposedDatabase(ProposedDatabase& database)
 {
-    std::lock_guard<Lock> lock { m_proposedDatabasesMutex };
+    Locker locker { m_proposedDatabasesLock };
     m_proposedDatabases.remove(&database);
 }
 
 ExceptionOr<Ref<Database>> DatabaseManager::openDatabase(Document& document, const String& name, const String& expectedVersion, const String& displayName, unsigned estimatedSize, RefPtr<DatabaseCallback>&& creationCallback)
 {
-    ScriptController::initializeThreading();
+    ASSERT(isMainThread());
+
+    // FIXME: Remove this call to ScriptController::initializeMainThread(). The
+    // main thread should have been initialized by a WebKit entrypoint already.
+    // Also, initializeMainThread() does nothing on iOS.
+    ScriptController::initializeMainThread();
 
     bool setVersionInNewDatabase = !creationCallback;
     auto openResult = openDatabaseBackend(document, name, expectedVersion, displayName, estimatedSize, setVersionInNewDatabase);
@@ -208,7 +216,7 @@ ExceptionOr<Ref<Database>> DatabaseManager::openDatabase(Document& document, con
     if (database->isNew() && creationCallback.get()) {
         LOG(StorageAPI, "Scheduling DatabaseCreationCallbackTask for database %p\n", database.get());
         database->setHasPendingCreationEvent(true);
-        database->m_document->postTask([creationCallback, database] (ScriptExecutionContext&) {
+        database->m_document->eventLoop().queueTask(TaskSource::Networking, [creationCallback, database]() {
             creationCallback->handleEvent(*database);
             database->setHasPendingCreationEvent(false);
         });
@@ -235,7 +243,7 @@ void DatabaseManager::stopDatabases(Document& document, DatabaseTaskSynchronizer
 String DatabaseManager::fullPathForDatabase(SecurityOrigin& origin, const String& name, bool createIfDoesNotExist)
 {
     {
-        std::lock_guard<Lock> lock { m_proposedDatabasesMutex };
+        Locker locker { m_proposedDatabasesLock };
         for (auto* proposedDatabase : m_proposedDatabases) {
             if (proposedDatabase->details().name() == name && proposedDatabase->origin().equal(&origin))
                 return String();
@@ -247,7 +255,7 @@ String DatabaseManager::fullPathForDatabase(SecurityOrigin& origin, const String
 DatabaseDetails DatabaseManager::detailsForNameAndOrigin(const String& name, SecurityOrigin& origin)
 {
     {
-        std::lock_guard<Lock> lock { m_proposedDatabasesMutex };
+        Locker locker { m_proposedDatabasesLock };
         for (auto* proposedDatabase : m_proposedDatabases) {
             if (proposedDatabase->details().name() == name && proposedDatabase->origin().equal(&origin)) {
                 ASSERT(&proposedDatabase->details().thread() == &Thread::current() || isMainThread());

@@ -25,11 +25,12 @@
 
 #pragma once
 
-#if ENABLE(WEBASSEMBLY)
+#if ENABLE(WEBASSEMBLY_B3JIT)
 
 #include "CompilationResult.h"
 #include "ExecutionCounter.h"
 #include "Options.h"
+#include "WasmOSREntryData.h"
 #include <wtf/Atomics.h>
 #include <wtf/SegmentedVector.h>
 #include <wtf/StdLibExtras.h>
@@ -56,7 +57,6 @@ public:
         NotCompiled,
         StartCompilation,
         Compiled,
-        Failed,
     };
 
     TierUpCount();
@@ -69,12 +69,12 @@ public:
     Vector<uint32_t>& outerLoops() { return m_outerLoops; }
     Lock& getLock() { return m_lock; }
 
-    OSREntryData& addOSREntryData(uint32_t functionIndex, uint32_t loopIndex);
+    OSREntryData& addOSREntryData(uint32_t functionIndex, uint32_t loopIndex, StackMap&&);
 
     void optimizeAfterWarmUp(uint32_t functionIndex)
     {
         dataLogLnIf(Options::verboseOSR(), functionIndex, ": OMG-optimizing after warm-up.");
-        setNewThreshold(Options::thresholdForOMGOptimizeAfterWarmUp(), nullptr);
+        setNewThreshold(Options::thresholdForOMGOptimizeAfterWarmUp());
     }
 
     bool checkIfOptimizationThresholdReached()
@@ -91,14 +91,14 @@ public:
     void optimizeNextInvocation(uint32_t functionIndex)
     {
         dataLogLnIf(Options::verboseOSR(), functionIndex, ": OMG-optimizing next invocation.");
-        setNewThreshold(0, nullptr);
+        setNewThreshold(0);
     }
 
     void optimizeSoon(uint32_t functionIndex)
     {
         dataLogLnIf(Options::verboseOSR(), functionIndex, ": OMG-optimizing soon.");
         // FIXME: Need adjustment once we get more information about wasm functions.
-        setNewThreshold(Options::thresholdForOMGOptimizeSoon(), nullptr);
+        setNewThreshold(Options::thresholdForOMGOptimizeSoon());
     }
 
     void setOptimizationThresholdBasedOnCompilationResult(uint32_t functionIndex, CompilationResult result)
@@ -126,7 +126,6 @@ public:
         RELEASE_ASSERT_NOT_REACHED();
     }
 
-    Atomic<bool> m_tierUpStarted { false };
     Lock m_lock;
     CompilationStatus m_compilationStatusForOMG { CompilationStatus::NotCompiled };
     CompilationStatus m_compilationStatusForOMGForOSREntry { CompilationStatus::NotCompiled };
@@ -137,4 +136,4 @@ public:
 
 } } // namespace JSC::Wasm
 
-#endif // ENABLE(WEBASSEMBLY)
+#endif // ENABLE(WEBASSEMBLY_B3JIT)

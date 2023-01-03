@@ -35,8 +35,6 @@
 
 namespace WebCore {
 
-using namespace XPath;
-
 inline XPathExpression::XPathExpression(std::unique_ptr<XPath::Expression> expression)
     : m_topExpression(WTFMove(expression))
 {
@@ -44,7 +42,7 @@ inline XPathExpression::XPathExpression(std::unique_ptr<XPath::Expression> expre
 
 ExceptionOr<Ref<XPathExpression>> XPathExpression::createExpression(const String& expression, RefPtr<XPathNSResolver>&& resolver)
 {
-    auto parseResult = Parser::parseStatement(expression, WTFMove(resolver));
+    auto parseResult = XPath::Parser::parseStatement(expression, WTFMove(resolver));
     if (parseResult.hasException())
         return parseResult.releaseException();
 
@@ -54,17 +52,17 @@ ExceptionOr<Ref<XPathExpression>> XPathExpression::createExpression(const String
 XPathExpression::~XPathExpression() = default;
 
 // FIXME: Why does this take an XPathResult that it ignores?
-ExceptionOr<Ref<XPathResult>> XPathExpression::evaluate(Node* contextNode, unsigned short type, XPathResult*)
+ExceptionOr<Ref<XPathResult>> XPathExpression::evaluate(Node& contextNode, unsigned short type, XPathResult*)
 {
-    if (!isValidContextNode(contextNode))
+    if (!XPath::isValidContextNode(contextNode))
         return Exception { NotSupportedError };
 
-    EvaluationContext& evaluationContext = Expression::evaluationContext();
-    evaluationContext.node = contextNode;
+    auto& evaluationContext = XPath::Expression::evaluationContext();
+    evaluationContext.node = &contextNode;
     evaluationContext.size = 1;
     evaluationContext.position = 1;
     evaluationContext.hadTypeConversionError = false;
-    auto result = XPathResult::create(contextNode->document(), m_topExpression->evaluate());
+    auto result = XPathResult::create(contextNode.document(), m_topExpression->evaluate());
     evaluationContext.node = nullptr; // Do not hold a reference to the context node, as this may prevent the whole document from being destroyed in time.
 
     if (evaluationContext.hadTypeConversionError)

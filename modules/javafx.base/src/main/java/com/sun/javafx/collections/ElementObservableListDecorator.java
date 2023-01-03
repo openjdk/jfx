@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -34,12 +34,11 @@ import java.util.RandomAccess;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.collections.ListChangeListener;
-import javafx.collections.ListChangeListener.Change;
 import javafx.collections.ObservableList;
 import javafx.collections.WeakListChangeListener;
 import javafx.util.Callback;
 
-public final class ElementObservableListDecorator<E> extends ObservableListBase<E> implements ObservableList<E> {
+public final class ElementObservableListDecorator<E> extends ObservableListBase<E> {
 
     private final ObservableList<E> decoratedList;
     private final ListChangeListener<E> listener;
@@ -48,7 +47,7 @@ public final class ElementObservableListDecorator<E> extends ObservableListBase<
 
     public ElementObservableListDecorator(ObservableList<E> decorated,
             Callback<E, Observable[]> extractor) {
-        this.observer = new ElementObserver<E>(extractor, new Callback<E, InvalidationListener>() {
+        this.observer = new ElementObserver<>(extractor, new Callback<E, InvalidationListener>() {
 
             @Override
             public InvalidationListener call(final E e) {
@@ -83,7 +82,7 @@ public final class ElementObservableListDecorator<E> extends ObservableListBase<
         for (int i = 0; i < sz; ++i) {
             observer.attachListener(decoratedList.get(i));
         }
-        listener = new ListChangeListener<E>() {
+        listener = new ListChangeListener<>() {
 
             @Override
             public void onChanged(Change<? extends E> c) {
@@ -110,7 +109,7 @@ public final class ElementObservableListDecorator<E> extends ObservableListBase<
                 fireChange(c);
             }
         };
-        this.decoratedList.addListener(new WeakListChangeListener<E> (listener));
+        this.decoratedList.addListener(new WeakListChangeListener<> (listener));
     }
 
     @Override

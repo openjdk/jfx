@@ -36,15 +36,17 @@ class PrintStream;
 
 namespace WebCore {
 
-class PlatformTimeRanges {
+class WEBCORE_EXPORT PlatformTimeRanges {
     WTF_MAKE_FAST_ALLOCATED;
 public:
     explicit PlatformTimeRanges() { }
     PlatformTimeRanges(const MediaTime& start, const MediaTime& end);
 
-    WEBCORE_EXPORT MediaTime start(unsigned index) const;
+    PlatformTimeRanges copyWithEpsilon(const MediaTime&) const;
+
+    MediaTime start(unsigned index) const;
     MediaTime start(unsigned index, bool& valid) const;
-    WEBCORE_EXPORT MediaTime end(unsigned index) const;
+    MediaTime end(unsigned index) const;
     MediaTime end(unsigned index, bool& valid) const;
     MediaTime duration(unsigned index) const;
     MediaTime maximumBufferedTime() const;
@@ -56,16 +58,21 @@ public:
     unsigned length() const { return m_ranges.size(); }
 
     void add(const MediaTime& start, const MediaTime& end);
+    void clear();
 
     bool contain(const MediaTime&) const;
 
     size_t find(const MediaTime&) const;
+    size_t findWithEpsilon(const MediaTime&, const MediaTime& epsilon);
 
     MediaTime nearest(const MediaTime&) const;
 
     MediaTime totalDuration() const;
 
-    void dump(WTF::PrintStream&) const;
+    void dump(PrintStream&) const;
+
+    template<class Encoder> void encode(Encoder&) const;
+    template<class Decoder> static std::optional<PlatformTimeRanges> decode(Decoder&);
 
 private:
     // We consider all the Ranges to be semi-bounded as follow: [start, end[
@@ -79,6 +86,29 @@ private:
 
         MediaTime m_start;
         MediaTime m_end;
+
+        template<class Encoder>
+        void encode(Encoder& encoder) const
+        {
+            encoder << m_start;
+            encoder << m_end;
+        }
+
+        template <class Decoder>
+        static std::optional<Range> decode(Decoder& decoder)
+        {
+            std::optional<MediaTime> start;
+            decoder >> start;
+            if (!start)
+                return std::nullopt;
+
+            std::optional<MediaTime> end;
+            decoder >> end;
+            if (!end)
+                return std::nullopt;
+
+            return {{ WTFMove(*start), WTFMove(*end) }};
+        }
 
         inline bool isPointInRange(const MediaTime& point) const
         {
@@ -111,8 +141,27 @@ private:
         }
     };
 
+    PlatformTimeRanges(Vector<Range>&&);
+
     Vector<Range> m_ranges;
 };
+
+template<class Encoder>
+void PlatformTimeRanges::encode(Encoder& encoder) const
+{
+    encoder << m_ranges;
+}
+
+template <class Decoder>
+std::optional<PlatformTimeRanges> PlatformTimeRanges::decode(Decoder& decoder)
+{
+    std::optional<Vector<Range>> buffered;
+    decoder >> buffered;
+    if (!buffered)
+        return std::nullopt;
+
+    return {{ WTFMove(*buffered) }};
+}
 
 } // namespace WebCore
 

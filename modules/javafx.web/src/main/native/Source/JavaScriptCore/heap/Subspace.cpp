@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,12 +27,9 @@
 #include "Subspace.h"
 
 #include "AlignedMemoryAllocator.h"
-#include "BlockDirectoryInlines.h"
 #include "HeapCellType.h"
-#include "JSCInlines.h"
-#include "MarkedBlockInlines.h"
+#include "MarkedSpaceInlines.h"
 #include "ParallelSourceAdapter.h"
-#include "PreventCollectionScope.h"
 #include "SubspaceInlines.h"
 
 namespace JSC {
@@ -43,13 +40,13 @@ Subspace::Subspace(CString name, Heap& heap)
 {
 }
 
-void Subspace::initialize(HeapCellType* heapCellType, AlignedMemoryAllocator* alignedMemoryAllocator)
+void Subspace::initialize(const HeapCellType& heapCellType, AlignedMemoryAllocator* alignedMemoryAllocator)
 {
-    m_heapCellType = heapCellType;
+    m_heapCellType = &heapCellType;
     m_alignedMemoryAllocator = alignedMemoryAllocator;
     m_directoryForEmptyAllocation = m_alignedMemoryAllocator->firstDirectory();
 
-    Heap& heap = *m_space.heap();
+    Heap& heap = m_space.heap();
     heap.objectSpace().m_subspaces.append(this);
     m_alignedMemoryAllocator->registerSubspace(this);
 }
@@ -89,16 +86,16 @@ MarkedBlock::Handle* Subspace::findEmptyBlockToSteal()
 
 Ref<SharedTask<BlockDirectory*()>> Subspace::parallelDirectorySource()
 {
-    class Task : public SharedTask<BlockDirectory*()> {
+    class Task final : public SharedTask<BlockDirectory*()> {
     public:
         Task(BlockDirectory* directory)
             : m_directory(directory)
         {
         }
 
-        BlockDirectory* run() override
+        BlockDirectory* run() final
         {
-            auto locker = holdLock(m_lock);
+            Locker locker { m_lock };
             BlockDirectory* result = m_directory;
             if (result)
                 m_directory = result->nextDirectoryInSubspace();
@@ -124,7 +121,7 @@ Ref<SharedTask<MarkedBlock::Handle*()>> Subspace::parallelNotEmptyMarkedBlockSou
         });
 }
 
-void Subspace::sweep()
+void Subspace::sweepBlocks()
 {
     forEachDirectory(
         [&] (BlockDirectory& directory) {
@@ -132,11 +129,11 @@ void Subspace::sweep()
         });
 }
 
-void Subspace::didResizeBits(size_t)
+void Subspace::didResizeBits(unsigned)
 {
 }
 
-void Subspace::didRemoveBlock(size_t)
+void Subspace::didRemoveBlock(unsigned)
 {
 }
 

@@ -26,8 +26,6 @@
 #include "config.h"
 #include "IDBResourceIdentifier.h"
 
-#if ENABLE(INDEXED_DATABASE)
-
 #include "IDBConnectionToClient.h"
 #include "IDBConnectionToServer.h"
 #include "IDBRequest.h"
@@ -44,7 +42,6 @@ static uint64_t nextClientResourceNumber()
 
 static uint64_t nextServerResourceNumber()
 {
-    ASSERT(isMainThread());
     static uint64_t currentNumber = 0;
     return currentNumber += 2;
 }
@@ -53,7 +50,7 @@ IDBResourceIdentifier::IDBResourceIdentifier()
 {
 }
 
-IDBResourceIdentifier::IDBResourceIdentifier(uint64_t connectionIdentifier, uint64_t resourceIdentifier)
+IDBResourceIdentifier::IDBResourceIdentifier(IDBConnectionIdentifier connectionIdentifier, uint64_t resourceIdentifier)
     : m_idbConnectionIdentifier(connectionIdentifier)
     , m_resourceNumber(resourceIdentifier)
 {
@@ -84,29 +81,16 @@ IDBResourceIdentifier IDBResourceIdentifier::isolatedCopy() const
 
 IDBResourceIdentifier IDBResourceIdentifier::emptyValue()
 {
-    return IDBResourceIdentifier(0, 0);
-}
-
-IDBResourceIdentifier IDBResourceIdentifier::deletedValue()
-{
-    return IDBResourceIdentifier(std::numeric_limits<uint64_t>::max(), std::numeric_limits<uint64_t>::max());
-}
-
-bool IDBResourceIdentifier::isHashTableDeletedValue() const
-{
-    return m_idbConnectionIdentifier == std::numeric_limits<uint64_t>::max()
-        && m_resourceNumber == std::numeric_limits<uint64_t>::max();
+    return IDBResourceIdentifier({ }, 0);
 }
 
 #if !LOG_DISABLED
 
 String IDBResourceIdentifier::loggingString() const
 {
-    return makeString('<', m_idbConnectionIdentifier, ", ", m_resourceNumber, '>');
+    return makeString('<', m_idbConnectionIdentifier.toUInt64(), ", ", m_resourceNumber, '>');
 }
 
 #endif
 
 } // namespace WebCore
-
-#endif // ENABLE(INDEXED_DATABASE)

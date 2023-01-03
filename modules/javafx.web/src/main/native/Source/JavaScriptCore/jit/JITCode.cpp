@@ -26,11 +26,13 @@
 #include "config.h"
 #include "JITCode.h"
 
-#include "JSCInlines.h"
-#include "ProtoCallFrame.h"
+#include "FTLJITCode.h"
+
 #include <wtf/PrintStream.h>
 
 namespace JSC {
+
+DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(DirectJITCode);
 
 JITCode::JITCode(JITType jitType, ShareAttribute shareAttribute)
     : m_jitType(jitType)
@@ -70,25 +72,46 @@ void JITCode::validateReferences(const TrackedReferences&)
 DFG::CommonData* JITCode::dfgCommon()
 {
     RELEASE_ASSERT_NOT_REACHED();
-    return 0;
+    return nullptr;
 }
 
 DFG::JITCode* JITCode::dfg()
 {
     RELEASE_ASSERT_NOT_REACHED();
-    return 0;
+    return nullptr;
 }
 
 FTL::JITCode* JITCode::ftl()
 {
     RELEASE_ASSERT_NOT_REACHED();
-    return 0;
+    return nullptr;
 }
 
 FTL::ForOSREntryJITCode* JITCode::ftlForOSREntry()
 {
     RELEASE_ASSERT_NOT_REACHED();
-    return 0;
+    return nullptr;
+}
+
+void JITCode::shrinkToFit(const ConcurrentJSLocker&)
+{
+}
+
+const RegisterAtOffsetList* JITCode::calleeSaveRegisters() const
+{
+#if ENABLE(FTL_JIT)
+    if (m_jitType == JITType::FTLJIT)
+        return static_cast<const FTL::JITCode*>(this)->calleeSaveRegisters();
+#endif
+#if ENABLE(DFG_JIT)
+    if (m_jitType == JITType::DFGJIT)
+        return &RegisterAtOffsetList::dfgCalleeSaveRegisters();
+#endif
+#if !ENABLE(C_LOOP)
+    return &RegisterAtOffsetList::llintBaselineCalleeSaveRegisters();
+#else
+    return nullptr;
+#endif
 }
 
 JITCodeWithCodeRef::JITCodeWithCodeRef(JITType jitType)
@@ -112,7 +135,7 @@ JITCodeWithCodeRef::~JITCodeWithCodeRef()
 void* JITCodeWithCodeRef::executableAddressAtOffset(size_t offset)
 {
     RELEASE_ASSERT(m_ref);
-    assertIsTaggedWith(m_ref.code().executableAddress(), JSEntryPtrTag);
+    assertIsTaggedWith<JSEntryPtrTag>(m_ref.code().executableAddress());
     if (!offset)
         return m_ref.code().executableAddress();
 

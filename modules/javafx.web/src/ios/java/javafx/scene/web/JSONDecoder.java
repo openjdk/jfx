@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -98,9 +98,9 @@ class JSONDecoder {
         } else {
             long val = Long.parseLong(sNum);
             if ((val <= Integer.MAX_VALUE) && (Integer.MIN_VALUE <= val)) {
-                return new Integer((int) val);
+                return Integer.valueOf((int) val);
             } else {
-                return new Double(val);
+                return Double.valueOf(val);
             }
         }
     }

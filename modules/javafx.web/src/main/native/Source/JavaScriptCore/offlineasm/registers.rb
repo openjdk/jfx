@@ -38,6 +38,10 @@ GPRS =
      "a1",
      "a2",
      "a3",
+     "a4",
+     "a5",
+     "a6",
+     "a7",
      "r0",
      "r1",
      "sp",
@@ -53,7 +57,8 @@ GPRS =
      "csr6",
      "csr7",
      "csr8",
-     "csr9"
+     "csr9",
+     "csr10"
     ]
 
 FPRS =
@@ -76,12 +81,48 @@ FPRS =
      "csfr5",
      "csfr6",
      "csfr7",
+     "csfr8",
+     "csfr9",
+     "csfr10",
+     "csfr11",
      "fr"
     ]
 
-REGISTERS = GPRS + FPRS
+WASM_GPRS =
+    [
+     "wa0",
+     "wa1",
+     "wa2",
+     "wa3",
+     "wa4",
+     "wa5",
+     "wa6",
+     "wa7",
+    ]
+
+WASM_FPRS =
+    [
+     "wfa0",
+     "wfa1",
+     "wfa2",
+     "wfa3",
+     "wfa4",
+     "wfa5",
+     "wfa6",
+     "wfa7",
+    ]
+
+WASM_SCRATCHS =
+    [
+     "ws0",
+     "ws1",
+    ]
+
+REGISTERS = GPRS + FPRS + WASM_GPRS + WASM_FPRS + WASM_SCRATCHS
 
 GPR_PATTERN = Regexp.new('\\A((' + GPRS.join(')|(') + '))\\Z')
 FPR_PATTERN = Regexp.new('\\A((' + FPRS.join(')|(') + '))\\Z')
+WASM_GPR_PATTERN = Regexp.new('\\A((' + WASM_GPRS.join(')|(') + '))\\Z')
+WASM_FPR_PATTERN = Regexp.new('\\A((' + WASM_FPRS.join(')|(') + '))\\Z')
 
 REGISTER_PATTERN = Regexp.new('\\A((' + REGISTERS.join(')|(') + '))\\Z')

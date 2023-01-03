@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2016, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,7 +29,6 @@ import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.scene.DirtyBits;
 import com.sun.javafx.scene.NodeHelper;
-import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.sg.prism.NGShape;
 import com.sun.javafx.util.Utils;
 import javafx.scene.Node;
@@ -109,10 +108,6 @@ public abstract class ShapeHelper extends NodeHelper {
         return shapeAccessor.getMode(shape);
     }
 
-    public static void setMode(Shape shape, NGShape.Mode mode) {
-        shapeAccessor.setMode(shape, mode);
-    }
-
     public static void setShapeChangeListener(Shape shape, Runnable listener) {
         shapeAccessor.setShapeChangeListener(shape, listener);
     }
@@ -133,7 +128,6 @@ public abstract class ShapeHelper extends NodeHelper {
         Paint doCssGetFillInitialValue(Shape shape);
         Paint doCssGetStrokeInitialValue(Shape shape);
         NGShape.Mode getMode(Shape shape);
-        void setMode(Shape shape, NGShape.Mode mode);
         void setShapeChangeListener(Shape shape, Runnable listener);
     }
 

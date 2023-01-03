@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,7 +33,7 @@
 
 namespace JSC {
 
-JITMathICInlineResult JITMulGenerator::generateInline(CCallHelpers& jit, MathICGenerationState& state, const ArithProfile* arithProfile)
+JITMathICInlineResult JITMulGenerator::generateInline(CCallHelpers& jit, MathICGenerationState& state, const BinaryArithProfile* arithProfile)
 {
     // We default to speculating int32.
     ObservedType lhs = ObservedType().withInt32();
@@ -58,8 +58,8 @@ JITMathICInlineResult JITMulGenerator::generateInline(CCallHelpers& jit, MathICG
             state.slowPathJumps.append(jit.branchIfNotNumber(m_right, m_scratchGPR));
         state.slowPathJumps.append(jit.branchIfInt32(m_left));
         state.slowPathJumps.append(jit.branchIfInt32(m_right));
-        jit.unboxDoubleNonDestructive(m_left, m_leftFPR, m_scratchGPR, m_scratchFPR);
-        jit.unboxDoubleNonDestructive(m_right, m_rightFPR, m_scratchGPR, m_scratchFPR);
+        jit.unboxDoubleNonDestructive(m_left, m_leftFPR, m_scratchGPR);
+        jit.unboxDoubleNonDestructive(m_right, m_rightFPR, m_scratchGPR);
         jit.mulDouble(m_rightFPR, m_leftFPR);
         jit.boxDouble(m_leftFPR, m_result);
 
@@ -89,7 +89,7 @@ JITMathICInlineResult JITMulGenerator::generateInline(CCallHelpers& jit, MathICG
     return JITMathICInlineResult::GenerateFullSnippet;
 }
 
-bool JITMulGenerator::generateFastPath(CCallHelpers& jit, CCallHelpers::JumpList& endJumpList, CCallHelpers::JumpList& slowPathJumpList, const ArithProfile* arithProfile, bool shouldEmitProfiling)
+bool JITMulGenerator::generateFastPath(CCallHelpers& jit, CCallHelpers::JumpList& endJumpList, CCallHelpers::JumpList& slowPathJumpList, const BinaryArithProfile* arithProfile, bool shouldEmitProfiling)
 {
     ASSERT(m_scratchGPR != InvalidGPRReg);
     ASSERT(m_scratchGPR != m_left.payloadGPR());
@@ -99,7 +99,6 @@ bool JITMulGenerator::generateFastPath(CCallHelpers& jit, CCallHelpers::JumpList
 #else
     ASSERT(m_scratchGPR != m_left.tagGPR());
     ASSERT(m_scratchGPR != m_right.tagGPR());
-    ASSERT(m_scratchFPR != InvalidFPRReg);
 #endif
 
     ASSERT(!m_leftOperand.isPositiveConstInt32() || !m_rightOperand.isPositiveConstInt32());
@@ -134,7 +133,7 @@ bool JITMulGenerator::generateFastPath(CCallHelpers& jit, CCallHelpers::JumpList
         if (!varOpr.definitelyIsNumber())
             slowPathJumpList.append(jit.branchIfNotNumber(var, m_scratchGPR));
 
-        jit.unboxDoubleNonDestructive(var, m_leftFPR, m_scratchGPR, m_scratchFPR);
+        jit.unboxDoubleNonDestructive(var, m_leftFPR, m_scratchGPR);
 
         jit.move(CCallHelpers::Imm32(constOpr.asConstInt32()), m_scratchGPR);
         jit.convertInt32ToDouble(m_scratchGPR, m_rightFPR);
@@ -169,7 +168,7 @@ bool JITMulGenerator::generateFastPath(CCallHelpers& jit, CCallHelpers::JumpList
         if (!m_rightOperand.definitelyIsNumber())
             slowPathJumpList.append(jit.branchIfNotNumber(m_right, m_scratchGPR));
 
-        jit.unboxDoubleNonDestructive(m_left, m_leftFPR, m_scratchGPR, m_scratchFPR);
+        jit.unboxDoubleNonDestructive(m_left, m_leftFPR, m_scratchGPR);
         CCallHelpers::Jump rightIsDouble = jit.branchIfNotInt32(m_right);
 
         jit.convertInt32ToDouble(m_right.payloadGPR(), m_rightFPR);
@@ -182,7 +181,7 @@ bool JITMulGenerator::generateFastPath(CCallHelpers& jit, CCallHelpers::JumpList
         jit.convertInt32ToDouble(m_left.payloadGPR(), m_leftFPR);
 
         rightIsDouble.link(&jit);
-        jit.unboxDoubleNonDestructive(m_right, m_rightFPR, m_scratchGPR, m_scratchFPR);
+        jit.unboxDoubleNonDestructive(m_right, m_rightFPR, m_scratchGPR);
 
         rightWasInteger.link(&jit);
 
@@ -205,40 +204,40 @@ bool JITMulGenerator::generateFastPath(CCallHelpers& jit, CCallHelpers::JumpList
 
         CCallHelpers::Jump notNegativeZero = jit.branch64(CCallHelpers::NotEqual, m_result.payloadGPR(), CCallHelpers::TrustedImm64(negativeZeroBits));
 
-        jit.or32(CCallHelpers::TrustedImm32(ArithProfile::NegZeroDouble), CCallHelpers::AbsoluteAddress(arithProfile->addressOfBits()));
+        arithProfile->emitUnconditionalSet(jit, ObservedResults::NegZeroDouble);
         CCallHelpers::Jump done = jit.jump();
 
         notNegativeZero.link(&jit);
-        jit.or32(CCallHelpers::TrustedImm32(ArithProfile::NonNegZeroDouble), CCallHelpers::AbsoluteAddress(arithProfile->addressOfBits()));
+        arithProfile->emitUnconditionalSet(jit, ObservedResults::NonNegZeroDouble);
 
         jit.move(m_result.payloadGPR(), m_scratchGPR);
         jit.urshiftPtr(CCallHelpers::Imm32(52), m_scratchGPR);
         jit.and32(CCallHelpers::Imm32(0x7ff), m_scratchGPR);
         CCallHelpers::Jump noInt52Overflow = jit.branch32(CCallHelpers::LessThanOrEqual, m_scratchGPR, CCallHelpers::TrustedImm32(0x431));
 
-        jit.or32(CCallHelpers::TrustedImm32(ArithProfile::Int52Overflow), CCallHelpers::AbsoluteAddress(arithProfile->addressOfBits()));
+        arithProfile->emitUnconditionalSet(jit, ObservedResults::Int52Overflow);
         noInt52Overflow.link(&jit);
 
         done.link(&jit);
-        jit.sub64(GPRInfo::tagTypeNumberRegister, m_result.payloadGPR()); // Box the double.
+        jit.sub64(GPRInfo::numberTagRegister, m_result.payloadGPR()); // Box the double.
 #else
         jit.boxDouble(m_leftFPR, m_result);
         CCallHelpers::JumpList notNegativeZero;
         notNegativeZero.append(jit.branch32(CCallHelpers::NotEqual, m_result.payloadGPR(), CCallHelpers::TrustedImm32(0)));
         notNegativeZero.append(jit.branch32(CCallHelpers::NotEqual, m_result.tagGPR(), CCallHelpers::TrustedImm32(negativeZeroBits >> 32)));
 
-        jit.or32(CCallHelpers::TrustedImm32(ArithProfile::NegZeroDouble), CCallHelpers::AbsoluteAddress(arithProfile->addressOfBits()));
+        arithProfile->emitUnconditionalSet(jit, ObservedResults::NegZeroDouble);
         CCallHelpers::Jump done = jit.jump();
 
         notNegativeZero.link(&jit);
-        jit.or32(CCallHelpers::TrustedImm32(ArithProfile::NonNegZeroDouble), CCallHelpers::AbsoluteAddress(arithProfile->addressOfBits()));
+        arithProfile->emitUnconditionalSet(jit, ObservedResults::NonNegZeroDouble);
 
         jit.move(m_result.tagGPR(), m_scratchGPR);
         jit.urshiftPtr(CCallHelpers::Imm32(52 - 32), m_scratchGPR);
         jit.and32(CCallHelpers::Imm32(0x7ff), m_scratchGPR);
         CCallHelpers::Jump noInt52Overflow = jit.branch32(CCallHelpers::LessThanOrEqual, m_scratchGPR, CCallHelpers::TrustedImm32(0x431));
 
-        jit.or32(CCallHelpers::TrustedImm32(ArithProfile::Int52Overflow), CCallHelpers::AbsoluteAddress(arithProfile->addressOfBits()));
+        arithProfile->emitUnconditionalSet(jit, ObservedResults::Int52Overflow);
 
         endJumpList.append(noInt52Overflow);
         if (m_scratchGPR == m_result.tagGPR() || m_scratchGPR == m_result.payloadGPR())

@@ -34,8 +34,9 @@ class UserAgentQuirks {
 public:
     enum UserAgentQuirk {
         NeedsChromeBrowser,
+        NeedsFirefoxBrowser,
         NeedsMacintoshPlatform,
-        NeedsLinuxDesktopPlatform,
+        NeedsUnbrandedUserAgent,
 
         NumUserAgentQuirks
     };

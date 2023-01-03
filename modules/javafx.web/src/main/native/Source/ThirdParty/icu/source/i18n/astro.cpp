@@ -65,10 +65,7 @@ static inline UBool isINVALID(double d) {
   return(uprv_isNaN(d));
 }
 
-static icu::UMutex *ccLock() {
-    static icu::UMutex m = U_MUTEX_INITIALIZER;
-    return &m;
-}
+static icu::UMutex ccLock;
 
 U_CDECL_BEGIN
 static UBool calendar_astro_cleanup(void) {
@@ -382,7 +379,7 @@ double CalendarAstronomer::getJulianCentury() {
  */
 double CalendarAstronomer::getGreenwichSidereal() {
     if (isINVALID(siderealTime)) {
-        // See page 86 of "Practial Astronomy with your Calculator",
+        // See page 86 of "Practical Astronomy with your Calculator",
         // by Peter Duffet-Smith, for details on the algorithm.
 
         double UT = normalize(fTime/(double)HOUR_MS, 24.);
@@ -463,7 +460,7 @@ CalendarAstronomer::Equatorial& CalendarAstronomer::eclipticToEquatorial(Calenda
  */
 CalendarAstronomer::Equatorial& CalendarAstronomer::eclipticToEquatorial(CalendarAstronomer::Equatorial& result, double eclipLong, double eclipLat)
 {
-    // See page 42 of "Practial Astronomy with your Calculator",
+    // See page 42 of "Practical Astronomy with your Calculator",
     // by Peter Duffet-Smith, for details on the algorithm.
 
     double obliq = eclipticObliquity();
@@ -626,7 +623,7 @@ static double trueAnomaly(double meanAnomaly, double eccentricity)
  */
 double CalendarAstronomer::getSunLongitude()
 {
-    // See page 86 of "Practial Astronomy with your Calculator",
+    // See page 86 of "Practical Astronomy with your Calculator",
     // by Peter Duffet-Smith, for details on the algorithm.
 
     if (isINVALID(sunLongitude)) {
@@ -640,7 +637,7 @@ double CalendarAstronomer::getSunLongitude()
  */
 /*public*/ void CalendarAstronomer::getSunLongitude(double jDay, double &longitude, double &meanAnomaly)
 {
-    // See page 86 of "Practial Astronomy with your Calculator",
+    // See page 86 of "Practical Astronomy with your Calculator",
     // by Peter Duffet-Smith, for details on the algorithm.
 
     double day = jDay - JD_EPOCH;       // Days since epoch
@@ -726,7 +723,7 @@ CalendarAstronomer::AngleFunc::~AngleFunc() {}
 class SunTimeAngleFunc : public CalendarAstronomer::AngleFunc {
 public:
     virtual ~SunTimeAngleFunc();
-    virtual double eval(CalendarAstronomer& a) { return a.getSunLongitude(); }
+    virtual double eval(CalendarAstronomer& a) override { return a.getSunLongitude(); }
 };
 
 SunTimeAngleFunc::~SunTimeAngleFunc() {}
@@ -746,7 +743,7 @@ CalendarAstronomer::CoordFunc::~CoordFunc() {}
 class RiseSetCoordFunc : public CalendarAstronomer::CoordFunc {
 public:
     virtual ~RiseSetCoordFunc();
-    virtual void eval(CalendarAstronomer::Equatorial& result, CalendarAstronomer&a) {  a.getSunPosition(result); }
+    virtual void eval(CalendarAstronomer::Equatorial& result, CalendarAstronomer& a) override { a.getSunPosition(result); }
 };
 
 RiseSetCoordFunc::~RiseSetCoordFunc() {}
@@ -1069,7 +1066,7 @@ UDate CalendarAstronomer::getSunRiseSet(UBool rise)
 const CalendarAstronomer::Equatorial& CalendarAstronomer::getMoonPosition()
 {
     //
-    // See page 142 of "Practial Astronomy with your Calculator",
+    // See page 142 of "Practical Astronomy with your Calculator",
     // by Peter Duffet-Smith, for details on the algorithm.
     //
     if (moonPositionSet == FALSE) {
@@ -1157,7 +1154,7 @@ const CalendarAstronomer::Equatorial& CalendarAstronomer::getMoonPosition()
  * @deprecated ICU 2.4. This class may be removed or modified.
  */
 double CalendarAstronomer::getMoonAge() {
-    // See page 147 of "Practial Astronomy with your Calculator",
+    // See page 147 of "Practical Astronomy with your Calculator",
     // by Peter Duffet-Smith, for details on the algorithm.
     //
     // Force the moon's position to be calculated.  We're going to use
@@ -1184,7 +1181,7 @@ double CalendarAstronomer::getMoonAge() {
  * @deprecated ICU 2.4. This class may be removed or modified.
  */
 double CalendarAstronomer::getMoonPhase() {
-    // See page 147 of "Practial Astronomy with your Calculator",
+    // See page 147 of "Practical Astronomy with your Calculator",
     // by Peter Duffet-Smith, for details on the algorithm.
     return 0.5 * (1 - cos(getMoonAge()));
 }
@@ -1228,7 +1225,7 @@ const CalendarAstronomer::MoonAge CalendarAstronomer::FULL_MOON() {
 class MoonTimeAngleFunc : public CalendarAstronomer::AngleFunc {
 public:
     virtual ~MoonTimeAngleFunc();
-    virtual double eval(CalendarAstronomer&a) { return a.getMoonAge(); }
+    virtual double eval(CalendarAstronomer& a) override { return a.getMoonAge(); }
 };
 
 MoonTimeAngleFunc::~MoonTimeAngleFunc() {}
@@ -1242,8 +1239,8 @@ MoonTimeAngleFunc::~MoonTimeAngleFunc() {}
  * longitude will have the desired value.
  * <p>
  * @param desired   The desired longitude.
- * @param next      <tt>true</tt> if the next occurrance of the phase
- *                  is desired, <tt>false</tt> for the previous occurrance.
+ * @param next      <tt>true</tt> if the next occurrence of the phase
+ *                  is desired, <tt>false</tt> for the previous occurrence.
  * @internal
  * @deprecated ICU 2.4. This class may be removed or modified.
  */
@@ -1262,8 +1259,8 @@ UDate CalendarAstronomer::getMoonTime(double desired, UBool next)
  * desired phase.
  * <p>
  * @param desired   The desired phase of the moon.
- * @param next      <tt>true</tt> if the next occurrance of the phase
- *                  is desired, <tt>false</tt> for the previous occurrance.
+ * @param next      <tt>true</tt> if the next occurrence of the phase
+ *                  is desired, <tt>false</tt> for the previous occurrence.
  * @internal
  * @deprecated ICU 2.4. This class may be removed or modified.
  */
@@ -1274,7 +1271,7 @@ UDate CalendarAstronomer::getMoonTime(const CalendarAstronomer::MoonAge& desired
 class MoonRiseSetCoordFunc : public CalendarAstronomer::CoordFunc {
 public:
     virtual ~MoonRiseSetCoordFunc();
-    virtual void eval(CalendarAstronomer::Equatorial& result, CalendarAstronomer&a) { result = a.getMoonPosition(); }
+    virtual void eval(CalendarAstronomer::Equatorial& result, CalendarAstronomer& a) override { result = a.getMoonPosition(); }
 };
 
 MoonRiseSetCoordFunc::~MoonRiseSetCoordFunc() {}
@@ -1408,7 +1405,7 @@ UDate CalendarAstronomer::riseOrSet(CoordFunc& func, UBool rise,
 
     return fTime + (rise ? -delta : delta);
 }
-                                               /**
+                                                                                           /**
  * Return the obliquity of the ecliptic (the angle between the ecliptic
  * and the earth's equator) at the current time.  This varies due to
  * the precession of the earth's axis.
@@ -1552,12 +1549,12 @@ int32_t CalendarCache::get(CalendarCache** cache, int32_t key, UErrorCode &statu
     if(U_FAILURE(status)) {
         return 0;
     }
-    umtx_lock(ccLock());
+    umtx_lock(&ccLock);
 
     if(*cache == NULL) {
         createCache(cache, status);
         if(U_FAILURE(status)) {
-            umtx_unlock(ccLock());
+            umtx_unlock(&ccLock);
             return 0;
         }
     }
@@ -1565,7 +1562,7 @@ int32_t CalendarCache::get(CalendarCache** cache, int32_t key, UErrorCode &statu
     res = uhash_igeti((*cache)->fTable, key);
     U_DEBUG_ASTRO_MSG(("%p: GET: [%d] == %d\n", (*cache)->fTable, key, res));
 
-    umtx_unlock(ccLock());
+    umtx_unlock(&ccLock);
     return res;
 }
 
@@ -1573,12 +1570,12 @@ void CalendarCache::put(CalendarCache** cache, int32_t key, int32_t value, UErro
     if(U_FAILURE(status)) {
         return;
     }
-    umtx_lock(ccLock());
+    umtx_lock(&ccLock);
 
     if(*cache == NULL) {
         createCache(cache, status);
         if(U_FAILURE(status)) {
-            umtx_unlock(ccLock());
+            umtx_unlock(&ccLock);
             return;
         }
     }
@@ -1586,7 +1583,7 @@ void CalendarCache::put(CalendarCache** cache, int32_t key, int32_t value, UErro
     uhash_iputi((*cache)->fTable, key, value, &status);
     U_DEBUG_ASTRO_MSG(("%p: PUT: [%d] := %d\n", (*cache)->fTable, key, value));
 
-    umtx_unlock(ccLock());
+    umtx_unlock(&ccLock);
 }
 
 CalendarCache::CalendarCache(int32_t size, UErrorCode &status) {

@@ -28,6 +28,8 @@
 
 #if ENABLE(DFG_JIT)
 
+#include "JSCJSValueInlines.h"
+
 namespace JSC { namespace DFG {
 
 void HeapLocation::dump(PrintStream& out) const
@@ -60,12 +62,20 @@ void printInternal(PrintStream& out, LocationKind kind)
         out.print("InvalidationPointLoc");
         return;
 
-    case IsObjectOrNullLoc:
-        out.print("IsObjectOrNullLoc");
+    case TypeOfIsObjectLoc:
+        out.print("TypeOfIsObjectLoc");
         return;
 
-    case IsFunctionLoc:
-        out.print("IsFunctionLoc");
+    case TypeOfIsFunctionLoc:
+        out.print("TypeOfIsFunctionLoc");
+        return;
+
+    case IsCallableLoc:
+        out.print("IsCallableLoc");
+        return;
+
+    case IsConstructorLoc:
+        out.print("IsConstructorLoc");
         return;
 
     case GetterLoc:
@@ -132,8 +142,20 @@ void printInternal(PrintStream& out, LocationKind kind)
         out.print("IndexedPropertyDoubleSaneChainLoc");
         return;
 
+    case IndexedPropertyDoubleOutOfBoundsSaneChainLoc:
+        out.print("IndexedPropertyDoubleOutOfBoundsSaneChainLoc");
+        return;
+
+    case IndexedPropertyDoubleOrOtherOutOfBoundsSaneChainLoc:
+        out.print("IndexedPropertyDoubleOrOtherOutOfBoundsSaneChainLoc");
+        return;
+
     case IndexedPropertyInt32Loc:
         out.print("IndexedPropertyInt32Loc");
+        return;
+
+    case IndexedPropertyInt32OutOfBoundsSaneChainLoc:
+        out.print("IndexedPropertyInt32OutOfBoundsSaneChainLoc");
         return;
 
     case IndexedPropertyInt52Loc:
@@ -142,6 +164,10 @@ void printInternal(PrintStream& out, LocationKind kind)
 
     case IndexedPropertyJSLoc:
         out.print("IndexedPropertyJSLoc");
+        return;
+
+    case IndexedPropertyJSOutOfBoundsSaneChainLoc:
+        out.print("IndexedPropertyJSOutOfBoundsSaneChainLoc");
         return;
 
     case IndexedPropertyStorageLoc:
@@ -156,6 +182,14 @@ void printInternal(PrintStream& out, LocationKind kind)
         out.print("TypedArrayByteOffsetLoc");
         return;
 
+    case TypedArrayByteOffsetInt52Loc:
+        out.print("TypedArrayByteOffsetInt52Loc");
+        return;
+
+    case TypedArrayLengthInt52Loc:
+        out.print("TypedArrayLengthInt52Loc");
+        return;
+
     case PrototypeLoc:
         out.print("PrototypeLoc");
         return;
@@ -166,6 +200,10 @@ void printInternal(PrintStream& out, LocationKind kind)
 
     case RegExpObjectLastIndexLoc:
         out.print("RegExpObjectLastIndexLoc");
+        return;
+
+    case DateFieldLoc:
+        out.print("DateFieldLoc");
         return;
 
     case MapBucketLoc:
@@ -190,6 +228,10 @@ void printInternal(PrintStream& out, LocationKind kind)
 
     case WeakMapGetLoc:
         out.print("WeakMapGetLoc");
+        return;
+
+    case InternalFieldObjectLoc:
+        out.print("InternalFieldObjectLoc");
         return;
 
     case DOMStateLoc:

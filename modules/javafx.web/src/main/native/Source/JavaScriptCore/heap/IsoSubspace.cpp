@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,27 +26,28 @@
 #include "config.h"
 #include "IsoSubspace.h"
 
-#include "AllocatorInlines.h"
-#include "BlockDirectoryInlines.h"
 #include "IsoAlignedMemoryAllocator.h"
-#include "IsoSubspaceInlines.h"
-#include "LocalAllocatorInlines.h"
+#include "IsoCellSetInlines.h"
+#include "JSCellInlines.h"
+#include "MarkedSpaceInlines.h"
 
 namespace JSC {
 
-IsoSubspace::IsoSubspace(CString name, Heap& heap, HeapCellType* heapCellType, size_t size)
+IsoSubspace::IsoSubspace(CString name, Heap& heap, const HeapCellType& heapCellType, size_t size, uint8_t numberOfLowerTierCells, std::unique_ptr<IsoMemoryAllocatorBase>&& allocator)
     : Subspace(name, heap)
-    , m_size(size)
-    , m_directory(&heap, WTF::roundUpToMultipleOf<MarkedBlock::atomSize>(size))
-    , m_localAllocator(&m_directory)
-    , m_isoAlignedMemoryAllocator(makeUnique<IsoAlignedMemoryAllocator>())
+    , m_directory(WTF::roundUpToMultipleOf<MarkedBlock::atomSize>(size))
+    , m_isoAlignedMemoryAllocator(allocator ? WTFMove(allocator) : makeUnique<IsoAlignedMemoryAllocator>(name))
 {
+    m_remainingLowerTierCellCount = numberOfLowerTierCells;
+    ASSERT(WTF::roundUpToMultipleOf<MarkedBlock::atomSize>(size) == cellSize());
+    ASSERT(numberOfLowerTierCells <= MarkedBlock::maxNumberOfLowerTierCells);
+    m_isIsoSubspace = true;
     initialize(heapCellType, m_isoAlignedMemoryAllocator.get());
 
-    auto locker = holdLock(m_space.directoryLock());
+    Locker locker { m_space.directoryLock() };
     m_directory.setSubspace(this);
     m_space.addBlockDirectory(locker, &m_directory);
-    m_alignedMemoryAllocator->registerDirectory(&m_directory);
+    m_alignedMemoryAllocator->registerDirectory(heap, &m_directory);
     m_firstDirectory = &m_directory;
 }
 
@@ -54,17 +55,7 @@ IsoSubspace::~IsoSubspace()
 {
 }
 
-Allocator IsoSubspace::allocatorFor(size_t size, AllocatorForMode mode)
-{
-    return allocatorForNonVirtual(size, mode);
-}
-
-void* IsoSubspace::allocate(VM& vm, size_t size, GCDeferralContext* deferralContext, AllocationFailureMode failureMode)
-{
-    return allocateNonVirtual(vm, size, deferralContext, failureMode);
-}
-
-void IsoSubspace::didResizeBits(size_t blockIndex)
+void IsoSubspace::didResizeBits(unsigned blockIndex)
 {
     m_cellSets.forEach(
         [&] (IsoCellSet* set) {
@@ -72,7 +63,7 @@ void IsoSubspace::didResizeBits(size_t blockIndex)
         });
 }
 
-void IsoSubspace::didRemoveBlock(size_t blockIndex)
+void IsoSubspace::didRemoveBlock(unsigned blockIndex)
 {
     m_cellSets.forEach(
         [&] (IsoCellSet* set) {
@@ -87,6 +78,54 @@ void IsoSubspace::didBeginSweepingToFreeList(MarkedBlock::Handle* block)
             set->sweepToFreeList(block);
         });
 }
+
+void* IsoSubspace::tryAllocateFromLowerTier()
+{
+    auto revive = [&] (PreciseAllocation* allocation) {
+        allocation->setIndexInSpace(m_space.m_preciseAllocations.size());
+        allocation->m_hasValidCell = true;
+        m_space.m_preciseAllocations.append(allocation);
+        if (auto* set = m_space.preciseAllocationSet())
+            set->add(allocation->cell());
+        ASSERT(allocation->indexInSpace() == m_space.m_preciseAllocations.size() - 1);
+        m_preciseAllocations.append(allocation);
+        return allocation->cell();
+    };
+
+    if (!m_lowerTierFreeList.isEmpty()) {
+        PreciseAllocation* allocation = m_lowerTierFreeList.begin();
+        allocation->remove();
+        return revive(allocation);
+    }
+    if (m_remainingLowerTierCellCount) {
+        PreciseAllocation* allocation = PreciseAllocation::tryCreateForLowerTier(m_space.heap(), cellSize(), this, --m_remainingLowerTierCellCount);
+        if (allocation)
+            return revive(allocation);
+    }
+    return nullptr;
+}
+
+void IsoSubspace::sweepLowerTierCell(PreciseAllocation* preciseAllocation)
+{
+    preciseAllocation = preciseAllocation->reuseForLowerTier();
+    m_lowerTierFreeList.append(preciseAllocation);
+}
+
+void IsoSubspace::destroyLowerTierFreeList()
+{
+    m_lowerTierFreeList.forEach([&](PreciseAllocation* allocation) {
+        allocation->destroy();
+    });
+}
+
+namespace GCClient {
+
+IsoSubspace::IsoSubspace(JSC::IsoSubspace& server)
+    : m_localAllocator(&server.m_directory)
+{
+}
+
+} // namespace GCClient
 
 } // namespace JSC
 

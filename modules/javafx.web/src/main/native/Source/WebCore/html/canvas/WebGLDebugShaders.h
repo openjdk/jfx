@@ -34,13 +34,14 @@ namespace WebCore {
 class WebGLShader;
 
 class WebGLDebugShaders final : public WebGLExtension {
+    WTF_MAKE_ISO_ALLOCATED(WebGLDebugShaders);
 public:
     explicit WebGLDebugShaders(WebGLRenderingContextBase&);
     virtual ~WebGLDebugShaders();
 
     ExtensionName getName() const override;
 
-    String getTranslatedShaderSource(WebGLShader*);
+    String getTranslatedShaderSource(WebGLShader&);
 };
 
 } // namespace WebCore

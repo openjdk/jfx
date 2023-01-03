@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -51,7 +51,6 @@ inline CapabilityLevel canCompile(Node* node)
     case KillStack:
     case GetStack:
     case MovHint:
-    case ZombieHint:
     case ExitOK:
     case Phantom:
     case Flush:
@@ -63,7 +62,7 @@ inline CapabilityLevel canCompile(Node* node)
     case ArithBitAnd:
     case ArithBitOr:
     case ArithBitXor:
-    case BitRShift:
+    case ArithBitRShift:
     case ArithBitLShift:
     case BitURShift:
     case CheckStructure:
@@ -74,10 +73,13 @@ inline CapabilityLevel canCompile(Node* node)
     case PutStructure:
     case GetButterfly:
     case NewObject:
+    case NewGenerator:
+    case NewAsyncGenerator:
     case NewStringObject:
     case NewSymbol:
     case NewArray:
     case NewArrayWithSpread:
+    case NewInternalFieldObject:
     case Spread:
     case NewArrayBuffer:
     case NewTypedArray:
@@ -94,6 +96,7 @@ inline CapabilityLevel canCompile(Node* node)
     case ValueBitOr:
     case ValueBitNot:
     case ValueBitLShift:
+    case ValueBitRShift:
     case ValueNegate:
     case ValueAdd:
     case ValueSub:
@@ -101,6 +104,8 @@ inline CapabilityLevel canCompile(Node* node)
     case ValueDiv:
     case ValueMod:
     case ValuePow:
+    case Inc:
+    case Dec:
     case StrCat:
     case ArithAdd:
     case ArithClz32:
@@ -141,26 +146,31 @@ inline CapabilityLevel canCompile(Node* node)
     case NewAsyncGeneratorFunction:
     case GetClosureVar:
     case PutClosureVar:
+    case GetInternalField:
+    case PutInternalField:
     case CreateDirectArguments:
     case CreateScopedArguments:
     case CreateClonedArguments:
+    case CreateArgumentsButterfly:
     case GetFromArguments:
     case PutToArguments:
     case GetArgument:
     case InvalidationPoint:
     case StringCharAt:
-    case CheckCell:
-    case CheckBadCell:
+    case CheckIsConstant:
+    case CheckBadValue:
     case CheckNotEmpty:
     case AssertNotEmpty:
-    case CheckStringIdent:
+    case CheckIdent:
     case CheckTraps:
     case StringCharCodeAt:
+    case StringCodePointAt:
     case StringFromCharCode:
     case AllocatePropertyStorage:
     case ReallocatePropertyStorage:
     case NukeStructureAndSetButterfly:
     case GetTypedArrayByteOffset:
+    case GetTypedArrayByteOffsetAsInt52:
     case GetPrototypeOf:
     case NotifyWrite:
     case StoreBarrier:
@@ -182,15 +192,21 @@ inline CapabilityLevel canCompile(Node* node)
     case TailCallForwardVarargs:
     case TailCallForwardVarargsInlinedCaller:
     case ConstructForwardVarargs:
+    case VarargsLength:
     case LoadVarargs:
     case ValueToInt32:
     case Branch:
+    case ToBoolean:
     case LogicalNot:
+    case AssertInBounds:
     case CheckInBounds:
+    case CheckInBoundsInt52:
     case ConstantStoragePointer:
     case Check:
     case CheckVarargs:
     case CheckArray:
+    case CheckArrayOrEmpty:
+    case CheckDetached:
     case CountExecution:
     case SuperSamplerBegin:
     case SuperSamplerEnd:
@@ -201,12 +217,17 @@ inline CapabilityLevel canCompile(Node* node)
     case GetArgumentCountIncludingThis:
     case SetArgumentCountIncludingThis:
     case ToNumber:
+    case ToNumeric:
     case ToString:
+    case FunctionToString:
     case ToObject:
     case CallObjectConstructor:
     case CallStringConstructor:
+    case CallNumberConstructor:
+    case ObjectAssign:
     case ObjectCreate:
     case ObjectKeys:
+    case ObjectGetOwnPropertyNames:
     case MakeRope:
     case NewArrayWithSize:
     case TryGetById:
@@ -218,12 +239,16 @@ inline CapabilityLevel canCompile(Node* node)
     case ToThis:
     case MultiGetByOffset:
     case MultiPutByOffset:
+    case MultiDeleteByOffset:
     case ToPrimitive:
+    case ToPropertyKey:
     case Throw:
     case ThrowStaticError:
     case Unreachable:
     case InByVal:
     case InById:
+    case HasPrivateName:
+    case HasPrivateBrand:
     case HasOwnProperty:
     case IsCellWithType:
     case MapHash:
@@ -240,14 +265,17 @@ inline CapabilityLevel canCompile(Node* node)
     case WeakSetAdd:
     case WeakMapSet:
     case IsEmpty:
-    case IsUndefined:
+    case TypeOfIsUndefined:
+    case TypeOfIsObject:
+    case TypeOfIsFunction:
     case IsUndefinedOrNull:
     case IsBoolean:
     case IsNumber:
+    case IsBigInt:
     case NumberIsInteger:
     case IsObject:
-    case IsObjectOrNull:
-    case IsFunction:
+    case IsCallable:
+    case IsConstructor:
     case IsTypedArrayView:
     case CheckTypeInfoFlags:
     case OverridesHasInstance:
@@ -259,28 +287,30 @@ inline CapabilityLevel canCompile(Node* node)
     case DoubleConstant:
     case Int52Constant:
     case BooleanToNumber:
-    case HasGenericProperty:
-    case HasStructureProperty:
     case HasIndexedProperty:
-    case GetDirectPname:
-    case GetEnumerableLength:
     case GetIndexedPropertyStorage:
     case GetPropertyEnumerator:
-    case GetEnumeratorStructurePname:
-    case GetEnumeratorGenericPname:
-    case ToIndexString:
+    case EnumeratorNextUpdateIndexAndMode:
+    case EnumeratorNextExtractMode:
+    case EnumeratorNextExtractIndex:
+    case EnumeratorNextUpdatePropertyName:
+    case EnumeratorGetByVal:
+    case EnumeratorInByVal:
+    case EnumeratorHasOwnProperty:
     case BottomValue:
     case PhantomNewObject:
     case PhantomNewFunction:
     case PhantomNewGeneratorFunction:
     case PhantomNewAsyncGeneratorFunction:
     case PhantomNewAsyncFunction:
+    case PhantomNewInternalFieldObject:
     case PhantomCreateActivation:
     case PhantomNewRegexp:
     case PutHint:
     case CheckStructureImmediate:
     case MaterializeNewObject:
     case MaterializeCreateActivation:
+    case MaterializeNewInternalFieldObject:
     case PhantomDirectArguments:
     case PhantomCreateRest:
     case PhantomSpread:
@@ -309,6 +339,7 @@ inline CapabilityLevel canCompile(Node* node)
     case RegExpExec:
     case RegExpExecNonGlobalOrSticky:
     case RegExpTest:
+    case RegExpTestInline:
     case RegExpMatchFast:
     case RegExpMatchFastGlobal:
     case NewRegexp:
@@ -341,7 +372,8 @@ inline CapabilityLevel canCompile(Node* node)
     case ToLowerCase:
     case NumberToStringWithRadix:
     case NumberToStringWithValidRadixConstant:
-    case CheckSubClass:
+    case CheckJSCast:
+    case CheckNotJSCast:
     case CallDOM:
     case CallDOMGetter:
     case ArraySlice:
@@ -362,6 +394,7 @@ inline CapabilityLevel canCompile(Node* node)
     case InitializeEntrypointArguments:
     case CPUIntrinsic:
     case GetArrayLength:
+    case GetTypedArrayLengthAsInt52:
     case GetVectorLength:
     case GetByVal:
     case GetByValWithThis:
@@ -369,15 +402,29 @@ inline CapabilityLevel canCompile(Node* node)
     case PutByValAlias:
     case PutByValDirect:
     case PutByValWithThis:
+    case PutPrivateName:
+    case PutPrivateNameById:
+    case GetPrivateName:
+    case GetPrivateNameById:
+    case CheckPrivateBrand:
+    case SetPrivateBrand:
     case MatchStructure:
     case FilterCallLinkStatus:
-    case FilterGetByIdStatus:
-    case FilterPutByIdStatus:
-    case FilterInByIdStatus:
+    case FilterGetByStatus:
+    case FilterPutByStatus:
+    case FilterInByStatus:
+    case FilterDeleteByStatus:
+    case FilterCheckPrivateBrandStatus:
+    case FilterSetPrivateBrandStatus:
     case CreateThis:
+    case CreatePromise:
+    case CreateGenerator:
+    case CreateAsyncGenerator:
     case DataViewGetInt:
     case DataViewGetFloat:
     case DataViewSet:
+    case DateGetInt32OrNaN:
+    case DateGetTime:
         // These are OK.
         break;
 
@@ -459,17 +506,22 @@ CapabilityLevel canCompile(Graph& graph)
                 case StringObjectUse:
                 case StringOrStringObjectUse:
                 case SymbolUse:
-                case BigIntUse:
+                case AnyBigIntUse:
+                case BigInt32Use:
+                case HeapBigIntUse:
+                case DateObjectUse:
                 case MapObjectUse:
                 case SetObjectUse:
                 case WeakMapObjectUse:
                 case WeakSetObjectUse:
                 case DataViewObjectUse:
                 case FinalObjectUse:
+                case PromiseObjectUse:
                 case RegExpObjectUse:
                 case ProxyObjectUse:
                 case DerivedArrayUse:
                 case NotCellUse:
+                case NotCellNorBigIntUse:
                 case OtherUse:
                 case KnownOtherUse:
                 case MiscUse:
@@ -478,6 +530,9 @@ CapabilityLevel canCompile(Graph& graph)
                 case NotSymbolUse:
                 case AnyIntUse:
                 case DoubleRepAnyIntUse:
+                case NotDoubleUse:
+                case NeitherDoubleNorHeapBigIntUse:
+                case NeitherDoubleNorHeapBigIntNorStringUse:
                     // These are OK.
                     break;
                 default:

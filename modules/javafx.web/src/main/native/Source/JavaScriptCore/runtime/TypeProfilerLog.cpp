@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Apple Inc. All rights reserved.
+ * Copyright (C) 2014-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,15 +29,13 @@
 #include "config.h"
 #include "TypeProfilerLog.h"
 
-#include "JSCInlines.h"
-#include "SlotVisitor.h"
+#include "JSCJSValueInlines.h"
 #include "TypeLocation.h"
-
 
 namespace JSC {
 
 namespace TypeProfilerLogInternal {
-static const bool verbose = false;
+static constexpr bool verbose = false;
 }
 
 TypeProfilerLog::TypeProfilerLog(VM& vm)
@@ -82,7 +80,7 @@ void TypeProfilerLog::processLogEntries(VM& vm, const String& reason)
         Structure* structure = nullptr;
         bool sawPolyProtoStructure = false;
         if (id) {
-            structure = Heap::heap(value.asCell())->structureIDTable().get(id);
+            structure = id.decode();
             auto iter = cachedMonoProtoShapes.find(structure);
             if (iter == cachedMonoProtoShapes.end()) {
                 auto key = std::make_pair(structure, value.asCell());
@@ -126,12 +124,14 @@ void TypeProfilerLog::processLogEntries(VM& vm, const String& reason)
     }
 }
 
-void TypeProfilerLog::visit(SlotVisitor& visitor)
+// We don't need a SlotVisitor version of this because TypeProfilerLog is only used by
+// dev tools, and is therefore not on the critical path for performance.
+void TypeProfilerLog::visit(AbstractSlotVisitor& visitor)
 {
     for (LogEntry* entry = m_logStartPtr; entry != m_currentLogEntryPtr; ++entry) {
         visitor.appendUnbarriered(entry->value);
         if (StructureID id = entry->structureID) {
-            Structure* structure = visitor.heap()->structureIDTable().get(id);
+            Structure* structure = id.decode();
             visitor.appendUnbarriered(structure);
         }
     }

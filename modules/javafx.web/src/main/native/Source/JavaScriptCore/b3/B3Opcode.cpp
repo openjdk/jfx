@@ -30,13 +30,13 @@
 
 #include <wtf/PrintStream.h>
 
-#if ASSERT_DISABLED
+#if !ASSERT_ENABLED
 IGNORE_RETURN_TYPE_WARNINGS_BEGIN
 #endif
 
 namespace JSC { namespace B3 {
 
-Optional<Opcode> invertedCompare(Opcode opcode, Type type)
+std::optional<Opcode> invertedCompare(Opcode opcode, Type type)
 {
     switch (opcode) {
     case Equal:
@@ -46,19 +46,19 @@ Optional<Opcode> invertedCompare(Opcode opcode, Type type)
     case LessThan:
         if (type.isInt())
             return GreaterEqual;
-        return WTF::nullopt;
+        return std::nullopt;
     case GreaterThan:
         if (type.isInt())
             return LessEqual;
-        return WTF::nullopt;
+        return std::nullopt;
     case LessEqual:
         if (type.isInt())
             return GreaterThan;
-        return WTF::nullopt;
+        return std::nullopt;
     case GreaterEqual:
         if (type.isInt())
             return LessThan;
-        return WTF::nullopt;
+        return std::nullopt;
     case Above:
         return BelowEqual;
     case Below:
@@ -68,7 +68,7 @@ Optional<Opcode> invertedCompare(Opcode opcode, Type type)
     case BelowEqual:
         return Above;
     default:
-        return WTF::nullopt;
+        return std::nullopt;
     }
 }
 
@@ -120,6 +120,9 @@ void printInternal(PrintStream& out, Opcode opcode)
     case ConstFloat:
         out.print("ConstFloat");
         return;
+    case BottomTuple:
+        out.print("BottomTuple");
+        return;
     case Get:
         out.print("Get");
         return;
@@ -155,6 +158,12 @@ void printInternal(PrintStream& out, Opcode opcode)
         return;
     case UMod:
         out.print("UMod");
+        return;
+    case FMin:
+        out.print("FMin");
+        return;
+    case FMax:
+        out.print("FMax");
         return;
     case Neg:
         out.print("Neg");
@@ -375,7 +384,7 @@ void printInternal(PrintStream& out, Opcode opcode)
 
 } // namespace WTF
 
-#if ASSERT_DISABLED
+#if !ASSERT_ENABLED
 IGNORE_RETURN_TYPE_WARNINGS_END
 #endif
 

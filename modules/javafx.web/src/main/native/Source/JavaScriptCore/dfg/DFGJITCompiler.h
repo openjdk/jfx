@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -86,6 +86,8 @@ struct CallLinkRecord {
 // call to be linked).
 class JITCompiler : public CCallHelpers {
 public:
+    friend class SpeculativeJIT;
+
     JITCompiler(Graph& dfg);
     ~JITCompiler();
 
@@ -98,7 +100,7 @@ public:
     // Methods to set labels for the disassembler.
     void setStartOfCode()
     {
-        m_pcToCodeOriginMapBuilder.appendItem(labelIgnoringWatchpoints(), CodeOrigin(0, nullptr));
+        m_pcToCodeOriginMapBuilder.appendItem(labelIgnoringWatchpoints(), CodeOrigin(BytecodeIndex(0)));
         if (LIKELY(!m_disassembler))
             return;
         m_disassembler->setStartOfCode(labelIgnoringWatchpoints());
@@ -123,7 +125,7 @@ public:
 
     CallSiteIndex addCallSite(CodeOrigin codeOrigin)
     {
-        return m_jitCode->common.addCodeOrigin(codeOrigin);
+        return m_jitCode->common.codeOrigins->addCodeOrigin(codeOrigin);
     }
 
     CallSiteIndex emitStoreCodeOrigin(CodeOrigin codeOrigin)
@@ -135,7 +137,7 @@ public:
 
     void emitStoreCallSiteIndex(CallSiteIndex callSite)
     {
-        store32(TrustedImm32(callSite.bits()), tagFor(static_cast<VirtualRegister>(CallFrameSlot::argumentCount)));
+        store32(TrustedImm32(callSite.bits()), tagFor(CallFrameSlot::argumentCountIncludingThis));
     }
 
     // Add a call out from JIT code, without an exception check.
@@ -146,18 +148,23 @@ public:
         return functionCall;
     }
 
+    Call appendOperationCall(const FunctionPtr<OperationPtrTag> function)
+    {
+        Call functionCall = call(OperationPtrTag);
+        m_calls.append(CallLinkRecord(functionCall, function));
+        return functionCall;
+    }
+
+    void appendCall(CCallHelpers::Address address)
+    {
+        call(address, OperationPtrTag);
+    }
+
     void exceptionCheck();
 
     void exceptionCheckWithCallFrameRollback()
     {
         m_exceptionChecksWithCallFrameRollback.append(emitExceptionCheck(vm()));
-    }
-
-    // Add a call out from JIT code, with a fast exception check that tests if the return value is zero.
-    void fastExceptionCheck()
-    {
-        callExceptionFuzz(vm());
-        m_exceptionChecks.append(branchTestPtr(Zero, GPRInfo::returnValueGPR));
     }
 
     OSRExitCompilationInfo& appendExitInfo(MacroAssembler::JumpList jumpsToFail = MacroAssembler::JumpList())
@@ -182,9 +189,29 @@ public:
         m_getByIdsWithThis.append(InlineCacheWrapper<JITGetByIdWithThisGenerator>(gen, slowPath));
     }
 
+    void addGetByVal(const JITGetByValGenerator& gen, SlowPathGenerator* slowPath)
+    {
+        m_getByVals.append(InlineCacheWrapper<JITGetByValGenerator>(gen, slowPath));
+    }
+
     void addPutById(const JITPutByIdGenerator& gen, SlowPathGenerator* slowPath)
     {
         m_putByIds.append(InlineCacheWrapper<JITPutByIdGenerator>(gen, slowPath));
+    }
+
+    void addPutByVal(const JITPutByValGenerator& gen, SlowPathGenerator* slowPath)
+    {
+        m_putByVals.append(InlineCacheWrapper<JITPutByValGenerator>(gen, slowPath));
+    }
+
+    void addDelById(const JITDelByIdGenerator& gen, SlowPathGenerator* slowPath)
+    {
+        m_delByIds.append(InlineCacheWrapper<JITDelByIdGenerator>(gen, slowPath));
+    }
+
+    void addDelByVal(const JITDelByValGenerator& gen, SlowPathGenerator* slowPath)
+    {
+        m_delByVals.append(InlineCacheWrapper<JITDelByValGenerator>(gen, slowPath));
     }
 
     void addInstanceOf(const JITInstanceOfGenerator& gen, SlowPathGenerator* slowPath)
@@ -197,19 +224,24 @@ public:
         m_inByIds.append(InlineCacheWrapper<JITInByIdGenerator>(gen, slowPath));
     }
 
-    void addJSCall(Call fastCall, Call slowCall, DataLabelPtr targetToCheck, CallLinkInfo* info)
+    void addInByVal(const JITInByValGenerator& gen, SlowPathGenerator* slowPath)
     {
-        m_jsCalls.append(JSCallRecord(fastCall, slowCall, targetToCheck, info));
+        m_inByVals.append(InlineCacheWrapper<JITInByValGenerator>(gen, slowPath));
     }
 
-    void addJSDirectCall(Call call, Label slowPath, CallLinkInfo* info)
+    void addPrivateBrandAccess(const JITPrivateBrandAccessGenerator& gen, SlowPathGenerator* slowPath)
     {
-        m_jsDirectCalls.append(JSDirectCallRecord(call, slowPath, info));
+        m_privateBrandAccesses.append(InlineCacheWrapper<JITPrivateBrandAccessGenerator>(gen, slowPath));
     }
 
-    void addJSDirectTailCall(PatchableJump patchableJump, Call call, Label slowPath, CallLinkInfo* info)
+    void addJSCall(Label slowPathStart, Label doneLocation, OptimizingCallLinkInfo* info)
     {
-        m_jsDirectTailCalls.append(JSDirectTailCallRecord(patchableJump, call, slowPath, info));
+        m_jsCalls.append(JSCallRecord(slowPathStart, doneLocation, info));
+    }
+
+    void addJSDirectCall(Label slowPath, OptimizingCallLinkInfo* info)
+    {
+        m_jsDirectCalls.append(JSDirectCallRecord(slowPath, info));
     }
 
     void addWeakReference(JSCell* target)
@@ -236,7 +268,7 @@ public:
     {
         Structure* structure = weakStructure.get();
 #if USE(JSVALUE64)
-        Jump result = branch32(cond, left, TrustedImm32(structure->id()));
+        Jump result = branch32(cond, left, TrustedImm32(structure->id().bits()));
         return result;
 #else
         return branchPtr(cond, left, TrustedImmPtr(structure));
@@ -245,6 +277,20 @@ public:
 
     void noticeOSREntry(BasicBlock&, JITCompiler::Label blockHead, LinkBuffer&);
     void noticeCatchEntrypoint(BasicBlock&, JITCompiler::Label blockHead, LinkBuffer&, Vector<FlushFormat>&& argumentFormats);
+
+    unsigned appendOSRExit(OSRExit&& exit)
+    {
+        unsigned result = m_osrExit.size();
+        m_osrExit.append(WTFMove(exit));
+        return result;
+    }
+
+    unsigned appendSpeculationRecovery(const SpeculationRecovery& recovery)
+    {
+        unsigned result = m_speculationRecovery.size();
+        m_speculationRecovery.append(recovery);
+        return result;
+    }
 
     RefPtr<JITCode> jitCode() { return m_jitCode; }
 
@@ -255,6 +301,16 @@ public:
     PCToCodeOriginMapBuilder& pcToCodeOriginMapBuilder() { return m_pcToCodeOriginMapBuilder; }
 
     VM& vm() { return m_graph.m_vm; }
+
+    void emitRestoreCalleeSaves()
+    {
+        emitRestoreCalleeSavesFor(&RegisterAtOffsetList::dfgCalleeSaveRegisters());
+    }
+
+    void emitSaveCalleeSaves()
+    {
+        emitSaveCalleeSavesFor(&RegisterAtOffsetList::dfgCalleeSaveRegisters());
+    }
 
 private:
     friend class OSRExitJumpPlaceholder;
@@ -292,63 +348,47 @@ private:
 
 
     struct JSCallRecord {
-        JSCallRecord(Call fastCall, Call slowCall, DataLabelPtr targetToCheck, CallLinkInfo* info)
-            : fastCall(fastCall)
-            , slowCall(slowCall)
-            , targetToCheck(targetToCheck)
+        JSCallRecord(Label slowPathStart, Label doneLocation, OptimizingCallLinkInfo* info)
+            : slowPathStart(slowPathStart)
+            , doneLocation(doneLocation)
             , info(info)
         {
-            ASSERT(fastCall.isFlagSet(Call::Near));
-            ASSERT(slowCall.isFlagSet(Call::Near));
         }
 
-        Call fastCall;
-        Call slowCall;
-        DataLabelPtr targetToCheck;
-        CallLinkInfo* info;
+        Label slowPathStart;
+        Label doneLocation;
+        OptimizingCallLinkInfo* info;
     };
 
     struct JSDirectCallRecord {
-        JSDirectCallRecord(Call call, Label slowPath, CallLinkInfo* info)
-            : call(call)
-            , slowPath(slowPath)
+        JSDirectCallRecord(Label slowPath, OptimizingCallLinkInfo* info)
+            : slowPath(slowPath)
             , info(info)
         {
-            ASSERT(call.isFlagSet(Call::Near));
         }
 
-        Call call;
         Label slowPath;
-        CallLinkInfo* info;
+        OptimizingCallLinkInfo* info;
     };
-
-    struct JSDirectTailCallRecord {
-        JSDirectTailCallRecord(PatchableJump patchableJump, Call call, Label slowPath, CallLinkInfo* info)
-            : patchableJump(patchableJump)
-            , call(call)
-            , slowPath(slowPath)
-            , info(info)
-        {
-            ASSERT(call.isFlagSet(Call::Near) && call.isFlagSet(Call::Tail));
-        }
-
-        PatchableJump patchableJump;
-        Call call;
-        Label slowPath;
-        CallLinkInfo* info;
-    };
-
 
     Vector<InlineCacheWrapper<JITGetByIdGenerator>, 4> m_getByIds;
     Vector<InlineCacheWrapper<JITGetByIdWithThisGenerator>, 4> m_getByIdsWithThis;
+    Vector<InlineCacheWrapper<JITGetByValGenerator>, 4> m_getByVals;
     Vector<InlineCacheWrapper<JITPutByIdGenerator>, 4> m_putByIds;
+    Vector<InlineCacheWrapper<JITPutByValGenerator>, 4> m_putByVals;
+    Vector<InlineCacheWrapper<JITDelByIdGenerator>, 4> m_delByIds;
+    Vector<InlineCacheWrapper<JITDelByValGenerator>, 4> m_delByVals;
     Vector<InlineCacheWrapper<JITInByIdGenerator>, 4> m_inByIds;
+    Vector<InlineCacheWrapper<JITInByValGenerator>, 4> m_inByVals;
     Vector<InlineCacheWrapper<JITInstanceOfGenerator>, 4> m_instanceOfs;
+    Vector<InlineCacheWrapper<JITPrivateBrandAccessGenerator>, 4> m_privateBrandAccesses;
     Vector<JSCallRecord, 4> m_jsCalls;
     Vector<JSDirectCallRecord, 4> m_jsDirectCalls;
-    Vector<JSDirectTailCallRecord, 4> m_jsDirectTailCalls;
     SegmentedVector<OSRExitCompilationInfo, 4> m_exitCompilationInfo;
     Vector<Vector<Label>> m_exitSiteLabels;
+    Vector<DFG::OSREntryData> m_osrEntry;
+    Vector<DFG::OSRExit> m_osrExit;
+    Vector<DFG::SpeculationRecovery> m_speculationRecovery;
 
     struct ExceptionHandlingOSRExitInfo {
         OSRExitCompilationInfo& exitInfo;

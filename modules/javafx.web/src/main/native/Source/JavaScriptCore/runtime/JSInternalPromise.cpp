@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -35,14 +35,19 @@ const ClassInfo JSInternalPromise::s_info = { "InternalPromise", &Base::s_info, 
 
 JSInternalPromise* JSInternalPromise::create(VM& vm, Structure* structure)
 {
-    JSInternalPromise* promise = new (NotNull, allocateCell<JSInternalPromise>(vm.heap)) JSInternalPromise(vm, structure);
+    JSInternalPromise* promise = new (NotNull, allocateCell<JSInternalPromise>(vm)) JSInternalPromise(vm, structure);
     promise->finishCreation(vm);
     return promise;
 }
 
+JSInternalPromise* JSInternalPromise::createWithInitialValues(VM& vm, Structure* structure)
+{
+    return create(vm, structure);
+}
+
 Structure* JSInternalPromise::createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
 {
-    return Structure::create(vm, globalObject, prototype, TypeInfo(ObjectType, StructureFlags), info());
+    return Structure::create(vm, globalObject, prototype, TypeInfo(JSPromiseType, StructureFlags), info());
 }
 
 JSInternalPromise::JSInternalPromise(VM& vm, Structure* structure)
@@ -50,23 +55,28 @@ JSInternalPromise::JSInternalPromise(VM& vm, Structure* structure)
 {
 }
 
-JSInternalPromise* JSInternalPromise::then(ExecState* exec, JSFunction* onFulfilled, JSFunction* onRejected)
+JSInternalPromise* JSInternalPromise::then(JSGlobalObject* globalObject, JSFunction* onFulfilled, JSFunction* onRejected)
 {
-    VM& vm = exec->vm();
+    VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    JSObject* function = jsCast<JSObject*>(get(exec, vm.propertyNames->builtinNames().thenPublicName()));
+    JSObject* function = getAs<JSObject*>(globalObject, vm.propertyNames->builtinNames().thenPublicName());
     RETURN_IF_EXCEPTION(scope, nullptr);
-    CallData callData;
-    CallType callType = JSC::getCallData(vm, function, callData);
-    ASSERT(callType != CallType::None);
+    auto callData = JSC::getCallData(vm, function);
+    ASSERT(callData.type != CallData::Type::None);
 
     MarkedArgumentBuffer arguments;
     arguments.append(onFulfilled ? onFulfilled : jsUndefined());
     arguments.append(onRejected ? onRejected : jsUndefined());
     ASSERT(!arguments.hasOverflowed());
+    JSValue result = call(globalObject, function, callData, this, arguments);
+    RETURN_IF_EXCEPTION(scope, nullptr);
+    return jsCast<JSInternalPromise*>(result);
+}
 
-    RELEASE_AND_RETURN(scope, jsCast<JSInternalPromise*>(call(exec, function, callType, callData, this, arguments)));
+JSInternalPromise* JSInternalPromise::rejectWithCaughtException(JSGlobalObject* globalObject, ThrowScope& scope)
+{
+    return jsCast<JSInternalPromise*>(JSPromise::rejectWithCaughtException(globalObject, scope));
 }
 
 } // namespace JSC

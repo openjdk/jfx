@@ -27,7 +27,6 @@
 
 #if ENABLE(B3_JIT)
 
-#include "AirArg.h"
 #include "B3Bank.h"
 #include "B3HeapRange.h"
 #include "B3Value.h"
@@ -42,7 +41,7 @@ public:
         return isMemoryAccess(kind.opcode());
     }
 
-    ~MemoryValue();
+    ~MemoryValue() override;
 
     OffsetType offset() const { return m_offset; }
     template<typename Int, typename = IsLegalOffset<Int>>

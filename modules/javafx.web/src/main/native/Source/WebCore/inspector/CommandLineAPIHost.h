@@ -66,12 +66,12 @@ public:
     class InspectableObject {
         WTF_MAKE_FAST_ALLOCATED;
     public:
-        virtual JSC::JSValue get(JSC::ExecState&);
+        virtual JSC::JSValue get(JSC::JSGlobalObject&);
         virtual ~InspectableObject() = default;
     };
     void addInspectedObject(std::unique_ptr<InspectableObject>);
-    JSC::JSValue inspectedObject(JSC::ExecState&);
-    void inspect(JSC::ExecState&, JSC::JSValue objectToInspect, JSC::JSValue hints);
+    JSC::JSValue inspectedObject(JSC::JSGlobalObject&);
+    void inspect(JSC::JSGlobalObject&, JSC::JSValue objectToInspect, JSC::JSValue hints);
 
     struct ListenerEntry {
         JSC::Strong<JSC::JSObject> listener;
@@ -80,13 +80,13 @@ public:
         bool once;
     };
 
-    using EventListenersRecord = Vector<WTF::KeyValuePair<String, Vector<ListenerEntry>>>;
-    EventListenersRecord getEventListeners(JSC::ExecState&, EventTarget&);
+    using EventListenersRecord = Vector<KeyValuePair<String, Vector<ListenerEntry>>>;
+    EventListenersRecord getEventListeners(JSC::JSGlobalObject&, EventTarget&);
 
     String databaseId(Database&);
     String storageId(Storage&);
 
-    JSC::JSValue wrapper(JSC::ExecState*, JSDOMGlobalObject*);
+    JSC::JSValue wrapper(JSC::JSGlobalObject*, JSDOMGlobalObject*);
     void clearAllWrappers();
 
 private:

@@ -18,13 +18,12 @@
  */
 
 #include "config.h"
-
-#if ENABLE(SVG_FONTS)
 #include "SVGFontFaceSrcElement.h"
 
 #include "CSSFontFaceSrcValue.h"
 #include "CSSValueList.h"
 #include "ElementIterator.h"
+#include "SVGElementTypeHelpers.h"
 #include "SVGFontFaceElement.h"
 #include "SVGFontFaceNameElement.h"
 #include "SVGFontFaceUriElement.h"
@@ -71,5 +70,3 @@ void SVGFontFaceSrcElement::childrenChanged(const ChildChange& change)
 }
 
 }
-
-#endif // ENABLE(SVG_FONTS)

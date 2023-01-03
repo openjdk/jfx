@@ -25,16 +25,13 @@
 
 #include "config.h"
 #include "IDBIterateCursorData.h"
-
-#if ENABLE(INDEXED_DATABASE)
-
 #include <wtf/text/StringConcatenateNumbers.h>
 
 namespace WebCore {
 
 IDBIterateCursorData IDBIterateCursorData::isolatedCopy() const
 {
-    return { keyData.isolatedCopy(), primaryKeyData.isolatedCopy(), count };
+    return { keyData.isolatedCopy(), primaryKeyData.isolatedCopy(), count, option };
 }
 
 #if !LOG_DISABLED
@@ -47,5 +44,3 @@ String IDBIterateCursorData::loggingString() const
 #endif
 
 } // namespace WebCore
-
-#endif // ENABLE(INDEXED_DATABASE)

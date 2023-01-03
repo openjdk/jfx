@@ -136,8 +136,8 @@ TimeUnitFormat::~TimeUnitFormat() {
 }
 
 
-Format*
-TimeUnitFormat::clone(void) const {
+TimeUnitFormat*
+TimeUnitFormat::clone() const {
     return new TimeUnitFormat(*this);
 }
 
@@ -320,7 +320,7 @@ void
 TimeUnitFormat::setup(UErrorCode& err) {
     initDataMembers(err);
 
-    UVector pluralCounts(0, uhash_compareUnicodeString, 6, err);
+    UVector pluralCounts(nullptr, uhash_compareUnicodeString, 6, err);
     LocalPointer<StringEnumeration> keywords(getPluralRules().getKeywords(err), err);
     if (U_FAILURE(err)) {
         return;
@@ -362,7 +362,7 @@ struct TimeUnitFormatReadSink : public ResourceSink {
 
     virtual ~TimeUnitFormatReadSink();
 
-    virtual void put(const char *key, ResourceValue &value, UBool, UErrorCode &errorCode) {
+    virtual void put(const char *key, ResourceValue &value, UBool, UErrorCode &errorCode) override {
         // Skip all put() calls except the first one -- discard all fallback data.
         if (beenHere) {
             return;
@@ -685,7 +685,7 @@ TimeUnitFormat::setNumberFormat(const NumberFormat& format, UErrorCode& status){
     if (U_FAILURE(status)) {
         return;
     }
-    adoptNumberFormat((NumberFormat *)format.clone(), status);
+    adoptNumberFormat(format.clone(), status);
 }
 
 
@@ -721,8 +721,8 @@ TimeUnitFormat::copyHash(const Hashtable* source, Hashtable* target, UErrorCode&
             const UHashTok valueTok = element->value;
             const MessageFormat** value = (const MessageFormat**)valueTok.pointer;
             MessageFormat** newVal = (MessageFormat**)uprv_malloc(UTMUTFMT_FORMAT_STYLE_COUNT*sizeof(MessageFormat*));
-            newVal[0] = (MessageFormat*)value[0]->clone();
-            newVal[1] = (MessageFormat*)value[1]->clone();
+            newVal[0] = value[0]->clone();
+            newVal[1] = value[1]->clone();
             target->put(UnicodeString(*key), newVal, status);
             if ( U_FAILURE(status) ) {
                 delete newVal[0];

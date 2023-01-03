@@ -27,31 +27,32 @@
 #pragma once
 
 #include "ExceptionOr.h"
-#include "Gradient.h"
+#include "FloatPoint.h"
 
 namespace WebCore {
 
+class CanvasBase;
+class Gradient;
+
 class CanvasGradient : public RefCounted<CanvasGradient> {
 public:
-    static Ref<CanvasGradient> create(const FloatPoint& p0, const FloatPoint& p1)
-    {
-        return adoptRef(*new CanvasGradient(p0, p1));
-    }
-    static Ref<CanvasGradient> create(const FloatPoint& p0, float r0, const FloatPoint& p1, float r1)
-    {
-        return adoptRef(*new CanvasGradient(p0, r0, p1, r1));
-    }
+    static Ref<CanvasGradient> create(const FloatPoint& p0, const FloatPoint& p1, CanvasBase&);
+    static Ref<CanvasGradient> create(const FloatPoint& p0, float r0, const FloatPoint& p1, float r1, CanvasBase&);
+    static Ref<CanvasGradient> create(const FloatPoint& centerPoint, float angleInRadians, CanvasBase&);
+    ~CanvasGradient();
 
     Gradient& gradient() { return m_gradient; }
     const Gradient& gradient() const { return m_gradient; }
 
-    ExceptionOr<void> addColorStop(float value, const String& color);
+    ExceptionOr<void> addColorStop(double value, const String& color);
 
 private:
-    CanvasGradient(const FloatPoint& p0, const FloatPoint& p1);
-    CanvasGradient(const FloatPoint& p0, float r0, const FloatPoint& p1, float r1);
+    CanvasGradient(const FloatPoint& p0, const FloatPoint& p1, CanvasBase&);
+    CanvasGradient(const FloatPoint& p0, float r0, const FloatPoint& p1, float r1, CanvasBase&);
+    CanvasGradient(const FloatPoint& centerPoint, float angleInRadians, CanvasBase&);
 
     Ref<Gradient> m_gradient;
+    CanvasBase& m_canvas;
 };
 
 }

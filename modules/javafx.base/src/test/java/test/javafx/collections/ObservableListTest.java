@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,6 +28,7 @@ package test.javafx.collections;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -73,7 +74,7 @@ public class ObservableListTest  {
     @Before
     public void setUp() throws Exception {
         list = listFactory.call();
-        mlo = new MockListObserver<String>();
+        mlo = new MockListObserver<>();
         list.addListener(mlo);
 
         useListData("one", "two", "three");
@@ -96,7 +97,7 @@ public class ObservableListTest  {
 
     @Test
     public void testObserverAddRemove() {
-        MockListObserver<String> mlo2 = new MockListObserver<String>();
+        MockListObserver<String> mlo2 = new MockListObserver<>();
         list.addListener(mlo2);
         list.removeListener(mlo);
         list.add("xyzzy");
@@ -241,6 +242,16 @@ public class ObservableListTest  {
     }
 
     @Test
+    public void testRetainAllEmptySource() {
+        // grab default data
+        List<String> data = new ArrayList<>(list);
+        // retain none == remove all
+        list.retainAll();
+        assertTrue(list.isEmpty());
+        mlo.check1AddRemove(list, data, 0, 0);
+    }
+
+    @Test
     public void testRemoveNonexistent() {
         useListData("one", "two", "x", "three");
         boolean b = list.remove("four");
@@ -253,6 +264,29 @@ public class ObservableListTest  {
         String r = list.set(1, "fnord");
         mlo.check1AddRemove(list, Arrays.asList("two"), 1, 2);
         assertEquals("two", r);
+    }
+
+    @Test
+    public void testSetAll() {
+        useListData("one", "two", "three");
+        boolean r = list.setAll("one");
+        assertTrue(r);
+
+        r = list.setAll("one", "four", "five");
+        assertTrue(r);
+
+        r = list.setAll();
+        assertTrue(r);
+
+        r = list.setAll("one");
+        assertTrue(r);
+    }
+
+    @Test
+    public void testSetAllNoUpdate() {
+        useListData();
+        boolean r = list.setAll();
+        assertFalse(r);
     }
 
     @Test

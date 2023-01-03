@@ -35,7 +35,7 @@
 #include <wtf/WeakPtr.h>
 
 namespace JSC {
-class ExecState;
+class CallFrame;
 class JSObject;
 class JSValue;
 }
@@ -44,22 +44,24 @@ namespace WebCore {
 
 class Frame;
 
-class MessagePort final : public ActiveDOMObject, public EventTargetWithInlineData, public CanMakeWeakPtr<MessagePort, WeakPtrFactoryInitialization::Eager> {
+struct StructuredSerializeOptions;
+
+class MessagePort final : public ActiveDOMObject, public EventTargetWithInlineData {
     WTF_MAKE_NONCOPYABLE(MessagePort);
     WTF_MAKE_ISO_ALLOCATED(MessagePort);
 public:
     static Ref<MessagePort> create(ScriptExecutionContext&, const MessagePortIdentifier& local, const MessagePortIdentifier& remote);
     virtual ~MessagePort();
 
-    ExceptionOr<void> postMessage(JSC::ExecState&, JSC::JSValue message, Vector<JSC::Strong<JSC::JSObject>>&&);
+    ExceptionOr<void> postMessage(JSC::JSGlobalObject&, JSC::JSValue message, StructuredSerializeOptions&&);
 
     void start();
     void close();
     void entangle();
 
     // Returns nullptr if the passed-in vector is empty.
-    static ExceptionOr<TransferredMessagePortArray> disentanglePorts(Vector<RefPtr<MessagePort>>&&);
-    static Vector<RefPtr<MessagePort>> entanglePorts(ScriptExecutionContext&, TransferredMessagePortArray&&);
+    static ExceptionOr<Vector<TransferredMessagePort>> disentanglePorts(Vector<RefPtr<MessagePort>>&&);
+    static Vector<RefPtr<MessagePort>> entanglePorts(ScriptExecutionContext&, Vector<TransferredMessagePort>&&);
 
     WEBCORE_EXPORT static bool isExistingMessagePortLocallyReachable(const MessagePortIdentifier&);
     WEBCORE_EXPORT static void notifyMessageAvailable(const MessagePortIdentifier&);
@@ -81,13 +83,6 @@ public:
     WEBCORE_EXPORT void ref() const;
     WEBCORE_EXPORT void deref() const;
 
-    // ActiveDOMObject
-    const char* activeDOMObjectName() const final;
-    bool canSuspendForDocumentSuspension() const final;
-    void contextDestroyed() final;
-    void stop() final { close(); }
-    bool hasPendingActivity() const final;
-
     WEBCORE_EXPORT bool isLocallyReachable() const;
 
     // EventTargetWithInlineData.
@@ -96,13 +91,22 @@ public:
     void refEventTarget() final { ref(); }
     void derefEventTarget() final { deref(); }
 
+    void dispatchEvent(Event&) final;
+
+    TransferredMessagePort disentangle();
+    static Ref<MessagePort> entangle(ScriptExecutionContext&, TransferredMessagePort&&);
+
 private:
     explicit MessagePort(ScriptExecutionContext&, const MessagePortIdentifier& local, const MessagePortIdentifier& remote);
 
     bool addEventListener(const AtomString& eventType, Ref<EventListener>&&, const AddEventListenerOptions&) final;
-    bool removeEventListener(const AtomString& eventType, EventListener&, const ListenerOptions&) final;
+    bool removeEventListener(const AtomString& eventType, EventListener&, const EventListenerOptions&) final;
 
-    void disentangle();
+    // ActiveDOMObject
+    const char* activeDOMObjectName() const final;
+    void contextDestroyed() final;
+    void stop() final { close(); }
+    bool virtualHasPendingActivity() const final;
 
     void registerLocalActivity();
 

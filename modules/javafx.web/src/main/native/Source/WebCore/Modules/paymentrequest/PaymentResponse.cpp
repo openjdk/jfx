@@ -28,8 +28,14 @@
 
 #if ENABLE(PAYMENT_REQUEST)
 
+#include "Document.h"
+#include "JSDOMPromiseDeferred.h"
 #include "NotImplemented.h"
+#include "PaymentComplete.h"
+#include "PaymentCompleteDetails.h"
 #include "PaymentRequest.h"
+#include <JavaScriptCore/JSONObject.h>
+#include <JavaScriptCore/ThrowScope.h>
 #include <wtf/IsoMallocInlines.h>
 #include <wtf/RunLoop.h>
 
@@ -39,15 +45,15 @@ WTF_MAKE_ISO_ALLOCATED_IMPL(PaymentResponse);
 
 PaymentResponse::PaymentResponse(ScriptExecutionContext* context, PaymentRequest& request)
     : ActiveDOMObject { context }
-    , m_request { makeWeakPtr(request) }
+    , m_request { request }
 {
-    suspendIfNeeded();
 }
 
 void PaymentResponse::finishConstruction()
 {
     ASSERT(!hasPendingActivity());
     m_pendingActivity = makePendingActivity(*this);
+    suspendIfNeeded();
 }
 
 PaymentResponse::~PaymentResponse()
@@ -59,10 +65,10 @@ PaymentResponse::~PaymentResponse()
 void PaymentResponse::setDetailsFunction(DetailsFunction&& detailsFunction)
 {
     m_detailsFunction = WTFMove(detailsFunction);
-    m_cachedDetails = { };
+    m_cachedDetails.clear();
 }
 
-void PaymentResponse::complete(Optional<PaymentComplete>&& result, DOMPromiseDeferred<void>&& promise)
+void PaymentResponse::complete(Document& document, std::optional<PaymentComplete>&& result, std::optional<PaymentCompleteDetails>&& details, DOMPromiseDeferred<void>&& promise)
 {
     if (m_state == State::Stopped || !m_request) {
         promise.reject(Exception { AbortError });
@@ -74,12 +80,27 @@ void PaymentResponse::complete(Optional<PaymentComplete>&& result, DOMPromiseDef
         return;
     }
 
-    ASSERT(hasPendingActivity());
-    ASSERT(m_state == State::Created);
-    m_pendingActivity = nullptr;
-    m_state = State::Completed;
+    String serializedData;
+    if (details) {
+        if (auto data = details->data) {
+            auto throwScope = DECLARE_THROW_SCOPE(document.globalObject()->vm());
 
-    promise.settle(m_request->complete(WTFMove(result)));
+            serializedData = JSONStringify(document.globalObject(), data.get(), 0);
+            if (throwScope.exception()) {
+                promise.reject(Exception { ExistingExceptionError });
+                return;
+            }
+        }
+    }
+
+    auto exception = m_request->complete(document, WTFMove(result), WTFMove(serializedData));
+    if (!exception.hasException()) {
+        ASSERT(hasPendingActivity());
+        ASSERT(m_state == State::Created);
+        m_pendingActivity = nullptr;
+        m_state = State::Completed;
+    }
+    promise.settle(WTFMove(exception));
 }
 
 void PaymentResponse::retry(PaymentValidationErrors&& errors, DOMPromiseDeferred<void>&& promise)
@@ -103,7 +124,7 @@ void PaymentResponse::retry(PaymentValidationErrors&& errors, DOMPromiseDeferred
         return;
     }
 
-    m_retryPromise = WTFMove(promise);
+    m_retryPromise = makeUnique<DOMPromiseDeferred<void>>(WTFMove(promise));
 }
 
 void PaymentResponse::abortWithException(Exception&& exception)
@@ -120,13 +141,8 @@ void PaymentResponse::settleRetryPromise(ExceptionOr<void>&& result)
 
     ASSERT(hasPendingActivity());
     ASSERT(m_state == State::Created);
-    std::exchange(m_retryPromise, WTF::nullopt)->settle(WTFMove(result));
-}
-
-bool PaymentResponse::canSuspendForDocumentSuspension() const
-{
-    ASSERT(m_state != State::Stopped);
-    return !hasPendingActivity();
+    m_retryPromise->settle(WTFMove(result));
+    m_retryPromise = nullptr;
 }
 
 void PaymentResponse::stop()
@@ -134,6 +150,20 @@ void PaymentResponse::stop()
     settleRetryPromise(Exception { AbortError });
     m_pendingActivity = nullptr;
     m_state = State::Stopped;
+}
+
+void PaymentResponse::suspend(ReasonForSuspension reason)
+{
+    if (reason != ReasonForSuspension::BackForwardCache)
+        return;
+
+    if (m_state != State::Created) {
+        ASSERT(!hasPendingActivity());
+        ASSERT(!m_retryPromise);
+        return;
+    }
+
+    stop();
 }
 
 } // namespace WebCore

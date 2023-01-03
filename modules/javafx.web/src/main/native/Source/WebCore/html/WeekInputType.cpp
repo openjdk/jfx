@@ -32,9 +32,13 @@
 #if ENABLE(INPUT_TYPE_WEEK)
 #include "WeekInputType.h"
 
+#include "DateComponents.h"
+#include "Decimal.h"
+#include "ElementInlines.h"
 #include "HTMLInputElement.h"
 #include "HTMLNames.h"
 #include "InputTypeNames.h"
+#include "StepRange.h"
 
 namespace WebCore {
 
@@ -50,9 +54,9 @@ const AtomString& WeekInputType::formControlType() const
     return InputTypeNames::week();
 }
 
-DateComponents::Type WeekInputType::dateType() const
+DateComponentsType WeekInputType::dateType() const
 {
-    return DateComponents::Week;
+    return DateComponentsType::Week;
 }
 
 StepRange WeekInputType::createStepRange(AnyStepHandling anyStepHandling) const
@@ -65,22 +69,32 @@ StepRange WeekInputType::createStepRange(AnyStepHandling anyStepHandling) const
     return StepRange(stepBase, RangeLimitations::Valid, minimum, maximum, step, weekStepDescription);
 }
 
-bool WeekInputType::parseToDateComponentsInternal(const UChar* characters, unsigned length, DateComponents* out) const
+std::optional<DateComponents> WeekInputType::parseToDateComponents(StringView source) const
 {
-    ASSERT(out);
-    unsigned end;
-    return out->parseWeek(characters, length, 0, end) && end == length;
+    return DateComponents::fromParsingWeek(source);
 }
 
-bool WeekInputType::setMillisecondToDateComponents(double value, DateComponents* date) const
+std::optional<DateComponents> WeekInputType::setMillisecondToDateComponents(double value) const
 {
-    ASSERT(date);
-    return date->setMillisecondsSinceEpochForWeek(value);
+    return DateComponents::fromMillisecondsSinceEpochForWeek(value);
 }
 
-bool WeekInputType::isWeekField() const
+void WeekInputType::handleDOMActivateEvent(Event&)
 {
-    return true;
+}
+
+bool WeekInputType::isValidFormat(OptionSet<DateTimeFormatValidationResults> results) const
+{
+    return results.containsAll({ DateTimeFormatValidationResults::HasYear, DateTimeFormatValidationResults::HasWeek });
+}
+
+String WeekInputType::formatDateTimeFieldsState(const DateTimeFieldsState&) const
+{
+    return emptyString();
+}
+
+void WeekInputType::setupLayoutParameters(DateTimeEditElement::LayoutParameters&, const DateComponents&) const
+{
 }
 
 } // namespace WebCore

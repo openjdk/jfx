@@ -27,9 +27,11 @@
 
 #if ENABLE(WEB_RTC) && USE(LIBWEBRTC)
 
+#include "JSDOMPromiseDeferred.h"
 #include "LibWebRTCRtpReceiverBackend.h"
 #include "LibWebRTCRtpSenderBackend.h"
 #include "LibWebRTCUtils.h"
+#include "RTCRtpCodecCapability.h"
 
 namespace WebCore {
 
@@ -48,17 +50,18 @@ RTCRtpTransceiverDirection LibWebRTCRtpTransceiverBackend::direction() const
     return toRTCRtpTransceiverDirection(m_rtcTransceiver->direction());
 }
 
-Optional<RTCRtpTransceiverDirection> LibWebRTCRtpTransceiverBackend::currentDirection() const
+std::optional<RTCRtpTransceiverDirection> LibWebRTCRtpTransceiverBackend::currentDirection() const
 {
     auto value = m_rtcTransceiver->current_direction();
     if (!value)
-        return WTF::nullopt;
+        return std::nullopt;
     return toRTCRtpTransceiverDirection(*value);
 }
 
 void LibWebRTCRtpTransceiverBackend::setDirection(RTCRtpTransceiverDirection direction)
 {
-    m_rtcTransceiver->SetDirection(fromRTCRtpTransceiverDirection(direction));
+    // FIXME: Handle error.
+    m_rtcTransceiver->SetDirectionWithError(fromRTCRtpTransceiverDirection(direction));
 }
 
 String LibWebRTCRtpTransceiverBackend::mid()
@@ -70,12 +73,52 @@ String LibWebRTCRtpTransceiverBackend::mid()
 
 void LibWebRTCRtpTransceiverBackend::stop()
 {
-    m_rtcTransceiver->Stop();
+    m_rtcTransceiver->StopStandard();
 }
 
 bool LibWebRTCRtpTransceiverBackend::stopped() const
 {
     return m_rtcTransceiver->stopped();
+}
+
+static inline ExceptionOr<webrtc::RtpCodecCapability> toRtpCodecCapability(const RTCRtpCodecCapability& codec)
+{
+    webrtc::RtpCodecCapability rtcCodec;
+    if (codec.mimeType.startsWith("video/"))
+        rtcCodec.kind = cricket::MEDIA_TYPE_VIDEO;
+    else if (codec.mimeType.startsWith("audio/"))
+        rtcCodec.kind = cricket::MEDIA_TYPE_AUDIO;
+    else
+        return Exception { InvalidModificationError, "RTCRtpCodecCapability bad mimeType" };
+
+    rtcCodec.name = codec.mimeType.substring(6).utf8().data();
+    rtcCodec.clock_rate = codec.clockRate;
+    if (codec.channels)
+        rtcCodec.num_channels = *codec.channels;
+
+    for (auto parameter : StringView(codec.sdpFmtpLine).split(';')) {
+        auto position = parameter.find('=');
+        if (position == notFound)
+            return Exception { InvalidModificationError, "RTCRtpCodecCapability sdpFmtLine badly formated" };
+        rtcCodec.parameters.emplace(parameter.substring(0, position).utf8().data(), parameter.substring(position + 1).utf8().data());
+    }
+
+    return rtcCodec;
+}
+
+ExceptionOr<void> LibWebRTCRtpTransceiverBackend::setCodecPreferences(const Vector<RTCRtpCodecCapability>& codecs)
+{
+    std::vector<webrtc::RtpCodecCapability> rtcCodecs;
+    for (auto& codec : codecs) {
+        auto result = toRtpCodecCapability(codec);
+        if (result.hasException())
+            return result.releaseException();
+        rtcCodecs.push_back(result.releaseReturnValue());
+    }
+    auto result = m_rtcTransceiver->SetCodecPreferences(rtcCodecs);
+    if (!result.ok())
+        return toException(result);
+    return { };
 }
 
 } // namespace WebCore

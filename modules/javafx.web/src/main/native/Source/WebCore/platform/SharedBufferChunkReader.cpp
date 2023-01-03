@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2011 Google Inc. All rights reserved.
+ * Copyright (C) 2021 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -31,35 +32,22 @@
 #include "config.h"
 #include "SharedBufferChunkReader.h"
 
-#if ENABLE(MHTML)
-
-// FIXME: This class is overkill. Remove this class and just iterate the segments of a SharedBuffer
-// using the cool new SharedBuffer::begin() and SharedBuffer::end() instead of using this class.
-
-#include "SharedBuffer.h"
-
 namespace WebCore {
 
-SharedBufferChunkReader::SharedBufferChunkReader(SharedBuffer* buffer, const Vector<char>& separator)
-    : m_buffer(buffer)
-    , m_bufferPosition(0)
-    , m_segment(0)
-    , m_segmentLength(0)
-    , m_segmentIndex(0)
-    , m_reachedEndOfFile(false)
+#if ENABLE(MHTML)
+
+SharedBufferChunkReader::SharedBufferChunkReader(FragmentedSharedBuffer* buffer, const Vector<char>& separator)
+    : m_iteratorCurrent(buffer->begin())
+    , m_iteratorEnd(buffer->end())
+    , m_segment(m_iteratorCurrent != m_iteratorEnd ? m_iteratorCurrent->segment->data() : nullptr)
     , m_separator(separator)
-    , m_separatorIndex(0)
 {
 }
 
-SharedBufferChunkReader::SharedBufferChunkReader(SharedBuffer* buffer, const char* separator)
-    : m_buffer(buffer)
-    , m_bufferPosition(0)
-    , m_segment(0)
-    , m_segmentLength(0)
-    , m_segmentIndex(0)
-    , m_reachedEndOfFile(false)
-    , m_separatorIndex(0)
+SharedBufferChunkReader::SharedBufferChunkReader(FragmentedSharedBuffer* buffer, const char* separator)
+    : m_iteratorCurrent(buffer->begin())
+    , m_iteratorEnd(buffer->end())
+    , m_segment(m_iteratorCurrent != m_iteratorEnd ? m_iteratorCurrent->segment->data() : nullptr)
 {
     setSeparator(separator);
 }
@@ -75,15 +63,16 @@ void SharedBufferChunkReader::setSeparator(const char* separator)
     m_separator.append(separator, strlen(separator));
 }
 
-bool SharedBufferChunkReader::nextChunk(Vector<char>& chunk, bool includeSeparator)
+bool SharedBufferChunkReader::nextChunk(Vector<uint8_t>& chunk, bool includeSeparator)
 {
-    if (m_reachedEndOfFile)
+    if (m_iteratorCurrent == m_iteratorEnd)
         return false;
 
     chunk.clear();
     while (true) {
-        while (m_segmentIndex < m_segmentLength) {
-            char currentCharacter = m_segment[m_segmentIndex++];
+        while (m_segmentIndex < m_iteratorCurrent->segment->size()) {
+            // FIXME: The existing code to check for separators doesn't work correctly with arbitrary separator strings.
+            auto currentCharacter = m_segment[m_segmentIndex++];
             if (currentCharacter != m_separator[m_separatorIndex]) {
                 if (m_separatorIndex > 0) {
                     ASSERT_WITH_SECURITY_IMPLICATION(m_separatorIndex <= m_separator.size());
@@ -104,59 +93,53 @@ bool SharedBufferChunkReader::nextChunk(Vector<char>& chunk, bool includeSeparat
 
         // Read the next segment.
         m_segmentIndex = 0;
-        m_bufferPosition += m_segmentLength;
-        // Let's pretend all the data is in one block.
-        // FIXME: This class should be removed in favor of just iterating the segments of the SharedBuffer.
-        m_segment = m_buffer->data() + m_bufferPosition;
-        m_segmentLength = m_buffer->size() - m_bufferPosition;
-        if (!m_segmentLength) {
-            m_reachedEndOfFile = true;
+        if (++m_iteratorCurrent == m_iteratorEnd) {
+            m_segment = nullptr;
             if (m_separatorIndex > 0)
-                chunk.append(m_separator.data(), m_separatorIndex);
+                chunk.append(reinterpret_cast<const uint8_t*>(m_separator.data()), m_separatorIndex);
             return !chunk.isEmpty();
         }
+        m_segment = m_iteratorCurrent->segment->data();
     }
+
     ASSERT_NOT_REACHED();
     return false;
 }
 
 String SharedBufferChunkReader::nextChunkAsUTF8StringWithLatin1Fallback(bool includeSeparator)
 {
-    Vector<char> data;
+    Vector<uint8_t> data;
     if (!nextChunk(data, includeSeparator))
         return String();
 
     return data.size() ? String::fromUTF8WithLatin1Fallback(data.data(), data.size()) : emptyString();
 }
 
-size_t SharedBufferChunkReader::peek(Vector<char>& data, size_t requestedSize)
+size_t SharedBufferChunkReader::peek(Vector<uint8_t>& data, size_t requestedSize)
 {
     data.clear();
-    if (requestedSize <= m_segmentLength - m_segmentIndex) {
-        data.append(m_segment + m_segmentIndex, requestedSize);
-        return requestedSize;
-    }
+    if (m_iteratorCurrent == m_iteratorEnd)
+        return 0;
 
-    size_t readBytesCount = m_segmentLength - m_segmentIndex;
-    data.append(m_segment + m_segmentIndex, readBytesCount);
+    size_t availableInSegment = std::min(m_iteratorCurrent->segment->size() - m_segmentIndex, requestedSize);
+    data.append(m_segment + m_segmentIndex, availableInSegment);
 
-    size_t bufferPosition = m_bufferPosition + m_segmentLength;
-    const char* segment = 0;
+    size_t readBytesCount = availableInSegment;
+    requestedSize -= readBytesCount;
 
-    // Let's pretend all the data is in one block.
-    // FIXME: This class should be removed in favor of just iterating the segments of the SharedBuffer.
-    if (bufferPosition != m_buffer->size()) {
-        segment = m_buffer->data() + bufferPosition;
-        size_t segmentLength = m_buffer->size() - bufferPosition;
-        if (segmentLength > requestedSize)
-            segmentLength = requestedSize;
-        data.append(segment, segmentLength);
-        readBytesCount += segmentLength;
-        bufferPosition += segmentLength;
+    auto currentSegment = m_iteratorCurrent;
+
+    while (requestedSize && ++currentSegment != m_iteratorEnd) {
+        const uint8_t* segment = currentSegment->segment->data();
+        size_t lengthInSegment = std::min(currentSegment->segment->size(), requestedSize);
+        data.append(segment, lengthInSegment);
+        readBytesCount += lengthInSegment;
+        requestedSize -= lengthInSegment;
     }
     return readBytesCount;
 }
 
+#endif
+
 }
 
-#endif

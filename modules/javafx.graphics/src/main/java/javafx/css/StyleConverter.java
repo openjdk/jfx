@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -85,6 +85,12 @@ import java.util.WeakHashMap;
  * @since JavaFX 8.0
  */
 public class StyleConverter<F, T> {
+
+    /**
+     * Creates a {@code StyleConverter}.
+     */
+    public StyleConverter() {
+    }
 
     /**
      * Convert from the parsed CSS value to the target property type.
@@ -309,7 +315,6 @@ public class StyleConverter<F, T> {
      * @throws java.io.IOException the exception
      * @since 9
      */
-    @SuppressWarnings("rawtypes")
     public static StyleConverter<?,?> readBinary(DataInputStream is, String[] strings)
             throws IOException {
 
@@ -325,7 +330,7 @@ public class StyleConverter<F, T> {
             cname = "javafx.css.converter." + cname.substring("com.sun.javafx.css.converters.".length());
         }
         if (cname.startsWith("javafx.css.converter.EnumConverter")) {
-            return (StyleConverter)javafx.css.converter.EnumConverter.readBinary(is, strings);
+            return javafx.css.converter.EnumConverter.readBinary(is, strings);
         }
 
         // Make a new entry in tmap, if necessary
@@ -340,7 +345,7 @@ public class StyleConverter<F, T> {
             if (converter == null) {
                 System.err.println("could not deserialize " + cname);
             }
-            if (tmap == null) tmap = new HashMap<String,StyleConverter<?,?>>();
+            if (tmap == null) tmap = new HashMap<>();
             tmap.put(cname, converter);
             return converter;
         }
@@ -525,13 +530,28 @@ public class StyleConverter<F, T> {
 
 
     /**
-     * The StringStore class
+     * The StringStore class.
      * @since 9
      */
     public static class StringStore {
-        private final Map<String,Integer> stringMap = new HashMap<String,Integer>();
-        public final List<String> strings = new ArrayList<String>();
+        private final Map<String,Integer> stringMap = new HashMap<>();
 
+        /**
+         * List of strings of this {@code StringStore}.
+         */
+        public final List<String> strings = new ArrayList<>();
+
+        /**
+         * Creates a {@code StringStore}.
+         */
+        public StringStore() {
+        }
+
+        /**
+         * Adds given string to the {@code StringStore}.
+         * @param s string to be added to the {@code StringStore}
+         * @return index at which the given string gets added
+         */
         public int addString(String s) {
             Integer index = stringMap.get(s);
             if (index == null) {
@@ -542,6 +562,11 @@ public class StyleConverter<F, T> {
             return index;
         }
 
+        /**
+         * Writes the {@code StringStore} strings to a given {@code DataOutputStream}.
+         * @param os {@code DataOutputStream} where the StringStore strings need to be written
+         * @throws IOException if writing to {@code DataOutputStream} fails
+         */
         public void writeBinary(DataOutputStream os) throws IOException {
             os.writeShort(strings.size());
             if (stringMap.containsKey(null)) {
@@ -558,6 +583,12 @@ public class StyleConverter<F, T> {
         }
 
         // TODO: this isn't parallel with writeBinary
+        /**
+         * Read the StringStore strings from a given {@code DataInputStream}.
+         * @param is {@code DataInputStream} from where StringStore strings need to be read from
+         * @return a {@code String} array constructed by reading {@code DataInputStream}
+         * @throws IOException if reading from {@code DataInputStream} fails
+         */
         public static String[] readBinary(DataInputStream is) throws IOException {
             int nStrings = is.readShort();
             int nullIndex = is.readShort();

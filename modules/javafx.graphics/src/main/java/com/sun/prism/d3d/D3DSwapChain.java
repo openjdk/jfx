@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -81,6 +81,9 @@ class D3DSwapChain
     @Override
     public boolean present() {
         D3DContext context = getContext();
+        if (context.isDisposed()) {
+            return false;
+        }
         int res = nPresent(context.getContextHandle(), d3dResRecord.getResource());
         return context.validatePresent(res);
     }

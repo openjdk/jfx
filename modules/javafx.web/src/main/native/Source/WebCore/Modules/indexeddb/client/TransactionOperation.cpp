@@ -26,13 +26,15 @@
 #include "config.h"
 #include "TransactionOperation.h"
 
-#if ENABLE(INDEXED_DATABASE)
-
 #include "IDBCursor.h"
 #include <JavaScriptCore/HeapInlines.h>
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
 namespace IDBClient {
+
+WTF_MAKE_ISO_ALLOCATED_IMPL(TransactionOperation);
+WTF_MAKE_ISO_ALLOCATED_IMPL(TransactionOperationImpl);
 
 TransactionOperation::TransactionOperation(IDBTransaction& transaction, IDBRequest& request)
     : TransactionOperation(transaction)
@@ -44,10 +46,9 @@ TransactionOperation::TransactionOperation(IDBTransaction& transaction, IDBReque
     if (auto* cursor = request.pendingCursor())
         m_cursorIdentifier = makeUnique<IDBResourceIdentifier>(cursor->info().identifier());
 
+    request.setTransactionOperationID(m_operationID);
     m_idbRequest = &request;
 }
 
 } // namespace IDBClient
 } // namespace WebCore
-
-#endif // ENABLE(INDEXED_DATABASE)

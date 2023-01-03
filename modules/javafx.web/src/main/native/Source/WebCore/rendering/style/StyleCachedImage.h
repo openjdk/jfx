@@ -2,7 +2,7 @@
  * Copyright (C) 2000 Lars Knoll (knoll@kde.org)
  *           (C) 2000 Antti Koivisto (koivisto@kde.org)
  *           (C) 2000 Dirk Mueller (mueller@kde.org)
- * Copyright (C) 2003, 2005, 2006, 2007, 2008 Apple Inc. All rights reserved.
+ * Copyright (C) 2003-2021 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -29,13 +29,14 @@
 namespace WebCore {
 
 class CSSValue;
+class CSSImageValue;
 class CachedImage;
 class Document;
 
 class StyleCachedImage final : public StyleImage {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    static Ref<StyleCachedImage> create(CSSValue& cssValue) { return adoptRef(*new StyleCachedImage(cssValue)); }
+    static Ref<StyleCachedImage> create(CSSImageValue& cssValue, float scaleFactor = 1);
     virtual ~StyleCachedImage();
 
     bool operator==(const StyleImage& other) const final;
@@ -57,17 +58,23 @@ public:
     void computeIntrinsicDimensions(const RenderElement*, Length& intrinsicWidth, Length& intrinsicHeight, FloatSize& intrinsicRatio) final;
     bool usesImageContainerSize() const final;
     void setContainerContextForRenderer(const RenderElement&, const FloatSize&, float) final;
-    void addClient(RenderElement*) final;
-    void removeClient(RenderElement*) final;
+    void addClient(RenderElement&) final;
+    void removeClient(RenderElement&) final;
+    bool hasClient(RenderElement&) const final;
+    bool hasImage() const final;
     RefPtr<Image> image(RenderElement*, const FloatSize&) const final;
     float imageScaleFactor() const final;
-    bool knownToBeOpaque(const RenderElement*) const final;
+    bool knownToBeOpaque(const RenderElement&) const final;
+    bool usesDataProtocol() const final;
+
+    URL reresolvedURL(const Document&) const;
 
 private:
-    StyleCachedImage(CSSValue&);
-    URL imageURL();
+    StyleCachedImage(CSSImageValue&, float);
 
-    Ref<CSSValue> m_cssValue;
+    URL imageURL() const;
+
+    Ref<CSSImageValue> m_cssValue;
     bool m_isPending { true };
     mutable float m_scaleFactor { 1 };
     mutable CachedResourceHandle<CachedImage> m_cachedImage;

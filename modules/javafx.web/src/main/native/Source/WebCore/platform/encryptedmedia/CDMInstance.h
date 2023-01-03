@@ -31,42 +31,79 @@
 #include "CDMMessageType.h"
 #include "CDMSessionType.h"
 #include <utility>
+#include <wtf/CompletionHandler.h>
 #include <wtf/Forward.h>
 #include <wtf/RefCounted.h>
+#include <wtf/ThreadSafeRefCounted.h>
 #include <wtf/TypeCasts.h>
+#include <wtf/WeakPtr.h>
+
+#if !RELEASE_LOG_DISABLED
+namespace WTF {
+class Logger;
+}
+#endif
 
 namespace WebCore {
 
-class SharedBuffer;
-
+class FragmentedSharedBuffer;
 class CDMInstanceSession;
 struct CDMKeySystemConfiguration;
 
+class CDMInstanceClient : public CanMakeWeakPtr<CDMInstanceClient> {
+public:
+    virtual ~CDMInstanceClient() = default;
+
+    virtual void unrequestedInitializationDataReceived(const String&, Ref<FragmentedSharedBuffer>&&) = 0;
+};
+
+// JavaScript's handle to a CDMInstance, must be used from the
+// main-thread only!
 class CDMInstance : public RefCounted<CDMInstance> {
 public:
     virtual ~CDMInstance() = default;
+
+    virtual void setClient(WeakPtr<CDMInstanceClient>&&) { }
+    virtual void clearClient() { }
+
+#if !RELEASE_LOG_DISABLED
+    virtual void setLogger(Logger&, const void*) { }
+#endif
 
     enum class ImplementationType {
         Mock,
         ClearKey,
         FairPlayStreaming,
+        Remote,
+#if ENABLE(THUNDER)
+        Thunder,
+#endif
     };
     virtual ImplementationType implementationType() const = 0;
 
-    enum SuccessValue {
+    enum SuccessValue : bool {
         Failed,
         Succeeded,
     };
+    using SuccessCallback = CompletionHandler<void(SuccessValue)>;
 
-    virtual SuccessValue initializeWithConfiguration(const CDMKeySystemConfiguration&) = 0;
-    virtual SuccessValue setDistinctiveIdentifiersAllowed(bool) = 0;
-    virtual SuccessValue setPersistentStateAllowed(bool) = 0;
-    virtual SuccessValue setServerCertificate(Ref<SharedBuffer>&&) = 0;
-    virtual SuccessValue setStorageDirectory(const String&) = 0;
+    enum class AllowDistinctiveIdentifiers : bool {
+        No,
+        Yes,
+    };
+
+    enum class AllowPersistentState : bool {
+        No,
+        Yes,
+    };
+
+    virtual void initializeWithConfiguration(const CDMKeySystemConfiguration&, AllowDistinctiveIdentifiers, AllowPersistentState, SuccessCallback&&) = 0;
+    virtual void setServerCertificate(Ref<FragmentedSharedBuffer>&&, SuccessCallback&&) = 0;
+    virtual void setStorageDirectory(const String&) = 0;
     virtual const String& keySystem() const = 0;
     virtual RefPtr<CDMInstanceSession> createSession() = 0;
 
-    enum class HDCPStatus {
+    enum class HDCPStatus : uint8_t {
         Unknown,
         Valid,
         OutputRestricted,

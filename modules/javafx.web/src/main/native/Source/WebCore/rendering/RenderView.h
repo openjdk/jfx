@@ -29,6 +29,7 @@
 #include <memory>
 #include <wtf/HashSet.h>
 #include <wtf/ListHashSet.h>
+#include <wtf/WeakHashSet.h>
 
 namespace WebCore {
 
@@ -68,7 +69,13 @@ public:
 
     FrameView& frameView() const { return m_frameView; }
 
-    Optional<LayoutRect> computeVisibleRectInContainer(const LayoutRect&, const RenderLayerModelObject* container, VisibleRectContext) const override;
+    bool needsRepaintHackAfterCompositingLayerUpdateForDebugOverlaysOnly() const { return m_needsRepaintHackAfterCompositingLayerUpdateForDebugOverlaysOnly; };
+    void setNeedsRepaintHackAfterCompositingLayerUpdateForDebugOverlaysOnly(bool value = true) { m_needsRepaintHackAfterCompositingLayerUpdateForDebugOverlaysOnly = value; }
+
+    bool needsEventRegionUpdateForNonCompositedFrame() const { return m_needsEventRegionUpdateForNonCompositedFrame; }
+    void setNeedsEventRegionUpdateForNonCompositedFrame(bool value = true) { m_needsEventRegionUpdateForNonCompositedFrame = value; }
+
+    std::optional<LayoutRect> computeVisibleRectInContainer(const LayoutRect&, const RenderLayerModelObject* container, VisibleRectContext) const override;
     void repaintRootContents();
     void repaintViewRectangle(const LayoutRect&) const;
     void repaintViewAndCompositedLayers();
@@ -135,9 +142,12 @@ public:
     // Renderer that paints the root background has background-images which all have background-attachment: fixed.
     bool rootBackgroundIsEntirelyFixed() const;
 
-    void styleDidChange(StyleDifference, const RenderStyle* oldStyle) override;
+    bool shouldPaintBaseBackground() const;
 
-    IntSize viewportSizeForCSSViewportUnits() const;
+    FloatSize sizeForCSSSmallViewportUnits() const;
+    FloatSize sizeForCSSLargeViewportUnits() const;
+    FloatSize sizeForCSSDynamicViewportUnits() const;
+    FloatSize sizeForCSSDefaultViewportUnits() const;
 
     bool hasQuotesNeedingUpdate() const { return m_hasQuotesNeedingUpdate; }
     void setHasQuotesNeedingUpdate(bool b) { m_hasQuotesNeedingUpdate = b; }
@@ -179,28 +189,32 @@ public:
 
     private:
         WeakPtr<RenderView> m_rootView;
-        bool m_wasAccumulatingRepaintRegion;
+        bool m_wasAccumulatingRepaintRegion { false };
     };
 
     void scheduleLazyRepaint(RenderBox&);
     void unscheduleLazyRepaint(RenderBox&);
 
+    void layerChildrenChangedDuringStyleChange(RenderLayer&);
+    RenderLayer* takeStyleChangeLayerTreeMutationRoot();
+
     void protectRenderWidgetUntilLayoutIsDone(RenderWidget& widget) { m_protectedRenderWidgets.append(&widget); }
     void releaseProtectedRenderWidgets() { m_protectedRenderWidgets.clear(); }
 
-#if ENABLE(CSS_SCROLL_SNAP)
     void registerBoxWithScrollSnapPositions(const RenderBox&);
     void unregisterBoxWithScrollSnapPositions(const RenderBox&);
     const HashSet<const RenderBox*>& boxesWithScrollSnapPositions() { return m_boxesWithScrollSnapPositions; }
-#endif
 
-protected:
-    void mapLocalToContainer(const RenderLayerModelObject* repaintContainer, TransformState&, MapCoordinatesFlags, bool* wasFixed) const override;
-    const RenderObject* pushMappingToContainer(const RenderLayerModelObject* ancestorToStopAt, RenderGeometryMap&) const override;
-    void mapAbsoluteToLocalPoint(MapCoordinatesFlags, TransformState&) const override;
-    bool requiresColumns(int desiredColumnCount) const override;
+    void registerContainerQueryBox(const RenderBox&);
+    void unregisterContainerQueryBox(const RenderBox&);
+    const WeakHashSet<const RenderBox>& containerQueryBoxes() const { return m_containerQueryBoxes; }
 
 private:
+    void mapLocalToContainer(const RenderLayerModelObject* repaintContainer, TransformState&, OptionSet<MapCoordinatesMode>, bool* wasFixed) const override;
+    const RenderObject* pushMappingToContainer(const RenderLayerModelObject* ancestorToStopAt, RenderGeometryMap&) const override;
+    void mapAbsoluteToLocalPoint(OptionSet<MapCoordinatesMode>, TransformState&) const override;
+    bool requiresColumns(int desiredColumnCount) const override;
+
     void computeColumnCountAndWidth() override;
 
     bool shouldRepaint(const LayoutRect&) const;
@@ -210,7 +224,8 @@ private:
 
     bool isScrollableOrRubberbandableBox() const override;
 
-private:
+    Node* nodeForHitTest() const override;
+
     FrameView& m_frameView;
 
     // Include this RenderView.
@@ -218,6 +233,8 @@ private:
 
     mutable std::unique_ptr<Region> m_accumulatedRepaintRegion;
     SelectionRangeData m_selection;
+
+    WeakPtr<RenderLayer> m_styleChangeLayerMutationRoot;
 
     // FIXME: Only used by embedded WebViews inside AppKit NSViews.  Find a way to remove.
     struct LegacyPrinting {
@@ -238,7 +255,7 @@ private:
     HashSet<RenderBox*> m_renderersNeedingLazyRepaint;
 
     std::unique_ptr<ImageQualityController> m_imageQualityController;
-    Optional<LayoutSize> m_pageLogicalSize;
+    std::optional<LayoutSize> m_pageLogicalSize;
     bool m_pageLogicalHeightChanged { false };
     std::unique_ptr<RenderLayerCompositor> m_compositor;
 
@@ -250,14 +267,15 @@ private:
     bool m_hasSoftwareFilters { false };
     bool m_usesFirstLineRules { false };
     bool m_usesFirstLetterRules { false };
+    bool m_needsRepaintHackAfterCompositingLayerUpdateForDebugOverlaysOnly { false };
+    bool m_needsEventRegionUpdateForNonCompositedFrame { false };
 
     HashMap<RenderElement*, Vector<CachedImage*>> m_renderersWithPausedImageAnimation;
     HashSet<RenderElement*> m_visibleInViewportRenderers;
     Vector<RefPtr<RenderWidget>> m_protectedRenderWidgets;
 
-#if ENABLE(CSS_SCROLL_SNAP)
     HashSet<const RenderBox*> m_boxesWithScrollSnapPositions;
-#endif
+    WeakHashSet<const RenderBox> m_containerQueryBoxes;
 };
 
 } // namespace WebCore

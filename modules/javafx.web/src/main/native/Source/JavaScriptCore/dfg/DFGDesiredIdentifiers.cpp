@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,7 +30,7 @@
 
 #include "CodeBlock.h"
 #include "DFGCommonData.h"
-#include "JSCInlines.h"
+#include "IdentifierInlines.h"
 
 namespace JSC { namespace DFG {
 
@@ -87,9 +87,16 @@ UniquedStringImpl* DesiredIdentifiers::at(unsigned index) const
 
 void DesiredIdentifiers::reallyAdd(VM& vm, CommonData* commonData)
 {
+    unsigned index = 0;
+    FixedVector<Identifier> identifiers(m_addedIdentifiers.size());
     for (auto rep : m_addedIdentifiers) {
         ASSERT(rep->hasAtLeastOneRef());
-        commonData->dfgIdentifiers.append(Identifier::fromUid(vm, rep));
+        identifiers[index++] = Identifier::fromUid(vm, rep);
+    }
+    if (!identifiers.isEmpty()) {
+        ConcurrentJSLocker locker(m_codeBlock->m_lock);
+        ASSERT(commonData->m_dfgIdentifiers.isEmpty());
+        commonData->m_dfgIdentifiers = WTFMove(identifiers);
     }
 }
 

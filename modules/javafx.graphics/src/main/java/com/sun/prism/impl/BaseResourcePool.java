@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -460,7 +460,16 @@ public abstract class BaseResourcePool<T> implements ResourcePool<T> {
                 cur = cur.next;
             }
         }
-        throw new IllegalStateException("unmanaged resource freed from pool "+this);
+
+        // If we get here, the resource is not currently being managed. This
+        // can happen when the Disposer processes its queue of disposed records
+        // and encounters a record that was previously reclaimed via
+        // cleanup() or freeDisposalRequestedAndCheckResources(), when the
+        // device is lost or removed. We can safely ignore it.
+        if (PrismSettings.poolDebug) {
+            System.err.println("Warning: unmanaged resource " + freed +
+                    " freed from pool: " + this);
+        }
     }
 
     @Override

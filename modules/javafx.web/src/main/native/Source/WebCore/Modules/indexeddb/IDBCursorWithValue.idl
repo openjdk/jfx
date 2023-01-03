@@ -24,9 +24,9 @@
  */
 
 [
-    Conditional=INDEXED_DATABASE,
     SkipVTableValidation,
     JSCustomMarkFunction,
+    Exposed=(Window,Worker)
 ] interface IDBCursorWithValue : IDBCursor {
     [CustomGetter] readonly attribute any value;
 };

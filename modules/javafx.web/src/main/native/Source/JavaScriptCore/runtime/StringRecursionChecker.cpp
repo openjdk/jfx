@@ -20,22 +20,21 @@
 #include "config.h"
 #include "StringRecursionChecker.h"
 
-#include "Error.h"
-#include "ExceptionHelpers.h"
-#include "JSCInlines.h"
+#include "JSCJSValueInlines.h"
+#include "JSGlobalObject.h"
 
 namespace JSC {
 
 JSValue StringRecursionChecker::throwStackOverflowError()
 {
-    VM& vm = m_exec->vm();
+    VM& vm = m_globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
-    return JSC::throwStackOverflowError(m_exec, scope);
+    return JSC::throwStackOverflowError(m_globalObject, scope);
 }
 
 JSValue StringRecursionChecker::emptyString()
 {
-    return jsEmptyString(m_exec->vm());
+    return jsEmptyString(m_globalObject->vm());
 }
 
 }

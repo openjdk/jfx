@@ -55,8 +55,12 @@ HTMLAttachmentElement& RenderAttachment::attachmentElement() const
 void RenderAttachment::layout()
 {
     LayoutSize newIntrinsicSize = theme().attachmentIntrinsicSize(*this);
-    m_minimumIntrinsicWidth = std::max(m_minimumIntrinsicWidth, newIntrinsicSize.width());
-    newIntrinsicSize.setWidth(m_minimumIntrinsicWidth);
+
+    if (!theme().attachmentShouldAllowWidthToShrink(*this)) {
+        m_minimumIntrinsicWidth = std::max(m_minimumIntrinsicWidth, newIntrinsicSize.width());
+        newIntrinsicSize.setWidth(m_minimumIntrinsicWidth);
+    }
+
     setIntrinsicSize(newIntrinsicSize);
 
     RenderReplaced::layout();
@@ -68,21 +72,21 @@ void RenderAttachment::invalidate()
     repaint();
 }
 
-int RenderAttachment::baselinePosition(FontBaseline, bool, LineDirectionMode, LinePositionMode) const
+LayoutUnit RenderAttachment::baselinePosition(FontBaseline, bool, LineDirectionMode, LinePositionMode) const
 {
     return theme().attachmentBaseline(*this);
 }
 
 bool RenderAttachment::shouldDrawBorder() const
 {
-    if (style().appearance() == BorderlessAttachmentPart)
+    if (style().effectiveAppearance() == BorderlessAttachmentPart)
         return false;
     return m_shouldDrawBorder;
 }
 
 void RenderAttachment::paintReplaced(PaintInfo& paintInfo, const LayoutPoint& offset)
 {
-    if (paintInfo.phase != PaintPhase::Selection || !hasVisibleBoxDecorations() || !style().hasAppearance())
+    if (paintInfo.phase != PaintPhase::Selection || !hasVisibleBoxDecorations() || !style().hasEffectiveAppearance())
         return;
 
     auto paintRect = borderBoxRect();

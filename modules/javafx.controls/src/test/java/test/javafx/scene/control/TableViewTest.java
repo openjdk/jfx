@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,9 +28,12 @@ package test.javafx.scene.control;
 import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.assertStyleClassContains;
 import static javafx.scene.control.TableColumn.SortType.ASCENDING;
 import static javafx.scene.control.TableColumn.SortType.DESCENDING;
+import static javafx.collections.FXCollections.*;
 import static org.junit.Assert.*;
 
 import java.util.*;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Supplier;
 
@@ -38,8 +41,12 @@ import com.sun.javafx.scene.control.ReadOnlyUnbackedObservableList;
 import com.sun.javafx.scene.control.SelectedCellsMap;
 import com.sun.javafx.scene.control.TableColumnBaseHelper;
 import com.sun.javafx.scene.control.behavior.TableCellBehavior;
-import javafx.beans.InvalidationListener;
-import javafx.scene.Node;
+import javafx.collections.ObservableSet;
+import javafx.collections.SetChangeListener;
+import javafx.css.PseudoClass;
+import javafx.scene.control.Slider;
+import javafx.scene.layout.Region;
+import org.junit.After;
 import test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils;
 import test.com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
 import test.com.sun.javafx.scene.control.infrastructure.KeyModifier;
@@ -55,6 +62,7 @@ import javafx.collections.ObservableList;
 import javafx.collections.transformation.SortedList;
 import javafx.event.EventHandler;
 import javafx.geometry.Orientation;
+import javafx.scene.AccessibleAttribute;
 import javafx.scene.Group;
 import javafx.scene.Scene;
 import javafx.scene.control.cell.*;
@@ -106,13 +114,14 @@ import test.com.sun.javafx.scene.control.test.Person;
 import test.com.sun.javafx.scene.control.test.RT_22463_Person;
 
 import javafx.scene.control.skin.TableHeaderRowShim;
-import static org.junit.Assert.assertEquals;
 import test.com.sun.javafx.scene.control.infrastructure.TableColumnHeaderUtil;
 
 public class TableViewTest {
     private TableView<String> table;
     private TableView.TableViewSelectionModel sm;
     private TableView.TableViewFocusModel<String> fm;
+
+    private StageLoader stageLoader;
 
     private ObservableList<Person> personTestData;
 
@@ -129,6 +138,12 @@ public class TableViewTest {
                 new Person("Michael", "Brown", "michael.brown@example.com"));
     }
 
+    @After
+    public void cleanup() {
+        if (stageLoader != null) {
+            stageLoader.dispose();
+        }
+    }
 
     /*********************************************************************
      * Tests for the constructors                                        *
@@ -197,6 +212,18 @@ public class TableViewTest {
         assertEquals(-1, b2.getSelectionModel().getSelectedIndex());
     }
 
+    @Test public void noArgConstructorSetsDefaultColumnResizePolicyPseudoclass() {
+        TableView<?> view = new TableView<>();
+        assertTrue(view.getPseudoClassStates().stream().anyMatch(
+            c -> c.getPseudoClassName().equals(TableView.UNCONSTRAINED_RESIZE_POLICY.toString())));
+    }
+
+    @Test public void singleArgConstructorSetsDefaultColumnResizePolicyPseudoclass() {
+        TableView<?> view = new TableView<>(FXCollections.observableArrayList());
+        assertTrue(view.getPseudoClassStates().stream().anyMatch(
+            c -> c.getPseudoClassName().equals(TableView.UNCONSTRAINED_RESIZE_POLICY.toString())));
+    }
+
     /*********************************************************************
      * Tests for selection model                                         *
      ********************************************************************/
@@ -208,7 +235,7 @@ public class TableViewTest {
 
     @Test public void selectionModelCanBeBound() {
         TableView.TableViewSelectionModel<String> sm = TableViewShim.<String>get_TableViewArrayListSelectionModel(table);
-        ObjectProperty<TableView.TableViewSelectionModel<String>> other = new SimpleObjectProperty<TableView.TableViewSelectionModel<String>>(sm);
+        ObjectProperty<TableView.TableViewSelectionModel<String>> other = new SimpleObjectProperty<>(sm);
         table.selectionModelProperty().bind(other);
         assertSame(sm, sm);
     }
@@ -274,8 +301,8 @@ public class TableViewTest {
         assertEquals("Pineapple", sm.getSelectedItem());
     }
 
-    @Ignore("Not fixed yet")
-    @Test public void ensureSelectionShiftsDownWhenOneNewItemIsAdded() {
+    @Test
+    public void ensureSelectionShiftsDownWhenOneNewItemIsAdded() {
         table.getItems().addAll("Apple", "Orange", "Banana");
         sm.select(1);
         assertEquals(1, sm.getSelectedIndex());
@@ -286,8 +313,8 @@ public class TableViewTest {
         assertEquals("Orange", sm.getSelectedItem());
     }
 
-    @Ignore("Not fixed yet")
-    @Test public void ensureSelectionShiftsDownWhenMultipleNewItemAreAdded() {
+    @Test
+    public void ensureSelectionShiftsDownWhenMultipleNewItemAreAdded() {
         table.getItems().addAll("Apple", "Orange", "Banana");
         sm.select(1);
         assertEquals(1, sm.getSelectedIndex());
@@ -298,8 +325,8 @@ public class TableViewTest {
         assertEquals(4, sm.getSelectedIndex());
     }
 
-    @Ignore("Not fixed yet")
-    @Test public void ensureSelectionShiftsDownWhenOneItemIsRemoved() {
+    @Test
+    public void ensureSelectionShiftsDownWhenOneItemIsRemoved() {
         table.getItems().addAll("Apple", "Orange", "Banana");
         sm.select(1);
         assertEquals(1, sm.getSelectedIndex());
@@ -310,8 +337,8 @@ public class TableViewTest {
         assertEquals("Orange", sm.getSelectedItem());
     }
 
-    @Ignore("Not fixed yet")
-    @Test public void ensureSelectionShiftsDownWheMultipleItemsAreRemoved() {
+    @Test
+    public void ensureSelectionShiftsDownWheMultipleItemsAreRemoved() {
         table.getItems().addAll("Apple", "Orange", "Banana");
         sm.select(2);
         assertEquals(2, sm.getSelectedIndex());
@@ -332,6 +359,50 @@ public class TableViewTest {
         assertNull(sm.getSelectedItem());
         assertEquals(0, fm.getFocusedIndex());
         assertEquals("Item 2", fm.getFocusedItem());
+    }
+
+    @Test
+    public void ensureRowRemainsSelectedWhenSelectingCellInSameRow() {
+        class Person {
+            final String firstName, lastName;
+            Person(String firstName, String lastName) {
+                this.firstName = firstName;
+                this.lastName = lastName;
+            }
+            public String getFirstName() { return firstName; }
+            public String getLastName() { return lastName; }
+        }
+
+        var tableView = new TableView<Person>();
+        tableView.getSelectionModel().setCellSelectionEnabled(true);
+        tableView.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
+
+        var col1 = new TableColumn<Person, String>();
+        col1.setCellValueFactory(new PropertyValueFactory<>("firstName"));
+        var col2 = new TableColumn<Person, String>();
+        col2.setCellValueFactory(new PropertyValueFactory<>("lastName"));
+        tableView.getColumns().addAll(List.of(col1, col2));
+
+        var ab = new Person("a", "b");
+        tableView.getItems().add(ab);
+        var cd = new Person("c", "d");
+        tableView.getItems().add(cd);
+
+        var selectionModel = tableView.getSelectionModel();
+        selectionModel.select(0);
+        selectionModel.clearAndSelect(0, col1);
+
+        // The following asserts should work once JDK-8273336 is fixed:
+        //
+        // assertEquals(1, selectionModel.getSelectedIndices().size());
+        // assertEquals(0, (int)selectionModel.getSelectedIndices().get(0));
+
+        selectionModel.clearSelection();
+        selectionModel.selectRange(0, col1, 1, col2);
+        selectionModel.clearAndSelect(1, col2);
+
+        // assertEquals(1, selectionModel.getSelectedIndices().size());
+        // assertEquals(1, (int)selectionModel.getSelectedIndices().get(0));
     }
 
     /*********************************************************************
@@ -364,12 +435,12 @@ public class TableViewTest {
         assertEquals(0, table.getVisibleLeafColumns().size());
     }
 
-    @Test public void testSortOrderCleanup() {
-//        ObservableList<ObservablePerson> persons = ObservablePerson.createFXPersonList();
+    @Test
+    public void testSortOrderCleanup() {
         TableView table = new TableView();
-        TableColumn<String,String> first = new TableColumn<String,String>("first");
+        TableColumn<String,String> first = new TableColumn<>("first");
         first.setCellValueFactory(new PropertyValueFactory("firstName"));
-        TableColumn<String,String> second = new TableColumn<String,String>("second");
+        TableColumn<String,String> second = new TableColumn<>("second");
         second.setCellValueFactory(new PropertyValueFactory("lastName"));
         table.getColumns().addAll(first, second);
         table.getSortOrder().setAll(first, second);
@@ -392,7 +463,7 @@ public class TableViewTest {
     private static final Callback<TableView<String>, Boolean> SORT_SUCCESS_ASCENDING_SORT_POLICY =
             tableView -> {
                 if (tableView.getSortOrder().isEmpty()) return true;
-                FXCollections.sort(tableView.getItems(), new Comparator<String>() {
+                FXCollections.sort(tableView.getItems(), new Comparator<>() {
                     @Override public int compare(String o1, String o2) {
                         return o1.compareTo(o2);
                     }
@@ -401,9 +472,9 @@ public class TableViewTest {
             };
 
     private TableColumn<String, String> initSortTestStructure() {
-        TableColumn<String, String> col = new TableColumn<String, String>("column");
+        TableColumn<String, String> col = new TableColumn<>("column");
         col.setSortType(ASCENDING);
-        col.setCellValueFactory(param -> new ReadOnlyObjectWrapper<String>(param.getValue()));
+        col.setCellValueFactory(param -> new ReadOnlyObjectWrapper<>(param.getValue()));
         table.getColumns().add(col);
         table.getItems().addAll("Apple", "Orange", "Banana");
         return col;
@@ -655,8 +726,8 @@ public class TableViewTest {
         VirtualFlowTestUtils.assertListContainsItemsInOrder(c.getColumns(), col);
     }
 
-    @Ignore
-    @Test public void testComparatorChangesInSyncWithSortOrder_2() {
+    @Test
+    public void testComparatorChangesInSyncWithSortOrder_2() {
         // same as test above
         TableColumn<String, String> col = initSortTestStructure();
         assertNull(table.getComparator());
@@ -736,6 +807,41 @@ public class TableViewTest {
     /*********************************************************************
      * Tests for specific bugs                                           *
      ********************************************************************/
+
+    /**
+     * JDK-8277853
+     */
+    @Test public void testInvisibleScrollbarDoesNotScrollTableToBeginning() {
+        TableView<Person> table = new TableView<>(personTestData);
+        StageLoader sl = new StageLoader(table);
+
+        TableColumn firstNameCol = new TableColumn("First Name");
+        firstNameCol.setCellValueFactory(new PropertyValueFactory<>("firstName"));
+
+        TableColumn lastNameCol = new TableColumn("Last Name");
+        lastNameCol.setCellValueFactory(new PropertyValueFactory<>("lastName"));
+
+        TableColumn emailCol = new TableColumn("Email");
+        emailCol.setCellValueFactory(new PropertyValueFactory<>("email"));
+
+        table.getColumns().addAll(firstNameCol, lastNameCol, emailCol);
+        table.setItems(personTestData);
+
+        Toolkit.getToolkit().firePulse();
+
+        ScrollBar horizontalBar = VirtualFlowTestUtils.getVirtualFlowHorizontalScrollbar(table);
+        assertNotNull(horizontalBar);
+
+        double scrollbarPosition = horizontalBar.getMax();
+        horizontalBar.setValue(scrollbarPosition);
+
+        assertEquals(scrollbarPosition, horizontalBar.getValue(), 0);
+        horizontalBar.setVisible(false);
+        assertEquals(scrollbarPosition, horizontalBar.getValue(), 0);
+
+        sl.dispose();
+    }
+
     @Test public void test_rt16019() {
         // RT-16019: NodeMemory TableView tests fail with
         // IndexOutOfBoundsException (ObservableListWrapper.java:336)
@@ -757,8 +863,12 @@ public class TableViewTest {
         assertEquals(-1, tv.getSelectionModel().getSelectedIndex());
     }
 
-    @Ignore("Started failing recently, but manual tests seem to indicate the functionality is intact")
-    @Test public void test_rt17522_focusShouldMoveWhenItemAddedAtFocusIndex() {
+    /**
+     * JDK-8119787
+     * @ Ignore("Started failing recently, but manual tests seem to indicate the functionality is intact")
+     */
+    @Test
+    public void test_rt17522_focusShouldMoveWhenItemAddedAtFocusIndex() {
         final TableView lv = new TableView();
         StageLoader sl = new StageLoader(lv);
         FocusModel fm = lv.getFocusModel();
@@ -849,7 +959,7 @@ public class TableViewTest {
     }
 
     @Test public void test_rt18339_onlyEditWhenTableViewIsEditable_tableEditableIsFalse_columnEditableIsFalse() {
-        TableColumn<String,String> first = new TableColumn<String,String>("first");
+        TableColumn<String,String> first = new TableColumn<>("first");
         first.setEditable(false);
         table.getColumns().add(first);
         table.setEditable(false);
@@ -858,7 +968,7 @@ public class TableViewTest {
     }
 
     @Test public void test_rt18339_onlyEditWhenTableViewIsEditable_tableEditableIsFalse_columnEditableIsTrue() {
-        TableColumn<String,String> first = new TableColumn<String,String>("first");
+        TableColumn<String,String> first = new TableColumn<>("first");
         first.setEditable(true);
         table.getColumns().add(first);
         table.setEditable(false);
@@ -867,7 +977,7 @@ public class TableViewTest {
     }
 
     @Test public void test_rt18339_onlyEditWhenTableViewIsEditable_tableEditableIsTrue_columnEditableIsFalse() {
-        TableColumn<String,String> first = new TableColumn<String,String>("first");
+        TableColumn<String,String> first = new TableColumn<>("first");
         first.setEditable(false);
         table.getColumns().add(first);
         table.setEditable(true);
@@ -876,7 +986,7 @@ public class TableViewTest {
     }
 
     @Test public void test_rt18339_onlyEditWhenTableViewIsEditable_tableEditableIsTrue_columnEditableIsTrue() {
-        TableColumn<String,String> first = new TableColumn<String,String>("first");
+        TableColumn<String,String> first = new TableColumn<>("first");
         first.setEditable(true);
         table.getColumns().add(first);
         table.setEditable(true);
@@ -927,17 +1037,17 @@ public class TableViewTest {
     }
 
     @Test public void test_rt28534() {
-        TableView<Person> table = new TableView<Person>();
+        TableView<Person> table = new TableView<>();
         table.setItems(personTestData);
 
         TableColumn firstNameCol = new TableColumn("First Name");
-        firstNameCol.setCellValueFactory(new PropertyValueFactory<Person, String>("firstName"));
+        firstNameCol.setCellValueFactory(new PropertyValueFactory<>("firstName"));
 
         TableColumn lastNameCol = new TableColumn("Last Name");
-        lastNameCol.setCellValueFactory(new PropertyValueFactory<Person, String>("lastName"));
+        lastNameCol.setCellValueFactory(new PropertyValueFactory<>("lastName"));
 
         TableColumn emailCol = new TableColumn("Email");
-        emailCol.setCellValueFactory(new PropertyValueFactory<Person, String>("email"));
+        emailCol.setCellValueFactory(new PropertyValueFactory<>("email"));
 
         table.getColumns().addAll(firstNameCol, lastNameCol, emailCol);
 
@@ -955,12 +1065,12 @@ public class TableViewTest {
     }
 
     @Test public void test_rt22463() {
-        final TableView<RT_22463_Person> table = new TableView<RT_22463_Person>();
+        final TableView<RT_22463_Person> table = new TableView<>();
         table.setTableMenuButtonVisible(true);
         TableColumn c1 = new TableColumn("Id");
         TableColumn c2 = new TableColumn("Name");
-        c1.setCellValueFactory(new PropertyValueFactory<Person, Long>("id"));
-        c2.setCellValueFactory(new PropertyValueFactory<Person, String>("name"));
+        c1.setCellValueFactory(new PropertyValueFactory<>("id"));
+        c2.setCellValueFactory(new PropertyValueFactory<>("name"));
         table.getColumns().addAll(c1, c2);
 
         // before the change things display fine
@@ -991,7 +1101,7 @@ public class TableViewTest {
     @Test public void test_rt28637() {
         ObservableList<String> items = FXCollections.observableArrayList("String1", "String2", "String3", "String4");
 
-        final TableView<String> tableView = new TableView<String>();
+        final TableView<String> tableView = new TableView<>();
         final MultipleSelectionModel sm = tableView.getSelectionModel();
         tableView.setItems(items);
 
@@ -1012,7 +1122,7 @@ public class TableViewTest {
         // p1 == lowest first name
         Person p0, p1, p2, p3, p4;
 
-        TableView<Person> table = new TableView<Person>();
+        TableView<Person> table = new TableView<>();
         table.setItems(FXCollections.observableArrayList(
             p3 = new Person("Jacob", "Smith", "jacob.smith@example.com"),
             p2 = new Person("Isabella", "Johnson", "isabella.johnson@example.com"),
@@ -1021,7 +1131,7 @@ public class TableViewTest {
             p4 = new Person("Michael", "Brown", "michael.brown@example.com")));
 
         TableColumn firstNameCol = new TableColumn("First Name");
-        firstNameCol.setCellValueFactory(new PropertyValueFactory<Person, String>("firstName"));
+        firstNameCol.setCellValueFactory(new PropertyValueFactory<>("firstName"));
 
         // set dummy comparator to lock items in place until new comparator is set
         firstNameCol.setComparator((t, t1) -> 0);
@@ -1053,16 +1163,16 @@ public class TableViewTest {
     }
 
     @Test public void test_rt29331() {
-        TableView<Person> table = new TableView<Person>();
+        TableView<Person> table = new TableView<>();
 
         TableColumn firstNameCol = new TableColumn("First Name");
-        firstNameCol.setCellValueFactory(new PropertyValueFactory<Person, String>("firstName"));
+        firstNameCol.setCellValueFactory(new PropertyValueFactory<>("firstName"));
 
         TableColumn lastNameCol = new TableColumn("Last Name");
-        lastNameCol.setCellValueFactory(new PropertyValueFactory<Person, String>("lastName"));
+        lastNameCol.setCellValueFactory(new PropertyValueFactory<>("lastName"));
 
         TableColumn emailCol = new TableColumn("Email");
-        emailCol.setCellValueFactory(new PropertyValueFactory<Person, String>("email"));
+        emailCol.setCellValueFactory(new PropertyValueFactory<>("email"));
 
         TableColumn parentColumn = new TableColumn<>("Parent");
         parentColumn.getColumns().addAll(firstNameCol, lastNameCol, emailCol);
@@ -1088,10 +1198,10 @@ public class TableViewTest {
         table.getColumns().addAll(parentColumn);
 
         TableColumn firstNameCol = new TableColumn("First Name");
-        firstNameCol.setCellValueFactory(new PropertyValueFactory<Person, String>("firstName"));
+        firstNameCol.setCellValueFactory(new PropertyValueFactory<>("firstName"));
 
         TableColumn lastNameCol = new TableColumn("Last Name");
-        lastNameCol.setCellValueFactory(new PropertyValueFactory<Person, String>("lastName"));
+        lastNameCol.setCellValueFactory(new PropertyValueFactory<>("lastName"));
 
         parentColumn.getColumns().addAll(firstNameCol, lastNameCol);
 
@@ -1120,10 +1230,10 @@ public class TableViewTest {
         TableView<Person> table = new TableView<>(personTestData);
 
         TableColumn firstNameCol = new TableColumn("First Name");
-        firstNameCol.setCellValueFactory(new PropertyValueFactory<Person, String>("firstName"));
+        firstNameCol.setCellValueFactory(new PropertyValueFactory<>("firstName"));
 
         TableColumn lastNameCol = new TableColumn("Last Name");
-        lastNameCol.setCellValueFactory(new PropertyValueFactory<Person, String>("lastName"));
+        lastNameCol.setCellValueFactory(new PropertyValueFactory<>("lastName"));
 
         // this test differs from the previous one by installing the parent column
         // into the tableview after it has the children added into it
@@ -1158,13 +1268,13 @@ public class TableViewTest {
         TableSelectionModel sm = table.getSelectionModel();
 
         TableColumn firstNameCol = new TableColumn("First Name");
-        firstNameCol.setCellValueFactory(new PropertyValueFactory<Person, String>("firstName"));
+        firstNameCol.setCellValueFactory(new PropertyValueFactory<>("firstName"));
 
         TableColumn lastNameCol = new TableColumn("Last Name");
-        lastNameCol.setCellValueFactory(new PropertyValueFactory<Person, String>("lastName"));
+        lastNameCol.setCellValueFactory(new PropertyValueFactory<>("lastName"));
 
         TableColumn emailCol = new TableColumn("Email");
-        emailCol.setCellValueFactory(new PropertyValueFactory<Person, String>("email"));
+        emailCol.setCellValueFactory(new PropertyValueFactory<>("email"));
 
         table.getColumns().addAll(firstNameCol, lastNameCol, emailCol);
         sm.setCellSelectionEnabled(true);
@@ -1202,13 +1312,13 @@ public class TableViewTest {
         TableSelectionModel sm = table.getSelectionModel();
 
         TableColumn firstNameCol = new TableColumn("First Name");
-        firstNameCol.setCellValueFactory(new PropertyValueFactory<Person, String>("firstName"));
+        firstNameCol.setCellValueFactory(new PropertyValueFactory<>("firstName"));
 
         TableColumn lastNameCol = new TableColumn("Last Name");
-        lastNameCol.setCellValueFactory(new PropertyValueFactory<Person, String>("lastName"));
+        lastNameCol.setCellValueFactory(new PropertyValueFactory<>("lastName"));
 
         TableColumn emailCol = new TableColumn("Email");
-        emailCol.setCellValueFactory(new PropertyValueFactory<Person, String>("email"));
+        emailCol.setCellValueFactory(new PropertyValueFactory<>("email"));
 
         table.getColumns().addAll(firstNameCol, lastNameCol, emailCol);
         sm.setCellSelectionEnabled(true);
@@ -1239,13 +1349,13 @@ public class TableViewTest {
         TableSelectionModel sm = table.getSelectionModel();
 
         TableColumn firstNameCol = new TableColumn("First Name");
-        firstNameCol.setCellValueFactory(new PropertyValueFactory<Person, String>("firstName"));
+        firstNameCol.setCellValueFactory(new PropertyValueFactory<>("firstName"));
 
         TableColumn lastNameCol = new TableColumn("Last Name");
-        lastNameCol.setCellValueFactory(new PropertyValueFactory<Person, String>("lastName"));
+        lastNameCol.setCellValueFactory(new PropertyValueFactory<>("lastName"));
 
         TableColumn emailCol = new TableColumn("Email");
-        emailCol.setCellValueFactory(new PropertyValueFactory<Person, String>("email"));
+        emailCol.setCellValueFactory(new PropertyValueFactory<>("email"));
 
         table.getColumns().addAll(firstNameCol, lastNameCol, emailCol);
 
@@ -1278,7 +1388,7 @@ public class TableViewTest {
     }
 
     @Test public void test_rt29390() {
-        final TableView<Person> tableView = new TableView<Person>();
+        final TableView<Person> tableView = new TableView<>();
         tableView.setMaxHeight(50);
         tableView.setPrefHeight(50);
         tableView.setItems(FXCollections.observableArrayList(
@@ -1301,7 +1411,7 @@ public class TableViewTest {
         ));
 
         TableColumn firstNameCol = new TableColumn("First Name");
-        firstNameCol.setCellValueFactory(new PropertyValueFactory<Person, String>("firstName"));
+        firstNameCol.setCellValueFactory(new PropertyValueFactory<>("firstName"));
 
         tableView.getColumns().add(firstNameCol);
 
@@ -1320,7 +1430,7 @@ public class TableViewTest {
 
     @Test public void test_rt30400() {
         // create a listview that'll render cells using the check box cell factory
-        final TableView<Person> tableView = new TableView<Person>();
+        final TableView<Person> tableView = new TableView<>();
         tableView.setMinHeight(100);
         tableView.setPrefHeight(100);
         tableView.setItems(FXCollections.observableArrayList(
@@ -1328,7 +1438,7 @@ public class TableViewTest {
         ));
 
         TableColumn firstNameCol = new TableColumn("First Name");
-        firstNameCol.setCellValueFactory(new PropertyValueFactory<Person, String>("firstName"));
+        firstNameCol.setCellValueFactory(new PropertyValueFactory<>("firstName"));
         firstNameCol.setCellFactory(CheckBoxTableCell.forTableColumn(param -> new ReadOnlyBooleanWrapper(true)));
         tableView.getColumns().add(firstNameCol);
 
@@ -1344,7 +1454,7 @@ public class TableViewTest {
     @Test public void test_rt31165() {
         final ObservableList names = FXCollections.observableArrayList("Adam", "Alex", "Alfred", "Albert");
 
-        final TableView<Person> tableView = new TableView<Person>();
+        final TableView<Person> tableView = new TableView<>();
         tableView.setEditable(true);
         tableView.setItems(FXCollections.observableArrayList(
             new Person("Jacob", "Smith", "jacob.smith@example.com"),
@@ -1352,7 +1462,7 @@ public class TableViewTest {
         ));
 
         TableColumn firstNameCol = new TableColumn("First Name");
-        firstNameCol.setCellValueFactory(new PropertyValueFactory<Person, String>("firstName"));
+        firstNameCol.setCellValueFactory(new PropertyValueFactory<>("firstName"));
         firstNameCol.setCellFactory(ChoiceBoxTableCell.forTableColumn(names));
         firstNameCol.setEditable(true);
 
@@ -1380,14 +1490,14 @@ public class TableViewTest {
 
     @Test public void test_rt31471() {
         Person jacobSmith;
-        final TableView<Person> tableView = new TableView<Person>();
+        final TableView<Person> tableView = new TableView<>();
         tableView.setItems(FXCollections.observableArrayList(
                 jacobSmith = new Person("Jacob", "Smith", "jacob.smith@example.com"),
                 new Person("Jim", "Bob", "jim.bob@example.com")
         ));
 
         TableColumn firstNameCol = new TableColumn("First Name");
-        firstNameCol.setCellValueFactory(new PropertyValueFactory<Person, String>("firstName"));
+        firstNameCol.setCellValueFactory(new PropertyValueFactory<>("firstName"));
         tableView.getColumns().add(firstNameCol);
 
         IndexedCell cell = VirtualFlowTestUtils.getCell(tableView, 0);
@@ -1405,7 +1515,7 @@ public class TableViewTest {
     private int rt_31200_count = 0;
     @Test public void test_rt_31200_tableCell() {
         rt_31200_count = 0;
-        final TableView<Person> tableView = new TableView<Person>();
+        final TableView<Person> tableView = new TableView<>();
         tableView.setItems(FXCollections.observableArrayList(
                 new Person("Jacob", "Smith", "jacob.smith@example.com"),
                 new Person("Jim", "Bob", "jim.bob@example.com")
@@ -1418,9 +1528,9 @@ public class TableViewTest {
         firstNameCol.setCellFactory(new Callback<TableColumn<Person,String>, TableCell<Person, String>>() {
             @Override
             public TableCell<Person, String> call(TableColumn<Person,String> param) {
-                return new TableCellShim<Person, String>() {
+                return new TableCellShim<>() {
                     ImageView view = new ImageView();
-                    { setGraphic(view); };
+                    { setGraphic(view); }
 
                     @Override
                     public void updateItem(String item, boolean empty) {
@@ -1441,36 +1551,38 @@ public class TableViewTest {
 
         StageLoader sl = new StageLoader(tableView);
 
-        assertEquals(14, rt_31200_count);
+        assertTrue(rt_31200_count > 0);
+        assertTrue(rt_31200_count < 18);
 
         // resize the stage
         sl.getStage().setHeight(250);
         Toolkit.getToolkit().firePulse();
         sl.getStage().setHeight(50);
         Toolkit.getToolkit().firePulse();
-        assertEquals(14, rt_31200_count);
+        assertTrue(rt_31200_count > 0);
+        assertTrue(rt_31200_count < 18);
 
         sl.dispose();
     }
 
     @Test public void test_rt_31200_tableRow() {
         rt_31200_count = 0;
-        final TableView<Person> tableView = new TableView<Person>();
+        final TableView<Person> tableView = new TableView<>();
         tableView.setItems(FXCollections.observableArrayList(
                 new Person("Jacob", "Smith", "jacob.smith@example.com"),
                 new Person("Jim", "Bob", "jim.bob@example.com")
         ));
 
         TableColumn<Person,String> firstNameCol = new TableColumn("First Name");
-        firstNameCol.setCellValueFactory(new PropertyValueFactory<Person, String>("firstName"));
+        firstNameCol.setCellValueFactory(new PropertyValueFactory<>("firstName"));
         tableView.getColumns().add(firstNameCol);
 
         tableView.setRowFactory(new Callback<TableView<Person>, TableRow<Person>>() {
             @Override
             public TableRow<Person> call(TableView<Person> param) {
-                return new TableRowShim<Person>() {
+                return new TableRowShim<>() {
                     ImageView view = new ImageView();
-                    { setGraphic(view); };
+                    { setGraphic(view); }
 
                     @Override
                     public void updateItem(Person item, boolean empty) {
@@ -1505,9 +1617,9 @@ public class TableViewTest {
 
     @Test public void test_rt_31727() {
         TableView table = new TableView();
-        TableColumn<String,String> first = new TableColumn<String,String>("first");
+        TableColumn<String,String> first = new TableColumn<>("first");
         first.setCellValueFactory(new PropertyValueFactory("firstName"));
-        TableColumn<String,String> second = new TableColumn<String,String>("second");
+        TableColumn<String,String> second = new TableColumn<>("second");
         second.setCellValueFactory(new PropertyValueFactory("lastName"));
         table.getColumns().addAll(first, second);
 
@@ -1536,9 +1648,9 @@ public class TableViewTest {
 
     @Test public void test_rt_21517() {
         TableView table = new TableView();
-        TableColumn<String,String> first = new TableColumn<String,String>("first");
+        TableColumn<String,String> first = new TableColumn<>("first");
         first.setCellValueFactory(new PropertyValueFactory("firstName"));
-        TableColumn<String,String> second = new TableColumn<String,String>("second");
+        TableColumn<String,String> second = new TableColumn<>("second");
         second.setCellValueFactory(new PropertyValueFactory("lastName"));
         table.getColumns().addAll(first, second);
 
@@ -1624,9 +1736,9 @@ public class TableViewTest {
         first.setCellFactory(new Callback<TableColumn<Person, String>, TableCell<Person, String>>() {
             @Override
             public TableCell<Person, String> call(TableColumn<Person, String> param) {
-                return new TableCellShim<Person, String>() {
+                return new TableCellShim<>() {
                     Rectangle graphic = new Rectangle(10, 10, Color.RED);
-                    { setGraphic(graphic); };
+                    { setGraphic(graphic); }
 
                     @Override public void updateItem(String item, boolean empty) {
                         super.updateItem(item, empty);
@@ -1655,7 +1767,7 @@ public class TableViewTest {
 
     @Test public void test_rt_30484_tableRow() {
         TableView<Person> table = new TableView<>();
-        TableColumn<Person,String> first = new TableColumn<Person,String>("first");
+        TableColumn<Person,String> first = new TableColumn<>("first");
         first.setCellValueFactory(new PropertyValueFactory("firstName"));
         table.getColumns().addAll(first);
 
@@ -1666,9 +1778,9 @@ public class TableViewTest {
 
         table.setRowFactory(new Callback<TableView<Person>, TableRow<Person>>() {
             @Override public TableRow<Person> call(TableView<Person> param) {
-                return new TableRowShim<Person>() {
+                return new TableRowShim<>() {
                     Rectangle graphic = new Rectangle(10, 10, Color.RED);
-                    { setGraphic(graphic); };
+                    { setGraphic(graphic); }
 
                     @Override public void updateItem(Person item, boolean empty) {
                         super.updateItem(item, empty);
@@ -1744,7 +1856,7 @@ public class TableViewTest {
     @Test public void test_rt_31015() {
         TableView<Person> table = new TableView<>();
         table.setEditable(true);
-        TableColumn<Person,String> first = new TableColumn<Person,String>("first");
+        TableColumn<Person,String> first = new TableColumn<>("first");
         first.setCellValueFactory(new PropertyValueFactory("firstName"));
         table.getColumns().addAll(first);
 
@@ -1753,9 +1865,10 @@ public class TableViewTest {
         ));
 
         //Set cell factory for cells that allow editing
-        Callback<TableColumn<Person,String>, TableCell<Person, String>> cellFactory = new Callback<TableColumn<Person,String>, TableCell<Person, String>>() {
+        Callback<TableColumn<Person,String>, TableCell<Person, String>> cellFactory = new Callback<>() {
+            @Override
             public TableCell<Person, String> call(TableColumn<Person, String> p) {
-                return new TableCell<Person, String>() {
+                return new TableCell<>() {
                     @Override public void cancelEdit() {
                         super.cancelEdit();
                         rt_31015_count++;
@@ -1780,7 +1893,7 @@ public class TableViewTest {
 
     @Test public void test_rt_31653() {
         TableView<Person> table = new TableView<>();
-        TableColumn<Person,String> first = new TableColumn<Person,String>("first");
+        TableColumn<Person,String> first = new TableColumn<>("first");
         first.setCellValueFactory(new PropertyValueFactory("firstName"));
         table.getColumns().addAll(first);
 
@@ -1808,7 +1921,7 @@ public class TableViewTest {
                 new Person("John", "Smith", "jacob.smith@example.com")
         ));
 
-        TableColumn<Person,String> first = new TableColumn<Person,String>("first");
+        TableColumn<Person,String> first = new TableColumn<>("first");
         first.setCellValueFactory(new PropertyValueFactory("firstName"));
         Callback<TableColumn<Person, String>, TableCell<Person, String>> factory = TextFieldTableCell.forTableColumn();
         first.setCellFactory(factory);
@@ -1816,7 +1929,7 @@ public class TableViewTest {
         first.setOnEditStart(t -> {
             rt_29650_start_count++;
         });
-        first.setOnEditCommit(t -> {
+        first.addEventHandler(TableColumn.editCommitEvent(), t -> {
             rt_29650_commit_count++;
         });
         first.setOnEditCancel(t -> {
@@ -1835,8 +1948,7 @@ public class TableViewTest {
         KeyEventFirer keyboard = new KeyEventFirer(textField);
         keyboard.doKeyPress(KeyCode.ENTER);
 
-        // TODO should the following assert be enabled?
-//        assertEquals("Testing!", listView.getItems().get(0));
+        assertEquals("Testing!", table.getItems().get(0).getFirstName());
         assertEquals(1, rt_29650_start_count);
         assertEquals(1, rt_29650_commit_count);
         assertEquals(0, rt_29650_cancel_count);
@@ -1852,7 +1964,7 @@ public class TableViewTest {
             new Person("John", "Smith", "jacob.smith@example.com")
         ));
 
-        TableColumn<Person,String> first = new TableColumn<Person,String>("first");
+        TableColumn<Person,String> first = new TableColumn<>("first");
         first.setCellValueFactory(new PropertyValueFactory("firstName"));
         Callback<TableColumn<Person, String>, TableCell<Person, String>> factory = TextFieldTableCell.forTableColumn();
         first.setCellFactory(factory);
@@ -1883,11 +1995,11 @@ public class TableViewTest {
                 new Person("John", "Smith", "jacob.smith@example.com")
         ));
 
-        TableColumn<Person,String> first = new TableColumn<Person,String>("first");
+        TableColumn<Person,String> first = new TableColumn<>("first");
         first.setCellValueFactory(new PropertyValueFactory("firstName"));
-        TableColumn<Person,String> last = new TableColumn<Person,String>("last");
+        TableColumn<Person,String> last = new TableColumn<>("last");
         first.setCellValueFactory(new PropertyValueFactory("lastName"));
-        TableColumn<Person,String> email = new TableColumn<Person,String>("email");
+        TableColumn<Person,String> email = new TableColumn<>("email");
         first.setCellValueFactory(new PropertyValueFactory("email"));
         table.getColumns().addAll(first, last, email);
 
@@ -1914,11 +2026,11 @@ public class TableViewTest {
                 new Person("John", "Smith", "jacob.smith@example.com")
         ));
 
-        TableColumn<Person,String> first = new TableColumn<Person,String>("first");
+        TableColumn<Person,String> first = new TableColumn<>("first");
         first.setCellValueFactory(new PropertyValueFactory("firstName"));
-        TableColumn<Person,String> last = new TableColumn<Person,String>("last");
+        TableColumn<Person,String> last = new TableColumn<>("last");
         first.setCellValueFactory(new PropertyValueFactory("lastName"));
-        TableColumn<Person,String> email = new TableColumn<Person,String>("email");
+        TableColumn<Person,String> email = new TableColumn<>("email");
         first.setCellValueFactory(new PropertyValueFactory("email"));
         table.getColumns().addAll(first, last, email);
 
@@ -1938,18 +2050,22 @@ public class TableViewTest {
         sl.dispose();
     }
 
-//    @Ignore("Test started intermittently failing, most probably due to RT-36855 changeset")
-    @Test public void test_rt_34493() {
+    /**
+     * JDK-8093986
+     * @ Ignore("Test started intermittently failing, most probably due to RT-36855/JDK-8096512 changeset")
+     */
+    @Test
+    public void noAutoresizeOnColumnRemoval() {
         TableView<Person> table = new TableView<>();
         table.setItems(FXCollections.observableArrayList(
                 new Person("John", "Smith", "jacob.smith@example.com")
         ));
 
-        TableColumn<Person,String> first = new TableColumn<Person,String>("first");
+        TableColumn<Person,String> first = new TableColumn<>("first");
         first.setCellValueFactory(new PropertyValueFactory("firstName"));
-        TableColumn<Person,String> last = new TableColumn<Person,String>("last");
+        TableColumn<Person,String> last = new TableColumn<>("last");
         first.setCellValueFactory(new PropertyValueFactory("lastName"));
-        TableColumn<Person,String> email = new TableColumn<Person,String>("email");
+        TableColumn<Person,String> email = new TableColumn<>("email");
         first.setCellValueFactory(new PropertyValueFactory("email"));
         table.getColumns().addAll(first, last, email);
 
@@ -2007,7 +2123,7 @@ public class TableViewTest {
             new Person("Jim", "Bob", "jim.bob@example.com")
         ));
 
-        TableColumn<Person,String> first = new TableColumn<Person,String>("first");
+        TableColumn<Person,String> first = new TableColumn<>("first");
         first.setCellValueFactory(new PropertyValueFactory("firstName"));
         Callback<TableColumn<Person, String>, TableCell<Person, String>> factory = TextFieldTableCell.forTableColumn();
         first.setCellFactory(factory);       // note that only the first name col is editable
@@ -2529,7 +2645,7 @@ public class TableViewTest {
         treeTableView.getColumns().addAll(temp, temp2, temp3);
 
         //TABLE
-        TableView<Person> table = new TableView<Person>();
+        TableView<Person> table = new TableView<>();
         table.setEditable(true);
         table.getSelectionModel().setCellSelectionEnabled(true);
         TableColumn firstNameCol = new TableColumn("First Name");
@@ -2719,12 +2835,12 @@ public class TableViewTest {
     }
 
     private void readOnlyUnbackedObservableListSubListTest(int from, int to) {
-        final SelectedCellsMap<TablePosition> selectedCellsMap = new SelectedCellsMap<TablePosition>(c -> { /* Do nothing */}) {
+        final SelectedCellsMap<TablePosition> selectedCellsMap = new SelectedCellsMap<>(c -> { /* Do nothing */}) {
             @Override public boolean isCellSelectionEnabled() {
                 return false;
             }
         };
-        ReadOnlyUnbackedObservableList<TablePosition<Object, ?>> selectedCellsSeq = new ReadOnlyUnbackedObservableList<TablePosition<Object, ?>>() {
+        ReadOnlyUnbackedObservableList<TablePosition<Object, ?>> selectedCellsSeq = new ReadOnlyUnbackedObservableList<>() {
             @Override public TablePosition<Object, ?> get(int i) {
                 return selectedCellsMap.get(i);
             }
@@ -2738,9 +2854,55 @@ public class TableViewTest {
         selectedCellsSeq.subList(from, to);
     }
 
+  //--------- regression testing of JDK-8093144 (was: RT-35857)
+
+    @Test
+    public void test_rt35857_selectLast_retainAllSelected() {
+        TableView<String> tableView = new TableView<>(observableArrayList("A", "B", "C"));
+        tableView.getSelectionModel().select(tableView.getItems().size() - 1);
+
+        assert_rt35857(tableView.getItems(), tableView.getSelectionModel(), true);
+    }
+
+    @Test
+    public void test_rt35857_selectLast_removeAllSelected() {
+        TableView<String> tableView = new TableView<>(observableArrayList("A", "B", "C"));
+        tableView.getSelectionModel().select(tableView.getItems().size() - 1);
+
+        assert_rt35857(tableView.getItems(), tableView.getSelectionModel(), false);
+    }
+
+    @Test
+    public void test_rt35857_selectFirst_retainAllSelected() {
+        TableView<String> tableView = new TableView<>(observableArrayList("A", "B", "C"));
+        tableView.getSelectionModel().select(0);
+
+        assert_rt35857(tableView.getItems(), tableView.getSelectionModel(), true);
+    }
+
+    /**
+     * Modifies the items by retain/removeAll (depending on the given flag) selectedItems
+     * of the selectionModels and asserts the state of the items.
+     */
+    protected <T> void assert_rt35857(ObservableList<T> items, MultipleSelectionModel<T> sm, boolean retain) {
+        T selectedItem = sm.getSelectedItem();
+        ObservableList<T> expected;
+        if (retain) {
+            expected = FXCollections.observableArrayList(selectedItem);
+            items.retainAll(sm.getSelectedItems());
+        } else {
+            expected = FXCollections.observableArrayList(items);
+            expected.remove(selectedItem);
+            items.removeAll(sm.getSelectedItems());
+        }
+        String modified = (retain ? " retainAll " : " removeAll ") + " selectedItems ";
+        assertEquals("expected list after" + modified, expected, items);
+    }
+
+
     @Test public void test_rt35857() {
         ObservableList<String> fxList = FXCollections.observableArrayList("A", "B", "C");
-        final TableView<String> tableView = new TableView<String>(fxList);
+        final TableView<String> tableView = new TableView<>(fxList);
 
         tableView.getSelectionModel().select(0);
 
@@ -2754,15 +2916,17 @@ public class TableViewTest {
         assertEquals("C", fxList.get(1));
     }
 
+//--------- end regression testing of JDK-8093144 (was: RT-35857)
+
     @Test public void test_getColumnHeaderForColumn() {
         TableView<Person> table = new TableView<>();
         table.setItems(FXCollections.observableArrayList(
                 new Person("John", "Smith", "jacob.smith@example.com")
         ));
 
-        TableColumn<Person,String> first = new TableColumn<Person,String>("first");
+        TableColumn<Person,String> first = new TableColumn<>("first");
         first.setCellValueFactory(new PropertyValueFactory("firstName"));
-        TableColumn<Person,String> last = new TableColumn<Person,String>("last");
+        TableColumn<Person,String> last = new TableColumn<>("last");
         first.setCellValueFactory(new PropertyValueFactory("lastName"));
 
         TableColumn name = new TableColumn("Name");
@@ -3028,7 +3192,7 @@ public class TableViewTest {
         tableView.setRowFactory(new Callback<TableView<String>, TableRow<String>>() {
             @Override public TableRow<String> call(TableView<String> param) {
                 rt36556_instanceCount++;
-                return new TableRow<String>();
+                return new TableRow<>();
             }
         });
 
@@ -3070,7 +3234,7 @@ public class TableViewTest {
     }
 
     private void test_rt_36656(boolean removeFromSortOrder, boolean removeFromColumns, boolean setInvisible) {
-        TableView<Person> table = new TableView<Person>();
+        TableView<Person> table = new TableView<>();
         table.setItems(personTestData);
 
         TableColumn firstNameCol = new TableColumn("First Name");
@@ -3526,7 +3690,7 @@ public class TableViewTest {
     }
 
     private void test_rt_37054(boolean scroll) {
-        ObjectProperty<Integer> offset = new SimpleObjectProperty<Integer>(0);
+        ObjectProperty<Integer> offset = new SimpleObjectProperty<>(0);
 
         // create table with a bunch of rows and 1 column...
         TableView<Integer> table = new TableView<>();
@@ -3538,7 +3702,7 @@ public class TableViewTest {
         column.setPrefWidth( 150 );
 
         // each cell displays x, where x = "cell row number + offset"
-        column.setCellValueFactory( cdf -> new ObjectBinding<Integer>() {
+        column.setCellValueFactory( cdf -> new ObjectBinding<>() {
             { super.bind( offset ); }
 
             @Override protected Integer computeValue() {
@@ -3681,7 +3845,7 @@ public class TableViewTest {
         }
         final TableColumn<Integer, Integer> column = new TableColumn<>("Column");
         table.getColumns().add(column);
-        column.setCellValueFactory( cdf -> new ReadOnlyObjectWrapper<Integer>(cdf.getValue()));
+        column.setCellValueFactory( cdf -> new ReadOnlyObjectWrapper<>(cdf.getValue()));
 
         table.getSelectionModel().getSelectedItems().addListener((ListChangeListener.Change<? extends Integer> c) -> {
             if (callCNextOnce) {
@@ -3740,7 +3904,7 @@ public class TableViewTest {
         if (useFixedCellSize) {
             tableView.setFixedCellSize(24);
         }
-        tableView.setRowFactory(tv -> new TableRowShim<String>() {
+        tableView.setRowFactory(tv -> new TableRowShim<>() {
             @Override public void updateItem(String color, boolean empty) {
                 rt_35395_counter += testCell ? 0 : 1;
                 super.updateItem(color, empty);
@@ -3749,7 +3913,7 @@ public class TableViewTest {
 
         TableColumn<String,String> column = new TableColumn<>("Column");
         column.setCellValueFactory(param -> new ReadOnlyStringWrapper(param.getValue()));
-        column.setCellFactory(tv -> new TableCellShim<String,String>() {
+        column.setCellFactory(tv -> new TableCellShim<>() {
             @Override public void updateItem(String color, boolean empty) {
                 rt_35395_counter += testCell ? 1 : 0;
                 super.updateItem(color, empty);
@@ -4601,17 +4765,14 @@ public class TableViewTest {
         assertEquals(0, listOne.size());
         assertEquals(0, listTwo.size());
 
-        System.out.println("Test One:");
         listTwo.setAll("a", "b", "c", "d");
         assertEquals(4, listOne.size());
         assertEquals(4, listTwo.size());
 
-        System.out.println("\nTest Two:");
         listTwo.setAll("e", "f", "g", "h");
         assertEquals(4, listOne.size());
         assertEquals(4, listTwo.size());
 
-        System.out.println("\nTest Three:");
         listTwo.setAll("i", "j", "k", "l");
         assertEquals(4, listOne.size());
         assertEquals(4, listTwo.size());
@@ -4629,7 +4790,8 @@ public class TableViewTest {
         TableView.TableViewSelectionModel<String> sm = stringTableView.getSelectionModel();
         sm.setSelectionMode(SelectionMode.MULTIPLE);
 
-        sm.getSelectedItems().addListener((ListChangeListener<String>) change -> {
+        // Enable below prints for debug if needed
+        /*sm.getSelectedItems().addListener((ListChangeListener<String>) change -> {
             while (change.next()) {
                 System.out.println("sm.getSelectedItems(): " + change.getList());
             }
@@ -4639,7 +4801,7 @@ public class TableViewTest {
             while (change.next()) {
                 System.out.println("rt_39482_list: " + change.getList());
             }
-        });
+        });*/
 
         Bindings.bindContent(rt_39482_list, sm.getSelectedItems());
 
@@ -4656,7 +4818,6 @@ public class TableViewTest {
                                          TableView.TableViewSelectionModel<String> sm,
                                          int rowToSelect,
                                          TableColumn<String,String> columnToSelect) {
-        System.out.println("\nSelect row " + rowToSelect);
         sm.selectAll();
         assertEquals(4, sm.getSelectedCells().size());
         assertEquals(4, sm.getSelectedIndices().size());
@@ -4943,6 +5104,11 @@ public class TableViewTest {
             if (obj == null) return false;
             return id == ((RT22599_DataType)obj).id;
         }
+
+        @Override
+        public int hashCode() {
+            return id;
+        }
     }
 
     private int rt_39966_count = 0;
@@ -5158,7 +5324,7 @@ public class TableViewTest {
             // number of items selected
             c.reset();
             c.next();
-            System.out.println("Added items: " + c.getAddedSubList());
+            //System.out.println("Added items: " + c.getAddedSubList());
             assertEquals(indices.length, c.getAddedSize());
             assertArrayEquals(indices, c.getAddedSubList().stream().mapToInt(i -> i).toArray());
         };
@@ -5425,5 +5591,416 @@ public class TableViewTest {
         assertArrayEquals(new String[] {"column-header", "table-column", "child"}, childHeader.getStyleClass().toArray());
 
         sl.dispose();
+    }
+
+    // see JDK-8177945
+    @Test
+    public void test_addingNewItemsDoesNotChangePseudoClassSelectedState() {
+        TableColumn firstNameCol = new TableColumn("First Name");
+        firstNameCol.setCellValueFactory(new PropertyValueFactory<Person, String>("firstName"));
+
+        TableView<Person> table = new TableView<>();
+        table.setItems(personTestData);
+        table.getColumns().add(firstNameCol);
+
+        sm = table.getSelectionModel();
+        sm.setCellSelectionEnabled(true);
+
+        StageLoader sl = new StageLoader(table);
+
+        table.scrollTo(3);
+        sm.select(3);
+
+        Toolkit.getToolkit().firePulse();
+
+        assertEquals(1, sm.getSelectedCells().size());
+
+        IndexedCell cell = VirtualFlowTestUtils.getCell(table, 3, 0);
+        assertTrue(cell.isSelected());
+
+        ObservableSet<PseudoClass> pseudoClassStates = cell.getPseudoClassStates();
+        String selectedState = "selected";
+        assertTrue(pseudoClassStates.stream().anyMatch(p -> selectedState.equals(p.getPseudoClassName())));
+
+        AtomicInteger counter = new AtomicInteger();
+        AtomicBoolean selected = new AtomicBoolean(true);
+        pseudoClassStates.addListener((SetChangeListener<PseudoClass>) change -> {
+            if (selected.get() && pseudoClassStates.stream().noneMatch(p -> selectedState.equals(p.getPseudoClassName()))) {
+                counter.incrementAndGet(); // deselected
+                selected.set(false);
+            } else if (!selected.get() && pseudoClassStates.stream().anyMatch(p -> selectedState.equals(p.getPseudoClassName()))) {
+                counter.incrementAndGet(); // selected
+                selected.set(true);
+            }
+        });
+
+        Toolkit.getToolkit().firePulse();
+        for (int i = 0; i < 10; i++) {
+            table.getItems().add(new Person("Test", i));
+            Toolkit.getToolkit().firePulse();
+            assertEquals(0, counter.get());
+        }
+
+        sl.dispose();
+    }
+
+    @Test
+    public void test_clearAndSelectChangeMultipleSelectionCellMode() {
+        TableColumn<Person, String> firstNameCol = new TableColumn<>("First Name");
+        firstNameCol.setCellValueFactory(new PropertyValueFactory<>("firstName"));
+
+        TableColumn<Person, String> lastNameCol = new TableColumn<>("Last Name");
+        lastNameCol.setCellValueFactory(new PropertyValueFactory<>("lastName"));
+
+        TableView<Person> table = new TableView<>();
+        table.setItems(personTestData);
+        table.getColumns().addAll(firstNameCol, lastNameCol);
+
+        sm = table.getSelectionModel();
+        sm.setCellSelectionEnabled(true);
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+
+        StageLoader sl = new StageLoader(table);
+        KeyEventFirer keyboard = new KeyEventFirer(table);
+
+        assertEquals(0, sm.getSelectedItems().size());
+
+        sm.select(0, firstNameCol);
+        assertEquals(1, sm.getSelectedCells().size());
+        assertEquals(1, sm.getSelectedItems().size());
+
+        keyboard.doKeyPress(KeyCode.RIGHT, KeyModifier.SHIFT);
+        assertEquals(2, sm.getSelectedCells().size());
+        assertEquals(1, sm.getSelectedItems().size());
+
+        keyboard.doKeyPress(KeyCode.LEFT);
+        assertTrue(VirtualFlowTestUtils.getCell(table, 0, 0).isSelected());
+        assertFalse(VirtualFlowTestUtils.getCell(table, 0, 1).isSelected());
+        assertEquals(1, sm.getSelectedCells().size());
+        assertEquals(1, sm.getSelectedItems().size());
+
+        sm.clearSelection();
+
+        sm.selectRange(0, firstNameCol, 1, lastNameCol);
+        assertEquals(4, sm.getSelectedCells().size());
+        assertEquals(2, sm.getSelectedItems().size());
+
+        sm.clearAndSelect(0, firstNameCol);
+        assertEquals(1, sm.getSelectedCells().size());
+        assertEquals(1, sm.getSelectedItems().size());
+
+        sl.dispose();
+    }
+
+    @Test
+    public void test_ChangeToStringKeyboardMultipleSelectionCellMode() {
+        final Thread.UncaughtExceptionHandler exceptionHandler = Thread.currentThread().getUncaughtExceptionHandler();
+        Thread.currentThread().setUncaughtExceptionHandler((t, e) -> fail("We don't expect any exceptions in this test!"));
+
+        TableColumn<Person, String> firstNameCol = new TableColumn<>("First Name");
+        firstNameCol.setCellValueFactory(new PropertyValueFactory<>("firstName"));
+
+        TableColumn<Person, String> lastNameCol = new TableColumn<>("Last Name");
+        lastNameCol.setCellValueFactory(new PropertyValueFactory<>("lastName"));
+
+        TableView<Person> table = new TableView<>();
+        table.setItems(personTestData);
+        table.getColumns().addAll(firstNameCol, lastNameCol);
+
+        sm = table.getSelectionModel();
+        sm.setCellSelectionEnabled(true);
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+
+        // Call change::toString
+        table.getSelectionModel().getSelectedItems().addListener((ListChangeListener<Person>) Object::toString);
+
+        StageLoader sl = new StageLoader(table);
+
+        KeyEventFirer keyboard = new KeyEventFirer(table);
+
+        assertEquals(0, sm.getSelectedItems().size());
+
+        sm.select(0, firstNameCol);
+        assertEquals(1, sm.getSelectedCells().size());
+        assertEquals(1, sm.getSelectedItems().size());
+
+        keyboard.doKeyPress(KeyCode.RIGHT, KeyModifier.SHIFT);
+        assertEquals(2, sm.getSelectedCells().size());
+        assertEquals(1, sm.getSelectedItems().size());
+
+        sm.clearSelection();
+
+        sl.dispose();
+
+        // reset the exception handler
+        Thread.currentThread().setUncaughtExceptionHandler(exceptionHandler);
+    }
+
+    @Test
+    public void test_ChangeToStringMouseMultipleSelectionCellMode() {
+        final Thread.UncaughtExceptionHandler exceptionHandler = Thread.currentThread().getUncaughtExceptionHandler();
+        Thread.currentThread().setUncaughtExceptionHandler((t, e) -> fail("We don't expect any exceptions in this test!"));
+
+        TableColumn<Person, String> firstNameCol = new TableColumn<>("First Name");
+        firstNameCol.setCellValueFactory(new PropertyValueFactory<>("firstName"));
+
+        TableColumn<Person, String> lastNameCol = new TableColumn<>("Last Name");
+        lastNameCol.setCellValueFactory(new PropertyValueFactory<>("lastName"));
+
+        TableView<Person> table = new TableView<>();
+        table.setItems(personTestData);
+        table.getColumns().addAll(firstNameCol, lastNameCol);
+
+        sm = table.getSelectionModel();
+        sm.setCellSelectionEnabled(true);
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+
+        // Call change::toString
+        table.getSelectionModel().getSelectedItems().addListener((ListChangeListener<Person>) Object::toString);
+
+        assertEquals(0, sm.getSelectedItems().size());
+
+        sm.select(0, firstNameCol);
+        assertTrue(sm.isSelected(0, firstNameCol));
+        assertEquals(1, sm.getSelectedCells().size());
+        assertEquals(1, sm.getSelectedItems().size());
+
+        TableCell<Person, String> cell = (TableCell<Person, String>) VirtualFlowTestUtils.getCell(table, 0, 1);
+        new MouseEventFirer(cell).fireMousePressAndRelease(KeyModifier.getShortcutKey());
+        assertTrue(sm.isSelected(0, firstNameCol));
+        assertTrue(sm.isSelected(0, lastNameCol));
+        assertEquals(2, sm.getSelectedCells().size());
+        assertEquals(1, sm.getSelectedItems().size());
+
+        // reset the exception handler
+        Thread.currentThread().setUncaughtExceptionHandler(exceptionHandler);
+    }
+
+    // see JDK-8284665
+    @Test
+    public void testAnchorRemainsWhenAddingMoreItemsBelow() {
+        TableView<String> stringTableView = new TableView<>();
+        stringTableView.getItems().addAll("a", "b", "c", "d");
+
+        TableColumn<String,String> column = new TableColumn<>("Column");
+        column.setCellValueFactory(cdf -> new ReadOnlyStringWrapper(cdf.getValue()));
+        stringTableView.getColumns().add(column);
+
+        TableSelectionModel<String> sm = stringTableView.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+
+        // click on row 1
+        Cell startCell = VirtualFlowTestUtils.getCell(stringTableView, 1, 0);
+        new MouseEventFirer(startCell).fireMousePressAndRelease();
+
+        assertTrue(sm.isSelected(1));
+        assertEquals("b", sm.getSelectedItem());
+
+        TablePosition anchor = TableCellBehavior.getAnchor(stringTableView, null);
+        assertTrue(TableCellBehavior.hasNonDefaultAnchor(stringTableView));
+        assertEquals(1, anchor.getRow());
+        assertEquals(column, anchor.getTableColumn());
+
+        // now add a new item
+        stringTableView.getItems().add("e");
+
+        // select also row 2
+        Cell endCell = VirtualFlowTestUtils.getCell(stringTableView, 2, 0);
+        new MouseEventFirer(endCell).fireMousePressAndRelease(KeyModifier.SHIFT);
+
+        // row 1 should remain selected
+        assertTrue(sm.isSelected(1));
+        assertTrue(sm.isSelected(2));
+
+        // anchor should remain at 1
+        anchor = TableCellBehavior.getAnchor(stringTableView, null);
+        assertTrue(TableCellBehavior.hasNonDefaultAnchor(stringTableView));
+        assertEquals(1, anchor.getRow());
+        assertEquals(column, anchor.getTableColumn());
+    }
+
+    // see JDK-8089009
+    @Test public void testHScrollBarVisibilityForConstrainedTable() {
+        TableColumn firstNameCol = new TableColumn("First Name");
+        firstNameCol.setCellValueFactory(new PropertyValueFactory<Person, String>("firstName"));
+
+        TableColumn lastNameCol = new TableColumn("Last Name");
+        lastNameCol.setCellValueFactory(new PropertyValueFactory<Person, String>("lastName"));
+
+        TableColumn emailCol = new TableColumn("Email");
+        emailCol.setCellValueFactory(new PropertyValueFactory<Person, String>("email"));
+
+        final double initialWidth = 500;
+        TableView<Person> table = new TableView<>(personTestData);
+        table.setMinWidth(initialWidth);
+        table.getColumns().addAll(firstNameCol, lastNameCol, emailCol);
+        table.setItems(personTestData);
+        table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+
+        StageLoader sl = new StageLoader(table);
+        Toolkit.getToolkit().firePulse();
+
+        ScrollBar horizontalBar = VirtualFlowTestUtils.getVirtualFlowHorizontalScrollbar(table);
+        assertNotNull(horizontalBar);
+        assertEquals(initialWidth, table.getWidth(), 0);
+        assertFalse(horizontalBar.isVisible());
+
+        // Reduce table width by 10px
+        table.setMinWidth(initialWidth - 10);
+        Toolkit.getToolkit().firePulse();
+        assertEquals(initialWidth - 10, table.getWidth(), 0);
+        assertFalse(horizontalBar.isVisible());
+
+        // Reset table width
+        table.setMinWidth(initialWidth);
+        Toolkit.getToolkit().firePulse();
+        assertEquals(initialWidth, table.getWidth(), 0);
+        assertFalse(horizontalBar.isVisible());
+
+        // Reduce table width by 1px
+        table.setMinWidth(initialWidth - 1);
+        Toolkit.getToolkit().firePulse();
+        assertEquals(initialWidth - 1, table.getWidth(), 0);
+        assertFalse(horizontalBar.isVisible());
+
+        sl.dispose();
+    }
+
+    // See JDK-8087673
+    @Test
+    public void testTableMenuButtonDoesNotOverlapColumnHeaderGraphic() {
+        TableView<String> table = new TableView<>();
+        table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+        table.setTableMenuButtonVisible(true);
+        TableColumn<String, String> column = new TableColumn<>();
+        Slider slider = new Slider();
+        slider.setValue(100);
+        column.setGraphic(slider);
+        table.getColumns().add(column);
+
+        stageLoader = new StageLoader(table);
+
+        Toolkit.getToolkit().firePulse();
+
+        ScrollBar vbar = VirtualFlowTestUtils.getVirtualFlowVerticalScrollbar(table);
+        assertFalse(vbar.isVisible());
+
+        StackPane thumb = (StackPane) slider.lookup(".thumb");
+        assertNotNull(thumb);
+        double thumbMaxX = thumb.localToScene(thumb.getLayoutBounds()).getMaxX();
+
+        StackPane corner = (StackPane) table.lookup(".show-hide-columns-button");
+        assertNotNull(corner);
+        assertTrue(corner.isVisible());
+        double cornerMinX = corner.localToScene(corner.getLayoutBounds()).getMinX();
+
+        // Verify that the slider's thumb is fully visible, and it is not overlapped
+        // by the corner region
+        assertTrue(thumbMaxX < cornerMinX);
+    }
+
+    // See JDK-8087673
+    @Test
+    public void testTableMenuButtonDoesNotOverlapLastColumnHeader() {
+        TableView<String> table = new TableView<>();
+        table.setTableMenuButtonVisible(true);
+        for (int i = 0; i < 10; i++) {
+            final TableColumn<String, String> column = new TableColumn<>(i + "          ");
+            column.setCellValueFactory(value -> new SimpleStringProperty(value.getValue()));
+            table.getColumns().add(column);
+        }
+        for (int i = 0; i < 10; i++) {
+            table.getItems().add(Integer.toString(i));
+        }
+
+        stageLoader = new StageLoader(new Scene(table, 300, 300));
+
+        TableColumn<String, ?> lastColumn = table.getColumns().get(9);
+        lastColumn.setSortType(DESCENDING);
+        table.getSortOrder().setAll(lastColumn);
+        Toolkit.getToolkit().firePulse();
+
+        TableColumnHeader lastColumnHeader = VirtualFlowTestUtils.getTableColumnHeader(table, lastColumn);
+        assertNotNull(lastColumnHeader);
+
+        Region arrow = (Region) lastColumnHeader.lookup(".arrow");
+        assertNotNull(arrow);
+
+        ScrollBar vbar = VirtualFlowTestUtils.getVirtualFlowVerticalScrollbar(table);
+        assertFalse(vbar.isVisible());
+        ScrollBar hbar = VirtualFlowTestUtils.getVirtualFlowHorizontalScrollbar(table);
+        assertTrue(hbar.isVisible());
+
+        table.scrollToColumnIndex(9);
+
+        double headerMinX = lastColumnHeader.localToScene(lastColumnHeader.getLayoutBounds()).getMinX();
+        double headerMaxX = lastColumnHeader.localToScene(lastColumnHeader.getLayoutBounds()).getMaxX();
+
+        double arrowMaxX = arrow.localToScene(arrow.getLayoutBounds()).getMaxX();
+
+        StackPane corner = (StackPane) table.lookup(".show-hide-columns-button");
+        assertNotNull(corner);
+        assertTrue(corner.isVisible());
+        double cornerMinX = corner.localToScene(corner.getLayoutBounds()).getMinX();
+
+        // Verify that the corner region is over the last visible column header
+        assertTrue(headerMinX < cornerMinX);
+        assertTrue(cornerMinX < headerMaxX);
+
+        // Verify that the arrow is fully visible, and it is not overlapped
+        // by the corner region
+        assertTrue(arrowMaxX < cornerMinX);
+    }
+
+    // See JDK-8089280
+    @Test
+    public void testSuppressHorizontalScrollBar() {
+        TableView<String> table = new TableView<>();
+        for (int i = 0; i < 10; i++) {
+            final TableColumn<String, String> c = new TableColumn<>("C" + i);
+            c.setCellValueFactory(value -> new SimpleStringProperty(value.getValue()));
+            c.setMinWidth(200); // caused HSB before the fix
+            table.getColumns().add(c);
+        }
+
+        for (int i = 0; i < 10; i++) {
+            table.getItems().add("");
+        }
+
+        stageLoader = new StageLoader(new Scene(table, 50, 50));
+
+        ScrollBar hbar = VirtualFlowTestUtils.getVirtualFlowHorizontalScrollbar(table);
+        assertTrue(hbar.isVisible());
+
+        table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+
+        Toolkit.getToolkit().firePulse();
+
+        hbar = VirtualFlowTestUtils.getVirtualFlowHorizontalScrollbar(table);
+        assertFalse(hbar.isVisible()); // used to fail here
+    }
+
+    @Test
+    public void testQueryAccessibleAttributeSelectedItemsWithNullSelectionModel() {
+        table.getItems().addAll("1", "2");
+        table.setSelectionModel(null);
+        stageLoader = new StageLoader(table);
+
+        Object result = table.queryAccessibleAttribute(AccessibleAttribute.SELECTED_ITEMS);
+        // Should be an empty observable array list
+        assertEquals(FXCollections.observableArrayList(), result);
+    }
+
+    @Ignore("JDK-8296413")
+    @Test
+    public void testQueryAccessibleAttributeFocusItemWithNullFocusModel() {
+        table.getItems().addAll("1", "2");
+        table.setFocusModel(null);
+
+        stageLoader = new StageLoader(table);
+
+        Object result = table.queryAccessibleAttribute(AccessibleAttribute.FOCUS_ITEM);
+
+        assertNull(result);
     }
 }

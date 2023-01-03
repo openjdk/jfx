@@ -29,7 +29,6 @@
 
 #include "SecurityOrigin.h"
 #include "ServiceWorkerRegistrationKey.h"
-#include <pal/SessionID.h>
 #include <wtf/ThreadSafeRefCounted.h>
 #include <wtf/WeakPtr.h>
 #include <wtf/WorkQueue.h>
@@ -39,6 +38,7 @@ namespace WebCore {
 
 class RegistrationStore;
 class SQLiteDatabase;
+class SWScriptStorage;
 struct ServiceWorkerContextData;
 
 WEBCORE_EXPORT String serviceWorkerRegistrationDatabaseFilename(const String& databaseDirectory);
@@ -53,7 +53,7 @@ public:
 
     ~RegistrationDatabase();
 
-    void pushChanges(const HashMap<ServiceWorkerRegistrationKey, Optional<ServiceWorkerContextData>>&, CompletionHandler<void()>&&);
+    void pushChanges(const HashMap<ServiceWorkerRegistrationKey, std::optional<ServiceWorkerContextData>>&, CompletionHandler<void()>&&);
     void clearAll(CompletionHandler<void()>&&);
     void close(CompletionHandler<void()>&&);
 
@@ -62,15 +62,19 @@ private:
 
     String databaseDirectoryIsolatedCopy() const { return m_databaseDirectory.isolatedCopy(); }
 
+    enum class ShouldRetry { No, Yes };
+    void schedulePushChanges(Vector<ServiceWorkerContextData>&&, Vector<ServiceWorkerRegistrationKey>&&, ShouldRetry, CompletionHandler<void()>&&);
     void postTaskToWorkQueue(Function<void()>&&);
 
     // Methods to be run on the work queue.
-    void openSQLiteDatabase(const String& fullFilename);
+    bool openSQLiteDatabase(const String& fullFilename);
     String ensureValidRecordsTable();
     String importRecords();
     void importRecordsIfNecessary();
-    void doPushChanges(const Vector<ServiceWorkerContextData>&, const Vector<ServiceWorkerRegistrationKey>&);
+    bool doPushChanges(const Vector<ServiceWorkerContextData>&, const Vector<ServiceWorkerRegistrationKey>&);
     void doClearOrigin(const SecurityOrigin&);
+    SWScriptStorage& scriptStorage();
+    String scriptStorageDirectory() const;
 
     // Replies to the main thread.
     void addRegistrationToStore(ServiceWorkerContextData&&);
@@ -79,10 +83,11 @@ private:
 
     Ref<WorkQueue> m_workQueue;
     WeakPtr<RegistrationStore> m_store;
-    PAL::SessionID m_sessionID;
+    std::unique_ptr<SWScriptStorage> m_scriptStorage;
     String m_databaseDirectory;
     String m_databaseFilePath;
     std::unique_ptr<SQLiteDatabase> m_database;
+    uint64_t m_pushCounter { 0 };
 };
 
 } // namespace WebCore

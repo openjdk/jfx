@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -43,7 +43,6 @@ import javafx.scene.shape.StrokeLineJoin;
 import javafx.scene.shape.StrokeType;
 import javafx.stage.FileChooser.ExtensionFilter;
 import javafx.stage.Modality;
-import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 import javafx.stage.Window;
 import java.io.File;
@@ -64,9 +63,10 @@ import com.sun.javafx.runtime.async.AsyncOperation;
 import com.sun.javafx.runtime.async.AsyncOperationListener;
 import com.sun.javafx.scene.text.TextLayoutFactory;
 import com.sun.scenario.DelayedRunnable;
-import com.sun.scenario.animation.AbstractMasterTimer;
+import com.sun.scenario.animation.AbstractPrimaryTimer;
 import com.sun.scenario.effect.FilterContext;
 import com.sun.scenario.effect.Filterable;
+import java.util.Optional;
 
 /**
  * A stubbed out Toolkit that provides no useful implementation. This is used
@@ -102,27 +102,17 @@ final public class DummyToolkit extends Toolkit {
     }
 
     @Override
-    public TKStage createTKStage(Window peerWindow, boolean securityDialog, StageStyle stageStyle, boolean primary, Modality modality, TKStage owner, boolean rtl, AccessControlContext acc) {
+    public TKStage createTKStage(Window peerWindow, boolean securityDialog, StageStyle stageStyle, boolean primary, Modality modality, TKStage owner, boolean rtl, @SuppressWarnings("removal") AccessControlContext acc) {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 
     @Override
-    public TKStage createTKPopupStage(Window peerWindow, StageStyle popupStyle, TKStage owner, AccessControlContext acc) {
+    public TKStage createTKPopupStage(Window peerWindow, StageStyle popupStyle, TKStage owner, @SuppressWarnings("removal") AccessControlContext acc) {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 
     @Override
-    public TKStage createTKEmbeddedStage(HostInterface host, AccessControlContext acc) {
-        throw new UnsupportedOperationException("Not supported yet.");
-    }
-
-    @Override
-    public AppletWindow createAppletWindow(long parent, String serverName) {
-        throw new UnsupportedOperationException("Not supported yet.");
-    }
-
-    @Override
-    public void closeAppletWindow() {
+    public TKStage createTKEmbeddedStage(HostInterface host, @SuppressWarnings("removal") AccessControlContext acc) {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 
@@ -282,7 +272,7 @@ final public class DummyToolkit extends Toolkit {
     }
 
     @Override
-    public AbstractMasterTimer getMasterTimer() {
+    public AbstractPrimaryTimer getPrimaryTimer() {
         return null;
     }
 
@@ -368,6 +358,11 @@ final public class DummyToolkit extends Toolkit {
 
     @Override
     public KeyCode getPlatformShortcutKey() {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public Optional<Boolean> isKeyLocked(KeyCode keyCode) {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 

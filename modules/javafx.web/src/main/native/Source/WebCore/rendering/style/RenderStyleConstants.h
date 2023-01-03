@@ -2,7 +2,7 @@
  * Copyright (C) 2000 Lars Knoll (knoll@kde.org)
  *           (C) 2000 Antti Koivisto (koivisto@kde.org)
  *           (C) 2000 Dirk Mueller (mueller@kde.org)
- * Copyright (C) 2003, 2005, 2006, 2007, 2008, 2009, 2010 Apple Inc. All rights reserved.
+ * Copyright (C) 2003-2020 Apple Inc. All rights reserved.
  * Copyright (C) 2006 Graham Dennis (graham.dennis@gmail.com)
  * Copyright (C) 2009 Torch Mobile Inc. All rights reserved. (http://www.torchmobile.com/)
  *
@@ -26,12 +26,18 @@
 #pragma once
 
 #include <initializer_list>
+#include <wtf/EnumTraits.h>
 
 namespace WTF {
 class TextStream;
 }
 
 namespace WebCore {
+
+enum class DumpStyleValues {
+    All,
+    NonInitial,
+};
 
 static const size_t PrintColorAdjustBits = 1;
 enum class PrintColorAdjust : uint8_t {
@@ -77,17 +83,19 @@ enum class StyleDifferenceContextSensitiveProperty {
 };
 
 // Static pseudo styles. Dynamic ones are produced on the fly.
-enum class PseudoId : uint8_t {
+enum class PseudoId : uint16_t {
     // The order must be None, public IDs, and then internal IDs.
     None,
 
     // Public:
     FirstLine,
     FirstLetter,
+    Highlight,
     Marker,
     Before,
     After,
     Selection,
+    Backdrop,
     Scrollbar,
 
     // Internal:
@@ -134,6 +142,12 @@ public:
     {
         ASSERT((sizeof(m_data) * 8) > static_cast<unsigned>(pseudoId));
         m_data |= (1U << static_cast<unsigned>(pseudoId));
+    }
+
+    void remove(PseudoId pseudoId)
+    {
+        ASSERT((sizeof(m_data) * 8) > static_cast<unsigned>(pseudoId));
+        m_data &= ~(1U << static_cast<unsigned>(pseudoId));
     }
 
     void merge(PseudoIdSet source)
@@ -224,15 +238,17 @@ enum class PositionType : uint8_t {
 };
 
 enum class Float : uint8_t {
-    No,
+    None,
     Left,
-    Right
+    Right,
+    InlineStart,
+    InlineEnd,
 };
 
-enum class MarginCollapse : uint8_t {
-    Collapse,
-    Separate,
-    Discard
+enum class UsedFloat : uint8_t {
+    None,
+    Left,
+    Right,
 };
 
 // Box decoration attributes. Not inherited.
@@ -254,6 +270,7 @@ enum class BoxSizing : uint8_t {
 enum class Overflow : uint8_t {
     Visible,
     Hidden,
+    Clip,
     Scroll,
     Auto,
     PagedX,
@@ -274,10 +291,19 @@ enum class VerticalAlign : uint8_t {
 };
 
 enum class Clear : uint8_t {
-    None = 0,
-    Left = 1,
-    Right = 2,
-    Both = 3
+    None,
+    Left,
+    Right,
+    InlineStart,
+    InlineEnd,
+    Both
+};
+
+enum class UsedClear : uint8_t {
+    None,
+    Left,
+    Right,
+    Both
 };
 
 enum class TableLayoutType : uint8_t {
@@ -287,7 +313,7 @@ enum class TableLayoutType : uint8_t {
 
 enum class TextCombine : uint8_t {
     None,
-    Horizontal
+    All
 };
 
 enum class FillAttachment : uint8_t {
@@ -300,7 +326,8 @@ enum class FillBox : uint8_t {
     Border,
     Padding,
     Content,
-    Text
+    Text,
+    NoClip
 };
 
 enum class FillRepeat : uint8_t {
@@ -331,11 +358,12 @@ enum class Edge : uint8_t {
     Left
 };
 
-// CSS3 Mask Source Types
+// CSS3 Mask Mode
 
-enum class MaskSourceType : uint8_t {
+enum class MaskMode : uint8_t {
     Alpha,
-    Luminance
+    Luminance,
+    MatchSource,
 };
 
 // CSS3 Marquee Properties
@@ -471,6 +499,11 @@ enum class TextSecurity : uint8_t {
     Square
 };
 
+enum class InputSecurity : uint8_t {
+    Auto,
+    None
+};
+
 // CSS3 User Modify Properties
 
 enum class UserModify : uint8_t {
@@ -506,9 +539,9 @@ enum class ObjectFit : uint8_t {
 
 enum class AspectRatioType : uint8_t {
     Auto,
-    FromIntrinsic,
-    FromDimensions,
-    Specified
+    Ratio,
+    AutoAndRatio,
+    AutoZero
 };
 
 enum class WordBreak : uint8_t {
@@ -520,7 +553,8 @@ enum class WordBreak : uint8_t {
 
 enum class OverflowWrap : uint8_t {
     Normal,
-    Break
+    BreakWord,
+    Anywhere
 };
 
 enum class NBSPMode : uint8_t {
@@ -587,8 +621,8 @@ enum class ListStyleType : uint8_t {
     EthiopicHalehameAmEt,
     AmharicAbegede,
     EthiopicAbegedeAmEt,
-    CjkEarthlyBranch,
-    CjkHeavenlyStem,
+    CJKEarthlyBranch,
+    CJKHeavenlyStem,
     Ethiopic,
     EthiopicHalehameGez,
     EthiopicAbegede,
@@ -626,6 +660,21 @@ enum class ListStyleType : uint8_t {
     Katakana,
     HiraganaIroha,
     KatakanaIroha,
+    CJKDecimal,
+    Tamil,
+    DisclosureOpen,
+    DisclosureClosed,
+    JapaneseInformal,
+    JapaneseFormal,
+    KoreanHangulFormal,
+    KoreanHanjaInformal,
+    KoreanHanjaFormal,
+    SimplifiedChineseInformal,
+    SimplifiedChineseFormal,
+    TraditionalChineseInformal,
+    TraditionalChineseFormal,
+    EthiopicNumeric,
+    String,
     None
 };
 
@@ -634,11 +683,6 @@ enum class QuoteType : uint8_t {
     CloseQuote,
     NoOpenQuote,
     NoCloseQuote
-};
-
-enum class BorderFit : uint8_t {
-    Border,
-    Lines
 };
 
 enum class AnimationFillMode : uint8_t {
@@ -663,6 +707,13 @@ enum class WhiteSpace : uint8_t {
     BreakSpaces
 };
 
+enum class ReflectionDirection : uint8_t {
+    Below,
+    Above,
+    Left,
+    Right
+};
+
 // The order of this enum must match the order of the text align values in CSSValueKeywords.in.
 enum class TextAlignMode : uint8_t {
     Left,
@@ -683,20 +734,13 @@ enum class TextTransform : uint8_t {
     None
 };
 
-#if ENABLE(LETTERPRESS)
-static const size_t TextDecorationBits = 5;
-#else
 static const size_t TextDecorationBits = 4;
-#endif
-enum class TextDecoration : uint8_t {
+enum class TextDecorationLine : uint8_t {
     None          = 0,
     Underline     = 1 << 0,
     Overline      = 1 << 1,
     LineThrough   = 1 << 2,
     Blink         = 1 << 3,
-#if ENABLE(LETTERPRESS)
-    Letterpress   = 1 << 4,
-#endif
 };
 
 enum class TextDecorationStyle : uint8_t {
@@ -726,11 +770,10 @@ enum class TextJustify : uint8_t {
 };
 #endif // CSS3_TEXT
 
-enum class TextDecorationSkip : uint8_t {
-    None      = 0,
-    Ink       = 1 << 0,
-    Objects   = 1 << 1,
-    Auto      = 1 << 2
+enum class TextDecorationSkipInk : uint8_t {
+    None,
+    Auto,
+    All
 };
 
 enum class TextUnderlinePosition : uint8_t {
@@ -797,8 +840,6 @@ enum class Visibility : uint8_t {
     Collapse
 };
 
-WTF::TextStream& operator<<(WTF::TextStream&, Visibility);
-
 enum class CursorType : uint8_t {
     // The following must match the order in CSSValueKeywords.in.
     Auto,
@@ -855,7 +896,6 @@ enum class DisplayType : uint8_t {
     Inline,
     Block,
     ListItem,
-    Compact,
     InlineBlock,
     Table,
     InlineTable,
@@ -870,9 +910,7 @@ enum class DisplayType : uint8_t {
     Box,
     InlineBox,
     Flex,
-    WebKitFlex,
     InlineFlex,
-    WebKitInlineFlex,
     Contents,
     Grid,
     InlineGrid,
@@ -896,12 +934,16 @@ enum class PointerEvents : uint8_t {
     VisibleStroke,
     VisibleFill,
     VisiblePainted,
+    BoundingBox,
     All
 };
 
 enum class TransformStyle3D : uint8_t {
     Flat,
-    Preserve3D
+    Preserve3D,
+#if ENABLE(CSS_TRANSFORM_STYLE_OPTIMIZED_3D)
+    Optimized3D
+#endif
 };
 
 enum class BackfaceVisibility : uint8_t {
@@ -910,6 +952,8 @@ enum class BackfaceVisibility : uint8_t {
 };
 
 enum class TransformBox : uint8_t {
+    StrokeBox,
+    ContentBox,
     BorderBox,
     FillBox,
     ViewBox
@@ -976,8 +1020,6 @@ enum class ImageRendering : uint8_t {
     Pixelated
 };
 
-WTF::TextStream& operator<<(WTF::TextStream&, ImageRendering);
-
 enum class ImageResolutionSource : uint8_t {
     Specified = 0,
     FromImage
@@ -1031,12 +1073,9 @@ static const size_t ColorSchemeBits = 2;
 #endif
 
 static const size_t GridAutoFlowBits = 4;
-enum InternalGridAutoFlowAlgorithm {
+enum InternalGridAutoFlow {
     InternalAutoFlowAlgorithmSparse = 1 << 0,
     InternalAutoFlowAlgorithmDense  = 1 << 1,
-};
-
-enum InternalGridAutoFlowDirection {
     InternalAutoFlowDirectionRow    = 1 << 2,
     InternalAutoFlowDirectionColumn = 1 << 3
 };
@@ -1054,10 +1093,13 @@ enum class AutoRepeatType : uint8_t {
     Fit
 };
 
+#if USE(FREETYPE)
+// Maximum allowed font size in Freetype2 is 65535 because x_ppem and y_ppem fields in FreeType structs are of type 'unsigned short'.
+static const float maximumAllowedFontSize = std::numeric_limits<unsigned short>::max();
+#else
 // Reasonable maximum to prevent insane font sizes from causing crashes on some platforms (such as Windows).
 static const float maximumAllowedFontSize = 1000000.0f;
-
-#if ENABLE(CSS3_TEXT)
+#endif
 
 enum class TextIndentLine : uint8_t {
     FirstLine,
@@ -1068,8 +1110,6 @@ enum class TextIndentType : uint8_t {
     Normal,
     Hanging
 };
-
-#endif
 
 enum class Isolation : uint8_t {
     Auto,
@@ -1088,7 +1128,6 @@ enum class CSSBoxType : uint8_t {
     ViewBox
 };
 
-#if ENABLE(CSS_SCROLL_SNAP)
 enum class ScrollSnapStrictness : uint8_t {
     None,
     Proximity,
@@ -1109,7 +1148,11 @@ enum class ScrollSnapAxisAlignType : uint8_t {
     Center,
     End
 };
-#endif
+
+enum class ScrollSnapStop : uint8_t {
+    Normal,
+    Always,
+};
 
 #if ENABLE(CSS_TRAILING_WORD)
 enum class TrailingWord : uint8_t {
@@ -1130,20 +1173,21 @@ enum class ApplePayButtonType : uint8_t {
     Buy,
     SetUp,
     Donate,
-#if ENABLE(APPLE_PAY_SESSION_V4)
     CheckOut,
     Book,
     Subscribe,
+#if ENABLE(APPLE_PAY_NEW_BUTTON_TYPES)
+    Reload,
+    AddMoney,
+    TopUp,
+    Order,
+    Rent,
+    Support,
+    Contribute,
+    Tip,
 #endif
 };
 #endif
-
-WTF::TextStream& operator<<(WTF::TextStream&, FillSizeType);
-WTF::TextStream& operator<<(WTF::TextStream&, FillAttachment);
-WTF::TextStream& operator<<(WTF::TextStream&, FillBox);
-WTF::TextStream& operator<<(WTF::TextStream&, FillRepeat);
-WTF::TextStream& operator<<(WTF::TextStream&, MaskSourceType);
-WTF::TextStream& operator<<(WTF::TextStream&, Edge);
 
 // These are all minimized combinations of paint-order.
 enum class PaintOrder : uint8_t {
@@ -1170,6 +1214,257 @@ enum class FontLoadingBehavior : uint8_t {
     Optional
 };
 
+enum class EventListenerRegionType : uint8_t {
+    Wheel           = 1 << 0,
+    NonPassiveWheel = 1 << 1,
+};
+
+enum class MathStyle : uint8_t {
+    Normal,
+    Compact,
+};
+
+enum class Containment : uint8_t {
+    Layout      = 1 << 0,
+    Paint       = 1 << 1,
+    Size        = 1 << 2,
+    InlineSize  = 1 << 3,
+    Style       = 1 << 4,
+};
+
+enum class ContainerType : uint8_t {
+    None,
+    Size,
+    InlineSize,
+};
+
+CSSBoxType transformBoxToCSSBoxType(TransformBox);
+
 extern const float defaultMiterLimit;
 
+WTF::TextStream& operator<<(WTF::TextStream&, AnimationFillMode);
+WTF::TextStream& operator<<(WTF::TextStream&, AnimationPlayState);
+#if ENABLE(APPLE_PAY)
+WTF::TextStream& operator<<(WTF::TextStream&, ApplePayButtonStyle);
+WTF::TextStream& operator<<(WTF::TextStream&, ApplePayButtonType);
+#endif
+WTF::TextStream& operator<<(WTF::TextStream&, AspectRatioType);
+WTF::TextStream& operator<<(WTF::TextStream&, AutoRepeatType);
+WTF::TextStream& operator<<(WTF::TextStream&, BackfaceVisibility);
+WTF::TextStream& operator<<(WTF::TextStream&, BorderCollapse);
+WTF::TextStream& operator<<(WTF::TextStream&, BorderStyle);
+WTF::TextStream& operator<<(WTF::TextStream&, BoxAlignment);
+WTF::TextStream& operator<<(WTF::TextStream&, BoxDecorationBreak);
+WTF::TextStream& operator<<(WTF::TextStream&, BoxDirection);
+WTF::TextStream& operator<<(WTF::TextStream&, BoxLines);
+WTF::TextStream& operator<<(WTF::TextStream&, BoxOrient);
+WTF::TextStream& operator<<(WTF::TextStream&, BoxPack);
+WTF::TextStream& operator<<(WTF::TextStream&, BoxSizing);
+WTF::TextStream& operator<<(WTF::TextStream&, BreakBetween);
+WTF::TextStream& operator<<(WTF::TextStream&, BreakInside);
+WTF::TextStream& operator<<(WTF::TextStream&, CSSBoxType);
+WTF::TextStream& operator<<(WTF::TextStream&, CaptionSide);
+WTF::TextStream& operator<<(WTF::TextStream&, Clear);
+WTF::TextStream& operator<<(WTF::TextStream&, UsedClear);
+#if ENABLE(DARK_MODE_CSS)
+WTF::TextStream& operator<<(WTF::TextStream&, ColorScheme);
+#endif
+WTF::TextStream& operator<<(WTF::TextStream&, ColumnAxis);
+WTF::TextStream& operator<<(WTF::TextStream&, ColumnFill);
+WTF::TextStream& operator<<(WTF::TextStream&, ColumnProgression);
+WTF::TextStream& operator<<(WTF::TextStream&, ColumnSpan);
+WTF::TextStream& operator<<(WTF::TextStream&, ContentDistribution);
+WTF::TextStream& operator<<(WTF::TextStream&, ContentPosition);
+WTF::TextStream& operator<<(WTF::TextStream&, CursorType);
+#if ENABLE(CURSOR_VISIBILITY)
+WTF::TextStream& operator<<(WTF::TextStream&, CursorVisibility);
+#endif
+WTF::TextStream& operator<<(WTF::TextStream&, DisplayType);
+WTF::TextStream& operator<<(WTF::TextStream&, Edge);
+WTF::TextStream& operator<<(WTF::TextStream&, EmptyCell);
+WTF::TextStream& operator<<(WTF::TextStream&, EventListenerRegionType);
+WTF::TextStream& operator<<(WTF::TextStream&, FillAttachment);
+WTF::TextStream& operator<<(WTF::TextStream&, FillBox);
+WTF::TextStream& operator<<(WTF::TextStream&, FillRepeat);
+WTF::TextStream& operator<<(WTF::TextStream&, FillSizeType);
+WTF::TextStream& operator<<(WTF::TextStream&, FlexDirection);
+WTF::TextStream& operator<<(WTF::TextStream&, FlexWrap);
+WTF::TextStream& operator<<(WTF::TextStream&, Float);
+WTF::TextStream& operator<<(WTF::TextStream&, UsedFloat);
+WTF::TextStream& operator<<(WTF::TextStream&, GridAutoFlow);
+WTF::TextStream& operator<<(WTF::TextStream&, HangingPunctuation);
+WTF::TextStream& operator<<(WTF::TextStream&, Hyphens);
+WTF::TextStream& operator<<(WTF::TextStream&, ImageRendering);
+WTF::TextStream& operator<<(WTF::TextStream&, InsideLink);
+WTF::TextStream& operator<<(WTF::TextStream&, Isolation);
+WTF::TextStream& operator<<(WTF::TextStream&, ItemPosition);
+WTF::TextStream& operator<<(WTF::TextStream&, ItemPositionType);
+WTF::TextStream& operator<<(WTF::TextStream&, LineAlign);
+WTF::TextStream& operator<<(WTF::TextStream&, LineBreak);
+WTF::TextStream& operator<<(WTF::TextStream&, LineSnap);
+WTF::TextStream& operator<<(WTF::TextStream&, ListStylePosition);
+WTF::TextStream& operator<<(WTF::TextStream&, ListStyleType);
+WTF::TextStream& operator<<(WTF::TextStream&, MarqueeBehavior);
+WTF::TextStream& operator<<(WTF::TextStream&, MarqueeDirection);
+WTF::TextStream& operator<<(WTF::TextStream&, MaskMode);
+WTF::TextStream& operator<<(WTF::TextStream&, NBSPMode);
+WTF::TextStream& operator<<(WTF::TextStream&, ObjectFit);
+WTF::TextStream& operator<<(WTF::TextStream&, Order);
+WTF::TextStream& operator<<(WTF::TextStream&, WebCore::Overflow);
+WTF::TextStream& operator<<(WTF::TextStream&, OverflowAlignment);
+WTF::TextStream& operator<<(WTF::TextStream&, OverflowWrap);
+WTF::TextStream& operator<<(WTF::TextStream&, PaintOrder);
+WTF::TextStream& operator<<(WTF::TextStream&, PointerEvents);
+WTF::TextStream& operator<<(WTF::TextStream&, PositionType);
+WTF::TextStream& operator<<(WTF::TextStream&, PrintColorAdjust);
+WTF::TextStream& operator<<(WTF::TextStream&, PseudoId);
+WTF::TextStream& operator<<(WTF::TextStream&, QuoteType);
+WTF::TextStream& operator<<(WTF::TextStream&, ReflectionDirection);
+WTF::TextStream& operator<<(WTF::TextStream&, Resize);
+WTF::TextStream& operator<<(WTF::TextStream&, RubyPosition);
+WTF::TextStream& operator<<(WTF::TextStream&, ScrollSnapAxis);
+WTF::TextStream& operator<<(WTF::TextStream&, ScrollSnapAxisAlignType);
+WTF::TextStream& operator<<(WTF::TextStream&, ScrollSnapStop);
+WTF::TextStream& operator<<(WTF::TextStream&, ScrollSnapStrictness);
+WTF::TextStream& operator<<(WTF::TextStream&, SpeakAs);
+WTF::TextStream& operator<<(WTF::TextStream&, StyleDifference);
+WTF::TextStream& operator<<(WTF::TextStream&, TableLayoutType);
+WTF::TextStream& operator<<(WTF::TextStream&, TextAlignMode);
+WTF::TextStream& operator<<(WTF::TextStream&, TextCombine);
+WTF::TextStream& operator<<(WTF::TextStream&, TextDecorationLine);
+WTF::TextStream& operator<<(WTF::TextStream&, TextDecorationSkipInk);
+WTF::TextStream& operator<<(WTF::TextStream&, TextDecorationStyle);
+WTF::TextStream& operator<<(WTF::TextStream&, TextEmphasisFill);
+WTF::TextStream& operator<<(WTF::TextStream&, TextEmphasisMark);
+WTF::TextStream& operator<<(WTF::TextStream&, TextEmphasisPosition);
+WTF::TextStream& operator<<(WTF::TextStream&, TextOrientation);
+WTF::TextStream& operator<<(WTF::TextStream&, TextOverflow);
+WTF::TextStream& operator<<(WTF::TextStream&, TextSecurity);
+WTF::TextStream& operator<<(WTF::TextStream&, TextTransform);
+WTF::TextStream& operator<<(WTF::TextStream&, TextUnderlinePosition);
+WTF::TextStream& operator<<(WTF::TextStream&, TextZoom);
+WTF::TextStream& operator<<(WTF::TextStream&, TransformBox);
+WTF::TextStream& operator<<(WTF::TextStream&, TransformStyle3D);
+WTF::TextStream& operator<<(WTF::TextStream&, UserDrag);
+WTF::TextStream& operator<<(WTF::TextStream&, UserModify);
+WTF::TextStream& operator<<(WTF::TextStream&, UserSelect);
+WTF::TextStream& operator<<(WTF::TextStream&, VerticalAlign);
+WTF::TextStream& operator<<(WTF::TextStream&, Visibility);
+WTF::TextStream& operator<<(WTF::TextStream&, WhiteSpace);
+WTF::TextStream& operator<<(WTF::TextStream&, WordBreak);
+WTF::TextStream& operator<<(WTF::TextStream&, MathStyle);
+
 } // namespace WebCore
+
+namespace WTF {
+template<> struct EnumTraits<WebCore::ScrollSnapStop> {
+    using values = EnumValues<
+        WebCore::ScrollSnapStop,
+        WebCore::ScrollSnapStop::Normal,
+        WebCore::ScrollSnapStop::Always
+    >;
+};
+
+template<> struct EnumTraits<WebCore::ListStyleType> {
+    using values = EnumValues<
+        WebCore::ListStyleType,
+        WebCore::ListStyleType::Disc,
+        WebCore::ListStyleType::Circle,
+        WebCore::ListStyleType::Square,
+        WebCore::ListStyleType::Decimal,
+        WebCore::ListStyleType::DecimalLeadingZero,
+        WebCore::ListStyleType::ArabicIndic,
+        WebCore::ListStyleType::Binary,
+        WebCore::ListStyleType::Bengali,
+        WebCore::ListStyleType::Cambodian,
+        WebCore::ListStyleType::Khmer,
+        WebCore::ListStyleType::Devanagari,
+        WebCore::ListStyleType::Gujarati,
+        WebCore::ListStyleType::Gurmukhi,
+        WebCore::ListStyleType::Kannada,
+        WebCore::ListStyleType::LowerHexadecimal,
+        WebCore::ListStyleType::Lao,
+        WebCore::ListStyleType::Malayalam,
+        WebCore::ListStyleType::Mongolian,
+        WebCore::ListStyleType::Myanmar,
+        WebCore::ListStyleType::Octal,
+        WebCore::ListStyleType::Oriya,
+        WebCore::ListStyleType::Persian,
+        WebCore::ListStyleType::Urdu,
+        WebCore::ListStyleType::Telugu,
+        WebCore::ListStyleType::Tibetan,
+        WebCore::ListStyleType::Thai,
+        WebCore::ListStyleType::UpperHexadecimal,
+        WebCore::ListStyleType::LowerRoman,
+        WebCore::ListStyleType::UpperRoman,
+        WebCore::ListStyleType::LowerGreek,
+        WebCore::ListStyleType::LowerAlpha,
+        WebCore::ListStyleType::LowerLatin,
+        WebCore::ListStyleType::UpperAlpha,
+        WebCore::ListStyleType::UpperLatin,
+        WebCore::ListStyleType::Afar,
+        WebCore::ListStyleType::EthiopicHalehameAaEt,
+        WebCore::ListStyleType::EthiopicHalehameAaEr,
+        WebCore::ListStyleType::Amharic,
+        WebCore::ListStyleType::EthiopicHalehameAmEt,
+        WebCore::ListStyleType::AmharicAbegede,
+        WebCore::ListStyleType::EthiopicAbegedeAmEt,
+        WebCore::ListStyleType::CJKEarthlyBranch,
+        WebCore::ListStyleType::CJKHeavenlyStem,
+        WebCore::ListStyleType::Ethiopic,
+        WebCore::ListStyleType::EthiopicHalehameGez,
+        WebCore::ListStyleType::EthiopicAbegede,
+        WebCore::ListStyleType::EthiopicAbegedeGez,
+        WebCore::ListStyleType::HangulConsonant,
+        WebCore::ListStyleType::Hangul,
+        WebCore::ListStyleType::LowerNorwegian,
+        WebCore::ListStyleType::Oromo,
+        WebCore::ListStyleType::EthiopicHalehameOmEt,
+        WebCore::ListStyleType::Sidama,
+        WebCore::ListStyleType::EthiopicHalehameSidEt,
+        WebCore::ListStyleType::Somali,
+        WebCore::ListStyleType::EthiopicHalehameSoEt,
+        WebCore::ListStyleType::Tigre,
+        WebCore::ListStyleType::EthiopicHalehameTig,
+        WebCore::ListStyleType::TigrinyaEr,
+        WebCore::ListStyleType::EthiopicHalehameTiEr,
+        WebCore::ListStyleType::TigrinyaErAbegede,
+        WebCore::ListStyleType::EthiopicAbegedeTiEr,
+        WebCore::ListStyleType::TigrinyaEt,
+        WebCore::ListStyleType::EthiopicHalehameTiEt,
+        WebCore::ListStyleType::TigrinyaEtAbegede,
+        WebCore::ListStyleType::EthiopicAbegedeTiEt,
+        WebCore::ListStyleType::UpperGreek,
+        WebCore::ListStyleType::UpperNorwegian,
+        WebCore::ListStyleType::Asterisks,
+        WebCore::ListStyleType::Footnotes,
+        WebCore::ListStyleType::Hebrew,
+        WebCore::ListStyleType::Armenian,
+        WebCore::ListStyleType::LowerArmenian,
+        WebCore::ListStyleType::UpperArmenian,
+        WebCore::ListStyleType::Georgian,
+        WebCore::ListStyleType::CJKIdeographic,
+        WebCore::ListStyleType::Hiragana,
+        WebCore::ListStyleType::Katakana,
+        WebCore::ListStyleType::HiraganaIroha,
+        WebCore::ListStyleType::KatakanaIroha,
+        WebCore::ListStyleType::CJKDecimal,
+        WebCore::ListStyleType::Tamil,
+        WebCore::ListStyleType::DisclosureOpen,
+        WebCore::ListStyleType::DisclosureClosed,
+        WebCore::ListStyleType::JapaneseInformal,
+        WebCore::ListStyleType::JapaneseFormal,
+        WebCore::ListStyleType::KoreanHangulFormal,
+        WebCore::ListStyleType::KoreanHanjaInformal,
+        WebCore::ListStyleType::KoreanHanjaFormal,
+        WebCore::ListStyleType::SimplifiedChineseInformal,
+        WebCore::ListStyleType::SimplifiedChineseFormal,
+        WebCore::ListStyleType::TraditionalChineseInformal,
+        WebCore::ListStyleType::TraditionalChineseFormal,
+        WebCore::ListStyleType::EthiopicNumeric,
+        WebCore::ListStyleType::String,
+        WebCore::ListStyleType::None
+    >;
+};
+
+}

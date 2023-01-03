@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2017 Caio Lima <ticaiolima@gmail.com>
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -36,11 +36,11 @@ class GetterSetter;
 class BigIntConstructor final : public InternalFunction {
 public:
     using Base = InternalFunction;
-    static const unsigned StructureFlags = Base::StructureFlags | HasStaticPropertyTable;
+    static constexpr unsigned StructureFlags = Base::StructureFlags | HasStaticPropertyTable;
 
     static BigIntConstructor* create(VM& vm, Structure* structure, BigIntPrototype* bigIntPrototype, GetterSetter*)
     {
-        BigIntConstructor* constructor = new (NotNull, allocateCell<BigIntConstructor>(vm.heap)) BigIntConstructor(vm, structure);
+        BigIntConstructor* constructor = new (NotNull, allocateCell<BigIntConstructor>(vm)) BigIntConstructor(vm, structure);
         constructor->finishCreation(vm, bigIntPrototype);
         return constructor;
     }
@@ -52,11 +52,10 @@ public:
         return Structure::create(vm, globalObject, proto, TypeInfo(InternalFunctionType, StructureFlags), info());
     }
 
-protected:
-    void finishCreation(VM&, BigIntPrototype*);
-
 private:
     BigIntConstructor(VM&, Structure*);
+    void finishCreation(VM&, BigIntPrototype*);
 };
+STATIC_ASSERT_ISO_SUBSPACE_SHARABLE(BigIntConstructor, InternalFunction);
 
 } // namespace JSC

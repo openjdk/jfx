@@ -31,11 +31,15 @@
 #pragma once
 
 #include "ActiveDOMObject.h"
+#include "DOMException.h"
 #include "EventTarget.h"
+#include "ExceptionCode.h"
 #include "ExceptionOr.h"
-#include "FileError.h"
 #include "FileReaderLoader.h"
 #include "FileReaderLoaderClient.h"
+#include "FileReaderSync.h"
+#include <wtf/HashMap.h>
+#include <wtf/UniqueRef.h>
 
 namespace JSC {
 class ArrayBuffer;
@@ -58,18 +62,18 @@ public:
         DONE = 2
     };
 
-    ExceptionOr<void> readAsArrayBuffer(Blob*);
-    ExceptionOr<void> readAsBinaryString(Blob*);
-    ExceptionOr<void> readAsText(Blob*, const String& encoding);
-    ExceptionOr<void> readAsDataURL(Blob*);
+    ExceptionOr<void> readAsArrayBuffer(Blob&);
+    ExceptionOr<void> readAsBinaryString(Blob&);
+    ExceptionOr<void> readAsText(Blob&, const String& encoding);
+    ExceptionOr<void> readAsDataURL(Blob&);
     void abort();
 
     void doAbort();
 
     ReadyState readyState() const { return m_state; }
-    RefPtr<FileError> error() { return m_error; }
+    DOMException* error() { return m_error.get(); }
     FileReaderLoader::ReadType readType() const { return m_readType; }
-    Optional<Variant<String, RefPtr<JSC::ArrayBuffer>>> result() const;
+    std::optional<std::variant<String, RefPtr<JSC::ArrayBuffer>>> result() const;
 
     using RefCounted::ref;
     using RefCounted::deref;
@@ -77,33 +81,36 @@ public:
 private:
     explicit FileReader(ScriptExecutionContext&);
 
+    // ActiveDOMObject.
     const char* activeDOMObjectName() const final;
-    bool canSuspendForDocumentSuspension() const final;
     void stop() final;
+    bool virtualHasPendingActivity() const final;
 
     EventTargetInterface eventTargetInterface() const final { return FileReaderEventTargetInterfaceType; }
     ScriptExecutionContext* scriptExecutionContext() const final { return ActiveDOMObject::scriptExecutionContext(); }
     void refEventTarget() final { ref(); }
     void derefEventTarget() final { deref(); }
 
+    void enqueueTask(Function<void()>&&);
+
     void didStartLoading() final;
     void didReceiveData() final;
     void didFinishLoading() final;
-    void didFail(int errorCode) final;
+    void didFail(ExceptionCode errorCode) final;
 
     ExceptionOr<void> readInternal(Blob&, FileReaderLoader::ReadType);
     void fireErrorEvent(int httpStatusCode);
     void fireEvent(const AtomString& type);
 
     ReadyState m_state { EMPTY };
-    bool m_aborting { false };
+    bool m_finishedLoading { false };
     RefPtr<Blob> m_blob;
     FileReaderLoader::ReadType m_readType { FileReaderLoader::ReadAsBinaryString };
     String m_encoding;
     std::unique_ptr<FileReaderLoader> m_loader;
-    RefPtr<FileError> m_error;
+    RefPtr<DOMException> m_error;
     MonotonicTime m_lastProgressNotificationTime { MonotonicTime::nan() };
-    RefPtr<PendingActivity<FileReader>> m_loadingActivity;
+    HashMap<uint64_t, Function<void()>> m_pendingTasks;
 };
 
 } // namespace WebCore

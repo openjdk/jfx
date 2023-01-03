@@ -28,10 +28,9 @@
 
 #if ENABLE(DFG_JIT)
 
-#include "DFGBasicBlockInlines.h"
 #include "DFGGraph.h"
 #include "DFGPhase.h"
-#include "JSCInlines.h"
+#include "JSCJSValueInlines.h"
 
 namespace JSC { namespace DFG {
 
@@ -70,10 +69,10 @@ public:
                 continue;
             if (block->bytecodeBegin != m_graph.m_plan.osrEntryBytecodeIndex())
                 continue;
-            const Operands<Optional<JSValue>>& mustHandleValues = m_graph.m_plan.mustHandleValues();
+            const Operands<std::optional<JSValue>>& mustHandleValues = m_graph.m_plan.mustHandleValues();
             for (size_t i = 0; i < mustHandleValues.size(); ++i) {
-                int operand = mustHandleValues.operandForIndex(i);
-                Optional<JSValue> value = mustHandleValues[i];
+                Operand operand = mustHandleValues.operandForIndex(i);
+                std::optional<JSValue> value = mustHandleValues[i];
                 if (!value)
                     continue;
                 Node* node = block->variablesAtHead.operand(operand);

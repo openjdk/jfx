@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -56,7 +56,7 @@ static BOOL          dragging = NO;// Are we inside drag and drop session?
 
 static UIImageView * dragImage = nil;// Image(s) shown during drag and drop
 
-static UIView      * dragViewParent;// parental UIView of all GlassWindows (aka masterHostView); do not retain
+static UIView      * dragViewParent;// parental UIView of all GlassWindows (aka mainHostView); do not retain
 static UIView *      dragSourceView;// GlassView where drag operation started
 
 static jobject lastJavaViewDragTarget = NULL; // last view where mouse occured during dragging session

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,13 +26,18 @@
 package com.sun.glass.ui.monocle;
 
 import com.sun.glass.ui.Timer;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Monocle implementation class for Timer.
  */
 final class MonocleTimer extends Timer {
-    private static java.util.Timer timer;
-    private java.util.TimerTask task;
+    private static final String THREAD_NAME = "Monocle Timer";
+
+    private static ScheduledThreadPoolExecutor scheduler;
+    private ScheduledFuture<?> task;
 
     MonocleTimer(final Runnable runnable) {
         super(runnable);
@@ -47,19 +52,15 @@ final class MonocleTimer extends Timer {
     }
 
     @Override protected long _start(final Runnable runnable, int period) {
-        if (timer == null) {
-            timer = new java.util.Timer(true);
+        if (scheduler == null) {
+            scheduler = new ScheduledThreadPoolExecutor(1, target -> {
+                Thread thread = new Thread(target, THREAD_NAME);
+                thread.setDaemon(true);
+                return thread;
+            });
         }
 
-        task = new java.util.TimerTask() {
-
-            @Override
-            public void run() {
-                runnable.run();
-            }
-        };
-
-        timer.schedule(task, 0, (long)period);
+        task = scheduler.scheduleAtFixedRate(runnable, 0, period, TimeUnit.MILLISECONDS);
         return 1; // need something non-zero to denote success.
     }
 
@@ -69,7 +70,7 @@ final class MonocleTimer extends Timer {
 
     @Override protected void _stop(long timer) {
         if (task != null) {
-            task.cancel();
+            task.cancel(false);
             task = null;
         }
     }

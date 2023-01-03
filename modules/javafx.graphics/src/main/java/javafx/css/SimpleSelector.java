@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -60,19 +60,22 @@ final public class SimpleSelector extends Selector {
      * then name would be "Rectangle".
      */
     final private String name;
+
     /**
-     * @return The name of the java class to which this selector is applied, or *.
+     * Gets the name of the java class to which this selector is applied, or *.
+     * @return the name of the java class
      */
     public String getName() {
         return name;
     }
 
     /**
-     * @return Immutable List&lt;String&gt; of style-classes of the selector
+     * Gets an immutable list of style-classes of the {@code Selector}.
+     * @return an immutable list of style-classes of the {@code Selector}
      */
     public List<String> getStyleClasses() {
 
-        final List<String> names = new ArrayList<String>();
+        final List<String> names = new ArrayList<>();
 
         Iterator<StyleClass> iter = styleClassSet.iterator();
         while (iter.hasNext()) {
@@ -82,16 +85,24 @@ final public class SimpleSelector extends Selector {
         return Collections.unmodifiableList(names);
     }
 
+    /**
+     * Gets the {@code Set} of {@code StyleClass}es of the {@code Selector}.
+     * @return the {@code Set} of {@code StyleClass}es
+     */
     public Set<StyleClass> getStyleClassSet() {
         return styleClassSet;
     }
 
-    /** styleClasses converted to a set of bit masks */
+    /**
+     * styleClasses converted to a set of bit masks
+     */
     final private StyleClassSet styleClassSet;
 
     final private String id;
-    /*
-     * @return The value of the selector id, which may be an empty string.
+
+    /**
+     * Gets the value of the selector id.
+     * @return the value of the selector id, which may be an empty string
      */
     public String getId() {
         return id;
@@ -105,11 +116,12 @@ final public class SimpleSelector extends Selector {
     }
 
     /**
-     * @return Immutable List&lt;String&gt; of pseudo-classes of the selector
+     * Gets an immutable list of {@code String}s of pseudo classes of the {@code Selector}
+     * @return an immutable list of {@code String}s
      */
     List<String> getPseudoclasses() {
 
-        final List<String> names = new ArrayList<String>();
+        final List<String> names = new ArrayList<>();
 
         Iterator<PseudoClass> iter = pseudoClassState.iterator();
         while (iter.hasNext()) {
@@ -139,6 +151,10 @@ final public class SimpleSelector extends Selector {
 
     // Used in Match. If nodeOrientation is ltr or rtl,
     // then count it as a pseudoclass
+    /**
+     * Gets the {@code NodeOrientation} of this {@code Selector}.
+     * @return the {@code NodeOrientation}
+     */
     public NodeOrientation getNodeOrientation() {
         return nodeOrientation;
     }
@@ -387,13 +403,13 @@ final public class SimpleSelector extends Selector {
     {
         final String name = strings[is.readShort()];
         final int nStyleClasses = is.readShort();
-        final List<String> styleClasses = new ArrayList<String>();
+        final List<String> styleClasses = new ArrayList<>();
         for (int n=0; n < nStyleClasses; n++) {
             styleClasses.add(strings[is.readShort()]);
         }
         final String id = strings[is.readShort()];
         final int nPseudoclasses = is.readShort();
-        final List<String> pseudoclasses = new ArrayList<String>();
+        final List<String> pseudoclasses = new ArrayList<>();
         for(int n=0; n < nPseudoclasses; n++) {
             pseudoclasses.add(strings[is.readShort()]);
         }

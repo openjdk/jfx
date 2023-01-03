@@ -1,18 +1,18 @@
 /*
- * Copyright (C) 2005, 2007, 2014 Apple Inc. All rights reserved.
+ * Copyright (C) 2005-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
  * are met:
  *
  * 1.  Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer. 
+ *     notice, this list of conditions and the following disclaimer.
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution. 
+ *     documentation and/or other materials provided with the distribution.
  * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
- *     from this software without specific prior written permission. 
+ *     from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY APPLE AND ITS CONTRIBUTORS "AS IS" AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -29,21 +29,18 @@
 #import "config.h"
 #import "NSURLExtras.h"
 
+#import <mutex>
 #import <wtf/Function.h>
-#import <wtf/ObjCRuntimeExtras.h>
 #import <wtf/RetainPtr.h>
+#import <wtf/URL.h>
 #import <wtf/URLHelpers.h>
-#import <wtf/URLParser.h>
 #import <wtf/Vector.h>
 #import <wtf/cf/CFURLExtras.h>
-
-#define URL_BYTES_BUFFER_LENGTH 2048
+#import <wtf/cocoa/TypeCastsCocoa.h>
 
 namespace WTF {
 
-using namespace URLHelpers;
-
-static BOOL readIDNScriptWhiteListFile(NSString *filename)
+static BOOL readIDNAllowedScriptListFile(NSString *filename)
 {
     if (!filename)
         return NO;
@@ -51,23 +48,23 @@ static BOOL readIDNScriptWhiteListFile(NSString *filename)
     FILE *file = fopen([filename fileSystemRepresentation], "r");
     if (!file)
         return NO;
-    
+
     // Read a word at a time.
     // Allow comments, starting with # character to the end of the line.
     while (1) {
         // Skip a comment if present.
         if (fscanf(file, " #%*[^\n\r]%*[\n\r]") == EOF)
             break;
-        
+
         // Read a script name if present.
         char word[33];
         int result = fscanf(file, " %32[^# \t\n\r]%*[^# \t\n\r] ", word);
         if (result == EOF)
             break;
-        
+
         if (result == 1) {
             // Got a word, map to script code and put it into the array.
-            whiteListIDNScript(word);
+            URLHelpers::addScriptToIDNAllowedScriptList(word);
         }
     }
     fclose(file);
@@ -76,37 +73,31 @@ static BOOL readIDNScriptWhiteListFile(NSString *filename)
 
 namespace URLHelpers {
 
-void loadIDNScriptWhiteList()
+void loadIDNAllowedScriptList()
 {
     static dispatch_once_t flag;
     dispatch_once(&flag, ^{
-        // Read white list from library.
-        NSArray *dirs = NSSearchPathForDirectoriesInDomains(NSLibraryDirectory, NSAllDomainsMask, YES);
-        int numDirs = [dirs count];
-        for (int i = 0; i < numDirs; i++) {
-            if (readIDNScriptWhiteListFile([[dirs objectAtIndex:i] stringByAppendingPathComponent:@"IDNScriptWhiteList.txt"]))
+        for (NSString *directory in NSSearchPathForDirectoriesInDomains(NSLibraryDirectory, NSAllDomainsMask, YES)) {
+            if (readIDNAllowedScriptListFile([directory stringByAppendingPathComponent:@"IDNScriptWhiteList.txt"]))
                 return;
         }
-        initializeDefaultIDNScriptWhiteList();
+        initializeDefaultIDNAllowedScriptList();
     });
 }
 
 } // namespace URLHelpers
-    
+
 static String decodePercentEscapes(const String& string)
 {
-    NSString *substring = (NSString *)string;
-    substring = CFBridgingRelease(CFURLCreateStringByReplacingPercentEscapes(nullptr, (CFStringRef)substring, CFSTR("")));
-
+    auto substring = adoptCF(CFURLCreateStringByReplacingPercentEscapes(nullptr, string.createCFString().get(), CFSTR("")));
     if (!substring)
         return string;
-
-    return (String)substring;
+    return substring.get();
 }
 
 NSString *decodeHostName(NSString *string)
 {
-    Optional<String> host = mapHostName(string, nullopt);
+    std::optional<String> host = URLHelpers::mapHostName(string, nullptr);
     if (!host)
         return nil;
     return !*host ? string : (NSString *)*host;
@@ -114,7 +105,7 @@ NSString *decodeHostName(NSString *string)
 
 NSString *encodeHostName(NSString *string)
 {
-    Optional<String> host = mapHostName(string, decodePercentEscapes);
+    std::optional<String> host = URLHelpers::mapHostName(string, decodePercentEscapes);
     if (!host)
         return nil;
     return !*host ? string : (NSString *)*host;
@@ -131,76 +122,64 @@ NSURL *URLByTruncatingOneCharacterBeforeComponent(NSURL *URL, CFURLComponentType
 {
     if (!URL)
         return nil;
-    
-    CFRange fragRg = CFURLGetByteRangeForComponent((__bridge CFURLRef)URL, component, nullptr);
-    if (fragRg.location == kCFNotFound)
+
+    CFRange range = CFURLGetByteRangeForComponent(bridge_cast(URL), component, nullptr);
+    if (range.location == kCFNotFound)
         return URL;
 
-    Vector<UInt8, URL_BYTES_BUFFER_LENGTH> urlBytes(URL_BYTES_BUFFER_LENGTH);
-    CFIndex numBytes = CFURLGetBytes((__bridge CFURLRef)URL, urlBytes.data(), urlBytes.size());
-    if (numBytes == -1) {
-        numBytes = CFURLGetBytes((__bridge CFURLRef)URL, nullptr, 0);
-        urlBytes.grow(numBytes);
-        CFURLGetBytes((__bridge CFURLRef)URL, urlBytes.data(), numBytes);
-    }
+    auto bytes = bytesAsVector(bridge_cast(URL));
 
-    CFURLRef result = CFURLCreateWithBytes(nullptr, urlBytes.data(), fragRg.location - 1, kCFStringEncodingUTF8, nullptr);
+    auto result = adoptCF(CFURLCreateWithBytes(nullptr, bytes.data(), range.location - 1, kCFStringEncodingUTF8, nullptr));
     if (!result)
-        result = CFURLCreateWithBytes(nullptr, urlBytes.data(), fragRg.location - 1, kCFStringEncodingISOLatin1, nullptr);
-        
-    return result ? CFBridgingRelease(result) : URL;
-}
+        result = adoptCF(CFURLCreateWithBytes(nullptr, bytes.data(), range.location - 1, kCFStringEncodingISOLatin1, nullptr));
 
-static NSURL *URLByRemovingResourceSpecifier(NSURL *URL)
-{
-    return URLByTruncatingOneCharacterBeforeComponent(URL, kCFURLComponentResourceSpecifier);
+    return result ? result.bridgingAutorelease() : URL;
 }
 
 NSURL *URLWithData(NSData *data, NSURL *baseURL)
 {
     if (!data)
         return nil;
-    
-    NSURL *result = nil;
+
     size_t length = [data length];
     if (length > 0) {
-        // work around <rdar://4470771>: CFURLCreateAbsoluteURLWithBytes(.., TRUE) doesn't remove non-path components.
-        baseURL = URLByRemovingResourceSpecifier(baseURL);
-        
+        // Work around <rdar://4470771>: CFURLCreateAbsoluteURLWithBytes(.., TRUE) doesn't remove non-path components.
+        baseURL = URLByTruncatingOneCharacterBeforeComponent(baseURL, kCFURLComponentResourceSpecifier);
+
         const UInt8 *bytes = static_cast<const UInt8*>([data bytes]);
-        
+
         // CFURLCreateAbsoluteURLWithBytes would complain to console if we passed a path to it.
         if (bytes[0] == '/' && !baseURL)
             return nil;
-        
+
         // NOTE: We use UTF-8 here since this encoding is used when computing strings when returning URL components
         // (e.g calls to NSURL -path). However, this function is not tolerant of illegal UTF-8 sequences, which
         // could either be a malformed string or bytes in a different encoding, like shift-jis, so we fall back
         // onto using ISO Latin 1 in those cases.
-        result = CFBridgingRelease(CFURLCreateAbsoluteURLWithBytes(nullptr, bytes, length, kCFStringEncodingUTF8, (__bridge CFURLRef)baseURL, YES));
+        auto result = adoptCF(CFURLCreateAbsoluteURLWithBytes(nullptr, bytes, length, kCFStringEncodingUTF8, (__bridge CFURLRef)baseURL, YES));
         if (!result)
-            result = CFBridgingRelease(CFURLCreateAbsoluteURLWithBytes(nullptr, bytes, length, kCFStringEncodingISOLatin1, (__bridge CFURLRef)baseURL, YES));
-    } else
-        result = [NSURL URLWithString:@""];
-
-    return result;
+            result = adoptCF(CFURLCreateAbsoluteURLWithBytes(nullptr, bytes, length, kCFStringEncodingISOLatin1, (__bridge CFURLRef)baseURL, YES));
+        return result.bridgingAutorelease();
+    }
+    return [NSURL URLWithString:@""];
 }
+
 static NSData *dataWithUserTypedString(NSString *string)
 {
     NSData *userTypedData = [string dataUsingEncoding:NSUTF8StringEncoding];
     ASSERT(userTypedData);
-    
+
     const UInt8* inBytes = static_cast<const UInt8 *>([userTypedData bytes]);
     int inLength = [userTypedData length];
     if (!inLength)
         return nil;
 
-    Checked<int, RecordOverflow> mallocLength = inLength;
+    CheckedInt32 mallocLength = inLength;
     mallocLength *= 3; // large enough to %-escape every character
     if (mallocLength.hasOverflowed())
         return nil;
-    
-    char* outBytes = static_cast<char *>(malloc(mallocLength.unsafeGet()));
+
+    char* outBytes = static_cast<char *>(malloc(mallocLength));
     char* p = outBytes;
     int outLength = 0;
     for (int i = 0; i < inLength; i++) {
@@ -215,21 +194,21 @@ static NSData *dataWithUserTypedString(NSString *string)
             outLength++;
         }
     }
-    
+
     return [NSData dataWithBytesNoCopy:outBytes length:outLength]; // adopts outBytes
 }
 
-NSURL *URLWithUserTypedString(NSString *string, NSURL *nsURL)
+NSURL *URLWithUserTypedString(NSString *string, NSURL *)
 {
     if (!string)
         return nil;
 
-    auto mappedString = mapHostNames(stringByTrimmingWhitespace(string).get(), decodePercentEscapes);
+    auto mappedString = URLHelpers::mapHostNames(stringByTrimmingWhitespace(string).get(), decodePercentEscapes);
     if (!mappedString)
         return nil;
 
     // Let's check whether the URL is bogus.
-    URL url { URL { nsURL }, mappedString };
+    URL url { URL { }, mappedString };
     if (!url.createCFURL())
         return nil;
 
@@ -239,114 +218,87 @@ NSURL *URLWithUserTypedString(NSString *string, NSURL *nsURL)
     if (!data)
         return [NSURL URLWithString:@""];
 
-    return URLWithData(data, nsURL);
+    return URLWithData(data, nil);
 }
 
-NSURL *URLWithUserTypedStringDeprecated(NSString *string, NSURL *URL)
+NSURL *URLWithUserTypedStringDeprecated(NSString *string)
 {
     if (!string)
         return nil;
 
-    NSURL *result = URLWithUserTypedString(string, URL);
+    NSURL *result = URLWithUserTypedString(string);
     if (!result) {
         NSData *resultData = dataWithUserTypedString(string);
         if (!resultData)
             return [NSURL URLWithString:@""];
-        result = URLWithData(resultData, URL);
+        result = URLWithData(resultData, nil);
     }
 
     return result;
 }
 
-static BOOL hasQuestionMarkOnlyQueryString(NSURL *URL)
+static bool hasQuestionMarkOnlyQueryString(NSURL *URL)
 {
     CFRange rangeWithSeparators;
-    CFURLGetByteRangeForComponent((__bridge CFURLRef)URL, kCFURLComponentQuery, &rangeWithSeparators);
-    if (rangeWithSeparators.location != kCFNotFound && rangeWithSeparators.length == 1)
-        return YES;
-
-    return NO;
+    CFURLGetByteRangeForComponent(bridge_cast(URL), kCFURLComponentQuery, &rangeWithSeparators);
+    return rangeWithSeparators.location != kCFNotFound && rangeWithSeparators.length == 1;
 }
 
 NSData *dataForURLComponentType(NSURL *URL, CFURLComponentType componentType)
 {
-    Vector<UInt8, URL_BYTES_BUFFER_LENGTH> allBytesBuffer(URL_BYTES_BUFFER_LENGTH);
-    CFIndex bytesFilled = CFURLGetBytes((__bridge CFURLRef)URL, allBytesBuffer.data(), allBytesBuffer.size());
-    if (bytesFilled == -1) {
-        CFIndex bytesToAllocate = CFURLGetBytes((__bridge CFURLRef)URL, nullptr, 0);
-        allBytesBuffer.grow(bytesToAllocate);
-        bytesFilled = CFURLGetBytes((__bridge CFURLRef)URL, allBytesBuffer.data(), bytesToAllocate);
-    }
-    
-    const CFURLComponentType completeURL = (CFURLComponentType)-1;
-    CFRange range;
-    if (componentType != completeURL) {
-        range = CFURLGetByteRangeForComponent((__bridge CFURLRef)URL, componentType, nullptr);
-        if (range.location == kCFNotFound)
-            return nil;
-    } else {
-        range.location = 0;
-        range.length = bytesFilled;
-    }
-    
-    NSData *componentData = [NSData dataWithBytes:allBytesBuffer.data() + range.location length:range.length]; 
-    
-    const unsigned char *bytes = static_cast<const unsigned char *>([componentData bytes]);
-    NSMutableData *resultData = [NSMutableData data];
-    // NOTE: add leading '?' to query strings non-zero length query strings.
-    // NOTE: retain question-mark only query strings.
+    CFRange range = CFURLGetByteRangeForComponent(bridge_cast(URL), componentType, nullptr);
+    if (range.location == kCFNotFound)
+        return nil;
+
+    auto bytesBuffer = bytesAsVector(bridge_cast(URL));
+    auto bytes = bytesBuffer.data() + range.location;
+
+    NSMutableData *result = [NSMutableData data];
+
+    // We add leading '?' to non-zero length query strings including question-mark only query strings.
     if (componentType == kCFURLComponentQuery) {
-        if (range.length > 0 || hasQuestionMarkOnlyQueryString(URL))
-            [resultData appendBytes:"?" length:1];    
+        if (range.length || hasQuestionMarkOnlyQueryString(URL))
+            [result appendBytes:"?" length:1];
     }
-    for (int i = 0; i < range.length; i++) {
+
+    for (CFIndex i = 0; i < range.length; i++) {
         unsigned char c = bytes[i];
-        if (c <= 0x20 || c >= 0x7f) {
-            char escaped[3];
-            escaped[0] = '%';
-            escaped[1] = upperNibbleToASCIIHexDigit(c);
-            escaped[2] = lowerNibbleToASCIIHexDigit(c);
-            [resultData appendBytes:escaped length:3];    
-        } else {
-            char b[1];
-            b[0] = c;
-            [resultData appendBytes:b length:1];    
-        }               
+        if (c > 0x20 && c < 0x7F)
+            [result appendBytes:&bytes[i] length:1];
+        else {
+            char escaped[3] = { '%', upperNibbleToASCIIHexDigit(c), lowerNibbleToASCIIHexDigit(c) };
+            [result appendBytes:escaped length:3];
+        }
     }
-    
-    return resultData;
+
+    return result;
 }
 
 static NSURL *URLByRemovingComponentAndSubsequentCharacter(NSURL *URL, CFURLComponentType component)
 {
-    CFRange range = CFURLGetByteRangeForComponent((__bridge CFURLRef)URL, component, 0);
+    CFRange range = CFURLGetByteRangeForComponent(bridge_cast(URL), component, 0);
     if (range.location == kCFNotFound)
         return URL;
-    
+
     // Remove one subsequent character.
     range.length++;
 
-    Vector<UInt8, URL_BYTES_BUFFER_LENGTH> buffer(URL_BYTES_BUFFER_LENGTH);
-    CFIndex numBytes = CFURLGetBytes((__bridge CFURLRef)URL, buffer.data(), buffer.size());
-    if (numBytes == -1) {
-        numBytes = CFURLGetBytes((__bridge CFURLRef)URL, nullptr, 0);
-        buffer.grow(numBytes);
-        CFURLGetBytes((__bridge CFURLRef)URL, buffer.data(), numBytes);
-    }
-    UInt8* urlBytes = buffer.data();
-        
+    auto bytes = bytesAsVector(bridge_cast(URL));
+    auto urlBytes = bytes.data();
+    CFIndex numBytes = bytes.size();
+
     if (numBytes < range.location)
         return URL;
     if (numBytes < range.location + range.length)
         range.length = numBytes - range.location;
-        
+
     memmove(urlBytes + range.location, urlBytes + range.location + range.length, numBytes - range.location + range.length);
-    
-    CFURLRef result = CFURLCreateWithBytes(nullptr, urlBytes, numBytes - range.length, kCFStringEncodingUTF8, nullptr);
+
+    auto result = adoptCF(CFURLCreateWithBytes(nullptr, urlBytes, numBytes - range.length, kCFStringEncodingUTF8, nullptr));
     if (!result)
-        result = CFURLCreateWithBytes(nullptr, urlBytes, numBytes - range.length, kCFStringEncodingISOLatin1, nullptr);
-                
-    return result ? CFBridgingRelease(result) : URL;
+        result = adoptCF(CFURLCreateWithBytes(nullptr, urlBytes, numBytes - range.length, kCFStringEncodingISOLatin1, nullptr));
+
+    return result ? result.bridgingAutorelease() : URL;
 }
 
 NSURL *URLByRemovingUserInfo(NSURL *URL)
@@ -356,93 +308,42 @@ NSURL *URLByRemovingUserInfo(NSURL *URL)
 
 NSData *originalURLData(NSURL *URL)
 {
-    UInt8 *buffer = (UInt8 *)malloc(URL_BYTES_BUFFER_LENGTH);
-    CFIndex bytesFilled = CFURLGetBytes((__bridge CFURLRef)URL, buffer, URL_BYTES_BUFFER_LENGTH);
-    if (bytesFilled == -1) {
-        CFIndex bytesToAllocate = CFURLGetBytes((__bridge CFURLRef)URL, nullptr, 0);
-        buffer = (UInt8 *)realloc(buffer, bytesToAllocate);
-        bytesFilled = CFURLGetBytes((__bridge CFURLRef)URL, buffer, bytesToAllocate);
-        ASSERT(bytesFilled == bytesToAllocate);
-    }
-    
-    // buffer is adopted by the NSData
-    NSData *data = [NSData dataWithBytesNoCopy:buffer length:bytesFilled freeWhenDone:YES];
-    
-    NSURL *baseURL = (__bridge NSURL *)CFURLGetBaseURL((__bridge CFURLRef)URL);
-    if (baseURL)
-        return originalURLData(URLWithData(data, baseURL));
-    return data;
+    auto data = bridge_cast(bytesAsCFData(bridge_cast(URL)));
+    if (auto baseURL = bridge_cast(CFURLGetBaseURL(bridge_cast(URL))))
+        return originalURLData(URLWithData(data.get(), baseURL));
+    return data.autorelease();
 }
 
 NSString *userVisibleString(NSURL *URL)
 {
     NSData *data = originalURLData(URL);
-    CString string(static_cast<const char*>([data bytes]), [data length]);
-    return userVisibleURL(string);
+    return URLHelpers::userVisibleURL(CString(static_cast<const char*>([data bytes]), [data length]));
 }
 
 BOOL isUserVisibleURL(NSString *string)
 {
-    BOOL valid = YES;
-    // get buffer
-    
-    char static_buffer[1024];
-    const char *p;
-    BOOL success = CFStringGetCString((__bridge CFStringRef)string, static_buffer, 1023, kCFStringEncodingUTF8);
-    p = success ? static_buffer : [string UTF8String];
-    
-    int length = strlen(p);
-    
-    // check for characters <= 0x20 or >=0x7f, %-escape sequences of %7f, and xn--, these
-    // are the things that will lead _web_userVisibleString to actually change things.
-    for (int i = 0; i < length; i++) {
-        unsigned char c = p[i];
-        // escape control characters, space, and delete
-        if (c <= 0x20 || c == 0x7f) {
-            valid = NO;
-            break;
-        } else if (c == '%' && (i + 1 < length && isASCIIHexDigit(p[i + 1])) && i + 2 < length && isASCIIHexDigit(p[i + 2])) {
-            auto u = toASCIIHexValue(p[i + 1], p[i + 2]);
-            if (u > 0x7f) {
-                valid = NO;
-                break;
-            }
-            i += 2;
-        } else {
-            // Check for "xn--" in an efficient, non-case-sensitive, way.
-            if (c == '-' && i >= 3 && (p[i - 3] | 0x20) == 'x' && (p[i - 2] | 0x20) == 'n' && p[i - 1] == '-') {
-                valid = NO;
-                break;
-            }
-        }
+    // Return true if the userVisibleString function is guaranteed to not change the passed-in URL.
+    // This function is used to optimize all the most common cases where we don't need the userVisibleString algorithm.
+
+    char buffer[1024];
+    auto success = CFStringGetCString(bridge_cast(string), reinterpret_cast<char*>(buffer), sizeof(buffer) - 1, kCFStringEncodingUTF8);
+    auto characters = success ? buffer : [string UTF8String];
+
+    // Check for control characters, %-escape sequences that are non-ASCII, and xn--: these
+    // are the things that might lead the userVisibleString function to actually change the string.
+    while (auto character = *characters++) {
+        // Control characters, including space, will be escaped by userVisibleString.
+        if (character <= 0x20 || character == 0x7F)
+            return NO;
+        // Escape sequences that expand to non-ASCII characters may be converted to non-escaped UTF-8 sequences.
+        if (character == '%' && isASCIIHexDigit(characters[0]) && isASCIIHexDigit(characters[1]) && !isASCII(toASCIIHexValue(characters[0], characters[1])))
+            return NO;
+        // If "xn--" appears, then we might need to run the IDN algorithm if it's a host name.
+        if (isASCIIAlphaCaselessEqual(character, 'x') && isASCIIAlphaCaselessEqual(characters[0], 'n') && characters[1] == '-' && characters[2] == '-')
+            return NO;
     }
-    
-    return valid;
+
+    return YES;
 }
 
-NSRange rangeOfURLScheme(NSString *string)
-{
-    NSRange colon = [string rangeOfString:@":"];
-    if (colon.location != NSNotFound && colon.location > 0) {
-        NSRange scheme = {0, colon.location};
-        /*
-         This stuff is very expensive.  10-15 msec on a 2x1.2GHz.  If not cached it swamps
-         everything else when adding items to the autocomplete DB.  Makes me wonder if we
-         even need to enforce the character set here.
-         */
-        NSString *acceptableCharacters = @"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+.-";
-        static NeverDestroyed<RetainPtr<NSCharacterSet>> InverseSchemeCharacterSet([[NSCharacterSet characterSetWithCharactersInString:acceptableCharacters] invertedSet]);
-        NSRange illegals = [string rangeOfCharacterFromSet:InverseSchemeCharacterSet.get().get() options:0 range:scheme];
-        if (illegals.location == NSNotFound)
-            return scheme;
-    }
-    return NSMakeRange(NSNotFound, 0);
 }
-
-BOOL looksLikeAbsoluteURL(NSString *string)
-{
-    // Trim whitespace because _web_URLWithString allows whitespace.
-    return rangeOfURLScheme(stringByTrimmingWhitespace(string).get()).location != NSNotFound;
-}
-
-} // namespace WebCore

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -60,7 +60,7 @@ final class NativeAudioClip extends AudioClip {
             throw new MediaException("Cannot connect to media", ex);
         }
         if (null != newClip && 0 != newClip.getNativeHandle()) {
-            MediaDisposer.addResourceDisposer(newClip, (Long)newClip.getNativeHandle(), clipDisposer);
+            MediaDisposer.addResourceDisposer(newClip, newClip.getNativeHandle(), clipDisposer);
         } else {
             newClip = null;
             throw new MediaException("Cannot create audio clip");
@@ -71,7 +71,7 @@ final class NativeAudioClip extends AudioClip {
     public static AudioClip create(byte[] data, int dataOffset, int sampleCount, int sampleFormat, int channels, int sampleRate) {
         NativeAudioClip newClip = new NativeAudioClip(data, dataOffset, sampleCount, sampleFormat, channels, sampleRate);
         if (null != newClip && 0 != newClip.getNativeHandle()) {
-            MediaDisposer.addResourceDisposer(newClip, (Long)newClip.getNativeHandle(), clipDisposer);
+            MediaDisposer.addResourceDisposer(newClip, newClip.getNativeHandle(), clipDisposer);
         } else {
             newClip = null;
             throw new MediaException("Cannot create audio clip");
@@ -163,6 +163,7 @@ final class NativeAudioClip extends AudioClip {
     }
 
     private static class NativeAudioClipDisposer implements MediaDisposer.ResourceDisposer {
+        @Override
         public void disposeResource(Object resource) {
             // resource is a Long
             long nativeHandle = ((Long)resource).longValue();

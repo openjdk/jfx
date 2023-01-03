@@ -1,3 +1,28 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project version="4" />
-
+<project version="4">
+  <component name="GradleMigrationSettings" migrationVersion="1" />
+  <component name="GradleSettings">
+    <option name="linkedExternalProjectsSettings">
+      <GradleProjectSettings>
+        <option name="distributionType" value="DEFAULT_WRAPPED" />
+        <option name="externalProjectPath" value="$PROJECT_DIR$" />
+        <option name="modules">
+          <set>
+            <option value="$PROJECT_DIR$" />
+            <option value="$PROJECT_DIR$/apps" />
+            <option value="$PROJECT_DIR$/buildSrc" />
+            <option value="$PROJECT_DIR$/modules/javafx.base" />
+            <option value="$PROJECT_DIR$/modules/javafx.controls" />
+            <option value="$PROJECT_DIR$/modules/javafx.fxml" />
+            <option value="$PROJECT_DIR$/modules/javafx.graphics" />
+            <option value="$PROJECT_DIR$/modules/javafx.media" />
+            <option value="$PROJECT_DIR$/modules/javafx.swing" />
+            <option value="$PROJECT_DIR$/modules/javafx.swt" />
+            <option value="$PROJECT_DIR$/modules/javafx.web" />
+            <option value="$PROJECT_DIR$/tests/system" />
+          </set>
+        </option>
+      </GradleProjectSettings>
+    </option>
+  </component>
+</project>

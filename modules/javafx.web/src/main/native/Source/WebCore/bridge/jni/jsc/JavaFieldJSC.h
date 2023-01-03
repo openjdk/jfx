@@ -42,8 +42,8 @@ class JavaField : public Field {
 public:
     JavaField(JNIEnv*, jobject aField);
 
-    JSValue valueFromInstance(ExecState*, const Instance*) const override;
-    bool setValueToInstance(ExecState*, const Instance*, JSValue) const override;
+    JSValue valueFromInstance(JSGlobalObject*, const Instance*) const override;
+    bool setValueToInstance(JSGlobalObject*, const Instance*, JSValue) const override;
 
     const JavaString& name() const { return m_name; }
     virtual RuntimeType typeClassName() const { return m_typeClassName.utf8(); }

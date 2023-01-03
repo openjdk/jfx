@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -49,7 +49,7 @@ public final class ScrollBarThemeImpl extends ScrollBarTheme {
     private final static PlatformLogger log = PlatformLogger.getLogger(ScrollBarThemeImpl.class.getName());
 
     private WeakReference<ScrollBar> testSBRef = // used for scrollbar thickness calculation
-            new WeakReference<ScrollBar>(null);
+            new WeakReference<>(null);
 
     private final Accessor accessor;
 
@@ -59,7 +59,7 @@ public final class ScrollBarThemeImpl extends ScrollBarTheme {
         private final WeakReference<ScrollBarWidget> sbRef;
 
         private ScrollBarRef(ScrollBarWidget sb) {
-            this.sbRef = new WeakReference<ScrollBarWidget>(sb);
+            this.sbRef = new WeakReference<>(sb);
         }
 
         private Control asControl() {
@@ -74,7 +74,7 @@ public final class ScrollBarThemeImpl extends ScrollBarTheme {
      */
     public ScrollBarThemeImpl(final Accessor accessor) {
         this.accessor = accessor;
-        pool = new Pool<ScrollBarWidget>(
+        pool = new Pool<>(
                 sb -> {
                     accessor.removeChild(sb);
                 }, ScrollBarWidget.class);
@@ -84,7 +84,7 @@ public final class ScrollBarThemeImpl extends ScrollBarTheme {
                 ScrollBar testSB = new ScrollBarWidget(ScrollBarThemeImpl.this);
                 // testSB should be added to the new WebView (if any)
                 accessor.addChild(testSB);
-                testSBRef = new WeakReference<ScrollBar>(testSB);
+                testSBRef = new WeakReference<>(testSB);
             }
         });
 

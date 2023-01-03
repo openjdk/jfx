@@ -37,11 +37,11 @@ namespace WebCore {
 // Base of button, file, image, reset, and submit types.
 class BaseButtonInputType : public BaseClickableWithKeyInputType {
 protected:
-    explicit BaseButtonInputType(HTMLInputElement& element) : BaseClickableWithKeyInputType(element) { }
+    explicit BaseButtonInputType(Type type, HTMLInputElement& element) : BaseClickableWithKeyInputType(type, element) { }
 
 private:
     bool shouldSaveAndRestoreFormControlState() const override;
-    bool appendFormData(DOMFormData&, bool) const override;
+    bool appendFormData(DOMFormData&) const override;
     RenderPtr<RenderElement> createInputRenderer(RenderStyle&&) override;
     bool storesValueSeparateFromAttribute() override;
     void setValue(const String&, bool, TextFieldEventBehavior) override;

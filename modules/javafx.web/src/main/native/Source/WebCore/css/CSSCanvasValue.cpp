@@ -41,9 +41,12 @@ String CSSCanvasValue::customCSSText() const
     return makeString("-webkit-canvas(", m_name, ')');
 }
 
-void CSSCanvasValue::canvasChanged(HTMLCanvasElement&, const FloatRect& changedRect)
+void CSSCanvasValue::canvasChanged(HTMLCanvasElement&, const std::optional<FloatRect>& changedRect)
 {
-    IntRect imageChangeRect = enclosingIntRect(changedRect);
+    if (!changedRect)
+        return;
+
+    auto imageChangeRect = enclosingIntRect(changedRect.value());
     for (auto it = clients().begin(), end = clients().end(); it != end; ++it)
         it->key->imageChanged(static_cast<WrappedImagePtr>(this), &imageChangeRect);
 }
@@ -60,11 +63,11 @@ void CSSCanvasValue::canvasDestroyed(HTMLCanvasElement& element)
     m_element = nullptr;
 }
 
-FloatSize CSSCanvasValue::fixedSize(const RenderElement* renderer)
+FloatSize CSSCanvasValue::fixedSize(const RenderElement& renderer)
 {
-    if (HTMLCanvasElement* elt = element(renderer->document()))
+    if (HTMLCanvasElement* elt = element(renderer.document()))
         return FloatSize(elt->width(), elt->height());
-    return FloatSize();
+    return { };
 }
 
 HTMLCanvasElement* CSSCanvasValue::element(Document& document)
@@ -78,10 +81,10 @@ HTMLCanvasElement* CSSCanvasValue::element(Document& document)
     return m_element;
 }
 
-RefPtr<Image> CSSCanvasValue::image(RenderElement* renderer, const FloatSize& /*size*/)
+RefPtr<Image> CSSCanvasValue::image(RenderElement& renderer, const FloatSize& /*size*/)
 {
-    ASSERT(clients().contains(renderer));
-    HTMLCanvasElement* element = this->element(renderer->document());
+    ASSERT(clients().contains(&renderer));
+    HTMLCanvasElement* element = this->element(renderer.document());
     if (!element || !element->buffer())
         return nullptr;
     return element->copiedImage();

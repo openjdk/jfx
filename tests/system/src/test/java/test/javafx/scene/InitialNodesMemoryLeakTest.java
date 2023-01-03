@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2019, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,9 @@
 
 package test.javafx.scene;
 
+import java.lang.ref.WeakReference;
+import java.util.concurrent.CountDownLatch;
+
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.scene.Group;
@@ -32,21 +35,17 @@ import javafx.scene.Scene;
 import javafx.stage.Stage;
 import javafx.stage.WindowEvent;
 
-import junit.framework.Assert;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import test.util.Util;
-import static org.junit.Assert.fail;
 
-import java.lang.ref.WeakReference;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
+import test.util.Util;
+import test.util.memory.JMemoryBuddy;
 
 
 public class InitialNodesMemoryLeakTest {
 
-    static CountDownLatch startupLatch;
+    static CountDownLatch startupLatch = new CountDownLatch(1);
     static WeakReference<Group> groupWRef;
     static Stage stage;
 
@@ -72,37 +71,16 @@ public class InitialNodesMemoryLeakTest {
 
     @BeforeClass
     public static void initFX() {
-        startupLatch = new CountDownLatch(1);
-        new Thread(() -> Application.launch(InitialNodesMemoryLeakTest.TestApp.class, (String[])null)).start();
-        try {
-            if (!startupLatch.await(15, TimeUnit.SECONDS)) {
-                fail("Timeout waiting for FX runtime to start");
-            }
-        } catch (InterruptedException ex) {
-            fail("Unexpected exception: " + ex);
-        }
-    }
-
-    @Test
-    public void testRootNodeMemoryLeak() throws Exception {
-        for (int j = 0; j < 10; j++) {
-            System.gc();
-            System.runFinalization();
-
-            if (groupWRef.get() == null) {
-                break;
-            }
-
-            Util.sleep(500);
-        }
-        Assert.assertNull("Couldn't collect Node", groupWRef.get());
+        Util.launch(startupLatch, TestApp.class);
     }
 
     @AfterClass
     public static void teardownOnce() {
-        Platform.runLater(() -> {
-            stage.hide();
-            Platform.exit();
-        });
+        Util.shutdown(stage);
+    }
+
+    @Test
+    public void testRootNodeMemoryLeak() throws Exception {
+        JMemoryBuddy.assertCollectable(groupWRef);
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,21 +28,28 @@
 #include "IsoAllocator.h"
 #include "IsoTLSEntry.h"
 
+#if !BUSE(LIBPAS)
+
 namespace bmalloc {
 
 template<typename Config> class IsoHeapImpl;
 
 template<typename Config>
-class IsoTLSAllocatorEntry : public DefaultIsoTLSEntry<IsoAllocator<Config>> {
+class IsoTLSAllocatorEntry final : public DefaultIsoTLSEntry<IsoAllocator<Config>> {
 public:
-    IsoTLSAllocatorEntry(IsoHeapImpl<Config>&);
+    template<typename T> friend class IsoTLSEntryHolder;
     ~IsoTLSAllocatorEntry();
 
 private:
+    IsoTLSAllocatorEntry(IsoHeapImpl<Config>&);
+
     void construct(void* dst) override;
+
+    void scavenge(void* entry) override;
 
     IsoHeapImpl<Config>& m_heap;
 };
 
 } // namespace bmalloc
 
+#endif

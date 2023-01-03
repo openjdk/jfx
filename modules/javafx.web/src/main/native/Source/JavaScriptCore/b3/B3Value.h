@@ -218,6 +218,8 @@ public:
     virtual Value* uDivConstant(Procedure&, const Value* other) const;
     virtual Value* modConstant(Procedure&, const Value* other) const; // This chooses Mod<Chill> semantics.
     virtual Value* uModConstant(Procedure&, const Value* other) const;
+    virtual Value* fMinConstant(Procedure&, const Value* other) const;
+    virtual Value* fMaxConstant(Procedure&, const Value* other) const;
     virtual Value* bitAndConstant(Procedure&, const Value* other) const;
     virtual Value* bitOrConstant(Procedure&, const Value* other) const;
     virtual Value* bitXorConstant(Procedure&, const Value* other) const;
@@ -290,8 +292,8 @@ public:
     bool isRounded() const;
 
     TriState asTriState() const;
-    bool isLikeZero() const { return asTriState() == FalseTriState; }
-    bool isLikeNonZero() const { return asTriState() == TrueTriState; }
+    bool isLikeZero() const { return asTriState() == TriState::False; }
+    bool isLikeNonZero() const { return asTriState() == TriState::True; }
 
     Effects effects() const;
 
@@ -391,6 +393,7 @@ protected:
         case Const64:
         case ConstFloat:
         case ConstDouble:
+        case BottomTuple:
         case Fence:
         case SlotBase:
         case Get:
@@ -435,6 +438,8 @@ protected:
         case UDiv:
         case Mod:
         case UMod:
+        case FMin:
+        case FMax:
         case BitAnd:
         case BitOr:
         case BitXor:
@@ -600,6 +605,8 @@ private:
         case UDiv:
         case Mod:
         case UMod:
+        case FMin:
+        case FMax:
         case BitAnd:
         case BitOr:
         case BitXor:

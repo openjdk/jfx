@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -44,7 +44,8 @@ class FontConfigManager {
     static boolean useEmbeddedFontSupport = false;
 
     static {
-        AccessController.doPrivileged(
+        @SuppressWarnings("removal")
+        var dummy = AccessController.doPrivileged(
                 (PrivilegedAction<Void>) () -> {
                     String dbg = System.getProperty("prism.debugfonts", "");
                     debugFonts = "true".equals(dbg);
@@ -347,7 +348,8 @@ class FontConfigManager {
         private static boolean fontDirFromJRE = false;
 
         static {
-            AccessController.doPrivileged(
+            @SuppressWarnings("removal")
+            var dummy = AccessController.doPrivileged(
                     (PrivilegedAction<Void>) () -> {
                         initEmbeddedFonts();
                     return null;
@@ -397,6 +399,7 @@ class FontConfigManager {
         }
 
 
+        @SuppressWarnings("removal")
         private static boolean exists(final File f) {
             return AccessController.doPrivileged(
                     (PrivilegedAction<Boolean>) () -> f.exists()
@@ -475,8 +478,7 @@ class FontConfigManager {
                 String fcFamily = fonts[f].fcFamily;
                 String styleStr = getStyleStr(fonts[f].style);
                 String key = fcFamily+"."+styleStr+".";
-                ArrayList<FontConfigFont> allFonts =
-                      new ArrayList<FontConfigFont>();
+                ArrayList<FontConfigFont> allFonts = new ArrayList<>();
                 int i=0;
                 while (true) {
                     String file = props.getProperty(key+i+".file");
@@ -542,7 +544,8 @@ class FontConfigManager {
              Locale locale)
         {
             final Properties props = new Properties();
-            AccessController.doPrivileged(
+            @SuppressWarnings("removal")
+            var dummy = AccessController.doPrivileged(
                     (PrivilegedAction<Void>) () -> {
                         try {
                             String lFile = fontDir+"/allfonts.properties";
@@ -590,7 +593,7 @@ class FontConfigManager {
                     ArrayList<String> familyArr =
                         familyToFontListMap.get(familyLC);
                     if (familyArr == null) {
-                        familyArr = new ArrayList<String>(4);
+                        familyArr = new ArrayList<>(4);
                         familyToFontListMap.put(familyLC, familyArr);
                     }
                     familyArr.add(font);

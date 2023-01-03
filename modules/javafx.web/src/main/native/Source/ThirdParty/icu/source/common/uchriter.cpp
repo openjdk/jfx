@@ -66,13 +66,13 @@ UCharCharacterIterator::operator=(const UCharCharacterIterator& that) {
 UCharCharacterIterator::~UCharCharacterIterator() {
 }
 
-UBool
+bool
 UCharCharacterIterator::operator==(const ForwardCharacterIterator& that) const {
     if (this == &that) {
-        return TRUE;
+        return true;
     }
     if (typeid(*this) != typeid(that)) {
-        return FALSE;
+        return false;
     }
 
     UCharCharacterIterator&    realThat = (UCharCharacterIterator&)that;
@@ -89,7 +89,7 @@ UCharCharacterIterator::hashCode() const {
     return ustr_hashUCharsN(text, textLength) ^ pos ^ begin ^ end;
 }
 
-CharacterIterator*
+UCharCharacterIterator*
 UCharCharacterIterator::clone() const {
     return new UCharCharacterIterator(*this);
 }

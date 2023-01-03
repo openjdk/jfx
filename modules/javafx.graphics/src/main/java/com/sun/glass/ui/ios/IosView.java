@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -82,5 +82,10 @@ final class IosView extends View {
     @Override protected void _uploadPixels(long ptr, Pixels pixels) {
         throw new RuntimeException("IosView._uploadPixels() UNIMPLEMENTED.");
     }
+
+    private void notifyUnicode(int type, int keyCode, int unicode, int modifiers) {
+        notifyKey(type, keyCode, new char[] {(char) unicode}, modifiers);
+    }
+
 }
 

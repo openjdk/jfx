@@ -2,7 +2,7 @@
  * Copyright (C) 1999 Lars Knoll (knoll@kde.org)
  *           (C) 1999 Antti Koivisto (koivisto@kde.org)
  *           (C) 2001 Dirk Mueller (mueller@kde.org)
- * Copyright (C) 2004, 2007, 2014-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2020 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -38,9 +38,14 @@ NameNodeList::NameNodeList(ContainerNode& rootNode, const AtomString& name)
 {
 }
 
+Ref<NameNodeList> NameNodeList::create(ContainerNode& rootNode, const AtomString& name)
+{
+    return adoptRef(*new NameNodeList(rootNode, name));
+}
+
 NameNodeList::~NameNodeList()
 {
-    ownerNode().nodeLists()->removeCacheWithAtomicName(this, m_name);
+    ownerNode().nodeLists()->removeCacheWithAtomName(*this, m_name);
 }
 
 } // namespace WebCore

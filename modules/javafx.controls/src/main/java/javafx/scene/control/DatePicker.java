@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -44,7 +44,6 @@ import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.beans.property.SimpleObjectProperty;
-import javafx.beans.value.WritableValue;
 import javafx.css.CssMetaData;
 import javafx.css.Styleable;
 import javafx.css.StyleableBooleanProperty;
@@ -106,7 +105,15 @@ public class DatePicker extends ComboBoxBase<LocalDate> {
      */
     public DatePicker() {
         this(null);
+    }
 
+    /**
+     * Creates a DatePicker instance and sets the
+     * {@link #valueProperty() value} to the given date.
+     *
+     * @param localDate to be set as the currently selected date in the DatePicker. Can be null.
+     */
+    public DatePicker(LocalDate localDate) {
         valueProperty().addListener(observable -> {
             LocalDate date = getValue();
             Chronology chrono = getChronology();
@@ -115,7 +122,7 @@ public class DatePicker extends ComboBoxBase<LocalDate> {
                 lastValidDate = date;
             } else {
                 System.err.println("Restoring value to " +
-                            ((lastValidDate == null) ? "null" : getConverter().toString(lastValidDate)));
+                        ((lastValidDate == null) ? "null" : getConverter().toString(lastValidDate)));
                 setValue(lastValidDate);
             }
         });
@@ -132,6 +139,17 @@ public class DatePicker extends ComboBoxBase<LocalDate> {
                 setChronology(lastValidChronology);
             }
         });
+
+        setValue(localDate);
+        getStyleClass().add(DEFAULT_STYLE_CLASS);
+        setAccessibleRole(AccessibleRole.DATE_PICKER);
+        setEditable(true);
+
+        focusedProperty().addListener(o -> {
+            if (!isFocused()) {
+                commitValue();
+            }
+        });
     }
 
     private boolean validateDate(Chronology chrono, LocalDate date) {
@@ -146,21 +164,8 @@ public class DatePicker extends ComboBoxBase<LocalDate> {
         }
     }
 
-    /**
-     * Creates a DatePicker instance and sets the
-     * {@link #valueProperty() value} to the given date.
-     *
-     * @param localDate to be set as the currently selected date in the DatePicker. Can be null.
-     */
-    public DatePicker(LocalDate localDate) {
-        setValue(localDate);
-        getStyleClass().add(DEFAULT_STYLE_CLASS);
-        setAccessibleRole(AccessibleRole.DATE_PICKER);
-        setEditable(true);
-    }
 
-
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Properties                                                                 *
      *                                                                         *
@@ -206,7 +211,7 @@ public class DatePicker extends ComboBoxBase<LocalDate> {
     }
     public final ObjectProperty<Callback<DatePicker, DateCell>> dayCellFactoryProperty() {
         if (dayCellFactory == null) {
-            dayCellFactory = new SimpleObjectProperty<Callback<DatePicker, DateCell>>(this, "dayCellFactory");
+            dayCellFactory = new SimpleObjectProperty<>(this, "dayCellFactory");
         }
         return dayCellFactory;
     }
@@ -231,7 +236,7 @@ public class DatePicker extends ComboBoxBase<LocalDate> {
         return chronology;
     }
     private ObjectProperty<Chronology> chronology =
-        new SimpleObjectProperty<Chronology>(this, "chronology", null);
+        new SimpleObjectProperty<>(this, "chronology", null);
     public final Chronology getChronology() {
         Chronology chrono = chronology.get();
         if (chrono == null) {
@@ -386,7 +391,7 @@ public class DatePicker extends ComboBoxBase<LocalDate> {
      */
     public final ObjectProperty<StringConverter<LocalDate>> converterProperty() { return converter; }
     private ObjectProperty<StringConverter<LocalDate>> converter =
-            new SimpleObjectProperty<StringConverter<LocalDate>>(this, "converter", null);
+            new SimpleObjectProperty<>(this, "converter", null);
     public final void setConverter(StringConverter<LocalDate> value) { converterProperty().set(value); }
     public final StringConverter<LocalDate> getConverter() {
         StringConverter<LocalDate> converter = converterProperty().get();
@@ -425,8 +430,43 @@ public class DatePicker extends ComboBoxBase<LocalDate> {
         return new DatePickerSkin(this);
     }
 
+    /**
+     * If the {@link DatePicker} is {@link #editableProperty() editable}, calling this method will attempt to
+     * commit the current text and convert it to a {@link #valueProperty() value}.
+     * @since 18
+     */
+    public final void commitValue() {
+        if (!isEditable()) {
+            return;
+        }
+        String text = getEditor().getText();
+        StringConverter<LocalDate> converter = getConverter();
+        if (converter != null) {
+            LocalDate value = converter.fromString(text);
+            setValue(value);
+        }
+    }
 
-    /***************************************************************************
+    /**
+     * If the {@link DatePicker} is {@link #editableProperty() editable}, calling this method will attempt to
+     * replace the editor text with the last committed {@link #valueProperty() value}.
+     * @since 18
+     */
+    public final void cancelEdit() {
+        if (!isEditable()) {
+            return;
+        }
+        LocalDate committedValue = getValue();
+        StringConverter<LocalDate> converter = getConverter();
+        if (converter != null) {
+            String valueString = converter.toString(committedValue);
+            getEditor().setText(valueString);
+        }
+    }
+
+
+
+    /* *************************************************************************
      *                                                                         *
      * Stylesheet Handling                                                     *
      *                                                                         *
@@ -438,7 +478,7 @@ public class DatePicker extends ComboBoxBase<LocalDate> {
         private static final String country =
             Locale.getDefault(Locale.Category.FORMAT).getCountry();
         private static final CssMetaData<DatePicker, Boolean> SHOW_WEEK_NUMBERS =
-              new CssMetaData<DatePicker, Boolean>("-fx-show-week-numbers",
+              new CssMetaData<>("-fx-show-week-numbers",
                    BooleanConverter.getInstance(),
                    (!country.isEmpty() &&
                     ControlResources.getNonTranslatableString("DatePicker.showWeekNumbers").contains(country))) {
@@ -447,7 +487,7 @@ public class DatePicker extends ComboBoxBase<LocalDate> {
             }
 
             @Override public StyleableProperty<Boolean> getStyleableProperty(DatePicker n) {
-                return (StyleableProperty<Boolean>)(WritableValue<Boolean>)n.showWeekNumbersProperty();
+                return (StyleableProperty<Boolean>)n.showWeekNumbersProperty();
             }
         };
 
@@ -455,7 +495,7 @@ public class DatePicker extends ComboBoxBase<LocalDate> {
 
         static {
             final List<CssMetaData<? extends Styleable, ?>> styleables =
-                new ArrayList<CssMetaData<? extends Styleable, ?>>(Control.getClassCssMetaData());
+                new ArrayList<>(Control.getClassCssMetaData());
             Collections.addAll(styleables,
                 SHOW_WEEK_NUMBERS
             );
@@ -464,8 +504,9 @@ public class DatePicker extends ComboBoxBase<LocalDate> {
     }
 
     /**
-     * @return The CssMetaData associated with this class, which may include the
-     * CssMetaData of its superclasses.
+     * Gets the {@code CssMetaData} associated with this class, which may include the
+     * {@code CssMetaData} of its superclasses.
+     * @return the {@code CssMetaData}
      */
     public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
         return StyleableProperties.STYLEABLES;
@@ -480,7 +521,7 @@ public class DatePicker extends ComboBoxBase<LocalDate> {
         return getClassCssMetaData();
     }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Accessibility handling                                                  *
      *                                                                         *

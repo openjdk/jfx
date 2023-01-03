@@ -44,6 +44,7 @@ class HTMLMapElement;
 class LayoutPoint;
 class IdTargetObserverRegistry;
 class Node;
+class RadioButtonGroups;
 class ShadowRoot;
 
 class TreeScope {
@@ -75,7 +76,7 @@ public:
     static ptrdiff_t documentScopeMemoryOffset() { return OBJECT_OFFSETOF(TreeScope, m_documentScope); }
 
     // https://dom.spec.whatwg.org/#retarget
-    Node& retargetToScope(Node&) const;
+    Ref<Node> retargetToScope(Node&) const;
 
     WEBCORE_EXPORT Node* ancestorNodeInThisScope(Node*) const;
     WEBCORE_EXPORT Element* ancestorElementInThisScope(Element*) const;
@@ -103,11 +104,13 @@ public:
     // for an anchor with the given name. ID matching is always case sensitive, but
     // Anchor name matching is case sensitive in strict mode and not case sensitive in
     // quirks mode for historical compatibility reasons.
-    Element* findAnchor(const String& name);
+    Element* findAnchor(StringView name);
 
     ContainerNode& rootNode() const { return m_rootNode; }
 
     IdTargetObserverRegistry& idTargetObserverRegistry() const { return *m_idTargetObserverRegistry.get(); }
+
+    RadioButtonGroups& radioButtonGroups();
 
 protected:
     TreeScope(ShadowRoot&, Document&);
@@ -120,7 +123,7 @@ protected:
         m_documentScope = document;
     }
 
-    Node* nodeFromPoint(const LayoutPoint& clientPoint, LayoutPoint* localPoint);
+    RefPtr<Node> nodeFromPoint(const LayoutPoint& clientPoint, LayoutPoint* localPoint);
 
 private:
 
@@ -135,6 +138,8 @@ private:
     std::unique_ptr<TreeScopeOrderedMap> m_labelsByForAttribute;
 
     std::unique_ptr<IdTargetObserverRegistry> m_idTargetObserverRegistry;
+
+    std::unique_ptr<RadioButtonGroups> m_radioButtonGroups;
 };
 
 inline bool TreeScope::hasElementWithId(const AtomStringImpl& id) const

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,6 +30,8 @@ import javafx.scene.control.IndexedCell;
 import javafx.scene.control.ScrollToEvent;
 import javafx.scene.control.SkinBase;
 
+import com.sun.javafx.scene.control.ListenerHelper;
+
 /**
  * Parent class to control skins whose contents are virtualized and scrollable.
  * This class handles the interaction with the VirtualFlow class, which is the
@@ -39,7 +41,7 @@ import javafx.scene.control.SkinBase;
  */
 public abstract class VirtualContainerBase<C extends Control, I extends IndexedCell> extends SkinBase<C> {
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Private fields                                                          *
      *                                                                         *
@@ -54,22 +56,21 @@ public abstract class VirtualContainerBase<C extends Control, I extends IndexedC
     private final VirtualFlow<I> flow;
 
 
-
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
      **************************************************************************/
 
     /**
-     *
+     * Constructor for subclasses to call.
      * @param control the control
      */
     public VirtualContainerBase(final C control) {
         super(control);
         flow = createVirtualFlow();
 
-        control.addEventHandler(ScrollToEvent.scrollToTopIndex(), event -> {
+        ListenerHelper.get(this).addEventHandler(control, ScrollToEvent.scrollToTopIndex(), (ev) -> {
             // Fix for RT-24630: The row count in VirtualFlow was incorrect
             // (normally zero), so the scrollTo call was misbehaving.
             if (itemCountDirty) {
@@ -77,13 +78,13 @@ public abstract class VirtualContainerBase<C extends Control, I extends IndexedC
                 updateItemCount();
                 itemCountDirty = false;
             }
-            flow.scrollToTop(event.getScrollTarget());
+            flow.scrollToTop(ev.getScrollTarget());
         });
     }
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Abstract API                                                            *
      *                                                                         *
@@ -105,7 +106,7 @@ public abstract class VirtualContainerBase<C extends Control, I extends IndexedC
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Public API                                                              *
      *                                                                         *
@@ -121,6 +122,18 @@ public abstract class VirtualContainerBase<C extends Control, I extends IndexedC
      */
     protected VirtualFlow<I> createVirtualFlow() {
         return new VirtualFlow<>();
+    }
+
+    /**
+     * {@inheritDoc} <p>
+     * Overridden to remove EventHandler.
+     */
+    @Override
+    public void dispose() {
+        if (getSkinnable() == null) {
+            return;
+        }
+        super.dispose();
     }
 
     /**
@@ -145,7 +158,7 @@ public abstract class VirtualContainerBase<C extends Control, I extends IndexedC
         checkState();
     }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Private methods                                                         *
      *                                                                         *

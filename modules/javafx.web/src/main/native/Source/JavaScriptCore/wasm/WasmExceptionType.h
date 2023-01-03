@@ -36,14 +36,13 @@ namespace Wasm {
     macro(OutOfBoundsTableAccess, "Out of bounds table access") \
     macro(OutOfBoundsCallIndirect, "Out of bounds call_indirect") \
     macro(NullTableEntry,  "call_indirect to a null table entry") \
+    macro(NullReference,  "call_ref to a null reference") \
     macro(BadSignature, "call_indirect to a signature that does not match") \
     macro(OutOfBoundsTrunc, "Out of bounds Trunc operation") \
     macro(Unreachable, "Unreachable code should not be executed") \
     macro(DivisionByZero, "Division by zero") \
     macro(IntegerOverflow, "Integer overflow") \
     macro(StackOverflow, "Stack overflow") \
-    macro(I64ArgumentType, "WebAssembly function with an i64 argument can't be called from JavaScript") \
-    macro(I64ReturnType, "WebAssembly function that returns i64 can't be called from JavaScript") \
     macro(FuncrefNotWasm, "Funcref must be an exported wasm function")
 
 enum class ExceptionType : uint32_t {

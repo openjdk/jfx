@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -46,6 +46,7 @@ import javafx.scene.control.TextInputControl;
 import javafx.scene.input.ContextMenuEvent;
 import javafx.scene.input.Clipboard;
 import com.sun.javafx.scene.control.inputmap.InputMap;
+import com.sun.javafx.scene.control.inputmap.InputMap.Mapping;
 import com.sun.javafx.scene.control.inputmap.KeyBinding;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
@@ -77,10 +78,9 @@ import static javafx.scene.input.KeyEvent.*;
 public abstract class TextInputControlBehavior<T extends TextInputControl> extends BehaviorBase<T> {
 
     /**
-     * Specifies whether we ought to show handles. We should do it on touch platforms, but not
-     * iOS (and maybe not Android either?)
+     * Specifies whether we ought to show handles. We should do it on touch platforms
      */
-    static final boolean SHOW_HANDLES = Properties.IS_TOUCH_SUPPORTED && !PlatformUtil.isIOS();
+    static final boolean SHOW_HANDLES = Properties.IS_TOUCH_SUPPORTED;
 
     public static final String DISABLE_FORWARD_TO_PARENT = "TextInputControlBehavior.disableForwardToParent";
 
@@ -109,8 +109,6 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
         super(c);
 
         this.textInputControl = c;
-
-        textInputControl.textProperty().addListener(textListener);
 
         // create a map for text input-specific mappings (this reuses the default
         // InputMap installed on the control, if it is non-null, allowing us to pick up any user-specified mappings)
@@ -206,7 +204,7 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
                 new MouseMapping(MouseEvent.MOUSE_PRESSED, this::mousePressed),
                 new MouseMapping(MouseEvent.MOUSE_DRAGGED, this::mouseDragged),
                 new MouseMapping(MouseEvent.MOUSE_RELEASED, this::mouseReleased),
-                new InputMap.Mapping<ContextMenuEvent>(ContextMenuEvent.CONTEXT_MENU_REQUESTED, this::contextMenuRequested) {
+                new InputMap.Mapping<>(ContextMenuEvent.CONTEXT_MENU_REQUESTED, this::contextMenuRequested) {
                     @Override public int getSpecificity(Event event) {
                         return 1;
                     }
@@ -301,15 +299,28 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
                 }
             }
         }
-        // Install mappings
-        for (Object o : tmpMap.getMappings()) {
-            map.getMappings().add((KeyMapping)o);
+
+        if (map == getInputMap()) {
+            // install mappings in the top-level inputMap
+            // as default mappings to clear them on dispose
+            for (Mapping<?> mapping : tmpMap.getMappings()) {
+                addDefaultMapping(map, mapping);
+            }
+        } else {
+            // Install mappings in child maps
+            for (Object o : tmpMap.getMappings()) {
+                map.getMappings().add((KeyMapping)o);
+            }
         }
+
+        // temporary inputMap must be disposed to prevent memory leak
+        tmpMap.dispose();
 
         // Recursive call for child maps
         for (Object o : map.getChildInputMaps()) {
             addKeyPadMappings((InputMap<T>)o);
         }
+
     }
 
 
@@ -409,6 +420,11 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
     private Bidi bidi = null;
     private Boolean mixed = null;
     private Boolean rtlText = null;
+
+    // test-only
+    Bidi getRawBidi() {
+        return bidi;
+    }
 
     private void invalidateBidi() {
         bidi = null;
@@ -623,7 +639,7 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
     }
 
     protected void fire(KeyEvent event) { } // TODO move to TextFieldBehavior
-    protected void cancelEdit(KeyEvent event) { };
+    protected void cancelEdit(KeyEvent event) { }
 
     protected void selectHome() {
         getNode().selectHome();

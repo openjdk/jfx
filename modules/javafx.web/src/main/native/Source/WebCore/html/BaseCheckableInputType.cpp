@@ -55,7 +55,7 @@ void BaseCheckableInputType::restoreFormControlState(const FormControlState& sta
     element()->setChecked(state[0] == "on");
 }
 
-bool BaseCheckableInputType::appendFormData(DOMFormData& formData, bool) const
+bool BaseCheckableInputType::appendFormData(DOMFormData& formData) const
 {
     ASSERT(element());
     if (!element()->checked())
@@ -91,17 +91,15 @@ bool BaseCheckableInputType::canSetStringValue() const
 }
 
 // FIXME: Could share this with BaseClickableWithKeyInputType and RangeInputType if we had a common base class.
-void BaseCheckableInputType::accessKeyAction(bool sendMouseEvents)
+bool BaseCheckableInputType::accessKeyAction(bool sendMouseEvents)
 {
-    InputType::accessKeyAction(sendMouseEvents);
-
     ASSERT(element());
-    element()->dispatchSimulatedClick(0, sendMouseEvents ? SendMouseUpDownEvents : SendNoEvents);
+    return InputType::accessKeyAction(sendMouseEvents) || element()->dispatchSimulatedClick(0, sendMouseEvents ? SendMouseUpDownEvents : SendNoEvents);
 }
 
 String BaseCheckableInputType::fallbackValue() const
 {
-    static NeverDestroyed<const AtomString> on("on", AtomString::ConstructFromLiteral);
+    static MainThreadNeverDestroyed<const AtomString> on("on", AtomString::ConstructFromLiteral);
     return on.get();
 }
 
@@ -116,11 +114,6 @@ void BaseCheckableInputType::setValue(const String& sanitizedValue, bool, TextFi
     element()->setAttributeWithoutSynchronization(valueAttr, sanitizedValue);
 }
 
-bool BaseCheckableInputType::isCheckable()
-{
-    return true;
-}
-
 void BaseCheckableInputType::fireInputAndChangeEvents()
 {
     if (!element()->isConnected())
@@ -129,7 +122,7 @@ void BaseCheckableInputType::fireInputAndChangeEvents()
     if (!shouldSendChangeEventAfterCheckedChanged())
         return;
 
-    auto protectedThis = makeRef(*this);
+    Ref protectedThis { *this };
     element()->setTextAsOfLastFormControlChangeEvent(String());
     element()->dispatchInputEvent();
     if (auto* element = this->element())

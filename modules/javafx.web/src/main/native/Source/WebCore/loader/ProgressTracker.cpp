@@ -37,7 +37,7 @@
 #include "ResourceResponse.h"
 #include <wtf/text/CString.h>
 
-#define RELEASE_LOG_IF_ALLOWED(fmt, ...) RELEASE_LOG_IF(isAlwaysOnLoggingAllowed(), Network, "%p - ProgressTracker::" fmt, this, ##__VA_ARGS__)
+#define PROGRESS_TRACKER_RELEASE_LOG(fmt, ...) RELEASE_LOG(Network, "%p - ProgressTracker::" fmt, this, ##__VA_ARGS__)
 
 namespace WebCore {
 
@@ -75,18 +75,14 @@ public:
     long long estimatedLength;
 };
 
-unsigned long ProgressTracker::s_uniqueIdentifier = 0;
-
-ProgressTracker::ProgressTracker(ProgressTrackerClient& client)
-    : m_client(client)
+ProgressTracker::ProgressTracker(Page& page, UniqueRef<ProgressTrackerClient>&& client)
+    : m_page(page)
+    , m_client(WTFMove(client))
     , m_progressHeartbeatTimer(*this, &ProgressTracker::progressHeartbeatTimerFired)
 {
 }
 
-ProgressTracker::~ProgressTracker()
-{
-    m_client.progressTrackerDestroyed();
-}
+ProgressTracker::~ProgressTracker() = default;
 
 double ProgressTracker::estimatedProgress() const
 {
@@ -117,7 +113,7 @@ void ProgressTracker::progressStarted(Frame& frame)
 {
     LOG(Progress, "Progress started (%p) - frame %p(\"%s\"), value %f, tracked frames %d, originating frame %p", this, &frame, frame.tree().uniqueName().string().utf8().data(), m_progressValue, m_numProgressTrackedFrames, m_originatingProgressFrame.get());
 
-    m_client.willChangeEstimatedProgress();
+    m_client->willChangeEstimatedProgress();
 
     if (!m_numProgressTrackedFrames || m_originatingProgressFrame == &frame) {
         reset();
@@ -133,37 +129,44 @@ void ProgressTracker::progressStarted(Frame& frame)
         static const auto subframePartOfMainLoadThreshold = 1_s;
         m_isMainLoad = isMainFrame || elapsedTimeSinceMainLoadComplete < subframePartOfMainLoadThreshold;
 
-        m_client.progressStarted(*m_originatingProgressFrame);
+        m_client->progressStarted(*m_originatingProgressFrame);
+        m_page.progressEstimateChanged(*m_originatingProgressFrame);
     }
     m_numProgressTrackedFrames++;
 
-    RELEASE_LOG_IF_ALLOWED("progressStarted: frame %p, value %f, tracked frames %d, originating frame %p, isMainLoad %d", &frame, m_progressValue, m_numProgressTrackedFrames, m_originatingProgressFrame.get(), m_isMainLoad);
+    PROGRESS_TRACKER_RELEASE_LOG("progressStarted: frame %p, value %f, tracked frames %d, originating frame %p, isMainLoad %d", &frame, m_progressValue, m_numProgressTrackedFrames, m_originatingProgressFrame.get(), m_isMainLoad);
 
-    m_client.didChangeEstimatedProgress();
+    m_client->didChangeEstimatedProgress();
     InspectorInstrumentation::frameStartedLoading(frame);
+}
+
+void ProgressTracker::progressEstimateChanged(Frame& frame)
+{
+    m_client->progressEstimateChanged(frame);
+    m_page.progressEstimateChanged(frame);
 }
 
 void ProgressTracker::progressCompleted(Frame& frame)
 {
     LOG(Progress, "Progress completed (%p) - frame %p(\"%s\"), value %f, tracked frames %d, originating frame %p", this, &frame, frame.tree().uniqueName().string().utf8().data(), m_progressValue, m_numProgressTrackedFrames, m_originatingProgressFrame.get());
-    RELEASE_LOG_IF_ALLOWED("progressCompleted: frame %p, value %f, tracked frames %d, originating frame %p, isMainLoad %d", &frame, m_progressValue, m_numProgressTrackedFrames, m_originatingProgressFrame.get(), m_isMainLoad);
+    PROGRESS_TRACKER_RELEASE_LOG("progressCompleted: frame %p, value %f, tracked frames %d, originating frame %p, isMainLoad %d", &frame, m_progressValue, m_numProgressTrackedFrames, m_originatingProgressFrame.get(), m_isMainLoad);
 
     if (m_numProgressTrackedFrames <= 0)
         return;
 
-    m_client.willChangeEstimatedProgress();
+    m_client->willChangeEstimatedProgress();
 
     m_numProgressTrackedFrames--;
     if (!m_numProgressTrackedFrames || m_originatingProgressFrame == &frame)
         finalProgressComplete();
 
-    m_client.didChangeEstimatedProgress();
+    m_client->didChangeEstimatedProgress();
 }
 
 void ProgressTracker::finalProgressComplete()
 {
     LOG(Progress, "Final progress complete (%p)", this);
-    RELEASE_LOG_IF_ALLOWED("finalProgressComplete: value %f, tracked frames %d, originating frame %p, isMainLoad %d, isMainLoadProgressing %d", m_progressValue, m_numProgressTrackedFrames, m_originatingProgressFrame.get(), m_isMainLoad, isMainLoadProgressing());
+    PROGRESS_TRACKER_RELEASE_LOG("finalProgressComplete: value %f, tracked frames %d, originating frame %p, isMainLoad %d, isMainLoadProgressing %d", m_progressValue, m_numProgressTrackedFrames, m_originatingProgressFrame.get(), m_isMainLoad, isMainLoadProgressing());
 
     auto frame = WTFMove(m_originatingProgressFrame);
 
@@ -171,7 +174,7 @@ void ProgressTracker::finalProgressComplete()
     // with final progress value.
     if (!m_finalProgressChangedSent) {
         m_progressValue = 1;
-        m_client.progressEstimateChanged(*frame);
+        progressEstimateChanged(*frame);
     }
 
     reset();
@@ -180,13 +183,14 @@ void ProgressTracker::finalProgressComplete()
         m_mainLoadCompletionTime = MonotonicTime::now();
 
     frame->loader().client().setMainFrameDocumentReady(true);
-    m_client.progressFinished(*frame);
+    m_client->progressFinished(*frame);
+    m_page.progressFinished(*frame);
     frame->loader().loadProgressingStatusChanged();
 
     InspectorInstrumentation::frameStoppedLoading(*frame);
 }
 
-void ProgressTracker::incrementProgress(unsigned long identifier, const ResourceResponse& response)
+void ProgressTracker::incrementProgress(ResourceLoaderIdentifier identifier, const ResourceResponse& response)
 {
     LOG(Progress, "Progress incremented (%p) - value %f, tracked frames %d, originating frame %p", this, m_progressValue, m_numProgressTrackedFrames, m_originatingProgressFrame.get());
 
@@ -209,7 +213,7 @@ void ProgressTracker::incrementProgress(unsigned long identifier, const Resource
     item->estimatedLength = estimatedLength;
 }
 
-void ProgressTracker::incrementProgress(unsigned long identifier, unsigned bytesReceived)
+void ProgressTracker::incrementProgress(ResourceLoaderIdentifier identifier, unsigned bytesReceived)
 {
     ProgressItem* item = m_progressItems.get(identifier);
 
@@ -219,7 +223,7 @@ void ProgressTracker::incrementProgress(unsigned long identifier, unsigned bytes
 
     RefPtr<Frame> frame = m_originatingProgressFrame;
 
-    m_client.willChangeEstimatedProgress();
+    m_client->willChangeEstimatedProgress();
 
     double increment, percentOfRemainingBytes;
     long long remainingBytes, estimatedBytesForPendingRequests;
@@ -259,17 +263,17 @@ void ProgressTracker::incrementProgress(unsigned long identifier, unsigned bytes
             if (m_progressValue == 1)
                 m_finalProgressChangedSent = true;
 
-            m_client.progressEstimateChanged(*frame);
+            progressEstimateChanged(*frame);
 
             m_lastNotifiedProgressValue = m_progressValue;
             m_lastNotifiedProgressTime = now;
         }
     }
 
-    m_client.didChangeEstimatedProgress();
+    m_client->didChangeEstimatedProgress();
 }
 
-void ProgressTracker::completeProgress(unsigned long identifier)
+void ProgressTracker::completeProgress(ResourceLoaderIdentifier identifier)
 {
     auto it = m_progressItems.find(identifier);
 
@@ -284,11 +288,6 @@ void ProgressTracker::completeProgress(unsigned long identifier)
     m_totalPageAndResourceBytesToLoad += delta;
 
     m_progressItems.remove(it);
-}
-
-unsigned long ProgressTracker::createUniqueIdentifier()
-{
-    return ++s_uniqueIdentifier;
 }
 
 bool ProgressTracker::isMainLoadProgressing() const
@@ -316,14 +315,6 @@ void ProgressTracker::progressHeartbeatTimerFired()
 
     if (m_progressValue >= finalProgressValue)
         m_progressHeartbeatTimer.stop();
-}
-
-bool ProgressTracker::isAlwaysOnLoggingAllowed() const
-{
-    if (!m_originatingProgressFrame)
-        return false;
-
-    return m_originatingProgressFrame->isAlwaysOnLoggingAllowed();
 }
 
 }

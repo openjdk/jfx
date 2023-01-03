@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 # Copyright (c) 2014, 2016 Apple Inc. All rights reserved.
 # Copyright (c) 2014 University of Washington. All rights reserved.
@@ -33,7 +33,7 @@ try:
     from .generator import Generator
     from .objc_generator import ObjCGenerator
     from .objc_generator_templates import ObjCGeneratorTemplates as ObjCTemplates
-except ValueError:
+except ImportError:
     from generator import Generator
     from objc_generator import ObjCGenerator
     from objc_generator_templates import ObjCGeneratorTemplates as ObjCTemplates
@@ -82,9 +82,10 @@ class ObjCConfigurationHeaderGenerator(ObjCGenerator):
         }
 
         lines = []
-
         if self.should_generate_commands_for_domain(domain):
             lines.append(Template(ObjCTemplates.ConfigurationCommandProperty).substitute(None, **property_args))
         if self.should_generate_events_for_domain(domain):
             lines.append(Template(ObjCTemplates.ConfigurationEventProperty).substitute(None, **property_args))
-        return lines
+        if not len(lines):
+            return []
+        return [self.wrap_with_guard_for_condition(domain.condition, '\n'.join(lines))]

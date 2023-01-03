@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2005 Oliver Hunt <ojh16@student.canterbury.ac.nz>
- * Copyright (C) 2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2022 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -22,10 +22,8 @@
 #include "SVGFEDiffuseLightingElement.h"
 
 #include "FEDiffuseLighting.h"
-#include "FilterEffect.h"
 #include "RenderStyle.h"
 #include "SVGFELightElement.h"
-#include "SVGFilterBuilder.h"
 #include "SVGNames.h"
 #include "SVGParserUtilities.h"
 #include <wtf/IsoMallocInlines.h>
@@ -71,10 +69,9 @@ void SVGFEDiffuseLightingElement::parseAttribute(const QualifiedName& name, cons
     }
 
     if (name == SVGNames::kernelUnitLengthAttr) {
-        float x, y;
-        if (parseNumberOptionalNumber(value, x, y)) {
-            m_kernelUnitLengthX->setBaseValInternal(x);
-            m_kernelUnitLengthY->setBaseValInternal(y);
+        if (auto result = parseNumberOptionalNumber(value)) {
+            m_kernelUnitLengthX->setBaseValInternal(result->first);
+            m_kernelUnitLengthY->setBaseValInternal(result->second);
         }
         return;
     }
@@ -152,18 +149,13 @@ void SVGFEDiffuseLightingElement::lightElementAttributeChanged(const SVGFELightE
     primitiveAttributeChanged(attrName);
 }
 
-RefPtr<FilterEffect> SVGFEDiffuseLightingElement::build(SVGFilterBuilder* filterBuilder, Filter& filter) const
+RefPtr<FilterEffect> SVGFEDiffuseLightingElement::filterEffect(const SVGFilterBuilder& filterBuilder, const FilterEffectVector&) const
 {
-    auto input1 = filterBuilder->getEffectById(in1());
-
-    if (!input1)
-        return nullptr;
-
-    auto lightElement = makeRefPtr(SVGFELightElement::findLightElement(this));
+    RefPtr lightElement = SVGFELightElement::findLightElement(this);
     if (!lightElement)
         return nullptr;
 
-    auto lightSource = lightElement->lightSource(*filterBuilder);
+    auto lightSource = lightElement->lightSource(filterBuilder);
 
     RenderObject* renderer = this->renderer();
     if (!renderer)
@@ -171,9 +163,7 @@ RefPtr<FilterEffect> SVGFEDiffuseLightingElement::build(SVGFilterBuilder* filter
 
     Color color = renderer->style().colorByApplyingColorFilter(renderer->style().svgStyle().lightingColor());
 
-    auto effect = FEDiffuseLighting::create(filter, color, surfaceScale(), diffuseConstant(), kernelUnitLengthX(), kernelUnitLengthY(), WTFMove(lightSource));
-    effect->inputEffects().append(input1);
-    return effect;
+    return FEDiffuseLighting::create(color, surfaceScale(), diffuseConstant(), kernelUnitLengthX(), kernelUnitLengthY(), WTFMove(lightSource));
 }
 
-}
+} // namespace WebCore

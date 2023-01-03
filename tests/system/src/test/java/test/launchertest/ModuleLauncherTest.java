@@ -44,6 +44,7 @@ public class ModuleLauncherTest {
     private static final String modulePath5 = System.getProperty("launchertest.testapp5.module.path");
     private static final String modulePath6 = System.getProperty("launchertest.testapp6.module.path");
     private static final String modulePathScript1 = System.getProperty("launchertest.testscriptapp1.module.path");
+    private static final String modulePathScript2 = System.getProperty("launchertest.testscriptapp2.module.path");
 
     private static final String moduleName = "mymod";
 
@@ -281,4 +282,27 @@ public class ModuleLauncherTest {
         doTestLaunchModule(modulePathScript1, "myapp1.FXMLScriptDeployment");
     }
 
+    @Test (timeout = 15000)
+    public void testFXMLScriptDeployment2Compile_On() throws Exception {
+        doTestLaunchModule(modulePathScript2, "myapp2.FXMLScriptDeployment2Compile_On");
+    }
+
+    @Test (timeout = 15000)
+    public void testFXMLScriptDeployment2Compile_Off() throws Exception {
+        doTestLaunchModule(modulePathScript2, "myapp2.FXMLScriptDeployment2Compile_Off");
+    }
+
+    @Test (timeout = 15000)
+    public void testFXMLScriptDeployment2Compile_On_Off() throws Exception {
+        doTestLaunchModule(modulePathScript2, "myapp2.FXMLScriptDeployment2Compile_On_Off");
+    }
+
+    @Test (timeout = 15000)
+    public void testFXMLScriptDeployment2Compile_Off_On() throws Exception {
+        doTestLaunchModule(modulePathScript2, "myapp2.FXMLScriptDeployment2Compile_Off_On");
+    }
+    @Test (timeout = 15000)
+    public void testFXMLScriptDeployment2Compile_Fail_Compilation() throws Exception {
+        doTestLaunchModule(modulePathScript2, "myapp2.FXMLScriptDeployment2Compile_Fail_Compilation");
+    }
 }

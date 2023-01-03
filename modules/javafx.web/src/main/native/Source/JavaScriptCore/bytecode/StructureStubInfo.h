@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,17 +25,22 @@
 
 #pragma once
 
+#include "CacheableIdentifier.h"
 #include "CodeBlock.h"
 #include "CodeOrigin.h"
 #include "Instruction.h"
 #include "JITStubRoutine.h"
 #include "MacroAssembler.h"
 #include "Options.h"
+#include "PolymorphicAccess.h"
+#include "PutKind.h"
 #include "RegisterSet.h"
 #include "Structure.h"
 #include "StructureSet.h"
 #include "StructureStubClearingWatchpoint.h"
 #include "StubInfoSummary.h"
+#include <wtf/Box.h>
+#include <wtf/Lock.h>
 
 namespace JSC {
 
@@ -46,13 +51,24 @@ class AccessGenerationResult;
 class PolymorphicAccess;
 
 enum class AccessType : int8_t {
-    Get,
-    GetWithThis,
-    GetDirect,
-    TryGet,
-    Put,
-    In,
-    InstanceOf
+    GetById,
+    GetByIdWithThis,
+    GetByIdDirect,
+    TryGetById,
+    GetByVal,
+    PutById,
+    PutByVal,
+    PutPrivateName,
+    InById,
+    InByVal,
+    HasPrivateName,
+    HasPrivateBrand,
+    InstanceOf,
+    DeleteByID,
+    DeleteByVal,
+    GetPrivateName,
+    CheckPrivateBrand,
+    SetPrivateBrand,
 };
 
 enum class CacheType : int8_t {
@@ -65,34 +81,143 @@ enum class CacheType : int8_t {
     StringLength
 };
 
+struct UnlinkedStructureStubInfo;
+
 class StructureStubInfo {
     WTF_MAKE_NONCOPYABLE(StructureStubInfo);
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    StructureStubInfo(AccessType);
+    StructureStubInfo(AccessType accessType, CodeOrigin codeOrigin)
+        : codeOrigin(codeOrigin)
+        , accessType(accessType)
+        , bufferingCountdown(Options::repatchBufferingCountdown())
+        , resetByGC(false)
+        , tookSlowPath(false)
+        , everConsidered(false)
+        , prototypeIsKnownObject(false)
+        , sawNonCell(false)
+        , hasConstantIdentifier(true)
+        , propertyIsString(false)
+        , propertyIsInt32(false)
+        , propertyIsSymbol(false)
+    {
+        regs.thisGPR = InvalidGPRReg;
+    }
+
+    StructureStubInfo()
+        : StructureStubInfo(AccessType::GetById, { })
+    { }
+
     ~StructureStubInfo();
 
-    void initGetByIdSelf(CodeBlock*, Structure* baseObjectStructure, PropertyOffset);
-    void initArrayLength();
-    void initStringLength();
-    void initPutByIdReplace(CodeBlock*, Structure* baseObjectStructure, PropertyOffset);
-    void initInByIdSelf(CodeBlock*, Structure* baseObjectStructure, PropertyOffset);
+    void initGetByIdSelf(const ConcurrentJSLockerBase&, CodeBlock*, Structure* inlineAccessBaseStructure, PropertyOffset, CacheableIdentifier);
+    void initArrayLength(const ConcurrentJSLockerBase&);
+    void initStringLength(const ConcurrentJSLockerBase&);
+    void initPutByIdReplace(const ConcurrentJSLockerBase&, CodeBlock*, Structure* inlineAccessBaseStructure, PropertyOffset, CacheableIdentifier);
+    void initInByIdSelf(const ConcurrentJSLockerBase&, CodeBlock*, Structure* inlineAccessBaseStructure, PropertyOffset, CacheableIdentifier);
 
-    AccessGenerationResult addAccessCase(const GCSafeConcurrentJSLocker&, CodeBlock*, const Identifier&, std::unique_ptr<AccessCase>);
+    AccessGenerationResult addAccessCase(const GCSafeConcurrentJSLocker&, JSGlobalObject*, CodeBlock*, ECMAMode, CacheableIdentifier, RefPtr<AccessCase>);
 
-    void reset(CodeBlock*);
+    void reset(const ConcurrentJSLockerBase&, CodeBlock*);
 
     void deref();
     void aboutToDie();
 
+    void initializeFromUnlinkedStructureStubInfo(CodeBlock*, UnlinkedStructureStubInfo&);
+
+    DECLARE_VISIT_AGGREGATE;
+
     // Check if the stub has weak references that are dead. If it does, then it resets itself,
     // either entirely or just enough to ensure that those dead pointers don't get used anymore.
-    void visitWeakReferences(CodeBlock*);
+    void visitWeakReferences(const ConcurrentJSLockerBase&, CodeBlock*);
 
     // This returns true if it has marked everything that it will ever mark.
-    bool propagateTransitions(SlotVisitor&);
+    template<typename Visitor> void propagateTransitions(Visitor&);
 
-    ALWAYS_INLINE bool considerCaching(VM& vm, CodeBlock* codeBlock, Structure* structure)
+    StubInfoSummary summary(VM&) const;
+
+    static StubInfoSummary summary(VM&, const StructureStubInfo*);
+
+    CacheableIdentifier identifier()
+    {
+        switch (m_cacheType) {
+        case CacheType::Unset:
+        case CacheType::ArrayLength:
+        case CacheType::StringLength:
+        case CacheType::Stub:
+            RELEASE_ASSERT_NOT_REACHED();
+            break;
+        case CacheType::PutByIdReplace:
+        case CacheType::InByIdSelf:
+        case CacheType::GetByIdSelf:
+            break;
+        }
+        return m_identifier;
+    }
+
+    bool containsPC(void* pc) const;
+
+    uint32_t inlineSize() const
+    {
+        int32_t inlineSize = MacroAssembler::differenceBetweenCodePtr(start, doneLocation);
+        ASSERT(inlineSize >= 0);
+        return inlineSize;
+    }
+
+    JSValueRegs valueRegs() const
+    {
+        return JSValueRegs(
+#if USE(JSVALUE32_64)
+            valueTagGPR,
+#endif
+            valueGPR);
+    }
+
+    JSValueRegs propertyRegs() const
+    {
+        return JSValueRegs(
+#if USE(JSVALUE32_64)
+            v.propertyTagGPR,
+#endif
+            regs.propertyGPR);
+    }
+
+    JSValueRegs baseRegs() const
+    {
+        return JSValueRegs(
+#if USE(JSVALUE32_64)
+            baseTagGPR,
+#endif
+            baseGPR);
+    }
+
+    bool thisValueIsInThisGPR() const { return accessType == AccessType::GetByIdWithThis; }
+
+#if ASSERT_ENABLED
+    void checkConsistency();
+#else
+    ALWAYS_INLINE void checkConsistency() { }
+#endif
+
+    CacheType cacheType() const { return m_cacheType; }
+
+    // Not ByVal and ById case: e.g. instanceof, by-index etc.
+    ALWAYS_INLINE bool considerCachingGeneric(VM& vm, CodeBlock* codeBlock, Structure* structure)
+    {
+        return considerCaching(vm, codeBlock, structure, CacheableIdentifier());
+    }
+
+    ALWAYS_INLINE bool considerCachingBy(VM& vm, CodeBlock* codeBlock, Structure* structure, CacheableIdentifier impl)
+    {
+        return considerCaching(vm, codeBlock, structure, impl);
+    }
+
+    Structure* inlineAccessBaseStructure(VM&)
+    {
+        return m_inlineAccessBaseStructureID.get();
+    }
+private:
+    ALWAYS_INLINE bool considerCaching(VM& vm, CodeBlock* codeBlock, Structure* structure, CacheableIdentifier impl)
     {
         DisallowGC disallowGC;
 
@@ -108,7 +233,7 @@ public:
         //
         // If we determine that we should do something to the IC then the next order of business is
         // to determine if this Structure would impact the IC at all. We know that it won't, if we
-        // have already buffered something on its behalf. That's what the bufferedStructures set is
+        // have already buffered something on its behalf. That's what the m_bufferedStructures set is
         // for.
 
         everConsidered = true;
@@ -152,99 +277,162 @@ public:
             // NOTE: This will behave oddly for InstanceOf if the user varies the prototype but not
             // the base's structure. That seems unlikely for the canonical use of instanceof, where
             // the prototype is fixed.
-            bool isNewlyAdded = bufferedStructures.add(structure);
+            bool isNewlyAdded = false;
+            {
+                Locker locker { m_bufferedStructuresLock };
+                isNewlyAdded = m_bufferedStructures.add({ structure, impl }).isNewEntry;
+            }
             if (isNewlyAdded)
-                vm.heap.writeBarrier(codeBlock);
+                vm.writeBarrier(codeBlock);
             return isNewlyAdded;
         }
         countdown--;
         return false;
     }
 
-    StubInfoSummary summary() const;
+    void setCacheType(const ConcurrentJSLockerBase&, CacheType);
 
-    static StubInfoSummary summary(const StructureStubInfo*);
+    void clearBufferedStructures()
+    {
+        Locker locker { m_bufferedStructuresLock };
+        m_bufferedStructures.clear();
+    }
 
-    bool containsPC(void* pc) const;
+    class BufferedStructure {
+    public:
+        static constexpr uintptr_t hashTableDeletedValue = 0x2;
+        BufferedStructure() = default;
+        BufferedStructure(Structure* structure, CacheableIdentifier byValId)
+            : m_structure(structure)
+            , m_byValId(byValId)
+        { }
+        BufferedStructure(WTF::HashTableDeletedValueType)
+            : m_structure(bitwise_cast<Structure*>(hashTableDeletedValue))
+        { }
+
+        bool isHashTableDeletedValue() const { return bitwise_cast<uintptr_t>(m_structure) == hashTableDeletedValue; }
+
+        unsigned hash() const
+        {
+            unsigned hash = PtrHash<Structure*>::hash(m_structure);
+            if (m_byValId)
+                hash += m_byValId.hash();
+            return hash;
+        }
+
+        friend bool operator==(const BufferedStructure& a, const BufferedStructure& b)
+        {
+            return a.m_structure == b.m_structure && a.m_byValId == b.m_byValId;
+        }
+
+        friend bool operator!=(const BufferedStructure& a, const BufferedStructure& b)
+        {
+            return !(a == b);
+        }
+
+        struct Hash {
+            static unsigned hash(const BufferedStructure& key)
+            {
+                return key.hash();
+            }
+
+            static bool equal(const BufferedStructure& a, const BufferedStructure& b)
+            {
+                return a == b;
+            }
+
+            static constexpr bool safeToCompareToEmptyOrDeleted = false;
+        };
+        using KeyTraits = SimpleClassHashTraits<BufferedStructure>;
+        static_assert(KeyTraits::emptyValueIsZero, "Structure* and CacheableIdentifier are empty if they are zero-initialized");
+
+        Structure* structure() const { return m_structure; }
+        const CacheableIdentifier& byValId() const { return m_byValId; }
+
+    private:
+        Structure* m_structure { nullptr };
+        CacheableIdentifier m_byValId;
+    };
+
+public:
+    static ptrdiff_t offsetOfByIdSelfOffset() { return OBJECT_OFFSETOF(StructureStubInfo, byIdSelfOffset); }
+    static ptrdiff_t offsetOfInlineAccessBaseStructureID() { return OBJECT_OFFSETOF(StructureStubInfo, m_inlineAccessBaseStructureID); }
+    static ptrdiff_t offsetOfCodePtr() { return OBJECT_OFFSETOF(StructureStubInfo, m_codePtr); }
+    static ptrdiff_t offsetOfDoneLocation() { return OBJECT_OFFSETOF(StructureStubInfo, doneLocation); }
+    static ptrdiff_t offsetOfSlowPathStartLocation() { return OBJECT_OFFSETOF(StructureStubInfo, slowPathStartLocation); }
+    static ptrdiff_t offsetOfSlowOperation() { return OBJECT_OFFSETOF(StructureStubInfo, m_slowOperation); }
+    static ptrdiff_t offsetOfCountdown() { return OBJECT_OFFSETOF(StructureStubInfo, countdown); }
 
     CodeOrigin codeOrigin;
-    CallSiteIndex callSiteIndex;
-
-    union {
-        struct {
-            WriteBarrierBase<Structure> baseObjectStructure;
-            PropertyOffset offset;
-        } byIdSelf;
-        PolymorphicAccess* stub;
-    } u;
-
+    PropertyOffset byIdSelfOffset;
+    std::unique_ptr<PolymorphicAccess> m_stub;
+    WriteBarrierStructureID m_inlineAccessBaseStructureID;
+private:
+    CacheableIdentifier m_identifier;
     // Represents those structures that already have buffered AccessCases in the PolymorphicAccess.
     // Note that it's always safe to clear this. If we clear it prematurely, then if we see the same
     // structure again during this buffering countdown, we will create an AccessCase object for it.
     // That's not so bad - we'll get rid of the redundant ones once we regenerate.
-    StructureSet bufferedStructures;
+    HashSet<BufferedStructure, BufferedStructure::Hash, BufferedStructure::KeyTraits> m_bufferedStructures WTF_GUARDED_BY_LOCK(m_bufferedStructuresLock);
+public:
+    CodeLocationLabel<JITStubRoutinePtrTag> start; // This is either the start of the inline IC for *byId caches. or the location of patchable jump for 'instanceof' caches.
+    CodeLocationLabel<JSInternalPtrTag> doneLocation;
+    CodeLocationLabel<JITStubRoutinePtrTag> slowPathStartLocation;
 
-    struct {
-        CodeLocationLabel<JITStubRoutinePtrTag> start; // This is either the start of the inline IC for *byId caches. or the location of patchable jump for 'instanceof' caches.
-        CodeLocationLabel<JSInternalPtrTag> doneLocation;
-        CodeLocationCall<JSInternalPtrTag> slowPathCallLocation;
-        CodeLocationLabel<JITStubRoutinePtrTag> slowPathStartLocation;
+    union {
+        CodeLocationCall<JSInternalPtrTag> m_slowPathCallLocation;
+        FunctionPtr<OperationPtrTag> m_slowOperation;
+    };
 
-        RegisterSet usedRegisters;
+    MacroAssemblerCodePtr<JITStubRoutinePtrTag> m_codePtr;
 
-        uint32_t inlineSize() const
-        {
-            int32_t inlineSize = MacroAssembler::differenceBetweenCodePtr(start, doneLocation);
-            ASSERT(inlineSize >= 0);
-            return inlineSize;
-        }
+    RegisterSet usedRegisters;
 
-        GPRReg baseGPR;
-        GPRReg valueGPR;
+    GPRReg baseGPR { InvalidGPRReg };
+    GPRReg valueGPR { InvalidGPRReg };
+    union {
         GPRReg thisGPR;
+        GPRReg prototypeGPR;
+        GPRReg propertyGPR;
+        GPRReg brandGPR;
+    } regs;
+    GPRReg m_stubInfoGPR { InvalidGPRReg };
+    GPRReg m_arrayProfileGPR { InvalidGPRReg };
 #if USE(JSVALUE32_64)
-        GPRReg valueTagGPR;
-        GPRReg baseTagGPR;
+    GPRReg valueTagGPR;
+    // FIXME: [32-bits] Check if StructureStubInfo::baseTagGPR is used somewhere.
+    // https://bugs.webkit.org/show_bug.cgi?id=204726
+    GPRReg baseTagGPR;
+    union {
         GPRReg thisTagGPR;
+        GPRReg propertyTagGPR;
+        GPRReg brandTagGPR;
+    } v;
 #endif
-    } patch;
-
-    GPRReg baseGPR() const
-    {
-        return patch.baseGPR;
-    }
-
-    CodeLocationCall<JSInternalPtrTag> slowPathCallLocation() { return patch.slowPathCallLocation; }
-    CodeLocationLabel<JSInternalPtrTag> doneLocation() { return patch.doneLocation; }
-    CodeLocationLabel<JITStubRoutinePtrTag> slowPathStartLocation() { return patch.slowPathStartLocation; }
-
-    CodeLocationJump<JSInternalPtrTag> patchableJump()
-    {
-        ASSERT(accessType == AccessType::InstanceOf);
-        return patch.start.jumpAtOffset<JSInternalPtrTag>(0);
-    }
-
-    JSValueRegs valueRegs() const
-    {
-        return JSValueRegs(
-#if USE(JSVALUE32_64)
-            patch.valueTagGPR,
-#endif
-            patch.valueGPR);
-    }
-
 
     AccessType accessType;
-    CacheType cacheType;
-    uint8_t countdown; // We repatch only when this is zero. If not zero, we decrement.
-    uint8_t repatchCount;
-    uint8_t numberOfCoolDowns;
+private:
+    CacheType m_cacheType { CacheType::Unset };
+public:
+    // We repatch only when this is zero. If not zero, we decrement.
+    // Setting 1 for a totally clear stub, we'll patch it after the first execution.
+    uint8_t countdown { 1 };
+    uint8_t repatchCount { 0 };
+    uint8_t numberOfCoolDowns { 0 };
     uint8_t bufferingCountdown;
+private:
+    Lock m_bufferedStructuresLock;
+public:
+    CallSiteIndex callSiteIndex;
     bool resetByGC : 1;
     bool tookSlowPath : 1;
     bool everConsidered : 1;
     bool prototypeIsKnownObject : 1; // Only relevant for InstanceOf.
     bool sawNonCell : 1;
+    bool hasConstantIdentifier : 1;
+    bool propertyIsString : 1;
+    bool propertyIsInt32 : 1;
+    bool propertyIsSymbol : 1;
 };
 
 inline CodeOrigin getStructureStubInfoCodeOrigin(StructureStubInfo& structureStubInfo)
@@ -252,37 +440,53 @@ inline CodeOrigin getStructureStubInfoCodeOrigin(StructureStubInfo& structureStu
     return structureStubInfo.codeOrigin;
 }
 
-inline J_JITOperation_ESsiJI appropriateOptimizingGetByIdFunction(AccessType type)
+inline auto appropriateOptimizingGetByIdFunction(AccessType type) -> decltype(&operationGetByIdOptimize)
 {
     switch (type) {
-    case AccessType::Get:
+    case AccessType::GetById:
         return operationGetByIdOptimize;
-    case AccessType::TryGet:
+    case AccessType::TryGetById:
         return operationTryGetByIdOptimize;
-    case AccessType::GetDirect:
+    case AccessType::GetByIdDirect:
         return operationGetByIdDirectOptimize;
-    case AccessType::GetWithThis:
+    case AccessType::GetPrivateName:
+        return operationGetPrivateNameByIdOptimize;
+    case AccessType::GetByIdWithThis:
     default:
         ASSERT_NOT_REACHED();
         return nullptr;
     }
 }
 
-inline J_JITOperation_EJI appropriateGenericGetByIdFunction(AccessType type)
+inline auto appropriateGenericGetByIdFunction(AccessType type) -> decltype(&operationGetByIdGeneric)
 {
     switch (type) {
-    case AccessType::Get:
+    case AccessType::GetById:
         return operationGetByIdGeneric;
-    case AccessType::TryGet:
+    case AccessType::TryGetById:
         return operationTryGetByIdGeneric;
-    case AccessType::GetDirect:
+    case AccessType::GetByIdDirect:
         return operationGetByIdDirectGeneric;
-    case AccessType::GetWithThis:
+    case AccessType::GetPrivateName:
+        return operationGetPrivateNameByIdGeneric;
+    case AccessType::GetByIdWithThis:
     default:
         ASSERT_NOT_REACHED();
         return nullptr;
     }
 }
+
+struct UnlinkedStructureStubInfo {
+    AccessType accessType;
+    PutKind putKind;
+    PrivateFieldPutKind privateFieldPutKind { PrivateFieldPutKind::none() };
+    ECMAMode ecmaMode { ECMAMode::sloppy() };
+    bool propertyIsInt32 { false };
+    BytecodeIndex bytecodeIndex;
+    CodeLocationLabel<JITStubRoutinePtrTag> start; // This is either the start of the inline IC for *byId caches. or the location of patchable jump for 'instanceof' caches.
+    CodeLocationLabel<JSInternalPtrTag> doneLocation;
+    CodeLocationLabel<JITStubRoutinePtrTag> slowPathStartLocation;
+};
 
 #else
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,6 +27,9 @@
 #include "testb3.h"
 
 #if ENABLE(B3_JIT)
+
+static const char* const dmbIsh = "dmb      ish";
+static const char* const dmbIshst = "dmb      ishst";
 
 void testBitAndSExt32(int32_t value, int64_t mask)
 {
@@ -1610,7 +1613,8 @@ void testLateRegister()
     CHECK(invoke<uint64_t>(*code) == result);
 }
 
-void interpreterPrint(Vector<intptr_t>* stream, intptr_t value)
+JSC_DECLARE_JIT_OPERATION(interpreterPrint, void, (Vector<intptr_t>* stream, intptr_t value));
+JSC_DEFINE_JIT_OPERATION(interpreterPrint, void, (Vector<intptr_t>* stream, intptr_t value))
 {
     stream->append(value);
 }
@@ -1662,30 +1666,30 @@ void testInterpreter()
     dispatch->appendSuccessor(FrequentedBlock(stop));
 
     // Our "opcodes".
-    static const intptr_t AddDP = 0;
-    static const intptr_t AddCP = 1;
-    static const intptr_t Add = 2;
-    static const intptr_t Print = 3;
-    static const intptr_t Stop = 4;
+    static constexpr intptr_t AddDP = 0;
+    static constexpr intptr_t AddCP = 1;
+    static constexpr intptr_t Add = 2;
+    static constexpr intptr_t Print = 3;
+    static constexpr intptr_t Stop = 4;
 
     polyJump->setGenerator(
         [&] (CCallHelpers& jit, const StackmapGenerationParams& params) {
             AllowMacroScratchRegisterUsage allowScratch(jit);
             Vector<Box<CCallHelpers::Label>> labels = params.successorLabels();
 
-            MacroAssemblerCodePtr<B3CompilationPtrTag>* jumpTable = bitwise_cast<MacroAssemblerCodePtr<B3CompilationPtrTag>*>(
-                params.proc().addDataSection(sizeof(MacroAssemblerCodePtr<B3CompilationPtrTag>) * labels.size()));
+            MacroAssemblerCodePtr<JSSwitchPtrTag>* jumpTable = bitwise_cast<MacroAssemblerCodePtr<JSSwitchPtrTag>*>(
+                params.proc().addDataSection(sizeof(MacroAssemblerCodePtr<JSSwitchPtrTag>) * labels.size()));
 
             GPRReg scratch = params.gpScratch(0);
 
             jit.move(CCallHelpers::TrustedImmPtr(jumpTable), scratch);
-            jit.load64(CCallHelpers::BaseIndex(scratch, params[0].gpr(), CCallHelpers::timesPtr()), scratch);
-            jit.farJump(scratch, B3CompilationPtrTag);
+            jit.load64(CCallHelpers::BaseIndex(scratch, params[0].gpr(), CCallHelpers::ScalePtr), scratch);
+            jit.farJump(scratch, JSSwitchPtrTag);
 
             jit.addLinkTask(
                 [&, jumpTable, labels] (LinkBuffer& linkBuffer) {
                     for (unsigned i = labels.size(); i--;)
-                        jumpTable[i] = linkBuffer.locationOf<B3CompilationPtrTag>(*labels[i]);
+                        jumpTable[i] = linkBuffer.locationOf<JSSwitchPtrTag>(*labels[i]);
                 });
         });
 
@@ -1768,7 +1772,7 @@ void testInterpreter()
     print->appendNew<CCallValue>(
         proc, Void, Origin(),
         print->appendNew<ConstPtrValue>(
-            proc, Origin(), tagCFunctionPtr<void*>(interpreterPrint, B3CCallPtrTag)),
+            proc, Origin(), tagCFunction<OperationPtrTag>(interpreterPrint)),
         context,
         print->appendNew<MemoryValue>(proc, Load, pointerType(), Origin(), dataPointerValue));
     print->appendNew<VariableValue>(
@@ -1792,7 +1796,7 @@ void testInterpreter()
     data.append(1);
     data.append(0);
 
-    if (shouldBeVerbose())
+    if (shouldBeVerbose(proc))
         dataLog("data = ", listDump(data), "\n");
 
     // We'll write a program that prints the numbers 1..100.
@@ -1828,7 +1832,7 @@ void testInterpreter()
 
     code.append(Stop);
 
-    if (shouldBeVerbose())
+    if (shouldBeVerbose(proc))
         dataLog("code = ", listDump(code), "\n");
 
     CHECK(!invoke<intptr_t>(*interpreter, data.data(), code.data(), &stream));
@@ -1837,7 +1841,7 @@ void testInterpreter()
     for (unsigned i = 0; i < 100; ++i)
         CHECK(stream[i] == i + 1);
 
-    if (shouldBeVerbose())
+    if (shouldBeVerbose(proc))
         dataLog("stream = ", listDump(stream), "\n");
 }
 
@@ -1936,11 +1940,11 @@ void testEntrySwitchSimple()
     CCallHelpers jit;
     generate(proc, jit);
     LinkBuffer linkBuffer(jit, nullptr);
-    CodeLocationLabel<B3CompilationPtrTag> labelOne = linkBuffer.locationOf<B3CompilationPtrTag>(proc.entrypointLabel(0));
-    CodeLocationLabel<B3CompilationPtrTag> labelTwo = linkBuffer.locationOf<B3CompilationPtrTag>(proc.entrypointLabel(1));
-    CodeLocationLabel<B3CompilationPtrTag> labelThree = linkBuffer.locationOf<B3CompilationPtrTag>(proc.entrypointLabel(2));
+    CodeLocationLabel<JITCompilationPtrTag> labelOne = linkBuffer.locationOf<JITCompilationPtrTag>(proc.code().entrypointLabel(0));
+    CodeLocationLabel<JITCompilationPtrTag> labelTwo = linkBuffer.locationOf<JITCompilationPtrTag>(proc.code().entrypointLabel(1));
+    CodeLocationLabel<JITCompilationPtrTag> labelThree = linkBuffer.locationOf<JITCompilationPtrTag>(proc.code().entrypointLabel(2));
 
-    MacroAssemblerCodeRef<B3CompilationPtrTag> codeRef = FINALIZE_CODE(linkBuffer, B3CompilationPtrTag, "testb3 compilation");
+    MacroAssemblerCodeRef<JITCompilationPtrTag> codeRef = FINALIZE_CODE(linkBuffer, JITCompilationPtrTag, "testb3 compilation");
 
     CHECK(invoke<int>(labelOne, 1, 2) == 3);
     CHECK(invoke<int>(labelTwo, 1, 2) == -1);
@@ -1969,11 +1973,11 @@ void testEntrySwitchNoEntrySwitch()
     CCallHelpers jit;
     generate(proc, jit);
     LinkBuffer linkBuffer(jit, nullptr);
-    CodeLocationLabel<B3CompilationPtrTag> labelOne = linkBuffer.locationOf<B3CompilationPtrTag>(proc.entrypointLabel(0));
-    CodeLocationLabel<B3CompilationPtrTag> labelTwo = linkBuffer.locationOf<B3CompilationPtrTag>(proc.entrypointLabel(1));
-    CodeLocationLabel<B3CompilationPtrTag> labelThree = linkBuffer.locationOf<B3CompilationPtrTag>(proc.entrypointLabel(2));
+    CodeLocationLabel<JITCompilationPtrTag> labelOne = linkBuffer.locationOf<JITCompilationPtrTag>(proc.code().entrypointLabel(0));
+    CodeLocationLabel<JITCompilationPtrTag> labelTwo = linkBuffer.locationOf<JITCompilationPtrTag>(proc.code().entrypointLabel(1));
+    CodeLocationLabel<JITCompilationPtrTag> labelThree = linkBuffer.locationOf<JITCompilationPtrTag>(proc.code().entrypointLabel(2));
 
-    MacroAssemblerCodeRef<B3CompilationPtrTag> codeRef = FINALIZE_CODE(linkBuffer, B3CompilationPtrTag, "testb3 compilation");
+    MacroAssemblerCodeRef<JITCompilationPtrTag> codeRef = FINALIZE_CODE(linkBuffer, JITCompilationPtrTag, "testb3 compilation");
 
     CHECK_EQ(invoke<int>(labelOne, 1, 2), 3);
     CHECK_EQ(invoke<int>(labelTwo, 1, 2), 3);
@@ -2056,11 +2060,11 @@ void testEntrySwitchWithCommonPaths()
     CCallHelpers jit;
     generate(proc, jit);
     LinkBuffer linkBuffer(jit, nullptr);
-    CodeLocationLabel<B3CompilationPtrTag> labelOne = linkBuffer.locationOf<B3CompilationPtrTag>(proc.entrypointLabel(0));
-    CodeLocationLabel<B3CompilationPtrTag> labelTwo = linkBuffer.locationOf<B3CompilationPtrTag>(proc.entrypointLabel(1));
-    CodeLocationLabel<B3CompilationPtrTag> labelThree = linkBuffer.locationOf<B3CompilationPtrTag>(proc.entrypointLabel(2));
+    CodeLocationLabel<JITCompilationPtrTag> labelOne = linkBuffer.locationOf<JITCompilationPtrTag>(proc.code().entrypointLabel(0));
+    CodeLocationLabel<JITCompilationPtrTag> labelTwo = linkBuffer.locationOf<JITCompilationPtrTag>(proc.code().entrypointLabel(1));
+    CodeLocationLabel<JITCompilationPtrTag> labelThree = linkBuffer.locationOf<JITCompilationPtrTag>(proc.code().entrypointLabel(2));
 
-    MacroAssemblerCodeRef<B3CompilationPtrTag> codeRef = FINALIZE_CODE(linkBuffer, B3CompilationPtrTag, "testb3 compilation");
+    MacroAssemblerCodeRef<JITCompilationPtrTag> codeRef = FINALIZE_CODE(linkBuffer, JITCompilationPtrTag, "testb3 compilation");
 
     CHECK_EQ(invoke<int>(labelOne, 1, 2, 10), 3);
     CHECK_EQ(invoke<int>(labelTwo, 1, 2, 10), -1);
@@ -2173,11 +2177,11 @@ void testEntrySwitchWithCommonPathsAndNonTrivialEntrypoint()
     CCallHelpers jit;
     generate(proc, jit);
     LinkBuffer linkBuffer(jit, nullptr);
-    CodeLocationLabel<B3CompilationPtrTag> labelOne = linkBuffer.locationOf<B3CompilationPtrTag>(proc.entrypointLabel(0));
-    CodeLocationLabel<B3CompilationPtrTag> labelTwo = linkBuffer.locationOf<B3CompilationPtrTag>(proc.entrypointLabel(1));
-    CodeLocationLabel<B3CompilationPtrTag> labelThree = linkBuffer.locationOf<B3CompilationPtrTag>(proc.entrypointLabel(2));
+    CodeLocationLabel<JITCompilationPtrTag> labelOne = linkBuffer.locationOf<JITCompilationPtrTag>(proc.code().entrypointLabel(0));
+    CodeLocationLabel<JITCompilationPtrTag> labelTwo = linkBuffer.locationOf<JITCompilationPtrTag>(proc.code().entrypointLabel(1));
+    CodeLocationLabel<JITCompilationPtrTag> labelThree = linkBuffer.locationOf<JITCompilationPtrTag>(proc.code().entrypointLabel(2));
 
-    MacroAssemblerCodeRef<B3CompilationPtrTag> codeRef = FINALIZE_CODE(linkBuffer, B3CompilationPtrTag, "testb3 compilation");
+    MacroAssemblerCodeRef<JITCompilationPtrTag> codeRef = FINALIZE_CODE(linkBuffer, JITCompilationPtrTag, "testb3 compilation");
 
     CHECK_EQ(invoke<int>(labelOne, 1, 2, 10, false), 3);
     CHECK_EQ(invoke<int>(labelTwo, 1, 2, 10, false), -1);
@@ -2251,10 +2255,10 @@ void testEntrySwitchLoop()
     CCallHelpers jit;
     generate(proc, jit);
     LinkBuffer linkBuffer(jit, nullptr);
-    CodeLocationLabel<B3CompilationPtrTag> labelOne = linkBuffer.locationOf<B3CompilationPtrTag>(proc.entrypointLabel(0));
-    CodeLocationLabel<B3CompilationPtrTag> labelTwo = linkBuffer.locationOf<B3CompilationPtrTag>(proc.entrypointLabel(1));
+    CodeLocationLabel<JITCompilationPtrTag> labelOne = linkBuffer.locationOf<JITCompilationPtrTag>(proc.code().entrypointLabel(0));
+    CodeLocationLabel<JITCompilationPtrTag> labelTwo = linkBuffer.locationOf<JITCompilationPtrTag>(proc.code().entrypointLabel(1));
 
-    MacroAssemblerCodeRef<B3CompilationPtrTag> codeRef = FINALIZE_CODE(linkBuffer, B3CompilationPtrTag, "testb3 compilation");
+    MacroAssemblerCodeRef<JITCompilationPtrTag> codeRef = FINALIZE_CODE(linkBuffer, JITCompilationPtrTag, "testb3 compilation");
 
     CHECK(invoke<int>(labelOne, 0) == 1);
     CHECK(invoke<int>(labelOne, 42) == 43);
@@ -2598,11 +2602,11 @@ void testMemoryFence()
     auto code = compileProc(proc);
     CHECK_EQ(invoke<int>(*code), 42);
     if (isX86())
-        checkUsesInstruction(*code, "lock or $0x0, (%rsp)");
+        checkUsesInstruction(*code, "lock orl $0x0, (%rsp)");
     if (isARM64())
-        checkUsesInstruction(*code, "dmb     ish");
+        checkUsesInstruction(*code, dmbIsh);
     checkDoesNotUseInstruction(*code, "mfence");
-    checkDoesNotUseInstruction(*code, "dmb     ishst");
+    checkDoesNotUseInstruction(*code, dmbIshst);
 }
 
 void testStoreFence()
@@ -2619,7 +2623,7 @@ void testStoreFence()
     checkDoesNotUseInstruction(*code, "lock");
     checkDoesNotUseInstruction(*code, "mfence");
     if (isARM64())
-        checkUsesInstruction(*code, "dmb     ishst");
+        checkUsesInstruction(*code, dmbIshst);
 }
 
 void testLoadFence()
@@ -2636,8 +2640,8 @@ void testLoadFence()
     checkDoesNotUseInstruction(*code, "lock");
     checkDoesNotUseInstruction(*code, "mfence");
     if (isARM64())
-        checkUsesInstruction(*code, "dmb     ish");
-    checkDoesNotUseInstruction(*code, "dmb     ishst");
+        checkUsesInstruction(*code, dmbIsh);
+    checkDoesNotUseInstruction(*code, dmbIshst);
 }
 
 void testTrappingLoad()
@@ -2763,6 +2767,8 @@ void testTrappingStoreElimination()
         root->appendNew<Const32Value>(proc, Origin(), 44),
         ptr);
     root->appendNew<Value>(proc, Return, Origin());
+    // We'll look at the values after compiling
+    proc.code().forcePreservationOfB3Origins();
     compileAndRun<int>(proc);
     unsigned storeCount = 0;
     for (Value* value : proc.values()) {
@@ -2777,14 +2783,14 @@ void testMoveConstants()
     auto check = [] (Procedure& proc) {
         proc.resetReachability();
 
-        if (shouldBeVerbose()) {
+        if (shouldBeVerbose(proc)) {
             dataLog("IR before:\n");
             dataLog(proc);
         }
 
         moveConstants(proc);
 
-        if (shouldBeVerbose()) {
+        if (shouldBeVerbose(proc)) {
             dataLog("IR after:\n");
             dataLog(proc);
         }
@@ -2831,6 +2837,32 @@ void testMoveConstants()
         root->appendNew<Value>(proc, Return, Origin());
         check(proc);
     }
+}
+
+extern "C" {
+static JSC_DECLARE_JIT_OPERATION_WITHOUT_WTF_INTERNAL(testMoveConstantsWithLargeOffsetsFunc, double, (double));
+}
+JSC_DEFINE_JIT_OPERATION(testMoveConstantsWithLargeOffsetsFunc, double, (double a))
+{
+    return a;
+}
+
+void testMoveConstantsWithLargeOffsets()
+{
+    Procedure proc;
+    BasicBlock* root = proc.addBlock();
+    Value* result = root->appendNew<ConstDoubleValue>(proc, Origin(), 0);
+    double rhs = 0;
+    for (size_t i = 0; i < 4100; i++) {
+        rhs += i;
+        Value* callResult = root->appendNew<CCallValue>(proc, Double, Origin(),
+            root->appendNew<ConstPtrValue>(proc, Origin(), tagCFunction<OperationPtrTag>(testMoveConstantsWithLargeOffsetsFunc)),
+            root->appendNew<ConstDoubleValue>(proc, Origin(), i));
+        result = root->appendNew<Value>(proc, Add, Origin(), result, callResult);
+    }
+    root->appendNewControlValue(proc, Return, Origin(), result);
+
+    CHECK_EQ(compileAndRun<double>(proc), rhs);
 }
 
 void testPCOriginMapDoesntInsertNops()

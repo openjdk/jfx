@@ -54,6 +54,7 @@
 #include "unicode/udisplaycontext.h"
 #include "unicode/brkiter.h"
 #include "unicode/rbnf.h"
+#include "unicode/dtptngen.h"
 #include "uresimp.h"
 #include "olsontz.h"
 #include "patternprops.h"
@@ -63,6 +64,7 @@
 #include "uassert.h"
 #include "cmemory.h"
 #include "umutex.h"
+#include "mutex.h"
 #include <float.h>
 #include "smpdtfst.h"
 #include "sharednumberformat.h"
@@ -226,14 +228,18 @@ static const int32_t gFieldRangeBias[] = {
 };
 
 // When calendar uses hebr numbering (i.e. he@calendar=hebrew),
-// offset the years within the current millenium down to 1-999
+// offset the years within the current millennium down to 1-999
 static const int32_t HEBREW_CAL_CUR_MILLENIUM_START_YEAR = 5000;
 static const int32_t HEBREW_CAL_CUR_MILLENIUM_END_YEAR = 6000;
 
-static UMutex *LOCK() {
-    static UMutex m = U_MUTEX_INITIALIZER;
-    return &m;
-}
+/**
+ * Maximum range for detecting daylight offset of a time zone when parsed time zone
+ * string indicates it's daylight saving time, but the detected time zone does not
+ * observe daylight saving time at the parsed date.
+ */
+static const double MAX_DAYLIGHT_DETECTION_RANGE = 30*365*24*60*60*1000.0;
+
+static UMutex LOCK;
 
 UOBJECT_DEFINE_RTTI_IMPLEMENTATION(SimpleDateFormat)
 
@@ -586,11 +592,32 @@ SimpleDateFormat& SimpleDateFormat::operator=(const SimpleDateFormat& other)
     fHasMinute = other.fHasMinute;
     fHasSecond = other.fHasSecond;
 
-    // TimeZoneFormat in ICU4C only depends on a locale for now
-    if (fLocale != other.fLocale) {
-        delete fTimeZoneFormat;
-        fTimeZoneFormat = NULL; // forces lazy instantiation with the other locale
-        fLocale = other.fLocale;
+    fLocale = other.fLocale;
+
+    // TimeZoneFormat can now be set independently via setter.
+    // If it is NULL, it will be lazily initialized from locale.
+    delete fTimeZoneFormat;
+    fTimeZoneFormat = nullptr;
+    TimeZoneFormat *otherTZFormat;
+    {
+        // Synchronization is required here, when accessing other.fTimeZoneFormat,
+        // because another thread may be concurrently executing other.tzFormat(),
+        // a logically const function that lazily creates other.fTimeZoneFormat.
+        //
+        // Without synchronization, reordered memory writes could allow us
+        // to see a non-null fTimeZoneFormat before the object itself was
+        // fully initialized. In case of a race, it doesn't matter whether
+        // we see a null or a fully initialized other.fTimeZoneFormat,
+        // only that we avoid seeing a partially initialized object.
+        //
+        // Once initialized, no const function can modify fTimeZoneFormat,
+        // meaning that once we have safely grabbed the other.fTimeZoneFormat
+        // pointer, continued synchronization is not required to use it.
+        Mutex m(&LOCK);
+        otherTZFormat = other.fTimeZoneFormat;
+    }
+    if (otherTZFormat) {
+        fTimeZoneFormat = new TimeZoneFormat(*otherTZFormat);
     }
 
 #if !UCONFIG_NO_BREAK_ITERATION
@@ -623,7 +650,7 @@ SimpleDateFormat& SimpleDateFormat::operator=(const SimpleDateFormat& other)
 
 //----------------------------------------------------------------------
 
-Format*
+SimpleDateFormat*
 SimpleDateFormat::clone() const
 {
     return new SimpleDateFormat(*this);
@@ -631,7 +658,7 @@ SimpleDateFormat::clone() const
 
 //----------------------------------------------------------------------
 
-UBool
+bool
 SimpleDateFormat::operator==(const Format& other) const
 {
     if (DateFormat::operator==(other)) {
@@ -646,10 +673,16 @@ SimpleDateFormat::operator==(const Format& other) const
                 fHaveDefaultCentury  == that->fHaveDefaultCentury &&
                 fDefaultCenturyStart == that->fDefaultCenturyStart);
     }
-    return FALSE;
+    return false;
 }
 
 //----------------------------------------------------------------------
+static const UChar* timeSkeletons[4] = {
+    u"jmmsszzzz",   // kFull
+    u"jmmssz",      // kLong
+    u"jmmss",       // kMedium
+    u"jmm",         // kShort
+};
 
 void SimpleDateFormat::construct(EStyle timeStyle,
                                  EStyle dateStyle,
@@ -714,35 +747,75 @@ void SimpleDateFormat::construct(EStyle timeStyle,
     fDateOverride.setToBogus();
     fTimeOverride.setToBogus();
 
+    UnicodeString timePattern;
+    if (timeStyle >= kFull && timeStyle <= kShort) {
+        const char* baseLocID = locale.getBaseName();
+        if (baseLocID[0]!=0 && uprv_strcmp(baseLocID,"und")!=0) {
+            UErrorCode useStatus = U_ZERO_ERROR;
+            Locale baseLoc(baseLocID);
+            Locale validLoc(getLocale(ULOC_VALID_LOCALE, useStatus));
+            if (U_SUCCESS(useStatus) && validLoc!=baseLoc) {
+                bool useDTPG = false;
+                const char* baseReg = baseLoc.getCountry(); // empty string if no region
+                if ((baseReg[0]!=0 && uprv_strncmp(baseReg,validLoc.getCountry(),ULOC_COUNTRY_CAPACITY)!=0)
+                        || uprv_strncmp(baseLoc.getLanguage(),validLoc.getLanguage(),ULOC_LANG_CAPACITY)!=0) {
+                    // use DTPG if
+                    // * baseLoc has a region and validLoc does not have the same one (or has none), OR
+                    // * validLoc has a different language code than baseLoc
+                    useDTPG = true;
+                }
+                if (useDTPG) {
+                    // The standard time formats may have the wrong time cycle, because:
+                    // the valid locale differs in important ways (region, language) from
+                    // the base locale.
+                    // We could *also* check whether they do actually have a mismatch with
+                    // the time cycle preferences for the region, but that is a lot more
+                    // work for little or no additional benefit, since just going ahead
+                    // and always synthesizing the time format as per the following should
+                    // create a locale-appropriate pattern with cycle that matches the
+                    // region preferences anyway.
+                    LocalPointer<DateTimePatternGenerator> dtpg(DateTimePatternGenerator::createInstanceNoStdPat(locale, useStatus));
+                    if (U_SUCCESS(useStatus)) {
+                        UnicodeString timeSkeleton(TRUE, timeSkeletons[timeStyle], -1);
+                        timePattern = dtpg->getBestPattern(timeSkeleton, useStatus);
+                    }
+                }
+            }
+        }
+    }
+
     // if the pattern should include both date and time information, use the date/time
     // pattern string as a guide to tell use how to glue together the appropriate date
     // and time pattern strings.
     if ((timeStyle != kNone) && (dateStyle != kNone))
     {
-        currentBundle.adoptInstead(
-                ures_getByIndex(dateTimePatterns.getAlias(), (int32_t)timeStyle, NULL, &status));
-        if (U_FAILURE(status)) {
-           status = U_INVALID_FORMAT_ERROR;
-           return;
-        }
-        switch (ures_getType(currentBundle.getAlias())) {
-            case URES_STRING: {
-               resStr = ures_getString(currentBundle.getAlias(), &resStrLen, &status);
-               break;
-            }
-            case URES_ARRAY: {
-               resStr = ures_getStringByIndex(currentBundle.getAlias(), 0, &resStrLen, &status);
-               ovrStr = ures_getStringByIndex(currentBundle.getAlias(), 1, &ovrStrLen, &status);
-               fTimeOverride.setTo(TRUE, ovrStr, ovrStrLen);
-               break;
-            }
-            default: {
+        UnicodeString tempus1(timePattern);
+        if (tempus1.length() == 0) {
+            currentBundle.adoptInstead(
+                    ures_getByIndex(dateTimePatterns.getAlias(), (int32_t)timeStyle, NULL, &status));
+            if (U_FAILURE(status)) {
                status = U_INVALID_FORMAT_ERROR;
                return;
             }
-        }
+            switch (ures_getType(currentBundle.getAlias())) {
+                case URES_STRING: {
+                   resStr = ures_getString(currentBundle.getAlias(), &resStrLen, &status);
+                   break;
+                }
+                case URES_ARRAY: {
+                   resStr = ures_getStringByIndex(currentBundle.getAlias(), 0, &resStrLen, &status);
+                   ovrStr = ures_getStringByIndex(currentBundle.getAlias(), 1, &ovrStrLen, &status);
+                   fTimeOverride.setTo(TRUE, ovrStr, ovrStrLen);
+                   break;
+                }
+                default: {
+                   status = U_INVALID_FORMAT_ERROR;
+                   return;
+                }
+            }
 
-        UnicodeString tempus1(TRUE, resStr, resStrLen);
+            tempus1.setTo(TRUE, resStr, resStrLen);
+        }
 
         currentBundle.adoptInstead(
                 ures_getByIndex(dateTimePatterns.getAlias(), (int32_t)dateStyle, NULL, &status));
@@ -784,29 +857,32 @@ void SimpleDateFormat::construct(EStyle timeStyle,
     // pattern string from the resources
     // setTo() - see DateFormatSymbols::assignArray comments
     else if (timeStyle != kNone) {
-        currentBundle.adoptInstead(
-                ures_getByIndex(dateTimePatterns.getAlias(), (int32_t)timeStyle, NULL, &status));
-        if (U_FAILURE(status)) {
-           status = U_INVALID_FORMAT_ERROR;
-           return;
-        }
-        switch (ures_getType(currentBundle.getAlias())) {
-            case URES_STRING: {
-               resStr = ures_getString(currentBundle.getAlias(), &resStrLen, &status);
-               break;
-            }
-            case URES_ARRAY: {
-               resStr = ures_getStringByIndex(currentBundle.getAlias(), 0, &resStrLen, &status);
-               ovrStr = ures_getStringByIndex(currentBundle.getAlias(), 1, &ovrStrLen, &status);
-               fDateOverride.setTo(TRUE, ovrStr, ovrStrLen);
-               break;
-            }
-            default: {
+        fPattern.setTo(timePattern);
+        if (fPattern.length() == 0) {
+            currentBundle.adoptInstead(
+                    ures_getByIndex(dateTimePatterns.getAlias(), (int32_t)timeStyle, NULL, &status));
+            if (U_FAILURE(status)) {
                status = U_INVALID_FORMAT_ERROR;
                return;
             }
+            switch (ures_getType(currentBundle.getAlias())) {
+                case URES_STRING: {
+                   resStr = ures_getString(currentBundle.getAlias(), &resStrLen, &status);
+                   break;
+                }
+                case URES_ARRAY: {
+                   resStr = ures_getStringByIndex(currentBundle.getAlias(), 0, &resStrLen, &status);
+                   ovrStr = ures_getStringByIndex(currentBundle.getAlias(), 1, &ovrStrLen, &status);
+                   fDateOverride.setTo(TRUE, ovrStr, ovrStrLen);
+                   break;
+                }
+                default: {
+                   status = U_INVALID_FORMAT_ERROR;
+                   return;
+                }
+            }
+            fPattern.setTo(TRUE, resStr, resStrLen);
         }
-        fPattern.setTo(TRUE, resStr, resStrLen);
     }
     else if (dateStyle != kNone) {
         currentBundle.adoptInstead(
@@ -848,7 +924,8 @@ Calendar*
 SimpleDateFormat::initializeCalendar(TimeZone* adoptZone, const Locale& locale, UErrorCode& status)
 {
     if(!U_FAILURE(status)) {
-        fCalendar = Calendar::createInstance(adoptZone?adoptZone:TimeZone::createDefault(), locale, status);
+        fCalendar = Calendar::createInstance(
+            adoptZone ? adoptZone : TimeZone::forLocaleOrDefault(locale), locale, status);
     }
     return fCalendar;
 }
@@ -999,7 +1076,8 @@ SimpleDateFormat::_format(Calendar& cal, UnicodeString& appendTo,
         // Use subFormat() to format a repeated pattern character
         // when a different pattern or non-pattern character is seen
         if (ch != prevCh && count > 0) {
-            subFormat(appendTo, prevCh, count, capitalizationContext, fieldNum++, handler, *workCal, status);
+            subFormat(appendTo, prevCh, count, capitalizationContext, fieldNum++,
+                      prevCh, handler, *workCal, status);
             count = 0;
         }
         if (ch == QUOTE) {
@@ -1026,7 +1104,8 @@ SimpleDateFormat::_format(Calendar& cal, UnicodeString& appendTo,
 
     // Format the last item in the pattern, if any
     if (count > 0) {
-        subFormat(appendTo, prevCh, count, capitalizationContext, fieldNum++, handler, *workCal, status);
+        subFormat(appendTo, prevCh, count, capitalizationContext, fieldNum++,
+                  prevCh, handler, *workCal, status);
     }
 
     if (calClone != NULL) {
@@ -1223,10 +1302,14 @@ _appendSymbolWithMonthPattern(UnicodeString& dst, int32_t value, const UnicodeSt
 //----------------------------------------------------------------------
 
 static number::LocalizedNumberFormatter*
-createFastFormatter(const DecimalFormat* df, int32_t minInt, int32_t maxInt) {
-    return new number::LocalizedNumberFormatter(
-            df->toNumberFormatter()
-                    .integerWidth(number::IntegerWidth::zeroFillTo(minInt).truncateAt(maxInt)));
+createFastFormatter(const DecimalFormat* df, int32_t minInt, int32_t maxInt, UErrorCode& status) {
+    const number::LocalizedNumberFormatter* lnfBase = df->toNumberFormatter(status);
+    if (U_FAILURE(status)) {
+        return nullptr;
+    }
+    return lnfBase->integerWidth(
+        number::IntegerWidth::zeroFillTo(minInt).truncateAt(maxInt)
+    ).clone().orphan();
 }
 
 void SimpleDateFormat::initFastNumberFormatters(UErrorCode& status) {
@@ -1237,11 +1320,11 @@ void SimpleDateFormat::initFastNumberFormatters(UErrorCode& status) {
     if (df == nullptr) {
         return;
     }
-    fFastNumberFormatters[SMPDTFMT_NF_1x10] = createFastFormatter(df, 1, 10);
-    fFastNumberFormatters[SMPDTFMT_NF_2x10] = createFastFormatter(df, 2, 10);
-    fFastNumberFormatters[SMPDTFMT_NF_3x10] = createFastFormatter(df, 3, 10);
-    fFastNumberFormatters[SMPDTFMT_NF_4x10] = createFastFormatter(df, 4, 10);
-    fFastNumberFormatters[SMPDTFMT_NF_2x2] = createFastFormatter(df, 2, 2);
+    fFastNumberFormatters[SMPDTFMT_NF_1x10] = createFastFormatter(df, 1, 10, status);
+    fFastNumberFormatters[SMPDTFMT_NF_2x10] = createFastFormatter(df, 2, 10, status);
+    fFastNumberFormatters[SMPDTFMT_NF_3x10] = createFastFormatter(df, 3, 10, status);
+    fFastNumberFormatters[SMPDTFMT_NF_4x10] = createFastFormatter(df, 4, 10, status);
+    fFastNumberFormatters[SMPDTFMT_NF_2x2] = createFastFormatter(df, 2, 2, status);
 }
 
 void SimpleDateFormat::freeFastNumberFormatters() {
@@ -1266,14 +1349,14 @@ SimpleDateFormat::initNumberFormatters(const Locale &locale,UErrorCode &status) 
     if ( fDateOverride.isBogus() && fTimeOverride.isBogus() ) {
         return;
     }
-    umtx_lock(LOCK());
+    umtx_lock(&LOCK);
     if (fSharedNumberFormatters == NULL) {
         fSharedNumberFormatters = allocSharedNumberFormatters();
         if (fSharedNumberFormatters == NULL) {
             status = U_MEMORY_ALLOCATION_ERROR;
         }
     }
-    umtx_unlock(LOCK());
+    umtx_unlock(&LOCK);
 
     if (U_FAILURE(status)) {
         return;
@@ -1401,10 +1484,11 @@ SimpleDateFormat::processOverrideString(const Locale &locale, const UnicodeStrin
 //---------------------------------------------------------------------
 void
 SimpleDateFormat::subFormat(UnicodeString &appendTo,
-                            UChar ch,
+                            char16_t ch,
                             int32_t count,
                             UDisplayContext capitalizationContext,
                             int32_t fieldNum,
+                            char16_t fieldToOutput,
                             FieldPositionHandler& handler,
                             Calendar& cal,
                             UErrorCode& status) const
@@ -1790,7 +1874,7 @@ SimpleDateFormat::subFormat(UnicodeString &appendTo,
                     }
                 }
                 else {
-                    UPRV_UNREACHABLE;
+                    UPRV_UNREACHABLE_EXIT;
                 }
             }
             appendTo += zoneString;
@@ -1798,7 +1882,10 @@ SimpleDateFormat::subFormat(UnicodeString &appendTo,
         break;
 
     case UDAT_QUARTER_FIELD:
-        if (count >= 4)
+        if (count >= 5)
+            _appendSymbol(appendTo, value/3, fSymbols->fNarrowQuarters,
+                          fSymbols->fNarrowQuartersCount);
+         else if (count == 4)
             _appendSymbol(appendTo, value/3, fSymbols->fQuarters,
                           fSymbols->fQuartersCount);
         else if (count == 3)
@@ -1809,7 +1896,10 @@ SimpleDateFormat::subFormat(UnicodeString &appendTo,
         break;
 
     case UDAT_STANDALONE_QUARTER_FIELD:
-        if (count >= 4)
+        if (count >= 5)
+            _appendSymbol(appendTo, value/3, fSymbols->fStandaloneNarrowQuarters,
+                          fSymbols->fStandaloneNarrowQuartersCount);
+        else if (count == 4)
             _appendSymbol(appendTo, value/3, fSymbols->fStandaloneQuarters,
                           fSymbols->fStandaloneQuartersCount);
         else if (count == 3)
@@ -1852,8 +1942,11 @@ SimpleDateFormat::subFormat(UnicodeString &appendTo,
         // In either case, fall back to am/pm.
         if (toAppend == NULL || toAppend->isBogus()) {
             // Reformat with identical arguments except ch, now changed to 'a'.
-            subFormat(appendTo, 0x61, count, capitalizationContext, fieldNum,
-                      handler, cal, status);
+            // We are passing a different fieldToOutput because we want to add
+            // 'b' to field position. This makes this fallback stable when
+            // there is a data change on locales.
+            subFormat(appendTo, u'a', count, capitalizationContext, fieldNum, u'b', handler, cal, status);
+            return;
         } else {
             appendTo += *toAppend;
         }
@@ -1873,9 +1966,11 @@ SimpleDateFormat::subFormat(UnicodeString &appendTo,
         if (ruleSet == NULL) {
             // Data doesn't exist for the locale we're looking for.
             // Falling back to am/pm.
-            subFormat(appendTo, 0x61, count, capitalizationContext, fieldNum,
-                      handler, cal, status);
-            break;
+            // We are passing a different fieldToOutput because we want to add
+            // 'B' to field position. This makes this fallback stable when
+            // there is a data change on locales.
+            subFormat(appendTo, u'a', count, capitalizationContext, fieldNum, u'B', handler, cal, status);
+            return;
         }
 
         // Get current display time.
@@ -1944,8 +2039,11 @@ SimpleDateFormat::subFormat(UnicodeString &appendTo,
         if (periodType == DayPeriodRules::DAYPERIOD_AM ||
             periodType == DayPeriodRules::DAYPERIOD_PM ||
             toAppend->isBogus()) {
-            subFormat(appendTo, 0x61, count, capitalizationContext, fieldNum,
-                      handler, cal, status);
+            // We are passing a different fieldToOutput because we want to add
+            // 'B' to field position iterator. This makes this fallback stable when
+            // there is a data change on locales.
+            subFormat(appendTo, u'a', count, capitalizationContext, fieldNum, u'B', handler, cal, status);
+            return;
         }
         else {
             appendTo += *toAppend;
@@ -1980,14 +2078,16 @@ SimpleDateFormat::subFormat(UnicodeString &appendTo,
                 break;
         }
         if (titlecase) {
+            BreakIterator* const mutableCapitalizationBrkIter = fCapitalizationBrkIter->clone();
             UnicodeString firstField(appendTo, beginOffset);
-            firstField.toTitle(fCapitalizationBrkIter, fLocale, U_TITLECASE_NO_LOWERCASE | U_TITLECASE_NO_BREAK_ADJUSTMENT);
+            firstField.toTitle(mutableCapitalizationBrkIter, fLocale, U_TITLECASE_NO_LOWERCASE | U_TITLECASE_NO_BREAK_ADJUSTMENT);
             appendTo.replaceBetween(beginOffset, appendTo.length(), firstField);
+            delete mutableCapitalizationBrkIter;
         }
     }
 #endif
 
-    handler.addAttribute(fgPatternIndexToDateFormatField[patternCharIndex], beginOffset, appendTo.length());
+    handler.addAttribute(DateFormatSymbols::getPatternCharIndex(fieldToOutput), beginOffset, appendTo.length());
 }
 
 //----------------------------------------------------------------------
@@ -2107,7 +2207,7 @@ SimpleDateFormat::zeroPaddingNumber(
     // Fall back to slow path (clone and mutate the NumberFormat)
     if (currentNumberFormat != nullptr) {
         FieldPosition pos(FieldPosition::DONT_CARE);
-        LocalPointer<NumberFormat> nf(dynamic_cast<NumberFormat*>(currentNumberFormat->clone()));
+        LocalPointer<NumberFormat> nf(currentNumberFormat->clone());
         nf->setMinimumIntegerDigits(minDigits);
         nf->setMaximumIntegerDigits(maxDigits);
         nf->format(value, appendTo, pos);  // 3rd arg is there to speed up processing
@@ -2117,7 +2217,7 @@ SimpleDateFormat::zeroPaddingNumber(
 //----------------------------------------------------------------------
 
 /**
- * Return true if the given format character, occuring count
+ * Return true if the given format character, occurring count
  * times, represents a numeric field.
  */
 UBool SimpleDateFormat::isNumeric(UChar formatChar, int32_t count) {
@@ -2486,10 +2586,10 @@ SimpleDateFormat::parse(const UnicodeString& text, Calendar& cal, ParsePosition&
             if (btz != NULL) {
                 if (tzTimeType == UTZFMT_TIME_TYPE_STANDARD) {
                     btz->getOffsetFromLocal(localMillis,
-                        BasicTimeZone::kStandard, BasicTimeZone::kStandard, raw, dst, status);
+                        UCAL_TZ_LOCAL_STANDARD_FORMER, UCAL_TZ_LOCAL_STANDARD_LATTER, raw, dst, status);
                 } else {
                     btz->getOffsetFromLocal(localMillis,
-                        BasicTimeZone::kDaylight, BasicTimeZone::kDaylight, raw, dst, status);
+                        UCAL_TZ_LOCAL_DAYLIGHT_FORMER, UCAL_TZ_LOCAL_DAYLIGHT_LATTER, raw, dst, status);
                 }
             } else {
                 // No good way to resolve ambiguous time at transition,
@@ -2507,51 +2607,47 @@ SimpleDateFormat::parse(const UnicodeString& text, Calendar& cal, ParsePosition&
             } else { // tztype == TZTYPE_DST
                 if (dst == 0) {
                     if (btz != NULL) {
-                        UDate time = localMillis + raw;
-                        // We use the nearest daylight saving time rule.
-                        TimeZoneTransition beforeTrs, afterTrs;
-                        UDate beforeT = time, afterT = time;
-                        int32_t beforeSav = 0, afterSav = 0;
-                        UBool beforeTrsAvail, afterTrsAvail;
+                        // This implementation resolves daylight saving time offset
+                        // closest rule after the given time.
+                        UDate baseTime = localMillis + raw;
+                        UDate time = baseTime;
+                        UDate limit = baseTime + MAX_DAYLIGHT_DETECTION_RANGE;
+                        TimeZoneTransition trs;
+                        UBool trsAvail;
 
-                        // Search for DST rule before or on the time
-                        while (TRUE) {
-                            beforeTrsAvail = btz->getPreviousTransition(beforeT, TRUE, beforeTrs);
-                            if (!beforeTrsAvail) {
+                        // Search for DST rule after the given time
+                        while (time < limit) {
+                            trsAvail = btz->getNextTransition(time, FALSE, trs);
+                            if (!trsAvail) {
                                 break;
                             }
-                            beforeT = beforeTrs.getTime() - 1;
-                            beforeSav = beforeTrs.getFrom()->getDSTSavings();
-                            if (beforeSav != 0) {
+                            resolvedSavings = trs.getTo()->getDSTSavings();
+                            if (resolvedSavings != 0) {
                                 break;
                             }
+                            time = trs.getTime();
                         }
 
-                        // Search for DST rule after the time
-                        while (TRUE) {
-                            afterTrsAvail = btz->getNextTransition(afterT, FALSE, afterTrs);
-                            if (!afterTrsAvail) {
-                                break;
+                        if (resolvedSavings == 0) {
+                            // If no DST rule after the given time was found, search for
+                            // DST rule before.
+                            time = baseTime;
+                            limit = baseTime - MAX_DAYLIGHT_DETECTION_RANGE;
+                            while (time > limit) {
+                                trsAvail = btz->getPreviousTransition(time, TRUE, trs);
+                                if (!trsAvail) {
+                                    break;
+                                }
+                                resolvedSavings = trs.getFrom()->getDSTSavings();
+                                if (resolvedSavings != 0) {
+                                    break;
+                                }
+                                time = trs.getTime() - 1;
                             }
-                            afterT = afterTrs.getTime();
-                            afterSav = afterTrs.getTo()->getDSTSavings();
-                            if (afterSav != 0) {
-                                break;
-                            }
-                        }
 
-                        if (beforeTrsAvail && afterTrsAvail) {
-                            if (time - beforeT > afterT - time) {
-                                resolvedSavings = afterSav;
-                            } else {
-                                resolvedSavings = beforeSav;
+                            if (resolvedSavings == 0) {
+                                resolvedSavings = btz->getDSTSavings();
                             }
-                        } else if (beforeTrsAvail && beforeSav != 0) {
-                            resolvedSavings = beforeSav;
-                        } else if (afterTrsAvail && afterSav != 0) {
-                            resolvedSavings = afterSav;
-                        } else {
-                            resolvedSavings = btz->getDSTSavings();
                         }
                     } else {
                         resolvedSavings = tz.getDSTSavings();
@@ -2760,7 +2856,7 @@ UBool SimpleDateFormat::matchLiterals(const UnicodeString &pattern,
                     continue;  // Do not update p.
                 }
             }
-            // hack around oldleniency being a bit of a catch-all bucket and we're just adding support specifically for paritial matches
+            // hack around oldleniency being a bit of a catch-all bucket and we're just adding support specifically for partial matches
             if(partialMatchLenient && oldLeniency) {
                 break;
             }
@@ -3381,7 +3477,7 @@ int32_t SimpleDateFormat::subParse(const UnicodeString& text, int32_t& start, UC
             return pos.getIndex();
         } else {
             // count >= 3 // i.e., QQQ or QQQQ
-            // Want to be able to parse both short and long forms.
+            // Want to be able to parse short, long, and narrow forms.
             // Try count == 4 first:
             int32_t newStart = 0;
 
@@ -3393,6 +3489,11 @@ int32_t SimpleDateFormat::subParse(const UnicodeString& text, int32_t& start, UC
             if(getBooleanAttribute(UDAT_PARSE_MULTIPLE_PATTERNS_FOR_MATCH, status) || count == 3) {
                 if ((newStart = matchQuarterString(text, start, UCAL_MONTH,
                                           fSymbols->fShortQuarters, fSymbols->fShortQuartersCount, cal)) > 0)
+                    return newStart;
+            }
+            if(getBooleanAttribute(UDAT_PARSE_MULTIPLE_PATTERNS_FOR_MATCH, status) || count == 5) {
+                if ((newStart = matchQuarterString(text, start, UCAL_MONTH,
+                                      fSymbols->fNarrowQuarters, fSymbols->fNarrowQuartersCount, cal)) > 0)
                     return newStart;
             }
             if (!getBooleanAttribute(UDAT_PARSE_ALLOW_NUMERIC, status))
@@ -3425,6 +3526,11 @@ int32_t SimpleDateFormat::subParse(const UnicodeString& text, int32_t& start, UC
             if(getBooleanAttribute(UDAT_PARSE_MULTIPLE_PATTERNS_FOR_MATCH, status) || count == 3) {
                 if ((newStart = matchQuarterString(text, start, UCAL_MONTH,
                                           fSymbols->fStandaloneShortQuarters, fSymbols->fStandaloneShortQuartersCount, cal)) > 0)
+                    return newStart;
+            }
+            if(getBooleanAttribute(UDAT_PARSE_MULTIPLE_PATTERNS_FOR_MATCH, status) || count == 5) {
+                if ((newStart = matchQuarterString(text, start, UCAL_MONTH,
+                                          fSymbols->fStandaloneNarrowQuarters, fSymbols->fStandaloneNarrowQuartersCount, cal)) > 0)
                     return newStart;
             }
             if (!getBooleanAttribute(UDAT_PARSE_ALLOW_NUMERIC, status))
@@ -3686,6 +3792,9 @@ int32_t SimpleDateFormat::subParse(const UnicodeString& text, int32_t& start, UC
         src = &text;
     }
     parseInt(*src, number, pos, allowNegative,currentNumberFormat);
+    if (!isLenient() && pos.getIndex() < start + count) {
+        return -start;
+    }
     if (pos.getIndex() != parseStart) {
         int32_t val = number.getLong();
 
@@ -3770,7 +3879,7 @@ void SimpleDateFormat::parseInt(const UnicodeString& text,
     auto* fmtAsDF = dynamic_cast<const DecimalFormat*>(fmt);
     LocalPointer<DecimalFormat> df;
     if (!allowNegative && fmtAsDF != nullptr) {
-        df.adoptInstead(dynamic_cast<DecimalFormat*>(fmtAsDF->clone()));
+        df.adoptInstead(fmtAsDF->clone());
         if (df.isNull()) {
             // Memory allocation error
             return;
@@ -3901,11 +4010,11 @@ SimpleDateFormat::applyPattern(const UnicodeString& pattern)
         } else if (fDateOverride.isBogus() && fHasHanYearChar) {
             // No current override (=> no Gannen numbering) but new pattern needs it;
             // use procedures from initNUmberFormatters / adoptNumberFormat
-            umtx_lock(LOCK());
+            umtx_lock(&LOCK);
             if (fSharedNumberFormatters == NULL) {
                 fSharedNumberFormatters = allocSharedNumberFormatters();
             }
-            umtx_unlock(LOCK());
+            umtx_unlock(&LOCK);
             if (fSharedNumberFormatters != NULL) {
                 Locale ovrLoc(fLocale.getLanguage(),fLocale.getCountry(),fLocale.getVariant(),"numbers=jpanyear");
                 UErrorCode status = U_ZERO_ERROR;
@@ -3998,6 +4107,7 @@ void SimpleDateFormat::adoptCalendar(Calendar* calendarToAdopt)
   DateFormatSymbols *newSymbols =
           DateFormatSymbols::createForLocale(calLocale, status);
   if (U_FAILURE(status)) {
+      delete calendarToAdopt;
       return;
   }
   DateFormat::adoptCalendar(calendarToAdopt);
@@ -4236,19 +4346,10 @@ SimpleDateFormat::skipUWhiteSpace(const UnicodeString& text, int32_t pos) const 
 // Lazy TimeZoneFormat instantiation, semantically const.
 TimeZoneFormat *
 SimpleDateFormat::tzFormat(UErrorCode &status) const {
-    if (fTimeZoneFormat == NULL) {
-        umtx_lock(LOCK());
-        {
-            if (fTimeZoneFormat == NULL) {
-                TimeZoneFormat *tzfmt = TimeZoneFormat::createInstance(fLocale, status);
-                if (U_FAILURE(status)) {
-                    return NULL;
-                }
-
-                const_cast<SimpleDateFormat *>(this)->fTimeZoneFormat = tzfmt;
-            }
-        }
-        umtx_unlock(LOCK());
+    Mutex m(&LOCK);
+    if (fTimeZoneFormat == nullptr && U_SUCCESS(status)) {
+        const_cast<SimpleDateFormat *>(this)->fTimeZoneFormat =
+                TimeZoneFormat::createInstance(fLocale, status);
     }
     return fTimeZoneFormat;
 }

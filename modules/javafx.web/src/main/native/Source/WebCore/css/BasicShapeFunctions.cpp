@@ -65,13 +65,31 @@ static Ref<CSSPrimitiveValue> basicShapeRadiusToCSSValue(const RenderStyle& styl
     return pool.createIdentifierValue(CSSValueClosestSide);
 }
 
-Ref<CSSPrimitiveValue> valueForBasicShape(const RenderStyle& style, const BasicShape& basicShape)
+static std::unique_ptr<SVGPathByteStream> copySVGPathByteStream(const SVGPathByteStream& source, SVGPathConversion conversion)
+{
+    switch (conversion) {
+    case SVGPathConversion::None:
+        return source.copy();
+
+    case SVGPathConversion::ForceAbsolute:
+        // Only returns the resulting absolute path if the conversion succeeds.
+        if (auto result = convertSVGPathByteStreamToAbsoluteCoordinates(source))
+            return result;
+
+        return source.copy();
+    }
+
+    ASSERT_NOT_REACHED();
+    return source.copy();
+}
+
+Ref<CSSPrimitiveValue> valueForBasicShape(const RenderStyle& style, const BasicShape& basicShape, SVGPathConversion conversion)
 {
     auto& cssValuePool = CSSValuePool::singleton();
 
     RefPtr<CSSBasicShape> basicShapeValue;
     switch (basicShape.type()) {
-    case BasicShape::BasicShapeCircleType: {
+    case BasicShape::Type::Circle: {
         auto& circle = downcast<BasicShapeCircle>(basicShape);
         auto circleValue = CSSBasicShapeCircle::create();
 
@@ -82,7 +100,7 @@ Ref<CSSPrimitiveValue> valueForBasicShape(const RenderStyle& style, const BasicS
         basicShapeValue = WTFMove(circleValue);
         break;
     }
-    case BasicShape::BasicShapeEllipseType: {
+    case BasicShape::Type::Ellipse: {
         auto& ellipse = downcast<BasicShapeEllipse>(basicShape);
         auto ellipseValue = CSSBasicShapeEllipse::create();
 
@@ -94,7 +112,7 @@ Ref<CSSPrimitiveValue> valueForBasicShape(const RenderStyle& style, const BasicS
         basicShapeValue = WTFMove(ellipseValue);
         break;
     }
-    case BasicShape::BasicShapePolygonType: {
+    case BasicShape::Type::Polygon: {
         auto& polygon = downcast<BasicShapePolygon>(basicShape);
         auto polygonValue = CSSBasicShapePolygon::create();
 
@@ -106,15 +124,20 @@ Ref<CSSPrimitiveValue> valueForBasicShape(const RenderStyle& style, const BasicS
         basicShapeValue = WTFMove(polygonValue);
         break;
     }
-    case BasicShape::BasicShapePathType: {
+    case BasicShape::Type::Path: {
         auto& pathShape = downcast<BasicShapePath>(basicShape);
-        auto pathShapeValue = CSSBasicShapePath::create(pathShape.pathData()->copy());
+
+        ASSERT(pathShape.pathData());
+        auto pathByteStream = copySVGPathByteStream(*pathShape.pathData(), conversion);
+
+        auto pathShapeValue = CSSBasicShapePath::create(WTFMove(pathByteStream));
         pathShapeValue->setWindRule(pathShape.windRule());
 
         basicShapeValue = WTFMove(pathShapeValue);
+
         break;
     }
-    case BasicShape::BasicShapeInsetType: {
+    case BasicShape::Type::Inset: {
         auto& inset = downcast<BasicShapeInset>(basicShape);
         auto insetValue = CSSBasicShapeInset::create();
 
@@ -144,7 +167,7 @@ static Length convertToLength(const CSSToLengthConversionData& conversionData, c
 static LengthSize convertToLengthSize(const CSSToLengthConversionData& conversionData, const CSSPrimitiveValue* value)
 {
     if (!value)
-        return { { 0, Fixed }, { 0, Fixed } };
+        return { { 0, LengthType::Fixed }, { 0, LengthType::Fixed } };
 
     auto& pair = *value->pairValue();
     return { convertToLength(conversionData, pair.first()), convertToLength(conversionData, pair.second()) };
@@ -153,7 +176,7 @@ static LengthSize convertToLengthSize(const CSSToLengthConversionData& conversio
 static BasicShapeCenterCoordinate convertToCenterCoordinate(const CSSToLengthConversionData& conversionData, CSSPrimitiveValue* value)
 {
     CSSValueID keyword = CSSValueTop;
-    Length offset { 0, Fixed };
+    Length offset { 0, LengthType::Fixed };
     if (!value)
         keyword = CSSValueCenter;
     else if (value->isValueID())
@@ -176,7 +199,7 @@ static BasicShapeCenterCoordinate convertToCenterCoordinate(const CSSToLengthCon
         break;
     case CSSValueCenter:
         direction = BasicShapeCenterCoordinate::TopLeft;
-        offset = Length(50, Percent);
+        offset = Length(50, LengthType::Percent);
         break;
     default:
         ASSERT_NOT_REACHED();
@@ -207,7 +230,7 @@ static BasicShapeRadius cssValueToBasicShapeRadius(const CSSToLengthConversionDa
     return BasicShapeRadius(convertToLength(conversionData, radius));
 }
 
-Ref<BasicShape> basicShapeForValue(const CSSToLengthConversionData& conversionData, const CSSBasicShape& basicShapeValue)
+Ref<BasicShape> basicShapeForValue(const CSSToLengthConversionData& conversionData, const CSSBasicShape& basicShapeValue, float zoom)
 {
     RefPtr<BasicShape> basicShape;
 
@@ -269,6 +292,7 @@ Ref<BasicShape> basicShapeForValue(const CSSToLengthConversionData& conversionDa
         auto& pathValue = downcast<CSSBasicShapePath>(basicShapeValue);
         auto path = BasicShapePath::create(pathValue.pathData().copy());
         path->setWindRule(pathValue.windRule());
+        path->setZoom(zoom);
 
         basicShape = WTFMove(path);
         break;

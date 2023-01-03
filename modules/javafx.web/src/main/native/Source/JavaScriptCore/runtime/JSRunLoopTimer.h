@@ -33,10 +33,6 @@
 #include <wtf/SharedTask.h>
 #include <wtf/ThreadSafeRefCounted.h>
 
-#if USE(CF)
-#include <CoreFoundation/CoreFoundation.h>
-#endif
-
 namespace JSC {
 
 class JSLock;
@@ -50,11 +46,8 @@ public:
     class Manager {
         WTF_MAKE_FAST_ALLOCATED;
         WTF_MAKE_NONCOPYABLE(Manager);
-#if USE(CF)
-        static void timerDidFireCallback(CFRunLoopTimerRef, void*);
-#else
         void timerDidFireCallback();
-#endif
+
         Manager() = default;
 
         void timerDidFire();
@@ -68,11 +61,7 @@ public:
         void scheduleTimer(JSRunLoopTimer&, Seconds nextFireTime);
         void cancelTimer(JSRunLoopTimer&);
 
-        Optional<Seconds> timeUntilFire(JSRunLoopTimer&);
-
-#if USE(CF)
-        void didChangeRunLoop(VM&, CFRunLoopRef newRunLoop);
-#endif
+        std::optional<Seconds> timeUntilFire(JSRunLoopTimer&);
 
     private:
         Lock m_lock;
@@ -81,22 +70,11 @@ public:
             WTF_MAKE_FAST_ALLOCATED;
             WTF_MAKE_NONCOPYABLE(PerVMData);
         public:
-#if USE(CF)
-            PerVMData(Manager&) { }
-#else
-            PerVMData(Manager&);
-#endif
+            PerVMData(Manager&, WTF::RunLoop&);
             ~PerVMData();
 
-#if USE(CF)
-            void setRunLoop(Manager*, CFRunLoopRef);
-            RetainPtr<CFRunLoopTimerRef> timer;
-            RetainPtr<CFRunLoopRef> runLoop;
-            CFRunLoopTimerContext context;
-#else
-            RunLoop* runLoop;
+            Ref<WTF::RunLoop> runLoop;
             std::unique_ptr<RunLoop::Timer<Manager>> timer;
-#endif
             Vector<std::pair<Ref<JSRunLoopTimer>, EpochTime>> timers;
         };
 
@@ -118,10 +96,10 @@ public:
     JS_EXPORT_PRIVATE void addTimerSetNotification(TimerNotificationCallback);
     JS_EXPORT_PRIVATE void removeTimerSetNotification(TimerNotificationCallback);
 
-    JS_EXPORT_PRIVATE Optional<Seconds> timeUntilFire();
+    JS_EXPORT_PRIVATE std::optional<Seconds> timeUntilFire();
 
 protected:
-    static const Seconds s_decade;
+    static constexpr Seconds s_decade { 60 * 60 * 24 * 365 * 10 };
     Ref<JSLock> m_apiLock;
 
 private:

@@ -1,5 +1,5 @@
 // Copyright 2014 The Chromium Authors. All rights reserved.
-// Copyright (C) 2016 Apple Inc. All rights reserved.
+// Copyright (C) 2016-2020 Apple Inc. All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
@@ -45,6 +45,9 @@ class CSSTokenizer {
     WTF_MAKE_NONCOPYABLE(CSSTokenizer);
     WTF_MAKE_FAST_ALLOCATED;
 public:
+    static std::unique_ptr<CSSTokenizer> tryCreate(const String&);
+    static std::unique_ptr<CSSTokenizer> tryCreate(const String&, CSSParserObserverWrapper&); // For the inspector
+
     explicit CSSTokenizer(const String&);
     CSSTokenizer(const String&, CSSParserObserverWrapper&); // For the inspector
 
@@ -54,16 +57,19 @@ public:
     Vector<String>&& escapedStringsForAdoption() { return WTFMove(m_stringPool); }
 
 private:
+    CSSTokenizer(const String&, CSSParserObserverWrapper*, bool* constructionSuccess);
+
     CSSParserToken nextToken();
 
     UChar consume();
     void reconsume(UChar);
 
+    String preprocessString(String);
+
     CSSParserToken consumeNumericToken();
     CSSParserToken consumeIdentLikeToken();
     CSSParserToken consumeNumber();
     CSSParserToken consumeStringTokenUntil(UChar);
-    CSSParserToken consumeUnicodeRange();
     CSSParserToken consumeUrlToken();
 
     void consumeBadUrlRemnants();
@@ -118,11 +124,10 @@ private:
     static const CodePoint codePoints[];
 
     Vector<CSSParserTokenType, 8> m_blockStack;
-    CSSTokenizerInputStream m_input;
-
     Vector<CSSParserToken, 32> m_tokens;
     // We only allocate strings when escapes are used.
     Vector<String> m_stringPool;
+    CSSTokenizerInputStream m_input;
 };
 
 } // namespace WebCore

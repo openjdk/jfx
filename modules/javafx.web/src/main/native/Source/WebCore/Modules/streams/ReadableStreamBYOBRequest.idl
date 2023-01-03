@@ -27,14 +27,14 @@
  */
 
 [
-    Conditional=STREAMS_API,
-    Constructor(ReadableByteStreamController controller, TypedArray view),
     Exposed=(Window,Worker),
     JSBuiltin,
     PrivateIdentifier
 ] interface ReadableStreamBYOBRequest {
-    [NotEnumerable] void respond(optional any bytesWritten);
-    [NotEnumerable] void respondWithNewView(optional any view);
+    constructor(ReadableByteStreamController controller, TypedArray view);
+
+    [NotEnumerable] undefined respond(optional any bytesWritten);
+    [NotEnumerable] undefined respondWithNewView(optional any view);
 
     [NotEnumerable] readonly attribute TypedArray view;
 };

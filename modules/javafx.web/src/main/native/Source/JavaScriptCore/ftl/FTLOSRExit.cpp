@@ -28,17 +28,9 @@
 
 #if ENABLE(FTL_JIT)
 
-#include "AirGenerationContext.h"
 #include "B3StackmapGenerationParams.h"
-#include "B3StackmapValue.h"
-#include "CodeBlock.h"
-#include "DFGBasicBlock.h"
-#include "DFGNode.h"
-#include "FTLExitArgument.h"
 #include "FTLJITCode.h"
-#include "FTLLocation.h"
 #include "FTLState.h"
-#include "JSCInlines.h"
 
 namespace JSC { namespace FTL {
 
@@ -47,10 +39,10 @@ using namespace DFG;
 
 OSRExitDescriptor::OSRExitDescriptor(
     DataFormat profileDataFormat, MethodOfGettingAValueProfile valueProfile,
-    unsigned numberOfArguments, unsigned numberOfLocals)
+    unsigned numberOfArguments, unsigned numberOfLocals, unsigned numberOfTmps)
     : m_profileDataFormat(profileDataFormat)
     , m_valueProfile(valueProfile)
-    , m_values(numberOfArguments, numberOfLocals)
+    , m_values(numberOfArguments, numberOfLocals, numberOfTmps)
 {
 }
 
@@ -65,20 +57,20 @@ void OSRExitDescriptor::validateReferences(const TrackedReferences& trackedRefer
 
 Ref<OSRExitHandle> OSRExitDescriptor::emitOSRExit(
     State& state, ExitKind exitKind, const NodeOrigin& nodeOrigin, CCallHelpers& jit,
-    const StackmapGenerationParams& params, unsigned offset)
+    const StackmapGenerationParams& params, uint32_t dfgNodeIndex, unsigned offset)
 {
     Ref<OSRExitHandle> handle =
-        prepareOSRExitHandle(state, exitKind, nodeOrigin, params, offset);
+        prepareOSRExitHandle(state, exitKind, nodeOrigin, params, dfgNodeIndex, offset);
     handle->emitExitThunk(state, jit);
     return handle;
 }
 
 Ref<OSRExitHandle> OSRExitDescriptor::emitOSRExitLater(
     State& state, ExitKind exitKind, const NodeOrigin& nodeOrigin,
-    const StackmapGenerationParams& params, unsigned offset)
+    const StackmapGenerationParams& params, uint32_t dfgNodeIndex, unsigned offset)
 {
     RefPtr<OSRExitHandle> handle =
-        prepareOSRExitHandle(state, exitKind, nodeOrigin, params, offset);
+        prepareOSRExitHandle(state, exitKind, nodeOrigin, params, dfgNodeIndex, offset);
     params.addLatePath(
         [handle, &state] (CCallHelpers& jit) {
             handle->emitExitThunk(state, jit);
@@ -88,23 +80,24 @@ Ref<OSRExitHandle> OSRExitDescriptor::emitOSRExitLater(
 
 Ref<OSRExitHandle> OSRExitDescriptor::prepareOSRExitHandle(
     State& state, ExitKind exitKind, const NodeOrigin& nodeOrigin,
-    const StackmapGenerationParams& params, unsigned offset)
+    const StackmapGenerationParams& params, uint32_t dfgNodeIndex, unsigned offset)
 {
-    unsigned index = state.jitCode->osrExit.size();
-    OSRExit& exit = state.jitCode->osrExit.alloc(
-        this, exitKind, nodeOrigin.forExit, nodeOrigin.semantic, nodeOrigin.wasHoisted);
-    Ref<OSRExitHandle> handle = adoptRef(*new OSRExitHandle(index, exit));
-    for (unsigned i = offset; i < params.size(); ++i)
-        exit.m_valueReps.append(params[i]);
-    exit.m_valueReps.shrinkToFit();
-    return handle;
+    FixedVector<B3::ValueRep> valueReps(params.size() - offset);
+IGNORE_GCC_WARNINGS_BEGIN("stringop-overflow")
+    for (unsigned i = offset, indexInValueReps = 0; i < params.size(); ++i, ++indexInValueReps)
+        valueReps[indexInValueReps] = params[i];
+IGNORE_GCC_WARNINGS_END
+    unsigned index = state.jitCode->m_osrExit.size();
+    state.jitCode->m_osrExit.append(OSRExit(this, exitKind, nodeOrigin.forExit, nodeOrigin.semantic, nodeOrigin.wasHoisted, dfgNodeIndex, WTFMove(valueReps)));
+    return adoptRef(*new OSRExitHandle(index, state.jitCode.get()));
 }
 
 OSRExit::OSRExit(
     OSRExitDescriptor* descriptor, ExitKind exitKind, CodeOrigin codeOrigin,
-    CodeOrigin codeOriginForExitProfile, bool wasHoisted)
-    : OSRExitBase(exitKind, codeOrigin, codeOriginForExitProfile, wasHoisted)
+    CodeOrigin codeOriginForExitProfile, bool wasHoisted, uint32_t dfgNodeIndex, FixedVector<B3::ValueRep>&& valueReps)
+    : OSRExitBase(exitKind, codeOrigin, codeOriginForExitProfile, wasHoisted, dfgNodeIndex)
     , m_descriptor(descriptor)
+    , m_valueReps(WTFMove(valueReps))
 {
 }
 
@@ -117,5 +110,3 @@ CodeLocationJump<JSInternalPtrTag> OSRExit::codeLocationForRepatch(CodeBlock* ft
 } } // namespace JSC::FTL
 
 #endif // ENABLE(FTL_JIT)
-
-

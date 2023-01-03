@@ -23,9 +23,6 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-const ButtonMarginForThreeButtonsOrLess = 24;
-const ButtonMarginForFourButtons = 16;
-const ButtonMarginForFiveButtons = 12;
 const FullscreenTimeControlWidth = 448;
 
 class MacOSFullscreenMediaControls extends MediaControls
@@ -33,7 +30,7 @@ class MacOSFullscreenMediaControls extends MediaControls
 
     constructor(options = {})
     {
-        options.layoutTraits = LayoutTraits.macOS | LayoutTraits.Fullscreen;
+        options.layoutTraits = new MacOSLayoutTraits(LayoutTraits.Mode.Fullscreen);
 
         super(options);
 
@@ -41,8 +38,6 @@ class MacOSFullscreenMediaControls extends MediaControls
         this.element.classList.add("fullscreen");
 
         // Set up fullscreen-specific buttons.
-        this.volumeDownButton = new VolumeDownButton(this);
-        this.volumeUpButton = new VolumeUpButton(this);
         this.rewindButton = new RewindButton(this);
         this.forwardButton = new ForwardButton(this);
         this.fullscreenButton.isFullscreen = true;
@@ -51,7 +46,7 @@ class MacOSFullscreenMediaControls extends MediaControls
         this.volumeSlider.width = 60;
 
         this._leftContainer = new ButtonsContainer({
-            children: [this.volumeDownButton, this.volumeSlider, this.volumeUpButton],
+            children: this._volumeControlsForCurrentDirection(),
             cssClassName: "left",
             leftMargin: 12,
             rightMargin: 0,
@@ -67,10 +62,11 @@ class MacOSFullscreenMediaControls extends MediaControls
         });
 
         this._rightContainer = new ButtonsContainer({
-            children: [this.airplayButton, this.pipButton, this.tracksButton, this.fullscreenButton],
+            children: [this.airplayButton, this.pipButton, this.tracksButton, this.fullscreenButton, this.overflowButton],
             cssClassName: "right",
             leftMargin: 12,
-            rightMargin: 12
+            rightMargin: 12,
+            buttonMargin: 24
         });
 
         this.bottomControlsBar.children = [this._leftContainer, this._centerContainer, this._rightContainer];
@@ -113,17 +109,23 @@ class MacOSFullscreenMediaControls extends MediaControls
         if (!this._rightContainer)
             return;
 
-        const numberOfEnabledButtons = this._rightContainer.children.filter(button => button.enabled).length;
-
-        let buttonMargin = ButtonMarginForFiveButtons;
-        if (numberOfEnabledButtons === 4)
-            buttonMargin = ButtonMarginForFourButtons;
-        else if (numberOfEnabledButtons <= 3)
-            buttonMargin = ButtonMarginForThreeButtonsOrLess;
-
-        this._rightContainer.buttonMargin = buttonMargin;
+        this._rightContainer.children.forEach(button => delete button.dropped)
+        this.overflowButton.clearContextMenuOptions();
 
         this._leftContainer.visible = this.muteButton.enabled;
+        this._leftContainer.children = this._volumeControlsForCurrentDirection();
+
+        let collapsableButtons = this._collapsableButtons();
+        let shownRightContainerButtons = this._rightContainer.children.filter(button => button.enabled && !button.dropped);
+        let maximumRightContainerButtonCount = this.maximumRightContainerButtonCountOverride ?? 3; // Allow AirPlay, Exit Fullscreen, and overflow if all buttons are shown.
+        for (let i = shownRightContainerButtons.length - 1; i >= 0 && shownRightContainerButtons.length > maximumRightContainerButtonCount; --i) {
+            let button = shownRightContainerButtons[i];
+            if (!collapsableButtons.has(button))
+                continue;
+
+            button.dropped = true;
+            this.overflowButton.addContextMenuOptions(button.contextMenuOptions);
+        }
 
         this._leftContainer.layout();
         this._centerContainer.layout();
@@ -142,6 +144,19 @@ class MacOSFullscreenMediaControls extends MediaControls
     }
 
     // Private
+
+    _volumeControlsForCurrentDirection()
+    {
+        return this.usesLTRUserInterfaceLayoutDirection ? [this.muteButton, this.volumeSlider] : [this.volumeSlider, this.muteButton];
+    }
+
+    _collapsableButtons()
+    {
+        return new Set([
+            this.tracksButton,
+            this.pipButton,
+        ]);
+    }
 
     _handleMousedown(event)
     {

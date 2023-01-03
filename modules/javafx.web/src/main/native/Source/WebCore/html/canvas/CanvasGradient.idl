@@ -23,12 +23,10 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
  */
 
+// https://html.spec.whatwg.org/multipage/canvas.html#canvasgradient
 [
     Exposed=(Window,Worker),
-    ImplementationLacksVTable
 ] interface CanvasGradient {
-    // FIXME: The float parameters below should be a double.
-
     // opaque object
-    [MayThrowException] void addColorStop(float offset, DOMString color);
+    undefined addColorStop(double offset, DOMString color);
 };

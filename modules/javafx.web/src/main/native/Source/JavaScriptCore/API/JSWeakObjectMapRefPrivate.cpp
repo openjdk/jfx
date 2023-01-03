@@ -27,11 +27,8 @@
 #include "JSWeakObjectMapRefPrivate.h"
 
 #include "APICast.h"
-#include "JSCJSValue.h"
 #include "JSCallbackObject.h"
 #include "JSWeakObjectMapRefInternal.h"
-#include "JSCInlines.h"
-#include "Weak.h"
 #include "WeakGCMapInlines.h"
 
 using namespace JSC;
@@ -42,11 +39,11 @@ extern "C" {
 
 JSWeakObjectMapRef JSWeakObjectMapCreate(JSContextRef context, void* privateData, JSWeakMapDestroyedCallback callback)
 {
-    ExecState* exec = toJS(context);
-    VM& vm = exec->vm();
+    JSGlobalObject* globalObject = toJS(context);
+    VM& vm = globalObject->vm();
     JSLockHolder locker(vm);
     auto map = OpaqueJSWeakObjectMap::create(vm, privateData, callback);
-    exec->lexicalGlobalObject()->registerWeakMap(map.ptr());
+    globalObject->registerWeakMap(map.ptr());
     return map.ptr();
 }
 
@@ -56,15 +53,15 @@ void JSWeakObjectMapSet(JSContextRef ctx, JSWeakObjectMapRef map, void* key, JSO
         ASSERT_NOT_REACHED();
         return;
     }
-    ExecState* exec = toJS(ctx);
-    VM& vm = exec->vm();
+    JSGlobalObject* globalObject = toJS(ctx);
+    VM& vm = globalObject->vm();
     JSLockHolder locker(vm);
     JSObject* obj = toJS(object);
     if (!obj)
         return;
     ASSERT(obj->inherits<JSProxy>(vm)
         || obj->inherits<JSCallbackObject<JSGlobalObject>>(vm)
-        || obj->inherits<JSCallbackObject<JSDestructibleObject>>(vm));
+        || obj->inherits<JSCallbackObject<JSNonFinalObject>>(vm));
     map->map().set(key, obj);
 }
 
@@ -72,10 +69,10 @@ JSObjectRef JSWeakObjectMapGet(JSContextRef ctx, JSWeakObjectMapRef map, void* k
 {
     if (!ctx) {
         ASSERT_NOT_REACHED();
-        return 0;
+        return nullptr;
     }
-    ExecState* exec = toJS(ctx);
-    JSLockHolder locker(exec);
+    JSGlobalObject* globalObject = toJS(ctx);
+    JSLockHolder locker(globalObject);
     return toRef(jsCast<JSObject*>(map->map().get(key)));
 }
 
@@ -85,8 +82,8 @@ void JSWeakObjectMapRemove(JSContextRef ctx, JSWeakObjectMapRef map, void* key)
         ASSERT_NOT_REACHED();
         return;
     }
-    ExecState* exec = toJS(ctx);
-    JSLockHolder locker(exec);
+    JSGlobalObject* globalObject = toJS(ctx);
+    JSLockHolder locker(globalObject);
     map->map().remove(key);
 }
 

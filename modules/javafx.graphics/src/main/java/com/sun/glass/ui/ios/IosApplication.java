@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -39,7 +39,8 @@ public final class IosApplication extends Application {
 
     private static native void _initIDs(); // init IDs for java callbacks from native
     static {
-        AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+        @SuppressWarnings("removal")
+        var dummy = AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
             Application.loadNativeLibrary();
             return null;
         });
@@ -82,14 +83,6 @@ public final class IosApplication extends Application {
      * @inheritDoc
      */
     @Override
-    public Window createWindow(long parent) {
-        return new IosWindow(parent);
-    }
-
-    /**
-     * @inheritDoc
-     */
-    @Override
     public View createView() {
         return new IosView();
     }
@@ -125,6 +118,11 @@ public final class IosApplication extends Application {
     @Override
     public Pixels createPixels(int width, int height, ByteBuffer data) {
         return new IosPixels(width, height, data);
+    }
+
+    @Override
+    public Pixels createPixels(int width, int height, ByteBuffer data, float scalex, float scaley) {
+        return new IosPixels(width, height, data, scalex, scaley);
     }
 
     /**

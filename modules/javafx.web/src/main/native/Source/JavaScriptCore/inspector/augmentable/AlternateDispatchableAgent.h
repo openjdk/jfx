@@ -27,8 +27,8 @@
 
 #if ENABLE(INSPECTOR_ALTERNATE_DISPATCHERS)
 
+#include "InspectorAgentBase.h"
 #include "InspectorAlternateBackendDispatchers.h"
-#include <JavaScriptCore/InspectorAgentBase.h>
 #include <wtf/Forward.h>
 
 namespace Inspector {
@@ -51,11 +51,11 @@ public:
         m_alternateDispatcher->setBackendDispatcher(nullptr);
     }
 
-    void didCreateFrontendAndBackend(FrontendRouter*, BackendDispatcher*) override
+    void didCreateFrontendAndBackend(FrontendRouter*, BackendDispatcher*) final
     {
     }
 
-    void willDestroyFrontendAndBackend(DisconnectReason) override
+    void willDestroyFrontendAndBackend(DisconnectReason) final
     {
     }
 

@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2017 Oleksandr Skachkov <gskachkov@gmail.com>.
+ * Copyright (C) 2019-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,11 +33,18 @@ namespace JSC {
 class AsyncIteratorPrototype final : public JSNonFinalObject {
 public:
     using Base = JSNonFinalObject;
-    static const unsigned StructureFlags = Base::StructureFlags;
+    static constexpr unsigned StructureFlags = Base::StructureFlags;
+
+    template<typename CellType, SubspaceAccess>
+    static GCClient::IsoSubspace* subspaceFor(VM& vm)
+    {
+        STATIC_ASSERT_ISO_SUBSPACE_SHARABLE(AsyncIteratorPrototype, Base);
+        return &vm.plainObjectSpace();
+    }
 
     static AsyncIteratorPrototype* create(VM& vm, JSGlobalObject* globalObject, Structure* structure)
     {
-        AsyncIteratorPrototype* prototype = new (NotNull, allocateCell<AsyncIteratorPrototype>(vm.heap)) AsyncIteratorPrototype(vm, structure);
+        AsyncIteratorPrototype* prototype = new (NotNull, allocateCell<AsyncIteratorPrototype>(vm)) AsyncIteratorPrototype(vm, structure);
         prototype->finishCreation(vm, globalObject);
         return prototype;
     }

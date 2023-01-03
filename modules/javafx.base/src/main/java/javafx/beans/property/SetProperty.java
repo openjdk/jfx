@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,9 +26,7 @@
 package javafx.beans.property;
 
 import javafx.beans.binding.Bindings;
-import javafx.beans.value.WritableListValue;
 import javafx.beans.value.WritableSetValue;
-import javafx.collections.ObservableList;
 import javafx.collections.ObservableSet;
 
 /**
@@ -57,6 +55,13 @@ import javafx.collections.ObservableSet;
  */
 public abstract class SetProperty<E> extends ReadOnlySetProperty<E> implements
         Property<ObservableSet<E>>, WritableSetValue<E> {
+
+    /**
+     * Creates a default {@code SetProperty}.
+     */
+    public SetProperty() {
+    }
+
     /**
      * {@inheritDoc}
      */

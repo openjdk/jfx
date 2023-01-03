@@ -30,8 +30,6 @@
  * Since: 1.8
  */
 
-#define GST_USE_UNSTABLE_API
-
 #include "gst_private.h"
 #include "gstenumtypes.h"
 #include "gstinfo.h"
@@ -70,7 +68,7 @@ build_field_template (GQuark field_id, const GValue * value, gpointer user_data)
   gboolean res;
 
   if (G_VALUE_TYPE (value) != GST_TYPE_STRUCTURE) {
-    GST_WARNING ("expected field of type GstStructure, but %s is %s",
+    GST_ERROR ("expected field of type GstStructure, but %s is %s",
         g_quark_to_string (field_id), G_VALUE_TYPE_NAME (value));
     return FALSE;
   }
@@ -161,6 +159,7 @@ gst_tracer_record_init (GstTracerRecord * self)
  *
  * Create a new tracer record. The record instance can be used to efficiently
  * log entries using gst_tracer_record_log().
+ * %NULL terminator required after the last argument.
  *
  * The @name without the ".class" suffix will be used for the log records.
  * There must be fields for each value that gets logged where the field name is
@@ -179,6 +178,8 @@ gst_tracer_record_init (GstTracerRecord * self)
  * > Please note that this is still under discussion and subject to change.
  *
  * Returns: (transfer full): a new #GstTracerRecord
+ *
+ * Since: 1.8
  */
 GstTracerRecord *
 gst_tracer_record_new (const gchar * name, const gchar * firstfield, ...)
@@ -201,8 +202,11 @@ gst_tracer_record_new (const gchar * name, const gchar * firstfield, ...)
 
     /* all fields passed here must be GstStructures which we take over */
     if (type != GST_TYPE_STRUCTURE) {
-      GST_WARNING ("expected field of type GstStructure, but %s is %s",
+      GST_ERROR ("expected field of type GstStructure, but %s is %s",
           firstfield, g_type_name (type));
+      va_end (varargs);
+      gst_structure_free (structure);
+      return NULL;
     }
 
     G_VALUE_COLLECT_INIT (&val, type, varargs, G_VALUE_NOCOPY_CONTENTS, &err);
@@ -211,7 +215,9 @@ gst_tracer_record_new (const gchar * name, const gchar * firstfield, ...)
       g_free (err);
       break;
     }
-    /* see boxed_proxy_collect_value */
+    /* give ownership of the GstStructure "value" collected from varargs
+     * to this structure by unsetting the NOCOPY_CONTENTS collect-flag.
+     * see boxed_proxy_collect_value in glib's gobject/gboxed.c */
     val.data[1].v_uint &= ~G_VALUE_NOCOPY_CONTENTS;
     gst_structure_id_take_value (structure, id, &val);
 
@@ -242,6 +248,8 @@ gst_tracer_record_new (const gchar * name, const gchar * firstfield, ...)
  * the category "GST_TRACER".
  *
  * > Please note that this is still under discussion and subject to change.
+ *
+ * Since: 1.8
  */
 void
 gst_tracer_record_log (GstTracerRecord * self, ...)

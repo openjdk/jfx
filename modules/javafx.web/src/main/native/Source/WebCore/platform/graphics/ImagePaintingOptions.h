@@ -32,27 +32,39 @@
 namespace WebCore {
 
 struct ImagePaintingOptions {
-    template<typename... Options>
-    ImagePaintingOptions(Options... options)
+    template<typename Type> static constexpr bool isOptionType =
+        std::is_same_v<Type, CompositeOperator>
+        || std::is_same_v<Type, BlendMode>
+        || std::is_same_v<Type, DecodingMode>
+        || std::is_same_v<Type, ImageOrientation>
+        || std::is_same_v<Type, ImageOrientation::Orientation>
+        || std::is_same_v<Type, InterpolationQuality>;
+
+    template<typename First, typename... Rest, typename = std::enable_if_t<isOptionType<std::decay_t<First>>>>
+    ImagePaintingOptions(First first, Rest... rest)
     {
-        setOption(options...);
+        setOption(first, rest...);
     }
 
-    template<typename... Overrrides>
-    ImagePaintingOptions(const ImagePaintingOptions& other, Overrrides... overrrides)
+    template<typename... Overrides>
+    ImagePaintingOptions(const ImagePaintingOptions& other, Overrides... overrides)
         : ImagePaintingOptions(other)
     {
-        setOption(overrrides...);
+        setOption(overrides...);
     }
 
     ImagePaintingOptions() = default;
     ImagePaintingOptions(const ImagePaintingOptions&) = default;
+    ImagePaintingOptions& operator=(const ImagePaintingOptions&) = default;
 
     CompositeOperator compositeOperator() const { return m_compositeOperator; }
     BlendMode blendMode() const { return m_blendMode; }
     DecodingMode decodingMode() const { return m_decodingMode; }
     ImageOrientation orientation() const { return m_orientation; }
     InterpolationQuality interpolationQuality() const { return m_interpolationQuality; }
+
+    template<class Encoder> void encode(Encoder&) const;
+    template<class Decoder> static std::optional<ImagePaintingOptions> decode(Decoder&);
 
 private:
     template <typename First, typename... Rest>
@@ -69,11 +81,52 @@ private:
     void setOption(ImageOrientation::Orientation orientation) { m_orientation = orientation; }
     void setOption(InterpolationQuality interpolationQuality) { m_interpolationQuality = interpolationQuality; }
 
-    CompositeOperator m_compositeOperator { CompositeSourceOver };
+    CompositeOperator m_compositeOperator { CompositeOperator::SourceOver };
     BlendMode m_blendMode { BlendMode::Normal };
     DecodingMode m_decodingMode { DecodingMode::Synchronous };
     ImageOrientation m_orientation { ImageOrientation::None };
-    InterpolationQuality m_interpolationQuality { InterpolationDefault };
+    InterpolationQuality m_interpolationQuality { InterpolationQuality::Default };
 };
+
+template<class Encoder>
+void ImagePaintingOptions::encode(Encoder& encoder) const
+{
+    encoder << m_compositeOperator;
+    encoder << m_blendMode;
+    encoder << m_decodingMode;
+    encoder << ImageOrientation::Orientation(m_orientation);
+    encoder << m_interpolationQuality;
+}
+
+template<class Decoder>
+std::optional<ImagePaintingOptions> ImagePaintingOptions::decode(Decoder& decoder)
+{
+    std::optional<CompositeOperator> compositeOperator;
+    decoder >> compositeOperator;
+    if (!compositeOperator)
+        return std::nullopt;
+
+    std::optional<BlendMode> blendMode;
+    decoder >> blendMode;
+    if (!blendMode)
+        return std::nullopt;
+
+    std::optional<DecodingMode> decodingMode;
+    decoder >> decodingMode;
+    if (!decodingMode)
+        return std::nullopt;
+
+    std::optional<ImageOrientation::Orientation> orientation;
+    decoder >> orientation;
+    if (!orientation)
+        return std::nullopt;
+
+    std::optional<InterpolationQuality> interpolationQuality;
+    decoder >> interpolationQuality;
+    if (!interpolationQuality)
+        return std::nullopt;
+
+    return ImagePaintingOptions { *compositeOperator, *blendMode, *decodingMode, *orientation, *interpolationQuality };
+}
 
 }

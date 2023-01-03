@@ -30,20 +30,22 @@
 
 #pragma once
 
-#if USE(ZLIB)
+#if !PLATFORM(JAVA)
 #include "WebSocketDeflater.h"
 #endif
 #include "WebSocketExtensionProcessor.h"
-#include "WebSocketFrame.h"
 
 namespace WebCore {
 
 class WebSocketDeflateFramer;
+class WebSocketExtensionProcessor;
+
+struct WebSocketFrame;
 
 class DeflateResultHolder {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    explicit DeflateResultHolder(WebSocketDeflateFramer*);
+    explicit DeflateResultHolder(WebSocketDeflateFramer&);
     ~DeflateResultHolder();
 
     bool succeeded() const { return m_succeeded; }
@@ -52,15 +54,15 @@ public:
     void fail(const String& failureReason);
 
 private:
-    WebSocketDeflateFramer* m_framer;
-    bool m_succeeded;
+    WebSocketDeflateFramer& m_framer;
+    bool m_succeeded { true };
     String m_failureReason;
 };
 
 class InflateResultHolder {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    explicit InflateResultHolder(WebSocketDeflateFramer*);
+    explicit InflateResultHolder(WebSocketDeflateFramer&);
     ~InflateResultHolder();
 
     bool succeeded() const { return m_succeeded; }
@@ -69,18 +71,15 @@ public:
     void fail(const String& failureReason);
 
 private:
-    WebSocketDeflateFramer* m_framer;
-    bool m_succeeded;
+    WebSocketDeflateFramer& m_framer;
+    bool m_succeeded { true };
     String m_failureReason;
 };
 
 class WebSocketDeflateFramer {
 public:
-    WebSocketDeflateFramer();
-
     std::unique_ptr<WebSocketExtensionProcessor> createExtensionProcessor();
 
-    bool canDeflate() const;
     bool enabled() const { return m_enabled; }
 
     std::unique_ptr<DeflateResultHolder> deflate(WebSocketFrame&);
@@ -90,13 +89,13 @@ public:
 
     void didFail();
 
-#if USE(ZLIB)
+#if !PLATFORM(JAVA)
     void enableDeflate(int windowBits, WebSocketDeflater::ContextTakeOverMode);
 #endif
 
 private:
-    bool m_enabled;
-#if USE(ZLIB)
+    bool m_enabled { false };
+#if !PLATFORM(JAVA)
     std::unique_ptr<WebSocketDeflater> m_deflater;
     std::unique_ptr<WebSocketInflater> m_inflater;
 #endif

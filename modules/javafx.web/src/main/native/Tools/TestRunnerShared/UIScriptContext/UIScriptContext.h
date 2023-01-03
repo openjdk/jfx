@@ -30,7 +30,7 @@
 
 #include <JavaScriptCore/JSRetainPtr.h>
 #include <wtf/HashMap.h>
-#include <wtf/RefPtr.h>
+#include <wtf/Ref.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
@@ -61,9 +61,13 @@ typedef enum  {
     CallbackTypeDidEndScrolling,
     CallbackTypeDidStartFormControlInteraction,
     CallbackTypeDidEndFormControlInteraction,
-    CallbackTypeDidShowForcePressPreview,
-    CallbackTypeDidDismissForcePressPreview,
+    CallbackTypeDidShowContextMenu,
+    CallbackTypeDidDismissContextMenu,
     CallbackTypeWillCreateNewPage,
+    CallbackTypeWindowTapRecognized,
+    CallbackTypeDidShowContactPicker,
+    CallbackTypeDidHideContactPicker,
+    CallbackTypeWillStartInputSession,
     CallbackTypeNonPersistent = firstNonPersistentCallbackID
 } CallbackType;
 
@@ -71,7 +75,9 @@ class UIScriptContext {
     WTF_MAKE_FAST_ALLOCATED;
     WTF_MAKE_NONCOPYABLE(UIScriptContext);
 public:
-    UIScriptContext(UIScriptContextDelegate&);
+    using UIScriptControllerFactory = Ref<UIScriptController> (*)(UIScriptContext&);
+
+    UIScriptContext(UIScriptContextDelegate&, UIScriptControllerFactory);
     ~UIScriptContext();
 
     void runUIScript(const String& script, unsigned scriptCallbackID);

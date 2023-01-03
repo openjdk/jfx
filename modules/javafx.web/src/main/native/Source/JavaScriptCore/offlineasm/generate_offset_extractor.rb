@@ -29,6 +29,7 @@ require "config"
 require "backends"
 require "digest/sha1"
 require "offsets"
+require 'optparse'
 require "parser"
 require "self_hash"
 require "settings"
@@ -43,8 +44,18 @@ outputFlnm = ARGV.shift
 validBackends = canonicalizeBackendNames(ARGV.shift.split(/[,\s]+/))
 includeOnlyBackends(validBackends)
 
+variants = ARGV.shift.split(/[,\s]+/)
+
+$options = {}
+OptionParser.new do |opts|
+    opts.banner = "Usage: generate_offset_extractor.rb asmFile settingFile outputFileName backends variants [--webkit-additions-path=<path>]"
+    opts.on("--webkit-additions-path=PATH", "WebKitAdditions path.") do |path|
+        $options[:webkit_additions_path] = path
+    end
+end.parse!
+
 begin
-    configurationList = configurationIndices(settingsFlnm)
+    configurationList = configurationIndicesForVariants(settingsFlnm, variants)
 rescue MissingMagicValuesException
     $stderr.puts "OffsetExtractor: No magic values found. Skipping offsets extractor file generation."
     exit 1
@@ -58,20 +69,20 @@ def emitMagicNumber
 end
 
 configurationHash = Digest::SHA1.hexdigest(configurationList.join(' '))
-inputHash = "// OffsetExtractor input hash: #{parseHash(inputFlnm)} #{configurationHash} #{selfHash}"
+inputHash = "// OffsetExtractor input hash: #{parseHash(inputFlnm, $options)} #{configurationHash} #{selfHash}"
 
 if FileTest.exist? outputFlnm
     File.open(outputFlnm, "r") {
         | inp |
         firstLine = inp.gets
         if firstLine and firstLine.chomp == inputHash
-            $stderr.puts "OffsetExtractor: Nothing changed."
+            # Nothing changed.
             exit 0
         end
     }
 end
 
-ast = parse(inputFlnm)
+ast = parse(inputFlnm, $options)
 settingsCombinations = computeSettingsCombinations(ast)
 
 File.open(outputFlnm, "w") {
@@ -90,6 +101,11 @@ File.open(outputFlnm, "w") {
             constsList = constsList(lowLevelAST)
 
             emitCodeInConfiguration(concreteSettings, lowLevelAST, backend) {
+
+                # Windows complains about signed integers being cast to unsigned but we just want the bits.
+                outp.puts "\#if COMPILER(MSVC)"
+                outp.puts "\#pragma warning(disable:4308)"
+                outp.puts "\#endif"
                 constsList.each_with_index {
                     | const, index |
                     outp.puts "constexpr int64_t constValue#{index} = static_cast<int64_t>(#{const.value});"

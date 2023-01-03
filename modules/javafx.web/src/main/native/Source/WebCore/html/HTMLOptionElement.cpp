@@ -3,7 +3,7 @@
  *           (C) 1999 Antti Koivisto (koivisto@kde.org)
  *           (C) 2001 Dirk Mueller (mueller@kde.org)
  *           (C) 2006 Alexey Proskuryakov (ap@nypop.com)
- * Copyright (C) 2004-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2020 Apple Inc. All rights reserved.
  * Copyright (C) 2010 Google Inc. All rights reserved.
  * Copyright (C) 2011 Motorola Mobility, Inc.  All rights reserved.
  *
@@ -27,7 +27,10 @@
 #include "config.h"
 #include "HTMLOptionElement.h"
 
+#include "AXObjectCache.h"
 #include "Document.h"
+#include "DocumentInlines.h"
+#include "ElementAncestorIterator.h"
 #include "HTMLDataListElement.h"
 #include "HTMLNames.h"
 #include "HTMLOptGroupElement.h"
@@ -35,6 +38,7 @@
 #include "HTMLSelectElement.h"
 #include "NodeRenderStyle.h"
 #include "NodeTraversal.h"
+#include "PseudoClassChangeInvalidation.h"
 #include "RenderMenuList.h"
 #include "RenderTheme.h"
 #include "ScriptElement.h"
@@ -51,8 +55,6 @@ using namespace HTMLNames;
 
 HTMLOptionElement::HTMLOptionElement(const QualifiedName& tagName, Document& document)
     : HTMLElement(tagName, document)
-    , m_disabled(false)
-    , m_isSelected(false)
 {
     ASSERT(hasTagName(optionTag));
     setHasCustomStyleResolveCallbacks();
@@ -68,7 +70,7 @@ Ref<HTMLOptionElement> HTMLOptionElement::create(const QualifiedName& tagName, D
     return adoptRef(*new HTMLOptionElement(tagName, document));
 }
 
-ExceptionOr<Ref<HTMLOptionElement>> HTMLOptionElement::createForJSConstructor(Document& document, const String& text, const String& value, bool defaultSelected, bool selected)
+ExceptionOr<Ref<HTMLOptionElement>> HTMLOptionElement::createForLegacyFactoryFunction(Document& document, const String& text, const String& value, bool defaultSelected, bool selected)
 {
     auto element = create(document);
 
@@ -98,7 +100,7 @@ bool HTMLOptionElement::isFocusable() const
 
 bool HTMLOptionElement::matchesDefaultPseudoClass() const
 {
-    return hasAttributeWithoutSynchronization(selectedAttr);
+    return m_isDefault;
 }
 
 String HTMLOptionElement::text() const
@@ -112,17 +114,17 @@ String HTMLOptionElement::text() const
 
 void HTMLOptionElement::setText(const String &text)
 {
-    Ref<HTMLOptionElement> protectedThis(*this);
+    Ref protectedThis { *this };
 
     // Changing the text causes a recalc of a select's items, which will reset the selected
     // index to the first item if the select is single selection with a menu list. We attempt to
     // preserve the selected item.
-    RefPtr<HTMLSelectElement> select = ownerSelectElement();
+    RefPtr select = ownerSelectElement();
     bool selectIsMenuList = select && select->usesMenuList();
     int oldSelectedIndex = selectIsMenuList ? select->selectedIndex() : -1;
 
     // Handle the common special case where there's exactly 1 child node, and it's a text node.
-    RefPtr<Node> child = firstChild();
+    RefPtr child = firstChild();
     if (is<Text>(child) && !child->nextSibling())
         downcast<Text>(*child).setData(text);
     else {
@@ -134,18 +136,21 @@ void HTMLOptionElement::setText(const String &text)
         select->setSelectedIndex(oldSelectedIndex);
 }
 
-void HTMLOptionElement::accessKeyAction(bool)
+bool HTMLOptionElement::accessKeyAction(bool)
 {
-    RefPtr<HTMLSelectElement> select = ownerSelectElement();
-    if (select)
+    RefPtr select = ownerSelectElement();
+    if (select) {
         select->accessKeySetSelectedIndex(index());
+        return true;
+    }
+    return false;
 }
 
 int HTMLOptionElement::index() const
 {
     // It would be faster to cache the index, but harder to get it right in all cases.
 
-    RefPtr<HTMLSelectElement> selectElement = ownerSelectElement();
+    RefPtr selectElement = ownerSelectElement();
     if (!selectElement)
         return 0;
 
@@ -166,28 +171,28 @@ void HTMLOptionElement::parseAttribute(const QualifiedName& name, const AtomStri
 {
 #if ENABLE(DATALIST_ELEMENT)
     if (name == valueAttr) {
-        if (RefPtr<HTMLDataListElement> dataList = ownerDataListElement())
-            dataList->optionElementChildrenChanged();
+        for (auto& dataList : ancestorsOfType<HTMLDataListElement>(*this))
+            dataList.optionElementChildrenChanged();
     } else
 #endif
     if (name == disabledAttr) {
-        bool oldDisabled = m_disabled;
-        m_disabled = !value.isNull();
-        if (oldDisabled != m_disabled) {
-            invalidateStyleForSubtree();
-            if (renderer() && renderer()->style().hasAppearance())
-                renderer()->theme().stateChanged(*renderer(), ControlStates::EnabledState);
+        bool newDisabled = !value.isNull();
+        if (m_disabled != newDisabled) {
+            Style::PseudoClassChangeInvalidation disabledInvalidation(*this, { { CSSSelector::PseudoClassDisabled, newDisabled },  { CSSSelector::PseudoClassEnabled, !newDisabled } });
+            m_disabled = newDisabled;
+            if (renderer() && renderer()->style().hasEffectiveAppearance())
+                renderer()->theme().stateChanged(*renderer(), ControlStates::States::Enabled);
         }
     } else if (name == selectedAttr) {
-        invalidateStyleForSubtree();
+        // FIXME: Use PseudoClassChangeInvalidation in other elements that implement matchesDefaultPseudoClass().
+        Style::PseudoClassChangeInvalidation defaultInvalidation(*this, CSSSelector::PseudoClassDefault, !value.isNull());
+        m_isDefault = !value.isNull();
 
         // FIXME: This doesn't match what the HTML specification says.
         // The specification implies that removing the selected attribute or
         // changing the value of a selected attribute that is already present
-        // has no effect on whether the element is selected. Further, it seems
-        // that we need to do more than just set m_isSelected to select in that
-        // case; we'd need to do the other work from the setSelected function.
-        m_isSelected = !value.isNull();
+        // has no effect on whether the element is selected.
+        setSelectedState(!value.isNull());
     } else
         HTMLElement::parseAttribute(name, value);
 }
@@ -205,10 +210,10 @@ void HTMLOptionElement::setValue(const String& value)
     setAttributeWithoutSynchronization(valueAttr, value);
 }
 
-bool HTMLOptionElement::selected()
+bool HTMLOptionElement::selected(AllowStyleInvalidation allowStyleInvalidation) const
 {
-    if (RefPtr<HTMLSelectElement> select = ownerSelectElement())
-        select->updateListItemSelectedStates();
+    if (RefPtr select = ownerSelectElement())
+        select->updateListItemSelectedStates(allowStyleInvalidation);
     return m_isSelected;
 }
 
@@ -219,58 +224,47 @@ void HTMLOptionElement::setSelected(bool selected)
 
     setSelectedState(selected);
 
-    if (RefPtr<HTMLSelectElement> select = ownerSelectElement())
+    if (RefPtr select = ownerSelectElement())
         select->optionSelectionStateChanged(*this, selected);
 }
 
-void HTMLOptionElement::setSelectedState(bool selected)
+void HTMLOptionElement::setSelectedState(bool selected, AllowStyleInvalidation allowStyleInvalidation)
 {
     if (m_isSelected == selected)
         return;
 
-    m_isSelected = selected;
-    invalidateStyleForSubtree();
+    std::optional<Style::PseudoClassChangeInvalidation> checkedInvalidation;
+    if (allowStyleInvalidation == AllowStyleInvalidation::Yes)
+        emplace(checkedInvalidation, *this, { { CSSSelector::PseudoClassChecked, selected } });
 
-    if (RefPtr<HTMLSelectElement> select = ownerSelectElement())
-        select->invalidateSelectedItems();
+    m_isSelected = selected;
+
+#if USE(ATSPI)
+    if (auto* cache = document().existingAXObjectCache())
+        cache->postNotification(this, AXObjectCache::AXSelectedStateChanged);
+#endif
 }
 
 void HTMLOptionElement::childrenChanged(const ChildChange& change)
 {
 #if ENABLE(DATALIST_ELEMENT)
-    if (RefPtr<HTMLDataListElement> dataList = ownerDataListElement())
-        dataList->optionElementChildrenChanged();
-    else
+    for (auto& dataList : ancestorsOfType<HTMLDataListElement>(*this))
+        dataList.optionElementChildrenChanged();
 #endif
-    if (RefPtr<HTMLSelectElement> select = ownerSelectElement())
+    if (RefPtr select = ownerSelectElement())
         select->optionElementChildrenChanged();
     HTMLElement::childrenChanged(change);
 }
 
-#if ENABLE(DATALIST_ELEMENT)
-HTMLDataListElement* HTMLOptionElement::ownerDataListElement() const
-{
-    RefPtr<ContainerNode> datalist = parentNode();
-    while (datalist && !is<HTMLDataListElement>(*datalist))
-        datalist = datalist->parentNode();
-
-    if (!datalist)
-        return nullptr;
-
-    return downcast<HTMLDataListElement>(datalist.get());
-}
-#endif
-
 HTMLSelectElement* HTMLOptionElement::ownerSelectElement() const
 {
-    RefPtr<ContainerNode> select = parentNode();
-    while (select && !is<HTMLSelectElement>(*select))
-        select = select->parentNode();
-
-    if (!select)
-        return nullptr;
-
-    return downcast<HTMLSelectElement>(select.get());
+    if (auto* parent = parentElement()) {
+        if (is<HTMLSelectElement>(*parent))
+            return downcast<HTMLSelectElement>(parent);
+        if (is<HTMLOptGroupElement>(*parent))
+            return downcast<HTMLOptGroupElement>(*parent).ownerSelectElement();
+    }
+    return nullptr;
 }
 
 String HTMLOptionElement::label() const
@@ -306,7 +300,7 @@ void HTMLOptionElement::willResetComputedStyle()
 
 String HTMLOptionElement::textIndentedToRespectGroupLabel() const
 {
-    RefPtr<ContainerNode> parent = parentNode();
+    RefPtr parent = parentNode();
     if (is<HTMLOptGroupElement>(parent))
         return "    " + displayLabel();
     return displayLabel();
@@ -323,27 +317,10 @@ bool HTMLOptionElement::isDisabledFormControl() const
     return downcast<HTMLOptGroupElement>(*parentNode()).isDisabledFormControl();
 }
 
-Node::InsertedIntoAncestorResult HTMLOptionElement::insertedIntoAncestor(InsertionType insertionType, ContainerNode& parentOfInsertedTree)
-{
-    if (RefPtr<HTMLSelectElement> select = ownerSelectElement()) {
-        select->setRecalcListItems();
-        select->updateValidity();
-        // Do not call selected() since calling updateListItemSelectedStates()
-        // at this time won't do the right thing. (Why, exactly?)
-        // FIXME: Might be better to call this unconditionally, always passing m_isSelected,
-        // rather than only calling it if we are selected.
-        if (m_isSelected)
-            select->optionSelectionStateChanged(*this, true);
-        select->scrollToSelection();
-    }
-
-    return HTMLElement::insertedIntoAncestor(insertionType, parentOfInsertedTree);
-}
-
 String HTMLOptionElement::collectOptionInnerText() const
 {
     StringBuilder text;
-    for (RefPtr<Node> node = firstChild(); node; ) {
+    for (RefPtr node = firstChild(); node; ) {
         if (is<Text>(*node))
             text.append(node->nodeValue());
         // Text nodes inside script elements are not part of the option text.

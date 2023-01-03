@@ -29,7 +29,7 @@
 #if ENABLE(MEDIA_STREAM)
 
 #include "NotImplemented.h"
-#include <wtf/UUID.h>
+#include "PlatformAudioData.h"
 
 namespace WebCore {
 
@@ -38,6 +38,8 @@ MediaStreamAudioSource::MediaStreamAudioSource(float sampleRate)
 {
     m_currentSettings.setSampleRate(sampleRate);
 }
+
+MediaStreamAudioSource::~MediaStreamAudioSource() = default;
 
 const RealtimeMediaSourceCapabilities& MediaStreamAudioSource::capabilities()
 {
@@ -55,7 +57,7 @@ const RealtimeMediaSourceSettings& MediaStreamAudioSource::settings()
     return m_currentSettings;
 }
 
-#if !PLATFORM(COCOA)
+#if !PLATFORM(COCOA) && !USE(GSTREAMER)
 void MediaStreamAudioSource::consumeAudio(AudioBus&, size_t)
 {
 }

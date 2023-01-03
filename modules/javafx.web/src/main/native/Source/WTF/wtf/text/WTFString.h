@@ -1,6 +1,6 @@
 /*
  * (C) 1999 Lars Knoll (knoll@kde.org)
- * Copyright (C) 2004-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2019 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -46,31 +46,6 @@ namespace WTF {
 
 // Declarations of string operations
 
-WTF_EXPORT_PRIVATE int charactersToIntStrict(const LChar*, size_t, bool* ok = nullptr, int base = 10);
-WTF_EXPORT_PRIVATE int charactersToIntStrict(const UChar*, size_t, bool* ok = nullptr, int base = 10);
-WTF_EXPORT_PRIVATE unsigned charactersToUIntStrict(const LChar*, size_t, bool* ok = nullptr, int base = 10);
-WTF_EXPORT_PRIVATE unsigned charactersToUIntStrict(const UChar*, size_t, bool* ok = nullptr, int base = 10);
-int64_t charactersToInt64Strict(const LChar*, size_t, bool* ok = nullptr, int base = 10);
-int64_t charactersToInt64Strict(const UChar*, size_t, bool* ok = nullptr, int base = 10);
-WTF_EXPORT_PRIVATE uint64_t charactersToUInt64Strict(const LChar*, size_t, bool* ok = nullptr, int base = 10);
-WTF_EXPORT_PRIVATE uint64_t charactersToUInt64Strict(const UChar*, size_t, bool* ok = nullptr, int base = 10);
-intptr_t charactersToIntPtrStrict(const LChar*, size_t, bool* ok = nullptr, int base = 10);
-intptr_t charactersToIntPtrStrict(const UChar*, size_t, bool* ok = nullptr, int base = 10);
-
-WTF_EXPORT_PRIVATE int charactersToInt(const LChar*, size_t, bool* ok = nullptr); // ignores trailing garbage
-WTF_EXPORT_PRIVATE int charactersToInt(const UChar*, size_t, bool* ok = nullptr); // ignores trailing garbage
-unsigned charactersToUInt(const LChar*, size_t, bool* ok = nullptr); // ignores trailing garbage
-unsigned charactersToUInt(const UChar*, size_t, bool* ok = nullptr); // ignores trailing garbage
-int64_t charactersToInt64(const LChar*, size_t, bool* ok = nullptr); // ignores trailing garbage
-int64_t charactersToInt64(const UChar*, size_t, bool* ok = nullptr); // ignores trailing garbage
-uint64_t charactersToUInt64(const LChar*, size_t, bool* ok = nullptr); // ignores trailing garbage
-WTF_EXPORT_PRIVATE uint64_t charactersToUInt64(const UChar*, size_t, bool* ok = nullptr); // ignores trailing garbage
-intptr_t charactersToIntPtr(const LChar*, size_t, bool* ok = nullptr); // ignores trailing garbage
-intptr_t charactersToIntPtr(const UChar*, size_t, bool* ok = nullptr); // ignores trailing garbage
-
-// FIXME: Like the strict functions above, these give false for "ok" when there is trailing garbage.
-// Like the non-strict functions above, these return the value when there is trailing garbage.
-// It would be better if these were more consistent with the above functions instead.
 WTF_EXPORT_PRIVATE double charactersToDouble(const LChar*, size_t, bool* ok = nullptr);
 WTF_EXPORT_PRIVATE double charactersToDouble(const UChar*, size_t, bool* ok = nullptr);
 WTF_EXPORT_PRIVATE float charactersToFloat(const LChar*, size_t, bool* ok = nullptr);
@@ -206,6 +181,7 @@ public:
     size_t reverseFind(const String& string, unsigned start = MaxLength) const { return m_impl ? m_impl->reverseFind(string.impl(), start) : notFound; }
 
     WTF_EXPORT_PRIVATE Vector<UChar> charactersWithNullTermination() const;
+    WTF_EXPORT_PRIVATE Vector<UChar> charactersWithoutNullTermination() const;
 
     WTF_EXPORT_PRIVATE UChar32 characterStartingAt(unsigned) const;
 
@@ -263,7 +239,7 @@ public:
     WTF_EXPORT_PRIVATE String simplifyWhiteSpace(CodeUnitMatchFunction) const;
 
     WTF_EXPORT_PRIVATE String stripLeadingAndTrailingCharacters(CodeUnitMatchFunction) const;
-    WTF_EXPORT_PRIVATE String removeCharacters(CodeUnitMatchFunction) const;
+    template<typename Predicate> String removeCharacters(const Predicate&) const;
 
     // Returns the string with case folded for case insensitive comparison.
     // Use convertToASCIILowercase instead if ASCII case insensitive comparison is desired.
@@ -274,7 +250,7 @@ public:
     static String createUninitialized(unsigned length, UChar*& data) { return StringImpl::createUninitialized(length, data); }
     static String createUninitialized(unsigned length, LChar*& data) { return StringImpl::createUninitialized(length, data); }
 
-    using SplitFunctor = WTF::Function<void(const StringView&)>;
+    using SplitFunctor = WTF::Function<void(StringView)>;
 
     WTF_EXPORT_PRIVATE void split(UChar separator, const SplitFunctor&) const;
     WTF_EXPORT_PRIVATE Vector<String> split(UChar separator) const;
@@ -284,25 +260,8 @@ public:
     WTF_EXPORT_PRIVATE Vector<String> splitAllowingEmptyEntries(UChar separator) const;
     WTF_EXPORT_PRIVATE Vector<String> splitAllowingEmptyEntries(const String& separator) const;
 
-    WTF_EXPORT_PRIVATE int toIntStrict(bool* ok = nullptr, int base = 10) const;
-    WTF_EXPORT_PRIVATE unsigned toUIntStrict(bool* ok = nullptr, int base = 10) const;
-    WTF_EXPORT_PRIVATE int64_t toInt64Strict(bool* ok = nullptr, int base = 10) const;
-    WTF_EXPORT_PRIVATE uint64_t toUInt64Strict(bool* ok = nullptr, int base = 10) const;
-    WTF_EXPORT_PRIVATE intptr_t toIntPtrStrict(bool* ok = nullptr, int base = 10) const;
-
-    WTF_EXPORT_PRIVATE int toInt(bool* ok = nullptr) const;
-    WTF_EXPORT_PRIVATE unsigned toUInt(bool* ok = nullptr) const;
-    WTF_EXPORT_PRIVATE int64_t toInt64(bool* ok = nullptr) const;
-    WTF_EXPORT_PRIVATE uint64_t toUInt64(bool* ok = nullptr) const;
-    WTF_EXPORT_PRIVATE intptr_t toIntPtr(bool* ok = nullptr) const;
-
-    // FIXME: Like the strict functions above, these give false for "ok" when there is trailing garbage.
-    // Like the non-strict functions above, these return the value when there is trailing garbage.
-    // It would be better if these were more consistent with the above functions instead.
     WTF_EXPORT_PRIVATE double toDouble(bool* ok = nullptr) const;
     WTF_EXPORT_PRIVATE float toFloat(bool* ok = nullptr) const;
-
-    bool percentage(int& percentage) const;
 
     WTF_EXPORT_PRIVATE String isolatedCopy() const &;
     WTF_EXPORT_PRIVATE String isolatedCopy() &&;
@@ -322,7 +281,12 @@ public:
 #endif
 
 #ifdef __OBJC__
+#if HAVE(SAFARI_FOR_WEBKIT_DEVELOPMENT_REQUIRING_EXTRA_SYMBOLS)
     WTF_EXPORT_PRIVATE String(NSString *);
+#else
+    String(NSString *string)
+        : String((__bridge CFStringRef)string) { }
+#endif
 
     // This conversion converts the null string to an empty NSString rather than to nil.
     // Given Cocoa idioms, this is a more useful default. Clients that need to preserve the
@@ -336,14 +300,12 @@ public:
     WTF_EXPORT_PRIVATE static String fromJavaString(JNIEnv *, jstring);
 #endif
 
-#if OS(WINDOWS) && !PLATFORM(JAVA)
-#if U_ICU_VERSION_MAJOR_NUM >= 59
+#if OS(WINDOWS)
     String(const wchar_t* characters, unsigned length)
         : String(ucharFrom(characters), length) { }
 
     String(const wchar_t* characters)
         : String(ucharFrom(characters)) { }
-#endif
 
     WTF_EXPORT_PRIVATE Vector<wchar_t> wideCharacters() const;
 #endif
@@ -361,10 +323,13 @@ public:
     static String fromUTF8(const char* string) { return fromUTF8(reinterpret_cast<const LChar*>(string)); };
     WTF_EXPORT_PRIVATE static String fromUTF8(const CString&);
     static String fromUTF8(const Vector<LChar>& characters);
+    static String fromUTF8ReplacingInvalidSequences(const LChar*, size_t);
 
     // Tries to convert the passed in string to UTF-8, but will fall back to Latin-1 if the string is not valid UTF-8.
     WTF_EXPORT_PRIVATE static String fromUTF8WithLatin1Fallback(const LChar*, size_t);
     static String fromUTF8WithLatin1Fallback(const char* characters, size_t length) { return fromUTF8WithLatin1Fallback(reinterpret_cast<const LChar*>(characters), length); };
+
+    WTF_EXPORT_PRIVATE static String fromCodePoint(UChar32 codePoint);
 
     // Determines the writing direction using the Unicode Bidi Algorithm rules P2 and P3.
     UCharDirection defaultWritingDirection(bool* hasStrongDirectionality = nullptr) const;
@@ -452,10 +417,10 @@ WTF_EXPORT_PRIVATE const String& emptyString();
 WTF_EXPORT_PRIVATE const String& nullString();
 
 template<typename> struct DefaultHash;
-template<> struct DefaultHash<String> { using Hash = StringHash; };
+template<> struct DefaultHash<String>;
 template<> struct VectorTraits<String> : VectorTraitsBase<false, void> {
-    static const bool canInitializeWithMemset = true;
-    static const bool canMoveWithMemcpy = true;
+    static constexpr bool canInitializeWithMemset = true;
+    static constexpr bool canMoveWithMemcpy = true;
 };
 
 template<> struct IntegerToStringConversionTrait<String> {
@@ -463,6 +428,15 @@ template<> struct IntegerToStringConversionTrait<String> {
     using AdditionalArgumentType = void;
     static String flush(LChar* characters, unsigned length, void*) { return { characters, length }; }
 };
+
+#ifdef __OBJC__
+
+WTF_EXPORT_PRIVATE RetainPtr<id> makeNSArrayElement(const String&);
+WTF_EXPORT_PRIVATE std::optional<String> makeVectorElement(const String*, id);
+
+#endif
+
+WTF_EXPORT_PRIVATE String replaceUnpairedSurrogatesWithReplacementCharacter(String&&);
 
 // Definitions of string operations
 
@@ -636,6 +610,12 @@ inline String String::fromUTF8(const Vector<LChar>& characters)
     return fromUTF8(characters.data(), characters.size());
 }
 
+template<typename Predicate>
+String String::removeCharacters(const Predicate& findMatch) const
+{
+    return m_impl ? m_impl->removeCharacters(findMatch) : String { };
+}
+
 template<unsigned length> inline bool equalLettersIgnoringASCIICase(const String& string, const char (&lowercaseLetters)[length])
 {
     return equalLettersIgnoringASCIICase(string.impl(), lowercaseLetters);
@@ -672,16 +652,6 @@ using WTF::String;
 using WTF::appendNumber;
 using WTF::charactersToDouble;
 using WTF::charactersToFloat;
-using WTF::charactersToInt64;
-using WTF::charactersToInt64Strict;
-using WTF::charactersToInt;
-using WTF::charactersToIntPtr;
-using WTF::charactersToIntPtrStrict;
-using WTF::charactersToIntStrict;
-using WTF::charactersToUInt64;
-using WTF::charactersToUInt64Strict;
-using WTF::charactersToUInt;
-using WTF::charactersToUIntStrict;
 using WTF::emptyString;
 using WTF::nullString;
 using WTF::equal;

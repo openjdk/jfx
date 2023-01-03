@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,7 +28,6 @@
 
 #if ENABLE(WEBASSEMBLY)
 
-#include "FunctionPrototype.h"
 #include "JSCInlines.h"
 #include "JSWebAssemblyRuntimeError.h"
 #include "WebAssemblyRuntimeErrorPrototype.h"
@@ -39,33 +38,39 @@ namespace JSC {
 
 const ClassInfo WebAssemblyRuntimeErrorConstructor::s_info = { "Function", &Base::s_info, &constructorTableWebAssemblyRuntimeError, nullptr, CREATE_METHOD_TABLE(WebAssemblyRuntimeErrorConstructor) };
 
+static JSC_DECLARE_HOST_FUNCTION(constructJSWebAssemblyRuntimeError);
+static JSC_DECLARE_HOST_FUNCTION(callJSWebAssemblyRuntimeError);
+
 /* Source for WebAssemblyRuntimeErrorConstructor.lut.h
  @begin constructorTableWebAssemblyRuntimeError
  @end
  */
 
-static EncodedJSValue JSC_HOST_CALL constructJSWebAssemblyRuntimeError(ExecState* exec)
+JSC_DEFINE_HOST_FUNCTION(constructJSWebAssemblyRuntimeError, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
-    auto& vm = exec->vm();
+    auto& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
-    JSValue message = exec->argument(0);
-    String messageString = message.isUndefined() ? String() : message.toWTFString(exec);
-    RETURN_IF_EXCEPTION(scope, encodedJSValue());
-    auto* structure = InternalFunction::createSubclassStructure(exec, exec->newTarget(), jsCast<InternalFunction*>(exec->jsCallee())->globalObject(vm)->webAssemblyRuntimeErrorStructure());
-    RETURN_IF_EXCEPTION(scope, encodedJSValue());
-    return JSValue::encode(JSWebAssemblyRuntimeError::create(exec, vm, structure, WTFMove(messageString)));
+    JSValue message = callFrame->argument(0);
+    JSValue options = callFrame->argument(1);
+
+    JSObject* newTarget = asObject(callFrame->newTarget());
+    Structure* structure = JSC_GET_DERIVED_STRUCTURE(vm, webAssemblyRuntimeErrorStructure, newTarget, callFrame->jsCallee());
+    RETURN_IF_EXCEPTION(scope, { });
+
+    RELEASE_AND_RETURN(scope, JSValue::encode(ErrorInstance::create(globalObject, structure, message, options, nullptr, TypeNothing, ErrorType::Error, false)));
 }
 
-static EncodedJSValue JSC_HOST_CALL callJSWebAssemblyRuntimeError(ExecState* exec)
+JSC_DEFINE_HOST_FUNCTION(callJSWebAssemblyRuntimeError, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
-    JSValue message = exec->argument(0);
-    Structure* errorStructure = jsCast<InternalFunction*>(exec->jsCallee())->globalObject(exec->vm())->webAssemblyRuntimeErrorStructure();
-    return JSValue::encode(ErrorInstance::create(exec, errorStructure, message, nullptr, TypeNothing, false));
+    JSValue message = callFrame->argument(0);
+    JSValue options = callFrame->argument(1);
+    Structure* errorStructure = globalObject->webAssemblyRuntimeErrorStructure();
+    return JSValue::encode(ErrorInstance::create(globalObject, errorStructure, message, options, nullptr, TypeNothing, ErrorType::Error, false));
 }
 
 WebAssemblyRuntimeErrorConstructor* WebAssemblyRuntimeErrorConstructor::create(VM& vm, Structure* structure, WebAssemblyRuntimeErrorPrototype* thisPrototype)
 {
-    auto* constructor = new (NotNull, allocateCell<WebAssemblyRuntimeErrorConstructor>(vm.heap)) WebAssemblyRuntimeErrorConstructor(vm, structure);
+    auto* constructor = new (NotNull, allocateCell<WebAssemblyRuntimeErrorConstructor>(vm)) WebAssemblyRuntimeErrorConstructor(vm, structure);
     constructor->finishCreation(vm, thisPrototype);
     return constructor;
 }
@@ -77,9 +82,8 @@ Structure* WebAssemblyRuntimeErrorConstructor::createStructure(VM& vm, JSGlobalO
 
 void WebAssemblyRuntimeErrorConstructor::finishCreation(VM& vm, WebAssemblyRuntimeErrorPrototype* prototype)
 {
-    Base::finishCreation(vm, "RuntimeError"_s, NameVisibility::Visible, NameAdditionMode::WithoutStructureTransition);
+    Base::finishCreation(vm, 1, "RuntimeError"_s, PropertyAdditionMode::WithoutStructureTransition);
     putDirectWithoutTransition(vm, vm.propertyNames->prototype, prototype, PropertyAttribute::ReadOnly | PropertyAttribute::DontEnum | PropertyAttribute::DontDelete);
-    putDirectWithoutTransition(vm, vm.propertyNames->length, jsNumber(1), PropertyAttribute::ReadOnly | PropertyAttribute::DontEnum);
 }
 
 WebAssemblyRuntimeErrorConstructor::WebAssemblyRuntimeErrorConstructor(VM& vm, Structure* structure)

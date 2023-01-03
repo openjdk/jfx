@@ -28,15 +28,18 @@
 #if ENABLE(WEBGL)
 #include "ANGLEInstancedArrays.h"
 
-#if PLATFORM(GTK)
-#include "Extensions3D.h"
-#endif
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_ISO_ALLOCATED_IMPL(ANGLEInstancedArrays);
 
 ANGLEInstancedArrays::ANGLEInstancedArrays(WebGLRenderingContextBase& context)
     : WebGLExtension(context)
 {
+#if USE(ANGLE)
+    context.graphicsContextGL()->ensureExtensionEnabled("GL_ANGLE_instanced_arrays");
+#endif
 }
 
 ANGLEInstancedArrays::~ANGLEInstancedArrays() = default;
@@ -46,38 +49,35 @@ WebGLExtension::ExtensionName ANGLEInstancedArrays::getName() const
     return ANGLEInstancedArraysName;
 }
 
-bool ANGLEInstancedArrays::supported(WebGLRenderingContextBase& context)
+bool ANGLEInstancedArrays::supported(GraphicsContextGL& context)
 {
-#if PLATFORM(COCOA)
-    UNUSED_PARAM(context);
-    return true;
-#elif PLATFORM(GTK)
-    return context.graphicsContext3D()->getExtensions().supports("GL_ANGLE_instanced_arrays");
+#if USE(ANGLE) || PLATFORM(GTK) || PLATFORM(WPE)
+    return context.supportsExtension("GL_ANGLE_instanced_arrays");
 #else
     UNUSED_PARAM(context);
     return false;
 #endif
 }
 
-void ANGLEInstancedArrays::drawArraysInstancedANGLE(GC3Denum mode, GC3Dint first, GC3Dsizei count, GC3Dsizei primcount)
+void ANGLEInstancedArrays::drawArraysInstancedANGLE(GCGLenum mode, GCGLint first, GCGLsizei count, GCGLsizei primcount)
 {
-    if (m_context.isContextLost())
+    if (!m_context || m_context->isContextLost())
         return;
-    m_context.drawArraysInstanced(mode, first, count, primcount);
+    m_context->drawArraysInstanced(mode, first, count, primcount);
 }
 
-void ANGLEInstancedArrays::drawElementsInstancedANGLE(GC3Denum mode, GC3Dsizei count, GC3Denum type, long long offset, GC3Dsizei primcount)
+void ANGLEInstancedArrays::drawElementsInstancedANGLE(GCGLenum mode, GCGLsizei count, GCGLenum type, long long offset, GCGLsizei primcount)
 {
-    if (m_context.isContextLost())
+    if (!m_context || m_context->isContextLost())
         return;
-    m_context.drawElementsInstanced(mode, count, type, offset, primcount);
+    m_context->drawElementsInstanced(mode, count, type, offset, primcount);
 }
 
-void ANGLEInstancedArrays::vertexAttribDivisorANGLE(GC3Duint index, GC3Duint divisor)
+void ANGLEInstancedArrays::vertexAttribDivisorANGLE(GCGLuint index, GCGLuint divisor)
 {
-    if (m_context.isContextLost())
+    if (!m_context || m_context->isContextLost())
         return;
-    m_context.vertexAttribDivisor(index, divisor);
+    m_context->vertexAttribDivisor(index, divisor);
 }
 
 } // namespace WebCore

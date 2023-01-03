@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,9 +27,12 @@
 
 
 #include <WebCore/DOMException.h>
+#include <WebCore/Document.h>
 #include <WebCore/DocumentFragment.h>
 #include <WebCore/Node.h>
 #include <WebCore/Range.h>
+#include <WebCore/SimpleRange.h>
+#include <WebCore/TextIterator.h>
 #include <WebCore/JSExecState.h>
 
 #include <wtf/RefPtr.h>
@@ -90,7 +93,10 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_RangeImpl_getCommonAncestorConta
 JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_RangeImpl_getTextImpl(JNIEnv* env, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<String>(env, IMPL->text());
+
+    auto range = makeSimpleRange(*IMPL);
+    range.start.document().updateLayout();
+    return JavaReturn<String>(env, plainText(range));
 }
 
 
@@ -323,7 +329,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_RangeImpl_intersectsNodeImpl(
         raiseTypeErrorException(env);
         return JNI_FALSE;
     }
-    return raiseOnDOMError(env, IMPL->intersectsNode(*static_cast<Node*>(jlong_to_ptr(refNode))));
+    return IMPL->intersectsNode(*static_cast<Node*>(jlong_to_ptr(refNode)));
 }
 
 

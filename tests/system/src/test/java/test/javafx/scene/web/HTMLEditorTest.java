@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2017, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,35 +25,38 @@
 
 package test.javafx.scene.web;
 
-import com.sun.javafx.PlatformUtil;
-import java.util.concurrent.atomic.AtomicReference;
+import static javafx.concurrent.Worker.State.SUCCEEDED;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
+
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.event.Event;
+import javafx.scene.Node;
+import javafx.scene.Scene;
 import javafx.scene.control.ComboBox;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
-import javafx.scene.Node;
-import javafx.scene.Scene;
 import javafx.scene.text.Font;
 import javafx.scene.web.HTMLEditor;
 import javafx.scene.web.WebView;
 import javafx.stage.Stage;
+
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
+
+import com.sun.javafx.PlatformUtil;
+
 import test.com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
 import test.com.sun.javafx.scene.control.infrastructure.KeyModifier;
 import test.util.Util;
-
-import static javafx.concurrent.Worker.State.SUCCEEDED;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
 
 public class HTMLEditorTest {
     private static final CountDownLatch launchLatch = new CountDownLatch(1);
@@ -74,6 +77,12 @@ public class HTMLEditorTest {
 
         @Override
         public void init() {
+            // Used by selectFontFamilysWithSpace() for JDK-8230492
+            Font.loadFont(
+                HTMLEditorTest.class.getResource("WebKit_Layout_Tests_2.ttf").toExternalForm(),
+                10
+            );
+
             HTMLEditorTest.htmlEditorTestApp = this;
         }
 
@@ -87,22 +96,12 @@ public class HTMLEditorTest {
 
     @BeforeClass
     public static void setupOnce() {
-        // Start the Test Application
-        new Thread(() -> Application.launch(HTMLEditorTestApp.class,
-            (String[]) null)).start();
-
-        // Used by selectFontFamilysWithSpace() for JDK-8230492
-        Font.loadFont(
-            HTMLEditorTest.class.getResource("WebKit_Layout_Tests_2.ttf").toExternalForm(),
-            10
-        );
-
-        assertTrue("Timeout waiting for FX runtime to start", Util.await(launchLatch));
+        Util.launch(launchLatch, HTMLEditorTestApp.class);
     }
 
     @AfterClass
     public static void tearDownOnce() {
-        Platform.exit();
+        Util.shutdown();
     }
 
     @Before

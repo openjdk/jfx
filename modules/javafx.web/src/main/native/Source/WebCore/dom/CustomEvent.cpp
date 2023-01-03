@@ -28,8 +28,11 @@
 #include "CustomEvent.h"
 
 #include <JavaScriptCore/JSCInlines.h>
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_ISO_ALLOCATED_IMPL(CustomEvent);
 
 inline CustomEvent::CustomEvent(IsTrusted isTrusted)
     : Event(isTrusted)
@@ -61,8 +64,10 @@ void CustomEvent::initCustomEvent(const AtomString& type, bool canBubble, bool c
 
     initEvent(type, canBubble, cancelable);
 
-    m_detail = detail;
-    m_cachedDetail = { };
+    // FIXME: This code is wrong: we should emit a write-barrier. Otherwise, GC can collect it.
+    // https://bugs.webkit.org/show_bug.cgi?id=236353
+    m_detail.setWeakly(detail);
+    m_cachedDetail.clear();
 }
 
 EventInterface CustomEvent::eventInterface() const

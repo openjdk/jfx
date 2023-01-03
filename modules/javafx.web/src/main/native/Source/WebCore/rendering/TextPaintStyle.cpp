@@ -26,7 +26,7 @@
 #include "config.h"
 #include "TextPaintStyle.h"
 
-#include "ColorUtilities.h"
+#include "ColorLuminance.h"
 #include "FocusController.h"
 #include "Frame.h"
 #include "GraphicsContext.h"
@@ -50,9 +50,6 @@ bool TextPaintStyle::operator==(const TextPaintStyle& other) const
 {
     return fillColor == other.fillColor && strokeColor == other.strokeColor && emphasisMarkColor == other.emphasisMarkColor
         && strokeWidth == other.strokeWidth && paintOrder == other.paintOrder && lineJoin == other.lineJoin
-#if ENABLE(LETTERPRESS)
-        && useLetterpressEffect == other.useLetterpressEffect
-#endif
 #if HAVE(OS_DARK_MODE_SUPPORT)
         && useDarkAppearance == other.useDarkAppearance
 #endif
@@ -63,7 +60,7 @@ bool textColorIsLegibleAgainstBackgroundColor(const Color& textColor, const Colo
 {
     // Uses the WCAG 2.0 definition of legibility: a contrast ratio of 4.5:1 or greater.
     // https://www.w3.org/TR/WCAG20/#visual-audio-contrast-contrast
-    return contrastRatio(textColor, backgroundColor) > 4.5;
+    return contrastRatio(textColor, backgroundColor) >= 4.5;
 }
 
 static Color adjustColorForVisibilityOnBackground(const Color& textColor, const Color& backgroundColor)
@@ -71,21 +68,14 @@ static Color adjustColorForVisibilityOnBackground(const Color& textColor, const 
     if (textColorIsLegibleAgainstBackgroundColor(textColor, backgroundColor))
         return textColor;
 
-    int distanceFromWhite = differenceSquared(textColor, Color::white);
-    int distanceFromBlack = differenceSquared(textColor, Color::black);
-    if (distanceFromWhite < distanceFromBlack)
-        return textColor.dark();
-
-    return textColor.light();
+    if (textColor.luminance() > 0.5)
+        return textColor.darkened();
+    return textColor.lightened();
 }
 
 TextPaintStyle computeTextPaintStyle(const Frame& frame, const RenderStyle& lineStyle, const PaintInfo& paintInfo)
 {
     TextPaintStyle paintStyle;
-
-#if ENABLE(LETTERPRESS)
-    paintStyle.useLetterpressEffect = lineStyle.textDecorationsInEffect().contains(TextDecoration::Letterpress);
-#endif
 
 #if HAVE(OS_DARK_MODE_SUPPORT)
     paintStyle.useDarkAppearance = frame.document() ? frame.document()->useDarkAppearance(&lineStyle) : false;
@@ -108,10 +98,10 @@ TextPaintStyle computeTextPaintStyle(const Frame& frame, const RenderStyle& line
     if (lineStyle.insideDefaultButton()) {
         Page* page = frame.page();
         if (page && page->focusController().isActive()) {
-            OptionSet<StyleColor::Options> options;
+            OptionSet<StyleColorOptions> options;
             if (page->useSystemAppearance())
-                options.add(StyleColor::Options::UseSystemAppearance);
-            paintStyle.fillColor = RenderTheme::singleton().systemColor(CSSValueActivebuttontext, options);
+                options.add(StyleColorOptions::UseSystemAppearance);
+            paintStyle.fillColor = RenderTheme::singleton().defaultButtonTextColor(options);
             return paintStyle;
         }
     }
@@ -136,7 +126,7 @@ TextPaintStyle computeTextPaintStyle(const Frame& frame, const RenderStyle& line
     if (forceBackgroundToWhite)
         paintStyle.strokeColor = adjustColorForVisibilityOnBackground(paintStyle.strokeColor, Color::white);
 
-    paintStyle.emphasisMarkColor = lineStyle.visitedDependentColorWithColorFilter(CSSPropertyWebkitTextEmphasisColor);
+    paintStyle.emphasisMarkColor = lineStyle.visitedDependentColorWithColorFilter(CSSPropertyTextEmphasisColor);
 
     // Make the text stroke color legible against a white background
     if (forceBackgroundToWhite)
@@ -145,7 +135,7 @@ TextPaintStyle computeTextPaintStyle(const Frame& frame, const RenderStyle& line
     return paintStyle;
 }
 
-TextPaintStyle computeTextSelectionPaintStyle(const TextPaintStyle& textPaintStyle, const RenderText& renderer, const RenderStyle& lineStyle, const PaintInfo& paintInfo, Optional<ShadowData>& selectionShadow)
+TextPaintStyle computeTextSelectionPaintStyle(const TextPaintStyle& textPaintStyle, const RenderText& renderer, const RenderStyle& lineStyle, const PaintInfo& paintInfo, std::optional<ShadowData>& selectionShadow)
 {
     TextPaintStyle selectionPaintStyle = textPaintStyle;
 
@@ -183,14 +173,8 @@ void updateGraphicsContext(GraphicsContext& context, const TextPaintStyle& paint
 {
     TextDrawingModeFlags mode = context.textDrawingMode();
     TextDrawingModeFlags newMode = mode;
-#if ENABLE(LETTERPRESS)
-    if (paintStyle.useLetterpressEffect)
-        newMode |= TextModeLetterpress;
-    else
-        newMode &= ~TextModeLetterpress;
-#endif
     if (paintStyle.strokeWidth > 0 && paintStyle.strokeColor.isVisible())
-        newMode |= TextModeStroke;
+        newMode.add(TextDrawingMode::Stroke);
     if (mode != newMode) {
         context.setTextDrawingMode(newMode);
         mode = newMode;
@@ -201,17 +185,17 @@ void updateGraphicsContext(GraphicsContext& context, const TextPaintStyle& paint
 #endif
 
     Color fillColor = fillColorType == UseEmphasisMarkColor ? paintStyle.emphasisMarkColor : paintStyle.fillColor;
-    if (mode & TextModeFill && (fillColor != context.fillColor()))
+    if (mode.contains(TextDrawingMode::Fill) && (fillColor != context.fillColor()))
         context.setFillColor(fillColor);
 
-    if (mode & TextModeStroke) {
+    if (mode & TextDrawingMode::Stroke) {
         if (paintStyle.strokeColor != context.strokeColor())
             context.setStrokeColor(paintStyle.strokeColor);
         if (paintStyle.strokeWidth != context.strokeThickness())
             context.setStrokeThickness(paintStyle.strokeWidth);
         context.setLineJoin(paintStyle.lineJoin);
         context.setLineCap(paintStyle.lineCap);
-        if (paintStyle.lineJoin == MiterJoin)
+        if (paintStyle.lineJoin == LineJoin::Miter)
             context.setMiterLimit(paintStyle.miterLimit);
     }
 }

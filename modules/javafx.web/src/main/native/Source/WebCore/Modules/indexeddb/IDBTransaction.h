@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,8 +25,6 @@
 
 #pragma once
 
-#if ENABLE(INDEXED_DATABASE)
-
 #include "EventTarget.h"
 #include "IDBActiveDOMObject.h"
 #include "IDBError.h"
@@ -40,6 +38,7 @@
 #include "Timer.h"
 #include <wtf/Deque.h>
 #include <wtf/HashMap.h>
+#include <wtf/Lock.h>
 
 namespace WebCore {
 
@@ -66,20 +65,24 @@ class TransactionOperation;
 }
 
 class IDBTransaction final : public ThreadSafeRefCounted<IDBTransaction>, public EventTargetWithInlineData, public IDBActiveDOMObject {
-    WTF_MAKE_ISO_ALLOCATED(IDBTransaction);
+    WTF_MAKE_ISO_ALLOCATED_EXPORT(IDBTransaction, WEBCORE_EXPORT);
 public:
     static Ref<IDBTransaction> create(IDBDatabase&, const IDBTransactionInfo&);
     static Ref<IDBTransaction> create(IDBDatabase&, const IDBTransactionInfo&, IDBOpenDBRequest&);
 
-    ~IDBTransaction() final;
+    static uint64_t generateOperationID();
+
+    WEBCORE_EXPORT ~IDBTransaction() final;
 
     // IDBTransaction IDL
     Ref<DOMStringList> objectStoreNames() const;
     IDBTransactionMode mode() const { return m_info.mode(); }
+    IDBTransactionDurability durability() const { return m_info.durability(); }
     IDBDatabase* db();
     DOMException* error() const;
     ExceptionOr<Ref<IDBObjectStore>> objectStore(const String& name);
     ExceptionOr<void> abort();
+    ExceptionOr<void> commit();
 
     EventTargetInterface eventTargetInterface() const final { return IDBTransactionEventTargetInterfaceType; }
     ScriptExecutionContext* scriptExecutionContext() const final { return ActiveDOMObject::scriptExecutionContext(); }
@@ -90,11 +93,6 @@ public:
 
     using ThreadSafeRefCounted<IDBTransaction>::ref;
     using ThreadSafeRefCounted<IDBTransaction>::deref;
-
-    const char* activeDOMObjectName() const final;
-    bool canSuspendForDocumentSuspension() const final;
-    bool hasPendingActivity() const final;
-    void stop() final;
 
     const IDBTransactionInfo& info() const { return m_info; }
     IDBDatabase& database() { return m_database.get(); }
@@ -114,18 +112,18 @@ public:
     std::unique_ptr<IDBIndex> createIndex(IDBObjectStore&, const IDBIndexInfo&);
     void renameIndex(IDBIndex&, const String& newName);
 
-    Ref<IDBRequest> requestPutOrAdd(JSC::ExecState&, IDBObjectStore&, RefPtr<IDBKey>&&, SerializedScriptValue&, IndexedDB::ObjectStoreOverwriteMode);
-    Ref<IDBRequest> requestGetRecord(JSC::ExecState&, IDBObjectStore&, const IDBGetRecordData&);
-    Ref<IDBRequest> requestGetAllObjectStoreRecords(JSC::ExecState&, IDBObjectStore&, const IDBKeyRangeData&, IndexedDB::GetAllType, Optional<uint32_t> count);
-    Ref<IDBRequest> requestGetAllIndexRecords(JSC::ExecState&, IDBIndex&, const IDBKeyRangeData&, IndexedDB::GetAllType, Optional<uint32_t> count);
-    Ref<IDBRequest> requestDeleteRecord(JSC::ExecState&, IDBObjectStore&, const IDBKeyRangeData&);
-    Ref<IDBRequest> requestClearObjectStore(JSC::ExecState&, IDBObjectStore&);
-    Ref<IDBRequest> requestCount(JSC::ExecState&, IDBObjectStore&, const IDBKeyRangeData&);
-    Ref<IDBRequest> requestCount(JSC::ExecState&, IDBIndex&, const IDBKeyRangeData&);
-    Ref<IDBRequest> requestGetValue(JSC::ExecState&, IDBIndex&, const IDBKeyRangeData&);
-    Ref<IDBRequest> requestGetKey(JSC::ExecState&, IDBIndex&, const IDBKeyRangeData&);
-    Ref<IDBRequest> requestOpenCursor(JSC::ExecState&, IDBObjectStore&, const IDBCursorInfo&);
-    Ref<IDBRequest> requestOpenCursor(JSC::ExecState&, IDBIndex&, const IDBCursorInfo&);
+    Ref<IDBRequest> requestPutOrAdd(IDBObjectStore&, RefPtr<IDBKey>&&, SerializedScriptValue&, IndexedDB::ObjectStoreOverwriteMode);
+    Ref<IDBRequest> requestGetRecord(IDBObjectStore&, const IDBGetRecordData&);
+    Ref<IDBRequest> requestGetAllObjectStoreRecords(IDBObjectStore&, const IDBKeyRangeData&, IndexedDB::GetAllType, std::optional<uint32_t> count);
+    Ref<IDBRequest> requestGetAllIndexRecords(IDBIndex&, const IDBKeyRangeData&, IndexedDB::GetAllType, std::optional<uint32_t> count);
+    Ref<IDBRequest> requestDeleteRecord(IDBObjectStore&, const IDBKeyRangeData&);
+    Ref<IDBRequest> requestClearObjectStore(IDBObjectStore&);
+    Ref<IDBRequest> requestCount(IDBObjectStore&, const IDBKeyRangeData&);
+    Ref<IDBRequest> requestCount(IDBIndex&, const IDBKeyRangeData&);
+    Ref<IDBRequest> requestGetValue(IDBIndex&, const IDBKeyRangeData&);
+    Ref<IDBRequest> requestGetKey(IDBIndex&, const IDBKeyRangeData&);
+    Ref<IDBRequest> requestOpenCursor(IDBObjectStore&, const IDBCursorInfo&);
+    Ref<IDBRequest> requestOpenCursor(IDBIndex&, const IDBCursorInfo&);
     void iterateCursor(IDBCursor&, const IDBIterateCursorData&);
 
     void deleteObjectStore(const String& objectStoreName);
@@ -152,31 +150,39 @@ public:
 
     void connectionClosedFromServer(const IDBError&);
 
-    void visitReferencedObjectStores(JSC::SlotVisitor&) const;
+    template<typename Visitor> void visitReferencedObjectStores(Visitor&) const;
 
     WEBCORE_EXPORT static std::atomic<unsigned> numberOfIDBTransactions;
+
+    // ActiveDOMObject.
+    void stop() final;
 
 private:
     IDBTransaction(IDBDatabase&, const IDBTransactionInfo&, IDBOpenDBRequest*);
 
-    void commit();
+    // ActiveDOMObject.
+    const char* activeDOMObjectName() const final;
+    bool virtualHasPendingActivity() const final;
 
-    void internalAbort();
+    void commitInternal();
+    void abortInternal();
     void notifyDidAbort(const IDBError&);
     void finishAbortOrCommit();
     void abortInProgressOperations(const IDBError&);
 
-    void scheduleOperation(Ref<IDBClient::TransactionOperation>&&);
-    void pendingOperationTimerFired();
-    void completedOperationTimerFired();
+    enum class IsWriteOperation : bool { No, Yes };
+    void scheduleOperation(Ref<IDBClient::TransactionOperation>&&, IsWriteOperation = IsWriteOperation::No);
+    void handleOperationsCompletedOnServer();
+    void handlePendingOperations();
+    void autoCommit();
 
     void fireOnComplete();
     void fireOnAbort();
     void enqueueEvent(Ref<Event>&&);
 
-    Ref<IDBRequest> requestIndexRecord(JSC::ExecState&, IDBIndex&, IndexedDB::IndexRecordType, const IDBKeyRangeData&);
+    Ref<IDBRequest> requestIndexRecord(IDBIndex&, IndexedDB::IndexRecordType, const IDBKeyRangeData&);
 
-    void commitOnServer(IDBClient::TransactionOperation&);
+    void commitOnServer(IDBClient::TransactionOperation&, uint64_t pendingRequestCount);
     void abortOnServerAndCancelRequests(IDBClient::TransactionOperation&);
 
     void createObjectStoreOnServer(IDBClient::TransactionOperation&, const IDBObjectStoreInfo&);
@@ -215,7 +221,7 @@ private:
     void deleteIndexOnServer(IDBClient::TransactionOperation&, const uint64_t& objectStoreIdentifier, const String& indexName);
     void didDeleteIndexOnServer(const IDBResultData&);
 
-    Ref<IDBRequest> doRequestOpenCursor(JSC::ExecState&, Ref<IDBCursor>&&);
+    Ref<IDBRequest> doRequestOpenCursor(Ref<IDBCursor>&&);
     void openCursorOnServer(IDBClient::TransactionOperation&, const IDBCursorInfo&);
     void didOpenCursorOnServer(IDBRequest&, const IDBResultData&);
 
@@ -229,8 +235,7 @@ private:
     void completeNoncursorRequest(IDBRequest&, const IDBResultData&);
     void completeCursorRequest(IDBRequest&, const IDBResultData&);
 
-    void schedulePendingOperationTimer();
-    void scheduleCompletedOperationTimer();
+    void trySchedulePendingOperationTimer();
 
     Ref<IDBDatabase> m_database;
     IDBTransactionInfo m_info;
@@ -241,28 +246,28 @@ private:
     IDBError m_idbError;
     RefPtr<DOMException> m_domError;
 
-    Timer m_pendingOperationTimer;
-    Timer m_completedOperationTimer;
-    std::unique_ptr<Timer> m_activationTimer;
-
     RefPtr<IDBOpenDBRequest> m_openDBRequest;
 
     Deque<RefPtr<IDBClient::TransactionOperation>> m_pendingTransactionOperationQueue;
     Deque<IDBClient::TransactionOperation*> m_transactionOperationsInProgressQueue;
-    Deque<std::pair<RefPtr<IDBClient::TransactionOperation>, IDBResultData>> m_completedOnServerQueue;
     Deque<RefPtr<IDBClient::TransactionOperation>> m_abortQueue;
-
+    Event* m_abortOrCommitEvent;
+    HashMap<RefPtr<IDBClient::TransactionOperation>, IDBResultData> m_transactionOperationResultMap;
     HashMap<IDBResourceIdentifier, RefPtr<IDBClient::TransactionOperation>> m_transactionOperationMap;
 
     mutable Lock m_referencedObjectStoreLock;
-    HashMap<String, std::unique_ptr<IDBObjectStore>> m_referencedObjectStores;
+    HashMap<String, std::unique_ptr<IDBObjectStore>> m_referencedObjectStores WTF_GUARDED_BY_LOCK(m_referencedObjectStoreLock);
     HashMap<uint64_t, std::unique_ptr<IDBObjectStore>> m_deletedObjectStores;
 
     HashSet<RefPtr<IDBRequest>> m_openRequests;
     RefPtr<IDBRequest> m_currentlyCompletingRequest;
 
-    bool m_contextStopped { false };
+    bool m_isStopped { false };
     bool m_didDispatchAbortOrCommit { false };
+
+    uint64_t m_lastWriteOperationID { 0 };
+    std::optional<IDBResourceIdentifier> m_lastTransactionOperationBeforeCommit;
+    std::optional<IDBError> m_commitResult;
 };
 
 class TransactionActivator {
@@ -286,5 +291,3 @@ private:
 };
 
 } // namespace WebCore
-
-#endif // ENABLE(INDEXED_DATABASE)

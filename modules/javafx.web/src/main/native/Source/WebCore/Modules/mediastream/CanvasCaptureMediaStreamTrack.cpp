@@ -36,10 +36,12 @@ namespace WebCore {
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(CanvasCaptureMediaStreamTrack);
 
-Ref<CanvasCaptureMediaStreamTrack> CanvasCaptureMediaStreamTrack::create(Document& document, Ref<HTMLCanvasElement>&& canvas, Optional<double>&& frameRequestRate)
+Ref<CanvasCaptureMediaStreamTrack> CanvasCaptureMediaStreamTrack::create(Document& document, Ref<HTMLCanvasElement>&& canvas, std::optional<double>&& frameRequestRate)
 {
     auto source = CanvasCaptureMediaStreamTrack::Source::create(canvas.get(), WTFMove(frameRequestRate));
-    return adoptRef(*new CanvasCaptureMediaStreamTrack(document, WTFMove(canvas), WTFMove(source)));
+    auto track = adoptRef(*new CanvasCaptureMediaStreamTrack(document, WTFMove(canvas), WTFMove(source)));
+    track->suspendIfNeeded();
+    return track;
 }
 
 CanvasCaptureMediaStreamTrack::CanvasCaptureMediaStreamTrack(Document& document, Ref<HTMLCanvasElement>&& canvas, Ref<CanvasCaptureMediaStreamTrack::Source>&& source)
@@ -54,12 +56,12 @@ CanvasCaptureMediaStreamTrack::CanvasCaptureMediaStreamTrack(Document& document,
 {
 }
 
-Ref<CanvasCaptureMediaStreamTrack::Source> CanvasCaptureMediaStreamTrack::Source::create(HTMLCanvasElement& canvas, Optional<double>&& frameRequestRate)
+Ref<CanvasCaptureMediaStreamTrack::Source> CanvasCaptureMediaStreamTrack::Source::create(HTMLCanvasElement& canvas, std::optional<double>&& frameRequestRate)
 {
     auto source = adoptRef(*new Source(canvas, WTFMove(frameRequestRate)));
     source->start();
 
-    callOnMainThread([source = source.copyRef()] {
+    callOnMainThread([source] {
         if (!source->m_canvas)
             return;
         source->captureCanvas();
@@ -67,12 +69,17 @@ Ref<CanvasCaptureMediaStreamTrack::Source> CanvasCaptureMediaStreamTrack::Source
     return source;
 }
 
+const char* CanvasCaptureMediaStreamTrack::activeDOMObjectName() const
+{
+    return "CanvasCaptureMediaStreamTrack";
+}
+
 // FIXME: Give source id and name
-CanvasCaptureMediaStreamTrack::Source::Source(HTMLCanvasElement& canvas, Optional<double>&& frameRequestRate)
+CanvasCaptureMediaStreamTrack::Source::Source(HTMLCanvasElement& canvas, std::optional<double>&& frameRequestRate)
     : RealtimeMediaSource(Type::Video, "CanvasCaptureMediaStreamTrack"_s)
     , m_frameRequestRate(WTFMove(frameRequestRate))
     , m_requestFrameTimer(*this, &Source::requestFrameTimerFired)
-    , m_canvasChangedTimer(*this, &Source::captureCanvas)
+    , m_captureCanvasTimer(*this, &Source::captureCanvas)
     , m_canvas(&canvas)
 {
 }
@@ -82,6 +89,7 @@ void CanvasCaptureMediaStreamTrack::Source::startProducingData()
     if (!m_canvas)
         return;
     m_canvas->addObserver(*this);
+    m_canvas->addDisplayBufferObserver(*this);
 
     if (!m_frameRequestRate)
         return;
@@ -97,6 +105,7 @@ void CanvasCaptureMediaStreamTrack::Source::stopProducingData()
     if (!m_canvas)
         return;
     m_canvas->removeObserver(*this);
+    m_canvas->removeDisplayBufferObserver(*this);
 }
 
 void CanvasCaptureMediaStreamTrack::Source::requestFrameTimerFired()
@@ -133,7 +142,7 @@ const RealtimeMediaSourceSettings& CanvasCaptureMediaStreamTrack::Source::settin
 void CanvasCaptureMediaStreamTrack::Source::settingsDidChange(OptionSet<RealtimeMediaSourceSettings::Flag> settings)
 {
     if (settings.containsAny({ RealtimeMediaSourceSettings::Flag::Width, RealtimeMediaSourceSettings::Flag::Height }))
-        m_currentSettings = WTF::nullopt;
+        m_currentSettings = std::nullopt;
 }
 
 void CanvasCaptureMediaStreamTrack::Source::canvasResized(CanvasBase& canvas)
@@ -142,27 +151,29 @@ void CanvasCaptureMediaStreamTrack::Source::canvasResized(CanvasBase& canvas)
     setSize(IntSize(m_canvas->width(), m_canvas->height()));
 }
 
-void CanvasCaptureMediaStreamTrack::Source::canvasChanged(CanvasBase& canvas, const FloatRect&)
+void CanvasCaptureMediaStreamTrack::Source::canvasChanged(CanvasBase& canvas, const std::optional<FloatRect>&)
 {
     ASSERT_UNUSED(canvas, m_canvas == &canvas);
-
-#if ENABLE(WEBGL)
-    // FIXME: We need to preserve drawing buffer as we are currently grabbing frames asynchronously.
-    // We should instead add an anchor point for both 2d and 3d contexts where canvas will actually paint.
-    // And call canvas observers from that point.
-    if (is<WebGLRenderingContextBase>(canvas.renderingContext())) {
-        auto& context = downcast<WebGLRenderingContextBase>(*canvas.renderingContext());
-        if (!context.isPreservingDrawingBuffer()) {
-            canvas.scriptExecutionContext()->addConsoleMessage(MessageSource::JS, MessageLevel::Warning, "Turning drawing buffer preservation for the WebGL canvas being captured"_s);
-            context.setPreserveDrawingBuffer(true);
-        }
-    }
-#endif
-
-    // FIXME: We should try to generate the frame at the time the screen is being updated.
-    if (m_canvasChangedTimer.isActive())
+    if (m_canvas->renderingContext() && m_canvas->renderingContext()->needsPreparationForDisplay())
         return;
-    m_canvasChangedTimer.startOneShot(0_s);
+    scheduleCaptureCanvas();
+}
+
+void CanvasCaptureMediaStreamTrack::Source::scheduleCaptureCanvas()
+{
+    // FIXME: We should try to generate the frame at the time the screen is being updated.
+    if (m_captureCanvasTimer.isActive())
+        return;
+    m_captureCanvasTimer.startOneShot(0_s);
+}
+
+void CanvasCaptureMediaStreamTrack::Source::canvasDisplayBufferPrepared(CanvasBase& canvas)
+{
+    ASSERT_UNUSED(canvas, m_canvas == &canvas);
+    // FIXME: Here we should capture the image instead.
+    // However, submitting the sample to the receiver might cause layout,
+    // and currently the display preparation is done after layout.
+    scheduleCaptureCanvas();
 }
 
 void CanvasCaptureMediaStreamTrack::Source::captureCanvas()
@@ -185,7 +196,9 @@ void CanvasCaptureMediaStreamTrack::Source::captureCanvas()
     if (!sample)
         return;
 
-    videoSampleAvailable(*sample);
+    VideoSampleMetadata metadata;
+    metadata.captureTime = MonotonicTime::now().secondsSinceEpoch();
+    videoSampleAvailable(*sample, metadata);
 }
 
 RefPtr<MediaStreamTrack> CanvasCaptureMediaStreamTrack::clone()
@@ -193,7 +206,9 @@ RefPtr<MediaStreamTrack> CanvasCaptureMediaStreamTrack::clone()
     if (!scriptExecutionContext())
         return nullptr;
 
-    return adoptRef(*new CanvasCaptureMediaStreamTrack(downcast<Document>(*scriptExecutionContext()), m_canvas.copyRef(), m_private->clone()));
+    auto track = adoptRef(*new CanvasCaptureMediaStreamTrack(downcast<Document>(*scriptExecutionContext()), m_canvas.copyRef(), m_private->clone()));
+    track->suspendIfNeeded();
+    return track;
 }
 
 }

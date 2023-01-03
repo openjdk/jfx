@@ -23,15 +23,16 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+// https://w3c.github.io/media-playback-quality/#idl-def-videoplaybackquality
+// FIXME: This is not specified as "LegacyNoInterfaceObject". It should have an interface object.
 [
     Conditional=VIDEO,
-    NoInterfaceObject,
-    ImplementationLacksVTable,
+    LegacyNoInterfaceObject,
 ] interface VideoPlaybackQuality {
     readonly attribute unrestricted double creationTime;
     readonly attribute unsigned long totalVideoFrames;
     readonly attribute unsigned long droppedVideoFrames;
     readonly attribute unsigned long corruptedVideoFrames;
-    [EnabledBySetting=videoQualityIncludesDisplayCompositing] readonly attribute unsigned long displayCompositedVideoFrames;
+    [EnabledBySetting=videoQualityIncludesDisplayCompositingEnabled] readonly attribute unsigned long displayCompositedVideoFrames;
     readonly attribute unrestricted double totalFrameDelay;
 };

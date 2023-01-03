@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -54,7 +54,6 @@ import com.sun.javafx.scene.text.TextLayoutFactory;
 import com.sun.javafx.scene.text.TextSpan;
 import com.sun.javafx.tk.Toolkit;
 import javafx.beans.property.IntegerProperty;
-import javafx.beans.property.IntegerPropertyBase;
 import javafx.css.Styleable;
 import javafx.css.StyleableIntegerProperty;
 import javafx.css.StyleableProperty;
@@ -532,7 +531,7 @@ public class TextFlow extends Pane {
         return top - getTextLayout().getBounds().getMinY();
     }
 
-   /***************************************************************************
+   /* *************************************************************************
     *                                                                         *
     *                            Stylesheet Handling                          *
     *                                                                         *
@@ -545,8 +544,8 @@ public class TextFlow extends Pane {
 
         private static final
             CssMetaData<TextFlow, TextAlignment> TEXT_ALIGNMENT =
-                new CssMetaData<TextFlow,TextAlignment>("-fx-text-alignment",
-                new EnumConverter<TextAlignment>(TextAlignment.class),
+                new CssMetaData<>("-fx-text-alignment",
+                new EnumConverter<>(TextAlignment.class),
                 TextAlignment.LEFT) {
 
             @Override public boolean isSettable(TextFlow node) {
@@ -560,7 +559,7 @@ public class TextFlow extends Pane {
 
         private static final
             CssMetaData<TextFlow,Number> LINE_SPACING =
-                new CssMetaData<TextFlow,Number>("-fx-line-spacing",
+                new CssMetaData<>("-fx-line-spacing",
                 SizeConverter.getInstance(), 0) {
 
             @Override public boolean isSettable(TextFlow node) {
@@ -573,7 +572,7 @@ public class TextFlow extends Pane {
         };
 
         private static final CssMetaData<TextFlow, Number> TAB_SIZE =
-                new CssMetaData<TextFlow,Number>("-fx-tab-size",
+                new CssMetaData<>("-fx-tab-size",
                 SizeConverter.getInstance(), TextLayout.DEFAULT_TAB_SIZE) {
 
             @Override
@@ -590,7 +589,7 @@ public class TextFlow extends Pane {
         private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
         static {
             final List<CssMetaData<? extends Styleable, ?>> styleables =
-                new ArrayList<CssMetaData<? extends Styleable, ?>>(Pane.getClassCssMetaData());
+                new ArrayList<>(Pane.getClassCssMetaData());
             styleables.add(TEXT_ALIGNMENT);
             styleables.add(LINE_SPACING);
             styleables.add(TAB_SIZE);
@@ -599,8 +598,9 @@ public class TextFlow extends Pane {
     }
 
     /**
-     * @return The CssMetaData associated with this class, which may include the
-     * CssMetaData of its superclasses.
+     * Gets the {@code CssMetaData} associated with this class, which may include the
+     * {@code CssMetaData} of its superclasses.
+     * @return the {@code CssMetaData}
      */
     public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
         return StyleableProperties.STYLEABLES;
@@ -612,10 +612,6 @@ public class TextFlow extends Pane {
     }
 
     /* The methods in this section are copied from Region due to package visibility restriction */
-    private static double snapSpace(double value, boolean snapToPixel) {
-        return snapToPixel ? Math.round(value) : value;
-    }
-
     static double boundedSize(double min, double pref, double max) {
         double a = pref >= min ? pref : min;
         double b = min >= max ? min : max;
@@ -627,11 +623,10 @@ public class TextFlow extends Pane {
     }
 
     double computeChildPrefAreaWidth(Node child, Insets margin, double height) {
-        final boolean snap = isSnapToPixel();
-        double top = margin != null? snapSpace(margin.getTop(), snap) : 0;
-        double bottom = margin != null? snapSpace(margin.getBottom(), snap) : 0;
-        double left = margin != null? snapSpace(margin.getLeft(), snap) : 0;
-        double right = margin != null? snapSpace(margin.getRight(), snap) : 0;
+        double top = margin != null? snapSpaceY(margin.getTop()) : 0;
+        double bottom = margin != null? snapSpaceY(margin.getBottom()) : 0;
+        double left = margin != null? snapSpaceX(margin.getLeft()) : 0;
+        double right = margin != null? snapSpaceX(margin.getRight()) : 0;
         double alt = -1;
         if (child.getContentBias() == Orientation.VERTICAL) { // width depends on height
             alt = snapSizeY(boundedSize(
@@ -646,11 +641,10 @@ public class TextFlow extends Pane {
     }
 
     double computeChildPrefAreaHeight(Node child, Insets margin, double width) {
-        final boolean snap = isSnapToPixel();
-        double top = margin != null? snapSpace(margin.getTop(), snap) : 0;
-        double bottom = margin != null? snapSpace(margin.getBottom(), snap) : 0;
-        double left = margin != null? snapSpace(margin.getLeft(), snap) : 0;
-        double right = margin != null? snapSpace(margin.getRight(), snap) : 0;
+        double top = margin != null? snapSpaceY(margin.getTop()) : 0;
+        double bottom = margin != null? snapSpaceY(margin.getBottom()) : 0;
+        double left = margin != null? snapSpaceX(margin.getLeft()) : 0;
+        double right = margin != null? snapSpaceX(margin.getRight()) : 0;
         double alt = -1;
         if (child.getContentBias() == Orientation.HORIZONTAL) { // height depends on width
             alt = snapSizeX(boundedSize(

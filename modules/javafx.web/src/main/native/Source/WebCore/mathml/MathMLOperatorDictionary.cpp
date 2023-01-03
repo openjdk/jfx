@@ -25,7 +25,6 @@
 
 #include "config.h"
 #include "MathMLOperatorDictionary.h"
-#include <wtf/Optional.h>
 
 #if ENABLE(MATHML)
 
@@ -55,9 +54,10 @@ static inline Property ExtractProperty(const Entry& entry)
 
 // This table has been automatically generated from the Operator Dictionary of the MathML3 specification (appendix C).
 // Some people use the binary operator "U+2225 PARALLEL TO" as an opening and closing delimiter, so we add the corresponding stretchy prefix and postfix forms.
-static const unsigned dictionarySize = 1043;
+static const unsigned dictionarySize = 1061;
 static const Entry dictionary[dictionarySize] = {
     { 0x21, Postfix, 1, 0, 0}, // EXCLAMATION MARK
+    { 0x22, Postfix, 1, 0, Accent}, // QUOTATION MARK
     { 0x25, Infix, 3, 3, 0}, // PERCENT SIGN
     { 0x26, Postfix, 0, 0, 0}, // AMPERSAND
     { 0x27, Postfix, 0, 0, Accent}, // APOSTROPHE
@@ -93,14 +93,19 @@ static const Entry dictionary[dictionarySize] = {
     { 0x7D, Postfix, 0, 0, Symmetric | Fence | Stretchy}, // RIGHT CURLY BRACKET
     { 0x7E, Postfix, 0, 0, Accent | Stretchy}, // TILDE
     { 0xA8, Postfix, 0, 0, Accent}, // DIAERESIS
+    { 0xAA, Postfix, 0, 0, Accent}, // FEMININE ORDINAL INDICATOR
     { 0xAC, Prefix, 2, 1, 0}, // NOT SIGN
     { 0xAF, Postfix, 0, 0, Accent | Stretchy}, // MACRON
     { 0xB0, Postfix, 0, 0, 0}, // DEGREE SIGN
     { 0xB1, Infix, 4, 4, 0}, // PLUS-MINUS SIGN
     { 0xB1, Prefix, 0, 1, 0}, // PLUS-MINUS SIGN
+    { 0xB2, Postfix, 0, 0, Accent}, // SUPERSCRIPT TWO
+    { 0xB3, Postfix, 0, 0, Accent}, // SUPERSCRIPT THREE
     { 0xB4, Postfix, 0, 0, Accent}, // ACUTE ACCENT
     { 0xB7, Infix, 4, 4, 0}, // MIDDLE DOT
     { 0xB8, Postfix, 0, 0, Accent}, // CEDILLA
+    { 0xB9, Postfix, 0, 0, Accent}, // SUPERSCRIPT ONE
+    { 0xBA, Postfix, 0, 0, Accent}, // MASCULINE ORDINAL INDICATOR
     { 0xD7, Infix, 4, 4, 0}, // MULTIPLICATION SIGN
     { 0xF7, Infix, 4, 4, 0}, // DIVISION SIGN
     { 0x2C6, Postfix, 0, 0, Accent | Stretchy}, // MODIFIER LETTER CIRCUMFLEX ACCENT
@@ -122,13 +127,23 @@ static const Entry dictionary[dictionarySize] = {
     { 0x2016, Postfix, 0, 0, Fence | Stretchy}, // DOUBLE VERTICAL LINE
     { 0x2018, Prefix, 0, 0, Fence}, // LEFT SINGLE QUOTATION MARK
     { 0x2019, Postfix, 0, 0, Fence}, // RIGHT SINGLE QUOTATION MARK
+    { 0x201A, Postfix, 0, 0, Accent}, // SINGLE LOW-9 QUOTATION MARK
+    { 0x201B, Postfix, 0, 0, Accent}, // SINGLE HIGH-REVERSED-9 QUOTATION MARK
     { 0x201C, Prefix, 0, 0, Fence}, // LEFT DOUBLE QUOTATION MARK
     { 0x201D, Postfix, 0, 0, Fence}, // RIGHT DOUBLE QUOTATION MARK
+    { 0x201E, Postfix, 0, 0, Accent}, // DOUBLE HIGH-REVERSED-9 QUOTATION MARK
+    { 0x201F, Postfix, 0, 0, Accent}, // DOUBLE LOW-9 QUOTATION MARK
     { 0x2022, Infix, 4, 4, 0}, // BULLET
     { 0x2026, Infix, 0, 0, 0}, // HORIZONTAL ELLIPSIS
-    { 0x2032, Postfix, 0, 2, 0}, // PRIME
+    { 0x2032, Postfix, 0, 0, 0}, // PRIME
+    { 0x2033, Postfix, 0, 0, Accent}, // DOUBLE PRIME
+    { 0x2034, Postfix, 0, 0, Accent}, // TRIPLE PRIME
+    { 0x2035, Postfix, 0, 0, Accent}, // REVERSED PRIME
+    { 0x2036, Postfix, 0, 0, Accent}, // REVERSED DOUBLE PRIME
+    { 0x2037, Postfix, 0, 0, Accent}, // REVERSED TRIPLE PRIME
     { 0x203E, Postfix, 0, 0, Accent | Stretchy}, // OVERLINE
     { 0x2044, Infix, 4, 4, Stretchy}, // FRACTION SLASH
+    { 0x2057, Postfix, 0, 0, Accent}, // QUADRUPLE PRIME
     { 0x2061, Infix, 0, 0, 0}, // FUNCTION APPLICATION
     { 0x2062, Infix, 0, 0, 0}, // INVISIBLE TIMES
     { 0x2063, Infix, 0, 0, Separator}, // INVISIBLE SEPARATOR
@@ -510,6 +525,8 @@ static const Entry dictionary[dictionarySize] = {
     { 0x2309, Postfix, 0, 0, Symmetric | Fence | Stretchy}, // RIGHT CEILING
     { 0x230A, Prefix, 0, 0, Symmetric | Fence | Stretchy}, // LEFT FLOOR
     { 0x230B, Postfix, 0, 0, Symmetric | Fence | Stretchy}, // RIGHT FLOOR
+    { 0x2329, Prefix, 0, 0, Symmetric | Fence | Stretchy}, // LEFT-POINTING ANGLE BRACKET
+    { 0x232A, Postfix, 0, 0, Symmetric | Fence | Stretchy}, // RIGHT-POINTING ANGLE BRACKET
     { 0x23B4, Postfix, 0, 0, Accent | Stretchy}, // TOP SQUARE BRACKET
     { 0x23B5, Postfix, 0, 0, Accent | Stretchy}, // BOTTOM SQUARE BRACKET
     { 0x23DC, Postfix, 0, 0, Accent | Stretchy}, // TOP PARENTHESIS
@@ -1098,8 +1115,8 @@ static const Entry dictionary[dictionarySize] = {
     { 0x2AFF, Prefix, 1, 2, Symmetric | LargeOp | MovableLimits}, // N-ARY WHITE VERTICAL BAR
     { 0x2B45, Infix, 5, 5, Stretchy}, // LEFTWARDS QUADRUPLE ARROW
     { 0x2B46, Infix, 5, 5, Stretchy}, // RIGHTWARDS QUADRUPLE ARROW
-    { 0x1EEF0, Prefix, 0, 0, Stretchy }, // ARABIC MATHEMATICAL OPERATOR MEEM WITH HAH WITH TATWEEL
-    { 0x1EEF1, Prefix, 0, 0, Stretchy } // ARABIC MATHEMATICAL OPERATOR HAH WITH DAL
+    { 0x1EEF0, Prefix, 0, 0, Stretchy}, // ARABIC MATHEMATICAL OPERATOR MEEM WITH HAH WITH TATWEEL
+    { 0x1EEF1, Prefix, 0, 0, Stretchy} // ARABIC MATHEMATICAL OPERATOR HAH WITH DAL
 };
 
 // A list of operators that stretch in the horizontal direction. This has been generated from Mozilla's MathML operator dictionary.
@@ -1108,19 +1125,19 @@ static const UChar32 horizontalOperators[] = {
     0x003D, 0x005E, 0x005F, 0x007E, 0x00AF, 0x02C6, 0x02C7, 0x02C9, 0x02CD, 0x02DC, 0x02F7, 0x0302, 0x0332, 0x203E, 0x20D0, 0x20D1, 0x20D6, 0x20D7, 0x20E1, 0x2190, 0x2192, 0x2194, 0x2198, 0x2199, 0x219C, 0x219D, 0x219E, 0x21A0, 0x21A2, 0x21A3, 0x21A4, 0x21A6, 0x21A9, 0x21AA, 0x21AB, 0x21AC, 0x21AD, 0x21B4, 0x21B9, 0x21BC, 0x21BD, 0x21C0, 0x21C1, 0x21C4, 0x21C6, 0x21C7, 0x21C9, 0x21CB, 0x21CC, 0x21D0, 0x21D2, 0x21D4, 0x21DA, 0x21DB, 0x21DC, 0x21DD, 0x21E0, 0x21E2, 0x21E4, 0x21E5, 0x21E6, 0x21E8, 0x21F0, 0x21F6, 0x21FD, 0x21FE, 0x21FF, 0x23B4, 0x23B5, 0x23DC, 0x23DD, 0x23DE, 0x23DF, 0x23E0, 0x23E1, 0x2500, 0x27F5, 0x27F6, 0x27F7, 0x27F8, 0x27F9, 0x27FA, 0x27FB, 0x27FC, 0x27FD, 0x27FE, 0x27FF, 0x290C, 0x290D, 0x290E, 0x290F, 0x2910, 0x294E, 0x2950, 0x2952, 0x2953, 0x2956, 0x2957, 0x295A, 0x295B, 0x295E, 0x295F, 0x2B45, 0x2B46, 0xFE35, 0xFE36, 0xFE37, 0xFE38, 0x1EEF0, 0x1EEF1
 };
 
-Optional<Property> MathMLOperatorDictionary::search(UChar32 character, Form form, bool explicitForm)
+std::optional<Property> MathMLOperatorDictionary::search(UChar32 character, Form form, bool explicitForm)
 {
     if (!character)
-        return WTF::nullopt;
+        return std::nullopt;
 
     // We try and find the default values from the operator dictionary.
     if (auto* entry = tryBinarySearch<const Entry, Key>(dictionary, dictionarySize, Key(character, form), ExtractKey))
         return ExtractProperty(*entry);
 
     if (explicitForm)
-        return WTF::nullopt;
+        return std::nullopt;
 
-    // If we did not find the desired operator form and if it was not set explicitely, we use the first one in the following order: Infix, Prefix, Postfix.
+    // If we did not find the desired operator form and if it was not set explicitly, we use the first one in the following order: Infix, Prefix, Postfix.
     // This is to handle bad MathML markup without explicit <mrow> delimiters like "<mo>(</mo><mi>a</mi><mo>)</mo><mo>(</mo><mi>b</mi><mo>)</mo>" where innerfences should not be considered infix.
     if (auto* entry = tryBinarySearch<const Entry, UChar32>(dictionary, dictionarySize, character, ExtractChar)) {
         // There are at most two other entries before the one found.
@@ -1131,7 +1148,7 @@ Optional<Property> MathMLOperatorDictionary::search(UChar32 character, Form form
         return ExtractProperty(*entry);
     }
 
-    return WTF::nullopt;
+    return std::nullopt;
 }
 
 bool MathMLOperatorDictionary::isVertical(UChar32 textContent)

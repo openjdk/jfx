@@ -13,19 +13,12 @@ endif ()
 
 add_subdirectory(JavaScriptCore)
 
-if (ENABLE_GRAPHICS_CONTEXT_3D)
+if (ENABLE_WEBGL OR USE_ANGLE_EGL)
     add_subdirectory(ThirdParty/ANGLE)
 endif ()
 
 if (ENABLE_API_TESTS)
     add_subdirectory(ThirdParty/gtest)
-endif ()
-
-if (USE_OPENVR)
-    # OpenVR is compiled with -stdlib=libc++ as default if Clang is used.
-    # Disable USE_LIBCXX not to use -stdlib=libc++.
-    option(USE_LIBCXX "Uses libc++ instead of libstdc++" OFF)
-    add_subdirectory(ThirdParty/openvr)
 endif ()
 
 if (USE_XDGMIME)
@@ -34,6 +27,11 @@ endif ()
 
 if (USE_LIBWEBRTC)
     add_subdirectory(ThirdParty/libwebrtc)
+    include_directories(${CMAKE_CURRENT_BINARY_DIR}/ThirdParty/libwebrtc)
+endif ()
+
+if (ENABLE_WEBINSPECTORUI)
+    add_subdirectory(WebInspectorUI)
 endif ()
 
 if (ENABLE_WEBCORE)

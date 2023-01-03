@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -46,7 +46,7 @@ import javafx.util.converter.DefaultStringConverter;
  */
 public class TextFieldTableCell<S,T> extends TableCell<S,T> {
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Static cell factories                                                   *
      *                                                                         *
@@ -88,11 +88,11 @@ public class TextFieldTableCell<S,T> extends TableCell<S,T> {
      */
     public static <S,T> Callback<TableColumn<S,T>, TableCell<S,T>> forTableColumn(
             final StringConverter<T> converter) {
-        return list -> new TextFieldTableCell<S,T>(converter);
+        return list -> new TextFieldTableCell<>(converter);
     }
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Fields                                                                  *
      *                                                                         *
@@ -102,7 +102,7 @@ public class TextFieldTableCell<S,T> extends TableCell<S,T> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
@@ -139,7 +139,7 @@ public class TextFieldTableCell<S,T> extends TableCell<S,T> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Properties                                                              *
      *                                                                         *
@@ -147,7 +147,7 @@ public class TextFieldTableCell<S,T> extends TableCell<S,T> {
 
     // --- converter
     private ObjectProperty<StringConverter<T>> converter =
-            new SimpleObjectProperty<StringConverter<T>>(this, "converter");
+            new SimpleObjectProperty<>(this, "converter");
 
     /**
      * The {@link StringConverter} property.
@@ -175,7 +175,7 @@ public class TextFieldTableCell<S,T> extends TableCell<S,T> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Public API                                                              *
      *                                                                         *
@@ -183,20 +183,16 @@ public class TextFieldTableCell<S,T> extends TableCell<S,T> {
 
     /** {@inheritDoc} */
     @Override public void startEdit() {
-        if (! isEditable()
-                || ! getTableView().isEditable()
-                || ! getTableColumn().isEditable()) {
+        super.startEdit();
+        if (!isEditing()) {
             return;
         }
-        super.startEdit();
 
-        if (isEditing()) {
-            if (textField == null) {
-                textField = CellUtils.createTextField(this, getConverter());
-            }
-
-            CellUtils.startEdit(this, getConverter(), null, null, textField);
+        if (textField == null) {
+            textField = CellUtils.createTextField(this, getConverter());
         }
+
+        CellUtils.startEdit(this, getConverter(), null, null, textField);
     }
 
     /** {@inheritDoc} */

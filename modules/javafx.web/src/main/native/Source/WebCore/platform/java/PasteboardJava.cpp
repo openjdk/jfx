@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -110,7 +110,7 @@ void jWriteSelection(bool canSmartCopyOrDelete, const String& plainText, const S
 void jWriteImage(const Image& image)
 {
     DEFINE_PB_STATIC_METHOD("writeImage", "(Lcom/sun/webkit/graphics/WCImageFrame;)V");
-    CALL_PB_STATIC_VOID_METHOD(jobject(*const_cast<Image&>(image).javaImage()));
+    CALL_PB_STATIC_VOID_METHOD(jobject(*const_cast<Image&>(image).javaImage()->platformImage()->getImage()));
 }
 
 void jWriteURL(const String& url, const String& markup)
@@ -157,7 +157,7 @@ void writeImageToDataObject(RefPtr<DataObjectJava> dataObject, const Element& el
     if (!cachedImage || !cachedImage->image() || !cachedImage->isLoaded()) {
         return;
     }
-    SharedBuffer* imageBuffer = cachedImage->image()->data();
+    FragmentedSharedBuffer* imageBuffer = cachedImage->image()->data();
     if (!imageBuffer || !imageBuffer->size()) {
         return;
     }
@@ -222,7 +222,7 @@ Pasteboard::Pasteboard(RefPtr<DataObjectJava> dataObject, bool copyPasteMode = f
     ASSERT(m_dataObject);
 }
 
-Pasteboard::Pasteboard() : Pasteboard(DataObjectJava::create())
+Pasteboard::Pasteboard(std::unique_ptr<PasteboardContext>&&) : Pasteboard(DataObjectJava::create())
 {
 }
 
@@ -231,22 +231,23 @@ std::unique_ptr<Pasteboard> Pasteboard::create(RefPtr<DataObjectJava> dataObject
     return std::unique_ptr<Pasteboard>(new Pasteboard(dataObject));
 }
 
-std::unique_ptr<Pasteboard> Pasteboard::createForCopyAndPaste()
+std::unique_ptr<Pasteboard> Pasteboard::createForCopyAndPaste(std::unique_ptr<PasteboardContext>&&)
 {
     // Use single shared data instance for all copy'n'paste pasteboards.
     static RefPtr<DataObjectJava> data = DataObjectJava::create();
     // TODO: setURL, setFiles, setData, setHtml (needs URL)
     data->setPlainText(jGetPlainText());
+    data->setData(DataObjectJava::mimeHTML(), jGetPlainText());
     return std::unique_ptr<Pasteboard>(new Pasteboard(data, true));
 }
 
 #if ENABLE(DRAG_SUPPORT)
-std::unique_ptr<Pasteboard> Pasteboard::createForDragAndDrop()
+std::unique_ptr<Pasteboard> Pasteboard::createForDragAndDrop(std::unique_ptr<PasteboardContext>&&)
 {
     return create(DataObjectJava::create());
 }
 
-std::unique_ptr<Pasteboard> Pasteboard::createForDragAndDrop(const DragData& dragData)
+std::unique_ptr<Pasteboard> Pasteboard::create(const DragData& dragData)
 {
     return create(dragData.platformData());
 }
@@ -257,7 +258,7 @@ void Pasteboard::setDragImage(DragImage, const IntPoint&)
 #endif
 
 void Pasteboard::writeSelection(
-    Range& selectedRange,
+    const SimpleRange& selectedRange,
     bool canSmartCopyOrDelete,
     Frame& frame,
     ShouldSerializeSelectedTextForDataTransfer shouldSerializeSelectedTextForDataTransfer)
@@ -303,7 +304,7 @@ void Pasteboard::write(const PasteboardURL& pasteboardURL)
 
     String title(pasteboardURL.title);
     if (title.isEmpty()) {
-        title = pasteboardURL.url.lastPathComponent();
+        title = pasteboardURL.url.lastPathComponent().toString();
         if (title.isEmpty()) {
             title = pasteboardURL.url.host().toString();
         }
@@ -320,24 +321,24 @@ void Pasteboard::write(const PasteboardURL& pasteboardURL)
     }
 }
 
-void Pasteboard::writeImage(Element& node, const URL& url, const String& title)
+void Pasteboard::writeImage(Element& element, const URL& url, const String& title)
 {
     m_dataObject->setURL(url, title);
 
     // Write the bytes of the image to the file format
-    writeImageToDataObject(m_dataObject,    node, url);
+    writeImageToDataObject(m_dataObject, element, url);
 
-    AtomString imageURL = node.getAttribute(HTMLNames::srcAttr);
+    AtomString imageURL = element.getAttribute(HTMLNames::srcAttr);
     if (!imageURL.isEmpty()) {
-        String fullURL = node.document().completeURL(stripLeadingAndTrailingHTMLSpaces(imageURL));
+        String fullURL = element.document().completeURL(stripLeadingAndTrailingHTMLSpaces(imageURL)).string();
         if (!fullURL.isEmpty()) {
             m_dataObject->setHTML(
-                imageToMarkup(fullURL, node),
-                node.document().url());
+                imageToMarkup(fullURL, element),
+                element.document().url());
         }
     }
     if (m_copyPasteMode) {
-        CachedImage* cachedImage = getCachedImage(node);
+        CachedImage* cachedImage = getCachedImage(element);
         // CachedImage not exist
         if (!cachedImage) {
             return;
@@ -352,7 +353,7 @@ void Pasteboard::writeImage(Element& node, const URL& url, const String& title)
         // SVGImage are not Bitmap backed, Let the receiving end decode the svg image
         // based on url and its markup
         if (image->isSVGImage()) {
-            jWriteURL(url.string(), serializeFragment(node, SerializedNodes::SubtreeIncludingNode));
+            jWriteURL(url.string(), serializeFragment(element, SerializedNodes::SubtreeIncludingNode));
         }
         else {
             jWriteImage(*image);
@@ -430,7 +431,7 @@ bool Pasteboard::hasData()
     return m_dataObject && m_dataObject->hasData();
 }
 
-void Pasteboard::read(PasteboardFileReader& reader)
+void Pasteboard::read(PasteboardFileReader& reader, std::optional<size_t>)
 {
     if (m_dataObject) {
         for (const auto& filename : m_dataObject->asFilenames())
@@ -452,7 +453,7 @@ Pasteboard::FileContentState Pasteboard::fileContentState()
     return reader.count ? FileContentState::MayContainFilePaths : FileContentState::NoFileOrImageData;
 }
 
-void Pasteboard::read(PasteboardPlainText& text)
+void Pasteboard::read(PasteboardPlainText& text, PlainTextURLReadingPolicy, std::optional<size_t>)
 {
     if (m_copyPasteMode) {
         text.text = jGetPlainText();
@@ -473,10 +474,7 @@ bool Pasteboard::canSmartReplace()
 }
 
 RefPtr<DocumentFragment> Pasteboard::documentFragment(
-    Frame& frame,
-    Range& range,
-    bool allowPlainText,
-    bool &chosePlainText)
+    Frame& frame, const SimpleRange& range, bool allowPlainText, bool &chosePlainText)
 {
     chosePlainText = false;
 
@@ -486,10 +484,7 @@ RefPtr<DocumentFragment> Pasteboard::documentFragment(
 
     if (!htmlString.isNull()) {
         if (RefPtr<DocumentFragment> fragment = createFragmentFromMarkup(
-                *frame.document(),
-                htmlString,
-                String(),
-                DisallowScriptingContent))
+                *frame.document(), htmlString, String(), DisallowScriptingContent))
         {
             return fragment;
         }
@@ -505,9 +500,8 @@ RefPtr<DocumentFragment> Pasteboard::documentFragment(
 
     if (!plainTextString.isNull()) {
         chosePlainText = true;
-        if (RefPtr<DocumentFragment> fragment = createFragmentFromText(
-                range,
-                plainTextString))
+        if (RefPtr<DocumentFragment> fragment =
+            createFragmentFromText(range, plainTextString))
         {
             return fragment;
         }
@@ -515,11 +509,15 @@ RefPtr<DocumentFragment> Pasteboard::documentFragment(
     return nullptr;
 }
 
-void Pasteboard::read(PasteboardWebContentReader&, WebContentReadingPolicy)
+void Pasteboard::read(PasteboardWebContentReader&, WebContentReadingPolicy, std::optional<size_t>)
 {
 }
 
 void Pasteboard::write(const PasteboardImage&)
+{
+}
+
+void Pasteboard::write(const PasteboardBuffer&)
 {
 }
 
@@ -531,7 +529,7 @@ void Pasteboard::writeMarkup(const String&)
 {
 }
 
-void Pasteboard::writeCustomData(const PasteboardCustomData&)
+void Pasteboard::writeCustomData(const Vector<PasteboardCustomData>&)
 {
 }
 

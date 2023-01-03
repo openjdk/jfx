@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,6 +26,7 @@
 package test.javafx.scene.control;
 
 import javafx.scene.control.Separator;
+import org.junit.After;
 import test.com.sun.javafx.pgstub.StubToolkit;
 import com.sun.javafx.tk.Toolkit;
 
@@ -56,22 +57,33 @@ import javafx.scene.control.SelectionModelShim;
 import javafx.scene.control.SingleSelectionModel;
 import javafx.scene.layout.StackPane;
 import javafx.stage.Stage;
-import javafx.event.Event;
-import javafx.event.EventHandler;
 
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
 
 public class ChoiceBoxTest {
-    private final ChoiceBox<String> box = new ChoiceBox<String>();
+    private final ChoiceBox<String> box = new ChoiceBox<>();
     private Toolkit tk;
     private Scene scene;
     private Stage stage;
 
     @Before public void setup() {
-        //This step is not needed (Just to make sure StubToolkit is loaded into VM)
-        tk = (StubToolkit)Toolkit.getToolkit();
+        Thread.currentThread().setUncaughtExceptionHandler((thread, throwable) -> {
+            if (throwable instanceof RuntimeException) {
+                throw (RuntimeException) throwable;
+            } else {
+                Thread.currentThread().getThreadGroup().uncaughtException(thread, throwable);
+            }
+        });
+
+        tk = Toolkit.getToolkit();
+
+        assertTrue(tk instanceof StubToolkit);  // Ensure it's StubToolkit
+    }
+
+    @After public void cleanUp() {
+        Thread.currentThread().setUncaughtExceptionHandler(null);
     }
 
     protected void startApp(Parent root) {
@@ -110,38 +122,38 @@ public class ChoiceBoxTest {
     }
 
     @Test public void singleArgConstructorSetsTheStyleClass() {
-        final ChoiceBox<String> b2 = new ChoiceBox<String>(FXCollections.observableArrayList("Hi"));
+        final ChoiceBox<String> b2 = new ChoiceBox<>(FXCollections.observableArrayList("Hi"));
         assertStyleClassContains(b2, "choice-box");
     }
 
     @Test public void singleArgConstructorSetsNonNullSelectionModel() {
-        final ChoiceBox<String> b2 = new ChoiceBox<String>(FXCollections.observableArrayList("Hi"));
+        final ChoiceBox<String> b2 = new ChoiceBox<>(FXCollections.observableArrayList("Hi"));
         assertNotNull(b2.getSelectionModel());
     }
 
     @Test public void singleArgConstructorAllowsNullItems() {
-        final ChoiceBox<String> b2 = new ChoiceBox<String>(null);
+        final ChoiceBox<String> b2 = new ChoiceBox<>(null);
         assertNull(b2.getItems());
     }
 
     @Test public void singleArgConstructorTakesItems() {
         ObservableList<String> items = FXCollections.observableArrayList("Hi");
-        final ChoiceBox<String> b2 = new ChoiceBox<String>(items);
+        final ChoiceBox<String> b2 = new ChoiceBox<>(items);
         assertSame(items, b2.getItems());
     }
 
     @Test public void singleArgConstructor_selectedItemIsNull() {
-        final ChoiceBox<String> b2 = new ChoiceBox<String>(FXCollections.observableArrayList("Hi"));
+        final ChoiceBox<String> b2 = new ChoiceBox<>(FXCollections.observableArrayList("Hi"));
         assertNull(b2.getSelectionModel().getSelectedItem());
     }
 
     @Test public void singleArgConstructor_selectedIndexIsNegativeOne() {
-        final ChoiceBox<String> b2 = new ChoiceBox<String>(FXCollections.observableArrayList("Hi"));
+        final ChoiceBox<String> b2 = new ChoiceBox<>(FXCollections.observableArrayList("Hi"));
         assertEquals(-1, b2.getSelectionModel().getSelectedIndex());
     }
 
     @Test public void singleArgConstructor_converterIsNotNull() {
-        final ChoiceBox<String> b2 = new ChoiceBox<String>(FXCollections.observableArrayList("Hi"));
+        final ChoiceBox<String> b2 = new ChoiceBox<>(FXCollections.observableArrayList("Hi"));
         assertNull(b2.getConverter());
     }
 
@@ -154,9 +166,22 @@ public class ChoiceBoxTest {
         assertNull(box.getSelectionModel());
     }
 
+    @Test public void testNullSelectionModelDoesNotThrowNPEOnValueChange() {
+        ObservableList<String> items = FXCollections.observableArrayList("ITEM1", "ITEM2");
+
+        box.setSkin(new ChoiceBoxSkin<>(box));
+        box.setItems(items);
+        box.setSelectionModel(null);
+
+        box.setValue(items.get(1));
+
+        String text = ChoiceBoxSkinNodesShim.getChoiceBoxSelectedText((ChoiceBoxSkin<?>) box.getSkin());
+        assertEquals(items.get(1), text);
+    }
+
     @Test public void selectionModelCanBeBound() {
         SingleSelectionModel<String> sm = ChoiceBoxShim.<String>get_ChoiceBoxSelectionModel(box);
-        ObjectProperty<SingleSelectionModel<String>> other = new SimpleObjectProperty<SingleSelectionModel<String>>(sm);
+        ObjectProperty<SingleSelectionModel<String>> other = new SimpleObjectProperty<>(sm);
         box.selectionModelProperty().bind(other);
         assertSame(sm, box.getSelectionModel());
     }
@@ -342,7 +367,8 @@ public class ChoiceBoxTest {
         assertEquals("Orange", box.getValue());
     }
 
-    @Test public void ensureValueIsUpdatedByCorrectSelectionModelWhenSelectionModelIsChanged() {
+    @Test
+    public void ensureValueIsUpdatedByCorrectSelectionModelWhenSelectionModelIsChanged() {
         box.getItems().addAll("Apple", "Orange", "Banana");
         SelectionModel sm1 = box.getSelectionModel();
         sm1.select(1);
@@ -351,7 +377,10 @@ public class ChoiceBoxTest {
         box.setSelectionModel(sm2);
 
         sm1.select(2);  // value should not change as we are using old SM
-        assertEquals("Orange", box.getValue());
+        // was: incorrect test assumption
+        // - setting the new model (with null selected item) changed the value to null
+        // assertEquals("Orange", box.getValue());
+        assertEquals(sm2.getSelectedItem(), box.getValue());
 
         sm2.select(0);  // value should change, as we are using new SM
         assertEquals("Apple", box.getValue());
@@ -417,10 +446,17 @@ public class ChoiceBoxTest {
         assertFalse(box.isShowing());
     }
 
-    @Ignore("impl_cssSet API removed")
     @Test public void cannotSpecifyShowingViaCSS() {
-//        box.impl_cssSet("-fx-showing", true);
+        box.setStyle("-fx-showing: true;");
+        box.applyCss();
         assertFalse(box.isShowing());
+
+        box.show();
+        assertTrue(box.isShowing());
+
+        box.setStyle("-fx-showing: false;");
+        box.applyCss();
+        assertTrue(box.isShowing());
     }
 
     @Test public void settingShowingSetsPseudoClass() {

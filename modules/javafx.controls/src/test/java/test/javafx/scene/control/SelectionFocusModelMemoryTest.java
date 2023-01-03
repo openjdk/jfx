@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2020, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -70,7 +70,7 @@ import javafx.stage.Stage;
 
 /**
  * Testing for potential memory leaks in xxSelectionModel and xxFocusModel (
- * https://bugs.openjdk.java.net/browse/JDK-8241455).
+ * https://bugs.openjdk.org/browse/JDK-8241455).
  * Might happen, when the concrete selection/focusModel registers strong listeners on any of the
  * control's properties.
  * <p>
@@ -194,9 +194,6 @@ public class SelectionFocusModelMemoryTest {
 
     @Test
     public void testTabPaneSelectionModel() {
-        // FIXME
-        // can't formally ignore just one parameter, so backing out if showBeforeReplaceSM
-        if (showBeforeReplaceSM) return; //@Ignore("8241737")
         TabPane control = new TabPane();
         ObservableList<String> data = FXCollections.observableArrayList("Apple", "Orange", "Banana");
         data.forEach(text -> control.getTabs().add(new Tab(text)));
@@ -221,10 +218,6 @@ public class SelectionFocusModelMemoryTest {
 
     @Test
     public void testChoiceBoxSelectionModel() {
-        // FIXME
-        // can't formally ignore just one parameter, so backing out if showBeforeReplaceSM
-        // will be fixed as side-effect of skin cleanup
-        if (showBeforeReplaceSM) return; //@Ignore("8087555")
         ChoiceBox<String> control = new ChoiceBox<>(FXCollections.observableArrayList("Apple", "Orange", "Banana"));
         WeakReference<SelectionModel<?>> weakRef = new WeakReference<>(control.getSelectionModel());
         SingleSelectionModel<String> replacingSm = ChoiceBoxShim.get_ChoiceBoxSelectionModel(control);
@@ -238,7 +231,6 @@ public class SelectionFocusModelMemoryTest {
         // Attempt gc n times
         for (int i = 0; i < n; i++) {
             System.gc();
-            System.runFinalization();
 
             if (weakRef.get() == null) {
                 break;

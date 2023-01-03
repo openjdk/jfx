@@ -73,6 +73,7 @@
 #include "gst/gst_private.h"
 
 #include "gsttypefindelement.h"
+#include "gstcoreelementselements.h"
 #include "gst/gst-i18n-lib.h"
 #include "gst/base/gsttypefindhelper.h"
 
@@ -129,6 +130,8 @@ enum
 #define gst_type_find_element_parent_class parent_class
 G_DEFINE_TYPE_WITH_CODE (GstTypeFindElement, gst_type_find_element,
     GST_TYPE_ELEMENT, _do_init);
+GST_ELEMENT_REGISTER_DEFINE (typefind, "typefind", GST_RANK_NONE,
+    GST_TYPE_TYPE_FIND_ELEMENT);
 
 static void gst_type_find_element_dispose (GObject * object);
 static void gst_type_find_element_set_property (GObject * object,
@@ -272,7 +275,7 @@ gst_type_find_element_class_init (GstTypeFindElementClass * typefind_class)
   gst_type_find_element_signals[HAVE_TYPE] = g_signal_new ("have-type",
       G_TYPE_FROM_CLASS (typefind_class), G_SIGNAL_RUN_LAST,
       G_STRUCT_OFFSET (GstTypeFindElementClass, have_type), NULL, NULL,
-      g_cclosure_marshal_generic, G_TYPE_NONE, 2,
+      NULL, G_TYPE_NONE, 2,
       G_TYPE_UINT, GST_TYPE_CAPS | G_SIGNAL_TYPE_STATIC_SCOPE);
 
   typefind_class->have_type =
@@ -527,6 +530,7 @@ gst_type_find_element_seek (GstTypeFindElement * typefind, GstEvent * event)
   }
 
   typefind->need_segment = TRUE;
+  typefind->seqnum = gst_event_get_seqnum (event);
 
   /* restart our task since it might have been stopped when we did the
    * flush. */
@@ -796,9 +800,8 @@ static gchar *
 gst_type_find_get_extension (GstTypeFindElement * typefind, GstPad * pad)
 {
   GstQuery *query;
-  gchar *uri, *result;
-  size_t len;
-  gint find;
+  gchar *uri, *result, *path, *base_path, *find;
+  GstUri *gst_uri;
 
   query = gst_query_new_uri ();
 
@@ -812,22 +815,30 @@ gst_type_find_get_extension (GstTypeFindElement * typefind, GstPad * pad)
 
   GST_DEBUG_OBJECT (typefind, "finding extension of %s", uri);
 
-  /* find the extension on the uri, this is everything after a '.' */
-  len = strlen (uri);
-  find = len - 1;
+  gst_uri = gst_uri_from_string (uri);
+  if (gst_uri == NULL)
+    goto invalid_uri;
 
-  while (find >= 0) {
-    if (uri[find] == '.')
-      break;
-    find--;
-  }
-  if (find < 0)
+  path = gst_uri_get_path (gst_uri);
+  gst_uri_unref (gst_uri);
+
+  if (path == NULL)
+    goto invalid_uri;
+
+  base_path = g_path_get_basename (path);
+  g_free (path);
+
+  /* find the extension on the path, this is everything after a '.' */
+  find = strrchr (base_path, '.');
+
+  if (find == NULL)
     goto no_extension;
 
-  result = g_strdup (&uri[find + 1]);
+  result = g_strdup (find + 1);
 
   GST_DEBUG_OBJECT (typefind, "found extension %s", result);
   gst_query_unref (query);
+  g_free (base_path);
   g_free (uri);
 
   return result;
@@ -845,11 +856,19 @@ no_uri:
     gst_query_unref (query);
     return NULL;
   }
+invalid_uri:
+  {
+    GST_INFO_OBJECT (typefind, "failed to extract path from uri %s", uri);
+    g_free (uri);
+    gst_query_unref (query);
+    return NULL;
+  }
 no_extension:
   {
     GST_INFO_OBJECT (typefind, "could not find uri extension in %s", uri);
-    gst_query_unref (query);
+    g_free (base_path);
     g_free (uri);
+    gst_query_unref (query);
     return NULL;
   }
 }
@@ -1172,9 +1191,12 @@ gst_type_find_element_loop (GstPad * pad)
     GstBuffer *outbuf = NULL;
 
     if (typefind->need_segment) {
+      GstEvent *event;
       typefind->need_segment = FALSE;
-      gst_pad_push_event (typefind->src,
-          gst_event_new_segment (&typefind->segment));
+      event = gst_event_new_segment (&typefind->segment);
+      if (typefind->seqnum != 0)
+        gst_event_set_seqnum (event, typefind->seqnum);
+      gst_pad_push_event (typefind->src, event);
     }
 
     /* Pull 4k blocks and send downstream */
@@ -1253,6 +1275,7 @@ gst_type_find_element_activate_sink_mode (GstPad * pad, GstObject * parent,
         typefind->need_segment = TRUE;
         typefind->need_stream_start = TRUE;
         typefind->offset = 0;
+        typefind->seqnum = 0;
         res = TRUE;
       } else {
         res = gst_pad_stop_task (pad);

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006 Apple Inc.  All rights reserved.
+ * Copyright (C) 2006-2020 Apple Inc.  All rights reserved.
  * Copyright (C) 2010 Igalia S.L
  *
  * Redistribution and use in source and binary forms, with or without
@@ -24,9 +24,9 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef ContextMenuItem_h
-#define ContextMenuItem_h
+#pragma once
 
+#include <wtf/EnumTraits.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
@@ -54,6 +54,7 @@ enum ContextMenuAction {
     ContextMenuItemTagCut,
     ContextMenuItemTagPaste,
 #if PLATFORM(GTK)
+    ContextMenuItemTagPasteAsPlainText,
     ContextMenuItemTagDelete,
     ContextMenuItemTagSelectAll,
     ContextMenuItemTagInputMethods,
@@ -144,6 +145,12 @@ enum ContextMenuAction {
     ContextMenuItemTagToggleVideoFullscreen,
     ContextMenuItemTagShareMenu,
     ContextMenuItemTagToggleVideoEnhancedFullscreen,
+    ContextMenuItemTagAddHighlightToCurrentQuickNote,
+    ContextMenuItemTagAddHighlightToNewQuickNote,
+    ContextMenuItemTagQuickLookImage,
+    ContextMenuItemTagTranslate,
+    ContextMenuItemTagCopyCroppedImage,
+    ContextMenuItemLastNonCustomTag = ContextMenuItemTagCopyCroppedImage,
     ContextMenuItemBaseCustomTag = 5000,
     ContextMenuItemLastCustomTag = 5999,
     ContextMenuItemBaseApplicationTag = 10000
@@ -160,7 +167,7 @@ class ContextMenuItem {
     WTF_MAKE_FAST_ALLOCATED;
 public:
     WEBCORE_EXPORT ContextMenuItem(ContextMenuItemType, ContextMenuAction, const String&, ContextMenu* subMenu = 0);
-    WEBCORE_EXPORT ContextMenuItem(ContextMenuItemType, ContextMenuAction, const String&, bool enabled, bool checked);
+    WEBCORE_EXPORT ContextMenuItem(ContextMenuItemType, ContextMenuAction, const String&, bool enabled, bool checked, unsigned indentationLevel = 0);
 
     WEBCORE_EXPORT ~ContextMenuItem();
 
@@ -176,9 +183,12 @@ public:
     void setEnabled(bool = true);
     WEBCORE_EXPORT bool enabled() const;
 
+    void setIndentationLevel(unsigned);
+    WEBCORE_EXPORT unsigned indentationLevel() const;
+
     void setSubMenu(ContextMenu*);
 
-    WEBCORE_EXPORT ContextMenuItem(ContextMenuAction, const String&, bool enabled, bool checked, const Vector<ContextMenuItem>& subMenuItems);
+    WEBCORE_EXPORT ContextMenuItem(ContextMenuAction, const String&, bool enabled, bool checked, const Vector<ContextMenuItem>& subMenuItems, unsigned indentationLevel = 0);
     ContextMenuItem();
 
     bool isNull() const;
@@ -193,9 +203,33 @@ private:
     String m_title;
     bool m_enabled;
     bool m_checked;
+    unsigned m_indentationLevel;
     Vector<ContextMenuItem> m_subMenuItems;
 };
 
-}
+WEBCORE_EXPORT bool isValidContextMenuAction(ContextMenuAction);
 
-#endif // ContextMenuItem_h
+} // namespace WebCore
+
+namespace WTF {
+
+template<>
+struct EnumTraits<WebCore::ContextMenuAction> {
+    template<typename T>
+    static std::enable_if_t<sizeof(T) == sizeof(WebCore::ContextMenuAction), bool> isValidEnum(T action)
+    {
+        return WebCore::isValidContextMenuAction(static_cast<WebCore::ContextMenuAction>(action));
+    };
+};
+
+template<> struct EnumTraits<WebCore::ContextMenuItemType> {
+    using values = EnumValues<
+        WebCore::ContextMenuItemType,
+        WebCore::ContextMenuItemType::ActionType,
+        WebCore::ContextMenuItemType::CheckableActionType,
+        WebCore::ContextMenuItemType::SeparatorType,
+        WebCore::ContextMenuItemType::SubmenuType
+    >;
+};
+
+} // namespace WTF

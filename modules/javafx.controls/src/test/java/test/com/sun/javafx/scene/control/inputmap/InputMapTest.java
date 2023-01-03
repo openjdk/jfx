@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2015, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,24 +24,7 @@
  */
 package test.com.sun.javafx.scene.control.inputmap;
 
-import javafx.event.Event;
-import javafx.event.EventType;
-import javafx.scene.Node;
-import javafx.scene.input.KeyCode;
-import javafx.scene.input.KeyEvent;
-import javafx.scene.input.MouseButton;
-import javafx.scene.input.MouseEvent;
-import javafx.scene.input.PickResult;
-import javafx.scene.layout.Region;
-import javafx.scene.shape.Rectangle;
-import org.junit.Before;
 import org.junit.Test;
-
-import java.util.Optional;
-import java.util.function.Predicate;
-
-import static org.junit.Assert.*;
-import static javafx.scene.input.KeyCode.*;
 
 /**
  * Thoughts / Considerations (search for [1], etc in comments below):

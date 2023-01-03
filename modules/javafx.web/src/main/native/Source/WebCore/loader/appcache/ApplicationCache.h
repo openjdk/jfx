@@ -26,6 +26,7 @@
 #pragma once
 
 #include <wtf/HashMap.h>
+#include <wtf/WeakPtr.h>
 #include <wtf/text/StringHash.h>
 
 namespace WebCore {
@@ -45,10 +46,10 @@ public:
     void addResource(Ref<ApplicationCacheResource>&&);
 
     void setManifestResource(Ref<ApplicationCacheResource>&&);
-    ApplicationCacheResource* manifestResource() const { return m_manifest; }
+    ApplicationCacheResource* manifestResource() const;
 
     void setGroup(ApplicationCacheGroup*);
-    ApplicationCacheGroup* group() const { return m_group; }
+    ApplicationCacheGroup* group() const;
 
     bool isComplete();
 
@@ -57,9 +58,9 @@ public:
 
     void setAllowsAllNetworkRequests(bool value) { m_allowAllNetworkRequests = value; }
     bool allowsAllNetworkRequests() const { return m_allowAllNetworkRequests; }
-    void setOnlineWhitelist(const Vector<URL>& onlineWhitelist);
-    const Vector<URL>& onlineWhitelist() const { return m_onlineWhitelist; }
-    bool isURLInOnlineWhitelist(const URL&); // There is an entry in online whitelist that has the same origin as the resource's URL and that is a prefix match for the resource's URL.
+    void setOnlineAllowlist(const Vector<URL>&);
+    const Vector<URL>& onlineAllowlist() const { return m_onlineAllowlist; }
+    bool isURLInOnlineAllowlist(const URL&); // There is an entry in online allowlist that has the same origin as the resource's URL and that is a prefix match for the resource's URL.
 
     void setFallbackURLs(const FallbackURLVector&);
     const FallbackURLVector& fallbackURLs() const { return m_fallbackURLs; }
@@ -83,12 +84,12 @@ public:
 private:
     ApplicationCache();
 
-    ApplicationCacheGroup* m_group { nullptr };
+    WeakPtr<ApplicationCacheGroup> m_group;
     ResourceMap m_resources;
-    ApplicationCacheResource* m_manifest { nullptr };
+    WeakPtr<ApplicationCacheResource> m_manifest;
 
     bool m_allowAllNetworkRequests { false };
-    Vector<URL> m_onlineWhitelist;
+    Vector<URL> m_onlineAllowlist;
     FallbackURLVector m_fallbackURLs;
 
     // The total size of the resources belonging to this Application Cache instance.

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,55 +27,72 @@
 #include <wtf/cf/CFURLExtras.h>
 
 #include <wtf/URL.h>
-#include <wtf/text/CString.h>
 
 namespace WTF {
 
-RetainPtr<CFURLRef> createCFURLFromBuffer(const char* data, size_t size, CFURLRef baseURL)
+RetainPtr<CFDataRef> bytesAsCFData(CFURLRef url)
 {
-    // NOTE: We use UTF-8 here since this encoding is used when computing strings when returning URL components
-    // (e.g calls to NSURL -path). However, this function is not tolerant of illegal UTF-8 sequences, which
-    // could either be a malformed string or bytes in a different encoding, like Shift-JIS, so we fall back
-    // onto using ISO Latin-1 in those cases.
-    RetainPtr<CFURLRef> result = adoptCF(CFURLCreateAbsoluteURLWithBytes(0, reinterpret_cast<const UInt8*>(data), size, kCFStringEncodingUTF8, baseURL, true));
-    if (!result)
-        result = adoptCF(CFURLCreateAbsoluteURLWithBytes(0, reinterpret_cast<const UInt8*>(data), size, kCFStringEncodingISOLatin1, baseURL, true));
+    if (!url)
+        return nullptr;
+    auto bytesLength = CFURLGetBytes(url, nullptr, 0);
+    RELEASE_ASSERT(bytesLength != -1);
+    auto buffer = static_cast<uint8_t*>(malloc(bytesLength));
+    RELEASE_ASSERT(buffer);
+    CFURLGetBytes(url, buffer, bytesLength);
+    return adoptCF(CFDataCreateWithBytesNoCopy(nullptr, buffer, bytesLength, kCFAllocatorMalloc));
+}
+
+String bytesAsString(CFURLRef url)
+{
+    if (!url)
+        return { };
+    auto bytesLength = CFURLGetBytes(url, nullptr, 0);
+    RELEASE_ASSERT(bytesLength != -1);
+    RELEASE_ASSERT(bytesLength <= static_cast<CFIndex>(String::MaxLength));
+    LChar* buffer;
+    auto result = String::createUninitialized(bytesLength, buffer);
+    CFURLGetBytes(url, buffer, bytesLength);
     return result;
 }
 
-void getURLBytes(CFURLRef url, URLCharBuffer& result)
+Vector<uint8_t, URLBytesVectorInlineCapacity> bytesAsVector(CFURLRef url)
 {
-    CFIndex bytesLength = CFURLGetBytes(url, 0, 0);
-    result.resize(bytesLength);
-    CFIndex finalLength = CFURLGetBytes(url, reinterpret_cast<UInt8*>(result.data()), bytesLength);
-    ASSERT_UNUSED(finalLength, finalLength == bytesLength);
+    if (!url)
+        return { };
+
+    Vector<uint8_t, URLBytesVectorInlineCapacity> result(URLBytesVectorInlineCapacity);
+    auto bytesLength = CFURLGetBytes(url, result.data(), URLBytesVectorInlineCapacity);
+    if (bytesLength != -1)
+        result.shrink(bytesLength);
+    else {
+        bytesLength = CFURLGetBytes(url, nullptr, 0);
+        RELEASE_ASSERT(bytesLength != -1);
+        result.grow(bytesLength);
+        CFURLGetBytes(url, result.data(), bytesLength);
+    }
+
+    // This may look like it copies the bytes in the vector, but due to the return value optimization it does not.
+    return result;
 }
 
-void getURLBytes(CFURLRef url, CString& result)
+bool isSameOrigin(CFURLRef a, const URL& b)
 {
-    CFIndex bytesLength = CFURLGetBytes(url, 0, 0);
-    char* bytes;
-    result = CString::newUninitialized(bytesLength, bytes);
-    CFIndex finalLength = CFURLGetBytes(url, reinterpret_cast<UInt8*>(bytes), bytesLength);
-    ASSERT_UNUSED(finalLength, finalLength == bytesLength);
-}
+    ASSERT(b.protocolIsInHTTPFamily());
 
-bool isCFURLSameOrigin(CFURLRef cfURL, const URL& url)
-{
-    ASSERT(url.protocolIsInHTTPFamily());
+    if (b.hasCredentials())
+        return protocolHostAndPortAreEqual(a, b);
 
-    if (url.hasUsername() || url.hasPassword())
-        return protocolHostAndPortAreEqual(url, URL { cfURL });
+    auto aBytes = bytesAsVector(a);
+    RELEASE_ASSERT(aBytes.size() <= String::MaxLength);
 
-    URLCharBuffer bytes;
-    getURLBytes(cfURL, bytes);
-    StringView cfURLString { reinterpret_cast<const LChar*>(bytes.data()), static_cast<unsigned>(bytes.size()) };
+    StringView aString { aBytes.data(), static_cast<unsigned>(aBytes.size()) };
+    StringView bString { b.string() };
 
-    if (!url.hasPath())
-        return StringView { url.string() } == cfURLString;
+    if (!b.hasPath())
+        return aString == bString;
 
-    auto urlWithoutPath = StringView { url.string() }.substring(0, url.pathStart() + 1);
-    return cfURLString.startsWith(urlWithoutPath);
+    unsigned afterPathSeparator = b.pathStart() + 1;
+    return aString.left(afterPathSeparator) == bString.left(afterPathSeparator);
 }
 
 }

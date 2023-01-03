@@ -56,41 +56,16 @@
 #include <gst/video/navigation.h>
 #include <gst/video/video-enumtypes.h>
 
-static void gst_navigation_class_init (GstNavigationInterface * iface);
-
 #define GST_NAVIGATION_MESSAGE_NAME "GstNavigationMessage"
 #define GST_NAVIGATION_QUERY_NAME "GstNavigationQuery"
 #define GST_NAVIGATION_EVENT_NAME "application/x-gst-navigation"
 
 #define WARN_IF_FAIL(exp,msg) if(G_UNLIKELY(!(exp))){g_warning("%s",(msg));}
 
-GType
-gst_navigation_get_type (void)
-{
-  static GType gst_navigation_type = 0;
-
-  if (!gst_navigation_type) {
-    static const GTypeInfo gst_navigation_info = {
-      sizeof (GstNavigationInterface),
-      (GBaseInitFunc) gst_navigation_class_init,
-      NULL,
-      NULL,
-      NULL,
-      NULL,
-      0,
-      0,
-      NULL,
-    };
-
-    gst_navigation_type = g_type_register_static (G_TYPE_INTERFACE,
-        "GstNavigation", &gst_navigation_info, 0);
-  }
-
-  return gst_navigation_type;
-}
+G_DEFINE_INTERFACE (GstNavigation, gst_navigation, 0);
 
 static void
-gst_navigation_class_init (GstNavigationInterface * iface)
+gst_navigation_default_init (GstNavigationInterface * iface)
 {
   /* default virtual functions */
   iface->send_event = NULL;
@@ -158,6 +133,34 @@ gst_navigation_send_mouse_event (GstNavigation * navigation, const char *event,
       gst_structure_new (GST_NAVIGATION_EVENT_NAME, "event", G_TYPE_STRING,
           event, "button", G_TYPE_INT, button, "pointer_x", G_TYPE_DOUBLE, x,
           "pointer_y", G_TYPE_DOUBLE, y, NULL));
+}
+
+/**
+ * gst_navigation_send_mouse_scroll_event:
+ * @navigation: The navigation interface instance
+ * @x: The x coordinate of the mouse event.
+ * @y: The y coordinate of the mouse event.
+ * @delta_x: The delta_x coordinate of the mouse event.
+ * @delta_y: The delta_y coordinate of the mouse event.
+ *
+ * Sends a mouse scroll event to the navigation interface. Mouse event coordinates
+ * are sent relative to the display space of the related output area. This is
+ * usually the size in pixels of the window associated with the element
+ * implementing the #GstNavigation interface.
+ *
+ * Since: 1.18
+ */
+void
+gst_navigation_send_mouse_scroll_event (GstNavigation * navigation,
+    double x, double y, double delta_x, double delta_y)
+{
+  gst_navigation_send_event (navigation,
+      gst_structure_new (GST_NAVIGATION_EVENT_NAME,
+          "event", G_TYPE_STRING, "mouse-scroll",
+          "pointer_x", G_TYPE_DOUBLE, x,
+          "pointer_y", G_TYPE_DOUBLE, y,
+          "delta_pointer_x", G_TYPE_DOUBLE, delta_x,
+          "delta_pointer_y", G_TYPE_DOUBLE, delta_y, NULL));
 }
 
 /**
@@ -730,6 +733,8 @@ gst_navigation_event_get_type (GstEvent * event)
     return GST_NAVIGATION_EVENT_MOUSE_BUTTON_RELEASE;
   else if (g_str_equal (e_type, "mouse-move"))
     return GST_NAVIGATION_EVENT_MOUSE_MOVE;
+  else if (g_str_equal (e_type, "mouse-scroll"))
+    return GST_NAVIGATION_EVENT_MOUSE_SCROLL;
   else if (g_str_equal (e_type, "key-press"))
     return GST_NAVIGATION_EVENT_KEY_PRESS;
   else if (g_str_equal (e_type, "key-release"))
@@ -839,6 +844,50 @@ gst_navigation_event_parse_mouse_move_event (GstEvent * event, gdouble * x,
     ret &= gst_structure_get_double (s, "pointer_y", y);
 
   WARN_IF_FAIL (ret, "Couldn't extract positions from mouse move event");
+
+  return ret;
+}
+
+/**
+ * gst_navigation_event_parse_mouse_scroll_event:
+ * @event: A #GstEvent to inspect.
+ * @x: (out) (optional): Pointer to a gdouble to receive the x coordinate of the
+ *     mouse movement.
+ * @y: (out) (optional): Pointer to a gdouble to receive the y coordinate of the
+ *     mouse movement.
+ * @delta_x: (out) (optional): Pointer to a gdouble to receive the delta_x coordinate of the
+ *     mouse movement.
+ * @delta_y: (out) (optional): Pointer to a gdouble to receive the delta_y coordinate of the
+ *     mouse movement.
+ *
+ * Inspect a #GstNavigation mouse scroll event and extract the coordinates
+ * of the event.
+ *
+ * Returns: TRUE if all coordinates could be extracted, otherwise FALSE.
+ *
+ * Since: 1.18
+ */
+gboolean
+gst_navigation_event_parse_mouse_scroll_event (GstEvent * event,
+    gdouble * x, gdouble * y, gdouble * delta_x, gdouble * delta_y)
+{
+  const GstStructure *s;
+  gboolean ret = TRUE;
+
+  g_return_val_if_fail (GST_NAVIGATION_EVENT_HAS_TYPE (event, MOUSE_SCROLL),
+      FALSE);
+
+  s = gst_event_get_structure (event);
+  if (x)
+    ret &= gst_structure_get_double (s, "pointer_x", x);
+  if (y)
+    ret &= gst_structure_get_double (s, "pointer_y", y);
+  if (delta_x)
+    ret &= gst_structure_get_double (s, "delta_pointer_x", delta_x);
+  if (delta_y)
+    ret &= gst_structure_get_double (s, "delta_pointer_y", delta_y);
+
+  WARN_IF_FAIL (ret, "Couldn't extract positions from mouse scroll event");
 
   return ret;
 }

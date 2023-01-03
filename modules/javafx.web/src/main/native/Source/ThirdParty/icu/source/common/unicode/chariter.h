@@ -13,6 +13,9 @@
 #define CHARITER_H
 
 #include "unicode/utypes.h"
+
+#if U_SHOW_CPLUSPLUS_API
+
 #include "unicode/uobject.h"
 #include "unicode/unistr.h"
 /**
@@ -62,7 +65,7 @@ U_NAMESPACE_BEGIN
  * check for the end of the iteration. When there are no more
  * characters in the text object:
  * <ul>
- * <li>The hasNext() function returns FALSE.</li>
+ * <li>The hasNext() function returns false.</li>
  * <li>nextPostInc() and next32PostInc() return DONE
  *     when one attempts to read beyond the end of the text object.</li>
  * </ul>
@@ -111,7 +114,7 @@ public:
      * character in the same character-storage object
      * @stable ICU 2.0
      */
-    virtual UBool operator==(const ForwardCharacterIterator& that) const = 0;
+    virtual bool operator==(const ForwardCharacterIterator& that) const = 0;
 
     /**
      * Returns true when the iterators refer to different
@@ -123,7 +126,7 @@ public:
      * same text-storage object
      * @stable ICU 2.0
      */
-    inline UBool operator!=(const ForwardCharacterIterator& that) const;
+    inline bool operator!=(const ForwardCharacterIterator& that) const;
 
     /**
      * Generates a hash code for this iterator.
@@ -139,7 +142,7 @@ public:
      * @return a UClassID for this ForwardCharacterIterator
      * @stable ICU 2.0
      */
-    virtual UClassID getDynamicClassID(void) const = 0;
+    virtual UClassID getDynamicClassID(void) const override = 0;
 
     /**
      * Gets the current code unit for returning and advances to the next code unit
@@ -162,11 +165,11 @@ public:
     virtual UChar32       next32PostInc(void) = 0;
 
     /**
-     * Returns FALSE if there are no more code units or code points
+     * Returns false if there are no more code units or code points
      * at or after the current position in the iteration range.
      * This is used with nextPostInc() or next32PostInc() in forward
      * iteration.
-     * @returns FALSE if there are no more code units or code points
+     * @returns false if there are no more code units or code points
      * at or after the current position in the iteration range.
      * @stable ICU 2.0
      */
@@ -377,7 +380,7 @@ public:
      * @return a pointer to a new CharacterIterator
      * @stable ICU 2.0
      */
-    virtual CharacterIterator* clone(void) const = 0;
+    virtual CharacterIterator* clone() const = 0;
 
     /**
      * Sets the iterator to refer to the first code unit in its
@@ -532,12 +535,12 @@ public:
     virtual UChar32       previous32(void) = 0;
 
     /**
-     * Returns FALSE if there are no more code units or code points
+     * Returns false if there are no more code units or code points
      * before the current position in the iteration range.
      * This is used with previous() or previous32() in backward
      * iteration.
-     * @return FALSE if there are no more code units or code points
-     * before the current position in the iteration range, return TRUE otherwise.
+     * @return false if there are no more code units or code points
+     * before the current position in the iteration range, return true otherwise.
      * @stable ICU 2.0
      */
     virtual UBool        hasPrevious() = 0;
@@ -689,7 +692,7 @@ protected:
     int32_t  end;
 };
 
-inline UBool
+inline bool
 ForwardCharacterIterator::operator!=(const ForwardCharacterIterator& that) const {
     return !operator==(that);
 }
@@ -725,4 +728,7 @@ CharacterIterator::getLength(void) const {
 }
 
 U_NAMESPACE_END
+
+#endif /* U_SHOW_CPLUSPLUS_API */
+
 #endif

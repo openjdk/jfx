@@ -48,7 +48,7 @@ public:
     unsigned numTracks(GridTrackSizingDirection) const;
 
     void ensureGridSize(unsigned maximumRowSize, unsigned maximumColumnSize);
-    void insert(RenderBox&, const GridArea&);
+    GridArea insert(RenderBox&, const GridArea&);
 
     // Note that each in flow child of a grid container becomes a grid item. This means that
     // this method will return false for a grid container with only out of flow children.
@@ -61,11 +61,15 @@ public:
 
     const GridCell& cell(unsigned row, unsigned column) const { return m_grid[row][column]; }
 
-    int smallestTrackStart(GridTrackSizingDirection) const;
-    void setSmallestTracksStart(int rowStart, int columnStart);
+    unsigned explicitGridStart(GridTrackSizingDirection) const;
+    void setExplicitGridStart(unsigned rowStart, unsigned columnStart);
 
     unsigned autoRepeatTracks(GridTrackSizingDirection) const;
     void setAutoRepeatTracks(unsigned autoRepeatRows, unsigned autoRepeatColumns);
+
+    void setClampingForSubgrid(unsigned maxRows, unsigned maxColumns);
+
+    void clampAreaToSubgridIfNeeded(GridArea&);
 
     void setAutoRepeatEmptyColumns(std::unique_ptr<OrderedTrackIndexSet>);
     void setAutoRepeatEmptyRows(std::unique_ptr<OrderedTrackIndexSet>);
@@ -86,18 +90,20 @@ private:
 
     OrderIterator m_orderIterator;
 
-    int m_smallestColumnStart { 0 };
-    int m_smallestRowStart { 0 };
+    unsigned m_explicitColumnStart { 0 };
+    unsigned m_explicitRowStart { 0 };
 
     unsigned m_autoRepeatColumns { 0 };
     unsigned m_autoRepeatRows { 0 };
+
+    unsigned m_maxColumns { 0 };
+    unsigned m_maxRows { 0 };
 
     bool m_needsItemsPlacement { true };
 
     GridAsMatrix m_grid;
 
     HashMap<const RenderBox*, GridArea> m_gridItemArea;
-    HashMap<const RenderBox*, size_t> m_gridItemsIndexesMap;
 
     std::unique_ptr<OrderedTrackIndexSet> m_autoRepeatEmptyColumns;
     std::unique_ptr<OrderedTrackIndexSet> m_autoRepeatEmptyRows;
@@ -110,9 +116,16 @@ public:
     // GridIterator(m_grid, ForColumns, 1) will walk over the rows of the 2nd column.
     GridIterator(const Grid&, GridTrackSizingDirection, unsigned fixedTrackIndex, unsigned varyingTrackIndex = 0);
 
+    static GridIterator createForSubgrid(const RenderGrid& subgrid, const GridIterator& outer);
+
     RenderBox* nextGridItem();
     bool isEmptyAreaEnough(unsigned rowSpan, unsigned columnSpan) const;
     std::unique_ptr<GridArea> nextEmptyGridArea(unsigned fixedTrackSpan, unsigned varyingTrackSpan);
+
+    GridTrackSizingDirection direction() const
+    {
+        return m_direction;
+    }
 
 private:
     const GridAsMatrix& m_grid;

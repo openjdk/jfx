@@ -25,7 +25,7 @@
 
 #pragma once
 
-#if ENABLE(VIDEO_TRACK)
+#if ENABLE(VIDEO)
 
 #include "Element.h"
 #include "JSDOMBinding.h"
@@ -34,15 +34,8 @@
 
 namespace WebCore {
 
-JSC::JSValue toJS(JSC::ExecState*, JSDOMGlobalObject*, TrackBase&);
-
-inline void* root(TrackBase* track)
-{
-    if (track->element())
-        return root(track->element());
-    return track;
-}
+JSC::JSValue toJS(JSC::JSGlobalObject*, JSDOMGlobalObject*, TrackBase&);
 
 } // namespace WebCore
 
-#endif // ENABLE(VIDEO_TRACK)
+#endif // ENABLE(VIDEO)

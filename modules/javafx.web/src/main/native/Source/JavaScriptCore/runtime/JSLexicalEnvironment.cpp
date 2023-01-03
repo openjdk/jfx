@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,21 +30,22 @@
 #include "JSLexicalEnvironment.h"
 
 #include "HeapAnalyzer.h"
-#include "Interpreter.h"
-#include "JSFunction.h"
 #include "JSCInlines.h"
 
 namespace JSC {
 
 const ClassInfo JSLexicalEnvironment::s_info = { "JSLexicalEnvironment", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSLexicalEnvironment) };
 
-void JSLexicalEnvironment::visitChildren(JSCell* cell, SlotVisitor& visitor)
+template<typename Visitor>
+void JSLexicalEnvironment::visitChildrenImpl(JSCell* cell, Visitor& visitor)
 {
     auto* thisObject = jsCast<JSLexicalEnvironment*>(cell);
     ASSERT_GC_OBJECT_INHERITS(thisObject, info());
     Base::visitChildren(thisObject, visitor);
     visitor.appendValuesHidden(thisObject->variables(), thisObject->symbolTable()->scopeSize());
 }
+
+DEFINE_VISIT_CHILDREN(JSLexicalEnvironment);
 
 void JSLexicalEnvironment::analyzeHeap(JSCell* cell, HeapAnalyzer& analyzer)
 {
@@ -66,16 +67,16 @@ void JSLexicalEnvironment::analyzeHeap(JSCell* cell, HeapAnalyzer& analyzer)
     }
 }
 
-void JSLexicalEnvironment::getOwnNonIndexPropertyNames(JSObject* object, ExecState* exec, PropertyNameArray& propertyNames, EnumerationMode mode)
+void JSLexicalEnvironment::getOwnSpecialPropertyNames(JSObject* object, JSGlobalObject* globalObject, PropertyNameArray& propertyNames, DontEnumPropertiesMode mode)
 {
     JSLexicalEnvironment* thisObject = jsCast<JSLexicalEnvironment*>(object);
 
     {
         ConcurrentJSLocker locker(thisObject->symbolTable()->m_lock);
         SymbolTable::Map::iterator end = thisObject->symbolTable()->end(locker);
-        VM& vm = exec->vm();
+        VM& vm = globalObject->vm();
         for (SymbolTable::Map::iterator it = thisObject->symbolTable()->begin(locker); it != end; ++it) {
-            if (it->value.getAttributes() & PropertyAttribute::DontEnum && !mode.includeDontEnumProperties())
+            if (mode == DontEnumPropertiesMode::Exclude && it->value.isDontEnum())
                 continue;
             if (!thisObject->isValidScopeOffset(it->value.scopeOffset()))
                 continue;
@@ -84,18 +85,16 @@ void JSLexicalEnvironment::getOwnNonIndexPropertyNames(JSObject* object, ExecSta
             propertyNames.add(Identifier::fromUid(vm, it->key.get()));
         }
     }
-    // Skip the JSSymbolTableObject's implementation of getOwnNonIndexPropertyNames
-    JSObject::getOwnNonIndexPropertyNames(thisObject, exec, propertyNames, mode);
 }
 
-bool JSLexicalEnvironment::getOwnPropertySlot(JSObject* object, ExecState* exec, PropertyName propertyName, PropertySlot& slot)
+bool JSLexicalEnvironment::getOwnPropertySlot(JSObject* object, JSGlobalObject* globalObject, PropertyName propertyName, PropertySlot& slot)
 {
     JSLexicalEnvironment* thisObject = jsCast<JSLexicalEnvironment*>(object);
 
     if (symbolTableGet(thisObject, propertyName, slot))
         return true;
 
-    VM& vm = exec->vm();
+    VM& vm = globalObject->vm();
     unsigned attributes;
     if (JSValue value = thisObject->getDirect(vm, propertyName, attributes)) {
         slot.setValue(thisObject, attributes, value);
@@ -109,7 +108,7 @@ bool JSLexicalEnvironment::getOwnPropertySlot(JSObject* object, ExecState* exec,
     return false;
 }
 
-bool JSLexicalEnvironment::put(JSCell* cell, ExecState* exec, PropertyName propertyName, JSValue value, PutPropertySlot& slot)
+bool JSLexicalEnvironment::put(JSCell* cell, JSGlobalObject* globalObject, PropertyName propertyName, JSValue value, PutPropertySlot& slot)
 {
     JSLexicalEnvironment* thisObject = jsCast<JSLexicalEnvironment*>(cell);
     ASSERT(!Heap::heap(value) || Heap::heap(value) == Heap::heap(thisObject));
@@ -117,23 +116,23 @@ bool JSLexicalEnvironment::put(JSCell* cell, ExecState* exec, PropertyName prope
     bool shouldThrowReadOnlyError = slot.isStrictMode() || thisObject->isLexicalScope();
     bool ignoreReadOnlyErrors = false;
     bool putResult = false;
-    if (symbolTablePutInvalidateWatchpointSet(thisObject, exec, propertyName, value, shouldThrowReadOnlyError, ignoreReadOnlyErrors, putResult))
+    if (symbolTablePutInvalidateWatchpointSet(thisObject, globalObject, propertyName, value, shouldThrowReadOnlyError, ignoreReadOnlyErrors, putResult))
         return putResult;
 
     // We don't call through to JSObject because __proto__ and getter/setter
     // properties are non-standard extensions that other implementations do not
     // expose in the lexicalEnvironment object.
-    ASSERT(!thisObject->hasGetterSetterProperties(exec->vm()));
-    return thisObject->putOwnDataProperty(exec->vm(), propertyName, value, slot);
+    ASSERT(!thisObject->hasGetterSetterProperties(globalObject->vm()));
+    return thisObject->putOwnDataProperty(globalObject->vm(), propertyName, value, slot);
 }
 
-bool JSLexicalEnvironment::deleteProperty(JSCell* cell, ExecState* exec, PropertyName propertyName)
+bool JSLexicalEnvironment::deleteProperty(JSCell* cell, JSGlobalObject* globalObject, PropertyName propertyName, DeletePropertySlot& slot)
 {
-    VM& vm = exec->vm();
+    VM& vm = globalObject->vm();
     if (propertyName == vm.propertyNames->arguments)
         return false;
 
-    return Base::deleteProperty(cell, exec, propertyName);
+    return Base::deleteProperty(cell, globalObject, propertyName, slot);
 }
 
 } // namespace JSC

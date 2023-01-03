@@ -35,21 +35,25 @@
 
 namespace WebCore {
 
-FlexItem::FlexItem(RenderBox& box, LayoutUnit flexBaseContentSize, LayoutUnit hypotheticalMainContentSize, LayoutUnit mainAxisBorderAndPadding, LayoutUnit mainAxisMargin)
+FlexItem::FlexItem(RenderBox& box, LayoutUnit flexBaseContentSize, LayoutUnit mainAxisBorderAndPadding, LayoutUnit mainAxisMargin, std::pair<LayoutUnit, LayoutUnit> minMaxSizes, bool everHadLayout)
     : box(box)
     , flexBaseContentSize(flexBaseContentSize)
-    , hypotheticalMainContentSize(hypotheticalMainContentSize)
     , mainAxisBorderAndPadding(mainAxisBorderAndPadding)
     , mainAxisMargin(mainAxisMargin)
+    , minMaxSizes(minMaxSizes)
+    , hypotheticalMainContentSize(constrainSizeByMinMax(flexBaseContentSize))
     , frozen(false)
+    , everHadLayout(everHadLayout)
 {
     ASSERT(!box.isOutOfFlowPositioned());
 }
 
-FlexLayoutAlgorithm::FlexLayoutAlgorithm(const RenderStyle& style, LayoutUnit lineBreakLength, const Vector<FlexItem>& allItems)
+FlexLayoutAlgorithm::FlexLayoutAlgorithm(const RenderStyle& style, LayoutUnit lineBreakLength, const Vector<FlexItem>& allItems, LayoutUnit gapBetweenItems, LayoutUnit gapBetweenLines)
     : m_style(style)
     , m_lineBreakLength(lineBreakLength)
     , m_allItems(allItems)
+    , m_gapBetweenItems(gapBetweenItems)
+    , m_gapBetweenLines(gapBetweenLines)
 {
 }
 
@@ -60,23 +64,33 @@ bool FlexLayoutAlgorithm::computeNextFlexLine(size_t& nextIndex, Vector<FlexItem
     totalFlexGrow = totalFlexShrink = totalWeightedFlexShrink = 0;
     sumHypotheticalMainSize = 0_lu;
 
-    bool lineHasInFlowItem = false;
-
     for (; nextIndex < m_allItems.size(); ++nextIndex) {
         const auto& flexItem = m_allItems[nextIndex];
         ASSERT(!flexItem.box.isOutOfFlowPositioned());
-        if (isMultiline() && sumHypotheticalMainSize + flexItem.hypotheticalMainAxisMarginBoxSize() > m_lineBreakLength && lineHasInFlowItem)
+        if (isMultiline() && sumHypotheticalMainSize + flexItem.hypotheticalMainAxisMarginBoxSize() > m_lineBreakLength && !lineItems.isEmpty())
             break;
         lineItems.append(flexItem);
-        lineHasInFlowItem = true;
-        sumFlexBaseSize += flexItem.flexBaseMarginBoxSize();
+        sumFlexBaseSize += flexItem.flexBaseMarginBoxSize() + m_gapBetweenItems;
         totalFlexGrow += flexItem.box.style().flexGrow();
         totalFlexShrink += flexItem.box.style().flexShrink();
         totalWeightedFlexShrink += flexItem.box.style().flexShrink() * flexItem.flexBaseContentSize;
-        sumHypotheticalMainSize += flexItem.hypotheticalMainAxisMarginBoxSize();
+        sumHypotheticalMainSize += flexItem.hypotheticalMainAxisMarginBoxSize() + m_gapBetweenItems;
     }
+
+    if (!lineItems.isEmpty()) {
+        // We added a gap after every item but there shouldn't be one after the last item, so subtract it here. Note that
+        // sums might be negative here due to negative margins in flex items.
+        sumHypotheticalMainSize -= m_gapBetweenItems;
+        sumFlexBaseSize -= m_gapBetweenItems;
+    }
+
     ASSERT(lineItems.size() > 0 || nextIndex == m_allItems.size());
     return lineItems.size() > 0;
+}
+
+LayoutUnit FlexItem::constrainSizeByMinMax(const LayoutUnit size) const
+{
+    return std::max(minMaxSizes.first, std::min(size, minMaxSizes.second));
 }
 
 } // namespace WebCore

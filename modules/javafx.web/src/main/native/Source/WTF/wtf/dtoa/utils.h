@@ -192,7 +192,7 @@ inline int StrLength(const char* string) {
 template <typename T>
 class BufferReference {
  public:
-  BufferReference() : start_(NULL), length_(0) {}
+  BufferReference() : start_(nullptr), length_(0) {}
   BufferReference(T* data, int len) : start_(data), length_(len) {
     ASSERT(len == 0 || (len > 0 && data != NULL));
   }
@@ -271,7 +271,7 @@ class StringBuilder {
   // builder. The input string must have enough characters.
   void AddSubstring(const char* s, int n) {
     ASSERT(!is_finalized() && position_ + n < buffer_.length());
-    ASSERT_WITH_SECURITY_IMPLICATION(static_cast<size_t>(n) <= strlen(s));
+    ASSERT_WITH_SECURITY_IMPLICATION(static_cast<size_t>(n) <= strnlen(s, n));
     memmove(&buffer_[position_], s, n * kCharSize);
     position_ += n;
   }

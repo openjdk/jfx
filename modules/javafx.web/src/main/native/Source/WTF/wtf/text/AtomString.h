@@ -32,8 +32,6 @@
 
 namespace WTF {
 
-struct AtomStringHash;
-
 class AtomString final {
     WTF_MAKE_FAST_ALLOCATED;
 public:
@@ -73,6 +71,11 @@ public:
     {
         COMPILE_ASSERT(characterCount > 1, AtomStringFromLiteralNotEmpty);
         COMPILE_ASSERT((characterCount - 1 <= ((unsigned(~0) - sizeof(StringImpl)) / sizeof(LChar))), AtomStringFromLiteralCannotOverflow);
+    }
+
+    AtomString(ASCIILiteral literal)
+        : m_string(AtomStringImpl::addLiteral(literal.characters(), literal.length()))
+    {
     }
 
     // We have to declare the copy constructor and copy assignment operator as well, otherwise
@@ -134,10 +137,8 @@ public:
     WTF_EXPORT_PRIVATE AtomString convertToASCIILowercase() const;
     WTF_EXPORT_PRIVATE AtomString convertToASCIIUppercase() const;
 
-    int toInt(bool* ok = nullptr) const { return m_string.toInt(ok); }
     double toDouble(bool* ok = nullptr) const { return m_string.toDouble(ok); }
     float toFloat(bool* ok = nullptr) const { return m_string.toFloat(ok); }
-    bool percentage(int& p) const { return m_string.percentage(p); }
 
     bool isNull() const { return m_string.isNull(); }
     bool isEmpty() const { return m_string.isEmpty(); }
@@ -151,7 +152,7 @@ public:
     operator NSString *() const { return m_string; }
 #endif
 
-#if OS(WINDOWS) && U_ICU_VERSION_MAJOR_NUM >= 59 && !PLATFORM(JAVA)
+#if OS(WINDOWS) && !PLATFORM(JAVA)
     AtomString(const wchar_t* characters, unsigned length)
         : AtomString(ucharFrom(characters), length) { }
 
@@ -168,9 +169,6 @@ public:
 #endif
 
 private:
-    // The explicit constructors with AtomString::ConstructFromLiteral must be used for literals.
-    AtomString(ASCIILiteral);
-
     enum class CaseConvertType { Upper, Lower };
     template<CaseConvertType> AtomString convertASCIICase() const;
 
@@ -288,13 +286,15 @@ inline AtomString::AtomString(NSString *string)
 
 #endif
 
+// nullAtom and emptyAtom are special AtomString. They can be used from any threads since their StringImpls are not actually registered into AtomStringTable.
+extern WTF_EXPORT_PRIVATE LazyNeverDestroyed<const AtomString> nullAtomData;
+extern WTF_EXPORT_PRIVATE LazyNeverDestroyed<const AtomString> emptyAtomData;
+
 // Define external global variables for the commonly used atom strings.
 // These are only usable from the main thread.
-extern WTF_EXPORT_PRIVATE LazyNeverDestroyed<AtomString> nullAtomData;
-extern WTF_EXPORT_PRIVATE LazyNeverDestroyed<AtomString> emptyAtomData;
-extern WTF_EXPORT_PRIVATE LazyNeverDestroyed<AtomString> starAtomData;
-extern WTF_EXPORT_PRIVATE LazyNeverDestroyed<AtomString> xmlAtomData;
-extern WTF_EXPORT_PRIVATE LazyNeverDestroyed<AtomString> xmlnsAtomData;
+extern WTF_EXPORT_PRIVATE MainThreadLazyNeverDestroyed<const AtomString> starAtomData;
+extern WTF_EXPORT_PRIVATE MainThreadLazyNeverDestroyed<const AtomString> xmlAtomData;
+extern WTF_EXPORT_PRIVATE MainThreadLazyNeverDestroyed<const AtomString> xmlnsAtomData;
 
 inline const AtomString& nullAtom() { return nullAtomData.get(); }
 inline const AtomString& emptyAtom() { return emptyAtomData.get(); }
@@ -321,10 +321,8 @@ inline AtomString AtomString::fromUTF8(const char* characters)
 }
 
 // AtomStringHash is the default hash for AtomString
-template<typename T> struct DefaultHash;
-template<> struct DefaultHash<AtomString> {
-    typedef AtomStringHash Hash;
-};
+template<typename> struct DefaultHash;
+template<> struct DefaultHash<AtomString>;
 
 template<unsigned length> inline bool equalLettersIgnoringASCIICase(const AtomString& string, const char (&lowercaseLetters)[length])
 {

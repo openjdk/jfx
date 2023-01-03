@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -143,7 +143,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLImageElementImpl_setIsMapImpl
 JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLImageElementImpl_getLongDescImpl(JNIEnv* env, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<String>(env, IMPL->getURLAttribute(WebCore::HTMLNames::longdescAttr));
+    return JavaReturn<String>(env, IMPL->getURLAttribute(WebCore::HTMLNames::longdescAttr).string());
 }
 
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLImageElementImpl_setLongDescImpl(JNIEnv* env, jclass, jlong peer, jstring value)
@@ -155,7 +155,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLImageElementImpl_setLongDescI
 JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLImageElementImpl_getSrcImpl(JNIEnv* env, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<String>(env, IMPL->getURLAttribute(WebCore::HTMLNames::srcAttr));
+    return JavaReturn<String>(env, IMPL->getURLAttribute(WebCore::HTMLNames::srcAttr).string());
 }
 
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLImageElementImpl_setSrcImpl(JNIEnv* env, jclass, jlong peer, jstring value)
@@ -239,7 +239,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_HTMLImageElementImpl_getCompl
 JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLImageElementImpl_getLowsrcImpl(JNIEnv* env, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<String>(env, IMPL->getURLAttribute(WebCore::HTMLNames::lowsrcAttr));
+    return JavaReturn<String>(env, IMPL->getURLAttribute(WebCore::HTMLNames::lowsrcAttr).string());
 }
 
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLImageElementImpl_setLowsrcImpl(JNIEnv* env, jclass, jlong peer, jstring value)

@@ -27,18 +27,118 @@
 
 #if ENABLE(APPLE_PAY)
 
-#include "ApplePaySessionPaymentRequest.h"
+#include "ApplePayPaymentTiming.h"
+#include "ApplePayRecurringPaymentDateUnit.h"
+#include <optional>
+#include <wtf/WallTime.h>
+#include <wtf/text/WTFString.h>
+
+#if USE(APPLE_INTERNAL_SDK)
+#include <WebKitAdditions/ApplePayLineItemAdditions.h>
+#endif
 
 namespace WebCore {
 
-struct ApplePayLineItem {
-    using Type = ApplePaySessionPaymentRequest::LineItem::Type;
+struct ApplePayLineItem final {
+    enum class Type : bool {
+        Pending,
+        Final,
+    };
 
     Type type { Type::Final };
     String label;
     String amount;
+
+    ApplePayPaymentTiming paymentTiming { ApplePayPaymentTiming::Immediate };
+
+#if ENABLE(APPLE_PAY_RECURRING_LINE_ITEM)
+    WallTime recurringPaymentStartDate { WallTime::nan() };
+    ApplePayRecurringPaymentDateUnit recurringPaymentIntervalUnit { ApplePayRecurringPaymentDateUnit::Month };
+    unsigned recurringPaymentIntervalCount = 1;
+    WallTime recurringPaymentEndDate { WallTime::nan() };
+#endif
+
+#if ENABLE(APPLE_PAY_DEFERRED_LINE_ITEM)
+    WallTime deferredPaymentDate { WallTime::nan() };
+#endif
+
+#if defined(ApplePayLineItemAdditions_members)
+    ApplePayLineItemAdditions_members
+#endif
+
+    template<class Encoder> void encode(Encoder&) const;
+    template<class Decoder> static std::optional<ApplePayLineItem> decode(Decoder&);
 };
 
+template<class Encoder>
+void ApplePayLineItem::encode(Encoder& encoder) const
+{
+    encoder << type;
+    encoder << label;
+    encoder << amount;
+    encoder << paymentTiming;
+#if ENABLE(APPLE_PAY_RECURRING_LINE_ITEM)
+    encoder << recurringPaymentStartDate;
+    encoder << recurringPaymentIntervalUnit;
+    encoder << recurringPaymentIntervalCount;
+    encoder << recurringPaymentEndDate;
+#endif
+#if ENABLE(APPLE_PAY_DEFERRED_LINE_ITEM)
+    encoder << deferredPaymentDate;
+#endif
+#if defined(ApplePayLineItemAdditions_encode)
+    ApplePayLineItemAdditions_encode
+#endif
 }
+
+template<class Decoder>
+std::optional<ApplePayLineItem> ApplePayLineItem::decode(Decoder& decoder)
+{
+#define DECODE(name, type) \
+    std::optional<type> name; \
+    decoder >> name; \
+    if (!name) \
+        return std::nullopt; \
+
+    DECODE(type, Type)
+    DECODE(label, String)
+    DECODE(amount, String)
+    DECODE(paymentTiming, ApplePayPaymentTiming)
+#if ENABLE(APPLE_PAY_RECURRING_LINE_ITEM)
+    DECODE(recurringPaymentStartDate, WallTime)
+    DECODE(recurringPaymentIntervalUnit, ApplePayRecurringPaymentDateUnit)
+    DECODE(recurringPaymentIntervalCount, unsigned)
+    DECODE(recurringPaymentEndDate, WallTime)
+#endif
+#if ENABLE(APPLE_PAY_DEFERRED_LINE_ITEM)
+    DECODE(deferredPaymentDate, WallTime)
+#endif
+#if defined(ApplePayLineItemAdditions_decode_members)
+    ApplePayLineItemAdditions_decode_members
+#endif
+
+#undef DECODE
+
+    return { {
+        WTFMove(*type),
+        WTFMove(*label),
+        WTFMove(*amount),
+        WTFMove(*paymentTiming),
+#if ENABLE(APPLE_PAY_RECURRING_LINE_ITEM)
+        WTFMove(*recurringPaymentStartDate),
+        WTFMove(*recurringPaymentIntervalUnit),
+        WTFMove(*recurringPaymentIntervalCount),
+        WTFMove(*recurringPaymentEndDate),
+#endif
+#if ENABLE(APPLE_PAY_DEFERRED_LINE_ITEM)
+        WTFMove(*deferredPaymentDate),
+#endif
+#if defined(ApplePayLineItemAdditions_decode_return)
+    ApplePayLineItemAdditions_decode_return
+#endif
+    } };
+}
+
+} // namespace WebCore
 
 #endif

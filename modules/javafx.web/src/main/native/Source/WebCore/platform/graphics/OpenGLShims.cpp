@@ -17,7 +17,7 @@
  */
 
 #include "config.h"
-#if ENABLE(GRAPHICS_CONTEXT_3D)
+#if ENABLE(WEBGL)
 
 #define DISABLE_SHIMS
 #include "OpenGLShims.h"
@@ -143,6 +143,7 @@ bool initializeOpenGLShims()
     ASSIGN_FUNCTION_TABLE_ENTRY(glDrawBuffers, success);
     ASSIGN_FUNCTION_TABLE_ENTRY(glDrawElementsInstanced, success);
     ASSIGN_FUNCTION_TABLE_ENTRY(glEnableVertexAttribArray, success);
+    ASSIGN_FUNCTION_TABLE_ENTRY(glEGLImageTargetTexture2DOES, success);
     ASSIGN_FUNCTION_TABLE_ENTRY(glFramebufferRenderbuffer, success);
     ASSIGN_FUNCTION_TABLE_ENTRY(glFramebufferTexture2D, success);
     ASSIGN_FUNCTION_TABLE_ENTRY(glGenBuffers, success);
@@ -162,6 +163,7 @@ bool initializeOpenGLShims()
     ASSIGN_FUNCTION_TABLE_ENTRY(glGetShaderInfoLog, success);
     ASSIGN_FUNCTION_TABLE_ENTRY(glGetShaderiv, success);
     ASSIGN_FUNCTION_TABLE_ENTRY(glGetShaderSource, success);
+    ASSIGN_FUNCTION_TABLE_ENTRY(glGetString, success);
     // glGetStringi is only available on OpenGL or GLES versions >= 3.0.
     // Add it with _EXT so it doesn't cause an initialization failure on lower versions.
     ASSIGN_FUNCTION_TABLE_ENTRY_EXT(glGetStringi);
@@ -229,4 +231,4 @@ bool initializeOpenGLShims()
 
 } // namespace WebCore
 
-#endif // ENABLE(GRAPHICS_CONTEXT_3D)
+#endif // ENABLE(WEBGL)

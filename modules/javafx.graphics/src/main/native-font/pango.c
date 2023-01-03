@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -396,6 +396,13 @@ JNIEXPORT jlong JNICALL OS_NATIVE(g_1utf8_1pointer_1to_1offset)
 {
     if (!str) return 0;
     return (jlong)g_utf8_pointer_to_offset((const gchar *)str, (const gchar *)pos);
+}
+
+JNIEXPORT jlong JNICALL OS_NATIVE(g_1utf8_1strlen)
+    (JNIEnv *env, jclass that, jlong str, jlong pos)
+{
+    if (!str) return 0;
+    return (jlong)g_utf8_strlen((const gchar *)str, (const gchar *)pos);
 }
 
 JNIEXPORT jlong JNICALL OS_NATIVE(g_1utf16_1to_1utf8)

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -54,12 +54,13 @@ class PrintLogger extends Logger {
      * the threshold, then it is logged, otherwise an abbreviated representation including
      * only the time of the pulse is logged.
      */
-    private static long THRESHOLD = (long)
-            AccessController.doPrivileged((PrivilegedAction<Integer>) () -> Integer.getInteger("javafx.pulseLogger.threshold", 17));
+    @SuppressWarnings("removal")
+    private static long THRESHOLD = AccessController.doPrivileged((PrivilegedAction<Integer>) () -> Integer.getInteger("javafx.pulseLogger.threshold", 17));
 
     /**
      * Optionally exit after a given number of pulses
      */
+    @SuppressWarnings("removal")
     private static final int EXIT_ON_PULSE =
             AccessController.doPrivileged((PrivilegedAction<Integer>) () -> Integer.getInteger("javafx.pulseLogger.exitOnPulse", 0));
 

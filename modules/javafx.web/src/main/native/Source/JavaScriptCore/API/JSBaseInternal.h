@@ -29,9 +29,9 @@
 #include <JavaScriptCore/WebKitAvailability.h>
 
 namespace JSC {
+class CallFrame;
 class JSLockHolder;
-class ExecState;
 class SourceCode;
 }
 
-extern "C" JSValueRef JSEvaluateScriptInternal(const JSC::JSLockHolder&, JSC::ExecState*, JSContextRef, JSObjectRef thisObject, const JSC::SourceCode&, JSValueRef* exception);
+extern "C" JSValueRef JSEvaluateScriptInternal(const JSC::JSLockHolder&, JSContextRef, JSObjectRef thisObject, const JSC::SourceCode&, JSValueRef* exception);

@@ -26,71 +26,39 @@
 
 #pragma once
 
-#include "CSSValue.h"
-#include "ComputedEffectTiming.h"
 #include "RenderStyle.h"
 #include "WebAnimation.h"
 #include <wtf/Forward.h>
-#include <wtf/HashMap.h>
-#include <wtf/ListHashSet.h>
 #include <wtf/Markable.h>
-#include <wtf/Optional.h>
 #include <wtf/Ref.h>
 #include <wtf/RefCounted.h>
 #include <wtf/Seconds.h>
 
 namespace WebCore {
 
-class CSSAnimation;
-class CSSTransition;
-class DeclarativeAnimation;
-class Element;
-
-class AnimationTimeline : public RefCounted<AnimationTimeline> {
+class AnimationTimeline : public RefCounted<AnimationTimeline>, public CanMakeWeakPtr<AnimationTimeline> {
 public:
+    virtual ~AnimationTimeline();
+
     virtual bool isDocumentTimeline() const { return false; }
+
+    const AnimationCollection& relevantAnimations() const { return m_animations; }
 
     void forgetAnimation(WebAnimation*);
     virtual void animationTimingDidChange(WebAnimation&);
     virtual void removeAnimation(WebAnimation&);
 
-    Optional<double> bindingsCurrentTime();
-    virtual Optional<Seconds> currentTime() { return m_currentTime; }
-
-    enum class Ordering : uint8_t { Sorted, Unsorted };
-    Vector<RefPtr<WebAnimation>> animationsForElement(Element&, Ordering ordering = Ordering::Unsorted) const;
-    void elementWasRemoved(Element&);
-    void removeAnimationsForElement(Element&);
-    void cancelDeclarativeAnimationsForElement(Element&);
-    virtual void animationWasAddedToElement(WebAnimation&, Element&);
-    virtual void animationWasRemovedFromElement(WebAnimation&, Element&);
-    void removeDeclarativeAnimationFromListsForOwningElement(WebAnimation&, Element&);
-
-    void updateCSSAnimationsForElement(Element&, const RenderStyle* currentStyle, const RenderStyle& afterChangeStyle);
-    void updateCSSTransitionsForElement(Element&, const RenderStyle& currentStyle, const RenderStyle& afterChangeStyle);
-
-    using ElementToAnimationsMap = HashMap<Element*, ListHashSet<RefPtr<WebAnimation>>>;
-    using PropertyToTransitionMap = HashMap<CSSPropertyID, RefPtr<CSSTransition>>;
-
-    virtual ~AnimationTimeline();
+    std::optional<double> bindingsCurrentTime();
+    virtual std::optional<Seconds> currentTime() { return m_currentTime; }
 
 protected:
     explicit AnimationTimeline();
 
     Vector<WeakPtr<WebAnimation>> m_allAnimations;
-    ListHashSet<RefPtr<WebAnimation>> m_animations;
-    HashMap<Element*, PropertyToTransitionMap> m_elementToCompletedCSSTransitionByCSSPropertyID;
+    AnimationCollection m_animations;
 
 private:
-    RefPtr<WebAnimation> cssAnimationForElementAndProperty(Element&, CSSPropertyID);
-    PropertyToTransitionMap& ensureRunningTransitionsByProperty(Element&);
-    void cancelDeclarativeAnimation(DeclarativeAnimation&);
-
-    ElementToAnimationsMap m_elementToAnimationsMap;
-    ElementToAnimationsMap m_elementToCSSAnimationsMap;
-    ElementToAnimationsMap m_elementToCSSTransitionsMap;
-    HashMap<Element*, HashMap<String, RefPtr<CSSAnimation>>> m_elementToCSSAnimationByName;
-    HashMap<Element*, PropertyToTransitionMap> m_elementToRunningCSSTransitionByCSSPropertyID;
+    void updateGlobalPosition(WebAnimation&);
 
     Markable<Seconds, Seconds::MarkableTraits> m_currentTime;
 };

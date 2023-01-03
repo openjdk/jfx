@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 # Copyright (c) 2014, 2015 Apple Inc. All rights reserved.
 # Copyright (c) 2014 University of Washington. All rights reserved.
@@ -127,7 +127,8 @@ class FunctionExecutable;
 
             lines.append("""extern const char* const s_%(codeName)s;
 extern const int s_%(codeName)sLength;
-extern const JSC::ConstructAbility s_%(codeName)sConstructAbility;""" % function_args)
+extern const JSC::ConstructAbility s_%(codeName)sConstructAbility;
+extern const JSC::ConstructorKind s_%(codeName)sConstructorKind;""" % function_args)
 
         return lines
 

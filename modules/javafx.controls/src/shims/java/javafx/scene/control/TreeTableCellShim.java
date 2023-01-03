@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2015, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -31,8 +31,12 @@ public class TreeTableCellShim<S,T> extends TreeTableCell<S,T> {
         super.updateItem(item, empty);
     }
 
-    public static void set_lockItemOnEdit(TreeTableCell tc, boolean b) {
+    public static <S, T> void set_lockItemOnEdit(TreeTableCell<S, T> tc, boolean b) {
         tc.lockItemOnEdit = b;
+    }
+
+    public static <S, T> TreeTablePosition<S, T> getEditingCellAtStartEdit(TreeTableCell<S, T> cell) {
+        return cell.getEditingCellAtStartEdit();
     }
 
 }

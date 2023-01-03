@@ -27,7 +27,9 @@
 #include "config.h"
 #include "RenderSVGEllipse.h"
 
+#include "LegacyRenderSVGShapeInlines.h"
 #include "SVGCircleElement.h"
+#include "SVGElementTypeHelpers.h"
 #include "SVGEllipseElement.h"
 #include <wtf/IsoMallocInlines.h>
 
@@ -36,7 +38,7 @@ namespace WebCore {
 WTF_MAKE_ISO_ALLOCATED_IMPL(RenderSVGEllipse);
 
 RenderSVGEllipse::RenderSVGEllipse(SVGGraphicsElement& element, RenderStyle&& style)
-    : RenderSVGShape(element, WTFMove(style))
+    : LegacyRenderSVGShape(element, WTFMove(style))
     , m_usePathFallback(false)
 {
 }
@@ -54,20 +56,18 @@ void RenderSVGEllipse::updateShapeFromElement()
 
     calculateRadiiAndCenter();
 
-    // Element is invalid if either dimension is negative.
-    if (m_radii.width() < 0 || m_radii.height() < 0)
+    // Spec: "A negative value is illegal. A value of zero disables rendering of the element."
+    if (m_radii.isEmpty())
         return;
 
-    // Spec: "A value of zero disables rendering of the element."
-    if (!m_radii.isEmpty()) {
-        if (hasNonScalingStroke()) {
-            // Fallback to RenderSVGShape if shape has a non-scaling stroke.
-            RenderSVGShape::updateShapeFromElement();
-            m_usePathFallback = true;
-            return;
-        }
-        m_usePathFallback = false;
+    if (hasNonScalingStroke()) {
+        // Fallback to LegacyRenderSVGShape if shape has a non-scaling stroke.
+        LegacyRenderSVGShape::updateShapeFromElement();
+        m_usePathFallback = true;
+        return;
     }
+
+    m_usePathFallback = false;
 
     m_fillBoundingBox = FloatRect(m_center.x() - m_radii.width(), m_center.y() - m_radii.height(), 2 * m_radii.width(), 2 * m_radii.height());
     m_strokeBoundingBox = m_fillBoundingBox;
@@ -79,8 +79,8 @@ void RenderSVGEllipse::calculateRadiiAndCenter()
 {
     SVGLengthContext lengthContext(&graphicsElement());
     m_center = FloatPoint(
-        lengthContext.valueForLength(style().svgStyle().cx(), LengthModeWidth),
-        lengthContext.valueForLength(style().svgStyle().cy(), LengthModeHeight));
+        lengthContext.valueForLength(style().svgStyle().cx(), SVGLengthMode::Width),
+        lengthContext.valueForLength(style().svgStyle().cy(), SVGLengthMode::Height));
     if (is<SVGCircleElement>(graphicsElement())) {
         float radius = lengthContext.valueForLength(style().svgStyle().r());
         m_radii = FloatSize(radius, radius);
@@ -88,15 +88,18 @@ void RenderSVGEllipse::calculateRadiiAndCenter()
     }
 
     ASSERT(is<SVGEllipseElement>(graphicsElement()));
+
+    Length rx = style().svgStyle().rx();
+    Length ry = style().svgStyle().ry();
     m_radii = FloatSize(
-        lengthContext.valueForLength(style().svgStyle().rx(), LengthModeWidth),
-        lengthContext.valueForLength(style().svgStyle().ry(), LengthModeHeight));
+        lengthContext.valueForLength(rx.isAuto() ? ry : rx, SVGLengthMode::Width),
+        lengthContext.valueForLength(ry.isAuto() ? rx : ry, SVGLengthMode::Height));
 }
 
 void RenderSVGEllipse::fillShape(GraphicsContext& context) const
 {
     if (m_usePathFallback) {
-        RenderSVGShape::fillShape(context);
+        LegacyRenderSVGShape::fillShape(context);
         return;
     }
     context.fillEllipse(m_fillBoundingBox);
@@ -107,7 +110,7 @@ void RenderSVGEllipse::strokeShape(GraphicsContext& context) const
     if (!style().hasVisibleStroke())
         return;
     if (m_usePathFallback) {
-        RenderSVGShape::strokeShape(context);
+        LegacyRenderSVGShape::strokeShape(context);
         return;
     }
     context.strokeEllipse(m_fillBoundingBox);
@@ -116,11 +119,11 @@ void RenderSVGEllipse::strokeShape(GraphicsContext& context) const
 bool RenderSVGEllipse::shapeDependentStrokeContains(const FloatPoint& point, PointCoordinateSpace pointCoordinateSpace)
 {
     // The optimized contains code below does not support non-smooth strokes so we need
-    // to fall back to RenderSVGShape::shapeDependentStrokeContains in these cases.
+    // to fall back to LegacyRenderSVGShape::shapeDependentStrokeContains in these cases.
     if (m_usePathFallback || !hasSmoothStroke()) {
         if (!hasPath())
-            RenderSVGShape::updateShapeFromElement();
-        return RenderSVGShape::shapeDependentStrokeContains(point, pointCoordinateSpace);
+            LegacyRenderSVGShape::updateShapeFromElement();
+        return LegacyRenderSVGShape::shapeDependentStrokeContains(point, pointCoordinateSpace);
     }
 
     float halfStrokeWidth = strokeWidth() / 2;
@@ -141,7 +144,7 @@ bool RenderSVGEllipse::shapeDependentStrokeContains(const FloatPoint& point, Poi
 bool RenderSVGEllipse::shapeDependentFillContains(const FloatPoint& point, const WindRule fillRule) const
 {
     if (m_usePathFallback)
-        return RenderSVGShape::shapeDependentFillContains(point, fillRule);
+        return LegacyRenderSVGShape::shapeDependentFillContains(point, fillRule);
 
     FloatPoint center = FloatPoint(m_center.x() - point.x(), m_center.y() - point.y());
 

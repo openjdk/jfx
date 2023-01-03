@@ -135,6 +135,11 @@ unum_open(  UNumberFormatStyle    style,
         *status = U_MEMORY_ALLOCATION_ERROR;
     }
 
+    if (U_FAILURE(*status) && retVal != NULL) {
+        delete retVal;
+        retVal = NULL;
+    }
+
     return reinterpret_cast<UNumberFormat *>(retVal);
 }
 
@@ -893,7 +898,7 @@ unum_getContext(const UNumberFormat *fmt, UDisplayContextType type, UErrorCode* 
     return ((const NumberFormat*)fmt)->getContext(type, *status);
 }
 
-U_INTERNAL UFormattable * U_EXPORT2
+U_CAPI UFormattable * U_EXPORT2
 unum_parseToUFormattable(const UNumberFormat* fmt,
                          UFormattable *result,
                          const UChar* text,
@@ -917,7 +922,7 @@ unum_parseToUFormattable(const UNumberFormat* fmt,
   return result;
 }
 
-U_INTERNAL int32_t U_EXPORT2
+U_CAPI int32_t U_EXPORT2
 unum_formatUFormattable(const UNumberFormat* fmt,
                         const UFormattable *number,
                         UChar *result,

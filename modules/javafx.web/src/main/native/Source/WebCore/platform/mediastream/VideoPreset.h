@@ -40,7 +40,7 @@ struct FrameRateRange {
     double maximum;
 
     template<class Encoder> void encode(Encoder&) const;
-    template<class Decoder> static Optional<FrameRateRange> decode(Decoder&);
+    template<class Decoder> static std::optional<FrameRateRange> decode(Decoder&);
 };
 
 template<class Encoder>
@@ -51,17 +51,17 @@ void FrameRateRange::encode(Encoder& encoder) const
 }
 
 template <class Decoder>
-Optional<FrameRateRange> FrameRateRange::decode(Decoder& decoder)
+std::optional<FrameRateRange> FrameRateRange::decode(Decoder& decoder)
 {
-    Optional<double> minimum;
+    std::optional<double> minimum;
     decoder >> minimum;
     if (!minimum)
-        return WTF::nullopt;
+        return std::nullopt;
 
-    Optional<double> maximum;
+    std::optional<double> maximum;
     decoder >> maximum;
     if (!maximum)
-        return WTF::nullopt;
+        return std::nullopt;
 
     return FrameRateRange { *minimum, *maximum };
 }
@@ -71,7 +71,7 @@ struct VideoPresetData {
     Vector<FrameRateRange> frameRateRanges;
 
     template<class Encoder> void encode(Encoder&) const;
-    template<class Decoder> static Optional<VideoPresetData> decode(Decoder&);
+    template<class Decoder> static std::optional<VideoPresetData> decode(Decoder&);
 };
 
 template<class Encoder>
@@ -82,17 +82,17 @@ void VideoPresetData::encode(Encoder& encoder) const
 }
 
 template <class Decoder>
-Optional<VideoPresetData> VideoPresetData::decode(Decoder& decoder)
+std::optional<VideoPresetData> VideoPresetData::decode(Decoder& decoder)
 {
-    Optional<IntSize> size;
+    std::optional<IntSize> size;
     decoder >> size;
     if (!size)
-        return WTF::nullopt;
+        return std::nullopt;
 
-    Optional<Vector<FrameRateRange>> frameRateRanges;
+    std::optional<Vector<FrameRateRange>> frameRateRanges;
     decoder >> frameRateRanges;
     if (!frameRateRanges)
-        return WTF::nullopt;
+        return std::nullopt;
 
     return VideoPresetData { *size, *frameRateRanges };
 }
@@ -114,6 +114,11 @@ public:
     Vector<FrameRateRange> frameRateRanges;
     VideoPresetType type;
 
+    double maxFrameRate() const;
+    double minFrameRate() const;
+
+    void log()const;
+
 protected:
     VideoPreset(IntSize size, Vector<FrameRateRange>&& frameRateRanges, VideoPresetType type)
         : size(size)
@@ -122,6 +127,33 @@ protected:
     {
     }
 };
+
+inline void VideoPreset::log() const
+{
+    WTFLogAlways("VideoPreset of size (%d,%d) and type %d", size.width(), size.height(), type);
+    for (auto range : frameRateRanges)
+        WTFLogAlways("VideoPreset frame rate range [%f, %f]", range.minimum, range.maximum);
+}
+
+inline double VideoPreset::minFrameRate() const
+{
+    double minFrameRate = std::numeric_limits<double>::max();
+    for (auto& range : frameRateRanges) {
+        if (minFrameRate > range.minimum)
+            minFrameRate = range.minimum;
+    }
+    return minFrameRate;
+}
+
+inline double VideoPreset::maxFrameRate() const
+{
+    double maxFrameRate = 0;
+    for (auto& range : frameRateRanges) {
+        if (maxFrameRate < range.maximum)
+            maxFrameRate = range.maximum;
+    }
+    return maxFrameRate;
+}
 
 } // namespace WebCore
 

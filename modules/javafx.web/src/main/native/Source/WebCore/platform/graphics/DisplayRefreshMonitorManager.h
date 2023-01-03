@@ -25,8 +25,7 @@
 
 #pragma once
 
-#if USE(REQUEST_ANIMATION_FRAME_DISPLAY_MONITOR)
-
+#include "AnimationFrameRate.h"
 #include "DisplayRefreshMonitor.h"
 #include "PlatformScreen.h"
 #include <wtf/NeverDestroyed.h>
@@ -35,33 +34,38 @@
 
 namespace WebCore {
 
+struct DisplayUpdate;
+
 class DisplayRefreshMonitorManager {
     friend class NeverDestroyed<DisplayRefreshMonitorManager>;
+    friend class DisplayRefreshMonitor;
 public:
     WEBCORE_EXPORT static DisplayRefreshMonitorManager& sharedManager();
 
-    void registerClient(DisplayRefreshMonitorClient&);
     void unregisterClient(DisplayRefreshMonitorClient&);
 
     bool scheduleAnimation(DisplayRefreshMonitorClient&);
     void windowScreenDidChange(PlatformDisplayID, DisplayRefreshMonitorClient&);
 
-    WEBCORE_EXPORT void displayWasUpdated(PlatformDisplayID);
+    std::optional<FramesPerSecond> nominalFramesPerSecondForDisplay(PlatformDisplayID, DisplayRefreshMonitorFactory*);
+
+    void clientPreferredFramesPerSecondChanged(DisplayRefreshMonitorClient&);
+
+    WEBCORE_EXPORT void displayWasUpdated(PlatformDisplayID, const DisplayUpdate&);
 
 private:
-    friend class DisplayRefreshMonitor;
-    void displayDidRefresh(DisplayRefreshMonitor&);
-
-    DisplayRefreshMonitorManager() { }
+    DisplayRefreshMonitorManager() = default;
     virtual ~DisplayRefreshMonitorManager();
+
+    void displayDidRefresh(DisplayRefreshMonitor&);
 
     size_t findMonitorForDisplayID(PlatformDisplayID) const;
     DisplayRefreshMonitor* monitorForDisplayID(PlatformDisplayID) const;
+    DisplayRefreshMonitor* monitorForClient(DisplayRefreshMonitorClient&);
 
-    DisplayRefreshMonitor* createMonitorForClient(DisplayRefreshMonitorClient&);
+    DisplayRefreshMonitor* ensureMonitorForDisplayID(PlatformDisplayID, DisplayRefreshMonitorFactory*);
 
     struct DisplayRefreshMonitorWrapper {
-        DisplayRefreshMonitorWrapper(DisplayRefreshMonitorWrapper&&) = default;
         ~DisplayRefreshMonitorWrapper()
         {
             if (monitor)
@@ -75,5 +79,3 @@ private:
 };
 
 }
-
-#endif // USE(REQUEST_ANIMATION_FRAME_DISPLAY_MONITOR)

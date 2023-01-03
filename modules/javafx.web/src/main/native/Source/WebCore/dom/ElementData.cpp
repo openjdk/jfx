@@ -33,6 +33,9 @@
 
 namespace WebCore {
 
+DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(ElementData);
+DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(ShareableElementData);
+
 void ElementData::destroy()
 {
     if (is<UniqueElementData>(*this))
@@ -65,7 +68,7 @@ static size_t sizeForShareableElementDataWithAttributeCount(unsigned count)
 
 Ref<ShareableElementData> ShareableElementData::createWithAttributes(const Vector<Attribute>& attributes)
 {
-    void* slot = WTF::fastMalloc(sizeForShareableElementDataWithAttributeCount(attributes.size()));
+    void* slot = ShareableElementDataMalloc::malloc(sizeForShareableElementDataWithAttributeCount(attributes.size()));
     return adoptRef(*new (NotNull, slot) ShareableElementData(attributes));
 }
 
@@ -92,7 +95,7 @@ ShareableElementData::~ShareableElementData()
 ShareableElementData::ShareableElementData(const UniqueElementData& other)
     : ElementData(other, false)
 {
-    ASSERT(!other.m_presentationAttributeStyle);
+    ASSERT(!other.m_presentationalHintStyle);
 
     if (other.m_inlineStyle) {
         ASSERT(!other.m_inlineStyle->hasCSSOMWrapper());
@@ -128,7 +131,7 @@ UniqueElementData::UniqueElementData()
 
 UniqueElementData::UniqueElementData(const UniqueElementData& other)
     : ElementData(other, true)
-    , m_presentationAttributeStyle(other.m_presentationAttributeStyle)
+    , m_presentationalHintStyle(other.m_presentationalHintStyle)
     , m_attributeVector(other.m_attributeVector)
 {
     if (other.m_inlineStyle)
@@ -137,15 +140,11 @@ UniqueElementData::UniqueElementData(const UniqueElementData& other)
 
 UniqueElementData::UniqueElementData(const ShareableElementData& other)
     : ElementData(other, true)
+    , m_attributeVector(other.m_attributeArray, other.length())
 {
     // An ShareableElementData should never have a mutable inline StyleProperties attached.
     ASSERT(!other.m_inlineStyle || !other.m_inlineStyle->isMutable());
     m_inlineStyle = other.m_inlineStyle;
-
-    unsigned otherLength = other.length();
-    m_attributeVector.reserveCapacity(otherLength);
-    for (unsigned i = 0; i < otherLength; ++i)
-        m_attributeVector.uncheckedAppend(other.m_attributeArray[i]);
 }
 
 Ref<UniqueElementData> ElementData::makeUniqueCopy() const
@@ -157,7 +156,7 @@ Ref<UniqueElementData> ElementData::makeUniqueCopy() const
 
 Ref<ShareableElementData> UniqueElementData::makeShareableCopy() const
 {
-    void* slot = WTF::fastMalloc(sizeForShareableElementDataWithAttributeCount(m_attributeVector.size()));
+    void* slot = ShareableElementDataMalloc::malloc(sizeForShareableElementDataWithAttributeCount(m_attributeVector.size()));
     return adoptRef(*new (NotNull, slot) ShareableElementData(*this));
 }
 

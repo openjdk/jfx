@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2009-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -34,15 +34,15 @@ class ModuleProgramExecutable final : public GlobalExecutable {
     friend class LLIntOffsetsExtractor;
 public:
     using Base = GlobalExecutable;
-    static const unsigned StructureFlags = Base::StructureFlags | StructureIsImmortal;
+    static constexpr unsigned StructureFlags = Base::StructureFlags | StructureIsImmortal;
 
     template<typename CellType, SubspaceAccess mode>
-    static IsoSubspace* subspaceFor(VM& vm)
+    static GCClient::IsoSubspace* subspaceFor(VM& vm)
     {
         return vm.moduleProgramExecutableSpace<mode>();
     }
 
-    static ModuleProgramExecutable* create(ExecState*, const SourceCode&);
+    static ModuleProgramExecutable* create(JSGlobalObject*, const SourceCode&);
 
     static void destroy(JSCell*);
 
@@ -63,9 +63,8 @@ public:
 
     DECLARE_INFO;
 
-    ExecutableInfo executableInfo() const { return ExecutableInfo(usesEval(), isStrictMode(), false, false, ConstructorKind::None, JSParserScriptMode::Module, SuperBinding::NotNeeded, SourceParseMode::ModuleEvaluateMode, derivedContextType(), isArrowFunctionContext(), false, EvalContextType::None); }
-
     UnlinkedModuleProgramCodeBlock* unlinkedModuleProgramCodeBlock() { return m_unlinkedModuleProgramCodeBlock.get(); }
+    bool isAsync() const { return features() & AwaitFeature; }
 
     SymbolTable* moduleEnvironmentSymbolTable() { return m_moduleEnvironmentSymbolTable.get(); }
 
@@ -75,9 +74,9 @@ private:
     friend class ExecutableBase;
     friend class ScriptExecutable;
 
-    ModuleProgramExecutable(ExecState*, const SourceCode&);
+    ModuleProgramExecutable(JSGlobalObject*, const SourceCode&);
 
-    static void visitChildren(JSCell*, SlotVisitor&);
+    DECLARE_VISIT_CHILDREN;
 
     WriteBarrier<UnlinkedModuleProgramCodeBlock> m_unlinkedModuleProgramCodeBlock;
     WriteBarrier<SymbolTable> m_moduleEnvironmentSymbolTable;

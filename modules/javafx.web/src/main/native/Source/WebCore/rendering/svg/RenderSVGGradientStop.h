@@ -22,11 +22,11 @@
 #pragma once
 
 #include "RenderElement.h"
-#include "SVGStopElement.h"
 
 namespace WebCore {
 
 class SVGGradientElement;
+class SVGStopElement;
 
 // This class exists mostly so we can hear about gradient stop style changes
 class RenderSVGGradientStop final : public RenderElement {
@@ -35,7 +35,7 @@ public:
     RenderSVGGradientStop(SVGStopElement&, RenderStyle&&);
     virtual ~RenderSVGGradientStop();
 
-    SVGStopElement& element() const { return downcast<SVGStopElement>(RenderObject::nodeForNonAnonymous()); }
+    inline SVGStopElement& element() const;
 
 private:
     void styleDidChange(StyleDifference, const RenderStyle* oldStyle) override;
@@ -45,7 +45,7 @@ private:
     // These overrides are needed to prevent ASSERTs on <svg><stop /></svg>
     // RenderObject's default implementations ASSERT_NOT_REACHED()
     // https://bugs.webkit.org/show_bug.cgi?id=20400
-    LayoutRect clippedOverflowRectForRepaint(const RenderLayerModelObject*) const override { return LayoutRect(); }
+    LayoutRect clippedOverflowRect(const RenderLayerModelObject*, VisibleRectContext) const override { return LayoutRect(); }
     FloatRect objectBoundingBox() const override { return FloatRect(); }
     FloatRect strokeBoundingBox() const override { return FloatRect(); }
     FloatRect repaintRectInLocalCoordinates() const override { return FloatRect(); }

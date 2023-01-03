@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010 Apple Inc. All rights reserved.
+ * Copyright (C) 2010-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -38,26 +38,29 @@ ContextMenuItem::ContextMenuItem(ContextMenuItemType type, ContextMenuAction act
     , m_title(title)
     , m_enabled(true)
     , m_checked(false)
+    , m_indentationLevel(0)
 {
     if (subMenu)
         setSubMenu(subMenu);
 }
 
-ContextMenuItem::ContextMenuItem(ContextMenuItemType type, ContextMenuAction action, const String& title, bool enabled, bool checked)
+ContextMenuItem::ContextMenuItem(ContextMenuItemType type, ContextMenuAction action, const String& title, bool enabled, bool checked, unsigned indentationLevel)
     : m_type(type)
     , m_action(action)
     , m_title(title)
     , m_enabled(enabled)
     , m_checked(checked)
+    , m_indentationLevel(indentationLevel)
 {
 }
 
-ContextMenuItem::ContextMenuItem(ContextMenuAction action, const String& title, bool enabled, bool checked, const Vector<ContextMenuItem>& subMenuItems)
+ContextMenuItem::ContextMenuItem(ContextMenuAction action, const String& title, bool enabled, bool checked, const Vector<ContextMenuItem>& subMenuItems, unsigned indentationLevel)
     : m_type(SubmenuType)
     , m_action(action)
     , m_title(title)
     , m_enabled(enabled)
     , m_checked(checked)
+    , m_indentationLevel(indentationLevel)
     , m_subMenuItems(subMenuItems)
 {
 }
@@ -67,6 +70,7 @@ ContextMenuItem::ContextMenuItem()
     , m_action(ContextMenuItemTagNoAction)
     , m_enabled(false)
     , m_checked(false)
+    , m_indentationLevel(0)
 {
 }
 
@@ -109,6 +113,16 @@ ContextMenuAction ContextMenuItem::action() const
     return m_action;
 }
 
+void ContextMenuItem::setIndentationLevel(unsigned indentationLevel)
+{
+    m_indentationLevel = indentationLevel;
+}
+
+unsigned ContextMenuItem::indentationLevel() const
+{
+    return m_indentationLevel;
+}
+
 void ContextMenuItem::setChecked(bool checked)
 {
     m_checked = checked;
@@ -127,6 +141,139 @@ void ContextMenuItem::setEnabled(bool enabled)
 bool ContextMenuItem::enabled() const
 {
     return m_enabled;
+}
+
+bool isValidContextMenuAction(ContextMenuAction action)
+{
+    switch (action) {
+    case ContextMenuAction::ContextMenuItemTagNoAction:
+    case ContextMenuAction::ContextMenuItemTagOpenLinkInNewWindow:
+    case ContextMenuAction::ContextMenuItemTagDownloadLinkToDisk:
+    case ContextMenuAction::ContextMenuItemTagCopyLinkToClipboard:
+    case ContextMenuAction::ContextMenuItemTagOpenImageInNewWindow:
+    case ContextMenuAction::ContextMenuItemTagDownloadImageToDisk:
+    case ContextMenuAction::ContextMenuItemTagCopyImageToClipboard:
+    case ContextMenuAction::ContextMenuItemTagCopyCroppedImage:
+#if PLATFORM(GTK)
+    case ContextMenuAction::ContextMenuItemTagCopyImageUrlToClipboard:
+#endif
+    case ContextMenuAction::ContextMenuItemTagOpenFrameInNewWindow:
+    case ContextMenuAction::ContextMenuItemTagCopy:
+    case ContextMenuAction::ContextMenuItemTagGoBack:
+    case ContextMenuAction::ContextMenuItemTagGoForward:
+    case ContextMenuAction::ContextMenuItemTagStop:
+    case ContextMenuAction::ContextMenuItemTagReload:
+    case ContextMenuAction::ContextMenuItemTagCut:
+    case ContextMenuAction::ContextMenuItemTagPaste:
+#if PLATFORM(GTK)
+    case ContextMenuAction::ContextMenuItemTagPasteAsPlainText:
+    case ContextMenuAction::ContextMenuItemTagDelete:
+    case ContextMenuAction::ContextMenuItemTagSelectAll:
+    case ContextMenuAction::ContextMenuItemTagInputMethods:
+    case ContextMenuAction::ContextMenuItemTagUnicode:
+    case ContextMenuAction::ContextMenuItemTagUnicodeInsertLRMMark:
+    case ContextMenuAction::ContextMenuItemTagUnicodeInsertRLMMark:
+    case ContextMenuAction::ContextMenuItemTagUnicodeInsertLREMark:
+    case ContextMenuAction::ContextMenuItemTagUnicodeInsertRLEMark:
+    case ContextMenuAction::ContextMenuItemTagUnicodeInsertLROMark:
+    case ContextMenuAction::ContextMenuItemTagUnicodeInsertRLOMark:
+    case ContextMenuAction::ContextMenuItemTagUnicodeInsertPDFMark:
+    case ContextMenuAction::ContextMenuItemTagUnicodeInsertZWSMark:
+    case ContextMenuAction::ContextMenuItemTagUnicodeInsertZWJMark:
+    case ContextMenuAction::ContextMenuItemTagUnicodeInsertZWNJMark:
+    case ContextMenuAction::ContextMenuItemTagInsertEmoji:
+#endif
+    case ContextMenuAction::ContextMenuItemTagSpellingGuess:
+    case ContextMenuAction::ContextMenuItemTagNoGuessesFound:
+    case ContextMenuAction::ContextMenuItemTagIgnoreSpelling:
+    case ContextMenuAction::ContextMenuItemTagLearnSpelling:
+    case ContextMenuAction::ContextMenuItemTagOther:
+    case ContextMenuAction::ContextMenuItemTagSearchInSpotlight:
+    case ContextMenuAction::ContextMenuItemTagSearchWeb:
+    case ContextMenuAction::ContextMenuItemTagLookUpInDictionary:
+    case ContextMenuAction::ContextMenuItemTagOpenWithDefaultApplication:
+    case ContextMenuAction::ContextMenuItemPDFActualSize:
+    case ContextMenuAction::ContextMenuItemPDFZoomIn:
+    case ContextMenuAction::ContextMenuItemPDFZoomOut:
+    case ContextMenuAction::ContextMenuItemPDFAutoSize:
+    case ContextMenuAction::ContextMenuItemPDFSinglePage:
+    case ContextMenuAction::ContextMenuItemPDFFacingPages:
+    case ContextMenuAction::ContextMenuItemPDFContinuous:
+    case ContextMenuAction::ContextMenuItemPDFNextPage:
+    case ContextMenuAction::ContextMenuItemPDFPreviousPage:
+    case ContextMenuAction::ContextMenuItemTagOpenLink:
+    case ContextMenuAction::ContextMenuItemTagIgnoreGrammar:
+    case ContextMenuAction::ContextMenuItemTagSpellingMenu:
+    case ContextMenuAction::ContextMenuItemTagShowSpellingPanel:
+    case ContextMenuAction::ContextMenuItemTagCheckSpelling:
+    case ContextMenuAction::ContextMenuItemTagCheckSpellingWhileTyping:
+    case ContextMenuAction::ContextMenuItemTagCheckGrammarWithSpelling:
+    case ContextMenuAction::ContextMenuItemTagFontMenu:
+    case ContextMenuAction::ContextMenuItemTagShowFonts:
+    case ContextMenuAction::ContextMenuItemTagBold:
+    case ContextMenuAction::ContextMenuItemTagItalic:
+    case ContextMenuAction::ContextMenuItemTagUnderline:
+    case ContextMenuAction::ContextMenuItemTagOutline:
+    case ContextMenuAction::ContextMenuItemTagStyles:
+    case ContextMenuAction::ContextMenuItemTagShowColors:
+    case ContextMenuAction::ContextMenuItemTagSpeechMenu:
+    case ContextMenuAction::ContextMenuItemTagStartSpeaking:
+    case ContextMenuAction::ContextMenuItemTagStopSpeaking:
+    case ContextMenuAction::ContextMenuItemTagWritingDirectionMenu:
+    case ContextMenuAction::ContextMenuItemTagDefaultDirection:
+    case ContextMenuAction::ContextMenuItemTagLeftToRight:
+    case ContextMenuAction::ContextMenuItemTagRightToLeft:
+    case ContextMenuAction::ContextMenuItemTagPDFSinglePageScrolling:
+    case ContextMenuAction::ContextMenuItemTagPDFFacingPagesScrolling:
+    case ContextMenuAction::ContextMenuItemTagInspectElement:
+    case ContextMenuAction::ContextMenuItemTagTextDirectionMenu:
+    case ContextMenuAction::ContextMenuItemTagTextDirectionDefault:
+    case ContextMenuAction::ContextMenuItemTagTextDirectionLeftToRight:
+    case ContextMenuAction::ContextMenuItemTagTextDirectionRightToLeft:
+    case ContextMenuAction::ContextMenuItemTagAddHighlightToCurrentQuickNote:
+    case ContextMenuAction::ContextMenuItemTagAddHighlightToNewQuickNote:
+#if PLATFORM(COCOA)
+    case ContextMenuAction::ContextMenuItemTagCorrectSpellingAutomatically:
+    case ContextMenuAction::ContextMenuItemTagSubstitutionsMenu:
+    case ContextMenuAction::ContextMenuItemTagShowSubstitutions:
+    case ContextMenuAction::ContextMenuItemTagSmartCopyPaste:
+    case ContextMenuAction::ContextMenuItemTagSmartQuotes:
+    case ContextMenuAction::ContextMenuItemTagSmartDashes:
+    case ContextMenuAction::ContextMenuItemTagSmartLinks:
+    case ContextMenuAction::ContextMenuItemTagTextReplacement:
+    case ContextMenuAction::ContextMenuItemTagTransformationsMenu:
+    case ContextMenuAction::ContextMenuItemTagMakeUpperCase:
+    case ContextMenuAction::ContextMenuItemTagMakeLowerCase:
+    case ContextMenuAction::ContextMenuItemTagCapitalize:
+    case ContextMenuAction::ContextMenuItemTagChangeBack:
+#endif
+    case ContextMenuAction::ContextMenuItemTagOpenMediaInNewWindow:
+    case ContextMenuAction::ContextMenuItemTagDownloadMediaToDisk:
+    case ContextMenuAction::ContextMenuItemTagCopyMediaLinkToClipboard:
+    case ContextMenuAction::ContextMenuItemTagToggleMediaControls:
+    case ContextMenuAction::ContextMenuItemTagToggleMediaLoop:
+    case ContextMenuAction::ContextMenuItemTagEnterVideoFullscreen:
+    case ContextMenuAction::ContextMenuItemTagMediaPlayPause:
+    case ContextMenuAction::ContextMenuItemTagMediaMute:
+    case ContextMenuAction::ContextMenuItemTagDictationAlternative:
+    case ContextMenuAction::ContextMenuItemTagToggleVideoFullscreen:
+    case ContextMenuAction::ContextMenuItemTagShareMenu:
+    case ContextMenuAction::ContextMenuItemTagToggleVideoEnhancedFullscreen:
+    case ContextMenuAction::ContextMenuItemTagQuickLookImage:
+    case ContextMenuAction::ContextMenuItemTagTranslate:
+    case ContextMenuAction::ContextMenuItemBaseCustomTag:
+    case ContextMenuAction::ContextMenuItemLastCustomTag:
+    case ContextMenuAction::ContextMenuItemBaseApplicationTag:
+        return true;
+    }
+
+    if (action > ContextMenuAction::ContextMenuItemBaseCustomTag && action < ContextMenuAction::ContextMenuItemLastCustomTag)
+        return true;
+
+    if (action > ContextMenuAction::ContextMenuItemBaseApplicationTag)
+        return true;
+
+    return false;
 }
 
 } // namespace WebCore

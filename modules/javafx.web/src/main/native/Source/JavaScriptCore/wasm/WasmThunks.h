@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -34,7 +34,9 @@ namespace JSC { namespace Wasm {
 
 MacroAssemblerCodeRef<JITThunkPtrTag> throwExceptionFromWasmThunkGenerator(const AbstractLocker&);
 MacroAssemblerCodeRef<JITThunkPtrTag> throwStackOverflowFromWasmThunkGenerator(const AbstractLocker&);
+#if ENABLE(WEBASSEMBLY_B3JIT)
 MacroAssemblerCodeRef<JITThunkPtrTag> triggerOMGEntryTierUpThunkGenerator(const AbstractLocker&);
+#endif
 
 typedef MacroAssemblerCodeRef<JITThunkPtrTag> (*ThunkGenerator)(const AbstractLocker&);
 
@@ -45,9 +47,6 @@ public:
     static void initialize();
     static Thunks& singleton();
 
-    void setThrowWasmException(ThrowWasmException);
-    ThrowWasmException throwWasmException();
-
     MacroAssemblerCodeRef<JITThunkPtrTag> stub(ThunkGenerator);
     MacroAssemblerCodeRef<JITThunkPtrTag> stub(const AbstractLocker&, ThunkGenerator);
     MacroAssemblerCodeRef<JITThunkPtrTag> existingStub(ThunkGenerator);
@@ -56,7 +55,6 @@ private:
     Thunks() = default;
 
     HashMap<ThunkGenerator, MacroAssemblerCodeRef<JITThunkPtrTag>> m_stubs;
-    ThrowWasmException m_throwWasmException { nullptr };
     Lock m_lock;
 };
 

@@ -31,18 +31,17 @@
 namespace WebCore {
 
 class AudioBuffer;
+struct AudioProcessingEventInit;
 
 class AudioProcessingEvent final : public Event {
+    WTF_MAKE_ISO_ALLOCATED(AudioProcessingEvent);
 public:
     static Ref<AudioProcessingEvent> create(RefPtr<AudioBuffer>&& inputBuffer, RefPtr<AudioBuffer>&& outputBuffer, double playbackTime)
     {
         return adoptRef(*new AudioProcessingEvent(WTFMove(inputBuffer), WTFMove(outputBuffer), playbackTime));
     }
 
-    static Ref<AudioProcessingEvent> createForBindings()
-    {
-        return adoptRef(*new AudioProcessingEvent);
-    }
+    static Ref<AudioProcessingEvent> create(const AtomString&, AudioProcessingEventInit&&);
 
     virtual ~AudioProcessingEvent();
 
@@ -53,8 +52,8 @@ public:
     EventInterface eventInterface() const override;
 
 private:
-    AudioProcessingEvent();
     AudioProcessingEvent(RefPtr<AudioBuffer>&& inputBuffer, RefPtr<AudioBuffer>&& outputBuffer, double playbackTime);
+    AudioProcessingEvent(const AtomString&, AudioProcessingEventInit&&);
 
     RefPtr<AudioBuffer> m_inputBuffer;
     RefPtr<AudioBuffer> m_outputBuffer;

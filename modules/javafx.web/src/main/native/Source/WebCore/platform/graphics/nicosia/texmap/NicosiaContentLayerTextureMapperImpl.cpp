@@ -31,7 +31,7 @@
 
 #if USE(TEXTURE_MAPPER)
 
-#include "TextureMapperPlatformLayerProxy.h"
+#include "TextureMapperPlatformLayerProxyGL.h"
 
 namespace Nicosia {
 
@@ -39,39 +39,39 @@ auto ContentLayerTextureMapperImpl::createFactory(Client& client) -> Factory
 {
     return Factory(
         [&client](ContentLayer&) {
-            return makeUnique<ContentLayerTextureMapperImpl>(client);
+            return makeUnique<ContentLayerTextureMapperImpl>(client, adoptRef(*new WebCore::TextureMapperPlatformLayerProxyGL));
         });
 }
 
-ContentLayerTextureMapperImpl::ContentLayerTextureMapperImpl(Client& client)
-    : m_proxy(adoptRef(*new WebCore::TextureMapperPlatformLayerProxy))
+ContentLayerTextureMapperImpl::ContentLayerTextureMapperImpl(Client& client, Ref<WebCore::TextureMapperPlatformLayerProxy>&& proxy)
+    : m_proxy(WTFMove(proxy))
     , m_client { { }, &client }
 {
 }
 
 ContentLayerTextureMapperImpl::~ContentLayerTextureMapperImpl()
 {
-#if !ASSERT_DISABLED
-    LockHolder locker(m_client.lock);
+#if ASSERT_ENABLED
+    Locker locker { m_client.lock };
     ASSERT(!m_client.client);
 #endif
 }
 
 void ContentLayerTextureMapperImpl::invalidateClient()
 {
-    LockHolder locker(m_client.lock);
+    Locker locker { m_client.lock };
     m_client.client = nullptr;
 }
 
 bool ContentLayerTextureMapperImpl::flushUpdate()
 {
-    LockHolder locker(m_client.lock);
+    Locker locker { m_client.lock };
     return std::exchange(m_client.pendingUpdate, false);
 }
 
 void ContentLayerTextureMapperImpl::swapBuffersIfNeeded()
 {
-    LockHolder locker(m_client.lock);
+    Locker locker { m_client.lock };
     if (m_client.client)
         m_client.client->swapBuffersIfNeeded();
 }

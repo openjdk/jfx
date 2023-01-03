@@ -31,6 +31,7 @@
 #include "ParsingUtilities.h"
 #include "ResourceCryptographicDigest.h"
 #include "SharedBuffer.h"
+#include <wtf/text/StringParsingBuffer.h>
 
 namespace WebCore {
 
@@ -45,32 +46,32 @@ static bool isVCHAR(CharacterType c)
 template<typename CharacterType>
 struct IntegrityMetadataParser {
 public:
-    IntegrityMetadataParser(Optional<Vector<EncodedResourceCryptographicDigest>>& digests)
+    IntegrityMetadataParser(std::optional<Vector<EncodedResourceCryptographicDigest>>& digests)
         : m_digests(digests)
     {
     }
 
-    bool operator()(const CharacterType*& position, const CharacterType* end)
+    bool operator()(StringParsingBuffer<CharacterType>& buffer)
     {
-        // Initialize hashes to be something other WTF::nullopt, to indicate
+        // Initialize hashes to be something other std::nullopt, to indicate
         // that at least one token was seen, and thus setting the empty flag
         // from section 3.3.3 Parse metadata, to false.
         if (!m_digests)
             m_digests = Vector<EncodedResourceCryptographicDigest> { };
 
-        auto digest = parseEncodedCryptographicDigest(position, end);
+        auto digest = parseEncodedCryptographicDigest(buffer);
         if (!digest)
             return false;
 
         // The spec allows for options following the digest, but so far, no
         // specific options have been specified. Thus, we just parse and ignore
         // them. Their syntax is a '?' follow by any number of VCHARs.
-        if (skipExactly<CharacterType>(position, end, '?'))
-            skipWhile<CharacterType, isVCHAR>(position, end);
+        if (skipExactly(buffer, '?'))
+            skipWhile<isVCHAR>(buffer);
 
         // After the base64 value and options, the current character pointed to by position
         // should either be the end or a space.
-        if (position != end && !isHTMLSpace(*position))
+        if (!buffer.atEnd() && !isHTMLSpace(*buffer))
             return false;
 
         m_digests->append(WTFMove(*digest));
@@ -78,38 +79,34 @@ public:
     }
 
 private:
-    Optional<Vector<EncodedResourceCryptographicDigest>>& m_digests;
+    std::optional<Vector<EncodedResourceCryptographicDigest>>& m_digests;
 };
 
 }
 
 template <typename CharacterType, typename Functor>
-static inline void splitOnSpaces(const CharacterType* begin, const CharacterType* end, Functor&& functor)
+static inline void splitOnSpaces(StringParsingBuffer<CharacterType> buffer, Functor&& functor)
 {
-    const CharacterType* position = begin;
+    skipWhile<isHTMLSpace>(buffer);
 
-    skipWhile<CharacterType, isHTMLSpace>(position, end);
-
-    while (position < end) {
-        if (!functor(position, end))
-            skipWhile<CharacterType, isNotHTMLSpace>(position, end);
-
-        skipWhile<CharacterType, isHTMLSpace>(position, end);
+    while (buffer.hasCharactersRemaining()) {
+        if (!functor(buffer))
+            skipWhile<isNotHTMLSpace>(buffer);
+        skipWhile<isHTMLSpace>(buffer);
     }
 }
 
-static Optional<Vector<EncodedResourceCryptographicDigest>> parseIntegrityMetadata(const String& integrityMetadata)
+std::optional<Vector<EncodedResourceCryptographicDigest>> parseIntegrityMetadata(const String& integrityMetadata)
 {
     if (integrityMetadata.isEmpty())
-        return WTF::nullopt;
+        return std::nullopt;
 
-    Optional<Vector<EncodedResourceCryptographicDigest>> result;
+    std::optional<Vector<EncodedResourceCryptographicDigest>> result;
 
-    const StringImpl& stringImpl = *integrityMetadata.impl();
-    if (stringImpl.is8Bit())
-        splitOnSpaces(stringImpl.characters8(), stringImpl.characters8() + stringImpl.length(), IntegrityMetadataParser<LChar> { result });
-    else
-        splitOnSpaces(stringImpl.characters16(), stringImpl.characters16() + stringImpl.length(), IntegrityMetadataParser<UChar> { result });
+    readCharactersForParsing(integrityMetadata, [&result] (auto buffer) {
+        using CharacterType = typename decltype(buffer)::CharacterType;
+        splitOnSpaces(buffer, IntegrityMetadataParser<CharacterType> { result });
+    });
 
     return result;
 }
@@ -120,10 +117,10 @@ static bool isResponseEligible(const CachedResource& resource)
     return resource.isCORSSameOrigin();
 }
 
-static Optional<EncodedResourceCryptographicDigest::Algorithm> prioritizedHashFunction(EncodedResourceCryptographicDigest::Algorithm a, EncodedResourceCryptographicDigest::Algorithm b)
+static std::optional<EncodedResourceCryptographicDigest::Algorithm> prioritizedHashFunction(EncodedResourceCryptographicDigest::Algorithm a, EncodedResourceCryptographicDigest::Algorithm b)
 {
     if (a == b)
-        return WTF::nullopt;
+        return std::nullopt;
     return (a > b) ? a : b;
 }
 
@@ -198,7 +195,7 @@ bool matchIntegrityMetadata(const CachedResource& resource, const String& integr
         auto expectedValue = decodeEncodedResourceCryptographicDigest(item);
 
         // 3. Let actualValue be the result of applying algorithm to response.
-        auto actualValue = cryptographicDigestForBytes(algorithm, sharedBuffer ? sharedBuffer->data() : nullptr, sharedBuffer ? sharedBuffer->size() : 0);
+        auto actualValue = cryptographicDigestForSharedBuffer(algorithm, sharedBuffer);
 
         // 4. If actualValue is a case-sensitive match for expectedValue, return true.
         if (expectedValue && actualValue.value == expectedValue->value)
@@ -206,6 +203,17 @@ bool matchIntegrityMetadata(const CachedResource& resource, const String& integr
     }
 
     return false;
+}
+
+String integrityMismatchDescription(const CachedResource& resource, const String& integrityMetadata)
+{
+    auto resourceURL = resource.url().stringCenterEllipsizedToLength();
+    if (auto resourceBuffer = resource.resourceBuffer()) {
+        return makeString(resourceURL, ". Failed integrity metadata check. Content length: ", resourceBuffer->size(), ", Expected content length: ",
+            resource.response().expectedContentLength(), ", Expected metadata: ", integrityMetadata);
+    }
+    return makeString(resourceURL, ". Failed integrity metadata check. Content length: (no content), Expected content length: ",
+        resource.response().expectedContentLength(), ", Expected metadata: ", integrityMetadata);
 }
 
 }

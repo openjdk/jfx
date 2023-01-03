@@ -27,7 +27,8 @@
 
 #if ENABLE(WEBASSEMBLY)
 
-#include "B3Compilation.h"
+#include "JITCompilation.h"
+#include "WasmBinding.h"
 #include "WasmFormat.h"
 #include <wtf/Expected.h>
 

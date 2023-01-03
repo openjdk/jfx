@@ -29,9 +29,14 @@
 
 #include "WebGLObject.h"
 
+namespace WTF {
+class AbstractLocker;
+class Lock;
+}
+
 namespace WebCore {
 
-class GraphicsContext3D;
+class GraphicsContextGL;
 class WebGLContextGroup;
 class WebGLRenderingContextBase;
 
@@ -50,17 +55,18 @@ public:
         return contextGroup == m_contextGroup;
     }
 
-    void detachContextGroup();
+    void detachContextGroup(const AbstractLocker&);
+
+    void detachContextGroupWithoutDeletingObject();
+
+    Lock& objectGraphLockForContext() override;
 
 protected:
     WebGLSharedObject(WebGLRenderingContextBase&);
 
-    bool hasGroupOrContext() const override
-    {
-        return m_contextGroup;
-    }
+    bool hasGroupOrContext() const override;
 
-    GraphicsContext3D* getAGraphicsContext3D() const override;
+    GraphicsContextGL* getAGraphicsContextGL() const override;
 
 private:
     WebGLContextGroup* m_contextGroup;

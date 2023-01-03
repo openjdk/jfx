@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1997, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 1997, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -193,6 +193,7 @@ public class Arc2D extends RectangularShape {
     /**
      * {@inheritDoc}
      */
+    @Override
     public boolean isEmpty() {
         return (width <= 0f || height <= 0f);
     }
@@ -349,7 +350,7 @@ public class Arc2D extends RectangularShape {
         } else {
             diff -= 360;
         }
-        setArcByCenter((float)x, (float)y, (float)radius, (float)ang1, (float)diff, type);
+        setArcByCenter((float)x, (float)y, radius, (float)ang1, (float)diff, type);
     }
 
     /**
@@ -385,7 +386,7 @@ public class Arc2D extends RectangularShape {
         double x = getCenterX();
         double y = getCenterY();
         double w = this.width;
-        double h = this.height;;
+        double h = this.height;
         // Note: reversing the Y equations negates the angle to adjust
         // for the upside down coordinate system.
         // Also we should bias atans by the height and width of the oval.
@@ -442,6 +443,7 @@ public class Arc2D extends RectangularShape {
      * <a href="Arc2D.html#inscribes">partially inscribes</a>
      * the framing rectangle of this {@code RectangularShape}.
      */
+    @Override
     public void setFrame(float x, float y, float w, float h) {
         setArc(x, y, w, h, start, extent, type);
     }
@@ -461,6 +463,7 @@ public class Arc2D extends RectangularShape {
      * @return the <CODE>RectBounds</CODE> that represents the arc's
      * framing rectangle.
      */
+    @Override
     public RectBounds getBounds() {
         if (isEmpty()) {
             return new RectBounds(x, y, x + width, y + height);
@@ -572,6 +575,7 @@ public class Arc2D extends RectangularShape {
      * the arc, <CODE>false</CODE> if the point lies outside of the
      * arc's bounds.
      */
+    @Override
     public boolean contains(float x, float y) {
         // Normalize the coordinates compared to the ellipse
         // having a center at 0,0 and a radius of 0.5.
@@ -635,6 +639,7 @@ public class Arc2D extends RectangularShape {
      * @return <CODE>true</CODE> if the arc intersects the rectangle,
      * <CODE>false</CODE> if the arc doesn't intersect the rectangle.
      */
+    @Override
     public boolean intersects(float x, float y, float w, float h) {
         float aw = this.width;
         float ah = this.height;
@@ -742,6 +747,7 @@ public class Arc2D extends RectangularShape {
      * @return <CODE>true</CODE> if the arc contains the rectangle,
      * <CODE>false</CODE> if the arc doesn't contain the rectangle.
      */
+    @Override
     public boolean contains(float x, float y, float w, float h) {
         if (!(contains(x, y) &&
               contains(x + w, y) &&
@@ -792,6 +798,7 @@ public class Arc2D extends RectangularShape {
      *
      * @return A <CODE>PathIterator</CODE> that defines the arc's boundary.
      */
+    @Override
     public PathIterator getPathIterator(BaseTransform tx) {
         return new ArcIterator(this, tx);
     }

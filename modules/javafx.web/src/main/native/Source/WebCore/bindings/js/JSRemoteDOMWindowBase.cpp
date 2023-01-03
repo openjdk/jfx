@@ -26,7 +26,6 @@
 #include "config.h"
 #include "JSRemoteDOMWindowBase.h"
 
-#include "JSRemoteDOMWindow.h"
 #include "JSWindowProxy.h"
 
 using namespace JSC;
@@ -39,7 +38,7 @@ const GlobalObjectMethodTable JSRemoteDOMWindowBase::s_globalObjectMethodTable =
     nullptr, // shellSupportsRichSourceInfo
     nullptr, // shouldInterruptScript
     &javaScriptRuntimeFlags,
-    nullptr, // queueTaskToEventLoop
+    nullptr, // queueMicrotaskToEventLoop
     nullptr, // shouldInterruptScriptBeforeTimeout
     nullptr, // moduleLoaderImportModule
     nullptr, // moduleLoaderResolve
@@ -47,9 +46,14 @@ const GlobalObjectMethodTable JSRemoteDOMWindowBase::s_globalObjectMethodTable =
     nullptr, // moduleLoaderCreateImportMetaProperties
     nullptr, // moduleLoaderEvaluate
     nullptr, // promiseRejectionTracker
+    nullptr, // reportUncaughtExceptionAtEventLoop
+    &currentScriptExecutionOwner,
+    &scriptExecutionStatus,
+    &reportViolationForUnsafeEval,
     nullptr, // defaultLanguage
     nullptr, // compileStreaming
     nullptr, // instantiateStreaming
+    nullptr, // deriveShadowRealmGlobalObject
 };
 
 JSRemoteDOMWindowBase::JSRemoteDOMWindowBase(VM& vm, Structure* structure, RefPtr<RemoteDOMWindow>&& window, JSWindowProxy* proxy)
@@ -66,23 +70,6 @@ void JSRemoteDOMWindowBase::destroy(JSCell* cell)
 RuntimeFlags JSRemoteDOMWindowBase::javaScriptRuntimeFlags(const JSGlobalObject*)
 {
     return RuntimeFlags { };
-}
-
-JSRemoteDOMWindow* toJSRemoteDOMWindow(JSC::VM& vm, JSValue value)
-{
-    if (!value.isObject())
-        return nullptr;
-
-    while (!value.isNull()) {
-        JSObject* object = asObject(value);
-        const ClassInfo* classInfo = object->classInfo(vm);
-        if (classInfo == JSRemoteDOMWindow::info())
-            return jsCast<JSRemoteDOMWindow*>(object);
-        if (classInfo == JSWindowProxy::info())
-            return jsDynamicCast<JSRemoteDOMWindow*>(vm, jsCast<JSWindowProxy*>(object)->window());
-        value = object->getPrototypeDirect(vm);
-    }
-    return nullptr;
 }
 
 } // namespace WebCore

@@ -31,24 +31,28 @@
 #include "Blob.h"
 #include "EventNames.h"
 #include <JavaScriptCore/JSCInlines.h>
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
 
 using namespace JSC;
 
+WTF_MAKE_ISO_ALLOCATED_IMPL(MessageEvent);
+
 MessageEvent::MessageEvent() = default;
 
 inline MessageEvent::MessageEvent(const AtomString& type, Init&& initializer, IsTrusted isTrusted)
     : Event(type, initializer, isTrusted)
-    , m_data(JSValueInWrappedObject { initializer.data })
+    , m_data(JSValueTag { })
     , m_origin(initializer.origin)
     , m_lastEventId(initializer.lastEventId)
     , m_source(WTFMove(initializer.source))
     , m_ports(WTFMove(initializer.ports))
+    , m_jsData(initializer.data)
 {
 }
 
-inline MessageEvent::MessageEvent(DataType&& data, const String& origin, const String& lastEventId, Optional<MessageEventSource>&& source, Vector<RefPtr<MessagePort>>&& ports)
+inline MessageEvent::MessageEvent(DataType&& data, const String& origin, const String& lastEventId, std::optional<MessageEventSource>&& source, Vector<RefPtr<MessagePort>>&& ports)
     : Event(eventNames().messageEvent, CanBubble::No, IsCancelable::No)
     , m_data(WTFMove(data))
     , m_origin(origin)
@@ -66,7 +70,7 @@ inline MessageEvent::MessageEvent(const AtomString& type, Ref<SerializedScriptVa
 {
 }
 
-Ref<MessageEvent> MessageEvent::create(Vector<RefPtr<MessagePort>>&& ports, Ref<SerializedScriptValue>&& data, const String& origin, const String& lastEventId, Optional<MessageEventSource>&& source)
+Ref<MessageEvent> MessageEvent::create(Vector<RefPtr<MessagePort>>&& ports, Ref<SerializedScriptValue>&& data, const String& origin, const String& lastEventId, std::optional<MessageEventSource>&& source)
 {
     return adoptRef(*new MessageEvent(WTFMove(data), origin, lastEventId, WTFMove(source), WTFMove(ports)));
 }
@@ -103,25 +107,47 @@ Ref<MessageEvent> MessageEvent::create(const AtomString& type, Init&& initialize
 
 MessageEvent::~MessageEvent() = default;
 
-void MessageEvent::initMessageEvent(const AtomString& type, bool canBubble, bool cancelable, JSValue data, const String& origin, const String& lastEventId, Optional<MessageEventSource>&& source, Vector<RefPtr<MessagePort>>&& ports)
+void MessageEvent::initMessageEvent(const AtomString& type, bool canBubble, bool cancelable, JSValue data, const String& origin, const String& lastEventId, std::optional<MessageEventSource>&& source, Vector<RefPtr<MessagePort>>&& ports)
 {
     if (isBeingDispatched())
         return;
 
     initEvent(type, canBubble, cancelable);
 
-    m_data = JSValueInWrappedObject { data };
-    m_cachedData = { };
+    {
+        Locker { m_concurrentDataAccessLock };
+        m_data = JSValueTag { };
+    }
+    // FIXME: This code is wrong: we should emit a write-barrier. Otherwise, GC can collect it.
+    // https://bugs.webkit.org/show_bug.cgi?id=236353
+    m_jsData.setWeakly(data);
+    m_cachedData.clear();
     m_origin = origin;
     m_lastEventId = lastEventId;
     m_source = WTFMove(source);
     m_ports = WTFMove(ports);
-    m_cachedPorts = { };
+    m_cachedPorts.clear();
 }
 
 EventInterface MessageEvent::eventInterface() const
 {
     return MessageEventInterfaceType;
+}
+
+size_t MessageEvent::memoryCost() const
+{
+    Locker { m_concurrentDataAccessLock };
+    return WTF::switchOn(m_data, [] (JSValueTag) -> size_t {
+        return 0;
+    }, [] (const Ref<SerializedScriptValue>& data) -> size_t {
+        return data->memoryCost();
+    }, [] (const String& string) -> size_t {
+        return string.sizeInBytes();
+    }, [] (const Ref<Blob>& blob) -> size_t {
+        return blob->size();
+    }, [] (const Ref<ArrayBuffer>& buffer) -> size_t {
+        return buffer->byteLength();
+    });
 }
 
 } // namespace WebCore

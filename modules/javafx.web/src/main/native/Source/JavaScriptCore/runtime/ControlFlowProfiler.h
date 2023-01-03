@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Apple Inc. All rights reserved.
+ * Copyright (C) 2014-2019 Apple Inc. All rights reserved.
  * Copyright (C) 2014 Saam Barati. <saambarati1@gmail.com>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,6 +27,7 @@
 #pragma once
 
 #include "BasicBlockLocation.h"
+#include "SourceID.h"
 #include <wtf/HashMap.h>
 
 namespace JSC {
@@ -60,7 +61,7 @@ struct BasicBlockKey {
 struct BasicBlockKeyHash {
     static unsigned hash(const BasicBlockKey& key) { return key.hash(); }
     static bool equal(const BasicBlockKey& a, const BasicBlockKey& b) { return a == b; }
-    static const bool safeToCompareToEmptyOrDeleted = true;
+    static constexpr bool safeToCompareToEmptyOrDeleted = true;
 };
 
 } // namespace JSC
@@ -68,13 +69,11 @@ struct BasicBlockKeyHash {
 namespace WTF {
 
 template<typename T> struct DefaultHash;
-template<> struct DefaultHash<JSC::BasicBlockKey> {
-    typedef JSC::BasicBlockKeyHash Hash;
-};
+template<> struct DefaultHash<JSC::BasicBlockKey> : JSC::BasicBlockKeyHash { };
 
 template<typename T> struct HashTraits;
 template<> struct HashTraits<JSC::BasicBlockKey> : SimpleClassHashTraits<JSC::BasicBlockKey> {
-    static const bool emptyValueIsZero = false;
+    static constexpr bool emptyValueIsZero = false;
 };
 
 } // namespace WTF
@@ -93,16 +92,16 @@ class ControlFlowProfiler {
 public:
     ControlFlowProfiler();
     ~ControlFlowProfiler();
-    BasicBlockLocation* getBasicBlockLocation(intptr_t sourceID, int startOffset, int endOffset);
+    BasicBlockLocation* getBasicBlockLocation(SourceID, int startOffset, int endOffset);
     JS_EXPORT_PRIVATE void dumpData() const;
-    Vector<BasicBlockRange> getBasicBlocksForSourceID(intptr_t sourceID, VM&) const;
+    Vector<BasicBlockRange> getBasicBlocksForSourceID(SourceID, VM&) const;
     BasicBlockLocation* dummyBasicBlock() { return &m_dummyBasicBlock; }
-    JS_EXPORT_PRIVATE bool hasBasicBlockAtTextOffsetBeenExecuted(int, intptr_t, VM&);  // This function exists for testing.
-    JS_EXPORT_PRIVATE size_t basicBlockExecutionCountAtTextOffset(int, intptr_t, VM&); // This function exists for testing.
+    JS_EXPORT_PRIVATE bool hasBasicBlockAtTextOffsetBeenExecuted(int, SourceID, VM&); // This function exists for testing.
+    JS_EXPORT_PRIVATE size_t basicBlockExecutionCountAtTextOffset(int, SourceID, VM&); // This function exists for testing.
 
 private:
     typedef HashMap<BasicBlockKey, BasicBlockLocation*> BlockLocationCache;
-    typedef HashMap<intptr_t, BlockLocationCache> SourceIDBuckets;
+    typedef HashMap<SourceID, BlockLocationCache> SourceIDBuckets;
 
     SourceIDBuckets m_sourceIDBuckets;
     BasicBlockLocation m_dummyBasicBlock;

@@ -20,6 +20,8 @@
 #ifndef __GST_MATH_COMPAT_H__
 #define __GST_MATH_COMPAT_H__
 
+#ifndef __GI_SCANNER__
+
 /* This header is not included automatically via gst/gst.h, you need to
  * include it explicitly if you need it. */
 
@@ -108,5 +110,7 @@ static union {
 #endif
 
 G_END_DECLS
+
+#endif /* !__GI_SCANNER__ */
 
 #endif /* __GST_MATH_COMPAT_H__ */

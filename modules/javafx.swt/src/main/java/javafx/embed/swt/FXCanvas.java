@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -96,7 +96,6 @@ import org.eclipse.swt.widgets.Canvas;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.Display;
-import org.eclipse.swt.widgets.Event;
 import org.eclipse.swt.widgets.Listener;
 import org.eclipse.swt.widgets.Shell;
 
@@ -168,7 +167,7 @@ public class FXCanvas extends Canvas {
                 break;
             }
             control = control.getParent();
-        };
+        }
     };
 
     private double getScaleFactor() {
@@ -259,6 +258,7 @@ public class FXCanvas extends Canvas {
             }
         } else if (SWT.getPlatform().equals("win32")) {
             try {
+                @SuppressWarnings("removal")
                 String autoScale = AccessController.doPrivileged((PrivilegedAction<String>)() -> System.getProperty("swt.autoScale"));
                 if (autoScale == null || ! "false".equalsIgnoreCase(autoScale)) {
                     Class dpiUtilClass = Class.forName("org.eclipse.swt.internal.DPIUtil");
@@ -309,6 +309,7 @@ public class FXCanvas extends Canvas {
         return null;
     }
 
+    @SuppressWarnings("removal")
     private static void initFx() {
         // NOTE: no internal "com.sun.*" packages can be accessed until after
         // the JavaFX platform is initialized. The list of needed internal
@@ -419,6 +420,7 @@ public class FXCanvas extends Canvas {
     /**
      * {@inheritDoc}
      */
+    @Override
     public Point computeSize (int wHint, int hHint, boolean changed) {
         checkWidget();
         if (wHint == -1 && hHint == -1) {
@@ -634,8 +636,8 @@ public class FXCanvas extends Canvas {
             height = lastHeight;
             buffer = lastPixelsBuf;
         }
-        width = (int)Math.round(width * scaleFactor);
-        height = (int)Math.round(height * scaleFactor);
+        width = (int)Math.ceil(width * scaleFactor);
+        height = (int)Math.ceil(height * scaleFactor);
 
         // Consider optimizing this
         ImageData imageData = null;
@@ -1053,8 +1055,8 @@ public class FXCanvas extends Canvas {
         if ((pWidth <= 0) || (pHeight <= 0)) {
             pixelsBuf = null;
         } else {
-            pixelsBuf = IntBuffer.allocate((int)Math.round(pWidth * newScaleFactor) *
-                                           (int)Math.round(pHeight * newScaleFactor));
+            pixelsBuf = IntBuffer.allocate((int)Math.ceil(pWidth * newScaleFactor) *
+                                           (int)Math.ceil(pHeight * newScaleFactor));
             // The bg color may show through on resize. See RT-34380.
             RGB rgb = getBackground().getRGB();
             Arrays.fill(pixelsBuf.array(), rgb.red << 16 | rgb.green << 8 | rgb.blue);
@@ -1106,7 +1108,7 @@ public class FXCanvas extends Canvas {
         }
 
         Set<TransferMode> getTransferModes(int bits) {
-            Set<TransferMode> set = new HashSet<TransferMode>();
+            Set<TransferMode> set = new HashSet<>();
             if ((bits & DND.DROP_COPY) != 0) set.add(TransferMode.COPY);
             if ((bits & DND.DROP_MOVE) != 0) set.add(TransferMode.MOVE);
             if ((bits & DND.DROP_TARGET_MOVE) != 0) set.add(TransferMode.MOVE);
@@ -1174,10 +1176,12 @@ public class FXCanvas extends Canvas {
             final DragSource dragSource = new DragSource(FXCanvas.this, dragOperation);
             dragSource.setTransfer(transfers);
             dragSource.addDragListener(new DragSourceListener() {
+                @Override
                 public void dragFinished(org.eclipse.swt.dnd.DragSourceEvent event) {
                     dragSource.dispose();
                     fxDragSource.dragDropEnd(getTransferMode(event.detail));
                 }
+                @Override
                 public void dragSetData(org.eclipse.swt.dnd.DragSourceEvent event) {
                     Transfer [] transfers = dragSource.getTransfer();
                     for (int i=0; i<transfers.length; i++) {
@@ -1195,6 +1199,7 @@ public class FXCanvas extends Canvas {
                         event.doit = false;
                     }
                 }
+                @Override
                 public void dragStart(org.eclipse.swt.dnd.DragSourceEvent event) {
                 }
             });
@@ -1249,7 +1254,7 @@ public class FXCanvas extends Canvas {
 
         String getMime(Transfer transfer) {
             if (transfer.equals(TextTransfer.getInstance())) return "text/plain";
-            if (transfer.equals(RTFTransfer.getInstance())) return "text/rtf"; ;
+            if (transfer.equals(RTFTransfer.getInstance())) return "text/rtf";
             if (transfer.equals( HTMLTransfer.getInstance())) return "text/html";
             if (transfer.equals(URLTransfer.getInstance())) return "text/uri-list";
             if (transfer.equals( ImageTransfer.getInstance())) return "application/x-java-rawimage";
@@ -1290,17 +1295,21 @@ public class FXCanvas extends Canvas {
                 boolean ignoreLeave;
                 int detail = DND.DROP_NONE, operations = DND.DROP_NONE;
                 EmbeddedSceneDSInterface fxDragSource = new EmbeddedSceneDSInterface() {
+                    @Override
                     public Set<TransferMode> getSupportedActions() {
                         return getTransferModes(operations);
                     }
+                    @Override
                     public Object getData(String mimeType) {
                         // NOTE: get the data for the requested mime type, not the default data
                         return data;
                     }
+                    @Override
                     public String[] getMimeTypes() {
                         if (currentTransferData == null) return new String [0];
                         return getMimes(getAllTransfers(), currentTransferData);
                     }
+                    @Override
                     public boolean isMimeTypeAvailable(String mimeType) {
                         String [] mimes = getMimeTypes();
                         for (int i=0; i<mimes.length; i++) {
@@ -1308,12 +1317,14 @@ public class FXCanvas extends Canvas {
                         }
                         return false;
                     }
+                    @Override
                     public void dragDropEnd(TransferMode performedAction) {
                         data = null;
                         //transferData = null;
                         currentTransferData = null;
                     }
                 };
+                @Override
                 public void dragEnter(DropTargetEvent event) {
                     ignoreLeave = false;
                     dropTarget.setTransfer(getAllTransfers());
@@ -1321,6 +1332,7 @@ public class FXCanvas extends Canvas {
                     operations = event.operations;
                     dragOver (event, true, detail);
                 }
+                @Override
                 public void dragLeave(DropTargetEvent event) {
                     detail = operations = DND.DROP_NONE;
                     data = null;
@@ -1331,11 +1343,13 @@ public class FXCanvas extends Canvas {
                         fxDropTarget.handleDragLeave();
                     });
                 }
+                @Override
                 public void dragOperationChanged(DropTargetEvent event) {
                     detail = event.detail;
                     operations = event.operations;
                     dragOver(event, false, detail);
                 }
+                @Override
                 public void dragOver(DropTargetEvent event) {
                     operations = event.operations;
                     dragOver (event, false, detail);
@@ -1353,6 +1367,7 @@ public class FXCanvas extends Canvas {
                     }
                     event.detail = getDragAction(acceptedMode);
                 }
+                @Override
                 public void drop(DropTargetEvent event) {
                     detail = event.detail;
                     operations = event.operations;
@@ -1367,6 +1382,7 @@ public class FXCanvas extends Canvas {
                     //transferData = null;
                     currentTransferData = null;
                 }
+                @Override
                 public void dropAccept(DropTargetEvent event) {
                     ignoreLeave = true;
                 }
@@ -1420,6 +1436,7 @@ public class FXCanvas extends Canvas {
 
         Object lock = new Object();
         boolean queued = false;
+        @Override
         public void repaint() {
             synchronized (lock) {
                 if (queued) return;

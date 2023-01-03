@@ -26,36 +26,34 @@
 #include "config.h"
 #include "Logger.h"
 
+#include <mutex>
 #include <wtf/HexNumber.h>
 #include <wtf/text/WTFString.h>
 
 namespace WTF {
 
+Lock loggerObserverLock;
+
 String Logger::LogSiteIdentifier::toString() const
 {
-    StringBuilder builder;
-
-    if (className) {
-        builder.append(className);
-        builder.appendLiteral("::");
-    }
-    builder.append(methodName);
-    builder.append('(');
-    appendUnsignedAsHex(objectPtr, builder);
-    builder.appendLiteral(") ");
-    return builder.toString();
+    if (className)
+        return makeString(className, "::", methodName, '(', hex(objectPtr), ") ");
+    return makeString(methodName, '(', hex(objectPtr), ") ");
 }
 
 String LogArgument<const void*>::toString(const void* argument)
 {
-    StringBuilder builder;
-    builder.append('(');
-    appendUnsignedAsHex(reinterpret_cast<uintptr_t>(argument), builder);
-    builder.append(')');
-    return builder.toString();
+    return makeString('(', hex(reinterpret_cast<uintptr_t>(argument)), ')');
+}
+
+Vector<std::reference_wrapper<Logger::Observer>>& Logger::observers()
+{
+    static LazyNeverDestroyed<Vector<std::reference_wrapper<Observer>>> observers;
+    static std::once_flag onceKey;
+    std::call_once(onceKey, [&] {
+        observers.construct();
+    });
+    return observers;
 }
 
 } // namespace WTF
-
-using WTF::Logger;
-using WTF::JSONLogValue;

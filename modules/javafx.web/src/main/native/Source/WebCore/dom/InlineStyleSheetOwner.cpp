@@ -22,7 +22,7 @@
 #include "InlineStyleSheetOwner.h"
 
 #include "ContentSecurityPolicy.h"
-#include "Element.h"
+#include "ElementInlines.h"
 #include "Logging.h"
 #include "MediaList.h"
 #include "MediaQueryEvaluator.h"
@@ -50,7 +50,7 @@ static CSSParserContext parserContextForElement(const Element& element)
 {
     auto* shadowRoot = element.containingShadowRoot();
     // User agent shadow trees can't contain document-relative URLs. Use blank URL as base allowing cross-document sharing.
-    auto& baseURL = shadowRoot && shadowRoot->mode() == ShadowRootMode::UserAgent ? WTF::blankURL() : element.document().baseURL();
+    auto& baseURL = shadowRoot && shadowRoot->mode() == ShadowRootMode::UserAgent ? aboutBlankURL() : element.document().baseURL();
 
     CSSParserContext result = CSSParserContext { element.document(), baseURL, element.document().characterSetWithUTF8Fallback() };
     if (shadowRoot && shadowRoot->mode() == ShadowRootMode::UserAgent)
@@ -58,7 +58,7 @@ static CSSParserContext parserContextForElement(const Element& element)
     return result;
 }
 
-static Optional<InlineStyleSheetCacheKey> makeInlineStyleSheetCacheKey(const String& text, const Element& element)
+static std::optional<InlineStyleSheetCacheKey> makeInlineStyleSheetCacheKey(const String& text, const Element& element)
 {
     // Only cache for shadow trees. Main document inline stylesheets are generally unique and can't be shared between documents.
     // FIXME: This could be relaxed when a stylesheet does not contain document-relative URLs (or #urls).
@@ -96,6 +96,8 @@ void InlineStyleSheetOwner::insertedIntoDocument(Element& element)
 void InlineStyleSheetOwner::removedFromDocument(Element& element)
 {
     if (m_styleScope) {
+        if (m_styleScope->hasPendingSheet(element))
+            m_styleScope->removePendingSheet(element);
         m_styleScope->removeStyleSheetCandidateNode(element);
         m_styleScope = nullptr;
     }
@@ -149,7 +151,7 @@ inline bool isValidCSSContentType(Element& element, const AtomString& type)
     // FIXME: Should MIME types really be case sensitive in XML documents? Doesn't seem like they should,
     // even though other things are case sensitive in that context. MIME types should never be case sensitive.
     // We should verify this and then remove the isHTMLElement check here.
-    static NeverDestroyed<const AtomString> cssContentType("text/css", AtomString::ConstructFromLiteral);
+    static MainThreadNeverDestroyed<const AtomString> cssContentType("text/css", AtomString::ConstructFromLiteral);
     return element.isHTMLElement() ? equalLettersIgnoringASCIICase(type, "text/css") : type == cssContentType;
 }
 
@@ -168,17 +170,10 @@ void InlineStyleSheetOwner::createSheet(Element& element, const String& text)
 
     ASSERT(document.contentSecurityPolicy());
     const ContentSecurityPolicy& contentSecurityPolicy = *document.contentSecurityPolicy();
-    bool hasKnownNonce = contentSecurityPolicy.allowStyleWithNonce(element.attributeWithoutSynchronization(HTMLNames::nonceAttr), element.isInUserAgentShadowTree());
-    if (!contentSecurityPolicy.allowInlineStyle(document.url(), m_startTextPosition.m_line, text, hasKnownNonce))
+    if (!contentSecurityPolicy.allowInlineStyle(document.url().string(), m_startTextPosition.m_line, text, CheckUnsafeHashes::No, element, element.nonce(), element.isInUserAgentShadowTree()))
         return;
 
     auto mediaQueries = MediaQuerySet::create(m_media, MediaQueryParserContext(document));
-
-    MediaQueryEvaluator screenEval("screen"_s, true);
-    MediaQueryEvaluator printEval("print"_s, true);
-    LOG(MediaQueries, "InlineStyleSheetOwner::createSheet evaluating queries");
-    if (!screenEval.evaluate(mediaQueries.get()) && !printEval.evaluate(mediaQueries.get()))
-        return;
 
     if (m_styleScope)
         m_styleScope->addPendingSheet(element);
@@ -247,7 +242,7 @@ bool InlineStyleSheetOwner::sheetLoaded(Element& element)
 
 void InlineStyleSheetOwner::startLoadingDynamicSheet(Element& element)
 {
-    if (m_styleScope)
+    if (m_styleScope && !m_styleScope->hasPendingSheet(element))
         m_styleScope->addPendingSheet(element);
 }
 

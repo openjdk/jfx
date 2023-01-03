@@ -26,7 +26,6 @@
 #include "config.h"
 #include "SuperSampler.h"
 
-#include "MacroAssembler.h"
 #include "Options.h"
 #include <wtf/DataLog.h>
 #include <wtf/Lock.h>
@@ -34,11 +33,12 @@
 
 namespace JSC {
 
-volatile uint32_t g_superSamplerCount;
+std::atomic<uint32_t> g_superSamplerCount;
+std::atomic<bool> g_superSamplerEnabled;
 
 static Lock lock;
-static double in;
-static double out;
+static double in WTF_GUARDED_BY_LOCK(lock);
+static double out WTF_GUARDED_BY_LOCK(lock);
 
 void initializeSuperSampler()
 {
@@ -48,12 +48,12 @@ void initializeSuperSampler()
     Thread::create(
         "JSC Super Sampler",
         [] () {
-            const int sleepQuantum = 10;
-            const int printingPeriod = 1000;
+            const int sleepQuantum = 3;
+            const int printingPeriod = 3000;
             for (;;) {
                 for (int ms = 0; ms < printingPeriod; ms += sleepQuantum) {
-                    {
-                        LockHolder locker(lock);
+                    if (g_superSamplerEnabled) {
+                        Locker locker { lock };
                         if (g_superSamplerCount)
                             in++;
                         else
@@ -70,7 +70,7 @@ void initializeSuperSampler()
 
 void resetSuperSamplerState()
 {
-    LockHolder locker(lock);
+    Locker locker { lock };
     in = 0;
     out = 0;
 }
@@ -80,11 +80,23 @@ void printSuperSamplerState()
     if (!Options::useSuperSampler())
         return;
 
-    LockHolder locker(lock);
+    Locker locker { lock };
     double percentage = 100.0 * in / (in + out);
     if (percentage != percentage)
         percentage = 0.0;
-    dataLog("Percent time behind super sampler flag: ", percentage, "\n");
+    dataLog("Percent time behind super sampler flag: ", percentage, "%\n");
+}
+
+void enableSuperSampler()
+{
+    Locker locker { lock };
+    g_superSamplerEnabled = true;
+}
+
+void disableSuperSampler()
+{
+    Locker locker { lock };
+    g_superSamplerEnabled = false;
 }
 
 } // namespace JSC

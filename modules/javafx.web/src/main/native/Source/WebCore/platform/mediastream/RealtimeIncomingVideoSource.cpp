@@ -39,37 +39,39 @@ RealtimeIncomingVideoSource::RealtimeIncomingVideoSource(rtc::scoped_refptr<webr
     : RealtimeMediaSource(Type::Video, "remote video"_s, WTFMove(videoTrackId))
     , m_videoTrack(WTFMove(videoTrack))
 {
-    notifyMutedChange(!m_videoTrack);
+    ASSERT(m_videoTrack);
 
     RealtimeMediaSourceSupportedConstraints constraints;
     constraints.setSupportsWidth(true);
     constraints.setSupportsHeight(true);
     m_currentSettings = RealtimeMediaSourceSettings { };
     m_currentSettings->setSupportedConstraints(WTFMove(constraints));
+
+    m_videoTrack->RegisterObserver(this);
+}
+
+RealtimeIncomingVideoSource::~RealtimeIncomingVideoSource()
+{
+    stop();
+    m_videoTrack->UnregisterObserver(this);
 }
 
 void RealtimeIncomingVideoSource::startProducingData()
 {
-    if (m_videoTrack)
-        m_videoTrack->AddOrUpdateSink(this, rtc::VideoSinkWants());
-}
-
-void RealtimeIncomingVideoSource::setSourceTrack(rtc::scoped_refptr<webrtc::VideoTrackInterface>&& track)
-{
-    ASSERT(track);
-
-    if (m_videoTrack && isProducingData())
-        m_videoTrack->RemoveSink(this);
-    m_videoTrack = WTFMove(track);
-    notifyMutedChange(!m_videoTrack);
-    if (isProducingData())
-        m_videoTrack->AddOrUpdateSink(this, rtc::VideoSinkWants());
+    m_videoTrack->AddOrUpdateSink(this, rtc::VideoSinkWants());
 }
 
 void RealtimeIncomingVideoSource::stopProducingData()
 {
-    if (m_videoTrack)
-        m_videoTrack->RemoveSink(this);
+    m_videoTrack->RemoveSink(this);
+}
+
+void RealtimeIncomingVideoSource::OnChanged()
+{
+    callOnMainThread([protectedThis = Ref { *this }] {
+        if (protectedThis->m_videoTrack->state() == webrtc::MediaStreamTrackInterface::kEnded)
+            protectedThis->end();
+    });
 }
 
 const RealtimeMediaSourceCapabilities& RealtimeIncomingVideoSource::capabilities()
@@ -99,7 +101,24 @@ const RealtimeMediaSourceSettings& RealtimeIncomingVideoSource::settings()
 void RealtimeIncomingVideoSource::settingsDidChange(OptionSet<RealtimeMediaSourceSettings::Flag> settings)
 {
     if (settings.containsAny({ RealtimeMediaSourceSettings::Flag::Width, RealtimeMediaSourceSettings::Flag::Height }))
-        m_currentSettings = WTF::nullopt;
+        m_currentSettings = std::nullopt;
+}
+
+VideoSampleMetadata RealtimeIncomingVideoSource::metadataFromVideoFrame(const webrtc::VideoFrame& frame)
+{
+    VideoSampleMetadata metadata;
+    if (frame.ntp_time_ms() > 0)
+        metadata.captureTime = Seconds::fromMilliseconds(frame.ntp_time_ms());
+    if (isInBounds<uint32_t>(frame.timestamp()))
+        metadata.rtpTimestamp = frame.timestamp();
+    auto lastPacketTimestamp = std::max_element(frame.packet_infos().cbegin(), frame.packet_infos().cend(), [](const auto& a, const auto& b) {
+        return a.receive_time() < b.receive_time();
+    });
+    metadata.receiveTime = Seconds::fromMicroseconds(lastPacketTimestamp->receive_time().us());
+    if (frame.processing_time())
+        metadata.processingDuration = Seconds::fromMilliseconds(frame.processing_time()->Elapsed().ms()).value();
+
+    return metadata;
 }
 
 } // namespace WebCore

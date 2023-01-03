@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -43,7 +43,7 @@ import javafx.stage.Window;
 // Not public API (class is package-protected), so no JavaDoc is required.
 class HeavyweightDialog extends FXDialog {
 
-    /**************************************************************************
+    /* ************************************************************************
      *
      * Private fields
      *
@@ -73,7 +73,7 @@ class HeavyweightDialog extends FXDialog {
 
 
 
-    /**************************************************************************
+    /* ************************************************************************
      *
      * Constructors
      *
@@ -105,7 +105,7 @@ class HeavyweightDialog extends FXDialog {
 
 
 
-    /**************************************************************************
+    /* ************************************************************************
      *
      * Public API
      *
@@ -249,7 +249,7 @@ class HeavyweightDialog extends FXDialog {
 
 
 
-    /**************************************************************************
+    /* ************************************************************************
      *
      * Private implementation
      *
@@ -312,6 +312,8 @@ class HeavyweightDialog extends FXDialog {
         if (oldOwner != null && oldOwner instanceof Stage) {
             Stage oldStage = (Stage) oldOwner;
             Bindings.unbindContent(stage.getIcons(), oldStage.getIcons());
+            stage.renderScaleXProperty().unbind();
+            stage.renderScaleYProperty().unbind();
 
             Scene oldScene = oldStage.getScene();
             if (scene != null && dialogScene != null) {
@@ -323,6 +325,8 @@ class HeavyweightDialog extends FXDialog {
         if (newOwner instanceof Stage) {
             Stage newStage = (Stage) newOwner;
             Bindings.bindContent(stage.getIcons(), newStage.getIcons());
+            stage.renderScaleXProperty().bind(newStage.renderScaleXProperty());
+            stage.renderScaleYProperty().bind(newStage.renderScaleYProperty());
 
             Scene newScene = newStage.getScene();
             if (scene != null && dialogScene != null) {

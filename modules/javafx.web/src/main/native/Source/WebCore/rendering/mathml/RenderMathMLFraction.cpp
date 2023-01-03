@@ -99,7 +99,7 @@ RenderMathMLFraction::FractionParameters RenderMathMLFraction::fractionParameter
     // We try and read constants to draw the fraction from the OpenType MATH and use fallback values otherwise.
     const auto& primaryFont = style().fontCascade().primaryFont();
     const auto* mathData = style().fontCascade().primaryFont().mathData();
-    bool display = mathMLStyle().displayStyle();
+    bool display = style().mathStyle() == MathStyle::Normal;
     if (mathData) {
         numeratorGapMin = mathData->getMathConstant(primaryFont, display ? OpenTypeMathData::FractionNumDisplayStyleGapMin : OpenTypeMathData::FractionNumeratorGapMin);
         denominatorGapMin = mathData->getMathConstant(primaryFont, display ? OpenTypeMathData::FractionDenomDisplayStyleGapMin : OpenTypeMathData::FractionDenominatorGapMin);
@@ -138,7 +138,7 @@ RenderMathMLFraction::FractionParameters RenderMathMLFraction::stackParameters()
     // We try and read constants to draw the stack from the OpenType MATH and use fallback values otherwise.
     const auto& primaryFont = style().fontCascade().primaryFont();
     const auto* mathData = style().fontCascade().primaryFont().mathData();
-    bool display = mathMLStyle().displayStyle();
+    bool display = style().mathStyle() == MathStyle::Normal;
     if (mathData) {
         gapMin = mathData->getMathConstant(primaryFont, display ? OpenTypeMathData::StackDisplayStyleGapMin : OpenTypeMathData::StackGapMin);
         parameters.numeratorShiftUp = mathData->getMathConstant(primaryFont, display ? OpenTypeMathData::StackTopDisplayStyleShiftUp : OpenTypeMathData::StackTopShiftUp);
@@ -272,10 +272,10 @@ void RenderMathMLFraction::paint(PaintInfo& info, const LayoutPoint& paintOffset
     info.context().drawLine(adjustedPaintOffset, roundedIntPoint(LayoutPoint(adjustedPaintOffset.x() + logicalWidth(), LayoutUnit(adjustedPaintOffset.y()))));
 }
 
-Optional<int> RenderMathMLFraction::firstLineBaseline() const
+std::optional<LayoutUnit> RenderMathMLFraction::firstLineBaseline() const
 {
     if (isValid())
-        return Optional<int>(std::lround(static_cast<float>(fractionAscent())));
+        return LayoutUnit { roundf(static_cast<float>(fractionAscent())) };
     return RenderMathMLBlock::firstLineBaseline();
 }
 

@@ -48,19 +48,20 @@ public:
 
     static const AtomString& defaultSlotName() { return emptyAtom(); }
 
-    HTMLSlotElement* findAssignedSlot(const Node&, ShadowRoot&);
+    HTMLSlotElement* findAssignedSlot(const Node&);
 
     void renameSlotElement(HTMLSlotElement&, const AtomString& oldName, const AtomString& newName, ShadowRoot&);
     void addSlotElementByName(const AtomString&, HTMLSlotElement&, ShadowRoot&);
     void removeSlotElementByName(const AtomString&, HTMLSlotElement&, ContainerNode* oldParentOfRemovedTreeForRemoval, ShadowRoot&);
     void slotFallbackDidChange(HTMLSlotElement&, ShadowRoot&);
-    void resolveSlotsBeforeNodeInsertionOrRemoval(ShadowRoot&);
-    void willRemoveAllChildren(ShadowRoot&);
+
+    void resolveSlotsBeforeNodeInsertionOrRemoval();
+    void willRemoveAllChildren();
 
     void didChangeSlot(const AtomString&, ShadowRoot&);
-    void enqueueSlotChangeEvent(const AtomString&, ShadowRoot&);
 
-    const Vector<Node*>* assignedNodesForSlot(const HTMLSlotElement&, ShadowRoot&);
+    const Vector<WeakPtr<Node>>* assignedNodesForSlot(const HTMLSlotElement&, ShadowRoot&);
+    void willRemoveAssignedNode(const Node&);
 
     virtual void hostChildElementDidChange(const Element&, ShadowRoot&);
 
@@ -75,10 +76,10 @@ private:
         bool shouldResolveSlotElement() { return !element && elementCount; }
 
         WeakPtr<HTMLSlotElement> element;
-        WeakPtr<HTMLSlotElement> oldElement;
+        WeakPtr<HTMLSlotElement> oldElement; // Set by resolveSlotsAfterSlotMutation to dispatch slotchange in tree order.
         unsigned elementCount { 0 };
-        bool seenFirstElement { false };
-        Vector<Node*> assignedNodes;
+        bool seenFirstElement { false }; // Used in resolveSlotsAfterSlotMutation.
+        Vector<WeakPtr<Node>> assignedNodes;
     };
 
     bool hasAssignedNodes(ShadowRoot&, Slot&);
@@ -87,35 +88,46 @@ private:
 
     virtual const AtomString& slotNameForHostChild(const Node&) const;
 
-    HTMLSlotElement* findFirstSlotElement(Slot&, ShadowRoot&);
-    void resolveAllSlotElements(ShadowRoot&);
+    HTMLSlotElement* findFirstSlotElement(Slot&);
 
     void assignSlots(ShadowRoot&);
     void assignToSlot(Node& child, const AtomString& slotName);
 
     HashMap<AtomString, std::unique_ptr<Slot>> m_slots;
 
-#ifndef NDEBUG
+#if ASSERT_ENABLED
     HashSet<HTMLSlotElement*> m_slotElementsForConsistencyCheck;
 #endif
 
-    bool m_needsToResolveSlotElements { false };
     bool m_slotAssignmentsIsValid { false };
     bool m_willBeRemovingAllChildren { false };
     unsigned m_slotMutationVersion { 0 };
     unsigned m_slotResolutionVersion { 0 };
+    unsigned m_slotElementCount { 0 };
 };
+
+inline void SlotAssignment::resolveSlotsBeforeNodeInsertionOrRemoval()
+{
+    m_slotMutationVersion++;
+    m_willBeRemovingAllChildren = false;
+}
+
+inline void SlotAssignment::willRemoveAllChildren()
+{
+    m_slotMutationVersion++;
+    m_willBeRemovingAllChildren = true;
+}
 
 inline void ShadowRoot::resolveSlotsBeforeNodeInsertionOrRemoval()
 {
-    if (UNLIKELY(shouldFireSlotchangeEvent() && m_slotAssignment))
-        m_slotAssignment->resolveSlotsBeforeNodeInsertionOrRemoval(*this);
+    if (UNLIKELY(m_slotAssignment))
+        m_slotAssignment->resolveSlotsBeforeNodeInsertionOrRemoval();
 }
 
 inline void ShadowRoot::willRemoveAllChildren(ContainerNode&)
 {
-    if (UNLIKELY(shouldFireSlotchangeEvent() && m_slotAssignment))
-        m_slotAssignment->willRemoveAllChildren(*this);
+    if (UNLIKELY(m_slotAssignment))
+        m_slotAssignment->willRemoveAllChildren();
 }
 
 inline void ShadowRoot::didRemoveAllChildrenOfShadowHost()
@@ -143,6 +155,12 @@ inline void ShadowRoot::hostChildElementDidChangeSlotAttribute(Element& element,
     m_slotAssignment->didChangeSlot(oldValue, *this);
     m_slotAssignment->didChangeSlot(newValue, *this);
     RenderTreeUpdater::tearDownRenderers(element);
+}
+
+inline void ShadowRoot::willRemoveAssignedNode(const Node& node)
+{
+    if (m_slotAssignment)
+        m_slotAssignment->willRemoveAssignedNode(node);
 }
 
 } // namespace WebCore

@@ -44,18 +44,6 @@ typedef enum {
 } GstAudioFlags;
 
 /**
- * GstAudioLayout:
- * @GST_AUDIO_LAYOUT_INTERLEAVED: interleaved audio
- * @GST_AUDIO_LAYOUT_NON_INTERLEAVED: non-interleaved audio
- *
- * Layout of the audio samples for the different channels.
- */
-typedef enum {
-  GST_AUDIO_LAYOUT_INTERLEAVED = 0,
-  GST_AUDIO_LAYOUT_NON_INTERLEAVED
-} GstAudioLayout;
-
-/**
  * GstAudioInfo:
  * @finfo: the format info of the audio
  * @flags: additional audio flags
@@ -105,7 +93,7 @@ GType gst_audio_info_get_type                (void);
 #define GST_AUDIO_INFO_IS_BIG_ENDIAN(i)      (GST_AUDIO_FORMAT_INFO_IS_BIG_ENDIAN((i)->finfo))
 
 #define GST_AUDIO_INFO_FLAGS(info)           ((info)->flags)
-#define GST_AUDIO_INFO_IS_UNPOSITIONED(info) ((info)->flags & GST_AUDIO_FLAG_UNPOSITIONED)
+#define GST_AUDIO_INFO_IS_UNPOSITIONED(info) (((info)->flags & GST_AUDIO_FLAG_UNPOSITIONED) != 0)
 #define GST_AUDIO_INFO_LAYOUT(info)          ((info)->layout)
 
 #define GST_AUDIO_INFO_RATE(info)            ((info)->rate)
@@ -115,6 +103,9 @@ GType gst_audio_info_get_type                (void);
 
 GST_AUDIO_API
 GstAudioInfo * gst_audio_info_new         (void);
+
+GST_AUDIO_API
+GstAudioInfo * gst_audio_info_new_from_caps (const GstCaps * caps);
 
 GST_AUDIO_API
 void           gst_audio_info_init        (GstAudioInfo *info);
@@ -145,9 +136,7 @@ GST_AUDIO_API
 gboolean       gst_audio_info_is_equal    (const GstAudioInfo *info,
                                            const GstAudioInfo *other);
 
-#ifdef G_DEFINE_AUTOPTR_CLEANUP_FUNC
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(GstAudioInfo, gst_audio_info_free)
-#endif
 
 G_END_DECLS
 

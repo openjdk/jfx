@@ -55,7 +55,11 @@ class Timer;
 
 class BitmapImage final : public Image {
 public:
-    static Ref<BitmapImage> create(NativeImagePtr&& nativeImage, ImageObserver* observer = nullptr)
+    static Ref<BitmapImage> create(PlatformImagePtr&& platformImage, ImageObserver* observer = nullptr)
+    {
+        return adoptRef(*new BitmapImage(NativeImage::create(WTFMove(platformImage)), observer));
+    }
+    static Ref<BitmapImage> create(RefPtr<NativeImage>&& nativeImage, ImageObserver* observer = nullptr)
     {
         return adoptRef(*new BitmapImage(WTFMove(nativeImage), observer));
     }
@@ -83,11 +87,12 @@ public:
     RepetitionCount repetitionCount() const { return m_source->repetitionCount(); }
     String uti() const override { return m_source->uti(); }
     String filenameExtension() const override { return m_source->filenameExtension(); }
-    Optional<IntPoint> hotSpot() const override { return m_source->hotSpot(); }
+    String accessibilityDescription() const override { return m_source->accessibilityDescription(); }
+    std::optional<IntPoint> hotSpot() const override { return m_source->hotSpot(); }
 
     // FloatSize due to override.
-    FloatSize size() const override { return m_source->size(); }
-    IntSize sizeRespectingOrientation() const { return m_source->sizeRespectingOrientation(); }
+    FloatSize size(ImageOrientation orientation = ImageOrientation::FromImage) const override { return m_source->size(orientation); }
+    ImageOrientation orientation() const override { return m_source->orientation(); }
     Color singlePixelSolidColor() const override { return m_source->singlePixelSolidColor(); }
     bool frameIsBeingDecodedAndIsCompatibleWithOptionsAtIndex(size_t index, const DecodingOptions& decodingOptions) const { return m_source->frameIsBeingDecodedAndIsCompatibleWithOptionsAtIndex(index, decodingOptions); }
     DecodingStatus frameDecodingStatusAtIndex(size_t index) const { return m_source->frameDecodingStatusAtIndex(index); }
@@ -95,7 +100,7 @@ public:
     bool frameHasAlphaAtIndex(size_t index) const { return m_source->frameHasAlphaAtIndex(index); }
 
     bool frameHasFullSizeNativeImageAtIndex(size_t index, SubsamplingLevel subsamplingLevel) { return m_source->frameHasFullSizeNativeImageAtIndex(index, subsamplingLevel); }
-    bool frameHasDecodedNativeImageCompatibleWithOptionsAtIndex(size_t index, const Optional<SubsamplingLevel>& subsamplingLevel, const DecodingOptions& decodingOptions) { return m_source->frameHasDecodedNativeImageCompatibleWithOptionsAtIndex(index, subsamplingLevel, decodingOptions); }
+    bool frameHasDecodedNativeImageCompatibleWithOptionsAtIndex(size_t index, const std::optional<SubsamplingLevel>& subsamplingLevel, const DecodingOptions& decodingOptions) { return m_source->frameHasDecodedNativeImageCompatibleWithOptionsAtIndex(index, subsamplingLevel, decodingOptions); }
 
     SubsamplingLevel frameSubsamplingLevelAtIndex(size_t index) const { return m_source->frameSubsamplingLevelAtIndex(index); }
 
@@ -116,6 +121,8 @@ public:
     bool isLargeImageAsyncDecodingEnabledForTesting() const { return m_largeImageAsyncDecodingEnabledForTesting; }
     void stopAsyncDecodingQueue() { m_source->stopAsyncDecodingQueue(); }
 
+    DestinationColorSpace colorSpace() final;
+
     WEBCORE_EXPORT unsigned decodeCountForTesting() const;
 
     // Accessors for native image formats.
@@ -135,24 +142,28 @@ public:
 
 #if PLATFORM(GTK)
     GdkPixbuf* getGdkPixbuf() override;
+#if USE(GTK4)
+    GdkTexture* gdkTexture() override;
+#endif
 #endif
 
-    WEBCORE_EXPORT NativeImagePtr nativeImage(const GraphicsContext* = nullptr) override;
-    NativeImagePtr nativeImageForCurrentFrame(const GraphicsContext* = nullptr) override;
+    WEBCORE_EXPORT RefPtr<NativeImage> nativeImage(const DestinationColorSpace& = DestinationColorSpace::SRGB()) override;
+    RefPtr<NativeImage> nativeImageForCurrentFrame() override;
+    RefPtr<NativeImage> preTransformedNativeImageForCurrentFrame(bool respectOrientation) override;
 #if USE(CG)
-    NativeImagePtr nativeImageOfSize(const IntSize&, const GraphicsContext* = nullptr) override;
-    Vector<NativeImagePtr> framesNativeImages();
+    RefPtr<NativeImage> nativeImageOfSize(const IntSize&) override;
+    Vector<Ref<NativeImage>> framesNativeImages();
 #endif
 
     void imageFrameAvailableAtIndex(size_t);
     void decode(Function<void()>&&);
 
-protected:
-    WEBCORE_EXPORT BitmapImage(NativeImagePtr&&, ImageObserver* = nullptr);
+private:
+    WEBCORE_EXPORT BitmapImage(RefPtr<NativeImage>&&, ImageObserver* = nullptr);
     WEBCORE_EXPORT BitmapImage(ImageObserver* = nullptr);
 
-    NativeImagePtr frameImageAtIndex(size_t index) { return m_source->frameImageAtIndex(index); }
-    NativeImagePtr frameImageAtIndexCacheIfNeeded(size_t, SubsamplingLevel = SubsamplingLevel::Default, const GraphicsContext* = nullptr);
+    RefPtr<NativeImage> frameImageAtIndex(size_t index) { return m_source->frameImageAtIndex(index); }
+    RefPtr<NativeImage> frameImageAtIndexCacheIfNeeded(size_t, SubsamplingLevel = SubsamplingLevel::Default);
 
     // Called to invalidate cached data. When |destroyAll| is true, we wipe out
     // the entire frame buffer cache and tell the image source to destroy
@@ -165,6 +176,9 @@ protected:
     // If the image is large enough, calls destroyDecodedData() and passes
     // |destroyAll| along.
     void destroyDecodedDataIfNecessary(bool destroyAll = true);
+
+    FloatSize sourceSize(ImageOrientation orientation = ImageOrientation::FromImage) const final { return m_source->sourceSize(orientation); }
+    bool hasDensityCorrectedSize() const override { return m_source->hasDensityCorrectedSize(); }
 
     ImageDrawResult draw(GraphicsContext&, const FloatRect& dstRect, const FloatRect& srcRect, const ImagePaintingOptions& = { }) override;
     void drawPattern(GraphicsContext&, const FloatRect& destRect, const FloatRect& srcRect, const AffineTransform& patternTransform, const FloatPoint& phase, const FloatSize& spacing, const ImagePaintingOptions& = { }) override;
@@ -191,15 +205,14 @@ protected:
     // Handle platform-specific data
     void invalidatePlatformData();
 
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
     bool notSolidColor() override;
 #endif
 
 #if PLATFORM(COCOA)
-    RetainPtr<CFDataRef> tiffRepresentation(const Vector<NativeImagePtr>&);
+    RetainPtr<CFDataRef> tiffRepresentation(const Vector<Ref<NativeImage>>&);
 #endif
 
-private:
     void clearTimer();
     void startTimer(Seconds delay);
     SubsamplingLevel subsamplingLevelForScaleFactor(GraphicsContext&, const FloatSize& scaleFactor);
@@ -225,7 +238,7 @@ private:
 
     bool m_animationFinished { false };
 
-    // The default value of m_allowSubsampling should be the same as defaultImageSubsamplingEnabled in Settings.cpp
+    // The default value of m_allowSubsampling should be the same as default value of the ImageSubsamplingEnabled setting.
 #if PLATFORM(IOS_FAMILY)
     bool m_allowSubsampling { true };
 #else
@@ -237,7 +250,7 @@ private:
     bool m_clearDecoderAfterAsyncFrameRequestForTesting { false };
     bool m_largeImageAsyncDecodingEnabledForTesting { false };
 
-#if !LOG_DISABLED
+#if ASSERT_ENABLED || !LOG_DISABLED
     size_t m_lateFrameCount { 0 };
     size_t m_earlyFrameCount { 0 };
     size_t m_cachedFrameCount { 0 };

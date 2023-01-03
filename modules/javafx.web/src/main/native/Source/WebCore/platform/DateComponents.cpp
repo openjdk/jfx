@@ -31,25 +31,27 @@
 #include "config.h"
 #include "DateComponents.h"
 
+#include "ParsingUtilities.h"
 #include <limits.h>
 #include <wtf/ASCIICType.h>
 #include <wtf/DateMath.h>
 #include <wtf/MathExtras.h>
 #include <wtf/text/StringConcatenateNumbers.h>
+#include <wtf/text/StringParsingBuffer.h>
 
 namespace WebCore {
 
-// HTML5 specification defines minimum week of year is one.
-const int DateComponents::minimumWeekNumber = 1;
+// HTML defines minimum week of year is one.
+static constexpr int minimumWeekNumber = 1;
 
-// HTML5 specification defines maximum week of year is 53.
-const int DateComponents::maximumWeekNumber = 53;
+// HTML defines maximum week of year is 53.
+static constexpr int maximumWeekNumber = 53;
 
-static const int maximumMonthInMaximumYear = 8; // This is September, since months are 0 based.
-static const int maximumDayInMaximumMonth = 13;
-static const int maximumWeekInMaximumYear = 37; // The week of 275760-09-13
+static constexpr int maximumMonthInMaximumYear = 8; // This is September, since months are 0 based.
+static constexpr int maximumDayInMaximumMonth = 13;
+static constexpr int maximumWeekInMaximumYear = 37; // The week of 275760-09-13
 
-static const int daysInMonth[12] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
+static constexpr int daysInMonth[12] = { 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 };
 
 static bool isLeapYear(int year)
 {
@@ -96,51 +98,57 @@ int DateComponents::maxWeekNumberInYear() const
     return day == Thursday || (day == Wednesday && isLeapYear(m_year)) ? maximumWeekNumber : maximumWeekNumber - 1;
 }
 
-static unsigned countDigits(const UChar* src, unsigned length, unsigned start)
+template<typename CharacterType> static unsigned countDigits(StringParsingBuffer<CharacterType> buffer)
 {
-    unsigned index = start;
-    for (; index < length; ++index) {
-        if (!isASCIIDigit(src[index]))
-            break;
-    }
-    return index - start;
+    auto begin = buffer.position();
+    skipWhile<isASCIIDigit>(buffer);
+    return buffer.position() - begin;
 }
 
-// Very strict integer parser. Do not allow leading or trailing whitespace unlike charactersToIntStrict().
-static bool toInt(const UChar* src, unsigned length, unsigned parseStart, unsigned parseLength, int& out)
+// Differences from parseInteger<int>: Takes StringParsingBuffer. Does not allow leading or trailing spaces. Does not allow leading "+".
+template<typename CharacterType> static std::optional<int> parseInt(StringParsingBuffer<CharacterType>& buffer, unsigned maximumNumberOfDigitsToParse)
 {
-    if (parseStart + parseLength > length || parseLength <= 0)
-        return false;
-    int value = 0;
-    const UChar* current = src + parseStart;
-    const UChar* end = current + parseLength;
+    if (maximumNumberOfDigitsToParse > buffer.lengthRemaining() || !maximumNumberOfDigitsToParse)
+        return std::nullopt;
 
     // We don't need to handle negative numbers for ISO 8601.
-    for (; current < end; ++current) {
-        if (!isASCIIDigit(*current))
-            return false;
-        int digit = *current - '0';
+
+    int value = 0;
+    unsigned digitsRemaining = 0;
+    while (digitsRemaining < maximumNumberOfDigitsToParse) {
+        if (!isASCIIDigit(*buffer))
+            return std::nullopt;
+        int digit = *buffer - '0';
         if (value > (INT_MAX - digit) / 10) // Check for overflow.
-            return false;
+            return std::nullopt;
         value = value * 10 + digit;
+        ++digitsRemaining;
+        ++buffer;
     }
-    out = value;
-    return true;
+    return value;
 }
 
-bool DateComponents::parseYear(const UChar* src, unsigned length, unsigned start, unsigned& end)
+template<typename CharacterType> static std::optional<int> parseIntWithinLimits(StringParsingBuffer<CharacterType>& buffer, unsigned maximumNumberOfDigitsToParse, int minimumValue, int maximumValue)
 {
-    unsigned digitsLength = countDigits(src, length, start);
+    auto value = parseInt(buffer, maximumNumberOfDigitsToParse);
+    if (!(value && *value >= minimumValue && *value <= maximumValue))
+        return std::nullopt;
+    return value;
+}
+
+// https://html.spec.whatwg.org/multipage/common-microsyntaxes.html#months
+template<typename CharacterType> bool DateComponents::parseYear(StringParsingBuffer<CharacterType>& buffer)
+{
+    unsigned digitsLength = countDigits(buffer);
     // Needs at least 4 digits according to the standard.
     if (digitsLength < 4)
         return false;
-    int year;
-    if (!toInt(src, length, start, digitsLength, year))
+
+    auto year = parseIntWithinLimits(buffer, digitsLength, minimumYear(), maximumYear());
+    if (!year)
         return false;
-    if (year < minimumYear() || year > maximumYear())
-        return false;
-    m_year = year;
-    end = start + digitsLength;
+
+    m_year = *year;
     return true;
 }
 
@@ -178,6 +186,54 @@ static bool withinHTMLDateLimits(int year, int month, int monthDay, int hour, in
         return false;
     // (year, month, monthDay) = (maximumYear, maximumMonthInMaximumYear, maximumDayInMaximumMonth)
     return !hour && !minute && !second && !millisecond;
+}
+
+template<typename F> static std::optional<DateComponents> createFromString(StringView source, F&& parseFunction)
+{
+    if (source.isEmpty())
+        return std::nullopt;
+
+    return readCharactersForParsing(source, [&](auto buffer) -> std::optional<DateComponents> {
+        DateComponents date;
+        if (!parseFunction(buffer, date) || !buffer.atEnd())
+            return std::nullopt;
+        return date;
+    });
+}
+
+std::optional<DateComponents> DateComponents::fromParsingMonth(StringView source)
+{
+    return createFromString(source, [] (auto& buffer, auto& date) {
+        return date.parseMonth(buffer);
+    });
+}
+
+std::optional<DateComponents> DateComponents::fromParsingDate(StringView source)
+{
+    return createFromString(source, [] (auto& buffer, auto& date) {
+        return date.parseDate(buffer);
+    });
+}
+
+std::optional<DateComponents> DateComponents::fromParsingWeek(StringView source)
+{
+    return createFromString(source, [] (auto& buffer, auto& date) {
+        return date.parseWeek(buffer);
+    });
+}
+
+std::optional<DateComponents> DateComponents::fromParsingTime(StringView source)
+{
+    return createFromString(source, [] (auto& buffer, auto& date) {
+        return date.parseTime(buffer);
+    });
+}
+
+std::optional<DateComponents> DateComponents::fromParsingDateTimeLocal(StringView source)
+{
+    return createFromString(source, [] (auto& buffer, auto& date) {
+        return date.parseDateTimeLocal(buffer);
+    });
 }
 
 bool DateComponents::addDay(int dayDiff)
@@ -282,218 +338,191 @@ bool DateComponents::addMinute(int minute)
     return true;
 }
 
+// https://html.spec.whatwg.org/multipage/common-microsyntaxes.html#time-zones
 // Parses a timezone part, and adjust year, month, monthDay, hour, minute, second, millisecond.
-bool DateComponents::parseTimeZone(const UChar* src, unsigned length, unsigned start, unsigned& end)
+template<typename CharacterType> bool DateComponents::parseTimeZone(StringParsingBuffer<CharacterType>& buffer)
 {
-    if (start >= length)
-        return false;
-    unsigned index = start;
-    if (src[index] == 'Z') {
-        end = index + 1;
+    if (skipExactly(buffer, 'Z'))
         return true;
-    }
 
     bool minus;
-    if (src[index] == '+')
+    if (skipExactly(buffer, '+'))
         minus = false;
-    else if (src[index] == '-')
+    else if (skipExactly(buffer, '-'))
         minus = true;
     else
         return false;
-    ++index;
 
-    int hour;
-    int minute;
-    if (!toInt(src, length, index, 2, hour) || hour < 0 || hour > 23)
+    auto hour = parseIntWithinLimits(buffer, 2, 0, 23);
+    if (!hour)
         return false;
-    index += 2;
 
-    if (index >= length || src[index] != ':')
+    if (!skipExactly(buffer, ':'))
         return false;
-    ++index;
 
-    if (!toInt(src, length, index, 2, minute) || minute < 0 || minute > 59)
+    auto minute = parseIntWithinLimits(buffer, 2, 0, 59);
+    if (!minute)
         return false;
-    index += 2;
 
     if (minus) {
-        hour = -hour;
-        minute = -minute;
+        *hour = -*hour;
+        *minute = -*minute;
     }
 
     // Subtract the timezone offset.
-    if (!addMinute(-(hour * 60 + minute)))
+    if (!addMinute(-(*hour * 60 + *minute)))
         return false;
-    end = index;
     return true;
 }
 
-bool DateComponents::parseMonth(const UChar* src, unsigned length, unsigned start, unsigned& end)
+// https://html.spec.whatwg.org/multipage/common-microsyntaxes.html#months
+template<typename CharacterType> bool DateComponents::parseMonth(StringParsingBuffer<CharacterType>& buffer)
 {
-    ASSERT(src);
-    unsigned index;
-    if (!parseYear(src, length, start, index))
+    if (!parseYear(buffer))
         return false;
-    if (index >= length || src[index] != '-')
-        return false;
-    ++index;
 
-    int month;
-    if (!toInt(src, length, index, 2, month) || month < 1 || month > 12)
+    if (!skipExactly(buffer, '-'))
         return false;
-    --month;
-    if (!withinHTMLDateLimits(m_year, month))
+
+    auto month = parseIntWithinLimits(buffer, 2, 1, 12);
+    if (!month)
         return false;
-    m_month = month;
-    end = index + 2;
-    m_type = Month;
+    --*month;
+
+    if (!withinHTMLDateLimits(m_year, *month))
+        return false;
+
+    m_month = *month;
+    m_type = DateComponentsType::Month;
     return true;
 }
 
-bool DateComponents::parseDate(const UChar* src, unsigned length, unsigned start, unsigned& end)
+// https://html.spec.whatwg.org/multipage/common-microsyntaxes.html#dates
+template<typename CharacterType> bool DateComponents::parseDate(StringParsingBuffer<CharacterType>& buffer)
 {
-    ASSERT(src);
-    unsigned index;
-    if (!parseMonth(src, length, start, index))
+    if (!parseMonth(buffer))
         return false;
-    // '-' and 2-digits are needed.
-    if (index + 2 >= length)
-        return false;
-    if (src[index] != '-')
-        return false;
-    ++index;
 
-    int day;
-    if (!toInt(src, length, index, 2, day) || day < 1 || day > maxDayOfMonth(m_year, m_month))
+    if (!skipExactly(buffer, '-'))
         return false;
-    if (!withinHTMLDateLimits(m_year, m_month, day))
+
+    auto day = parseIntWithinLimits(buffer, 2, 1, maxDayOfMonth(m_year, m_month));
+    if (!day)
         return false;
-    m_monthDay = day;
-    end = index + 2;
-    m_type = Date;
+
+    if (!withinHTMLDateLimits(m_year, m_month, *day))
+        return false;
+
+    m_monthDay = *day;
+    m_type = DateComponentsType::Date;
     return true;
 }
 
-bool DateComponents::parseWeek(const UChar* src, unsigned length, unsigned start, unsigned& end)
+// https://html.spec.whatwg.org/multipage/common-microsyntaxes.html#weeks
+template<typename CharacterType> bool DateComponents::parseWeek(StringParsingBuffer<CharacterType>& buffer)
 {
-    ASSERT(src);
-    unsigned index;
-    if (!parseYear(src, length, start, index))
+    if (!parseYear(buffer))
         return false;
 
-    // 4 characters ('-' 'W' digit digit) are needed.
-    if (index + 3 >= length)
+    if (!skipExactly(buffer, '-'))
         return false;
-    if (src[index] != '-')
+    if (!skipExactly(buffer, 'W'))
         return false;
-    ++index;
-    if (src[index] != 'W')
-        return false;
-    ++index;
 
-    int week;
-    if (!toInt(src, length, index, 2, week) || week < minimumWeekNumber || week > maxWeekNumberInYear())
+    auto week = parseIntWithinLimits(buffer, 2, minimumWeekNumber, maxWeekNumberInYear());
+    if (!week)
         return false;
-    if (m_year == maximumYear() && week > maximumWeekInMaximumYear)
+
+    if (m_year == maximumYear() && *week > maximumWeekInMaximumYear)
         return false;
-    m_week = week;
-    end = index + 2;
-    m_type = Week;
+
+    m_week = *week;
+    m_type = DateComponentsType::Week;
     return true;
 }
 
-bool DateComponents::parseTime(const UChar* src, unsigned length, unsigned start, unsigned& end)
+// https://html.spec.whatwg.org/multipage/common-microsyntaxes.html#times
+template<typename CharacterType> bool DateComponents::parseTime(StringParsingBuffer<CharacterType>& buffer)
 {
-    ASSERT(src);
-    int hour;
-    if (!toInt(src, length, start, 2, hour) || hour < 0 || hour > 23)
+    auto hour = parseIntWithinLimits(buffer, 2, 0, 23);
+    if (!hour)
         return false;
-    unsigned index = start + 2;
-    if (index >= length)
-        return false;
-    if (src[index] != ':')
-        return false;
-    ++index;
 
-    int minute;
-    if (!toInt(src, length, index, 2, minute) || minute < 0 || minute > 59)
+    if (!skipExactly(buffer, ':'))
         return false;
-    index += 2;
 
-    int second = 0;
-    int millisecond = 0;
+    auto minute = parseIntWithinLimits(buffer, 2, 0, 59);
+    if (!minute)
+        return false;
+
     // Optional second part.
     // Do not return with false because the part is optional.
-    if (index + 2 < length && src[index] == ':') {
-        if (toInt(src, length, index + 1, 2, second) && second >= 0 && second <= 59) {
-            index += 3;
+    std::optional<int> second;
+    std::optional<int> millisecond;
+
+    auto temporaryBuffer = buffer;
+    if (skipExactly(temporaryBuffer, ':')) {
+        second = parseIntWithinLimits(temporaryBuffer, 2, 0, 59);
+        if (second) {
+            // Only after successfully parsing and validating 'second', do we increment the real buffer.
+            buffer += temporaryBuffer.position() - buffer.position();
 
             // Optional fractional second part.
-            if (index < length && src[index] == '.') {
-                unsigned digitsLength = countDigits(src, length, index + 1);
-                if (digitsLength >  0) {
-                    ++index;
-                    bool ok;
+            if (skipExactly(temporaryBuffer, '.')) {
+                unsigned digitsLength = countDigits(temporaryBuffer);
+                if (digitsLength > 0) {
                     if (digitsLength == 1) {
-                        ok = toInt(src, length, index, 1, millisecond);
-                        millisecond *= 100;
+                        millisecond = parseInt(temporaryBuffer, 1);
+                        *millisecond *= 100;
                     } else if (digitsLength == 2) {
-                        ok = toInt(src, length, index, 2, millisecond);
-                        millisecond *= 10;
-                    } else // digitsLength >= 3
-                        ok = toInt(src, length, index, 3, millisecond);
-                    ASSERT_UNUSED(ok, ok);
-                    index += digitsLength;
+                        millisecond = parseInt(temporaryBuffer, 2);
+                        *millisecond *= 10;
+                    } else if (digitsLength == 3)
+                        millisecond = parseInt(temporaryBuffer, 3);
+                    else
+                        return false;
+
+                    // Due to the countDigits above, the parseInt calls should all be successful.
+                    ASSERT(millisecond);
+
+                    // Only after successfully parsing and validating 'millisecond', do we increment the real buffer.
+                    buffer += 1 + digitsLength;
                 }
             }
         }
     }
-    m_hour = hour;
-    m_minute = minute;
-    m_second = second;
-    m_millisecond = millisecond;
-    end = index;
-    m_type = Time;
+
+    m_hour = *hour;
+    m_minute = *minute;
+    m_second = second.value_or(0);
+    m_millisecond = millisecond.value_or(0);
+    m_type = DateComponentsType::Time;
     return true;
 }
 
-bool DateComponents::parseDateTimeLocal(const UChar* src, unsigned length, unsigned start, unsigned& end)
+// Gecko allows both 'T' and a space as datetime-local separator (see https://github.com/whatwg/html/issues/2276).
+// WPT tests also expect this behavior.
+template<typename CharacterType> static bool isDateTimeLocalSeparator(CharacterType c)
 {
-    ASSERT(src);
-    unsigned index;
-    if (!parseDate(src, length, start, index))
-        return false;
-    if (index >= length)
-        return false;
-    if (src[index] != 'T')
-        return false;
-    ++index;
-    if (!parseTime(src, length, index, end))
-        return false;
-    if (!withinHTMLDateLimits(m_year, m_month, m_monthDay, m_hour, m_minute, m_second, m_millisecond))
-        return false;
-    m_type = DateTimeLocal;
-    return true;
+    return c == 'T' || c == ' ';
 }
 
-bool DateComponents::parseDateTime(const UChar* src, unsigned length, unsigned start, unsigned& end)
+// https://html.spec.whatwg.org/multipage/common-microsyntaxes.html#local-dates-and-times
+template<typename CharacterType> bool DateComponents::parseDateTimeLocal(StringParsingBuffer<CharacterType>& buffer)
 {
-    ASSERT(src);
-    unsigned index;
-    if (!parseDate(src, length, start, index))
+    if (!parseDate(buffer))
         return false;
-    if (index >= length)
+
+    if (!skipExactly<isDateTimeLocalSeparator>(buffer))
         return false;
-    if (src[index] != 'T')
+
+    if (!parseTime(buffer))
         return false;
-    ++index;
-    if (!parseTime(src, length, index, index))
-        return false;
-    if (!parseTimeZone(src, length, index, end))
-        return false;
+
     if (!withinHTMLDateLimits(m_year, m_month, m_monthDay, m_hour, m_minute, m_second, m_millisecond))
         return false;
-    m_type = DateTime;
+
+    m_type = DateComponentsType::DateTimeLocal;
     return true;
 }
 
@@ -501,6 +530,56 @@ static inline double positiveFmod(double value, double divider)
 {
     double remainder = fmod(value, divider);
     return remainder < 0 ? remainder + divider : remainder;
+}
+
+template<typename F> static std::optional<DateComponents> createFromTimeOffset(double timeOffset, F&& function)
+{
+    DateComponents result;
+    if (!function(result, timeOffset))
+        return std::nullopt;
+    return result;
+}
+
+std::optional<DateComponents> DateComponents::fromMillisecondsSinceEpochForDate(double ms)
+{
+    return createFromTimeOffset(ms, [] (auto& date, auto ms) {
+        return date.setMillisecondsSinceEpochForDate(ms);
+    });
+}
+
+std::optional<DateComponents> DateComponents::fromMillisecondsSinceEpochForDateTimeLocal(double ms)
+{
+    return createFromTimeOffset(ms, [] (auto& date, auto ms) {
+        return date.setMillisecondsSinceEpochForDateTimeLocal(ms);
+    });
+}
+
+std::optional<DateComponents> DateComponents::fromMillisecondsSinceEpochForMonth(double ms)
+{
+    return createFromTimeOffset(ms, [] (auto& date, auto ms) {
+        return date.setMillisecondsSinceEpochForMonth(ms);
+    });
+}
+
+std::optional<DateComponents> DateComponents::fromMillisecondsSinceEpochForWeek(double ms)
+{
+    return createFromTimeOffset(ms, [] (auto& date, auto ms) {
+        return date.setMillisecondsSinceEpochForWeek(ms);
+    });
+}
+
+std::optional<DateComponents> DateComponents::fromMillisecondsSinceMidnight(double ms)
+{
+    return createFromTimeOffset(ms, [] (auto& date, auto ms) {
+        return date.setMillisecondsSinceMidnight(ms);
+    });
+}
+
+std::optional<DateComponents> DateComponents::fromMonthsSinceEpoch(double months)
+{
+    return createFromTimeOffset(months, [] (auto& date, auto months) {
+        return date.setMonthsSinceEpoch(months);
+    });
 }
 
 void DateComponents::setMillisecondsSinceMidnightInternal(double msInDay)
@@ -525,20 +604,20 @@ bool DateComponents::setMillisecondsSinceEpochForDateInternal(double ms)
 
 bool DateComponents::setMillisecondsSinceEpochForDate(double ms)
 {
-    m_type = Invalid;
+    m_type = DateComponentsType::Invalid;
     if (!std::isfinite(ms))
         return false;
     if (!setMillisecondsSinceEpochForDateInternal(round(ms)))
         return false;
     if (!withinHTMLDateLimits(m_year, m_month, m_monthDay))
         return false;
-    m_type = Date;
+    m_type = DateComponentsType::Date;
     return true;
 }
 
-bool DateComponents::setMillisecondsSinceEpochForDateTime(double ms)
+bool DateComponents::setMillisecondsSinceEpochForDateTimeLocal(double ms)
 {
-    m_type = Invalid;
+    m_type = DateComponentsType::Invalid;
     if (!std::isfinite(ms))
         return false;
     ms = round(ms);
@@ -547,39 +626,30 @@ bool DateComponents::setMillisecondsSinceEpochForDateTime(double ms)
         return false;
     if (!withinHTMLDateLimits(m_year, m_month, m_monthDay, m_hour, m_minute, m_second, m_millisecond))
         return false;
-    m_type = DateTime;
-    return true;
-}
-
-bool DateComponents::setMillisecondsSinceEpochForDateTimeLocal(double ms)
-{
-    // Internal representation of DateTimeLocal is the same as DateTime except m_type.
-    if (!setMillisecondsSinceEpochForDateTime(ms))
-        return false;
-    m_type = DateTimeLocal;
+    m_type = DateComponentsType::DateTimeLocal;
     return true;
 }
 
 bool DateComponents::setMillisecondsSinceEpochForMonth(double ms)
 {
-    m_type = Invalid;
+    m_type = DateComponentsType::Invalid;
     if (!std::isfinite(ms))
         return false;
     if (!setMillisecondsSinceEpochForDateInternal(round(ms)))
         return false;
     if (!withinHTMLDateLimits(m_year, m_month))
         return false;
-    m_type = Month;
+    m_type = DateComponentsType::Month;
     return true;
 }
 
 bool DateComponents::setMillisecondsSinceMidnight(double ms)
 {
-    m_type = Invalid;
+    m_type = DateComponentsType::Invalid;
     if (!std::isfinite(ms))
         return false;
     setMillisecondsSinceMidnightInternal(positiveFmod(round(ms), msPerDay));
-    m_type = Time;
+    m_type = DateComponentsType::Time;
     return true;
 }
 
@@ -598,7 +668,7 @@ bool DateComponents::setMonthsSinceEpoch(double months)
         return false;
     m_year = year;
     m_month = month;
-    m_type = Month;
+    m_type = DateComponentsType::Month;
     return true;
 }
 
@@ -614,7 +684,7 @@ static int offsetTo1stWeekStart(int year)
 
 bool DateComponents::setMillisecondsSinceEpochForWeek(double ms)
 {
-    m_type = Invalid;
+    m_type = DateComponentsType::Invalid;
     if (!std::isfinite(ms))
         return false;
     ms = round(ms);
@@ -640,31 +710,30 @@ bool DateComponents::setMillisecondsSinceEpochForWeek(double ms)
         if (m_year > maximumYear() || (m_year == maximumYear() && m_week > maximumWeekInMaximumYear))
             return false;
     }
-    m_type = Week;
+    m_type = DateComponentsType::Week;
     return true;
 }
 
 double DateComponents::millisecondsSinceEpochForTime() const
 {
-    ASSERT(m_type == Time || m_type == DateTime || m_type == DateTimeLocal);
+    ASSERT(m_type == DateComponentsType::Time || m_type == DateComponentsType::DateTimeLocal);
     return ((m_hour * minutesPerHour + m_minute) * secondsPerMinute + m_second) * msPerSecond + m_millisecond;
 }
 
 double DateComponents::millisecondsSinceEpoch() const
 {
     switch (m_type) {
-    case Date:
+    case DateComponentsType::Date:
         return dateToDaysFrom1970(m_year, m_month, m_monthDay) * msPerDay;
-    case DateTime:
-    case DateTimeLocal:
+    case DateComponentsType::DateTimeLocal:
         return dateToDaysFrom1970(m_year, m_month, m_monthDay) * msPerDay + millisecondsSinceEpochForTime();
-    case Month:
+    case DateComponentsType::Month:
         return dateToDaysFrom1970(m_year, m_month, 1) * msPerDay;
-    case Time:
+    case DateComponentsType::Time:
         return millisecondsSinceEpochForTime();
-    case Week:
+    case DateComponentsType::Week:
         return (dateToDaysFrom1970(m_year, 0, 1) + offsetTo1stWeekStart(m_year) + (m_week - 1) * 7) * msPerDay;
-    case Invalid:
+    case DateComponentsType::Invalid:
         break;
     }
     ASSERT_NOT_REACHED();
@@ -673,50 +742,54 @@ double DateComponents::millisecondsSinceEpoch() const
 
 double DateComponents::monthsSinceEpoch() const
 {
-    ASSERT(m_type == Month);
+    ASSERT(m_type == DateComponentsType::Month);
     return (m_year - 1970) * 12 + m_month;
 }
 
 String DateComponents::toStringForTime(SecondFormat format) const
 {
-    ASSERT(m_type == DateTime || m_type == DateTimeLocal || m_type == Time);
+    ASSERT(m_type == DateComponentsType::DateTimeLocal || m_type == DateComponentsType::Time);
     SecondFormat effectiveFormat = format;
     if (m_millisecond)
-        effectiveFormat = Millisecond;
-    else if (format == None && m_second)
-        effectiveFormat = Second;
+        effectiveFormat = SecondFormat::Millisecond;
+    else if (format == SecondFormat::None && m_second)
+        effectiveFormat = SecondFormat::Second;
 
     switch (effectiveFormat) {
     default:
         ASSERT_NOT_REACHED();
-#if ASSERT_DISABLED
+#if !ASSERT_ENABLED
         FALLTHROUGH; // To None.
 #endif
-    case None:
+    case SecondFormat::None:
         return makeString(pad('0', 2, m_hour), ':', pad('0', 2, m_minute));
-    case Second:
+    case SecondFormat::Second:
         return makeString(pad('0', 2, m_hour), ':', pad('0', 2, m_minute), ':', pad('0', 2, m_second));
-    case Millisecond:
-        return makeString(pad('0', 2, m_hour), ':', pad('0', 2, m_minute), ':', pad('0', 2, m_second), '.', pad('0', 3, m_millisecond));
+    case SecondFormat::Millisecond: {
+        auto resultWithoutMilliseconds = makeString(pad('0', 2, m_hour), ':', pad('0', 2, m_minute), ':', pad('0', 2, m_second), '.');
+        if (!(m_millisecond % 100))
+            return makeString(resultWithoutMilliseconds, m_millisecond / 100);
+        if (!(m_millisecond % 10))
+            return makeString(resultWithoutMilliseconds, pad('0', 2, m_millisecond / 10));
+        return makeString(resultWithoutMilliseconds, pad('0', 3, m_millisecond));
+    }
     }
 }
 
 String DateComponents::toString(SecondFormat format) const
 {
     switch (m_type) {
-    case Date:
+    case DateComponentsType::Date:
         return makeString(pad('0', 4, m_year), '-', pad('0', 2, m_month + 1), '-', pad('0', 2, m_monthDay));
-    case DateTime:
-        return makeString(pad('0', 4, m_year), '-', pad('0', 2, m_month + 1), '-', pad('0', 2, m_monthDay), 'T', toStringForTime(format), 'Z');
-    case DateTimeLocal:
+    case DateComponentsType::DateTimeLocal:
         return makeString(pad('0', 4, m_year), '-', pad('0', 2, m_month + 1), '-', pad('0', 2, m_monthDay), 'T', toStringForTime(format));
-    case Month:
+    case DateComponentsType::Month:
         return makeString(pad('0', 4, m_year), '-', pad('0', 2, m_month + 1));
-    case Time:
+    case DateComponentsType::Time:
         return toStringForTime(format);
-    case Week:
+    case DateComponentsType::Week:
         return makeString(pad('0', 4, m_year), "-W", pad('0', 2, m_week));
-    case Invalid:
+    case DateComponentsType::Invalid:
         break;
     }
     ASSERT_NOT_REACHED();

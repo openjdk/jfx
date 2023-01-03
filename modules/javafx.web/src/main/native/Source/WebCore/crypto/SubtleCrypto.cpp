@@ -78,9 +78,9 @@ enum class Operations {
     GetKeyLength
 };
 
-static ExceptionOr<std::unique_ptr<CryptoAlgorithmParameters>> normalizeCryptoAlgorithmParameters(ExecState&, WebCore::SubtleCrypto::AlgorithmIdentifier, Operations);
+static ExceptionOr<std::unique_ptr<CryptoAlgorithmParameters>> normalizeCryptoAlgorithmParameters(JSGlobalObject&, WebCore::SubtleCrypto::AlgorithmIdentifier, Operations);
 
-static ExceptionOr<CryptoAlgorithmIdentifier> toHashIdentifier(ExecState& state, SubtleCrypto::AlgorithmIdentifier algorithmIdentifier)
+static ExceptionOr<CryptoAlgorithmIdentifier> toHashIdentifier(JSGlobalObject& state, SubtleCrypto::AlgorithmIdentifier algorithmIdentifier)
 {
     auto digestParams = normalizeCryptoAlgorithmParameters(state, algorithmIdentifier, Operations::Digest);
     if (digestParams.hasException())
@@ -88,19 +88,19 @@ static ExceptionOr<CryptoAlgorithmIdentifier> toHashIdentifier(ExecState& state,
     return digestParams.returnValue()->identifier;
 }
 
-static ExceptionOr<std::unique_ptr<CryptoAlgorithmParameters>> normalizeCryptoAlgorithmParameters(ExecState& state, SubtleCrypto::AlgorithmIdentifier algorithmIdentifier, Operations operation)
+static ExceptionOr<std::unique_ptr<CryptoAlgorithmParameters>> normalizeCryptoAlgorithmParameters(JSGlobalObject& state, SubtleCrypto::AlgorithmIdentifier algorithmIdentifier, Operations operation)
 {
     VM& vm = state.vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    if (WTF::holds_alternative<String>(algorithmIdentifier)) {
+    if (std::holds_alternative<String>(algorithmIdentifier)) {
         auto newParams = Strong<JSObject>(vm, constructEmptyObject(&state));
-        newParams->putDirect(vm, Identifier::fromString(vm, "name"), jsString(vm, WTF::get<String>(algorithmIdentifier)));
+        newParams->putDirect(vm, Identifier::fromString(vm, "name"), jsString(vm, std::get<String>(algorithmIdentifier)));
 
         return normalizeCryptoAlgorithmParameters(state, newParams, operation);
     }
 
-    auto& value = WTF::get<JSC::Strong<JSC::JSObject>>(algorithmIdentifier);
+    auto& value = std::get<JSC::Strong<JSC::JSObject>>(algorithmIdentifier);
 
     auto params = convertDictionary<CryptoAlgorithmParameters>(state, value.get());
     RETURN_IF_EXCEPTION(scope, Exception { ExistingExceptionError });
@@ -442,36 +442,34 @@ static void normalizeJsonWebKey(JsonWebKey& webKey)
     webKey.usages = webKey.key_ops ? toCryptoKeyUsageBitmap(webKey.key_ops.value()) : 0;
 }
 
-// FIXME: This returns an Optional<KeyData> and takes a promise, rather than returning an
+// FIXME: This returns an std::optional<KeyData> and takes a promise, rather than returning an
 // ExceptionOr<KeyData> and letting the caller handle the promise, to work around an issue where
 // Variant types (which KeyData is) in ExceptionOr<> cause compile issues on some platforms. This
 // should be resolved by adopting a standards compliant std::variant (see https://webkit.org/b/175583)
-static Optional<KeyData> toKeyData(SubtleCrypto::KeyFormat format, SubtleCrypto::KeyDataVariant&& keyDataVariant, Ref<DeferredPromise>& promise)
+static std::optional<KeyData> toKeyData(SubtleCrypto::KeyFormat format, SubtleCrypto::KeyDataVariant&& keyDataVariant, Ref<DeferredPromise>& promise)
 {
     switch (format) {
     case SubtleCrypto::KeyFormat::Spki:
     case SubtleCrypto::KeyFormat::Pkcs8:
     case SubtleCrypto::KeyFormat::Raw:
         return WTF::switchOn(keyDataVariant,
-            [&promise] (JsonWebKey&) -> Optional<KeyData> {
+            [&promise] (JsonWebKey&) -> std::optional<KeyData> {
                 promise->reject(Exception { TypeError });
-                return WTF::nullopt;
+                return std::nullopt;
             },
-            [] (auto& bufferSource) -> Optional<KeyData> {
-                Vector<uint8_t> result;
-                result.append(static_cast<const uint8_t*>(bufferSource->data()), bufferSource->byteLength());
-                return KeyData { result };
+            [] (auto& bufferSource) -> std::optional<KeyData> {
+                return KeyData { Vector { static_cast<const uint8_t*>(bufferSource->data()), bufferSource->byteLength() } };
             }
         );
     case SubtleCrypto::KeyFormat::Jwk:
         return WTF::switchOn(keyDataVariant,
-            [] (JsonWebKey& webKey) -> Optional<KeyData> {
+            [] (JsonWebKey& webKey) -> std::optional<KeyData> {
                 normalizeJsonWebKey(webKey);
                 return KeyData { webKey };
             },
-            [&promise] (auto&) -> Optional<KeyData> {
+            [&promise] (auto&) -> std::optional<KeyData> {
                 promise->reject(Exception { TypeError });
-                return WTF::nullopt;
+                return std::nullopt;
             }
         );
     }
@@ -481,9 +479,7 @@ static Optional<KeyData> toKeyData(SubtleCrypto::KeyFormat format, SubtleCrypto:
 
 static Vector<uint8_t> copyToVector(BufferSource&& data)
 {
-    Vector<uint8_t> dataVector;
-    dataVector.append(data.data(), data.length());
-    return dataVector;
+    return { data.data(), data.length() };
 }
 
 static bool isSupportedExportKey(CryptoAlgorithmIdentifier identifier)
@@ -507,12 +503,10 @@ static bool isSupportedExportKey(CryptoAlgorithmIdentifier identifier)
     }
 }
 
-RefPtr<DeferredPromise> getPromise(DeferredPromise* index, WeakPtr<SubtleCrypto> subtleCryptoWeakPointer)
+RefPtr<DeferredPromise> getPromise(DeferredPromise* index, WeakPtr<SubtleCrypto> weakThis)
 {
-    if (subtleCryptoWeakPointer) {
-        if (auto promise = subtleCryptoWeakPointer->m_pendingPromises.take(index))
-            return WTFMove(promise.value());
-    }
+    if (weakThis)
+        return weakThis->m_pendingPromises.take(index);
     return nullptr;
 }
 
@@ -536,10 +530,18 @@ static std::unique_ptr<CryptoAlgorithmParameters> crossThreadCopyImportParams(co
     }
 }
 
+void SubtleCrypto::addAuthenticatedEncryptionWarningIfNecessary(CryptoAlgorithmIdentifier algorithmIdentifier)
+{
+    if (algorithmIdentifier == CryptoAlgorithmIdentifier::AES_CBC || algorithmIdentifier == CryptoAlgorithmIdentifier::AES_CTR)
+        scriptExecutionContext()->addConsoleMessage(MessageSource::Security, MessageLevel::Warning, "AES-CBC and AES-CTR do not provide authentication by default, and implementing it manually can result in minor, but serious mistakes. We recommended using authenticated encryption like AES-GCM to protect against chosen-ciphertext attacks.");
+}
+
 // MARK: - Exposed functions.
 
-void SubtleCrypto::encrypt(JSC::ExecState& state, AlgorithmIdentifier&& algorithmIdentifier, CryptoKey& key, BufferSource&& dataBufferSource, Ref<DeferredPromise>&& promise)
+void SubtleCrypto::encrypt(JSC::JSGlobalObject& state, AlgorithmIdentifier&& algorithmIdentifier, CryptoKey& key, BufferSource&& dataBufferSource, Ref<DeferredPromise>&& promise)
 {
+    addAuthenticatedEncryptionWarningIfNecessary(key.algorithmIdentifier());
+
     auto paramsOrException = normalizeCryptoAlgorithmParameters(state, WTFMove(algorithmIdentifier), Operations::Encrypt);
     if (paramsOrException.hasException()) {
         promise->reject(paramsOrException.releaseException());
@@ -563,21 +565,23 @@ void SubtleCrypto::encrypt(JSC::ExecState& state, AlgorithmIdentifier&& algorith
 
     auto index = promise.ptr();
     m_pendingPromises.add(index, WTFMove(promise));
-    auto subtleCryptoWeakPointer = makeWeakPtr(*this);
-    auto callback = [index, subtleCryptoWeakPointer](const Vector<uint8_t>& cipherText) mutable {
-        if (auto promise = getPromise(index, subtleCryptoWeakPointer))
+    WeakPtr weakThis { *this };
+    auto callback = [index, weakThis](const Vector<uint8_t>& cipherText) mutable {
+        if (auto promise = getPromise(index, weakThis))
             fulfillPromiseWithArrayBuffer(promise.releaseNonNull(), cipherText.data(), cipherText.size());
     };
-    auto exceptionCallback = [index, subtleCryptoWeakPointer](ExceptionCode ec) mutable {
-        if (auto promise = getPromise(index, subtleCryptoWeakPointer))
+    auto exceptionCallback = [index, weakThis](ExceptionCode ec) mutable {
+        if (auto promise = getPromise(index, weakThis))
             rejectWithException(promise.releaseNonNull(), ec);
     };
 
     algorithm->encrypt(*params, key, WTFMove(data), WTFMove(callback), WTFMove(exceptionCallback), *scriptExecutionContext(), m_workQueue);
 }
 
-void SubtleCrypto::decrypt(JSC::ExecState& state, AlgorithmIdentifier&& algorithmIdentifier, CryptoKey& key, BufferSource&& dataBufferSource, Ref<DeferredPromise>&& promise)
+void SubtleCrypto::decrypt(JSC::JSGlobalObject& state, AlgorithmIdentifier&& algorithmIdentifier, CryptoKey& key, BufferSource&& dataBufferSource, Ref<DeferredPromise>&& promise)
 {
+    addAuthenticatedEncryptionWarningIfNecessary(key.algorithmIdentifier());
+
     auto paramsOrException = normalizeCryptoAlgorithmParameters(state, WTFMove(algorithmIdentifier), Operations::Decrypt);
     if (paramsOrException.hasException()) {
         promise->reject(paramsOrException.releaseException());
@@ -601,20 +605,20 @@ void SubtleCrypto::decrypt(JSC::ExecState& state, AlgorithmIdentifier&& algorith
 
     auto index = promise.ptr();
     m_pendingPromises.add(index, WTFMove(promise));
-    auto subtleCryptoWeakPointer = makeWeakPtr(*this);
-    auto callback = [index, subtleCryptoWeakPointer](const Vector<uint8_t>& plainText) mutable {
-        if (auto promise = getPromise(index, subtleCryptoWeakPointer))
+    WeakPtr weakThis { *this };
+    auto callback = [index, weakThis](const Vector<uint8_t>& plainText) mutable {
+        if (auto promise = getPromise(index, weakThis))
             fulfillPromiseWithArrayBuffer(promise.releaseNonNull(), plainText.data(), plainText.size());
     };
-    auto exceptionCallback = [index, subtleCryptoWeakPointer](ExceptionCode ec) mutable {
-        if (auto promise = getPromise(index, subtleCryptoWeakPointer))
+    auto exceptionCallback = [index, weakThis](ExceptionCode ec) mutable {
+        if (auto promise = getPromise(index, weakThis))
             rejectWithException(promise.releaseNonNull(), ec);
     };
 
     algorithm->decrypt(*params, key, WTFMove(data), WTFMove(callback), WTFMove(exceptionCallback), *scriptExecutionContext(), m_workQueue);
 }
 
-void SubtleCrypto::sign(JSC::ExecState& state, AlgorithmIdentifier&& algorithmIdentifier, CryptoKey& key, BufferSource&& dataBufferSource, Ref<DeferredPromise>&& promise)
+void SubtleCrypto::sign(JSC::JSGlobalObject& state, AlgorithmIdentifier&& algorithmIdentifier, CryptoKey& key, BufferSource&& dataBufferSource, Ref<DeferredPromise>&& promise)
 {
     auto paramsOrException = normalizeCryptoAlgorithmParameters(state, WTFMove(algorithmIdentifier), Operations::Sign);
     if (paramsOrException.hasException()) {
@@ -639,20 +643,20 @@ void SubtleCrypto::sign(JSC::ExecState& state, AlgorithmIdentifier&& algorithmId
 
     auto index = promise.ptr();
     m_pendingPromises.add(index, WTFMove(promise));
-    auto subtleCryptoWeakPointer = makeWeakPtr(*this);
-    auto callback = [index, subtleCryptoWeakPointer](const Vector<uint8_t>& signature) mutable {
-        if (auto promise = getPromise(index, subtleCryptoWeakPointer))
+    WeakPtr weakThis { *this };
+    auto callback = [index, weakThis](const Vector<uint8_t>& signature) mutable {
+        if (auto promise = getPromise(index, weakThis))
             fulfillPromiseWithArrayBuffer(promise.releaseNonNull(), signature.data(), signature.size());
     };
-    auto exceptionCallback = [index, subtleCryptoWeakPointer](ExceptionCode ec) mutable {
-        if (auto promise = getPromise(index, subtleCryptoWeakPointer))
+    auto exceptionCallback = [index, weakThis](ExceptionCode ec) mutable {
+        if (auto promise = getPromise(index, weakThis))
             rejectWithException(promise.releaseNonNull(), ec);
     };
 
     algorithm->sign(*params, key, WTFMove(data), WTFMove(callback), WTFMove(exceptionCallback), *scriptExecutionContext(), m_workQueue);
 }
 
-void SubtleCrypto::verify(JSC::ExecState& state, AlgorithmIdentifier&& algorithmIdentifier, CryptoKey& key, BufferSource&& signatureBufferSource, BufferSource&& dataBufferSource, Ref<DeferredPromise>&& promise)
+void SubtleCrypto::verify(JSC::JSGlobalObject& state, AlgorithmIdentifier&& algorithmIdentifier, CryptoKey& key, BufferSource&& signatureBufferSource, BufferSource&& dataBufferSource, Ref<DeferredPromise>&& promise)
 {
     auto paramsOrException = normalizeCryptoAlgorithmParameters(state, WTFMove(algorithmIdentifier), Operations::Verify);
     if (paramsOrException.hasException()) {
@@ -678,20 +682,20 @@ void SubtleCrypto::verify(JSC::ExecState& state, AlgorithmIdentifier&& algorithm
 
     auto index = promise.ptr();
     m_pendingPromises.add(index, WTFMove(promise));
-    auto subtleCryptoWeakPointer = makeWeakPtr(*this);
-    auto callback = [index, subtleCryptoWeakPointer](bool result) mutable {
-        if (auto promise = getPromise(index, subtleCryptoWeakPointer))
+    WeakPtr weakThis { *this };
+    auto callback = [index, weakThis](bool result) mutable {
+        if (auto promise = getPromise(index, weakThis))
             promise->resolve<IDLBoolean>(result);
     };
-    auto exceptionCallback = [index, subtleCryptoWeakPointer](ExceptionCode ec) mutable {
-        if (auto promise = getPromise(index, subtleCryptoWeakPointer))
+    auto exceptionCallback = [index, weakThis](ExceptionCode ec) mutable {
+        if (auto promise = getPromise(index, weakThis))
             rejectWithException(promise.releaseNonNull(), ec);
     };
 
     algorithm->verify(*params, key, WTFMove(signature), WTFMove(data), WTFMove(callback), WTFMove(exceptionCallback), *scriptExecutionContext(), m_workQueue);
 }
 
-void SubtleCrypto::digest(JSC::ExecState& state, AlgorithmIdentifier&& algorithmIdentifier, BufferSource&& dataBufferSource, Ref<DeferredPromise>&& promise)
+void SubtleCrypto::digest(JSC::JSGlobalObject& state, AlgorithmIdentifier&& algorithmIdentifier, BufferSource&& dataBufferSource, Ref<DeferredPromise>&& promise)
 {
     auto paramsOrException = normalizeCryptoAlgorithmParameters(state, WTFMove(algorithmIdentifier), Operations::Digest);
     if (paramsOrException.hasException()) {
@@ -706,20 +710,20 @@ void SubtleCrypto::digest(JSC::ExecState& state, AlgorithmIdentifier&& algorithm
 
     auto index = promise.ptr();
     m_pendingPromises.add(index, WTFMove(promise));
-    auto subtleCryptoWeakPointer = makeWeakPtr(*this);
-    auto callback = [index, subtleCryptoWeakPointer](const Vector<uint8_t>& digest) mutable {
-        if (auto promise = getPromise(index, subtleCryptoWeakPointer))
+    WeakPtr weakThis { *this };
+    auto callback = [index, weakThis](const Vector<uint8_t>& digest) mutable {
+        if (auto promise = getPromise(index, weakThis))
             fulfillPromiseWithArrayBuffer(promise.releaseNonNull(), digest.data(), digest.size());
     };
-    auto exceptionCallback = [index, subtleCryptoWeakPointer](ExceptionCode ec) mutable {
-        if (auto promise = getPromise(index, subtleCryptoWeakPointer))
+    auto exceptionCallback = [index, weakThis](ExceptionCode ec) mutable {
+        if (auto promise = getPromise(index, weakThis))
             rejectWithException(promise.releaseNonNull(), ec);
     };
 
     algorithm->digest(WTFMove(data), WTFMove(callback), WTFMove(exceptionCallback), *scriptExecutionContext(), m_workQueue);
 }
 
-void SubtleCrypto::generateKey(JSC::ExecState& state, AlgorithmIdentifier&& algorithmIdentifier, bool extractable, Vector<CryptoKeyUsage>&& keyUsages, Ref<DeferredPromise>&& promise)
+void SubtleCrypto::generateKey(JSC::JSGlobalObject& state, AlgorithmIdentifier&& algorithmIdentifier, bool extractable, Vector<CryptoKeyUsage>&& keyUsages, Ref<DeferredPromise>&& promise)
 {
     auto paramsOrException = normalizeCryptoAlgorithmParameters(state, WTFMove(algorithmIdentifier), Operations::GenerateKey);
     if (paramsOrException.hasException()) {
@@ -734,9 +738,9 @@ void SubtleCrypto::generateKey(JSC::ExecState& state, AlgorithmIdentifier&& algo
 
     auto index = promise.ptr();
     m_pendingPromises.add(index, WTFMove(promise));
-    auto subtleCryptoWeakPointer = makeWeakPtr(*this);
-    auto callback = [index, subtleCryptoWeakPointer](KeyOrKeyPair&& keyOrKeyPair) mutable {
-        if (auto promise = getPromise(index, subtleCryptoWeakPointer)) {
+    WeakPtr weakThis { *this };
+    auto callback = [index, weakThis](KeyOrKeyPair&& keyOrKeyPair) mutable {
+        if (auto promise = getPromise(index, weakThis)) {
             WTF::switchOn(keyOrKeyPair,
                 [&promise] (RefPtr<CryptoKey>& key) {
                     if ((key->type() == CryptoKeyType::Private || key->type() == CryptoKeyType::Secret) && !key->usagesBitmap()) {
@@ -755,8 +759,8 @@ void SubtleCrypto::generateKey(JSC::ExecState& state, AlgorithmIdentifier&& algo
             );
         }
     };
-    auto exceptionCallback = [index, subtleCryptoWeakPointer](ExceptionCode ec) mutable {
-        if (auto promise = getPromise(index, subtleCryptoWeakPointer))
+    auto exceptionCallback = [index, weakThis](ExceptionCode ec) mutable {
+        if (auto promise = getPromise(index, weakThis))
             rejectWithException(promise.releaseNonNull(), ec);
     };
 
@@ -766,7 +770,7 @@ void SubtleCrypto::generateKey(JSC::ExecState& state, AlgorithmIdentifier&& algo
     algorithm->generateKey(*params, extractable, keyUsagesBitmap, WTFMove(callback), WTFMove(exceptionCallback), *scriptExecutionContext());
 }
 
-void SubtleCrypto::deriveKey(JSC::ExecState& state, AlgorithmIdentifier&& algorithmIdentifier, CryptoKey& baseKey, AlgorithmIdentifier&& derivedKeyType, bool extractable, Vector<CryptoKeyUsage>&& keyUsages, Ref<DeferredPromise>&& promise)
+void SubtleCrypto::deriveKey(JSC::JSGlobalObject& state, AlgorithmIdentifier&& algorithmIdentifier, CryptoKey& baseKey, AlgorithmIdentifier&& derivedKeyType, bool extractable, Vector<CryptoKeyUsage>&& keyUsages, Ref<DeferredPromise>&& promise)
 {
     auto paramsOrException = normalizeCryptoAlgorithmParameters(state, WTFMove(algorithmIdentifier), Operations::DeriveBits);
     if (paramsOrException.hasException()) {
@@ -815,12 +819,12 @@ void SubtleCrypto::deriveKey(JSC::ExecState& state, AlgorithmIdentifier&& algori
 
     auto index = promise.ptr();
     m_pendingPromises.add(index, WTFMove(promise));
-    auto subtleCryptoWeakPointer = makeWeakPtr(*this);
-    auto callback = [index, subtleCryptoWeakPointer, importAlgorithm = WTFMove(importAlgorithm), importParams = crossThreadCopyImportParams(*importParams), extractable, keyUsagesBitmap](const Vector<uint8_t>& derivedKey) mutable {
+    WeakPtr weakThis { *this };
+    auto callback = [index, weakThis, importAlgorithm = WTFMove(importAlgorithm), importParams = crossThreadCopyImportParams(*importParams), extractable, keyUsagesBitmap](const Vector<uint8_t>& derivedKey) mutable {
         // FIXME: https://bugs.webkit.org/show_bug.cgi?id=169395
         KeyData data = derivedKey;
-        auto callback = [index, subtleCryptoWeakPointer](CryptoKey& key) mutable {
-            if (auto promise = getPromise(index, subtleCryptoWeakPointer)) {
+        auto callback = [index, weakThis](CryptoKey& key) mutable {
+            if (auto promise = getPromise(index, weakThis)) {
                 if ((key.type() == CryptoKeyType::Private || key.type() == CryptoKeyType::Secret) && !key.usagesBitmap()) {
                     rejectWithException(promise.releaseNonNull(), SyntaxError);
                     return;
@@ -828,22 +832,22 @@ void SubtleCrypto::deriveKey(JSC::ExecState& state, AlgorithmIdentifier&& algori
                 promise->resolve<IDLInterface<CryptoKey>>(key);
             }
         };
-        auto exceptionCallback = [index, subtleCryptoWeakPointer](ExceptionCode ec) mutable {
-            if (auto promise = getPromise(index, subtleCryptoWeakPointer))
+        auto exceptionCallback = [index, weakThis](ExceptionCode ec) mutable {
+            if (auto promise = getPromise(index, weakThis))
                 rejectWithException(promise.releaseNonNull(), ec);
         };
 
         importAlgorithm->importKey(SubtleCrypto::KeyFormat::Raw, WTFMove(data), *importParams, extractable, keyUsagesBitmap, WTFMove(callback), WTFMove(exceptionCallback));
     };
-    auto exceptionCallback = [index, subtleCryptoWeakPointer](ExceptionCode ec) mutable {
-        if (auto promise = getPromise(index, subtleCryptoWeakPointer))
+    auto exceptionCallback = [index, weakThis](ExceptionCode ec) mutable {
+        if (auto promise = getPromise(index, weakThis))
             rejectWithException(promise.releaseNonNull(), ec);
     };
 
     algorithm->deriveBits(*params, baseKey, length, WTFMove(callback), WTFMove(exceptionCallback), *scriptExecutionContext(), m_workQueue);
 }
 
-void SubtleCrypto::deriveBits(JSC::ExecState& state, AlgorithmIdentifier&& algorithmIdentifier, CryptoKey& baseKey, unsigned length, Ref<DeferredPromise>&& promise)
+void SubtleCrypto::deriveBits(JSC::JSGlobalObject& state, AlgorithmIdentifier&& algorithmIdentifier, CryptoKey& baseKey, unsigned length, Ref<DeferredPromise>&& promise)
 {
     auto paramsOrException = normalizeCryptoAlgorithmParameters(state, WTFMove(algorithmIdentifier), Operations::DeriveBits);
     if (paramsOrException.hasException()) {
@@ -866,20 +870,20 @@ void SubtleCrypto::deriveBits(JSC::ExecState& state, AlgorithmIdentifier&& algor
 
     auto index = promise.ptr();
     m_pendingPromises.add(index, WTFMove(promise));
-    auto subtleCryptoWeakPointer = makeWeakPtr(*this);
-    auto callback = [index, subtleCryptoWeakPointer](const Vector<uint8_t>& derivedKey) mutable {
-        if (auto promise = getPromise(index, subtleCryptoWeakPointer))
+    WeakPtr weakThis { *this };
+    auto callback = [index, weakThis](const Vector<uint8_t>& derivedKey) mutable {
+        if (auto promise = getPromise(index, weakThis))
             fulfillPromiseWithArrayBuffer(promise.releaseNonNull(), derivedKey.data(), derivedKey.size());
     };
-    auto exceptionCallback = [index, subtleCryptoWeakPointer](ExceptionCode ec) mutable {
-        if (auto promise = getPromise(index, subtleCryptoWeakPointer))
+    auto exceptionCallback = [index, weakThis](ExceptionCode ec) mutable {
+        if (auto promise = getPromise(index, weakThis))
             rejectWithException(promise.releaseNonNull(), ec);
     };
 
     algorithm->deriveBits(*params, baseKey, length, WTFMove(callback), WTFMove(exceptionCallback), *scriptExecutionContext(), m_workQueue);
 }
 
-void SubtleCrypto::importKey(JSC::ExecState& state, KeyFormat format, KeyDataVariant&& keyDataVariant, AlgorithmIdentifier&& algorithmIdentifier, bool extractable, Vector<CryptoKeyUsage>&& keyUsages, Ref<DeferredPromise>&& promise)
+void SubtleCrypto::importKey(JSC::JSGlobalObject& state, KeyFormat format, KeyDataVariant&& keyDataVariant, AlgorithmIdentifier&& algorithmIdentifier, bool extractable, Vector<CryptoKeyUsage>&& keyUsages, Ref<DeferredPromise>&& promise)
 {
     auto paramsOrException = normalizeCryptoAlgorithmParameters(state, WTFMove(algorithmIdentifier), Operations::ImportKey);
     if (paramsOrException.hasException()) {
@@ -901,9 +905,9 @@ void SubtleCrypto::importKey(JSC::ExecState& state, KeyFormat format, KeyDataVar
 
     auto index = promise.ptr();
     m_pendingPromises.add(index, WTFMove(promise));
-    auto subtleCryptoWeakPointer = makeWeakPtr(*this);
-    auto callback = [index, subtleCryptoWeakPointer](CryptoKey& key) mutable {
-        if (auto promise = getPromise(index, subtleCryptoWeakPointer)) {
+    WeakPtr weakThis { *this };
+    auto callback = [index, weakThis](CryptoKey& key) mutable {
+        if (auto promise = getPromise(index, weakThis)) {
             if ((key.type() == CryptoKeyType::Private || key.type() == CryptoKeyType::Secret) && !key.usagesBitmap()) {
                 rejectWithException(promise.releaseNonNull(), SyntaxError);
                 return;
@@ -911,8 +915,8 @@ void SubtleCrypto::importKey(JSC::ExecState& state, KeyFormat format, KeyDataVar
             promise->resolve<IDLInterface<CryptoKey>>(key);
         }
     };
-    auto exceptionCallback = [index, subtleCryptoWeakPointer](ExceptionCode ec) mutable {
-        if (auto promise = getPromise(index, subtleCryptoWeakPointer))
+    auto exceptionCallback = [index, weakThis](ExceptionCode ec) mutable {
+        if (auto promise = getPromise(index, weakThis))
             rejectWithException(promise.releaseNonNull(), ec);
     };
 
@@ -938,26 +942,26 @@ void SubtleCrypto::exportKey(KeyFormat format, CryptoKey& key, Ref<DeferredPromi
 
     auto index = promise.ptr();
     m_pendingPromises.add(index, WTFMove(promise));
-    auto subtleCryptoWeakPointer = makeWeakPtr(*this);
-    auto callback = [index, subtleCryptoWeakPointer](SubtleCrypto::KeyFormat format, KeyData&& key) mutable {
-        if (auto promise = getPromise(index, subtleCryptoWeakPointer)) {
+    WeakPtr weakThis { *this };
+    auto callback = [index, weakThis](SubtleCrypto::KeyFormat format, KeyData&& key) mutable {
+        if (auto promise = getPromise(index, weakThis)) {
             switch (format) {
             case SubtleCrypto::KeyFormat::Spki:
             case SubtleCrypto::KeyFormat::Pkcs8:
             case SubtleCrypto::KeyFormat::Raw: {
-                Vector<uint8_t>& rawKey = WTF::get<Vector<uint8_t>>(key);
+                Vector<uint8_t>& rawKey = std::get<Vector<uint8_t>>(key);
                 fulfillPromiseWithArrayBuffer(promise.releaseNonNull(), rawKey.data(), rawKey.size());
                 return;
             }
             case SubtleCrypto::KeyFormat::Jwk:
-                promise->resolve<IDLDictionary<JsonWebKey>>(WTFMove(WTF::get<JsonWebKey>(key)));
+                promise->resolve<IDLDictionary<JsonWebKey>>(WTFMove(std::get<JsonWebKey>(key)));
                 return;
             }
             ASSERT_NOT_REACHED();
         }
     };
-    auto exceptionCallback = [index, subtleCryptoWeakPointer](ExceptionCode ec) mutable {
-        if (auto promise = getPromise(index, subtleCryptoWeakPointer))
+    auto exceptionCallback = [index, weakThis](ExceptionCode ec) mutable {
+        if (auto promise = getPromise(index, weakThis))
             rejectWithException(promise.releaseNonNull(), ec);
     };
 
@@ -967,7 +971,7 @@ void SubtleCrypto::exportKey(KeyFormat format, CryptoKey& key, Ref<DeferredPromi
     algorithm->exportKey(format, key, WTFMove(callback), WTFMove(exceptionCallback));
 }
 
-void SubtleCrypto::wrapKey(JSC::ExecState& state, KeyFormat format, CryptoKey& key, CryptoKey& wrappingKey, AlgorithmIdentifier&& wrapAlgorithmIdentifier, Ref<DeferredPromise>&& promise)
+void SubtleCrypto::wrapKey(JSC::JSGlobalObject& state, KeyFormat format, CryptoKey& key, CryptoKey& wrappingKey, AlgorithmIdentifier&& wrapAlgorithmIdentifier, Ref<DeferredPromise>&& promise)
 {
     bool isEncryption = false;
 
@@ -1012,32 +1016,32 @@ void SubtleCrypto::wrapKey(JSC::ExecState& state, KeyFormat format, CryptoKey& k
 
     auto index = promise.ptr();
     m_pendingPromises.add(index, WTFMove(promise));
-    auto subtleCryptoWeakPointer = makeWeakPtr(*this);
-    auto callback = [index, subtleCryptoWeakPointer, wrapAlgorithm, wrappingKey = makeRef(wrappingKey), wrapParams = WTFMove(wrapParams), isEncryption, context, workQueue = m_workQueue.copyRef()](SubtleCrypto::KeyFormat format, KeyData&& key) mutable {
-        if (subtleCryptoWeakPointer) {
-            if (auto promise = subtleCryptoWeakPointer->m_pendingPromises.get(index)) {
+    WeakPtr weakThis { *this };
+    auto callback = [index, weakThis, wrapAlgorithm, wrappingKey = Ref { wrappingKey }, wrapParams = WTFMove(wrapParams), isEncryption, context, workQueue = m_workQueue](SubtleCrypto::KeyFormat format, KeyData&& key) mutable {
+        if (weakThis) {
+            if (auto promise = weakThis->m_pendingPromises.get(index)) {
                 Vector<uint8_t> bytes;
                 switch (format) {
                 case SubtleCrypto::KeyFormat::Spki:
                 case SubtleCrypto::KeyFormat::Pkcs8:
                 case SubtleCrypto::KeyFormat::Raw:
-                    bytes = WTF::get<Vector<uint8_t>>(key);
+                    bytes = std::get<Vector<uint8_t>>(key);
                     break;
                 case SubtleCrypto::KeyFormat::Jwk: {
                     // FIXME: Converting to JS just to JSON-Stringify seems inefficient. We should find a way to go directly from the struct to JSON.
-                    auto jwk = toJS<IDLDictionary<JsonWebKey>>(*(promise->globalObject()->globalExec()), *(promise->globalObject()), WTFMove(WTF::get<JsonWebKey>(key)));
-                    String jwkString = JSONStringify(promise->globalObject()->globalExec(), jwk, 0);
+                    auto jwk = toJS<IDLDictionary<JsonWebKey>>(*(promise->globalObject()), *(promise->globalObject()), WTFMove(std::get<JsonWebKey>(key)));
+                    String jwkString = JSONStringify(promise->globalObject(), jwk, 0);
                     CString jwkUtf8String = jwkString.utf8(StrictConversion);
                     bytes.append(jwkUtf8String.data(), jwkUtf8String.length());
                 }
                 }
 
-                auto callback = [index, subtleCryptoWeakPointer](const Vector<uint8_t>& wrappedKey) mutable {
-                    if (auto promise = getPromise(index, subtleCryptoWeakPointer))
+                auto callback = [index, weakThis](const Vector<uint8_t>& wrappedKey) mutable {
+                    if (auto promise = getPromise(index, weakThis))
                         fulfillPromiseWithArrayBuffer(promise.releaseNonNull(), wrappedKey.data(), wrappedKey.size());
                 };
-                auto exceptionCallback = [index, subtleCryptoWeakPointer](ExceptionCode ec) mutable {
-                    if (auto promise = getPromise(index, subtleCryptoWeakPointer))
+                auto exceptionCallback = [index, weakThis](ExceptionCode ec) mutable {
+                    if (auto promise = getPromise(index, weakThis))
                         rejectWithException(promise.releaseNonNull(), ec);
                 };
 
@@ -1053,8 +1057,8 @@ void SubtleCrypto::wrapKey(JSC::ExecState& state, KeyFormat format, CryptoKey& k
             }
         }
     };
-    auto exceptionCallback = [index, subtleCryptoWeakPointer](ExceptionCode ec) mutable {
-        if (auto promise = getPromise(index, subtleCryptoWeakPointer))
+    auto exceptionCallback = [index, weakThis](ExceptionCode ec) mutable {
+        if (auto promise = getPromise(index, weakThis))
             rejectWithException(promise.releaseNonNull(), ec);
     };
 
@@ -1062,7 +1066,7 @@ void SubtleCrypto::wrapKey(JSC::ExecState& state, KeyFormat format, CryptoKey& k
     exportAlgorithm->exportKey(format, key, WTFMove(callback), WTFMove(exceptionCallback));
 }
 
-void SubtleCrypto::unwrapKey(JSC::ExecState& state, KeyFormat format, BufferSource&& wrappedKeyBufferSource, CryptoKey& unwrappingKey, AlgorithmIdentifier&& unwrapAlgorithmIdentifier, AlgorithmIdentifier&& unwrappedKeyAlgorithmIdentifier, bool extractable, Vector<CryptoKeyUsage>&& keyUsages, Ref<DeferredPromise>&& promise)
+void SubtleCrypto::unwrapKey(JSC::JSGlobalObject& state, KeyFormat format, BufferSource&& wrappedKeyBufferSource, CryptoKey& unwrappingKey, AlgorithmIdentifier&& unwrapAlgorithmIdentifier, AlgorithmIdentifier&& unwrappedKeyAlgorithmIdentifier, bool extractable, Vector<CryptoKeyUsage>&& keyUsages, Ref<DeferredPromise>&& promise)
 {
     auto wrappedKey = copyToVector(WTFMove(wrappedKeyBufferSource));
 
@@ -1070,8 +1074,6 @@ void SubtleCrypto::unwrapKey(JSC::ExecState& state, KeyFormat format, BufferSour
 
     auto unwrapParamsOrException = normalizeCryptoAlgorithmParameters(state, unwrapAlgorithmIdentifier, Operations::UnwrapKey);
     if (unwrapParamsOrException.hasException()) {
-        ASSERT(unwrapParamsOrException.exception().code() != ExistingExceptionError);
-
         unwrapParamsOrException = normalizeCryptoAlgorithmParameters(state, unwrapAlgorithmIdentifier, Operations::Decrypt);
         if (unwrapParamsOrException.hasException()) {
             promise->reject(unwrapParamsOrException.releaseException());
@@ -1115,10 +1117,10 @@ void SubtleCrypto::unwrapKey(JSC::ExecState& state, KeyFormat format, BufferSour
 
     auto index = promise.ptr();
     m_pendingPromises.add(index, WTFMove(promise));
-    auto subtleCryptoWeakPointer = makeWeakPtr(*this);
-    auto callback = [index, subtleCryptoWeakPointer, format, importAlgorithm, unwrappedKeyAlgorithm = crossThreadCopyImportParams(*unwrappedKeyAlgorithm), extractable, keyUsagesBitmap](const Vector<uint8_t>& bytes) mutable {
-        if (subtleCryptoWeakPointer) {
-            if (auto promise = subtleCryptoWeakPointer->m_pendingPromises.get(index)) {
+    WeakPtr weakThis { *this };
+    auto callback = [index, weakThis, format, importAlgorithm, unwrappedKeyAlgorithm = crossThreadCopyImportParams(*unwrappedKeyAlgorithm), extractable, keyUsagesBitmap](const Vector<uint8_t>& bytes) mutable {
+        if (weakThis) {
+            if (RefPtr promise = weakThis->m_pendingPromises.get(index)) {
                 KeyData keyData;
                 switch (format) {
                 case SubtleCrypto::KeyFormat::Spki:
@@ -1127,11 +1129,11 @@ void SubtleCrypto::unwrapKey(JSC::ExecState& state, KeyFormat format, BufferSour
                     keyData = bytes;
                     break;
                 case SubtleCrypto::KeyFormat::Jwk: {
-                    auto& state = *(promise->globalObject()->globalExec());
+                    auto& state = *(promise->globalObject());
                     auto& vm = state.vm();
                     auto scope = DECLARE_THROW_SCOPE(vm);
 
-                    String jwkString(reinterpret_cast_ptr<const char*>(bytes.data()), bytes.size());
+                    String jwkString(bytes.data(), bytes.size());
                     JSLockHolder locker(vm);
                     auto jwkObject = JSONParse(&state, jwkString);
                     if (!jwkObject) {
@@ -1147,8 +1149,8 @@ void SubtleCrypto::unwrapKey(JSC::ExecState& state, KeyFormat format, BufferSour
                 }
                 }
 
-                auto callback = [index, subtleCryptoWeakPointer](CryptoKey& key) mutable {
-                    if (auto promise = getPromise(index, subtleCryptoWeakPointer)) {
+                auto callback = [index, weakThis](CryptoKey& key) mutable {
+                    if (auto promise = getPromise(index, weakThis)) {
                         if ((key.type() == CryptoKeyType::Private || key.type() == CryptoKeyType::Secret) && !key.usagesBitmap()) {
                             rejectWithException(promise.releaseNonNull(), SyntaxError);
                             return;
@@ -1156,8 +1158,8 @@ void SubtleCrypto::unwrapKey(JSC::ExecState& state, KeyFormat format, BufferSour
                         promise->resolve<IDLInterface<CryptoKey>>(key);
                     }
                 };
-                auto exceptionCallback = [index, subtleCryptoWeakPointer](ExceptionCode ec) mutable {
-                    if (auto promise = getPromise(index, subtleCryptoWeakPointer))
+                auto exceptionCallback = [index, weakThis](ExceptionCode ec) mutable {
+                    if (auto promise = getPromise(index, weakThis))
                         rejectWithException(promise.releaseNonNull(), ec);
                 };
 
@@ -1166,8 +1168,8 @@ void SubtleCrypto::unwrapKey(JSC::ExecState& state, KeyFormat format, BufferSour
             }
         }
     };
-    auto exceptionCallback = [index, subtleCryptoWeakPointer](ExceptionCode ec) mutable {
-        if (auto promise = getPromise(index, subtleCryptoWeakPointer))
+    auto exceptionCallback = [index, weakThis](ExceptionCode ec) mutable {
+        if (auto promise = getPromise(index, weakThis))
             rejectWithException(promise.releaseNonNull(), ec);
     };
 

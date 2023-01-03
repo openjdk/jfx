@@ -25,8 +25,6 @@
 
 #pragma once
 
-#if ENABLE(INDEXED_DATABASE)
-
 #include "IDBKeyPath.h"
 #include <wtf/text/WTFString.h>
 
@@ -37,7 +35,7 @@ public:
     WEBCORE_EXPORT IDBIndexInfo();
     IDBIndexInfo(uint64_t identifier, uint64_t objectStoreIdentifier, const String& name, IDBKeyPath&&, bool unique, bool multiEntry);
 
-    IDBIndexInfo isolatedCopy() const;
+    WEBCORE_EXPORT IDBIndexInfo isolatedCopy() const;
 
     uint64_t identifier() const { return m_identifier; }
     uint64_t objectStoreIdentifier() const { return m_objectStoreIdentifier; }
@@ -49,7 +47,7 @@ public:
     void rename(const String& newName) { m_name = newName; }
 
     template<class Encoder> void encode(Encoder&) const;
-    template<class Decoder> static bool decode(Decoder&, IDBIndexInfo&);
+    template<class Decoder> static WARN_UNUSED_RETURN bool decode(Decoder&, IDBIndexInfo&);
 
 #if !LOG_DISABLED
     String loggingString(int indent = 0) const;
@@ -59,6 +57,7 @@ public:
     // FIXME: Remove the need for this.
     static const int64_t InvalidId = -1;
 
+    void setIdentifier(uint64_t identifier) { m_identifier = identifier; }
 private:
     uint64_t m_identifier { 0 };
     uint64_t m_objectStoreIdentifier { 0 };
@@ -99,5 +98,3 @@ bool IDBIndexInfo::decode(Decoder& decoder, IDBIndexInfo& info)
 }
 
 } // namespace WebCore
-
-#endif // ENABLE(INDEXED_DATABASE)

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2010-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,23 +25,34 @@
 
 #pragma once
 
+#if ENABLE(JIT)
+
+#include "CallMode.h"
 #include "CodeSpecializationKind.h"
 #include "JSCPtrTag.h"
 
-#if ENABLE(JIT)
 namespace JSC {
 
 class CallLinkInfo;
+enum class CallMode;
 template<PtrTag> class MacroAssemblerCodeRef;
 class VM;
 
+#if ENABLE(EXTRA_CTI_THUNKS)
+
+MacroAssemblerCodeRef<JITThunkPtrTag> handleExceptionWithCallFrameRollbackGenerator(VM&);
+
+#endif // ENABLE(EXTRA_CTI_THUNKS)
+
+MacroAssemblerCodeRef<JITThunkPtrTag> handleExceptionGenerator(VM&);
+MacroAssemblerCodeRef<JITThunkPtrTag> popThunkStackPreservesAndHandleExceptionGenerator(VM&);
+
 MacroAssemblerCodeRef<JITThunkPtrTag> throwExceptionFromCallSlowPathGenerator(VM&);
 
-MacroAssemblerCodeRef<JITThunkPtrTag> linkCallThunk(VM*, CallLinkInfo&, CodeSpecializationKind);
 MacroAssemblerCodeRef<JITThunkPtrTag> linkCallThunkGenerator(VM&);
 MacroAssemblerCodeRef<JITThunkPtrTag> linkPolymorphicCallThunkGenerator(VM&);
 
-MacroAssemblerCodeRef<JITStubRoutinePtrTag> virtualThunkFor(VM&, CallLinkInfo&);
+MacroAssemblerCodeRef<JITStubRoutinePtrTag> virtualThunkFor(VM&, CallMode);
 
 MacroAssemblerCodeRef<JITThunkPtrTag> nativeCallGenerator(VM&);
 MacroAssemblerCodeRef<JITThunkPtrTag> nativeConstructGenerator(VM&);
@@ -55,6 +66,7 @@ MacroAssemblerCodeRef<JITThunkPtrTag> stringGetByValGenerator(VM&);
 
 MacroAssemblerCodeRef<JITThunkPtrTag> charCodeAtThunkGenerator(VM&);
 MacroAssemblerCodeRef<JITThunkPtrTag> charAtThunkGenerator(VM&);
+MacroAssemblerCodeRef<JITThunkPtrTag> stringPrototypeCodePointAtThunkGenerator(VM&);
 MacroAssemblerCodeRef<JITThunkPtrTag> clz32ThunkGenerator(VM&);
 MacroAssemblerCodeRef<JITThunkPtrTag> fromCharCodeThunkGenerator(VM&);
 MacroAssemblerCodeRef<JITThunkPtrTag> absThunkGenerator(VM&);
@@ -68,6 +80,13 @@ MacroAssemblerCodeRef<JITThunkPtrTag> imulThunkGenerator(VM&);
 MacroAssemblerCodeRef<JITThunkPtrTag> randomThunkGenerator(VM&);
 MacroAssemblerCodeRef<JITThunkPtrTag> truncThunkGenerator(VM&);
 
-MacroAssemblerCodeRef<JITThunkPtrTag> boundThisNoArgsFunctionCallGenerator(VM&);
-}
+MacroAssemblerCodeRef<JITThunkPtrTag> boundFunctionCallGenerator(VM&);
+
+MacroAssemblerCodeRef<JITThunkPtrTag> remoteFunctionCallGenerator(VM&);
+
+#if ENABLE(EXTRA_CTI_THUNKS)
+MacroAssemblerCodeRef<JITThunkPtrTag> checkExceptionGenerator(VM&);
+#endif
+
+} // namespace JSC
 #endif // ENABLE(JIT)

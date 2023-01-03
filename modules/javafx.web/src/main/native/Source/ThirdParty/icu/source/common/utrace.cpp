@@ -67,7 +67,7 @@ utrace_exit(int32_t fnNumber, int32_t returnType, ...) {
             fmt = gExitFmtPtrStatus;
             break;
         default:
-            UPRV_UNREACHABLE;
+            UPRV_UNREACHABLE_EXIT;
         }
 
         va_start(args, returnType);
@@ -93,7 +93,7 @@ static void outputChar(char c, char *outBuf, int32_t *outIx, int32_t capacity, i
     int32_t i;
     /* Check whether a start of line indenting is needed.  Three cases:
      *   1.  At the start of the first line  (output index == 0).
-     *   2.  At the start of subsequent lines  (preceeding char in buffer == '\n')
+     *   2.  At the start of subsequent lines  (preceding char in buffer == '\n')
      *   3.  When preflighting buffer len (buffer capacity is exceeded), when
      *       a \n is output.  Ideally we wouldn't do the indent until the following char
      *       is received, but that won't work because there's no place to remember that
@@ -369,13 +369,13 @@ utrace_vformat(char *outBuf, int32_t capacity, int32_t indent, const char *fmt, 
         default:
             /* %. in format string, where . is some character not in the set
              *    of recognized format chars.  Just output it as if % wasn't there.
-             *    (Covers "%%" outputing a single '%')
+             *    (Covers "%%" outputting a single '%')
              */
              outputChar(fmtC, outBuf, &outIx, capacity, indent);
         }
     }
-    outputChar(0, outBuf, &outIx, capacity, indent);  /* Make sure that output is null terminated  */
-    return outIx + 1;     /* outIx + 1 because outIx does not increment when outputing final null. */
+    outputChar(0, outBuf, &outIx, capacity, indent);  /* Make sure that output is null terminated   */
+    return outIx + 1;     /* outIx + 1 because outIx does not increment when outputting final null. */
 }
 
 
@@ -477,6 +477,16 @@ trCollNames[] = {
 };
 
 
+static const char* const
+trResDataNames[] = {
+    "resc",
+    "bundle-open",
+    "file-open",
+    "res-open",
+    NULL
+};
+
+
 U_CAPI const char * U_EXPORT2
 utrace_functionName(int32_t fnNumber) {
     if(UTRACE_FUNCTION_START <= fnNumber && fnNumber < UTRACE_FUNCTION_LIMIT) {
@@ -485,6 +495,8 @@ utrace_functionName(int32_t fnNumber) {
         return trConvNames[fnNumber - UTRACE_CONVERSION_START];
     } else if(UTRACE_COLLATION_START <= fnNumber && fnNumber < UTRACE_COLLATION_LIMIT){
         return trCollNames[fnNumber - UTRACE_COLLATION_START];
+    } else if(UTRACE_UDATA_START <= fnNumber && fnNumber < UTRACE_RES_DATA_LIMIT){
+        return trResDataNames[fnNumber - UTRACE_UDATA_START];
     } else {
         return "[BOGUS Trace Function Number]";
     }

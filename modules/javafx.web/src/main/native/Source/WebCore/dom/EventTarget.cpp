@@ -2,7 +2,7 @@
  * Copyright (C) 1999 Lars Knoll (knoll@kde.org)
  *           (C) 1999 Antti Koivisto (koivisto@kde.org)
  *           (C) 2001 Dirk Mueller (mueller@kde.org)
- * Copyright (C) 2004-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2021 Apple Inc. All rights reserved.
  * Copyright (C) 2006 Alexey Proskuryakov (ap@webkit.org)
  *           (C) 2007, 2008 Nikolas Zimmermann <zimmermann@kde.org>
  *
@@ -32,19 +32,20 @@
 #include "config.h"
 #include "EventTarget.h"
 
+#include "AddEventListenerOptions.h"
 #include "DOMWrapperWorld.h"
 #include "EventNames.h"
+#include "EventTargetConcrete.h"
 #include "HTMLBodyElement.h"
 #include "HTMLHtmlElement.h"
 #include "InspectorInstrumentation.h"
+#include "JSErrorHandler.h"
 #include "JSEventListener.h"
-#include "JSLazyEventListener.h"
-#include "RuntimeEnabledFeatures.h"
+#include "Logging.h"
+#include "Quirks.h"
 #include "ScriptController.h"
 #include "ScriptDisallowedScope.h"
 #include "Settings.h"
-#include "WebKitAnimationEvent.h"
-#include "WebKitTransitionEvent.h"
 #include <wtf/IsoMallocInlines.h>
 #include <wtf/MainThread.h>
 #include <wtf/NeverDestroyed.h>
@@ -53,10 +54,22 @@
 #include <wtf/StdLibExtras.h>
 #include <wtf/Vector.h>
 
+#if PLATFORM(JAVA)
+#include "EventListenerManager.h"
+#include "JavaEventListener.h"
+#endif
+
 namespace WebCore {
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(EventTarget);
 WTF_MAKE_ISO_ALLOCATED_IMPL(EventTargetWithInlineData);
+
+Ref<EventTarget> EventTarget::create(ScriptExecutionContext& context)
+{
+    return EventTargetConcrete::create(context);
+}
+
+EventTarget::~EventTarget() = default;
 
 bool EventTarget::isNode() const
 {
@@ -70,33 +83,37 @@ bool EventTarget::isPaymentRequest() const
 
 bool EventTarget::addEventListener(const AtomString& eventType, Ref<EventListener>&& listener, const AddEventListenerOptions& options)
 {
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
     listener->checkValidityForEventTarget(*this);
 #endif
 
-    auto passive = options.passive;
-
-    if (!passive.hasValue() && eventNames().isTouchScrollBlockingEventType(eventType)) {
-        if (is<DOMWindow>(*this)) {
-            auto& window = downcast<DOMWindow>(*this);
-            if (auto* document = window.document())
-                passive = document->settings().passiveTouchListenersAsDefaultOnDocument();
-        } else if (is<Node>(*this)) {
-            auto& node = downcast<Node>(*this);
-            if (is<Document>(node) || node.document().documentElement() == &node || node.document().body() == &node)
-                passive = node.document().settings().passiveTouchListenersAsDefaultOnDocument();
-        }
-    }
-
-    bool listenerCreatedFromScript = listener->type() == EventListener::JSEventListenerType && !listener->wasCreatedFromMarkup();
-    auto listenerRef = listener.copyRef();
-
-    if (!ensureEventTargetData().eventListenerMap.add(eventType, WTFMove(listener), { options.capture, passive.valueOr(false), options.once }))
+    if (options.signal && options.signal->aborted())
         return false;
 
-    if (listenerCreatedFromScript)
-        InspectorInstrumentation::didAddEventListener(*this, eventType, listenerRef.get(), options.capture);
+    auto passive = options.passive;
 
+    if (!passive.has_value() && Quirks::shouldMakeEventListenerPassive(*this, eventType, listener.get()))
+        passive = true;
+
+    bool listenerCreatedFromScript = is<JSEventListener>(listener) && !downcast<JSEventListener>(listener.get()).wasCreatedFromMarkup();
+
+    if (!ensureEventTargetData().eventListenerMap.add(eventType, listener.copyRef(), { options.capture, passive.value_or(false), options.once }))
+        return false;
+
+    if (options.signal) {
+        options.signal->addAlgorithm([weakThis = WeakPtr { *this }, eventType, listener = WeakPtr { listener }, capture = options.capture] {
+            if (weakThis && listener)
+                weakThis->removeEventListener(eventType, *listener, capture);
+        });
+    }
+
+    if (listenerCreatedFromScript)
+        InspectorInstrumentation::didAddEventListener(*this, eventType, listener.get(), options.capture);
+
+    if (eventNames().isWheelEventType(eventType))
+        invalidateEventListenerRegions();
+
+    eventListenersDidChange();
     return true;
 }
 
@@ -111,24 +128,24 @@ void EventTarget::addEventListenerForBindings(const AtomString& eventType, RefPt
         addEventListener(eventType, listener.releaseNonNull(), capture);
     });
 
-    WTF::visit(visitor, variant);
+    std::visit(visitor, variant);
 }
 
-void EventTarget::removeEventListenerForBindings(const AtomString& eventType, RefPtr<EventListener>&& listener, ListenerOptionsOrBoolean&& variant)
+void EventTarget::removeEventListenerForBindings(const AtomString& eventType, RefPtr<EventListener>&& listener, EventListenerOptionsOrBoolean&& variant)
 {
     if (!listener)
         return;
 
-    auto visitor = WTF::makeVisitor([&](const ListenerOptions& options) {
+    auto visitor = WTF::makeVisitor([&](const EventListenerOptions& options) {
         removeEventListener(eventType, *listener, options);
     }, [&](bool capture) {
         removeEventListener(eventType, *listener, capture);
     });
 
-    WTF::visit(visitor, variant);
+    std::visit(visitor, variant);
 }
 
-bool EventTarget::removeEventListener(const AtomString& eventType, EventListener& listener, const ListenerOptions& options)
+bool EventTarget::removeEventListener(const AtomString& eventType, EventListener& listener, const EventListenerOptions& options)
 {
     auto* data = eventTargetData();
     if (!data)
@@ -136,8 +153,43 @@ bool EventTarget::removeEventListener(const AtomString& eventType, EventListener
 
     InspectorInstrumentation::willRemoveEventListener(*this, eventType, listener, options.capture);
 
-    return data->eventListenerMap.remove(eventType, listener, options.capture);
+    if (data->eventListenerMap.remove(eventType, listener, options.capture)) {
+#if PLATFORM(JAVA)
+        EventListenerManager::get_instance().unregisterListener(static_cast<JavaEventListener *> (&listener));
+#endif
+        if (eventNames().isWheelEventType(eventType))
+            invalidateEventListenerRegions();
+
+        eventListenersDidChange();
+        return true;
+    }
+    return false;
 }
+
+template<typename JSMaybeErrorEventListener>
+void EventTarget::setAttributeEventListener(const AtomString& eventType, JSC::JSValue listener, JSC::JSObject& jsEventTarget)
+{
+    auto& isolatedWorld = worldForDOMObject(jsEventTarget);
+    auto* existingListener = attributeEventListener(eventType, isolatedWorld);
+    if (!listener.isObject()) {
+        if (existingListener)
+            removeEventListener(eventType, *existingListener, false);
+    } else if (existingListener) {
+        bool capture = false;
+
+        InspectorInstrumentation::willRemoveEventListener(*this, eventType, *existingListener, capture);
+#if PLATFORM(JAVA)
+        (downcast<JSEventListener>)(existingListener)->replaceJSFunctionForAttributeListener(asObject(listener), &jsEventTarget);
+#else
+        existingListener->replaceJSFunctionForAttributeListener(asObject(listener), &jsEventTarget);
+#endif
+        InspectorInstrumentation::didAddEventListener(*this, eventType, *existingListener, capture);
+    } else
+        addEventListener(eventType, JSMaybeErrorEventListener::create(*asObject(listener), jsEventTarget, true, isolatedWorld), { });
+}
+
+template void EventTarget::setAttributeEventListener<JSErrorHandler>(const AtomString& eventType, JSC::JSValue listener, JSC::JSObject& jsEventTarget);
+template void EventTarget::setAttributeEventListener<JSEventListener>(const AtomString& eventType, JSC::JSValue listener, JSC::JSObject& jsEventTarget);
 
 bool EventTarget::setAttributeEventListener(const AtomString& eventType, RefPtr<EventListener>&& listener, DOMWrapperWorld& isolatedWorld)
 {
@@ -150,7 +202,7 @@ bool EventTarget::setAttributeEventListener(const AtomString& eventType, RefPtr<
     if (existingListener) {
         InspectorInstrumentation::willRemoveEventListener(*this, eventType, *existingListener, false);
 
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
         listener->checkValidityForEventTarget(*this);
 #endif
 
@@ -161,12 +213,13 @@ bool EventTarget::setAttributeEventListener(const AtomString& eventType, RefPtr<
 
         return true;
     }
-    return addEventListener(eventType, listener.releaseNonNull());
+    return addEventListener(eventType, listener.releaseNonNull(), { });
 }
-
+// If this change does not work, refer cd50b14b5fde20ce801fdd0bc2c5b35022f87009 from webkit-2.36
 EventListener* EventTarget::attributeEventListener(const AtomString& eventType, DOMWrapperWorld& isolatedWorld)
 {
     for (auto& eventListener : eventListeners(eventType)) {
+#if PLATFORM(JAVA)
         auto& listener = eventListener->callback();
         if (!listener.isAttribute())
             continue;
@@ -174,6 +227,15 @@ EventListener* EventTarget::attributeEventListener(const AtomString& eventType, 
         auto& listenerWorld = downcast<JSEventListener>(listener).isolatedWorld();
         if (&listenerWorld == &isolatedWorld)
             return &listener;
+#else
+        auto& listener = eventListener->callback();
+        if (listener.type() != EventListener::JSEventListenerType)
+            continue;
+
+        auto& jsListener = downcast<JSEventListener>(listener);
+        if (jsListener.isAttribute() && &jsListener.isolatedWorld() == &isolatedWorld)
+            return &jsListener;
+#endif
     }
 
     return nullptr;
@@ -187,13 +249,13 @@ bool EventTarget::hasActiveEventListeners(const AtomString& eventType) const
 
 ExceptionOr<bool> EventTarget::dispatchEventForBindings(Event& event)
 {
-    event.setUntrusted();
-
     if (!event.isInitialized() || event.isBeingDispatched())
         return Exception { InvalidStateError };
 
     if (!scriptExecutionContext())
         return false;
+
+    event.setUntrusted();
 
     dispatchEvent(event);
     return event.legacyReturnValue();
@@ -282,9 +344,8 @@ void EventTarget::innerInvokeEventListeners(Event& event, EventListenerVector li
 
     auto& context = *scriptExecutionContext();
     bool contextIsDocument = is<Document>(context);
-    InspectorInstrumentationCookie willDispatchEventCookie;
     if (contextIsDocument)
-        willDispatchEventCookie = InspectorInstrumentation::willDispatchEvent(downcast<Document>(context), event, true);
+        InspectorInstrumentation::willDispatchEvent(downcast<Document>(context), event);
 
     for (auto& registeredListener : listeners) {
         if (UNLIKELY(registeredListener->wasRemoved()))
@@ -303,27 +364,33 @@ void EventTarget::innerInvokeEventListeners(Event& event, EventListenerVector li
         if (event.immediatePropagationStopped())
             break;
 
+        // Make sure the JS wrapper and function stay alive until the end of this scope. Otherwise,
+        // event listeners with 'once' flag may get collected as soon as they get unregistered below,
+        // before we call the js function.
+        JSC::EnsureStillAliveScope wrapperProtector(registeredListener->callback().wrapper());
+        JSC::EnsureStillAliveScope jsFunctionProtector(registeredListener->callback().jsFunction());
+
         // Do this before invocation to avoid reentrancy issues.
         if (registeredListener->isOnce())
-            removeEventListener(event.type(), registeredListener->callback(), ListenerOptions(registeredListener->useCapture()));
+            removeEventListener(event.type(), registeredListener->callback(), registeredListener->useCapture());
 
         if (registeredListener->isPassive())
             event.setInPassiveListener(true);
 
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
         registeredListener->callback().checkValidityForEventTarget(*this);
 #endif
 
         InspectorInstrumentation::willHandleEvent(context, event, *registeredListener);
         registeredListener->callback().handleEvent(context, event);
-        InspectorInstrumentation::didHandleEvent(context);
+        InspectorInstrumentation::didHandleEvent(context, event, *registeredListener);
 
         if (registeredListener->isPassive())
             event.setInPassiveListener(false);
     }
 
     if (contextIsDocument)
-        InspectorInstrumentation::didDispatchEvent(willDispatchEventCookie, event.defaultPrevented());
+        InspectorInstrumentation::didDispatchEvent(downcast<Document>(context), event);
 }
 
 Vector<AtomString> EventTarget::eventTypes()
@@ -349,22 +416,50 @@ void EventTarget::removeAllEventListeners()
     threadData.setIsInRemoveAllEventListeners(true);
 
     auto* data = eventTargetData();
-    if (data)
+    if (data && !data->eventListenerMap.isEmpty()) {
+        if (data->eventListenerMap.contains(eventNames().wheelEvent) || data->eventListenerMap.contains(eventNames().mousewheelEvent))
+            invalidateEventListenerRegions();
+
         data->eventListenerMap.clear();
+        eventListenersDidChange();
+    }
 
     threadData.setIsInRemoveAllEventListeners(false);
 }
 
-void EventTarget::visitJSEventListeners(JSC::SlotVisitor& visitor)
+template<typename Visitor>
+void EventTarget::visitJSEventListeners(Visitor& visitor)
 {
     EventTargetData* data = eventTargetDataConcurrently();
     if (!data)
         return;
 
-    auto locker = holdLock(data->eventListenerMap.lock());
+    Locker locker { data->eventListenerMap.lock() };
     EventListenerIterator iterator(&data->eventListenerMap);
     while (auto* listener = iterator.nextListener())
         listener->visitJSFunction(visitor);
+}
+
+template void EventTarget::visitJSEventListeners(JSC::AbstractSlotVisitor&);
+template void EventTarget::visitJSEventListeners(JSC::SlotVisitor&);
+
+void EventTarget::invalidateEventListenerRegions()
+{
+    if (is<Element>(*this)) {
+        downcast<Element>(*this).invalidateEventListenerRegions();
+        return;
+    }
+
+    auto* document = [&]() -> Document* {
+        if (is<Document>(*this))
+            return &downcast<Document>(*this);
+        if (is<DOMWindow>(*this))
+            return downcast<DOMWindow>(*this).document();
+        return nullptr;
+    }();
+
+    if (document)
+        document->invalidateEventListenerRegions();
 }
 
 } // namespace WebCore

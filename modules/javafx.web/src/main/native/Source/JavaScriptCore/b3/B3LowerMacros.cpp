@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -40,7 +40,6 @@
 #include "B3MemoryValueInlines.h"
 #include "B3PatchpointValue.h"
 #include "B3PhaseScope.h"
-#include "B3ProcedureInlines.h"
 #include "B3StackmapGenerationParams.h"
 #include "B3SwitchValue.h"
 #include "B3UpsilonValue.h"
@@ -128,9 +127,8 @@ private:
                     break;
                 }
 
-                auto* fmodDouble = tagCFunctionPtr<double (*)(double, double)>(fmod, B3CCallPtrTag);
                 if (m_value->type() == Double) {
-                    Value* functionAddress = m_insertionSet.insert<ConstPtrValue>(m_index, m_origin, fmodDouble);
+                    Value* functionAddress = m_insertionSet.insert<ConstPtrValue>(m_index, m_origin, tagCFunction<OperationPtrTag>(Math::fmodDouble));
                     Value* result = m_insertionSet.insert<CCallValue>(m_index, Double, m_origin,
                         Effects::none(),
                         functionAddress,
@@ -141,7 +139,7 @@ private:
                 } else if (m_value->type() == Float) {
                     Value* numeratorAsDouble = m_insertionSet.insert<Value>(m_index, FloatToDouble, m_origin, m_value->child(0));
                     Value* denominatorAsDouble = m_insertionSet.insert<Value>(m_index, FloatToDouble, m_origin, m_value->child(1));
-                    Value* functionAddress = m_insertionSet.insert<ConstPtrValue>(m_index, m_origin, fmodDouble);
+                    Value* functionAddress = m_insertionSet.insert<ConstPtrValue>(m_index, m_origin, tagCFunction<OperationPtrTag>(Math::fmodDouble));
                     Value* doubleMod = m_insertionSet.insert<CCallValue>(m_index, Double, m_origin,
                         Effects::none(),
                         functionAddress,
@@ -166,6 +164,71 @@ private:
                     Value* multipliedBack = m_insertionSet.insert<Value>(m_index, Mul, m_origin, divResult, m_value->child(1));
                     Value* result = m_insertionSet.insert<Value>(m_index, Sub, m_origin, m_value->child(0), multipliedBack);
                     m_value->replaceWithIdentity(result);
+                    m_changed = true;
+                }
+                break;
+            }
+
+            case FMax:
+            case FMin: {
+                if (isX86()) {
+                    bool isMax = m_value->opcode() == FMax;
+
+                    Value* a = m_value->child(0);
+                    Value* b = m_value->child(1);
+
+                    Value* isEqualValue = m_insertionSet.insert<Value>(
+                        m_index, Equal, m_origin, a, b);
+
+                    BasicBlock* before = m_blockInsertionSet.splitForward(m_block, m_index, &m_insertionSet);
+
+                    BasicBlock* isEqual = m_blockInsertionSet.insertBefore(m_block);
+                    BasicBlock* notEqual = m_blockInsertionSet.insertBefore(m_block);
+                    BasicBlock* isLessThan = m_blockInsertionSet.insertBefore(m_block);
+                    BasicBlock* notLessThan = m_blockInsertionSet.insertBefore(m_block);
+                    BasicBlock* isGreaterThan = m_blockInsertionSet.insertBefore(m_block);
+                    BasicBlock* isNaN = m_blockInsertionSet.insertBefore(m_block);
+
+                    before->replaceLastWithNew<Value>(m_proc, Branch, m_origin, isEqualValue);
+                    before->setSuccessors(FrequentedBlock(isEqual), FrequentedBlock(notEqual));
+
+                    Value* lessThanValue = notEqual->appendNew<Value>(m_proc, LessThan, m_origin, a, b);
+                    notEqual->appendNew<Value>(m_proc, Branch, m_origin, lessThanValue);
+                    notEqual->setSuccessors(FrequentedBlock(isLessThan), FrequentedBlock(notLessThan));
+
+                    Value* greaterThanValue = notLessThan->appendNew<Value>(m_proc, GreaterThan, m_origin, a, b);
+                    notLessThan->appendNew<Value>(m_proc, Branch, m_origin, greaterThanValue);
+                    notLessThan->setSuccessors(FrequentedBlock(isGreaterThan), FrequentedBlock(isNaN));
+
+                    UpsilonValue* isLessThanResult = isLessThan->appendNew<UpsilonValue>(
+                        m_proc, m_origin, isMax ? b : a);
+                    isLessThan->appendNew<Value>(m_proc, Jump, m_origin);
+                    isLessThan->setSuccessors(FrequentedBlock(m_block));
+
+                    UpsilonValue* isGreaterThanResult = isGreaterThan->appendNew<UpsilonValue>(
+                        m_proc, m_origin, isMax ? a : b);
+                    isGreaterThan->appendNew<Value>(m_proc, Jump, m_origin);
+                    isGreaterThan->setSuccessors(FrequentedBlock(m_block));
+
+                    UpsilonValue* isEqualResult = isEqual->appendNew<UpsilonValue>(
+                        m_proc, m_origin, isEqual->appendNew<Value>(m_proc, isMax ? BitAnd : BitOr, m_origin, a, b));
+                    isEqual->appendNew<Value>(m_proc, Jump, m_origin);
+                    isEqual->setSuccessors(FrequentedBlock(m_block));
+
+                    UpsilonValue* isNaNResult = isNaN->appendNew<UpsilonValue>(
+                        m_proc, m_origin, isNaN->appendNew<Value>(m_proc, Add, m_origin, a, b));
+                    isNaN->appendNew<Value>(m_proc, Jump, m_origin);
+                    isNaN->setSuccessors(FrequentedBlock(m_block));
+
+                    Value* phi = m_insertionSet.insert<Value>(
+                        m_index, Phi, m_value->type(), m_origin);
+                    isLessThanResult->setPhi(phi);
+                    isGreaterThanResult->setPhi(phi);
+                    isEqualResult->setPhi(phi);
+                    isNaNResult->setPhi(phi);
+
+                    m_value->replaceWithIdentity(phi);
+                    before->updatePredecessorsAfter();
                     m_changed = true;
                 }
                 break;
@@ -307,6 +370,14 @@ private:
                     }
                     if (exempt)
                         break;
+                }
+
+                if (isARM64E()) {
+                    if (m_value->opcode() == AtomicXchgSub) {
+                        m_value->setOpcodeUnsafely(AtomicXchgAdd);
+                        m_value->child(0) = m_insertionSet.insert<Value>(
+                            m_index, Neg, m_origin, m_value->child(0));
+                    }
                 }
 
                 AtomicValue* atomic = m_value->as<AtomicValue>();
@@ -539,7 +610,7 @@ private:
                         GPRReg scratch = params.gpScratch(0);
 
                         jit.move(CCallHelpers::TrustedImmPtr(jumpTable), scratch);
-                        jit.load64(CCallHelpers::BaseIndex(scratch, index, CCallHelpers::timesPtr()), scratch);
+                        jit.load64(CCallHelpers::BaseIndex(scratch, index, CCallHelpers::ScalePtr), scratch);
                         jit.farJump(scratch, JSSwitchPtrTag);
 
                         // These labels are guaranteed to be populated before either late paths or

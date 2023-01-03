@@ -85,7 +85,7 @@ public class ME$peerName$Peer extends MEEffectPeer$genericsDecl$ $interfaceDecl$
         setDestNativeBounds(dst.getWidth(), dst.getHeight());
         int dstscan = dst.getWidth();
         int[] dstPixels = ((DataBufferInt)dst.getRaster().getDataBuffer()).getData();
-        
+
         $constants$
 
         filter(dstPixels, dstx, dsty, dstw, dsth, dstscan$params$);

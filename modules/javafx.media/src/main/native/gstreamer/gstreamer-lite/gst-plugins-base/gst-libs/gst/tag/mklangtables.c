@@ -76,10 +76,6 @@ dump_languages (void)
   for (i = 0, num_escaped = 0; i < languages->len; ++i) {
     IsoLang *lang = &g_array_index (languages, IsoLang, i);
 
-    /* For now just print those where there's both a ISO-639-1 and -2 code */
-    if (lang->code_1[0] == '\0')
-      continue;
-
     /* save current offset */
     lang->name_offset = names->len;
 

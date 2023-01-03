@@ -41,25 +41,21 @@ class CSSTokenizerInputStream {
 public:
     explicit CSSTokenizerInputStream(const String& input);
 
-    // Gets the char in the stream replacing NUL characters with a unicode
-    // replacement character. Will return (NUL) kEndOfFileMarker when at the
+    // Gets the char in the stream. Will return (NUL) kEndOfFileMarker when at the
     // end of the stream.
     UChar nextInputChar() const
     {
         if (m_offset >= m_stringLength)
-            return '\0';
-        UChar result = (*m_string)[m_offset];
-        return result ? result : 0xFFFD;
+            return kEndOfFileMarker;
+        return (*m_string)[m_offset];
     }
 
     // Gets the char at lookaheadOffset from the current stream position. Will
     // return NUL (kEndOfFileMarker) if the stream position is at the end.
-    // NOTE: This may *also* return NUL if there's one in the input! Never
-    // compare the return value to '\0'.
-    UChar peekWithoutReplacement(unsigned lookaheadOffset) const
+    UChar peek(unsigned lookaheadOffset) const
     {
         if ((m_offset + lookaheadOffset) >= m_stringLength)
-            return '\0';
+            return kEndOfFileMarker;
         return (*m_string)[m_offset + lookaheadOffset];
     }
 

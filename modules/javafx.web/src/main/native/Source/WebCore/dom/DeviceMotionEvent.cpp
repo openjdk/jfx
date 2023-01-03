@@ -27,8 +27,13 @@
 #include "DeviceMotionEvent.h"
 
 #include "DeviceMotionData.h"
+#include "DeviceOrientationAndMotionAccessController.h"
+#include "JSDOMPromiseDeferred.h"
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_ISO_ALLOCATED_IMPL(DeviceMotionEvent);
 
 DeviceMotionEvent::~DeviceMotionEvent() = default;
 
@@ -43,23 +48,23 @@ DeviceMotionEvent::DeviceMotionEvent(const AtomString& eventType, DeviceMotionDa
 {
 }
 
-static Optional<DeviceMotionEvent::Acceleration> convert(const DeviceMotionData::Acceleration* acceleration)
+static std::optional<DeviceMotionEvent::Acceleration> convert(const DeviceMotionData::Acceleration* acceleration)
 {
     if (!acceleration)
-        return WTF::nullopt;
+        return std::nullopt;
 
     return DeviceMotionEvent::Acceleration { acceleration->x(), acceleration->y(), acceleration->z() };
 }
 
-static Optional<DeviceMotionEvent::RotationRate> convert(const DeviceMotionData::RotationRate* rotationRate)
+static std::optional<DeviceMotionEvent::RotationRate> convert(const DeviceMotionData::RotationRate* rotationRate)
 {
     if (!rotationRate)
-        return WTF::nullopt;
+        return std::nullopt;
 
     return DeviceMotionEvent::RotationRate { rotationRate->alpha(), rotationRate->beta(), rotationRate->gamma() };
 }
 
-static RefPtr<DeviceMotionData::Acceleration> convert(Optional<DeviceMotionEvent::Acceleration>&& acceleration)
+static RefPtr<DeviceMotionData::Acceleration> convert(std::optional<DeviceMotionEvent::Acceleration>&& acceleration)
 {
     if (!acceleration)
         return nullptr;
@@ -70,7 +75,7 @@ static RefPtr<DeviceMotionData::Acceleration> convert(Optional<DeviceMotionEvent
     return DeviceMotionData::Acceleration::create(acceleration->x, acceleration->y, acceleration->z);
 }
 
-static RefPtr<DeviceMotionData::RotationRate> convert(Optional<DeviceMotionEvent::RotationRate>&& rotationRate)
+static RefPtr<DeviceMotionData::RotationRate> convert(std::optional<DeviceMotionEvent::RotationRate>&& rotationRate)
 {
     if (!rotationRate)
         return nullptr;
@@ -81,27 +86,27 @@ static RefPtr<DeviceMotionData::RotationRate> convert(Optional<DeviceMotionEvent
     return DeviceMotionData::RotationRate::create(rotationRate->alpha, rotationRate->beta, rotationRate->gamma);
 }
 
-Optional<DeviceMotionEvent::Acceleration> DeviceMotionEvent::acceleration() const
+std::optional<DeviceMotionEvent::Acceleration> DeviceMotionEvent::acceleration() const
 {
     return convert(m_deviceMotionData->acceleration());
 }
 
-Optional<DeviceMotionEvent::Acceleration> DeviceMotionEvent::accelerationIncludingGravity() const
+std::optional<DeviceMotionEvent::Acceleration> DeviceMotionEvent::accelerationIncludingGravity() const
 {
     return convert(m_deviceMotionData->accelerationIncludingGravity());
 }
 
-Optional<DeviceMotionEvent::RotationRate> DeviceMotionEvent::rotationRate() const
+std::optional<DeviceMotionEvent::RotationRate> DeviceMotionEvent::rotationRate() const
 {
     return convert(m_deviceMotionData->rotationRate());
 }
 
-Optional<double> DeviceMotionEvent::interval() const
+std::optional<double> DeviceMotionEvent::interval() const
 {
     return m_deviceMotionData->interval();
 }
 
-void DeviceMotionEvent::initDeviceMotionEvent(const AtomString& type, bool bubbles, bool cancelable, Optional<DeviceMotionEvent::Acceleration>&& acceleration, Optional<DeviceMotionEvent::Acceleration>&& accelerationIncludingGravity, Optional<DeviceMotionEvent::RotationRate>&& rotationRate, Optional<double> interval)
+void DeviceMotionEvent::initDeviceMotionEvent(const AtomString& type, bool bubbles, bool cancelable, std::optional<DeviceMotionEvent::Acceleration>&& acceleration, std::optional<DeviceMotionEvent::Acceleration>&& accelerationIncludingGravity, std::optional<DeviceMotionEvent::RotationRate>&& rotationRate, std::optional<double> interval)
 {
     if (isBeingDispatched())
         return;
@@ -121,5 +126,27 @@ EventInterface DeviceMotionEvent::eventInterface() const
     return EventInterfaceType;
 #endif
 }
+
+#if ENABLE(DEVICE_ORIENTATION)
+void DeviceMotionEvent::requestPermission(Document& document, PermissionPromise&& promise)
+{
+    auto* window = document.domWindow();
+    auto* page = document.page();
+    if (!window || !page)
+        return promise.reject(Exception { InvalidStateError, "No browsing context"_s });
+
+    String errorMessage;
+    if (!window->isAllowedToUseDeviceMotion(errorMessage)) {
+        document.addConsoleMessage(MessageSource::JS, MessageLevel::Warning, makeString("Call to requestPermission() failed, reason: ", errorMessage, "."));
+        return promise.resolve(PermissionState::Denied);
+    }
+
+    document.deviceOrientationAndMotionAccessController().shouldAllowAccess(document, [promise = WTFMove(promise)](auto permissionState) mutable {
+        if (permissionState == PermissionState::Prompt)
+            return promise.reject(Exception { NotAllowedError, "Requesting device motion access requires a user gesture to prompt"_s });
+        promise.resolve(permissionState);
+    });
+}
+#endif
 
 } // namespace WebCore

@@ -77,7 +77,7 @@ public:
     const FloatSize& viewLayoutSize() const { return m_viewLayoutSize; }
 
     const FloatSize& minimumLayoutSize() const { return m_minimumLayoutSize; }
-    WEBCORE_EXPORT bool setViewLayoutSize(const FloatSize&, Optional<double>&& scaleFactor = WTF::nullopt, Optional<double>&& effectiveWidth = WTF::nullopt);
+    WEBCORE_EXPORT bool setViewLayoutSize(const FloatSize&, std::optional<double>&& scaleFactor = std::nullopt, std::optional<double>&& effectiveWidth = std::nullopt);
 
     const OptionSet<DisabledAdaptations>& disabledAdaptations() const { return m_disabledAdaptations; }
     WEBCORE_EXPORT bool setDisabledAdaptations(const OptionSet<DisabledAdaptations>&);
@@ -88,19 +88,26 @@ public:
     WEBCORE_EXPORT bool setCanIgnoreScalingConstraints(bool);
     constexpr bool canIgnoreScalingConstraints() const { return m_canIgnoreScalingConstraints; }
 
-    WEBCORE_EXPORT bool setMinimumEffectiveDeviceWidth(double);
+    WEBCORE_EXPORT bool setMinimumEffectiveDeviceWidthWhenIgnoringScalingConstraints(double);
+    WEBCORE_EXPORT bool setMinimumEffectiveDeviceWidthForShrinkToFit(double);
     constexpr double minimumEffectiveDeviceWidth() const
     {
-        if (shouldIgnoreMinimumEffectiveDeviceWidth())
-            return 0;
-        return m_minimumEffectiveDeviceWidth;
+        double minimumEffectiveDeviceWidth = m_minimumEffectiveDeviceWidthForView;
+
+        if (!shouldIgnoreMinimumEffectiveDeviceWidthForShrinkToFit())
+            minimumEffectiveDeviceWidth = std::max(minimumEffectiveDeviceWidth, m_canIgnoreScalingConstraints ? m_minimumEffectiveDeviceWidthWhenIgnoringScalingConstraints : m_minimumEffectiveDeviceWidthForShrinkToFit);
+
+        return minimumEffectiveDeviceWidth;
     }
 
     constexpr bool isKnownToLayOutWiderThanViewport() const { return m_isKnownToLayOutWiderThanViewport; }
     WEBCORE_EXPORT bool setIsKnownToLayOutWiderThanViewport(bool value);
 
-    constexpr bool shouldIgnoreMinimumEffectiveDeviceWidth() const
+    constexpr bool shouldIgnoreMinimumEffectiveDeviceWidthForShrinkToFit() const
     {
+        if (shouldShrinkToFitMinimumEffectiveDeviceWidthWhenIgnoringScalingConstraints())
+            return false;
+
         if (m_canIgnoreScalingConstraints)
             return true;
 
@@ -111,6 +118,11 @@ public:
             return true;
 
         return false;
+    }
+
+    constexpr bool shouldShrinkToFitMinimumEffectiveDeviceWidthWhenIgnoringScalingConstraints() const
+    {
+        return m_canIgnoreScalingConstraints && m_minimumEffectiveDeviceWidthWhenIgnoringScalingConstraints;
     }
 
     void setForceAlwaysUserScalable(bool forceAlwaysUserScalable) { m_forceAlwaysUserScalable = forceAlwaysUserScalable; }
@@ -138,7 +150,7 @@ public:
     WEBCORE_EXPORT static Parameters xhtmlMobileParameters();
     WEBCORE_EXPORT static Parameters testingParameters();
 
-#ifndef NDEBUG
+#if !LOG_DISABLED
     String description() const;
     WEBCORE_EXPORT void dump() const;
 #endif
@@ -191,7 +203,9 @@ private:
     OptionSet<DisabledAdaptations> m_disabledAdaptations;
 
     double m_layoutSizeScaleFactor { 1 };
-    double m_minimumEffectiveDeviceWidth { 0 };
+    double m_minimumEffectiveDeviceWidthForView { 0 };
+    double m_minimumEffectiveDeviceWidthForShrinkToFit { 0 };
+    double m_minimumEffectiveDeviceWidthWhenIgnoringScalingConstraints { 0 };
     bool m_canIgnoreScalingConstraints;
     bool m_forceAlwaysUserScalable;
     bool m_isKnownToLayOutWiderThanViewport { false };

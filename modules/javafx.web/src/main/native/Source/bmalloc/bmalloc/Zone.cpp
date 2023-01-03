@@ -26,6 +26,8 @@
 #include "Sizes.h"
 #include "Zone.h"
 
+#if !BUSE(LIBPAS)
+
 namespace bmalloc {
 
 template<typename T> static void remoteRead(task_t task, memory_reader_t reader, vm_address_t remotePointer, T& result)
@@ -115,7 +117,7 @@ static const malloc_introspection_t zoneIntrospect = {
     .statistics = bmalloc::statistics
 };
 
-Zone::Zone(std::lock_guard<Mutex>&)
+Zone::Zone(const LockHolder&)
 {
     malloc_zone_t::size = &bmalloc::zoneSize;
     malloc_zone_t::zone_name = "WebKit Malloc";
@@ -130,3 +132,5 @@ Zone::Zone(task_t task, memory_reader_t reader, vm_address_t remotePointer)
 }
 
 } // namespace bmalloc
+
+#endif

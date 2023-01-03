@@ -37,6 +37,7 @@
 #include <unicode/uloc.h>
 #include <wtf/DateMath.h>
 #include <wtf/text/StringBuilder.h>
+#include <wtf/unicode/icu/ICUHelpers.h>
 
 
 namespace WebCore {
@@ -69,8 +70,8 @@ String LocaleICU::decimalSymbol(UNumberFormatSymbol symbol)
 {
     UErrorCode status = U_ZERO_ERROR;
     int32_t bufferLength = unum_getSymbol(m_numberFormat, symbol, 0, 0, &status);
-    ASSERT(U_SUCCESS(status) || status == U_BUFFER_OVERFLOW_ERROR);
-    if (U_FAILURE(status) && status != U_BUFFER_OVERFLOW_ERROR)
+    ASSERT(U_SUCCESS(status) || needsToGrowToProduceBuffer(status));
+    if (U_FAILURE(status) && !needsToGrowToProduceBuffer(status))
         return String();
     Vector<UChar> buffer(bufferLength);
     status = U_ZERO_ERROR;
@@ -84,8 +85,8 @@ String LocaleICU::decimalTextAttribute(UNumberFormatTextAttribute tag)
 {
     UErrorCode status = U_ZERO_ERROR;
     int32_t bufferLength = unum_getTextAttribute(m_numberFormat, tag, 0, 0, &status);
-    ASSERT(U_SUCCESS(status) || status == U_BUFFER_OVERFLOW_ERROR);
-    if (U_FAILURE(status) && status != U_BUFFER_OVERFLOW_ERROR)
+    ASSERT(U_SUCCESS(status) || needsToGrowToProduceBuffer(status));
+    if (U_FAILURE(status) && !needsToGrowToProduceBuffer(status))
         return String();
     Vector<UChar> buffer(bufferLength);
     status = U_ZERO_ERROR;
@@ -150,7 +151,7 @@ static String getDateFormatPattern(const UDateFormat* dateFormat)
 
     UErrorCode status = U_ZERO_ERROR;
     int32_t length = udat_toPattern(dateFormat, TRUE, 0, 0, &status);
-    if (status != U_BUFFER_OVERFLOW_ERROR || !length)
+    if (!needsToGrowToProduceBuffer(status) || !length)
         return emptyString();
     Vector<UChar> buffer(length);
     status = U_ZERO_ERROR;
@@ -168,29 +169,29 @@ std::unique_ptr<Vector<String>> LocaleICU::createLabelVector(const UDateFormat* 
         return makeUnique<Vector<String>>();
 
     auto labels = makeUnique<Vector<String>>();
-    labels->reserveCapacity(size);
+    labels->reserveInitialCapacity(size);
     for (int32_t i = 0; i < size; ++i) {
         UErrorCode status = U_ZERO_ERROR;
         int32_t length = udat_getSymbols(dateFormat, type, startIndex + i, 0, 0, &status);
-        if (status != U_BUFFER_OVERFLOW_ERROR)
+        if (!needsToGrowToProduceBuffer(status))
             return makeUnique<Vector<String>>();
         Vector<UChar> buffer(length);
         status = U_ZERO_ERROR;
         udat_getSymbols(dateFormat, type, startIndex + i, buffer.data(), length, &status);
         if (U_FAILURE(status))
             return makeUnique<Vector<String>>();
-        labels->append(String::adopt(WTFMove(buffer)));
+        labels->uncheckedAppend(String::adopt(WTFMove(buffer)));
     }
-    return WTFMove(labels);
+    return labels;
 }
 
 static std::unique_ptr<Vector<String>> createFallbackMonthLabels()
 {
     auto labels = makeUnique<Vector<String>>();
-    labels->reserveCapacity(WTF_ARRAY_LENGTH(WTF::monthFullName));
-    for (unsigned i = 0; i < WTF_ARRAY_LENGTH(WTF::monthFullName); ++i)
-        labels->append(WTF::monthFullName[i]);
-    return WTFMove(labels);
+    labels->reserveInitialCapacity(std::size(WTF::monthFullName));
+    for (auto* monthName : WTF::monthFullName)
+        labels->uncheckedAppend(monthName);
+    return labels;
 }
 
 const Vector<String>& LocaleICU::monthLabels()
@@ -208,11 +209,7 @@ const Vector<String>& LocaleICU::monthLabels()
 
 static std::unique_ptr<Vector<String>> createFallbackAMPMLabels()
 {
-    auto labels = makeUnique<Vector<String>>();
-    labels->reserveCapacity(2);
-    labels->append("AM");
-    labels->append("PM");
-    return WTFMove(labels);
+    return makeUnique<Vector<String>>(Vector<String>::from("AM"_str, "PM"_str));
 }
 
 void LocaleICU::initializeDateTimeFormat()
@@ -264,7 +261,7 @@ static String getFormatForSkeleton(const char* locale, const UChar* skeleton, in
         return format;
     status = U_ZERO_ERROR;
     int32_t length = udatpg_getBestPattern(patternGenerator, skeleton, skeletonLength, 0, 0, &status);
-    if (status == U_BUFFER_OVERFLOW_ERROR && length) {
+    if (needsToGrowToProduceBuffer(status) && length) {
         Vector<UChar> buffer(length);
         status = U_ZERO_ERROR;
         udatpg_getBestPattern(patternGenerator, skeleton, skeletonLength, buffer.data(), length, &status);

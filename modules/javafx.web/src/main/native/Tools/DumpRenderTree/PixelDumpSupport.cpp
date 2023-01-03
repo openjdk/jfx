@@ -41,8 +41,6 @@
 #include "PixelDumpSupportCG.h"
 #elif USE(CAIRO)
 #include "PixelDumpSupportCairo.h"
-#elif USE(DIRECT2D)
-#include "PixelDumpSupportDirect2D.h"
 #endif
 
 void dumpWebViewAsPixelsAndCompareWithExpected(const std::string& expectedHash)
@@ -58,7 +56,7 @@ void dumpWebViewAsPixelsAndCompareWithExpected(const std::string& expectedHash)
 
     // Compute the hash of the bitmap context pixels
     char actualHash[33];
-    computeMD5HashStringForBitmapContext(context.get(), actualHash);
+    computeSHA1HashStringForBitmapContext(context.get(), actualHash);
     fprintf(testResult, "\nActualHash: %s\n", actualHash); // FIXME: No need for the leading newline.
 
     // Check the computed hash against the expected one and dump image on mismatch

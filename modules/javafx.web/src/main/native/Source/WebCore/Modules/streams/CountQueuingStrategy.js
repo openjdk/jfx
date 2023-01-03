@@ -23,7 +23,17 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-// @conditional=ENABLE(STREAMS_API)
+@getter
+function highWaterMark()
+{
+    "use strict";
+
+    const highWaterMark = @getByIdDirectPrivate(this, "highWaterMark");
+    if (highWaterMark === @undefined)
+        @throwTypeError("CountQueuingStrategy.highWaterMark getter called on incompatible |this| value.");
+
+    return highWaterMark;
+}
 
 function size()
 {
@@ -36,10 +46,5 @@ function initializeCountQueuingStrategy(parameters)
 {
     "use strict";
 
-    @Object.@defineProperty(this, "highWaterMark", {
-        value: parameters.highWaterMark,
-        configurable: true,
-        enumerable: true,
-        writable: true
-    });
+    @putByIdDirectPrivate(this, "highWaterMark", @extractHighWaterMarkFromQueuingStrategyInit(parameters));
 }

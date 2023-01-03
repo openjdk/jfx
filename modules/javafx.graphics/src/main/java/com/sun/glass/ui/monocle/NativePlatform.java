@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,6 +27,9 @@ package com.sun.glass.ui.monocle;
 
 import java.security.AccessController;
 import java.security.PrivilegedAction;
+
+import java.util.ArrayList;
+import java.util.List;
 import com.sun.javafx.logging.PlatformLogger;
 import com.sun.javafx.logging.PlatformLogger.Level;
 import com.sun.javafx.util.Logging;
@@ -39,10 +42,11 @@ public abstract class NativePlatform {
     private final PlatformLogger logger = Logging.getJavaFXLogger();
 
     private NativeCursor cursor;
-    private NativeScreen screen;
+    protected List<NativeScreen> screens;
     protected AcceleratedScreen accScreen;
 
 
+    @SuppressWarnings("removal")
     protected static final boolean useCursor =
         AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> {
             final String str =
@@ -64,8 +68,10 @@ public abstract class NativePlatform {
         if (cursor != null) {
             cursor.shutdown();
         }
-        if (screen != null) {
-            screen.shutdown();
+        if (screens != null) {
+            for (NativeScreen screen: screens) {
+                screen.shutdown();
+            }
         }
     }
 
@@ -120,15 +126,49 @@ public abstract class NativePlatform {
     protected abstract NativeScreen createScreen();
 
     /**
-     * Obtains the singleton NativeScreen
+     * Create <code>NativeScreen</code> instances for all
+     * available native screens. The default implementation of
+     * this method will invoke the <code>createScreen</code>
+     * method and return a list with a single screen only.
+     * Subclasses can override this and return a list
+     * with all screens. The approach to get this list is
+     * specific to the subclass and can be done in Java or
+     * in native code. <p>
+     * The first element in the returned list is considered
+     * to be the primary screen.
      *
-     * @return the NativeScreen
+     * @return a list with all native screens. This list is
+     * never <code>null</code>, but it can be empty.
+     */
+    protected synchronized List<NativeScreen> createScreens() {
+        if (screens == null) {
+            screens = new ArrayList<>(1);
+            screens.add(createScreen());
+        }
+        return screens;
+    }
+
+    /**
+     * Obtains the NativeScreen instances. This method will
+     * create NativeScreen instances for all native screens,
+     * and stores them internally. The main screen (primaryscreen)
+     * is returned.
+     *
+     * @return the primaryscreen, or <code>null</code> if no
+     * screen is found.
      */
     synchronized NativeScreen getScreen() {
-        if (screen == null) {
-            screen = createScreen();
+        if (screens == null) {
+            screens = createScreens();
         }
-        return screen;
+        return (screens.size() == 0 ? null : screens.get(0));
+    }
+
+    synchronized List<NativeScreen> getScreens() {
+        if (screens == null) {
+            screens = createScreens();
+        }
+        return screens;
     }
 
     /**

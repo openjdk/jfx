@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,13 +25,9 @@
 
 package javafx.scene.control.skin;
 
-import com.sun.javafx.scene.control.behavior.ComboBoxBaseBehavior;
-import com.sun.javafx.scene.control.behavior.ComboBoxListViewBehavior;
-
 import java.util.List;
+import java.util.function.Supplier;
 
-import javafx.beans.InvalidationListener;
-import javafx.beans.WeakInvalidationListener;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.value.ObservableValue;
@@ -52,10 +48,17 @@ import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
 import javafx.scene.control.SelectionMode;
 import javafx.scene.control.SelectionModel;
+import javafx.scene.control.SingleSelectionModel;
 import javafx.scene.control.TextField;
-import javafx.scene.input.*;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.MouseEvent;
 import javafx.util.Callback;
 import javafx.util.StringConverter;
+
+import com.sun.javafx.scene.control.IDisconnectable;
+import com.sun.javafx.scene.control.ListenerHelper;
+import com.sun.javafx.scene.control.behavior.ComboBoxBaseBehavior;
+import com.sun.javafx.scene.control.behavior.ComboBoxListViewBehavior;
 
 /**
  * Default skin implementation for the {@link ComboBox} control.
@@ -65,7 +68,7 @@ import javafx.util.StringConverter;
  */
 public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Static fields                                                           *
      *                                                                         *
@@ -79,7 +82,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Private fields                                                          *
      *                                                                         *
@@ -98,30 +101,28 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
     private boolean listViewSelectionDirty = false;
 
     private final ComboBoxListViewBehavior behavior;
+    private IDisconnectable selectedItemWatcher;
 
 
-
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Listeners                                                               *
      *                                                                         *
      **************************************************************************/
 
     private boolean itemCountDirty;
-    private final ListChangeListener<T> listViewItemsListener = new ListChangeListener<T>() {
+    private final ListChangeListener<T> listViewItemsListener = new ListChangeListener<>() {
         @Override public void onChanged(ListChangeListener.Change<? extends T> c) {
             itemCountDirty = true;
             getSkinnable().requestLayout();
         }
     };
 
-    private final InvalidationListener itemsObserver;
-
     private final WeakListChangeListener<T> weakListViewItemsListener =
-            new WeakListChangeListener<T>(listViewItemsListener);
+            new WeakListChangeListener<>(listViewItemsListener);
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
@@ -139,16 +140,16 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
 
         // install default input map for the control
         this.behavior = new ComboBoxListViewBehavior<>(control);
-//        control.setInputMap(behavior.getInputMap());
 
         this.comboBox = control;
         updateComboBoxItems();
 
-        itemsObserver = observable -> {
+        ListenerHelper lh = ListenerHelper.get(this);
+
+        lh.addInvalidationListener(control.itemsProperty(), (x) -> {
             updateComboBoxItems();
             updateListViewItems();
-        };
-        control.itemsProperty().addListener(new WeakInvalidationListener(itemsObserver));
+        });
 
         // listview for popup
         this.listView = createListView();
@@ -166,32 +167,33 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
         // Fix for RT-19431 (also tested via ComboBoxListViewSkinTest)
         updateValue();
 
-        registerChangeListener(control.itemsProperty(), e -> {
+        lh.addChangeListener(control.itemsProperty(), e -> {
             updateComboBoxItems();
             updateListViewItems();
         });
-        registerChangeListener(control.promptTextProperty(), e -> updateDisplayNode());
-        registerChangeListener(control.cellFactoryProperty(), e -> updateCellFactory());
-        registerChangeListener(control.visibleRowCountProperty(), e -> {
+        lh.addChangeListener(control.promptTextProperty(), e -> updateDisplayNode());
+        lh.addChangeListener(control.cellFactoryProperty(), e -> updateCellFactory());
+        lh.addChangeListener(control.visibleRowCountProperty(), e -> {
             if (listView == null) return;
             listView.requestLayout();
         });
-        registerChangeListener(control.converterProperty(), e -> updateListViewItems());
-        registerChangeListener(control.buttonCellProperty(), e -> {
+        lh.addChangeListener(control.converterProperty(), e -> updateListViewItems());
+        lh.addChangeListener(control.buttonCellProperty(), e -> {
             updateButtonCell();
             updateDisplayArea();
         });
-        registerChangeListener(control.valueProperty(), e -> {
+        lh.addChangeListener(control.valueProperty(), e -> {
             updateValue();
             control.fireEvent(new ActionEvent());
         });
-        registerChangeListener(control.editableProperty(), e -> updateEditable());
+        lh.addChangeListener(control.editableProperty(), e -> updateEditable());
 
         // Refer to JDK-8095306
         if (comboBox.isShowing()) {
             show();
         }
-        comboBox.sceneProperty().addListener(o -> {
+
+        lh.addInvalidationListener(comboBox.sceneProperty(), (o) -> {
             if (((ObservableValue)o).getValue() == null) {
                 comboBox.hide();
             }
@@ -200,7 +202,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Properties                                                              *
      *                                                                         *
@@ -226,7 +228,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Public API                                                              *
      *                                                                         *
@@ -320,9 +322,13 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
         if (listViewSelectionDirty) {
             try {
                 listSelectionLock = true;
-                T item = comboBox.getSelectionModel().getSelectedItem();
-                listView.getSelectionModel().clearSelection();
-                listView.getSelectionModel().select(item);
+                SingleSelectionModel<T> selectionModel = comboBox.getSelectionModel();
+
+                if (selectionModel != null) {
+                    T item = selectionModel.getSelectedItem();
+                    listView.getSelectionModel().clearSelection();
+                    listView.getSelectionModel().select(item);
+                }
             } finally {
                 listSelectionLock = false;
                 listViewSelectionDirty = false;
@@ -334,7 +340,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Private methods                                                         *
      *                                                                         *
@@ -395,6 +401,11 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
     }
 
     private void updateValue() {
+        SingleSelectionModel<T> comboBoxSM = comboBox.getSelectionModel();
+        if (comboBoxSM == null) {
+            return;
+        }
+
         T newValue = comboBox.getValue();
 
         SelectionModel<T> listViewSM = listView.getSelectionModel();
@@ -412,7 +423,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
                 listViewSM.clearSelection();
                 listSelectionLock = false;
             } else {
-                int index = comboBox.getSelectionModel().getSelectedIndex();
+                int index = comboBoxSM.getSelectedIndex();
                 if (index >= 0 && index < comboBoxItems.size()) {
                     T itemsObj = comboBoxItems.get(index);
                     if ((itemsObj != null && itemsObj.equals(newValue)) || (itemsObj == null && newValue == null)) {
@@ -487,9 +498,9 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
     }
 
     private Callback<ListView<T>, ListCell<T>> getDefaultCellFactory() {
-        return new Callback<ListView<T>, ListCell<T>>() {
+        return new Callback<>() {
             @Override public ListCell<T> call(ListView<T> listView) {
-                return new ListCell<T>() {
+                return new ListCell<>() {
                     @Override public void updateItem(T item, boolean empty) {
                         super.updateItem(item, empty);
                         updateDisplayText(this, item, empty);
@@ -500,10 +511,13 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
     }
 
     private ListView<T> createListView() {
-        final ListView<T> _listView = new ListView<T>() {
+        final ListView<T> _listView = new ListView<>() {
 
             {
                 getProperties().put("selectFirstRowByDefault", false);
+                // editableComboBox property is used to intercept few Key inputs from this ListView,
+                // so that those inputs get forwarded to editor of ComboBox .
+                getProperties().put("editableComboBox", (Supplier<Boolean>) () -> getSkinnable().isEditable());
             }
 
             @Override protected double computeMinHeight(double width) {
@@ -550,14 +564,26 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
 
         _listView.getSelectionModel().selectedIndexProperty().addListener(o -> {
             if (listSelectionLock) return;
+            SingleSelectionModel<T> selectionModel = comboBox.getSelectionModel();
+            if (selectionModel == null) return;
+
             int index = listView.getSelectionModel().getSelectedIndex();
-            comboBox.getSelectionModel().select(index);
+            selectionModel.select(index);
             updateDisplayNode();
             comboBox.notifyAccessibleAttributeChanged(AccessibleAttribute.TEXT);
         });
 
-        comboBox.getSelectionModel().selectedItemProperty().addListener(o -> {
-            listViewSelectionDirty = true;
+        ListenerHelper lh = ListenerHelper.get(this);
+        lh.addChangeListener(comboBox.selectionModelProperty(), true, (src, oldsm, newsm) -> {
+            if (selectedItemWatcher != null) {
+                selectedItemWatcher.disconnect();
+            }
+
+            if (newsm != null) {
+                selectedItemWatcher = lh.addInvalidationListener(newsm.selectedItemProperty(), (x) -> {
+                    listViewSelectionDirty = true;
+                });
+            }
         });
 
         _listView.addEventFilter(MouseEvent.MOUSE_RELEASED, t -> {
@@ -608,7 +634,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
 
 
 
-    /**************************************************************************
+    /* ************************************************************************
      *
      * API for testing
      *
@@ -621,7 +647,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Stylesheet Handling                                                     *
      *                                                                         *

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,8 @@
 
 package test.com.sun.javafx.scene.control.infrastructure;
 
+import com.sun.javafx.scene.SceneHelper;
+
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
@@ -49,7 +51,7 @@ public class KeyEventFirer {
      * <p>
      * Beware: using this constructor on an <code>EventTarget</code> of type <code>Node</code>
      * which is not focusOwner may lead
-     * to false greens (see https://bugs.openjdk.java.net/browse/JDK-8231692).
+     * to false greens (see https://bugs.openjdk.org/browse/JDK-8231692).
      *
      * @param target the target to fire keyEvents onto, must not be null.
      * @throws NullPointerException if target is null.
@@ -63,7 +65,7 @@ public class KeyEventFirer {
      * Any one of those can be null, but not both. A null/not null scene decides
      * about the delivering path of events. If null, events are delivered
      * via <code>EventUtils.fire(target, keyEvent)</code>, otherwise via
-     * <code>scene.processKeyEvent(keyEvent)</code>.
+     * <code>SceneHelper.processKeyEvent(scene, keyEvent)</code>.
      * <p>
      * Note that in the latter case, the target doesn't matter - the scene
      * delivers keyEvents to its focusOwner. Calling code is responsible to
@@ -111,14 +113,14 @@ public class KeyEventFirer {
      * Dispatches the given events. The process depends on the state of
      * this firer. If the scene is null, the events are delivered via
      * Event.fireEvent(target,..), otherwise they are delivered via
-     * scene.processKeyEvent.
+     * SceneHelper.processKeyEvent.
      *
      * @param events the events to dispatch.
      */
     private void fireEvents(KeyEvent... events) {
         for (KeyEvent evt : events) {
             if (scene != null) {
-                scene.processKeyEvent(evt);
+                SceneHelper.processKeyEvent(scene, evt);
             } else {
                 Event.fireEvent(target, evt);
             }

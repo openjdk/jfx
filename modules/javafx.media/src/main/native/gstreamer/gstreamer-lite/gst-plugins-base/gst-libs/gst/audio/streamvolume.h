@@ -25,17 +25,12 @@
 
 G_BEGIN_DECLS
 
-#define GST_TYPE_STREAM_VOLUME \
-  (gst_stream_volume_get_type ())
-#define GST_STREAM_VOLUME(obj) \
-  (G_TYPE_CHECK_INSTANCE_CAST ((obj), GST_TYPE_STREAM_VOLUME, GstStreamVolume))
-#define GST_IS_STREAM_VOLUME(obj) \
-  (G_TYPE_CHECK_INSTANCE_TYPE ((obj), GST_TYPE_STREAM_VOLUME))
-#define GST_STREAM_VOLUME_GET_INTERFACE(inst) \
-  (G_TYPE_INSTANCE_GET_INTERFACE ((inst), GST_TYPE_STREAM_VOLUME, GstStreamVolumeInterface))
+#define GST_TYPE_STREAM_VOLUME (gst_stream_volume_get_type ())
+GST_AUDIO_API
+G_DECLARE_INTERFACE (GstStreamVolume, gst_stream_volume, GST, STREAM_VOLUME,
+    GObject)
 
-typedef struct _GstStreamVolume GstStreamVolume;
-typedef struct _GstStreamVolumeInterface GstStreamVolumeInterface;
+#define GST_STREAM_VOLUME_GET_INTERFACE(obj) GST_STREAM_VOLUME_GET_IFACE(obj)
 
 struct _GstStreamVolumeInterface {
   GTypeInterface iface;
@@ -58,9 +53,6 @@ typedef enum {
   GST_STREAM_VOLUME_FORMAT_CUBIC,
   GST_STREAM_VOLUME_FORMAT_DB
 } GstStreamVolumeFormat;
-
-GST_AUDIO_API
-GType           gst_stream_volume_get_type        (void);
 
 GST_AUDIO_API
 void            gst_stream_volume_set_volume      (GstStreamVolume *volume,

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -34,7 +34,6 @@ import javafx.beans.property.ReadOnlyDoubleWrapper;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectPropertyBase;
 import javafx.beans.value.ChangeListener;
-import javafx.collections.ObservableList;
 import javafx.css.CssMetaData;
 import javafx.css.Styleable;
 import javafx.css.StyleableBooleanProperty;
@@ -213,7 +212,9 @@ public class Region extends Parent {
 
     static Vec2d TEMP_VEC2D = new Vec2d();
 
-    /***************************************************************************
+    private static final double EPSILON = 1e-14;
+
+    /* *************************************************************************
      *                                                                         *
      * Static convenience methods for layout                                   *
      *                                                                         *
@@ -294,12 +295,32 @@ public class Region extends Parent {
         return Math.round(value * scale) / scale;
     }
 
+    /**
+     * The value is floored for a given scale using Math.floor.
+     * This method guarantees that:
+     *
+     * scaledFloor(scaledFloor(value, scale), scale) == scaledFloor(value, scale)
+     *
+     * @param value The value that needs to be floored
+     * @param scale The scale that will be used
+     * @return value floored with scale
+     */
     private static double scaledFloor(double value, double scale) {
-        return Math.floor(value * scale) / scale;
+        return Math.floor(value * scale + EPSILON) / scale;
     }
 
+    /**
+     * The value is ceiled with a given scale using Math.ceil.
+     * This method guarantees that:
+     *
+     * scaledCeil(scaledCeil(value, scale), scale) == scaledCeil(value, scale)
+     *
+     * @param value The value that needs to be ceiled
+     * @param scale The scale that will be used
+     * @return value ceiled with scale
+     */
     private static double scaledCeil(double value, double scale) {
-        return Math.ceil(value * scale) / scale;
+        return Math.ceil(value * scale - EPSILON) / scale;
     }
 
     /**
@@ -363,25 +384,46 @@ public class Region extends Parent {
         return snapToPixel ? scaledRound(value, snapScale) : value;
     }
 
+    /**
+     * If snapToPixel is true, then the value is either floored (positive values) or
+     * ceiled (negative values) with a scale. This method guarantees that:
+     *
+     * snapPortionX(snapPortionX(value, snapToPixel), snapToPixel) == snapPortionX(value, snapToPixel)
+     *
+     * @param value The value that needs to be snapped
+     * @param snapToPixel Whether to snap to pixel
+     * @return value either as passed, or floored or ceiled with scale, based on snapToPixel
+     */
     private double snapPortionX(double value, boolean snapToPixel) {
         if (!snapToPixel || value == 0) return value;
         double s = getSnapScaleX();
         value *= s;
         if (value > 0) {
-            value = Math.max(1, Math.floor(value));
+            value = Math.max(1, Math.floor(value + EPSILON));
         } else {
-            value = Math.min(-1, Math.ceil(value));
+            value = Math.min(-1, Math.ceil(value - EPSILON));
         }
         return value / s;
     }
+
+    /**
+     * If snapToPixel is true, then the value is either floored (positive values) or
+     * ceiled (negative values) with a scale. This method guarantees that:
+     *
+     * snapPortionY(snapPortionY(value, snapToPixel), snapToPixel) == snapPortionY(value, snapToPixel)
+     *
+     * @param value The value that needs to be snapped
+     * @param snapToPixel Whether to snap to pixel
+     * @return value either as passed, or floored or ceiled with scale, based on snapToPixel
+     */
     private double snapPortionY(double value, boolean snapToPixel) {
         if (!snapToPixel || value == 0) return value;
         double s = getSnapScaleY();
         value *= s;
         if (value > 0) {
-            value = Math.max(1, Math.floor(value));
+            value = Math.max(1, Math.floor(value + EPSILON));
         } else {
-            value = Math.min(-1, Math.ceil(value));
+            value = Math.min(-1, Math.ceil(value - EPSILON));
         }
         return value / s;
     }
@@ -540,7 +582,7 @@ public class Region extends Parent {
         return array;
     }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
@@ -585,7 +627,7 @@ public class Region extends Parent {
         setPickOnBounds(true);
     }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Region properties                                                       *
      *                                                                         *
@@ -840,7 +882,7 @@ public class Region extends Parent {
      */
     public final ObjectProperty<Insets> opaqueInsetsProperty() {
         if (opaqueInsets == null) {
-            opaqueInsets = new StyleableObjectProperty<Insets>() {
+            opaqueInsets = new StyleableObjectProperty<>() {
                 @Override public Object getBean() { return Region.this; }
                 @Override public String getName() { return "opaqueInsets"; }
                 @Override public CssMetaData<Region, Insets> getCssMetaData() {
@@ -932,7 +974,7 @@ public class Region extends Parent {
             }
             return cache;
         }
-    };
+    }
 
     /**
      * cached results of snapped insets, this are used a lot during layout so makes sense
@@ -943,20 +985,23 @@ public class Region extends Parent {
     private double snappedBottomInset = 0;
     private double snappedLeftInset = 0;
 
+    /**
+     * Cached snapScale values, used to determine if snapped cached insets values
+     * should be invalidated because screen scale has changed.
+     */
+    private double lastUsedSnapScaleY = 0;
+    private double lastUsedSnapScaleX = 0;
+
     /** Called to update the cached snapped insets */
     private void updateSnappedInsets() {
+        lastUsedSnapScaleX = getSnapScaleX();
+        lastUsedSnapScaleY = getSnapScaleY();
         final Insets insets = getInsets();
-        if (_snapToPixel) {
-            snappedTopInset = Math.ceil(insets.getTop());
-            snappedRightInset = Math.ceil(insets.getRight());
-            snappedBottomInset = Math.ceil(insets.getBottom());
-            snappedLeftInset = Math.ceil(insets.getLeft());
-        } else {
-            snappedTopInset = insets.getTop();
-            snappedRightInset = insets.getRight();
-            snappedBottomInset = insets.getBottom();
-            snappedLeftInset = insets.getLeft();
-        }
+        final boolean snap = isSnapToPixel();
+        snappedTopInset = snapSpaceY(insets.getTop(), snap);
+        snappedRightInset = snapSpaceX(insets.getRight(), snap);
+        snappedBottomInset = snapSpaceY(insets.getBottom(), snap);
+        snappedLeftInset = snapSpaceX(insets.getLeft(), snap);
     }
 
     /**
@@ -1377,7 +1422,7 @@ public class Region extends Parent {
             NodeHelper.geomChanged(Region.this);
             NodeHelper.markDirty(Region.this, DirtyBits.REGION_SHAPE);
         }
-    };
+    }
 
     /**
      * Specifies whether the shape, if defined, is scaled to match the size of the Region.
@@ -1459,7 +1504,7 @@ public class Region extends Parent {
         return cacheShape;
     }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Layout                                                                  *
      *                                                                         *
@@ -1818,6 +1863,11 @@ public class Region extends Parent {
      * @return Rounded up insets top
      */
     public final double snappedTopInset() {
+        // invalidate the cached values for snapped inset dimensions
+        // if the screen scale changed since they were last computed.
+        if (lastUsedSnapScaleY != getSnapScaleY()) {
+            updateSnappedInsets();
+        }
         return snappedTopInset;
     }
 
@@ -1829,6 +1879,11 @@ public class Region extends Parent {
      * @return Rounded up insets bottom
      */
     public final double snappedBottomInset() {
+        // invalidate the cached values for snapped inset dimensions
+        // if the screen scale changed since they were last computed.
+        if (lastUsedSnapScaleY != getSnapScaleY()) {
+            updateSnappedInsets();
+        }
         return snappedBottomInset;
     }
 
@@ -1840,6 +1895,11 @@ public class Region extends Parent {
      * @return Rounded up insets left
      */
     public final double snappedLeftInset() {
+        // invalidate the cached values for snapped inset dimensions
+        // if the screen scale changed since they were last computed.
+        if (lastUsedSnapScaleX != getSnapScaleX()) {
+            updateSnappedInsets();
+        }
         return snappedLeftInset;
     }
 
@@ -1851,6 +1911,11 @@ public class Region extends Parent {
      * @return Rounded up insets right
      */
     public final double snappedRightInset() {
+        // invalidate the cached values for snapped inset dimensions
+        // if the screen scale changed since they were last computed.
+        if (lastUsedSnapScaleX != getSnapScaleX()) {
+            updateSnappedInsets();
+        }
         return snappedRightInset;
     }
 
@@ -2581,7 +2646,7 @@ public class Region extends Parent {
         child.relocate(x,y);
     }
 
-     /**************************************************************************
+     /* ************************************************************************
      *                                                                         *
      * PG Implementation                                                       *
      *                                                                         *
@@ -3313,7 +3378,7 @@ public class Region extends Parent {
         }
     }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * CSS                                                                     *
      *                                                                         *
@@ -3376,7 +3441,7 @@ public class Region extends Parent {
      */
      private static class StyleableProperties {
          private static final CssMetaData<Region,Insets> PADDING =
-             new CssMetaData<Region,Insets>("-fx-padding",
+             new CssMetaData<>("-fx-padding",
                  InsetsConverter.getInstance(), Insets.EMPTY) {
 
             @Override public boolean isSettable(Region node) {
@@ -3389,7 +3454,7 @@ public class Region extends Parent {
          };
 
          private static final CssMetaData<Region,Insets> OPAQUE_INSETS =
-                 new CssMetaData<Region,Insets>("-fx-opaque-insets",
+                 new CssMetaData<>("-fx-opaque-insets",
                          InsetsConverter.getInstance(), null) {
 
                      @Override
@@ -3405,7 +3470,7 @@ public class Region extends Parent {
                  };
 
          private static final CssMetaData<Region,Background> BACKGROUND =
-             new CssMetaData<Region,Background>("-fx-region-background",
+             new CssMetaData<>("-fx-region-background",
                  BackgroundConverter.INSTANCE,
                  null,
                  false,
@@ -3421,7 +3486,7 @@ public class Region extends Parent {
          };
 
          private static final CssMetaData<Region,Border> BORDER =
-             new CssMetaData<Region,Border>("-fx-region-border",
+             new CssMetaData<>("-fx-region-border",
                      BorderConverter.getInstance(),
                      null,
                      false,
@@ -3437,7 +3502,7 @@ public class Region extends Parent {
              };
 
          private static final CssMetaData<Region,Shape> SHAPE =
-             new CssMetaData<Region,Shape>("-fx-shape",
+             new CssMetaData<>("-fx-shape",
                  ShapeConverter.getInstance()) {
 
             @Override public boolean isSettable(Region node) {
@@ -3451,7 +3516,7 @@ public class Region extends Parent {
          };
 
          private static final CssMetaData<Region, Boolean> SCALE_SHAPE =
-             new CssMetaData<Region,Boolean>("-fx-scale-shape",
+             new CssMetaData<>("-fx-scale-shape",
                  BooleanConverter.getInstance(), Boolean.TRUE){
 
             @Override public boolean isSettable(Region node) {
@@ -3464,7 +3529,7 @@ public class Region extends Parent {
         };
 
          private static final CssMetaData<Region,Boolean> POSITION_SHAPE =
-             new CssMetaData<Region,Boolean>("-fx-position-shape",
+             new CssMetaData<>("-fx-position-shape",
                  BooleanConverter.getInstance(), Boolean.TRUE){
 
             @Override public boolean isSettable(Region node) {
@@ -3477,7 +3542,7 @@ public class Region extends Parent {
         };
 
          private static final CssMetaData<Region,Boolean> CACHE_SHAPE =
-             new CssMetaData<Region,Boolean>("-fx-cache-shape",
+             new CssMetaData<>("-fx-cache-shape",
                  BooleanConverter.getInstance(), Boolean.TRUE){
 
             @Override public boolean isSettable(Region node) {
@@ -3490,7 +3555,7 @@ public class Region extends Parent {
         };
 
          private static final CssMetaData<Region, Boolean> SNAP_TO_PIXEL =
-             new CssMetaData<Region,Boolean>("-fx-snap-to-pixel",
+             new CssMetaData<>("-fx-snap-to-pixel",
                  BooleanConverter.getInstance(), Boolean.TRUE){
 
             @Override public boolean isSettable(Region node) {
@@ -3504,7 +3569,7 @@ public class Region extends Parent {
         };
 
          private static final CssMetaData<Region, Number> MIN_HEIGHT =
-             new CssMetaData<Region,Number>("-fx-min-height",
+             new CssMetaData<>("-fx-min-height",
                  SizeConverter.getInstance(), USE_COMPUTED_SIZE){
 
             @Override public boolean isSettable(Region node) {
@@ -3518,7 +3583,7 @@ public class Region extends Parent {
         };
 
          private static final CssMetaData<Region, Number> PREF_HEIGHT =
-             new CssMetaData<Region,Number>("-fx-pref-height",
+             new CssMetaData<>("-fx-pref-height",
                  SizeConverter.getInstance(), USE_COMPUTED_SIZE){
 
             @Override public boolean isSettable(Region node) {
@@ -3532,7 +3597,7 @@ public class Region extends Parent {
         };
 
          private static final CssMetaData<Region, Number> MAX_HEIGHT =
-             new CssMetaData<Region,Number>("-fx-max-height",
+             new CssMetaData<>("-fx-max-height",
                  SizeConverter.getInstance(), USE_COMPUTED_SIZE){
 
             @Override public boolean isSettable(Region node) {
@@ -3546,7 +3611,7 @@ public class Region extends Parent {
         };
 
          private static final CssMetaData<Region, Number> MIN_WIDTH =
-             new CssMetaData<Region,Number>("-fx-min-width",
+             new CssMetaData<>("-fx-min-width",
                  SizeConverter.getInstance(), USE_COMPUTED_SIZE){
 
             @Override public boolean isSettable(Region node) {
@@ -3560,7 +3625,7 @@ public class Region extends Parent {
         };
 
          private static final CssMetaData<Region, Number> PREF_WIDTH =
-             new CssMetaData<Region,Number>("-fx-pref-width",
+             new CssMetaData<>("-fx-pref-width",
                  SizeConverter.getInstance(), USE_COMPUTED_SIZE){
 
             @Override public boolean isSettable(Region node) {
@@ -3574,7 +3639,7 @@ public class Region extends Parent {
         };
 
          private static final CssMetaData<Region, Number> MAX_WIDTH =
-             new CssMetaData<Region,Number>("-fx-max-width",
+             new CssMetaData<>("-fx-max-width",
                  SizeConverter.getInstance(), USE_COMPUTED_SIZE){
 
             @Override public boolean isSettable(Region node) {
@@ -3591,7 +3656,7 @@ public class Region extends Parent {
          static {
 
             final List<CssMetaData<? extends Styleable, ?>> styleables =
-                new ArrayList<CssMetaData<? extends Styleable, ?>>(Parent.getClassCssMetaData());
+                new ArrayList<>(Parent.getClassCssMetaData());
             styleables.add(PADDING);
             styleables.add(BACKGROUND);
             styleables.add(BORDER);
@@ -3611,8 +3676,9 @@ public class Region extends Parent {
     }
 
     /**
-     * @return The CssMetaData associated with this class, which may include the
-     * CssMetaData of its superclasses.
+     * Gets the {@code CssMetaData} associated with this class, which may include the
+     * {@code CssMetaData} of its superclasses.
+     * @return the {@code CssMetaData}
      * @since JavaFX 8.0
      */
     public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {

@@ -53,7 +53,7 @@ Ref<AccessibilityListBox> AccessibilityListBox::create(RenderObject* renderer)
     return adoptRef(*new AccessibilityListBox(renderer));
 }
 
-bool AccessibilityListBox::canSetSelectedChildrenAttribute() const
+bool AccessibilityListBox::canSetSelectedChildren() const
 {
     Node* selectNode = m_renderer->node();
     if (!selectNode)
@@ -64,24 +64,22 @@ bool AccessibilityListBox::canSetSelectedChildrenAttribute() const
 
 void AccessibilityListBox::addChildren()
 {
+    if (!m_renderer)
+        return;
+
     Node* selectNode = m_renderer->node();
     if (!selectNode)
         return;
 
-    m_haveChildren = true;
+    m_childrenInitialized = true;
 
-    for (const auto& listItem : downcast<HTMLSelectElement>(*selectNode).listItems()) {
-        // The cast to HTMLElement below is safe because the only other possible listItem type
-        // would be a WMLElement, but WML builds don't use accessibility features at all.
-        AccessibilityObject* listOption = listBoxOptionAccessibilityObject(listItem);
-        if (listOption && !listOption->accessibilityIsIgnored())
-            m_children.append(listOption);
-    }
+    for (const auto& listItem : downcast<HTMLSelectElement>(*selectNode).listItems())
+        addChild(listBoxOptionAccessibilityObject(listItem), DescendIfIgnored::No);
 }
 
 void AccessibilityListBox::setSelectedChildren(const AccessibilityChildrenVector& children)
 {
-    if (!canSetSelectedChildrenAttribute())
+    if (!canSetSelectedChildren())
         return;
 
     Node* selectNode = m_renderer->node();
@@ -107,7 +105,7 @@ void AccessibilityListBox::selectedChildren(AccessibilityChildrenVector& result)
 {
     ASSERT(result.isEmpty());
 
-    if (!hasChildren())
+    if (!childrenInitialized())
         addChildren();
 
     for (const auto& child : m_children) {
@@ -120,7 +118,7 @@ void AccessibilityListBox::visibleChildren(AccessibilityChildrenVector& result)
 {
     ASSERT(result.isEmpty());
 
-    if (!hasChildren())
+    if (!childrenInitialized())
         addChildren();
 
     unsigned length = m_children.size();
@@ -132,17 +130,11 @@ void AccessibilityListBox::visibleChildren(AccessibilityChildrenVector& result)
 
 AccessibilityObject* AccessibilityListBox::listBoxOptionAccessibilityObject(HTMLElement* element) const
 {
-    // skip hr elements
-    if (!element || element->hasTagName(hrTag))
-        return nullptr;
-
-    AccessibilityObject& listBoxObject = *m_renderer->document().axObjectCache()->getOrCreate(AccessibilityRole::ListBoxOption);
-    downcast<AccessibilityListBoxOption>(listBoxObject).setHTMLElement(element);
-
-    return &listBoxObject;
+    // FIXME: Why does AccessibilityMenuListPopup::menuListOptionAccessibilityObject check inRenderedDocument, but this does not?
+    return m_renderer->document().axObjectCache()->getOrCreate(element);
 }
 
-AccessibilityObject* AccessibilityListBox::elementAccessibilityHitTest(const IntPoint& point) const
+AXCoreObject* AccessibilityListBox::elementAccessibilityHitTest(const IntPoint& point) const
 {
     // the internal HTMLSelectElement methods for returning a listbox option at a point
     // ignore optgroup elements.
@@ -155,7 +147,7 @@ AccessibilityObject* AccessibilityListBox::elementAccessibilityHitTest(const Int
 
     LayoutRect parentRect = boundingBoxRect();
 
-    AccessibilityObject* listBoxOption = nullptr;
+    AXCoreObject* listBoxOption = nullptr;
     unsigned length = m_children.size();
     for (unsigned i = 0; i < length; ++i) {
         LayoutRect rect = downcast<RenderListBox>(*m_renderer).itemBoundingBoxRect(parentRect.location(), i);

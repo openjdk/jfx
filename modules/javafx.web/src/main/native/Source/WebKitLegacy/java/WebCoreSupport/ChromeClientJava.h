@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -55,7 +55,7 @@ public:
     // created Page has its show method called.
     // The FrameLoadRequest parameter is only for ChromeClient to check if the
     // request could be fulfilled. The ChromeClient should not load the request.
-    Page* createWindow(Frame&, const FrameLoadRequest&, const WindowFeatures&, const NavigationAction&) override;
+    Page* createWindow(Frame&, const WindowFeatures&, const NavigationAction&) override;
     void show() override;
 
     bool canRunModal() override;
@@ -79,13 +79,18 @@ public:
     bool canRunBeforeUnloadConfirmPanel() override;
     bool runBeforeUnloadConfirmPanel(const String& message, Frame&) override;
 
-    void closeWindowSoon() override;
+    void closeWindow() override;
 
     void runJavaScriptAlert(Frame&, const String&) override;
     bool runJavaScriptConfirm(Frame&, const String&) override;
     bool runJavaScriptPrompt(Frame&, const String& message, const String& defaultValue, String& result) override;
     void setStatusbarText(const String&) override;
     KeyboardUIMode keyboardUIMode() override;
+
+    bool hoverSupportedByPrimaryPointingDevice() const override { return true; }
+    bool hoverSupportedByAnyAvailablePointingDevice() const override { return true; }
+    std::optional<PointerCharacteristics> pointerCharacteristicsOfPrimaryPointingDevice() const override { return PointerCharacteristics::Fine; }
+    OptionSet<PointerCharacteristics> pointerCharacteristicsOfAllAvailablePointingDevices() const override { return PointerCharacteristics::Fine; }
 
     // Methods used by HostWindow.
     //
@@ -104,14 +109,15 @@ public:
     PlatformPageClient platformPageClient() const override;
     void setCursor(const Cursor&) override;
     void setCursorHiddenUntilMouseMoves(bool) override;
+    void setTextIndicator(const TextIndicatorData&) const override {}
     // End methods used by HostWindow.
 
     void contentsSizeChanged(Frame&, const IntSize&) const override;
-    void mouseDidMoveOverElement(const HitTestResult&, unsigned modifierFlags) override;
+    void mouseDidMoveOverElement(const HitTestResult&, unsigned modifierFlags, const String& toolTip, TextDirection) override;
 
-    void setToolTip(const String&, TextDirection) override;
+    void setToolTip(const String&);
 
-    void print(Frame&) override;
+    void print(Frame&, const StringWithDirection&) override;
 
     void exceededDatabaseQuota(Frame&, const String& databaseName, DatabaseDetails) override;
 
@@ -154,7 +160,7 @@ public:
     void setNeedsOneShotDrawingSynchronization() override;
     // Sets a flag to specify that the view needs to be updated, so we need
     // to do an eager layout before the drawing.
-    void scheduleCompositingLayerFlush() override;
+    void triggerRenderingUpdate() override;
     void attachViewOverlayGraphicsLayer(GraphicsLayer*) override;
 
 #if ENABLE(TOUCH_EVENTS)
@@ -170,6 +176,9 @@ public:
 
     RefPtr<Icon> createIconForFiles(const Vector<String>&) override;
     void didFinishLoadingImageForElement(HTMLImageElement&) override;
+    void requestCookieConsent(CompletionHandler<void(CookieConsentDecisionResult)>&&) override;
+    void classifyModalContainerControls(Vector<String>&& texts, CompletionHandler<void(Vector<ModalContainerControlType>&&)>&&) override;
+    void decidePolicyForModalContainer(OptionSet<ModalContainerControlType>, CompletionHandler<void(ModalContainerDecision)>&&) override;
 
 
 private:

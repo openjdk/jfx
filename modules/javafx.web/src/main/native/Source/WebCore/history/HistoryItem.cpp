@@ -26,10 +26,10 @@
 #include "config.h"
 #include "HistoryItem.h"
 
+#include "BackForwardCache.h"
 #include "CachedPage.h"
 #include "Document.h"
 #include "KeyedCoding.h"
-#include "PageCache.h"
 #include "ResourceRequest.h"
 #include "SerializedScriptValue.h"
 #include "SharedBuffer.h"
@@ -106,10 +106,12 @@ inline HistoryItem::HistoryItem(const HistoryItem& item)
     , m_displayTitle(item.m_displayTitle)
     , m_scrollPosition(item.m_scrollPosition)
     , m_pageScaleFactor(item.m_pageScaleFactor)
+    , m_children(item.m_children.map([](auto& child) { return child->copy(); }))
     , m_lastVisitWasFailure(item.m_lastVisitWasFailure)
     , m_isTargetItem(item.m_isTargetItem)
     , m_itemSequenceNumber(item.m_itemSequenceNumber)
     , m_documentSequenceNumber(item.m_documentSequenceNumber)
+    , m_formData(item.m_formData ? RefPtr<FormData> { item.m_formData->copy() } : nullptr)
     , m_formContentType(item.m_formContentType)
     , m_pruningReason(PruningReason::None)
 #if PLATFORM(IOS_FAMILY)
@@ -122,13 +124,6 @@ inline HistoryItem::HistoryItem(const HistoryItem& item)
 #endif
     , m_identifier(item.m_identifier)
 {
-    if (item.m_formData)
-        m_formData = item.m_formData->copy();
-
-    unsigned size = item.m_children.size();
-    m_children.reserveInitialCapacity(size);
-    for (unsigned i = 0; i < size; ++i)
-        m_children.uncheckedAppend(item.m_children[i]->copy());
 }
 
 Ref<HistoryItem> HistoryItem::copy() const
@@ -186,6 +181,22 @@ bool HistoryItem::hasCachedPageExpired() const
     return m_cachedPage ? m_cachedPage->hasExpired() : false;
 }
 
+void HistoryItem::setCachedPage(std::unique_ptr<CachedPage>&& cachedPage)
+{
+    bool wasInBackForwardCache = isInBackForwardCache();
+    m_cachedPage = WTFMove(cachedPage);
+    if (wasInBackForwardCache != isInBackForwardCache())
+        notifyChanged();
+}
+
+std::unique_ptr<CachedPage> HistoryItem::takeCachedPage()
+{
+    ASSERT(m_cachedPage);
+    auto cachedPage = std::exchange(m_cachedPage, nullptr);
+    notifyChanged();
+    return cachedPage;
+}
+
 URL HistoryItem::url() const
 {
     return URL({ }, m_urlString);
@@ -220,7 +231,7 @@ void HistoryItem::setURLString(const String& urlString)
 
 void HistoryItem::setURL(const URL& url)
 {
-    PageCache::singleton().remove(*this);
+    BackForwardCache::singleton().remove(*this);
     setURLString(url.string());
     clearDocumentState();
 }

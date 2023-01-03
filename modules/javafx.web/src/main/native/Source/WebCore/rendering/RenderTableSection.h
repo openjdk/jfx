@@ -62,7 +62,7 @@ public:
     RenderTableRow* firstRow() const;
     RenderTableRow* lastRow() const;
 
-    Optional<int> firstLineBaseline() const override;
+    std::optional<LayoutUnit> firstLineBaseline() const override;
 
     void addCell(RenderTableCell*, RenderTableRow* row);
 
@@ -149,10 +149,9 @@ public:
 
     void willInsertTableRow(RenderTableRow& child, RenderObject* beforeChild);
 
-protected:
+private:
     void styleDidChange(StyleDifference, const RenderStyle* oldStyle) override;
 
-private:
     static RenderPtr<RenderTableSection> createTableSectionWithStyle(Document&, const RenderStyle&);
 
     enum ShouldIncludeAllIntersectingCells {
@@ -166,7 +165,7 @@ private:
 
     bool isTableSection() const override { return true; }
 
-    void willBeRemovedFromTree() override;
+    void willBeRemovedFromTree(IsInternalMove) override;
 
     void layout() override;
 

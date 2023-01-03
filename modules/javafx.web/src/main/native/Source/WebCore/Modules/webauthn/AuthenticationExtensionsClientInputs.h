@@ -33,27 +33,34 @@ namespace WebCore {
 
 struct AuthenticationExtensionsClientInputs {
     String appid;
+    bool googleLegacyAppidSupport;
 
     template<class Encoder> void encode(Encoder&) const;
-    template<class Decoder> static Optional<AuthenticationExtensionsClientInputs> decode(Decoder&);
+    template<class Decoder> static std::optional<AuthenticationExtensionsClientInputs> decode(Decoder&);
 };
 
 template<class Encoder>
 void AuthenticationExtensionsClientInputs::encode(Encoder& encoder) const
 {
-    encoder << appid;
+    encoder << appid << googleLegacyAppidSupport;
 }
 
 template<class Decoder>
-Optional<AuthenticationExtensionsClientInputs> AuthenticationExtensionsClientInputs::decode(Decoder& decoder)
+std::optional<AuthenticationExtensionsClientInputs> AuthenticationExtensionsClientInputs::decode(Decoder& decoder)
 {
     AuthenticationExtensionsClientInputs result;
 
-    Optional<String> appid;
+    std::optional<String> appid;
     decoder >> appid;
     if (!appid)
-        return WTF::nullopt;
+        return std::nullopt;
     result.appid = WTFMove(*appid);
+
+    std::optional<bool> googleLegacyAppidSupport;
+    decoder >> googleLegacyAppidSupport;
+    if (!googleLegacyAppidSupport)
+        return std::nullopt;
+    result.googleLegacyAppidSupport = WTFMove(*googleLegacyAppidSupport);
 
     return result;
 }

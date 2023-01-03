@@ -50,6 +50,8 @@
 #include "JSString.h"
 #include "Operations.h"
 #include "SlotVisitorInlines.h"
+#include "StrongInlines.h"
 #include "StructureInlines.h"
 #include "ThrowScope.h"
 #include "WeakGCMapInlines.h"
+#include "WeakGCSetInlines.h"

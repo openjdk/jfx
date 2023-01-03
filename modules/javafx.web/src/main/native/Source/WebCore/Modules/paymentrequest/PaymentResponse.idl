@@ -24,13 +24,14 @@
  */
 
 [
+    ActiveDOMObject,
     Conditional=PAYMENT_REQUEST,
-    EnabledBySetting=PaymentRequest,
+    EnabledBySetting=PaymentRequestEnabled,
     Exposed=Window,
     JSCustomMarkFunction,
     SecureContext,
 ] interface PaymentResponse : EventTarget {
-    serializer = { attribute };
+    [Default] object toJSON();
 
     readonly attribute DOMString requestId;
     readonly attribute DOMString methodName;
@@ -41,8 +42,8 @@
     readonly attribute DOMString? payerEmail;
     readonly attribute DOMString? payerPhone;
 
-    [NewObject] Promise<void> complete(optional PaymentComplete result = "unknown");
-    [NewObject] Promise<void> retry(optional PaymentValidationErrors errorFields);
+    [CallWith=CurrentDocument, NewObject] Promise<undefined> complete(optional PaymentComplete result = "unknown", optional PaymentCompleteDetails details);
+    [NewObject] Promise<undefined> retry(optional PaymentValidationErrors errorFields);
 
     attribute EventHandler onpayerdetailchange;
 };

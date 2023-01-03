@@ -28,16 +28,14 @@
 
 #include "CustomElementRegistry.h"
 #include "DOMWindow.h"
-#include "Document.h"
-#include "Element.h"
-#include "HTMLNames.h"
+#include "ElementInlines.h"
+#include "EventLoop.h"
 #include "JSCustomElementInterface.h"
 #include "JSDOMBinding.h"
-#include "Microtasks.h"
+#include "WindowEventLoop.h"
 #include <JavaScriptCore/CatchScope.h>
 #include <JavaScriptCore/Heap.h>
 #include <wtf/NeverDestroyed.h>
-#include <wtf/Optional.h>
 #include <wtf/Ref.h>
 #include <wtf/SetForScope.h>
 
@@ -98,7 +96,7 @@ private:
     Type m_type;
     RefPtr<Document> m_oldDocument;
     RefPtr<Document> m_newDocument;
-    Optional<QualifiedName> m_attributeName;
+    std::optional<QualifiedName> m_attributeName;
     AtomString m_oldValue;
     AtomString m_newValue;
 };
@@ -117,21 +115,27 @@ void CustomElementReactionQueue::clear()
     m_items.clear();
 }
 
+#if ASSERT_ENABLED
+bool CustomElementReactionQueue::hasJustUpgradeReaction() const
+{
+    return m_items.size() == 1 && m_items[0].type() == CustomElementReactionQueueItem::Type::ElementUpgrade;
+}
+#endif
+
 void CustomElementReactionQueue::enqueueElementUpgrade(Element& element, bool alreadyScheduledToUpgrade)
 {
     ASSERT(CustomElementReactionDisallowedScope::isReactionAllowed());
     ASSERT(element.reactionQueue());
     auto& queue = *element.reactionQueue();
-    if (alreadyScheduledToUpgrade) {
-        ASSERT(queue.m_items.size() == 1);
-        ASSERT(queue.m_items[0].type() == CustomElementReactionQueueItem::Type::ElementUpgrade);
-    } else {
+    if (alreadyScheduledToUpgrade)
+        ASSERT(queue.hasJustUpgradeReaction());
+    else
         queue.m_items.append({CustomElementReactionQueueItem::Type::ElementUpgrade});
-        enqueueElementOnAppropriateElementQueue(element);
-    }
+    enqueueElementOnAppropriateElementQueue(element);
 }
 
-void CustomElementReactionQueue::enqueueElementUpgradeIfDefined(Element& element)
+// https://html.spec.whatwg.org/multipage/custom-elements.html#concept-try-upgrade
+void CustomElementReactionQueue::tryToUpgradeElement(Element& element)
 {
     ASSERT(CustomElementReactionDisallowedScope::isReactionAllowed());
     ASSERT(element.isCustomElementUpgradeCandidate());
@@ -165,10 +169,10 @@ void CustomElementReactionQueue::enqueueConnectedCallbackIfNeeded(Element& eleme
 
 void CustomElementReactionQueue::enqueueDisconnectedCallbackIfNeeded(Element& element)
 {
-    ASSERT(CustomElementReactionDisallowedScope::isReactionAllowed());
     ASSERT(element.isDefinedCustomElement());
     if (element.document().refCount() <= 0)
         return; // Don't enqueue disconnectedCallback if the entire document is getting destructed.
+    ASSERT(CustomElementReactionDisallowedScope::isReactionAllowed());
     ASSERT(element.reactionQueue());
     auto& queue = *element.reactionQueue();
     if (!queue.m_interface->hasDisconnectedCallback())
@@ -238,14 +242,14 @@ void CustomElementReactionQueue::invokeAll(Element& element)
     }
 }
 
-inline void CustomElementReactionQueue::ElementQueue::add(Element& element)
+inline void CustomElementQueue::add(Element& element)
 {
     ASSERT(!m_invoking);
     // FIXME: Avoid inserting the same element multiple times.
     m_elements.append(element);
 }
 
-inline void CustomElementReactionQueue::ElementQueue::invokeAll()
+inline void CustomElementQueue::invokeAll()
 {
     RELEASE_ASSERT(!m_invoking);
     SetForScope<bool> invoking(m_invoking, true);
@@ -262,7 +266,7 @@ inline void CustomElementReactionQueue::ElementQueue::invokeAll()
     m_elements.clear();
 }
 
-inline void CustomElementReactionQueue::ElementQueue::processQueue(JSC::ExecState* state)
+inline void CustomElementQueue::processQueue(JSC::JSGlobalObject* state)
 {
     if (!state) {
         invokeAll();
@@ -293,24 +297,23 @@ void CustomElementReactionQueue::enqueueElementOnAppropriateElementQueue(Element
 {
     ASSERT(element.reactionQueue());
     if (!CustomElementReactionStack::s_currentProcessingStack) {
-        auto& queue = ensureBackupQueue();
-        queue.add(element);
+        element.document().windowEventLoop().backupElementQueue().add(element);
         return;
     }
 
     auto*& queue = CustomElementReactionStack::s_currentProcessingStack->m_queue;
     if (!queue) // We use a raw pointer to avoid genearing code to delete it in ~CustomElementReactionStack.
-        queue = new ElementQueue;
+        queue = new CustomElementQueue;
     queue->add(element);
 }
 
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
 unsigned CustomElementReactionDisallowedScope::s_customElementReactionDisallowedCount = 0;
 #endif
 
 CustomElementReactionStack* CustomElementReactionStack::s_currentProcessingStack = nullptr;
 
-void CustomElementReactionStack::processQueue(JSC::ExecState* state)
+void CustomElementReactionStack::processQueue(JSC::JSGlobalObject* state)
 {
     ASSERT(m_queue);
     m_queue->processQueue(state);
@@ -318,37 +321,9 @@ void CustomElementReactionStack::processQueue(JSC::ExecState* state)
     m_queue = nullptr;
 }
 
-class BackupElementQueueMicrotask final : public Microtask {
-    WTF_MAKE_FAST_ALLOCATED;
-private:
-    Result run() final
-    {
-        CustomElementReactionQueue::processBackupQueue();
-        return Result::Done;
-    }
-};
-
-static bool s_processingBackupElementQueue = false;
-
-CustomElementReactionQueue::ElementQueue& CustomElementReactionQueue::ensureBackupQueue()
+void CustomElementReactionQueue::processBackupQueue(CustomElementQueue& backupElementQueue)
 {
-    if (!s_processingBackupElementQueue) {
-        s_processingBackupElementQueue = true;
-        MicrotaskQueue::mainThreadQueue().append(makeUnique<BackupElementQueueMicrotask>());
-    }
-    return backupElementQueue();
-}
-
-void CustomElementReactionQueue::processBackupQueue()
-{
-    backupElementQueue().processQueue(nullptr);
-    s_processingBackupElementQueue = false;
-}
-
-CustomElementReactionQueue::ElementQueue& CustomElementReactionQueue::backupElementQueue()
-{
-    static NeverDestroyed<ElementQueue> queue;
-    return queue.get();
+    backupElementQueue.processQueue(nullptr);
 }
 
 }

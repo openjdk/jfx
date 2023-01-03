@@ -29,6 +29,7 @@
 
 #if ENABLE(MATHML)
 
+#include "ElementInlines.h"
 #include "HTMLParserIdioms.h"
 #include "MathMLNames.h"
 #include "RenderMathMLMenclose.h"
@@ -135,7 +136,7 @@ bool MathMLMencloseElement::hasNotation(MencloseNotationFlag notationFlag)
 void MathMLMencloseElement::parseAttribute(const QualifiedName& name, const AtomString& value)
 {
     if (name == notationAttr)
-        m_notationFlags = WTF::nullopt;
+        m_notationFlags = std::nullopt;
 
     MathMLRowElement::parseAttribute(name, value);
 }

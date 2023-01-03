@@ -1,6 +1,6 @@
 /*
  * Copyright (C) Research In Motion Limited 2011. All rights reserved.
- * Copyright (C) 2018-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2022 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -22,7 +22,6 @@
 #include "SVGFEDropShadowElement.h"
 
 #include "RenderStyle.h"
-#include "SVGFilterBuilder.h"
 #include "SVGNames.h"
 #include "SVGParserUtilities.h"
 #include "SVGRenderStyle.h"
@@ -61,10 +60,9 @@ void SVGFEDropShadowElement::setStdDeviation(float x, float y)
 void SVGFEDropShadowElement::parseAttribute(const QualifiedName& name, const AtomString& value)
 {
     if (name == SVGNames::stdDeviationAttr) {
-        float x, y;
-        if (parseNumberOptionalNumber(value, x, y)) {
-            m_stdDeviationX->setBaseValInternal(x);
-            m_stdDeviationY->setBaseValInternal(y);
+        if (auto result = parseNumberOptionalNumber(value)) {
+            m_stdDeviationX->setBaseValInternal(result->first);
+            m_stdDeviationY->setBaseValInternal(result->second);
         }
         return;
     }
@@ -98,7 +96,7 @@ void SVGFEDropShadowElement::svgAttributeChanged(const QualifiedName& attrName)
     SVGFilterPrimitiveStandardAttributes::svgAttributeChanged(attrName);
 }
 
-RefPtr<FilterEffect> SVGFEDropShadowElement::build(SVGFilterBuilder* filterBuilder, Filter& filter) const
+RefPtr<FilterEffect> SVGFEDropShadowElement::filterEffect(const SVGFilterBuilder&, const FilterEffectVector&) const
 {
     RenderObject* renderer = this->renderer();
     if (!renderer)
@@ -112,13 +110,7 @@ RefPtr<FilterEffect> SVGFEDropShadowElement::build(SVGFilterBuilder* filterBuild
     Color color = renderer->style().colorByApplyingColorFilter(svgStyle.floodColor());
     float opacity = svgStyle.floodOpacity();
 
-    auto input1 = filterBuilder->getEffectById(in1());
-    if (!input1)
-        return nullptr;
-
-    auto effect = FEDropShadow::create(filter, stdDeviationX(), stdDeviationY(), dx(), dy(), color, opacity);
-    effect->inputEffects().append(input1);
-    return effect;
+    return FEDropShadow::create(stdDeviationX(), stdDeviationY(), dx(), dy(), color, opacity);
 }
 
-}
+} // namespace WebCore

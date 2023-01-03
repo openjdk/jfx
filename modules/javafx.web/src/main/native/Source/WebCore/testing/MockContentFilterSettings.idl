@@ -39,8 +39,7 @@ enum Decision {
 
 [
     Conditional=CONTENT_FILTERING,
-    NoInterfaceObject,
-    ImplementationLacksVTable
+    LegacyNoInterfaceObject,
 ] interface MockContentFilterSettings {
     attribute boolean enabled;
     attribute DOMString blockedString;

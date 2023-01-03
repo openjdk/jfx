@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -125,6 +125,12 @@ public abstract class Transform implements Cloneable, EventTarget {
                 return Transform.createImmutableTransform(transform, left, right);
             }
         });
+    }
+
+    /**
+     * Constructor for subclasses to call.
+     */
+    public Transform() {
     }
 
     /* *************************************************************************
@@ -2024,8 +2030,7 @@ public abstract class Transform implements Cloneable, EventTarget {
             onTransformChangedProperty() {
         if (onTransformChanged == null) {
 
-            onTransformChanged = new SimpleObjectProperty<EventHandler
-                    <? super TransformChangedEvent>>(this, "onTransformChanged") {
+            onTransformChanged = new SimpleObjectProperty<>(this, "onTransformChanged") {
 
                 @Override protected void invalidated() {
                     getInternalEventDispatcher().setEventHandler(
@@ -2168,7 +2173,7 @@ public abstract class Transform implements Cloneable, EventTarget {
                     getMyx(), getMyy(), getMyz(), getTy(),
                     getMzx(), getMzy(), getMzz(), getTz());
             inv.invert();
-            inverseCache = new SoftReference<Transform>(inv);
+            inverseCache = new SoftReference<>(inv);
             return inv;
         }
 
@@ -2184,7 +2189,7 @@ public abstract class Transform implements Cloneable, EventTarget {
         }
     }
 
-    /**************************************************************************
+    /* ************************************************************************
      *  ImmutableTransform Class and supporting methods
      **************************************************************************/
 
@@ -2915,6 +2920,7 @@ public abstract class Transform implements Cloneable, EventTarget {
             }
         }
 
+        @Override
         void ensureCanTransform2DPoint() throws IllegalStateException {
             if (state3d != APPLY_NON_3D) {
                 throw new IllegalStateException("Cannot transform 2D point "

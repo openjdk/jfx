@@ -5,7 +5,6 @@ list(APPEND WebCore_PRIVATE_INCLUDE_DIRECTORIES
 list(APPEND WebCore_SOURCES
     platform/network/curl/AuthenticationChallengeCurl.cpp
     platform/network/curl/CertificateInfoCurl.cpp
-    platform/network/curl/CookieJarCurl.cpp
     platform/network/curl/CookieJarDB.cpp
     platform/network/curl/CookieStorageCurl.cpp
     platform/network/curl/CookieUtil.cpp
@@ -22,11 +21,12 @@ list(APPEND WebCore_SOURCES
     platform/network/curl/CurlResourceHandleDelegate.cpp
     platform/network/curl/CurlSSLHandle.cpp
     platform/network/curl/CurlSSLVerifier.cpp
+    platform/network/curl/CurlStream.cpp
+    platform/network/curl/CurlStreamScheduler.cpp
     platform/network/curl/DNSResolveQueueCurl.cpp
     platform/network/curl/NetworkStorageSessionCurl.cpp
     platform/network/curl/OpenSSLHelper.cpp
     platform/network/curl/ProtectionSpaceCurl.cpp
-    platform/network/curl/ProxyServerCurl.cpp
     platform/network/curl/PublicSuffixCurl.cpp
     platform/network/curl/ResourceErrorCurl.cpp
     platform/network/curl/ResourceHandleCurl.cpp
@@ -39,7 +39,6 @@ list(APPEND WebCore_SOURCES
 list(APPEND WebCore_PRIVATE_FRAMEWORK_HEADERS
     platform/network/curl/AuthenticationChallenge.h
     platform/network/curl/CertificateInfo.h
-    platform/network/curl/CookieJarCurl.h
     platform/network/curl/CookieJarDB.h
     platform/network/curl/CookieUtil.h
     platform/network/curl/CurlCacheEntry.h
@@ -58,6 +57,8 @@ list(APPEND WebCore_PRIVATE_FRAMEWORK_HEADERS
     platform/network/curl/CurlResponse.h
     platform/network/curl/CurlSSLHandle.h
     platform/network/curl/CurlSSLVerifier.h
+    platform/network/curl/CurlStream.h
+    platform/network/curl/CurlStreamScheduler.h
     platform/network/curl/DNSResolveQueueCurl.h
     platform/network/curl/DownloadBundle.h
     platform/network/curl/OpenSSLHelper.h
@@ -68,14 +69,8 @@ list(APPEND WebCore_PRIVATE_FRAMEWORK_HEADERS
     platform/network/curl/SocketStreamHandleImpl.h
 )
 
-list(APPEND WebCore_SYSTEM_INCLUDE_DIRECTORIES
-    ${CURL_INCLUDE_DIRS}
-    ${LIBPSL_INCLUDE_DIR}
-    ${OPENSSL_INCLUDE_DIR}
-)
-
 list(APPEND WebCore_LIBRARIES
-    ${CURL_LIBRARIES}
-    ${LIBPSL_LIBRARIES}
-    ${OPENSSL_LIBRARIES}
+    CURL::libcurl
+    LibPSL::LibPSL
+    OpenSSL::SSL
 )

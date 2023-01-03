@@ -26,19 +26,23 @@
 
 #if ENABLE(WEB_AUDIO)
 
+#include "AudioContext.h"
 #include "AudioListener.h"
 #include "AudioNode.h"
 #include "AudioParam.h"
 #include "Cone.h"
 #include "Distance.h"
 #include "FloatPoint3D.h"
-#include "HRTFDatabaseLoader.h"
 #include "Panner.h"
+#include "PannerOptions.h"
 #include <memory>
 #include <wtf/HashSet.h>
 #include <wtf/Lock.h>
 
 namespace WebCore {
+
+class HRTFDatabaseLoader;
+class BaseAudioContext;
 
 // PannerNode is an AudioNode with one input and one output.
 // It positions a sound in 3D space, with the exact effect dependent on the panning model.
@@ -50,103 +54,111 @@ namespace WebCore {
 class PannerNode final : public AudioNode {
     WTF_MAKE_ISO_ALLOCATED(PannerNode);
 public:
-    static Ref<PannerNode> create(AudioContext& context, float sampleRate)
-    {
-        return adoptRef(*new PannerNode(context, sampleRate));
-    }
+    static ExceptionOr<Ref<PannerNode>> create(BaseAudioContext&, const PannerOptions& = { });
 
     virtual ~PannerNode();
 
     // AudioNode
     void process(size_t framesToProcess) override;
-    void pullInputs(size_t framesToProcess) override;
-    void reset() override;
-    void initialize() override;
-    void uninitialize() override;
+    void processOnlyAudioParams(size_t framesToProcess) final;
 
     // Listener
-    AudioListener* listener();
+    AudioListener& listener();
 
     // Panning model
-    PanningModelType panningModel() const { return m_panningModel; }
-    void setPanningModel(PanningModelType);
+    PanningModelType panningModelForBindings() const WTF_IGNORES_THREAD_SAFETY_ANALYSIS { ASSERT(isMainThread()); return m_panningModel; }
+    void setPanningModelForBindings(PanningModelType);
 
     // Position
-    FloatPoint3D position() const { return m_position; }
-    void setPosition(float x, float y, float z) { m_position = FloatPoint3D(x, y, z); }
+    ExceptionOr<void> setPosition(float x, float y, float z);
+    AudioParam& positionX() WTF_IGNORES_THREAD_SAFETY_ANALYSIS { ASSERT(isMainThread()); return m_positionX.get(); }
+    AudioParam& positionY() WTF_IGNORES_THREAD_SAFETY_ANALYSIS { ASSERT(isMainThread()); return m_positionY.get(); }
+    AudioParam& positionZ() WTF_IGNORES_THREAD_SAFETY_ANALYSIS { ASSERT(isMainThread()); return m_positionZ.get(); }
 
     // Orientation
-    FloatPoint3D orientation() const { return m_position; }
-    void setOrientation(float x, float y, float z) { m_orientation = FloatPoint3D(x, y, z); }
-
-    // Velocity
-    FloatPoint3D velocity() const { return m_velocity; }
-    void setVelocity(float x, float y, float z) { m_velocity = FloatPoint3D(x, y, z); }
+    ExceptionOr<void> setOrientation(float x, float y, float z);
+    AudioParam& orientationX() WTF_IGNORES_THREAD_SAFETY_ANALYSIS { ASSERT(isMainThread()); return m_orientationX.get(); }
+    AudioParam& orientationY() WTF_IGNORES_THREAD_SAFETY_ANALYSIS { ASSERT(isMainThread()); return m_orientationY.get(); }
+    AudioParam& orientationZ() WTF_IGNORES_THREAD_SAFETY_ANALYSIS { ASSERT(isMainThread()); return m_orientationZ.get(); }
 
     // Distance parameters
-    DistanceModelType distanceModel() const;
-    void setDistanceModel(DistanceModelType);
+    DistanceModelType distanceModelForBindings() const;
+    void setDistanceModelForBindings(DistanceModelType);
 
-    double refDistance() { return m_distanceEffect.refDistance(); }
-    void setRefDistance(double refDistance) { m_distanceEffect.setRefDistance(refDistance); }
+    double refDistanceForBindings() const WTF_IGNORES_THREAD_SAFETY_ANALYSIS { ASSERT(isMainThread()); return m_distanceEffect.refDistance(); }
+    ExceptionOr<void> setRefDistanceForBindings(double);
 
-    double maxDistance() { return m_distanceEffect.maxDistance(); }
-    void setMaxDistance(double maxDistance) { m_distanceEffect.setMaxDistance(maxDistance); }
+    double maxDistanceForBindings() const WTF_IGNORES_THREAD_SAFETY_ANALYSIS { ASSERT(isMainThread()); return m_distanceEffect.maxDistance(); }
+    ExceptionOr<void> setMaxDistanceForBindings(double);
 
-    double rolloffFactor() { return m_distanceEffect.rolloffFactor(); }
-    void setRolloffFactor(double rolloffFactor) { m_distanceEffect.setRolloffFactor(rolloffFactor); }
+    double rolloffFactorForBindings() const WTF_IGNORES_THREAD_SAFETY_ANALYSIS { ASSERT(isMainThread()); return m_distanceEffect.rolloffFactor(); }
+    ExceptionOr<void> setRolloffFactorForBindings(double);
 
     // Sound cones - angles in degrees
-    double coneInnerAngle() const { return m_coneEffect.innerAngle(); }
-    void setConeInnerAngle(double angle) { m_coneEffect.setInnerAngle(angle); }
+    double coneInnerAngleForBindings() const WTF_IGNORES_THREAD_SAFETY_ANALYSIS { ASSERT(isMainThread()); return m_coneEffect.innerAngle(); }
+    void setConeInnerAngleForBindings(double);
 
-    double coneOuterAngle() const { return m_coneEffect.outerAngle(); }
-    void setConeOuterAngle(double angle) { m_coneEffect.setOuterAngle(angle); }
+    double coneOuterAngleForBindings() const WTF_IGNORES_THREAD_SAFETY_ANALYSIS { ASSERT(isMainThread()); return m_coneEffect.outerAngle(); }
+    void setConeOuterAngleForBindings(double);
 
-    double coneOuterGain() const { return m_coneEffect.outerGain(); }
-    void setConeOuterGain(double angle) { m_coneEffect.setOuterGain(angle); }
+    double coneOuterGainForBindings() const WTF_IGNORES_THREAD_SAFETY_ANALYSIS { ASSERT(isMainThread()); return m_coneEffect.outerGain(); }
+    ExceptionOr<void> setConeOuterGainForBindings(double);
 
-    void getAzimuthElevation(double* outAzimuth, double* outElevation);
-    float dopplerRate();
+    ExceptionOr<void> setChannelCount(unsigned) final;
+    ExceptionOr<void> setChannelCountMode(ChannelCountMode) final;
 
-    // Accessors for dynamically calculated gain values.
-    AudioParam* distanceGain() { return m_distanceGain.get(); }
-    AudioParam* coneGain() { return m_coneGain.get(); }
-
-    double tailTime() const override { return m_panner ? m_panner->tailTime() : 0; }
-    double latencyTime() const override { return m_panner ? m_panner->latencyTime() : 0; }
+    double tailTime() const final;
+    double latencyTime() const final;
 
 private:
-    PannerNode(AudioContext&, float sampleRate);
+    PannerNode(BaseAudioContext&, const PannerOptions&);
+
+    struct AzimuthElevation {
+        double azimuth { 0. };
+        double elevation { 0. };
+    };
+    static AzimuthElevation calculateAzimuthElevation(const FloatPoint3D& position, const FloatPoint3D& listenerPosition, const FloatPoint3D& listenerForward, const FloatPoint3D& listenerUp);
+    static float calculateDistanceConeGain(const FloatPoint3D& position, const FloatPoint3D& orientation, const FloatPoint3D& listenerPosition, const DistanceEffect&, const ConeEffect&);
 
     // Returns the combined distance and cone gain attenuation.
-    float distanceConeGain();
+    float distanceConeGain() WTF_REQUIRES_LOCK(m_processLock);
 
-    // Notifies any AudioBufferSourceNodes connected to us either directly or indirectly about our existence.
-    // This is in order to handle the pitch change necessary for the doppler shift.
-    void notifyAudioSourcesConnectedToNode(AudioNode*, HashSet<AudioNode*>& visitedNodes);
+    bool requiresTailProcessing() const final;
 
-    std::unique_ptr<Panner> m_panner;
-    PanningModelType m_panningModel;
+    void invalidateCachedPropertiesIfNecessary() WTF_REQUIRES_LOCK(m_processLock);
 
-    FloatPoint3D m_position;
-    FloatPoint3D m_orientation;
-    FloatPoint3D m_velocity;
+    const AzimuthElevation& azimuthElevation() WTF_REQUIRES_LOCK(m_processLock);
+    void processSampleAccurateValues(AudioBus* destination, const AudioBus* source, size_t framesToProcess) WTF_REQUIRES_LOCK(m_processLock);
+    bool hasSampleAccurateValues() const WTF_REQUIRES_LOCK(m_processLock);
+    bool shouldUseARate() const WTF_REQUIRES_LOCK(m_processLock);
+
+    FloatPoint3D position() const WTF_REQUIRES_LOCK(m_processLock);
+    FloatPoint3D orientation() const WTF_REQUIRES_LOCK(m_processLock);
+
+    Ref<HRTFDatabaseLoader> m_hrtfDatabaseLoader;
+    PanningModelType m_panningModel WTF_GUARDED_BY_LOCK(m_processLock);
+    std::unique_ptr<Panner> m_panner WTF_GUARDED_BY_LOCK(m_processLock);
 
     // Gain
-    RefPtr<AudioParam> m_distanceGain;
-    RefPtr<AudioParam> m_coneGain;
-    DistanceEffect m_distanceEffect;
-    ConeEffect m_coneEffect;
-    float m_lastGain;
+    DistanceEffect m_distanceEffect WTF_GUARDED_BY_LOCK(m_processLock);
+    ConeEffect m_coneEffect WTF_GUARDED_BY_LOCK(m_processLock);
 
-    // HRTF Database loader
-    RefPtr<HRTFDatabaseLoader> m_hrtfDatabaseLoader;
+    Ref<AudioParam> m_positionX WTF_GUARDED_BY_LOCK(m_processLock);
+    Ref<AudioParam> m_positionY WTF_GUARDED_BY_LOCK(m_processLock);
+    Ref<AudioParam> m_positionZ WTF_GUARDED_BY_LOCK(m_processLock);
 
-    unsigned m_connectionCount;
+    Ref<AudioParam> m_orientationX WTF_GUARDED_BY_LOCK(m_processLock);
+    Ref<AudioParam> m_orientationY WTF_GUARDED_BY_LOCK(m_processLock);
+    Ref<AudioParam> m_orientationZ WTF_GUARDED_BY_LOCK(m_processLock);
 
-    // Synchronize process() and setPanningModel() which can change the panner.
-    mutable Lock m_pannerMutex;
+    mutable std::optional<AzimuthElevation> m_cachedAzimuthElevation WTF_GUARDED_BY_LOCK(m_processLock);
+    mutable std::optional<float> m_cachedConeGain WTF_GUARDED_BY_LOCK(m_processLock);
+    FloatPoint3D m_lastPosition WTF_GUARDED_BY_LOCK(m_processLock);
+    FloatPoint3D m_lastOrientation WTF_GUARDED_BY_LOCK(m_processLock);
+
+    // Synchronize process() with setting of the panning model, source's location
+    // information, listener, distance parameters and sound cones.
+    mutable Lock m_processLock;
 };
 
 } // namespace WebCore

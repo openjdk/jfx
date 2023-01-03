@@ -28,6 +28,7 @@
 #if ENABLE(FTL_JIT)
 
 #include "FTLJITCode.h"
+#include <wtf/FixedVector.h>
 
 namespace JSC { namespace FTL {
 
@@ -40,25 +41,32 @@ namespace JSC { namespace FTL {
 //
 // - Each OSR entry compilation allows entry through only one bytecode index.
 
-class ForOSREntryJITCode : public FTL::JITCode {
+class ForOSREntryJITCode final : public FTL::JITCode {
 public:
     ForOSREntryJITCode();
-    ~ForOSREntryJITCode();
+    ~ForOSREntryJITCode() final;
 
     void initializeEntryBuffer(VM&, unsigned numCalleeLocals);
     ScratchBuffer* entryBuffer() const { return m_entryBuffer; }
 
-    void setBytecodeIndex(unsigned value) { m_bytecodeIndex = value; }
-    unsigned bytecodeIndex() const { return m_bytecodeIndex; }
+    void setBytecodeIndex(BytecodeIndex value) { m_bytecodeIndex = value; }
+    BytecodeIndex bytecodeIndex() const { return m_bytecodeIndex; }
 
     void countEntryFailure() { m_entryFailureCount++; }
     unsigned entryFailureCount() const { return m_entryFailureCount; }
 
-    ForOSREntryJITCode* ftlForOSREntry();
+    ForOSREntryJITCode* ftlForOSREntry() final;
+
+    void setArgumentFlushFormats(FixedVector<DFG::FlushFormat>&& argumentFlushFormats)
+    {
+        m_argumentFlushFormats = WTFMove(argumentFlushFormats);
+    }
+    const FixedVector<DFG::FlushFormat>& argumentFlushFormats() { return m_argumentFlushFormats; }
 
 private:
+    FixedVector<DFG::FlushFormat> m_argumentFlushFormats;
     ScratchBuffer* m_entryBuffer; // Only for OSR entry code blocks.
-    unsigned m_bytecodeIndex;
+    BytecodeIndex m_bytecodeIndex;
     unsigned m_entryFailureCount;
 };
 

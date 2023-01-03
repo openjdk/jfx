@@ -1,6 +1,33 @@
+/* GLIB - Library of useful routines for C programming
+ * Copyright (C) 1995-1997  Peter Mattis, Spencer Kimball and Josh MacDonald
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, see <http://www.gnu.org/licenses/>.
+ */
+
+/*
+ * Modified by the GLib Team and others 1997-2000.  See the AUTHORS
+ * file for a list of people on the GLib Team.  See the ChangeLog
+ * files for a list of changes.  These files are distributed with
+ * GLib at ftp://ftp.gtk.org/pub/gtk/.
+ */
+
+#ifndef __G_CONSTRUCTOR_H__
+#define __G_CONSTRUCTOR_H__
+
 /*
   If G_HAS_CONSTRUCTORS is true then the compiler support *both* constructors and
-  destructors, in a sane way, including e.g. on library unload. If not you're on
+  destructors, in a usable way, including e.g. on library unload. If not you're on
   your own.
 
   Some compilers need #pragma to handle this, which does not work with macros,
@@ -28,6 +55,15 @@
 #elif defined (_MSC_VER) && (_MSC_VER >= 1500)
 /* Visual studio 2008 and later has _Pragma */
 
+/*
+ * Only try to include gslist.h if not already included via glib.h,
+ * so that items using gconstructor.h outside of GLib (such as
+ * GResources) continue to build properly.
+ */
+#ifndef __G_LIB_H__
+#include "gslist.h"
+#endif
+
 #include <stdlib.h>
 
 #define G_HAS_CONSTRUCTORS 1
@@ -42,13 +78,13 @@
  */
 
 /* We need to account for differences between the mangling of symbols
- * for Win32 (x86) and x64 programs, as symbols on Win32 are prefixed
- * with an underscore but symbols on x64 are not.
+ * for x86 and x64/ARM/ARM64 programs, as symbols on x86 are prefixed
+ * with an underscore but symbols on x64/ARM/ARM64 are not.
  */
-#ifdef _WIN64
-#define G_MSVC_SYMBOL_PREFIX ""
-#else
+#ifdef _M_IX86
 #define G_MSVC_SYMBOL_PREFIX "_"
+#else
+#define G_MSVC_SYMBOL_PREFIX ""
 #endif
 
 #define G_DEFINE_CONSTRUCTOR(_func) G_MSVC_CTOR (_func, G_MSVC_SYMBOL_PREFIX)
@@ -120,3 +156,4 @@
 #endif
 
 #endif /* __GTK_DOC_IGNORE__ */
+#endif /* __G_CONSTRUCTOR_H__ */

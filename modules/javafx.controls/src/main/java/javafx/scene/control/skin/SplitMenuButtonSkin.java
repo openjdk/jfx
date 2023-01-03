@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,11 +25,6 @@
 
 package javafx.scene.control.skin;
 
-import com.sun.javafx.scene.control.behavior.BehaviorBase;
-import com.sun.javafx.scene.control.behavior.MenuButtonBehavior;
-import javafx.scene.Node;
-import javafx.scene.control.Accordion;
-import javafx.scene.control.Button;
 import javafx.scene.control.Control;
 import javafx.scene.control.SplitMenuButton;
 import javafx.scene.input.MouseEvent;
@@ -44,7 +39,7 @@ import com.sun.javafx.scene.control.behavior.SplitMenuButtonBehavior;
  */
 public class SplitMenuButtonSkin extends MenuButtonSkinBase<SplitMenuButton> {
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Private fields                                                          *
      *                                                                         *
@@ -54,7 +49,7 @@ public class SplitMenuButtonSkin extends MenuButtonSkinBase<SplitMenuButton> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
@@ -96,7 +91,7 @@ public class SplitMenuButtonSkin extends MenuButtonSkinBase<SplitMenuButton> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Public API                                                              *
      *                                                                         *
@@ -113,7 +108,7 @@ public class SplitMenuButtonSkin extends MenuButtonSkinBase<SplitMenuButton> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Private implementation                                                  *
      *                                                                         *

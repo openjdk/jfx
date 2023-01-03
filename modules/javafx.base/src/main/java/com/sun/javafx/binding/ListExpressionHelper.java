@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -35,8 +35,6 @@ import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 
 import java.util.Arrays;
-import java.util.List;
-
 import static javafx.collections.ListChangeListener.Change;
 
 /**
@@ -60,7 +58,7 @@ public abstract class ListExpressionHelper<E> extends ExpressionHelperBase {
             throw new NullPointerException();
         }
         observable.getValue(); // validate observable
-        return (helper == null)? new SingleInvalidation<E>(observable, listener) : helper.addListener(listener);
+        return (helper == null)? new SingleInvalidation<>(observable, listener) : helper.addListener(listener);
     }
 
     public static <E> ListExpressionHelper<E> removeListener(ListExpressionHelper<E> helper, InvalidationListener listener) {
@@ -74,7 +72,7 @@ public abstract class ListExpressionHelper<E> extends ExpressionHelperBase {
         if ((observable == null) || (listener == null)) {
             throw new NullPointerException();
         }
-        return (helper == null)? new SingleChange<E>(observable, listener) : helper.addListener(listener);
+        return (helper == null)? new SingleChange<>(observable, listener) : helper.addListener(listener);
     }
 
     public static <E> ListExpressionHelper<E> removeListener(ListExpressionHelper<E> helper, ChangeListener<? super ObservableList<E>> listener) {
@@ -88,7 +86,7 @@ public abstract class ListExpressionHelper<E> extends ExpressionHelperBase {
         if ((observable == null) || (listener == null)) {
             throw new NullPointerException();
         }
-        return (helper == null)? new SingleListChange<E>(observable, listener) : helper.addListener(listener);
+        return (helper == null)? new SingleListChange<>(observable, listener) : helper.addListener(listener);
     }
 
     public static <E> ListExpressionHelper<E> removeListener(ListExpressionHelper<E> helper, ListChangeListener<? super E> listener) {
@@ -145,7 +143,7 @@ public abstract class ListExpressionHelper<E> extends ExpressionHelperBase {
 
         @Override
         protected ListExpressionHelper<E> addListener(InvalidationListener listener) {
-            return new Generic<E>(observable, this.listener, listener);
+            return new Generic<>(observable, this.listener, listener);
         }
 
         @Override
@@ -155,7 +153,7 @@ public abstract class ListExpressionHelper<E> extends ExpressionHelperBase {
 
         @Override
         protected ListExpressionHelper<E> addListener(ChangeListener<? super ObservableList<E>> listener) {
-            return new Generic<E>(observable, this.listener, listener);
+            return new Generic<>(observable, this.listener, listener);
         }
 
         @Override
@@ -165,7 +163,7 @@ public abstract class ListExpressionHelper<E> extends ExpressionHelperBase {
 
         @Override
         protected ListExpressionHelper<E> addListener(ListChangeListener<? super E> listener) {
-            return new Generic<E>(observable, this.listener, listener);
+            return new Generic<>(observable, this.listener, listener);
         }
 
         @Override
@@ -197,7 +195,7 @@ public abstract class ListExpressionHelper<E> extends ExpressionHelperBase {
 
         @Override
         protected ListExpressionHelper<E> addListener(InvalidationListener listener) {
-            return new Generic<E>(observable, listener, this.listener);
+            return new Generic<>(observable, listener, this.listener);
         }
 
         @Override
@@ -207,7 +205,7 @@ public abstract class ListExpressionHelper<E> extends ExpressionHelperBase {
 
         @Override
         protected ListExpressionHelper<E> addListener(ChangeListener<? super ObservableList<E>> listener) {
-            return new Generic<E>(observable, this.listener, listener);
+            return new Generic<>(observable, this.listener, listener);
         }
 
         @Override
@@ -217,7 +215,7 @@ public abstract class ListExpressionHelper<E> extends ExpressionHelperBase {
 
         @Override
         protected ListExpressionHelper<E> addListener(ListChangeListener<? super E> listener) {
-            return new Generic<E>(observable, this.listener, listener);
+            return new Generic<>(observable, this.listener, listener);
         }
 
         @Override
@@ -253,7 +251,7 @@ public abstract class ListExpressionHelper<E> extends ExpressionHelperBase {
 
         @Override
         protected ListExpressionHelper<E> addListener(InvalidationListener listener) {
-            return new Generic<E>(observable, listener, this.listener);
+            return new Generic<>(observable, listener, this.listener);
         }
 
         @Override
@@ -263,7 +261,7 @@ public abstract class ListExpressionHelper<E> extends ExpressionHelperBase {
 
         @Override
         protected ListExpressionHelper<E> addListener(ChangeListener<? super ObservableList<E>> listener) {
-            return new Generic<E>(observable, listener, this.listener);
+            return new Generic<>(observable, listener, this.listener);
         }
 
         @Override
@@ -273,7 +271,7 @@ public abstract class ListExpressionHelper<E> extends ExpressionHelperBase {
 
         @Override
         protected ListExpressionHelper<E> addListener(ListChangeListener<? super E> listener) {
-            return new Generic<E>(observable, this.listener, listener);
+            return new Generic<>(observable, this.listener, listener);
         }
 
         @Override
@@ -290,7 +288,7 @@ public abstract class ListExpressionHelper<E> extends ExpressionHelperBase {
                 final ObservableList<E> safeOldValue = (oldValue == null)?
                         FXCollections.<E>emptyObservableList()
                         : FXCollections.unmodifiableObservableList(oldValue);
-                final Change<E> change = new NonIterableChange.GenericAddRemoveChange<E>(0, safeSize, safeOldValue, observable);
+                final Change<E> change = new NonIterableChange.GenericAddRemoveChange<>(0, safeSize, safeOldValue, observable);
                 listener.onChanged(change);
             }
         }
@@ -388,14 +386,14 @@ public abstract class ListExpressionHelper<E> extends ExpressionHelperBase {
                     if (listener.equals(invalidationListeners[index])) {
                         if (invalidationSize == 1) {
                             if ((changeSize == 1) && (listChangeSize == 0)) {
-                                return new SingleChange<E>(observable, changeListeners[0]);
+                                return new SingleChange<>(observable, changeListeners[0]);
                             } else if ((changeSize == 0) && (listChangeSize == 1)) {
-                                return new SingleListChange<E>(observable, listChangeListeners[0]);
+                                return new SingleListChange<>(observable, listChangeListeners[0]);
                             }
                             invalidationListeners = null;
                             invalidationSize = 0;
                         } else if ((invalidationSize == 2) && (changeSize == 0) && (listChangeSize == 0)) {
-                            return new SingleInvalidation<E>(observable, invalidationListeners[1-index]);
+                            return new SingleInvalidation<>(observable, invalidationListeners[1-index]);
                         } else {
                             final int numMoved = invalidationSize - index - 1;
                             final InvalidationListener[] oldListeners = invalidationListeners;
@@ -450,14 +448,14 @@ public abstract class ListExpressionHelper<E> extends ExpressionHelperBase {
                     if (listener.equals(changeListeners[index])) {
                         if (changeSize == 1) {
                             if ((invalidationSize == 1) && (listChangeSize == 0)) {
-                                return new SingleInvalidation<E>(observable, invalidationListeners[0]);
+                                return new SingleInvalidation<>(observable, invalidationListeners[0]);
                             } else if ((invalidationSize == 0) && (listChangeSize == 1)) {
-                                return new SingleListChange<E>(observable, listChangeListeners[0]);
+                                return new SingleListChange<>(observable, listChangeListeners[0]);
                             }
                             changeListeners = null;
                             changeSize = 0;
                         } else if ((changeSize == 2) && (invalidationSize == 0) && (listChangeSize == 0)) {
-                            return new SingleChange<E>(observable, changeListeners[1-index]);
+                            return new SingleChange<>(observable, changeListeners[1-index]);
                         } else {
                             final int numMoved = changeSize - index - 1;
                             final ChangeListener<? super ObservableList<E>>[] oldListeners = changeListeners;
@@ -512,14 +510,14 @@ public abstract class ListExpressionHelper<E> extends ExpressionHelperBase {
                     if (listener.equals(listChangeListeners[index])) {
                         if (listChangeSize == 1) {
                             if ((invalidationSize == 1) && (changeSize == 0)) {
-                                return new SingleInvalidation<E>(observable, invalidationListeners[0]);
+                                return new SingleInvalidation<>(observable, invalidationListeners[0]);
                             } else if ((invalidationSize == 0) && (changeSize == 1)) {
-                                return new SingleChange<E>(observable, changeListeners[0]);
+                                return new SingleChange<>(observable, changeListeners[0]);
                             }
                             listChangeListeners = null;
                             listChangeSize = 0;
                         } else if ((listChangeSize == 2) && (invalidationSize == 0) && (changeSize == 0)) {
-                            return new SingleListChange<E>(observable, listChangeListeners[1-index]);
+                            return new SingleListChange<>(observable, listChangeListeners[1-index]);
                         } else {
                             final int numMoved = listChangeSize - index - 1;
                             final ListChangeListener<? super E>[] oldListeners = listChangeListeners;

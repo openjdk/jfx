@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,14 +31,18 @@
 namespace WebCore {
 using namespace JSC;
 
-void JSPaintWorkletGlobalScope::visitAdditionalChildren(JSC::SlotVisitor& visitor)
+template<typename Visitor>
+void JSPaintWorkletGlobalScope::visitAdditionalChildren(Visitor& visitor)
 {
-    auto locker = holdLock(wrapped().paintDefinitionLock());
+    Locker locker { wrapped().paintDefinitionLock() };
     for (auto& registered : wrapped().paintDefinitionMap().values()) {
         registered->paintCallback->visitJSFunction(visitor);
         visitor.appendUnbarriered(registered->paintConstructor);
     }
 }
 
-}
+DEFINE_VISIT_ADDITIONAL_CHILDREN(JSPaintWorkletGlobalScope);
+
+} // namespace WebCore
+
 #endif

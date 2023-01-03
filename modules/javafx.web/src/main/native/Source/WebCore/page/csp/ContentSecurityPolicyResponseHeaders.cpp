@@ -28,6 +28,7 @@
 
 #include "HTTPHeaderNames.h"
 #include "ResourceResponse.h"
+#include <wtf/CrossThreadCopier.h>
 
 namespace WebCore {
 
@@ -41,23 +42,13 @@ ContentSecurityPolicyResponseHeaders::ContentSecurityPolicyResponseHeaders(const
     if (!policyValue.isEmpty())
         m_headers.append({ policyValue, ContentSecurityPolicyHeaderType::Report });
 
-    policyValue = response.httpHeaderField(HTTPHeaderName::XWebKitCSP);
-    if (!policyValue.isEmpty())
-        m_headers.append({ policyValue, ContentSecurityPolicyHeaderType::PrefixedEnforce });
-
-    policyValue = response.httpHeaderField(HTTPHeaderName::XWebKitCSPReportOnly);
-    if (!policyValue.isEmpty())
-        m_headers.append({ policyValue, ContentSecurityPolicyHeaderType::PrefixedReport });
-
     m_httpStatusCode = response.httpStatusCode();
 }
 
 ContentSecurityPolicyResponseHeaders ContentSecurityPolicyResponseHeaders::isolatedCopy() const
 {
     ContentSecurityPolicyResponseHeaders isolatedCopy;
-    isolatedCopy.m_headers.reserveInitialCapacity(m_headers.size());
-    for (auto& header : m_headers)
-        isolatedCopy.m_headers.uncheckedAppend({ header.first.isolatedCopy(), header.second });
+    isolatedCopy.m_headers = crossThreadCopy(m_headers);
     isolatedCopy.m_httpStatusCode = m_httpStatusCode;
     return isolatedCopy;
 }

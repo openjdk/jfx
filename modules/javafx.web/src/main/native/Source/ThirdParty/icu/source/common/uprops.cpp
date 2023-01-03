@@ -30,7 +30,9 @@
 #include "unicode/unorm2.h"
 #include "unicode/uscript.h"
 #include "unicode/ustring.h"
+#include "unicode/utf16.h"
 #include "cstring.h"
+#include "emojiprops.h"
 #include "mutex.h"
 #include "normalizer2impl.h"
 #include "umutex.h"
@@ -322,6 +324,10 @@ static UBool isRegionalIndicator(const BinaryProperty &/*prop*/, UChar32 c, UPro
     return 0x1F1E6<=c && c<=0x1F1FF;
 }
 
+static UBool hasEmojiProperty(const BinaryProperty &/*prop*/, UChar32 c, UProperty which) {
+    return EmojiProps::hasBinaryProperty(c, which);
+}
+
 static const BinaryProperty binProps[UCHAR_BINARY_LIMIT]={
     /*
      * column and mask values for binary properties from u_getUnicodeProperties().
@@ -388,14 +394,21 @@ static const BinaryProperty binProps[UCHAR_BINARY_LIMIT]={
     { UPROPS_SRC_CASE_AND_NORM,  0, changesWhenCasefolded },
     { UPROPS_SRC_CASE,  0, caseBinaryPropertyContains },  // UCHAR_CHANGES_WHEN_CASEMAPPED
     { UPROPS_SRC_NFKC_CF, 0, changesWhenNFKC_Casefolded },
-    { 2,                U_MASK(UPROPS_2_EMOJI), defaultContains },
-    { 2,                U_MASK(UPROPS_2_EMOJI_PRESENTATION), defaultContains },
-    { 2,                U_MASK(UPROPS_2_EMOJI_MODIFIER), defaultContains },
-    { 2,                U_MASK(UPROPS_2_EMOJI_MODIFIER_BASE), defaultContains },
-    { 2,                U_MASK(UPROPS_2_EMOJI_COMPONENT), defaultContains },
+    { UPROPS_SRC_EMOJI, 0, hasEmojiProperty },  // UCHAR_EMOJI
+    { UPROPS_SRC_EMOJI, 0, hasEmojiProperty },  // UCHAR_EMOJI_PRESENTATION
+    { UPROPS_SRC_EMOJI, 0, hasEmojiProperty },  // UCHAR_EMOJI_MODIFIER
+    { UPROPS_SRC_EMOJI, 0, hasEmojiProperty },  // UCHAR_EMOJI_MODIFIER_BASE
+    { UPROPS_SRC_EMOJI, 0, hasEmojiProperty },  // UCHAR_EMOJI_COMPONENT
     { 2,                0, isRegionalIndicator },
     { 1,                U_MASK(UPROPS_PREPENDED_CONCATENATION_MARK), defaultContains },
-    { 2,                U_MASK(UPROPS_2_EXTENDED_PICTOGRAPHIC), defaultContains },
+    { UPROPS_SRC_EMOJI, 0, hasEmojiProperty },  // UCHAR_EXTENDED_PICTOGRAPHIC
+    { UPROPS_SRC_EMOJI, 0, hasEmojiProperty },  // UCHAR_BASIC_EMOJI
+    { UPROPS_SRC_EMOJI, 0, hasEmojiProperty },  // UCHAR_EMOJI_KEYCAP_SEQUENCE
+    { UPROPS_SRC_EMOJI, 0, hasEmojiProperty },  // UCHAR_RGI_EMOJI_MODIFIER_SEQUENCE
+    { UPROPS_SRC_EMOJI, 0, hasEmojiProperty },  // UCHAR_RGI_EMOJI_FLAG_SEQUENCE
+    { UPROPS_SRC_EMOJI, 0, hasEmojiProperty },  // UCHAR_RGI_EMOJI_TAG_SEQUENCE
+    { UPROPS_SRC_EMOJI, 0, hasEmojiProperty },  // UCHAR_RGI_EMOJI_ZWJ_SEQUENCE
+    { UPROPS_SRC_EMOJI, 0, hasEmojiProperty },  // UCHAR_RGI_EMOJI
 };
 
 U_CAPI UBool U_EXPORT2
@@ -408,6 +421,26 @@ u_hasBinaryProperty(UChar32 c, UProperty which) {
         const BinaryProperty &prop=binProps[which];
         return prop.contains(prop, c, which);
     }
+}
+
+U_CAPI UBool U_EXPORT2
+u_stringHasBinaryProperty(const UChar *s, int32_t length, UProperty which) {
+    if (s == nullptr && length != 0) { return false; }
+    if (length == 1) {
+        return u_hasBinaryProperty(s[0], which);  // single code point
+    } else if (length == 2 || (length < 0 && *s != 0)) {  // not empty string
+        // first code point
+        int32_t i = 0;
+        UChar32 c;
+        U16_NEXT(s, i, length, c);
+        if (length > 0 ? i == length : s[i] == 0) {
+            return u_hasBinaryProperty(c, which);  // single code point
+        }
+    }
+    // Only call into EmojiProps for a relevant property,
+    // so that we not unnecessarily try to load its data file.
+    return UCHAR_BASIC_EMOJI <= which && which <= UCHAR_RGI_EMOJI &&
+        EmojiProps::hasBinaryProperty(s, length, which);
 }
 
 struct IntProperty;
@@ -478,6 +511,11 @@ static int32_t getNumericType(const IntProperty &/*prop*/, UChar32 c, UProperty 
 static int32_t getScript(const IntProperty &/*prop*/, UChar32 c, UProperty /*which*/) {
     UErrorCode errorCode=U_ZERO_ERROR;
     return (int32_t)uscript_getScript(c, &errorCode);
+}
+
+static int32_t scriptGetMaxValue(const IntProperty &/*prop*/, UProperty /*which*/) {
+    uint32_t scriptX=uprv_getMaxValues(0)&UPROPS_SCRIPT_X_MASK;
+    return uprops_mergeScriptCodeOrIndex(scriptX);
 }
 
 /*
@@ -586,7 +624,7 @@ static const IntProperty intProps[UCHAR_INT_LIMIT-UCHAR_INT_START]={
     { UPROPS_SRC_BIDI,  0, 0,                               getJoiningType, biDiGetMaxValue },
     { 2,                UPROPS_LB_MASK, UPROPS_LB_SHIFT,    defaultGetValue, defaultGetMaxValue },
     { UPROPS_SRC_CHAR,  0, (int32_t)U_NT_COUNT-1,           getNumericType, getMaxValueFromShift },
-    { 0,                UPROPS_SCRIPT_MASK, 0,              getScript, defaultGetMaxValue },
+    { UPROPS_SRC_PROPSVEC, 0, 0,                            getScript, scriptGetMaxValue },
     { UPROPS_SRC_PROPSVEC, 0, (int32_t)U_HST_COUNT-1,       getHangulSyllableType, getMaxValueFromShift },
     // UCHAR_NFD_QUICK_CHECK: max=1=YES -- never "maybe", only "no" or "yes"
     { UPROPS_SRC_NFC,   0, (int32_t)UNORM_YES,              getNormQuickCheck, getMaxValueFromShift },

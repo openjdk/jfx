@@ -23,22 +23,19 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-// According to the spec we are supposed to crawl the prototype chain looking
-// for the a TypedArray constructor. The way we implement this is with a
-// private function, @alloctateTypedArray, on each of the prototypes.
-// This enables us to optimize this lookup in the inline cache.
-
 function of(/* items... */)
 {
     "use strict";
-    let len = arguments.length;
-    let constructFunction = @getByIdDirectPrivate(this, "allocateTypedArray");
-    if (constructFunction === @undefined)
-        @throwTypeError("TypedArray.of requires its this argument to subclass a TypedArray constructor");
+    var len = arguments.length;
 
-    let result = constructFunction(len);
+    if (!@isConstructor(this))
+        @throwTypeError("TypedArray.of requires |this| to be a constructor");
 
-    for (let i = 0; i < len; i++)
+    var result = new this(len);
+    if (@typedArrayLength(result) < len)
+        @throwTypeError("TypedArray.of constructed typed array of insufficient length");
+
+    for (var i = 0; i < len; i++)
         result[i] = arguments[i];
 
     return result;
@@ -48,118 +45,69 @@ function from(items /* [ , mapfn [ , thisArg ] ] */)
 {
     "use strict";
 
-    let mapFn = @argument(1);
+    if (!@isConstructor(this))
+        @throwTypeError("TypedArray.from requires |this| to be a constructor");
 
-    let thisArg;
-
+    var mapFn = @argument(1);
+    var thisArg;
     if (mapFn !== @undefined) {
-        if (typeof mapFn !== "function")
+        if (!@isCallable(mapFn))
             @throwTypeError("TypedArray.from requires that the second argument, when provided, be a function");
 
         thisArg = @argument(2);
     }
 
-    let arrayLike = @toObject(items, "TypedArray.from requires an array-like object - not null or undefined");
+    var arrayLike = @toObject(items, "TypedArray.from requires an array-like object - not null or undefined");
 
-    let iteratorMethod = items.@iteratorSymbol;
-    if (iteratorMethod != null) {
-        if (typeof iteratorMethod !== "function")
+    var iteratorMethod = items.@@iterator;
+    if (!@isUndefinedOrNull(iteratorMethod)) {
+        if (!@isCallable(iteratorMethod))
             @throwTypeError("TypedArray.from requires that the property of the first argument, items[Symbol.iterator], when exists, be a function");
 
-        let accumulator = [];
+        var accumulator = [];
 
-        let k = 0;
-        let iterator = iteratorMethod.@call(items);
+        var count = 0;
+        var iterator = iteratorMethod.@call(items);
 
         // Since for-of loop once more looks up the @@iterator property of a given iterable,
         // it could be observable if the user defines a getter for @@iterator.
         // To avoid this situation, we define a wrapper object that @@iterator just returns a given iterator.
-        let wrapper = {};
-        wrapper.@iteratorSymbol = function() { return iterator; }
+        var wrapper = {};
+        wrapper.@@iterator = function() { return iterator; }
 
-        for (let value of wrapper) {
-            if (mapFn)
-                @putByValDirect(accumulator, k, thisArg === @undefined ? mapFn(value, k) : mapFn.@call(thisArg, value, k));
-            else
-                @putByValDirect(accumulator, k, value);
-            k++;
+        for (var value of wrapper) {
+            @putByValDirect(accumulator, count, value);
+            count++;
         }
 
-        let constructFunction = @getByIdDirectPrivate(this, "allocateTypedArray");
-        if (constructFunction === @undefined)
-            @throwTypeError("TypedArray.from requires its this argument subclass a TypedArray constructor");
+        var result = new this(count);
+        if (@typedArrayLength(result) < count)
+            @throwTypeError("TypedArray.from constructed typed array of insufficient length");
 
-        let result = constructFunction(k);
-
-        for (let i = 0; i < k; i++) 
-            result[i] = accumulator[i];
-
+        for (var k = 0; k < count; k++) {
+            var value = accumulator[k];
+            if (mapFn)
+                result[k] = thisArg === @undefined ? mapFn(value, k) : mapFn.@call(thisArg, value, k);
+            else
+                result[k] = value;
+        }
 
         return result;
     }
 
-    let arrayLikeLength = @toLength(arrayLike.length);
+    var arrayLikeLength = @toLength(arrayLike.length);
 
-    let constructFunction = @getByIdDirectPrivate(this, "allocateTypedArray");
-    if (constructFunction === @undefined)
-        @throwTypeError("this does not subclass a TypedArray constructor");
+    var result = new this(arrayLikeLength);
+    if (@typedArrayLength(result) < arrayLikeLength)
+        @throwTypeError("TypedArray.from constructed typed array of insufficient length");
 
-    let result = constructFunction(arrayLikeLength);
-
-    let k = 0;
-    while (k < arrayLikeLength) {
-        let value = arrayLike[k];
+    for (var k = 0; k < arrayLikeLength; k++) {
+        var value = arrayLike[k];
         if (mapFn)
             result[k] = thisArg === @undefined ? mapFn(value, k) : mapFn.@call(thisArg, value, k);
         else
             result[k] = value;
-        k++;
     }
 
     return result;
-}
-
-function allocateInt8Array(length)
-{
-    return new @Int8Array(length);
-}
-
-function allocateInt16Array(length)
-{
-    return new @Int16Array(length);    
-}
-
-function allocateInt32Array(length)
-{
-    return new @Int32Array(length);   
-}
-
-function allocateUint32Array(length)
-{
-    return new @Uint32Array(length);
-}
-
-function allocateUint16Array(length)
-{
-    return new @Uint16Array(length);   
-}
-
-function allocateUint8Array(length)
-{
-    return new @Uint8Array(length);   
-}
-
-function allocateUint8ClampedArray(length)
-{
-    return new @Uint8ClampedArray(length);
-}
-
-function allocateFloat32Array(length)
-{
-    return new @Float32Array(length);
-}
-
-function allocateFloat64Array(length)
-{
-    return new @Float64Array(length);
 }

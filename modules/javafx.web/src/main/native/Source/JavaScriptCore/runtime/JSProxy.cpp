@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2012, 2016-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,7 +27,7 @@
 #include "JSProxy.h"
 
 #include "JSGlobalObject.h"
-#include "JSCInlines.h"
+#include "StructureInlines.h"
 
 namespace JSC {
 
@@ -35,7 +35,8 @@ STATIC_ASSERT_IS_TRIVIALLY_DESTRUCTIBLE(JSProxy);
 
 const ClassInfo JSProxy::s_info = { "JSProxy", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSProxy) };
 
-void JSProxy::visitChildren(JSCell* cell, SlotVisitor& visitor)
+template<typename Visitor>
+void JSProxy::visitChildrenImpl(JSCell* cell, Visitor& visitor)
 {
     JSProxy* thisObject = jsCast<JSProxy*>(cell);
     ASSERT_GC_OBJECT_INHERITS(thisObject, info());
@@ -43,119 +44,84 @@ void JSProxy::visitChildren(JSCell* cell, SlotVisitor& visitor)
     visitor.append(thisObject->m_target);
 }
 
+DEFINE_VISIT_CHILDREN_WITH_MODIFIER(JS_EXPORT_PRIVATE, JSProxy);
+
 void JSProxy::setTarget(VM& vm, JSGlobalObject* globalObject)
 {
     m_target.set(vm, this, globalObject);
     setPrototypeDirect(vm, globalObject->getPrototypeDirect(vm));
 }
 
-String JSProxy::className(const JSObject* object, VM& vm)
-{
-    const JSProxy* thisObject = jsCast<const JSProxy*>(object);
-    return thisObject->target()->methodTable(vm)->className(thisObject->target(), vm);
-}
-
-String JSProxy::toStringName(const JSObject* object, ExecState* exec)
-{
-    const JSProxy* thisObject = jsCast<const JSProxy*>(object);
-    return thisObject->target()->methodTable(exec->vm())->toStringName(thisObject->target(), exec);
-}
-
-bool JSProxy::getOwnPropertySlot(JSObject* object, ExecState* exec, PropertyName propertyName, PropertySlot& slot)
+bool JSProxy::getOwnPropertySlot(JSObject* object, JSGlobalObject* globalObject, PropertyName propertyName, PropertySlot& slot)
 {
     JSProxy* thisObject = jsCast<JSProxy*>(object);
-    return thisObject->target()->methodTable(exec->vm())->getOwnPropertySlot(thisObject->target(), exec, propertyName, slot);
+    return thisObject->target()->methodTable(globalObject->vm())->getOwnPropertySlot(thisObject->target(), globalObject, propertyName, slot);
 }
 
-bool JSProxy::getOwnPropertySlotByIndex(JSObject* object, ExecState* exec, unsigned propertyName, PropertySlot& slot)
+bool JSProxy::getOwnPropertySlotByIndex(JSObject* object, JSGlobalObject* globalObject, unsigned propertyName, PropertySlot& slot)
 {
     JSProxy* thisObject = jsCast<JSProxy*>(object);
-    return thisObject->target()->methodTable(exec->vm())->getOwnPropertySlotByIndex(thisObject->target(), exec, propertyName, slot);
+    return thisObject->target()->methodTable(globalObject->vm())->getOwnPropertySlotByIndex(thisObject->target(), globalObject, propertyName, slot);
 }
 
-bool JSProxy::put(JSCell* cell, ExecState* exec, PropertyName propertyName, JSValue value, PutPropertySlot& slot)
+bool JSProxy::put(JSCell* cell, JSGlobalObject* globalObject, PropertyName propertyName, JSValue value, PutPropertySlot& slot)
 {
     JSProxy* thisObject = jsCast<JSProxy*>(cell);
-    return thisObject->target()->methodTable(exec->vm())->put(thisObject->target(), exec, propertyName, value, slot);
+    return thisObject->target()->methodTable(globalObject->vm())->put(thisObject->target(), globalObject, propertyName, value, slot);
 }
 
-bool JSProxy::putByIndex(JSCell* cell, ExecState* exec, unsigned propertyName, JSValue value, bool shouldThrow)
+bool JSProxy::putByIndex(JSCell* cell, JSGlobalObject* globalObject, unsigned propertyName, JSValue value, bool shouldThrow)
 {
     JSProxy* thisObject = jsCast<JSProxy*>(cell);
-    return thisObject->target()->methodTable(exec->vm())->putByIndex(thisObject->target(), exec, propertyName, value, shouldThrow);
+    return thisObject->target()->methodTable(globalObject->vm())->putByIndex(thisObject->target(), globalObject, propertyName, value, shouldThrow);
 }
 
-bool JSProxy::defineOwnProperty(JSObject* object, ExecState* exec, PropertyName propertyName, const PropertyDescriptor& descriptor, bool shouldThrow)
+bool JSProxy::defineOwnProperty(JSObject* object, JSGlobalObject* globalObject, PropertyName propertyName, const PropertyDescriptor& descriptor, bool shouldThrow)
 {
     JSProxy* thisObject = jsCast<JSProxy*>(object);
-    return thisObject->target()->methodTable(exec->vm())->defineOwnProperty(thisObject->target(), exec, propertyName, descriptor, shouldThrow);
+    return thisObject->target()->methodTable(globalObject->vm())->defineOwnProperty(thisObject->target(), globalObject, propertyName, descriptor, shouldThrow);
 }
 
-bool JSProxy::deleteProperty(JSCell* cell, ExecState* exec, PropertyName propertyName)
+bool JSProxy::deleteProperty(JSCell* cell, JSGlobalObject* globalObject, PropertyName propertyName, DeletePropertySlot& slot)
 {
     JSProxy* thisObject = jsCast<JSProxy*>(cell);
-    return thisObject->target()->methodTable(exec->vm())->deleteProperty(thisObject->target(), exec, propertyName);
+    return thisObject->target()->methodTable(globalObject->vm())->deleteProperty(thisObject->target(), globalObject, propertyName, slot);
 }
 
-bool JSProxy::isExtensible(JSObject* object, ExecState* exec)
+bool JSProxy::isExtensible(JSObject* object, JSGlobalObject* globalObject)
 {
     JSProxy* thisObject = jsCast<JSProxy*>(object);
-    return thisObject->target()->methodTable(exec->vm())->isExtensible(thisObject->target(), exec);
+    return thisObject->target()->methodTable(globalObject->vm())->isExtensible(thisObject->target(), globalObject);
 }
 
-bool JSProxy::preventExtensions(JSObject* object, ExecState* exec)
+bool JSProxy::preventExtensions(JSObject* object, JSGlobalObject* globalObject)
 {
     JSProxy* thisObject = jsCast<JSProxy*>(object);
-    return thisObject->target()->methodTable(exec->vm())->preventExtensions(thisObject->target(), exec);
+    return thisObject->target()->methodTable(globalObject->vm())->preventExtensions(thisObject->target(), globalObject);
 }
 
-bool JSProxy::deletePropertyByIndex(JSCell* cell, ExecState* exec, unsigned propertyName)
+bool JSProxy::deletePropertyByIndex(JSCell* cell, JSGlobalObject* globalObject, unsigned propertyName)
 {
     JSProxy* thisObject = jsCast<JSProxy*>(cell);
-    return thisObject->target()->methodTable(exec->vm())->deletePropertyByIndex(thisObject->target(), exec, propertyName);
+    return thisObject->target()->methodTable(globalObject->vm())->deletePropertyByIndex(thisObject->target(), globalObject, propertyName);
 }
 
-void JSProxy::getPropertyNames(JSObject* object, ExecState* exec, PropertyNameArray& propertyNames, EnumerationMode mode)
+void JSProxy::getOwnPropertyNames(JSObject* object, JSGlobalObject* globalObject, PropertyNameArray& propertyNames, DontEnumPropertiesMode mode)
 {
     JSProxy* thisObject = jsCast<JSProxy*>(object);
-    thisObject->target()->methodTable(exec->vm())->getPropertyNames(thisObject->target(), exec, propertyNames, mode);
+    thisObject->target()->methodTable(globalObject->vm())->getOwnPropertyNames(thisObject->target(), globalObject, propertyNames, mode);
 }
 
-uint32_t JSProxy::getEnumerableLength(ExecState* exec, JSObject* object)
+bool JSProxy::setPrototype(JSObject* object, JSGlobalObject* globalObject, JSValue prototype, bool shouldThrowIfCantSet)
 {
     JSProxy* thisObject = jsCast<JSProxy*>(object);
-    return thisObject->target()->methodTable(exec->vm())->getEnumerableLength(exec, thisObject->target());
+    return thisObject->target()->methodTable(globalObject->vm())->setPrototype(thisObject->target(), globalObject, prototype, shouldThrowIfCantSet);
 }
 
-void JSProxy::getStructurePropertyNames(JSObject*, ExecState*, PropertyNameArray&, EnumerationMode)
-{
-    // Skip the structure loop, since it is invalid for proxies.
-}
-
-void JSProxy::getGenericPropertyNames(JSObject* object, ExecState* exec, PropertyNameArray& propertyNames, EnumerationMode mode)
+JSValue JSProxy::getPrototype(JSObject* object, JSGlobalObject* globalObject)
 {
     JSProxy* thisObject = jsCast<JSProxy*>(object);
-    // Get *all* of the property names, not just the generic ones, since we skipped the structure
-    // ones above.
-    thisObject->target()->methodTable(exec->vm())->getPropertyNames(thisObject->target(), exec, propertyNames, mode);
-}
-
-void JSProxy::getOwnPropertyNames(JSObject* object, ExecState* exec, PropertyNameArray& propertyNames, EnumerationMode mode)
-{
-    JSProxy* thisObject = jsCast<JSProxy*>(object);
-    thisObject->target()->methodTable(exec->vm())->getOwnPropertyNames(thisObject->target(), exec, propertyNames, mode);
-}
-
-bool JSProxy::setPrototype(JSObject* object, ExecState* exec, JSValue prototype, bool shouldThrowIfCantSet)
-{
-    JSProxy* thisObject = jsCast<JSProxy*>(object);
-    return thisObject->target()->methodTable(exec->vm())->setPrototype(thisObject->target(), exec, prototype, shouldThrowIfCantSet);
-}
-
-JSValue JSProxy::getPrototype(JSObject* object, ExecState* exec)
-{
-    JSProxy* thisObject = jsCast<JSProxy*>(object);
-    return thisObject->target()->methodTable(exec->vm())->getPrototype(thisObject->target(), exec);
+    return thisObject->target()->methodTable(globalObject->vm())->getPrototype(thisObject->target(), globalObject);
 }
 
 } // namespace JSC

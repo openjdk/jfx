@@ -382,7 +382,7 @@ if (compileNativeText) {
         "-I$freetypeDir/include", "-I$freetypeDir/include/freetype2"].flatten()
 
     ANDROID.fontNativeFreetype.linkFlags =
-IS_STATIC_BUILD ? [linkFlags].flatten() : 
+IS_STATIC_BUILD ? [linkFlags].flatten() :
         [linkFlags, "-llog",
          "-L$freetypeDir/lib", "$freetypeDir/lib/libfreetype.a"].flatten()
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -37,6 +37,7 @@ import javafx.collections.MapChangeListener;
 import javafx.collections.ObservableList;
 import javafx.collections.ObservableMap;
 import javafx.collections.WeakListChangeListener;
+import javafx.collections.WeakMapChangeListener;
 import javafx.event.EventHandler;
 import javafx.geometry.Orientation;
 import javafx.scene.AccessibleAction;
@@ -67,7 +68,7 @@ import com.sun.javafx.scene.control.skin.resources.ControlResources;
  */
 public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListCell<T>> {
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Static Fields                                                           *
      *                                                                         *
@@ -78,12 +79,13 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListCell<
     // is set to true. This is done in order to make ListView functional
     // on embedded systems with touch screens which do not generate scroll
     // events for touch drag gestures.
+    @SuppressWarnings("removal")
     private static final boolean IS_PANNABLE =
             AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> Boolean.getBoolean("javafx.scene.control.skin.ListViewSkin.pannable"));
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Internal Fields                                                         *
      *                                                                         *
@@ -104,7 +106,6 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListCell<
     private Node placeholderNode;
 
     private ObservableList<T> listViewItems;
-    private final InvalidationListener itemsChangeListener = observable -> updateListViewItems();
 
     private boolean needCellsRebuilt = true;
     private boolean needCellsReconfigured = false;
@@ -114,7 +115,7 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListCell<
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Listeners                                                               *
      *                                                                         *
@@ -129,7 +130,10 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListCell<
         }
     };
 
-    private final ListChangeListener<T> listViewItemsListener = new ListChangeListener<T>() {
+    private WeakMapChangeListener<Object, Object> weakPropertiesMapListener =
+            new WeakMapChangeListener<>(propertiesMapListener);
+
+    private final ListChangeListener<T> listViewItemsListener = new ListChangeListener<>() {
         @Override public void onChanged(Change<? extends T> c) {
             while (c.next()) {
                 if (c.wasReplaced()) {
@@ -163,11 +167,15 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListCell<
     };
 
     private final WeakListChangeListener<T> weakListViewItemsListener =
-            new WeakListChangeListener<T>(listViewItemsListener);
+            new WeakListChangeListener<>(listViewItemsListener);
 
 
+    private final InvalidationListener itemsChangeListener = observable -> updateListViewItems();
 
-    /***************************************************************************
+    private WeakInvalidationListener
+                weakItemsChangeListener = new WeakInvalidationListener(itemsChangeListener);
+
+    /* *************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
@@ -209,13 +217,6 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListCell<
         getChildren().add(flow);
 
         EventHandler<MouseEvent> ml = event -> {
-            // RT-15127: cancel editing on scroll. This is a bit extreme
-            // (we are cancelling editing on touching the scrollbars).
-            // This can be improved at a later date.
-            if (control.getEditingIndex() > -1) {
-                control.edit(-1);
-            }
-
             // This ensures that the list maintains the focus, even when the vbar
             // and hbar controls inside the flow are clicked. Without this, the
             // focus border will not be shown when the user interacts with the
@@ -230,11 +231,11 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListCell<
 
         updateItemCount();
 
-        control.itemsProperty().addListener(new WeakInvalidationListener(itemsChangeListener));
+        control.itemsProperty().addListener(weakItemsChangeListener);
 
         final ObservableMap<Object, Object> properties = control.getProperties();
         properties.remove(Properties.RECREATE);
-        properties.addListener(propertiesMapListener);
+        properties.addListener(weakPropertiesMapListener);
 
         // Register listeners
         registerChangeListener(control.itemsProperty(), o -> updateListViewItems());
@@ -255,7 +256,7 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListCell<
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Public API                                                              *
      *                                                                         *
@@ -263,6 +264,15 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListCell<
 
     /** {@inheritDoc} */
     @Override public void dispose() {
+        if (getSkinnable() == null) return;
+        // listener cleanup fixes side-effects (NPE on refresh, setItems, modifyItems)
+        getSkinnable().getProperties().removeListener(weakPropertiesMapListener);
+        getSkinnable().itemsProperty().removeListener(weakItemsChangeListener);
+        if (listViewItems != null) {
+            listViewItems.removeListener(weakListViewItemsListener);
+            listViewItems = null;
+        }
+        getChildren().remove(flow);
         super.dispose();
 
         if (behavior != null) {
@@ -333,10 +343,10 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListCell<
         flow.setCellCount(newCount);
 
         updatePlaceholderRegionVisibility();
-        if (newCount != oldCount) {
-            requestRebuildCells();
-        } else {
+        if (newCount == oldCount) {
             needCellsReconfigured = true;
+        } else if (oldCount == 0) {
+            requestRebuildCells();
         }
     }
 
@@ -345,6 +355,14 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListCell<
         switch (attribute) {
             case FOCUS_ITEM: {
                 FocusModel<?> fm = getSkinnable().getFocusModel();
+                if (fm == null) {
+                    if (placeholderRegion != null && placeholderRegion.isVisible()) {
+                        return placeholderRegion.getChildren().get(0);
+                    } else {
+                        return null;
+                    }
+                }
+
                 int focusedIndex = fm.getFocusedIndex();
                 if (focusedIndex == -1) {
                     if (placeholderRegion != null && placeholderRegion.isVisible()) {
@@ -369,6 +387,10 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListCell<
             }
             case SELECTED_ITEMS: {
                 MultipleSelectionModel<T> sm = getSkinnable().getSelectionModel();
+                if (sm == null) {
+                    return FXCollections.observableArrayList();
+                }
+
                 ObservableList<Integer> indices = sm.getSelectedIndices();
                 List<Node> selection = new ArrayList<>(indices.size());
                 for (int i : indices) {
@@ -419,7 +441,7 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListCell<
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Private implementation                                                  *
      *                                                                         *
@@ -482,7 +504,7 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListCell<
     }
 
     private static <T> ListCell<T> createDefaultCellImpl() {
-        return new ListCell<T>() {
+        return new ListCell<>() {
             @Override public void updateItem(T item, boolean empty) {
                 super.updateItem(item, empty);
 
@@ -570,12 +592,12 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListCell<
      * if this is a horizontal container, then the scrolling will be to the right.
      */
     private int onScrollPageDown(boolean isFocusDriven) {
-        ListCell<T> lastVisibleCell = flow.getLastVisibleCellWithinViewport();
-        if (lastVisibleCell == null) return -1;
-
         final SelectionModel<T> sm = getSkinnable().getSelectionModel();
         final FocusModel<T> fm = getSkinnable().getFocusModel();
         if (sm == null || fm == null) return -1;
+
+        ListCell<T> lastVisibleCell = flow.getLastVisibleCellWithinViewport();
+        if (lastVisibleCell == null) return -1;
 
         int lastVisibleCellIndex = lastVisibleCell.getIndex();
 
@@ -616,12 +638,12 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListCell<
      * if this is a horizontal container, then the scrolling will be to the left.
      */
     private int onScrollPageUp(boolean isFocusDriven) {
-        ListCell<T> firstVisibleCell = flow.getFirstVisibleCellWithinViewport();
-        if (firstVisibleCell == null) return -1;
-
         final SelectionModel<T> sm = getSkinnable().getSelectionModel();
         final FocusModel<T> fm = getSkinnable().getFocusModel();
         if (sm == null || fm == null) return -1;
+
+        ListCell<T> firstVisibleCell = flow.getFirstVisibleCellWithinViewport();
+        if (firstVisibleCell == null) return -1;
 
         int firstVisibleCellIndex = firstVisibleCell.getIndex();
 

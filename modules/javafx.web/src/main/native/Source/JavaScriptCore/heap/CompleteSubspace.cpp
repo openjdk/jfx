@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,16 +28,14 @@
 
 #include "AlignedMemoryAllocator.h"
 #include "AllocatorInlines.h"
-#include "BlockDirectoryInlines.h"
-#include "JSCInlines.h"
+#include "JSCellInlines.h"
 #include "LocalAllocatorInlines.h"
-#include "MarkedBlockInlines.h"
-#include "PreventCollectionScope.h"
+#include "MarkedSpaceInlines.h"
 #include "SubspaceInlines.h"
 
 namespace JSC {
 
-CompleteSubspace::CompleteSubspace(CString name, Heap& heap, HeapCellType* heapCellType, AlignedMemoryAllocator* alignedMemoryAllocator)
+CompleteSubspace::CompleteSubspace(CString name, Heap& heap, const HeapCellType& heapCellType, AlignedMemoryAllocator* alignedMemoryAllocator)
     : Subspace(name, heap)
 {
     initialize(heapCellType, alignedMemoryAllocator);
@@ -47,14 +45,9 @@ CompleteSubspace::~CompleteSubspace()
 {
 }
 
-Allocator CompleteSubspace::allocatorFor(size_t size, AllocatorForMode mode)
+Allocator CompleteSubspace::allocatorForNonInline(size_t size, AllocatorForMode mode)
 {
-    return allocatorForNonVirtual(size, mode);
-}
-
-void* CompleteSubspace::allocate(VM& vm, size_t size, GCDeferralContext* deferralContext, AllocationFailureMode failureMode)
-{
-    return allocateNonVirtual(vm, size, deferralContext, failureMode);
+    return allocatorFor(size, mode);
 }
 
 Allocator CompleteSubspace::allocatorForSlow(size_t size)
@@ -72,15 +65,14 @@ Allocator CompleteSubspace::allocatorForSlow(size_t size)
     // prevent simultaneously BlockDirectory creations from multiple threads. This code ensures
     // that any "forEachAllocator" traversals will only see this allocator after it's initialized
     // enough: it will have
-    auto locker = holdLock(m_space.directoryLock());
+    Locker locker { m_space.directoryLock() };
     if (Allocator allocator = m_allocatorForSizeStep[index])
         return allocator;
 
     if (false)
         dataLog("Creating BlockDirectory/LocalAllocator for ", m_name, ", ", attributes(), ", ", sizeClass, ".\n");
 
-    std::unique_ptr<BlockDirectory> uniqueDirectory =
-        makeUnique<BlockDirectory>(m_space.heap(), sizeClass);
+    std::unique_ptr<BlockDirectory> uniqueDirectory = makeUnique<BlockDirectory>(sizeClass);
     BlockDirectory* directory = uniqueDirectory.get();
     m_directories.append(WTFMove(uniqueDirectory));
 
@@ -106,7 +98,7 @@ Allocator CompleteSubspace::allocatorForSlow(size_t size)
     }
 
     directory->setNextDirectoryInSubspace(m_firstDirectory);
-    m_alignedMemoryAllocator->registerDirectory(directory);
+    m_alignedMemoryAllocator->registerDirectory(m_space.heap(), directory);
     WTF::storeStoreFence();
     m_firstDirectory = directory;
     return allocator;
@@ -122,15 +114,15 @@ void* CompleteSubspace::allocateSlow(VM& vm, size_t size, GCDeferralContext* def
 
 void* CompleteSubspace::tryAllocateSlow(VM& vm, size_t size, GCDeferralContext* deferralContext)
 {
-    if (validateDFGDoesGC)
-        RELEASE_ASSERT(vm.heap.expectDoesGC());
+    if constexpr (validateDFGDoesGC)
+        vm.verifyCanGC();
 
     sanitizeStackForVM(vm);
 
-    if (Allocator allocator = allocatorFor(size, AllocatorForMode::EnsureAllocator))
-        return allocator.allocate(deferralContext, AllocationFailureMode::ReturnNull);
+    if (Allocator allocator = allocatorForNonInline(size, AllocatorForMode::EnsureAllocator))
+        return allocator.allocate(vm.heap, deferralContext, AllocationFailureMode::ReturnNull);
 
-    if (size <= Options::largeAllocationCutoff()
+    if (size <= Options::preciseAllocationCutoff()
         && size <= MarkedSpace::largeCutoff) {
         dataLog("FATAL: attampting to allocate small object using large allocation.\n");
         dataLog("Requested allocation size: ", size, "\n");
@@ -140,29 +132,31 @@ void* CompleteSubspace::tryAllocateSlow(VM& vm, size_t size, GCDeferralContext* 
     vm.heap.collectIfNecessaryOrDefer(deferralContext);
 
     size = WTF::roundUpToMultipleOf<MarkedSpace::sizeStep>(size);
-    LargeAllocation* allocation = LargeAllocation::tryCreate(vm.heap, size, this, m_space.m_largeAllocations.size());
+    PreciseAllocation* allocation = PreciseAllocation::tryCreate(vm.heap, size, this, m_space.m_preciseAllocations.size());
     if (!allocation)
         return nullptr;
 
-    m_space.m_largeAllocations.append(allocation);
-    ASSERT(allocation->indexInSpace() == m_space.m_largeAllocations.size() - 1);
+    m_space.m_preciseAllocations.append(allocation);
+    if (auto* set = m_space.preciseAllocationSet())
+        set->add(allocation->cell());
+    ASSERT(allocation->indexInSpace() == m_space.m_preciseAllocations.size() - 1);
     vm.heap.didAllocate(size);
     m_space.m_capacity += size;
 
-    m_largeAllocations.append(allocation);
+    m_preciseAllocations.append(allocation);
 
     return allocation->cell();
 }
 
-void* CompleteSubspace::reallocateLargeAllocationNonVirtual(VM& vm, HeapCell* oldCell, size_t size, GCDeferralContext* deferralContext, AllocationFailureMode failureMode)
+void* CompleteSubspace::reallocatePreciseAllocationNonVirtual(VM& vm, HeapCell* oldCell, size_t size, GCDeferralContext* deferralContext, AllocationFailureMode failureMode)
 {
-    if (validateDFGDoesGC)
-        RELEASE_ASSERT(vm.heap.expectDoesGC());
+    if constexpr (validateDFGDoesGC)
+        vm.verifyCanGC();
 
     // The following conditions are met in Butterfly for example.
-    ASSERT(oldCell->isLargeAllocation());
+    ASSERT(oldCell->isPreciseAllocation());
 
-    LargeAllocation* oldAllocation = &oldCell->largeAllocation();
+    PreciseAllocation* oldAllocation = &oldCell->preciseAllocation();
     ASSERT(oldAllocation->cellSize() <= size);
     ASSERT(oldAllocation->weakSet().isTriviallyDestructible());
     ASSERT(oldAllocation->attributes().destruction == DoesNotNeedDestruction);
@@ -171,7 +165,7 @@ void* CompleteSubspace::reallocateLargeAllocationNonVirtual(VM& vm, HeapCell* ol
 
     sanitizeStackForVM(vm);
 
-    if (size <= Options::largeAllocationCutoff()
+    if (size <= Options::preciseAllocationCutoff()
         && size <= MarkedSpace::largeCutoff) {
         dataLog("FATAL: attampting to allocate small object using large allocation.\n");
         dataLog("Requested allocation size: ", size, "\n");
@@ -186,19 +180,27 @@ void* CompleteSubspace::reallocateLargeAllocationNonVirtual(VM& vm, HeapCell* ol
     if (oldAllocation->isOnList())
         oldAllocation->remove();
 
-    LargeAllocation* allocation = oldAllocation->tryReallocate(size, this);
+    PreciseAllocation* allocation = oldAllocation->tryReallocate(size, this);
     if (!allocation) {
         RELEASE_ASSERT(failureMode != AllocationFailureMode::Assert);
-        m_largeAllocations.append(oldAllocation);
+        m_preciseAllocations.append(oldAllocation);
         return nullptr;
     }
     ASSERT(oldIndexInSpace == allocation->indexInSpace());
 
-    m_space.m_largeAllocations[oldIndexInSpace] = allocation;
+    // If reallocation changes the address, we should update HashSet.
+    if (oldAllocation != allocation) {
+        if (auto* set = m_space.preciseAllocationSet()) {
+            set->remove(oldAllocation->cell());
+            set->add(allocation->cell());
+        }
+    }
+
+    m_space.m_preciseAllocations[oldIndexInSpace] = allocation;
     vm.heap.didAllocate(difference);
     m_space.m_capacity += difference;
 
-    m_largeAllocations.append(allocation);
+    m_preciseAllocations.append(allocation);
 
     return allocation->cell();
 }

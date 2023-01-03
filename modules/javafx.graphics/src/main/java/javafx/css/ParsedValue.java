@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -47,8 +47,9 @@ public class ParsedValue<V, T> {
     final protected V value;
 
     /**
-     * @return The CSS property value as created by the parser, which may be null
+     * Gets the CSS property value as created by the parser, which may be null
      * or otherwise incomprehensible.
+     * @return the CSS property value
      */
     public final V getValue() { return value; }
 

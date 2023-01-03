@@ -35,21 +35,6 @@
 #include <vector>
 #include <windows.h>
 
-#if defined _M_IX86
-#define PROCESSORARCHITECTURE "x86"
-#elif defined _M_IA64
-#define PROCESSORARCHITECTURE "ia64"
-#elif defined _M_X64
-#define PROCESSORARCHITECTURE "amd64"
-#else
-#define PROCESSORARCHITECTURE "*"
-#endif
-
-#pragma comment(linker, "/manifestdependency:\"type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' processorArchitecture='" PROCESSORARCHITECTURE "' publicKeyToken='6595b64144ccf1df' language='*'\"")
-#if defined(_MSC_VER) && (_MSC_VER >= 1600) && !defined(WIN_CAIRO)
-#pragma comment(linker, "/manifestdependency:\"type='win32' name='Microsoft.VC80.CRT' version='8.0.50727.6195' processorArchitecture='" PROCESSORARCHITECTURE "' publicKeyToken='1fc8b3b9a1e18e3b' language='*'\"")
-#endif
-
 static void enableTerminationOnHeapCorruption()
 {
     HEAP_INFORMATION_CLASS heapEnableTerminationOnCorruption = static_cast<HEAP_INFORMATION_CLASS>(1);
@@ -97,6 +82,11 @@ static std::wstring appleApplicationSupportDirectory()
     return applePathFromRegistry(L"SOFTWARE\\Apple Inc.\\Apple Application Support", L"InstallDir");
 }
 
+static std::wstring iTunesDirectory()
+{
+    return applePathFromRegistry(L"SOFTWARE\\Apple Computer, Inc.\\iTunes\\", L"InstallDir");
+}
+
 static bool prependPath(const std::wstring& directoryToPrepend)
 {
     std::wstring pathVariable = L"PATH";
@@ -109,7 +99,11 @@ static bool prependPath(const std::wstring& directoryToPrepend)
 static int fatalError(const std::wstring& programName, const std::wstring& message)
 {
     std::wstring caption = programName + L" can't open.";
+#if USE_CONSOLE_ENTRY_POINT
+    fwprintf(stderr, L"%s\n%s\n", caption.c_str(), message.c_str());
+#else
     ::MessageBoxW(0, message.c_str(), caption.c_str(), MB_ICONERROR);
+#endif
     return 1;
 }
 
@@ -139,18 +133,23 @@ static bool modifyPath(const std::wstring& programName)
     return true;
 
 #else
-
-    const std::wstring& pathPrefix = appleApplicationSupportDirectory();
-
-    if (!directoryExists(pathPrefix)) {
-        fatalError(programName, L"Failed to determine path to AAS directory.");
-        return false;
-    }
-
-    if (prependPath(pathPrefix))
+    auto modifyPathWith = [&] (const std::wstring& pathPrefix) {
+        if (!prependPath(pathPrefix)) {
+            fatalError(programName, L"Failed to modify PATH environment variable.");
+            return false;
+        }
         return true;
+    };
 
-    fatalError(programName, L"Failed to modify PATH environment variable.");
+    const std::wstring& applicationSupportPathPrefix = appleApplicationSupportDirectory();
+    if (directoryExists(applicationSupportPathPrefix))
+        return modifyPathWith(applicationSupportPathPrefix);
+
+    const std::wstring& iTunesPathPrefix = iTunesDirectory();
+    if (directoryExists(iTunesPathPrefix))
+        return modifyPathWith(iTunesPathPrefix);
+
+    fatalError(programName, L"Couldn't find path to Apple Application Support (AAS) or iTunes via the registry.  Do you have iTunes installed?");
     return false;
 #endif
 }

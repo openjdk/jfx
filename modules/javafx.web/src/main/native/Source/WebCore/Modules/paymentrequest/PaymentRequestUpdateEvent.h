@@ -36,6 +36,7 @@ class DOMPromise;
 struct PaymentRequestUpdateEventInit;
 
 class PaymentRequestUpdateEvent : public Event {
+    WTF_MAKE_ISO_ALLOCATED(PaymentRequestUpdateEvent);
 public:
     template <typename... Args> static Ref<PaymentRequestUpdateEvent> create(Args&&... args)
     {
@@ -43,6 +44,8 @@ public:
     }
     ~PaymentRequestUpdateEvent();
     ExceptionOr<void> updateWith(Ref<DOMPromise>&&);
+
+    bool didCallUpdateWith() const { return m_waitForUpdate; }
 
 protected:
     explicit PaymentRequestUpdateEvent(const AtomString& type);

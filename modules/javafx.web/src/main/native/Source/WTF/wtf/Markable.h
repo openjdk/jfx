@@ -34,8 +34,8 @@
 
 #pragma once
 
+#include <optional>
 #include <type_traits>
-#include <wtf/Optional.h>
 #include <wtf/StdLibExtras.h>
 
 namespace WTF {
@@ -89,7 +89,7 @@ public:
         : m_value(Traits::emptyValue())
     { }
 
-    constexpr Markable(WTF::nullopt_t)
+    constexpr Markable(std::nullopt_t)
         : Markable()
     { }
 
@@ -106,11 +106,11 @@ public:
         : m_value(std::forward<Args>(args)...)
     { }
 
-    constexpr Markable(const Optional<T>& value)
+    constexpr Markable(const std::optional<T>& value)
         : m_value(bool(value) ? *value : Traits::emptyValue())
     { }
 
-    constexpr Markable(Optional<T>&& value)
+    constexpr Markable(std::optional<T>&& value)
         : m_value(bool(value) ? WTFMove(*value) : Traits::emptyValue())
     { }
 
@@ -128,23 +128,43 @@ public:
     constexpr const T& operator*() const& { return m_value; }
     constexpr T& operator*() & { return m_value; }
 
-    operator Optional<T>() &&
+    operator std::optional<T>() &&
     {
         if (bool(*this))
             return WTFMove(m_value);
-        return WTF::nullopt;
+        return std::nullopt;
     }
 
-    operator Optional<T>() const&
+    operator std::optional<T>() const&
     {
         if (bool(*this))
             return m_value;
-        return WTF::nullopt;
+        return std::nullopt;
+    }
+
+    std::optional<T> asOptional() const
+    {
+        return std::optional<T>(*this);
     }
 
 private:
     T m_value;
 };
+
+template <typename T, typename Traits> constexpr bool operator==(const Markable<T, Traits>& x, const Markable<T, Traits>& y)
+{
+    if (bool(x) != bool(y))
+        return false;
+    if (!bool(x))
+        return true;
+    return x.value() == y.value();
+}
+template <typename T, typename Traits> constexpr bool operator==(const Markable<T, Traits>& x, const T& v) { return bool(x) && x.value() == v; }
+template <typename T, typename Traits> constexpr bool operator==(const T& v, const Markable<T, Traits>& x) { return bool(x) && v == x.value(); }
+
+template <typename T, typename Traits> constexpr bool operator!=(const Markable<T, Traits>& x, const Markable<T, Traits>& y) { return !(x == y); }
+template <typename T, typename Traits> constexpr bool operator!=(const Markable<T, Traits>& x, const T& v) { return !(x == v); }
+template <typename T, typename Traits> constexpr bool operator!=(const T& v, const Markable<T, Traits>& x) { return !(v == x); }
 
 } // namespace WTF
 

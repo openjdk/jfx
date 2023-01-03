@@ -39,82 +39,75 @@ enum class CloneMode {
     Partial,
 };
 
-EncodedJSValue JSC_HOST_CALL cloneArrayBufferImpl(ExecState*, CloneMode);
-
-EncodedJSValue JSC_HOST_CALL cloneArrayBufferImpl(ExecState* state, CloneMode mode)
+static EncodedJSValue cloneArrayBufferImpl(JSGlobalObject* lexicalGlobalObject, CallFrame* callFrame, CloneMode mode)
 {
-    ASSERT(state);
-    ASSERT(state->argumentCount());
-    ASSERT(state->lexicalGlobalObject());
+    VM& vm = lexicalGlobalObject->vm();
 
-    VM& vm = state->vm();
-    auto* buffer = toUnsharedArrayBuffer(vm, state->uncheckedArgument(0));
+    ASSERT(lexicalGlobalObject);
+    ASSERT(callFrame->argumentCount());
+    ASSERT(callFrame->lexicalGlobalObject(vm) == lexicalGlobalObject);
+
+    auto* buffer = toUnsharedArrayBuffer(vm, callFrame->uncheckedArgument(0));
     if (!buffer) {
         auto scope = DECLARE_THROW_SCOPE(vm);
-        throwDataCloneError(*state, scope);
+        throwDataCloneError(*lexicalGlobalObject, scope);
         return { };
     }
     if (mode == CloneMode::Partial) {
-        ASSERT(state->argumentCount() == 3);
-        int srcByteOffset = static_cast<int>(state->uncheckedArgument(1).toNumber(state));
-        int srcLength = static_cast<int>(state->uncheckedArgument(2).toNumber(state));
-        return JSValue::encode(JSArrayBuffer::create(state->vm(), state->lexicalGlobalObject()->arrayBufferStructure(ArrayBufferSharingMode::Default), buffer->slice(srcByteOffset, srcByteOffset + srcLength)));
+        ASSERT(callFrame->argumentCount() == 3);
+        int srcByteOffset = static_cast<int>(callFrame->uncheckedArgument(1).toNumber(lexicalGlobalObject));
+        int srcLength = static_cast<int>(callFrame->uncheckedArgument(2).toNumber(lexicalGlobalObject));
+        return JSValue::encode(JSArrayBuffer::create(lexicalGlobalObject->vm(), lexicalGlobalObject->arrayBufferStructure(ArrayBufferSharingMode::Default), buffer->slice(srcByteOffset, srcByteOffset + srcLength)));
     }
-    return JSValue::encode(JSArrayBuffer::create(state->vm(), state->lexicalGlobalObject()->arrayBufferStructure(ArrayBufferSharingMode::Default), ArrayBuffer::tryCreate(buffer->data(), buffer->byteLength())));
+    return JSValue::encode(JSArrayBuffer::create(lexicalGlobalObject->vm(), lexicalGlobalObject->arrayBufferStructure(ArrayBufferSharingMode::Default), ArrayBuffer::tryCreate(buffer->data(), buffer->byteLength())));
 }
 
-EncodedJSValue JSC_HOST_CALL cloneArrayBuffer(ExecState* state)
+JSC_DEFINE_HOST_FUNCTION(cloneArrayBuffer, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
-    return cloneArrayBufferImpl(state, CloneMode::Partial);
+    return cloneArrayBufferImpl(globalObject, callFrame, CloneMode::Partial);
 }
 
-EncodedJSValue JSC_HOST_CALL structuredCloneArrayBuffer(ExecState* state)
+JSC_DEFINE_HOST_FUNCTION(structuredCloneForStream, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
-    return cloneArrayBufferImpl(state, CloneMode::Full);
-}
+    ASSERT(callFrame);
+    ASSERT(callFrame->argumentCount());
 
-EncodedJSValue JSC_HOST_CALL structuredCloneArrayBufferView(ExecState* state)
-{
-    ASSERT(state);
-    ASSERT(state->argumentCount());
+    VM& vm = globalObject->vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
 
-    JSValue value = state->uncheckedArgument(0);
-    VM& vm = state->vm();
-    auto* bufferView = jsDynamicCast<JSArrayBufferView*>(vm, value);
-    ASSERT(bufferView);
+    JSValue value = callFrame->uncheckedArgument(0);
 
-    auto* buffer = bufferView->unsharedBuffer();
-    if (!buffer) {
-        auto scope = DECLARE_THROW_SCOPE(vm);
-        throwDataCloneError(*state, scope);
-        return { };
+    if (value.inherits<JSArrayBuffer>(vm))
+        RELEASE_AND_RETURN(scope, cloneArrayBufferImpl(globalObject, callFrame, CloneMode::Full));
+
+    if (value.inherits<JSArrayBufferView>(vm)) {
+        auto* bufferView = jsCast<JSArrayBufferView*>(value);
+        ASSERT(bufferView);
+
+        auto* buffer = bufferView->unsharedBuffer();
+        if (!buffer) {
+            throwDataCloneError(*globalObject, scope);
+            return { };
+        }
+        auto bufferClone = ArrayBuffer::tryCreate(buffer->data(), buffer->byteLength());
+        Structure* structure = bufferView->structure(vm);
+
+#define CLONE_TYPED_ARRAY(name) \
+        do { \
+            if (bufferView->inherits<JS##name##Array>(vm)) \
+                RELEASE_AND_RETURN(scope, JSValue::encode(JS##name##Array::create(globalObject, structure, WTFMove(bufferClone), bufferView->byteOffset(), bufferView->length()))); \
+        } while (0);
+
+        FOR_EACH_TYPED_ARRAY_TYPE_EXCLUDING_DATA_VIEW(CLONE_TYPED_ARRAY)
+
+#undef CLONE_TYPED_ARRAY
+
+        if (value.inherits<JSDataView>(vm))
+            RELEASE_AND_RETURN(scope, JSValue::encode(JSDataView::create(globalObject, structure, WTFMove(bufferClone), bufferView->byteOffset(), bufferView->length())));
     }
-    auto bufferClone = ArrayBuffer::tryCreate(buffer->data(), buffer->byteLength());
-    Structure* structure = bufferView->structure(vm);
 
-    if (jsDynamicCast<JSInt8Array*>(vm, value))
-        return JSValue::encode(JSInt8Array::create(state, structure, WTFMove(bufferClone), bufferView->byteOffset(), bufferView->length()));
-    if (jsDynamicCast<JSInt16Array*>(vm, value))
-        return JSValue::encode(JSInt16Array::create(state, structure, WTFMove(bufferClone), bufferView->byteOffset(), bufferView->length()));
-    if (jsDynamicCast<JSInt32Array*>(vm, value))
-        return JSValue::encode(JSInt32Array::create(state, structure, WTFMove(bufferClone), bufferView->byteOffset(), bufferView->length()));
-    if (jsDynamicCast<JSUint8Array*>(vm, value))
-        return JSValue::encode(JSUint8Array::create(state, structure, WTFMove(bufferClone), bufferView->byteOffset(), bufferView->length()));
-    if (jsDynamicCast<JSUint8ClampedArray*>(vm, value))
-        return JSValue::encode(JSUint8ClampedArray::create(state, structure, WTFMove(bufferClone), bufferView->byteOffset(), bufferView->length()));
-    if (jsDynamicCast<JSUint16Array*>(vm, value))
-        return JSValue::encode(JSUint16Array::create(state, structure, WTFMove(bufferClone), bufferView->byteOffset(), bufferView->length()));
-    if (jsDynamicCast<JSUint32Array*>(vm, value))
-        return JSValue::encode(JSUint32Array::create(state, structure, WTFMove(bufferClone), bufferView->byteOffset(), bufferView->length()));
-    if (jsDynamicCast<JSFloat32Array*>(vm, value))
-        return JSValue::encode(JSFloat32Array::create(state, structure, WTFMove(bufferClone), bufferView->byteOffset(), bufferView->length()));
-    if (jsDynamicCast<JSFloat64Array*>(vm, value))
-        return JSValue::encode(JSFloat64Array::create(state, structure, WTFMove(bufferClone), bufferView->byteOffset(), bufferView->length()));
-    if (jsDynamicCast<JSDataView*>(vm, value))
-        return JSValue::encode(JSDataView::create(state, structure, WTFMove(bufferClone), bufferView->byteOffset(), bufferView->length()));
-
-    ASSERT_NOT_REACHED();
-    return JSValue::encode(jsUndefined());
+    throwTypeError(globalObject, scope, "structuredClone not implemented for non-ArrayBuffer / non-ArrayBufferView"_s);
+    return { };
 }
 
 } // namespace WebCore

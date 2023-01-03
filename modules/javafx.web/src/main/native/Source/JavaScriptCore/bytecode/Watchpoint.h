@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -36,38 +36,36 @@
 
 namespace JSC {
 
+namespace DFG {
+struct ArrayBufferViewWatchpointAdaptor;
+}
+
 class VM;
 
 class FireDetail {
     void* operator new(size_t) = delete;
 
 public:
-    FireDetail()
-    {
-    }
-
-    virtual ~FireDetail()
-    {
-    }
-
+    FireDetail() = default;
+    virtual ~FireDetail() = default;
     virtual void dump(PrintStream&) const = 0;
 };
 
-class StringFireDetail : public FireDetail {
+class StringFireDetail final : public FireDetail {
 public:
     StringFireDetail(const char* string)
         : m_string(string)
     {
     }
 
-    void dump(PrintStream& out) const override;
+    void dump(PrintStream& out) const final;
 
 private:
     const char* m_string;
 };
 
 template<typename... Types>
-class LazyFireDetail : public FireDetail {
+class LazyFireDetail final : public FireDetail {
 public:
     LazyFireDetail(const Types&... args)
     {
@@ -76,7 +74,7 @@ public:
         });
     }
 
-    void dump(PrintStream& out) const override { m_lambda(out); }
+    void dump(PrintStream& out) const final { m_lambda(out); }
 
 private:
     ScopedLambda<void(PrintStream&)> m_lambda;
@@ -110,12 +108,13 @@ class WatchpointSet;
     macro(CodeBlockJettisoning, CodeBlockJettisoningWatchpoint) \
     macro(LLIntPrototypeLoadAdaptiveStructure, LLIntPrototypeLoadAdaptiveStructureWatchpoint) \
     macro(FunctionRareDataAllocationProfileClearing, FunctionRareData::AllocationProfileClearingWatchpoint) \
-    macro(ObjectToStringAdaptiveStructure, ObjectToStringAdaptiveStructureWatchpoint)
+    macro(CachedSpecialPropertyAdaptiveStructure, CachedSpecialPropertyAdaptiveStructureWatchpoint) \
+    macro(StructureChainInvalidation, StructureChainInvalidationWatchpoint) \
 
 #if ENABLE(JIT)
 #define JSC_WATCHPOINT_TYPES_WITHOUT_DFG(macro) \
     JSC_WATCHPOINT_TYPES_WITHOUT_JIT(macro) \
-    macro(StructureStubClearing, StructureStubClearingWatchpoint)
+    macro(StructureTransitionStructureStubClearing, StructureTransitionStructureStubClearingWatchpoint)
 
 #if ENABLE(DFG_JIT)
 #define JSC_WATCHPOINT_TYPES(macro) \
@@ -135,11 +134,12 @@ class WatchpointSet;
     type member; \
     static_assert(std::is_trivially_destructible<type>::value, ""); \
 
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(Watchpoint);
 
 class Watchpoint : public PackedRawSentinelNode<Watchpoint> {
     WTF_MAKE_NONCOPYABLE(Watchpoint);
     WTF_MAKE_NONMOVABLE(Watchpoint);
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_STRUCT_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Watchpoint);
 public:
 #define JSC_DEFINE_WATCHPOINT_TYPES(type, _) type,
     enum class Type : uint8_t {
@@ -156,6 +156,8 @@ protected:
 
 private:
     friend class WatchpointSet;
+    // ArrayBufferViewWatchpointAdaptor can fire watchpoints if it tries to attach a watchpoint to a view but can't allocate the ArrayBuffer.
+    friend struct DFG::ArrayBufferViewWatchpointAdaptor;
     void fire(VM&, const FireDetail&);
 
     Type m_type;
@@ -172,12 +174,13 @@ class InlineWatchpointSet;
 class DeferredWatchpointFire;
 class VM;
 
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(WatchpointSet);
+
 class WatchpointSet : public ThreadSafeRefCounted<WatchpointSet> {
+    WTF_MAKE_STRUCT_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(WatchpointSet);
     friend class LLIntOffsetsExtractor;
     friend class DeferredWatchpointFire;
 public:
-    JS_EXPORT_PRIVATE WatchpointSet(WatchpointState);
-
     // FIXME: In many cases, it would be amazing if this *did* fire the watchpoints. I suspect that
     // this might be hard to get right, but still, it might be awesome.
     JS_EXPORT_PRIVATE ~WatchpointSet(); // Note that this will not fire any of the watchpoints; if you need to know when a WatchpointSet dies then you need a separate mechanism for this.
@@ -187,22 +190,17 @@ public:
         return adoptRef(*new WatchpointSet(state));
     }
 
-    // Fast way of getting the state, which only works from the main thread.
-    WatchpointState stateOnJSThread() const
-    {
-        return static_cast<WatchpointState>(m_state);
-    }
-
-    // It is safe to call this from another thread. It may return an old
-    // state. Guarantees that if *first* read the state() of the thing being
-    // watched and it returned IsWatched and *second* you actually read its
-    // value then it's safe to assume that if the state being watched changes
-    // then also the watchpoint state() will change to IsInvalidated.
+    // It is always safe to call this from the main thread.
+    // It is also safe to call this from another thread. It may return an old
+    // state. Generally speaking, a safe pattern to use in a concurrent compiler
+    // thread is:
+    // if (watchpoint.isValid()) {
+    //     watch(watchpoint);
+    //     do optimizations;
+    // }
     WatchpointState state() const
     {
-        WTF::loadLoadFence();
         WatchpointState result = static_cast<WatchpointState>(m_state);
-        WTF::loadLoadFence();
         return result;
     }
 
@@ -285,6 +283,9 @@ public:
     JS_EXPORT_PRIVATE void fireAllSlow(VM&, DeferredWatchpointFire* deferredWatchpoints); // Ditto.
     JS_EXPORT_PRIVATE void fireAllSlow(VM&, const char* reason); // Ditto.
 
+protected:
+    JS_EXPORT_PRIVATE WatchpointSet(WatchpointState);
+
 private:
     void fireAllWatchpoints(VM&, const FireDetail&);
     void take(WatchpointSet* other);
@@ -331,23 +332,10 @@ public:
         freeFat();
     }
 
-    // Fast way of getting the state, which only works from the main thread.
-    WatchpointState stateOnJSThread() const
-    {
-        uintptr_t data = m_data;
-        if (isFat(data))
-            return fat(data)->stateOnJSThread();
-        return decodeState(data);
-    }
-
-    // It is safe to call this from another thread. It may return a prior state,
-    // but that should be fine since you should only perform actions based on the
-    // state if you also add a watchpoint.
+    // See comment about state() in Watchpoint above.
     WatchpointState state() const
     {
-        WTF::loadLoadFence();
         uintptr_t data = m_data;
-        WTF::loadLoadFence();
         if (isFat(data))
             return fat(data)->state();
         return decodeState(data);
@@ -475,9 +463,9 @@ public:
     }
 
 private:
-    static const uintptr_t IsThinFlag        = 1;
-    static const uintptr_t StateMask         = 6;
-    static const uintptr_t StateShift        = 1;
+    static constexpr uintptr_t IsThinFlag        = 1;
+    static constexpr uintptr_t StateMask         = 6;
+    static constexpr uintptr_t StateShift        = 1;
 
     static bool isThin(uintptr_t data) { return data & IsThinFlag; }
     static bool isFat(uintptr_t data) { return !isThin(data); }
@@ -522,14 +510,22 @@ private:
 class DeferredWatchpointFire : public FireDetail {
     WTF_MAKE_NONCOPYABLE(DeferredWatchpointFire);
 public:
-    JS_EXPORT_PRIVATE DeferredWatchpointFire(VM&);
-    JS_EXPORT_PRIVATE ~DeferredWatchpointFire();
+    DeferredWatchpointFire(VM& vm)
+        : m_vm(vm)
+        , m_watchpointsToFire(ClearWatchpoint)
+    {
+    }
 
     JS_EXPORT_PRIVATE void takeWatchpointsToFire(WatchpointSet*);
-    JS_EXPORT_PRIVATE void fireAll();
+    void fireAll()
+    {
+        if (m_watchpointsToFire.state() == IsWatched)
+            fireAllSlow();
+    }
 
-    void dump(PrintStream& out) const override = 0;
 private:
+    JS_EXPORT_PRIVATE void fireAllSlow();
+
     VM& m_vm;
     WatchpointSet m_watchpointsToFire;
 };

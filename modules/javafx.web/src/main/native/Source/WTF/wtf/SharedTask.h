@@ -73,7 +73,7 @@ public:
 // you don't want to use this class directly. Use createSharedTask() instead.
 template<typename FunctionType, typename Functor> class SharedTaskFunctor;
 template<typename ResultType, typename... ArgumentTypes, typename Functor>
-class SharedTaskFunctor<ResultType (ArgumentTypes...), Functor> : public SharedTask<ResultType (ArgumentTypes...)> {
+class SharedTaskFunctor<ResultType(ArgumentTypes...), Functor> final : public SharedTask<ResultType(ArgumentTypes...)> {
 public:
     SharedTaskFunctor(const Functor& functor)
         : m_functor(functor)
@@ -86,7 +86,7 @@ public:
     }
 
 private:
-    ResultType run(ArgumentTypes... arguments) override
+    ResultType run(ArgumentTypes... arguments) final
     {
         return m_functor(std::forward<ArgumentTypes>(arguments)...);
     }
@@ -119,7 +119,7 @@ Ref<SharedTask<FunctionType>> createSharedTask(const Functor& functor)
 template<typename FunctionType, typename Functor>
 Ref<SharedTask<FunctionType>> createSharedTask(Functor&& functor)
 {
-    return adoptRef(*new SharedTaskFunctor<FunctionType, Functor>(WTFMove(functor)));
+    return adoptRef(*new SharedTaskFunctor<FunctionType, Functor>(std::forward<Functor>(functor)));
 }
 
 } // namespace WTF

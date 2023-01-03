@@ -29,14 +29,14 @@ namespace WebCore {
 class HTMLDivElement : public HTMLElement {
     WTF_MAKE_ISO_ALLOCATED(HTMLDivElement);
 public:
-    static Ref<HTMLDivElement> create(Document&);
+    WEBCORE_EXPORT static Ref<HTMLDivElement> create(Document&);
     static Ref<HTMLDivElement> create(const QualifiedName&, Document&);
 
 protected:
     HTMLDivElement(const QualifiedName&, Document&);
 
 private:
-    void collectStyleForPresentationAttribute(const QualifiedName&, const AtomString&, MutableStyleProperties&) final;
+    void collectPresentationalHintsForAttribute(const QualifiedName&, const AtomString&, MutableStyleProperties&) final;
 };
 
 } // namespace WebCore

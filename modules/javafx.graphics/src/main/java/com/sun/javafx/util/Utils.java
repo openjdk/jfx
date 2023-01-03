@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -92,6 +92,16 @@ public class Utils {
 
     /**
      * Simple utility function which clamps the given value to be strictly
+     * between the min and max values.
+     */
+    public static long clamp(long min, long value, long max) {
+        if (value < min) return min;
+        if (value > max) return max;
+        return value;
+    }
+
+    /**
+     * Simple utility function which clamps the given value to be strictly
      * above the min value.
      */
     public static double clampMin(double value, double min) {
@@ -158,7 +168,7 @@ public class Utils {
         if (separator == null || separator.length() == 0) return new String[] { };
         if (separator.length() > str.length()) return new String[] { };
 
-        java.util.List<String> result = new java.util.ArrayList<String>();
+        java.util.List<String> result = new java.util.ArrayList<>();
 
         int index = str.indexOf(separator);
         while (index >= 0) {
@@ -377,7 +387,7 @@ public class Utils {
 
         brightness = cmax;
         if (cmax != 0)
-            saturation = (double) (cmax - cmin) / cmax;
+            saturation = (cmax - cmin) / cmax;
         else
             saturation = 0;
 
@@ -659,6 +669,7 @@ public class Utils {
     }
 
     public static boolean hasFullScreenStage(final Screen screen) {
+        @SuppressWarnings("removal")
         final List<Window> allWindows = AccessController.doPrivileged(
                 (PrivilegedAction<List<Window>>) () -> Window.getWindows(),
                 null,
@@ -859,9 +870,16 @@ public class Utils {
         }
     }
 
+    /**
+     * @return true if and only if assertions are enabled at runtime.
+     */
     public static boolean assertionEnabled() {
         boolean assertsEnabled = false;
-        assert assertsEnabled = true;  // Intentional side-effect !!!
+
+        // The following assertion check will always pass. The side-effect
+        // of the `assertsEnabled = true` assignment is intentional. It will
+        // be executed if-and-only-if assertions are enabled at runtime.
+        assert (assertsEnabled = true) == true;
 
         return assertsEnabled;
     }
@@ -964,6 +982,7 @@ public class Utils {
         return new String(dst, 0, dstIndex);
     }
 
+    @SuppressWarnings("removal")
     public static synchronized void loadNativeSwingLibrary() {
         AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
             String libName = "prism_common";

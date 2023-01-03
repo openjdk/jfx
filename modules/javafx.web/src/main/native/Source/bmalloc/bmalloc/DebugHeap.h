@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,6 +26,7 @@
 #pragma once
 
 #include "Environment.h"
+#include "FailureAction.h"
 #include "Mutex.h"
 #include "StaticPerProcess.h"
 #include <mutex>
@@ -39,11 +40,11 @@ namespace bmalloc {
 
 class DebugHeap : private StaticPerProcess<DebugHeap> {
 public:
-    DebugHeap(std::lock_guard<Mutex>&);
+    DebugHeap(const LockHolder&);
 
-    void* malloc(size_t, bool crashOnFailure);
-    void* memalign(size_t alignment, size_t, bool crashOnFailure);
-    void* realloc(void*, size_t, bool crashOnFailure);
+    void* malloc(size_t, FailureAction);
+    void* memalign(size_t alignment, size_t, FailureAction);
+    void* realloc(void*, size_t, FailureAction);
     void free(void*);
 
     void* memalignLarge(size_t alignment, size_t);
@@ -53,8 +54,11 @@ public:
     void dump();
 
     static DebugHeap* tryGet();
+    static DebugHeap* getExisting();
 
 private:
+    static DebugHeap* tryGetSlow();
+
 #if BOS(DARWIN)
     malloc_zone_t* m_zone;
 #endif
@@ -66,15 +70,27 @@ private:
 DECLARE_STATIC_PER_PROCESS_STORAGE(DebugHeap);
 
 extern BEXPORT DebugHeap* debugHeapCache;
+
+BINLINE DebugHeap* debugHeapDisabled()
+{
+    return reinterpret_cast<DebugHeap*>(static_cast<uintptr_t>(1));
+}
+
 BINLINE DebugHeap* DebugHeap::tryGet()
 {
-    if (debugHeapCache)
-        return debugHeapCache;
-    if (Environment::get()->isDebugHeapEnabled()) {
-        debugHeapCache = DebugHeap::get();
-        return debugHeapCache;
-    }
-    return nullptr;
+    DebugHeap* result = debugHeapCache;
+    if (result == debugHeapDisabled())
+        return nullptr;
+    if (result)
+        return result;
+    return tryGetSlow();
+}
+
+BINLINE DebugHeap* DebugHeap::getExisting()
+{
+    DebugHeap* result = tryGet();
+    RELEASE_BASSERT(result);
+    return result;
 }
 
 } // namespace bmalloc

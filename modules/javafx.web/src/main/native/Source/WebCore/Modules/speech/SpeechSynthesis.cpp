@@ -36,23 +36,33 @@
 #include "UserGestureIndicator.h"
 #include <wtf/NeverDestroyed.h>
 
+#if PLATFORM(IOS_FAMILY)
+#include "Document.h"
+#endif
+
 namespace WebCore {
 
-Ref<SpeechSynthesis> SpeechSynthesis::create(WeakPtr<SpeechSynthesisClient> client)
+Ref<SpeechSynthesis> SpeechSynthesis::create(WeakPtr<SpeechSynthesisClient> client, Document& document)
 {
-    return adoptRef(*new SpeechSynthesis(client));
+    return adoptRef(*new SpeechSynthesis(client, document));
 }
 
-SpeechSynthesis::SpeechSynthesis(WeakPtr<SpeechSynthesisClient> client)
+SpeechSynthesis::SpeechSynthesis(WeakPtr<SpeechSynthesisClient> client, Document& document)
     : m_currentSpeechUtterance(nullptr)
     , m_isPaused(false)
 #if PLATFORM(IOS_FAMILY)
-    , m_restrictions(RequireUserGestureForSpeechStartRestriction)
+    , m_restrictions(document.audioPlaybackRequiresUserGesture() ? RequireUserGestureForSpeechStartRestriction : NoRestrictions)
 #endif
     , m_speechSynthesisClient(client)
 {
-    if (m_speechSynthesisClient)
-        m_speechSynthesisClient->setObserver(makeWeakPtr(this));
+#if !PLATFORM(IOS_FAMILY)
+    UNUSED_PARAM(document);
+#endif
+
+    if (m_speechSynthesisClient) {
+        m_speechSynthesisClient->setObserver(*this);
+        m_speechSynthesisClient->resetState();
+    }
 }
 
 void SpeechSynthesis::setPlatformSynthesizer(std::unique_ptr<PlatformSpeechSynthesizer> synthesizer)
@@ -114,12 +124,6 @@ void SpeechSynthesis::startSpeakingImmediately(SpeechSynthesisUtterance& utteran
     m_currentSpeechUtterance = &utterance;
     m_isPaused = false;
 
-    // Zero lengthed strings should immediately notify that the event is complete.
-    if (utterance.text().isEmpty()) {
-        handleSpeakingCompleted(utterance, false);
-        return;
-    }
-
     if (m_speechSynthesisClient)
         m_speechSynthesisClient->speak(utterance.platformUtterance());
     else
@@ -137,7 +141,6 @@ void SpeechSynthesis::speak(SpeechSynthesisUtterance& utterance)
 #endif
 
     m_utteranceQueue.append(utterance);
-
     // If the queue was empty, speak this immediately and add it to the queue.
     if (m_utteranceQueue.size() == 1)
         startSpeakingImmediately(m_utteranceQueue.first());
@@ -149,9 +152,13 @@ void SpeechSynthesis::cancel()
     // Hold on to the current utterance so the platform synthesizer can have a chance to clean up.
     RefPtr<SpeechSynthesisUtterance> current = m_currentSpeechUtterance;
     m_utteranceQueue.clear();
-    if (m_speechSynthesisClient)
+    if (m_speechSynthesisClient) {
         m_speechSynthesisClient->cancel();
-    else if (m_platformSpeechSynthesizer) {
+        // If we wait for cancel to callback speakingErrorOccurred, then m_currentSpeechUtterance will be null
+        // and the event won't be processed. Instead we process the error immediately.
+        speakingErrorOccurred();
+        m_currentSpeechUtterance = nullptr;
+    } else if (m_platformSpeechSynthesizer) {
         m_platformSpeechSynthesizer->cancel();
         // The platform should have called back immediately and cleared the current utterance.
         ASSERT(!m_currentSpeechUtterance);

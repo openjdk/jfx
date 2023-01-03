@@ -27,10 +27,10 @@
 
 namespace WTF {
 
-#if defined(NDEBUG) && !ENABLE(SECURITY_ASSERTIONS)
-#define CHECK_REF_COUNTED_LIFECYCLE 0
-#else
+#if ASSERT_ENABLED || ENABLE(SECURITY_ASSERTIONS)
 #define CHECK_REF_COUNTED_LIFECYCLE 1
+#else
+#define CHECK_REF_COUNTED_LIFECYCLE 0
 #endif
 
 // This base class holds the non-template methods and attributes.
@@ -75,14 +75,14 @@ public:
     // locking at call sites).
     void disableThreadingChecks()
     {
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
         m_areThreadingChecksEnabled = false;
 #endif
     }
 
     static void enableThreadingChecksGlobally()
     {
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
         areThreadingChecksEnabledGlobally = true;
 #endif
     }
@@ -90,9 +90,8 @@ public:
 protected:
     RefCountedBase()
         : m_refCount(1)
-#if !ASSERT_DISABLED
-        , m_isOwnedByMainThread(isMainThreadIfInitialized())
-        , m_areThreadingChecksEnabled(isMainThreadInitialized())
+#if ASSERT_ENABLED
+        , m_isOwnedByMainThread(isMainThread())
 #endif
 #if CHECK_REF_COUNTED_LIFECYCLE
         , m_deletionHasBegun(false)
@@ -103,10 +102,10 @@ protected:
 
     void applyRefDerefThreadingCheck() const
     {
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
         if (hasOneRef()) {
             // Likely an ownership transfer across threads that may be safe.
-            m_isOwnedByMainThread = isMainThreadIfInitialized();
+            m_isOwnedByMainThread = isMainThread();
         } else if (areThreadingChecksEnabledGlobally && m_areThreadingChecksEnabled) {
             // If you hit this assertion, it means that the RefCounted object was ref/deref'd
             // from both the main thread and another in a way that is likely concurrent and unsafe.
@@ -161,11 +160,11 @@ private:
 #endif
 
     mutable unsigned m_refCount;
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
     mutable bool m_isOwnedByMainThread;
     bool m_areThreadingChecksEnabled { true };
-    WTF_EXPORT_PRIVATE static bool areThreadingChecksEnabledGlobally;
 #endif
+    WTF_EXPORT_PRIVATE static bool areThreadingChecksEnabledGlobally;
 #if CHECK_REF_COUNTED_LIFECYCLE
     mutable bool m_deletionHasBegun;
     mutable bool m_adoptionIsRequired;

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -1265,10 +1265,9 @@ void NotifyTouchInput(
 
     JNIEnv *env = GetEnv();
 
-    // TBD: set to 'true' if source device is a touch screen
-    // and to 'false' if source device is a touch pad.
-    // So far assume source device on Windows is always a touch screen.
-    const bool isDirect = true;
+    // Sets to 'true' if source device is a touch screen
+    // and to 'false' if source device is a touch pad/pen.
+    const bool isDirect = IsTouchEvent();
 
     jint modifiers = GetModifiers();
     env->CallStaticObjectMethod(gestureSupportCls,

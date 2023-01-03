@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -44,15 +44,15 @@ namespace WTF {
 class MetaAllocatorTracker {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    void notify(MetaAllocatorHandle*);
-    void release(MetaAllocatorHandle*);
+    void notify(MetaAllocatorHandle&);
+    void release(MetaAllocatorHandle&);
 
     MetaAllocatorHandle* find(void* address)
     {
         MetaAllocatorHandle* handle = m_allocations.findGreatestLessThanOrEqual(address);
-        if (handle && address < handle->end().untaggedPtr())
+        if (handle && handle->start().untaggedPtr() <= address && address < handle->end().untaggedPtr())
             return handle;
-        return 0;
+        return nullptr;
     }
 
     RedBlackTree<MetaAllocatorHandle, void*> m_allocations;
@@ -63,12 +63,18 @@ class MetaAllocator {
 
 public:
     using FreeSpacePtr = MetaAllocatorPtr<FreeSpacePtrTag>;
+    using MemoryPtr = MetaAllocatorHandle::MemoryPtr;
 
-    WTF_EXPORT_PRIVATE MetaAllocator(size_t allocationGranule, size_t pageSize = WTF::pageSize());
+    WTF_EXPORT_PRIVATE MetaAllocator(Lock&, size_t allocationGranule, size_t pageSize = WTF::pageSize());
 
     WTF_EXPORT_PRIVATE virtual ~MetaAllocator();
 
-    WTF_EXPORT_PRIVATE RefPtr<MetaAllocatorHandle> allocate(size_t sizeInBytes, void* ownerUID);
+    ALWAYS_INLINE RefPtr<MetaAllocatorHandle> allocate(size_t sizeInBytes)
+    {
+        Locker locker { m_lock };
+        return allocate(locker, sizeInBytes);
+    }
+    WTF_EXPORT_PRIVATE RefPtr<MetaAllocatorHandle> allocate(const LockHolder&, size_t sizeInBytes);
 
     void trackAllocations(MetaAllocatorTracker* tracker)
     {
@@ -87,7 +93,12 @@ public:
         size_t bytesReserved;
         size_t bytesCommitted;
     };
-    WTF_EXPORT_PRIVATE Statistics currentStatistics();
+    Statistics currentStatistics()
+    {
+        Locker locker { m_lock };
+        return currentStatistics(locker);
+    }
+    WTF_EXPORT_PRIVATE Statistics currentStatistics(const LockHolder&);
 
     // Add more free space to the allocator. Call this directly from
     // the constructor if you wish to operate the allocator within a
@@ -98,7 +109,6 @@ public:
     // builds.
     WTF_EXPORT_PRIVATE size_t debugFreeSpaceSize();
 
-    Lock& getLock() { return m_lock; }
     WTF_EXPORT_PRIVATE bool isInAllocatedMemory(const AbstractLocker&, void* address);
 
 #if ENABLE(META_ALLOCATOR_PROFILE)
@@ -123,6 +133,8 @@ protected:
     // destruction, in part because a MetaAllocator cannot die so long
     // as there are Handles that refer to it.
 
+    // Release a MetaAllocatorHandle.
+    WTF_EXPORT_PRIVATE virtual void release(const LockHolder&, MetaAllocatorHandle&);
 private:
 
     friend class MetaAllocatorHandle;
@@ -130,11 +142,6 @@ private:
     class FreeSpaceNode : public RedBlackTree<FreeSpaceNode, size_t>::Node {
     public:
         FreeSpaceNode() = default;
-
-        FreeSpaceNode(void* start, size_t sizeInBytes)
-            : m_start(start)
-            , m_end(reinterpret_cast<uint8_t*>(start) + sizeInBytes)
-        { }
 
         size_t sizeInBytes()
         {
@@ -150,9 +157,6 @@ private:
         FreeSpacePtr m_end;
     };
     typedef RedBlackTree<FreeSpaceNode, size_t> Tree;
-
-    // Release a MetaAllocatorHandle.
-    void release(MetaAllocatorHandle*);
 
     // Remove free space from the allocator. This is effectively
     // the allocate() function, except that it does not mark the
@@ -193,9 +197,9 @@ private:
     size_t m_bytesReserved;
     size_t m_bytesCommitted;
 
-    Lock m_lock;
+    Lock& m_lock;
 
-    MetaAllocatorTracker* m_tracker;
+    MetaAllocatorTracker* m_tracker { nullptr };
 
 #ifndef NDEBUG
     size_t m_mallocBalance;

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,7 +28,6 @@ package test.javafx.scene;
 import com.sun.javafx.css.StyleManager;
 import javafx.css.Stylesheet;
 import javafx.css.CssParser;
-import com.sun.javafx.tk.Toolkit;
 import static javafx.geometry.NodeOrientation.*;
 import javafx.scene.Group;
 import javafx.scene.Scene;
@@ -63,7 +62,17 @@ public class Node_effectiveOrientation_Css_Test {
 
     @After
     public void tearDown() {
+        resetStyleManager();
         stage.hide();
+    }
+
+    private static void resetStyleManager() {
+        StyleManager sm = StyleManager.getInstance();
+        sm.userAgentStylesheetContainers.clear();
+        sm.platformUserAgentStylesheetContainers.clear();
+        sm.stylesheetContainerMap.clear();
+        sm.cacheContainerMap.clear();
+        sm.hasDefaultUserAgentStylesheet = false;
     }
 
     public Node_effectiveOrientation_Css_Test() {}

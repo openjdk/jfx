@@ -9,8 +9,10 @@
 #ifndef __XML_LIBXML_H__
 #define __XML_LIBXML_H__
 
-#include <libxml/xmlstring.h>
-
+/*
+ * These macros must be defined before including system headers.
+ * Do not add any #include directives above this block.
+ */
 #ifndef NO_LARGEFILE_SOURCE
 #ifndef _LARGEFILE_SOURCE
 #define _LARGEFILE_SOURCE
@@ -39,6 +41,7 @@
 #include "config.h"
 #include <libxml/xmlversion.h>
 #endif
+#include <libxml/xmlstring.h>
 
 #if defined(__Lynx__)
 #include <stdio.h> /* pull definition of size_t */
@@ -86,7 +89,7 @@ int vfprintf(FILE *, const char *, va_list);
  */
 extern int __xmlRegisterCallbacks;
 /*
- * internal error reporting routines, shared but not partof the API.
+ * internal error reporting routines, shared but not part of the API.
  */
 void __xmlIOErr(int domain, int code, const char *extra);
 void __xmlLoaderErr(void *ctx, const char *msg, const char *filename) LIBXML_ATTR_FORMAT(2,0);

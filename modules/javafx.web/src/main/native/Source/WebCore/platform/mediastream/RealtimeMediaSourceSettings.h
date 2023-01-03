@@ -132,7 +132,7 @@ public:
     void setLabel(const AtomString& label) { m_label = label; }
 
     template<class Encoder> void encode(Encoder&) const;
-    template<class Decoder> static bool decode(Decoder&, RealtimeMediaSourceSettings&);
+    template<class Decoder> static WARN_UNUSED_RETURN bool decode(Decoder&, RealtimeMediaSourceSettings&);
 
     static String convertFlagsToString(const OptionSet<RealtimeMediaSourceSettings::Flag>);
 
@@ -172,7 +172,7 @@ void RealtimeMediaSourceSettings::encode(Encoder& encoder) const
         << m_groupId
         << m_label
         << m_supportedConstraints;
-    encoder.encodeEnum(m_facingMode);
+    encoder << m_facingMode;
 }
 
 template<class Decoder>
@@ -190,7 +190,7 @@ bool RealtimeMediaSourceSettings::decode(Decoder& decoder, RealtimeMediaSourceSe
         && decoder.decode(settings.m_groupId)
         && decoder.decode(settings.m_label)
         && decoder.decode(settings.m_supportedConstraints)
-        && decoder.decodeEnum(settings.m_facingMode);
+        && decoder.decode(settings.m_facingMode);
 }
 
 String convertEnumerationToString(RealtimeMediaSourceSettings::VideoFacingMode);

@@ -39,7 +39,7 @@ class ApplicationCacheGroup;
 class ApplicationCacheHost;
 class ApplicationCacheResource;
 class SecurityOrigin;
-class SharedBuffer;
+class FragmentedSharedBuffer;
 template<typename> class StorageIDJournal;
 
 class ApplicationCacheStorage : public RefCounted<ApplicationCacheStorage> {
@@ -63,7 +63,7 @@ public:
 
     int64_t defaultOriginQuota() const { return m_defaultOriginQuota; }
     WEBCORE_EXPORT void setDefaultOriginQuota(int64_t quota);
-    WEBCORE_EXPORT bool calculateUsageForOrigin(const SecurityOrigin*, int64_t& usage);
+    WEBCORE_EXPORT bool calculateUsageForOrigin(const SecurityOriginData&, int64_t& usage);
     WEBCORE_EXPORT bool calculateQuotaForOrigin(const SecurityOrigin&, int64_t& quota);
     bool calculateRemainingSizeForOriginExcludingCache(const SecurityOrigin&, ApplicationCache*, int64_t& remainingSize);
     WEBCORE_EXPORT bool storeUpdatedQuotaForOrigin(const SecurityOrigin*, int64_t quota);
@@ -86,17 +86,17 @@ public:
 
     WEBCORE_EXPORT void empty();
 
-    WEBCORE_EXPORT Vector<Ref<SecurityOrigin>> originsWithCache();
+    WEBCORE_EXPORT HashSet<SecurityOriginData> originsWithCache();
     WEBCORE_EXPORT void deleteAllEntries();
 
     // FIXME: This should be consolidated with deleteAllEntries().
     WEBCORE_EXPORT void deleteAllCaches();
 
     // FIXME: This should be consolidated with deleteCacheGroup().
-    WEBCORE_EXPORT void deleteCacheForOrigin(const SecurityOrigin&);
+    WEBCORE_EXPORT void deleteCacheForOrigin(const SecurityOriginData&);
 
     // FIXME: This should be consolidated with calculateUsageForOrigin().
-    WEBCORE_EXPORT int64_t diskUsageForOrigin(const SecurityOrigin&);
+    WEBCORE_EXPORT int64_t diskUsageForOrigin(const SecurityOriginData&);
 
     static int64_t unknownQuota() { return -1; }
     static int64_t noQuota() { return std::numeric_limits<int64_t>::max(); }
@@ -106,7 +106,7 @@ private:
 
     RefPtr<ApplicationCache> loadCache(unsigned storageID);
     ApplicationCacheGroup* loadCacheGroup(const URL& manifestURL);
-    Optional<Vector<URL>> manifestURLs();
+    std::optional<Vector<URL>> manifestURLs();
     ApplicationCacheGroup* findInMemoryCacheGroup(const URL& manifestURL) const;
     bool deleteCacheGroup(const String& manifestURL);
     void vacuumDatabaseFile();
@@ -122,7 +122,7 @@ private:
     bool ensureOriginRecord(const SecurityOrigin*);
     static bool shouldStoreResourceAsFlatFile(ApplicationCacheResource*);
     void deleteTables();
-    bool writeDataToUniqueFileInDirectory(SharedBuffer&, const String& directory, String& outFilename, const String& fileExtension);
+    bool writeDataToUniqueFileInDirectory(FragmentedSharedBuffer&, const String& directory, String& outFilename, const String& fileExtension);
 
     void loadManifestHostHashes();
 
@@ -131,7 +131,7 @@ private:
     void openDatabase(bool createIfDoesNotExist);
 
     bool executeStatement(SQLiteStatement&);
-    bool executeSQLCommand(const String&);
+    bool executeSQLCommand(ASCIILiteral);
 
     void checkForMaxSizeReached();
     void checkForDeletedResources();
@@ -154,7 +154,7 @@ private:
 
     HashMap<String, ApplicationCacheGroup*> m_cachesInMemory; // Excludes obsolete cache groups.
 
-    friend class WTF::NeverDestroyed<ApplicationCacheStorage>;
+    friend class NeverDestroyed<ApplicationCacheStorage>;
 };
 
 } // namespace WebCore

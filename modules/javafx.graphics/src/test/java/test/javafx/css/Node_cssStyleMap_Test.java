@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,7 +25,6 @@
 
 package test.javafx.css;
 
-import com.sun.javafx.css.CascadingStyle;
 import com.sun.javafx.css.ParsedValueImpl;
 import com.sun.javafx.css.StyleManager;
 import com.sun.javafx.scene.NodeHelper;
@@ -53,15 +52,14 @@ import javafx.css.StyleableProperty;
 import javafx.css.Stylesheet;
 import javafx.css.StylesheetShim;
 import javafx.scene.Group;
-import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
-import javafx.scene.text.Font;
 import javafx.scene.text.Text;
 
 import static org.junit.Assert.*;
 
+import org.junit.After;
 import org.junit.Ignore;
 import org.junit.Test;
 
@@ -72,9 +70,15 @@ public class Node_cssStyleMap_Test {
 
     boolean disabled = false;
 
+    /**
+     * @param property - must be a StyleableProperty
+     * @param map
+     * @param decls
+     */
     private void checkFoundStyle(Property<?> property, Map<StyleableProperty<?>, List<Style>> map, List<Declaration> decls) {
 
-        List<Style> styles = map.get(property);
+        assertTrue(property instanceof StyleableProperty);
+        List<Style> styles = map.get((StyleableProperty<?>)property);
         assert (styles != null && !styles.isEmpty());
 
         String pname = ((StyleableProperty<?>)property).getCssMetaData().getProperty();
@@ -100,21 +104,35 @@ public class Node_cssStyleMap_Test {
 
     }
 
+    private static void resetStyleManager() {
+        StyleManager sm = StyleManager.getInstance();
+        sm.userAgentStylesheetContainers.clear();
+        sm.platformUserAgentStylesheetContainers.clear();
+        sm.stylesheetContainerMap.clear();
+        sm.cacheContainerMap.clear();
+        sm.hasDefaultUserAgentStylesheet = false;
+    }
+
+    @After
+    public void cleanup() {
+        resetStyleManager();
+    }
+
     @Ignore("JDK-8234241")
     @Test
     public void testStyleMap() {
 
-        final List<Declaration> declsNoState = new ArrayList<Declaration>();
+        final List<Declaration> declsNoState = new ArrayList<>();
         Collections.addAll(declsNoState,
             DeclarationShim.getDeclaration("-fx-fill", new ParsedValueImpl<Color,Color>(Color.RED, null), false),
             DeclarationShim.getDeclaration("-fx-stroke", new ParsedValueImpl<Color,Color>(Color.YELLOW, null), false),
-            DeclarationShim.getDeclaration("-fx-stroke-width", new ParsedValueImpl<ParsedValue<?,Size>,Number>(
+            DeclarationShim.getDeclaration("-fx-stroke-width", new ParsedValueImpl<>(
                 new ParsedValueImpl<Size,Size>(new Size(3d, SizeUnits.PX), null),
                 SizeConverter.getInstance()), false)
         );
 
 
-        final List<Selector> selsNoState = new ArrayList<Selector>();
+        final List<Selector> selsNoState = new ArrayList<>();
         Collections.addAll(selsNoState,
             Selector.createSelector(".rect")
         );
@@ -125,13 +143,13 @@ public class Node_cssStyleMap_Test {
         stylesheet.setOrigin(StyleOrigin.USER_AGENT);
         stylesheet.getRules().add(rule);
 
-        final List<Declaration> declsDisabledState = new ArrayList<Declaration>();
+        final List<Declaration> declsDisabledState = new ArrayList<>();
         Collections.addAll(declsDisabledState,
             DeclarationShim.getDeclaration("-fx-fill", new ParsedValueImpl<Color,Color>(Color.GRAY, null), false),
             DeclarationShim.getDeclaration("-fx-stroke", new ParsedValueImpl<Color,Color>(Color.DARKGRAY, null), false)
         );
 
-        final List<Selector> selsDisabledState = new ArrayList<Selector>();
+        final List<Selector> selsDisabledState = new ArrayList<>();
         Collections.addAll(selsDisabledState,
             Selector.createSelector(".rect:disabled")
         );
@@ -171,12 +189,12 @@ public class Node_cssStyleMap_Test {
     @Test
     public void testStyleMapChildren() {
 
-        final List<Declaration> declsNoState = new ArrayList<Declaration>();
+        final List<Declaration> declsNoState = new ArrayList<>();
         Collections.addAll(declsNoState,
                 DeclarationShim.getDeclaration("-fx-fill", new ParsedValueImpl<Color,Color>(Color.RED, null), false)
         );
 
-        final List<Selector> selsNoState = new ArrayList<Selector>();
+        final List<Selector> selsNoState = new ArrayList<>();
         Collections.addAll(selsNoState,
                 Selector.createSelector(".rect")
         );
@@ -210,14 +228,14 @@ public class Node_cssStyleMap_Test {
     @Test
     public void testRT_21212() {
 
-        final List<Declaration> rootDecls = new ArrayList<Declaration>();
+        final List<Declaration> rootDecls = new ArrayList<>();
         Collections.addAll(rootDecls,
-            DeclarationShim.getDeclaration("-fx-font-size", new ParsedValueImpl<ParsedValue<?,Size>,Number>(
+            DeclarationShim.getDeclaration("-fx-font-size", new ParsedValueImpl<>(
                 new ParsedValueImpl<Size,Size>(new Size(12, SizeUnits.PX), null),
                 SizeConverter.getInstance()), false)
         );
 
-        final List<Selector> rootSels = new ArrayList<Selector>();
+        final List<Selector> rootSels = new ArrayList<>();
         Collections.addAll(rootSels,
             Selector.createSelector(".root")
         );
@@ -234,20 +252,20 @@ public class Node_cssStyleMap_Test {
 
         final ParsedValue[] fontValues = new ParsedValue[] {
             new ParsedValueImpl<String,String>("system", null),
-            new ParsedValueImpl<ParsedValue<?,Size>,Number>(
+            new ParsedValueImpl<>(
                 new ParsedValueImpl<Size,Size>(new Size(1.5, SizeUnits.EM), null),
                 SizeConverter.getInstance()
             ),
             null,
             null
         };
-        final List<Declaration> textDecls = new ArrayList<Declaration>();
+        final List<Declaration> textDecls = new ArrayList<>();
         Collections.addAll(textDecls,
-            DeclarationShim.getDeclaration("-fx-font", new ParsedValueImpl<ParsedValue[], Font>(
+            DeclarationShim.getDeclaration("-fx-font", new ParsedValueImpl<>(
                 fontValues, FontConverter.getInstance()), false)
         );
 
-        final List<Selector> textSels = new ArrayList<Selector>();
+        final List<Selector> textSels = new ArrayList<>();
         Collections.addAll(textSels,
             Selector.createSelector(".text")
         );
@@ -271,30 +289,18 @@ public class Node_cssStyleMap_Test {
 
     }
 
-    boolean containsProperty(CssMetaData key, Map<String,List<CascadingStyle>> map) {
-
-        if (map.containsKey(key)) return true;
-        List<CssMetaData> subProperties = key.getSubProperties();
-        if (subProperties != null && !subProperties.isEmpty()) {
-            for (CssMetaData subKey: subProperties) {
-                if (map.containsKey(subKey)) return true;
-            }
-        }
-        return false;
-    }
-
     @Test
     public void testRT_34799() {
 
         Stylesheet stylesheet = new StylesheetShim("testRT_34799");
         stylesheet.setOrigin(StyleOrigin.USER_AGENT);
 
-        final List<Declaration> txtDecls = new ArrayList<Declaration>();
+        final List<Declaration> txtDecls = new ArrayList<>();
         Collections.addAll(txtDecls,
                 DeclarationShim.getDeclaration("-fx-fill", new ParsedValueImpl<Color,Color>(Color.RED, null), false)
         );
 
-        final List<Selector> textSels = new ArrayList<Selector>();
+        final List<Selector> textSels = new ArrayList<>();
         Collections.addAll(textSels,
                 Selector.createSelector(".rt-34799")
         );

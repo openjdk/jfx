@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,7 +26,6 @@
 package javafx.scene;
 
 import javafx.beans.InvalidationListener;
-import javafx.beans.Observable;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.geometry.Point2D;
@@ -159,6 +158,9 @@ public abstract class Camera extends Node {
         CameraHelper.initHelper(this);
     }
 
+    /**
+     * Constructor for subclasses to call.
+     */
     protected Camera() {
         InvalidationListener dirtyTransformListener = observable
                 -> NodeHelper.markDirty(this, DirtyBits.NODE_CAMERA_TRANSFORM);

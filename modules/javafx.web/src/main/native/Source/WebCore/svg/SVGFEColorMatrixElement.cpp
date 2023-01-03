@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2004, 2005, 2007 Nikolas Zimmermann <zimmermann@kde.org>
  * Copyright (C) 2004, 2005, 2006 Rob Buis <buis@kde.org>
- * Copyright (C) 2018-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2022 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -22,8 +22,7 @@
 #include "config.h"
 #include "SVGFEColorMatrixElement.h"
 
-#include "FilterEffect.h"
-#include "SVGFilterBuilder.h"
+#include "FEColorMatrix.h"
 #include "SVGNames.h"
 #include <wtf/IsoMallocInlines.h>
 
@@ -100,28 +99,26 @@ void SVGFEColorMatrixElement::svgAttributeChanged(const QualifiedName& attrName)
     SVGFilterPrimitiveStandardAttributes::svgAttributeChanged(attrName);
 }
 
-RefPtr<FilterEffect> SVGFEColorMatrixElement::build(SVGFilterBuilder* filterBuilder, Filter& filter) const
+RefPtr<FilterEffect> SVGFEColorMatrixElement::filterEffect(const SVGFilterBuilder&, const FilterEffectVector&) const
 {
-    auto input1 = filterBuilder->getEffectById(in1());
-
-    if (!input1)
-        return nullptr;
-
     Vector<float> filterValues;
     ColorMatrixType filterType = type();
 
     // Use defaults if values is empty (SVG 1.1 15.10).
     if (!hasAttribute(SVGNames::valuesAttr)) {
         switch (filterType) {
-        case FECOLORMATRIX_TYPE_MATRIX:
-            for (size_t i = 0; i < 20; i++)
-                filterValues.append((i % 6) ? 0 : 1);
+        case FECOLORMATRIX_TYPE_MATRIX: {
+            static constexpr unsigned matrixValueCount = 20;
+            filterValues.reserveInitialCapacity(matrixValueCount);
+            for (size_t i = 0; i < matrixValueCount; i++)
+                filterValues.uncheckedAppend((i % 6) ? 0 : 1);
             break;
+        }
         case FECOLORMATRIX_TYPE_HUEROTATE:
-            filterValues.append(0);
+            filterValues = { 0 };
             break;
         case FECOLORMATRIX_TYPE_SATURATE:
-            filterValues.append(1);
+            filterValues = { 1 };
             break;
         default:
             break;
@@ -135,11 +132,10 @@ RefPtr<FilterEffect> SVGFEColorMatrixElement::build(SVGFilterBuilder* filterBuil
             return nullptr;
 
         filterValues = values();
+        filterValues.shrinkToFit();
     }
 
-    auto effect = FEColorMatrix::create(filter, filterType, filterValues);
-    effect->inputEffects().append(input1);
-    return effect;
+    return FEColorMatrix::create(filterType, WTFMove(filterValues));
 }
 
 } // namespace WebCore

@@ -26,7 +26,6 @@
 #include "HTMLTableSectionElement.h"
 
 #include "GenericCachedHTMLCollection.h"
-#include "HTMLCollection.h"
 #include "HTMLNames.h"
 #include "HTMLTableRowElement.h"
 #include "HTMLTableElement.h"
@@ -51,7 +50,7 @@ Ref<HTMLTableSectionElement> HTMLTableSectionElement::create(const QualifiedName
     return adoptRef(*new HTMLTableSectionElement(tagName, document));
 }
 
-const StyleProperties* HTMLTableSectionElement::additionalPresentationAttributeStyle() const
+const StyleProperties* HTMLTableSectionElement::additionalPresentationalHintStyle() const
 {
     auto table = findParentTable();
     if (!table)
@@ -95,7 +94,7 @@ ExceptionOr<void> HTMLTableSectionElement::deleteRow(int index)
 int HTMLTableSectionElement::numRows() const
 {
     auto rows = childrenOfType<HTMLTableRowElement>(*this);
-    return std::distance(rows.begin(), rows.end());
+    return std::distance(rows.begin(), { });
 }
 
 Ref<HTMLCollection> HTMLTableSectionElement::rows()

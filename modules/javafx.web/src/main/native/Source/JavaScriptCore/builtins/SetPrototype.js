@@ -23,38 +23,6 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-@constructor
-@globalPrivate
-function SetIterator(iteratedObject, kind)
-{
-    "use strict";
-
-    @assert(@isSet(iteratedObject));
-    @putByIdDirectPrivate(this, "iteratedObject", iteratedObject);
-    @putByIdDirectPrivate(this, "setIteratorKind", kind);
-    @putByIdDirectPrivate(this, "setBucket", @setBucketHead(iteratedObject));
-}
-
-function values()
-{
-    "use strict";
-
-    if (!@isSet(this))
-        @throwTypeError("Set.prototype.values requires that |this| be Set");
-
-    return new @SetIterator(this, @iterationKindValue);
-}
-
-function entries()
-{
-    "use strict";
-
-    if (!@isSet(this))
-        @throwTypeError("Set.prototype.entries requires that |this| be Set");
-
-    return new @SetIterator(this, @iterationKindKeyValue);
-}
-
 function forEach(callback /*, thisArg */)
 {
     "use strict";
@@ -62,7 +30,7 @@ function forEach(callback /*, thisArg */)
     if (!@isSet(this))
         @throwTypeError("Set operation called on non-Set object");
 
-    if (typeof callback !== 'function')
+    if (!@isCallable(callback))
         @throwTypeError("Set.prototype.forEach callback must be a function");
 
     var thisArg = @argument(1);

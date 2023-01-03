@@ -31,6 +31,7 @@
 #include "FocusController.h"
 #include "Frame.h"
 #include "FrameLoader.h"
+#include "FrameLoaderClient.h"
 #include "FrameView.h"
 #include "HistoryController.h"
 #include "HistoryItem.h"
@@ -38,6 +39,7 @@
 #include "Page.h"
 #include "PageTransitionEvent.h"
 #include "ScriptDisallowedScope.h"
+#include "SelectionRestorationMode.h"
 #include "Settings.h"
 #include "VisitedLinkState.h"
 #include <wtf/RefCountedLeakCounter.h>
@@ -55,8 +57,11 @@ DEFINE_DEBUG_ONLY_GLOBAL(WTF::RefCountedLeakCounter, cachedPageCounter, ("Cached
 
 CachedPage::CachedPage(Page& page)
     : m_page(page)
-    , m_expirationTime(MonotonicTime::now() + Seconds(page.settings().backForwardCacheExpirationInterval()))
+    , m_expirationTime(MonotonicTime::now() + page.settings().backForwardCacheExpirationInterval())
     , m_cachedMainFrame(makeUnique<CachedFrame>(page.mainFrame()))
+#if ENABLE(INTELLIGENT_TRACKING_PREVENTION)
+    , m_loadedSubresourceDomains(page.mainFrame().loader().client().loadedSubresourceDomains())
+#endif
 {
 #ifndef NDEBUG
     cachedPageCounter.increment();
@@ -88,8 +93,9 @@ static void firePageShowAndPopStateEvents(Page& page)
         if (!document)
             continue;
 
-        // FIXME: Update Page Visibility state here.
-        // https://bugs.webkit.org/show_bug.cgi?id=116770
+        // This takes care of firing the visibilitychange event and making sure the document is reported as visible.
+        document->setVisibilityHiddenDueToDismissal(false);
+
         document->dispatchPageshowEvent(PageshowEventPersisted);
 
         auto* historyItem = child->loader().history().currentItem();
@@ -126,8 +132,8 @@ void CachedPage::restore(Page& page)
 
     // Restore the focus appearance for the focused element.
     // FIXME: Right now we don't support pages w/ frames in the b/f cache.  This may need to be tweaked when we add support for that.
-    Document* focusedDocument = page.focusController().focusedOrMainFrame().document();
-    if (Element* element = focusedDocument->focusedElement()) {
+    RefPtr focusedDocument = CheckedRef(page.focusController())->focusedOrMainFrame().document();
+    if (RefPtr element = focusedDocument->focusedElement()) {
 #if PLATFORM(IOS_FAMILY)
         // We don't want focused nodes changing scroll position when restoring from the cache
         // as it can cause ugly jumps before we manage to restore the cached position.
@@ -140,7 +146,7 @@ void CachedPage::restore(Page& page)
             frameView->setProhibitsScrolling(true);
         }
 #endif
-        element->updateFocusAppearance(SelectionRestorationMode::Restore);
+        element->updateFocusAppearance(SelectionRestorationMode::RestoreOrSelectAll);
 #if PLATFORM(IOS_FAMILY)
         if (frameView)
             frameView->setProhibitsScrolling(hadProhibitsScrolling);
@@ -153,7 +159,7 @@ void CachedPage::restore(Page& page)
 
     page.setNeedsRecalcStyleInAllFrames();
 
-#if ENABLE(VIDEO_TRACK)
+#if ENABLE(VIDEO)
     if (m_needsCaptionPreferencesChanged)
         page.captionPreferencesChanged();
 #endif
@@ -165,6 +171,11 @@ void CachedPage::restore(Page& page)
 
     firePageShowAndPopStateEvents(page);
 
+#if ENABLE(INTELLIGENT_TRACKING_PREVENTION)
+    for (auto& domain : m_loadedSubresourceDomains)
+        page.mainFrame().loader().client().didLoadFromRegistrableDomain(WTFMove(domain));
+#endif
+
     clear();
 }
 
@@ -173,11 +184,14 @@ void CachedPage::clear()
     ASSERT(m_cachedMainFrame);
     m_cachedMainFrame->clear();
     m_cachedMainFrame = nullptr;
-#if ENABLE(VIDEO_TRACK)
+#if ENABLE(VIDEO)
     m_needsCaptionPreferencesChanged = false;
 #endif
     m_needsDeviceOrPageScaleChanged = false;
     m_needsUpdateContentsSize = false;
+#if ENABLE(INTELLIGENT_TRACKING_PREVENTION)
+    m_loadedSubresourceDomains.clear();
+#endif
 }
 
 bool CachedPage::hasExpired() const

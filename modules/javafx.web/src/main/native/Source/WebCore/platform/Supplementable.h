@@ -30,7 +30,7 @@
 #include <wtf/HashMap.h>
 #include <wtf/MainThread.h>
 
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
 #include <wtf/Threading.h>
 #endif
 
@@ -78,7 +78,7 @@ template<typename T>
 class Supplement {
 public:
     virtual ~Supplement() = default;
-#if !ASSERT_DISABLED || ENABLE(SECURITY_ASSERTIONS)
+#if ASSERT_ENABLED || ENABLE(SECURITY_ASSERTIONS)
     virtual bool isRefCountedWrapper() const { return false; }
 #endif
 
@@ -98,24 +98,24 @@ class Supplementable {
 public:
     void provideSupplement(const char* key, std::unique_ptr<Supplement<T>> supplement)
     {
-        ASSERT(canAccessThreadLocalDataForThread(m_thread.get()));
+        ASSERT(canCurrentThreadAccessThreadLocalData(m_thread));
         ASSERT(!m_supplements.get(key));
         m_supplements.set(key, WTFMove(supplement));
     }
 
     void removeSupplement(const char* key)
     {
-        ASSERT(canAccessThreadLocalDataForThread(m_thread.get()));
+        ASSERT(canCurrentThreadAccessThreadLocalData(m_thread));
         m_supplements.remove(key);
     }
 
     Supplement<T>* requireSupplement(const char* key)
     {
-        ASSERT(canAccessThreadLocalDataForThread(m_thread.get()));
+        ASSERT(canCurrentThreadAccessThreadLocalData(m_thread));
         return m_supplements.get(key);
     }
 
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
 protected:
     Supplementable() = default;
 #endif
@@ -123,7 +123,7 @@ protected:
 private:
     typedef HashMap<const char*, std::unique_ptr<Supplement<T>>, PtrHash<const char*>> SupplementMap;
     SupplementMap m_supplements;
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
     Ref<Thread> m_thread { Thread::current() };
 #endif
 };

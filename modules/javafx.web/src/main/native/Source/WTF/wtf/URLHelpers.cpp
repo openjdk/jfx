@@ -34,37 +34,90 @@
 #include <mutex>
 #include <unicode/uidna.h>
 #include <unicode/uscript.h>
-#include <wtf/Optional.h>
 #include <wtf/text/WTFString.h>
 
 namespace WTF {
 namespace URLHelpers {
 
-// Needs to be big enough to hold an IDN-encoded name.
-// For host names bigger than this, we won't do IDN encoding, which is almost certainly OK.
-const unsigned hostNameBufferLength = 2048;
-const unsigned urlBytesBufferLength = 2048;
+constexpr unsigned urlBytesBufferLength = 2048;
 
-static uint32_t IDNScriptWhiteList[(USCRIPT_CODE_LIMIT + 31) / 32];
+// This needs to be higher than the UScriptCode for any of the scripts on the IDN allowed list.
+// At one point we used USCRIPT_CODE_LIMIT from ICU, but there are two reasons not to use it.
+// 1) ICU considers it deprecated, so by setting U_HIDE_DEPRECATED we can't see it.
+// 2) No good reason to limit ourselves to scripts that existed in the ICU headers when
+//    WebKit was compiled.
+// This is only really important for platforms that load an external IDN allowed script list.
+// Not important for the compiled-in one.
+constexpr auto scriptCodeLimit = static_cast<UScriptCode>(256);
+
+static uint32_t allowedIDNScriptBits[(scriptCodeLimit + 31) / 32];
 
 #if !PLATFORM(COCOA)
 
-// Cocoa has an implementation that uses a whitelist in /Library or ~/Library,
-// if it exists.
-void loadIDNScriptWhiteList()
+// Cocoa has an implementation that reads this from a file in /Library or ~/Library.
+void loadIDNAllowedScriptList()
 {
     static std::once_flag flag;
-    std::call_once(flag, initializeDefaultIDNScriptWhiteList);
+    std::call_once(flag, initializeDefaultIDNAllowedScriptList);
 }
 
 #endif // !PLATFORM(COCOA)
 
-static bool isArmenianLookalikeCharacter(UChar32 codePoint)
+template<UScriptCode> bool isLookalikeCharacterOfScriptType(UChar32);
+
+template<> bool isLookalikeCharacterOfScriptType<USCRIPT_ARMENIAN>(UChar32 codePoint)
 {
-    return codePoint == 0x0548 || codePoint == 0x054D || codePoint == 0x0578 || codePoint == 0x057D;
+    switch (codePoint) {
+    case 0x0548: /* ARMENIAN CAPITAL LETTER VO */
+    case 0x054D: /* ARMENIAN CAPITAL LETTER SEH */
+    case 0x0551: /* ARMENIAN CAPITAL LETTER CO */
+    case 0x0555: /* ARMENIAN CAPITAL LETTER OH */
+    case 0x0578: /* ARMENIAN SMALL LETTER VO */
+    case 0x057D: /* ARMENIAN SMALL LETTER SEH */
+    case 0x0581: /* ARMENIAN SMALL LETTER CO */
+    case 0x0585: /* ARMENIAN SMALL LETTER OH */
+        return true;
+    default:
+        return false;
+    }
 }
 
-static bool isArmenianScriptCharacter(UChar32 codePoint)
+template<> bool isLookalikeCharacterOfScriptType<USCRIPT_TAMIL>(UChar32 codePoint)
+{
+    switch (codePoint) {
+    case 0x0BE6: /* TAMIL DIGIT ZERO */
+        return true;
+    default:
+        return false;
+    }
+}
+
+template<> bool isLookalikeCharacterOfScriptType<USCRIPT_CANADIAN_ABORIGINAL>(UChar32 codePoint)
+{
+    switch (codePoint) {
+    case 0x146D: /* CANADIAN SYLLABICS KI */
+    case 0x146F: /* CANADIAN SYLLABICS KO */
+    case 0x1472: /* CANADIAN SYLLABICS KA */
+    case 0x14AA: /* CANADIAN SYLLABICS MA */
+    case 0x157C: /* CANADIAN SYLLABICS NUNAVUT H */
+    case 0x1587: /* CANADIAN SYLLABICS TLHI */
+    case 0x15AF: /* CANADIAN SYLLABICS AIVILIK B */
+    case 0x15B4: /* CANADIAN SYLLABICS BLACKFOOT WE */
+    case 0x15C5: /* CANADIAN SYLLABICS CARRIER GHO */
+    case 0x15DE: /* CANADIAN SYLLABICS CARRIER THE */
+    case 0x15E9: /* CANADIAN SYLLABICS CARRIER PO */
+    case 0x15F1: /* CANADIAN SYLLABICS CARRIER GE */
+    case 0x15F4: /* CANADIAN SYLLABICS CARRIER GA */
+    case 0x166D: /* CANADIAN SYLLABICS CHI SIGN */
+    case 0x166E: /* CANADIAN SYLLABICS FULL STOP */
+        return true;
+    default:
+        return false;
+    }
+}
+
+template <UScriptCode ScriptType>
+bool isOfScriptType(UChar32 codePoint)
 {
     UErrorCode error = U_ZERO_ERROR;
     UScriptCode script = uscript_getScript(codePoint, &error);
@@ -72,8 +125,7 @@ static bool isArmenianScriptCharacter(UChar32 codePoint)
         LOG_ERROR("got ICU error while trying to look at scripts: %d", error);
         return false;
     }
-
-    return script == USCRIPT_ARMENIAN;
+    return script == ScriptType;
 }
 
 template<typename CharacterType> inline bool isASCIIDigitOrValidHostCharacter(CharacterType charCode)
@@ -98,23 +150,36 @@ template<typename CharacterType> inline bool isASCIIDigitOrValidHostCharacter(Ch
     }
 }
 
-static bool isLookalikeCharacter(const Optional<UChar32>& previousCodePoint, UChar32 charCode)
+template <UScriptCode ScriptType>
+bool isLookalikeSequence(const std::optional<UChar32>& previousCodePoint, UChar32 codePoint)
+{
+    if (!previousCodePoint || *previousCodePoint == '/')
+        return false;
+
+    auto isLookalikePair = [] (UChar first, UChar second) {
+        return isLookalikeCharacterOfScriptType<ScriptType>(first) && !(isOfScriptType<ScriptType>(second) || isASCIIDigitOrValidHostCharacter(second));
+    };
+    return isLookalikePair(codePoint, *previousCodePoint)
+        || isLookalikePair(*previousCodePoint, codePoint);
+}
+
+static bool isLookalikeCharacter(const std::optional<UChar32>& previousCodePoint, UChar32 codePoint)
 {
     // This function treats the following as unsafe, lookalike characters:
     // any non-printable character, any character considered as whitespace,
     // any ignorable character, and emoji characters related to locks.
 
-    // We also considered the characters in Mozilla's blacklist <http://kb.mozillazine.org/Network.IDN.blacklist_chars>.
+    // We also considered the characters in Mozilla's list of characters <http://kb.mozillazine.org/Network.IDN.blacklist_chars>.
 
     // Some of the characters here will never appear once ICU has encoded.
     // For example, ICU transforms most spaces into an ASCII space and most
     // slashes into an ASCII solidus. But one of the two callers uses this
     // on characters that have not been processed by ICU, so they are needed here.
 
-    if (!u_isprint(charCode) || u_isUWhiteSpace(charCode) || u_hasBinaryProperty(charCode, UCHAR_DEFAULT_IGNORABLE_CODE_POINT))
+    if (!u_isprint(codePoint) || u_isUWhiteSpace(codePoint) || u_hasBinaryProperty(codePoint, UCHAR_DEFAULT_IGNORABLE_CODE_POINT))
         return true;
 
-    switch (charCode) {
+    switch (codePoint) {
     case 0x00BC: /* VULGAR FRACTION ONE QUARTER */
     case 0x00BD: /* VULGAR FRACTION ONE HALF */
     case 0x00BE: /* VULGAR FRACTION THREE QUARTERS */
@@ -122,8 +187,10 @@ static bool isLookalikeCharacter(const Optional<UChar32>& previousCodePoint, UCh
     /* 0x0131 LATIN SMALL LETTER DOTLESS I is intentionally not considered a lookalike character because it is visually distinguishable from i and it has legitimate use in the Turkish language. */
     case 0x01C0: /* LATIN LETTER DENTAL CLICK */
     case 0x01C3: /* LATIN LETTER RETROFLEX CLICK */
+    case 0x0237: /* LATIN SMALL LETTER DOTLESS J */
     case 0x0251: /* LATIN SMALL LETTER ALPHA */
     case 0x0261: /* LATIN SMALL LETTER SCRIPT G */
+    case 0x0274: /* LATIN LETTER SMALL CAPITAL N */
     case 0x027E: /* LATIN SMALL LETTER R WITH FISHHOOK */
     case 0x02D0: /* MODIFIER LETTER TRIANGULAR COLON */
     case 0x0335: /* COMBINING SHORT STROKE OVERLAY */
@@ -240,65 +307,67 @@ static bool isLookalikeCharacter(const Optional<UChar32>& previousCodePoint, UCh
         return previousCodePoint == 0x0237 /* LATIN SMALL LETTER DOTLESS J */
             || previousCodePoint == 0x0131 /* LATIN SMALL LETTER DOTLESS I */
             || previousCodePoint == 0x05D5; /* HEBREW LETTER VAV */
-    case 0x0548: /* ARMENIAN CAPITAL LETTER VO */
-    case 0x054D: /* ARMENIAN CAPITAL LETTER SEH */
-    case 0x0578: /* ARMENIAN SMALL LETTER VO */
-    case 0x057D: /* ARMENIAN SMALL LETTER SEH */
-        return previousCodePoint
-            && !isASCIIDigitOrValidHostCharacter(previousCodePoint.value())
-            && !isArmenianScriptCharacter(previousCodePoint.value());
     case '.':
         return false;
     default:
-        return previousCodePoint
-            && isArmenianLookalikeCharacter(previousCodePoint.value())
-            && !(isArmenianScriptCharacter(charCode) || isASCIIDigitOrValidHostCharacter(charCode));
+        return isLookalikeSequence<USCRIPT_ARMENIAN>(previousCodePoint, codePoint)
+            || isLookalikeSequence<USCRIPT_TAMIL>(previousCodePoint, codePoint)
+            || isLookalikeSequence<USCRIPT_CANADIAN_ABORIGINAL>(previousCodePoint, codePoint);
     }
 }
 
-void whiteListIDNScript(const char* scriptName)
+static void addScriptToIDNAllowedScriptList(int32_t script)
 {
-    int32_t script = u_getPropertyValueEnum(UCHAR_SCRIPT, scriptName);
-    if (script >= 0 && script < USCRIPT_CODE_LIMIT) {
+    if (script >= 0 && script < scriptCodeLimit) {
         size_t index = script / 32;
         uint32_t mask = 1 << (script % 32);
-        IDNScriptWhiteList[index] |= mask;
+        allowedIDNScriptBits[index] |= mask;
     }
 }
 
-void initializeDefaultIDNScriptWhiteList()
+static void addScriptToIDNAllowedScriptList(UScriptCode script)
 {
-    const char* defaultIDNScriptWhiteList[20] = {
-        "Common",
-        "Inherited",
-        "Arabic",
-        "Armenian",
-        "Bopomofo",
-        "Canadian_Aboriginal",
-        "Devanagari",
-        "Deseret",
-        "Gujarati",
-        "Gurmukhi",
-        "Hangul",
-        "Han",
-        "Hebrew",
-        "Hiragana",
-        "Katakana_Or_Hiragana",
-        "Katakana",
-        "Latin",
-        "Tamil",
-        "Thai",
-        "Yi",
-    };
-    for (const char* scriptName : defaultIDNScriptWhiteList)
-        whiteListIDNScript(scriptName);
+    addScriptToIDNAllowedScriptList(static_cast<int32_t>(script));
 }
 
-static bool allCharactersInIDNScriptWhiteList(const UChar* buffer, int32_t length)
+void addScriptToIDNAllowedScriptList(const char* scriptName)
 {
-    loadIDNScriptWhiteList();
+    addScriptToIDNAllowedScriptList(u_getPropertyValueEnum(UCHAR_SCRIPT, scriptName));
+}
+
+void initializeDefaultIDNAllowedScriptList()
+{
+    constexpr UScriptCode scripts[] = {
+        USCRIPT_COMMON,
+        USCRIPT_INHERITED,
+        USCRIPT_ARABIC,
+        USCRIPT_ARMENIAN,
+        USCRIPT_BOPOMOFO,
+        USCRIPT_CANADIAN_ABORIGINAL,
+        USCRIPT_DEVANAGARI,
+        USCRIPT_DESERET,
+        USCRIPT_GUJARATI,
+        USCRIPT_GURMUKHI,
+        USCRIPT_HANGUL,
+        USCRIPT_HAN,
+        USCRIPT_HEBREW,
+        USCRIPT_HIRAGANA,
+        USCRIPT_KATAKANA_OR_HIRAGANA,
+        USCRIPT_KATAKANA,
+        USCRIPT_LATIN,
+        USCRIPT_TAMIL,
+        USCRIPT_THAI,
+        USCRIPT_YI,
+    };
+    for (auto script : scripts)
+        addScriptToIDNAllowedScriptList(script);
+}
+
+static bool allCharactersInAllowedIDNScriptList(const UChar* buffer, int32_t length)
+{
+    loadIDNAllowedScriptList();
     int32_t i = 0;
-    Optional<UChar32> previousCodePoint;
+    std::optional<UChar32> previousCodePoint;
     while (i < length) {
         UChar32 c;
         U16_NEXT(buffer, i, length, c);
@@ -312,12 +381,12 @@ static bool allCharactersInIDNScriptWhiteList(const UChar* buffer, int32_t lengt
             LOG_ERROR("got negative number for script code from ICU: %d", script);
             return false;
         }
-        if (script >= USCRIPT_CODE_LIMIT)
+        if (script >= scriptCodeLimit)
             return false;
 
         size_t index = script / 32;
         uint32_t mask = 1 << (script % 32);
-        if (!(IDNScriptWhiteList[index] & mask))
+        if (!(allowedIDNScriptBits[index] & mask))
             return false;
 
         if (isLookalikeCharacter(previousCodePoint, c))
@@ -526,9 +595,11 @@ static bool allCharactersAllowedByTLDRules(const UChar* buffer, int32_t length)
 }
 
 // Return value of null means no mapping is necessary.
-Optional<String> mapHostName(const String& hostName, const Optional<URLDecodeFunction>& decodeFunction)
+std::optional<String> mapHostName(const String& hostName, URLDecodeFunction decodeFunction)
 {
-    if (hostName.length() > hostNameBufferLength)
+    // destinationBuffer needs to be big enough to hold an IDN-encoded name.
+    // For host names bigger than this, we won't do IDN encoding, which is almost certainly OK.
+    if (hostName.length() > URLParser::hostnameBufferLength)
         return String();
 
     if (!hostName.length())
@@ -544,31 +615,32 @@ Optional<String> mapHostName(const String& hostName, const Optional<URLDecodeFun
 
     auto sourceBuffer = string.charactersWithNullTermination();
 
-    UChar destinationBuffer[hostNameBufferLength];
+    UChar destinationBuffer[URLParser::hostnameBufferLength];
     UErrorCode uerror = U_ZERO_ERROR;
     UIDNAInfo processingDetails = UIDNA_INFO_INITIALIZER;
-    int32_t numCharactersConverted = (decodeFunction ? uidna_nameToASCII : uidna_nameToUnicode)(&URLParser::internationalDomainNameTranscoder(), sourceBuffer.data(), length, destinationBuffer, hostNameBufferLength, &processingDetails, &uerror);
-    if (length && (U_FAILURE(uerror) || processingDetails.errors))
-        return nullopt;
+    int32_t numCharactersConverted = (decodeFunction ? uidna_nameToASCII : uidna_nameToUnicode)(&URLParser::internationalDomainNameTranscoder(), sourceBuffer.data(), length, destinationBuffer, URLParser::hostnameBufferLength, &processingDetails, &uerror);
+    int allowedErrors = decodeFunction ? 0 : URLParser::allowedNameToASCIIErrors;
+    if (length && (U_FAILURE(uerror) || processingDetails.errors & ~allowedErrors))
+        return std::nullopt;
 
     if (numCharactersConverted == static_cast<int32_t>(length) && !memcmp(sourceBuffer.data(), destinationBuffer, length * sizeof(UChar)))
         return String();
 
-    if (!decodeFunction && !allCharactersInIDNScriptWhiteList(destinationBuffer, numCharactersConverted) && !allCharactersAllowedByTLDRules(destinationBuffer, numCharactersConverted))
+    if (!decodeFunction && !allCharactersInAllowedIDNScriptList(destinationBuffer, numCharactersConverted) && !allCharactersAllowedByTLDRules(destinationBuffer, numCharactersConverted))
         return String();
 
     return String(destinationBuffer, numCharactersConverted);
 }
 
-using MappingRangesVector = Optional<Vector<std::tuple<unsigned, unsigned, String>>>;
+using MappingRangesVector = std::optional<Vector<std::tuple<unsigned, unsigned, String>>>;
 
-static void collectRangesThatNeedMapping(const String& string, unsigned location, unsigned length, MappingRangesVector& array, const Optional<URLDecodeFunction>& decodeFunction)
+static void collectRangesThatNeedMapping(const String& string, unsigned location, unsigned length, MappingRangesVector& array, URLDecodeFunction decodeFunction)
 {
     // Generally, we want to optimize for the case where there is one host name that does not need mapping.
     // Therefore, we use null to indicate no mapping here and an empty array to indicate error.
 
     String substring = string.substringSharingImpl(location, length);
-    Optional<String> host = mapHostName(substring, decodeFunction);
+    std::optional<String> host = mapHostName(substring, decodeFunction);
 
     if (host && !*host)
         return;
@@ -580,7 +652,7 @@ static void collectRangesThatNeedMapping(const String& string, unsigned location
         array->constructAndAppend(location, length, *host);
 }
 
-static void applyHostNameFunctionToMailToURLString(const String& string, const Optional<URLDecodeFunction>& decodeFunction, MappingRangesVector& array)
+static void applyHostNameFunctionToMailToURLString(const String& string, URLDecodeFunction decodeFunction, MappingRangesVector& array)
 {
     // In a mailto: URL, host names come after a '@' character and end with a '>' or ',' or '?' character.
     // Skip quoted strings so that characters in them don't confuse us.
@@ -652,7 +724,7 @@ static void applyHostNameFunctionToMailToURLString(const String& string, const O
     }
 }
 
-static void applyHostNameFunctionToURLString(const String& string, const Optional<URLDecodeFunction>& decodeFunction, MappingRangesVector& array)
+static void applyHostNameFunctionToURLString(const String& string, URLDecodeFunction decodeFunction, MappingRangesVector& array)
 {
     // Find hostnames. Too bad we can't use any real URL-parsing code to do this,
     // but we have to do it before doing all the %-escaping, and this is the only
@@ -695,7 +767,7 @@ static void applyHostNameFunctionToURLString(const String& string, const Optiona
     collectRangesThatNeedMapping(string, hostNameStart, hostNameEnd - hostNameStart, array, decodeFunction);
 }
 
-String mapHostNames(const String& string, const Optional<URLDecodeFunction>& decodeFunction)
+String mapHostNames(const String& string, URLDecodeFunction decodeFunction)
 {
     // Generally, we want to optimize for the case where there is one host name that does not need mapping.
 
@@ -724,7 +796,7 @@ static String escapeUnsafeCharacters(const String& sourceBuffer)
 {
     unsigned length = sourceBuffer.length();
 
-    Optional<UChar32> previousCodePoint;
+    std::optional<UChar32> previousCodePoint;
 
     unsigned i;
     for (i = 0; i < length; ) {
@@ -774,7 +846,7 @@ static String escapeUnsafeCharacters(const String& sourceBuffer)
 
 String userVisibleURL(const CString& url)
 {
-    auto* before = reinterpret_cast<const unsigned char*>(url.data());
+    auto* before = url.dataAsUInt8Ptr();
     int length = url.length();
 
     if (!length)
@@ -782,11 +854,11 @@ String userVisibleURL(const CString& url)
 
     bool mayNeedHostNameDecoding = false;
 
-    Checked<int, RecordOverflow> bufferLength = length;
+    CheckedInt32 bufferLength = length;
     bufferLength = bufferLength * 3 + 1; // The buffer should be large enough to %-escape every character.
     if (bufferLength.hasOverflowed())
         return { };
-    Vector<char, urlBytesBufferLength> after(bufferLength.unsafeGet());
+    Vector<char, urlBytesBufferLength> after(bufferLength);
 
     char* q = after.data();
     {
@@ -826,7 +898,7 @@ String userVisibleURL(const CString& url)
         // then we will copy back bytes to the start of the buffer
         // as we convert.
         int afterlength = q - after.data();
-        char* p = after.data() + bufferLength.unsafeGet() - afterlength - 1;
+        char* p = after.data() + bufferLength.value() - afterlength - 1;
         memmove(p, after.data(), afterlength + 1); // copies trailing '\0'
         char* q = after.data();
         while (*p) {
@@ -851,7 +923,7 @@ String userVisibleURL(const CString& url)
 
     if (mayNeedHostNameDecoding) {
         // FIXME: Is it good to ignore the failure of mapHostNames and keep result intact?
-        auto mappedResult = mapHostNames(result, nullopt);
+        auto mappedResult = mapHostNames(result, nullptr);
         if (!!mappedResult)
             result = mappedResult;
     }

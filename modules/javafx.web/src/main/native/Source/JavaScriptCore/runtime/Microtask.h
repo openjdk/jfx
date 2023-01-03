@@ -29,7 +29,7 @@
 
 namespace JSC {
 
-class ExecState;
+class CallFrame;
 
 class Microtask : public RefCounted<Microtask> {
 public:
@@ -37,7 +37,7 @@ public:
     {
     }
 
-    virtual void run(ExecState*) = 0;
+    virtual void run(JSGlobalObject*) = 0;
 };
 
 } // namespace JSC

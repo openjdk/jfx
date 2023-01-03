@@ -112,6 +112,7 @@ typedef enum
  *    horizontally and two vertically are grouped together and are located
  *    in memory in Z or flipped Z order. In case of odd rows, the last row
  *    of blocks is arranged in linear order.
+ * @GST_VIDEO_TILE_MODE_LINEAR: Tiles are in row order. (Since: 1.18)
  *
  * Enum value describing the available tiling modes.
  */
@@ -119,6 +120,14 @@ typedef enum
 {
   GST_VIDEO_TILE_MODE_UNKNOWN = 0,
   GST_VIDEO_TILE_MODE_ZFLIPZ_2X2 = GST_VIDEO_TILE_MAKE_MODE (1, INDEXED),
+  /**
+   * GST_VIDEO_TILE_MODE_LINEAR:
+   *
+   * Tiles are in row order.
+   *
+   * Since: 1.18
+   */
+  GST_VIDEO_TILE_MODE_LINEAR = GST_VIDEO_TILE_MAKE_MODE (2, INDEXED),
 } GstVideoTileMode;
 
 GST_VIDEO_API

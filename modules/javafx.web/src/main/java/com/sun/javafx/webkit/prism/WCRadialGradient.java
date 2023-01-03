@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,7 @@
 
 package com.sun.javafx.webkit.prism;
 
+import com.sun.prism.paint.Color;
 import com.sun.prism.paint.RadialGradient;
 import com.sun.prism.paint.Stop;
 import com.sun.webkit.graphics.WCGradient;
@@ -56,7 +57,7 @@ final class WCRadialGradient extends WCGradient<RadialGradient> {
     private final float r1over;
     private final float r1;
     private final float r2;
-    private final List<Stop> stops = new ArrayList<Stop>();
+    private final List<Stop> stops = new ArrayList<>();
 
     WCRadialGradient(WCPoint p1, float r1, WCPoint p2, float r2) {
         this.reverse = r1 < r2;
@@ -70,14 +71,15 @@ final class WCRadialGradient extends WCGradient<RadialGradient> {
     }
 
     @Override
-    protected void addStop(int argb, float offset) {
+    protected void addStop(Color color, float offset) {
         if (this.reverse) {
             offset = 1.0f - offset;
         }
         offset = 1.0f - offset + offset * this.r2 * this.r1over;
-        this.stops.add(new Stop(WCGraphicsPrismContext.createColor(argb), offset));
+        this.stops.add(new Stop(color, offset));
     }
 
+    @Override
     public RadialGradient getPlatformGradient() {
         Collections.sort(this.stops, COMPARATOR);
         float dx = this.p2.getX() - this.p1.getX();

@@ -26,16 +26,19 @@
 #include "config.h"
 #include "WeakSetPrototype.h"
 
+#include "HashMapImplInlines.h"
 #include "JSCInlines.h"
 #include "JSWeakSet.h"
+#include "WeakMapImplInlines.h"
 
 namespace JSC {
 
+const ASCIILiteral WeakSetNonObjectValueError { "Attempted to add a non-object value to a WeakSet"_s };
+
 const ClassInfo WeakSetPrototype::s_info = { "WeakSet", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(WeakSetPrototype) };
 
-static EncodedJSValue JSC_HOST_CALL protoFuncWeakSetDelete(ExecState*);
-static EncodedJSValue JSC_HOST_CALL protoFuncWeakSetHas(ExecState*);
-static EncodedJSValue JSC_HOST_CALL protoFuncWeakSetAdd(ExecState*);
+static JSC_DECLARE_HOST_FUNCTION(protoFuncWeakSetDelete);
+static JSC_DECLARE_HOST_FUNCTION(protoFuncWeakSetHas);
 
 void WeakSetPrototype::finishCreation(VM& vm, JSGlobalObject* globalObject)
 {
@@ -46,16 +49,16 @@ void WeakSetPrototype::finishCreation(VM& vm, JSGlobalObject* globalObject)
     JSC_NATIVE_INTRINSIC_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->has, protoFuncWeakSetHas, static_cast<unsigned>(PropertyAttribute::DontEnum), 1, JSWeakSetHasIntrinsic);
     JSC_NATIVE_INTRINSIC_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->add, protoFuncWeakSetAdd, static_cast<unsigned>(PropertyAttribute::DontEnum), 1, JSWeakSetAddIntrinsic);
 
-    putDirectWithoutTransition(vm, vm.propertyNames->toStringTagSymbol, jsString(vm, "WeakSet"), PropertyAttribute::DontEnum | PropertyAttribute::ReadOnly);
+    JSC_TO_STRING_TAG_WITHOUT_TRANSITION();
 }
 
-ALWAYS_INLINE static JSWeakSet* getWeakSet(CallFrame* callFrame, JSValue value)
+ALWAYS_INLINE static JSWeakSet* getWeakSet(JSGlobalObject* globalObject, JSValue value)
 {
-    VM& vm = callFrame->vm();
+    VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     if (UNLIKELY(!value.isObject())) {
-        throwTypeError(callFrame, scope, "Called WeakSet function on non-object"_s);
+        throwTypeError(globalObject, scope, "Called WeakSet function on non-object"_s);
         return nullptr;
     }
 
@@ -63,40 +66,40 @@ ALWAYS_INLINE static JSWeakSet* getWeakSet(CallFrame* callFrame, JSValue value)
     if (LIKELY(set))
         return set;
 
-    throwTypeError(callFrame, scope, "Called WeakSet function on a non-WeakSet object"_s);
+    throwTypeError(globalObject, scope, "Called WeakSet function on a non-WeakSet object"_s);
     return nullptr;
 }
 
-EncodedJSValue JSC_HOST_CALL protoFuncWeakSetDelete(CallFrame* callFrame)
+JSC_DEFINE_HOST_FUNCTION(protoFuncWeakSetDelete, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
-    auto* set = getWeakSet(callFrame, callFrame->thisValue());
+    auto* set = getWeakSet(globalObject, callFrame->thisValue());
     if (!set)
         return JSValue::encode(jsUndefined());
     JSValue key = callFrame->argument(0);
     return JSValue::encode(jsBoolean(key.isObject() && set->remove(asObject(key))));
 }
 
-EncodedJSValue JSC_HOST_CALL protoFuncWeakSetHas(CallFrame* callFrame)
+JSC_DEFINE_HOST_FUNCTION(protoFuncWeakSetHas, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
-    auto* set = getWeakSet(callFrame, callFrame->thisValue());
+    auto* set = getWeakSet(globalObject, callFrame->thisValue());
     if (!set)
         return JSValue::encode(jsUndefined());
     JSValue key = callFrame->argument(0);
     return JSValue::encode(jsBoolean(key.isObject() && set->has(asObject(key))));
 }
 
-EncodedJSValue JSC_HOST_CALL protoFuncWeakSetAdd(CallFrame* callFrame)
+JSC_DEFINE_HOST_FUNCTION(protoFuncWeakSetAdd, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
-    VM& vm = callFrame->vm();
+    VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    auto* set = getWeakSet(callFrame, callFrame->thisValue());
+    auto* set = getWeakSet(globalObject, callFrame->thisValue());
     EXCEPTION_ASSERT(!!scope.exception() == !set);
     if (!set)
         return JSValue::encode(jsUndefined());
     JSValue key = callFrame->argument(0);
     if (!key.isObject())
-        return JSValue::encode(throwTypeError(callFrame, scope, "Attempted to add a non-object key to a WeakSet"_s));
+        return JSValue::encode(throwTypeError(globalObject, scope, WeakSetNonObjectValueError));
     set->add(vm, asObject(key));
     return JSValue::encode(callFrame->thisValue());
 }

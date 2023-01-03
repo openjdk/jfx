@@ -30,12 +30,13 @@
  * Buffer lists are an object containing a list of buffers.
  *
  * Buffer lists are created with gst_buffer_list_new() and filled with data
- * using a gst_buffer_list_insert().
+ * using gst_buffer_list_insert().
  *
  * Buffer lists can be pushed on a srcpad with gst_pad_push_list(). This is
  * interesting when multiple buffers need to be pushed in one go because it
  * can reduce the amount of overhead for pushing each buffer individually.
  */
+#define GST_DISABLE_MINIOBJECT_INLINE_FUNCTIONS
 #include "gst_private.h"
 
 #include "gstbuffer.h"
@@ -146,14 +147,10 @@ gst_buffer_list_init (GstBufferList * list, guint n_allocated, gsize slice_size)
  * gst_buffer_list_new_sized:
  * @size: an initial reserved size
  *
- * Creates a new, empty #GstBufferList. The caller is responsible for unreffing
- * the returned #GstBufferList. The list will have @size space preallocated so
- * that memory reallocations can be avoided.
+ * Creates a new, empty #GstBufferList. The list will have @size space
+ * preallocated so that memory reallocations can be avoided.
  *
- * Free-function: gst_buffer_list_unref
- *
- * Returns: (transfer full): the new #GstBufferList. gst_buffer_list_unref()
- *     after usage.
+ * Returns: (transfer full): the new #GstBufferList.
  */
 GstBufferList *
 gst_buffer_list_new_sized (guint size)
@@ -181,13 +178,9 @@ gst_buffer_list_new_sized (guint size)
 /**
  * gst_buffer_list_new:
  *
- * Creates a new, empty #GstBufferList. The caller is responsible for unreffing
- * the returned #GstBufferList.
+ * Creates a new, empty #GstBufferList.
  *
- * Free-function: gst_buffer_list_unref
- *
- * Returns: (transfer full): the new #GstBufferList. gst_buffer_list_unref()
- *     after usage.
+ * Returns: (transfer full): the new #GstBufferList.
  */
 GstBufferList *
 gst_buffer_list_new (void)
@@ -239,10 +232,10 @@ gst_buffer_list_remove_range_internal (GstBufferList * list, guint idx,
  * @func: (scope call): a #GstBufferListFunc to call
  * @user_data: (closure): user data passed to @func
  *
- * Call @func with @data for each buffer in @list.
+ * Calls @func with @data for each buffer in @list.
  *
  * @func can modify the passed buffer pointer or its contents. The return value
- * of @func define if this function returns or if the remaining buffers in
+ * of @func defines if this function returns or if the remaining buffers in
  * the list should be skipped.
  *
  * Returns: %TRUE when @func returned %TRUE for each buffer in @list or when
@@ -307,8 +300,11 @@ gst_buffer_list_foreach (GstBufferList * list, GstBufferListFunc func,
         gst_buffer_list_remove_range_internal (list, i, 1, !was_writable);
         --len;
       } else {
-        if (!was_writable)
+        if (!was_writable) {
+          gst_mini_object_remove_parent (GST_MINI_OBJECT_CAST (buf),
+              GST_MINI_OBJECT_CAST (list));
           gst_buffer_unref (buf);
+        }
 
         list->buffers[i] = buf_ret;
         gst_mini_object_add_parent (GST_MINI_OBJECT_CAST (buf_ret),
@@ -337,7 +333,7 @@ gst_buffer_list_foreach (GstBufferList * list, GstBufferListFunc func,
  * @list: a #GstBufferList
  * @idx: the index
  *
- * Get the buffer at @idx.
+ * Gets the buffer at @idx.
  *
  * You must make sure that @idx does not exceed the number of
  * buffers available.
@@ -409,7 +405,7 @@ gst_buffer_list_get_writable (GstBufferList * list, guint idx)
  * @idx: the index
  * @buffer: (transfer full): a #GstBuffer
  *
- * Insert @buffer at @idx in @list. Other buffers are moved to make room for
+ * Inserts @buffer at @idx in @list. Other buffers are moved to make room for
  * this new buffer.
  *
  * A -1 value for @idx will append the buffer at the end.
@@ -436,6 +432,9 @@ gst_buffer_list_insert (GstBufferList * list, gint idx, GstBuffer * buffer)
   want_alloc = list->n_buffers + 1;
 
   if (want_alloc > list->n_allocated) {
+    if (G_UNLIKELY (list->n_allocated > (G_MAXUINT / 2)))
+      g_error ("Growing GstBufferList would result in overflow");
+
     want_alloc = MAX (GST_ROUND_UP_16 (want_alloc), list->n_allocated * 2);
 
     if (GST_BUFFER_LIST_IS_USING_DYNAMIC_ARRAY (list)) {
@@ -466,7 +465,7 @@ gst_buffer_list_insert (GstBufferList * list, gint idx, GstBuffer * buffer)
  * @idx: the index
  * @length: the amount to remove
  *
- * Remove @length buffers starting from @idx in @list. The following buffers
+ * Removes @length buffers starting from @idx in @list. The following buffers
  * are moved to close the gap.
  */
 void
@@ -484,8 +483,8 @@ gst_buffer_list_remove (GstBufferList * list, guint idx, guint length)
  * gst_buffer_list_copy_deep:
  * @list: a #GstBufferList
  *
- * Create a copy of the given buffer list. This will make a newly allocated
- * copy of the buffer that the source buffer list contains.
+ * Creates a copy of the given buffer list. This will make a newly allocated
+ * copy of the buffers that the source buffer list contains.
  *
  * Returns: (transfer full): a new copy of @list.
  *
@@ -523,10 +522,10 @@ gst_buffer_list_copy_deep (const GstBufferList * list)
  * gst_buffer_list_calculate_size:
  * @list: a #GstBufferList
  *
- * Calculates the size of the data contained in buffer list by adding the
+ * Calculates the size of the data contained in @list by adding the
  * size of all buffers.
  *
- * Returns: the size of the data contained in buffer list in bytes.
+ * Returns: the size of the data contained in @list in bytes.
  *
  * Since: 1.14
  */
@@ -546,4 +545,121 @@ gst_buffer_list_calculate_size (GstBufferList * list)
     size += gst_buffer_get_size (buffers[i]);
 
   return size;
+}
+
+/**
+ * gst_buffer_list_ref: (skip)
+ * @list: a #GstBufferList
+ *
+ * Increases the refcount of the given buffer list by one.
+ *
+ * Note that the refcount affects the writability of @list and its data, see
+ * gst_buffer_list_make_writable(). It is important to note that keeping
+ * additional references to GstBufferList instances can potentially increase
+ * the number of memcpy operations in a pipeline.
+ *
+ * Returns: (transfer full): @list
+ */
+GstBufferList *
+gst_buffer_list_ref (GstBufferList * list)
+{
+  return
+      GST_BUFFER_LIST_CAST (gst_mini_object_ref (GST_MINI_OBJECT_CAST (list)));
+}
+
+/**
+ * gst_buffer_list_unref: (skip)
+ * @list: (transfer full): a #GstBufferList
+ *
+ * Decreases the refcount of the buffer list. If the refcount reaches 0, the
+ * buffer list will be freed.
+ */
+void
+gst_buffer_list_unref (GstBufferList * list)
+{
+  gst_mini_object_unref (GST_MINI_OBJECT_CAST (list));
+}
+
+/**
+ * gst_clear_buffer_list: (skip)
+ * @list_ptr: a pointer to a #GstBufferList reference
+ *
+ * Clears a reference to a #GstBufferList.
+ *
+ * @list_ptr must not be %NULL.
+ *
+ * If the reference is %NULL then this function does nothing. Otherwise, the
+ * reference count of the list is decreased and the pointer is set to %NULL.
+ *
+ * Since: 1.16
+ */
+void
+gst_clear_buffer_list (GstBufferList ** list_ptr)
+{
+  gst_clear_mini_object ((GstMiniObject **) list_ptr);
+}
+
+/**
+ * gst_buffer_list_copy: (skip)
+ * @list: a #GstBufferList
+ *
+ * Creates a shallow copy of the given buffer list. This will make a newly
+ * allocated copy of the source list with copies of buffer pointers. The
+ * refcount of buffers pointed to will be increased by one.
+ *
+ * Returns: (transfer full): a new copy of @list.
+ */
+GstBufferList *
+gst_buffer_list_copy (const GstBufferList * list)
+{
+  return
+      GST_BUFFER_LIST_CAST (gst_mini_object_copy (GST_MINI_OBJECT_CONST_CAST
+          (list)));
+}
+
+/**
+ * gst_buffer_list_replace:
+ * @old_list: (inout) (transfer full) (nullable): pointer to a pointer to a
+ *     #GstBufferList to be replaced.
+ * @new_list: (transfer none) (allow-none): pointer to a #GstBufferList that
+ *     will replace the buffer list pointed to by @old_list.
+ *
+ * Modifies a pointer to a #GstBufferList to point to a different
+ * #GstBufferList. The modification is done atomically (so this is useful for
+ * ensuring thread safety in some cases), and the reference counts are updated
+ * appropriately (the old buffer list is unreffed, the new is reffed).
+ *
+ * Either @new_list or the #GstBufferList pointed to by @old_list may be %NULL.
+ *
+ * Returns: %TRUE if @new_list was different from @old_list
+ *
+ * Since: 1.16
+ */
+gboolean
+gst_buffer_list_replace (GstBufferList ** old_list, GstBufferList * new_list)
+{
+  return gst_mini_object_replace ((GstMiniObject **) old_list,
+      (GstMiniObject *) new_list);
+}
+
+/**
+ * gst_buffer_list_take:
+ * @old_list: (inout) (transfer full): pointer to a pointer to a #GstBufferList
+ *     to be replaced.
+ * @new_list: (transfer full) (allow-none): pointer to a #GstBufferList
+ *     that will replace the bufferlist pointed to by @old_list.
+ *
+ * Modifies a pointer to a #GstBufferList to point to a different
+ * #GstBufferList. This function is similar to gst_buffer_list_replace() except
+ * that it takes ownership of @new_list.
+ *
+ * Returns: %TRUE if @new_list was different from @old_list
+ *
+ * Since: 1.16
+ */
+gboolean
+gst_buffer_list_take (GstBufferList ** old_list, GstBufferList * new_list)
+{
+  return gst_mini_object_take ((GstMiniObject **) old_list,
+      (GstMiniObject *) new_list);
 }

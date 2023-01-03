@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -87,8 +87,8 @@ public final class Node_cssMethods_Test extends CssMethodsTestBase {
                    }),
             config("cursor", null, "-fx-cursor", Cursor.MOVE),
             config("effect", null, "-fx-effect", new Shadow()),
-            config("focusTraversable", false,
-                   "-fx-focus-traversable", true),
+            config("focusTraversable", false, "-fx-focus-traversable", true),
+            config("managed", true, "-fx-managed", false, false),
             config("opacity", 1.0, "-fx-opacity", 0.5),
             config("opacity", 0.5, "-fx-opacity", null, 0.0),
             config("viewOrder", 0.0, "-fx-view-order", 0.5),

@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2011 Ericsson AB. All rights reserved.
  * Copyright (C) 2012 Google Inc. All rights reserved.
- * Copyright (C) 2013-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -35,13 +35,15 @@
 
 #if ENABLE(MEDIA_STREAM)
 
-#include "CaptureDeviceManager.h"
+#include "DisplayCaptureManager.h"
 #include "Logging.h"
 #include "MediaStreamPrivate.h"
-#include "RuntimeEnabledFeatures.h"
+#include <wtf/CallbackAggregator.h>
 #include <wtf/SHA1.h>
 
 namespace WebCore {
+
+static const Seconds deviceChangeDebounceTimerInterval { 200_ms };
 
 RealtimeMediaSourceCenter& RealtimeMediaSourceCenter::singleton()
 {
@@ -51,7 +53,9 @@ RealtimeMediaSourceCenter& RealtimeMediaSourceCenter::singleton()
 }
 
 RealtimeMediaSourceCenter::RealtimeMediaSourceCenter()
+    : m_debounceTimer(RunLoop::main(), this, &RealtimeMediaSourceCenter::triggerDevicesChangedObservers)
 {
+    m_supportedConstraints.setSupportsEchoCancellation(true);
     m_supportedConstraints.setSupportsWidth(true);
     m_supportedConstraints.setSupportsHeight(true);
     m_supportedConstraints.setSupportsAspectRatio(true);
@@ -63,65 +67,69 @@ RealtimeMediaSourceCenter::RealtimeMediaSourceCenter()
 
 RealtimeMediaSourceCenter::~RealtimeMediaSourceCenter() = default;
 
+RealtimeMediaSourceCenter::Observer::~Observer() = default;
+
 void RealtimeMediaSourceCenter::createMediaStream(Ref<const Logger>&& logger, NewMediaStreamHandler&& completionHandler, String&& hashSalt, CaptureDevice&& audioDevice, CaptureDevice&& videoDevice, const MediaStreamRequest& request)
 {
     Vector<Ref<RealtimeMediaSource>> audioSources;
     Vector<Ref<RealtimeMediaSource>> videoSources;
     String invalidConstraint;
 
+    RefPtr<RealtimeMediaSource> audioSource;
     if (audioDevice) {
-        auto audioSource = audioCaptureFactory().createAudioCaptureSource(WTFMove(audioDevice), String { hashSalt }, &request.audioConstraints);
-        if (audioSource)
-            audioSources.append(audioSource.source());
-        else {
-#if !LOG_DISABLED
-            if (!audioSource.errorMessage.isEmpty())
-                LOG(Media, "RealtimeMediaSourceCenter::createMediaStream(%p), audio constraints failed to apply: %s", this, audioSource.errorMessage.utf8().data());
-#endif
-            completionHandler(nullptr);
+        auto source = audioCaptureFactory().createAudioCaptureSource(WTFMove(audioDevice), String { hashSalt }, &request.audioConstraints);
+        if (!source) {
+            completionHandler(makeUnexpected(makeString("Failed to create MediaStream audio source: ", source.errorMessage)));
             return;
         }
+        audioSource = source.source();
     }
 
+    RefPtr<RealtimeMediaSource> videoSource;
     if (videoDevice) {
-        CaptureSourceOrError videoSource;
+        CaptureSourceOrError source;
         if (videoDevice.type() == CaptureDevice::DeviceType::Camera)
-            videoSource = videoCaptureFactory().createVideoCaptureSource(WTFMove(videoDevice), WTFMove(hashSalt), &request.videoConstraints);
+            source = videoCaptureFactory().createVideoCaptureSource(WTFMove(videoDevice), WTFMove(hashSalt), &request.videoConstraints);
         else
-            videoSource = displayCaptureFactory().createDisplayCaptureSource(WTFMove(videoDevice), &request.videoConstraints);
+            source = displayCaptureFactory().createDisplayCaptureSource(WTFMove(videoDevice), WTFMove(hashSalt), &request.videoConstraints);
 
-        if (videoSource)
-            videoSources.append(videoSource.source());
-        else {
-#if !LOG_DISABLED
-            if (!videoSource.errorMessage.isEmpty())
-                LOG(Media, "RealtimeMediaSourceCenter::createMediaStream(%p), video constraints failed to apply: %s", this, videoSource.errorMessage.utf8().data());
-#endif
-            completionHandler(nullptr);
+        if (!source) {
+            completionHandler(makeUnexpected(makeString("Failed to create MediaStream video source: ", source.errorMessage)));
             return;
         }
+        videoSource = source.source();
     }
 
-    completionHandler(MediaStreamPrivate::create(WTFMove(logger), audioSources, videoSources));
+    CompletionHandler<void(String&&)> whenAudioSourceReady = [audioSource, videoSource = WTFMove(videoSource), logger = WTFMove(logger), completionHandler = WTFMove(completionHandler)](auto&& errorMessage) mutable {
+        if (!errorMessage.isEmpty())
+            return completionHandler(makeUnexpected(makeString("Failed to create MediaStream audio source: ", errorMessage)));
+        if (!videoSource)
+            return completionHandler(MediaStreamPrivate::create(WTFMove(logger), WTFMove(audioSource), WTFMove(videoSource)));
+
+        CompletionHandler<void(String&&)> whenVideoSourceReady = [audioSource = WTFMove(audioSource), videoSource, logger = WTFMove(logger), completionHandler = WTFMove(completionHandler)](auto&& errorMessage) mutable {
+            if (!errorMessage.isEmpty())
+                return completionHandler(makeUnexpected(makeString("Failed to create MediaStream video source: ", errorMessage)));
+            completionHandler(MediaStreamPrivate::create(WTFMove(logger), WTFMove(audioSource), WTFMove(videoSource)));
+        };
+        videoSource->whenReady(WTFMove(whenVideoSourceReady));
+    };
+    if (!audioSource)
+        return whenAudioSourceReady({ });
+    audioSource->whenReady(WTFMove(whenAudioSourceReady));
 }
 
-Vector<CaptureDevice> RealtimeMediaSourceCenter::getMediaStreamDevices()
+void RealtimeMediaSourceCenter::getMediaStreamDevices(CompletionHandler<void(Vector<CaptureDevice>&&)>&& completion)
 {
-    Vector<CaptureDevice> result;
-    for (auto& device : audioCaptureFactory().audioCaptureDeviceManager().captureDevices()) {
-        if (device.enabled())
-            result.append(device);
-    }
-    for (auto& device : videoCaptureFactory().videoCaptureDeviceManager().captureDevices()) {
-        if (device.enabled())
-            result.append(device);
-    }
-    for (auto& device : displayCaptureFactory().displayCaptureDeviceManager().captureDevices()) {
-        if (device.enabled())
-            result.append(device);
-    }
+    enumerateDevices(true, true, true, true, [this, completion = WTFMove(completion)]() mutable {
+        Vector<CaptureDevice> results;
 
-    return result;
+        results.appendVector(audioCaptureFactory().audioCaptureDeviceManager().captureDevices());
+        results.appendVector(videoCaptureFactory().videoCaptureDeviceManager().captureDevices());
+        results.appendVector(displayCaptureFactory().displayCaptureDeviceManager().captureDevices());
+        results.appendVector(audioCaptureFactory().speakerDevices());
+
+        completion(WTFMove(results));
+    });
 }
 
 static void addStringToSHA1(SHA1& sha1, const String& string)
@@ -137,7 +145,7 @@ static void addStringToSHA1(SHA1& sha1, const String& string)
     }
 
     auto utf8 = string.utf8();
-    sha1.addBytes(reinterpret_cast<const uint8_t*>(utf8.data()), utf8.length() + 1); // Include terminating null byte.
+    sha1.addBytes(utf8.dataAsUInt8Ptr(), utf8.length() + 1); // Include terminating null byte.
 }
 
 String RealtimeMediaSourceCenter::hashStringWithSalt(const String& id, const String& hashSalt)
@@ -156,21 +164,37 @@ String RealtimeMediaSourceCenter::hashStringWithSalt(const String& id, const Str
     return SHA1::hexDigest(digest).data();
 }
 
-void RealtimeMediaSourceCenter::setDevicesChangedObserver(std::function<void()>&& observer)
+void RealtimeMediaSourceCenter::addDevicesChangedObserver(Observer& observer)
 {
     ASSERT(isMainThread());
-    ASSERT(!m_deviceChangedObserver);
-    m_deviceChangedObserver = WTFMove(observer);
+    m_observers.add(observer);
+}
+
+void RealtimeMediaSourceCenter::removeDevicesChangedObserver(Observer& observer)
+{
+    ASSERT(isMainThread());
+    m_observers.remove(observer);
 }
 
 void RealtimeMediaSourceCenter::captureDevicesChanged()
 {
     ASSERT(isMainThread());
-    if (m_deviceChangedObserver)
-        m_deviceChangedObserver();
+
+    // When a device with camera and microphone is attached or detached, the CaptureDevice notification for
+    // the different devices won't arrive at the same time so delay a bit so we can coalesce the callbacks.
+    if (!m_debounceTimer.isActive())
+        m_debounceTimer.startOneShot(deviceChangeDebounceTimerInterval);
 }
 
-void RealtimeMediaSourceCenter::getDisplayMediaDevices(const MediaStreamRequest& request, Vector<DeviceInfo>& diaplayDeviceInfo, String& firstInvalidConstraint)
+void RealtimeMediaSourceCenter::triggerDevicesChangedObservers()
+{
+    Ref protectedThis { *this };
+    m_observers.forEach([](auto& observer) {
+        observer.devicesChanged();
+    });
+}
+
+void RealtimeMediaSourceCenter::getDisplayMediaDevices(const MediaStreamRequest& request, String&& hashSalt, Vector<DeviceInfo>& displayDeviceInfo, String& firstInvalidConstraint)
 {
     if (!request.videoConstraints.isValid)
         return;
@@ -180,9 +204,9 @@ void RealtimeMediaSourceCenter::getDisplayMediaDevices(const MediaStreamRequest&
         if (!device.enabled())
             return;
 
-        auto sourceOrError = displayCaptureFactory().createDisplayCaptureSource(device, { });
+        auto sourceOrError = displayCaptureFactory().createDisplayCaptureSource(device, String { hashSalt }, &request.videoConstraints);
         if (sourceOrError && sourceOrError.captureSource->supportsConstraints(request.videoConstraints, invalidConstraint))
-            diaplayDeviceInfo.append({sourceOrError.captureSource->fitnessScore(), device});
+            displayDeviceInfo.append({ sourceOrError.captureSource->fitnessScore(), device });
 
         if (!invalidConstraint.isEmpty() && firstInvalidConstraint.isEmpty())
             firstInvalidConstraint = invalidConstraint;
@@ -221,7 +245,31 @@ void RealtimeMediaSourceCenter::getUserMediaDevices(const MediaStreamRequest& re
     }
 }
 
+void RealtimeMediaSourceCenter::enumerateDevices(bool shouldEnumerateCamera, bool shouldEnumerateDisplay, bool shouldEnumerateMicrophone, bool shouldEnumerateSpeakers, CompletionHandler<void()>&& callback)
+{
+    auto callbackAggregator = CallbackAggregator::create(WTFMove(callback));
+    if (shouldEnumerateCamera)
+        videoCaptureFactory().videoCaptureDeviceManager().computeCaptureDevices([callbackAggregator] { });
+    if (shouldEnumerateDisplay)
+        displayCaptureFactory().displayCaptureDeviceManager().computeCaptureDevices([callbackAggregator] { });
+    if (shouldEnumerateMicrophone)
+        audioCaptureFactory().audioCaptureDeviceManager().computeCaptureDevices([callbackAggregator] { });
+    if (shouldEnumerateSpeakers)
+        audioCaptureFactory().computeSpeakerDevices([callbackAggregator] { });
+}
+
 void RealtimeMediaSourceCenter::validateRequestConstraints(ValidConstraintsHandler&& validHandler, InvalidConstraintsHandler&& invalidHandler, const MediaStreamRequest& request, String&& deviceIdentifierHashSalt)
+{
+    bool shouldEnumerateCamera = request.videoConstraints.isValid;
+    bool shouldEnumerateDisplay = (request.type == MediaStreamRequest::Type::DisplayMedia || request.type == MediaStreamRequest::Type::DisplayMediaWithAudio);
+    bool shouldEnumerateMicrophone = request.audioConstraints.isValid;
+    bool shouldEnumerateSpeakers = false;
+    enumerateDevices(shouldEnumerateCamera, shouldEnumerateDisplay, shouldEnumerateMicrophone, shouldEnumerateSpeakers, [this, validHandler = WTFMove(validHandler), invalidHandler = WTFMove(invalidHandler), request, deviceIdentifierHashSalt = WTFMove(deviceIdentifierHashSalt)]() mutable {
+        validateRequestConstraintsAfterEnumeration(WTFMove(validHandler), WTFMove(invalidHandler), request, WTFMove(deviceIdentifierHashSalt));
+    });
+}
+
+void RealtimeMediaSourceCenter::validateRequestConstraintsAfterEnumeration(ValidConstraintsHandler&& validHandler, InvalidConstraintsHandler&& invalidHandler, const MediaStreamRequest& request, String&& deviceIdentifierHashSalt)
 {
     struct {
         bool operator()(const DeviceInfo& a, const DeviceInfo& b)
@@ -234,12 +282,23 @@ void RealtimeMediaSourceCenter::validateRequestConstraints(ValidConstraintsHandl
     Vector<DeviceInfo> videoDeviceInfo;
     String firstInvalidConstraint;
 
-    if (request.type == MediaStreamRequest::Type::DisplayMedia)
-        getDisplayMediaDevices(request, videoDeviceInfo, firstInvalidConstraint);
+    if (request.type == MediaStreamRequest::Type::DisplayMedia || request.type == MediaStreamRequest::Type::DisplayMediaWithAudio)
+        getDisplayMediaDevices(request, String { deviceIdentifierHashSalt }, videoDeviceInfo, firstInvalidConstraint);
     else
         getUserMediaDevices(request, String { deviceIdentifierHashSalt }, audioDeviceInfo, videoDeviceInfo, firstInvalidConstraint);
 
-    if ((request.audioConstraints.isValid && audioDeviceInfo.isEmpty()) || (request.videoConstraints.isValid && videoDeviceInfo.isEmpty())) {
+    if (request.audioConstraints.isValid && audioDeviceInfo.isEmpty()) {
+        WTFLogAlways("Audio capture was requested but no device was found amongst %zu devices", audioCaptureFactory().audioCaptureDeviceManager().captureDevices().size());
+        request.audioConstraints.mandatoryConstraints.forEach([](auto& constraint) { constraint.log(); });
+
+        invalidHandler(firstInvalidConstraint);
+        return;
+    }
+
+    if (request.videoConstraints.isValid && videoDeviceInfo.isEmpty()) {
+        WTFLogAlways("Video capture was requested but no device was found amongst %zu devices", videoCaptureFactory().videoCaptureDeviceManager().captureDevices().size());
+        request.videoConstraints.mandatoryConstraints.forEach([](auto& constraint) { constraint.log(); });
+
         invalidHandler(firstInvalidConstraint);
         return;
     }
@@ -261,13 +320,6 @@ void RealtimeMediaSourceCenter::validateRequestConstraints(ValidConstraintsHandl
     }
 
     validHandler(WTFMove(audioDevices), WTFMove(videoDevices), WTFMove(deviceIdentifierHashSalt));
-}
-
-void RealtimeMediaSourceCenter::setCapturePageState(bool interrupted, bool pageMuted)
-{
-    if (RuntimeEnabledFeatures::sharedFeatures().interruptAudioOnPageVisibilityChangeEnabled())
-        audioCaptureFactory().setAudioCapturePageState(interrupted, pageMuted);
-    videoCaptureFactory().setVideoCapturePageState(interrupted, pageMuted);
 }
 
 void RealtimeMediaSourceCenter::setAudioCaptureFactory(AudioCaptureFactory& factory)

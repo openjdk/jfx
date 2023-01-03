@@ -84,6 +84,8 @@ String undoRedoLabel(EditAction editAction)
         return WEB_UI_STRING_KEY("Superscript", "Superscript (Undo action name)", "Undo action name");
     case EditAction::Underline:
         return WEB_UI_STRING_KEY("Underline", "Underline (Undo action name)", "Undo action name");
+    case EditAction::StrikeThrough:
+        return WEB_UI_STRING_KEY("StrikeThrough", "StrikeThrough (Undo action name)", "Undo action name");
     case EditAction::Outline:
         return WEB_UI_STRING_KEY("Outline", "Outline (Undo action name)", "Undo action name");
     case EditAction::Unscript:
@@ -140,8 +142,6 @@ String undoRedoLabel(EditAction editAction)
         return WEB_UI_STRING_KEY("Convert to Ordered List", "Convert to Ordered List (Undo action name)", "Undo action name");
     case EditAction::ConvertToUnorderedList:
         return WEB_UI_STRING_KEY("Convert to Unordered List", "Convert to Unordered List (Undo action name)", "Undo action name");
-    case EditAction::InsertEditableImage:
-        return WEB_UI_STRING_KEY("Insert Drawing", "Insert Drawing (Undo action name)", "Undo action name");
     }
     return { };
 }

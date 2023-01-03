@@ -50,15 +50,15 @@ namespace JSC {
 
 namespace Bindings {
 
-static jchar toJCharValue(const JSValue& value, ExecState* exec)
+static jchar toJCharValue(const JSValue& value, JSGlobalObject* globalObject)
 {
     // If JS type is string and target Java type is char, then
     // return the first unicode character.
     if (value.isString()) {
-        String stringValue = value.toString(exec)->value(exec);
+        String stringValue = value.toString(globalObject)->value(globalObject);
         return (jchar)stringValue[0];
     }
-    return (jchar)value.toNumber(exec);
+    return (jchar)value.toNumber(globalObject);
 }
 
 jobject convertUndefinedToJObject()
@@ -74,11 +74,11 @@ jobject convertUndefinedToJObject()
     return jgoUndefined;
 }
 
-jvalue convertValueToJValue(ExecState* exec, RootObject* rootObject, JSValue value, JavaType javaType, const char* javaClassName)
+jvalue convertValueToJValue(JSGlobalObject* globalObject, RootObject* rootObject, JSValue value, JavaType javaType, const char* javaClassName)
 {
-    JSLockHolder lock(exec);
+    JSLockHolder lock(globalObject);
 
-    VM& vm = exec->vm();
+    VM& vm = globalObject->vm();
 
     jvalue result;
     memset(&result, 0, sizeof(jvalue));
@@ -149,7 +149,7 @@ jvalue convertValueToJValue(ExecState* exec, RootObject* rootObject, JSValue val
             // Create an appropriate Java object if target type is java.lang.Object or other wrapper Objects {Integer, Double, Boolean}.
             if (!result.l) {
                 if (value.isString() && !strcmp(javaClassName, "java.lang.Object")) {
-                    String stringValue = asString(value)->value(exec);
+                    String stringValue = asString(value)->value(globalObject);
                     JNIEnv* env = getJNIEnv();
                     jobject javaString = stringValue.toJavaString(env).releaseLocal();
                     result.l = javaString;
@@ -157,7 +157,7 @@ jvalue convertValueToJValue(ExecState* exec, RootObject* rootObject, JSValue val
                     JNIEnv* env = getJNIEnv();
                     static JGClass clazz(env->FindClass("java/lang/Character"));
                     jmethodID meth = env->GetStaticMethodID(clazz, "valueOf", "(C)Ljava/lang/Character;");
-                    jchar charValue = toJCharValue(value, exec);
+                    jchar charValue = toJCharValue(value, globalObject);
                     jobject javaChar = env->CallStaticObjectMethod(clazz, meth, charValue);
                     result.l = javaChar;
                 } else if (value.isNumber()) {
@@ -189,7 +189,7 @@ jvalue convertValueToJValue(ExecState* exec, RootObject* rootObject, JSValue val
             // converting from a null.
             if (!result.l && !strcmp(javaClassName, "java.lang.String")) {
                 if (!value.isNull()) {
-                    String stringValue = value.toString(exec)->value(exec);
+                    String stringValue = value.toString(globalObject)->value(globalObject);
                     JNIEnv* env = getJNIEnv();
                     jobject javaString = stringValue.toJavaString(env).releaseLocal();
                     result.l = javaString;
@@ -200,49 +200,49 @@ jvalue convertValueToJValue(ExecState* exec, RootObject* rootObject, JSValue val
 
     case JavaTypeBoolean:
         {
-            result.z = (jboolean)value.toNumber(exec);
+            result.z = (jboolean)value.toNumber(globalObject);
         }
         break;
 
     case JavaTypeByte:
         {
-            result.b = (jbyte)value.toNumber(exec);
+            result.b = (jbyte)value.toNumber(globalObject);
         }
         break;
 
     case JavaTypeChar:
         {
-            result.c = toJCharValue(value, exec);
+            result.c = toJCharValue(value, globalObject);
         }
         break;
 
     case JavaTypeShort:
         {
-            result.s = (jshort)value.toNumber(exec);
+            result.s = (jshort)value.toNumber(globalObject);
         }
         break;
 
     case JavaTypeInt:
         {
-            result.i = (jint)value.toNumber(exec);
+            result.i = (jint)value.toNumber(globalObject);
         }
         break;
 
     case JavaTypeLong:
         {
-            result.j = (jlong)value.toNumber(exec);
+            result.j = (jlong)value.toNumber(globalObject);
         }
         break;
 
     case JavaTypeFloat:
         {
-            result.f = (jfloat)value.toNumber(exec);
+            result.f = (jfloat)value.toNumber(globalObject);
         }
         break;
 
     case JavaTypeDouble:
         {
-            result.d = (jdouble)value.toNumber(exec);
+            result.d = (jdouble)value.toNumber(globalObject);
         }
         break;
 

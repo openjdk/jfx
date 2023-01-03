@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2015 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,17 +27,20 @@
 #include "Watchpoint.h"
 
 #include "AdaptiveInferredPropertyValueWatchpointBase.h"
+#include "CachedSpecialPropertyAdaptiveStructureWatchpoint.h"
 #include "CodeBlockJettisoningWatchpoint.h"
 #include "DFGAdaptiveStructureWatchpoint.h"
 #include "FunctionRareData.h"
 #include "HeapInlines.h"
 #include "LLIntPrototypeLoadAdaptiveStructureWatchpoint.h"
-#include "ObjectToStringAdaptiveStructureWatchpoint.h"
+#include "StructureRareDataInlines.h"
 #include "StructureStubClearingWatchpoint.h"
 #include "VM.h"
-#include <wtf/CompilationThread.h>
 
 namespace JSC {
+
+DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(Watchpoint);
+DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(WatchpointSet);
 
 void StringFireDetail::dump(PrintStream& out) const
 {
@@ -132,7 +135,7 @@ void WatchpointSet::fireAllWatchpoints(VM& vm, const FireDetail& detail)
     // for most Watchpoints to be destructed while they're in the middle of firing.
     // This GC could also destroy us, and we're not in a safe state to be destroyed.
     // The safest thing to do is to DeferGCForAWhile to prevent this GC from happening.
-    DeferGCForAWhile deferGC(vm.heap);
+    DeferGCForAWhile deferGC(vm);
 
     while (!m_set.isEmpty()) {
         Watchpoint* watchpoint = m_set.begin();
@@ -180,7 +183,7 @@ WatchpointSet* InlineWatchpointSet::inflateSlow()
 {
     ASSERT(isThin());
     ASSERT(!isCompilationThread());
-    WatchpointSet* fat = adoptRef(new WatchpointSet(decodeState(m_data))).leakRef();
+    WatchpointSet* fat = &WatchpointSet::create(decodeState(m_data)).leakRef();
     WTF::storeStoreFence();
     m_data = bitwise_cast<uintptr_t>(fat);
     return fat;
@@ -192,20 +195,9 @@ void InlineWatchpointSet::freeFat()
     fat()->deref();
 }
 
-DeferredWatchpointFire::DeferredWatchpointFire(VM& vm)
-    : m_vm(vm)
-    , m_watchpointsToFire(ClearWatchpoint)
+void DeferredWatchpointFire::fireAllSlow()
 {
-}
-
-DeferredWatchpointFire::~DeferredWatchpointFire()
-{
-}
-
-void DeferredWatchpointFire::fireAll()
-{
-    if (m_watchpointsToFire.state() == IsWatched)
-        m_watchpointsToFire.fireAll(m_vm, *this);
+    m_watchpointsToFire.fireAll(m_vm, *this);
 }
 
 void DeferredWatchpointFire::takeWatchpointsToFire(WatchpointSet* watchpointsToFire)

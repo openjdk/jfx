@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009 Apple Inc. All rights reserved.
+ * Copyright (C) 2009-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,12 +31,19 @@ namespace JSC {
 
 class JSONObject final : public JSNonFinalObject {
 public:
-    typedef JSNonFinalObject Base;
-    static const unsigned StructureFlags = Base::StructureFlags | HasStaticPropertyTable;
+    using Base = JSNonFinalObject;
+    static constexpr unsigned StructureFlags = Base::StructureFlags | HasStaticPropertyTable;
+
+    template<typename CellType, SubspaceAccess>
+    static GCClient::IsoSubspace* subspaceFor(VM& vm)
+    {
+        STATIC_ASSERT_ISO_SUBSPACE_SHARABLE(JSONObject, Base);
+        return &vm.plainObjectSpace();
+    }
 
     static JSONObject* create(VM& vm, Structure* structure)
     {
-        JSONObject* object = new (NotNull, allocateCell<JSONObject>(vm.heap)) JSONObject(vm, structure);
+        JSONObject* object = new (NotNull, allocateCell<JSONObject>(vm)) JSONObject(vm, structure);
         object->finishCreation(vm);
         return object;
     }
@@ -48,15 +55,13 @@ public:
 
     DECLARE_INFO;
 
-protected:
-    void finishCreation(VM&);
-
 private:
     JSONObject(VM&, Structure*);
+    void finishCreation(VM&);
 };
 
-JS_EXPORT_PRIVATE JSValue JSONParse(ExecState*, const String&);
-JS_EXPORT_PRIVATE String JSONStringify(ExecState*, JSValue, JSValue space);
-JS_EXPORT_PRIVATE String JSONStringify(ExecState*, JSValue, unsigned indent);
+JS_EXPORT_PRIVATE JSValue JSONParse(JSGlobalObject*, const String&);
+JS_EXPORT_PRIVATE String JSONStringify(JSGlobalObject*, JSValue, JSValue space);
+JS_EXPORT_PRIVATE String JSONStringify(JSGlobalObject*, JSValue, unsigned indent);
 
 } // namespace JSC

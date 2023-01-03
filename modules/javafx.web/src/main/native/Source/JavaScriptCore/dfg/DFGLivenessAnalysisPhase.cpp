@@ -28,26 +28,23 @@
 
 #if ENABLE(DFG_JIT)
 
-#include "DFGBasicBlockInlines.h"
 #include "DFGBlockMapInlines.h"
 #include "DFGFlowIndexing.h"
 #include "DFGGraph.h"
-#include "DFGInsertionSet.h"
 #include "DFGPhase.h"
-#include "JSCInlines.h"
+#include "JSCJSValueInlines.h"
 #include <wtf/BitVector.h>
 #include <wtf/IndexSparseSet.h>
-#include <wtf/LoggingHashSet.h>
 
 namespace JSC { namespace DFG {
 
 namespace {
 
 // Uncomment this to log hashtable operations.
-// static const char templateString[] = "unsigned, DefaultHash<unsigned>::Hash, WTF::UnsignedWithZeroKeyHashTraits<unsigned>";
-// typedef LoggingHashSet<templateString, unsigned, DefaultHash<unsigned>::Hash, WTF::UnsignedWithZeroKeyHashTraits<unsigned>> LiveSet;
+// static const char templateString[] = "unsigned, DefaultHash<unsigned>, WTF::UnsignedWithZeroKeyHashTraits<unsigned>";
+// typedef LoggingHashSet<templateString, unsigned, DefaultHash<unsigned>, WTF::UnsignedWithZeroKeyHashTraits<unsigned>> LiveSet;
 
-typedef HashSet<unsigned, DefaultHash<unsigned>::Hash, WTF::UnsignedWithZeroKeyHashTraits<unsigned>> LiveSet;
+typedef HashSet<unsigned, DefaultHash<unsigned>, WTF::UnsignedWithZeroKeyHashTraits<unsigned>> LiveSet;
 
 typedef IndexSparseSet<unsigned, DefaultIndexSparseSetTraits<unsigned>, UnsafeVectorOverflow> Workset;
 
@@ -94,20 +91,14 @@ public:
                 continue;
 
             {
-                const Vector<unsigned, 0, UnsafeVectorOverflow, 1>& liveAtHeadIndices = m_liveAtHead[blockIndex];
-                Vector<NodeFlowProjection>& liveAtHead = block->ssa->liveAtHead;
-                liveAtHead.shrink(0);
-                liveAtHead.reserveCapacity(liveAtHeadIndices.size());
-                for (unsigned index : liveAtHeadIndices)
-                    liveAtHead.uncheckedAppend(m_indexing.nodeProjection(index));
+                block->ssa->liveAtHead = m_liveAtHead[blockIndex].map([this](auto index) {
+                    return m_indexing.nodeProjection(index);
+                });
             }
             {
-                const LiveSet& liveAtTailIndices = m_liveAtTail[blockIndex];
-                Vector<NodeFlowProjection>& liveAtTail = block->ssa->liveAtTail;
-                liveAtTail.shrink(0);
-                liveAtTail.reserveCapacity(liveAtTailIndices.size());
-                for (unsigned index : m_liveAtTail[blockIndex])
-                    liveAtTail.uncheckedAppend(m_indexing.nodeProjection(index));
+                block->ssa->liveAtTail = WTF::map(m_liveAtTail[blockIndex], [this](auto index) {
+                    return m_indexing.nodeProjection(index);
+                });
             }
         }
 

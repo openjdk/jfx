@@ -37,12 +37,15 @@
 namespace WebCore {
 
 class Document;
+class HighlightRegister;
+class Highlight;
 
 class DOMCSSNamespace final : public RefCounted<DOMCSSNamespace>, public Supplementable<DOMCSSNamespace> {
 public:
     static bool supports(Document&, const String& property, const String& value);
     static bool supports(Document&, const String& conditionText);
     static String escape(const String& ident);
+    static HighlightRegister& highlights(Document&);
 };
 
 }

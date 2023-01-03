@@ -25,6 +25,8 @@
 
 #pragma once
 
+#if ENABLE(OFFSCREEN_CANVAS)
+
 #include "CanvasRenderingContext2DBase.h"
 
 #include "OffscreenCanvas.h"
@@ -34,15 +36,28 @@ namespace WebCore {
 class OffscreenCanvasRenderingContext2D final : public CanvasRenderingContext2DBase {
     WTF_MAKE_ISO_ALLOCATED(OffscreenCanvasRenderingContext2D);
 public:
-    OffscreenCanvasRenderingContext2D(CanvasBase&);
+    static bool enabledForContext(ScriptExecutionContext&);
+
+    OffscreenCanvasRenderingContext2D(CanvasBase&, CanvasRenderingContext2DSettings&&);
     virtual ~OffscreenCanvasRenderingContext2D();
 
-    bool isOffscreen2d() const override { return true; }
-
     OffscreenCanvas& canvas() const { return downcast<OffscreenCanvas>(canvasBase()); }
+
+    void commit();
+
+    void setFont(const String&);
+    CanvasDirection direction() const;
+    void fillText(const String& text, double x, double y, std::optional<double> maxWidth = std::nullopt);
+    void strokeText(const String& text, double x, double y, std::optional<double> maxWidth = std::nullopt);
+    Ref<TextMetrics> measureText(const String& text);
+
+private:
+    bool isOffscreen2d() const final { return true; }
+    const FontProxy* fontProxy() final;
 };
 
 } // namespace WebCore
 
 SPECIALIZE_TYPE_TRAITS_CANVASRENDERINGCONTEXT(WebCore::OffscreenCanvasRenderingContext2D, isOffscreen2d())
 
+#endif

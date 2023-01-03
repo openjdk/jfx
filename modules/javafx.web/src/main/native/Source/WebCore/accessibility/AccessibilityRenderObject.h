@@ -50,7 +50,6 @@ class Node;
 class RenderTextControl;
 class RenderView;
 class VisibleSelection;
-class Widget;
 
 class AccessibilityRenderObject : public AccessibilityNodeObject, public CanMakeWeakPtr<AccessibilityRenderObject> {
 public:
@@ -60,8 +59,6 @@ public:
     void init() override;
 
     bool isAttachment() const override;
-    bool isFileUploadButton() const override;
-
     bool isSelected() const override;
     bool isFocused() const override;
     bool isLoaded() const override;
@@ -72,9 +69,9 @@ public:
     bool hasBoldFont() const override;
     bool hasItalicFont() const override;
     bool hasPlainText() const override;
-    bool hasSameFont(RenderObject*) const override;
-    bool hasSameFontColor(RenderObject*) const override;
-    bool hasSameStyle(RenderObject*) const override;
+    bool hasSameFont(const AXCoreObject&) const override;
+    bool hasSameFontColor(const AXCoreObject&) const override;
+    bool hasSameStyle(const AXCoreObject&) const override;
     bool hasUnderline() const override;
 
     bool canSetTextRangeAttributes() const override;
@@ -86,7 +83,7 @@ public:
     AccessibilityObjectInclusion defaultObjectInclusion() const override;
 
     int layoutCount() const override;
-    double estimatedLoadingProgress() const override;
+    double loadingProgress() const override;
 
     AccessibilityObject* firstChild() const override;
     AccessibilityObject* lastChild() const override;
@@ -94,19 +91,17 @@ public:
     AccessibilityObject* nextSibling() const override;
     AccessibilityObject* parentObject() const override;
     AccessibilityObject* parentObjectIfExists() const override;
+    AXCoreObject* parentObjectUnignored() const override;
     AccessibilityObject* observableObject() const override;
     void linkedUIElements(AccessibilityChildrenVector&) const override;
-    bool exposesTitleUIElement() const override;
     AccessibilityObject* titleUIElement() const override;
-    AccessibilityObject* correspondingControlForLabelElement() const override;
-    AccessibilityObject* correspondingLabelForControlElement() const override;
 
     bool supportsARIAOwns() const override;
     bool isPresentationalChildOfAriaRole() const override;
     bool ariaRoleHasPresentationalChildren() const override;
 
     // Should be called on the root accessibility object to kick off a hit test.
-    AccessibilityObjectInterface* accessibilityHitTest(const IntPoint&) const override;
+    AXCoreObject* accessibilityHitTest(const IntPoint&) const override;
 
     Element* anchorElement() const override;
 
@@ -123,10 +118,10 @@ public:
 
     RenderView* topRenderer() const;
     RenderTextControl* textControl() const;
-    HTMLLabelElement* labelElementContainer() const;
 
     URL url() const override;
     PlainTextRange selectedTextRange() const override;
+    int insertionPointLineNumber() const override;
     VisibleSelection selection() const override;
     String stringValue() const override;
     String helpText() const override;
@@ -134,11 +129,12 @@ public:
     String text() const override;
     int textLength() const override;
     String selectedText() const override;
-    const AtomString& accessKey() const override;
-    virtual const String& actionVerb() const;
+    String accessKey() const override;
+
+    bool isWidget() const override;
     Widget* widget() const override;
     Widget* widgetForAttachmentView() const override;
-    virtual void getDocumentLinks(AccessibilityChildrenVector&);
+    AccessibilityChildrenVector documentLinks() override;
     FrameView* documentFrameView() const override;
 
     void clearChildren() override;
@@ -146,12 +142,10 @@ public:
 
     void setFocused(bool) override;
     void setSelectedTextRange(const PlainTextRange&) override;
-    void setValue(const String&) override;
+    bool setValue(const String&) override;
     void setSelectedRows(AccessibilityChildrenVector&) override;
     AccessibilityOrientation orientation() const override;
 
-    void detach(AccessibilityDetachmentType, AXObjectCache*) override;
-    void textChanged() override;
     void addChildren() override;
     bool canHaveChildren() const override;
     bool canHaveSelectedChildren() const override;
@@ -162,20 +156,20 @@ public:
     bool shouldNotifyActiveDescendant() const;
     AccessibilityObject* activeDescendant() const override;
     void handleActiveDescendantChanged() override;
-    void handleAriaExpandedChanged() override;
 
     VisiblePositionRange visiblePositionRange() const override;
     VisiblePositionRange visiblePositionRangeForLine(unsigned) const override;
     IntRect boundsForVisiblePositionRange(const VisiblePositionRange&) const override;
-    IntRect boundsForRange(const RefPtr<Range>) const override;
+    IntRect boundsForRange(const SimpleRange&) const override;
+    VisiblePositionRange selectedVisiblePositionRange() const override;
     void setSelectedVisiblePositionRange(const VisiblePositionRange&) const override;
     bool isVisiblePositionRangeInDifferentDocument(const VisiblePositionRange&) const;
     bool hasPopup() const override;
 
-    bool supportsARIADropping() const override;
-    bool supportsARIADragging() const override;
-    bool isARIAGrabbed() override;
-    Vector<String> determineARIADropEffects() override;
+    bool supportsDropping() const override;
+    bool supportsDragging() const override;
+    bool isGrabbed() override;
+    Vector<String> determineDropEffects() const override;
 
     VisiblePosition visiblePositionForPoint(const IntPoint&) const override;
     VisiblePosition visiblePositionForIndex(unsigned indexValue, bool lastIndexOK) const override;
@@ -203,11 +197,13 @@ public:
 
 protected:
     explicit AccessibilityRenderObject(RenderObject*);
+    void detachRemoteParts(AccessibilityDetachmentType) override;
     ScrollableArea* getScrollableAreaIfScrollable() const override;
     void scrollTo(const IntPoint&) const override;
 
     bool isDetached() const override { return !m_renderer; }
 
+    bool shouldIgnoreAttributeRole() const override;
     AccessibilityRole determineAccessibilityRole() override;
     bool computeAccessibilityIsIgnored() const override;
 
@@ -222,7 +218,6 @@ private:
     void ariaListboxSelectedChildren(AccessibilityChildrenVector&);
     void ariaListboxVisibleChildren(AccessibilityChildrenVector&);
     bool isAllowedChildOfTree() const;
-    bool hasTextAlternative() const;
     String positionalDescriptionForMSAA() const;
     PlainTextRange documentBasedSelectedTextRange() const;
     Element* rootEditableElementForPosition(const Position&) const;
@@ -235,22 +230,23 @@ private:
     bool isTabItemSelected() const;
     LayoutRect checkboxOrRadioRect() const;
     void addRadioButtonGroupMembers(AccessibilityChildrenVector& linkedUIElements) const;
-    void addRadioButtonGroupChildren(AccessibilityObject*, AccessibilityChildrenVector&) const;
+    void addRadioButtonGroupChildren(AXCoreObject*, AccessibilityChildrenVector&) const;
     AccessibilityObject* internalLinkElement() const;
-    AccessibilityObject* accessibilityImageMapHitTest(HTMLAreaElement*, const IntPoint&) const;
+    AXCoreObject* accessibilityImageMapHitTest(HTMLAreaElement*, const IntPoint&) const;
     AccessibilityObject* accessibilityParentForImageMap(HTMLMapElement*) const;
-    AccessibilityObjectInterface* elementAccessibilityHitTest(const IntPoint&) const override;
+    AXCoreObject* elementAccessibilityHitTest(const IntPoint&) const override;
 
     bool renderObjectIsObservable(RenderObject&) const;
     RenderObject* renderParentObject() const;
-    bool isDescendantOfElementType(const QualifiedName& tagName) const;
-    bool isDescendantOfElementType(const HashSet<QualifiedName>&) const;
+#if USE(ATSPI)
+    RenderObject* markerRenderer() const;
+#endif
 
     bool isSVGImage() const;
     void detachRemoteSVGRoot();
     enum CreationChoice { Create, Retrieve };
     AccessibilitySVGRoot* remoteSVGRootElement(CreationChoice createIfNecessary) const;
-    AccessibilityObjectInterface* remoteSVGElementHitTest(const IntPoint&) const;
+    AXCoreObject* remoteSVGElementHitTest(const IntPoint&) const;
     void offsetBoundingBoxForRemoteSVGElement(LayoutRect&) const;
     bool supportsPath() const override;
 
@@ -260,6 +256,9 @@ private:
     void addCanvasChildren();
     void addAttachmentChildren();
     void addRemoteSVGChildren();
+#if USE(ATSPI)
+    void addListItemMarker();
+#endif
 #if PLATFORM(COCOA)
     void updateAttachmentViewParents();
 #endif
@@ -293,8 +292,6 @@ private:
     bool canHavePlainText() const;
     // Special handling of click point for links.
     IntPoint linkClickPoint();
-    // Rects utilities.
-    static IntRect boundsForRects(LayoutRect const&, LayoutRect const&, RefPtr<Range> const&);
 };
 
 } // namespace WebCore

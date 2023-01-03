@@ -28,6 +28,10 @@
 
 #if ENABLE(PAYMENT_REQUEST)
 
+#if ENABLE(APPLE_PAY_AMS_UI)
+#include "ApplePayAMSUIPaymentHandler.h"
+#endif
+
 #if ENABLE(APPLE_PAY)
 #include "ApplePayPaymentHandler.h"
 #endif
@@ -39,12 +43,16 @@ RefPtr<PaymentHandler> PaymentHandler::create(Document& document, PaymentRequest
 #if ENABLE(APPLE_PAY)
     if (ApplePayPaymentHandler::handlesIdentifier(identifier))
         return adoptRef(new ApplePayPaymentHandler(document, identifier, paymentRequest));
-#else
+#endif
+
+#if ENABLE(APPLE_PAY_AMS_UI)
+    if (ApplePayAMSUIPaymentHandler::handlesIdentifier(identifier))
+        return adoptRef(new ApplePayAMSUIPaymentHandler(document, identifier, paymentRequest));
+#endif
+
     UNUSED_PARAM(document);
     UNUSED_PARAM(paymentRequest);
     UNUSED_PARAM(identifier);
-#endif
-
     return nullptr;
 }
 
@@ -61,24 +69,38 @@ ExceptionOr<void> PaymentHandler::canCreateSession(Document& document)
     return { };
 }
 
-bool PaymentHandler::enabledForContext(ScriptExecutionContext& context)
+ExceptionOr<void> PaymentHandler::validateData(Document& document, JSC::JSValue data, const PaymentRequest::MethodIdentifier& identifier)
 {
 #if ENABLE(APPLE_PAY)
-    return PaymentSession::enabledForContext(context);
-#else
-    UNUSED_PARAM(context);
-    return false;
+    if (ApplePayPaymentHandler::handlesIdentifier(identifier))
+        return ApplePayPaymentHandler::validateData(document, data);
 #endif
+
+#if ENABLE(APPLE_PAY_AMS_UI)
+    if (ApplePayAMSUIPaymentHandler::handlesIdentifier(identifier))
+        return ApplePayAMSUIPaymentHandler::validateData(document, data);
+#endif
+
+    UNUSED_PARAM(document);
+    UNUSED_PARAM(data);
+    UNUSED_PARAM(identifier);
+    return { };
 }
 
 bool PaymentHandler::hasActiveSession(Document& document)
 {
 #if ENABLE(APPLE_PAY)
-    return ApplePayPaymentHandler::hasActiveSession(document);
-#else
+    if (ApplePayPaymentHandler::hasActiveSession(document))
+        return true;
+#endif
+
+#if ENABLE(APPLE_PAY_AMS_UI)
+    if (ApplePayAMSUIPaymentHandler::hasActiveSession(document))
+        return true;
+#endif
+
     UNUSED_PARAM(document);
     return false;
-#endif
 }
 
 } // namespace WebCore

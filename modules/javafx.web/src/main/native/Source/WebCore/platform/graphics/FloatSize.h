@@ -48,11 +48,6 @@ typedef struct _NSSize NSSize;
 #endif
 #endif // PLATFORM(MAC)
 
-#if PLATFORM(WIN)
-struct D2D_SIZE_F;
-typedef D2D_SIZE_F D2D1_SIZE_F;
-#endif
-
 namespace WTF {
 class TextStream;
 }
@@ -71,6 +66,9 @@ public:
 
     float width() const { return m_width; }
     float height() const { return m_height; }
+
+    float minDimension() const { return std::min(m_width, m_height); }
+    float maxDimension() const { return std::max(m_width, m_height); }
 
     void setWidth(float width) { m_width = width; }
     void setHeight(float height) { m_height = height; }
@@ -123,7 +121,10 @@ public:
            m_height < other.m_height ? m_height : other.m_height);
     }
 
-    WEBCORE_EXPORT float diagonalLength() const;
+    float diagonalLength() const
+    {
+        return std::hypot(m_width, m_height);
+    }
 
     float diagonalLengthSquared() const
     {
@@ -150,13 +151,8 @@ public:
     operator NSSize() const;
 #endif
 
-#if PLATFORM(WIN)
-    WEBCORE_EXPORT FloatSize(const D2D1_SIZE_F&);
-    operator D2D1_SIZE_F() const;
-#endif
-
     String toJSONString() const;
-    Ref<JSON::Object> toJSONObject() const;
+    WEBCORE_EXPORT Ref<JSON::Object> toJSONObject() const;
 
 private:
     float m_width { 0 };

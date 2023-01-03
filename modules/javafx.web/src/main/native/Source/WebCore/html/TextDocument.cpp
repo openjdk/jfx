@@ -32,8 +32,8 @@ namespace WebCore {
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(TextDocument);
 
-TextDocument::TextDocument(PAL::SessionID sessionID, Frame* frame, const URL& url)
-    : HTMLDocument(sessionID, frame, url, TextDocumentClass)
+TextDocument::TextDocument(Frame* frame, const Settings& settings, const URL& url, ScriptExecutionContextIdentifier identifier)
+    : HTMLDocument(frame, settings, url, identifier, { DocumentClass::Text })
 {
     setCompatibilityMode(DocumentCompatibilityMode::QuirksMode);
     lockCompatibilityMode();

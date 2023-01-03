@@ -66,7 +66,7 @@ class SampleIsRandomAccess {
 public:
     bool operator()(DecodeOrderSampleMap::MapType::value_type& value)
     {
-        return value.second->flags() == MediaSample::IsSync;
+        return value.second->isSync();
     }
 };
 
@@ -186,6 +186,11 @@ PresentationOrderSampleMap::iterator PresentationOrderSampleMap::findSampleStart
 DecodeOrderSampleMap::iterator DecodeOrderSampleMap::findSampleWithDecodeKey(const KeyType& key)
 {
     return m_samples.find(key);
+}
+
+DecodeOrderSampleMap::iterator DecodeOrderSampleMap::findSampleAfterDecodeKey(const KeyType& key)
+{
+    return m_samples.upper_bound(key);
 }
 
 PresentationOrderSampleMap::reverse_iterator PresentationOrderSampleMap::reverseFindSampleContainingPresentationTime(const MediaTime& time)

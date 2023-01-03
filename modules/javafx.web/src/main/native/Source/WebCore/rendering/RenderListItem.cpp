@@ -25,15 +25,17 @@
 #include "RenderListItem.h"
 
 #include "CSSFontSelector.h"
+#include "ElementInlines.h"
 #include "ElementTraversal.h"
 #include "HTMLNames.h"
 #include "HTMLOListElement.h"
 #include "HTMLUListElement.h"
-#include "InlineElementBox.h"
 #include "PseudoElement.h"
+#include "RenderStyleConstants.h"
 #include "RenderTreeBuilder.h"
 #include "RenderView.h"
 #include "StyleInheritedData.h"
+#include "UnicodeBidi.h"
 #include <wtf/IsoMallocInlines.h>
 #include <wtf/StackStats.h>
 #include <wtf/StdLibExtras.h>
@@ -58,38 +60,43 @@ RenderListItem::~RenderListItem()
 
 RenderStyle RenderListItem::computeMarkerStyle() const
 {
+    if (!is<PseudoElement>(element())) {
+        if (auto markerStyle = getCachedPseudoStyle(PseudoId::Marker, &style()))
+            return RenderStyle::clone(*markerStyle);
+    }
+
     // The marker always inherits from the list item, regardless of where it might end
     // up (e.g., in some deeply nested line box). See CSS3 spec.
-    // FIXME: The marker should only inherit all font properties and the color property
-    // according to the CSS Pseudo-Elements Module Level 4 spec.
-    //
-    // Although the CSS Pseudo-Elements Module Level 4 spec. saids to add ::marker to the UA sheet
-    // we apply it here as an optimization because it only applies to markers. That is, it does not
-    // apply to all elements.
-    RenderStyle parentStyle = RenderStyle::clone(style());
+    auto markerStyle = RenderStyle::create();
+    markerStyle.inheritFrom(style());
+
+    // In the case of a ::before or ::after pseudo-element, we manually apply the properties
+    // otherwise set in the user-agent stylesheet since we don't support ::before::marker or
+    // ::after::marker. See bugs.webkit.org/b/218897.
     auto fontDescription = style().fontDescription();
     fontDescription.setVariantNumericSpacing(FontVariantNumericSpacing::TabularNumbers);
-    parentStyle.setFontDescription(WTFMove(fontDescription));
-    parentStyle.fontCascade().update(&document().fontSelector());
-    if (auto markerStyle = getCachedPseudoStyle(PseudoId::Marker, &parentStyle))
-        return RenderStyle::clone(*markerStyle);
-    auto markerStyle = RenderStyle::create();
-    markerStyle.inheritFrom(parentStyle);
+    markerStyle.setFontDescription(WTFMove(fontDescription));
+    markerStyle.fontCascade().update(&document().fontSelector());
+    markerStyle.setUnicodeBidi(UnicodeBidi::Isolate);
+    markerStyle.setWhiteSpace(WhiteSpace::Pre);
+    markerStyle.setTextTransform(TextTransform::None);
     return markerStyle;
 }
 
-void RenderListItem::insertedIntoTree()
+void RenderListItem::insertedIntoTree(IsInternalMove isInternalMove)
 {
-    RenderBlockFlow::insertedIntoTree();
+    RenderBlockFlow::insertedIntoTree(isInternalMove);
 
-    updateListMarkerNumbers();
+    if (isInternalMove == IsInternalMove::No)
+        updateListMarkerNumbers();
 }
 
-void RenderListItem::willBeRemovedFromTree()
+void RenderListItem::willBeRemovedFromTree(IsInternalMove isInternalMove)
 {
-    RenderBlockFlow::willBeRemovedFromTree();
+    RenderBlockFlow::willBeRemovedFromTree(isInternalMove);
 
-    updateListMarkerNumbers();
+    if (isInternalMove == IsInternalMove::No)
+        updateListMarkerNumbers();
 }
 
 bool isHTMLListElement(const Node& node)
@@ -203,7 +210,7 @@ unsigned RenderListItem::itemCountForOrderedList(const HTMLOListElement& list)
 void RenderListItem::updateValueNow() const
 {
     auto* list = enclosingList(*this);
-    auto* orderedList = is<HTMLOListElement>(list) ? downcast<HTMLOListElement>(list) : nullptr;
+    auto* orderedList = dynamicDowncast<HTMLOListElement>(list);
 
     // The start item is either the closest item before this one in the list that already has a value,
     // or the first item in the list if none have before this have values yet.
@@ -232,7 +239,7 @@ void RenderListItem::updateValueNow() const
 void RenderListItem::updateValue()
 {
     if (!m_valueWasSetExplicitly) {
-        m_value = WTF::nullopt;
+        m_value = std::nullopt;
         if (m_marker)
             m_marker->setNeedsLayoutAndPrefWidthsRecalc();
     }
@@ -248,7 +255,8 @@ void RenderListItem::layout()
 
 void RenderListItem::addOverflowFromChildren()
 {
-    positionListMarker();
+    if (m_marker)
+        m_marker->addOverflowFromListMarker();
     RenderBlockFlow::addOverflowFromChildren();
 }
 
@@ -261,127 +269,26 @@ void RenderListItem::computePreferredLogicalWidths()
     RenderBlockFlow::computePreferredLogicalWidths();
 }
 
-void RenderListItem::positionListMarker()
-{
-    if (!m_marker || !m_marker->parent() || !m_marker->parent()->isBox())
-        return;
-
-    if (m_marker->isInside() || !m_marker->inlineBoxWrapper())
-        return;
-
-    LayoutUnit markerOldLogicalLeft = m_marker->logicalLeft();
-    LayoutUnit blockOffset;
-    LayoutUnit lineOffset;
-    for (auto* ancestor = m_marker->parentBox(); ancestor && ancestor != this; ancestor = ancestor->parentBox()) {
-        blockOffset += ancestor->logicalTop();
-        lineOffset += ancestor->logicalLeft();
-    }
-
-    bool adjustOverflow = false;
-    LayoutUnit markerLogicalLeft;
-    bool hitSelfPaintingLayer = false;
-
-    const RootInlineBox& rootBox = m_marker->inlineBoxWrapper()->root();
-    LayoutUnit lineTop = rootBox.lineTop();
-    LayoutUnit lineBottom = rootBox.lineBottom();
-
-    // FIXME: Need to account for relative positioning in the layout overflow.
-    if (style().isLeftToRightDirection()) {
-        markerLogicalLeft = m_marker->lineOffsetForListItem() - lineOffset - paddingStart() - borderStart() + m_marker->marginStart();
-        m_marker->inlineBoxWrapper()->adjustLineDirectionPosition(markerLogicalLeft - markerOldLogicalLeft);
-        for (InlineFlowBox* box = m_marker->inlineBoxWrapper()->parent(); box; box = box->parent()) {
-            LayoutRect newLogicalVisualOverflowRect = box->logicalVisualOverflowRect(lineTop, lineBottom);
-            LayoutRect newLogicalLayoutOverflowRect = box->logicalLayoutOverflowRect(lineTop, lineBottom);
-            if (markerLogicalLeft < newLogicalVisualOverflowRect.x() && !hitSelfPaintingLayer) {
-                newLogicalVisualOverflowRect.setWidth(newLogicalVisualOverflowRect.maxX() - markerLogicalLeft);
-                newLogicalVisualOverflowRect.setX(markerLogicalLeft);
-                if (box == &rootBox)
-                    adjustOverflow = true;
-            }
-            if (markerLogicalLeft < newLogicalLayoutOverflowRect.x()) {
-                newLogicalLayoutOverflowRect.setWidth(newLogicalLayoutOverflowRect.maxX() - markerLogicalLeft);
-                newLogicalLayoutOverflowRect.setX(markerLogicalLeft);
-                if (box == &rootBox)
-                    adjustOverflow = true;
-            }
-            box->setOverflowFromLogicalRects(newLogicalLayoutOverflowRect, newLogicalVisualOverflowRect, lineTop, lineBottom);
-            if (box->renderer().hasSelfPaintingLayer())
-                hitSelfPaintingLayer = true;
-        }
-    } else {
-        markerLogicalLeft = m_marker->lineOffsetForListItem() - lineOffset + paddingStart() + borderStart() + m_marker->marginEnd();
-        m_marker->inlineBoxWrapper()->adjustLineDirectionPosition(markerLogicalLeft - markerOldLogicalLeft);
-        for (InlineFlowBox* box = m_marker->inlineBoxWrapper()->parent(); box; box = box->parent()) {
-            LayoutRect newLogicalVisualOverflowRect = box->logicalVisualOverflowRect(lineTop, lineBottom);
-            LayoutRect newLogicalLayoutOverflowRect = box->logicalLayoutOverflowRect(lineTop, lineBottom);
-            if (markerLogicalLeft + m_marker->logicalWidth() > newLogicalVisualOverflowRect.maxX() && !hitSelfPaintingLayer) {
-                newLogicalVisualOverflowRect.setWidth(markerLogicalLeft + m_marker->logicalWidth() - newLogicalVisualOverflowRect.x());
-                if (box == &rootBox)
-                    adjustOverflow = true;
-            }
-            if (markerLogicalLeft + m_marker->logicalWidth() > newLogicalLayoutOverflowRect.maxX()) {
-                newLogicalLayoutOverflowRect.setWidth(markerLogicalLeft + m_marker->logicalWidth() - newLogicalLayoutOverflowRect.x());
-                if (box == &rootBox)
-                    adjustOverflow = true;
-            }
-            box->setOverflowFromLogicalRects(newLogicalLayoutOverflowRect, newLogicalVisualOverflowRect, lineTop, lineBottom);
-
-            if (box->renderer().hasSelfPaintingLayer())
-                hitSelfPaintingLayer = true;
-        }
-    }
-
-    if (adjustOverflow) {
-        LayoutRect markerRect(markerLogicalLeft + lineOffset, blockOffset, m_marker->width(), m_marker->height());
-        if (!style().isHorizontalWritingMode())
-            markerRect = markerRect.transposedRect();
-        RenderBox* markerAncestor = m_marker.get();
-        bool propagateVisualOverflow = true;
-        bool propagateLayoutOverflow = true;
-        do {
-            markerAncestor = markerAncestor->parentBox();
-            if (markerAncestor->hasOverflowClip())
-                propagateVisualOverflow = false;
-            if (is<RenderBlock>(*markerAncestor)) {
-                if (propagateVisualOverflow)
-                    downcast<RenderBlock>(*markerAncestor).addVisualOverflow(markerRect);
-                if (propagateLayoutOverflow)
-                    downcast<RenderBlock>(*markerAncestor).addLayoutOverflow(markerRect);
-            }
-            if (markerAncestor->hasOverflowClip())
-                propagateLayoutOverflow = false;
-            if (markerAncestor->hasSelfPaintingLayer())
-                propagateVisualOverflow = false;
-            markerRect.moveBy(-markerAncestor->location());
-        } while (markerAncestor != this && propagateVisualOverflow && propagateLayoutOverflow);
-    }
-}
-
 void RenderListItem::paint(PaintInfo& paintInfo, const LayoutPoint& paintOffset)
 {
-    if (!logicalHeight() && hasOverflowClip())
+    if (!logicalHeight() && hasNonVisibleOverflow())
         return;
 
     RenderBlockFlow::paint(paintInfo, paintOffset);
 }
 
-const String& RenderListItem::markerText() const
-{
-    if (m_marker)
-        return m_marker->text();
-    return nullAtom().string();
-}
-
-String RenderListItem::markerTextWithSuffix() const
+StringView RenderListItem::markerTextWithoutSuffix() const
 {
     if (!m_marker)
-        return String();
+        return { };
+    return m_marker->textWithoutSuffix();
+}
 
-    // Append the suffix for the marker in the right place depending
-    // on the direction of the text (right-to-left or left-to-right).
-    if (m_marker->style().isLeftToRightDirection())
-        return m_marker->text() + m_marker->suffix();
-    return m_marker->suffix() + m_marker->text();
+StringView RenderListItem::markerTextWithSuffix() const
+{
+    if (!m_marker)
+        return { };
+    return m_marker->textWithSuffix();
 }
 
 void RenderListItem::explicitValueChanged()
@@ -398,7 +305,7 @@ void RenderListItem::explicitValueChanged()
         item->updateValue();
 }
 
-void RenderListItem::setExplicitValue(Optional<int> value)
+void RenderListItem::setExplicitValue(std::optional<int> value)
 {
     if (!value) {
         if (!m_valueWasSetExplicitly)
@@ -407,7 +314,7 @@ void RenderListItem::setExplicitValue(Optional<int> value)
         if (m_valueWasSetExplicitly && m_value == value)
             return;
     }
-    m_valueWasSetExplicitly = value.hasValue();
+    m_valueWasSetExplicitly = value.has_value();
     m_value = value;
     explicitValueChanged();
 }

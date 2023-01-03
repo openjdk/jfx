@@ -1,5 +1,5 @@
 # generates header with JavaFX version
-configure_file(java/WebCoreSupport/WebPageConfig.h.in ${DERIVED_SOURCES_WEBKITLEGACY_DIR}/WebPageConfig.h)
+configure_file(java/WebCoreSupport/WebPageConfig.h.in ${WebKitLegacy_DERIVED_SOURCES_DIR}/WebPageConfig.h)
 
 # Remove unused files
 list(REMOVE_ITEM WebKitLegacy_SOURCES
@@ -131,11 +131,13 @@ list(APPEND WebKitLegacy_SOURCES
     java/WebCoreSupport/ChromeClientJava.cpp
     java/WebCoreSupport/BackForwardList.cpp
     java/WebCoreSupport/PageCacheJava.cpp
+
+    java/storage/WebDatabaseProviderJava.cpp
 )
 
 # for DRT
-list(APPEND WebKitLegacy_LIBRARIES
-    PRIVATE WebCoreTestSupport${DEBUG_SUFFIX}
+list(APPEND WebKitLegacy_PRIVATE_LIBRARIES
+    WebKit::WebCoreTestSupport
     ${ICU_I18N_LIBRARIES}
     ${ICU_DATA_LIBRARIES}
     ${ICU_LIBRARIES}
@@ -143,6 +145,11 @@ list(APPEND WebKitLegacy_LIBRARIES
 
 add_definitions(-DSTATICALLY_LINKED_WITH_JavaScriptCore)
 add_definitions(-DSTATICALLY_LINKED_WITH_WTF)
+
+list(APPEND WebKitLegacy_PRIVATE_DEFINITIONS
+    STATICALLY_LINKED_WITH_PAL
+    STATICALLY_LINKED_WITH_WebCore
+)
 
 set(WebKitLegacy_OUTPUT_NAME "jfxwebkit")
 
@@ -176,16 +183,17 @@ add_custom_command(
 list(APPEND WebKitLegacy_SOURCES ${WebKitLegacy_EXTERNAL_DEP_STAMP})
 
 add_custom_command(
-    OUTPUT ${DERIVED_SOURCES_WEBKITLEGACY_DIR}/WebKitVersion.h
+    OUTPUT ${WebKitLegacy_DERIVED_SOURCES_DIR}/WebKitVersion.h
     MAIN_DEPENDENCY ${WEBKITLEGACY_DIR}/scripts/generate-webkitversion.pl
     DEPENDS ${WEBKITLEGACY_DIR}/mac/Configurations/Version.xcconfig
-    COMMAND ${PERL_EXECUTABLE} ${WEBKITLEGACY_DIR}/scripts/generate-webkitversion.pl --config ${WEBKITLEGACY_DIR}/mac/Configurations/Version.xcconfig --outputDir ${DERIVED_SOURCES_WEBKITLEGACY_DIR}
+    COMMAND ${PERL_EXECUTABLE} ${WEBKITLEGACY_DIR}/scripts/generate-webkitversion.pl --config ${WEBKITLEGACY_DIR}/mac/Configurations/Version.xcconfig --outputDir ${WebKitLegacy_DERIVED_SOURCES_DIR}
     VERBATIM)
-list(APPEND WebKitLegacy_SOURCES ${DERIVED_SOURCES_WEBKITLEGACY_DIR}/WebKitVersion.h)
+list(APPEND WebKitLegacy_SOURCES ${WebKitLegacy_DERIVED_SOURCES_DIR}/WebKitVersion.h)
 
 
 list(APPEND WebKitLegacy_INCLUDE_DIRECTORIES
-    "${DERIVED_SOURCES_WEBKITLEGACY_DIR}"
+    "${WebKitLegacy_DERIVED_SOURCES_DIR}"
     "${WEBKITLEGACY_DIR}/java/DOM"
     "${WEBKITLEGACY_DIR}/java/WebCoreSupport"
+    "${WebCore_PRIVATE_FRAMEWORK_HEADERS_DIR}/WebCore"
 )

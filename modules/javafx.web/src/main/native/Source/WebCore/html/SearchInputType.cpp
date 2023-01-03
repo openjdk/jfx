@@ -32,11 +32,13 @@
 #include "config.h"
 #include "SearchInputType.h"
 
+#include "ElementInlines.h"
 #include "HTMLInputElement.h"
 #include "HTMLNames.h"
 #include "InputTypeNames.h"
 #include "KeyboardEvent.h"
 #include "RenderSearchField.h"
+#include "ShadowPseudoIds.h"
 #include "ShadowRoot.h"
 #include "TextControlInnerElements.h"
 
@@ -45,9 +47,10 @@ namespace WebCore {
 using namespace HTMLNames;
 
 SearchInputType::SearchInputType(HTMLInputElement& element)
-    : BaseTextInputType(element)
+    : BaseTextInputType(Type::Search, element)
     , m_searchEventTimer(*this, &SearchInputType::searchEventTimerFired)
 {
+    ASSERT(needsShadowSubtree());
 }
 
 void SearchInputType::addSearchResult()
@@ -65,11 +68,11 @@ void SearchInputType::addSearchResult()
 static void updateResultButtonPseudoType(SearchFieldResultsButtonElement& resultButton, int maxResults)
 {
     if (!maxResults)
-        resultButton.setPseudo(AtomString("-webkit-search-results-decoration", AtomString::ConstructFromLiteral));
+        resultButton.setPseudo(ShadowPseudoIds::webkitSearchResultsDecoration());
     else if (maxResults < 0)
-        resultButton.setPseudo(AtomString("-webkit-search-decoration", AtomString::ConstructFromLiteral));
+        resultButton.setPseudo(ShadowPseudoIds::webkitSearchDecoration());
     else
-        resultButton.setPseudo(AtomString("-webkit-search-results-button", AtomString::ConstructFromLiteral));
+        resultButton.setPseudo(ShadowPseudoIds::webkitSearchResultsButton());
 }
 
 void SearchInputType::attributeChanged(const QualifiedName& name)
@@ -94,11 +97,6 @@ const AtomString& SearchInputType::formControlType() const
     return InputTypeNames::search();
 }
 
-bool SearchInputType::isSearchField() const
-{
-    return true;
-}
-
 bool SearchInputType::needsContainer() const
 {
     return true;
@@ -106,6 +104,7 @@ bool SearchInputType::needsContainer() const
 
 void SearchInputType::createShadowSubtree()
 {
+    ASSERT(needsShadowSubtree());
     ASSERT(!m_resultsButton);
     ASSERT(!m_cancelButton);
 

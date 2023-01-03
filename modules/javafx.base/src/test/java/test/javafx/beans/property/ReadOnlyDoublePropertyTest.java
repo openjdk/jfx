@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,17 +26,12 @@
 package test.javafx.beans.property;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
 import javafx.beans.InvalidationListener;
-import javafx.beans.binding.ObjectExpression;
 import javafx.beans.property.ReadOnlyDoubleProperty;
 import javafx.beans.property.ReadOnlyDoubleWrapper;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.beans.value.ChangeListener;
-import static org.junit.Assert.assertEquals;
-
 import org.junit.Before;
 import org.junit.Test;
 
@@ -87,7 +82,7 @@ public class ReadOnlyDoublePropertyTest {
 
     @Test
     public void testObjectToDouble() {
-        final ReadOnlyObjectWrapper<Double> valueModel = new ReadOnlyObjectWrapper<Double>();
+        final ReadOnlyObjectWrapper<Double> valueModel = new ReadOnlyObjectWrapper<>();
         final ReadOnlyDoubleProperty exp = ReadOnlyDoubleProperty.readOnlyDoubleProperty(valueModel.getReadOnlyProperty());
 
 

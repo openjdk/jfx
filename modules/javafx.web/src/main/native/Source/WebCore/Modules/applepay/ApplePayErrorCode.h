@@ -27,12 +27,39 @@
 
 #if ENABLE(APPLE_PAY)
 
-#include "ApplePaySessionPaymentRequest.h"
+#include <wtf/Forward.h>
 
 namespace WebCore {
 
-using ApplePayErrorCode = PaymentError::Code;
+enum class ApplePayErrorCode {
+    Unknown,
+    ShippingContactInvalid,
+    BillingContactInvalid,
+    AddressUnserviceable,
+#if ENABLE(APPLE_PAY_COUPON_CODE)
+    CouponCodeInvalid,
+    CouponCodeExpired,
+#endif
+};
 
 } // namespace WebCore
+
+namespace WTF {
+
+template<> struct EnumTraits<WebCore::ApplePayErrorCode> {
+    using values = EnumValues<
+        WebCore::ApplePayErrorCode,
+        WebCore::ApplePayErrorCode::Unknown,
+        WebCore::ApplePayErrorCode::ShippingContactInvalid,
+        WebCore::ApplePayErrorCode::BillingContactInvalid,
+        WebCore::ApplePayErrorCode::AddressUnserviceable
+#if ENABLE(APPLE_PAY_COUPON_CODE)
+        , WebCore::ApplePayErrorCode::CouponCodeInvalid
+        , WebCore::ApplePayErrorCode::CouponCodeExpired
+#endif
+    >;
+};
+
+} // namespace WTF
 
 #endif // ENABLE(APPLE_PAY)

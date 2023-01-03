@@ -35,19 +35,27 @@
 #include <wtf/Vector.h>
 #include <wtf/WeakPtr.h>
 
+#if !RELEASE_LOG_DISABLED
+namespace WTF {
+class Logger;
+}
+#endif
+
 namespace WebCore {
 
-class SharedBuffer;
+class FragmentedSharedBuffer;
 
 class CDMInstanceSessionClient : public CanMakeWeakPtr<CDMInstanceSessionClient> {
 public:
     virtual ~CDMInstanceSessionClient() = default;
 
     using KeyStatus = CDMKeyStatus;
-    using KeyStatusVector = Vector<std::pair<Ref<SharedBuffer>, KeyStatus>>;
+    using KeyStatusVector = Vector<std::pair<Ref<FragmentedSharedBuffer>, KeyStatus>>;
     virtual void updateKeyStatuses(KeyStatusVector&&) = 0;
-    virtual void sendMessage(CDMMessageType, Ref<SharedBuffer>&& message) = 0;
+    virtual void sendMessage(CDMMessageType, Ref<FragmentedSharedBuffer>&& message) = 0;
     virtual void sessionIdChanged(const String&) = 0;
+    using PlatformDisplayID = uint32_t;
+    virtual PlatformDisplayID displayID() = 0;
 };
 
 class CDMInstanceSession : public RefCounted<CDMInstanceSession> {
@@ -58,6 +66,10 @@ public:
     using LicenseType = CDMSessionType;
     using MessageType = CDMMessageType;
 
+#if !RELEASE_LOG_DISABLED
+    virtual void setLogger(Logger&, const void*) { }
+#endif
+
     virtual void setClient(WeakPtr<CDMInstanceSessionClient>&&) { }
     virtual void clearClient() { }
 
@@ -66,15 +78,15 @@ public:
         Succeeded,
     };
 
-    using LicenseCallback = CompletionHandler<void(Ref<SharedBuffer>&& message, const String& sessionId, bool needsIndividualization, SuccessValue succeeded)>;
-    virtual void requestLicense(LicenseType, const AtomString& initDataType, Ref<SharedBuffer>&& initData, LicenseCallback&&) = 0;
+    using LicenseCallback = CompletionHandler<void(Ref<FragmentedSharedBuffer>&& message, const String& sessionId, bool needsIndividualization, SuccessValue succeeded)>;
+    virtual void requestLicense(LicenseType, const AtomString& initDataType, Ref<FragmentedSharedBuffer>&& initData, LicenseCallback&&) = 0;
 
     using KeyStatusVector = CDMInstanceSessionClient::KeyStatusVector;
-    using Message = std::pair<MessageType, Ref<SharedBuffer>>;
-    using LicenseUpdateCallback = CompletionHandler<void(bool sessionWasClosed, Optional<KeyStatusVector>&& changedKeys, Optional<double>&& changedExpiration, Optional<Message>&& message, SuccessValue succeeded)>;
-    virtual void updateLicense(const String& sessionId, LicenseType, const SharedBuffer& response, LicenseUpdateCallback&&) = 0;
+    using Message = std::pair<MessageType, Ref<FragmentedSharedBuffer>>;
+    using LicenseUpdateCallback = CompletionHandler<void(bool sessionWasClosed, std::optional<KeyStatusVector>&& changedKeys, std::optional<double>&& changedExpiration, std::optional<Message>&& message, SuccessValue succeeded)>;
+    virtual void updateLicense(const String& sessionId, LicenseType, Ref<FragmentedSharedBuffer>&& response, LicenseUpdateCallback&&) = 0;
 
-    enum class SessionLoadFailure {
+    enum class SessionLoadFailure : uint8_t {
         None,
         NoSessionData,
         MismatchedSessionType,
@@ -82,16 +94,19 @@ public:
         Other,
     };
 
-    using LoadSessionCallback = CompletionHandler<void(Optional<KeyStatusVector>&&, Optional<double>&&, Optional<Message>&&, SuccessValue, SessionLoadFailure)>;
+    using LoadSessionCallback = CompletionHandler<void(std::optional<KeyStatusVector>&&, std::optional<double>&&, std::optional<Message>&&, SuccessValue, SessionLoadFailure)>;
     virtual void loadSession(LicenseType, const String& sessionId, const String& origin, LoadSessionCallback&&) = 0;
 
     using CloseSessionCallback = CompletionHandler<void()>;
     virtual void closeSession(const String& sessionId, CloseSessionCallback&&) = 0;
 
-    using RemoveSessionDataCallback = CompletionHandler<void(KeyStatusVector&&, Optional<Ref<SharedBuffer>>&&, SuccessValue)>;
+    using RemoveSessionDataCallback = CompletionHandler<void(KeyStatusVector&&, std::optional<Ref<FragmentedSharedBuffer>>&&, SuccessValue)>;
     virtual void removeSessionData(const String& sessionId, LicenseType, RemoveSessionDataCallback&&) = 0;
 
     virtual void storeRecordOfKeyUsage(const String& sessionId) = 0;
+
+    using PlatformDisplayID = uint32_t;
+    virtual void displayChanged(PlatformDisplayID) { }
 };
 
 } // namespace WebCore

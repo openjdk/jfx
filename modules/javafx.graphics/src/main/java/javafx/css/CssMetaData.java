@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -113,7 +113,7 @@ import javafx.scene.Node;
 public abstract class CssMetaData<S extends Styleable, V> {
 
     /**
-     * Set the value of the corresponding property on the given Node.
+     * Sets the value of the corresponding property on the given Node.
      * @param styleable The Styleable on which the property value is being set
      * @param value The value to which the property is set
      * @param origin the origin
@@ -160,7 +160,9 @@ public abstract class CssMetaData<S extends Styleable, V> {
     public abstract StyleableProperty<V> getStyleableProperty(S styleable);
 
     private final String property;
+
     /**
+     * Gets the CSS property name.
      * @return the CSS property name
      */
     public final String getProperty() {
@@ -168,8 +170,10 @@ public abstract class CssMetaData<S extends Styleable, V> {
     }
 
     private final StyleConverter<?,V> converter;
+
     /**
-     * @return The CSS converter that handles conversion from a CSS value to a Java Object
+     * Gets the CSS converter that handles conversion from a CSS value to a Java Object.
+     * @return the CSS converter
      */
     public final StyleConverter<?,V> getConverter() {
         return converter;

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -64,7 +64,13 @@ import javafx.collections.ObservableList;
  */
 public abstract class ListBinding<E> extends ListExpression<E> implements Binding<ObservableList<E>> {
 
-    private final ListChangeListener<E> listChangeListener = new ListChangeListener<E>() {
+    /**
+     * Creates a default {@code ListBinding}.
+     */
+    public ListBinding() {
+    }
+
+    private final ListChangeListener<E> listChangeListener = new ListChangeListener<>() {
         @Override
         public void onChanged(Change<? extends E> change) {
             invalidateProperties();
@@ -112,6 +118,7 @@ public abstract class ListBinding<E> extends ListExpression<E> implements Bindin
             return "size";
         }
 
+        @Override
         protected void fireValueChangedEvent() {
             super.fireValueChangedEvent();
         }
@@ -142,6 +149,7 @@ public abstract class ListBinding<E> extends ListExpression<E> implements Bindin
             return "empty";
         }
 
+        @Override
         protected void fireValueChangedEvent() {
             super.fireValueChangedEvent();
         }

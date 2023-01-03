@@ -37,11 +37,9 @@
 #include <pal/cf/CoreMediaSoftLink.h>
 #include "CoreVideoSoftLink.h"
 
-using namespace PAL;
-
 namespace WebCore {
 
-static inline AudioStreamBasicDescription streamDescription(size_t sampleRate, size_t channelCount)
+static inline CAAudioStreamDescription streamDescription(size_t sampleRate, size_t channelCount)
 {
     bool isFloat = true;
     bool isBigEndian = false;
@@ -71,19 +69,26 @@ void MediaStreamAudioSource::consumeAudio(AudioBus& bus, size_t numberOfFrames)
         return;
     }
 
-    CMTime startTime = CMTimeMake(m_numberOfFrames, m_currentSettings.sampleRate());
+    CMTime startTime = PAL::CMTimeMake(m_numberOfFrames, m_currentSettings.sampleRate());
     auto mediaTime = PAL::toMediaTime(startTime);
     m_numberOfFrames += numberOfFrames;
 
-    AudioStreamBasicDescription newDescription = streamDescription(m_currentSettings.sampleRate(), bus.numberOfChannels());
+    auto* audioBuffer = m_audioBuffer ? &downcast<WebAudioBufferList>(*m_audioBuffer) : nullptr;
 
-    // FIXME: We should do the memory allocation once in MediaStreamAudioSource and resize it according numberOfFrames.
-    WebAudioBufferList audioBufferList { CAAudioStreamDescription(newDescription), WTF::safeCast<uint32_t>(numberOfFrames) };
+    auto description = streamDescription(m_currentSettings.sampleRate(), bus.numberOfChannels());
+    if (!audioBuffer || audioBuffer->channelCount() != bus.numberOfChannels()) {
+        // Heap allocations are forbidden on the audio thread for performance reasons so we need to
+        // explicitly allow the following allocation(s).
+        DisableMallocRestrictionsForCurrentThreadScope disableMallocRestrictions;
+        m_audioBuffer = makeUnique<WebAudioBufferList>(description, numberOfFrames);
+        audioBuffer = &downcast<WebAudioBufferList>(*m_audioBuffer);
+    } else
+        audioBuffer->setSampleCount(numberOfFrames);
 
     for (size_t cptr = 0; cptr < bus.numberOfChannels(); ++cptr)
-        copyChannelData(*bus.channel(cptr), *audioBufferList.buffer(cptr), numberOfFrames, muted());
+        copyChannelData(*bus.channel(cptr), *audioBuffer->buffer(cptr), numberOfFrames, muted());
 
-    audioSamplesAvailable(mediaTime, audioBufferList, CAAudioStreamDescription(newDescription), numberOfFrames);
+    audioSamplesAvailable(mediaTime, *m_audioBuffer, description, numberOfFrames);
 }
 
 } // namespace WebCore

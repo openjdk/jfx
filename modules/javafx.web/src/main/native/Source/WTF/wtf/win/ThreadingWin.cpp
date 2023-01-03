@@ -98,8 +98,6 @@
 
 namespace WTF {
 
-static Lock globalSuspendLock;
-
 Thread::~Thread()
 {
     // It is OK because FLSAlloc's callback will be called even before there are some open handles.
@@ -153,17 +151,11 @@ static unsigned __stdcall wtfThreadEntryPoint(void* data)
     return 0;
 }
 
-bool Thread::establishHandle(NewThreadContext* data)
+bool Thread::establishHandle(NewThreadContext* data, std::optional<size_t> stackSize, QOS)
 {
-    size_t stackSize = 0;
-#if PLATFORM(JAVA) && USE(JSVALUE32_64)
-    stackSize = 1024 * 1024;
-#endif
-
     unsigned threadIdentifier = 0;
     unsigned initFlag = stackSize ? STACK_SIZE_PARAM_IS_A_RESERVATION : 0;
-
-    HANDLE threadHandle = reinterpret_cast<HANDLE>(_beginthreadex(0, stackSize, wtfThreadEntryPoint, data, initFlag, &threadIdentifier));
+    HANDLE threadHandle = reinterpret_cast<HANDLE>(_beginthreadex(nullptr, stackSize.value_or(0), wtfThreadEntryPoint, data, initFlag, &threadIdentifier));
     if (!threadHandle) {
         LOG_ERROR("Failed to create thread at entry point %p with data %p: %ld", wtfThreadEntryPoint, data, errno);
         return false;
@@ -174,7 +166,7 @@ bool Thread::establishHandle(NewThreadContext* data)
 
 void Thread::changePriority(int delta)
 {
-    auto locker = holdLock(m_mutex);
+    Locker locker { m_mutex };
     SetThreadPriority(m_handle, THREAD_PRIORITY_NORMAL + delta);
 }
 
@@ -182,7 +174,7 @@ int Thread::waitForCompletion()
 {
     HANDLE handle;
     {
-        auto locker = holdLock(m_mutex);
+        Locker locker { m_mutex };
         handle = m_handle;
     }
 
@@ -190,7 +182,7 @@ int Thread::waitForCompletion()
     if (joinResult == WAIT_FAILED)
         LOG_ERROR("Thread %p was found to be deadlocked trying to quit", this);
 
-    auto locker = holdLock(m_mutex);
+    Locker locker { m_mutex };
     ASSERT(joinableState() == Joinable);
 
     // The thread has already exited, do nothing.
@@ -212,15 +204,14 @@ void Thread::detach()
     // FlsCallback automatically. FlsCallback will call CloseHandle to clean up
     // resource. So in this function, we just mark the thread as detached to
     // avoid calling waitForCompletion for this thread.
-    auto locker = holdLock(m_mutex);
+    Locker locker { m_mutex };
     if (!hasExited())
         didBecomeDetached();
 }
 
-auto Thread::suspend() -> Expected<void, PlatformSuspendError>
+auto Thread::suspend(const ThreadSuspendLocker&) -> Expected<void, PlatformSuspendError>
 {
     RELEASE_ASSERT_WITH_MESSAGE(this != &Thread::current(), "We do not support suspending the current thread itself.");
-    LockHolder locker(globalSuspendLock);
     DWORD result = SuspendThread(m_handle);
     if (result != (DWORD)-1)
         return { };
@@ -228,15 +219,13 @@ auto Thread::suspend() -> Expected<void, PlatformSuspendError>
 }
 
 // During resume, suspend or resume should not be executed from the other threads.
-void Thread::resume()
+void Thread::resume(const ThreadSuspendLocker&)
 {
-    LockHolder locker(globalSuspendLock);
     ResumeThread(m_handle);
 }
 
-size_t Thread::getRegisters(PlatformRegisters& registers)
+size_t Thread::getRegisters(const ThreadSuspendLocker&, PlatformRegisters& registers)
 {
-    LockHolder locker(globalSuspendLock);
     registers.ContextFlags = CONTEXT_INTEGER | CONTEXT_CONTROL;
     GetThreadContext(m_handle, &registers);
     return sizeof(CONTEXT);
@@ -245,6 +234,7 @@ size_t Thread::getRegisters(PlatformRegisters& registers)
 Thread& Thread::initializeCurrentTLS()
 {
     // Not a WTF-created thread, ThreadIdentifier is not established yet.
+    WTF::initialize();
     Ref<Thread> thread = adoptRef(*new Thread());
 
     HANDLE handle;
@@ -265,102 +255,77 @@ ThreadIdentifier Thread::currentID()
 
 void Thread::establishPlatformSpecificHandle(HANDLE handle, ThreadIdentifier threadID)
 {
-    auto locker = holdLock(m_mutex);
+    Locker locker { m_mutex };
     m_handle = handle;
     m_id = threadID;
 }
 
-#define InvalidThread reinterpret_cast<Thread*>(static_cast<uintptr_t>(0xbbadbeef))
+struct Thread::ThreadHolder {
+    ~ThreadHolder()
+    {
+        // The thread_local object of the main thread is destructed
+        // after Windows terminates other threads. If the terminated
+        // thread was holding a mutex, trying to lock the mutex causes
+        // deadlock.
+        if (isMainThread())
+            return;
+        if (thread) {
+            thread->specificStorage().destroySlots();
+            thread->didExit();
+        }
+    }
 
-static WordLock threadMapMutex;
+    RefPtr<Thread> thread;
+};
 
-static HashMap<ThreadIdentifier, Thread*>& threadMap()
+thread_local static Thread::ThreadHolder s_threadHolder;
+
+Thread* Thread::currentMayBeNull()
 {
-    static NeverDestroyed<HashMap<ThreadIdentifier, Thread*>> map;
-    return map.get();
-}
-
-void Thread::initializeTLSKey()
-{
-    threadMap();
-    threadSpecificKeyCreate(&s_key, destructTLS);
-}
-
-Thread* Thread::currentDying()
-{
-    ASSERT(s_key != InvalidThreadSpecificKey);
-    // After FLS is destroyed, this map offers the value until the second thread exit callback is called.
-    auto locker = holdLock(threadMapMutex);
-    return threadMap().get(currentID());
-}
-
-RefPtr<Thread> Thread::get(ThreadIdentifier id)
-{
-    auto locker = holdLock(threadMapMutex);
-    Thread* thread = threadMap().get(id);
-    if (thread)
-        return thread;
-    return nullptr;
+    return s_threadHolder.thread.get();
 }
 
 Thread& Thread::initializeTLS(Ref<Thread>&& thread)
 {
-    ASSERT(s_key != InvalidThreadSpecificKey);
-    // FIXME: Remove this workaround code once <rdar://problem/31793213> is fixed.
-    auto id = thread->id();
-    // We leak the ref to keep the Thread alive while it is held in TLS. destructTLS will deref it later at thread destruction time.
-    auto& threadInTLS = thread.leakRef();
-    threadSpecificSet(s_key, &threadInTLS);
-    {
-        auto locker = holdLock(threadMapMutex);
-        threadMap().add(id, &threadInTLS);
-    }
-    return threadInTLS;
+    s_threadHolder.thread = WTFMove(thread);
+    return *s_threadHolder.thread;
 }
 
-void Thread::destructTLS(void* data)
+Atomic<int> Thread::SpecificStorage::s_numberOfKeys;
+std::array<Atomic<Thread::SpecificStorage::DestroyFunction>, Thread::SpecificStorage::s_maxKeys> Thread::SpecificStorage::s_destroyFunctions;
+
+bool Thread::SpecificStorage::allocateKey(int& key, DestroyFunction destroy)
 {
-    if (data == InvalidThread)
-        return;
-
-    Thread* thread = static_cast<Thread*>(data);
-    ASSERT(thread);
-
-    // Delay the deallocation of Thread more.
-    // It defers Thread deallocation after the other ThreadSpecific values are deallocated.
-    static thread_local class ThreadExitCallback {
-    public:
-        ThreadExitCallback(Thread* thread)
-            : m_thread(thread)
-        {
-        }
-
-        ~ThreadExitCallback()
-        {
-            Thread::destructTLS(m_thread);
-        }
-
-    private:
-        Thread* m_thread;
-    } callback(thread);
-
-    if (thread->m_isDestroyedOnce) {
-        {
-            auto locker = holdLock(threadMapMutex);
-            ASSERT(threadMap().contains(thread->id()));
-            threadMap().remove(thread->id());
-        }
-        thread->didExit();
-        thread->deref();
-
-        // Fill the FLS with the non-nullptr value. While FLS destructor won't be called for that,
-        // non-nullptr value tells us that we already destructed Thread. This allows us to
-        // detect incorrect use of Thread::current() after this point because it will crash.
-        threadSpecificSet(s_key, InvalidThread);
-        return;
+    int k = s_numberOfKeys.exchangeAdd(1);
+    if (k >= s_maxKeys) {
+        s_numberOfKeys.exchangeSub(1);
+        return false;
     }
-    threadSpecificSet(s_key, InvalidThread);
-    thread->m_isDestroyedOnce = true;
+    key = k;
+    s_destroyFunctions[key].store(destroy);
+    return true;
+}
+
+void* Thread::SpecificStorage::get(int key)
+{
+    return m_slots[key];
+}
+
+void Thread::SpecificStorage::set(int key, void* value)
+{
+    m_slots[key] = value;
+}
+
+void Thread::SpecificStorage::destroySlots()
+{
+    auto numberOfKeys = s_numberOfKeys.load();
+    for (size_t i = 0; i < numberOfKeys; i++) {
+        auto destroy = s_destroyFunctions[i].load();
+        if (destroy && m_slots[i]) {
+            destroy(m_slots[i]);
+            m_slots[i] = nullptr;
+        }
+    }
 }
 
 Mutex::~Mutex()

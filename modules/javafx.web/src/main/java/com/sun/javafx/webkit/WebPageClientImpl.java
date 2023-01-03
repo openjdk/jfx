@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -31,6 +31,7 @@ import java.security.AccessController;
 import java.security.PrivilegedAction;
 
 import com.sun.javafx.scene.traversal.Direction;
+import com.sun.javafx.scene.traversal.TraversalMethod;
 import javafx.geometry.Point2D;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.Cursor;
@@ -49,15 +50,12 @@ import com.sun.webkit.graphics.WCPoint;
 import com.sun.webkit.graphics.WCRectangle;
 
 public final class WebPageClientImpl implements WebPageClient<WebView> {
-    private static final boolean backBufferSupported;
+    @SuppressWarnings("removal")
+    private static final boolean backBufferSupported = Boolean.valueOf(
+        AccessController.doPrivileged((PrivilegedAction<String>) () -> System.getProperty(
+            "com.sun.webkit.pagebackbuffer", "true")));
     private static WebConsoleListener consoleListener = null;
     private final Accessor accessor;
-
-    static {
-        backBufferSupported = Boolean.valueOf(
-                AccessController.doPrivileged((PrivilegedAction<String>) () -> System.getProperty(
-                        "com.sun.webkit.pagebackbuffer", "true")));
-    }
 
     static void setConsoleListener(WebConsoleListener consoleListener) {
         WebPageClientImpl.consoleListener = consoleListener;
@@ -91,7 +89,7 @@ public final class WebPageClientImpl implements WebPageClient<WebView> {
             Tooltip tooltip = (tooltipRef == null) ? null : tooltipRef.get();
             if (tooltip == null) {
                 tooltip = new Tooltip(tooltipText);
-                tooltipRef = new WeakReference<Tooltip>(tooltip);
+                tooltipRef = new WeakReference<>(tooltip);
             } else {
                 tooltip.setText(tooltipText);
                 if (!oldTooltipText.equals(tooltipText)) {
@@ -114,7 +112,7 @@ public final class WebPageClientImpl implements WebPageClient<WebView> {
     }
 
     @Override public void transferFocus(boolean forward) {
-        NodeHelper.traverse(accessor.getView(), forward ? Direction.NEXT : Direction.PREVIOUS);
+        NodeHelper.traverse(accessor.getView(), forward ? Direction.NEXT : Direction.PREVIOUS, TraversalMethod.DEFAULT);
     }
 
     @Override public WCRectangle getScreenBounds(boolean available) {

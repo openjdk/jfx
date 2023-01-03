@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -63,7 +63,7 @@ public class ControlSkinTest {
      */
     @Before public void setUp() {
         c = new ControlStub();
-        s = new SkinStub<ControlStub>(c);
+        s = new SkinStub<>(c);
         t = new Tooltip();
 //        t.setSkin(new SkinStub<Tooltip>(t));
     }
@@ -81,7 +81,7 @@ public class ControlSkinTest {
 
     @Test public void skinCanBeReplacedOnControlManually() {
         c.setSkin(s);
-        final Skin<ControlStub> s2 = new SkinStub<ControlStub>(c);
+        final Skin<ControlStub> s2 = new SkinStub<>(c);
         c.setSkin(s2);
         assertSame(s2, c.getSkin());
         assertTrue(c.getChildrenUnmodifiable().contains(s2.getNode()));
@@ -90,14 +90,14 @@ public class ControlSkinTest {
 
     @Test public void disposeIsCalledOnReplacedSkin() {
         final boolean[] result = new boolean[1];
-        s = new SkinStub<ControlStub>(c) {
+        s = new SkinStub<>(c) {
             @Override public void dispose() {
                 super.dispose();
                 result[0] = true;
             }
         };
         c.setSkin(s);
-        final Skin<ControlStub> s2 = new SkinStub<ControlStub>(c);
+        final Skin<ControlStub> s2 = new SkinStub<>(c);
         c.setSkin(s2);
         assertTrue(result[0]);
     }
@@ -109,7 +109,7 @@ public class ControlSkinTest {
     /*
      * Binding a skin is honored
      * Be sure to check that "dispose" is called on the old skin
-     * Test that if skin is bound, then impl_cssSettable returns false
+     * Test that if skin is bound, then CssMetaData_isSettable returns false
      */
 //    @Test public void skinCanBeBound() {
 //        ObjectProperty<SkinStub<ControlStub>> skin = new SimpleObjectProperty<SkinStub<ControlStub>>();
@@ -122,7 +122,7 @@ public class ControlSkinTest {
         assertTrue(c.getSkin() instanceof MySkinStub);
     }
 
-    @Test public void impl_cssSetCalledTwiceWithTheSameValueHasNoEffectTheSecondTime() {
+    @Test public void applyStyleCalledTwiceWithTheSameValueHasNoEffectTheSecondTime() {
         StringProperty skinClassName = ControlShim.skinClassNameProperty(c);
         skinClassName.addListener(new InvalidationListener() {
             boolean calledOnce = false;

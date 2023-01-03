@@ -26,13 +26,10 @@
 #include "config.h"
 #include "IDBRequest.h"
 
-#if ENABLE(INDEXED_DATABASE)
-
 #include "DOMException.h"
 #include "Event.h"
 #include "EventDispatcher.h"
 #include "EventNames.h"
-#include "EventQueue.h"
 #include "IDBBindingUtilities.h"
 #include "IDBConnectionProxy.h"
 #include "IDBCursor.h"
@@ -48,10 +45,9 @@
 #include "ScriptExecutionContext.h"
 #include "ThreadSafeDataBuffer.h"
 #include <JavaScriptCore/StrongInlines.h>
+#include <variant>
 #include <wtf/IsoMallocInlines.h>
 #include <wtf/Scope.h>
-#include <wtf/Variant.h>
-
 
 namespace WebCore {
 using namespace JSC;
@@ -60,63 +56,70 @@ WTF_MAKE_ISO_ALLOCATED_IMPL(IDBRequest);
 
 Ref<IDBRequest> IDBRequest::create(ScriptExecutionContext& context, IDBObjectStore& objectStore, IDBTransaction& transaction)
 {
-    return adoptRef(*new IDBRequest(context, objectStore, transaction));
+    auto request = adoptRef(*new IDBRequest(context, objectStore, transaction));
+    request->suspendIfNeeded();
+    return request;
 }
 
 Ref<IDBRequest> IDBRequest::create(ScriptExecutionContext& context, IDBCursor& cursor, IDBTransaction& transaction)
 {
-    return adoptRef(*new IDBRequest(context, cursor, transaction));
+    auto request = adoptRef(*new IDBRequest(context, cursor, transaction));
+    request->suspendIfNeeded();
+    return request;
 }
 
 Ref<IDBRequest> IDBRequest::create(ScriptExecutionContext& context, IDBIndex& index, IDBTransaction& transaction)
 {
-    return adoptRef(*new IDBRequest(context, index, transaction));
+    auto request = adoptRef(*new IDBRequest(context, index, transaction));
+    request->suspendIfNeeded();
+    return request;
 }
 
 Ref<IDBRequest> IDBRequest::createObjectStoreGet(ScriptExecutionContext& context, IDBObjectStore& objectStore, IndexedDB::ObjectStoreRecordType type, IDBTransaction& transaction)
 {
-    return adoptRef(*new IDBRequest(context, objectStore, type, transaction));
+    auto request = adoptRef(*new IDBRequest(context, objectStore, type, transaction));
+    request->suspendIfNeeded();
+    return request;
 }
 
 Ref<IDBRequest> IDBRequest::createIndexGet(ScriptExecutionContext& context, IDBIndex& index, IndexedDB::IndexRecordType requestedRecordType, IDBTransaction& transaction)
 {
-    return adoptRef(*new IDBRequest(context, index, requestedRecordType, transaction));
+    auto request = adoptRef(*new IDBRequest(context, index, requestedRecordType, transaction));
+    request->suspendIfNeeded();
+    return request;
 }
 
-IDBRequest::IDBRequest(ScriptExecutionContext& context, IDBClient::IDBConnectionProxy& connectionProxy)
+IDBRequest::IDBRequest(ScriptExecutionContext& context, IDBClient::IDBConnectionProxy& connectionProxy, IndexedDB::RequestType requestType)
     : IDBActiveDOMObject(&context)
     , m_resourceIdentifier(connectionProxy)
+    , m_result(NullResultType::Undefined)
     , m_connectionProxy(connectionProxy)
+    , m_requestType(requestType)
 {
-    m_result = NullResultType::Undefined;
-    suspendIfNeeded();
 }
 
 IDBRequest::IDBRequest(ScriptExecutionContext& context, IDBObjectStore& objectStore, IDBTransaction& transaction)
     : IDBActiveDOMObject(&context)
     , m_transaction(&transaction)
     , m_resourceIdentifier(transaction.connectionProxy())
+    , m_result(NullResultType::Undefined)
     , m_source(&objectStore)
     , m_connectionProxy(transaction.database().connectionProxy())
 {
-    m_result = NullResultType::Undefined;
-    suspendIfNeeded();
 }
 
 IDBRequest::IDBRequest(ScriptExecutionContext& context, IDBCursor& cursor, IDBTransaction& transaction)
     : IDBActiveDOMObject(&context)
     , m_transaction(&transaction)
     , m_resourceIdentifier(transaction.connectionProxy())
+    , m_result(NullResultType::Undefined)
     , m_pendingCursor(&cursor)
     , m_connectionProxy(transaction.database().connectionProxy())
 {
-    suspendIfNeeded();
-
     WTF::switchOn(cursor.source(),
         [this] (const auto& value) { this->m_source = IDBRequest::Source { value }; }
     );
 
-    m_result = NullResultType::Undefined;
     cursor.setRequest(*this);
 }
 
@@ -124,35 +127,32 @@ IDBRequest::IDBRequest(ScriptExecutionContext& context, IDBIndex& index, IDBTran
     : IDBActiveDOMObject(&context)
     , m_transaction(&transaction)
     , m_resourceIdentifier(transaction.connectionProxy())
+    , m_result(NullResultType::Undefined)
     , m_source(&index)
     , m_connectionProxy(transaction.database().connectionProxy())
 {
-    m_result = NullResultType::Undefined;
-    suspendIfNeeded();
 }
 
 IDBRequest::IDBRequest(ScriptExecutionContext& context, IDBObjectStore& objectStore, IndexedDB::ObjectStoreRecordType type, IDBTransaction& transaction)
     : IDBActiveDOMObject(&context)
     , m_transaction(&transaction)
     , m_resourceIdentifier(transaction.connectionProxy())
+    , m_result(NullResultType::Undefined)
     , m_source(&objectStore)
-    , m_requestedObjectStoreRecordType(type)
     , m_connectionProxy(transaction.database().connectionProxy())
+    , m_requestedObjectStoreRecordType(type)
 {
-    m_result = NullResultType::Undefined;
-    suspendIfNeeded();
 }
 
 IDBRequest::IDBRequest(ScriptExecutionContext& context, IDBIndex& index, IndexedDB::IndexRecordType requestedRecordType, IDBTransaction& transaction)
     : IDBRequest(context, index, transaction)
 {
-    m_result = NullResultType::Undefined;
     m_requestedIndexRecordType = requestedRecordType;
 }
 
 IDBRequest::~IDBRequest()
 {
-    ASSERT(&originThread() == &Thread::current());
+    ASSERT(canCurrentThreadAccessThreadLocalData(originThread()));
 
     WTF::switchOn(m_result,
         [] (RefPtr<IDBCursor>& cursor) { cursor->clearRequest(); },
@@ -170,7 +170,7 @@ ExceptionOr<IDBRequest::Result> IDBRequest::result() const
 
 ExceptionOr<DOMException*> IDBRequest::error() const
 {
-    ASSERT(&originThread() == &Thread::current());
+    ASSERT(canCurrentThreadAccessThreadLocalData(originThread()));
 
     if (!isDone())
         return Exception { InvalidStateError, "Failed to read the 'error' property from 'IDBRequest': The request has not finished."_s };
@@ -180,14 +180,14 @@ ExceptionOr<DOMException*> IDBRequest::error() const
 
 void IDBRequest::setSource(IDBCursor& cursor)
 {
-    ASSERT(&originThread() == &Thread::current());
+    ASSERT(canCurrentThreadAccessThreadLocalData(originThread()));
 
     m_source = Source { &cursor };
 }
 
 void IDBRequest::setVersionChangeTransaction(IDBTransaction& transaction)
 {
-    ASSERT(&originThread() == &Thread::current());
+    ASSERT(canCurrentThreadAccessThreadLocalData(originThread()));
     ASSERT(!m_transaction);
     ASSERT(transaction.isVersionChange());
     ASSERT(!transaction.isFinishedOrFinishing());
@@ -197,27 +197,27 @@ void IDBRequest::setVersionChangeTransaction(IDBTransaction& transaction)
 
 RefPtr<WebCore::IDBTransaction> IDBRequest::transaction() const
 {
-    ASSERT(&originThread() == &Thread::current());
+    ASSERT(canCurrentThreadAccessThreadLocalData(originThread()));
     return m_shouldExposeTransactionToDOM ? m_transaction : nullptr;
 }
 
 uint64_t IDBRequest::sourceObjectStoreIdentifier() const
 {
-    ASSERT(&originThread() == &Thread::current());
+    ASSERT(canCurrentThreadAccessThreadLocalData(originThread()));
 
     if (!m_source)
         return 0;
 
     return WTF::switchOn(m_source.value(),
-        [] (const RefPtr<IDBObjectStore>& objectStore) { return objectStore->info().identifier(); },
-        [] (const RefPtr<IDBIndex>& index) { return index->info().objectStoreIdentifier(); },
-        [] (const RefPtr<IDBCursor>&) { return 0; }
+        [] (const RefPtr<IDBObjectStore>& objectStore) -> uint64_t { return objectStore->info().identifier(); },
+        [] (const RefPtr<IDBIndex>& index) -> uint64_t { return index->info().objectStoreIdentifier(); },
+        [] (const RefPtr<IDBCursor>&) -> uint64_t { return 0; }
     );
 }
 
 uint64_t IDBRequest::sourceIndexIdentifier() const
 {
-    ASSERT(&originThread() == &Thread::current());
+    ASSERT(canCurrentThreadAccessThreadLocalData(originThread()));
 
     if (!m_source)
         return 0;
@@ -231,58 +231,49 @@ uint64_t IDBRequest::sourceIndexIdentifier() const
 
 IndexedDB::ObjectStoreRecordType IDBRequest::requestedObjectStoreRecordType() const
 {
-    ASSERT(&originThread() == &Thread::current());
+    ASSERT(canCurrentThreadAccessThreadLocalData(originThread()));
 
     return m_requestedObjectStoreRecordType;
 }
 
 IndexedDB::IndexRecordType IDBRequest::requestedIndexRecordType() const
 {
-    ASSERT(&originThread() == &Thread::current());
+    ASSERT(canCurrentThreadAccessThreadLocalData(originThread()));
     ASSERT(m_source);
-    ASSERT(WTF::holds_alternative<RefPtr<IDBIndex>>(m_source.value()));
+    ASSERT(std::holds_alternative<RefPtr<IDBIndex>>(m_source.value()));
 
     return m_requestedIndexRecordType;
 }
 
 EventTargetInterface IDBRequest::eventTargetInterface() const
 {
-    ASSERT(&originThread() == &Thread::current());
+    ASSERT(canCurrentThreadAccessThreadLocalData(originThread()));
 
     return IDBRequestEventTargetInterfaceType;
 }
 
 const char* IDBRequest::activeDOMObjectName() const
 {
-    ASSERT(&originThread() == &Thread::current());
+    ASSERT(canCurrentThreadAccessThreadLocalData(originThread()));
 
     return "IDBRequest";
 }
 
-bool IDBRequest::canSuspendForDocumentSuspension() const
+bool IDBRequest::virtualHasPendingActivity() const
 {
-    ASSERT(&originThread() == &Thread::current());
-    return false;
-}
-
-bool IDBRequest::hasPendingActivity() const
-{
-    ASSERT(&originThread() == &Thread::current() || Thread::mayBeGCThread());
-    return !m_contextStopped && m_hasPendingActivity;
+    ASSERT(canCurrentThreadAccessThreadLocalData(originThread()) || Thread::mayBeGCThread());
+    return m_hasPendingActivity;
 }
 
 void IDBRequest::stop()
 {
-    ASSERT(&originThread() == &Thread::current());
-    ASSERT(!m_contextStopped);
+    ASSERT(canCurrentThreadAccessThreadLocalData(originThread()));
 
     cancelForStop();
 
     removeAllEventListeners();
 
     clearWrappers();
-
-    m_contextStopped = true;
 }
 
 void IDBRequest::cancelForStop()
@@ -292,24 +283,23 @@ void IDBRequest::cancelForStop()
 
 void IDBRequest::enqueueEvent(Ref<Event>&& event)
 {
-    ASSERT(&originThread() == &Thread::current());
-    if (m_contextStopped)
+    ASSERT(canCurrentThreadAccessThreadLocalData(originThread()));
+    if (isContextStopped())
         return;
 
-    event->setTarget(this);
-    scriptExecutionContext()->eventQueue().enqueueEvent(WTFMove(event));
+    queueTaskToDispatchEvent(*this, TaskSource::DatabaseAccess, WTFMove(event));
 }
 
 void IDBRequest::dispatchEvent(Event& event)
 {
     LOG(IndexedDB, "IDBRequest::dispatchEvent - %s (%p)", event.type().string().utf8().data(), this);
 
-    ASSERT(&originThread() == &Thread::current());
+    ASSERT(canCurrentThreadAccessThreadLocalData(originThread()));
     ASSERT(m_hasPendingActivity);
-    ASSERT(!m_contextStopped);
+    ASSERT(!isContextStopped());
 
-    auto protectedThis = makeRef(*this);
-    m_dispatchingEvent = true;
+    Ref protectedThis { *this };
+    m_eventBeingDispatched = &event;
 
     if (event.type() != eventNames().blockedEvent)
         m_readyState = ReadyState::Done;
@@ -321,7 +311,8 @@ void IDBRequest::dispatchEvent(Event& event)
     else if (m_transaction && !m_transaction->didDispatchAbortOrCommit())
         targets = { this, m_transaction.get(), &m_transaction->database() };
 
-    m_hasPendingActivity = false;
+    if (event.isTrusted())
+        m_hasPendingActivity = false;
 
     {
         TransactionActivator activator(m_transaction.get());
@@ -333,13 +324,9 @@ void IDBRequest::dispatchEvent(Event& event)
     if (!m_hasPendingActivity)
         m_hasPendingActivity = isOpenDBRequest() && (event.type() == eventNames().upgradeneededEvent || event.type() == eventNames().blockedEvent);
 
-    m_dispatchingEvent = false;
+    m_eventBeingDispatched = nullptr;
     if (!m_transaction)
         return;
-
-    // The request should only remain in the transaction's request list if it represents a pending cursor operation, or this is an open request that was blocked.
-    if (!m_pendingCursor && event.type() != eventNames().blockedEvent)
-        m_transaction->removeRequest(*this);
 
     if (m_hasUncaughtException)
         m_transaction->abortDueToFailedRequest(DOMException::create(AbortError, "IDBTransaction will abort due to uncaught exception in an event handler"_s));
@@ -349,15 +336,19 @@ void IDBRequest::dispatchEvent(Event& event)
     }
 
     m_transaction->finishedDispatchEventForRequest(*this);
+
+    // The request should only remain in the transaction's request list if it represents a pending cursor operation, or this is an open request that was blocked.
+    if (!m_pendingCursor && event.type() != eventNames().blockedEvent)
+        m_transaction->removeRequest(*this);
 }
 
 void IDBRequest::uncaughtExceptionInEventHandler()
 {
     LOG(IndexedDB, "IDBRequest::uncaughtExceptionInEventHandler");
 
-    ASSERT(&originThread() == &Thread::current());
+    ASSERT(canCurrentThreadAccessThreadLocalData(originThread()));
 
-    if (m_dispatchingEvent) {
+    if (m_eventBeingDispatched) {
         ASSERT(!m_hasUncaughtException);
         m_hasUncaughtException = true;
         return;
@@ -368,7 +359,7 @@ void IDBRequest::uncaughtExceptionInEventHandler()
 
 void IDBRequest::setResult(const IDBKeyData& keyData)
 {
-    ASSERT(&originThread() == &Thread::current());
+    ASSERT(canCurrentThreadAccessThreadLocalData(originThread()));
 
     auto* context = scriptExecutionContext();
     if (!context)
@@ -377,12 +368,12 @@ void IDBRequest::setResult(const IDBKeyData& keyData)
     VM& vm = context->vm();
     JSLockHolder lock(vm);
     m_result = keyData;
-    m_resultWrapper = { };
+    m_resultWrapper.clear();
 }
 
 void IDBRequest::setResult(const Vector<IDBKeyData>& keyDatas)
 {
-    ASSERT(&originThread() == &Thread::current());
+    ASSERT(canCurrentThreadAccessThreadLocalData(originThread()));
 
     auto* context = scriptExecutionContext();
     if (!context)
@@ -391,12 +382,12 @@ void IDBRequest::setResult(const Vector<IDBKeyData>& keyDatas)
     VM& vm = context->vm();
     JSLockHolder lock(vm);
     m_result = keyDatas;
-    m_resultWrapper = { };
+    m_resultWrapper.clear();
 }
 
 void IDBRequest::setResult(const IDBGetAllResult& result)
 {
-    ASSERT(&originThread() == &Thread::current());
+    ASSERT(canCurrentThreadAccessThreadLocalData(originThread()));
 
     auto* context = scriptExecutionContext();
     if (!context)
@@ -405,12 +396,12 @@ void IDBRequest::setResult(const IDBGetAllResult& result)
     VM& vm = context->vm();
     JSLockHolder lock(vm);
     m_result = result;
-    m_resultWrapper = { };
+    m_resultWrapper.clear();
 }
 
 void IDBRequest::setResult(uint64_t number)
 {
-    ASSERT(&originThread() == &Thread::current());
+    ASSERT(canCurrentThreadAccessThreadLocalData(originThread()));
 
     auto* context = scriptExecutionContext();
     if (!context)
@@ -419,12 +410,12 @@ void IDBRequest::setResult(uint64_t number)
     VM& vm = context->vm();
     JSLockHolder lock(vm);
     m_result = number;
-    m_resultWrapper = { };
+    m_resultWrapper.clear();
 }
 
 void IDBRequest::setResultToStructuredClone(const IDBGetResult& result)
 {
-    ASSERT(&originThread() == &Thread::current());
+    ASSERT(canCurrentThreadAccessThreadLocalData(originThread()));
 
     LOG(IndexedDB, "IDBRequest::setResultToStructuredClone");
 
@@ -435,12 +426,12 @@ void IDBRequest::setResultToStructuredClone(const IDBGetResult& result)
     VM& vm = context->vm();
     JSLockHolder lock(vm);
     m_result = result;
-    m_resultWrapper = { };
+    m_resultWrapper.clear();
 }
 
 void IDBRequest::setResultToUndefined()
 {
-    ASSERT(&originThread() == &Thread::current());
+    ASSERT(canCurrentThreadAccessThreadLocalData(originThread()));
 
     auto* context = scriptExecutionContext();
     if (!context)
@@ -449,12 +440,12 @@ void IDBRequest::setResultToUndefined()
     VM& vm = context->vm();
     JSLockHolder lock(vm);
     m_result = NullResultType::Undefined;
-    m_resultWrapper = { };
+    m_resultWrapper.clear();
 }
 
 IDBCursor* IDBRequest::resultCursor()
 {
-    ASSERT(&originThread() == &Thread::current());
+    ASSERT(canCurrentThreadAccessThreadLocalData(originThread()));
 
     return WTF::switchOn(m_result,
         [] (const RefPtr<IDBCursor>& cursor) -> IDBCursor* { return cursor.get(); },
@@ -464,7 +455,7 @@ IDBCursor* IDBRequest::resultCursor()
 
 void IDBRequest::willIterateCursor(IDBCursor& cursor)
 {
-    ASSERT(&originThread() == &Thread::current());
+    ASSERT(canCurrentThreadAccessThreadLocalData(originThread()));
     ASSERT(isDone());
     ASSERT(scriptExecutionContext());
     ASSERT(m_transaction);
@@ -479,12 +470,6 @@ void IDBRequest::willIterateCursor(IDBCursor& cursor)
     if (!context)
         return;
 
-    VM& vm = context->vm();
-    JSLockHolder lock(vm);
-
-    if (m_resultWrapper)
-        m_cursorWrapper = m_resultWrapper;
-    m_resultWrapper = { };
     m_readyState = ReadyState::Pending;
     m_domError = nullptr;
     m_idbError = IDBError { };
@@ -492,7 +477,7 @@ void IDBRequest::willIterateCursor(IDBCursor& cursor)
 
 void IDBRequest::didOpenOrIterateCursor(const IDBResultData& resultData)
 {
-    ASSERT(&originThread() == &Thread::current());
+    ASSERT(canCurrentThreadAccessThreadLocalData(originThread()));
     ASSERT(m_pendingCursor);
 
     auto* context = scriptExecutionContext();
@@ -503,14 +488,14 @@ void IDBRequest::didOpenOrIterateCursor(const IDBResultData& resultData)
     JSLockHolder lock(vm);
 
     m_result = NullResultType::Empty;
-    m_resultWrapper = { };
-
     if (resultData.type() == IDBResultType::IterateCursorSuccess || resultData.type() == IDBResultType::OpenCursorSuccess) {
-        if (m_pendingCursor->setGetResult(*this, resultData.getResult()) && m_cursorWrapper)
-            m_resultWrapper = m_cursorWrapper;
+        m_pendingCursor->setGetResult(*this, resultData.getResult(), m_currentTransactionOperationID);
         if (resultData.getResult().isDefined())
             m_result = m_pendingCursor;
     }
+
+    if (std::get_if<NullResultType>(&m_result))
+        m_resultWrapper.clear();
 
     m_pendingCursor = nullptr;
 
@@ -519,7 +504,7 @@ void IDBRequest::didOpenOrIterateCursor(const IDBResultData& resultData)
 
 void IDBRequest::completeRequestAndDispatchEvent(const IDBResultData& resultData)
 {
-    ASSERT(&originThread() == &Thread::current());
+    ASSERT(canCurrentThreadAccessThreadLocalData(originThread()));
 
     m_readyState = ReadyState::Done;
 
@@ -534,7 +519,7 @@ void IDBRequest::onError()
 {
     LOG(IndexedDB, "IDBRequest::onError");
 
-    ASSERT(&originThread() == &Thread::current());
+    ASSERT(canCurrentThreadAccessThreadLocalData(originThread()));
     ASSERT(!m_idbError.isNull());
 
     m_domError = m_idbError.toDOMException();
@@ -544,13 +529,13 @@ void IDBRequest::onError()
 void IDBRequest::onSuccess()
 {
     LOG(IndexedDB, "IDBRequest::onSuccess");
-    ASSERT(&originThread() == &Thread::current());
+    ASSERT(canCurrentThreadAccessThreadLocalData(originThread()));
     enqueueEvent(Event::create(eventNames().successEvent, Event::CanBubble::No, Event::IsCancelable::No));
 }
 
 void IDBRequest::setResult(Ref<IDBDatabase>&& database)
 {
-    ASSERT(&originThread() == &Thread::current());
+    ASSERT(canCurrentThreadAccessThreadLocalData(originThread()));
 
     auto* context = scriptExecutionContext();
     if (!context)
@@ -560,7 +545,7 @@ void IDBRequest::setResult(Ref<IDBDatabase>&& database)
     JSLockHolder lock(vm);
 
     m_result = RefPtr<IDBDatabase> { WTFMove(database) };
-    m_resultWrapper = { };
+    m_resultWrapper.clear();
 }
 
 void IDBRequest::clearWrappers()
@@ -572,7 +557,6 @@ void IDBRequest::clearWrappers()
     JSLockHolder lock(vm);
 
     m_resultWrapper.clear();
-    m_cursorWrapper.clear();
 
     WTF::switchOn(m_result,
         [] (RefPtr<IDBCursor>& cursor) { cursor->clearWrappers(); },
@@ -580,7 +564,15 @@ void IDBRequest::clearWrappers()
     );
 }
 
+bool IDBRequest::willAbortTransactionAfterDispatchingEvent() const
+{
+    if (!m_eventBeingDispatched)
+        return false;
+
+    if (m_hasUncaughtException)
+        return true;
+
+    return !m_eventBeingDispatched->defaultPrevented() && m_eventBeingDispatched->type() == eventNames().errorEvent;
+}
 
 } // namespace WebCore
-
-#endif // ENABLE(INDEXED_DATABASE)

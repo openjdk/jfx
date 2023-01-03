@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include <pal/SessionID.h>
+#include <wtf/Forward.h>
 #include <wtf/Markable.h>
 #include <wtf/WallTime.h>
 
@@ -69,6 +69,7 @@ struct CacheControlDirectives {
 
     Markable<Seconds, Seconds::MarkableTraits> maxAge;
     Markable<Seconds, Seconds::MarkableTraits> maxStale;
+    Markable<Seconds, Seconds::MarkableTraits> staleWhileRevalidate;
     bool noCache : 1;
     bool noStore : 1;
     bool mustRevalidate : 1;
@@ -76,10 +77,10 @@ struct CacheControlDirectives {
 };
 WEBCORE_EXPORT CacheControlDirectives parseCacheControlDirectives(const HTTPHeaderMap&);
 
-WEBCORE_EXPORT Vector<std::pair<String, String>> collectVaryingRequestHeaders(NetworkStorageSession&, const ResourceRequest&, const ResourceResponse&);
-WEBCORE_EXPORT Vector<std::pair<String, String>> collectVaryingRequestHeaders(const CookieJar*, const ResourceRequest&, const ResourceResponse&, const PAL::SessionID&);
-WEBCORE_EXPORT bool verifyVaryingRequestHeaders(NetworkStorageSession&, const Vector<std::pair<String, String>>& varyingRequestHeaders, const ResourceRequest&);
-WEBCORE_EXPORT bool verifyVaryingRequestHeaders(const CookieJar*, const Vector<std::pair<String, String>>& varyingRequestHeaders, const ResourceRequest&, const PAL::SessionID&);
+WEBCORE_EXPORT Vector<std::pair<String, String>> collectVaryingRequestHeaders(NetworkStorageSession*, const ResourceRequest&, const ResourceResponse&);
+WEBCORE_EXPORT Vector<std::pair<String, String>> collectVaryingRequestHeaders(const CookieJar*, const ResourceRequest&, const ResourceResponse&);
+WEBCORE_EXPORT bool verifyVaryingRequestHeaders(NetworkStorageSession*, const Vector<std::pair<String, String>>& varyingRequestHeaders, const ResourceRequest&);
+WEBCORE_EXPORT bool verifyVaryingRequestHeaders(const CookieJar*, const Vector<std::pair<String, String>>& varyingRequestHeaders, const ResourceRequest&);
 
 WEBCORE_EXPORT bool isStatusCodeCacheableByDefault(int statusCode);
 WEBCORE_EXPORT bool isStatusCodePotentiallyCacheable(int statusCode);

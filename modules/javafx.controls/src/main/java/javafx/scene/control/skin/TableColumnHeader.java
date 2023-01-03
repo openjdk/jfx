@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -33,7 +33,6 @@ import com.sun.javafx.scene.control.skin.Utils;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
-import javafx.beans.value.WritableValue;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.collections.WeakListChangeListener;
@@ -53,9 +52,11 @@ import javafx.scene.AccessibleRole;
 import javafx.scene.Node;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Label;
+import javafx.scene.control.SkinBase;
 import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableColumnBase;
+import javafx.scene.control.TableRow;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TreeTableCell;
 import javafx.scene.control.TreeTableColumn;
@@ -89,7 +90,7 @@ import static com.sun.javafx.scene.control.TableColumnSortTypeWrapper.setSortTyp
  */
 public class TableColumnHeader extends Region {
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Static Fields                                                           *
      *                                                                         *
@@ -103,7 +104,7 @@ public class TableColumnHeader extends Region {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Private Fields                                                          *
      *                                                                         *
@@ -143,7 +144,7 @@ public class TableColumnHeader extends Region {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Constructor                                                             *
      *                                                                         *
@@ -197,7 +198,7 @@ public class TableColumnHeader extends Region {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Listeners                                                               *
      *                                                                         *
@@ -226,11 +227,11 @@ public class TableColumnHeader extends Region {
     };
 
     private WeakListChangeListener<TableColumnBase<?,?>> weakSortOrderListener =
-            new WeakListChangeListener<TableColumnBase<?,?>>(sortOrderListener);
+            new WeakListChangeListener<>(sortOrderListener);
     private final WeakListChangeListener<TableColumnBase<?,?>> weakVisibleLeafColumnsListener =
-            new WeakListChangeListener<TableColumnBase<?,?>>(visibleLeafColumnsListener);
+            new WeakListChangeListener<>(visibleLeafColumnsListener);
     private final WeakListChangeListener<String> weakStyleClassListener =
-            new WeakListChangeListener<String>(styleClassListener);
+            new WeakListChangeListener<>(styleClassListener);
 
     private static final EventHandler<MouseEvent> mousePressedHandler = me -> {
         TableColumnHeader header = (TableColumnHeader) me.getSource();
@@ -267,12 +268,12 @@ public class TableColumnHeader extends Region {
     };
 
     private static final EventHandler<MouseEvent> mouseReleasedHandler = me -> {
+        TableColumnHeader header = (TableColumnHeader) me.getSource();
+        header.getTableHeaderRow().columnDragLock = false;
+
         if (me.isPopupTrigger()) return;
         if (me.isConsumed()) return;
         me.consume();
-
-        TableColumnHeader header = (TableColumnHeader) me.getSource();
-        header.getTableHeaderRow().columnDragLock = false;
 
         if (header.getTableHeaderRow().isReordering() && header.isColumnReorderingEnabled()) {
             header.columnReorderingComplete();
@@ -292,9 +293,7 @@ public class TableColumnHeader extends Region {
         }
     };
 
-
-
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Properties                                                              *
      *                                                                         *
@@ -357,7 +356,7 @@ public class TableColumnHeader extends Region {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Public API                                                              *
      *                                                                         *
@@ -370,8 +369,9 @@ public class TableColumnHeader extends Region {
             isSizeDirty = false;
         }
 
+        double cornerRegionPadding = tableHeaderRow == null ? 0.0 : tableHeaderRow.cornerPadding.get();
         double sortWidth = 0;
-        double w = snapSizeX(getWidth()) - (snappedLeftInset() + snappedRightInset());
+        double w = snapSizeX(getWidth()) - (snappedLeftInset() + snappedRightInset()) - cornerRegionPadding;
         double h = getHeight() - (snappedTopInset() + snappedBottomInset());
         double x = w;
 
@@ -439,7 +439,7 @@ public class TableColumnHeader extends Region {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Private Implementation                                                  *
      *                                                                         *
@@ -474,7 +474,17 @@ public class TableColumnHeader extends Region {
     }
 
     void setTableHeaderRow(TableHeaderRow thr) {
+        if (tableHeaderRow != null) {
+            changeListenerHandler.unregisterChangeListeners(tableHeaderRow.cornerPadding);
+        }
         tableHeaderRow = thr;
+        if (tableHeaderRow != null) {
+            changeListenerHandler.registerChangeListener(tableHeaderRow.cornerPadding, o -> {
+                if (isLastVisibleColumn) {
+                    requestLayout();
+                }
+            });
+        }
         updateTableSkin();
     }
 
@@ -644,23 +654,29 @@ public class TableColumnHeader extends Region {
             Region r = (Region) n;
             padding = r.snappedLeftInset() + r.snappedRightInset();
         }
+        Callback<TableView<T>, TableRow<T>> rowFactory = tv.getRowFactory();
+        TableRow<T> tableRow = createMeasureRow(tv, tableSkin, rowFactory);
+        ((SkinBase<?>) tableRow.getSkin()).getChildren().add(cell);
 
         int rows = maxRows == -1 ? items.size() : Math.min(items.size(), maxRows);
         double maxWidth = 0;
         for (int row = 0; row < rows; row++) {
+            tableRow.updateIndex(row);
+
             cell.updateTableColumn(tc);
             cell.updateTableView(tv);
+            cell.updateTableRow(tableRow);
             cell.updateIndex(row);
 
             if ((cell.getText() != null && !cell.getText().isEmpty()) || cell.getGraphic() != null) {
-                tableSkin.getChildren().add(cell);
-                cell.applyCss();
+                tableRow.applyCss();
                 maxWidth = Math.max(maxWidth, cell.prefWidth(-1));
-                tableSkin.getChildren().remove(cell);
             }
         }
+        tableSkin.getChildren().remove(tableRow);
 
-        // dispose of the cell to prevent it retaining listeners (see RT-31015)
+        // dispose of the row and cell to prevent it retaining listeners (see RT-31015)
+        tableRow.updateIndex(-1);
         cell.updateIndex(-1);
 
         // RT-36855 - take into account the column header text / graphic widths.
@@ -674,7 +690,7 @@ public class TableColumnHeader extends Region {
 
         // RT-23486
         maxWidth += padding;
-        if (tv.getColumnResizePolicy() == TableView.CONSTRAINED_RESIZE_POLICY && tv.getWidth() > 0) {
+        if (TableSkinUtils.isConstrainedResizePolicy(tv.getColumnResizePolicy()) && tv.getWidth() > 0) {
             if (maxWidth > tc.getMaxWidth()) {
                 maxWidth = tc.getMaxWidth();
             }
@@ -692,6 +708,22 @@ public class TableColumnHeader extends Region {
         } else {
             TableColumnBaseHelper.setWidth(tc, maxWidth);
         }
+    }
+
+    private <T> TableRow<T> createMeasureRow(TableView<T> tv, TableViewSkinBase tableSkin,
+            Callback<TableView<T>, TableRow<T>> rowFactory) {
+        TableRow<T> tableRow = rowFactory != null ? rowFactory.call(tv) : new TableRow<>();
+        tableRow.updateTableView(tv);
+
+        tableSkin.getChildren().add(tableRow);
+        tableRow.applyCss();
+        if (!(tableRow.getSkin() instanceof SkinBase<?>)) {
+            tableSkin.getChildren().remove(tableRow);
+            // recreate with null rowFactory will result in a standard TableRow that will
+            // have a SkinBase-derived skin
+            tableRow = createMeasureRow(tv, tableSkin, null);
+        }
+        return tableRow;
     }
 
     private <T,S> void resizeColumnToFitContent(TreeTableView<T> ttv, TreeTableColumn<T, S> tc, TableViewSkinBase tableSkin, int maxRows) {
@@ -716,8 +748,9 @@ public class TableColumnHeader extends Region {
             padding = r.snappedLeftInset() + r.snappedRightInset();
         }
 
-        TreeTableRow<T> treeTableRow = new TreeTableRow<>();
-        treeTableRow.updateTreeTableView(ttv);
+        Callback<TreeTableView<T>, TreeTableRow<T>> rowFactory = ttv.getRowFactory();
+        TreeTableRow<T> treeTableRow = createMeasureRow(ttv, tableSkin, rowFactory);
+        ((SkinBase<?>) treeTableRow.getSkin()).getChildren().add(cell);
 
         int rows = maxRows == -1 ? items.size() : Math.min(items.size(), maxRows);
         double maxWidth = 0;
@@ -725,23 +758,23 @@ public class TableColumnHeader extends Region {
             treeTableRow.updateIndex(row);
             treeTableRow.updateTreeItem(ttv.getTreeItem(row));
 
-            cell.updateTreeTableColumn(tc);
+            cell.updateTableColumn(tc);
             cell.updateTreeTableView(ttv);
-            cell.updateTreeTableRow(treeTableRow);
+            cell.updateTableRow(treeTableRow);
             cell.updateIndex(row);
 
             if ((cell.getText() != null && !cell.getText().isEmpty()) || cell.getGraphic() != null) {
-                tableSkin.getChildren().add(cell);
-                cell.applyCss();
+                treeTableRow.applyCss();
 
                 double w = cell.prefWidth(-1);
 
                 maxWidth = Math.max(maxWidth, w);
-                tableSkin.getChildren().remove(cell);
             }
         }
+        tableSkin.getChildren().remove(treeTableRow);
 
-        // dispose of the cell to prevent it retaining listeners (see RT-31015)
+        // dispose of the row and cell to prevent it retaining listeners (see RT-31015)
+        treeTableRow.updateIndex(-1);
         cell.updateIndex(-1);
 
         // RT-36855 - take into account the column header text / graphic widths.
@@ -755,7 +788,7 @@ public class TableColumnHeader extends Region {
 
         // RT-23486
         maxWidth += padding;
-        if (ttv.getColumnResizePolicy() == TreeTableView.CONSTRAINED_RESIZE_POLICY && ttv.getWidth() > 0) {
+        if (TableSkinUtils.isConstrainedResizePolicy(ttv.getColumnResizePolicy()) && ttv.getWidth() > 0) {
 
             if (maxWidth > tc.getMaxWidth()) {
                 maxWidth = tc.getMaxWidth();
@@ -774,6 +807,22 @@ public class TableColumnHeader extends Region {
         } else {
             TableColumnBaseHelper.setWidth(tc, maxWidth);
         }
+    }
+
+    private <T> TreeTableRow<T> createMeasureRow(TreeTableView<T> ttv, TableViewSkinBase tableSkin,
+            Callback<TreeTableView<T>, TreeTableRow<T>> rowFactory) {
+        TreeTableRow<T> treeTableRow = rowFactory != null ? rowFactory.call(ttv) : new TreeTableRow<>();
+        treeTableRow.updateTreeTableView(ttv);
+
+        tableSkin.getChildren().add(treeTableRow);
+        treeTableRow.applyCss();
+        if (!(treeTableRow.getSkin() instanceof SkinBase<?>)) {
+            tableSkin.getChildren().remove(treeTableRow);
+            // recreate with null rowFactory will result in a standard TableRow that will
+            // have a SkinBase-derived skin
+            treeTableRow = createMeasureRow(ttv, tableSkin, null);
+        }
+        return treeTableRow;
     }
 
     private void updateSortPosition() {
@@ -1043,7 +1092,7 @@ public class TableColumnHeader extends Region {
                 // to prevent multiple sorts, we make a copy of the sort order
                 // list, moving the column value from the current position to
                 // its new position at the front of the list
-                List<TableColumnBase<?,?>> sortOrderCopy = new ArrayList<TableColumnBase<?,?>>(sortOrder);
+                List<TableColumnBase<?,?>> sortOrderCopy = new ArrayList<>(sortOrder);
                 sortOrderCopy.remove(getTableColumn());
                 sortOrderCopy.add(0, getTableColumn());
                 sortOrder.setAll(getTableColumn());
@@ -1104,7 +1153,7 @@ public class TableColumnHeader extends Region {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Private Implementation: Column Reordering                               *
      *                                                                         *
@@ -1240,7 +1289,7 @@ public class TableColumnHeader extends Region {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Stylesheet Handling                                                     *
      *                                                                         *
@@ -1254,7 +1303,7 @@ public class TableColumnHeader extends Region {
      */
      private static class StyleableProperties {
          private static final CssMetaData<TableColumnHeader,Number> SIZE =
-            new CssMetaData<TableColumnHeader,Number>("-fx-size",
+            new CssMetaData<>("-fx-size",
                  SizeConverter.getInstance(), 20.0) {
 
             @Override
@@ -1264,7 +1313,7 @@ public class TableColumnHeader extends Region {
 
             @Override
             public StyleableProperty<Number> getStyleableProperty(TableColumnHeader n) {
-                return (StyleableProperty<Number>)(WritableValue<Number>)n.sizeProperty();
+                return (StyleableProperty<Number>)n.sizeProperty();
             }
         };
 
@@ -1272,7 +1321,7 @@ public class TableColumnHeader extends Region {
          static {
 
             final List<CssMetaData<? extends Styleable, ?>> styleables =
-                new ArrayList<CssMetaData<? extends Styleable, ?>>(Region.getClassCssMetaData());
+                new ArrayList<>(Region.getClassCssMetaData());
             styleables.add(SIZE);
             STYLEABLES = Collections.unmodifiableList(styleables);
 

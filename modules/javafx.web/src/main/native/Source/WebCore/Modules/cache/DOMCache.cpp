@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,11 +27,12 @@
 #include "DOMCache.h"
 
 #include "CacheQueryOptions.h"
+#include "CachedResourceRequestInitiators.h"
+#include "EventLoop.h"
 #include "FetchResponse.h"
 #include "HTTPParsers.h"
 #include "JSFetchRequest.h"
 #include "JSFetchResponse.h"
-#include "ReadableStreamChunk.h"
 #include "ScriptExecutionContext.h"
 #include <wtf/CompletionHandler.h>
 #include <wtf/URL.h>
@@ -39,13 +40,19 @@
 namespace WebCore {
 using namespace WebCore::DOMCacheEngine;
 
+Ref<DOMCache> DOMCache::create(ScriptExecutionContext& context, String&& name, uint64_t identifier, Ref<CacheStorageConnection>&& connection)
+{
+    auto cache = adoptRef(*new DOMCache(context, WTFMove(name), identifier, WTFMove(connection)));
+    cache->suspendIfNeeded();
+    return cache;
+}
+
 DOMCache::DOMCache(ScriptExecutionContext& context, String&& name, uint64_t identifier, Ref<CacheStorageConnection>&& connection)
     : ActiveDOMObject(&context)
     , m_name(WTFMove(name))
     , m_identifier(identifier)
     , m_connection(WTFMove(connection))
 {
-    suspendIfNeeded();
     m_connection->reference(m_identifier);
 }
 
@@ -57,17 +64,28 @@ DOMCache::~DOMCache()
 
 void DOMCache::match(RequestInfo&& info, CacheQueryOptions&& options, Ref<DeferredPromise>&& promise)
 {
-    doMatch(WTFMove(info), WTFMove(options), [promise = WTFMove(promise)](ExceptionOr<FetchResponse*>&& result) mutable {
-        if (result.hasException()) {
-            promise->reject(result.releaseException());
-            return;
-        }
-        if (!result.returnValue()) {
-            promise->resolve();
-            return;
-        }
-        promise->resolve<IDLInterface<FetchResponse>>(*result.returnValue());
+    doMatch(WTFMove(info), WTFMove(options), [this, protectedThis = Ref { *this }, promise = WTFMove(promise)](ExceptionOr<RefPtr<FetchResponse>>&& result) mutable {
+        queueTaskKeepingObjectAlive(*this, TaskSource::DOMManipulation, [promise = WTFMove(promise), result = WTFMove(result)]() mutable {
+            if (result.hasException()) {
+                promise->reject(result.releaseException());
+                return;
+            }
+            if (!result.returnValue()) {
+                promise->resolve();
+                return;
+            }
+            promise->resolve<IDLInterface<FetchResponse>>(*result.returnValue());
+        });
     });
+}
+
+static Ref<FetchResponse> createResponse(ScriptExecutionContext& context, const DOMCacheEngine::Record& record)
+{
+    auto resourceResponse = record.response;
+    resourceResponse.setSource(ResourceResponse::Source::DOMCache);
+    auto response = FetchResponse::create(&context, std::nullopt, record.responseHeadersGuard, WTFMove(resourceResponse));
+    response->setBodyData(copyResponseBody(record.responseBody), record.responseBodySize);
+    return response;
 }
 
 void DOMCache::doMatch(RequestInfo&& info, CacheQueryOptions&& options, MatchCallback&& callback)
@@ -80,60 +98,52 @@ void DOMCache::doMatch(RequestInfo&& info, CacheQueryOptions&& options, MatchCal
         callback(nullptr);
         return;
     }
-    auto request = requestOrException.releaseReturnValue();
 
-    queryCache(request.get(), WTFMove(options), [this, callback = WTFMove(callback)](ExceptionOr<Vector<CacheStorageRecord>>&& result) mutable {
+    auto request = requestOrException.releaseReturnValue()->resourceRequest();
+    queryCache(WTFMove(request), options, ShouldRetrieveResponses::Yes, [this, callback = WTFMove(callback)](auto&& result) mutable {
         if (result.hasException()) {
             callback(result.releaseException());
             return;
         }
-        if (result.returnValue().isEmpty()) {
-            callback(nullptr);
-            return;
-        }
-        callback(result.returnValue()[0].response->clone(*scriptExecutionContext()).releaseReturnValue().ptr());
+
+        RefPtr<FetchResponse> response;
+        if (!result.returnValue().isEmpty())
+            response = createResponse(*scriptExecutionContext(), result.returnValue()[0]);
+
+        callback(WTFMove(response));
     });
 }
 
-Vector<Ref<FetchResponse>> DOMCache::cloneResponses(const Vector<CacheStorageRecord>& records)
+Vector<Ref<FetchResponse>> DOMCache::cloneResponses(const Vector<DOMCacheEngine::Record>& records)
 {
-    auto& context = *scriptExecutionContext();
-    return WTF::map(records, [&context] (const auto& record) {
-        return record.response->clone(context).releaseReturnValue();
+    return WTF::map(records, [this] (const auto& record) {
+        return createResponse(*scriptExecutionContext(), record);
     });
 }
 
-void DOMCache::matchAll(Optional<RequestInfo>&& info, CacheQueryOptions&& options, MatchAllPromise&& promise)
+void DOMCache::matchAll(std::optional<RequestInfo>&& info, CacheQueryOptions&& options, MatchAllPromise&& promise)
 {
     if (UNLIKELY(!scriptExecutionContext()))
         return;
 
-    RefPtr<FetchRequest> request;
+    ResourceRequest resourceRequest;
     if (info) {
         auto requestOrException = requestFromInfo(WTFMove(info.value()), options.ignoreMethod);
         if (requestOrException.hasException()) {
             promise.resolve({ });
             return;
         }
-        request = requestOrException.releaseReturnValue();
+        resourceRequest = requestOrException.releaseReturnValue()->resourceRequest();
     }
 
-    if (!request) {
-        retrieveRecords(URL { }, [this, promise = WTFMove(promise)](Optional<Exception>&& exception) mutable {
-            if (exception) {
-                promise.reject(WTFMove(exception.value()));
+    queryCache(WTFMove(resourceRequest), options, ShouldRetrieveResponses::Yes, [this, promise = WTFMove(promise)](auto&& result) mutable {
+        queueTaskKeepingObjectAlive(*this, TaskSource::DOMManipulation, [this, promise = WTFMove(promise), result = WTFMove(result)]() mutable {
+            if (result.hasException()) {
+                promise.reject(result.releaseException());
                 return;
             }
-            promise.resolve(cloneResponses(m_records));
+            promise.resolve(cloneResponses(result.releaseReturnValue()));
         });
-        return;
-    }
-    queryCache(request.releaseNonNull(), WTFMove(options), [this, promise = WTFMove(promise)](ExceptionOr<Vector<CacheStorageRecord>>&& result) mutable {
-        if (result.hasException()) {
-            promise.reject(result.releaseException());
-            return;
-        }
-        promise.resolve(cloneResponses(result.releaseReturnValue()));
     });
 }
 
@@ -203,14 +213,14 @@ private:
 ExceptionOr<Ref<FetchRequest>> DOMCache::requestFromInfo(RequestInfo&& info, bool ignoreMethod)
 {
     RefPtr<FetchRequest> request;
-    if (WTF::holds_alternative<RefPtr<FetchRequest>>(info)) {
-        request = WTF::get<RefPtr<FetchRequest>>(info).releaseNonNull();
+    if (std::holds_alternative<RefPtr<FetchRequest>>(info)) {
+        request = std::get<RefPtr<FetchRequest>>(info).releaseNonNull();
         if (request->method() != "GET" && !ignoreMethod)
             return Exception { TypeError, "Request method is not GET"_s };
     } else
         request = FetchRequest::create(*scriptExecutionContext(), WTFMove(info), { }).releaseReturnValue();
 
-    if (!protocolIsInHTTPFamily(request->url()))
+    if (!request->url().protocolIsInHTTPFamily())
         return Exception { TypeError, "Request url is not HTTP/HTTPS"_s };
 
     return request.releaseNonNull();
@@ -233,19 +243,27 @@ void DOMCache::addAll(Vector<RequestInfo>&& infos, DOMPromiseDeferred<void>&& pr
         requests.uncheckedAppend(requestOrException.releaseReturnValue());
     }
 
-    auto taskHandler = FetchTasksHandler::create(*this, [this, promise = WTFMove(promise)](ExceptionOr<Vector<Record>>&& result) mutable {
+    auto taskHandler = FetchTasksHandler::create(*this, [this, protectedThis = Ref { *this }, promise = WTFMove(promise)](ExceptionOr<Vector<Record>>&& result) mutable {
         if (result.hasException()) {
-            promise.reject(result.releaseException());
+            queueTaskKeepingObjectAlive(*this, TaskSource::DOMManipulation, [promise = WTFMove(promise), exception = result.releaseException()]() mutable {
+                promise.reject(WTFMove(exception));
+            });
             return;
         }
-        batchPutOperation(result.releaseReturnValue(), [promise = WTFMove(promise)](ExceptionOr<void>&& result) mutable {
-            promise.settle(WTFMove(result));
+        batchPutOperation(result.releaseReturnValue(), [this, protectedThis = WTFMove(protectedThis), promise = WTFMove(promise)](ExceptionOr<void>&& result) mutable {
+            queueTaskKeepingObjectAlive(*this, TaskSource::DOMManipulation, [promise = WTFMove(promise), result = WTFMove(result)]() mutable {
+                promise.settle(WTFMove(result));
+            });
         });
     });
 
     for (auto& request : requests) {
         auto& requestReference = request.get();
-        FetchResponse::fetch(*scriptExecutionContext(), requestReference, [this, request = WTFMove(request), taskHandler = taskHandler.copyRef()](ExceptionOr<FetchResponse&>&& result) mutable {
+        if (requestReference.signal().aborted()) {
+            taskHandler->error(Exception { AbortError, "Request signal is aborted"_s });
+            return;
+        }
+        FetchResponse::fetch(*scriptExecutionContext(), requestReference, [this, request = WTFMove(request), taskHandler](auto&& result) mutable {
 
             if (taskHandler->isDone())
                 return;
@@ -255,7 +273,8 @@ void DOMCache::addAll(Vector<RequestInfo>&& infos, DOMPromiseDeferred<void>&& pr
                 return;
             }
 
-            auto& response = result.releaseReturnValue();
+            auto protectedResponse = result.releaseReturnValue();
+            auto& response = protectedResponse.get();
 
             if (!response.ok()) {
                 taskHandler->error(Exception { TypeError, "Response is not OK"_s });
@@ -281,7 +300,7 @@ void DOMCache::addAll(Vector<RequestInfo>&& infos, DOMPromiseDeferred<void>&& pr
             }
             size_t recordPosition = taskHandler->addRecord(toConnectionRecord(request.get(), response, nullptr));
 
-            response.consumeBodyReceivedByChunk([taskHandler = WTFMove(taskHandler), recordPosition, data = SharedBuffer::create(), response = makeRef(response)] (ExceptionOr<ReadableStreamChunk*>&& result) mutable {
+            response.consumeBodyReceivedByChunk([taskHandler = WTFMove(taskHandler), recordPosition, data = SharedBufferBuilder(), response = WTFMove(protectedResponse)] (auto&& result) mutable {
                 if (taskHandler->isDone())
                     return;
 
@@ -290,27 +309,31 @@ void DOMCache::addAll(Vector<RequestInfo>&& infos, DOMPromiseDeferred<void>&& pr
                     return;
                 }
 
-                if (auto chunk = result.returnValue())
-                    data->append(reinterpret_cast<const char*>(chunk->data), chunk->size);
+                if (auto* chunk = result.returnValue())
+                    data.append(chunk->data(), chunk->size());
                 else
-                    taskHandler->addResponseBody(recordPosition, response, WTFMove(data));
+                    taskHandler->addResponseBody(recordPosition, response, data.takeAsContiguous());
             });
-        });
+        }, cachedResourceRequestInitiators().fetch);
     }
 }
 
 void DOMCache::putWithResponseData(DOMPromiseDeferred<void>&& promise, Ref<FetchRequest>&& request, Ref<FetchResponse>&& response, ExceptionOr<RefPtr<SharedBuffer>>&& responseBody)
 {
     if (responseBody.hasException()) {
-        promise.reject(responseBody.releaseException());
+        queueTaskKeepingObjectAlive(*this, TaskSource::DOMManipulation, [promise = WTFMove(promise), exception = responseBody.releaseException()]() mutable {
+            promise.reject(WTFMove(exception));
+        });
         return;
     }
 
     DOMCacheEngine::ResponseBody body;
     if (auto buffer = responseBody.releaseReturnValue())
-        body = buffer.releaseNonNull();
-    batchPutOperation(request.get(), response.get(), WTFMove(body), [promise = WTFMove(promise)](ExceptionOr<void>&& result) mutable {
-        promise.settle(WTFMove(result));
+        body = buffer->makeContiguous();
+    batchPutOperation(request.get(), response.get(), WTFMove(body), [this, protectedThis = Ref { *this }, promise = WTFMove(promise)](ExceptionOr<void>&& result) mutable {
+        queueTaskKeepingObjectAlive(*this, TaskSource::DOMManipulation, [promise = WTFMove(promise), result = WTFMove(result)]() mutable {
+            promise.settle(WTFMove(result));
+        });
     });
 }
 
@@ -347,34 +370,36 @@ void DOMCache::put(RequestInfo&& info, Ref<FetchResponse>&& response, DOMPromise
         return;
     }
 
-    if (response->isBlobFormData()) {
-        promise.reject(Exception { NotSupportedError, "Not implemented"_s });
-        return;
+    // FIXME: for efficiency, we should load blobs/form data directly instead of going through the readableStream path.
+    if (response->isBlobBody() || response->isBlobFormData()) {
+        auto streamOrException = response->readableStream(*scriptExecutionContext()->globalObject());
+        if (UNLIKELY(streamOrException.hasException())) {
+            promise.reject(streamOrException.releaseException());
+            return;
+        }
     }
-
-    // FIXME: for efficiency, we should load blobs directly instead of going through the readableStream path.
-    if (response->isBlobBody())
-        response->readableStream(*scriptExecutionContext()->execState());
 
     if (response->isBodyReceivedByChunk()) {
         auto& responseRef = response.get();
-        responseRef.consumeBodyReceivedByChunk([promise = WTFMove(promise), request = WTFMove(request), response = WTFMove(response), data = SharedBuffer::create(), pendingActivity = makePendingActivity(*this), this](auto&& result) mutable {
+        responseRef.consumeBodyReceivedByChunk([promise = WTFMove(promise), request = WTFMove(request), response = WTFMove(response), data = SharedBufferBuilder(), pendingActivity = makePendingActivity(*this), this](auto&& result) mutable {
 
             if (result.hasException()) {
                 this->putWithResponseData(WTFMove(promise), WTFMove(request), WTFMove(response), result.releaseException().isolatedCopy());
                 return;
             }
 
-            if (auto chunk = result.returnValue())
-                data->append(reinterpret_cast<const char*>(chunk->data), chunk->size);
+            if (auto* chunk = result.returnValue())
+                data.append(chunk->data(), chunk->size());
             else
-                this->putWithResponseData(WTFMove(promise), WTFMove(request), WTFMove(response), RefPtr<SharedBuffer> { WTFMove(data) });
+                this->putWithResponseData(WTFMove(promise), WTFMove(request), WTFMove(response), RefPtr<SharedBuffer> { data.takeAsContiguous() });
         });
         return;
     }
 
-    batchPutOperation(request.get(), response.get(), response->consumeBody(), [promise = WTFMove(promise)](ExceptionOr<void>&& result) mutable {
-        promise.settle(WTFMove(result));
+    batchPutOperation(request.get(), response.get(), response->consumeBody(), [this, protectedThis = Ref { *this }, promise = WTFMove(promise)](ExceptionOr<void>&& result) mutable {
+        queueTaskKeepingObjectAlive(*this, TaskSource::DOMManipulation, [promise = WTFMove(promise), result = WTFMove(result)]() mutable {
+            promise.settle(WTFMove(result));
+        });
     });
 }
 
@@ -389,107 +414,75 @@ void DOMCache::remove(RequestInfo&& info, CacheQueryOptions&& options, DOMPromis
         return;
     }
 
-    batchDeleteOperation(requestOrException.releaseReturnValue(), WTFMove(options), [promise = WTFMove(promise)](ExceptionOr<bool>&& result) mutable {
-        promise.settle(WTFMove(result));
+    batchDeleteOperation(requestOrException.releaseReturnValue(), WTFMove(options), [this, protectedThis = Ref { *this }, promise = WTFMove(promise)](ExceptionOr<bool>&& result) mutable {
+        queueTaskKeepingObjectAlive(*this, TaskSource::DOMManipulation, [promise = WTFMove(promise), result = WTFMove(result)]() mutable {
+            promise.settle(WTFMove(result));
+        });
     });
 }
 
-static inline Ref<FetchRequest> copyRequestRef(const CacheStorageRecord& record)
+static Ref<FetchRequest> createRequest(ScriptExecutionContext& context, const DOMCacheEngine::Record& record)
 {
-    return record.request.copyRef();
+    auto requestHeaders = FetchHeaders::create(record.requestHeadersGuard, HTTPHeaderMap { record.request.httpHeaderFields() });
+    return FetchRequest::create(context, std::nullopt, WTFMove(requestHeaders),  ResourceRequest { record.request }, FetchOptions { record.options }, String { record.referrer });
 }
 
-void DOMCache::keys(Optional<RequestInfo>&& info, CacheQueryOptions&& options, KeysPromise&& promise)
+void DOMCache::keys(std::optional<RequestInfo>&& info, CacheQueryOptions&& options, KeysPromise&& promise)
 {
     if (UNLIKELY(!scriptExecutionContext()))
         return;
 
-    RefPtr<FetchRequest> request;
+    ResourceRequest resourceRequest;
     if (info) {
         auto requestOrException = requestFromInfo(WTFMove(info.value()), options.ignoreMethod);
         if (requestOrException.hasException()) {
             promise.resolve(Vector<Ref<FetchRequest>> { });
             return;
         }
-        request = requestOrException.releaseReturnValue();
+        resourceRequest = requestOrException.releaseReturnValue()->resourceRequest();
     }
 
-    if (!request) {
-        retrieveRecords(URL { }, [this, promise = WTFMove(promise)](Optional<Exception>&& exception) mutable {
-            if (exception) {
-                promise.reject(WTFMove(exception.value()));
+    queryCache(WTFMove(resourceRequest), options, ShouldRetrieveResponses::No, [this, promise = WTFMove(promise)](auto&& result) mutable {
+        queueTaskKeepingObjectAlive(*this, TaskSource::DOMManipulation, [this, promise = WTFMove(promise), result = WTFMove(result)]() mutable {
+            if (result.hasException()) {
+                promise.reject(result.releaseException());
                 return;
             }
-            promise.resolve(WTF::map(m_records, copyRequestRef));
+
+            auto records = result.releaseReturnValue();
+            promise.resolve(WTF::map(records, [this](auto& record) {
+                return createRequest(*scriptExecutionContext(), record);
+            }));
         });
-        return;
-    }
-
-    queryCache(request.releaseNonNull(), WTFMove(options), [promise = WTFMove(promise)](ExceptionOr<Vector<CacheStorageRecord>>&& result) mutable {
-        if (result.hasException()) {
-            promise.reject(result.releaseException());
-            return;
-        }
-
-        promise.resolve(WTF::map(result.releaseReturnValue(), copyRequestRef));
     });
 }
 
-void DOMCache::retrieveRecords(const URL& url, WTF::Function<void(Optional<Exception>&&)>&& callback)
+void DOMCache::queryCache(ResourceRequest&& request, const CacheQueryOptions& options, ShouldRetrieveResponses shouldRetrieveResponses, RecordsCallback&& callback)
 {
-    URL retrieveURL = url;
-    retrieveURL.removeQueryAndFragmentIdentifier();
-
-    m_connection->retrieveRecords(m_identifier, retrieveURL, [this, pendingActivity = makePendingActivity(*this), callback = WTFMove(callback)](RecordsOrError&& result) {
-        if (m_isStopped)
+    RetrieveRecordsOptions retrieveOptions { WTFMove(request), scriptExecutionContext()->crossOriginEmbedderPolicy(), *scriptExecutionContext()->securityOrigin(), options.ignoreSearch, options.ignoreMethod, options.ignoreVary, shouldRetrieveResponses == ShouldRetrieveResponses::Yes };
+    m_connection->retrieveRecords(m_identifier, retrieveOptions, [this, pendingActivity = makePendingActivity(*this), callback = WTFMove(callback)](auto&& result) mutable {
+        if (m_isStopped) {
+            callback(DOMCacheEngine::convertToExceptionAndLog(scriptExecutionContext(), DOMCacheEngine::Error::Stopped));
             return;
+        }
 
         if (!result.has_value()) {
             callback(DOMCacheEngine::convertToExceptionAndLog(scriptExecutionContext(), result.error()));
             return;
         }
 
-        updateRecords(WTFMove(result.value()));
-        callback(WTF::nullopt);
+        callback(WTFMove(result.value()));
     });
+
 }
 
-void DOMCache::queryCache(Ref<FetchRequest>&& request, CacheQueryOptions&& options, WTF::Function<void(ExceptionOr<Vector<CacheStorageRecord>>&&)>&& callback)
+void DOMCache::batchDeleteOperation(const FetchRequest& request, CacheQueryOptions&& options, CompletionHandler<void(ExceptionOr<bool>&&)>&& callback)
 {
-    auto url = request->url();
-    retrieveRecords(url, [this, request = WTFMove(request), options = WTFMove(options), callback = WTFMove(callback)](Optional<Exception>&& exception) mutable {
-        if (exception) {
-            callback(WTFMove(exception.value()));
+    m_connection->batchDeleteOperation(m_identifier, request.internalRequest(), WTFMove(options), [this, pendingActivity = makePendingActivity(*this), callback = WTFMove(callback)](RecordIdentifiersOrError&& result) mutable {
+        if (m_isStopped) {
+            callback(DOMCacheEngine::convertToExceptionAndLog(scriptExecutionContext(), DOMCacheEngine::Error::Stopped));
             return;
         }
-        callback(queryCacheWithTargetStorage(request.get(), options, m_records));
-    });
-}
-
-static inline bool queryCacheMatch(const FetchRequest& request, const FetchRequest& cachedRequest, const ResourceResponse& cachedResponse, const CacheQueryOptions& options)
-{
-    // We need to pass the resource request with all correct headers hence why we call resourceRequest().
-    return DOMCacheEngine::queryCacheMatch(request.resourceRequest(), cachedRequest.resourceRequest(), cachedResponse, options);
-}
-
-Vector<CacheStorageRecord> DOMCache::queryCacheWithTargetStorage(const FetchRequest& request, const CacheQueryOptions& options, const Vector<CacheStorageRecord>& targetStorage)
-{
-    if (!options.ignoreMethod && request.method() != "GET")
-        return { };
-
-    Vector<CacheStorageRecord> records;
-    for (auto& record : targetStorage) {
-        if (queryCacheMatch(request, record.request.get(), record.response->resourceResponse(), options))
-            records.append({ record.identifier, record.updateResponseCounter, record.request.copyRef(), record.response.copyRef() });
-    }
-    return records;
-}
-
-void DOMCache::batchDeleteOperation(const FetchRequest& request, CacheQueryOptions&& options, WTF::Function<void(ExceptionOr<bool>&&)>&& callback)
-{
-    m_connection->batchDeleteOperation(m_identifier, request.internalRequest(), WTFMove(options), [this, pendingActivity = makePendingActivity(*this), callback = WTFMove(callback)](RecordIdentifiersOrError&& result) {
-        if (m_isStopped)
-            return;
 
         if (!result.has_value()) {
             callback(DOMCacheEngine::convertToExceptionAndLog(scriptExecutionContext(), result.error()));
@@ -520,7 +513,7 @@ Record DOMCache::toConnectionRecord(const FetchRequest& request, FetchResponse& 
     };
 }
 
-void DOMCache::batchPutOperation(const FetchRequest& request, FetchResponse& response, DOMCacheEngine::ResponseBody&& responseBody, WTF::Function<void(ExceptionOr<void>&&)>&& callback)
+void DOMCache::batchPutOperation(const FetchRequest& request, FetchResponse& response, DOMCacheEngine::ResponseBody&& responseBody, CompletionHandler<void(ExceptionOr<void>&&)>&& callback)
 {
     Vector<Record> records;
     records.append(toConnectionRecord(request, response, WTFMove(responseBody)));
@@ -528,47 +521,20 @@ void DOMCache::batchPutOperation(const FetchRequest& request, FetchResponse& res
     batchPutOperation(WTFMove(records), WTFMove(callback));
 }
 
-void DOMCache::batchPutOperation(Vector<Record>&& records, WTF::Function<void(ExceptionOr<void>&&)>&& callback)
+void DOMCache::batchPutOperation(Vector<Record>&& records, CompletionHandler<void(ExceptionOr<void>&&)>&& callback)
 {
-    m_connection->batchPutOperation(m_identifier, WTFMove(records), [this, pendingActivity = makePendingActivity(*this), callback = WTFMove(callback)](RecordIdentifiersOrError&& result) {
-        if (m_isStopped)
+    m_connection->batchPutOperation(m_identifier, WTFMove(records), [this, pendingActivity = makePendingActivity(*this), callback = WTFMove(callback)](auto&& result) mutable {
+        if (m_isStopped) {
+            callback(DOMCacheEngine::convertToExceptionAndLog(scriptExecutionContext(), DOMCacheEngine::Error::Stopped));
             return;
+        }
+
         if (!result.has_value()) {
             callback(DOMCacheEngine::convertToExceptionAndLog(scriptExecutionContext(), result.error()));
             return;
         }
         callback({ });
     });
-}
-
-void DOMCache::updateRecords(Vector<Record>&& records)
-{
-    ASSERT(scriptExecutionContext());
-    Vector<CacheStorageRecord> newRecords;
-
-    for (auto& record : records) {
-        size_t index = m_records.findMatching([&](const auto& item) { return item.identifier == record.identifier; });
-        if (index != notFound) {
-            auto& current = m_records[index];
-            if (current.updateResponseCounter != record.updateResponseCounter) {
-                auto response = FetchResponse::create(*scriptExecutionContext(), WTF::nullopt, record.responseHeadersGuard, WTFMove(record.response));
-                response->setBodyData(WTFMove(record.responseBody), record.responseBodySize);
-
-                current.response = WTFMove(response);
-                current.updateResponseCounter = record.updateResponseCounter;
-            }
-            newRecords.append(WTFMove(current));
-        } else {
-            auto requestHeaders = FetchHeaders::create(record.requestHeadersGuard, HTTPHeaderMap { record.request.httpHeaderFields() });
-            auto request = FetchRequest::create(*scriptExecutionContext(), WTF::nullopt, WTFMove(requestHeaders),  WTFMove(record.request), WTFMove(record.options), WTFMove(record.referrer));
-
-            auto response = FetchResponse::create(*scriptExecutionContext(), WTF::nullopt, record.responseHeadersGuard, WTFMove(record.response));
-            response->setBodyData(WTFMove(record.responseBody), record.responseBodySize);
-
-            newRecords.append(CacheStorageRecord { record.identifier, record.updateResponseCounter, WTFMove(request), WTFMove(response) });
-        }
-    }
-    m_records = WTFMove(newRecords);
 }
 
 void DOMCache::stop()
@@ -583,11 +549,5 @@ const char* DOMCache::activeDOMObjectName() const
 {
     return "Cache";
 }
-
-bool DOMCache::canSuspendForDocumentSuspension() const
-{
-    return m_records.isEmpty() && !hasPendingActivity();
-}
-
 
 } // namespace WebCore

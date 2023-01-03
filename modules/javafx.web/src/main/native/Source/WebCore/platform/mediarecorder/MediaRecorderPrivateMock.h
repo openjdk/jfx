@@ -24,7 +24,7 @@
 
 #pragma once
 
-#if ENABLE(MEDIA_STREAM)
+#if ENABLE(MEDIA_RECORDER)
 
 #include "MediaRecorderPrivate.h"
 #include <wtf/Lock.h>
@@ -34,20 +34,31 @@ namespace WebCore {
 
 class MediaStreamTrackPrivate;
 
-class WEBCORE_EXPORT MediaRecorderPrivateMock final : public MediaRecorderPrivate {
-private:
-    void sampleBufferUpdated(MediaStreamTrackPrivate&, MediaSample&) final;
-    void audioSamplesAvailable(MediaStreamTrackPrivate&, const WTF::MediaTime&, const PlatformAudioData&, const AudioStreamDescription&, size_t) final;
-    RefPtr<SharedBuffer> fetchData() final;
-    const String& mimeType() final;
+class WEBCORE_EXPORT MediaRecorderPrivateMock final
+    : public MediaRecorderPrivate {
+public:
+    explicit MediaRecorderPrivateMock(MediaStreamPrivate&);
+    ~MediaRecorderPrivateMock();
 
-    void generateMockString(MediaStreamTrackPrivate&);
+private:
+    // MediaRecorderPrivate
+    void videoSampleAvailable(MediaSample&, VideoSampleMetadata) final;
+    void fetchData(FetchDataCallback&&) final;
+    void audioSamplesAvailable(const MediaTime&, const PlatformAudioData&, const AudioStreamDescription&, size_t) final;
+    void stopRecording(CompletionHandler<void()>&&) final;
+    void pauseRecording(CompletionHandler<void()>&&) final;
+    void resumeRecording(CompletionHandler<void()>&&) final;
+    const String& mimeType() const final;
+
+    void generateMockCounterString() WTF_REQUIRES_LOCK(m_bufferLock);
 
     mutable Lock m_bufferLock;
-    StringBuilder m_buffer;
+    StringBuilder m_buffer WTF_GUARDED_BY_LOCK(m_bufferLock);
     unsigned m_counter { 0 };
+    String m_audioTrackID;
+    String m_videoTrackID;
 };
 
 } // namespace WebCore
 
-#endif // ENABLE(MEDIA_STREAM)
+#endif // ENABLE(MEDIA_RECORDER)

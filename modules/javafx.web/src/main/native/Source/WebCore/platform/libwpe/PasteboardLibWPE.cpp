@@ -34,12 +34,13 @@
 
 namespace WebCore {
 
-std::unique_ptr<Pasteboard> Pasteboard::createForCopyAndPaste()
+std::unique_ptr<Pasteboard> Pasteboard::createForCopyAndPaste(std::unique_ptr<PasteboardContext>&& context)
 {
-    return makeUnique<Pasteboard>();
+    return makeUnique<Pasteboard>(WTFMove(context));
 }
 
-Pasteboard::Pasteboard()
+Pasteboard::Pasteboard(std::unique_ptr<PasteboardContext>&& context)
+    : m_context(WTFMove(context))
 {
 }
 
@@ -72,7 +73,7 @@ String Pasteboard::readOrigin()
 
 String Pasteboard::readString(const String& type)
 {
-    return platformStrategies()->pasteboardStrategy()->readStringFromPasteboard(0, type);
+    return platformStrategies()->pasteboardStrategy()->readStringFromPasteboard(0, type, name(), context());
 }
 
 String Pasteboard::readStringInCustomData(const String&)
@@ -94,17 +95,17 @@ void Pasteboard::clear(const String&)
 {
 }
 
-void Pasteboard::read(PasteboardPlainText& text)
+void Pasteboard::read(PasteboardPlainText& text, PlainTextURLReadingPolicy, std::optional<size_t>)
 {
-    text.text = platformStrategies()->pasteboardStrategy()->readStringFromPasteboard(0, "text/plain;charset=utf-8");
+    text.text = platformStrategies()->pasteboardStrategy()->readStringFromPasteboard(0, "text/plain;charset=utf-8", name(), context());
 }
 
-void Pasteboard::read(PasteboardWebContentReader&, WebContentReadingPolicy)
+void Pasteboard::read(PasteboardWebContentReader&, WebContentReadingPolicy, std::optional<size_t>)
 {
     notImplemented();
 }
 
-void Pasteboard::read(PasteboardFileReader&)
+void Pasteboard::read(PasteboardFileReader&, std::optional<size_t>)
 {
 }
 
@@ -119,6 +120,10 @@ void Pasteboard::writeTrustworthyWebURLsPboardType(const PasteboardURL&)
 }
 
 void Pasteboard::write(const PasteboardImage&)
+{
+}
+
+void Pasteboard::write(const PasteboardBuffer&)
 {
 }
 
@@ -147,7 +152,7 @@ void Pasteboard::writePlainText(const String& text, SmartReplaceOption)
     writeString("text/plain;charset=utf-8", text);
 }
 
-void Pasteboard::writeCustomData(const PasteboardCustomData&)
+void Pasteboard::writeCustomData(const Vector<PasteboardCustomData>&)
 {
 }
 

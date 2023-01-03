@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2006-2018 Apple Inc. All rights reserved.
+ *  Copyright (C) 2006-2021 Apple Inc. All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Library General Public
@@ -21,9 +21,12 @@
 #pragma once
 
 #include <stddef.h>
+#include <wtf/Platform.h>
 
 namespace WTF {
 
+class ASCIILiteral;
+class AbstractLocker;
 class AtomString;
 class AtomStringImpl;
 class BinarySemaphore;
@@ -31,6 +34,8 @@ class CString;
 class CrashOnOverflow;
 class FunctionDispatcher;
 class Hasher;
+class Lock;
+class Logger;
 class MonotonicTime;
 class OrdinalNumber;
 class PrintStream;
@@ -40,43 +45,71 @@ class String;
 class StringBuilder;
 class StringImpl;
 class StringView;
+class SuspendableWorkQueue;
 class TextPosition;
 class TextStream;
-class UniquedStringImpl;
 class URL;
+class UniquedStringImpl;
 class WallTime;
 
+struct AnyThreadsAccessTraits;
+struct EmptyCounter;
 struct FastMalloc;
+struct MainThreadAccessTraits;
+
+#if ENABLE(MALLOC_HEAP_BREAKDOWN)
+struct VectorMalloc;
+#else
+using VectorMalloc = FastMalloc;
+#endif
+
+template<typename> struct DefaultRefDerefTraits;
 
 template<typename> class CompletionHandler;
-template<typename T> struct DumbPtrTraits;
-template<typename T> struct DumbValueTraits;
+template<typename> class FixedVector;
 template<typename> class Function;
-template<typename> class LazyNeverDestroyed;
-template<typename> class NeverDestroyed;
+template<typename, typename = AnyThreadsAccessTraits> class LazyNeverDestroyed;
+template<typename, typename = AnyThreadsAccessTraits> class NeverDestroyed;
+template<typename> class ObjectIdentifier;
 template<typename> class OptionSet;
-template<typename> class Optional;
-template<typename T, typename = DumbPtrTraits<T>> class Ref;
-template<typename T, typename = DumbPtrTraits<T>> class RefPtr;
+template<typename> class Packed;
+template<typename T, size_t = alignof(T)> class PackedAlignedPtr;
+template<typename> struct RawPtrTraits;
+template<typename T, typename = RawPtrTraits<T>> class CheckedRef;
+template<typename T, typename = RawPtrTraits<T>> class CheckedPtr;
+template<typename T, typename = RawPtrTraits<T>> class Ref;
+template<typename T, typename = RawPtrTraits<T>, typename = DefaultRefDerefTraits<T>> class RefPtr;
+template<typename> class RetainPtr;
+template<typename> class ScopedLambda;
 template<typename> class StringBuffer;
+template<typename> class StringParsingBuffer;
 template<typename, typename = void> class StringTypeAdapter;
-template<typename T> class WeakPtr;
+template<typename> class UniqueRef;
+template<typename, size_t = 0, typename = CrashOnOverflow, size_t = 16, typename Malloc = VectorMalloc> class Vector;
+template<typename, typename = EmptyCounter> class WeakPtr;
 
-template<typename> struct DefaultHash { using Hash = void; };
-template<typename> struct HashTraits;
+template<typename> struct DefaultHash;
+template<> struct DefaultHash<AtomString>;
+template<typename T> struct DefaultHash<OptionSet<T>>;
+template<> struct DefaultHash<String>;
+template<> struct DefaultHash<StringImpl*>;
+template<> struct DefaultHash<URL>;
+template<typename T, size_t inlineCapacity> struct DefaultHash<Vector<T, inlineCapacity>>;
 
+template<typename> struct RawValueTraits;
 template<typename> struct EnumTraits;
 template<typename E, E...> struct EnumValues;
+template<typename> struct HashTraits;
 
-template<typename...> class Variant;
-template<typename, size_t = 0, typename = CrashOnOverflow, size_t = 16> class Vector;
-template<typename Value, typename = typename DefaultHash<Value>::Hash, typename = HashTraits<Value>> class HashCountedSet;
-template<typename KeyArg, typename MappedArg, typename = typename DefaultHash<KeyArg>::Hash, typename = HashTraits<KeyArg>, typename = HashTraits<MappedArg>> class HashMap;
-template<typename ValueArg, typename = typename DefaultHash<ValueArg>::Hash, typename = HashTraits<ValueArg>> class HashSet;
-
-template<size_t, typename> struct variant_alternative;
-template<ptrdiff_t, typename...> struct __indexed_type;
-template<ptrdiff_t _Index, typename... _Types> constexpr typename __indexed_type<_Index, _Types...>::__type const& get(Variant<_Types...> const&);
+struct HashTableTraits;
+struct IdentityExtractor;
+template<typename T> struct KeyValuePairKeyExtractor;
+template<typename KeyTraits, typename MappedTraits> struct KeyValuePairTraits;
+template<typename KeyTypeArg, typename ValueTypeArg> struct KeyValuePair;
+template<typename Key, typename Value, typename Extractor, typename HashFunctions, typename Traits, typename KeyTraits> class HashTable;
+template<typename Value, typename = DefaultHash<Value>, typename = HashTraits<Value>> class HashCountedSet;
+template<typename KeyArg, typename MappedArg, typename = DefaultHash<KeyArg>, typename = HashTraits<KeyArg>, typename = HashTraits<MappedArg>, typename = HashTableTraits> class HashMap;
+template<typename ValueArg, typename = DefaultHash<ValueArg>, typename = HashTraits<ValueArg>, typename = HashTableTraits> class HashSet;
 
 }
 
@@ -87,13 +120,14 @@ template<class, class> class expected;
 template<class> class unexpected;
 }}} // namespace std::experimental::fundamentals_v3
 
+using WTF::ASCIILiteral;
+using WTF::AbstractLocker;
 using WTF::AtomString;
 using WTF::AtomStringImpl;
 using WTF::BinarySemaphore;
 using WTF::CString;
 using WTF::CompletionHandler;
-using WTF::DumbPtrTraits;
-using WTF::DumbValueTraits;
+using WTF::FixedVector;
 using WTF::Function;
 using WTF::FunctionDispatcher;
 using WTF::HashCountedSet;
@@ -101,24 +135,33 @@ using WTF::HashMap;
 using WTF::HashSet;
 using WTF::Hasher;
 using WTF::LazyNeverDestroyed;
+using WTF::Lock;
+using WTF::Logger;
 using WTF::NeverDestroyed;
+using WTF::ObjectIdentifier;
 using WTF::OptionSet;
-using WTF::Optional;
 using WTF::OrdinalNumber;
 using WTF::PrintStream;
+using WTF::RawPtrTraits;
+using WTF::RawValueTraits;
 using WTF::Ref;
 using WTF::RefPtr;
+using WTF::RetainPtr;
 using WTF::SHA1;
+using WTF::ScopedLambda;
 using WTF::String;
 using WTF::StringBuffer;
 using WTF::StringBuilder;
 using WTF::StringImpl;
+using WTF::StringParsingBuffer;
 using WTF::StringView;
+using WTF::SuspendableWorkQueue;
 using WTF::TextPosition;
 using WTF::TextStream;
 using WTF::URL;
-using WTF::Variant;
+using WTF::UniqueRef;
 using WTF::Vector;
+using WTF::WeakPtr;
 
 template<class T, class E> using Expected = std::experimental::expected<T, E>;
 template<class E> using Unexpected = std::experimental::unexpected<E>;

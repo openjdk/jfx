@@ -29,6 +29,8 @@
 #include "IsoSharedPage.h"
 #include "StaticPerProcess.h"
 
+#if !BUSE(LIBPAS)
+
 namespace bmalloc {
 
 class AllIsoHeaps;
@@ -53,7 +55,7 @@ private:
 
 class IsoSharedHeap : public StaticPerProcess<IsoSharedHeap> {
 public:
-    IsoSharedHeap(std::lock_guard<Mutex>&)
+    IsoSharedHeap(const LockHolder&)
     {
     }
 
@@ -62,7 +64,7 @@ public:
 
 private:
     template<unsigned>
-    void* allocateSlow(bool abortOnFailure);
+    void* allocateSlow(const LockHolder&, bool abortOnFailure);
 
     IsoSharedPage* m_currentPage { nullptr };
     VariadicBumpAllocator m_allocator;
@@ -71,4 +73,4 @@ DECLARE_STATIC_PER_PROCESS_STORAGE(IsoSharedHeap);
 
 } // namespace bmalloc
 
-
+#endif

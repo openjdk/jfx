@@ -27,6 +27,7 @@
 #pragma once
 
 #include "DOMCacheEngine.h"
+#include "RetrieveRecordsOptions.h"
 #include <wtf/HashMap.h>
 #include <wtf/ThreadSafeRefCounted.h>
 
@@ -43,7 +44,7 @@ public:
     virtual void remove(uint64_t cacheIdentifier, DOMCacheEngine::CacheIdentifierCallback&&) = 0;
     virtual void retrieveCaches(const ClientOrigin&, uint64_t updateCounter, DOMCacheEngine::CacheInfosCallback&&) = 0;
 
-    virtual void retrieveRecords(uint64_t cacheIdentifier, const URL&, DOMCacheEngine::RecordsCallback&&) = 0;
+    virtual void retrieveRecords(uint64_t cacheIdentifier, const RetrieveRecordsOptions&, DOMCacheEngine::RecordsCallback&&) = 0;
     virtual void batchDeleteOperation(uint64_t cacheIdentifier, const ResourceRequest&, CacheQueryOptions&&, DOMCacheEngine::RecordIdentifiersCallback&&) = 0;
     virtual void batchPutOperation(uint64_t cacheIdentifier, Vector<DOMCacheEngine::Record>&&, DOMCacheEngine::RecordIdentifiersCallback&&) = 0;
 
@@ -57,12 +58,11 @@ public:
     virtual void engineRepresentation(CompletionHandler<void(const String&)>&& callback) { callback(String { }); }
     virtual void updateQuotaBasedOnSpaceUsage(const ClientOrigin&) { }
 
-    virtual PAL::SessionID sessionID() const = 0;
-
 private:
     uint64_t computeRealBodySize(const DOMCacheEngine::ResponseBody&);
 
 protected:
     HashMap<uint64_t, uint64_t> m_opaqueResponseToSizeWithPaddingMap;
 };
+
 } // namespace WebCore

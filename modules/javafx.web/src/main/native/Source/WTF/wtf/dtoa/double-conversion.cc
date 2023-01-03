@@ -56,13 +56,24 @@ const DoubleToStringConverter& DoubleToStringConverter::EcmaScriptConverter() {
   return converter;
 }
 
+const DoubleToStringConverter& DoubleToStringConverter::CSSConverter() {
+  int flags = UNIQUE_ZERO | EMIT_POSITIVE_EXPONENT_SIGN;
+  static DoubleToStringConverter converter(flags,
+                                           "infinity",
+                                           "NaN",
+                                           'e',
+                                           -6, 21,
+                                           6, 0);
+  return converter;
+}
+
 
 bool DoubleToStringConverter::HandleSpecialValues(
     double value,
     StringBuilder* result_builder) const {
   Double double_inspect(value);
   if (double_inspect.IsInfinite()) {
-    if (infinity_symbol_ == NULL) return false;
+    if (infinity_symbol_ == nullptr) return false;
     if (value < 0) {
       result_builder->AddCharacter('-');
     }
@@ -70,7 +81,7 @@ bool DoubleToStringConverter::HandleSpecialValues(
     return true;
   }
   if (double_inspect.IsNan()) {
-    if (nan_symbol_ == NULL) return false;
+    if (nan_symbol_ == nullptr) return false;
     result_builder->AddString(nan_symbol_);
     return true;
   }
@@ -201,12 +212,35 @@ bool DoubleToStringConverter::ToShortestIeeeNumber(
   return true;
 }
 
+bool DoubleToStringConverter::ToFixedInternal(double value,
+                                              int requested_digits,
+                                              char* buffer,
+                                              int buffer_length,
+                                              StringBuilder* result_builder) const {
+  // Find a sufficiently precise decimal representation of n.
+  int decimal_point;
+  bool sign;
+  int decimal_rep_length;
+  DoubleToAscii(value, FIXED, requested_digits,
+                buffer, buffer_length,
+                &sign, &decimal_rep_length, &decimal_point);
+
+  bool unique_zero = ((flags_ & UNIQUE_ZERO) != 0);
+  if (sign && (value != 0.0 || !unique_zero)) {
+    result_builder->AddCharacter('-');
+  }
+
+  CreateDecimalRepresentation(buffer, decimal_rep_length, decimal_point,
+                              requested_digits, result_builder);
+  return true;
+}
+
 
 bool DoubleToStringConverter::ToFixed(double value,
                                       int requested_digits,
                                       StringBuilder* result_builder) const {
-  ASSERT(kMaxFixedDigitsBeforePoint == 60);
-  const double kFirstNonFixed = 1e60;
+  ASSERT(kMaxFixedDigitsBeforePoint == 21);
+  const double kFirstNonFixed = 1e21;
 
   if (Double(value).IsSpecial()) {
     return HandleSpecialValues(value, result_builder);
@@ -215,26 +249,30 @@ bool DoubleToStringConverter::ToFixed(double value,
   if (requested_digits > kMaxFixedDigitsAfterPoint) return false;
   if (value >= kFirstNonFixed || value <= -kFirstNonFixed) return false;
 
-  // Find a sufficiently precise decimal representation of n.
-  int decimal_point;
-  bool sign;
   // Add space for the '\0' byte.
   const int kDecimalRepCapacity =
       kMaxFixedDigitsBeforePoint + kMaxFixedDigitsAfterPoint + 1;
   char decimal_rep[kDecimalRepCapacity];
-  int decimal_rep_length;
-  DoubleToAscii(value, FIXED, requested_digits,
-                decimal_rep, kDecimalRepCapacity,
-                &sign, &decimal_rep_length, &decimal_point);
+  return ToFixedInternal(value, requested_digits, decimal_rep, kDecimalRepCapacity, result_builder);
+}
 
-  bool unique_zero = ((flags_ & UNIQUE_ZERO) != 0);
-  if (sign && (value != 0.0 || !unique_zero)) {
-    result_builder->AddCharacter('-');
+bool DoubleToStringConverter::ToFixedUncapped(double value,
+                                              int requested_digits,
+                                              StringBuilder* result_builder) const {
+  // Max double is 1e308, so we could have 310 digits including a negative sign.
+  const int kMaxPossibleDigitsBeforePoint = 310;
+
+  if (Double(value).IsSpecial()) {
+    return HandleSpecialValues(value, result_builder);
   }
 
-  CreateDecimalRepresentation(decimal_rep, decimal_rep_length, decimal_point,
-                              requested_digits, result_builder);
-  return true;
+  if (requested_digits > kMaxFixedDigitsAfterPoint) return false;
+
+  // Add space for the '\0' byte.
+  const int kDecimalRepCapacity =
+      kMaxPossibleDigitsBeforePoint + kMaxFixedDigitsAfterPoint + 1;
+  char decimal_rep[kDecimalRepCapacity];
+  return ToFixedInternal(value, requested_digits, decimal_rep, kDecimalRepCapacity, result_builder);
 }
 
 
@@ -267,10 +305,12 @@ bool DoubleToStringConverter::ToExponential(
                   &sign, &decimal_rep_length, &decimal_point);
     ASSERT(decimal_rep_length <= requested_digits + 1);
 
-    for (int i = decimal_rep_length; i < requested_digits + 1; ++i) {
-      decimal_rep[i] = '0';
+    if (decimal_rep_length < requested_digits + 1) {
+      for (int i = decimal_rep_length; i < requested_digits + 1; ++i)
+        decimal_rep[i] = '0';
+      decimal_rep_length = requested_digits + 1;
+      decimal_rep[decimal_rep_length] = '\0';
     }
-    decimal_rep_length = requested_digits + 1;
   }
 
   bool unique_zero = ((flags_ & UNIQUE_ZERO) != 0);

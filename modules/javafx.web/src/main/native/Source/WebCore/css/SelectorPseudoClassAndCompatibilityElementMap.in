@@ -1,7 +1,9 @@
+-internal-modal-dialog
 -khtml-drag
 -webkit-any
 -webkit-any-link, PseudoClassAnyLinkDeprecated, PseudoElementUnknown
 -webkit-autofill
+-webkit-autofill-and-obscured
 -webkit-autofill-strong-password
 -webkit-autofill-strong-password-viewable
 -webkit-drag
@@ -9,6 +11,7 @@
 active
 after, PseudoClassUnknown, PseudoElementAfter
 any-link
+autofill
 before, PseudoClassUnknown, PseudoElementBefore
 checked
 corner-present
@@ -28,7 +31,9 @@ first-letter, PseudoClassUnknown, PseudoElementFirstLetter
 first-line, PseudoClassUnknown, PseudoElementFirstLine
 first-of-type
 focus
+focus-visible
 focus-within
+has
 #if ENABLE(ATTACHMENT_ELEMENT)
 has-attachment
 #endif
@@ -39,6 +44,7 @@ in-range
 increment
 indeterminate
 invalid
+is
 lang
 last-child
 last-of-type
@@ -69,6 +75,7 @@ target
 valid
 vertical
 visited
+where
 window-inactive
 
 #if ENABLE(FULLSCREEN_API)
@@ -79,8 +86,19 @@ window-inactive
 -webkit-full-screen-controls-hidden
 #endif
 
-#if ENABLE(VIDEO_TRACK)
+#if ENABLE(PICTURE_IN_PICTURE_API)
+picture-in-picture
+#endif
+
+#if ENABLE(VIDEO)
 future
 past
+playing
+paused
+seeking
+buffering
+stalled
+muted
+volume-locked
 #endif
 

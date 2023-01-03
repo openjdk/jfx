@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2015, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -62,6 +62,7 @@ public class CustomSecurityManagerTest extends VisualTestBase {
     private static final int WIDTH = 400;
     private static final int HEIGHT = 300;
 
+    @SuppressWarnings("removal")
     static class MySecurityManager extends SecurityManager {
         private final boolean permissive;
 
@@ -91,11 +92,13 @@ public class CustomSecurityManagerTest extends VisualTestBase {
         }
     }
 
+    @SuppressWarnings("removal")
     @After
     public void cleanup() {
         System.setSecurityManager(null);
     }
 
+    @SuppressWarnings("removal")
     private void doTestOnTopCommon(SecurityManager sm, boolean expectedOnTop) {
         // Skip on Linux due to 8145152
         assumeTrue(!PlatformUtil.isLinux());
@@ -139,6 +142,7 @@ public class CustomSecurityManagerTest extends VisualTestBase {
         });
     }
 
+    @SuppressWarnings("removal")
     private void doTestFullScreenCommon(SecurityManager sm,
                                         boolean initFullScreen,
                                         boolean expectedFullScreen)
@@ -191,7 +195,15 @@ public class CustomSecurityManagerTest extends VisualTestBase {
                 assertFalse(propertyState);
             }
             for (int row = 0; row < 2; row++) {
-                int y = row == 0 ? 1 : screenHeight.get() - 2;
+                int h = screenHeight.get();
+                int y;
+                if (row == 0) {
+                    // avoid the top area as it might contain OS-specific UI (Macs with a notch)
+                    y = h / 3;
+                } else {
+                    y = h - 2;
+                }
+
                 for (int col = 0; col < 2; col++) {
                     int x = col == 0 ? 1 : screenWidth.get() - 2;
                     Color color = getColor(x, y);
@@ -205,6 +217,7 @@ public class CustomSecurityManagerTest extends VisualTestBase {
         });
     }
 
+    @SuppressWarnings("removal")
     private void doTestRobotCommon(SecurityManager sm, boolean expectedCreateRobot) {
         final AtomicReference<Robot> robot = new AtomicReference<>();
         System.setSecurityManager(sm);

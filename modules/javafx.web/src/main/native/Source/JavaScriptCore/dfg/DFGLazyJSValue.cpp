@@ -30,7 +30,7 @@
 
 #include "CCallHelpers.h"
 #include "DFGGraph.h"
-#include "JSCInlines.h"
+#include "JSCJSValueInlines.h"
 #include "LinkBuffer.h"
 
 namespace JSC { namespace DFG {
@@ -62,15 +62,15 @@ JSValue LazyJSValue::getValue(VM& vm) const
 static TriState equalToSingleCharacter(JSValue value, UChar character)
 {
     if (!value.isString())
-        return FalseTriState;
+        return TriState::False;
 
     JSString* jsString = asString(value);
     if (jsString->length() != 1)
-        return FalseTriState;
+        return TriState::False;
 
     const StringImpl* string = jsString->tryGetValueImpl();
     if (!string)
-        return MixedTriState;
+        return TriState::Indeterminate;
 
     return triState(string->at(0) == character);
 }
@@ -78,12 +78,12 @@ static TriState equalToSingleCharacter(JSValue value, UChar character)
 static TriState equalToStringImpl(JSValue value, StringImpl* stringImpl)
 {
     if (!value.isString())
-        return FalseTriState;
+        return TriState::False;
 
     JSString* jsString = asString(value);
     const StringImpl* string = jsString->tryGetValueImpl();
     if (!string)
-        return MixedTriState;
+        return TriState::Indeterminate;
 
     return triState(WTF::equal(stringImpl, string));
 }
@@ -107,6 +107,23 @@ const StringImpl* LazyJSValue::tryGetStringImpl(VM& vm) const
     return nullptr;
 }
 
+struct CrossThreadStringTranslator {
+    static unsigned hash(const StringImpl* impl)
+    {
+        return impl->concurrentHash();
+    }
+
+    static bool equal(const String& string, const StringImpl* impl)
+    {
+        return WTF::equal(string.impl(), impl);
+    }
+
+    static void translate(String& location, const StringImpl* impl, unsigned)
+    {
+        location = impl->isolatedCopy();
+    }
+};
+
 String LazyJSValue::tryGetString(Graph& graph) const
 {
     switch (m_kind) {
@@ -123,10 +140,7 @@ String LazyJSValue::tryGetString(Graph& graph) const
             if (string->length() > ginormousStringLength)
                 return String();
 
-            auto result = graph.m_copiedStrings.add(string, String());
-            if (result.isNewEntry)
-                result.iterator->value = string->isolatedCopy();
-            return result.iterator->value;
+            return *graph.m_copiedStrings.add<CrossThreadStringTranslator>(string).iterator;
         }
 
         return String();
@@ -142,18 +156,18 @@ TriState LazyJSValue::strictEqual(const LazyJSValue& other) const
         switch (other.m_kind) {
         case KnownValue: {
             if (!value()->value() || !other.value()->value())
-                return value()->value() == other.value()->value() ? TrueTriState : FalseTriState;
+                return value()->value() == other.value()->value() ? TriState::True : TriState::False;
             return JSValue::pureStrictEqual(value()->value(), other.value()->value());
         }
         case SingleCharacterString: {
             if (!value()->value())
-                return FalseTriState;
+                return TriState::False;
             return equalToSingleCharacter(value()->value(), other.character());
         }
         case KnownStringImpl:
         case NewStringImpl: {
             if (!value()->value())
-                return FalseTriState;
+                return TriState::False;
             return equalToStringImpl(value()->value(), other.stringImpl());
         }
         }
@@ -165,7 +179,7 @@ TriState LazyJSValue::strictEqual(const LazyJSValue& other) const
         case KnownStringImpl:
         case NewStringImpl:
             if (other.stringImpl()->length() != 1)
-                return FalseTriState;
+                return TriState::False;
             return triState(other.stringImpl()->at(0) == character());
         case KnownValue:
             return other.strictEqual(*this);
@@ -184,7 +198,7 @@ TriState LazyJSValue::strictEqual(const LazyJSValue& other) const
         break;
     }
     RELEASE_ASSERT_NOT_REACHED();
-    return FalseTriState;
+    return TriState::False;
 }
 
 uintptr_t LazyJSValue::switchLookupValue(SwitchKind kind) const
@@ -249,18 +263,20 @@ void LazyJSValue::emit(CCallHelpers& jit, JSValueRegs result) const
 
     CodeBlock* codeBlock = jit.codeBlock();
 
-    jit.addLinkTask(
-        [codeBlock, label, thisValue] (LinkBuffer& linkBuffer) {
+    jit.addLinkTask([=] (LinkBuffer& linkBuffer) {
+        auto patchLocation = linkBuffer.locationOf<JITCompilationPtrTag>(label);
+        linkBuffer.addMainThreadFinalizationTask([=] {
             JSValue realValue = thisValue.getValue(codeBlock->vm());
             RELEASE_ASSERT(realValue.isCell());
 
-            codeBlock->addConstant(realValue);
+            codeBlock->addConstant(ConcurrentJSLocker(codeBlock->m_lock), realValue);
 
             if (thisValue.m_kind == NewStringImpl)
                 thisValue.u.stringImpl->deref();
 
-            linkBuffer.patch(label, realValue.asCell());
+            MacroAssembler::repatchPointer(patchLocation, realValue.asCell());
         });
+    });
 }
 
 void LazyJSValue::dumpInContext(PrintStream& out, DumpContext* context) const
@@ -286,7 +302,7 @@ void LazyJSValue::dumpInContext(PrintStream& out, DumpContext* context) const
 
 void LazyJSValue::dump(PrintStream& out) const
 {
-    dumpInContext(out, 0);
+    dumpInContext(out, nullptr);
 }
 
 } } // namespace JSC::DFG

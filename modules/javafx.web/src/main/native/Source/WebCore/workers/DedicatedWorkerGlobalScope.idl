@@ -29,19 +29,21 @@
  */
 
 [
-    CustomProxyToJSObject,
     Exposed=DedicatedWorker,
     Global=(Worker,DedicatedWorker),
     JSGenerateToNativeObject,
-    ImplicitThis,
     IsImmutablePrototypeExoticObject,
     IsImmutablePrototypeExoticObjectOnPrototype,
 ] interface DedicatedWorkerGlobalScope : WorkerGlobalScope {
     [Replaceable] readonly attribute DOMString name;
 
-    [CallWith=ExecState, MayThrowException] void postMessage(any message, optional sequence<object> transfer = []);
+    [CallWith=CurrentGlobalObject] undefined postMessage(any message, sequence<object> transfer);
+    [CallWith=CurrentGlobalObject] undefined postMessage(any message, optional StructuredSerializeOptions options);
 
-    void close();
+    undefined close();
 
     attribute EventHandler onmessage;
 };
+
+[Conditional=OFFSCREEN_CANVAS_IN_WORKERS, EnabledAtRuntime=OffscreenCanvasInWorkersEnabled] DedicatedWorkerGlobalScope includes AnimationFrameProvider;
+[Conditional=WEB_RTC, EnabledBySetting=WebRTCEncodedTransformEnabled] DedicatedWorkerGlobalScope includes RTCRtpScriptTransformProvider;

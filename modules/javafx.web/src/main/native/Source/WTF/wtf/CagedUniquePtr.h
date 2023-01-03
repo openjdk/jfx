@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -36,7 +36,7 @@ public:
     using Base = CagedPtr<kind, T, shouldTag>;
     CagedUniquePtr() = default;
 
-    CagedUniquePtr(T* ptr, unsigned size)
+    CagedUniquePtr(T* ptr, size_t size)
         : Base(ptr, size)
     { }
 
@@ -47,9 +47,20 @@ public:
     CagedUniquePtr(const CagedUniquePtr&) = delete;
 
     template<typename... Arguments>
-    static CagedUniquePtr create(unsigned length, Arguments&&... arguments)
+    static CagedUniquePtr create(size_t length, Arguments&&... arguments)
     {
         T* result = static_cast<T*>(Gigacage::malloc(kind, sizeof(T) * length));
+        while (length--)
+            new (result + length) T(arguments...);
+        return CagedUniquePtr(result, length);
+    }
+
+    template<typename... Arguments>
+    static CagedUniquePtr tryCreate(size_t length, Arguments&&... arguments)
+    {
+        T* result = static_cast<T*>(Gigacage::tryMalloc(kind, sizeof(T) * length));
+        if (!result)
+            return { };
         while (length--)
             new (result + length) T(arguments...);
         return CagedUniquePtr(result, length);

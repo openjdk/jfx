@@ -51,16 +51,16 @@ public:
     // Called by the task.
     void taskCompleted();
 
-#ifndef NDEBUG
+#if ASSERT_ENABLED
     bool hasCheckedForTermination() const { return m_hasCheckedForTermination; }
     void setHasCheckedForTermination() { m_hasCheckedForTermination = true; }
 #endif
 
 private:
-    bool m_taskCompleted { false };
-    Lock m_synchronousMutex;
+    bool m_taskCompleted WTF_GUARDED_BY_LOCK(m_synchronousLock) { false };
+    Lock m_synchronousLock;
     Condition m_synchronousCondition;
-#ifndef NDEBUG
+#if ASSERT_ENABLED
     bool m_hasCheckedForTermination { false };
 #endif
 };
@@ -74,7 +74,7 @@ public:
 
     Database& database() const { return m_database; }
 
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
     bool hasSynchronizer() const { return m_synchronizer; }
     bool hasCheckedForTermination() const { return m_synchronizer->hasCheckedForTermination(); }
 #endif
@@ -92,7 +92,7 @@ private:
     virtual const char* debugTaskName() const = 0;
 #endif
 
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
     bool m_complete { false };
 #endif
 };

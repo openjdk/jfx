@@ -23,7 +23,14 @@
 #include "KeyframeList.h"
 
 #include "Animation.h"
+#include "CSSAnimation.h"
+#include "CSSKeyframeRule.h"
+#include "CSSPropertyAnimation.h"
+#include "CompositeOperation.h"
+#include "Element.h"
+#include "KeyframeEffect.h"
 #include "RenderObject.h"
+#include "StyleResolver.h"
 
 namespace WebCore {
 
@@ -72,6 +79,140 @@ void KeyframeList::insert(KeyframeValue&& keyframe)
 
     for (auto& property : m_keyframes[i].properties())
         m_properties.add(property);
+}
+
+bool KeyframeList::hasImplicitKeyframes() const
+{
+    return size() && (m_keyframes[0].key() || m_keyframes[size() - 1].key() != 1);
+}
+
+void KeyframeList::copyKeyframes(KeyframeList& other)
+{
+    for (auto& keyframe : other) {
+        KeyframeValue keyframeValue(keyframe.key(), RenderStyle::clonePtr(*keyframe.style()));
+        for (auto propertyId : keyframe.properties())
+            keyframeValue.addProperty(propertyId);
+        keyframeValue.setTimingFunction(keyframe.timingFunction());
+        keyframeValue.setCompositeOperation(keyframe.compositeOperation());
+        insert(WTFMove(keyframeValue));
+    }
+}
+
+static const StyleRuleKeyframe& zeroPercentKeyframe()
+{
+    static LazyNeverDestroyed<Ref<StyleRuleKeyframe>> rule;
+    static std::once_flag onceFlag;
+    std::call_once(onceFlag, [] {
+        rule.construct(StyleRuleKeyframe::create(MutableStyleProperties::create()));
+        rule.get()->setKey(0);
+    });
+    return rule.get().get();
+}
+
+static const StyleRuleKeyframe& hundredPercentKeyframe()
+{
+    static LazyNeverDestroyed<Ref<StyleRuleKeyframe>> rule;
+    static std::once_flag onceFlag;
+    std::call_once(onceFlag, [] {
+        rule.construct(StyleRuleKeyframe::create(MutableStyleProperties::create()));
+        rule.get()->setKey(1);
+    });
+    return rule.get().get();
+}
+
+void KeyframeList::fillImplicitKeyframes(const KeyframeEffect& effect, const RenderStyle& underlyingStyle)
+{
+    if (isEmpty())
+        return;
+
+    ASSERT(effect.target());
+    auto& element = *effect.target();
+    auto& styleResolver = element.styleResolver();
+
+    // We need to establish which properties are implicit for 0% and 100%.
+    // We start each list off with the full list of properties, and see if
+    // any 0% and 100% keyframes specify them.
+    auto zeroKeyframeImplicitProperties = m_properties;
+    auto oneKeyframeImplicitProperties = m_properties;
+    zeroKeyframeImplicitProperties.remove(CSSPropertyCustom);
+    oneKeyframeImplicitProperties.remove(CSSPropertyCustom);
+
+    KeyframeValue* implicitZeroKeyframe = nullptr;
+    KeyframeValue* implicitOneKeyframe = nullptr;
+
+    auto isSuitableKeyframeForImplicitValues = [&](const KeyframeValue& keyframe) {
+        auto* timingFunction = keyframe.timingFunction();
+
+        // If there is no timing function set on the keyframe, then it uses the element's
+        // timing function, which makes this keyframe suitable.
+        if (!timingFunction)
+            return true;
+
+        if (auto* cssAnimation = dynamicDowncast<CSSAnimation>(effect.animation())) {
+            auto* animationWideTimingFunction = cssAnimation->backingAnimation().defaultTimingFunctionForKeyframes();
+            // If we're dealing with a CSS Animation and if that CSS Animation's backing animation
+            // has a default timing function set, then if that keyframe's timing function matches,
+            // that keyframe is suitable.
+            if (animationWideTimingFunction)
+                return timingFunction == animationWideTimingFunction;
+            // Otherwise, the keyframe will be suitable if its timing function matches the default.
+            return timingFunction == &CubicBezierTimingFunction::defaultTimingFunction();
+        }
+
+        return false;
+    };
+
+    for (auto& keyframe : m_keyframes) {
+        if (!keyframe.key()) {
+            for (auto cssPropertyId : keyframe.properties())
+                zeroKeyframeImplicitProperties.remove(cssPropertyId);
+            if (!implicitZeroKeyframe && isSuitableKeyframeForImplicitValues(keyframe))
+                implicitZeroKeyframe = &keyframe;
+        } else if (keyframe.key() == 1) {
+            for (auto cssPropertyId : keyframe.properties())
+                oneKeyframeImplicitProperties.remove(cssPropertyId);
+            if (!implicitOneKeyframe && isSuitableKeyframeForImplicitValues(keyframe))
+                implicitOneKeyframe = &keyframe;
+        }
+    }
+
+    auto addImplicitKeyframe = [&](double key, const HashSet<CSSPropertyID>& implicitProperties, const StyleRuleKeyframe& keyframeRule, KeyframeValue* existingImplicitKeyframeValue) {
+        // If we're provided an existing implicit keyframe, we need to add all the styles for the implicit properties.
+        if (existingImplicitKeyframeValue) {
+            ASSERT(existingImplicitKeyframeValue->style());
+            auto keyframeStyle = RenderStyle::clonePtr(*existingImplicitKeyframeValue->style());
+            for (auto cssPropertyId : implicitProperties) {
+                CSSPropertyAnimation::blendProperties(&effect, cssPropertyId, *keyframeStyle, underlyingStyle, underlyingStyle, 1, CompositeOperation::Replace);
+                existingImplicitKeyframeValue->addProperty(cssPropertyId);
+            }
+            existingImplicitKeyframeValue->setStyle(WTFMove(keyframeStyle));
+            return;
+        }
+
+        // Otherwise we create a new keyframe.
+        KeyframeValue keyframeValue(key, nullptr);
+        keyframeValue.setStyle(styleResolver.styleForKeyframe(element, underlyingStyle, { nullptr }, keyframeRule, keyframeValue));
+        for (auto cssPropertyId : implicitProperties)
+            keyframeValue.addProperty(cssPropertyId);
+        if (!key)
+            m_keyframes.insert(0, WTFMove(keyframeValue));
+        else
+            m_keyframes.append(WTFMove(keyframeValue));
+    };
+
+    if (!zeroKeyframeImplicitProperties.isEmpty())
+        addImplicitKeyframe(0, zeroKeyframeImplicitProperties, zeroPercentKeyframe(), implicitZeroKeyframe);
+    if (!oneKeyframeImplicitProperties.isEmpty())
+        addImplicitKeyframe(1, oneKeyframeImplicitProperties, hundredPercentKeyframe(), implicitOneKeyframe);
+}
+
+bool KeyframeList::containsAnimatableProperty() const
+{
+    for (auto cssPropertyId : m_properties) {
+        if (CSSPropertyAnimation::isPropertyAnimatable(cssPropertyId))
+            return true;
+    }
+    return false;
 }
 
 } // namespace WebCore

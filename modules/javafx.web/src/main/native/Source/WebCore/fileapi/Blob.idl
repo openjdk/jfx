@@ -31,20 +31,20 @@
 typedef (BufferSource or Blob or USVString) BlobPart;
 
 [
+    ActiveDOMObject,
+    ExportToWrappedFunction,
     Exposed=(Window,Worker),
     GenerateIsReachable=Impl,
     CustomToJSObject,
-    Constructor(optional sequence<BlobPart> blobParts, optional BlobPropertyBag options),
-    ConstructorCallWith=ScriptExecutionContext,
 ] interface Blob {
+    [CallWith=CurrentScriptExecutionContext] constructor(optional sequence<BlobPart> blobParts, optional BlobPropertyBag options);
+
     readonly attribute unsigned long long size;
     readonly attribute DOMString type;
 
-    // slice Blob into byte-ranged chunks
-    Blob slice(optional long long start = 0, optional long long end = 0x7FFFFFFFFFFFFFFF, optional DOMString? contentType = null);
+    [NewObject] Blob slice(optional long long start = 0, optional long long end = 0x7FFFFFFFFFFFFFFF, optional DOMString contentType = "");
 
-    // FIXME: Implement:
-    // readonly attribute boolean isClosed;
-    // void close();
-
+    [NewObject] ReadableStream stream();
+    [NewObject] Promise<USVString> text();
+    [NewObject] Promise<ArrayBuffer> arrayBuffer();
 };

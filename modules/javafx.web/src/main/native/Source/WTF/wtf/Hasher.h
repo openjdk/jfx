@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2021 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -20,33 +20,18 @@
 
 #pragma once
 
-#include <wtf/Forward.h>
-#include <wtf/Optional.h>
+#include <optional>
+#include <variant>
 #include <wtf/StdLibExtras.h>
+#include <wtf/URL.h>
+#include <wtf/text/AtomString.h>
 #include <wtf/text/StringHasher.h>
 
 namespace WTF {
 
-// Deprecated. Use Hasher instead.
-class IntegerHasher {
-    WTF_MAKE_FAST_ALLOCATED;
-public:
-    void add(uint32_t integer)
-    {
-        m_underlyingHasher.addCharactersAssumingAligned(integer, integer >> 16);
-    }
-
-    unsigned hash() const
-    {
-        return m_underlyingHasher.hash();
-    }
-
-private:
-    StringHasher m_underlyingHasher;
-};
-
 template<typename... Types> uint32_t computeHash(const Types&...);
 template<typename T, typename... OtherTypes> uint32_t computeHash(std::initializer_list<T>, std::initializer_list<OtherTypes>...);
+template<typename UnsignedInteger> std::enable_if_t<std::is_unsigned_v<UnsignedInteger> && sizeof(UnsignedInteger) <= sizeof(uint32_t) && !std::is_enum_v<UnsignedInteger>, void> add(Hasher&, UnsignedInteger);
 
 class Hasher {
     WTF_MAKE_FAST_ALLOCATED;
@@ -66,13 +51,18 @@ public:
         return hasher.m_underlyingHasher.hash();
     }
 
-    template<typename UnsignedInteger> friend std::enable_if_t<std::is_unsigned<UnsignedInteger>::value && sizeof(UnsignedInteger) <= sizeof(uint32_t), void> add(Hasher& hasher, UnsignedInteger integer)
+    template<typename UnsignedInteger> friend std::enable_if_t<std::is_unsigned_v<UnsignedInteger> && sizeof(UnsignedInteger) <= sizeof(uint32_t) && !std::is_enum_v<UnsignedInteger>, void> add(Hasher& hasher, UnsignedInteger integer)
     {
         // We can consider adding a more efficient code path for hashing booleans or individual bytes if needed.
         // We can consider adding a more efficient code path for hashing 16-bit values if needed, perhaps using addCharacter,
         // but getting rid of "assuming aligned" would make hashing values 32-bit or larger slower.
         uint32_t sizedInteger = integer;
         hasher.m_underlyingHasher.addCharactersAssumingAligned(sizedInteger, sizedInteger >> 16);
+    }
+
+    unsigned hash() const
+    {
+        return m_underlyingHasher.hash();
     }
 
 private:
@@ -91,6 +81,11 @@ template<typename SignedArithmetic> std::enable_if_t<std::is_signed<SignedArithm
     add(hasher, static_cast<std::make_unsigned_t<SignedArithmetic>>(number));
 }
 
+inline void add(Hasher& hasher, bool boolean)
+{
+    add(hasher, static_cast<uint8_t>(boolean));
+}
+
 inline void add(Hasher& hasher, double number)
 {
     add(hasher, bitwise_cast<uint64_t>(number));
@@ -101,16 +96,42 @@ inline void add(Hasher& hasher, float number)
     add(hasher, bitwise_cast<uint32_t>(number));
 }
 
-template<typename Enumeration> std::enable_if_t<std::is_enum<Enumeration>::value, void> add(Hasher& hasher, Enumeration value)
+template<typename T> inline void add(Hasher& hasher, T* ptr)
+{
+    add(hasher, bitwise_cast<uintptr_t>(ptr));
+}
+
+inline void add(Hasher& hasher, const String& string)
+{
+    // Chose to hash the characters here. Assuming this is better than hashing the possibly-already-computed hash of the characters.
+    bool remainder = string.length() & 1;
+    unsigned roundedLength = string.length() - remainder;
+    for (unsigned i = 0; i < roundedLength; i += 2)
+        add(hasher, (string[i] << 16) | string[i + 1]);
+    if (remainder)
+        add(hasher, string[roundedLength]);
+}
+
+inline void add(Hasher& hasher, const AtomString& string)
+{
+    // Chose to hash the pointer here. Assuming this is better than hashing the characters or hashing the already-computed hash of the characters.
+    add(hasher, bitwise_cast<uintptr_t>(string.impl()));
+}
+
+inline void add(Hasher& hasher, const URL& url)
+{
+    add(hasher, url.string());
+}
+
+template<typename Enumeration> std::enable_if_t<std::is_enum_v<Enumeration>, void> add(Hasher& hasher, Enumeration value)
 {
     add(hasher, static_cast<std::underlying_type_t<Enumeration>>(value));
 }
 
-template<typename> struct TypeCheckHelper { };
-template<typename, typename = void> struct HasBeginFunctionMember : std::false_type { };
-template<typename Container> struct HasBeginFunctionMember<Container, std::conditional_t<false, TypeCheckHelper<decltype(std::declval<Container>().begin())>, void>> : std::true_type { };
+template<typename, typename = void> inline constexpr bool HasBeginFunctionMember = false;
+template<typename T> inline constexpr bool HasBeginFunctionMember<T, std::void_t<decltype(std::declval<T>().begin())>> = true;
 
-template<typename Container> std::enable_if_t<HasBeginFunctionMember<Container>::value, void> add(Hasher& hasher, const Container& container)
+template<typename Container> std::enable_if_t<HasBeginFunctionMember<Container> && !IsTypeComplete<std::tuple_size<Container>>, void> add(Hasher& hasher, const Container& container)
 {
     for (const auto& value : container)
         add(hasher, value);
@@ -126,33 +147,35 @@ template<typename Arg, typename ...Args> void addArgs(Hasher& hasher, const Arg&
     addArgs(hasher, args...);
 }
 
-template<typename Tuple, std::size_t ...i> void addTupleHelper(Hasher& hasher, const Tuple& values, std::index_sequence<i...>)
+template<typename, typename = void> inline constexpr bool HasGetFunctionMember = false;
+template<typename T> inline constexpr bool HasGetFunctionMember<T, std::void_t<decltype(std::declval<T>().template get<0>())>> = true;
+
+template<typename TupleLike, std::size_t ...I> void addTupleLikeHelper(Hasher& hasher, const TupleLike& tupleLike, std::index_sequence<I...>)
 {
-    addArgs(hasher, std::get<i>(values)...);
+    if constexpr (HasGetFunctionMember<TupleLike>)
+        addArgs(hasher, tupleLike.template get<I>()...);
+    else {
+        using std::get;
+        addArgs(hasher, get<I>(tupleLike)...);
+    }
 }
 
-template<typename... Types> void add(Hasher& hasher, const std::tuple<Types...>& tuple)
+template<typename TupleLike> std::enable_if_t<IsTypeComplete<std::tuple_size<TupleLike>>, void> add(Hasher& hasher, const TupleLike& tuple)
 {
-    addTupleHelper(hasher, tuple, std::make_index_sequence<std::tuple_size<std::tuple<Types...>>::value> { });
+    addTupleLikeHelper(hasher, tuple, std::make_index_sequence<std::tuple_size<TupleLike>::value> { });
 }
 
-template<typename T1, typename T2> void add(Hasher& hasher, const std::pair<T1, T2>& pair)
+template<typename T> void add(Hasher& hasher, const std::optional<T>& optional)
 {
-    add(hasher, pair.first);
-    add(hasher, pair.second);
-}
-
-template<typename T> void add(Hasher& hasher, const Optional<T>& optional)
-{
-    add(hasher, optional.hasValue());
-    if (optional.hasValue())
+    add(hasher, optional.has_value());
+    if (optional.has_value())
         add(hasher, optional.value());
 }
 
-template<typename... Types> void add(Hasher& hasher, const Variant<Types...>& variant)
+template<typename... Types> void add(Hasher& hasher, const std::variant<Types...>& variant)
 {
     add(hasher, variant.index());
-    visit([&hasher] (auto& value) {
+    std::visit([&hasher] (auto& value) {
         add(hasher, value);
     }, variant);
 }
@@ -174,4 +197,3 @@ template<typename T> void add(Hasher& hasher, std::initializer_list<T> values)
 
 using WTF::computeHash;
 using WTF::Hasher;
-using WTF::IntegerHasher;

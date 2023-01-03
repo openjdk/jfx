@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,15 +25,18 @@
 
 #pragma once
 
+#include "CompleteSubspace.h"
+#include "VM.h"
+
 namespace JSC {
 
-ALWAYS_INLINE void* CompleteSubspace::allocateNonVirtual(VM& vm, size_t size, GCDeferralContext* deferralContext, AllocationFailureMode failureMode)
+ALWAYS_INLINE void* CompleteSubspace::allocate(VM& vm, size_t size, GCDeferralContext* deferralContext, AllocationFailureMode failureMode)
 {
-    if (validateDFGDoesGC)
-        RELEASE_ASSERT(vm.heap.expectDoesGC());
+    if constexpr (validateDFGDoesGC)
+        vm.verifyCanGC();
 
-    if (Allocator allocator = allocatorForNonVirtual(size, AllocatorForMode::AllocatorIfExists))
-        return allocator.allocate(deferralContext, failureMode);
+    if (Allocator allocator = allocatorFor(size, AllocatorForMode::AllocatorIfExists))
+        return allocator.allocate(vm.heap, deferralContext, failureMode);
     return allocateSlow(vm, size, deferralContext, failureMode);
 }
 

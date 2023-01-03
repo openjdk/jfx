@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -57,10 +57,10 @@ import org.junit.Test;
 public class TooltipTest {
     private TooltipShim toolTip;//Empty string
     private TooltipShim dummyToolTip;//Empty string
-    private Toolkit tk;
 
     @Before public void setup() {
-        tk = (StubToolkit)Toolkit.getToolkit();//This step is not needed (Just to make sure StubToolkit is loaded into VM)
+        assertTrue(Toolkit.getToolkit() instanceof StubToolkit);  // Ensure StubToolkit is loaded
+
         toolTip = new TooltipShim();
         dummyToolTip = new TooltipShim("dummy");
     }
@@ -115,7 +115,7 @@ public class TooltipTest {
     }
 
     @Test public void defaultFontIsnotNull() {
-        System.out.println("toolTip.getFont() " + toolTip.getFont());
+        //System.out.println("toolTip.getFont() " + toolTip.getFont());
         assertNotNull(toolTip.getFont());
     }
 
@@ -146,7 +146,7 @@ public class TooltipTest {
     }
 
     @Test public void checkTextAlignmentPropertyBind() {
-        ObjectProperty objPr = new SimpleObjectProperty<TextAlignment>(TextAlignment.CENTER);
+        ObjectProperty objPr = new SimpleObjectProperty<>(TextAlignment.CENTER);
         toolTip.textAlignmentProperty().bind(objPr);
         assertSame("TextAlignment cannot be bound", toolTip.textAlignmentProperty().getValue(), TextAlignment.CENTER);
         objPr.setValue(TextAlignment.JUSTIFY);
@@ -154,7 +154,7 @@ public class TooltipTest {
     }
 
     @Test public void checkTextOverrunPropertyBind() {
-        ObjectProperty objPr = new SimpleObjectProperty<OverrunStyle>(OverrunStyle.CENTER_WORD_ELLIPSIS);
+        ObjectProperty objPr = new SimpleObjectProperty<>(OverrunStyle.CENTER_WORD_ELLIPSIS);
         toolTip.textOverrunProperty().bind(objPr);
         assertSame("TextOverrun cannot be bound", toolTip.textOverrunProperty().getValue(), OverrunStyle.CENTER_WORD_ELLIPSIS);
         objPr.setValue(OverrunStyle.LEADING_ELLIPSIS);
@@ -162,7 +162,7 @@ public class TooltipTest {
     }
 
     @Test public void checkTextWrapPropertyBind() {
-        ObjectProperty objPr = new SimpleObjectProperty<Boolean>(true);
+        ObjectProperty objPr = new SimpleObjectProperty<>(true);
         toolTip.wrapTextProperty().bind(objPr);
         assertEquals("TextWrap cannot be bound", toolTip.wrapTextProperty().getValue(), true);
         objPr.setValue(false);
@@ -270,15 +270,15 @@ public class TooltipTest {
     /*********************************************************************
      * CSS related Tests                                                 *
      ********************************************************************/
-    @Test public void whenTextAlignmentIsBound_impl_cssSettable_ReturnsFalse() {
+    @Test public void whenTextAlignmentIsBound_CssMetaData_isSettable_ReturnsFalse() {
         CssMetaData styleable = ((StyleableProperty)toolTip.textAlignmentProperty()).getCssMetaData();
         assertTrue(styleable.isSettable(toolTip.get_bridge()));
-        ObjectProperty<TextAlignment> other = new SimpleObjectProperty<TextAlignment>(TextAlignment.JUSTIFY);
+        ObjectProperty<TextAlignment> other = new SimpleObjectProperty<>(TextAlignment.JUSTIFY);
         toolTip.textAlignmentProperty().bind(other);
         assertFalse(styleable.isSettable(toolTip.get_bridge()));
     }
 
-    @Test public void whenTextAlignmentIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
+    @Test public void whenTextAlignmentIsSpecifiedViaCSSAndIsNotBound_CssMetaData_isSettable_ReturnsTrue() {
         CssMetaData styleable = ((StyleableProperty)toolTip.textAlignmentProperty()).getCssMetaData();
         ((StyleableProperty)toolTip.textAlignmentProperty()).applyStyle(null, TextAlignment.RIGHT);
         assertTrue(styleable.isSettable(toolTip.get_bridge()));
@@ -289,15 +289,15 @@ public class TooltipTest {
         assertSame(TextAlignment.CENTER, toolTip.getTextAlignment());
     }
 
-    @Test public void whenTextOverrunIsBound_impl_cssSettable_ReturnsFalse() {
+    @Test public void whenTextOverrunIsBound_CssMetaData_isSettable_ReturnsFalse() {
         CssMetaData styleable = ((StyleableProperty)toolTip.textOverrunProperty()).getCssMetaData();
         assertTrue(styleable.isSettable(toolTip.get_bridge()));
-        ObjectProperty<OverrunStyle> other = new SimpleObjectProperty<OverrunStyle>(OverrunStyle.LEADING_ELLIPSIS);
+        ObjectProperty<OverrunStyle> other = new SimpleObjectProperty<>(OverrunStyle.LEADING_ELLIPSIS);
         toolTip.textOverrunProperty().bind(other);
         assertFalse(styleable.isSettable(toolTip.get_bridge()));
     }
 
-    @Test public void whenTextOverrunIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
+    @Test public void whenTextOverrunIsSpecifiedViaCSSAndIsNotBound_CssMetaData_isSettable_ReturnsTrue() {
         CssMetaData styleable = ((StyleableProperty)toolTip.textOverrunProperty()).getCssMetaData();
         ((StyleableProperty)toolTip.textOverrunProperty()).applyStyle(null, OverrunStyle.CENTER_ELLIPSIS);
         assertTrue(styleable.isSettable(toolTip.get_bridge()));
@@ -308,7 +308,7 @@ public class TooltipTest {
         assertSame(OverrunStyle.CLIP, toolTip.getTextOverrun());
     }
 
-    @Test public void whenWrapTextIsBound_impl_cssSettable_ReturnsFalse() {
+    @Test public void whenWrapTextIsBound_CssMetaData_isSettable_ReturnsFalse() {
         CssMetaData styleable = ((StyleableProperty)toolTip.wrapTextProperty()).getCssMetaData();
         assertTrue(styleable.isSettable(toolTip.get_bridge()));
         BooleanProperty other = new SimpleBooleanProperty();
@@ -316,7 +316,7 @@ public class TooltipTest {
         assertFalse(styleable.isSettable(toolTip.get_bridge()));
     }
 
-    @Test public void whenWrapTextIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
+    @Test public void whenWrapTextIsSpecifiedViaCSSAndIsNotBound_CssMetaData_isSettable_ReturnsTrue() {
         CssMetaData styleable = ((StyleableProperty)toolTip.wrapTextProperty()).getCssMetaData();
           assertTrue(styleable.isSettable(toolTip.get_bridge()));
     }
@@ -326,15 +326,15 @@ public class TooltipTest {
         assertSame(true, toolTip.isWrapText());
     }
 
-    @Test public void whenFontIsBound_impl_cssSettable_ReturnsFalse() {
+    @Test public void whenFontIsBound_CssMetaData_isSettable_ReturnsFalse() {
         CssMetaData styleable = ((StyleableProperty)toolTip.fontProperty()).getCssMetaData();
           assertTrue(styleable.isSettable(toolTip.get_bridge()));
-        ObjectProperty<Font> other = new SimpleObjectProperty<Font>();
+        ObjectProperty<Font> other = new SimpleObjectProperty<>();
         toolTip.fontProperty().bind(other);
           assertFalse(styleable.isSettable(toolTip.get_bridge()));
     }
 
-    @Test public void whenFontIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
+    @Test public void whenFontIsSpecifiedViaCSSAndIsNotBound_CssMetaData_isSettable_ReturnsTrue() {
         CssMetaData styleable = ((StyleableProperty)toolTip.fontProperty()).getCssMetaData();
           assertTrue(styleable.isSettable(toolTip.get_bridge()));
     }
@@ -344,15 +344,15 @@ public class TooltipTest {
         assertSame(Font.getDefault(), toolTip.getFont());
     }
 
-    @Test public void whenGraphicIsBound_impl_cssSettable_ReturnsFalse() {
+    @Test public void whenGraphicIsBound_CssMetaData_isSettable_ReturnsFalse() {
         CssMetaData styleable = ((StyleableProperty)toolTip.graphicProperty()).getCssMetaData();
         assertTrue(styleable.isSettable(toolTip.get_bridge()));
-        ObjectProperty<Node> other = new SimpleObjectProperty<Node>();
+        ObjectProperty<Node> other = new SimpleObjectProperty<>();
         toolTip.graphicProperty().bind(other);
           assertFalse(styleable.isSettable(toolTip.get_bridge()));
     }
 
-    @Test public void whenGraphicIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
+    @Test public void whenGraphicIsSpecifiedViaCSSAndIsNotBound_CssMetaData_isSettable_ReturnsTrue() {
         CssMetaData styleable = ((StyleableProperty)toolTip.graphicProperty()).getCssMetaData();
           assertTrue(styleable.isSettable(toolTip.get_bridge()));
     }
@@ -364,14 +364,14 @@ public class TooltipTest {
         assertNotNull(toolTip.getGraphic());
     }
 
-    @Test public void whenContentDisplayIsBound_impl_cssSettable_ReturnsFalse() {
+    @Test public void whenContentDisplayIsBound_CssMetaData_isSettable_ReturnsFalse() {
         CssMetaData styleable = ((StyleableProperty)toolTip.contentDisplayProperty()).getCssMetaData();
           assertTrue(styleable.isSettable(toolTip.get_bridge()));
-        ObjectProperty<ContentDisplay> other = new SimpleObjectProperty<ContentDisplay>();
+        ObjectProperty<ContentDisplay> other = new SimpleObjectProperty<>();
         toolTip.contentDisplayProperty().bind(other);
           assertFalse(styleable.isSettable(toolTip.get_bridge()));
     }
-     @Test public void whenContentDisplayIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
+     @Test public void whenContentDisplayIsSpecifiedViaCSSAndIsNotBound_CssMetaData_isSettable_ReturnsTrue() {
         CssMetaData styleable = ((StyleableProperty)toolTip.contentDisplayProperty()).getCssMetaData();
           assertTrue(styleable.isSettable(toolTip.get_bridge()));
     }
@@ -381,7 +381,7 @@ public class TooltipTest {
         assertSame(toolTip.getContentDisplay(), ContentDisplay.BOTTOM);
     }
 
-    @Test public void whenGraphicTextGapIsBound_impl_cssSettable_ReturnsFalse() {
+    @Test public void whenGraphicTextGapIsBound_CssMetaData_isSettable_ReturnsFalse() {
         CssMetaData styleable = ((StyleableProperty)toolTip.graphicTextGapProperty()).getCssMetaData();
           assertTrue(styleable.isSettable(toolTip.get_bridge()));
         DoubleProperty other = new SimpleDoubleProperty();
@@ -389,7 +389,7 @@ public class TooltipTest {
           assertFalse(styleable.isSettable(toolTip.get_bridge()));
     }
 
-    @Test public void whenGraphicTextGapIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
+    @Test public void whenGraphicTextGapIsSpecifiedViaCSSAndIsNotBound_CssMetaData_isSettable_ReturnsTrue() {
         CssMetaData styleable = ((StyleableProperty)toolTip.graphicTextGapProperty()).getCssMetaData();
           assertTrue(styleable.isSettable(toolTip.get_bridge()));
     }

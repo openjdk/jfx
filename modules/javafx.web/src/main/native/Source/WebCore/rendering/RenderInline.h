@@ -22,7 +22,7 @@
 
 #pragma once
 
-#include "InlineFlowBox.h"
+#include "LegacyInlineFlowBox.h"
 #include "RenderBoxModelObject.h"
 #include "RenderLineBoxList.h"
 
@@ -60,7 +60,7 @@ public:
     LayoutRect linesVisualOverflowBoundingBox() const;
     LayoutRect linesVisualOverflowBoundingBoxInFragment(const RenderFragmentContainer*) const;
 
-    InlineFlowBox* createAndAppendInlineFlowBox();
+    LegacyInlineFlowBox* createAndAppendInlineFlowBox();
 
     void dirtyLineBoxes(bool fullLayout);
     void deleteLines();
@@ -68,29 +68,21 @@ public:
     RenderLineBoxList& lineBoxes() { return m_lineBoxes; }
     const RenderLineBoxList& lineBoxes() const { return m_lineBoxes; }
 
-    InlineFlowBox* firstLineBox() const { return m_lineBoxes.firstLineBox(); }
-    InlineFlowBox* lastLineBox() const { return m_lineBoxes.lastLineBox(); }
-    InlineBox* firstLineBoxIncludingCulling() const { return alwaysCreateLineBoxes() ? firstLineBox() : culledInlineFirstLineBox(); }
-    InlineBox* lastLineBoxIncludingCulling() const { return alwaysCreateLineBoxes() ? lastLineBox() : culledInlineLastLineBox(); }
+    LegacyInlineFlowBox* firstLineBox() const { return m_lineBoxes.firstLineBox(); }
+    LegacyInlineFlowBox* lastLineBox() const { return m_lineBoxes.lastLineBox(); }
 
 #if PLATFORM(IOS_FAMILY)
     void absoluteQuadsForSelection(Vector<FloatQuad>& quads) const override;
 #endif
-
-    void updateDragState(bool dragOn) final;
 
     LayoutSize offsetForInFlowPositionedInline(const RenderBox* child) const;
 
     void addFocusRingRects(Vector<LayoutRect>&, const LayoutPoint& additionalOffset, const RenderLayerModelObject* paintContainer = 0) final;
     void paintOutline(PaintInfo&, const LayoutPoint&);
 
-    bool alwaysCreateLineBoxes() const { return renderInlineAlwaysCreatesLineBoxes(); }
-    void setAlwaysCreateLineBoxes() { setRenderInlineAlwaysCreatesLineBoxes(true); }
-    void updateAlwaysCreateLineBoxes(bool fullLayout);
+    bool mayAffectLayout() const;
 
-    LayoutRect localCaretRect(InlineBox*, unsigned, LayoutUnit* extraWidthToEndOfLine) final;
-
-    bool hitTestCulledInline(const HitTestRequest&, HitTestResult&, const HitTestLocation& locationInContainer, const LayoutPoint& accumulatedOffset);
+    bool requiresLayer() const override { return isInFlowPositioned() || createsGroup() || hasClipPath() || shouldApplyPaintContainment(*this) || willChangeCreatesStackingContext() || hasRunningAcceleratedAnimations(); }
 
 protected:
     void willBeDestroyed() override;
@@ -105,14 +97,10 @@ private:
 
     bool canHaveChildren() const final { return true; }
 
-    LayoutRect culledInlineVisualOverflowBoundingBox() const;
-    InlineBox* culledInlineFirstLineBox() const;
-    InlineBox* culledInlineLastLineBox() const;
+    void absoluteQuadsIgnoringContinuation(const FloatRect&, Vector<FloatQuad>&, bool* wasFixed) const override;
 
     template<typename GeneratorContext>
     void generateLineBoxRects(GeneratorContext& yield) const;
-    template<typename GeneratorContext>
-    void generateCulledLineBoxRects(GeneratorContext& yield, const RenderInline* container) const;
 
     void layout() final { ASSERT_NOT_REACHED(); } // Do nothing for layout()
 
@@ -120,32 +108,31 @@ private:
 
     bool nodeAtPoint(const HitTestRequest&, HitTestResult&, const HitTestLocation& locationInContainer, const LayoutPoint& accumulatedOffset, HitTestAction) final;
 
-    bool requiresLayer() const override { return isInFlowPositioned() || createsGroup() || hasClipPath() || willChangeCreatesStackingContext() || hasRunningAcceleratedAnimations(); }
-
     LayoutUnit offsetLeft() const final;
     LayoutUnit offsetTop() const final;
     LayoutUnit offsetWidth() const final { return linesBoundingBox().width(); }
     LayoutUnit offsetHeight() const final { return linesBoundingBox().height(); }
+    LayoutPoint firstInlineBoxTopLeft() const;
 
-    LayoutRect clippedOverflowRectForRepaint(const RenderLayerModelObject* repaintContainer) const override;
+    LayoutRect clippedOverflowRect(const RenderLayerModelObject* repaintContainer, VisibleRectContext) const override;
     LayoutRect rectWithOutlineForRepaint(const RenderLayerModelObject* repaintContainer, LayoutUnit outlineWidth) const final;
 
-    Optional<LayoutRect> computeVisibleRectInContainer(const LayoutRect&, const RenderLayerModelObject* container, VisibleRectContext) const final;
+    std::optional<LayoutRect> computeVisibleRectInContainer(const LayoutRect&, const RenderLayerModelObject* container, VisibleRectContext) const final;
     LayoutRect computeVisibleRectUsingPaintOffset(const LayoutRect&) const;
 
-    void mapLocalToContainer(const RenderLayerModelObject* repaintContainer, TransformState&, MapCoordinatesFlags, bool* wasFixed) const override;
+    void mapLocalToContainer(const RenderLayerModelObject* repaintContainer, TransformState&, OptionSet<MapCoordinatesMode>, bool* wasFixed) const override;
     const RenderObject* pushMappingToContainer(const RenderLayerModelObject* ancestorToStopAt, RenderGeometryMap&) const override;
 
     VisiblePosition positionForPoint(const LayoutPoint&, const RenderFragmentContainer*) final;
 
     LayoutRect frameRectForStickyPositioning() const final { return linesBoundingBox(); }
 
-    virtual std::unique_ptr<InlineFlowBox> createInlineFlowBox(); // Subclassed by RenderSVGInline
+    virtual std::unique_ptr<LegacyInlineFlowBox> createInlineFlowBox(); // Subclassed by RenderSVGInline
 
     void dirtyLinesFromChangedChild(RenderObject& child) final { m_lineBoxes.dirtyLinesFromChangedChild(*this, child); }
 
     LayoutUnit lineHeight(bool firstLine, LineDirectionMode, LinePositionMode = PositionOnContainingLine) const final;
-    int baselinePosition(FontBaseline, bool firstLine, LineDirectionMode, LinePositionMode = PositionOnContainingLine) const final;
+    LayoutUnit baselinePosition(FontBaseline, bool firstLine, LineDirectionMode, LinePositionMode = PositionOnContainingLine) const final;
 
     void updateHitTestResult(HitTestResult&, const LayoutPoint&) final;
 
@@ -160,6 +147,8 @@ private:
 
     RenderLineBoxList m_lineBoxes;   // All of the line boxes created for this inline flow.  For example, <i>Hello<br>world.</i> will have two <i> line boxes.
 };
+
+bool isEmptyInline(const RenderInline&);
 
 } // namespace WebCore
 

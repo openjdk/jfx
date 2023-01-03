@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2018, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,11 +24,11 @@
  */
 package test.com.sun.marlin;
 
+import static org.junit.Assert.assertEquals;
+
 import java.awt.BasicStroke;
 import java.awt.Shape;
 import java.awt.geom.CubicCurve2D;
-import java.awt.geom.Ellipse2D;
-import java.awt.geom.Line2D;
 import java.awt.geom.Path2D;
 import java.awt.geom.PathIterator;
 import java.awt.geom.QuadCurve2D;
@@ -41,12 +41,17 @@ import java.util.Iterator;
 import java.util.Locale;
 import java.util.Random;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Handler;
 import java.util.logging.LogRecord;
 import java.util.logging.Logger;
+
+import javax.imageio.IIOImage;
+import javax.imageio.ImageIO;
+import javax.imageio.ImageWriteParam;
+import javax.imageio.ImageWriter;
+import javax.imageio.stream.ImageOutputStream;
 
 import javafx.application.Application;
 import javafx.application.Platform;
@@ -72,20 +77,13 @@ import javafx.scene.shape.StrokeLineCap;
 import javafx.scene.shape.StrokeLineJoin;
 import javafx.scene.text.Text;
 import javafx.stage.Stage;
-import javax.imageio.IIOImage;
-import javax.imageio.ImageIO;
-import javax.imageio.ImageWriteParam;
-import javax.imageio.ImageWriter;
-import javax.imageio.stream.ImageOutputStream;
 
-import junit.framework.AssertionFailedError;
 import org.junit.AfterClass;
 import org.junit.Assert;
-import static org.junit.Assert.assertEquals;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import static test.util.Util.TIMEOUT;
+import test.util.Util;
 
 /**
  * @test
@@ -179,7 +177,7 @@ public final class ClipShapeTest {
                 if (msg != null) {
                     // last space to avoid matching other settings:
                     if (msg.startsWith("prism.marlin ")) {
-                        isMarlin.set(msg.contains("DRenderer"));
+                        isMarlin.set(msg.contains("Renderer"));
                     }
                     if (msg.startsWith("prism.marlin.clip.runtime.enable")) {
                         isClipRuntime.set(msg.contains("true"));
@@ -975,22 +973,15 @@ NbPixels [All Test setups][n: 30] sum: 232 avg: 7.733 [1 | 27]
     }
 
     @BeforeClass
-    public static void setupOnce() {
-        // Start the Application
-        new Thread(() -> Application.launch(MyApp.class, (String[]) null)).start();
-
-        try {
-            if (!launchLatch.await(TIMEOUT, TimeUnit.MILLISECONDS)) {
-                throw new AssertionFailedError("Timeout waiting for Application to launch");
-            }
-
-        } catch (InterruptedException ex) {
-            AssertionFailedError err = new AssertionFailedError("Unexpected exception");
-            err.initCause(ex);
-            throw err;
-        }
+    public static void setupOnce() throws Exception {
+        Util.launch(launchLatch, MyApp.class);
 
         assertEquals(0, launchLatch.getCount());
+    }
+
+    @AfterClass
+    public static void teardownOnce() {
+        Util.shutdown();
     }
 
     private void checkMarlin() {
@@ -1000,11 +991,6 @@ NbPixels [All Test setups][n: 30] sum: 232 avg: 7.733 [1 | 27]
         if (!isClipRuntime.get()) {
             throw new RuntimeException("Marlin clipping not enabled at runtime !");
         }
-    }
-
-    @AfterClass
-    public static void teardownOnce() {
-        Platform.exit();
     }
 
     @Test(timeout = 600000)

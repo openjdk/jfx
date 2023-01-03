@@ -27,7 +27,6 @@
 
 #include "LinkIconType.h"
 #include <wtf/HashMap.h>
-#include <wtf/Optional.h>
 #include <wtf/URL.h>
 #include <wtf/text/WTFString.h>
 
@@ -37,18 +36,18 @@ struct LinkIcon {
     URL url;
     LinkIconType type;
     String mimeType;
-    Optional<unsigned> size;
+    std::optional<unsigned> size;
     Vector<std::pair<String, String>> attributes;
 
     template<class Encoder> void encode(Encoder&) const;
-    template<class Decoder> static bool decode(Decoder&, LinkIcon&);
+    template<class Decoder> static WARN_UNUSED_RETURN bool decode(Decoder&, LinkIcon&);
 };
 
 template<class Encoder>
 void LinkIcon::encode(Encoder& encoder) const
 {
     encoder << url << mimeType << size << attributes;
-    encoder.encodeEnum(type);
+    encoder << type;
 }
 
 template<class Decoder>
@@ -66,7 +65,7 @@ bool LinkIcon::decode(Decoder& decoder, LinkIcon& result)
     if (!decoder.decode(result.attributes))
         return false;
 
-    if (!decoder.decodeEnum(result.type))
+    if (!decoder.decode(result.type))
         return false;
 
     return true;

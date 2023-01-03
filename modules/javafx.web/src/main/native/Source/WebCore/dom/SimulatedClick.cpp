@@ -48,7 +48,7 @@ private:
     SimulatedMouseEvent(const AtomString& eventType, RefPtr<WindowProxy>&& view, RefPtr<Event>&& underlyingEvent, Element& target, SimulatedClickSource source)
         : MouseEvent(eventType, CanBubble::Yes, IsCancelable::Yes, IsComposed::Yes,
             underlyingEvent ? underlyingEvent->timeStamp() : MonotonicTime::now(), WTFMove(view), /* detail */ 0,
-            { }, { }, { }, modifiersFromUnderlyingEvent(underlyingEvent), 0, 0, nullptr, 0, 0, nullptr, IsSimulated::Yes,
+            { }, { }, { }, modifiersFromUnderlyingEvent(underlyingEvent), 0, 0, nullptr, 0, 0, IsSimulated::Yes,
             source == SimulatedClickSource::UserAgent ? IsTrusted::Yes : IsTrusted::No)
     {
         setUnderlyingEvent(underlyingEvent.get());
@@ -81,21 +81,22 @@ static void simulateMouseEvent(const AtomString& eventType, Element& element, Ev
     element.dispatchEvent(SimulatedMouseEvent::create(eventType, element.document().windowProxy(), underlyingEvent, element, source));
 }
 
-void simulateClick(Element& element, Event* underlyingEvent, SimulatedClickMouseEventOptions mouseEventOptions, SimulatedClickVisualOptions visualOptions, SimulatedClickSource creationOptions)
+bool simulateClick(Element& element, Event* underlyingEvent, SimulatedClickMouseEventOptions mouseEventOptions, SimulatedClickVisualOptions visualOptions, SimulatedClickSource creationOptions)
 {
     if (element.isDisabledFormControl())
-        return;
+        return false;
 
     static NeverDestroyed<HashSet<Element*>> elementsDispatchingSimulatedClicks;
     if (!elementsDispatchingSimulatedClicks.get().add(&element).isNewEntry)
-        return;
+        return false;
 
     if (mouseEventOptions == SendMouseOverUpDownEvents)
         simulateMouseEvent(eventNames().mouseoverEvent, element, underlyingEvent, creationOptions);
 
     if (mouseEventOptions != SendNoEvents)
         simulateMouseEvent(eventNames().mousedownEvent, element, underlyingEvent, creationOptions);
-    element.setActive(true, visualOptions == ShowPressedLook);
+    if (mouseEventOptions != SendNoEvents || visualOptions == ShowPressedLook)
+        element.setActive(true, true);
     if (mouseEventOptions != SendNoEvents)
         simulateMouseEvent(eventNames().mouseupEvent, element, underlyingEvent, creationOptions);
     element.setActive(false);
@@ -103,6 +104,7 @@ void simulateClick(Element& element, Event* underlyingEvent, SimulatedClickMouse
     simulateMouseEvent(eventNames().clickEvent, element, underlyingEvent, creationOptions);
 
     elementsDispatchingSimulatedClicks.get().remove(&element);
+    return true;
 }
 
 } // namespace WebCore

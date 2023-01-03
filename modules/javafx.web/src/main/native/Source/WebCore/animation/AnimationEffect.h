@@ -37,34 +37,39 @@
 #include "TimingFunction.h"
 #include "WebAnimation.h"
 #include "WebAnimationUtilities.h"
+#include <variant>
 #include <wtf/Forward.h>
 #include <wtf/Ref.h>
 #include <wtf/RefCounted.h>
 #include <wtf/RefPtr.h>
 #include <wtf/Seconds.h>
-#include <wtf/Variant.h>
 #include <wtf/WeakPtr.h>
 
 namespace WebCore {
 
-class AnimationEffect : public RefCounted<AnimationEffect> {
+class AnimationEffect : public RefCounted<AnimationEffect>, public CanMakeWeakPtr<AnimationEffect> {
 public:
     virtual ~AnimationEffect();
 
+    virtual bool isCustomEffect() const { return false; }
     virtual bool isKeyframeEffect() const { return false; }
 
+    EffectTiming getBindingsTiming() const;
     EffectTiming getTiming() const;
-    BasicEffectTiming getBasicTiming() const;
-    ComputedEffectTiming getComputedTiming() const;
-    ExceptionOr<void> updateTiming(Optional<OptionalEffectTiming>);
+    BasicEffectTiming getBasicTiming(std::optional<Seconds> = std::nullopt) const;
+    ComputedEffectTiming getBindingsComputedTiming() const;
+    ComputedEffectTiming getComputedTiming(std::optional<Seconds> = std::nullopt) const;
+    ExceptionOr<void> bindingsUpdateTiming(std::optional<OptionalEffectTiming>);
+    ExceptionOr<void> updateTiming(std::optional<OptionalEffectTiming>);
 
-    virtual void apply(RenderStyle&) = 0;
-    virtual void invalidate() = 0;
-    virtual void animationDidSeek() = 0;
-    virtual void animationSuspensionStateDidChange(bool) = 0;
+    virtual void animationDidTick() { };
+    virtual void animationDidChangeTimingProperties() { };
+    virtual void animationWasCanceled() { };
+    virtual void animationSuspensionStateDidChange(bool) { };
+    virtual void animationTimelineDidChange(AnimationTimeline*) { };
 
     WebAnimation* animation() const { return m_animation.get(); }
-    void setAnimation(WebAnimation* animation) { m_animation = makeWeakPtr(animation); }
+    virtual void setAnimation(WebAnimation*);
 
     Seconds delay() const { return m_delay; }
     void setDelay(const Seconds&);
@@ -90,8 +95,18 @@ public:
     TimingFunction* timingFunction() const { return m_timingFunction.get(); }
     void setTimingFunction(const RefPtr<TimingFunction>&);
 
+    Seconds activeDuration() const { return m_activeDuration; }
+    Seconds endTime() const { return m_endTime; }
+
+    void updateStaticTimingProperties();
+
+    virtual Seconds timeToNextTick(BasicEffectTiming) const;
+
 protected:
     explicit AnimationEffect();
+
+    virtual bool ticksContinouslyWhileActive() const { return false; }
+    virtual std::optional<double> progressUntilNextStep(double) const;
 
 private:
     enum class ComputedDirection : uint8_t { Forwards, Reverse };
@@ -108,6 +123,8 @@ private:
     Seconds m_delay { 0_s };
     Seconds m_endDelay { 0_s };
     Seconds m_iterationDuration { 0_s };
+    Seconds m_activeDuration { 0_s };
+    Seconds m_endTime { 0_s };
 };
 
 } // namespace WebCore

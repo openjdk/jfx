@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -31,6 +31,7 @@ import com.sun.javafx.geom.PickRay;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.scene.input.PickResultChooser;
 import com.sun.javafx.scene.traversal.Direction;
+import com.sun.javafx.scene.traversal.TraversalMethod;
 import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.util.Utils;
 import java.util.List;
@@ -46,6 +47,7 @@ import javafx.scene.Node;
 import javafx.scene.SubScene;
 import javafx.scene.shape.Shape;
 import javafx.scene.shape.Shape3D;
+import javafx.scene.text.Font;
 
 /**
  * Used to access internal methods of Node.
@@ -232,8 +234,8 @@ public abstract class NodeHelper {
         return nodeAccessor.showMnemonicsProperty(node);
     }
 
-    public static boolean traverse(Node node, Direction direction) {
-        return nodeAccessor.traverse(node, direction);
+    public static boolean traverse(Node node, Direction direction, TraversalMethod method) {
+        return nodeAccessor.traverse(node, direction, method);
     }
 
     public static double getPivotX(Node node) {
@@ -282,6 +284,10 @@ public abstract class NodeHelper {
         nodeAccessor.reapplyCSS(node);
     }
 
+    public static void recalculateRelativeSizeProperties(Node node, Font fontForRelativeSizes) {
+        nodeAccessor.recalculateRelativeSizeProperties(node, fontForRelativeSizes);
+    }
+
     public static boolean isTreeVisible(Node node) {
         return nodeAccessor.isTreeVisible(node);
     }
@@ -294,16 +300,16 @@ public abstract class NodeHelper {
         return nodeAccessor.isTreeShowing(node);
     }
 
-    public static BooleanExpression treeShowingProperty(Node node) {
-        return nodeAccessor.treeShowingProperty(node);
-    }
-
     public static List<Style> getMatchingStyles(CssMetaData cssMetaData, Styleable styleable) {
         return nodeAccessor.getMatchingStyles(cssMetaData, styleable);
     }
 
     public static Map<StyleableProperty<?>,List<Style>> findStyles(Node node, Map<StyleableProperty<?>,List<Style>> styleMap) {
         return nodeAccessor.findStyles(node, styleMap);
+    }
+
+    public static void requestFocusVisible(Node node) {
+        nodeAccessor.requestFocusVisible(node);
     }
 
     public static void setNodeAccessor(final NodeAccessor newAccessor) {
@@ -345,7 +351,7 @@ public abstract class NodeHelper {
         void setShowMnemonics(Node node, boolean value);
         boolean isShowMnemonics(Node node);
         BooleanProperty showMnemonicsProperty(Node node);
-        boolean traverse(Node node, Direction direction);
+        boolean traverse(Node node, Direction direction, TraversalMethod method);
         double getPivotX(Node node);
         double getPivotY(Node node);
         double getPivotZ(Node node);
@@ -358,13 +364,14 @@ public abstract class NodeHelper {
         void setLabeledBy(Node node, Node labeledBy);
         Accessible getAccessible(Node node);
         void reapplyCSS(Node node);
+        void recalculateRelativeSizeProperties(Node node, Font fontForRelativeSizes);
         boolean isTreeVisible(Node node);
         BooleanExpression treeVisibleProperty(Node node);
         boolean isTreeShowing(Node node);
-        BooleanExpression treeShowingProperty(Node node);
         List<Style> getMatchingStyles(CssMetaData cssMetaData, Styleable styleable);
         Map<StyleableProperty<?>,List<Style>> findStyles(Node node,
                 Map<StyleableProperty<?>,List<Style>> styleMap);
+        void requestFocusVisible(Node node);
     }
 
 }

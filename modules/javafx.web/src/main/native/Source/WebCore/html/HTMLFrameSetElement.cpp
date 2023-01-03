@@ -36,6 +36,7 @@
 #include "HTMLCollection.h"
 #include "HTMLFrameElement.h"
 #include "HTMLNames.h"
+#include "HTMLParserIdioms.h"
 #include "Length.h"
 #include "MouseEvent.h"
 #include "RenderFrameSet.h"
@@ -68,19 +69,19 @@ Ref<HTMLFrameSetElement> HTMLFrameSetElement::create(const QualifiedName& tagNam
     return adoptRef(*new HTMLFrameSetElement(tagName, document));
 }
 
-bool HTMLFrameSetElement::isPresentationAttribute(const QualifiedName& name) const
+bool HTMLFrameSetElement::hasPresentationalHintsForAttribute(const QualifiedName& name) const
 {
     if (name == bordercolorAttr)
         return true;
-    return HTMLElement::isPresentationAttribute(name);
+    return HTMLElement::hasPresentationalHintsForAttribute(name);
 }
 
-void HTMLFrameSetElement::collectStyleForPresentationAttribute(const QualifiedName& name, const AtomString& value, MutableStyleProperties& style)
+void HTMLFrameSetElement::collectPresentationalHintsForAttribute(const QualifiedName& name, const AtomString& value, MutableStyleProperties& style)
 {
     if (name == bordercolorAttr)
         addHTMLColorToStyle(style, CSSPropertyBorderColor, value);
     else
-        HTMLElement::collectStyleForPresentationAttribute(name, value, style);
+        HTMLElement::collectPresentationalHintsForAttribute(name, value, style);
 }
 
 void HTMLFrameSetElement::parseAttribute(const QualifiedName& name, const AtomString& value)
@@ -131,7 +132,7 @@ void HTMLFrameSetElement::parseAttribute(const QualifiedName& name, const AtomSt
 
     if (name == borderAttr) {
         if (!value.isNull()) {
-            m_border = value.toInt();
+            m_border = parseHTMLInteger(value).value_or(0);
             m_borderSet = true;
         } else
             m_borderSet = false;
@@ -214,26 +215,17 @@ void HTMLFrameSetElement::willRecalcStyle(Style::Change)
 Node::InsertedIntoAncestorResult HTMLFrameSetElement::insertedIntoAncestor(InsertionType insertionType, ContainerNode& parentOfInsertedTree)
 {
     HTMLElement::insertedIntoAncestor(insertionType, parentOfInsertedTree);
-    if (insertionType.connectedToDocument) {
-        if (RefPtr<Frame> frame = document().frame())
-            frame->loader().client().dispatchDidBecomeFrameset(document().isFrameSet());
-    }
-
     return InsertedIntoAncestorResult::Done;
 }
 
 void HTMLFrameSetElement::removedFromAncestor(RemovalType removalType, ContainerNode& oldParentOfRemovedTree)
 {
     HTMLElement::removedFromAncestor(removalType, oldParentOfRemovedTree);
-    if (removalType.disconnectedFromDocument) {
-        if (RefPtr<Frame> frame = document().frame())
-            frame->loader().client().dispatchDidBecomeFrameset(document().isFrameSet());
-    }
 }
 
 WindowProxy* HTMLFrameSetElement::namedItem(const AtomString& name)
 {
-    auto frameElement = makeRefPtr(children()->namedItem(name));
+    RefPtr frameElement = children()->namedItem(name);
     if (!is<HTMLFrameElement>(frameElement))
         return nullptr;
 

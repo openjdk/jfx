@@ -25,10 +25,16 @@
 
 #pragma once
 
+#include <wtf/Forward.h>
 #include <wtf/Markable.h>
 #include <wtf/Seconds.h>
 
 namespace WebCore {
+
+enum class PseudoId : uint16_t;
+
+class Element;
+class WebAnimation;
 
 inline double secondsToWebAnimationsAPITime(const Seconds time)
 {
@@ -46,19 +52,8 @@ inline double secondsToWebAnimationsAPITime(const Seconds time)
 
 const auto timeEpsilon = Seconds::fromMilliseconds(0.001);
 
-struct WebAnimationsMarkableDoubleTraits {
-    static bool isEmptyValue(double value)
-    {
-        return std::isnan(value);
-    }
-
-    static constexpr double emptyValue()
-    {
-        return std::numeric_limits<double>::quiet_NaN();
-    }
-};
-
-using MarkableDouble = Markable<double, WebAnimationsMarkableDoubleTraits>;
+bool compareAnimationsByCompositeOrder(const WebAnimation&, const WebAnimation&);
+String pseudoIdAsString(PseudoId);
 
 } // namespace WebCore
 

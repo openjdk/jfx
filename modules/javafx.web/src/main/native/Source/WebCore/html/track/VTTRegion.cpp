@@ -32,7 +32,7 @@
 #include "config.h"
 #include "VTTRegion.h"
 
-#if ENABLE(VIDEO_TRACK)
+#if ENABLE(VIDEO)
 
 #include "DOMRect.h"
 #include "DOMTokenList.h"
@@ -41,6 +41,7 @@
 #include "HTMLParserIdioms.h"
 #include "Logging.h"
 #include "RenderElement.h"
+#include "ShadowPseudoIds.h"
 #include "VTTCue.h"
 #include "VTTScanner.h"
 #include "WebVTTParser.h"
@@ -126,7 +127,7 @@ ExceptionOr<void> VTTRegion::setViewportAnchorY(double value)
 
 static const AtomString& upKeyword()
 {
-    static NeverDestroyed<const AtomString> upKeyword("up", AtomString::ConstructFromLiteral);
+    static MainThreadNeverDestroyed<const AtomString> upKeyword("up", AtomString::ConstructFromLiteral);
     return upKeyword;
 }
 
@@ -262,26 +263,12 @@ void VTTRegion::parseSettingValue(RegionSetting setting, VTTScanner& input)
 
 const AtomString& VTTRegion::textTrackCueContainerScrollingClass()
 {
-    static NeverDestroyed<const AtomString> trackRegionCueContainerScrollingClass("scrolling", AtomString::ConstructFromLiteral);
+    static MainThreadNeverDestroyed<const AtomString> trackRegionCueContainerScrollingClass("scrolling", AtomString::ConstructFromLiteral);
 
     return trackRegionCueContainerScrollingClass;
 }
 
-const AtomString& VTTRegion::textTrackCueContainerShadowPseudoId()
-{
-    static NeverDestroyed<const AtomString> trackRegionCueContainerPseudoId("-webkit-media-text-track-region-container", AtomString::ConstructFromLiteral);
-
-    return trackRegionCueContainerPseudoId;
-}
-
-const AtomString& VTTRegion::textTrackRegionShadowPseudoId()
-{
-    static NeverDestroyed<const AtomString> trackRegionShadowPseudoId("-webkit-media-text-track-region", AtomString::ConstructFromLiteral);
-
-    return trackRegionShadowPseudoId;
-}
-
-void VTTRegion::appendTextTrackCueBox(Ref<VTTCueBox>&& displayBox)
+void VTTRegion::appendTextTrackCueBox(Ref<TextTrackCueBox>&& displayBox)
 {
     ASSERT(m_cueContainer);
 
@@ -304,13 +291,13 @@ void VTTRegion::displayLastTextTrackCueBox()
     if (isScrollingRegion())
         m_cueContainer->classList().add(textTrackCueContainerScrollingClass());
 
-    float regionBottom = m_regionDisplayTree->getBoundingClientRect()->bottom();
+    float regionBottom = m_regionDisplayTree->boundingClientRect().maxY();
 
     // Find first cue that is not entirely displayed and scroll it upwards.
     for (auto& child : childrenOfType<Element>(*m_cueContainer)) {
-        auto rect = child.getBoundingClientRect();
-        float childTop = rect->top();
-        float childBottom = rect->bottom();
+        auto rect = child.boundingClientRect();
+        float childTop = rect.y();
+        float childBottom = rect.maxY();
 
         if (regionBottom >= childBottom)
             continue;
@@ -318,7 +305,7 @@ void VTTRegion::displayLastTextTrackCueBox()
         float height = childBottom - childTop;
 
         m_currentTop -= std::min(height, childBottom - regionBottom);
-        m_cueContainer->setInlineStyleProperty(CSSPropertyTop, m_currentTop, CSSPrimitiveValue::CSS_PX);
+        m_cueContainer->setInlineStyleProperty(CSSPropertyTop, m_currentTop, CSSUnitType::CSS_PX);
 
         startTimer();
         break;
@@ -330,20 +317,24 @@ void VTTRegion::willRemoveTextTrackCueBox(VTTCueBox* box)
     LOG(Media, "VTTRegion::willRemoveTextTrackCueBox");
     ASSERT(m_cueContainer->contains(box));
 
-    double boxHeight = box->getBoundingClientRect()->bottom() - box->getBoundingClientRect()->top();
+    double boxHeight = box->boundingClientRect().height();
 
     m_cueContainer->classList().remove(textTrackCueContainerScrollingClass());
 
     m_currentTop += boxHeight;
-    m_cueContainer->setInlineStyleProperty(CSSPropertyTop, m_currentTop, CSSPrimitiveValue::CSS_PX);
+    m_cueContainer->setInlineStyleProperty(CSSPropertyTop, m_currentTop, CSSUnitType::CSS_PX);
 }
 
 HTMLDivElement& VTTRegion::getDisplayTree()
 {
     if (!m_regionDisplayTree) {
-        m_regionDisplayTree = HTMLDivElement::create(downcast<Document>(*m_scriptExecutionContext));
-        prepareRegionDisplayTree();
+        m_regionDisplayTree = HTMLDivElement::create(downcast<Document>(*scriptExecutionContext()));
+        m_regionDisplayTree->setPseudo(ShadowPseudoIds::webkitMediaTextTrackRegion());
+        m_recalculateStyles = true;
     }
+
+    if (m_recalculateStyles)
+        prepareRegionDisplayTree();
 
     return *m_regionDisplayTree;
 }
@@ -359,38 +350,40 @@ void VTTRegion::prepareRegionDisplayTree()
 
     // Let regionWidth be the text track region width.
     // Let width be 'regionWidth vw' ('vw' is a CSS unit)
-    m_regionDisplayTree->setInlineStyleProperty(CSSPropertyWidth, m_width, CSSPrimitiveValue::CSS_PERCENTAGE);
+    m_regionDisplayTree->setInlineStyleProperty(CSSPropertyWidth, m_width, CSSUnitType::CSS_PERCENTAGE);
 
     // Let lineHeight be '0.0533vh' ('vh' is a CSS unit) and regionHeight be
     // the text track region height. Let height be 'lineHeight' multiplied
     // by regionHeight.
     double height = lineHeight * m_lines;
-    m_regionDisplayTree->setInlineStyleProperty(CSSPropertyHeight, height, CSSPrimitiveValue::CSS_VH);
+    m_regionDisplayTree->setInlineStyleProperty(CSSPropertyHeight, height, CSSUnitType::CSS_VH);
 
     // Let viewportAnchorX be the x dimension of the text track region viewport
     // anchor and regionAnchorX be the x dimension of the text track region
     // anchor. Let leftOffset be regionAnchorX multiplied by width divided by
     // 100.0. Let left be leftOffset subtracted from 'viewportAnchorX vw'.
     double leftOffset = m_regionAnchor.x() * m_width / 100;
-    m_regionDisplayTree->setInlineStyleProperty(CSSPropertyLeft, m_viewportAnchor.x() - leftOffset, CSSPrimitiveValue::CSS_PERCENTAGE);
+    m_regionDisplayTree->setInlineStyleProperty(CSSPropertyLeft, m_viewportAnchor.x() - leftOffset, CSSUnitType::CSS_PERCENTAGE);
 
     // Let viewportAnchorY be the y dimension of the text track region viewport
     // anchor and regionAnchorY be the y dimension of the text track region
     // anchor. Let topOffset be regionAnchorY multiplied by height divided by
     // 100.0. Let top be topOffset subtracted from 'viewportAnchorY vh'.
     double topOffset = m_regionAnchor.y() * height / 100;
-    m_regionDisplayTree->setInlineStyleProperty(CSSPropertyTop, m_viewportAnchor.y() - topOffset, CSSPrimitiveValue::CSS_PERCENTAGE);
+    m_regionDisplayTree->setInlineStyleProperty(CSSPropertyTop, m_viewportAnchor.y() - topOffset, CSSUnitType::CSS_PERCENTAGE);
 
     // The cue container is used to wrap the cues and it is the object which is
     // gradually scrolled out as multiple cues are appended to the region.
-    m_cueContainer = HTMLDivElement::create(downcast<Document>(*m_scriptExecutionContext));
-    m_cueContainer->setInlineStyleProperty(CSSPropertyTop, 0.0f, CSSPrimitiveValue::CSS_PX);
-
-    m_cueContainer->setPseudo(textTrackCueContainerShadowPseudoId());
-    m_regionDisplayTree->appendChild(*m_cueContainer);
+    if (!m_cueContainer) {
+        m_cueContainer = HTMLDivElement::create(downcast<Document>(*scriptExecutionContext()));
+        m_cueContainer->setPseudo(ShadowPseudoIds::webkitMediaTextTrackRegionContainer());
+        m_regionDisplayTree->appendChild(*m_cueContainer);
+    }
+    m_cueContainer->setInlineStyleProperty(CSSPropertyTop, 0.0f, CSSUnitType::CSS_PX);
 
     // 7.5 Every WebVTT region object is initialised with the following CSS
-    m_regionDisplayTree->setPseudo(textTrackRegionShadowPseudoId());
+
+    m_recalculateStyles = false;
 }
 
 void VTTRegion::startTimer()

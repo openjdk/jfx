@@ -30,69 +30,86 @@
 #include "IsoSharedHeapInlines.h"
 #include "IsoSharedPageInlines.h"
 
+#if !BUSE(LIBPAS)
+
 namespace bmalloc {
 
 template<typename Config>
 IsoHeapImpl<Config>::IsoHeapImpl()
-    : lock(PerProcess<IsoTLSDeallocatorEntry<Config>>::get()->lock)
+    : IsoHeapImplBase((*PerProcess<IsoTLSEntryHolder<IsoTLSDeallocatorEntry<Config>>>::get())->lock)
     , m_inlineDirectory(*this)
     , m_allocator(*this)
 {
-    addToAllIsoHeaps();
+#if BUSE(LIBPAS) && BCOMPILER(CLANG)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wmissing-noreturn"
+    RELEASE_BASSERT(!"Should not be using IsoHeapImpl if BUSE(LIBPAS)");
+#pragma clang diagnostic pop
+#endif
 }
 
 template<typename Config>
-EligibilityResult<Config> IsoHeapImpl<Config>::takeFirstEligible()
+EligibilityResult<Config> IsoHeapImpl<Config>::takeFirstEligible(const LockHolder& locker)
 {
     if (m_isInlineDirectoryEligibleOrDecommitted) {
-        EligibilityResult<Config> result = m_inlineDirectory.takeFirstEligible();
+        EligibilityResult<Config> result = m_inlineDirectory.takeFirstEligible(locker);
         if (result.kind == EligibilityKind::Full)
             m_isInlineDirectoryEligibleOrDecommitted = false;
         else
             return result;
     }
 
-    if (!m_firstEligibleOrDecommitedDirectory) {
-        // If nothing is eligible, it can only be because we have no directories. It wouldn't be the end
-        // of the world if we broke this invariant. It would only mean that didBecomeEligibleOrDecommited() would need
-        // a null check.
-        RELEASE_BASSERT(!m_headDirectory);
-        RELEASE_BASSERT(!m_tailDirectory);
-    }
-
-    for (; m_firstEligibleOrDecommitedDirectory; m_firstEligibleOrDecommitedDirectory = m_firstEligibleOrDecommitedDirectory->next) {
-        EligibilityResult<Config> result = m_firstEligibleOrDecommitedDirectory->payload.takeFirstEligible();
-        if (result.kind != EligibilityKind::Full) {
-            m_directoryHighWatermark = std::max(m_directoryHighWatermark, m_firstEligibleOrDecommitedDirectory->index());
-            return result;
+    {
+        auto* cursor = m_firstEligibleOrDecommitedDirectory.get();
+        if (!cursor) {
+            // If nothing is eligible, it can only be because we have no directories. It wouldn't be the end
+            // of the world if we broke this invariant. It would only mean that didBecomeEligibleOrDecommited() would need
+            // a null check.
+            RELEASE_BASSERT(!m_headDirectory.get());
+            RELEASE_BASSERT(!m_tailDirectory.get());
+        } else {
+            auto* originalCursor = cursor;
+            BUNUSED(originalCursor);
+            for (; cursor; cursor = cursor->next) {
+                EligibilityResult<Config> result = cursor->payload.takeFirstEligible(locker);
+                // While iterating, m_firstEligibleOrDecommitedDirectory is never changed. We are holding a lock,
+                // and IsoDirectory::takeFirstEligible must not populate a new eligibile / decommitted pages.
+                BASSERT(m_firstEligibleOrDecommitedDirectory.get() == originalCursor);
+                if (result.kind != EligibilityKind::Full) {
+                    m_directoryHighWatermark = std::max(m_directoryHighWatermark, cursor->index());
+                    m_firstEligibleOrDecommitedDirectory = cursor;
+                    return result;
+                }
+            }
+            m_firstEligibleOrDecommitedDirectory = nullptr;
         }
     }
 
     auto* newDirectory = new IsoDirectoryPage<Config>(*this, m_nextDirectoryPageIndex++);
-    if (m_headDirectory) {
+    if (m_headDirectory.get()) {
         m_tailDirectory->next = newDirectory;
         m_tailDirectory = newDirectory;
     } else {
-        RELEASE_BASSERT(!m_tailDirectory);
+        RELEASE_BASSERT(!m_tailDirectory.get());
         m_headDirectory = newDirectory;
         m_tailDirectory = newDirectory;
     }
     m_directoryHighWatermark = newDirectory->index();
     m_firstEligibleOrDecommitedDirectory = newDirectory;
-    EligibilityResult<Config> result = newDirectory->payload.takeFirstEligible();
+    EligibilityResult<Config> result = newDirectory->payload.takeFirstEligible(locker);
     RELEASE_BASSERT(result.kind != EligibilityKind::Full);
     return result;
 }
 
 template<typename Config>
-void IsoHeapImpl<Config>::didBecomeEligibleOrDecommited(IsoDirectory<Config, numPagesInInlineDirectory>* directory)
+void IsoHeapImpl<Config>::didBecomeEligibleOrDecommited(const LockHolder&, IsoDirectory<Config, numPagesInInlineDirectory>* directory)
 {
     RELEASE_BASSERT(directory == &m_inlineDirectory);
     m_isInlineDirectoryEligibleOrDecommitted = true;
 }
 
 template<typename Config>
-void IsoHeapImpl<Config>::didBecomeEligibleOrDecommited(IsoDirectory<Config, IsoDirectoryPage<Config>::numPages>* directory)
+void IsoHeapImpl<Config>::didBecomeEligibleOrDecommited(const LockHolder&, IsoDirectory<Config, IsoDirectoryPage<Config>::numPages>* directory)
 {
     RELEASE_BASSERT(m_firstEligibleOrDecommitedDirectory);
     auto* directoryPage = IsoDirectoryPage<Config>::pageFor(directory);
@@ -103,16 +120,16 @@ void IsoHeapImpl<Config>::didBecomeEligibleOrDecommited(IsoDirectory<Config, Iso
 template<typename Config>
 void IsoHeapImpl<Config>::scavenge(Vector<DeferredDecommit>& decommits)
 {
-    std::lock_guard<Mutex> locker(this->lock);
+    LockHolder locker(this->lock);
     forEachDirectory(
+        locker,
         [&] (auto& directory) {
-            directory.scavenge(decommits);
+            directory.scavenge(locker, decommits);
         });
     m_directoryHighWatermark = 0;
 }
 
-template<typename Config>
-size_t IsoHeapImpl<Config>::freeableMemory()
+inline size_t IsoHeapImplBase::freeableMemory()
 {
     return m_freeableMemory;
 }
@@ -120,20 +137,22 @@ size_t IsoHeapImpl<Config>::freeableMemory()
 template<typename Config>
 unsigned IsoHeapImpl<Config>::allocatorOffset()
 {
-    return m_allocator.offset();
+    return m_allocator->offset();
 }
 
 template<typename Config>
 unsigned IsoHeapImpl<Config>::deallocatorOffset()
 {
-    return PerProcess<IsoTLSDeallocatorEntry<Config>>::get()->offset();
+    return (*PerProcess<IsoTLSEntryHolder<IsoTLSDeallocatorEntry<Config>>>::get())->offset();
 }
 
 template<typename Config>
 unsigned IsoHeapImpl<Config>::numLiveObjects()
 {
+    LockHolder locker(this->lock);
     unsigned result = 0;
     forEachLiveObject(
+        locker,
         [&] (void*) {
             result++;
         });
@@ -143,8 +162,10 @@ unsigned IsoHeapImpl<Config>::numLiveObjects()
 template<typename Config>
 unsigned IsoHeapImpl<Config>::numCommittedPages()
 {
+    LockHolder locker(this->lock);
     unsigned result = 0;
     forEachCommittedPage(
+        locker,
         [&] (IsoPage<Config>&) {
             result++;
         });
@@ -153,40 +174,41 @@ unsigned IsoHeapImpl<Config>::numCommittedPages()
 
 template<typename Config>
 template<typename Func>
-void IsoHeapImpl<Config>::forEachDirectory(const Func& func)
+void IsoHeapImpl<Config>::forEachDirectory(const LockHolder&, const Func& func)
 {
     func(m_inlineDirectory);
-    for (IsoDirectoryPage<Config>* page = m_headDirectory; page; page = page->next)
+    for (IsoDirectoryPage<Config>* page = m_headDirectory.get(); page; page = page->next)
         func(page->payload);
 }
 
 template<typename Config>
 template<typename Func>
-void IsoHeapImpl<Config>::forEachCommittedPage(const Func& func)
+void IsoHeapImpl<Config>::forEachCommittedPage(const LockHolder& locker, const Func& func)
 {
     forEachDirectory(
+        locker,
         [&] (auto& directory) {
-            directory.forEachCommittedPage(func);
+            directory.forEachCommittedPage(locker, func);
         });
 }
 
 template<typename Config>
 template<typename Func>
-void IsoHeapImpl<Config>::forEachLiveObject(const Func& func)
+void IsoHeapImpl<Config>::forEachLiveObject(const LockHolder& locker, const Func& func)
 {
     forEachCommittedPage(
+        locker,
         [&] (IsoPage<Config>& page) {
-            page.forEachLiveObject(func);
+            page.forEachLiveObject(locker, func);
         });
     for (unsigned index = 0; index < maxAllocationFromShared; ++index) {
-        void* pointer = m_sharedCells[index];
+        void* pointer = m_sharedCells[index].get();
         if (pointer && !(m_availableShared & (1U << index)))
             func(pointer);
     }
 }
 
-template<typename Config>
-size_t IsoHeapImpl<Config>::footprint()
+inline size_t IsoHeapImplBase::footprint()
 {
 #if ENABLE_PHYSICAL_PAGE_MAP
     RELEASE_BASSERT(m_footprint == m_physicalPageMap.footprint());
@@ -194,8 +216,7 @@ size_t IsoHeapImpl<Config>::footprint()
     return m_footprint;
 }
 
-template<typename Config>
-void IsoHeapImpl<Config>::didCommit(void* ptr, size_t bytes)
+inline void IsoHeapImplBase::didCommit(void* ptr, size_t bytes)
 {
     BUNUSED_PARAM(ptr);
     m_footprint += bytes;
@@ -204,8 +225,7 @@ void IsoHeapImpl<Config>::didCommit(void* ptr, size_t bytes)
 #endif
 }
 
-template<typename Config>
-void IsoHeapImpl<Config>::didDecommit(void* ptr, size_t bytes)
+inline void IsoHeapImplBase::didDecommit(void* ptr, size_t bytes)
 {
     BUNUSED_PARAM(ptr);
     m_footprint -= bytes;
@@ -214,15 +234,13 @@ void IsoHeapImpl<Config>::didDecommit(void* ptr, size_t bytes)
 #endif
 }
 
-template<typename Config>
-void IsoHeapImpl<Config>::isNowFreeable(void* ptr, size_t bytes)
+inline void IsoHeapImplBase::isNowFreeable(void* ptr, size_t bytes)
 {
     BUNUSED_PARAM(ptr);
     m_freeableMemory += bytes;
 }
 
-template<typename Config>
-void IsoHeapImpl<Config>::isNoLongerFreeable(void* ptr, size_t bytes)
+inline void IsoHeapImplBase::isNoLongerFreeable(void* ptr, size_t bytes)
 {
     BUNUSED_PARAM(ptr);
     m_freeableMemory -= bytes;
@@ -280,14 +298,14 @@ AllocationMode IsoHeapImpl<Config>::updateAllocationMode()
 }
 
 template<typename Config>
-void* IsoHeapImpl<Config>::allocateFromShared(const std::lock_guard<Mutex>&, bool abortOnFailure)
+void* IsoHeapImpl<Config>::allocateFromShared(const LockHolder&, bool abortOnFailure)
 {
     static constexpr bool verbose = false;
 
     unsigned indexPlusOne = __builtin_ffs(m_availableShared);
     BASSERT(indexPlusOne);
     unsigned index = indexPlusOne - 1;
-    void* result = m_sharedCells[index];
+    void* result = m_sharedCells[index].get();
     if (result) {
         if (verbose)
             fprintf(stderr, "%p: allocated %p from shared again of size %u\n", this, result, Config::objectSize);
@@ -300,7 +318,7 @@ void* IsoHeapImpl<Config>::allocateFromShared(const std::lock_guard<Mutex>&, boo
             fprintf(stderr, "%p: allocated %p from shared of size %u\n", this, result, Config::objectSize);
         BASSERT(index < IsoHeapImplBase::maxAllocationFromShared);
         *indexSlotFor<Config>(result) = index;
-        m_sharedCells[index] = result;
+        m_sharedCells[index] = bitwise_cast<uint8_t*>(result);
     }
     BASSERT(result);
     m_availableShared &= ~(1U << index);
@@ -310,3 +328,4 @@ void* IsoHeapImpl<Config>::allocateFromShared(const std::lock_guard<Mutex>&, boo
 
 } // namespace bmalloc
 
+#endif

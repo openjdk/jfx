@@ -158,30 +158,30 @@ public:
 
     Operands<AbstractValue>& variablesForDebugging();
 
+    unsigned size() const { return m_variables.size(); }
     unsigned numberOfArguments() const { return m_variables.numberOfArguments(); }
     unsigned numberOfLocals() const { return m_variables.numberOfLocals(); }
+    unsigned numberOfTmps() const { return m_variables.numberOfTmps(); }
 
-    AbstractValue& variableAt(size_t index)
+    AbstractValue& atIndex(size_t index)
     {
         activateVariableIfNecessary(index);
         return fastForward(m_variables[index]);
     }
 
-    AbstractValue& operand(int operand)
+    AbstractValue& operand(Operand operand)
     {
-        return variableAt(m_variables.operandIndex(operand));
+        return atIndex(m_variables.operandIndex(operand));
     }
-
-    AbstractValue& operand(VirtualRegister operand) { return this->operand(operand.offset()); }
 
     AbstractValue& local(size_t index)
     {
-        return variableAt(m_variables.localIndex(index));
+        return atIndex(m_variables.localIndex(index));
     }
 
     AbstractValue& argument(size_t index)
     {
-        return variableAt(m_variables.argumentIndex(index));
+        return atIndex(m_variables.argumentIndex(index));
     }
 
     // Call this before beginning CFA to initialize the abstract values of
@@ -257,7 +257,7 @@ public:
     // block. But, the last time we did it, it was a 1% SunSpider regression:
     // https://bugs.webkit.org/show_bug.cgi?id=133947
     // So, we should probably keep this method.
-    void setFoundConstants(bool foundConstants) { m_foundConstants = foundConstants; }
+    void setShouldTryConstantFolding(bool tryConstantFolding) { m_shouldTryConstantFolding = tryConstantFolding; }
 
     void setProofStatus(Edge& edge, ProofStatus status)
     {
@@ -283,7 +283,7 @@ private:
     FastBitVector m_activeVariables;
     BasicBlock* m_block;
 
-    bool m_foundConstants;
+    bool m_shouldTryConstantFolding;
 
     bool m_isValid;
     AbstractInterpreterClobberState m_clobberState;

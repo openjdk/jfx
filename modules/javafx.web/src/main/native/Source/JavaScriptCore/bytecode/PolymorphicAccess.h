@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2014-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,6 +32,7 @@
 #include "JSFunctionInlines.h"
 #include "MacroAssembler.h"
 #include "ScratchRegisterAllocator.h"
+#include <wtf/FixedVector.h>
 #include <wtf/Vector.h>
 
 namespace JSC {
@@ -39,11 +40,13 @@ namespace DOMJIT {
 class GetterSetter;
 }
 
+class CCallHelpers;
 class CodeBlock;
 class PolymorphicAccess;
 class StructureStubInfo;
 class WatchpointsOnStructureStubInfo;
-class ScratchRegisterAllocator;
+
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(PolymorphicAccess);
 
 class AccessGenerationResult {
 public:
@@ -129,7 +132,7 @@ private:
 
 class PolymorphicAccess {
     WTF_MAKE_NONCOPYABLE(PolymorphicAccess);
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_STRUCT_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(PolymorphicAccess);
 public:
     PolymorphicAccess();
     ~PolymorphicAccess();
@@ -137,24 +140,26 @@ public:
     // When this fails (returns GaveUp), this will leave the old stub intact but you should not try
     // to call this method again for that PolymorphicAccess instance.
     AccessGenerationResult addCases(
-        const GCSafeConcurrentJSLocker&, VM&, CodeBlock*, StructureStubInfo&, const Identifier&, Vector<std::unique_ptr<AccessCase>, 2>);
+        const GCSafeConcurrentJSLocker&, VM&, CodeBlock*, StructureStubInfo&, Vector<RefPtr<AccessCase>, 2>);
 
     AccessGenerationResult addCase(
-        const GCSafeConcurrentJSLocker&, VM&, CodeBlock*, StructureStubInfo&, const Identifier&, std::unique_ptr<AccessCase>);
+        const GCSafeConcurrentJSLocker&, VM&, CodeBlock*, StructureStubInfo&, Ref<AccessCase>);
 
-    AccessGenerationResult regenerate(const GCSafeConcurrentJSLocker&, VM&, CodeBlock*, StructureStubInfo&, const Identifier&);
+    AccessGenerationResult regenerate(const GCSafeConcurrentJSLocker&, VM&, JSGlobalObject*, CodeBlock*, ECMAMode, StructureStubInfo&);
 
     bool isEmpty() const { return m_list.isEmpty(); }
     unsigned size() const { return m_list.size(); }
     const AccessCase& at(unsigned i) const { return *m_list[i]; }
     const AccessCase& operator[](unsigned i) const { return *m_list[i]; }
 
+    DECLARE_VISIT_AGGREGATE;
+
     // If this returns false then we are requesting a reset of the owning StructureStubInfo.
     bool visitWeak(VM&) const;
 
     // This returns true if it has marked everything it will ever marked. This can be used as an
     // optimization to then avoid calling this method again during the fixpoint.
-    bool propagateTransitions(SlotVisitor&) const;
+    template<typename Visitor> void propagateTransitions(Visitor&) const;
 
     void aboutToDie();
 
@@ -173,26 +178,29 @@ private:
     friend class CodeBlock;
     friend struct AccessGenerationState;
 
-    typedef Vector<std::unique_ptr<AccessCase>, 2> ListType;
+    typedef Vector<RefPtr<AccessCase>, 2> ListType;
 
     void commit(
         const GCSafeConcurrentJSLocker&, VM&, std::unique_ptr<WatchpointsOnStructureStubInfo>&, CodeBlock*, StructureStubInfo&,
-        const Identifier&, AccessCase&);
+        AccessCase&);
 
     ListType m_list;
-    RefPtr<JITStubRoutine> m_stubRoutine;
+    RefPtr<PolymorphicAccessJITStubRoutine> m_stubRoutine;
     std::unique_ptr<WatchpointsOnStructureStubInfo> m_watchpoints;
-    std::unique_ptr<Vector<WriteBarrier<JSCell>>> m_weakReferences;
 };
 
 struct AccessGenerationState {
-    AccessGenerationState(VM& vm, JSGlobalObject* globalObject)
+    AccessGenerationState(VM& vm, JSGlobalObject* globalObject, ECMAMode ecmaMode)
         : m_vm(vm)
         , m_globalObject(globalObject)
+        , m_ecmaMode(ecmaMode)
+        , m_doesJSGetterSetterCalls(false)
+        , m_doesCalls(false)
         , m_calculatedRegistersForCallAndExceptionHandling(false)
         , m_needsToRestoreRegistersIfException(false)
         , m_calculatedCallSiteIndex(false)
     {
+        u.thisGPR = InvalidGPRReg;
     }
     VM& m_vm;
     JSGlobalObject* m_globalObject;
@@ -205,14 +213,22 @@ struct AccessGenerationState {
     MacroAssembler::JumpList failAndRepatch;
     MacroAssembler::JumpList failAndIgnore;
     GPRReg baseGPR { InvalidGPRReg };
-    GPRReg thisGPR { InvalidGPRReg };
+    union {
+        GPRReg thisGPR;
+        GPRReg prototypeGPR;
+        GPRReg propertyGPR;
+    } u;
     JSValueRegs valueRegs;
     GPRReg scratchGPR { InvalidGPRReg };
-    const Identifier* ident;
+    FPRReg scratchFPR { InvalidFPRReg };
+    ECMAMode m_ecmaMode { ECMAMode::sloppy() };
     std::unique_ptr<WatchpointsOnStructureStubInfo> watchpoints;
-    Vector<WriteBarrier<JSCell>> weakReferences;
+    Vector<StructureID> weakStructures;
+    Bag<OptimizingCallLinkInfo> m_callLinkInfos;
+    bool m_doesJSGetterSetterCalls : 1;
+    bool m_doesCalls : 1;
 
-    Watchpoint* addWatchpoint(const ObjectPropertyCondition& = ObjectPropertyCondition());
+    void installWatchpoint(CodeBlock*, const ObjectPropertyCondition&);
 
     void restoreScratch();
     void succeed();
@@ -234,6 +250,7 @@ struct AccessGenerationState {
     const RegisterSet& calculateLiveRegistersForCallAndExceptionHandling();
 
     SpillState preserveLiveRegistersToStackForCall(const RegisterSet& extra = { });
+    SpillState preserveLiveRegistersToStackForCallWithoutExceptions();
 
     void restoreLiveRegistersFromStackForCallWithThrownException(const SpillState&);
     void restoreLiveRegistersFromStackForCall(const SpillState&, const RegisterSet& dontRestore = { });
@@ -259,6 +276,8 @@ struct AccessGenerationState {
         m_spillStateForJSGetterSetter = spillState;
     }
     SpillState spillStateForJSGetterSetter() const { return m_spillStateForJSGetterSetter; }
+
+    ScratchRegisterAllocator makeDefaultScratchAllocator(GPRReg extraToLock = InvalidGPRReg);
 
 private:
     const RegisterSet& liveRegistersToPreserveAtExceptionHandlingCallSite();

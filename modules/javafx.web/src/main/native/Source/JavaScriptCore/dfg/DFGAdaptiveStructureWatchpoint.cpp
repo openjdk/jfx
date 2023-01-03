@@ -29,7 +29,7 @@
 #if ENABLE(DFG_JIT)
 
 #include "CodeBlock.h"
-#include "JSCInlines.h"
+#include "JSCellInlines.h"
 
 namespace JSC { namespace DFG {
 
@@ -38,6 +38,20 @@ AdaptiveStructureWatchpoint::AdaptiveStructureWatchpoint(const ObjectPropertyCon
     , m_codeBlock(codeBlock)
     , m_key(key)
 {
+    RELEASE_ASSERT(key.watchingRequiresStructureTransitionWatchpoint());
+    RELEASE_ASSERT(!key.watchingRequiresReplacementWatchpoint());
+}
+
+AdaptiveStructureWatchpoint::AdaptiveStructureWatchpoint()
+    : Watchpoint(Watchpoint::Type::AdaptiveStructure)
+    , m_codeBlock(nullptr)
+{
+}
+
+void AdaptiveStructureWatchpoint::initialize(const ObjectPropertyCondition& key, CodeBlock* codeBlock)
+{
+    m_codeBlock = codeBlock;
+    m_key = key;
     RELEASE_ASSERT(key.watchingRequiresStructureTransitionWatchpoint());
     RELEASE_ASSERT(!key.watchingRequiresReplacementWatchpoint());
 }

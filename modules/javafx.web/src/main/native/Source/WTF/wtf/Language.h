@@ -28,31 +28,46 @@
 #include <wtf/Forward.h>
 #include <wtf/Vector.h>
 
+#if PLATFORM(COCOA)
+#import <CoreFoundation/CoreFoundation.h>
+#import <wtf/RetainPtr.h>
+#endif
+
 namespace WTF {
 
-WTF_EXPORT String defaultLanguage(); // Thread-safe.
-WTF_EXPORT Vector<String> userPreferredLanguages(); // Thread-safe, returns BCP 47 language tags.
-WTF_EXPORT Vector<String> userPreferredLanguagesOverride();
-WTF_EXPORT void overrideUserPreferredLanguages(const Vector<String>&);
-WTF_EXPORT size_t indexOfBestMatchingLanguageInList(const String& language, const Vector<String>& languageList, bool& exactMatch);
-WTF_EXPORT Vector<String> platformUserPreferredLanguages();
+enum class ShouldMinimizeLanguages { No, Yes };
+
+WTF_EXPORT_PRIVATE String defaultLanguage(ShouldMinimizeLanguages = ShouldMinimizeLanguages::Yes); // Thread-safe.
+WTF_EXPORT_PRIVATE Vector<String> userPreferredLanguages(ShouldMinimizeLanguages = ShouldMinimizeLanguages::Yes); // Thread-safe, returns BCP 47 language tags.
+WTF_EXPORT_PRIVATE Vector<String> userPreferredLanguagesOverride();
+WTF_EXPORT_PRIVATE void overrideUserPreferredLanguages(const Vector<String>&);
+WTF_EXPORT_PRIVATE size_t indexOfBestMatchingLanguageInList(const String& language, const Vector<String>& languageList, bool& exactMatch);
+
 // Called from platform specific code when the user's preferred language(s) change.
-void languageDidChange();
+WTF_EXPORT_PRIVATE void languageDidChange();
 
 // The observer function will be called when system language changes.
 typedef void (*LanguageChangeObserverFunction)(void* context);
-WTF_EXPORT void addLanguageChangeObserver(void* context, LanguageChangeObserverFunction);
-WTF_EXPORT void removeLanguageChangeObserver(void* context);
+WTF_EXPORT_PRIVATE void addLanguageChangeObserver(void* context, LanguageChangeObserverFunction);
+WTF_EXPORT_PRIVATE void removeLanguageChangeObserver(void* context);
+WTF_EXPORT_PRIVATE String displayNameForLanguageLocale(const String&);
 
-WTF_EXPORT String displayNameForLanguageLocale(const String&);
-}
+Vector<String> platformUserPreferredLanguages(ShouldMinimizeLanguages = ShouldMinimizeLanguages::Yes);
 
+#if PLATFORM(COCOA)
+bool canMinimizeLanguages();
+WTF_EXPORT_PRIVATE void listenForLanguageChangeNotifications();
+RetainPtr<CFArrayRef> minimizedLanguagesFromLanguages(CFArrayRef);
+#endif
+
+} // namespace WTF
+
+using WTF::ShouldMinimizeLanguages;
 using WTF::defaultLanguage;
 using WTF::userPreferredLanguages;
 using WTF::userPreferredLanguagesOverride;
 using WTF::overrideUserPreferredLanguages;
 using WTF::indexOfBestMatchingLanguageInList;
-using WTF::platformUserPreferredLanguages;
 using WTF::addLanguageChangeObserver;
 using WTF::removeLanguageChangeObserver;
 using WTF::displayNameForLanguageLocale;

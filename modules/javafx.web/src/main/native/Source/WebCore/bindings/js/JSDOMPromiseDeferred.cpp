@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,207 +27,232 @@
 #include "JSDOMPromiseDeferred.h"
 
 #include "DOMWindow.h"
+#include "EventLoop.h"
+#include "JSDOMExceptionHandling.h"
 #include "JSDOMPromise.h"
 #include "JSDOMWindow.h"
+#include "ScriptController.h"
+#include "WorkerGlobalScope.h"
 #include <JavaScriptCore/BuiltinNames.h>
 #include <JavaScriptCore/Exception.h>
 #include <JavaScriptCore/JSONObject.h>
 #include <JavaScriptCore/JSPromiseConstructor.h>
+#include <JavaScriptCore/Strong.h>
 
 namespace WebCore {
 using namespace JSC;
 
 JSC::JSValue DeferredPromise::promise() const
 {
+    if (isEmpty())
+        return jsUndefined();
+
     ASSERT(deferred());
-    return deferred()->promise();
+    return deferred();
 }
 
-void DeferredPromise::callFunction(ExecState& exec, JSValue function, JSValue resolution)
+void DeferredPromise::callFunction(JSGlobalObject& lexicalGlobalObject, ResolveMode mode, JSValue resolution)
 {
-    if (!canInvokeCallback())
+    if (shouldIgnoreRequestToFulfill())
         return;
 
-    VM& vm = exec.vm();
-    auto scope = DECLARE_THROW_SCOPE(vm);
+    if (activeDOMObjectsAreSuspended()) {
+        JSC::Strong<JSC::Unknown, ShouldStrongDestructorGrabLock::Yes> strongResolution(lexicalGlobalObject.vm(), resolution);
+        ASSERT(scriptExecutionContext()->eventLoop().isSuspended());
+        scriptExecutionContext()->eventLoop().queueTask(TaskSource::Networking, [this, protectedThis = Ref { *this }, mode, strongResolution = WTFMove(strongResolution)]() mutable {
+            if (shouldIgnoreRequestToFulfill())
+                return;
 
-    CallData callData;
-    CallType callType = getCallData(vm, function, callData);
-    ASSERT(callType != CallType::None);
+            JSC::JSGlobalObject* lexicalGlobalObject = globalObject();
+            JSC::JSLockHolder locker(lexicalGlobalObject);
+            callFunction(*globalObject(), mode, strongResolution.get());
+        });
+        return;
+    }
 
-    MarkedArgumentBuffer arguments;
-    arguments.append(resolution);
-    ASSERT(!arguments.hasOverflowed());
-
-    call(&exec, function, callType, callData, jsUndefined(), arguments);
-
-    // DeferredPromise should only be used by internal implementations that are well behaved.
-    // In practice, the only exception we should ever see here is the TerminatedExecutionException.
-    EXCEPTION_ASSERT_UNUSED(scope, !scope.exception() || isTerminatedExecutionException(vm, scope.exception()));
+    // FIXME: We could have error since any JS call can throw stack-overflow errors.
+    // https://bugs.webkit.org/show_bug.cgi?id=203402
+    switch (mode) {
+    case ResolveMode::Resolve:
+        deferred()->resolve(&lexicalGlobalObject, resolution);
+        break;
+    case ResolveMode::Reject:
+        deferred()->reject(&lexicalGlobalObject, resolution);
+        break;
+    case ResolveMode::RejectAsHandled:
+        deferred()->rejectAsHandled(&lexicalGlobalObject, resolution);
+        break;
+    }
 
     if (m_mode == Mode::ClearPromiseOnResolve)
         clear();
 }
 
-void DeferredPromise::whenSettled(std::function<void()>&& callback)
+void DeferredPromise::whenSettled(Function<void()>&& callback)
 {
-    DOMPromise::whenPromiseIsSettled(globalObject(), deferred()->promise(), WTFMove(callback));
-}
-
-void DeferredPromise::reject()
-{
-    if (isSuspended())
+    if (shouldIgnoreRequestToFulfill())
         return;
 
-    ASSERT(deferred());
-    ASSERT(m_globalObject);
-    auto& state = *m_globalObject->globalExec();
-    JSC::JSLockHolder locker(&state);
-    reject(state, JSC::jsUndefined());
-}
-
-void DeferredPromise::reject(std::nullptr_t)
-{
-    if (isSuspended())
-        return;
-
-    ASSERT(deferred());
-    ASSERT(m_globalObject);
-    auto& state = *m_globalObject->globalExec();
-    JSC::JSLockHolder locker(&state);
-    reject(state, JSC::jsNull());
-}
-
-void DeferredPromise::reject(Exception exception)
-{
-    if (isSuspended())
-        return;
-
-    ASSERT(deferred());
-    ASSERT(m_globalObject);
-    auto& state = *m_globalObject->globalExec();
-    JSC::JSLockHolder locker(&state);
-
-    if (exception.code() == ExistingExceptionError) {
-        auto scope = DECLARE_CATCH_SCOPE(state.vm());
-
-        EXCEPTION_ASSERT(scope.exception());
-
-        auto error = scope.exception()->value();
-        scope.clearException();
-
-        reject<IDLAny>(error);
+    if (activeDOMObjectsAreSuspended()) {
+        scriptExecutionContext()->eventLoop().queueTask(TaskSource::Networking, [this, protectedThis = Ref { *this }, callback = WTFMove(callback)]() mutable {
+            whenSettled(WTFMove(callback));
+        });
         return;
     }
 
-    auto scope = DECLARE_THROW_SCOPE(state.vm());
-    auto error = createDOMException(state, WTFMove(exception));
-    if (UNLIKELY(scope.exception())) {
-        ASSERT(isTerminatedExecutionException(state.vm(), scope.exception()));
-        return;
-    }
-
-    reject(state, error);
+    DOMPromise::whenPromiseIsSettled(globalObject(), deferred(), WTFMove(callback));
 }
 
-void DeferredPromise::reject(ExceptionCode ec, const String& message)
+void DeferredPromise::reject(RejectAsHandled rejectAsHandled)
 {
-    if (isSuspended())
+    if (shouldIgnoreRequestToFulfill())
         return;
 
     ASSERT(deferred());
     ASSERT(m_globalObject);
-    auto& state = *m_globalObject->globalExec();
-    JSC::JSLockHolder locker(&state);
-
-    if (ec == ExistingExceptionError) {
-        auto scope = DECLARE_CATCH_SCOPE(state.vm());
-
-        EXCEPTION_ASSERT(scope.exception());
-
-        auto error = scope.exception()->value();
-        scope.clearException();
-
-        reject<IDLAny>(error);
-        return;
-    }
-
-    auto scope = DECLARE_THROW_SCOPE(state.vm());
-    auto error = createDOMException(&state, ec, message);
-    if (UNLIKELY(scope.exception())) {
-        ASSERT(isTerminatedExecutionException(state.vm(), scope.exception()));
-        return;
-    }
-
-
-    reject(state, error);
+    auto& lexicalGlobalObject = *m_globalObject;
+    JSC::JSLockHolder locker(&lexicalGlobalObject);
+    reject(lexicalGlobalObject, JSC::jsUndefined(), rejectAsHandled);
 }
 
-void DeferredPromise::reject(const JSC::PrivateName& privateName)
+void DeferredPromise::reject(std::nullptr_t, RejectAsHandled rejectAsHandled)
 {
-    if (isSuspended())
+    if (shouldIgnoreRequestToFulfill())
         return;
 
     ASSERT(deferred());
     ASSERT(m_globalObject);
-    JSC::ExecState* state = m_globalObject->globalExec();
-    JSC::JSLockHolder locker(state);
-    reject(*state, JSC::Symbol::create(state->vm(), privateName.uid()));
+    auto& lexicalGlobalObject = *m_globalObject;
+    JSC::JSLockHolder locker(&lexicalGlobalObject);
+    reject(lexicalGlobalObject, JSC::jsNull(), rejectAsHandled);
 }
 
-void rejectPromiseWithExceptionIfAny(JSC::ExecState& state, JSDOMGlobalObject& globalObject, JSPromiseDeferred& promiseDeferred)
+void DeferredPromise::reject(Exception exception, RejectAsHandled rejectAsHandled)
 {
-    VM& vm = state.vm();
+    if (shouldIgnoreRequestToFulfill())
+        return;
+
+    Ref protectedThis(*this);
+    ASSERT(deferred());
+    ASSERT(m_globalObject);
+    auto& lexicalGlobalObject = *m_globalObject;
+    JSC::VM& vm = lexicalGlobalObject.vm();
+    JSC::JSLockHolder locker(vm);
     auto scope = DECLARE_CATCH_SCOPE(vm);
 
-    if (LIKELY(!scope.exception()))
+    if (exception.code() == ExistingExceptionError) {
+        EXCEPTION_ASSERT(scope.exception());
+        auto error = scope.exception()->value();
+        bool isTerminating = handleTerminationExceptionIfNeeded(scope, lexicalGlobalObject);
+        scope.clearException();
+
+        if (!isTerminating)
+            reject<IDLAny>(error, rejectAsHandled);
+        return;
+    }
+
+    auto error = createDOMException(lexicalGlobalObject, WTFMove(exception));
+    if (UNLIKELY(scope.exception())) {
+        handleUncaughtException(scope, lexicalGlobalObject);
+        return;
+    }
+
+    reject(lexicalGlobalObject, error, rejectAsHandled);
+    if (UNLIKELY(scope.exception()))
+        handleUncaughtException(scope, lexicalGlobalObject);
+}
+
+void DeferredPromise::reject(ExceptionCode ec, const String& message, RejectAsHandled rejectAsHandled)
+{
+    if (shouldIgnoreRequestToFulfill())
         return;
 
-    JSValue error = scope.exception()->value();
-    scope.clearException();
+    Ref protectedThis(*this);
+    ASSERT(deferred());
+    ASSERT(m_globalObject);
+    auto& lexicalGlobalObject = *m_globalObject;
+    JSC::VM& vm = lexicalGlobalObject.vm();
+    JSC::JSLockHolder locker(vm);
+    auto scope = DECLARE_CATCH_SCOPE(vm);
 
-    DeferredPromise::create(globalObject, promiseDeferred)->reject<IDLAny>(error);
+    if (ec == ExistingExceptionError) {
+        EXCEPTION_ASSERT(scope.exception());
+        auto error = scope.exception()->value();
+        bool isTerminating = handleTerminationExceptionIfNeeded(scope, lexicalGlobalObject);
+        scope.clearException();
+
+        if (!isTerminating)
+            reject<IDLAny>(error, rejectAsHandled);
+        return;
+    }
+
+    auto error = createDOMException(&lexicalGlobalObject, ec, message);
+    if (UNLIKELY(scope.exception())) {
+        handleUncaughtException(scope, lexicalGlobalObject);
+        return;
+    }
+
+    reject(lexicalGlobalObject, error, rejectAsHandled);
+    if (UNLIKELY(scope.exception()))
+        handleUncaughtException(scope, lexicalGlobalObject);
 }
 
-Ref<DeferredPromise> createDeferredPromise(JSC::ExecState& state, JSDOMWindow& domWindow)
+void DeferredPromise::reject(const JSC::PrivateName& privateName, RejectAsHandled rejectAsHandled)
 {
-    JSC::JSPromiseDeferred* deferred = JSC::JSPromiseDeferred::tryCreate(&state, &domWindow);
-    // deferred can only be null in workers.
-    RELEASE_ASSERT(deferred);
-    return DeferredPromise::create(domWindow, *deferred);
+    if (shouldIgnoreRequestToFulfill())
+        return;
+
+    ASSERT(deferred());
+    ASSERT(m_globalObject);
+    JSC::JSGlobalObject* lexicalGlobalObject = m_globalObject.get();
+    JSC::JSLockHolder locker(lexicalGlobalObject);
+    reject(*lexicalGlobalObject, JSC::Symbol::create(lexicalGlobalObject->vm(), privateName.uid()), rejectAsHandled);
 }
 
-JSC::EncodedJSValue createRejectedPromiseWithTypeError(JSC::ExecState& state, const String& errorMessage, RejectedPromiseWithTypeErrorCause cause)
+void rejectPromiseWithExceptionIfAny(JSC::JSGlobalObject& lexicalGlobalObject, JSDOMGlobalObject& globalObject, JSPromise& promise, JSC::CatchScope& catchScope)
 {
-    ASSERT(state.lexicalGlobalObject());
-    auto& globalObject = *state.lexicalGlobalObject();
+    UNUSED_PARAM(lexicalGlobalObject);
+    if (LIKELY(!catchScope.exception()))
+        return;
+
+    JSValue error = catchScope.exception()->value();
+    catchScope.clearException();
+
+    DeferredPromise::create(globalObject, promise)->reject<IDLAny>(error);
+}
+
+JSC::EncodedJSValue createRejectedPromiseWithTypeError(JSC::JSGlobalObject& lexicalGlobalObject, const String& errorMessage, RejectedPromiseWithTypeErrorCause cause)
+{
+    auto& globalObject = lexicalGlobalObject;
+    auto& vm = lexicalGlobalObject.vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
 
     auto promiseConstructor = globalObject.promiseConstructor();
-    auto rejectFunction = promiseConstructor->get(&state, state.vm().propertyNames->builtinNames().rejectPrivateName());
-    auto* rejectionValue = static_cast<ErrorInstance*>(createTypeError(&state, errorMessage));
+    auto rejectFunction = promiseConstructor->get(&lexicalGlobalObject, vm.propertyNames->builtinNames().rejectPrivateName());
+    RETURN_IF_EXCEPTION(scope, { });
+    auto* rejectionValue = static_cast<ErrorInstance*>(createTypeError(&lexicalGlobalObject, errorMessage));
     if (cause == RejectedPromiseWithTypeErrorCause::NativeGetter)
         rejectionValue->setNativeGetterTypeError();
 
-    CallData callData;
-    auto callType = getCallData(state.vm(), rejectFunction, callData);
-    ASSERT(callType != CallType::None);
+    auto callData = getCallData(vm, rejectFunction);
+    ASSERT(callData.type != CallData::Type::None);
 
     MarkedArgumentBuffer arguments;
     arguments.append(rejectionValue);
     ASSERT(!arguments.hasOverflowed());
 
-    return JSValue::encode(call(&state, rejectFunction, callType, callData, promiseConstructor, arguments));
+    RELEASE_AND_RETURN(scope, JSValue::encode(call(&lexicalGlobalObject, rejectFunction, callData, promiseConstructor, arguments)));
 }
 
-static inline JSC::JSValue parseAsJSON(JSC::ExecState* state, const String& data)
+static inline JSC::JSValue parseAsJSON(JSC::JSGlobalObject* lexicalGlobalObject, const String& data)
 {
-    JSC::JSLockHolder lock(state);
-    return JSC::JSONParse(state, data);
+    JSC::JSLockHolder lock(lexicalGlobalObject);
+    return JSC::JSONParse(lexicalGlobalObject, data);
 }
 
 void fulfillPromiseWithJSON(Ref<DeferredPromise>&& promise, const String& data)
 {
-    JSC::JSValue value = parseAsJSON(promise->globalObject()->globalExec(), data);
+    JSC::JSValue value = parseAsJSON(promise->globalObject(), data);
     if (!value)
         promise->reject(SyntaxError);
     else
@@ -237,7 +262,7 @@ void fulfillPromiseWithJSON(Ref<DeferredPromise>&& promise, const String& data)
 void fulfillPromiseWithArrayBuffer(Ref<DeferredPromise>&& promise, ArrayBuffer* arrayBuffer)
 {
     if (!arrayBuffer) {
-        promise->reject<IDLAny>(createOutOfMemoryError(promise->globalObject()->globalExec()));
+        promise->reject<IDLAny>(createOutOfMemoryError(promise->globalObject()));
         return;
     }
     promise->resolve<IDLInterface<ArrayBuffer>>(*arrayBuffer);
@@ -248,4 +273,28 @@ void fulfillPromiseWithArrayBuffer(Ref<DeferredPromise>&& promise, const void* d
     fulfillPromiseWithArrayBuffer(WTFMove(promise), ArrayBuffer::tryCreate(data, length).get());
 }
 
+bool DeferredPromise::handleTerminationExceptionIfNeeded(CatchScope& scope, JSDOMGlobalObject& lexicalGlobalObject)
+{
+    auto* exception = scope.exception();
+    VM& vm = scope.vm();
+
+    auto& scriptExecutionContext = *lexicalGlobalObject.scriptExecutionContext();
+    if (is<WorkerGlobalScope>(scriptExecutionContext)) {
+        auto* scriptController = downcast<WorkerGlobalScope>(scriptExecutionContext).script();
+        bool terminatorCausedException = vm.isTerminationException(exception);
+        if (terminatorCausedException || (scriptController && scriptController->isTerminatingExecution())) {
+            scriptController->forbidExecution();
+            return true;
+        }
+    }
+    return false;
 }
+
+void DeferredPromise::handleUncaughtException(CatchScope& scope, JSDOMGlobalObject& lexicalGlobalObject)
+{
+    auto* exception = scope.exception();
+    handleTerminationExceptionIfNeeded(scope, lexicalGlobalObject);
+    reportException(&lexicalGlobalObject, exception);
+};
+
+} // namespace WebCore

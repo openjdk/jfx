@@ -26,26 +26,24 @@
 
 #include "FileChooser.h"
 #include "HTMLTextFormControlElement.h"
-#include "StepRange.h"
+#include "SelectionRestorationMode.h"
 #include <memory>
 #include <wtf/WeakPtr.h>
-
-#if PLATFORM(IOS_FAMILY)
-#include "DateComponents.h"
-#endif
+#include "ElementInlines.h"
 
 namespace WebCore {
 
+class Decimal;
 class DragData;
 class FileList;
 class HTMLDataListElement;
 class HTMLImageLoader;
+class HTMLOptionElement;
 class Icon;
 class InputType;
 class ListAttributeTargetObserver;
 class RadioButtonGroups;
-
-struct DateTimeChooserParameters;
+class StepRange;
 
 struct InputElementClickState {
     bool stateful { false };
@@ -53,6 +51,10 @@ struct InputElementClickState {
     bool indeterminate { false };
     RefPtr<HTMLInputElement> checkedRadioButton;
 };
+
+enum class AnyStepHandling : bool;
+enum class DateComponentsType : uint8_t;
+enum class WasSetByJavaScript : bool { No, Yes };
 
 class HTMLInputElement : public HTMLTextFormControlElement {
     WTF_MAKE_ISO_ALLOCATED(HTMLInputElement);
@@ -72,7 +74,7 @@ public:
     bool tooLong() const final;
     bool typeMismatch() const final;
     bool valueMissing() const final;
-    bool isValid() const final;
+    bool computeValidity() const final;
     WEBCORE_EXPORT String validationMessage() const final;
 
     // Returns the minimum value for type=date, number, or range.  Don't call this for other types.
@@ -86,7 +88,8 @@ public:
     StepRange createStepRange(AnyStepHandling) const;
 
 #if ENABLE(DATALIST_ELEMENT)
-    Optional<Decimal> findClosestTickMarkValue(const Decimal&);
+    std::optional<Decimal> findClosestTickMarkValue(const Decimal&);
+    std::optional<double> listOptionValueAsDouble(const HTMLOptionElement&);
 #endif
 
     WEBCORE_EXPORT ExceptionOr<void> stepUp(int = 1);
@@ -118,27 +121,25 @@ public:
     WEBCORE_EXPORT bool isText() const;
 
     WEBCORE_EXPORT bool isEmailField() const;
-    bool isFileUpload() const;
+    WEBCORE_EXPORT bool isFileUpload() const;
     bool isImageButton() const;
     WEBCORE_EXPORT bool isNumberField() const;
-    bool isSubmitButton() const;
+    bool isSubmitButton() const final;
     WEBCORE_EXPORT bool isTelephoneField() const;
     WEBCORE_EXPORT bool isURLField() const;
     WEBCORE_EXPORT bool isDateField() const;
-    WEBCORE_EXPORT bool isDateTimeField() const;
     WEBCORE_EXPORT bool isDateTimeLocalField() const;
     WEBCORE_EXPORT bool isMonthField() const;
     WEBCORE_EXPORT bool isTimeField() const;
     WEBCORE_EXPORT bool isWeekField() const;
 
-#if PLATFORM(IOS_FAMILY)
-    DateComponents::Type dateType() const;
-#endif
+    DateComponentsType dateType() const;
 
     HTMLElement* containerElement() const;
 
     RefPtr<TextControlInnerTextElement> innerTextElement() const final;
-    RenderStyle createInnerTextStyle(const RenderStyle&) override;
+    RefPtr<TextControlInnerTextElement> innerTextElementCreatingShadowSubtreeIfNeeded() final;
+    RenderStyle createInnerTextStyle(const RenderStyle&) final;
 
     HTMLElement* innerBlockElement() const;
     HTMLElement* innerSpinButtonElement() const;
@@ -178,6 +179,8 @@ public:
     bool isValidValue(const String&) const;
     bool hasDirtyValue() const { return !m_valueIfDirty.isNull(); };
 
+    String placeholder() const;
+
     String sanitizeValue(const String&) const;
 
     String localizeValue(const String&) const;
@@ -185,8 +188,11 @@ public:
     // The value which is drawn by a renderer.
     String visibleValue() const;
 
-    WEBCORE_EXPORT double valueAsDate() const;
-    WEBCORE_EXPORT ExceptionOr<void> setValueAsDate(double);
+    WEBCORE_EXPORT WallTime valueAsDate() const;
+    WEBCORE_EXPORT ExceptionOr<void> setValueAsDate(WallTime);
+    #if PLATFORM(JAVA)
+    WEBCORE_EXPORT ExceptionOr<void> setValueAsDate(double value);
+    #endif
 
     WEBCORE_EXPORT double valueAsNumber() const;
     WEBCORE_EXPORT ExceptionOr<void> setValueAsNumber(double, TextFieldEventBehavior = DispatchNoEvent);
@@ -235,13 +241,16 @@ public:
 
     unsigned effectiveMaxLength() const;
 
-    bool multiple() const;
+    WEBCORE_EXPORT bool multiple() const;
 
     bool isAutoFilled() const { return m_isAutoFilled; }
     WEBCORE_EXPORT void setAutoFilled(bool = true);
 
     bool isAutoFilledAndViewable() const { return m_isAutoFilledAndViewable; }
     WEBCORE_EXPORT void setAutoFilledAndViewable(bool = true);
+
+    bool isAutoFilledAndObscured() const { return m_isAutoFilledAndObscured; }
+    WEBCORE_EXPORT void setAutoFilledAndObscured(bool = true);
 
     AutoFillButtonType lastAutoFillButtonType() const { return static_cast<AutoFillButtonType>(m_lastAutoFillButtonType); }
     AutoFillButtonType autoFillButtonType() const { return static_cast<AutoFillButtonType>(m_autoFillButtonType); }
@@ -253,7 +262,10 @@ public:
     void setAutoFillAvailable(bool autoFillAvailable) { m_isAutoFillAvailable = autoFillAvailable; }
 
     WEBCORE_EXPORT FileList* files();
-    WEBCORE_EXPORT void setFiles(RefPtr<FileList>&&);
+    WEBCORE_EXPORT void setFiles(RefPtr<FileList>&&, WasSetByJavaScript = WasSetByJavaScript::No);
+
+    FileList* filesForBindings() { return files(); }
+    void setFilesForBindings(RefPtr<FileList>&& fileList) { return setFiles(WTFMove(fileList), WasSetByJavaScript::Yes); }
 
 #if ENABLE(DRAG_SUPPORT)
     // Returns true if the given DragData has more than one dropped files.
@@ -271,16 +283,17 @@ public:
     void addSearchResult();
     void onSearch();
 
-    bool willRespondToMouseClickEvents() override;
+    bool willRespondToMouseClickEvents() final;
 
 #if ENABLE(DATALIST_ELEMENT)
     WEBCORE_EXPORT RefPtr<HTMLElement> list() const;
+    WEBCORE_EXPORT bool isFocusingWithDataListDropdown() const;
     RefPtr<HTMLDataListElement> dataList() const;
-    void listAttributeTargetChanged();
+    void dataListMayHaveChanged();
 #endif
 
-    Vector<HTMLInputElement*> radioButtonGroup() const;
-    HTMLInputElement* checkedRadioButtonForGroup() const;
+    Vector<Ref<HTMLInputElement>> radioButtonGroup() const;
+    RefPtr<HTMLInputElement> checkedRadioButtonForGroup() const;
     bool isInRequiredRadioButtonGroup();
     // Returns null if this isn't associated with any radio button group.
     RadioButtonGroups* radioButtonGroups() const;
@@ -294,7 +307,7 @@ public:
 
     void cacheSelectionInResponseToSetValue(int caretOffset) { cacheSelection(caretOffset, caretOffset, SelectionHasNoDirection); }
 
-    Color valueAsColor() const; // Returns transparent color if not type=color.
+    WEBCORE_EXPORT Color valueAsColor() const; // Returns transparent color if not type=color.
     WEBCORE_EXPORT void selectColor(StringView); // Does nothing if not type=color. Simulates user selection of color; intended for testing.
     WEBCORE_EXPORT Vector<Color> suggestedColors() const;
 
@@ -330,34 +343,35 @@ public:
     HTMLImageLoader* imageLoader() { return m_imageLoader.get(); }
     HTMLImageLoader& ensureImageLoader();
 
-#if ENABLE(DATE_AND_TIME_INPUT_TYPES)
-    bool setupDateTimeChooserParameters(DateTimeChooserParameters&);
-#endif
-
     void capsLockStateMayHaveChanged();
 
     bool shouldTruncateText(const RenderStyle&) const;
+    void invalidateStyleOnFocusChangeIfNeeded();
 
-    ExceptionOr<int> selectionStartForBindings() const;
-    ExceptionOr<void> setSelectionStartForBindings(int);
+    std::optional<int> selectionStartForBindings() const;
+    ExceptionOr<void> setSelectionStartForBindings(std::optional<int>);
 
-    ExceptionOr<int> selectionEndForBindings() const;
-    ExceptionOr<void> setSelectionEndForBindings(int);
+    std::optional<int> selectionEndForBindings() const;
+    ExceptionOr<void> setSelectionEndForBindings(std::optional<int>);
 
     ExceptionOr<String> selectionDirectionForBindings() const;
     ExceptionOr<void> setSelectionDirectionForBindings(const String&);
 
     ExceptionOr<void> setSelectionRangeForBindings(int start, int end, const String& direction);
 
+    String resultForDialogSubmit() const final;
+
+    bool isInnerTextElementEditable() const final { return !hasAutoFillStrongPasswordButton() && HTMLTextFormControlElement::isInnerTextElementEditable(); }
+
+    void updateUserAgentShadowTree() final;
+
 protected:
     HTMLInputElement(const QualifiedName&, Document&, HTMLFormElement*, bool createdByParser);
 
-    void defaultEventHandler(Event&) override;
+    void defaultEventHandler(Event&) final;
 
 private:
     enum AutoCompleteSetting { Uninitialized, On, Off };
-
-    void didAddUserAgentShadowRoot(ShadowRoot&) final;
 
     void willChangeForm() final;
     void didChangeForm() final;
@@ -377,8 +391,6 @@ private:
 
     bool isInteractiveContent() const final;
 
-    bool isInnerTextElementEditable() const final { return !hasAutoFillStrongPasswordButton() && HTMLTextFormControlElement::isInnerTextElementEditable(); }
-
     bool canTriggerImplicitSubmission() const final { return isTextField(); }
 
     const AtomString& formControlType() const final;
@@ -391,17 +403,17 @@ private:
 
     bool canStartSelection() const final;
 
-    void accessKeyAction(bool sendMouseEvents) final;
+    bool accessKeyAction(bool sendMouseEvents) final;
 
     void parseAttribute(const QualifiedName&, const AtomString&) final;
-    bool isPresentationAttribute(const QualifiedName&) const final;
-    void collectStyleForPresentationAttribute(const QualifiedName&, const AtomString&, MutableStyleProperties&) final;
+    bool hasPresentationalHintsForAttribute(const QualifiedName&) const final;
+    void collectPresentationalHintsForAttribute(const QualifiedName&, const AtomString&, MutableStyleProperties&) final;
     void finishParsingChildren() final;
     void parserDidSetAttributes() final;
 
     void copyNonAttributePropertiesFromElement(const Element&) final;
 
-    bool appendFormData(DOMFormData&, bool) final;
+    bool appendFormData(DOMFormData&) final;
 
     bool isSuccessfulSubmitButton() const final;
     bool matchesDefaultPseudoClass() const final;
@@ -458,7 +470,7 @@ private:
     void addToRadioButtonGroup();
     void removeFromRadioButtonGroup();
 
-    void setDefaultSelectionAfterFocus(SelectionRevealMode);
+    void setDefaultSelectionAfterFocus(SelectionRestorationMode, SelectionRevealMode);
 
     AtomString m_name;
     String m_valueIfDirty;
@@ -472,6 +484,7 @@ private:
     unsigned m_autocomplete : 2; // AutoCompleteSetting
     bool m_isAutoFilled : 1;
     bool m_isAutoFilledAndViewable : 1;
+    bool m_isAutoFilledAndObscured : 1;
     unsigned m_autoFillButtonType : 3; // AutoFillButtonType
     unsigned m_lastAutoFillButtonType : 3; // AutoFillButtonType
     bool m_isAutoFillAvailable : 1;
@@ -487,6 +500,7 @@ private:
     bool m_hasTouchEventHandler : 1;
 #endif
     bool m_isSpellcheckDisabledExceptTextReplacement : 1;
+    bool m_hasPendingUserAgentShadowTreeUpdate : 1;
     RefPtr<InputType> m_inputType;
     // The ImageLoader must be owned by this element because the loader code assumes
     // that it lives as long as its owning element lives. If we move the loader into

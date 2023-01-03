@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2010 Google, Inc. All Rights Reserved.
- * Copyright (C) 2015-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,10 +27,10 @@
 #include "config.h"
 #include "HTMLDocumentParser.h"
 
-#include "CustomHeaderFields.h"
 #include "CustomElementReactionQueue.h"
 #include "DocumentFragment.h"
 #include "DocumentLoader.h"
+#include "EventLoop.h"
 #include "Frame.h"
 #include "HTMLDocument.h"
 #include "HTMLParserScheduler.h"
@@ -40,14 +40,22 @@
 #include "HTMLUnknownElement.h"
 #include "JSCustomElementInterface.h"
 #include "LinkLoader.h"
-#include "Microtasks.h"
 #include "NavigationScheduler.h"
 #include "ScriptElement.h"
 #include "ThrowOnDynamicMarkupInsertionCountIncrementer.h"
 
+#include <wtf/SystemTracing.h>
+
 namespace WebCore {
 
 using namespace HTMLNames;
+
+DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(HTMLDocumentParser);
+
+static bool isMainDocumentLoadingFromHTTP(const Document& document)
+{
+    return !document.ownerElement() && document.url().protocolIsInHTTPFamily();
+}
 
 HTMLDocumentParser::HTMLDocumentParser(HTMLDocument& document)
     : ScriptableDocumentParser(document)
@@ -56,8 +64,8 @@ HTMLDocumentParser::HTMLDocumentParser(HTMLDocument& document)
     , m_scriptRunner(makeUnique<HTMLScriptRunner>(document, static_cast<HTMLScriptRunnerHost&>(*this)))
     , m_treeBuilder(makeUnique<HTMLTreeBuilder>(*this, document, parserContentPolicy(), m_options))
     , m_parserScheduler(makeUnique<HTMLParserScheduler>(*this))
-    , m_xssAuditorDelegate(document)
     , m_preloader(makeUnique<HTMLResourcePreloader>(document))
+    , m_shouldEmitTracePoints(isMainDocumentLoadingFromHTTP(document))
 {
 }
 
@@ -71,12 +79,11 @@ inline HTMLDocumentParser::HTMLDocumentParser(DocumentFragment& fragment, Elemen
     , m_options(fragment.document())
     , m_tokenizer(m_options)
     , m_treeBuilder(makeUnique<HTMLTreeBuilder>(*this, fragment, contextElement, parserContentPolicy(), m_options))
-    , m_xssAuditorDelegate(fragment.document())
+    , m_shouldEmitTracePoints(false) // Avoid emitting trace points when parsing fragments like outerHTML.
 {
     // https://html.spec.whatwg.org/multipage/syntax.html#parsing-html-fragments
     if (contextElement.isHTMLElement())
         m_tokenizer.updateStateFor(contextElement.tagQName().localName());
-    m_xssAuditor.initForFragment();
 }
 
 inline Ref<HTMLDocumentParser> HTMLDocumentParser::create(DocumentFragment& fragment, Element& contextElement, ParserContentPolicy parserContentPolicy)
@@ -216,9 +223,9 @@ void HTMLDocumentParser::runScriptsForPausedTreeBuilder()
             // Prevent document.open/write during reactions by allocating the incrementer before the reactions stack.
             ThrowOnDynamicMarkupInsertionCountIncrementer incrementer(*document());
 
-            MicrotaskQueue::mainThreadQueue().performMicrotaskCheckpoint();
+            document()->eventLoop().performMicrotaskCheckpoint();
 
-            CustomElementReactionStack reactionStack(document()->execState());
+            CustomElementReactionStack reactionStack(document()->globalObject());
             auto& elementInterface = constructionData->elementInterface.get();
             auto newElement = elementInterface.constructElementWithFallback(*document(), constructionData->name);
             m_treeBuilder->didCreateCustomOrFallbackElement(WTFMove(newElement), *constructionData);
@@ -248,8 +255,9 @@ bool HTMLDocumentParser::pumpTokenizerLoop(SynchronousMode mode, bool parsingFra
 {
     do {
         if (UNLIKELY(isWaitingForScripts())) {
-            if (mode == AllowYield && m_parserScheduler->shouldYieldBeforeExecutingScript(session))
+            if (mode == AllowYield && m_parserScheduler->shouldYieldBeforeExecutingScript(m_treeBuilder->scriptToProcess(), session))
                 return true;
+
             runScriptsForPausedTreeBuilder();
             // If we're paused waiting for a script, we try to execute scripts before continuing.
             if (isWaitingForScripts() || isStopped())
@@ -266,21 +274,9 @@ bool HTMLDocumentParser::pumpTokenizerLoop(SynchronousMode mode, bool parsingFra
         if (UNLIKELY(mode == AllowYield && m_parserScheduler->shouldYieldBeforeToken(session)))
             return true;
 
-        if (!parsingFragment)
-            m_sourceTracker.startToken(m_input.current(), m_tokenizer);
-
         auto token = m_tokenizer.nextToken(m_input.current());
         if (!token)
             return false;
-
-        if (!parsingFragment) {
-            m_sourceTracker.endToken(m_input.current(), m_tokenizer);
-
-            // We do not XSS filter innerHTML, which means we (intentionally) fail
-            // http/tests/security/xssAuditor/dom-write-innerHTML.html
-            if (auto xssInfo = m_xssAuditor.filterToken(FilterTokenRequest(*token, m_sourceTracker, m_tokenizer.shouldAllowCDATA())))
-                m_xssAuditorDelegate.didBlockScript(*xssInfo);
-        }
 
         constructTreeFromHTMLToken(token);
     } while (!isStopped());
@@ -298,21 +294,29 @@ void HTMLDocumentParser::pumpTokenizer(SynchronousMode mode)
 
     PumpSession session(m_pumpSessionNestingLevel, contextForParsingSession());
 
-    m_xssAuditor.init(document(), &m_xssAuditorDelegate);
+    auto emitTracePoint = [this](TracePointCode code) {
+        if (!m_shouldEmitTracePoints)
+            return;
 
+        auto position = textPosition();
+        tracePoint(code, position.m_line.oneBasedInt(), position.m_column.oneBasedInt());
+    };
+
+    emitTracePoint(ParseHTMLStart);
     bool shouldResume = pumpTokenizerLoop(mode, isParsingFragment(), session);
+    emitTracePoint(ParseHTMLEnd);
 
     // Ensure we haven't been totally deref'ed after pumping. Any caller of this
     // function should be holding a RefPtr to this to ensure we weren't deleted.
     ASSERT(refCount() >= 1);
 
-    if (isStopped())
+    if (isStopped() || isParsingFragment())
         return;
 
     if (shouldResume)
         m_parserScheduler->scheduleForResume();
 
-    if (isWaitingForScripts()) {
+    if (isWaitingForScripts() && !isDetached()) {
         ASSERT(m_tokenizer.isInDataState());
         if (!m_preloadScanner) {
             m_preloadScanner = makeUnique<HTMLPreloadScanner>(m_options, document()->url(), document()->deviceScaleFactor());
@@ -327,11 +331,11 @@ void HTMLDocumentParser::pumpTokenizer(SynchronousMode mode)
 
 void HTMLDocumentParser::constructTreeFromHTMLToken(HTMLTokenizer::TokenPtr& rawToken)
 {
-    AtomicHTMLToken token(*rawToken);
+    AtomHTMLToken token(*rawToken);
 
-    // We clear the rawToken in case constructTreeFromAtomicToken
+    // We clear the rawToken in case constructTree
     // synchronously re-enters the parser. We don't clear the token immedately
-    // for Character tokens because the AtomicHTMLToken avoids copying the
+    // for Character tokens because the AtomHTMLToken avoids copying the
     // characters by keeping a pointer to the underlying buffer in the
     // HTMLToken. Fortunately, Character tokens can't cause us to re-enter
     // the parser.
@@ -370,7 +374,7 @@ void HTMLDocumentParser::insert(SegmentedString&& source)
     m_input.insertAtCurrentInsertionPoint(WTFMove(source));
     pumpTokenizerIfPossible(ForceSynchronous);
 
-    if (isWaitingForScripts()) {
+    if (isWaitingForScripts() && !isDetached()) {
         // Check the document.write() output with a separate preload scanner as
         // the main scanner can't deal with insertions.
         if (!m_insertionPreloadScanner)
@@ -383,6 +387,16 @@ void HTMLDocumentParser::insert(SegmentedString&& source)
 }
 
 void HTMLDocumentParser::append(RefPtr<StringImpl>&& inputSource)
+{
+    append(WTFMove(inputSource), AllowYield);
+}
+
+void HTMLDocumentParser::appendSynchronously(RefPtr<StringImpl>&& inputSource)
+{
+    append(WTFMove(inputSource), ForceSynchronous);
+}
+
+void HTMLDocumentParser::append(RefPtr<StringImpl>&& inputSource, SynchronousMode synchronousMode)
 {
     if (isStopped())
         return;
@@ -414,7 +428,7 @@ void HTMLDocumentParser::append(RefPtr<StringImpl>&& inputSource)
         return;
     }
 
-    pumpTokenizerIfPossible(AllowYield);
+    pumpTokenizerIfPossible(synchronousMode);
 
     endIfDelayed();
 }
@@ -495,6 +509,11 @@ bool HTMLDocumentParser::shouldAssociateConsoleMessagesWithTextPosition() const
 
 bool HTMLDocumentParser::isWaitingForScripts() const
 {
+    if (isParsingFragment()) {
+        // HTMLTreeBuilder may have a parser blocking script element but we ignore them during fragment parsing.
+        ASSERT(!m_scriptRunner || !m_scriptRunner->hasParserBlockingScript());
+        return false;
+    }
     // When the TreeBuilder encounters a </script> tag, it returns to the HTMLDocumentParser
     // where the script is transfered from the treebuilder to the script runner.
     // The script runner will hold the script until its loaded and run. During

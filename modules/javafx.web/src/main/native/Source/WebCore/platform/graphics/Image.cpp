@@ -64,6 +64,10 @@ Image& Image::nullImage()
 
 RefPtr<Image> Image::create(ImageObserver& observer)
 {
+    // SVGImage and PDFDocumentImage are not safe to use off the main thread.
+    // Workers can use BitmapImage directly.
+    ASSERT(isMainThread());
+
     auto mimeType = observer.mimeType();
     if (mimeType == "image/svg+xml")
         return SVGImage::create(observer);
@@ -100,7 +104,7 @@ bool Image::isPostScriptResource(const String& mimeType, const URL& url)
 }
 
 
-EncodedDataStatus Image::setData(RefPtr<SharedBuffer>&& data, bool allDataReceived)
+EncodedDataStatus Image::setData(RefPtr<FragmentedSharedBuffer>&& data, bool allDataReceived)
 {
     m_encodedImageData = WTFMove(data);
 
@@ -132,17 +136,18 @@ void Image::fillWithSolidColor(GraphicsContext& ctxt, const FloatRect& dstRect, 
         return;
 
     CompositeOperator previousOperator = ctxt.compositeOperation();
-    ctxt.setCompositeOperation(color.isOpaque() && op == CompositeSourceOver ? CompositeCopy : op);
+    ctxt.setCompositeOperation(color.isOpaque() && op == CompositeOperator::SourceOver ? CompositeOperator::Copy : op);
     ctxt.fillRect(dstRect, color);
     ctxt.setCompositeOperation(previousOperator);
 }
 
 void Image::drawPattern(GraphicsContext& ctxt, const FloatRect& destRect, const FloatRect& tileRect, const AffineTransform& patternTransform,  const FloatPoint& phase, const FloatSize& spacing, const ImagePaintingOptions& options)
 {
-    if (!nativeImageForCurrentFrame(&ctxt))
+    auto tileImage = preTransformedNativeImageForCurrentFrame(options.orientation() == ImageOrientation::FromImage);
+    if (!tileImage)
         return;
 
-    ctxt.drawPattern(*this, destRect, tileRect, patternTransform, phase, spacing, options);
+    ctxt.drawPattern(*tileImage, destRect, tileRect, patternTransform, phase, spacing, options);
 
     if (imageObserver())
         imageObserver()->didDraw(*this);
@@ -185,8 +190,9 @@ ImageDrawResult Image::drawTiled(GraphicsContext& ctxt, const FloatRect& destRec
     }
 
 #if PLATFORM(IOS_FAMILY)
+    // FIXME: We should re-test this and remove this iOS behavior difference if possible.
     // When using accelerated drawing on iOS, it's faster to stretch an image than to tile it.
-    if (ctxt.isAcceleratedContext()) {
+    if (ctxt.renderingMode() == RenderingMode::Accelerated) {
         if (size().width() == 1 && intersection(oneTileRect, destRect).height() == destRect.height()) {
             FloatRect visibleSrcRect;
             visibleSrcRect.setX(0);
@@ -335,8 +341,8 @@ ImageDrawResult Image::drawTiled(GraphicsContext& ctxt, const FloatRect& dstRect
 void Image::computeIntrinsicDimensions(Length& intrinsicWidth, Length& intrinsicHeight, FloatSize& intrinsicRatio)
 {
     intrinsicRatio = size();
-    intrinsicWidth = Length(intrinsicRatio.width(), Fixed);
-    intrinsicHeight = Length(intrinsicRatio.height(), Fixed);
+    intrinsicWidth = Length(intrinsicRatio.width(), LengthType::Fixed);
+    intrinsicHeight = Length(intrinsicRatio.height(), LengthType::Fixed);
 }
 
 void Image::startAnimationAsynchronously()
@@ -346,6 +352,11 @@ void Image::startAnimationAsynchronously()
     if (m_animationStartTimer->isActive())
         return;
     m_animationStartTimer->startOneShot(0_s);
+}
+
+DestinationColorSpace Image::colorSpace()
+{
+    return DestinationColorSpace::SRGB();
 }
 
 void Image::dump(TextStream& ts) const
@@ -373,6 +384,8 @@ TextStream& operator<<(TextStream& ts, const Image& image)
         ts << "gradient image";
     else if (image.isSVGImage())
         ts << "svg image";
+    else if (image.isSVGImageForContainer())
+        ts << "svg image for container";
     else if (image.isPDFDocumentImage())
         ts << "pdf image";
 

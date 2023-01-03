@@ -29,16 +29,20 @@
 
 #include "WebGLCompressedTextureATC.h"
 
-#include "Extensions3D.h"
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_ISO_ALLOCATED_IMPL(WebGLCompressedTextureATC);
 
 WebGLCompressedTextureATC::WebGLCompressedTextureATC(WebGLRenderingContextBase& context)
     : WebGLExtension(context)
 {
-    context.addCompressedTextureFormat(Extensions3D::COMPRESSED_ATC_RGB_AMD);
-    context.addCompressedTextureFormat(Extensions3D::COMPRESSED_ATC_RGBA_EXPLICIT_ALPHA_AMD);
-    context.addCompressedTextureFormat(Extensions3D::COMPRESSED_ATC_RGBA_INTERPOLATED_ALPHA_AMD);
+    context.graphicsContextGL()->ensureExtensionEnabled("GL_AMD_compressed_ATC_texture");
+
+    context.addCompressedTextureFormat(GraphicsContextGL::COMPRESSED_ATC_RGB_AMD);
+    context.addCompressedTextureFormat(GraphicsContextGL::COMPRESSED_ATC_RGBA_EXPLICIT_ALPHA_AMD);
+    context.addCompressedTextureFormat(GraphicsContextGL::COMPRESSED_ATC_RGBA_INTERPOLATED_ALPHA_AMD);
 }
 
 WebGLCompressedTextureATC::~WebGLCompressedTextureATC() = default;
@@ -48,9 +52,9 @@ WebGLExtension::ExtensionName WebGLCompressedTextureATC::getName() const
     return WebGLCompressedTextureATCName;
 }
 
-bool WebGLCompressedTextureATC::supported(WebGLRenderingContextBase& context)
+bool WebGLCompressedTextureATC::supported(GraphicsContextGL& context)
 {
-    return context.graphicsContext3D()->getExtensions().supports("GL_AMD_compressed_ATC_texture");
+    return context.supportsExtension("GL_AMD_compressed_ATC_texture");
 }
 
 } // namespace WebCore

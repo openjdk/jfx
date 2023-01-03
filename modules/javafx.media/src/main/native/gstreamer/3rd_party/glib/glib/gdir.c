@@ -66,7 +66,9 @@ struct _GDir
   DIR *dirp;
 #endif
 #ifdef G_OS_WIN32
-  gchar utf8_buf[FILENAME_MAX*4];
+  /* maximum encoding of FILENAME_MAX UTF-8 characters, plus a nul terminator
+   * (FILENAME_MAX is not guaranteed to include one) */
+  gchar utf8_buf[FILENAME_MAX*4 + 1];
 #endif
 };
 
@@ -118,7 +120,7 @@ g_dir_open_with_errno (const gchar *path,
     return NULL;
 #endif
 
-  return g_memdup (&dir, sizeof dir);
+  return g_memdup2 (&dir, sizeof dir);
 }
 
 /**
@@ -249,7 +251,7 @@ g_dir_read_name (GDir *dir)
       utf8_name = g_utf16_to_utf8 (wentry->d_name, -1, NULL, NULL, NULL);
 
       if (utf8_name == NULL)
-  continue;   /* Huh, impossible? Skip it anyway */
+    continue;       /* Huh, impossible? Skip it anyway */
 
       strcpy (dir->utf8_buf, utf8_name);
       g_free (utf8_name);

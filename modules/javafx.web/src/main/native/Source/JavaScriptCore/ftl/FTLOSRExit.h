@@ -44,6 +44,7 @@
 #include "Reg.h"
 #include "ValueProfile.h"
 #include "VirtualRegister.h"
+#include <wtf/FixedVector.h>
 
 namespace JSC {
 
@@ -67,9 +68,12 @@ struct OSRExitDescriptorImpl;
 struct OSRExitHandle;
 
 struct OSRExitDescriptor {
+private:
+    WTF_MAKE_NONCOPYABLE(OSRExitDescriptor);
+public:
     OSRExitDescriptor(
         DataFormat profileDataFormat, MethodOfGettingAValueProfile,
-        unsigned numberOfArguments, unsigned numberOfLocals);
+        unsigned numberOfArguments, unsigned numberOfLocals, unsigned numberOfTmps);
 
     // The first argument to the exit call may be a value we wish to profile.
     // If that's the case, the format will be not Invalid and we'll have a
@@ -79,7 +83,7 @@ struct OSRExitDescriptor {
     DataFormat m_profileDataFormat;
     MethodOfGettingAValueProfile m_valueProfile;
 
-    Operands<ExitValue> m_values;
+    FixedOperands<ExitValue> m_values;
     Bag<ExitTimeObjectMaterialization> m_materializations;
 
     void validateReferences(const TrackedReferences&);
@@ -92,7 +96,7 @@ struct OSRExitDescriptor {
     // this call, the OSRExit is simply ready to go.
     Ref<OSRExitHandle> emitOSRExit(
         State&, ExitKind, const DFG::NodeOrigin&, CCallHelpers&, const B3::StackmapGenerationParams&,
-        unsigned offset = 0);
+        uint32_t dfgNodeIndex, unsigned offset);
 
     // In some cases you want an OSRExit to come into existence, but you don't want to emit it right now.
     // This will emit the OSR exit in a late path. You can't be sure exactly when that will happen, but
@@ -104,7 +108,7 @@ struct OSRExitDescriptor {
     // eventually gets access to its label.
     Ref<OSRExitHandle> emitOSRExitLater(
         State&, ExitKind, const DFG::NodeOrigin&, const B3::StackmapGenerationParams&,
-        unsigned offset = 0);
+        uint32_t dfgNodeIndex, unsigned offset);
 
 private:
     // This is the low-level interface. It will create a handle representing the desire to emit code for
@@ -112,17 +116,17 @@ private:
     // that the above two APIs are written in terms of this and OSRExitHandle::emitExitThunk().
     Ref<OSRExitHandle> prepareOSRExitHandle(
         State&, ExitKind, const DFG::NodeOrigin&, const B3::StackmapGenerationParams&,
-        unsigned offset = 0);
+        uint32_t dfgNodeIndex, unsigned offset);
 };
 
 struct OSRExit : public DFG::OSRExitBase {
-    OSRExit(OSRExitDescriptor*, ExitKind, CodeOrigin, CodeOrigin codeOriginForExitProfile, bool wasHoisted);
+    OSRExit(OSRExitDescriptor*, ExitKind, CodeOrigin, CodeOrigin codeOriginForExitProfile, bool wasHoisted, uint32_t dfgNodeIndex, FixedVector<B3::ValueRep>&&);
 
     OSRExitDescriptor* m_descriptor;
     MacroAssemblerCodeRef<OSRExitPtrTag> m_code;
     // This tells us where to place a jump.
     CodeLocationJump<JSInternalPtrTag> m_patchableJump;
-    Vector<B3::ValueRep> m_valueReps;
+    FixedVector<B3::ValueRep> m_valueReps;
 
     CodeLocationJump<JSInternalPtrTag> codeLocationForRepatch(CodeBlock* ftlCodeBlock) const;
     void considerAddingAsFrequentExitSite(CodeBlock* profiledCodeBlock)

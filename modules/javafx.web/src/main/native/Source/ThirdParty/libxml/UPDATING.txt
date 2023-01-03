@@ -1,0 +1,57 @@
+Updating libxml in OpenJFX:
+
+1. Download respective libxml source tarball from here: http://xmlsoft.org/sources.
+   Alternatively we can also clone the libxml repo from github. (url- https://gitlab.gnome.org/GNOME/libxml2.git)
+
+2. Extract contents into `modules/javafx.web/src/main/native/Source/ThirdParty/libxml/src` directory.
+
+3. We do not have any local changes in the libxml source but libxml source needs to be configured before integrating into JavaFX. Below are platform wise steps to configure.
+
+- For windows
+4. Configure libxml.
+        > cd modules/javafx.web/src/main/native/Source/ThirdParty/libxml/src/win32
+        > cscript configure.js compiler=msvc catalog=no xml_debug=no docb=no ftp=no http=no iconv=no legacy=no mem_debug=no modules=no regexps=no run_debug=no schemas=no schematron=no valid=no xinclude=no xptr=no zlib=no
+
+        - Above command generates a header file `libxml\src\include\libxml\xmlversion.h` and may update the `src/config.h` file. (on all platforms)
+4.1 Copy `libxml\src\include\libxml\xmlversion.h` to `libxml\win32\include\libxml\xmlversion.h'. xmlversion.h file defines several macros to control libxml features. We do not require all of the features to be enabled. Compare the generated `libxml\src\include\libxml\xmlversion.h` with existing `libxml\win32\include\libxml\xmlversion.h' and retain macro definitions from the later.
+
+4.2 Copy `libxml\src\config.h` to `libxml\win32\config.h`
+
+5. Remove files & directories which are not relevant to JavaFX WebKit.
+
+- For Mac
+6. Prerequisites to compile libxml: libtool, autoconf, automake
+
+7. Configure libxml.
+        > cd modules/javafx.web/src/main/native/Source/ThirdParty/libxml/src
+        > ./configure
+
+7.1 Copy `libxml\src\include\libxml\xmlversion.h` to `libxml\mac\include\libxml\xmlversion.h` and follow same guidelines as Windows to retain changes from our repo.
+
+7.2 Copy libxml\src\config.h to libxml\mac\config.h
+
+- For Linux
+8. Prerequisites to compile libxml: libtool, autoconf, automake
+
+9. Configure libxml.
+        > cd modules/javafx.web/src/main/native/Source/ThirdParty/libxml/src
+        > ./configure
+
+9.1 Copy `libxml\src\include\libxml\xmlversion.h` to `libxml\linux\include\libxml\xmlversion.h` and follow same guidelines as Windows to retain changes from our repo.
+
+9.2 Copy libxml\src\config.h to libxml\linux\config.h
+
+10. Update version info in 'modules/javafx.web/src/main/legal/libxml.md'. Also, update copyright if any new files are added.
+
+11. Helper commands for removing tabs and trailing whitespaces from source files(.h and .c).
+
+11.1 > cd modules/javafx.web/src/main/native/Source/ThirdParty/libxml
+
+11.2 Remove tabs from source files:
+    > sudo apt install moreutils
+    > find src/ -name "*.c" -type f -exec bash -c 'expand -t 8 "$0" | sponge "$0"' {} \;
+    > find src/ -name "*.h" -type f -exec bash -c 'expand -t 8 "$0" | sponge "$0"' {} \;
+
+11.3 Remove trailing whitespaces from source files:
+    > find src/ -name “*.c” -type f -exec sed --in-place 's/[[:space:]]\+$//' {} \+
+    > find src/ -name “*.h” -type f -exec sed --in-place 's/[[:space:]]\+$//' {} \+

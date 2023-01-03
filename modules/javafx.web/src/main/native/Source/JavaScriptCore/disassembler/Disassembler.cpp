@@ -32,7 +32,6 @@
 #include <wtf/Deque.h>
 #include <wtf/Lock.h>
 #include <wtf/NeverDestroyed.h>
-#include <wtf/StringPrintStream.h>
 #include <wtf/Threading.h>
 
 namespace JSC {
@@ -78,14 +77,14 @@ public:
 
     void enqueue(std::unique_ptr<DisassemblyTask> task)
     {
-        LockHolder locker(m_lock);
+        Locker locker { m_lock };
         m_queue.append(WTFMove(task));
         m_condition.notifyAll();
     }
 
     void waitUntilEmpty()
     {
-        LockHolder locker(m_lock);
+        Locker locker { m_lock };
         while (!m_queue.isEmpty() || m_working)
             m_condition.wait(m_lock);
     }
@@ -96,7 +95,7 @@ private:
         for (;;) {
             std::unique_ptr<DisassemblyTask> task;
             {
-                LockHolder locker(m_lock);
+                Locker locker { m_lock };
                 m_working = false;
                 m_condition.notifyAll();
                 while (m_queue.isEmpty())
@@ -112,7 +111,7 @@ private:
 
     Lock m_lock;
     Condition m_condition;
-    Deque<std::unique_ptr<DisassemblyTask>> m_queue;
+    Deque<std::unique_ptr<DisassemblyTask>> m_queue WTF_GUARDED_BY_LOCK(m_lock);
     bool m_working { false };
 };
 
@@ -120,8 +119,12 @@ bool hadAnyAsynchronousDisassembly = false;
 
 AsynchronousDisassembler& asynchronousDisassembler()
 {
-    static NeverDestroyed<AsynchronousDisassembler> disassembler;
-    hadAnyAsynchronousDisassembly = true;
+    static LazyNeverDestroyed<AsynchronousDisassembler> disassembler;
+    static std::once_flag onceKey;
+    std::call_once(onceKey, [&] {
+        disassembler.construct();
+        hadAnyAsynchronousDisassembly = true;
+    });
     return disassembler.get();
 }
 

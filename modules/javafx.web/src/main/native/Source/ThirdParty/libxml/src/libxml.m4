@@ -1,4 +1,6 @@
 # Configure paths for LIBXML2
+# Simon Josefsson 2020-02-12
+# Fix autoconf 2.70+ warnings
 # Mike Hommey 2004-06-19
 # use CPPFLAGS instead of CFLAGS
 # Toshio Kuratomi 2001-04-21
@@ -58,7 +60,8 @@ dnl Now check if the installed libxml is sufficiently new.
 dnl (Also sanity checks the results of xml2-config to some extent)
 dnl
       rm -f conf.xmltest
-      AC_TRY_RUN([
+      AC_RUN_IFELSE(
+            [AC_LANG_SOURCE([[
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -119,21 +122,20 @@ main()
       {
         printf("\n*** An old version of libxml (%d.%d.%d) was found.\n",
                xml_major_version, xml_minor_version, xml_micro_version);
-        printf("*** You need a version of libxml newer than %d.%d.%d. The latest version of\n",
+        printf("*** You need a version of libxml newer than %d.%d.%d.\n",
            major, minor, micro);
-        printf("*** libxml is always available from ftp://ftp.xmlsoft.org.\n");
         printf("***\n");
         printf("*** If you have already installed a sufficiently new version, this error\n");
         printf("*** probably means that the wrong copy of the xml2-config shell script is\n");
         printf("*** being found. The easiest way to fix this is to remove the old version\n");
         printf("*** of LIBXML, but you can also set the XML2_CONFIG environment to point to the\n");
         printf("*** correct copy of xml2-config. (In this case, you will have to\n");
-        printf("*** modify your LD_LIBRARY_PATH enviroment variable, or edit /etc/ld.so.conf\n");
+        printf("*** modify your LD_LIBRARY_PATH environment variable, or edit /etc/ld.so.conf\n");
         printf("*** so that the correct libraries are found at run-time))\n");
     }
   return 1;
 }
-],, no_xml=yes,[echo $ac_n "cross compiling; assumed OK... $ac_c"])
+]])],, no_xml=yes,[echo $ac_n "cross compiling; assumed OK... $ac_c"])
        CPPFLAGS="$ac_save_CPPFLAGS"
        LIBS="$ac_save_LIBS"
      fi
@@ -156,10 +158,11 @@ main()
           echo "*** Could not run libxml test program, checking why..."
           CPPFLAGS="$CPPFLAGS $XML_CPPFLAGS"
           LIBS="$LIBS $XML_LIBS"
-          AC_TRY_LINK([
+	  AC_LINK_IFELSE(
+            [AC_LANG_PROGRAM([[
 #include <libxml/xmlversion.h>
 #include <stdio.h>
-],      [ LIBXML_TEST_VERSION; return 0;],
+]],    [[ LIBXML_TEST_VERSION; return 0;]])],
         [ echo "*** The test program compiled, but did not run. This usually means"
           echo "*** that the run-time linker is not finding LIBXML or finding the wrong"
           echo "*** version of LIBXML. If it is not finding LIBXML, you'll need to set your"

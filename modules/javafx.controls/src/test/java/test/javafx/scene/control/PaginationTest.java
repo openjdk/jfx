@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -47,8 +47,8 @@ import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 import javafx.util.Callback;
 
+import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import test.com.sun.javafx.pgstub.StubToolkit;
@@ -67,11 +67,18 @@ public class PaginationTest {
 
     @Before public void setup() {
         pagination = new Pagination();
-        tk = (StubToolkit)Toolkit.getToolkit();//This step is not needed (Just to make sure StubToolkit is loaded into VM)
+        tk = Toolkit.getToolkit();//This step is not needed (Just to make sure StubToolkit is loaded into VM)
+
+        assertTrue(tk instanceof StubToolkit);  // Ensure it's StubToolkit
+
         root = new StackPane();
         scene = new Scene(root);
         stage = new Stage();
         stage.setScene(scene);
+    }
+
+    @After public void tearDown() {
+        stage.hide();
     }
 
     /*********************************************************************
@@ -133,7 +140,7 @@ public class PaginationTest {
     /*********************************************************************
      * CSS related Tests                                                 *
      ********************************************************************/
-    @Test public void whenMaxPageIndicatorCountIsBound_impl_cssSettable_ReturnsFalse() {
+    @Test public void whenMaxPageIndicatorCountIsBound_CssMetaData_isSettable_ReturnsFalse() {
         CssMetaData styleable = ((StyleableProperty)pagination.maxPageIndicatorCountProperty()).getCssMetaData();
         assertTrue(styleable.isSettable(pagination));
         IntegerProperty intPr = new SimpleIntegerProperty(10);
@@ -141,7 +148,7 @@ public class PaginationTest {
         assertFalse(styleable.isSettable(pagination));
     }
 
-    @Test public void whenMaxPageIndicatorCountIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
+    @Test public void whenMaxPageIndicatorCountIsSpecifiedViaCSSAndIsNotBound_CssMetaData_isSettable_ReturnsTrue() {
         CssMetaData styleable = ((StyleableProperty)pagination.maxPageIndicatorCountProperty()).getCssMetaData();
         assertTrue(styleable.isSettable(pagination));
     }
@@ -180,7 +187,7 @@ public class PaginationTest {
         assertEquals(2, pagination.getCurrentPageIndex());
     }
 
-    @Ignore @Test public void setCurrentPageIndexAndNavigateWithMouse() {
+    @Test public void setCurrentPageIndexAndNavigateWithMouse() {
         pagination.setPageCount(25);
         pagination.setPageFactory(pageIndex -> {
             Node n = createPage(pageIndex);
@@ -201,6 +208,8 @@ public class PaginationTest {
 
         SceneHelper.processMouseEvent(scene,
             MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_PRESSED, xval+170, yval+380));
+        SceneHelper.processMouseEvent(scene,
+            MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_RELEASED, xval+170, yval+380));
         tk.firePulse();
 
         assertEquals(3, pagination.getCurrentPageIndex());

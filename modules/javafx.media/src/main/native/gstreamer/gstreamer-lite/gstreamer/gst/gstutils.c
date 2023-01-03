@@ -44,19 +44,14 @@
 #include "gstinfo.h"
 #include "gstparse.h"
 #include "gstvalue.h"
+#include "gstquark.h"
 #include "gst-i18n-lib.h"
 #include "glib-compat-private.h"
 #include <math.h>
 
-/**
- * gst_util_dump_mem:
- * @mem: (array length=size): a pointer to the memory to dump
- * @size: the size of the memory block to dump
- *
- * Dumps the memory block into a hex representation. Useful for debugging.
- */
-void
-gst_util_dump_mem (const guchar * mem, guint size)
+
+static void
+gst_util_dump_mem_offset (const guchar * mem, guint size, guint offset)
 {
   guint i, j;
   GString *string = g_string_sized_new (50);
@@ -75,7 +70,7 @@ gst_util_dump_mem (const guchar * mem, guint size)
     i++;
 
     if (j == 16 || i == size) {
-      g_print ("%08x (%p): %-48.48s %-16.16s\n", i - j, mem + i - j,
+      g_print ("%08x (%p): %-48.48s %-16.16s\n", i - j + offset, mem + i - j,
           string->str, chars->str);
       g_string_set_size (string, 0);
       g_string_set_size (chars, 0);
@@ -84,6 +79,19 @@ gst_util_dump_mem (const guchar * mem, guint size)
   }
   g_string_free (string, TRUE);
   g_string_free (chars, TRUE);
+}
+
+/**
+ * gst_util_dump_mem:
+ * @mem: (array length=size): a pointer to the memory to dump
+ * @size: the size of the memory block to dump
+ *
+ * Dumps the memory block into a hex representation. Useful for debugging.
+ */
+void
+gst_util_dump_mem (const guchar * mem, guint size)
+{
+  gst_util_dump_mem_offset (mem, size, 0);
 }
 
 /**
@@ -98,10 +106,35 @@ void
 gst_util_dump_buffer (GstBuffer * buf)
 {
   GstMapInfo map;
+  GstMemory *mem;
+  guint n_memory;
+  guint i;
+  guint offset;
 
-  if (gst_buffer_map (buf, &map, GST_MAP_READ)) {
-    gst_util_dump_mem (map.data, map.size);
-    gst_buffer_unmap (buf, &map);
+  n_memory = gst_buffer_n_memory (buf);
+
+  if (n_memory == 1) {
+    if (gst_buffer_map (buf, &map, GST_MAP_READ)) {
+      gst_util_dump_mem (map.data, map.size);
+      gst_buffer_unmap (buf, &map);
+    }
+  } else if (n_memory > 1) {
+    /* gst_buffer_map() will merge multiple memory segments into one contiguous
+     * area so we need to use gst_memory_map() in order not to affect the
+     * contents of buf */
+    offset = 0;
+    for (i = 0; i < n_memory; ++i) {
+      g_print ("[Memory #%u]\n", i);
+      mem = gst_buffer_get_memory (buf, i);
+      if (gst_memory_map (mem, &map, GST_MAP_READ)) {
+        gst_util_dump_mem_offset (map.data, map.size, offset);
+        offset += map.size;
+        gst_memory_unmap (mem, &map);
+      }
+      gst_memory_unref (mem);
+    }
+  } else {
+    g_print ("[Empty]\n");
   }
 }
 
@@ -180,7 +213,7 @@ gst_util_set_object_arg (GObject * object, const gchar * name,
     goto done;
   }
 
-  if (!gst_value_deserialize (&v, value))
+  if (!gst_value_deserialize_with_pspec (&v, value, pspec))
     return;
 
 done:
@@ -265,6 +298,12 @@ gst_util_get_object_array (GObject * object, const gchar * name,
  * double conversion is not defined/implemented.
  */
 
+/**
+ * gst_util_guint64_to_gdouble:
+ * @value: The #guint64 value to convert to double
+ *
+ * Returns: @value casted to #gdouble
+ */
 gdouble
 gst_util_guint64_to_gdouble (guint64 value)
 {
@@ -274,6 +313,12 @@ gst_util_guint64_to_gdouble (guint64 value)
     return (gdouble) ((gint64) value);
 }
 
+/**
+ * gst_util_gdouble_to_guint64:
+ * @value: The #gdouble value to convert guint64 double
+ *
+ * Returns: @value casted to #guint64
+ */
 guint64
 gst_util_gdouble_to_guint64 (gdouble value)
 {
@@ -343,7 +388,7 @@ gst_util_uint64_mul_uint64 (GstUInt64 * c1, GstUInt64 * c0, guint64 arg1,
   b0.ll = (guint64) v.l.high * n.l.low;
 
   /* add the high word of a0 to the low words of a1 and b0 using c1 as
-   * scrach space to capture the carry.  the low word of the result becomes
+   * scratch space to capture the carry.  the low word of the result becomes
    * the final high word of c0 */
   c1->ll = (guint64) c0->l.high + a1.l.low + b0.l.low;
   c0->l.high = c1->l.low;
@@ -1780,7 +1825,7 @@ gst_element_link_pads_full (GstElement * src, const gchar * srcpadname,
   if (srcpadname) {
     /* name specified, look it up */
     if (!(srcpad = gst_element_get_static_pad (src, srcpadname))) {
-      if ((srcpad = gst_element_get_request_pad (src, srcpadname)))
+      if ((srcpad = gst_element_request_pad_simple (src, srcpadname)))
         srcrequest = TRUE;
     }
     if (!srcpad) {
@@ -1819,7 +1864,7 @@ gst_element_link_pads_full (GstElement * src, const gchar * srcpadname,
   if (destpadname) {
     /* name specified, look it up */
     if (!(destpad = gst_element_get_static_pad (dest, destpadname))) {
-      if ((destpad = gst_element_get_request_pad (dest, destpadname)))
+      if ((destpad = gst_element_request_pad_simple (dest, destpadname)))
         destrequest = TRUE;
     }
     if (!destpad) {
@@ -2279,14 +2324,14 @@ gst_element_unlink_pads (GstElement * src, const gchar * srcpadname,
 
   /* obtain the pads requested */
   if (!(srcpad = gst_element_get_static_pad (src, srcpadname)))
-    if ((srcpad = gst_element_get_request_pad (src, srcpadname)))
+    if ((srcpad = gst_element_request_pad_simple (src, srcpadname)))
       srcrequest = TRUE;
   if (srcpad == NULL) {
     GST_WARNING_OBJECT (src, "source element has no pad \"%s\"", srcpadname);
     return;
   }
   if (!(destpad = gst_element_get_static_pad (dest, destpadname)))
-    if ((destpad = gst_element_get_request_pad (dest, destpadname)))
+    if ((destpad = gst_element_request_pad_simple (dest, destpadname)))
       destrequest = TRUE;
   if (destpad == NULL) {
     GST_WARNING_OBJECT (dest, "destination element has no pad \"%s\"",
@@ -2671,7 +2716,7 @@ gst_bin_add_many (GstBin * bin, GstElement * element_1, ...)
  * @element_1: (transfer none): the first #GstElement to remove from the bin
  * @...: (transfer none): %NULL-terminated list of elements to remove from the bin
  *
- * Remove a list of elements from a bin. This function is equivalent
+ * Removes a list of elements from a bin. This function is equivalent
  * to calling gst_bin_remove() with each member of the list.
  */
 void
@@ -3250,7 +3295,7 @@ element_find_unlinked_pad (GstElement * element, GstPadDirection direction)
  * pad when it is not needed any longer.
  *
  * Returns: (transfer full) (nullable): unlinked pad of the given
- * direction, %NULL.
+ * direction.
  */
 GstPad *
 gst_bin_find_unlinked_pad (GstBin * bin, GstPadDirection direction)
@@ -3362,7 +3407,7 @@ gst_bin_sync_children_states (GstBin * bin)
  * and want them all ghosted, you will have to create the ghost pads
  * yourself).
  *
- * Returns: (transfer floating) (type Gst.Bin) (nullable): a
+ * Returns: (transfer floating) (type Gst.Bin): a
  *   newly-created bin, or %NULL if an error occurred.
  */
 GstElement *
@@ -3393,9 +3438,9 @@ gst_parse_bin_from_description (const gchar * bin_description,
  * and want them all ghosted, you will have to create the ghost pads
  * yourself).
  *
- * Returns: (transfer floating) (type Gst.Element) (nullable): a newly-created
+ * Returns: (transfer floating) (type Gst.Element): a newly-created
  *   element, which is guaranteed to be a bin unless
- *   GST_FLAG_NO_SINGLE_ELEMENT_BINS was passed, or %NULL if an error
+ *   #GST_PARSE_FLAG_NO_SINGLE_ELEMENT_BINS was passed, or %NULL if an error
  *   occurred.
  */
 #ifndef GSTREAMER_LITE
@@ -3971,7 +4016,7 @@ gst_pad_create_stream_id_internal (GstPad * pad, GstElement * parent,
     gst_object_unref (sinkpad);
   }
 
-  /* The only case where we don't have an upstream start-start event
+  /* The only case where we don't have an upstream stream-start event
    * here is for source elements */
   if (!upstream_stream_id) {
     GstQuery *query;
@@ -4489,4 +4534,56 @@ invalid:
       g_free (newx);
     return FALSE;
   }
+}
+
+/**
+ * gst_type_mark_as_plugin_api:
+ * @type: a GType
+ * @flags: a set of #GstPluginAPIFlags to further inform cache generation.
+ *
+ * Marks @type as plugin API. This should be called in `class_init` of
+ * elements that expose new types (i.e. enums, flags or internal GObjects) via
+ * properties, signals or pad templates.
+ *
+ * Types exposed by plugins are not automatically added to the documentation
+ * as they might originate from another library and should in that case be
+ * documented via that library instead.
+ *
+ * By marking a type as plugin API it will be included in the documentation of
+ * the plugin that defines it.
+ *
+ * Since: 1.18
+ */
+void
+gst_type_mark_as_plugin_api (GType type, GstPluginAPIFlags flags)
+{
+  g_type_set_qdata (type, GST_QUARK (PLUGIN_API), GINT_TO_POINTER (TRUE));
+  g_type_set_qdata (type, GST_QUARK (PLUGIN_API_FLAGS),
+      GINT_TO_POINTER (flags));
+}
+
+/**
+ * gst_type_is_plugin_api:
+ * @type: a GType
+ * @flags: (out) (nullable): What #GstPluginAPIFlags the plugin was marked with
+ *
+ * Checks if @type is plugin API. See gst_type_mark_as_plugin_api() for
+ * details.
+ *
+ * Returns: %TRUE if @type is plugin API or %FALSE otherwise.
+ *
+ * Since: 1.18
+ */
+gboolean
+gst_type_is_plugin_api (GType type, GstPluginAPIFlags * flags)
+{
+  gboolean ret =
+      ! !GPOINTER_TO_INT (g_type_get_qdata (type, GST_QUARK (PLUGIN_API)));
+
+  if (ret && flags) {
+    *flags =
+        GPOINTER_TO_INT (g_type_get_qdata (type, GST_QUARK (PLUGIN_API_FLAGS)));
+  }
+
+  return ret;
 }

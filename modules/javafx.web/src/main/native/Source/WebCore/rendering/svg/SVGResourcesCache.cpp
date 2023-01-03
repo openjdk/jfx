@@ -20,6 +20,7 @@
 #include "config.h"
 #include "SVGResourcesCache.h"
 
+#include "ElementInlines.h"
 #include "RenderSVGResourceContainer.h"
 #include "SVGResources.h"
 #include "SVGResourcesCycleSolver.h"
@@ -167,6 +168,29 @@ void SVGResourcesCache::resourceDestroyed(RenderSVGResourceContainer& resource)
             clientElement.document().accessSVGExtensions().addPendingResource(resource.element().getIdAttribute(), clientElement);
         }
     }
+}
+
+SVGResourcesCache::SetStyleForScope::SetStyleForScope(RenderElement& renderer, const RenderStyle& scopedStyle, const RenderStyle& newStyle)
+    : m_renderer(renderer)
+    , m_scopedStyle(scopedStyle)
+    , m_needsNewStyle(scopedStyle != newStyle && rendererCanHaveResources(renderer))
+{
+    setStyle(newStyle);
+}
+
+SVGResourcesCache::SetStyleForScope::~SetStyleForScope()
+{
+    setStyle(m_scopedStyle);
+}
+
+void SVGResourcesCache::SetStyleForScope::setStyle(const RenderStyle& style)
+{
+    if (!m_needsNewStyle)
+        return;
+
+    auto& cache = resourcesCacheFromRenderer(m_renderer);
+    cache.removeResourcesFromRenderer(m_renderer);
+    cache.addResourcesFromRenderer(m_renderer, style);
 }
 
 }

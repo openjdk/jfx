@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,19 +26,18 @@
 #include "config.h"
 #include "JSIDBIndex.h"
 
-#if ENABLE(INDEXED_DATABASE)
-
 #include "IDBIndex.h"
 #include <JavaScriptCore/HeapInlines.h>
 
 namespace WebCore {
 using namespace JSC;
 
-void JSIDBIndex::visitAdditionalChildren(SlotVisitor& visitor)
+template<typename Visitor>
+void JSIDBIndex::visitAdditionalChildren(Visitor& visitor)
 {
     visitor.addOpaqueRoot(static_cast<IDBIndex&>(wrapped()).objectStoreAsOpaqueRoot());
 }
 
-} // namespace WebCore
+DEFINE_VISIT_ADDITIONAL_CHILDREN(JSIDBIndex);
 
-#endif // ENABLE(INDEXED_DATABASE)
+} // namespace WebCore

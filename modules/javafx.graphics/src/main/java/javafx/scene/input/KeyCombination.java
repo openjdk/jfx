@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -385,7 +385,7 @@ public abstract class KeyCombination {
      * @since JavaFX 2.1
      */
     public static KeyCombination valueOf(String value) {
-        final List<Modifier> modifiers = new ArrayList<Modifier>(4);
+        final List<Modifier> modifiers = new ArrayList<>(4);
 
         final String[] tokens = splitName(value);
 
@@ -635,7 +635,7 @@ public abstract class KeyCombination {
     }
 
     private static String[] splitName(String name) {
-        List<String> tokens = new ArrayList<String>();
+        List<String> tokens = new ArrayList<>();
         char[] chars = name.trim().toCharArray();
 
         final int STATE_BASIC = 0;      // general text

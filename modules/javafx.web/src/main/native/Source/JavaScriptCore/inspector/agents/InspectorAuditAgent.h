@@ -32,27 +32,29 @@
 #include <wtf/Forward.h>
 #include <wtf/Noncopyable.h>
 
+namespace JSC {
+class Debugger;
+}
+
 namespace Inspector {
 
 class InjectedScript;
 class InjectedScriptManager;
-class ScriptDebugServer;
-typedef String ErrorString;
 
 class JS_EXPORT_PRIVATE InspectorAuditAgent : public InspectorAgentBase, public AuditBackendDispatcherHandler {
     WTF_MAKE_NONCOPYABLE(InspectorAuditAgent);
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    virtual ~InspectorAuditAgent();
+    ~InspectorAuditAgent() override;
 
     // InspectorAgentBase
     void didCreateFrontendAndBackend(FrontendRouter*, BackendDispatcher*) final;
     void willDestroyFrontendAndBackend(DisconnectReason) final;
 
     // AuditBackendDispatcherHandler
-    void setup(ErrorString&, const int* executionContextId) final;
-    void run(ErrorString&, const String& test, const int* executionContextId, RefPtr<Protocol::Runtime::RemoteObject>& result, Optional<bool>& wasThrown) final;
-    void teardown(ErrorString&) final;
+    Protocol::ErrorStringOr<void> setup(std::optional<Protocol::Runtime::ExecutionContextId>&&) final;
+    Protocol::ErrorStringOr<std::tuple<Ref<Protocol::Runtime::RemoteObject>, std::optional<bool> /* wasThrown */>> run(const String& test, std::optional<Protocol::Runtime::ExecutionContextId>&&) final;
+    Protocol::ErrorStringOr<void> teardown() final;
 
     bool hasActiveAudit() const;
 
@@ -61,9 +63,9 @@ protected:
 
     InjectedScriptManager& injectedScriptManager() { return m_injectedScriptManager; }
 
-    virtual InjectedScript injectedScriptForEval(ErrorString&, const int* executionContextId) = 0;
+    virtual InjectedScript injectedScriptForEval(Protocol::ErrorString&, std::optional<Protocol::Runtime::ExecutionContextId>&&) = 0;
 
-    virtual void populateAuditObject(JSC::ExecState*, JSC::Strong<JSC::JSObject>& auditObject);
+    virtual void populateAuditObject(JSC::JSGlobalObject*, JSC::Strong<JSC::JSObject>& auditObject);
 
     virtual void muteConsole() { };
     virtual void unmuteConsole() { };
@@ -71,7 +73,7 @@ protected:
 private:
     RefPtr<AuditBackendDispatcher> m_backendDispatcher;
     InjectedScriptManager& m_injectedScriptManager;
-    ScriptDebugServer& m_scriptDebugServer;
+    JSC::Debugger& m_debugger;
 
     JSC::Strong<JSC::JSObject> m_injectedWebInspectorAuditValue;
 };

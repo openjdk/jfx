@@ -22,14 +22,15 @@
 
 #pragma once
 
-#include "SVGExternalResourcesRequired.h"
 #include "SVGGraphicsElement.h"
 #include "SVGURIReference.h"
 #include "SharedStringHash.h"
 
 namespace WebCore {
 
-class SVGAElement final : public SVGGraphicsElement, public SVGExternalResourcesRequired, public SVGURIReference {
+class DOMTokenList;
+
+class SVGAElement final : public SVGGraphicsElement, public SVGURIReference {
     WTF_MAKE_ISO_ALLOCATED(SVGAElement);
 public:
     static Ref<SVGAElement> create(const QualifiedName&, Document&);
@@ -39,10 +40,12 @@ public:
 
     SharedStringHash visitedLinkHash() const;
 
+    DOMTokenList& relList();
+
 private:
     SVGAElement(const QualifiedName&, Document&);
 
-    using PropertyRegistry = SVGPropertyOwnerRegistry<SVGAElement, SVGGraphicsElement, SVGExternalResourcesRequired, SVGURIReference>;
+    using PropertyRegistry = SVGPropertyOwnerRegistry<SVGAElement, SVGGraphicsElement, SVGURIReference>;
     const SVGPropertyRegistry& propertyRegistry() const final { return m_propertyRegistry; }
 
     void parseAttribute(const QualifiedName&, const AtomString&) final;
@@ -68,7 +71,9 @@ private:
     Ref<SVGAnimatedString> m_target { SVGAnimatedString::create(this) };
 
     // This is computed only once and must not be affected by subsequent URL changes.
-    mutable Optional<SharedStringHash> m_storedVisitedLinkHash;
+    mutable std::optional<SharedStringHash> m_storedVisitedLinkHash;
+
+    std::unique_ptr<DOMTokenList> m_relList;
 };
 
 } // namespace WebCore

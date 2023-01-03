@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,7 +24,7 @@
  */
 
 
-#include <WebCore/PageCache.h>
+#include <WebCore/BackForwardCache.h>
 #include <WebCore/PlatformJavaClasses.h>
 // FIXME: Openjfx2.26 rename pagecache to backforwardcache
 #include "com_sun_webkit_PageCache.h"
@@ -34,14 +34,14 @@ extern "C" {
 JNIEXPORT jint JNICALL Java_com_sun_webkit_PageCache_twkGetCapacity
   (JNIEnv *, jclass)
 {
-    return WebCore::PageCache::singleton().maxSize();
+    return WebCore::BackForwardCache::singleton().maxSize();
 }
 
 JNIEXPORT void JNICALL Java_com_sun_webkit_PageCache_twkSetCapacity
   (JNIEnv *, jclass, jint capacity)
 {
     ASSERT(capacity >= 0);
-    WebCore::PageCache::singleton().setMaxSize(capacity);
+    WebCore::BackForwardCache::singleton().setMaxSize(capacity);
 }
 
 }

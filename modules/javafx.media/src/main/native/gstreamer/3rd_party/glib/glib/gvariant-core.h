@@ -34,4 +34,6 @@ gboolean                g_variant_is_trusted                            (GVarian
 
 GVariantTypeInfo *      g_variant_get_type_info                         (GVariant            *value);
 
+gsize                   g_variant_get_depth                             (GVariant            *value);
+
 #endif /* __G_VARIANT_CORE_H__ */

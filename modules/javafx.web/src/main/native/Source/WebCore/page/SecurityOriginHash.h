@@ -40,7 +40,7 @@ struct SecurityOriginHash {
         unsigned hashCodes[3] = {
             origin->protocol().impl() ? origin->protocol().impl()->hash() : 0,
             origin->host().impl() ? origin->host().impl()->hash() : 0,
-            origin->port().valueOr(0)
+            origin->port().value_or(0)
         };
         return StringHasher::hashMemory<sizeof(hashCodes)>(hashCodes);
     }
@@ -74,10 +74,8 @@ struct SecurityOriginHash {
 } // namespace WebCore
 
 namespace WTF {
-    template<typename> struct DefaultHash;
 
-    template<> struct DefaultHash<RefPtr<WebCore::SecurityOrigin>> {
-        typedef WebCore::SecurityOriginHash Hash;
-    };
+template<typename> struct DefaultHash;
+template<> struct DefaultHash<RefPtr<WebCore::SecurityOrigin>> : WebCore::SecurityOriginHash { };
 
 } // namespace WTF

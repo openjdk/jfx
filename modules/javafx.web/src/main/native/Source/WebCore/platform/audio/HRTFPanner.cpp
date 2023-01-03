@@ -29,6 +29,7 @@
 #include "HRTFPanner.h"
 
 #include "AudioBus.h"
+#include "AudioUtilities.h"
 #include "FFTConvolver.h"
 #include "HRTFDatabase.h"
 #include "HRTFDatabaseLoader.h"
@@ -39,32 +40,22 @@ namespace WebCore {
 
 // The value of 2 milliseconds is larger than the largest delay which exists in any HRTFKernel from the default HRTFDatabase (0.0136 seconds).
 // We ASSERT the delay values used in process() with this value.
-const double MaxDelayTimeSeconds = 0.002;
-
-const int UninitializedAzimuth = -1;
-const unsigned RenderingQuantum = 128;
+constexpr double MaxDelayTimeSeconds = 0.002;
 
 HRTFPanner::HRTFPanner(float sampleRate, HRTFDatabaseLoader* databaseLoader)
     : Panner(PanningModelType::HRTF)
     , m_databaseLoader(databaseLoader)
     , m_sampleRate(sampleRate)
-    , m_crossfadeSelection(CrossfadeSelection1)
-    , m_azimuthIndex1(UninitializedAzimuth)
-    , m_elevation1(0)
-    , m_azimuthIndex2(UninitializedAzimuth)
-    , m_elevation2(0)
-    , m_crossfadeX(0)
-    , m_crossfadeIncr(0)
     , m_convolverL1(fftSizeForSampleRate(sampleRate))
     , m_convolverR1(fftSizeForSampleRate(sampleRate))
     , m_convolverL2(fftSizeForSampleRate(sampleRate))
     , m_convolverR2(fftSizeForSampleRate(sampleRate))
     , m_delayLineL(MaxDelayTimeSeconds, sampleRate)
     , m_delayLineR(MaxDelayTimeSeconds, sampleRate)
-    , m_tempL1(RenderingQuantum)
-    , m_tempR1(RenderingQuantum)
-    , m_tempL2(RenderingQuantum)
-    , m_tempR2(RenderingQuantum)
+    , m_tempL1(AudioUtilities::renderQuantumSize)
+    , m_tempR1(AudioUtilities::renderQuantumSize)
+    , m_tempL2(AudioUtilities::renderQuantumSize)
+    , m_tempR2(AudioUtilities::renderQuantumSize)
 {
     ASSERT(databaseLoader);
 }
@@ -73,11 +64,33 @@ HRTFPanner::~HRTFPanner() = default;
 
 size_t HRTFPanner::fftSizeForSampleRate(float sampleRate)
 {
-    // The HRTF impulse responses (loaded as audio resources) are 512 sample-frames @44.1KHz.
-    // Currently, we truncate the impulse responses to half this size, but an FFT-size of twice impulse response size is needed (for convolution).
-    // So for sample rates around 44.1KHz an FFT size of 512 is good. We double the FFT-size only for sample rates at least double this.
-    ASSERT(sampleRate >= 44100 && sampleRate <= 96000.0);
-    return (sampleRate < 88200.0) ? 512 : 1024;
+    // The HRTF impulse responses (loaded as audio resources) are 512
+    // sample-frames @44.1KHz. Currently, we truncate the impulse responses to
+    // half this size, but an FFT-size of twice impulse response size is needed
+    // (for convolution). So for sample rates around 44.1KHz an FFT size of 512
+    // is good. For different sample rates, the truncated response is resampled.
+    // The resampled length is used to compute the FFT size by choosing a power
+    // of two that is greater than or equal the resampled length. This power of
+    // two is doubled to get the actual FFT size.
+
+    const int truncatedImpulseLength = 256;
+    double sampleRateRatio = sampleRate / 44100;
+    double resampledLength = truncatedImpulseLength * sampleRateRatio;
+
+    // This is the size used for analysis frames in the HRTF kernel. The
+    // convolvers used by the kernel are twice this size.
+    int analysisFFTSize = 1 << static_cast<unsigned>(log2(resampledLength));
+
+    // Don't let the analysis size be smaller than the supported size
+    analysisFFTSize = std::max(analysisFFTSize, FFTFrame::minFFTSize());
+
+    int convolverFFTSize = 2 * analysisFFTSize;
+
+    // Make sure this size of convolver is supported.
+    ASSERT(convolverFFTSize <= FFTFrame::maxFFTSize());
+
+    return convolverFFTSize;
+
 }
 
 void HRTFPanner::reset()
@@ -164,11 +177,11 @@ void HRTFPanner::pan(double desiredAzimuth, double elevation, const AudioBus* in
     int desiredAzimuthIndex = calculateDesiredAzimuthIndexAndBlend(azimuth, azimuthBlend);
 
     // Initially snap azimuth and elevation values to first values encountered.
-    if (m_azimuthIndex1 == UninitializedAzimuth) {
+    if (!m_azimuthIndex1) {
         m_azimuthIndex1 = desiredAzimuthIndex;
         m_elevation1 = elevation;
     }
-    if (m_azimuthIndex2 == UninitializedAzimuth) {
+    if (!m_azimuthIndex2) {
         m_azimuthIndex2 = desiredAzimuthIndex;
         m_elevation2 = elevation;
     }
@@ -180,7 +193,7 @@ void HRTFPanner::pan(double desiredAzimuth, double elevation, const AudioBus* in
 
     // Check for azimuth and elevation changes, initiating a cross-fade if needed.
     if (!m_crossfadeX && m_crossfadeSelection == CrossfadeSelection1) {
-        if (desiredAzimuthIndex != m_azimuthIndex1 || elevation != m_elevation1) {
+        if (desiredAzimuthIndex != *m_azimuthIndex1 || elevation != m_elevation1) {
             // Cross-fade from 1 -> 2
             m_crossfadeIncr = 1 / fadeFrames;
             m_azimuthIndex2 = desiredAzimuthIndex;
@@ -188,7 +201,7 @@ void HRTFPanner::pan(double desiredAzimuth, double elevation, const AudioBus* in
         }
     }
     if (m_crossfadeX == 1 && m_crossfadeSelection == CrossfadeSelection2) {
-        if (desiredAzimuthIndex != m_azimuthIndex2 || elevation != m_elevation2) {
+        if (desiredAzimuthIndex != *m_azimuthIndex2 || elevation != m_elevation2) {
             // Cross-fade from 2 -> 1
             m_crossfadeIncr = -1 / fadeFrames;
             m_azimuthIndex1 = desiredAzimuthIndex;
@@ -196,11 +209,11 @@ void HRTFPanner::pan(double desiredAzimuth, double elevation, const AudioBus* in
         }
     }
 
-    // This algorithm currently requires that we process in power-of-two size chunks at least RenderingQuantum.
+    // This algorithm currently requires that we process in power-of-two size chunks at least AudioUtilities::renderQuantumSize.
     ASSERT(1UL << static_cast<int>(log2(framesToProcess)) == framesToProcess);
-    ASSERT(framesToProcess >= RenderingQuantum);
+    ASSERT(framesToProcess >= AudioUtilities::renderQuantumSize);
 
-    const unsigned framesPerSegment = RenderingQuantum;
+    const unsigned framesPerSegment = AudioUtilities::renderQuantumSize;
     const unsigned numberOfSegments = framesToProcess / framesPerSegment;
 
     for (unsigned segment = 0; segment < numberOfSegments; ++segment) {
@@ -213,8 +226,8 @@ void HRTFPanner::pan(double desiredAzimuth, double elevation, const AudioBus* in
         double frameDelayR1;
         double frameDelayL2;
         double frameDelayR2;
-        database->getKernelsFromAzimuthElevation(azimuthBlend, m_azimuthIndex1, m_elevation1, kernelL1, kernelR1, frameDelayL1, frameDelayR1);
-        database->getKernelsFromAzimuthElevation(azimuthBlend, m_azimuthIndex2, m_elevation2, kernelL2, kernelR2, frameDelayL2, frameDelayR2);
+        database->getKernelsFromAzimuthElevation(azimuthBlend, *m_azimuthIndex1, m_elevation1, kernelL1, kernelR1, frameDelayL1, frameDelayR1);
+        database->getKernelsFromAzimuthElevation(azimuthBlend, *m_azimuthIndex2, m_elevation2, kernelL2, kernelR2, frameDelayL2, frameDelayR2);
 
         bool areKernelsGood = kernelL1 && kernelR1 && kernelL2 && kernelR2;
         ASSERT(areKernelsGood);
@@ -291,6 +304,20 @@ void HRTFPanner::pan(double desiredAzimuth, double elevation, const AudioBus* in
     }
 }
 
+void HRTFPanner::panWithSampleAccurateValues(double* azimuth, double* elevation, const AudioBus* inputBus, AudioBus* outputBus, size_t framesToProcess)
+{
+    // Sample-accurate (a-rate) HRTF panner is not implemented, just k-rate. Just
+    // grab the current azimuth/elevation and use that.
+    //
+    // We are assuming that the inherent smoothing in the HRTF processing is good
+    // enough, and we don't want to increase the complexity of the HRTF panner by
+    // 15-20 times. (We need to compute one output sample for each possibly
+    // different impulse response. That N^2. Previously, we used an FFT to do
+    // them all at once for a complexity of N/log2(N). Hence, N/log2(N) times
+    // more complex.)
+    pan(azimuth[0], elevation[0], inputBus, outputBus, framesToProcess);
+}
+
 double HRTFPanner::tailTime() const
 {
     // Because HRTFPanner is implemented with a DelayKernel and a FFTConvolver, the tailTime of the HRTFPanner
@@ -304,6 +331,12 @@ double HRTFPanner::latencyTime() const
     // The latency of a FFTConvolver is also fftSize() / 2, and is in addition to its tailTime of the
     // same value.
     return (fftSize() / 2) / static_cast<double>(sampleRate());
+}
+
+bool HRTFPanner::requiresTailProcessing() const
+{
+    // Always return true since the tail and latency are never zero.
+    return true;
 }
 
 } // namespace WebCore

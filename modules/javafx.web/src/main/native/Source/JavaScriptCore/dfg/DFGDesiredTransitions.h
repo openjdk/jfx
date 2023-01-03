@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013, 2014 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,24 +33,22 @@ namespace JSC {
 
 class CodeBlock;
 class ScriptExecutable;
-class SlotVisitor;
 class Structure;
 class VM;
 
 namespace DFG {
 
 class CommonData;
+class DesiredTransitions;
 
 class DesiredTransition {
 public:
-    DesiredTransition(CodeBlock*, CodeBlock* codeOriginOwner, Structure*, Structure*);
+    friend class DesiredTransitions;
+    DesiredTransition(CodeBlock* codeOriginOwner, Structure*, Structure*);
 
-    void reallyAdd(VM&, CommonData*);
-
-    void visitChildren(SlotVisitor&);
+    template<typename Visitor> void visitChildren(Visitor&);
 
 private:
-    CodeBlock* m_codeBlock;
     CodeBlock* m_codeOriginOwner;
     Structure* m_oldStructure;
     Structure* m_newStructure;
@@ -58,14 +56,16 @@ private:
 
 class DesiredTransitions {
 public:
-    DesiredTransitions();
+    DesiredTransitions() = default;
+    DesiredTransitions(CodeBlock*);
     ~DesiredTransitions();
 
-    void addLazily(CodeBlock*, CodeBlock* codeOriginOwner, Structure*, Structure*);
+    void addLazily(CodeBlock* codeOriginOwner, Structure*, Structure*);
     void reallyAdd(VM&, CommonData*);
-    void visitChildren(SlotVisitor&);
+    template<typename Visitor> void visitChildren(Visitor&);
 
 private:
+    CodeBlock* m_codeBlock { nullptr };
     Vector<DesiredTransition> m_transitions;
 };
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -132,7 +132,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkRobot__1mouseMove
 
     Display *xdisplay = gdk_x11_get_default_xdisplay();
     checkXTest(env);
-    jfloat uiScale = getUIScale();
+    jfloat uiScale = getUIScale(gdk_screen_get_default());
     x = rint(x * uiScale);
     y = rint(y * uiScale);
     XWarpPointer(xdisplay,
@@ -228,7 +228,7 @@ JNIEXPORT jint JNICALL Java_com_sun_glass_ui_gtk_GtkRobot__1getMouseX
 
     jint x;
     glass_gdk_display_get_pointer(gdk_display_get_default(), &x, NULL);
-    x = rint(x / getUIScale());
+    x = rint(x / getUIScale(gdk_screen_get_default()));
     return x;
 }
 
@@ -245,7 +245,7 @@ JNIEXPORT jint JNICALL Java_com_sun_glass_ui_gtk_GtkRobot__1getMouseY
 
     jint y;
     glass_gdk_display_get_pointer(gdk_display_get_default(), NULL, &y);
-    y = rint(y / getUIScale());
+    y = rint(y / getUIScale(gdk_screen_get_default()));
     return y;
 }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013, 2014 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -24,31 +24,33 @@
  */
 
 #include "config.h"
-#include "PropertyMapHashTable.h"
+#include "PropertyTable.h"
 
-#include "JSCInlines.h"
+#include "JSCJSValueInlines.h"
 
 namespace JSC {
+
+DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(PropertyTable);
 
 const ClassInfo PropertyTable::s_info = { "PropertyTable", nullptr, nullptr, nullptr, CREATE_METHOD_TABLE(PropertyTable) };
 
 PropertyTable* PropertyTable::create(VM& vm, unsigned initialCapacity)
 {
-    PropertyTable* table = new (NotNull, allocateCell<PropertyTable>(vm.heap)) PropertyTable(vm, initialCapacity);
+    PropertyTable* table = new (NotNull, allocateCell<PropertyTable>(vm)) PropertyTable(vm, initialCapacity);
     table->finishCreation(vm);
     return table;
 }
 
 PropertyTable* PropertyTable::clone(VM& vm, const PropertyTable& other)
 {
-    PropertyTable* table = new (NotNull, allocateCell<PropertyTable>(vm.heap)) PropertyTable(vm, other);
+    PropertyTable* table = new (NotNull, allocateCell<PropertyTable>(vm)) PropertyTable(vm, other);
     table->finishCreation(vm);
     return table;
 }
 
 PropertyTable* PropertyTable::clone(VM& vm, unsigned initialCapacity, const PropertyTable& other)
 {
-    PropertyTable* table = new (NotNull, allocateCell<PropertyTable>(vm.heap)) PropertyTable(vm, initialCapacity, other);
+    PropertyTable* table = new (NotNull, allocateCell<PropertyTable>(vm)) PropertyTable(vm, initialCapacity, other);
     table->finishCreation(vm);
     return table;
 }
@@ -57,7 +59,7 @@ PropertyTable::PropertyTable(VM& vm, unsigned initialCapacity)
     : JSCell(vm, vm.propertyTableStructure.get())
     , m_indexSize(sizeForCapacity(initialCapacity))
     , m_indexMask(m_indexSize - 1)
-    , m_index(static_cast<unsigned*>(fastZeroedMalloc(dataSize())))
+    , m_index(static_cast<unsigned*>(PropertyTableMalloc::zeroedMalloc(dataSize())))
     , m_keyCount(0)
     , m_deletedCount(0)
 {
@@ -68,7 +70,7 @@ PropertyTable::PropertyTable(VM& vm, const PropertyTable& other)
     : JSCell(vm, vm.propertyTableStructure.get())
     , m_indexSize(other.m_indexSize)
     , m_indexMask(other.m_indexMask)
-    , m_index(static_cast<unsigned*>(fastMalloc(dataSize())))
+    , m_index(static_cast<unsigned*>(PropertyTableMalloc::malloc(dataSize())))
     , m_keyCount(other.m_keyCount)
     , m_deletedCount(other.m_deletedCount)
 {
@@ -90,7 +92,7 @@ PropertyTable::PropertyTable(VM& vm, unsigned initialCapacity, const PropertyTab
     : JSCell(vm, vm.propertyTableStructure.get())
     , m_indexSize(sizeForCapacity(initialCapacity))
     , m_indexMask(m_indexSize - 1)
-    , m_index(static_cast<unsigned*>(fastZeroedMalloc(dataSize())))
+    , m_index(static_cast<unsigned*>(PropertyTableMalloc::zeroedMalloc(dataSize())))
     , m_keyCount(0)
     , m_deletedCount(0)
 {
@@ -110,6 +112,23 @@ PropertyTable::PropertyTable(VM& vm, unsigned initialCapacity, const PropertyTab
         m_deletedOffsets = makeUnique<Vector<PropertyOffset>>(*otherDeletedOffsets);
 }
 
+void PropertyTable::finishCreation(VM& vm)
+{
+    Base::finishCreation(vm);
+    vm.heap.reportExtraMemoryAllocated(dataSize());
+}
+
+template<typename Visitor>
+void PropertyTable::visitChildrenImpl(JSCell* cell, Visitor& visitor)
+{
+    auto* thisObject = jsCast<PropertyTable*>(cell);
+    ASSERT_GC_OBJECT_INHERITS(thisObject, info());
+    Base::visitChildren(cell, visitor);
+    visitor.reportExtraMemoryVisited(thisObject->dataSize());
+}
+
+DEFINE_VISIT_CHILDREN(PropertyTable);
+
 void PropertyTable::destroy(JSCell* cell)
 {
     static_cast<PropertyTable*>(cell)->PropertyTable::~PropertyTable();
@@ -121,7 +140,8 @@ PropertyTable::~PropertyTable()
     for (iterator iter = begin(); iter != end; ++iter)
         iter->key->deref();
 
-    fastFree(m_index);
+    PropertyTableMalloc::free(m_index);
+
 }
 
 } // namespace JSC

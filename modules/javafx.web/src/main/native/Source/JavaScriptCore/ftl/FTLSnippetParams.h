@@ -36,25 +36,25 @@ namespace JSC { namespace FTL {
 
 class State;
 
-class SnippetParams : public JSC::SnippetParams {
+class SnippetParams final : public JSC::SnippetParams {
 public:
-    SnippetParams(State& state, const B3::StackmapGenerationParams& params, DFG::Node* node, Box<CCallHelpers::JumpList> exceptions, Vector<Value>&& regs, Vector<GPRReg>&& gpScratch, Vector<FPRReg>&& fpScratch)
+    SnippetParams(State& state, const B3::StackmapGenerationParams& params, CodeOrigin semanticNodeOrigin, Box<CCallHelpers::JumpList> exceptions, Vector<Value>&& regs, Vector<GPRReg>&& gpScratch, Vector<FPRReg>&& fpScratch)
         : JSC::SnippetParams(state.vm(), WTFMove(regs), WTFMove(gpScratch), WTFMove(fpScratch))
         , m_state(state)
         , m_params(params)
-        , m_node(node)
+        , m_semanticNodeOrigin(semanticNodeOrigin)
         , m_exceptions(exceptions)
     {
     }
 
 private:
-#define JSC_DEFINE_CALL_OPERATIONS(OperationType, ResultType, ...) void addSlowPathCallImpl(CCallHelpers::JumpList, CCallHelpers&, OperationType, ResultType, std::tuple<__VA_ARGS__> args) override;
+#define JSC_DEFINE_CALL_OPERATIONS(OperationType, ResultType, ...) void addSlowPathCallImpl(CCallHelpers::JumpList, CCallHelpers&, OperationType, ResultType, std::tuple<__VA_ARGS__> args) final;
     SNIPPET_SLOW_PATH_CALLS(JSC_DEFINE_CALL_OPERATIONS)
 #undef JSC_DEFINE_CALL_OPERATIONS
 
     State& m_state;
     const B3::StackmapGenerationParams& m_params;
-    DFG::Node* m_node;
+    CodeOrigin m_semanticNodeOrigin;
     Box<CCallHelpers::JumpList> m_exceptions;
 };
 

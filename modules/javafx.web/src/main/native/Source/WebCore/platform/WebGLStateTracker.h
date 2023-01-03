@@ -27,7 +27,7 @@
 
 #if ENABLE(WEBGL)
 
-#include "GraphicsContext3DAttributes.h"
+#include "GraphicsContextGLAttributes.h"
 #include <wtf/Function.h>
 #include <wtf/RefCounter.h>
 
@@ -36,14 +36,14 @@ namespace WebCore {
 class WebGLStateTracker {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    using StateChangeHandler = WTF::Function<void(bool isUsingWebGL)>;
+    using StateChangeHandler = Function<void(bool isUsingWebGL)>;
     WEBCORE_EXPORT explicit WebGLStateTracker(StateChangeHandler&&);
 
     enum WebGLContextCounterType { };
     using WebGLContextCounter = RefCounter<WebGLContextCounterType>;
     using Token = WebGLContextCounter::Token;
 
-    Token token(GraphicsContext3DPowerPreference);
+    Token token(GraphicsContextGLPowerPreference);
 
 private:
     void updateWebGLState();

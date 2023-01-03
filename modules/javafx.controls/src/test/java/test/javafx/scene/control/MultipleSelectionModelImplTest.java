@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -34,9 +34,12 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.BiPredicate;
+import java.util.stream.Collectors;
 
 import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
 import javafx.collections.FXCollections;
@@ -73,6 +76,7 @@ import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
 
 import test.com.sun.javafx.scene.control.infrastructure.VirtualFlowTestUtils;
+import test.javafx.collections.MockListObserver;
 
 /**
  * Unit tests for the SelectionModel abstract class used by ListView
@@ -169,7 +173,7 @@ public class MultipleSelectionModelImplTest {
             if (modelClass.equals(ListViewShim.get_ListViewBitSetSelectionModel_class())) {
                 // recreate the selection model
                 model = MultipleSelectionModelShim.newInstance_from_class(modelClass, ListView.class, listView);
-                listView.setSelectionModel((MultipleSelectionModel<String>)model);
+                listView.setSelectionModel(model);
 
                 // create a new focus model
                 focusModel = ListViewShim.getListViewFocusModel(listView);
@@ -177,7 +181,7 @@ public class MultipleSelectionModelImplTest {
                 currentControl = listView;
             } else if (modelClass.equals(TreeViewShim.get_TreeViewBitSetSelectionModel_class())) {
                 model = MultipleSelectionModelShim.newInstance_from_class(modelClass, TreeView.class, treeView);
-                treeView.setSelectionModel((MultipleSelectionModel<String>)model);
+                treeView.setSelectionModel(model);
                 focusModel = treeView.getFocusModel();
 
                 // create a new focus model
@@ -340,6 +344,94 @@ public class MultipleSelectionModelImplTest {
         assertTrue(model.isSelected(4));
         assertFalse(model.isSelected(5));
         assertTrue(model.isSelected(6));
+    }
+
+    @Test public void selectedIndicesListenerReportsCorrectIndexOnClearSelection() {
+        model.setSelectionMode(SelectionMode.MULTIPLE);
+        model.select(1);
+        model.select(5);
+        MockListObserver<Integer> observer = new MockListObserver<>();
+        model.getSelectedIndices().addListener(observer);
+        model.clearSelection(5);
+
+        observer.check1();
+        observer.checkAddRemove(0, model.getSelectedIndices(), List.of(5), 1, 1);
+    }
+
+    @Test public void clearAndSelectFiresDisjointRemovedChanges() {
+        model.setSelectionMode(SelectionMode.MULTIPLE);
+        model.selectAll();
+
+        MockListObserver observer = new MockListObserver();
+        model.getSelectedItems().addListener(observer);
+        model.clearAndSelect(1);
+
+        List removed1, removed2;
+        BiPredicate equalityComparer;
+
+        if (isTree()) {
+            removed1 = List.of(new TreeItem<>(data.get(0)));
+            removed2 = data.stream().map(TreeItem::new).skip(2).collect(Collectors.toList());
+            equalityComparer = (a, b) -> Objects.equals(((TreeItem)a).getValue(), ((TreeItem)b).getValue());
+        } else {
+            removed1 = List.of(data.get(0));
+            removed2 = data.stream().skip(2).collect(Collectors.toList());
+            equalityComparer = Objects::equals;
+        }
+
+        observer.checkN(2);
+        observer.checkAddRemove(0, model.getSelectedItems(), removed1, equalityComparer, 0, 0);
+        observer.checkAddRemove(1, model.getSelectedItems(), removed2, equalityComparer, 1, 1);
+    }
+
+    @Test public void clearAndSelectFirstSelectedItem() {
+        model.setSelectionMode(SelectionMode.MULTIPLE);
+        model.select(1);
+        model.select(2);
+        model.select(3);
+
+        MockListObserver observer = new MockListObserver();
+        model.getSelectedItems().addListener(observer);
+        model.clearAndSelect(1);
+
+        List removed;
+        BiPredicate equalityComparer;
+
+        if (isTree()) {
+            removed = data.stream().map(TreeItem::new).skip(2).limit(2).collect(Collectors.toList());
+            equalityComparer = (a, b) -> Objects.equals(((TreeItem)a).getValue(), ((TreeItem)b).getValue());
+        } else {
+            removed = data.stream().skip(2).limit(2).collect(Collectors.toList());
+            equalityComparer = Objects::equals;
+        }
+
+        observer.check1();
+        observer.checkAddRemove(0, model.getSelectedItems(), removed, equalityComparer, 1, 1);
+    }
+
+    @Test public void clearAndSelectLastSelectedItem() {
+        model.setSelectionMode(SelectionMode.MULTIPLE);
+        model.select(1);
+        model.select(2);
+        model.select(3);
+
+        MockListObserver observer = new MockListObserver();
+        model.getSelectedItems().addListener(observer);
+        model.clearAndSelect(3);
+
+        List removed;
+        BiPredicate equalityComparer;
+
+        if (isTree()) {
+            removed = data.stream().map(TreeItem::new).skip(1).limit(2).collect(Collectors.toList());
+            equalityComparer = (a, b) -> Objects.equals(((TreeItem)a).getValue(), ((TreeItem)b).getValue());
+        } else {
+            removed = data.stream().skip(1).limit(2).collect(Collectors.toList());
+            equalityComparer = Objects::equals;
+        }
+
+        observer.check1();
+        observer.checkAddRemove(0, model.getSelectedItems(), removed, equalityComparer, 0, 0);
     }
 
     @Test public void testSelectedIndicesObservableListIsEmpty() {
@@ -1304,5 +1396,117 @@ public class MultipleSelectionModelImplTest {
         assertEquals(2, model.getSelectedIndices().size());
         assertEquals(2, model.getSelectedItems().size());
         assertEquals(1, counter.get());
+    }
+
+    // Test for MultipleSelectionModelBase.SelectedIndicesList#set(int index)
+    @Test public void testSelectedIndicesList_SetMethod() {
+        model.clearSelection();
+        model.setSelectionMode(SelectionMode.MULTIPLE);
+        model.select(1);
+
+        assertTrue(model.isSelected(1));
+    }
+
+    // Test for MultipleSelectionModelBase.SelectedIndicesList#set(int index, int end, boolean isSet)
+    @Test public void testSelectedIndicesList_SetRangeMethod() {
+        model.clearSelection();
+        model.setSelectionMode(SelectionMode.MULTIPLE);
+        model.selectAll();
+
+        assertEquals(data.size(), model.getSelectedItems().size());
+    }
+
+    // Test for MultipleSelectionModelBase.SelectedIndicesList#set(int index, int... indices)
+    @Test public void testSelectedIndicesList_SetIndicesMethod() {
+        model.clearSelection();
+        model.setSelectionMode(SelectionMode.MULTIPLE);
+        model.selectIndices(1, 2, 5);
+
+        assertTrue(model.isSelected(1));
+        assertTrue(model.isSelected(2));
+        assertTrue(model.isSelected(5));
+        assertEquals(3, model.getSelectedIndices().size());
+    }
+
+    // Test for MultipleSelectionModelBase.SelectedIndicesList#clear()
+    @Test public void testSelectedIndicesList_ClearMethod() {
+        model.setSelectionMode(SelectionMode.MULTIPLE);
+        model.selectIndices(1, 2, 5);
+        model.clearSelection();
+
+        assertTrue(model.getSelectedIndices().isEmpty());
+    }
+
+    // Test for MultipleSelectionModelBase.SelectedIndicesList#clear()
+    @Test public void testSelectedIndicesList_ClearIndexMethod() {
+        model.clearSelection();
+        model.setSelectionMode(SelectionMode.MULTIPLE);
+        model.selectIndices(1, 2, 5);
+        model.clearSelection(2);
+
+        assertEquals(2, model.getSelectedIndices().size());
+    }
+
+
+    @Test
+    public void testSelectedIndicesChangeEvents() throws InterruptedException {
+
+        testSelectedIndicesChangeEventsFactory(0, new int[]{2,3}, 1, new int[]{5,7},
+                new int[][]{new int[]{1}, new int[]{5,7}});
+
+        testSelectedIndicesChangeEventsFactory(1, new int[]{3,4}, 0, new int[]{5,7},
+                new int[][]{new int[]{0}, new int[]{5,7}});
+
+        testSelectedIndicesChangeEventsFactory(0, new int[]{1, 3,4, 5, 7}, 6, new int[]{8,9},
+                new int[][]{new int[]{6}, new int[]{8,9}});
+
+        testSelectedIndicesChangeEventsFactory(5, new int[]{6, 7}, 2, new int[]{1,0},
+                new int[][]{new int[]{0,1,2}});
+
+        testSelectedIndicesChangeEventsFactory(2, new int[]{3, 6,7}, 0, new int[]{1,4,5,8,9},
+                new int[][]{new int[]{0,1},new int[]{4,5},new int[]{8,9}});
+    }
+
+    public ListView createListViewWithMultipleSelection() {
+        ListView<String> listView = new ListView<>();
+        listView.getItems().addAll(
+                "item-0",
+                "item-1",
+                "item-2",
+                "item-3",
+                "item-4",
+                "item-5",
+                "item-6",
+                "item-7",
+                "item-8",
+                "item-9",
+                "item-10"
+        );
+        listView.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
+        return listView;
+    }
+
+    public void testSelectedIndicesChangeEventsFactory(int initialSelected, int[] initialSelectedI, int selected, int[] selectedI, int[][] expected) throws InterruptedException {
+        ListView<String> listView = createListViewWithMultipleSelection();
+        listView.getSelectionModel().selectIndices(initialSelected,initialSelectedI);
+        testSelectedIndicesChangeHelper(listView, selected, selectedI, expected);
+    }
+    public void testSelectedIndicesChangeHelper(ListView listView, int selected, int[] selectedI, int[][] expected) {
+        List<int[]> expectedEntries = new LinkedList<>(Arrays.asList(expected));
+        MultipleSelectionModel<String> selectionModel = listView.getSelectionModel();
+        selectionModel.getSelectedIndices().addListener((ListChangeListener<? super Integer>) c -> {
+            while (c.next()) {
+                try {
+                    assertEquals(Arrays.stream(expectedEntries.get(0)).boxed().collect(Collectors.toList()), c.getAddedSubList());
+                    expectedEntries.remove(0);
+                } catch (IndexOutOfBoundsException e) {
+                    fail(e.getMessage());
+                }
+            }
+        });
+
+        selectionModel.selectIndices(selected, selectedI);
+
+        assertTrue("A ListEvent was missing: " + Arrays.deepToString(expectedEntries.toArray()), expectedEntries.isEmpty());
     }
 }

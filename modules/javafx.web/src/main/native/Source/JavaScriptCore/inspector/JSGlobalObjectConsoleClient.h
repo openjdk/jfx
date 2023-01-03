@@ -29,6 +29,8 @@
 #include <wtf/Vector.h>
 #include <wtf/text/WTFString.h>
 
+using JSC::MessageType;
+
 namespace Inspector {
 
 class InspectorConsoleAgent;
@@ -39,32 +41,31 @@ class JSGlobalObjectConsoleClient final : public JSC::ConsoleClient {
     WTF_MAKE_FAST_ALLOCATED;
 public:
     explicit JSGlobalObjectConsoleClient(InspectorConsoleAgent*);
-    virtual ~JSGlobalObjectConsoleClient() { }
+    ~JSGlobalObjectConsoleClient() final { }
 
     static bool logToSystemConsole();
     static void setLogToSystemConsole(bool);
 
-    void setInspectorDebuggerAgent(InspectorDebuggerAgent* agent) { m_debuggerAgent = agent; }
-    void setInspectorScriptProfilerAgent(InspectorScriptProfilerAgent* agent) { m_scriptProfilerAgent = agent; }
-
-protected:
-    void messageWithTypeAndLevel(MessageType, MessageLevel, JSC::ExecState*, Ref<ScriptArguments>&&) override;
-    void count(JSC::ExecState*, const String& label) override;
-    void countReset(JSC::ExecState*, const String& label) override;
-    void profile(JSC::ExecState*, const String& title) override;
-    void profileEnd(JSC::ExecState*, const String& title) override;
-    void takeHeapSnapshot(JSC::ExecState*, const String& title) override;
-    void time(JSC::ExecState*, const String& label) override;
-    void timeLog(JSC::ExecState*, const String& label, Ref<ScriptArguments>&&) override;
-    void timeEnd(JSC::ExecState*, const String& label) override;
-    void timeStamp(JSC::ExecState*, Ref<ScriptArguments>&&) override;
-    void record(JSC::ExecState*, Ref<ScriptArguments>&&) override;
-    void recordEnd(JSC::ExecState*, Ref<ScriptArguments>&&) override;
-    void screenshot(JSC::ExecState*, Ref<ScriptArguments>&&) override;
+    void setDebuggerAgent(InspectorDebuggerAgent* agent) { m_debuggerAgent = agent; }
+    void setPersistentScriptProfilerAgent(InspectorScriptProfilerAgent* agent) { m_scriptProfilerAgent = agent; }
 
 private:
+    void messageWithTypeAndLevel(MessageType, MessageLevel, JSC::JSGlobalObject*, Ref<ScriptArguments>&&) final;
+    void count(JSC::JSGlobalObject*, const String& label) final;
+    void countReset(JSC::JSGlobalObject*, const String& label) final;
+    void profile(JSC::JSGlobalObject*, const String& title) final;
+    void profileEnd(JSC::JSGlobalObject*, const String& title) final;
+    void takeHeapSnapshot(JSC::JSGlobalObject*, const String& title) final;
+    void time(JSC::JSGlobalObject*, const String& label) final;
+    void timeLog(JSC::JSGlobalObject*, const String& label, Ref<ScriptArguments>&&) final;
+    void timeEnd(JSC::JSGlobalObject*, const String& label) final;
+    void timeStamp(JSC::JSGlobalObject*, Ref<ScriptArguments>&&) final;
+    void record(JSC::JSGlobalObject*, Ref<ScriptArguments>&&) final;
+    void recordEnd(JSC::JSGlobalObject*, Ref<ScriptArguments>&&) final;
+    void screenshot(JSC::JSGlobalObject*, Ref<ScriptArguments>&&) final;
+
     void warnUnimplemented(const String& method);
-    void internalAddMessage(MessageType, MessageLevel, JSC::ExecState*, Ref<ScriptArguments>&&);
+    void internalAddMessage(MessageType, MessageLevel, JSC::JSGlobalObject*, Ref<ScriptArguments>&&);
 
     void startConsoleProfile();
     void stopConsoleProfile();

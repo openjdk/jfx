@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -79,7 +79,7 @@ public:
     }
 
 private:
-    static const char* m_deletedValueRaceName;
+    static const char* const m_deletedValueRaceName;
 
     JSCell* m_cell { nullptr };
     const char* m_raceName { nullptr };
@@ -88,7 +88,7 @@ private:
 struct VisitRaceKeyHash {
     static unsigned hash(const VisitRaceKey& key) { return key.hash(); }
     static bool equal(const VisitRaceKey& a, const VisitRaceKey& b) { return a == b; }
-    static const bool safeToCompareToEmptyOrDeleted = true;
+    static constexpr bool safeToCompareToEmptyOrDeleted = true;
 };
 
 } // namespace JSC
@@ -96,9 +96,7 @@ struct VisitRaceKeyHash {
 namespace WTF {
 
 template<typename T> struct DefaultHash;
-template<> struct DefaultHash<JSC::VisitRaceKey> {
-    typedef JSC::VisitRaceKeyHash Hash;
-};
+template<> struct DefaultHash<JSC::VisitRaceKey> : JSC::VisitRaceKeyHash { };
 
 template<typename T> struct HashTraits;
 template<> struct HashTraits<JSC::VisitRaceKey> : SimpleClassHashTraits<JSC::VisitRaceKey> { };

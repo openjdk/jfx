@@ -51,13 +51,16 @@ CFLAGS += -fPIC \
          -DHAVE_CONFIG_H \
          -DGSTREAMER_LITE \
          -DGST_REMOVE_DISABLED \
-         -DOSX \
-         -msse2
+         -DOSX
 
 ifeq ($(BUILD_TYPE), Release)
     CFLAGS += -Os
 else
     CFLAGS += -O0 -g -Wall
+endif
+
+ifneq ($(ARCH), arm64)
+    CFLAGS += -msse2
 endif
 
 INCLUDES = $(addprefix -I$(SRCBASE_DIR)/,$(DIRLIST)) \
@@ -234,21 +237,29 @@ C_SOURCES = gstreamer/gst/gst.c \
             gst-plugins-base/gst/audioconvert/gstaudioconvert.c \
             gst-plugins-bad/gst/aiff/aiff.c \
             gst-plugins-bad/gst/aiff/aiffparse.c \
+            gst-plugins-bad/gst/aiff/gstaiffelement.c \
             gst-plugins-base/gst/app/gstapp.c \
+            gst-plugins-base/gst/app/gstappsink.c \
             gst-plugins-base/gst/typefind/gsttypefindfunctions.c \
+            gst-plugins-base/gst/typefind/gsttypefindfunctionsplugin.c \
             gst-plugins-good/gst/audioparsers/gstmpegaudioparse.c \
             gst-plugins-good/gst/audioparsers/parsersplugin.c \
             gst-plugins-good/gst/equalizer/gstiirequalizer.c \
             gst-plugins-good/gst/equalizer/gstiirequalizernbands.c \
+            gst-plugins-good/gst/equalizer/gstiirequalizerplugin.c \
             gst-plugins-good/gst/isomp4/isomp4-plugin.c \
+            gst-plugins-good/gst/isomp4/gstisomp4element.c \
+            gst-plugins-good/gst/isomp4/qtdemux-webvtt.c \
             gst-plugins-good/gst/isomp4/qtdemux.c \
             gst-plugins-good/gst/isomp4/gstisoff.c \
             gst-plugins-good/gst/isomp4/qtdemux_dump.c \
             gst-plugins-good/gst/isomp4/qtdemux_lang.c \
+            gst-plugins-good/gst/isomp4/qtdemux_tags.c \
+            gst-plugins-good/gst/isomp4/qtdemux_tree.c \
             gst-plugins-good/gst/isomp4/qtdemux_types.c \
             gst-plugins-good/gst/spectrum/gstspectrum.c \
             gst-plugins-good/gst/wavparse/gstwavparse.c \
-            gstreamer/plugins/elements/gstelements.c \
+            gstreamer/plugins/elements/gstcoreelementsplugin.c \
             gstreamer/plugins/elements/gstqueue.c \
             gstreamer/plugins/elements/gsttypefindelement.c \
             projects/plugins/gstplugins-lite.c

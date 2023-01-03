@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -38,6 +38,8 @@ import java.awt.Insets;
 import java.awt.EventQueue;
 import java.awt.SecondaryLoop;
 import java.awt.GraphicsEnvironment;
+import java.awt.GraphicsConfiguration;
+import java.awt.Rectangle;
 import java.awt.event.AWTEventListener;
 import java.awt.event.ComponentEvent;
 import java.awt.event.FocusEvent;
@@ -48,6 +50,7 @@ import java.awt.event.KeyEvent;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseWheelEvent;
 import java.awt.event.InvocationEvent;
+import java.awt.geom.AffineTransform;
 import java.awt.im.InputMethodRequests;
 import java.awt.image.BufferedImage;
 import java.awt.image.DataBufferInt;
@@ -59,7 +62,9 @@ import javax.swing.JComponent;
 import javax.swing.SwingUtilities;
 
 import javafx.application.Platform;
+import javafx.geometry.Point2D;
 import javafx.scene.Scene;
+import com.sun.glass.ui.Screen;
 
 import com.sun.javafx.application.PlatformImpl;
 import com.sun.javafx.cursor.CursorFrame;
@@ -212,6 +217,7 @@ public class JFXPanel extends JComponent {
         if (fxInitialized) {
             return;
         }
+        @SuppressWarnings("removal")
         EventQueue eventQueue = AccessController.doPrivileged(
                                 (PrivilegedAction<EventQueue>) java.awt.Toolkit
                                 .getDefaultToolkit()::getSystemEventQueue);
@@ -295,16 +301,19 @@ public class JFXPanel extends JComponent {
         if (Toolkit.getToolkit().isFxUserThread()) {
             setSceneImpl(newScene);
         } else {
+            @SuppressWarnings("removal")
             EventQueue eventQueue = AccessController.doPrivileged(
                     (PrivilegedAction<EventQueue>) java.awt.Toolkit
                             .getDefaultToolkit()::getSystemEventQueue);
             SecondaryLoop secondaryLoop = eventQueue.createSecondaryLoop();
-            if (secondaryLoop.enter()) {
-                Platform.runLater(() -> {
+            Platform.runLater(() -> {
+                try {
                     setSceneImpl(newScene);
-                });
-                secondaryLoop.exit();
-            }
+                } finally {
+                    secondaryLoop.exit();
+                }
+            });
+            secondaryLoop.enter();
         }
     }
 
@@ -358,6 +367,44 @@ public class JFXPanel extends JComponent {
         return false;
     }
 
+    // we need to know the JavaFX screen of the current AWT graphcisConfiguration
+    private Screen findScreen(GraphicsConfiguration graphicsConfiguration) {
+        Rectangle awtBounds = graphicsConfiguration.getBounds();
+        AffineTransform awtScales = graphicsConfiguration.getDefaultTransform();
+        for (Screen screen : Screen.getScreens()) {
+            if ((Math.abs(screen.getPlatformX() - awtBounds.getX()) < 2.) &&
+                    (Math.abs(screen.getPlatformY() - awtBounds.getY()) < 2.) &&
+                    (Math.abs(screen.getPlatformWidth() - awtScales.getScaleX() * awtBounds.getWidth()) < 2.) &&
+                    (Math.abs(screen.getPlatformHeight() - awtScales.getScaleY() * awtBounds.getHeight()) < 2.)) {
+                return screen;
+            }
+        }
+        return null;
+    }
+
+    private Point2D convertSwingToFxPixel(GraphicsConfiguration g, double wx, double wy) {
+        double newx, newy;
+        Screen screen = findScreen(g);
+        if (screen != null) {
+            AffineTransform awtScales = getGraphicsConfiguration().getDefaultTransform();
+            float pScaleX = screen.getPlatformScaleX();
+            float pScaleY = screen.getPlatformScaleY();
+            int sx = screen.getX();
+            int sy = screen.getY();
+            double awtScaleX = awtScales.getScaleX();
+            double awtScaleY = awtScales.getScaleY();
+
+            int px = screen.getPlatformX();
+            int py = screen.getPlatformY();
+            newx = sx + (wx - px) * awtScaleX / pScaleX;
+            newy = sy + (wy - py) * awtScaleY / pScaleY;
+        } else {
+            newx = wx;
+            newy = wy;
+        }
+        return new Point2D(newx, newy);
+    }
+
     private void sendMouseEventToFX(MouseEvent e) {
         if (scenePeer == null || !isFxEnabled()) {
             return;
@@ -403,6 +450,9 @@ public class JFXPanel extends JComponent {
         if (e.getID() == MouseEvent.MOUSE_PRESSED || e.getID() == MouseEvent.MOUSE_RELEASED) {
             popupTrigger = e.isPopupTrigger();
         }
+        Point2D onScreen = convertSwingToFxPixel(getGraphicsConfiguration(), e.getXOnScreen(), e.getYOnScreen());
+        int fxXOnScreen = (int)Math.round(onScreen.getX());
+        int fxYOnScreen = (int)Math.round(onScreen.getY());
 
         if(e.getID() == MouseEvent.MOUSE_WHEEL) {
             scenePeer.scrollEvent(AbstractEvents.MOUSEEVENT_VERTICAL_WHEEL,
@@ -410,7 +460,7 @@ public class JFXPanel extends JComponent {
                     0, 0, // total scroll
                     40, 40, // multiplier
                     e.getX(), e.getY(),
-                    e.getXOnScreen(), e.getYOnScreen(),
+                    fxXOnScreen, fxYOnScreen,
                     (extModifiers & MouseEvent.SHIFT_DOWN_MASK) != 0,
                     (extModifiers & MouseEvent.CTRL_DOWN_MASK) != 0,
                     (extModifiers & MouseEvent.ALT_DOWN_MASK) != 0,
@@ -421,7 +471,8 @@ public class JFXPanel extends JComponent {
                     SwingEvents.mouseButtonToEmbedMouseButton(e.getButton(), extModifiers),
                     primaryBtnDown, middleBtnDown, secondaryBtnDown,
                     backBtnDown, forwardBtnDown,
-                    e.getX(), e.getY(), e.getXOnScreen(), e.getYOnScreen(),
+                    e.getX(), e.getY(),
+                    fxXOnScreen, fxYOnScreen,
                     (extModifiers & MouseEvent.SHIFT_DOWN_MASK) != 0,
                     (extModifiers & MouseEvent.CTRL_DOWN_MASK) != 0,
                     (extModifiers & MouseEvent.ALT_DOWN_MASK) != 0,
@@ -429,7 +480,7 @@ public class JFXPanel extends JComponent {
                     popupTrigger);
         }
         if (e.isPopupTrigger()) {
-            scenePeer.menuEvent(e.getX(), e.getY(), e.getXOnScreen(), e.getYOnScreen(), false);
+            scenePeer.menuEvent(e.getX(), e.getY(), fxXOnScreen, fxYOnScreen, false);
         }
     }
 
@@ -449,8 +500,10 @@ public class JFXPanel extends JComponent {
                 // The extra simulated mouse pressed event is removed by making the JavaFX scene focused.
                 // It is safe, because in JavaFX only the method "setFocused(true)" is called,
                 // which doesn't have any side-effects when called multiple times.
-                int focusCause = AbstractEvents.FOCUSEVENT_ACTIVATED;
-                stagePeer.setFocused(true, focusCause);
+                if (stagePeer != null) {
+                    int focusCause = AbstractEvents.FOCUSEVENT_ACTIVATED;
+                    stagePeer.setFocused(true, focusCause);
+                }
             }
         }
 
@@ -592,8 +645,9 @@ public class JFXPanel extends JComponent {
         synchronized (getTreeLock()) {
             if (isShowing()) {
                 Point p = getLocationOnScreen();
-                screenX = p.x;
-                screenY = p.y;
+                Point2D fxcoord = convertSwingToFxPixel(getGraphicsConfiguration(), p.x, p.y);
+                screenX = (int)Math.round(fxcoord.getX());
+                screenY = (int)Math.round(fxcoord.getY());
                 return true;
             }
         }
@@ -685,8 +739,8 @@ public class JFXPanel extends JComponent {
                 double ratioX = newScaleFactorX / scaleFactorX;
                 double ratioY = newScaleFactorY / scaleFactorY;
                 // Transform old size to the new coordinate space.
-                int oldW = (int)Math.round(oldIm.getWidth() * ratioX);
-                int oldH = (int)Math.round(oldIm.getHeight() * ratioY);
+                int oldW = (int)Math.ceil(oldIm.getWidth() * ratioX);
+                int oldH = (int)Math.ceil(oldIm.getHeight() * ratioY);
 
                 Graphics g = pixelsIm.getGraphics();
                 try {
@@ -868,6 +922,7 @@ public class JFXPanel extends JComponent {
      * method is invoked, the chain of parent components is set up with
      * KeyboardAction event listeners.
      */
+    @SuppressWarnings("removal")
     @Override
     public void addNotify() {
         super.addNotify();
@@ -902,6 +957,7 @@ public class JFXPanel extends JComponent {
      * When this method is invoked, any KeyboardActions set up in the the
      * chain of parent components are removed.
      */
+    @SuppressWarnings("removal")
     @Override public void removeNotify() {
         SwingNodeHelper.runOnFxThread(() -> {
             if ((stage != null) && stage.isShowing()) {
@@ -928,6 +984,11 @@ public class JFXPanel extends JComponent {
 
     private void invokeOnClientEDT(Runnable r) {
         jfxPanelIOP.postEvent(this, new InvocationEvent(this, r));
+    }
+
+    // Package scope method for testing
+    final BufferedImage test_getPixelsIm() {
+        return pixelsIm;
     }
 
     private class HostContainer implements HostInterface {

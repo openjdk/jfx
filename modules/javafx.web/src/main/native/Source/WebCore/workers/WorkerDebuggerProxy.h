@@ -30,13 +30,15 @@
 
 #pragma once
 
+#include <wtf/text/WTFString.h>
+
 namespace WebCore {
 
 class WorkerDebuggerProxy {
 public:
     virtual ~WorkerDebuggerProxy() = default;
     virtual void postMessageToDebugger(const String&) = 0;
-    virtual void setResourceCachingDisabled(bool) = 0;
+    virtual void setResourceCachingDisabledByWebInspector(bool) = 0;
 };
 
 } // namespace WebCore

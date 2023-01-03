@@ -26,21 +26,19 @@
 #pragma once
 
 #include "JSDOMConvertStrings.h"
+#include "JSDOMExceptionHandling.h"
 
 namespace WebCore {
 
 // Implementations of the abstract operations defined at
-// https://heycam.github.io/webidl/#legacy-platform-object-abstract-ops
+// https://webidl.spec.whatwg.org/#legacy-platform-object-abstract-ops
 
-enum class OverrideBuiltins {
-    No,
-    Yes
-};
+enum class LegacyOverrideBuiltIns { No, Yes };
 
 // An implementation of the 'named property visibility algorithm'
-// https://heycam.github.io/webidl/#dfn-named-property-visibility
-template<OverrideBuiltins overrideBuiltins, class JSClass>
-static bool isVisibleNamedProperty(JSC::ExecState& state, JSClass& thisObject, JSC::PropertyName propertyName)
+// https://webidl.spec.whatwg.org/#dfn-named-property-visibility
+template<LegacyOverrideBuiltIns overrideBuiltins, class JSClass>
+static bool isVisibleNamedProperty(JSC::JSGlobalObject& lexicalGlobalObject, JSClass& thisObject, JSC::PropertyName propertyName)
 {
     // FIXME: It seems unfortunate that have to do two lookups for the property name,
     // one for isSupportedPropertyName and one by the user of this algorithm to access
@@ -59,12 +57,12 @@ static bool isVisibleNamedProperty(JSC::ExecState& state, JSClass& thisObject, J
         return false;
 
     // 2. If O has an own property named P, then return false.
-    JSC::PropertySlot slot { &thisObject, JSC::PropertySlot::InternalMethodType::VMInquiry };
-    if (JSC::JSObject::getOwnPropertySlot(&thisObject, &state, propertyName, slot))
+    JSC::PropertySlot slot { &thisObject, JSC::PropertySlot::InternalMethodType::VMInquiry, &lexicalGlobalObject.vm() };
+    if (JSC::JSObject::getOwnPropertySlot(&thisObject, &lexicalGlobalObject, propertyName, slot))
         return false;
 
-    // 3. If O implements an interface that has the [OverrideBuiltins] extended attribute, then return true.
-    if (overrideBuiltins == OverrideBuiltins::Yes)
+    // 3. If O implements an interface that has the [LegacyOverrideBuiltIns] extended attribute, then return true.
+    if (overrideBuiltins == LegacyOverrideBuiltIns::Yes)
         return true;
 
     // 4. Initialize prototype to be the value of the internal [[Prototype]] property of O.
@@ -72,12 +70,45 @@ static bool isVisibleNamedProperty(JSC::ExecState& state, JSClass& thisObject, J
     //    1. If prototype is not a named properties object, and prototype has an own property named P, then return false.
     // FIXME: Implement checking for 'named properties object'.
     //    2. Set prototype to be the value of the internal [[Prototype]] property of prototype.
-    auto prototype = thisObject.getPrototypeDirect(state.vm());
-    if (prototype.isObject() && JSC::asObject(prototype)->getPropertySlot(&state, propertyName, slot))
+    auto prototype = thisObject.getPrototypeDirect(JSC::getVM(&lexicalGlobalObject));
+    if (prototype.isObject() && JSC::asObject(prototype)->getPropertySlot(&lexicalGlobalObject, propertyName, slot))
         return false;
 
     // 6. Return true.
     return true;
+}
+
+// NOTE: Named getters are little odd. To avoid doing duplicate lookups (once when checking if
+//       the property name is a 'supported property name' and once to get the value) we signal
+//       that a property is supported by whether or not it is 'null' (where what null means is
+//       dependant on the IDL type). This is based on the assumption that no named getter will
+//       ever actually want to return null as an actual return value, which seems like an ok
+//       assumption to make (should it turn out this doesn't hold in the future, we have lots
+//       of options; do two lookups, add an extra layer of Optional, etc.).
+template<typename IDLType, typename JSClass, typename InnerItemAccessor>
+static decltype(auto) visibleNamedPropertyItemAccessorFunctor(InnerItemAccessor&& innerItemAccessor)
+{
+    if constexpr (IsExceptionOr<std::invoke_result_t<InnerItemAccessor, JSClass&, JSC::PropertyName>>) {
+        using ReturnType = ExceptionOr<typename IDLType::ImplementationType>;
+
+        return [innerItemAccessor = std::forward<InnerItemAccessor>(innerItemAccessor)] (JSClass& thisObject, JSC::PropertyName propertyName) -> std::optional<ReturnType> {
+            auto result = innerItemAccessor(thisObject, propertyName);
+            if (result.hasException())
+                return ReturnType { result.releaseException() };
+            if (!IDLType::isNullValue(result.returnValue()))
+                return ReturnType { IDLType::extractValueFromNullable(result.releaseReturnValue()) };
+            return std::nullopt;
+        };
+    } else {
+        using ReturnType = typename IDLType::ImplementationType;
+
+        return [innerItemAccessor = std::forward<InnerItemAccessor>(innerItemAccessor)] (JSClass& thisObject, JSC::PropertyName propertyName) -> std::optional<ReturnType> {
+            auto result = innerItemAccessor(thisObject, propertyName);
+            if (!IDLType::isNullValue(result))
+                return ReturnType { IDLType::extractValueFromNullable(result) };
+            return std::nullopt;
+        };
+    }
 }
 
 // An implementation of the 'named property visibility algorithm' augmented to replace the
@@ -85,26 +116,26 @@ static bool isVisibleNamedProperty(JSC::ExecState& state, JSClass& thisObject, J
 // for the property name, via passed in functor. This allows us to avoid two looking up the
 // the property name twice; once for 'named property visibility algorithm' check, and then
 // again when the value is needed.
-template<OverrideBuiltins overrideBuiltins, class JSClass, class Functor>
-static auto accessVisibleNamedProperty(JSC::ExecState& state, JSClass& thisObject, JSC::PropertyName propertyName, Functor&& itemAccessor) -> decltype(itemAccessor(thisObject, propertyName))
+template<LegacyOverrideBuiltIns overrideBuiltins, class JSClass, class ItemAccessor>
+static auto accessVisibleNamedProperty(JSC::JSGlobalObject& lexicalGlobalObject, JSClass& thisObject, JSC::PropertyName propertyName, ItemAccessor&& itemAccessor) -> decltype(itemAccessor(thisObject, propertyName))
 {
     // NOTE: While it is not specified, a Symbol can never be a 'supported property
     // name' so we check that first.
     if (propertyName.isSymbol())
-        return WTF::nullopt;
+        return std::nullopt;
 
     // 1. If P is not a supported property name of O, then return false.
     auto result = itemAccessor(thisObject, propertyName);
     if (!result)
-        return WTF::nullopt;
+        return std::nullopt;
 
     // 2. If O has an own property named P, then return false.
-    JSC::PropertySlot slot { &thisObject, JSC::PropertySlot::InternalMethodType::VMInquiry };
-    if (JSC::JSObject::getOwnPropertySlot(&thisObject, &state, propertyName, slot))
-        return WTF::nullopt;
+    JSC::PropertySlot slot { &thisObject, JSC::PropertySlot::InternalMethodType::VMInquiry, &lexicalGlobalObject.vm() };
+    if (JSC::JSObject::getOwnPropertySlot(&thisObject, &lexicalGlobalObject, propertyName, slot))
+        return std::nullopt;
 
-    // 3. If O implements an interface that has the [OverrideBuiltins] extended attribute, then return true.
-    if (overrideBuiltins == OverrideBuiltins::Yes && !worldForDOMObject(thisObject).shouldDisableOverrideBuiltinsBehavior())
+    // 3. If O implements an interface that has the [LegacyOverrideBuiltIns] extended attribute, then return true.
+    if (overrideBuiltins == LegacyOverrideBuiltIns::Yes && !worldForDOMObject(thisObject).shouldDisableLegacyOverrideBuiltInsBehavior())
         return result;
 
     // 4. Initialize prototype to be the value of the internal [[Prototype]] property of O.
@@ -112,12 +143,37 @@ static auto accessVisibleNamedProperty(JSC::ExecState& state, JSClass& thisObjec
     //    1. If prototype is not a named properties object, and prototype has an own property named P, then return false.
     // FIXME: Implement checking for 'named properties object'.
     //    2. Set prototype to be the value of the internal [[Prototype]] property of prototype.
-    auto prototype = thisObject.getPrototypeDirect(state.vm());
-    if (prototype.isObject() && JSC::asObject(prototype)->getPropertySlot(&state, propertyName, slot))
-        return WTF::nullopt;
+    auto prototype = thisObject.getPrototypeDirect(JSC::getVM(&lexicalGlobalObject));
+    if (prototype.isObject() && JSC::asObject(prototype)->getPropertySlot(&lexicalGlobalObject, propertyName, slot))
+        return std::nullopt;
 
     // 6. Return true.
     return result;
+}
+
+// This implements steps 2.2 through 2.5 of https://webidl.spec.whatwg.org/#legacy-platform-object-delete.
+template<typename Functor> bool performLegacyPlatformObjectDeleteOperation(JSC::JSGlobalObject& lexicalGlobalObject, Functor&& functor)
+{
+    using ReturnType = std::invoke_result_t<Functor>;
+
+    if constexpr (IsExceptionOr<ReturnType>) {
+        auto result = functor();
+        if (result.hasException()) {
+            auto throwScope = DECLARE_THROW_SCOPE(JSC::getVM(&lexicalGlobalObject));
+            propagateException(lexicalGlobalObject, throwScope, result.releaseException());
+            return true;
+        }
+
+        if constexpr (std::is_same_v<ReturnType, ExceptionOr<bool>>)
+            return result.releaseReturnValue();
+        return true;
+    }
+
+    if constexpr (std::is_same_v<ReturnType, bool>)
+        return functor();
+
+    functor();
+    return true;
 }
 
 }

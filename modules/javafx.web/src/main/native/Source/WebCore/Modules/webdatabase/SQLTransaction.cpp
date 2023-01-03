@@ -47,7 +47,7 @@
 #include "SQLTransactionErrorCallback.h"
 #include "SQLiteTransaction.h"
 #include "VoidCallback.h"
-#include <wtf/Optional.h>
+#include "WindowEventLoop.h"
 #include <wtf/StdLibExtras.h>
 #include <wtf/Vector.h>
 
@@ -72,7 +72,7 @@ SQLTransaction::SQLTransaction(Ref<Database>&& database, RefPtr<SQLTransactionCa
 
 SQLTransaction::~SQLTransaction() = default;
 
-ExceptionOr<void> SQLTransaction::executeSql(const String& sqlStatement, Optional<Vector<SQLValue>>&& arguments, RefPtr<SQLStatementCallback>&& callback, RefPtr<SQLStatementErrorCallback>&& callbackError)
+ExceptionOr<void> SQLTransaction::executeSql(const String& sqlStatement, std::optional<Vector<SQLValue>>&& arguments, RefPtr<SQLStatementCallback>&& callback, RefPtr<SQLStatementErrorCallback>&& callbackError)
 {
     if (!m_executeSqlAllowed || !m_database->opened())
         return Exception { InvalidStateError };
@@ -83,7 +83,7 @@ ExceptionOr<void> SQLTransaction::executeSql(const String& sqlStatement, Optiona
     else if (m_readOnly)
         permissions |= DatabaseAuthorizer::ReadOnlyMask;
 
-    auto statement = makeUnique<SQLStatement>(m_database, sqlStatement, arguments.valueOr(Vector<SQLValue> { }), WTFMove(callback), WTFMove(callbackError), permissions);
+    auto statement = makeUnique<SQLStatement>(m_database, sqlStatement, valueOrDefault(arguments), WTFMove(callback), WTFMove(callbackError), permissions);
 
     if (m_database->deleted())
         statement->setDatabaseDeletedError();
@@ -109,6 +109,7 @@ void SQLTransaction::performNextStep()
 
 void SQLTransaction::performPendingCallback()
 {
+    ASSERT(isMainThread());
     LOG(StorageAPI, "Callback %s\n", debugStepName(m_nextStep));
 
     ASSERT(m_nextStep == &SQLTransaction::deliverTransactionCallback
@@ -128,9 +129,21 @@ void SQLTransaction::notifyDatabaseThreadIsShuttingDown()
     m_backend.notifyDatabaseThreadIsShuttingDown();
 }
 
+void SQLTransaction::callErrorCallbackDueToInterruption()
+{
+    ASSERT(isMainThread());
+    auto errorCallback = m_errorCallbackWrapper.unwrap();
+    if (!errorCallback)
+        return;
+
+    m_database->document().eventLoop().queueTask(TaskSource::Networking, [errorCallback = WTFMove(errorCallback)]() mutable {
+        errorCallback->handleEvent(SQLError::create(SQLError::DATABASE_ERR, "the database was closed"));
+    });
+}
+
 void SQLTransaction::enqueueStatement(std::unique_ptr<SQLStatement> statement)
 {
-    LockHolder locker(m_statementMutex);
+    Locker locker { m_statementLock };
     m_statementQueue.append(WTFMove(statement));
 }
 
@@ -176,9 +189,11 @@ void SQLTransaction::checkAndHandleClosedDatabase()
     // If the database was stopped, don't do anything and cancel queued work
     LOG(StorageAPI, "Database was stopped or interrupted - cancelling work for this transaction");
 
-    LockHolder locker(m_statementMutex);
+    Locker locker { m_statementLock };
     m_statementQueue.clear();
     m_nextStep = nullptr;
+
+    callErrorCallbackDueToInterruption();
 
     // Release the unneeded callbacks, to break reference cycles.
     m_callbackWrapper.clear();
@@ -394,8 +409,11 @@ void SQLTransaction::deliverTransactionErrorCallback()
     // Spec 4.3.2.10: If exists, invoke error callback with the last
     // error to have occurred in this transaction.
     RefPtr<SQLTransactionErrorCallback> errorCallback = m_errorCallbackWrapper.unwrap();
-    if (errorCallback)
-        errorCallback->handleEvent(*m_transactionError);
+    if (errorCallback) {
+        m_database->document().eventLoop().queueTask(TaskSource::Networking, [errorCallback = WTFMove(errorCallback), transactionError = m_transactionError]() mutable {
+            errorCallback->handleEvent(*transactionError);
+        });
+    }
 
     clearCallbackWrappers();
 
@@ -442,8 +460,11 @@ void SQLTransaction::deliverSuccessCallback()
 {
     // Spec 4.3.2.8: Deliver success callback.
     RefPtr<VoidCallback> successCallback = m_successCallbackWrapper.unwrap();
-    if (successCallback)
-        successCallback->handleEvent();
+    if (successCallback) {
+        m_database->document().eventLoop().queueTask(TaskSource::Networking, [successCallback = WTFMove(successCallback)]() mutable {
+            successCallback->handleEvent();
+        });
+    }
 
     clearCallbackWrappers();
 
@@ -475,7 +496,8 @@ void SQLTransaction::computeNextStateAndCleanupIfNeeded()
 
         LOG(StorageAPI, "Callback %s\n", nameForSQLTransactionState(m_nextState));
         return;
-    }
+    } else
+        callErrorCallbackDueToInterruption();
 
     clearCallbackWrappers();
     m_backend.requestTransitToState(SQLTransactionState::CleanupAndTerminate);
@@ -493,7 +515,7 @@ void SQLTransaction::getNextStatement()
 {
     m_currentStatement = nullptr;
 
-    LockHolder locker(m_statementMutex);
+    Locker locker { m_statementLock };
     if (!m_statementQueue.isEmpty())
         m_currentStatement = m_statementQueue.takeFirst();
 }

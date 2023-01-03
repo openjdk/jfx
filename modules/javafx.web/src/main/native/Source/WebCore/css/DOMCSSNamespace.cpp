@@ -33,6 +33,8 @@
 #include "CSSMarkup.h"
 #include "CSSParser.h"
 #include "CSSPropertyParser.h"
+#include "Document.h"
+#include "HighlightRegister.h"
 #include "StyleProperties.h"
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/WTFString.h>
@@ -57,6 +59,13 @@ bool DOMCSSNamespace::supports(Document& document, const String& property, const
 {
     CSSPropertyID propertyID = cssPropertyID(property.stripWhiteSpace());
 
+    CSSParserContext parserContext(document);
+    if (parserContext.isPropertyRuntimeDisabled(propertyID))
+        return false;
+
+    if (isInternalCSSProperty(propertyID))
+        return false;
+
     if (propertyID == CSSPropertyInvalid)
         return false;
 
@@ -70,7 +79,7 @@ bool DOMCSSNamespace::supports(Document& document, const String& property, const
         return false;
 
     auto dummyStyle = MutableStyleProperties::create();
-    return CSSParser::parseValue(dummyStyle, propertyID, normalizedValue, false, document) != CSSParser::ParseResult::Error;
+    return CSSParser::parseValue(dummyStyle, propertyID, normalizedValue, false, parserContext) != CSSParser::ParseResult::Error;
 }
 
 bool DOMCSSNamespace::supports(Document& document, const String& conditionText)
@@ -85,6 +94,11 @@ String DOMCSSNamespace::escape(const String& ident)
     StringBuilder builder;
     serializeIdentifier(ident, builder);
     return builder.toString();
+}
+
+HighlightRegister& DOMCSSNamespace::highlights(Document& document)
+{
+    return document.highlightRegister();
 }
 
 }

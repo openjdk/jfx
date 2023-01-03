@@ -24,6 +24,7 @@
 #include "FloatPoint.h"
 #include "Path.h"
 #include "PathTraversalState.h"
+#include "SVGPathAbsoluteConverter.h"
 #include "SVGPathBlender.h"
 #include "SVGPathBuilder.h"
 #include "SVGPathByteStreamBuilder.h"
@@ -58,43 +59,19 @@ String buildStringFromPath(const Path& path)
     if (!path.isNull() && !path.isEmpty()) {
         path.apply([&builder] (const PathElement& element) {
             switch (element.type) {
-            case PathElementMoveToPoint:
-                builder.append('M');
-                builder.appendNumber(element.points[0].x());
-                builder.append(' ');
-                builder.appendNumber(element.points[0].y());
+            case PathElement::Type::MoveToPoint:
+                builder.append('M', element.points[0].x(), ' ', element.points[0].y());
                 break;
-            case PathElementAddLineToPoint:
-                builder.append('L');
-                builder.appendNumber(element.points[0].x());
-                builder.append(' ');
-                builder.appendNumber(element.points[0].y());
+            case PathElement::Type::AddLineToPoint:
+                builder.append('L', element.points[0].x(), ' ', element.points[0].y());
                 break;
-            case PathElementAddQuadCurveToPoint:
-                builder.append('Q');
-                builder.appendNumber(element.points[0].x());
-                builder.append(' ');
-                builder.appendNumber(element.points[0].y());
-                builder.append(',');
-                builder.appendNumber(element.points[1].x());
-                builder.append(' ');
-                builder.appendNumber(element.points[1].y());
+            case PathElement::Type::AddQuadCurveToPoint:
+                builder.append('Q', element.points[0].x(), ' ', element.points[0].y(), ',', element.points[1].x(), ' ', element.points[1].y());
                 break;
-            case PathElementAddCurveToPoint:
-                builder.append('C');
-                builder.appendNumber(element.points[0].x());
-                builder.append(' ');
-                builder.appendNumber(element.points[0].y());
-                builder.append(',');
-                builder.appendNumber(element.points[1].x());
-                builder.append(' ');
-                builder.appendNumber(element.points[1].y());
-                builder.append(',');
-                builder.appendNumber(element.points[2].x());
-                builder.append(' ');
-                builder.appendNumber(element.points[2].y());
+            case PathElement::Type::AddCurveToPoint:
+                builder.append('C', element.points[0].x(), ' ', element.points[0].y(), ',', element.points[1].x(), ' ', element.points[1].y(), ',', element.points[2].x(), ' ', element.points[2].y());
                 break;
-            case PathElementCloseSubpath:
+            case PathElement::Type::CloseSubpath:
                 builder.append('Z');
                 break;
             }
@@ -193,48 +170,63 @@ bool addToSVGPathByteStream(SVGPathByteStream& streamToAppendTo, const SVGPathBy
     return SVGPathBlender::addAnimatedPath(fromSource, bySource, builder, repeatCount);
 }
 
-bool getSVGPathSegAtLengthFromSVGPathByteStream(const SVGPathByteStream& stream, float length, unsigned& pathSeg)
+unsigned getSVGPathSegAtLengthFromSVGPathByteStream(const SVGPathByteStream& stream, float length)
 {
     if (stream.isEmpty())
-        return false;
+        return 0;
 
     PathTraversalState traversalState(PathTraversalState::Action::SegmentAtLength);
     SVGPathTraversalStateBuilder builder(traversalState, length);
 
     SVGPathByteStreamSource source(stream);
-    bool ok = SVGPathParser::parse(source, builder);
-    pathSeg = builder.pathSegmentIndex();
-    return ok;
+    SVGPathParser::parse(source, builder);
+    return builder.pathSegmentIndex();
 }
 
-bool getTotalLengthOfSVGPathByteStream(const SVGPathByteStream& stream, float& totalLength)
+float getTotalLengthOfSVGPathByteStream(const SVGPathByteStream& stream)
 {
     if (stream.isEmpty())
-        return false;
+        return 0;
 
     PathTraversalState traversalState(PathTraversalState::Action::TotalLength);
 
     SVGPathTraversalStateBuilder builder(traversalState);
 
     SVGPathByteStreamSource source(stream);
-    bool ok = SVGPathParser::parse(source, builder);
-    totalLength = builder.totalLength();
-    return ok;
+    SVGPathParser::parse(source, builder);
+    return builder.totalLength();
 }
 
-bool getPointAtLengthOfSVGPathByteStream(const SVGPathByteStream& stream, float length, FloatPoint& point)
+FloatPoint getPointAtLengthOfSVGPathByteStream(const SVGPathByteStream& stream, float length)
 {
     if (stream.isEmpty())
-        return false;
+        return { };
 
     PathTraversalState traversalState(PathTraversalState::Action::VectorAtLength);
 
     SVGPathTraversalStateBuilder builder(traversalState, length);
 
     SVGPathByteStreamSource source(stream);
-    bool ok = SVGPathParser::parse(source, builder);
-    point = builder.currentPoint();
-    return ok;
+    SVGPathParser::parse(source, builder);
+    return builder.currentPoint();
+}
+
+std::unique_ptr<SVGPathByteStream> convertSVGPathByteStreamToAbsoluteCoordinates(const SVGPathByteStream& stream)
+{
+    auto result = makeUnique<SVGPathByteStream>();
+
+    if (stream.isEmpty())
+        return result;
+
+    SVGPathByteStreamBuilder builder(*result);
+    SVGPathAbsoluteConverter converter(builder);
+
+    SVGPathByteStreamSource source(stream);
+
+    if (!SVGPathParser::parse(source, converter, UnalteredParsing, false))
+        return nullptr;
+
+    return result;
 }
 
 }

@@ -28,4 +28,3 @@ if (USE_LD_GOLD)
         set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,--no-gc-sections")
     endif ()
 endif ()
-

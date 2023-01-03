@@ -31,15 +31,20 @@
 
 namespace JSC { namespace B3 {
 
+namespace Air {
+
 class StackSlot;
 
-class JS_EXPORT_PRIVATE SlotBaseValue : public Value {
+} // namespace Air
+
+
+class JS_EXPORT_PRIVATE SlotBaseValue final : public Value {
 public:
     static bool accepts(Kind kind) { return kind == SlotBase; }
 
-    ~SlotBaseValue();
+    ~SlotBaseValue() final;
 
-    StackSlot* slot() const { return m_slot; }
+    Air::StackSlot* slot() const { return m_slot; }
 
     B3_SPECIALIZE_VALUE_FOR_NO_CHILDREN
 
@@ -47,16 +52,16 @@ private:
     friend class Procedure;
     friend class Value;
 
-    void dumpMeta(CommaPrinter&, PrintStream&) const override;
+    void dumpMeta(CommaPrinter&, PrintStream&) const final;
 
-    static Opcode opcodeFromConstructor(Origin, StackSlot*) { return SlotBase; }
-    SlotBaseValue(Origin origin, StackSlot* slot)
+    static Opcode opcodeFromConstructor(Origin, Air::StackSlot*) { return SlotBase; }
+    SlotBaseValue(Origin origin, Air::StackSlot* slot)
         : Value(CheckedOpcode, SlotBase, pointerType(), Zero, origin)
         , m_slot(slot)
     {
     }
 
-    StackSlot* m_slot;
+    Air::StackSlot* m_slot;
 };
 
 } } // namespace JSC::B3

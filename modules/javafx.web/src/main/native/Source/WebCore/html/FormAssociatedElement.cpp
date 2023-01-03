@@ -27,6 +27,7 @@
 
 #include "EditorClient.h"
 #include "ElementAncestorIterator.h"
+#include "ElementInlines.h"
 #include "FormController.h"
 #include "Frame.h"
 #include "HTMLFormControlElement.h"
@@ -52,13 +53,13 @@ private:
 
 FormAssociatedElement::FormAssociatedElement(HTMLFormElement* form)
     : m_form(nullptr)
-    , m_formSetByParser(makeWeakPtr(form))
+    , m_formSetByParser(form)
 {
 }
 
 FormAssociatedElement::~FormAssociatedElement()
 {
-    setForm(nullptr);
+    RELEASE_ASSERT(!m_form);
 }
 
 void FormAssociatedElement::didMoveToNewDocument(Document&)
@@ -108,9 +109,12 @@ HTMLFormElement* FormAssociatedElement::findAssociatedForm(const HTMLElement* el
         // the value of form attribute, so we put the result of
         // treeScope().getElementById() over the given element.
         RefPtr<Element> newFormCandidate = element->treeScope().getElementById(formId);
-        if (is<HTMLFormElement>(newFormCandidate))
+        if (!is<HTMLFormElement>(newFormCandidate))
+            return nullptr;
+        if (&element->traverseToRootNode() == &element->treeScope().rootNode()) {
+            ASSERT(&element->traverseToRootNode() == &newFormCandidate->traverseToRootNode());
             return downcast<HTMLFormElement>(newFormCandidate.get());
-        return nullptr;
+        }
     }
 
     if (!currentAssociatedForm)
@@ -151,7 +155,7 @@ void FormAssociatedElement::setForm(HTMLFormElement* newForm)
     willChangeForm();
     if (m_form)
         m_form->removeFormElement(this);
-    m_form = makeWeakPtr(newForm);
+    m_form = newForm;
     if (newForm)
         newForm->registerFormElement(this);
     didChangeForm();
@@ -206,7 +210,7 @@ void FormAssociatedElement::formAttributeChanged()
 
 bool FormAssociatedElement::customError() const
 {
-    return willValidate() && !m_customValidationMessage.isEmpty();
+    return !m_customValidationMessage.isEmpty();
 }
 
 bool FormAssociatedElement::hasBadInput() const
@@ -249,7 +253,7 @@ bool FormAssociatedElement::typeMismatch() const
     return false;
 }
 
-bool FormAssociatedElement::isValid() const
+bool FormAssociatedElement::computeValidity() const
 {
     bool someError = typeMismatch() || stepMismatch() || rangeUnderflow() || rangeOverflow()
         || tooShort() || tooLong() || patternMismatch() || valueMissing() || hasBadInput() || customError();
@@ -268,7 +272,7 @@ String FormAssociatedElement::customValidationMessage() const
 
 String FormAssociatedElement::validationMessage() const
 {
-    return customError() ? m_customValidationMessage : String();
+    return willValidate() ? m_customValidationMessage : String();
 }
 
 void FormAssociatedElement::setCustomValidity(const String& error)

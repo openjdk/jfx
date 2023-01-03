@@ -36,12 +36,16 @@
 #include <wtf/URL.h>
 
 namespace JSC {
+class JSGlobalObject;
 class JSValue;
 }
 
 namespace WebCore {
 
 class Frame;
+class SWClientConnection;
+
+struct StructuredSerializeOptions;
 
 class ServiceWorker final : public RefCounted<ServiceWorker>, public EventTargetWithInlineData, public ActiveDOMObject {
     WTF_MAKE_ISO_ALLOCATED(ServiceWorker);
@@ -57,10 +61,11 @@ public:
 
     void updateState(State);
 
-    ExceptionOr<void> postMessage(ScriptExecutionContext&, JSC::JSValue message, Vector<JSC::Strong<JSC::JSObject>>&&);
+    ExceptionOr<void> postMessage(JSC::JSGlobalObject&, JSC::JSValue message, StructuredSerializeOptions&&);
 
     ServiceWorkerIdentifier identifier() const { return m_data.identifier; }
     ServiceWorkerRegistrationIdentifier registrationIdentifier() const { return m_data.registrationIdentifier; }
+    WorkerType workerType() const { return m_data.type; }
 
     using RefCounted::ref;
     using RefCounted::deref;
@@ -76,10 +81,9 @@ private:
 
     // ActiveDOMObject.
     const char* activeDOMObjectName() const final;
-    bool canSuspendForDocumentSuspension() const final;
     void stop() final;
 
-    bool isAlwaysOnLoggingAllowed() const;
+    SWClientConnection& swConnection();
 
     ServiceWorkerData m_data;
     bool m_isStopped { false };

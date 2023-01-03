@@ -30,6 +30,7 @@
 #include "ActivityStateChangeObserver.h"
 #include "Geolocation.h"
 #include "Page.h"
+#include "RegistrableDomain.h"
 #include <wtf/HashSet.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/RefPtr.h>
@@ -53,15 +54,19 @@ public:
     void requestPermission(Geolocation&);
     void cancelPermissionRequest(Geolocation&);
 
-    WEBCORE_EXPORT void positionChanged(const Optional<GeolocationPositionData>&);
+    WEBCORE_EXPORT void positionChanged(const std::optional<GeolocationPositionData>&);
     WEBCORE_EXPORT void errorOccurred(GeolocationError&);
 
-    Optional<GeolocationPositionData> lastPosition();
+    std::optional<GeolocationPositionData> lastPosition();
 
     GeolocationClient& client() { return m_client; }
 
     WEBCORE_EXPORT static const char* supplementName();
     static GeolocationController* from(Page* page) { return static_cast<GeolocationController*>(Supplement<Page>::from(page, supplementName())); }
+
+    void revokeAuthorizationToken(const String&);
+
+    void didNavigatePage();
 
 private:
     Page& m_page;
@@ -69,7 +74,12 @@ private:
 
     void activityStateDidChange(OptionSet<ActivityState::Flag> oldActivityState, OptionSet<ActivityState::Flag> newActivityState) override;
 
-    Optional<GeolocationPositionData> m_lastPosition;
+    std::optional<GeolocationPositionData> m_lastPosition;
+
+    bool needsHighAccuracy() const { return !m_highAccuracyObservers.isEmpty(); }
+
+    void startUpdatingIfNecessary();
+    void stopUpdatingIfNecessary();
 
     typedef HashSet<Ref<Geolocation>> ObserversSet;
     // All observers; both those requesting high accuracy and those not.
@@ -78,6 +88,9 @@ private:
 
     // While the page is not visible, we pend permission requests.
     HashSet<Ref<Geolocation>> m_pendingPermissionRequest;
+
+    RegistrableDomain m_registrableDomain;
+    bool m_isUpdating { false };
 };
 
 } // namespace WebCore

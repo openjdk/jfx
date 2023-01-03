@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -58,14 +58,14 @@ public class PrimaryExprTest extends ParserBase {
     public void intLiteral() throws Exception {
         Expr tree = parseTreeFor("123");
         assertTrue(tree instanceof LiteralExpr);
-        assertEquals(((LiteralExpr)tree).getValue(), new Integer(123));
+        assertEquals(((LiteralExpr)tree).getValue(), Integer.valueOf(123));
     }
 
     @Test
     public void floatLiteral() throws Exception {
         Expr tree = parseTreeFor("1.234");
         assertTrue(tree instanceof LiteralExpr);
-        assertEquals(((LiteralExpr)tree).getValue(), new Float(1.234));
+        assertEquals(((LiteralExpr)tree).getValue(), Float.valueOf(1.234f));
     }
 
     @Test

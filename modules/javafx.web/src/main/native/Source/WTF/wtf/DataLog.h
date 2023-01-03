@@ -34,13 +34,14 @@ namespace WTF {
 
 WTF_EXPORT_PRIVATE PrintStream& dataFile();
 WTF_EXPORT_PRIVATE void setDataFile(const char* path);
+WTF_EXPORT_PRIVATE void setDataFile(std::unique_ptr<PrintStream>&&);
 
 WTF_EXPORT_PRIVATE void dataLogFV(const char* format, va_list) WTF_ATTRIBUTE_PRINTF(1, 0);
 WTF_EXPORT_PRIVATE void dataLogF(const char* format, ...) WTF_ATTRIBUTE_PRINTF(1, 2);
 WTF_EXPORT_PRIVATE void dataLogFString(const char*);
 
 template<typename... Types>
-void dataLog(const Types&... values)
+NEVER_INLINE void dataLog(const Types&... values)
 {
     dataFile().print(values...);
 }
@@ -52,16 +53,16 @@ void dataLogLn(const Types&... values)
 }
 
 template<typename... Types>
-void dataLogIf(bool shouldLog, const Types&... values)
+ALWAYS_INLINE void dataLogIf(bool shouldLog, const Types&... values)
 {
-    if (shouldLog)
+    if (UNLIKELY(shouldLog))
         dataLog(values...);
 }
 
 template<typename... Types>
-void dataLogLnIf(bool shouldLog, const Types&... values)
+ALWAYS_INLINE void dataLogLnIf(bool shouldLog, const Types&... values)
 {
-    if (shouldLog)
+    if (UNLIKELY(shouldLog))
         dataLogLn(values...);
 }
 

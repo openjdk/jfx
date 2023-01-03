@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -47,8 +47,6 @@ import javafx.css.converter.SizeConverter;
 import javafx.css.Styleable;
 import javafx.geometry.HPos;
 import javafx.util.Callback;
-
-
 
 /**
  * HBox lays out its children in a single horizontal row.
@@ -160,7 +158,7 @@ public class HBox extends Pane {
     private Orientation bias;
     private double[][] tempArray;
 
-    /********************************************************************
+    /* ******************************************************************
      *  BEGIN static methods
      ********************************************************************/
     private static final String MARGIN_CONSTRAINT = "hbox-margin";
@@ -168,13 +166,14 @@ public class HBox extends Pane {
 
     /**
      * Sets the horizontal grow priority for the child when contained by an hbox.
-     * If set, the hbox will use the priority to allocate additional space if the
-     * hbox is resized larger than it's preferred width.
+     * If set, the hbox will use the priority value to allocate additional space if the
+     * hbox is resized larger than its preferred width.
      * If multiple hbox children have the same horizontal grow priority, then the
      * extra space will be split evenly between them.
      * If no horizontal grow priority is set on a child, the hbox will never
-     * allocate it additional horizontal space if available.
-     * Setting the value to null will remove the constraint.
+     * allocate any additional horizontal space for that child.
+     * <p>
+     * Setting the value to {@code null} will remove the constraint.
      * @param child the child of an hbox
      * @param value the horizontal grow priority for the child
      */
@@ -222,19 +221,19 @@ public class HBox extends Pane {
         setMargin(child, null);
     }
 
-    /********************************************************************
+    /* ******************************************************************
      *  END static methods
      ********************************************************************/
 
     /**
-     * Creates an HBox layout with spacing = 0.
+     * Creates an {@code HBox} layout with {@code spacing = 0}.
      */
     public HBox() {
         super();
     }
 
     /**
-     * Creates an HBox layout with the specified spacing between children.
+     * Creates an {@code HBox} layout with the specified spacing between children.
      * @param spacing the amount of horizontal space between each child
      */
     public HBox(double spacing) {
@@ -243,8 +242,8 @@ public class HBox extends Pane {
     }
 
     /**
-     * Creates an HBox layout with spacing = 0.
-     * @param children The initial set of children for this pane.
+     * Creates an {@code HBox} layout with {@code spacing = 0}.
+     * @param children the initial set of children for this pane
      * @since JavaFX 8.0
      */
     public HBox(Node... children) {
@@ -253,9 +252,9 @@ public class HBox extends Pane {
     }
 
     /**
-     * Creates an HBox layout with the specified spacing between children.
+     * Creates an {@code HBox} layout with the specified spacing between children.
      * @param spacing the amount of horizontal space between each child
-     * @param children The initial set of children for this pane.
+     * @param children the initial set of children for this pane
      * @since JavaFX 8.0
      */
     public HBox(double spacing, Node... children) {
@@ -661,7 +660,7 @@ public class HBox extends Pane {
 
     }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      *                         Stylesheet Handling                             *
      *                                                                         *
@@ -673,8 +672,8 @@ public class HBox extends Pane {
      private static class StyleableProperties {
 
          private static final CssMetaData<HBox,Pos> ALIGNMENT =
-             new CssMetaData<HBox,Pos>("-fx-alignment",
-                 new EnumConverter<Pos>(Pos.class),
+             new CssMetaData<>("-fx-alignment",
+                 new EnumConverter<>(Pos.class),
                  Pos.TOP_LEFT) {
 
             @Override
@@ -690,7 +689,7 @@ public class HBox extends Pane {
          };
 
          private static final CssMetaData<HBox,Boolean> FILL_HEIGHT =
-             new CssMetaData<HBox,Boolean>("-fx-fill-height",
+             new CssMetaData<>("-fx-fill-height",
                  BooleanConverter.getInstance(), Boolean.TRUE) {
 
             @Override
@@ -707,7 +706,7 @@ public class HBox extends Pane {
          };
 
          private static final CssMetaData<HBox,Number> SPACING =
-             new CssMetaData<HBox,Number>("-fx-spacing",
+             new CssMetaData<>("-fx-spacing",
                  SizeConverter.getInstance(), 0.0){
 
             @Override
@@ -725,7 +724,7 @@ public class HBox extends Pane {
          private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
          static {
             final List<CssMetaData<? extends Styleable, ?>> styleables =
-                new ArrayList<CssMetaData<? extends Styleable, ?>>(Pane.getClassCssMetaData());
+                new ArrayList<>(Pane.getClassCssMetaData());
             styleables.add(FILL_HEIGHT);
             styleables.add(ALIGNMENT);
             styleables.add(SPACING);
@@ -734,8 +733,9 @@ public class HBox extends Pane {
     }
 
     /**
-     * @return The CssMetaData associated with this class, which may include the
-     * CssMetaData of its superclasses.
+     * Gets the {@code CssMetaData} associated with this class, which may include the
+     * {@code CssMetaData} of its superclasses.
+     * @return the {@code CssMetaData}
      * @since JavaFX 8.0
      */
     public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {

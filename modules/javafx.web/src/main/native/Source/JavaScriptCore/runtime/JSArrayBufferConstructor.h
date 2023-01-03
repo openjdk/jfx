@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -38,17 +38,10 @@ class JSGenericArrayBufferConstructor final : public InternalFunction {
 public:
     using Base = InternalFunction;
 
-protected:
-    JSGenericArrayBufferConstructor(VM&, Structure*);
-    void finishCreation(VM&, JSArrayBufferPrototype*, GetterSetter* speciesSymbol);
-
-    static EncodedJSValue JSC_HOST_CALL constructArrayBuffer(ExecState*);
-
-public:
     static JSGenericArrayBufferConstructor* create(VM& vm, Structure* structure, JSArrayBufferPrototype* prototype, GetterSetter* speciesSymbol)
     {
         JSGenericArrayBufferConstructor* result =
-            new (NotNull, allocateCell<JSGenericArrayBufferConstructor>(vm.heap)) JSGenericArrayBufferConstructor(vm, structure);
+            new (NotNull, allocateCell<JSGenericArrayBufferConstructor>(vm)) JSGenericArrayBufferConstructor(vm, structure);
         result->finishCreation(vm, prototype, speciesSymbol);
         return result;
     }
@@ -57,11 +50,17 @@ public:
 
     static const ClassInfo s_info; // This is never accessed directly, since that would break linkage on some compilers.
     static const ClassInfo* info();
+
+    static EncodedJSValue constructImpl(JSGlobalObject*, CallFrame*);
+
+private:
+    JSGenericArrayBufferConstructor(VM&, Structure*);
+    void finishCreation(VM&, JSArrayBufferPrototype*, GetterSetter* speciesSymbol);
 };
 
 using JSArrayBufferConstructor = JSGenericArrayBufferConstructor<ArrayBufferSharingMode::Default>;
 using JSSharedArrayBufferConstructor = JSGenericArrayBufferConstructor<ArrayBufferSharingMode::Shared>;
-static_assert(sizeof(JSArrayBufferConstructor::Base) == sizeof(JSArrayBufferConstructor), "");
-static_assert(sizeof(JSSharedArrayBufferConstructor::Base) == sizeof(JSSharedArrayBufferConstructor), "");
+STATIC_ASSERT_ISO_SUBSPACE_SHARABLE(JSArrayBufferConstructor, InternalFunction);
+STATIC_ASSERT_ISO_SUBSPACE_SHARABLE(JSSharedArrayBufferConstructor, InternalFunction);
 
 } // namespace JSC

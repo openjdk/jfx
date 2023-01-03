@@ -30,12 +30,18 @@ function performIteration(iterable)
     // and returning the result in an array.
     // https://tc39.github.io/ecma262/#sec-runtime-semantics-arrayaccumulation
 
-    let result = [];
+    var result = [];
+    if (@isUndefinedOrNull(iterable))
+        @throwTypeError('Spread syntax requires ...iterable not be null or undefined');
 
-    let iterator = iterable.@iteratorSymbol();
-    let next = iterator.next;
-    let item;
-    let index = 0;
+    var iteratorMethod = iterable.@@iterator;
+    if (!@isCallable(iteratorMethod))
+        @throwTypeError('Spread syntax requires ...iterable[Symbol.iterator] to be a function');
+
+    var iterator = iteratorMethod.@call(iterable);
+    var next = iterator.next;
+    var item;
+    var index = 0;
     while (true) {
         item = next.@call(iterator);
         if (!@isObject(item))

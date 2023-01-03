@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -55,7 +55,6 @@ import com.sun.javafx.tk.TKPulseListener;
 import com.sun.javafx.tk.Toolkit;
 import com.sun.media.jfxmedia.MediaManager;
 import com.sun.media.jfxmedia.control.VideoDataBuffer;
-import com.sun.media.jfxmedia.effects.AudioSpectrum;
 import com.sun.media.jfxmedia.events.AudioSpectrumEvent;
 import com.sun.media.jfxmedia.events.BufferListener;
 import com.sun.media.jfxmedia.events.BufferProgressEvent;
@@ -112,10 +111,11 @@ import javafx.event.EventHandler;
  * duration of media playback is then the product of the cycle duration and the
  * number of times the cycle is played. If the stop time of the cycle is reached
  * and the cycle is to be played again, the event handler registered with the
- * {@link #onRepeatProperty onRepeat} property is invoked. If the stop time is reached and
- * the cycle is <i>not</i> to be repeated, then the event handler registered
- * with the {@link #onEndOfMediaProperty onEndOfMedia} property is invoked. A zero-relative index of
- * which cycle is presently being played is maintained by {@link #currentCountProperty currentCount}.
+ * {@link #onRepeatProperty onRepeat} property is invoked. If the stop time is
+ * reached, then the event handler registered with the {@link #onEndOfMediaProperty onEndOfMedia}
+ * property is invoked regardless of whether the cycle is to be repeated or not.
+ * A zero-relative index of which cycle is presently being played is maintained
+ * by {@link #currentCountProperty currentCount}.
  * </p>
  *
  * <p>The operation of a <code>MediaPlayer</code> is inherently asynchronous.
@@ -263,7 +263,7 @@ public final class MediaPlayer {
          * @since JavaFX 8.0
          */
         DISPOSED
-    };
+    }
 
     /**
      * A value representing an effectively infinite number of playback cycles.
@@ -329,7 +329,7 @@ public final class MediaPlayer {
 
     // views to be notified on media change
     private final Set<WeakReference<MediaView>> viewRefs =
-            new HashSet<WeakReference<MediaView>>();
+            new HashSet<>();
 
     /**
      * The read-only {@link AudioEqualizer} associated with this player. The
@@ -571,7 +571,7 @@ public final class MediaPlayer {
 
     private ReadOnlyObjectWrapper<MediaException> errorPropertyImpl() {
         if (error == null) {
-            error = new ReadOnlyObjectWrapper<MediaException>() {
+            error = new ReadOnlyObjectWrapper<>() {
 
                 @Override
                 protected void invalidated() {
@@ -617,7 +617,7 @@ public final class MediaPlayer {
 
     public ObjectProperty<Runnable> onErrorProperty() {
         if (onError == null) {
-            onError = new ObjectPropertyBase<Runnable>() {
+            onError = new ObjectPropertyBase<>() {
 
                 @Override
                 protected void invalidated() {
@@ -1095,7 +1095,7 @@ public final class MediaPlayer {
 
     public ObjectProperty<Duration> startTimeProperty() {
         if (startTime == null) {
-            startTime = new ObjectPropertyBase<Duration>() {
+            startTime = new ObjectPropertyBase<>() {
 
                 @Override
                 protected void invalidated() {
@@ -1156,7 +1156,7 @@ public final class MediaPlayer {
 
     public ObjectProperty<Duration> stopTimeProperty() {
         if (stopTime == null) {
-            stopTime = new ObjectPropertyBase<Duration>() {
+            stopTime = new ObjectPropertyBase<>() {
 
                 @Override
                 protected void invalidated() {
@@ -1213,7 +1213,7 @@ public final class MediaPlayer {
 
     private ReadOnlyObjectWrapper<Duration> cycleDurationPropertyImpl() {
         if (cycleDuration == null) {
-            cycleDuration = new ReadOnlyObjectWrapper<Duration>(this, "cycleDuration");
+            cycleDuration = new ReadOnlyObjectWrapper<>(this, "cycleDuration");
         }
         return cycleDuration;
     }
@@ -1270,7 +1270,7 @@ public final class MediaPlayer {
 
     private ReadOnlyObjectWrapper<Duration> totalDurationPropertyImpl() {
         if (totalDuration == null) {
-            totalDuration = new ReadOnlyObjectWrapper<Duration>(this, "totalDuration");
+            totalDuration = new ReadOnlyObjectWrapper<>(this, "totalDuration");
         }
         return totalDuration;
     }
@@ -1280,7 +1280,7 @@ public final class MediaPlayer {
          } else if (getCycleDuration().isUnknown()) {
              setTotalDuration(Duration.UNKNOWN);
          } else {
-             setTotalDuration(getCycleDuration().multiply((double)getCycleCount()));
+             setTotalDuration(getCycleDuration().multiply(getCycleCount()));
          }
      }
 
@@ -1355,7 +1355,7 @@ public final class MediaPlayer {
 
     private ReadOnlyObjectWrapper<Duration> currentTimePropertyImpl() {
         if (currentTime == null) {
-            currentTime = new ReadOnlyObjectWrapper<Duration>(this, "currentTime");
+            currentTime = new ReadOnlyObjectWrapper<>(this, "currentTime");
             currentTime.setValue(Duration.ZERO);
             updateTime();
         }
@@ -1465,7 +1465,7 @@ public final class MediaPlayer {
 
     private ReadOnlyObjectWrapper<Status> statusPropertyImpl() {
         if (status == null) {
-            status = new ReadOnlyObjectWrapper<Status>() {
+            status = new ReadOnlyObjectWrapper<>() {
 
                 @Override
                 protected void invalidated() {
@@ -1543,7 +1543,7 @@ public final class MediaPlayer {
 
     private ReadOnlyObjectWrapper<Duration> bufferProgressTimePropertyImpl() {
         if (bufferProgressTime == null) {
-            bufferProgressTime = new ReadOnlyObjectWrapper<Duration>(this, "bufferProgressTime");
+            bufferProgressTime = new ReadOnlyObjectWrapper<>(this, "bufferProgressTime");
         }
         return bufferProgressTime;
     }
@@ -1708,13 +1708,13 @@ public final class MediaPlayer {
 
     public ObjectProperty<EventHandler<MediaMarkerEvent>> onMarkerProperty() {
         if (onMarker == null) {
-            onMarker = new SimpleObjectProperty<EventHandler<MediaMarkerEvent>>(this, "onMarker");
+            onMarker = new SimpleObjectProperty<>(this, "onMarker");
         }
         return onMarker;
     }
 
     void addView(MediaView view) {
-        WeakReference<MediaView> vref = new WeakReference<MediaView>(view);
+        WeakReference<MediaView> vref = new WeakReference<>(view);
         synchronized (viewRefs) {
             viewRefs.add(vref);
         }
@@ -1845,9 +1845,9 @@ public final class MediaPlayer {
         }
     }
 
-    //*************************************************************************************************
-    //********** Player event-handling
-    //*************************************************************************************************
+    // ************************************************************************************************
+    // ********* Player event-handling
+    // ************************************************************************************************
 
     void preReady() {
         // Notify MediaView that we ready
@@ -1879,7 +1879,7 @@ public final class MediaPlayer {
         media.setDuration(duration);
         media._updateMedia(jfxPlayer.getMedia());
 
-        //***** Sync up the player with the desired properties if they were called
+        // **** Sync up the player with the desired properties if they were called
         //      before onReady()
         handleRequestedChanges();
 
@@ -1921,7 +1921,7 @@ public final class MediaPlayer {
 
     public ObjectProperty<Runnable> onEndOfMediaProperty() {
         if (onEndOfMedia == null) {
-            onEndOfMedia = new SimpleObjectProperty<Runnable>(this, "onEndOfMedia");
+            onEndOfMedia = new SimpleObjectProperty<>(this, "onEndOfMedia");
         }
         return onEndOfMedia;
     }
@@ -1950,7 +1950,7 @@ public final class MediaPlayer {
 
     public ObjectProperty<Runnable> onReadyProperty() {
         if (onReady == null) {
-            onReady = new SimpleObjectProperty<Runnable>(this, "onReady");
+            onReady = new SimpleObjectProperty<>(this, "onReady");
         }
         return onReady;
     }
@@ -1979,7 +1979,7 @@ public final class MediaPlayer {
 
     public ObjectProperty<Runnable> onPlayingProperty() {
         if (onPlaying == null) {
-            onPlaying = new SimpleObjectProperty<Runnable>(this, "onPlaying");
+            onPlaying = new SimpleObjectProperty<>(this, "onPlaying");
         }
         return onPlaying;
     }
@@ -2007,7 +2007,7 @@ public final class MediaPlayer {
 
     public ObjectProperty<Runnable> onPausedProperty() {
         if (onPaused == null) {
-            onPaused = new SimpleObjectProperty<Runnable>(this, "onPaused");
+            onPaused = new SimpleObjectProperty<>(this, "onPaused");
         }
         return onPaused;
     }
@@ -2036,7 +2036,7 @@ public final class MediaPlayer {
 
     public ObjectProperty<Runnable> onStoppedProperty() {
         if (onStopped == null) {
-            onStopped = new SimpleObjectProperty<Runnable>(this, "onStopped");
+            onStopped = new SimpleObjectProperty<>(this, "onStopped");
         }
         return onStopped;
     }
@@ -2064,7 +2064,7 @@ public final class MediaPlayer {
 
     public ObjectProperty<Runnable> onHaltedProperty() {
         if (onHalted == null) {
-            onHalted = new SimpleObjectProperty<Runnable>(this, "onHalted");
+            onHalted = new SimpleObjectProperty<>(this, "onHalted");
         }
         return onHalted;
     }
@@ -2095,7 +2095,7 @@ public final class MediaPlayer {
 
     public ObjectProperty<Runnable> onRepeatProperty() {
         if (onRepeat == null) {
-            onRepeat = new SimpleObjectProperty<Runnable>(this, "onRepeat");
+            onRepeat = new SimpleObjectProperty<>(this, "onRepeat");
         }
         return onRepeat;
     }
@@ -2124,12 +2124,12 @@ public final class MediaPlayer {
 
     public ObjectProperty<Runnable> onStalledProperty() {
         if (onStalled == null) {
-            onStalled = new SimpleObjectProperty<Runnable>(this, "onStalled");
+            onStalled = new SimpleObjectProperty<>(this, "onStalled");
         }
         return onStalled;
     }
 
-    /****************************************************************************
+    /* **************************************************************************
      * AudioSpectrum API
      ***************************************************************************/
 
@@ -2329,7 +2329,7 @@ public final class MediaPlayer {
 
     public ObjectProperty<AudioSpectrumListener> audioSpectrumListenerProperty() {
         if (audioSpectrumListener == null) {
-            audioSpectrumListener = new ObjectPropertyBase<AudioSpectrumListener>() {
+            audioSpectrumListener = new ObjectPropertyBase<>() {
 
                 @Override
                 protected void invalidated() {
@@ -2389,7 +2389,7 @@ public final class MediaPlayer {
         }
     }
 
-    /****************************************************************************
+    /* **************************************************************************
      * Listeners section
      ***************************************************************************
      * Listener of modifications to the marker map in the public Media API.
@@ -2438,7 +2438,7 @@ public final class MediaPlayer {
             Platform.runLater(() -> {
                 Duration markerTime = Duration.millis(evt.getPresentationTime() * 1000.0);
                 if (getOnMarker() != null) {
-                    getOnMarker().handle(new MediaMarkerEvent(new Pair<String, Duration>(evt.getMarkerName(), markerTime)));
+                    getOnMarker().handle(new MediaMarkerEvent(new Pair<>(evt.getMarkerName(), markerTime)));
                 }
             });
         }
@@ -2771,7 +2771,7 @@ public final class MediaPlayer {
 
 class MediaPlayerShutdownHook implements Runnable {
 
-    private final static List<WeakReference<MediaPlayer>> playerRefs = new ArrayList<WeakReference<MediaPlayer>>();
+    private final static List<WeakReference<MediaPlayer>> playerRefs = new ArrayList<>();
     private static boolean isShutdown = false;
 
     static {
@@ -2793,7 +2793,7 @@ class MediaPlayerShutdownHook implements Runnable {
                     }
                 }
 
-                playerRefs.add(new WeakReference<MediaPlayer>(player));
+                playerRefs.add(new WeakReference<>(player));
             }
         }
     }
@@ -2826,7 +2826,7 @@ class MediaTimerTask extends TimerTask {
     private WeakReference<MediaPlayer> playerRef;
 
     MediaTimerTask(MediaPlayer player) {
-        playerRef = new WeakReference<MediaPlayer>(player);
+        playerRef = new WeakReference<>(player);
     }
 
     void start() {

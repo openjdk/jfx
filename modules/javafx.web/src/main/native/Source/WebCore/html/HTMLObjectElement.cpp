@@ -51,10 +51,10 @@
 #include "Widget.h"
 #include <wtf/IsoMallocInlines.h>
 #include <wtf/Ref.h>
+#include <wtf/RobinHoodHashSet.h>
 
 #if PLATFORM(IOS_FAMILY)
 #include "RuntimeApplicationChecks.h"
-#include <wtf/spi/darwin/dyldSPI.h>
 #endif
 
 namespace WebCore {
@@ -72,33 +72,32 @@ inline HTMLObjectElement::HTMLObjectElement(const QualifiedName& tagName, Docume
 
 Ref<HTMLObjectElement> HTMLObjectElement::create(const QualifiedName& tagName, Document& document, HTMLFormElement* form)
 {
-    auto result = adoptRef(*new HTMLObjectElement(tagName, document, form));
-    result->finishCreating();
-    return result;
+    return adoptRef(*new HTMLObjectElement(tagName, document, form));
 }
 
-RenderWidget* HTMLObjectElement::renderWidgetLoadingPlugin() const
+HTMLObjectElement::~HTMLObjectElement()
 {
-    // Needs to load the plugin immediatedly because this function is called
-    // when JavaScript code accesses the plugin.
-    // FIXME: <rdar://16893708> Check if dispatching events here is safe.
-    document().updateLayoutIgnorePendingStylesheets(Document::RunPostLayoutTasks::Synchronously);
-    return renderWidget(); // This will return 0 if the renderer is not a RenderWidget.
+    clearForm();
 }
 
-bool HTMLObjectElement::isPresentationAttribute(const QualifiedName& name) const
+int HTMLObjectElement::defaultTabIndex() const
+{
+    return 0;
+}
+
+bool HTMLObjectElement::hasPresentationalHintsForAttribute(const QualifiedName& name) const
 {
     if (name == borderAttr)
         return true;
-    return HTMLPlugInImageElement::isPresentationAttribute(name);
+    return HTMLPlugInImageElement::hasPresentationalHintsForAttribute(name);
 }
 
-void HTMLObjectElement::collectStyleForPresentationAttribute(const QualifiedName& name, const AtomString& value, MutableStyleProperties& style)
+void HTMLObjectElement::collectPresentationalHintsForAttribute(const QualifiedName& name, const AtomString& value, MutableStyleProperties& style)
 {
     if (name == borderAttr)
         applyBorderAttributeToStyle(value, style);
     else
-        HTMLPlugInImageElement::collectStyleForPresentationAttribute(name, value, style);
+        HTMLPlugInImageElement::collectPresentationalHintsForAttribute(name, value, style);
 }
 
 void HTMLObjectElement::parseAttribute(const QualifiedName& name, const AtomString& value)
@@ -206,7 +205,7 @@ void HTMLObjectElement::parametersForPlugin(Vector<String>& paramNames, Vector<S
     // if we know that resource points to a plug-in.
 
     if (url.isEmpty() && !urlParameter.isEmpty()) {
-        SubframeLoader& loader = document().frame()->loader().subframeLoader();
+        auto& loader = document().frame()->loader().subframeLoader();
         if (loader.resourceWillUsePlugin(urlParameter, serviceType))
             url = urlParameter;
     }
@@ -277,14 +276,11 @@ void HTMLObjectElement::updateWidget(CreatePlugins createPlugins)
 
     setNeedsWidgetUpdate(false);
 
-    Ref<HTMLObjectElement> protectedThis(*this); // beforeload and plugin loading can make arbitrary DOM mutations.
-    bool beforeLoadAllowedLoad = guardedDispatchBeforeLoadEvent(url);
-    if (!renderer()) // Do not load the plugin if beforeload removed this element or its renderer.
-        return;
+    Ref protectedThis = *this; // Plugin loading can make arbitrary DOM mutations.
 
     // Dispatching a beforeLoad event could have executed code that changed the document.
     // Make sure the URL is still safe to load.
-    bool success = beforeLoadAllowedLoad && hasValidClassId() && canLoadURL(url);
+    bool success = hasValidClassId() && canLoadURL(url);
     if (success)
         success = requestObject(url, serviceType, paramNames, paramValues);
     if (!success && hasFallbackContent())
@@ -322,12 +318,7 @@ void HTMLObjectElement::childrenChanged(const ChildChange& change)
 
 bool HTMLObjectElement::isURLAttribute(const Attribute& attribute) const
 {
-    return attribute.name() == dataAttr || attribute.name() == codebaseAttr || (attribute.name() == usemapAttr && attribute.value().string()[0] != '#') || HTMLPlugInImageElement::isURLAttribute(attribute);
-}
-
-bool HTMLObjectElement::isInteractiveContent() const
-{
-    return hasAttributeWithoutSynchronization(usemapAttr);
+    return attribute.name() == dataAttr || attribute.name() == codebaseAttr || HTMLPlugInImageElement::isURLAttribute(attribute);
 }
 
 const AtomString& HTMLObjectElement::imageSourceURL() const
@@ -362,9 +353,10 @@ void HTMLObjectElement::renderFallbackContent()
 
 static inline bool preventsParentObjectFromExposure(const Element& child)
 {
-    static const auto mostKnownTags = makeNeverDestroyed([] {
-        HashSet<QualifiedName> set;
+    static NeverDestroyed mostKnownTags = [] {
+        MemoryCompactLookupOnlyRobinHoodHashSet<QualifiedName> set;
         auto* tags = HTMLNames::getHTMLTags();
+        set.reserveInitialCapacity(HTMLNames::HTMLTagsCount);
         for (size_t i = 0; i < HTMLNames::HTMLTagsCount; i++) {
             auto& tag = *tags[i];
             // Only the param element was explicitly mentioned in the HTML specification rule
@@ -383,7 +375,7 @@ static inline bool preventsParentObjectFromExposure(const Element& child)
             set.add(tag);
         }
         return set;
-    }());
+    }();
     return mostKnownTags.get().contains(child.tagQName());
 }
 
@@ -405,7 +397,7 @@ static inline bool shouldBeExposed(const HTMLObjectElement& element)
     // with no children other than param elements, unknown elements and whitespace can be found
     // by name in a document, and other object elements cannot".
 
-    for (auto child = makeRefPtr(element.firstChild()); child; child = child->nextSibling()) {
+    for (RefPtr child = element.firstChild(); child; child = child->nextSibling()) {
         if (preventsParentObjectFromExposure(*child))
             return false;
     }
@@ -460,35 +452,12 @@ void HTMLObjectElement::addSubresourceAttributeURLs(ListHashSet<URL>& urls) cons
     HTMLPlugInImageElement::addSubresourceAttributeURLs(urls);
 
     addSubresourceURL(urls, document().completeURL(attributeWithoutSynchronization(dataAttr)));
-
-    // FIXME: Passing a string that starts with "#" to the completeURL function does
-    // not seem like it would work. The image element has similar but not identical code.
-    const AtomString& useMap = attributeWithoutSynchronization(usemapAttr);
-    if (useMap.startsWith('#'))
-        addSubresourceURL(urls, document().completeURL(useMap));
 }
 
 void HTMLObjectElement::didMoveToNewDocument(Document& oldDocument, Document& newDocument)
 {
     FormAssociatedElement::didMoveToNewDocument(oldDocument);
     HTMLPlugInImageElement::didMoveToNewDocument(oldDocument, newDocument);
-}
-
-bool HTMLObjectElement::appendFormData(DOMFormData& formData, bool)
-{
-    if (name().isEmpty())
-        return false;
-
-    // Use PluginLoadingPolicy::DoNotLoad here or it would fire JS events synchronously
-    // which would not be safe here.
-    auto widget = makeRefPtr(pluginWidget(PluginLoadingPolicy::DoNotLoad));
-    if (!is<PluginViewBase>(widget))
-        return false;
-    String value;
-    if (!downcast<PluginViewBase>(*widget).getFormValue(value))
-        return false;
-    formData.append(name(), value);
-    return true;
 }
 
 bool HTMLObjectElement::canContainRangeEndPoint() const

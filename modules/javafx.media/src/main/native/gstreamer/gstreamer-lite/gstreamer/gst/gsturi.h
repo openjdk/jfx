@@ -33,6 +33,9 @@ G_BEGIN_DECLS
 
 #include <gst/gstconfig.h>
 
+/**
+ * gst_uri_error_quark: (attributes doc.skip=true)
+ */
 GST_API
 GQuark gst_uri_error_quark (void);
 
@@ -233,6 +236,9 @@ GST_API
 GstUri * gst_uri_from_string           (const gchar * uri) G_GNUC_MALLOC;
 
 GST_API
+GstUri * gst_uri_from_string_escaped   (const gchar * uri) G_GNUC_MALLOC;
+
+GST_API
 GstUri * gst_uri_from_string_with_base (GstUri * base,
                                         const gchar * uri) G_GNUC_MALLOC;
 GST_API
@@ -345,56 +351,45 @@ gboolean gst_uri_set_fragment          (GstUri * uri, const gchar * fragment);
 GST_API
 GHashTable * gst_uri_get_media_fragment_table  (const GstUri * uri);
 
-/**
- * gst_uri_copy:
- * @uri: This #GstUri object.
- *
- * Create a new #GstUri object with the same data as this #GstUri object.
- * If @uri is %NULL then returns %NULL.
- *
- * Returns: (transfer full): A new #GstUri object which is a copy of this
- *          #GstUri or %NULL.
- */
+#ifndef GST_DISABLE_MINIOBJECT_INLINE_FUNCTIONS
 static inline GstUri *
 gst_uri_copy (const GstUri * uri)
 {
   return GST_URI_CAST (gst_mini_object_copy (GST_MINI_OBJECT_CONST_CAST (uri)));
 }
 
-/**
- * gst_uri_ref:
- * @uri: (transfer none): This #GstUri object.
- *
- * Add a reference to this #GstUri object. See gst_mini_object_ref() for further
- * info.
- *
- * Returns: This object with the reference count incremented.
- */
 static inline GstUri *
 gst_uri_ref (GstUri * uri)
 {
   return GST_URI_CAST (gst_mini_object_ref (GST_MINI_OBJECT_CAST (uri)));
 }
 
-/**
- * gst_uri_unref:
- * @uri: (transfer full): This #GstUri object.
- *
- * Decrement the reference count to this #GstUri object.
- *
- * If the reference count drops to 0 then finalize this object.
- *
- * See gst_mini_object_unref() for further info.
- */
 static inline void
 gst_uri_unref (GstUri * uri)
 {
   gst_mini_object_unref (GST_MINI_OBJECT_CAST (uri));
 }
 
-#ifdef G_DEFINE_AUTOPTR_CLEANUP_FUNC
+static inline void
+gst_clear_uri (GstUri ** uri_ptr)
+{
+  gst_clear_mini_object ((GstMiniObject **) uri_ptr);
+}
+#else /* GST_DISABLE_MINIOBJECT_INLINE_FUNCTIONS */
+GST_API
+GstUri * gst_uri_copy  (const GstUri * uri);
+
+GST_API
+GstUri * gst_uri_ref   (GstUri * uri);
+
+GST_API
+void     gst_uri_unref (GstUri * uri);
+
+GST_API
+void     gst_clear_uri (GstUri ** uri_ptr);
+#endif /* GST_DISABLE_MINIOBJECT_INLINE_FUNCTIONS */
+
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(GstUri, gst_uri_unref)
-#endif
 
 G_END_DECLS
 

@@ -41,9 +41,9 @@ public:
 
     String customCSSText() const;
 
-    RefPtr<Image> image(RenderElement*, const FloatSize&);
+    RefPtr<Image> image(RenderElement&, const FloatSize&);
     bool isFixedSize() const { return true; }
-    FloatSize fixedSize(const RenderElement*);
+    FloatSize fixedSize(const RenderElement&);
 
     HTMLCanvasElement* element() const { return m_element; }
 
@@ -66,7 +66,7 @@ public:
         const CSSCanvasValue& ownerValue() const { return m_ownerValue; }
 
     private:
-        void canvasChanged(CanvasBase& canvasBase, const FloatRect& changedRect) final
+        void canvasChanged(CanvasBase& canvasBase, const std::optional<FloatRect>& changedRect) final
         {
             ASSERT(is<HTMLCanvasElement>(canvasBase));
             m_ownerValue.canvasChanged(downcast<HTMLCanvasElement>(canvasBase), changedRect);
@@ -93,7 +93,7 @@ private:
     {
     }
 
-    void canvasChanged(HTMLCanvasElement&, const FloatRect& changedRect);
+    void canvasChanged(HTMLCanvasElement&, const std::optional<FloatRect>& changedRect);
     void canvasResized(HTMLCanvasElement&);
     void canvasDestroyed(HTMLCanvasElement&);
 

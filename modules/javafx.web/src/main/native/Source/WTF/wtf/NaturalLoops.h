@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -126,7 +126,7 @@ public:
         // blocks to their loop headers, which gives us all of the blocks in the
         // loop body.
 
-        static const bool verbose = false;
+        static constexpr bool verbose = false;
 
         if (verbose) {
             dataLog("Dominators:\n");
@@ -287,7 +287,7 @@ public:
             return nullptr;
         if (loop->header() == block)
             return loop;
-        if (!ASSERT_DISABLED) {
+        if (ASSERT_ENABLED) {
             for (; loop; loop = innerMostOuterLoop(*loop))
                 ASSERT(loop->header() != block);
         }

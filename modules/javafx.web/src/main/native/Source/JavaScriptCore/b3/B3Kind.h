@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -126,6 +126,14 @@ public:
         case Store8:
         case Store16:
         case Store:
+        case AtomicWeakCAS:
+        case AtomicStrongCAS:
+        case AtomicXchgAdd:
+        case AtomicXchgAnd:
+        case AtomicXchgOr:
+        case AtomicXchgSub:
+        case AtomicXchgXor:
+        case AtomicXchg:
             return true;
         default:
             return false;
@@ -211,7 +219,7 @@ inline Kind trapping(Kind kind)
 struct KindHash {
     static unsigned hash(const Kind& key) { return key.hash(); }
     static bool equal(const Kind& a, const Kind& b) { return a == b; }
-    static const bool safeToCompareToEmptyOrDeleted = true;
+    static constexpr bool safeToCompareToEmptyOrDeleted = true;
 };
 
 } } // namespace JSC::B3
@@ -219,13 +227,11 @@ struct KindHash {
 namespace WTF {
 
 template<typename T> struct DefaultHash;
-template<> struct DefaultHash<JSC::B3::Kind> {
-    typedef JSC::B3::KindHash Hash;
-};
+template<> struct DefaultHash<JSC::B3::Kind> : JSC::B3::KindHash { };
 
 template<typename T> struct HashTraits;
 template<> struct HashTraits<JSC::B3::Kind> : public SimpleClassHashTraits<JSC::B3::Kind> {
-    static const bool emptyValueIsZero = false;
+    static constexpr bool emptyValueIsZero = false;
 };
 
 } // namespace WTF

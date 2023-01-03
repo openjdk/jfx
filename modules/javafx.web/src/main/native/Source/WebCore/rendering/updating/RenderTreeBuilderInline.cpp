@@ -27,12 +27,14 @@
 #include "RenderTreeBuilderInline.h"
 
 #include "FullscreenManager.h"
+#include "RenderBlockFlow.h"
 #include "RenderChildIterator.h"
 #include "RenderFullScreen.h"
 #include "RenderInline.h"
 #include "RenderTable.h"
 #include "RenderTreeBuilderMultiColumn.h"
 #include "RenderTreeBuilderTable.h"
+#include <wtf/SetForScope.h>
 
 namespace WebCore {
 
@@ -49,7 +51,7 @@ static bool canUseAsParentForContinuation(const RenderObject* renderer)
 
 static RenderBoxModelObject* nextContinuation(RenderObject* renderer)
 {
-    if (is<RenderInline>(*renderer) && !renderer->isReplaced())
+    if (is<RenderInline>(*renderer) && !renderer->isReplacedOrInlineBlock())
         return downcast<RenderInline>(*renderer).continuation();
     return downcast<RenderBlock>(*renderer).inlineContinuation();
 }
@@ -265,6 +267,7 @@ void RenderTreeBuilder::Inline::splitFlow(RenderInline& parent, RenderObject* be
 
 void RenderTreeBuilder::Inline::splitInlines(RenderInline& parent, RenderBlock* fromBlock, RenderBlock* toBlock, RenderBlock* middleBlock, RenderObject* beforeChild, RenderBoxModelObject* oldCont)
 {
+    auto internalMoveScope = SetForScope { m_builder.m_internalMovesType, RenderObject::IsInternalMove::Yes };
     // Create a clone of this inline.
     RenderPtr<RenderInline> cloneInline = cloneAsContinuation(parent);
 #if ENABLE(FULLSCREEN_API)
@@ -308,8 +311,11 @@ void RenderTreeBuilder::Inline::splitInlines(RenderInline& parent, RenderBlock* 
             // FIXME: When the anonymous wrapper has multiple children, we end up traversing up to the topmost wrapper
             // every time, which is a bit wasteful.
         }
-        auto childToMove = m_builder.detachFromRenderElement(*rendererToMove->parent(), *rendererToMove);
+        auto childToMove = m_builder.detachFromRenderElement(*rendererToMove->parent(), *rendererToMove, WillBeDestroyed::No);
         m_builder.attachIgnoringContinuation(*cloneInline, WTFMove(childToMove));
+        auto* newParent = rendererToMove->parent();
+        if (is<RenderBox>(newParent))
+            markBoxForRelayoutAfterSplit(downcast<RenderBox>(*newParent));
         rendererToMove->setNeedsLayoutAndPrefWidthsRecalc();
         rendererToMove = nextSibling;
     }
@@ -346,12 +352,13 @@ void RenderTreeBuilder::Inline::splitInlines(RenderInline& parent, RenderBlock* 
             // *after* currentChild and append them all to the clone.
             for (auto* sibling = currentChild->nextSibling(); sibling;) {
                 auto* next = sibling->nextSibling();
-                auto childToMove = m_builder.detachFromRenderElement(*current, *sibling);
+                auto childToMove = m_builder.detachFromRenderElement(*current, *sibling, WillBeDestroyed::No);
                 m_builder.attachIgnoringContinuation(*cloneInline, WTFMove(childToMove));
                 sibling->setNeedsLayoutAndPrefWidthsRecalc();
                 sibling = next;
             }
-        }
+        } else
+            m_builder.setHasBrokenContinuation();
 
         // Keep walking up the chain.
         currentChild = current;
@@ -370,7 +377,7 @@ void RenderTreeBuilder::Inline::splitInlines(RenderInline& parent, RenderBlock* 
     // and put them in the toBlock.
     for (auto* current = currentChild->nextSibling(); current;) {
         auto* next = current->nextSibling();
-        auto childToMove = m_builder.detachFromRenderElement(*fromBlock, *current);
+        auto childToMove = m_builder.detachFromRenderElement(*fromBlock, *current, WillBeDestroyed::No);
         m_builder.attachToRenderElementInternal(*toBlock, WTFMove(childToMove));
         current = next;
     }

@@ -76,6 +76,8 @@ enum Type : uint8_t {
     Uint32Array,
     Float32Array,
     Float64Array,
+    BigInt64Array,
+    BigUint64Array,
     AnyTypedArray
 };
 
@@ -89,10 +91,11 @@ enum Class : uint8_t {
 };
 
 enum Speculation : uint8_t {
-    SaneChain, // In bounds and the array prototype chain is still intact, i.e. loading a hole doesn't require special treatment.
+    InBoundsSaneChain, // In bounds and the array prototype chain is still intact, i.e. loading a hole doesn't require special treatment.
 
     InBounds, // In bounds and not loading a hole.
     ToHole, // Potentially storing to a hole.
+    OutOfBoundsSaneChain, // Out-of-bounds access, but sane chain, so there are no arbitrary effects. E.g, loading out of bounds doesn't require traversing the prototype chain if we're an original array structure.
     OutOfBounds // Out-of-bounds access and anything can happen.
 };
 enum Conversion : uint8_t {
@@ -124,6 +127,7 @@ public:
         u.asBytes.speculation = Array::InBounds;
         u.asBytes.conversion = Array::AsIs;
         u.asBytes.action = Array::Write;
+        u.asBytes.mayBeLargeTypedArray = false;
     }
 
     explicit ArrayMode(Array::Type type, Array::Action action)
@@ -133,6 +137,7 @@ public:
         u.asBytes.speculation = Array::InBounds;
         u.asBytes.conversion = Array::AsIs;
         u.asBytes.action = action;
+        u.asBytes.mayBeLargeTypedArray = false;
     }
 
     ArrayMode(Array::Type type, Array::Class arrayClass, Array::Action action)
@@ -142,15 +147,17 @@ public:
         u.asBytes.speculation = Array::InBounds;
         u.asBytes.conversion = Array::AsIs;
         u.asBytes.action = action;
+        u.asBytes.mayBeLargeTypedArray = false;
     }
 
-    ArrayMode(Array::Type type, Array::Class arrayClass, Array::Speculation speculation, Array::Conversion conversion, Array::Action action)
+    ArrayMode(Array::Type type, Array::Class arrayClass, Array::Speculation speculation, Array::Conversion conversion, Array::Action action, bool mayBeLargeTypedArray = false)
     {
         u.asBytes.type = type;
         u.asBytes.arrayClass = arrayClass;
         u.asBytes.speculation = speculation;
         u.asBytes.conversion = conversion;
         u.asBytes.action = action;
+        u.asBytes.mayBeLargeTypedArray = mayBeLargeTypedArray;
     }
 
     ArrayMode(Array::Type type, Array::Class arrayClass, Array::Conversion conversion, Array::Action action)
@@ -160,6 +167,7 @@ public:
         u.asBytes.speculation = Array::InBounds;
         u.asBytes.conversion = conversion;
         u.asBytes.action = action;
+        u.asBytes.mayBeLargeTypedArray = false;
     }
 
     Array::Type type() const { return static_cast<Array::Type>(u.asBytes.type); }
@@ -167,6 +175,7 @@ public:
     Array::Speculation speculation() const { return static_cast<Array::Speculation>(u.asBytes.speculation); }
     Array::Conversion conversion() const { return static_cast<Array::Conversion>(u.asBytes.conversion); }
     Array::Action action() const { return static_cast<Array::Action>(u.asBytes.action); }
+    bool mayBeLargeTypedArray() const { return u.asBytes.mayBeLargeTypedArray; }
 
     unsigned asWord() const { return u.asWord; }
 
@@ -177,34 +186,49 @@ public:
 
     static ArrayMode fromObserved(const ConcurrentJSLocker&, ArrayProfile*, Array::Action, bool makeSafe);
 
-    ArrayMode withSpeculation(Array::Speculation speculation) const
+    ArrayMode withType(Array::Type type) const
     {
-        return ArrayMode(type(), arrayClass(), speculation, conversion(), action());
+        return ArrayMode(type, arrayClass(), speculation(), conversion(), action(), mayBeLargeTypedArray());
     }
 
-    ArrayMode withArrayClass(Array::Class arrayClass) const
+    ArrayMode withSpeculation(Array::Speculation speculation) const
     {
-        return ArrayMode(type(), arrayClass, speculation(), conversion(), action());
+        return ArrayMode(type(), arrayClass(), speculation, conversion(), action(), mayBeLargeTypedArray());
+    }
+
+    ArrayMode withConversion(Array::Conversion conversion) const
+    {
+        return ArrayMode(type(), arrayClass(), speculation(), conversion, action(), mayBeLargeTypedArray());
+    }
+
+    ArrayMode withTypeAndConversion(Array::Type type, Array::Conversion conversion) const
+    {
+        return ArrayMode(type, arrayClass(), speculation(), conversion, action(), mayBeLargeTypedArray());
+    }
+
+    ArrayMode withArrayClassAndSpeculationAndMayBeLargeTypedArray(Array::Class arrayClass, Array::Speculation speculation, bool mayBeLargeTypedArray) const
+    {
+        return ArrayMode(type(), arrayClass, speculation, conversion(), action(), mayBeLargeTypedArray);
+    }
+
+    static Array::Speculation speculationFromProfile(const ConcurrentJSLocker& locker, ArrayProfile* profile, bool makeSafe)
+    {
+        if (makeSafe)
+            return Array::OutOfBounds;
+        else if (profile->mayStoreToHole(locker))
+            return Array::ToHole;
+        else
+            return Array::InBounds;
     }
 
     ArrayMode withSpeculationFromProfile(const ConcurrentJSLocker& locker, ArrayProfile* profile, bool makeSafe) const
     {
-        Array::Speculation mySpeculation;
-
-        if (makeSafe)
-            mySpeculation = Array::OutOfBounds;
-        else if (profile->mayStoreToHole(locker))
-            mySpeculation = Array::ToHole;
-        else
-            mySpeculation = Array::InBounds;
-
-        return withSpeculation(mySpeculation);
+        return withSpeculation(speculationFromProfile(locker, profile, makeSafe));
     }
 
     ArrayMode withProfile(const ConcurrentJSLocker& locker, ArrayProfile* profile, bool makeSafe) const
     {
         Array::Class myArrayClass;
-
         if (isJSArray()) {
             if (profile->usesOriginalArrayStructures(locker) && benefitsFromOriginalArray()) {
                 ArrayModes arrayModes = profile->observedArrayModes(locker);
@@ -219,24 +243,14 @@ public:
         } else
             myArrayClass = arrayClass();
 
-        return withArrayClass(myArrayClass).withSpeculationFromProfile(locker, profile, makeSafe);
+        Array::Speculation speculation = speculationFromProfile(locker, profile, makeSafe);
+
+        bool largeTypedArray = profile->mayBeLargeTypedArray(locker);
+
+        return withArrayClassAndSpeculationAndMayBeLargeTypedArray(myArrayClass, speculation, largeTypedArray);
     }
 
-    ArrayMode withType(Array::Type type) const
-    {
-        return ArrayMode(type, arrayClass(), speculation(), conversion(), action());
-    }
-
-    ArrayMode withConversion(Array::Conversion conversion) const
-    {
-        return ArrayMode(type(), arrayClass(), speculation(), conversion, action());
-    }
-
-    ArrayMode withTypeAndConversion(Array::Type type, Array::Conversion conversion) const
-    {
-        return ArrayMode(type, arrayClass(), speculation(), conversion, action());
-    }
-
+    static constexpr SpeculatedType unusedIndexSpeculatedType = SpecInt32Only;
     ArrayMode refine(Graph&, Node*, SpeculatedType base, SpeculatedType index, SpeculatedType value = SpecNone) const;
 
     bool alreadyChecked(Graph&, Node*, const AbstractValue&) const;
@@ -275,15 +289,35 @@ public:
         return arrayClass() == Array::OriginalArray || arrayClass() == Array::OriginalCopyOnWriteArray;
     }
 
+    bool isInBoundsSaneChain() const
+    {
+        return speculation() == Array::InBoundsSaneChain;
+    }
+
+    bool isOutOfBoundsSaneChain() const
+    {
+        return speculation() == Array::OutOfBoundsSaneChain;
+    }
+
     bool isSaneChain() const
     {
-        return speculation() == Array::SaneChain;
+        return isInBoundsSaneChain() || isOutOfBoundsSaneChain();
+    }
+
+    bool isOutOfBounds() const
+    {
+        return speculation() == Array::OutOfBounds || speculation() == Array::OutOfBoundsSaneChain;
+    }
+
+    bool isEffectfulOutOfBounds() const
+    {
+        return speculation() == Array::OutOfBounds;
     }
 
     bool isInBounds() const
     {
         switch (speculation()) {
-        case Array::SaneChain:
+        case Array::InBoundsSaneChain:
         case Array::InBounds:
             return true;
         default:
@@ -294,11 +328,6 @@ public:
     bool mayStoreToHole() const
     {
         return !isInBounds();
-    }
-
-    bool isOutOfBounds() const
-    {
-        return speculation() == Array::OutOfBounds;
     }
 
     bool isSlowPut() const
@@ -381,6 +410,8 @@ public:
         case Array::Uint32Array:
         case Array::Float32Array:
         case Array::Float64Array:
+        case Array::BigInt64Array:
+        case Array::BigUint64Array:
             return false;
         case Array::Int32:
         case Array::Double:
@@ -429,22 +460,24 @@ public:
         switch (type()) {
         case Array::Generic:
             return ALL_ARRAY_MODES;
+        case Array::Undecided:
+            return arrayModesWithIndexingShapes(UndecidedShape);
         case Array::Int32:
-            result = arrayModesWithIndexingShape(Int32Shape);
+            result = arrayModesWithIndexingShapes(Int32Shape);
             break;
         case Array::Double:
-            result = arrayModesWithIndexingShape(DoubleShape);
+            result = arrayModesWithIndexingShapes(DoubleShape);
             break;
         case Array::Contiguous:
-            result = arrayModesWithIndexingShape(ContiguousShape);
+            result = arrayModesWithIndexingShapes(ContiguousShape);
             break;
         case Array::ArrayStorage:
-            return arrayModesWithIndexingShape(ArrayStorageShape);
+            return arrayModesWithIndexingShapes(ArrayStorageShape);
         case Array::SlowPutArrayStorage:
             return arrayModesWithIndexingShapes(SlowPutArrayStorageShape, ArrayStorageShape);
         case Array::DirectArguments:
         case Array::ScopedArguments:
-            return arrayModesWithIndexingShapes(ArrayStorageShape, NonArray);
+            return arrayModesWithIndexingShapes(ArrayStorageShape, SlowPutArrayStorageShape, NonArray);
         case Array::Int8Array:
             return Int8ArrayMode;
         case Array::Int16Array:
@@ -463,6 +496,10 @@ public:
             return Float32ArrayMode;
         case Array::Float64Array:
             return Float64ArrayMode;
+        case Array::BigInt64Array:
+            return BigInt64ArrayMode;
+        case Array::BigUint64Array:
+            return BigUint64ArrayMode;
         case Array::AnyTypedArray:
             return ALL_TYPED_ARRAY_MODES;
         default:
@@ -499,7 +536,8 @@ public:
         return type() == other.type()
             && arrayClass() == other.arrayClass()
             && speculation() == other.speculation()
-            && conversion() == other.conversion();
+            && conversion() == other.conversion()
+            && mayBeLargeTypedArray() == other.mayBeLargeTypedArray();
     }
 
     bool operator!=(const ArrayMode& other) const
@@ -512,7 +550,7 @@ private:
         u.asWord = word;
     }
 
-    ArrayModes arrayModesWithIndexingShape(IndexingType shape) const
+    ArrayModes arrayModesWithIndexingShapes(IndexingType shape) const
     {
         switch (arrayClass()) {
         case Array::NonArray:
@@ -531,16 +569,16 @@ private:
             if (hasInt32(shape) || hasDouble(shape) || hasContiguous(shape))
                 return asArrayModesIgnoringTypedArrays(shape) | asArrayModesIgnoringTypedArrays(shape | IsArray) | asArrayModesIgnoringTypedArrays(shape | IsArray | CopyOnWrite);
             return asArrayModesIgnoringTypedArrays(shape) | asArrayModesIgnoringTypedArrays(shape | IsArray);
-        default:
-            // This is only necessary for C++ compilers that don't understand enums.
-            return 0;
         }
+        // This is only necessary for C++ compilers that don't understand enums.
+        return 0;
     }
 
-    ArrayModes arrayModesWithIndexingShapes(IndexingType shape1, IndexingType shape2) const
+    template <typename... Args>
+    ArrayModes arrayModesWithIndexingShapes(IndexingType shape1, Args... args) const
     {
-        ArrayModes arrayMode1 = arrayModesWithIndexingShape(shape1);
-        ArrayModes arrayMode2 = arrayModesWithIndexingShape(shape2);
+        ArrayModes arrayMode1 = arrayModesWithIndexingShapes(shape1);
+        ArrayModes arrayMode2 = arrayModesWithIndexingShapes(args...);
         return arrayMode1 | arrayMode2;
     }
 
@@ -552,7 +590,8 @@ private:
             uint8_t arrayClass;
             uint8_t speculation;
             uint8_t conversion : 4;
-            uint8_t action : 4;
+            uint8_t action : 1;
+            uint8_t mayBeLargeTypedArray : 1;
         } asBytes;
         unsigned asWord;
     } u;

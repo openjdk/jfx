@@ -37,7 +37,7 @@ struct ExceptionData {
     WEBCORE_EXPORT ExceptionData isolatedCopy() const;
 
     template<class Encoder> void encode(Encoder&) const;
-    template<class Decoder> static bool decode(Decoder&, ExceptionData&);
+    template<class Decoder> static std::optional<ExceptionData> decode(Decoder&);
 
     Exception toException() const
     {
@@ -48,20 +48,24 @@ struct ExceptionData {
 template<class Encoder>
 void ExceptionData::encode(Encoder& encoder) const
 {
-    encoder.encodeEnum(code);
+    encoder << code;
     encoder << message;
 }
 
 template<class Decoder>
-bool ExceptionData::decode(Decoder& decoder, ExceptionData& data)
+std::optional<ExceptionData> ExceptionData::decode(Decoder& decoder)
 {
-    if (!decoder.decodeEnum(data.code))
-        return false;
+    std::optional<ExceptionCode> code;
+    decoder >> code;
+    if (!code)
+        return std::nullopt;
 
-    if (!decoder.decode(data.message))
-        return false;
+    std::optional<String> message;
+    decoder >> message;
+    if (!message)
+        return std::nullopt;
 
-    return true;
+    return ExceptionData { WTFMove(*code), WTFMove(*message) };
 }
 
 } // namespace WebCore

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,16 +25,18 @@
 
 #pragma once
 
-#if ENABLE(INDEXED_DATABASE)
-
 #include "ActiveDOMObject.h"
 #include "ExceptionOr.h"
 #include "IDBCursorDirection.h"
 #include "IDBKeyPath.h"
 #include "IDBObjectStoreInfo.h"
+#include <wtf/IsoMalloc.h>
+#include <wtf/Lock.h>
+#include <wtf/UniqueRef.h>
 
 namespace JSC {
-class ExecState;
+class CallFrame;
+class JSGlobalObject;
 class JSValue;
 class SlotVisitor;
 }
@@ -47,23 +49,23 @@ class IDBKey;
 class IDBKeyRange;
 class IDBRequest;
 class IDBTransaction;
+class SerializedScriptValue;
 
 struct IDBKeyRangeData;
 
 namespace IndexedDB {
-enum class ObjectStoreOverwriteMode;
+enum class ObjectStoreOverwriteMode : uint8_t;
 }
 
 class IDBObjectStore final : public ActiveDOMObject {
-    WTF_MAKE_NONCOPYABLE(IDBObjectStore);
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_ISO_ALLOCATED(IDBObjectStore);
 public:
-    IDBObjectStore(ScriptExecutionContext&, const IDBObjectStoreInfo&, IDBTransaction&);
+    static UniqueRef<IDBObjectStore> create(ScriptExecutionContext&, const IDBObjectStoreInfo&, IDBTransaction&);
     ~IDBObjectStore();
 
     const String& name() const;
     ExceptionOr<void> setName(const String&);
-    const Optional<IDBKeyPath>& keyPath() const;
+    const std::optional<IDBKeyPath>& keyPath() const;
     Ref<DOMStringList> indexNames() const;
     IDBTransaction& transaction();
     bool autoIncrement() const;
@@ -73,30 +75,30 @@ public:
         bool multiEntry;
     };
 
-    ExceptionOr<Ref<IDBRequest>> openCursor(JSC::ExecState&, RefPtr<IDBKeyRange>&&, IDBCursorDirection);
-    ExceptionOr<Ref<IDBRequest>> openCursor(JSC::ExecState&, JSC::JSValue key, IDBCursorDirection);
-    ExceptionOr<Ref<IDBRequest>> openKeyCursor(JSC::ExecState&, RefPtr<IDBKeyRange>&&, IDBCursorDirection);
-    ExceptionOr<Ref<IDBRequest>> openKeyCursor(JSC::ExecState&, JSC::JSValue key, IDBCursorDirection);
-    ExceptionOr<Ref<IDBRequest>> get(JSC::ExecState&, JSC::JSValue key);
-    ExceptionOr<Ref<IDBRequest>> get(JSC::ExecState&, IDBKeyRange*);
-    ExceptionOr<Ref<IDBRequest>> getKey(JSC::ExecState&, JSC::JSValue key);
-    ExceptionOr<Ref<IDBRequest>> getKey(JSC::ExecState&, IDBKeyRange*);
-    ExceptionOr<Ref<IDBRequest>> add(JSC::ExecState&, JSC::JSValue, JSC::JSValue key);
-    ExceptionOr<Ref<IDBRequest>> put(JSC::ExecState&, JSC::JSValue, JSC::JSValue key);
-    ExceptionOr<Ref<IDBRequest>> deleteFunction(JSC::ExecState&, IDBKeyRange*);
-    ExceptionOr<Ref<IDBRequest>> deleteFunction(JSC::ExecState&, JSC::JSValue key);
-    ExceptionOr<Ref<IDBRequest>> clear(JSC::ExecState&);
-    ExceptionOr<Ref<IDBIndex>> createIndex(JSC::ExecState&, const String& name, IDBKeyPath&&, const IndexParameters&);
+    ExceptionOr<Ref<IDBRequest>> openCursor(RefPtr<IDBKeyRange>&&, IDBCursorDirection);
+    ExceptionOr<Ref<IDBRequest>> openCursor(JSC::JSGlobalObject&, JSC::JSValue key, IDBCursorDirection);
+    ExceptionOr<Ref<IDBRequest>> openKeyCursor(RefPtr<IDBKeyRange>&&, IDBCursorDirection);
+    ExceptionOr<Ref<IDBRequest>> openKeyCursor(JSC::JSGlobalObject&, JSC::JSValue key, IDBCursorDirection);
+    ExceptionOr<Ref<IDBRequest>> get(JSC::JSGlobalObject&, JSC::JSValue key);
+    ExceptionOr<Ref<IDBRequest>> get(IDBKeyRange*);
+    ExceptionOr<Ref<IDBRequest>> getKey(JSC::JSGlobalObject&, JSC::JSValue key);
+    ExceptionOr<Ref<IDBRequest>> getKey(IDBKeyRange*);
+    ExceptionOr<Ref<IDBRequest>> add(JSC::JSGlobalObject&, JSC::JSValue, JSC::JSValue key);
+    ExceptionOr<Ref<IDBRequest>> put(JSC::JSGlobalObject&, JSC::JSValue, JSC::JSValue key);
+    ExceptionOr<Ref<IDBRequest>> deleteFunction(IDBKeyRange*);
+    ExceptionOr<Ref<IDBRequest>> deleteFunction(JSC::JSGlobalObject&, JSC::JSValue key);
+    ExceptionOr<Ref<IDBRequest>> clear();
+    ExceptionOr<Ref<IDBIndex>> createIndex(const String& name, IDBKeyPath&&, const IndexParameters&);
     ExceptionOr<Ref<IDBIndex>> index(const String& name);
     ExceptionOr<void> deleteIndex(const String& name);
-    ExceptionOr<Ref<IDBRequest>> count(JSC::ExecState&, IDBKeyRange*);
-    ExceptionOr<Ref<IDBRequest>> count(JSC::ExecState&, JSC::JSValue key);
-    ExceptionOr<Ref<IDBRequest>> getAll(JSC::ExecState&, RefPtr<IDBKeyRange>&&, Optional<uint32_t> count);
-    ExceptionOr<Ref<IDBRequest>> getAll(JSC::ExecState&, JSC::JSValue key, Optional<uint32_t> count);
-    ExceptionOr<Ref<IDBRequest>> getAllKeys(JSC::ExecState&, RefPtr<IDBKeyRange>&&, Optional<uint32_t> count);
-    ExceptionOr<Ref<IDBRequest>> getAllKeys(JSC::ExecState&, JSC::JSValue key, Optional<uint32_t> count);
+    ExceptionOr<Ref<IDBRequest>> count(IDBKeyRange*);
+    ExceptionOr<Ref<IDBRequest>> count(JSC::JSGlobalObject&, JSC::JSValue key);
+    ExceptionOr<Ref<IDBRequest>> getAll(RefPtr<IDBKeyRange>&&, std::optional<uint32_t> count);
+    ExceptionOr<Ref<IDBRequest>> getAll(JSC::JSGlobalObject&, JSC::JSValue key, std::optional<uint32_t> count);
+    ExceptionOr<Ref<IDBRequest>> getAllKeys(RefPtr<IDBKeyRange>&&, std::optional<uint32_t> count);
+    ExceptionOr<Ref<IDBRequest>> getAllKeys(JSC::JSGlobalObject&, JSC::JSValue key, std::optional<uint32_t> count);
 
-    ExceptionOr<Ref<IDBRequest>> putForCursorUpdate(JSC::ExecState&, JSC::JSValue, RefPtr<IDBKey>);
+    ExceptionOr<Ref<IDBRequest>> putForCursorUpdate(JSC::JSGlobalObject&, JSC::JSValue, RefPtr<IDBKey>&&, RefPtr<SerializedScriptValue>&&);
 
     void markAsDeleted();
     bool isDeleted() const { return m_deleted; }
@@ -108,22 +110,24 @@ public:
     void ref();
     void deref();
 
-    void visitReferencedIndexes(JSC::SlotVisitor&) const;
+    template<typename Visitor> void visitReferencedIndexes(Visitor&) const;
     void renameReferencedIndex(IDBIndex&, const String& newName);
 
 private:
-    enum class InlineKeyCheck { Perform, DoNotPerform };
-    ExceptionOr<Ref<IDBRequest>> putOrAdd(JSC::ExecState&, JSC::JSValue, RefPtr<IDBKey>, IndexedDB::ObjectStoreOverwriteMode, InlineKeyCheck);
-    ExceptionOr<Ref<IDBRequest>> doCount(JSC::ExecState&, const IDBKeyRangeData&);
-    ExceptionOr<Ref<IDBRequest>> doDelete(JSC::ExecState&, WTF::Function<ExceptionOr<RefPtr<IDBKeyRange>>()> &&);
-    ExceptionOr<Ref<IDBRequest>> doOpenCursor(JSC::ExecState&, IDBCursorDirection, WTF::Function<ExceptionOr<RefPtr<IDBKeyRange>>()>&&);
-    ExceptionOr<Ref<IDBRequest>> doOpenKeyCursor(JSC::ExecState&, IDBCursorDirection, WTF::Function<ExceptionOr<RefPtr<IDBKeyRange>>()>&&);
-    ExceptionOr<Ref<IDBRequest>> doGetAll(JSC::ExecState&, Optional<uint32_t> count, WTF::Function<ExceptionOr<RefPtr<IDBKeyRange>>()> &&);
-    ExceptionOr<Ref<IDBRequest>> doGetAllKeys(JSC::ExecState&, Optional<uint32_t> count, WTF::Function<ExceptionOr<RefPtr<IDBKeyRange>>()> &&);
+    IDBObjectStore(ScriptExecutionContext&, const IDBObjectStoreInfo&, IDBTransaction&);
 
+    enum class InlineKeyCheck { Perform, DoNotPerform };
+    ExceptionOr<Ref<IDBRequest>> putOrAdd(JSC::JSGlobalObject&, JSC::JSValue, RefPtr<IDBKey>, IndexedDB::ObjectStoreOverwriteMode, InlineKeyCheck, RefPtr<SerializedScriptValue>&& = nullptr);
+    ExceptionOr<Ref<IDBRequest>> doCount(const IDBKeyRangeData&);
+    ExceptionOr<Ref<IDBRequest>> doDelete(Function<ExceptionOr<RefPtr<IDBKeyRange>>()> &&);
+    ExceptionOr<Ref<IDBRequest>> doOpenCursor(IDBCursorDirection, Function<ExceptionOr<RefPtr<IDBKeyRange>>()>&&);
+    ExceptionOr<Ref<IDBRequest>> doOpenKeyCursor(IDBCursorDirection, Function<ExceptionOr<RefPtr<IDBKeyRange>>()>&&);
+    ExceptionOr<Ref<IDBRequest>> doGetAll(std::optional<uint32_t> count, Function<ExceptionOr<RefPtr<IDBKeyRange>>()> &&);
+    ExceptionOr<Ref<IDBRequest>> doGetAllKeys(std::optional<uint32_t> count, Function<ExceptionOr<RefPtr<IDBKeyRange>>()> &&);
+
+    // ActiveDOMObject.
     const char* activeDOMObjectName() const final;
-    bool canSuspendForDocumentSuspension() const final;
-    bool hasPendingActivity() const final;
+    bool virtualHasPendingActivity() const final;
 
     IDBObjectStoreInfo m_info;
     IDBObjectStoreInfo m_originalInfo;
@@ -135,10 +139,8 @@ private:
     bool m_deleted { false };
 
     mutable Lock m_referencedIndexLock;
-    HashMap<String, std::unique_ptr<IDBIndex>> m_referencedIndexes;
-    HashMap<uint64_t, std::unique_ptr<IDBIndex>> m_deletedIndexes;
+    HashMap<String, std::unique_ptr<IDBIndex>> m_referencedIndexes WTF_GUARDED_BY_LOCK(m_referencedIndexLock);
+    HashMap<uint64_t, std::unique_ptr<IDBIndex>> m_deletedIndexes WTF_GUARDED_BY_LOCK(m_referencedIndexLock);
 };
 
 } // namespace WebCore
-
-#endif // ENABLE(INDEXED_DATABASE)

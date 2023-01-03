@@ -43,7 +43,10 @@ gboolean __gst_audio_encoded_audio_convert (GstAudioInfo * fmt, gint64 bytes,
                                             gint64 * dest_value);
 
 G_GNUC_INTERNAL
-gboolean __gst_audio_set_thread_priority   (void);
+gboolean __gst_audio_set_thread_priority   (gpointer * handle);
+
+G_GNUC_INTERNAL
+gboolean __gst_audio_restore_thread_priority (gpointer handle);
 
 G_END_DECLS
 

@@ -29,7 +29,6 @@
 #include "AllocatingScope.h"
 #include "FreeListInlines.h"
 #include "GCDeferralContext.h"
-#include "JSCInlines.h"
 #include "LocalAllocatorInlines.h"
 #include "Options.h"
 #include "SuperSampler.h"
@@ -40,7 +39,7 @@ LocalAllocator::LocalAllocator(BlockDirectory* directory)
     : m_directory(directory)
     , m_freeList(directory->m_cellSize)
 {
-    auto locker = holdLock(directory->m_localAllocatorsLock);
+    Locker locker { directory->m_localAllocatorsLock };
     directory->m_localAllocators.append(this);
 }
 
@@ -55,7 +54,7 @@ void LocalAllocator::reset()
 LocalAllocator::~LocalAllocator()
 {
     if (isOnList()) {
-        auto locker = holdLock(m_directory->m_localAllocatorsLock);
+        Locker locker { m_directory->m_localAllocatorsLock };
         remove();
     }
 
@@ -110,12 +109,11 @@ void LocalAllocator::stopAllocatingForGood()
     reset();
 }
 
-void* LocalAllocator::allocateSlowCase(GCDeferralContext* deferralContext, AllocationFailureMode failureMode)
+void* LocalAllocator::allocateSlowCase(Heap& heap, GCDeferralContext* deferralContext, AllocationFailureMode failureMode)
 {
     SuperSamplerScope superSamplerScope(false);
-    Heap& heap = *m_directory->m_heap;
     ASSERT(heap.vm().currentThreadIsHoldingAPILock());
-    doTestCollectionsIfNeeded(deferralContext);
+    doTestCollectionsIfNeeded(heap, deferralContext);
 
     ASSERT(!m_directory->markedSpace().isIterating());
     heap.didAllocate(m_freeList.originalSize());
@@ -129,14 +127,22 @@ void* LocalAllocator::allocateSlowCase(GCDeferralContext* deferralContext, Alloc
     // Goofy corner case: the GC called a callback and now this directory has a currentBlock. This only
     // happens when running WebKit tests, which inject a callback into the GC's finalization.
     if (UNLIKELY(m_currentBlock))
-        return allocate(deferralContext, failureMode);
+        return allocate(heap, deferralContext, failureMode);
 
     void* result = tryAllocateWithoutCollecting();
 
-    if (LIKELY(result != 0))
+    if (LIKELY(result != nullptr))
         return result;
 
-    MarkedBlock::Handle* block = m_directory->tryAllocateBlock();
+    // FIXME GlobalGC: Need to synchronize here to when allocating from the BlockDirectory in the server.
+
+    Subspace* subspace = m_directory->m_subspace;
+    if (subspace->isIsoSubspace()) {
+        if (void* result = static_cast<IsoSubspace*>(subspace)->tryAllocateFromLowerTier())
+            return result;
+    }
+
+    MarkedBlock::Handle* block = m_directory->tryAllocateBlock(heap);
     if (!block) {
         if (failureMode == AllocationFailureMode::Assert)
             RELEASE_ASSERT_NOT_REACHED();
@@ -160,6 +166,7 @@ void LocalAllocator::didConsumeFreeList()
 
 void* LocalAllocator::tryAllocateWithoutCollecting()
 {
+    // FIXME: GlobalGC
     // FIXME: If we wanted this to be used for real multi-threaded allocations then we would have to
     // come up with some concurrency protocol here. That protocol would need to be able to handle:
     //
@@ -243,18 +250,18 @@ void* LocalAllocator::tryAllocateIn(MarkedBlock::Handle* block)
     return result;
 }
 
-void LocalAllocator::doTestCollectionsIfNeeded(GCDeferralContext* deferralContext)
+void LocalAllocator::doTestCollectionsIfNeeded(Heap& heap, GCDeferralContext* deferralContext)
 {
-    if (!Options::slowPathAllocsBetweenGCs())
+    if (LIKELY(!Options::slowPathAllocsBetweenGCs()))
         return;
 
     static unsigned allocationCount = 0;
     if (!allocationCount) {
-        if (!m_directory->m_heap->isDeferred()) {
+        if (!heap.isDeferred()) {
             if (deferralContext)
                 deferralContext->m_shouldGC = true;
             else
-                m_directory->m_heap->collectNow(Sync, CollectionScope::Full);
+                heap.collectNow(Sync, CollectionScope::Full);
         }
     }
     if (++allocationCount >= Options::slowPathAllocsBetweenGCs())

@@ -25,9 +25,10 @@
 #include "Frame.h"
 #include "FrameLoader.h"
 #include "RenderWidget.h"
+#include "SVGDocument.h"
+#include "SVGElementTypeHelpers.h"
 #include "ScriptController.h"
 #include "ShadowRoot.h"
-#include "SVGDocument.h"
 #include "StyleTreeResolver.h"
 #include <wtf/IsoMallocInlines.h>
 #include <wtf/Ref.h>
@@ -50,11 +51,10 @@ RenderWidget* HTMLFrameOwnerElement::renderWidget() const
     return downcast<RenderWidget>(renderer());
 }
 
-void HTMLFrameOwnerElement::setContentFrame(Frame* frame)
+void HTMLFrameOwnerElement::setContentFrame(Frame& frame)
 {
     // Make sure we will not end up with two frames referencing the same owner element.
     ASSERT(!m_contentFrame || m_contentFrame->ownerElement() != this);
-    ASSERT(frame);
     // Disconnected frames should not be allowed to load.
     ASSERT(isConnected());
     m_contentFrame = frame;
@@ -76,7 +76,7 @@ void HTMLFrameOwnerElement::clearContentFrame()
 
 void HTMLFrameOwnerElement::disconnectContentFrame()
 {
-    if (RefPtr<Frame> frame = m_contentFrame) {
+    if (RefPtr<Frame> frame = m_contentFrame.get()) {
         frame->loader().frameDetached();
         frame->disconnectOwnerElement();
     }
@@ -121,7 +121,7 @@ void HTMLFrameOwnerElement::scheduleInvalidateStyleAndLayerComposition()
 {
     if (Style::postResolutionCallbacksAreSuspended()) {
         RefPtr<HTMLFrameOwnerElement> element = this;
-        Style::queuePostResolutionCallback([element] {
+        Style::deprecatedQueuePostResolutionCallback([element] {
             element->invalidateStyleAndLayerComposition();
         });
     } else

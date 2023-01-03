@@ -50,7 +50,7 @@ RenderRubyRun::RenderRubyRun(Document& document, RenderStyle&& style)
     , m_lastCharacter(0)
     , m_secondToLastCharacter(0)
 {
-    setReplaced(true);
+    setReplacedOrInlineBlock(true);
     setInline(true);
 }
 
@@ -154,7 +154,7 @@ void RenderRubyRun::layoutBlock(bool relayoutChildren, LayoutUnit pageHeight)
     // Place the RenderRubyText such that its bottom is flush with the lineTop of the first line of the RenderRubyBase.
     LayoutUnit lastLineRubyTextBottom = rt->logicalHeight();
     LayoutUnit firstLineRubyTextTop;
-    RootInlineBox* rootBox = rt->lastRootBox();
+    LegacyRootInlineBox* rootBox = rt->lastRootBox();
     if (rootBox) {
         // In order to align, we have to ignore negative leading.
         firstLineRubyTextTop = rt->firstRootBox()->logicalTopLayoutOverflow();
@@ -165,12 +165,12 @@ void RenderRubyRun::layoutBlock(bool relayoutChildren, LayoutUnit pageHeight)
         // Bopomofo. We need to move the RenderRubyText over to the right side and center it
         // vertically relative to the base.
         const FontCascade& font = style().fontCascade();
-        float distanceBetweenBase = std::max(font.letterSpacing(), 2.0f * rt->style().fontCascade().fontMetrics().height());
+        float distanceBetweenBase = std::max(font.letterSpacing(), 2.0f * rt->style().fontCascade().metricsOfPrimaryFont().height());
         setWidth(width() + distanceBetweenBase - font.letterSpacing());
         if (RenderRubyBase* rb = rubyBase()) {
             LayoutUnit firstLineTop;
             LayoutUnit lastLineBottom = logicalHeight();
-            RootInlineBox* rootBox = rb->firstRootBox();
+            LegacyRootInlineBox* rootBox = rb->firstRootBox();
             if (rootBox)
                 firstLineTop = rootBox->logicalTopLayoutOverflow();
             firstLineTop += rb->logicalTop();
@@ -184,7 +184,7 @@ void RenderRubyRun::layoutBlock(bool relayoutChildren, LayoutUnit pageHeight)
     } else if (style().isFlippedLinesWritingMode() == (style().rubyPosition() == RubyPosition::After)) {
         LayoutUnit firstLineTop;
         if (RenderRubyBase* rb = rubyBase()) {
-            RootInlineBox* rootBox = rb->firstRootBox();
+            LegacyRootInlineBox* rootBox = rb->firstRootBox();
             if (rootBox)
                 firstLineTop = rootBox->logicalTopLayoutOverflow();
             firstLineTop += rb->logicalTop();
@@ -194,7 +194,7 @@ void RenderRubyRun::layoutBlock(bool relayoutChildren, LayoutUnit pageHeight)
     } else {
         LayoutUnit lastLineBottom = logicalHeight();
         if (RenderRubyBase* rb = rubyBase()) {
-            RootInlineBox* rootBox = rb->lastRootBox();
+            LegacyRootInlineBox* rootBox = rb->lastRootBox();
             if (rootBox)
                 lastLineBottom = rootBox->logicalBottomLayoutOverflow();
             lastLineBottom += rb->logicalTop();
@@ -235,7 +235,7 @@ void RenderRubyRun::getOverhang(bool firstLine, RenderObject* startRenderer, Ren
     LayoutUnit logicalWidth = this->logicalWidth();
     float logicalLeftOverhang = std::numeric_limits<float>::max();
     float logicalRightOverhang = std::numeric_limits<float>::max();
-    for (RootInlineBox* rootInlineBox = rubyBase->firstRootBox(); rootInlineBox; rootInlineBox = rootInlineBox->nextRootBox()) {
+    for (auto* rootInlineBox = rubyBase->firstRootBox(); rootInlineBox; rootInlineBox = rootInlineBox->nextRootBox()) {
         logicalLeftOverhang = std::min<float>(logicalLeftOverhang, rootInlineBox->logicalLeft());
         logicalRightOverhang = std::min<float>(logicalRightOverhang, logicalWidth - rootInlineBox->logicalRight());
     }

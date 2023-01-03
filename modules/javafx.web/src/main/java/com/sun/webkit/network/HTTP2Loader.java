@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2019, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -31,26 +31,18 @@ import com.sun.javafx.tk.Toolkit;
 import com.sun.webkit.Invoker;
 import com.sun.webkit.LoadListenerClient;
 import com.sun.webkit.WebPage;
-import java.io.EOFException;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.SequenceInputStream;
-import java.io.UnsupportedEncodingException;
-import java.lang.annotation.Native;
 import java.net.ConnectException;
 import java.net.CookieHandler;
-import java.net.HttpRetryException;
-import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.NoRouteToHostException;
 import java.net.SocketException;
 import java.net.SocketTimeoutException;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.net.URL;
-import java.net.URLConnection;
-import java.net.URLDecoder;
 import java.net.UnknownHostException;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -64,17 +56,14 @@ import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.time.Duration;
 import java.util.Arrays;
-import java.util.Enumeration;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 import java.util.Vector;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Flow;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.zip.GZIPInputStream;
@@ -83,7 +72,6 @@ import javax.net.ssl.SSLHandshakeException;
 import static com.sun.webkit.network.URLs.newURL;
 import static java.net.http.HttpClient.Redirect;
 import static java.net.http.HttpClient.Version;
-import static java.net.http.HttpResponse.BodyHandlers;
 import static java.net.http.HttpResponse.BodySubscribers;
 
 final class HTTP2Loader extends URLLoaderBase {
@@ -102,6 +90,7 @@ final class HTTP2Loader extends URLLoaderBase {
 
     private final CompletableFuture<Void> response;
     // Use singleton instance of HttpClient to get the maximum benefits
+    @SuppressWarnings("removal")
     private final static HttpClient HTTP_CLIENT =
         AccessController.doPrivileged((PrivilegedAction<HttpClient>) () -> HttpClient.newBuilder()
                 .version(Version.HTTP_2)  // this is the default
@@ -114,6 +103,7 @@ final class HTTP2Loader extends URLLoaderBase {
     private static final int DEFAULT_BUFSIZE = 40 * 1024;
     private final static ByteBuffer BUFFER;
     static {
+       @SuppressWarnings("removal")
        int bufSize  = AccessController.doPrivileged(
                         (PrivilegedAction<Integer>) () ->
                             Integer.valueOf(System.getProperty("jdk.httpclient.bufsize", Integer.toString(DEFAULT_BUFSIZE))));
@@ -293,7 +283,7 @@ final class HTTP2Loader extends URLLoaderBase {
                 didFail(ex);
             }
         });
-        return new BodySubscriber<Void>() {
+        return new BodySubscriber<>() {
                 @Override
                 public void onComplete() {
                     streamSubscriber.onComplete();
@@ -409,11 +399,13 @@ final class HTTP2Loader extends URLLoaderBase {
         };
 
         // Run the HttpClient in the page's access control context
-        this.response = AccessController.doPrivileged((PrivilegedAction<CompletableFuture<Void>>) () -> {
+        @SuppressWarnings("removal")
+        var tmpResponse = AccessController.doPrivileged((PrivilegedAction<CompletableFuture<Void>>) () -> {
             return HTTP_CLIENT.sendAsync(request, bodyHandler)
                               .thenAccept($ -> {})
                               .exceptionally(ex -> didFail(ex.getCause()));
         }, webPage.getAccessControlContext());
+        this.response = tmpResponse;
 
         if (!asynchronous) {
             waitForRequestToComplete();
@@ -584,7 +576,7 @@ final class HTTP2Loader extends URLLoaderBase {
                 throw th;
             } catch (MalformedURLException ex) {
                 errorCode = LoadListenerClient.MALFORMED_URL;
-            } catch (AccessControlException ex) {
+            } catch (@SuppressWarnings("removal") AccessControlException ex) {
                 errorCode = LoadListenerClient.PERMISSION_DENIED;
             } catch (UnknownHostException ex) {
                 errorCode = LoadListenerClient.UNKNOWN_HOST;

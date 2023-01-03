@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2016 Caitlin Potter <caitp@igalia.com>.
+ * Copyright (C) 2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,13 +27,8 @@
 #include "config.h"
 #include "JSAsyncFunction.h"
 
-#include "Error.h"
-#include "JSCInlines.h"
-#include "JSCJSValue.h"
-#include "JSFunction.h"
+#include "JSCellInlines.h"
 #include "JSFunctionInlines.h"
-#include "JSObject.h"
-#include "PropertySlot.h"
 #include "VM.h"
 
 namespace JSC {
@@ -46,7 +42,7 @@ JSAsyncFunction::JSAsyncFunction(VM& vm, FunctionExecutable* executable, JSScope
 
 JSAsyncFunction* JSAsyncFunction::createImpl(VM& vm, FunctionExecutable* executable, JSScope* scope, Structure* structure)
 {
-    JSAsyncFunction* asyncFunction = new (NotNull, allocateCell<JSAsyncFunction>(vm.heap)) JSAsyncFunction(vm, executable, scope, structure);
+    JSAsyncFunction* asyncFunction = new (NotNull, allocateCell<JSAsyncFunction>(vm)) JSAsyncFunction(vm, executable, scope, structure);
     ASSERT(asyncFunction->structure(vm)->globalObject());
     asyncFunction->finishCreation(vm);
     return asyncFunction;

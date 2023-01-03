@@ -31,6 +31,7 @@
 #include "RemoteAutomationTarget.h"
 #include "RemoteInspectionTarget.h"
 #include "RemoteInspector.h"
+#include <wtf/RunLoop.h>
 
 namespace Inspector {
 
@@ -45,11 +46,11 @@ RemoteConnectionToTarget::~RemoteConnectionToTarget()
 
 bool RemoteConnectionToTarget::setup(bool isAutomaticInspection, bool automaticallyPause)
 {
-    LockHolder lock(m_targetMutex);
+    Locker locker { m_targetMutex };
     if (!m_target)
         return false;
 
-    auto targetIdentifier = this->targetIdentifier().valueOr(0);
+    auto targetIdentifier = this->targetIdentifier().value_or(0);
 
     if (!m_target || !m_target->remoteControlAllowed()) {
         RemoteInspector::singleton().setupFailed(targetIdentifier);
@@ -75,7 +76,7 @@ void RemoteConnectionToTarget::sendMessageToTarget(const String& message)
 {
     RemoteControllableTarget* target = nullptr;
     {
-        LockHolder lock(m_targetMutex);
+        Locker locker { m_targetMutex };
         if (!m_target)
             return;
         target = m_target;
@@ -86,29 +87,31 @@ void RemoteConnectionToTarget::sendMessageToTarget(const String& message)
 
 void RemoteConnectionToTarget::close()
 {
-    LockHolder lock(m_targetMutex);
-    if (!m_target)
-        return;
+    RunLoop::current().dispatch([this, protectThis = Ref { *this }] {
+        Locker locker { m_targetMutex };
+        if (!m_target)
+            return;
 
-    auto targetIdentifier = m_target->targetIdentifier();
+        auto targetIdentifier = m_target->targetIdentifier();
 
-    if (m_connected)
-        m_target->disconnect(*this);
+        if (m_connected)
+            m_target->disconnect(*this);
 
-    m_target = nullptr;
+        m_target = nullptr;
 
-    RemoteInspector::singleton().updateTargetListing(targetIdentifier);
+        RemoteInspector::singleton().updateTargetListing(targetIdentifier);
+    });
 }
 
 void RemoteConnectionToTarget::targetClosed()
 {
-    LockHolder lock(m_targetMutex);
+    Locker locker { m_targetMutex };
     m_target = nullptr;
 }
 
-Optional<TargetID> RemoteConnectionToTarget::targetIdentifier() const
+std::optional<TargetID> RemoteConnectionToTarget::targetIdentifier() const
 {
-    return m_target ? Optional<TargetID>(m_target->targetIdentifier()) : WTF::nullopt;
+    return m_target ? std::optional<TargetID>(m_target->targetIdentifier()) : std::nullopt;
 }
 
 void RemoteConnectionToTarget::sendMessageToFrontend(const String& message)

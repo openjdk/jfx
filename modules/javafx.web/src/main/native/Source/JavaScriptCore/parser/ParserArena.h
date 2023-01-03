@@ -35,8 +35,9 @@ namespace JSC {
 
     class ParserArenaDeletable;
 
+    DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(IdentifierArena);
     class IdentifierArena {
-        WTF_MAKE_FAST_ALLOCATED;
+        WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(IdentifierArena);
     public:
         IdentifierArena()
         {
@@ -49,7 +50,9 @@ namespace JSC {
         ALWAYS_INLINE const Identifier& makeIdentifierLCharFromUChar(VM&, const UChar* characters, size_t length);
         ALWAYS_INLINE const Identifier& makeIdentifier(VM&, SymbolImpl*);
 
+        const Identifier& makeBigIntDecimalIdentifier(VM&, const Identifier&, uint8_t radix);
         const Identifier& makeNumericIdentifier(VM&, double number);
+        const Identifier& makePrivateIdentifier(VM&, ASCIILiteral, unsigned);
 
     public:
         static const int MaximumCachableCharacter = 128;
@@ -58,9 +61,9 @@ namespace JSC {
         {
             m_identifiers.clear();
             for (int i = 0; i < MaximumCachableCharacter; i++)
-                m_shortIdentifiers[i] = 0;
+                m_shortIdentifiers[i] = nullptr;
             for (int i = 0; i < MaximumCachableCharacter; i++)
-                m_recentIdentifiers[i] = 0;
+                m_recentIdentifiers[i] = nullptr;
         }
 
     private:
@@ -135,6 +138,8 @@ namespace JSC {
         m_identifiers.append(Identifier::fromString(vm, String::number(number)));
         return m_identifiers.last();
     }
+
+    DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(ParserArena);
 
     class ParserArena {
         WTF_MAKE_NONCOPYABLE(ParserArena);

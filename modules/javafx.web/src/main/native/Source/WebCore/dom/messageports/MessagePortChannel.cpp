@@ -60,7 +60,7 @@ MessagePortChannel::~MessagePortChannel()
     m_registry.messagePortChannelDestroyed(*this);
 }
 
-Optional<ProcessIdentifier> MessagePortChannel::processForPort(const MessagePortIdentifier& port)
+std::optional<ProcessIdentifier> MessagePortChannel::processForPort(const MessagePortIdentifier& port)
 {
     ASSERT(isMainThread());
     ASSERT(port == m_ports[0] || port == m_ports[1]);
@@ -100,7 +100,7 @@ void MessagePortChannel::disentanglePort(const MessagePortIdentifier& port)
     size_t i = port == m_ports[0] ? 0 : 1;
 
     ASSERT(m_processes[i] || m_isClosed[i]);
-    m_processes[i] = WTF::nullopt;
+    m_processes[i] = std::nullopt;
     m_pendingMessagePortTransfers[i].add(this);
 
     // This set of steps is to guarantee that the lock is unlocked before the
@@ -115,12 +115,12 @@ void MessagePortChannel::closePort(const MessagePortIdentifier& port)
     ASSERT(port == m_ports[0] || port == m_ports[1]);
     size_t i = port == m_ports[0] ? 0 : 1;
 
-    m_processes[i] = WTF::nullopt;
+    m_processes[i] = std::nullopt;
     m_isClosed[i] = true;
 
     // This set of steps is to guarantee that the lock is unlocked before the
     // last ref to this object is released.
-    auto protectedThis = makeRef(*this);
+    Ref protectedThis { *this };
 
     m_pendingMessages[i].clear();
     m_pendingMessagePortTransfers[i].clear();
@@ -147,7 +147,7 @@ bool MessagePortChannel::postMessageToRemote(MessageWithMessagePorts&& message, 
     return false;
 }
 
-void MessagePortChannel::takeAllMessagesForPort(const MessagePortIdentifier& port, Function<void(Vector<MessageWithMessagePorts>&&, Function<void()>&&)>&& callback)
+void MessagePortChannel::takeAllMessagesForPort(const MessagePortIdentifier& port, CompletionHandler<void(Vector<MessageWithMessagePorts>&&, CompletionHandler<void()>&&)>&& callback)
 {
     ASSERT(isMainThread());
 
@@ -182,7 +182,7 @@ void MessagePortChannel::takeAllMessagesForPort(const MessagePortIdentifier& por
     });
 }
 
-void MessagePortChannel::checkRemotePortForActivity(const MessagePortIdentifier& remotePort, Function<void(MessagePortChannelProvider::HasActivity)>&& callback)
+void MessagePortChannel::checkRemotePortForActivity(const MessagePortIdentifier& remotePort, CompletionHandler<void(MessagePortChannelProvider::HasActivity)>&& callback)
 {
     ASSERT(isMainThread());
     ASSERT(remotePort == m_ports[0] || remotePort == m_ports[1]);
@@ -207,7 +207,7 @@ void MessagePortChannel::checkRemotePortForActivity(const MessagePortIdentifier&
         return;
     }
 
-    auto outerCallback = Function<void(MessagePortChannelProvider::HasActivity)> { [this, protectedThis = makeRef(*this), callback = WTFMove(callback)] (MessagePortChannelProvider::HasActivity hasActivity) mutable {
+    CompletionHandler<void(MessagePortChannelProvider::HasActivity)> outerCallback = [this, protectedThis = Ref { *this }, callback = WTFMove(callback)](auto hasActivity) mutable {
         if (hasActivity == MessagePortChannelProvider::HasActivity::Yes) {
             callback(hasActivity);
             return;
@@ -219,9 +219,9 @@ void MessagePortChannel::checkRemotePortForActivity(const MessagePortIdentifier&
             hasActivity = MessagePortChannelProvider::HasActivity::Yes;
 
         callback(hasActivity);
-    } };
+    };
 
-    m_registry.provider().checkProcessLocalPortForActivity(remotePort, *m_processes[i], WTFMove(outerCallback));
+    m_registry.checkProcessLocalPortForActivity(remotePort, *m_processes[i], WTFMove(outerCallback));
 }
 
 bool MessagePortChannel::hasAnyMessagesPendingOrInFlight() const

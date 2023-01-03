@@ -26,7 +26,7 @@
 #include "config.h"
 #include "Disassembler.h"
 
-#if USE(ARM64_DISASSEMBLER)
+#if ENABLE(ARM64_DISASSEMBLER)
 
 #include "A64DOpcode.h"
 #include "MacroAssemblerCodeRef.h"
@@ -41,9 +41,7 @@ bool tryToDisassemble(const MacroAssemblerCodePtr<DisassemblyPtrTag>& codePtr, s
     size_t byteCount = size;
 
     while (byteCount) {
-        char pcString[20];
-        snprintf(pcString, sizeof(pcString), "0x%lx", reinterpret_cast<unsigned long>(currentPC));
-        out.printf("%s%16s: %s\n", prefix, pcString, arm64Opcode.disassemble(currentPC));
+        out.printf("%s%#16llx: %s\n", prefix, static_cast<unsigned long long>(bitwise_cast<uintptr_t>(currentPC)), arm64Opcode.disassemble(currentPC));
         currentPC++;
         byteCount -= sizeof(uint32_t);
     }
@@ -53,5 +51,5 @@ bool tryToDisassemble(const MacroAssemblerCodePtr<DisassemblyPtrTag>& codePtr, s
 
 } // namespace JSC
 
-#endif // USE(ARM64_DISASSEMBLER)
+#endif // ENABLE(ARM64_DISASSEMBLER)
 

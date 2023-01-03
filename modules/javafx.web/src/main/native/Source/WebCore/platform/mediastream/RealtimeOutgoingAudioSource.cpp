@@ -45,36 +45,36 @@ RealtimeOutgoingAudioSource::RealtimeOutgoingAudioSource(Ref<MediaStreamTrackPri
 
 RealtimeOutgoingAudioSource::~RealtimeOutgoingAudioSource()
 {
+    ASSERT(!m_audioSource->hasObserver(*this));
+#if ASSERT_ENABLED
+    Locker locker { m_sinksLock };
+#endif
     ASSERT(m_sinks.isEmpty());
+
     stop();
 }
 
 void RealtimeOutgoingAudioSource::observeSource()
 {
+    ASSERT(!m_audioSource->hasObserver(*this));
     m_audioSource->addObserver(*this);
+    m_audioSource->source().addAudioSampleObserver(*this);
     initializeConverter();
 }
 
 void RealtimeOutgoingAudioSource::unobserveSource()
 {
+    m_audioSource->source().removeAudioSampleObserver(*this);
     m_audioSource->removeObserver(*this);
 }
 
-bool RealtimeOutgoingAudioSource::setSource(Ref<MediaStreamTrackPrivate>&& newSource)
+void RealtimeOutgoingAudioSource::setSource(Ref<MediaStreamTrackPrivate>&& newSource)
 {
     ALWAYS_LOG("Changing source to ", newSource->logIdentifier());
-    auto locker = holdLock(m_sinksLock);
-    bool hasSinks = !m_sinks.isEmpty();
 
-    if (hasSinks)
-        unobserveSource();
+    ASSERT(!m_audioSource->hasObserver(*this));
     m_audioSource = WTFMove(newSource);
-    if (hasSinks)
-        observeSource();
-
     sourceUpdated();
-
-    return true;
 }
 
 void RealtimeOutgoingAudioSource::initializeConverter()
@@ -95,26 +95,14 @@ void RealtimeOutgoingAudioSource::sourceEnabledChanged()
 
 void RealtimeOutgoingAudioSource::AddSink(webrtc::AudioTrackSinkInterface* sink)
 {
-    {
-    auto locker = holdLock(m_sinksLock);
-    if (!m_sinks.add(sink) || m_sinks.size() != 1)
-        return;
-    }
-
-    callOnMainThread([protectedThis = makeRef(*this)]() {
-        protectedThis->observeSource();
-    });
+    Locker locker { m_sinksLock };
+    m_sinks.add(sink);
 }
 
 void RealtimeOutgoingAudioSource::RemoveSink(webrtc::AudioTrackSinkInterface* sink)
 {
-    {
-    auto locker = holdLock(m_sinksLock);
-    if (!m_sinks.remove(sink) || !m_sinks.isEmpty())
-        return;
-    }
-
-    unobserveSource();
+    Locker locker { m_sinksLock };
+    m_sinks.remove(sink);
 }
 
 void RealtimeOutgoingAudioSource::sendAudioFrames(const void* audioData, int bitsPerSample, int sampleRate, size_t numberOfChannels, size_t numberOfFrames)
@@ -124,7 +112,7 @@ void RealtimeOutgoingAudioSource::sendAudioFrames(const void* audioData, int bit
         ALWAYS_LOG(LOGIDENTIFIER, "chunk ", m_chunksSent);
 #endif
 
-    auto locker = holdLock(m_sinksLock);
+    Locker locker { m_sinksLock };
     for (auto sink : m_sinks)
         sink->OnData(audioData, bitsPerSample, sampleRate, numberOfChannels, numberOfFrames);
 }

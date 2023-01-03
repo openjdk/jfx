@@ -21,7 +21,6 @@
 #include "config.h"
 #include "BooleanObject.h"
 
-#include "JSScope.h"
 #include "JSCInlines.h"
 
 namespace JSC {

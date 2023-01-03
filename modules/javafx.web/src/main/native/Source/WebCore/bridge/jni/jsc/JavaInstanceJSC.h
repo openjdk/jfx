@@ -49,23 +49,23 @@ public:
 
     virtual Class* getClass() const;
 
-    virtual JSValue valueOf(ExecState*) const;
-    virtual JSValue defaultValue(ExecState*, PreferredPrimitiveType) const;
+    virtual JSValue valueOf(JSGlobalObject*) const;
+    virtual JSValue defaultValue(JSGlobalObject*, PreferredPrimitiveType) const;
 
-    virtual JSValue getMethod(ExecState*, PropertyName);
-    virtual JSValue invokeMethod(ExecState*, RuntimeMethod*);
+    virtual JSValue getMethod(JSGlobalObject*, PropertyName);
+    virtual JSValue invokeMethod(JSGlobalObject*, CallFrame*, RuntimeMethod*);
 
     jobject javaInstance() const { return m_instance->instance(); }
 
-    JSValue stringValue(ExecState*) const;
-    JSValue numberValue(ExecState*) const;
+    JSValue stringValue(JSGlobalObject*) const;
+    JSValue numberValue(JSGlobalObject*) const;
     JSValue booleanValue() const;
     jobject accessControlContext() const { return m_accessControlContext->instance(); }
 
 protected:
     JavaInstance(jobject instance, RefPtr<RootObject>&&, jobject accessControlContext);
 
-    virtual RuntimeObject* newRuntimeObject(ExecState*);
+    virtual RuntimeObject* newRuntimeObject(JSGlobalObject*);
 
     virtual void virtualBegin();
     virtual void virtualEnd();

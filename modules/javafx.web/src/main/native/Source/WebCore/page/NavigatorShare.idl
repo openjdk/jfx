@@ -23,10 +23,10 @@
 * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-
+// https://w3c.github.io/web-share/#extensions-to-the-navigator-interface
 [
-    NoInterfaceObject,
-    EnabledAtRuntime=WebShare
-] interface NavigatorShare {
-    [CallWith=ScriptExecutionContext, SecureContext] Promise<void> share(optional ShareData shareData);
+    EnabledBySetting=WebShareEnabled
+] interface mixin NavigatorShare {
+    [CallWith=CurrentDocument, SecureContext] boolean canShare(optional ShareData shareData);
+    [CallWith=CurrentDocument, SecureContext] Promise<undefined> share(optional ShareData shareData);
 };

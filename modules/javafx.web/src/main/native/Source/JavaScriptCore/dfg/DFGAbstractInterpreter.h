@@ -32,6 +32,7 @@
 #include "DFGNode.h"
 #include "DFGNodeFlowProjection.h"
 #include "DFGPhiChildren.h"
+#include <wtf/TriState.h>
 
 namespace JSC { namespace DFG {
 
@@ -182,9 +183,9 @@ public:
     }
 
     template<typename T>
-    FiltrationResult filterArrayModes(T node, ArrayModes arrayModes)
+    FiltrationResult filterArrayModes(T node, ArrayModes arrayModes, SpeculatedType admittedTypes = SpecNone)
     {
-        return filterArrayModes(forNode(node), arrayModes);
+        return filterArrayModes(forNode(node), arrayModes, admittedTypes);
     }
 
     template<typename T>
@@ -206,7 +207,7 @@ public:
     }
 
     FiltrationResult filter(AbstractValue&, const RegisteredStructureSet&, SpeculatedType admittedTypes = SpecNone);
-    FiltrationResult filterArrayModes(AbstractValue&, ArrayModes);
+    FiltrationResult filterArrayModes(AbstractValue&, ArrayModes, SpeculatedType admittedTypes = SpecNone);
     FiltrationResult filter(AbstractValue&, SpeculatedType);
     FiltrationResult filterByValue(AbstractValue&, FrozenValue);
     FiltrationResult filterClassInfo(AbstractValue&, const ClassInfo*);
@@ -215,9 +216,9 @@ public:
 
     void filterICStatus(Node*);
 
-private:
     void clobberWorld();
     void didFoldClobberWorld();
+private:
 
     bool handleConstantBinaryBitwiseOp(Node*);
 
@@ -228,14 +229,11 @@ private:
     void didFoldClobberStructures();
 
     void observeTransition(unsigned indexInBlock, RegisteredStructure from, RegisteredStructure to);
+public:
     void observeTransitions(unsigned indexInBlock, const TransitionVector&);
+private:
 
-    enum BooleanResult {
-        UnknownBooleanResult,
-        DefinitelyFalse,
-        DefinitelyTrue
-    };
-    BooleanResult booleanResult(Node*, AbstractValue&);
+    TriState booleanResult(Node*, AbstractValue&);
 
     void setBuiltInConstant(Node* node, FrozenValue value)
     {
@@ -247,7 +245,7 @@ private:
     void setConstant(Node* node, FrozenValue value)
     {
         setBuiltInConstant(node, value);
-        m_state.setFoundConstants(true);
+        m_state.setShouldTryConstantFolding(true);
     }
 
     ALWAYS_INLINE void filterByType(Edge& edge, SpeculatedType type);

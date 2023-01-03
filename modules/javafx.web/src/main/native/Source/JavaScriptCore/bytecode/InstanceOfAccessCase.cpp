@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,26 +28,26 @@
 
 #if ENABLE(JIT)
 
-#include "JSCInlines.h"
+#include "JSCJSValueInlines.h"
 
 namespace JSC {
 
-std::unique_ptr<AccessCase> InstanceOfAccessCase::create(
+Ref<AccessCase> InstanceOfAccessCase::create(
     VM& vm, JSCell* owner, AccessType accessType, Structure* structure,
     const ObjectPropertyConditionSet& conditionSet, JSObject* prototype)
 {
-    return std::unique_ptr<AccessCase>(new InstanceOfAccessCase(vm, owner, accessType, structure, conditionSet, prototype));
+    return adoptRef(*new InstanceOfAccessCase(vm, owner, accessType, structure, conditionSet, prototype));
 }
 
-void InstanceOfAccessCase::dumpImpl(PrintStream& out, CommaPrinter& comma) const
+void InstanceOfAccessCase::dumpImpl(PrintStream& out, CommaPrinter& comma, Indenter& indent) const
 {
-    Base::dumpImpl(out, comma);
+    Base::dumpImpl(out, comma, indent);
     out.print(comma, "prototype = ", JSValue(prototype()));
 }
 
-std::unique_ptr<AccessCase> InstanceOfAccessCase::clone() const
+Ref<AccessCase> InstanceOfAccessCase::clone() const
 {
-    std::unique_ptr<InstanceOfAccessCase> result(new InstanceOfAccessCase(*this));
+    auto result = adoptRef(*new InstanceOfAccessCase(*this));
     result->resetState();
     return result;
 }
@@ -59,7 +59,7 @@ InstanceOfAccessCase::~InstanceOfAccessCase()
 InstanceOfAccessCase::InstanceOfAccessCase(
     VM& vm, JSCell* owner, AccessType accessType, Structure* structure,
     const ObjectPropertyConditionSet& conditionSet, JSObject* prototype)
-    : Base(vm, owner, accessType, invalidOffset, structure, conditionSet, nullptr)
+    : Base(vm, owner, accessType, nullptr, invalidOffset, structure, conditionSet, nullptr)
     , m_prototype(vm, owner, prototype)
 {
 }

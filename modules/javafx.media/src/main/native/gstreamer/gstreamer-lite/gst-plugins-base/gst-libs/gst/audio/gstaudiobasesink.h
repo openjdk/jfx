@@ -110,7 +110,7 @@ typedef struct _GstAudioBaseSinkPrivate GstAudioBaseSinkPrivate;
  * @GST_AUDIO_BASE_SINK_DISCONT_REASON_FLUSH: Samples have been flushed
  * @GST_AUDIO_BASE_SINK_DISCONT_REASON_SYNC_LATENCY: Sink was synchronized to the estimated latency (occurs during initialization)
  * @GST_AUDIO_BASE_SINK_DISCONT_REASON_ALIGNMENT: Aligning buffers failed because the timestamps are too discontinuous
- * @GST_AUDIO_BASE_SINK_DISCONT_REASON_DEVICE_FAILURE: Audio output device experienced and recovered from an error but introduced latency in the process (see also @gst_audio_base_sink_report_device_failure())
+ * @GST_AUDIO_BASE_SINK_DISCONT_REASON_DEVICE_FAILURE: Audio output device experienced and recovered from an error but introduced latency in the process (see also gst_audio_base_sink_report_device_failure())
  *
  * Different possible reasons for discontinuities. This enum is useful for the custom
  * slave method.
@@ -270,9 +270,7 @@ gst_audio_base_sink_set_custom_slaving_callback        (GstAudioBaseSink * sink,
 GST_AUDIO_API
 void gst_audio_base_sink_report_device_failure         (GstAudioBaseSink * sink);
 
-#ifdef G_DEFINE_AUTOPTR_CLEANUP_FUNC
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(GstAudioBaseSink, gst_object_unref)
-#endif
 
 G_END_DECLS
 

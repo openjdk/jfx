@@ -36,16 +36,19 @@ STATIC_ASSERT_IS_TRIVIALLY_DESTRUCTIBLE(AsyncFunctionConstructor);
 
 const ClassInfo AsyncFunctionConstructor::s_info = { "AsyncFunction", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(AsyncFunctionConstructor) };
 
-static EncodedJSValue JSC_HOST_CALL callAsyncFunctionConstructor(ExecState* exec)
+static JSC_DECLARE_HOST_FUNCTION(callAsyncFunctionConstructor);
+static JSC_DECLARE_HOST_FUNCTION(constructAsyncFunctionConstructor);
+
+JSC_DEFINE_HOST_FUNCTION(callAsyncFunctionConstructor, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
-    ArgList args(exec);
-    return JSValue::encode(constructFunction(exec, jsCast<InternalFunction*>(exec->jsCallee())->globalObject(exec->vm()), args, FunctionConstructionMode::Async));
+    ArgList args(callFrame);
+    return JSValue::encode(constructFunction(globalObject, callFrame, args, FunctionConstructionMode::Async));
 }
 
-static EncodedJSValue JSC_HOST_CALL constructAsyncFunctionConstructor(ExecState* exec)
+JSC_DEFINE_HOST_FUNCTION(constructAsyncFunctionConstructor, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
-    ArgList args(exec);
-    return JSValue::encode(constructFunction(exec, jsCast<InternalFunction*>(exec->jsCallee())->globalObject(exec->vm()), args, FunctionConstructionMode::Async));
+    ArgList args(callFrame);
+    return JSValue::encode(constructFunction(globalObject, callFrame, args, FunctionConstructionMode::Async, callFrame->newTarget()));
 }
 
 AsyncFunctionConstructor::AsyncFunctionConstructor(VM& vm, Structure* structure)
@@ -55,9 +58,8 @@ AsyncFunctionConstructor::AsyncFunctionConstructor(VM& vm, Structure* structure)
 
 void AsyncFunctionConstructor::finishCreation(VM& vm, AsyncFunctionPrototype* prototype)
 {
-    Base::finishCreation(vm, "AsyncFunction"_s, NameVisibility::Visible, NameAdditionMode::WithoutStructureTransition);
+    Base::finishCreation(vm, 1, "AsyncFunction"_s, PropertyAdditionMode::WithoutStructureTransition);
     putDirectWithoutTransition(vm, vm.propertyNames->prototype, prototype, PropertyAttribute::DontEnum | PropertyAttribute::DontDelete | PropertyAttribute::ReadOnly);
-    putDirectWithoutTransition(vm, vm.propertyNames->length, jsNumber(1), PropertyAttribute::ReadOnly | PropertyAttribute::DontEnum);
 }
 
 } // namespace JSC

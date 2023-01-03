@@ -32,8 +32,6 @@
 #include "ReadableStream.h"
 #include "SharedBuffer.h"
 
-#if ENABLE(STREAMS_API)
-
 namespace WebCore {
 
 ReadableStreamToSharedBufferSink::ReadableStreamToSharedBufferSink(Callback&& callback)
@@ -52,7 +50,7 @@ void ReadableStreamToSharedBufferSink::enqueue(const BufferSource& buffer)
         return;
 
     if (m_callback) {
-        ReadableStreamChunk chunk { buffer.data(), buffer.length() };
+        Span chunk { buffer.data(), buffer.length() };
         m_callback(&chunk);
     }
 }
@@ -70,5 +68,3 @@ void ReadableStreamToSharedBufferSink::error(String&& message)
 }
 
 } // namespace WebCore
-
-#endif // ENABLE(STREAMS_API)

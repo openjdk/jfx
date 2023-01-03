@@ -55,13 +55,13 @@ public class AnimationTest {
 
     private static final double EPSILON = 1e-12;
 
-    private AbstractMasterTimerMock timer;
+    private AbstractPrimaryTimerMock timer;
     private AnimationImpl animation;
     private ClipEnvelopeMock clipEnvelope;
 
     @Before
     public void setUp() {
-        timer = new AbstractMasterTimerMock();
+        timer = new AbstractPrimaryTimerMock();
         clipEnvelope = new ClipEnvelopeMock();
         animation = new AnimationImpl(timer, clipEnvelope, 1);
         animation.shim_setCycleDuration(ONE_SEC);
@@ -84,7 +84,7 @@ public class AnimationTest {
         assertEquals(DEFAULT_REPEAT_COUNT, animation0.getCycleCount());
         assertEquals(DEFAULT_AUTO_REVERSE, animation0.isAutoReverse());
         assertEquals(Status.STOPPED, animation0.getStatus());
-        assertEquals(6000.0 / Toolkit.getToolkit().getMasterTimer().getDefaultResolution(), animation0.getTargetFramerate(), EPSILON);
+        assertEquals(6000.0 / Toolkit.getToolkit().getPrimaryTimer().getDefaultResolution(), animation0.getTargetFramerate(), EPSILON);
         assertEquals(null, animation0.getOnFinished());
         assertEquals(0, animation0.getCuePoints().size());
 
@@ -252,6 +252,34 @@ public class AnimationTest {
     @Test(expected=IllegalArgumentException.class)
     public void testJumpTo_UNKNOWN() {
         animation.jumpTo(Duration.UNKNOWN);
+    }
+
+    @Test
+    public void testJumpTo_IndefiniteCycles() {
+        animation.shim_setCycleDuration(TWO_SECS);
+        animation.setCycleCount(Animation.INDEFINITE);
+
+        animation.jumpTo("end");
+        assertEquals(TWO_SECS, animation.getCurrentTime());
+    }
+
+    @Test
+    public void testJumpTo_IndefiniteCycleDuration() {
+        animation.shim_setCycleDuration(Duration.INDEFINITE);
+
+        // TicksCalculation defines TICKS_PER_MILLI == 6
+        //
+        // Jumping to the end of Duration.INDEFINITE, which has Double.POSITIVE_INFINITY millis, sets the ticks to
+        // Math.round(Double.POSITIVE_INFINITY * TICKS_PER_MILLI), which is Long.MAX_VALUE as per Math#round specs.
+        // The multiplication by 6 gets lost here because of the infinity rules of Double.
+        //
+        // getCurrentTime() takes the ticks and returns a duration by calculating millis = ticks / TICKS_PER_MILI,
+        // which is Long.MAX_VALUE / 6.
+        //
+        // This means that the conversion Duration -> ticks -> Duration loses information, and the maximum duration is less
+        // than Long.MAX_VALUE.
+        animation.jumpTo("end");
+        assertEquals(Duration.millis(Long.MAX_VALUE / 6), animation.getCurrentTime());
     }
 
     @Test
@@ -558,7 +586,7 @@ public class AnimationTest {
 
     @Test
     public void testFullSpeedResolution() {
-        final int resolution = Toolkit.getToolkit().getMasterTimer().getDefaultResolution();
+        final int resolution = Toolkit.getToolkit().getPrimaryTimer().getDefaultResolution();
 
         // send pulse
         animation.doTimePulse(4 * resolution);

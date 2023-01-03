@@ -35,61 +35,52 @@
 
 namespace WebCore {
 
+class DOMWrapperWorld;
 class Document;
-class EventListener;
-class EventTarget;
+class Frame;
 class Page;
-class RegisteredEventListener;
-class TimerBase;
+class UserGestureEmulationScope;
 
 class PageDebuggerAgent final : public WebDebuggerAgent {
     WTF_MAKE_NONCOPYABLE(PageDebuggerAgent);
     WTF_MAKE_FAST_ALLOCATED;
 public:
     PageDebuggerAgent(PageAgentContext&);
-    virtual ~PageDebuggerAgent();
+    ~PageDebuggerAgent();
+    bool enabled() const;
 
     // DebuggerBackendDispatcherHandler
-    void evaluateOnCallFrame(ErrorString&, const String& callFrameId, const String& expression, const String* objectGroup, const bool* includeCommandLineAPI, const bool* doNotPauseOnExceptionsAndMuteConsole, const bool* returnByValue, const bool* generatePreview, const bool* saveResult, const bool* emulateUserGesture, RefPtr<Inspector::Protocol::Runtime::RemoteObject>& result, Optional<bool>& wasThrown, Optional<int>& savedResultIndex);
+    Inspector::Protocol::ErrorStringOr<std::tuple<Ref<Inspector::Protocol::Runtime::RemoteObject>, std::optional<bool> /* wasThrown */, std::optional<int> /* savedResultIndex */>> evaluateOnCallFrame(const Inspector::Protocol::Debugger::CallFrameId&, const String& expression, const String& objectGroup, std::optional<bool>&& includeCommandLineAPI, std::optional<bool>&& doNotPauseOnExceptionsAndMuteConsole, std::optional<bool>&& returnByValue, std::optional<bool>&& generatePreview, std::optional<bool>&& saveResult, std::optional<bool>&& emulateUserGesture);
 
-    // ScriptDebugListener
-    void breakpointActionLog(JSC::ExecState&, const String&);
+    // JSC::Debugger::Client
+    void debuggerWillEvaluate(JSC::Debugger&, const JSC::Breakpoint::Action&);
+    void debuggerDidEvaluate(JSC::Debugger&, const JSC::Breakpoint::Action&);
+
+    // JSC::Debugger::Observer
+    void breakpointActionLog(JSC::JSGlobalObject*, const String& data);
 
     // InspectorInstrumentation
-    void didClearMainFrameWindowObject();
+    void didClearWindowObjectInWorld(Frame&, DOMWrapperWorld&);
     void mainFrameStartedLoading();
     void mainFrameStoppedLoading();
     void mainFrameNavigated();
     void didRequestAnimationFrame(int callbackId, Document&);
     void willFireAnimationFrame(int callbackId);
     void didCancelAnimationFrame(int callbackId);
-    void didAddEventListener(EventTarget&, const AtomString& eventType, EventListener&, bool capture);
-    void willRemoveEventListener(EventTarget&, const AtomString& eventType, EventListener&, bool capture);
-    void willHandleEvent(const RegisteredEventListener&);
-    void didPostMessage(const TimerBase&, JSC::ExecState&);
-    void didFailPostMessage(const TimerBase&);
-    void willDispatchPostMessage(const TimerBase&);
-    void didDispatchPostMessage(const TimerBase&);
 
 private:
-    void enable();
-    void disable(bool isBeingDestroyed);
+    void internalEnable();
+    void internalDisable(bool isBeingDestroyed);
 
-    String sourceMapURLForScript(const Script&);
-
-    void didClearAsyncStackTraceData();
+    String sourceMapURLForScript(const JSC::Debugger::Script&);
 
     void muteConsole();
     void unmuteConsole();
 
-    Inspector::InjectedScript injectedScriptForEval(ErrorString&, const int* executionContextId);
+    Inspector::InjectedScript injectedScriptForEval(Inspector::Protocol::ErrorString&, std::optional<Inspector::Protocol::Runtime::ExecutionContextId>&&);
 
     Page& m_inspectedPage;
-
-    HashMap<const RegisteredEventListener*, int> m_registeredEventListeners;
-    HashMap<const TimerBase*, int> m_postMessageTimers;
-    int m_nextEventListenerIdentifier { 1 };
-    int m_nextPostMessageIdentifier { 1 };
+    Vector<UniqueRef<UserGestureEmulationScope>> m_breakpointActionUserGestureEmulationScopeStack;
 };
 
 } // namespace WebCore

@@ -41,7 +41,7 @@ public:
     ConeEffect();
 
     // Returns scalar gain for the given source/listener positions/orientations
-    double gain(FloatPoint3D sourcePosition, FloatPoint3D sourceOrientation, FloatPoint3D listenerPosition);
+    double gain(FloatPoint3D sourcePosition, FloatPoint3D sourceOrientation, FloatPoint3D listenerPosition) const;
 
     // Angles in degrees
     void setInnerAngle(double innerAngle) { m_innerAngle = innerAngle; }
@@ -54,9 +54,9 @@ public:
     double outerGain() const { return m_outerGain; }
 
 protected:
-    double m_innerAngle;
-    double m_outerAngle;
-    double m_outerGain;
+    double m_innerAngle { 360 };
+    double m_outerAngle { 360 };
+    double m_outerGain { 0 };
 };
 
 } // namespace WebCore

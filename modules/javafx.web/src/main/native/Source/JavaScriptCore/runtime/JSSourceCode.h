@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2016 Yusuke Suzuki <utatane.tea@gmail.com>
+ * Copyright (C) 2019-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -35,10 +36,16 @@ class JSSourceCode final : public JSCell {
 public:
     using Base = JSCell;
 
-    static const unsigned StructureFlags = Base::StructureFlags | StructureIsImmortal;
-    static const bool needsDestruction = true;
+    static constexpr unsigned StructureFlags = Base::StructureFlags | StructureIsImmortal;
+    static constexpr bool needsDestruction = true;
 
     DECLARE_EXPORT_INFO;
+
+    template<typename CellType, SubspaceAccess mode>
+    static GCClient::IsoSubspace* subspaceFor(VM& vm)
+    {
+        return vm.sourceCodeSpace<mode>();
+    }
 
     static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
     {
@@ -47,7 +54,7 @@ public:
 
     static JSSourceCode* create(VM& vm, Structure* structure, SourceCode&& sourceCode)
     {
-        auto* result = new (NotNull, allocateCell<JSSourceCode>(vm.heap)) JSSourceCode(vm, structure, WTFMove(sourceCode));
+        auto* result = new (NotNull, allocateCell<JSSourceCode>(vm)) JSSourceCode(vm, structure, WTFMove(sourceCode));
         result->finishCreation(vm);
         return result;
     }

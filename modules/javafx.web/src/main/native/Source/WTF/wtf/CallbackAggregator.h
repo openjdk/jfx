@@ -27,15 +27,17 @@
 
 #include <wtf/CompletionHandler.h>
 #include <wtf/MainThread.h>
+#include <wtf/Ref.h>
 #include <wtf/ThreadSafeRefCounted.h>
 
 namespace WTF {
 
-class CallbackAggregator : public ThreadSafeRefCounted<CallbackAggregator> {
+template <DestructionThread destructionThread>
+class CallbackAggregatorOnThread : public ThreadSafeRefCounted<CallbackAggregatorOnThread<destructionThread>, destructionThread> {
 public:
-    static Ref<CallbackAggregator> create(CompletionHandler<void()>&& callback) { return adoptRef(*new CallbackAggregator(WTFMove(callback))); }
+    static auto create(CompletionHandler<void()>&& callback) { return adoptRef(*new CallbackAggregatorOnThread(WTFMove(callback))); }
 
-    ~CallbackAggregator()
+    ~CallbackAggregatorOnThread()
     {
         ASSERT(m_wasConstructedOnMainThread == isMainThread());
         if (m_callback)
@@ -43,20 +45,24 @@ public:
     }
 
 private:
-    explicit CallbackAggregator(CompletionHandler<void()>&& callback)
+    explicit CallbackAggregatorOnThread(CompletionHandler<void()>&& callback)
         : m_callback(WTFMove(callback))
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
         , m_wasConstructedOnMainThread(isMainThread())
 #endif
     {
     }
 
     CompletionHandler<void()> m_callback;
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
     bool m_wasConstructedOnMainThread;
 #endif
 };
 
+using CallbackAggregator = CallbackAggregatorOnThread<DestructionThread::Any>;
+using MainRunLoopCallbackAggregator = CallbackAggregatorOnThread<DestructionThread::MainRunLoop>;
+
 } // namespace WTF
 
 using WTF::CallbackAggregator;
+using WTF::MainRunLoopCallbackAggregator;

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,7 +30,6 @@ import javafx.scene.control.skin.NestedTableColumnHeader;
 import javafx.scene.control.skin.TableColumnHeader;
 import javafx.scene.control.skin.TableHeaderRow;
 import javafx.scene.control.skin.TableViewSkin;
-import javafx.scene.control.skin.TableViewSkinBase;
 
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
@@ -135,7 +134,7 @@ import javafx.beans.value.WritableValue;
  */
 public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarget {
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Static properties and methods                                           *
      *                                                                         *
@@ -209,10 +208,10 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
      * inside the {@link Cell#textProperty() text} property.
      */
     public static final Callback<TableColumn<?,?>, TableCell<?,?>> DEFAULT_CELL_FACTORY =
-            new Callback<TableColumn<?,?>, TableCell<?,?>>() {
+            new Callback<>() {
 
         @Override public TableCell<?,?> call(TableColumn<?,?> param) {
-            return new TableCell<Object,Object>() {
+            return new TableCell<>() {
                 @Override protected void updateItem(Object item, boolean empty) {
                     if (item == getItem()) return;
 
@@ -235,7 +234,7 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
@@ -283,15 +282,15 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Listeners                                                               *
      *                                                                         *
      **************************************************************************/
 
     private EventHandler<CellEditEvent<S,T>> DEFAULT_EDIT_COMMIT_HANDLER = t -> {
-        int index = t.getTablePosition().getRow();
-        List<S> list = t.getTableView().getItems();
+        int index = t.getTablePosition() != null ? t.getTablePosition().getRow() : -1;
+        List<S> list = t.getTableView() != null ? t.getTableView().getItems() : null;
         if (list == null || index < 0 || index >= list.size()) return;
         S rowData = list.get(index);
         ObservableValue<T> ov = getCellObservableValue(rowData);
@@ -326,11 +325,11 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
     };
 
     private WeakListChangeListener<TableColumn<S,?>> weakColumnsListener =
-            new WeakListChangeListener<TableColumn<S,?>>(columnsListener);
+            new WeakListChangeListener<>(columnsListener);
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Instance Variables                                                      *
      *                                                                         *
@@ -341,7 +340,7 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Properties                                                              *
      *                                                                         *
@@ -351,7 +350,7 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
     /**
      * The TableView that this TableColumn belongs to.
      */
-    private ReadOnlyObjectWrapper<TableView<S>> tableView = new ReadOnlyObjectWrapper<TableView<S>>(this, "tableView");
+    private ReadOnlyObjectWrapper<TableView<S>> tableView = new ReadOnlyObjectWrapper<>(this, "tableView");
     public final ReadOnlyObjectProperty<TableView<S>> tableViewProperty() {
         return tableView.getReadOnlyProperty();
     }
@@ -402,7 +401,7 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
     }
     public final ObjectProperty<Callback<CellDataFeatures<S,T>, ObservableValue<T>>> cellValueFactoryProperty() {
         if (cellValueFactory == null) {
-            cellValueFactory = new SimpleObjectProperty<Callback<CellDataFeatures<S,T>, ObservableValue<T>>>(this, "cellValueFactory");
+            cellValueFactory = new SimpleObjectProperty<>(this, "cellValueFactory");
         }
         return cellValueFactory;
     }
@@ -424,8 +423,8 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
      * {@link javafx.scene.control.cell} package.
      */
     private final ObjectProperty<Callback<TableColumn<S,T>, TableCell<S,T>>> cellFactory =
-        new SimpleObjectProperty<Callback<TableColumn<S,T>, TableCell<S,T>>>(
-            this, "cellFactory", (Callback<TableColumn<S,T>, TableCell<S,T>>) ((Callback) DEFAULT_CELL_FACTORY)) {
+        new SimpleObjectProperty<>(
+            this, "cellFactory", ((Callback) DEFAULT_CELL_FACTORY)) {
                 @Override protected void invalidated() {
                     TableView<S> table = getTableView();
                     if (table == null) return;
@@ -463,7 +462,7 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
     private ObjectProperty<SortType> sortType;
     public final ObjectProperty<SortType> sortTypeProperty() {
         if (sortType == null) {
-            sortType = new SimpleObjectProperty<SortType>(this, "sortType", SortType.ASCENDING);
+            sortType = new SimpleObjectProperty<>(this, "sortType", SortType.ASCENDING);
         }
         return sortType;
     }
@@ -491,7 +490,7 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
      */
     public final ObjectProperty<EventHandler<CellEditEvent<S,T>>> onEditStartProperty() {
         if (onEditStart == null) {
-            onEditStart = new SimpleObjectProperty<EventHandler<CellEditEvent<S,T>>>(this, "onEditStart") {
+            onEditStart = new SimpleObjectProperty<>(this, "onEditStart") {
                 @Override protected void invalidated() {
                     eventHandlerManager.setEventHandler(TableColumn.<S,T>editStartEvent(), get());
                 }
@@ -516,7 +515,7 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
      */
     public final ObjectProperty<EventHandler<CellEditEvent<S,T>>> onEditCommitProperty() {
         if (onEditCommit == null) {
-            onEditCommit = new SimpleObjectProperty<EventHandler<CellEditEvent<S,T>>>(this, "onEditCommit") {
+            onEditCommit = new SimpleObjectProperty<>(this, "onEditCommit") {
                 @Override protected void invalidated() {
                     eventHandlerManager.setEventHandler(TableColumn.<S,T>editCommitEvent(), get());
                 }
@@ -540,7 +539,7 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
      */
     public final ObjectProperty<EventHandler<CellEditEvent<S,T>>> onEditCancelProperty() {
         if (onEditCancel == null) {
-            onEditCancel = new SimpleObjectProperty<EventHandler<CellEditEvent<S, T>>>(this, "onEditCancel") {
+            onEditCancel = new SimpleObjectProperty<>(this, "onEditCancel") {
                 @Override protected void invalidated() {
                     eventHandlerManager.setEventHandler(TableColumn.<S,T>editCancelEvent(), get());
                 }
@@ -551,7 +550,7 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Public API                                                              *
      *                                                                         *
@@ -589,13 +588,13 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
         if (table == null) return null;
 
         // Call the factory
-        final CellDataFeatures<S,T> cdf = new CellDataFeatures<S,T>(table, this, item);
+        final CellDataFeatures<S,T> cdf = new CellDataFeatures<>(table, this, item);
         return factory.call(cdf);
     }
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Stylesheet Handling                                                     *
      *                                                                         *
@@ -633,8 +632,9 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
     }
 
     /**
-     * @return The CssMetaData associated with this class, which may include the
-     * CssMetaData of its superclasses.
+     * Gets the {@code CssMetaData} associated with this class, which may include the
+     * {@code CssMetaData} of its superclasses.
+     * @return the {@code CssMetaData}
      * @since JavaFX 8.0
      */
     public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
@@ -685,7 +685,7 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Support Interfaces                                                      *
      *                                                                         *
@@ -783,9 +783,6 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
                 EventType<CellEditEvent<S,T>> eventType, T newValue) {
             super(table, Event.NULL_SOURCE_TARGET, eventType);
 
-            if (table == null) {
-                throw new NullPointerException("TableView can not be null");
-            }
             this.pos = pos;
             this.newValue = newValue;
         }
@@ -795,7 +792,7 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
          * @return The TableView control upon which this event occurred.
          */
         public TableView<S> getTableView() {
-            return pos.getTableView();
+            return pos != null ? pos.getTableView() : null;
         }
 
         /**
@@ -804,7 +801,7 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
          * @return The TableColumn that the edit occurred in.
          */
         public TableColumn<S,T> getTableColumn() {
-            return pos.getTableColumn();
+            return pos != null ? pos.getTableColumn() : null;
         }
 
         /**
@@ -842,7 +839,7 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
             }
 
             // if we are here, we now need to get the data for the specific column
-            return (T) pos.getTableColumn().getCellData(rowData);
+            return pos.getTableColumn().getCellData(rowData);
         }
 
         /**
@@ -853,10 +850,10 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
          * @return the value for the row
          */
         public S getRowValue() {
-            List<S> items = getTableView().getItems();
+            List<S> items = getTableView() != null ? getTableView().getItems() : null;
             if (items == null) return null;
 
-            int row = pos.getRow();
+            int row = pos != null ? pos.getRow() : -1;
             if (row < 0 || row >= items.size()) return null;
 
             return items.get(row);

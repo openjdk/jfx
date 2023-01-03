@@ -33,6 +33,7 @@
 #include "EventNames.h"
 #include "File.h"
 #include "HTMLDocument.h"
+#include "HTMLIFrameElement.h"
 #include "HTTPHeaderNames.h"
 #include "HTTPHeaderValues.h"
 #include "HTTPParsers.h"
@@ -47,10 +48,10 @@
 #include "RuntimeApplicationChecks.h"
 #include "SecurityOriginPolicy.h"
 #include "Settings.h"
-#include "SharedBuffer.h"
 #include "StringAdaptors.h"
 #include "TextResourceDecoder.h"
 #include "ThreadableLoader.h"
+#include "URLSearchParams.h"
 #include "XMLDocument.h"
 #include "XMLHttpRequestProgressEvent.h"
 #include "XMLHttpRequestUpload.h"
@@ -65,8 +66,6 @@
 #include <wtf/text/CString.h>
 
 namespace WebCore {
-
-static const Seconds maximumIntervalForUserGestureForwarding { 10_s };
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(XMLHttpRequest);
 
@@ -116,14 +115,10 @@ XMLHttpRequest::XMLHttpRequest(ScriptExecutionContext& context)
     , m_uploadComplete(false)
     , m_wasAbortedByClient(false)
     , m_responseCacheIsValid(false)
-    , m_dispatchErrorOnResuming(false)
     , m_readyState(static_cast<unsigned>(UNSENT))
     , m_responseType(static_cast<unsigned>(ResponseType::EmptyString))
-    , m_progressEventThrottle(this)
-    , m_resumeTimer(*this, &XMLHttpRequest::resumeTimerFired)
-    , m_networkErrorTimer(*this, &XMLHttpRequest::networkErrorTimerFired)
-    , m_timeoutTimer(*this, &XMLHttpRequest::didReachTimeout)
-    , m_maximumIntervalForUserGestureForwarding(maximumIntervalForUserGestureForwarding)
+    , m_progressEventThrottle(*this)
+    , m_timeoutTimer(*this, &XMLHttpRequest::timeoutTimerFired)
 {
 #ifndef NDEBUG
     xmlHttpRequestCounter.increment();
@@ -173,26 +168,27 @@ ExceptionOr<Document*> XMLHttpRequest::responseXML()
         return nullptr;
 
     if (!m_createdDocument) {
-        auto& context = *scriptExecutionContext();
+        auto& context = downcast<Document>(*scriptExecutionContext());
 
         String mimeType = responseMIMEType();
         bool isHTML = equalLettersIgnoringASCIICase(mimeType, "text/html");
+        bool isXML = MIMETypeRegistry::isXMLMIMEType(mimeType);
 
         // The W3C spec requires the final MIME type to be some valid XML type, or text/html.
         // If it is text/html, then the responseType of "document" must have been supplied explicitly.
-        if ((m_response.isHTTP() && !responseIsXML() && !isHTML)
+        if ((m_response.isInHTTPFamily() && !isXML && !isHTML)
             || (isHTML && responseType() == ResponseType::EmptyString)) {
             m_responseDocument = nullptr;
         } else {
             if (isHTML)
-                m_responseDocument = HTMLDocument::create(context.sessionID(), nullptr, m_url);
+                m_responseDocument = HTMLDocument::create(nullptr, context.settings(), m_response.url(), { });
             else
-                m_responseDocument = XMLDocument::create(context.sessionID(), nullptr, m_url);
+                m_responseDocument = XMLDocument::create(nullptr, context.settings(), m_response.url());
             m_responseDocument->overrideLastModified(m_response.lastModified());
-            m_responseDocument->setContent(m_responseBuilder.toStringPreserveCapacity());
-            m_responseDocument->setContextDocument(downcast<Document>(context));
+            m_responseDocument->setContextDocument(context);
             m_responseDocument->setSecurityOriginPolicy(context.securityOriginPolicy());
             m_responseDocument->overrideMIMEType(mimeType);
+            m_responseDocument->setContent(m_responseBuilder.toStringPreserveCapacity());
 
             if (!m_responseDocument->wellFormed())
                 m_responseDocument = nullptr;
@@ -211,10 +207,9 @@ Ref<Blob> XMLHttpRequest::createResponseBlob()
     // FIXME: We just received the data from NetworkProcess, and are sending it back. This is inefficient.
     Vector<uint8_t> data;
     if (m_binaryResponseBuilder)
-        data.append(m_binaryResponseBuilder->data(), m_binaryResponseBuilder->size());
-    m_binaryResponseBuilder = nullptr;
-    String normalizedContentType = Blob::normalizedContentType(responseMIMEType()); // responseMIMEType defaults to text/xml which may be incorrect.
-    return Blob::create(scriptExecutionContext()->sessionID(), WTFMove(data), normalizedContentType);
+        data = m_binaryResponseBuilder.take()->extractData();
+    String normalizedContentType = Blob::normalizedContentType(responseMIMEType(FinalMIMEType::Yes)); // responseMIMEType defaults to text/xml which may be incorrect.
+    return Blob::create(scriptExecutionContext(), WTFMove(data), normalizedContentType);
 }
 
 RefPtr<ArrayBuffer> XMLHttpRequest::createResponseArrayBuffer()
@@ -222,9 +217,7 @@ RefPtr<ArrayBuffer> XMLHttpRequest::createResponseArrayBuffer()
     ASSERT(responseType() == ResponseType::Arraybuffer);
     ASSERT(doneWithoutErrors());
 
-    auto result = m_binaryResponseBuilder ? m_binaryResponseBuilder->tryCreateArrayBuffer() : ArrayBuffer::create(nullptr, 0);
-    m_binaryResponseBuilder = nullptr;
-    return result;
+    return m_binaryResponseBuilder.takeAsArrayBuffer();
 }
 
 ExceptionOr<void> XMLHttpRequest::setTimeout(unsigned timeout)
@@ -282,6 +275,11 @@ XMLHttpRequestUpload& XMLHttpRequest::upload()
 void XMLHttpRequest::changeState(State newState)
 {
     if (readyState() != newState) {
+        // Setting the readyState to DONE could get the wrapper collected before we get a chance to fire the JS
+        // events in callReadyStateChangeListener() below so we extend the lifetime of the JS wrapper until the
+        // of this scope.
+        auto eventFiringActivity = makePendingActivity(*this);
+
         m_readyState = static_cast<State>(newState);
         if (readyState() == DONE) {
             // The XHR object itself holds on to the responseText, and
@@ -336,6 +334,11 @@ ExceptionOr<void> XMLHttpRequest::open(const String& method, const String& url)
 
 ExceptionOr<void> XMLHttpRequest::open(const String& method, const URL& url, bool async)
 {
+    auto* context = scriptExecutionContext();
+    bool contextIsDocument = is<Document>(*context);
+    if (contextIsDocument && !downcast<Document>(*context).isFullyActive())
+        return Exception { InvalidStateError, "Document is not fully active"_s };
+
     if (!isValidHTTPToken(method))
         return Exception { SyntaxError };
 
@@ -345,19 +348,19 @@ ExceptionOr<void> XMLHttpRequest::open(const String& method, const URL& url, boo
     if (!url.isValid())
         return Exception { SyntaxError };
 
-    if (!async && scriptExecutionContext()->isDocument()) {
+    if (!async && contextIsDocument) {
         // Newer functionality is not available to synchronous requests in window contexts, as a spec-mandated
         // attempt to discourage synchronous XHR use. responseType is one such piece of functionality.
         // We'll only disable this functionality for HTTP(S) requests since sync requests for local protocols
         // such as file: and data: still make sense to allow.
         if (url.protocolIsInHTTPFamily() && responseType() != ResponseType::EmptyString) {
-            logConsoleError(scriptExecutionContext(), "Synchronous HTTP(S) requests made from the window context cannot have XMLHttpRequest.responseType set.");
+            logConsoleError(context, "Synchronous HTTP(S) requests made from the window context cannot have XMLHttpRequest.responseType set.");
             return Exception { InvalidAccessError };
         }
 
         // Similarly, timeouts are disabled for synchronous requests as well.
         if (m_timeoutMilliseconds > 0) {
-            logConsoleError(scriptExecutionContext(), "Synchronous XMLHttpRequests must not have a timeout value set.");
+            logConsoleError(context, "Synchronous XMLHttpRequests must not have a timeout value set.");
             return Exception { InvalidAccessError };
         }
     }
@@ -377,11 +380,13 @@ ExceptionOr<void> XMLHttpRequest::open(const String& method, const URL& url, boo
     clearRequest();
 
     m_url = url;
-    scriptExecutionContext()->contentSecurityPolicy()->upgradeInsecureRequestIfNeeded(m_url, ContentSecurityPolicy::InsecureRequestType::Load);
+    context->contentSecurityPolicy()->upgradeInsecureRequestIfNeeded(m_url, ContentSecurityPolicy::InsecureRequestType::Load);
+    if (m_url.protocolIsBlob())
+        m_blobURLLifetimeExtension = m_url;
 
     m_async = async;
 
-    ASSERT(!m_loader);
+    ASSERT(!m_loadingActivity);
 
     changeState(OPENED);
 
@@ -394,42 +399,48 @@ ExceptionOr<void> XMLHttpRequest::open(const String& method, const String& url, 
     if (!user.isNull())
         urlWithCredentials.setUser(user);
     if (!password.isNull())
-        urlWithCredentials.setPass(password);
+        urlWithCredentials.setPassword(password);
 
     return open(method, urlWithCredentials, async);
 }
 
-Optional<ExceptionOr<void>> XMLHttpRequest::prepareToSend()
+std::optional<ExceptionOr<void>> XMLHttpRequest::prepareToSend()
 {
-    // A return value other than WTF::nullopt means we should not try to send, and we should return that value to the caller.
-    // WTF::nullopt means we are ready to send and should continue with the send algorithm.
+    // A return value other than std::nullopt means we should not try to send, and we should return that value to the caller.
+    // std::nullopt means we are ready to send and should continue with the send algorithm.
 
     if (!scriptExecutionContext())
         return ExceptionOr<void> { };
 
     auto& context = *scriptExecutionContext();
 
+    if (is<Document>(context) && downcast<Document>(context).shouldIgnoreSyncXHRs()) {
+        logConsoleError(scriptExecutionContext(), makeString("Ignoring XMLHttpRequest.send() call for '", m_url.string(), "' because the maximum number of synchronous failures was reached."));
+        return ExceptionOr<void> { };
+    }
+
     if (readyState() != OPENED || m_sendFlag)
         return ExceptionOr<void> { Exception { InvalidStateError } };
-    ASSERT(!m_loader);
+    ASSERT(!m_loadingActivity);
 
     // FIXME: Convert this to check the isolated world's Content Security Policy once webkit.org/b/104520 is solved.
     if (!context.shouldBypassMainWorldContentSecurityPolicy() && !context.contentSecurityPolicy()->allowConnectToSource(m_url)) {
         if (!m_async)
             return ExceptionOr<void> { Exception { NetworkError } };
-        setPendingActivity(*this);
         m_timeoutTimer.stop();
-        m_networkErrorTimer.startOneShot(0_s);
+        queueTaskKeepingObjectAlive(*this, TaskSource::Networking, [this] {
+            networkError();
+        });
         return ExceptionOr<void> { };
     }
 
     m_error = false;
-    return WTF::nullopt;
+    return std::nullopt;
 }
 
-ExceptionOr<void> XMLHttpRequest::send(Optional<SendTypes>&& sendType)
+ExceptionOr<void> XMLHttpRequest::send(std::optional<SendTypes>&& sendType)
 {
-    InspectorInstrumentation::willSendXMLHttpRequest(scriptExecutionContext(), url());
+    InspectorInstrumentation::willSendXMLHttpRequest(scriptExecutionContext(), url().string());
     m_userGestureToken = UserGestureIndicator::currentUserGesture();
 
     ExceptionOr<void> result;
@@ -442,6 +453,7 @@ ExceptionOr<void> XMLHttpRequest::send(Optional<SendTypes>&& sendType)
             [this] (const RefPtr<JSC::ArrayBufferView>& arrayBufferView) -> ExceptionOr<void> { return send(*arrayBufferView); },
             [this] (const RefPtr<JSC::ArrayBuffer>& arrayBuffer) -> ExceptionOr<void> { return send(*arrayBuffer); },
             [this] (const RefPtr<DOMFormData>& formData) -> ExceptionOr<void> { return send(*formData); },
+            [this] (const RefPtr<URLSearchParams>& searchParams) -> ExceptionOr<void> { return send(*searchParams); },
             [this] (const String& string) -> ExceptionOr<void> { return send(string); }
         );
     }
@@ -466,7 +478,12 @@ ExceptionOr<void> XMLHttpRequest::send(Document& document)
 
         // FIXME: According to XMLHttpRequest Level 2, this should use the Document.innerHTML algorithm
         // from the HTML5 specification to serialize the document.
-        m_requestEntityBody = FormData::create(UTF8Encoding().encode(serializeFragment(document, SerializedNodes::SubtreeIncludingNode), UnencodableHandling::Entities));
+
+        // https://xhr.spec.whatwg.org/#dom-xmlhttprequest-send Step 4.2.
+        auto serialized = serializeFragment(document, SerializedNodes::SubtreeIncludingNode);
+        auto converted = replaceUnpairedSurrogatesWithReplacementCharacter(WTFMove(serialized));
+        auto encoded = PAL::UTF8Encoding().encode(WTFMove(converted), PAL::UnencodableHandling::Entities);
+        m_requestEntityBody = FormData::create(WTFMove(encoded));
         if (m_upload)
             m_requestEntityBody->setAlwaysStream(true);
     }
@@ -488,7 +505,7 @@ ExceptionOr<void> XMLHttpRequest::send(const String& body)
             m_requestHeaders.set(HTTPHeaderName::ContentType, contentType);
         }
 
-        m_requestEntityBody = FormData::create(UTF8Encoding().encode(body, UnencodableHandling::Entities));
+        m_requestEntityBody = FormData::create(PAL::UTF8Encoding().encode(body, PAL::UnencodableHandling::Entities));
         if (m_upload)
             m_requestEntityBody->setAlwaysStream(true);
     }
@@ -516,10 +533,6 @@ ExceptionOr<void> XMLHttpRequest::send(Blob& body)
             const String& blobType = body.type();
             if (!blobType.isEmpty() && isValidContentType(blobType))
                 m_requestHeaders.set(HTTPHeaderName::ContentType, blobType);
-            else {
-                // From FileAPI spec, whenever media type cannot be determined, empty string must be returned.
-                m_requestHeaders.set(HTTPHeaderName::ContentType, emptyString());
-            }
         }
 
         m_requestEntityBody = FormData::create();
@@ -527,6 +540,13 @@ ExceptionOr<void> XMLHttpRequest::send(Blob& body)
     }
 
     return createRequest();
+}
+
+ExceptionOr<void> XMLHttpRequest::send(const URLSearchParams& params)
+{
+    if (!m_requestHeaders.contains(HTTPHeaderName::ContentType))
+        m_requestHeaders.set(HTTPHeaderName::ContentType, "application/x-www-form-urlencoded;charset=UTF-8"_s);
+    return send(params.toString());
 }
 
 ExceptionOr<void> XMLHttpRequest::send(DOMFormData& body)
@@ -572,8 +592,10 @@ ExceptionOr<void> XMLHttpRequest::sendBytesData(const void* data, size_t length)
 ExceptionOr<void> XMLHttpRequest::createRequest()
 {
     // Only GET request is supported for blob URL.
-    if (!m_async && m_url.protocolIsBlob() && m_method != "GET")
+    if (!m_async && m_url.protocolIsBlob() && m_method != "GET") {
+        m_blobURLLifetimeExtension.clear();
         return Exception { NetworkError };
+    }
 
     if (m_async && m_upload && m_upload->hasEventListeners())
         m_uploadListenerFlag = true;
@@ -615,7 +637,7 @@ ExceptionOr<void> XMLHttpRequest::createRequest()
         }
     }
 
-    m_exceptionCode = WTF::nullopt;
+    m_exceptionCode = std::nullopt;
     m_error = false;
     m_uploadComplete = !request.httpBody();
     m_sendFlag = true;
@@ -623,25 +645,24 @@ ExceptionOr<void> XMLHttpRequest::createRequest()
     if (m_async) {
         m_progressEventThrottle.dispatchProgressEvent(eventNames().loadstartEvent);
         if (!m_uploadComplete && m_uploadListenerFlag)
-            m_upload->dispatchProgressEvent(eventNames().loadstartEvent, 0, request.httpBody()->lengthInBytes(scriptExecutionContext()->sessionID()));
+            m_upload->dispatchProgressEvent(eventNames().loadstartEvent, 0, request.httpBody()->lengthInBytes());
 
-        if (readyState() != OPENED || !m_sendFlag || m_loader)
+        if (readyState() != OPENED || !m_sendFlag || m_loadingActivity)
             return { };
 
         // ThreadableLoader::create can return null here, for example if we're no longer attached to a page or if a content blocker blocks the load.
         // This is true while running onunload handlers.
         // FIXME: Maybe we need to be able to send XMLHttpRequests from onunload, <http://bugs.webkit.org/show_bug.cgi?id=10904>.
-        m_loader = ThreadableLoader::create(*scriptExecutionContext(), *this, WTFMove(request), options);
+        auto loader = ThreadableLoader::create(*scriptExecutionContext(), *this, WTFMove(request), options);
+        if (loader)
+            m_loadingActivity = LoadingActivity { Ref { *this }, loader.releaseNonNull() };
 
         // Either loader is null or some error was synchronously sent to us.
-        ASSERT(m_loader || !m_sendFlag);
-
-        // Neither this object nor the JavaScript wrapper should be deleted while
-        // a request is in progress because we need to keep the listeners alive,
-        // and they are referenced by the JavaScript wrapper.
-        if (m_loader)
-            setPendingActivity(*this);
+        ASSERT(m_loadingActivity || !m_sendFlag);
     } else {
+        if (scriptExecutionContext()->isDocument() && !isFeaturePolicyAllowedByDocumentAndAllOwners(FeaturePolicy::Type::SyncXHR, *document()))
+            return Exception { NetworkError };
+
         request.setDomainForCachePartition(scriptExecutionContext()->domainForCachePartition());
         InspectorInstrumentation::willLoadXHRSynchronously(scriptExecutionContext());
         ThreadableLoader::loadResourceSynchronously(*scriptExecutionContext(), WTFMove(request), *this, options);
@@ -657,7 +678,6 @@ ExceptionOr<void> XMLHttpRequest::createRequest()
 
 void XMLHttpRequest::abort()
 {
-    // internalAbort() calls unsetPendingActivity(this), which may release the last reference.
     Ref<XMLHttpRequest> protectedThis(*this);
 
     m_wasAbortedByClient = true;
@@ -668,7 +688,7 @@ void XMLHttpRequest::abort()
 
     m_requestHeaders.clear();
     if ((readyState() == OPENED && m_sendFlag) || readyState() == HEADERS_RECEIVED || readyState() == LOADING) {
-        ASSERT(!m_loader);
+        ASSERT(!m_loadingActivity);
         m_sendFlag = false;
         changeState(DONE);
         dispatchErrorEvents(eventNames().abortEvent);
@@ -688,22 +708,20 @@ bool XMLHttpRequest::internalAbort()
 
     m_timeoutTimer.stop();
 
-    if (!m_loader)
+    if (!m_loadingActivity)
         return true;
 
-    // Cancelling m_loader may trigger a window.onload callback which can call open() on the same xhr.
+    // Cancelling m_loadingActivity may trigger a window.onload callback which can call open() on the same xhr.
     // This would create internalAbort reentrant call.
-    // m_loader is set to null before being cancelled to exit early in any reentrant internalAbort() call.
-    auto loader = WTFMove(m_loader);
-    loader->cancel();
+    // m_loadingActivity is set to std::nullopt before being cancelled to exit early in any reentrant internalAbort() call.
+    auto loadingActivity = std::exchange(m_loadingActivity, std::nullopt);
+    loadingActivity->loader->cancel();
 
-    // If window.onload callback calls open() and send() on the same xhr, m_loader is now set to a new value.
+    // If window.onload callback calls open() and send() on the same xhr, m_loadingActivity is now set to a new value.
     // The function calling internalAbort() should abort to let the open() and send() calls continue properly.
     // We ask the function calling internalAbort() to exit by returning false.
     // Save this information to a local variable since we are going to drop protection.
-    bool newLoadStarted = m_loader;
-
-    unsetPendingActivity(*this);
+    bool newLoadStarted = !!m_loadingActivity;
 
     return !newLoadStarted;
 }
@@ -720,7 +738,7 @@ void XMLHttpRequest::clearResponseBuffers()
     m_responseEncoding = String();
     m_createdDocument = false;
     m_responseDocument = nullptr;
-    m_binaryResponseBuilder = nullptr;
+    m_binaryResponseBuilder.reset();
     m_responseCacheIsValid = false;
 }
 
@@ -728,6 +746,8 @@ void XMLHttpRequest::clearRequest()
 {
     m_requestHeaders.clear();
     m_requestEntityBody = nullptr;
+    m_url = URL { };
+    m_blobURLLifetimeExtension.clear();
 }
 
 void XMLHttpRequest::genericError()
@@ -745,12 +765,6 @@ void XMLHttpRequest::networkError()
     genericError();
     dispatchErrorEvents(eventNames().errorEvent);
     internalAbort();
-}
-
-void XMLHttpRequest::networkErrorTimerFired()
-{
-    networkError();
-    unsetPendingActivity(*this);
 }
 
 void XMLHttpRequest::abortError()
@@ -807,22 +821,29 @@ String XMLHttpRequest::getAllResponseHeaders() const
         return emptyString();
 
     if (!m_allResponseHeaders) {
-        Vector<String> headers;
+        Vector<std::pair<String, String>> headers;
         headers.reserveInitialCapacity(m_response.httpHeaderFields().size());
 
-        for (auto& header : m_response.httpHeaderFields()) {
-            StringBuilder stringBuilder;
-            stringBuilder.append(header.key.convertToASCIILowercase());
-            stringBuilder.appendLiteral(": ");
-            stringBuilder.append(header.value);
-            stringBuilder.appendLiteral("\r\n");
-            headers.uncheckedAppend(stringBuilder.toString());
-        }
-        std::sort(headers.begin(), headers.end(), WTF::codePointCompareLessThan);
+        for (auto& header : m_response.httpHeaderFields())
+            headers.uncheckedAppend(std::make_pair(header.key, header.value));
+
+        std::sort(headers.begin(), headers.end(), [] (const std::pair<String, String>& x, const std::pair<String, String>& y) {
+            unsigned xLength = x.first.length();
+            unsigned yLength = y.first.length();
+            unsigned commonLength = std::min(xLength, yLength);
+            for (unsigned i = 0; i < commonLength; ++i) {
+                auto xCharacter = toASCIIUpper(x.first[i]);
+                auto yCharacter = toASCIIUpper(y.first[i]);
+                if (xCharacter != yCharacter)
+                    return xCharacter < yCharacter;
+            }
+            return xLength < yLength;
+        });
 
         StringBuilder stringBuilder;
         for (auto& header : headers)
-            stringBuilder.append(header);
+            stringBuilder.append(lowercase(header.first), ": ", header.second, "\r\n");
+
         m_allResponseHeaders = stringBuilder.toString();
     }
 
@@ -837,25 +858,19 @@ String XMLHttpRequest::getResponseHeader(const String& name) const
     return m_response.httpHeaderField(name);
 }
 
-String XMLHttpRequest::responseMIMEType() const
+String XMLHttpRequest::responseMIMEType(FinalMIMEType finalMIMEType) const
 {
-    String mimeType = extractMIMETypeFromMediaType(m_mimeTypeOverride);
-    if (mimeType.isEmpty()) {
-        String contentType;
-        if (m_response.isHTTP())
+    String contentType = m_mimeTypeOverride;
+    if (contentType.isEmpty()) {
+        // Same logic as externalEntityMimeTypeAllowed() in XMLDocumentParserLibxml2.cpp. Keep them in sync.
+        if (m_response.isInHTTPFamily())
             contentType = m_response.httpHeaderField(HTTPHeaderName::ContentType);
         else
             contentType = m_response.mimeType();
-        if (auto parsedContentType = ParsedContentType::create(contentType))
-            return parsedContentType->mimeType();
-        return "text/xml"_s;
     }
-    return mimeType;
-}
-
-bool XMLHttpRequest::responseIsXML() const
-{
-    return MIMETypeRegistry::isXMLMIMEType(responseMIMEType());
+    if (auto parsedContentType = ParsedContentType::create(contentType))
+        return finalMIMEType == FinalMIMEType::Yes ? parsedContentType->serialize() : parsedContentType->mimeType();
+    return "text/xml"_s;
 }
 
 int XMLHttpRequest::status() const
@@ -876,6 +891,8 @@ String XMLHttpRequest::statusText() const
 
 void XMLHttpRequest::didFail(const ResourceError& error)
 {
+    Ref protectedThis { *this };
+
     // If we are already in an error state, for instance we called abort(), bail out early.
     if (m_error)
         return;
@@ -894,19 +911,22 @@ void XMLHttpRequest::didFail(const ResourceError& error)
     }
 
     // In case didFail is called synchronously on an asynchronous XHR call, let's dispatch network error asynchronously
-    if (m_async && m_sendFlag && !m_loader) {
+    if (m_async && m_sendFlag && !m_loadingActivity) {
         m_sendFlag = false;
-        setPendingActivity(*this);
         m_timeoutTimer.stop();
-        m_networkErrorTimer.startOneShot(0_s);
+        queueTaskKeepingObjectAlive(*this, TaskSource::Networking, [this] {
+            networkError();
+        });
         return;
     }
     m_exceptionCode = NetworkError;
     networkError();
 }
 
-void XMLHttpRequest::didFinishLoading(unsigned long)
+void XMLHttpRequest::didFinishLoading(ResourceLoaderIdentifier, const NetworkLoadMetrics&)
 {
+    Ref protectedThis { *this };
+
     if (m_error)
         return;
 
@@ -918,8 +938,9 @@ void XMLHttpRequest::didFinishLoading(unsigned long)
 
     m_responseBuilder.shrinkToFit();
 
-    bool hadLoader = m_loader;
-    m_loader = nullptr;
+    m_loadingActivity = std::nullopt;
+    m_url = URL { };
+    m_blobURLLifetimeExtension.clear();
 
     m_sendFlag = false;
     changeState(DONE);
@@ -927,9 +948,6 @@ void XMLHttpRequest::didFinishLoading(unsigned long)
     m_decoder = nullptr;
 
     m_timeoutTimer.stop();
-
-    if (hadLoader)
-        unsetPendingActivity(*this);
 }
 
 void XMLHttpRequest::didSendData(unsigned long long bytesSent, unsigned long long totalBytesToBeSent)
@@ -949,7 +967,7 @@ void XMLHttpRequest::didSendData(unsigned long long bytesSent, unsigned long lon
     }
 }
 
-void XMLHttpRequest::didReceiveResponse(unsigned long, const ResourceResponse& response)
+void XMLHttpRequest::didReceiveResponse(ResourceLoaderIdentifier, const ResourceResponse& response)
 {
     m_response = response;
 }
@@ -971,7 +989,7 @@ static inline bool shouldDecodeResponse(XMLHttpRequest::ResponseType type)
 }
 
 // https://xhr.spec.whatwg.org/#final-charset
-TextEncoding XMLHttpRequest::finalResponseCharset() const
+PAL::TextEncoding XMLHttpRequest::finalResponseCharset() const
 {
     String label = m_responseEncoding;
 
@@ -979,18 +997,18 @@ TextEncoding XMLHttpRequest::finalResponseCharset() const
     if (!overrideResponseCharset.isEmpty())
         label = overrideResponseCharset;
 
-    return TextEncoding(label);
+    return PAL::TextEncoding(label);
 }
 
 Ref<TextResourceDecoder> XMLHttpRequest::createDecoder() const
 {
-    TextEncoding finalResponseCharset = this->finalResponseCharset();
+    PAL::TextEncoding finalResponseCharset = this->finalResponseCharset();
     if (finalResponseCharset.isValid())
         return TextResourceDecoder::create("text/plain", finalResponseCharset);
 
     switch (responseType()) {
     case ResponseType::EmptyString:
-        if (responseIsXML()) {
+        if (MIMETypeRegistry::isXMLMIMEType(responseMIMEType())) {
             auto decoder = TextResourceDecoder::create("application/xml");
             // Don't stop on encoding errors, unlike it is done for other kinds of XML resources. This matches the behavior of previous WebKit versions, Firefox and Opera.
             decoder->useLenientXMLDecoding();
@@ -1016,7 +1034,7 @@ Ref<TextResourceDecoder> XMLHttpRequest::createDecoder() const
     return TextResourceDecoder::create("text/plain", "UTF-8");
 }
 
-void XMLHttpRequest::didReceiveData(const char* data, int len)
+void XMLHttpRequest::didReceiveData(const SharedBuffer& buffer)
 {
     if (m_error)
         return;
@@ -1034,23 +1052,18 @@ void XMLHttpRequest::didReceiveData(const char* data, int len)
     if (useDecoder && !m_decoder)
         m_decoder = createDecoder();
 
-    if (!len)
+    if (buffer.isEmpty())
         return;
 
-    if (len == -1)
-        len = strlen(data);
-
     if (useDecoder)
-        m_responseBuilder.append(m_decoder->decode(data, len));
+        m_responseBuilder.append(m_decoder->decode(buffer.data(), buffer.size()));
     else {
         // Buffer binary data.
-        if (!m_binaryResponseBuilder)
-            m_binaryResponseBuilder = SharedBuffer::create();
-        m_binaryResponseBuilder->append(data, len);
+        m_binaryResponseBuilder.append(buffer);
     }
 
     if (!m_error) {
-        m_receivedLength += len;
+        m_receivedLength += buffer.size();
 
         if (readyState() != LOADING)
             changeState(LOADING);
@@ -1059,18 +1072,18 @@ void XMLHttpRequest::didReceiveData(const char* data, int len)
             callReadyStateChangeListener();
         }
 
-        if (m_async) {
-            long long expectedLength = m_response.expectedContentLength();
-            bool lengthComputable = expectedLength > 0 && m_receivedLength <= expectedLength;
-            unsigned long long total = lengthComputable ? expectedLength : 0;
-            m_progressEventThrottle.dispatchThrottledProgressEvent(lengthComputable, m_receivedLength, total);
-        }
+        long long expectedLength = m_response.expectedContentLength();
+        bool lengthComputable = expectedLength > 0 && m_receivedLength <= expectedLength;
+        unsigned long long total = lengthComputable ? expectedLength : 0;
+        m_progressEventThrottle.updateProgress(m_async, lengthComputable, m_receivedLength, total);
     }
 }
 
 void XMLHttpRequest::dispatchEvent(Event& event)
 {
-    if (m_userGestureToken && m_userGestureToken->hasExpired(m_maximumIntervalForUserGestureForwarding))
+    RELEASE_ASSERT(!scriptExecutionContext()->activeDOMObjectsAreSuspended());
+
+    if (m_userGestureToken && m_userGestureToken->hasExpired(UserGestureToken::maximumIntervalForUserGestureForwardingForFetch()))
         m_userGestureToken = nullptr;
 
     if (readyState() != DONE || !m_userGestureToken || !m_userGestureToken->processingUserGesture()) {
@@ -1095,9 +1108,22 @@ void XMLHttpRequest::dispatchErrorEvents(const AtomString& type)
     m_progressEventThrottle.dispatchProgressEvent(eventNames().loadendEvent);
 }
 
+void XMLHttpRequest::timeoutTimerFired()
+{
+    if (!m_loadingActivity)
+        return;
+    m_loadingActivity->loader->computeIsDone();
+}
+
+void XMLHttpRequest::notifyIsDone(bool isDone)
+{
+    if (isDone)
+        return;
+    didReachTimeout();
+}
+
 void XMLHttpRequest::didReachTimeout()
 {
-    // internalAbort() calls unsetPendingActivity(this), which may release the last reference.
     Ref<XMLHttpRequest> protectedThis(*this);
     if (!internalAbort())
         return;
@@ -1120,54 +1146,19 @@ void XMLHttpRequest::didReachTimeout()
     dispatchErrorEvents(eventNames().timeoutEvent);
 }
 
-bool XMLHttpRequest::canSuspendForDocumentSuspension() const
-{
-    // If the load event has not fired yet, cancelling the load in suspend() may cause
-    // the load event to be fired and arbitrary JS execution, which would be unsafe.
-    // Therefore, we prevent suspending in this case.
-    return document()->loadEventFinished();
-}
-
 const char* XMLHttpRequest::activeDOMObjectName() const
 {
     return "XMLHttpRequest";
 }
 
-void XMLHttpRequest::suspend(ReasonForSuspension reason)
+void XMLHttpRequest::suspend(ReasonForSuspension)
 {
     m_progressEventThrottle.suspend();
-
-    if (m_resumeTimer.isActive()) {
-        m_resumeTimer.stop();
-        m_dispatchErrorOnResuming = true;
-    }
-
-    if (reason == ReasonForSuspension::PageCache && m_loader) {
-        // Going into PageCache, abort the request and dispatch a network error on resuming.
-        genericError();
-        m_dispatchErrorOnResuming = true;
-        bool aborted = internalAbort();
-        // It should not be possible to restart the load when aborting in suspend() because
-        // we are not allowed to execute in JS in suspend().
-        ASSERT_UNUSED(aborted, aborted);
-    }
 }
 
 void XMLHttpRequest::resume()
 {
     m_progressEventThrottle.resume();
-
-    // We are not allowed to execute arbitrary JS in resume() so dispatch
-    // the error event in a timer.
-    if (m_dispatchErrorOnResuming && !m_resumeTimer.isActive())
-        m_resumeTimer.startOneShot(0_s);
-}
-
-void XMLHttpRequest::resumeTimerFired()
-{
-    ASSERT(m_dispatchErrorOnResuming);
-    m_dispatchErrorOnResuming = false;
-    dispatchErrorEvents(eventNames().errorEvent);
 }
 
 void XMLHttpRequest::stop()
@@ -1177,13 +1168,45 @@ void XMLHttpRequest::stop()
 
 void XMLHttpRequest::contextDestroyed()
 {
-    ASSERT(!m_loader);
+    ASSERT(!m_loadingActivity);
     ActiveDOMObject::contextDestroyed();
 }
 
-void XMLHttpRequest::setMaximumIntervalForUserGestureForwarding(double interval)
+void XMLHttpRequest::updateHasRelevantEventListener()
 {
-    m_maximumIntervalForUserGestureForwarding = Seconds(interval);
+    m_hasRelevantEventListener = hasEventListeners(eventNames().abortEvent)
+        || hasEventListeners(eventNames().errorEvent)
+        || hasEventListeners(eventNames().loadEvent)
+        || hasEventListeners(eventNames().loadendEvent)
+        || hasEventListeners(eventNames().progressEvent)
+        || hasEventListeners(eventNames().readystatechangeEvent)
+        || hasEventListeners(eventNames().timeoutEvent)
+        || (m_upload && m_upload->hasRelevantEventListener());
+}
+
+void XMLHttpRequest::eventListenersDidChange()
+{
+    updateHasRelevantEventListener();
+}
+
+// An XMLHttpRequest object must not be garbage collected if its state is either opened with the send() flag set, headers received, or loading, and
+// it has one or more event listeners registered whose type is one of readystatechange, progress, abort, error, load, timeout, and loadend.
+bool XMLHttpRequest::virtualHasPendingActivity() const
+{
+    if (!m_hasRelevantEventListener)
+        return false;
+
+    switch (readyState()) {
+    case OPENED:
+        return m_sendFlag;
+    case HEADERS_RECEIVED:
+    case LOADING:
+        return true;
+    case UNSENT:
+    case DONE:
+        break;
+    }
+    return false;
 }
 
 } // namespace WebCore

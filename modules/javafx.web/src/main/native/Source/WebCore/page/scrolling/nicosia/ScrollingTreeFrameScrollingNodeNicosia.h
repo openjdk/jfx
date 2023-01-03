@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2018 Igalia S.L.
+ * Copyright (C) 2012, 2014-2015 Apple Inc. All rights reserved.
+ * Copyright (C) 2019 Igalia S.L.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,20 +31,50 @@
 #if ENABLE(ASYNC_SCROLLING) && USE(NICOSIA)
 
 #include "ScrollingTreeFrameScrollingNode.h"
+#include "ScrollingTreeScrollingNodeDelegateNicosia.h"
+#include <wtf/RefPtr.h>
+
+namespace Nicosia {
+class CompositionLayer;
+}
 
 namespace WebCore {
+class ScrollAnimation;
+class ScrollAnimationKinetic;
 
 class ScrollingTreeFrameScrollingNodeNicosia final : public ScrollingTreeFrameScrollingNode {
 public:
     static Ref<ScrollingTreeFrameScrollingNode> create(ScrollingTree&, ScrollingNodeType, ScrollingNodeID);
     virtual ~ScrollingTreeFrameScrollingNodeNicosia();
 
+    RefPtr<Nicosia::CompositionLayer> rootContentsLayer() const { return m_rootContentsLayer; }
+
 private:
     ScrollingTreeFrameScrollingNodeNicosia(ScrollingTree&, ScrollingNodeType, ScrollingNodeID);
 
-    ScrollingEventResult handleWheelEvent(const PlatformWheelEvent&) override;
+    void commitStateBeforeChildren(const ScrollingStateNode&) override;
+    void commitStateAfterChildren(const ScrollingStateNode&) override;
 
+    bool startAnimatedScrollToPosition(FloatPoint) override;
+    void stopAnimatedScroll() override;
+    void serviceScrollAnimation(MonotonicTime) final;
+
+    WheelEventHandlingResult handleWheelEvent(const PlatformWheelEvent&, EventTargeting) override;
+    void stopScrollAnimations() override;
+
+    FloatPoint adjustedScrollPosition(const FloatPoint&, ScrollClamping) const override;
+    void currentScrollPositionChanged(ScrollType, ScrollingLayerPositionAction) override;
     void repositionScrollingLayers() override;
+    void repositionRelatedLayers() override;
+
+    RefPtr<Nicosia::CompositionLayer> m_rootContentsLayer;
+    RefPtr<Nicosia::CompositionLayer> m_counterScrollingLayer;
+    RefPtr<Nicosia::CompositionLayer> m_insetClipLayer;
+    RefPtr<Nicosia::CompositionLayer> m_contentShadowLayer;
+    RefPtr<Nicosia::CompositionLayer> m_headerLayer;
+    RefPtr<Nicosia::CompositionLayer> m_footerLayer;
+
+    ScrollingTreeScrollingNodeDelegateNicosia m_delegate;
 };
 
 } // namespace WebCore

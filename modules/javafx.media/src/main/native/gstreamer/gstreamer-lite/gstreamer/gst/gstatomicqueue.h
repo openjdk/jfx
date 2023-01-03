@@ -65,9 +65,7 @@ gpointer           gst_atomic_queue_peek        (GstAtomicQueue* queue);
 GST_API
 guint              gst_atomic_queue_length      (GstAtomicQueue * queue);
 
-#ifdef G_DEFINE_AUTOPTR_CLEANUP_FUNC
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(GstAtomicQueue, gst_atomic_queue_unref)
-#endif
 
 G_END_DECLS
 

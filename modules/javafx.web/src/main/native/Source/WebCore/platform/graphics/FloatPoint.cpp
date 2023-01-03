@@ -29,6 +29,7 @@
 
 #include "AffineTransform.h"
 #include "FloatConversion.h"
+#include "FloatRect.h"
 #include "IntPoint.h"
 #include "TransformationMatrix.h"
 #include <limits>
@@ -49,6 +50,11 @@ FloatPoint FloatPoint::constrainedBetween(const FloatPoint& min, const FloatPoin
     };
 }
 
+FloatPoint FloatPoint::constrainedWithin(const FloatRect& rect) const
+{
+    return constrainedBetween(rect.minXMinYCorner(), rect.maxXMaxYCorner());
+}
+
 void FloatPoint::normalize()
 {
     float tempLength = length();
@@ -62,11 +68,6 @@ void FloatPoint::normalize()
 float FloatPoint::slopeAngleRadians() const
 {
     return atan2f(m_y, m_x);
-}
-
-float FloatPoint::length() const
-{
-    return sqrtf(lengthSquared());
 }
 
 FloatPoint FloatPoint::matrixTransform(const AffineTransform& transform) const

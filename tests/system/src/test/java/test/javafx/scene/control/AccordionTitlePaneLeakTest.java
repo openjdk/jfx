@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2019, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,9 @@
 
 package test.javafx.scene.control;
 
+import java.lang.ref.WeakReference;
+import java.util.concurrent.CountDownLatch;
+
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.scene.Scene;
@@ -32,50 +35,44 @@ import javafx.scene.control.Accordion;
 import javafx.scene.control.TitledPane;
 import javafx.scene.layout.StackPane;
 import javafx.stage.Stage;
-import javafx.stage.WindowEvent;
 
-import test.util.Util;
-
-import java.lang.ref.WeakReference;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-
-import junit.framework.Assert;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-public class AccordionTitlePaneLeakTest extends Application {
+import test.util.Util;
+
+public class AccordionTitlePaneLeakTest {
 
     static private CountDownLatch startupLatch;
     static private Accordion accordion;
     static private StackPane root;
     static private Stage stage;
 
-    @Override
-    public void start(Stage primaryStage) throws Exception {
-        stage = primaryStage;
-        accordion = new Accordion();
-        root = new StackPane(accordion);
-        stage.setScene(new Scene(root));
-        stage.addEventHandler(WindowEvent.WINDOW_SHOWN, e -> {
-            Platform.runLater(() -> startupLatch.countDown());
-        });
-        stage.show();
+    public static class TestApp extends Application {
+        @Override
+        public void start(Stage primaryStage) throws Exception {
+            stage = primaryStage;
+            accordion = new Accordion();
+            root = new StackPane(accordion);
+            stage.setScene(new Scene(root));
+            stage.setOnShown(l -> {
+                Platform.runLater(() -> startupLatch.countDown());
+            });
+            stage.show();
+        }
     }
 
     @BeforeClass
-    public static void initFX() {
+    public static void initFX() throws Exception {
         startupLatch = new CountDownLatch(1);
-        new Thread(() -> Application.launch(AccordionTitlePaneLeakTest.class, (String[]) null)).start();
+        Util.launch(startupLatch, TestApp.class);
+    }
 
-        try {
-            if (!startupLatch.await(15, TimeUnit.SECONDS)) {
-                Assert.fail("Timeout waiting for FX runtime to start");
-            }
-        } catch (InterruptedException ex) {
-            Assert.fail("Unexpected exception: " + ex);
-        }
+    @AfterClass
+    public static void teardownOnce() {
+        Util.shutdown(stage);
     }
 
     @Test
@@ -87,7 +84,6 @@ public class AccordionTitlePaneLeakTest extends Application {
         accordion.getPanes().clear();
         for (int i = 0; i < 10; i++) {
             System.gc();
-            System.runFinalization();
             if (weakRefToPane.get() == null) {
                 break;
             }
@@ -95,13 +91,5 @@ public class AccordionTitlePaneLeakTest extends Application {
         }
         // Ensure accordion's skin no longer hold a ref to titled pane.
         Assert.assertNull("Couldn't collect TitledPane", weakRefToPane.get());
-    }
-
-    @AfterClass
-    public static void teardownOnce() {
-        Platform.runLater(() -> {
-            stage.hide();
-            Platform.exit();
-        });
     }
 }

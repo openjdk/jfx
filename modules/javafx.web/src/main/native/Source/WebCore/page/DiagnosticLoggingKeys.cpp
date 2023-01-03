@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -53,16 +53,6 @@ String DiagnosticLoggingKeys::missingValidatorFieldsKey()
     return "missingValidatorFields"_s;
 }
 
-String DiagnosticLoggingKeys::pluginLoadedKey()
-{
-    return "pluginLoaded"_s;
-}
-
-String DiagnosticLoggingKeys::pluginLoadingFailedKey()
-{
-    return "pluginFailedLoading"_s;
-}
-
 String DiagnosticLoggingKeys::postPageBackgroundingCPUUsageKey()
 {
     return "postPageBackgroundingCPUUsage"_s;
@@ -91,16 +81,6 @@ String DiagnosticLoggingKeys::postPageLoadMemoryUsageKey()
 String DiagnosticLoggingKeys::provisionalLoadKey()
 {
     return "provisionalLoad"_s;
-}
-
-String DiagnosticLoggingKeys::pageContainsPluginKey()
-{
-    return "pageContainsPlugin"_s;
-}
-
-String DiagnosticLoggingKeys::pageContainsAtLeastOnePluginKey()
-{
-    return "pageContainsAtLeastOnePlugin"_s;
 }
 
 String DiagnosticLoggingKeys::pageContainsMediaEngineKey()
@@ -208,14 +188,19 @@ String DiagnosticLoggingKeys::notInMemoryCacheKey()
     return "notInMemoryCache"_s;
 }
 
-String DiagnosticLoggingKeys::pageCacheKey()
+String DiagnosticLoggingKeys::backForwardCacheKey()
 {
-    return "pageCache"_s;
+    return "backForwardCache"_s;
 }
 
-String DiagnosticLoggingKeys::pageCacheFailureKey()
+String DiagnosticLoggingKeys::backForwardCacheFailureKey()
 {
-    return "pageCacheFailure"_s;
+    return "backForwardCacheFailure"_s;
+}
+
+String DiagnosticLoggingKeys::visuallyEmptyKey()
+{
+    return "visuallyEmpty"_s;
 }
 
 String DiagnosticLoggingKeys::noDocumentLoaderKey()
@@ -231,11 +216,6 @@ String DiagnosticLoggingKeys::noLongerInCacheKey()
 String DiagnosticLoggingKeys::otherKey()
 {
     return "other"_s;
-}
-
-String DiagnosticLoggingKeys::mainDocumentErrorKey()
-{
-    return "mainDocumentError"_s;
 }
 
 String DiagnosticLoggingKeys::mainResourceKey()
@@ -261,11 +241,6 @@ String DiagnosticLoggingKeys::isReloadIgnoringCacheDataKey()
 String DiagnosticLoggingKeys::loadingKey()
 {
     return "loading"_s;
-}
-
-String DiagnosticLoggingKeys::hasPluginsKey()
-{
-    return "hasPlugins"_s;
 }
 
 String DiagnosticLoggingKeys::httpsNoStoreKey()
@@ -475,6 +450,16 @@ String DiagnosticLoggingKeys::diskCacheAfterValidationKey()
     return "diskCacheAfterValidation"_s;
 }
 
+String DiagnosticLoggingKeys::memoryCacheKey()
+{
+    return "memoryCache"_s;
+}
+
+String DiagnosticLoggingKeys::memoryCacheAfterValidationKey()
+{
+    return "memoryCacheAfterValidation"_s;
+}
+
 String DiagnosticLoggingKeys::reloadKey()
 {
     return "reload"_s;
@@ -533,6 +518,11 @@ String DiagnosticLoggingKeys::scriptKey()
 String DiagnosticLoggingKeys::serviceWorkerKey()
 {
     return "serviceWorker"_s;
+}
+
+String DiagnosticLoggingKeys::siteSpecificQuirkKey()
+{
+    return "siteSpecificQuirk"_s;
 }
 
 String DiagnosticLoggingKeys::streamingMedia()
@@ -852,11 +842,6 @@ String DiagnosticLoggingKeys::backgroundCPUUsageToDiagnosticLoggingKey(double cp
     if (cpuUsage < 70)
         return "50to70"_s;
     return "over70"_s;
-}
-
-String DiagnosticLoggingKeys::resourceLoadStatisticsTelemetryKey()
-{
-    return "resourceLoadStatisticsTelemetry"_s;
 }
 
 } // namespace WebCore

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -43,7 +43,7 @@ public:
     EditorClientJava(const JLObject &webPage);
     ~EditorClientJava() override;
 
-    bool shouldDeleteRange(Range*) override;
+    bool shouldDeleteRange(const std::optional<SimpleRange>&) override;
     bool smartInsertDeleteEnabled() override;
     bool isSelectTrailingWhitespaceEnabled() const override;
     bool isContinuousSpellCheckingEnabled() override;
@@ -52,27 +52,28 @@ public:
     void toggleGrammarChecking() override;
     int spellCheckerDocumentTag() override;
 
-    bool shouldBeginEditing(Range*) override;
-    bool shouldEndEditing(Range*) override;
-    bool shouldInsertNode(Node*, Range*, EditorInsertAction) override;
-    bool shouldInsertText(const String&, Range*, EditorInsertAction) override;
-    bool shouldChangeSelectedRange(Range* fromRange, Range* toRange, EAffinity, bool stillSelecting) override;
+    bool shouldBeginEditing(const SimpleRange&) override;
+    bool shouldEndEditing(const SimpleRange&) override;
+    bool shouldInsertNode(Node&, const std::optional<SimpleRange>&, EditorInsertAction) override;
+    bool shouldInsertText(const String&, const std::optional<SimpleRange>&, EditorInsertAction) override;
+    bool shouldChangeSelectedRange(const std::optional<SimpleRange>& fromRange, const std::optional<SimpleRange>& toRange, Affinity, bool stillSelecting) override;
 
-    bool shouldApplyStyle(StyleProperties*, Range*) override;
+    bool shouldApplyStyle(const StyleProperties&, const std::optional<SimpleRange>&) override;
     void didApplyStyle() override;
-    bool shouldMoveRangeAfterDelete(Range*, Range*) override;
+    bool shouldMoveRangeAfterDelete(const SimpleRange&, const SimpleRange&) override;
 
     void didBeginEditing() override;
     void respondToChangedContents() override;
     void respondToChangedSelection(Frame*) override;
-    void didEndUserTriggeredSelectionChanges() final { }
+    void didEndUserTriggeredSelectionChanges() override { }
     void updateEditorStateAfterLayoutIfEditabilityChanged() override;
     void didEndEditing() override;
-    void willWriteSelectionToPasteboard(Range*) override;
+    void willWriteSelectionToPasteboard(const std::optional<SimpleRange>&) override;
     void didWriteSelectionToPasteboard() override;
-    void getClientPasteboardDataForRange(Range*, Vector<String>& pasteboardTypes, Vector<RefPtr<SharedBuffer> >& pasteboardData) override;
-    void didUpdateComposition() final { }
+    void getClientPasteboardData(const std::optional<SimpleRange>&, Vector<String>& pasteboardTypes, Vector<RefPtr<SharedBuffer> >& pasteboardData) override;
+    void didUpdateComposition() override { }
 
+    DOMPasteAccessResponse requestDOMPasteAccess(DOMPasteAccessCategory, const String& originIdentifier) override;
     void discardedComposition(Frame*) override;
     void canceledComposition() override;
 
@@ -98,6 +99,7 @@ public:
     void textWillBeDeletedInTextField(Element*) override;
     void textDidChangeInTextArea(Element*) override;
     void overflowScrollPositionChanged() override;
+    void subFrameScrollPositionChanged() override;
 
 #if USE(APPKIT)
     void uppercaseWord() override;
@@ -132,7 +134,7 @@ public:
     void showSpellingUI(bool show) override;
     bool spellingUIIsShowing() override;
     void willSetInputMethodState() override;
-    void setInputMethodState(bool enabled) override;
+    void setInputMethodState(Element*) override;
 
     // TextCheckerClient member functions
     bool shouldEraseMarkersAfterChangeSelection(TextCheckingType) const override;
@@ -151,10 +153,9 @@ public:
     // identification. Noramlly it's the text surrounding the "word" for which we are getting correction suggestions.
     void getGuessesForWord(const String& word, const String& context, const VisibleSelection& currentSelection, Vector<String>& guesses) override;
     void requestCheckingOfString(TextCheckingRequest&, const VisibleSelection& currentSelection) override;
-    bool performTwoStepDrop(WebCore::DocumentFragment&, WebCore::Range&, bool) final { return false; }
+    bool performTwoStepDrop(DocumentFragment&, const SimpleRange&, bool) final { return false; }
     bool canShowFontPanel() const final { return false; }
 
-    DOMPasteAccessResponse requestDOMPasteAccess(const String&) final { return DOMPasteAccessResponse::DeniedForGesture; }
 
 protected:
     JGObject m_webPage;

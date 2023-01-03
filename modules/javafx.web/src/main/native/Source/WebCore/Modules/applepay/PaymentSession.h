@@ -27,7 +27,6 @@
 
 #if ENABLE(APPLE_PAY)
 
-#include "ApplePaySessionPaymentRequest.h"
 #include "ExceptionOr.h"
 #include "PaymentSessionBase.h"
 
@@ -37,19 +36,24 @@ class Document;
 class Payment;
 class PaymentContact;
 class PaymentMethod;
+class PaymentSessionError;
+class ScriptExecutionContext;
+struct ApplePayShippingMethod;
 
 class PaymentSession : public virtual PaymentSessionBase {
 public:
     static ExceptionOr<void> canCreateSession(Document&);
-    static bool enabledForContext(ScriptExecutionContext&);
 
     virtual unsigned version() const = 0;
     virtual void validateMerchant(URL&&) = 0;
     virtual void didAuthorizePayment(const Payment&) = 0;
-    virtual void didSelectShippingMethod(const ApplePaySessionPaymentRequest::ShippingMethod&) = 0;
+    virtual void didSelectShippingMethod(const ApplePayShippingMethod&) = 0;
     virtual void didSelectShippingContact(const PaymentContact&) = 0;
     virtual void didSelectPaymentMethod(const PaymentMethod&) = 0;
-    virtual void didCancelPaymentSession() = 0;
+#if ENABLE(APPLE_PAY_COUPON_CODE)
+    virtual void didChangeCouponCode(String&& couponCode) = 0;
+#endif
+    virtual void didCancelPaymentSession(PaymentSessionError&&) = 0;
 };
 
 } // namespace WebCore

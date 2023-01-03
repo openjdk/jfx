@@ -40,6 +40,7 @@ class FloatRoundedRect {
     WTF_MAKE_FAST_ALLOCATED;
 public:
     class Radii {
+    WTF_MAKE_FAST_ALLOCATED;
     public:
         Radii() { }
         Radii(const FloatSize& topLeft, const FloatSize& topRight, const FloatSize& bottomLeft, const FloatSize& bottomRight)
@@ -63,6 +64,14 @@ public:
             , m_topRight(uniformRadius, uniformRadius)
             , m_bottomLeft(uniformRadius, uniformRadius)
             , m_bottomRight(uniformRadius, uniformRadius)
+        {
+        }
+
+        explicit Radii(float uniformRadiusWidth, float uniformRadiusHeight)
+            : m_topLeft(uniformRadiusWidth, uniformRadiusHeight)
+            , m_topRight(uniformRadiusWidth, uniformRadiusHeight)
+            , m_bottomLeft(uniformRadiusWidth, uniformRadiusHeight)
+            , m_bottomRight(uniformRadiusWidth, uniformRadiusHeight)
         {
         }
 
@@ -103,6 +112,7 @@ public:
     bool isEmpty() const { return m_rect.isEmpty(); }
 
     void setRect(const FloatRect& rect) { m_rect = rect; }
+    void setLocation(FloatPoint location) { m_rect.setLocation(location); }
     void setRadii(const Radii& radii) { m_radii = radii; }
 
     void move(const FloatSize& size) { m_rect.move(size); }

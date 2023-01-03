@@ -21,6 +21,7 @@
 #include "NicosiaAnimation.h"
 
 #include "LayoutSize.h"
+#include "TranslateTransformOperation.h"
 
 namespace Nicosia {
 
@@ -166,9 +167,35 @@ static const TimingFunction& timingFunctionForAnimationValue(const AnimationValu
     return CubicBezierTimingFunction::defaultTimingFunction();
 }
 
+static KeyframeValueList createThreadsafeKeyFrames(const KeyframeValueList& originalKeyframes, const FloatSize& boxSize)
+{
+    if (originalKeyframes.property() != AnimatedPropertyTransform)
+        return originalKeyframes;
+
+    // Currently translation operations are the only transform operations that store a non-fixed
+    // Length. Some Lengths, in particular those for calc() operations, are not thread-safe or
+    // multiprocess safe, because they maintain indices into a shared HashMap of CalculationValues.
+    // This code converts all possible unsafe Length parameters to fixed Lengths, which are safe to
+    // use in other threads and across IPC channels.
+    KeyframeValueList keyframes = originalKeyframes;
+    for (unsigned i = 0; i < keyframes.size(); i++) {
+        const auto& transformValue = static_cast<const TransformAnimationValue&>(keyframes.at(i));
+        for (auto& operation : transformValue.value().operations()) {
+            if (is<TranslateTransformOperation>(operation)) {
+                TranslateTransformOperation* translation = static_cast<TranslateTransformOperation*>(operation.get());
+                translation->setX(Length(translation->xAsFloat(boxSize), LengthType::Fixed));
+                translation->setY(Length(translation->yAsFloat(boxSize), LengthType::Fixed));
+                translation->setZ(Length(translation->zAsFloat(), LengthType::Fixed));
+            }
+        }
+    }
+
+    return keyframes;
+}
+
 Animation::Animation(const String& name, const KeyframeValueList& keyframes, const FloatSize& boxSize, const WebCore::Animation& animation, bool listsMatch, MonotonicTime startTime, Seconds pauseTime, AnimationState state)
     : m_name(name.isSafeToSendToAnotherThread() ? name : name.isolatedCopy())
-    , m_keyframes(keyframes)
+    , m_keyframes(createThreadsafeKeyFrames(keyframes, boxSize))
     , m_boxSize(boxSize)
     , m_timingFunction(animation.timingFunction()->clone())
     , m_iterationCount(animation.iterationCount())
@@ -202,10 +229,29 @@ Animation::Animation(const Animation& other)
 {
 }
 
+Animation& Animation::operator=(const Animation& other)
+{
+    m_name = other.m_name.isSafeToSendToAnotherThread() ? other.m_name : other.m_name.isolatedCopy();
+    m_keyframes = other.m_keyframes;
+    m_boxSize = other.m_boxSize;
+    m_timingFunction = other.m_timingFunction->clone();
+    m_iterationCount = other.m_iterationCount;
+    m_duration = other.m_duration;
+    m_direction = other.m_direction;
+    m_fillsForwards = other.m_fillsForwards;
+    m_listsMatch = other.m_listsMatch;
+    m_startTime = other.m_startTime;
+    m_pauseTime = other.m_pauseTime;
+    m_totalRunningTime = other.m_totalRunningTime;
+    m_lastRefreshedTime = other.m_lastRefreshedTime;
+    m_state = other.m_state;
+    return *this;
+}
+
 void Animation::apply(ApplicationResult& applicationResults, MonotonicTime time)
 {
-    if (!isActive())
-        return;
+    // Even when m_state == AnimationState::Stopped && !m_fillsForwards, we should calculate the last value to avoid a flash.
+    // CoordinatedGraphicsScene will soon remove the stopped animation and update the value instead of this function.
 
     Seconds totalRunningTime = computeTotalRunningTime(time);
     double normalizedValue = normalizedAnimationValue(totalRunningTime.seconds(), m_duration, m_direction, m_iterationCount);
@@ -213,8 +259,7 @@ void Animation::apply(ApplicationResult& applicationResults, MonotonicTime time)
     if (m_iterationCount != WebCore::Animation::IterationCountInfinite && totalRunningTime.seconds() >= m_duration * m_iterationCount) {
         m_state = AnimationState::Stopped;
         m_pauseTime = 0_s;
-        if (m_fillsForwards)
-            normalizedValue = normalizedAnimationValueForFillsForwards(m_iterationCount, m_direction);
+        normalizedValue = normalizedAnimationValueForFillsForwards(m_iterationCount, m_direction);
     }
 
     applicationResults.hasRunningAnimations |= (m_state == AnimationState::Playing);
@@ -230,7 +275,7 @@ void Animation::apply(ApplicationResult& applicationResults, MonotonicTime time)
     }
     if (m_keyframes.size() == 2) {
         auto& timingFunction = timingFunctionForAnimationValue(m_keyframes.at(0), *this);
-        normalizedValue = timingFunction.transformTime(normalizedValue, m_duration);
+        normalizedValue = timingFunction.transformProgress(normalizedValue, m_duration);
         applyInternal(applicationResults, m_keyframes.at(0), m_keyframes.at(1), normalizedValue);
         return;
     }
@@ -243,7 +288,7 @@ void Animation::apply(ApplicationResult& applicationResults, MonotonicTime time)
 
         normalizedValue = (normalizedValue - from.keyTime()) / (to.keyTime() - from.keyTime());
         auto& timingFunction = timingFunctionForAnimationValue(from, *this);
-        normalizedValue = timingFunction.transformTime(normalizedValue, m_duration);
+        normalizedValue = timingFunction.transformProgress(normalizedValue, m_duration);
         applyInternal(applicationResults, from, to, normalizedValue);
         break;
     }
@@ -289,11 +334,6 @@ Seconds Animation::computeTotalRunningTime(MonotonicTime time)
     return m_totalRunningTime;
 }
 
-bool Animation::isActive() const
-{
-    return m_state != AnimationState::Stopped || m_fillsForwards;
-}
-
 void Animation::applyInternal(ApplicationResult& applicationResults, const AnimationValue& from, const AnimationValue& to, float progress)
 {
     switch (m_keyframes.property()) {
@@ -304,6 +344,9 @@ void Animation::applyInternal(ApplicationResult& applicationResults, const Anima
         applicationResults.opacity = applyOpacityAnimation((static_cast<const FloatAnimationValue&>(from).value()), (static_cast<const FloatAnimationValue&>(to).value()), progress);
         return;
     case AnimatedPropertyFilter:
+#if ENABLE(FILTERS_LEVEL_2)
+    case AnimatedPropertyWebkitBackdropFilter:
+#endif
         applicationResults.filters = applyFilterAnimation(static_cast<const FilterAnimationValue&>(from).value(), static_cast<const FilterAnimationValue&>(to).value(), progress, m_boxSize);
         return;
     default:
@@ -371,7 +414,7 @@ bool Animations::hasActiveAnimationsOfType(AnimatedPropertyID type) const
 {
     return std::any_of(m_animations.begin(), m_animations.end(),
         [&type](const Animation& animation) {
-            return animation.isActive() && animation.keyframes().property() == type;
+            return animation.keyframes().property() == type;
         });
 }
 
@@ -381,16 +424,6 @@ bool Animations::hasRunningAnimations() const
         [](const Animation& animation) {
             return animation.state() == Animation::AnimationState::Playing;
         });
-}
-
-Animations Animations::getActiveAnimations() const
-{
-    Animations active;
-    for (auto& animation : m_animations) {
-        if (animation.isActive())
-            active.add(animation);
-    }
-    return active;
 }
 
 } // namespace Nicosia

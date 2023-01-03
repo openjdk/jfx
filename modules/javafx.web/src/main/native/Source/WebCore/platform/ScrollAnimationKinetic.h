@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2016 Igalia S.L.
+ * Copyright (C) 2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,21 +28,19 @@
 
 #include "FloatPoint.h"
 #include "ScrollAnimation.h"
-#include "Timer.h"
-
-#include <wtf/Optional.h>
 
 namespace WebCore {
 
-class ScrollableArea;
+class PlatformWheelEvent;
 
-class ScrollAnimationKinetic final: public ScrollAnimation {
+class ScrollAnimationKinetic final : public ScrollAnimation {
 private:
     class PerAxisData {
     public:
-        PerAxisData(double lower, double upper, double initialPosition, double initialVelocity);
+        PerAxisData(double lower, double upper, double initialOffset, double initialVelocity);
 
-        double position() { return m_position; }
+        double offset() { return m_offset; }
+        double velocity() { return m_velocity; }
 
         bool animateScroll(Seconds timeDelta);
 
@@ -53,28 +52,40 @@ private:
         double m_coef2 { 0 };
 
         Seconds m_elapsedTime;
-        double m_position { 0 };
+        double m_offset { 0 };
         double m_velocity { 0 };
     };
 
 public:
-    ScrollAnimationKinetic(ScrollableArea&, std::function<void(FloatPoint&&)>&& notifyPositionChangedFunction);
+    ScrollAnimationKinetic(ScrollAnimationClient&);
     virtual ~ScrollAnimationKinetic();
 
-    void start(const FloatPoint& initialPosition, const FloatPoint& velocity, bool mayHScroll, bool mayVScroll);
+    bool startAnimatedScrollWithInitialVelocity(const FloatPoint& initialOffset, const FloatSize& velocity, const FloatSize& previousVelocity, bool mayHScroll, bool mayVScroll);
+    bool retargetActiveAnimation(const FloatPoint& newOffset) final;
+
+    void appendToScrollHistory(const PlatformWheelEvent&);
+    void clearScrollHistory();
+
+    FloatSize computeVelocity();
+
+    MonotonicTime startTime() { return m_startTime; }
+    FloatSize initialVelocity() { return m_initialVelocity; }
+    FloatPoint initialOffset() { return m_initialOffset; }
+
+    FloatSize accumulateVelocityFromPreviousGesture(const MonotonicTime, const FloatPoint&, const FloatSize&);
 
 private:
-    void stop() override;
-    void animationTimerFired();
+    void serviceAnimation(MonotonicTime) final;
+    String debugDescription() const final;
 
-    std::function<void(FloatPoint&&)> m_notifyPositionChangedFunction;
+    std::optional<PerAxisData> m_horizontalData;
+    std::optional<PerAxisData> m_verticalData;
 
-    Optional<PerAxisData> m_horizontalData;
-    Optional<PerAxisData> m_verticalData;
-
-    MonotonicTime m_startTime;
-    Timer m_animationTimer;
-    FloatPoint m_position;
+    Vector<PlatformWheelEvent> m_scrollHistory;
+    FloatPoint m_initialOffset;
+    FloatSize m_initialVelocity;
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_SCROLL_ANIMATION(WebCore::ScrollAnimationKinetic, type() == WebCore::ScrollAnimation::Type::Kinetic)

@@ -1,6 +1,6 @@
 /*
  * (C) 1999-2003 Lars Knoll (knoll@kde.org)
- * Copyright (C) 2004-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2020 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -25,6 +25,7 @@
 #include "CSSStyleSheet.h"
 #include "DOMWindow.h"
 #include "Document.h"
+#include "MediaFeatureNames.h"
 #include "MediaQuery.h"
 #include "MediaQueryParser.h"
 #include <wtf/NeverDestroyed.h>
@@ -66,7 +67,11 @@ Ref<MediaQuerySet> MediaQuerySet::create(const String& mediaString, MediaQueryPa
     if (mediaString.isEmpty())
         return MediaQuerySet::create();
 
-    return MediaQueryParser::parseMediaQuerySet(mediaString, context).releaseNonNull();
+    auto parsedMediaQuerySet = MediaQueryParser::parseMediaQuerySet(mediaString, context);
+    if (UNLIKELY(!parsedMediaQuerySet))
+        return MediaQuerySet::create();
+
+    return parsedMediaQuerySet.releaseNonNull();
 }
 
 MediaQuerySet::MediaQuerySet() = default;
@@ -82,7 +87,7 @@ MediaQuerySet::~MediaQuerySet() = default;
 bool MediaQuerySet::set(const String& mediaString)
 {
     auto result = create(mediaString);
-    m_queries.swap(result->m_queries);
+    m_queries = WTFMove(result->m_queries);
     return true;
 }
 
@@ -146,7 +151,7 @@ String MediaQuerySet::mediaText() const
     bool needComma = false;
     for (auto& query : m_queries) {
         if (needComma)
-            text.appendLiteral(", ");
+            text.append(", ");
         text.append(query.cssText());
         needComma = true;
     }
@@ -219,32 +224,20 @@ void MediaList::reattach(MediaQuerySet* mediaQueries)
     m_mediaQueries = mediaQueries;
 }
 
-#if ENABLE(RESOLUTION_MEDIA_QUERY)
-
 static void addResolutionWarningMessageToConsole(Document& document, const String& serializedExpression, const CSSPrimitiveValue& value)
 {
-    static NeverDestroyed<String> mediaQueryMessage(MAKE_STATIC_STRING_IMPL("Consider using 'dppx' units instead of '%replacementUnits%', as in CSS '%replacementUnits%' means dots-per-CSS-%lengthUnit%, not dots-per-physical-%lengthUnit%, so does not correspond to the actual '%replacementUnits%' of a screen. In media query expression: "));
-    static NeverDestroyed<String> mediaValueDPI(MAKE_STATIC_STRING_IMPL("dpi"));
-    static NeverDestroyed<String> mediaValueDPCM(MAKE_STATIC_STRING_IMPL("dpcm"));
-    static NeverDestroyed<String> lengthUnitInch(MAKE_STATIC_STRING_IMPL("inch"));
-    static NeverDestroyed<String> lengthUnitCentimeter(MAKE_STATIC_STRING_IMPL("centimeter"));
+    ASSERT(value.isDotsPerInch() || value.isDotsPerCentimeter());
+    auto replacementUnit = CSSPrimitiveValue::unitTypeString(value.primitiveType());
+    auto lengthUnit = value.isDotsPerInch() ? "inch" : "centimeter";
 
-    String message;
-    if (value.isDotsPerInch())
-        message = mediaQueryMessage.get().replace("%replacementUnits%", mediaValueDPI).replace("%lengthUnit%", lengthUnitInch);
-    else if (value.isDotsPerCentimeter())
-        message = mediaQueryMessage.get().replace("%replacementUnits%", mediaValueDPCM).replace("%lengthUnit%", lengthUnitCentimeter);
-    else
-        ASSERT_NOT_REACHED();
-
-    message.append(serializedExpression);
+    auto message = makeString("Consider using 'dppx' units instead of '", replacementUnit, "', as in CSS '", replacementUnit, "' means dots-per-CSS-", lengthUnit, ", not dots-per-physical-", lengthUnit, ", so does not correspond to the actual '", replacementUnit, "' of a screen. In media query expression: ", serializedExpression);
 
     document.addConsoleMessage(MessageSource::CSS, MessageLevel::Debug, message);
 }
 
 void reportMediaQueryWarningIfNeeded(Document* document, const MediaQuerySet* mediaQuerySet)
 {
-    if (!mediaQuerySet || !document)
+    if (!mediaQuerySet || !document || !document->settings().resolutionMediaFeatureEnabled())
         return;
 
     for (auto& query : mediaQuerySet->queryVector()) {
@@ -263,8 +256,6 @@ void reportMediaQueryWarningIfNeeded(Document* document, const MediaQuerySet* me
         }
     }
 }
-
-#endif
 
 TextStream& operator<<(TextStream& ts, const MediaQuerySet& querySet)
 {

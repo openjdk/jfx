@@ -34,6 +34,9 @@
 
 namespace WebCore {
 
+class SWServerWorker;
+struct WorkerFetchResult;
+
 class SWServerJobQueue {
     WTF_MAKE_FAST_ALLOCATED;
 public:
@@ -43,15 +46,15 @@ public:
 
     const ServiceWorkerJobData& firstJob() const { return m_jobQueue.first(); }
     const ServiceWorkerJobData& lastJob() const { return m_jobQueue.last(); }
-    void enqueueJob(const ServiceWorkerJobData& jobData) { m_jobQueue.append(jobData); }
+    void enqueueJob(ServiceWorkerJobData&& jobData) { m_jobQueue.append(WTFMove(jobData)); }
     size_t size() const { return m_jobQueue.size(); }
 
     void runNextJob();
 
-    void scriptFetchFinished(SWServer::Connection&, const ServiceWorkerFetchResult&);
+    void scriptFetchFinished(const ServiceWorkerJobDataIdentifier&, const WorkerFetchResult&);
     void scriptContextFailedToStart(const ServiceWorkerJobDataIdentifier&, ServiceWorkerIdentifier, const String& message);
     void scriptContextStarted(const ServiceWorkerJobDataIdentifier&, ServiceWorkerIdentifier);
-    void didFinishInstall(const ServiceWorkerJobDataIdentifier&, ServiceWorkerIdentifier, bool wasSuccessful);
+    void didFinishInstall(const ServiceWorkerJobDataIdentifier&, SWServerWorker&, bool wasSuccessful);
     void didResolveRegistrationPromise();
     void cancelJobsFromConnection(SWServerConnectionIdentifier);
     void cancelJobsFromServiceWorker(ServiceWorkerIdentifier);
@@ -70,7 +73,7 @@ private:
 
     void install(SWServerRegistration&, ServiceWorkerIdentifier);
 
-    void removeAllJobsMatching(const WTF::Function<bool(ServiceWorkerJobData&)>&);
+    void removeAllJobsMatching(const Function<bool(ServiceWorkerJobData&)>&);
 
     Deque<ServiceWorkerJobData> m_jobQueue;
 

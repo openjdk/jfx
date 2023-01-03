@@ -1,5 +1,5 @@
 // Copyright 2018 The Chromium Authors. All rights reserved.
-// Copyright (C) 2019 Apple Inc. All rights reserved.
+// Copyright (C) 2019-2021 Apple Inc. All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
@@ -49,9 +49,6 @@ namespace {
 const uint8_t uncompressedKey = 0x04;
 // https://www.w3.org/TR/webauthn/#flags
 const uint8_t makeCredentialFlags = 0b01000001; // UP and AT are set.
-// https://fidoalliance.org/specs/fido-u2f-v1.2-ps-20170411/fido-u2f-raw-message-formats-v1.2-ps-20170411.html#registration-response-message-success
-const uint8_t minSignatureLength = 71;
-const uint8_t maxSignatureLength = 73;
 // https://fidoalliance.org/specs/fido-u2f-v1.2-ps-20170411/fido-u2f-raw-message-formats-v1.2-ps-20170411.html#authentication-response-message-success
 const size_t flagIndex = 0;
 const size_t counterIndex = 1;
@@ -67,13 +64,10 @@ static Vector<uint8_t> extractECPublicKeyFromU2fRegistrationResponse(const Vecto
     if (u2fData.size() < pos + 2 * ES256FieldElementLength)
         return { };
 
-    Vector<uint8_t> x;
-    x.append(u2fData.data() + pos, ES256FieldElementLength);
+    Vector<uint8_t> x { u2fData.data() + pos, ES256FieldElementLength };
     pos += ES256FieldElementLength;
 
-    Vector<uint8_t> y;
-    y.append(u2fData.data() + pos, ES256FieldElementLength);
-
+    Vector<uint8_t> y { u2fData.data() + pos, ES256FieldElementLength };
     return encodeES256PublicKeyAsCBOR(WTFMove(x), WTFMove(y));
 }
 
@@ -87,9 +81,7 @@ static Vector<uint8_t> extractCredentialIdFromU2fRegistrationResponse(const Vect
 
     if (u2fData.size() < pos + credentialIdLength)
         return { };
-    Vector<uint8_t> credentialId;
-    credentialId.append(u2fData.data() + pos, credentialIdLength);
-    return credentialId;
+    return { u2fData.data() + pos, credentialIdLength };
 }
 
 static Vector<uint8_t> createAttestedCredentialDataFromU2fRegisterResponse(const Vector<uint8_t>& u2fData, const Vector<uint8_t>& publicKey)
@@ -127,13 +119,11 @@ static cbor::CBORValue::MapValue createFidoAttestationStatementFromU2fRegisterRe
     if (!x509Length || u2fData.size() < offset + x509Length)
         return { };
 
-    Vector<uint8_t> x509;
-    x509.append(u2fData.data() + offset, x509Length);
+    Vector<uint8_t> x509 { u2fData.data() + offset, x509Length };
     offset += x509Length;
 
-    Vector<uint8_t> signature;
-    signature.append(u2fData.data() + offset, u2fData.size() - offset);
-    if (signature.size() < minSignatureLength || signature.size() > maxSignatureLength)
+    Vector<uint8_t> signature { u2fData.data() + offset, u2fData.size() - offset };
+    if (signature.isEmpty())
         return { };
 
     cbor::CBORValue::MapValue attestationStatementMap;
@@ -147,15 +137,15 @@ static cbor::CBORValue::MapValue createFidoAttestationStatementFromU2fRegisterRe
 
 } // namespace
 
-Optional<PublicKeyCredentialData> readU2fRegisterResponse(const String& rpId, const Vector<uint8_t>& u2fData, const AttestationConveyancePreference& attestation)
+RefPtr<AuthenticatorAttestationResponse> readU2fRegisterResponse(const String& rpId, const Vector<uint8_t>& u2fData, AuthenticatorAttachment attachment, const AttestationConveyancePreference& attestation)
 {
     auto publicKey = extractECPublicKeyFromU2fRegistrationResponse(u2fData);
     if (publicKey.isEmpty())
-        return WTF::nullopt;
+        return nullptr;
 
     auto attestedCredentialData = createAttestedCredentialDataFromU2fRegisterResponse(u2fData, publicKey);
     if (attestedCredentialData.isEmpty())
-        return WTF::nullopt;
+        return nullptr;
 
     // Extract the credentialId for packing into the response data.
     auto credentialId = extractCredentialIdFromU2fRegistrationResponse(u2fData);
@@ -166,17 +156,17 @@ Optional<PublicKeyCredentialData> readU2fRegisterResponse(const String& rpId, co
 
     auto fidoAttestationStatement = createFidoAttestationStatementFromU2fRegisterResponse(u2fData, kU2fKeyHandleOffset + credentialId.size());
     if (fidoAttestationStatement.empty())
-        return WTF::nullopt;
+        return nullptr;
 
     auto attestationObject = buildAttestationObject(WTFMove(authData), "fido-u2f", WTFMove(fidoAttestationStatement), attestation);
 
-    return PublicKeyCredentialData { ArrayBuffer::create(credentialId.data(), credentialId.size()), true, nullptr, ArrayBuffer::create(attestationObject.data(), attestationObject.size()), nullptr, nullptr, nullptr, WTF::nullopt };
+    return AuthenticatorAttestationResponse::create(credentialId, attestationObject, attachment);
 }
 
-Optional<PublicKeyCredentialData> readU2fSignResponse(const String& rpId, const Vector<uint8_t>& keyHandle, const Vector<uint8_t>& u2fData)
+RefPtr<AuthenticatorAssertionResponse> readU2fSignResponse(const String& rpId, const WebCore::BufferSource& keyHandle, const Vector<uint8_t>& u2fData, AuthenticatorAttachment attachment)
 {
-    if (keyHandle.isEmpty() || u2fData.size() <= signatureIndex)
-        return WTF::nullopt;
+    if (!keyHandle.length() || u2fData.size() <= signatureIndex)
+        return nullptr;
 
     // 1 byte flags, 4 bytes counter
     auto flags = u2fData[flagIndex];
@@ -186,7 +176,10 @@ Optional<PublicKeyCredentialData> readU2fSignResponse(const String& rpId, const 
     counter += u2fData[counterIndex + 3];
     auto authData = buildAuthData(rpId, flags, counter, { });
 
-    return PublicKeyCredentialData { ArrayBuffer::create(keyHandle.data(), keyHandle.size()), false, nullptr, nullptr, ArrayBuffer::create(authData.data(), authData.size()), ArrayBuffer::create(u2fData.data() + signatureIndex, u2fData.size() - signatureIndex), nullptr, WTF::nullopt };
+    // FIXME: Find a way to remove the need of constructing a vector here.
+    Vector<uint8_t> signature { u2fData.data() + signatureIndex, u2fData.size() - signatureIndex };
+    Vector<uint8_t> keyHandleVector { keyHandle.data(), keyHandle.length() };
+    return AuthenticatorAssertionResponse::create(keyHandleVector, authData, signature, { }, attachment);
 }
 
 } // namespace fido

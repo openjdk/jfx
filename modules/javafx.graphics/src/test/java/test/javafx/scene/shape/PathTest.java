@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -31,7 +31,6 @@ import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.sg.prism.NGPath;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
-import javafx.beans.property.BooleanProperty;
 import javafx.scene.Group;
 import test.javafx.scene.NodeTest;
 import javafx.scene.Scene;
@@ -67,7 +66,7 @@ public class PathTest {
         PathElement two = new LineTo(20, 20);
         PathElement three = new MoveTo(30, 30);
 
-        List<PathElement> listOfElements = new ArrayList<PathElement>();
+        List<PathElement> listOfElements = new ArrayList<>();
         listOfElements.add(one);
         listOfElements.add(two);
         listOfElements.add(three);
@@ -79,7 +78,7 @@ public class PathTest {
     }
 
     @Test public void testBoundPropertySync_FillRule() throws Exception {
-        ObjectProperty<FillRule> v = new SimpleObjectProperty<FillRule>(FillRule.EVEN_ODD);
+        ObjectProperty<FillRule> v = new SimpleObjectProperty<>(FillRule.EVEN_ODD);
         Path path = new Path();
         path.fillRuleProperty().bind(v);
         ((Group)new Scene(new Group()).getRoot()).getChildren().add(path);

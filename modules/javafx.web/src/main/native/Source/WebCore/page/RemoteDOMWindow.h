@@ -27,14 +27,15 @@
 
 #include "AbstractDOMWindow.h"
 #include "RemoteFrame.h"
+#include <JavaScriptCore/Strong.h>
 #include <wtf/IsoMalloc.h>
 #include <wtf/TypeCasts.h>
 
 namespace JSC {
-class ExecState;
+class CallFrame;
+class JSGlobalObject;
 class JSObject;
 class JSValue;
-template<typename> class Strong;
 }
 
 namespace WebCore {
@@ -67,7 +68,7 @@ public:
     WindowProxy* top() const;
     WindowProxy* opener() const;
     WindowProxy* parent() const;
-    void postMessage(JSC::ExecState&, DOMWindow& incumbentWindow, JSC::JSValue message, const String& targetOrigin, Vector<JSC::Strong<JSC::JSObject>>&&);
+    void postMessage(JSC::JSGlobalObject&, DOMWindow& incumbentWindow, JSC::JSValue message, const String& targetOrigin, Vector<JSC::Strong<JSC::JSObject>>&&);
 
 private:
     WEBCORE_EXPORT RemoteDOMWindow(Ref<RemoteFrame>&&, GlobalWindowIdentifier&&);

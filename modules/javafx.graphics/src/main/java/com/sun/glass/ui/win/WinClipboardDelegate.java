@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,6 +28,7 @@ import com.sun.glass.ui.Clipboard;
 import com.sun.glass.ui.delegate.ClipboardDelegate;
 
 final class WinClipboardDelegate implements ClipboardDelegate {
+    @Override
     public Clipboard createClipboard(String clipboardName) {
         if (Clipboard.SYSTEM.equals(clipboardName)) {
             return new WinSystemClipboard(clipboardName);

@@ -36,37 +36,39 @@
 #include <JavaScriptCore/InspectorRuntimeAgent.h>
 
 namespace JSC {
-class ExecState;
+class CallFrame;
 }
 
 namespace WebCore {
 
+class DOMWrapperWorld;
 class Frame;
 class Page;
 class SecurityOrigin;
-typedef String ErrorString;
 
 class PageRuntimeAgent final : public Inspector::InspectorRuntimeAgent {
     WTF_MAKE_NONCOPYABLE(PageRuntimeAgent);
     WTF_MAKE_FAST_ALLOCATED;
 public:
     PageRuntimeAgent(PageAgentContext&);
-    virtual ~PageRuntimeAgent();
+    ~PageRuntimeAgent();
 
     // RuntimeBackendDispatcherHandler
-    void enable(ErrorString&);
-    void disable(ErrorString&);
-    void evaluate(ErrorString&, const String& expression, const String* objectGroup, const bool* includeCommandLineAPI, const bool* doNotPauseOnExceptionsAndMuteConsole, const int* executionContextId, const bool* returnByValue, const bool* generatePreview, const bool* saveResult, const bool* emulateUserGesture, RefPtr<Inspector::Protocol::Runtime::RemoteObject>& result, Optional<bool>& wasThrown, Optional<int>& savedResultIndex);
+    Inspector::Protocol::ErrorStringOr<void> enable();
+    Inspector::Protocol::ErrorStringOr<void> disable();
+    Inspector::Protocol::ErrorStringOr<std::tuple<Ref<Inspector::Protocol::Runtime::RemoteObject>, std::optional<bool> /* wasThrown */, std::optional<int> /* savedResultIndex */>> evaluate(const String& expression, const String& objectGroup, std::optional<bool>&& includeCommandLineAPI, std::optional<bool>&& doNotPauseOnExceptionsAndMuteConsole, std::optional<Inspector::Protocol::Runtime::ExecutionContextId>&&, std::optional<bool>&& returnByValue, std::optional<bool>&& generatePreview, std::optional<bool>&& saveResult, std::optional<bool>&& emulateUserGesture);
+    Inspector::Protocol::ErrorStringOr<std::tuple<Ref<Inspector::Protocol::Runtime::RemoteObject>, std::optional<bool> /* wasThrown */>> callFunctionOn(const Inspector::Protocol::Runtime::RemoteObjectId&, const String& expression, RefPtr<JSON::Array>&& arguments, std::optional<bool>&& doNotPauseOnExceptionsAndMuteConsole, std::optional<bool>&& returnByValue, std::optional<bool>&& generatePreview, std::optional<bool>&& emulateUserGesture);
 
     // InspectorInstrumentation
-    void didCreateMainWorldContext(Frame&);
+    void frameNavigated(Frame&);
+    void didClearWindowObjectInWorld(Frame&, DOMWrapperWorld&);
 
 private:
-    Inspector::InjectedScript injectedScriptForEval(ErrorString&, const int* executionContextId);
+    Inspector::InjectedScript injectedScriptForEval(Inspector::Protocol::ErrorString&, std::optional<Inspector::Protocol::Runtime::ExecutionContextId>&&);
     void muteConsole();
     void unmuteConsole();
     void reportExecutionContextCreation();
-    void notifyContextCreated(const String& frameId, JSC::ExecState*, SecurityOrigin*, bool isPageContext);
+    void notifyContextCreated(const Inspector::Protocol::Network::FrameId&, JSC::JSGlobalObject*, const DOMWrapperWorld&, SecurityOrigin* = nullptr);
 
     std::unique_ptr<Inspector::RuntimeFrontendDispatcher> m_frontendDispatcher;
     RefPtr<Inspector::RuntimeBackendDispatcher> m_backendDispatcher;

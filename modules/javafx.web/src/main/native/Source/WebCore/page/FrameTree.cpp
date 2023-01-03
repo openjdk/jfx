@@ -36,6 +36,12 @@
 
 namespace WebCore {
 
+FrameTree::FrameTree(Frame& thisFrame, Frame* parentFrame)
+    : m_thisFrame(thisFrame)
+    , m_parent(parentFrame)
+{
+}
+
 FrameTree::~FrameTree()
 {
     for (Frame* child = firstChild(); child; child = child->tree().nextSibling())
@@ -61,15 +67,15 @@ void FrameTree::clearName()
 
 Frame* FrameTree::parent() const
 {
-    return m_parent;
+    return m_parent.get();
 }
 
 void FrameTree::appendChild(Frame& child)
 {
     ASSERT(child.page() == m_thisFrame.page());
-    child.tree().m_parent = &m_thisFrame;
-    Frame* oldLast = m_lastChild;
-    m_lastChild = &child;
+    child.tree().m_parent = m_thisFrame;
+    WeakPtr<Frame> oldLast = m_lastChild;
+    m_lastChild = child;
 
     if (oldLast) {
         child.tree().m_previousSibling = oldLast;
@@ -84,7 +90,7 @@ void FrameTree::appendChild(Frame& child)
 
 void FrameTree::removeChild(Frame& child)
 {
-    Frame*& newLocationForPrevious = m_lastChild == &child ? m_lastChild : child.tree().m_nextSibling->tree().m_previousSibling;
+    WeakPtr<Frame>& newLocationForPrevious = m_lastChild == &child ? m_lastChild : child.tree().m_nextSibling->tree().m_previousSibling;
     RefPtr<Frame>& newLocationForNext = m_firstChild == &child ? m_firstChild : child.tree().m_previousSibling->tree().m_nextSibling;
 
     child.tree().m_parent = nullptr;
@@ -97,7 +103,7 @@ void FrameTree::removeChild(Frame& child)
 AtomString FrameTree::uniqueChildName(const AtomString& requestedName) const
 {
     // If the requested name (the frame's "name" attribute) is unique, just use that.
-    if (!requestedName.isEmpty() && !child(requestedName) && !equalIgnoringASCIICase(requestedName, "_blank"))
+    if (!requestedName.isEmpty() && !child(requestedName) && !isBlankTargetFrameName(requestedName))
         return requestedName;
 
     // The "name" attribute was not unique or absent. Generate a name based on a counter on the main frame that gets reset
@@ -188,8 +194,16 @@ unsigned FrameTree::scopedChildCount() const
 unsigned FrameTree::childCount() const
 {
     unsigned count = 0;
-    for (Frame* result = firstChild(); result; result = result->tree().nextSibling())
+    for (auto* child = firstChild(); child; child = child->tree().nextSibling())
         ++count;
+    return count;
+}
+
+unsigned FrameTree::descendantCount() const
+{
+    unsigned count = 0;
+    for (auto* child = firstChild(); child; child = child->tree().nextSibling())
+        count += 1 + child->tree().descendantCount();
     return count;
 }
 
@@ -223,18 +237,17 @@ static bool isFrameFamiliarWith(Frame& frameA, Frame& frameB)
 
 Frame* FrameTree::find(const AtomString& name, Frame& activeFrame) const
 {
-    // FIXME: _current is not part of the HTML specification.
-    if (equalIgnoringASCIICase(name, "_self") || name == "_current" || name.isEmpty())
+    if (isSelfTargetFrameName(name))
         return &m_thisFrame;
 
-    if (equalIgnoringASCIICase(name, "_top"))
+    if (isTopTargetFrameName(name))
         return &top();
 
-    if (equalIgnoringASCIICase(name, "_parent"))
+    if (isParentTargetFrameName(name))
         return parent() ? parent() : &m_thisFrame;
 
-    // Since "_blank" should never be any frame's name, the following is only an optimization.
-    if (equalIgnoringASCIICase(name, "_blank"))
+    // Since "_blank" cannot be a frame's name, this check is an optimization, not for correctness.
+    if (isBlankTargetFrameName(name))
         return nullptr;
 
     // Search subtree starting with this frame first.
@@ -250,15 +263,15 @@ Frame* FrameTree::find(const AtomString& name, Frame& activeFrame) const
     }
 
     // Search the entire tree of each of the other pages in this namespace.
-    // FIXME: Is random order OK?
     Page* page = m_thisFrame.page();
     if (!page)
         return nullptr;
 
-    for (auto* otherPage : page->group().pages()) {
-        if (otherPage == page)
+    // FIXME: These pages are searched in random order; that doesn't seem good. Maybe use order of creation?
+    for (auto& otherPage : page->group().pages()) {
+        if (&otherPage == page || otherPage.isClosing())
             continue;
-        for (auto* frame = &otherPage->mainFrame(); frame; frame = frame->tree().traverseNext()) {
+        for (auto* frame = &otherPage.mainFrame(); frame; frame = frame->tree().traverseNext()) {
             if (frame->tree().uniqueName() == name && isFrameFamiliarWith(activeFrame, *frame))
                 return frame;
         }
@@ -415,7 +428,7 @@ Frame* FrameTree::traverseNextInPostOrder(CanWrap canWrap) const
     if (m_nextSibling)
         return m_nextSibling->tree().deepFirstChild();
     if (m_parent)
-        return m_parent;
+        return m_parent.get();
     if (canWrap == CanWrap::Yes)
         return deepFirstChild();
     return nullptr;
@@ -444,6 +457,38 @@ Frame& FrameTree::top() const
     for (Frame* parent = &m_thisFrame; parent; parent = parent->tree().parent())
         frame = parent;
     return *frame;
+}
+
+ASCIILiteral blankTargetFrameName()
+{
+    return "_blank"_s;
+}
+
+// FIXME: Is it important to have this? Can't we just use the empty string everywhere this is used, instead?
+ASCIILiteral selfTargetFrameName()
+{
+    return "_self"_s;
+}
+
+bool isBlankTargetFrameName(StringView name)
+{
+    return equalIgnoringASCIICase(name, "_blank");
+}
+
+bool isParentTargetFrameName(StringView name)
+{
+    return equalIgnoringASCIICase(name, "_parent");
+}
+
+bool isSelfTargetFrameName(StringView name)
+{
+    // FIXME: Some day we should remove _current, which is not part of the HTML specification.
+    return name.isEmpty() || equalIgnoringASCIICase(name, "_self") || name == "_current";
+}
+
+bool isTopTargetFrameName(StringView name)
+{
+    return equalIgnoringASCIICase(name, "_top");
 }
 
 } // namespace WebCore

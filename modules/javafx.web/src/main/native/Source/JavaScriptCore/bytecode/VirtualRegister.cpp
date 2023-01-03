@@ -42,8 +42,8 @@ void VirtualRegister::dump(PrintStream& out) const
             out.print("codeBlock");
         else if (m_virtualRegister == CallFrameSlot::callee)
             out.print("callee");
-        else if (m_virtualRegister == CallFrameSlot::argumentCount)
-            out.print("argumentCount");
+        else if (m_virtualRegister == CallFrameSlot::argumentCountIncludingThis)
+            out.print("argumentCountIncludingThis");
 #if CPU(ADDRESS64)
         else if (!m_virtualRegister)
             out.print("callerFrame");
@@ -80,6 +80,11 @@ void VirtualRegister::dump(PrintStream& out) const
 
 VirtualRegister::VirtualRegister(RegisterID* reg)
     : VirtualRegister(reg->m_virtualRegister.m_virtualRegister)
+{
+}
+
+VirtualRegister::VirtualRegister(RefPtr<RegisterID> reg)
+    : VirtualRegister(reg.get())
 {
 }
 

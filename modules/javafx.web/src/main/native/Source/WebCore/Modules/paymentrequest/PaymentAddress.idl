@@ -25,12 +25,11 @@
 
 [
     Conditional=PAYMENT_REQUEST,
-    EnabledBySetting=PaymentRequest,
+    EnabledBySetting=PaymentRequestEnabled,
     Exposed=Window,
-    ImplementationLacksVTable,
     SecureContext
 ] interface PaymentAddress {
-    serializer = { attribute };
+    [Default] object toJSON();
     readonly attribute DOMString country;
     readonly attribute FrozenArray<DOMString> addressLine;
     readonly attribute DOMString region;

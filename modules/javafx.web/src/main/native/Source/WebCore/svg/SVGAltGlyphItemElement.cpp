@@ -19,10 +19,10 @@
 
 #include "config.h"
 
-#if ENABLE(SVG_FONTS)
 #include "SVGAltGlyphItemElement.h"
 
 #include "ElementIterator.h"
+#include "SVGElementTypeHelpers.h"
 #include "SVGGlyphRefElement.h"
 #include "SVGNames.h"
 #include <wtf/IsoMallocInlines.h>
@@ -66,5 +66,3 @@ bool SVGAltGlyphItemElement::hasValidGlyphElements(Vector<String>& glyphNames) c
 }
 
 }
-
-#endif

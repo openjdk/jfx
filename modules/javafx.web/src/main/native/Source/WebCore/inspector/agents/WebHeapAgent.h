@@ -33,7 +33,6 @@ namespace WebCore {
 
 class SendGarbageCollectionEventsTask;
 struct GarbageCollectionData;
-typedef String ErrorString;
 
 class WebHeapAgent : public Inspector::InspectorHeapAgent {
     WTF_MAKE_NONCOPYABLE(WebHeapAgent);
@@ -41,11 +40,11 @@ class WebHeapAgent : public Inspector::InspectorHeapAgent {
     friend class SendGarbageCollectionEventsTask;
 public:
     WebHeapAgent(WebAgentContext&);
-    virtual ~WebHeapAgent();
+    ~WebHeapAgent() override;
 
     // HeapBackendDispatcherHandler
-    void enable(ErrorString&) override;
-    void disable(ErrorString&) override;
+    Inspector::Protocol::ErrorStringOr<void> enable() override;
+    Inspector::Protocol::ErrorStringOr<void> disable() override;
 
 protected:
     void dispatchGarbageCollectedEvent(Inspector::Protocol::Heap::GarbageCollection::Type, Seconds startTime, Seconds endTime) final;

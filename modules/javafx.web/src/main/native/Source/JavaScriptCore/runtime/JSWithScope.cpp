@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012, 2016 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2012-2021 Apple Inc. All Rights Reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -36,18 +36,21 @@ JSWithScope* JSWithScope::create(
     VM& vm, JSGlobalObject* globalObject, JSScope* next, JSObject* object)
 {
     Structure* structure = globalObject->withScopeStructure();
-    JSWithScope* withScope = new (NotNull, allocateCell<JSWithScope>(vm.heap)) JSWithScope(vm, structure, object, next);
+    JSWithScope* withScope = new (NotNull, allocateCell<JSWithScope>(vm)) JSWithScope(vm, structure, object, next);
     withScope->finishCreation(vm);
     return withScope;
 }
 
-void JSWithScope::visitChildren(JSCell* cell, SlotVisitor& visitor)
+template<typename Visitor>
+void JSWithScope::visitChildrenImpl(JSCell* cell, Visitor& visitor)
 {
     JSWithScope* thisObject = jsCast<JSWithScope*>(cell);
     ASSERT_GC_OBJECT_INHERITS(thisObject, info());
     Base::visitChildren(thisObject, visitor);
     visitor.append(thisObject->m_object);
 }
+
+DEFINE_VISIT_CHILDREN(JSWithScope);
 
 Structure* JSWithScope::createStructure(VM& vm, JSGlobalObject* globalObject, JSValue proto)
 {

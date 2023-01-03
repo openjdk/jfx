@@ -71,35 +71,26 @@ void AccessibilityMenuList::addChildren()
     if (!cache)
         return;
 
-    AccessibilityObject* list = cache->getOrCreate(AccessibilityRole::MenuListPopup);
+    auto list = cache->create(AccessibilityRole::MenuListPopup);
     if (!list)
         return;
 
     downcast<AccessibilityMockObject>(*list).setParent(this);
     if (list->accessibilityIsIgnored()) {
-        cache->remove(list->axObjectID());
+        cache->remove(list->objectID());
         return;
     }
 
-    m_haveChildren = true;
-    m_children.append(list);
-
+    m_childrenInitialized = true;
+    addChild(list);
     list->addChildren();
-}
-
-void AccessibilityMenuList::childrenChanged()
-{
-    if (m_children.isEmpty())
-        return;
-
-    ASSERT(m_children.size() == 1);
-    m_children[0]->childrenChanged();
 }
 
 bool AccessibilityMenuList::isCollapsed() const
 {
 #if !PLATFORM(IOS_FAMILY)
-    return !static_cast<RenderMenuList*>(renderer())->popupIsVisible();
+    auto* renderer = this->renderer();
+    return !(is<RenderMenuList>(renderer) && downcast<RenderMenuList>(*renderer).popupIsVisible());
 #else
     return true;
 #endif
@@ -116,7 +107,6 @@ bool AccessibilityMenuList::canSetFocusAttribute() const
 void AccessibilityMenuList::didUpdateActiveOption(int optionIndex)
 {
     Ref<Document> document(m_renderer->document());
-    AXObjectCache* cache = document->axObjectCache();
 
     const auto& childObjects = children();
     if (!childObjects.isEmpty()) {
@@ -135,7 +125,10 @@ void AccessibilityMenuList::didUpdateActiveOption(int optionIndex)
             downcast<AccessibilityMenuListPopup>(*childObjects[0]).didUpdateActiveOption(optionIndex);
     }
 
-    cache->postNotification(this, document.ptr(), AXObjectCache::AXMenuListValueChanged, TargetElement, PostSynchronously);
+#if ENABLE(ACCESSIBILITY)
+    if (auto* cache = document->axObjectCache())
+        cache->deferMenuListValueChange(element());
+#endif
 }
 
 } // namespace WebCore

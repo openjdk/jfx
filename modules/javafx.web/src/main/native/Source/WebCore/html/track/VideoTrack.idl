@@ -24,14 +24,16 @@
  */
 
 [
-    Conditional=VIDEO_TRACK,
-    GenerateIsReachable=ImplElementRoot,
-    JSCustomMarkFunction
+    Conditional=VIDEO,
+    GenerateIsReachable,
+    Exposed=Window
 ] interface VideoTrack {
     readonly attribute DOMString id;
-    [ConditionallyReadWrite=MEDIA_SOURCE] attribute DOMString kind;
+    [SettingsConditionallyReadWrite=MediaSourceEnabled] attribute DOMString kind;
     readonly attribute DOMString label;
-    [ConditionallyReadWrite=MEDIA_SOURCE] attribute DOMString language;
+    [SettingsConditionallyReadWrite=MediaSourceEnabled] attribute DOMString language;
 
     attribute boolean selected;
+
+    [EnabledBySetting=TrackConfigurationEnabled] readonly attribute VideoTrackConfiguration configuration;
 };

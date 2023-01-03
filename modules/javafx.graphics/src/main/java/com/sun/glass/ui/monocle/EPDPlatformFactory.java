@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2019, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -72,6 +72,7 @@ class EPDPlatformFactory extends NativePlatformFactory {
 
     @Override
     protected boolean matches() {
+        @SuppressWarnings("removal")
         String fbinfo = AccessController.doPrivileged((PrivilegedAction<String>) () -> {
             String line = null;
             try (var reader = new BufferedReader(new FileReader(FB_FILE))) {

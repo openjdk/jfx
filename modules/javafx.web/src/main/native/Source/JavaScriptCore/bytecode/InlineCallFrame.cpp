@@ -26,9 +26,8 @@
 #include "config.h"
 #include "InlineCallFrame.h"
 
-#include "CallFrame.h"
 #include "CodeBlock.h"
-#include "JSCInlines.h"
+#include "JSCJSValueInlines.h"
 
 namespace JSC {
 
@@ -39,9 +38,9 @@ JSFunction* InlineCallFrame::calleeConstant() const
     return nullptr;
 }
 
-JSFunction* InlineCallFrame::calleeForCallFrame(ExecState* exec) const
+JSFunction* InlineCallFrame::calleeForCallFrame(CallFrame* callFrame) const
 {
-    return jsCast<JSFunction*>(calleeRecovery.recover(exec));
+    return jsCast<JSFunction*>(calleeRecovery.recover(callFrame));
 }
 
 CodeBlockHash InlineCallFrame::hash() const
@@ -67,22 +66,22 @@ void InlineCallFrame::dumpBriefFunctionInformation(PrintStream& out) const
 void InlineCallFrame::dumpInContext(PrintStream& out, DumpContext* context) const
 {
     out.print(briefFunctionInformation(), ":<", RawPointer(baselineCodeBlock.get()));
-    if (isStrictMode())
+    if (isInStrictContext())
         out.print(" (StrictMode)");
-    out.print(", bc#", directCaller.bytecodeIndex(), ", ", static_cast<Kind>(kind));
+    out.print(", ", directCaller.bytecodeIndex(), ", ", static_cast<Kind>(kind));
     if (isClosureCall)
         out.print(", closure call");
     else
         out.print(", known callee: ", inContext(calleeRecovery.constant(), context));
     out.print(", numArgs+this = ", argumentCountIncludingThis);
-    out.print(", numFixup = ", argumentsWithFixup.size() - argumentCountIncludingThis);
+    out.print(", numFixup = ", m_argumentsWithFixup.size() - argumentCountIncludingThis);
     out.print(", stackOffset = ", stackOffset);
     out.print(" (", virtualRegisterForLocal(0), " maps to ", virtualRegisterForLocal(0) + stackOffset, ")>");
 }
 
 void InlineCallFrame::dump(PrintStream& out) const
 {
-    dumpInContext(out, 0);
+    dumpInContext(out, nullptr);
 }
 
 } // namespace JSC

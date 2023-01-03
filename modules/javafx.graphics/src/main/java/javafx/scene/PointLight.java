@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,18 +26,25 @@
 package javafx.scene;
 
 import com.sun.javafx.scene.DirtyBits;
-import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.scene.PointLightHelper;
 import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.sg.prism.NGPointLight;
+
+import javafx.beans.property.DoubleProperty;
 import javafx.scene.paint.Color;
+import javafx.scene.paint.PhongMaterial;
 
 /**
- * Defines a point light source object. A light source that has a
- * fixed point in space and radiates light equally in all directions
- * away from itself.
+ * A light source that radiates light equally in all directions away from itself. The location of the light
+ * source is a single point in space. It is <a href="LightBase.html#Attenuation">attenuated</a> with the
+ * {@link #constantAttenuationProperty() constantAttenuation}, {@link #linearAttenuationProperty() linearAttenuation},
+ * {@link #quadraticAttenuationProperty() quadraticAttenuation}, and {@link #maxRangeProperty() maxRange} properties.
+ * <p>
+ * {@code PointLight}s can represent point-like light sources with little to no directionality. Light bulbs and candles
+ * are common light sources that can be simulated with this light type.
  *
  * @since JavaFX 8.0
+ * @see PhongMaterial
  */
 public class PointLight extends LightBase {
     static {
@@ -46,16 +53,21 @@ public class PointLight extends LightBase {
             public NGNode doCreatePeer(Node node) {
                 return ((PointLight) node).doCreatePeer();
             }
+
+            @Override
+            public void doUpdatePeer(Node node) {
+                ((PointLight) node).doUpdatePeer();
+            }
         });
     }
 
     {
-        // To initialize the class helper at the begining each constructor of this class
+        // To initialize the class helper at the beginning each constructor of this class
         PointLightHelper.initHelper(this);
     }
 
     /**
-     * Creates a new instance of {@code PointLight} class with a default Color.WHITE light source.
+     * Creates a new instance of {@code PointLight} class with a default {@code Color.WHITE} light source.
      */
     public PointLight() {
         super();
@@ -70,10 +82,141 @@ public class PointLight extends LightBase {
         super(color);
     }
 
+    /**
+     * The maximum range of this {@code PointLight}. For a pixel to be affected by this light, its distance to the
+     * light source must be less than or equal to the light's maximum range. Any negative value will be treated as 0.
+     * <p>
+     * Lower {@code maxRange} values can give better performance as pixels outside the range of the light
+     * will not require complex calculation. The attenuation formula can be used to calculate a realistic
+     * {@code maxRange} value by finding the distance where the attenuation is close enough to 0.
+     * <p>
+     * Nodes that are inside the light's range can still be excluded from the light's effect by removing them from
+     * its {@link #getScope() scope} (or including them in its {@link #getExclusionScope() exclusion scope}). If a
+     * node is known to always be outside of the light's range, it is more performant to exclude it from its scope.
+     *
+     * @defaultValue {@code Double.POSITIVE_INFINITY}
+     * @since 16
+     */
+    private DoubleProperty maxRange;
+
+    public final void setMaxRange(double value) {
+        maxRangeProperty().set(value);
+    }
+
+    private static final double DEFAULT_MAX_RANGE = NGPointLight.getDefaultMaxRange();
+
+    public final double getMaxRange() {
+        return maxRange == null ? DEFAULT_MAX_RANGE : maxRange.get();
+    }
+
+    public final DoubleProperty maxRangeProperty() {
+        if (maxRange == null) {
+            maxRange = getLightDoubleProperty("maxRange", DEFAULT_MAX_RANGE);
+        }
+        return maxRange;
+    }
+
+    /**
+     * The constant attenuation coefficient. This is the term {@code ca} in the attenuation formula:
+     * <p>
+     * {@code attn = 1 / (ca + la * dist + qa * dist^2)}
+     * <p>
+     * where {@code dist} is the distance between the light source and the pixel.
+     *
+     * @defaultValue 1
+     * @since 16
+     */
+    private DoubleProperty constantAttenuation;
+
+    public final void setConstantAttenuation(double value) {
+        constantAttenuationProperty().set(value);
+    }
+
+    private static final double DEFAULT_CONSTANT_ATTENUATION = NGPointLight.getDefaultCa();
+
+    public final double getConstantAttenuation() {
+        return constantAttenuation == null ? DEFAULT_CONSTANT_ATTENUATION : constantAttenuation.get();
+    }
+
+    public final DoubleProperty constantAttenuationProperty() {
+        if (constantAttenuation == null) {
+            constantAttenuation = getLightDoubleProperty("constantAttenuation", DEFAULT_CONSTANT_ATTENUATION);
+        }
+        return constantAttenuation;
+    }
+
+    /**
+     * The linear attenuation coefficient. This is the term {@code la} in the attenuation formula:
+     * <p>
+     * {@code attn = 1 / (ca + la * dist + qa * dist^2)}
+     * <p>
+     * where {@code dist} is the distance between the light source and the pixel.
+     *
+     * @defaultValue 0
+     * @since 16
+     */
+    private DoubleProperty linearAttenuation;
+
+    public final void setLinearAttenuation(double value) {
+        linearAttenuationProperty().set(value);
+    }
+
+    private static final double DEFAULT_LINEAR_ATTENUATION = NGPointLight.getDefaultLa();
+
+    public final double getLinearAttenuation() {
+        return linearAttenuation == null ? DEFAULT_LINEAR_ATTENUATION : linearAttenuation.get();
+    }
+
+    public final DoubleProperty linearAttenuationProperty() {
+        if (linearAttenuation == null) {
+            linearAttenuation = getLightDoubleProperty("linearAttenuation", DEFAULT_LINEAR_ATTENUATION);
+        }
+        return linearAttenuation;
+    }
+
+    /**
+     * The quadratic attenuation coefficient. This is the term {@code qa} in the attenuation formula:
+     * <p>
+     * {@code attn = 1 / (ca + la * dist + qa * dist^2)}
+     * <p>
+     * where {@code dist} is the distance between the light source and the pixel.
+     *
+     * @defaultValue 0
+     * @since 16
+     */
+    private DoubleProperty quadraticAttenuation;
+
+    public final void setQuadraticAttenuation(double value) {
+        quadraticAttenuationProperty().set(value);
+    }
+
+    private static final double DEFAULT_QUADRATIC_ATTENUATION = NGPointLight.getDefaultQa();
+
+    public final double getQuadraticAttenuation() {
+        return quadraticAttenuation == null ? DEFAULT_QUADRATIC_ATTENUATION : quadraticAttenuation.get();
+    }
+
+    public final DoubleProperty quadraticAttenuationProperty() {
+        if (quadraticAttenuation == null) {
+            quadraticAttenuation = getLightDoubleProperty("quadraticAttenuation", DEFAULT_QUADRATIC_ATTENUATION);
+        }
+        return quadraticAttenuation;
+    }
+
     /*
      * Note: This method MUST only be called via its accessor method.
      */
     private NGNode doCreatePeer() {
         return new NGPointLight();
+    }
+
+    private void doUpdatePeer() {
+        if (isDirty(DirtyBits.NODE_LIGHT)) {
+            NGPointLight peer = getPeer();
+            peer.setCa((float) getConstantAttenuation());
+            peer.setLa((float) getLinearAttenuation());
+            peer.setQa((float) getQuadraticAttenuation());
+            peer.setMaxRange((float) getMaxRange());
+        }
     }
 }

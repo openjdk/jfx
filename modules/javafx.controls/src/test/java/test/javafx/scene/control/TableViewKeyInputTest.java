@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -63,10 +63,10 @@ import org.junit.Ignore;
 import org.junit.Test;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNotSame;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
 public class TableViewKeyInputTest {
     private TableView<String> tableView;
@@ -85,7 +85,7 @@ public class TableViewKeyInputTest {
     private TableColumn<String, String> col4;
 
     @Before public void setup() {
-        tableView = new TableView<String>();
+        tableView = new TableView<>();
         sm = tableView.getSelectionModel();
         fm = tableView.getFocusModel();
 
@@ -94,11 +94,11 @@ public class TableViewKeyInputTest {
 
         tableView.getItems().setAll("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12");
 
-        col0 = new TableColumn<String, String>("col0");
-        col1 = new TableColumn<String, String>("col1");
-        col2 = new TableColumn<String, String>("col2");
-        col3 = new TableColumn<String, String>("col3");
-        col4 = new TableColumn<String, String>("col4");
+        col0 = new TableColumn<>("col0");
+        col1 = new TableColumn<>("col1");
+        col2 = new TableColumn<>("col2");
+        col3 = new TableColumn<>("col3");
+        col4 = new TableColumn<>("col4");
         tableView.getColumns().setAll(col0, col1, col2, col3, col4);
 
         keyboard = new KeyEventFirer(tableView);
@@ -183,6 +183,19 @@ public class TableViewKeyInputTest {
     /***************************************************************************
      * Tests for row-based single selection
      **************************************************************************/
+
+    @Test
+    public void testEnterOnFocusedRowDoesNotThrowNPE() {
+        tableView.setEditable(true);
+
+        assertNull(tableView.getSelectionModel().getSelectedItem());
+        assertEquals(0, tableView.getFocusModel().getFocusedCell().getRow());
+
+        // Fire an ENTER event on the focused row. This should not throw a NPE!
+        keyboard.doKeyPress(KeyCode.ENTER);
+
+        assertNotNull(tableView.getSelectionModel().getSelectedItem());
+    }
 
     @Test public void testDownArrowChangesSelection() {
         sm.clearAndSelect(0);

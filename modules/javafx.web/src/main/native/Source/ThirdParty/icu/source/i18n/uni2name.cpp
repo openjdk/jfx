@@ -60,7 +60,7 @@ UnicodeNameTransliterator::UnicodeNameTransliterator(const UnicodeNameTransliter
 /**
  * Transliterator API.
  */
-Transliterator* UnicodeNameTransliterator::clone(void) const {
+UnicodeNameTransliterator* UnicodeNameTransliterator::clone() const {
     return new UnicodeNameTransliterator(*this);
 }
 
@@ -81,7 +81,7 @@ void UnicodeNameTransliterator::handleTransliterate(Replaceable& text, UTransPos
         return;
     }
 
-    // Accomodate the longest possible name plus padding
+    // Accommodate the longest possible name plus padding
     char* buf = (char*) uprv_malloc(maxLen);
     if (buf == NULL) {
         offsets.start = offsets.limit;

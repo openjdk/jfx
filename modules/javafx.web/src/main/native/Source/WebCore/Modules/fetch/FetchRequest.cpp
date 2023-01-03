@@ -40,14 +40,14 @@
 
 namespace WebCore {
 
-static Optional<Exception> setMethod(ResourceRequest& request, const String& initMethod)
+static std::optional<Exception> setMethod(ResourceRequest& request, const String& initMethod)
 {
     if (!isValidHTTPToken(initMethod))
         return Exception { TypeError, "Method is not a valid HTTP token."_s };
     if (isForbiddenMethod(initMethod))
         return Exception { TypeError, "Method is forbidden."_s };
     request.setHTTPMethod(normalizeHTTPMethod(initMethod));
-    return WTF::nullopt;
+    return std::nullopt;
 }
 
 static ExceptionOr<String> computeReferrer(ScriptExecutionContext& context, const String& referrer)
@@ -60,7 +60,7 @@ static ExceptionOr<String> computeReferrer(ScriptExecutionContext& context, cons
     if (!referrerURL.isValid())
         return Exception { TypeError, "Referrer is not a valid URL."_s };
 
-    if (referrerURL.protocolIs("about") && referrerURL.path() == "client")
+    if (referrerURL.protocolIsAbout() && referrerURL.path() == "client")
         return "client"_str;
 
     if (!(context.securityOrigin() && context.securityOrigin()->canRequest(referrerURL)))
@@ -69,7 +69,7 @@ static ExceptionOr<String> computeReferrer(ScriptExecutionContext& context, cons
     return String { referrerURL.string() };
 }
 
-static Optional<Exception> buildOptions(FetchOptions& options, ResourceRequest& request, String& referrer, ScriptExecutionContext& context, const FetchRequest::Init& init)
+static std::optional<Exception> buildOptions(FetchOptions& options, ResourceRequest& request, String& referrer, ScriptExecutionContext& context, const FetchRequest::Init& init)
 {
     if (!init.window.isUndefinedOrNull() && !init.window.isEmpty())
         return Exception { TypeError, "Window can only be null."_s };
@@ -119,7 +119,7 @@ static Optional<Exception> buildOptions(FetchOptions& options, ResourceRequest& 
             return exception;
     }
 
-    return WTF::nullopt;
+    return std::nullopt;
 }
 
 static bool methodCanHaveBody(const ResourceRequest& request)
@@ -145,7 +145,7 @@ ExceptionOr<void> FetchRequest::initializeOptions(const Init& init)
     return { };
 }
 
-static inline Optional<Exception> processInvalidSignal(ScriptExecutionContext& context)
+static inline std::optional<Exception> processInvalidSignal(ScriptExecutionContext& context)
 {
     ASCIILiteral message { "FetchRequestInit.signal should be undefined, null or an AbortSignal object. This will throw in a future release."_s };
     context.addConsoleMessage(MessageSource::JS, MessageLevel::Warning, message);
@@ -160,16 +160,16 @@ static inline Optional<Exception> processInvalidSignal(ScriptExecutionContext& c
 ExceptionOr<void> FetchRequest::initializeWith(const String& url, Init&& init)
 {
     ASSERT(scriptExecutionContext());
-    // FIXME: Tighten the URL parsing algorithm according https://url.spec.whatwg.org/#concept-url-parser.
-    URL requestURL = scriptExecutionContext()->completeURL(url);
-    if (!requestURL.isValid() || !requestURL.user().isEmpty() || !requestURL.pass().isEmpty())
+
+    // FIXME: Tighten the URL parsing algorithm according to https://url.spec.whatwg.org/#concept-url-parser.
+    URL requestURL = scriptExecutionContext()->completeURL(url, ScriptExecutionContext::ForceUTF8::Yes);
+    if (!requestURL.isValid() || requestURL.hasCredentials())
         return Exception { TypeError, "URL is not valid or contains user credentials."_s };
 
     m_options.mode = Mode::Cors;
     m_options.credentials = Credentials::SameOrigin;
     m_referrer = "client"_s;
     m_request.setURL(requestURL);
-    m_request.setRequester(ResourceRequest::Requester::Fetch);
     m_request.setInitiatorIdentifier(scriptExecutionContext()->resourceRequestIdentifier());
 
     auto optionsResult = initializeOptions(init);
@@ -178,7 +178,7 @@ ExceptionOr<void> FetchRequest::initializeWith(const String& url, Init&& init)
 
     if (init.signal) {
         if (auto* signal = JSAbortSignal::toWrapped(scriptExecutionContext()->vm(), init.signal))
-            m_signal->follow(*signal);
+            m_signal->signalFollow(*signal);
         else if (!init.signal.isUndefinedOrNull())  {
             if (auto exception = processInvalidSignal(*scriptExecutionContext()))
                 return WTFMove(*exception);
@@ -197,6 +197,9 @@ ExceptionOr<void> FetchRequest::initializeWith(const String& url, Init&& init)
             return setBodyResult.releaseException();
     }
 
+    if (requestURL.protocolIsBlob())
+        m_requestBlobURLLifetimeExtender = requestURL;
+
     updateContentType();
     return { };
 }
@@ -204,6 +207,8 @@ ExceptionOr<void> FetchRequest::initializeWith(const String& url, Init&& init)
 ExceptionOr<void> FetchRequest::initializeWith(FetchRequest& input, Init&& init)
 {
     m_request = input.m_request;
+    m_navigationPreloadIdentifier = input.navigationPreloadIdentifier();
+
     m_options = input.m_options;
     m_referrer = input.m_referrer;
 
@@ -213,22 +218,28 @@ ExceptionOr<void> FetchRequest::initializeWith(FetchRequest& input, Init&& init)
 
     if (init.signal && !init.signal.isUndefined()) {
         if (auto* signal = JSAbortSignal::toWrapped(scriptExecutionContext()->vm(), init.signal))
-            m_signal->follow(*signal);
+            m_signal->signalFollow(*signal);
         else if (!init.signal.isNull()) {
             if (auto exception = processInvalidSignal(*scriptExecutionContext()))
                 return WTFMove(*exception);
         }
 
     } else
-        m_signal->follow(input.m_signal.get());
+        m_signal->signalFollow(input.m_signal.get());
 
-    auto fillResult = init.headers ? m_headers->fill(*init.headers) : m_headers->fill(input.headers());
-    if (fillResult.hasException())
-        return fillResult;
+    if (init.hasMembers()) {
+        auto fillResult = init.headers ? m_headers->fill(*init.headers) : m_headers->fill(input.headers());
+        if (fillResult.hasException())
+            return fillResult;
+    } else
+        m_headers->setInternalHeaders(HTTPHeaderMap { input.headers().internalHeaders() });
 
     auto setBodyResult = init.body ? setBody(WTFMove(*init.body)) : setBody(input);
     if (setBodyResult.hasException())
         return setBodyResult;
+
+    if (m_request.url().protocolIsBlob())
+        m_requestBlobURLLifetimeExtender = m_request.url();
 
     updateContentType();
     return { };
@@ -269,19 +280,27 @@ ExceptionOr<void> FetchRequest::setBody(FetchRequest& request)
 
 ExceptionOr<Ref<FetchRequest>> FetchRequest::create(ScriptExecutionContext& context, Info&& input, Init&& init)
 {
-    auto request = adoptRef(*new FetchRequest(context, WTF::nullopt, FetchHeaders::create(FetchHeaders::Guard::Request), { }, { }, { }));
+    auto request = adoptRef(*new FetchRequest(&context, std::nullopt, FetchHeaders::create(FetchHeaders::Guard::Request), { }, { }, { }));
+    request->suspendIfNeeded();
 
-    if (WTF::holds_alternative<String>(input)) {
-        auto result = request->initializeWith(WTF::get<String>(input), WTFMove(init));
+    if (std::holds_alternative<String>(input)) {
+        auto result = request->initializeWith(std::get<String>(input), WTFMove(init));
         if (result.hasException())
             return result.releaseException();
     } else {
-        auto result = request->initializeWith(*WTF::get<RefPtr<FetchRequest>>(input), WTFMove(init));
+        auto result = request->initializeWith(*std::get<RefPtr<FetchRequest>>(input), WTFMove(init));
         if (result.hasException())
             return result.releaseException();
     }
 
     return request;
+}
+
+Ref<FetchRequest> FetchRequest::create(ScriptExecutionContext& context, std::optional<FetchBody>&& body, Ref<FetchHeaders>&& headers, ResourceRequest&& request, FetchOptions&& options, String&& referrer)
+{
+    auto result = adoptRef(*new FetchRequest(&context, WTFMove(body), WTFMove(headers), WTFMove(request), WTFMove(options), WTFMove(referrer)));
+    result->suspendIfNeeded();
+    return result;
 }
 
 String FetchRequest::referrer() const
@@ -296,7 +315,7 @@ String FetchRequest::referrer() const
 const String& FetchRequest::urlString() const
 {
     if (m_requestURL.isNull())
-        m_requestURL = m_request.url();
+        m_requestURL = m_request.url().string();
     return m_requestURL;
 }
 
@@ -308,20 +327,28 @@ ResourceRequest FetchRequest::resourceRequest() const
     request.setHTTPHeaderFields(m_headers->internalHeaders());
 
     if (!isBodyNull())
-        request.setHTTPBody(body().bodyAsFormData(*scriptExecutionContext()));
+        request.setHTTPBody(body().bodyAsFormData());
 
     return request;
 }
 
-ExceptionOr<Ref<FetchRequest>> FetchRequest::clone(ScriptExecutionContext& context)
+ExceptionOr<Ref<FetchRequest>> FetchRequest::clone()
 {
     if (isDisturbedOrLocked())
         return Exception { TypeError, "Body is disturbed or locked"_s };
 
-    auto clone = adoptRef(*new FetchRequest(context, WTF::nullopt, FetchHeaders::create(m_headers.get()), ResourceRequest { m_request }, FetchOptions { m_options}, String { m_referrer }));
+    auto clone = adoptRef(*new FetchRequest(scriptExecutionContext(), std::nullopt, FetchHeaders::create(m_headers.get()), ResourceRequest { m_request }, FetchOptions { m_options }, String { m_referrer }));
+    clone->suspendIfNeeded();
     clone->cloneBody(*this);
-    clone->m_signal->follow(m_signal);
+    clone->setNavigationPreloadIdentifier(m_navigationPreloadIdentifier);
+    clone->m_signal->signalFollow(m_signal);
     return clone;
+}
+
+void FetchRequest::stop()
+{
+    m_requestBlobURLLifetimeExtender.clear();
+    FetchBodyOwner::stop();
 }
 
 const char* FetchRequest::activeDOMObjectName() const
@@ -329,11 +356,4 @@ const char* FetchRequest::activeDOMObjectName() const
     return "Request";
 }
 
-bool FetchRequest::canSuspendForDocumentSuspension() const
-{
-    // FIXME: We can probably do the same strategy as XHR.
-    return !isActive();
-}
-
 } // namespace WebCore
-

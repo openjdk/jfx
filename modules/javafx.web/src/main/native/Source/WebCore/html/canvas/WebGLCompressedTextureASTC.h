@@ -32,6 +32,7 @@
 namespace WebCore {
 
 class WebGLCompressedTextureASTC final : public WebGLExtension {
+    WTF_MAKE_ISO_ALLOCATED(WebGLCompressedTextureASTC);
 public:
     explicit WebGLCompressedTextureASTC(WebGLRenderingContextBase&);
     virtual ~WebGLCompressedTextureASTC();
@@ -39,7 +40,7 @@ public:
     ExtensionName getName() const override;
     Vector<String> getSupportedProfiles();
 
-    static bool supported(const WebGLRenderingContextBase&);
+    static bool supported(GraphicsContextGL&);
 private:
     bool m_isHDRSupported : 1;
     bool m_isLDRSupported : 1;

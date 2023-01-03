@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -40,7 +40,7 @@ import javafx.util.Callback;
  */
 public class ProgressBarTreeTableCell<S> extends TreeTableCell<S, Double> {
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Static cell factories                                                   *
      *                                                                         *
@@ -58,12 +58,12 @@ public class ProgressBarTreeTableCell<S> extends TreeTableCell<S, Double> {
      *      from 0.0 to 1.0.
      */
     public static <S> Callback<TreeTableColumn<S,Double>, TreeTableCell<S,Double>> forTreeTableColumn() {
-        return param -> new ProgressBarTreeTableCell<S>();
+        return param -> new ProgressBarTreeTableCell<>();
     }
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Fields                                                                  *
      *                                                                         *
@@ -75,7 +75,7 @@ public class ProgressBarTreeTableCell<S> extends TreeTableCell<S, Double> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
@@ -93,7 +93,7 @@ public class ProgressBarTreeTableCell<S> extends TreeTableCell<S, Double> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Public API                                                              *
      *                                                                         *

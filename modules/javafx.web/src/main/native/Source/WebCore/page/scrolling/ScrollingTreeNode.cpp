@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -39,7 +39,6 @@ ScrollingTreeNode::ScrollingTreeNode(ScrollingTree& scrollingTree, ScrollingNode
     : m_scrollingTree(scrollingTree)
     , m_nodeType(nodeType)
     , m_nodeID(nodeID)
-    , m_parent(nullptr)
 {
 }
 
@@ -47,29 +46,37 @@ ScrollingTreeNode::~ScrollingTreeNode() = default;
 
 void ScrollingTreeNode::appendChild(Ref<ScrollingTreeNode>&& childNode)
 {
+    RELEASE_ASSERT(m_scrollingTree.inCommitTreeState());
+
     childNode->setParent(this);
 
-    if (!m_children)
-        m_children = makeUnique<Vector<RefPtr<ScrollingTreeNode>>>();
-    m_children->append(WTFMove(childNode));
+    m_children.append(WTFMove(childNode));
 }
 
 void ScrollingTreeNode::removeChild(ScrollingTreeNode& node)
 {
-    if (!m_children)
-        return;
+    RELEASE_ASSERT(m_scrollingTree.inCommitTreeState());
 
-    size_t index = m_children->find(&node);
+    size_t index = m_children.findIf([&](auto& child) {
+        return &node == child.ptr();
+    });
 
     // The index will be notFound if the node to remove is a deeper-than-1-level descendant or
     // if node is the root state node.
     if (index != notFound) {
-        m_children->remove(index);
+        m_children.remove(index);
         return;
     }
 
-    for (auto& child : *m_children)
+    for (auto& child : m_children)
         child->removeChild(node);
+}
+
+void ScrollingTreeNode::removeAllChildren()
+{
+    RELEASE_ASSERT(m_scrollingTree.inCommitTreeState());
+
+    m_children.clear();
 }
 
 bool ScrollingTreeNode::isRootNode() const
@@ -77,9 +84,9 @@ bool ScrollingTreeNode::isRootNode() const
     return m_scrollingTree.rootNode() == this;
 }
 
-void ScrollingTreeNode::dumpProperties(TextStream& ts, ScrollingStateTreeAsTextBehavior behavior) const
+void ScrollingTreeNode::dumpProperties(TextStream& ts, OptionSet<ScrollingStateTreeAsTextBehavior> behavior) const
 {
-    if (behavior & ScrollingStateTreeAsTextBehaviorIncludeNodeIDs)
+    if (behavior & ScrollingStateTreeAsTextBehavior::IncludeNodeIDs)
         ts.dumpProperty("nodeID", scrollingNodeID());
 }
 
@@ -101,31 +108,14 @@ ScrollingTreeScrollingNode* ScrollingTreeNode::enclosingScrollingNodeIncludingSe
     return downcast<ScrollingTreeScrollingNode>(node);
 }
 
-void ScrollingTreeNode::dump(TextStream& ts, ScrollingStateTreeAsTextBehavior behavior) const
+void ScrollingTreeNode::dump(TextStream& ts, OptionSet<ScrollingStateTreeAsTextBehavior> behavior) const
 {
     dumpProperties(ts, behavior);
 
-    if (m_children) {
-        for (auto& child : *m_children) {
-            TextStream::GroupScope scope(ts);
-            child->dump(ts, behavior);
-        }
+    for (auto& child : m_children) {
+        TextStream::GroupScope scope(ts);
+        child->dump(ts, behavior);
     }
-}
-
-ScrollingTreeScrollingNode* ScrollingTreeNode::scrollingNodeForPoint(LayoutPoint parentPoint) const
-{
-    LayoutPoint localPoint = parentToLocalPoint(parentPoint);
-    LayoutPoint contentsPoint = localToContentsPoint(localPoint);
-
-    if (children()) {
-        for (auto iterator = children()->rbegin(), end = children()->rend(); iterator != end; iterator++) {
-            if (auto node = (**iterator).scrollingNodeForPoint(contentsPoint))
-                return node;
-        }
-    }
-
-    return nullptr;
 }
 
 } // namespace WebCore

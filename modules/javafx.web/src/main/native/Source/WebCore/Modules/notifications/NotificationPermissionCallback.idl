@@ -25,4 +25,5 @@
 
 [
     Conditional=NOTIFICATIONS,
-] callback NotificationPermissionCallback = void (NotificationPermission permission);
+    EnabledBySetting=NotificationsEnabled,
+] callback NotificationPermissionCallback = undefined (NotificationPermission permission);

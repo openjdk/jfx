@@ -23,6 +23,7 @@
 
 #include "InlineStyleSheetOwner.h"
 #include "SVGElement.h"
+#include "Timer.h"
 
 namespace WebCore {
 
@@ -58,12 +59,12 @@ private:
     virtual bool isLoading() const { return m_styleSheetOwner.isLoading(); }
     bool sheetLoaded() final { return m_styleSheetOwner.sheetLoaded(*this); }
     void startLoadingDynamicSheet() final { m_styleSheetOwner.startLoadingDynamicSheet(*this); }
-    Timer* svgLoadEventTimer() final { return &m_svgLoadEventTimer; }
+    Timer* loadEventTimer() final { return &m_loadEventTimer; }
 
     String title() const final;
 
     InlineStyleSheetOwner m_styleSheetOwner;
-    Timer m_svgLoadEventTimer;
+    Timer m_loadEventTimer;
 };
 
 } // namespace WebCore

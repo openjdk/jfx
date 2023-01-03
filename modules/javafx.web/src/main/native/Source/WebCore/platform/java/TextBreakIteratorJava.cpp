@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -145,7 +145,7 @@ TextBreakIterator* cursorMovementIterator(const UChar* string, int length)
 
 //TextBreakIterator* lineBreakIterator(const UChar* string, int length)
 //UTATODO: need to recycle staticLineBreakIterator
-TextBreakIterator* acquireLineBreakIterator(const UChar* string, int length, const AtomString& locale, const UChar* priorContext, unsigned priorContextLength)
+TextBreakIterator* acquireLineBreakIterator(const UChar* string, int length, const AtomicString& locale, const UChar* priorContext, unsigned priorContextLength)
 {
     return setUpIterator(JNI_EXPAND(LINE_ITERATOR), string, length);
 }

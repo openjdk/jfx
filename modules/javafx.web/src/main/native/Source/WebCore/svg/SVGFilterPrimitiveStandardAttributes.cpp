@@ -25,6 +25,7 @@
 
 #include "FilterEffect.h"
 #include "RenderSVGResourceFilterPrimitive.h"
+#include "SVGElementInlines.h"
 #include "SVGFilterBuilder.h"
 #include <wtf/IsoMallocInlines.h>
 #include <wtf/NeverDestroyed.h>
@@ -51,13 +52,13 @@ void SVGFilterPrimitiveStandardAttributes::parseAttribute(const QualifiedName& n
     SVGParsingError parseError = NoError;
 
     if (name == SVGNames::xAttr)
-        m_x->setBaseValInternal(SVGLengthValue::construct(LengthModeWidth, value, parseError));
+        m_x->setBaseValInternal(SVGLengthValue::construct(SVGLengthMode::Width, value, parseError));
     else if (name == SVGNames::yAttr)
-        m_y->setBaseValInternal(SVGLengthValue::construct(LengthModeHeight, value, parseError));
+        m_y->setBaseValInternal(SVGLengthValue::construct(SVGLengthMode::Height, value, parseError));
     else if (name == SVGNames::widthAttr)
-        m_width->setBaseValInternal(SVGLengthValue::construct(LengthModeWidth, value, parseError));
+        m_width->setBaseValInternal(SVGLengthValue::construct(SVGLengthMode::Width, value, parseError));
     else if (name == SVGNames::heightAttr)
-        m_height->setBaseValInternal(SVGLengthValue::construct(LengthModeHeight, value, parseError));
+        m_height->setBaseValInternal(SVGLengthValue::construct(SVGLengthMode::Height, value, parseError));
     else if (name == SVGNames::resultAttr)
         m_result->setBaseValInternal(value);
 
@@ -75,7 +76,7 @@ bool SVGFilterPrimitiveStandardAttributes::setFilterEffectAttribute(FilterEffect
 
 void SVGFilterPrimitiveStandardAttributes::svgAttributeChanged(const QualifiedName& attrName)
 {
-    if (isKnownAttribute(attrName)) {
+    if (PropertyRegistry::isKnownAttribute(attrName)) {
         InstanceInvalidationGuard guard(*this);
         invalidate();
         return;
@@ -88,25 +89,9 @@ void SVGFilterPrimitiveStandardAttributes::childrenChanged(const ChildChange& ch
 {
     SVGElement::childrenChanged(change);
 
-    if (change.source == ChildChangeSource::Parser)
+    if (change.source == ChildChange::Source::Parser)
         return;
     invalidate();
-}
-
-void SVGFilterPrimitiveStandardAttributes::setStandardAttributes(FilterEffect* filterEffect) const
-{
-    ASSERT(filterEffect);
-    if (!filterEffect)
-        return;
-
-    if (hasAttribute(SVGNames::xAttr))
-        filterEffect->setHasX(true);
-    if (hasAttribute(SVGNames::yAttr))
-        filterEffect->setHasY(true);
-    if (hasAttribute(SVGNames::widthAttr))
-        filterEffect->setHasWidth(true);
-    if (hasAttribute(SVGNames::heightAttr))
-        filterEffect->setHasHeight(true);
 }
 
 RenderPtr<RenderElement> SVGFilterPrimitiveStandardAttributes::createElementRenderer(RenderStyle&& style, const RenderTreePosition&)
@@ -127,8 +112,7 @@ void invalidateFilterPrimitiveParent(SVGElement* element)
     if (!element)
         return;
 
-    auto parent = makeRefPtr(element->parentNode());
-
+    RefPtr parent = element->parentNode();
     if (!parent)
         return;
 

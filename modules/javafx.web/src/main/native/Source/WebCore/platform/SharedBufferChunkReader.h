@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2011 Google Inc. All rights reserved.
+ * Copyright (C) 2021 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -32,40 +33,37 @@
 
 #if ENABLE(MHTML)
 
+#include "SharedBuffer.h"
 #include <wtf/Vector.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
-class SharedBuffer;
-
-class SharedBufferChunkReader {
+class WEBCORE_EXPORT SharedBufferChunkReader {
 public:
-    SharedBufferChunkReader(SharedBuffer*, const Vector<char>& separator);
-    SharedBufferChunkReader(SharedBuffer*, const char* separator);
+    SharedBufferChunkReader(FragmentedSharedBuffer*, const Vector<char>& separator);
+    SharedBufferChunkReader(FragmentedSharedBuffer*, const char* separator);
 
     void setSeparator(const Vector<char>&);
     void setSeparator(const char*);
 
     // Returns false when the end of the buffer was reached.
-    bool nextChunk(Vector<char>& data, bool includeSeparator = false);
+    bool nextChunk(Vector<uint8_t>& data, bool includeSeparator = false);
 
     // Returns a null string when the end of the buffer has been reached.
     String nextChunkAsUTF8StringWithLatin1Fallback(bool includeSeparator = false);
 
     // Reads size bytes at the current location in the buffer, without changing the buffer position.
     // Returns the number of bytes read. That number might be less than the specified size if the end of the buffer was reached.
-    size_t peek(Vector<char>&, size_t);
+    size_t peek(Vector<uint8_t>&, size_t);
 
 private:
-    SharedBuffer* m_buffer;
-    size_t m_bufferPosition;
-    const char* m_segment;
-    size_t m_segmentLength;
-    size_t m_segmentIndex;
-    bool m_reachedEndOfFile;
-    Vector<char> m_separator;
-    size_t m_separatorIndex;
+    FragmentedSharedBuffer::DataSegmentVector::const_iterator m_iteratorCurrent;
+    const FragmentedSharedBuffer::DataSegmentVector::const_iterator m_iteratorEnd;
+    const uint8_t* m_segment { nullptr };
+    size_t m_segmentIndex { 0 };
+    Vector<char> m_separator { false };
+    size_t m_separatorIndex { 0 };
 };
 
 }

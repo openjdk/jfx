@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -34,6 +34,7 @@ import javafx.animation.KeyValue;
 import javafx.animation.Timeline;
 import javafx.application.Platform;
 import javafx.beans.NamedArg;
+import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.collections.FXCollections;
@@ -53,7 +54,6 @@ import javafx.util.Duration;
 
 import com.sun.javafx.charts.Legend.LegendItem;
 import javafx.css.converter.BooleanConverter;
-import javafx.beans.property.BooleanProperty;
 import javafx.css.CssMetaData;
 import javafx.css.Styleable;
 import javafx.css.StyleableBooleanProperty;
@@ -100,14 +100,17 @@ public class AreaChart<X,Y> extends XYChart<X,Y> {
             requestChartLayout();
         }
 
+        @Override
         public Object getBean() {
             return this;
         }
 
+        @Override
         public String getName() {
             return "createSymbols";
         }
 
+        @Override
         public CssMetaData<AreaChart<?, ?>,Boolean> getCssMetaData() {
             return StyleableProperties.CREATE_SYMBOLS;
         }
@@ -161,8 +164,8 @@ public class AreaChart<X,Y> extends XYChart<X,Y> {
         final Axis<Y> ya = getYAxis();
         List<X> xData = null;
         List<Y> yData = null;
-        if(xa.isAutoRanging()) xData = new ArrayList<X>();
-        if(ya.isAutoRanging()) yData = new ArrayList<Y>();
+        if(xa.isAutoRanging()) xData = new ArrayList<>();
+        if(ya.isAutoRanging()) yData = new ArrayList<>();
         if(xData != null || yData != null) {
             for(Series<X,Y> series : getData()) {
                 for(Data<X,Y> data: series.getData()) {
@@ -369,7 +372,7 @@ public class AreaChart<X,Y> extends XYChart<X,Y> {
             seriesYAnimMultiplier.setValue(1d);
         }
         getPlotChildren().add(areaGroup);
-        List<KeyFrame> keyFrames = new ArrayList<KeyFrame>();
+        List<KeyFrame> keyFrames = new ArrayList<>();
         if (shouldAnimate()) {
             // animate in new series
             keyFrames.add(new KeyFrame(Duration.ZERO,
@@ -478,8 +481,8 @@ public class AreaChart<X,Y> extends XYChart<X,Y> {
             } else {
                 if (nextDataPoint == null) {
                     nextDataPoint = new LineTo(x, y);
-                } else if ((sortX && x <= nextDataPoint.getX()) ||
-                           (sortY && y <= nextDataPoint.getY()))
+                } else if ((sortX && x < nextDataPoint.getX()) ||
+                           (sortY && y < nextDataPoint.getY()))
                 {
                     nextDataPoint.setX(x);
                     nextDataPoint.setY(y);
@@ -555,7 +558,7 @@ public class AreaChart<X,Y> extends XYChart<X,Y> {
 
     private static class StyleableProperties {
         private static final CssMetaData<AreaChart<?,?>,Boolean> CREATE_SYMBOLS =
-            new CssMetaData<AreaChart<?,?>,Boolean>("-fx-create-symbols",
+            new CssMetaData<>("-fx-create-symbols",
                 BooleanConverter.getInstance(), Boolean.TRUE) {
 
             @Override
@@ -572,15 +575,16 @@ public class AreaChart<X,Y> extends XYChart<X,Y> {
         private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
         static {
             final List<CssMetaData<? extends Styleable, ?>> styleables =
-                new ArrayList<CssMetaData<? extends Styleable, ?>>(XYChart.getClassCssMetaData());
+                new ArrayList<>(XYChart.getClassCssMetaData());
             styleables.add(CREATE_SYMBOLS);
             STYLEABLES = Collections.unmodifiableList(styleables);
         }
     }
 
     /**
-     * @return The CssMetaData associated with this class, which may include the
-     * CssMetaData of its superclasses.
+     * Gets the {@code CssMetaData} associated with this class, which may include the
+     * {@code CssMetaData} of its superclasses.
+     * @return the {@code CssMetaData}
      * @since JavaFX 8.0
      */
     public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {

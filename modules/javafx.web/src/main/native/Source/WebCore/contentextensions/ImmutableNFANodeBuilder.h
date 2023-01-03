@@ -35,13 +35,13 @@ namespace WebCore {
 
 namespace ContentExtensions {
 
-// A ImmutableNFANodeBuilder let you build a NFA node by adding states and linking with other nodes.
-// Whe a builder is destructed, all its properties are finalized into the NFA. Using the NA with a live
-// builder results in undefined behaviors.
+// A ImmutableNFANodeBuilder let you build an NFA node by adding states and linking with other nodes.
+// When a builder is destructed, all its properties are finalized into the NFA. Using the NFA with a live
+// builder results in undefined behavior.
 template <typename CharacterType, typename ActionType>
 class ImmutableNFANodeBuilder {
     typedef ImmutableNFA<CharacterType, ActionType> TypedImmutableNFA;
-    typedef HashSet<uint32_t, DefaultHash<uint32_t>::Hash, WTF::UnsignedWithZeroKeyHashTraits<uint32_t>> TargetSet;
+    typedef HashSet<uint32_t, DefaultHash<uint32_t>, WTF::UnsignedWithZeroKeyHashTraits<uint32_t>> TargetSet;
 public:
     ImmutableNFANodeBuilder() { }
 
@@ -91,11 +91,11 @@ public:
         CharacterType first() const { return range.first; }
         CharacterType last() const { return range.last; }
         uint32_t data() const { return targetId; }
-        bool operator==(const FakeRangeIterator& other)
+        bool operator==(const FakeRangeIterator& other) const
         {
             return this->isEnd == other.isEnd;
         }
-        bool operator!=(const FakeRangeIterator& other) { return !(*this == other); }
+        bool operator!=(const FakeRangeIterator& other) const { return !(*this == other); }
         FakeRangeIterator operator++()
         {
             isEnd = true;
@@ -218,7 +218,7 @@ private:
     TypedImmutableNFA* m_immutableNFA { nullptr };
     MutableRangeList<CharacterType, TargetSet> m_ranges;
     TargetSet m_epsilonTransitionTargets;
-    HashSet<ActionType, WTF::IntHash<ActionType>, WTF::UnsignedWithZeroKeyHashTraits<ActionType>> m_actions;
+    HashSet<ActionType, IntHash<ActionType>, WTF::UnsignedWithZeroKeyHashTraits<ActionType>> m_actions;
     uint32_t m_nodeId;
     bool m_finalized { true };
 };

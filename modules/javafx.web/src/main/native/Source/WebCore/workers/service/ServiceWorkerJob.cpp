@@ -34,8 +34,11 @@
 #include "ResourceError.h"
 #include "ResourceResponse.h"
 #include "ScriptExecutionContext.h"
+#include "SecurityOrigin.h"
 #include "ServiceWorkerJobData.h"
 #include "ServiceWorkerRegistration.h"
+#include "WorkerFetchResult.h"
+#include "WorkerRunLoop.h"
 
 namespace WebCore {
 
@@ -50,6 +53,11 @@ ServiceWorkerJob::ServiceWorkerJob(ServiceWorkerJobClient& client, RefPtr<Deferr
 ServiceWorkerJob::~ServiceWorkerJob()
 {
     ASSERT(m_creationThread.ptr() == &Thread::current());
+}
+
+RefPtr<DeferredPromise> ServiceWorkerJob::takePromise()
+{
+    return WTFMove(m_promise);
 }
 
 void ServiceWorkerJob::failedWithException(const Exception& exception)
@@ -104,48 +112,51 @@ void ServiceWorkerJob::fetchScriptWithContext(ScriptExecutionContext& context, F
     options.cache = cachePolicy;
     options.redirect = FetchOptions::Redirect::Error;
     options.destination = FetchOptions::Destination::Serviceworker;
-    m_scriptLoader->loadAsynchronously(context, WTFMove(request), WTFMove(options), ContentSecurityPolicyEnforcement::DoNotEnforce, ServiceWorkersMode::None, *this);
+    options.credentials = FetchOptions::Credentials::SameOrigin;
+
+    auto source = m_jobData.workerType == WorkerType::Module ? WorkerScriptLoader::Source::ModuleScript : WorkerScriptLoader::Source::ClassicWorkerScript;
+    m_scriptLoader->loadAsynchronously(context, WTFMove(request), source, WTFMove(options), ContentSecurityPolicyEnforcement::DoNotEnforce, ServiceWorkersMode::None, *this, WorkerRunLoop::defaultMode());
 }
 
-void ServiceWorkerJob::didReceiveResponse(unsigned long, const ResourceResponse& response)
+ResourceError ServiceWorkerJob::validateServiceWorkerResponse(const ServiceWorkerJobData& jobData, const ResourceResponse& response)
+{
+    // Extract a MIME type from the response's header list. If this MIME type (ignoring parameters) is not a JavaScript MIME type, then:
+    if (!MIMETypeRegistry::isSupportedJavaScriptMIMEType(response.mimeType()))
+        return { errorDomainWebKitInternal, 0, response.url(), "MIME Type is not a JavaScript MIME type"_s };
+
+    auto serviceWorkerAllowed = response.httpHeaderField(HTTPHeaderName::ServiceWorkerAllowed);
+    String maxScopeString;
+    if (serviceWorkerAllowed.isNull()) {
+        auto path = jobData.scriptURL.path();
+        // Last part of the path is the script's filename.
+        maxScopeString = path.substring(0, path.reverseFind('/') + 1).toString();
+    } else {
+        auto maxScope = URL(jobData.scriptURL, serviceWorkerAllowed);
+        if (SecurityOrigin::create(maxScope)->isSameOriginAs(SecurityOrigin::create(jobData.scriptURL)))
+            maxScopeString = maxScope.path().toString();
+    }
+
+    auto scopeString = jobData.scopeURL.path();
+    if (maxScopeString.isNull() || !scopeString.startsWith(maxScopeString))
+        return { errorDomainWebKitInternal, 0, response.url(), "Scope URL should start with the given script URL"_s };
+
+    return { };
+}
+
+void ServiceWorkerJob::didReceiveResponse(ResourceLoaderIdentifier, const ResourceResponse& response)
 {
     ASSERT(m_creationThread.ptr() == &Thread::current());
     ASSERT(!m_completed);
     ASSERT(m_scriptLoader);
 
-    // Extract a MIME type from the response's header list. If this MIME type (ignoring parameters) is not a JavaScript MIME type, then:
-    if (!MIMETypeRegistry::isSupportedJavaScriptMIMEType(response.mimeType())) {
-        m_scriptLoader->cancel();
-        m_scriptLoader = nullptr;
-
-        // Invoke Reject Job Promise with job and "SecurityError" DOMException.
-        Exception exception { SecurityError, "MIME Type is not a JavaScript MIME type"_s };
-        // Asynchronously complete these steps with a network error.
-        ResourceError error { errorDomainWebKitInternal, 0, response.url(), "Unexpected MIME type"_s };
-        m_client.jobFailedLoadingScript(*this, WTFMove(error), WTFMove(exception));
-        return;
-    }
-
-    String serviceWorkerAllowed = response.httpHeaderField(HTTPHeaderName::ServiceWorkerAllowed);
-    String maxScopeString;
-    if (serviceWorkerAllowed.isNull()) {
-        String path = m_jobData.scriptURL.path();
-        // Last part of the path is the script's filename.
-        maxScopeString = path.substring(0, path.reverseFind('/') + 1);
-    } else {
-        auto maxScope = URL(m_jobData.scriptURL, serviceWorkerAllowed);
-        maxScopeString = maxScope.path();
-    }
-
-    String scopeString = m_jobData.scopeURL.path();
-    if (scopeString.startsWith(maxScopeString))
+    auto error = validateServiceWorkerResponse(m_jobData, response);
+    if (error.isNull())
         return;
 
     m_scriptLoader->cancel();
     m_scriptLoader = nullptr;
 
-    Exception exception { SecurityError, "Scope URL should start with the given script URL"_s };
-    ResourceError error { errorDomainWebKitInternal, 0, response.url(), "Scope URL should start with the given script URL"_s };
+    Exception exception { SecurityError, error.localizedDescription() };
     m_client.jobFailedLoadingScript(*this, WTFMove(error), WTFMove(exception));
 }
 
@@ -157,7 +168,7 @@ void ServiceWorkerJob::notifyFinished()
     auto scriptLoader = WTFMove(m_scriptLoader);
 
     if (!scriptLoader->failed()) {
-        m_client.jobFinishedLoadingScript(*this, scriptLoader->script(), scriptLoader->contentSecurityPolicy(), scriptLoader->referrerPolicy());
+        m_client.jobFinishedLoadingScript(*this, scriptLoader->fetchResult());
         return;
     }
 

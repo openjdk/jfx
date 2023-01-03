@@ -25,7 +25,6 @@
 
 #pragma once
 
-#include <wtf/Optional.h>
 #include <wtf/Vector.h>
 #include <wtf/text/WTFString.h>
 
@@ -38,11 +37,11 @@ enum class PasteboardItemPresentationStyle {
 };
 
 struct PresentationSize {
-    Optional<double> width;
-    Optional<double> height;
+    std::optional<double> width;
+    std::optional<double> height;
 
     template<class Encoder> void encode(Encoder&) const;
-    template<class Decoder> static Optional<PresentationSize> decode(Decoder&);
+    template<class Decoder> static std::optional<PresentationSize> decode(Decoder&);
 };
 
 template<class Encoder>
@@ -52,32 +51,33 @@ void PresentationSize::encode(Encoder& encoder) const
 }
 
 template<class Decoder>
-Optional<PresentationSize> PresentationSize::decode(Decoder& decoder)
+std::optional<PresentationSize> PresentationSize::decode(Decoder& decoder)
 {
     PresentationSize result;
     if (!decoder.decode(result.width))
-        return WTF::nullopt;
+        return std::nullopt;
 
     if (!decoder.decode(result.height))
-        return WTF::nullopt;
+        return std::nullopt;
 
-    return WTFMove(result);
+    return result;
 }
 
 struct PasteboardItemInfo {
     Vector<String> pathsForFileUpload;
-    Vector<String> contentTypesForFileUpload;
-    Vector<String> contentTypesByFidelity;
+    Vector<String> platformTypesForFileUpload;
+    Vector<String> platformTypesByFidelity;
     String suggestedFileName;
     PresentationSize preferredPresentationSize;
     bool isNonTextType { false };
     bool containsFileURLAndFileUploadContent { false };
+    Vector<String> webSafeTypesByFidelity;
     PasteboardItemPresentationStyle preferredPresentationStyle { PasteboardItemPresentationStyle::Unspecified };
 
     String pathForContentType(const String& type) const
     {
-        ASSERT(pathsForFileUpload.size() == contentTypesForFileUpload.size());
-        auto index = contentTypesForFileUpload.find(type);
+        ASSERT(pathsForFileUpload.size() == platformTypesForFileUpload.size());
+        auto index = platformTypesForFileUpload.find(type);
         if (index == notFound)
             return { };
 
@@ -104,10 +104,10 @@ struct PasteboardItemInfo {
 
     String contentTypeForHighestFidelityItem() const
     {
-        if (contentTypesForFileUpload.isEmpty())
+        if (platformTypesForFileUpload.isEmpty())
             return { };
 
-        return contentTypesForFileUpload.first();
+        return platformTypesForFileUpload.first();
     }
 
     String pathForHighestFidelityItem() const
@@ -119,45 +119,48 @@ struct PasteboardItemInfo {
     }
 
     template<class Encoder> void encode(Encoder&) const;
-    template<class Decoder> static Optional<PasteboardItemInfo> decode(Decoder&);
+    template<class Decoder> static std::optional<PasteboardItemInfo> decode(Decoder&);
 };
 
 template<class Encoder>
 void PasteboardItemInfo::encode(Encoder& encoder) const
 {
-    encoder << pathsForFileUpload << contentTypesForFileUpload << contentTypesByFidelity << suggestedFileName << preferredPresentationSize << isNonTextType << containsFileURLAndFileUploadContent;
-    encoder.encodeEnum(preferredPresentationStyle);
+    encoder << pathsForFileUpload << platformTypesForFileUpload << platformTypesByFidelity << suggestedFileName << preferredPresentationSize << isNonTextType << containsFileURLAndFileUploadContent << webSafeTypesByFidelity;
+    encoder << preferredPresentationStyle;
 }
 
 template<class Decoder>
-Optional<PasteboardItemInfo> PasteboardItemInfo::decode(Decoder& decoder)
+std::optional<PasteboardItemInfo> PasteboardItemInfo::decode(Decoder& decoder)
 {
     PasteboardItemInfo result;
     if (!decoder.decode(result.pathsForFileUpload))
-        return WTF::nullopt;
+        return std::nullopt;
 
-    if (!decoder.decode(result.contentTypesForFileUpload))
-        return WTF::nullopt;
+    if (!decoder.decode(result.platformTypesForFileUpload))
+        return std::nullopt;
 
-    if (!decoder.decode(result.contentTypesByFidelity))
-        return WTF::nullopt;
+    if (!decoder.decode(result.platformTypesByFidelity))
+        return std::nullopt;
 
     if (!decoder.decode(result.suggestedFileName))
-        return WTF::nullopt;
+        return std::nullopt;
 
     if (!decoder.decode(result.preferredPresentationSize))
-        return WTF::nullopt;
+        return std::nullopt;
 
     if (!decoder.decode(result.isNonTextType))
-        return WTF::nullopt;
+        return std::nullopt;
 
     if (!decoder.decode(result.containsFileURLAndFileUploadContent))
-        return WTF::nullopt;
+        return std::nullopt;
 
-    if (!decoder.decodeEnum(result.preferredPresentationStyle))
-        return WTF::nullopt;
+    if (!decoder.decode(result.webSafeTypesByFidelity))
+        return std::nullopt;
 
-    return WTFMove(result);
+    if (!decoder.decode(result.preferredPresentationStyle))
+        return std::nullopt;
+
+    return result;
 }
 
 }

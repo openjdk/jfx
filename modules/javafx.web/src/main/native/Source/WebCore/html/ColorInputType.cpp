@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2010 Google Inc. All rights reserved.
- * Copyright (C) 2015-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -38,6 +38,7 @@
 #include "CSSPropertyNames.h"
 #include "Chrome.h"
 #include "Color.h"
+#include "ColorSerialization.h"
 #include "ElementChildIterator.h"
 #include "Event.h"
 #include "HTMLDataListElement.h"
@@ -47,6 +48,7 @@
 #include "InputTypeNames.h"
 #include "RenderView.h"
 #include "ScopedEventQueue.h"
+#include "ShadowPseudoIds.h"
 #include "ShadowRoot.h"
 #include "UserGestureIndicator.h"
 
@@ -69,11 +71,11 @@ static bool isValidSimpleColor(StringView string)
 }
 
 // https://html.spec.whatwg.org/multipage/common-microsyntaxes.html#rules-for-parsing-simple-colour-values
-static Optional<RGBA32> parseSimpleColorValue(StringView string)
+static std::optional<SRGBA<uint8_t>> parseSimpleColorValue(StringView string)
 {
     if (!isValidSimpleColor(string))
-        return WTF::nullopt;
-    return makeRGB(toASCIIHexValue(string[1], string[2]), toASCIIHexValue(string[3], string[4]), toASCIIHexValue(string[5], string[6]));
+        return std::nullopt;
+    return { { toASCIIHexValue(string[1], string[2]), toASCIIHexValue(string[3], string[4]), toASCIIHexValue(string[5], string[6]) } };
 }
 
 ColorInputType::~ColorInputType()
@@ -95,13 +97,9 @@ bool ColorInputType::isKeyboardFocusable(KeyboardEvent*) const
         return false;
 
     return element()->isTextFormControlFocusable();
-#endif
+#else
     return false;
-}
-
-bool ColorInputType::isColorControl() const
-{
-    return true;
+#endif
 }
 
 bool ColorInputType::isPresentingAttachedView() const
@@ -140,16 +138,17 @@ Color ColorInputType::valueAsColor() const
 
 void ColorInputType::createShadowSubtree()
 {
+    ASSERT(needsShadowSubtree());
     ASSERT(element());
     ASSERT(element()->shadowRoot());
 
     Document& document = element()->document();
     auto wrapperElement = HTMLDivElement::create(document);
-    wrapperElement->setPseudo(AtomString("-webkit-color-swatch-wrapper", AtomString::ConstructFromLiteral));
+    wrapperElement->setPseudo(ShadowPseudoIds::webkitColorSwatchWrapper());
     auto colorSwatch = HTMLDivElement::create(document);
-    colorSwatch->setPseudo(AtomString("-webkit-color-swatch", AtomString::ConstructFromLiteral));
-    wrapperElement->appendChild(colorSwatch);
-    element()->userAgentShadowRoot()->appendChild(wrapperElement);
+    colorSwatch->setPseudo(ShadowPseudoIds::webkitColorSwatch());
+    wrapperElement->appendChild(ContainerNode::ChildChange::Source::Parser, colorSwatch);
+    element()->userAgentShadowRoot()->appendChild(ContainerNode::ChildChange::Source::Parser, wrapperElement);
 
     updateColorSwatch();
 }
@@ -164,6 +163,14 @@ void ColorInputType::setValue(const String& value, bool valueChanged, TextFieldE
     updateColorSwatch();
     if (m_chooser)
         m_chooser->setSelectedColor(valueAsColor());
+}
+
+void ColorInputType::attributeChanged(const QualifiedName& name)
+{
+    if (name == valueAttr)
+        updateColorSwatch();
+
+    InputType::attributeChanged(name);
 }
 
 void ColorInputType::handleDOMActivateEvent(Event& event)
@@ -216,7 +223,7 @@ void ColorInputType::didChooseColor(const Color& color)
     if (element()->isDisabledFormControl() || color == valueAsColor())
         return;
     EventQueueScope scope;
-    element()->setValueFromRenderer(color.serialized());
+    element()->setValueFromRenderer(serializationForHTML(color));
     updateColorSwatch();
     element()->dispatchFormControlChangeEvent();
 }
@@ -266,34 +273,15 @@ IntRect ColorInputType::elementRectRelativeToRootView() const
     return element()->document().view()->contentsToRootView(element()->renderer()->absoluteBoundingBoxRect());
 }
 
-Color ColorInputType::currentColor()
-{
-    return valueAsColor();
-}
-
-bool ColorInputType::shouldShowSuggestions() const
-{
-#if ENABLE(DATALIST_ELEMENT)
-    ASSERT(element());
-    return element()->hasAttributeWithoutSynchronization(listAttr);
-#else
-    return false;
-#endif
-}
-
 Vector<Color> ColorInputType::suggestedColors() const
 {
     Vector<Color> suggestions;
 #if ENABLE(DATALIST_ELEMENT)
     ASSERT(element());
     if (auto dataList = element()->dataList()) {
-        Ref<HTMLCollection> options = dataList->options();
-        unsigned length = options->length();
-        suggestions.reserveInitialCapacity(length);
-        for (unsigned i = 0; i != length; ++i) {
-            auto value = downcast<HTMLOptionElement>(*options->item(i)).value();
-            if (isValidSimpleColor(value))
-                suggestions.uncheckedAppend(Color(value));
+        for (auto& option : dataList->suggestions()) {
+            if (auto color = parseSimpleColorValue(option.value()))
+                suggestions.append(*color);
         }
     }
 #endif

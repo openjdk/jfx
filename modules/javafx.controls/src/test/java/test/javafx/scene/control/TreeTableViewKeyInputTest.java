@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -31,7 +31,6 @@ import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.scene.Group;
-import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.input.KeyCode;
 import java.util.List;
@@ -62,6 +61,7 @@ import org.junit.Ignore;
 import org.junit.Test;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNotSame;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
@@ -81,20 +81,20 @@ public class TreeTableViewKeyInputTest {
     private TreeTableColumn<String, String> col3;
     private TreeTableColumn<String, String> col4;
 
-    private final TreeItem<String> root = new TreeItem<String>("Root");                     // 0
-        private final TreeItem<String> child1 = new TreeItem<String>("Child 1");            // 1
-        private final TreeItem<String> child2 = new TreeItem<String>("Child 2");            // 2
-        private final TreeItem<String> child3 = new TreeItem<String>("Child 3");            // 3
-            private final TreeItem<String> subchild1 = new TreeItem<String>("Subchild 1");  // 4
-            private final TreeItem<String> subchild2 = new TreeItem<String>("Subchild 2");  // 5
-            private final TreeItem<String> subchild3 = new TreeItem<String>("Subchild 3");  // 6
-        private final TreeItem<String> child4 = new TreeItem<String>("Child 4");            // 7
-        private final TreeItem<String> child5 = new TreeItem<String>("Child 5");            // 8
-        private final TreeItem<String> child6 = new TreeItem<String>("Child 6");            // 9
-        private final TreeItem<String> child7 = new TreeItem<String>("Child 7");            // 10
-        private final TreeItem<String> child8 = new TreeItem<String>("Child 8");            // 11
-        private final TreeItem<String> child9 = new TreeItem<String>("Child 9");            // 12
-        private final TreeItem<String> child10 = new TreeItem<String>("Child 10");          // 13
+    private final TreeItem<String> root = new TreeItem<>("Root");                     // 0
+        private final TreeItem<String> child1 = new TreeItem<>("Child 1");            // 1
+        private final TreeItem<String> child2 = new TreeItem<>("Child 2");            // 2
+        private final TreeItem<String> child3 = new TreeItem<>("Child 3");            // 3
+            private final TreeItem<String> subchild1 = new TreeItem<>("Subchild 1");  // 4
+            private final TreeItem<String> subchild2 = new TreeItem<>("Subchild 2");  // 5
+            private final TreeItem<String> subchild3 = new TreeItem<>("Subchild 3");  // 6
+        private final TreeItem<String> child4 = new TreeItem<>("Child 4");            // 7
+        private final TreeItem<String> child5 = new TreeItem<>("Child 5");            // 8
+        private final TreeItem<String> child6 = new TreeItem<>("Child 6");            // 9
+        private final TreeItem<String> child7 = new TreeItem<>("Child 7");            // 10
+        private final TreeItem<String> child8 = new TreeItem<>("Child 8");            // 11
+        private final TreeItem<String> child9 = new TreeItem<>("Child 9");            // 12
+        private final TreeItem<String> child10 = new TreeItem<>("Child 10");          // 13
 
     @Before public void setup() {
         // reset tree structure
@@ -123,7 +123,7 @@ public class TreeTableViewKeyInputTest {
         child10.getChildren().clear();
         child10.setExpanded(false);
 
-        tableView = new TreeTableView<String>();
+        tableView = new TreeTableView<>();
         sm = tableView.getSelectionModel();
         fm = tableView.getFocusModel();
 
@@ -132,11 +132,11 @@ public class TreeTableViewKeyInputTest {
 
         tableView.setRoot(root);
 
-        col0 = new TreeTableColumn<String, String>("col0");
-        col1 = new TreeTableColumn<String, String>("col1");
-        col2 = new TreeTableColumn<String, String>("col2");
-        col3 = new TreeTableColumn<String, String>("col3");
-        col4 = new TreeTableColumn<String, String>("col4");
+        col0 = new TreeTableColumn<>("col0");
+        col1 = new TreeTableColumn<>("col1");
+        col2 = new TreeTableColumn<>("col2");
+        col3 = new TreeTableColumn<>("col3");
+        col4 = new TreeTableColumn<>("col4");
         tableView.getColumns().setAll(col0, col1, col2, col3, col4);
 
         keyboard = new KeyEventFirer(tableView);
@@ -241,6 +241,19 @@ public class TreeTableViewKeyInputTest {
     /***************************************************************************
      * Tests for row-based single selection
      **************************************************************************/
+
+    @Test
+    public void testEnterOnFocusedRowDoesNotThrowNPE() {
+        tableView.setEditable(true);
+
+        assertNull(tableView.getSelectionModel().getSelectedItem());
+        assertEquals(0, tableView.getFocusModel().getFocusedCell().getRow());
+
+        // Fire an ENTER event on the focused row. This should not throw a NPE!
+        keyboard.doKeyPress(KeyCode.ENTER);
+
+        assertNotNull(tableView.getSelectionModel().getSelectedItem());
+    }
 
     @Test public void testDownArrowChangesSelection() {
         sm.clearAndSelect(0);
@@ -2442,7 +2455,7 @@ public class TreeTableViewKeyInputTest {
     @Test public void test_rt32383_pageDown() {
         // this test requires a lot of data
         for (int i = 0; i < 100; i++) {
-            root.getChildren().add(new TreeItem<String>("Row " + i));
+            root.getChildren().add(new TreeItem<>("Row " + i));
         }
 
         final MultipleSelectionModel sm = tableView.getSelectionModel();
@@ -2466,7 +2479,7 @@ public class TreeTableViewKeyInputTest {
     @Test public void test_rt32383_pageUp() {
         // this test requires a lot of data
         for (int i = 0; i < 100; i++) {
-            root.getChildren().add(new TreeItem<String>("Row " + i));
+            root.getChildren().add(new TreeItem<>("Row " + i));
         }
 
         final int lastIndex = 99;
@@ -2496,7 +2509,7 @@ public class TreeTableViewKeyInputTest {
     @Test public void test_rt27710_pageDown_singleSelection_cell() {
         // this test requires a lot of data
         for (int i = 0; i < 100; i++) {
-            root.getChildren().add(new TreeItem<String>("Row " + i));
+            root.getChildren().add(new TreeItem<>("Row " + i));
         }
 
         col0.setCellValueFactory(param -> new ReadOnlyStringWrapper(param.getValue().getValue()));
@@ -2525,7 +2538,7 @@ public class TreeTableViewKeyInputTest {
     @Test public void test_rt27710_pageUp_singleSelection_cell() {
         // this test requires a lot of data
         for (int i = 0; i < 100; i++) {
-            root.getChildren().add(new TreeItem<String>("Row " + i));
+            root.getChildren().add(new TreeItem<>("Row " + i));
         }
 
         col0.setCellValueFactory(param -> new ReadOnlyStringWrapper(param.getValue().getValue()));

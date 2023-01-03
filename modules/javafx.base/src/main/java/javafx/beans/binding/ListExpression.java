@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -57,6 +57,12 @@ public abstract class ListExpression<E> implements ObservableListValue<E> {
 
     private static final ObservableList EMPTY_LIST = FXCollections.emptyObservableList();
 
+    /**
+     * Creates a default {@code ListExpression}.
+     */
+    public ListExpression() {
+    }
+
     @Override
     public ObservableList<E> getValue() {
         return get();
@@ -83,7 +89,7 @@ public abstract class ListExpression<E> implements ObservableListValue<E> {
             throw new NullPointerException("List must be specified.");
         }
         return value instanceof ListExpression ? (ListExpression<E>) value
-                : new ListBinding<E>() {
+                : new ListBinding<>() {
             {
                 super.bind(value);
             }

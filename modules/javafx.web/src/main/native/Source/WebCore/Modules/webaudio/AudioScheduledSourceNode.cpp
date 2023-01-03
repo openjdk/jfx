@@ -37,6 +37,7 @@
 #include <algorithm>
 #include <wtf/IsoMallocInlines.h>
 #include <wtf/MathExtras.h>
+#include <wtf/Scope.h>
 
 #if PLATFORM(IOS_FAMILY)
 #include "ScriptController.h"
@@ -46,21 +47,20 @@ namespace WebCore {
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(AudioScheduledSourceNode);
 
-const double AudioScheduledSourceNode::UnknownTime = -1;
-
-AudioScheduledSourceNode::AudioScheduledSourceNode(AudioContext& context, float sampleRate)
-    : AudioNode(context, sampleRate)
-    , m_endTime(UnknownTime)
+AudioScheduledSourceNode::AudioScheduledSourceNode(BaseAudioContext& context, NodeType type)
+    : AudioNode(context, type)
+    , ActiveDOMObject(context.scriptExecutionContext())
 {
 }
 
-void AudioScheduledSourceNode::updateSchedulingInfo(size_t quantumFrameSize, AudioBus& outputBus, size_t& quantumFrameOffset, size_t& nonSilentFramesToProcess)
+void AudioScheduledSourceNode::updateSchedulingInfo(size_t quantumFrameSize, AudioBus& outputBus, size_t& quantumFrameOffset, size_t& nonSilentFramesToProcess, double& startFrameOffset)
 {
     nonSilentFramesToProcess = 0;
     quantumFrameOffset = 0;
+    startFrameOffset = 0;
 
-    ASSERT(quantumFrameSize == AudioNode::ProcessingSizeInFrames);
-    if (quantumFrameSize != AudioNode::ProcessingSizeInFrames)
+    ASSERT(quantumFrameSize == AudioUtilities::renderQuantumSize);
+    if (quantumFrameSize != AudioUtilities::renderQuantumSize)
         return;
 
     double sampleRate = this->sampleRate();
@@ -71,11 +71,19 @@ void AudioScheduledSourceNode::updateSchedulingInfo(size_t quantumFrameSize, Aud
     // endFrame              : End frame for this source.
     size_t quantumStartFrame = context().currentSampleFrame();
     size_t quantumEndFrame = quantumStartFrame + quantumFrameSize;
-    size_t startFrame = AudioUtilities::timeToSampleFrame(m_startTime, sampleRate);
-    size_t endFrame = m_endTime == UnknownTime ? 0 : AudioUtilities::timeToSampleFrame(m_endTime, sampleRate);
+
+    // Round up if the start time isn't on a frame boundary so we don't start too early.
+    size_t startFrame = AudioUtilities::timeToSampleFrame(m_startTime, sampleRate, AudioUtilities::SampleFrameRounding::Up);
+    size_t endFrame = 0;
+    if (m_endTime) {
+        // The end frame is the end time rounded up because it is an exclusive upper
+        // bound of the end time. We also need to take care to handle huge end
+        // times and clamp the corresponding frame to the largest size_t value.
+        endFrame = AudioUtilities::timeToSampleFrame(*m_endTime, sampleRate, AudioUtilities::SampleFrameRounding::Up);
+    }
 
     // If we know the end time and it's already passed, then don't bother doing any more rendering this cycle.
-    if (m_endTime != UnknownTime && endFrame <= quantumStartFrame)
+    if (m_endTime && endFrame <= quantumStartFrame)
         finish();
 
     if (m_playbackState == UNSCHEDULED_STATE || m_playbackState == FINISHED_STATE || startFrame >= quantumEndFrame) {
@@ -88,7 +96,9 @@ void AudioScheduledSourceNode::updateSchedulingInfo(size_t quantumFrameSize, Aud
     if (m_playbackState == SCHEDULED_STATE) {
         // Increment the active source count only if we're transitioning from SCHEDULED_STATE to PLAYING_STATE.
         m_playbackState = PLAYING_STATE;
-        context().incrementActiveSourceCount();
+        // NOTE: startFrameOffset is usually negative, but may not be because of
+        // the rounding that may happen in computing |startFrame| above.
+        startFrameOffset = m_startTime * sampleRate - startFrame;
     }
 
     quantumFrameOffset = startFrame > quantumStartFrame ? startFrame - quantumStartFrame : 0;
@@ -111,13 +121,15 @@ void AudioScheduledSourceNode::updateSchedulingInfo(size_t quantumFrameSize, Aud
     // Handle silence after we're done playing.
     // If the end time is somewhere in the middle of this time quantum, then zero out the
     // frames from the end time to the very end of the quantum.
-    if (m_endTime != UnknownTime && endFrame >= quantumStartFrame && endFrame < quantumEndFrame) {
+    if (m_endTime && endFrame >= quantumStartFrame && endFrame < quantumEndFrame) {
         size_t zeroStartFrame = endFrame - quantumStartFrame;
         size_t framesToZero = quantumFrameSize - zeroStartFrame;
 
-        bool isSafe = zeroStartFrame < quantumFrameSize && framesToZero <= quantumFrameSize && zeroStartFrame + framesToZero <= quantumFrameSize;
-        ASSERT(isSafe);
+        ASSERT(zeroStartFrame < quantumFrameSize);
+        ASSERT(framesToZero <= quantumFrameSize);
+        ASSERT(zeroStartFrame + framesToZero <= quantumFrameSize);
 
+        bool isSafe = zeroStartFrame < quantumFrameSize && framesToZero <= quantumFrameSize && zeroStartFrame + framesToZero <= quantumFrameSize;
         if (isSafe) {
             if (framesToZero > nonSilentFramesToProcess)
                 nonSilentFramesToProcess = 0;
@@ -132,17 +144,18 @@ void AudioScheduledSourceNode::updateSchedulingInfo(size_t quantumFrameSize, Aud
     }
 }
 
-ExceptionOr<void> AudioScheduledSourceNode::start(double when)
+ExceptionOr<void> AudioScheduledSourceNode::startLater(double when)
 {
     ASSERT(isMainThread());
     ALWAYS_LOG(LOGIDENTIFIER, when);
 
-    context().nodeWillBeginPlayback();
-
     if (m_playbackState != UNSCHEDULED_STATE)
-        return Exception { InvalidStateError };
+        return Exception { InvalidStateError, "Cannot call start() more than once"_s };
+
     if (!std::isfinite(when) || when < 0)
-        return Exception { InvalidStateError };
+        return Exception { RangeError, "when value should be positive"_s };
+
+    context().sourceNodeWillBeginPlayback(*this);
 
     m_startTime = when;
     m_playbackState = SCHEDULED_STATE;
@@ -150,60 +163,47 @@ ExceptionOr<void> AudioScheduledSourceNode::start(double when)
     return { };
 }
 
-ExceptionOr<void> AudioScheduledSourceNode::stop(double when)
+ExceptionOr<void> AudioScheduledSourceNode::stopLater(double when)
 {
     ASSERT(isMainThread());
     ALWAYS_LOG(LOGIDENTIFIER, when);
 
-    if (m_playbackState == UNSCHEDULED_STATE || m_endTime != UnknownTime)
-        return Exception { InvalidStateError };
+    if (m_playbackState == UNSCHEDULED_STATE)
+        return Exception { InvalidStateError, "cannot call stop without calling start first."_s };
+
     if (!std::isfinite(when) || when < 0)
-        return Exception { InvalidStateError };
+        return Exception { RangeError, "when value should be positive"_s };
 
     m_endTime = when;
 
     return { };
 }
 
+bool AudioScheduledSourceNode::virtualHasPendingActivity() const
+{
+    return m_hasEndedEventListener && m_playbackState != FINISHED_STATE && !isMarkedForDeletion() && !context().isClosed();
+}
+
+void AudioScheduledSourceNode::eventListenersDidChange()
+{
+    m_hasEndedEventListener = hasEventListeners(eventNames().endedEvent);
+}
+
 void AudioScheduledSourceNode::finish()
 {
-    if (m_playbackState != FINISHED_STATE) {
-        // Let the context dereference this AudioNode.
-        context().notifyNodeFinishedProcessing(this);
-        m_playbackState = FINISHED_STATE;
-        context().decrementActiveSourceCount();
-    }
+    ASSERT(!hasFinished());
+    // Let the context dereference this AudioNode.
+    context().sourceNodeDidFinishPlayback(*this);
+    m_playbackState = FINISHED_STATE;
 
-    if (!m_hasEndedListener)
-        return;
-
-    context().postTask([this, protectedThis = makeRef(*this)] {
+    // Heap allocations are forbidden on the audio thread for performance reasons so we need to
+    // explicitly allow the following allocation(s).
+    DisableMallocRestrictionsForCurrentThreadScope disableMallocRestrictions;
+    callOnMainThread([this, protectedThis = Ref { *this }, pendingActivity = makePendingActivity(*this)] {
         if (context().isStopped())
             return;
         this->dispatchEvent(Event::create(eventNames().endedEvent, Event::CanBubble::No, Event::IsCancelable::No));
     });
-}
-
-bool AudioScheduledSourceNode::addEventListener(const AtomString& eventType, Ref<EventListener>&& listener, const AddEventListenerOptions& options)
-{
-    bool success = AudioNode::addEventListener(eventType, WTFMove(listener), options);
-    if (success && eventType == eventNames().endedEvent)
-        m_hasEndedListener = hasEventListeners(eventNames().endedEvent);
-    return success;
-}
-
-bool AudioScheduledSourceNode::removeEventListener(const AtomString& eventType, EventListener& listener, const ListenerOptions& options)
-{
-    bool success = AudioNode::removeEventListener(eventType, listener, options);
-    if (success && eventType == eventNames().endedEvent)
-        m_hasEndedListener = hasEventListeners(eventNames().endedEvent);
-    return success;
-}
-
-void AudioScheduledSourceNode::removeAllEventListeners()
-{
-    m_hasEndedListener = false;
-    AudioNode::removeAllEventListeners();
 }
 
 } // namespace WebCore

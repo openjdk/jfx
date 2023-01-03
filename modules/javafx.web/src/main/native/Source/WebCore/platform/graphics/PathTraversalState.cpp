@@ -21,6 +21,7 @@
 #include "config.h"
 #include "PathTraversalState.h"
 
+#include "GeometryUtilities.h"
 #include <wtf/MathExtras.h>
 #include <wtf/Vector.h>
 
@@ -28,16 +29,9 @@ namespace WebCore {
 
 static const float kPathSegmentLengthTolerance = 0.00001f;
 
-static inline FloatPoint midPoint(const FloatPoint& first, const FloatPoint& second)
-{
-    return FloatPoint((first.x() + second.x()) / 2.0f, (first.y() + second.y()) / 2.0f);
-}
-
 static inline float distanceLine(const FloatPoint& start, const FloatPoint& end)
 {
-    float dx = end.x() - start.x();
-    float dy = end.y() - start.y();
-    return sqrtf(dx * dx + dy * dy);
+    return std::hypot(end.x() - start.x(), end.y() - start.y());
 }
 
 struct QuadraticBezier {
@@ -243,22 +237,22 @@ bool PathTraversalState::finalizeAppendPathElement()
     return m_success;
 }
 
-bool PathTraversalState::appendPathElement(PathElementType type, const FloatPoint* points)
+bool PathTraversalState::appendPathElement(PathElement::Type type, const FloatPoint* points)
 {
     switch (type) {
-    case PathElementMoveToPoint:
+    case PathElement::Type::MoveToPoint:
         moveTo(points[0]);
         break;
-    case PathElementAddLineToPoint:
+    case PathElement::Type::AddLineToPoint:
         lineTo(points[0]);
         break;
-    case PathElementAddQuadCurveToPoint:
+    case PathElement::Type::AddQuadCurveToPoint:
         quadraticBezierTo(points[0], points[1]);
         break;
-    case PathElementAddCurveToPoint:
+    case PathElement::Type::AddCurveToPoint:
         cubicBezierTo(points[0], points[1], points[2]);
         break;
-    case PathElementCloseSubpath:
+    case PathElement::Type::CloseSubpath:
         closeSubpath();
         break;
     }
@@ -266,7 +260,7 @@ bool PathTraversalState::appendPathElement(PathElementType type, const FloatPoin
     return finalizeAppendPathElement();
 }
 
-bool PathTraversalState::processPathElement(PathElementType type, const FloatPoint* points)
+bool PathTraversalState::processPathElement(PathElement::Type type, const FloatPoint* points)
 {
     if (m_success)
         return true;

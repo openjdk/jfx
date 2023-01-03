@@ -27,6 +27,8 @@
 
 #include "IsoHeapImpl.h"
 
+#if !BUSE(LIBPAS)
+
 namespace bmalloc {
 
 template<typename Config>
@@ -46,5 +48,12 @@ void IsoTLSAllocatorEntry<Config>::construct(void* dst)
     new (dst) IsoAllocator<Config>(m_heap);
 }
 
+template<typename Config>
+void IsoTLSAllocatorEntry<Config>::scavenge(void* entry)
+{
+    static_cast<IsoAllocator<Config>*>(entry)->scavenge(m_heap);
+}
+
 } // namespace bmalloc
 
+#endif

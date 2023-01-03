@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,13 +27,10 @@
 #include "config.h"
 #include "JSWorkletGlobalScopeBase.h"
 
-#if ENABLE(CSS_PAINTING_API)
-
 #include "DOMWrapperWorld.h"
-#include "JSDOMGlobalObjectTask.h"
-#include "JSWorkletGlobalScope.h"
+#include "JSDOMGuardedObject.h"
+#include "WorkerOrWorkletScriptController.h"
 #include "WorkletGlobalScope.h"
-#include "WorkletScriptController.h"
 #include <JavaScriptCore/JSCInlines.h>
 #include <JavaScriptCore/JSCJSValueInlines.h>
 #include <wtf/Language.h>
@@ -48,17 +45,27 @@ const GlobalObjectMethodTable JSWorkletGlobalScopeBase::s_globalObjectMethodTabl
     &supportsRichSourceInfo,
     &shouldInterruptScript,
     &javaScriptRuntimeFlags,
-    nullptr, // queueTaskToEventLoop
+    nullptr, // queueMicrotaskToEventLoop
     &shouldInterruptScriptBeforeTimeout,
-    nullptr, // moduleLoaderImportModule
-    nullptr, // moduleLoaderResolve
-    nullptr, // moduleLoaderFetch
-    nullptr, // moduleLoaderCreateImportMetaProperties
-    nullptr, // moduleLoaderEvaluate
+    &moduleLoaderImportModule,
+    &moduleLoaderResolve,
+    &moduleLoaderFetch,
+    &moduleLoaderCreateImportMetaProperties,
+    &moduleLoaderEvaluate,
     &promiseRejectionTracker,
-    &defaultLanguage,
-    nullptr, // compileStreaming
-    nullptr, // instantiateStreaming
+    &reportUncaughtExceptionAtEventLoop,
+    &currentScriptExecutionOwner,
+    &scriptExecutionStatus,
+    &reportViolationForUnsafeEval,
+    [] { return defaultLanguage(); },
+#if ENABLE(WEBASSEMBLY)
+    &compileStreaming,
+    &instantiateStreaming,
+#else
+    nullptr,
+    nullptr,
+#endif
+    deriveShadowRealmGlobalObject,
 };
 
 JSWorkletGlobalScopeBase::JSWorkletGlobalScopeBase(JSC::VM& vm, JSC::Structure* structure, RefPtr<WorkletGlobalScope>&& impl)
@@ -75,20 +82,16 @@ void JSWorkletGlobalScopeBase::finishCreation(VM& vm, JSProxy* proxy)
     ASSERT(inherits(vm, info()));
 }
 
-void JSWorkletGlobalScopeBase::clearDOMGuardedObjects()
-{
-    auto guardedObjects = m_guardedObjects;
-    for (auto& guarded : guardedObjects)
-        guarded->clear();
-}
-
-void JSWorkletGlobalScopeBase::visitChildren(JSCell* cell, SlotVisitor& visitor)
+template<typename Visitor>
+void JSWorkletGlobalScopeBase::visitChildrenImpl(JSCell* cell, Visitor& visitor)
 {
     auto* thisObject = jsCast<JSWorkletGlobalScopeBase*>(cell);
     ASSERT_GC_OBJECT_INHERITS(thisObject, info());
     Base::visitChildren(thisObject, visitor);
     visitor.append(thisObject->m_proxy);
 }
+
+DEFINE_VISIT_CHILDREN(JSWorkletGlobalScopeBase);
 
 void JSWorkletGlobalScopeBase::destroy(JSCell* cell)
 {
@@ -98,6 +101,17 @@ void JSWorkletGlobalScopeBase::destroy(JSCell* cell)
 ScriptExecutionContext* JSWorkletGlobalScopeBase::scriptExecutionContext() const
 {
     return m_wrapped.get();
+}
+
+JSC::ScriptExecutionStatus JSWorkletGlobalScopeBase::scriptExecutionStatus(JSC::JSGlobalObject* globalObject, JSC::JSObject* owner)
+{
+    ASSERT_UNUSED(owner, globalObject == owner);
+    return jsCast<JSWorkletGlobalScopeBase*>(globalObject)->scriptExecutionContext()->jscScriptExecutionStatus();
+}
+
+void JSWorkletGlobalScopeBase::reportViolationForUnsafeEval(JSC::JSGlobalObject* globalObject, JSC::JSString* source)
+{
+    return JSGlobalObject::reportViolationForUnsafeEval(globalObject, source);
 }
 
 bool JSWorkletGlobalScopeBase::supportsRichSourceInfo(const JSGlobalObject* object)
@@ -121,32 +135,19 @@ RuntimeFlags JSWorkletGlobalScopeBase::javaScriptRuntimeFlags(const JSGlobalObje
     return thisObject->m_wrapped->jsRuntimeFlags();
 }
 
-JSValue toJS(ExecState* exec, JSDOMGlobalObject*, WorkletGlobalScope& workletGlobalScope)
+JSValue toJS(JSGlobalObject* lexicalGlobalObject, JSDOMGlobalObject*, WorkletGlobalScope& workletGlobalScope)
 {
-    return toJS(exec, workletGlobalScope);
+    return toJS(lexicalGlobalObject, workletGlobalScope);
 }
 
-JSValue toJS(ExecState*, WorkletGlobalScope& workletGlobalScope)
+JSValue toJS(JSGlobalObject*, WorkletGlobalScope& workletGlobalScope)
 {
     if (!workletGlobalScope.script())
         return jsUndefined();
-    auto* contextWrapper = workletGlobalScope.script()->workletGlobalScopeWrapper();
+    auto* contextWrapper = workletGlobalScope.script()->globalScopeWrapper();
     if (!contextWrapper)
         return jsUndefined();
-    return contextWrapper->proxy();
-}
-
-JSWorkletGlobalScope* toJSWorkletGlobalScope(VM& vm, JSValue value)
-{
-    if (!value.isObject())
-        return nullptr;
-    auto* classInfo = asObject(value)->classInfo(vm);
-
-    if (classInfo == JSProxy::info())
-        return jsDynamicCast<JSWorkletGlobalScope*>(vm, jsCast<JSProxy*>(asObject(value))->target());
-
-    return nullptr;
+    return &contextWrapper->proxy();
 }
 
 } // namespace WebCore
-#endif

@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2013 Adobe Systems Incorporated. All rights reserved.
+ * Copyright (C) 2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -35,11 +36,12 @@
 
 namespace WebCore {
 
-class CachedImage;
 class FilterSubimageObserverProxy;
 class RenderElement;
-class Document;
-class StyleResolver;
+
+namespace Style {
+class BuilderState;
+}
 
 class CSSFilterImageValue final : public CSSImageGeneratorValue {
     friend class FilterSubimageObserverProxy;
@@ -53,29 +55,26 @@ public:
 
     String customCSSText() const;
 
-    RefPtr<Image> image(RenderElement*, const FloatSize&);
+    RefPtr<Image> image(RenderElement&, const FloatSize&);
     bool isFixedSize() const { return true; }
-    FloatSize fixedSize(const RenderElement*);
+    FloatSize fixedSize(const RenderElement&);
 
     bool isPending() const;
     bool knownToBeOpaque(const RenderElement&) const;
 
     void loadSubimages(CachedResourceLoader&, const ResourceLoaderOptions&);
 
-    bool traverseSubresources(const WTF::Function<bool (const CachedResource&)>& handler) const;
+    bool traverseSubresources(const Function<bool(const CachedResource&)>& handler) const;
 
     bool equals(const CSSFilterImageValue&) const;
 
     bool equalInputImages(const CSSFilterImageValue&) const;
 
-    void createFilterOperations(StyleResolver*);
-
     const FilterOperations& filterOperations() const { return m_filterOperations; }
-    void setFilterOperations(const FilterOperations& filterOperations)
-    {
-        m_filterOperations = filterOperations;
-    }
+    void setFilterOperations(const FilterOperations& filterOperations) { m_filterOperations = filterOperations; }
     CachedImage* cachedImage() const { return m_cachedImage.get(); }
+
+    Ref<CSSFilterImageValue> valueWithStylesResolved(Style::BuilderState&);
 
 private:
     CSSFilterImageValue(Ref<CSSValue>&& imageValue, Ref<CSSValue>&& filterValue)
@@ -103,6 +102,7 @@ private:
     };
 
     void filterImageChanged(const IntRect&);
+    void createFilterOperations(Style::BuilderState&);
 
     Ref<CSSValue> m_imageValue;
     Ref<CSSValue> m_filterValue;

@@ -24,6 +24,7 @@
 #include "Document.h"
 #include "SVGAnimateMotionElement.h"
 #include "SVGDocumentExtensions.h"
+#include "SVGElementTypeHelpers.h"
 #include "SVGNames.h"
 #include "SVGPathElement.h"
 #include <wtf/IsoMallocInlines.h>
@@ -34,7 +35,6 @@ WTF_MAKE_ISO_ALLOCATED_IMPL(SVGMPathElement);
 
 inline SVGMPathElement::SVGMPathElement(const QualifiedName& tagName, Document& document)
     : SVGElement(tagName, document)
-    , SVGExternalResourcesRequired(this)
     , SVGURIReference(this)
 {
     ASSERT(hasTagName(SVGNames::mpathTag));
@@ -66,18 +66,15 @@ void SVGMPathElement::buildPendingResource()
             document().accessSVGExtensions().addPendingResource(target.identifier, *this);
             ASSERT(hasPendingResources());
         }
-    } else if (is<SVGElement>(*target.element)) {
-        // Register us with the target in the dependencies map. Any change of hrefElement
-        // that leads to relayout/repainting now informs us, so we can react to it.
-        document().accessSVGExtensions().addElementReferencingTarget(*this, downcast<SVGElement>(*target.element));
-    }
+    } else if (is<SVGElement>(*target.element))
+        downcast<SVGElement>(*target.element).addReferencingElement(*this);
 
     targetPathChanged();
 }
 
 void SVGMPathElement::clearResourceReferences()
 {
-    document().accessSVGExtensions().removeAllTargetReferencesForElement(*this);
+    removeElementReference();
 }
 
 Node::InsertedIntoAncestorResult SVGMPathElement::insertedIntoAncestor(InsertionType insertionType, ContainerNode& parentOfInsertedTree)
@@ -105,7 +102,6 @@ void SVGMPathElement::parseAttribute(const QualifiedName& name, const AtomString
 {
     SVGElement::parseAttribute(name, value);
     SVGURIReference::parseAttribute(name, value);
-    SVGExternalResourcesRequired::parseAttribute(name, value);
 }
 
 void SVGMPathElement::svgAttributeChanged(const QualifiedName& attrName)
@@ -117,7 +113,6 @@ void SVGMPathElement::svgAttributeChanged(const QualifiedName& attrName)
     }
 
     SVGElement::svgAttributeChanged(attrName);
-    SVGExternalResourcesRequired::svgAttributeChanged(attrName);
 }
 
 RefPtr<SVGPathElement> SVGMPathElement::pathElement()

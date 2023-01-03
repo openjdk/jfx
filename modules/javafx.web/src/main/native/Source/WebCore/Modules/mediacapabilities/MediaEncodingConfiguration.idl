@@ -24,9 +24,8 @@
  */
 
 [
-    EnabledBySetting=MediaCapabilities,
+    EnabledBySetting=MediaCapabilitiesEnabled,
     JSGenerateToJSObject,
-]
-dictionary MediaEncodingConfiguration : MediaConfiguration {
+] dictionary MediaEncodingConfiguration : MediaConfiguration {
   required MediaEncodingType type;
 };

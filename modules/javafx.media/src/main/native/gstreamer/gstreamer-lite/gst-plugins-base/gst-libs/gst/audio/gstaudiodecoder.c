@@ -142,7 +142,8 @@ enum
   PROP_0,
   PROP_LATENCY,
   PROP_TOLERANCE,
-  PROP_PLC
+  PROP_PLC,
+  PROP_MAX_ERRORS
 };
 
 #define DEFAULT_LATENCY    0
@@ -150,6 +151,7 @@ enum
 #define DEFAULT_PLC        FALSE
 #define DEFAULT_DRAINABLE  TRUE
 #define DEFAULT_NEEDS_FORMAT  FALSE
+#define DEFAULT_MAX_ERRORS GST_AUDIO_DECODER_MAX_ERRORS
 
 typedef struct _GstAudioDecoderContext
 {
@@ -174,7 +176,6 @@ typedef struct _GstAudioDecoderContext
   /* output */
   gboolean do_plc;
   gboolean do_estimate_rate;
-  gint max_errors;
   GstCaps *allocation_caps;
   /* MT-protected (with LOCK) */
   GstClockTime min_latency;
@@ -214,6 +215,10 @@ struct _GstAudioDecoderPrivate
   gboolean force;
   /* input_segment are output_segment identical */
   gboolean in_out_segment_sync;
+  /* TRUE if we have an active set of instant rate flags */
+  gboolean decode_flags_override;
+  GstSegmentFlags decode_flags;
+
   /* expecting the buffer with DISCONT flag */
   gboolean expecting_discont_buf;
 
@@ -229,6 +234,8 @@ struct _GstAudioDecoderPrivate
   guint sync_flush;
   /* error count */
   gint error_count;
+  /* max errors */
+  gint max_errors;
 
   /* upstream stream tags (global tags are passed through as-is) */
   GstTagList *upstream_tags;
@@ -266,6 +273,10 @@ struct _GstAudioDecoderPrivate
   /* flags */
   gboolean use_default_pad_acceptcaps;
 };
+
+/* cached quark to avoid contention on the global quark table lock */
+#define META_TAG_AUDIO meta_tag_audio_quark
+static GQuark meta_tag_audio_quark;
 
 static void gst_audio_decoder_finalize (GObject * object);
 static void gst_audio_decoder_set_property (GObject * object,
@@ -327,7 +338,7 @@ static void gst_audio_decoder_init (GstAudioDecoder * dec,
 GType
 gst_audio_decoder_get_type (void)
 {
-  static volatile gsize audio_decoder_type = 0;
+  static gsize audio_decoder_type = 0;
 
   if (g_once_init_enter (&audio_decoder_type)) {
     GType _type;
@@ -404,6 +415,20 @@ gst_audio_decoder_class_init (GstAudioDecoderClass * klass)
           "Perform packet loss concealment (if supported)",
           DEFAULT_PLC, G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
 
+  /**
+   * GstAudioDecoder:max-errors:
+   *
+   * Maximum number of tolerated consecutive decode errors. See
+   * gst_audio_decoder_set_max_errors() for more details.
+   *
+   * Since: 1.18
+   */
+  g_object_class_install_property (gobject_class, PROP_MAX_ERRORS,
+      g_param_spec_int ("max-errors", "Max errors",
+          "Max consecutive decoder errors before returning flow error",
+          -1, G_MAXINT, DEFAULT_MAX_ERRORS,
+          G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
+
   audiodecoder_class->sink_event =
       GST_DEBUG_FUNCPTR (gst_audio_decoder_sink_eventfunc);
   audiodecoder_class->src_event =
@@ -420,6 +445,8 @@ gst_audio_decoder_class_init (GstAudioDecoderClass * klass)
       GST_DEBUG_FUNCPTR (gst_audio_decoder_src_query_default);
   audiodecoder_class->transform_meta =
       GST_DEBUG_FUNCPTR (gst_audio_decoder_transform_meta_default);
+
+  meta_tag_audio_quark = g_quark_from_static_string (GST_META_TAG_AUDIO_STR);
 }
 
 static void
@@ -471,6 +498,7 @@ gst_audio_decoder_init (GstAudioDecoder * dec, GstAudioDecoderClass * klass)
   dec->priv->plc = DEFAULT_PLC;
   dec->priv->drainable = DEFAULT_DRAINABLE;
   dec->priv->needs_format = DEFAULT_NEEDS_FORMAT;
+  dec->priv->max_errors = GST_AUDIO_DECODER_MAX_ERRORS;
 
   /* init state */
   dec->priv->ctx.min_latency = 0;
@@ -519,6 +547,7 @@ gst_audio_decoder_reset (GstAudioDecoder * dec, gboolean full)
       gst_object_unref (dec->priv->ctx.allocator);
 
     GST_OBJECT_LOCK (dec);
+    dec->priv->decode_flags_override = FALSE;
     gst_caps_replace (&dec->priv->ctx.input_caps, NULL);
     gst_caps_replace (&dec->priv->ctx.caps, NULL);
     gst_caps_replace (&dec->priv->ctx.allocation_caps, NULL);
@@ -527,7 +556,6 @@ gst_audio_decoder_reset (GstAudioDecoder * dec, gboolean full)
 
     gst_audio_info_init (&dec->priv->ctx.info);
     GST_OBJECT_UNLOCK (dec);
-    dec->priv->ctx.max_errors = GST_AUDIO_DECODER_MAX_ERRORS;
     dec->priv->ctx.had_output_data = FALSE;
     dec->priv->ctx.had_input_data = FALSE;
   }
@@ -950,12 +978,12 @@ gst_audio_decoder_push_forward (GstAudioDecoder * dec, GstBuffer * buf)
   }
 
   ctx->had_output_data = TRUE;
-  ts = GST_BUFFER_TIMESTAMP (buf);
+  ts = GST_BUFFER_PTS (buf);
 
   GST_LOG_OBJECT (dec,
       "clipping buffer of size %" G_GSIZE_FORMAT " with ts %" GST_TIME_FORMAT
       ", duration %" GST_TIME_FORMAT, gst_buffer_get_size (buf),
-      GST_TIME_ARGS (GST_BUFFER_TIMESTAMP (buf)),
+      GST_TIME_ARGS (GST_BUFFER_PTS (buf)),
       GST_TIME_ARGS (GST_BUFFER_DURATION (buf)));
 
   /* clip buffer */
@@ -984,11 +1012,11 @@ gst_audio_decoder_push_forward (GstAudioDecoder * dec, GstBuffer * buf)
   }
 
   /* track where we are */
-  if (G_LIKELY (GST_BUFFER_TIMESTAMP_IS_VALID (buf))) {
+  if (G_LIKELY (GST_BUFFER_PTS_IS_VALID (buf))) {
     /* duration should always be valid for raw audio */
     g_assert (GST_BUFFER_DURATION_IS_VALID (buf));
     dec->output_segment.position =
-        GST_BUFFER_TIMESTAMP (buf) + GST_BUFFER_DURATION (buf);
+        GST_BUFFER_PTS (buf) + GST_BUFFER_DURATION (buf);
   }
 
   if (klass->pre_push) {
@@ -1006,7 +1034,7 @@ gst_audio_decoder_push_forward (GstAudioDecoder * dec, GstBuffer * buf)
   GST_LOG_OBJECT (dec,
       "pushing buffer of size %" G_GSIZE_FORMAT " with ts %" GST_TIME_FORMAT
       ", duration %" GST_TIME_FORMAT, gst_buffer_get_size (buf),
-      GST_TIME_ARGS (GST_BUFFER_TIMESTAMP (buf)),
+      GST_TIME_ARGS (GST_BUFFER_PTS (buf)),
       GST_TIME_ARGS (GST_BUFFER_DURATION (buf)));
 
   ret = gst_pad_push (dec->srcpad, buf);
@@ -1033,7 +1061,7 @@ gst_audio_decoder_output (GstAudioDecoder * dec, GstBuffer * buf)
     GST_LOG_OBJECT (dec,
         "output buffer of size %" G_GSIZE_FORMAT " with ts %" GST_TIME_FORMAT
         ", duration %" GST_TIME_FORMAT, gst_buffer_get_size (buf),
-        GST_TIME_ARGS (GST_BUFFER_TIMESTAMP (buf)),
+        GST_TIME_ARGS (GST_BUFFER_PTS (buf)),
         GST_TIME_ARGS (GST_BUFFER_DURATION (buf)));
   }
 
@@ -1051,9 +1079,9 @@ again:
       /* forcibly send current */
       assemble = TRUE;
       GST_LOG_OBJECT (dec, "forcing fragment flush");
-    } else if (av && (!GST_BUFFER_TIMESTAMP_IS_VALID (buf) ||
+    } else if (av && (!GST_BUFFER_PTS_IS_VALID (buf) ||
             !GST_CLOCK_TIME_IS_VALID (priv->out_ts) ||
-            ((diff = GST_CLOCK_DIFF (GST_BUFFER_TIMESTAMP (buf),
+            ((diff = GST_CLOCK_DIFF (GST_BUFFER_PTS (buf),
                         priv->out_ts + priv->out_dur)) > tol) || diff < -tol)) {
       assemble = TRUE;
       GST_LOG_OBJECT (dec, "buffer %d ms apart from current fragment",
@@ -1062,7 +1090,7 @@ again:
       /* add or start collecting */
       if (!av) {
         GST_LOG_OBJECT (dec, "starting new fragment");
-        priv->out_ts = GST_BUFFER_TIMESTAMP (buf);
+        priv->out_ts = GST_BUFFER_PTS (buf);
       } else {
         GST_LOG_OBJECT (dec, "adding to fragment");
       }
@@ -1077,7 +1105,7 @@ again:
       GST_LOG_OBJECT (dec, "assembling fragment");
       inbuf = buf;
       buf = gst_adapter_take_buffer (priv->adapter_out, av);
-      GST_BUFFER_TIMESTAMP (buf) = priv->out_ts;
+      GST_BUFFER_PTS (buf) = priv->out_ts;
       GST_BUFFER_DURATION (buf) = priv->out_dur;
       priv->out_ts = GST_CLOCK_TIME_NONE;
       priv->out_dur = 0;
@@ -1181,15 +1209,24 @@ gst_audio_decoder_transform_meta_default (GstAudioDecoder *
 {
   const GstMetaInfo *info = meta->info;
   const gchar *const *tags;
+  const gchar *const supported_tags[] = {
+    GST_META_TAG_AUDIO_STR,
+    GST_META_TAG_AUDIO_CHANNELS_STR,
+    NULL,
+  };
 
   tags = gst_meta_api_type_get_tags (info->api);
 
-  if (!tags || (g_strv_length ((gchar **) tags) == 1
-          && gst_meta_api_type_has_tag (info->api,
-              g_quark_from_string (GST_META_TAG_AUDIO_STR))))
+  if (!tags)
     return TRUE;
 
-  return FALSE;
+  while (*tags) {
+    if (!g_strv_contains (supported_tags, *tags))
+      return FALSE;
+    tags++;
+  }
+
+  return TRUE;
 }
 
 typedef struct
@@ -1234,7 +1271,7 @@ foreach_metadata (GstBuffer * inbuf, GstMeta ** meta, gpointer user_data)
 /**
  * gst_audio_decoder_finish_subframe:
  * @dec: a #GstAudioDecoder
- * @buf: decoded data
+ * @buf: (transfer full) (allow-none): decoded data
  *
  * Collects decoded data and pushes it downstream. This function may be called
  * multiple times for a given input frame.
@@ -1268,7 +1305,7 @@ gst_audio_decoder_finish_subframe (GstAudioDecoder * dec, GstBuffer * buf)
 /**
  * gst_audio_decoder_finish_frame:
  * @dec: a #GstAudioDecoder
- * @buf: decoded data
+ * @buf: (transfer full) (allow-none): decoded data
  * @frames: number of decoded frames represented by decoded data
  *
  * Collects decoded data and pushes it downstream.
@@ -1350,7 +1387,7 @@ gst_audio_decoder_finish_frame_or_subframe (GstAudioDecoder * dec,
   /* sanity checking */
   if (G_LIKELY (buf && ctx->info.bpf)) {
     if (!meta || meta->info.layout == GST_AUDIO_LAYOUT_INTERLEAVED) {
-      /* output shoud be whole number of sample frames */
+      /* output should be whole number of sample frames */
       if (size % ctx->info.bpf)
         goto wrong_buffer;
       /* output should have no additional padding */
@@ -1383,7 +1420,7 @@ gst_audio_decoder_finish_frame_or_subframe (GstAudioDecoder * dec,
   }
 
   if (G_LIKELY (priv->frames.length))
-    ts = GST_BUFFER_TIMESTAMP (priv->frames.head->data);
+    ts = GST_BUFFER_PTS (priv->frames.head->data);
   else
     ts = GST_CLOCK_TIME_NONE;
 
@@ -1462,14 +1499,14 @@ gst_audio_decoder_finish_frame_or_subframe (GstAudioDecoder * dec,
 
   buf = gst_buffer_make_writable (buf);
   if (G_LIKELY (GST_CLOCK_TIME_IS_VALID (priv->base_ts))) {
-    GST_BUFFER_TIMESTAMP (buf) =
+    GST_BUFFER_PTS (buf) =
         priv->base_ts +
         GST_FRAMES_TO_CLOCK_TIME (priv->samples, ctx->info.rate);
     GST_BUFFER_DURATION (buf) = priv->base_ts +
         GST_FRAMES_TO_CLOCK_TIME (priv->samples + samples, ctx->info.rate) -
-        GST_BUFFER_TIMESTAMP (buf);
+        GST_BUFFER_PTS (buf);
   } else {
-    GST_BUFFER_TIMESTAMP (buf) = GST_CLOCK_TIME_NONE;
+    GST_BUFFER_PTS (buf) = GST_CLOCK_TIME_NONE;
     GST_BUFFER_DURATION (buf) =
         GST_FRAMES_TO_CLOCK_TIME (samples, ctx->info.rate);
   }
@@ -1587,7 +1624,7 @@ gst_audio_decoder_handle_frame (GstAudioDecoder * dec,
     /* keep around for admin */
     GST_LOG_OBJECT (dec,
         "tracking frame size %" G_GSIZE_FORMAT ", ts %" GST_TIME_FORMAT, size,
-        GST_TIME_ARGS (GST_BUFFER_TIMESTAMP (buffer)));
+        GST_TIME_ARGS (GST_BUFFER_PTS (buffer)));
     g_queue_push_tail (&dec->priv->frames, buffer);
     dec->priv->ctx.delay = dec->priv->frames.length;
     GST_OBJECT_LOCK (dec);
@@ -1681,7 +1718,7 @@ gst_audio_decoder_push_buffers (GstAudioDecoder * dec, gboolean force)
       }
       buffer = gst_adapter_take_buffer (priv->adapter, len);
       buffer = gst_buffer_make_writable (buffer);
-      GST_BUFFER_TIMESTAMP (buffer) = ts;
+      GST_BUFFER_PTS (buffer) = ts;
       flush += len;
       priv->force = FALSE;
     } else {
@@ -1844,7 +1881,7 @@ gst_audio_decoder_clear_queues (GstAudioDecoder * dec)
  * arrives out of order.
  *
  * we first gather buffers in the gather queue until we get a DISCONT. We
- * prepend each incomming buffer so that they are in reversed order.
+ * prepend each incoming buffer so that they are in reversed order.
  *
  *    gather queue:    9  8  7
  *    decode queue:
@@ -1915,7 +1952,7 @@ gst_audio_decoder_flush_decode (GstAudioDecoder * dec)
     GstBuffer *buf = GST_BUFFER_CAST (walk->data);
 
     GST_DEBUG_OBJECT (dec, "decoding buffer %p, ts %" GST_TIME_FORMAT,
-        buf, GST_TIME_ARGS (GST_BUFFER_TIMESTAMP (buf)));
+        buf, GST_TIME_ARGS (GST_BUFFER_PTS (buf)));
 
     next = g_list_next (walk);
     /* decode buffer, resulting data prepended to output queue */
@@ -1956,13 +1993,13 @@ gst_audio_decoder_flush_decode (GstAudioDecoder * dec)
         timestamp = 0;
     }
 
-    if (!GST_BUFFER_TIMESTAMP_IS_VALID (buf)) {
+    if (!GST_BUFFER_PTS_IS_VALID (buf)) {
       GST_LOG_OBJECT (dec, "applying reverse interpolated ts %"
           GST_TIME_FORMAT, GST_TIME_ARGS (timestamp));
-      GST_BUFFER_TIMESTAMP (buf) = timestamp;
+      GST_BUFFER_PTS (buf) = timestamp;
     } else {
       /* track otherwise */
-      timestamp = GST_BUFFER_TIMESTAMP (buf);
+      timestamp = GST_BUFFER_PTS (buf);
       GST_LOG_OBJECT (dec, "tracking ts %" GST_TIME_FORMAT,
           GST_TIME_ARGS (timestamp));
     }
@@ -1970,7 +2007,7 @@ gst_audio_decoder_flush_decode (GstAudioDecoder * dec)
     if (G_LIKELY (res == GST_FLOW_OK)) {
       GST_DEBUG_OBJECT (dec, "pushing buffer %p of size %" G_GSIZE_FORMAT ", "
           "time %" GST_TIME_FORMAT ", dur %" GST_TIME_FORMAT, buf,
-          gst_buffer_get_size (buf), GST_TIME_ARGS (GST_BUFFER_TIMESTAMP (buf)),
+          gst_buffer_get_size (buf), GST_TIME_ARGS (GST_BUFFER_PTS (buf)),
           GST_TIME_ARGS (GST_BUFFER_DURATION (buf)));
       /* should be already, but let's be sure */
       buf = gst_buffer_make_writable (buf);
@@ -2013,7 +2050,7 @@ gst_audio_decoder_chain_reverse (GstAudioDecoder * dec, GstBuffer * buf)
   if (G_LIKELY (buf)) {
     GST_DEBUG_OBJECT (dec, "gathering buffer %p of size %" G_GSIZE_FORMAT ", "
         "time %" GST_TIME_FORMAT ", dur %" GST_TIME_FORMAT, buf,
-        gst_buffer_get_size (buf), GST_TIME_ARGS (GST_BUFFER_TIMESTAMP (buf)),
+        gst_buffer_get_size (buf), GST_TIME_ARGS (GST_BUFFER_PTS (buf)),
         GST_TIME_ARGS (GST_BUFFER_DURATION (buf)));
 
     /* add buffer to gather queue */
@@ -2034,7 +2071,7 @@ gst_audio_decoder_chain (GstPad * pad, GstObject * parent, GstBuffer * buffer)
   GST_LOG_OBJECT (dec,
       "received buffer of size %" G_GSIZE_FORMAT " with ts %" GST_TIME_FORMAT
       ", duration %" GST_TIME_FORMAT, gst_buffer_get_size (buffer),
-      GST_TIME_ARGS (GST_BUFFER_TIMESTAMP (buffer)),
+      GST_TIME_ARGS (GST_BUFFER_PTS (buffer)),
       GST_TIME_ARGS (GST_BUFFER_DURATION (buffer)));
 
   GST_AUDIO_DECODER_STREAM_LOCK (dec);
@@ -2059,8 +2096,7 @@ gst_audio_decoder_chain (GstPad * pad, GstObject * parent, GstBuffer * buffer)
     /* buffer may claim DISCONT loudly, if it can't tell us where we are now,
      * we'll stick to where we were ...
      * Particularly useful/needed for upstream BYTE based */
-    if (dec->input_segment.rate > 0.0
-        && !GST_BUFFER_TIMESTAMP_IS_VALID (buffer)) {
+    if (dec->input_segment.rate > 0.0 && !GST_BUFFER_PTS_IS_VALID (buffer)) {
       GST_DEBUG_OBJECT (dec, "... but restoring previous ts tracking");
       dec->priv->base_ts = ts;
       dec->priv->samples = samples;
@@ -2256,7 +2292,7 @@ gst_audio_decoder_handle_gap (GstAudioDecoder * dec, GstEvent * event)
 
     /* hand subclass empty frame with duration that needs covering */
     buf = gst_buffer_new ();
-    GST_BUFFER_TIMESTAMP (buf) = timestamp;
+    GST_BUFFER_PTS (buf) = timestamp;
     GST_BUFFER_DURATION (buf) = duration;
     /* best effort, not much error handling */
     gst_audio_decoder_handle_frame (dec, klass, buf);
@@ -2373,14 +2409,45 @@ gst_audio_decoder_sink_eventfunc (GstAudioDecoder * dec, GstEvent * event)
         dec->priv->samples = 0;
       }
 
+      /* Update the decode flags in the segment if we have an instant-rate
+       * override active */
+      GST_OBJECT_LOCK (dec);
+      if (dec->priv->decode_flags_override) {
+        seg.flags &= ~GST_SEGMENT_INSTANT_FLAGS;
+        seg.flags |= dec->priv->decode_flags & GST_SEGMENT_INSTANT_FLAGS;
+      }
+
       /* and follow along with segment */
       dec->priv->in_out_segment_sync = FALSE;
       dec->input_segment = seg;
+      GST_OBJECT_UNLOCK (dec);
+
       dec->priv->pending_events =
           g_list_append (dec->priv->pending_events, event);
       GST_AUDIO_DECODER_STREAM_UNLOCK (dec);
 
       ret = TRUE;
+      break;
+    }
+    case GST_EVENT_INSTANT_RATE_CHANGE:
+    {
+      GstSegmentFlags flags;
+      GstSegment *seg;
+
+      gst_event_parse_instant_rate_change (event, NULL, &flags);
+
+      GST_OBJECT_LOCK (dec);
+      dec->priv->decode_flags_override = TRUE;
+      dec->priv->decode_flags = flags;
+
+      /* Update the input segment flags */
+      seg = &dec->input_segment;
+      seg->flags &= ~GST_SEGMENT_INSTANT_FLAGS;
+      seg->flags |= dec->priv->decode_flags & GST_SEGMENT_INSTANT_FLAGS;
+      GST_OBJECT_UNLOCK (dec);
+
+      /* Forward downstream */
+      ret = gst_pad_event_default (dec->sinkpad, GST_OBJECT_CAST (dec), event);
       break;
     }
     case GST_EVENT_GAP:
@@ -3068,6 +3135,9 @@ gst_audio_decoder_get_property (GObject * object, guint prop_id,
     case PROP_PLC:
       g_value_set_boolean (value, dec->priv->plc);
       break;
+    case PROP_MAX_ERRORS:
+      g_value_set_int (value, gst_audio_decoder_get_max_errors (dec));
+      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -3091,6 +3161,9 @@ gst_audio_decoder_set_property (GObject * object, guint prop_id,
       break;
     case PROP_PLC:
       dec->priv->plc = g_value_get_boolean (value);
+      break;
+    case PROP_MAX_ERRORS:
+      gst_audio_decoder_set_max_errors (dec, g_value_get_int (value));
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -3181,8 +3254,8 @@ _gst_audio_decoder_error (GstAudioDecoder * dec, gint weight,
     GST_WARNING_OBJECT (dec, "error: %s", dbg);
   dec->priv->error_count += weight;
   dec->priv->discont = TRUE;
-  if (dec->priv->ctx.max_errors >= 0
-      && dec->priv->ctx.max_errors < dec->priv->error_count) {
+  if (dec->priv->max_errors >= 0
+      && dec->priv->max_errors < dec->priv->error_count) {
     gst_element_message_full (GST_ELEMENT (dec), GST_MESSAGE_ERROR, domain,
         code, txt, dbg, file, function, line);
     return GST_FLOW_ERROR;
@@ -3197,7 +3270,7 @@ _gst_audio_decoder_error (GstAudioDecoder * dec, gint weight,
  * gst_audio_decoder_get_audio_info:
  * @dec: a #GstAudioDecoder
  *
- * Returns: a #GstAudioInfo describing the input audio format
+ * Returns: (transfer none): a #GstAudioInfo describing the input audio format
  */
 GstAudioInfo *
 gst_audio_decoder_get_audio_info (GstAudioDecoder * dec)
@@ -3294,7 +3367,7 @@ gst_audio_decoder_set_max_errors (GstAudioDecoder * dec, gint num)
 {
   g_return_if_fail (GST_IS_AUDIO_DECODER (dec));
 
-  dec->priv->ctx.max_errors = num;
+  dec->priv->max_errors = num;
 }
 
 /**
@@ -3308,7 +3381,7 @@ gst_audio_decoder_get_max_errors (GstAudioDecoder * dec)
 {
   g_return_val_if_fail (GST_IS_AUDIO_DECODER (dec), 0);
 
-  return dec->priv->ctx.max_errors;
+  return dec->priv->max_errors;
 }
 
 /**
@@ -3460,6 +3533,7 @@ void
 gst_audio_decoder_set_min_latency (GstAudioDecoder * dec, GstClockTime num)
 {
   g_return_if_fail (GST_IS_AUDIO_DECODER (dec));
+  g_return_if_fail (GST_CLOCK_TIME_IS_VALID (num));
 
   GST_OBJECT_LOCK (dec);
   dec->priv->latency = num;
@@ -3503,6 +3577,7 @@ void
 gst_audio_decoder_set_tolerance (GstAudioDecoder * dec, GstClockTime tolerance)
 {
   g_return_if_fail (GST_IS_AUDIO_DECODER (dec));
+  g_return_if_fail (GST_CLOCK_TIME_IS_VALID (tolerance));
 
   GST_OBJECT_LOCK (dec);
   dec->priv->tolerance = tolerance;

@@ -29,7 +29,7 @@
 
 #pragma once
 
-#include "FrameLoaderTypes.h"
+#include "FrameLoader.h"
 #include "ResourceRequest.h"
 #include <wtf/WeakPtr.h>
 #include <wtf/text/WTFString.h>
@@ -51,11 +51,7 @@ class Frame;
 class NavigationAction;
 class ResourceError;
 class ResourceResponse;
-
-enum class ShouldContinue {
-    Yes,
-    No
-};
+class BlobURLHandle;
 
 enum class NavigationPolicyDecision : uint8_t {
     ContinueLoad,
@@ -65,14 +61,14 @@ enum class NavigationPolicyDecision : uint8_t {
 
 enum class PolicyDecisionMode { Synchronous, Asynchronous };
 
-using NewWindowPolicyDecisionFunction = CompletionHandler<void(const ResourceRequest&, WeakPtr<FormState>&&, const String& frameName, const NavigationAction&, ShouldContinue)>;
-using NavigationPolicyDecisionFunction = CompletionHandler<void(ResourceRequest&&, WeakPtr<FormState>&&, NavigationPolicyDecision)>;
-
-class PolicyChecker {
+class FrameLoader::PolicyChecker {
     WTF_MAKE_NONCOPYABLE(PolicyChecker);
     WTF_MAKE_FAST_ALLOCATED;
 public:
     explicit PolicyChecker(Frame&);
+
+    using NavigationPolicyDecisionFunction = CompletionHandler<void(ResourceRequest&&, WeakPtr<FormState>&&, NavigationPolicyDecision)>;
+    using NewWindowPolicyDecisionFunction = CompletionHandler<void(const ResourceRequest&, WeakPtr<FormState>&&, const String& frameName, const NavigationAction&, ShouldContinuePolicyCheck)>;
 
     void checkNavigationPolicy(ResourceRequest&&, const ResourceResponse& redirectResponse, DocumentLoader*, RefPtr<FormState>&&, NavigationPolicyDecisionFunction&&, PolicyDecisionMode = PolicyDecisionMode::Asynchronous);
     void checkNavigationPolicy(ResourceRequest&&, const ResourceResponse& redirectResponse, NavigationPolicyDecisionFunction&&);
@@ -94,7 +90,7 @@ public:
 
 private:
     void handleUnimplementablePolicy(const ResourceError&);
-    WTF::CompletionHandlerCallingScope extendBlobURLLifetimeIfNecessary(ResourceRequest&) const;
+    BlobURLHandle extendBlobURLLifetimeIfNecessary(const ResourceRequest&, PolicyDecisionMode = PolicyDecisionMode::Asynchronous) const;
 
     Frame& m_frame;
 

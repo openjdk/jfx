@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -57,6 +57,7 @@ typedef __attribute__((NSObject)) CFMutableDictionaryRef GlassMutableDictionaryR
 // touches
 @property (nonatomic, strong) GlassMutableDictionaryRef touches;
 @property (nonatomic) jlong lastTouchId;
+@property (nonatomic) CGPoint beginTouchEventPoint; // coordinates at the beginning of a 'touch' event
 // gestures
 @property (nonatomic, retain) GlassGestureDelegate *delegate;
 
@@ -73,7 +74,7 @@ typedef __attribute__((NSObject)) CFMutableDictionaryRef GlassMutableDictionaryR
 - (void)sendJavaMouseEvent:(CGPoint)viewPoint type:(int)type button:(int)button;
 
 // Java events callbacks
-- (void)sendJavaKeyEventWithType:(int)type keyCode:(int)code chars:(char)chr modifiers:(int)modif;
+- (void)sendJavaKeyEventWithType:(int)type keyCode:(int)code unicode:(int)unicode modifiers:(int)modif;
 
 - (void)sendJavaTouchEvent:(UIEvent *)theEvent;
 

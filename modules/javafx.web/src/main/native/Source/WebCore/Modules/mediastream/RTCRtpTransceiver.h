@@ -33,7 +33,6 @@
 
 #if ENABLE(WEB_RTC)
 
-#include "RTCIceTransport.h"
 #include "RTCRtpReceiver.h"
 #include "RTCRtpSender.h"
 #include "RTCRtpTransceiverBackend.h"
@@ -44,6 +43,9 @@
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
+
+class RTCPeerConnection;
+struct RTCRtpCodecCapability;
 
 class RTCRtpTransceiver final : public RefCounted<RTCRtpTransceiver>, public ScriptWrappable {
     WTF_MAKE_ISO_ALLOCATED(RTCRtpTransceiver);
@@ -56,7 +58,7 @@ public:
     void disableSendingDirection();
 
     RTCRtpTransceiverDirection direction() const;
-    Optional<RTCRtpTransceiverDirection> currentDirection() const;
+    std::optional<RTCRtpTransceiverDirection> currentDirection() const;
     void setDirection(RTCRtpTransceiverDirection);
     String mid() const;
 
@@ -64,14 +66,11 @@ public:
     RTCRtpReceiver& receiver() { return m_receiver.get(); }
 
     bool stopped() const;
-    void stop();
-
-    // FIXME: Temporary solution to keep track of ICE states for this transceiver. Later, each
-    // sender and receiver will have up to two DTLS transports, which in turn will have an ICE
-    // transport each.
-    RTCIceTransport& iceTransport() { return m_iceTransport.get(); }
+    ExceptionOr<void> stop();
+    ExceptionOr<void> setCodecPreferences(const Vector<RTCRtpCodecCapability>&);
 
     RTCRtpTransceiverBackend* backend() { return m_backend.get(); }
+    void setConnection(RTCPeerConnection&);
 
 private:
     RTCRtpTransceiver(Ref<RTCRtpSender>&&, Ref<RTCRtpReceiver>&&, std::unique_ptr<RTCRtpTransceiverBackend>&&);
@@ -83,8 +82,8 @@ private:
 
     bool m_stopped { false };
 
-    Ref<RTCIceTransport> m_iceTransport;
     std::unique_ptr<RTCRtpTransceiverBackend> m_backend;
+    WeakPtr<RTCPeerConnection> m_connection;
 };
 
 class RtpTransceiverSet {

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -43,6 +43,7 @@ public class TextLine implements com.sun.javafx.scene.text.TextLine {
         this.runs = runs;
     }
 
+    @Override
     public RectBounds getBounds() {
         return bounds;
     }
@@ -51,14 +52,17 @@ public class TextLine implements com.sun.javafx.scene.text.TextLine {
         return leading;
     }
 
+    @Override
     public TextRun[] getRuns() {
         return runs;
     }
 
+    @Override
     public int getStart() {
         return start;
     }
 
+    @Override
     public int getLength() {
         return length;
     }
@@ -68,10 +72,12 @@ public class TextLine implements com.sun.javafx.scene.text.TextLine {
         this.rsb = rsb;
     }
 
+    @Override
     public float getLeftSideBearing() {
         return lsb;
     }
 
+    @Override
     public float getRightSideBearing() {
         return rsb;
     }

@@ -30,6 +30,8 @@
 
 #include "WebGL2RenderingContext.h"
 #include "WebGLContextGroup.h"
+#include <wtf/Lock.h>
+#include <wtf/Locker.h>
 
 namespace WebCore {
 
@@ -40,7 +42,10 @@ Ref<WebGLVertexArrayObject> WebGLVertexArrayObject::create(WebGLRenderingContext
 
 WebGLVertexArrayObject::~WebGLVertexArrayObject()
 {
-    deleteObject(nullptr);
+    if (!context())
+        return;
+
+    runDestructor();
 }
 
 WebGLVertexArrayObject::WebGLVertexArrayObject(WebGLRenderingContextBase& context, Type type)
@@ -49,13 +54,11 @@ WebGLVertexArrayObject::WebGLVertexArrayObject(WebGLRenderingContextBase& contex
 #if USE(OPENGL_ES)
     if (m_type != Type::User)
         return;
-#else
-    ASSERT(type != Type::Default || !(this->context()->m_defaultVertexArrayObject));
 #endif
-    setObject(this->context()->graphicsContext3D()->createVertexArray());
+    setObject(this->context()->graphicsContextGL()->createVertexArray());
 }
 
-void WebGLVertexArrayObject::deleteObjectImpl(GraphicsContext3D* context3d, Platform3DObject object)
+void WebGLVertexArrayObject::deleteObjectImpl(const AbstractLocker& locker, GraphicsContextGL* context3d, PlatformGLObject object)
 {
     switch (m_type) {
     case Type::Default:
@@ -66,11 +69,11 @@ void WebGLVertexArrayObject::deleteObjectImpl(GraphicsContext3D* context3d, Plat
     }
 
     if (m_boundElementArrayBuffer)
-        m_boundElementArrayBuffer->onDetached(context3d);
+        m_boundElementArrayBuffer->onDetached(locker, context3d);
 
     for (auto& state : m_vertexAttribState) {
         if (state.bufferBinding)
-            state.bufferBinding->onDetached(context3d);
+            state.bufferBinding->onDetached(locker, context3d);
     }
 }
 

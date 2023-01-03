@@ -22,12 +22,104 @@
 #include "gwakeup.h"
 #include "gstdioprivate.h"
 
+/* gcc defines __SANITIZE_ADDRESS__, clang sets the address_sanitizer
+ * feature flag.
+ *
+ * MSVC defines __SANITIZE_ADDRESS__ as well when AddressSanitizer
+ * is enabled but __lsan_ignore_object() equivalent method is not supported
+ * See also
+ * https://docs.microsoft.com/en-us/cpp/sanitizers/asan-building?view=msvc-160
+ */
+#if !defined(_MSC_VER) && (defined(__SANITIZE_ADDRESS__) || g_macro__has_feature(address_sanitizer))
+
+/*
+ * %_GLIB_ADDRESS_SANITIZER:
+ *
+ * Private macro defined if the AddressSanitizer is in use.
+ */
+#define _GLIB_ADDRESS_SANITIZER
+
+#include <sanitizer/lsan_interface.h>
+
+#endif
+
+/*
+ * g_ignore_leak:
+ * @p: any pointer
+ *
+ * Tell AddressSanitizer and similar tools that if the object pointed to
+ * by @p is leaked, it is not a problem. Use this to suppress memory leak
+ * reports when a potentially unreachable pointer is deliberately not
+ * going to be deallocated.
+ */
+static inline void
+g_ignore_leak (gconstpointer p)
+{
+#ifdef _GLIB_ADDRESS_SANITIZER
+  if (p != NULL)
+    __lsan_ignore_object (p);
+#endif
+}
+
+/*
+ * g_ignore_strv_leak:
+ * @strv: (nullable) (array zero-terminated=1): an array of strings
+ *
+ * The same as g_ignore_leak(), but for the memory pointed to by @strv,
+ * and for each element of @strv.
+ */
+static inline void
+g_ignore_strv_leak (GStrv strv)
+{
+#ifdef _GLIB_ADDRESS_SANITIZER
+  gchar **item;
+
+  if (strv)
+    {
+      g_ignore_leak (strv);
+
+      for (item = strv; *item != NULL; item++)
+        g_ignore_leak (*item);
+    }
+#endif
+}
+
+/*
+ * g_begin_ignore_leaks:
+ *
+ * Tell AddressSanitizer and similar tools to ignore all leaks from this point
+ * onwards, until g_end_ignore_leaks() is called.
+ *
+ * Try to use g_ignore_leak() where possible to target deliberate leaks more
+ * specifically.
+ */
+static inline void
+g_begin_ignore_leaks (void)
+{
+#ifdef _GLIB_ADDRESS_SANITIZER
+  __lsan_disable ();
+#endif
+}
+
+/*
+ * g_end_ignore_leaks:
+ *
+ * Start ignoring leaks again; this must be paired with a previous call to
+ * g_begin_ignore_leaks().
+ */
+static inline void
+g_end_ignore_leaks (void)
+{
+#ifdef _GLIB_ADDRESS_SANITIZER
+  __lsan_enable ();
+#endif
+}
+
 GMainContext *          g_get_worker_context            (void);
 gboolean                g_check_setuid                  (void);
 GMainContext *          g_main_context_new_with_next_id (guint next_id);
 
 #ifdef G_OS_WIN32
-gchar *_glib_get_dll_directory (void);
 GLIB_AVAILABLE_IN_ALL
 gchar *_glib_get_locale_dir    (void);
 #endif
@@ -75,6 +167,10 @@ typedef struct {
 
   int                   (* g_win32_fstat)               (int                 fd,
                                                          GWin32PrivateStat  *buf);
+
+  /* See gwin32.c */
+  gchar *(*g_win32_find_helper_executable_path) (const gchar *process_name,
+                                                 void *dll_handle);
 #endif
 
 

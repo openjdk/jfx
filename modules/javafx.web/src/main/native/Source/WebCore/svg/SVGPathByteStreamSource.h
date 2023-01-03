@@ -32,18 +32,18 @@ public:
 private:
     bool hasMoreData() const final;
     bool moveToNextToken() final { return true; }
-    bool parseSVGSegmentType(SVGPathSegType&) final;
     SVGPathSegType nextCommand(SVGPathSegType) final;
 
-    bool parseMoveToSegment(FloatPoint&) final;
-    bool parseLineToSegment(FloatPoint&) final;
-    bool parseLineToHorizontalSegment(float&) final;
-    bool parseLineToVerticalSegment(float&) final;
-    bool parseCurveToCubicSegment(FloatPoint&, FloatPoint&, FloatPoint&) final;
-    bool parseCurveToCubicSmoothSegment(FloatPoint&, FloatPoint&) final;
-    bool parseCurveToQuadraticSegment(FloatPoint&, FloatPoint&) final;
-    bool parseCurveToQuadraticSmoothSegment(FloatPoint&) final;
-    bool parseArcToSegment(float&, float&, float&, bool&, bool&, FloatPoint&) final;
+    std::optional<SVGPathSegType> parseSVGSegmentType() final;
+    std::optional<MoveToSegment> parseMoveToSegment() final;
+    std::optional<LineToSegment> parseLineToSegment() final;
+    std::optional<LineToHorizontalSegment> parseLineToHorizontalSegment() final;
+    std::optional<LineToVerticalSegment> parseLineToVerticalSegment() final;
+    std::optional<CurveToCubicSegment> parseCurveToCubicSegment() final;
+    std::optional<CurveToCubicSmoothSegment> parseCurveToCubicSmoothSegment() final;
+    std::optional<CurveToQuadraticSegment> parseCurveToQuadraticSegment() final;
+    std::optional<CurveToQuadraticSmoothSegment> parseCurveToQuadraticSmoothSegment() final;
+    std::optional<ArcToSegment> parseArcToSegment() final;
 
 #if COMPILER(MSVC)
 #pragma warning(disable: 4701)

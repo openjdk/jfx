@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2018 Andy VanWagoner (andy@vanwagoner.family)
- * Copyright (C) 2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2019-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,17 +27,16 @@
 #include "config.h"
 #include "IntlPluralRulesPrototype.h"
 
-#if ENABLE(INTL)
-
-#include "Error.h"
 #include "IntlPluralRules.h"
 #include "JSCInlines.h"
-#include "JSObjectInlines.h"
 
 namespace JSC {
 
-static EncodedJSValue JSC_HOST_CALL IntlPluralRulesPrototypeFuncSelect(ExecState*);
-static EncodedJSValue JSC_HOST_CALL IntlPluralRulesPrototypeFuncResolvedOptions(ExecState*);
+static JSC_DECLARE_HOST_FUNCTION(intlPluralRulesPrototypeFuncSelect);
+#if HAVE(ICU_U_NUMBER_RANGE_FORMATTER)
+static JSC_DECLARE_HOST_FUNCTION(intlPluralRulesPrototypeFuncSelectRange);
+#endif
+static JSC_DECLARE_HOST_FUNCTION(intlPluralRulesPrototypeFuncResolvedOptions);
 
 }
 
@@ -45,19 +44,19 @@ static EncodedJSValue JSC_HOST_CALL IntlPluralRulesPrototypeFuncResolvedOptions(
 
 namespace JSC {
 
-const ClassInfo IntlPluralRulesPrototype::s_info = { "Object", &Base::s_info, &pluralRulesPrototypeTable, nullptr, CREATE_METHOD_TABLE(IntlPluralRulesPrototype) };
+const ClassInfo IntlPluralRulesPrototype::s_info = { "Intl.PluralRules", &Base::s_info, &pluralRulesPrototypeTable, nullptr, CREATE_METHOD_TABLE(IntlPluralRulesPrototype) };
 
 /* Source for IntlPluralRulesPrototype.lut.h
 @begin pluralRulesPrototypeTable
-  select           IntlPluralRulesPrototypeFuncSelect           DontEnum|Function 1
-  resolvedOptions  IntlPluralRulesPrototypeFuncResolvedOptions  DontEnum|Function 0
+  select           intlPluralRulesPrototypeFuncSelect           DontEnum|Function 1
+  resolvedOptions  intlPluralRulesPrototypeFuncResolvedOptions  DontEnum|Function 0
 @end
 */
 
-IntlPluralRulesPrototype* IntlPluralRulesPrototype::create(VM& vm, JSGlobalObject*, Structure* structure)
+IntlPluralRulesPrototype* IntlPluralRulesPrototype::create(VM& vm, JSGlobalObject* globalObject, Structure* structure)
 {
-    IntlPluralRulesPrototype* object = new (NotNull, allocateCell<IntlPluralRulesPrototype>(vm.heap)) IntlPluralRulesPrototype(vm, structure);
-    object->finishCreation(vm, structure);
+    IntlPluralRulesPrototype* object = new (NotNull, allocateCell<IntlPluralRulesPrototype>(vm)) IntlPluralRulesPrototype(vm, structure);
+    object->finishCreation(vm, globalObject);
     return object;
 }
 
@@ -71,46 +70,75 @@ IntlPluralRulesPrototype::IntlPluralRulesPrototype(VM& vm, Structure* structure)
 {
 }
 
-void IntlPluralRulesPrototype::finishCreation(VM& vm, Structure*)
+void IntlPluralRulesPrototype::finishCreation(VM& vm, JSGlobalObject* globalObject)
 {
     Base::finishCreation(vm);
-
-    putDirectWithoutTransition(vm, vm.propertyNames->toStringTagSymbol, jsString(vm, "Object"), PropertyAttribute::DontEnum | PropertyAttribute::ReadOnly);
+    ASSERT(inherits(vm, info()));
+    JSC_TO_STRING_TAG_WITHOUT_TRANSITION();
+    UNUSED_PARAM(globalObject);
+#if HAVE(ICU_U_NUMBER_RANGE_FORMATTER)
+    JSC_NATIVE_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->selectRange, intlPluralRulesPrototypeFuncSelectRange, static_cast<unsigned>(PropertyAttribute::DontEnum), 2);
+#endif
 }
 
-EncodedJSValue JSC_HOST_CALL IntlPluralRulesPrototypeFuncSelect(ExecState* state)
+JSC_DEFINE_HOST_FUNCTION(intlPluralRulesPrototypeFuncSelect, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
-    VM& vm = state->vm();
+    VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     // 13.4.3 Intl.PluralRules.prototype.select (value)
     // https://tc39.github.io/ecma402/#sec-intl.pluralrules.prototype.select
-    IntlPluralRules* pluralRules = jsDynamicCast<IntlPluralRules*>(vm, state->thisValue());
+    IntlPluralRules* pluralRules = jsDynamicCast<IntlPluralRules*>(vm, callFrame->thisValue());
 
     if (!pluralRules)
-        return JSValue::encode(throwTypeError(state, scope, "Intl.PluralRules.prototype.select called on value that's not an object initialized as a PluralRules"_s));
+        return JSValue::encode(throwTypeError(globalObject, scope, "Intl.PluralRules.prototype.select called on value that's not a PluralRules"_s));
 
-    double value = state->argument(0).toNumber(state);
+    double value = callFrame->argument(0).toNumber(globalObject);
     RETURN_IF_EXCEPTION(scope, encodedJSValue());
 
-    RELEASE_AND_RETURN(scope, JSValue::encode(pluralRules->select(*state, value)));
+    RELEASE_AND_RETURN(scope, JSValue::encode(pluralRules->select(globalObject, value)));
 }
 
-EncodedJSValue JSC_HOST_CALL IntlPluralRulesPrototypeFuncResolvedOptions(ExecState* state)
+#if HAVE(ICU_U_NUMBER_RANGE_FORMATTER)
+JSC_DEFINE_HOST_FUNCTION(intlPluralRulesPrototypeFuncSelectRange, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
-    VM& vm = state->vm();
+    VM& vm = globalObject->vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    // https://tc39.es/proposal-intl-numberformat-v3/out/pluralrules/diff.html#sec-intl.pluralrules.prototype.selectrange
+    IntlPluralRules* pluralRules = jsDynamicCast<IntlPluralRules*>(vm, callFrame->thisValue());
+    if (!pluralRules)
+        return JSValue::encode(throwTypeError(globalObject, scope, "Intl.PluralRules.prototype.selectRange called on value that's not a PluralRules"_s));
+
+    JSValue startValue = callFrame->argument(0);
+    JSValue endValue = callFrame->argument(1);
+
+    if (startValue.isUndefined() || endValue.isUndefined())
+        return throwVMTypeError(globalObject, scope, "start or end is undefined"_s);
+
+    double start = startValue.toNumber(globalObject);
+    RETURN_IF_EXCEPTION(scope, { });
+
+    double end = endValue.toNumber(globalObject);
+    RETURN_IF_EXCEPTION(scope, { });
+
+    RELEASE_AND_RETURN(scope, JSValue::encode(pluralRules->selectRange(globalObject, start, end)));
+}
+#endif
+
+JSC_DEFINE_HOST_FUNCTION(intlPluralRulesPrototypeFuncResolvedOptions, (JSGlobalObject* globalObject, CallFrame* callFrame))
+{
+    VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     // 13.4.4 Intl.PluralRules.prototype.resolvedOptions ()
     // https://tc39.github.io/ecma402/#sec-intl.pluralrules.prototype.resolvedoptions
-    IntlPluralRules* pluralRules = jsDynamicCast<IntlPluralRules*>(vm, state->thisValue());
+    IntlPluralRules* pluralRules = jsDynamicCast<IntlPluralRules*>(vm, callFrame->thisValue());
 
     if (!pluralRules)
-        return JSValue::encode(throwTypeError(state, scope, "Intl.PluralRules.prototype.resolvedOptions called on value that's not an object initialized as a PluralRules"_s));
+        return JSValue::encode(throwTypeError(globalObject, scope, "Intl.PluralRules.prototype.resolvedOptions called on value that's not a PluralRules"_s));
 
-    RELEASE_AND_RETURN(scope, JSValue::encode(pluralRules->resolvedOptions(*state)));
+    RELEASE_AND_RETURN(scope, JSValue::encode(pluralRules->resolvedOptions(globalObject)));
 }
 
 } // namespace JSC
-
-#endif // ENABLE(INTL)

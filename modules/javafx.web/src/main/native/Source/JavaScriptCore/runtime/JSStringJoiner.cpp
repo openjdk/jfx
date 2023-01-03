@@ -26,7 +26,7 @@
 #include "config.h"
 #include "JSStringJoiner.h"
 
-#include "JSCInlines.h"
+#include "JSCJSValueInlines.h"
 
 namespace JSC {
 
@@ -79,35 +79,33 @@ static inline String joinStrings(const Vector<StringViewWithUnderlyingString>& s
     return result;
 }
 
-inline unsigned JSStringJoiner::joinedLength(ExecState& state) const
+inline unsigned JSStringJoiner::joinedLength(JSGlobalObject* globalObject) const
 {
-    VM& vm = state.vm();
+    VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     unsigned numberOfStrings = m_strings.size();
     if (!numberOfStrings)
         return 0;
 
-    Checked<int32_t, RecordOverflow> separatorLength = m_separator.length();
-    Checked<int32_t, RecordOverflow> totalSeparatorsLength = separatorLength * (numberOfStrings - 1);
-    Checked<int32_t, RecordOverflow> totalLength = totalSeparatorsLength + m_accumulatedStringsLength;
-
-    int32_t result;
-    if (totalLength.safeGet(result) == CheckedState::DidOverflow) {
-        throwOutOfMemoryError(&state, scope);
+    CheckedInt32 separatorLength = m_separator.length();
+    CheckedInt32 totalSeparatorsLength = separatorLength * (numberOfStrings - 1);
+    CheckedInt32 totalLength = totalSeparatorsLength + m_accumulatedStringsLength;
+    if (totalLength.hasOverflowed()) {
+        throwOutOfMemoryError(globalObject, scope);
         return 0;
     }
-    return result;
+    return totalLength;
 }
 
-JSValue JSStringJoiner::join(ExecState& state)
+JSValue JSStringJoiner::join(JSGlobalObject* globalObject)
 {
-    VM& vm = state.vm();
+    VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     ASSERT(m_strings.size() <= m_strings.capacity());
 
-    unsigned length = joinedLength(state);
+    unsigned length = joinedLength(globalObject);
     RETURN_IF_EXCEPTION(scope, JSValue());
 
     if (!length)
@@ -120,7 +118,7 @@ JSValue JSStringJoiner::join(ExecState& state)
         result = joinStrings<UChar>(m_strings, m_separator, length);
 
     if (result.isNull())
-        return throwOutOfMemoryError(&state, scope);
+        return throwOutOfMemoryError(globalObject, scope);
 
     return jsString(vm, WTFMove(result));
 }

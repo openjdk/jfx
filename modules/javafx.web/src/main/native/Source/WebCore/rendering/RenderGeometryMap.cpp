@@ -34,12 +34,8 @@
 
 namespace WebCore {
 
-RenderGeometryMap::RenderGeometryMap(MapCoordinatesFlags flags)
-    : m_insertionPosition(notFound)
-    , m_nonUniformStepsCount(0)
-    , m_transformedStepsCount(0)
-    , m_fixedStepsCount(0)
-    , m_mapCoordinatesFlags(flags)
+RenderGeometryMap::RenderGeometryMap(OptionSet<MapCoordinatesMode> flags)
+    : m_mapCoordinatesFlags(flags)
 {
 }
 
@@ -55,7 +51,7 @@ void RenderGeometryMap::mapToContainer(TransformState& transformState, const Ren
     }
 
     bool inFixed = false;
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
     bool foundContainer = !container || (m_mapping.size() && m_mapping[0].m_renderer == container);
 #endif
 
@@ -64,7 +60,7 @@ void RenderGeometryMap::mapToContainer(TransformState& transformState, const Ren
 
         // If container is the RenderView (step 0) we want to apply its scroll offset.
         if (i > 0 && currentStep.m_renderer == container) {
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
             foundContainer = true;
 #endif
             break;
@@ -102,14 +98,14 @@ void RenderGeometryMap::mapToContainer(TransformState& transformState, const Ren
 FloatPoint RenderGeometryMap::mapToContainer(const FloatPoint& p, const RenderLayerModelObject* container) const
 {
     FloatPoint result;
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
     FloatPoint rendererMappedResult = m_mapping.last().m_renderer->localToAbsolute(p, m_mapCoordinatesFlags);
 #endif
 
     if (!hasFixedPositionStep() && !hasTransformStep() && !hasNonUniformStep() && (!container || (m_mapping.size() && container == m_mapping[0].m_renderer))) {
-        result = p + roundedIntSize(m_accumulatedOffset);
-        // Should convert to a LayoutPoint because of the uniqueness of LayoutUnit::round
-        ASSERT(roundedIntPoint(LayoutPoint(rendererMappedResult)) == result);
+        result = p;
+        result.move(m_accumulatedOffset);
+        ASSERT(m_accumulatedOffsetMightBeSaturated || areEssentiallyEqual(rendererMappedResult, result));
     } else {
         TransformState transformState(TransformState::ApplyTransformDirection, p);
         mapToContainer(transformState, container);
@@ -154,13 +150,13 @@ static bool canMapBetweenRenderersViaLayers(const RenderLayerModelObject& render
         if (current->isFixedPositioned() || style.isFlippedBlocksWritingMode())
             return false;
 
-        if (current->hasTransformRelatedProperty() && (current->style().hasTransform() || current->style().hasPerspective()))
+        if (current->hasTransformRelatedProperty() && (style.hasTransform() || style.translate() || style.scale() || style.rotate() || style.hasPerspective()))
             return false;
 
         if (current->isRenderFragmentedFlow())
             return false;
 
-        if (current->isSVGRoot())
+        if (current->isLegacySVGRoot())
             return false;
 
         if (current == &ancestor)
@@ -172,8 +168,11 @@ static bool canMapBetweenRenderersViaLayers(const RenderLayerModelObject& render
 
 void RenderGeometryMap::pushMappingsToAncestor(const RenderLayer* layer, const RenderLayer* ancestorLayer, bool respectTransforms)
 {
-    MapCoordinatesFlags newFlags = respectTransforms ? m_mapCoordinatesFlags : m_mapCoordinatesFlags & ~UseTransforms;
-    SetForScope<MapCoordinatesFlags> flagsChange(m_mapCoordinatesFlags, newFlags);
+    OptionSet<MapCoordinatesMode> newFlags = m_mapCoordinatesFlags;
+    if (!respectTransforms)
+        newFlags.remove(UseTransforms);
+
+    SetForScope<OptionSet<MapCoordinatesMode>> flagsChange(m_mapCoordinatesFlags, newFlags);
 
     const RenderLayerModelObject& renderer = layer->renderer();
 
@@ -265,8 +264,12 @@ void RenderGeometryMap::popMappingsToAncestor(const RenderLayer* ancestorLayer)
 void RenderGeometryMap::stepInserted(const RenderGeometryMapStep& step)
 {
     // RenderView's offset, is only applied when we have fixed-positions.
-    if (!step.m_renderer->isRenderView())
+    if (!step.m_renderer->isRenderView()) {
         m_accumulatedOffset += step.m_offset;
+#if ASSERT_ENABLED
+        m_accumulatedOffsetMightBeSaturated |= m_accumulatedOffset.mightBeSaturated();
+#endif
+    }
 
     if (step.m_isNonUniform)
         ++m_nonUniformStepsCount;
@@ -281,8 +284,12 @@ void RenderGeometryMap::stepInserted(const RenderGeometryMapStep& step)
 void RenderGeometryMap::stepRemoved(const RenderGeometryMapStep& step)
 {
     // RenderView's offset, is only applied when we have fixed-positions.
-    if (!step.m_renderer->isRenderView())
+    if (!step.m_renderer->isRenderView()) {
         m_accumulatedOffset -= step.m_offset;
+#if ASSERT_ENABLED
+        m_accumulatedOffsetMightBeSaturated |= m_accumulatedOffset.mightBeSaturated();
+#endif
+    }
 
     if (step.m_isNonUniform) {
         ASSERT(m_nonUniformStepsCount);

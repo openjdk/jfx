@@ -49,29 +49,14 @@ GST_EXPORT GType _gst_context_type;
 GST_API
 GType           gst_context_get_type            (void);
 
-
+#ifndef GST_DISABLE_MINIOBJECT_INLINE_FUNCTIONS
 /* refcounting */
-/**
- * gst_context_ref:
- * @context: the context to ref
- *
- * Convenience macro to increase the reference count of the context.
- *
- * Returns: @context (for convenience when doing assignments)
- */
 static inline GstContext *
 gst_context_ref (GstContext * context)
 {
   return (GstContext *) gst_mini_object_ref (GST_MINI_OBJECT_CAST (context));
 }
 
-/**
- * gst_context_unref:
- * @context: the context to unref
- *
- * Convenience macro to decrease the reference count of the context, possibly
- * freeing it.
- */
 static inline void
 gst_context_unref (GstContext * context)
 {
@@ -79,21 +64,21 @@ gst_context_unref (GstContext * context)
 }
 
 /* copy context */
-/**
- * gst_context_copy:
- * @context: the context to copy
- *
- * Creates a copy of the context. Returns a copy of the context.
- *
- * Returns: (transfer full): a new copy of @context.
- *
- * MT safe
- */
 static inline GstContext *
 gst_context_copy (const GstContext * context)
 {
   return GST_CONTEXT_CAST (gst_mini_object_copy (GST_MINI_OBJECT_CONST_CAST (context)));
 }
+#else /* GST_DISABLE_MINIOBJECT_INLINE_FUNCTIONS */
+GST_API
+GstContext * gst_context_ref    (GstContext * context);
+
+GST_API
+void         gst_context_unref  (GstContext * context);
+
+GST_API
+GstContext * gst_context_copy   (const GstContext * context);
+#endif /* GST_DISABLE_MINIOBJECT_INLINE_FUNCTIONS */
 
 /**
  * gst_context_is_writable:
@@ -115,27 +100,18 @@ gst_context_copy (const GstContext * context)
  * MT safe
  */
 #define         gst_context_make_writable(context)  GST_CONTEXT_CAST (gst_mini_object_make_writable (GST_MINI_OBJECT_CAST (context)))
-/**
- * gst_context_replace:
- * @old_context: (inout) (transfer full): pointer to a pointer to a #GstContext
- *     to be replaced.
- * @new_context: (allow-none) (transfer none): pointer to a #GstContext that will
- *     replace the context pointed to by @old_context.
- *
- * Modifies a pointer to a #GstContext to point to a different #GstContext. The
- * modification is done atomically (so this is useful for ensuring thread safety
- * in some cases), and the reference counts are updated appropriately (the old
- * context is unreffed, the new one is reffed).
- *
- * Either @new_context or the #GstContext pointed to by @old_context may be %NULL.
- *
- * Returns: %TRUE if @new_context was different from @old_context
- */
+
+#ifndef GST_DISABLE_MINIOBJECT_INLINE_FUNCTIONS
 static inline gboolean
 gst_context_replace (GstContext **old_context, GstContext *new_context)
 {
   return gst_mini_object_replace ((GstMiniObject **) old_context, (GstMiniObject *) new_context);
 }
+#else /* GST_DISABLE_MINIOBJECT_INLINE_FUNCTIONS */
+GST_API
+gboolean              gst_context_replace                  (GstContext ** old_context,
+                                                            GstContext * new_context);
+#endif /* GST_DISABLE_MINIOBJECT_INLINE_FUNCTIONS */
 
 GST_API
 GstContext *          gst_context_new                      (const gchar * context_type,
@@ -155,9 +131,7 @@ GstStructure *        gst_context_writable_structure       (GstContext * context
 GST_API
 gboolean              gst_context_is_persistent            (const GstContext * context);
 
-#ifdef G_DEFINE_AUTOPTR_CLEANUP_FUNC
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(GstContext, gst_context_unref)
-#endif
 
 G_END_DECLS
 

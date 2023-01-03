@@ -34,7 +34,6 @@
 #include "CachedSVGDocument.h"
 #include "Document.h"
 #include "InspectorPageAgent.h"
-#include <wtf/HashMap.h>
 #include <wtf/Vector.h>
 #include <wtf/text/WTFString.h>
 
@@ -69,7 +68,7 @@ ExceptionOr<Vector<InspectorAuditResourcesObject::Resource>> InspectorAuditResou
 
     for (auto* cachedResource : InspectorPageAgent::cachedResourcesForFrame(frame)) {
         Resource resource;
-        resource.url = cachedResource->url();
+        resource.url = cachedResource->url().string();
         resource.mimeType = cachedResource->mimeType();
 
         bool exists = false;
@@ -105,7 +104,7 @@ ExceptionOr<InspectorAuditResourcesObject::ResourceContent> InspectorAuditResour
     if (!cachedResource)
         return Exception { NotFoundError, makeString("Unknown identifier "_s, id) };
 
-    ErrorString errorString;
+    Protocol::ErrorString errorString;
     ResourceContent resourceContent;
     InspectorPageAgent::resourceContent(errorString, frame, cachedResource->url(), &resourceContent.data, &resourceContent.base64Encoded);
     if (!errorString.isEmpty())

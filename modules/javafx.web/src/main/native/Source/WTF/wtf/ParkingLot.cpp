@@ -26,9 +26,7 @@
 #include "config.h"
 #include <wtf/ParkingLot.h>
 
-#include <condition_variable>
 #include <mutex>
-#include <thread>
 #include <wtf/DataLog.h>
 #include <wtf/HashFunctions.h>
 #include <wtf/StringPrintStream.h>
@@ -42,7 +40,7 @@ namespace WTF {
 
 namespace {
 
-const bool verbose = false;
+static constexpr bool verbose = false;
 
 struct ThreadData : public ThreadSafeRefCounted<ThreadData> {
     WTF_MAKE_FAST_ALLOCATED;
@@ -355,7 +353,8 @@ void ensureHashtableSize(unsigned numThreads)
     // Check again, since the hashtable could have rehashed while we were locking it. Also,
     // lockHashtable() creates an initial hashtable for us.
     oldHashtable = hashtable.load();
-    if (oldHashtable && static_cast<double>(oldHashtable->size) / static_cast<double>(numThreads) >= maxLoadFactor) {
+    RELEASE_ASSERT(oldHashtable);
+    if (static_cast<double>(oldHashtable->size) / static_cast<double>(numThreads) >= maxLoadFactor) {
         if (verbose)
             dataLog(toString(Thread::current(), ": after locking, no need to rehash because ", oldHashtable->size, " / ", numThreads, " >= ", maxLoadFactor, "\n"));
         unlockHashtable(bucketsToUnlock);

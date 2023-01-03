@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,11 +25,17 @@
 
 package javafx.scene.control.skin;
 
+import javafx.scene.control.ContextMenu;
+
 public class ChoiceBoxSkinNodesShim {
 
     // can only access the getChoiceBoxSelectedText method in ChoiceBoxSkin
     // from this package.
     public static String getChoiceBoxSelectedText(ChoiceBoxSkin skin) {
         return skin.getChoiceBoxSelectedText();
+    }
+
+    public static ContextMenu getChoiceBoxPopup(ChoiceBoxSkin skin) {
+        return skin.getChoiceBoxPopup();
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,25 +28,20 @@
 
 #if ENABLE(DFG_JIT)
 
-#include "CodeBlock.h"
 #include "DFGBasicBlock.h"
-#include "GetByIdStatus.h"
-#include "JSCInlines.h"
-#include "PutByIdStatus.h"
-#include "StringObject.h"
-#include "SuperSampler.h"
+#include "JSCJSValueInlines.h"
 
 namespace JSC { namespace DFG {
 
 namespace DFGInPlaceAbstractStateInternal {
-static const bool verbose = false;
+static constexpr bool verbose = false;
 }
 
 InPlaceAbstractState::InPlaceAbstractState(Graph& graph)
     : m_graph(graph)
     , m_abstractValues(*graph.m_abstractValuesCache)
-    , m_variables(m_graph.m_codeBlock->numParameters(), graph.m_localVars)
-    , m_block(0)
+    , m_variables(OperandsLike, graph.block(0)->variablesAtHead)
+    , m_block(nullptr)
 {
 }
 
@@ -59,6 +54,9 @@ void InPlaceAbstractState::beginBasicBlock(BasicBlock* basicBlock)
     ASSERT(basicBlock->variablesAtHead.numberOfLocals() == basicBlock->valuesAtHead.numberOfLocals());
     ASSERT(basicBlock->variablesAtTail.numberOfLocals() == basicBlock->valuesAtTail.numberOfLocals());
     ASSERT(basicBlock->variablesAtHead.numberOfLocals() == basicBlock->variablesAtTail.numberOfLocals());
+    ASSERT(basicBlock->variablesAtHead.numberOfTmps() == basicBlock->valuesAtHead.numberOfTmps());
+    ASSERT(basicBlock->variablesAtTail.numberOfTmps() == basicBlock->valuesAtTail.numberOfTmps());
+    ASSERT(basicBlock->variablesAtHead.numberOfTmps() == basicBlock->variablesAtTail.numberOfTmps());
 
     m_abstractValues.resize();
 
@@ -84,17 +82,16 @@ void InPlaceAbstractState::beginBasicBlock(BasicBlock* basicBlock)
     basicBlock->cfaShouldRevisit = false;
     basicBlock->cfaHasVisited = true;
     m_isValid = true;
-    m_foundConstants = false;
+    m_shouldTryConstantFolding = false;
     m_branchDirection = InvalidBranchDirection;
     m_structureClobberState = basicBlock->cfaStructureClobberStateAtHead;
 }
 
 static void setLiveValues(Vector<NodeAbstractValuePair>& values, const Vector<NodeFlowProjection>& live)
 {
-    values.shrink(0);
-    values.reserveCapacity(live.size());
-    for (NodeFlowProjection node : live)
-        values.uncheckedAppend(NodeAbstractValuePair { node, AbstractValue() });
+    values = live.map([](auto node) {
+        return NodeAbstractValuePair { node, AbstractValue() };
+    });
 }
 
 Operands<AbstractValue>& InPlaceAbstractState::variablesForDebugging()
@@ -114,7 +111,7 @@ void InPlaceAbstractState::initialize()
     for (BasicBlock* entrypoint : m_graph.m_roots) {
         entrypoint->cfaShouldRevisit = true;
         entrypoint->cfaHasVisited = false;
-        entrypoint->cfaFoundConstants = false;
+        entrypoint->cfaThinksShouldTryConstantFolding = false;
         entrypoint->cfaStructureClobberStateAtHead = StructuresAreWatched;
         entrypoint->cfaStructureClobberStateAtTail = StructuresAreWatched;
 
@@ -161,6 +158,10 @@ void InPlaceAbstractState::initialize()
             entrypoint->valuesAtHead.local(i).clear();
             entrypoint->valuesAtTail.local(i).clear();
         }
+        for (size_t i = 0; i < entrypoint->valuesAtHead.numberOfTmps(); ++i) {
+            entrypoint->valuesAtHead.tmp(i).clear();
+            entrypoint->valuesAtTail.tmp(i).clear();
+        }
     }
 
     for (BasicBlock* block : m_graph.blocksInNaturalOrder()) {
@@ -172,16 +173,12 @@ void InPlaceAbstractState::initialize()
         ASSERT(block->isReachable);
         block->cfaShouldRevisit = false;
         block->cfaHasVisited = false;
-        block->cfaFoundConstants = false;
+        block->cfaThinksShouldTryConstantFolding = false;
         block->cfaStructureClobberStateAtHead = StructuresAreWatched;
         block->cfaStructureClobberStateAtTail = StructuresAreWatched;
-        for (size_t i = 0; i < block->valuesAtHead.numberOfArguments(); ++i) {
-            block->valuesAtHead.argument(i).clear();
-            block->valuesAtTail.argument(i).clear();
-        }
-        for (size_t i = 0; i < block->valuesAtHead.numberOfLocals(); ++i) {
-            block->valuesAtHead.local(i).clear();
-            block->valuesAtTail.local(i).clear();
+        for (size_t i = 0; i < block->valuesAtHead.size(); ++i) {
+            block->valuesAtHead[i].clear();
+            block->valuesAtTail[i].clear();
         }
     }
 
@@ -202,7 +199,7 @@ bool InPlaceAbstractState::endBasicBlock()
 
     BasicBlock* block = m_block; // Save the block for successor merging.
 
-    block->cfaFoundConstants = m_foundConstants;
+    block->cfaThinksShouldTryConstantFolding = m_shouldTryConstantFolding;
     block->cfaDidFinish = m_isValid;
     block->cfaBranchDirection = m_branchDirection;
 
@@ -239,7 +236,7 @@ bool InPlaceAbstractState::endBasicBlock()
             case PhantomLocal:
             case Flush: {
                 // The block transfers the value from head to tail.
-                destination = variableAt(index);
+                destination = atIndex(index);
                 break;
             }
 
@@ -304,7 +301,7 @@ bool InPlaceAbstractState::endBasicBlock()
                 continue;
             }
 
-            block->valuesAtTail[i] = variableAt(i);
+            block->valuesAtTail[i] = atIndex(i);
         }
 
         for (NodeAbstractValuePair& valueAtTail : block->ssa->valuesAtTail)
@@ -323,7 +320,7 @@ bool InPlaceAbstractState::endBasicBlock()
 
 void InPlaceAbstractState::reset()
 {
-    m_block = 0;
+    m_block = nullptr;
     m_isValid = false;
     m_branchDirection = InvalidBranchDirection;
     m_structureClobberState = StructuresAreWatched;
@@ -343,6 +340,7 @@ bool InPlaceAbstractState::merge(BasicBlock* from, BasicBlock* to)
         dataLog("   Merging from ", pointerDump(from), " to ", pointerDump(to), "\n");
     ASSERT(from->variablesAtTail.numberOfArguments() == to->variablesAtHead.numberOfArguments());
     ASSERT(from->variablesAtTail.numberOfLocals() == to->variablesAtHead.numberOfLocals());
+    ASSERT(from->variablesAtTail.numberOfTmps() == to->variablesAtHead.numberOfTmps());
 
     bool changed = false;
 
@@ -352,14 +350,9 @@ bool InPlaceAbstractState::merge(BasicBlock* from, BasicBlock* to)
 
     switch (m_graph.m_form) {
     case ThreadedCPS: {
-        for (size_t argument = 0; argument < from->variablesAtTail.numberOfArguments(); ++argument) {
-            AbstractValue& destination = to->valuesAtHead.argument(argument);
-            changed |= mergeVariableBetweenBlocks(destination, from->valuesAtTail.argument(argument), to->variablesAtHead.argument(argument), from->variablesAtTail.argument(argument));
-        }
-
-        for (size_t local = 0; local < from->variablesAtTail.numberOfLocals(); ++local) {
-            AbstractValue& destination = to->valuesAtHead.local(local);
-            changed |= mergeVariableBetweenBlocks(destination, from->valuesAtTail.local(local), to->variablesAtHead.local(local), from->variablesAtTail.local(local));
+        for (size_t index = 0; index < from->variablesAtTail.size(); ++index) {
+            AbstractValue& destination = to->valuesAtHead.at(index);
+            changed |= mergeVariableBetweenBlocks(destination, from->valuesAtTail.at(index), to->variablesAtHead.at(index), from->variablesAtTail.at(index));
         }
         break;
     }

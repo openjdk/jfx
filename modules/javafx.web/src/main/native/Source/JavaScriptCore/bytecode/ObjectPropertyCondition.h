@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -66,7 +66,7 @@ public:
         unsigned attributes)
     {
         if (owner)
-            vm.heap.writeBarrier(owner);
+            vm.writeBarrier(owner);
         return presenceWithoutBarrier(object, uid, offset, attributes);
     }
 
@@ -84,7 +84,7 @@ public:
         VM& vm, JSCell* owner, JSObject* object, UniquedStringImpl* uid, JSObject* prototype)
     {
         if (owner)
-            vm.heap.writeBarrier(owner);
+            vm.writeBarrier(owner);
         return absenceWithoutBarrier(object, uid, prototype);
     }
 
@@ -101,7 +101,7 @@ public:
         VM& vm, JSCell* owner, JSObject* object, UniquedStringImpl* uid, JSObject* prototype)
     {
         if (owner)
-            vm.heap.writeBarrier(owner);
+            vm.writeBarrier(owner);
         return absenceOfSetEffectWithoutBarrier(object, uid, prototype);
     }
 
@@ -118,8 +118,19 @@ public:
         VM& vm, JSCell* owner, JSObject* object, UniquedStringImpl* uid, JSValue value)
     {
         if (owner)
-            vm.heap.writeBarrier(owner);
+            vm.writeBarrier(owner);
         return equivalenceWithoutBarrier(object, uid, value);
+    }
+
+    static ObjectPropertyCondition hasStaticProperty(
+        VM& vm, JSCell* owner, JSObject* object, UniquedStringImpl* uid)
+    {
+        ObjectPropertyCondition result;
+        result.m_object = object;
+        result.m_condition = PropertyCondition::hasStaticProperty(uid);
+        if (owner)
+            vm.writeBarrier(owner);
+        return result;
     }
 
     static ObjectPropertyCondition hasPrototypeWithoutBarrier(JSObject* object, JSObject* prototype)
@@ -134,7 +145,7 @@ public:
         VM& vm, JSCell* owner, JSObject* object, JSObject* prototype)
     {
         if (owner)
-            vm.heap.writeBarrier(owner);
+            vm.writeBarrier(owner);
         return hasPrototypeWithoutBarrier(object, prototype);
     }
 
@@ -193,7 +204,6 @@ public:
 
     // Checks if the object's structure claims that the property won't be intercepted. Validity
     // does not require watchpoints on the object.
-    bool structureEnsuresValidityAssumingImpurePropertyWatchpoint(Structure*) const;
     bool structureEnsuresValidityAssumingImpurePropertyWatchpoint() const;
 
     // Returns true if we need an impure property watchpoint to ensure validity even if
@@ -227,7 +237,7 @@ public:
         PropertyCondition::WatchabilityEffort = PropertyCondition::MakeNoChanges) const;
 
     // This means that it's still valid and we could enforce validity by setting a transition
-    // watchpoint on the structure.
+    // watchpoint on the structure, and a value change watchpoint if we're Equivalence.
     bool isWatchable(
         Structure*,
         PropertyCondition::WatchabilityEffort = PropertyCondition::MakeNoChanges) const;
@@ -241,6 +251,13 @@ public:
     bool watchingRequiresReplacementWatchpoint() const
     {
         return condition().watchingRequiresReplacementWatchpoint();
+    }
+
+    template<typename Functor>
+    void forEachDependentCell(const Functor& functor) const
+    {
+        functor(m_object);
+        m_condition.forEachDependentCell(functor);
     }
 
     // This means that the objects involved in this are still live.
@@ -267,7 +284,7 @@ struct ObjectPropertyConditionHash {
     {
         return a == b;
     }
-    static const bool safeToCompareToEmptyOrDeleted = true;
+    static constexpr bool safeToCompareToEmptyOrDeleted = true;
 };
 
 } // namespace JSC
@@ -275,9 +292,7 @@ struct ObjectPropertyConditionHash {
 namespace WTF {
 
 template<typename T> struct DefaultHash;
-template<> struct DefaultHash<JSC::ObjectPropertyCondition> {
-    typedef JSC::ObjectPropertyConditionHash Hash;
-};
+template<> struct DefaultHash<JSC::ObjectPropertyCondition> : JSC::ObjectPropertyConditionHash { };
 
 template<typename T> struct HashTraits;
 template<> struct HashTraits<JSC::ObjectPropertyCondition> : SimpleClassHashTraits<JSC::ObjectPropertyCondition> { };

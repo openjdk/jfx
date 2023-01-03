@@ -23,7 +23,6 @@
 
 #include "CachedResourceHandle.h"
 #include "CachedSVGDocumentClient.h"
-#include "SVGExternalResourcesRequired.h"
 #include "SVGGraphicsElement.h"
 #include "SVGURIReference.h"
 
@@ -32,15 +31,14 @@ namespace WebCore {
 class CachedSVGDocument;
 class SVGGElement;
 
-class SVGUseElement final : public SVGGraphicsElement, public SVGExternalResourcesRequired, public SVGURIReference, private CachedSVGDocumentClient {
+class SVGUseElement final : public SVGGraphicsElement, public SVGURIReference, private CachedSVGDocumentClient {
     WTF_MAKE_ISO_ALLOCATED(SVGUseElement);
 public:
     static Ref<SVGUseElement> create(const QualifiedName&, Document&);
     virtual ~SVGUseElement();
 
     void invalidateShadowTree();
-    bool shadowTreeNeedsUpdate() const { return m_shadowTreeNeedsUpdate; }
-    void updateShadowTree();
+    void updateUserAgentShadowTree() final;
 
     RenderElement* rendererClipChild() const;
 
@@ -57,13 +55,12 @@ public:
 private:
     SVGUseElement(const QualifiedName&, Document&);
 
-    bool isValid() const override;
     InsertedIntoAncestorResult insertedIntoAncestor(InsertionType, ContainerNode&) override;
     void didFinishInsertingNode() final;
     void removedFromAncestor(RemovalType, ContainerNode&) override;
     void buildPendingResource() override;
 
-    using PropertyRegistry = SVGPropertyOwnerRegistry<SVGUseElement, SVGGraphicsElement, SVGExternalResourcesRequired, SVGURIReference>;
+    using PropertyRegistry = SVGPropertyOwnerRegistry<SVGUseElement, SVGGraphicsElement, SVGURIReference>;
     const SVGPropertyRegistry& propertyRegistry() const final { return m_propertyRegistry; }
 
     void parseAttribute(const QualifiedName&, const AtomString&) override;
@@ -71,13 +68,8 @@ private:
 
     RenderPtr<RenderElement> createElementRenderer(RenderStyle&&, const RenderTreePosition&) override;
     Path toClipPath() override;
-    bool haveLoadedRequiredResources() override;
-    void finishParsingChildren() override;
     bool selfHasRelativeLengths() const override;
-    void setHaveFiredLoadEvent(bool) override;
-    bool haveFiredLoadEvent() const override;
-    Timer* svgLoadEventTimer() override;
-    void notifyFinished(CachedResource&) final;
+    void notifyFinished(CachedResource&, const NetworkLoadMetrics&) final;
 
     Document* externalDocument() const;
     void updateExternalDocument();
@@ -95,16 +87,26 @@ private:
     void clearShadowTree();
     void invalidateDependentShadowTrees();
 
+    bool haveLoadedRequiredResources() override { return SVGURIReference::haveLoadedRequiredResources(); }
+    void setHaveFiredLoadEvent(bool haveFiredLoadEvent) override { m_haveFiredLoadEvent = haveFiredLoadEvent; }
+    bool haveFiredLoadEvent() const override { return m_haveFiredLoadEvent; }
+    void setErrorOccurred(bool errorOccurred) override { m_errorOccurred = errorOccurred; }
+    bool errorOccurred() const override { return m_errorOccurred; }
+    Timer* loadEventTimer() override { return &m_loadEventTimer; }
+
+    bool isValid() const override { return SVGTests::isValid(); }
+
     PropertyRegistry m_propertyRegistry { *this };
-    Ref<SVGAnimatedLength> m_x { SVGAnimatedLength::create(this, LengthModeWidth) };
-    Ref<SVGAnimatedLength> m_y { SVGAnimatedLength::create(this, LengthModeHeight) };
-    Ref<SVGAnimatedLength> m_width { SVGAnimatedLength::create(this, LengthModeWidth) };
-    Ref<SVGAnimatedLength> m_height { SVGAnimatedLength::create(this, LengthModeHeight) };
+    Ref<SVGAnimatedLength> m_x { SVGAnimatedLength::create(this, SVGLengthMode::Width) };
+    Ref<SVGAnimatedLength> m_y { SVGAnimatedLength::create(this, SVGLengthMode::Height) };
+    Ref<SVGAnimatedLength> m_width { SVGAnimatedLength::create(this, SVGLengthMode::Width) };
+    Ref<SVGAnimatedLength> m_height { SVGAnimatedLength::create(this, SVGLengthMode::Height) };
 
     bool m_haveFiredLoadEvent { false };
+    bool m_errorOccurred { false };
     bool m_shadowTreeNeedsUpdate { true };
     CachedResourceHandle<CachedSVGDocument> m_externalDocument;
-    Timer m_svgLoadEventTimer;
+    Timer m_loadEventTimer;
 };
 
 }

@@ -88,6 +88,8 @@ Value* ValueKey::materialize(Procedure& proc, Origin origin) const
     case UDiv:
     case Mod:
     case UMod:
+    case FMax:
+    case FMin:
     case BitAnd:
     case BitOr:
     case BitXor:
@@ -116,6 +118,8 @@ Value* ValueKey::materialize(Procedure& proc, Origin origin) const
         return proc.add<ConstDoubleValue>(origin, doubleValue());
     case ConstFloat:
         return proc.add<ConstFloatValue>(origin, floatValue());
+    case BottomTuple:
+        return proc.add<BottomTupleValue>(origin, type());
     case ArgumentReg:
         return proc.add<ArgumentRegValue>(origin, Reg::fromIndex(static_cast<unsigned>(value())));
     case SlotBase:

@@ -84,7 +84,7 @@
  * g_ref_count_init:
  * @rc: the address of a reference count variable
  *
- * Initializes a reference count variable.
+ * Initializes a reference count variable to 1.
  *
  * Since: 2.58
  */
@@ -141,6 +141,10 @@ void
  * @rc: the address of a reference count variable
  *
  * Decreases the reference count.
+ *
+ * If %TRUE is returned, the reference count reached 0. After this point, @rc
+ * is an undefined state and must be reinitialized with
+ * g_ref_count_init() to be used again.
  *
  * Returns: %TRUE if the reference count reached 0, and %FALSE otherwise
  *
@@ -199,7 +203,7 @@ gboolean
  * g_atomic_ref_count_init:
  * @arc: the address of an atomic reference count variable
  *
- * Initializes a reference count variable.
+ * Initializes a reference count variable to 1.
  *
  * Since: 2.58
  */
@@ -231,16 +235,14 @@ void
 void
 (g_atomic_ref_count_inc) (gatomicrefcount *arc)
 {
+  gint old_value;
+
   g_return_if_fail (arc != NULL);
-  g_return_if_fail (g_atomic_int_get (arc) > 0);
+  old_value = g_atomic_int_add (arc, 1);
+  g_return_if_fail (old_value > 0);
 
-  if (g_atomic_int_get (arc) == G_MAXINT)
-    {
-      g_critical ("Reference count has reached saturation");
-      return;
-    }
-
-  g_atomic_int_inc (arc);
+  if (old_value == G_MAXINT)
+    g_critical ("Reference count has reached saturation");
 }
 
 /**
@@ -249,6 +251,10 @@ void
  *
  * Atomically decreases the reference count.
  *
+ * If %TRUE is returned, the reference count reached 0. After this point, @arc
+ * is an undefined state and must be reinitialized with
+ * g_atomic_ref_count_init() to be used again.
+ *
  * Returns: %TRUE if the reference count reached 0, and %FALSE otherwise
  *
  * Since: 2.58
@@ -256,10 +262,13 @@ void
 gboolean
 (g_atomic_ref_count_dec) (gatomicrefcount *arc)
 {
-  g_return_val_if_fail (arc != NULL, FALSE);
-  g_return_val_if_fail (g_atomic_int_get (arc) > 0, FALSE);
+  gint old_value;
 
-  return g_atomic_int_dec_and_test (arc);
+  g_return_val_if_fail (arc != NULL, FALSE);
+  old_value = g_atomic_int_add (arc, -1);
+  g_return_val_if_fail (old_value > 0, FALSE);
+
+  return old_value == 1;
 }
 
 /**

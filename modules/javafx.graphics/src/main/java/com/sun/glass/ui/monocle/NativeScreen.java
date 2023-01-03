@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -51,6 +51,22 @@ public interface NativeScreen {
      * Returns the pixel height of the screen.
      */
     int getHeight();
+
+    /**
+     * Returns the horizontal start position of this screen relative to the total
+     * combined screen size.
+     */
+    default int getOffsetX() {
+        return 0;
+    }
+
+    /**
+     * Returns the vertical start position of this screen relative to the total
+     * combined screen size.
+     */
+    default int getOffsetY() {
+        return 0;
+    }
 
     /**
      * Returns the number of pixels per inch in the screen.

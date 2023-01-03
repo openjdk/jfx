@@ -34,7 +34,7 @@ struct CSSParserContext;
 
 class CachedCSSStyleSheet final : public CachedResource {
 public:
-    CachedCSSStyleSheet(CachedResourceRequest&&, const PAL::SessionID&, const CookieJar*);
+    CachedCSSStyleSheet(CachedResourceRequest&&, PAL::SessionID, const CookieJar*);
     virtual ~CachedCSSStyleSheet();
 
     enum class MIMETypeCheckHint { Strict, Lax };
@@ -55,13 +55,12 @@ private:
     void setEncoding(const String&) final;
     String encoding() const final;
     const TextResourceDecoder* textResourceDecoder() const final { return m_decoder.get(); }
-    void finishLoading(SharedBuffer*) final;
+    void finishLoading(const FragmentedSharedBuffer*, const NetworkLoadMetrics&) final;
     void destroyDecodedData() final;
 
     void setBodyDataFrom(const CachedResource&) final;
 
-protected:
-    void checkNotify() final;
+    void checkNotify(const NetworkLoadMetrics&) final;
 
     RefPtr<TextResourceDecoder> m_decoder;
     String m_decodedSheetText;

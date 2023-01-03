@@ -35,17 +35,15 @@ class ScriptExecutable;
 struct DebuggerLocation {
 
     DebuggerLocation() { }
-    DebuggerLocation(const String& url, intptr_t sourceID, unsigned line, unsigned column)
-        : url(url)
-        , sourceID(sourceID)
+    DebuggerLocation(SourceID sourceID, unsigned line, unsigned column)
+        : sourceID(sourceID)
         , line(line)
         , column(column)
     { }
 
     DebuggerLocation(ScriptExecutable*);
 
-    String url;
-    intptr_t sourceID { noSourceID };
+    SourceID sourceID { noSourceID };
     unsigned line { 0 };
     unsigned column { 0 };
 };

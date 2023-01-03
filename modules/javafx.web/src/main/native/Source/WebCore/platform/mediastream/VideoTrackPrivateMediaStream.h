@@ -25,7 +25,7 @@
 
 #pragma once
 
-#if ENABLE(VIDEO_TRACK) && ENABLE(MEDIA_STREAM)
+#if ENABLE(MEDIA_STREAM)
 
 #include "MediaStreamTrackPrivate.h"
 #include "VideoTrackPrivate.h"
@@ -35,7 +35,7 @@ namespace WebCore {
 class VideoTrackPrivateMediaStream final : public VideoTrackPrivate {
     WTF_MAKE_NONCOPYABLE(VideoTrackPrivateMediaStream)
 public:
-    static RefPtr<VideoTrackPrivateMediaStream> create(MediaStreamTrackPrivate& streamTrack)
+    static Ref<VideoTrackPrivateMediaStream> create(MediaStreamTrackPrivate& streamTrack)
     {
         return adoptRef(*new VideoTrackPrivateMediaStream(streamTrack));
     }
@@ -44,15 +44,11 @@ public:
 
     MediaStreamTrackPrivate& streamTrack() { return m_streamTrack.get(); }
 
-    MediaTime timelineOffset() const { return m_timelineOffset; }
-    void setTimelineOffset(const MediaTime& offset) { m_timelineOffset = offset; }
-
 private:
     VideoTrackPrivateMediaStream(MediaStreamTrackPrivate& track)
         : m_streamTrack(track)
         , m_id(track.id())
         , m_label(track.label())
-        , m_timelineOffset(MediaTime::invalidTime())
     {
     }
 
@@ -66,9 +62,8 @@ private:
     AtomString m_id;
     AtomString m_label;
     int m_index { 0 };
-    MediaTime m_timelineOffset;
 };
 
 }
 
-#endif // ENABLE(VIDEO_TRACK) && ENABLE(MEDIA_STREAM)
+#endif // ENABLE(MEDIA_STREAM)

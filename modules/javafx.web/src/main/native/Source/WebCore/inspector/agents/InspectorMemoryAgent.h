@@ -35,24 +35,22 @@
 
 namespace WebCore {
 
-typedef String ErrorString;
-
 class InspectorMemoryAgent final : public InspectorAgentBase, public Inspector::MemoryBackendDispatcherHandler {
     WTF_MAKE_NONCOPYABLE(InspectorMemoryAgent);
     WTF_MAKE_FAST_ALLOCATED;
 public:
     InspectorMemoryAgent(PageAgentContext&);
-    virtual ~InspectorMemoryAgent();
+    ~InspectorMemoryAgent();
 
     // InspectorAgentBase
     void didCreateFrontendAndBackend(Inspector::FrontendRouter*, Inspector::BackendDispatcher*);
     void willDestroyFrontendAndBackend(Inspector::DisconnectReason);
 
     // MemoryBackendDispatcherHandler
-    void enable(ErrorString&);
-    void disable(ErrorString&);
-    void startTracking(ErrorString&);
-    void stopTracking(ErrorString&);
+    Inspector::Protocol::ErrorStringOr<void> enable();
+    Inspector::Protocol::ErrorStringOr<void> disable();
+    Inspector::Protocol::ErrorStringOr<void> startTracking();
+    Inspector::Protocol::ErrorStringOr<void> stopTracking();
 
     // InspectorInstrumentation
     void didHandleMemoryPressure(Critical);

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,21 +25,24 @@
 
 #pragma once
 
+#include "ExecutableMemoryHandle.h"
+#include "FastJITPermissions.h"
 #include "JITCompilationEffort.h"
+#include "JSCConfig.h"
 #include "JSCPtrTag.h"
 #include "Options.h"
 #include <stddef.h> // for ptrdiff_t
 #include <limits>
 #include <wtf/Assertions.h>
+#include <wtf/Gigacage.h>
 #include <wtf/Lock.h>
-#include <wtf/MetaAllocatorHandle.h>
-#include <wtf/MetaAllocator.h>
 
-#if OS(IOS_FAMILY)
-#include <libkern/OSCacheControl.h>
+#if !USE(LIBPAS_JIT_HEAP)
+#include <wtf/MetaAllocator.h>
 #endif
 
-#if OS(IOS_FAMILY)
+#if OS(DARWIN)
+#include <libkern/OSCacheControl.h>
 #include <sys/mman.h>
 #endif
 
@@ -47,18 +50,13 @@
 #include <sys/cachectl.h>
 #endif
 
-#if ENABLE(FAST_JIT_PERMISSIONS)
-#include <os/thread_self_restrict.h>
-#endif
 #define JIT_ALLOCATOR_LARGE_ALLOC_SIZE (pageSize() * 4)
 
 #define EXECUTABLE_POOL_WRITABLE true
 
 namespace JSC {
 
-static const unsigned jitAllocationGranule = 32;
-
-typedef WTF::MetaAllocatorHandle ExecutableMemoryHandle;
+static constexpr unsigned jitAllocationGranule = 32;
 
 class ExecutableAllocatorBase {
     WTF_MAKE_FAST_ALLOCATED;
@@ -72,7 +70,7 @@ public:
 
     static void dumpProfile() { }
 
-    RefPtr<ExecutableMemoryHandle> allocate(size_t, void*, JITCompilationEffort) { return nullptr; }
+    RefPtr<ExecutableMemoryHandle> allocate(size_t, JITCompilationEffort) { return nullptr; }
 
     static void setJITEnabled(bool) { };
 
@@ -80,7 +78,7 @@ public:
 
     static size_t committedByteCount() { return 0; }
 
-    Lock& getLock() const
+    Lock& getLock() const WTF_RETURNS_LOCK(m_lock)
     {
         return m_lock;
     }
@@ -110,19 +108,14 @@ T endOfFixedExecutableMemoryPool()
     return bitwise_cast<T>(endOfFixedExecutableMemoryPoolImpl());
 }
 
-JS_EXPORT_PRIVATE bool isJITPC(void* pc);
+ALWAYS_INLINE bool isJITPC(void* pc)
+{
+    return g_jscConfig.startExecutableMemory <= pc && pc < g_jscConfig.endExecutableMemory;
+}
 
 JS_EXPORT_PRIVATE void dumpJITMemory(const void*, const void*, size_t);
 
-#if ENABLE(SEPARATED_WX_HEAP)
-
-typedef void (*JITWriteSeparateHeapsFunction)(off_t, const void*, size_t);
-extern JS_EXPORT_PRIVATE JITWriteSeparateHeapsFunction jitWriteSeparateHeapsFunction;
-extern JS_EXPORT_PRIVATE bool useFastPermisionsJITCopy;
-
-#endif // ENABLE(SEPARATED_WX_HEAP)
-
-static inline void* performJITMemcpy(void *dst, const void *src, size_t n)
+static ALWAYS_INLINE void* performJITMemcpy(void *dst, const void *src, size_t n)
 {
 #if CPU(ARM64)
     static constexpr size_t instructionSize = sizeof(unsigned);
@@ -130,28 +123,26 @@ static inline void* performJITMemcpy(void *dst, const void *src, size_t n)
     RELEASE_ASSERT(roundUpToMultipleOf<instructionSize>(src) == src);
 #endif
     if (isJITPC(dst)) {
+        RELEASE_ASSERT(!Gigacage::contains(src));
         RELEASE_ASSERT(reinterpret_cast<uint8_t*>(dst) + n <= endOfFixedExecutableMemoryPool());
 
         if (UNLIKELY(Options::dumpJITMemoryPath()))
             dumpJITMemory(dst, src, n);
-#if ENABLE(FAST_JIT_PERMISSIONS)
-#if ENABLE(SEPARATED_WX_HEAP)
-        if (useFastPermisionsJITCopy)
-#endif
-        {
-            os_thread_self_restrict_rwx_to_rw();
+
+        if (g_jscConfig.useFastJITPermissions) {
+            threadSelfRestrictRWXToRW();
             memcpy(dst, src, n);
-            os_thread_self_restrict_rwx_to_rx();
+            threadSelfRestrictRWXToRX();
             return dst;
         }
-#endif // ENABLE(FAST_JIT_PERMISSIONS)
 
 #if ENABLE(SEPARATED_WX_HEAP)
-        if (jitWriteSeparateHeapsFunction) {
+        if (g_jscConfig.jitWriteSeparateHeaps) {
             // Use execute-only write thunk for writes inside the JIT region. This is a variant of
             // memcpy that takes an offset into the JIT region as its destination (first) parameter.
             off_t offset = (off_t)((uintptr_t)dst - startOfFixedExecutableMemoryPool<uintptr_t>());
-            retagCodePtr<JITThunkPtrTag, CFunctionPtrTag>(jitWriteSeparateHeapsFunction)(offset, src, n);
+            retagCodePtr<JITThunkPtrTag, CFunctionPtrTag>(g_jscConfig.jitWriteSeparateHeaps)(offset, src, n);
+            RELEASE_ASSERT(!Gigacage::contains(src));
             return dst;
         }
 #endif
@@ -165,7 +156,7 @@ class ExecutableAllocator : private ExecutableAllocatorBase {
 public:
     using Base = ExecutableAllocatorBase;
 
-    static ExecutableAllocator& singleton();
+    JS_EXPORT_PRIVATE static ExecutableAllocator& singleton();
     static void initialize();
     static void initializeUnderlyingAllocator();
 
@@ -183,13 +174,18 @@ public:
 
     JS_EXPORT_PRIVATE static void setJITEnabled(bool);
 
-    RefPtr<ExecutableMemoryHandle> allocate(size_t sizeInBytes, void* ownerUID, JITCompilationEffort);
+    RefPtr<ExecutableMemoryHandle> allocate(size_t sizeInBytes, JITCompilationEffort);
 
     bool isValidExecutableMemory(const AbstractLocker&, void* address);
 
     static size_t committedByteCount();
 
     Lock& getLock() const;
+
+#if ENABLE(JUMP_ISLANDS)
+    JS_EXPORT_PRIVATE void* getJumpIslandTo(void* from, void* newDestination);
+    JS_EXPORT_PRIVATE void* getJumpIslandToConcurrently(void* from, void* newDestination);
+#endif
 
 private:
     ExecutableAllocator() = default;

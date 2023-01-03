@@ -1,6 +1,6 @@
 /*
  *  Copyright (C) 1999-2001 Harri Porten (porten@kde.org)
- *  Copyright (C) 2003-2017 Apple Inc. All rights reserved.
+ *  Copyright (C) 2003-2021 Apple Inc. All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Library General Public
@@ -28,28 +28,18 @@
 
 namespace JSC {
 
-class MarkedArgumentBuffer : public RecordOverflow {
-    WTF_MAKE_NONCOPYABLE(MarkedArgumentBuffer);
+class alignas(alignof(EncodedJSValue)) MarkedArgumentBufferBase : public RecordOverflow {
+    WTF_MAKE_NONCOPYABLE(MarkedArgumentBufferBase);
+    WTF_MAKE_NONMOVABLE(MarkedArgumentBufferBase);
     WTF_FORBID_HEAP_ALLOCATION;
     friend class VM;
     friend class ArgList;
 
 public:
     using Base = RecordOverflow;
-    static const size_t inlineCapacity = 8;
-    typedef HashSet<MarkedArgumentBuffer*> ListSet;
+    typedef HashSet<MarkedArgumentBufferBase*> ListSet;
 
-    // Constructor for a read-write list, to which you may append values.
-    // FIXME: Remove all clients of this API, then remove this API.
-    MarkedArgumentBuffer()
-        : m_size(0)
-        , m_capacity(inlineCapacity)
-        , m_buffer(m_inlineBuffer)
-        , m_markSet(0)
-    {
-    }
-
-    ~MarkedArgumentBuffer()
+    ~MarkedArgumentBufferBase()
     {
         ASSERT(!m_needsOverflowCheck);
         if (m_markSet)
@@ -117,7 +107,7 @@ public:
         return result;
     }
 
-    static void markLists(SlotVisitor&, ListSet&);
+    template<typename Visitor> static void markLists(Visitor&, ListSet&);
 
     void ensureCapacity(size_t requestedCapacity)
     {
@@ -132,6 +122,33 @@ public:
     }
 
     void overflowCheckNotNeeded() { clearNeedsOverflowCheck(); }
+
+    template<typename Functor>
+    void fill(size_t count, const Functor& func)
+    {
+        ASSERT(!m_size);
+        ensureCapacity(count);
+        if (Base::hasOverflowed())
+            return;
+        m_size = count;
+        func(reinterpret_cast<JSValue*>(&slotFor(0)));
+    }
+
+protected:
+    // Constructor for a read-write list, to which you may append values.
+    // FIXME: Remove all clients of this API, then remove this API.
+    MarkedArgumentBufferBase(size_t capacity)
+        : m_size(0)
+        , m_capacity(capacity)
+        , m_buffer(inlineBuffer())
+        , m_markSet(nullptr)
+    {
+    }
+
+    EncodedJSValue* inlineBuffer()
+    {
+        return bitwise_cast<EncodedJSValue*>(bitwise_cast<uint8_t*>(this) + sizeof(MarkedArgumentBufferBase));
+    }
 
 private:
     void expandCapacity();
@@ -149,26 +166,42 @@ private:
 
     EncodedJSValue* mallocBase()
     {
-        if (m_buffer == m_inlineBuffer)
-            return 0;
+        if (m_buffer == inlineBuffer())
+            return nullptr;
         return &slotFor(0);
     }
 
-#if ASSERT_DISABLED
-    void setNeedsOverflowCheck() { }
-    void clearNeedsOverflowCheck() { }
-#else
+#if ASSERT_ENABLED
     void setNeedsOverflowCheck() { m_needsOverflowCheck = true; }
     void clearNeedsOverflowCheck() { m_needsOverflowCheck = false; }
 
     bool m_needsOverflowCheck { false };
-#endif
+#else
+    void setNeedsOverflowCheck() { }
+    void clearNeedsOverflowCheck() { }
+#endif // ASSERT_ENABLED
     int m_size;
     int m_capacity;
-    EncodedJSValue m_inlineBuffer[inlineCapacity];
     EncodedJSValue* m_buffer;
     ListSet* m_markSet;
 };
+
+template<size_t passedInlineCapacity = 8>
+class MarkedArgumentBufferWithSize : public MarkedArgumentBufferBase {
+public:
+    static constexpr size_t inlineCapacity = passedInlineCapacity;
+
+    MarkedArgumentBufferWithSize()
+        : MarkedArgumentBufferBase(inlineCapacity)
+    {
+        ASSERT(inlineBuffer() == m_inlineBuffer);
+    }
+
+private:
+    EncodedJSValue m_inlineBuffer[inlineCapacity] { };
+};
+
+using MarkedArgumentBuffer = MarkedArgumentBufferWithSize<>;
 
 class ArgList {
     WTF_MAKE_FAST_ALLOCATED;
@@ -176,14 +209,14 @@ class ArgList {
     friend class JIT;
 public:
     ArgList()
-        : m_args(0)
+        : m_args(nullptr)
         , m_argCount(0)
     {
     }
 
-    ArgList(ExecState* exec)
-        : m_args(reinterpret_cast<JSValue*>(&exec[CallFrame::argumentOffset(0)]))
-        , m_argCount(exec->argumentCount())
+    ArgList(CallFrame* callFrame)
+        : m_args(reinterpret_cast<JSValue*>(&callFrame[CallFrame::argumentOffset(0)]))
+        , m_argCount(callFrame->argumentCount())
     {
     }
 

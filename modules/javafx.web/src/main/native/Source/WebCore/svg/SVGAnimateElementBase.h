@@ -38,10 +38,12 @@ public:
 protected:
     SVGAnimateElementBase(const QualifiedName&, Document&);
 
+    bool hasValidAttributeType() const override;
+    virtual String animateRangeString(const String& string) const { return string; }
+
+private:
     SVGAttributeAnimator* animator() const;
     SVGAttributeAnimator* animatorIfExists() const { return m_animator.get(); }
-
-    bool hasValidAttributeType() const override;
 
     void setTargetElement(SVGElement*) override;
     void setAttributeName(const QualifiedName&) override;
@@ -51,19 +53,16 @@ protected:
     bool calculateFromAndByValues(const String& fromString, const String& byString) override;
     bool calculateToAtEndOfDurationValue(const String& toAtEndOfDurationString) override;
 
-    void resetAnimatedType() override;
-    void calculateAnimatedValue(float progress, unsigned repeatCount, SVGSMILElement* resultElement) override;
+    void startAnimation() override;
+    void calculateAnimatedValue(float progress, unsigned repeatCount) override;
     void applyResultsToTarget() override;
-    void clearAnimatedType(SVGElement* targetElement) override;
-    Optional<float> calculateDistance(const String& fromString, const String& toString) override;
+    void stopAnimation(SVGElement* targetElement) override;
+    std::optional<float> calculateDistance(const String& fromString, const String& toString) override;
 
-    virtual String animateRangeString(const String& string) const { return string; }
-
-private:
     bool hasInvalidCSSAttributeType() const;
 
     mutable RefPtr<SVGAttributeAnimator> m_animator;
-    mutable Optional<bool> m_hasInvalidCSSAttributeType;
+    mutable std::optional<bool> m_hasInvalidCSSAttributeType;
 };
 
 } // namespace WebCore

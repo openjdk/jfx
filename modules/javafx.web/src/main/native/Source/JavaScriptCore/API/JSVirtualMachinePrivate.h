@@ -23,8 +23,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "JSExportMacros.h"
-#include <JavaScriptCore/JavaScript.h>
+#import "JSExportMacros.h"
+#import <JavaScriptCore/JavaScript.h>
 
 #if JSC_OBJC_API_ENABLED
 
@@ -44,8 +44,6 @@
 */
 
 - (void)shrinkFootprintWhenIdle JSC_API_AVAILABLE(macos(10.14), ios(12.0));
-
-#if ENABLE(DFG_JIT)
 
 /*!
 @method
@@ -79,8 +77,6 @@
 @param shouldCrash Sets process-wide state that indicates whether VM creation should crash or not.
 */
 + (void)setCrashOnVMCreation:(BOOL)shouldCrash;
-
-#endif // ENABLE(DFG_JIT)
 
 @end
 

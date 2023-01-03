@@ -25,8 +25,11 @@
 #pragma once
 
 #include "AudioBus.h"
+#include "ChannelCountMode.h"
+#include "ChannelInterpretation.h"
 #include "EventTarget.h"
 #include "ExceptionOr.h"
+#include <variant>
 #include <wtf/Forward.h>
 #include <wtf/LoggerHelper.h>
 
@@ -34,10 +37,11 @@
 
 namespace WebCore {
 
-class AudioContext;
 class AudioNodeInput;
+struct AudioNodeOptions;
 class AudioNodeOutput;
 class AudioParam;
+class BaseAudioContext;
 
 // An AudioNode is the basic building block for handling audio within an AudioContext.
 // It may be an audio source, an intermediate processing module, or an audio destination.
@@ -54,16 +58,7 @@ class AudioNode
     WTF_MAKE_NONCOPYABLE(AudioNode);
     WTF_MAKE_ISO_ALLOCATED(AudioNode);
 public:
-    enum { ProcessingSizeInFrames = 128 };
-
-    AudioNode(AudioContext&, float sampleRate);
-    virtual ~AudioNode();
-
-    AudioContext& context() { return m_context.get(); }
-    const AudioContext& context() const { return m_context.get(); }
-
     enum NodeType {
-        NodeTypeUnknown,
         NodeTypeDestination,
         NodeTypeOscillator,
         NodeTypeAudioBufferSource,
@@ -81,39 +76,39 @@ public:
         NodeTypeAnalyser,
         NodeTypeDynamicsCompressor,
         NodeTypeWaveShaper,
-        NodeTypeBasicInspector,
-        NodeTypeEnd
+        NodeTypeConstant,
+        NodeTypeStereoPanner,
+        NodeTypeIIRFilter,
+        NodeTypeWorklet,
+        NodeTypeLast = NodeTypeWorklet
     };
 
-    enum ChannelCountMode {
-        Max,
-        ClampedMax,
-        Explicit
-    };
+    AudioNode(BaseAudioContext&, NodeType);
+    virtual ~AudioNode();
+
+    BaseAudioContext& context();
+    const BaseAudioContext& context() const;
 
     NodeType nodeType() const { return m_nodeType; }
-    void setNodeType(NodeType);
-
-    // We handle our own ref-counting because of the threading issues and subtle nature of
-    // how AudioNodes can continue processing (playing one-shot sound) after there are no more
-    // JavaScript references to the object.
-    enum RefType { RefTypeNormal, RefTypeConnection };
 
     // Can be called from main thread or context's audio thread.
-    void ref(RefType refType = RefTypeNormal);
-    void deref(RefType refType = RefTypeNormal);
+    virtual void ref();
+    virtual void deref();
+    void incrementConnectionCount();
+    void decrementConnectionCount();
 
     // Can be called from main thread or context's audio thread.  It must be called while the context's graph lock is held.
-    void finishDeref(RefType refType);
+    void decrementConnectionCountWithLock();
 
     // The AudioNodeInput(s) (if any) will already have their input data available when process() is called.
     // Subclasses will take this input data and put the results in the AudioBus(s) of its AudioNodeOutput(s) (if any).
     // Called from context's audio thread.
     virtual void process(size_t framesToProcess) = 0;
 
-    // Resets DSP processing state (clears delay lines, filter memory, etc.)
-    // Called from context's audio thread.
-    virtual void reset() = 0;
+    // Like process(), but only causes the automations to process; the
+    // normal processing of the node is bypassed. By default, we assume
+    // no AudioParams need to be updated.
+    virtual void processOnlyAudioParams(size_t) { }
 
     // No significant resources should be allocated until initialize() is called.
     // Processing may not occur until a node is initialized.
@@ -121,7 +116,6 @@ public:
     virtual void uninitialize();
 
     bool isInitialized() const { return m_isInitialized; }
-    void lazyInitialize();
 
     unsigned numberOfInputs() const { return m_inputs.size(); }
     unsigned numberOfOutputs() const { return m_outputs.size(); }
@@ -130,11 +124,18 @@ public:
     AudioNodeOutput* output(unsigned);
 
     // Called from main thread by corresponding JavaScript methods.
-    virtual ExceptionOr<void> connect(AudioNode&, unsigned outputIndex, unsigned inputIndex);
+    ExceptionOr<void> connect(AudioNode&, unsigned outputIndex, unsigned inputIndex);
     ExceptionOr<void> connect(AudioParam&, unsigned outputIndex);
-    virtual ExceptionOr<void> disconnect(unsigned outputIndex);
 
-    virtual float sampleRate() const { return m_sampleRate; }
+    void disconnect();
+    ExceptionOr<void> disconnect(unsigned output);
+    ExceptionOr<void> disconnect(AudioNode& destinationNode);
+    ExceptionOr<void> disconnect(AudioNode& destinationNode, unsigned output);
+    ExceptionOr<void> disconnect(AudioNode& destinationNode, unsigned output, unsigned input);
+    ExceptionOr<void> disconnect(AudioParam& destinationParam);
+    ExceptionOr<void> disconnect(AudioParam& destinationParam, unsigned output);
+
+    virtual float sampleRate() const;
 
     // processIfNecessary() is called by our output(s) when the rendering graph needs this AudioNode to process.
     // This method ensures that the AudioNode will only process once per rendering time quantum even if it's called repeatedly.
@@ -160,6 +161,13 @@ public:
     // example, a "delay" effect is expected to delay the signal, and thus would not be considered latency.
     virtual double latencyTime() const = 0;
 
+    // True if the node has a tail time or latency time that requires
+    // special tail processing to behave properly. Ideally, this can be
+    // checked using tailTime and latencyTime, but these aren't
+    // available on the main thread, and the tail processing check can
+    // happen on the main thread.
+    virtual bool requiresTailProcessing() const = 0;
+
     // propagatesSilence() should return true if the node will generate silent output when given silent input. By default, AudioNode
     // will take tailTime() and latencyTime() into account when determining whether the node will propagate silence.
     virtual bool propagatesSilence() const;
@@ -168,23 +176,40 @@ public:
 
     void enableOutputsIfNecessary();
     void disableOutputsIfNecessary();
+    void disableOutputs();
 
-    unsigned channelCount();
+    unsigned channelCount() const { return m_channelCount; }
     virtual ExceptionOr<void> setChannelCount(unsigned);
 
-    String channelCountMode();
-    ExceptionOr<void> setChannelCountMode(const String&);
+    ChannelCountMode channelCountMode() const { return m_channelCountMode; }
+    virtual ExceptionOr<void> setChannelCountMode(ChannelCountMode);
 
-    String channelInterpretation();
-    ExceptionOr<void> setChannelInterpretation(const String&);
+    ChannelInterpretation channelInterpretation() const { return m_channelInterpretation; }
+    virtual ExceptionOr<void> setChannelInterpretation(ChannelInterpretation);
 
-    ChannelCountMode internalChannelCountMode() const { return m_channelCountMode; }
-    AudioBus::ChannelInterpretation internalChannelInterpretation() const { return m_channelInterpretation; }
+    bool isFinishedSourceNode() const { return m_isFinishedSourceNode; }
+    void setIsFinishedSourceNode() { m_isFinishedSourceNode = true; }
+
+    // Flag indicating the node is in the context's m_tailProcessingNodes or m_finishTailProcessingNodes.
+    // We rely on this flag to avoid unnecessary linear searches in those vectors.
+    bool isTailProcessing() const { return m_isTailProcessing; }
+    void setIsTailProcessing(bool isTailProcessing) { m_isTailProcessing = isTailProcessing; }
 
 protected:
     // Inputs and outputs must be created before the AudioNode is initialized.
-    void addInput(std::unique_ptr<AudioNodeInput>);
-    void addOutput(std::unique_ptr<AudioNodeOutput>);
+    void addInput();
+    void addOutput(unsigned numberOfChannels);
+
+    void markNodeForDeletionIfNecessary();
+    void derefWithLock();
+
+    struct DefaultAudioNodeOptions {
+        unsigned channelCount;
+        ChannelCountMode channelCountMode;
+        ChannelInterpretation channelInterpretation;
+    };
+
+    ExceptionOr<void> handleAudioNodeOptions(const AudioNodeOptions&, const DefaultAudioNodeOptions&);
 
     // Called by processIfNecessary() to cause all parts of the rendering graph connected to us to process.
     // Each rendering quantum, the audio data for each of the AudioNode's inputs will be available after this method is called.
@@ -201,31 +226,42 @@ protected:
     WTFLogChannel& logChannel() const final;
 #endif
 
+    void initializeDefaultNodeOptions(unsigned count, ChannelCountMode, ChannelInterpretation);
+
+    virtual void updatePullStatus() { }
+
 private:
+    using WeakOrStrongContext = std::variant<Ref<BaseAudioContext>, WeakPtr<BaseAudioContext>>;
+    static WeakOrStrongContext toWeakOrStrongContext(BaseAudioContext&, NodeType);
+
     // EventTarget
     EventTargetInterface eventTargetInterface() const override;
     ScriptExecutionContext* scriptExecutionContext() const final;
 
-    volatile bool m_isInitialized;
+    volatile bool m_isInitialized { false };
     NodeType m_nodeType;
-    Ref<AudioContext> m_context;
-    float m_sampleRate;
+
+    WeakOrStrongContext m_context;
+
     Vector<std::unique_ptr<AudioNodeInput>> m_inputs;
     Vector<std::unique_ptr<AudioNodeOutput>> m_outputs;
 
-    double m_lastProcessingTime;
-    double m_lastNonSilentTime;
+    double m_lastProcessingTime { -1 };
+    double m_lastNonSilentTime { -1 };
 
     // Ref-counting
-    std::atomic<int> m_normalRefCount;
-    std::atomic<int> m_connectionRefCount;
+    // start out with normal refCount == 1 (like WTF::RefCounted class).
+    std::atomic<int> m_normalRefCount { 1 };
+    std::atomic<int> m_connectionRefCount { 0 };
 
-    bool m_isMarkedForDeletion;
-    bool m_isDisabled;
+    bool m_isMarkedForDeletion { false };
+    bool m_isDisabled { false };
+    bool m_isFinishedSourceNode { false };
+    bool m_isTailProcessing { false };
 
 #if DEBUG_AUDIONODE_REFERENCES
     static bool s_isNodeCountInitialized;
-    static int s_nodeCount[NodeTypeEnd];
+    static int s_nodeCount[NodeTypeLast + 1];
 #endif
 
     void refEventTarget() override { ref(); }
@@ -236,11 +272,27 @@ private:
     const void* m_logIdentifier;
 #endif
 
-protected:
-    unsigned m_channelCount;
-    ChannelCountMode m_channelCountMode;
-    AudioBus::ChannelInterpretation m_channelInterpretation;
+    unsigned m_channelCount { 2 };
+    ChannelCountMode m_channelCountMode { ChannelCountMode::Max };
+    ChannelInterpretation m_channelInterpretation { ChannelInterpretation::Speakers };
 };
+
+template<typename T> struct AudioNodeConnectionRefDerefTraits {
+    static ALWAYS_INLINE void refIfNotNull(T* ptr)
+    {
+        if (LIKELY(ptr != nullptr))
+            ptr->incrementConnectionCount();
+    }
+
+    static ALWAYS_INLINE void derefIfNotNull(T* ptr)
+    {
+        if (LIKELY(ptr != nullptr))
+            ptr->decrementConnectionCount();
+    }
+};
+
+template<typename T>
+using AudioConnectionRefPtr = RefPtr<T, RawPtrTraits<T>, AudioNodeConnectionRefDerefTraits<T>>;
 
 String convertEnumerationToString(AudioNode::NodeType);
 

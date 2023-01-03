@@ -25,40 +25,36 @@
 
 #pragma once
 
-#if ENABLE(INDEXED_DATABASE)
-
 #include "IDBKeyRangeData.h"
-#include <wtf/Optional.h>
 
 namespace WebCore {
 
 namespace IndexedDB {
-enum class DataSource;
-enum class GetAllType;
+enum class GetAllType : uint8_t;
 }
 
 struct IDBGetAllRecordsData {
     IDBKeyRangeData keyRangeData;
     IndexedDB::GetAllType getAllType;
-    Optional<uint32_t> count;
+    std::optional<uint32_t> count;
     uint64_t objectStoreIdentifier;
     uint64_t indexIdentifier;
 
-    IDBGetAllRecordsData isolatedCopy() const;
+    WEBCORE_EXPORT IDBGetAllRecordsData isolatedCopy() const;
 
 #if !LOG_DISABLED
     String loggingString() const;
 #endif
 
     template<class Encoder> void encode(Encoder&) const;
-    template<class Decoder> static bool decode(Decoder&, IDBGetAllRecordsData&);
+    template<class Decoder> static WARN_UNUSED_RETURN bool decode(Decoder&, IDBGetAllRecordsData&);
 };
 
 template<class Encoder>
 void IDBGetAllRecordsData::encode(Encoder& encoder) const
 {
     encoder << keyRangeData;
-    encoder.encodeEnum(getAllType);
+    encoder << getAllType;
     encoder << count << objectStoreIdentifier << indexIdentifier;
 }
 
@@ -68,7 +64,7 @@ bool IDBGetAllRecordsData::decode(Decoder& decoder, IDBGetAllRecordsData& getAll
     if (!decoder.decode(getAllRecordsData.keyRangeData))
         return false;
 
-    if (!decoder.decodeEnum(getAllRecordsData.getAllType))
+    if (!decoder.decode(getAllRecordsData.getAllType))
         return false;
 
     if (!decoder.decode(getAllRecordsData.count))
@@ -84,5 +80,3 @@ bool IDBGetAllRecordsData::decode(Decoder& decoder, IDBGetAllRecordsData& getAll
 }
 
 } // namespace WebCore
-
-#endif // ENABLE(INDEXED_DATABASE)

@@ -245,15 +245,27 @@ typedef enum
 GST_API
 gchar *gst_error_get_message (GQuark domain, gint code);
 
+/**
+ * gst_stream_error_quark: (attributes doc.skip=true)
+ */
 GST_API
 GQuark gst_stream_error_quark (void);
 
+/**
+ * gst_core_error_quark: (attributes doc.skip=true)
+ */
 GST_API
 GQuark gst_core_error_quark (void);
 
+/**
+ * gst_resource_error_quark: (attributes doc.skip=true)
+ */
 GST_API
 GQuark gst_resource_error_quark (void);
 
+/**
+ * gst_library_error_quark: (attributes doc.skip=true)
+ */
 GST_API
 GQuark gst_library_error_quark (void);
 

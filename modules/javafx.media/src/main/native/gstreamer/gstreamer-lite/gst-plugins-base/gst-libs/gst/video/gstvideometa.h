@@ -53,8 +53,27 @@ typedef struct _GstVideoCropMeta GstVideoCropMeta;
  *          valid, it is used by the default implementation of @map.
  * @map: map the memory of a plane
  * @unmap: unmap the memory of a plane
+ * @alignment: the paddings and alignment constraints of the video buffer.
+ * It is up to the caller of `gst_buffer_add_video_meta_full()` to set it
+ * using gst_video_meta_set_alignment(), if they did not it defaults
+ * to no padding and no alignment. Since: 1.18
  *
  * Extra buffer metadata describing image properties
+ *
+ * This meta can also be used by downstream elements to specifiy their
+ * buffer layout requirements for upstream. Upstream should try to
+ * fit those requirements, if possible, in order to prevent buffer copies.
+ *
+ * This is done by passing a custom #GstStructure to
+ * gst_query_add_allocation_meta() when handling the ALLOCATION query.
+ * This structure should be named 'video-meta' and can have the following
+ * fields:
+ * - padding-top (uint): extra pixels on the top
+ * - padding-bottom (uint): extra pixels on the bottom
+ * - padding-left (uint): extra pixels on the left side
+ * - padding-right (uint): extra pixels on the right side
+ * The padding fields have the same semantic as #GstVideoMeta.alignment
+ * and so represent the paddings requested on produced video buffers.
  */
 struct _GstVideoMeta {
   GstMeta            meta;
@@ -74,6 +93,8 @@ struct _GstVideoMeta {
   gboolean (*map)    (GstVideoMeta *meta, guint plane, GstMapInfo *info,
                       gpointer *data, gint * stride, GstMapFlags flags);
   gboolean (*unmap)  (GstVideoMeta *meta, guint plane, GstMapInfo *info);
+
+  GstVideoAlignment  alignment;
 };
 
 GST_VIDEO_API
@@ -104,6 +125,15 @@ gboolean       gst_video_meta_map        (GstVideoMeta *meta, guint plane, GstMa
 
 GST_VIDEO_API
 gboolean       gst_video_meta_unmap      (GstVideoMeta *meta, guint plane, GstMapInfo *info);
+
+GST_VIDEO_API
+gboolean       gst_video_meta_set_alignment (GstVideoMeta * meta, GstVideoAlignment alignment);
+
+GST_VIDEO_API
+gboolean       gst_video_meta_get_plane_size (GstVideoMeta * meta, gsize plane_size[GST_VIDEO_MAX_PLANES]);
+
+GST_VIDEO_API
+gboolean       gst_video_meta_get_plane_height (GstVideoMeta * meta, guint plane_height[GST_VIDEO_MAX_PLANES]);
 
 /**
  * GstVideoCropMeta:
@@ -281,7 +311,8 @@ gboolean  gst_video_gl_texture_upload_meta_upload     (GstVideoGLTextureUploadMe
  * @y: y component of upper-left corner
  * @w: bounding box width
  * @h: bounding box height
- * @params: list of #GstStructure containing element-specific params for downstream, see gst_video_region_of_interest_meta_add_params(). (Since: 1.14)
+ * @params: list of #GstStructure containing element-specific params for downstream,
+ *          see gst_video_region_of_interest_meta_add_param(). (Since: 1.14)
  *
  * Extra buffer metadata describing an image region of interest
  */
@@ -367,7 +398,7 @@ const GstMetaInfo *gst_video_time_code_meta_get_info (void);
 
 GST_VIDEO_API
 GstVideoTimeCodeMeta *gst_buffer_add_video_time_code_meta    (GstBuffer             * buffer,
-                                                              GstVideoTimeCode      * tc);
+                                                              const GstVideoTimeCode* tc);
 
 GST_VIDEO_API
 GstVideoTimeCodeMeta *

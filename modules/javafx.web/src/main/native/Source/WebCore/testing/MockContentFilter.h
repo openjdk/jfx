@@ -27,21 +27,22 @@
 
 #include "MockContentFilterSettings.h"
 #include "PlatformContentFilter.h"
+#include <wtf/UniqueRef.h>
 
 namespace WebCore {
 
 class MockContentFilter final : public PlatformContentFilter {
-    friend std::unique_ptr<MockContentFilter> std::make_unique<MockContentFilter>();
+    friend UniqueRef<MockContentFilter> WTF::makeUniqueRefWithoutFastMallocCheck<MockContentFilter>();
 
 public:
     static void ensureInstalled();
-    static std::unique_ptr<MockContentFilter> create();
+    static UniqueRef<MockContentFilter> create();
 
     void willSendRequest(ResourceRequest&, const ResourceResponse&) override;
     void responseReceived(const ResourceResponse&) override;
-    void addData(const char* data, int length) override;
+    void addData(const SharedBuffer&) override;
     void finishedAddingData() override;
-    Ref<SharedBuffer> replacementData() const override;
+    Ref<FragmentedSharedBuffer> replacementData() const override;
 #if ENABLE(CONTENT_FILTERING)
     ContentFilterUnblockHandler unblockHandler() const override;
 #endif

@@ -36,7 +36,7 @@ class AccessCase;
 class CodeBlock;
 class StructureStubInfo;
 
-class InstanceOfStatus {
+class InstanceOfStatus final {
     WTF_MAKE_FAST_ALLOCATED;
 public:
     enum State {
@@ -79,10 +79,10 @@ public:
         RELEASE_ASSERT_NOT_REACHED();
     }
 
-    static InstanceOfStatus computeFor(CodeBlock*, ICStatusMap&, unsigned bytecodeIndex);
+    static InstanceOfStatus computeFor(CodeBlock*, ICStatusMap&, BytecodeIndex);
 
 #if ENABLE(DFG_JIT)
-    static InstanceOfStatus computeForStubInfo(const ConcurrentJSLocker&, StructureStubInfo*);
+    static InstanceOfStatus computeForStubInfo(const ConcurrentJSLocker&, VM&, StructureStubInfo*);
 #endif
 
     State state() const { return m_state; }
@@ -106,6 +106,7 @@ public:
 
 private:
     void appendVariant(const InstanceOfVariant&);
+    void shrinkToFit();
 
     State m_state;
     Vector<InstanceOfVariant, 2> m_variants;

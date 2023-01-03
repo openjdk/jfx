@@ -38,6 +38,8 @@
 #include <JavaScriptCore/Snippet.h>
 #include <JavaScriptCore/SnippetParams.h>
 
+IGNORE_WARNINGS_BEGIN("frame-address");
+
 namespace WebCore {
 using namespace JSC;
 
@@ -58,9 +60,11 @@ Ref<JSC::DOMJIT::CallDOMGetterSnippet> compileDocumentDocumentElementAttribute()
         GPRReg scratch = params.gpScratch(0);
 
         jit.loadPtr(CCallHelpers::Address(document, JSDocument::offsetOfWrapped()), scratch);
+        static_assert(!JSDocument::hasCustomPtrTraits(), "Optimized JSDocument wrapper access should not be using RawPtrTraits");
+
         DOMJIT::loadDocumentElement(jit, scratch, scratch);
         auto nullCase = jit.branchTestPtr(CCallHelpers::Zero, scratch);
-        DOMJIT::toWrapper<Element>(jit, params, scratch, globalObject, result, DOMJIT::toWrapperSlow<Element>, globalObjectValue);
+        DOMJIT::toWrapper<Element>(jit, params, scratch, globalObject, result, DOMJIT::operationToJSElement, globalObjectValue);
         auto done = jit.jump();
 
         nullCase.link(&jit);
@@ -92,6 +96,8 @@ Ref<JSC::DOMJIT::CallDOMGetterSnippet> compileDocumentBodyAttribute()
         GPRReg scratch2 = params.gpScratch(1);
 
         jit.loadPtr(CCallHelpers::Address(document, JSDocument::offsetOfWrapped()), scratch1);
+        static_assert(!JSDocument::hasCustomPtrTraits(), "Optimized JSDocument wrapper access should not be using RawPtrTraits");
+
         DOMJIT::loadDocumentElement(jit, scratch1, scratch1);
 
         CCallHelpers::JumpList nullCases;
@@ -127,7 +133,7 @@ Ref<JSC::DOMJIT::CallDOMGetterSnippet> compileDocumentBodyAttribute()
         jit.jump().linkTo(loopStart, &jit);
 
         successCases.link(&jit);
-        DOMJIT::toWrapper<HTMLElement>(jit, params, scratch1, globalObject, result, DOMJIT::toWrapperSlow<HTMLElement>, globalObjectValue);
+        DOMJIT::toWrapper<HTMLElement>(jit, params, scratch1, globalObject, result, DOMJIT::operationToJSHTMLElement, globalObjectValue);
         auto done = jit.jump();
 
         nullCases.link(&jit);
@@ -140,6 +146,60 @@ Ref<JSC::DOMJIT::CallDOMGetterSnippet> compileDocumentBodyAttribute()
     return snippet;
 }
 
+namespace DOMJIT {
+
+JSC_DEFINE_JIT_OPERATION(operationToJSElement, JSC::EncodedJSValue, (JSC::JSGlobalObject* globalObject, void* result))
+{
+    ASSERT(result);
+    ASSERT(globalObject);
+    JSC::VM& vm = globalObject->vm();
+    JSC::CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
+    JSC::JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
+    return DOMJIT::toWrapperSlowImpl<Element>(globalObject, result);
 }
 
-#endif
+JSC_DEFINE_JIT_OPERATION(operationToJSHTMLElement, JSC::EncodedJSValue, (JSC::JSGlobalObject* globalObject, void* result))
+{
+    ASSERT(result);
+    ASSERT(globalObject);
+    JSC::VM& vm = globalObject->vm();
+    JSC::CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
+    JSC::JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
+    return DOMJIT::toWrapperSlowImpl<HTMLElement>(globalObject, result);
+}
+
+JSC_DEFINE_JIT_OPERATION(operationToJSDocument, JSC::EncodedJSValue, (JSC::JSGlobalObject* globalObject, void* result))
+{
+    ASSERT(result);
+    ASSERT(globalObject);
+    JSC::VM& vm = globalObject->vm();
+    JSC::CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
+    JSC::JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
+    return DOMJIT::toWrapperSlowImpl<Document>(globalObject, result);
+}
+
+JSC_DEFINE_JIT_OPERATION(operationToJSNode, JSC::EncodedJSValue, (JSC::JSGlobalObject* globalObject, void* result))
+{
+    ASSERT(result);
+    ASSERT(globalObject);
+    JSC::VM& vm = globalObject->vm();
+    JSC::CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
+    JSC::JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
+    return DOMJIT::toWrapperSlowImpl<Node>(globalObject, result);
+}
+
+JSC_DEFINE_JIT_OPERATION(operationToJSContainerNode, JSC::EncodedJSValue, (JSC::JSGlobalObject* globalObject, void* result))
+{
+    ASSERT(result);
+    ASSERT(globalObject);
+    JSC::VM& vm = globalObject->vm();
+    JSC::CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
+    JSC::JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
+    return DOMJIT::toWrapperSlowImpl<ContainerNode>(globalObject, result);
+}
+
+} } // namespace WebCore::DOMJIT
+
+IGNORE_WARNINGS_END
+
+#endif // ENABLE(JIT)

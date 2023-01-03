@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006 Apple Inc.  All rights reserved.
+ * Copyright (C) 2006-2020 Apple Inc.  All rights reserved.
  * Copyright (C) 2016 Canon Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -26,6 +26,7 @@
 
 #pragma once
 
+#include <wtf/EnumTraits.h>
 #include <wtf/URL.h>
 #include <wtf/text/WTFString.h>
 
@@ -46,6 +47,8 @@ public:
     const URL& failingURL() const { lazyInit(); return m_failingURL; }
     const String& localizedDescription() const { lazyInit(); return m_localizedDescription; }
 
+    String sanitizedDescription() const { return m_isSanitized  == IsSanitized::Yes ? m_localizedDescription : "Load failed"_s; }
+
     enum class Type : uint8_t {
         Null,
         General,
@@ -53,6 +56,7 @@ public:
         Cancellation,
         Timeout
     };
+    enum class IsSanitized : bool { No, Yes };
 
     bool isNull() const { return m_type == Type::Null; }
     bool isGeneral() const { return m_type == Type::General; }
@@ -65,15 +69,19 @@ public:
     WEBCORE_EXPORT void setType(Type);
     Type type() const { return m_type; }
 
+    bool isSanitized() const { return m_isSanitized == IsSanitized::Yes; }
+    void setAsSanitized() { m_isSanitized = IsSanitized::Yes; }
+
 protected:
     ResourceErrorBase(Type type) : m_type(type) { }
 
-    ResourceErrorBase(const String& domain, int errorCode, const URL& failingURL, const String& localizedDescription, Type type)
+    ResourceErrorBase(const String& domain, int errorCode, const URL& failingURL, const String& localizedDescription, Type type, IsSanitized isSanitized)
         : m_domain(domain)
         , m_failingURL(failingURL)
         , m_localizedDescription(localizedDescription)
         , m_errorCode(errorCode)
         , m_type(type)
+        , m_isSanitized(isSanitized)
     {
     }
 
@@ -90,12 +98,30 @@ protected:
     String m_localizedDescription;
     int m_errorCode { 0 };
     Type m_type { Type::General };
+    IsSanitized m_isSanitized { IsSanitized::No };
 
 private:
     const ResourceError& asResourceError() const;
 };
 
+WEBCORE_EXPORT ResourceError internalError(const URL&);
+
 inline bool operator==(const ResourceError& a, const ResourceError& b) { return ResourceErrorBase::compare(a, b); }
 inline bool operator!=(const ResourceError& a, const ResourceError& b) { return !(a == b); }
 
 } // namespace WebCore
+
+namespace WTF {
+
+template<> struct EnumTraits<WebCore::ResourceErrorBase::Type> {
+    using values = EnumValues<
+        WebCore::ResourceErrorBase::Type,
+        WebCore::ResourceErrorBase::Type::Null,
+        WebCore::ResourceErrorBase::Type::General,
+        WebCore::ResourceErrorBase::Type::AccessControl,
+        WebCore::ResourceErrorBase::Type::Cancellation,
+        WebCore::ResourceErrorBase::Type::Timeout
+    >;
+};
+
+} // namespace WTF

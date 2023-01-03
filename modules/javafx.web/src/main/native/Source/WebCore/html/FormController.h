@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2021 Apple Inc. All rights reserved.
  * Copyright (C) 2010, 2011, 2012 Google Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
@@ -21,36 +21,26 @@
 
 #pragma once
 
-#include "RadioButtonGroups.h"
 #include <wtf/Forward.h>
-#include <wtf/ListHashSet.h>
-#include <wtf/Vector.h>
-#include <wtf/text/WTFString.h>
+#include <wtf/HashMap.h>
 
 namespace WebCore {
 
-class FormKeyGenerator;
+class Document;
 class HTMLFormControlElementWithState;
 class HTMLFormElement;
-class SavedFormState;
 
 using FormControlState = Vector<String>;
 
 class FormController {
     WTF_MAKE_FAST_ALLOCATED;
+
 public:
     FormController();
     ~FormController();
 
-    RadioButtonGroups& radioButtonGroups() { return m_radioButtonGroups; }
-
-    void registerFormElementWithState(HTMLFormControlElementWithState&);
-    void unregisterFormElementWithState(HTMLFormControlElementWithState&);
-
-    unsigned formElementsCharacterCount() const;
-
-    Vector<String> formElementsState() const;
-    void setStateForNewFormElements(const Vector<String>&);
+    Vector<String> formElementsState(const Document&) const;
+    void setStateForNewFormElements(const Vector<String>& stateVector);
 
     void willDeleteForm(HTMLFormElement&);
     void restoreControlStateFor(HTMLFormControlElementWithState&);
@@ -60,15 +50,13 @@ public:
     WEBCORE_EXPORT static Vector<String> referencedFilePaths(const Vector<String>& stateVector);
 
 private:
-    typedef ListHashSet<RefPtr<HTMLFormControlElementWithState>> FormElementListHashSet;
-    typedef HashMap<RefPtr<AtomStringImpl>, std::unique_ptr<SavedFormState>> SavedFormStateMap;
+    class FormKeyGenerator;
+    class SavedFormState;
+    using SavedFormStateMap = HashMap<String, SavedFormState>;
 
-    static std::unique_ptr<SavedFormStateMap> createSavedFormStateMap(const FormElementListHashSet&);
     FormControlState takeStateForFormElement(const HTMLFormControlElementWithState&);
-    static void formStatesFromStateVector(const Vector<String>&, SavedFormStateMap&);
+    static SavedFormStateMap parseStateVector(const Vector<String>&);
 
-    RadioButtonGroups m_radioButtonGroups;
-    FormElementListHashSet m_formElementsWithState;
     SavedFormStateMap m_savedFormStateMap;
     std::unique_ptr<FormKeyGenerator> m_formKeyGenerator;
 };

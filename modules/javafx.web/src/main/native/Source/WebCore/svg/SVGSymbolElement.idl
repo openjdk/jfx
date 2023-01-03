@@ -23,8 +23,9 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
  */
 
-interface SVGSymbolElement : SVGElement {
+[
+    Exposed=Window
+] interface SVGSymbolElement : SVGGraphicsElement {
 };
 
-SVGSymbolElement implements SVGExternalResourcesRequired;
-SVGSymbolElement implements SVGFitToViewBox;
+SVGSymbolElement includes SVGFitToViewBox;

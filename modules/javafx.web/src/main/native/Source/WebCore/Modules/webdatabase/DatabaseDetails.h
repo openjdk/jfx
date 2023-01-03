@@ -46,7 +46,7 @@ public:
         , m_currentUsage(details.m_currentUsage)
         , m_creationTime(details.m_creationTime)
         , m_modificationTime(details.m_modificationTime)
-#ifndef NDEBUG
+#if ASSERT_ENABLED
         , m_thread(details.m_thread.copyRef())
 #endif
     {
@@ -60,13 +60,13 @@ public:
         m_currentUsage = details.m_currentUsage;
         m_creationTime = details.m_creationTime;
         m_modificationTime = details.m_modificationTime;
-#ifndef NDEBUG
+#if ASSERT_ENABLED
         m_thread = details.m_thread.copyRef();
 #endif
         return *this;
     }
 
-    DatabaseDetails(const String& databaseName, const String& displayName, unsigned long long expectedUsage, unsigned long long currentUsage, Optional<WallTime> creationTime, Optional<WallTime> modificationTime)
+    DatabaseDetails(const String& databaseName, const String& displayName, uint64_t expectedUsage, uint64_t currentUsage, std::optional<WallTime> creationTime, std::optional<WallTime> modificationTime)
         : m_name(databaseName)
         , m_displayName(displayName)
         , m_expectedUsage(expectedUsage)
@@ -80,9 +80,9 @@ public:
     const String& displayName() const { return m_displayName; }
     uint64_t expectedUsage() const { return m_expectedUsage; }
     uint64_t currentUsage() const { return m_currentUsage; }
-    Optional<WallTime> creationTime() const { return m_creationTime; }
-    Optional<WallTime> modificationTime() const { return m_modificationTime; }
-#ifndef NDEBUG
+    std::optional<WallTime> creationTime() const { return m_creationTime; }
+    std::optional<WallTime> modificationTime() const { return m_modificationTime; }
+#if ASSERT_ENABLED
     Thread& thread() const { return m_thread.get(); }
 #endif
 
@@ -93,7 +93,7 @@ private:
     uint64_t m_currentUsage { 0 };
     Markable<WallTime, WallTime::MarkableTraits> m_creationTime;
     Markable<WallTime, WallTime::MarkableTraits> m_modificationTime;
-#ifndef NDEBUG
+#if ASSERT_ENABLED
     Ref<Thread> m_thread { Thread::current() };
 #endif
 };

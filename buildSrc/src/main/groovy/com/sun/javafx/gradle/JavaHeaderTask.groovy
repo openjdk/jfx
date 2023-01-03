@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,6 +26,7 @@
 import org.gradle.api.DefaultTask
 import org.gradle.api.file.FileCollection
 import org.gradle.api.file.FileTree
+import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.TaskAction
 import org.gradle.api.tasks.util.PatternFilterable
@@ -33,8 +34,8 @@ import org.gradle.api.tasks.util.PatternSet
 
 class JavaHeaderTask extends DefaultTask {
     @OutputDirectory File output;
-    List sourceRoots = new ArrayList();
-    FileCollection classpath;
+    @Input List sourceRoots = new ArrayList();
+    @Input FileCollection classpath;
     private final PatternFilterable patternSet = new PatternSet();
 
 //    @InputFiles public void setSource(Object source) {

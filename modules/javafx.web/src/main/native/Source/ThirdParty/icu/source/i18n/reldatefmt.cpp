@@ -43,7 +43,7 @@
 #include "standardplural.h"
 #include "unifiedcache.h"
 #include "util.h"
-#include "number_stringbuilder.h"
+#include "formatted_string_builder.h"
 #include "number_utypes.h"
 #include "number_modifiers.h"
 #include "formattedval_impl.h"
@@ -95,7 +95,7 @@ public:
 
     const UnicodeString emptyString;
 
-    // Mappping from source to target styles for alias fallback.
+    // Mapping from source to target styles for alias fallback.
     int32_t fallBackCache[UDAT_STYLE_COUNT];
 
     void adoptCombinedDateAndTime(SimpleFormatter *fmtToAdopt) {
@@ -315,6 +315,10 @@ struct RelDateTimeFmtDataSink : public ResourceSink {
                 return UDAT_ABSOLUTE_FRIDAY;
             case SATURDAY:
                 return UDAT_ABSOLUTE_SATURDAY;
+            case HOUR:
+                return UDAT_ABSOLUTE_HOUR;
+            case MINUTE:
+                return UDAT_ABSOLUTE_MINUTE;
             default:
                 return -1;
         }
@@ -584,7 +588,7 @@ struct RelDateTimeFmtDataSink : public ResourceSink {
     }
 
     virtual void put(const char *key, ResourceValue &value,
-                     UBool /*noFallback*/, UErrorCode &errorCode) {
+                     UBool /*noFallback*/, UErrorCode &errorCode) override {
         // Main entry point to sink
         ResourceTable table = value.getTable(errorCode);
         if (U_FAILURE(errorCode)) { return; }
@@ -724,15 +728,15 @@ const RelativeDateTimeCacheData *LocaleCacheKey<RelativeDateTimeCacheData>::crea
 
 
 
-static constexpr number::impl::Field kRDTNumericField
-    = number::impl::NumFieldUtils::compress<UFIELD_CATEGORY_RELATIVE_DATETIME, UDAT_REL_NUMERIC_FIELD>();
+static constexpr FormattedStringBuilder::Field kRDTNumericField
+    = {UFIELD_CATEGORY_RELATIVE_DATETIME, UDAT_REL_NUMERIC_FIELD};
 
-static constexpr number::impl::Field kRDTLiteralField
-    = number::impl::NumFieldUtils::compress<UFIELD_CATEGORY_RELATIVE_DATETIME, UDAT_REL_LITERAL_FIELD>();
+static constexpr FormattedStringBuilder::Field kRDTLiteralField
+    = {UFIELD_CATEGORY_RELATIVE_DATETIME, UDAT_REL_LITERAL_FIELD};
 
-class FormattedRelativeDateTimeData : public FormattedValueNumberStringBuilderImpl {
+class FormattedRelativeDateTimeData : public FormattedValueStringBuilderImpl {
 public:
-    FormattedRelativeDateTimeData() : FormattedValueNumberStringBuilderImpl(kRDTNumericField) {}
+    FormattedRelativeDateTimeData() : FormattedValueStringBuilderImpl(kRDTNumericField) {}
     virtual ~FormattedRelativeDateTimeData();
 };
 
@@ -1122,7 +1126,7 @@ void RelativeDateTimeFormatter::formatRelativeImpl(
     // leaves some holes (even for data that is currently available, such as quarter).
     // When the new CLDR data is available, update the data storage accordingly,
     // rewrite this to use it directly, and rewrite the old format method to call this
-    // new one; that is covered by http://bugs.icu-project.org/trac/ticket/12171.
+    // new one; that is covered by https://unicode-org.atlassian.net/browse/ICU-12171.
     UDateDirection direction = UDAT_DIRECTION_COUNT;
     if (offset > -2.1 && offset < 2.1) {
         // Allow a 1% epsilon, so offsets in -1.01..-0.99 map to LAST
@@ -1157,6 +1161,8 @@ void RelativeDateTimeFormatter::formatRelativeImpl(
         case UDAT_REL_UNIT_THURSDAY:  absunit = UDAT_ABSOLUTE_THURSDAY; break;
         case UDAT_REL_UNIT_FRIDAY:  absunit = UDAT_ABSOLUTE_FRIDAY; break;
         case UDAT_REL_UNIT_SATURDAY:  absunit = UDAT_ABSOLUTE_SATURDAY; break;
+        case UDAT_REL_UNIT_HOUR:  absunit = UDAT_ABSOLUTE_HOUR; break;
+        case UDAT_REL_UNIT_MINUTE:  absunit = UDAT_ABSOLUTE_MINUTE; break;
         default: break;
     }
     if (direction != UDAT_DIRECTION_COUNT && absunit != UDAT_ABSOLUTE_UNIT_COUNT) {
@@ -1184,7 +1190,7 @@ UnicodeString& RelativeDateTimeFormatter::adjustForContext(UnicodeString &str) c
 
     // Must guarantee that one thread at a time accesses the shared break
     // iterator.
-    static icu::UMutex gBrkIterMutex = U_MUTEX_INITIALIZER;
+    static UMutex gBrkIterMutex;
     Mutex lock(&gBrkIterMutex);
     str.toTitle(
             fOptBreakIterator->get(),
@@ -1320,7 +1326,7 @@ ureldatefmt_formatNumeric( const URelativeDateTimeFormatter* reldatefmt,
     return res.extract(result, resultCapacity, *status);
 }
 
-U_STABLE void U_EXPORT2
+U_CAPI void U_EXPORT2
 ureldatefmt_formatNumericToResult(
         const URelativeDateTimeFormatter* reldatefmt,
         double                            offset,
@@ -1363,7 +1369,7 @@ ureldatefmt_format( const URelativeDateTimeFormatter* reldatefmt,
     return res.extract(result, resultCapacity, *status);
 }
 
-U_DRAFT void U_EXPORT2
+U_CAPI void U_EXPORT2
 ureldatefmt_formatToResult(
         const URelativeDateTimeFormatter* reldatefmt,
         double                            offset,

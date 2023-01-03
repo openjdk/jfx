@@ -25,7 +25,7 @@
 
 #pragma once
 
-#if ENABLE(VIDEO_TRACK)
+#if ENABLE(VIDEO)
 
 #include "TrackListBase.h"
 
@@ -35,9 +35,11 @@ class VideoTrack;
 
 class VideoTrackList final : public TrackListBase {
 public:
-    static Ref<VideoTrackList> create(HTMLMediaElement* owner, ScriptExecutionContext* context)
+    static Ref<VideoTrackList> create(ScriptExecutionContext* context)
     {
-        return adoptRef(*new VideoTrackList(owner, context));
+        auto list = adoptRef(*new VideoTrackList(context));
+        list->suspendIfNeeded();
+        return list;
     }
     virtual ~VideoTrackList();
 
@@ -52,11 +54,16 @@ public:
     EventTargetInterface eventTargetInterface() const override;
 
 private:
-    VideoTrackList(HTMLMediaElement*, ScriptExecutionContext*);
+    VideoTrackList(ScriptExecutionContext*);
+
     const char* activeDOMObjectName() const final;
 };
 static_assert(sizeof(VideoTrackList) == sizeof(TrackListBase), "");
 
 } // namespace WebCore
 
-#endif // ENABLE(VIDEO_TRACK)
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::VideoTrackList)
+    static bool isType(const WebCore::TrackListBase& trackList) { return trackList.type() == WebCore::TrackListBase::VideoTrackList; }
+SPECIALIZE_TYPE_TRAITS_END()
+
+#endif // ENABLE(VIDEO)

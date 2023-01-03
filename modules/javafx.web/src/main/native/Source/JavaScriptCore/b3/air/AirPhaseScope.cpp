@@ -31,13 +31,14 @@
 #include "AirCode.h"
 #include "AirValidate.h"
 #include "B3Common.h"
+#include <wtf/StringPrintStream.h>
 
 namespace JSC { namespace B3 { namespace Air {
 
 PhaseScope::PhaseScope(Code& code, const char* name)
     : m_code(code)
     , m_name(name)
-    , m_timingScope(name)
+    , m_timingScope("Air", name)
 {
     if (shouldDumpIRAtEachPhase(AirMode)) {
         dataLog("Air after ", code.lastPhaseName(), ", before ", name, ":\n");

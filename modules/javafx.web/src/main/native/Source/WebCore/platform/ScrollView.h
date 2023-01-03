@@ -57,6 +57,8 @@ OBJC_CLASS WAKView;
 
 namespace WebCore {
 
+class EventRegionContext;
+class FloatQuad;
 class HostWindow;
 class LegacyTileCache;
 class Scrollbar;
@@ -72,8 +74,6 @@ public:
     WEBCORE_EXPORT void setScrollOffset(const ScrollOffset&) final;
     bool isScrollCornerVisible() const final;
     void scrollbarStyleChanged(ScrollbarStyle, bool forceUpdate) override;
-
-    virtual void notifyPageThatContentAreaWillPaint() const;
 
     IntPoint locationOfContents() const;
 
@@ -120,7 +120,6 @@ public:
     void setScrollingModesLock(bool lock = true) { m_horizontalScrollbarLock = m_verticalScrollbarLock = lock; }
 
     WEBCORE_EXPORT virtual void setCanHaveScrollbars(bool);
-    bool canHaveScrollbars() const { return horizontalScrollbarMode() != ScrollbarAlwaysOff || verticalScrollbarMode() != ScrollbarAlwaysOff; }
 
     virtual bool avoidScrollbarCreation() const { return false; }
 
@@ -140,11 +139,23 @@ public:
     // Overridden by FrameView to create custom CSS scrollbars if applicable.
     virtual Ref<Scrollbar> createScrollbar(ScrollbarOrientation);
 
-    void styleDidChange();
+    virtual void styleAndRenderTreeDidChange();
 
     // If the prohibits scrolling flag is set, then all scrolling in the view (even programmatic scrolling) is turned off.
     void setProhibitsScrolling(bool b) { m_prohibitsScrolling = b; }
     bool prohibitsScrolling() const { return m_prohibitsScrolling; }
+
+    class ProhibitScrollingWhenChangingContentSizeForScope {
+        WTF_MAKE_FAST_ALLOCATED;
+    public:
+        ProhibitScrollingWhenChangingContentSizeForScope(ScrollView&);
+        ~ProhibitScrollingWhenChangingContentSizeForScope();
+
+    private:
+        WeakPtr<ScrollView> m_scrollView;
+    };
+
+    std::unique_ptr<ProhibitScrollingWhenChangingContentSizeForScope> prohibitScrollingWhenChangingContentSizeForScope();
 
     // Whether or not a scroll view will blit visible contents when it is scrolled. Blitting is disabled in situations
     // where it would cause rendering glitches (such as with fixed backgrounds or when the view is partially transparent).
@@ -176,21 +187,23 @@ public:
     // contribute to painting but not to the scrollable area.
     // The unobscuredContentRect is the area that is not covered by UI elements.
     WEBCORE_EXPORT IntRect unobscuredContentRect(VisibleContentRectIncludesScrollbars = ExcludeScrollbars) const;
+
 #if PLATFORM(IOS_FAMILY)
     IntRect unobscuredContentRectIncludingScrollbars() const { return unobscuredContentRect(IncludeScrollbars); }
 #else
     IntRect unobscuredContentRectIncludingScrollbars() const { return visibleContentRectIncludingScrollbars(); }
 #endif
 
-#if PLATFORM(IOS_FAMILY)
     // This is the area that is partially or fully exposed, and may extend under overlapping UI elements.
     WEBCORE_EXPORT FloatRect exposedContentRect() const;
 
     // The given rects are only used if there is no platform widget.
     WEBCORE_EXPORT void setExposedContentRect(const FloatRect&);
-    const FloatSize& unobscuredContentSize() const { return m_unobscuredContentSize; }
+
+    WEBCORE_EXPORT FloatSize unobscuredContentSize() const;
     WEBCORE_EXPORT void setUnobscuredContentSize(const FloatSize&);
 
+#if PLATFORM(IOS_FAMILY)
     void setActualScrollPosition(const IntPoint&);
     LegacyTileCache* legacyTileCache();
 #endif
@@ -230,7 +243,7 @@ public:
 
     // Scroll position used by web-exposed features (has legacy iOS behavior).
     WEBCORE_EXPORT IntPoint contentsScrollPosition() const;
-    void setContentsScrollPosition(const IntPoint&);
+    void setContentsScrollPosition(const IntPoint&, const ScrollPositionChangeOptions& = ScrollPositionChangeOptions::createProgrammatic());
 
 #if PLATFORM(IOS_FAMILY)
     int actualScrollX() const { return unobscuredContentRect().x(); }
@@ -260,7 +273,8 @@ public:
     ScrollPosition cachedScrollPosition() const { return m_cachedScrollPosition; }
 
     // Functions for scrolling the view.
-    virtual void setScrollPosition(const ScrollPosition&);
+    virtual void setScrollPosition(const ScrollPosition&, const ScrollPositionChangeOptions& = ScrollPositionChangeOptions::createProgrammatic());
+
     void scrollBy(const IntSize& s) { return setScrollPosition(scrollPosition() + s); }
 
     // This function scrolls by lines, pages or pixels.
@@ -276,6 +290,7 @@ public:
     WEBCORE_EXPORT void setScrollbarsSuppressed(bool suppressed, bool repaintOnUnsuppress = false);
     bool scrollbarsSuppressed() const { return m_scrollbarsSuppressed; }
 
+    WEBCORE_EXPORT FloatPoint rootViewToContents(const FloatPoint&) const;
     WEBCORE_EXPORT IntPoint rootViewToContents(const IntPoint&) const;
     WEBCORE_EXPORT IntPoint contentsToRootView(const IntPoint&) const;
     WEBCORE_EXPORT FloatPoint contentsToRootView(const FloatPoint&) const;
@@ -283,6 +298,8 @@ public:
     WEBCORE_EXPORT IntRect contentsToRootView(const IntRect&) const;
     WEBCORE_EXPORT FloatRect rootViewToContents(const FloatRect&) const;
     WEBCORE_EXPORT FloatRect contentsToRootView(const FloatRect&) const;
+    WEBCORE_EXPORT FloatQuad rootViewToContents(const FloatQuad&) const;
+    WEBCORE_EXPORT FloatQuad contentsToRootView(const FloatQuad&) const;
 
     IntPoint viewToContents(const IntPoint&) const;
     IntPoint contentsToView(const IntPoint&) const;
@@ -338,6 +355,15 @@ public:
         return newPoint;
     }
 
+    FloatPoint convertChildToSelf(const Widget* child, const FloatPoint& point) const
+    {
+        FloatPoint newPoint = point;
+        if (!isScrollViewScrollbar(child))
+            newPoint -= toFloatSize(scrollPosition());
+        newPoint.moveBy(child->location());
+        return newPoint;
+    }
+
     IntPoint convertSelfToChild(const Widget* child, const IntPoint& point) const
     {
         IntPoint newPoint = point;
@@ -348,7 +374,7 @@ public:
     }
 
     // Widget override. Handles painting of the contents of the view as well as the scrollbars.
-    WEBCORE_EXPORT void paint(GraphicsContext&, const IntRect&, Widget::SecurityOriginPaintPolicy = SecurityOriginPaintPolicy::AnyOrigin) final;
+    WEBCORE_EXPORT void paint(GraphicsContext&, const IntRect&, Widget::SecurityOriginPaintPolicy = SecurityOriginPaintPolicy::AnyOrigin, EventRegionContext* = nullptr) final;
     void paintScrollbars(GraphicsContext&, const IntRect&);
 
     // Widget overrides to ensure that our children's visibility status is kept up to date when we get shown and hidden.
@@ -381,12 +407,13 @@ public:
     bool allowsUnclampedScrollPosition() const { return m_allowsUnclampedScrollPosition; }
 
     bool managesScrollbars() const;
+    virtual void updateScrollbarSteps();
 
 protected:
     ScrollView();
 
     virtual void repaintContentRectangle(const IntRect&);
-    virtual void paintContents(GraphicsContext&, const IntRect& damageRect, SecurityOriginPaintPolicy = SecurityOriginPaintPolicy::AnyOrigin) = 0;
+    virtual void paintContents(GraphicsContext&, const IntRect& damageRect, SecurityOriginPaintPolicy = SecurityOriginPaintPolicy::AnyOrigin, EventRegionContext* = nullptr) = 0;
 
     virtual void paintOverhangAreas(GraphicsContext&, const IntRect& horizontalOverhangArea, const IntRect& verticalOverhangArea, const IntRect& dirtyRect);
 
@@ -425,9 +452,9 @@ protected:
 
     virtual void scrollOffsetChangedViaPlatformWidgetImpl(const ScrollOffset&, const ScrollOffset&) = 0;
 
-#if PLATFORM(IOS_FAMILY)
     virtual void unobscuredContentSizeChanged() = 0;
-#endif
+
+    virtual void didFinishProhibitingScrollingWhenChangingContentSize() = 0;
 
 #if PLATFORM(COCOA) && defined __OBJC__
 public:
@@ -449,6 +476,7 @@ private:
     bool setHasScrollbarInternal(RefPtr<Scrollbar>&, ScrollbarOrientation, bool hasBar, bool* contentSizeAffected);
 
     bool isScrollView() const final { return true; }
+    String debugDescription() const override;
 
     void init();
     void destroy();
@@ -465,13 +493,20 @@ private:
     void platformScrollbarModes(ScrollbarMode& horizontal, ScrollbarMode& vertical) const;
     void platformSetCanBlitOnScroll(bool);
     bool platformCanBlitOnScroll() const;
+
     IntRect platformVisibleContentRect(bool includeScrollbars) const;
     IntSize platformVisibleContentSize(bool includeScrollbars) const;
     IntRect platformVisibleContentRectIncludingObscuredArea(bool includeScrollbars) const;
     IntSize platformVisibleContentSizeIncludingObscuredArea(bool includeScrollbars) const;
+
+    IntRect platformUnobscuredContentRect(VisibleContentRectIncludesScrollbars) const;
+    FloatRect platformExposedContentRect() const;
+
     void platformSetContentsSize();
+
     IntRect platformContentsToScreen(const IntRect&) const;
     IntPoint platformScreenToContents(const IntPoint&) const;
+
     void platformSetScrollPosition(const IntPoint&);
     bool platformScroll(ScrollDirection, ScrollGranularity);
     void platformSetScrollbarsSuppressed(bool repaintOnUnsuppress);
@@ -483,20 +518,36 @@ private:
     void calculateOverhangAreasForPainting(IntRect& horizontalOverhangRect, IntRect& verticalOverhangRect);
     void updateOverhangAreas();
 
+    void incrementProhibitsScrollingWhenChangingContentSizeCount() { ++m_prohibitsScrollingWhenChangingContentSizeCount; }
+    void decrementProhibitsScrollingWhenChangingContentSizeCount()
+    {
+        if (!m_prohibitsScrollingWhenChangingContentSizeCount) {
+            ASSERT_NOT_REACHED();
+            return;
+        }
+
+        if (!--m_prohibitsScrollingWhenChangingContentSizeCount)
+            didFinishProhibitingScrollingWhenChangingContentSize();
+    }
+
     HashSet<Ref<Widget>> m_children;
 
     RefPtr<Scrollbar> m_horizontalScrollbar;
     RefPtr<Scrollbar> m_verticalScrollbar;
-    ScrollbarMode m_horizontalScrollbarMode { ScrollbarAuto };
-    ScrollbarMode m_verticalScrollbarMode { ScrollbarAuto };
+    ScrollbarMode m_horizontalScrollbarMode { ScrollbarMode::Auto };
+    ScrollbarMode m_verticalScrollbarMode { ScrollbarMode::Auto };
 
-#if PLATFORM(IOS_FAMILY)
+
+    // FIXME: More things will move into here.
+    struct DelegatedScrollingGeometry {
+        FloatSize unobscuredContentSize;
+        FloatRect exposedContentRect;
+    };
+    std::optional<DelegatedScrollingGeometry> m_delegatedScrollingGeometry;
+
+#if USE(COORDINATED_GRAPHICS)
     // FIXME: exposedContentRect is a very similar concept to fixedVisibleContentRect except it does not differentiate
     // between exposed and unobscured areas. The two attributes should eventually be merged.
-    FloatRect m_exposedContentRect;
-    FloatSize m_unobscuredContentSize;
-    // This is only used for history scroll position restoration.
-#else
     IntRect m_fixedVisibleContentRect;
 #endif
     ScrollPosition m_scrollPosition;
@@ -504,12 +555,13 @@ private:
     IntSize m_fixedLayoutSize;
     IntSize m_contentsSize;
 
-    Optional<IntSize> m_deferredScrollDelta; // Needed for WebKit scrolling
-    Optional<std::pair<ScrollOffset, ScrollOffset>> m_deferredScrollOffsets; // Needed for platform widget scrolling
+    std::optional<IntSize> m_deferredScrollDelta; // Needed for WebKit scrolling
+    std::optional<std::pair<ScrollOffset, ScrollOffset>> m_deferredScrollOffsets; // Needed for platform widget scrolling
 
     IntPoint m_panScrollIconPoint;
 
     unsigned m_updateScrollbarsPass { 0 };
+    unsigned m_prohibitsScrollingWhenChangingContentSizeCount { 0 };
 
     bool m_horizontalScrollbarLock { false };
     bool m_verticalScrollbarLock { false };
@@ -529,8 +581,12 @@ private:
 
     bool m_paintsEntireContents { false };
     bool m_delegatesScrolling { false };
+
 }; // class ScrollView
 
 } // namespace WebCore
 
-SPECIALIZE_TYPE_TRAITS_WIDGET(ScrollView, isScrollView())
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::ScrollView)
+    static bool isType(const WebCore::Widget& widget) { return widget.isScrollView(); }
+    static bool isType(const WebCore::ScrollableArea& area) { return area.isScrollView(); }
+SPECIALIZE_TYPE_TRAITS_END()

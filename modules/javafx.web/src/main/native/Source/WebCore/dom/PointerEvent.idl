@@ -37,12 +37,11 @@ dictionary PointerEventInit : MouseEventInit {
 };
 
 [
-    Conditional=POINTER_EVENTS,
-    EnabledAtRuntime=PointerEvents,
     DisabledByQuirk=shouldDisablePointerEvents,
-    Constructor(DOMString type, optional PointerEventInit eventInitDict),
     Exposed=Window
 ] interface PointerEvent : MouseEvent {
+    constructor(DOMString type, optional PointerEventInit eventInitDict);
+
     readonly attribute long pointerId;
     readonly attribute double width;
     readonly attribute double height;

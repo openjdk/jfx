@@ -62,7 +62,7 @@ public:
 
     // Override in derived classes to get the encoded name=value pair for submitting.
     // Return true for a successful control (see HTML4-17.13.2).
-    virtual bool appendFormData(DOMFormData&, bool) { return false; }
+    virtual bool appendFormData(DOMFormData&) { return false; }
 
     void formWillBeDestroyed();
 
@@ -85,7 +85,7 @@ public:
     virtual bool typeMismatch() const;
     virtual bool valueMissing() const;
     virtual String validationMessage() const;
-    virtual bool isValid() const;
+    virtual bool computeValidity() const;
     virtual void setCustomValidity(const String&);
 
     void formAttributeTargetChanged();
@@ -97,6 +97,7 @@ protected:
     void removedFromAncestor(Node::RemovalType, ContainerNode&);
     void didMoveToNewDocument(Document& oldDocument);
 
+    void clearForm() { setForm(nullptr); }
     void setForm(HTMLFormElement*);
     void formAttributeChanged();
 
@@ -109,6 +110,7 @@ protected:
     String customValidationMessage() const;
 
 private:
+    // "willValidate" means "is a candidate for constraint validation".
     virtual bool willValidate() const = 0;
     virtual void refFormAssociatedElement() = 0;
     virtual void derefFormAssociatedElement() = 0;

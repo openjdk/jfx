@@ -38,14 +38,26 @@ struct MediaEncodingConfiguration;
 
 class MediaEngineConfigurationFactory {
 public:
-    using DecodingConfigurationCallback = WTF::Function<void(MediaCapabilitiesDecodingInfo&&)>;
-    using EncodingConfigurationCallback = WTF::Function<void(MediaCapabilitiesEncodingInfo&&)>;
+    using DecodingConfigurationCallback = Function<void(MediaCapabilitiesDecodingInfo&&)>;
+    using EncodingConfigurationCallback = Function<void(MediaCapabilitiesEncodingInfo&&)>;
 
     static bool hasDecodingConfigurationFactory();
     static bool hasEncodingConfigurationFactory();
 
-    static void createDecodingConfiguration(MediaDecodingConfiguration&&, DecodingConfigurationCallback&&);
-    static void createEncodingConfiguration(MediaEncodingConfiguration&&, EncodingConfigurationCallback&&);
+    WEBCORE_EXPORT static void createDecodingConfiguration(MediaDecodingConfiguration&&, DecodingConfigurationCallback&&);
+    WEBCORE_EXPORT static void createEncodingConfiguration(MediaEncodingConfiguration&&, EncodingConfigurationCallback&&);
+
+    using CreateDecodingConfiguration = Function<void(MediaDecodingConfiguration&&, DecodingConfigurationCallback&&)>;
+    using CreateEncodingConfiguration = Function<void(MediaEncodingConfiguration&&, EncodingConfigurationCallback&&)>;
+
+    struct MediaEngineFactory {
+        CreateDecodingConfiguration createDecodingConfiguration;
+        CreateEncodingConfiguration createEncodingConfiguration;
+    };
+
+    WEBCORE_EXPORT static void clearFactories();
+    WEBCORE_EXPORT static void resetFactories();
+    WEBCORE_EXPORT static void installFactory(MediaEngineFactory&&);
 
     WEBCORE_EXPORT static void enableMock();
     WEBCORE_EXPORT static void disableMock();

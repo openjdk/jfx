@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,25 +24,27 @@
 
 package test.robot.javafx.scene.layout;
 
-import test.robot.javafx.scene.layout.RegionUITestBase;
+import static org.junit.Assume.assumeTrue;
+
 import javafx.geometry.Bounds;
 import javafx.scene.paint.Color;
+
 import org.junit.Ignore;
 import org.junit.Test;
 
-/**
- */
-@Ignore("RT-33741")
+import com.sun.javafx.PlatformUtil;
+
+/**************************************************************************
+ *                                                                        *
+ * Tests for aligned background images. The test image in use is chosen   *
+ * to align naturally with the edge of the test region.                   *
+ *                                                                        *
+ *************************************************************************/
 public class RegionBackgroundImageUITest extends RegionUITestBase {
-    /**************************************************************************
-     *                                                                        *
-     * Tests for aligned background images. The test image in use is chosen   *
-     * to align naturally with the edge of the test region.                   *
-     *                                                                        *
-     *************************************************************************/
 
     @Test(timeout = 20000)
     public void alignedImage() {
+        assumeTrue(checkIntegralUIScale());
         setStyle("-fx-background-color: black;" +
                 "-fx-background-image: url('test/robot/javafx/scene/layout/test20x20.png');");
 
@@ -51,6 +53,7 @@ public class RegionBackgroundImageUITest extends RegionUITestBase {
 
     @Test(timeout = 20000)
     public void alignedImage_RepeatX() {
+        assumeTrue(checkIntegralUIScale());
         setStyle("-fx-background-color: black;" +
                 "-fx-background-image: url('test/robot/javafx/scene/layout/test20x20.png');" +
                 "-fx-background-repeat: repeat-x");
@@ -60,6 +63,7 @@ public class RegionBackgroundImageUITest extends RegionUITestBase {
 
     @Test(timeout = 20000)
     public void alignedImage_RepeatY() {
+        assumeTrue(checkIntegralUIScale());
         setStyle("-fx-background-color: black;" +
                 "-fx-background-image: url('test/robot/javafx/scene/layout/test20x20.png');" +
                 "-fx-background-repeat: repeat-y");
@@ -69,6 +73,7 @@ public class RegionBackgroundImageUITest extends RegionUITestBase {
 
     @Test(timeout = 20000)
     public void alignedImage_Space() {
+        assumeTrue(checkIntegralUIScale());
         setStyle("-fx-background-color: black;" +
                 "-fx-background-image: url('test/robot/javafx/scene/layout/test20x20.png');" +
                 "-fx-background-repeat: space space");
@@ -78,6 +83,7 @@ public class RegionBackgroundImageUITest extends RegionUITestBase {
 
     @Test(timeout = 20000)
     public void alignedImage_Round() {
+        assumeTrue(checkIntegralUIScale());
         setStyle("-fx-background-color: black;" +
                 "-fx-background-image: url('test/robot/javafx/scene/layout/test20x20.png');" +
                 "-fx-background-repeat: round");
@@ -87,6 +93,7 @@ public class RegionBackgroundImageUITest extends RegionUITestBase {
 
     @Test(timeout = 20000)
     public void alignedImage_RoundSpace() {
+        assumeTrue(checkIntegralUIScale());
         setStyle("-fx-background-color: black;" +
                 "-fx-background-image: url('test/robot/javafx/scene/layout/test20x20.png');" +
                 "-fx-background-repeat: round space");
@@ -155,6 +162,7 @@ public class RegionBackgroundImageUITest extends RegionUITestBase {
 
     @Test(timeout = 20000)
     public void alignedImage_PositionCenterBottom() {
+        assumeTrue(checkIntegralUIScale());
         setStyle("-fx-background-color: black;" +
                 "-fx-background-image: url('test/robot/javafx/scene/layout/test20x20.png');" +
                 "-fx-background-repeat: no-repeat;" +
@@ -168,6 +176,7 @@ public class RegionBackgroundImageUITest extends RegionUITestBase {
 
     @Test(timeout = 20000)
     public void alignedImage_PositionBottomRight() {
+        assumeTrue(checkIntegralUIScale());
         setStyle("-fx-background-color: black;" +
                 "-fx-background-image: url('test/robot/javafx/scene/layout/test20x20.png');" +
                 "-fx-background-repeat: no-repeat;" +
@@ -223,6 +232,7 @@ public class RegionBackgroundImageUITest extends RegionUITestBase {
 
     @Test(timeout = 20000)
     public void alignedImage_PositionCenterTopRepeatX() {
+        assumeTrue(checkIntegralUIScale());
         setStyle("-fx-background-color: black;" +
                 "-fx-background-image: url('test/robot/javafx/scene/layout/test20x20.png');" +
                 "-fx-background-repeat: repeat-x;" +
@@ -233,6 +243,7 @@ public class RegionBackgroundImageUITest extends RegionUITestBase {
 
     @Test(timeout = 20000)
     public void alignedImage_PositionCenterBottomRepeatX() {
+        assumeTrue(checkIntegralUIScale());
         setStyle("-fx-background-color: black;" +
                 "-fx-background-image: url('test/robot/javafx/scene/layout/test20x20.png');" +
                 "-fx-background-repeat: repeat-x;" +
@@ -243,6 +254,7 @@ public class RegionBackgroundImageUITest extends RegionUITestBase {
 
     @Test(timeout = 20000)
     public void alignedImage_PositionBottomRightRepeatX() {
+        assumeTrue(checkIntegralUIScale());
         setStyle("-fx-background-color: black;" +
                 "-fx-background-image: url('test/robot/javafx/scene/layout/test20x20.png');" +
                 "-fx-background-repeat: repeat-x;" +
@@ -253,6 +265,7 @@ public class RegionBackgroundImageUITest extends RegionUITestBase {
 
     @Test(timeout = 20000)
     public void alignedImage_PositionCenterRepeatY() {
+        assumeTrue(checkIntegralUIScale());
         setStyle("-fx-background-color: black;" +
                 "-fx-background-image: url('test/robot/javafx/scene/layout/test20x20.png');" +
                 "-fx-background-repeat: repeat-y;" +
@@ -263,6 +276,7 @@ public class RegionBackgroundImageUITest extends RegionUITestBase {
 
     @Test(timeout = 20000)
     public void alignedImage_PositionCenterFiftyPercentRepeatY() {
+        assumeTrue(checkIntegralUIScale());
         setStyle("-fx-background-color: black;" +
                 "-fx-background-image: url('test/robot/javafx/scene/layout/test20x20.png');" +
                 "-fx-background-repeat: repeat-y;" +
@@ -273,6 +287,7 @@ public class RegionBackgroundImageUITest extends RegionUITestBase {
 
     @Test(timeout = 20000)
     public void alignedImage_PositionCenterLeftRepeatY() {
+        assumeTrue(checkIntegralUIScale());
         setStyle("-fx-background-color: black;" +
                 "-fx-background-image: url('test/robot/javafx/scene/layout/test20x20.png');" +
                 "-fx-background-repeat: repeat-y;" +
@@ -283,6 +298,7 @@ public class RegionBackgroundImageUITest extends RegionUITestBase {
 
     @Test(timeout = 20000)
     public void alignedImage_PositionCenterRightRepeatY() {
+        assumeTrue(checkIntegralUIScale());
         setStyle("-fx-background-color: black;" +
                 "-fx-background-image: url('test/robot/javafx/scene/layout/test20x20.png');" +
                 "-fx-background-repeat: repeat-y;" +
@@ -293,6 +309,7 @@ public class RegionBackgroundImageUITest extends RegionUITestBase {
 
     @Test(timeout = 20000)
     public void alignedImage_PositionCenterTopRepeatY() {
+        assumeTrue(checkIntegralUIScale());
         setStyle("-fx-background-color: black;" +
                 "-fx-background-image: url('test/robot/javafx/scene/layout/test20x20.png');" +
                 "-fx-background-repeat: repeat-y;" +
@@ -303,6 +320,7 @@ public class RegionBackgroundImageUITest extends RegionUITestBase {
 
     @Test(timeout = 20000)
     public void alignedImage_PositionCenterBottomRepeatY() {
+        assumeTrue(checkIntegralUIScale());
         setStyle("-fx-background-color: black;" +
                 "-fx-background-image: url('test/robot/javafx/scene/layout/test20x20.png');" +
                 "-fx-background-repeat: repeat-y;" +
@@ -313,6 +331,7 @@ public class RegionBackgroundImageUITest extends RegionUITestBase {
 
     @Test(timeout = 20000)
     public void alignedImage_PositionBottomRightRepeatY() {
+        assumeTrue(checkIntegralUIScale());
         setStyle("-fx-background-color: black;" +
                 "-fx-background-image: url('test/robot/javafx/scene/layout/test20x20.png');" +
                 "-fx-background-repeat: repeat-y;" +
@@ -363,6 +382,7 @@ public class RegionBackgroundImageUITest extends RegionUITestBase {
     // TODO should test that contain causes other properties to be ignored
     @Test(timeout = 20000)
     public void alignedImage_Contain() {
+        assumeTrue(checkIntegralUIScale());
         setStyle("-fx-background-color: black;" +
                 "-fx-background-image: url('test/robot/javafx/scene/layout/test20x20.png');" +
                 "-fx-background-size: contain;");
@@ -384,6 +404,7 @@ public class RegionBackgroundImageUITest extends RegionUITestBase {
 
     @Test(timeout = 20000)
     public void unalignedImage() {
+        assumeTrue(checkIntegralUIScale());
         setStyle("-fx-background-color: black;" +
                 "-fx-background-image: url('test/robot/javafx/scene/layout/test48x48.png');");
         checkCompletelyFilled(48);
@@ -391,6 +412,7 @@ public class RegionBackgroundImageUITest extends RegionUITestBase {
 
     @Test(timeout = 20000)
     public void unalignedImage_RepeatX() {
+        assumeTrue(checkIntegralUIScale());
         setStyle("-fx-background-color: black;" +
                 "-fx-background-image: url('test/robot/javafx/scene/layout/test48x48.png');" +
                 "-fx-background-repeat: repeat-x");
@@ -400,6 +422,7 @@ public class RegionBackgroundImageUITest extends RegionUITestBase {
 
     @Test(timeout = 20000)
     public void unalignedImage_RepeatY() {
+        assumeTrue(checkIntegralUIScale());
         setStyle("-fx-background-color: black;" +
                 "-fx-background-image: url('test/robot/javafx/scene/layout/test48x48.png');" +
                 "-fx-background-repeat: repeat-y");
@@ -419,6 +442,7 @@ public class RegionBackgroundImageUITest extends RegionUITestBase {
 
     @Test(timeout = 20000)
     public void unalignedImage_Round() {
+        assumeTrue(checkIntegralUIScale());
         setStyle("-fx-background-color: black;" +
                 "-fx-background-image: url('test/robot/javafx/scene/layout/test48x48.png');" +
                 "-fx-background-repeat: round");
@@ -542,6 +566,7 @@ public class RegionBackgroundImageUITest extends RegionUITestBase {
 
     @Test(timeout = 20000)
     public void unalignedImage_PositionCenterTopRepeatX() {
+        assumeTrue(checkIntegralUIScale());
         setStyle("-fx-background-color: black;" +
                 "-fx-background-image: url('test/robot/javafx/scene/layout/test48x48.png');" +
                 "-fx-background-repeat: repeat-x;" +
@@ -552,6 +577,7 @@ public class RegionBackgroundImageUITest extends RegionUITestBase {
 
     @Test(timeout = 20000)
     public void unalignedImage_PositionCenterBottomRepeatX() {
+        assumeTrue(checkIntegralUIScale());
         setStyle("-fx-background-color: black;" +
                 "-fx-background-image: url('test/robot/javafx/scene/layout/test48x48.png');" +
                 "-fx-background-repeat: repeat-x;" +
@@ -562,6 +588,7 @@ public class RegionBackgroundImageUITest extends RegionUITestBase {
 
     @Test(timeout = 20000)
     public void unalignedImage_PositionBottomRightRepeatX() {
+        assumeTrue(checkIntegralUIScale());
         setStyle("-fx-background-color: black;" +
                 "-fx-background-image: url('test/robot/javafx/scene/layout/test48x48.png');" +
                 "-fx-background-repeat: repeat-x;" +
@@ -572,6 +599,7 @@ public class RegionBackgroundImageUITest extends RegionUITestBase {
 
     @Test(timeout = 20000)
     public void unalignedImage_PositionCenterRepeatY() {
+        assumeTrue(checkIntegralUIScale());
         setStyle("-fx-background-color: black;" +
                 "-fx-background-image: url('test/robot/javafx/scene/layout/test48x48.png');" +
                 "-fx-background-repeat: repeat-y;" +
@@ -582,6 +610,7 @@ public class RegionBackgroundImageUITest extends RegionUITestBase {
 
     @Test(timeout = 20000)
     public void unalignedImage_PositionCenterFiftyPercentRepeatY() {
+        assumeTrue(checkIntegralUIScale());
         setStyle("-fx-background-color: black;" +
                 "-fx-background-image: url('test/robot/javafx/scene/layout/test48x48.png');" +
                 "-fx-background-repeat: repeat-y;" +
@@ -592,6 +621,7 @@ public class RegionBackgroundImageUITest extends RegionUITestBase {
 
     @Test(timeout = 20000)
     public void unalignedImage_PositionCenterLeftRepeatY() {
+        assumeTrue(checkIntegralUIScale());
         setStyle("-fx-background-color: black;" +
                 "-fx-background-image: url('test/robot/javafx/scene/layout/test48x48.png');" +
                 "-fx-background-repeat: repeat-y;" +
@@ -602,6 +632,7 @@ public class RegionBackgroundImageUITest extends RegionUITestBase {
 
     @Test(timeout = 20000)
     public void unalignedImage_PositionCenterRightRepeatY() {
+        assumeTrue(checkIntegralUIScale());
         setStyle("-fx-background-color: black;" +
                 "-fx-background-image: url('test/robot/javafx/scene/layout/test48x48.png');" +
                 "-fx-background-repeat: repeat-y;" +
@@ -612,6 +643,7 @@ public class RegionBackgroundImageUITest extends RegionUITestBase {
 
     @Test(timeout = 20000)
     public void unalignedImage_PositionCenterTopRepeatY() {
+        assumeTrue(checkIntegralUIScale());
         setStyle("-fx-background-color: black;" +
                 "-fx-background-image: url('test/robot/javafx/scene/layout/test48x48.png');" +
                 "-fx-background-repeat: repeat-y;" +
@@ -622,6 +654,7 @@ public class RegionBackgroundImageUITest extends RegionUITestBase {
 
     @Test(timeout = 20000)
     public void unalignedImage_PositionCenterBottomRepeatY() {
+        assumeTrue(checkIntegralUIScale());
         setStyle("-fx-background-color: black;" +
                 "-fx-background-image: url('test/robot/javafx/scene/layout/test48x48.png');" +
                 "-fx-background-repeat: repeat-y;" +
@@ -632,6 +665,7 @@ public class RegionBackgroundImageUITest extends RegionUITestBase {
 
     @Test(timeout = 20000)
     public void unalignedImage_PositionBottomRightRepeatY() {
+        assumeTrue(checkIntegralUIScale());
         setStyle("-fx-background-color: black;" +
                 "-fx-background-image: url('test/robot/javafx/scene/layout/test48x48.png');" +
                 "-fx-background-repeat: repeat-y;" +
@@ -672,6 +706,8 @@ public class RegionBackgroundImageUITest extends RegionUITestBase {
 
     @Test(timeout = 20000)
     public void unalignedImage_Cover() {
+        assumeTrue(checkIntegralUIScale());
+        assumeTrue(!PlatformUtil.isMac()); // JDK-8255679
         setStyle("-fx-background-color: black;" +
                 "-fx-background-image: url('test/robot/javafx/scene/layout/test48x48.png');" +
                 "-fx-background-size: cover;");
@@ -683,6 +719,7 @@ public class RegionBackgroundImageUITest extends RegionUITestBase {
     // TODO should test that contain causes other properties to be ignored
     @Test(timeout = 20000)
     public void unalignedImage_Contain() {
+        assumeTrue(checkIntegralUIScale());
         setStyle("-fx-background-color: black;" +
                 "-fx-background-image: url('test/robot/javafx/scene/layout/test48x48.png');" +
                 "-fx-background-size: contain;");

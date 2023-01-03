@@ -23,63 +23,69 @@
 #pragma once
 
 #include <wtf/Assertions.h>
+#include <wtf/OptionSet.h>
 
 namespace WebCore {
 
 class HitTestRequest {
 public:
-    enum RequestType {
-        ReadOnly = 1 << 1,
-        Active = 1 << 2,
-        Move = 1 << 3,
-        Release = 1 << 4,
+    enum class Type {
+        ReadOnly = 1 << 0,
+        Active = 1 << 1,
+        Move = 1 << 2,
+        Release = 1 << 3,
+        IgnoreCSSPointerEventsProperty = 1 << 4,
         IgnoreClipping = 1 << 5,
         SVGClipContent = 1 << 6,
         TouchEvent = 1 << 7,
         DisallowUserAgentShadowContent = 1 << 8,
-        AllowFrameScrollbars = 1 << 9,
-        AllowChildFrameContent = 1 << 10,
-        AllowVisibleChildFrameContentOnly = 1 << 11,
-        ChildFrameHitTest = 1 << 12,
-        AccessibilityHitTest = 1 << 13,
+        DisallowUserAgentShadowContentExceptForImageOverlays = 1 << 9,
+        AllowFrameScrollbars = 1 << 10,
+        AllowChildFrameContent = 1 << 11,
+        AllowVisibleChildFrameContentOnly = 1 << 12,
+        ChildFrameHitTest = 1 << 13,
+        AccessibilityHitTest = 1 << 14,
         // Collect a list of nodes instead of just one. Used for elementsFromPoint and rect-based tests.
-        CollectMultipleElements = 1 << 14,
+        CollectMultipleElements = 1 << 15,
         // When using list-based testing, continue hit testing even after a hit has been found.
-        IncludeAllElementsUnderPoint = 1 << 15
+        IncludeAllElementsUnderPoint = 1 << 16,
+        PenEvent = 1 << 17,
     };
 
-    typedef unsigned HitTestRequestType;
-
-    HitTestRequest(HitTestRequestType requestType = ReadOnly | Active | DisallowUserAgentShadowContent)
-        : m_requestType(requestType)
+    HitTestRequest(OptionSet<Type> type = { Type::ReadOnly, Type::Active, Type::DisallowUserAgentShadowContent })
+        : m_type { type }
     {
-        ASSERT(!(requestType & IncludeAllElementsUnderPoint) || (requestType & CollectMultipleElements));
+        ASSERT(!type.containsAll({ Type::DisallowUserAgentShadowContentExceptForImageOverlays, Type::DisallowUserAgentShadowContent }));
+        ASSERT_IMPLIES(type.contains(Type::IncludeAllElementsUnderPoint), type.contains(Type::CollectMultipleElements));
     }
 
-    bool readOnly() const { return m_requestType & ReadOnly; }
-    bool active() const { return m_requestType & Active; }
-    bool move() const { return m_requestType & Move; }
-    bool release() const { return m_requestType & Release; }
-    bool ignoreClipping() const { return m_requestType & IgnoreClipping; }
-    bool svgClipContent() const { return m_requestType & SVGClipContent; }
-    bool touchEvent() const { return m_requestType & TouchEvent; }
-    bool mouseEvent() const { return !touchEvent(); }
-    bool disallowsUserAgentShadowContent() const { return m_requestType & DisallowUserAgentShadowContent; }
-    bool allowsFrameScrollbars() const { return m_requestType & AllowFrameScrollbars; }
-    bool allowsChildFrameContent() const { return m_requestType & AllowChildFrameContent; }
-    bool allowsVisibleChildFrameContent() const { return m_requestType & AllowVisibleChildFrameContentOnly; }
-    bool isChildFrameHitTest() const { return m_requestType & ChildFrameHitTest; }
-    bool resultIsElementList() const { return m_requestType & CollectMultipleElements; }
-    bool includesAllElementsUnderPoint() const { return m_requestType & IncludeAllElementsUnderPoint; }
+    bool readOnly() const { return m_type.contains(Type::ReadOnly); }
+    bool active() const { return m_type.contains(Type::Active); }
+    bool move() const { return m_type.contains(Type::Move); }
+    bool release() const { return m_type.contains(Type::Release); }
+    bool ignoreCSSPointerEventsProperty() const { return m_type.contains(Type::IgnoreCSSPointerEventsProperty); }
+    bool ignoreClipping() const { return m_type.contains(Type::IgnoreClipping); }
+    bool svgClipContent() const { return m_type.contains(Type::SVGClipContent); }
+    bool touchEvent() const { return m_type.contains(Type::TouchEvent); }
+    bool mouseEvent() const { return !touchEvent() && !penEvent(); }
+    bool penEvent() const { return m_type.contains(Type::PenEvent); }
+    bool disallowsUserAgentShadowContent() const { return m_type.contains(Type::DisallowUserAgentShadowContent); }
+    bool disallowsUserAgentShadowContentExceptForImageOverlays() const { return m_type.contains(Type::DisallowUserAgentShadowContentExceptForImageOverlays); }
+    bool allowsFrameScrollbars() const { return m_type.contains(Type::AllowFrameScrollbars); }
+    bool allowsChildFrameContent() const { return m_type.contains(Type::AllowChildFrameContent); }
+    bool allowsVisibleChildFrameContent() const { return m_type.contains(Type::AllowVisibleChildFrameContentOnly); }
+    bool isChildFrameHitTest() const { return m_type.contains(Type::ChildFrameHitTest); }
+    bool resultIsElementList() const { return m_type.contains(Type::CollectMultipleElements); }
+    bool includesAllElementsUnderPoint() const { return m_type.contains(Type::IncludeAllElementsUnderPoint); }
 
     // Convenience functions
     bool touchMove() const { return move() && touchEvent(); }
     bool touchRelease() const { return release() && touchEvent(); }
 
-    HitTestRequestType type() const { return m_requestType; }
+    OptionSet<Type> type() const { return m_type; }
 
 private:
-    HitTestRequestType m_requestType;
+    OptionSet<Type> m_type;
 };
 
 } // namespace WebCore

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,24 +28,12 @@
 
 #include <wtf/Assertions.h>
 #include <wtf/ASCIICType.h>
-//#include <wtf/unicode/ScriptCodesFromICU.h>
-//#include <wtf/unicode/UnicodeMacrosFromICU.h>
 
 #include <stdint.h>
 
 #include "com_sun_webkit_dom_CharacterDataImpl.h"
 
 #define CharProp(p) com_sun_webkit_dom_CharacterDataImpl_##p
-
-#if PLATFORM(JAVA) && OS(WINDOWS)
-typedef wchar_t UChar;
-#else
-typedef uint16_t UChar;
-#endif
-
-// #ifdef UChar32
-// #undef UChar32
-// #endif
 
 #ifndef __UMACHINE_H__ //XXX: recheck
 typedef uint32_t UChar32;

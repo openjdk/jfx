@@ -26,9 +26,7 @@
 #pragma once
 
 #include "SecurityOriginHash.h"
-#include <wtf/Forward.h>
 #include <wtf/HashMap.h>
-#include <wtf/HashSet.h>
 #include <wtf/RefCounted.h>
 
 namespace PAL {
@@ -52,13 +50,14 @@ public:
 
     Ref<StorageArea> localStorageArea(Document&);
 
-    WEBCORE_EXPORT void enableLegacyPrivateBrowsingForTesting(bool enabled);
+    WEBCORE_EXPORT void setSessionIDForTesting(PAL::SessionID);
 
 protected:
     StorageNamespace* optionalLocalStorageNamespace() { return m_localStorageNamespace.get(); }
 
 private:
-    StorageNamespace& localStorageNamespace(PAL::SessionID);
+    friend class Internals;
+    WEBCORE_EXPORT StorageNamespace& localStorageNamespace(PAL::SessionID);
     StorageNamespace& transientLocalStorageNamespace(SecurityOrigin&, PAL::SessionID);
 
     virtual Ref<StorageNamespace> createLocalStorageNamespace(unsigned quota, PAL::SessionID) = 0;

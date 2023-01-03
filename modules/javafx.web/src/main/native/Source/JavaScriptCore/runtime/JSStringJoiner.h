@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,54 +27,54 @@
 
 #include "ExceptionHelpers.h"
 #include "JSCJSValue.h"
+#include "JSGlobalObject.h"
 
 namespace JSC {
 
 class JSStringJoiner {
 public:
-    JSStringJoiner(ExecState&, LChar separator, unsigned stringCount);
-    JSStringJoiner(ExecState&, StringView separator, unsigned stringCount);
+    JSStringJoiner(JSGlobalObject*, LChar separator, size_t stringCount);
+    JSStringJoiner(JSGlobalObject*, StringView separator, size_t stringCount);
     ~JSStringJoiner();
 
-    void append(ExecState&, JSValue);
+    void append(JSGlobalObject*, JSValue);
     void appendNumber(VM&, int32_t);
     void appendNumber(VM&, double);
-    bool appendWithoutSideEffects(ExecState&, JSValue);
+    bool appendWithoutSideEffects(JSGlobalObject*, JSValue);
     void appendEmptyString();
 
-    JSValue join(ExecState&);
+    JSValue join(JSGlobalObject*);
 
 private:
     void append(StringViewWithUnderlyingString&&);
     void append8Bit(const String&);
-    void appendLiteral(const Identifier&);
-    unsigned joinedLength(ExecState&) const;
+    unsigned joinedLength(JSGlobalObject*) const;
 
     LChar m_singleCharacterSeparator;
     StringView m_separator;
     Vector<StringViewWithUnderlyingString> m_strings;
-    Checked<unsigned, RecordOverflow> m_accumulatedStringsLength;
+    CheckedUint32 m_accumulatedStringsLength;
     bool m_isAll8Bit { true };
 };
 
-inline JSStringJoiner::JSStringJoiner(ExecState& state, StringView separator, unsigned stringCount)
+inline JSStringJoiner::JSStringJoiner(JSGlobalObject* globalObject, StringView separator, size_t stringCount)
     : m_separator(separator)
     , m_isAll8Bit(m_separator.is8Bit())
 {
-    VM& vm = state.vm();
+    VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
     if (UNLIKELY(!m_strings.tryReserveCapacity(stringCount)))
-        throwOutOfMemoryError(&state, scope);
+        throwOutOfMemoryError(globalObject, scope);
 }
 
-inline JSStringJoiner::JSStringJoiner(ExecState& state, LChar separator, unsigned stringCount)
+inline JSStringJoiner::JSStringJoiner(JSGlobalObject* globalObject, LChar separator, size_t stringCount)
     : m_singleCharacterSeparator(separator)
     , m_separator { &m_singleCharacterSeparator, 1 }
 {
-    VM& vm = state.vm();
+    VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
     if (UNLIKELY(!m_strings.tryReserveCapacity(stringCount)))
-        throwOutOfMemoryError(&state, scope);
+        throwOutOfMemoryError(globalObject, scope);
 }
 
 ALWAYS_INLINE void JSStringJoiner::append(StringViewWithUnderlyingString&& string)
@@ -91,19 +91,12 @@ ALWAYS_INLINE void JSStringJoiner::append8Bit(const String& string)
     m_strings.uncheckedAppend({ string, string });
 }
 
-ALWAYS_INLINE void JSStringJoiner::appendLiteral(const Identifier& literal)
-{
-    m_accumulatedStringsLength += literal.length();
-    ASSERT(literal.string().is8Bit());
-    m_strings.uncheckedAppend({ literal.string(), { } });
-}
-
 ALWAYS_INLINE void JSStringJoiner::appendEmptyString()
 {
     m_strings.uncheckedAppend({ { }, { } });
 }
 
-ALWAYS_INLINE bool JSStringJoiner::appendWithoutSideEffects(ExecState& state, JSValue value)
+ALWAYS_INLINE bool JSStringJoiner::appendWithoutSideEffects(JSGlobalObject* globalObject, JSValue value)
 {
     // The following code differs from using the result of JSValue::toString in the following ways:
     // 1) It's inlined more than JSValue::toString is.
@@ -115,39 +108,55 @@ ALWAYS_INLINE bool JSStringJoiner::appendWithoutSideEffects(ExecState& state, JS
 
     if (value.isCell()) {
         JSString* jsString;
+        // FIXME: Support JSBigInt in side-effect-free append.
+        // https://bugs.webkit.org/show_bug.cgi?id=211173
         if (!value.asCell()->isString())
             return false;
         jsString = asString(value);
-        append(jsString->viewWithUnderlyingString(&state));
+        append(jsString->viewWithUnderlyingString(globalObject));
         return true;
     }
 
     if (value.isInt32()) {
-        appendNumber(state.vm(), value.asInt32());
+        appendNumber(globalObject->vm(), value.asInt32());
         return true;
     }
     if (value.isDouble()) {
-        appendNumber(state.vm(), value.asDouble());
+        appendNumber(globalObject->vm(), value.asDouble());
         return true;
     }
     if (value.isTrue()) {
-        append8Bit(state.vm().propertyNames->trueKeyword.string());
+        append8Bit(globalObject->vm().propertyNames->trueKeyword.string());
         return true;
     }
     if (value.isFalse()) {
-        append8Bit(state.vm().propertyNames->falseKeyword.string());
+        append8Bit(globalObject->vm().propertyNames->falseKeyword.string());
         return true;
     }
+
+#if USE(BIGINT32)
+    if (value.isBigInt32()) {
+        appendNumber(globalObject->vm(), value.bigInt32AsInt32());
+        return true;
+    }
+#endif
+
     ASSERT(value.isUndefinedOrNull());
     appendEmptyString();
     return true;
 }
 
-ALWAYS_INLINE void JSStringJoiner::append(ExecState& state, JSValue value)
+ALWAYS_INLINE void JSStringJoiner::append(JSGlobalObject* globalObject, JSValue value)
 {
-    if (!appendWithoutSideEffects(state, value)) {
-        JSString* jsString = value.toString(&state);
-        append(jsString->viewWithUnderlyingString(&state));
+    VM& vm = globalObject->vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    bool success = appendWithoutSideEffects(globalObject, value);
+    RETURN_IF_EXCEPTION(scope, void());
+    if (!success) {
+        JSString* jsString = value.toString(globalObject);
+        RETURN_IF_EXCEPTION(scope, void());
+        RELEASE_AND_RETURN(scope, append(jsString->viewWithUnderlyingString(globalObject)));
     }
 }
 

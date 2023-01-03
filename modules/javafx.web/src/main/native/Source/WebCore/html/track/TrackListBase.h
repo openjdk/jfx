@@ -25,24 +25,26 @@
 
 #pragma once
 
-#if ENABLE(VIDEO_TRACK)
+#if ENABLE(VIDEO)
 
 #include "ActiveDOMObject.h"
 #include "EventTarget.h"
-#include "GenericEventQueue.h"
+#include <wtf/Observer.h>
 #include <wtf/RefCounted.h>
 #include <wtf/Vector.h>
+#include <wtf/WeakPtr.h>
 
 namespace WebCore {
 
-class HTMLMediaElement;
-class Element;
 class TrackBase;
 
 class TrackListBase : public RefCounted<TrackListBase>, public EventTargetWithInlineData, public ActiveDOMObject {
     WTF_MAKE_ISO_ALLOCATED(TrackListBase);
 public:
     virtual ~TrackListBase();
+
+    enum Type { BaseTrackList, TextTrackList, AudioTrackList, VideoTrackList };
+    Type type() const { return m_type; }
 
     virtual unsigned length() const;
     virtual bool contains(TrackBase&) const;
@@ -54,18 +56,19 @@ public:
     using RefCounted<TrackListBase>::deref;
     ScriptExecutionContext* scriptExecutionContext() const final { return ContextDestructionObserver::scriptExecutionContext(); }
 
-    virtual void clearElement();
-    Element* element() const;
-    HTMLMediaElement* mediaElement() const { return m_element; }
+    void* opaqueRoot();
+
+    using OpaqueRootObserver = WTF::Observer<void*()>;
+    void setOpaqueRootObserver(const OpaqueRootObserver& observer) { m_opaqueRootObserver = observer; };
 
     // Needs to be public so tracks can call it
     void scheduleChangeEvent();
-    bool isChangeEventScheduled() const;
+    bool isChangeEventScheduled() const { return m_isChangeEventScheduled; }
 
     bool isAnyTrackEnabled() const;
 
 protected:
-    TrackListBase(HTMLMediaElement*, ScriptExecutionContext*);
+    TrackListBase(ScriptExecutionContext*, Type);
 
     void scheduleAddTrackEvent(Ref<TrackBase>&&);
     void scheduleRemoveTrackEvent(Ref<TrackBase>&&);
@@ -75,20 +78,20 @@ protected:
 private:
     void scheduleTrackEvent(const AtomString& eventName, Ref<TrackBase>&&);
 
-    bool canSuspendForDocumentSuspension() const final;
-    void suspend(ReasonForSuspension) final;
-    void resume() final;
-    void stop() final;
-
     // EventTarget
     void refEventTarget() final { ref(); }
     void derefEventTarget() final { deref(); }
 
-    HTMLMediaElement* m_element;
-
-    GenericEventQueue m_asyncEventQueue;
+    Type m_type;
+    WeakPtr<OpaqueRootObserver> m_opaqueRootObserver;
+    bool m_isChangeEventScheduled { false };
 };
+
+inline void* root(TrackListBase* trackList)
+{
+    return trackList->opaqueRoot();
+}
 
 } // namespace WebCore
 
-#endif // ENABLE(VIDEO_TRACK)
+#endif // ENABLE(VIDEO)

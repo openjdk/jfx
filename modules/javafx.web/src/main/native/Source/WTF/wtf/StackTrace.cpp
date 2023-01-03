@@ -49,7 +49,7 @@ void WTFGetBacktrace(void** stack, int* size)
 #if HAVE(BACKTRACE)
     *size = backtrace(stack, *size);
 #elif OS(WINDOWS)
-    *size = RtlCaptureStackBackTrace(0, *size, stack, 0);
+    *size = RtlCaptureStackBackTrace(0, *size, stack, nullptr);
 #else
     UNUSED_PARAM(stack);
     *size = 0;
@@ -86,7 +86,7 @@ std::unique_ptr<StackTrace> StackTrace::captureStackTrace(int maxFrames, int fra
     return trace;
 }
 
-auto StackTrace::demangle(void* pc) -> Optional<DemangleEntry>
+auto StackTrace::demangle(void* pc) -> std::optional<DemangleEntry>
 {
 #if HAVE(DLADDR)
     const char* mangledName = nullptr;
@@ -104,7 +104,7 @@ auto StackTrace::demangle(void* pc) -> Optional<DemangleEntry>
 #else
     UNUSED_PARAM(pc);
 #endif
-    return WTF::nullopt;
+    return std::nullopt;
 }
 
 void StackTrace::dump(PrintStream& out, const char* indentString) const
@@ -130,21 +130,20 @@ void StackTrace::dump(PrintStream& out, const char* indentString) const
         const char* cxaDemangled = nullptr;
 #if HAVE(BACKTRACE_SYMBOLS)
         mangledName = symbols[i];
-#elif HAVE(DLADDR)
+#elif OS(WINDOWS)
+        if (DbgHelper::SymFromAddress(hProc, reinterpret_cast<DWORD64>(stack[i]), nullptr, symbolInfo))
+            mangledName = symbolInfo->Name;
+#endif
         auto demangled = demangle(stack[i]);
         if (demangled) {
             mangledName = demangled->mangledName();
             cxaDemangled = demangled->demangledName();
         }
-#elif OS(WINDOWS)
-        if (DbgHelper::SymFromAddress(hProc, reinterpret_cast<DWORD64>(stack[i]), 0, symbolInfo))
-            mangledName = symbolInfo->Name;
-#endif
         const int frameNumber = i + 1;
         if (mangledName || cxaDemangled)
-            out.printf("%s%-3d %p %s\n", indentString, frameNumber, stack[i], cxaDemangled ? cxaDemangled : mangledName);
+            out.printf("%s%s%-3d %p %s\n", m_prefix ? m_prefix : "", indentString, frameNumber, stack[i], cxaDemangled ? cxaDemangled : mangledName);
         else
-            out.printf("%s%-3d %p\n", indentString, frameNumber, stack[i]);
+            out.printf("%s%s%-3d %p\n", m_prefix ? m_prefix : "", indentString, frameNumber, stack[i]);
     }
 
 #if HAVE(BACKTRACE_SYMBOLS)

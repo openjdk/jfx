@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,9 +27,11 @@ package com.sun.webkit;
 
 import javafx.application.ConditionalFeature;
 import javafx.application.Platform;
+import javafx.scene.paint.Color;
 import com.sun.glass.utils.NativeLibLoader;
 import com.sun.javafx.logging.PlatformLogger;
 import com.sun.javafx.logging.PlatformLogger.Level;
+import com.sun.javafx.tk.Toolkit;
 import com.sun.webkit.event.WCFocusEvent;
 import com.sun.webkit.event.WCInputMethodEvent;
 import com.sun.webkit.event.WCKeyEvent;
@@ -82,6 +84,7 @@ public final class WebPage {
     private final static PlatformLogger paintLog = PlatformLogger.getLogger(WebPage.class.getName() + ".paint");
 
     private static final int MAX_FRAME_QUEUE_SIZE = 10;
+    private static final int DEFAULT_BACKGROUND_INT_RGBA = 0xFFFFFFFF; // Color.WHITE
 
     // Native WebPage* pointer
     private long pPage = 0;
@@ -93,22 +96,24 @@ public final class WebPage {
     private int width, height;
 
     private int fontSmoothingType;
+    private int backgroundIntRgba = DEFAULT_BACKGROUND_INT_RGBA;
 
     private final WCFrameView hostWindow;
 
     // List of created frames
-    private final Set<Long> frames = new HashSet<Long>();
+    private final Set<Long> frames = new HashSet<>();
 
     // The access control context associated with this object
+    @SuppressWarnings("removal")
     private final AccessControlContext accessControlContext;
 
     // Maps load request identifiers to URLs
     private final Map<Integer, String> requestURLs =
-            new HashMap<Integer, String>();
+            new HashMap<>();
 
     // There may be several RESOURCE_STARTED events for a resource,
     // so this map is used to convert them to RESOURCE_REDIRECTED
-    private final Set<Integer> requestStarted = new HashSet<Integer>();
+    private final Set<Integer> requestStarted = new HashSet<>();
 
     // PAGE_LOCK is used to synchronize the following operations b/w Event & Main threads:
     // - rendering of the page (Main thread)
@@ -119,7 +124,7 @@ public final class WebPage {
     // The queue of render frames awaiting rendering.
     // Access to this object is synchronized on its monitor.
     // Accessed on: Event thread and Main thread.
-    private final Queue<RenderFrame> frameQueue = new LinkedList<RenderFrame>();
+    private final Queue<RenderFrame> frameQueue = new LinkedList<>();
 
     // The current frame being generated.
     // Accessed on: Event thread only.
@@ -129,7 +134,8 @@ public final class WebPage {
     private int updateContentCycleID;
 
     static {
-        AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+        @SuppressWarnings("removal")
+        var dummy = AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
             NativeLibLoader.loadLibrary("jfxwebkit");
             log.finer("jfxwebkit loaded");
 
@@ -154,6 +160,19 @@ public final class WebPage {
 
             // Initialize WTF, WebCore and JavaScriptCore.
             twkInitWebCore(useJIT, useDFGJIT, useCSS3D);
+
+            // Inform the native webkit code when either the JVM or the
+            // JavaFX runtime is being shutdown
+            final Runnable shutdownHook = () -> {
+                synchronized(WebPage.class) {
+                    MainThread.twkSetShutdown(true);
+                }
+            };
+
+            // Register shutdown hook with the Java runtime and the Toolkit
+            Toolkit.getToolkit().addShutdownHook(shutdownHook);
+            Runtime.getRuntime().addShutdownHook(new Thread(shutdownHook));
+
             return null;
         });
 
@@ -191,7 +210,9 @@ public final class WebPage {
             this.scrollbarTheme = null;
         }
 
-        accessControlContext = AccessController.getContext();
+        @SuppressWarnings("removal")
+        AccessControlContext tmpAcc = AccessController.getContext();
+        accessControlContext = tmpAcc;
 
         hostWindow = new WCFrameView(this);
         pPage = twkCreatePage(editable);
@@ -225,6 +246,7 @@ public final class WebPage {
      * May be called on any thread.
      * @return the access control context associated with this object
      */
+    @SuppressWarnings("removal")
     public AccessControlContext getAccessControlContext() {
         return accessControlContext;
     }
@@ -242,7 +264,7 @@ public final class WebPage {
     // *************************************************************************
 
     private WCPageBackBuffer backbuffer;
-    private List<WCRectangle> dirtyRects = new LinkedList<WCRectangle>();
+    private List<WCRectangle> dirtyRects = new LinkedList<>();
 
     private void addDirtyRect(WCRectangle toPaint) {
         if (toPaint.getWidth() <= 0 || toPaint.getHeight() <= 0) {
@@ -299,7 +321,7 @@ public final class WebPage {
             clip = new WCRectangle(0, 0, width, height);
         }
         List<WCRectangle> oldDirtyRects = dirtyRects;
-        dirtyRects = new LinkedList<WCRectangle>();
+        dirtyRects = new LinkedList<>();
         twkPrePaint(getPage());
         while (!oldDirtyRects.isEmpty()) {
             WCRectangle r = oldDirtyRects.remove(0).intersection(clip);
@@ -368,6 +390,14 @@ public final class WebPage {
     }
 
     private void scroll(int x, int y, int w, int h, int dx, int dy) {
+        if (!isBackgroundColorOpaque()) {
+            if (paintLog.isLoggable(Level.FINEST)) {
+                paintLog.finest("rect=[" + x + ", " + y + " " + w + "x" + h +"]");
+            }
+            addDirtyRect(new WCRectangle(x, y, w, h));
+            return;
+        }
+
         if (paintLog.isLoggable(Level.FINEST)) {
             paintLog.finest("rect=[" + x + ", " + y + " " + w + "x" + h +
                             "] delta=[" + dx + ", " + dy + "]");
@@ -423,7 +453,7 @@ public final class WebPage {
     // by multiple threads
     private static final class RenderFrame {
         private final List<WCRenderQueue> rqList =
-                new LinkedList<WCRenderQueue>();
+                new LinkedList<>();
         private int scrollDx, scrollDy;
         private final WCRectangle enclosingRect = new WCRectangle();
 
@@ -483,7 +513,7 @@ public final class WebPage {
     private final PolicyClient policyClient;
     private InputMethodClient imClient;
     private final List<LoadListenerClient> loadListenerClients =
-        new LinkedList<LoadListenerClient>();
+        new LinkedList<>();
     private final InspectorClient inspectorClient;
     private final RenderTheme renderTheme;
     private final ScrollBarTheme scrollbarTheme;
@@ -583,9 +613,10 @@ public final class WebPage {
     }
 
     public void setBackgroundColor(long frameID, int backgroundColor) {
+        backgroundIntRgba = backgroundColor;
         lockPage();
         try {
-            log.fine("setBackgroundColor: " + backgroundColor);
+            log.fine("setBackgroundColor intRgba: {0}", backgroundColor);
             if (isDisposed) {
                 log.fine("setBackgroundColor() request for a disposed web page.");
                 return;
@@ -593,27 +624,34 @@ public final class WebPage {
             if (!frames.contains(frameID)) {
                 return;
             }
+            twkSetTransparent(frameID, isBackgroundColorTransparent());
             twkSetBackgroundColor(frameID, backgroundColor);
-
+            repaintAll();
         } finally {
             unlockPage();
         }
     }
 
+    public void setBackgroundColor(Color backgroundColor) {
+        log.fine("setBackgroundColor color: " + backgroundColor);
+        setBackgroundColor(getIntRgba(backgroundColor));
+    }
+
     public void setBackgroundColor(int backgroundColor) {
+        backgroundIntRgba = backgroundColor;
         lockPage();
         try {
-            log.fine("setBackgroundColor: " + backgroundColor +
-                   " for all frames");
+            log.fine("setBackgroundColor intRgba: {0} for all frames", backgroundColor);
             if (isDisposed) {
                 log.fine("setBackgroundColor() request for a disposed web page.");
                 return;
             }
 
             for (long frameID: frames) {
+                twkSetTransparent(frameID, isBackgroundColorTransparent());
                 twkSetBackgroundColor(frameID, backgroundColor);
             }
-
+            repaintAll();
         } finally {
             unlockPage();
         }
@@ -633,10 +671,14 @@ public final class WebPage {
                 return;
             }
             updateDirty(toPaint);
-
+            updateRendering();
         } finally {
             unlockPage();
         }
+    }
+
+    public void updateRendering() {
+        twkUpdateRendering(getPage());
     }
 
     public int getUpdateContentCycleID() {
@@ -664,7 +706,7 @@ public final class WebPage {
         try {
             final WCRenderQueue rq = WCGraphicsManager.getGraphicsManager().
                     createRenderQueue(new WCRectangle(x, y, w, h), true);
-            FutureTask<Void> f = new FutureTask<Void>(() -> {
+            FutureTask<Void> f = new FutureTask<>(() -> {
                 twkUpdateContent(getPage(), rq, x, y, w, h);
             }, null);
             Invoker.getInvoker().invokeOnEventThread(f);
@@ -730,8 +772,15 @@ public final class WebPage {
             paintLog.finest("Rendering: {0}", frame);
             for (WCRenderQueue rq : frame.getRQList()) {
                 gc.saveState();
-                if (rq.getClip() != null) {
-                    gc.setClip(rq.getClip());
+                WCRectangle clip = rq.getClip();
+                if (clip != null) {
+                    if (isBackgroundColorTransparent()) {
+                        // As backbuffer is enabled, new clips are drawn over the old rendered frames
+                        // regardless the alpha channel. While that works fine for alpha > 0,
+                        // for alpha == 0 we need to clear the old frame or it will still be visible.
+                        gc.clearRect((int) clip.getX(), (int) clip.getY(), (int) clip.getWidth(), (int) clip.getHeight());
+                    }
+                    gc.setClip(clip);
                 }
                 rq.decode(gc);
                 gc.restoreState();
@@ -802,15 +851,18 @@ public final class WebPage {
                 log.fine("Mouse event for a disposed web page.");
                 return false;
             }
-
-            return !isDragConfirmed() //When Webkit informes FX about drag start, it waits
-                                      //for system DnD loop and not intereasted in
-                                      //intermediate mouse events that can change text selection.
+            boolean result = !isDragConfirmed() //When Webkit informes FX about drag start, it waits
+                                                // for system DnD loop and not intereasted in
+                                                //intermediate mouse events that can change text selection.
                 && twkProcessMouseEvent(getPage(), me.getID(),
-                                        me.getButton(), me.getClickCount(),
+                                        me.getButton(), me.getButtonMask(), me.getClickCount(),
                                         me.getX(), me.getY(), me.getScreenX(), me.getScreenY(),
                                         me.isShiftDown(), me.isControlDown(), me.isAltDown(), me.isMetaDown(), me.isPopupTrigger(),
                                         me.getWhen() / 1000.0);
+            if (!isBackgroundColorOpaque()) {
+                repaintAll();
+            }
+            return result;
         } finally {
             unlockPage();
         }
@@ -824,11 +876,15 @@ public final class WebPage {
                 log.fine("MouseWheel event for a disposed web page.");
                 return false;
             }
-            return twkProcessMouseWheelEvent(getPage(),
-                                             me.getX(), me.getY(), me.getScreenX(), me.getScreenY(),
-                                             me.getDeltaX(), me.getDeltaY(),
-                                             me.isShiftDown(), me.isControlDown(), me.isAltDown(), me.isMetaDown(),
-                                             me.getWhen() / 1000.0);
+            boolean result = twkProcessMouseWheelEvent(getPage(),
+                    me.getX(), me.getY(), me.getScreenX(), me.getScreenY(),
+                    me.getDeltaX(), me.getDeltaY(),
+                    me.isShiftDown(), me.isControlDown(), me.isAltDown(), me.isMetaDown(),
+                    me.getWhen() / 1000.0);
+            if (!isBackgroundColorOpaque()) {
+                repaintAll();
+            }
+            return result;
         } finally {
             unlockPage();
         }
@@ -1153,6 +1209,12 @@ public final class WebPage {
         } finally {
             unlockPage();
         }
+    }
+
+    // DRT support
+    public void forceRepaint() {
+        repaintAll();
+        updateContent(new WCRectangle(0, 0, width, height));
     }
 
     public String getContentType(long frameID) {
@@ -1564,7 +1626,7 @@ public final class WebPage {
                 return null;
             }
             long[] children = twkGetChildFrames(parentID);
-            List<Long> childrenList = new LinkedList<Long>();
+            List<Long> childrenList = new LinkedList<>();
             for (long child : children) {
                 childrenList.add(Long.valueOf(child));
             }
@@ -2510,6 +2572,7 @@ public final class WebPage {
     private void fireLoadEvent(long frameID, int state, String url,
             String contentType, double progress, int errorCode)
     {
+        setBackgroundColor(backgroundIntRgba);
         for (LoadListenerClient l : loadListenerClients) {
             l.dispatchLoadEvent(frameID, state, url, contentType, progress, errorCode);
         }
@@ -2526,6 +2589,27 @@ public final class WebPage {
     private void repaintAll() {
         dirtyRects.clear();
         addDirtyRect(new WCRectangle(0, 0, width, height));
+    }
+
+    private boolean isBackgroundColorTransparent() {
+        return (backgroundIntRgba & 0x000000FF) == 0;
+    }
+
+    private boolean isBackgroundColorOpaque() {
+        return (backgroundIntRgba & 0x000000FF) == 255;
+    }
+
+    private static int getIntRgba(Color color) {
+        if (color == null) {
+            return DEFAULT_BACKGROUND_INT_RGBA;
+        }
+        int red = (int) Math.round(color.getRed() * 255.0);
+        int green = (int) Math.round(color.getGreen() * 255.0);
+        int blue = (int) Math.round(color.getBlue() * 255.0);
+        int alpha = (int) Math.round(color.getOpacity() * 255.0);
+
+        // return 32 bit integer representation compatible with WebKit
+        return (red << 24) | (green << 16) | (blue << 8) | alpha;
     }
 
     // Package scope method for testing
@@ -2597,6 +2681,7 @@ public final class WebPage {
     private native void twkSetBounds(long pPage, int x, int y, int w, int h);
     private native void twkPrePaint(long pPage);
     private native void twkUpdateContent(long pPage, WCRenderQueue rq, int x, int y, int w, int h);
+    private native void twkUpdateRendering(long pPage);
     private native void twkPostPaint(long pPage, WCRenderQueue rq,
                                      int x, int y, int w, int h);
 
@@ -2610,7 +2695,7 @@ public final class WebPage {
                                               boolean shift, boolean ctrl,
                                               boolean alt, boolean meta, double when);
     private native boolean twkProcessMouseEvent(long pPage, int id,
-                                                int button, int clickCount,
+                                                int button, int buttonMask, int clickCount,
                                                 int x, int y, int sx, int sy,
                                                 boolean shift, boolean control, boolean alt, boolean meta,
                                                 boolean popupTrigger, double when);

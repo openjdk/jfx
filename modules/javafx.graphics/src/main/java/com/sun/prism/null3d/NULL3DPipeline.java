@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -51,16 +51,18 @@ public class NULL3DPipeline extends GraphicsPipeline {
         return theInstance;
     }
 
+    @Override
     public boolean init() {
         return true;
     }
 
 
+    @Override
     public void dispose() {
     }
 
     private final HashMap<Integer, DummyResourceFactory> factories =
-            new HashMap<Integer, DummyResourceFactory>(1);
+            new HashMap<>(1);
 
     @Override
     public int getAdapterOrdinal(Screen screen) {
@@ -69,7 +71,7 @@ public class NULL3DPipeline extends GraphicsPipeline {
 
     @Override
     public ResourceFactory getResourceFactory(Screen screen) {
-        Integer index = new Integer(screen.getAdapterOrdinal());
+        Integer index = Integer.valueOf(screen.getAdapterOrdinal());
         DummyResourceFactory factory = factories.get(index);
         if (factory == null) {
             factory = new DummyResourceFactory(screen);

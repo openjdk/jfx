@@ -27,7 +27,16 @@
 
 namespace WebCore {
 
-FloatSize SVGImageForContainer::size() const
+
+SVGImageForContainer::SVGImageForContainer(SVGImage* image, const FloatSize& containerSize, float containerZoom, const URL& initialFragmentURL)
+    : m_image(image)
+    , m_containerSize(containerSize)
+    , m_containerZoom(containerZoom)
+    , m_initialFragmentURL(initialFragmentURL)
+{
+}
+
+FloatSize SVGImageForContainer::size(ImageOrientation) const
 {
     FloatSize scaledContainerSize(m_containerSize);
     scaledContainerSize.scale(m_containerZoom);
@@ -45,9 +54,9 @@ void SVGImageForContainer::drawPattern(GraphicsContext& context, const FloatRect
     m_image->drawPatternForContainer(context, m_containerSize, m_containerZoom, m_initialFragmentURL, srcRect, patternTransform, phase, spacing, dstRect, options);
 }
 
-NativeImagePtr SVGImageForContainer::nativeImageForCurrentFrame(const GraphicsContext* targetContext)
+RefPtr<NativeImage> SVGImageForContainer::nativeImageForCurrentFrame()
 {
-    return m_image->nativeImageForCurrentFrame(targetContext);
+    return m_image->nativeImageForCurrentFrame();
 }
 
 } // namespace WebCore

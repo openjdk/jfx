@@ -25,10 +25,9 @@
 
 #pragma once
 
-#if ENABLE(INDEXED_DATABASE)
-
 #include "IDBDatabaseInfo.h"
 #include "IDBResourceIdentifier.h"
+#include "IDBTransactionDurability.h"
 #include "IDBTransactionMode.h"
 #include "IndexedDB.h"
 #include <wtf/Vector.h>
@@ -46,21 +45,22 @@ class IDBConnectionToClient;
 class IDBTransactionInfo {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    static IDBTransactionInfo clientTransaction(const IDBClient::IDBConnectionProxy&, const Vector<String>& objectStores, IDBTransactionMode);
+    static IDBTransactionInfo clientTransaction(const IDBClient::IDBConnectionProxy&, const Vector<String>& objectStores, IDBTransactionMode, std::optional<IDBTransactionDurability>);
     static IDBTransactionInfo versionChange(const IDBServer::IDBConnectionToClient&, const IDBDatabaseInfo& originalDatabaseInfo, uint64_t newVersion);
 
-    IDBTransactionInfo(const IDBTransactionInfo&);
+    WEBCORE_EXPORT IDBTransactionInfo(const IDBTransactionInfo&);
     IDBTransactionInfo(IDBTransactionInfo&&) = default;
     IDBTransactionInfo& operator=(IDBTransactionInfo&&) = default;
 
     enum IsolatedCopyTag { IsolatedCopy };
     IDBTransactionInfo(const IDBTransactionInfo&, IsolatedCopyTag);
 
-    IDBTransactionInfo isolatedCopy() const;
+    WEBCORE_EXPORT IDBTransactionInfo isolatedCopy() const;
 
     const IDBResourceIdentifier& identifier() const { return m_identifier; }
 
     IDBTransactionMode mode() const { return m_mode; }
+    IDBTransactionDurability durability() const { return m_durability; }
     uint64_t newVersion() const { return m_newVersion; }
 
     const Vector<String>& objectStores() const { return m_objectStores; }
@@ -69,7 +69,7 @@ public:
 
     WEBCORE_EXPORT IDBTransactionInfo();
     template<class Encoder> void encode(Encoder&) const;
-    template<class Decoder> static bool decode(Decoder&, IDBTransactionInfo&);
+    template<class Decoder> static WARN_UNUSED_RETURN bool decode(Decoder&, IDBTransactionInfo&);
 
 #if !LOG_DISABLED
     String loggingString() const;
@@ -83,6 +83,7 @@ private:
     IDBResourceIdentifier m_identifier;
 
     IDBTransactionMode m_mode { IDBTransactionMode::Readonly };
+    IDBTransactionDurability m_durability { IDBTransactionDurability::Default };
     uint64_t m_newVersion { 0 };
     Vector<String> m_objectStores;
     std::unique_ptr<IDBDatabaseInfo> m_originalDatabaseInfo;
@@ -92,7 +93,7 @@ template<class Encoder>
 void IDBTransactionInfo::encode(Encoder& encoder) const
 {
     encoder << m_identifier << m_newVersion << m_objectStores;
-    encoder.encodeEnum(m_mode);
+    encoder << m_mode << m_durability;
 
     encoder << !!m_originalDatabaseInfo;
     if (m_originalDatabaseInfo)
@@ -111,7 +112,10 @@ bool IDBTransactionInfo::decode(Decoder& decoder, IDBTransactionInfo& info)
     if (!decoder.decode(info.m_objectStores))
         return false;
 
-    if (!decoder.decodeEnum(info.m_mode))
+    if (!decoder.decode(info.m_mode))
+        return false;
+
+    if (!decoder.decode(info.m_durability))
         return false;
 
     bool hasObject;
@@ -129,5 +133,3 @@ bool IDBTransactionInfo::decode(Decoder& decoder, IDBTransactionInfo& info)
 }
 
 } // namespace WebCore
-
-#endif // ENABLE(INDEXED_DATABASE)

@@ -27,7 +27,7 @@
 #include "ArrayProfile.h"
 
 #include "CodeBlock.h"
-#include "JSCInlines.h"
+#include "JSCellInlines.h"
 #include <wtf/CommaPrinter.h>
 #include <wtf/StringPrintStream.h>
 
@@ -44,6 +44,8 @@ const ArrayModes typedArrayModes[NumberOfTypedArrayTypesExcludingDataView] = {
     Uint32ArrayMode,
     Float32ArrayMode,
     Float64ArrayMode,
+    BigInt64ArrayMode,
+    BigUint64ArrayMode,
 };
 
 void dumpArrayModes(PrintStream& out, ArrayModes arrayModes)
@@ -110,6 +112,10 @@ void dumpArrayModes(PrintStream& out, ArrayModes arrayModes)
         out.print(comma, "Float32ArrayMode");
     if (arrayModes & Float64ArrayMode)
         out.print(comma, "Float64ArrayMode");
+    if (arrayModes & BigInt64ArrayMode)
+        out.print(comma, "BigInt64ArrayMode");
+    if (arrayModes & BigUint64ArrayMode)
+        out.print(comma, "BigUint64ArrayMode");
 }
 
 void ArrayProfile::computeUpdatedPrediction(const ConcurrentJSLocker& locker, CodeBlock* codeBlock)
@@ -117,9 +123,9 @@ void ArrayProfile::computeUpdatedPrediction(const ConcurrentJSLocker& locker, Co
     if (!m_lastSeenStructureID)
         return;
 
-    Structure* lastSeenStructure = codeBlock->heap()->structureIDTable().get(m_lastSeenStructureID);
+    Structure* lastSeenStructure = m_lastSeenStructureID.decode();
     computeUpdatedPrediction(locker, codeBlock, lastSeenStructure);
-    m_lastSeenStructureID = 0;
+    m_lastSeenStructureID = StructureID();
 }
 
 void ArrayProfile::computeUpdatedPrediction(const ConcurrentJSLocker&, CodeBlock* codeBlock, Structure* lastSeenStructure)

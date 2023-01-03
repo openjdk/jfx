@@ -20,7 +20,6 @@
 
 #pragma once
 
-#include "CallFrame.h"
 #include "Identifier.h"
 #include <wtf/HashSet.h>
 #include <wtf/Vector.h>
@@ -115,7 +114,7 @@ ALWAYS_INLINE void PropertyNameArray::addUnchecked(UniquedStringImpl* identifier
 
 ALWAYS_INLINE void PropertyNameArray::add(UniquedStringImpl* identifier)
 {
-    static const unsigned setThreshold = 20;
+    static constexpr unsigned setThreshold = 20;
 
     ASSERT(identifier);
 

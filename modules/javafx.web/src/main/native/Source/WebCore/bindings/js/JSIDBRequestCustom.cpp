@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2019-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,73 +26,85 @@
 #include "config.h"
 #include "JSIDBRequest.h"
 
-#if ENABLE(INDEXED_DATABASE)
-
 #include "IDBBindingUtilities.h"
+#include "JSDOMConvertIndexedDB.h"
 #include "JSDOMConvertInterface.h"
+#include "JSDOMConvertSequences.h"
 #include "JSIDBCursor.h"
 #include "JSIDBDatabase.h"
 
 namespace WebCore {
 using namespace JSC;
 
-JSC::JSValue JSIDBRequest::result(JSC::ExecState& state) const
+JSC::JSValue JSIDBRequest::result(JSC::JSGlobalObject& lexicalGlobalObject) const
 {
-    return cachedPropertyValue(state, *this, wrapped().resultWrapper(), [&] {
-        auto result = wrapped().result();
-        if (UNLIKELY(result.hasException())) {
-            auto throwScope = DECLARE_THROW_SCOPE(state.vm());
-            propagateException(state, throwScope, result.releaseException());
-            return jsNull();
-        }
+    auto result = wrapped().result();
+    if (UNLIKELY(result.hasException())) {
+        auto throwScope = DECLARE_THROW_SCOPE(lexicalGlobalObject.vm());
+        propagateException(lexicalGlobalObject, throwScope, result.releaseException());
+        return jsNull();
+    }
 
-        IDBRequest::Result resultValue = result.releaseReturnValue();
-        return WTF::switchOn(resultValue, [&state] (RefPtr<IDBCursor>& cursor) {
-            auto throwScope = DECLARE_THROW_SCOPE(state.vm());
-            return toJS<IDLInterface<IDBCursor>>(state, *jsCast<JSDOMGlobalObject*>(state.lexicalGlobalObject()), throwScope, cursor.get());
-        }, [&state] (RefPtr<IDBDatabase>& database) {
-            auto throwScope = DECLARE_THROW_SCOPE(state.vm());
-            return toJS<IDLInterface<IDBDatabase>>(state, *jsCast<JSDOMGlobalObject*>(state.lexicalGlobalObject()), throwScope, database.get());
-        }, [&state] (IDBKeyData keyData) {
-            return toJS<IDLIDBKeyData>(state, *jsCast<JSDOMGlobalObject*>(state.lexicalGlobalObject()), keyData);
-        }, [&state] (Vector<IDBKeyData> keyDatas) {
-            return toJS<IDLSequence<IDLIDBKeyData>>(state, *jsCast<JSDOMGlobalObject*>(state.lexicalGlobalObject()), keyDatas);
-        }, [&state] (IDBGetResult getResult) {
-            auto result = deserializeIDBValueWithKeyInjection(state, getResult.value(), getResult.keyData(), getResult.keyPath());
+    auto resultValue = result.releaseReturnValue();
+    auto& resultWrapper = wrapped().resultWrapper();
+    return WTF::switchOn(resultValue, [] (IDBRequest::NullResultType result) {
+        if (result == IDBRequest::NullResultType::Empty)
+            return JSC::jsNull();
+        return JSC::jsUndefined();
+    }, [] (uint64_t number) {
+        return toJS<IDLUnsignedLongLong>(number);
+    }, [&] (RefPtr<IDBCursor>& cursor) {
+        return cachedPropertyValue(lexicalGlobalObject, *this, resultWrapper, [&] {
+            auto throwScope = DECLARE_THROW_SCOPE(lexicalGlobalObject.vm());
+            return toJS<IDLInterface<IDBCursor>>(lexicalGlobalObject, *jsCast<JSDOMGlobalObject*>(&lexicalGlobalObject), throwScope, cursor.get());
+        });
+    }, [&] (RefPtr<IDBDatabase>& database) {
+        return cachedPropertyValue(lexicalGlobalObject, *this, resultWrapper, [&] {
+            auto throwScope = DECLARE_THROW_SCOPE(lexicalGlobalObject.vm());
+            return toJS<IDLInterface<IDBDatabase>>(lexicalGlobalObject, *jsCast<JSDOMGlobalObject*>(&lexicalGlobalObject), throwScope, database.get());
+        });
+    }, [&] (IDBKeyData keyData) {
+        return cachedPropertyValue(lexicalGlobalObject, *this, resultWrapper, [&] {
+            return toJS<IDLIDBKeyData>(lexicalGlobalObject, *jsCast<JSDOMGlobalObject*>(&lexicalGlobalObject), keyData);
+        });
+    }, [&] (Vector<IDBKeyData> keyDatas) {
+        return cachedPropertyValue(lexicalGlobalObject, *this, resultWrapper, [&] {
+            return toJS<IDLSequence<IDLIDBKeyData>>(lexicalGlobalObject, *jsCast<JSDOMGlobalObject*>(&lexicalGlobalObject), keyDatas);
+        });
+    }, [&] (IDBGetResult getResult) {
+        return cachedPropertyValue(lexicalGlobalObject, *this, resultWrapper, [&] {
+            auto result = deserializeIDBValueWithKeyInjection(lexicalGlobalObject, getResult.value(), getResult.keyData(), getResult.keyPath());
             return result ? result.value() : jsNull();
-        }, [&state] (IDBGetAllResult getAllResult) {
+        });
+    }, [&] (IDBGetAllResult getAllResult) {
+        return cachedPropertyValue(lexicalGlobalObject, *this, resultWrapper, [&] {
             auto& keys = getAllResult.keys();
             auto& values = getAllResult.values();
             auto& keyPath = getAllResult.keyPath();
-            auto scope = DECLARE_THROW_SCOPE(state.vm());
+            auto scope = DECLARE_THROW_SCOPE(lexicalGlobalObject.vm());
             JSC::MarkedArgumentBuffer list;
             for (unsigned i = 0; i < values.size(); i ++) {
-                auto result = deserializeIDBValueWithKeyInjection(state, values[i], keys[i], keyPath);
+                auto result = deserializeIDBValueWithKeyInjection(lexicalGlobalObject, values[i], keys[i], keyPath);
                 if (!result)
                     return jsNull();
                 list.append(result.value());
                 if (UNLIKELY(list.hasOverflowed())) {
-                    propagateException(state, scope, Exception(UnknownError));
+                    propagateException(lexicalGlobalObject, scope, Exception(UnknownError));
                     return jsNull();
                 }
             }
-            return JSValue(JSC::constructArray(&state, nullptr, state.lexicalGlobalObject(), list));
-        }, [] (uint64_t number) {
-            return toJS<IDLUnsignedLongLong>(number);
-        }, [] (IDBRequest::NullResultType other) {
-            if (other == IDBRequest::NullResultType::Empty)
-                return JSC::jsNull();
-            return JSC::jsUndefined();
+            return JSValue(JSC::constructArray(&lexicalGlobalObject, static_cast<JSC::ArrayAllocationProfile*>(nullptr), list));
         });
     });
 }
 
-void JSIDBRequest::visitAdditionalChildren(SlotVisitor& visitor)
+template<typename Visitor>
+void JSIDBRequest::visitAdditionalChildren(Visitor& visitor)
 {
     auto& request = wrapped();
     request.resultWrapper().visit(visitor);
-    request.cursorWrapper().visit(visitor);
 }
 
-}
-#endif // ENABLE(INDEXED_DATABASE)
+DEFINE_VISIT_ADDITIONAL_CHILDREN(JSIDBRequest);
+
+} // namespace WebCore

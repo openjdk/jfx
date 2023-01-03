@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -62,7 +62,7 @@ public class QueuedPixelSource implements PixelSource {
     private volatile Pixels beingConsumed;
     private volatile Pixels enqueued;
     private final List<WeakReference<Pixels>> saved =
-         new ArrayList<WeakReference<Pixels>>(3);
+         new ArrayList<>(3);
     private final boolean useDirectBuffers;
 
     public QueuedPixelSource(boolean useDirectBuffers) {
@@ -100,7 +100,7 @@ public class QueuedPixelSource implements PixelSource {
     private boolean usesSameBuffer(Pixels p1, Pixels p2) {
         if (p1 == p2) return true;
         if (p1 == null || p2 == null) return false;
-        return (p1.getPixels() == p2.getPixels());
+        return (p1.getBuffer() == p2.getBuffer());
     }
 
     /**

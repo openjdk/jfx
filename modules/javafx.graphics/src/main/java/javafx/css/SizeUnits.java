@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -34,6 +34,9 @@ import javafx.scene.text.Font;
  */
 public enum SizeUnits {
 
+    /**
+     * Represents a size as a percentage.
+     */
     PERCENT(false) {
 
         @Override
@@ -50,6 +53,10 @@ public enum SizeUnits {
         }
 
     },
+
+    /**
+     * Represents a size in inches.
+     */
     IN(true) {
 
         @Override
@@ -66,6 +73,10 @@ public enum SizeUnits {
         }
 
     },
+
+    /**
+     * Represents a size in centimeters.
+     */
     CM(true) {
 
         @Override
@@ -82,6 +93,10 @@ public enum SizeUnits {
         }
 
     },
+
+    /**
+     * Represents a size in millimeters.
+     */
     MM(true) {
 
         @Override
@@ -98,6 +113,11 @@ public enum SizeUnits {
         }
 
     },
+
+    /**
+     * Represents a size in EM unit.
+     * Note: It is a unit relative to the font-size of the element.
+     */
     EM(false) {
 
         @Override
@@ -114,6 +134,11 @@ public enum SizeUnits {
         }
 
     },
+
+    /**
+     * Represents a size in EX unit.
+     * Note: In the absence of font metrics, one {@code EX} is taken to be half an {@code EM} unit.
+     */
     EX(false) {
 
         @Override
@@ -132,6 +157,10 @@ public enum SizeUnits {
         }
 
     },
+
+    /**
+     * Represents a size in points.
+     */
     PT(true) {
         @Override
         public String toString() { return "pt"; }
@@ -147,6 +176,10 @@ public enum SizeUnits {
         }
 
     },
+
+    /**
+     * Represents a size in picas.
+     */
     PC(true) {
         @Override
         public String toString() { return "pc"; }
@@ -162,6 +195,10 @@ public enum SizeUnits {
         }
 
     },
+
+    /**
+     * Represents a size in pixels.
+     */
     PX(true) {
         @Override
         public String toString() { return "px"; }
@@ -178,6 +215,9 @@ public enum SizeUnits {
 
     },
 
+    /**
+     * Represents an angle in degrees.
+     */
     DEG(true) {
         @Override
         public String toString() { return "deg"; }
@@ -194,6 +234,10 @@ public enum SizeUnits {
 
     },
 
+    /**
+     * Represents an angle in gradians.
+     * Note: 400 Gradians = 360 Degrees.
+     */
     GRAD(true) {
 
         @Override
@@ -213,6 +257,9 @@ public enum SizeUnits {
 
     },
 
+    /**
+     * Represents an angle in radians.
+     */
     RAD(true) {
 
         @Override
@@ -232,6 +279,10 @@ public enum SizeUnits {
 
     },
 
+    /**
+     * Represents an angle in turns.
+     * Note: 1 Turn = 360 Degrees.
+     */
     TURN(true) {
 
         @Override
@@ -250,7 +301,9 @@ public enum SizeUnits {
 
     },
 
-
+    /**
+     * Represents time in seconds.
+     */
     S(true) {
 
         @Override
@@ -268,6 +321,9 @@ public enum SizeUnits {
 
     },
 
+    /**
+     * Represents time in milliseconds.
+     */
     MS(true) {
 
         @Override
@@ -285,7 +341,22 @@ public enum SizeUnits {
 
     };
 
+    /**
+     * Calculates points for a particular {@code SizeUnits}.
+     * @param value value
+     * @param multiplier multiplier
+     * @param font font
+     * @return points for a particular {@code SizeUnits}
+     */
     public abstract double points(double value, double multiplier, Font font);
+
+    /**
+     * Calculates pixels for a particular {@code SizeUnits}.
+     * @param value value
+     * @param multiplier multiplier
+     * @param font font
+     * @return pixels for a particular {@code SizeUnits}
+     */
     public abstract double pixels(double value, double multiplier, Font font);
 
     private SizeUnits(boolean absolute) {
@@ -293,6 +364,11 @@ public enum SizeUnits {
     }
 
     private final boolean absolute;
+
+    /**
+     * Gets wehther this {@code SizeUnits} value is absolute.
+     * @return whether value is absoulute
+     */
     public boolean isAbsolute() {
         return absolute;
     }

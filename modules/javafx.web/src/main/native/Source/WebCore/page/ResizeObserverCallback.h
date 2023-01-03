@@ -25,8 +25,6 @@
 
 #pragma once
 
-#if ENABLE(RESIZE_OBSERVER)
-
 #include "ActiveDOMCallback.h"
 #include "CallbackResult.h"
 #include <wtf/RefCounted.h>
@@ -39,9 +37,10 @@ class ResizeObserverEntry;
 class ResizeObserverCallback : public RefCounted<ResizeObserverCallback>, public ActiveDOMCallback {
 public:
     using ActiveDOMCallback::ActiveDOMCallback;
-    virtual CallbackResult<void> handleEvent(const Vector<Ref<ResizeObserverEntry>>&, ResizeObserver&) = 0;
+
+    virtual bool hasCallback() const = 0;
+
+    virtual CallbackResult<void> handleEvent(ResizeObserver&, const Vector<Ref<ResizeObserverEntry>>&, ResizeObserver&) = 0;
 };
 
 } // namespace WebCore
-
-#endif // ENABLE(RESIZE_OBSERVER)

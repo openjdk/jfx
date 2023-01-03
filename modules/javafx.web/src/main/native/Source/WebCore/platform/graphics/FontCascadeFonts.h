@@ -42,8 +42,10 @@ class GraphicsContext;
 class IntRect;
 class MixedFontGlyphPage;
 
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(FontCascadeFonts);
 class FontCascadeFonts : public RefCounted<FontCascadeFonts> {
     WTF_MAKE_NONCOPYABLE(FontCascadeFonts);
+    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(FontCascadeFonts);
 public:
     static Ref<FontCascadeFonts> create(RefPtr<FontSelector>&& fontSelector) { return adoptRef(*new FontCascadeFonts(WTFMove(fontSelector))); }
     static Ref<FontCascadeFonts> createForPlatformFont(const FontPlatformData& platformData) { return adoptRef(*new FontCascadeFonts(platformData)); }
@@ -112,6 +114,9 @@ private:
     unsigned short m_generation;
     Pitch m_pitch { UnknownPitch };
     bool m_isForPlatformFont { false };
+#if ASSERT_ENABLED
+    std::optional<Ref<Thread>> m_thread;
+#endif
 };
 
 inline bool FontCascadeFonts::isFixedPitch(const FontCascadeDescription& description)
@@ -123,7 +128,7 @@ inline bool FontCascadeFonts::isFixedPitch(const FontCascadeDescription& descrip
 
 inline const Font& FontCascadeFonts::primaryFont(const FontCascadeDescription& description)
 {
-    ASSERT(isMainThread());
+    ASSERT(m_thread ? m_thread->ptr() == &Thread::current() : isMainThread());
     if (!m_cachedPrimaryFont) {
         auto& primaryRanges = realizeFallbackRangesAt(description, 0);
         m_cachedPrimaryFont = primaryRanges.glyphDataForCharacter(' ', ExternalResourceDownloadPolicy::Allow).font;

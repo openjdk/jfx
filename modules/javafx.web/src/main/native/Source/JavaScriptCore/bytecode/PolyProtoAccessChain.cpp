@@ -27,29 +27,28 @@
 #include "PolyProtoAccessChain.h"
 
 #include "JSCInlines.h"
-#include "JSObject.h"
 
 namespace JSC {
 
-std::unique_ptr<PolyProtoAccessChain> PolyProtoAccessChain::create(JSGlobalObject* globalObject, JSCell* base, const PropertySlot& slot, bool& usesPolyProto)
+RefPtr<PolyProtoAccessChain> PolyProtoAccessChain::tryCreate(JSGlobalObject* globalObject, JSCell* base, const PropertySlot& slot)
 {
     JSObject* target = slot.isUnset() ? nullptr : slot.slotBase();
-    return create(globalObject, base, target, usesPolyProto);
+    return tryCreate(globalObject, base, target);
 }
 
-std::unique_ptr<PolyProtoAccessChain> PolyProtoAccessChain::create(JSGlobalObject* globalObject, JSCell* base, JSObject* target, bool& usesPolyProto)
+RefPtr<PolyProtoAccessChain> PolyProtoAccessChain::tryCreate(JSGlobalObject* globalObject, JSCell* base, JSObject* target)
 {
     JSCell* current = base;
     VM& vm = base->vm();
 
     bool found = false;
 
-    usesPolyProto = false;
-
-    std::unique_ptr<PolyProtoAccessChain> result(new PolyProtoAccessChain());
-
+    Vector<StructureID> chain;
     for (unsigned iterationNumber = 0; true; ++iterationNumber) {
         Structure* structure = current->structure(vm);
+
+        if (structure->isDictionary())
+            return nullptr;
 
         if (!structure->propertyAccessesAreCacheable())
             return nullptr;
@@ -57,18 +56,10 @@ std::unique_ptr<PolyProtoAccessChain> PolyProtoAccessChain::create(JSGlobalObjec
         if (structure->isProxy())
             return nullptr;
 
-        if (structure->isDictionary()) {
-            ASSERT(structure->isObject());
-            if (structure->hasBeenFlattenedBefore())
-                return nullptr;
-
-            structure->flattenDictionaryStructure(vm, asObject(current));
-        }
-
         // To save memory, we don't include the base in the chain. We let
         // AccessCase provide the base to us as needed.
         if (iterationNumber)
-            result->m_chain.append(structure);
+            chain.append(structure->id());
         else
             RELEASE_ASSERT(current == base);
 
@@ -76,12 +67,6 @@ std::unique_ptr<PolyProtoAccessChain> PolyProtoAccessChain::create(JSGlobalObjec
             found = true;
             break;
         }
-
-        // We only have poly proto if we need to access our prototype via
-        // the poly proto protocol. If the slot base is the only poly proto
-        // thing in the chain, and we have a cache hit on it, then we're not
-        // poly proto.
-        usesPolyProto |= structure->hasPolyProto();
 
         JSValue prototype = structure->prototypeForLookup(globalObject, current);
         if (prototype.isNull())
@@ -92,13 +77,13 @@ std::unique_ptr<PolyProtoAccessChain> PolyProtoAccessChain::create(JSGlobalObjec
     if (!found && !!target)
         return nullptr;
 
-    return result;
+    return adoptRef(*new PolyProtoAccessChain(WTFMove(chain)));
 }
 
-bool PolyProtoAccessChain::needImpurePropertyWatchpoint() const
+bool PolyProtoAccessChain::needImpurePropertyWatchpoint(VM&) const
 {
-    for (Structure* structure : m_chain) {
-        if (structure->needImpurePropertyWatchpoint())
+    for (StructureID structureID : m_chain) {
+        if (structureID.decode()->needImpurePropertyWatchpoint())
             return true;
     }
     return false;
@@ -112,7 +97,7 @@ bool PolyProtoAccessChain::operator==(const PolyProtoAccessChain& other) const
 void PolyProtoAccessChain::dump(Structure* baseStructure, PrintStream& out) const
 {
     out.print("PolyPolyProtoAccessChain: [\n");
-    forEach(baseStructure, [&] (Structure* structure, bool) {
+    forEach(baseStructure->vm(), baseStructure, [&] (Structure* structure, bool) {
         out.print("\t");
         structure->dump(out);
         out.print("\n");

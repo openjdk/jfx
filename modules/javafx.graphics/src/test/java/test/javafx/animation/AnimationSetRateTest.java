@@ -40,24 +40,24 @@ public class AnimationSetRateTest {
 
     private static final double EPSILON = 1e-12;
 
-    private AbstractMasterTimerMock timer;
+    private AbstractPrimaryTimerMock timer;
     private AnimationImpl animation;
     private ClipEnvelopeMock clipEnvelope;
 
     @Before
     public void setUp() throws Exception {
-        timer = new AbstractMasterTimerMock();
+        timer = new AbstractPrimaryTimerMock();
         clipEnvelope = new ClipEnvelopeMock();
         animation = new AnimationImpl(timer, clipEnvelope, 1);
         animation.shim_setCycleDuration(Duration.millis(1000));
         clipEnvelope.setAnimation(animation);
     }
 
-    private void assertAnimation(double rate, double currentRate, Status status, boolean addedToMasterTimer) {
+    private void assertAnimation(double rate, double currentRate, Status status, boolean addedToPrimaryTimer) {
         assertEquals(rate, animation.getRate(), EPSILON);
         assertEquals(currentRate, animation.getCurrentRate(), EPSILON);
         assertEquals(status, animation.getStatus());
-        assertEquals(addedToMasterTimer, timer.containsPulseReceiver(animation.shim_pulseReceiver()));
+        assertEquals(addedToPrimaryTimer, timer.containsPulseReceiver(animation.shim_pulseReceiver()));
     }
 
     @Test

@@ -25,6 +25,13 @@
  * @title: GstElement
  * @short_description: Abstract base class for all pipeline elements
  * @see_also: #GstElementFactory, #GstPad
+ * @symbols:
+ * - GST_ELEMENT_METADATA_LONGNAME
+ * - GST_ELEMENT_METADATA_KLASS
+ * - GST_ELEMENT_METADATA_DESCRIPTION
+ * - GST_ELEMENT_METADATA_AUTHOR
+ * - GST_ELEMENT_METADATA_DOC_URI
+ * - GST_ELEMENT_METADATA_ICON_NAME
  *
  * GstElement is the abstract base class needed to construct an element that
  * can be used in a GStreamer pipeline. Please refer to the plugin writers
@@ -88,6 +95,7 @@
 #include "gstbus.h"
 #include "gsterror.h"
 #include "gstevent.h"
+#include "gstghostpad.h"
 #include "gstutils.h"
 #include "gstinfo.h"
 #include "gstquark.h"
@@ -144,7 +152,7 @@ static gboolean gst_element_default_query (GstElement * element,
     GstQuery * query);
 
 static GstPadTemplate
-    * gst_element_class_get_request_pad_template (GstElementClass *
+    * gst_element_class_request_pad_simple_template (GstElementClass *
     element_class, const gchar * name);
 
 static void gst_element_call_async_func (gpointer data, gpointer user_data);
@@ -152,15 +160,20 @@ static void gst_element_call_async_func (gpointer data, gpointer user_data);
 static GstObjectClass *parent_class = NULL;
 static guint gst_element_signals[LAST_SIGNAL] = { 0 };
 
+static GMutex _element_pool_lock;
 static GThreadPool *gst_element_pool = NULL;
 
 /* this is used in gstelementfactory.c:gst_element_register() */
 GQuark __gst_elementclass_factory = 0;
 
+/* used for gst_element_type_set_skip_documentation() and
+ * gst_element_factory_get_skip_documentation() */
+GQuark __gst_elementclass_skip_doc = 0;
+
 GType
 gst_element_get_type (void)
 {
-  static volatile gsize gst_element_type = 0;
+  static gsize gst_element_type = 0;
 
   if (g_once_init_enter (&gst_element_type)) {
     GType _type;
@@ -182,24 +195,29 @@ gst_element_get_type (void)
 
     __gst_elementclass_factory =
         g_quark_from_static_string ("GST_ELEMENTCLASS_FACTORY");
+    __gst_elementclass_skip_doc =
+        g_quark_from_static_string ("GST_ELEMENTCLASS_SKIP_DOCUMENTATION");
     g_once_init_leave (&gst_element_type, _type);
   }
   return gst_element_type;
 }
 
-static void
+static GThreadPool *
 gst_element_setup_thread_pool (void)
 {
   GError *err = NULL;
+  GThreadPool *pool;
 
   GST_DEBUG ("creating element thread pool");
-  gst_element_pool =
+  pool =
       g_thread_pool_new ((GFunc) gst_element_call_async_func, NULL, -1, FALSE,
       &err);
   if (err != NULL) {
     g_critical ("could not alloc threadpool %s", err->message);
     g_clear_error (&err);
   }
+
+  return pool;
 }
 
 static void
@@ -225,7 +243,7 @@ gst_element_class_init (GstElementClass * klass)
   gst_element_signals[PAD_ADDED] =
       g_signal_new ("pad-added", G_TYPE_FROM_CLASS (klass), G_SIGNAL_RUN_LAST,
       G_STRUCT_OFFSET (GstElementClass, pad_added), NULL, NULL,
-      g_cclosure_marshal_generic, G_TYPE_NONE, 1, GST_TYPE_PAD);
+      NULL, G_TYPE_NONE, 1, GST_TYPE_PAD);
   /**
    * GstElement::pad-removed:
    * @gstelement: the object which received the signal
@@ -236,7 +254,7 @@ gst_element_class_init (GstElementClass * klass)
   gst_element_signals[PAD_REMOVED] =
       g_signal_new ("pad-removed", G_TYPE_FROM_CLASS (klass), G_SIGNAL_RUN_LAST,
       G_STRUCT_OFFSET (GstElementClass, pad_removed), NULL, NULL,
-      g_cclosure_marshal_generic, G_TYPE_NONE, 1, GST_TYPE_PAD);
+      NULL, G_TYPE_NONE, 1, GST_TYPE_PAD);
   /**
    * GstElement::no-more-pads:
    * @gstelement: the object which received the signal
@@ -248,7 +266,7 @@ gst_element_class_init (GstElementClass * klass)
   gst_element_signals[NO_MORE_PADS] =
       g_signal_new ("no-more-pads", G_TYPE_FROM_CLASS (klass),
       G_SIGNAL_RUN_LAST, G_STRUCT_OFFSET (GstElementClass, no_more_pads), NULL,
-      NULL, g_cclosure_marshal_generic, G_TYPE_NONE, 0);
+      NULL, NULL, G_TYPE_NONE, 0);
 
   gobject_class->dispose = gst_element_dispose;
   gobject_class->finalize = gst_element_finalize;
@@ -266,8 +284,6 @@ gst_element_class_init (GstElementClass * klass)
   klass->set_context = GST_DEBUG_FUNCPTR (gst_element_set_context_default);
 
   klass->elementfactory = NULL;
-
-  gst_element_setup_thread_pool ();
 }
 
 static void
@@ -478,6 +494,7 @@ gst_element_set_base_time (GstElement * element, GstClockTime time)
   GstClockTime old;
 
   g_return_if_fail (GST_IS_ELEMENT (element));
+  g_return_if_fail (GST_CLOCK_TIME_IS_VALID (time));
 
   GST_OBJECT_LOCK (element);
   old = element->base_time;
@@ -577,6 +594,80 @@ gst_element_get_start_time (GstElement * element)
   GST_OBJECT_UNLOCK (element);
 
   return result;
+}
+
+/**
+ * gst_element_get_current_running_time:
+ * @element: a #GstElement.
+ *
+ * Returns the running time of the element. The running time is the
+ * element's clock time minus its base time. Will return GST_CLOCK_TIME_NONE
+ * if the element has no clock, or if its base time has not been set.
+ *
+ * Returns: the running time of the element, or GST_CLOCK_TIME_NONE if the
+ * element has no clock or its base time has not been set.
+ *
+ * Since: 1.18
+ */
+GstClockTime
+gst_element_get_current_running_time (GstElement * element)
+{
+  GstClockTime base_time, clock_time;
+
+  g_return_val_if_fail (GST_IS_ELEMENT (element), GST_CLOCK_TIME_NONE);
+
+  base_time = gst_element_get_base_time (element);
+
+  if (!GST_CLOCK_TIME_IS_VALID (base_time)) {
+    GST_DEBUG_OBJECT (element, "Could not determine base time");
+    return GST_CLOCK_TIME_NONE;
+  }
+
+  clock_time = gst_element_get_current_clock_time (element);
+
+  if (!GST_CLOCK_TIME_IS_VALID (clock_time)) {
+    return GST_CLOCK_TIME_NONE;
+  }
+
+  if (clock_time < base_time) {
+    GST_DEBUG_OBJECT (element, "Got negative current running time");
+    return GST_CLOCK_TIME_NONE;
+  }
+
+  return clock_time - base_time;
+}
+
+/**
+ * gst_element_get_current_clock_time:
+ * @element: a #GstElement.
+ *
+ * Returns the current clock time of the element, as in, the time of the
+ * element's clock, or GST_CLOCK_TIME_NONE if there is no clock.
+ *
+ * Returns: the clock time of the element, or GST_CLOCK_TIME_NONE if there is
+ * no clock.
+ *
+ * Since: 1.18
+ */
+GstClockTime
+gst_element_get_current_clock_time (GstElement * element)
+{
+  GstClock *clock = NULL;
+  GstClockTime ret;
+
+  g_return_val_if_fail (GST_IS_ELEMENT (element), GST_CLOCK_TIME_NONE);
+
+  clock = gst_element_get_clock (element);
+
+  if (!clock) {
+    GST_DEBUG_OBJECT (element, "Element has no clock");
+    return GST_CLOCK_TIME_NONE;
+  }
+
+  ret = gst_clock_get_time (clock);
+  gst_object_unref (clock);
+
+  return ret;
 }
 
 #if 0
@@ -799,6 +890,16 @@ gst_element_remove_pad (GstElement * element, GstPad * pad)
       gst_pad_unlink (peer, pad);
 
     gst_object_unref (peer);
+  }
+
+  /* if this is a ghost pad we also need to unset the target or it
+   * will stay linked although not allowed according to the topology.
+   *
+   * FIXME 2.0: Do this generically somehow from inside GstGhostPad
+   * when it gets unparented.
+   */
+  if (GST_IS_GHOST_PAD (pad)) {
+    gst_ghost_pad_set_target (GST_GHOST_PAD (pad), NULL);
   }
 
   GST_OBJECT_LOCK (element);
@@ -1073,8 +1174,31 @@ _gst_element_request_pad (GstElement * element, GstPadTemplate * templ,
   return newpad;
 }
 
+#ifndef GST_REMOVE_DEPRECATED
 /**
  * gst_element_get_request_pad:
+ * @element: a #GstElement to find a request pad of.
+ * @name: the name of the request #GstPad to retrieve.
+ *
+ * The name of this function is confusing to people learning GStreamer.
+ * gst_element_request_pad_simple() aims at making it more explicit it is
+ * a simplified gst_element_request_pad().
+ *
+ * Deprecated: 1.20: Prefer using gst_element_request_pad_simple() which
+ * provides the exact same functionality.
+ *
+ * Returns: (transfer full) (nullable): requested #GstPad if found,
+ *     otherwise %NULL.  Release after usage.
+ */
+GstPad *
+gst_element_get_request_pad (GstElement * element, const gchar * name)
+{
+  return gst_element_request_pad_simple (element, name);
+}
+#endif
+
+/**
+ * gst_element_request_pad_simple:
  * @element: a #GstElement to find a request pad of.
  * @name: the name of the request #GstPad to retrieve.
  *
@@ -1086,11 +1210,18 @@ _gst_element_request_pad (GstElement * element, GstPadTemplate * templ,
  * gst_element_request_pad() if the pads should have a specific name (e.g.
  * @name is "src_1" instead of "src_\%u").
  *
+ * Note that this function was introduced in GStreamer 1.20 in order to provide
+ * a better name to gst_element_get_request_pad(). Prior to 1.20, users
+ * should use gst_element_get_request_pad() which provides the same
+ * functionality.
+ *
  * Returns: (transfer full) (nullable): requested #GstPad if found,
  *     otherwise %NULL.  Release after usage.
+ *
+ * Since: 1.20
  */
 GstPad *
-gst_element_get_request_pad (GstElement * element, const gchar * name)
+gst_element_request_pad_simple (GstElement * element, const gchar * name)
 {
   GstPadTemplate *templ = NULL;
   GstPad *pad;
@@ -1104,7 +1235,7 @@ gst_element_get_request_pad (GstElement * element, const gchar * name)
 
   class = GST_ELEMENT_GET_CLASS (element);
 
-  templ = gst_element_class_get_request_pad_template (class, name);
+  templ = gst_element_class_request_pad_simple_template (class, name);
   if (templ) {
     req_name = strstr (name, "%") ? NULL : name;
     templ_found = TRUE;
@@ -1717,7 +1848,7 @@ gst_element_get_pad_template (GstElement * element, const gchar * name)
 }
 
 static GstPadTemplate *
-gst_element_class_get_request_pad_template (GstElementClass *
+gst_element_class_request_pad_simple_template (GstElementClass *
     element_class, const gchar * name)
 {
   GstPadTemplate *tmpl;
@@ -3291,6 +3422,7 @@ gst_element_dispose (GObject * object)
   gst_object_replace ((GstObject **) clock_p, NULL);
   gst_object_replace ((GstObject **) bus_p, NULL);
   g_list_free_full (element->contexts, (GDestroyNotify) gst_context_unref);
+  element->contexts = NULL;
   GST_OBJECT_UNLOCK (element);
 
   GST_CAT_INFO_OBJECT (GST_CAT_REFCOUNTING, element, "%p parent class dispose",
@@ -3537,7 +3669,7 @@ gst_element_get_context_unlocked (GstElement * element,
  *
  * MT safe.
  *
- * Returns: (transfer full): A #GstContext or NULL
+ * Returns: (transfer full) (nullable): A #GstContext or NULL
  *
  * Since: 1.8
  */
@@ -3728,18 +3860,34 @@ gst_element_call_async (GstElement * element, GstElementCallAsyncFunc func,
   async_data->user_data = user_data;
   async_data->destroy_notify = destroy_notify;
 
-  g_thread_pool_push (gst_element_pool, async_data, NULL);
+  g_mutex_lock (&_element_pool_lock);
+  if (G_UNLIKELY (gst_element_pool == NULL))
+    gst_element_pool = gst_element_setup_thread_pool ();
+  g_thread_pool_push ((GThreadPool *) gst_element_pool, async_data, NULL);
+  g_mutex_unlock (&_element_pool_lock);
 }
 
 void
 _priv_gst_element_cleanup (void)
 {
+  g_mutex_lock (&_element_pool_lock);
   if (gst_element_pool) {
-    g_thread_pool_free (gst_element_pool, FALSE, TRUE);
-    gst_element_setup_thread_pool ();
+    g_thread_pool_free ((GThreadPool *) gst_element_pool, FALSE, TRUE);
+    gst_element_pool = NULL;
   }
+  g_mutex_unlock (&_element_pool_lock);
 }
 
+/**
+ * gst_make_element_message_details:
+ * @name: Name of the first field to set
+ * @...: variable arguments in the same form as #GstStructure
+ *
+ * Create a #GstStructure to be used with #gst_element_message_full_with_details.
+ * %NULL terminator required.
+ *
+ * Since: 1.10
+ */
 GstStructure *
 gst_make_element_message_details (const char *name, ...)
 {

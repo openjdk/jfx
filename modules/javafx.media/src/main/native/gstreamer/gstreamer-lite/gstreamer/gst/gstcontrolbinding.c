@@ -24,7 +24,7 @@
  * @title: GstControlBinding
  * @short_description: attachment for control source sources
  *
- * A base class for value mapping objects that attaches control sources to gobject
+ * A base class for value mapping objects that attaches control sources to #GObject
  * properties. Such an object is taking one or more #GstControlSource instances,
  * combines them and maps the resulting value to the type and value range of the
  * bound property.
@@ -145,7 +145,7 @@ gst_control_binding_constructor (GType type, guint n_construct_params,
               binding->name))) {
     GST_DEBUG_OBJECT (object, "  psec->flags : 0x%08x", pspec->flags);
 
-    /* check if this param is witable && controlable && !construct-only */
+    /* check if this param is writeable && controllable && !construct-only */
     if ((pspec->flags & (G_PARAM_WRITABLE | GST_PARAM_CONTROLLABLE |
                 G_PARAM_CONSTRUCT_ONLY)) ==
         (G_PARAM_WRITABLE | GST_PARAM_CONTROLLABLE)) {
@@ -153,7 +153,7 @@ gst_control_binding_constructor (GType type, guint n_construct_params,
     } else {
       GST_WARNING_OBJECT (object,
           "property '%s' on class '%s' needs to "
-          "be writeable, controlable and not construct_only", binding->name,
+          "be writeable, controllable and not construct_only", binding->name,
           G_OBJECT_TYPE_NAME (object));
     }
   } else {
@@ -244,7 +244,7 @@ gst_control_binding_get_property (GObject * object, guint prop_id,
  * @last_sync: the last time this was called
  *
  * Sets the property of the @object, according to the #GstControlSources that
- * handle them and for the given timestamp.
+ * handles it and for the given timestamp.
  *
  * If this function fails, it is most likely the application developers fault.
  * Most probably the control sources are not setup correctly.
@@ -260,6 +260,7 @@ gst_control_binding_sync_values (GstControlBinding * binding,
   gboolean ret = FALSE;
 
   g_return_val_if_fail (GST_IS_CONTROL_BINDING (binding), FALSE);
+  g_return_val_if_fail (GST_CLOCK_TIME_IS_VALID (timestamp), FALSE);
 
   if (binding->disabled)
     return TRUE;
@@ -313,7 +314,7 @@ gst_control_binding_get_value (GstControlBinding * binding,
  * @values: (array length=n_values): array to put control-values in
  *
  * Gets a number of values for the given controlled property starting at the
- * requested time. The array @values need to hold enough space for @n_values of
+ * requested time. The array @values needs to hold enough space for @n_values of
  * the same type as the objects property's type.
  *
  * This function is useful if one wants to e.g. draw a graph of the control
@@ -482,7 +483,7 @@ gst_control_binding_set_disabled (GstControlBinding * binding,
  * gst_control_binding_is_disabled:
  * @binding: the control binding
  *
- * Check if the control binding is disabled.
+ * Checks if the control binding is disabled.
  *
  * Returns: %TRUE if the binding is inactive
  */

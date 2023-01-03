@@ -162,7 +162,11 @@
 #ifdef GSTREAMER_LITE
   // We using def file to limit export, so not need to export all APIs
   #ifndef GST_API
-    #define GST_API
+    #if defined(__GNUC__)
+      #define GST_API GST_EXPORT
+    #else
+      #define GST_API
+    #endif
   #endif
 #else // GSTREAMER_LITE
   #ifndef GST_API

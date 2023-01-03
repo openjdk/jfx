@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -36,7 +36,6 @@ import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
 import javafx.geometry.VPos;
 import javafx.scene.Node;
-import static javafx.scene.layout.Region.positionInArea;
 
 
 /**
@@ -146,7 +145,7 @@ import static javafx.scene.layout.Region.positionInArea;
  * @since JavaFX 2.0
  */
 public class BorderPane extends Pane {
-    /********************************************************************
+    /* ******************************************************************
      *  BEGIN static methods
      ********************************************************************/
 
@@ -208,7 +207,7 @@ public class BorderPane extends Pane {
         setMargin(child, null);
     }
 
-    /********************************************************************
+    /* ******************************************************************
      *  END static methods
      ********************************************************************/
 
@@ -640,7 +639,7 @@ public class BorderPane extends Pane {
         return false;
     }
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      *                         Private Inner Class                             *
      *                                                                         *

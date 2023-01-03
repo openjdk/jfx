@@ -54,7 +54,7 @@ public:
     struct RBBIRuleChar {
         UChar32             fChar;
         UBool               fEscaped;
-        RBBIRuleChar() : fChar(0), fEscaped(FALSE) {}
+        RBBIRuleChar() : fChar(0), fEscaped(false) {}
     };
 
     RBBIRuleScanner(RBBIRuleBuilder  *rb);
@@ -72,6 +72,8 @@ public:
                                                     //   trees, one each for the forward and
                                                     //   reverse rules,
                                                     //   and a list of UnicodeSets encountered.
+
+    int32_t     numRules();                         // Return the number of rules that have been seen.
 
     /**
      * Return a rules string without unnecessary
@@ -142,7 +144,7 @@ private:
 
     UnicodeSet                     fRuleSets[10];    // Unicode Sets that are needed during
                                                      //  the scanning of RBBI rules.  The
-                                                     //  indicies for these are assigned by the
+                                                     //  indices for these are assigned by the
                                                      //  perl script that builds the state tables.
                                                      //  See rbbirpt.h.
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -44,29 +44,30 @@ namespace WebCore {
 class FrameLoaderClientJava final : public FrameLoaderClient {
 public:
     FrameLoaderClientJava(const JLObject &webPage);
-    void frameLoaderDestroyed() override;
+    ~FrameLoaderClientJava();
+
+    void init();
 
     bool hasWebView() const override;
 
     void makeRepresentation(DocumentLoader*) override;
     void forceLayoutForNonHTML() override;
 
-    Optional<PageIdentifier> pageID() const final;
-    Optional<FrameIdentifier> frameID() const final;
-    PAL::SessionID sessionID() const final;
+    std::optional<PageIdentifier> pageID() const final;
+    std::optional<FrameIdentifier> frameID() const final;
 
     void setCopiesOnScroll() override;
 
     void detachedFromParent2() override;
     void detachedFromParent3() override;
 
-    void assignIdentifierToInitialRequest(unsigned long identifier, DocumentLoader*, const ResourceRequest&) override;
+    void assignIdentifierToInitialRequest(ResourceLoaderIdentifier, DocumentLoader*, const ResourceRequest&) override;
 
-    void dispatchWillSendRequest(DocumentLoader*, unsigned long  identifier, ResourceRequest&, const ResourceResponse& redirectResponse) override;
-    void dispatchDidReceiveResponse(DocumentLoader*, unsigned long  identifier, const ResourceResponse&) override;
-    void dispatchDidReceiveContentLength(DocumentLoader*, unsigned long identifier, int lengthReceived) override;
-    void dispatchDidFinishLoading(DocumentLoader*, unsigned long  identifier) override;
-    void dispatchDidFailLoading(DocumentLoader*, unsigned long  identifier, const ResourceError&) override;
+    void dispatchWillSendRequest(DocumentLoader*, ResourceLoaderIdentifier, ResourceRequest&, const ResourceResponse& redirectResponse) override;
+    void dispatchDidReceiveResponse(DocumentLoader*, ResourceLoaderIdentifier, const ResourceResponse&) override;
+    void dispatchDidReceiveContentLength(DocumentLoader*, ResourceLoaderIdentifier, int lengthReceived) override;
+    void dispatchDidFinishLoading(DocumentLoader*, ResourceLoaderIdentifier) override;
+    void dispatchDidFailLoading(DocumentLoader*, ResourceLoaderIdentifier, const ResourceError&) override;
     bool dispatchDidLoadResourceFromMemoryCache(DocumentLoader*, const ResourceRequest&, const ResourceResponse&, int length) override;
 
     void dispatchDidDispatchOnloadEvents() override;
@@ -82,14 +83,14 @@ public:
     void dispatchDidReceiveIcon() override;
     void dispatchDidStartProvisionalLoad() override;
     void dispatchDidReceiveTitle(const StringWithDirection&) override;
-    void dispatchDidCommitLoad(Optional<HasInsecureContent>) override;
+    void dispatchDidCommitLoad(std::optional<HasInsecureContent>, std::optional<WebCore::UsedLegacyTLS>) override;
     void dispatchDidFailProvisionalLoad(const ResourceError&, WillContinueLoading) override;
     void dispatchDidFailLoad(const ResourceError&) override;
     void dispatchDidFinishDocumentLoad() override;
     void dispatchDidFinishLoad() override;
     void dispatchDidClearWindowObjectInWorld(WebCore::DOMWrapperWorld&) override;
 
-    Frame* dispatchCreatePage(const NavigationAction&) override;
+    Frame* dispatchCreatePage(const NavigationAction&, NewFrameOpenerPolicy) override;
     void dispatchShow() override;
 
     void dispatchDecidePolicyForResponse(const ResourceResponse&, const ResourceRequest&, PolicyCheckIdentifier, const String& downloadAttribute, FramePolicyFunction&&) override;
@@ -107,12 +108,10 @@ public:
     void revertToProvisionalState(DocumentLoader*) override;
     void setMainDocumentError(DocumentLoader*, const ResourceError&) override;
 
-    RefPtr<Frame> createFrame(const URL& url, const String& name, HTMLFrameOwnerElement& ownerElement,
-                               const String& referrer) override;
+    RefPtr<Frame> createFrame(const String& name, HTMLFrameOwnerElement& ownerElement) override;
     ObjectContentType objectContentType(const URL& url, const String& mimeTypeIn) override;
     RefPtr<Widget> createPlugin(const IntSize&, HTMLPlugInElement&, const URL&, const Vector<String>&, const Vector<String>&, const String&, bool loadManually) override;
     void redirectDataToPlugin(Widget&) override;
-    RefPtr<Widget> createJavaAppletWidget(const IntSize&, HTMLAppletElement&, const URL& baseURL, const Vector<String>& paramNames, const Vector<String>& paramValues) override;
     String overrideMediaType() const override;
 
     void setMainFrameDocumentReady(bool) override;
@@ -122,7 +121,7 @@ public:
     void willChangeTitle(DocumentLoader*) override;
     void didChangeTitle(DocumentLoader*) override;
 
-    void committedLoad(DocumentLoader*, const char*, int) override;
+    void committedLoad(DocumentLoader*, const SharedBuffer&) override;
     void finishedLoading(DocumentLoader*) override;
 
     void updateGlobalHistory() override;
@@ -140,20 +139,20 @@ public:
     void didRunInsecureContent(SecurityOrigin&, const URL&) override;
     void didDetectXSS(const URL&, bool) override;
 
-    ResourceError cancelledError(const ResourceRequest&) override;
-    ResourceError blockedByContentBlockerError(const ResourceRequest& request) override;
-    ResourceError blockedError(const ResourceRequest&) override;
-    ResourceError cannotShowURLError(const ResourceRequest&) override;
-    ResourceError interruptedForPolicyChangeError(const ResourceRequest&) override;
+    ResourceError cancelledError(const ResourceRequest&) const override;
+    ResourceError blockedByContentBlockerError(const ResourceRequest& request) const override;
+    ResourceError blockedError(const ResourceRequest&) const override;
+    ResourceError cannotShowURLError(const ResourceRequest&) const override;
+    ResourceError interruptedForPolicyChangeError(const ResourceRequest&) const override;
 
-    ResourceError cannotShowMIMETypeError(const ResourceResponse&) override;
-    ResourceError fileDoesNotExistError(const ResourceResponse&) override;
-    ResourceError pluginWillHandleLoadError(const ResourceResponse&) override;
+    ResourceError cannotShowMIMETypeError(const ResourceResponse&) const override;
+    ResourceError fileDoesNotExistError(const ResourceResponse&) const override;
+    ResourceError pluginWillHandleLoadError(const ResourceResponse&) const override;
 
-    bool shouldFallBack(const ResourceError&) override;
+    bool shouldFallBack(const ResourceError&) const override;
 
-    bool shouldUseCredentialStorage(DocumentLoader*, unsigned long identifier) override;
-    void dispatchDidReceiveAuthenticationChallenge(DocumentLoader*, unsigned long identifier, const AuthenticationChallenge&) override;
+    bool shouldUseCredentialStorage(DocumentLoader*, ResourceLoaderIdentifier) override;
+    void dispatchDidReceiveAuthenticationChallenge(DocumentLoader*, ResourceLoaderIdentifier, const AuthenticationChallenge&) override;
 
     bool canHandleRequest(const ResourceRequest&) const override;
     bool canShowMIMEType(const String&) const override;
@@ -175,18 +174,15 @@ public:
     void didReplaceMultipartContent() override;
     void updateCachedDocumentLoader(DocumentLoader&) override;
 
-    String userAgent(const URL&) override;
+    String userAgent(const URL&) const override;
 
     void savePlatformDataToCachedFrame(CachedFrame*) override;
     void transitionToCommittedFromCachedFrame(CachedFrame*) override;
     void transitionToCommittedForNewPage() override;
-    void didSaveToPageCache() override;
-    void didRestoreFromPageCache() override;
 
+    void didRestoreFromBackForwardCache() override;
     bool canCachePage() const override;
-    void convertMainResourceLoadToDownload(DocumentLoader*, PAL::SessionID, const ResourceRequest&, const ResourceResponse&) override;
-
-    void dispatchDidBecomeFrameset(bool) override; // Can change due to navigation or DOM modification override.
+    void convertMainResourceLoadToDownload(DocumentLoader*, const ResourceRequest&, const ResourceResponse&) override;
 
     Ref<FrameNetworkingContext> createNetworkingContext() override;
 
@@ -196,11 +192,12 @@ public:
 
     bool isJavaFrameLoaderClient() override { return true; }
     void prefetchDNS(const String&) override;
+    void sendH2Ping(const URL&, CompletionHandler<void(Expected<Seconds, ResourceError>&&)>&&) override;
 private:
     Page* m_page;
     Frame* m_frame;
     ResourceResponse m_response;
-    unsigned long m_mainResourceRequestID;
+    ResourceLoaderIdentifier m_mainResourceRequestID;
     bool m_isPageRedirected;
     bool m_hasRepresentation;
 
@@ -209,11 +206,11 @@ private:
     Page* page();
     Frame* frame();
 
-    void setRequestURL(Frame* f, int identifier, String url);
-    void removeRequestURL(Frame* f, int identifier);
+    void setRequestURL(Frame* f,  ResourceLoaderIdentifier identifier, String url);
+    void removeRequestURL(Frame* f, ResourceLoaderIdentifier identifier);
 
     void postLoadEvent(Frame* f, int state, String url, String contentType, double progress, int errorCode = 0);
-    void postResourceLoadEvent(Frame* f, int state, int id, String contentType, double progress, int errorCode = 0);
+    void postResourceLoadEvent(Frame* f, int state, ResourceLoaderIdentifier id, String contentType, double progress, int errorCode = 0);
     // Plugin widget for handling data redirection
 //        PluginWidgetJava* m_pluginWidget;
 };

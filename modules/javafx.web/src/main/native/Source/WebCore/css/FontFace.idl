@@ -37,27 +37,26 @@ dictionary FontFaceDescriptors {
     DOMString weight = "normal";
     DOMString stretch = "normal";
     DOMString unicodeRange = "U+0-10FFFF";
-    DOMString variant = "normal";
     DOMString featureSettings = "normal";
     DOMString display = "auto";
 };
 
 [
-    ConstructorCallWith=Document,
-    ConstructorMayThrowException,
-    Constructor(DOMString family, (DOMString or BinaryData) source, optional FontFaceDescriptors descriptors)
+    ActiveDOMObject,
+    Exposed=(Window,Worker)
 ] interface FontFace {
-    [SetterCallWith=Document] attribute DOMString family;
-    attribute DOMString style;
-    attribute DOMString weight;
-    attribute DOMString stretch;
-    attribute DOMString unicodeRange;
-    attribute DOMString variant;
-    attribute DOMString featureSettings;
-    attribute DOMString display;
+    [CallWith=CurrentScriptExecutionContext] constructor(DOMString family, (DOMString or BinaryData) source, optional FontFaceDescriptors descriptors);
+
+    [SetterCallWith=CurrentScriptExecutionContext] attribute DOMString family;
+    [SetterCallWith=CurrentScriptExecutionContext] attribute DOMString style;
+    [SetterCallWith=CurrentScriptExecutionContext] attribute DOMString weight;
+    [SetterCallWith=CurrentScriptExecutionContext] attribute DOMString stretch;
+    [SetterCallWith=CurrentScriptExecutionContext] attribute DOMString unicodeRange;
+    [SetterCallWith=CurrentScriptExecutionContext] attribute DOMString featureSettings;
+    [CallWith=CurrentScriptExecutionContext] attribute DOMString display;
 
     readonly attribute FontFaceLoadStatus status;
 
-    [ReturnsOwnPromise, PromiseProxy] Promise<FontFace> load();
-    readonly attribute Promise<FontFace> loaded;
+    [ReturnsOwnPromise, PromiseProxy, ImplementedAs=loadForBindings] Promise<FontFace> load();
+    [ImplementedAs=loadedForBindings] readonly attribute Promise<FontFace> loaded;
 };

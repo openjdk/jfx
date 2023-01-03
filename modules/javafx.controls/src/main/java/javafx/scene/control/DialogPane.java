@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -53,6 +53,7 @@ import javafx.css.StyleableProperty;
 import javafx.css.StyleableStringProperty;
 import javafx.event.ActionEvent;
 import javafx.geometry.Pos;
+import javafx.scene.AccessibleRole;
 import javafx.scene.Node;
 import javafx.scene.control.ButtonBar.ButtonData;
 import javafx.scene.image.Image;
@@ -153,7 +154,7 @@ import javafx.css.converter.StringConverter;
 @DefaultProperty("buttonTypes")
 public class DialogPane extends Pane {
 
-    /**************************************************************************
+    /* ************************************************************************
      *
      * Static fields
      *
@@ -175,7 +176,7 @@ public class DialogPane extends Pane {
 
 
 
-    /**************************************************************************
+    /* ************************************************************************
      *
      * Private fields
      *
@@ -198,7 +199,7 @@ public class DialogPane extends Pane {
 
 
 
-    /**************************************************************************
+    /* ************************************************************************
      *
      * Constructors
      *
@@ -209,6 +210,7 @@ public class DialogPane extends Pane {
      */
     public DialogPane() {
         getStyleClass().add("dialog-pane");
+        setAccessibleRole(AccessibleRole.DIALOG);
 
         headerTextPanel = new GridPane();
         getChildren().add(headerTextPanel);
@@ -218,11 +220,8 @@ public class DialogPane extends Pane {
         contentLabel = createContentLabel("");
         getChildren().add(contentLabel);
 
-        buttonBar = createButtonBar();
-        if (buttonBar != null) {
-            getChildren().add(buttonBar);
-        }
-
+        // Add this listener before calling #createButtonBar, so that the listener added in #createButtonBar will run
+        // after this one.
         buttons.addListener((ListChangeListener<ButtonType>) c -> {
             while (c.next()) {
                 if (c.wasRemoved()) {
@@ -239,18 +238,23 @@ public class DialogPane extends Pane {
                 }
             }
         });
+
+        buttonBar = createButtonBar();
+        if (buttonBar != null) {
+            getChildren().add(buttonBar);
+        }
     }
 
 
 
-    /**************************************************************************
+    /* ************************************************************************
      *
      * Properties
      *
      **************************************************************************/
 
     // --- graphic
-    private final ObjectProperty<Node> graphicProperty = new StyleableObjectProperty<Node>() {
+    private final ObjectProperty<Node> graphicProperty = new StyleableObjectProperty<>() {
         // The graphic is styleable by css, but it is the
         // imageUrlProperty that handles the style value.
         @Override public CssMetaData getCssMetaData() {
@@ -428,7 +432,7 @@ public class DialogPane extends Pane {
 
 
     // --- header
-    private final ObjectProperty<Node> header = new SimpleObjectProperty<Node>(null) {
+    private final ObjectProperty<Node> header = new SimpleObjectProperty<>(null) {
         WeakReference<Node> headerRef = new WeakReference<>(null);
         @Override protected void invalidated() {
             Node oldHeader = headerRef.get();
@@ -522,7 +526,7 @@ public class DialogPane extends Pane {
 
 
     // --- content
-    private final ObjectProperty<Node> content = new SimpleObjectProperty<Node>(null) {
+    private final ObjectProperty<Node> content = new SimpleObjectProperty<>(null) {
         WeakReference<Node> contentRef = new WeakReference<>(null);
         @Override protected void invalidated() {
             Node oldContent = contentRef.get();
@@ -606,7 +610,7 @@ public class DialogPane extends Pane {
 
 
     // --- expandable content
-    private final ObjectProperty<Node> expandableContentProperty = new SimpleObjectProperty<Node>(null) {
+    private final ObjectProperty<Node> expandableContentProperty = new SimpleObjectProperty<>(null) {
         WeakReference<Node> expandableContentRef = new WeakReference<>(null);
         @Override protected void invalidated() {
             Node oldExpandableContent = expandableContentRef.get();
@@ -615,7 +619,7 @@ public class DialogPane extends Pane {
             }
 
             Node newExpandableContent = getExpandableContent();
-            expandableContentRef = new WeakReference<Node>(newExpandableContent);
+            expandableContentRef = new WeakReference<>(newExpandableContent);
             if (newExpandableContent != null) {
                 newExpandableContent.setVisible(isExpanded());
                 newExpandableContent.setManaged(isExpanded());
@@ -661,6 +665,7 @@ public class DialogPane extends Pane {
 
     // --- expanded
     private final BooleanProperty expandedProperty = new SimpleBooleanProperty(this, "expanded", false) {
+        @Override
         protected void invalidated() {
             final Node expandableContent = getExpandableContent();
 
@@ -701,7 +706,7 @@ public class DialogPane extends Pane {
 
 
 
-    /**************************************************************************
+    /* ************************************************************************
      *
      * Public API
      *
@@ -845,7 +850,7 @@ public class DialogPane extends Pane {
         double h;
 
         if (prefHeight > currentHeight && prefHeight > minHeight && (prefHeight <= dialogHeight || dialogHeight == 0)) {
-            h = prefHeight;
+            h = Utils.boundedSize(prefHeight, minHeight, maxHeight);
             resize(w, h);
         } else {
             boolean isDialogGrowing = currentHeight > oldHeight;
@@ -1035,7 +1040,7 @@ public class DialogPane extends Pane {
 
 
 
-    /**************************************************************************
+    /* ************************************************************************
      *
      * Private implementation
      * @param buttonBar
@@ -1057,7 +1062,7 @@ public class DialogPane extends Pane {
 
         boolean hasDefault = false;
         for (ButtonType cmd : getButtonTypes()) {
-            Node button = buttonNodes.computeIfAbsent(cmd, dialogButton -> createButton(cmd));
+            Node button = buttonNodes.get(cmd);
 
             // keep only first default button
             if (button instanceof Button) {
@@ -1116,16 +1121,15 @@ public class DialogPane extends Pane {
             headerLabel.setMaxHeight(Double.MAX_VALUE);
             headerTextPanel.add(headerLabel, 0, 0);
 
-            // on the right of the header is a graphic, if one is specified
+            // to the right of the header, if any, or to the left of the content area otherwise,
+            // there is a graphic, if one is specified
             graphicContainer.getChildren().clear();
-
-            if (! graphicContainer.getStyleClass().contains("graphic-container")) { //$NON-NLS-1$)
-                graphicContainer.getStyleClass().add("graphic-container"); //$NON-NLS-1$
-            }
+            graphicContainer.getStyleClass().clear();
 
             final Node graphic = getGraphic();
             if (graphic != null) {
                 graphicContainer.getChildren().add(graphic);
+                graphicContainer.getStyleClass().add("graphic-container"); //$NON-NLS-1$
             }
             headerTextPanel.add(graphicContainer, 1, 0);
 
@@ -1184,7 +1188,7 @@ public class DialogPane extends Pane {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Stylesheet Handling                                                     *
      *                                                                         *
@@ -1193,7 +1197,7 @@ public class DialogPane extends Pane {
     private static class StyleableProperties {
 
         private static final CssMetaData<DialogPane,String> GRAPHIC =
-            new CssMetaData<DialogPane,String>("-fx-graphic",
+            new CssMetaData<>("-fx-graphic",
                 StringConverter.getInstance()) {
 
             @Override
@@ -1219,8 +1223,9 @@ public class DialogPane extends Pane {
     }
 
     /**
-     * @return The CssMetaData associated with this class, which may include the
-     * CssMetaData of its superclasses.
+     * Gets the {@code CssMetaData} associated with this class, which may include the
+     * {@code CssMetaData} of its superclasses.
+     * @return the {@code CssMetaData}
      */
     public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
         return StyleableProperties.STYLEABLES;

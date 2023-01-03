@@ -26,19 +26,16 @@
 
 namespace WebCore {
 
-class HTMLAppletElement;
 class MouseEvent;
 class TextRun;
 
 // Renderer for embeds and objects, often, but not always, rendered via plug-ins.
 // For example, <embed src="foo.html"> does not invoke a plug-in.
-class RenderEmbeddedObject : public RenderWidget {
+class RenderEmbeddedObject final : public RenderWidget {
     WTF_MAKE_ISO_ALLOCATED(RenderEmbeddedObject);
 public:
     RenderEmbeddedObject(HTMLFrameOwnerElement&, RenderStyle&&);
     virtual ~RenderEmbeddedObject();
-
-    static RenderPtr<RenderEmbeddedObject> createForApplet(HTMLAppletElement&, RenderStyle&&);
 
     enum PluginUnavailabilityReason {
         PluginMissing,
@@ -64,39 +61,32 @@ public:
 
     const String& pluginReplacementTextIfUnavailable() const { return m_unavailablePluginReplacementText; }
 
-protected:
-    void paintReplaced(PaintInfo&, const LayoutPoint&) final;
-    void paint(PaintInfo&, const LayoutPoint&) override;
-
-    CursorDirective getCursor(const LayoutPoint&, Cursor&) const override;
-
-protected:
-    void layout() override;
-    void willBeDestroyed() override;
-
 private:
-    const char* renderName() const override { return "RenderEmbeddedObject"; }
+    void paintReplaced(PaintInfo&, const LayoutPoint&) final;
+    void paint(PaintInfo&, const LayoutPoint&) final;
+
+    CursorDirective getCursor(const LayoutPoint&, Cursor&) const final;
+
+    void layout() final;
+    void willBeDestroyed() final;
+
+    const char* renderName() const final { return "RenderEmbeddedObject"; }
     bool isEmbeddedObject() const final { return true; }
 
     bool showsUnavailablePluginIndicator() const { return isPluginUnavailable() && m_isUnavailablePluginIndicatorState != UnavailablePluginIndicatorState::Hidden; }
-    void paintSnapshotImage(PaintInfo&, const LayoutPoint&, Image&);
-    void paintContents(PaintInfo&, const LayoutPoint&) final;
 
     bool requiresLayer() const final;
 
     bool nodeAtPoint(const HitTestRequest&, HitTestResult&, const HitTestLocation& locationInContainer, const LayoutPoint& accumulatedOffset, HitTestAction) final;
 
-    bool scroll(ScrollDirection, ScrollGranularity, float multiplier = 1, Element** stopElement = nullptr, RenderBox* startBox = nullptr, const IntPoint& wheelEventAbsolutePoint = IntPoint()) final;
-    bool logicalScroll(ScrollLogicalDirection, ScrollGranularity, float multiplier, Element** stopElement) final;
+    bool scroll(ScrollDirection, ScrollGranularity, unsigned stepCount = 1, Element** stopElement = nullptr, RenderBox* startBox = nullptr, const IntPoint& wheelEventAbsolutePoint = IntPoint()) final;
+    bool logicalScroll(ScrollLogicalDirection, ScrollGranularity, unsigned stepCount, Element** stopElement) final;
 
     void setUnavailablePluginIndicatorIsPressed(bool);
     bool isInUnavailablePluginIndicator(const MouseEvent&) const;
     bool isInUnavailablePluginIndicator(const FloatPoint&) const;
     void getReplacementTextGeometry(const LayoutPoint& accumulatedOffset, FloatRect& contentRect, FloatRect& indicatorRect, FloatRect& replacementTextRect, FloatRect& arrowRect, FontCascade&, TextRun&, float& textWidth) const;
     LayoutRect getReplacementTextGeometry(const LayoutPoint& accumulatedOffset) const;
-
-    bool canHaveChildren() const final;
-    virtual bool canHaveWidget() const { return true; }
 
     bool m_isPluginUnavailable;
     enum class UnavailablePluginIndicatorState { Uninitialized, Hidden, Visible };

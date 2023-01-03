@@ -27,12 +27,13 @@
     Conditional=MEDIA_STREAM,
     JSGenerateToJSObject,
     SkipVTableValidation,
+    Exposed=Window
 ] interface MediaDeviceInfo {
     readonly attribute DOMString deviceId;
     readonly attribute MediaDeviceKind kind;
     readonly attribute DOMString label;
     readonly attribute DOMString groupId;
-    serializer = {attribute};
+    [Default] object toJSON();
 };
 
 // FIXME 169871: missing InputDeviceInfo

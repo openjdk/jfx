@@ -24,13 +24,18 @@
 #if USE(CF)
 
 #include <CoreFoundation/CoreFoundation.h>
+#include <wtf/DebugHeap.h>
 #include <wtf/MainThread.h>
+#include <wtf/NeverDestroyed.h>
 #include <wtf/RetainPtr.h>
 #include <wtf/Threading.h>
 
 namespace WTF {
 
 namespace StringWrapperCFAllocator {
+
+    DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(StringWrapperCFAllocator);
+    DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(StringWrapperCFAllocator);
 
     static StringImpl* currentString;
 
@@ -52,15 +57,15 @@ namespace StringWrapperCFAllocator {
 
     static void* allocate(CFIndex size, CFOptionFlags, void*)
     {
-        StringImpl* underlyingString = 0;
+        StringImpl* underlyingString = nullptr;
         if (isMainThread()) {
             underlyingString = currentString;
             if (underlyingString) {
-                currentString = 0;
+                currentString = nullptr;
                 underlyingString->ref(); // Balanced by call to deref in deallocate below.
             }
         }
-        StringImpl** header = static_cast<StringImpl**>(fastMalloc(sizeof(StringImpl*) + size));
+        StringImpl** header = static_cast<StringImpl**>(StringWrapperCFAllocatorMalloc::malloc(sizeof(StringImpl*) + size));
         *header = underlyingString;
         return header + 1;
     }
@@ -70,28 +75,21 @@ namespace StringWrapperCFAllocator {
         size_t newAllocationSize = sizeof(StringImpl*) + newSize;
         StringImpl** header = static_cast<StringImpl**>(pointer) - 1;
         ASSERT(!*header);
-        header = static_cast<StringImpl**>(fastRealloc(header, newAllocationSize));
+        header = static_cast<StringImpl**>(StringWrapperCFAllocatorMalloc::realloc(header, newAllocationSize));
         return header + 1;
     }
 
     static void deallocate(void* pointer, void*)
     {
         StringImpl** header = static_cast<StringImpl**>(pointer) - 1;
-        StringImpl* underlyingString = *header;
-        if (!underlyingString)
-            fastFree(header);
+        if (!*header)
+            StringWrapperCFAllocatorMalloc::free(header);
         else {
-            if (isMainThread()) {
-                underlyingString->deref(); // Balanced by call to ref in allocate above.
-                fastFree(header);
-                return;
-            }
-
-            callOnMainThread([header] {
+            ensureOnMainThread([header] {
                 StringImpl* underlyingString = *header;
                 ASSERT(underlyingString);
                 underlyingString->deref(); // Balanced by call to ref in allocate above.
-                fastFree(header);
+                StringWrapperCFAllocatorMalloc::free(header);
             });
         }
     }
@@ -106,26 +104,23 @@ namespace StringWrapperCFAllocator {
         return size;
     }
 
-    static CFAllocatorRef create()
-    {
-        CFAllocatorContext context = { 0, 0, retain, release, copyDescription, allocate, reallocate, deallocate, preferredSize };
-        return CFAllocatorCreate(0, &context);
-    }
-
     static CFAllocatorRef allocator()
     {
-        static CFAllocatorRef allocator = create();
-        return allocator;
+        static NeverDestroyed allocator = [] {
+            CFAllocatorContext context = { 0, nullptr, retain, release, copyDescription, allocate, reallocate, deallocate, preferredSize };
+            return adoptCF(CFAllocatorCreate(nullptr, &context));
+        }();
+        return allocator.get().get();
     }
 
 }
 
 RetainPtr<CFStringRef> StringImpl::createCFString()
 {
-    if (!m_length || !isMainThreadIfInitialized()) {
+    if (!m_length || !isMainThread()) {
         if (is8Bit())
-            return adoptCF(CFStringCreateWithBytes(0, reinterpret_cast<const UInt8*>(characters8()), m_length, kCFStringEncodingISOLatin1, false));
-        return adoptCF(CFStringCreateWithCharacters(0, reinterpret_cast<const UniChar*>(characters16()), m_length));
+            return adoptCF(CFStringCreateWithBytes(nullptr, characters8(), m_length, kCFStringEncodingISOLatin1, false));
+        return adoptCF(CFStringCreateWithCharacters(nullptr, reinterpret_cast<const UniChar*>(characters16()), m_length));
     }
     CFAllocatorRef allocator = StringWrapperCFAllocator::allocator();
 
@@ -133,15 +128,15 @@ RetainPtr<CFStringRef> StringImpl::createCFString()
     ASSERT(!StringWrapperCFAllocator::currentString);
     StringWrapperCFAllocator::currentString = this;
 
-    CFStringRef string;
+    RetainPtr<CFStringRef> string;
     if (is8Bit())
-        string = CFStringCreateWithBytesNoCopy(allocator, reinterpret_cast<const UInt8*>(characters8()), m_length, kCFStringEncodingISOLatin1, false, kCFAllocatorNull);
+        string = adoptCF(CFStringCreateWithBytesNoCopy(allocator, characters8(), m_length, kCFStringEncodingISOLatin1, false, kCFAllocatorNull));
     else
-        string = CFStringCreateWithCharactersNoCopy(allocator, reinterpret_cast<const UniChar*>(characters16()), m_length, kCFAllocatorNull);
+        string = adoptCF(CFStringCreateWithCharactersNoCopy(allocator, reinterpret_cast<const UniChar*>(characters16()), m_length, kCFAllocatorNull));
     // CoreFoundation might not have to allocate anything, we clear currentString in case we did not execute allocate().
-    StringWrapperCFAllocator::currentString = 0;
+    StringWrapperCFAllocator::currentString = nullptr;
 
-    return adoptCF(string);
+    return string;
 }
 
 // On StringImpl creation we could check if the allocator is the StringWrapperCFAllocator.

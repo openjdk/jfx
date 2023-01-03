@@ -28,7 +28,7 @@
 
 #include "ICStatusUtils.h"
 #include "InstanceOfAccessCase.h"
-#include "JSCInlines.h"
+#include "JSCellInlines.h"
 #include "PolymorphicAccess.h"
 #include "StructureStubInfo.h"
 
@@ -39,14 +39,19 @@ void InstanceOfStatus::appendVariant(const InstanceOfVariant& variant)
     appendICStatusVariant(m_variants, variant);
 }
 
+void InstanceOfStatus::shrinkToFit()
+{
+    m_variants.shrinkToFit();
+}
+
 InstanceOfStatus InstanceOfStatus::computeFor(
-    CodeBlock* codeBlock, ICStatusMap& infoMap, unsigned bytecodeIndex)
+    CodeBlock* codeBlock, ICStatusMap& infoMap, BytecodeIndex bytecodeIndex)
 {
     ConcurrentJSLocker locker(codeBlock->m_lock);
 
     InstanceOfStatus result;
 #if ENABLE(DFG_JIT)
-    result = computeForStubInfo(locker, infoMap.get(CodeOrigin(bytecodeIndex)).stubInfo);
+    result = computeForStubInfo(locker, codeBlock->vm(), infoMap.get(CodeOrigin(bytecodeIndex)).stubInfo);
 
     if (!result.takesSlowPath()) {
         UnlinkedCodeBlock* unlinkedCodeBlock = codeBlock->unlinkedCodeBlock();
@@ -66,19 +71,19 @@ InstanceOfStatus InstanceOfStatus::computeFor(
 }
 
 #if ENABLE(DFG_JIT)
-InstanceOfStatus InstanceOfStatus::computeForStubInfo(const ConcurrentJSLocker&, StructureStubInfo* stubInfo)
+InstanceOfStatus InstanceOfStatus::computeForStubInfo(const ConcurrentJSLocker&, VM& vm, StructureStubInfo* stubInfo)
 {
     // FIXME: We wouldn't have to bail for nonCell if we taught MatchStructure how to handle non
     // cells. If we fixed that then we wouldn't be able to use summary();
     // https://bugs.webkit.org/show_bug.cgi?id=185784
-    StubInfoSummary summary = StructureStubInfo::summary(stubInfo);
+    StubInfoSummary summary = StructureStubInfo::summary(vm, stubInfo);
     if (!isInlineable(summary))
         return InstanceOfStatus(summary);
 
-    if (stubInfo->cacheType != CacheType::Stub)
+    if (stubInfo->cacheType() != CacheType::Stub)
         return TakesSlowPath; // This is conservative. It could be that we have no information.
 
-    PolymorphicAccess* list = stubInfo->u.stub;
+    PolymorphicAccess* list = stubInfo->m_stub.get();
     InstanceOfStatus result;
     for (unsigned listIndex = 0; listIndex < list->size(); ++listIndex) {
         const AccessCase& access = list->at(listIndex);
@@ -96,6 +101,7 @@ InstanceOfStatus InstanceOfStatus::computeForStubInfo(const ConcurrentJSLocker&,
             access.type() == AccessCase::InstanceOfHit));
     }
 
+    result.shrinkToFit();
     return result;
 }
 #endif // ENABLE(DFG_JIT)

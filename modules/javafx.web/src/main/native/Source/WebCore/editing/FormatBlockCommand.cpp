@@ -31,9 +31,9 @@
 #include "Element.h"
 #include "HTMLElement.h"
 #include "HTMLNames.h"
-#include "Range.h"
 #include "VisibleUnits.h"
 #include <wtf/NeverDestroyed.h>
+#include <wtf/RobinHoodHashSet.h>
 
 namespace WebCore {
 
@@ -66,16 +66,19 @@ void FormatBlockCommand::formatRange(const Position& start, const Position& end,
     Node* nodeToSplitTo = enclosingBlockToSplitTreeTo(start.deprecatedNode());
     ASSERT(nodeToSplitTo);
     RefPtr<Node> outerBlock = (start.deprecatedNode() == nodeToSplitTo) ? start.deprecatedNode() : splitTreeToNode(*start.deprecatedNode(), *nodeToSplitTo);
+    if (!outerBlock)
+        return;
+
     RefPtr<Node> nodeAfterInsertionPosition = outerBlock;
 
-    auto range = Range::create(document(), start, endOfSelection);
+    auto range = makeSimpleRange(start, endOfSelection);
     Element* refNode = enclosingBlockFlowElement(end);
     Element* root = editableRootForPosition(start);
     // Root is null for elements with contenteditable=false.
     if (!root || !refNode)
         return;
     if (isElementForFormatBlock(refNode->tagQName()) && start == startOfBlock(start)
-        && (end == endOfBlock(end) || isNodeVisiblyContainedWithin(*refNode, range.get()))
+        && (end == endOfBlock(end) || (range && isNodeVisiblyContainedWithin(*refNode, *range)))
         && refNode != root && !root->isDescendantOf(*refNode)) {
         // Already in a block element that only contains the current paragraph
         if (refNode->hasTagName(tagName()))
@@ -95,32 +98,32 @@ void FormatBlockCommand::formatRange(const Position& start, const Position& end,
 
     moveParagraphWithClones(start, end, blockNode.get(), outerBlock.get());
 
-    if (wasEndOfParagraph && !isEndOfParagraph(lastParagraphInBlockNode) && !isStartOfParagraph(lastParagraphInBlockNode))
+    if (wasEndOfParagraph && lastParagraphInBlockNode.anchorNode()->isConnected()
+        && !isEndOfParagraph(lastParagraphInBlockNode) && !isStartOfParagraph(lastParagraphInBlockNode))
         insertBlockPlaceholder(lastParagraphInBlockNode);
 }
 
-Element* FormatBlockCommand::elementForFormatBlockCommand(Range* range)
+Element* FormatBlockCommand::elementForFormatBlockCommand(const std::optional<SimpleRange>& range)
 {
     if (!range)
         return nullptr;
 
-    Node* commonAncestor = range->commonAncestorContainer();
+    auto commonAncestor = commonInclusiveAncestor<ComposedTree>(*range);
     while (commonAncestor && !isElementForFormatBlock(commonAncestor))
         commonAncestor = commonAncestor->parentNode();
-
-    if (!commonAncestor)
+    if (!is<Element>(commonAncestor))
         return nullptr;
 
-    Element* rootEditableElement = range->startContainer().rootEditableElement();
+    auto rootEditableElement = range->start.container->rootEditableElement();
     if (!rootEditableElement || commonAncestor->contains(rootEditableElement))
         return nullptr;
 
-    return commonAncestor->isElementNode() ? downcast<Element>(commonAncestor) : nullptr;
+    return &downcast<Element>(*commonAncestor);
 }
 
 bool isElementForFormatBlock(const QualifiedName& tagName)
 {
-    static const auto blockTags = makeNeverDestroyed(HashSet<QualifiedName> {
+    static NeverDestroyed blockTags = MemoryCompactLookupOnlyRobinHoodHashSet<QualifiedName> {
         addressTag,
         articleTag,
         asideTag,
@@ -143,7 +146,7 @@ bool isElementForFormatBlock(const QualifiedName& tagName)
         pTag,
         preTag,
         sectionTag,
-    });
+    };
     return blockTags.get().contains(tagName);
 }
 

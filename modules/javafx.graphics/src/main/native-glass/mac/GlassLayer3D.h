@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,10 +30,6 @@
 
 @interface GlassLayer3D : CAOpenGLLayer
 {
-    mach_port_t _serverPort;
-    CALayer *_remoteLayer;
-    uint32_t _remoteLayerID;
-
     GlassOffscreen *_glassOffscreen;
     GlassOffscreen *_painterOffscreen;
 
@@ -44,9 +40,6 @@
            andClientContext:(CGLContextObj)clCtx
              withHiDPIAware:(BOOL)HiDPIAware
              withIsSwPipe:(BOOL)isSwPipe;
-
-- (uint32_t)getRemoteLayerIdForServer:(NSString*)serverName;
-- (void)hostRemoteLayerId:(uint32_t)layerId;
 
 - (GlassOffscreen*)getPainterOffscreen;
 - (GlassOffscreen*)getGlassOffscreen;

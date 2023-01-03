@@ -1,6 +1,6 @@
 /*
  *  Copyright (C) 2001 Peter Kelly (pmk@post.com)
- *  Copyright (C) 2003-2019 Apple Inc. All Rights Reserved.
+ *  Copyright (C) 2003-2021 Apple Inc. All Rights Reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public
@@ -35,42 +35,38 @@
 #include "JSExecStateInstrumentation.h"
 #include "JSWorkerGlobalScope.h"
 #include "ScriptController.h"
+#include "WebCoreJSClientData.h"
 #include "WorkerGlobalScope.h"
 #include <JavaScriptCore/ExceptionHelpers.h>
 #include <JavaScriptCore/JSLock.h>
 #include <JavaScriptCore/VMEntryScope.h>
 #include <JavaScriptCore/Watchdog.h>
 #include <wtf/Ref.h>
+#include <wtf/Scope.h>
 
 namespace WebCore {
 using namespace JSC;
 
-JSEventListener::JSEventListener(JSObject* function, JSObject* wrapper, bool isAttribute, DOMWrapperWorld& isolatedWorld)
+JSEventListener::JSEventListener(JSObject* function, JSObject* wrapper, bool isAttribute, CreatedFromMarkup createdFromMarkup, DOMWrapperWorld& isolatedWorld)
     : EventListener(JSEventListenerType)
-    , m_wrapper(wrapper)
     , m_isAttribute(isAttribute)
+    , m_wasCreatedFromMarkup(createdFromMarkup == CreatedFromMarkup::Yes)
+    , m_isInitialized(false)
+    , m_wrapper(wrapper)
     , m_isolatedWorld(isolatedWorld)
 {
-    if (wrapper) {
-        JSC::Heap::heap(wrapper)->writeBarrier(wrapper, function);
+    if (function) {
+        ASSERT(wrapper);
         m_jsFunction = JSC::Weak<JSC::JSObject>(function);
-    } else
-        ASSERT(!function);
+        m_isInitialized = true;
+    }
 }
 
 JSEventListener::~JSEventListener() = default;
 
-Ref<JSEventListener> JSEventListener::create(JSC::JSObject* listener, JSC::JSObject* wrapper, bool isAttribute, DOMWrapperWorld& world)
+Ref<JSEventListener> JSEventListener::create(JSC::JSObject& listener, JSC::JSObject& wrapper, bool isAttribute, DOMWrapperWorld& world)
 {
-    return adoptRef(*new JSEventListener(listener, wrapper, isAttribute, world));
-}
-
-RefPtr<JSEventListener> JSEventListener::create(JSC::JSValue listener, JSC::JSObject& wrapper, bool isAttribute, DOMWrapperWorld& world)
-{
-    if (UNLIKELY(!listener.isObject()))
-        return nullptr;
-
-    return create(JSC::asObject(listener), &wrapper, isAttribute, world);
+    return adoptRef(*new JSEventListener(&listener, &wrapper, isAttribute, CreatedFromMarkup::No, world));
 }
 
 JSObject* JSEventListener::initializeJSFunction(ScriptExecutionContext&) const
@@ -78,14 +74,51 @@ JSObject* JSEventListener::initializeJSFunction(ScriptExecutionContext&) const
     return nullptr;
 }
 
-void JSEventListener::visitJSFunction(SlotVisitor& visitor)
+void JSEventListener::replaceJSFunctionForAttributeListener(JSObject* function, JSObject* wrapper)
 {
-    // If m_wrapper is null, then m_jsFunction is zombied, and should never be accessed.
+    ASSERT(m_isAttribute);
+    ASSERT(function);
+    ASSERT(wrapper);
+
+    m_wasCreatedFromMarkup = false;
+    m_jsFunction = Weak { function };
+    if (m_isInitialized)
+        ASSERT(m_wrapper.get() == wrapper);
+    else {
+        m_wrapper = Weak { wrapper };
+        m_isInitialized = true;
+    }
+}
+
+JSValue eventHandlerAttribute(EventTarget& eventTarget, const AtomString& eventType, DOMWrapperWorld& isolatedWorld)
+{
+    if (auto* jsListener = eventTarget.attributeEventListener(eventType, isolatedWorld)) {
+        if (auto* context = eventTarget.scriptExecutionContext()) {
+#if PLATFORM(JAVA)
+            if (auto* jsFunction = (downcast<JSEventListener>)(jsListener)->ensureJSFunction(*context))
+#else
+            if (auto* jsFunction = jsListener->ensureJSFunction(*context))
+#endif
+                return jsFunction;
+        }
+    }
+
+    return jsNull();
+}
+
+
+template<typename Visitor>
+inline void JSEventListener::visitJSFunctionImpl(Visitor& visitor)
+{
+    // If m_wrapper is null, we are not keeping m_jsFunction alive.
     if (!m_wrapper)
         return;
 
     visitor.append(m_jsFunction);
 }
+
+void JSEventListener::visitJSFunction(AbstractSlotVisitor& visitor) { visitJSFunctionImpl(visitor); }
+void JSEventListener::visitJSFunction(SlotVisitor& visitor) { visitJSFunctionImpl(visitor); }
 
 static void handleBeforeUnloadEventReturnValue(BeforeUnloadEvent& event, const String& returnValue)
 {
@@ -110,7 +143,7 @@ void JSEventListener::handleEvent(ScriptExecutionContext& scriptExecutionContext
     // "If this throws an exception, report the exception." It should not propagate the
     // exception.
 
-    JSObject* jsFunction = this->jsFunction(scriptExecutionContext);
+    JSObject* jsFunction = ensureJSFunction(scriptExecutionContext);
     if (!jsFunction)
         return;
 
@@ -122,74 +155,93 @@ void JSEventListener::handleEvent(ScriptExecutionContext& scriptExecutionContext
         JSDOMWindow* window = jsCast<JSDOMWindow*>(globalObject);
         if (!window->wrapped().isCurrentlyDisplayedInFrame())
             return;
-        if (wasCreatedFromMarkup() && !scriptExecutionContext.contentSecurityPolicy()->allowInlineEventHandlers(sourceURL(), sourcePosition().m_line))
-            return;
+        if (wasCreatedFromMarkup()) {
+            Element* element = event.target()->isNode() && !downcast<Node>(*event.target()).isDocumentNode() ? dynamicDowncast<Element>(*event.target()) : nullptr;
+            if (!scriptExecutionContext.contentSecurityPolicy()->allowInlineEventHandlers(sourceURL().string(), sourcePosition().m_line, code(), element))
+                return;
+        }
         // FIXME: Is this check needed for other contexts?
         ScriptController& script = window->wrapped().frame()->script();
         if (!script.canExecuteScripts(AboutToExecuteScript) || script.isPaused())
             return;
     }
 
-    ExecState* exec = globalObject->globalExec();
+    RefPtr<Event> savedEvent;
+    auto* jsFunctionWindow = jsDynamicCast<JSDOMWindow*>(vm, jsFunction->globalObject(vm));
+    if (jsFunctionWindow) {
+        savedEvent = jsFunctionWindow->currentEvent();
+
+        // window.event should not be set when the target is inside a shadow tree, as per the DOM specification.
+        if (!event.currentTargetIsInShadowTree())
+            jsFunctionWindow->setCurrentEvent(&event);
+    }
+
+    auto restoreCurrentEventOnExit = makeScopeExit([&] {
+        if (jsFunctionWindow)
+            jsFunctionWindow->setCurrentEvent(savedEvent.get());
+    });
+
+    JSGlobalObject* lexicalGlobalObject = jsFunction->globalObject();
 
     JSValue handleEventFunction = jsFunction;
 
-    CallData callData;
-    CallType callType = getCallData(vm, handleEventFunction, callData);
+    auto callData = getCallData(vm, handleEventFunction);
 
-    // If jsFunction is not actually a function, see if it implements the EventListener interface and use that
-    if (callType == CallType::None) {
-        handleEventFunction = jsFunction->get(exec, Identifier::fromString(vm, "handleEvent"));
+    // If jsFunction is not actually a function and this is an EventListener, see if it implements callback interface.
+    if (callData.type == CallData::Type::None) {
+        if (m_isAttribute)
+            return;
+
+        handleEventFunction = jsFunction->get(lexicalGlobalObject, builtinNames(vm).handleEventPublicName());
         if (UNLIKELY(scope.exception())) {
             auto* exception = scope.exception();
             scope.clearException();
             event.target()->uncaughtExceptionInEventHandler();
-            reportException(exec, exception);
+            reportException(lexicalGlobalObject, exception);
             return;
         }
-        callType = getCallData(vm, handleEventFunction, callData);
+        callData = getCallData(vm, handleEventFunction);
+        if (callData.type == CallData::Type::None) {
+            event.target()->uncaughtExceptionInEventHandler();
+            reportException(lexicalGlobalObject, createTypeError(lexicalGlobalObject, "'handleEvent' property of event listener should be callable"_s));
+            return;
+        }
     }
-
-    if (callType == CallType::None)
-        return;
 
     Ref<JSEventListener> protectedThis(*this);
 
     MarkedArgumentBuffer args;
-    args.append(toJS(exec, globalObject, &event));
+    args.append(toJS(lexicalGlobalObject, globalObject, &event));
     ASSERT(!args.hasOverflowed());
 
-    Event* savedEvent = globalObject->currentEvent();
+    VMEntryScope entryScope(vm, vm.entryScope ? vm.entryScope->globalObject() : lexicalGlobalObject);
 
-    // window.event should not be set when the target is inside a shadow tree, as per the DOM specification.
-    bool isTargetInsideShadowTree = is<Node>(event.currentTarget()) && downcast<Node>(*event.currentTarget()).isInShadowTree();
-    if (!isTargetInsideShadowTree)
-        globalObject->setCurrentEvent(&event);
+    JSExecState::instrumentFunction(&scriptExecutionContext, callData);
 
-    VMEntryScope entryScope(vm, vm.entryScope ? vm.entryScope->globalObject() : globalObject);
+    JSValue thisValue = handleEventFunction == jsFunction ? toJS(lexicalGlobalObject, globalObject, event.currentTarget()) : jsFunction;
+    NakedPtr<JSC::Exception> uncaughtException;
+    JSValue retval = JSExecState::profiledCall(lexicalGlobalObject, JSC::ProfilingReason::Other, handleEventFunction, callData, thisValue, args, uncaughtException);
 
-    InspectorInstrumentationCookie cookie = JSExecState::instrumentFunctionCall(&scriptExecutionContext, callType, callData);
+    InspectorInstrumentation::didCallFunction(&scriptExecutionContext);
 
-    JSValue thisValue = handleEventFunction == jsFunction ? toJS(exec, globalObject, event.currentTarget()) : jsFunction;
-    NakedPtr<JSC::Exception> exception;
-    JSValue retval = JSExecState::profiledCall(exec, JSC::ProfilingReason::Other, handleEventFunction, callType, callData, thisValue, args, exception);
+    auto handleExceptionIfNeeded = [&] (JSC::Exception* exception) -> bool {
+        if (is<WorkerGlobalScope>(scriptExecutionContext)) {
+            auto* scriptController = downcast<WorkerGlobalScope>(scriptExecutionContext).script();
+            bool terminatorCausedException = (exception && vm.isTerminationException(exception));
+            if (terminatorCausedException || (scriptController && scriptController->isTerminatingExecution()))
+                scriptController->forbidExecution();
+        }
 
-    InspectorInstrumentation::didCallFunction(cookie, &scriptExecutionContext);
+        if (exception) {
+            event.target()->uncaughtExceptionInEventHandler();
+            reportException(lexicalGlobalObject, exception);
+            return true;
+        }
+        return false;
+    };
 
-    globalObject->setCurrentEvent(savedEvent);
-
-    if (is<WorkerGlobalScope>(scriptExecutionContext)) {
-        auto& scriptController = *downcast<WorkerGlobalScope>(scriptExecutionContext).script();
-        bool terminatorCausedException = (scope.exception() && isTerminatedExecutionException(vm, scope.exception()));
-        if (terminatorCausedException || scriptController.isTerminatingExecution())
-            scriptController.forbidExecution();
-    }
-
-    if (exception) {
-        event.target()->uncaughtExceptionInEventHandler();
-        reportException(exec, exception);
+    if (handleExceptionIfNeeded(uncaughtException))
         return;
-    }
 
     if (!m_isAttribute) {
         // This is an EventListener and there is therefore no need for any return value handling.
@@ -200,8 +252,14 @@ void JSEventListener::handleEvent(ScriptExecutionContext& scriptExecutionContext
 
     if (event.type() == eventNames().beforeunloadEvent) {
         // This is a OnBeforeUnloadEventHandler, and therefore the return value must be coerced into a String.
-        if (is<BeforeUnloadEvent>(event))
-            handleBeforeUnloadEventReturnValue(downcast<BeforeUnloadEvent>(event), convert<IDLNullable<IDLDOMString>>(*exec, retval));
+        if (is<BeforeUnloadEvent>(event)) {
+            String resultStr = convert<IDLNullable<IDLDOMString>>(*lexicalGlobalObject, retval);
+            if (UNLIKELY(scope.exception())) {
+                if (handleExceptionIfNeeded(scope.exception()))
+                    return;
+            }
+            handleBeforeUnloadEventReturnValue(downcast<BeforeUnloadEvent>(event), resultStr);
+        }
         return;
     }
 
@@ -217,80 +275,19 @@ bool JSEventListener::operator==(const EventListener& listener) const
     return m_jsFunction == other.m_jsFunction && m_isAttribute == other.m_isAttribute;
 }
 
-static inline JSC::JSValue eventHandlerAttribute(EventListener* abstractListener, ScriptExecutionContext& context)
+String JSEventListener::functionName() const
 {
-    if (!is<JSEventListener>(abstractListener))
-        return jsNull();
+    if (!m_wrapper || !m_jsFunction)
+        return { };
 
-    auto* function = downcast<JSEventListener>(*abstractListener).jsFunction(context);
-    if (!function)
-        return jsNull();
+    auto& vm = isolatedWorld().vm();
+    JSC::JSLockHolder lock(vm);
 
-    return function;
-}
+    auto* handlerFunction = JSC::jsDynamicCast<JSC::JSFunction*>(vm, m_jsFunction.get());
+    if (!handlerFunction)
+        return { };
 
-static inline RefPtr<JSEventListener> createEventListenerForEventHandlerAttribute(JSC::ExecState& state, JSC::JSValue listener, JSC::JSObject& wrapper)
-{
-    if (!listener.isObject())
-        return nullptr;
-    return JSEventListener::create(asObject(listener), &wrapper, true, currentWorld(state));
-}
-
-JSC::JSValue eventHandlerAttribute(EventTarget& target, const AtomString& eventType, DOMWrapperWorld& isolatedWorld)
-{
-    return eventHandlerAttribute(target.attributeEventListener(eventType, isolatedWorld), *target.scriptExecutionContext());
-}
-
-void setEventHandlerAttribute(JSC::ExecState& state, JSC::JSObject& wrapper, EventTarget& target, const AtomString& eventType, JSC::JSValue value)
-{
-    target.setAttributeEventListener(eventType, createEventListenerForEventHandlerAttribute(state, value, wrapper), currentWorld(state));
-}
-
-JSC::JSValue windowEventHandlerAttribute(HTMLElement& element, const AtomString& eventType, DOMWrapperWorld& isolatedWorld)
-{
-    auto& document = element.document();
-    return eventHandlerAttribute(document.getWindowAttributeEventListener(eventType, isolatedWorld), document);
-}
-
-void setWindowEventHandlerAttribute(JSC::ExecState& state, JSC::JSObject& wrapper, HTMLElement& element, const AtomString& eventType, JSC::JSValue value)
-{
-    ASSERT(wrapper.globalObject());
-    element.document().setWindowAttributeEventListener(eventType, createEventListenerForEventHandlerAttribute(state, value, *wrapper.globalObject()), currentWorld(state));
-}
-
-JSC::JSValue windowEventHandlerAttribute(DOMWindow& window, const AtomString& eventType, DOMWrapperWorld& isolatedWorld)
-{
-    return eventHandlerAttribute(window, eventType, isolatedWorld);
-}
-
-void setWindowEventHandlerAttribute(JSC::ExecState& state, JSC::JSObject& wrapper, DOMWindow& window, const AtomString& eventType, JSC::JSValue value)
-{
-    setEventHandlerAttribute(state, wrapper, window, eventType, value);
-}
-
-JSC::JSValue documentEventHandlerAttribute(HTMLElement& element, const AtomString& eventType, DOMWrapperWorld& isolatedWorld)
-{
-    auto& document = element.document();
-    return eventHandlerAttribute(document.attributeEventListener(eventType, isolatedWorld), document);
-}
-
-void setDocumentEventHandlerAttribute(JSC::ExecState& state, JSC::JSObject& wrapper, HTMLElement& element, const AtomString& eventType, JSC::JSValue value)
-{
-    ASSERT(wrapper.globalObject());
-    auto& document = element.document();
-    auto* documentWrapper = JSC::jsCast<JSDocument*>(toJS(&state, JSC::jsCast<JSDOMGlobalObject*>(wrapper.globalObject()), document));
-    ASSERT(documentWrapper);
-    document.setAttributeEventListener(eventType, createEventListenerForEventHandlerAttribute(state, value, *documentWrapper), currentWorld(state));
-}
-
-JSC::JSValue documentEventHandlerAttribute(Document& document, const AtomString& eventType, DOMWrapperWorld& isolatedWorld)
-{
-    return eventHandlerAttribute(document, eventType, isolatedWorld);
-}
-
-void setDocumentEventHandlerAttribute(JSC::ExecState& state, JSC::JSObject& wrapper, Document& document, const AtomString& eventType, JSC::JSValue value)
-{
-    setEventHandlerAttribute(state, wrapper, document, eventType, value);
+    return handlerFunction->name(vm);
 }
 
 } // namespace WebCore

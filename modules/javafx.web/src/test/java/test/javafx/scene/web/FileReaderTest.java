@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2018, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -70,6 +70,10 @@ public class FileReaderTest extends TestBase {
                                         "};" +
                                         "reader.onload = () => {" +
                                             "result = reader.result;" +
+                                            "latch.countDown();" +
+                                        "};" +
+                                        "reader.onabort = () => {" +
+                                            "result = 'failed due to abort';" +
                                             "latch.countDown();" +
                                         "};" +
                                         "reader.onerror = () => {" +
@@ -216,7 +220,7 @@ public class FileReaderTest extends TestBase {
         });
     }
 
-    @Test public void testreadAsArrayBuffer() throws FileNotFoundException, IOException {
+    @Test public void testreadAsArrayBuffer() {
         loadFileReaderTestScript(getScriptString("readAsArrayBuffer", "", false));
         try (FileInputStream in = new FileInputStream(fileList[0])) {
             final byte[] expectedArrayBuffer = in.readAllBytes();
@@ -233,7 +237,7 @@ public class FileReaderTest extends TestBase {
         }
     }
 
-    @Test public void testreadAsDataURL() throws FileNotFoundException, IOException {
+    @Test public void testreadAsDataURL() {
         loadFileReaderTestScript(getScriptString("readAsDataURL", "", false));
         try (FileInputStream in = new FileInputStream(fileList[0])) {
             final byte[] expectedArrayBuffer = in.readAllBytes();
@@ -261,7 +265,7 @@ public class FileReaderTest extends TestBase {
     @Test public void testAbort() {
         loadFileReaderTestScript(getScriptString("readAsText", "", true));
         submit(() -> {
-            assertEquals("Unexpected file content received", "failed due to error",
+            assertEquals("Unexpected file content received", "failed due to abort",
                           getEngine().executeScript("window.result"));
         });
     }

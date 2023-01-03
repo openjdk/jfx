@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -40,7 +40,7 @@ import javafx.util.Callback;
  */
 public class ProgressBarTableCell<S> extends TableCell<S, Double> {
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Static cell factories                                                   *
      *                                                                         *
@@ -58,12 +58,12 @@ public class ProgressBarTableCell<S> extends TableCell<S, Double> {
      *      from 0.0 to 1.0.
      */
     public static <S> Callback<TableColumn<S,Double>, TableCell<S,Double>> forTableColumn() {
-        return param -> new ProgressBarTableCell<S>();
+        return param -> new ProgressBarTableCell<>();
     }
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Fields                                                                  *
      *                                                                         *
@@ -75,7 +75,7 @@ public class ProgressBarTableCell<S> extends TableCell<S, Double> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
@@ -93,7 +93,7 @@ public class ProgressBarTableCell<S> extends TableCell<S, Double> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Public API                                                              *
      *                                                                         *

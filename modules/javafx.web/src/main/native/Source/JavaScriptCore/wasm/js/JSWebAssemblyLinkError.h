@@ -31,23 +31,7 @@
 
 namespace JSC {
 
-class JSWebAssemblyLinkError final : public ErrorInstance {
-public:
-    typedef ErrorInstance Base;
-
-    static JSWebAssemblyLinkError* create(ExecState*, VM&, Structure*, const String&);
-    static JSWebAssemblyLinkError* create(ExecState* exec, VM& vm, Structure* structure, JSValue message)
-    {
-        return create(exec, vm, structure, message.isUndefined() ? String() : message.toWTFString(exec));
-    }
-
-    DECLARE_INFO;
-
-protected:
-    JSWebAssemblyLinkError(VM&, Structure*);
-};
-
-JSObject* createJSWebAssemblyLinkError(ExecState*, VM&, const String&);
+JSObject* createJSWebAssemblyLinkError(JSGlobalObject*, VM&, const String&);
 
 } // namespace JSC
 

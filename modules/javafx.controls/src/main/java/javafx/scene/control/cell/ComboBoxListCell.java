@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -55,7 +55,7 @@ import javafx.util.StringConverter;
  */
 public class ComboBoxListCell<T> extends ListCell<T> {
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Static cell factories                                                   *
      *                                                                         *
@@ -145,12 +145,12 @@ public class ComboBoxListCell<T> extends ListCell<T> {
     public static <T> Callback<ListView<T>, ListCell<T>> forListView(
             final StringConverter<T> converter,
             final ObservableList<T> items) {
-        return list -> new ComboBoxListCell<T>(converter, items);
+        return list -> new ComboBoxListCell<>(converter, items);
     }
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Fields                                                                  *
      *                                                                         *
@@ -162,7 +162,7 @@ public class ComboBoxListCell<T> extends ListCell<T> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Constructors                                                            *
      *                                                                         *
@@ -235,7 +235,7 @@ public class ComboBoxListCell<T> extends ListCell<T> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Properties                                                              *
      *                                                                         *
@@ -243,7 +243,7 @@ public class ComboBoxListCell<T> extends ListCell<T> {
 
     // --- converter
     private ObjectProperty<StringConverter<T>> converter =
-            new SimpleObjectProperty<StringConverter<T>>(this, "converter");
+            new SimpleObjectProperty<>(this, "converter");
 
     /**
      * The {@link StringConverter} property.
@@ -303,7 +303,7 @@ public class ComboBoxListCell<T> extends ListCell<T> {
 
 
 
-    /***************************************************************************
+    /* *************************************************************************
      *                                                                         *
      * Public API                                                              *
      *                                                                         *
@@ -319,7 +319,8 @@ public class ComboBoxListCell<T> extends ListCell<T> {
 
     /** {@inheritDoc} */
     @Override public void startEdit() {
-        if (! isEditable() || ! getListView().isEditable()) {
+        super.startEdit();
+        if (!isEditing()) {
             return;
         }
 
@@ -330,12 +331,8 @@ public class ComboBoxListCell<T> extends ListCell<T> {
 
         comboBox.getSelectionModel().select(getItem());
 
-        super.startEdit();
-
-        if (isEditing()) {
-            setText(null);
-            setGraphic(comboBox);
-        }
+        setText(null);
+        setGraphic(comboBox);
     }
 
     /** {@inheritDoc} */

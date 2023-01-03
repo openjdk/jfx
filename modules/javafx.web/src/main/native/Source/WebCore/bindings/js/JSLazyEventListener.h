@@ -39,25 +39,25 @@ public:
 
     virtual ~JSLazyEventListener();
 
-    String sourceURL() const final { return m_sourceURL; }
+    URL sourceURL() const final { return m_sourceURL; }
     TextPosition sourcePosition() const final { return m_sourcePosition; }
 
 private:
     struct CreationArguments;
     static RefPtr<JSLazyEventListener> create(CreationArguments&&);
-    JSLazyEventListener(CreationArguments&&, const String& sourceURL, const TextPosition&);
+    JSLazyEventListener(CreationArguments&&, const URL& sourceURL, const TextPosition&);
+    String code() const final { return m_code; }
 
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
     void checkValidityForEventTarget(EventTarget&) final;
 #endif
 
     JSC::JSObject* initializeJSFunction(ScriptExecutionContext&) const final;
-    bool wasCreatedFromMarkup() const final { return true; }
 
     String m_functionName;
     const String& m_eventParameterName;
     String m_code;
-    String m_sourceURL;
+    URL m_sourceURL;
     TextPosition m_sourcePosition;
     WeakPtr<ContainerNode> m_originalNode;
 };

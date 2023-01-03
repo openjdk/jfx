@@ -26,6 +26,7 @@
 #pragma once
 
 #include "CachedFrame.h"
+#include <wtf/MonotonicTime.h>
 
 namespace WebCore {
 
@@ -37,9 +38,9 @@ class CachedPage {
     WTF_MAKE_FAST_ALLOCATED;
 public:
     explicit CachedPage(Page&);
-    ~CachedPage();
+    WEBCORE_EXPORT ~CachedPage();
 
-    void restore(Page&);
+    WEBCORE_EXPORT void restore(Page&);
     void clear();
 
     Page& page() const { return m_page; }
@@ -50,7 +51,7 @@ public:
 
     CachedFrame* cachedMainFrame() { return m_cachedMainFrame.get(); }
 
-#if ENABLE(VIDEO_TRACK)
+#if ENABLE(VIDEO)
     void markForCaptionPreferencesChanged() { m_needsCaptionPreferencesChanged = true; }
 #endif
 
@@ -62,11 +63,14 @@ private:
     Page& m_page;
     MonotonicTime m_expirationTime;
     std::unique_ptr<CachedFrame> m_cachedMainFrame;
-#if ENABLE(VIDEO_TRACK)
+#if ENABLE(VIDEO)
     bool m_needsCaptionPreferencesChanged { false };
 #endif
     bool m_needsDeviceOrPageScaleChanged { false };
     bool m_needsUpdateContentsSize { false };
+#if ENABLE(INTELLIGENT_TRACKING_PREVENTION)
+    Vector<RegistrableDomain> m_loadedSubresourceDomains;
+#endif
 };
 
 } // namespace WebCore

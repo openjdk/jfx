@@ -47,13 +47,11 @@ public:
     virtual void insert(SegmentedString&&) = 0;
 
     // appendBytes and flush are used by DocumentWriter (the loader).
-    virtual void appendBytes(DocumentWriter&, const char* bytes, size_t length) = 0;
+    virtual void appendBytes(DocumentWriter&, const uint8_t* bytes, size_t length) = 0;
     virtual void flush(DocumentWriter&) = 0;
 
-    // FIXME: append() should be private, but DocumentWriter::replaceDocument uses it for now.
-    // FIXME: This really should take a std::unique_ptr to signify that it expects to take
-    // ownership of the buffer. The parser expects the RefPtr to hold the only ref of the StringImpl.
     virtual void append(RefPtr<StringImpl>&&) = 0;
+    virtual void appendSynchronously(RefPtr<StringImpl>&& inputSource) { append(WTFMove(inputSource)); }
 
     virtual void finish() = 0;
 
@@ -65,10 +63,10 @@ public:
     // document() will return 0 after detach() is called.
     Document* document() const { ASSERT(m_document); return m_document.get(); }
 
-    bool isParsing() const { return m_state == ParsingState; }
-    bool isStopping() const { return m_state == StoppingState; }
-    bool isStopped() const { return m_state >= StoppedState; }
-    bool isDetached() const { return m_state == DetachedState; }
+    bool isParsing() const { return m_state == ParserState::Parsing; }
+    bool isStopping() const { return m_state == ParserState::Stopping; }
+    bool isStopped() const { return m_state >= ParserState::Stopped; }
+    bool isDetached() const { return m_state == ParserState::Detached; }
 
     // FIXME: Is this necessary? Does XMLDocumentParserLibxml2 really need to set this?
     virtual void startParsing();
@@ -104,11 +102,11 @@ protected:
     explicit DocumentParser(Document&);
 
 private:
-    enum ParserState {
-        ParsingState,
-        StoppingState,
-        StoppedState,
-        DetachedState
+    enum class ParserState : uint8_t {
+        Parsing,
+        Stopping,
+        Stopped,
+        Detached
     };
     ParserState m_state;
     bool m_documentWasLoadedAsPartOfNavigation;

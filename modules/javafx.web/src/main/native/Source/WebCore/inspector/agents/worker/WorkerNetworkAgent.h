@@ -34,17 +34,17 @@ class WorkerNetworkAgent final : public InspectorNetworkAgent {
     WTF_MAKE_FAST_ALLOCATED;
 public:
     WorkerNetworkAgent(WorkerAgentContext&);
-    virtual ~WorkerNetworkAgent();
+    ~WorkerNetworkAgent();
 
 private:
-    String loaderIdentifier(DocumentLoader*);
-    String frameIdentifier(DocumentLoader*);
-    Vector<WebSocket*> activeWebSockets(const LockHolder&);
-    void setResourceCachingDisabled(bool);
-    ScriptExecutionContext* scriptExecutionContext(ErrorString&, const String& frameId);
+    Inspector::Protocol::Network::LoaderId loaderIdentifier(DocumentLoader*);
+    Inspector::Protocol::Network::FrameId frameIdentifier(DocumentLoader*);
+    Vector<WebSocket*> activeWebSockets() WTF_REQUIRES_LOCK(WebSocket::allActiveWebSocketsLock());
+    void setResourceCachingDisabledInternal(bool);
+    ScriptExecutionContext* scriptExecutionContext(Inspector::Protocol::ErrorString&, const Inspector::Protocol::Network::FrameId&);
     bool shouldForceBufferingNetworkResourceData() const { return true; }
 
-    WorkerGlobalScope& m_workerGlobalScope;
+    WorkerOrWorkletGlobalScope& m_globalScope;
 };
 
 } // namespace WebCore

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -55,7 +55,7 @@ import com.sun.javafx.css.PseudoClassState;
  *       new BooleanPropertyBase(false) {
  *
  *       {@literal @}Override protected void invalidated() {
- *           pseudoClassStateChanged(MAGIC_PSEUDO_CLASS. get());
+ *           pseudoClassStateChanged(MAGIC_PSEUDO_CLASS, get());
  *       }
  *
  *       {@literal @}Override public Object getBean() {
@@ -75,18 +75,29 @@ import com.sun.javafx.css.PseudoClassState;
 public abstract class PseudoClass {
 
     /**
-     * There is only one PseudoClass instance for a given pseudoClass.
-     * @param pseudoClass the pseudo-class
-     * @return The PseudoClass for the given pseudoClass. Will not return null.
-     * @throws IllegalArgumentException if pseudoClass parameter is null or an empty String
+     * Constructor for subclasses to call.
      */
-    public static PseudoClass getPseudoClass(String pseudoClass) {
-
-        return PseudoClassState.getPseudoClass(pseudoClass);
-
+    public PseudoClass() {
     }
 
-    /** @return the pseudo-class state */
+    /**
+     * Gets the {@code PseudoClass} instance for a given pseudo class name.
+     * <p>
+     * Note: There is only one {@code PseudoClass} instance for a given pseudo class name.
+     *
+     * @param pseudoClass the name of the pseudo class
+     * @return the {@code PseudoClass} instance for a given pseudo class name;
+     * It will not return {@code null}
+     * @throws IllegalArgumentException if pseudoClass parameter is {@code null} or an empty {@code String}
+     */
+    public static PseudoClass getPseudoClass(String pseudoClass) {
+        return PseudoClassState.getPseudoClass(pseudoClass);
+    }
+
+    /**
+     * Gets the name of the {@code PseudoClass}.
+     * @return the name of the {@code PseudoClass}
+     */
     abstract public String getPseudoClassName();
 
 }

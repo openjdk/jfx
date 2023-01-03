@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,7 +27,6 @@ package com.sun.javafx.font;
 
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -50,27 +49,24 @@ public class LogicalFont implements CompositeFontResource {
     public static final String STYLE_ITALIC      = "Italic";
     public static final String STYLE_BOLD_ITALIC = "Bold Italic";
 
-    static final HashMap<String, String>
-        canonicalFamilyMap = new  HashMap<String, String>();
-    static {
-        canonicalFamilyMap.put("system", SYSTEM);
+    private static final Map<String, String> CANONICAL_FAMILY_MAP = Map.of(
+        "system", SYSTEM,
 
-        canonicalFamilyMap.put("serif", SERIF);
+        "serif", SERIF,
 
-        canonicalFamilyMap.put("sansserif", SANS_SERIF);
-        canonicalFamilyMap.put("sans-serif", SANS_SERIF); // css style
-        canonicalFamilyMap.put("dialog", SANS_SERIF);
-        canonicalFamilyMap.put("default", SANS_SERIF);
+        "sansserif", SANS_SERIF,
+        "sans-serif", SANS_SERIF, // css style
+        "dialog", SANS_SERIF,
+        "default", SANS_SERIF,
 
-        canonicalFamilyMap.put("monospaced", MONOSPACED);
-        canonicalFamilyMap.put("monospace", MONOSPACED); // css style
-        canonicalFamilyMap.put("dialoginput", MONOSPACED);
-    }
+        "monospaced", MONOSPACED,
+        "monospace", MONOSPACED, // css style
+        "dialoginput", MONOSPACED);
 
     static boolean isLogicalFont(String name) {
         int spaceIndex = name.indexOf(' ');
         if (spaceIndex != -1) name = name.substring(0, spaceIndex);
-        return canonicalFamilyMap.get(name) != null;
+        return CANONICAL_FAMILY_MAP.get(name) != null;
     }
 
     private static String getCanonicalFamilyName(String name) {
@@ -78,7 +74,7 @@ public class LogicalFont implements CompositeFontResource {
              return SANS_SERIF;
          }
          String lcName = name.toLowerCase();
-         return canonicalFamilyMap.get(lcName);
+         return CANONICAL_FAMILY_MAP.get(lcName);
     }
 
     static LogicalFont[] logicalFonts = new LogicalFont[16];
@@ -230,6 +226,7 @@ public class LogicalFont implements CompositeFontResource {
         }
     }
 
+    @Override
     public int getNumSlots() {
         getLinkedFonts();
         int num = linkedFontFiles.size();
@@ -239,6 +236,7 @@ public class LogicalFont implements CompositeFontResource {
         return num + 1;
     }
 
+    @Override
     public int getSlotForFont(String fontName) {
         getLinkedFonts();
         int i = 1;
@@ -291,6 +289,7 @@ public class LogicalFont implements CompositeFontResource {
         return i;
     }
 
+    @Override
     public FontResource getSlotResource(int slot) {
         if (slot == 0) {
             return getSlot0Resource();
@@ -318,62 +317,77 @@ public class LogicalFont implements CompositeFontResource {
         }
     }
 
+    @Override
     public String getFullName() {
         return fullName;
     }
 
+    @Override
     public String getPSName() {
         return fullName;
     }
 
+    @Override
     public String getFamilyName() {
         return familyName;
     }
 
+    @Override
     public String getStyleName() {
         return styleName;
     }
 
+    @Override
     public String getLocaleFullName() {
         return fullName;
     }
 
+    @Override
     public String getLocaleFamilyName() {
         return familyName;
     }
 
+    @Override
     public String getLocaleStyleName() {
         return styleName;
     }
 
+    @Override
     public boolean isBold() {
         return getSlotResource(0).isBold();
     }
 
+    @Override
     public boolean isItalic() {
         return getSlotResource(0).isItalic();
     }
 
+    @Override
     public String getFileName() {
         return getSlotResource(0).getFileName();
     }
 
+    @Override
     public int getFeatures() {
         return getSlotResource(0).getFeatures();
     }
 
+    @Override
     public Object getPeer() {
         return null;
     }
 
+    @Override
     public boolean isEmbeddedFont() {
         return getSlotResource(0).isEmbeddedFont();
     }
 
+    @Override
     public void setPeer(Object peer) {
         throw new UnsupportedOperationException("Not supported");
     }
 
+    @Override
     public float[] getGlyphBoundingBox(int glyphCode,
                                 float size, float[] retArr) {
         int slot = (glyphCode >>> 24);
@@ -382,6 +396,7 @@ public class LogicalFont implements CompositeFontResource {
         return slotResource.getGlyphBoundingBox(slotglyphCode, size, retArr);
    }
 
+    @Override
     public float getAdvance(int glyphCode, float size) {
         int slot = (glyphCode >>> 24);
         int slotglyphCode = glyphCode & CompositeGlyphMapper.GLYPHMASK;
@@ -390,6 +405,7 @@ public class LogicalFont implements CompositeFontResource {
     }
 
     CompositeGlyphMapper mapper;
+    @Override
     public CharToGlyphMapper getGlyphMapper() {
         //return getSlot0Resource().getGlyphMapper();
         if (mapper == null) {
@@ -398,21 +414,24 @@ public class LogicalFont implements CompositeFontResource {
         return mapper;
     }
 
-    Map<FontStrikeDesc, WeakReference<FontStrike>> strikeMap =
-        new ConcurrentHashMap<FontStrikeDesc, WeakReference<FontStrike>>();
+    Map<FontStrikeDesc, WeakReference<FontStrike>> strikeMap = new ConcurrentHashMap<>();
 
+    @Override
     public Map<FontStrikeDesc, WeakReference<FontStrike>> getStrikeMap() {
         return strikeMap;
     }
 
+    @Override
     public int getDefaultAAMode() {
         return getSlot0Resource().getDefaultAAMode();
     }
 
+    @Override
     public FontStrike getStrike(float size, BaseTransform transform) {
         return getStrike(size, transform, getDefaultAAMode());
     }
 
+    @Override
     public FontStrike getStrike(float size, BaseTransform transform,
                                 int aaMode) {
         FontStrikeDesc desc= new FontStrikeDesc(size, transform, aaMode);
@@ -427,7 +446,7 @@ public class LogicalFont implements CompositeFontResource {
             if (strike.disposer != null) {
                 ref = Disposer.addRecord(strike, strike.disposer);
             } else {
-                ref = new WeakReference<FontStrike>(strike);
+                ref = new WeakReference<>(strike);
             }
             strikeMap.put(desc, ref);
         }

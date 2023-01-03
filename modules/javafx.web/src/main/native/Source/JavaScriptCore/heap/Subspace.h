@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -39,26 +39,22 @@ class HeapCellType;
 
 // The idea of subspaces is that you can provide some custom behavior for your objects if you
 // allocate them from a custom Subspace in which you override some of the virtual methods. This
-// class is the baseclass of Subspaces. Usually you will use either Subspace or FixedSizeSubspace.
+// class is the baseclass of all subspaces e.g. CompleteSubspace, IsoSubspace.
 class Subspace {
     WTF_MAKE_NONCOPYABLE(Subspace);
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    JS_EXPORT_PRIVATE Subspace(CString name, Heap&);
     JS_EXPORT_PRIVATE virtual ~Subspace();
 
     const char* name() const { return m_name.data(); }
     MarkedSpace& space() const { return m_space; }
 
-    const CellAttributes& attributes() const;
-    HeapCellType* heapCellType() const { return m_heapCellType; }
+    CellAttributes attributes() const;
+    const HeapCellType* heapCellType() const { return m_heapCellType; }
     AlignedMemoryAllocator* alignedMemoryAllocator() const { return m_alignedMemoryAllocator; }
 
     void finishSweep(MarkedBlock::Handle&, FreeList*);
     void destroy(VM&, JSCell*);
-
-    virtual Allocator allocatorFor(size_t, AllocatorForMode) = 0;
-    virtual void* allocate(VM&, size_t, GCDeferralContext*, AllocationFailureMode) = 0;
 
     void prepareForAllocation();
 
@@ -81,37 +77,45 @@ public:
     JS_EXPORT_PRIVATE Ref<SharedTask<MarkedBlock::Handle*()>> parallelNotEmptyMarkedBlockSource();
 
     template<typename Func>
-    void forEachLargeAllocation(const Func&);
+    void forEachPreciseAllocation(const Func&);
 
     template<typename Func>
     void forEachMarkedCell(const Func&);
 
-    template<typename Func>
-    Ref<SharedTask<void(SlotVisitor&)>> forEachMarkedCellInParallel(const Func&);
+    template<typename Visitor, typename Func>
+    Ref<SharedTask<void(Visitor&)>> forEachMarkedCellInParallel(const Func&);
 
     template<typename Func>
     void forEachLiveCell(const Func&);
 
-    void sweep();
+    void sweepBlocks();
 
     Subspace* nextSubspaceInAlignedMemoryAllocator() const { return m_nextSubspaceInAlignedMemoryAllocator; }
     void setNextSubspaceInAlignedMemoryAllocator(Subspace* subspace) { m_nextSubspaceInAlignedMemoryAllocator = subspace; }
 
-    virtual void didResizeBits(size_t newSize);
-    virtual void didRemoveBlock(size_t blockIndex);
+    virtual void didResizeBits(unsigned newSize);
+    virtual void didRemoveBlock(unsigned blockIndex);
     virtual void didBeginSweepingToFreeList(MarkedBlock::Handle*);
 
+    bool isIsoSubspace() const { return m_isIsoSubspace; }
+
 protected:
-    void initialize(HeapCellType*, AlignedMemoryAllocator*);
+    Subspace(CString name, Heap&);
+
+    void initialize(const HeapCellType&, AlignedMemoryAllocator*);
 
     MarkedSpace& m_space;
 
-    HeapCellType* m_heapCellType { nullptr };
+    const HeapCellType* m_heapCellType { nullptr };
     AlignedMemoryAllocator* m_alignedMemoryAllocator { nullptr };
 
     BlockDirectory* m_firstDirectory { nullptr };
     BlockDirectory* m_directoryForEmptyAllocation { nullptr }; // Uses the MarkedSpace linked list of blocks.
-    SentinelLinkedList<LargeAllocation, BasicRawSentinelNode<LargeAllocation>> m_largeAllocations;
+    SentinelLinkedList<PreciseAllocation, PackedRawSentinelNode<PreciseAllocation>> m_preciseAllocations;
+
+    bool m_isIsoSubspace { false };
+    uint8_t m_remainingLowerTierCellCount { 0 };
+
     Subspace* m_nextSubspaceInAlignedMemoryAllocator { nullptr };
 
     CString m_name;

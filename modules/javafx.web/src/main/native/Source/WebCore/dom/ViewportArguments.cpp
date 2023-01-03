@@ -31,14 +31,13 @@
 #include "Document.h"
 #include "Frame.h"
 #include "IntSize.h"
-#include "RuntimeEnabledFeatures.h"
 #include "ScriptableDocumentParser.h"
 #include "Settings.h"
 #include <wtf/text/TextStream.h>
 
 namespace WebCore {
 
-typedef WTF::Function<void(ViewportErrorCode, StringView, StringView)> InternalViewportErrorHandler;
+typedef Function<void(ViewportErrorCode, StringView, StringView)> InternalViewportErrorHandler;
 
 #if PLATFORM(GTK)
 const float ViewportArguments::deprecatedTargetDPI = 160;

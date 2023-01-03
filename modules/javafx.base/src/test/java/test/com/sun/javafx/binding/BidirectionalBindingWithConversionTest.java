@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,7 +29,6 @@ import com.sun.javafx.binding.BidirectionalBinding;
 import javafx.beans.InvalidationListener;
 import javafx.beans.binding.Bindings;
 import javafx.beans.property.*;
-import javafx.beans.value.ChangeListener;
 import javafx.util.StringConverter;
 import org.junit.Before;
 import org.junit.Test;
@@ -173,7 +172,7 @@ public class BidirectionalBindingWithConversionTest<S, T> {
         final Date[] dates = new Date[] {new Date(), new Date(0), new Date(Integer.MAX_VALUE), new Date(Long.MAX_VALUE)};
         final String[] strings = new String[] {format.format(dates[0]), format.format(dates[1]), format.format(dates[2]), format.format(dates[3])};
 
-        final StringConverter<Date> converter = new StringConverter<Date>() {
+        final StringConverter<Date> converter = new StringConverter<>() {
             @Override
             public String toString(Date object) {
                 return format.format(object);
@@ -199,7 +198,7 @@ public class BidirectionalBindingWithConversionTest<S, T> {
                     }
                     @Override
                     public PropertyMock<Date> create1() {
-                        return new ObjectPropertyMock<Date>();
+                        return new ObjectPropertyMock<>();
                     }
                     @Override
                     public void bind(PropertyMock<String> op0, PropertyMock<Date> op1) {
@@ -236,7 +235,7 @@ public class BidirectionalBindingWithConversionTest<S, T> {
                     }
                     @Override
                     public PropertyMock<Date> create1() {
-                        return new ObjectPropertyMock<Date>();
+                        return new ObjectPropertyMock<>();
                     }
                     @Override
                     public void bind(PropertyMock<String> op0, PropertyMock<Date> op1) {
@@ -281,13 +280,13 @@ public class BidirectionalBindingWithConversionTest<S, T> {
         }
 
         @Override
-        public void addListener(ChangeListener<? super T> listener) {
+        public void addListener(InvalidationListener listener) {
             super.addListener(listener);
             listenerCount++;
         }
 
         @Override
-        public void removeListener(ChangeListener<? super T> listener) {
+        public void removeListener(InvalidationListener listener) {
             super.removeListener(listener);
             listenerCount--;
         }
@@ -303,13 +302,13 @@ public class BidirectionalBindingWithConversionTest<S, T> {
         }
 
         @Override
-        public void addListener(ChangeListener<? super String> listener) {
+        public void addListener(InvalidationListener listener) {
             super.addListener(listener);
             listenerCount++;
         }
 
         @Override
-        public void removeListener(ChangeListener<? super String> listener) {
+        public void removeListener(InvalidationListener listener) {
             super.removeListener(listener);
             listenerCount--;
         }

@@ -8,6 +8,7 @@
       <sourceFolder url="file://$MODULE_DIR$/modules/javafx.controls/src/test/java" isTestSource="true" />
       <sourceFolder url="file://$MODULE_DIR$/modules/javafx.controls/src/test/resources" isTestSource="true" />
       <sourceFolder url="file://$MODULE_DIR$/modules/javafx.controls/build/resources/main" type="java-resource" />
+      <sourceFolder url="file://$MODULE_DIR$/modules/javafx.controls/src/shims/java" isTestSource="true" />
       <excludeFolder url="file://$MODULE_DIR$/modules/javafx.controls/build/classes" />
       <excludeFolder url="file://$MODULE_DIR$/modules/javafx.controls/build/dependency-cache" />
       <excludeFolder url="file://$MODULE_DIR$/modules/javafx.controls/build/libs" />

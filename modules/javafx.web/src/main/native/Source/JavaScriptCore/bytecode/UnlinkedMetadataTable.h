@@ -31,6 +31,10 @@
 
 namespace JSC {
 
+class VM;
+
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(MetadataTable);
+
 class MetadataTable;
 
 class UnlinkedMetadataTable : public RefCounted<UnlinkedMetadataTable> {
@@ -59,6 +63,12 @@ public:
     {
         return adoptRef(*new UnlinkedMetadataTable);
     }
+
+    template <typename Bytecode>
+    unsigned numEntries();
+
+    bool isFinalized() { return m_isFinalized; }
+    bool hasMetadata() { return m_hasMetadata; }
 
 private:
     enum EmptyTag { Empty };
@@ -96,6 +106,7 @@ private:
             return s_offset16TableSize + s_offset32TableSize;
         return s_offset16TableSize;
     }
+
 
     using Offset32 = uint32_t;
     using Offset16 = uint16_t;

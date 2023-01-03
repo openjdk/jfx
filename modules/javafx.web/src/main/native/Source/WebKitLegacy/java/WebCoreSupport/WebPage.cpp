@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -57,11 +57,14 @@
 #include <WebCore/BridgeUtils.h>
 #include <WebCore/CharacterData.h>
 #include <WebCore/Chrome.h>
+#include <WebCore/ColorTypes.h>
+#include <WebCore/CompositionHighlight.h>
 #include <WebCore/ContextMenu.h>
 #include <WebCore/ContextMenuController.h>
 #include <WebCore/CookieJar.h>
 #include <WebCore/DeprecatedGlobalSettings.h>
 #include <WebCore/Document.h>
+#include <WebCore/DocumentInlines.h>
 #include <WebCore/DragController.h>
 #include <WebCore/DragData.h>
 #include <WebCore/Editor.h>
@@ -80,6 +83,7 @@
 #include <WebCore/GraphicsLayerTextureMapper.h>
 #include <WebCore/InspectorController.h>
 #include <WebCore/KeyboardEvent.h>
+#include <WebCore/LogInitialization.h>
 #include <WebCore/NodeTraversal.h>
 #include <WebCore/Page.h>
 #include <WebCore/PageConfiguration.h>
@@ -102,10 +106,12 @@
 #include <WebCore/TextureMapperJava.h>
 #include <WebCore/TextureMapperLayer.h>
 #include <WebCore/WorkerThread.h>
+#include <WebCore/platform/graphics/java/GraphicsContextJava.h>
 #include <wtf/Ref.h>
 #include <wtf/RunLoop.h>
 #include <wtf/java/JavaRef.h>
 #include <wtf/text/WTFString.h>
+#include <wtf/text/StringToIntegerConversion.h>
 
 // FIXME: Move dependency of runtime_root to BridgeUtils
 #include <WebCore/runtime_root.h>
@@ -248,7 +254,7 @@ void WebPage::paint(jobject rq, jint x, jint y, jint w, jint h)
         return;
     }
 
-    DBG_CHECKPOINTEX("twkUpdateContent", 15, 100);
+    // DBG_CHECKPOINTEX("twkUpdateContent", 15, 100);
 
     RefPtr<Frame> mainFrame((Frame*)&m_page->mainFrame());
     RefPtr<FrameView> frameView(mainFrame->view());
@@ -258,15 +264,15 @@ void WebPage::paint(jobject rq, jint x, jint y, jint w, jint h)
 
     // Will be deleted by GraphicsContext destructor
     PlatformContextJava* ppgc = new PlatformContextJava(rq, jRenderTheme());
-    GraphicsContext gc(ppgc);
+    GraphicsContextJava gc(ppgc);
 
     // TODO: Following JS synchronization is not necessary for single thread model
-    JSGlobalContextRef globalContext = toGlobalRef(mainFrame->script().globalObject(mainThreadNormalWorld())->globalExec());
+    JSGlobalContextRef globalContext = toGlobalRef(mainFrame->script().globalObject(mainThreadNormalWorld()));
     JSC::JSLockHolder sw(toJS(globalContext)); // TODO-java: was JSC::APIEntryShim sw( toJS(globalContext) );
 
     frameView->paint(gc, IntRect(x, y, w, h));
     if (m_page->settings().showDebugBorders()) {
-        drawDebugLed(gc, IntRect(x, y, w, h), Color(0, 0, 255, 128));
+        drawDebugLed(gc, IntRect(x, y, w, h), SRGBA<uint8_t> { 0, 0, 255, 128 });
     }
 
     gc.platformContext()->rq().flushBuffer();
@@ -282,7 +288,7 @@ void WebPage::postPaint(jobject rq, jint x, jint y, jint w, jint h)
 
     // Will be deleted by GraphicsContext destructor
     PlatformContextJava* ppgc = new PlatformContextJava(rq, jRenderTheme());
-    GraphicsContext gc(ppgc);
+    GraphicsContextJava gc(ppgc);
 
     if (m_rootLayer) {
         if (m_syncLayers) {
@@ -291,7 +297,7 @@ void WebPage::postPaint(jobject rq, jint x, jint y, jint w, jint h)
         }
         renderCompositedLayers(gc, IntRect(x, y, w, h));
         if (m_page->settings().showDebugBorders()) {
-            drawDebugLed(gc, IntRect(x, y, w, h), Color(0, 192, 0, 128));
+            drawDebugLed(gc, IntRect(x, y, w, h), SRGBA<uint8_t> { 0, 192, 0, 128 });
         }
         if (downcast<GraphicsLayerTextureMapper>(m_rootLayer.get())->layer().descendantsOrSelfHaveRunningAnimations()) {
             requestJavaRepaint(pageRect());
@@ -373,8 +379,6 @@ void WebPage::setRootChildLayer(GraphicsLayer* layer)
         m_rootLayer->addChild(*layer);
 
         m_textureMapper = TextureMapper::create();
-        downcast<GraphicsLayerTextureMapper>(m_rootLayer.get())->layer()
-                .setTextureMapper(m_textureMapper.get());
     } else {
         m_rootLayer = nullptr;
         m_textureMapper.reset();
@@ -385,7 +389,7 @@ void WebPage::setNeedsOneShotDrawingSynchronization()
 {
 }
 
-void WebPage::scheduleCompositingLayerSync()
+void WebPage::scheduleRenderingUpdate()
 {
     markForSync();
 }
@@ -393,6 +397,7 @@ void WebPage::scheduleCompositingLayerSync()
 void WebPage::markForSync()
 {
     if (!m_rootLayer) {
+        m_page->isolatedUpdateRendering();
         return;
     }
     m_syncLayers = true;
@@ -435,10 +440,10 @@ void WebPage::renderCompositedLayers(GraphicsContext& context, const IntRect& cl
     static_cast<TextureMapperJava&>(*m_textureMapper).setGraphicsContext(&context);
     TransformationMatrix matrix;
     m_textureMapper->beginPainting();
-    m_textureMapper->beginClip(matrix, clip);
+    m_textureMapper->beginClip(matrix, FloatRoundedRect(clip));
     rootTextureMapperLayer.applyAnimationsRecursively(MonotonicTime::now());
-    downcast<GraphicsLayerTextureMapper>(*m_rootLayer).updateBackingStoreIncludingSubLayers();
-    rootTextureMapperLayer.paint();
+    downcast<GraphicsLayerTextureMapper>(*m_rootLayer).updateBackingStoreIncludingSubLayers(*m_textureMapper);
+    rootTextureMapperLayer.paint(*m_textureMapper);
     m_textureMapper->endClip();
     m_textureMapper->endPainting();
 }
@@ -453,17 +458,13 @@ void WebPage::notifyFlushRequired(const GraphicsLayer*)
     markForSync();
 }
 
-void WebPage::paintContents(const GraphicsLayer*,
-                   GraphicsContext& context,
-                   OptionSet<GraphicsLayerPaintingPhase>,
-                   const FloatRect& inClip,
-                   GraphicsLayerPaintBehavior)
+void WebPage::paintContents(const GraphicsLayer*, GraphicsContext& context, const FloatRect& inClip, GraphicsLayerPaintBehavior)
 {
     context.save();
     context.clip(inClip);
     m_page->mainFrame().view()->paint(context, enclosingIntRect(inClip));
     if (m_page->settings().showDebugBorders()) {
-        drawDebugBorder(context, roundedIntRect(inClip), Color(0, 192, 0), 20);
+        drawDebugBorder(context, roundedIntRect(inClip), SRGBA<uint8_t> { 0, 192, 0 }, 20);
     }
     context.restore();
 }
@@ -609,35 +610,35 @@ bool WebPage::mapKeyCodeForScroll(int keyCode,
     switch (keyCode) {
     case VKEY_LEFT:
         *scrollDirection = ScrollLeft;
-        *scrollGranularity = ScrollByLine;
+        *scrollGranularity = ScrollGranularity::Line;
         break;
     case VKEY_RIGHT:
         *scrollDirection = ScrollRight;
-        *scrollGranularity = ScrollByLine;
+        *scrollGranularity = ScrollGranularity::Line;
         break;
     case VKEY_UP:
         *scrollDirection = ScrollUp;
-        *scrollGranularity = ScrollByLine;
+        *scrollGranularity = ScrollGranularity::Line;
         break;
     case VKEY_DOWN:
         *scrollDirection = ScrollDown;
-        *scrollGranularity = ScrollByLine;
+        *scrollGranularity = ScrollGranularity::Line;
         break;
     case VKEY_HOME:
         *scrollDirection = ScrollUp;
-        *scrollGranularity = ScrollByDocument;
+        *scrollGranularity = ScrollGranularity::Document;
         break;
     case VKEY_END:
         *scrollDirection = ScrollDown;
-        *scrollGranularity = ScrollByDocument;
+        *scrollGranularity = ScrollGranularity::Document;
         break;
     case VKEY_PRIOR:  // page up
         *scrollDirection = ScrollUp;
-        *scrollGranularity = ScrollByPage;
+        *scrollGranularity = ScrollGranularity::Page;
         break;
     case VKEY_NEXT:  // page down
         *scrollDirection = ScrollDown;
-        *scrollGranularity = ScrollByPage;
+        *scrollGranularity = ScrollGranularity::Page;
         break;
     default:
         return false;
@@ -708,13 +709,13 @@ static String agentOS()
 
 static String defaultUserAgent()
 {
-    static const auto userAgentString = makeNeverDestroyed([] {
+    static const NeverDestroyed userAgentString = [] {
         String wkVersion = makeString(
                               WEBKIT_MAJOR_VERSION, ".", WEBKIT_MINOR_VERSION,
                               " (KHTML, like Gecko) JavaFX/", JAVAFX_RELEASE_VERSION,
                               " Safari/", WEBKIT_MAJOR_VERSION, ".",  WEBKIT_MINOR_VERSION);
         return makeString("Mozilla/5.0 (", agentOS(), ") AppleWebKit/", wkVersion);
-    }());
+    }();
     return userAgentString;
 }
 
@@ -842,9 +843,8 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_WebPage_twkCreatePage
 {
     // FIXME-java(JDK-8169950): Refactor the following WebCore module
     // initialization flow.
-    JSC::initializeThreading();
+    JSC::initialize();
     WTF::initializeMainThread();
-    RunLoop::initializeMainRunLoop();
     // RT-17330: Allow local loads for substitute data, that is,
     // for content loaded with twkLoad
     WebCore::SecurityPolicy::setLocalLoadPolicy(
@@ -855,7 +855,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_WebPage_twkCreatePage
     VisitedLinkStoreJava::setShouldTrackVisitedLinks(true);
 
 #if !LOG_DISABLED
-    WebKitInitializeLogChannelsIfNecessary();
+    logChannels().initializeLogChannelsIfNecessary();
 #endif
     WebCore::PlatformStrategiesJava::initialize();
 
@@ -870,20 +870,20 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_WebPage_twkCreatePage
 
     //utaTODO: history agent implementation
 
-    auto pc = pageConfigurationWithEmptyClients();
+    auto pc = pageConfigurationWithEmptyClients(PAL::SessionID::defaultSessionID());
     auto pageStorageSessionProvider = PageStorageSessionProvider::create();
     pc.cookieJar = CookieJar::create(pageStorageSessionProvider.copyRef());
     pc.chromeClient = new ChromeClientJava(jlself);
     pc.contextMenuClient = new ContextMenuClientJava(jlself);
     pc.editorClient = makeUniqueRef<EditorClientJava>(jlself);
-    pc.dragClient = new DragClientJava(jlself);
+    pc.dragClient = makeUnique<DragClientJava>(jlself);
     pc.inspectorClient = new InspectorClientJava(jlself);
     pc.databaseProvider = &WebDatabaseProvider::singleton();
     pc.storageNamespaceProvider = adoptRef(new WebStorageNamespaceProviderJava());
     pc.visitedLinkStore = VisitedLinkStoreJava::create();
 
-    pc.loaderClientForMainFrame = new FrameLoaderClientJava(jlself);
-    pc.progressTrackerClient = new ProgressTrackerClientJava(jlself);
+    pc.loaderClientForMainFrame = makeUniqueRef<FrameLoaderClientJava>(jlself);
+    pc.progressTrackerClient = makeUniqueRef<ProgressTrackerClientJava>(jlself);
 
     pc.backForwardClient = BackForwardList::create();
     auto page = std::make_unique<Page>(WTFMove(pc));
@@ -914,6 +914,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkInit
     settings.setDefaultFixedFontSize(13);
     settings.setDefaultFontSize(16);
     settings.setContextMenuEnabled(true);
+    settings.setInputTypeColorEnabled(true);
     settings.setUserAgent(defaultUserAgent());
     settings.setMaximumHTMLParserDOMTreeDepth(180);
     settings.setXSSAuditorEnabled(true);
@@ -925,10 +926,12 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkInit
     settings.setFixedFontFamily("Monospaced");
     page->setDeviceScaleFactor(devicePixelScale);
 
-    RuntimeEnabledFeatures::sharedFeatures().setLinkPrefetchEnabled(true);
-    RuntimeEnabledFeatures::sharedFeatures().setInputTypeColorEnabled(true);
-    static_cast<FrameLoaderClientJava&>(page->mainFrame().loader().client())
-                                            .setFrame(&page->mainFrame());
+    settings.setLinkPrefetchEnabled(true);
+
+    FrameLoaderClientJava& client =
+        static_cast<FrameLoaderClientJava&>(page->mainFrame().loader().client());
+    client.init();
+    client.setFrame(&page->mainFrame());
 
     page->mainFrame().init();
 
@@ -1114,11 +1117,10 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkOpen
 
     static const URL emptyParent;
 
-    frame->loader().load(FrameLoadRequest(
-        *frame,
-        ResourceRequest(URL(emptyParent, String(env, url))),
-        ShouldOpenExternalURLsPolicy::ShouldNotAllow // TODO-java: recheck policy value
-    ));
+    FrameLoadRequest frameLoadRequest(
+        *frame, ResourceRequest(URL(emptyParent, String(env, url))));
+    frameLoadRequest.setIsRequestFromClientOrUserInput();
+    frame->loader().load(WTFMove(frameLoadRequest));
 }
 
 JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkLoad
@@ -1135,16 +1137,17 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkLoad
 
     static const URL emptyUrl({ }, "");
     ResourceResponse response(URL(), String(env, contentType), stringLen, "UTF-8");
-    frame->loader().load(FrameLoadRequest(
+    FrameLoadRequest frameLoadRequest(
         *frame,
         ResourceRequest(emptyUrl),
-        ShouldOpenExternalURLsPolicy::ShouldNotAllow, // TODO-java: recheck policy value
         SubstituteData(
             WTFMove(buffer),
             URL(),
             response,
             SubstituteData::SessionHistoryVisibility::Visible) // TODO-java: or Hidden?
-    ));
+    );
+    frameLoadRequest.setIsRequestFromClientOrUserInput();
+    frame->loader().load(WTFMove(frameLoadRequest));
 
     env->ReleaseStringUTFChars(text, stringChars);
 }
@@ -1272,33 +1275,42 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkOverridePreference
     Settings& settings = page->settings();
     String nativePropertyName(env, propertyName);
     String nativePropertyValue(env, propertyValue);
+    StringView nativePropertyString(nativePropertyValue);
 
-    if (nativePropertyName == "WebKitTextAreasAreResizable") {
-        settings.setTextAreasAreResizable(nativePropertyValue.toInt());
+    if (nativePropertyName == "CSSCounterStyleAtRulesEnabled") {
+        settings.setCSSCounterStyleAtRulesEnabled(nativePropertyValue == "true");
+    } else if (nativePropertyName == "CSSCounterStyleAtRuleImageSymbolsEnabled") {
+        settings.setCSSCounterStyleAtRuleImageSymbolsEnabled(nativePropertyValue == "true");
+    } else if (nativePropertyName == "CSSIndividualTransformPropertiesEnabled") {
+        settings.setCSSIndividualTransformPropertiesEnabled(nativePropertyValue == "true");
+    } else if (nativePropertyName == "CSSColorContrastEnabled") {
+        settings.setCSSColorContrastEnabled(nativePropertyValue == "true");
+    } else if (nativePropertyName == "WebKitTextAreasAreResizable") {
+        settings.setTextAreasAreResizable(parseIntegerAllowingTrailingJunk<int>(nativePropertyString).value());
     } else if (nativePropertyName == "WebKitLoadsImagesAutomatically") {
-        settings.setLoadsImagesAutomatically(nativePropertyValue.toInt());
+        settings.setLoadsImagesAutomatically(parseIntegerAllowingTrailingJunk<int>(nativePropertyString).value());
     } else if (nativePropertyName == "WebKitMinimumFontSize") {
-        settings.setMinimumFontSize(nativePropertyValue.toInt());
+        settings.setMinimumFontSize(parseIntegerAllowingTrailingJunk<int>(nativePropertyString).value());
     } else if (nativePropertyName == "WebKitMinimumLogicalFontSize") {
-        settings.setMinimumLogicalFontSize(nativePropertyValue.toInt());
+        settings.setMinimumLogicalFontSize(parseIntegerAllowingTrailingJunk<int>(nativePropertyString).value());
     } else if (nativePropertyName == "WebKitAcceleratedCompositingEnabled") {
-        settings.setAcceleratedCompositingEnabled(nativePropertyValue.toInt());
+        settings.setAcceleratedCompositingEnabled(parseIntegerAllowingTrailingJunk<int>(nativePropertyString).value());
     } else if (nativePropertyName == "WebKitScriptEnabled") {
-        settings.setScriptEnabled(nativePropertyValue.toInt());
+        settings.setScriptEnabled(parseIntegerAllowingTrailingJunk<int>(nativePropertyString).value());
     } else if (nativePropertyName == "WebKitJavaScriptCanOpenWindowsAutomatically") {
-        settings.setJavaScriptCanOpenWindowsAutomatically(nativePropertyValue.toInt());
+        settings.setJavaScriptCanOpenWindowsAutomatically(parseIntegerAllowingTrailingJunk<int>(nativePropertyString).value());
     } else if (nativePropertyName == "WebKitPluginsEnabled") {
-        settings.setPluginsEnabled(nativePropertyValue.toInt());
+        settings.setPluginsEnabled(parseIntegerAllowingTrailingJunk<int>(nativePropertyString).value());
     } else if (nativePropertyName == "WebKitDefaultFixedFontSize") {
-        settings.setDefaultFixedFontSize(nativePropertyValue.toInt());
+        settings.setDefaultFixedFontSize(parseIntegerAllowingTrailingJunk<int>(nativePropertyString).value());
     } else if (nativePropertyName == "WebKitContextMenuEnabled") {
-        settings.setContextMenuEnabled(nativePropertyValue.toInt());
+        settings.setContextMenuEnabled(parseIntegerAllowingTrailingJunk<int>(nativePropertyString).value());
     } else if (nativePropertyName == "WebKitUserAgent") {
         settings.setUserAgent(nativePropertyValue);
     } else if (nativePropertyName == "WebKitMaximumHTMLParserDOMTreeDepth") {
-        settings.setMaximumHTMLParserDOMTreeDepth(nativePropertyValue.toUInt());
+        settings.setMaximumHTMLParserDOMTreeDepth(parseIntegerAllowingTrailingJunk<uint32_t>(nativePropertyString).value());
     } else if (nativePropertyName == "WebKitXSSAuditorEnabled")  {
-        settings.setXSSAuditorEnabled(nativePropertyValue.toInt());
+        settings.setXSSAuditorEnabled(parseIntegerAllowingTrailingJunk<int>(nativePropertyString).value());
     } else if (nativePropertyName == "WebKitSerifFontFamily") {
         settings.setSerifFontFamily(nativePropertyValue);
     } else if (nativePropertyName == "WebKitSansSerifFontFamily") {
@@ -1306,27 +1318,45 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkOverridePreference
     } else if (nativePropertyName == "WebKitFixedFontFamily") {
         settings.setFixedFontFamily(nativePropertyValue);
     } else if (nativePropertyName == "WebKitShowsURLsInToolTips") {
-        settings.setShowsURLsInToolTips(nativePropertyValue.toInt());
-    } else if (nativePropertyName == "WebKitUsesPageCachePreferenceKey") {
-        settings.setUsesPageCache(nativePropertyValue.toInt() != 0);
-    } else if (nativePropertyName == "WebKitJavaScriptCanAccessClipboardPreferenceKey") {
-        settings.setJavaScriptCanAccessClipboard(nativePropertyValue.toInt() != 0);
+        settings.setShowsURLsInToolTips(parseIntegerAllowingTrailingJunk<int>(nativePropertyString).value());
+    } else if (nativePropertyName == "JavaScriptCanAccessClipboard") {
+        settings.setJavaScriptCanAccessClipboard(nativePropertyValue == "true");
+    } else if (nativePropertyName == "allowTopNavigationToDataURLs") {
+        settings.setAllowTopNavigationToDataURLs(nativePropertyValue == "true");
+    } else if (nativePropertyName == "UsesBackForwardCache") {
+        settings.setUsesBackForwardCache(nativePropertyValue == "true");
     } else if (nativePropertyName == "enableColorFilter") {
         settings.setColorFilterEnabled(nativePropertyValue == "true");
-    } else if (nativePropertyName == "enableKeygenElement") {
+    } /*else if (nativePropertyName == "KeygenElementEnabled") {
         // removed from Chrome, Firefox, and the HTML specification in 2017.
         // https://trac.webkit.org/changeset/248960/webkit
         RuntimeEnabledFeatures::sharedFeatures().setKeygenElementEnabled(nativePropertyValue == "true");
-    } else if (nativePropertyName == "experimental:WebAnimationsCSSIntegrationEnabled") {
-        RuntimeEnabledFeatures::sharedFeatures().setWebAnimationsCSSIntegrationEnabled(nativePropertyValue == "true");
+    } */else if (nativePropertyName == "CSSCustomPropertiesAndValuesEnabled") {
+        settings.setCSSCustomPropertiesAndValuesEnabled(nativePropertyValue == "true");
+    } else if (nativePropertyName == "experimental:CSSCustomPropertiesAndValuesEnabled") {
+        settings.setCSSCustomPropertiesAndValuesEnabled(nativePropertyValue == "true");
+    } else if (nativePropertyName == "IntersectionObserverEnabled") {
+#if ENABLE(INTERSECTION_OBSERVER)
+        settings.setIntersectionObserverEnabled(nativePropertyValue == "true");
+#endif
     } else if (nativePropertyName == "enableIntersectionObserver") {
 #if ENABLE(INTERSECTION_OBSERVER)
-        RuntimeEnabledFeatures::sharedFeatures().setIntersectionObserverEnabled(nativePropertyValue == "true");
+        settings.setIntersectionObserverEnabled(nativePropertyValue == "true");
 #endif
-    } else if(nativePropertyName == "jscOptions" && !nativePropertyValue.isEmpty()) {
+    } else if (nativePropertyName == "ResizeObserverEnabled") {
+#if ENABLE(RESIZE_OBSERVER)
+        settings.setResizeObserverEnabled(nativePropertyValue == "true");
+#endif
+    } else if (nativePropertyName == "RequestIdleCallbackEnabled") {
+        settings.setRequestIdleCallbackEnabled(nativePropertyValue == "true");
+    } else if (nativePropertyName == "ContactPickerAPIEnabled") {
+        settings.setContactPickerAPIEnabled(nativePropertyValue == "true");
+    } else if (nativePropertyName == "AttachmentElementEnabled") {
+#if ENABLE(ATTACHMENT_ELEMENT)
+        RuntimeEnabledFeatures::sharedFeatures().setAttachmentElementEnabled(nativePropertyValue == "true");
+#endif
+    } else if (nativePropertyName == "jscOptions" && !nativePropertyValue.isEmpty()) {
         JSC::Options::setOptions(nativePropertyValue.utf8().data());
-    } else if(nativePropertyName == "experimental:CSSCustomPropertiesAndValuesEnabled") {
-        RuntimeEnabledFeatures::sharedFeatures().setCSSCustomPropertiesAndValuesEnabled(nativePropertyValue == "true");
     }
 }
 
@@ -1356,24 +1386,26 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkResetToConsistentStateBefo
     settings.setJavaEnabled(false);
     settings.setFullScreenEnabled(true);
     settings.setScriptEnabled(true);
-    settings.setEditableLinkBehavior(EditableLinkOnlyLiveWithShiftKey);
+    settings.setEditableLinkBehavior(EditableLinkBehavior::OnlyLiveWithShiftKey);
     // settings.setTabsToLinks(false);
     settings.setDOMPasteAllowed(true);
     settings.setShouldPrintBackgrounds(true);
     // settings.setCacheModel(WebCacheModelDocumentBrowser);
     settings.setXSSAuditorEnabled(false);
-    settings.setExperimentalNotificationsEnabled(false);
     settings.setPluginsEnabled(true);
     settings.setTextAreasAreResizable(true);
-    settings.setUsesPageCache(false);
+    settings.setUsesBackForwardCache(false);
     settings.setCSSOMViewScrollingAPIEnabled(true);
+    settings.setRequestIdleCallbackEnabled(true);
 
     // settings.setPrivateBrowsingEnabled(false);
+    settings.setAllowTopNavigationToDataURLs(true);
     settings.setAuthorAndUserStylesEnabled(true);
     // Shrinks standalone images to fit: YES
     settings.setJavaScriptCanOpenWindowsAutomatically(true);
     settings.setJavaScriptCanAccessClipboard(true);
     settings.setOfflineWebApplicationCacheEnabled(true);
+    settings.setDataTransferItemsEnabled(true);
     // settings.setDeveloperExtrasEnabled(false);
     settings.setJavaScriptRuntimeFlags(JSC::RuntimeFlags(0));
     // Set JS experiments enabled: YES
@@ -1391,20 +1423,13 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkResetToConsistentStateBefo
     // Async spellcheck: NO
     DeprecatedGlobalSettings::setMockScrollbarsEnabled(true);
 
-
-    RuntimeEnabledFeatures::sharedFeatures().setFetchAPIEnabled(true);
-    RuntimeEnabledFeatures::sharedFeatures().setShadowDOMEnabled(true);
-    RuntimeEnabledFeatures::sharedFeatures().setCustomElementsEnabled(true);
-    RuntimeEnabledFeatures::sharedFeatures().setModernMediaControlsEnabled(false);
-    RuntimeEnabledFeatures::sharedFeatures().setResourceTimingEnabled(true);
-    RuntimeEnabledFeatures::sharedFeatures().setUserTimingEnabled(true);
-    RuntimeEnabledFeatures::sharedFeatures().setDataTransferItemsEnabled(true);
+    RuntimeEnabledFeatures::sharedFeatures().setHighlightAPIEnabled(true);
+    // RuntimeEnabledFeatures::sharedFeatures().setModernMediaControlsEnabled(false);
     RuntimeEnabledFeatures::sharedFeatures().setInspectorAdditionsEnabled(true);
-    RuntimeEnabledFeatures::sharedFeatures().setWebAnimationsEnabled(true);
     // RuntimeEnabledFeatures::sharedFeatures().clearNetworkLoaderSession();
 
     Frame& coreFrame = page->mainFrame();
-    auto globalContext = toGlobalRef(coreFrame.script().globalObject(mainThreadNormalWorld())->globalExec());
+    auto globalContext = toGlobalRef(coreFrame.script().globalObject(mainThreadNormalWorld()));
     WebCoreTestSupport::resetInternalsObject(globalContext);
 }
 
@@ -1509,7 +1534,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkPrint
 {
     auto webPage = WebPage::webPageFromJLong(pPage);
     PlatformContextJava* ppgc = new PlatformContextJava(rq, webPage->jRenderTheme());
-    GraphicsContext gc(ppgc);
+    GraphicsContextJava gc(ppgc);
     webPage->print(gc, pageIndex, width);
 }
 
@@ -1622,7 +1647,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkSetBackgroundColor
     if (!frame || !frame->view()) {
         return;
     }
-    frame->view()->setBaseBackgroundColor(Color(RGBA32(backgroundColor)));
+    frame->view()->setBaseBackgroundColor(asSRGBA(WebCore::PackedColor::RGBA { static_cast<uint32_t>(backgroundColor) }));
 }
 
 JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkPrePaint
@@ -1635,6 +1660,12 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkUpdateContent
     (JNIEnv* env, jobject self, jlong pPage, jobject rq, jint x, jint y, jint w, jint h)
 {
     WebPage::webPageFromJLong(pPage)->paint(rq, x, y, w, h);
+}
+
+JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkUpdateRendering
+    (JNIEnv*, jobject, jlong pPage)
+{
+    WebPage::pageFromJLong(pPage)->isolatedUpdateRendering();
 }
 
 JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkPostPaint
@@ -1687,12 +1718,12 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkProcessFocusEvent
                 // comment out the following line to get focus to the last
                 // focused node instead of the first focusable one
                 focusedFrame->document()->setFocusedElement(0);
-                focusController.advanceFocus(FocusDirectionForward, nullptr);
+                focusController.advanceFocus(FocusDirection::Backward, nullptr);
             } else if (direction == com_sun_webkit_event_WCFocusEvent_BACKWARD) {
                 // comment out the following line to get focus to the last
                 // focused node instead of the last focusable one
                 focusedFrame->document()->setFocusedElement(0);
-                focusController.advanceFocus(FocusDirectionBackward, nullptr);
+                focusController.advanceFocus(FocusDirection::Backward, nullptr);
             }
             break;
         case com_sun_webkit_event_WCFocusEvent_FOCUS_LOST:
@@ -1718,7 +1749,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_webkit_WebPage_twkProcessKeyEvent
 
 JNIEXPORT jboolean JNICALL Java_com_sun_webkit_WebPage_twkProcessMouseEvent
     (JNIEnv* env, jobject self, jlong pPage,
-     jint id, jint button, jint clickCount,
+     jint id, jint button, jint buttonMask, jint clickCount,
      jint x, jint y, jint screenX, jint screenY,
      jboolean shift, jboolean ctrl, jboolean alt, jboolean meta,
      jboolean popupTrigger, jdouble timestamp)
@@ -1744,6 +1775,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_webkit_WebPage_twkProcessMouseEvent
     PlatformMouseEvent mouseEvent = PlatformMouseEvent(loc,
                                                        IntPoint(screenX, screenY),
                                                        getWebCoreMouseButton(button),
+                                                       getWebCoreMouseButtons(buttonMask),
                                                        getWebCoreMouseEventType(id),
                                                        clickCount,
                                                        shift, ctrl, alt, meta,
@@ -1808,7 +1840,12 @@ JNIEXPORT jboolean JNICALL Java_com_sun_webkit_WebPage_twkProcessMouseWheelEvent
                                                        IntPoint(screenX, screenY),
                                                        deltaX, deltaY,
                                                        shift, ctrl, alt, meta);
-    bool consumeEvent = frame->eventHandler().handleWheelEvent(wheelEvent);
+    OptionSet<WheelEventProcessingSteps> processingSteps =
+    {
+        WheelEventProcessingSteps::MainThreadForScrolling,
+        WheelEventProcessingSteps::MainThreadForBlockingDOMEventDispatch
+    };
+    bool consumeEvent = frame->eventHandler().handleWheelEvent(wheelEvent, processingSteps);
 
     return bool_to_jbool(consumeEvent);
 }
@@ -1867,12 +1904,12 @@ JNIEXPORT jboolean JNICALL Java_com_sun_webkit_WebPage_twkProcessInputTextChange
                 underlines[x].startOffset = attrs[i++];
                 underlines[x].endOffset = attrs[i++];
                 underlines[x].thick = (attrs[i++] == 1);
-                underlines[x].color = Color(0, 0, 0);
+                underlines[x].color = Color::black;
             }
             env->ReleaseIntArrayElements(jattributes, attrs, JNI_ABORT);
         }
         String composed = String(env, jcomposed);
-        frame->editor().setComposition(composed, underlines, caretPosition, 0);
+        frame->editor().setComposition(composed, underlines, { }, caretPosition, 0);
     }
     return JNI_TRUE;
 }
@@ -1894,7 +1931,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_webkit_WebPage_twkProcessCaretPositionCh
 
     // FIXME: the following code may not work with having committed text
     Position position(text, caretPosition);
-    VisibleSelection selection(position, DOWNSTREAM);
+    VisibleSelection selection(position, Affinity::Downstream);
     frame->selection().setSelection(selection /*, default is CharacterGranularity*/);//true, false, false
     return JNI_TRUE;
 }
@@ -1943,7 +1980,7 @@ JNIEXPORT jint JNICALL Java_com_sun_webkit_WebPage_twkGetLocationOffset
 
     Editor &editor = frame->editor();
     if (editor.hasComposition()) {
-        RefPtr<Range> range = editor.compositionRange();
+        auto range = editor.compositionRange();
         for (Node* node = &range->startContainer(); node; node = NodeTraversal::next(*node)) {
             RenderObject* renderer = node->renderer();
             IntRect content = renderer->absoluteBoundingBoxRect();
@@ -1995,12 +2032,10 @@ JNIEXPORT jint JNICALL Java_com_sun_webkit_WebPage_twkGetCommittedTextLength
     jint length = 0;
     Editor &editor = frame->editor();
     if (editor.canEdit()) {
-        RefPtr<Range> range = rangeOfContents(*(Node*)frame->selection().selection().start().element());
-        // Code derived from Range::toString
-        Node* pastLast = range.get()->pastLastNode();
-        for (Node* n = range.get()->firstNode(); n != pastLast; n = NodeTraversal::next(*n)) {
-            if (n->nodeType() == Node::TEXT_NODE || n->nodeType() == Node::CDATA_SECTION_NODE) {
-                length += static_cast<CharacterData*>(n)->data().length();
+        SimpleRange range = makeRangeSelectingNodeContents(*(Node*)frame->selection().selection().start().element());
+        for (auto& node : intersectingNodes(range)) {
+            if (node.nodeType() == Node::TEXT_NODE || node.nodeType() == Node::CDATA_SECTION_NODE) {
+                length += downcast<CharacterData>(node).data().length();
             }
         }
         // Exclude the composition part if any
@@ -2023,9 +2058,9 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_WebPage_twkGetCommittedText
 
     Editor &editor = frame->editor();
     if (editor.canEdit()) {
-        RefPtr<Range> range = rangeOfContents(*(Node*)frame->selection().selection().start().element());
-        if (range) {
-            String t = plainText(range.get());
+        auto range = makeRangeSelectingNodeContents(*(Node*)frame->selection().selection().start().element());
+        if (!range.collapsed()) {
+            String t = plainText(range);
             // Exclude the composition text if any
             if (editor.hasComposition()) {
                 String s;
@@ -2071,28 +2106,28 @@ enum JAVA_DND_ACTION {
     ACTION_LINK = 0x40000000
 };
 
-static jint dragOperationToDragCursor(DragOperation op) {
+static jint dragOperationToDragCursor(std::optional<DragOperation> operation) {
     unsigned int res = ACTION_NONE;
-    if (op & DragOperationCopy)
+    if (operation == DragOperation::Copy)
         res = ACTION_COPY;
-    else if (op & DragOperationLink)
+    else if (operation == DragOperation::Link)
         res = ACTION_LINK;
-    else if (op & DragOperationMove)
+    else if (operation == DragOperation::Move)
         res = ACTION_MOVE;
-    else if (op & DragOperationGeneric)
+    else if (operation == DragOperation::Generic)
         res = ACTION_MOVE; //This appears to be the Firefox behaviour
     return res;
 }
 
-static DragOperation keyStateToDragOperation(jint javaAction) {
-    unsigned int action = DragOperationNone;
+static OptionSet<DragOperation> keyStateToDragOperation(jint javaAction) {
+    OptionSet<DragOperation> action = { };
     if(javaAction & ACTION_COPY)
-        action = DragOperationCopy;
+        action = { DragOperation::Copy };
     else if(javaAction & ACTION_LINK)
-        action = DragOperationLink;
+        action = { DragOperation::Link };
     else if(javaAction & ACTION_MOVE)
-        action = DragOperationMove;
-    return static_cast<DragOperation>(action);
+        action = { DragOperation::Move };
+    return action;
 }
 
 JNIEXPORT jint JNICALL Java_com_sun_webkit_WebPage_twkProcessDrag
@@ -2211,7 +2246,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_webkit_WebPage_twkQueryCommandState
         return JNI_FALSE;
     }
     Editor::Command cmd = editor->command(String(env, command));
-    return bool_to_jbool(cmd.state() == TrueTriState);
+    return bool_to_jbool(cmd.state() == TriState::True);
 }
 
 JNIEXPORT jstring JNICALL Java_com_sun_webkit_WebPage_twkQueryCommandValue
@@ -2277,7 +2312,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_webkit_WebPage_twkGetUsePageCache
     ASSERT(pPage);
     Page* page = WebPage::pageFromJLong(pPage);
     ASSERT(page);
-    return bool_to_jbool(page->settings().usesPageCache());
+    return bool_to_jbool(page->settings().usesBackForwardCache());
 }
 
 JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkSetUsePageCache
@@ -2286,7 +2321,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkSetUsePageCache
     ASSERT(pPage);
     Page* page = WebPage::pageFromJLong(pPage);
     ASSERT(page);
-    page->settings().setUsesPageCache(jbool_to_bool(usePageCache));
+    page->settings().setUsesBackForwardCache(jbool_to_bool(usePageCache));
 }
 
 JNIEXPORT jboolean JNICALL Java_com_sun_webkit_WebPage_twkIsJavaScriptEnabled

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2015, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,6 +27,19 @@ package javafx.scene.control;
 import javafx.beans.property.StringProperty;
 
 public class ControlShim extends Control {
+
+    /**
+     * Installs the default skin for the given control.
+     *
+     * Note that this has no noticeable effect if the control's
+     * skin already is set to the default skin (see skinProperty for
+     * implementations details).
+     *
+     * @param control the control to set the default skin on
+     */
+    public static void installDefaultSkin(Control control) {
+        control.setSkin(control.createDefaultSkin());
+    }
 
     public static StringProperty skinClassNameProperty(Control c) {
         return c.skinClassNameProperty();

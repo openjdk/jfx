@@ -25,16 +25,17 @@
 
 #pragma once
 
-#if ENABLE(INDEXED_DATABASE)
-
 #include "ExceptionOr.h"
+#include "JSDOMPromiseDeferred.h"
 #include <wtf/Function.h>
 #include <wtf/Forward.h>
+#include <wtf/IsoMalloc.h>
 #include <wtf/Ref.h>
 #include <wtf/ThreadSafeRefCounted.h>
 
 namespace JSC {
-class ExecState;
+class CallFrame;
+class JSGlobalObject;
 class JSValue;
 }
 
@@ -49,16 +50,26 @@ class IDBConnectionProxy;
 }
 
 class IDBFactory : public ThreadSafeRefCounted<IDBFactory> {
+    WTF_MAKE_ISO_ALLOCATED(IDBFactory);
 public:
     static Ref<IDBFactory> create(IDBClient::IDBConnectionProxy&);
     ~IDBFactory();
 
-    ExceptionOr<Ref<IDBOpenDBRequest>> open(ScriptExecutionContext&, const String& name, Optional<uint64_t> version);
+    struct DatabaseInfo {
+        String name;
+        uint64_t version;
+    };
+
+    ExceptionOr<Ref<IDBOpenDBRequest>> open(ScriptExecutionContext&, const String& name, std::optional<uint64_t> version);
     ExceptionOr<Ref<IDBOpenDBRequest>> deleteDatabase(ScriptExecutionContext&, const String& name);
 
-    ExceptionOr<short> cmp(JSC::ExecState&, JSC::JSValue first, JSC::JSValue second);
+    ExceptionOr<short> cmp(JSC::JSGlobalObject&, JSC::JSValue first, JSC::JSValue second);
 
-    WEBCORE_EXPORT void getAllDatabaseNames(const SecurityOrigin& mainFrameOrigin, const SecurityOrigin& openingOrigin, WTF::Function<void (const Vector<String>&)>&&);
+    using IDBDatabasesResponsePromise = DOMPromiseDeferred<IDLSequence<IDLDictionary<IDBFactory::DatabaseInfo>>>;
+
+    void databases(ScriptExecutionContext&, IDBDatabasesResponsePromise&&);
+
+    WEBCORE_EXPORT void getAllDatabaseNames(ScriptExecutionContext&, Function<void(const Vector<String>&)>&&);
 
 private:
     explicit IDBFactory(IDBClient::IDBConnectionProxy&);
@@ -69,5 +80,3 @@ private:
 };
 
 } // namespace WebCore
-
-#endif // ENABLE(INDEXED_DATABASE)

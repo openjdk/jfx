@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -32,11 +32,18 @@ package javafx.util;
  * @since JavaFX 2.0
  */
 public abstract class StringConverter<T> {
+
+    /**
+     * Creates a default {@code StringConverter}.
+     */
+    public StringConverter() {
+    }
+
     /**
     * Converts the object provided into its string form.
     * Format of the returned string is defined by the specific converter.
     * @param object the object of type {@code T} to convert
-    * @return a string representation of the object passed in.
+    * @return a string representation of the object passed in
     */
     public abstract String toString(T object);
 

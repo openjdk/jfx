@@ -29,9 +29,11 @@ enum FontFaceSetLoadStatus {
 };
 
 [
-    ConstructorCallWith=Document,
-    Constructor(sequence<FontFace> initialFaces),
+    ActiveDOMObject,
+    Exposed=(Window,Worker)
 ] interface FontFaceSet : EventTarget {
+    [CallWith=CurrentScriptExecutionContext] constructor(sequence<FontFace> initialFaces);
+
     boolean has(FontFace font);
 
     // FIXME: We should add support for the setlike declaration.
@@ -41,14 +43,14 @@ enum FontFaceSetLoadStatus {
 
     FontFaceSet add(FontFace font);
     [ImplementedAs=remove] boolean delete(FontFace font);
-    void clear();
+    undefined clear();
 
     attribute EventHandler onloading;
     attribute EventHandler onloadingdone;
     attribute EventHandler onloadingerror;
 
     Promise<sequence<FontFace>> load(DOMString font, optional DOMString text = " ");
-    [MayThrowException] boolean check(DOMString font, optional DOMString text = " ");
+    boolean check(DOMString font, optional DOMString text = " ");
 
     readonly attribute Promise<FontFaceSet> ready;
     readonly attribute FontFaceSetLoadStatus status;

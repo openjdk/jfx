@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2015 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,17 +26,19 @@
 #include "config.h"
 #include "DFGCommon.h"
 
-#include "DFGNode.h"
-#include "JSCInlines.h"
+#include <wtf/Lock.h>
 #include <wtf/PrintStream.h>
 
 #if ENABLE(DFG_JIT)
 
 namespace JSC { namespace DFG {
 
+const char* const tierName = "DFG ";
+
 static Lock crashLock;
 
-void startCrashing()
+// Use WTF_IGNORES_THREAD_SAFETY_ANALYSIS since the function keeps holding the lock when returning.
+void startCrashing() WTF_IGNORES_THREAD_SAFETY_ANALYSIS
 {
     crashLock.lock();
 }

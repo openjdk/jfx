@@ -23,12 +23,13 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef LengthPoint_h
-#define LengthPoint_h
+#pragma once
 
 #include "Length.h"
 
 namespace WebCore {
+
+struct BlendingContext;
 
 struct LengthPoint {
 public:
@@ -58,19 +59,19 @@ public:
     void setY(Length y) { m_y = WTFMove(y); }
     const Length& y() const { return m_y; }
 
+    bool isZero() const { return m_x.isZero() && m_y.isZero(); }
+
 private:
     // FIXME: it would be nice to pack the two Lengths together better somehow (to avoid padding between them).
     Length m_x;
     Length m_y;
 };
 
-inline LengthPoint blend(const LengthPoint& from, const LengthPoint& to, double progress)
+inline LengthPoint blend(const LengthPoint& from, const LengthPoint& to, const BlendingContext& context)
 {
-    return LengthPoint(blend(from.x(), to.x(), progress), blend(from.y(), to.y(), progress));
+    return LengthPoint(blend(from.x(), to.x(), context), blend(from.y(), to.y(), context));
 }
 
 WTF::TextStream& operator<<(WTF::TextStream&, const LengthPoint&);
 
 } // namespace WebCore
-
-#endif // LengthPoint_h

@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2011 Google Inc. All rights reserved.
  * Copyright (C) 2011, 2012, 2015 Ericsson AB. All rights reserved.
- * Copyright (C) 2013-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2022 Apple Inc. All rights reserved.
  * Copyright (C) 2013 Nokia Corporation and/or its subsidiary(-ies).
  *
  * Redistribution and use in source and binary forms, with or without
@@ -33,15 +33,11 @@
 #include "Document.h"
 #include "Event.h"
 #include "EventNames.h"
-#include "Frame.h"
-#include "FrameLoader.h"
 #include "Logging.h"
 #include "MediaStreamTrackEvent.h"
-#include "NetworkingContext.h"
 #include "Page.h"
 #include "RealtimeMediaSource.h"
 #include <wtf/IsoMallocInlines.h>
-#include <wtf/URL.h>
 
 namespace WebCore {
 
@@ -54,62 +50,57 @@ Ref<MediaStream> MediaStream::create(Document& document)
 
 Ref<MediaStream> MediaStream::create(Document& document, MediaStream& stream)
 {
-    return adoptRef(*new MediaStream(document, stream.getTracks()));
+    auto mediaStream = adoptRef(*new MediaStream(document, stream.getTracks()));
+    mediaStream->suspendIfNeeded();
+    return mediaStream;
 }
 
 Ref<MediaStream> MediaStream::create(Document& document, const MediaStreamTrackVector& tracks)
 {
-    return adoptRef(*new MediaStream(document, tracks));
+    auto mediaStream = adoptRef(*new MediaStream(document, tracks));
+    mediaStream->suspendIfNeeded();
+    return mediaStream;
 }
 
 Ref<MediaStream> MediaStream::create(Document& document, Ref<MediaStreamPrivate>&& streamPrivate)
 {
-    return adoptRef(*new MediaStream(document, WTFMove(streamPrivate)));
+    auto mediaStream = adoptRef(*new MediaStream(document, WTFMove(streamPrivate)));
+    mediaStream->suspendIfNeeded();
+    return mediaStream;
 }
 
 static inline MediaStreamTrackPrivateVector createTrackPrivateVector(const MediaStreamTrackVector& tracks)
 {
-    MediaStreamTrackPrivateVector trackPrivates;
-    trackPrivates.reserveCapacity(tracks.size());
-    for (auto& track : tracks)
-        trackPrivates.append(&track->privateTrack());
-    return trackPrivates;
+    return map(tracks, [](auto& track) {
+        return RefPtr { &track->privateTrack() };
+    });
 }
 
 MediaStream::MediaStream(Document& document, const MediaStreamTrackVector& tracks)
     : ActiveDOMObject(document)
     , m_private(MediaStreamPrivate::create(document.logger(), createTrackPrivateVector(tracks)))
-    , m_mediaSession(PlatformMediaSession::create(*this))
 {
     // This constructor preserves MediaStreamTrack instances and must be used by calls originating
     // from the JavaScript MediaStream constructor.
 
-    for (auto& track : tracks) {
-        track->addObserver(*this);
+    for (auto& track : tracks)
         m_trackSet.add(track->id(), track);
-    }
 
     setIsActive(m_private->active());
     m_private->addObserver(*this);
-    suspendIfNeeded();
 }
 
 MediaStream::MediaStream(Document& document, Ref<MediaStreamPrivate>&& streamPrivate)
     : ActiveDOMObject(document)
     , m_private(WTFMove(streamPrivate))
-    , m_mediaSession(PlatformMediaSession::create(*this))
 {
     ALWAYS_LOG(LOGIDENTIFIER);
 
+    for (auto& trackPrivate : m_private->tracks())
+        m_trackSet.add(trackPrivate->id(), MediaStreamTrack::create(document, *trackPrivate));
+
     setIsActive(m_private->active());
     m_private->addObserver(*this);
-
-    for (auto& trackPrivate : m_private->tracks()) {
-        auto track = MediaStreamTrack::create(document, *trackPrivate);
-        track->addObserver(*this);
-        m_trackSet.add(track->id(), WTFMove(track));
-    }
-    suspendIfNeeded();
 }
 
 MediaStream::~MediaStream()
@@ -118,9 +109,7 @@ MediaStream::~MediaStream()
     // mediaState(), are short circuited.
     m_isActive = false;
     m_private->removeObserver(*this);
-    for (auto& track : m_trackSet.values())
-        track->removeObserver(*this);
-    if (Document* document = this->document()) {
+    if (auto* document = this->document()) {
         if (m_isWaitingUntilMediaCanStart)
             document->removeMediaCanStartListener(*this);
     }
@@ -130,64 +119,57 @@ RefPtr<MediaStream> MediaStream::clone()
 {
     ALWAYS_LOG(LOGIDENTIFIER);
 
-    MediaStreamTrackVector clonedTracks;
-    clonedTracks.reserveInitialCapacity(m_trackSet.size());
-
-    for (auto& track : m_trackSet.values())
-        clonedTracks.uncheckedAppend(track->clone());
-
-    return MediaStream::create(*document(), clonedTracks);
+    auto clonedTracks = WTF::map(m_trackSet, [](auto& entry) {
+        return entry.value->clone();
+    });
+    return MediaStream::create(*document(), WTFMove(clonedTracks));
 }
 
 void MediaStream::addTrack(MediaStreamTrack& track)
 {
     ALWAYS_LOG(LOGIDENTIFIER, track.logIdentifier());
-
-    if (!internalAddTrack(track, StreamModifier::DomAPI))
+    if (getTrackById(track.privateTrack().id()))
         return;
 
-    for (auto& observer : m_observers)
-        observer->didAddOrRemoveTrack();
+    internalAddTrack(track);
+    m_private->addTrack(track.privateTrack());
 }
 
 void MediaStream::removeTrack(MediaStreamTrack& track)
 {
     ALWAYS_LOG(LOGIDENTIFIER, track.logIdentifier());
-
-    if (!internalRemoveTrack(track.id(), StreamModifier::DomAPI))
-        return;
-
-    for (auto& observer : m_observers)
-        observer->didAddOrRemoveTrack();
+    if (auto taken = internalTakeTrack(track.id())) {
+        ASSERT(taken.get() == &track);
+        m_private->removeTrack(track.privateTrack());
+    }
 }
 
 MediaStreamTrack* MediaStream::getTrackById(String id)
 {
-    auto it = m_trackSet.find(id);
-    if (it != m_trackSet.end())
-        return it->value.get();
+    auto iterator = m_trackSet.find(id);
+    if (iterator != m_trackSet.end())
+        return iterator->value.get();
 
     return nullptr;
 }
 
 MediaStreamTrackVector MediaStream::getAudioTracks() const
 {
-    return trackVectorForType(RealtimeMediaSource::Type::Audio);
+    return filteredTracks([] (auto& track) mutable {
+        return track.hasAudio();
+    });
 }
 
 MediaStreamTrackVector MediaStream::getVideoTracks() const
 {
-    return trackVectorForType(RealtimeMediaSource::Type::Video);
+    return filteredTracks([] (auto& track) mutable {
+        return track.hasVideo();
+    });
 }
 
 MediaStreamTrackVector MediaStream::getTracks() const
 {
     return copyToVector(m_trackSet.values());
-}
-
-void MediaStream::trackDidEnd()
-{
-    m_private->updateActiveState(MediaStreamPrivate::NotifyClientOption::Notify);
 }
 
 void MediaStream::activeStatusChanged()
@@ -201,60 +183,44 @@ void MediaStream::didAddTrack(MediaStreamTrackPrivate& trackPrivate)
     if (!context)
         return;
 
-    if (!getTrackById(trackPrivate.id()))
-        internalAddTrack(MediaStreamTrack::create(*context, trackPrivate), StreamModifier::Platform);
+    if (getTrackById(trackPrivate.id()))
+        return;
+
+    auto track = MediaStreamTrack::create(*context, trackPrivate);
+    internalAddTrack(track.copyRef());
+    dispatchEvent(MediaStreamTrackEvent::create(eventNames().addtrackEvent, Event::CanBubble::No, Event::IsCancelable::No, WTFMove(track)));
 }
 
 void MediaStream::didRemoveTrack(MediaStreamTrackPrivate& trackPrivate)
 {
-    internalRemoveTrack(trackPrivate.id(), StreamModifier::Platform);
+    if (auto track = internalTakeTrack(trackPrivate.id()))
+        dispatchEvent(MediaStreamTrackEvent::create(eventNames().removetrackEvent, Event::CanBubble::No, Event::IsCancelable::No, WTFMove(track)));
 }
 
 void MediaStream::addTrackFromPlatform(Ref<MediaStreamTrack>&& track)
 {
     ALWAYS_LOG(LOGIDENTIFIER, track->logIdentifier());
 
-    auto* privateTrack = &track->privateTrack();
-    internalAddTrack(WTFMove(track), StreamModifier::Platform);
-    m_private->addTrack(privateTrack, MediaStreamPrivate::NotifyClientOption::Notify);
+    auto& privateTrack = track->privateTrack();
+    internalAddTrack(track.copyRef());
+    m_private->addTrack(privateTrack);
+    dispatchEvent(MediaStreamTrackEvent::create(eventNames().addtrackEvent, Event::CanBubble::No, Event::IsCancelable::No, WTFMove(track)));
 }
 
-bool MediaStream::internalAddTrack(Ref<MediaStreamTrack>&& trackToAdd, StreamModifier streamModifier)
+void MediaStream::internalAddTrack(Ref<MediaStreamTrack>&& trackToAdd)
 {
-    auto result = m_trackSet.add(trackToAdd->id(), WTFMove(trackToAdd));
-    if (!result.isNewEntry)
-        return false;
-
-    ASSERT(result.iterator->value);
-    auto& track = *result.iterator->value;
-    track.addObserver(*this);
-
+    ASSERT(!m_trackSet.contains(trackToAdd->id()));
+    m_trackSet.add(trackToAdd->id(), WTFMove(trackToAdd));
     updateActiveState();
-
-    if (streamModifier == StreamModifier::DomAPI)
-        m_private->addTrack(&track.privateTrack(), MediaStreamPrivate::NotifyClientOption::DontNotify);
-    else
-        dispatchEvent(MediaStreamTrackEvent::create(eventNames().addtrackEvent, Event::CanBubble::No, Event::IsCancelable::No, &track));
-
-    return true;
 }
 
-bool MediaStream::internalRemoveTrack(const String& trackId, StreamModifier streamModifier)
+RefPtr<MediaStreamTrack> MediaStream::internalTakeTrack(const String& trackId)
 {
     auto track = m_trackSet.take(trackId);
-    if (!track)
-        return false;
+    if (track)
+        updateActiveState();
 
-    track->removeObserver(*this);
-
-    updateActiveState();
-
-    if (streamModifier == StreamModifier::DomAPI)
-        m_private->removeTrack(track->privateTrack(), MediaStreamPrivate::NotifyClientOption::DontNotify);
-    else
-        dispatchEvent(MediaStreamTrackEvent::create(eventNames().removetrackEvent, Event::CanBubble::No, Event::IsCancelable::No, WTFMove(track)));
-
-    return true;
+    return track;
 }
 
 void MediaStream::setIsActive(bool active)
@@ -302,43 +268,36 @@ void MediaStream::startProducingData()
     if (m_isProducingData)
         return;
     m_isProducingData = true;
-
-    m_mediaSession->canProduceAudioChanged();
     m_private->startProducingData();
 }
 
 void MediaStream::stopProducingData()
 {
+    ALWAYS_LOG(LOGIDENTIFIER);
+
     if (!m_isProducingData)
         return;
 
-    ALWAYS_LOG(LOGIDENTIFIER);
-
     m_isProducingData = false;
-
-    m_mediaSession->canProduceAudioChanged();
-
     m_private->stopProducingData();
 }
 
-MediaProducer::MediaStateFlags MediaStream::mediaState() const
+MediaProducerMediaStateFlags MediaStream::mediaState() const
 {
-    MediaProducer::MediaStateFlags state = MediaProducer::IsNotPlaying;
+    MediaProducerMediaStateFlags state;
 
     if (!m_isActive || !document() || !document()->page())
         return state;
 
     for (const auto& track : m_trackSet.values())
-        state |= track->mediaState();
+        state.add(track->mediaState());
 
     return state;
 }
 
 void MediaStream::statusDidChange()
 {
-    m_mediaSession->canProduceAudioChanged();
-
-    if (Document* document = this->document()) {
+    if (auto* document = this->document()) {
         if (!m_isActive)
             return;
         document->updateIsPlayingMedia();
@@ -370,95 +329,20 @@ void MediaStream::updateActiveState()
     setIsActive(active);
 }
 
-MediaStreamTrackVector MediaStream::trackVectorForType(RealtimeMediaSource::Type filterType) const
+MediaStreamTrackVector MediaStream::filteredTracks(const Function<bool(const MediaStreamTrack&)>& filter) const
 {
     MediaStreamTrackVector tracks;
     for (auto& track : m_trackSet.values()) {
-        if (track->source().type() == filterType)
+        if (filter(*track))
             tracks.append(track);
     }
 
     return tracks;
 }
 
-void MediaStream::addObserver(MediaStream::Observer* observer)
-{
-    if (m_observers.find(observer) == notFound)
-        m_observers.append(observer);
-}
-
-void MediaStream::removeObserver(MediaStream::Observer* observer)
-{
-    size_t pos = m_observers.find(observer);
-    if (pos != notFound)
-        m_observers.remove(pos);
-}
-
 Document* MediaStream::document() const
 {
     return downcast<Document>(scriptExecutionContext());
-}
-
-PlatformMediaSession::MediaType MediaStream::mediaType() const
-{
-    // We only need to override the type when capturing audio, HTMLMediaElement and/or WebAudio
-    // will do the right thing when a stream is attached to a media element or an audio context.
-    if (m_private->hasAudio() && m_isProducingData && m_private->hasCaptureAudioSource())
-        return PlatformMediaSession::MediaStreamCapturingAudio;
-
-    return PlatformMediaSession::None;
-}
-
-PlatformMediaSession::MediaType MediaStream::presentationType() const
-{
-    return mediaType();
-}
-
-PlatformMediaSession::CharacteristicsFlags MediaStream::characteristics() const
-{
-    PlatformMediaSession::CharacteristicsFlags state = PlatformMediaSession::HasNothing;
-
-    if (!m_isProducingData)
-        return state;
-
-    if (m_private->hasAudio())
-        state |= PlatformMediaSession::HasAudio;
-
-    if (m_private->hasVideo())
-        state |= PlatformMediaSession::HasVideo;
-
-    return state;
-}
-
-void MediaStream::mayResumePlayback(bool)
-{
-    // FIXME: should a media stream pay attention to this directly, or only when attached to a media element?
-}
-
-void MediaStream::suspendPlayback()
-{
-    // FIXME: should a media stream pay attention to this directly, or only when attached to a media element?
-}
-
-String MediaStream::sourceApplicationIdentifier() const
-{
-    Document* document = this->document();
-    if (document && document->frame()) {
-        if (NetworkingContext* networkingContext = document->frame()->loader().networkingContext())
-            return networkingContext->sourceApplicationIdentifier();
-    }
-
-    return emptyString();
-}
-
-bool MediaStream::canProduceAudio() const
-{
-    return !muted() && active() && m_private->hasAudio() && m_isProducingData;
-}
-
-bool MediaStream::processingUserGestureForMedia() const
-{
-    return document() ? document()->processingUserGestureForMedia() : false;
 }
 
 void MediaStream::stop()
@@ -471,12 +355,7 @@ const char* MediaStream::activeDOMObjectName() const
     return "MediaStream";
 }
 
-bool MediaStream::canSuspendForDocumentSuspension() const
-{
-    return !hasPendingActivity();
-}
-
-bool MediaStream::hasPendingActivity() const
+bool MediaStream::virtualHasPendingActivity() const
 {
     return m_isActive;
 }

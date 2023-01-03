@@ -23,8 +23,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef Chunk_h
-#define Chunk_h
+#pragma once
 
 #include "Object.h"
 #include "Sizes.h"
@@ -33,11 +32,14 @@
 #include "VMAllocate.h"
 #include <array>
 
+#if !BUSE(LIBPAS)
+
 namespace bmalloc {
 
 class Chunk : public ListNode<Chunk> {
 public:
     static Chunk* get(void*);
+    static size_t metadataSize(size_t pageSize);
 
     Chunk(size_t pageSize);
 
@@ -65,21 +67,16 @@ private:
     std::array<SmallPage, chunkSize / smallPageSize> m_pages { };
 };
 
-struct ChunkHash {
-    static unsigned hash(Chunk* key)
-    {
-        return static_cast<unsigned>(
-            reinterpret_cast<uintptr_t>(key) / chunkSize);
-    }
-};
-
-template<typename Function> void forEachPage(Chunk* chunk, size_t pageSize, Function function)
+inline size_t Chunk::metadataSize(size_t pageSize)
 {
     // We align to at least the page size so we can service aligned allocations
     // at equal and smaller powers of two, and also so we can vmDeallocatePhysicalPages().
-    size_t metadataSize = roundUpToMultipleOfNonPowerOfTwo(pageSize, sizeof(Chunk));
+    return roundUpToMultipleOfNonPowerOfTwo(pageSize, sizeof(Chunk));
+}
 
-    Object begin(chunk, metadataSize);
+template<typename Function> void forEachPage(Chunk* chunk, size_t pageSize, Function function)
+{
+    Object begin(chunk, Chunk::metadataSize(pageSize));
     Object end(chunk, chunkSize);
 
     for (auto it = begin; it + pageSize <= end; it = it + pageSize)
@@ -177,4 +174,4 @@ inline SmallPage* Object::page()
 
 }; // namespace bmalloc
 
-#endif // Chunk
+#endif

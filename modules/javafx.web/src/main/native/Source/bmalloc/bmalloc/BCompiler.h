@@ -38,6 +38,18 @@
 
 #define BASAN_ENABLED BCOMPILER_HAS_CLANG_FEATURE(address_sanitizer)
 
+/* BCOMPILER_HAS_CLANG_DECLSPEC() - whether the compiler supports a Microsoft style __declspec attribute. */
+/* https://clang.llvm.org/docs/LanguageExtensions.html#has-declspec-attribute */
+#ifdef __has_declspec_attribute
+#define BCOMPILER_HAS_CLANG_DECLSPEC(x) __has_declspec_attribute(x)
+#else
+#define BCOMPILER_HAS_CLANG_DECLSPEC(x) 0
+#endif
+
+#if defined(__clang__)
+#define BCOMPILER_CLANG 1
+#endif
+
 /* BCOMPILER(GCC_COMPATIBLE) - GNU Compiler Collection or compatibles */
 
 #if defined(__GNUC__)
@@ -70,4 +82,14 @@
 
 #if !defined(BFALLTHROUGH)
 #define BFALLTHROUGH
+#endif
+
+/* BUNUSED_TYPE_ALIAS */
+
+#if !defined(BUNUSED_TYPE_ALIAS) && BCOMPILER(GCC_COMPATIBLE)
+#define BUNUSED_TYPE_ALIAS __attribute__((unused))
+#endif
+
+#if !defined(BUNUSED_TYPE_ALIAS)
+#define BUNUSED_TYPE_ALIAS
 #endif

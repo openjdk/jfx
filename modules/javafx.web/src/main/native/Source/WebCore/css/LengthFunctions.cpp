@@ -26,6 +26,7 @@
 
 #include "FloatSize.h"
 #include "LayoutSize.h"
+#include "LengthPoint.h"
 #include "LengthSize.h"
 
 namespace WebCore {
@@ -38,20 +39,76 @@ int intValueForLength(const Length& length, LayoutUnit maximumValue)
 LayoutUnit valueForLength(const Length& length, LayoutUnit maximumValue)
 {
     switch (length.type()) {
-    case Fixed:
-    case Percent:
-    case Calculated:
+    case LengthType::Fixed:
+    case LengthType::Percent:
+    case LengthType::Calculated:
         return minimumValueForLength(length, maximumValue);
-    case FillAvailable:
-    case Auto:
+    case LengthType::FillAvailable:
+    case LengthType::Auto:
         return maximumValue;
-    case Relative:
-    case Intrinsic:
-    case MinIntrinsic:
-    case MinContent:
-    case MaxContent:
-    case FitContent:
-    case Undefined:
+    case LengthType::Relative:
+    case LengthType::Intrinsic:
+    case LengthType::MinIntrinsic:
+    case LengthType::Content:
+    case LengthType::MinContent:
+    case LengthType::MaxContent:
+    case LengthType::FitContent:
+    case LengthType::Undefined:
+        ASSERT_NOT_REACHED();
+        return 0;
+    }
+    ASSERT_NOT_REACHED();
+    return 0;
+}
+
+// FIXME: when subpixel layout is supported this copy of floatValueForLength() can be removed. See bug 71143.
+float floatValueForLength(const Length& length, LayoutUnit maximumValue)
+{
+    switch (length.type()) {
+    case LengthType::Fixed:
+        return length.value();
+    case LengthType::Percent:
+        return static_cast<float>(maximumValue * length.percent() / 100.0f);
+    case LengthType::FillAvailable:
+    case LengthType::Auto:
+        return static_cast<float>(maximumValue);
+    case LengthType::Calculated:
+        return length.nonNanCalculatedValue(maximumValue);
+    case LengthType::Relative:
+    case LengthType::Intrinsic:
+    case LengthType::MinIntrinsic:
+    case LengthType::Content:
+    case LengthType::MinContent:
+    case LengthType::MaxContent:
+    case LengthType::FitContent:
+    case LengthType::Undefined:
+        ASSERT_NOT_REACHED();
+        return 0;
+    }
+    ASSERT_NOT_REACHED();
+    return 0;
+}
+
+float floatValueForLength(const Length& length, float maximumValue)
+{
+    switch (length.type()) {
+    case LengthType::Fixed:
+        return length.value();
+    case LengthType::Percent:
+        return static_cast<float>(maximumValue * length.percent() / 100.0f);
+    case LengthType::FillAvailable:
+    case LengthType::Auto:
+        return static_cast<float>(maximumValue);
+    case LengthType::Calculated:
+        return length.nonNanCalculatedValue(maximumValue);
+    case LengthType::Relative:
+    case LengthType::Intrinsic:
+    case LengthType::MinIntrinsic:
+    case LengthType::Content:
+    case LengthType::MinContent:
+    case LengthType::MaxContent:
+    case LengthType::FitContent:
+    case LengthType::Undefined:
         ASSERT_NOT_REACHED();
         return 0;
     }
@@ -64,62 +121,19 @@ LayoutSize sizeForLengthSize(const LengthSize& length, const LayoutSize& maximum
     return { valueForLength(length.width, maximumValue.width()), valueForLength(length.height, maximumValue.height()) };
 }
 
-// FIXME: when subpixel layout is supported this copy of floatValueForLength() can be removed. See bug 71143.
-float floatValueForLength(const Length& length, LayoutUnit maximumValue)
+LayoutPoint pointForLengthPoint(const LengthPoint& lengthPoint, const LayoutSize& maximumValue)
 {
-    switch (length.type()) {
-    case Fixed:
-        return length.value();
-    case Percent:
-        return static_cast<float>(maximumValue * length.percent() / 100.0f);
-    case FillAvailable:
-    case Auto:
-        return static_cast<float>(maximumValue);
-    case Calculated:
-        return length.nonNanCalculatedValue(maximumValue);
-    case Relative:
-    case Intrinsic:
-    case MinIntrinsic:
-    case MinContent:
-    case MaxContent:
-    case FitContent:
-    case Undefined:
-        ASSERT_NOT_REACHED();
-        return 0;
-    }
-    ASSERT_NOT_REACHED();
-    return 0;
-}
-
-float floatValueForLength(const Length& length, float maximumValue)
-{
-    switch (length.type()) {
-    case Fixed:
-        return length.value();
-    case Percent:
-        return static_cast<float>(maximumValue * length.percent() / 100.0f);
-    case FillAvailable:
-    case Auto:
-        return static_cast<float>(maximumValue);
-    case Calculated:
-        return length.nonNanCalculatedValue(maximumValue);
-    case Relative:
-    case Intrinsic:
-    case MinIntrinsic:
-    case MinContent:
-    case MaxContent:
-    case FitContent:
-    case Undefined:
-        ASSERT_NOT_REACHED();
-        return 0;
-    }
-    ASSERT_NOT_REACHED();
-    return 0;
+    return { valueForLength(lengthPoint.x(), maximumValue.width()), valueForLength(lengthPoint.y(), maximumValue.height()) };
 }
 
 FloatSize floatSizeForLengthSize(const LengthSize& lengthSize, const FloatSize& boxSize)
 {
     return { floatValueForLength(lengthSize.width, boxSize.width()), floatValueForLength(lengthSize.height, boxSize.height()) };
+}
+
+FloatPoint floatPointForLengthPoint(const LengthPoint& lengthPoint, const FloatSize& boxSize)
+{
+    return { floatValueForLength(lengthPoint.x(), boxSize.width()), floatValueForLength(lengthPoint.y(), boxSize.height()) };
 }
 
 } // namespace WebCore

@@ -32,6 +32,7 @@
 #include "ScriptController.h"
 #include "runtime_root.h"
 #include <JavaScriptCore/JSLock.h>
+#include <JavaScriptCore/StrongInlines.h>
 #include <JavaScriptCore/WeakGCMapInlines.h>
 #include <wtf/MemoryPressureHandler.h>
 
@@ -52,14 +53,20 @@ static void collectGarbageAfterWindowProxyDestruction()
 }
 
 WindowProxy::WindowProxy(AbstractFrame& frame)
-    : m_frame(&frame)
+    : m_frame(frame)
+    , m_jsWindowProxies(makeUniqueRef<ProxyMap>())
 {
 }
 
 WindowProxy::~WindowProxy()
 {
     ASSERT(!m_frame);
-    ASSERT(m_jsWindowProxies.isEmpty());
+    ASSERT(m_jsWindowProxies->isEmpty());
+}
+
+AbstractFrame* WindowProxy::frame() const
+{
+    return m_frame.get();
 }
 
 void WindowProxy::detachFromFrame()
@@ -69,9 +76,9 @@ void WindowProxy::detachFromFrame()
     m_frame = nullptr;
 
     // It's likely that destroying windowProxies will create a lot of garbage.
-    if (!m_jsWindowProxies.isEmpty()) {
-        while (!m_jsWindowProxies.isEmpty()) {
-            auto it = m_jsWindowProxies.begin();
+    if (!m_jsWindowProxies->isEmpty()) {
+        while (!m_jsWindowProxies->isEmpty()) {
+            auto it = m_jsWindowProxies->begin();
             it->value->window()->setConsoleClient(nullptr);
             destroyJSWindowProxy(*it->key);
         }
@@ -81,8 +88,8 @@ void WindowProxy::detachFromFrame()
 
 void WindowProxy::destroyJSWindowProxy(DOMWrapperWorld& world)
 {
-    ASSERT(m_jsWindowProxies.contains(&world));
-    m_jsWindowProxies.remove(&world);
+    ASSERT(m_jsWindowProxies->contains(&world));
+    m_jsWindowProxies->remove(&world);
     world.didDestroyWindowProxy(this);
 }
 
@@ -90,21 +97,20 @@ JSWindowProxy& WindowProxy::createJSWindowProxy(DOMWrapperWorld& world)
 {
     ASSERT(m_frame);
 
-    ASSERT(!m_jsWindowProxies.contains(&world));
+    ASSERT(!m_jsWindowProxies->contains(&world));
     ASSERT(m_frame->window());
 
     VM& vm = world.vm();
 
     Strong<JSWindowProxy> jsWindowProxy(vm, &JSWindowProxy::create(vm, *m_frame->window(), world));
-    Strong<JSWindowProxy> jsWindowProxy2(jsWindowProxy);
-    m_jsWindowProxies.add(&world, jsWindowProxy);
+    m_jsWindowProxies->add(&world, jsWindowProxy);
     world.didCreateWindowProxy(this);
     return *jsWindowProxy.get();
 }
 
 Vector<JSC::Strong<JSWindowProxy>> WindowProxy::jsWindowProxiesAsVector() const
 {
-    return copyToVector(m_jsWindowProxies.values());
+    return copyToVector(m_jsWindowProxies->values());
 }
 
 JSDOMGlobalObject* WindowProxy::globalObject(DOMWrapperWorld& world)
@@ -125,9 +131,9 @@ JSWindowProxy& WindowProxy::createJSWindowProxyWithInitializedScript(DOMWrapperW
     return windowProxy;
 }
 
-void WindowProxy::clearJSWindowProxiesNotMatchingDOMWindow(AbstractDOMWindow* newDOMWindow, bool goingIntoPageCache)
+void WindowProxy::clearJSWindowProxiesNotMatchingDOMWindow(AbstractDOMWindow* newDOMWindow, bool goingIntoBackForwardCache)
 {
-    if (m_jsWindowProxies.isEmpty())
+    if (m_jsWindowProxies->isEmpty())
         return;
 
     JSLockHolder lock(commonVM());
@@ -145,7 +151,7 @@ void WindowProxy::clearJSWindowProxiesNotMatchingDOMWindow(AbstractDOMWindow* ne
 
     // It's likely that resetting our windows created a lot of garbage, unless
     // it went in a back/forward cache.
-    if (!goingIntoPageCache)
+    if (!goingIntoBackForwardCache)
         collectGarbageAfterWindowProxyDestruction();
 }
 
@@ -153,7 +159,7 @@ void WindowProxy::setDOMWindow(AbstractDOMWindow* newDOMWindow)
 {
     ASSERT(newDOMWindow);
 
-    if (m_jsWindowProxies.isEmpty())
+    if (m_jsWindowProxies->isEmpty())
         return;
 
     ASSERT(m_frame);
@@ -182,13 +188,13 @@ void WindowProxy::setDOMWindow(AbstractDOMWindow* newDOMWindow)
         windowProxy->attachDebugger(page ? page->debugger() : nullptr);
         if (page)
             windowProxy->window()->setProfileGroup(page->group().identifier());
-        windowProxy->window()->setConsoleClient(page ? &page->console() : nullptr);
+        windowProxy->window()->setConsoleClient(page->console());
     }
 }
 
 void WindowProxy::attachDebugger(JSC::Debugger* debugger)
 {
-    for (auto& windowProxy : m_jsWindowProxies.values())
+    for (auto& windowProxy : m_jsWindowProxies->values())
         windowProxy->attachDebugger(debugger);
 }
 
@@ -196,5 +202,27 @@ AbstractDOMWindow* WindowProxy::window() const
 {
     return m_frame ? m_frame->window() : nullptr;
 }
+
+WindowProxy::ProxyMap::ValuesConstIteratorRange WindowProxy::jsWindowProxies() const
+{
+    return m_jsWindowProxies->values();
+}
+
+WindowProxy::ProxyMap WindowProxy::releaseJSWindowProxies()
+{
+    return std::exchange(m_jsWindowProxies, makeUniqueRef<ProxyMap>());
+}
+
+void WindowProxy::setJSWindowProxies(ProxyMap&& windowProxies)
+{
+    m_jsWindowProxies = makeUniqueRef<ProxyMap>(WTFMove(windowProxies));
+}
+
+#if PLATFORM(JAVA)
+void WindowProxy::set_existing_window_proxy(bool existingWindowProxy_, DOMWrapperWorld& world) {
+    VM& vm = world.vm();
+    vm.set_existing_window_proxy(existingWindowProxy_);
+}
+#endif
 
 } // namespace WebCore

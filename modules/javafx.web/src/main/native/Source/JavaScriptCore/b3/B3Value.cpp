@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -38,11 +38,8 @@
 #include "B3OriginDump.h"
 #include "B3ProcedureInlines.h"
 #include "B3SlotBaseValue.h"
-#include "B3StackSlot.h"
-#include "B3UpsilonValue.h"
 #include "B3ValueInlines.h"
 #include "B3ValueKeyInlines.h"
-#include "B3VariableValue.h"
 #include "B3WasmBoundsCheckValue.h"
 #include <wtf/CommaPrinter.h>
 #include <wtf/ListDump.h>
@@ -51,7 +48,7 @@
 
 namespace JSC { namespace B3 {
 
-const char* const Value::dumpPrefix = "@";
+const char* const Value::dumpPrefix = "b@";
 void DeepValueDump::dump(PrintStream& out) const
 {
     if (m_value)
@@ -292,6 +289,16 @@ Value* Value::uModConstant(Procedure&, const Value*) const
     return nullptr;
 }
 
+Value* Value::fMinConstant(Procedure&, const Value*) const
+{
+    return nullptr;
+}
+
+Value* Value::fMaxConstant(Procedure&, const Value*) const
+{
+    return nullptr;
+}
+
 Value* Value::bitAndConstant(Procedure&, const Value*) const
 {
     return nullptr;
@@ -379,64 +386,64 @@ Value* Value::sqrtConstant(Procedure&) const
 
 TriState Value::equalConstant(const Value*) const
 {
-    return MixedTriState;
+    return TriState::Indeterminate;
 }
 
 TriState Value::notEqualConstant(const Value*) const
 {
-    return MixedTriState;
+    return TriState::Indeterminate;
 }
 
 TriState Value::lessThanConstant(const Value*) const
 {
-    return MixedTriState;
+    return TriState::Indeterminate;
 }
 
 TriState Value::greaterThanConstant(const Value*) const
 {
-    return MixedTriState;
+    return TriState::Indeterminate;
 }
 
 TriState Value::lessEqualConstant(const Value*) const
 {
-    return MixedTriState;
+    return TriState::Indeterminate;
 }
 
 TriState Value::greaterEqualConstant(const Value*) const
 {
-    return MixedTriState;
+    return TriState::Indeterminate;
 }
 
 TriState Value::aboveConstant(const Value*) const
 {
-    return MixedTriState;
+    return TriState::Indeterminate;
 }
 
 TriState Value::belowConstant(const Value*) const
 {
-    return MixedTriState;
+    return TriState::Indeterminate;
 }
 
 TriState Value::aboveEqualConstant(const Value*) const
 {
-    return MixedTriState;
+    return TriState::Indeterminate;
 }
 
 TriState Value::belowEqualConstant(const Value*) const
 {
-    return MixedTriState;
+    return TriState::Indeterminate;
 }
 
 TriState Value::equalOrUnorderedConstant(const Value*) const
 {
-    return MixedTriState;
+    return TriState::Indeterminate;
 }
 
 Value* Value::invertedCompare(Procedure& proc) const
 {
     if (numChildren() != 2)
         return nullptr;
-    if (Optional<Opcode> invertedOpcode = B3::invertedCompare(opcode(), child(0)->type())) {
+    if (std::optional<Opcode> invertedOpcode = B3::invertedCompare(opcode(), child(0)->type())) {
         ASSERT(!kind().hasExtraBits());
         return proc.add<Value>(*invertedOpcode, type(), origin(), child(0), child(1));
     }
@@ -520,13 +527,13 @@ TriState Value::asTriState() const
     case ConstFloat:
         return triState(asFloat() != 0.);
     default:
-        return MixedTriState;
+        return TriState::Indeterminate;
     }
 }
 
 Effects Value::effects() const
 {
-    Effects result;
+    Effects result = Effects::none();
     switch (opcode()) {
     case Nop:
     case Identity:
@@ -535,6 +542,7 @@ Effects Value::effects() const
     case Const64:
     case ConstDouble:
     case ConstFloat:
+    case BottomTuple:
     case SlotBase:
     case ArgumentReg:
     case FramePointer:
@@ -579,6 +587,8 @@ Effects Value::effects() const
     case Select:
     case Depend:
     case Extract:
+    case FMin:
+    case FMax:
         break;
     case Div:
     case UDiv:
@@ -719,6 +729,8 @@ ValueKey Value::key() const
     case UDiv:
     case Mod:
     case UMod:
+    case FMax:
+    case FMin:
     case BitAnd:
     case BitOr:
     case BitXor:
@@ -750,6 +762,8 @@ ValueKey Value::key() const
         return ValueKey(ConstDouble, type(), asDouble());
     case ConstFloat:
         return ValueKey(ConstFloat, type(), asFloat());
+    case BottomTuple:
+        return ValueKey(BottomTuple, type());
     case ArgumentReg:
         return ValueKey(
             ArgumentReg, type(),
@@ -815,6 +829,8 @@ Type Value::typeFor(Kind kind, Value* firstChild, Value* secondChild)
     case UDiv:
     case Mod:
     case UMod:
+    case FMax:
+    case FMin:
     case Neg:
     case BitAnd:
     case BitOr:

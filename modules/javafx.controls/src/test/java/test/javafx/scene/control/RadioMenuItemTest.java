@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -43,7 +43,6 @@ import static org.junit.Assert.*;
 
 
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -55,10 +54,10 @@ public class RadioMenuItemTest {
     private RadioMenuItem radioMenuItem, rmi;//Empty string
     private RadioMenuItem radioMenuItemTwoArg;
     private Node node;
-    private Toolkit tk;
 
     @Before public void setup() {
-        tk = (StubToolkit)Toolkit.getToolkit();//This step is not needed (Just to make sure StubToolkit is loaded into VM)
+        assertTrue(Toolkit.getToolkit() instanceof StubToolkit);  // Ensure StubToolkit is loaded
+
         node = new Rectangle();
         toggleGroup = new ToggleGroup();
         radioMenuItem = rmi = new RadioMenuItem("one");
@@ -236,17 +235,9 @@ public class RadioMenuItemTest {
         assertNotNull(rmi2.toggleGroupProperty());
     }
 
-    // calling toggleGroupProperty does not ensure the value of toggleGroup
-    // to be non null
-    @Ignore
-    @Test public void unsetToggleGroupButNotNull() {
-        rmi.toggleGroupProperty();
-        assertNotNull(rmi.getToggleGroup());
-    }
-
     @Test public void toggleGroupCanBeBound() {
         ToggleGroup tg = new ToggleGroup();
-        SimpleObjectProperty<ToggleGroup> other = new SimpleObjectProperty<ToggleGroup>(rmi, "toggleGroup", tg);
+        SimpleObjectProperty<ToggleGroup> other = new SimpleObjectProperty<>(rmi, "toggleGroup", tg);
         rmi.toggleGroupProperty().bind(other);
         assertSame(tg, rmi.getToggleGroup());
     }

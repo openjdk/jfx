@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -43,14 +43,19 @@ class AbstractDOMWindow;
 class AbstractFrame;
 
 class JSWindowProxy final : public JSC::JSProxy {
-    using Base = JSC::JSProxy;
 public:
-    static JSWindowProxy& create(JSC::VM&, AbstractDOMWindow&, DOMWrapperWorld&);
+    using Base = JSC::JSProxy;
+    static constexpr bool needsDestruction = true;
     static void destroy(JSCell*);
+
+    template<typename CellType, JSC::SubspaceAccess> static JSC::GCClient::IsoSubspace* subspaceFor(JSC::VM& vm) { return subspaceForImpl(vm); }
+
+    static JSWindowProxy& create(JSC::VM&, AbstractDOMWindow&, DOMWrapperWorld&);
 
     DECLARE_INFO;
 
     JSDOMGlobalObject* window() const { return static_cast<JSDOMGlobalObject*>(target()); }
+
     void setWindow(JSC::VM&, JSDOMGlobalObject&);
     void setWindow(AbstractDOMWindow&);
 
@@ -66,16 +71,17 @@ public:
 private:
     JSWindowProxy(JSC::VM&, JSC::Structure&, DOMWrapperWorld&);
     void finishCreation(JSC::VM&, AbstractDOMWindow&);
+    static JSC::GCClient::IsoSubspace* subspaceForImpl(JSC::VM&);
 
     Ref<DOMWrapperWorld> m_world;
 };
 
 // JSWindowProxy is a little odd in that it's not a traditional wrapper and has no back pointer.
 // It is, however, strongly owned by AbstractFrame via its WindowProxy, so we can get one from a WindowProxy.
-WEBCORE_EXPORT JSC::JSValue toJS(JSC::ExecState*, WindowProxy&);
-inline JSC::JSValue toJS(JSC::ExecState* state, WindowProxy* windowProxy) { return windowProxy ? toJS(state, *windowProxy) : JSC::jsNull(); }
-inline JSC::JSValue toJS(JSC::ExecState* state, JSDOMGlobalObject*, WindowProxy& windowProxy) { return toJS(state, windowProxy); }
-inline JSC::JSValue toJS(JSC::ExecState* state, JSDOMGlobalObject* globalObject, WindowProxy* windowProxy) { return windowProxy ? toJS(state, globalObject, *windowProxy) : JSC::jsNull(); }
+WEBCORE_EXPORT JSC::JSValue toJS(JSC::JSGlobalObject*, WindowProxy&);
+inline JSC::JSValue toJS(JSC::JSGlobalObject* lexicalGlobalObject, WindowProxy* windowProxy) { return windowProxy ? toJS(lexicalGlobalObject, *windowProxy) : JSC::jsNull(); }
+inline JSC::JSValue toJS(JSC::JSGlobalObject* lexicalGlobalObject, JSDOMGlobalObject*, WindowProxy& windowProxy) { return toJS(lexicalGlobalObject, windowProxy); }
+inline JSC::JSValue toJS(JSC::JSGlobalObject* lexicalGlobalObject, JSDOMGlobalObject* globalObject, WindowProxy* windowProxy) { return windowProxy ? toJS(lexicalGlobalObject, globalObject, *windowProxy) : JSC::jsNull(); }
 
 JSWindowProxy* toJSWindowProxy(WindowProxy&, DOMWrapperWorld&);
 inline JSWindowProxy* toJSWindowProxy(WindowProxy* windowProxy, DOMWrapperWorld& world) { return windowProxy ? toJSWindowProxy(*windowProxy, world) : nullptr; }

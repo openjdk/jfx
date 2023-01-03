@@ -24,8 +24,7 @@
  */
 
 [
-    NoInterfaceObject,
-    ImplementationLacksVTable
+    LegacyNoInterfaceObject,
 ] interface MockPageOverlay {
-    void setFrame(double x, double y, double width, double height);
+    undefined setFrame(double x, double y, double width, double height);
 };

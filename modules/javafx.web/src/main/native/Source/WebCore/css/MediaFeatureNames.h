@@ -47,6 +47,7 @@
     macro(deviceHeight, "device-height") \
     macro(devicePixelRatio, "-webkit-device-pixel-ratio") \
     macro(deviceWidth, "device-width") \
+    macro(dynamicRange, "dynamic-range") \
     macro(grid, "grid") \
     macro(height, "height") \
     macro(hover, "hover") \
@@ -76,6 +77,7 @@
     macro(monochrome, "monochrome") \
     macro(orientation, "orientation") \
     macro(pointer, "pointer") \
+    macro(prefersContrast, "prefers-contrast") \
     macro(prefersDarkInterface, "prefers-dark-interface") \
     macro(prefersReducedMotion, "prefers-reduced-motion") \
     macro(resolution, "resolution") \

@@ -32,6 +32,7 @@
 #include "MouseEvent.h"
 #include "NodeTraversal.h"
 #include "SpatialNavigation.h"
+#include "TypedElementDescendantIterator.h"
 
 namespace WebCore {
 
@@ -45,7 +46,61 @@ const AtomString& RadioInputType::formControlType() const
 bool RadioInputType::valueMissing(const String&) const
 {
     ASSERT(element());
-    return element()->isInRequiredRadioButtonGroup() && !element()->checkedRadioButtonForGroup();
+    auto& name = element()->name();
+    if (auto* buttons = element()->radioButtonGroups())
+        return !buttons->checkedButtonForGroup(name) && buttons->isInRequiredGroup(*element());
+
+    if (name.isEmpty())
+        return false;
+
+    ASSERT(!element()->isConnected());
+    ASSERT(!element()->form());
+
+    bool isRequired = false;
+    bool foundCheckedRadio = false;
+    forEachButtonInDetachedGroup(element()->rootNode(), name, [&](auto& input) {
+        if (input.checked()) {
+            foundCheckedRadio = true;
+            return false;
+        }
+        if (input.isRequired())
+            isRequired = true;
+        return true;
+    });
+    return isRequired && !foundCheckedRadio;
+}
+
+void RadioInputType::forEachButtonInDetachedGroup(ContainerNode& rootNode, const String& groupName, const Function<bool(HTMLInputElement&)>& apply)
+{
+    ASSERT(!groupName.isEmpty());
+
+    for (auto* descendant = Traversal<HTMLElement>::inclusiveFirstWithin(rootNode); descendant;) {
+        if (is<HTMLFormElement>(*descendant)) {
+            // No need to consider the descendants of a <form> since they will have a form owner and we're only
+            // interested in <input> elements without a form owner.
+            descendant = Traversal<HTMLElement>::nextSkippingChildren(*descendant, &rootNode);
+            continue;
+        }
+        auto* input = dynamicDowncast<HTMLInputElement>(*descendant);
+        if (input && input->isRadioButton() && !input->form() && input->name() == groupName) {
+            bool shouldContinue = apply(*input);
+            if (!shouldContinue)
+                return;
+        }
+        descendant = Traversal<HTMLElement>::next(*descendant, &rootNode);
+    }
+}
+
+void RadioInputType::willUpdateCheckedness(bool nowChecked)
+{
+    if (!nowChecked)
+        return;
+    if (element()->radioButtonGroups()) {
+        // Buttons in RadioButtonGroups are handled in HTMLInputElement::setChecked().
+        return;
+    }
+    if (auto input = element()->checkedRadioButtonForGroup())
+        input->setChecked(false);
 }
 
 String RadioInputType::valueMissingText() const
@@ -171,16 +226,13 @@ void RadioInputType::didDispatchClick(Event& event, const InputElementClickState
         ASSERT(element());
         if (button && button->isRadioButton() && button->form() == element()->form() && button->name() == element()->name())
             button->setChecked(true);
+        else
+            element()->setChecked(false);
     } else if (state.checked != element()->checked())
         fireInputAndChangeEvents();
 
     // The work we did in willDispatchClick was default handling.
     event.setDefaultHandled();
-}
-
-bool RadioInputType::isRadioButton() const
-{
-    return true;
 }
 
 bool RadioInputType::matchesIndeterminatePseudoClass() const

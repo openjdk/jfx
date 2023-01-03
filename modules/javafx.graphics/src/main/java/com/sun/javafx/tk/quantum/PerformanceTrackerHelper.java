@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -46,6 +46,7 @@ abstract class PerformanceTrackerHelper {
     }
 
     private static PerformanceTrackerHelper createInstance() {
+        @SuppressWarnings("removal")
         PerformanceTrackerHelper trackerImpl = AccessController.doPrivileged(
                 new PrivilegedAction<PerformanceTrackerHelper>() {
 
@@ -90,7 +91,7 @@ abstract class PerformanceTrackerHelper {
     public abstract boolean isPerfLoggingEnabled();
 
     public final long nanoTime() {
-        return Toolkit.getToolkit().getMasterTimer().nanos();
+        return Toolkit.getToolkit().getPrimaryTimer().nanos();
     }
 
     private static final class PerformanceTrackerDefaultImpl
@@ -129,6 +130,7 @@ abstract class PerformanceTrackerHelper {
                 // Attempt to log launchTime, if not set already
                 if (PerformanceLogger.getStartTime() <= 0) {
                     // Standalone apps record launch time as sysprop
+                    @SuppressWarnings("removal")
                     String launchTimeString = AccessController.doPrivileged(
                             (PrivilegedAction<String>) () -> System.getProperty("launchTime"));
 

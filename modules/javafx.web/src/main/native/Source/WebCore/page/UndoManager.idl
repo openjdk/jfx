@@ -24,9 +24,9 @@
  */
 
 [
-    EnabledAtRuntime=UndoManagerAPI,
-    ImplementationLacksVTable,
+    EnabledBySetting=UndoManagerAPIEnabled,
     GenerateIsReachable=ImplDocument,
+    Exposed=Window
 ] interface UndoManager {
-    [MayThrowException] void addItem(UndoItem item);
+    undefined addItem(UndoItem item);
 };

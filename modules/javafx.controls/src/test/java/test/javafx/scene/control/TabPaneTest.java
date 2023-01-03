@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -37,6 +37,7 @@ import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import javafx.scene.control.SelectionModel;
 import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
 import javafx.application.Platform;
 import javafx.beans.property.BooleanProperty;
@@ -60,7 +61,6 @@ import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import test.com.sun.javafx.pgstub.StubToolkit;
@@ -100,7 +100,10 @@ public class TabPaneTest {
     private StackPane root;
 
     @Before public void setup() {
-        tk = (StubToolkit)Toolkit.getToolkit();//This step is not needed (Just to make sure StubToolkit is loaded into VM)
+        tk = Toolkit.getToolkit();
+
+        assertTrue(tk instanceof StubToolkit);  // Ensure it's StubToolkit
+
         tabPane = new TabPane();
         tab1 = new Tab("one");
         tab2 = new Tab("two");
@@ -193,7 +196,7 @@ public class TabPaneTest {
     }
 
     @Test public void checkSidePropertyBind() {
-        ObjectProperty objPr = new SimpleObjectProperty<Side>(Side.BOTTOM);
+        ObjectProperty objPr = new SimpleObjectProperty<>(Side.BOTTOM);
         tabPane.sideProperty().bind(objPr);
         assertSame("side cannot be bound", tabPane.sideProperty().getValue(), Side.BOTTOM);
         objPr.setValue(Side.RIGHT);
@@ -201,7 +204,7 @@ public class TabPaneTest {
     }
 
     @Test public void checkTabClosingPropertyBind() {
-        ObjectProperty objPr = new SimpleObjectProperty<TabPane.TabClosingPolicy>(TabPane.TabClosingPolicy.UNAVAILABLE);
+        ObjectProperty objPr = new SimpleObjectProperty<>(TabPane.TabClosingPolicy.UNAVAILABLE);
         tabPane.tabClosingPolicyProperty().bind(objPr);
         assertSame("side cannot be bound", tabPane.tabClosingPolicyProperty().getValue(), TabPane.TabClosingPolicy.UNAVAILABLE);
         objPr.setValue(TabPane.TabClosingPolicy.ALL_TABS);
@@ -340,7 +343,7 @@ public class TabPaneTest {
      * CSS related Tests                                                 *
      ********************************************************************/
 
-    @Test public void whenTabMinWidthIsBound_impl_cssSettable_ReturnsFalse() {
+    @Test public void whenTabMinWidthIsBound_CssMetaData_isSettable_ReturnsFalse() {
         CssMetaData styleable = ((StyleableProperty)tabPane.tabMinWidthProperty()).getCssMetaData();
         assertTrue(styleable.isSettable(tabPane));
         DoubleProperty other = new SimpleDoubleProperty(30.0);
@@ -348,7 +351,7 @@ public class TabPaneTest {
         assertFalse(styleable.isSettable(tabPane));
     }
 
-    @Test public void whenTabMinWidthIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
+    @Test public void whenTabMinWidthIsSpecifiedViaCSSAndIsNotBound_CssMetaData_isSettable_ReturnsTrue() {
         CssMetaData styleable = ((StyleableProperty)tabPane.tabMinWidthProperty()).getCssMetaData();
         assertTrue(styleable.isSettable(tabPane));
     }
@@ -358,7 +361,7 @@ public class TabPaneTest {
         assertEquals(34.0, tabPane.getTabMinWidth(), 0.0);
     }
 
-    @Test public void whenTabMaxWidthIsBound_impl_cssSettable_ReturnsFalse() {
+    @Test public void whenTabMaxWidthIsBound_CssMetaData_isSettable_ReturnsFalse() {
         CssMetaData styleable = ((StyleableProperty)tabPane.tabMaxWidthProperty()).getCssMetaData();
         assertTrue(styleable.isSettable(tabPane));
         DoubleProperty other = new SimpleDoubleProperty(30.0);
@@ -366,7 +369,7 @@ public class TabPaneTest {
         assertFalse(styleable.isSettable(tabPane));
     }
 
-    @Test public void whenTabMaxWidthIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
+    @Test public void whenTabMaxWidthIsSpecifiedViaCSSAndIsNotBound_CssMetaData_isSettable_ReturnsTrue() {
         CssMetaData styleable = ((StyleableProperty)tabPane.tabMaxWidthProperty()).getCssMetaData();
         assertTrue(styleable.isSettable(tabPane));
     }
@@ -376,7 +379,7 @@ public class TabPaneTest {
         assertEquals(34.0, tabPane.getTabMaxWidth(), 0.0);
     }
 
-    @Test public void whenTabMinHeightIsBound_impl_cssSettable_ReturnsFalse() {
+    @Test public void whenTabMinHeightIsBound_CssMetaData_isSettable_ReturnsFalse() {
         CssMetaData styleable = ((StyleableProperty)tabPane.tabMinHeightProperty()).getCssMetaData();
         assertTrue(styleable.isSettable(tabPane));
         DoubleProperty other = new SimpleDoubleProperty(30.0);
@@ -384,7 +387,7 @@ public class TabPaneTest {
         assertFalse(styleable.isSettable(tabPane));
     }
 
-    @Test public void whenTabMinHeightIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
+    @Test public void whenTabMinHeightIsSpecifiedViaCSSAndIsNotBound_CssMetaData_isSettable_ReturnsTrue() {
         CssMetaData styleable = ((StyleableProperty)tabPane.tabMinHeightProperty()).getCssMetaData();
         assertTrue(styleable.isSettable(tabPane));
     }
@@ -394,7 +397,7 @@ public class TabPaneTest {
         assertEquals(34.0, tabPane.getTabMinHeight(), 0.0);
     }
 
-    @Test public void whenTabMaxHeightIsBound_impl_cssSettable_ReturnsFalse() {
+    @Test public void whenTabMaxHeightIsBound_CssMetaData_isSettable_ReturnsFalse() {
         CssMetaData styleable = ((StyleableProperty)tabPane.tabMaxHeightProperty()).getCssMetaData();
         assertTrue(styleable.isSettable(tabPane));
         DoubleProperty other = new SimpleDoubleProperty(30.0);
@@ -402,7 +405,7 @@ public class TabPaneTest {
         assertFalse(styleable.isSettable(tabPane));
     }
 
-    @Test public void whenTabMaxHeightIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
+    @Test public void whenTabMaxHeightIsSpecifiedViaCSSAndIsNotBound_CssMetaData_isSettable_ReturnsTrue() {
         CssMetaData styleable = ((StyleableProperty)tabPane.tabMaxHeightProperty()).getCssMetaData();
         assertTrue(styleable.isSettable(tabPane));
     }
@@ -731,7 +734,6 @@ public class TabPaneTest {
         assertEquals(tab1, tabPane.getSelectionModel().getSelectedItem());
     }
 
-    @Ignore
     @Test public void mousePressSelectsATab_RT20476() {
         tabPane.getTabs().add(tab1);
         tabPane.getTabs().add(tab2);
@@ -763,7 +765,6 @@ public class TabPaneTest {
     }
 
     private int counter = 0;
-    @Ignore
     @Test public void setOnSelectionChangedFiresTwice_RT21089() {
         tabPane.getTabs().add(tab1);
         tabPane.getTabs().add(tab2);
@@ -1155,27 +1156,25 @@ public class TabPaneTest {
     }
 
     // Test for JDK-8154039
-    WeakReference<Tab> weakTab;
     @Test public void testSelectNonChildTab() {
         tabPane.getTabs().addAll(tab1);
         root.getChildren().add(tabPane);
         show();
         tk.firePulse();
-        weakTab = new WeakReference<>(new Tab("NonChildTab"));
+        WeakReference<Tab> weakTab = new WeakReference<>(new Tab("NonChildTab"));
         tabPane.getSelectionModel().select(weakTab.get());
         tk.firePulse();
-        attemptGC(10);
+        attemptGC(10, weakTab);
         tk.firePulse();
         assertNull(weakTab.get());
     }
 
-    private void attemptGC(int n) {
+    private void attemptGC(int n, WeakReference<?> weakRef) {
         // Attempt gc n times
         for (int i = 0; i < n; i++) {
             System.gc();
-            System.runFinalization();
 
-            if (weakTab.get() == null) {
+            if (weakRef.get() == null) {
                 break;
             }
             try {
@@ -1206,5 +1205,40 @@ public class TabPaneTest {
 
     private int sortCompare(Tab t1, Tab t2) {
         return t2.getText().compareTo(t1.getText());
+    }
+
+    class TabPaneSkin1 extends TabPaneSkin {
+        TabPaneSkin1(TabPane tabPane) {
+            super(tabPane);
+        }
+    }
+
+    @Test
+    public void testNPEOnSwitchSkinAndChangeSelection() {
+        tabPane.getTabs().addAll(tab1, tab2);
+        root.getChildren().add(tabPane);
+        stage.show();
+        tk.firePulse();
+
+        tabPane.setSkin(new TabPaneSkin1(tabPane));
+        tk.firePulse();
+        tabPane.getSelectionModel().select(1);
+        tk.firePulse();
+    }
+
+    @Test
+    public void testSMLeakOnSwitchSkinAndSM() {
+        tabPane.getTabs().addAll(tab1, tab2);
+        root.getChildren().add(tabPane);
+        stage.show();
+        tk.firePulse();
+
+        WeakReference<SelectionModel<Tab>> weakSMRef = new WeakReference<>(tabPane.getSelectionModel());
+        tabPane.setSkin(new TabPaneSkin1(tabPane));
+        tk.firePulse();
+        tabPane.setSelectionModel(TabPaneShim.getTabPaneSelectionModel(tabPane));
+        tk.firePulse();
+        attemptGC(10, weakSMRef);
+        assertNull(weakSMRef.get());
     }
 }

@@ -30,45 +30,35 @@
 
 #include "JSDOMPromiseDeferred.h"
 #include "JSServiceWorkerWindowClient.h"
+#include "Logging.h"
 #include "SWContextManager.h"
 #include "ServiceWorker.h"
 #include "ServiceWorkerGlobalScope.h"
 #include "ServiceWorkerThread.h"
+#include <wtf/text/StringToIntegerConversion.h>
 
 namespace WebCore {
 
-static inline void didFinishGetRequest(ServiceWorkerGlobalScope& scope, DeferredPromise& promise, ExceptionOr<Optional<ServiceWorkerClientData>>&& clientData)
+static inline void didFinishGetRequest(ServiceWorkerGlobalScope& scope, DeferredPromise& promise, std::optional<ServiceWorkerClientData>&& clientData)
 {
-    if (clientData.hasException()) {
-        promise.reject(clientData.releaseException());
-        return;
-    }
-    auto data = clientData.releaseReturnValue();
-    if (!data) {
+    if (!clientData) {
         promise.resolve();
         return;
     }
 
-    promise.resolve<IDLInterface<ServiceWorkerClient>>(ServiceWorkerClient::getOrCreate(scope, WTFMove(data.value())));
+    promise.resolve<IDLInterface<ServiceWorkerClient>>(ServiceWorkerClient::getOrCreate(scope, WTFMove(*clientData)));
 }
 
 void ServiceWorkerClients::get(ScriptExecutionContext& context, const String& id, Ref<DeferredPromise>&& promise)
 {
-    auto identifier = ServiceWorkerClientIdentifier::fromString(id);
-    if (!identifier) {
-        promise->resolve();
-        return;
-    }
-    auto clientIdentifier = identifier.value();
-
     auto serviceWorkerIdentifier = downcast<ServiceWorkerGlobalScope>(context).thread().identifier();
 
     auto promisePointer = promise.ptr();
     m_pendingPromises.add(promisePointer, WTFMove(promise));
 
-    callOnMainThread([promisePointer, serviceWorkerIdentifier, clientIdentifier] () {
+    callOnMainThread([promisePointer, serviceWorkerIdentifier, id = id.isolatedCopy()] () {
         auto connection = SWContextManager::singleton().connection();
-        connection->findClientByIdentifier(serviceWorkerIdentifier, clientIdentifier, [promisePointer, serviceWorkerIdentifier] (auto&& clientData) {
+        connection->findClientByVisibleIdentifier(serviceWorkerIdentifier, id, [promisePointer, serviceWorkerIdentifier] (auto&& clientData) {
             SWContextManager::singleton().postTaskToServiceWorker(serviceWorkerIdentifier, [promisePointer, data = crossThreadCopy(clientData)] (auto& context) mutable {
                 if (auto promise = context.clients().m_pendingPromises.take(promisePointer))
                     didFinishGetRequest(context, *promise, WTFMove(data));
@@ -116,20 +106,17 @@ void ServiceWorkerClients::claim(ScriptExecutionContext& context, Ref<DeferredPr
 
     auto serviceWorkerIdentifier = serviceWorkerGlobalScope.thread().identifier();
 
-    if (!serviceWorkerGlobalScope.registration().active() || serviceWorkerGlobalScope.registration().active()->identifier() != serviceWorkerIdentifier) {
-        promise->reject(Exception { InvalidStateError, "Service worker is not active"_s });
-        return;
-    }
-
     auto promisePointer = promise.ptr();
     m_pendingPromises.add(promisePointer, WTFMove(promise));
 
     callOnMainThread([promisePointer, serviceWorkerIdentifier] () mutable {
         auto connection = SWContextManager::singleton().connection();
-        connection->claim(serviceWorkerIdentifier, [promisePointer, serviceWorkerIdentifier] () mutable {
-            SWContextManager::singleton().postTaskToServiceWorker(serviceWorkerIdentifier, [promisePointer] (auto& scope) mutable {
-                if (auto promise = scope.clients().m_pendingPromises.take(promisePointer))
-                    promise.value()->resolve();
+        connection->claim(serviceWorkerIdentifier, [promisePointer, serviceWorkerIdentifier](auto&& result) mutable {
+            SWContextManager::singleton().postTaskToServiceWorker(serviceWorkerIdentifier, [promisePointer, result = isolatedCopy(WTFMove(result))](auto& scope) mutable {
+                if (auto promise = scope.clients().m_pendingPromises.take(promisePointer)) {
+                    DOMPromiseDeferred<void> pendingPromise { promise.releaseNonNull() };
+                    pendingPromise.settle(WTFMove(result));
+                }
             });
         });
     });

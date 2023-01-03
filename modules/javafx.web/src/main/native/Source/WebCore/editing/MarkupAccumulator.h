@@ -46,13 +46,16 @@ enum EntityMask {
     EntityGt = 0x0004,
     EntityQuot = 0x0008,
     EntityNbsp = 0x0010,
+    EntityTab = 0x0020,
+    EntityLineFeed = 0x0040,
+    EntityCarriageReturn = 0x0080,
 
     // Non-breaking space needs to be escaped in innerHTML for compatibility reason. See http://trac.webkit.org/changeset/32879
     // However, we cannot do this in a XML document because it does not have the entity reference defined (See the bug 19215).
     EntityMaskInCDATA = 0,
     EntityMaskInPCDATA = EntityAmp | EntityLt | EntityGt,
     EntityMaskInHTMLPCDATA = EntityMaskInPCDATA | EntityNbsp,
-    EntityMaskInAttributeValue = EntityAmp | EntityLt | EntityGt | EntityQuot,
+    EntityMaskInAttributeValue = EntityAmp | EntityLt | EntityGt | EntityQuot | EntityTab | EntityLineFeed | EntityCarriageReturn,
     EntityMaskInHTMLAttributeValue = EntityAmp | EntityQuot | EntityNbsp,
 };
 
@@ -67,20 +70,15 @@ public:
     static void appendCharactersReplacingEntities(StringBuilder&, const String&, unsigned, unsigned, EntityMask);
 
 protected:
-    static size_t totalLength(const Vector<String>&);
-    size_t length() const { return m_markup.length(); }
+    unsigned length() const { return m_markup.length(); }
+    bool isAllASCII() const { return m_markup.isAllASCII(); }
 
-    void concatenateMarkup(StringBuilder&);
+    StringBuilder takeMarkup();
 
-    void appendString(const String&);
-    void appendStringView(StringView);
+    template<typename ...StringTypes> void append(StringTypes&&... strings) { m_markup.append(std::forward<StringTypes>(strings)...); }
 
     void startAppendingNode(const Node&, Namespaces* = nullptr);
-    void endAppendingNode(const Node& node)
-    {
-        if (is<Element>(node))
-            appendEndTag(m_markup, downcast<Element>(node));
-    }
+    void endAppendingNode(const Node&);
 
     virtual void appendStartTag(StringBuilder&, const Element&, Namespaces*);
     virtual void appendEndTag(StringBuilder&, const Element&);
@@ -91,23 +89,16 @@ protected:
     void appendCloseTag(StringBuilder&, const Element&);
 
     void appendNonElementNode(StringBuilder&, const Node&, Namespaces*);
-    void appendEndMarkup(StringBuilder&, const Element&);
 
-    void appendAttributeValue(StringBuilder&, const String&, bool isSerializingHTML);
-    void appendNamespace(StringBuilder&, const AtomString& prefix, const AtomString& namespaceURI, Namespaces&, bool allowEmptyDefaultNS = false);
-    void appendXMLDeclaration(StringBuilder&, const Document&);
-    void appendDocumentType(StringBuilder&, const DocumentType&);
-    void appendProcessingInstruction(StringBuilder&, const String& target, const String& data);
+    static void appendAttributeValue(StringBuilder&, const String&, bool isSerializingHTML);
     void appendAttribute(StringBuilder&, const Element&, const Attribute&, Namespaces*);
-    void appendCDATASection(StringBuilder&, const String&);
 
-    bool shouldAddNamespaceElement(const Element&);
-    bool shouldAddNamespaceAttribute(const Attribute&, Namespaces&);
     EntityMask entityMaskForText(const Text&) const;
 
     Vector<Node*>* const m_nodes;
 
 private:
+    void appendNamespace(StringBuilder&, const AtomString& prefix, const AtomString& namespaceURI, Namespaces&, bool allowEmptyDefaultNS = false);
     String resolveURLIfNeeded(const Element&, const String&) const;
     void appendQuotedURLAttributeValue(StringBuilder&, const Element&, const Attribute&);
     void serializeNodesWithNamespaces(Node& targetNode, SerializedNodes, const Namespaces*, Vector<QualifiedName>* tagNamesToSkip);
@@ -117,8 +108,14 @@ private:
 
     StringBuilder m_markup;
     const ResolveURLs m_resolveURLs;
-    SerializationSyntax m_serializationSyntax;
+    const SerializationSyntax m_serializationSyntax;
     unsigned m_prefixLevel { 0 };
 };
+
+inline void MarkupAccumulator::endAppendingNode(const Node& node)
+{
+    if (is<Element>(node))
+        appendEndTag(m_markup, downcast<Element>(node));
+}
 
 } // namespace WebCore

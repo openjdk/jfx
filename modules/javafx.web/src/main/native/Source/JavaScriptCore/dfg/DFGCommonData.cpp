@@ -32,84 +32,27 @@
 #include "DFGNode.h"
 #include "DFGPlan.h"
 #include "InlineCallFrame.h"
-#include "JSCInlines.h"
+#include "JSCJSValueInlines.h"
 #include "TrackedReferences.h"
-#include "VM.h"
-
+#include <wtf/Lock.h>
 #include <wtf/NeverDestroyed.h>
 
 namespace JSC { namespace DFG {
 
-void CommonData::notifyCompilingStructureTransition(Plan& plan, CodeBlock* codeBlock, Node* node)
-{
-    plan.transitions().addLazily(
-        codeBlock,
-        node->origin.semantic.codeOriginOwner(),
-        node->transition()->previous.get(),
-        node->transition()->next.get());
-}
-
-CallSiteIndex CommonData::addCodeOrigin(CodeOrigin codeOrigin)
-{
-    if (codeOrigins.isEmpty()
-        || codeOrigins.last() != codeOrigin)
-        codeOrigins.append(codeOrigin);
-    unsigned index = codeOrigins.size() - 1;
-    ASSERT(codeOrigins[index] == codeOrigin);
-    return CallSiteIndex(index);
-}
-
-CallSiteIndex CommonData::addUniqueCallSiteIndex(CodeOrigin codeOrigin)
-{
-    codeOrigins.append(codeOrigin);
-    unsigned index = codeOrigins.size() - 1;
-    ASSERT(codeOrigins[index] == codeOrigin);
-    return CallSiteIndex(index);
-}
-
-CallSiteIndex CommonData::lastCallSite() const
-{
-    RELEASE_ASSERT(codeOrigins.size());
-    return CallSiteIndex(codeOrigins.size() - 1);
-}
-
-DisposableCallSiteIndex CommonData::addDisposableCallSiteIndex(CodeOrigin codeOrigin)
-{
-    if (callSiteIndexFreeList.size()) {
-        unsigned index = callSiteIndexFreeList.takeAny();
-        codeOrigins[index] = codeOrigin;
-        return DisposableCallSiteIndex(index);
-    }
-
-    codeOrigins.append(codeOrigin);
-    unsigned index = codeOrigins.size() - 1;
-    ASSERT(codeOrigins[index] == codeOrigin);
-    return DisposableCallSiteIndex(index);
-}
-
-
-void CommonData::removeDisposableCallSiteIndex(DisposableCallSiteIndex callSite)
-{
-    RELEASE_ASSERT(callSite.bits() < codeOrigins.size());
-    callSiteIndexFreeList.add(callSite.bits());
-    codeOrigins[callSite.bits()] = CodeOrigin();
-}
-
 void CommonData::shrinkToFit()
 {
-    codeOrigins.shrinkToFit();
-    dfgIdentifiers.shrinkToFit();
-    weakReferences.shrinkToFit();
-    weakStructureReferences.shrinkToFit();
-    transitions.shrinkToFit();
-    catchEntrypoints.shrinkToFit();
-    jumpReplacements.shrinkToFit();
+    codeOrigins->shrinkToFit();
+    m_jumpReplacements.shrinkToFit();
 }
 
 static Lock pcCodeBlockMapLock;
-inline HashMap<void*, CodeBlock*>& pcCodeBlockMap(AbstractLocker&)
+inline HashMap<void*, CodeBlock*>& pcCodeBlockMap() WTF_REQUIRES_LOCK(pcCodeBlockMapLock)
 {
-    static NeverDestroyed<HashMap<void*, CodeBlock*>> pcCodeBlockMap;
+    static LazyNeverDestroyed<HashMap<void*, CodeBlock*>> pcCodeBlockMap;
+    static std::once_flag onceKey;
+    std::call_once(onceKey, [&] {
+        pcCodeBlockMap.construct();
+    });
     return pcCodeBlockMap;
 }
 
@@ -119,15 +62,15 @@ bool CommonData::invalidate()
         return false;
 
     if (UNLIKELY(hasVMTrapsBreakpointsInstalled)) {
-        LockHolder locker(pcCodeBlockMapLock);
-        auto& map = pcCodeBlockMap(locker);
-        for (auto& jumpReplacement : jumpReplacements)
+        Locker locker { pcCodeBlockMapLock };
+        auto& map = pcCodeBlockMap();
+        for (auto& jumpReplacement : m_jumpReplacements)
             map.remove(jumpReplacement.dataLocation());
         hasVMTrapsBreakpointsInstalled = false;
     }
 
-    for (unsigned i = jumpReplacements.size(); i--;)
-        jumpReplacements[i].fire();
+    for (unsigned i = m_jumpReplacements.size(); i--;)
+        m_jumpReplacements[i].fire();
     isStillValid = false;
     return true;
 }
@@ -135,27 +78,27 @@ bool CommonData::invalidate()
 CommonData::~CommonData()
 {
     if (UNLIKELY(hasVMTrapsBreakpointsInstalled)) {
-        LockHolder locker(pcCodeBlockMapLock);
-        auto& map = pcCodeBlockMap(locker);
-        for (auto& jumpReplacement : jumpReplacements)
+        Locker locker { pcCodeBlockMapLock };
+        auto& map = pcCodeBlockMap();
+        for (auto& jumpReplacement : m_jumpReplacements)
             map.remove(jumpReplacement.dataLocation());
     }
 }
 
 void CommonData::installVMTrapBreakpoints(CodeBlock* owner)
 {
-    LockHolder locker(pcCodeBlockMapLock);
+    Locker locker { pcCodeBlockMapLock };
     if (!isStillValid || hasVMTrapsBreakpointsInstalled)
         return;
     hasVMTrapsBreakpointsInstalled = true;
 
-    auto& map = pcCodeBlockMap(locker);
+    auto& map = pcCodeBlockMap();
 #if !defined(NDEBUG)
     // We need to be able to handle more than one invalidation point at the same pc
     // but we want to make sure we don't forget to remove a pc from the map.
     HashSet<void*> newReplacements;
 #endif
-    for (auto& jumpReplacement : jumpReplacements) {
+    for (auto& jumpReplacement : m_jumpReplacements) {
         jumpReplacement.installVMTrapBreakpoint();
         void* source = jumpReplacement.dataLocation();
         auto result = map.add(source, owner);
@@ -170,8 +113,8 @@ void CommonData::installVMTrapBreakpoints(CodeBlock* owner)
 CodeBlock* codeBlockForVMTrapPC(void* pc)
 {
     ASSERT(isJITPC(pc));
-    LockHolder locker(pcCodeBlockMapLock);
-    auto& map = pcCodeBlockMap(locker);
+    Locker locker { pcCodeBlockMapLock };
+    auto& map = pcCodeBlockMap();
     auto result = map.find(pc);
     if (result == map.end())
         return nullptr;
@@ -182,8 +125,8 @@ bool CommonData::isVMTrapBreakpoint(void* address)
 {
     if (!isStillValid)
         return false;
-    for (unsigned i = jumpReplacements.size(); i--;) {
-        if (address == jumpReplacements[i].dataLocation())
+    for (unsigned i = m_jumpReplacements.size(); i--;) {
+        if (address == m_jumpReplacements[i].dataLocation())
             return true;
     }
     return false;
@@ -193,7 +136,7 @@ void CommonData::validateReferences(const TrackedReferences& trackedReferences)
 {
     if (InlineCallFrameSet* set = inlineCallFrames.get()) {
         for (InlineCallFrame* inlineCallFrame : *set) {
-            for (ValueRecovery& recovery : inlineCallFrame->argumentsWithFixup) {
+            for (ValueRecovery& recovery : inlineCallFrame->m_argumentsWithFixup) {
                 if (recovery.isConstant())
                     trackedReferences.check(recovery.constant());
             }
@@ -206,26 +149,28 @@ void CommonData::validateReferences(const TrackedReferences& trackedReferences)
         }
     }
 
-    for (AdaptiveStructureWatchpoint* watchpoint : adaptiveStructureWatchpoints)
-        watchpoint->key().validateReferences(trackedReferences);
+    for (auto& watchpoint : m_adaptiveStructureWatchpoints)
+        watchpoint.key().validateReferences(trackedReferences);
 }
 
-void CommonData::finalizeCatchEntrypoints()
+void CommonData::finalizeCatchEntrypoints(Vector<CatchEntrypointData>&& catchEntrypoints)
 {
     std::sort(catchEntrypoints.begin(), catchEntrypoints.end(),
         [] (const CatchEntrypointData& a, const CatchEntrypointData& b) { return a.bytecodeIndex < b.bytecodeIndex; });
+    ASSERT(m_catchEntrypoints.isEmpty());
+    m_catchEntrypoints = WTFMove(catchEntrypoints);
 
-#if !ASSERT_DISABLED
-    for (unsigned i = 0; i + 1 < catchEntrypoints.size(); ++i)
-        ASSERT(catchEntrypoints[i].bytecodeIndex <= catchEntrypoints[i + 1].bytecodeIndex);
+#if ASSERT_ENABLED
+    for (unsigned i = 0; i + 1 < m_catchEntrypoints.size(); ++i)
+        ASSERT(m_catchEntrypoints[i].bytecodeIndex <= m_catchEntrypoints[i + 1].bytecodeIndex);
 #endif
 }
 
 void CommonData::clearWatchpoints()
 {
-    watchpoints.clear();
-    adaptiveStructureWatchpoints.clear();
-    adaptiveInferredPropertyValueWatchpoints.clear();
+    m_watchpoints = FixedVector<CodeBlockJettisoningWatchpoint>();
+    m_adaptiveStructureWatchpoints = FixedVector<AdaptiveStructureWatchpoint>();
+    m_adaptiveInferredPropertyValueWatchpoints = FixedVector<AdaptiveInferredPropertyValueWatchpoint>();
 }
 
 } } // namespace JSC::DFG

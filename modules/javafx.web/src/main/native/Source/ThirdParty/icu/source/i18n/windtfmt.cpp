@@ -193,6 +193,7 @@ Win32DateFormat::~Win32DateFormat()
 
 Win32DateFormat &Win32DateFormat::operator=(const Win32DateFormat &other)
 {
+    if (this == &other) { return *this; }  // self-assignment: no-op
     // The following handles fCalendar
     DateFormat::operator=(other);
 
@@ -213,7 +214,7 @@ Win32DateFormat &Win32DateFormat::operator=(const Win32DateFormat &other)
     return *this;
 }
 
-Format *Win32DateFormat::clone(void) const
+Win32DateFormat *Win32DateFormat::clone() const
 {
     return new Win32DateFormat(*this);
 }

@@ -22,6 +22,7 @@
     JSCustomMarkFunction,
     JSGenerateToJSObject,
     JSGenerateToNativeObject,
+    Exposed=Window
 ] interface Attr : Node {
     readonly attribute DOMString? namespaceURI;
     readonly attribute DOMString? prefix;
@@ -33,5 +34,5 @@
 
     readonly attribute boolean specified; // Useless; always returns true.
 
-    [EnabledAtRuntime=AttrStyle] readonly attribute CSSStyleDeclaration style;
+    [EnabledAtRuntime=AttrStyleEnabled] readonly attribute CSSStyleDeclaration style;
 };

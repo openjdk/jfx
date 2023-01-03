@@ -1,4 +1,4 @@
-# Copyright (C) 2011-2018 Apple Inc. All rights reserved.
+# Copyright (C) 2011-2020 Apple Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -27,6 +27,7 @@ require "arm64"
 require "ast"
 require "x86"
 require "mips"
+require "riscv64"
 require "cloop"
 
 begin
@@ -44,6 +45,7 @@ BACKENDS =
      "ARM64",
      "ARM64E",
      "MIPS",
+     "RISCV64",
      "C_LOOP",
      "C_LOOP_WIN"
     ]
@@ -63,6 +65,7 @@ WORKING_BACKENDS =
      "ARM64",
      "ARM64E",
      "MIPS",
+     "RISCV64",
      "C_LOOP",
      "C_LOOP_WIN"
     ]
@@ -83,12 +86,12 @@ def canonicalizeBackendNames(backendNames)
         | backendName |
         backendName = backendName.upcase
         if backendName =~ /ARM.*/
-            backendName.sub!(/ARMV7(S?)(.*)/) { | _ | 'ARMv7' + $1.downcase + $2 }
+            backendName.sub!(/ARMV7([KS]?)(.*)/) { | _ | 'ARMv7' + $1.downcase + $2 }
             backendName = "ARM64" if backendName == "ARM64_32"
         end
         backendName = "X86" if backendName == "I386"
         newBackendNames << backendName
-        newBackendNames << "ARMv7" if backendName == "ARMv7s"
+        newBackendNames << "ARMv7" if backendName.start_with?("ARMv7")
     }
     newBackendNames.uniq
 end

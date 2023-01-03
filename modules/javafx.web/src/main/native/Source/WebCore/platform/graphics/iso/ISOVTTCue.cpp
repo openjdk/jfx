@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Apple Inc. All rights reserved.
+ * Copyright (C) 2014-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -39,7 +39,7 @@ class ISOStringBox final : public ISOBox {
 public:
     const String& contents() { return m_contents; }
 
-protected:
+private:
     bool parse(JSC::DataView& view, unsigned& offset) override
     {
         unsigned localOffset = offset;
@@ -80,6 +80,20 @@ ISOWebVTTCue::ISOWebVTTCue(const MediaTime& presentationTime, const MediaTime& d
 {
 }
 
+ISOWebVTTCue::ISOWebVTTCue(MediaTime&& presentationTime, MediaTime&& duration, String&& cueID, String&& cueText, String&& settings, String&& sourceID, String&& originalStartTime)
+    : m_presentationTime(WTFMove(presentationTime))
+    , m_duration(WTFMove(duration))
+    , m_sourceID(WTFMove(sourceID))
+    , m_identifier(WTFMove(cueID))
+    , m_originalStartTime(WTFMove(originalStartTime))
+    , m_settings(WTFMove(settings))
+    , m_cueText(WTFMove(cueText))
+{
+}
+
+ISOWebVTTCue::ISOWebVTTCue(ISOWebVTTCue&&) = default;
+ISOWebVTTCue::~ISOWebVTTCue() = default;
+
 bool ISOWebVTTCue::parse(DataView& view, unsigned& offset)
 {
     if (!ISOBox::parse(view, offset))
@@ -99,7 +113,7 @@ bool ISOWebVTTCue::parse(DataView& view, unsigned& offset)
         else if (stringBox.boxType() == vttPayloadBoxType())
             m_cueText = stringBox.contents();
         else
-            LOG(Media, "ISOWebVTTCue::ISOWebVTTCue - skipping box id = \"%s\", size = %zu", stringBox.boxType().toString().utf8().data(), (size_t)stringBox.size());
+            LOG(Media, "ISOWebVTTCue::ISOWebVTTCue - skipping box id = \"%s\", size = %" PRIu64, stringBox.boxType().string().data(), stringBox.size());
     }
     return true;
 }

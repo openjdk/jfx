@@ -31,17 +31,18 @@
 #include "ScrollTypes.h"
 #include "ScrollingCoordinator.h"
 #include "ScrollingStateNode.h"
-#include "TouchAction.h"
 #include <wtf/RefCounted.h>
 #include <wtf/TypeCasts.h>
 
 namespace WebCore {
 
 class ScrollingStateFixedNode;
+class ScrollingTree;
 class ScrollingTreeFrameScrollingNode;
 class ScrollingTreeScrollingNode;
 
 class ScrollingTreeNode : public ThreadSafeRefCounted<ScrollingTreeNode> {
+    WTF_MAKE_FAST_ALLOCATED;
     friend class ScrollingTree;
 public:
     virtual ~ScrollingTreeNode();
@@ -60,26 +61,25 @@ public:
 
     virtual void commitStateBeforeChildren(const ScrollingStateNode&) = 0;
     virtual void commitStateAfterChildren(const ScrollingStateNode&) { }
+    virtual void didCompleteCommitForNode() { }
+
+    virtual void willBeDestroyed() { }
 
     ScrollingTreeNode* parent() const { return m_parent; }
     void setParent(ScrollingTreeNode* parent) { m_parent = parent; }
 
     WEBCORE_EXPORT bool isRootNode() const;
 
-    Vector<RefPtr<ScrollingTreeNode>>* children() { return m_children.get(); }
-    const Vector<RefPtr<ScrollingTreeNode>>* children() const { return m_children.get(); }
+    const Vector<Ref<ScrollingTreeNode>>& children() const { return m_children; }
 
     void appendChild(Ref<ScrollingTreeNode>&&);
     void removeChild(ScrollingTreeNode&);
+    void removeAllChildren();
 
     WEBCORE_EXPORT ScrollingTreeFrameScrollingNode* enclosingFrameNodeIncludingSelf();
     WEBCORE_EXPORT ScrollingTreeScrollingNode* enclosingScrollingNodeIncludingSelf();
 
-    WEBCORE_EXPORT void dump(WTF::TextStream&, ScrollingStateTreeAsTextBehavior) const;
-
-    virtual LayoutPoint parentToLocalPoint(LayoutPoint point) const { return point; }
-    virtual LayoutPoint localToContentsPoint(LayoutPoint point) const { return point; }
-    virtual ScrollingTreeScrollingNode* scrollingNodeForPoint(LayoutPoint) const;
+    WEBCORE_EXPORT void dump(WTF::TextStream&, OptionSet<ScrollingStateTreeAsTextBehavior>) const;
 
 protected:
     ScrollingTreeNode(ScrollingTree&, ScrollingNodeType, ScrollingNodeID);
@@ -87,9 +87,9 @@ protected:
 
     virtual void applyLayerPositions() = 0;
 
-    WEBCORE_EXPORT virtual void dumpProperties(WTF::TextStream&, ScrollingStateTreeAsTextBehavior) const;
+    WEBCORE_EXPORT virtual void dumpProperties(WTF::TextStream&, OptionSet<ScrollingStateTreeAsTextBehavior>) const;
 
-    std::unique_ptr<Vector<RefPtr<ScrollingTreeNode>>> m_children;
+    Vector<Ref<ScrollingTreeNode>> m_children;
 
 private:
     ScrollingTree& m_scrollingTree;
@@ -97,7 +97,7 @@ private:
     const ScrollingNodeType m_nodeType;
     const ScrollingNodeID m_nodeID;
 
-    ScrollingTreeNode* m_parent;
+    ScrollingTreeNode* m_parent { nullptr };
 };
 
 } // namespace WebCore

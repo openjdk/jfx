@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2003, 2006, 2009, 2011, 2012, 2013 Apple Inc.  All rights reserved.
+ * Copyright (C) 2003-2021 Apple Inc. All rights reserved.
  * Copyright (C) 2010 Igalia S.L
  *
  * Redistribution and use in source and binary forms, with or without
@@ -29,6 +29,10 @@
 
 #include <wtf/Forward.h>
 
+#ifdef __OBJC__
+#include <wtf/cocoa/TypeCastsCocoa.h>
+#endif
+
 #if USE(GLIB) && defined(GETTEXT_PACKAGE)
 #include <glib/gi18n-lib.h>
 #endif
@@ -41,14 +45,18 @@ namespace WebCore {
     String resetButtonDefaultLabel();
     String searchableIndexIntroduction();
     String submitButtonDefaultLabel();
-    String fileButtonChooseFileLabel();
-    String fileButtonChooseMultipleFilesLabel();
+    WEBCORE_EXPORT String fileButtonChooseFileLabel();
+    WEBCORE_EXPORT String fileButtonChooseMultipleFilesLabel();
     String fileButtonNoFileSelectedLabel();
     String fileButtonNoFilesSelectedLabel();
     String defaultDetailsSummaryText();
 
 #if PLATFORM(COCOA)
     String copyImageUnknownFileLabel();
+#endif
+#if ENABLE(APP_HIGHLIGHTS)
+    WEBCORE_EXPORT String contextMenuItemTagAddHighlightToCurrentQuickNote();
+    WEBCORE_EXPORT String contextMenuItemTagAddHighlightToNewQuickNote();
 #endif
 
 #if ENABLE(CONTEXT_MENUS)
@@ -68,8 +76,9 @@ namespace WebCore {
     String contextMenuItemTagStop();
     String contextMenuItemTagReload();
     String contextMenuItemTagCut();
-    String contextMenuItemTagPaste();
+    WEBCORE_EXPORT String contextMenuItemTagPaste();
 #if PLATFORM(GTK)
+    String contextMenuItemTagPasteAsPlainText();
     String contextMenuItemTagDelete();
     String contextMenuItemTagInputMethods();
     String contextMenuItemTagUnicode();
@@ -186,6 +195,9 @@ namespace WebCore {
     String AXMonthFieldText();
     String AXNumberFieldText();
     String AXWeekFieldText();
+    String AXARIAContentGroupText(const String& ariaType);
+    String AXHorizontalRuleDescriptionText();
+    String AXMarkText();
 
     String AXButtonActionVerb();
     String AXRadioButtonActionVerb();
@@ -197,20 +209,10 @@ namespace WebCore {
     String AXLinkActionVerb();
     String AXListItemActionVerb();
 
-#if ENABLE(INPUT_TYPE_WEEK)
-    // weekFormatInLDML() returns week and year format in LDML, Unicode
-    // technical standard 35, Locale Data Markup Language, e.g. "'Week' ww, yyyy"
-    String weekFormatInLDML();
-#endif
 #if PLATFORM(COCOA)
-    String AXARIAContentGroupText(const String& ariaType);
-    String AXHorizontalRuleDescriptionText();
-    String AXMarkText();
-#if ENABLE(METER_ELEMENT)
     String AXMeterGaugeRegionOptimumText();
     String AXMeterGaugeRegionSuboptimalText();
     String AXMeterGaugeRegionLessGoodText();
-#endif
 #endif
 #if ENABLE(APPLE_PAY)
     String AXApplePayPlainLabel();
@@ -220,6 +222,16 @@ namespace WebCore {
     String AXApplePayCheckOutLabel();
     String AXApplePayBookLabel();
     String AXApplePaySubscribeLabel();
+#if ENABLE(APPLE_PAY_NEW_BUTTON_TYPES)
+    String AXApplePayReloadLabel();
+    String AXApplePayAddMoneyLabel();
+    String AXApplePayTopUpLabel();
+    String AXApplePayOrderLabel();
+    String AXApplePayRentLabel();
+    String AXApplePaySupportLabel();
+    String AXApplePayContributeLabel();
+    String AXApplePayTipLabel();
+#endif
 #endif
 
     String AXAutoFillCredentialsLabel();
@@ -257,6 +269,8 @@ namespace WebCore {
     String fileButtonChooseMultipleMediaFilesLabel();
     String fileButtonNoMediaFileSelectedLabel();
     String fileButtonNoMediaFilesSelectedLabel();
+
+    WEBCORE_EXPORT String formControlDoneButtonTitle();
 #endif
 
     String imageTitle(const String& filename, const IntSize& size);
@@ -290,22 +304,34 @@ namespace WebCore {
 
     String clickToExitFullScreenText();
 
-#if ENABLE(VIDEO_TRACK)
-    String textTrackSubtitlesText();
+#if ENABLE(VIDEO)
+    String trackNoLabelText();
     String textTrackOffMenuItemText();
     String textTrackAutomaticMenuItemText();
-    String textTrackNoLabelText();
-    String audioTrackNoLabelText();
-#if PLATFORM(COCOA) || PLATFORM(WIN)
-    String textTrackCountryAndLanguageMenuItemText(const String& title, const String& country, const String& language);
-    String textTrackLanguageMenuItemText(const String& title, const String& language);
-    String closedCaptionTrackMenuItemText(const String&);
-    String sdhTrackMenuItemText(const String&);
-    String easyReaderTrackMenuItemText(const String&);
-    String forcedTrackMenuItemText(const String&);
-    String audioDescriptionTrackSuffixText(const String&);
-#endif
-#endif
+#if USE(CF)
+    String addTrackLabelAsSuffix(const String&, const String&);
+    String textTrackKindClosedCaptionsDisplayName();
+    String addTextTrackKindClosedCaptionsSuffix(const String&);
+    String textTrackKindCaptionsDisplayName();
+    String addTextTrackKindCaptionsSuffix(const String&);
+    String textTrackKindDescriptionsDisplayName();
+    String addTextTrackKindDescriptionsSuffix(const String&);
+    String textTrackKindChaptersDisplayName();
+    String addTextTrackKindChaptersSuffix(const String&);
+    String textTrackKindMetadataDisplayName();
+    String addTextTrackKindMetadataSuffix(const String&);
+    String textTrackKindSDHDisplayName();
+    String addTextTrackKindSDHSuffix(const String&);
+    String textTrackKindEasyReaderDisplayName();
+    String addTextTrackKindEasyReaderSuffix(const String&);
+    String textTrackKindForcedDisplayName();
+    String addTextTrackKindForcedSuffix(const String&);
+    String audioTrackKindDescriptionsDisplayName();
+    String addAudioTrackKindDescriptionsSuffix(const String&);
+    String audioTrackKindCommentaryDisplayName();
+    String addAudioTrackKindCommentarySuffix(const String&);
+#endif // USE(CF)
+#endif // ENABLE(VIDEO)
 
     String snapshottedPlugInLabelTitle();
     String snapshottedPlugInLabelSubtitle();
@@ -329,7 +355,6 @@ namespace WebCore {
 #if PLATFORM(WATCHOS)
     WEBCORE_EXPORT String numberPadOKButtonTitle();
     WEBCORE_EXPORT String formControlCancelButtonTitle();
-    WEBCORE_EXPORT String formControlDoneButtonTitle();
     WEBCORE_EXPORT String formControlHideButtonTitle();
     WEBCORE_EXPORT String formControlGoButtonTitle();
     WEBCORE_EXPORT String formControlSearchButtonTitle();
@@ -339,11 +364,38 @@ namespace WebCore {
     WEBCORE_EXPORT String datePickerYearLabelTitle();
 #endif
 
-#if USE(GLIB) && defined(GETTEXT_PACKAGE)
+#if ENABLE(WEB_AUTHN)
+    WEBCORE_EXPORT String makeCredentialTouchIDPromptTitle(const String& bundleName, const String& domain);
+    WEBCORE_EXPORT String getAssertionTouchIDPromptTitle(const String& bundleName, const String& domain);
+    WEBCORE_EXPORT String genericTouchIDPromptTitle();
+#endif
+
+#if ENABLE(IMAGE_ANALYSIS)
+    WEBCORE_EXPORT String contextMenuItemTagLookUpImage();
+    WEBCORE_EXPORT String contextMenuItemTagQuickLookImage();
+    WEBCORE_EXPORT String contextMenuItemTagQuickLookImageForTextSelection();
+    WEBCORE_EXPORT String contextMenuItemTagQuickLookImageForVisualSearch();
+#endif // ENABLE(IMAGE_ANALYSIS)
+
+#if ENABLE(IMAGE_ANALYSIS_ENHANCEMENTS)
+    WEBCORE_EXPORT String contextMenuItemTagCopyCroppedImage();
+    WEBCORE_EXPORT String contextMenuItemTitleMarkupImage();
+#endif
+
+#if HAVE(TRANSLATION_UI_SERVICES)
+    String contextMenuItemTagTranslate(const String& selectedString);
+#endif
+
+#if USE(CF) && !PLATFORM(WIN)
+#define WEB_UI_STRING(string, description) WebCore::localizedString(CFSTR(string))
+#define WEB_UI_STRING_KEY(string, key, description) WebCore::localizedString(CFSTR(key))
+#define WEB_UI_STRING_WITH_MNEMONIC(string, mnemonic, description) WebCore::localizedString(CFSTR(string))
+#elif USE(GLIB) && defined(GETTEXT_PACKAGE)
 #define WEB_UI_STRING(string, description) WebCore::localizedString(_(string))
 #define WEB_UI_STRING_KEY(string, key, description) WebCore::localizedString(C_(key, string))
 #define WEB_UI_STRING_WITH_MNEMONIC(string, mnemonic, description) WebCore::localizedString(_(mnemonic))
 #else
+// Work around default Mac Roman encoding of CFSTR() for Apple Windows port.
 #define WEB_UI_STRING(string, description) WebCore::localizedString(string)
 #define WEB_UI_STRING_KEY(string, key, description) WebCore::localizedString(key)
 #define WEB_UI_STRING_WITH_MNEMONIC(string, mnemonic, description) WebCore::localizedString(string)
@@ -351,15 +403,53 @@ namespace WebCore {
 
 #if USE(CF)
 // This is exactly as WEB_UI_STRING, but renamed to ensure the string is not scanned by non-CF ports.
+#if PLATFORM(WIN)
+// Work around default Mac Roman encoding of CFSTR() for Apple Windows port.
 #define WEB_UI_CFSTRING(string, description) WebCore::localizedString(string)
+#define WEB_UI_CFSTRING_KEY(string, key, description) WebCore::localizedString(key)
+#else
+#define WEB_UI_CFSTRING(string, description) WebCore::localizedString(CFSTR(string))
+#define WEB_UI_CFSTRING_KEY(string, key, description) WebCore::localizedString(CFSTR(key))
 #endif
 
+    WEBCORE_EXPORT RetainPtr<CFStringRef> copyLocalizedString(CFStringRef key);
+#endif
+
+#if USE(CF) && !PLATFORM(WIN)
+    WEBCORE_EXPORT String localizedString(CFStringRef key);
+#else
     WEBCORE_EXPORT String localizedString(const char* key);
-    String formatLocalizedString(String format, ...);
+#endif
+
+#if USE(CF)
+#if PLATFORM(WIN)
+// Work around default Mac Roman encoding of CFSTR() for Apple Windows port.
+#define WEB_UI_FORMAT_CFSTRING(string, description, ...) WebCore::formatLocalizedString(string, __VA_ARGS__)
+#define WEB_UI_FORMAT_CFSTRING_KEY(string, key, description, ...) WebCore::formatLocalizedString(key, __VA_ARGS__)
+#define WEB_UI_FORMAT_STRING(string, description, ...) WebCore::formatLocalizedString(string, __VA_ARGS__)
+#else
+#define WEB_UI_FORMAT_CFSTRING(string, description, ...) WebCore::formatLocalizedString(CFSTR(string), __VA_ARGS__)
+#define WEB_UI_FORMAT_CFSTRING_KEY(string, key, description, ...) WebCore::formatLocalizedString(CFSTR(key), __VA_ARGS__)
+#define WEB_UI_FORMAT_STRING(string, description, ...) WebCore::formatLocalizedString(CFSTR(string), __VA_ARGS__)
+#endif // PLATFORM(WIN)
+#elif USE(GLIB) && defined(GETTEXT_PACKAGE)
+#define WEB_UI_FORMAT_STRING(string, description, ...) WebCore::formatLocalizedString(_(string), __VA_ARGS__)
+#else
+#define WEB_UI_FORMAT_STRING(string, description, ...) WebCore::formatLocalizedString(string, __VA_ARGS__)
+#endif
+
+#if USE(CF) && !PLATFORM(WIN)
+    String formatLocalizedString(CFStringRef format, ...) CF_FORMAT_FUNCTION(1, 2);
+#else
+    String formatLocalizedString(const char* format, ...) WTF_ATTRIBUTE_PRINTF(1, 2);
+#endif
 
 #ifdef __OBJC__
 #define WEB_UI_NSSTRING(string, description) WebCore::localizedNSString(string)
-    WEBCORE_EXPORT NSString *localizedNSString(NSString *key) NS_FORMAT_ARGUMENT(1);
+    inline NS_FORMAT_ARGUMENT(1) NSString *localizedNSString(NSString *key)
+    {
+        return bridge_cast(copyLocalizedString(bridge_cast(key)).autorelease());
+    }
 #endif
 
 } // namespace WebCore
