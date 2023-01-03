@@ -118,6 +118,11 @@ public class ResizeHelper {
                 return;
             }
 
+            if (Math.abs(delta) < SMALL_DELTA) {
+                distributeSmallDelta(delta);
+                return;
+            }
+
             for (int i = 0; i < count; i++) {
                 if (skip.get(i)) {
                     continue;
