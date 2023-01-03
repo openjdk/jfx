@@ -1224,8 +1224,9 @@ DragView::DragView(GdkPixbuf* _pixbuf, gboolean _is_raw_image,
 
 #ifdef GLASS_GTK3
     gdk_window_set_opaque_region(window, NULL);
+    GdkRGBA rgba = {0, 0, 0, 0};
+    gdk_window_set_background_rgba(window, &rgba);
 #endif
-    gdk_window_set_opacity(window, 0);
 }
 
 void DragView::expose() {
