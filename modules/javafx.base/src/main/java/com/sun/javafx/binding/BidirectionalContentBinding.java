@@ -25,12 +25,25 @@
 
 package com.sun.javafx.binding;
 
-import javafx.beans.WeakListener;
-import javafx.collections.*;
-
 import java.lang.ref.WeakReference;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.IdentityHashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
+import java.util.WeakHashMap;
+import java.util.function.Function;
+import java.util.stream.Stream;
+
+import javafx.beans.WeakListener;
+import javafx.collections.ListChangeListener;
+import javafx.collections.MapChangeListener;
+import javafx.collections.ObservableList;
+import javafx.collections.ObservableMap;
+import javafx.collections.ObservableSet;
+import javafx.collections.SetChangeListener;
 
 /**
  */
@@ -45,13 +58,9 @@ public class BidirectionalContentBinding {
         }
     }
 
+    // TODO this really shouldn't be returning anything (unless it is a Subscription); only used for testing
     public static <E> Object bind(ObservableList<E> list1, ObservableList<E> list2) {
-        checkParameters(list1, list2);
-        final ListContentBinding<E> binding = new ListContentBinding<>(list1, list2);
-        list1.setAll(list2);
-        list1.addListener(binding);
-        list2.addListener(binding);
-        return binding;
+        return ListContentBinding.of(list1, list2);
     }
 
     public static <E> Object bind(ObservableSet<E> set1, ObservableSet<E> set2) {
@@ -76,16 +85,11 @@ public class BidirectionalContentBinding {
 
     public static void unbind(Object obj1, Object obj2) {
         checkParameters(obj1, obj2);
-        if ((obj1 instanceof ObservableList) && (obj2 instanceof ObservableList)) {
-            final ObservableList list1 = (ObservableList)obj1;
-            final ObservableList list2 = (ObservableList)obj2;
-            final ListContentBinding binding = new ListContentBinding(list1, list2);
-            list1.removeListener(binding);
-            list2.removeListener(binding);
-        } else if ((obj1 instanceof ObservableSet) && (obj2 instanceof ObservableSet)) {
-            final ObservableSet set1 = (ObservableSet)obj1;
-            final ObservableSet set2 = (ObservableSet)obj2;
-            final SetContentBinding binding = new SetContentBinding(set1, set2);
+        if ((obj1 instanceof ObservableList<?> list1) && (obj2 instanceof ObservableList<?> list2)) {
+            ListContentBinding.unbindIfPresent(list1, list2);
+        } else if ((obj1 instanceof ObservableSet<?> set1) && (obj2 instanceof ObservableSet<?> set2)) {
+            @SuppressWarnings("unchecked")
+            final SetContentBinding<Object> binding = new SetContentBinding<>((ObservableSet<Object>) set1, (ObservableSet<Object>) set2);
             set1.removeListener(binding);
             set2.removeListener(binding);
         } else if ((obj1 instanceof ObservableMap) && (obj2 instanceof ObservableMap)) {
@@ -97,24 +101,78 @@ public class BidirectionalContentBinding {
         }
     }
 
-    private static class ListContentBinding<E> implements ListChangeListener<E>, WeakListener {
+    private static class ListContentBinding implements ListChangeListener<Object>, WeakListener {
+        private static final Map<ObservableList<?>, Set<ListContentBinding>> BINDINGS = new WeakHashMap<>();
 
-        private final WeakReference<ObservableList<E>> propertyRef1;
-        private final WeakReference<ObservableList<E>> propertyRef2;
+        private final WeakReference<ObservableList<?>> propertyRef1;
+        private final WeakReference<ObservableList<?>> propertyRef2;
 
         private boolean updating = false;
 
+        /**
+         * Creates a bidirectional content binding between the given lists.
+         *
+         * @param <E> the element type of the lists
+         * @param list1 the first list, cannot be {@code null}
+         * @param list2 the second list, cannot be {@code null}
+         * @throws NullPointerException when either list is {@code null}
+         * @throws IllegalArgumentException when the lists are the same, the lists are already bound to each other, or
+         *   the binding would result in a circular binding between 3 or more lists
+         */
+        public static <E> ListContentBinding of(ObservableList<E> list1, ObservableList<E> list2) {
+            checkParameters(list1, list2);
+            ensureNoCyclicDependencies(list1, list2, obj -> Stream.ofNullable(BINDINGS.get(obj))
+                .flatMap(Set::stream)
+                .map(binding -> binding.propertyRef2.get())
+                .filter(Objects::nonNull)  // skip if reference is gone
+                .filter(observable -> observable != obj)  // skip if "target" is same same as "source" vertex in a DAG
+                .toList()
+            );
 
-        public ListContentBinding(ObservableList<E> list1, ObservableList<E> list2) {
+            ListContentBinding binding = new ListContentBinding(list1, list2);
+
+            if (!BINDINGS.computeIfAbsent(list1, k -> new HashSet<>()).add(binding)) {
+                throw new IllegalArgumentException("Already bound to each other");
+            }
+
+            BINDINGS.computeIfAbsent(list2, k -> new HashSet<>()).add(binding);
+
+            list1.setAll(list2);
+            list1.addListener(binding);
+            list2.addListener(binding);
+
+            return binding;  // TODO this is currently only returned for testing the hashcode/equals stuff, but IMHO should not be exposed at all!
+        }
+
+        public static void unbindIfPresent(ObservableList<?> list1, ObservableList<?> list2) {
+            Set<ListContentBinding> set1 = BINDINGS.get(list1);
+            Set<ListContentBinding> set2 = BINDINGS.get(list2);
+
+            if(set1 != null && set2 != null) {
+                set1.stream().filter(set2::contains).findFirst().ifPresent(binding -> {
+                    BINDINGS.computeIfPresent(list1, (k, v) -> v.remove(binding) && v.isEmpty() ? null : v);
+                    BINDINGS.computeIfPresent(list2, (k, v) -> v.remove(binding) && v.isEmpty() ? null : v);
+
+                    list1.removeListener(binding);
+                    list2.removeListener(binding);
+                });
+            }
+        }
+
+        private <E> ListContentBinding(ObservableList<E> list1, ObservableList<E> list2) {
             propertyRef1 = new WeakReference<>(list1);
             propertyRef2 = new WeakReference<>(list2);
         }
 
         @Override
-        public void onChanged(Change<? extends E> change) {
+        public void onChanged(Change<?> change) {
             if (!updating) {
-                final ObservableList<E> list1 = propertyRef1.get();
-                final ObservableList<E> list2 = propertyRef2.get();
+                @SuppressWarnings("unchecked")  // Safe cast, content of list is irrelevant
+                final ObservableList<Object> list1 = (ObservableList<Object>) propertyRef1.get();
+
+                @SuppressWarnings("unchecked")  // Safe cast, content of list is irrelevant
+                final ObservableList<Object> list2 = (ObservableList<Object>) propertyRef2.get();
+
                 if ((list1 == null) || (list2 == null)) {
                     if (list1 != null) {
                         list1.removeListener(this);
@@ -125,7 +183,7 @@ public class BidirectionalContentBinding {
                 } else {
                     try {
                         updating = true;
-                        final ObservableList<E> dest = (list1 ==  change.getList())? list2 : list1;
+                        final ObservableList<Object> dest = (list1 ==  change.getList())? list2 : list1;
                         while (change.next()) {
                             if (change.wasPermutated()) {
                                 dest.remove(change.getFrom(), change.getTo());
@@ -153,8 +211,8 @@ public class BidirectionalContentBinding {
 
         @Override
         public int hashCode() {
-            final ObservableList<E> list1 = propertyRef1.get();
-            final ObservableList<E> list2 = propertyRef2.get();
+            final ObservableList<?> list1 = propertyRef1.get();
+            final ObservableList<?> list2 = propertyRef2.get();
             final int hc1 = (list1 == null)? 0 : list1.hashCode();
             final int hc2 = (list2 == null)? 0 : list2.hashCode();
             return hc1 * hc2;
@@ -172,8 +230,7 @@ public class BidirectionalContentBinding {
                 return false;
             }
 
-            if (obj instanceof ListContentBinding) {
-                final ListContentBinding otherBinding = (ListContentBinding) obj;
+            if (obj instanceof ListContentBinding otherBinding) {
                 final Object propertyB1 = otherBinding.propertyRef1.get();
                 final Object propertyB2 = otherBinding.propertyRef2.get();
                 if ((propertyB1 == null) || (propertyB2 == null)) {
@@ -364,4 +421,49 @@ public class BidirectionalContentBinding {
         }
     }
 
+    private static void ensureNoCyclicDependencies(Object obj1, Object obj2, Function<Object, List<?>> dependencyProvider) {
+        Set<Object> input = Collections.newSetFromMap(new IdentityHashMap<>());
+
+        input.add(obj1);
+        input.add(obj2);
+
+        class CycleDetector {
+            Set<Object> visited = Collections.newSetFromMap(new IdentityHashMap<>());
+            Set<Object> visiting = Collections.newSetFromMap(new IdentityHashMap<>());
+
+            Set<Object> getCycle() {
+                for(Object node : input) {
+                    if(!visited.contains(node) && hasCycle(node)) {
+                        return visiting;
+                    }
+                }
+
+                return visiting;
+            }
+
+            boolean hasCycle(Object node) {
+                visiting.add(node);
+
+                for(Object dependency : dependencyProvider.apply(node)) {
+                    if(visiting.contains(dependency)) {
+                        return true;
+                    }
+                    else if(!visited.contains(dependency) && hasCycle(dependency)) {
+                        return true;
+                    }
+                }
+
+                visiting.remove(node);
+                visited.add(node);
+
+                return false;
+            }
+        }
+
+        Set<Object> cycle = new CycleDetector().getCycle();
+
+        if(!cycle.isEmpty()) {
+            throw new IllegalArgumentException("Cycle in: " + cycle);
+        }
+    }
 }
