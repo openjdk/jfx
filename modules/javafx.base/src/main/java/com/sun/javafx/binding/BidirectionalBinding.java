@@ -158,39 +158,39 @@ public abstract class BidirectionalBinding implements InvalidationListener, Weak
         source.removeListener(binding);
     }
 
-    public static BidirectionalBinding bindNumber(Property<Integer> target, IntegerProperty source) {
-        return bindNumber(target, (Property<Number>)source);
+    public static void bindNumber(Property<Integer> target, IntegerProperty source) {
+        bindNumber(target, (Property<Number>)source);
     }
 
-    public static BidirectionalBinding bindNumber(Property<Long> target, LongProperty source) {
-        return bindNumber(target, (Property<Number>)source);
+    public static void bindNumber(Property<Long> target, LongProperty source) {
+        bindNumber(target, (Property<Number>)source);
     }
 
-    public static BidirectionalBinding bindNumber(Property<Float> target, FloatProperty source) {
-        return bindNumber(target, (Property<Number>)source);
+    public static void bindNumber(Property<Float> target, FloatProperty source) {
+        bindNumber(target, (Property<Number>)source);
     }
 
-    public static BidirectionalBinding bindNumber(Property<Double> target, DoubleProperty source) {
-        return bindNumber(target, (Property<Number>)source);
+    public static void bindNumber(Property<Double> target, DoubleProperty source) {
+        bindNumber(target, (Property<Number>)source);
     }
 
-    public static BidirectionalBinding bindNumber(IntegerProperty target, Property<Integer> source) {
-        return bindNumberObject(target, source);
+    public static void bindNumber(IntegerProperty target, Property<Integer> source) {
+        bindNumberObject(target, source);
     }
 
-    public static BidirectionalBinding bindNumber(LongProperty target, Property<Long> source) {
-        return bindNumberObject(target, source);
+    public static void bindNumber(LongProperty target, Property<Long> source) {
+        bindNumberObject(target, source);
     }
 
-    public static BidirectionalBinding bindNumber(FloatProperty target, Property<Float> source) {
-        return bindNumberObject(target, source);
+    public static void bindNumber(FloatProperty target, Property<Float> source) {
+        bindNumberObject(target, source);
     }
 
-    public static BidirectionalBinding bindNumber(DoubleProperty target, Property<Double> source) {
-        return bindNumberObject(target, source);
+    public static void bindNumber(DoubleProperty target, Property<Double> source) {
+        bindNumberObject(target, source);
     }
 
-    private static <T extends Number> BidirectionalBinding bindNumberObject(Property<Number> target, Property<T> source) {
+    private static <T extends Number> void bindNumberObject(Property<Number> target, Property<T> source) {
         checkBindParameters(target, source);
         final BidirectionalBinding binding = new TypedNumberBidirectionalBinding<>(source, target);
         target.removeListener(binding);
@@ -199,10 +199,10 @@ public abstract class BidirectionalBinding implements InvalidationListener, Weak
         target.getValue();
         target.addListener(binding);
         source.addListener(binding);
-        return binding;
     }
 
-    private static <T extends Number> BidirectionalBinding bindNumber(Property<T> target, Property<Number> source) {
+    @SuppressWarnings("unchecked")
+    private static <T extends Number> void bindNumber(Property<T> target, Property<Number> source) {
         checkBindParameters(target, source);
         final BidirectionalBinding binding = new TypedNumberBidirectionalBinding<>(target, source);
         target.removeListener(binding);
@@ -211,7 +211,6 @@ public abstract class BidirectionalBinding implements InvalidationListener, Weak
         target.getValue();
         target.addListener(binding);
         source.addListener(binding);
-        return binding;
     }
 
     private final int cachedHashCode;
@@ -246,8 +245,7 @@ public abstract class BidirectionalBinding implements InvalidationListener, Weak
             return false;
         }
 
-        if (obj instanceof BidirectionalBinding) {
-            final BidirectionalBinding otherBinding = (BidirectionalBinding) obj;
+        if (obj instanceof BidirectionalBinding otherBinding) {
             final Property<?> propertyB1 = otherBinding.getProperty1();
             final Property<?> propertyB2 = otherBinding.getProperty2();
             if ((propertyB1 == null) || (propertyB2 == null)) {
