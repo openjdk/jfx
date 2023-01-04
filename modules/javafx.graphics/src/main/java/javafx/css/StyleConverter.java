@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -315,7 +315,6 @@ public class StyleConverter<F, T> {
      * @throws java.io.IOException the exception
      * @since 9
      */
-    @SuppressWarnings("rawtypes")
     public static StyleConverter<?,?> readBinary(DataInputStream is, String[] strings)
             throws IOException {
 
@@ -331,7 +330,7 @@ public class StyleConverter<F, T> {
             cname = "javafx.css.converter." + cname.substring("com.sun.javafx.css.converters.".length());
         }
         if (cname.startsWith("javafx.css.converter.EnumConverter")) {
-            return (StyleConverter)javafx.css.converter.EnumConverter.readBinary(is, strings);
+            return javafx.css.converter.EnumConverter.readBinary(is, strings);
         }
 
         // Make a new entry in tmap, if necessary
@@ -346,7 +345,7 @@ public class StyleConverter<F, T> {
             if (converter == null) {
                 System.err.println("could not deserialize " + cname);
             }
-            if (tmap == null) tmap = new HashMap<String,StyleConverter<?,?>>();
+            if (tmap == null) tmap = new HashMap<>();
             tmap.put(cname, converter);
             return converter;
         }
@@ -535,12 +534,12 @@ public class StyleConverter<F, T> {
      * @since 9
      */
     public static class StringStore {
-        private final Map<String,Integer> stringMap = new HashMap<String,Integer>();
+        private final Map<String,Integer> stringMap = new HashMap<>();
 
         /**
          * List of strings of this {@code StringStore}.
          */
-        public final List<String> strings = new ArrayList<String>();
+        public final List<String> strings = new ArrayList<>();
 
         /**
          * Creates a {@code StringStore}.

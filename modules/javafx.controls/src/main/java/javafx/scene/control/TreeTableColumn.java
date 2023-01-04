@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -202,7 +202,7 @@ public class TreeTableColumn<S,T> extends TableColumnBase<TreeItem<S>,T> impleme
      * inside the {@link Cell#textProperty() text} property.
      */
     public static final Callback<TreeTableColumn<?,?>, TreeTableCell<?,?>> DEFAULT_CELL_FACTORY =
-            new Callback<TreeTableColumn<?,?>, TreeTableCell<?,?>>() {
+            new Callback<>() {
         @Override public TreeTableCell<?,?> call(TreeTableColumn<?,?> param) {
             return new TreeTableCell() {
                 @Override protected void updateItem(Object item, boolean empty) {
@@ -293,7 +293,7 @@ public class TreeTableColumn<S,T> extends TableColumnBase<TreeItem<S>,T> impleme
                 }
             };
 
-    private ListChangeListener<TreeTableColumn<S, ?>> columnsListener = new ListChangeListener<TreeTableColumn<S,?>>() {
+    private ListChangeListener<TreeTableColumn<S, ?>> columnsListener = new ListChangeListener<>() {
         @Override public void onChanged(ListChangeListener.Change<? extends TreeTableColumn<S,?>> c) {
             while (c.next()) {
                 // update the TreeTableColumn.treeTableView property
@@ -346,7 +346,7 @@ public class TreeTableColumn<S,T> extends TableColumnBase<TreeItem<S>,T> impleme
      * The TreeTableView that this TreeTableColumn belongs to.
      */
     private ReadOnlyObjectWrapper<TreeTableView<S>> treeTableView =
-            new ReadOnlyObjectWrapper<TreeTableView<S>>(this, "treeTableView");
+            new ReadOnlyObjectWrapper<>(this, "treeTableView");
     public final ReadOnlyObjectProperty<TreeTableView<S>> treeTableViewProperty() {
         return treeTableView.getReadOnlyProperty();
     }
@@ -397,7 +397,7 @@ public class TreeTableColumn<S,T> extends TableColumnBase<TreeItem<S>,T> impleme
     }
     public final ObjectProperty<Callback<TreeTableColumn.CellDataFeatures<S,T>, ObservableValue<T>>> cellValueFactoryProperty() {
         if (cellValueFactory == null) {
-            cellValueFactory = new SimpleObjectProperty<Callback<TreeTableColumn.CellDataFeatures<S,T>, ObservableValue<T>>>(this, "cellValueFactory");
+            cellValueFactory = new SimpleObjectProperty<>(this, "cellValueFactory");
         }
         return cellValueFactory;
     }
@@ -420,8 +420,8 @@ public class TreeTableColumn<S,T> extends TableColumnBase<TreeItem<S>,T> impleme
      *
      */
     private final ObjectProperty<Callback<TreeTableColumn<S,T>, TreeTableCell<S,T>>> cellFactory =
-        new SimpleObjectProperty<Callback<TreeTableColumn<S,T>, TreeTableCell<S,T>>>(
-            this, "cellFactory", (Callback<TreeTableColumn<S,T>, TreeTableCell<S,T>>) ((Callback) DEFAULT_CELL_FACTORY)) {
+        new SimpleObjectProperty<>(
+            this, "cellFactory", ((Callback) DEFAULT_CELL_FACTORY)) {
                 @Override protected void invalidated() {
                     TreeTableView<S> table = getTreeTableView();
                     if (table == null) return;
@@ -455,7 +455,7 @@ public class TreeTableColumn<S,T> extends TableColumnBase<TreeItem<S>,T> impleme
     private ObjectProperty<SortType> sortType;
     public final ObjectProperty<SortType> sortTypeProperty() {
         if (sortType == null) {
-            sortType = new SimpleObjectProperty<SortType>(this, "sortType", SortType.ASCENDING);
+            sortType = new SimpleObjectProperty<>(this, "sortType", SortType.ASCENDING);
         }
         return sortType;
     }
@@ -481,7 +481,7 @@ public class TreeTableColumn<S,T> extends TableColumnBase<TreeItem<S>,T> impleme
     }
     public final ObjectProperty<EventHandler<TreeTableColumn.CellEditEvent<S,T>>> onEditStartProperty() {
         if (onEditStart == null) {
-            onEditStart = new SimpleObjectProperty<EventHandler<TreeTableColumn.CellEditEvent<S,T>>>(this, "onEditStart") {
+            onEditStart = new SimpleObjectProperty<>(this, "onEditStart") {
                 @Override protected void invalidated() {
                     eventHandlerManager.setEventHandler(TreeTableColumn.<S,T>editStartEvent(), get());
                 }
@@ -505,7 +505,7 @@ public class TreeTableColumn<S,T> extends TableColumnBase<TreeItem<S>,T> impleme
     }
     public final ObjectProperty<EventHandler<TreeTableColumn.CellEditEvent<S,T>>> onEditCommitProperty() {
         if (onEditCommit == null) {
-            onEditCommit = new SimpleObjectProperty<EventHandler<TreeTableColumn.CellEditEvent<S,T>>>(this, "onEditCommit") {
+            onEditCommit = new SimpleObjectProperty<>(this, "onEditCommit") {
                 @Override protected void invalidated() {
                     eventHandlerManager.setEventHandler(TreeTableColumn.<S,T>editCommitEvent(), get());
                 }
@@ -528,7 +528,7 @@ public class TreeTableColumn<S,T> extends TableColumnBase<TreeItem<S>,T> impleme
     }
     public final ObjectProperty<EventHandler<TreeTableColumn.CellEditEvent<S,T>>> onEditCancelProperty() {
         if (onEditCancel == null) {
-            onEditCancel = new SimpleObjectProperty<EventHandler<TreeTableColumn.CellEditEvent<S,T>>>(this, "onEditCancel") {
+            onEditCancel = new SimpleObjectProperty<>(this, "onEditCancel") {
                 @Override protected void invalidated() {
                     eventHandlerManager.setEventHandler(TreeTableColumn.<S,T>editCancelEvent(), get());
                 }
@@ -574,7 +574,7 @@ public class TreeTableColumn<S,T> extends TableColumnBase<TreeItem<S>,T> impleme
         if (table == null) return null;
 
         // Call the factory
-        final TreeTableColumn.CellDataFeatures<S,T> cdf = new TreeTableColumn.CellDataFeatures<S,T>(table, this, item);
+        final TreeTableColumn.CellDataFeatures<S,T> cdf = new TreeTableColumn.CellDataFeatures<>(table, this, item);
         return factory.call(cdf);
     }
 
@@ -823,7 +823,7 @@ public class TreeTableColumn<S,T> extends TableColumnBase<TreeItem<S>,T> impleme
             }
 
             // if we are here, we now need to get the data for the specific column
-            return (T) pos.getTableColumn().getCellData(rowData);
+            return pos.getTableColumn().getCellData(rowData);
         }
 
         /**

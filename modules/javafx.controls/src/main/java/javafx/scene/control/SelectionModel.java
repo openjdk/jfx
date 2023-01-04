@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -101,7 +101,7 @@ public abstract class SelectionModel<T> {
      * @return the selected item property
      */
     public final ReadOnlyObjectProperty<T> selectedItemProperty() { return selectedItem.getReadOnlyProperty(); }
-    private ReadOnlyObjectWrapper<T> selectedItem = new ReadOnlyObjectWrapper<T>(this, "selectedItem");
+    private ReadOnlyObjectWrapper<T> selectedItem = new ReadOnlyObjectWrapper<>(this, "selectedItem");
     protected final void setSelectedItem(T value) { selectedItem.set(value); }
 
     /**
@@ -198,9 +198,8 @@ public abstract class SelectionModel<T> {
     public abstract void clearSelection();
 
     /**
-     * <p>Convenience method to inform if the given index is currently selected
-     * in this SelectionModel. Is functionally equivalent to calling
-     * <code>getSelectedIndices().contains(index)</code>.
+     * This method tests whether the given index is currently selected
+     * in this SelectionModel.
      *
      * @param index The index to check as to whether it is currently selected
      *      or not.

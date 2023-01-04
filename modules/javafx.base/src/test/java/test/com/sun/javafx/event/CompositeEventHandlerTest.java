@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,8 +30,6 @@ import com.sun.javafx.event.CompositeEventHandlerShim;
 
 import static org.junit.Assert.*;
 
-import test.com.sun.javafx.event.EventCountingHandler;
-import test.com.sun.javafx.event.EmptyEvent;
 import javafx.event.Event;
 import javafx.event.WeakEventHandler;
 import javafx.event.WeakEventHandlerUtil;
@@ -45,7 +43,7 @@ public class CompositeEventHandlerTest {
 
     @Before
     public void setUp() {
-        compositeEventHandler = new CompositeEventHandler<Event>();
+        compositeEventHandler = new CompositeEventHandler<>();
     }
 
     /**
@@ -56,9 +54,9 @@ public class CompositeEventHandlerTest {
     @Test
     public void testHasFilterWeakCleared() {
         final EventCountingHandler<Event> eventCountingHandler =
-                new EventCountingHandler<Event>();
+                new EventCountingHandler<>();
         final WeakEventHandler<Event> weakEventHandler =
-                new WeakEventHandler<Event>(eventCountingHandler);
+                new WeakEventHandler<>(eventCountingHandler);
 
         compositeEventHandler.addEventFilter(weakEventHandler);
         assertFalse("must not have handler after adding filter", compositeEventHandler.hasHandler());
@@ -74,9 +72,9 @@ public class CompositeEventHandlerTest {
     @Test
     public void testHasHandlerAddWeakClear() {
         final EventCountingHandler<Event> eventCountingHandler =
-                new EventCountingHandler<Event>();
+                new EventCountingHandler<>();
         final WeakEventHandler<Event> weakEventHandler =
-                new WeakEventHandler<Event>(eventCountingHandler);
+                new WeakEventHandler<>(eventCountingHandler);
         compositeEventHandler.addEventHandler(weakEventHandler);
         assertTrue("sanity: really added?", CompositeEventHandlerShim.containsHandler(
                 compositeEventHandler, weakEventHandler));
@@ -95,9 +93,9 @@ public class CompositeEventHandlerTest {
     @Test
     public void testHasFilterWeak() {
         final EventCountingHandler<Event> eventCountingHandler =
-                new EventCountingHandler<Event>();
+                new EventCountingHandler<>();
         final WeakEventHandler<Event> weakEventHandler =
-                new WeakEventHandler<Event>(eventCountingHandler);
+                new WeakEventHandler<>(eventCountingHandler);
 
         compositeEventHandler.addEventFilter(weakEventHandler);
         assertFalse("must not have handler after adding filter", compositeEventHandler.hasHandler());
@@ -113,9 +111,9 @@ public class CompositeEventHandlerTest {
     @Test
     public void testHasHandlerAddWeak() {
         final EventCountingHandler<Event> eventCountingHandler =
-                new EventCountingHandler<Event>();
+                new EventCountingHandler<>();
         final WeakEventHandler<Event> weakEventHandler =
-                new WeakEventHandler<Event>(eventCountingHandler);
+                new WeakEventHandler<>(eventCountingHandler);
         compositeEventHandler.addEventHandler(weakEventHandler);
         assertTrue("sanity: really added?", CompositeEventHandlerShim.containsHandler(
                 compositeEventHandler, weakEventHandler));
@@ -132,7 +130,7 @@ public class CompositeEventHandlerTest {
     @Test
     public void testHasFilter() {
         final EventCountingHandler<Event> eventCountingHandler =
-                new EventCountingHandler<Event>();
+                new EventCountingHandler<>();
         compositeEventHandler.addEventFilter(eventCountingHandler);
         assertFalse("must not have handler after adding filter", compositeEventHandler.hasHandler());
         assertTrue("must have filter", compositeEventHandler.hasFilter());
@@ -147,7 +145,7 @@ public class CompositeEventHandlerTest {
     @Test
     public void testHasHandlerAdd() {
         final EventCountingHandler<Event> eventCountingHandler =
-                new EventCountingHandler<Event>();
+                new EventCountingHandler<>();
         compositeEventHandler.addEventHandler(eventCountingHandler);
         assertTrue("sanity: really added?", CompositeEventHandlerShim.containsHandler(
                 compositeEventHandler, eventCountingHandler));
@@ -165,7 +163,7 @@ public class CompositeEventHandlerTest {
     @Test
     public void testHasHandlerSingleton() {
         final EventCountingHandler<Event> eventCountingHandler =
-                new EventCountingHandler<Event>();
+                new EventCountingHandler<>();
         compositeEventHandler.setEventHandler(eventCountingHandler);
         assertFalse("must not have filter after set handler", compositeEventHandler.hasFilter());
         assertTrue("must have handler", compositeEventHandler.hasHandler());
@@ -177,9 +175,9 @@ public class CompositeEventHandlerTest {
     @Test
     public void weakEventHandlerTest() {
         final EventCountingHandler<Event> eventCountingHandler =
-                new EventCountingHandler<Event>();
+                new EventCountingHandler<>();
         final WeakEventHandler<Event> weakEventHandler =
-                new WeakEventHandler<Event>(eventCountingHandler);
+                new WeakEventHandler<>(eventCountingHandler);
 
         compositeEventHandler.addEventHandler(weakEventHandler);
 
@@ -203,9 +201,9 @@ public class CompositeEventHandlerTest {
     @Test
     public void weakEventFilterTest() {
         final EventCountingHandler<Event> eventCountingFilter =
-                new EventCountingHandler<Event>();
+                new EventCountingHandler<>();
         final WeakEventHandler<Event> weakEventFilter =
-                new WeakEventHandler<Event>(eventCountingFilter);
+                new WeakEventHandler<>(eventCountingFilter);
 
         compositeEventHandler.addEventFilter(weakEventFilter);
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -82,7 +82,7 @@ public final class TempState {
     public final Affine3D tempTx = new Affine3D();
 
     private static final ThreadLocal<TempState> tempStateRef =
-            new ThreadLocal<TempState>() {
+            new ThreadLocal<>() {
                 @Override
                 protected TempState initialValue() {
                     return new TempState();

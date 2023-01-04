@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,8 +25,6 @@
 
 package test.javafx.scene.layout;
 
-import test.javafx.scene.layout.MockBiased;
-import test.javafx.scene.layout.MockRegion;
 import javafx.geometry.HPos;
 import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
@@ -1221,7 +1219,7 @@ public class RegionTest {
         public void clearDirty() {
             NodeShim.clearDirty(this, DirtyBits.NODE_CONTENTS);
         }
-    };
+    }
 
     // Test for RT-13820
     @Test public void changingShapeElementsShouldResultInRender() {

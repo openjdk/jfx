@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -72,7 +72,7 @@ final class DataURLConnection extends URLConnection {
         String dataString = content.substring(commaPosition + 1);
 
         String mimeType = null;
-        LinkedList<String> parameters = new LinkedList<String>();
+        LinkedList<String> parameters = new LinkedList<>();
         Charset charset = null;
         boolean base64 = false;
 

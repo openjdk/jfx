@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -51,10 +51,12 @@ public class SSERendererDelegate implements RendererDelegate {
         }
     }
 
+    @Override
     public AccelType getAccelType() {
         return AccelType.SIMD;
     }
 
+    @Override
     public String getPlatformPeerName(String name, int unrollCount) {
         return Renderer.rootPkg + ".impl.sw.sse.SSE" + name + "Peer";
     }

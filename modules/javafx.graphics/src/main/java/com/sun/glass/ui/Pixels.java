@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -96,6 +96,20 @@ public abstract class Pixels {
         this.ints = null;
         this.scalex = 1.0f;
         this.scaley = 1.0f;
+    }
+
+    protected Pixels(final int width, final int height, final ByteBuffer pixels, float scalex, float scaley) {
+        this.width = width;
+        this.height = height;
+        this.bytesPerComponent = 1;
+        this.bytes = pixels.slice();
+        if ((this.width <= 0) || (this.height <= 0) || ((this.width * this.height * 4) > this.bytes.capacity())) {
+            throw new IllegalArgumentException("Too small byte buffer size "+this.width+"x"+this.height+" ["+(this.width*this.height*4)+"] > "+this.bytes.capacity());
+        }
+
+        this.ints = null;
+        this.scalex = scalex;
+        this.scaley = scaley;
     }
 
     protected Pixels(final int width, final int height, IntBuffer pixels) {

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -91,7 +91,7 @@ public final class Timeline extends Animation {
     public final ObservableList<KeyFrame> getKeyFrames() {
         return keyFrames;
     }
-    private final ObservableList<KeyFrame> keyFrames = new TrackableObservableList<KeyFrame>() {
+    private final ObservableList<KeyFrame> keyFrames = new TrackableObservableList<>() {
         @Override
         protected void onChanged(Change<KeyFrame> c) {
             while (c.next()) {

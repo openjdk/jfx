@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -59,7 +59,7 @@ import java.lang.reflect.Method;
  */
 public final class JavaBeanBooleanPropertyBuilder {
 
-    private final JavaBeanPropertyBuilderHelper helper = new JavaBeanPropertyBuilderHelper();
+    private final JavaBeanPropertyBuilderHelper<Boolean> helper = new JavaBeanPropertyBuilderHelper<>();
 
     private JavaBeanBooleanPropertyBuilder() {}
 
@@ -82,7 +82,7 @@ public final class JavaBeanBooleanPropertyBuilder {
      * {@code boolean} or {@code Boolean}
      */
     public JavaBeanBooleanProperty build() throws NoSuchMethodException {
-        final PropertyDescriptor descriptor = helper.getDescriptor();
+        final PropertyDescriptor<Boolean> descriptor = helper.getDescriptor();
         if (!boolean.class.equals(descriptor.getType()) && !Boolean.class.equals(descriptor.getType())) {
             throw new IllegalArgumentException("Not a boolean property");
         }

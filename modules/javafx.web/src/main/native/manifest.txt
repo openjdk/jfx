@@ -69,6 +69,7 @@ exclude Source/ThirdParty
 exclude Source/WebCore/platform/audio/resources
 exclude Source/WebCore/bindings/scripts/test
 exclude Source/WebCore/Resources
+exclude Source/WTF/icu
 exclude Source/WebKit/.*
 exclude Source/cmake/OptionsWinCairo.cmake
 exclude Source/cmake/OptionsWindows.cmake

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -41,7 +41,7 @@ import java.util.Arrays;
  */
 public final class GSTPlatform extends Platform {
     /**
-     * The MIME types of all supported media.
+     * The MIME types of all supported media on Windows and Linux.
      */
     private static final String[] CONTENT_TYPES = {
         "audio/x-aiff",
@@ -53,6 +53,14 @@ public final class GSTPlatform extends Platform {
         "video/x-m4v",
         "application/vnd.apple.mpegurl",
         "audio/mpegurl"
+    };
+
+    /**
+     * The MIME types of all supported media on macOS.
+     */
+    private static final String[] CONTENT_TYPES_MACOS = {
+        "audio/x-aiff",
+        "audio/x-wav"
     };
 
     /**
@@ -99,7 +107,11 @@ public final class GSTPlatform extends Platform {
 
     @Override
     public String[] getSupportedContentTypes() {
-        return Arrays.copyOf(CONTENT_TYPES, CONTENT_TYPES.length);
+        if (HostUtils.isMacOSX()) {
+            return Arrays.copyOf(CONTENT_TYPES_MACOS, CONTENT_TYPES_MACOS.length);
+        } else {
+            return Arrays.copyOf(CONTENT_TYPES, CONTENT_TYPES.length);
+        }
     }
 
     @Override

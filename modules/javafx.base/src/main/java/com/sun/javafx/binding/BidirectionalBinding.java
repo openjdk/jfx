@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -68,7 +68,7 @@ public abstract class BidirectionalBinding implements InvalidationListener, Weak
                         new BidirectionalLongBinding((LongProperty) property1, (LongProperty) property2)
                 : ((property1 instanceof BooleanProperty) && (property2 instanceof BooleanProperty)) ?
                         new BidirectionalBooleanBinding((BooleanProperty) property1, (BooleanProperty) property2)
-                : new TypedGenericBidirectionalBinding<T>(property1, property2);
+                : new TypedGenericBidirectionalBinding<>(property1, property2);
         property1.setValue(property2.getValue());
         property1.getValue();
         property1.addListener(binding);
@@ -736,7 +736,7 @@ public abstract class BidirectionalBinding implements InvalidationListener, Weak
                     } catch (RuntimeException e) {
                         try {
                             if (property1 == sourceProperty) {
-                                property1.setValue((T)oldValue);
+                                property1.setValue(oldValue);
                                 property1.getValue();
                             } else {
                                 property2.setValue(oldValue);

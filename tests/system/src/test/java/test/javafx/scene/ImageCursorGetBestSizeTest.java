@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2018, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,22 +26,24 @@
 package test.javafx.scene;
 
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
+
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.scene.Group;
-import javafx.scene.Scene;
 import javafx.scene.ImageCursor;
+import javafx.scene.Scene;
 import javafx.stage.Stage;
 import javafx.stage.WindowEvent;
+
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
+
 import test.util.Util;
 
 public class ImageCursorGetBestSizeTest {
-    static CountDownLatch startupLatch;
+    static CountDownLatch startupLatch = new CountDownLatch(1);
     static Stage stage;
 
     private static final double INIT_SIZE = 100.d;
@@ -62,16 +64,12 @@ public class ImageCursorGetBestSizeTest {
 
     @BeforeClass
     public static void initFX() {
-        startupLatch = new CountDownLatch(1);
+        Util.launch(startupLatch, TestApp.class);
+    }
 
-        new Thread(() -> Application.launch(TestApp.class, (String[]) null)).start();
-        try {
-            if (!startupLatch.await(15, TimeUnit.SECONDS)) {
-                Assert.fail("Timeout waiting for FX runtime to start");
-            }
-        } catch (InterruptedException ex) {
-            Assert.fail("Unexpected exception: " + ex);
-        }
+    @AfterClass
+    public static void teardown() {
+        Util.shutdown(stage);
     }
 
     @Test(timeout = 20000)
@@ -79,11 +77,5 @@ public class ImageCursorGetBestSizeTest {
         Util.runAndWait(() -> {
             Assert.assertNotNull(ImageCursor.getBestSize(10, 20));
         });
-    }
-
-    @AfterClass
-    public static void teardown() {
-        Platform.runLater(stage::hide);
-        Platform.exit();
     }
 }

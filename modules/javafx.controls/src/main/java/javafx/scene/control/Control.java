@@ -38,7 +38,6 @@ import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ObjectPropertyBase;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.StringProperty;
-import javafx.beans.value.WritableValue;
 import javafx.collections.ObservableList;
 import javafx.css.CssParser;
 import javafx.event.EventHandler;
@@ -222,15 +221,26 @@ public abstract class Control extends Region implements Skinnable {
      * {@code Skin}. Every {@code Skin} maintains a back reference to the
      * {@code Control} via the {@link Skin#getSkinnable()} method.
      * <p>
+     * To ensure a one-to-one relationship between a {@code Control} and its {@code Skin},
+     * skins which were not created for this control are rejected with an
+     * {@code IllegalArgumentException}.
+     * Then, {@link Skin#dispose()} is called on the old skin, disconnecting
+     * it from the corresponding {@code Control}.  And finally, {@link Skin#install()} is invoked
+     * to complete the process.  Only inside of {@link Skin#install()} should {@code Skin} implementations
+     * set/overwrite properties of their {@code Control} (though some operations like adding/removing a listener
+     * can still be done in the {@code Skin} constructor).
+     * <p>
      * A skin may be null.
+     *
      * @return the skin property for this control
+     * @throws IllegalArgumentException if {@code (skin != null && skin.getSkinnable() != this)}
      */
     @Override public final ObjectProperty<Skin<?>> skinProperty() { return skin; }
     @Override public final void setSkin(Skin<?> value) {
         skinProperty().set(value);
     }
     @Override public final Skin<?> getSkin() { return skinProperty().getValue(); }
-    private ObjectProperty<Skin<?>> skin = new StyleableObjectProperty<Skin<?>>() {
+    private ObjectProperty<Skin<?>> skin = new StyleableObjectProperty<>() {
         // We store a reference to the oldValue so that we can handle
         // changes in the skin properly in the case of binding. This is
         // only needed because invalidated() does not currently take
@@ -239,6 +249,15 @@ public abstract class Control extends Region implements Skinnable {
 
         @Override protected void invalidated() {
             Skin<?> skin = get();
+            // check whether the skin is for right control
+            if (skin != null) {
+                if (skin.getSkinnable() != Control.this) {
+                    unbind();
+                    set(oldValue);
+                    throw new IllegalArgumentException("Skin does not correspond to this Control");
+                }
+            }
+
             // Collect the name of the currently installed skin class. We do this
             // so that subsequent updates from CSS to the same skin class will not
             // result in reinstalling the skin
@@ -288,6 +307,11 @@ public abstract class Control extends Region implements Skinnable {
                 }
             }
 
+            // let the new skin modify this control
+            if (skin != null) {
+                skin.install();
+            }
+
             // clear out the styleable properties so that the list is rebuilt
             // next time they are requested.
             styleableProperties = null;
@@ -310,7 +334,7 @@ public abstract class Control extends Region implements Skinnable {
         // but SKIN is CssMetaData<Control,String>. This does not matter to
         // the CSS code which doesn't care about the actual type. Hence,
         // we'll suppress the warnings
-        @Override @SuppressWarnings({"unchecked", "rawtype"})
+        @Override @SuppressWarnings({"unchecked", "rawtypes"})
         public CssMetaData getCssMetaData() {
             return StyleableProperties.SKIN;
         }
@@ -334,7 +358,7 @@ public abstract class Control extends Region implements Skinnable {
      */
     public final ObjectProperty<Tooltip> tooltipProperty() {
         if (tooltip == null) {
-            tooltip = new ObjectPropertyBase<Tooltip>() {
+            tooltip = new ObjectPropertyBase<>() {
                 private Tooltip old = null;
                 @Override protected void invalidated() {
                     Tooltip t = get();
@@ -372,7 +396,7 @@ public abstract class Control extends Region implements Skinnable {
     /**
      * The ContextMenu to show for this control.
      */
-    private ObjectProperty<ContextMenu> contextMenu = new SimpleObjectProperty<ContextMenu>(this, "contextMenu") {
+    private ObjectProperty<ContextMenu> contextMenu = new SimpleObjectProperty<>(this, "contextMenu") {
         private WeakReference<ContextMenu> contextMenuRef;
 
         @Override protected void invalidated() {
@@ -421,7 +445,7 @@ public abstract class Control extends Region implements Skinnable {
         // override. Initializing focusTraversable by calling applyStyle
         // with null for StyleOrigin ensures that css will be able to override
         // the value.
-        final StyleableProperty<Boolean> prop = (StyleableProperty<Boolean>)(WritableValue<Boolean>)focusTraversableProperty();
+        final StyleableProperty<Boolean> prop = (StyleableProperty<Boolean>)focusTraversableProperty();
         prop.applyStyle(null, Boolean.TRUE);
 
         // we add a listener for menu request events to show the context menu
@@ -772,7 +796,7 @@ public abstract class Control extends Region implements Skinnable {
 
     private static class StyleableProperties {
         private static final CssMetaData<Control,String> SKIN =
-            new CssMetaData<Control,String>("-fx-skin",
+            new CssMetaData<>("-fx-skin",
                 StringConverter.getInstance()) {
 
             @Override
@@ -782,14 +806,14 @@ public abstract class Control extends Region implements Skinnable {
 
             @Override
             public StyleableProperty<String> getStyleableProperty(Control n) {
-                return (StyleableProperty<String>)(WritableValue<String>)n.skinClassNameProperty();
+                return (StyleableProperty<String>)n.skinClassNameProperty();
             }
         };
 
         private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
         static {
             final List<CssMetaData<? extends Styleable, ?>> styleables =
-                new ArrayList<CssMetaData<? extends Styleable, ?>>(Region.getClassCssMetaData());
+                new ArrayList<>(Region.getClassCssMetaData());
             styleables.add(SKIN);
             STYLEABLES = Collections.unmodifiableList(styleables);
         }
@@ -823,7 +847,7 @@ public abstract class Control extends Region implements Skinnable {
 
             // RT-29162: make sure properties only show up once in the list
             java.util.Map<String, CssMetaData<? extends Styleable, ?>> map =
-                new java.util.HashMap<String, CssMetaData<? extends Styleable, ?>>();
+                new java.util.HashMap<>();
 
             List<CssMetaData<? extends Styleable, ?>> list =  getControlCssMetaData();
 
@@ -851,7 +875,7 @@ public abstract class Control extends Region implements Skinnable {
                 map.put(metaData.getProperty(), metaData);
             }
 
-            styleableProperties = new ArrayList<CssMetaData<? extends Styleable, ?>>();
+            styleableProperties = new ArrayList<>();
             styleableProperties.addAll(map.values());
         }
         return styleableProperties;

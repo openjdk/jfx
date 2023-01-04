@@ -31,7 +31,7 @@ GST_DEBUG_CATEGORY (java_source_debug);
 #define GST_CAT_DEFAULT java_source_debug
 
 #define _BS(val) (val ? "TRUE" : "FALSE")
-#define BUFFER_SIZE 4096
+
 #define MAX_READ_SIZE 65536
 
 /***********************************************************************************
@@ -843,7 +843,7 @@ static GstFlowReturn java_source_getrange(GstPad *pad, GstObject *parent, guint6
 
             if (size < toRead)
             {
-                gst_buffer_set_size(buf, read); // Set ammount of valid data in buffer if read less then requested
+                gst_buffer_set_size(buf, read); // Set amount of valid data in buffer if read less then requested
                 break; // No more data to read, but we have some valid data
             }
         }

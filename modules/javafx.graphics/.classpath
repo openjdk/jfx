@@ -1,6 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <classpath>
 	<classpathentry kind="src" path="src/main/java"/>
+	<classpathentry kind="src" path="build/gensrc/jsl-prism"/>
+	<classpathentry kind="src" path="build/gensrc/jsl-decora"/>
+	<classpathentry kind="src" path="build/hlsl/Decora"/>
+	<classpathentry kind="src" path="build/hlsl/Prism"/>
 	<classpathentry kind="src" output="testbin" path="src/shims/java">
 		<attributes>
 			<attribute name="test" value="true"/>
@@ -29,7 +33,7 @@
 			<attribute name="add-exports" value="javafx.base/com.sun.javafx.property=javafx.graphics:javafx.base/test.util.memory=javafx.graphics"/>
 		</attributes>
 	</classpathentry>
-	<classpathentry kind="con" path="org.eclipse.jdt.junit.JUNIT_CONTAINER/4">
+	<classpathentry kind="con" path="org.eclipse.jdt.junit.JUNIT_CONTAINER/5">
 		<attributes>
 			<attribute name="test" value="true"/>
 		</attributes>

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,20 +26,19 @@
 package test.javafx.util.converter;
 
 import java.time.LocalTime;
-import java.time.chrono.Chronology;
-import java.time.chrono.IsoChronology;
 import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Locale;
 
-import javafx.util.StringConverter;
 import javafx.util.converter.LocalTimeStringConverterShim;
 import javafx.util.converter.LocalTimeStringConverter;
 
 import static org.junit.Assert.*;
+import org.junit.AfterClass;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -56,42 +55,94 @@ public class LocalTimeStringConverterTest {
         VALID_TIME_WITHOUT_SECONDS = LocalTime.of(12, 34, 0);
     }
 
-    private static final DateTimeFormatter aFormatter = DateTimeFormatter.ofPattern("HH mm ss");
-    private static final DateTimeFormatter aParser = DateTimeFormatter.ofPattern("hh mm ss a");
+    private static Locale oldLocale = null;
+    private static DateTimeFormatter aFormatter = null;
+    private static DateTimeFormatter aParser = null;
 
+    // We can only create LocalTimeStringConverter object after Locale is set.
+    // Unfortunately, due to unpredictability of @Parameterized.Parameters methods
+    // in JUnit, we have to allocate it after @BeforeClass sets up Locale and
+    // necessary static fields. Otherwise, the test may collide with other
+    // Local*StringConverter tests and cause unpredictable results.
+    private enum LocalTimeStringConverterVariant {
+        NO_PARAM,
+        WITH_FORMATTER_PARSER,
+        WITH_FORMAT_STYLES,
+    };
 
     @Parameterized.Parameters public static Collection implementations() {
         return Arrays.asList(new Object[][] {
-            { new LocalTimeStringConverter(),
-              Locale.getDefault(Locale.Category.FORMAT), FormatStyle.SHORT,
-              VALID_TIME_WITHOUT_SECONDS, null, null },
+            { LocalTimeStringConverterVariant.NO_PARAM,
+              FormatStyle.SHORT, VALID_TIME_WITHOUT_SECONDS },
 
-            { new LocalTimeStringConverter(aFormatter, aParser),
-              Locale.getDefault(Locale.Category.FORMAT), null,
-              VALID_TIME_WITH_SECONDS, aFormatter, aParser },
+            { LocalTimeStringConverterVariant.WITH_FORMATTER_PARSER,
+              null, VALID_TIME_WITH_SECONDS },
 
-            { new LocalTimeStringConverter(FormatStyle.SHORT, Locale.UK),
-              Locale.UK, FormatStyle.SHORT,
-              VALID_TIME_WITHOUT_SECONDS, null, null },
+            { LocalTimeStringConverterVariant.WITH_FORMAT_STYLES,
+              FormatStyle.SHORT, VALID_TIME_WITHOUT_SECONDS },
         });
     }
 
-    private LocalTimeStringConverter converter;
-    private Locale locale;
+    private LocalTimeStringConverterVariant converterVariant;
     private FormatStyle timeStyle;
-    private DateTimeFormatter formatter, parser;
     private LocalTime validTime;
 
-    public LocalTimeStringConverterTest(LocalTimeStringConverter converter, Locale locale, FormatStyle timeStyle, LocalTime validTime, DateTimeFormatter formatter, DateTimeFormatter parser) {
-        this.converter = converter;
-        this.locale = locale;
+    private LocalTimeStringConverter converter;
+    private Locale locale;
+    private DateTimeFormatter formatter, parser;
+
+    public LocalTimeStringConverterTest(LocalTimeStringConverterVariant converterVariant, FormatStyle timeStyle, LocalTime validTime) {
+        this.converterVariant = converterVariant;
         this.timeStyle = timeStyle;
         this.validTime = validTime;
-        this.formatter = formatter;
-        this.parser = parser;
+
+        this.locale = null;
+        this.formatter = null;
+        this.parser = null;
     }
 
-    @Before public void setup() {
+    @BeforeClass
+    public static void setupBeforeAll() {
+        // Tests require that default locale is en_US
+        oldLocale = Locale.getDefault();
+        Locale.setDefault(Locale.US);
+
+        // DateTimeFormatter uses default locale, so we can init this after updating locale
+        aFormatter = DateTimeFormatter.ofPattern("HH mm ss");
+        aParser = DateTimeFormatter.ofPattern("hh mm ss a");
+    }
+
+    @AfterClass
+    public static void teardownAfterAll() {
+        // Restore VM's old locale
+        Locale.setDefault(oldLocale);
+    }
+
+    @Before
+    public void setup() {
+        // Locale is established now, so we can allocate objects depending on it
+        switch (this.converterVariant) {
+        case NO_PARAM:
+            this.converter = new LocalTimeStringConverter();
+            this.locale = Locale.getDefault(Locale.Category.FORMAT);
+            this.formatter = null;
+            this.parser = null;
+            break;
+        case WITH_FORMATTER_PARSER:
+            this.converter = new LocalTimeStringConverter(aFormatter, aParser);
+            this.locale = Locale.getDefault(Locale.Category.FORMAT);
+            this.formatter = aFormatter;
+            this.parser = aParser;
+            break;
+        case WITH_FORMAT_STYLES:
+            this.converter = new LocalTimeStringConverter(FormatStyle.SHORT, Locale.UK);
+            this.locale = Locale.UK;
+            this.formatter = null;
+            this.parser = null;
+            break;
+        default:
+            fail("Invalid converter variant: " + this.converterVariant.toString());
+        }
     }
 
     /*********************************************************************

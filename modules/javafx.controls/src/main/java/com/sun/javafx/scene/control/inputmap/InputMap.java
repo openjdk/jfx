@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2015, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -173,7 +173,7 @@ public class InputMap<N extends Node> implements EventHandler<Event> {
      **************************************************************************/
 
     // --- parent behavior - for now this is an private property
-    private ReadOnlyObjectWrapper<InputMap<N>> parentInputMap = new ReadOnlyObjectWrapper<InputMap<N>>(this, "parentInputMap") {
+    private ReadOnlyObjectWrapper<InputMap<N>> parentInputMap = new ReadOnlyObjectWrapper<>(this, "parentInputMap") {
         @Override protected void invalidated() {
             // whenever the parent InputMap changes, we uninstall all mappings and
             // then reprocess them so that they are installed in the correct root.
@@ -925,6 +925,7 @@ public class InputMap<N extends Node> implements EventHandler<Event> {
         }
 
         /**  {@inheritDoc} */
+        @Override
         public boolean test(Event event) {
             if (!(event instanceof KeyEvent)) return false;
             return KeyBinding.toKeyBinding((KeyEvent)event).equals(keyBinding);
@@ -961,6 +962,7 @@ public class InputMap<N extends Node> implements EventHandler<Event> {
         }
 
         /**  {@inheritDoc} */
+        @Override
         public boolean test(Event event) {
             if (!(event instanceof MouseEvent)) return false;
             return event.getEventType() == this.eventType;

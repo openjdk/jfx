@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -89,62 +89,63 @@ import javafx.css.Styleable;
 @SuppressWarnings("unchecked")
 public final class Border {
     static final CssMetaData<Node,Paint[]> BORDER_COLOR =
-            new SubCssMetaData<Paint[]>("-fx-border-color",
+            new SubCssMetaData<>("-fx-border-color",
                     LayeredBorderPaintConverter.getInstance());
 
     static final CssMetaData<Node,BorderStrokeStyle[][]> BORDER_STYLE =
-            new SubCssMetaData<BorderStrokeStyle[][]>("-fx-border-style",
+            new SubCssMetaData<>("-fx-border-style",
                     LayeredBorderStyleConverter.getInstance());
 
     static final CssMetaData<Node,Margins[]> BORDER_WIDTH =
-            new SubCssMetaData<Margins[]> ("-fx-border-width",
+            new SubCssMetaData<> ("-fx-border-width",
                     Margins.SequenceConverter.getInstance());
 
     static final CssMetaData<Node,CornerRadii[]> BORDER_RADIUS =
-            new SubCssMetaData<CornerRadii[]>("-fx-border-radius",
+            new SubCssMetaData<>("-fx-border-radius",
                     CornerRadiiConverter.getInstance());
 
     static final CssMetaData<Node,Insets[]> BORDER_INSETS =
-            new SubCssMetaData<Insets[]>("-fx-border-insets",
+            new SubCssMetaData<>("-fx-border-insets",
                     InsetsConverter.SequenceConverter.getInstance());
 
     static final CssMetaData<Node,String[]> BORDER_IMAGE_SOURCE =
-            new SubCssMetaData<String[]>("-fx-border-image-source",
+            new SubCssMetaData<>("-fx-border-image-source",
                     URLConverter.SequenceConverter.getInstance());
 
     static final CssMetaData<Node,RepeatStruct[]> BORDER_IMAGE_REPEAT =
-            new SubCssMetaData<RepeatStruct[]>("-fx-border-image-repeat",
+            new SubCssMetaData<>("-fx-border-image-repeat",
                     RepeatStructConverter.getInstance(),
                     new RepeatStruct[] { new RepeatStruct(BackgroundRepeat.REPEAT, BackgroundRepeat.REPEAT) });
 
     static final CssMetaData<Node,BorderImageSlices[]> BORDER_IMAGE_SLICE =
-            new SubCssMetaData<BorderImageSlices[]> ("-fx-border-image-slice",
+            new SubCssMetaData<> ("-fx-border-image-slice",
                     SliceSequenceConverter.getInstance(),
                     new BorderImageSlices[] { BorderImageSlices.DEFAULT});
 
     static final CssMetaData<Node,BorderWidths[]> BORDER_IMAGE_WIDTH =
-            new SubCssMetaData<BorderWidths[]>("-fx-border-image-width",
+            new SubCssMetaData<>("-fx-border-image-width",
                     BorderImageWidthConverter.getInstance(),
                     new BorderWidths[] { BorderWidths.DEFAULT });
 
     static final CssMetaData<Node,Insets[]> BORDER_IMAGE_INSETS =
-            new SubCssMetaData<Insets[]>("-fx-border-image-insets",
+            new SubCssMetaData<>("-fx-border-image-insets",
                     InsetsConverter.SequenceConverter.getInstance(),
                     new Insets[] {Insets.EMPTY});
 
     private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES =
-            (List<CssMetaData<? extends Styleable, ?>>) (List) Collections.unmodifiableList(
-                    // Unchecked!
-                    Arrays.asList(BORDER_COLOR,
-                            BORDER_STYLE,
-                            BORDER_WIDTH,
-                            BORDER_RADIUS,
-                            BORDER_INSETS,
-                            BORDER_IMAGE_SOURCE,
-                            BORDER_IMAGE_REPEAT,
-                            BORDER_IMAGE_SLICE,
-                            BORDER_IMAGE_WIDTH,
-                            BORDER_IMAGE_INSETS));
+            // Unchecked!
+            (List) Collections.unmodifiableList(Arrays.asList(
+                BORDER_COLOR,
+                BORDER_STYLE,
+                BORDER_WIDTH,
+                BORDER_RADIUS,
+                BORDER_INSETS,
+                BORDER_IMAGE_SOURCE,
+                BORDER_IMAGE_REPEAT,
+                BORDER_IMAGE_SLICE,
+                BORDER_IMAGE_WIDTH,
+                BORDER_IMAGE_INSETS
+            ));
 
     /**
      * Gets the {@code CssMetaData} associated with this class, which may include the
@@ -337,7 +338,7 @@ public final class Border {
                     outerLeft = outerLeft >= strokeOuterLeft ? outerLeft : strokeOuterLeft;
                 }
             }
-            this.strokes = new UnmodifiableArrayList<BorderStroke>(noNulls, size);
+            this.strokes = new UnmodifiableArrayList<>(noNulls, size);
         }
 
         if (images == null || images.length == 0) {
@@ -373,7 +374,7 @@ public final class Border {
                     outerLeft = outerLeft >= imageOuterLeft ? outerLeft : imageOuterLeft;
                 }
             }
-            this.images = new UnmodifiableArrayList<BorderImage>(noNulls, size);
+            this.images = new UnmodifiableArrayList<>(noNulls, size);
         }
 
         // Both the BorderStroke and BorderImage class make sure to return the outsets

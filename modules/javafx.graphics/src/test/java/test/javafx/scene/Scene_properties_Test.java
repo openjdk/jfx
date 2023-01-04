@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,21 +25,15 @@
 
 package test.javafx.scene;
 
-import com.sun.javafx.cursor.CursorFrame;
 import com.sun.javafx.event.EventHandlerManager;
 import java.util.Arrays;
 import java.util.Collection;
-import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.geometry.NodeOrientation;
 import javafx.scene.Cursor;
-import javafx.scene.Cursor;
 import javafx.scene.CursorShim;
 import javafx.scene.Group;
-import javafx.scene.Group;
 import javafx.scene.ParallelCamera;
-import javafx.scene.ParallelCamera;
-import javafx.scene.PerspectiveCamera;
 import javafx.scene.PerspectiveCamera;
 import javafx.scene.paint.Color;
 
@@ -48,7 +42,6 @@ import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
 
 import test.com.sun.javafx.test.PropertiesTestBase;
-import test.com.sun.javafx.test.PropertiesTestBase.Configuration;
 import test.com.sun.javafx.test.objects.TestScene;
 import test.com.sun.javafx.test.objects.TestStage;
 import javafx.scene.layout.Pane;

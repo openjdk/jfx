@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,7 +26,6 @@
 package javafx.beans;
 
 import java.lang.ref.WeakReference;
-import javafx.beans.NamedArg;
 
 /**
  * A {@code WeakInvalidationListener} can be used if an {@link Observable}
@@ -62,7 +61,7 @@ public final class WeakInvalidationListener implements InvalidationListener, Wea
         if (listener == null) {
             throw new NullPointerException("Listener must be specified.");
         }
-        this.ref = new WeakReference<InvalidationListener>(listener);
+        this.ref = new WeakReference<>(listener);
     }
 
     /**

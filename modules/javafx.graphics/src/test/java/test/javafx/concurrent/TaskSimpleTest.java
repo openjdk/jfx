@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,8 +25,6 @@
 
 package test.javafx.concurrent;
 
-import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import java.util.ArrayList;
 import java.util.List;
 import javafx.concurrent.Task;
@@ -65,7 +63,7 @@ public class TaskSimpleTest {
      ***********************************************************************/
 
     @Test public void stateShouldBe_READY_ByDefault() {
-        assertEquals(Task.State.READY, task.getState());
+        assertEquals(Worker.State.READY, task.getState());
     }
 
     @Test public void workDoneShouldBe_Indeterminate_ByDefault() {
@@ -117,7 +115,7 @@ public class TaskSimpleTest {
      ***********************************************************************/
 
     @Test public void afterRunningStatesShouldHaveBeen_SCHEDULED_RUNNING_SUCCEEDED() {
-        final List<Worker.State> states = new ArrayList<Worker.State>();
+        final List<Worker.State> states = new ArrayList<>();
         task.stateProperty().addListener((observable, oldValue, newValue) -> {
             states.add(newValue);
         });

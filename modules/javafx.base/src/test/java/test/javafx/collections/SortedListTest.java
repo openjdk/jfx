@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -59,7 +59,7 @@ public class SortedListTest {
         list = FXCollections.observableArrayList();
         list.addAll("a", "c", "d", "c");
         sortedList = list.sorted();
-        mockListObserver = new MockListObserver<String>();
+        mockListObserver = new MockListObserver<>();
         sortedList.addListener(mockListObserver);
     }
 
@@ -393,12 +393,12 @@ public class SortedListTest {
      */
     @Test
     public void testPermutate() {
-        List<Integer> list = new ArrayList<Integer>();
+        List<Integer> list = new ArrayList<>();
         for (int i = 0; i < 3; i++) {
             list.add(i);
         }
-        Permutator<Integer> permutator = new Permutator<Integer>(list);
-        SortedList<Integer> sorted = new SortedList<Integer>(permutator);
+        Permutator<Integer> permutator = new Permutator<>(list);
+        SortedList<Integer> sorted = new SortedList<>(permutator);
         permutator.swap();
 
         compareIndices(sorted);
@@ -473,7 +473,7 @@ public class SortedListTest {
     @Test
     public void test_rt36353_sortedList() {
         ObservableList<String> data = FXCollections.observableArrayList("2", "1", "3");
-        SortedList<String> sortedList = new SortedList<String>(data);
+        SortedList<String> sortedList = new SortedList<>(data);
 
         HashMap<Integer, Integer> pMap = new HashMap<>();
         sortedList.addListener((ListChangeListener<String>) c -> {

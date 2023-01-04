@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -123,7 +123,7 @@ public abstract class ButtonBase extends Labeled {
     public final ObjectProperty<EventHandler<ActionEvent>> onActionProperty() { return onAction; }
     public final void setOnAction(EventHandler<ActionEvent> value) { onActionProperty().set(value); }
     public final EventHandler<ActionEvent> getOnAction() { return onActionProperty().get(); }
-    private ObjectProperty<EventHandler<ActionEvent>> onAction = new ObjectPropertyBase<EventHandler<ActionEvent>>() {
+    private ObjectProperty<EventHandler<ActionEvent>> onAction = new ObjectPropertyBase<>() {
         @Override protected void invalidated() {
             setEventHandler(ActionEvent.ACTION, get());
         }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -47,7 +47,7 @@ public class BidirectionalContentBinding {
 
     public static <E> Object bind(ObservableList<E> list1, ObservableList<E> list2) {
         checkParameters(list1, list2);
-        final ListContentBinding<E> binding = new ListContentBinding<E>(list1, list2);
+        final ListContentBinding<E> binding = new ListContentBinding<>(list1, list2);
         list1.setAll(list2);
         list1.addListener(binding);
         list2.addListener(binding);
@@ -56,7 +56,7 @@ public class BidirectionalContentBinding {
 
     public static <E> Object bind(ObservableSet<E> set1, ObservableSet<E> set2) {
         checkParameters(set1, set2);
-        final SetContentBinding<E> binding = new SetContentBinding<E>(set1, set2);
+        final SetContentBinding<E> binding = new SetContentBinding<>(set1, set2);
         set1.clear();
         set1.addAll(set2);
         set1.addListener(binding);
@@ -66,7 +66,7 @@ public class BidirectionalContentBinding {
 
     public static <K, V> Object bind(ObservableMap<K, V> map1, ObservableMap<K, V> map2) {
         checkParameters(map1, map2);
-        final MapContentBinding<K, V> binding = new MapContentBinding<K, V>(map1, map2);
+        final MapContentBinding<K, V> binding = new MapContentBinding<>(map1, map2);
         map1.clear();
         map1.putAll(map2);
         map1.addListener(binding);
@@ -106,8 +106,8 @@ public class BidirectionalContentBinding {
 
 
         public ListContentBinding(ObservableList<E> list1, ObservableList<E> list2) {
-            propertyRef1 = new WeakReference<ObservableList<E>>(list1);
-            propertyRef2 = new WeakReference<ObservableList<E>>(list2);
+            propertyRef1 = new WeakReference<>(list1);
+            propertyRef2 = new WeakReference<>(list2);
         }
 
         @Override
@@ -200,8 +200,8 @@ public class BidirectionalContentBinding {
 
 
         public SetContentBinding(ObservableSet<E> list1, ObservableSet<E> list2) {
-            propertyRef1 = new WeakReference<ObservableSet<E>>(list1);
-            propertyRef2 = new WeakReference<ObservableSet<E>>(list2);
+            propertyRef1 = new WeakReference<>(list1);
+            propertyRef2 = new WeakReference<>(list2);
         }
 
         @Override
@@ -286,8 +286,8 @@ public class BidirectionalContentBinding {
 
 
         public MapContentBinding(ObservableMap<K, V> list1, ObservableMap<K, V> list2) {
-            propertyRef1 = new WeakReference<ObservableMap<K, V>>(list1);
-            propertyRef2 = new WeakReference<ObservableMap<K, V>>(list2);
+            propertyRef1 = new WeakReference<>(list1);
+            propertyRef2 = new WeakReference<>(list2);
         }
 
         @Override

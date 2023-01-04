@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -44,7 +44,7 @@ import javafx.scene.chart.Axis;
  */
 public final class ChartLayoutAnimator extends AnimationTimer implements EventHandler<ActionEvent> {
     private Parent nodeToLayout;
-    private final Map<Object,Animation> activeTimeLines = new HashMap<Object, Animation>();
+    private final Map<Object,Animation> activeTimeLines = new HashMap<>();
     private final boolean isAxis;
 
     public ChartLayoutAnimator(Parent nodeToLayout) {
