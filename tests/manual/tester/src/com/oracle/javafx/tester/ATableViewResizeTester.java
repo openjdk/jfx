@@ -46,6 +46,7 @@ import javafx.scene.control.ConstrainedColumnResizeBase;
 import javafx.scene.control.Label;
 import javafx.scene.control.SelectionMode;
 import javafx.scene.control.SplitPane;
+import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableColumnBase;
 import javafx.scene.control.TableView;
@@ -116,6 +117,7 @@ public class ATableViewResizeTester extends Application {
     protected ComboBox<Demo> demoSelector;
     protected ComboBox<Policy> policySelector;
     protected SwingPanel swingPanel;
+    protected static Callback<TableColumn<String, String>, TableCell<String, String>> CELL_FACTORY = initCellFactory();
 
     public static void main(String[] args) {
         Application.launch(ATableViewResizeTester.class, args);
@@ -459,7 +461,8 @@ public class ATableViewResizeTester extends Application {
     }
 
     protected void combineColumns(TableView<String> t, int ix, int count, int name) {
-        TableColumn<String,?> tc = new TableColumn<>();
+        TableColumn<String, String> tc = new TableColumn<>();
+        tc.setCellFactory(CELL_FACTORY);
         tc.setText("N" + name);
 
         for (int i = 0; i < count; i++) {
@@ -489,7 +492,8 @@ public class ATableViewResizeTester extends Application {
             if (x instanceof Cmd cmd) {
                 switch (cmd) {
                 case COL:
-                    TableColumn<String,String> c = new TableColumn<>();
+                    TableColumn<String, String> c = new TableColumn<>();
+                    c.setCellFactory(CELL_FACTORY);
                     table.getColumns().add(c);
                     c.setText("C" + table.getColumns().size());
 //                    if (table.getColumns().size() == 1) {
@@ -637,9 +641,48 @@ public class ATableViewResizeTester extends Application {
         }
     }
 
+    private static Callback<TableColumn<String, String>, TableCell<String, String>> initCellFactory() {
+        return new Callback<TableColumn<String, String>, TableCell<String, String>>() {
+            public TableCell call(TableColumn column) {
+                return new TableCell<String, String>() {
+                    {
+                        widthProperty().addListener((s, p, c) -> {
+                            setStyle(computeStyle());
+                        });
+                    }
+
+                    @Override
+                    public void updateItem(String item, boolean empty) {
+                        super.updateItem(item, empty);
+                        setText(item);
+                    }
+
+                    private String computeStyle() {
+                        boolean empty = isEmpty();
+                        if (!empty) {
+                            double w = getWidth();
+                            if (isClose(w, column.getMinWidth())) {
+                                return "-fx-background-color:#ffeeee;";
+                            } else if (isClose(w, column.getPrefWidth())) {
+                                return "-fx-background-color:#eeffee;";
+                            } else if (isClose(w, column.getMaxWidth())) {
+                                return "-fx-background-color:#eeeeff;";
+                            }
+                        }
+                        return null;
+                    }
+                };
+            }
+        };
+    }
+
+    private static boolean isClose(double a, double b) {
+        return Math.abs(a - b) < 0.00001;
+    }
+
     /**
-     * a user-defined policy demonstrates that we can indeed create a custom policy using the new API.
-     * this policy simply sizes all columns equally.
+     * a user-defined policy demonstrates that we can indeed create a custom policy
+     * using the new API. this policy simply sizes all columns equally.
      */
     protected static class UserDefinedResizePolicy
         extends ConstrainedColumnResizeBase
