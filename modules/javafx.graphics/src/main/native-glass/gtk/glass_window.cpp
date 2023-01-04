@@ -818,8 +818,6 @@ WindowContextTop::WindowContextTop(jobject _jwindow, WindowContext* _owner, long
 
     gtk_window_set_title(GTK_WINDOW(gtk_widget), "");
     gdk_window = gtk_widget_get_window(gtk_widget);
-    gdk_window_set_events(gdk_window, GDK_FILTERED_EVENTS_MASK);
-
     g_object_set_data_full(G_OBJECT(gdk_window), GDK_WINDOW_DATA_CONTEXT, this, NULL);
 
     gdk_window_register_dnd(gdk_window);
