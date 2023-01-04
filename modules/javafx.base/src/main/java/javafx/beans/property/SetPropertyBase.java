@@ -38,6 +38,7 @@ import javafx.collections.ObservableSet;
 import javafx.collections.SetChangeListener;
 
 import java.lang.ref.WeakReference;
+import java.util.Objects;
 
 /**
  * The class {@code SetPropertyBase} is the base class for a property
@@ -311,6 +312,7 @@ public abstract class SetPropertyBase<E> extends SetProperty<E> {
 
     @Override
     public void unbindContent(Object source) {
+        Objects.requireNonNull(source);
         if (source instanceof ObservableSet<?>) {
             ContentBinding.unbind(this, (ObservableSet<E>)source);
         }

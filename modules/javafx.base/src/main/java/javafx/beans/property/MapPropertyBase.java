@@ -29,13 +29,16 @@ import com.sun.javafx.beans.BeanErrors;
 import com.sun.javafx.binding.ContentBinding;
 import com.sun.javafx.binding.MapExpressionHelper;
 import com.sun.javafx.property.PropertyHelper;
-import java.lang.ref.WeakReference;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.WeakListener;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
-import javafx.collections.*;
+import javafx.collections.MapChangeListener;
+import javafx.collections.ObservableMap;
+
+import java.lang.ref.WeakReference;
+import java.util.Objects;
 
 /**
  * The class {@code MapPropertyBase} is the base class for a property
@@ -309,9 +312,10 @@ public abstract class MapPropertyBase<K, V> extends MapProperty<K, V> {
     }
 
     @Override
-    public void unbindContent(Object object) {
-        if (object instanceof ObservableMap<?, ?>) {
-            ContentBinding.unbind(this, (ObservableMap<K, V>)object);
+    public void unbindContent(Object source) {
+        Objects.requireNonNull(source);
+        if (source instanceof ObservableMap<?, ?>) {
+            ContentBinding.unbind(this, (ObservableMap<K, V>)source);
         }
     }
 
