@@ -60,17 +60,17 @@ typedef xmlChar xsltLocaleChar;
 #endif
 
 XSLTPUBFUN xsltLocale XSLTCALL
-    xsltNewLocale           (const xmlChar *langName);
+        xsltNewLocale                   (const xmlChar *langName);
 XSLTPUBFUN void XSLTCALL
-    xsltFreeLocale          (xsltLocale locale);
+        xsltFreeLocale                  (xsltLocale locale);
 XSLTPUBFUN xsltLocaleChar * XSLTCALL
-    xsltStrxfrm         (xsltLocale locale,
-                     const xmlChar *string);
+        xsltStrxfrm                     (xsltLocale locale,
+                                         const xmlChar *string);
 XSLTPUBFUN int XSLTCALL
-    xsltLocaleStrcmp        (xsltLocale locale,
-                     const xsltLocaleChar *str1,
-                     const xsltLocaleChar *str2);
+        xsltLocaleStrcmp                (xsltLocale locale,
+                                         const xsltLocaleChar *str1,
+                                         const xsltLocaleChar *str2);
 XSLTPUBFUN void XSLTCALL
-    xsltFreeLocales         (void);
+        xsltFreeLocales                 (void);
 
 #endif /* __XML_XSLTLOCALE_H__ */

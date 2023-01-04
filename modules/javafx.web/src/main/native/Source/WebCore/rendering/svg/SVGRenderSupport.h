@@ -37,7 +37,8 @@ class RenderElement;
 class RenderGeometryMap;
 class RenderLayerModelObject;
 class RenderStyle;
-class RenderSVGRoot;
+class LegacyRenderSVGRoot;
+class SVGElement;
 class TransformState;
 
 // SVGRendererSupport is a helper class sharing code between all SVG renderers.
@@ -45,7 +46,7 @@ class SVGRenderSupport {
 public:
     static void layoutDifferentRootIfNeeded(const RenderElement&);
 
-    // Shares child layouting code between RenderSVGRoot/RenderSVG(Hidden)Container
+    // Shares child layouting code between LegacyRenderSVGRoot/RenderSVG(Hidden)Container
     static void layoutChildren(RenderElement&, bool selfNeedsLayout);
 
     // Helper function determining wheter overflow is hidden
@@ -65,14 +66,14 @@ public:
 
     // Important functions used by nearly all SVG renderers centralizing coordinate transformations / repaint rect calculations
     static LayoutRect clippedOverflowRectForRepaint(const RenderElement&, const RenderLayerModelObject* container);
-    static Optional<FloatRect> computeFloatVisibleRectInContainer(const RenderElement&, const FloatRect&, const RenderLayerModelObject* container, RenderObject::VisibleRectContext);
+    static std::optional<FloatRect> computeFloatVisibleRectInContainer(const RenderElement&, const FloatRect&, const RenderLayerModelObject* container, RenderObject::VisibleRectContext);
     static const RenderElement& localToParentTransform(const RenderElement&, AffineTransform &);
     static void mapLocalToContainer(const RenderElement&, const RenderLayerModelObject* ancestorContainer, TransformState&, bool* wasFixed);
     static const RenderElement* pushMappingToContainer(const RenderElement&, const RenderLayerModelObject* ancestorToStopAt, RenderGeometryMap&);
     static bool checkForSVGRepaintDuringLayout(const RenderElement&);
 
     // Shared between SVG renderers and resources.
-    static void applyStrokeStyleToContext(GraphicsContext*, const RenderStyle&, const RenderElement&);
+    static void applyStrokeStyleToContext(GraphicsContext&, const RenderStyle&, const RenderElement&);
 
     // Determines if any ancestor's transform has changed.
     static bool transformToRootChanged(RenderElement*);
@@ -81,13 +82,15 @@ public:
 
     static void styleChanged(RenderElement&, const RenderStyle*);
 
+    static FloatRect transformReferenceBox(const RenderElement&, const SVGElement&, const RenderStyle&);
+
 #if ENABLE(CSS_COMPOSITING)
     static bool isolatesBlending(const RenderStyle&);
     static void updateMaskedAncestorShouldIsolateBlending(const RenderElement&);
 #endif
 
-    static RenderSVGRoot* findTreeRootObject(RenderElement&);
-    static const RenderSVGRoot* findTreeRootObject(const RenderElement&);
+    static LegacyRenderSVGRoot* findTreeRootObject(RenderElement&);
+    static const LegacyRenderSVGRoot* findTreeRootObject(const RenderElement&);
 
 private:
     // This class is not constructable.

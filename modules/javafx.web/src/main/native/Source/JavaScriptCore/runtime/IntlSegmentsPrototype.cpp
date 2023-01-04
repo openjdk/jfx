@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2020-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,8 +31,8 @@
 
 namespace JSC {
 
-static JSC_DECLARE_HOST_FUNCTION(IntlSegmentsPrototypeFuncContaining);
-static JSC_DECLARE_HOST_FUNCTION(IntlSegmentsPrototypeFuncIterator);
+static JSC_DECLARE_HOST_FUNCTION(intlSegmentsPrototypeFuncContaining);
+static JSC_DECLARE_HOST_FUNCTION(intlSegmentsPrototypeFuncIterator);
 
 }
 
@@ -44,13 +44,13 @@ const ClassInfo IntlSegmentsPrototype::s_info = { "%Segments%", &Base::s_info, &
 
 /* Source for IntlSegmentsPrototype.lut.h
 @begin segmentsPrototypeTable
-  containing       IntlSegmentsPrototypeFuncContaining         DontEnum|Function 1
+  containing       intlSegmentsPrototypeFuncContaining         DontEnum|Function 1
 @end
 */
 
 IntlSegmentsPrototype* IntlSegmentsPrototype::create(VM& vm, JSGlobalObject* globalObject, Structure* structure)
 {
-    auto* object = new (NotNull, allocateCell<IntlSegmentsPrototype>(vm.heap)) IntlSegmentsPrototype(vm, structure);
+    auto* object = new (NotNull, allocateCell<IntlSegmentsPrototype>(vm)) IntlSegmentsPrototype(vm, structure);
     object->finishCreation(vm, globalObject);
     return object;
 }
@@ -69,31 +69,31 @@ void IntlSegmentsPrototype::finishCreation(VM& vm, JSGlobalObject* globalObject)
 {
     Base::finishCreation(vm);
     ASSERT(inherits(vm, info()));
-    JSC_NATIVE_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->iteratorSymbol, IntlSegmentsPrototypeFuncIterator, static_cast<unsigned>(PropertyAttribute::DontEnum), 0);
+    JSC_NATIVE_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->iteratorSymbol, intlSegmentsPrototypeFuncIterator, static_cast<unsigned>(PropertyAttribute::DontEnum), 0);
 }
 
 // https://tc39.es/proposal-intl-segmenter/#sec-%segmentsprototype%.containing
-JSC_DEFINE_HOST_FUNCTION(IntlSegmentsPrototypeFuncContaining, (JSGlobalObject* globalObject, CallFrame* callFrame))
+JSC_DEFINE_HOST_FUNCTION(intlSegmentsPrototypeFuncContaining, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     auto* segments = jsDynamicCast<IntlSegments*>(vm, callFrame->thisValue());
     if (!segments)
-        return throwVMTypeError(globalObject, scope, "%Segments.prototype%.containing called on value that's not an object initialized as a Segments"_s);
+        return throwVMTypeError(globalObject, scope, "%Segments.prototype%.containing called on value that's not a Segments"_s);
 
     RELEASE_AND_RETURN(scope, JSValue::encode(segments->containing(globalObject, callFrame->argument(0))));
 }
 
 // https://tc39.es/proposal-intl-segmenter/#sec-%segmentsprototype%-@@iterator
-JSC_DEFINE_HOST_FUNCTION(IntlSegmentsPrototypeFuncIterator, (JSGlobalObject* globalObject, CallFrame* callFrame))
+JSC_DEFINE_HOST_FUNCTION(intlSegmentsPrototypeFuncIterator, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     auto* segments = jsDynamicCast<IntlSegments*>(vm, callFrame->thisValue());
     if (!segments)
-        return throwVMTypeError(globalObject, scope, "%Segments.prototype%[@@iterator] called on value that's not an object initialized as a Segments"_s);
+        return throwVMTypeError(globalObject, scope, "%Segments.prototype%[@@iterator] called on value that's not a Segments"_s);
 
     RELEASE_AND_RETURN(scope, JSValue::encode(segments->createSegmentIterator(globalObject)));
 }

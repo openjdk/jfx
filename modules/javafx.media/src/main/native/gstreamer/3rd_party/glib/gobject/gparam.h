@@ -145,7 +145,9 @@ G_BEGIN_DECLS
  *  Since 2.26
  *
  * Through the #GParamFlags flag values, certain aspects of parameters
- * can be configured. See also #G_PARAM_STATIC_STRINGS.
+ * can be configured.
+ *
+ * See also: %G_PARAM_STATIC_STRINGS
  */
 typedef enum
 {
@@ -194,7 +196,7 @@ typedef struct _GParamSpecClass GParamSpecClass;
 typedef struct _GParameter  GParameter GLIB_DEPRECATED_TYPE_IN_2_54;
 typedef struct _GParamSpecPool  GParamSpecPool;
 /**
- * GParamSpec: (ref-func g_param_spec_ref_sink) (unref-func g_param_spec_uref) (set-value-func g_value_set_param) (get-value-func g_value_get_param)
+ * GParamSpec: (ref-func g_param_spec_ref_sink) (unref-func g_param_spec_unref) (set-value-func g_value_set_param) (get-value-func g_value_get_param)
  * @g_type_instance: private #GTypeInstance portion
  * @name: name of this parameter: always an interned string
  * @flags: #GParamFlags flags for this parameter
@@ -368,6 +370,7 @@ typedef struct _GParamSpecTypeInfo GParamSpecTypeInfo;
  * This structure is used to provide the type system with the information
  * required to initialize and destruct (finalize) a parameter's class and
  * instances thereof.
+ *
  * The initialized structure is passed to the g_param_type_register_static()
  * The type system will perform a deep copy of this structure, so its memory
  * does not need to be persistent across invocation of

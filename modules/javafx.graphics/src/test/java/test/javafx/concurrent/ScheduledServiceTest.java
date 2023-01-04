@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -359,25 +359,25 @@ public class ScheduledServiceTest extends ServiceTestBase {
     //     delay works on restart
     //     delay works on reset / start
 
-    @Test public void delayIsHonored_Positive() throws InterruptedException {
+    @Test public void delayIsHonored_Positive() {
         s.setDelay(Duration.seconds(1));
         s.start();
         assertEquals(1000, wallClock);
     }
 
-    @Test public void delayIsHonored_Unknown() throws InterruptedException {
+    @Test public void delayIsHonored_Unknown() {
         s.setDelay(Duration.UNKNOWN);
         s.start();
         assertEquals(0, wallClock);
     }
 
-    @Test public void delayIsHonored_Infinite() throws InterruptedException {
+    @Test public void delayIsHonored_Infinite() {
         s.setDelay(Duration.INDEFINITE);
         s.start();
         assertEquals(Long.MAX_VALUE, wallClock);
     }
 
-    @Test public void delayIsHonored_ZERO() throws InterruptedException {
+    @Test public void delayIsHonored_ZERO() {
         s.setDelay(Duration.ZERO);
         s.start();
         assertEquals(0, wallClock);
@@ -640,7 +640,7 @@ public class ScheduledServiceTest extends ServiceTestBase {
 
     @Test public void restartOnFailure_True() {
         final AtomicInteger counter = new AtomicInteger();
-        taskFactory = new Callback<Void, AbstractTask>() {
+        taskFactory = new Callback<>() {
             @Override public AbstractTask call(Void param) {
                 return new EpicFailTask() {
                     @Override protected String call() throws Exception {
@@ -658,7 +658,7 @@ public class ScheduledServiceTest extends ServiceTestBase {
 
     @Test public void restartOnFailure_False() {
         final AtomicInteger counter = new AtomicInteger();
-        taskFactory = new Callback<Void, AbstractTask>() {
+        taskFactory = new Callback<>() {
             @Override public AbstractTask call(Void param) {
                 return new EpicFailTask() {
                     @Override protected String call() throws Exception {
@@ -684,7 +684,7 @@ public class ScheduledServiceTest extends ServiceTestBase {
 
     @Test public void serviceIteratesWhile_CurrentFailureCount_IsLessThan_MaximumFailureCount() {
         final AtomicInteger counter = new AtomicInteger();
-        taskFactory = new Callback<Void, AbstractTask>() {
+        taskFactory = new Callback<>() {
             @Override public AbstractTask call(Void param) {
                 return new EpicFailTask() {
                     @Override protected String call() throws Exception {

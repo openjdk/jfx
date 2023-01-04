@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -40,17 +40,18 @@ import javafx.beans.InvalidationListener;
 import javafx.event.Event;
 import javafx.scene.control.IndexedCell;
 import javafx.scene.Node;
+import javafx.scene.Scene;
 import javafx.scene.shape.Circle;
 
 import test.javafx.scene.control.SkinStub;
 import javafx.scene.input.ScrollEvent;
+import javafx.scene.layout.HBox;
 
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
 
 
-import java.util.ArrayList;
 import java.util.List;
 import javafx.scene.control.IndexedCellShim;
 import javafx.scene.control.ScrollBar;
@@ -75,7 +76,7 @@ public class VirtualFlowTest {
 
 
     @Before public void setUp() {
-        list = new ArrayLinkedListShim<CellStub>();
+        list = new ArrayLinkedListShim<>();
         a = new CellStub(flow, "A");
         b = new CellStub(flow, "B");
         c = new CellStub(flow, "C");
@@ -138,7 +139,7 @@ public class VirtualFlowTest {
         Iterator<IndexedCell> itr = control.iterator();
         while (itr.hasNext()) {
             IndexedCell cell = itr.next();
-            IndexedCell cell2 = (IndexedCell)list.get(index);
+            IndexedCell cell2 = list.get(index);
             assertSame("The control and list did not have the same item at " +
                        "index " + index + ". Expected " + cell + " but was " + cell2,
                        cell, cell2);
@@ -762,7 +763,7 @@ public class VirtualFlowTest {
      * took place.
      */
     @Test public void testCellLayout_LayoutWithoutChangingThingsUsesCellsInSameOrderAsBefore() {
-        List<IndexedCell> cells = new LinkedList<IndexedCell>();
+        List<IndexedCell> cells = new LinkedList<>();
         for (int i = 0; i < VirtualFlowShim.cells_size(flow.cells); i++) {
             cells.add(VirtualFlowShim.<IndexedCell>cells_get(flow.cells, i));
         }
@@ -1142,6 +1143,52 @@ public class VirtualFlowTest {
     }
 
     @Test
+    public void testScrollToTopOfLastLargeCell() {
+        double flowHeight = 150;
+        int cellCount = 2;
+
+        flow = new VirtualFlowShim<>();
+        flow.setCellFactory(p -> new CellStub(flow) {
+            @Override
+            protected double computePrefHeight(double width) {
+                return getIndex() == cellCount -1 ? 200 : 100;
+            }
+
+            @Override
+            protected double computeMinHeight(double width) {
+                return computePrefHeight(width);
+            }
+
+            @Override
+            protected double computeMaxHeight(double width) {
+                return computePrefHeight(width);
+            }
+        });
+        flow.setVertical(true);
+
+        flow.resize(50,flowHeight);
+        flow.setCellCount(cellCount);
+        pulse();
+
+        flow.scrollToTop(cellCount - 1);
+        pulse();
+
+        IndexedCell<?> cell = flow.getCell(cellCount - 1);
+        double cellPosition = flow.getCellPosition(cell);
+
+        assertEquals("Last cell must be aligned to top of the viewport", 0, cellPosition, 0.1);
+    }
+
+    @Test
+    public void testImmediateScrollTo() {
+        flow.setCellCount(100);
+        flow.scrollTo(90);
+        pulse();
+        IndexedCell vc = flow.getVisibleCell(90);
+        assertNotNull(vc);
+    }
+
+    @Test
     // see JDK-8197536
     public void testScrollOneCell() {
         assertLastCellInsideViewport(true);
@@ -1206,7 +1253,41 @@ public class VirtualFlowTest {
         assertEquals("Wrong number of sheet children after removing all items", 12, sheetChildrenSize);
     }
 
-    private ArrayLinkedListShim<GraphicalCellStub> circlelist = new ArrayLinkedListShim<GraphicalCellStub>();
+    @Test
+    // See JDK-8291908
+    public void test_noEmptyTrailingCells() {
+        flow = new VirtualFlowShim();
+        flow.setVertical(true);
+        flow.setCellFactory(p -> new CellStub(flow) {
+            @Override
+            protected double computeMaxHeight(double width) {
+                return computePrefHeight(width);
+            }
+
+            @Override
+            protected double computePrefHeight(double width) {
+                return (getIndex() > 100) ? 1 : 20;
+            }
+
+            @Override
+            protected double computeMinHeight(double width) {
+                return computePrefHeight(width);
+            }
+
+        });
+        flow.setCellCount(100);
+        flow.setViewportLength(1000);
+        flow.resize(100, 1000);
+        pulse();
+        flow.sheetChildren.addListener((InvalidationListener) (o) -> {
+            int count = ((List) o).size();
+            assertTrue(Integer.toString(count), count < 101);
+        });
+        flow.scrollTo(99);
+        pulse();
+    }
+
+    private ArrayLinkedListShim<GraphicalCellStub> circlelist = new ArrayLinkedListShim<>();
 
     private VirtualFlowShim createCircleFlow() {
         // The second VirtualFlow we are going to test, with 7 cells. Each cell
@@ -1317,6 +1398,32 @@ public class VirtualFlowTest {
             if (cell != null) assertFalse(cell.isVisible());
         }
     }
+
+    @Test public void testScrollBarClipSyncWhileInvisibleOrNoScene() {
+        flow.setCellCount(3);
+        flow.resize(50, flow.getHeight());
+        pulse();
+
+        flow.setVisible(true);
+        Scene scene = new Scene(flow);
+        // sync works with both scene in place and flow visible
+        assertEquals(flow.shim_getHbar().getValue(), flow.get_clipView_getX(), 0);
+        flow.shim_getHbar().setValue(42);
+        assertEquals(flow.shim_getHbar().getValue(), flow.get_clipView_getX(), 0);
+
+        // sync works with flow invisible
+        flow.setVisible(false);
+        flow.shim_getHbar().setValue(21);
+        flow.setVisible(true);
+        assertEquals(flow.shim_getHbar().getValue(), flow.get_clipView_getX(), 0);
+
+        // sync works with no scene
+        scene.setRoot(new HBox());
+        assertEquals(null, flow.getScene());
+        flow.shim_getHbar().setValue(10);
+        scene.setRoot(flow);
+        assertEquals(flow.shim_getHbar().getValue(), flow.get_clipView_getX(), 0);
+    }
 }
 
 class GraphicalCellStub extends IndexedCellShim<Node> {
@@ -1337,7 +1444,7 @@ class GraphicalCellStub extends IndexedCellShim<Node> {
 
     private void init() {
         // System.err.println("Init vf cell "+this);
-        setSkin(new SkinStub<GraphicalCellStub>(this));
+        setSkin(new SkinStub<>(this));
     }
 
     @Override
@@ -1386,7 +1493,7 @@ class CellStub extends IndexedCellShim {
 
     private void init(VirtualFlowShim flow) {
      //   this.flow = flow;
-        setSkin(new SkinStub<CellStub>(this));
+        setSkin(new SkinStub<>(this));
         updateItem(this, false);
     }
 

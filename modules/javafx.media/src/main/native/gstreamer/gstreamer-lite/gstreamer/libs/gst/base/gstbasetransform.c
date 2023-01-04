@@ -219,7 +219,7 @@ static GstFlowReturn default_generate_output (GstBaseTransform * trans,
 GType
 gst_base_transform_get_type (void)
 {
-  static volatile gsize base_transform_type = 0;
+  static gsize base_transform_type = 0;
 
   if (g_once_init_enter (&base_transform_type)) {
     GType _type;
@@ -1452,15 +1452,15 @@ done:
  * marked as needing reconfiguring. Unmarks GST_PAD_FLAG_NEED_RECONFIGURE in
  * any case. But marks it again if negotiation fails.
  *
- * Do not call this in the #GstBaseTransformClass.transform() or
- * #GstBaseTransformClass.transform_ip() vmethod. Call this in
- * #GstBaseTransformClass.submit_input_buffer(),
- * #GstBaseTransformClass.prepare_output_buffer() or in
- * #GstBaseTransformClass.generate_output() _before_ any output buffer is
+ * Do not call this in the #GstBaseTransformClass::transform or
+ * #GstBaseTransformClass::transform_ip vmethod. Call this in
+ * #GstBaseTransformClass::submit_input_buffer,
+ * #GstBaseTransformClass::prepare_output_buffer or in
+ * #GstBaseTransformClass::generate_output _before_ any output buffer is
  * allocated.
  *
  * It will be default be called when handling an ALLOCATION query or at the
- * very beginning of the default #GstBaseTransformClass.submit_input_buffer()
+ * very beginning of the default #GstBaseTransformClass::submit_input_buffer
  * implementation.
  *
  * Returns: %TRUE if the negotiation succeeded, else %FALSE.
@@ -2696,6 +2696,7 @@ gst_base_transform_update_qos (GstBaseTransform * trans,
     gdouble proportion, GstClockTimeDiff diff, GstClockTime timestamp)
 {
   g_return_if_fail (GST_IS_BASE_TRANSFORM (trans));
+  g_return_if_fail (GST_CLOCK_TIME_IS_VALID (timestamp));
 
   GST_CAT_DEBUG_OBJECT (GST_CAT_QOS, trans,
       "qos: proportion: %lf, diff %" G_GINT64_FORMAT ", timestamp %"

@@ -236,7 +236,7 @@ private:
             if (match(attributeName, mediaAttr) && m_mediaAttribute.isNull()) {
                 m_mediaAttribute = attributeValue;
                 auto mediaSet = MediaQuerySet::create(attributeValue, MediaQueryParserContext(m_document));
-                auto documentElement = makeRefPtr(m_document.documentElement());
+                RefPtr documentElement = m_document.documentElement();
                 LOG(MediaQueries, "HTMLPreloadScanner %p processAttribute evaluating media queries", this);
                 m_mediaMatched = MediaQueryEvaluator { m_document.printing() ? "print" : "screen", m_document, documentElement ? documentElement->computedStyle() : nullptr }.evaluate(mediaSet.get());
             }
@@ -254,7 +254,7 @@ private:
                 m_nonceAttribute = attributeValue;
                 break;
             } else if (match(attributeName, referrerpolicyAttr)) {
-                m_referrerPolicy = parseReferrerPolicy(attributeValue, ReferrerPolicySource::ReferrerPolicyAttribute).valueOr(ReferrerPolicy::EmptyString);
+                m_referrerPolicy = parseReferrerPolicy(attributeValue, ReferrerPolicySource::ReferrerPolicyAttribute).value_or(ReferrerPolicy::EmptyString);
                 break;
             } else if (match(attributeName, nomoduleAttr)) {
                 m_scriptIsNomodule = true;
@@ -285,7 +285,7 @@ private:
             else if (match(attributeName, typeAttr))
                 m_typeAttribute = attributeValue;
             else if (match(attributeName, referrerpolicyAttr))
-                m_referrerPolicy = parseReferrerPolicy(attributeValue, ReferrerPolicySource::ReferrerPolicyAttribute).valueOr(ReferrerPolicy::EmptyString);
+                m_referrerPolicy = parseReferrerPolicy(attributeValue, ReferrerPolicySource::ReferrerPolicyAttribute).value_or(ReferrerPolicy::EmptyString);
             break;
         case TagId::Input:
             if (match(attributeName, srcAttr))
@@ -332,7 +332,7 @@ private:
         return m_charset;
     }
 
-    Optional<CachedResource::Type> resourceType() const
+    std::optional<CachedResource::Type> resourceType() const
     {
         switch (m_tagId) {
         case TagId::Script:

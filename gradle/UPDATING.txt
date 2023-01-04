@@ -1,0 +1,16 @@
+Updating gradle in OpenJFX:
+
+1. Update jfx.gradle.version in build.properties
+
+NOTE: only update the minimum when necessary (e.g., when replacing deprecated APIs in preparation for updating to a major version of gradle)
+
+
+2. Update the version in gradle/legal/gradle.md.
+
+
+3. Update gradle wrapper:
+
+* Update the version number in the URL in gradle/wrapper/gradle-wrapper.properties
+* Run: bash gradlew wrapper --gradle-version VERSION
+* Verify the changes (fix line endings in gradlew.bat if needed)
+* Add "distributionSha256Sum" back into gradle/wrapper/gradle-wrapper.properties (get the checksum from gradle.org)

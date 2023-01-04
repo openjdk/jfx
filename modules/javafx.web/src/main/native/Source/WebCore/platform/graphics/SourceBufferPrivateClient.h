@@ -27,6 +27,7 @@
 
 #if ENABLE(MEDIA_SOURCE)
 
+#include "MediaDescription.h"
 #include <wtf/MediaTime.h>
 #include <wtf/Vector.h>
 
@@ -78,7 +79,6 @@ public:
     virtual void sourceBufferPrivateDidParseSample(double frameDuration) = 0;
     virtual void sourceBufferPrivateDidDropSample() = 0;
     virtual void sourceBufferPrivateBufferedDirtyChanged(bool) = 0;
-    virtual void sourceBufferPrivateBufferedRangesChanged(const PlatformTimeRanges&) = 0;
     virtual void sourceBufferPrivateDidReceiveRenderingError(int64_t errorCode) = 0;
     virtual void sourceBufferPrivateReportExtraMemoryCost(uint64_t) = 0;
 };

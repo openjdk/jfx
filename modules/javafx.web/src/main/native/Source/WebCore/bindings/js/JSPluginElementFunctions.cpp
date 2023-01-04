@@ -79,11 +79,7 @@ JSObject* pluginScriptObject(JSGlobalObject* lexicalGlobalObject, JSHTMLElement*
     // Choke point for script/plugin interaction; notify DOMTimer of the event.
     DOMTimer::scriptDidInteractWithPlugin(pluginElement);
 
-    // First, see if the element has a plug-in replacement with a script.
-    if (auto* scriptObject = pluginElement.scriptObjectForPluginReplacement())
-        return scriptObject;
-
-    // Next, see if we can ask the plug-in view for its script object.
+    // See if we can ask the plug-in view for its script object.
     if (auto* scriptObject = pluginScriptObjectFromPluginViewBase(pluginElement, jsHTMLElement->globalObject()))
         return scriptObject;
 
@@ -114,10 +110,14 @@ JSC_DEFINE_CUSTOM_GETTER(pluginElementPropertyGetter, (JSGlobalObject* lexicalGl
 
 bool pluginElementCustomGetOwnPropertySlot(JSHTMLElement* element, JSGlobalObject* lexicalGlobalObject, PropertyName propertyName, PropertySlot& slot)
 {
+    VM& vm = lexicalGlobalObject->vm();
     slot.setIsTaintedByOpaqueObject();
 
+    if (propertyName.uid() == vm.propertyNames->toPrimitiveSymbol.impl())
+        return false;
+
     if (!element->globalObject()->world().isNormal()) {
-        JSC::JSValue proto = element->getPrototypeDirect(lexicalGlobalObject->vm());
+        JSValue proto = element->getPrototypeDirect(vm);
         if (proto.isObject() && JSC::jsCast<JSC::JSObject*>(asObject(proto))->hasProperty(lexicalGlobalObject, propertyName))
             return false;
     }

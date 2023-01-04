@@ -168,6 +168,15 @@
                 { "name": "borderColor", "$ref": "RGBAColor", "optional": true, "description": "The border highlight fill color (default: transparent)." },
                 { "name": "marginColor", "$ref": "RGBAColor", "optional": true, "description": "The margin highlight fill color (default: transparent)." }
             ]
+        },
+        {
+            "id": "Styleable",
+            "type": "object",
+            "properties": [
+                { "name": "nodeId", "$ref": "NodeId" },
+                { "name": "pseudoId", "$ref": "CSS.PseudoId", "optional": true }
+            ],
+            "description": "An object referencing a node and a pseudo-element, primarily used to identify an animation effect target."
         }
     ],
     "commands": [
@@ -517,6 +526,23 @@
             ]
         },
         {
+            "name": "showFlexOverlay",
+            "description": "Shows a flex overlay for a node that begins a 'flex' layout context. The command has no effect if <code>nodeId</code> is invalid or the associated node does not begin a 'flex' layout context. A node can only have one flex overlay at a time; subsequent calls with the same <code>nodeId</code> will override earlier calls.",
+            "targetTypes": ["page"],
+            "parameters": [
+                { "name": "nodeId", "$ref": "NodeId", "description": "The node for which a flex overlay should be shown." },
+                { "name": "flexColor", "$ref": "RGBAColor", "description": "The primary color to use for the flex overlay." }
+            ]
+        },
+        {
+            "name": "hideFlexOverlay",
+            "description": "Hides a flex overlay for a node that begins a 'flex' layout context. The command has no effect if <code>nodeId</code> is specified and invalid, or if there is not currently an overlay set for the <code>nodeId</code>.",
+            "targetTypes": ["page"],
+            "parameters": [
+                { "name": "nodeId", "$ref": "NodeId", "optional": true, "description": "The node for which a flex overlay should be hidden. If a <code>nodeId</code> is not specified, all flex overlays will be hidden." }
+            ]
+        },
+        {
             "name": "pushNodeByPathToFrontend",
             "description": "Requests that the node is sent to the caller given its path.",
             "targetTypes": ["page"],
@@ -676,6 +702,13 @@
             "parameters": [
                 { "name": "parentNodeId", "$ref": "NodeId", "description": "Parent id." },
                 { "name": "nodeId", "$ref": "NodeId", "description": "Id of the node that has been removed." }
+            ]
+        },
+        {
+            "name": "willDestroyDOMNode",
+            "description": "Fired when a detached DOM node is about to be destroyed. Currently, this event will only be fired when a DOM node that is detached is about to be destructed.",
+            "parameters": [
+                { "name": "nodeId", "$ref": "NodeId", "description": "Id of the node that will be destroyed." }
             ]
         },
         {

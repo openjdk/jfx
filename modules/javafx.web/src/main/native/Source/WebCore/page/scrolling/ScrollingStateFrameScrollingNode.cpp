@@ -174,7 +174,7 @@ void ScrollingStateFrameScrollingNode::setMaxLayoutViewportOrigin(const FloatPoi
     setPropertyChanged(Property::MaxLayoutViewportOrigin);
 }
 
-void ScrollingStateFrameScrollingNode::setOverrideVisualViewportSize(Optional<FloatSize> viewportSize)
+void ScrollingStateFrameScrollingNode::setOverrideVisualViewportSize(std::optional<FloatSize> viewportSize)
 {
     if (viewportSize == m_overrideVisualViewportSize)
         return;
@@ -309,13 +309,13 @@ void ScrollingStateFrameScrollingNode::setScrollingPerformanceTestingEnabled(boo
     setPropertyChanged(Property::ScrollingPerformanceTestingEnabled);
 }
 
-void ScrollingStateFrameScrollingNode::dumpProperties(TextStream& ts, ScrollingStateTreeAsTextBehavior behavior) const
+void ScrollingStateFrameScrollingNode::dumpProperties(TextStream& ts, OptionSet<ScrollingStateTreeAsTextBehavior> behavior) const
 {
     ts << "Frame scrolling node";
 
     ScrollingStateScrollingNode::dumpProperties(ts, behavior);
 
-    if (behavior & ScrollingStateTreeAsTextBehaviorIncludeLayerIDs) {
+    if (behavior & ScrollingStateTreeAsTextBehavior::IncludeLayerIDs) {
         ts.dumpProperty("root contents layer ID", m_rootContentsLayer.layerID());
         if (m_counterScrollingLayer.layerID())
             ts.dumpProperty("counter scrolling layer ID", m_counterScrollingLayer.layerID());
@@ -344,9 +344,6 @@ void ScrollingStateFrameScrollingNode::dumpProperties(TextStream& ts, ScrollingS
 
     if (m_overrideVisualViewportSize)
         ts.dumpProperty("override visual viewport size", m_overrideVisualViewportSize.value());
-
-    if (m_behaviorForFixed == StickToViewportBounds)
-        ts.dumpProperty("behavior for fixed", m_behaviorForFixed);
 
     if (!m_eventTrackingRegions.asynchronousDispatchRegion.isEmpty()) {
         TextStream::GroupScope scope(ts);

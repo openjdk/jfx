@@ -68,6 +68,13 @@ gboolean      gst_codec_utils_h264_caps_set_level_and_profile (GstCaps      * ca
                                                                const guint8 * sps,
                                                                guint          len);
 
+GST_PBUTILS_API
+gboolean      gst_codec_utils_h264_get_profile_flags_level (const guint8 * codec_data,
+                                                            guint len,
+                                                            guint8 * profile,
+                                                            guint8 * flags,
+                                                            guint8 * level);
+
 /* H.265 */
 
 GST_PBUTILS_API
@@ -145,6 +152,11 @@ gboolean  gst_codec_utils_opus_parse_header (GstBuffer * header,
                                              guint16   * pre_skip,
                                              gint16    * output_gain);
 #endif // GSTREAMER_LITE
+
+/* General */
+GST_PBUTILS_API
+gchar * gst_codec_utils_caps_get_mime_codec (GstCaps * caps);
+
 
 G_END_DECLS
 

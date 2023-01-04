@@ -25,7 +25,9 @@ SYSTEM_LIBS = glib-lite.lib \
               advapi32.lib \
               ole32.lib \
               oleaut32.lib \
-              strmiids.lib
+              strmiids.lib \
+              Mfplat.lib \
+              mfuuid.lib
 
 LDFLAGS = -out:$(shell cygpath -ma $(TARGET)) -nologo -incremental:no -libpath:$(shell cygpath -ma $(BUILD_DIR)) -dll $(SYSTEM_LIBS) \
           -nodefaultlib:libcmt -manifest -manifestfile:$(MANIFEST) -manifestuac:"level='asInvoker' uiAccess='false'" -implib:$(IMPLIB) \
@@ -41,7 +43,8 @@ BASECLASSES_DIR = ../../../3rd_party/baseclasses
 DIRLIST = dshowwrapper \
           javasource \
           progressbuffer \
-          progressbuffer/win32
+          progressbuffer/win32 \
+          mfwrapper
 
 DEP_DIRS = $(BUILD_DIR) $(addprefix $(OBJBASE_DIR)/,$(DIRLIST))
 
@@ -55,7 +58,8 @@ C_SOURCES = javasource/javasource.c \
 CPP_SOURCES = dshowwrapper/Allocator.cpp \
               dshowwrapper/dshowwrapper.cpp \
               dshowwrapper/Sink.cpp \
-              dshowwrapper/Src.cpp
+              dshowwrapper/Src.cpp \
+              mfwrapper/mfwrapper.cpp
 
 COMPILER_FLAGS = -nologo -W3 -WX- -EHsc -GS -fp:precise \
                  -Zc:wchar_t -Zc:forScope- -analyze- -errorReport:queue -Gm-

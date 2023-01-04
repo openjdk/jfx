@@ -32,6 +32,7 @@
 #include "JSFunctionInlines.h"
 #include "MacroAssembler.h"
 #include "ScratchRegisterAllocator.h"
+#include <wtf/FixedVector.h>
 #include <wtf/Vector.h>
 
 namespace JSC {
@@ -44,7 +45,6 @@ class CodeBlock;
 class PolymorphicAccess;
 class StructureStubInfo;
 class WatchpointsOnStructureStubInfo;
-class ScratchRegisterAllocator;
 
 DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(PolymorphicAccess);
 
@@ -140,10 +140,10 @@ public:
     // When this fails (returns GaveUp), this will leave the old stub intact but you should not try
     // to call this method again for that PolymorphicAccess instance.
     AccessGenerationResult addCases(
-        const GCSafeConcurrentJSLocker&, VM&, CodeBlock*, StructureStubInfo&, Vector<std::unique_ptr<AccessCase>, 2>);
+        const GCSafeConcurrentJSLocker&, VM&, CodeBlock*, StructureStubInfo&, Vector<RefPtr<AccessCase>, 2>);
 
     AccessGenerationResult addCase(
-        const GCSafeConcurrentJSLocker&, VM&, CodeBlock*, StructureStubInfo&, std::unique_ptr<AccessCase>);
+        const GCSafeConcurrentJSLocker&, VM&, CodeBlock*, StructureStubInfo&, Ref<AccessCase>);
 
     AccessGenerationResult regenerate(const GCSafeConcurrentJSLocker&, VM&, JSGlobalObject*, CodeBlock*, ECMAMode, StructureStubInfo&);
 
@@ -159,7 +159,7 @@ public:
 
     // This returns true if it has marked everything it will ever marked. This can be used as an
     // optimization to then avoid calling this method again during the fixpoint.
-    template<typename Visitor> bool propagateTransitions(Visitor&) const;
+    template<typename Visitor> void propagateTransitions(Visitor&) const;
 
     void aboutToDie();
 
@@ -178,16 +178,15 @@ private:
     friend class CodeBlock;
     friend struct AccessGenerationState;
 
-    typedef Vector<std::unique_ptr<AccessCase>, 2> ListType;
+    typedef Vector<RefPtr<AccessCase>, 2> ListType;
 
     void commit(
         const GCSafeConcurrentJSLocker&, VM&, std::unique_ptr<WatchpointsOnStructureStubInfo>&, CodeBlock*, StructureStubInfo&,
         AccessCase&);
 
     ListType m_list;
-    RefPtr<JITStubRoutine> m_stubRoutine;
+    RefPtr<PolymorphicAccessJITStubRoutine> m_stubRoutine;
     std::unique_ptr<WatchpointsOnStructureStubInfo> m_watchpoints;
-    std::unique_ptr<Vector<WriteBarrier<JSCell>>> m_weakReferences;
 };
 
 struct AccessGenerationState {
@@ -195,6 +194,8 @@ struct AccessGenerationState {
         : m_vm(vm)
         , m_globalObject(globalObject)
         , m_ecmaMode(ecmaMode)
+        , m_doesJSGetterSetterCalls(false)
+        , m_doesCalls(false)
         , m_calculatedRegistersForCallAndExceptionHandling(false)
         , m_needsToRestoreRegistersIfException(false)
         , m_calculatedCallSiteIndex(false)
@@ -222,10 +223,12 @@ struct AccessGenerationState {
     FPRReg scratchFPR { InvalidFPRReg };
     ECMAMode m_ecmaMode { ECMAMode::sloppy() };
     std::unique_ptr<WatchpointsOnStructureStubInfo> watchpoints;
-    Vector<WriteBarrier<JSCell>> weakReferences;
-    Bag<CallLinkInfo> m_callLinkInfos;
+    Vector<StructureID> weakStructures;
+    Bag<OptimizingCallLinkInfo> m_callLinkInfos;
+    bool m_doesJSGetterSetterCalls : 1;
+    bool m_doesCalls : 1;
 
-    void installWatchpoint(const ObjectPropertyCondition&);
+    void installWatchpoint(CodeBlock*, const ObjectPropertyCondition&);
 
     void restoreScratch();
     void succeed();
@@ -273,6 +276,8 @@ struct AccessGenerationState {
         m_spillStateForJSGetterSetter = spillState;
     }
     SpillState spillStateForJSGetterSetter() const { return m_spillStateForJSGetterSetter; }
+
+    ScratchRegisterAllocator makeDefaultScratchAllocator(GPRReg extraToLock = InvalidGPRReg);
 
 private:
     const RegisterSet& liveRegistersToPreserveAtExceptionHandlingCallSite();

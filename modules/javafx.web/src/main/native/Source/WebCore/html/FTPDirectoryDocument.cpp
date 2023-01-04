@@ -42,6 +42,7 @@
 #include <wtf/IsoMallocInlines.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/text/StringConcatenateNumbers.h>
+#include <wtf/text/StringToIntegerConversion.h>
 #include <wtf/unicode/CharacterNames.h>
 
 namespace WebCore {
@@ -160,18 +161,15 @@ static String processFilesizeString(const String& size, bool isDirectory)
     if (isDirectory)
         return "--"_s;
 
-    bool valid;
-    int64_t bytes = size.toUInt64(&valid);
-    if (!valid)
+    auto bytes = parseIntegerAllowingTrailingJunk<uint64_t>(size);
+    if (!bytes)
         return unknownFileSizeText();
 
-    if (bytes < 1000000)
-        return makeString(FormattedNumber::fixedWidth(bytes / 1000., 2), " KB");
-
-    if (bytes < 1000000000)
-        return makeString(FormattedNumber::fixedWidth(bytes / 1000000., 2), " MB");
-
-    return makeString(FormattedNumber::fixedWidth(bytes / 1000000000., 2), " GB");
+    if (*bytes < 1000000)
+        return makeString(FormattedNumber::fixedWidth(*bytes / 1000.0, 2), " KB");
+    if (*bytes < 1000000000)
+        return makeString(FormattedNumber::fixedWidth(*bytes / 1000000.0, 2), " MB");
+    return makeString(FormattedNumber::fixedWidth(*bytes / 1000000000.0, 2), " GB");
 }
 
 static bool wasLastDayOfMonth(int year, int month, int day)
@@ -301,7 +299,7 @@ bool FTPDirectoryDocumentParser::loadDocumentTemplate()
 
     auto& document = *this->document();
 
-    auto foundElement = makeRefPtr(document.getElementById(String("ftpDirectoryTable"_s)));
+    RefPtr foundElement = document.getElementById(StringView { "ftpDirectoryTable"_s });
     if (!foundElement)
         LOG_ERROR("Unable to find element by id \"ftpDirectoryTable\" in the template document.");
     else if (!is<HTMLTableElement>(foundElement))
@@ -316,7 +314,7 @@ bool FTPDirectoryDocumentParser::loadDocumentTemplate()
 
     // If we didn't find the table element, lets try to append our own to the body.
     // If that fails for some reason, cram it on the end of the document as a last ditch effort.
-    if (auto body = makeRefPtr(document.bodyOrFrameset()))
+    if (RefPtr body = document.bodyOrFrameset())
         body->appendChild(*m_tableElement);
     else
         document.appendChild(*m_tableElement);
@@ -420,7 +418,7 @@ void FTPDirectoryDocumentParser::finish()
 }
 
 FTPDirectoryDocument::FTPDirectoryDocument(Frame* frame, const Settings& settings, const URL& url)
-    : HTMLDocument(frame, settings, url)
+    : HTMLDocument(frame, settings, url, { })
 {
 #if !LOG_DISABLED
     LogFTP.state = WTFLogChannelState::On;

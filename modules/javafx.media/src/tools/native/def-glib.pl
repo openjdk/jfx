@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
 
 #
-# Copyright (c) 2015, 2021, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2015, 2022, Oracle and/or its affiliates. All rights reserved.
 # DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
 #
 # This code is free software; you can redistribute it and/or modify it
@@ -29,52 +29,52 @@ my @files = ("../../main/native/gstreamer/3rd_party/glib/build/win32/vs100/glib-
 
 foreach $file (@files)
 {
-	process_file($file);
+    process_file($file);
 }
 
 sub process_file
 {
-	my $infile = shift(@_);
-	my %symbols = ();
-	my $duplicates = 0;
+    my $infile = shift(@_);
+    my %symbols = ();
+    my $duplicates = 0;
 
-	print ("Processing file $infile\n");
-	open(INFILE, $infile) or die $!;
+    print ("Processing file $infile\n");
+    open(INFILE, $infile) or die $!;
 
-	while (my $str = <INFILE>)
-	{
-		$str =~ tr/\r\n//d;
+    while (my $str = <INFILE>)
+    {
+        $str =~ tr/\n//d;
 
-		if ($str !~ /^EXPORTS/ && $str =~ /(\w+)/)
-		{
-			if (exists( $symbols{$1}))
-			{
-				$duplicates++;
-				$symbols{$1}++;
-			}
-			else
-			{
-				$symbols{$1} = 1;
-			}
-		}
-	}
-	close(INFILE);
+        if ($str !~ /^EXPORTS/ && $str =~ /(\w+)/)
+        {
+            if (exists( $symbols{$1}))
+            {
+                $duplicates++;
+                $symbols{$1}++;
+            }
+            else
+            {
+                $symbols{$1} = 1;
+            }
+        }
+    }
+    close(INFILE);
 
-	my ($tmpfile) = $infile . ".tmp";
-	print("Found $duplicates duplicates.\nSaving results to: $tmpfile\n");
+    my ($tmpfile) = $infile . ".tmp";
+    print("Found $duplicates duplicates.\nSaving results to: $tmpfile\n");
 
-	my $ordinal = 1;
-	open(OUTFILE, ">$tmpfile") or die $!;
-	print OUTFILE "EXPORTS\r\n";
-	foreach $symbol (sort keys(%symbols))
-	{
-		print OUTFILE "${symbol}\t\@${ordinal}\tNONAME\r\n";
-#		print OUTFILE "${symbol}\r\n";
-		$ordinal++;
-	}
+    my $ordinal = 1;
+    open(OUTFILE, ">$tmpfile") or die $!;
+    print OUTFILE "EXPORTS\n";
+    foreach $symbol (sort keys(%symbols))
+    {
+        print OUTFILE "${symbol}\t\@${ordinal}\tNONAME\n";
+#       print OUTFILE "${symbol}\n";
+        $ordinal++;
+    }
 
-	close(OUTFILE);
+    close(OUTFILE);
 
-	print("Renaming $tmpfile to $infile\n\n");
-	rename($tmpfile, $infile);
+    print("Renaming $tmpfile to $infile\n\n");
+    rename($tmpfile, $infile);
 }

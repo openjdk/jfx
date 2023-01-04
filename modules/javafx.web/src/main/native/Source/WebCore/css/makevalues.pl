@@ -102,7 +102,11 @@ EOF
 for my $i (0 .. $#names) {
   my $id = $names[$i];
   $id =~ s/(^[^-])|-(.)/uc($1||$2)/ge;
-  print GPERF $lower_names[$i] . ", CSSValue" . $id . "\n";
+  if($lower_names[$i] eq "-infinity") {
+    print GPERF $lower_names[$i] . ", CSSValueNegativeInfinity" . "\n";
+  } else {
+    print GPERF $lower_names[$i] . ", CSSValue" . $id . "\n";
+  }
 }
 
 print GPERF << "EOF";
@@ -164,6 +168,8 @@ print HEADER << "EOF";
 
 #include <string.h>
 #include <wtf/Forward.h>
+#include <wtf/HashFunctions.h>
+#include <wtf/HashTraits.h>
 
 namespace WebCore {
 
@@ -177,7 +183,11 @@ my $maxLen = 0;
 foreach my $name (@names) {
   my $id = $name;
   $id =~ s/(^[^-])|-(.)/uc($1||$2)/ge;
-  print HEADER "    CSSValue" . $id . " = " . $i . ",\n";
+  if($name eq "-infinity") {
+    print HEADER "    CSSValueNegativeInfinity = " . $i . ",\n";
+  } else {
+    print HEADER "    CSSValue" . $id . " = " . $i . ",\n";
+  }
   $i = $i + 1;
   if (length($name) > $maxLen) {
     $maxLen = length($name);
@@ -194,8 +204,8 @@ print HEADER "const size_t maxCSSValueKeywordLength = " . $maxLen . ";\n";
 print HEADER << "EOF";
 
 const char* getValueName(unsigned short id);
-const WTF::AtomString& getValueNameAtomString(CSSValueID id);
-WTF::String getValueNameString(CSSValueID id);
+const AtomString& getValueNameAtomString(CSSValueID id);
+String getValueNameString(CSSValueID id);
 
 inline CSSValueID convertToCSSValueID(int value)
 {
@@ -204,6 +214,12 @@ inline CSSValueID convertToCSSValueID(int value)
 }
 
 } // namespace WebCore
+
+namespace WTF {
+template<> struct DefaultHash<WebCore::CSSValueID> : IntHash<unsigned> { };
+template<> struct HashTraits<WebCore::CSSValueID> : StrongEnumHashTraits<WebCore::CSSValueID> { };
+} // namespace WTF
+
 EOF
 close HEADER;
 

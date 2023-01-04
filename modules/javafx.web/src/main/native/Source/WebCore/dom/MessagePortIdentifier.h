@@ -39,7 +39,7 @@ struct MessagePortIdentifier {
     unsigned hash() const;
 
     template<class Encoder> void encode(Encoder&) const;
-    template<class Decoder> static Optional<MessagePortIdentifier> decode(Decoder&);
+    template<class Decoder> static std::optional<MessagePortIdentifier> decode(Decoder&);
 
 #if !LOG_DISABLED
     String logString() const;
@@ -58,17 +58,17 @@ void MessagePortIdentifier::encode(Encoder& encoder) const
 }
 
 template<class Decoder>
-Optional<MessagePortIdentifier> MessagePortIdentifier::decode(Decoder& decoder)
+std::optional<MessagePortIdentifier> MessagePortIdentifier::decode(Decoder& decoder)
 {
-    Optional<ProcessIdentifier> processIdentifier;
+    std::optional<ProcessIdentifier> processIdentifier;
     decoder >> processIdentifier;
     if (!processIdentifier)
-        return WTF::nullopt;
+        return std::nullopt;
 
-    Optional<ObjectIdentifier<PortIdentifierType>> portIdentifier;
+    std::optional<ObjectIdentifier<PortIdentifierType>> portIdentifier;
     decoder >> portIdentifier;
     if (!portIdentifier)
-        return WTF::nullopt;
+        return std::nullopt;
 
     return { { WTFMove(*processIdentifier), WTFMove(*portIdentifier) } };
 }
@@ -100,9 +100,9 @@ struct MessagePortIdentifierHash {
 template<> struct HashTraits<WebCore::MessagePortIdentifier> : GenericHashTraits<WebCore::MessagePortIdentifier> {
     static WebCore::MessagePortIdentifier emptyValue() { return { }; }
 
-    static void constructDeletedValue(WebCore::MessagePortIdentifier& slot) { slot.processIdentifier = makeObjectIdentifier<WebCore::ProcessIdentifierType>(std::numeric_limits<uint64_t>::max()); }
+    static void constructDeletedValue(WebCore::MessagePortIdentifier& slot) { new (NotNull, &slot.processIdentifier) WebCore::ProcessIdentifier(WTF::HashTableDeletedValue); }
 
-    static bool isDeletedValue(const WebCore::MessagePortIdentifier& slot) { return slot.processIdentifier.toUInt64() == std::numeric_limits<uint64_t>::max(); }
+    static bool isDeletedValue(const WebCore::MessagePortIdentifier& slot) { return slot.processIdentifier.isHashTableDeletedValue(); }
 };
 
 template<> struct DefaultHash<WebCore::MessagePortIdentifier> : MessagePortIdentifierHash { };

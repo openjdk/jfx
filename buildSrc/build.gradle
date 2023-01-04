@@ -74,7 +74,8 @@ repositories {
 }
 
 dependencies {
-    testImplementation group: "junit", name: "junit", version: "4.8.2"
+    testImplementation group: "junit", name: "junit", version: "4.13.2"
+    testImplementation group: "org.hamcrest", name: "hamcrest-core", version: "1.3"
 }
 
 // At the moment the ASM library shipped with Gradle that is used to

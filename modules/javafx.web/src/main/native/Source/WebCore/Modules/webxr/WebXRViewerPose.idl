@@ -23,8 +23,9 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+// https://immersive-web.github.io/webxr/#xrviewerpose
 [
-    EnabledAtRuntime=WebXR,
+    EnabledBySetting=WebXREnabled,
     Conditional=WEBXR,
     SecureContext,
     Exposed=Window,
@@ -32,5 +33,5 @@
     JSGenerateToNativeObject,
     InterfaceName=XRViewerPose
 ] interface WebXRViewerPose : WebXRPose {
-    [SameObject] readonly attribute FrozenArray<WebXRView> views;
+    [CachedAttribute, SameObject] readonly attribute FrozenArray<WebXRView> views;
 };

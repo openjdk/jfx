@@ -52,10 +52,10 @@ public:
     void disassociateBufferData();
 
     GCGLsizeiptr byteLength() const;
-    const RefPtr<JSC::ArrayBuffer> elementArrayBuffer() const { return m_elementArrayBuffer; }
+    const RefPtr<JSC::ArrayBuffer> elementArrayBuffer() const;
 
     // Gets the cached max index for the given type if one has been set.
-    Optional<unsigned> getCachedMaxIndex(GCGLenum type);
+    std::optional<unsigned> getCachedMaxIndex(GCGLenum type);
     // Sets the cached max index for the given type.
     void setCachedMaxIndex(GCGLenum type, unsigned value);
 
@@ -67,7 +67,7 @@ public:
 private:
     WebGLBuffer(WebGLRenderingContextBase&);
 
-    void deleteObjectImpl(const WTF::AbstractLocker&, GraphicsContextGL*, PlatformGLObject) override;
+    void deleteObjectImpl(const AbstractLocker&, GraphicsContextGL*, PlatformGLObject) override;
 
     GCGLenum m_target { 0 };
 

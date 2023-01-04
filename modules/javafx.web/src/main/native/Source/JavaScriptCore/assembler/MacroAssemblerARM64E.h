@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,14 +28,17 @@
 #if ENABLE(ASSEMBLER) && CPU(ARM64E)
 
 #include "DisallowMacroScratchRegisterUsage.h"
+#include <wtf/MathExtras.h>
 
 // We need to include this before MacroAssemblerARM64.h because MacroAssemblerARM64
 // will be defined in terms of ARM64EAssembler for ARM64E.
 #include "ARM64EAssembler.h"
+#include "JITOperationValidation.h"
 #include "JSCPtrTag.h"
 #include "MacroAssemblerARM64.h"
-#if ENABLE(JIT_CAGE)
-#include <WebKitAdditions/JITCageAdditions.h>
+
+#if OS(DARWIN)
+#include <mach/vm_param.h>
 #endif
 
 namespace JSC {
@@ -44,8 +47,9 @@ using Assembler = TARGET_ASSEMBLER;
 
 class MacroAssemblerARM64E : public MacroAssemblerARM64 {
 public:
-    static constexpr unsigned numberOfPACBits = 25;
-    static constexpr uintptr_t nonPACBitsMask = (1ull << (64 - numberOfPACBits)) - 1;
+    static constexpr unsigned numberOfPointerBits = sizeof(void*) * CHAR_BIT;
+    static constexpr unsigned maxNumberOfAllowedPACBits = numberOfPointerBits - OS_CONSTANT(EFFECTIVE_ADDRESS_WIDTH);
+    static constexpr uintptr_t nonPACBitsMask = (1ull << (numberOfPointerBits - maxNumberOfAllowedPACBits)) - 1;
 
     ALWAYS_INLINE void tagReturnAddress()
     {
@@ -109,21 +113,39 @@ public:
         m_assembler.pacdb(target, length);
     }
 
-    ALWAYS_INLINE void untagArrayPtr(RegisterID length, RegisterID target)
+    ALWAYS_INLINE void untagArrayPtr(RegisterID length, RegisterID target, bool validateAuth, RegisterID scratch)
     {
+        if (validateAuth) {
+            ASSERT(scratch != InvalidGPRReg);
+            move(target, scratch);
+        }
+
         m_assembler.autdb(target, length);
+
+        if (validateAuth) {
+            ASSERT(target != ARM64Registers::sp);
+            ASSERT(scratch != ARM64Registers::sp);
+            removeArrayPtrTag(scratch);
+            auto isValidPtr = branch64(Equal, scratch, target);
+            breakpoint(0xc473);
+            isValidPtr.link(this);
+        }
     }
 
-    ALWAYS_INLINE void untagArrayPtr(Address length, RegisterID target)
+    ALWAYS_INLINE void untagArrayPtrLength64(Address length, RegisterID target, bool validateAuth)
     {
         auto lengthGPR = getCachedDataTempRegisterIDAndInvalidate();
-        load32(length, lengthGPR);
-        m_assembler.autdb(target, lengthGPR);
+        load64(length, lengthGPR);
+        auto scratch = validateAuth ? getCachedMemoryTempRegisterIDAndInvalidate() : InvalidGPRReg;
+        untagArrayPtr(lengthGPR, target, validateAuth, scratch);
     }
 
     ALWAYS_INLINE void removeArrayPtrTag(RegisterID target)
     {
-        m_assembler.xpacd(target);
+        // If we couldn't fit this into a single instruction, we'd be better
+        // off emitting two shifts to mask off the top bits.
+        ASSERT(LogicalImmediate::create64(nonPACBitsMask).isValid());
+        and64(TrustedImmPtr(nonPACBitsMask), target);
     }
 
     static constexpr RegisterID InvalidGPR  = static_cast<RegisterID>(-1);
@@ -202,19 +224,19 @@ public:
         return callRegister<CallSignatureType::NativeCall>(targetGPR, tagGPR);
     }
 
-    ALWAYS_INLINE Call call(Address address, PtrTag tag)
+    ALWAYS_INLINE void call(Address address, PtrTag tag)
     {
         ASSERT(tag != CFunctionPtrTag && tag != NoPtrTag);
         ASSERT(!Options::useJITCage() || callerType(tag) == PtrTagCallerType::JIT);
         load64(address, getCachedDataTempRegisterIDAndInvalidate());
-        return call(dataTempRegister, tag);
+        call(dataTempRegister, tag);
     }
 
-    ALWAYS_INLINE Call call(Address address, RegisterID tag)
+    ALWAYS_INLINE void call(Address address, RegisterID tag)
     {
         ASSERT(tag != dataTempRegister);
         load64(address, getCachedDataTempRegisterIDAndInvalidate());
-        return call(dataTempRegister, tag);
+        call(dataTempRegister, tag);
     }
 
     ALWAYS_INLINE void callOperation(const FunctionPtr<OperationPtrTag> operation)
@@ -351,122 +373,122 @@ public:
             m_assembler.retab();
     }
 
-    void atomicXchgAdd8(RegisterID src, ImplicitAddress address, RegisterID dest)
+    void atomicXchgAdd8(RegisterID src, Address address, RegisterID dest)
     {
         m_assembler.ldaddal<8>(src, dest, extractSimpleAddress(address));
     }
 
-    void atomicXchgAdd16(RegisterID src, ImplicitAddress address, RegisterID dest)
+    void atomicXchgAdd16(RegisterID src, Address address, RegisterID dest)
     {
         m_assembler.ldaddal<16>(src, dest, extractSimpleAddress(address));
     }
 
-    void atomicXchgAdd32(RegisterID src, ImplicitAddress address, RegisterID dest)
+    void atomicXchgAdd32(RegisterID src, Address address, RegisterID dest)
     {
         m_assembler.ldaddal<32>(src, dest, extractSimpleAddress(address));
     }
 
-    void atomicXchgAdd64(RegisterID src, ImplicitAddress address, RegisterID dest)
+    void atomicXchgAdd64(RegisterID src, Address address, RegisterID dest)
     {
         m_assembler.ldaddal<64>(src, dest, extractSimpleAddress(address));
     }
 
-    void atomicXchgXor8(RegisterID src, ImplicitAddress address, RegisterID dest)
+    void atomicXchgXor8(RegisterID src, Address address, RegisterID dest)
     {
         m_assembler.ldeoral<8>(src, dest, extractSimpleAddress(address));
     }
 
-    void atomicXchgXor16(RegisterID src, ImplicitAddress address, RegisterID dest)
+    void atomicXchgXor16(RegisterID src, Address address, RegisterID dest)
     {
         m_assembler.ldeoral<16>(src, dest, extractSimpleAddress(address));
     }
 
-    void atomicXchgXor32(RegisterID src, ImplicitAddress address, RegisterID dest)
+    void atomicXchgXor32(RegisterID src, Address address, RegisterID dest)
     {
         m_assembler.ldeoral<32>(src, dest, extractSimpleAddress(address));
     }
 
-    void atomicXchgXor64(RegisterID src, ImplicitAddress address, RegisterID dest)
+    void atomicXchgXor64(RegisterID src, Address address, RegisterID dest)
     {
         m_assembler.ldeoral<64>(src, dest, extractSimpleAddress(address));
     }
 
-    void atomicXchgOr8(RegisterID src, ImplicitAddress address, RegisterID dest)
+    void atomicXchgOr8(RegisterID src, Address address, RegisterID dest)
     {
         m_assembler.ldsetal<8>(src, dest, extractSimpleAddress(address));
     }
 
-    void atomicXchgOr16(RegisterID src, ImplicitAddress address, RegisterID dest)
+    void atomicXchgOr16(RegisterID src, Address address, RegisterID dest)
     {
         m_assembler.ldsetal<16>(src, dest, extractSimpleAddress(address));
     }
 
-    void atomicXchgOr32(RegisterID src, ImplicitAddress address, RegisterID dest)
+    void atomicXchgOr32(RegisterID src, Address address, RegisterID dest)
     {
         m_assembler.ldsetal<32>(src, dest, extractSimpleAddress(address));
     }
 
-    void atomicXchgOr64(RegisterID src, ImplicitAddress address, RegisterID dest)
+    void atomicXchgOr64(RegisterID src, Address address, RegisterID dest)
     {
         m_assembler.ldsetal<64>(src, dest, extractSimpleAddress(address));
     }
 
-    void atomicXchgClear8(RegisterID src, ImplicitAddress address, RegisterID dest)
+    void atomicXchgClear8(RegisterID src, Address address, RegisterID dest)
     {
         m_assembler.ldclral<8>(src, dest, extractSimpleAddress(address));
     }
 
-    void atomicXchgClear16(RegisterID src, ImplicitAddress address, RegisterID dest)
+    void atomicXchgClear16(RegisterID src, Address address, RegisterID dest)
     {
         m_assembler.ldclral<16>(src, dest, extractSimpleAddress(address));
     }
 
-    void atomicXchgClear32(RegisterID src, ImplicitAddress address, RegisterID dest)
+    void atomicXchgClear32(RegisterID src, Address address, RegisterID dest)
     {
         m_assembler.ldclral<32>(src, dest, extractSimpleAddress(address));
     }
 
-    void atomicXchgClear64(RegisterID src, ImplicitAddress address, RegisterID dest)
+    void atomicXchgClear64(RegisterID src, Address address, RegisterID dest)
     {
         m_assembler.ldclral<64>(src, dest, extractSimpleAddress(address));
     }
 
-    void atomicXchg8(RegisterID src, ImplicitAddress address, RegisterID dest)
+    void atomicXchg8(RegisterID src, Address address, RegisterID dest)
     {
         m_assembler.swpal<8>(src, dest, extractSimpleAddress(address));
     }
 
-    void atomicXchg16(RegisterID src, ImplicitAddress address, RegisterID dest)
+    void atomicXchg16(RegisterID src, Address address, RegisterID dest)
     {
         m_assembler.swpal<16>(src, dest, extractSimpleAddress(address));
     }
 
-    void atomicXchg32(RegisterID src, ImplicitAddress address, RegisterID dest)
+    void atomicXchg32(RegisterID src, Address address, RegisterID dest)
     {
         m_assembler.swpal<32>(src, dest, extractSimpleAddress(address));
     }
 
-    void atomicXchg64(RegisterID src, ImplicitAddress address, RegisterID dest)
+    void atomicXchg64(RegisterID src, Address address, RegisterID dest)
     {
         m_assembler.swpal<64>(src, dest, extractSimpleAddress(address));
     }
 
-    void atomicStrongCAS8(RegisterID expectedAndResult, RegisterID newValue, ImplicitAddress address)
+    void atomicStrongCAS8(RegisterID expectedAndResult, RegisterID newValue, Address address)
     {
         m_assembler.casal<8>(expectedAndResult, newValue, extractSimpleAddress(address));
     }
 
-    void atomicStrongCAS16(RegisterID expectedAndResult, RegisterID newValue, ImplicitAddress address)
+    void atomicStrongCAS16(RegisterID expectedAndResult, RegisterID newValue, Address address)
     {
         m_assembler.casal<16>(expectedAndResult, newValue, extractSimpleAddress(address));
     }
 
-    void atomicStrongCAS32(RegisterID expectedAndResult, RegisterID newValue, ImplicitAddress address)
+    void atomicStrongCAS32(RegisterID expectedAndResult, RegisterID newValue, Address address)
     {
         m_assembler.casal<32>(expectedAndResult, newValue, extractSimpleAddress(address));
     }
 
-    void atomicStrongCAS64(RegisterID expectedAndResult, RegisterID newValue, ImplicitAddress address)
+    void atomicStrongCAS64(RegisterID expectedAndResult, RegisterID newValue, Address address)
     {
         m_assembler.casal<64>(expectedAndResult, newValue, extractSimpleAddress(address));
     }

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -168,7 +168,7 @@ ALWAYS_INLINE bool MarkedBlock::Handle::isLive(HeapVersion markingVersion, HeapV
         }
     }
 
-    auto locker = holdLock(footer.m_lock);
+    Locker locker { footer.m_lock };
 
     ASSERT(!isFreeListed());
 
@@ -213,7 +213,7 @@ inline bool MarkedBlock::Handle::areMarksStaleForSweep()
 // sweepMode == SweepToFreeList
 // scribbleMode == DontScribble
 // newlyAllocatedMode == DoesNotHaveNewlyAllocated
-// destructionMode != BlockHasDestrictorsAndCollectorIsRunning
+// destructionMode != BlockHasDestructorsAndCollectorIsRunning
 //
 // emptyMode = IsEmpty
 //     destructionMode = DoesNotNeedDestruction

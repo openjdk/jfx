@@ -42,7 +42,7 @@ namespace WebCore {
 
 RefPtr<AudioBuffer> AudioBuffer::create(unsigned numberOfChannels, size_t numberOfFrames, float sampleRate, LegacyPreventDetaching preventDetaching)
 {
-    if (!BaseAudioContext::isSupportedSampleRate(sampleRate) || !numberOfChannels || numberOfChannels > AudioContext::maxNumberOfChannels() || !numberOfFrames)
+    if (!BaseAudioContext::isSupportedSampleRate(sampleRate) || !numberOfChannels || numberOfChannels > AudioContext::maxNumberOfChannels || !numberOfFrames)
         return nullptr;
 
     auto buffer = adoptRef(*new AudioBuffer(numberOfChannels, numberOfFrames, sampleRate, preventDetaching));
@@ -57,7 +57,7 @@ ExceptionOr<Ref<AudioBuffer>> AudioBuffer::create(const AudioBufferOptions& opti
     if (!options.numberOfChannels)
         return Exception { NotSupportedError, "Number of channels cannot be 0."_s };
 
-    if (options.numberOfChannels > AudioContext::maxNumberOfChannels())
+    if (options.numberOfChannels > AudioContext::maxNumberOfChannels)
         return Exception { NotSupportedError, "Number of channels cannot be more than max supported."_s };
 
     if (!options.length)
@@ -86,41 +86,57 @@ AudioBuffer::AudioBuffer(unsigned numberOfChannels, size_t length, float sampleR
     , m_originalLength(length)
     , m_isDetachable(preventDetaching == LegacyPreventDetaching::No)
 {
-    m_channels.reserveCapacity(numberOfChannels);
+    if (static_cast<uint64_t>(m_originalLength) > s_maxLength) {
+        invalidate();
+        return;
+    }
+
+    Vector<RefPtr<Float32Array>> channels;
+    channels.reserveInitialCapacity(numberOfChannels);
 
     for (unsigned i = 0; i < numberOfChannels; ++i) {
         auto channelDataArray = Float32Array::tryCreate(m_originalLength);
         if (!channelDataArray) {
             invalidate();
-            break;
+            return;
         }
 
         if (preventDetaching == LegacyPreventDetaching::Yes)
             channelDataArray->setDetachable(false);
 
-        m_channels.append(WTFMove(channelDataArray));
+        channels.uncheckedAppend(WTFMove(channelDataArray));
     }
-    m_channelWrappers.resize(m_channels.size());
+
+    m_channels = WTFMove(channels);
+    m_channelWrappers = FixedVector<JSValueInWrappedObject> { m_channels.size() };
 }
 
 AudioBuffer::AudioBuffer(AudioBus& bus)
     : m_sampleRate(bus.sampleRate())
     , m_originalLength(bus.length())
 {
+    if (static_cast<uint64_t>(m_originalLength) > s_maxLength) {
+        invalidate();
+        return;
+    }
+
     // Copy audio data from the bus to the Float32Arrays we manage.
     unsigned numberOfChannels = bus.numberOfChannels();
-    m_channels.reserveCapacity(numberOfChannels);
+    Vector<RefPtr<Float32Array>> channels;
+    channels.reserveInitialCapacity(numberOfChannels);
     for (unsigned i = 0; i < numberOfChannels; ++i) {
         auto channelDataArray = Float32Array::tryCreate(m_originalLength);
         if (!channelDataArray) {
             invalidate();
-            break;
+            return;
         }
 
         channelDataArray->setRange(bus.channel(i)->data(), m_originalLength, 0);
-        m_channels.append(WTFMove(channelDataArray));
+        channels.uncheckedAppend(WTFMove(channelDataArray));
     }
-    m_channelWrappers.resize(m_channels.size());
+
+    m_channels = WTFMove(channels);
+    m_channelWrappers = FixedVector<JSValueInWrappedObject> { m_channels.size() };
 }
 
 void AudioBuffer::invalidate()
@@ -131,9 +147,9 @@ void AudioBuffer::invalidate()
 
 void AudioBuffer::releaseMemory()
 {
-    auto locker = holdLock(m_channelsLock);
-    m_channels.clear();
-    m_channelWrappers.clear();
+    Locker locker { m_channelsLock };
+    m_channels = { };
+    m_channelWrappers = { };
 }
 
 ExceptionOr<JSC::JSValue> AudioBuffer::getChannelData(JSDOMGlobalObject& globalObject, unsigned channelIndex)
@@ -149,8 +165,8 @@ ExceptionOr<JSC::JSValue> AudioBuffer::getChannelData(JSDOMGlobalObject& globalO
 
     if (globalObject.worldIsNormal()) {
         if (!m_channelWrappers[channelIndex])
-            m_channelWrappers[channelIndex] = { constructJSArray() };
-        return static_cast<JSC::JSValue>(m_channelWrappers[channelIndex]);
+            m_channelWrappers[channelIndex].setWeakly(constructJSArray());
+        return m_channelWrappers[channelIndex].getValue();
     }
     return constructJSArray();
 }
@@ -158,6 +174,7 @@ ExceptionOr<JSC::JSValue> AudioBuffer::getChannelData(JSDOMGlobalObject& globalO
 template<typename Visitor>
 void AudioBuffer::visitChannelWrappers(Visitor& visitor)
 {
+    Locker locker { m_channelsLock };
     for (auto& channelWrapper : m_channelWrappers)
         channelWrapper.visit(visitor);
 }
@@ -198,7 +215,7 @@ ExceptionOr<void> AudioBuffer::copyFromChannel(Ref<Float32Array>&& destination, 
     if (bufferOffset >= dataLength)
         return { };
 
-    unsigned count = dataLength - bufferOffset;
+    size_t count = dataLength - bufferOffset;
     count = std::min(destination.get().length(), count);
 
     const float* src = channelData->data();
@@ -226,7 +243,7 @@ ExceptionOr<void> AudioBuffer::copyToChannel(Ref<Float32Array>&& source, unsigne
     if (bufferOffset >= dataLength)
         return { };
 
-    unsigned count = dataLength - bufferOffset;
+    size_t count = dataLength - bufferOffset;
     count = std::min(source.get().length(), count);
 
     const float* src = source->data();
@@ -252,7 +269,7 @@ size_t AudioBuffer::memoryCost() const
     // from being changed while we iterate it, but calling channel->byteLength() is safe
     // because it doesn't involve chasing any pointers that can be nullified while the
     // AudioBuffer is alive.
-    auto locker = holdLock(m_channelsLock);
+    Locker locker { m_channelsLock };
     size_t cost = 0;
     for (auto& channel : m_channels)
         cost += channel->byteLength();

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -46,7 +46,7 @@ public abstract class SetExpressionHelper<E> extends CollectionExpressionHelperB
             throw new NullPointerException();
         }
         observable.getValue(); // validate observable
-        return (helper == null)? new SingleInvalidation<E>(observable, listener) : helper.addListener(listener);
+        return (helper == null)? new SingleInvalidation<>(observable, listener) : helper.addListener(listener);
     }
 
     public static <E> SetExpressionHelper<E> removeListener(SetExpressionHelper<E> helper, InvalidationListener listener) {
@@ -60,7 +60,7 @@ public abstract class SetExpressionHelper<E> extends CollectionExpressionHelperB
         if ((observable == null) || (listener == null)) {
             throw new NullPointerException();
         }
-        return (helper == null)? new SingleChange<E>(observable, listener) : helper.addListener(listener);
+        return (helper == null)? new SingleChange<>(observable, listener) : helper.addListener(listener);
     }
 
     public static <E> SetExpressionHelper<E> removeListener(SetExpressionHelper<E> helper, ChangeListener<? super ObservableSet<E>> listener) {
@@ -74,7 +74,7 @@ public abstract class SetExpressionHelper<E> extends CollectionExpressionHelperB
         if ((observable == null) || (listener == null)) {
             throw new NullPointerException();
         }
-        return (helper == null)? new SingleSetChange<E>(observable, listener) : helper.addListener(listener);
+        return (helper == null)? new SingleSetChange<>(observable, listener) : helper.addListener(listener);
     }
 
     public static <E> SetExpressionHelper<E> removeListener(SetExpressionHelper<E> helper, SetChangeListener<? super E> listener) {
@@ -124,7 +124,7 @@ public abstract class SetExpressionHelper<E> extends CollectionExpressionHelperB
 
         @Override
         protected SetExpressionHelper<E> addListener(InvalidationListener listener) {
-            return new Generic<E>(observable, this.listener, listener);
+            return new Generic<>(observable, this.listener, listener);
         }
 
         @Override
@@ -134,7 +134,7 @@ public abstract class SetExpressionHelper<E> extends CollectionExpressionHelperB
 
         @Override
         protected SetExpressionHelper<E> addListener(ChangeListener<? super ObservableSet<E>> listener) {
-            return new Generic<E>(observable, this.listener, listener);
+            return new Generic<>(observable, this.listener, listener);
         }
 
         @Override
@@ -144,7 +144,7 @@ public abstract class SetExpressionHelper<E> extends CollectionExpressionHelperB
 
         @Override
         protected SetExpressionHelper<E> addListener(SetChangeListener<? super E> listener) {
-            return new Generic<E>(observable, this.listener, listener);
+            return new Generic<>(observable, this.listener, listener);
         }
 
         @Override
@@ -191,7 +191,7 @@ public abstract class SetExpressionHelper<E> extends CollectionExpressionHelperB
 
         @Override
         protected SetExpressionHelper<E> addListener(InvalidationListener listener) {
-            return new Generic<E>(observable, listener, this.listener);
+            return new Generic<>(observable, listener, this.listener);
         }
 
         @Override
@@ -201,7 +201,7 @@ public abstract class SetExpressionHelper<E> extends CollectionExpressionHelperB
 
         @Override
         protected SetExpressionHelper<E> addListener(ChangeListener<? super ObservableSet<E>> listener) {
-            return new Generic<E>(observable, this.listener, listener);
+            return new Generic<>(observable, this.listener, listener);
         }
 
         @Override
@@ -211,7 +211,7 @@ public abstract class SetExpressionHelper<E> extends CollectionExpressionHelperB
 
         @Override
         protected SetExpressionHelper<E> addListener(SetChangeListener<? super E> listener) {
-            return new Generic<E>(observable, this.listener, listener);
+            return new Generic<>(observable, this.listener, listener);
         }
 
         @Override
@@ -262,7 +262,7 @@ public abstract class SetExpressionHelper<E> extends CollectionExpressionHelperB
 
         @Override
         protected SetExpressionHelper<E> addListener(InvalidationListener listener) {
-            return new Generic<E>(observable, listener, this.listener);
+            return new Generic<>(observable, listener, this.listener);
         }
 
         @Override
@@ -272,7 +272,7 @@ public abstract class SetExpressionHelper<E> extends CollectionExpressionHelperB
 
         @Override
         protected SetExpressionHelper<E> addListener(ChangeListener<? super ObservableSet<E>> listener) {
-            return new Generic<E>(observable, listener, this.listener);
+            return new Generic<>(observable, listener, this.listener);
         }
 
         @Override
@@ -282,7 +282,7 @@ public abstract class SetExpressionHelper<E> extends CollectionExpressionHelperB
 
         @Override
         protected SetExpressionHelper<E> addListener(SetChangeListener<? super E> listener) {
-            return new Generic<E>(observable, this.listener, listener);
+            return new Generic<>(observable, this.listener, listener);
         }
 
         @Override
@@ -310,7 +310,7 @@ public abstract class SetExpressionHelper<E> extends CollectionExpressionHelperB
             final ObservableSet<E> oldValue = currentValue;
             currentValue = observable.getValue();
             if (currentValue != oldValue) {
-                final SimpleChange<E> change = new SimpleChange<E>(observable);
+                final SimpleChange<E> change = new SimpleChange<>(observable);
                 if (currentValue == null) {
                     for (final E element : oldValue) {
                         listener.onChanged(change.setRemoved(element));
@@ -336,7 +336,7 @@ public abstract class SetExpressionHelper<E> extends CollectionExpressionHelperB
 
         @Override
         protected void fireValueChangedEvent(final SetChangeListener.Change<? extends E> change) {
-            listener.onChanged(new SimpleChange<E>(observable, change));
+            listener.onChanged(new SimpleChange<>(observable, change));
         }
     }
 
@@ -427,9 +427,9 @@ public abstract class SetExpressionHelper<E> extends CollectionExpressionHelperB
                     if (listener.equals(invalidationListeners[index])) {
                         if (invalidationSize == 1) {
                             if ((changeSize == 1) && (setChangeSize == 0)) {
-                                return new SingleChange<E>(observable, changeListeners[0]);
+                                return new SingleChange<>(observable, changeListeners[0]);
                             } else if ((changeSize == 0) && (setChangeSize == 1)) {
-                                return new SingleSetChange<E>(observable, setChangeListeners[0]);
+                                return new SingleSetChange<>(observable, setChangeListeners[0]);
                             }
                             invalidationListeners = null;
                             invalidationSize = 0;
@@ -489,9 +489,9 @@ public abstract class SetExpressionHelper<E> extends CollectionExpressionHelperB
                     if (listener.equals(changeListeners[index])) {
                         if (changeSize == 1) {
                             if ((invalidationSize == 1) && (setChangeSize == 0)) {
-                                return new SingleInvalidation<E>(observable, invalidationListeners[0]);
+                                return new SingleInvalidation<>(observable, invalidationListeners[0]);
                             } else if ((invalidationSize == 0) && (setChangeSize == 1)) {
-                                return new SingleSetChange<E>(observable, setChangeListeners[0]);
+                                return new SingleSetChange<>(observable, setChangeListeners[0]);
                             }
                             changeListeners = null;
                             changeSize = 0;
@@ -551,9 +551,9 @@ public abstract class SetExpressionHelper<E> extends CollectionExpressionHelperB
                     if (listener.equals(setChangeListeners[index])) {
                         if (setChangeSize == 1) {
                             if ((invalidationSize == 1) && (changeSize == 0)) {
-                                return new SingleInvalidation<E>(observable, invalidationListeners[0]);
+                                return new SingleInvalidation<>(observable, invalidationListeners[0]);
                             } else if ((invalidationSize == 0) && (changeSize == 1)) {
-                                return new SingleChange<E>(observable, changeListeners[0]);
+                                return new SingleChange<>(observable, changeListeners[0]);
                             }
                             setChangeListeners = null;
                             setChangeSize = 0;
@@ -627,7 +627,7 @@ public abstract class SetExpressionHelper<E> extends CollectionExpressionHelperB
 
         @Override
         protected void fireValueChangedEvent(final SetChangeListener.Change<? extends E> change) {
-            final SimpleChange<E> mappedChange = (setChangeSize == 0)? null : new SimpleChange<E>(observable, change);
+            final SimpleChange<E> mappedChange = (setChangeSize == 0)? null : new SimpleChange<>(observable, change);
             notifyListeners(currentValue, mappedChange);
         }
 
@@ -653,7 +653,7 @@ public abstract class SetExpressionHelper<E> extends CollectionExpressionHelperB
                                 curListChangeList[i].onChanged(change);
                             }
                         } else {
-                            change = new SimpleChange<E>(observable);
+                            change = new SimpleChange<>(observable);
                             if (currentValue == null) {
                                 for (final E element : oldValue) {
                                     change.setRemoved(element);

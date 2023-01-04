@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -84,10 +84,12 @@ public class CachingShapeRep implements ShapeRep {
         return new CachingShapeRepState();
     }
 
+    @Override
     public boolean is3DCapable() {
         return false;
     }
 
+    @Override
     public void invalidate(InvalidationType type) {
         // NOTE: for now we invalidate for any location or geometry change;
         // should consider allowing certain location changes...
@@ -99,6 +101,7 @@ public class CachingShapeRep implements ShapeRep {
         }
     }
 
+    @Override
     public void fill(Graphics g, Shape shape, BaseBounds bounds) {
         if (fillState == null) {
             fillState = createState();
@@ -106,6 +109,7 @@ public class CachingShapeRep implements ShapeRep {
         fillState.render(g, shape, (RectBounds) bounds, null);
     }
 
+    @Override
     public void draw(Graphics g, Shape shape, BaseBounds bounds) {
         if (drawState == null) {
             drawState = createState();
@@ -113,6 +117,7 @@ public class CachingShapeRep implements ShapeRep {
         drawState.render(g, shape,(RectBounds) bounds, g.getStroke());
     }
 
+    @Override
     public void dispose() {
         if (fillState != null) {
             fillState.dispose();
@@ -231,7 +236,7 @@ class CachingShapeRepState {
                 if (toPos < 0) {
                     toPos = ~toPos;
                 }
-                while (entries[pos] != entry && pos < toPos) { ++pos; };
+                while (entries[pos] != entry && pos < toPos) { ++pos; }
                 if (pos >= toPos) {
                     throw new IllegalStateException("Trying to remove a cached item that's not in the cache");
                 }
@@ -601,6 +606,7 @@ class CachingShapeRepState {
             this.texData = texData;
         }
 
+        @Override
         public void dispose() {
             // Note: this method should only be called from the rendering thread
             if (texData != null) {

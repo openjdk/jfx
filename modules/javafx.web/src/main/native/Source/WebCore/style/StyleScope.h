@@ -27,13 +27,19 @@
 
 #pragma once
 
+#include "LayoutSize.h"
+#include "MediaQueryEvaluator.h"
+#include "StyleScopeOrdinal.h"
 #include "Timer.h"
 #include <memory>
+#include <wtf/CheckedPtr.h>
 #include <wtf/FastMalloc.h>
+#include <wtf/HashMap.h>
 #include <wtf/HashSet.h>
 #include <wtf/ListHashSet.h>
 #include <wtf/RefPtr.h>
 #include <wtf/Vector.h>
+#include <wtf/WeakHashMap.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
@@ -41,6 +47,7 @@ namespace WebCore {
 class CSSStyleSheet;
 class Document;
 class Element;
+class HTMLSlotElement;
 class Node;
 class ProcessingInstruction;
 class StyleSheet;
@@ -53,16 +60,7 @@ namespace Style {
 
 class Resolver;
 
-// This is used to identify style scopes that can affect an element.
-// Scopes are in tree-of-trees order. Styles from earlier scopes win over later ones (modulo !important).
-enum class ScopeOrdinal : int {
-    ContainingHost = -1, // ::part rules and author-exposed UA pseudo classes from the host tree scope.
-    Element = 0, // Normal rules in the same tree where the element is.
-    FirstSlot = 1, // ::slotted rules in the parent's shadow tree. Values greater than FirstSlot indicate subsequent slots in the chain.
-    Shadow = std::numeric_limits<int>::max(), // :host rules in element's own shadow tree.
-};
-
-class Scope {
+class Scope : public CanMakeCheckedPtr {
     WTF_MAKE_FAST_ALLOCATED;
 public:
     explicit Scope(Document&);
@@ -92,7 +90,8 @@ public:
     bool hasPendingSheetInBody(const Element&) const;
     bool hasPendingSheet(const ProcessingInstruction&) const;
 
-    bool usesStyleBasedEditability() { return m_usesStyleBasedEditability; }
+    bool usesStyleBasedEditability() const { return m_usesStyleBasedEditability; }
+    bool usesHasPseudoClass() const { return m_usesHasPseudoClass; }
 
     bool activeStyleSheetsContains(const CSSStyleSheet*) const;
 
@@ -112,14 +111,13 @@ public:
 
     bool hasPendingUpdate() const { return m_pendingUpdate || m_hasDescendantWithPendingUpdate; }
     void flushPendingUpdate();
-    void insertedInDocument();
 
 #if ENABLE(XSLT)
     Vector<Ref<ProcessingInstruction>> collectXSLTransforms();
 #endif
 
     WEBCORE_EXPORT Resolver& resolver();
-    Resolver* resolverIfExists();
+    Resolver* resolverIfExists() { return m_resolver.get(); }
     void clearResolver();
     void releaseMemory();
 
@@ -131,8 +129,11 @@ public:
     static Scope& forNode(Node&);
     static Scope* forOrdinal(Element&, ScopeOrdinal);
 
+    bool updateQueryContainerState();
+
 private:
-    bool shouldUseSharedUserAgentShadowTreeStyleResolver() const;
+    Scope& documentScope();
+    bool isForUserAgentShadowTree() const;
 
     void didRemovePendingStylesheet();
 
@@ -140,6 +141,8 @@ private:
     void updateActiveStyleSheets(UpdateType);
     void scheduleUpdate(UpdateType);
 
+    using ResolverScopes = HashMap<Ref<Resolver>, Vector<CheckedPtr<Scope>>>;
+    ResolverScopes collectResolverScopes();
     template <typename TestFunction> void evaluateMediaQueries(TestFunction&&);
 
     WEBCORE_EXPORT void flushPendingSelfUpdate();
@@ -160,14 +163,25 @@ private:
     void invalidateStyleAfterStyleSheetChange(const StyleSheetChange&);
 
     void updateResolver(Vector<RefPtr<CSSStyleSheet>>&, ResolverUpdateType);
+    void createDocumentResolver();
+    void createOrFindSharedShadowTreeResolver();
+    void unshareShadowTreeResolverBeforeMutation();
+
+    using ResolverSharingKey = std::tuple<Vector<RefPtr<StyleSheetContents>>, bool, bool>;
+    ResolverSharingKey makeResolverSharingKey();
+
+    void pendingUpdateTimerFired();
+    void clearPendingUpdate();
 
     Document& m_document;
     ShadowRoot* m_shadowRoot { nullptr };
 
-    std::unique_ptr<Resolver> m_resolver;
+    RefPtr<Resolver> m_resolver;
 
     Vector<RefPtr<StyleSheet>> m_styleSheetsForStyleSheetList;
     Vector<RefPtr<CSSStyleSheet>> m_activeStyleSheets;
+
+    Timer m_pendingUpdateTimer;
 
     mutable std::unique_ptr<HashSet<const CSSStyleSheet*>> m_weakCopyOfActiveStyleSheetListForFastLookup;
 
@@ -179,17 +193,26 @@ private:
     HashSet<const Element*> m_elementsInHeadWithPendingSheets;
     HashSet<const Element*> m_elementsInBodyWithPendingSheets;
 
-
     ListHashSet<Node*> m_styleSheetCandidateNodes;
 
     String m_preferredStylesheetSetName;
 
-    Optional<UpdateType> m_pendingUpdate;
+    std::optional<UpdateType> m_pendingUpdate;
 
     bool m_hasDescendantWithPendingUpdate { false };
     bool m_usesStyleBasedEditability { false };
+    bool m_usesHasPseudoClass { false };
     bool m_isUpdatingStyleResolver { false };
+
+    std::optional<MediaQueryViewportState> m_viewportStateOnPreviousMediaQueryEvaluation;
+    WeakHashMap<Element, LayoutSize> m_queryContainerStates;
+
+    // FIXME: These (and some things above) are only relevant for the root scope.
+    HashMap<ResolverSharingKey, Ref<Resolver>> m_sharedShadowTreeResolvers;
 };
+
+HTMLSlotElement* assignedSlotForScopeOrdinal(const Element&, ScopeOrdinal);
+Element* hostForScopeOrdinal(const Element&, ScopeOrdinal);
 
 inline bool Scope::hasPendingSheets() const
 {
@@ -212,12 +235,6 @@ inline void Scope::flushPendingUpdate()
         flushPendingDescendantUpdates();
     if (m_pendingUpdate)
         flushPendingSelfUpdate();
-}
-
-inline ScopeOrdinal& operator++(ScopeOrdinal& ordinal)
-{
-    ASSERT(ordinal < ScopeOrdinal::Shadow);
-    return ordinal = static_cast<ScopeOrdinal>(static_cast<int>(ordinal) + 1);
 }
 
 }

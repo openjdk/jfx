@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -138,7 +138,7 @@ public class FloatPropertyTest {
 
     @Test
     public void testObjectToFloat() {
-        final ObjectProperty<Float> valueModel = new SimpleObjectProperty<Float>(2f);
+        final ObjectProperty<Float> valueModel = new SimpleObjectProperty<>(2f);
         final FloatProperty exp = FloatProperty.floatProperty(valueModel);
 
         assertEquals(2f, exp.floatValue(), EPSILON);

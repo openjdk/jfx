@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,7 @@
 
 package test.javafx.scene.control;
 
+import javafx.beans.property.SimpleStringProperty;
 import javafx.scene.control.skin.TreeTableCellSkin;
 import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
 import test.com.sun.javafx.scene.control.infrastructure.VirtualFlowTestUtils;
@@ -82,7 +83,7 @@ public class TreeTableCellTest {
             }
         });
 
-        cell = new TreeTableCell<String, String>();
+        cell = new TreeTableCell<>();
 
         root = new TreeItem<>(ROOT);
         apples = new TreeItem<>(APPLES);
@@ -90,7 +91,7 @@ public class TreeTableCellTest {
         pears = new TreeItem<>(PEARS);
         root.getChildren().addAll(apples, oranges, pears);
 
-        tree = new TreeTableView<String>(root);
+        tree = new TreeTableView<>(root);
         root.setExpanded(true);
         editingColumn = new TreeTableColumn<>("TEST");
 
@@ -170,7 +171,7 @@ public class TreeTableCellTest {
     @Test public void itemIsUpdatedWhenItWasOutOfRangeButUpdatesToTreeTableViewItemsMakesItInRange() {
         cell.updateIndex(4);
         cell.updateTreeTableView(tree);
-        root.getChildren().addAll(new TreeItem<String>("Pumpkin"), new TreeItem<>("Lemon"));
+        root.getChildren().addAll(new TreeItem<>("Pumpkin"), new TreeItem<>("Lemon"));
         assertSame("Pumpkin", cell.getItem());
     }
 
@@ -233,7 +234,7 @@ public class TreeTableCellTest {
         TreeItem<String> newRoot = new TreeItem<>();
         newRoot.setExpanded(true);
         newRoot.getChildren().setAll(new TreeItem<>("Water"), new TreeItem<>("Juice"), new TreeItem<>("Soda"));
-        TreeTableView<String> treeView2 = new TreeTableView<String>(newRoot);
+        TreeTableView<String> treeView2 = new TreeTableView<>(newRoot);
         cell.updateTreeTableView(treeView2);
         assertEquals("Juice", cell.getItem());
     }
@@ -304,12 +305,20 @@ public class TreeTableCellTest {
         assertNull(tree.getEditingCell());
     }
 
-    @Ignore // TODO file bug!
     @Test public void editCellWithTreeResultsInUpdatedEditingIndexProperty() {
-        tree.setEditable(true);
-        cell.updateTreeTableView(tree);
+        setupForEditing();
         cell.updateIndex(1);
         cell.startEdit();
+        assertEquals(apples, tree.getEditingCell().getTreeItem());
+    }
+
+    @Test public void editCellWithTreeNoColumnResultsInUpdatedEditingIndexProperty() {
+        // note: cell index must be != -1 because table.edit(-1, null) sets editingCell to null
+        cell.updateIndex(1);
+        setupForcedEditing(tree, null);
+        cell.startEdit();
+        assertTrue(cell.isEditing());
+        assertNotNull(tree.getEditingCell());
         assertEquals(apples, tree.getEditingCell().getTreeItem());
     }
 
@@ -525,7 +534,7 @@ public class TreeTableCellTest {
     private int rt_29923_count = 0;
     @Test public void test_rt_29923() {
         // setup test
-        cell = new TreeTableCellShim<String,String>() {
+        cell = new TreeTableCellShim<>() {
             @Override public void updateItem(String item, boolean empty) {
                 super.updateItem(item, empty);
                 rt_29923_count++;
@@ -672,6 +681,54 @@ public class TreeTableCellTest {
     @Test public void test_jdk_8151524() {
         TreeTableCell cell = new TreeTableCell();
         cell.setSkin(new TreeTableCellSkin(cell));
+    }
+
+    /**
+     * The {@link TreeTableRow} should never be null inside the {@link TreeTableCell} during auto sizing.
+     * Note: The auto sizing is triggered as soon as the table has a scene - so when the {@link StageLoader} is created.
+     * See also: JDK-8251481
+     */
+    @Test
+    public void testRowIsNotNullWhenAutoSizing() {
+        TreeTableColumn<String, String> treeTableColumn = new TreeTableColumn<>();
+        treeTableColumn.setCellFactory(col -> new TreeTableCell<>() {
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+
+                assertNotNull(getTableRow());
+            }
+        });
+        tree.getColumns().add(treeTableColumn);
+
+        stageLoader = new StageLoader(tree);
+    }
+
+    /**
+     * The item of the {@link TreeTableRow} should not be null, when the {@link TreeTableCell} is not empty.
+     * See also: JDK-8251483
+     */
+    @Test
+    public void testRowItemIsNotNullForNonEmptyCell() {
+        TreeTableColumn<String, String> treeTableColumn = new TreeTableColumn<>();
+        treeTableColumn.setCellValueFactory(cc -> new SimpleStringProperty(cc.getValue().getValue()));
+        treeTableColumn.setCellFactory(col -> new TreeTableCell<>() {
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+
+                if (!empty) {
+                    assertNotNull(getTableRow().getItem());
+                }
+            }
+        });
+        tree.getColumns().add(treeTableColumn);
+
+        stageLoader = new StageLoader(tree);
+
+        // Will create a new row and cell.
+        tree.getRoot().getChildren().add(new TreeItem<>("newItem"));
+        Toolkit.getToolkit().firePulse();
     }
 
     /**
@@ -904,16 +961,35 @@ public class TreeTableCellTest {
     }
 
  //------------- commitEdit
- // fix of JDK-8271474 changed the implementation of how the editing location is evaluated
+
+    @Test
+    public void testCommitEditMustNotFireCancel() {
+        setupForEditing();
+        // JDK-8187307: handler that resets control's editing state
+        editingColumn.setOnEditCommit(e -> {
+            TreeItem<String> treeItem = tree.getTreeItem(e.getTreeTablePosition().getRow());
+            treeItem.setValue(e.getNewValue());
+            tree.edit(-1, null);
+        });
+        int editingRow = 1;
+        cell.updateIndex(editingRow);
+        tree.edit(editingRow, editingColumn);
+        List<CellEditEvent<?, ?>> events = new ArrayList<>();
+        editingColumn.setOnEditCancel(events::add);
+        String value = "edited";
+        cell.commitEdit(value);
+        assertEquals("sanity: value committed", value, tree.getTreeItem(editingRow).getValue());
+        assertEquals("commit must not have fired editCancel", 0, events.size());
+    }
+
+// fix of JDK-8271474 changed the implementation of how the editing location is evaluated
 
      @Test
      public void testEditCommitEvent() {
          setupForEditing();
          int editingIndex = 1;
          cell.updateIndex(editingIndex);
-         // FIXME JDK-8187474
-         // should use cell.startEdit for consistency with the following tests
-         tree.edit(editingIndex, editingColumn);
+         cell.startEdit();
          TreeTablePosition<?, ?> editingPosition = tree.getEditingCell();
          List<CellEditEvent<?, ?>> events = new ArrayList<>();
          editingColumn.setOnEditCommit(events::add);
@@ -1027,6 +1103,27 @@ public class TreeTableCellTest {
          cell.commitEdit("edited");
      }
 
+     @Test
+     public void testStartEditOffRangeMustNotFireStartEdit() {
+         setupForEditing();
+         cell.updateIndex(tree.getExpandedItemCount());
+         List<CellEditEvent<?, ?>> events = new ArrayList<>();
+         editingColumn.addEventHandler(TreeTableColumn.editStartEvent(), events::add);
+         cell.startEdit();
+         assertFalse("sanity: off-range cell must not be editing", cell.isEditing());
+         assertEquals("cell must not fire editStart if not editing", 0, events.size());
+     }
+
+     @Test
+     public void testStartEditOffRangeMustNotUpdateEditingLocation() {
+         setupForEditing();
+         cell.updateIndex(tree.getExpandedItemCount());
+         cell.startEdit();
+         assertFalse("sanity: off-range cell must not be editing", cell.isEditing());
+         assertNull("treetable editing location must not be updated", tree.getEditingCell());
+     }
+
+
  //--------- test the test setup
 
      @Test
@@ -1075,7 +1172,7 @@ public class TreeTableCellTest {
      * Test that cell.cancelEdit can switch table editing off
      * even if a subclass violates its contract.
      *
-     * For details, see https://bugs.openjdk.java.net/browse/JDK-8265206
+     * For details, see https://bugs.openjdk.org/browse/JDK-8265206
      *
      */
     @Test

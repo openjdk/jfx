@@ -40,7 +40,7 @@ struct GreaterThanOrSameSizeAsStyleRareInheritedData : public RefCounted<Greater
     void* styleImage;
     Color firstColor;
     float firstFloat;
-    Color colors[9];
+    Color colors[10];
     void* ownPtrs[1];
     AtomString atomStrings[6];
     void* refPtrs[3];
@@ -49,7 +49,7 @@ struct GreaterThanOrSameSizeAsStyleRareInheritedData : public RefCounted<Greater
     TextUnderlineOffset offset;
     TextDecorationThickness thickness;
     void* customPropertyDataRefs[1];
-    unsigned bitfields[6];
+    unsigned bitfields[7];
     short pagedMediaShorts[2];
     TabSize tabSize;
     short hyphenationShorts[3];
@@ -97,14 +97,13 @@ StyleRareInheritedData::StyleRareInheritedData()
     , userSelect(static_cast<unsigned>(RenderStyle::initialUserSelect()))
     , speakAs(RenderStyle::initialSpeakAs().toRaw())
     , hyphens(static_cast<unsigned>(Hyphens::Manual))
+    , textCombine(static_cast<unsigned>(RenderStyle::initialTextCombine()))
     , textEmphasisFill(static_cast<unsigned>(TextEmphasisFill::Filled))
     , textEmphasisMark(static_cast<unsigned>(TextEmphasisMark::None))
     , textEmphasisPosition(static_cast<unsigned>(RenderStyle::initialTextEmphasisPosition().toRaw()))
     , textOrientation(static_cast<unsigned>(TextOrientation::Mixed))
-#if ENABLE(CSS3_TEXT)
-    , textIndentLine(RenderStyle::initialTextIndentLine())
-    , textIndentType(RenderStyle::initialTextIndentType())
-#endif
+    , textIndentLine(static_cast<unsigned>(RenderStyle::initialTextIndentLine()))
+    , textIndentType(static_cast<unsigned>(RenderStyle::initialTextIndentType()))
     , lineBoxContain(static_cast<unsigned>(RenderStyle::initialLineBoxContain().toRaw()))
     , imageOrientation(RenderStyle::initialImageOrientation())
     , imageRendering(static_cast<unsigned>(RenderStyle::initialImageRendering()))
@@ -118,10 +117,10 @@ StyleRareInheritedData::StyleRareInheritedData()
     , imageResolutionSnap(RenderStyle::initialImageResolutionSnap())
 #endif
 #if ENABLE(CSS3_TEXT)
-    , textAlignLast(RenderStyle::initialTextAlignLast())
-    , textJustify(RenderStyle::initialTextJustify())
+    , textAlignLast(static_cast<unsigned>(RenderStyle::initialTextAlignLast()))
+    , textJustify(static_cast<unsigned>(RenderStyle::initialTextJustify()))
 #endif
-    , textDecorationSkip(RenderStyle::initialTextDecorationSkip().toRaw())
+    , textDecorationSkipInk(static_cast<unsigned>(RenderStyle::initialTextDecorationSkipInk()))
     , textUnderlinePosition(static_cast<unsigned>(RenderStyle::initialTextUnderlinePosition()))
     , rubyPosition(static_cast<unsigned>(RenderStyle::initialRubyPosition()))
     , textZoom(static_cast<unsigned>(RenderStyle::initialTextZoom()))
@@ -130,11 +129,16 @@ StyleRareInheritedData::StyleRareInheritedData()
 #endif
     , hangingPunctuation(RenderStyle::initialHangingPunctuation().toRaw())
     , paintOrder(static_cast<unsigned>(RenderStyle::initialPaintOrder()))
-    , capStyle(RenderStyle::initialCapStyle())
-    , joinStyle(RenderStyle::initialJoinStyle())
+    , capStyle(static_cast<unsigned>(RenderStyle::initialCapStyle()))
+    , joinStyle(static_cast<unsigned>(RenderStyle::initialJoinStyle()))
     , hasSetStrokeWidth(false)
     , hasSetStrokeColor(false)
     , mathStyle(static_cast<unsigned>(RenderStyle::initialMathStyle()))
+    , hasAutoCaretColor(true)
+    , hasVisitedLinkAutoCaretColor(true)
+    , hasAutoAccentColor(true)
+    , effectiveInert(false)
+    , isInSubtreeWithBlendMode(false)
     , effectiveTouchActions(RenderStyle::initialTouchActions())
     , strokeWidth(RenderStyle::initialStrokeWidth())
     , strokeColor(RenderStyle::initialStrokeColor())
@@ -173,6 +177,7 @@ inline StyleRareInheritedData::StyleRareInheritedData(const StyleRareInheritedDa
     , visitedLinkTextEmphasisColor(o.visitedLinkTextEmphasisColor)
     , caretColor(o.caretColor)
     , visitedLinkCaretColor(o.visitedLinkCaretColor)
+    , accentColor(o.accentColor)
     , textShadow(o.textShadow ? makeUnique<ShadowData>(*o.textShadow) : nullptr)
     , cursorData(o.cursorData)
     , indent(o.indent)
@@ -193,14 +198,13 @@ inline StyleRareInheritedData::StyleRareInheritedData(const StyleRareInheritedDa
     , userSelect(o.userSelect)
     , speakAs(o.speakAs)
     , hyphens(o.hyphens)
+    , textCombine(o.textCombine)
     , textEmphasisFill(o.textEmphasisFill)
     , textEmphasisMark(o.textEmphasisMark)
     , textEmphasisPosition(o.textEmphasisPosition)
     , textOrientation(o.textOrientation)
-#if ENABLE(CSS3_TEXT)
     , textIndentLine(o.textIndentLine)
     , textIndentType(o.textIndentType)
-#endif
     , lineBoxContain(o.lineBoxContain)
     , imageOrientation(o.imageOrientation)
     , imageRendering(o.imageRendering)
@@ -217,7 +221,7 @@ inline StyleRareInheritedData::StyleRareInheritedData(const StyleRareInheritedDa
     , textAlignLast(o.textAlignLast)
     , textJustify(o.textJustify)
 #endif
-    , textDecorationSkip(o.textDecorationSkip)
+    , textDecorationSkipInk(o.textDecorationSkipInk)
     , textUnderlinePosition(o.textUnderlinePosition)
     , rubyPosition(o.rubyPosition)
     , textZoom(o.textZoom)
@@ -231,6 +235,11 @@ inline StyleRareInheritedData::StyleRareInheritedData(const StyleRareInheritedDa
     , hasSetStrokeWidth(o.hasSetStrokeWidth)
     , hasSetStrokeColor(o.hasSetStrokeColor)
     , mathStyle(o.mathStyle)
+    , hasAutoCaretColor(o.hasAutoCaretColor)
+    , hasVisitedLinkAutoCaretColor(o.hasVisitedLinkAutoCaretColor)
+    , hasAutoAccentColor(o.hasAutoAccentColor)
+    , effectiveInert(o.effectiveInert)
+    , isInSubtreeWithBlendMode(o.isInSubtreeWithBlendMode)
     , effectiveTouchActions(o.effectiveTouchActions)
     , eventListenerRegionTypes(o.eventListenerRegionTypes)
     , strokeWidth(o.strokeWidth)
@@ -278,6 +287,7 @@ bool StyleRareInheritedData::operator==(const StyleRareInheritedData& o) const
         && visitedLinkTextEmphasisColor == o.visitedLinkTextEmphasisColor
         && caretColor == o.caretColor
         && visitedLinkCaretColor == o.visitedLinkCaretColor
+        && accentColor == o.accentColor
 #if ENABLE(TOUCH_EVENTS)
         && tapHighlightColor == o.tapHighlightColor
 #endif
@@ -312,14 +322,13 @@ bool StyleRareInheritedData::operator==(const StyleRareInheritedData& o) const
         && hyphenationLimitBefore == o.hyphenationLimitBefore
         && hyphenationLimitAfter == o.hyphenationLimitAfter
         && hyphenationLimitLines == o.hyphenationLimitLines
+        && textCombine == o.textCombine
         && textEmphasisFill == o.textEmphasisFill
         && textEmphasisMark == o.textEmphasisMark
         && textEmphasisPosition == o.textEmphasisPosition
         && textOrientation == o.textOrientation
-#if ENABLE(CSS3_TEXT)
         && textIndentLine == o.textIndentLine
         && textIndentType == o.textIndentType
-#endif
         && lineBoxContain == o.lineBoxContain
 #if PLATFORM(IOS_FAMILY)
         && touchCalloutEnabled == o.touchCalloutEnabled
@@ -341,7 +350,7 @@ bool StyleRareInheritedData::operator==(const StyleRareInheritedData& o) const
         && textAlignLast == o.textAlignLast
         && textJustify == o.textJustify
 #endif // CSS3_TEXT
-        && textDecorationSkip == o.textDecorationSkip
+        && textDecorationSkipInk == o.textDecorationSkipInk
         && textUnderlinePosition == o.textUnderlinePosition
         && rubyPosition == o.rubyPosition
         && textZoom == o.textZoom
@@ -354,8 +363,13 @@ bool StyleRareInheritedData::operator==(const StyleRareInheritedData& o) const
         && hasSetStrokeWidth == o.hasSetStrokeWidth
         && hasSetStrokeColor == o.hasSetStrokeColor
         && mathStyle == o.mathStyle
+        && hasAutoCaretColor == o.hasAutoCaretColor
+        && hasVisitedLinkAutoCaretColor == o.hasVisitedLinkAutoCaretColor
+        && hasAutoAccentColor == o.hasAutoAccentColor
+        && isInSubtreeWithBlendMode == o.isInSubtreeWithBlendMode
         && effectiveTouchActions == o.effectiveTouchActions
         && eventListenerRegionTypes == o.eventListenerRegionTypes
+        && effectiveInert == o.effectiveInert
         && strokeWidth == o.strokeWidth
         && strokeColor == o.strokeColor
         && visitedLinkStrokeColor == o.visitedLinkStrokeColor

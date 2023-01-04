@@ -25,7 +25,6 @@
 #include <wtf/Forward.h>
 #include <wtf/HashFunctions.h>
 #include <wtf/KeyValuePair.h>
-#include <wtf/Optional.h>
 #include <wtf/StdLibExtras.h>
 
 #ifdef __OBJC__
@@ -177,6 +176,23 @@ template<typename T, typename Deleter> struct HashTraits<std::unique_ptr<T, Dele
         if (LIKELY(pointer))
             Deleter()(pointer);
     }
+};
+
+template<typename T> struct HashTraits<UniqueRef<T>> : SimpleClassHashTraits<UniqueRef<T>> {
+    typedef std::nullptr_t EmptyValueType;
+    static EmptyValueType emptyValue() { return nullptr; }
+
+    static void constructDeletedValue(UniqueRef<T>& slot) { new (NotNull, std::addressof(slot)) UniqueRef<T> { reinterpret_cast<T*>(-1) }; }
+    static bool isDeletedValue(const UniqueRef<T>& value) { return value.get() == reinterpret_cast<T*>(-1); }
+
+    typedef T* PeekType;
+    static const T* peek(const UniqueRef<T>& value) { return &value.get(); }
+    static T* peek(UniqueRef<T>& value) { return &value.get(); }
+    static T* peek(std::nullptr_t) { return nullptr; }
+
+    using TakeType = std::unique_ptr<T>;
+    static TakeType take(UniqueRef<T>&& value) { return value.moveToUniquePtr(); }
+    static TakeType take(std::nullptr_t) { return nullptr; }
 };
 
 template<typename P> struct HashTraits<RefPtr<P>> : SimpleClassHashTraits<RefPtr<P>> {

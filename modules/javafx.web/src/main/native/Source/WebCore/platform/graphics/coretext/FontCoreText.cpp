@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2005-2022 Apple Inc. All rights reserved.
  * Copyright (C) 2006 Alexey Proskuryakov
  *
  * Redistribution and use in source and binary forms, with or without
@@ -32,6 +32,7 @@
 #include "FontCache.h"
 #include "FontCascade.h"
 #include "FontDescription.h"
+#include "Logging.h"
 #include "OpenTypeCG.h"
 #include "SharedBuffer.h"
 #include <CoreText/CoreText.h>
@@ -108,6 +109,9 @@ static bool isAhemFont(CFStringRef familyName)
 
 bool fontHasTable(CTFontRef ctFont, unsigned tableTag)
 {
+#if USE(CTFONTHASTABLE)
+    return CTFontHasTable(ctFont, tableTag);
+#else
     auto tableTags = adoptCF(CTFontCopyAvailableTables(ctFont, kCTFontTableOptionNoOptions));
     if (!tableTags)
         return false;
@@ -118,10 +122,14 @@ bool fontHasTable(CTFontRef ctFont, unsigned tableTag)
             return true;
     }
     return false;
+#endif
 }
 
 bool fontHasEitherTable(CTFontRef ctFont, unsigned tableTag1, unsigned tableTag2)
 {
+#if USE(CTFONTHASTABLE)
+    return fontHasTable(ctFont, tableTag1) || fontHasTable(ctFont, tableTag2);
+#else
     auto tableTags = adoptCF(CTFontCopyAvailableTables(ctFont, kCTFontTableOptionNoOptions));
     if (!tableTags)
         return false;
@@ -132,6 +140,7 @@ bool fontHasEitherTable(CTFontRef ctFont, unsigned tableTag1, unsigned tableTag2
             return true;
     }
     return false;
+#endif
 }
 
 void Font::platformInit()
@@ -395,7 +404,7 @@ const BitVector& Font::glyphsSupportedByAllPetiteCaps() const
 }
 #endif
 
-static RefPtr<Font> createDerivativeFont(CTFontRef font, float size, FontOrientation orientation, CTFontSymbolicTraits fontTraits, bool syntheticBold, bool syntheticItalic)
+static RefPtr<Font> createDerivativeFont(CTFontRef font, float size, FontOrientation orientation, CTFontSymbolicTraits fontTraits, bool syntheticBold, bool syntheticItalic, FontWidthVariant fontWidthVariant, TextRenderingMode textRenderingMode, const FontPlatformData::CreationData* creationData)
 {
     if (!font)
         return nullptr;
@@ -409,7 +418,7 @@ static RefPtr<Font> createDerivativeFont(CTFontRef font, float size, FontOrienta
 
     bool usedSyntheticBold = (fontTraits & kCTFontBoldTrait) && !(scaledFontTraits & kCTFontTraitBold);
     bool usedSyntheticOblique = (fontTraits & kCTFontItalicTrait) && !(scaledFontTraits & kCTFontTraitItalic);
-    FontPlatformData scaledFontData(font, size, usedSyntheticBold, usedSyntheticOblique, orientation);
+    FontPlatformData scaledFontData(font, size, usedSyntheticBold, usedSyntheticOblique, orientation, fontWidthVariant, textRenderingMode, creationData);
 
     return Font::create(scaledFontData);
 }
@@ -424,7 +433,7 @@ static inline bool isTrueTypeFeature(CFDictionaryRef feature)
     return CFDictionaryContainsKey(feature, kCTFontFeatureTypeIdentifierKey) && CFDictionaryContainsKey(feature, kCTFontFeatureSelectorIdentifierKey);
 }
 
-static inline Optional<CFStringRef> openTypeFeature(CFDictionaryRef feature)
+static inline std::optional<CFStringRef> openTypeFeature(CFDictionaryRef feature)
 {
     ASSERT(isOpenTypeFeature(feature));
     CFStringRef tag = static_cast<CFStringRef>(CFDictionaryGetValue(feature, kCTFontOpenTypeFeatureTag));
@@ -432,7 +441,7 @@ static inline Optional<CFStringRef> openTypeFeature(CFDictionaryRef feature)
     CFNumberRef value = static_cast<CFNumberRef>(CFDictionaryGetValue(feature, kCTFontOpenTypeFeatureValue));
     auto success = CFNumberGetValue(value, kCFNumberIntType, &rawValue);
     ASSERT_UNUSED(success, success);
-    return rawValue ? Optional<CFStringRef>(tag) : WTF::nullopt;
+    return rawValue ? std::optional<CFStringRef>(tag) : std::nullopt;
 }
 
 static inline std::pair<int, int> trueTypeFeature(CFDictionaryRef feature)
@@ -549,7 +558,7 @@ RefPtr<Font> Font::createFontWithoutSynthesizableFeatures() const
     float size = m_platformData.size();
     CTFontSymbolicTraits fontTraits = CTFontGetSymbolicTraits(m_platformData.font());
     RetainPtr<CTFontRef> ctFont = createCTFontWithoutSynthesizableFeatures(m_platformData.font());
-    return createDerivativeFont(ctFont.get(), size, m_platformData.orientation(), fontTraits, m_platformData.syntheticBold(), m_platformData.syntheticOblique());
+    return createDerivativeFont(ctFont.get(), size, m_platformData.orientation(), fontTraits, m_platformData.syntheticBold(), m_platformData.syntheticOblique(), m_platformData.widthVariant(), m_platformData.textRenderingMode(), m_platformData.creationData() ? &m_platformData.creationData().value() : nullptr);
 }
 
 RefPtr<Font> Font::platformCreateScaledFont(const FontDescription&, float scaleFactor) const
@@ -559,7 +568,7 @@ RefPtr<Font> Font::platformCreateScaledFont(const FontDescription&, float scaleF
     RetainPtr<CTFontDescriptorRef> fontDescriptor = adoptCF(CTFontCopyFontDescriptor(m_platformData.font()));
     RetainPtr<CTFontRef> scaledFont = adoptCF(CTFontCreateWithFontDescriptor(fontDescriptor.get(), size, nullptr));
 
-    return createDerivativeFont(scaledFont.get(), size, m_platformData.orientation(), fontTraits, m_platformData.syntheticBold(), m_platformData.syntheticOblique());
+    return createDerivativeFont(scaledFont.get(), size, m_platformData.orientation(), fontTraits, m_platformData.syntheticBold(), m_platformData.syntheticOblique(), m_platformData.widthVariant(), m_platformData.textRenderingMode(), m_platformData.creationData() ? &m_platformData.creationData().value() : nullptr);
 }
 
 float Font::platformWidthForGlyph(Glyph glyph) const
@@ -579,16 +588,15 @@ float Font::platformWidthForGlyph(Glyph glyph) const
             CTFontGetAdvancesForGlyphs(m_platformData.ctFont(), orientation, &glyph, &advance, 1);
         }
     }
-    return advance.width + m_syntheticBoldOffset;
+    return advance.width;
 }
 
 #endif
 
-void Font::applyTransforms(GlyphBuffer& glyphBuffer, unsigned beginningGlyphIndex, unsigned beginningStringIndex, bool enableKerning, bool requiresShaping, const AtomString& locale, StringView text, TextDirection textDirection) const
+GlyphBufferAdvance Font::applyTransforms(GlyphBuffer& glyphBuffer, unsigned beginningGlyphIndex, unsigned beginningStringIndex, bool enableKerning, bool requiresShaping, const AtomString& locale, StringView text, TextDirection textDirection) const
 {
     UNUSED_PARAM(requiresShaping);
 
-    // FIXME: Implement GlyphBuffer initial advance.
 #if USE(CTFONTSHAPEGLYPHS)
     auto handler = ^(CFRange range, CGGlyph** newGlyphsPointer, CGSize** newAdvancesPointer, CGPoint** newOffsetsPointer, CFIndex** newIndicesPointer)
     {
@@ -597,8 +605,11 @@ void Font::applyTransforms(GlyphBuffer& glyphBuffer, unsigned beginningGlyphInde
             range.length = std::min(range.location, -range.length);
             range.location = range.location - range.length;
             glyphBuffer.remove(beginningGlyphIndex + range.location, range.length);
-        } else
+            LOG_WITH_STREAM(TextShaping, stream << "Callback called to remove at location " << range.location << " and length " << range.length);
+        } else {
             glyphBuffer.makeHole(beginningGlyphIndex + range.location, range.length, this);
+            LOG_WITH_STREAM(TextShaping, stream << "Callback called to insert hole at location " << range.location << " and length " << range.length);
+        }
 
         *newGlyphsPointer = glyphBuffer.glyphs(beginningGlyphIndex);
         *newAdvancesPointer = glyphBuffer.advances(beginningGlyphIndex);
@@ -609,24 +620,87 @@ void Font::applyTransforms(GlyphBuffer& glyphBuffer, unsigned beginningGlyphInde
     auto substring = text.substring(beginningStringIndex);
     auto upconvertedCharacters = substring.upconvertedCharacters();
     auto localeString = LocaleCocoa::canonicalLanguageIdentifierFromString(locale).string().createCFString();
+    auto numberOfInputGlyphs = glyphBuffer.size() - beginningGlyphIndex;
+    // FIXME: Enable kerning for single glyphs when rdar://82195405 is fixed
     CTFontShapeOptions options = kCTFontShapeWithClusterComposition
-        | (enableKerning ? kCTFontShapeWithKerning : 0)
+        | (enableKerning && numberOfInputGlyphs ? kCTFontShapeWithKerning : 0)
         | (textDirection == TextDirection::RTL ? kCTFontShapeRightToLeft : 0);
 
     for (unsigned i = 0; i < glyphBuffer.size() - beginningGlyphIndex; ++i)
         glyphBuffer.offsetsInString(beginningGlyphIndex)[i] -= beginningStringIndex;
 
-    CTFontShapeGlyphs(
+    LOG_WITH_STREAM(TextShaping,
+        stream << "Simple shaping " << numberOfInputGlyphs << " glyphs in font " << String(adoptCF(CTFontCopyPostScriptName(m_platformData.ctFont())).get()) << ".\n";
+        const auto* glyphs = glyphBuffer.glyphs(beginningGlyphIndex);
+        stream << "Glyphs:";
+        for (unsigned i = 0; i < numberOfInputGlyphs; ++i)
+            stream << " " << glyphs[i];
+        stream << "\n";
+        const auto* advances = glyphBuffer.advances(beginningGlyphIndex);
+        stream << "Advances:";
+        for (unsigned i = 0; i < numberOfInputGlyphs; ++i)
+            stream << " " << FloatSize(advances[i]);
+        stream << "\n";
+        const auto* origins = glyphBuffer.origins(beginningGlyphIndex);
+        stream << "Origins:";
+        for (unsigned i = 0; i < numberOfInputGlyphs; ++i)
+            stream << " " << origins[i];
+        stream << "\n";
+        const auto* offsets = glyphBuffer.offsetsInString(beginningGlyphIndex);
+        stream << "Offsets:";
+        for (unsigned i = 0; i < numberOfInputGlyphs; ++i)
+            stream << " " << offsets[i];
+        stream << "\n";
+        const UChar* codeUnits = upconvertedCharacters.get();
+        stream << "Code Units:";
+        for (unsigned i = 0; i < numberOfInputGlyphs; ++i)
+            stream << " " << codeUnits[i];
+    );
+
+    auto initialAdvance = CTFontShapeGlyphs(
         m_platformData.ctFont(),
         glyphBuffer.glyphs(beginningGlyphIndex),
-        reinterpret_cast<CGSize*>(glyphBuffer.advances(beginningGlyphIndex)),
-        reinterpret_cast<CGPoint*>(glyphBuffer.origins(beginningGlyphIndex)),
+        glyphBuffer.advances(beginningGlyphIndex),
+        glyphBuffer.origins(beginningGlyphIndex),
         glyphBuffer.offsetsInString(beginningGlyphIndex),
         reinterpret_cast<const UniChar*>(upconvertedCharacters.get()),
-        glyphBuffer.size() - beginningGlyphIndex,
+        numberOfInputGlyphs,
         options,
         localeString.get(),
         handler);
+
+    LOG_WITH_STREAM(TextShaping,
+        stream << "Shaping result: " << glyphBuffer.size() - beginningGlyphIndex << " glyphs.\n";
+        const auto* glyphs = glyphBuffer.glyphs(beginningGlyphIndex);
+        stream << "Glyphs:";
+        for (unsigned i = 0; i < glyphBuffer.size() - beginningGlyphIndex; ++i)
+            stream << " " << glyphs[i];
+        stream << "\n";
+        const auto* advances = glyphBuffer.advances(beginningGlyphIndex);
+        stream << "Advances:";
+        for (unsigned i = 0; i < glyphBuffer.size() - beginningGlyphIndex; ++i)
+            stream << " " << FloatSize(advances[i]);
+        stream << "\n";
+        const auto* origins = glyphBuffer.origins(beginningGlyphIndex);
+        stream << "Origins:";
+        for (unsigned i = 0; i < glyphBuffer.size() - beginningGlyphIndex; ++i)
+            stream << " " << origins[i];
+        stream << "\n";
+        const auto* offsets = glyphBuffer.offsetsInString(beginningGlyphIndex);
+        stream << "Offsets:";
+        for (unsigned i = 0; i < glyphBuffer.size() - beginningGlyphIndex; ++i)
+            stream << " " << offsets[i];
+        stream << "\n";
+        const UChar* codeUnits = upconvertedCharacters.get();
+        stream << "Code Units:";
+        for (unsigned i = 0; i < glyphBuffer.size() - beginningGlyphIndex; ++i)
+            stream << " " << codeUnits[i];
+        stream << "\n";
+        stream << "Initial advance: " << FloatSize(initialAdvance);
+    );
+
+    ASSERT(numberOfInputGlyphs || glyphBuffer.size() == beginningGlyphIndex);
+    ASSERT(numberOfInputGlyphs || (!initialAdvance.width && !initialAdvance.height));
 
     for (unsigned i = 0; i < glyphBuffer.size() - beginningGlyphIndex; ++i)
         glyphBuffer.offsetsInString(beginningGlyphIndex)[i] += beginningStringIndex;
@@ -652,11 +726,15 @@ void Font::applyTransforms(GlyphBuffer& glyphBuffer, unsigned beginningGlyphInde
 
     CTFontTransformOptions options = (enableKerning ? kCTFontTransformApplyPositioning : 0) | kCTFontTransformApplyShaping;
     CTFontTransformGlyphs(m_platformData.ctFont(), glyphBuffer.glyphs(beginningGlyphIndex), reinterpret_cast<CGSize*>(glyphBuffer.advances(beginningGlyphIndex)), glyphBuffer.size() - beginningGlyphIndex, options);
+
+    auto initialAdvance = makeGlyphBufferAdvance();
 #endif
 
     // See the comment above in this function where the other call to reverse() is.
     if (textDirection == TextDirection::RTL)
         glyphBuffer.reverse(beginningGlyphIndex, glyphBuffer.size() - beginningGlyphIndex);
+
+    return initialAdvance;
 }
 
 static int extractNumber(CFNumberRef number)
@@ -703,8 +781,7 @@ FloatRect Font::platformBoundsForGlyph(Glyph glyph) const
     CGRect ignoredRect = { };
     boundingBox = CTFontGetBoundingRectsForGlyphs(m_platformData.ctFont(), platformData().orientation() == FontOrientation::Vertical ? kCTFontOrientationVertical : kCTFontOrientationHorizontal, &glyph, &ignoredRect, 1);
     boundingBox.setY(-boundingBox.maxY());
-    if (m_syntheticBoldOffset)
-        boundingBox.setWidth(boundingBox.width() + m_syntheticBoldOffset);
+    boundingBox.setWidth(boundingBox.width() + m_syntheticBoldOffset);
 
     return boundingBox;
 }
@@ -723,7 +800,7 @@ Path Font::platformPathForGlyph(Glyph glyph) const
     return { adoptCF(CGPathCreateMutableCopy(result.get())) };
 }
 
-bool Font::platformSupportsCodePoint(UChar32 character, Optional<UChar32> variation) const
+bool Font::platformSupportsCodePoint(UChar32 character, std::optional<UChar32> variation) const
 {
     if (variation)
         return false;
@@ -733,6 +810,33 @@ bool Font::platformSupportsCodePoint(UChar32 character, Optional<UChar32> variat
     CFIndex count = 0;
     U16_APPEND_UNSAFE(codeUnits, count, character);
     return CTFontGetGlyphsForCharacters(platformData().ctFont(), codeUnits, glyphs, count);
+}
+
+static bool hasGlyphsForCharacterRange(CTFontRef font, UniChar firstCharacter, UniChar lastCharacter, bool expectValidGlyphsForAllCharacters)
+{
+    const unsigned numberOfCharacters = lastCharacter - firstCharacter + 1;
+    Vector<CGGlyph> glyphs;
+    glyphs.fill(0, numberOfCharacters);
+    CTFontGetGlyphsForCharacterRange(font, glyphs.begin(), CFRangeMake(firstCharacter, numberOfCharacters));
+    glyphs.removeAll(0);
+
+    if (glyphs.isEmpty())
+        return false;
+
+    Vector<CGRect> boundingRects;
+    boundingRects.fill(CGRectZero, glyphs.size());
+    CTFontGetBoundingRectsForGlyphs(font, kCTFontOrientationDefault, glyphs.begin(), boundingRects.begin(), glyphs.size());
+
+    unsigned validGlyphsCount = 0;
+    for (auto& rect : boundingRects) {
+        if (!CGRectIsEmpty(rect))
+            ++validGlyphsCount;
+    }
+
+    if (expectValidGlyphsForAllCharacters)
+        return validGlyphsCount == glyphs.size();
+
+    return validGlyphsCount;
 }
 
 bool Font::isProbablyOnlyUsedToRenderIcons() const
@@ -754,43 +858,106 @@ bool Font::isProbablyOnlyUsedToRenderIcons() const
     if (CFCharacterSetHasMemberInPlane(supportedCharacters.get(), 1) || CFCharacterSetHasMemberInPlane(supportedCharacters.get(), 2))
         return false;
 
-    // This encompasses all basic Latin non-control characters.
-    constexpr UniChar firstCharacterToTest = ' ';
-    constexpr UniChar lastCharacterToTest = '~';
-    constexpr auto numberOfCharactersToTest = lastCharacterToTest - firstCharacterToTest + 1;
-
-    Vector<CGGlyph> glyphs;
-    glyphs.fill(0, numberOfCharactersToTest);
-    CTFontGetGlyphsForCharacterRange(platformFont, glyphs.begin(), CFRangeMake(firstCharacterToTest, numberOfCharactersToTest));
-    glyphs.removeAll(0);
-
-    if (glyphs.isEmpty())
-        return false;
-
-    Vector<CGRect> boundingRects;
-    boundingRects.fill(CGRectZero, glyphs.size());
-    CTFontGetBoundingRectsForGlyphs(platformFont, kCTFontOrientationDefault, glyphs.begin(), boundingRects.begin(), glyphs.size());
-    return notFound == boundingRects.findMatching([](auto& rect) {
-        return !CGRectIsEmpty(rect);
-    });
+    return !hasGlyphsForCharacterRange(platformFont, ' ', '~', false) && !hasGlyphsForCharacterRange(platformFont, 0x0600, 0x06FF, true);
 }
 
-Optional<BitVector> Font::findOTSVGGlyphs(const GlyphBufferGlyph* glyphs, unsigned count) const
-{
 #if PLATFORM(COCOA)
+const PAL::OTSVGTable& Font::otSVGTable() const
+{
     if (!m_otSVGTable) {
         if (auto tableData = adoptCF(CTFontCopyTable(platformData().ctFont(), kCTFontTableSVG, kCTFontTableOptionNoOptions)))
             m_otSVGTable = PAL::OTSVGTable(tableData.get(), fontMetrics().unitsPerEm(), platformData().size());
         else
             m_otSVGTable = {{ }};
     }
+    return m_otSVGTable.value();
+}
 
-    if (!PAL::isOTSVGFrameworkAvailable() || !m_otSVGTable.value().table)
+Font::ComplexColorFormatGlyphs Font::ComplexColorFormatGlyphs::createWithNoRelevantTables()
+{
+    return { false, 0 };
+}
+
+Font::ComplexColorFormatGlyphs Font::ComplexColorFormatGlyphs::createWithRelevantTablesAndGlyphCount(unsigned glyphCount)
+{
+    return { true, glyphCount };
+}
+
+bool Font::ComplexColorFormatGlyphs::hasValueFor(Glyph glyph) const
+{
+    return m_bits.contains(bitForInitialized(glyph));
+}
+
+bool Font::ComplexColorFormatGlyphs::get(Glyph glyph) const
+{
+    ASSERT(hasValueFor(glyph));
+    return m_bits.contains(bitForValue(glyph));
+}
+
+void Font::ComplexColorFormatGlyphs::set(Glyph glyph, bool value)
+{
+    ASSERT(m_hasRelevantTables);
+    ASSERT(!hasValueFor(glyph));
+    m_bits.set(bitForInitialized(glyph));
+    if (value)
+        m_bits.set(bitForValue(glyph));
+}
+
+bool Font::hasComplexColorFormatTables() const
+{
+    if (otSVGTable().table)
+        return true;
+
+#if HAVE(CORE_TEXT_SBIX_IMAGE_SIZE_FUNCTIONS)
+    if (auto sbixTableData = adoptCF(CTFontCopyTable(platformData().ctFont(), kCTFontTableSbix, kCTFontTableOptionNoOptions)))
+        return true;
+#endif
+
+    return false;
+}
+
+Font::ComplexColorFormatGlyphs& Font::glyphsWithComplexColorFormat() const
+{
+    if (!m_glyphsWithComplexColorFormat) {
+        if (hasComplexColorFormatTables()) {
+            CFIndex glyphCount = CTFontGetGlyphCount(getCTFont());
+            if (glyphCount >= 0) {
+                m_glyphsWithComplexColorFormat = ComplexColorFormatGlyphs::createWithRelevantTablesAndGlyphCount(glyphCount);
+                return m_glyphsWithComplexColorFormat.value();
+            }
+        }
+    }
+    m_glyphsWithComplexColorFormat = ComplexColorFormatGlyphs::createWithNoRelevantTables();
+    return m_glyphsWithComplexColorFormat.value();
+}
+
+bool Font::glyphHasComplexColorFormat(Glyph glyphID) const
+{
+    if (auto svgTable = otSVGTable().table) {
+        if (PAL::softLinkOTSVGOTSVGTableGetDocumentIndexForGlyph(svgTable, glyphID) != kCFNotFound)
+            return true;
+    }
+
+#if HAVE(CORE_TEXT_SBIX_IMAGE_SIZE_FUNCTIONS)
+    // There's no function to directly look up the sbix table, so use the fact that this one returns a non-zero value iff there's an sbix entry.
+    if (CTFontGetSbixImageSizeForGlyphAndContentsScale(getCTFont(), glyphID, 0))
+        return true;
+#endif
+
+    return false;
+}
+#endif
+
+std::optional<BitVector> Font::findOTSVGGlyphs(const GlyphBufferGlyph* glyphs, unsigned count) const
+{
+#if PLATFORM(COCOA)
+    auto table = otSVGTable().table;
+    if (!table)
         return { };
 
-    Optional<BitVector> result;
+    std::optional<BitVector> result;
     for (unsigned i = 0; i < count; ++i) {
-        if (PAL::softLinkOTSVGOTSVGTableGetDocumentIndexForGlyph(m_otSVGTable.value().table, glyphs[i]) != kCFNotFound) {
+        if (PAL::softLinkOTSVGOTSVGTableGetDocumentIndexForGlyph(table, glyphs[i]) != kCFNotFound) {
             if (!result)
                 result = BitVector(count);
             result.value().quickSet(i);
@@ -801,6 +968,28 @@ Optional<BitVector> Font::findOTSVGGlyphs(const GlyphBufferGlyph* glyphs, unsign
     UNUSED_PARAM(glyphs);
     UNUSED_PARAM(count);
     return { };
+#endif
+}
+
+bool Font::hasAnyComplexColorFormatGlyphs(const GlyphBufferGlyph* glyphs, unsigned count) const
+{
+#if PLATFORM(COCOA)
+    auto& complexGlyphs = glyphsWithComplexColorFormat();
+    if (!complexGlyphs.hasRelevantTables())
+        return false;
+
+    for (unsigned i = 0; i < count; ++i) {
+        if (!complexGlyphs.hasValueFor(glyphs[i]))
+            complexGlyphs.set(glyphs[i], glyphHasComplexColorFormat(glyphs[i]));
+
+        if (complexGlyphs.get(glyphs[i]))
+            return true;
+    }
+    return false;
+#else
+    UNUSED_PARAM(glyphs);
+    UNUSED_PARAM(count);
+    return false;
 #endif
 }
 

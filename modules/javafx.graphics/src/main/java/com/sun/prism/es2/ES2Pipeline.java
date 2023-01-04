@@ -75,10 +75,15 @@ public class ES2Pipeline extends GraphicsPipeline {
         if (glFactory != null) {
             es2Enabled = glFactory.initialize(PrismSettings.class,
                     pixelFormatAttributes);
+            if (!es2Enabled && PrismSettings.verbose) {
+                System.out.println("GLFactory " + glFactory + " could not be initialized. ES2Pipeline not available.");
+            }
         } else {
+            if (PrismSettings.verbose) {
+                System.out.println("No GLFactory found. ES2Pipeline not available.");
+            }
             es2Enabled = false;
         }
-
         if (es2Enabled) {
             theInstance = new ES2Pipeline();
             factories = new ES2ResourceFactory[glFactory.getAdapterCount()];
@@ -93,7 +98,6 @@ public class ES2Pipeline extends GraphicsPipeline {
             npotSupported = false;
             supports3D = false;
         }
-
     }
     private static Thread creator;
     private static final ES2Pipeline theInstance;

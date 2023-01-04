@@ -85,6 +85,13 @@ GLIB_AVAILABLE_IN_ALL
 gint            g_bytes_compare                 (gconstpointer   bytes1,
                                                  gconstpointer   bytes2);
 
+GLIB_AVAILABLE_IN_2_70
+gconstpointer   g_bytes_get_region              (GBytes         *bytes,
+                                                 gsize           element_size,
+                                                 gsize           offset,
+                                                 gsize           n_elements);
+
+
 G_END_DECLS
 
 #endif /* __G_BYTES_H__ */

@@ -25,7 +25,7 @@
 
 namespace WebCore {
 
-class InlineElementBox;
+class LegacyInlineElementBox;
 class HTMLElement;
 class Position;
 
@@ -40,11 +40,11 @@ public:
 
     bool isWBR() const final { return m_isWBR; }
 
-    std::unique_ptr<InlineElementBox> createInlineBox();
-    InlineElementBox* inlineBoxWrapper() const { return m_inlineBoxWrapper; }
-    void setInlineBoxWrapper(InlineElementBox*);
+    std::unique_ptr<LegacyInlineElementBox> createInlineBox();
+    LegacyInlineElementBox* inlineBoxWrapper() const { return m_inlineBoxWrapper; }
+    void setInlineBoxWrapper(LegacyInlineElementBox*);
     void deleteInlineBoxWrapper();
-    void replaceInlineBoxWrapper(InlineElementBox&);
+    void replaceInlineBoxWrapper(LegacyInlineElementBox&);
     void dirtyLineBoxes(bool fullLayout);
 
     IntRect linesBoundingBox() const;
@@ -52,7 +52,7 @@ public:
     void absoluteRects(Vector<IntRect>&, const LayoutPoint& accumulatedOffset) const final;
     void absoluteQuads(Vector<FloatQuad>&, bool* wasFixed = nullptr) const final;
 #if PLATFORM(IOS_FAMILY)
-    void collectSelectionRects(Vector<SelectionRect>&, unsigned startOffset = 0, unsigned endOffset = std::numeric_limits<unsigned>::max()) final;
+    void collectSelectionGeometries(Vector<SelectionGeometry>&, unsigned startOffset = 0, unsigned endOffset = std::numeric_limits<unsigned>::max()) final;
 #endif
 
 private:
@@ -67,7 +67,7 @@ private:
     bool canBeSelectionLeaf() const final;
 
     LayoutUnit lineHeight(bool firstLine, LineDirectionMode, LinePositionMode) const final;
-    int baselinePosition(FontBaseline, bool firstLine, LineDirectionMode, LinePositionMode) const final;
+    LayoutUnit baselinePosition(FontBaseline, bool firstLine, LineDirectionMode, LinePositionMode) const final;
 
     LayoutUnit marginTop() const final { return 0; }
     LayoutUnit marginBottom() const final { return 0; }
@@ -81,12 +81,12 @@ private:
     LayoutUnit offsetHeight() const final { return linesBoundingBox().height(); }
     LayoutRect borderBoundingBox() const final { return LayoutRect(LayoutPoint(), linesBoundingBox().size()); }
     LayoutRect frameRectForStickyPositioning() const final { ASSERT_NOT_REACHED(); return LayoutRect(); }
-    LayoutRect clippedOverflowRectForRepaint(const RenderLayerModelObject*) const final { return LayoutRect(); }
+    LayoutRect clippedOverflowRect(const RenderLayerModelObject*, VisibleRectContext) const final { return LayoutRect(); }
 
     void updateFromStyle() final;
     bool requiresLayer() const final { return false; }
 
-    InlineElementBox* m_inlineBoxWrapper;
+    LegacyInlineElementBox* m_inlineBoxWrapper;
     mutable int m_cachedLineHeight;
     bool m_isWBR;
 };

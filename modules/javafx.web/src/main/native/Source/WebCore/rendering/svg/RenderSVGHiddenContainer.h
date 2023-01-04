@@ -19,7 +19,7 @@
 
 #pragma once
 
-#include "RenderSVGContainer.h"
+#include "LegacyRenderSVGContainer.h"
 
 namespace WebCore {
 
@@ -27,7 +27,7 @@ class SVGElement;
 
 // This class is for containers which are never drawn, but do need to support style
 // <defs>, <linearGradient>, <radialGradient> are all good examples
-class RenderSVGHiddenContainer : public RenderSVGContainer {
+class RenderSVGHiddenContainer : public LegacyRenderSVGContainer {
     WTF_MAKE_ISO_ALLOCATED(RenderSVGHiddenContainer);
 public:
     RenderSVGHiddenContainer(SVGElement&, RenderStyle&&);
@@ -41,7 +41,7 @@ private:
 
     void paint(PaintInfo&, const LayoutPoint&) final;
 
-    LayoutRect clippedOverflowRectForRepaint(const RenderLayerModelObject*) const final { return LayoutRect(); }
+    LayoutRect clippedOverflowRect(const RenderLayerModelObject*, VisibleRectContext) const final { return LayoutRect(); }
     void absoluteQuads(Vector<FloatQuad>&, bool* wasFixed) const final;
 
     bool nodeAtFloatPoint(const HitTestRequest&, HitTestResult&, const FloatPoint& pointInParent, HitTestAction) final;

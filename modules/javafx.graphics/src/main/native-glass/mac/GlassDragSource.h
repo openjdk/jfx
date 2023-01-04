@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -39,8 +39,10 @@
 + (void)flushWithMask:(jint)mask;
 
 + (NSDragOperation)mapJavaMaskToNsOperation:(jint)mask;
-+ (jint)mapNsOperationToJavaMask:(NSDragOperation)operation;
-+ (jint)getRecommendedActionForMask:(NSDragOperation)operation;
++ (jint)mapNsOperationToJavaMaskExternal:(NSDragOperation)operation;
++ (jint)mapNSOperationToJavaMaskInternal:(NSDragOperation)operation;
++ (jint)getRecommendedActionForMaskExternal:(NSDragOperation)operation;
++ (jint)getRecommendedActionForMaskInternal:(NSDragOperation)operation;
 
 + (void)setMask:(jint)mask;
 + (jint)getMask;

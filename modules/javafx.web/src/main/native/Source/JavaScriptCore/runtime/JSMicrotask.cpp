@@ -37,18 +37,14 @@ namespace JSC {
 
 class JSMicrotask final : public Microtask {
 public:
-    static constexpr unsigned maxArguments = 3;
-    JSMicrotask(VM& vm, JSValue job, JSValue argument0, JSValue argument1, JSValue argument2)
+    static constexpr unsigned maxArguments = 4;
+    JSMicrotask(VM& vm, JSValue job, JSValue argument0, JSValue argument1, JSValue argument2, JSValue argument3)
     {
         m_job.set(vm, job);
         m_arguments[0].set(vm, argument0);
         m_arguments[1].set(vm, argument1);
         m_arguments[2].set(vm, argument2);
-    }
-
-    JSMicrotask(VM& vm, JSValue job)
-    {
-        m_job.set(vm, job);
+        m_arguments[3].set(vm, argument3);
     }
 
 private:
@@ -58,14 +54,9 @@ private:
     Strong<Unknown> m_arguments[maxArguments];
 };
 
-Ref<Microtask> createJSMicrotask(VM& vm, JSValue job)
+Ref<Microtask> createJSMicrotask(VM& vm, JSValue job, JSValue argument0, JSValue argument1, JSValue argument2, JSValue argument3)
 {
-    return adoptRef(*new JSMicrotask(vm, job));
-}
-
-Ref<Microtask> createJSMicrotask(VM& vm, JSValue job, JSValue argument0, JSValue argument1, JSValue argument2)
-{
-    return adoptRef(*new JSMicrotask(vm, job, argument0, argument1, argument2));
+    return adoptRef(*new JSMicrotask(vm, job, argument0, argument1, argument2, argument3));
 }
 
 void JSMicrotask::run(JSGlobalObject* globalObject)

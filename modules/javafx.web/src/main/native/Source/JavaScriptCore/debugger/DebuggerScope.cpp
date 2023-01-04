@@ -38,7 +38,7 @@ const ClassInfo DebuggerScope::s_info = { "DebuggerScope", &Base::s_info, nullpt
 DebuggerScope* DebuggerScope::create(VM& vm, JSScope* scope)
 {
     Structure* structure = scope->globalObject(vm)->debuggerScopeStructure();
-    DebuggerScope* debuggerScope = new (NotNull, allocateCell<DebuggerScope>(vm.heap)) DebuggerScope(vm, structure, scope);
+    DebuggerScope* debuggerScope = new (NotNull, allocateCell<DebuggerScope>(vm)) DebuggerScope(vm, structure, scope);
     debuggerScope->finishCreation(vm);
     return debuggerScope;
 }
@@ -67,28 +67,6 @@ void DebuggerScope::visitChildrenImpl(JSCell* cell, Visitor& visitor)
 }
 
 DEFINE_VISIT_CHILDREN(DebuggerScope);
-
-String DebuggerScope::className(const JSObject* object, VM& vm)
-{
-    const DebuggerScope* scope = jsCast<const DebuggerScope*>(object);
-    // We cannot assert that scope->isValid() because the TypeProfiler may encounter an invalidated
-    // DebuggerScope in its log entries. We just need to handle it appropriately as below.
-    if (!scope->isValid())
-        return String();
-    JSObject* thisObject = JSScope::objectAtScope(scope->jsScope());
-    return thisObject->methodTable(vm)->className(thisObject, vm);
-}
-
-String DebuggerScope::toStringName(const JSObject* object, JSGlobalObject* globalObject)
-{
-    const DebuggerScope* scope = jsCast<const DebuggerScope*>(object);
-    // We cannot assert that scope->isValid() because the TypeProfiler may encounter an invalidated
-    // DebuggerScope in its log entries. We just need to handle it appropriately as below.
-    if (!scope->isValid())
-        return String();
-    JSObject* thisObject = JSScope::objectAtScope(scope->jsScope());
-    return thisObject->methodTable(globalObject->vm())->toStringName(thisObject, globalObject);
-}
 
 bool DebuggerScope::getOwnPropertySlot(JSObject* object, JSGlobalObject* globalObject, PropertyName propertyName, PropertySlot& slot)
 {

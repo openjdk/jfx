@@ -36,6 +36,7 @@
 #include <libxml/uri.h>
 #include <libxslt/xsltutils.h>
 #include <wtf/CheckedArithmetic.h>
+#include <wtf/HexNumber.h>
 #include <wtf/unicode/CharacterNames.h>
 
 #if OS(DARWIN) && !PLATFORM(GTK)
@@ -44,15 +45,14 @@
 
 namespace WebCore {
 
-XSLStyleSheet::XSLStyleSheet(XSLImportRule* parentRule, const String& originalURL, const URL& finalURL)
+XSLStyleSheet::XSLStyleSheet(XSLStyleSheet* parentSheet, const String& originalURL, const URL& finalURL)
     : m_ownerNode(nullptr)
     , m_originalURL(originalURL)
     , m_finalURL(finalURL)
     , m_embedded(false)
     , m_processed(false) // Child sheets get marked as processed when the libxslt engine has finally seen them.
+    , m_parentStyleSheet(parentSheet)
 {
-    if (parentRule)
-        m_parentStyleSheet = parentRule->parentStyleSheet();
 }
 
 XSLStyleSheet::XSLStyleSheet(Node* parentNode, const String& originalURL, const URL& finalURL,  bool embedded)
@@ -87,7 +87,7 @@ void XSLStyleSheet::checkLoaded()
 {
     if (isLoading())
         return;
-    if (XSLStyleSheet* styleSheet = parentStyleSheet())
+    if (RefPtr styleSheet = parentStyleSheet())
         styleSheet->checkLoaded();
     if (ownerNode())
         ownerNode()->sheetLoaded();
@@ -143,12 +143,12 @@ bool XSLStyleSheet::parseString(const String& string)
 
     auto upconvertedCharacters = StringView(string).upconvertedCharacters();
     const char* buffer = reinterpret_cast<const char*>(upconvertedCharacters.get());
-    Checked<unsigned, RecordOverflow> unsignedSize = string.length();
+    CheckedUint32 unsignedSize = string.length();
     unsignedSize *= sizeof(UChar);
-    if (unsignedSize.hasOverflowed() || unsignedSize.unsafeGet() > static_cast<unsigned>(std::numeric_limits<int>::max()))
+    if (unsignedSize.hasOverflowed() || unsignedSize > static_cast<unsigned>(std::numeric_limits<int>::max()))
         return false;
 
-    int size = static_cast<int>(unsignedSize.unsafeGet());
+    int size = unsignedSize.value<int>();
     xmlParserCtxtPtr ctxt = xmlCreateMemoryParserCtxt(buffer, size);
     if (!ctxt)
         return false;
@@ -231,7 +231,7 @@ void XSLStyleSheet::loadChildSheets()
 
 void XSLStyleSheet::loadChildSheet(const String& href)
 {
-    auto childRule = makeUnique<XSLImportRule>(this, href);
+    auto childRule = makeUnique<XSLImportRule>(*this, href);
     m_children.append(childRule.release());
     m_children.last()->loadSheet();
 }
@@ -266,19 +266,18 @@ void XSLStyleSheet::setParentStyleSheet(XSLStyleSheet* parent)
 
 Document* XSLStyleSheet::ownerDocument()
 {
-    for (XSLStyleSheet* styleSheet = this; styleSheet; styleSheet = styleSheet->parentStyleSheet()) {
-        Node* node = styleSheet->ownerNode();
-        if (node)
+    for (RefPtr styleSheet = this; styleSheet; styleSheet = styleSheet->parentStyleSheet()) {
+        if (auto* node = styleSheet->ownerNode())
             return &node->document();
     }
-    return 0;
+    return nullptr;
 }
 
 xmlDocPtr XSLStyleSheet::locateStylesheetSubResource(xmlDocPtr parentDoc, const xmlChar* uri)
 {
     bool matchedParent = (parentDoc == document());
     for (auto& import : m_children) {
-        XSLStyleSheet* child = import->styleSheet();
+        RefPtr child = import->styleSheet();
         if (!child)
             continue;
         if (matchedParent) {
@@ -301,7 +300,7 @@ xmlDocPtr XSLStyleSheet::locateStylesheetSubResource(xmlDocPtr parentDoc, const 
             }
             continue;
         }
-        xmlDocPtr result = import->styleSheet()->locateStylesheetSubResource(parentDoc, uri);
+        xmlDocPtr result = child->locateStylesheetSubResource(parentDoc, uri);
         if (result)
             return result;
     }
@@ -315,6 +314,11 @@ void XSLStyleSheet::markAsProcessed()
     ASSERT(!m_stylesheetDocTaken);
     m_processed = true;
     m_stylesheetDocTaken = true;
+}
+
+String XSLStyleSheet::debugDescription() const
+{
+    return makeString("XSLStyleSheet "_s, "0x"_s, hex(reinterpret_cast<uintptr_t>(this), Lowercase), ' ', href());
 }
 
 } // namespace WebCore

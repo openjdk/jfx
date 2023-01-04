@@ -68,27 +68,12 @@ struct MethodTable {
     using GetOwnPropertySlotByIndexFunctionPtr = bool (*)(JSObject*, JSGlobalObject*, unsigned, PropertySlot&);
     GetOwnPropertySlotByIndexFunctionPtr METHOD_TABLE_ENTRY(getOwnPropertySlotByIndex);
 
-    using DoPutPropertySecurityCheckFunctionPtr = void (*)(JSObject*, JSGlobalObject*, PropertyName, PutPropertySlot&);
-    DoPutPropertySecurityCheckFunctionPtr METHOD_TABLE_ENTRY(doPutPropertySecurityCheck);
-
     using ToThisFunctionPtr = JSValue (*)(JSCell*, JSGlobalObject*, ECMAMode);
     ToThisFunctionPtr METHOD_TABLE_ENTRY(toThis);
-
-    using DefaultValueFunctionPtr = JSValue (*)(const JSObject*, JSGlobalObject*, PreferredPrimitiveType);
-    DefaultValueFunctionPtr METHOD_TABLE_ENTRY(defaultValue);
 
     using GetOwnPropertyNamesFunctionPtr = void (*)(JSObject*, JSGlobalObject*, PropertyNameArray&, DontEnumPropertiesMode);
     GetOwnPropertyNamesFunctionPtr METHOD_TABLE_ENTRY(getOwnPropertyNames);
     GetOwnPropertyNamesFunctionPtr METHOD_TABLE_ENTRY(getOwnSpecialPropertyNames);
-
-    using GetEnumerableLengthFunctionPtr = uint32_t (*)(JSGlobalObject*, JSObject*);
-    GetEnumerableLengthFunctionPtr METHOD_TABLE_ENTRY(getEnumerableLength);
-
-    using ClassNameFunctionPtr = String (*)(const JSObject*, VM&);
-    ClassNameFunctionPtr METHOD_TABLE_ENTRY(className);
-
-    using ToStringNameFunctionPtr = String (*)(const JSObject*, JSGlobalObject*);
-    ToStringNameFunctionPtr METHOD_TABLE_ENTRY(toStringName);
 
     using CustomHasInstanceFunctionPtr = bool (*)(JSObject*, JSGlobalObject*, JSValue);
     CustomHasInstanceFunctionPtr METHOD_TABLE_ENTRY(customHasInstance);
@@ -167,14 +152,9 @@ struct MethodTable {
         &ClassName::deletePropertyByIndex, \
         &ClassName::getOwnPropertySlot, \
         &ClassName::getOwnPropertySlotByIndex, \
-        &ClassName::doPutPropertySecurityCheck, \
         &ClassName::toThis, \
-        &ClassName::defaultValue, \
         &ClassName::getOwnPropertyNames, \
         &ClassName::getOwnSpecialPropertyNames, \
-        &ClassName::getEnumerableLength, \
-        &ClassName::className, \
-        &ClassName::toStringName, \
         &ClassName::customHasInstance, \
         &ClassName::defineOwnProperty, \
         &ClassName::preventExtensions, \
@@ -202,7 +182,7 @@ struct ClassInfo {
     const ClassInfo* parentClass;
     const HashTable* staticPropHashTable;
     CheckJSCastSnippetFunctionPtr checkSubClassSnippet;
-    const Optional<JSTypeRange> inheritsJSTypeRange; // This is range of JSTypes for doing inheritance checking. Has the form: [firstJSType, lastJSType] (inclusive).
+    const std::optional<JSTypeRange> inheritsJSTypeRange; // This is range of JSTypes for doing inheritance checking. Has the form: [firstJSType, lastJSType] (inclusive).
     MethodTable methodTable;
     const TypedArrayType typedArrayStorageType;
     const unsigned staticClassSize;

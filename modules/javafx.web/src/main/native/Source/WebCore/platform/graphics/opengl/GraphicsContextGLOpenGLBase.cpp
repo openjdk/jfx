@@ -30,11 +30,11 @@
 #if ENABLE(WEBGL) && USE(OPENGL)
 
 #include "ExtensionsGLOpenGL.h"
-#include "ImageData.h"
 #include "IntRect.h"
 #include "IntSize.h"
 #include "Logging.h"
 #include "NotImplemented.h"
+#include "PixelBuffer.h"
 #include "TemporaryOpenGLSetting.h"
 #include <algorithm>
 #include <cstring>
@@ -61,12 +61,12 @@
 
 namespace WebCore {
 
-
-RefPtr<ImageData> GraphicsContextGLOpenGL::readPixelsForPaintResults()
+std::optional<PixelBuffer> GraphicsContextGLOpenGL::readPixelsForPaintResults()
 {
-    auto imageData = ImageData::create(getInternalFramebufferSize());
-    if (!imageData)
-        return nullptr;
+    PixelBufferFormat format { AlphaPremultiplication::Unpremultiplied, PixelFormat::RGBA8, DestinationColorSpace::SRGB() };
+    auto pixelBuffer = PixelBuffer::tryCreate(format, getInternalFramebufferSize());
+    if (!pixelBuffer)
+        return std::nullopt;
 
     GLint packAlignment = 4;
     bool mustRestorePackAlignment = false;
@@ -76,12 +76,12 @@ RefPtr<ImageData> GraphicsContextGLOpenGL::readPixelsForPaintResults()
         mustRestorePackAlignment = true;
     }
 
-    ::glReadPixels(0, 0, imageData->width(), imageData->height(), GL_RGBA, GL_UNSIGNED_BYTE, imageData->data()->data());
+    ::glReadPixels(0, 0, pixelBuffer->size().width(), pixelBuffer->size().height(), GL_RGBA, GL_UNSIGNED_BYTE, pixelBuffer->data().data());
 
     if (mustRestorePackAlignment)
         ::glPixelStorei(GL_PACK_ALIGNMENT, packAlignment);
 
-    return imageData;
+    return pixelBuffer;
 }
 
 void GraphicsContextGLOpenGL::validateAttributes()
@@ -143,14 +143,6 @@ bool GraphicsContextGLOpenGL::reshapeFBOs(const IntSize& size)
     // resize regular FBO
     ::glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, m_fbo);
     ASSERT(m_texture);
-#if PLATFORM(COCOA)
-    if (!allocateIOSurfaceBackingStore(size)) {
-        RELEASE_LOG(WebGL, "Fatal: Unable to allocate backing store of size %d x %d", width, height);
-        forceContextLost();
-        return true;
-    }
-    ::glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT, GL_TEXTURE_RECTANGLE_ARB, m_texture, 0);
-#else
     ::glBindTexture(GL_TEXTURE_2D, m_texture);
     ::glTexImage2D(GL_TEXTURE_2D, 0, m_internalColorFormat, width, height, 0, colorFormat, GL_UNSIGNED_BYTE, 0);
     ::glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT, GL_TEXTURE_2D, m_texture, 0);
@@ -164,7 +156,6 @@ bool GraphicsContextGLOpenGL::reshapeFBOs(const IntSize& size)
         ::glTexImage2D(GL_TEXTURE_2D, 0, m_internalColorFormat, width, height, 0, colorFormat, GL_UNSIGNED_BYTE, 0);
         ::glBindTexture(GL_TEXTURE_2D, 0);
     }
-#endif
 #endif
 
     attachDepthAndStencilBufferIfNeeded(internalDepthStencilFormat, width, height);
@@ -354,10 +345,10 @@ void GraphicsContextGLOpenGL::texImage2D(GCGLenum target, GCGLint level, GCGLenu
         type = GL_HALF_FLOAT_ARB;
     }
 
-    ASSERT(format != ExtensionsGL::SRGB8_ALPHA8_EXT);
-    if (format == ExtensionsGL::SRGB_ALPHA_EXT)
+    ASSERT(format != GraphicsContextGL::SRGB8_ALPHA8_EXT);
+    if (format == GraphicsContextGL::SRGB_ALPHA_EXT)
         openGLFormat = GL_RGBA;
-    else if (format == ExtensionsGL::SRGB_EXT)
+    else if (format == GraphicsContextGL::SRGB_EXT)
         openGLFormat = GL_RGB;
 #endif
 
@@ -407,7 +398,7 @@ void GraphicsContextGLOpenGL::clearDepth(GCGLclampf depth)
 }
 
 #if !PLATFORM(GTK)
-ExtensionsGLOpenGLCommon& GraphicsContextGLOpenGL::getExtensions()
+ExtensionsGLOpenGL& GraphicsContextGLOpenGL::getExtensions()
 {
     if (!m_extensions)
         m_extensions = makeUnique<ExtensionsGLOpenGL>(this, isGLES2Compliant());

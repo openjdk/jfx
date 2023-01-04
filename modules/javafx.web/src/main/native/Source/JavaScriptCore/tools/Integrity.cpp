@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2019-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -44,7 +44,7 @@ Random::Random(VM& vm)
 
 bool Random::reloadAndCheckShouldAuditSlow(VM& vm)
 {
-    auto locker = holdLock(m_lock);
+    Locker locker { m_lock };
 
     if (!Options::randomIntegrityAuditRate()) {
         m_triggerBits = 0; // Never trigger, and don't bother reloading.

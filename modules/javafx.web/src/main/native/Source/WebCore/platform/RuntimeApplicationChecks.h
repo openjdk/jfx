@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include <optional>
 #include <wtf/Forward.h>
 
 namespace WebCore {
@@ -45,8 +46,12 @@ enum class AuxiliaryProcessType : uint8_t {
 };
 
 WEBCORE_EXPORT void setAuxiliaryProcessType(AuxiliaryProcessType);
+WEBCORE_EXPORT void setAuxiliaryProcessTypeForTesting(std::optional<AuxiliaryProcessType>);
 WEBCORE_EXPORT bool checkAuxiliaryProcessType(AuxiliaryProcessType);
+WEBCORE_EXPORT std::optional<AuxiliaryProcessType> processType();
+WEBCORE_EXPORT const char* processTypeDescription(std::optional<AuxiliaryProcessType>);
 
+bool isInAuxiliaryProcess();
 inline bool isInWebProcess() { return checkAuxiliaryProcessType(AuxiliaryProcessType::WebContent); }
 inline bool isInNetworkProcess() { return checkAuxiliaryProcessType(AuxiliaryProcessType::Network); }
 #if ENABLE(GPU_PROCESS)
@@ -54,10 +59,17 @@ inline bool isInGPUProcess() { return checkAuxiliaryProcessType(AuxiliaryProcess
 #endif
 
 #if PLATFORM(COCOA)
+
 WEBCORE_EXPORT void setApplicationBundleIdentifier(const String&);
 WEBCORE_EXPORT void setApplicationBundleIdentifierOverride(const String&);
 WEBCORE_EXPORT String applicationBundleIdentifier();
 WEBCORE_EXPORT void clearApplicationBundleIdentifierTestingOverride();
+
+namespace CocoaApplication {
+
+WEBCORE_EXPORT bool isIBooks();
+
+}
 
 #if PLATFORM(MAC)
 
@@ -67,7 +79,6 @@ WEBCORE_EXPORT bool isAOLInstantMessenger();
 WEBCORE_EXPORT bool isAdobeInstaller();
 WEBCORE_EXPORT bool isAperture();
 WEBCORE_EXPORT bool isAppleMail();
-WEBCORE_EXPORT bool isIBooks();
 WEBCORE_EXPORT bool isITunes();
 WEBCORE_EXPORT bool isMicrosoftMessenger();
 WEBCORE_EXPORT bool isMicrosoftMyDay();
@@ -100,7 +111,6 @@ WEBCORE_EXPORT bool isMiniBrowser();
 bool isMobileStore();
 bool isSpringBoard();
 WEBCORE_EXPORT bool isWebProcess();
-WEBCORE_EXPORT bool isIBooks();
 bool isIBooksStorytime();
 WEBCORE_EXPORT bool isTheSecretSocietyHiddenMystery();
 WEBCORE_EXPORT bool isCardiogram();
@@ -126,6 +136,7 @@ WEBCORE_EXPORT bool isJWLibrary();
 WEBCORE_EXPORT bool isPaperIO();
 WEBCORE_EXPORT bool isCrunchyroll();
 bool isWechat();
+WEBCORE_EXPORT bool isLutron();
 
 } // IOSApplication
 

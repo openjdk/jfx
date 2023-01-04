@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -196,7 +196,7 @@ public class CheckBoxTreeTableCell<S,T> extends TreeTableCell<S,T> {
     public static <S,T> Callback<TreeTableColumn<S,T>, TreeTableCell<S,T>> forTreeTableColumn(
             final Callback<Integer, ObservableValue<Boolean>> getSelectedProperty,
             final StringConverter<T> converter) {
-        return list -> new CheckBoxTreeTableCell<S,T>(getSelectedProperty, converter);
+        return list -> new CheckBoxTreeTableCell<>(getSelectedProperty, converter);
     }
 
 
@@ -279,7 +279,7 @@ public class CheckBoxTreeTableCell<S,T> extends TreeTableCell<S,T> {
 
     // --- converter
     private ObjectProperty<StringConverter<T>> converter =
-            new SimpleObjectProperty<StringConverter<T>>(this, "converter") {
+            new SimpleObjectProperty<>(this, "converter") {
         protected void invalidated() {
             updateShowLabel();
         }
@@ -314,7 +314,7 @@ public class CheckBoxTreeTableCell<S,T> extends TreeTableCell<S,T> {
     // --- selected state callback property
     private ObjectProperty<Callback<Integer, ObservableValue<Boolean>>>
             selectedStateCallback =
-            new SimpleObjectProperty<Callback<Integer, ObservableValue<Boolean>>>(
+            new SimpleObjectProperty<>(
             this, "selectedStateCallback");
 
     /**

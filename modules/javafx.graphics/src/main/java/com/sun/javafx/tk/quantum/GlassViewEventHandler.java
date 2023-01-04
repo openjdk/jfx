@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -583,7 +583,7 @@ class GlassViewEventHandler extends View.EventHandler {
     private static ObservableList<InputMethodTextRun> inputMethodEventComposed(
             String text, int commitCount, int[] clauseBoundary, int[] attrBoundary, byte[] attrValue)
     {
-        ObservableList<InputMethodTextRun> composed = new TrackableObservableList<InputMethodTextRun>() {
+        ObservableList<InputMethodTextRun> composed = new TrackableObservableList<>() {
             @Override
             protected void onChanged(ListChangeListener.Change<InputMethodTextRun> c) {
             }
@@ -865,7 +865,7 @@ class GlassViewEventHandler extends View.EventHandler {
                     }
                     if (QuantumToolkit.drawInPaint && w != null && w.isVisible()) {
                         WindowStage stage = scene.getWindowStage();
-                        if (stage != null && !stage.isApplet()) {
+                        if (stage != null) {
                             collector.liveRepaintRenderJob(scene);
                         }
                     }
@@ -885,7 +885,7 @@ class GlassViewEventHandler extends View.EventHandler {
                     });
                     if (QuantumToolkit.liveResize && w != null && w.isVisible()) {
                         WindowStage stage = scene.getWindowStage();
-                        if (stage != null && !stage.isApplet()) {
+                        if (stage != null) {
                             collector.liveRepaintRenderJob(scene);
                         }
                     }

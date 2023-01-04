@@ -56,6 +56,9 @@ OBJC_CLASS NSArray;
 typedef struct HBITMAP__* HBITMAP;
 #endif
 
+typedef const struct OpaqueJSContext* JSContextRef;
+typedef const struct OpaqueJSValue* JSValueRef;
+
 namespace JSC { namespace Yarr {
 class RegularExpression;
 } }
@@ -68,6 +71,7 @@ namespace WebCore {
 
 class Color;
 class DOMWindow;
+class DataDetectionResultsStorage;
 class Document;
 class Editor;
 class Element;
@@ -112,22 +116,6 @@ enum OverflowScrollAction { DoNotPerformOverflowScroll, PerformOverflowScroll };
 using NodeQualifier = Function<Node* (const HitTestResult&, Node* terminationNode, IntRect* nodeBounds)>;
 #endif
 
-enum {
-    LayerTreeFlagsIncludeDebugInfo              = 1 << 0,
-    LayerTreeFlagsIncludeVisibleRects           = 1 << 1,
-    LayerTreeFlagsIncludeTileCaches             = 1 << 2,
-    LayerTreeFlagsIncludeRepaintRects           = 1 << 3,
-    LayerTreeFlagsIncludePaintingPhases         = 1 << 4,
-    LayerTreeFlagsIncludeContentLayers          = 1 << 5,
-    LayerTreeFlagsIncludeAcceleratesDrawing     = 1 << 6,
-    LayerTreeFlagsIncludeClipping               = 1 << 7,
-    LayerTreeFlagsIncludeBackingStoreAttached   = 1 << 8,
-    LayerTreeFlagsIncludeRootLayerProperties    = 1 << 9,
-    LayerTreeFlagsIncludeEventRegion            = 1 << 10,
-    LayerTreeFlagsIncludeDeepColor              = 1 << 11,
-};
-typedef unsigned LayerTreeFlags;
-
 // FIXME: Rename Frame to LocalFrame and AbstractFrame to Frame.
 class Frame final : public AbstractFrame {
 public:
@@ -139,10 +127,10 @@ public:
     WEBCORE_EXPORT void initWithSimpleHTMLDocument(const String& style, const URL&);
 #endif
     WEBCORE_EXPORT void setView(RefPtr<FrameView>&&);
-    WEBCORE_EXPORT void createView(const IntSize&, const Optional<Color>& backgroundColor,
+    WEBCORE_EXPORT void createView(const IntSize&, const std::optional<Color>& backgroundColor,
         const IntSize& fixedLayoutSize, const IntRect& fixedVisibleContentRect,
-        bool useFixedLayout = false, ScrollbarMode = ScrollbarAuto, bool horizontalLock = false,
-        ScrollbarMode = ScrollbarAuto, bool verticalLock = false);
+        bool useFixedLayout = false, ScrollbarMode = ScrollbarMode::Auto, bool horizontalLock = false,
+        ScrollbarMode = ScrollbarMode::Auto, bool verticalLock = false);
 
     WEBCORE_EXPORT ~Frame();
 
@@ -176,9 +164,10 @@ public:
     FrameTree& tree() const;
     ScriptController& script() { return m_script; }
     const ScriptController& script() const { return m_script; }
+    void resetScript();
 
-    WEBCORE_EXPORT Optional<PageIdentifier> pageID() const;
-    WEBCORE_EXPORT Optional<FrameIdentifier> frameID() const;
+    WEBCORE_EXPORT std::optional<PageIdentifier> pageID() const;
+    WEBCORE_EXPORT std::optional<FrameIdentifier> frameID() const;
 
     WEBCORE_EXPORT RenderView* contentRenderer() const; // Root of the render tree for the document contained in this frame.
     WEBCORE_EXPORT RenderWidget* ownerRenderer() const; // Renderer for the element that contains this frame.
@@ -188,9 +177,12 @@ public:
     bool hasHadUserInteraction() const { return m_hasHadUserInteraction; }
     void setHasHadUserInteraction() { m_hasHadUserInteraction = true; }
 
-    bool requestDOMPasteAccess();
+    bool requestDOMPasteAccess(DOMPasteAccessCategory = DOMPasteAccessCategory::General);
 
     String debugDescription() const;
+
+    WEBCORE_EXPORT static Frame* fromJSContext(JSContextRef);
+    WEBCORE_EXPORT static Frame* contentFrameFromWindowOrFrameElement(JSContextRef, JSValueRef);
 
 // ======== All public functions below this point are candidates to move out of Frame into another class. ========
 
@@ -200,7 +192,6 @@ public:
     void injectUserScriptsAwaitingNotification();
     void addUserScriptAwaitingNotification(DOMWrapperWorld&, const UserScript&);
 
-    WEBCORE_EXPORT String layerTreeAsText(LayerTreeFlags = 0) const;
     WEBCORE_EXPORT String trackedRepaintRectsAsText() const;
 
     WEBCORE_EXPORT static Frame* frameForWidget(const Widget&);
@@ -225,8 +216,8 @@ public:
     void deviceOrPageScaleFactorChanged();
 
 #if ENABLE(DATA_DETECTION)
-    void setDataDetectionResults(NSArray *results) { m_dataDetectionResults = results; }
-    NSArray *dataDetectionResults() const { return m_dataDetectionResults.get(); }
+    DataDetectionResultsStorage* dataDetectionResultsIfExists() const { return m_dataDetectionResults.get(); }
+    WEBCORE_EXPORT DataDetectionResultsStorage& dataDetectionResults();
 #endif
 
 #if PLATFORM(IOS_FAMILY)
@@ -270,7 +261,7 @@ public:
 
     WEBCORE_EXPORT VisiblePosition visiblePositionForPoint(const IntPoint& framePoint) const;
     Document* documentAtPoint(const IntPoint& windowPoint);
-    WEBCORE_EXPORT Optional<SimpleRange> rangeForPoint(const IntPoint& framePoint);
+    WEBCORE_EXPORT std::optional<SimpleRange> rangeForPoint(const IntPoint& framePoint);
 
     WEBCORE_EXPORT String searchForLabelsAboveCell(const JSC::Yarr::RegularExpression&, HTMLTableCellElement*, size_t* resultDistanceFromStartOfCell);
     String searchForLabelsBeforeElement(const Vector<String>& labels, Element*, size_t* resultDistance, bool* resultIsInCellAbove);
@@ -281,7 +272,6 @@ public:
     WEBCORE_EXPORT void updateLayout() const;
     WEBCORE_EXPORT NSRect caretRect();
     WEBCORE_EXPORT NSRect rectForScrollToVisible();
-    WEBCORE_EXPORT unsigned formElementsCharacterCount() const;
 
     // This function is used by Legacy WebKit.
     WEBCORE_EXPORT void setTimersPaused(bool);
@@ -302,11 +292,6 @@ public:
     void suspendActiveDOMObjectsAndAnimations();
     void resumeActiveDOMObjectsAndAnimations();
     bool activeDOMObjectsAndAnimationsSuspended() const { return m_activeDOMObjectsAndAnimationsSuspendedCount > 0; }
-
-    WEBCORE_EXPORT bool isAlwaysOnLoggingAllowed() const;
-
-    void didPrewarmLocalStorage();
-    bool mayPrewarmLocalStorage() const;
 
     enum class InvalidateContentEventRegionsReason { Layout, EventHandlerChange };
     void invalidateContentEventRegionsIfNeeded(InvalidateContentEventRegionsReason);
@@ -349,7 +334,7 @@ private:
     UniqueRef<ScriptController> m_script;
 
 #if ENABLE(DATA_DETECTION)
-    RetainPtr<NSArray> m_dataDetectionResults;
+    std::unique_ptr<DataDetectionResultsStorage> m_dataDetectionResults;
 #endif
 #if PLATFORM(IOS_FAMILY)
     void betterApproximateNode(const IntPoint& testPoint, const NodeQualifier&, Node*& best, Node* failedNode, IntPoint& bestPoint, IntRect& bestRect, const IntRect& testRect);
@@ -375,7 +360,6 @@ private:
     unsigned m_navigationDisableCount { 0 };
     unsigned m_selfOnlyRefCount { 0 };
     bool m_hasHadUserInteraction { false };
-    unsigned m_localStoragePrewarmingCount { 0 };
 
     FloatSize m_overrideScreenSize;
 

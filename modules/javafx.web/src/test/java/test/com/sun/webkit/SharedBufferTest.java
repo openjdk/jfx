@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -36,11 +36,13 @@ import java.util.Random;
 import org.junit.After;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.junit.Ignore;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+@Ignore("JDK-8290292")
 public class SharedBufferTest {
 
     private static final int SEGMENT_SIZE = 0x1000;
@@ -510,7 +512,7 @@ public class SharedBufferTest {
 
     private void assertSharedBufferContains(byte[]... expectedChunks) {
         ArrayList<byte[]> expectedChunkList =
-                new ArrayList<byte[]>(Arrays.asList(expectedChunks));
+                new ArrayList<>(Arrays.asList(expectedChunks));
         expectedChunkList.add(new byte[0]);
         long position = 0;
         for (byte[] expectedChunk : expectedChunkList) {

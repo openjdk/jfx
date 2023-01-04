@@ -25,8 +25,6 @@
 
 #pragma once
 
-#if ENABLE(INDEXED_DATABASE)
-
 #include "IDBCursorRecord.h"
 #include "IDBIndexInfo.h"
 #include "IDBKeyData.h"
@@ -79,7 +77,7 @@ public:
     void objectStoreRecordsChanged();
 
     enum class ShouldIncludePrefetchedRecords { No, Yes };
-    void currentData(IDBGetResult&, const Optional<IDBKeyPath>&, ShouldIncludePrefetchedRecords = ShouldIncludePrefetchedRecords::No);
+    void currentData(IDBGetResult&, const std::optional<IDBKeyPath>&, ShouldIncludePrefetchedRecords = ShouldIncludePrefetchedRecords::No);
 
 private:
     bool establishStatement();
@@ -143,5 +141,3 @@ private:
 
 } // namespace IDBServer
 } // namespace WebCore
-
-#endif // ENABLE(INDEXED_DATABASE)

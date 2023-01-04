@@ -1,6 +1,6 @@
 /*
     Copyright (C) 2008 Nokia Corporation and/or its subsidiary(-ies)
-    Copyright (C) 2015-2020 Apple Inc. All rights reserved.
+    Copyright (C) 2015-2022 Apple Inc. All rights reserved.
 
     This library is free software; you can redistribute it and/or
     modify it under the terms of the GNU Library General Public
@@ -89,7 +89,7 @@ struct SupportedPluginIdentifier {
     String pluginIdentifier;
 
     template<class Encoder> void encode(Encoder&) const;
-    template<class Decoder> static Optional<SupportedPluginIdentifier> decode(Decoder&);
+    template<class Decoder> static std::optional<SupportedPluginIdentifier> decode(Decoder&);
 };
 
 // FIXME: merge with PluginDatabase in the future
@@ -120,33 +120,33 @@ private:
 protected:
     Page& m_page;
     Vector<PluginInfo> m_plugins;
-    Optional<Vector<SupportedPluginIdentifier>> m_supportedPluginIdentifiers;
+    std::optional<Vector<SupportedPluginIdentifier>> m_supportedPluginIdentifiers;
 
     struct CachedVisiblePlugins {
         URL pageURL;
-        Optional<Vector<PluginInfo>> pluginList;
+        std::optional<Vector<PluginInfo>> pluginList;
     };
     mutable CachedVisiblePlugins m_cachedVisiblePlugins;
 };
 
 inline bool isSupportedPlugin(const Vector<SupportedPluginIdentifier>& pluginIdentifiers, const URL& pageURL, const String& pluginIdentifier)
 {
-    return pluginIdentifiers.findMatching([&] (auto&& plugin) {
+    return pluginIdentifiers.findIf([&] (auto&& plugin) {
         return pageURL.isMatchingDomain(plugin.matchingDomain) && plugin.pluginIdentifier == pluginIdentifier;
     }) != notFound;
 }
 
-template<class Decoder> inline Optional<SupportedPluginIdentifier> SupportedPluginIdentifier::decode(Decoder& decoder)
+template<class Decoder> inline std::optional<SupportedPluginIdentifier> SupportedPluginIdentifier::decode(Decoder& decoder)
 {
-    Optional<String> matchingDomain;
+    std::optional<String> matchingDomain;
     decoder >> matchingDomain;
     if (!matchingDomain)
-        return WTF::nullopt;
+        return std::nullopt;
 
-    Optional<String> pluginIdentifier;
+    std::optional<String> pluginIdentifier;
     decoder >> pluginIdentifier;
     if (!pluginIdentifier)
-        return WTF::nullopt;
+        return std::nullopt;
 
     return SupportedPluginIdentifier { WTFMove(matchingDomain.value()), WTFMove(pluginIdentifier.value()) };
 }

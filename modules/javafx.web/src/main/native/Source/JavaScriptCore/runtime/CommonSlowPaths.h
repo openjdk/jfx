@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,9 +31,11 @@
 #include "ExceptionHelpers.h"
 #include "FunctionCodeBlock.h"
 #include "JSImmutableButterfly.h"
+#include "JSPropertyNameEnumerator.h"
 #include "ScopedArguments.h"
-#include "SlowPathReturnType.h"
+#include "SlowPathFunction.h"
 #include "StackAlignment.h"
+#include "TypeError.h"
 #include "VMInlines.h"
 #include <wtf/StdLibExtras.h>
 
@@ -91,6 +93,45 @@ ALWAYS_INLINE int arityCheckFor(VM& vm, CallFrame* callFrame, CodeSpecialization
     return padding;
 }
 
+inline JSValue opEnumeratorGetByVal(JSGlobalObject* globalObject, JSValue baseValue, JSValue propertyNameValue, unsigned index, JSPropertyNameEnumerator::Flag mode, JSPropertyNameEnumerator* enumerator, ArrayProfile* arrayProfile = nullptr, uint8_t* enumeratorMetadata = nullptr)
+{
+    VM& vm = getVM(globalObject);
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    switch (mode) {
+    case JSPropertyNameEnumerator::IndexedMode: {
+        if (arrayProfile && LIKELY(baseValue.isCell()))
+            arrayProfile->observeStructureID(baseValue.asCell()->structureID());
+        RELEASE_AND_RETURN(scope, baseValue.get(globalObject, static_cast<unsigned>(index)));
+    }
+    case JSPropertyNameEnumerator::OwnStructureMode: {
+        if (LIKELY(baseValue.isCell()) && baseValue.asCell()->structureID() == enumerator->cachedStructureID()) {
+            // We'll only match the structure ID if the base is an object.
+            ASSERT(index < enumerator->endStructurePropertyIndex());
+            RELEASE_AND_RETURN(scope, baseValue.getObject()->getDirect(index < enumerator->cachedInlineCapacity() ? index : index - enumerator->cachedInlineCapacity() + firstOutOfLineOffset));
+        } else {
+            if (enumeratorMetadata)
+                *enumeratorMetadata |= static_cast<uint8_t>(JSPropertyNameEnumerator::HasSeenOwnStructureModeStructureMismatch);
+        }
+        FALLTHROUGH;
+    }
+
+    case JSPropertyNameEnumerator::GenericMode: {
+        if (arrayProfile && baseValue.isCell() && mode != JSPropertyNameEnumerator::OwnStructureMode)
+            arrayProfile->observeStructureID(baseValue.asCell()->structureID());
+        JSString* string = asString(propertyNameValue);
+        auto propertyName = string->toIdentifier(globalObject);
+        RETURN_IF_EXCEPTION(scope, { });
+        RELEASE_AND_RETURN(scope, baseValue.get(globalObject, propertyName));
+    }
+
+    default:
+        RELEASE_ASSERT_NOT_REACHED();
+        break;
+    };
+    RELEASE_ASSERT_NOT_REACHED();
+}
+
 inline bool opInByVal(JSGlobalObject* globalObject, JSValue baseVal, JSValue propName, ArrayProfile* arrayProfile = nullptr)
 {
     VM& vm = getVM(globalObject);
@@ -146,18 +187,28 @@ ALWAYS_INLINE Structure* originalStructureBeforePut(VM& vm, JSValue value)
     return value.asCell()->structure(vm);
 }
 
-
 static ALWAYS_INLINE void putDirectWithReify(VM& vm, JSGlobalObject* globalObject, JSObject* baseObject, PropertyName propertyName, JSValue value, PutPropertySlot& slot, Structure** result = nullptr)
 {
     auto scope = DECLARE_THROW_SCOPE(vm);
-    if (baseObject->inherits<JSFunction>(vm)) {
+    bool isJSFunction = baseObject->inherits<JSFunction>(vm);
+    if (isJSFunction) {
         jsCast<JSFunction*>(baseObject)->reifyLazyPropertyIfNeeded(vm, globalObject, propertyName);
         RETURN_IF_EXCEPTION(scope, void());
     }
     if (result)
         *result = originalStructureBeforePut(vm, baseObject);
-    scope.release();
-    baseObject->putDirect(vm, propertyName, value, slot);
+
+    Structure* structure = baseObject->structure(vm);
+    if (LIKELY(propertyName != vm.propertyNames->underscoreProto && !structure->hasReadOnlyOrGetterSetterPropertiesExcludingProto() && (isJSFunction || structure->classInfo()->methodTable.defineOwnProperty == &JSObject::defineOwnProperty))) {
+        auto error = baseObject->putDirectRespectingExtensibility(vm, propertyName, value, 0, slot);
+        if (!error.isNull())
+            typeError(globalObject, scope, slot.isStrictMode(), error);
+    } else {
+        slot.disableCaching();
+        scope.release();
+        PropertyDescriptor descriptor(value, 0);
+        baseObject->methodTable(vm)->defineOwnProperty(baseObject, globalObject, propertyName, descriptor, slot.isStrictMode());
+    }
 }
 
 static ALWAYS_INLINE void putDirectAccessorWithReify(VM& vm, JSGlobalObject* globalObject, JSObject* baseObject, PropertyName propertyName, GetterSetter* accessor, unsigned attribute)
@@ -200,7 +251,7 @@ class CallFrame;
 struct Instruction;
 
 #define JSC_DECLARE_COMMON_SLOW_PATH(name) \
-    extern "C" JSC_DECLARE_JIT_OPERATION(name, SlowPathReturnType, (CallFrame*, const Instruction*))
+    JSC_DECLARE_JIT_OPERATION(name, SlowPathReturnType, (CallFrame*, const Instruction*))
 
 #define JSC_DEFINE_COMMON_SLOW_PATH(name) \
     JSC_DEFINE_JIT_OPERATION(name, SlowPathReturnType, (CallFrame* callFrame, const Instruction* pc))
@@ -249,25 +300,17 @@ JSC_DECLARE_COMMON_SLOW_PATH(slow_path_bitxor);
 JSC_DECLARE_COMMON_SLOW_PATH(slow_path_typeof);
 JSC_DECLARE_COMMON_SLOW_PATH(slow_path_typeof_is_object);
 JSC_DECLARE_COMMON_SLOW_PATH(slow_path_typeof_is_function);
+JSC_DECLARE_COMMON_SLOW_PATH(slow_path_instanceof_custom);
 JSC_DECLARE_COMMON_SLOW_PATH(slow_path_is_callable);
 JSC_DECLARE_COMMON_SLOW_PATH(slow_path_is_constructor);
-JSC_DECLARE_COMMON_SLOW_PATH(slow_path_in_by_id);
-JSC_DECLARE_COMMON_SLOW_PATH(slow_path_in_by_val);
-JSC_DECLARE_COMMON_SLOW_PATH(slow_path_del_by_val);
 JSC_DECLARE_COMMON_SLOW_PATH(slow_path_strcat);
 JSC_DECLARE_COMMON_SLOW_PATH(slow_path_to_primitive);
 JSC_DECLARE_COMMON_SLOW_PATH(slow_path_to_property_key);
-JSC_DECLARE_COMMON_SLOW_PATH(slow_path_get_enumerable_length);
-JSC_DECLARE_COMMON_SLOW_PATH(slow_path_has_enumerable_indexed_property);
-JSC_DECLARE_COMMON_SLOW_PATH(slow_path_has_enumerable_structure_property);
-JSC_DECLARE_COMMON_SLOW_PATH(slow_path_has_enumerable_property);
-JSC_DECLARE_COMMON_SLOW_PATH(slow_path_has_own_structure_property);
-JSC_DECLARE_COMMON_SLOW_PATH(slow_path_in_structure_property);
-JSC_DECLARE_COMMON_SLOW_PATH(slow_path_get_direct_pname);
 JSC_DECLARE_COMMON_SLOW_PATH(slow_path_get_property_enumerator);
-JSC_DECLARE_COMMON_SLOW_PATH(slow_path_enumerator_structure_pname);
-JSC_DECLARE_COMMON_SLOW_PATH(slow_path_enumerator_generic_pname);
-JSC_DECLARE_COMMON_SLOW_PATH(slow_path_to_index_string);
+JSC_DECLARE_COMMON_SLOW_PATH(slow_path_enumerator_next);
+JSC_DECLARE_COMMON_SLOW_PATH(slow_path_enumerator_get_by_val);
+JSC_DECLARE_COMMON_SLOW_PATH(slow_path_enumerator_in_by_val);
+JSC_DECLARE_COMMON_SLOW_PATH(slow_path_enumerator_has_own_property);
 JSC_DECLARE_COMMON_SLOW_PATH(slow_path_profile_type_clear_log);
 JSC_DECLARE_COMMON_SLOW_PATH(slow_path_unreachable);
 JSC_DECLARE_COMMON_SLOW_PATH(slow_path_create_lexical_environment);
@@ -278,9 +321,7 @@ JSC_DECLARE_COMMON_SLOW_PATH(slow_path_create_promise);
 JSC_DECLARE_COMMON_SLOW_PATH(slow_path_create_generator);
 JSC_DECLARE_COMMON_SLOW_PATH(slow_path_create_async_generator);
 JSC_DECLARE_COMMON_SLOW_PATH(slow_path_create_rest);
-JSC_DECLARE_COMMON_SLOW_PATH(slow_path_get_by_id_with_this);
 JSC_DECLARE_COMMON_SLOW_PATH(slow_path_get_by_val_with_this);
-JSC_DECLARE_COMMON_SLOW_PATH(slow_path_get_private_name);
 JSC_DECLARE_COMMON_SLOW_PATH(slow_path_get_prototype_of);
 JSC_DECLARE_COMMON_SLOW_PATH(slow_path_put_by_id_with_this);
 JSC_DECLARE_COMMON_SLOW_PATH(slow_path_put_by_val_with_this);
@@ -298,7 +339,5 @@ JSC_DECLARE_COMMON_SLOW_PATH(iterator_open_try_fast_wide32);
 JSC_DECLARE_COMMON_SLOW_PATH(iterator_next_try_fast_narrow);
 JSC_DECLARE_COMMON_SLOW_PATH(iterator_next_try_fast_wide16);
 JSC_DECLARE_COMMON_SLOW_PATH(iterator_next_try_fast_wide32);
-
-using SlowPathFunction = SlowPathReturnType(JIT_OPERATION_ATTRIBUTES*)(CallFrame*, const Instruction*);
 
 } // namespace JSC

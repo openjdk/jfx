@@ -61,8 +61,9 @@ enum class XFrameOptionsDisposition : uint8_t {
     Conflict
 };
 
-enum class CrossOriginResourcePolicy {
+enum class CrossOriginResourcePolicy : uint8_t {
     None,
+    CrossOrigin,
     SameOrigin,
     SameSite,
     Invalid
@@ -77,13 +78,14 @@ WEBCORE_EXPORT bool isValidUserAgentHeaderValue(const String&);
 #endif
 bool isValidHTTPToken(const String&);
 bool isValidHTTPToken(StringView);
-Optional<WallTime> parseHTTPDate(const String&);
+std::optional<WallTime> parseHTTPDate(const String&);
 String filenameFromHTTPContentDisposition(const String&);
-String extractMIMETypeFromMediaType(const String&);
+WEBCORE_EXPORT String extractMIMETypeFromMediaType(const String&);
 String extractCharsetFromMediaType(const String&);
 XSSProtectionDisposition parseXSSProtectionHeader(const String& header, String& failureReason, unsigned& failurePosition, String& reportURL);
 AtomString extractReasonPhraseFromHTTPStatusLine(const String&);
 WEBCORE_EXPORT XFrameOptionsDisposition parseXFrameOptionsHeader(const String&);
+std::optional<std::pair<StringView, HashMap<String, String>>> parseStructuredFieldValue(StringView header);
 
 // -1 could be set to one of the return parameters to indicate the value is not specified.
 WEBCORE_EXPORT bool parseRange(const String&, long long& rangeOffset, long long& rangeEnd, long long& rangeSuffixLength);
@@ -91,8 +93,8 @@ WEBCORE_EXPORT bool parseRange(const String&, long long& rangeOffset, long long&
 ContentTypeOptionsDisposition parseContentTypeOptionsHeader(StringView header);
 
 // Parsing Complete HTTP Messages.
-size_t parseHTTPHeader(const char* data, size_t length, String& failureReason, StringView& nameStr, String& valueStr, bool strict = true);
-size_t parseHTTPRequestBody(const char* data, size_t length, Vector<unsigned char>& body);
+size_t parseHTTPHeader(const uint8_t* data, size_t length, String& failureReason, StringView& nameStr, String& valueStr, bool strict = true);
+size_t parseHTTPRequestBody(const uint8_t* data, size_t length, Vector<uint8_t>& body);
 
 // HTTP Header routine as per https://fetch.spec.whatwg.org/#terminology-headers
 bool isForbiddenHeaderName(const String&);
@@ -154,7 +156,7 @@ bool addToAccessControlAllowList(const String& string, unsigned start, unsigned 
 }
 
 template<class HashType = DefaultHash<String>>
-Optional<HashSet<String, HashType>> parseAccessControlAllowList(const String& string)
+std::optional<HashSet<String, HashType>> parseAccessControlAllowList(const String& string)
 {
     HashSet<String, HashType> set;
     unsigned start = 0;

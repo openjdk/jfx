@@ -69,10 +69,10 @@ void RenderVideo::willBeDestroyed()
 #if ENABLE(VIDEO_PRESENTATION_MODE)
     auto player = videoElement().player();
     if (player && videoElement().webkitPresentationMode() != HTMLVideoElement::VideoPresentationMode::PictureInPicture)
-        player->setVisible(false);
+        player->setPageIsVisible(false);
 #else
     if (auto player = videoElement().player())
-        player->setVisible(false);
+        player->setPageIsVisible(false);
 #endif
 
     RenderMedia::willBeDestroyed();
@@ -123,6 +123,9 @@ bool RenderVideo::updateIntrinsicSize()
 
 LayoutSize RenderVideo::calculateIntrinsicSize()
 {
+    if (shouldApplySizeContainment(*this))
+        return LayoutSize();
+
     // Spec text from 4.8.6
     //
     // The intrinsic width of a video element's playback area is the intrinsic width
@@ -229,7 +232,7 @@ void RenderVideo::paintReplaced(PaintInfo& paintInfo, const LayoutPoint& paintOf
 
     if (displayingPoster)
         paintIntoRect(paintInfo, rect);
-    else if (!videoElement().isFullscreen() || !mediaPlayer->supportsAcceleratedRendering()) {
+    else if (!videoElement().isFullscreen() || !videoElement().supportsAcceleratedRendering()) {
         if (paintInfo.paintBehavior.contains(PaintBehavior::FlattenCompositingLayers))
             context.paintFrameForMedia(*mediaPlayer, rect);
         else
@@ -270,7 +273,7 @@ void RenderVideo::updatePlayer()
         return;
 
     if (!videoElement().inActiveDocument()) {
-        mediaPlayer->setVisible(false);
+        mediaPlayer->setPageIsVisible(false);
         return;
     }
 
@@ -278,7 +281,8 @@ void RenderVideo::updatePlayer()
 
     IntRect videoBounds = videoBox();
     mediaPlayer->setSize(IntSize(videoBounds.width(), videoBounds.height()));
-    mediaPlayer->setVisible(!videoElement().elementIsHidden());
+    mediaPlayer->setPageIsVisible(!videoElement().elementIsHidden());
+    mediaPlayer->setVisibleInViewport(videoElement().isVisibleInViewport());
     mediaPlayer->setShouldMaintainAspectRatio(style().objectFit() != ObjectFit::Fill);
 }
 
@@ -294,9 +298,7 @@ LayoutUnit RenderVideo::minimumReplacedHeight() const
 
 bool RenderVideo::supportsAcceleratedRendering() const
 {
-    if (auto player = videoElement().player())
-        return player->supportsAcceleratedRendering();
-    return false;
+    return videoElement().supportsAcceleratedRendering();
 }
 
 void RenderVideo::acceleratedRenderingStateChanged()

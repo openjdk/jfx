@@ -29,7 +29,15 @@
 
 #include "MediaPlayer.h"
 #include "MediaPlayerIdentifier.h"
+#include "NativeImage.h"
 #include "PlatformTimeRanges.h"
+#include "VideoFrame.h"
+#include <optional>
+#include <wtf/CompletionHandler.h>
+
+#if ENABLE(LEGACY_ENCRYPTED_MEDIA)
+#include "LegacyCDMSession.h"
+#endif
 
 namespace WebCore {
 
@@ -64,7 +72,7 @@ public:
 
 #if ENABLE(VIDEO_PRESENTATION_MODE)
     virtual RetainPtr<PlatformLayer> createVideoFullscreenLayer() { return nullptr; }
-    virtual void setVideoFullscreenLayer(PlatformLayer*, WTF::Function<void()>&& completionHandler) { completionHandler(); }
+    virtual void setVideoFullscreenLayer(PlatformLayer*, Function<void()>&& completionHandler) { completionHandler(); }
     virtual void updateVideoFullscreenInlineImage() { }
     virtual void setVideoFullscreenFrame(FloatRect) { }
     virtual void setVideoFullscreenGravity(MediaPlayer::VideoGravity) { }
@@ -86,6 +94,7 @@ public:
     virtual bool supportsPictureInPicture() const { return false; }
     virtual bool supportsFullscreen() const { return false; }
     virtual bool supportsScanning() const { return false; }
+    virtual bool supportsProgressMonitoring() const { return true; }
     virtual bool requiresImmediateCompositing() const { return false; }
 
     virtual bool canSaveMediaData() const { return false; }
@@ -95,8 +104,9 @@ public:
     virtual bool hasVideo() const = 0;
     virtual bool hasAudio() const = 0;
 
-    virtual void setVisible(bool) = 0;
-    virtual void setVisibleForCanvas(bool visible) { setVisible(visible); }
+    virtual void setPageIsVisible(bool) = 0;
+    virtual void setVisibleForCanvas(bool visible) { setPageIsVisible(visible); }
+    virtual void setVisibleInViewport(bool) { }
 
     virtual float duration() const { return 0; }
     virtual double durationDouble() const { return duration(); }
@@ -105,6 +115,8 @@ public:
     virtual float currentTime() const { return 0; }
     virtual double currentTimeDouble() const { return currentTime(); }
     virtual MediaTime currentMediaTime() const { return MediaTime::createWithDouble(currentTimeDouble()); }
+
+    virtual bool setCurrentTimeDidChangeCallback(MediaPlayer::CurrentTimeDidChangeCallback&&) { return false; }
 
     virtual MediaTime getStartDate() const { return MediaTime::createWithDouble(std::numeric_limits<double>::quiet_NaN()); }
 
@@ -121,6 +133,7 @@ public:
     virtual void setRate(float) { }
     virtual void setRateDouble(double rate) { setRate(rate); }
     virtual double rate() const { return 0; }
+    virtual double effectiveRate() const { return rate(); }
 
     virtual void setPreservesPitch(bool) { }
     virtual void setPitchCorrectionAlgorithm(MediaPlayer::PitchCorrectionAlgorithm) { }
@@ -155,6 +168,10 @@ public:
 
     virtual unsigned long long totalBytes() const { return 0; }
     virtual bool didLoadingProgress() const = 0;
+    // The default implementation of didLoadingProgressAsync is implemented in terms of
+    // synchronous didLoadingProgress() calls. Implementations may also
+    // override didLoadingProgressAsync to create a more proper async implementation.
+    virtual void didLoadingProgressAsync(MediaPlayer::DidLoadingProgressCompletionHandler&& callback) const { callback(didLoadingProgress()); }
 
     virtual void setSize(const IntSize&) { }
 
@@ -163,10 +180,10 @@ public:
     virtual void paintCurrentFrameInContext(GraphicsContext& c, const FloatRect& r) { paint(c, r); }
 #if !USE(AVFOUNDATION)
     virtual bool copyVideoTextureToPlatformTexture(GraphicsContextGL*, PlatformGLObject, GCGLenum, GCGLint, GCGLenum, GCGLenum, GCGLenum, bool, bool) { return false; }
-#else
-    virtual CVPixelBufferRef pixelBufferForCurrentTime() { return nullptr; }
 #endif
+    virtual RefPtr<VideoFrame> videoFrameForCurrentTime() { return nullptr; }
     virtual RefPtr<NativeImage> nativeImageForCurrentTime() { return nullptr; }
+    virtual DestinationColorSpace colorSpace() = 0;
 
     virtual void setPreload(MediaPlayer::Preload) { }
 
@@ -196,7 +213,7 @@ public:
 
     virtual bool hasSingleSecurityOrigin() const { return false; }
     virtual bool didPassCORSAccessCheck() const { return false; }
-    virtual Optional<bool> wouldTaintOrigin(const SecurityOrigin&) const { return WTF::nullopt; }
+    virtual std::optional<bool> wouldTaintOrigin(const SecurityOrigin&) const { return std::nullopt; }
 
     virtual MediaPlayer::MovieLoadType movieLoadType() const { return MediaPlayer::MovieLoadType::Unknown; }
 
@@ -216,9 +233,9 @@ public:
     virtual unsigned audioDecodedByteCount() const { return 0; }
     virtual unsigned videoDecodedByteCount() const { return 0; }
 
-    HashSet<RefPtr<SecurityOrigin>> originsInMediaCache(const String&) { return { }; }
+    HashSet<SecurityOriginData> originsInMediaCache(const String&) { return { }; }
     void clearMediaCache(const String&, WallTime) { }
-    void clearMediaCacheForOrigins(const String&, const HashSet<RefPtr<SecurityOrigin>>&) { }
+    void clearMediaCacheForOrigins(const String&, const HashSet<SecurityOriginData>&) { }
 
     virtual void setPrivateBrowsingMode(bool) { }
 
@@ -274,11 +291,9 @@ public:
 
     virtual bool ended() const { return false; }
 
-    virtual Optional<VideoPlaybackQualityMetrics> videoPlaybackQualityMetrics() { return WTF::nullopt; }
+    virtual std::optional<VideoPlaybackQualityMetrics> videoPlaybackQualityMetrics() { return std::nullopt; }
 
-#if ENABLE(AVF_CAPTIONS)
     virtual void notifyTrackModeChanged() { }
-#endif
 
     virtual void notifyActiveSourceBuffersChanged() { }
 
@@ -300,6 +315,15 @@ public:
     virtual void audioOutputDeviceChanged() { }
 
     virtual MediaPlayerIdentifier identifier() const { return { }; }
+
+    virtual bool supportsPlayAtHostTime() const { return false; }
+    virtual bool supportsPauseAtHostTime() const { return false; }
+    virtual bool playAtHostTime(const MonotonicTime&) { return false; }
+    virtual bool pauseAtHostTime(const MonotonicTime&) { return false; }
+
+    virtual std::optional<VideoFrameMetadata> videoFrameMetadata() { return { }; }
+    virtual void startVideoFrameMetadataGathering() { }
+    virtual void stopVideoFrameMetadataGathering() { }
 };
 
 }

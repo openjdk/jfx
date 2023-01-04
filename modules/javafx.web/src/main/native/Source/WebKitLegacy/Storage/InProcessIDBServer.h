@@ -25,8 +25,6 @@
 
 #pragma once
 
-#if ENABLE(INDEXED_DATABASE)
-
 #include <WebCore/IDBConnectionToClient.h>
 #include <WebCore/IDBConnectionToServer.h>
 #include <WebCore/IDBServer.h>
@@ -41,7 +39,6 @@ class SessionID;
 namespace WebCore {
 struct ClientOrigin;
 class StorageQuotaManager;
-class StorageThread;
 
 namespace IDBClient {
 class IDBConnectionToServer;
@@ -68,7 +65,7 @@ public:
     void deleteDatabase(const WebCore::IDBRequestData&) final;
     void openDatabase(const WebCore::IDBRequestData&) final;
     void abortTransaction(const WebCore::IDBResourceIdentifier&) final;
-    void commitTransaction(const WebCore::IDBResourceIdentifier&) final;
+    void commitTransaction(const WebCore::IDBResourceIdentifier&, uint64_t pendingCountRequest) final;
     void didFinishHandlingVersionChangeTransaction(uint64_t databaseConnectionIdentifier, const WebCore::IDBResourceIdentifier&) final;
     void createObjectStore(const WebCore::IDBRequestData&, const WebCore::IDBObjectStoreInfo&) final;
     void deleteObjectStore(const WebCore::IDBRequestData&, const String& objectStoreName) final;
@@ -128,12 +125,11 @@ public:
 private:
     InProcessIDBServer(PAL::SessionID, const String& databaseDirectoryPath = nullString());
 
+    Lock m_serverLock;
     std::unique_ptr<WebCore::IDBServer::IDBServer> m_server;
     RefPtr<WebCore::IDBClient::IDBConnectionToServer> m_connectionToServer;
     RefPtr<WebCore::IDBServer::IDBConnectionToClient> m_connectionToClient;
-    std::unique_ptr<WebCore::StorageThread> m_thread;
+    Ref<WorkQueue> m_queue;
 
     HashMap<WebCore::ClientOrigin, RefPtr<WebCore::StorageQuotaManager>> m_quotaManagers;
 };
-
-#endif // ENABLE(INDEXED_DATABASE)

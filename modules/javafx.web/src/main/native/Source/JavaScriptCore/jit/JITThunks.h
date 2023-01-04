@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,12 +30,15 @@
 #include "CallData.h"
 #include "Intrinsic.h"
 #include "MacroAssemblerCodeRef.h"
+#include "SlowPathFunction.h"
 #include "ThunkGenerator.h"
 #include "Weak.h"
 #include "WeakHandleOwner.h"
 #include <tuple>
 #include <wtf/HashMap.h>
 #include <wtf/HashSet.h>
+#include <wtf/PackedRefPtr.h>
+#include <wtf/RecursiveLockAdapter.h>
 #include <wtf/text/StringHash.h>
 
 namespace JSC {
@@ -60,16 +63,25 @@ public:
     MacroAssemblerCodePtr<JITThunkPtrTag> ctiInternalFunctionConstruct(VM&);
 
     MacroAssemblerCodeRef<JITThunkPtrTag> ctiStub(VM&, ThunkGenerator);
-    MacroAssemblerCodeRef<JITThunkPtrTag> existingCTIStub(ThunkGenerator);
+#if ENABLE(EXTRA_CTI_THUNKS)
+    MacroAssemblerCodeRef<JITThunkPtrTag> ctiSlowPathFunctionStub(VM&, SlowPathFunction);
+#endif
 
     NativeExecutable* hostFunctionStub(VM&, TaggedNativeFunction, TaggedNativeFunction constructor, const String& name);
     NativeExecutable* hostFunctionStub(VM&, TaggedNativeFunction, TaggedNativeFunction constructor, ThunkGenerator, Intrinsic, const DOMJIT::Signature*, const String& name);
     NativeExecutable* hostFunctionStub(VM&, TaggedNativeFunction, ThunkGenerator, Intrinsic, const String& name);
 
 private:
+    template <typename GenerateThunk>
+    MacroAssemblerCodeRef<JITThunkPtrTag> ctiStubImpl(ThunkGenerator key, GenerateThunk);
+
     void finalize(Handle<Unknown>, void* context) final;
 
-    typedef HashMap<ThunkGenerator, MacroAssemblerCodeRef<JITThunkPtrTag>> CTIStubMap;
+    struct Entry {
+        PackedRefPtr<ExecutableMemoryHandle> handle;
+        bool needsCrossModifyingCodeFence;
+    };
+    using CTIStubMap = HashMap<ThunkGenerator, Entry>;
     CTIStubMap m_ctiStubMap;
 
     using HostFunctionKey = std::tuple<TaggedNativeFunction, TaggedNativeFunction, String>;
@@ -109,7 +121,8 @@ private:
 
     using WeakNativeExecutableSet = HashSet<Weak<NativeExecutable>, WeakNativeExecutableHash>;
     WeakNativeExecutableSet m_nativeExecutableSet;
-    Lock m_lock;
+
+    WTF::RecursiveLock m_lock;
 };
 
 } // namespace JSC

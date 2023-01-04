@@ -1,6 +1,6 @@
 /*
  *  Copyright (C) 1999-2000 Harri Porten (porten@kde.org)
- *  Copyright (C) 2003-2020 Apple Inc. All rights reserved.
+ *  Copyright (C) 2003-2021 Apple Inc. All rights reserved.
  *  Copyright (C) 2003 Peter Kelly (pmk@post.com)
  *  Copyright (C) 2006 Alexey Proskuryakov (ap@nypop.com)
  *
@@ -56,7 +56,7 @@ JSArray* JSArray::tryCreateUninitializedRestricted(ObjectInitializationScope& sc
             || hasContiguous(indexingType));
 
         unsigned vectorLength = Butterfly::optimalContiguousVectorLength(structure, initialLength);
-        void* temp = vm.jsValueGigacageAuxiliarySpace.allocateNonVirtual(
+        void* temp = vm.jsValueGigacageAuxiliarySpace().allocate(
             vm,
             Butterfly::totalSize(0, outOfLineStorage, true, vectorLength * sizeof(EncodedJSValue)),
             deferralContext, AllocationFailureMode::ReturnNull);
@@ -78,7 +78,7 @@ JSArray* JSArray::tryCreateUninitializedRestricted(ObjectInitializationScope& sc
             || indexingType == ArrayWithArrayStorage);
         static constexpr unsigned indexBias = 0;
         unsigned vectorLength = ArrayStorage::optimalVectorLength(indexBias, structure, initialLength);
-        void* temp = vm.jsValueGigacageAuxiliarySpace.allocateNonVirtual(
+        void* temp = vm.jsValueGigacageAuxiliarySpace().allocate(
             vm,
             Butterfly::totalSize(indexBias, outOfLineStorage, true, ArrayStorage::sizeFor(vectorLength)),
             deferralContext, AllocationFailureMode::ReturnNull);
@@ -191,8 +191,11 @@ bool JSArray::defineOwnProperty(JSObject* object, JSGlobalObject* globalObject, 
         }
 
         // setLength() clears indices >= newLength and sets correct "length" value if [[Delete]] fails (step 17.b.i)
-        bool success = array->setLength(globalObject, newLength, throwException);
-        EXCEPTION_ASSERT(!scope.exception() || !success);
+        bool success = true;
+        if (newLength != array->length()) {
+            success = array->setLength(globalObject, newLength, throwException);
+            EXCEPTION_ASSERT(!scope.exception() || !success);
+        }
         if (descriptor.writablePresent())
             array->setLengthWritable(globalObject, descriptor.writable());
         return success;
@@ -200,7 +203,7 @@ bool JSArray::defineOwnProperty(JSObject* object, JSGlobalObject* globalObject, 
 
     // 4. Else if P is an array index (15.4), then
     // a. Let index be ToUint32(P).
-    if (Optional<uint32_t> optionalIndex = parseIndex(propertyName)) {
+    if (std::optional<uint32_t> optionalIndex = parseIndex(propertyName)) {
         // b. Reject if index >= oldLen and oldLenDesc.[[Writable]] is false.
         uint32_t index = optionalIndex.value();
         // FIXME: Nothing prevents this from being called on a RuntimeArray, and the length function will always return 0 in that case.
@@ -238,10 +241,6 @@ bool JSArray::put(JSCell* cell, JSGlobalObject* globalObject, PropertyName prope
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     JSArray* thisObject = jsCast<JSArray*>(cell);
-
-    if (UNLIKELY(isThisValueAltered(slot, thisObject)))
-        RELEASE_AND_RETURN(scope, ordinarySetSlow(globalObject, thisObject, propertyName, value, slot.thisValue(), slot.isStrictMode()));
-
     thisObject->ensureWritable(vm);
 
     if (propertyName == vm.propertyNames->length) {
@@ -250,6 +249,9 @@ bool JSArray::put(JSCell* cell, JSGlobalObject* globalObject, PropertyName prope
                 throwTypeError(globalObject, scope, "Array length is not writable"_s);
             return false;
         }
+
+        if (UNLIKELY(slot.thisValue() != thisObject))
+            RELEASE_AND_RETURN(scope, JSObject::definePropertyOnReceiver(globalObject, propertyName, value, slot));
 
         unsigned newLength = value.toUInt32(globalObject);
         RETURN_IF_EXCEPTION(scope, false);
@@ -416,8 +418,6 @@ bool JSArray::setLengthWithArrayStorage(JSGlobalObject* globalObject, unsigned n
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     unsigned length = storage->length();
-    if (newLength == length)
-        return true;
 
     // If the length is read only then we enter sparse mode, so should enter the following 'if'.
     ASSERT(isLengthWritable() || storage->m_sparseMap);
@@ -504,14 +504,14 @@ bool JSArray::appendMemcpy(JSGlobalObject* globalObject, VM& vm, unsigned startI
         return false;
 
     unsigned otherLength = otherArray->length();
-    Checked<unsigned, RecordOverflow> checkedNewLength = startIndex;
+    CheckedUint32 checkedNewLength = startIndex;
     checkedNewLength += otherLength;
 
-    unsigned newLength;
-    if (checkedNewLength.safeGet(newLength) == CheckedState::DidOverflow) {
+    if (checkedNewLength.hasOverflowed()) {
         throwException(globalObject, scope, createRangeError(globalObject, LengthExceededTheMaximumArrayLengthError));
         return false;
     }
+    unsigned newLength = checkedNewLength;
 
     if (newLength >= MIN_SPARSE_ARRAY_INDEX)
         return false;
@@ -535,7 +535,7 @@ bool JSArray::appendMemcpy(JSGlobalObject* globalObject, VM& vm, unsigned startI
         gcSafeMemcpy(butterfly()->contiguousDouble().data() + startIndex, otherArray->butterfly()->contiguousDouble().data(), sizeof(JSValue) * otherLength);
     else {
         gcSafeMemcpy(butterfly()->contiguous().data() + startIndex, otherArray->butterfly()->contiguous().data(), sizeof(JSValue) * otherLength);
-        vm.heap.writeBarrier(this);
+        vm.writeBarrier(this);
     }
 
     return true;
@@ -726,18 +726,23 @@ NEVER_INLINE void JSArray::push(JSGlobalObject* globalObject, JSValue value)
     pushInline(globalObject, value);
 }
 
-JSArray* JSArray::fastSlice(JSGlobalObject* globalObject, unsigned startIndex, unsigned count)
+JSArray* JSArray::fastSlice(JSGlobalObject* globalObject, JSObject* source, uint64_t startIndex, uint64_t count)
 {
     VM& vm = globalObject->vm();
 
-    ensureWritable(vm);
+    Structure* sourceStructure = source->structure(vm);
+    if (sourceStructure->typeInfo().interceptsGetOwnPropertySlotByIndexEvenWhenLengthIsNotZero())
+        return nullptr;
 
-    auto arrayType = indexingMode();
+    auto arrayType = source->indexingType() | IsArray;
     switch (arrayType) {
     case ArrayWithDouble:
     case ArrayWithInt32:
     case ArrayWithContiguous: {
-        if (count >= MIN_SPARSE_ARRAY_INDEX || structure(vm)->holesMustForwardToPrototype(vm, this))
+        if (count >= MIN_SPARSE_ARRAY_INDEX || sourceStructure->holesMustForwardToPrototype(vm, source))
+            return nullptr;
+
+        if (startIndex + count > source->butterfly()->vectorLength())
             return nullptr;
 
         Structure* resultStructure = globalObject->arrayStructureForIndexingTypeDuringAllocation(arrayType);
@@ -746,15 +751,15 @@ JSArray* JSArray::fastSlice(JSGlobalObject* globalObject, unsigned startIndex, u
 
         ASSERT(!globalObject->isHavingABadTime());
         ObjectInitializationScope scope(vm);
-        JSArray* resultArray = JSArray::tryCreateUninitializedRestricted(scope, resultStructure, count);
+        JSArray* resultArray = JSArray::tryCreateUninitializedRestricted(scope, resultStructure, static_cast<uint32_t>(count));
         if (UNLIKELY(!resultArray))
             return nullptr;
 
         auto& resultButterfly = *resultArray->butterfly();
         if (arrayType == ArrayWithDouble)
-            gcSafeMemcpy(resultButterfly.contiguousDouble().data(), butterfly()->contiguousDouble().data() + startIndex, sizeof(JSValue) * count);
+            gcSafeMemcpy(resultButterfly.contiguousDouble().data(), source->butterfly()->contiguousDouble().data() + startIndex, sizeof(JSValue) * static_cast<uint32_t>(count));
         else
-            gcSafeMemcpy(resultButterfly.contiguous().data(), butterfly()->contiguous().data() + startIndex, sizeof(JSValue) * count);
+            gcSafeMemcpy(resultButterfly.contiguous().data(), source->butterfly()->contiguous().data() + startIndex, sizeof(JSValue) * static_cast<uint32_t>(count));
 
         ASSERT(resultButterfly.publicLength() == count);
         return resultArray;
@@ -793,7 +798,7 @@ bool JSArray::shiftCountWithArrayStorage(VM& vm, unsigned startIndex, unsigned c
         return true;
 
     DisallowGC disallowGC;
-    auto locker = holdLock(cellLock());
+    Locker locker { cellLock() };
 
     if (startIndex + count > vectorLength)
         count = vectorLength - startIndex;
@@ -909,7 +914,7 @@ bool JSArray::shiftCountWithAnyIndexingType(JSGlobalObject* globalObject, unsign
         // Our memmoving of values around in the array could have concealed some of them from
         // the collector. Let's make sure that the collector scans this object again.
         if (indexingType == ArrayWithContiguous)
-            vm.heap.writeBarrier(this);
+            vm.writeBarrier(this);
 
         return true;
     }
@@ -980,8 +985,8 @@ bool JSArray::unshiftCountWithArrayStorage(JSGlobalObject* globalObject, unsigne
 
     // Need to have GC deferred around the unshiftCountSlowCase(), since that leaves the butterfly in
     // a weird state: some parts of it will be left uninitialized, which we will fill in here.
-    DeferGC deferGC(vm.heap);
-    auto locker = holdLock(cellLock());
+    DeferGC deferGC(vm);
+    Locker locker { cellLock() };
 
     if (moveFront && storage->m_indexBias >= count) {
         // When moving Butterfly's head to adjust property-storage, we must take a structure lock.
@@ -1041,13 +1046,13 @@ bool JSArray::unshiftCountWithAnyIndexingType(JSGlobalObject* globalObject, unsi
         if (oldLength - startIndex >= MIN_SPARSE_ARRAY_INDEX)
             RELEASE_AND_RETURN(scope, unshiftCountWithArrayStorage(globalObject, startIndex, count, ensureArrayStorage(vm)));
 
-        Checked<unsigned, RecordOverflow> checkedLength(oldLength);
+        CheckedUint32 checkedLength(oldLength);
         checkedLength += count;
-        unsigned newLength;
-        if (CheckedState::DidOverflow == checkedLength.safeGet(newLength)) {
+        if (checkedLength.hasOverflowed()) {
             throwOutOfMemoryError(globalObject, scope);
             return true;
         }
+        unsigned newLength = checkedLength;
         if (newLength > MAX_STORAGE_VECTOR_LENGTH)
             return false;
         if (!ensureLength(vm, newLength)) {
@@ -1072,7 +1077,7 @@ bool JSArray::unshiftCountWithAnyIndexingType(JSGlobalObject* globalObject, unsi
 
         // Our memmoving of values around in the array could have concealed some of them from
         // the collector. Let's make sure that the collector scans this object again.
-        vm.heap.writeBarrier(this);
+        vm.writeBarrier(this);
 
         // NOTE: we're leaving being garbage in the part of the array that we shifted out
         // of. This is fine because the caller is required to store over that area, and
@@ -1090,13 +1095,13 @@ bool JSArray::unshiftCountWithAnyIndexingType(JSGlobalObject* globalObject, unsi
         if (oldLength - startIndex >= MIN_SPARSE_ARRAY_INDEX)
             RELEASE_AND_RETURN(scope, unshiftCountWithArrayStorage(globalObject, startIndex, count, ensureArrayStorage(vm)));
 
-        Checked<unsigned, RecordOverflow> checkedLength(oldLength);
+        CheckedUint32 checkedLength(oldLength);
         checkedLength += count;
-        unsigned newLength;
-        if (CheckedState::DidOverflow == checkedLength.safeGet(newLength)) {
+        if (checkedLength.hasOverflowed()) {
             throwOutOfMemoryError(globalObject, scope);
             return true;
         }
+        unsigned newLength = checkedLength;
         if (newLength > MAX_STORAGE_VECTOR_LENGTH)
             return false;
         if (!ensureLength(vm, newLength)) {

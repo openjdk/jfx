@@ -114,7 +114,7 @@ public:
     void stepOutOfFunction();
 
     enum class BlackboxType { Deferred, Ignored };
-    void setBlackboxType(SourceID, Optional<BlackboxType>);
+    void setBlackboxType(SourceID, std::optional<BlackboxType>);
     void clearBlackbox();
 
     bool isPaused() const { return m_isPaused; }
@@ -135,8 +135,8 @@ public:
     void didExecuteProgram(CallFrame*);
     void didReachDebuggerStatement(CallFrame*);
 
-    void willRunMicrotask();
-    void didRunMicrotask();
+    JS_EXPORT_PRIVATE void willRunMicrotask();
+    JS_EXPORT_PRIVATE void didRunMicrotask();
 
     void registerCodeBlock(CodeBlock*);
 

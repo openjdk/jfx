@@ -25,12 +25,16 @@
 
 #include "Frame.h"
 #include "FrameView.h"
+#include "LegacyRenderSVGRoot.h"
+#include "LegacyRenderSVGShape.h"
 #include "RenderSVGResourceClipper.h"
 #include "RenderSVGResourceFilter.h"
 #include "RenderSVGResourceMasker.h"
 #include "RenderSVGResourceSolidColor.h"
 #include "RenderSVGRoot.h"
+#include "RenderSVGShape.h"
 #include "RenderView.h"
+#include "SVGResourceElementClient.h"
 #include "SVGResources.h"
 #include "SVGResourcesCache.h"
 #include "SVGURIReference.h"
@@ -153,7 +157,7 @@ RenderSVGResourceSolidColor* RenderSVGResource::sharedSolidPaintingResource()
     return s_sharedSolidPaintingResource;
 }
 
-static inline void removeFromCacheAndInvalidateDependencies(RenderElement& renderer, bool needsLayout)
+static void removeFromCacheAndInvalidateDependencies(RenderElement& renderer, bool needsLayout)
 {
     if (auto* resources = SVGResourcesCache::cachedResourcesForRenderer(renderer)) {
         if (RenderSVGResourceFilter* filter = resources->filter())
@@ -168,22 +172,27 @@ static inline void removeFromCacheAndInvalidateDependencies(RenderElement& rende
 
     if (!is<SVGElement>(renderer.element()))
         return;
-    auto* dependencies = renderer.document().accessSVGExtensions().setOfElementsReferencingTarget(downcast<SVGElement>(*renderer.element()));
-    if (!dependencies)
-        return;
 
-    for (auto* element : *dependencies) {
+    Ref svgElement = downcast<SVGElement>(*renderer.element());
+
+    for (auto& element : svgElement->referencingElements()) {
         if (auto* renderer = element->renderer()) {
             // We allow cycles in SVGDocumentExtensions reference sets in order to avoid expensive
             // reference graph adjustments on changes, so we need to break possible cycles here.
-            static NeverDestroyed<HashSet<SVGElement*>> invalidatingDependencies;
-            if (UNLIKELY(!invalidatingDependencies.get().add(element).isNewEntry)) {
+            static NeverDestroyed<WeakHashSet<SVGElement>> invalidatingDependencies;
+            if (UNLIKELY(!invalidatingDependencies.get().add(element.get()).isNewEntry)) {
                 // Reference cycle: we are in process of invalidating this dependant.
                 continue;
             }
             RenderSVGResource::markForLayoutAndParentResourceInvalidation(*renderer, needsLayout);
-            invalidatingDependencies.get().remove(element);
+            invalidatingDependencies.get().remove(element.get());
         }
+    }
+
+    for (auto& cssClient : svgElement->referencingCSSClients()) {
+        if (!cssClient)
+            continue;
+        cssClient->resourceChanged(svgElement.get());
     }
 }
 
@@ -192,12 +201,30 @@ void RenderSVGResource::markForLayoutAndParentResourceInvalidation(RenderObject&
     ASSERT(object.node());
 
     if (needsLayout && !object.renderTreeBeingDestroyed()) {
-        // If we are inside the layout of an RenderSVGRoot, do not cross the SVG boundary to
+        // If we are inside the layout of an LegacyRenderSVGRoot, do not cross the SVG boundary to
         // invalidate the ancestor renderer because it may have finished its layout already.
-        if (is<RenderSVGRoot>(object) && downcast<RenderSVGRoot>(object).isInLayout())
+        if (is<LegacyRenderSVGRoot>(object) && downcast<LegacyRenderSVGRoot>(object).isInLayout())
             object.setNeedsLayout(MarkOnlyThis);
-        else
-            object.setNeedsLayout(MarkContainingBlockChain);
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
+        else if (is<RenderSVGRoot>(object) && downcast<RenderSVGRoot>(object).isInLayout())
+            object.setNeedsLayout(MarkOnlyThis);
+#endif
+        else {
+            if (!is<RenderElement>(object))
+                object.setNeedsLayout(MarkOnlyThis);
+            else {
+                auto svgRoot = SVGRenderSupport::findTreeRootObject(downcast<RenderElement>(object));
+                if (!svgRoot || !svgRoot->isInLayout())
+                    object.setNeedsLayout(MarkContainingBlockChain);
+                else {
+                    // We just want to re-layout the ancestors up to the RenderSVGRoot.
+                    object.setNeedsLayout(MarkOnlyThis);
+                    for (auto current = object.parent(); current != svgRoot; current = current->parent())
+                        current->setNeedsLayout(MarkOnlyThis);
+                    svgRoot->setNeedsLayout(MarkOnlyThis);
+                }
+            }
+        }
     }
 
     if (is<RenderElement>(object))
@@ -216,6 +243,41 @@ void RenderSVGResource::markForLayoutAndParentResourceInvalidation(RenderObject&
 
         current = current->parent();
     }
+}
+
+void RenderSVGResource::fillAndStrokePathOrShape(GraphicsContext& context, OptionSet<RenderSVGResourceMode> resourceMode, const Path* path, const RenderElement* shape) const
+{
+    if (shape) {
+        ASSERT(shape->isSVGShapeOrLegacySVGShape());
+
+        if (resourceMode.contains(RenderSVGResourceMode::ApplyToFill)) {
+            if (is<LegacyRenderSVGShape>(shape))
+                downcast<LegacyRenderSVGShape>(shape)->fillShape(context);
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
+            else if (is<RenderSVGShape>(shape))
+                downcast<RenderSVGShape>(shape)->fillShape(context);
+#endif
+        }
+
+        if (resourceMode.contains(RenderSVGResourceMode::ApplyToStroke)) {
+            if (is<LegacyRenderSVGShape>(shape))
+                downcast<LegacyRenderSVGShape>(shape)->strokeShape(context);
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
+            else if (is<RenderSVGShape>(shape))
+                downcast<RenderSVGShape>(shape)->strokeShape(context);
+#endif
+        }
+
+        return;
+    }
+
+    if (!path)
+        return;
+
+    if (resourceMode.contains(RenderSVGResourceMode::ApplyToFill))
+        context.fillPath(*path);
+    if (resourceMode.contains(RenderSVGResourceMode::ApplyToStroke))
+        context.strokePath(*path);
 }
 
 }

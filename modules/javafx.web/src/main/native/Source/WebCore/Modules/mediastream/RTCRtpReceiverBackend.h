@@ -31,6 +31,7 @@
 
 namespace WebCore {
 
+class RTCDtlsTransportBackend;
 class RTCRtpTransformBackend;
 
 class RTCRtpReceiverBackend {
@@ -39,7 +40,8 @@ public:
     virtual RTCRtpParameters getParameters() { return { }; }
     virtual Vector<RTCRtpContributingSource> getContributingSources() const { return { }; }
     virtual Vector<RTCRtpSynchronizationSource> getSynchronizationSources() const { return { }; }
-    virtual Ref<RTCRtpTransformBackend> createRTCRtpTransformBackend() = 0;
+    virtual Ref<RTCRtpTransformBackend> rtcRtpTransformBackend() = 0;
+    virtual std::unique_ptr<RTCDtlsTransportBackend> dtlsTransportBackend() = 0;
 };
 
 } // namespace WebCore

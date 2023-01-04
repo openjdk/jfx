@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -90,8 +90,8 @@ import java.security.PrivilegedAction;
  */
 public final class JavaBeanFloatProperty extends FloatProperty implements JavaBeanProperty<Number> {
 
-    private final PropertyDescriptor descriptor;
-    private final PropertyDescriptor.Listener<Number> listener;
+    private final PropertyDescriptor<Number> descriptor;
+    private final PropertyDescriptor<Number>.Listener listener;
 
     private ObservableValue<? extends Number> observable = null;
     private ExpressionHelper<Number> helper = null;
@@ -99,11 +99,11 @@ public final class JavaBeanFloatProperty extends FloatProperty implements JavaBe
     @SuppressWarnings("removal")
     private final AccessControlContext acc = AccessController.getContext();
 
-    JavaBeanFloatProperty(PropertyDescriptor descriptor, Object bean) {
+    JavaBeanFloatProperty(PropertyDescriptor<Number> descriptor, Object bean) {
         this.descriptor = descriptor;
-        this.listener = descriptor.new Listener<Number>(bean, this);
+        this.listener = descriptor.new Listener(bean, this);
         descriptor.addListener(listener);
-        Disposer.addRecord(this, new DescriptorListenerCleaner(descriptor, listener));
+        Disposer.addRecord(this, new DescriptorListenerCleaner<>(descriptor, listener));
     }
 
     /**

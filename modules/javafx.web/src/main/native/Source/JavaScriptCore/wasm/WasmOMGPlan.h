@@ -53,14 +53,14 @@ private:
     using Base::m_lock;
 
     bool isComplete() const final { return m_completed; }
-    void complete(const AbstractLocker& locker) final
+    void complete() WTF_REQUIRES_LOCK(m_lock) final
     {
         m_completed = true;
-        runCompletionTasks(locker);
+        runCompletionTasks();
     }
 
     Ref<Module> m_module;
-    Ref<CodeBlock> m_codeBlock;
+    Ref<CalleeGroup> m_calleeGroup;
     bool m_completed { false };
     uint32_t m_functionIndex;
 };

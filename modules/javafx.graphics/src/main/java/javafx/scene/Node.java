@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,6 +27,7 @@ package javafx.scene;
 
 
 import com.sun.javafx.geometry.BoundsUtils;
+import com.sun.javafx.scene.traversal.TraversalMethod;
 import javafx.application.Platform;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
@@ -522,8 +523,8 @@ public abstract class Node implements EventTarget, Styleable {
             }
 
             @Override
-            public boolean traverse(Node node, Direction direction) {
-                return node.traverse(direction);
+            public boolean traverse(Node node, Direction direction, TraversalMethod method) {
+                return node.traverse(direction, method);
             }
 
             @Override
@@ -618,6 +619,11 @@ public abstract class Node implements EventTarget, Styleable {
             public Map<StyleableProperty<?>, List<Style>> findStyles(Node node,
                     Map<StyleableProperty<?>, List<Style>> styleMap) {
                 return node.findStyles(styleMap);
+            }
+
+            @Override
+            public void requestFocusVisible(Node node) {
+                node.requestFocusVisible();
             }
         });
     }
@@ -880,7 +886,7 @@ public abstract class Node implements EventTarget, Styleable {
      */
      public final ObservableMap<Object, Object> getProperties() {
         if (properties == null) {
-            properties = FXCollections.observableMap(new HashMap<Object, Object>());
+            properties = FXCollections.observableMap(new HashMap<>());
         }
         return properties;
     }
@@ -945,12 +951,13 @@ public abstract class Node implements EventTarget, Styleable {
 
     private ReadOnlyObjectWrapper<Parent> parentPropertyImpl() {
         if (parent == null) {
-            parent = new ReadOnlyObjectWrapper<Parent>() {
+            parent = new ReadOnlyObjectWrapper<>() {
                 private Parent oldParent;
 
                 @Override
                 protected void invalidated() {
                     if (oldParent != null) {
+                        clearParentsFocusWithin(oldParent);
                         oldParent.disabledProperty().removeListener(parentDisabledChangedListener);
                         oldParent.treeVisibleProperty().removeListener(parentTreeVisibleChangedListener);
                         if (nodeTransformation != null && nodeTransformation.listenerReasons > 0) {
@@ -1014,7 +1021,7 @@ public abstract class Node implements EventTarget, Styleable {
      *
      * @defaultValue null
      */
-    private ReadOnlyObjectWrapperManualFire<Scene> scene = new ReadOnlyObjectWrapperManualFire<Scene>();
+    private ReadOnlyObjectWrapperManualFire<Scene> scene = new ReadOnlyObjectWrapperManualFire<>();
 
     private class ReadOnlyObjectWrapperManualFire<T> extends ReadOnlyObjectWrapper<T> {
         @Override
@@ -1193,6 +1200,7 @@ public abstract class Node implements EventTarget, Styleable {
      * @defaultValue null
      * @see <a href="doc-files/cssref.html">CSS Reference Guide</a>
      */
+    @Override
     public final String getId() {
         return id == null ? null : id.get();
     }
@@ -1233,7 +1241,7 @@ public abstract class Node implements EventTarget, Styleable {
      * @see <a href="doc-files/cssref.html">CSS Reference Guide</a>.
      * @defaultValue null
      */
-    private ObservableList<String> styleClass = new TrackableObservableList<String>() {
+    private ObservableList<String> styleClass = new TrackableObservableList<>() {
         @Override
         protected void onChanged(Change<String> c) {
             reapplyCSS();
@@ -1302,6 +1310,7 @@ public abstract class Node implements EventTarget, Styleable {
      *         an empty String is returned.
      * @see <a href="doc-files/cssref.html">CSS Reference Guide</a>
      */
+    @Override
     public final String getStyle() {
         return style == null ? "" : style.get();
     }
@@ -1972,7 +1981,7 @@ public abstract class Node implements EventTarget, Styleable {
         final Set<Node> empty = Collections.emptySet();
         if (s == null) return empty;
         List<Node> results = lookupAll(s, null);
-        return results == null ? empty : new UnmodifiableListSet<Node>(results);
+        return results == null ? empty : new UnmodifiableListSet<>(results);
     }
 
     /**
@@ -1986,7 +1995,7 @@ public abstract class Node implements EventTarget, Styleable {
         if (selector.applies(this)) {
             // Lazily create the set to reduce some trash.
             if (results == null) {
-                results = new LinkedList<Node>();
+                results = new LinkedList<>();
             }
             results.add(this);
         }
@@ -2554,7 +2563,6 @@ public abstract class Node implements EventTarget, Styleable {
      */
     private NGNode peer;
 
-    @SuppressWarnings("CallToPrintStackTrace")
     <P extends NGNode> P getPeer() {
         if (Utils.assertionEnabled()) {
             // Assertion checking code
@@ -6010,7 +6018,7 @@ public abstract class Node implements EventTarget, Styleable {
             public void addListener(InvalidationListener listener) {
                 incListenerReasons();
                 if (localToSceneListeners == null) {
-                    localToSceneListeners = new LinkedList<Object>();
+                    localToSceneListeners = new LinkedList<>();
                 }
                 localToSceneListeners.add(listener);
                 super.addListener(listener);
@@ -6020,7 +6028,7 @@ public abstract class Node implements EventTarget, Styleable {
             public void addListener(ChangeListener<? super Transform> listener) {
                 incListenerReasons();
                 if (localToSceneListeners == null) {
-                    localToSceneListeners = new LinkedList<Object>();
+                    localToSceneListeners = new LinkedList<>();
                 }
                 localToSceneListeners.add(listener);
                 super.addListener(listener);
@@ -6307,7 +6315,7 @@ public abstract class Node implements EventTarget, Styleable {
 
         public ObservableList<Transform> getTransforms() {
             if (transforms == null) {
-                transforms = new TrackableObservableList<Transform>() {
+                transforms = new TrackableObservableList<>() {
                     @Override
                     protected void onChanged(Change<Transform> c) {
                         while (c.next()) {
@@ -7158,7 +7166,7 @@ public abstract class Node implements EventTarget, Styleable {
                 inputMethodRequestsProperty() {
             if (inputMethodRequests == null) {
                 inputMethodRequests =
-                        new SimpleObjectProperty<InputMethodRequests>(
+                        new SimpleObjectProperty<>(
                                 Node.this,
                                 "inputMethodRequests",
                                 DEFAULT_INPUT_METHOD_REQUESTS);
@@ -8112,46 +8120,11 @@ public abstract class Node implements EventTarget, Styleable {
      * like an atomic operation - when the old node is notified to loose focus,
      * the new node is already focused.
      */
-    final class FocusedProperty extends ReadOnlyBooleanPropertyBase {
+    abstract class FocusPropertyBase extends ReadOnlyBooleanPropertyBase {
         private boolean value;
-        private boolean valid = true;
-        private boolean needsChangeEvent = false;
+        private boolean lastNotifiedValue;
 
-        public void store(final boolean value) {
-            if (value != this.value) {
-                this.value = value;
-                markInvalid();
-            }
-        }
-
-        public void notifyListeners() {
-            if (needsChangeEvent) {
-                fireValueChangedEvent();
-                needsChangeEvent = false;
-            }
-        }
-
-        private void markInvalid() {
-            if (valid) {
-                valid = false;
-
-                pseudoClassStateChanged(FOCUSED_PSEUDOCLASS_STATE, get());
-                PlatformLogger logger = Logging.getFocusLogger();
-                if (logger.isLoggable(Level.FINE)) {
-                    logger.fine(this + " focused=" + get());
-                }
-
-                needsChangeEvent = true;
-
-                notifyAccessibleAttributeChanged(AccessibleAttribute.FOCUSED);
-            }
-        }
-
-        @Override
-        public boolean get() {
-            valid = true;
-            return value;
-        }
+        protected abstract PseudoClass getPseudoClass();
 
         @Override
         public Object getBean() {
@@ -8159,8 +8132,74 @@ public abstract class Node implements EventTarget, Styleable {
         }
 
         @Override
-        public String getName() {
-            return "focused";
+        public boolean get() {
+            return value;
+        }
+
+        public void set(boolean value) {
+            this.value = value;
+        }
+
+        protected boolean notifyListeners() {
+            if (lastNotifiedValue == value) {
+                return false;
+            }
+
+            lastNotifiedValue = value;
+            pseudoClassStateChanged(getPseudoClass(), value);
+
+            PlatformLogger logger = Logging.getFocusLogger();
+            if (logger.isLoggable(Level.FINE)) {
+                logger.fine(this + " " + getName() + "=" + get());
+            }
+
+            fireValueChangedEvent();
+            return true;
+        }
+    }
+
+    /**
+     * Sets the value of the {@link #focused} and {@link #focusVisible} properties
+     * without firing change events. The value of {@link #focusWithin} is set
+     * by the implementation of {@link #focused}.
+     */
+    final void setFocusQuietly(boolean focused, boolean focusVisible) {
+        this.focused.set(focused);
+        this.focusVisible.set(focused && focusVisible);
+    }
+
+    /**
+     * Fires change notifications if the value of {@link #focused}, {@link #focusVisible}
+     * or {@link #focusWithin} has changed. Change notifications for {@link #focusWithin}
+     * are fired on the current node and on all of its parents, if necessary.
+     */
+    final void notifyFocusListeners() {
+        focused.notifyListeners();
+        focusVisible.notifyListeners();
+
+        Node node = this;
+        do {
+            node.focusWithin.notifyListeners();
+            node = node.getParent();
+        } while (node != null);
+    }
+
+    /**
+     * Called when the current node was removed from the scene graph.
+     * If the current node has the focusWithin bit, we also need to clear the focusWithin bits of this
+     * node's parents. Note that a scene graph can have more than a single focused node, for example when
+     * a PopupWindow is used to present a branch of the scene graph. Since we need to preserve multi-level
+     * focus, we need to stop clearing the focusWithin bits if we encounter a parent node that is focused.
+     */
+    private void clearParentsFocusWithin(Node oldParent) {
+        if (oldParent != null && focusWithin.get()) {
+            Node node = oldParent;
+            while (node != null && !node.focused.get()) {
+                node.focusWithin.set(false);
+                node = node.getParent();
+            }
+
+            oldParent.notifyFocusListeners();
         }
     }
 
@@ -8173,29 +8212,107 @@ public abstract class Node implements EventTarget, Styleable {
      * @see #requestFocus()
      * @defaultValue false
      */
-    private FocusedProperty focused;
+    private final FocusPropertyBase focused = new FocusPropertyBase() {
+        @Override
+        protected PseudoClass getPseudoClass() {
+            return FOCUSED_PSEUDOCLASS_STATE;
+        }
+
+        @Override
+        public String getName() {
+            return "focused";
+        }
+
+        @Override
+        protected boolean notifyListeners() {
+            if (super.notifyListeners()) {
+                notifyAccessibleAttributeChanged(AccessibleAttribute.FOCUSED);
+                return true;
+            }
+            return false;
+        }
+
+        @Override
+        public void set(boolean value) {
+            if (get() != value) {
+                super.set(value);
+
+                Node node = Node.this;
+                do {
+                    node.focusWithin.set(value);
+                    node = node.getParent();
+                } while (node != null && !node.focused.get());
+            }
+        }
+    };
 
     protected final void setFocused(boolean value) {
-        FocusedProperty fp = focusedPropertyImpl();
-        if (fp.value != value) {
-            fp.store(value);
-            fp.notifyListeners();
-        }
+        setFocusQuietly(value, false);
+        notifyFocusListeners();
     }
 
     public final boolean isFocused() {
-        return focused == null ? false : focused.get();
+        return focused.get();
     }
 
     public final ReadOnlyBooleanProperty focusedProperty() {
-        return focusedPropertyImpl();
+        return focused;
     }
 
-    private FocusedProperty focusedPropertyImpl() {
-        if (focused == null) {
-            focused = new FocusedProperty();
+    /**
+     * Indicates whether this {@code Node} should visibly indicate focus.
+     * This flag is set when the node acquires input focus via keyboard navigation,
+     * and it is cleared when the node loses focus or when {@link #requestFocus()}
+     * is called.
+     *
+     * @defaultValue false
+     * @since 19
+     */
+    final FocusPropertyBase focusVisible = new FocusPropertyBase() {
+        @Override
+        protected PseudoClass getPseudoClass() {
+            return FOCUS_VISIBLE_PSEUDOCLASS_STATE;
         }
-        return focused;
+
+        @Override
+        public String getName() {
+            return "focusVisible";
+        }
+    };
+
+    public final boolean isFocusVisible() {
+        return focusVisible.get();
+    }
+
+    public final ReadOnlyBooleanProperty focusVisibleProperty() {
+        return focusVisible;
+    }
+
+    /**
+     * Indicates whether this {@code Node} or any of its descendants currently
+     * has the input focus.
+     *
+     * @defaultValue false
+     * @since 19
+     */
+    private final FocusPropertyBase focusWithin = new FocusPropertyBase() {
+        @Override
+        protected PseudoClass getPseudoClass() {
+            return FOCUS_WITHIN_PSEUDOCLASS_STATE;
+        }
+
+        @Override
+        public String getName() {
+            return "focusWithin";
+        }
+    };
+
+    public final boolean isFocusWithin() {
+        return focusWithin.get();
+    }
+
+    public final ReadOnlyBooleanProperty focusWithinProperty() {
+        return focusWithin;
     }
 
     /**
@@ -8284,10 +8401,21 @@ public abstract class Node implements EventTarget, Styleable {
      * node. The focus owner will not actually have the input focus, however,
      * unless the scene belongs to a {@code Stage} that is both visible
      * and active.
+     * <p>This method will clear the {@link #focusVisible} flag.
      */
     public void requestFocus() {
         if (getScene() != null) {
-            getScene().requestFocus(this);
+            getScene().requestFocus(this, false);
+        }
+    }
+
+    /**
+     * Requests focus as if by calling {@link #requestFocus()}, and additionally
+     * sets the {@link #focusVisible} flag.
+     */
+    private void requestFocusVisible() {
+        if (getScene() != null) {
+            getScene().requestFocus(this, true);
         }
     }
 
@@ -8297,11 +8425,11 @@ public abstract class Node implements EventTarget, Styleable {
      * However, the node must be part of a scene, otherwise this request
      * is ignored.
      */
-    final boolean traverse(Direction dir) {
+    final boolean traverse(Direction dir, TraversalMethod method) {
         if (getScene() == null) {
             return false;
         }
-        return getScene().traverse(this, dir);
+        return getScene().traverse(this, dir, method);
     }
 
     ////////////////////////////
@@ -8696,7 +8824,7 @@ public abstract class Node implements EventTarget, Styleable {
     private void initializeInternalEventDispatcher() {
         if (internalEventDispatcher == null) {
             internalEventDispatcher = createInternalEventDispatcher();
-            eventDispatcher = new SimpleObjectProperty<EventDispatcher>(
+            eventDispatcher = new SimpleObjectProperty<>(
                                           Node.this,
                                           "eventDispatcher",
                                           internalEventDispatcher);
@@ -8872,7 +9000,7 @@ public abstract class Node implements EventTarget, Styleable {
      private static class StyleableProperties {
 
         private static final CssMetaData<Node,Cursor> CURSOR =
-            new CssMetaData<Node,Cursor>("-fx-cursor", CursorConverter.getInstance()) {
+            new CssMetaData<>("-fx-cursor", CursorConverter.getInstance()) {
 
                 @Override
                 public boolean isSettable(Node node) {
@@ -8893,7 +9021,7 @@ public abstract class Node implements EventTarget, Styleable {
 
             };
         private static final CssMetaData<Node,Effect> EFFECT =
-            new CssMetaData<Node,Effect>("-fx-effect", EffectConverter.getInstance()) {
+            new CssMetaData<>("-fx-effect", EffectConverter.getInstance()) {
 
                 @Override
                 public boolean isSettable(Node node) {
@@ -8906,7 +9034,7 @@ public abstract class Node implements EventTarget, Styleable {
                 }
             };
         private static final CssMetaData<Node,Boolean> FOCUS_TRAVERSABLE =
-            new CssMetaData<Node,Boolean>("-fx-focus-traversable",
+            new CssMetaData<>("-fx-focus-traversable",
                 BooleanConverter.getInstance(), Boolean.FALSE) {
 
                 @Override
@@ -8928,7 +9056,7 @@ public abstract class Node implements EventTarget, Styleable {
 
             };
         private static final CssMetaData<Node,Number> OPACITY =
-            new CssMetaData<Node,Number>("-fx-opacity",
+            new CssMetaData<>("-fx-opacity",
                 SizeConverter.getInstance(), 1.0) {
 
                 @Override
@@ -8942,7 +9070,7 @@ public abstract class Node implements EventTarget, Styleable {
                 }
             };
         private static final CssMetaData<Node,BlendMode> BLEND_MODE =
-            new CssMetaData<Node,BlendMode>("-fx-blend-mode", new EnumConverter<BlendMode>(BlendMode.class)) {
+            new CssMetaData<>("-fx-blend-mode", new EnumConverter<>(BlendMode.class)) {
 
                 @Override
                 public boolean isSettable(Node node) {
@@ -8955,7 +9083,7 @@ public abstract class Node implements EventTarget, Styleable {
                 }
             };
         private static final CssMetaData<Node,Number> ROTATE =
-            new CssMetaData<Node,Number>("-fx-rotate",
+            new CssMetaData<>("-fx-rotate",
                 SizeConverter.getInstance(), 0.0) {
 
                 @Override
@@ -8971,7 +9099,7 @@ public abstract class Node implements EventTarget, Styleable {
                 }
             };
         private static final CssMetaData<Node,Number> SCALE_X =
-            new CssMetaData<Node,Number>("-fx-scale-x",
+            new CssMetaData<>("-fx-scale-x",
                 SizeConverter.getInstance(), 1.0) {
 
                 @Override
@@ -8987,7 +9115,7 @@ public abstract class Node implements EventTarget, Styleable {
                 }
             };
         private static final CssMetaData<Node,Number> SCALE_Y =
-            new CssMetaData<Node,Number>("-fx-scale-y",
+            new CssMetaData<>("-fx-scale-y",
                 SizeConverter.getInstance(), 1.0) {
 
                 @Override
@@ -9003,7 +9131,7 @@ public abstract class Node implements EventTarget, Styleable {
                 }
             };
         private static final CssMetaData<Node,Number> SCALE_Z =
-            new CssMetaData<Node,Number>("-fx-scale-z",
+            new CssMetaData<>("-fx-scale-z",
                 SizeConverter.getInstance(), 1.0) {
 
                 @Override
@@ -9019,7 +9147,7 @@ public abstract class Node implements EventTarget, Styleable {
                 }
             };
         private static final CssMetaData<Node,Number> TRANSLATE_X =
-            new CssMetaData<Node,Number>("-fx-translate-x",
+            new CssMetaData<>("-fx-translate-x",
                 SizeConverter.getInstance(), 0.0) {
 
                 @Override
@@ -9035,7 +9163,7 @@ public abstract class Node implements EventTarget, Styleable {
                 }
             };
         private static final CssMetaData<Node,Number> TRANSLATE_Y =
-            new CssMetaData<Node,Number>("-fx-translate-y",
+            new CssMetaData<>("-fx-translate-y",
                 SizeConverter.getInstance(), 0.0) {
 
                 @Override
@@ -9051,7 +9179,7 @@ public abstract class Node implements EventTarget, Styleable {
                 }
             };
         private static final CssMetaData<Node,Number> TRANSLATE_Z =
-            new CssMetaData<Node,Number>("-fx-translate-z",
+            new CssMetaData<>("-fx-translate-z",
                 SizeConverter.getInstance(), 0.0) {
 
                 @Override
@@ -9067,7 +9195,7 @@ public abstract class Node implements EventTarget, Styleable {
                 }
             };
          private static final CssMetaData<Node, Number> VIEW_ORDER
-                 = new CssMetaData<Node, Number>("-fx-view-order",
+                 = new CssMetaData<>("-fx-view-order",
                          SizeConverter.getInstance(), 0.0) {
 
                      @Override
@@ -9083,7 +9211,7 @@ public abstract class Node implements EventTarget, Styleable {
                      }
                  };
         private static final CssMetaData<Node,Boolean> VISIBILITY =
-            new CssMetaData<Node,Boolean>("visibility",
+            new CssMetaData<>("visibility",
                 new StyleConverter<String,Boolean>() {
 
                     @Override
@@ -9107,7 +9235,7 @@ public abstract class Node implements EventTarget, Styleable {
                 }
             };
         private static final CssMetaData<Node,Boolean> MANAGED =
-            new CssMetaData<Node,Boolean>("-fx-managed",
+            new CssMetaData<>("-fx-managed",
                     BooleanConverter.getInstance(), Boolean.TRUE) {
 
                 @Override
@@ -9126,7 +9254,7 @@ public abstract class Node implements EventTarget, Styleable {
          static {
 
              final List<CssMetaData<? extends Styleable, ?>> styleables =
-                     new ArrayList<CssMetaData<? extends Styleable, ?>>();
+                     new ArrayList<>();
              styleables.add(CURSOR);
              styleables.add(EFFECT);
              styleables.add(FOCUS_TRAVERSABLE);
@@ -9148,8 +9276,9 @@ public abstract class Node implements EventTarget, Styleable {
     }
 
     /**
-     * @return The CssMetaData associated with this class, which may include the
-     * CssMetaData of its superclasses.
+     * Gets the {@code CssMetaData} associated with this class, which may include the
+     * {@code CssMetaData} of its superclasses.
+     * @return the {@code CssMetaData}
      * @since JavaFX 8.0
      */
     public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
@@ -9607,6 +9736,8 @@ public abstract class Node implements EventTarget, Styleable {
     private static final PseudoClass PRESSED_PSEUDOCLASS_STATE = PseudoClass.getPseudoClass("pressed");
     private static final PseudoClass DISABLED_PSEUDOCLASS_STATE = PseudoClass.getPseudoClass("disabled");
     private static final PseudoClass FOCUSED_PSEUDOCLASS_STATE = PseudoClass.getPseudoClass("focused");
+    private static final PseudoClass FOCUS_VISIBLE_PSEUDOCLASS_STATE = PseudoClass.getPseudoClass("focus-visible");
+    private static final PseudoClass FOCUS_WITHIN_PSEUDOCLASS_STATE = PseudoClass.getPseudoClass("focus-within");
     private static final PseudoClass SHOW_MNEMONICS_PSEUDOCLASS_STATE = PseudoClass.getPseudoClass("show-mnemonics");
 
     private static abstract class LazyTransformProperty
@@ -9752,7 +9883,7 @@ public abstract class Node implements EventTarget, Styleable {
 
     public final ObjectProperty<AccessibleRole> accessibleRoleProperty() {
         if (accessibleRole == null) {
-            accessibleRole = new SimpleObjectProperty<AccessibleRole>(this, "accessibleRole", AccessibleRole.NODE);
+            accessibleRole = new SimpleObjectProperty<>(this, "accessibleRole", AccessibleRole.NODE);
         }
         return accessibleRole;
     }
@@ -9852,21 +9983,21 @@ public abstract class Node implements EventTarget, Styleable {
         ObjectProperty<String> accessibleRoleDescription;
         ObjectProperty<String> getAccessibleRoleDescription() {
             if (accessibleRoleDescription == null) {
-                accessibleRoleDescription = new SimpleObjectProperty<String>(Node.this, "accessibleRoleDescription", null);
+                accessibleRoleDescription = new SimpleObjectProperty<>(Node.this, "accessibleRoleDescription", null);
             }
             return accessibleRoleDescription;
         }
         ObjectProperty<String> accessibleText;
         ObjectProperty<String> getAccessibleText() {
             if (accessibleText == null) {
-                accessibleText = new SimpleObjectProperty<String>(Node.this, "accessibleText", null);
+                accessibleText = new SimpleObjectProperty<>(Node.this, "accessibleText", null);
             }
             return accessibleText;
         }
         ObjectProperty<String> accessibleHelp;
         ObjectProperty<String> getAccessibleHelp() {
             if (accessibleHelp == null) {
-                accessibleHelp = new SimpleObjectProperty<String>(Node.this, "accessibleHelp", null);
+                accessibleHelp = new SimpleObjectProperty<>(Node.this, "accessibleHelp", null);
             }
             return accessibleHelp;
         }

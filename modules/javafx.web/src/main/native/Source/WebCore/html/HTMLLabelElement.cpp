@@ -32,6 +32,7 @@
 #include "FormAssociatedElement.h"
 #include "HTMLFormControlElement.h"
 #include "HTMLNames.h"
+#include "SelectionRestorationMode.h"
 #include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
@@ -42,7 +43,7 @@ using namespace HTMLNames;
 
 static LabelableElement* firstElementWithIdIfLabelable(TreeScope& treeScope, const AtomString& id)
 {
-    auto element = makeRefPtr(treeScope.getElementById(id));
+    RefPtr element = treeScope.getElementById(id);
     if (!is<LabelableElement>(element))
         return nullptr;
 
@@ -98,13 +99,13 @@ void HTMLLabelElement::setActive(bool down, bool pause, Style::InvalidationScope
         element->setActive(down, pause);
 }
 
-void HTMLLabelElement::setHovered(bool over, Style::InvalidationScope invalidationScope)
+void HTMLLabelElement::setHovered(bool over, Style::InvalidationScope invalidationScope, HitTestRequest request)
 {
     if (over == hovered())
         return;
 
     // Update our status first.
-    HTMLElement::setHovered(over, invalidationScope);
+    HTMLElement::setHovered(over, invalidationScope, request);
 
     // Also update our corresponding control.
     if (auto element = control())
@@ -156,7 +157,7 @@ void HTMLLabelElement::defaultEventHandler(Event& event)
 
         document().updateLayoutIgnorePendingStylesheets();
         if (control->isMouseFocusable())
-            control->focus();
+            control->focus({ { }, { }, { }, FocusTrigger::Click, { } });
 
         processingClick = false;
 
@@ -172,21 +173,21 @@ bool HTMLLabelElement::willRespondToMouseClickEvents()
     return (element && element->willRespondToMouseClickEvents()) || HTMLElement::willRespondToMouseClickEvents();
 }
 
-void HTMLLabelElement::focus(SelectionRestorationMode restorationMode, FocusDirection direction)
+void HTMLLabelElement::focus(const FocusOptions& options)
 {
     Ref<HTMLLabelElement> protectedThis(*this);
     if (document().haveStylesheetsLoaded()) {
         document().updateLayout();
         if (isFocusable()) {
             // The value of restorationMode is not used for label elements as it doesn't override updateFocusAppearance.
-            Element::focus(restorationMode, direction);
+            Element::focus(options);
             return;
         }
     }
 
     // To match other browsers, always restore previous selection.
     if (auto element = control())
-        element->focus(SelectionRestorationMode::RestoreOrSelectAll, direction);
+        element->focus({ SelectionRestorationMode::RestoreOrSelectAll, options.direction });
 }
 
 bool HTMLLabelElement::accessKeyAction(bool sendMouseEvents)

@@ -75,7 +75,7 @@ bool ExtensionsGLOpenGLES::isEnabled(const String& name)
 
     // For GL_EXT_robustness, check that the context supports robust access.
     if (name == "GL_EXT_robustness")
-        return m_context->getInteger(ExtensionsGL::CONTEXT_ROBUST_ACCESS) == GL_TRUE;
+        return m_context->getInteger(GraphicsContextGL::CONTEXT_ROBUST_ACCESS) == GL_TRUE;
 
     return true;
 }
@@ -174,7 +174,7 @@ int ExtensionsGLOpenGLES::getGraphicsResetStatusARB()
     if (m_contextResetStatus != GL_NO_ERROR)
         return m_contextResetStatus;
     if (m_glGetGraphicsResetStatusEXT) {
-        int reasonForReset = UNKNOWN_CONTEXT_RESET_ARB;
+        int reasonForReset = GraphicsContextGL::UNKNOWN_CONTEXT_RESET_ARB;
         if (m_context->makeContextCurrent())
             reasonForReset = m_glGetGraphicsResetStatusEXT();
         if (reasonForReset != GL_NO_ERROR)
@@ -270,8 +270,29 @@ void ExtensionsGLOpenGLES::vertexAttribDivisorANGLE(GCGLuint index, GCGLuint div
     m_glVertexAttribDivisorANGLE(index, divisor);
 }
 
-bool ExtensionsGLOpenGLES::supportsExtension(const String& name)
+bool ExtensionsGLOpenGLES::platformSupportsExtension(const String& name)
 {
+    if (name == "GL_ANGLE_instanced_arrays") {
+        auto majorVersion = []() {
+            GLint version = 0;
+            ::glGetIntegerv(GL_MAJOR_VERSION, &version);
+            return version;
+        };
+
+        if (m_availableExtensions.contains(name)) {
+            m_glVertexAttribDivisorANGLE = reinterpret_cast<PFNGLVERTEXATTRIBDIVISORANGLEPROC>(eglGetProcAddress("glVertexAttribDivisorANGLE"));
+            m_glDrawArraysInstancedANGLE = reinterpret_cast<PFNGLDRAWARRAYSINSTANCEDANGLEPROC >(eglGetProcAddress("glDrawArraysInstancedANGLE"));
+            m_glDrawElementsInstancedANGLE = reinterpret_cast<PFNGLDRAWELEMENTSINSTANCEDANGLEPROC >(eglGetProcAddress("glDrawElementsInstancedANGLE"));
+            m_supportsANGLEinstancedArrays = true;
+        } else if (majorVersion() >= 3 || (m_availableExtensions.contains("GL_EXT_instanced_arrays") && m_availableExtensions.contains("GL_EXT_draw_instanced"))) {
+            m_glVertexAttribDivisorANGLE = ::glVertexAttribDivisor;
+            m_glDrawArraysInstancedANGLE = ::glDrawArraysInstanced;
+            m_glDrawElementsInstancedANGLE = ::glDrawElementsInstanced;
+            m_supportsANGLEinstancedArrays = true;
+        }
+        return m_supportsANGLEinstancedArrays;
+    }
+
     if (m_availableExtensions.contains(name)) {
         if (!m_supportsOESvertexArrayObject && name == "GL_OES_vertex_array_object") {
             m_glBindVertexArrayOES = reinterpret_cast<PFNGLBINDVERTEXARRAYOESPROC>(eglGetProcAddress("glBindVertexArrayOES"));
@@ -288,11 +309,6 @@ bool ExtensionsGLOpenGLES::supportsExtension(const String& name)
             m_glReadnPixelsEXT = reinterpret_cast<PFNGLREADNPIXELSEXTPROC>(eglGetProcAddress("glReadnPixelsEXT"));
             m_glGetnUniformfvEXT = reinterpret_cast<PFNGLGETNUNIFORMFVEXTPROC>(eglGetProcAddress("glGetnUniformfvEXT"));
             m_glGetnUniformivEXT = reinterpret_cast<PFNGLGETNUNIFORMIVEXTPROC>(eglGetProcAddress("glGetnUniformivEXT"));
-        } else if (!m_supportsANGLEinstancedArrays && name == "GL_ANGLE_instanced_arrays") {
-            m_glVertexAttribDivisorANGLE = reinterpret_cast<PFNGLVERTEXATTRIBDIVISORANGLEPROC>(eglGetProcAddress("glVertexAttribDivisorANGLE"));
-            m_glDrawArraysInstancedANGLE = reinterpret_cast<PFNGLDRAWARRAYSINSTANCEDANGLEPROC >(eglGetProcAddress("glDrawArraysInstancedANGLE"));
-            m_glDrawElementsInstancedANGLE = reinterpret_cast<PFNGLDRAWELEMENTSINSTANCEDANGLEPROC >(eglGetProcAddress("glDrawElementsInstancedANGLE"));
-            m_supportsANGLEinstancedArrays = true;
         } else if (name == "GL_EXT_draw_buffers") {
             // FIXME: implement the support.
             return false;

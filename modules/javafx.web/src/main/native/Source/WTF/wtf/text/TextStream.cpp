@@ -53,37 +53,37 @@ TextStream& TextStream::operator<<(char c)
 
 TextStream& TextStream::operator<<(int i)
 {
-    m_text.appendNumber(i);
+    m_text.append(i);
     return *this;
 }
 
 TextStream& TextStream::operator<<(unsigned i)
 {
-    m_text.appendNumber(i);
+    m_text.append(i);
     return *this;
 }
 
 TextStream& TextStream::operator<<(long i)
 {
-    m_text.appendNumber(i);
+    m_text.append(i);
     return *this;
 }
 
 TextStream& TextStream::operator<<(unsigned long i)
 {
-    m_text.appendNumber(i);
+    m_text.append(i);
     return *this;
 }
 
 TextStream& TextStream::operator<<(long long i)
 {
-    m_text.appendNumber(i);
+    m_text.append(i);
     return *this;
 }
 
 TextStream& TextStream::operator<<(unsigned long long i)
 {
-    m_text.appendNumber(i);
+    m_text.append(i);
     return *this;
 }
 
@@ -118,7 +118,19 @@ TextStream& TextStream::operator<<(const void* p)
     return *this << buffer;
 }
 
+TextStream& TextStream::operator<<(const AtomString& string)
+{
+    m_text.append(string);
+    return *this;
+}
+
 TextStream& TextStream::operator<<(const String& string)
+{
+    m_text.append(string);
+    return *this;
+}
+
+TextStream& TextStream::operator<<(StringView string)
 {
     m_text.append(string);
     return *this;
@@ -131,7 +143,7 @@ TextStream& TextStream::operator<<(const FormatNumberRespectingIntegers& numberT
         return *this;
     }
 
-    m_text.appendNumber(static_cast<int>(numberToFormat.value));
+    m_text.append(static_cast<int>(numberToFormat.value));
     return *this;
 }
 

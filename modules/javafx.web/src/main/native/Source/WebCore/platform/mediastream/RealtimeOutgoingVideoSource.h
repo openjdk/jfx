@@ -33,6 +33,7 @@
 #include "LibWebRTCMacros.h"
 #include "MediaStreamTrackPrivate.h"
 #include <Timer.h>
+#include <wtf/Lock.h>
 
 ALLOW_UNUSED_PARAMETERS_BEGIN
 
@@ -41,7 +42,6 @@ ALLOW_UNUSED_PARAMETERS_BEGIN
 ALLOW_UNUSED_PARAMETERS_END
 
 #include <wtf/LoggerHelper.h>
-#include <wtf/Optional.h>
 #include <wtf/ThreadSafeRefCounted.h>
 
 namespace WebCore {
@@ -135,14 +135,14 @@ private:
     void trackEnded(MediaStreamTrackPrivate&) final { }
 
     // RealtimeMediaSource::VideoSampleObserver API
-    void videoSampleAvailable(MediaSample&) override { }
+    void videoSampleAvailable(MediaSample&, VideoSampleMetadata) override { }
 
     Ref<MediaStreamTrackPrivate> m_videoSource;
     Timer m_blackFrameTimer;
     rtc::scoped_refptr<webrtc::VideoFrameBuffer> m_blackFrame;
 
-    mutable RecursiveLock m_sinksLock;
-    HashSet<rtc::VideoSinkInterface<webrtc::VideoFrame>*> m_sinks;
+    mutable Lock m_sinksLock;
+    HashSet<rtc::VideoSinkInterface<webrtc::VideoFrame>*> m_sinks WTF_GUARDED_BY_LOCK(m_sinksLock);
     bool m_areSinksAskingToApplyRotation { false };
 
     bool m_enabled { true };

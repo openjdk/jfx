@@ -32,7 +32,6 @@
 #include "CSSParserToken.h"
 #include "CSSParserTokenRange.h"
 #include "CSSRegisteredCustomProperty.h"
-#include <wtf/HashSet.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
@@ -48,7 +47,7 @@ public:
         return adoptRef(*new CSSVariableData(range));
     }
 
-    CSSParserTokenRange tokenRange() { return m_tokens; }
+    CSSParserTokenRange tokenRange() const { return m_tokens; }
 
     const Vector<CSSParserToken>& tokens() const { return m_tokens; }
 

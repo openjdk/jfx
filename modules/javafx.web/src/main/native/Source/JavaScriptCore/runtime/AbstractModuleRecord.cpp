@@ -29,12 +29,12 @@
 #include "Error.h"
 #include "JSCInlines.h"
 #include "JSInternalFieldObjectImplInlines.h"
-#include "JSMap.h"
+#include "JSMapInlines.h"
 #include "JSModuleEnvironment.h"
 #include "JSModuleNamespaceObject.h"
 #include "JSModuleRecord.h"
+#include "VMTrapsInlines.h"
 #include "WebAssemblyModuleRecord.h"
-#include <wtf/Optional.h>
 
 namespace JSC {
 namespace AbstractModuleRecordInternal {
@@ -59,9 +59,7 @@ void AbstractModuleRecord::finishCreation(JSGlobalObject* globalObject, VM& vm)
     for (unsigned index = 0; index < values.size(); ++index)
         Base::internalField(index).set(vm, this, values[index]);
 
-    auto scope = DECLARE_THROW_SCOPE(vm);
-    JSMap* map = JSMap::create(globalObject, vm, globalObject->mapStructure());
-    scope.releaseAssertNoException();
+    JSMap* map = JSMap::create(vm, globalObject->mapStructure());
     m_dependenciesMap.set(vm, this, map);
     putDirect(vm, Identifier::fromString(vm, "dependenciesMap"_s), m_dependenciesMap.get());
 }
@@ -101,20 +99,20 @@ void AbstractModuleRecord::addExportEntry(const ExportEntry& entry)
     ASSERT_UNUSED(isNewEntry, isNewEntry); // This is guaranteed by the parser.
 }
 
-auto AbstractModuleRecord::tryGetImportEntry(UniquedStringImpl* localName) -> Optional<ImportEntry>
+auto AbstractModuleRecord::tryGetImportEntry(UniquedStringImpl* localName) -> std::optional<ImportEntry>
 {
     const auto iterator = m_importEntries.find(localName);
     if (iterator == m_importEntries.end())
-        return WTF::nullopt;
-    return Optional<ImportEntry>(iterator->value);
+        return std::nullopt;
+    return std::optional<ImportEntry>(iterator->value);
 }
 
-auto AbstractModuleRecord::tryGetExportEntry(UniquedStringImpl* exportName) -> Optional<ExportEntry>
+auto AbstractModuleRecord::tryGetExportEntry(UniquedStringImpl* exportName) -> std::optional<ExportEntry>
 {
     const auto iterator = m_exportEntries.find(exportName);
     if (iterator == m_exportEntries.end())
-        return WTF::nullopt;
-    return Optional<ExportEntry>(iterator->value);
+        return std::nullopt;
+    return std::optional<ExportEntry>(iterator->value);
 }
 
 auto AbstractModuleRecord::ExportEntry::createLocal(const Identifier& exportName, const Identifier& localName) -> ExportEntry
@@ -154,7 +152,7 @@ AbstractModuleRecord* AbstractModuleRecord::hostResolveImportedModule(JSGlobalOb
     JSValue moduleNameValue = identifierToJSValue(vm, moduleName);
     JSValue entry = m_dependenciesMap->JSMap::get(globalObject, moduleNameValue);
     RETURN_IF_EXCEPTION(scope, nullptr);
-    RELEASE_AND_RETURN(scope, jsCast<AbstractModuleRecord*>(entry.get(globalObject, Identifier::fromString(vm, "module"))));
+    RELEASE_AND_RETURN(scope, entry.getAs<AbstractModuleRecord*>(globalObject, Identifier::fromString(vm, "module")));
 }
 
 auto AbstractModuleRecord::resolveImport(JSGlobalObject* globalObject, const Identifier& localName) -> Resolution
@@ -162,7 +160,7 @@ auto AbstractModuleRecord::resolveImport(JSGlobalObject* globalObject, const Ide
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    Optional<ImportEntry> optionalImportEntry = tryGetImportEntry(localName.impl());
+    std::optional<ImportEntry> optionalImportEntry = tryGetImportEntry(localName.impl());
     if (!optionalImportEntry)
         return Resolution::notFound();
 
@@ -241,12 +239,12 @@ inline bool AbstractModuleRecord::ResolveQuery::Hash::equal(const ResolveQuery& 
     return lhs.moduleRecord == rhs.moduleRecord && lhs.exportName == rhs.exportName;
 }
 
-auto AbstractModuleRecord::tryGetCachedResolution(UniquedStringImpl* exportName) -> Optional<Resolution>
+auto AbstractModuleRecord::tryGetCachedResolution(UniquedStringImpl* exportName) -> std::optional<Resolution>
 {
     const auto iterator = m_resolutionCache.find(exportName);
     if (iterator == m_resolutionCache.end())
-        return WTF::nullopt;
-    return Optional<Resolution>(iterator->value);
+        return std::nullopt;
+    return std::optional<Resolution>(iterator->value);
 }
 
 void AbstractModuleRecord::cacheResolution(UniquedStringImpl* exportName, const Resolution& resolution)
@@ -603,14 +601,14 @@ auto AbstractModuleRecord::resolveExportImpl(JSGlobalObject* globalObject, const
 
             //  4. Once we follow star links, we should not retrieve the result from the cache and should not cache the result.
             if (!foundStarLinks) {
-                if (Optional<Resolution> cachedResolution = moduleRecord->tryGetCachedResolution(query.exportName.get())) {
+                if (std::optional<Resolution> cachedResolution = moduleRecord->tryGetCachedResolution(query.exportName.get())) {
                     if (!mergeToCurrentTop(*cachedResolution))
                         return Resolution::ambiguous();
                     continue;
                 }
             }
 
-            const Optional<ExportEntry> optionalExportEntry = moduleRecord->tryGetExportEntry(query.exportName.get());
+            const std::optional<ExportEntry> optionalExportEntry = moduleRecord->tryGetExportEntry(query.exportName.get());
             if (!optionalExportEntry) {
                 // If there is no matched exported binding in the current module,
                 // we need to look into the stars.
@@ -710,7 +708,7 @@ auto AbstractModuleRecord::resolveExportImpl(JSGlobalObject* globalObject, const
 auto AbstractModuleRecord::resolveExport(JSGlobalObject* globalObject, const Identifier& exportName) -> Resolution
 {
     // Look up the cached resolution first before entering the resolving loop, since the loop setup takes some cost.
-    if (Optional<Resolution> cachedResolution = tryGetCachedResolution(exportName.impl()))
+    if (std::optional<Resolution> cachedResolution = tryGetCachedResolution(exportName.impl()))
         return *cachedResolution;
     return resolveExportImpl(globalObject, ResolveQuery(this, exportName.impl()));
 }
@@ -820,8 +818,10 @@ Synchronousness AbstractModuleRecord::link(JSGlobalObject* globalObject, JSValue
     if (auto* jsModuleRecord = jsDynamicCast<JSModuleRecord*>(vm, this))
         return jsModuleRecord->link(globalObject, scriptFetcher);
 #if ENABLE(WEBASSEMBLY)
+    // WebAssembly module imports and exports are set up in the module record's
+    // evaluate() step. At this point, imports are just initialized as TDZ.
     if (auto* wasmModuleRecord = jsDynamicCast<WebAssemblyModuleRecord*>(vm, this))
-        return wasmModuleRecord->link(globalObject, scriptFetcher, nullptr, Wasm::CreationMode::FromModuleLoader);
+        return wasmModuleRecord->link(globalObject, scriptFetcher);
 #endif
     RELEASE_ASSERT_NOT_REACHED();
     return Synchronousness::Sync;
@@ -830,11 +830,21 @@ Synchronousness AbstractModuleRecord::link(JSGlobalObject* globalObject, JSValue
 JS_EXPORT_PRIVATE JSValue AbstractModuleRecord::evaluate(JSGlobalObject* globalObject, JSValue sentValue, JSValue resumeMode)
 {
     VM& vm = globalObject->vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
     if (auto* jsModuleRecord = jsDynamicCast<JSModuleRecord*>(vm, this))
-        return jsModuleRecord->evaluate(globalObject, sentValue, resumeMode);
+        RELEASE_AND_RETURN(scope, jsModuleRecord->evaluate(globalObject, sentValue, resumeMode));
 #if ENABLE(WEBASSEMBLY)
-    if (auto* wasmModuleRecord = jsDynamicCast<WebAssemblyModuleRecord*>(vm, this))
-        return wasmModuleRecord->evaluate(globalObject);
+    if (auto* wasmModuleRecord = jsDynamicCast<WebAssemblyModuleRecord*>(vm, this)) {
+        // WebAssembly imports need to be supplied during evaluation so that, e.g.,
+        // JS module exports are actually available to be read and installed as import
+        // bindings.
+        wasmModuleRecord->initializeImports(globalObject, nullptr, Wasm::CreationMode::FromModuleLoader);
+        RETURN_IF_EXCEPTION(scope, jsUndefined());
+        wasmModuleRecord->initializeExports(globalObject);
+        RETURN_IF_EXCEPTION(scope, jsUndefined());
+        RELEASE_AND_RETURN(scope, wasmModuleRecord->evaluate(globalObject));
+    }
 #endif
     RELEASE_ASSERT_NOT_REACHED();
     return jsUndefined();

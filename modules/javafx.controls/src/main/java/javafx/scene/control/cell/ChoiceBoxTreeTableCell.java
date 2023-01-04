@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -162,7 +162,7 @@ public class ChoiceBoxTreeTableCell<S,T> extends TreeTableCell<S,T> {
     public static <S,T> Callback<TreeTableColumn<S,T>, TreeTableCell<S,T>> forTreeTableColumn(
             final StringConverter<T> converter,
             final ObservableList<T> items) {
-        return list -> new ChoiceBoxTreeTableCell<S,T>(converter, items);
+        return list -> new ChoiceBoxTreeTableCell<>(converter, items);
     }
 
 
@@ -259,7 +259,7 @@ public class ChoiceBoxTreeTableCell<S,T> extends TreeTableCell<S,T> {
 
     // --- converter
     private ObjectProperty<StringConverter<T>> converter =
-            new SimpleObjectProperty<StringConverter<T>>(this, "converter");
+            new SimpleObjectProperty<>(this, "converter");
 
     /**
      * The {@link StringConverter} property.
@@ -303,7 +303,8 @@ public class ChoiceBoxTreeTableCell<S,T> extends TreeTableCell<S,T> {
 
     /** {@inheritDoc} */
     @Override public void startEdit() {
-        if (! isEditable() || ! getTreeTableView().isEditable() || ! getTableColumn().isEditable()) {
+        super.startEdit();
+        if (!isEditing()) {
             return;
         }
 
@@ -313,7 +314,6 @@ public class ChoiceBoxTreeTableCell<S,T> extends TreeTableCell<S,T> {
 
         choiceBox.getSelectionModel().select(getItem());
 
-        super.startEdit();
         setText(null);
         setGraphic(choiceBox);
     }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -54,7 +54,7 @@ import javafx.beans.value.ObservableValue;
 public abstract class ObjectPropertyBase<T> extends ObjectProperty<T> {
 
     private T value;
-    private ObservableValue<? extends T> observable = null;;
+    private ObservableValue<? extends T> observable = null;
     private InvalidationListener listener = null;
     private boolean valid = true;
     private ExpressionHelper<T> helper = null;
@@ -202,7 +202,7 @@ public abstract class ObjectPropertyBase<T> extends ObjectProperty<T> {
         private final WeakReference<ObjectPropertyBase<?>> wref;
 
         public Listener(ObjectPropertyBase<?> ref) {
-            this.wref = new WeakReference<ObjectPropertyBase<?>>(ref);
+            this.wref = new WeakReference<>(ref);
         }
 
         @Override

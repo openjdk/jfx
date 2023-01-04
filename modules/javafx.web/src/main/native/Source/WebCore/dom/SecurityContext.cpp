@@ -29,6 +29,7 @@
 
 #include "ContentSecurityPolicy.h"
 #include "HTMLParserIdioms.h"
+#include "PolicyContainer.h"
 #include "SecurityOrigin.h"
 #include "SecurityOriginPolicy.h"
 #include <wtf/text/StringBuilder.h>
@@ -69,8 +70,10 @@ bool SecurityContext::isSecureTransitionTo(const URL& url) const
     return securityOriginPolicy()->origin().isSameOriginDomain(SecurityOrigin::create(url).get());
 }
 
-void SecurityContext::enforceSandboxFlags(SandboxFlags mask)
+void SecurityContext::enforceSandboxFlags(SandboxFlags mask, SandboxFlagsSource source)
 {
+    if (source != SandboxFlagsSource::CSP)
+        m_creationSandboxFlags |= mask;
     m_sandboxFlags |= mask;
 
     // The SandboxOrigin is stored redundantly in the security origin.
@@ -136,11 +139,10 @@ SandboxFlags SecurityContext::parseSandboxPolicy(const String& policy, String& i
             flags &= ~SandboxStorageAccessByUserActivation;
         else {
             if (numberOfTokenErrors)
-                tokenErrors.appendLiteral(", '");
+                tokenErrors.append(", '");
             else
                 tokenErrors.append('\'');
-            tokenErrors.append(sandboxToken);
-            tokenErrors.append('\'');
+            tokenErrors.append(sandboxToken, '\'');
             numberOfTokenErrors++;
         }
 
@@ -149,13 +151,27 @@ SandboxFlags SecurityContext::parseSandboxPolicy(const String& policy, String& i
 
     if (numberOfTokenErrors) {
         if (numberOfTokenErrors > 1)
-            tokenErrors.appendLiteral(" are invalid sandbox flags.");
+            tokenErrors.append(" are invalid sandbox flags.");
         else
-            tokenErrors.appendLiteral(" is an invalid sandbox flag.");
+            tokenErrors.append(" is an invalid sandbox flag.");
         invalidTokensErrorMessage = tokenErrors.toString();
     }
 
     return flags;
+}
+
+const CrossOriginOpenerPolicy& SecurityContext::crossOriginOpenerPolicy() const
+{
+    static NeverDestroyed<CrossOriginOpenerPolicy> coop;
+    return coop;
+}
+
+PolicyContainer SecurityContext::policyContainer() const
+{
+    return {
+        crossOriginEmbedderPolicy(),
+        crossOriginOpenerPolicy()
+    };
 }
 
 }

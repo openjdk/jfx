@@ -51,6 +51,10 @@ Content-Type
 Content-Range
 Cookie
 Cookie2
+Cross-Origin-Embedder-Policy
+Cross-Origin-Embedder-Policy-Report-Only
+Cross-Origin-Opener-Policy
+Cross-Origin-Opener-Policy-Report-Only
 Cross-Origin-Resource-Policy
 Date
 DNT
@@ -79,6 +83,7 @@ Range
 Referer
 Referrer-Policy
 Refresh
+Report-To
 Sec-WebSocket-Accept
 Sec-WebSocket-Extensions
 Sec-WebSocket-Key
@@ -87,6 +92,7 @@ Sec-WebSocket-Version
 Server-Timing
 Service-Worker
 Service-Worker-Allowed
+Service-Worker-Navigation-Preload
 Set-Cookie
 Set-Cookie2
 SourceMap

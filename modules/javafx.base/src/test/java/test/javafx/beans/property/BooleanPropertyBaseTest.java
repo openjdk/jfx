@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -32,7 +32,6 @@ import javafx.beans.property.SimpleBooleanProperty;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
-import static test.util.MoreAssertions.*;
 
 import test.javafx.beans.InvalidationListenerMock;
 import test.javafx.beans.value.ChangeListenerMock;
@@ -57,7 +56,7 @@ public class BooleanPropertyBaseTest {
     public void setUp() throws Exception {
         property = new BooleanPropertyMock();
         invalidationListener = new InvalidationListenerMock();
-        changeListener = new ChangeListenerMock<Boolean>(UNDEFINED);
+        changeListener = new ChangeListenerMock<>(UNDEFINED);
     }
 
     private void attachInvalidationListener() {
@@ -203,7 +202,7 @@ public class BooleanPropertyBaseTest {
         changeListener.check(property, false, true, 2);
     }
 
-    @Test
+    @Test(expected=RuntimeException.class)
     public void testSetBoundValue() {
         final BooleanProperty v = new SimpleBooleanProperty(true);
         property.bind(v);
@@ -278,7 +277,7 @@ public class BooleanPropertyBaseTest {
     @Test
     public void testLazyBind_generic() {
         attachInvalidationListener();
-        final ObservableObjectValueStub<Boolean> v = new ObservableObjectValueStub<Boolean>(true);
+        final ObservableObjectValueStub<Boolean> v = new ObservableObjectValueStub<>(true);
 
         property.bind(v);
         assertEquals(true, property.get());
@@ -316,7 +315,7 @@ public class BooleanPropertyBaseTest {
     @Test
     public void testEagerBind_generic() {
         attachChangeListener();
-        final ObservableObjectValueStub<Boolean> v = new ObservableObjectValueStub<Boolean>(true);
+        final ObservableObjectValueStub<Boolean> v = new ObservableObjectValueStub<>(true);
 
         property.bind(v);
         assertEquals(true, property.get());
@@ -351,7 +350,7 @@ public class BooleanPropertyBaseTest {
         changeListener.check(property, true, false, 1);
     }
 
-    @Test
+    @Test(expected=NullPointerException.class)
     public void testBindToNull() {
         var ex = assertThrows(NullPointerException.class, () -> property.bind(null));
         assertEquals(BeanErrors.BINDING_SOURCE_NULL.getMessage(property), ex.getMessage());

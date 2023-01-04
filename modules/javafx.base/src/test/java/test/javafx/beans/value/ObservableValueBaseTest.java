@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,7 +25,6 @@
 
 package test.javafx.beans.value;
 
-import test.javafx.beans.value.ChangeListenerMock;
 import javafx.beans.InvalidationListener;
 import test.javafx.beans.InvalidationListenerMock;
 import javafx.beans.Observable;
@@ -47,9 +46,9 @@ public class ObservableValueBaseTest {
 
     @Before
     public void setUp() {
-        valueModel = new ObservableObjectValueStub<Object>();
+        valueModel = new ObservableObjectValueStub<>();
         invalidationListener = new InvalidationListenerMock();
-        changeListener = new ChangeListenerMock<Object>(UNDEFINED_VALUE);
+        changeListener = new ChangeListenerMock<>(UNDEFINED_VALUE);
     }
 
     @Test

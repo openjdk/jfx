@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -966,19 +966,6 @@ JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_ios_IosWindow__1createWindow
     GLASS_CHECK_EXCEPTION(env);
 
     return value;
-}
-
-
-/*
- * Class:     com_sun_glass_ui_ios_IosWindow
- * Method:    _createChildWindow
- * Signature: (J)J
- */
-JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_ios_IosWindow__1createChildWindow
-(JNIEnv *env, jobject jwindow, jlong parent) {
-    GLASS_LOG("Java_com_sun_glass_ui_ios_IosWindow__1createChildWindow");
-    // implementation comes here
-    return 0L;
 }
 
 

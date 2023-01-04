@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -70,9 +70,9 @@ public class ListCellTest {
             }
         });
 
-        cell = new ListCell<String>();
+        cell = new ListCell<>();
         model = FXCollections.observableArrayList("Apples", "Oranges", "Pears");
-        list = new ListView<String>(model);
+        list = new ListView<>(model);
     }
 
     @After public void cleanup() {
@@ -269,7 +269,7 @@ public class ListCellTest {
         cell.updateIndex(2);
         cell.updateListView(list);
         ObservableList<String> model2 = FXCollections.observableArrayList("Water", "Juice", "Soda");
-        ListView<String> listView2 = new ListView<String>(model2);
+        ListView<String> listView2 = new ListView<>(model2);
         cell.updateListView(listView2);
         assertEquals("Soda", cell.getItem());
     }
@@ -394,7 +394,7 @@ public class ListCellTest {
         cell.updateListView(list);
         cell.updateIndex(0);
 
-        ListCell<String> other = new ListCell<String>();
+        ListCell<String> other = new ListCell<>();
         other.updateListView(list);
         other.updateIndex(1);
 
@@ -407,7 +407,7 @@ public class ListCellTest {
         cell.updateListView(list);
         cell.updateIndex(0);
 
-        ListCell<String> other = new ListCell<String>();
+        ListCell<String> other = new ListCell<>();
         other.updateListView(list);
         other.updateIndex(1);
 
@@ -426,7 +426,7 @@ public class ListCellTest {
         list.getSelectionModel().select(0);
 
         // Other is configured to represent row 1 which is not selected.
-        ListCell<String> other = new ListCell<String>();
+        ListCell<String> other = new ListCell<>();
         other.updateListView(list);
         other.updateIndex(1);
 
@@ -444,7 +444,7 @@ public class ListCellTest {
         cell.updateListView(list);
         cell.updateIndex(0);
 
-        ListCell<String> other = new ListCell<String>();
+        ListCell<String> other = new ListCell<>();
         other.updateListView(list);
         other.updateIndex(1);
 
@@ -461,7 +461,7 @@ public class ListCellTest {
         list.getSelectionModel().select(0);
 
         // Other is configured to represent row 1 which is not selected.
-        ListCell<String> other = new ListCell<String>();
+        ListCell<String> other = new ListCell<>();
         other.updateListView(list);
         other.updateIndex(1);
 
@@ -482,7 +482,7 @@ public class ListCellTest {
         cell.updateListView(list);
 
         // Other is configured to represent row 1 which is not selected.
-        ListCell<String> other = new ListCell<String>();
+        ListCell<String> other = new ListCell<>();
         other.updateListView(list);
         other.updateIndex(1);
 
@@ -501,7 +501,7 @@ public class ListCellTest {
         cell.updateListView(list);
 
         // Other is configured to represent row 1 which is not selected.
-        ListCell<String> other = new ListCell<String>();
+        ListCell<String> other = new ListCell<>();
         other.updateListView(list);
         other.updateIndex(1);
 
@@ -529,7 +529,7 @@ public class ListCellTest {
         cell.updateListView(list);
         cell.updateIndex(0);
 
-        ListCell<String> other = new ListCell<String>();
+        ListCell<String> other = new ListCell<>();
         other.updateListView(list);
         other.updateIndex(1);
 
@@ -542,7 +542,7 @@ public class ListCellTest {
         cell.updateListView(list);
         cell.updateIndex(0);
 
-        ListCell<String> other = new ListCell<String>();
+        ListCell<String> other = new ListCell<>();
         other.updateListView(list);
         other.updateIndex(1);
 
@@ -559,7 +559,7 @@ public class ListCellTest {
         list.getFocusModel().focus(0);
 
         // Other is configured to represent row 1 which is not focused.
-        ListCell<String> other = new ListCell<String>();
+        ListCell<String> other = new ListCell<>();
         other.updateListView(list);
         other.updateIndex(1);
 
@@ -579,7 +579,7 @@ public class ListCellTest {
         cell.updateListView(list);
 
         // Other is configured to represent row 1 which is not focused
-        ListCell<String> other = new ListCell<String>();
+        ListCell<String> other = new ListCell<>();
         other.updateListView(list);
         other.updateIndex(1);
 
@@ -852,6 +852,48 @@ public class ListCellTest {
         assertEquals("editing location of cancel event", editingIndex, events.get(0).getIndex());
     }
 
+    @Test
+    public void testStartEditOffRangeMustNotFireStartEdit() {
+        list.setEditable(true);
+        cell.updateListView(list);
+        cell.updateIndex(list.getItems().size());
+        List<EditEvent<?>> events = new ArrayList<>();
+        list.addEventHandler(ListView.editStartEvent(), events::add);
+        cell.startEdit();
+        assertFalse("sanity: off-range cell must not be editing", cell.isEditing());
+        assertEquals("must not fire editStart", 0, events.size());
+    }
+
+    @Test
+    public void testStartEditOffRangeMustNotUpdateEditingLocation() {
+        list.setEditable(true);
+        cell.updateListView(list);
+        cell.updateIndex(list.getItems().size());
+        cell.startEdit();
+        assertFalse("sanity: off-range cell must not be editing", cell.isEditing());
+        assertEquals("list editing location must not be updated", -1, list.getEditingIndex());
+    }
+
+    @Test
+    public void testCommitEditMustNotFireCancel() {
+        list.setEditable(true);
+        // JDK-8187307: handler that resets control's editing state
+        list.setOnEditCommit(e -> {
+            int index = e.getIndex();
+            list.getItems().set(index, e.getNewValue());
+            list.edit(-1);
+        });
+        cell.updateListView(list);
+        int editingIndex = 1;
+        cell.updateIndex(editingIndex);
+        list.edit(editingIndex);
+        List<EditEvent<String>> events = new ArrayList<>();
+        list.setOnEditCancel(events::add);
+        String value = "edited";
+        cell.commitEdit(value);
+        assertEquals("sanity: value committed", value, list.getItems().get(editingIndex));
+        assertEquals("commit must not have fired editCancel", 0, events.size());
+    }
 
     // When the list view item's change and affects a cell that is editing, then what?
     // When the list cell's index is changed while it is editing, then what?
@@ -873,7 +915,7 @@ public class ListCellTest {
         @Override protected int getFocusedIndex() {
             return list.getFocusModel().getFocusedIndex();
         }
-    };
+    }
 
     private final class FocusModelMock extends FocusModel {
         @Override protected int getItemCount() {
@@ -888,7 +930,7 @@ public class ListCellTest {
     private int rt_29923_count = 0;
     @Test public void test_rt_29923() {
         // setup test
-        cell = new ListCellShim<String>() {
+        cell = new ListCellShim<>() {
             @Override public void updateItem(String item, boolean empty) {
                 super.updateItem(item, empty);
                 rt_29923_count++;
@@ -976,7 +1018,7 @@ public class ListCellTest {
 
     private void assertChangeIndexToEditing(int initialCellIndex, int listEditingIndex) {
         list.getFocusModel().focus(-1);
-        List<EditEvent> events = new ArrayList<EditEvent>();
+        List<EditEvent> events = new ArrayList<>();
         list.setOnEditStart(e -> {
             events.add(e);
         });
@@ -1012,7 +1054,7 @@ public class ListCellTest {
 
     public void assertUpdateCellIndexOffEditing(int editingIndex, int cancelIndex) {
         list.getFocusModel().focus(-1);
-        List<EditEvent> events = new ArrayList<EditEvent>();
+        List<EditEvent> events = new ArrayList<>();
         list.setOnEditCancel(e -> {
             events.add(e);
         });

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2019-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,6 +29,8 @@
 #include "WebCoreJSClientData.h"
 #include <JavaScriptCore/CatchScope.h>
 #include <JavaScriptCore/JSSet.h>
+#include <JavaScriptCore/JSSetInlines.h>
+#include <JavaScriptCore/VMTrapsInlines.h>
 
 namespace WebCore {
 
@@ -40,15 +42,11 @@ void DOMSetAdapter::clear()
 std::pair<bool, std::reference_wrapper<JSC::JSObject>> getBackingSet(JSC::JSGlobalObject& lexicalGlobalObject, JSC::JSObject& setLike)
 {
     auto& vm = lexicalGlobalObject.vm();
-    auto backingSet = setLike.get(&lexicalGlobalObject, static_cast<JSVMClientData*>(vm.clientData)->builtinNames().backingSetPrivateName());
+    auto backingSet = setLike.get(&lexicalGlobalObject, builtinNames(vm).backingSetPrivateName());
     if (backingSet.isUndefined()) {
         auto& vm = lexicalGlobalObject.vm();
-        auto scope = DECLARE_CATCH_SCOPE(vm);
-
-        backingSet = JSC::JSSet::create(&lexicalGlobalObject, vm, lexicalGlobalObject.setStructure());
-        scope.releaseAssertNoException();
-
-        setLike.putDirect(vm, static_cast<JSVMClientData*>(vm.clientData)->builtinNames().backingSetPrivateName(), backingSet, static_cast<unsigned>(JSC::PropertyAttribute::DontEnum));
+        backingSet = JSC::JSSet::create(vm, lexicalGlobalObject.setStructure());
+        setLike.putDirect(vm, builtinNames(vm).backingSetPrivateName(), backingSet, static_cast<unsigned>(JSC::PropertyAttribute::DontEnum));
         return { true, *JSC::asObject(backingSet) };
     }
     return { false, *JSC::asObject(backingSet) };

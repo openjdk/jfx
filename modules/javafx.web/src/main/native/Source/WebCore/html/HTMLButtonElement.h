@@ -42,6 +42,8 @@ public:
 
     RenderButton* renderer() const;
 
+    bool isExplicitlySetSubmitButton() const;
+
 private:
     HTMLButtonElement(const QualifiedName& tagName, Document&, HTMLFormElement*);
 
@@ -54,10 +56,10 @@ private:
     int defaultTabIndex() const final;
 
     void parseAttribute(const QualifiedName&, const AtomString&) final;
-    bool isPresentationAttribute(const QualifiedName&) const final;
+    bool hasPresentationalHintsForAttribute(const QualifiedName&) const final;
     void defaultEventHandler(Event&) final;
 
-    bool appendFormData(DOMFormData&, bool) final;
+    bool appendFormData(DOMFormData&) final;
 
     bool isEnumeratable() const final { return true; }
     bool supportLabels() const final { return true; }
@@ -68,13 +70,14 @@ private:
     bool isActivatedSubmit() const final;
     void setActivatedSubmit(bool flag) final;
 
-    bool accessKeyAction(bool sendMouseEvents) final;
     bool isURLAttribute(const Attribute&) const final;
 
     bool canStartSelection() const final { return false; }
 
     bool isOptionalFormControl() const final { return true; }
     bool computeWillValidate() const final;
+
+    bool isSubmitButton() const final;
 
     Type m_type;
     bool m_isActivatedSubmit;

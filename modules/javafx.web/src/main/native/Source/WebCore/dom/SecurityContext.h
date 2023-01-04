@@ -27,6 +27,7 @@
 
 #pragma once
 
+#include "CrossOriginEmbedderPolicy.h"
 #include <memory>
 #include <wtf/Forward.h>
 #include <wtf/OptionSet.h>
@@ -37,6 +38,8 @@ namespace WebCore {
 class SecurityOrigin;
 class SecurityOriginPolicy;
 class ContentSecurityPolicy;
+struct CrossOriginOpenerPolicy;
+struct PolicyContainer;
 
 enum SandboxFlag {
     // See http://www.whatwg.org/specs/web-apps/current-work/#attr-iframe-sandbox for a list of the sandbox flags.
@@ -62,12 +65,17 @@ typedef int SandboxFlags;
 
 class SecurityContext {
 public:
+    // https://html.spec.whatwg.org/multipage/origin.html#determining-the-creation-sandboxing-flags
+    SandboxFlags creationSandboxFlags() const { return m_creationSandboxFlags; }
+
     SandboxFlags sandboxFlags() const { return m_sandboxFlags; }
     ContentSecurityPolicy* contentSecurityPolicy() { return m_contentSecurityPolicy.get(); }
 
     bool isSecureTransitionTo(const URL&) const;
 
-    void enforceSandboxFlags(SandboxFlags mask);
+    enum class SandboxFlagsSource : bool { CSP, Other };
+    void enforceSandboxFlags(SandboxFlags, SandboxFlagsSource = SandboxFlagsSource::Other);
+
     bool isSandboxed(SandboxFlags mask) const { return m_sandboxFlags & mask; }
 
     SecurityOriginPolicy* securityOriginPolicy() const { return m_securityOriginPolicy.get(); }
@@ -81,6 +89,13 @@ public:
     // Note: It is dangerous to change the content security policy of a script
     //       context that already contains content.
     void setContentSecurityPolicy(std::unique_ptr<ContentSecurityPolicy>&&);
+
+    const CrossOriginEmbedderPolicy& crossOriginEmbedderPolicy() const { return m_crossOriginEmbedderPolicy; }
+    void setCrossOriginEmbedderPolicy(const CrossOriginEmbedderPolicy& crossOriginEmbedderPolicy) { m_crossOriginEmbedderPolicy = crossOriginEmbedderPolicy; }
+
+    virtual const CrossOriginOpenerPolicy& crossOriginOpenerPolicy() const;
+
+    PolicyContainer policyContainer() const;
 
     WEBCORE_EXPORT SecurityOrigin* securityOrigin() const;
 
@@ -121,8 +136,12 @@ protected:
     void didFailToInitializeSecurityOrigin() { m_haveInitializedSecurityOrigin = false; }
 
 private:
+    void addSandboxFlags(SandboxFlags);
+
     RefPtr<SecurityOriginPolicy> m_securityOriginPolicy;
     std::unique_ptr<ContentSecurityPolicy> m_contentSecurityPolicy;
+    CrossOriginEmbedderPolicy m_crossOriginEmbedderPolicy;
+    SandboxFlags m_creationSandboxFlags { SandboxNone };
     SandboxFlags m_sandboxFlags { SandboxNone };
     OptionSet<MixedContentType> m_mixedContentTypes;
     bool m_haveInitializedSecurityOrigin { false };

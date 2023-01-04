@@ -26,6 +26,7 @@
 #include "config.h"
 #include "WorkerNetworkAgent.h"
 
+#include "SharedBuffer.h"
 #include "WorkerDebuggerProxy.h"
 #include "WorkerOrWorkletGlobalScope.h"
 #include "WorkerThread.h"
@@ -53,7 +54,7 @@ Protocol::Network::FrameId WorkerNetworkAgent::frameIdentifier(DocumentLoader*)
     return { };
 }
 
-Vector<WebSocket*> WorkerNetworkAgent::activeWebSockets(const LockHolder&)
+Vector<WebSocket*> WorkerNetworkAgent::activeWebSockets()
 {
     // FIXME: <https://webkit.org/b/168475> Web Inspector: Correctly display worker's WebSockets
     return { };

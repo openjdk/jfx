@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2017 Yusuke Suzuki <utatane.tea@gmail.com>
- * Copyright (C) 2018-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,6 +31,7 @@
 #include "ICStatusMap.h"
 #include "InstructionStream.h"
 #include "StructureStubInfo.h"
+#include "WasmOps.h"
 
 namespace JSC {
 
@@ -128,16 +129,15 @@ private:
 
 namespace Wasm {
 
-class FunctionCodeBlock;
+class FunctionCodeBlockGenerator;
 struct ModuleInformation;
-enum Type : int8_t;
 
-class BytecodeDumper final : public JSC::BytecodeDumper<FunctionCodeBlock> {
+class BytecodeDumper final : public JSC::BytecodeDumper<FunctionCodeBlockGenerator> {
 public:
-    static void dumpBlock(FunctionCodeBlock*, const ModuleInformation&, PrintStream& out);
+    static void dumpBlock(FunctionCodeBlockGenerator*, const ModuleInformation&, PrintStream& out);
 
 private:
-    using JSC::BytecodeDumper<FunctionCodeBlock>::BytecodeDumper;
+    using JSC::BytecodeDumper<FunctionCodeBlockGenerator>::BytecodeDumper;
 
     void dumpConstants();
     CString constantName(VirtualRegister index) const final;

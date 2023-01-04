@@ -54,6 +54,9 @@ public:
     {
     }
 
+    LengthBox(const LengthBox&) = default;
+    LengthBox& operator=(const LengthBox&) = default;
+
     bool isZero() const
     {
         return top().isZero() && right().isZero() && bottom().isZero() && left().isZero();

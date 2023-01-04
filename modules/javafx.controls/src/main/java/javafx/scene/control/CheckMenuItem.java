@@ -85,7 +85,9 @@ public class CheckMenuItem extends MenuItem {
      * Constructors                                                            *
      *                                                                         *
      **************************************************************************/
-
+    /**
+     * Creates an empty {@code CheckMenuItem}.
+     */
     public CheckMenuItem() {
         this(null,null);
     }

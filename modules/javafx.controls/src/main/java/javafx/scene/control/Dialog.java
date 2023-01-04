@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -249,7 +249,7 @@ public class Dialog<R> implements EventTarget {
      *
      **************************************************************************/
 
-    final FXDialog dialog;
+    final FXDialog dialog = new HeavyweightDialog(this);
 
     private boolean isClosing;
 
@@ -265,7 +265,6 @@ public class Dialog<R> implements EventTarget {
      * Creates a dialog without a specified owner.
      */
     public Dialog() {
-        this.dialog = new HeavyweightDialog(this);
         setDialogPane(new DialogPane());
         initModality(Modality.APPLICATION_MODAL);
     }
@@ -509,7 +508,7 @@ public class Dialog<R> implements EventTarget {
      * the display of the dialog by modifying the existing dialog pane or creating
      * a new one.
      */
-    private ObjectProperty<DialogPane> dialogPane = new SimpleObjectProperty<DialogPane>(this, "dialogPane", new DialogPane()) {
+    private ObjectProperty<DialogPane> dialogPane = new SimpleObjectProperty<>(this, "dialogPane", new DialogPane()) {
         final InvalidationListener expandedListener = o -> {
             DialogPane dialogPane = getDialogPane();
             if (dialogPane == null) return;
@@ -558,7 +557,7 @@ public class Dialog<R> implements EventTarget {
             // push the new dialog down into the implementation for rendering
             dialog.setDialogPane(newDialogPane);
 
-            dialogPaneRef = new WeakReference<DialogPane>(newDialogPane);
+            dialogPaneRef = new WeakReference<>(newDialogPane);
         }
     };
 
@@ -667,7 +666,7 @@ public class Dialog<R> implements EventTarget {
 
 
     // --- result
-    private final ObjectProperty<R> resultProperty = new SimpleObjectProperty<R>() {
+    private final ObjectProperty<R> resultProperty = new SimpleObjectProperty<>() {
         protected void invalidated() {
             close();
         }
@@ -910,7 +909,7 @@ public class Dialog<R> implements EventTarget {
     }
     public final ObjectProperty<EventHandler<DialogEvent>> onShowingProperty() {
         if (onShowing == null) {
-            onShowing = new SimpleObjectProperty<EventHandler<DialogEvent>>(this, "onShowing") {
+            onShowing = new SimpleObjectProperty<>(this, "onShowing") {
                 @Override protected void invalidated() {
                     eventHandlerManager.setEventHandler(DialogEvent.DIALOG_SHOWING, get());
                 }
@@ -929,7 +928,7 @@ public class Dialog<R> implements EventTarget {
     }
     public final ObjectProperty<EventHandler<DialogEvent>> onShownProperty() {
         if (onShown == null) {
-            onShown = new SimpleObjectProperty<EventHandler<DialogEvent>>(this, "onShown") {
+            onShown = new SimpleObjectProperty<>(this, "onShown") {
                 @Override protected void invalidated() {
                     eventHandlerManager.setEventHandler(DialogEvent.DIALOG_SHOWN, get());
                 }
@@ -948,7 +947,7 @@ public class Dialog<R> implements EventTarget {
     }
     public final ObjectProperty<EventHandler<DialogEvent>> onHidingProperty() {
         if (onHiding == null) {
-            onHiding = new SimpleObjectProperty<EventHandler<DialogEvent>>(this, "onHiding") {
+            onHiding = new SimpleObjectProperty<>(this, "onHiding") {
                 @Override protected void invalidated() {
                     eventHandlerManager.setEventHandler(DialogEvent.DIALOG_HIDING, get());
                 }
@@ -970,7 +969,7 @@ public class Dialog<R> implements EventTarget {
     }
     public final ObjectProperty<EventHandler<DialogEvent>> onHiddenProperty() {
         if (onHidden == null) {
-            onHidden = new SimpleObjectProperty<EventHandler<DialogEvent>>(this, "onHidden") {
+            onHidden = new SimpleObjectProperty<>(this, "onHidden") {
                 @Override protected void invalidated() {
                     eventHandlerManager.setEventHandler(DialogEvent.DIALOG_HIDDEN, get());
                 }
@@ -994,7 +993,7 @@ public class Dialog<R> implements EventTarget {
     public final ObjectProperty<EventHandler<DialogEvent>>
             onCloseRequestProperty() {
         if (onCloseRequest == null) {
-            onCloseRequest = new SimpleObjectProperty<EventHandler<DialogEvent>>(this, "onCloseRequest") {
+            onCloseRequest = new SimpleObjectProperty<>(this, "onCloseRequest") {
                 @Override protected void invalidated() {
                     eventHandlerManager.setEventHandler(DialogEvent.DIALOG_CLOSE_REQUEST, get());
                 }

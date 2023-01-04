@@ -43,6 +43,8 @@
 
 namespace WebCore {
 
+static constexpr std::array<const char *, 3> databaseFileSuffixes { "", "-shm", "-wal" };
+
 SQLiteFileSystem::SQLiteFileSystem()
 {
 }
@@ -65,7 +67,7 @@ bool SQLiteFileSystem::ensureDatabaseFileExists(const String& fileName, bool che
         return false;
 
     if (checkPathOnly) {
-        String dir = FileSystem::directoryName(fileName);
+        String dir = FileSystem::parentPath(fileName);
         return ensureDatabaseDirectoryExists(dir);
     }
 
@@ -77,18 +79,22 @@ bool SQLiteFileSystem::deleteEmptyDatabaseDirectory(const String& path)
     return FileSystem::deleteEmptyDirectory(path);
 }
 
-bool SQLiteFileSystem::deleteDatabaseFile(const String& fileName)
+bool SQLiteFileSystem::deleteDatabaseFile(const String& filePath)
 {
-    String walFileName = makeString(fileName, "-wal"_s);
-    String shmFileName = makeString(fileName, "-shm"_s);
+    bool fileExists = false;
+    for (const auto* suffix : databaseFileSuffixes) {
+        String path = filePath + suffix;
+        FileSystem::deleteFile(path);
+        fileExists |= FileSystem::fileExists(path);
+    }
 
-    // Try to delete all three files whether or not they are there.
-    FileSystem::deleteFile(fileName);
-    FileSystem::deleteFile(walFileName);
-    FileSystem::deleteFile(shmFileName);
+    return !fileExists;
+}
 
-    // If any of the wal or shm files remain after the delete attempt, the overall delete operation failed.
-    return !FileSystem::fileExists(fileName) && !FileSystem::fileExists(walFileName) && !FileSystem::fileExists(shmFileName);
+void SQLiteFileSystem::moveDatabaseFile(const String& oldFilePath, const String& newFilePath)
+{
+    for (const auto* suffix : databaseFileSuffixes)
+        FileSystem::moveFile(makeString(oldFilePath, suffix), makeString(newFilePath, suffix));
 }
 
 #if PLATFORM(IOS_FAMILY)
@@ -98,37 +104,32 @@ bool SQLiteFileSystem::truncateDatabaseFile(sqlite3* database)
 }
 #endif
 
-long long SQLiteFileSystem::getDatabaseFileSize(const String& fileName)
+uint64_t SQLiteFileSystem::databaseFileSize(const String& filePath)
 {
-    long long fileSize = 0;
-    long long totalSize = 0;
-
-    if (FileSystem::getFileSize(fileName, fileSize))
-        totalSize += fileSize;
-
-    if (FileSystem::getFileSize(makeString(fileName, "-wal"_s), fileSize))
-        totalSize += fileSize;
-
-    if (FileSystem::getFileSize(makeString(fileName, "-shm"_s), fileSize))
-        totalSize += fileSize;
+    uint64_t totalSize = 0;
+    for (const auto* suffix : databaseFileSuffixes) {
+        if (auto fileSize = FileSystem::fileSize(filePath + suffix))
+            totalSize += *fileSize;
+    }
 
     return totalSize;
 }
 
-Optional<WallTime> SQLiteFileSystem::databaseCreationTime(const String& fileName)
+std::optional<WallTime> SQLiteFileSystem::databaseCreationTime(const String& fileName)
 {
-    return FileSystem::getFileCreationTime(fileName);
+    return FileSystem::fileCreationTime(fileName);
 }
 
-Optional<WallTime> SQLiteFileSystem::databaseModificationTime(const String& fileName)
+std::optional<WallTime> SQLiteFileSystem::databaseModificationTime(const String& fileName)
 {
-    return FileSystem::getFileModificationTime(fileName);
+    return FileSystem::fileModificationTime(fileName);
 }
 
 String SQLiteFileSystem::computeHashForFileName(const String& fileName)
 {
     auto cryptoDigest = PAL::CryptoDigest::create(PAL::CryptoDigest::Algorithm::SHA_256);
-    cryptoDigest->addBytes(fileName.utf8().data(), fileName.utf8().length());
+    auto utf8FileName = fileName.utf8();
+    cryptoDigest->addBytes(utf8FileName.data(), utf8FileName.length());
     auto digest = cryptoDigest->computeHash();
 
     // Convert digest to hex.

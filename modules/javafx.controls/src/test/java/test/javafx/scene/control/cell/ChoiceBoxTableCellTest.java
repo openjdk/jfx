@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -44,7 +44,7 @@ public class ChoiceBoxTableCellTest {
     private StringConverter<Object> converter;
 
     @Before public void setup() {
-        converter = new StringConverter<Object>() {
+        converter = new StringConverter<>() {
             @Override public String toString(Object object) {
                 return null;
             }
@@ -234,7 +234,7 @@ public class ChoiceBoxTableCellTest {
     @Test public void test_updateItem_isNotEmpty_textIsNotNull_nonNullConverter() {
         ChoiceBoxTableCell<Object, Object> cell = new ChoiceBoxTableCell<>();
         cell.setConverter(
-                new StringConverter<Object>() {
+                new StringConverter<>() {
                     @Override public Object fromString(String string) {
                         return null;
                     }
@@ -273,22 +273,6 @@ public class ChoiceBoxTableCellTest {
         cell.startEdit();
         assertFalse(cell.isEditing());
         assertNull(cell.getGraphic());
-    }
-
-    @Test(expected = NullPointerException.class)
-    public void test_startEdit_cellEditableIsTrue_tableViewIsNull_isEmpty() {
-        ChoiceBoxTableCell<Object,Object> cell = new ChoiceBoxTableCell<>();
-        cell.setEditable(true);
-        cell.startEdit();
-    }
-
-    @Test(expected = NullPointerException.class)
-    public void test_startEdit_tableViewEditableIsTrue_tableColumnIsNull() {
-        TableView tableView = new TableView();
-        tableView.setEditable(true);
-        ChoiceBoxTableCell<Object,Object> cell = new ChoiceBoxTableCell<>();
-        cell.updateTableView(tableView);
-        cell.startEdit();
     }
 
     @Test public void test_startEdit_tableViewEditableIsTrue_isEmpty() {
@@ -338,14 +322,6 @@ public class ChoiceBoxTableCellTest {
         cell.startEdit();
         assertFalse(cell.isEditing());
         assertNull(cell.getGraphic());
-    }
-
-    @Test(expected = NullPointerException.class)
-    public void test_startEdit_cellEditableIsTrue_tableViewIsNull_isNotEmpty() {
-        ChoiceBoxTableCell<Object,Object> cell = new ChoiceBoxTableCell<>();
-        cell.updateItem("TEST", false);
-        cell.setEditable(true);
-        cell.startEdit();
     }
 
     @Test public void test_startEdit_tableViewEditableIsTrue_isNotEmpty() {
@@ -443,7 +419,7 @@ public class ChoiceBoxTableCellTest {
         cell.setConverter(null);
         assertNull(cb.getConverter());
 
-        StringConverter<Object> customConverter = new StringConverter<Object>() {
+        StringConverter<Object> customConverter = new StringConverter<>() {
             @Override public String toString(Object object) { return null; }
             @Override public Object fromString(String string) { return null; }
         };

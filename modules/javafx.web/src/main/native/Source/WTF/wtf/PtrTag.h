@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -80,6 +80,9 @@ ALWAYS_INLINE static PtrType untagNativeCodePtrImpl(PtrType ptr)
 #endif
 }
 
+template<PtrTag tag, typename PtrType>
+ALWAYS_INLINE static bool isTaggedNativeCodePtrImpl(PtrType);
+
 template<PtrTag passedTag>
 struct PtrTagTraits {
     static constexpr PtrTag tag = passedTag;
@@ -97,6 +100,12 @@ struct PtrTagTraits {
     ALWAYS_INLINE static PtrType untagCodePtr(PtrType ptr)
     {
         return untagNativeCodePtrImpl<tag>(ptr);
+    }
+
+    template<typename PtrType>
+    ALWAYS_INLINE static bool isTagged(PtrType ptr)
+    {
+        return isTaggedNativeCodePtrImpl<tag>(ptr);
     }
 };
 
@@ -157,6 +166,10 @@ WTF_EXPORT_PRIVATE void registerPtrTagLookup(PtrTagLookup*);
 WTF_EXPORT_PRIVATE void reportBadTag(const void*, PtrTag expectedTag);
 
 #if ENABLE(PTRTAG_DEBUGGING)
+
+WTF_EXPORT_PRIVATE const char* ptrTagName(PtrTag);
+WTF_EXPORT_PRIVATE const char* tagForPtr(const void*);
+
 constexpr bool enablePtrTagDebugAssert = true;
 #define REPORT_BAD_TAG(success, ptr, expectedTag) do { \
         if (UNLIKELY(!success)) \
@@ -318,18 +331,15 @@ void assertIsNotTagged(PtrType value)
     WTF_PTRTAG_ASSERT(PtrTagAction::DebugAssert, ptr, NoPtrTag, ptr == removeCodePtrTag(ptr));
 }
 
-template<typename PtrType>
-void assertIsTagged(PtrType value)
+template<PtrTag tag, typename PtrType>
+ALWAYS_INLINE static bool isTaggedNativeCodePtrImpl(PtrType ptr)
 {
-    void* ptr = bitwise_cast<void*>(value);
-    WTF_PTRTAG_ASSERT(PtrTagAction::DebugAssert, ptr, AnyPtrTag, ptr != removeCodePtrTag(ptr));
-}
-
-template<typename PtrType>
-void assertIsNullOrTagged(PtrType ptr)
-{
-    if (ptr)
-        assertIsTagged(ptr);
+#if CPU(ARM64E)
+    return ptr == tagNativeCodePtrImpl<tag>(removeCodePtrTag(ptr));
+#else
+    UNUSED_PARAM(ptr);
+    return true;
+#endif
 }
 
 template<PtrTag tag, typename PtrType>
@@ -338,14 +348,14 @@ bool isTaggedWith(PtrType value)
     void* ptr = bitwise_cast<void*>(value);
     if (tag == NoPtrTag)
         return ptr == removeCodePtrTag(ptr);
-    return ptr == tagCodePtrImpl<PtrTagAction::NoAssert, tag>(removeCodePtrTag(ptr));
+    return PtrTagTraits<tag>::isTagged(ptr);
 }
 
 template<PtrTag tag, typename PtrType>
 void assertIsTaggedWith(PtrType value)
 {
     UNUSED_PARAM(value);
-    WTF_PTRTAG_ASSERT(PtrTagAction::DebugAssert, value, tag, isTaggedWith<tag>(value));
+    WTF_PTRTAG_ASSERT(PtrTagAction::DebugAssert, value, tag, PtrTagTraits<tag>::isTagged(value));
 }
 
 template<PtrTag tag, typename PtrType>
@@ -411,6 +421,13 @@ inline PtrType untagCFunctionPtr(PtrType ptr) { return untagCFunctionPtrImpl<Ptr
 
 #if CPU(ARM64E)
 
+inline const void* untagReturnPC(const void* pc, const void* sp)
+{
+    auto ptr = __builtin_ptrauth_auth(pc, ptrauth_key_return_address, sp);
+    assertIsNotTagged(ptr);
+    return ptr;
+}
+
 template <typename IntType>
 inline IntType untagInt(IntType ptrInt, PtrTag tag)
 {
@@ -475,6 +492,11 @@ inline bool usesPointerTagging() { return true; }
     __ptrauth(ptrauth_key_process_independent_code, 1, ptrauth_string_discriminator(discriminatorStr))
 
 #else // not CPU(ARM64E)
+
+inline const void* untagReturnPC(const void* pc, const void*)
+{
+    return pc;
+}
 
 template<typename T>
 inline T* tagArrayPtr(std::nullptr_t, size_t size)
@@ -547,6 +569,7 @@ using WTF::PtrTagCalleeType;
 
 using WTF::reportBadTag;
 
+using WTF::untagReturnPC;
 using WTF::tagArrayPtr;
 using WTF::untagArrayPtr;
 using WTF::retagArrayPtr;
@@ -565,8 +588,6 @@ using WTF::untagInt;
 using WTF::assertIsCFunctionPtr;
 using WTF::assertIsNullOrCFunctionPtr;
 using WTF::assertIsNotTagged;
-using WTF::assertIsTagged;
-using WTF::assertIsNullOrTagged;
 using WTF::isTaggedWith;
 using WTF::assertIsTaggedWith;
 using WTF::assertIsNullOrTaggedWith;

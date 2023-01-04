@@ -26,7 +26,7 @@
 class MediaControls extends LayoutNode
 {
 
-    constructor({ width = 300, height = 150, layoutTraits = LayoutTraits.Unknown } = {})
+    constructor({ width = 300, height = 150, layoutTraits = null } = {})
     {
         super(`<div class="media-controls"></div>`);
 
@@ -44,11 +44,11 @@ class MediaControls extends LayoutNode
         this.muteButton = new MuteButton(this);
         this.tracksButton = new TracksButton(this);
         this.overflowButton = new OverflowButton(this);
+        this.volumeButton = new VolumeButton(this);
+        this.brightnessButton = new BrightnessButton(this);
 
         this.statusLabel = new StatusLabel(this);
         this.timeControl = new TimeControl(this);
-
-        this.tracksPanel = new TracksPanel;
 
         this.bottomControlsBar = new ControlsBar("bottom");
 
@@ -121,6 +121,7 @@ class MediaControls extends LayoutNode
         this.element.classList.toggle("uses-ltr-user-interface-layout-direction", flag);
 
         this.muteButton.usesLTRUserInterfaceLayoutDirection = this.usesLTRUserInterfaceLayoutDirection;
+        this.volumeButton.usesLTRUserInterfaceLayoutDirection = this.usesLTRUserInterfaceLayoutDirection
     }
 
     get scaleFactor()
@@ -168,38 +169,6 @@ class MediaControls extends LayoutNode
     placardPreventsControlsBarDisplay()
     {
         return this._placard && this._placard !== this.airplayPlacard;
-    }
-
-    showTracksPanel()
-    {
-        this.element.classList.add("shows-tracks-panel");
-
-        this.tracksButton.on = true;
-        this.tracksButton.element.blur();
-        this.autoHideController.hasSecondaryUIAttached = true;
-        this.tracksPanel.presentInParent(this);
-
-        const controlsBounds = this.element.getBoundingClientRect();
-        const controlsBarBounds = this.bottomControlsBar.element.getBoundingClientRect();
-        const tracksButtonBounds = this.tracksButton.element.getBoundingClientRect();
-        this.tracksPanel.rightX = this.width - (tracksButtonBounds.right - controlsBounds.left);
-        this.tracksPanel.bottomY = this.height - (controlsBarBounds.top - controlsBounds.top) + 1;
-        this.tracksPanel.maxHeight = this.height - this.tracksPanel.bottomY - 10;
-    }
-
-    hideTracksPanel()
-    {
-        this.element.classList.remove("shows-tracks-panel");
-
-        let shouldFadeControlsBar = true;
-        if (window.event instanceof MouseEvent)
-            shouldFadeControlsBar = !this.isPointInControls(new DOMPoint(event.clientX, event.clientY), true);
-
-        this.tracksButton.on = false;
-        this.tracksButton.element.focus();
-        this.autoHideController.hasSecondaryUIAttached = false;
-        this.faded = this.autoHideController.fadesWhileIdle && shouldFadeControlsBar;
-        this.tracksPanel.hide();
     }
 
     fadeIn()
@@ -269,4 +238,8 @@ class MediaControls extends LayoutNode
             super.commitProperty(propertyName);
     }
 
+    get usesSingleMuteAndVolumeButton()
+    {
+        return false;
+    }
 }

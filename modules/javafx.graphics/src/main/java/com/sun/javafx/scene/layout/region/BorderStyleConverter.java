@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -62,11 +62,11 @@ public class BorderStyleConverter  extends StyleConverter<ParsedValue[], BorderS
 //                    }, SizeConverter.SequenceConverter.getInstance());
 
 
-    public static final ParsedValueImpl<ParsedValue[],Number[]> NONE = new ParsedValueImpl<ParsedValue[],Number[]>(null, null);
-    public static final ParsedValueImpl<ParsedValue[],Number[]> HIDDEN = new ParsedValueImpl<ParsedValue[],Number[]>(null, null);
-    public static final ParsedValueImpl<ParsedValue[],Number[]> DOTTED = new ParsedValueImpl<ParsedValue[],Number[]>(null, null);
-    public static final ParsedValueImpl<ParsedValue[],Number[]> DASHED = new ParsedValueImpl<ParsedValue[],Number[]>(null, null);
-    public static final ParsedValueImpl<ParsedValue[],Number[]> SOLID = new ParsedValueImpl<ParsedValue[],Number[]>(null, null);
+    public static final ParsedValueImpl<ParsedValue[],Number[]> NONE = new ParsedValueImpl<>(null, null);
+    public static final ParsedValueImpl<ParsedValue[],Number[]> HIDDEN = new ParsedValueImpl<>(null, null);
+    public static final ParsedValueImpl<ParsedValue[],Number[]> DOTTED = new ParsedValueImpl<>(null, null);
+    public static final ParsedValueImpl<ParsedValue[],Number[]> DASHED = new ParsedValueImpl<>(null, null);
+    public static final ParsedValueImpl<ParsedValue[],Number[]> SOLID = new ParsedValueImpl<>(null, null);
 
     /**
      * Convert a sequence of values to a BorderStyle.
@@ -123,7 +123,7 @@ public class BorderStyleConverter  extends StyleConverter<ParsedValue[], BorderS
                 dashes = Collections.emptyList();
             }
         } else {
-            dashes = new ArrayList<Double>(dash_vals.length);
+            dashes = new ArrayList<>(dash_vals.length);
             for(int dash=0; dash<dash_vals.length; dash++) {
                 final Size size = dash_vals[dash].convert(font);
                 dashes.add(size.pixels(font));

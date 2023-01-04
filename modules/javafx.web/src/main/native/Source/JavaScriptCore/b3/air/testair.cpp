@@ -129,7 +129,7 @@ void loadConstantImpl(BasicBlock* block, T value, B3::Air::Opcode move, Tmp tmp,
     static Lock lock;
     static StdMap<T, T*>* map; // I'm not messing with HashMap's problems with integers.
 
-    LockHolder locker(lock);
+    Locker locker { lock };
     if (!map)
         map = new StdMap<T, T*>();
 
@@ -2145,7 +2145,7 @@ void testElideHandlesEarlyClobber()
     patch->clobber(RegisterSet(lastCalleeSave));
 
     patch->setGenerator([=] (CCallHelpers& jit, const JSC::B3::StackmapGenerationParams&) {
-        jit.probe([=] (Probe::Context& context) {
+        jit.probeDebug([=] (Probe::Context& context) {
             for (Reg reg : registers)
                 context.gpr(reg.gpr()) = 0;
         });
@@ -2360,6 +2360,37 @@ void testLinearScanSpillRangesEarlyDef()
     CHECK(runResult == 99);
 }
 
+void testZDefOfSpillSlotWithOffsetNeedingToBeMaterializedInARegister()
+{
+    if (Options::defaultB3OptLevel() == 2)
+        return;
+
+    B3::Procedure proc;
+    Code& code = proc.code();
+
+    BasicBlock* root = code.addBlock();
+
+    Vector<StackSlot*> slots;
+    for (unsigned i = 0; i < 10000; ++i)
+        slots.append(code.addStackSlot(8, StackSlotKind::Spill));
+
+    for (auto* slot : slots)
+        root->append(Move32, nullptr, Tmp(GPRInfo::argumentGPR0), Arg::stack(slot));
+
+    Tmp loadResult = code.newTmp(GP);
+    Tmp sum = code.newTmp(GP);
+    root->append(Move, nullptr, Arg::imm(0), sum);
+    for (auto* slot : slots) {
+        root->append(Move, nullptr, Arg::stack(slot), loadResult);
+        root->append(Add64, nullptr, loadResult, sum);
+    }
+    root->append(Move, nullptr, sum, Tmp(GPRInfo::returnValueGPR));
+    root->append(Ret64, nullptr, Tmp(GPRInfo::returnValueGPR));
+
+    int32_t result = compileAndRun<int>(proc, 1);
+    CHECK(result == 10000);
+}
+
 #define PREFIX "O", Options::defaultB3OptLevel(), ": "
 
 #define RUN(test) do {                                 \
@@ -2455,6 +2486,8 @@ void run(const char* filter)
     RUN(testLinearScanSpillRangesLateUse());
     RUN(testLinearScanSpillRangesEarlyDef());
 
+    RUN(testZDefOfSpillSlotWithOffsetNeedingToBeMaterializedInARegister());
+
     if (tasks.isEmpty())
         usage();
 
@@ -2469,7 +2502,7 @@ void run(const char* filter)
                     for (;;) {
                         RefPtr<SharedTask<void()>> task;
                         {
-                            LockHolder locker(lock);
+                            Locker locker { lock };
                             if (tasks.isEmpty())
                                 return;
                             task = tasks.takeFirst();

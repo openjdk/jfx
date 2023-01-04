@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,7 +27,7 @@
 #include "InspectorScriptProfilerAgent.h"
 
 #include "Debugger.h"
-#include "DeferGC.h"
+#include "DeferGCInlines.h"
 #include "HeapInlines.h"
 #include "InspectorEnvironment.h"
 #include "SamplingProfiler.h"
@@ -64,7 +64,7 @@ void InspectorScriptProfilerAgent::willDestroyFrontendAndBackend(DisconnectReaso
     }
 }
 
-Protocol::ErrorStringOr<void> InspectorScriptProfilerAgent::startTracking(Optional<bool>&& includeSamples)
+Protocol::ErrorStringOr<void> InspectorScriptProfilerAgent::startTracking(std::optional<bool>&& includeSamples)
 {
     if (m_tracking)
         return { };
@@ -78,10 +78,10 @@ Protocol::ErrorStringOr<void> InspectorScriptProfilerAgent::startTracking(Option
         VM& vm = m_environment.debugger().vm();
         SamplingProfiler& samplingProfiler = vm.ensureSamplingProfiler(stopwatch);
 
-        LockHolder locker(samplingProfiler.getLock());
-        samplingProfiler.setStopWatch(locker, stopwatch);
-        samplingProfiler.noticeCurrentThreadAsJSCExecutionThread(locker);
-        samplingProfiler.start(locker);
+        Locker locker { samplingProfiler.getLock() };
+        samplingProfiler.setStopWatch(stopwatch);
+        samplingProfiler.noticeCurrentThreadAsJSCExecutionThreadWithLock();
+        samplingProfiler.startWithLock();
         m_enabledSamplingProfiler = true;
     }
 #else
@@ -213,13 +213,13 @@ void InspectorScriptProfilerAgent::trackingComplete()
     if (m_enabledSamplingProfiler) {
         VM& vm = m_environment.debugger().vm();
         JSLockHolder lock(vm);
-        DeferGC deferGC(vm.heap); // This is required because we will have raw pointers into the heap after we releaseStackTraces().
+        DeferGC deferGC(vm); // This is required because we will have raw pointers into the heap after we releaseStackTraces().
         SamplingProfiler* samplingProfiler = vm.samplingProfiler();
         RELEASE_ASSERT(samplingProfiler);
 
-        LockHolder locker(samplingProfiler->getLock());
-        samplingProfiler->pause(locker);
-        Vector<SamplingProfiler::StackTrace> stackTraces = samplingProfiler->releaseStackTraces(locker);
+        Locker locker { samplingProfiler->getLock() };
+        samplingProfiler->pause();
+        Vector<SamplingProfiler::StackTrace> stackTraces = samplingProfiler->releaseStackTraces();
         locker.unlockEarly();
 
         Ref<Protocol::ScriptProfiler::Samples> samples = buildSamples(vm, WTFMove(stackTraces));
@@ -244,9 +244,9 @@ void InspectorScriptProfilerAgent::stopSamplingWhenDisconnecting()
     JSLockHolder lock(vm);
     SamplingProfiler* samplingProfiler = vm.samplingProfiler();
     RELEASE_ASSERT(samplingProfiler);
-    LockHolder locker(samplingProfiler->getLock());
-    samplingProfiler->pause(locker);
-    samplingProfiler->clearData(locker);
+    Locker locker { samplingProfiler->getLock() };
+    samplingProfiler->pause();
+    samplingProfiler->clearData();
 
     m_enabledSamplingProfiler = false;
 #endif

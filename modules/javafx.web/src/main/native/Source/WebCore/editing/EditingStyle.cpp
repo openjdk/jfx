@@ -39,6 +39,7 @@
 #include "ColorSerialization.h"
 #include "Editing.h"
 #include "Editor.h"
+#include "ElementInlines.h"
 #include "FontCache.h"
 #include "FontCascade.h"
 #include "Frame.h"
@@ -59,7 +60,6 @@
 #include "StyleRule.h"
 #include "StyledElement.h"
 #include "VisibleUnits.h"
-#include <wtf/Optional.h>
 
 namespace WebCore {
 
@@ -155,7 +155,10 @@ int identifierForStyleProperty(T& style, CSSPropertyID propertyID)
         return CSSValueItalic;
     if (!is<CSSPrimitiveValue>(value))
         return 0;
-    return downcast<CSSPrimitiveValue>(*value).valueID();
+    auto& primitiveValue = downcast<CSSPrimitiveValue>(*value);
+    if (propertyID == CSSPropertyFontWeight && primitiveValue.isNumber() && primitiveValue.doubleValue(CSSUnitType::CSS_NUMBER) >= boldThreshold())
+        return CSSValueBold;
+    return primitiveValue.valueID();
 }
 
 template<typename T> Ref<MutableStyleProperties> getPropertiesNotIn(StyleProperties& styleWithRedundantProperties, T& baseStyle);
@@ -255,6 +258,43 @@ private:
     }
 
     bool m_isUnderline;
+};
+
+static bool fontWeightIsBold(CSSValue& fontWeight)
+{
+    if (!is<CSSPrimitiveValue>(fontWeight))
+        return false;
+
+    auto& primitiveValue = downcast<CSSPrimitiveValue>(fontWeight);
+    if (primitiveValue.isCSSWideKeyword())
+        return false;
+
+    switch (primitiveValue.valueID()) {
+    case CSSValueNormal:
+        return false;
+    case CSSValueBold:
+        return true;
+    default:
+        break;
+    }
+
+    ASSERT(primitiveValue.isNumber());
+    return primitiveValue.floatValue() >= static_cast<float>(boldThreshold());
+}
+
+class HTMLFontWeightEquivalent : public HTMLElementEquivalent {
+public:
+    HTMLFontWeightEquivalent(const QualifiedName& tagName)
+        : HTMLElementEquivalent(CSSPropertyFontWeight, CSSValueBold, tagName)
+    {
+    }
+
+private:
+    bool valueIsPresentInStyle(Element& element, const EditingStyle& style) const
+    {
+        RefPtr<CSSValue> value = style.m_mutableStyle->getPropertyCSSValue(m_propertyID);
+        return matches(element) && value && fontWeightIsBold(*value);
+    }
 };
 
 class HTMLAttributeEquivalent : public HTMLElementEquivalent {
@@ -399,7 +439,7 @@ static Color cssValueToColor(CSSValue* colorValue)
     if (primitiveColor.isRGBColor())
         return primitiveColor.color();
 
-    return CSSParser::parseColor(colorValue->cssText());
+    return CSSParser::parseColorWithoutContext(colorValue->cssText());
 }
 
 template<typename T>
@@ -478,8 +518,10 @@ void EditingStyle::init(Node* node, PropertiesToInclude propertiesToInclude)
     if (node && node->computedStyle()) {
         auto* renderStyle = node->computedStyle();
         removeTextFillAndStrokeColorsIfNeeded(renderStyle);
-        if (renderStyle->fontDescription().keywordSize())
-            m_mutableStyle->setProperty(CSSPropertyFontSize, computedStyleAtPosition.getFontSizeCSSValuePreferringKeyword()->cssText());
+        if (renderStyle->fontDescription().keywordSize()) {
+            if (auto cssValue = computedStyleAtPosition.getFontSizeCSSValuePreferringKeyword())
+                m_mutableStyle->setProperty(CSSPropertyFontSize, cssValue->cssText());
+        }
     }
 
     m_shouldUseFixedDefaultFontSize = computedStyleAtPosition.useFixedFontDefaultSize();
@@ -560,20 +602,20 @@ Ref<MutableStyleProperties> EditingStyle::styleWithResolvedTextDecorations() con
     return style;
 }
 
-Optional<WritingDirection> EditingStyle::textDirection() const
+std::optional<WritingDirection> EditingStyle::textDirection() const
 {
     if (!m_mutableStyle)
-        return WTF::nullopt;
+        return std::nullopt;
 
     RefPtr<CSSValue> unicodeBidi = m_mutableStyle->getPropertyCSSValue(CSSPropertyUnicodeBidi);
     if (!is<CSSPrimitiveValue>(unicodeBidi))
-        return WTF::nullopt;
+        return std::nullopt;
 
     CSSValueID unicodeBidiValue = downcast<CSSPrimitiveValue>(*unicodeBidi).valueID();
     if (unicodeBidiValue == CSSValueEmbed) {
         RefPtr<CSSValue> direction = m_mutableStyle->getPropertyCSSValue(CSSPropertyDirection);
         if (!is<CSSPrimitiveValue>(direction))
-            return WTF::nullopt;
+            return std::nullopt;
 
         return downcast<CSSPrimitiveValue>(*direction).valueID() == CSSValueLtr ? WritingDirection::LeftToRight : WritingDirection::RightToLeft;
     }
@@ -581,7 +623,7 @@ Optional<WritingDirection> EditingStyle::textDirection() const
     if (unicodeBidiValue == CSSValueNormal)
         return WritingDirection::Natural;
 
-    return WTF::nullopt;
+    return std::nullopt;
 }
 
 void EditingStyle::setStyle(RefPtr<MutableStyleProperties>&& style)
@@ -907,11 +949,12 @@ bool EditingStyle::conflictsWithInlineStyleOfElement(StyledElement& element, Ref
     return conflicts;
 }
 
-static const Vector<const HTMLElementEquivalent*>& htmlElementEquivalents()
+static Span<const HTMLElementEquivalent* const> htmlElementEquivalents()
 {
-    static const auto equivalents = makeNeverDestroyed(Vector<const HTMLElementEquivalent*> {
-        new HTMLElementEquivalent(CSSPropertyFontWeight, CSSValueBold, HTMLNames::bTag),
-        new HTMLElementEquivalent(CSSPropertyFontWeight, CSSValueBold, HTMLNames::strongTag),
+    static const HTMLElementEquivalent* const equivalents[] = {
+        new HTMLFontWeightEquivalent(HTMLNames::bTag),
+        new HTMLFontWeightEquivalent(HTMLNames::strongTag),
+
         new HTMLElementEquivalent(CSSPropertyVerticalAlign, CSSValueSub, HTMLNames::subTag),
         new HTMLElementEquivalent(CSSPropertyVerticalAlign, CSSValueSuper, HTMLNames::supTag),
         new HTMLElementEquivalent(CSSPropertyFontStyle, CSSValueItalic, HTMLNames::iTag),
@@ -920,10 +963,9 @@ static const Vector<const HTMLElementEquivalent*>& htmlElementEquivalents()
         new HTMLTextDecorationEquivalent(CSSValueUnderline, HTMLNames::uTag),
         new HTMLTextDecorationEquivalent(CSSValueLineThrough, HTMLNames::sTag),
         new HTMLTextDecorationEquivalent(CSSValueLineThrough, HTMLNames::strikeTag),
-    });
+    };
     return equivalents;
 }
-
 
 bool EditingStyle::conflictsWithImplicitStyleOfElement(HTMLElement& element, EditingStyle* extractedStyle, ShouldExtractMatchingStyle shouldExtractMatchingStyle) const
 {
@@ -941,9 +983,9 @@ bool EditingStyle::conflictsWithImplicitStyleOfElement(HTMLElement& element, Edi
     return false;
 }
 
-static const Vector<const HTMLAttributeEquivalent*>& htmlAttributeEquivalents()
+static Span<const HTMLAttributeEquivalent* const> htmlAttributeEquivalents()
 {
-    static const auto equivalents = makeNeverDestroyed(Vector<const HTMLAttributeEquivalent*> {
+    static const HTMLAttributeEquivalent* const equivalents[] = {
         // elementIsStyledSpanOrHTMLEquivalent depends on the fact each HTMLAttriuteEquivalent matches exactly one attribute
         // of exactly one element except dirAttr.
         new HTMLAttributeEquivalent(CSSPropertyColor, HTMLNames::fontTag, HTMLNames::colorAttr),
@@ -952,7 +994,7 @@ static const Vector<const HTMLAttributeEquivalent*>& htmlAttributeEquivalents()
 
         new HTMLAttributeEquivalent(CSSPropertyDirection, HTMLNames::dirAttr),
         new HTMLAttributeEquivalent(CSSPropertyUnicodeBidi, HTMLNames::dirAttr),
-    });
+    };
     return equivalents;
 }
 
@@ -1608,10 +1650,10 @@ Ref<EditingStyle> EditingStyle::inverseTransformColorIfNeeded(Element& element)
     if (!m_mutableStyle || !renderer || !renderer->style().hasAppleColorFilter())
         return *this;
 
-    auto colorForPropertyIfInvertible = [&](CSSPropertyID id) -> Optional<Color> {
+    auto colorForPropertyIfInvertible = [&](CSSPropertyID id) -> std::optional<Color> {
         auto color = m_mutableStyle->propertyAsColor(id);
         if (!color || !color->isVisible() || color->isSemantic())
-            return WTF::nullopt;
+            return std::nullopt;
         return color;
     };
 
@@ -1837,25 +1879,6 @@ static void diffTextDecorations(MutableStyleProperties& style, CSSPropertyID pro
         newTextDecoration->removeAll(&value.get());
 
     setTextDecorationProperty(style, newTextDecoration.get(), propertID);
-}
-
-static bool fontWeightIsBold(CSSValue& fontWeight)
-{
-    if (!is<CSSPrimitiveValue>(fontWeight))
-        return false;
-
-    auto& primitiveValue = downcast<CSSPrimitiveValue>(fontWeight);
-    switch (primitiveValue.valueID()) {
-        case CSSValueNormal:
-            return false;
-        case CSSValueBold:
-            return true;
-        default:
-            break;
-    }
-
-    ASSERT(primitiveValue.isNumber());
-    return primitiveValue.floatValue() >= static_cast<float>(boldThreshold());
 }
 
 template<typename T>

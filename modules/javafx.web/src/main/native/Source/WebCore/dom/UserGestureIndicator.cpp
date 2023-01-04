@@ -33,7 +33,6 @@
 #include "SecurityOrigin.h"
 #include <wtf/MainThread.h>
 #include <wtf/NeverDestroyed.h>
-#include <wtf/Optional.h>
 
 namespace WebCore {
 
@@ -61,7 +60,7 @@ UserGestureToken::UserGestureToken(ProcessingUserGestureState state, UserGesture
 
     for (auto* ancestorFrame = documentFrame->tree().parent(); ancestorFrame; ancestorFrame = ancestorFrame->tree().parent()) {
         if (auto* ancestorDocument = ancestorFrame->document())
-            m_documentsImpactedByUserGesture.add(ancestorDocument);
+            m_documentsImpactedByUserGesture.add(*ancestorDocument);
     }
 
     auto& documentOrigin = document->securityOrigin();
@@ -94,7 +93,7 @@ bool UserGestureToken::isValidForDocument(const Document& document) const
     return m_documentsImpactedByUserGesture.contains(document);
 }
 
-UserGestureIndicator::UserGestureIndicator(Optional<ProcessingUserGestureState> state, Document* document, UserGestureType gestureType, ProcessInteractionStyle processInteractionStyle)
+UserGestureIndicator::UserGestureIndicator(std::optional<ProcessingUserGestureState> state, Document* document, UserGestureType gestureType, ProcessInteractionStyle processInteractionStyle)
     : m_previousToken { currentToken() }
 {
     ASSERT(isMainThread());

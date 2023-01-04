@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2020-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -34,7 +34,7 @@ namespace JSC {
 
 STATIC_ASSERT_IS_TRIVIALLY_DESTRUCTIBLE(IntlDisplayNamesConstructor);
 
-static JSC_DECLARE_HOST_FUNCTION(IntlDisplayNamesConstructorSupportedLocalesOf);
+static JSC_DECLARE_HOST_FUNCTION(intlDisplayNamesConstructorSupportedLocalesOf);
 
 }
 
@@ -46,13 +46,13 @@ const ClassInfo IntlDisplayNamesConstructor::s_info = { "Function", &Base::s_inf
 
 /* Source for IntlDisplayNamesConstructor.lut.h
 @begin displayNamesConstructorTable
-  supportedLocalesOf             IntlDisplayNamesConstructorSupportedLocalesOf             DontEnum|Function 1
+  supportedLocalesOf             intlDisplayNamesConstructorSupportedLocalesOf             DontEnum|Function 1
 @end
 */
 
 IntlDisplayNamesConstructor* IntlDisplayNamesConstructor::create(VM& vm, Structure* structure, IntlDisplayNamesPrototype* displayNamesPrototype)
 {
-    auto* constructor = new (NotNull, allocateCell<IntlDisplayNamesConstructor>(vm.heap)) IntlDisplayNamesConstructor(vm, structure);
+    auto* constructor = new (NotNull, allocateCell<IntlDisplayNamesConstructor>(vm)) IntlDisplayNamesConstructor(vm, structure);
     constructor->finishCreation(vm, displayNamesPrototype);
     return constructor;
 }
@@ -84,9 +84,7 @@ JSC_DEFINE_HOST_FUNCTION(constructIntlDisplayNames, (JSGlobalObject* globalObjec
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     JSObject* newTarget = asObject(callFrame->newTarget());
-    Structure* structure = newTarget == callFrame->jsCallee()
-        ? globalObject->displayNamesStructure()
-        : InternalFunction::createSubclassStructure(globalObject, newTarget, getFunctionRealm(vm, newTarget)->displayNamesStructure());
+    Structure* structure = JSC_GET_DERIVED_STRUCTURE(vm, displayNamesStructure, newTarget, callFrame->jsCallee());
     RETURN_IF_EXCEPTION(scope, { });
 
     IntlDisplayNames* displayNames = IntlDisplayNames::create(vm, structure);
@@ -106,7 +104,7 @@ JSC_DEFINE_HOST_FUNCTION(callIntlDisplayNames, (JSGlobalObject* globalObject, Ca
     return JSValue::encode(throwConstructorCannotBeCalledAsFunctionTypeError(globalObject, scope, "DisplayNames"));
 }
 
-JSC_DEFINE_HOST_FUNCTION(IntlDisplayNamesConstructorSupportedLocalesOf, (JSGlobalObject* globalObject, CallFrame* callFrame))
+JSC_DEFINE_HOST_FUNCTION(intlDisplayNamesConstructorSupportedLocalesOf, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
@@ -114,7 +112,7 @@ JSC_DEFINE_HOST_FUNCTION(IntlDisplayNamesConstructorSupportedLocalesOf, (JSGloba
     // https://tc39.es/proposal-intl-displaynames/#sec-Intl.DisplayNames.supportedLocalesOf
 
     // 1. Let availableLocales be %DisplayNames%.[[availableLocales]].
-    const HashSet<String>& availableLocales = intlDisplayNamesAvailableLocales();
+    const auto& availableLocales = intlDisplayNamesAvailableLocales();
 
     // 2. Let requestedLocales be CanonicalizeLocaleList(locales).
     Vector<String> requestedLocales = canonicalizeLocaleList(globalObject, callFrame->argument(0));

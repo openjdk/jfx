@@ -45,19 +45,17 @@ public:
 
     bool hasBorder() const
     {
-        bool haveImage = m_image.hasImage();
-        return m_left.nonZero(!haveImage) || m_right.nonZero(!haveImage) || m_top.nonZero(!haveImage) || m_bottom.nonZero(!haveImage);
+        return m_left.nonZero() || m_right.nonZero() || m_top.nonZero() || m_bottom.nonZero();
     }
 
     bool hasVisibleBorder() const
     {
-        bool haveImage = m_image.hasImage();
-        return m_left.isVisible(!haveImage) || m_right.isVisible(!haveImage) || m_top.isVisible(!haveImage) || m_bottom.isVisible(!haveImage);
+        return m_left.isVisible() || m_right.isVisible() || m_top.isVisible() || m_bottom.isVisible();
     }
 
-    bool hasFill() const
+    bool hasBorderImage() const
     {
-        return m_image.hasImage() && m_image.fill();
+        return m_image.hasImage();
     }
 
     bool hasBorderRadius() const
@@ -70,28 +68,28 @@ public:
 
     float borderLeftWidth() const
     {
-        if (!m_image.hasImage() && (m_left.style() == BorderStyle::None || m_left.style() == BorderStyle::Hidden))
+        if (m_left.style() == BorderStyle::None || m_left.style() == BorderStyle::Hidden)
             return 0;
         return m_left.width();
     }
 
     float borderRightWidth() const
     {
-        if (!m_image.hasImage() && (m_right.style() == BorderStyle::None || m_right.style() == BorderStyle::Hidden))
+        if (m_right.style() == BorderStyle::None || m_right.style() == BorderStyle::Hidden)
             return 0;
         return m_right.width();
     }
 
     float borderTopWidth() const
     {
-        if (!m_image.hasImage() && (m_top.style() == BorderStyle::None || m_top.style() == BorderStyle::Hidden))
+        if (m_top.style() == BorderStyle::None || m_top.style() == BorderStyle::Hidden)
             return 0;
         return m_top.width();
     }
 
     float borderBottomWidth() const
     {
-        if (!m_image.hasImage() && (m_bottom.style() == BorderStyle::None || m_bottom.style() == BorderStyle::Hidden))
+        if (m_bottom.style() == BorderStyle::None || m_bottom.style() == BorderStyle::Hidden)
             return 0;
         return m_bottom.width();
     }

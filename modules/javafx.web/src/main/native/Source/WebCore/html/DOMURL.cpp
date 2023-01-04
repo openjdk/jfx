@@ -67,15 +67,11 @@ ExceptionOr<Ref<DOMURL>> DOMURL::create(const String& url, const DOMURL& base)
     return create(url, base.href());
 }
 
-DOMURL::~DOMURL()
-{
-    if (m_searchParams)
-        m_searchParams->associatedURLDestroyed();
-}
+DOMURL::~DOMURL() = default;
 
 ExceptionOr<void> DOMURL::setHref(const String& url)
 {
-    URL completeURL { m_baseURL, url };
+    URL completeURL { URL { }, url };
     if (!completeURL.isValid())
         return Exception { TypeError };
     m_url = WTFMove(completeURL);

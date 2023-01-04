@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -52,6 +52,7 @@ public abstract class AbstractSurface implements Surface {
         Disposer.addRecord(this, new AbstractSurfaceDisposerRecord(nativePtr));
     }
 
+    @Override
     public final void getRGB(int[] argb, int offset, int scanLength, int x, int y, int width, int height) {
         this.rgbCheck(argb.length, offset, scanLength, x, y, width, height);
         this.getRGBImpl(argb, offset, scanLength, x, y, width, height);
@@ -59,6 +60,7 @@ public abstract class AbstractSurface implements Surface {
 
     private native void getRGBImpl(int[] argb, int offset, int scanLength, int x, int y, int width, int height);
 
+    @Override
     public final void setRGB(int[] argb, int offset, int scanLength, int x, int y, int width, int height) {
         this.rgbCheck(argb.length, offset, scanLength, x, y, width, height);
         this.setRGBImpl(argb, offset, scanLength, x, y, width, height);
@@ -121,10 +123,12 @@ public abstract class AbstractSurface implements Surface {
         }
     }
 
+    @Override
     public final int getWidth() {
         return width;
     }
 
+    @Override
     public final int getHeight() {
         return height;
     }

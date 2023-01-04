@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -39,7 +39,7 @@ import java.lang.reflect.Method;
 
 /**
  */
-public class PropertyDescriptor extends ReadOnlyPropertyDescriptor {
+public class PropertyDescriptor<T> extends ReadOnlyPropertyDescriptor<T> {
 
     private static final String ADD_VETOABLE_LISTENER_METHOD_NAME = "addVetoableChangeListener";
     private static final String REMOVE_VETOABLE_LISTENER_METHOD_NAME = "removeVetoableChangeListener";
@@ -142,7 +142,7 @@ public class PropertyDescriptor extends ReadOnlyPropertyDescriptor {
         }
     }
 
-    public class Listener<T> extends ReadOnlyListener<T> implements ChangeListener<T>, VetoableChangeListener {
+    public class Listener extends ReadOnlyListener implements ChangeListener<T>, VetoableChangeListener {
 
         private boolean updating;
 
@@ -173,8 +173,7 @@ public class PropertyDescriptor extends ReadOnlyPropertyDescriptor {
         @Override
         public void vetoableChange(PropertyChangeEvent propertyChangeEvent) throws PropertyVetoException {
             if (bean.equals(propertyChangeEvent.getSource()) && name.equals(propertyChangeEvent.getPropertyName())) {
-                final ReadOnlyJavaBeanProperty<T> property = checkRef();
-                if ((property instanceof Property) && (((Property)property).isBound()) && !updating) {
+                if ((checkRef() instanceof Property<?> property) && property.isBound() && !updating) {
                     throw new PropertyVetoException("A bound value cannot be set.", propertyChangeEvent);
                 }
             }

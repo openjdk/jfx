@@ -26,6 +26,7 @@
 #pragma once
 
 #include "Position.h"
+#include "TextIteratorBehavior.h"
 #include <wtf/Forward.h>
 #include <wtf/HashSet.h>
 #include <wtf/unicode/CharacterNames.h>
@@ -118,9 +119,6 @@ Position previousCandidate(const Position&);
 Position nextVisuallyDistinctCandidate(const Position&);
 Position previousVisuallyDistinctCandidate(const Position&);
 
-Position positionBeforeContainingSpecialElement(const Position&, HTMLElement** containingSpecialElement = nullptr);
-Position positionAfterContainingSpecialElement(const Position&, HTMLElement** containingSpecialElement = nullptr);
-
 Position firstPositionInOrBeforeNode(Node*);
 Position lastPositionInOrAfterNode(Node*);
 
@@ -147,9 +145,9 @@ VisiblePosition visiblePositionAfterNode(Node&);
 bool lineBreakExistsAtVisiblePosition(const VisiblePosition&);
 
 WEBCORE_EXPORT int indexForVisiblePosition(const VisiblePosition&, RefPtr<ContainerNode>& scope);
-int indexForVisiblePosition(Node&, const VisiblePosition&, bool forSelectionPreservation);
+int indexForVisiblePosition(Node&, const VisiblePosition&, TextIteratorBehaviors);
 WEBCORE_EXPORT VisiblePosition visiblePositionForPositionWithOffset(const VisiblePosition&, int offset);
-WEBCORE_EXPORT VisiblePosition visiblePositionForIndex(int index, ContainerNode* scope);
+WEBCORE_EXPORT VisiblePosition visiblePositionForIndex(int index, Node* scope, TextIteratorBehaviors = TextIteratorBehavior::EmitsCharactersBetweenAllVisiblePositions);
 VisiblePosition visiblePositionForIndexUsingCharacterIterator(Node&, int index); // FIXME: Why do we need this version?
 
 WEBCORE_EXPORT VisiblePosition closestEditablePositionInElementForAbsolutePoint(const Element&, const IntPoint&);

@@ -33,7 +33,7 @@ namespace WebCore {
 
 void LibWebRTCRtpTransformBackend::setInputCallback(Callback&& callback)
 {
-    auto locker = holdLock(m_inputCallbackLock);
+    Locker locker { m_inputCallbackLock };
     m_inputCallback = WTFMove(callback);
 }
 
@@ -44,28 +44,31 @@ void LibWebRTCRtpTransformBackend::clearTransformableFrameCallback()
 
 void LibWebRTCRtpTransformBackend::setOutputCallback(rtc::scoped_refptr<webrtc::TransformedFrameCallback>&& callback)
 {
-    auto locker = holdLock(m_outputCallbackLock);
+    Locker locker { m_outputCallbackLock };
     m_outputCallback = WTFMove(callback);
 }
 
 void LibWebRTCRtpTransformBackend::processTransformedFrame(RTCRtpTransformableFrame& frame)
 {
-    auto locker = holdLock(m_outputCallbackLock);
+    auto rtcFrame = static_cast<LibWebRTCRtpTransformableFrame&>(frame).takeRTCFrame();
+    if (!rtcFrame)
+        return;
+    Locker locker { m_outputCallbackLock };
     if (m_outputCallback)
-        m_outputCallback->OnTransformedFrame(static_cast<LibWebRTCRtpTransformableFrame&>(frame).takeRTCFrame());
+        m_outputCallback->OnTransformedFrame(WTFMove(rtcFrame));
 }
 
 void LibWebRTCRtpTransformBackend::Transform(std::unique_ptr<webrtc::TransformableFrameInterface> rtcFrame)
 {
     {
-        auto locker = holdLock(m_inputCallbackLock);
+        Locker locker { m_inputCallbackLock };
         if (m_inputCallback) {
-            m_inputCallback(LibWebRTCRtpTransformableFrame::create(WTFMove(rtcFrame)));
+            m_inputCallback(LibWebRTCRtpTransformableFrame::create(WTFMove(rtcFrame), m_mediaType == MediaType::Audio && m_side == Side::Sender));
             return;
         }
     }
     // In case of no input callback, make the transform a no-op.
-    auto locker = holdLock(m_outputCallbackLock);
+    Locker locker { m_outputCallbackLock };
     if (m_outputCallback)
         m_outputCallback->OnTransformedFrame(WTFMove(rtcFrame));
 }

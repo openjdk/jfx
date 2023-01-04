@@ -63,8 +63,8 @@ private:
     int defaultTabIndex() const final;
 
     void parseAttribute(const QualifiedName&, const AtomString&) final;
-    bool isPresentationAttribute(const QualifiedName&) const final;
-    void collectStyleForPresentationAttribute(const QualifiedName&, const AtomString&, MutableStyleProperties&) final;
+    bool hasPresentationalHintsForAttribute(const QualifiedName&) const final;
+    void collectPresentationalHintsForAttribute(const QualifiedName&, const AtomString&, MutableStyleProperties&) final;
 
     InsertedIntoAncestorResult insertedIntoAncestor(InsertionType, ContainerNode&) final;
     void didFinishInsertingNode() final;
@@ -96,12 +96,9 @@ private:
     HTMLObjectElement& asHTMLElement() final { return *this; }
     const HTMLObjectElement& asHTMLElement() const final { return *this; }
 
-    bool isInteractiveContent() const final;
-
     bool isFormControlElement() const final { return false; }
 
     bool isEnumeratable() const final { return true; }
-    bool appendFormData(DOMFormData&, bool) final;
 
     bool canContainRangeEndPoint() const final;
 

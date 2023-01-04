@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -38,7 +38,6 @@ import java.util.Arrays;
 import java.util.List;
 
 import static org.junit.Assert.*;
-import static test.util.MoreAssertions.assertThrows;
 
 public class BidirectionalContentBindingListTest {
 
@@ -51,9 +50,9 @@ public class BidirectionalContentBindingListTest {
 
     @Before
     public void setUp() {
-        list0 = new ArrayList<Integer>();
-        list1 = new ArrayList<Integer>(Arrays.asList(-1));
-        list2 = new ArrayList<Integer>(Arrays.asList(2, 1));
+        list0 = new ArrayList<>();
+        list1 = new ArrayList<>(Arrays.asList(-1));
+        list2 = new ArrayList<>(Arrays.asList(2, 1));
 
         op1 = FXCollections.observableArrayList(list1);
         op2 = FXCollections.observableArrayList(list2);
@@ -62,7 +61,7 @@ public class BidirectionalContentBindingListTest {
 
     @Test
     public void testBind() {
-        final List<Integer> list2_sorted = new ArrayList<Integer>(Arrays.asList(1, 2));
+        final List<Integer> list2_sorted = new ArrayList<>(Arrays.asList(1, 2));
 
         Bindings.bindContentBidirectional(op1, op2);
         System.gc(); // making sure we did not not overdo weak references

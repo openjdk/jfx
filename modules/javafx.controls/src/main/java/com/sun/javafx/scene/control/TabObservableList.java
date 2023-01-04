@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2017, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -79,6 +79,6 @@ public class TabObservableList<E> extends ObservableListWrapper<E> {
         for (int i = 0; i < permSize; ++i) {
             perm[i] = i + from;
         }
-        fireChange(new NonIterableChange.SimplePermutationChange<E>(from, to + 1, perm, this));
+        fireChange(new NonIterableChange.SimplePermutationChange<>(from, to + 1, perm, this));
     }
 }

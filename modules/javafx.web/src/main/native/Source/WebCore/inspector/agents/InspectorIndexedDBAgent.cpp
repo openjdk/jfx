@@ -32,12 +32,9 @@
 #include "config.h"
 #include "InspectorIndexedDBAgent.h"
 
-#if ENABLE(INDEXED_DATABASE)
-
 #include "AddEventListenerOptions.h"
 #include "DOMStringList.h"
 #include "DOMWindow.h"
-#include "DOMWindowIndexedDatabase.h"
 #include "Document.h"
 #include "Event.h"
 #include "EventListener.h"
@@ -59,8 +56,9 @@
 #include "IDBTransaction.h"
 #include "InspectorPageAgent.h"
 #include "InstrumentingAgents.h"
-#include "ScriptState.h"
+#include "JSDOMWindowCustom.h"
 #include "SecurityOrigin.h"
+#include "WindowOrWorkerGlobalScopeIndexedDatabase.h"
 #include <JavaScriptCore/HeapInlines.h>
 #include <JavaScriptCore/InjectedScript.h>
 #include <JavaScriptCore/InjectedScriptManager.h>
@@ -118,12 +116,12 @@ public:
         }
 
         auto resultValue = result.releaseReturnValue();
-        if (!WTF::holds_alternative<RefPtr<IDBDatabase>>(resultValue)) {
+        if (!std::holds_alternative<RefPtr<IDBDatabase>>(resultValue)) {
             m_executableWithDatabase->requestCallback().sendFailure("Unexpected result type.");
             return;
         }
 
-        auto databaseResult = WTF::get<RefPtr<IDBDatabase>>(resultValue);
+        auto databaseResult = std::get<RefPtr<IDBDatabase>>(resultValue);
         m_executableWithDatabase->execute(*databaseResult);
         databaseResult->close();
     }
@@ -142,7 +140,7 @@ void ExecutableWithDatabase::start(IDBFactory* idbFactory, SecurityOrigin*, cons
         return;
     }
 
-    auto result = idbFactory->open(*context(), databaseName, WTF::nullopt);
+    auto result = idbFactory->open(*context(), databaseName, std::nullopt);
     if (result.hasException()) {
         requestCallback().sendFailure("Could not open database.");
         return;
@@ -152,7 +150,7 @@ void ExecutableWithDatabase::start(IDBFactory* idbFactory, SecurityOrigin*, cons
 }
 
 
-static Ref<Protocol::IndexedDB::KeyPath> keyPathFromIDBKeyPath(const Optional<IDBKeyPath>& idbKeyPath)
+static Ref<Protocol::IndexedDB::KeyPath> keyPathFromIDBKeyPath(const std::optional<IDBKeyPath>& idbKeyPath)
 {
     if (!idbKeyPath)
         return Protocol::IndexedDB::KeyPath::create().setType(Protocol::IndexedDB::KeyPath::Type::Null).release();
@@ -169,7 +167,7 @@ static Ref<Protocol::IndexedDB::KeyPath> keyPathFromIDBKeyPath(const Optional<ID
         keyPath->setArray(WTFMove(array));
         return keyPath;
     });
-    return WTF::visit(visitor, idbKeyPath.value());
+    return std::visit(visitor, idbKeyPath.value());
 }
 
 static RefPtr<IDBTransaction> transactionForDatabase(IDBDatabase* idbDatabase, const String& objectStoreName, IDBTransactionMode mode = IDBTransactionMode::Readonly)
@@ -364,12 +362,12 @@ public:
         }
 
         auto resultValue = result.releaseReturnValue();
-        if (!WTF::holds_alternative<RefPtr<IDBCursor>>(resultValue)) {
+        if (!std::holds_alternative<RefPtr<IDBCursor>>(resultValue)) {
             end(false);
             return;
         }
 
-        auto cursor = WTF::get<RefPtr<IDBCursor>>(resultValue);
+        auto cursor = std::get<RefPtr<IDBCursor>>(resultValue);
 
         if (m_skipCount) {
             if (cursor->advance(m_skipCount).hasException())
@@ -463,7 +461,6 @@ public:
 
         TransactionActivator activator(idbTransaction.get());
         RefPtr<IDBRequest> idbRequest;
-        auto* exec = context() ? context()->globalObject() : nullptr;
         if (!m_indexName.isEmpty()) {
             auto idbIndex = indexForObjectStore(idbObjectStore.get(), m_indexName);
             if (!idbIndex) {
@@ -471,17 +468,13 @@ public:
                 return;
             }
 
-            if (exec) {
-                auto result = idbIndex->openCursor(*exec, m_idbKeyRange.get(), IDBCursorDirection::Next);
-                if (!result.hasException())
-                    idbRequest = result.releaseReturnValue();
-            }
+            auto result = idbIndex->openCursor(m_idbKeyRange.get(), IDBCursorDirection::Next);
+            if (!result.hasException())
+                idbRequest = result.releaseReturnValue();
         } else {
-            if (exec) {
-                auto result = idbObjectStore->openCursor(*exec, m_idbKeyRange.get(), IDBCursorDirection::Next);
-                if (!result.hasException())
-                    idbRequest = result.releaseReturnValue();
-            }
+            auto result = idbObjectStore->openCursor(m_idbKeyRange.get(), IDBCursorDirection::Next);
+            if (!result.hasException())
+                idbRequest = result.releaseReturnValue();
         }
 
         if (!idbRequest) {
@@ -558,7 +551,7 @@ static Protocol::ErrorStringOr<IDBFactory*> IDBFactoryFromDocument(Document* doc
     if (!domWindow)
         return makeUnexpected("Missing window for given document"_s);
 
-    IDBFactory* idbFactory = DOMWindowIndexedDatabase::indexedDB(*domWindow);
+    IDBFactory* idbFactory = WindowOrWorkerGlobalScopeIndexedDatabase::indexedDB(*domWindow);
     if (!idbFactory)
         makeUnexpected("Missing IndexedDB factory of window for given document"_s);
 
@@ -624,14 +617,17 @@ void InspectorIndexedDBAgent::requestData(const String& securityOrigin, const St
     if (!getDocumentAndIDBFactoryFromFrameOrSendFailure(frame, document, idbFactory, callback))
         return;
 
-    InjectedScript injectedScript = m_injectedScriptManager.injectedScriptFor(mainWorldExecState(frame));
-    RefPtr<IDBKeyRange> idbKeyRange = keyRange ? idbKeyRangeFromKeyRange(*keyRange) : nullptr;
-    if (keyRange && !idbKeyRange) {
-        callback->sendFailure("Could not parse key range."_s);
-        return;
+    RefPtr<IDBKeyRange> idbKeyRange;
+    if (keyRange) {
+        idbKeyRange = idbKeyRangeFromKeyRange(*keyRange);
+        if (!idbKeyRange) {
+            callback->sendFailure("Could not parse key range."_s);
+            return;
+        }
     }
 
-    Ref<DataLoader> dataLoader = DataLoader::create(document, WTFMove(callback), injectedScript, objectStoreName, indexName, WTFMove(idbKeyRange), skipCount, pageSize);
+    auto injectedScript = m_injectedScriptManager.injectedScriptFor(&mainWorldGlobalObject(*frame));
+    auto dataLoader = DataLoader::create(document, WTFMove(callback), injectedScript, objectStoreName, indexName, WTFMove(idbKeyRange), skipCount, pageSize);
     dataLoader->start(idbFactory, &document->securityOrigin(), databaseName);
 }
 
@@ -705,15 +701,11 @@ public:
         }
 
         TransactionActivator activator(idbTransaction.get());
-        RefPtr<IDBRequest> idbRequest;
-        if (auto* exec = context() ? context()->globalObject() : nullptr) {
-            auto result = idbObjectStore->clear(*exec);
-            ASSERT(!result.hasException());
-            if (result.hasException()) {
-                m_requestCallback->sendFailure(makeString("Could not clear object store '", m_objectStoreName, "': ", static_cast<int>(result.releaseException().code())));
-                return;
-            }
-            idbRequest = result.releaseReturnValue();
+        auto result = idbObjectStore->clear();
+        ASSERT(!result.hasException());
+        if (result.hasException()) {
+            m_requestCallback->sendFailure(makeString("Could not clear object store '", m_objectStoreName, "': ", static_cast<int>(result.releaseException().code())));
+            return;
         }
 
         idbTransaction->addEventListener(eventNames().completeEvent, ClearObjectStoreListener::create(m_requestCallback.copyRef()), false);
@@ -740,4 +732,3 @@ void InspectorIndexedDBAgent::clearObjectStore(const String& securityOrigin, con
 }
 
 } // namespace WebCore
-#endif // ENABLE(INDEXED_DATABASE)

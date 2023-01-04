@@ -25,8 +25,6 @@
 
 #pragma once
 
-#if ENABLE(INDEXED_DATABASE)
-
 #include "IDBError.h"
 #include "IDBResourceIdentifier.h"
 #include "IDBTransactionInfo.h"
@@ -67,6 +65,7 @@ public:
     void notifyCursorsOfChanges(int64_t objectStoreID);
 
     IDBTransactionMode mode() const { return m_info.mode(); }
+    IDBTransactionDurability durability() const { return m_info.durability(); }
     bool inProgress() const;
 
     SQLiteTransaction* sqliteTransaction() const { return m_sqliteTransaction.get(); }
@@ -94,5 +93,3 @@ private:
 
 } // namespace IDBServer
 } // namespace WebCore
-
-#endif // ENABLE(INDEXED_DATABASE)

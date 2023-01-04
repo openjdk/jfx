@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2020, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,32 +25,26 @@
 
 package test.javafx.stage;
 
-import javafx.application.Application;
-import javafx.application.Platform;
-import javafx.scene.Node;
-import javafx.scene.Scene;
-import javafx.scene.control.TextField;
-import javafx.stage.Stage;
-import javafx.stage.WindowEvent;
-
 import java.lang.ref.WeakReference;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
-import junit.framework.Assert;
+import javafx.application.Platform;
+import javafx.scene.Scene;
+import javafx.scene.control.TextField;
+import javafx.stage.Stage;
+
+import org.junit.Assert;
+
 import test.util.Util;
 
 public abstract class FocusedWindowTestBase {
 
-    static CountDownLatch startupLatch;
-    static Stage stage = null;
+    static CountDownLatch startupLatch = new CountDownLatch(1);
 
     public static void initFXBase() throws Exception {
-        startupLatch = new CountDownLatch(1);
-        Platform.startup(startupLatch::countDown);
         Platform.setImplicitExit(false);
-        Assert.assertTrue("Timeout waiting for FX runtime to start",
-                startupLatch.await(15, TimeUnit.MILLISECONDS));
+        Util.startup(startupLatch, startupLatch::countDown);
     }
 
     WeakReference<Stage> closedFocusedStageWeak = null;
@@ -89,13 +83,11 @@ public abstract class FocusedWindowTestBase {
         int counter = 0;
 
         System.gc();
-        System.runFinalization();
 
         while (counter < 10 && weakReference.get() != null) {
             Thread.sleep(100);
             counter = counter + 1;
             System.gc();
-            System.runFinalization();
         }
 
         Assert.assertNull(weakReference.get());

@@ -26,15 +26,13 @@
 
 #pragma once
 
-#if ENABLE(INDEXED_DATABASE)
-
 #include <wtf/EnumTraits.h>
 
 namespace WebCore {
 
 namespace IndexedDB {
 
-enum class TransactionState {
+enum class TransactionState : uint8_t {
     Active,
     Inactive,
     Committing,
@@ -42,7 +40,7 @@ enum class TransactionState {
     Finished,
 };
 
-enum class CursorDirection {
+enum class CursorDirection : uint8_t {
     Next,
     Nextunique,
     Prev,
@@ -51,8 +49,8 @@ enum class CursorDirection {
 const unsigned CursorDirectionMaximum = 3;
 
 enum class CursorType : bool {
-    KeyAndValue = 0,
-    KeyOnly = 1,
+    KeyAndValue,
+    KeyOnly,
 };
 const unsigned CursorTypeMaximum = 1;
 
@@ -61,12 +59,12 @@ enum class CursorSource : bool {
     ObjectStore,
 };
 
-enum class VersionNullness {
+enum class VersionNullness : uint8_t {
     Null,
     NonNull,
 };
 
-enum class ObjectStoreOverwriteMode {
+enum class ObjectStoreOverwriteMode : uint8_t {
     Overwrite,
     OverwriteForCursor,
     NoOverwrite,
@@ -77,7 +75,7 @@ enum class IndexRecordType : bool {
     Value,
 };
 
-enum class ObjectStoreRecordType {
+enum class ObjectStoreRecordType : uint8_t {
     ValueOnly,
     KeyOnly,
 };
@@ -94,13 +92,13 @@ enum KeyType {
     Min,
 };
 
-enum class RequestType {
+enum class RequestType : uint8_t {
     Open,
     Delete,
     Other,
 };
 
-enum class GetAllType {
+enum class GetAllType : uint8_t {
     Keys,
     Values,
 };
@@ -161,5 +159,3 @@ template<> struct EnumTraits<WebCore::IndexedDB::RequestType> {
 };
 
 } // namespace WTF
-
-#endif // ENABLED(INDEXED_DATABASE)

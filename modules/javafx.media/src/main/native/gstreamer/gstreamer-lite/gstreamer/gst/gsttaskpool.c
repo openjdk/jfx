@@ -127,6 +127,12 @@ default_join (GstTaskPool * pool, gpointer id)
 }
 
 static void
+default_dispose_handle (GstTaskPool * pool, gpointer id)
+{
+  /* we do nothing here, the default handle is NULL */
+}
+
+static void
 gst_task_pool_class_init (GstTaskPoolClass * klass)
 {
   GObjectClass *gobject_class;
@@ -143,6 +149,7 @@ gst_task_pool_class_init (GstTaskPoolClass * klass)
   gsttaskpool_class->cleanup = default_cleanup;
   gsttaskpool_class->push = default_push;
   gsttaskpool_class->join = default_join;
+  gsttaskpool_class->dispose_handle = default_dispose_handle;
 }
 
 static void
@@ -233,9 +240,11 @@ gst_task_pool_cleanup (GstTaskPool * pool)
  *
  * Start the execution of a new thread from @pool.
  *
- * Returns: (transfer none) (nullable): a pointer that should be used
+ * Returns: (transfer full) (nullable): a pointer that should be used
  * for the gst_task_pool_join function. This pointer can be %NULL, you
- * must check @error to detect errors.
+ * must check @error to detect errors. If the pointer is not %NULL and
+ * gst_task_pool_join() is not used, call gst_task_pool_dispose_handle()
+ * instead.
  */
 gpointer
 gst_task_pool_push (GstTaskPool * pool, GstTaskPoolFunction func,
@@ -263,10 +272,14 @@ not_supported:
 /**
  * gst_task_pool_join:
  * @pool: a #GstTaskPool
- * @id: the id
+ * @id: (transfer full) (nullable): the id
  *
  * Join a task and/or return it to the pool. @id is the id obtained from
- * gst_task_pool_push().
+ * gst_task_pool_push(). The default implementation does nothing, as the
+ * default #GstTaskPoolClass::push implementation always returns %NULL.
+ *
+ * This method should only be called with the same @pool instance that provided
+ * @id.
  */
 void
 gst_task_pool_join (GstTaskPool * pool, gpointer id)
@@ -279,4 +292,258 @@ gst_task_pool_join (GstTaskPool * pool, gpointer id)
 
   if (klass->join)
     klass->join (pool, id);
+}
+
+/**
+ * gst_task_pool_dispose_handle:
+ * @pool: a #GstTaskPool
+ * @id: (transfer full) (nullable): the id
+ *
+ * Dispose of the handle returned by gst_task_pool_push(). This does
+ * not need to be called with the default implementation as the default
+ * #GstTaskPoolClass::push implementation always returns %NULL. This does not need to be
+ * called either when calling gst_task_pool_join(), but should be called
+ * when joining is not necessary, but gst_task_pool_push() returned a
+ * non-%NULL value.
+ *
+ * This method should only be called with the same @pool instance that provided
+ * @id.
+ *
+ * Since: 1.20
+ */
+void
+gst_task_pool_dispose_handle (GstTaskPool * pool, gpointer id)
+{
+  GstTaskPoolClass *klass;
+
+  g_return_if_fail (GST_IS_TASK_POOL (pool));
+
+  klass = GST_TASK_POOL_GET_CLASS (pool);
+
+  if (klass->dispose_handle)
+    klass->dispose_handle (pool, id);
+}
+
+typedef struct
+{
+  gboolean done;
+  guint64 id;
+  GstTaskPoolFunction func;
+  gpointer user_data;
+  GMutex done_lock;
+  GCond done_cond;
+  gint refcount;
+} SharedTaskData;
+
+static SharedTaskData *
+shared_task_data_ref (SharedTaskData * tdata)
+{
+  g_atomic_int_add (&tdata->refcount, 1);
+
+  return tdata;
+}
+
+static void
+shared_task_data_unref (SharedTaskData * tdata)
+{
+  if (g_atomic_int_dec_and_test (&tdata->refcount)) {
+    g_mutex_clear (&tdata->done_lock);
+    g_cond_clear (&tdata->done_cond);
+    g_slice_free (SharedTaskData, tdata);
+  }
+}
+
+struct _GstSharedTaskPoolPrivate
+{
+  guint max_threads;
+};
+
+#define GST_SHARED_TASK_POOL_CAST(pool)       ((GstSharedTaskPool*)(pool))
+
+G_DEFINE_TYPE_WITH_PRIVATE (GstSharedTaskPool, gst_shared_task_pool,
+    GST_TYPE_TASK_POOL);
+
+static void
+shared_func (SharedTaskData * tdata, GstTaskPool * pool)
+{
+  tdata->func (tdata->user_data);
+
+  g_mutex_lock (&tdata->done_lock);
+  tdata->done = TRUE;
+  g_cond_signal (&tdata->done_cond);
+  g_mutex_unlock (&tdata->done_lock);
+
+  shared_task_data_unref (tdata);
+}
+
+static gpointer
+shared_push (GstTaskPool * pool, GstTaskPoolFunction func,
+    gpointer user_data, GError ** error)
+{
+  SharedTaskData *ret = NULL;
+
+  GST_OBJECT_LOCK (pool);
+
+  if (!pool->pool) {
+    GST_OBJECT_UNLOCK (pool);
+    goto done;
+  }
+
+  ret = g_slice_new (SharedTaskData);
+
+  ret->done = FALSE;
+  ret->func = func;
+  ret->user_data = user_data;
+  g_atomic_int_set (&ret->refcount, 1);
+  g_cond_init (&ret->done_cond);
+  g_mutex_init (&ret->done_lock);
+
+  g_thread_pool_push (pool->pool, shared_task_data_ref (ret), error);
+
+  GST_OBJECT_UNLOCK (pool);
+
+done:
+  return ret;
+}
+
+static void
+shared_join (GstTaskPool * pool, gpointer id)
+{
+  SharedTaskData *tdata;
+
+  if (!id)
+    return;
+
+  tdata = (SharedTaskData *) id;
+
+  g_mutex_lock (&tdata->done_lock);
+  while (!tdata->done) {
+    g_cond_wait (&tdata->done_cond, &tdata->done_lock);
+  }
+  g_mutex_unlock (&tdata->done_lock);
+
+  shared_task_data_unref (tdata);
+}
+
+static void
+shared_dispose_handle (GstTaskPool * pool, gpointer id)
+{
+  SharedTaskData *tdata;
+
+  if (!id)
+    return;
+
+  tdata = (SharedTaskData *) id;
+
+
+  shared_task_data_unref (tdata);
+}
+
+static void
+shared_prepare (GstTaskPool * pool, GError ** error)
+{
+  GstSharedTaskPool *shared_pool = GST_SHARED_TASK_POOL_CAST (pool);
+
+  GST_OBJECT_LOCK (pool);
+  pool->pool =
+      g_thread_pool_new ((GFunc) shared_func, pool,
+      shared_pool->priv->max_threads, FALSE, error);
+  GST_OBJECT_UNLOCK (pool);
+}
+
+static void
+gst_shared_task_pool_class_init (GstSharedTaskPoolClass * klass)
+{
+  GstTaskPoolClass *taskpoolclass = GST_TASK_POOL_CLASS (klass);
+
+  taskpoolclass->prepare = shared_prepare;
+  taskpoolclass->push = shared_push;
+  taskpoolclass->join = shared_join;
+  taskpoolclass->dispose_handle = shared_dispose_handle;
+}
+
+static void
+gst_shared_task_pool_init (GstSharedTaskPool * pool)
+{
+  GstSharedTaskPoolPrivate *priv;
+
+  priv = pool->priv = gst_shared_task_pool_get_instance_private (pool);
+  priv->max_threads = 1;
+}
+
+/**
+ * gst_shared_task_pool_set_max_threads:
+ * @pool: a #GstSharedTaskPool
+ * @max_threads: Maximum number of threads to spawn.
+ *
+ * Update the maximal number of threads the @pool may spawn. When
+ * the maximal number of threads is reduced, existing threads are not
+ * immediately shut down, see g_thread_pool_set_max_threads().
+ *
+ * Setting @max_threads to 0 effectively freezes the pool.
+ *
+ * Since: 1.20
+ */
+void
+gst_shared_task_pool_set_max_threads (GstSharedTaskPool * pool,
+    guint max_threads)
+{
+  GstTaskPool *taskpool;
+
+  g_return_if_fail (GST_IS_SHARED_TASK_POOL (pool));
+
+  taskpool = GST_TASK_POOL (pool);
+
+  GST_OBJECT_LOCK (pool);
+  if (taskpool->pool)
+    g_thread_pool_set_max_threads (taskpool->pool, max_threads, NULL);
+  pool->priv->max_threads = max_threads;
+  GST_OBJECT_UNLOCK (pool);
+}
+
+/**
+ * gst_shared_task_pool_get_max_threads:
+ * @pool: a #GstSharedTaskPool
+ *
+ * Returns: the maximum number of threads @pool is configured to spawn
+ * Since: 1.20
+ */
+guint
+gst_shared_task_pool_get_max_threads (GstSharedTaskPool * pool)
+{
+  guint ret;
+
+  g_return_val_if_fail (GST_IS_SHARED_TASK_POOL (pool), 0);
+
+  GST_OBJECT_LOCK (pool);
+  ret = pool->priv->max_threads;
+  GST_OBJECT_UNLOCK (pool);
+
+  return ret;
+}
+
+/**
+ * gst_shared_task_pool_new:
+ *
+ * Create a new shared task pool. The shared task pool will queue tasks on
+ * a maximum number of threads, 1 by default.
+ *
+ * Do not use a #GstSharedTaskPool to manage potentially inter-dependent tasks such
+ * as pad tasks, as having one task waiting on another to return before returning
+ * would cause obvious deadlocks if they happen to share the same thread.
+ *
+ * Returns: (transfer full): a new #GstSharedTaskPool. gst_object_unref() after usage.
+ * Since: 1.20
+ */
+GstTaskPool *
+gst_shared_task_pool_new (void)
+{
+  GstTaskPool *pool;
+
+  pool = g_object_new (GST_TYPE_SHARED_TASK_POOL, NULL);
+
+  /* clear floating flag */
+  gst_object_ref_sink (pool);
+
+  return pool;
 }

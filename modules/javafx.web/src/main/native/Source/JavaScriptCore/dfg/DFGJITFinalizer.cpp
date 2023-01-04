@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -55,49 +55,33 @@ size_t JITFinalizer::codeSize()
 
 bool JITFinalizer::finalize()
 {
-    MacroAssemblerCodeRef<JSEntryPtrTag> codeRef = FINALIZE_DFG_CODE(*m_linkBuffer, JSEntryPtrTag, "DFG JIT code for %s", toCString(CodeBlockWithJITType(m_plan.codeBlock(), JITType::DFGJIT)).data());
-    m_jitCode->initializeCodeRefForDFG(codeRef, codeRef.code());
+    VM& vm = *m_plan.vm();
 
-    m_plan.codeBlock()->setJITCode(m_jitCode.copyRef());
+    WTF::crossModifyingCodeFence();
 
-    finalizeCommon();
+    m_linkBuffer->runMainThreadFinalizationTasks();
 
-    return true;
-}
-
-bool JITFinalizer::finalizeFunction()
-{
-    RELEASE_ASSERT(!m_withArityCheck.isEmptyValue());
-    m_jitCode->initializeCodeRefForDFG(
-        FINALIZE_DFG_CODE(*m_linkBuffer, JSEntryPtrTag, "DFG JIT code for %s", toCString(CodeBlockWithJITType(m_plan.codeBlock(), JITType::DFGJIT)).data()),
-        m_withArityCheck);
-    m_plan.codeBlock()->setJITCode(m_jitCode.copyRef());
-
-    finalizeCommon();
-
-    return true;
-}
-
-void JITFinalizer::finalizeCommon()
-{
     CodeBlock* codeBlock = m_plan.codeBlock();
+
+    codeBlock->setJITCode(m_jitCode.copyRef());
 
 #if ENABLE(FTL_JIT)
     m_jitCode->optimizeAfterWarmUp(codeBlock);
 #endif // ENABLE(FTL_JIT)
 
     if (UNLIKELY(m_plan.compilation()))
-        m_plan.vm()->m_perBytecodeProfiler->addCompilation(codeBlock, *m_plan.compilation());
+        vm.m_perBytecodeProfiler->addCompilation(codeBlock, *m_plan.compilation());
 
     if (!m_plan.willTryToTierUp())
         codeBlock->baselineVersion()->m_didFailFTLCompilation = true;
 
     // The codeBlock is now responsible for keeping many things alive (e.g. frozen values)
     // that were previously kept alive by the plan.
-    m_plan.vm()->heap.writeBarrier(codeBlock);
+    vm.writeBarrier(codeBlock);
+
+    return true;
 }
 
 } } // namespace JSC::DFG
 
 #endif // ENABLE(DFG_JIT)
-

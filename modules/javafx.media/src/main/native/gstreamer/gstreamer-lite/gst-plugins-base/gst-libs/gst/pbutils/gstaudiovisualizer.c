@@ -336,6 +336,10 @@ shader_fade_and_move_horiz_out (GstAudioVisualizer * scope,
     }
     d += ds;
   }
+
+  /* rewind one stride */
+  d -= ds;
+
   /* move lower half down */
   for (j = 0; j < height / 2; j++) {
     d += ds;
@@ -499,7 +503,7 @@ gst_audio_visualizer_change_shader (GstAudioVisualizer * scope)
 GType
 gst_audio_visualizer_get_type (void)
 {
-  static volatile gsize audio_visualizer_type = 0;
+  static gsize audio_visualizer_type = 0;
 
   if (g_once_init_enter (&audio_visualizer_type)) {
     static const GTypeInfo audio_visualizer_info = {
@@ -844,7 +848,7 @@ no_format:
 static gboolean
 gst_audio_visualizer_set_allocation (GstAudioVisualizer * scope,
     GstBufferPool * pool, GstAllocator * allocator,
-    GstAllocationParams * params, GstQuery * query)
+    const GstAllocationParams * params, GstQuery * query)
 {
   GstAllocator *oldalloc;
   GstBufferPool *oldpool;

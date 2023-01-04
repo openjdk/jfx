@@ -325,7 +325,7 @@ bool hasOffscreenRect(Node* node, FocusDirection direction)
     if (!render)
         return true;
 
-    LayoutRect rect(render->absoluteClippedOverflowRect());
+    LayoutRect rect(render->absoluteClippedOverflowRectForSpatialNavigation());
     if (rect.isEmpty())
         return true;
 
@@ -476,9 +476,9 @@ bool canScrollInDirection(const Frame* frame, FocusDirection direction)
     ScrollbarMode verticalMode;
     ScrollbarMode horizontalMode;
     frame->view()->calculateScrollbarModesForLayout(horizontalMode, verticalMode);
-    if ((direction == FocusDirection::Left || direction == FocusDirection::Right) && ScrollbarAlwaysOff == horizontalMode)
+    if ((direction == FocusDirection::Left || direction == FocusDirection::Right) && ScrollbarMode::AlwaysOff == horizontalMode)
         return false;
-    if ((direction == FocusDirection::Up || direction == FocusDirection::Down) &&  ScrollbarAlwaysOff == verticalMode)
+    if ((direction == FocusDirection::Up || direction == FocusDirection::Down) &&  ScrollbarMode::AlwaysOff == verticalMode)
         return false;
     LayoutSize size = frame->view()->totalContentsSize();
     LayoutPoint scrollPosition = frame->view()->scrollPosition();

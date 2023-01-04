@@ -24,7 +24,6 @@
 
 #if USE(TEXTURE_MAPPER_GL)
 
-#include "ExtensionsGL.h"
 #include "FilterOperations.h"
 #include "LengthFunctions.h"
 #include "NativeImage.h"
@@ -40,11 +39,6 @@
 #include "RefPtrCairo.h"
 #include <cairo.h>
 #include <wtf/text/CString.h>
-#endif
-
-#if USE(DIRECT2D)
-#include <d2d1.h>
-#include <wincodec.h>
 #endif
 
 #if OS(DARWIN)
@@ -104,8 +98,8 @@ void BitmapTextureGL::updateContents(const void* srcData, const IntRect& targetR
     glBindTexture(GL_TEXTURE_2D, m_id);
 
     const unsigned bytesPerPixel = 4;
-    const char* data = static_cast<const char*>(srcData);
-    Vector<char> temporaryData;
+    auto data = static_cast<const uint8_t*>(srcData);
+    Vector<uint8_t> temporaryData;
     IntPoint adjustedSourceOffset = sourceOffset;
 
     // Texture upload requires subimage buffer if driver doesn't support subimage and we don't have full image upload.
@@ -115,10 +109,10 @@ void BitmapTextureGL::updateContents(const void* srcData, const IntRect& targetR
     // prepare temporaryData if necessary
     if (requireSubImageBuffer) {
         temporaryData.resize(targetRect.width() * targetRect.height() * bytesPerPixel);
-        char* dst = temporaryData.data();
+        auto dst = temporaryData.data();
         data = dst;
-        const char* bits = static_cast<const char*>(srcData);
-        const char* src = bits + sourceOffset.y() * bytesPerLine + sourceOffset.x() * bytesPerPixel;
+        auto bits = static_cast<const uint8_t*>(srcData);
+        auto src = bits + sourceOffset.y() * bytesPerLine + sourceOffset.x() * bytesPerPixel;
         const int targetBytesPerLine = targetRect.width() * bytesPerPixel;
         for (int y = 0; y < targetRect.height(); ++y) {
             memcpy(dst, src, targetBytesPerLine);
@@ -157,14 +151,12 @@ void BitmapTextureGL::updateContents(Image* image, const IntRect& targetRect, co
         return;
 
     int bytesPerLine;
-    const char* imageData;
+    const uint8_t* imageData;
 
 #if USE(CAIRO)
     cairo_surface_t* surface = frameImage->platformImage().get();
-    imageData = reinterpret_cast<const char*>(cairo_image_surface_get_data(surface));
+    imageData = cairo_image_surface_get_data(surface);
     bytesPerLine = cairo_image_surface_get_stride(surface);
-#elif USE(DIRECT2D)
-    notImplemented();
 #endif
 
     updateContents(imageData, targetRect, offset, bytesPerLine);

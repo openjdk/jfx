@@ -37,21 +37,19 @@ namespace WTF {
 // and recompiled. Sorry.
 //
 // macOS x86_64 uses 4 KiB, but Apple's aarch64 systems use 16 KiB. Use 16 KiB on all Apple systems
-// for consistency.
+// for consistency. Linux on Apple Silicon also needs to use 16KiB for best performance, so use that
+// for Linux on aarch64 as well.
 //
 // Most Linux and Windows systems use a page size of 4 KiB.
 //
 // On Linux, Power systems normally use 64 KiB pages.
 //
-// aarch64 systems seem to be all over the place. Most Linux distros use 4 KiB, but RHEL uses
-// 64 KiB. (Apple uses 16 KiB.)
-//
 // Use 64 KiB for any unknown CPUs to be conservative.
-#if OS(DARWIN) || PLATFORM(PLAYSTATION)
+#if OS(DARWIN) || PLATFORM(PLAYSTATION) || CPU(MIPS) || CPU(MIPS64) || (OS(LINUX) && CPU(ARM64))
 constexpr size_t CeilingOnPageSize = 16 * KB;
-#elif USE(64KB_PAGE_BLOCK) || CPU(PPC) || CPU(PPC64) || CPU(PPC64LE) || CPU(UNKNOWN)
+#elif CPU(PPC) || CPU(PPC64) || CPU(PPC64LE) || CPU(UNKNOWN)
 constexpr size_t CeilingOnPageSize = 64 * KB;
-#elif OS(WINDOWS) || CPU(MIPS) || CPU(MIPS64) || CPU(X86) || CPU(X86_64) || CPU(ARM) || CPU(ARM64)
+#elif OS(WINDOWS) || CPU(X86) || CPU(X86_64) || CPU(ARM) || CPU(ARM64) || CPU(RISCV64)
 constexpr size_t CeilingOnPageSize = 4 * KB;
 #else
 #error Must set CeilingOnPageSize in PageBlock.h when adding a new CPU architecture!

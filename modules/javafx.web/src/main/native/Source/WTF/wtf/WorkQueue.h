@@ -34,49 +34,96 @@
 
 #if USE(COCOA_EVENT_LOOP)
 #include <dispatch/dispatch.h>
+#include <wtf/OSObjectPtr.h>
 #else
 #include <wtf/RunLoop.h>
 #endif
 
 namespace WTF {
 
-class WorkQueue final : public FunctionDispatcher {
-
+class WorkQueueBase : public FunctionDispatcher {
 public:
-    enum class Type {
+    using QOS = Thread::QOS;
+
+    ~WorkQueueBase() override;
+
+    WTF_EXPORT_PRIVATE void dispatch(Function<void()>&&) override;
+    WTF_EXPORT_PRIVATE void dispatchWithQOS(Function<void()>&&, QOS);
+    WTF_EXPORT_PRIVATE virtual void dispatchAfter(Seconds, Function<void()>&&);
+    WTF_EXPORT_PRIVATE virtual void dispatchSync(Function<void()>&&);
+
+#if USE(COCOA_EVENT_LOOP)
+    dispatch_queue_t dispatchQueue() const { return m_dispatchQueue.get(); }
+#endif
+
+protected:
+    enum class Type : bool {
         Serial,
         Concurrent
     };
-    using QOS = Thread::QOS;
-
-    WTF_EXPORT_PRIVATE static Ref<WorkQueue> create(const char* name, Type = Type::Serial, QOS = QOS::Default);
-    ~WorkQueue() final;
-
-    WTF_EXPORT_PRIVATE void dispatch(Function<void()>&&) final;
-    WTF_EXPORT_PRIVATE void dispatchAfter(Seconds, Function<void()>&&);
-
-    WTF_EXPORT_PRIVATE static void concurrentApply(size_t iterations, WTF::Function<void(size_t index)>&&);
-
+    WorkQueueBase(const char* name, Type, QOS);
 #if USE(COCOA_EVENT_LOOP)
-    dispatch_queue_t dispatchQueue() const { return m_dispatchQueue; }
+    explicit WorkQueueBase(OSObjectPtr<dispatch_queue_t>&&);
 #else
-    RunLoop& runLoop() const { return *m_runLoop; }
+    explicit WorkQueueBase(RunLoop&);
 #endif
-
-private:
-    explicit WorkQueue(const char* name, Type, QOS);
 
     void platformInitialize(const char* name, Type, QOS);
     void platformInvalidate();
 
 #if USE(COCOA_EVENT_LOOP)
-    static void executeFunction(void*);
-    dispatch_queue_t m_dispatchQueue;
+    OSObjectPtr<dispatch_queue_t> m_dispatchQueue;
 #else
     RunLoop* m_runLoop;
 #endif
 };
 
+/**
+ * A WorkQueue is a function dispatching interface like FunctionDispatcher.
+ * Runnables dispatched to a WorkQueue are required to execute serially.
+ * That is, two different runnables dispatched to the WorkQueue should never be allowed to execute simultaneously.
+ * They may be executed on different threads but can safely be used by objects that aren't already threadsafe.
+ */
+class WorkQueue : public WorkQueueBase {
+public:
+    WTF_EXPORT_PRIVATE static WorkQueue& main();
+
+    WTF_EXPORT_PRIVATE static Ref<WorkQueue> create(const char* name, QOS = QOS::Default);
+
+#if !USE(COCOA_EVENT_LOOP)
+    RunLoop& runLoop() const { return *m_runLoop; }
+#endif
+
+protected:
+    WorkQueue(const char* name, QOS qos)
+        : WorkQueueBase(name, Type::Serial, qos)
+    {
+    }
+private:
+#if USE(COCOA_EVENT_LOOP)
+    explicit WorkQueue(OSObjectPtr<dispatch_queue_t>&&);
+#else
+    explicit WorkQueue(RunLoop&);
+#endif
+    static Ref<WorkQueue> constructMainWorkQueue();
+};
+
+/**
+ * A ConcurrentWorkQueue unlike a WorkQueue doesn't guarantee the order in which the dispatched runnable will run
+ * and each can run concurrently on different threads.
+ */
+class ConcurrentWorkQueue final : public WorkQueueBase {
+public:
+    WTF_EXPORT_PRIVATE static Ref<ConcurrentWorkQueue> create(const char* name, QOS = QOS::Default);
+    WTF_EXPORT_PRIVATE static void apply(size_t iterations, WTF::Function<void(size_t index)>&&);
+private:
+    ConcurrentWorkQueue(const char* name, QOS qos)
+        : WorkQueueBase(name, Type::Concurrent, qos)
+    {
+    }
+};
+
 }
 
 using WTF::WorkQueue;
+using WTF::ConcurrentWorkQueue;

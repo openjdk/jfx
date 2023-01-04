@@ -108,7 +108,7 @@ Ref<SharedTask<void(Visitor&)>> Subspace::forEachMarkedCellInParallel(const Func
             }
 
             {
-                auto locker = holdLock(m_lock);
+                Locker locker { m_lock };
                 if (!m_needToVisitPreciseAllocations)
                     return;
                 m_needToVisitPreciseAllocations = false;
@@ -152,7 +152,7 @@ void Subspace::forEachLiveCell(const Func& func)
         });
 }
 
-inline const CellAttributes& Subspace::attributes() const
+inline CellAttributes Subspace::attributes() const
 {
     return m_heapCellType->attributes();
 }

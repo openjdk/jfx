@@ -7,6 +7,7 @@ ApplePaySession conditional=APPLE_PAY
 AudioNode conditional=WEB_AUDIO
 AudioTrackList conditional=VIDEO
 BaseAudioContext conditional=WEB_AUDIO
+BroadcastChannel
 Clipboard
 DedicatedWorkerGlobalScope
 DOMApplicationCache
@@ -14,15 +15,17 @@ DOMWindow
 EventSource
 FileReader
 FontFaceSet
-IDBDatabase conditional=INDEXED_DATABASE
-IDBOpenDBRequest conditional=INDEXED_DATABASE
-IDBRequest conditional=INDEXED_DATABASE
-IDBTransaction conditional=INDEXED_DATABASE
+GPUDevice
+IDBDatabase
+IDBOpenDBRequest
+IDBRequest
+IDBTransaction
 MediaController conditional=VIDEO
 MediaDevices conditional=MEDIA_STREAM
 MediaKeySession conditional=ENCRYPTED_MEDIA
 MediaQueryList
-MediaRecorder conditional=MEDIA_STREAM
+MediaRecorder conditional=MEDIA_RECORDER
+MediaSessionCoordinator conditional=MEDIA_SESSION_COORDINATOR
 MediaSource conditional=MEDIA_SOURCE
 MediaStream conditional=MEDIA_STREAM
 MediaStreamTrack conditional=MEDIA_STREAM
@@ -33,16 +36,23 @@ OffscreenCanvas conditional=OFFSCREEN_CANVAS
 PaymentRequest conditional=PAYMENT_REQUEST
 PaymentResponse conditional=PAYMENT_REQUEST
 Performance
+PermissionStatus
 PictureInPictureWindow conditional=PICTURE_IN_PICTURE_API
 RemotePlayback conditional=WIRELESS_PLAYBACK_TARGET
 RTCDataChannel conditional=WEB_RTC
+RTCDtlsTransport conditional=WEB_RTC
 RTCDTMFSender conditional=WEB_RTC
+RTCIceTransport conditional=WEB_RTC
 RTCPeerConnection conditional=WEB_RTC
+RTCRtpSFrameTransform conditional=WEB_RTC
 RTCRtpScriptTransform conditional=WEB_RTC
+RTCSctpTransport conditional=WEB_RTC
 ServiceWorker conditional=SERVICE_WORKER
 ServiceWorkerContainer conditional=SERVICE_WORKER
 ServiceWorkerGlobalScope conditional=SERVICE_WORKER
 ServiceWorkerRegistration conditional=SERVICE_WORKER
+SharedWorker
+SharedWorkerGlobalScope
 SourceBuffer conditional=MEDIA_SOURCE
 SourceBufferList conditional=MEDIA_SOURCE
 SpeechRecognition
@@ -54,7 +64,6 @@ TextTrackList conditional=VIDEO
 VideoTrackList conditional=VIDEO
 VisualViewport
 WebAnimation
-WebGPUDevice conditional=WEBGPU
 WebKitMediaKeySession conditional=LEGACY_ENCRYPTED_MEDIA
 WebSocket
 Worker

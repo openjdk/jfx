@@ -25,7 +25,9 @@
 #include "AffineTransform.h"
 #include "ElementIterator.h"
 #include "PathTraversalState.h"
+#include "RenderElement.h"
 #include "RenderSVGResource.h"
+#include "SVGElementTypeHelpers.h"
 #include "SVGImageElement.h"
 #include "SVGMPathElement.h"
 #include "SVGNames.h"
@@ -58,7 +60,7 @@ Ref<SVGAnimateMotionElement> SVGAnimateMotionElement::create(const QualifiedName
 
 bool SVGAnimateMotionElement::hasValidAttributeType() const
 {
-    auto targetElement = makeRefPtr(this->targetElement());
+    RefPtr targetElement = this->targetElement();
     if (!targetElement)
         return false;
 
@@ -142,7 +144,7 @@ void SVGAnimateMotionElement::startAnimation()
 {
     if (!hasValidAttributeType())
         return;
-    auto targetElement = makeRefPtr(this->targetElement());
+    RefPtr targetElement = this->targetElement();
     if (!targetElement)
         return;
     if (AffineTransform* transform = targetElement->supplementalTransform())
@@ -160,25 +162,25 @@ void SVGAnimateMotionElement::stopAnimation(SVGElement* targetElement)
 
 bool SVGAnimateMotionElement::calculateToAtEndOfDurationValue(const String& toAtEndOfDurationString)
 {
-    m_toPointAtEndOfDuration = parsePoint(toAtEndOfDurationString).valueOr(FloatPoint { });
+    m_toPointAtEndOfDuration = valueOrDefault(parsePoint(toAtEndOfDurationString));
     return true;
 }
 
 bool SVGAnimateMotionElement::calculateFromAndToValues(const String& fromString, const String& toString)
 {
-    m_toPointAtEndOfDuration = WTF::nullopt;
-    m_fromPoint = parsePoint(fromString).valueOr(FloatPoint { });
-    m_toPoint = parsePoint(toString).valueOr(FloatPoint { });
+    m_toPointAtEndOfDuration = std::nullopt;
+    m_fromPoint = valueOrDefault(parsePoint(fromString));
+    m_toPoint = valueOrDefault(parsePoint(toString));
     return true;
 }
 
 bool SVGAnimateMotionElement::calculateFromAndByValues(const String& fromString, const String& byString)
 {
-    m_toPointAtEndOfDuration = WTF::nullopt;
+    m_toPointAtEndOfDuration = std::nullopt;
     if (animationMode() == AnimationMode::By && !isAdditive())
         return false;
-    m_fromPoint = parsePoint(fromString).valueOr(FloatPoint { });
-    auto byPoint = parsePoint(byString).valueOr(FloatPoint { });
+    m_fromPoint = valueOrDefault(parsePoint(fromString));
+    auto byPoint = valueOrDefault(parsePoint(byString));
     m_toPoint = FloatPoint(m_fromPoint.x() + byPoint.x(), m_fromPoint.y() + byPoint.y());
     return true;
 }
@@ -206,7 +208,7 @@ void SVGAnimateMotionElement::buildTransformForProgress(AffineTransform* transfo
 
 void SVGAnimateMotionElement::calculateAnimatedValue(float percentage, unsigned repeatCount)
 {
-    auto targetElement = makeRefPtr(this->targetElement());
+    RefPtr targetElement = this->targetElement();
     if (!targetElement)
         return;
 
@@ -244,7 +246,7 @@ void SVGAnimateMotionElement::calculateAnimatedValue(float percentage, unsigned 
 void SVGAnimateMotionElement::applyResultsToTarget()
 {
     // We accumulate to the target element transform list so there is not much to do here.
-    auto targetElement = makeRefPtr(this->targetElement());
+    RefPtr targetElement = this->targetElement();
     if (!targetElement)
         return;
 
@@ -258,7 +260,7 @@ void SVGAnimateMotionElement::applyResultsToTarget()
         return;
 
     // ...except in case where we have additional instances in <use> trees.
-    for (auto* instance : targetElement->instances()) {
+    for (auto& instance : copyToVectorOf<Ref<SVGElement>>(targetElement->instances())) {
         AffineTransform* transform = instance->supplementalTransform();
         if (!transform || *transform == *targetSupplementalTransform)
             continue;
@@ -270,7 +272,7 @@ void SVGAnimateMotionElement::applyResultsToTarget()
     }
 }
 
-Optional<float> SVGAnimateMotionElement::calculateDistance(const String& fromString, const String& toString)
+std::optional<float> SVGAnimateMotionElement::calculateDistance(const String& fromString, const String& toString)
 {
     auto from = parsePoint(fromString);
     if (!from)

@@ -27,6 +27,7 @@
 #include "TransformationMatrix.h"
 #include <wtf/HashMap.h>
 #include <wtf/NeverDestroyed.h>
+#include <wtf/OptionSet.h>
 #include <wtf/Ref.h>
 #include <wtf/text/AtomStringHash.h>
 
@@ -50,16 +51,17 @@ namespace WebCore {
     macro(shadowOffset) \
     macro(roundedRectNumber) \
     macro(roundedRect) \
-    macro(roundedRectInverseTransformMatrix) \
+    macro(roundedRectInverseTransformMatrix)
 
-#define TEXMAP_SAMPLER_VARIABLES(macro) \
-    macro(sampler) \
-    macro(samplerY) \
-    macro(samplerU) \
-    macro(samplerV) \
-    macro(mask) \
-    macro(contentTexture) \
-    macro(externalOESTexture) \
+#define TEXMAP_SAMPLER_VARIABLES(macro)           \
+    macro(sampler)                                \
+    macro(samplerY)                               \
+    macro(samplerU)                               \
+    macro(samplerV)                               \
+    macro(samplerA)                               \
+    macro(mask)                                   \
+    macro(contentTexture)                         \
+    macro(externalOESTexture)
 
 #define TEXMAP_VARIABLES(macro) \
     TEXMAP_ATTRIBUTE_VARIABLES(macro) \
@@ -103,13 +105,15 @@ public:
         TexturePackedYUV = 1L << 21,
         TextureExternalOES = 1L << 22,
         RoundedRectClip  = 1L << 23,
+        Premultiply      = 1L << 24,
+        TextureYUVA      = 1L << 25,
     };
 
     enum class VariableID {
         TEXMAP_VARIABLES(TEXMAP_DECLARE_VARIABLE_ENUM)
     };
 
-    typedef unsigned Options;
+    using Options = OptionSet<Option>;
 
     static Ref<TextureMapperShaderProgram> create(Options);
     virtual ~TextureMapperShaderProgram();
@@ -133,10 +137,46 @@ private:
     GLuint getLocation(VariableID, ASCIILiteral, VariableType);
 
     GLuint m_id;
-    HashMap<VariableID, GLuint, WTF::IntHash<VariableID>, WTF::StrongEnumHashTraits<VariableID>> m_variables;
+    HashMap<VariableID, GLuint, IntHash<VariableID>, WTF::StrongEnumHashTraits<VariableID>> m_variables;
 };
 
-}
+} // namespace WebCore
+
+namespace WTF {
+
+template<> struct EnumTraits<WebCore::TextureMapperShaderProgram::Option> {
+    using values = EnumValues<
+        WebCore::TextureMapperShaderProgram::Option,
+        WebCore::TextureMapperShaderProgram::TextureRGB,
+        WebCore::TextureMapperShaderProgram::Rect,
+        WebCore::TextureMapperShaderProgram::SolidColor,
+        WebCore::TextureMapperShaderProgram::Opacity,
+        WebCore::TextureMapperShaderProgram::Antialiasing,
+        WebCore::TextureMapperShaderProgram::GrayscaleFilter,
+        WebCore::TextureMapperShaderProgram::SepiaFilter,
+        WebCore::TextureMapperShaderProgram::SaturateFilter,
+        WebCore::TextureMapperShaderProgram::HueRotateFilter,
+        WebCore::TextureMapperShaderProgram::BrightnessFilter,
+        WebCore::TextureMapperShaderProgram::ContrastFilter,
+        WebCore::TextureMapperShaderProgram::InvertFilter,
+        WebCore::TextureMapperShaderProgram::OpacityFilter,
+        WebCore::TextureMapperShaderProgram::BlurFilter,
+        WebCore::TextureMapperShaderProgram::AlphaBlur,
+        WebCore::TextureMapperShaderProgram::ContentTexture,
+        WebCore::TextureMapperShaderProgram::ManualRepeat,
+        WebCore::TextureMapperShaderProgram::TextureYUV,
+        WebCore::TextureMapperShaderProgram::TextureNV12,
+        WebCore::TextureMapperShaderProgram::TextureNV21,
+        WebCore::TextureMapperShaderProgram::TexturePackedYUV,
+        WebCore::TextureMapperShaderProgram::TextureExternalOES,
+        WebCore::TextureMapperShaderProgram::RoundedRectClip,
+        WebCore::TextureMapperShaderProgram::Premultiply,
+        WebCore::TextureMapperShaderProgram::TextureYUVA
+    >;
+};
+
+} // namespace WTF
+
 #endif // USE(TEXTURE_MAPPER_GL)
 
 #endif // TextureMapperShaderProgram_h

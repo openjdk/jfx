@@ -60,7 +60,12 @@ protected:
         HasMeridiem = 1 << 7,
     };
 
-    BaseDateAndTimeInputType(Type type, HTMLInputElement& element) : InputType(type, element) { }
+    BaseDateAndTimeInputType(Type type, HTMLInputElement& element)
+        : InputType(type, element)
+    {
+        ASSERT(needsShadowSubtree());
+    }
+
     ~BaseDateAndTimeInputType();
 
     Decimal parseToNumber(const String&, const Decimal&) const override;
@@ -87,18 +92,18 @@ private:
         OptionSet<DateTimeFormatValidationResults> m_results;
     };
 
-    virtual Optional<DateComponents> parseToDateComponents(const StringView&) const = 0;
-    virtual Optional<DateComponents> setMillisecondToDateComponents(double) const = 0;
+    virtual std::optional<DateComponents> parseToDateComponents(StringView) const = 0;
+    virtual std::optional<DateComponents> setMillisecondToDateComponents(double) const = 0;
     virtual void setupLayoutParameters(DateTimeEditElement::LayoutParameters&, const DateComponents&) const = 0;
     virtual bool isValidFormat(OptionSet<DateTimeFormatValidationResults>) const = 0;
     virtual String serializeWithMilliseconds(double) const;
 
     // InputType functions:
     String visibleValue() const final;
-    String sanitizeValue(const String&) const final;
+    String sanitizeValue(const String&) const override;
     void setValue(const String&, bool valueChanged, TextFieldEventBehavior) final;
-    double valueAsDate() const override;
-    ExceptionOr<void> setValueAsDate(double) const override;
+    WallTime valueAsDate() const override;
+    ExceptionOr<void> setValueAsDate(WallTime) const override;
     double valueAsDouble() const final;
     ExceptionOr<void> setValueAsDecimal(const Decimal&, TextFieldEventBehavior) const final;
     Decimal defaultValueForStepUp() const override;
@@ -109,7 +114,7 @@ private:
     bool isMouseFocusable() const final;
 
     void handleDOMActivateEvent(Event&) override;
-    void createShadowSubtreeAndUpdateInnerTextElementEditability(ContainerNode::ChildChange::Source, bool) final;
+    void createShadowSubtree() final;
     void destroyShadowSubtree() final;
     void updateInnerTextValue() final;
     bool hasCustomFocusLogic() const final;

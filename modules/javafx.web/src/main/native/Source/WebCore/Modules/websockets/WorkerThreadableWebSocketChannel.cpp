@@ -55,6 +55,7 @@ WorkerThreadableWebSocketChannel::WorkerThreadableWebSocketChannel(WorkerGlobalS
     , m_workerClientWrapper(ThreadableWebSocketChannelClientWrapper::create(context, client))
     , m_bridge(Bridge::create(m_workerClientWrapper.copyRef(), m_workerGlobalScope.copyRef(), taskMode, provider))
     , m_socketProvider(provider)
+    , m_progressIdentifier(WebSocketChannelIdentifier::generateThreadSafe())
 {
     m_bridge->initialize();
 }
@@ -411,7 +412,7 @@ void WorkerThreadableWebSocketChannel::Bridge::connect(const URL& url, const Str
 
         // FIXME: make this mixed content check equivalent to the document mixed content check currently in WebSocket::connect()
         if (auto* frame = document.frame()) {
-            Optional<String> errorString = MixedContentChecker::checkForMixedContentInFrameTree(*frame, url);
+            std::optional<String> errorString = MixedContentChecker::checkForMixedContentInFrameTree(*frame, url);
             if (errorString) {
                 peer->fail(errorString.value());
                 return;
@@ -447,10 +448,10 @@ ThreadableWebSocketChannel::SendResult WorkerThreadableWebSocketChannel::Bridge:
     if (!m_peer)
         return ThreadableWebSocketChannel::SendFail;
 
-    // ArrayBuffer isn't thread-safe, hence the content of ArrayBuffer is copied into Vector<char>.
-    Vector<char> data(byteLength);
+    // ArrayBuffer isn't thread-safe, hence the content of ArrayBuffer is copied into Vector<uint8_t>.
+    Vector<uint8_t> data(byteLength);
     if (binaryData.byteLength())
-        memcpy(data.data(), static_cast<const char*>(binaryData.data()) + byteOffset, byteLength);
+        memcpy(data.data(), static_cast<const uint8_t*>(binaryData.data()) + byteOffset, byteLength);
     setMethodNotCompleted();
 
     m_loaderProxy.postTaskToLoader([peer = m_peer, data = WTFMove(data)](ScriptExecutionContext& context) {
@@ -591,10 +592,10 @@ void WorkerThreadableWebSocketChannel::Bridge::waitForMethodCompletion()
     if (!m_workerGlobalScope)
         return;
     WorkerRunLoop& runLoop = m_workerGlobalScope->thread().runLoop();
-    MessageQueueWaitResult result = MessageQueueMessageReceived;
+    bool success = true;
     ThreadableWebSocketChannelClientWrapper* clientWrapper = m_workerClientWrapper.ptr();
-    while (m_workerGlobalScope && clientWrapper && !clientWrapper->syncMethodDone() && result != MessageQueueTerminated) {
-        result = runLoop.runInMode(m_workerGlobalScope.get(), m_taskMode); // May cause this bridge to get disconnected, which makes m_workerGlobalScope become null.
+    while (m_workerGlobalScope && clientWrapper && !clientWrapper->syncMethodDone() && success) {
+        success = runLoop.runInMode(m_workerGlobalScope.get(), m_taskMode); // May cause this bridge to get disconnected, which makes m_workerGlobalScope become null.
         clientWrapper = m_workerClientWrapper.ptr();
     }
 }

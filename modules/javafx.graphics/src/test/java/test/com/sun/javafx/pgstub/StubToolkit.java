@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -76,7 +76,7 @@ import java.util.concurrent.Future;
  */
 public class StubToolkit extends Toolkit {
 
-    private Map<Object, Object> contextMap = new HashMap<Object, Object>();
+    private Map<Object, Object> contextMap = new HashMap<>();
 
     private StubPrimaryTimer primaryTimer = new StubPrimaryTimer();
 
@@ -133,17 +133,6 @@ public class StubToolkit extends Toolkit {
     @Override
     public TKStage createTKEmbeddedStage(HostInterface host, @SuppressWarnings("removal") AccessControlContext acc) {
         return new StubStage();
-    }
-
-    @Override
-    public AppletWindow createAppletWindow(long parent, String serverName) {
-        // unsupported
-        return null;
-    }
-
-    @Override
-    public void closeAppletWindow() {
-        // unsupported
     }
 
     private final TKSystemMenu systemMenu = new StubSystemMenu();
@@ -382,7 +371,7 @@ public class StubToolkit extends Toolkit {
     }
 
     private TKClipboard clipboard = new TKClipboard() {
-        private Map<DataFormat, Object> map = new HashMap<DataFormat, Object>();
+        private Map<DataFormat, Object> map = new HashMap<>();
         private Image image;
         private double offsetX;
         private double offsetY;
@@ -413,7 +402,7 @@ public class StubToolkit extends Toolkit {
         }
 
         @Override public Set<TransferMode> getTransferModes() {
-            Set<TransferMode> modes = new HashSet<TransferMode>();
+            Set<TransferMode> modes = new HashSet<>();
             modes.add(TransferMode.COPY);
             return modes;
         }
@@ -746,6 +735,7 @@ public class StubToolkit extends Toolkit {
         this.platformShortcutKey = platformShortcutKey;
     }
 
+    @Override
     public KeyCode getPlatformShortcutKey() {
         return platformShortcutKey;
     }

@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 # Copyright (c) 2014-2018 Apple Inc. All rights reserved.
 # Copyright (c) 2014 University of Washington. All rights reserved.
@@ -36,7 +36,7 @@ try:
     from .cpp_generator_templates import CppGeneratorTemplates as CppTemplates
     from .generator import Generator, ucfirst
     from .models import EnumType, ObjectType, PrimitiveType, AliasedType, ArrayType, Frameworks
-except ValueError:
+except ImportError:
     from cpp_generator import CppGenerator
     from cpp_generator_templates import CppGeneratorTemplates as CppTemplates
     from generator import Generator, ucfirst
@@ -86,7 +86,6 @@ class CppProtocolTypesHeaderGenerator(CppGenerator):
         header_includes = [
             (["JavaScriptCore", "WebKit"], ("JavaScriptCore", "inspector/InspectorProtocolTypes.h")),
             (["JavaScriptCore", "WebKit"], ("WTF", "wtf/JSONValues.h")),
-            (["JavaScriptCore", "WebKit"], ("WTF", "wtf/Optional.h")),
             (["JavaScriptCore", "WebKit"], ("WTF", "wtf/text/WTFString.h")),
         ]
         return '\n'.join(self.generate_includes_from_entries(header_includes))
@@ -418,11 +417,11 @@ class CppProtocolTypesHeaderGenerator(CppGenerator):
             'namespace %s {' % self.helpers_namespace(),
             '',
             'template<typename ProtocolEnumType>',
-            'Optional<ProtocolEnumType> parseEnumValueFromString(const String&);',
+            'std::optional<ProtocolEnumType> parseEnumValueFromString(const String&);',
         ]))
 
         def return_type_with_export_macro(cpp_protocol_type):
-            enum_return_type = 'Optional<%s>' % cpp_protocol_type
+            enum_return_type = 'std::optional<%s>' % cpp_protocol_type
             result_terms = [enum_return_type]
             export_macro = self.model().framework.setting('export_macro', None)
             if export_macro is not None:

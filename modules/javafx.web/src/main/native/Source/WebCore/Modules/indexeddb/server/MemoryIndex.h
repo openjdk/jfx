@@ -25,8 +25,6 @@
 
 #pragma once
 
-#if ENABLE(INDEXED_DATABASE)
-
 #include "IDBIndexInfo.h"
 #include "IDBResourceIdentifier.h"
 #include <wtf/HashMap.h>
@@ -45,7 +43,7 @@ class ThreadSafeDataBuffer;
 struct IDBKeyRangeData;
 
 namespace IndexedDB {
-enum class GetAllType;
+enum class GetAllType : uint8_t;
 enum class IndexRecordType : bool;
 }
 
@@ -68,7 +66,7 @@ public:
 
     IDBGetResult getResultForKeyRange(IndexedDB::IndexRecordType, const IDBKeyRangeData&) const;
     uint64_t countForKeyRange(const IDBKeyRangeData&);
-    void getAllRecords(const IDBKeyRangeData&, Optional<uint32_t> count, IndexedDB::GetAllType, IDBGetAllResult&) const;
+    void getAllRecords(const IDBKeyRangeData&, std::optional<uint32_t> count, IndexedDB::GetAllType, IDBGetAllResult&) const;
 
     IDBError putIndexKey(const IDBKeyData&, const IndexKey&);
 
@@ -108,5 +106,3 @@ private:
 
 } // namespace IDBServer
 } // namespace WebCore
-
-#endif // ENABLE(INDEXED_DATABASE)

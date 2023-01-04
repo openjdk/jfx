@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2019-2021 Apple Inc. All Rights Reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -117,8 +117,9 @@ void UnlinkedCodeBlockGenerator::finalize(std::unique_ptr<InstructionStream> ins
 {
     ASSERT(instructions);
     {
-        auto locker = holdLock(m_codeBlock->cellLock());
+        Locker locker { m_codeBlock->cellLock() };
         m_codeBlock->m_instructions = WTFMove(instructions);
+        m_codeBlock->allocateSharedProfiles(m_numBinaryArithProfiles, m_numUnaryArithProfiles);
         m_codeBlock->m_metadata->finalize();
 
         m_codeBlock->m_jumpTargets = WTFMove(m_jumpTargets);
@@ -132,8 +133,8 @@ void UnlinkedCodeBlockGenerator::finalize(std::unique_ptr<InstructionStream> ins
 
         if (!m_codeBlock->m_rareData) {
             if (!m_exceptionHandlers.isEmpty()
-                || !m_switchJumpTables.isEmpty()
-                || !m_stringSwitchJumpTables.isEmpty()
+                || !m_unlinkedSwitchJumpTables.isEmpty()
+                || !m_unlinkedStringSwitchJumpTables.isEmpty()
                 || !m_expressionInfoFatPositions.isEmpty()
                 || !m_typeProfilerInfoMap.isEmpty()
                 || !m_opProfileControlFlowBytecodeOffsets.isEmpty()
@@ -143,16 +144,19 @@ void UnlinkedCodeBlockGenerator::finalize(std::unique_ptr<InstructionStream> ins
         }
         if (m_codeBlock->m_rareData) {
             m_codeBlock->m_rareData->m_exceptionHandlers = WTFMove(m_exceptionHandlers);
-            m_codeBlock->m_rareData->m_switchJumpTables = WTFMove(m_switchJumpTables);
-            m_codeBlock->m_rareData->m_stringSwitchJumpTables = WTFMove(m_stringSwitchJumpTables);
+            m_codeBlock->m_rareData->m_unlinkedSwitchJumpTables = WTFMove(m_unlinkedSwitchJumpTables);
+            m_codeBlock->m_rareData->m_unlinkedStringSwitchJumpTables = WTFMove(m_unlinkedStringSwitchJumpTables);
             m_codeBlock->m_rareData->m_expressionInfoFatPositions = WTFMove(m_expressionInfoFatPositions);
             m_codeBlock->m_rareData->m_typeProfilerInfoMap = WTFMove(m_typeProfilerInfoMap);
             m_codeBlock->m_rareData->m_opProfileControlFlowBytecodeOffsets = WTFMove(m_opProfileControlFlowBytecodeOffsets);
             m_codeBlock->m_rareData->m_bitVectors = WTFMove(m_bitVectors);
             m_codeBlock->m_rareData->m_constantIdentifierSets = WTFMove(m_constantIdentifierSets);
         }
+
+        if (UNLIKELY(Options::returnEarlyFromInfiniteLoopsForFuzzing()))
+            m_codeBlock->initializeLoopHintExecutionCounter();
     }
-    m_vm.heap.writeBarrier(m_codeBlock.get());
+    m_vm.writeBarrier(m_codeBlock.get());
     m_vm.heap.reportExtraMemoryAllocated(m_codeBlock->m_instructions->sizeInBytes() + m_codeBlock->m_metadata->sizeInBytes());
 }
 

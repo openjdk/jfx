@@ -36,6 +36,7 @@ class JSObject;
 // is a 0.5% reduction.
 
 extern const ASCIILiteral ObjectProtoCalledOnNullOrUndefinedError;
+extern const ASCIILiteral RestrictedPropertyAccessError;
 
 JSC_DECLARE_HOST_FUNCTION(globalFuncEval);
 JSC_DECLARE_HOST_FUNCTION(globalFuncParseInt);
@@ -52,6 +53,7 @@ JSC_DECLARE_HOST_FUNCTION(globalFuncMakeTypeError);
 JSC_DECLARE_HOST_FUNCTION(globalFuncProtoGetter);
 JSC_DECLARE_HOST_FUNCTION(globalFuncProtoSetter);
 JSC_DECLARE_HOST_FUNCTION(globalFuncSetPrototypeDirect);
+JSC_DECLARE_HOST_FUNCTION(globalFuncSetPrototypeDirectOrThrow);
 JSC_DECLARE_HOST_FUNCTION(globalFuncHostPromiseRejectionTracker);
 JSC_DECLARE_HOST_FUNCTION(globalFuncBuiltinLog);
 JSC_DECLARE_HOST_FUNCTION(globalFuncBuiltinDescribe);

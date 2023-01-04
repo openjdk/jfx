@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -37,7 +37,7 @@ static JSC_DECLARE_HOST_FUNCTION(arrayBufferProtoGetterFuncByteLength);
 static JSC_DECLARE_HOST_FUNCTION(sharedArrayBufferProtoFuncSlice);
 static JSC_DECLARE_HOST_FUNCTION(sharedArrayBufferProtoGetterFuncByteLength);
 
-Optional<JSValue> arrayBufferSpeciesConstructorSlow(JSGlobalObject* globalObject, JSArrayBuffer* thisObject, ArrayBufferSharingMode mode)
+std::optional<JSValue> arrayBufferSpeciesConstructorSlow(JSGlobalObject* globalObject, JSArrayBuffer* thisObject, ArrayBufferSharingMode mode)
 {
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
@@ -45,31 +45,30 @@ Optional<JSValue> arrayBufferSpeciesConstructorSlow(JSGlobalObject* globalObject
     bool isValid = speciesWatchpointIsValid(vm, thisObject, mode);
     scope.assertNoException();
     if (LIKELY(isValid))
-        return WTF::nullopt;
+        return std::nullopt;
 
     JSValue constructor = thisObject->get(globalObject, vm.propertyNames->constructor);
-    RETURN_IF_EXCEPTION(scope, WTF::nullopt);
+    RETURN_IF_EXCEPTION(scope, std::nullopt);
     if (constructor.isConstructor(vm)) {
         JSObject* constructorObject = jsCast<JSObject*>(constructor);
         JSGlobalObject* globalObjectFromConstructor = constructorObject->globalObject(vm);
-        bool isArrayBufferConstructorFromAnotherRealm = globalObject != globalObjectFromConstructor
-            && constructorObject == globalObjectFromConstructor->arrayBufferConstructor(mode);
-        if (isArrayBufferConstructorFromAnotherRealm)
-            return WTF::nullopt;
+        bool isAnyArrayBufferConstructor = constructorObject == globalObjectFromConstructor->arrayBufferConstructor(mode);
+        if (isAnyArrayBufferConstructor)
+            return std::nullopt;
     }
 
     if (constructor.isUndefined())
-        return WTF::nullopt;
+        return std::nullopt;
 
     if (!constructor.isObject()) {
         throwTypeError(globalObject, scope, "constructor property should not be null"_s);
-        return WTF::nullopt;
+        return std::nullopt;
     }
 
     JSValue species = constructor.get(globalObject, vm.propertyNames->speciesSymbol);
-    RETURN_IF_EXCEPTION(scope, WTF::nullopt);
+    RETURN_IF_EXCEPTION(scope, std::nullopt);
 
-    return species.isUndefinedOrNull() ? WTF::nullopt : makeOptional(species);
+    return species.isUndefinedOrNull() ? std::nullopt : std::make_optional(species);
 }
 
 enum class SpeciesConstructResult : uint8_t {
@@ -90,7 +89,7 @@ static ALWAYS_INLINE std::pair<SpeciesConstructResult, JSArrayBuffer*> speciesCo
 
     // Fast path in the normal case where the user has not set an own constructor and the ArrayBuffer.prototype.constructor is normal.
     // We need prototype check for subclasses of ArrayBuffer, which are ArrayBuffer objects but have a different prototype by default.
-    Optional<JSValue> species = arrayBufferSpeciesConstructor(globalObject, thisObject, mode);
+    std::optional<JSValue> species = arrayBufferSpeciesConstructor(globalObject, thisObject, mode);
     RETURN_IF_EXCEPTION(scope, errorResult);
     if (!species)
         return fastPathResult;
@@ -283,7 +282,7 @@ void JSArrayBufferPrototype::finishCreation(VM& vm, JSGlobalObject* globalObject
 JSArrayBufferPrototype* JSArrayBufferPrototype::create(VM& vm, JSGlobalObject* globalObject, Structure* structure, ArrayBufferSharingMode sharingMode)
 {
     JSArrayBufferPrototype* prototype =
-        new (NotNull, allocateCell<JSArrayBufferPrototype>(vm.heap))
+        new (NotNull, allocateCell<JSArrayBufferPrototype>(vm))
         JSArrayBufferPrototype(vm, structure);
     prototype->finishCreation(vm, globalObject, sharingMode);
     return prototype;

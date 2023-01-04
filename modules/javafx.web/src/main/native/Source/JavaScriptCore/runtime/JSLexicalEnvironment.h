@@ -44,11 +44,11 @@ public:
     static CompleteSubspace* subspaceFor(VM& vm)
     {
         static_assert(!CellType::needsDestruction, "");
-        return &vm.variableSizedCellSpace;
+        return &vm.variableSizedCellSpace();
     }
 
     using Base = JSSymbolTableObject;
-    static constexpr unsigned StructureFlags = Base::StructureFlags | OverridesGetOwnPropertySlot | OverridesGetOwnSpecialPropertyNames;
+    static constexpr unsigned StructureFlags = Base::StructureFlags | OverridesGetOwnPropertySlot | OverridesGetOwnSpecialPropertyNames | OverridesPut;
 
     WriteBarrierBase<Unknown>* variables()
     {
@@ -74,12 +74,12 @@ public:
     static size_t offsetOfVariable(ScopeOffset offset)
     {
         Checked<size_t> scopeOffset = offset.offset();
-        return (offsetOfVariables() + scopeOffset * sizeof(WriteBarrier<Unknown>)).unsafeGet();
+        return offsetOfVariables() + scopeOffset * sizeof(WriteBarrier<Unknown>);
     }
 
     static size_t allocationSizeForScopeSize(Checked<size_t> scopeSize)
     {
-        return (offsetOfVariables() + scopeSize * sizeof(WriteBarrier<Unknown>)).unsafeGet();
+        return offsetOfVariables() + scopeSize * sizeof(WriteBarrier<Unknown>);
     }
 
     static size_t allocationSize(SymbolTable* symbolTable)
@@ -93,7 +93,7 @@ public:
         JSLexicalEnvironment* result =
             new (
                 NotNull,
-                allocateCell<JSLexicalEnvironment>(vm.heap, allocationSize(symbolTable)))
+                allocateCell<JSLexicalEnvironment>(vm, allocationSize(symbolTable)))
             JSLexicalEnvironment(vm, structure, currentScope, symbolTable);
         result->finishCreation(vm, initialValue);
         return result;

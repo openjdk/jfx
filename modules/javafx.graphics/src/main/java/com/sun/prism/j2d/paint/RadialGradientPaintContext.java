@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2006, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2006, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -171,6 +171,7 @@ final class RadialGradientPaintContext extends MultipleGradientPaintContext {
      * @param x,y,w,h the area in device space for which colors are
      * generated.
      */
+    @Override
     protected void fillRaster(int pixels[], int off, int adjust,
                               int x, int y, int w, int h)
     {

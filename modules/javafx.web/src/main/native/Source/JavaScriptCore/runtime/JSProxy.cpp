@@ -52,18 +52,6 @@ void JSProxy::setTarget(VM& vm, JSGlobalObject* globalObject)
     setPrototypeDirect(vm, globalObject->getPrototypeDirect(vm));
 }
 
-String JSProxy::className(const JSObject* object, VM& vm)
-{
-    const JSProxy* thisObject = jsCast<const JSProxy*>(object);
-    return thisObject->target()->methodTable(vm)->className(thisObject->target(), vm);
-}
-
-String JSProxy::toStringName(const JSObject* object, JSGlobalObject* globalObject)
-{
-    const JSProxy* thisObject = jsCast<const JSProxy*>(object);
-    return thisObject->target()->methodTable(globalObject->vm())->toStringName(thisObject->target(), globalObject);
-}
-
 bool JSProxy::getOwnPropertySlot(JSObject* object, JSGlobalObject* globalObject, PropertyName propertyName, PropertySlot& slot)
 {
     JSProxy* thisObject = jsCast<JSProxy*>(object);
@@ -116,12 +104,6 @@ bool JSProxy::deletePropertyByIndex(JSCell* cell, JSGlobalObject* globalObject, 
 {
     JSProxy* thisObject = jsCast<JSProxy*>(cell);
     return thisObject->target()->methodTable(globalObject->vm())->deletePropertyByIndex(thisObject->target(), globalObject, propertyName);
-}
-
-uint32_t JSProxy::getEnumerableLength(JSGlobalObject* globalObject, JSObject* object)
-{
-    JSProxy* thisObject = jsCast<JSProxy*>(object);
-    return thisObject->target()->methodTable(globalObject->vm())->getEnumerableLength(globalObject, thisObject->target());
 }
 
 void JSProxy::getOwnPropertyNames(JSObject* object, JSGlobalObject* globalObject, PropertyNameArray& propertyNames, DontEnumPropertiesMode mode)

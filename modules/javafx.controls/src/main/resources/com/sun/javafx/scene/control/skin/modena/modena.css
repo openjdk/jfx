@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -356,6 +356,9 @@ is being used to size a border should also be in pixels.
 
     /** Focus line for keyboard focus traversal on cell based controls */
     -fx-cell-focus-inner-border: derive(-fx-selection-bar,30%);
+
+    /* Cell border color is initialized here to avoid a race condition during initialization */
+    -fx-table-cell-border-color: transparent;
 
     /* The colors to use in Pagination */
     -fx-page-bullet-border: #acacac;

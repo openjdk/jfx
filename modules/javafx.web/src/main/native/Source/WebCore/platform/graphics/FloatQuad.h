@@ -76,9 +76,10 @@ public:
     void setP3(const FloatPoint& p) { m_p3 = p; }
     void setP4(const FloatPoint& p) { m_p4 = p; }
 
-    // isEmpty tests that the bounding box is empty. This will not identify
-    // "slanted" empty quads.
-    bool isEmpty() const { return boundingBox().isEmpty(); }
+    WEBCORE_EXPORT bool isEmpty() const;
+
+    // This method will not identify "slanted" empty quads.
+    bool boundingBoxIsEmpty() const { return boundingBox().isEmpty(); }
 
     // Tests whether this quad can be losslessly represented by a FloatRect,
     // that is, if two edges are parallel to the x-axis and the other two
@@ -150,7 +151,7 @@ public:
     bool isCounterclockwise() const;
 
     template<class Encoder> void encode(Encoder&) const;
-    template<class Decoder> static Optional<FloatQuad> decode(Decoder&);
+    template<class Decoder> static std::optional<FloatQuad> decode(Decoder&);
 
 private:
     FloatPoint m_p1;
@@ -167,27 +168,27 @@ template<class Encoder> void FloatQuad::encode(Encoder& encoder) const
     encoder << m_p4;
 }
 
-template<class Decoder> Optional<FloatQuad> FloatQuad::decode(Decoder& decoder)
+template<class Decoder> std::optional<FloatQuad> FloatQuad::decode(Decoder& decoder)
 {
-    Optional<FloatPoint> p1;
+    std::optional<FloatPoint> p1;
     decoder >> p1;
     if (!p1)
-        return WTF::nullopt;
+        return std::nullopt;
 
-    Optional<FloatPoint> p2;
+    std::optional<FloatPoint> p2;
     decoder >> p2;
     if (!p2)
-        return WTF::nullopt;
+        return std::nullopt;
 
-    Optional<FloatPoint> p3;
+    std::optional<FloatPoint> p3;
     decoder >> p3;
     if (!p3)
-        return WTF::nullopt;
+        return std::nullopt;
 
-    Optional<FloatPoint> p4;
+    std::optional<FloatPoint> p4;
     decoder >> p4;
     if (!p4)
-        return WTF::nullopt;
+        return std::nullopt;
 
     return {{ *p1, *p2, *p3, *p4 }};
 }
@@ -214,7 +215,7 @@ inline bool operator!=(const FloatQuad& a, const FloatQuad& b)
     return !(a == b);
 }
 
-WTF::TextStream& operator<<(WTF::TextStream&, const FloatQuad&);
+WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, const FloatQuad&);
 
 Vector<FloatRect> boundingBoxes(const Vector<FloatQuad>&);
 WEBCORE_EXPORT FloatRect unitedBoundingBoxes(const Vector<FloatQuad>&);

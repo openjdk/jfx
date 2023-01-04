@@ -60,7 +60,7 @@ Ref<StorageArea> StorageNamespaceProvider::localStorageArea(Document& document)
     else
         storageNamespace = &localStorageNamespace(document.page()->sessionID());
 
-    return storageNamespace->storageArea(document.securityOrigin().data());
+    return storageNamespace->storageArea(document.securityOrigin());
 }
 
 StorageNamespace& StorageNamespaceProvider::localStorageNamespace(PAL::SessionID sessionID)
@@ -82,7 +82,7 @@ StorageNamespace& StorageNamespaceProvider::transientLocalStorageNamespace(Secur
     return *slot;
 }
 
-void StorageNamespaceProvider::setSessionIDForTesting(const PAL::SessionID& newSessionID)
+void StorageNamespaceProvider::setSessionIDForTesting(PAL::SessionID newSessionID)
 {
     if (m_localStorageNamespace && newSessionID != m_localStorageNamespace->sessionID())
         m_localStorageNamespace->setSessionIDForTesting(newSessionID);

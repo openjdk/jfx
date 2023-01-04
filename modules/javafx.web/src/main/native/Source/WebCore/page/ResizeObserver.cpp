@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2019 Igalia S.L.
+ * Copyright (C) 2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,12 +26,13 @@
 
 #include "config.h"
 
-#if ENABLE(RESIZE_OBSERVER)
 #include "ResizeObserver.h"
 
 #include "Element.h"
 #include "InspectorInstrumentation.h"
 #include "ResizeObserverEntry.h"
+#include "ResizeObserverOptions.h"
+#include <JavaScriptCore/AbstractSlotVisitorInlines.h>
 
 namespace WebCore {
 
@@ -40,11 +42,9 @@ Ref<ResizeObserver> ResizeObserver::create(Document& document, Ref<ResizeObserve
 }
 
 ResizeObserver::ResizeObserver(Document& document, Ref<ResizeObserverCallback>&& callback)
-    : ActiveDOMObject(callback->scriptExecutionContext())
-    , m_document(makeWeakPtr(document))
+    : m_document(document)
     , m_callback(WTFMove(callback))
 {
-    suspendIfNeeded();
 }
 
 ResizeObserver::~ResizeObserver()
@@ -54,23 +54,29 @@ ResizeObserver::~ResizeObserver()
         m_document->removeResizeObserver(*this);
 }
 
-void ResizeObserver::observe(Element& target)
+// https://drafts.csswg.org/resize-observer/#dom-resizeobserver-observe
+void ResizeObserver::observe(Element& target, const ResizeObserverOptions& options)
 {
     if (!m_callback)
         return;
 
-    auto position = m_observations.findMatching([&](auto& observation) {
+    auto position = m_observations.findIf([&](auto& observation) {
         return observation->target() == &target;
     });
 
-    if (position != notFound)
-        return;
+    if (position != notFound) {
+        // The spec suggests unconditionally unobserving here, but that causes a test failure:
+        // https://github.com/web-platform-tests/wpt/issues/30708
+        if (m_observations[position]->observedBox() == options.box)
+            return;
+
+        unobserve(target);
+    }
 
     auto& observerData = target.ensureResizeObserverData();
-    observerData.observers.append(makeWeakPtr(this));
+    observerData.observers.append(*this);
 
-    m_observations.append(ResizeObservation::create(&target));
-    m_pendingTargets.append(target);
+    m_observations.append(ResizeObservation::create(target, options.box));
 
     if (m_document) {
         m_document->addResizeObserver(*this);
@@ -78,6 +84,7 @@ void ResizeObserver::observe(Element& target)
     }
 }
 
+// https://drafts.csswg.org/resize-observer/#dom-resizeobserver-unobserve
 void ResizeObserver::unobserve(Element& target)
 {
     if (!removeTarget(target))
@@ -86,6 +93,7 @@ void ResizeObserver::unobserve(Element& target)
     removeObservation(target);
 }
 
+// https://drafts.csswg.org/resize-observer/#dom-resizeobserver-disconnect
 void ResizeObserver::disconnect()
 {
     removeAllTargets();
@@ -101,12 +109,12 @@ size_t ResizeObserver::gatherObservations(size_t deeperThan)
     m_hasSkippedObservations = false;
     size_t minObservedDepth = maxElementDepth();
     for (const auto& observation : m_observations) {
-        LayoutSize currentSize;
-        if (observation->elementSizeChanged(currentSize)) {
+        if (auto currentSizes = observation->elementSizeChanged()) {
             size_t depth = observation->targetElementDepth();
             if (depth > deeperThan) {
-                observation->updateObservationSize(currentSize);
+                observation->updateObservationSize(*currentSizes);
                 m_activeObservations.append(observation.get());
+                m_activeObservationTargets.append(*observation->target());
                 minObservedDepth = std::min(depth, minObservedDepth);
             } else
                 m_hasSkippedObservations = true;
@@ -120,9 +128,15 @@ void ResizeObserver::deliverObservations()
     Vector<Ref<ResizeObserverEntry>> entries;
     for (const auto& observation : m_activeObservations) {
         ASSERT(observation->target());
-        entries.append(ResizeObserverEntry::create(observation->target(), observation->computeContentRect()));
+        entries.append(ResizeObserverEntry::create(observation->target(), observation->computeContentRect(), observation->borderBoxSize(), observation->contentBoxSize()));
     }
     m_activeObservations.clear();
+    auto activeObservationTargets = std::exchange(m_activeObservationTargets, { });
+
+    // FIXME: The JSResizeObserver wrapper should be kept alive as long as the resize observer can fire events.
+    ASSERT(m_callback->hasCallback());
+    if (!m_callback->hasCallback())
+        return;
 
     auto* context = m_callback->scriptExecutionContext();
     if (!context)
@@ -131,6 +145,19 @@ void ResizeObserver::deliverObservations()
     InspectorInstrumentation::willFireObserverCallback(*context, "ResizeObserver"_s);
     m_callback->handleEvent(*this, entries, *this);
     InspectorInstrumentation::didFireObserverCallback(*context);
+}
+
+bool ResizeObserver::isReachableFromOpaqueRoots(JSC::AbstractSlotVisitor& visitor) const
+{
+    for (auto& observation : m_observations) {
+        if (auto* target = observation->target(); target && visitor.containsOpaqueRoot(target->opaqueRoot()))
+            return true;
+    }
+    for (auto& target : m_activeObservationTargets) {
+        if (visitor.containsOpaqueRoot(target->opaqueRoot()))
+            return true;
+    }
+    return false;
 }
 
 bool ResizeObserver::removeTarget(Element& target)
@@ -149,42 +176,16 @@ void ResizeObserver::removeAllTargets()
         bool removed = removeTarget(*observation->target());
         ASSERT_UNUSED(removed, removed);
     }
-    m_pendingTargets.clear();
+    m_activeObservationTargets.clear();
     m_activeObservations.clear();
     m_observations.clear();
 }
 
 bool ResizeObserver::removeObservation(const Element& target)
 {
-    m_pendingTargets.removeFirstMatching([&target](auto& pendingTarget) {
-        return pendingTarget.ptr() == &target;
-    });
-
-    m_activeObservations.removeFirstMatching([&target](auto& observation) {
-        return observation->target() == &target;
-    });
-
     return m_observations.removeFirstMatching([&target](auto& observation) {
         return observation->target() == &target;
     });
 }
 
-bool ResizeObserver::virtualHasPendingActivity() const
-{
-    return (hasObservations() && m_document) || !m_activeObservations.isEmpty();
-}
-
-const char* ResizeObserver::activeDOMObjectName() const
-{
-    return "ResizeObserver";
-}
-
-void ResizeObserver::stop()
-{
-    disconnect();
-    m_callback = nullptr;
-}
-
 } // namespace WebCore
-
-#endif // ENABLE(RESIZE_OBSERVER)

@@ -25,22 +25,17 @@
 
 #pragma once
 
+#include "DeferGC.h"
 #include "Weak.h"
+#include "WeakGCHashTable.h"
 #include <wtf/HashMap.h>
 
 namespace JSC {
 
 // A HashMap with Weak<JSCell> values, which automatically removes values once they're garbage collected.
 
-class WeakGCMapBase {
-public:
-    virtual ~WeakGCMapBase() { }
-    virtual void pruneStaleEntries() = 0;
-};
-
-template<typename KeyArg, typename ValueArg, typename HashArg = DefaultHash<KeyArg>,
-    typename KeyTraitsArg = HashTraits<KeyArg>>
-class WeakGCMap final : public WeakGCMapBase {
+template<typename KeyArg, typename ValueArg, typename HashArg = DefaultHash<KeyArg>, typename KeyTraitsArg = HashTraits<KeyArg>>
+class WeakGCMap final : public WeakGCHashTable {
     WTF_MAKE_FAST_ALLOCATED;
     typedef Weak<ValueArg> ValueType;
     typedef HashMap<KeyArg, ValueType, HashArg, KeyTraitsArg> HashMapType;
@@ -62,6 +57,21 @@ public:
     AddResult set(const KeyType& key, ValueType value)
     {
         return m_map.set(key, WTFMove(value));
+    }
+
+    template<typename Functor>
+    ValueArg* ensureValue(const KeyType& key, Functor&& functor)
+    {
+        // If functor invokes GC, GC can prune WeakGCMap, and manipulate HashMap while we are touching it in ensure function.
+        // The functor must not invoke GC.
+        DisallowGC disallowGC;
+        AddResult result = m_map.ensure(key, std::forward<Functor>(functor));
+        ValueArg* value = result.iterator->value.get();
+        if (!result.isNewEntry && !value) {
+            value = functor();
+            result.iterator->value = WTFMove(value);
+        }
+        return value;
     }
 
     bool remove(const KeyType& key)

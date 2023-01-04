@@ -38,6 +38,7 @@ namespace WebCore {
 
 class RegistrationStore;
 class SQLiteDatabase;
+class SWScriptStorage;
 struct ServiceWorkerContextData;
 
 WEBCORE_EXPORT String serviceWorkerRegistrationDatabaseFilename(const String& databaseDirectory);
@@ -52,7 +53,7 @@ public:
 
     ~RegistrationDatabase();
 
-    void pushChanges(const HashMap<ServiceWorkerRegistrationKey, Optional<ServiceWorkerContextData>>&, CompletionHandler<void()>&&);
+    void pushChanges(const HashMap<ServiceWorkerRegistrationKey, std::optional<ServiceWorkerContextData>>&, CompletionHandler<void()>&&);
     void clearAll(CompletionHandler<void()>&&);
     void close(CompletionHandler<void()>&&);
 
@@ -72,6 +73,8 @@ private:
     void importRecordsIfNecessary();
     bool doPushChanges(const Vector<ServiceWorkerContextData>&, const Vector<ServiceWorkerRegistrationKey>&);
     void doClearOrigin(const SecurityOrigin&);
+    SWScriptStorage& scriptStorage();
+    String scriptStorageDirectory() const;
 
     // Replies to the main thread.
     void addRegistrationToStore(ServiceWorkerContextData&&);
@@ -80,6 +83,7 @@ private:
 
     Ref<WorkQueue> m_workQueue;
     WeakPtr<RegistrationStore> m_store;
+    std::unique_ptr<SWScriptStorage> m_scriptStorage;
     String m_databaseDirectory;
     String m_databaseFilePath;
     std::unique_ptr<SQLiteDatabase> m_database;

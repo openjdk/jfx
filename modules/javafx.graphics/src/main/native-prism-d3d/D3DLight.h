@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -35,13 +35,14 @@ public:
     D3DLight();
     virtual ~D3DLight();
     bool isPointLight();
+    bool isDirectionalLight();
     void setColor(float r, float g, float b);
     void setPosition(float x, float y, float z);
 
     float position[3];
     float color[3];
     float w;
-    float attenuation[3]; // ca, la, qa
+    float attenuation[4]; // ca, la, qa, isAttenuated
     float maxRange;
     float direction[3];
     float innerAngle;

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,7 @@
 
 package test.javafx.scene;
 
+import javafx.scene.effect.BlendMode;
 import test.javafx.scene.shape.TestUtils;
 import test.javafx.scene.shape.CircleTest;
 import com.sun.javafx.geom.PickRay;
@@ -68,7 +69,6 @@ import java.util.Comparator;
 import java.util.Set;
 
 import javafx.scene.Group;
-import javafx.scene.GroupShim;
 import javafx.scene.Node;
 import javafx.scene.NodeShim;
 import javafx.scene.ParallelCamera;
@@ -1928,6 +1928,14 @@ public class NodeTest {
         Scene s = new Scene(node);
         node.applyCss();
         assertFalse(node.isManaged());
+    }
+
+    @Test public void testBlendModeSetFromCSS() {
+        final AnchorPane node = new AnchorPane();
+        node.setStyle("-fx-blend-mode: red");
+        new Scene(node);
+        node.applyCss();
+        assertEquals(BlendMode.RED, node.getBlendMode());
     }
 
     private Node createTestRect() {

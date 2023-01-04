@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -97,6 +97,9 @@ public abstract class Shape3D extends Node {
 
     private static final PhongMaterial DEFAULT_MATERIAL = new PhongMaterial();
 
+    /**
+     * Constructor for subclasses to call.
+     */
     protected Shape3D() {
         if (!Platform.isSupported(ConditionalFeature.SCENE3D)) {
             String logname = Shape3D.class.getName();
@@ -140,7 +143,7 @@ public abstract class Shape3D extends Node {
 
     public final ObjectProperty<Material> materialProperty() {
         if (material == null) {
-            material = new SimpleObjectProperty<Material>(Shape3D.this,
+            material = new SimpleObjectProperty<>(Shape3D.this,
                     "material") {
 
                 private Material old = null;
@@ -190,7 +193,7 @@ public abstract class Shape3D extends Node {
 
     public final ObjectProperty<DrawMode> drawModeProperty() {
         if (drawMode == null) {
-            drawMode = new SimpleObjectProperty<DrawMode>(Shape3D.this,
+            drawMode = new SimpleObjectProperty<>(Shape3D.this,
                     "drawMode", DrawMode.FILL) {
 
                 @Override
@@ -219,7 +222,7 @@ public abstract class Shape3D extends Node {
 
     public final ObjectProperty<CullFace> cullFaceProperty() {
         if (cullFace == null) {
-            cullFace = new SimpleObjectProperty<CullFace>(Shape3D.this,
+            cullFace = new SimpleObjectProperty<>(Shape3D.this,
                     "cullFace", CullFace.BACK) {
 
                 @Override

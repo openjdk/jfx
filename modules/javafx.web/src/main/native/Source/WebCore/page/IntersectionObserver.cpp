@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,7 +25,6 @@
 
 #include "config.h"
 
-#if ENABLE(INTERSECTION_OBSERVER)
 #include "IntersectionObserver.h"
 
 #include "CSSParserTokenRange.h"
@@ -37,6 +36,7 @@
 #include "IntersectionObserverCallback.h"
 #include "IntersectionObserverEntry.h"
 #include "Performance.h"
+#include <JavaScriptCore/AbstractSlotVisitorInlines.h>
 #include <wtf/Vector.h>
 
 namespace WebCore {
@@ -49,7 +49,7 @@ static ExceptionOr<LengthBox> parseRootMargin(String& rootMargin)
     while (!tokenRange.atEnd()) {
         if (margins.size() == 4)
             return Exception { SyntaxError, "Failed to construct 'IntersectionObserver': Extra text found at the end of rootMargin." };
-        RefPtr<CSSPrimitiveValue> parsedValue = CSSPropertyParserHelpers::consumeLengthOrPercent(tokenRange, HTMLStandardMode, ValueRangeAll);
+        RefPtr<CSSPrimitiveValue> parsedValue = CSSPropertyParserHelpers::consumeLengthOrPercent(tokenRange, HTMLStandardMode, ValueRange::All);
         if (!parsedValue || parsedValue->isCalculated())
             return Exception { SyntaxError, "Failed to construct 'IntersectionObserver': rootMargin must be specified in pixels or percent." };
         if (parsedValue->isPercentage())
@@ -86,7 +86,7 @@ static ExceptionOr<LengthBox> parseRootMargin(String& rootMargin)
 
 ExceptionOr<Ref<IntersectionObserver>> IntersectionObserver::create(Document& document, Ref<IntersectionObserverCallback>&& callback, IntersectionObserver::Init&& init)
 {
-    ContainerNode* root = nullptr;
+    RefPtr<ContainerNode> root;
     if (init.root) {
         WTF::switchOn(*init.root, [&root] (RefPtr<Element> element) {
             root = element.get();
@@ -101,8 +101,7 @@ ExceptionOr<Ref<IntersectionObserver>> IntersectionObserver::create(Document& do
 
     Vector<double> thresholds;
     WTF::switchOn(init.threshold, [&thresholds] (double initThreshold) {
-        thresholds.reserveInitialCapacity(1);
-        thresholds.uncheckedAppend(initThreshold);
+        thresholds.append(initThreshold);
     }, [&thresholds] (Vector<double>& initThresholds) {
         thresholds = WTFMove(initThresholds);
     });
@@ -112,38 +111,35 @@ ExceptionOr<Ref<IntersectionObserver>> IntersectionObserver::create(Document& do
             return Exception { RangeError, "Failed to construct 'IntersectionObserver': all thresholds must lie in the range [0.0, 1.0]." };
     }
 
-    return adoptRef(*new IntersectionObserver(document, WTFMove(callback), root, rootMarginOrException.releaseReturnValue(), WTFMove(thresholds)));
+    return adoptRef(*new IntersectionObserver(document, WTFMove(callback), root.get(), rootMarginOrException.releaseReturnValue(), WTFMove(thresholds)));
 }
 
 IntersectionObserver::IntersectionObserver(Document& document, Ref<IntersectionObserverCallback>&& callback, ContainerNode* root, LengthBox&& parsedRootMargin, Vector<double>&& thresholds)
-    : ActiveDOMObject(callback->scriptExecutionContext())
+    : m_associatedDocument(&document)
     , m_root(root)
     , m_rootMargin(WTFMove(parsedRootMargin))
     , m_thresholds(WTFMove(thresholds))
     , m_callback(WTFMove(callback))
 {
-    if (is<Document>(m_root)) {
-        auto& observerData = downcast<Document>(*m_root).ensureIntersectionObserverData();
-        observerData.observers.append(makeWeakPtr(this));
-    } else if (m_root) {
-        ASSERT(is<Element>(m_root));
-        auto& observerData = downcast<Element>(*m_root).ensureIntersectionObserverData();
-        observerData.observers.append(makeWeakPtr(this));
+    if (is<Document>(root)) {
+        auto& observerData = downcast<Document>(*root).ensureIntersectionObserverData();
+        observerData.observers.append(*this);
+    } else if (root) {
+        auto& observerData = downcast<Element>(*root).ensureIntersectionObserverData();
+        observerData.observers.append(*this);
     } else if (auto* frame = document.frame())
-        m_implicitRootDocument = makeWeakPtr(frame->mainFrame().document());
+        m_implicitRootDocument = frame->mainFrame().document();
 
     std::sort(m_thresholds.begin(), m_thresholds.end());
-    suspendIfNeeded();
 }
 
 IntersectionObserver::~IntersectionObserver()
 {
-    if (is<Document>(m_root)) {
-        downcast<Document>(*m_root).intersectionObserverDataIfExists()->observers.removeFirst(this);
-    } else if (m_root) {
-        ASSERT(is<Element>(m_root));
-        downcast<Element>(*m_root).intersectionObserverDataIfExists()->observers.removeFirst(this);
-    }
+    RefPtr root = m_root.get();
+    if (is<Document>(root))
+        downcast<Document>(*root).intersectionObserverDataIfExists()->observers.removeFirst(this);
+    else if (root)
+        downcast<Element>(*root).intersectionObserverDataIfExists()->observers.removeFirst(this);
     disconnect();
 }
 
@@ -152,25 +148,37 @@ String IntersectionObserver::rootMargin() const
     StringBuilder stringBuilder;
     for (auto side : allBoxSides) {
         auto& length = m_rootMargin.at(side);
-        stringBuilder.appendNumber(length.intValue());
-        if (length.isPercent())
-            stringBuilder.append('%');
-        else
-            stringBuilder.appendLiteral("px");
-        if (side != BoxSide::Left)
-            stringBuilder.append(' ');
+        stringBuilder.append(length.intValue(), length.isPercent() ? "%" : "px", side != BoxSide::Left ? " " : "");
     }
     return stringBuilder.toString();
 }
 
+bool IntersectionObserver::isObserving(const Element& element) const
+{
+    return m_observationTargets.findIf([&](auto& target) {
+        return target.get() == &element;
+    }) != notFound;
+}
+
 void IntersectionObserver::observe(Element& target)
 {
-    if (!trackingDocument() || !m_callback || m_observationTargets.contains(&target))
+    if (!trackingDocument() || !m_callback || isObserving(target))
         return;
 
-    target.ensureIntersectionObserverData().registrations.append({ makeWeakPtr(this), WTF::nullopt });
+    target.ensureIntersectionObserverData().registrations.append({ *this, std::nullopt });
     bool hadObservationTargets = hasObservationTargets();
-    m_observationTargets.append(&target);
+    m_observationTargets.append(target);
+
+    // Per the specification, we should dispatch at least one observation for the target. For this reason, we make sure to keep the
+    // target alive until this first observation. This, in turn, will keep the IntersectionObserver's JS wrapper alive via
+    // isReachableFromOpaqueRoots(), so the callback stays alive.
+    m_targetsWaitingForFirstObservation.append(target);
+
+    // Per the specification, we should dispatch at least one observation for the target. For this reason, we make sure to keep the
+    // target alive until this first observation. This, in turn, will keep the IntersectionObserver's JS wrapper alive via
+    // isReachableFromOpaqueRoots(), so the callback stays alive.
+    m_targetsWaitingForFirstObservation.append(target);
+
     auto* document = trackingDocument();
     if (!hadObservationTargets)
         document->addIntersectionObserver(*this);
@@ -184,6 +192,7 @@ void IntersectionObserver::unobserve(Element& target)
 
     bool removed = m_observationTargets.removeFirst(&target);
     ASSERT_UNUSED(removed, removed);
+    m_targetsWaitingForFirstObservation.removeFirstMatching([&](auto& pendingTarget) { return pendingTarget.ptr() == &target; });
 
     if (!hasObservationTargets()) {
         if (auto* document = trackingDocument())
@@ -209,6 +218,7 @@ auto IntersectionObserver::takeRecords() -> TakenRecords
 void IntersectionObserver::targetDestroyed(Element& target)
 {
     m_observationTargets.removeFirst(&target);
+    m_targetsWaitingForFirstObservation.removeFirstMatching([&](auto& pendingTarget) { return pendingTarget.ptr() == &target; });
     if (!hasObservationTargets()) {
         if (auto* document = trackingDocument())
             document->removeIntersectionObserver(*this);
@@ -229,11 +239,12 @@ bool IntersectionObserver::removeTargetRegistration(Element& target)
 
 void IntersectionObserver::removeAllTargets()
 {
-    for (auto* target : m_observationTargets) {
+    for (auto& target : m_observationTargets) {
         bool removed = removeTargetRegistration(*target);
         ASSERT_UNUSED(removed, removed);
     }
     m_observationTargets.clear();
+    m_targetsWaitingForFirstObservation.clear();
 }
 
 void IntersectionObserver::rootDestroyed()
@@ -243,21 +254,14 @@ void IntersectionObserver::rootDestroyed()
     m_root = nullptr;
 }
 
-Optional<ReducedResolutionSeconds> IntersectionObserver::nowTimestamp() const
+std::optional<ReducedResolutionSeconds> IntersectionObserver::nowTimestamp() const
 {
-    if (!m_callback)
-        return WTF::nullopt;
-
-    auto* context = m_callback->scriptExecutionContext();
-    if (!context)
-        return WTF::nullopt;
-
-    ASSERT(context->isDocument());
-    auto& document = downcast<Document>(*context);
-    if (auto* window = document.domWindow())
+    if (auto* document = m_associatedDocument.get()) {
+        if (auto* window = document->domWindow())
         return window->frozenNowTimestamp();
+    }
 
-    return WTF::nullopt;
+    return std::nullopt;
 }
 
 void IntersectionObserver::appendQueuedEntry(Ref<IntersectionObserverEntry>&& entry)
@@ -274,35 +278,34 @@ void IntersectionObserver::notify()
         return;
     }
 
+    auto takenRecords = takeRecords();
+    auto targetsWaitingForFirstObservation = std::exchange(m_targetsWaitingForFirstObservation, { });
+
+    // FIXME: The JSIntersectionObserver wrapper should be kept alive as long as the intersection observer can fire events.
+    ASSERT(m_callback->hasCallback());
+    if (!m_callback->hasCallback())
+        return;
+
     auto* context = m_callback->scriptExecutionContext();
     if (!context)
         return;
-
-    auto takenRecords = takeRecords();
 
     InspectorInstrumentation::willFireObserverCallback(*context, "IntersectionObserver"_s);
     m_callback->handleEvent(*this, WTFMove(takenRecords.records), *this);
     InspectorInstrumentation::didFireObserverCallback(*context);
 }
 
-bool IntersectionObserver::virtualHasPendingActivity() const
+bool IntersectionObserver::isReachableFromOpaqueRoots(JSC::AbstractSlotVisitor& visitor) const
 {
-    return (hasObservationTargets() && trackingDocument()) || !m_queuedEntries.isEmpty();
-}
-
-const char* IntersectionObserver::activeDOMObjectName() const
-{
-    return "IntersectionObserver";
-}
-
-void IntersectionObserver::stop()
-{
-    disconnect();
-    m_callback = nullptr;
-    m_queuedEntries.clear();
-    m_pendingTargets.clear();
+    for (auto& target : m_observationTargets) {
+        if (auto* element = target.get(); element && visitor.containsOpaqueRoot(element->opaqueRoot()))
+            return true;
+    }
+    for (auto& target : m_pendingTargets) {
+        if (visitor.containsOpaqueRoot(target->opaqueRoot()))
+            return true;
+    }
+    return !m_targetsWaitingForFirstObservation.isEmpty();
 }
 
 } // namespace WebCore
-
-#endif // ENABLE(INTERSECTION_OBSERVER)

@@ -26,16 +26,16 @@
 
 namespace WebCore {
 
-CSSValueList::CSSValueList(ClassType classType, ValueListSeparator listSeparator)
+CSSValueList::CSSValueList(ClassType classType, ValueSeparator listSeparator)
     : CSSValue(classType)
 {
-    m_valueListSeparator = listSeparator;
+    m_valueSeparator = listSeparator;
 }
 
-CSSValueList::CSSValueList(ValueListSeparator listSeparator)
+CSSValueList::CSSValueList(ValueSeparator listSeparator)
     : CSSValue(ValueListClass)
 {
-    m_valueListSeparator = listSeparator;
+    m_valueSeparator = listSeparator;
 }
 
 bool CSSValueList::removeAll(CSSValue* value)
@@ -65,7 +65,7 @@ bool CSSValueList::hasValue(CSSValue* val) const
 Ref<CSSValueList> CSSValueList::copy()
 {
     RefPtr<CSSValueList> newList;
-    switch (m_valueListSeparator) {
+    switch (m_valueSeparator) {
     case SpaceSeparator:
         newList = createSpaceSeparated();
         break;
@@ -86,33 +86,15 @@ Ref<CSSValueList> CSSValueList::copy()
 String CSSValueList::customCSSText() const
 {
     StringBuilder result;
-    String separator;
-    switch (m_valueListSeparator) {
-    case SpaceSeparator:
-        separator = " "_s;
-        break;
-    case CommaSeparator:
-        separator = ", "_s;
-        break;
-    case SlashSeparator:
-        separator = " / "_s;
-        break;
-    default:
-        ASSERT_NOT_REACHED();
-    }
-
-    for (auto& value : m_values) {
-        if (!result.isEmpty())
-            result.append(separator);
-        result.append(value.get().cssText());
-    }
-
+    auto separator = separatorCSSText();
+    for (auto& value : m_values)
+        result.append(result.isEmpty() ? ""_s : separator, value.get().cssText());
     return result.toString();
 }
 
 bool CSSValueList::equals(const CSSValueList& other) const
 {
-    if (m_valueListSeparator != other.m_valueListSeparator)
+    if (m_valueSeparator != other.m_valueSeparator)
         return false;
 
     if (m_values.size() != other.m_values.size())
@@ -133,7 +115,7 @@ bool CSSValueList::equals(const CSSValue& other) const
     return m_values[0].get().equals(other);
 }
 
-bool CSSValueList::traverseSubresources(const WTF::Function<bool (const CachedResource&)>& handler) const
+bool CSSValueList::traverseSubresources(const Function<bool(const CachedResource&)>& handler) const
 {
     for (unsigned i = 0; i < m_values.size(); ++i) {
         if (m_values[i].get().traverseSubresources(handler))

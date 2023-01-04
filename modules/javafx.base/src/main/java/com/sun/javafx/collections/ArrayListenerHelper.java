@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,7 +28,6 @@ import com.sun.javafx.WeakListenerArrayUtil;
 import javafx.beans.InvalidationListener;
 import javafx.collections.ArrayChangeListener;
 import javafx.collections.ObservableArray;
-
 import java.util.Arrays;
 
 public abstract class ArrayListenerHelper<T extends ObservableArray<T>> {

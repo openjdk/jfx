@@ -29,6 +29,8 @@
 
 namespace WebCore {
 
+struct BlendingContext;
+
 class ScaleTransformOperation final : public TransformOperation {
 public:
     static Ref<ScaleTransformOperation> create(double sx, double sy, OperationType type)
@@ -50,9 +52,12 @@ public:
     double y() const { return m_y; }
     double z() const { return m_z; }
 
+    OperationType primitiveType() const final { return isRepresentableIn2D() ? SCALE : SCALE_3D; }
+
+    bool operator==(const ScaleTransformOperation& other) const { return operator==(static_cast<const TransformOperation&>(other)); }
     bool operator==(const TransformOperation&) const final;
 
-    Ref<TransformOperation> blend(const TransformOperation* from, double progress, bool blendToIdentity = false) final;
+    Ref<TransformOperation> blend(const TransformOperation* from, const BlendingContext&, bool blendToIdentity = false) final;
 
     bool isIdentity() const final { return m_x == 1 &&  m_y == 1 &&  m_z == 1; }
 

@@ -30,6 +30,7 @@
 
 #include "ContextMenu.h"
 #include "ContextMenuProvider.h"
+#include "ExceptionOr.h"
 #include <wtf/RefCounted.h>
 #include <wtf/Vector.h>
 #include <wtf/text/WTFString.h>
@@ -39,6 +40,7 @@ namespace WebCore {
 class DOMWrapperWorld;
 class Event;
 class FrontendMenuProvider;
+class HTMLIFrameElement;
 class InspectorFrontendClient;
 class Page;
 
@@ -112,10 +114,10 @@ public:
     struct ContextMenuItem {
         String type;
         String label;
-        Optional<int> id;
-        Optional<bool> enabled;
-        Optional<bool> checked;
-        Optional<Vector<ContextMenuItem>> subItems;
+        std::optional<int> id;
+        std::optional<bool> enabled;
+        std::optional<bool> checked;
+        std::optional<Vector<ContextMenuItem>> subItems;
     };
     void showContextMenu(Event&, Vector<ContextMenuItem>&&);
 
@@ -129,6 +131,7 @@ public:
     void beep();
     void inspectInspector();
     bool isBeingInspected();
+    void setAllowsInspectingInspector(bool);
 
     bool supportsDiagnosticLogging();
 #if ENABLE(INSPECTOR_TELEMETRY)
@@ -138,8 +141,11 @@ public:
 
     bool supportsWebExtensions();
 #if ENABLE(INSPECTOR_EXTENSIONS)
-    void didShowExtensionTab(const String& extensionID, const String& extensionTabID);
+    void didShowExtensionTab(const String& extensionID, const String& extensionTabID, HTMLIFrameElement& extensionFrame);
     void didHideExtensionTab(const String& extensionID, const String& extensionTabID);
+    void didNavigateExtensionTab(const String& extensionID, const String& extensionTabID, const String& url);
+    void inspectedPageDidNavigate(const String& url);
+    ExceptionOr<JSC::JSValue> evaluateScriptInExtensionTab(HTMLIFrameElement& extensionFrame, const String& scriptSource);
 #endif
 
 private:

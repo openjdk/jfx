@@ -29,7 +29,7 @@ typedef (FetchRequest or USVString) RequestInfo;
     ActiveDOMObject,
     SecureContext,
     Exposed=(Window,Worker),
-    EnabledAtRuntime=CacheAPI,
+    EnabledAtRuntime=CacheAPIEnabled,
     InterfaceName=Cache,
 ] interface DOMCache {
     [NewObject] Promise<any> match(RequestInfo request, optional CacheQueryOptions options);
@@ -38,5 +38,5 @@ typedef (FetchRequest or USVString) RequestInfo;
     [NewObject] Promise<undefined> addAll(sequence<RequestInfo> requests);
     [NewObject] Promise<undefined> put(RequestInfo request, FetchResponse response);
     [NewObject, ImplementedAs=remove] Promise<boolean> delete(RequestInfo request, optional CacheQueryOptions options);
-    [NewObject] Promise<sequence<Request>> keys(optional RequestInfo request, optional CacheQueryOptions options);
+    [NewObject] Promise<sequence<FetchRequest>> keys(optional RequestInfo request, optional CacheQueryOptions options);
 };

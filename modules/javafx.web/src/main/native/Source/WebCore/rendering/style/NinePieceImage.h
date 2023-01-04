@@ -82,7 +82,7 @@ inline bool isVerticalPiece(ImagePiece piece)
     return piece == LeftPiece || piece == RightPiece || piece == MiddlePiece;
 }
 
-inline Optional<BoxSide> imagePieceHorizontalSide(ImagePiece piece)
+inline std::optional<BoxSide> imagePieceHorizontalSide(ImagePiece piece)
 {
     if (piece == TopLeftPiece || piece == TopPiece || piece == TopRightPiece)
         return BoxSide::Top;
@@ -90,10 +90,10 @@ inline Optional<BoxSide> imagePieceHorizontalSide(ImagePiece piece)
     if (piece == BottomLeftPiece || piece == BottomPiece || piece == BottomRightPiece)
         return BoxSide::Bottom;
 
-    return WTF::nullopt;
+    return std::nullopt;
 }
 
-inline Optional<BoxSide> imagePieceVerticalSide(ImagePiece piece)
+inline std::optional<BoxSide> imagePieceVerticalSide(ImagePiece piece)
 {
     if (piece == TopLeftPiece || piece == LeftPiece || piece == BottomLeftPiece)
         return BoxSide::Left;
@@ -101,7 +101,7 @@ inline Optional<BoxSide> imagePieceVerticalSide(ImagePiece piece)
     if (piece == TopRightPiece || piece == RightPiece || piece == BottomRightPiece)
         return BoxSide::Right;
 
-    return WTF::nullopt;
+    return std::nullopt;
 }
 
 class NinePieceImage {
@@ -161,11 +161,11 @@ public:
         m_data.access().verticalRule = other.m_data->verticalRule;
     }
 
-    static LayoutUnit computeOutset(const Length& outsetSide, LayoutUnit borderSide)
+    static LayoutUnit computeOutset(const Length& outset, LayoutUnit borderWidth)
     {
-        if (outsetSide.isRelative())
-            return LayoutUnit(outsetSide.value() * borderSide);
-        return LayoutUnit(outsetSide.value());
+        if (outset.isRelative())
+            return LayoutUnit(outset.value() * borderWidth);
+        return LayoutUnit(outset.value());
     }
 
     static LayoutUnit computeSlice(Length, LayoutUnit width, LayoutUnit slice, LayoutUnit extent);
@@ -200,7 +200,7 @@ private:
         RefPtr<StyleImage> image;
         LengthBox imageSlices { { 100, LengthType::Percent }, { 100, LengthType::Percent }, { 100, LengthType::Percent }, { 100, LengthType::Percent } };
         LengthBox borderSlices { { 1, LengthType::Relative }, { 1, LengthType::Relative }, { 1, LengthType::Relative }, { 1, LengthType::Relative } };
-        LengthBox outset { 0 };
+        LengthBox outset { LengthType::Relative };
 
     private:
         Data();
@@ -215,5 +215,6 @@ private:
 };
 
 WTF::TextStream& operator<<(WTF::TextStream&, const NinePieceImage&);
+WTF::TextStream& operator<<(WTF::TextStream&, NinePieceImageRule);
 
 } // namespace WebCore

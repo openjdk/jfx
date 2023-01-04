@@ -29,7 +29,6 @@
 
 #include "ActiveDOMObject.h"
 #include "EventTarget.h"
-#include "GenericEventQueue.h"
 #include <wtf/HashMap.h>
 #include <wtf/Ref.h>
 #include <wtf/RefCounted.h>
@@ -39,6 +38,7 @@ namespace WebCore {
 class DeferredPromise;
 class HTMLMediaElement;
 class MediaPlaybackTarget;
+class Node;
 class RemotePlaybackAvailabilityCallback;
 
 class RemotePlayback final : public RefCounted<RemotePlayback>, public ActiveDOMObject, public EventTargetWithInlineData {
@@ -48,7 +48,7 @@ public:
     ~RemotePlayback();
 
     void watchAvailability(Ref<RemotePlaybackAvailabilityCallback>&&, Ref<DeferredPromise>&&);
-    void cancelWatchAvailability(Optional<int32_t> id, Ref<DeferredPromise>&&);
+    void cancelWatchAvailability(std::optional<int32_t> id, Ref<DeferredPromise>&&);
     void prompt(Ref<DeferredPromise>&&);
 
     bool hasAvailabilityCallbacks() const;
@@ -69,6 +69,9 @@ public:
     using RefCounted::ref;
     using RefCounted::deref;
 
+    void* opaqueRootConcurrently() const;
+    Node* ownerNode() const;
+
 private:
     explicit RemotePlayback(HTMLMediaElement&);
 
@@ -81,7 +84,6 @@ private:
 
     // ActiveDOMObject.
     const char* activeDOMObjectName() const final;
-    void stop() final;
 
     // EventTargetWithInlineData.
     EventTargetInterface eventTargetInterface() const final { return RemotePlaybackEventTargetInterfaceType; }
@@ -99,9 +101,6 @@ private:
     PromiseVector m_promptPromises;
     State m_state { State::Disconnected };
     bool m_available { false };
-
-    UniqueRef<MainThreadGenericEventQueue> m_eventQueue;
-    GenericTaskQueue<Timer> m_taskQueue;
 };
 
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -133,7 +133,7 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListCell<
     private WeakMapChangeListener<Object, Object> weakPropertiesMapListener =
             new WeakMapChangeListener<>(propertiesMapListener);
 
-    private final ListChangeListener<T> listViewItemsListener = new ListChangeListener<T>() {
+    private final ListChangeListener<T> listViewItemsListener = new ListChangeListener<>() {
         @Override public void onChanged(Change<? extends T> c) {
             while (c.next()) {
                 if (c.wasReplaced()) {
@@ -167,7 +167,7 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListCell<
     };
 
     private final WeakListChangeListener<T> weakListViewItemsListener =
-            new WeakListChangeListener<T>(listViewItemsListener);
+            new WeakListChangeListener<>(listViewItemsListener);
 
 
     private final InvalidationListener itemsChangeListener = observable -> updateListViewItems();
@@ -217,13 +217,6 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListCell<
         getChildren().add(flow);
 
         EventHandler<MouseEvent> ml = event -> {
-            // RT-15127: cancel editing on scroll. This is a bit extreme
-            // (we are cancelling editing on touching the scrollbars).
-            // This can be improved at a later date.
-            if (control.getEditingIndex() > -1) {
-                control.edit(-1);
-            }
-
             // This ensures that the list maintains the focus, even when the vbar
             // and hbar controls inside the flow are clicked. Without this, the
             // focus border will not be shown when the user interacts with the
@@ -362,6 +355,14 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListCell<
         switch (attribute) {
             case FOCUS_ITEM: {
                 FocusModel<?> fm = getSkinnable().getFocusModel();
+                if (fm == null) {
+                    if (placeholderRegion != null && placeholderRegion.isVisible()) {
+                        return placeholderRegion.getChildren().get(0);
+                    } else {
+                        return null;
+                    }
+                }
+
                 int focusedIndex = fm.getFocusedIndex();
                 if (focusedIndex == -1) {
                     if (placeholderRegion != null && placeholderRegion.isVisible()) {
@@ -386,6 +387,10 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListCell<
             }
             case SELECTED_ITEMS: {
                 MultipleSelectionModel<T> sm = getSkinnable().getSelectionModel();
+                if (sm == null) {
+                    return FXCollections.observableArrayList();
+                }
+
                 ObservableList<Integer> indices = sm.getSelectedIndices();
                 List<Node> selection = new ArrayList<>(indices.size());
                 for (int i : indices) {
@@ -499,7 +504,7 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListCell<
     }
 
     private static <T> ListCell<T> createDefaultCellImpl() {
-        return new ListCell<T>() {
+        return new ListCell<>() {
             @Override public void updateItem(T item, boolean empty) {
                 super.updateItem(item, empty);
 
@@ -587,12 +592,12 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListCell<
      * if this is a horizontal container, then the scrolling will be to the right.
      */
     private int onScrollPageDown(boolean isFocusDriven) {
-        ListCell<T> lastVisibleCell = flow.getLastVisibleCellWithinViewport();
-        if (lastVisibleCell == null) return -1;
-
         final SelectionModel<T> sm = getSkinnable().getSelectionModel();
         final FocusModel<T> fm = getSkinnable().getFocusModel();
         if (sm == null || fm == null) return -1;
+
+        ListCell<T> lastVisibleCell = flow.getLastVisibleCellWithinViewport();
+        if (lastVisibleCell == null) return -1;
 
         int lastVisibleCellIndex = lastVisibleCell.getIndex();
 
@@ -633,12 +638,12 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListCell<
      * if this is a horizontal container, then the scrolling will be to the left.
      */
     private int onScrollPageUp(boolean isFocusDriven) {
-        ListCell<T> firstVisibleCell = flow.getFirstVisibleCellWithinViewport();
-        if (firstVisibleCell == null) return -1;
-
         final SelectionModel<T> sm = getSkinnable().getSelectionModel();
         final FocusModel<T> fm = getSkinnable().getFocusModel();
         if (sm == null || fm == null) return -1;
+
+        ListCell<T> firstVisibleCell = flow.getFirstVisibleCellWithinViewport();
+        if (firstVisibleCell == null) return -1;
 
         int firstVisibleCellIndex = firstVisibleCell.getIndex();
 

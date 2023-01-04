@@ -50,8 +50,7 @@
 #include "Page.h"
 #include "Quirks.h"
 #include "RenderTheme.h"
-#include "RuleSet.h"
-#include "RuntimeEnabledFeatures.h"
+#include "RuleSetBuilder.h"
 #include "SVGElement.h"
 #include "StyleSheetContents.h"
 #include "UserAgentStyleSheets.h"
@@ -75,6 +74,9 @@ StyleSheetContents* UserAgentStyle::mathMLStyleSheet;
 StyleSheetContents* UserAgentStyle::mediaControlsStyleSheet;
 StyleSheetContents* UserAgentStyle::fullscreenStyleSheet;
 StyleSheetContents* UserAgentStyle::plugInsStyleSheet;
+#if ENABLE(SERVICE_CONTROLS)
+StyleSheetContents* UserAgentStyle::imageControlsStyleSheet;
+#endif
 StyleSheetContents* UserAgentStyle::mediaQueryStyleSheet;
 #if ENABLE(DATALIST_ELEMENT)
 StyleSheetContents* UserAgentStyle::dataListStyleSheet;
@@ -83,7 +85,10 @@ StyleSheetContents* UserAgentStyle::dataListStyleSheet;
 StyleSheetContents* UserAgentStyle::colorInputStyleSheet;
 #endif
 #if ENABLE(IOS_FORM_CONTROL_REFRESH)
-StyleSheetContents* UserAgentStyle::formControlsIOSStyleSheet;
+StyleSheetContents* UserAgentStyle::legacyFormControlsIOSStyleSheet;
+#endif
+#if ENABLE(ALTERNATE_FORM_CONTROL_DESIGN)
+StyleSheetContents* UserAgentStyle::alternateFormControlDesignStyleSheet;
 #endif
 
 static const MediaQueryEvaluator& screenEval()
@@ -105,15 +110,13 @@ static StyleSheetContents* parseUASheet(const String& str)
     return &sheet;
 }
 
-static StyleSheetContents* parseUASheet(const char* characters, unsigned size)
-{
-    return parseUASheet(String(characters, size));
-}
-
 void UserAgentStyle::addToDefaultStyle(StyleSheetContents& sheet)
 {
-    defaultStyle->addRulesFromSheet(sheet, screenEval());
-    defaultPrintStyle->addRulesFromSheet(sheet, printEval());
+    RuleSetBuilder screenBuilder(*defaultStyle, screenEval());
+    screenBuilder.addRulesFromSheet(sheet);
+
+    RuleSetBuilder printBuilder(*defaultPrintStyle, printEval());
+    printBuilder.addRulesFromSheet(sheet);
 
     // Build a stylesheet consisting of non-trivial media queries seen in default style.
     // Rulesets for these can't be global and need to be built in document context.
@@ -143,14 +146,16 @@ void UserAgentStyle::initDefaultStyleSheet()
     mediaQueryStyleSheet = &StyleSheetContents::create(CSSParserContext(UASheetMode)).leakRef();
 
     // Strict-mode rules.
-    String defaultRules = String(htmlUserAgentStyleSheet, sizeof(htmlUserAgentStyleSheet)) + RenderTheme::singleton().extraDefaultStyleSheet();
+    String defaultRules = String(StringImpl::createWithoutCopying(htmlUserAgentStyleSheet, sizeof(htmlUserAgentStyleSheet))) + RenderTheme::singleton().extraDefaultStyleSheet();
     defaultStyleSheet = parseUASheet(defaultRules);
     addToDefaultStyle(*defaultStyleSheet);
 
     // Quirks-mode rules.
-    String quirksRules = String(quirksUserAgentStyleSheet, sizeof(quirksUserAgentStyleSheet)) + RenderTheme::singleton().extraQuirksStyleSheet();
+    String quirksRules = String(StringImpl::createWithoutCopying(quirksUserAgentStyleSheet, sizeof(quirksUserAgentStyleSheet))) + RenderTheme::singleton().extraQuirksStyleSheet();
     quirksStyleSheet = parseUASheet(quirksRules);
-    defaultQuirksStyle->addRulesFromSheet(*quirksStyleSheet, screenEval());
+
+    RuleSetBuilder quirkBuilder(*defaultQuirksStyle, screenEval());
+    quirkBuilder.addRulesFromSheet(*quirksStyleSheet);
 
     ++defaultStyleVersion;
 }
@@ -162,29 +167,28 @@ void UserAgentStyle::ensureDefaultStyleSheetsForElement(const Element& element)
             if (!plugInsStyleSheet && element.document().page()) {
                 String plugInsRules = RenderTheme::singleton().extraPlugInsStyleSheet() + element.document().page()->chrome().client().plugInExtraStyleSheet();
                 if (plugInsRules.isEmpty())
-                    plugInsRules = String(plugInsUserAgentStyleSheet, sizeof(plugInsUserAgentStyleSheet));
+                    plugInsRules = String(StringImpl::createWithoutCopying(plugInsUserAgentStyleSheet, sizeof(plugInsUserAgentStyleSheet)));
                 plugInsStyleSheet = parseUASheet(plugInsRules);
                 addToDefaultStyle(*plugInsStyleSheet);
             }
-        }
-        else if (is<HTMLDialogElement>(element) && RuntimeEnabledFeatures::sharedFeatures().dialogElementEnabled()) {
+        } else if (is<HTMLDialogElement>(element) && element.document().settings().dialogElementEnabled()) {
             if (!dialogStyleSheet) {
-                dialogStyleSheet = parseUASheet(dialogUserAgentStyleSheet, sizeof(dialogUserAgentStyleSheet));
+                dialogStyleSheet = parseUASheet(StringImpl::createWithoutCopying(dialogUserAgentStyleSheet, sizeof(dialogUserAgentStyleSheet)));
                 addToDefaultStyle(*dialogStyleSheet);
             }
         }
-#if ENABLE(VIDEO)
-        else if (is<HTMLMediaElement>(element) && !RuntimeEnabledFeatures::sharedFeatures().modernMediaControlsEnabled()) {
+#if ENABLE(VIDEO) && !ENABLE(MODERN_MEDIA_CONTROLS)
+        else if (is<HTMLMediaElement>(element)) {
             if (!mediaControlsStyleSheet) {
                 String mediaRules = RenderTheme::singleton().mediaControlsStyleSheet();
                 if (mediaRules.isEmpty())
-                    mediaRules = String(mediaControlsUserAgentStyleSheet, sizeof(mediaControlsUserAgentStyleSheet)) + RenderTheme::singleton().extraMediaControlsStyleSheet();
+                    mediaRules = String(StringImpl::createWithoutCopying(mediaControlsUserAgentStyleSheet, sizeof(mediaControlsUserAgentStyleSheet))) + RenderTheme::singleton().extraMediaControlsStyleSheet();
                 mediaControlsStyleSheet = parseUASheet(mediaRules);
                 addToDefaultStyle(*mediaControlsStyleSheet);
 
             }
         }
-#endif // ENABLE(VIDEO)
+#endif // ENABLE(VIDEO) && !ENABLE(MODERN_MEDIA_CONTROLS)
 #if ENABLE(DATALIST_ELEMENT)
         else if (!dataListStyleSheet && is<HTMLDataListElement>(element)) {
             dataListStyleSheet = parseUASheet(RenderTheme::singleton().dataListStyleSheet());
@@ -200,7 +204,7 @@ void UserAgentStyle::ensureDefaultStyleSheetsForElement(const Element& element)
     } else if (is<SVGElement>(element)) {
         if (!svgStyleSheet) {
             // SVG rules.
-            svgStyleSheet = parseUASheet(svgUserAgentStyleSheet, sizeof(svgUserAgentStyleSheet));
+            svgStyleSheet = parseUASheet(StringImpl::createWithoutCopying(svgUserAgentStyleSheet, sizeof(svgUserAgentStyleSheet)));
             addToDefaultStyle(*svgStyleSheet);
         }
     }
@@ -208,7 +212,7 @@ void UserAgentStyle::ensureDefaultStyleSheetsForElement(const Element& element)
     else if (is<MathMLElement>(element)) {
         if (!mathMLStyleSheet) {
             // MathML rules.
-            mathMLStyleSheet = parseUASheet(mathmlUserAgentStyleSheet, sizeof(mathmlUserAgentStyleSheet));
+            mathMLStyleSheet = parseUASheet(StringImpl::createWithoutCopying(mathmlUserAgentStyleSheet, sizeof(mathmlUserAgentStyleSheet)));
             addToDefaultStyle(*mathMLStyleSheet);
         }
     }
@@ -227,9 +231,16 @@ void UserAgentStyle::ensureDefaultStyleSheetsForElement(const Element& element)
 #endif // ENABLE(FULLSCREEN_API)
 
 #if ENABLE(IOS_FORM_CONTROL_REFRESH)
-    if (!formControlsIOSStyleSheet && element.document().settings().iOSFormControlRefreshEnabled()) {
-        formControlsIOSStyleSheet = parseUASheet(formControlsIOSUserAgentStyleSheet, sizeof(formControlsIOSUserAgentStyleSheet));
-        addToDefaultStyle(*formControlsIOSStyleSheet);
+    if (!legacyFormControlsIOSStyleSheet && !element.document().settings().iOSFormControlRefreshEnabled()) {
+        legacyFormControlsIOSStyleSheet = parseUASheet(StringImpl::createWithoutCopying(legacyFormControlsIOSUserAgentStyleSheet, sizeof(legacyFormControlsIOSUserAgentStyleSheet)));
+        addToDefaultStyle(*legacyFormControlsIOSStyleSheet);
+    }
+#endif
+
+#if ENABLE(ALTERNATE_FORM_CONTROL_DESIGN)
+    if (!alternateFormControlDesignStyleSheet && element.document().settings().alternateFormControlDesignEnabled()) {
+        alternateFormControlDesignStyleSheet = parseUASheet(StringImpl::createWithoutCopying(alternateFormControlDesignUserAgentStyleSheet, sizeof(alternateFormControlDesignUserAgentStyleSheet)));
+        addToDefaultStyle(*alternateFormControlDesignStyleSheet);
     }
 #endif
 

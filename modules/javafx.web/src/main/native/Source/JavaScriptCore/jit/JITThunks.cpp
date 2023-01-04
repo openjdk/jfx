@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,8 +28,11 @@
 
 #if ENABLE(JIT)
 
+#include "CommonSlowPaths.h"
+#include "JIT.h"
 #include "JITCode.h"
 #include "JSCJSValueInlines.h"
+#include "SlowPathCall.h"
 #include "ThunkGenerators.h"
 #include "VM.h"
 
@@ -126,26 +129,59 @@ MacroAssemblerCodePtr<JITThunkPtrTag> JITThunks::ctiInternalFunctionConstruct(VM
     return ctiStub(vm, internalFunctionConstructGenerator).code();
 }
 
-MacroAssemblerCodeRef<JITThunkPtrTag> JITThunks::ctiStub(VM& vm, ThunkGenerator generator)
+template <typename GenerateThunk>
+MacroAssemblerCodeRef<JITThunkPtrTag> JITThunks::ctiStubImpl(ThunkGenerator key, GenerateThunk generateThunk)
 {
-    LockHolder locker(m_lock);
-    CTIStubMap::AddResult entry = m_ctiStubMap.add(generator, MacroAssemblerCodeRef<JITThunkPtrTag>());
-    if (entry.isNewEntry) {
-        // Compilation thread can only retrieve existing entries.
-        ASSERT(!isCompilationThread());
-        entry.iterator->value = generator(vm);
+    Locker locker { m_lock };
+
+    auto handleEntry = [&] (Entry& entry) {
+        if (entry.needsCrossModifyingCodeFence && !isCompilationThread()) {
+            // The main thread will issue a crossModifyingCodeFence before running
+            // any code the compiler thread generates, including any thunks that they
+            // generate. However, the main thread may grab the thunk a compiler thread
+            // generated before we've issued that crossModifyingCodeFence. Hence, we
+            // conservatively say that when the main thread grabs a thunk generated
+            // from a compiler thread for the first time, it issues a crossModifyingCodeFence.
+            WTF::crossModifyingCodeFence();
+            entry.needsCrossModifyingCodeFence = false;
+        }
+
+        return MacroAssemblerCodeRef<JITThunkPtrTag>(*entry.handle);
+    };
+
+    {
+        auto iter = m_ctiStubMap.find(key);
+        if (iter != m_ctiStubMap.end())
+            return handleEntry(iter->value);
     }
-    return entry.iterator->value;
+
+    // We do two lookups on first addition to the hash table because generateThunk may add to it.
+    MacroAssemblerCodeRef<JITThunkPtrTag> codeRef = generateThunk();
+
+    bool needsCrossModifyingCodeFence = isCompilationThread();
+    auto addResult = m_ctiStubMap.add(key, Entry { PackedRefPtr<ExecutableMemoryHandle>(codeRef.executableMemory()), needsCrossModifyingCodeFence });
+    RELEASE_ASSERT(addResult.isNewEntry); // Thunks aren't recursive, so anything we generated transitively shouldn't have generated 'key'.
+    return handleEntry(addResult.iterator->value);
 }
 
-MacroAssemblerCodeRef<JITThunkPtrTag> JITThunks::existingCTIStub(ThunkGenerator generator)
+MacroAssemblerCodeRef<JITThunkPtrTag> JITThunks::ctiStub(VM& vm, ThunkGenerator generator)
 {
-    LockHolder locker(m_lock);
-    CTIStubMap::iterator entry = m_ctiStubMap.find(generator);
-    if (entry == m_ctiStubMap.end())
-        return MacroAssemblerCodeRef<JITThunkPtrTag>();
-    return entry->value;
+    return ctiStubImpl(generator, [&] {
+        return generator(vm);
+    });
 }
+
+#if ENABLE(EXTRA_CTI_THUNKS)
+
+MacroAssemblerCodeRef<JITThunkPtrTag> JITThunks::ctiSlowPathFunctionStub(VM& vm, SlowPathFunction slowPathFunction)
+{
+    auto key = bitwise_cast<ThunkGenerator>(slowPathFunction);
+    return ctiStubImpl(key, [&] {
+        return JITSlowPathCall::generateThunk(vm, slowPathFunction);
+    });
+}
+
+#endif // ENABLE(EXTRA_CTI_THUNKS)
 
 struct JITThunks::HostKeySearcher {
     static unsigned hash(const HostFunctionKey& key) { return WeakNativeExecutableHash::hash(key); }

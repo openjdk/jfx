@@ -33,10 +33,9 @@
 #include "XPathPath.h"
 #include "XPathStep.h"
 #include <wtf/NeverDestroyed.h>
+#include <wtf/RobinHoodHashMap.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/text/StringHash.h>
-
-using namespace WebCore::XPath;
 
 extern int xpathyyparse(WebCore::XPath::Parser&);
 
@@ -76,28 +75,28 @@ static XMLCat charCat(UChar character)
     return NotPartOfName;
 }
 
-static HashMap<String, Step::Axis> createAxisNamesMap()
+static MemoryCompactLookupOnlyRobinHoodHashMap<String, Step::Axis> createAxisNamesMap()
 {
     struct AxisName {
-        const char* name;
+        ASCIILiteral name;
         Step::Axis axis;
     };
     const AxisName axisNameList[] = {
-        { "ancestor", Step::AncestorAxis },
-        { "ancestor-or-self", Step::AncestorOrSelfAxis },
-        { "attribute", Step::AttributeAxis },
-        { "child", Step::ChildAxis },
-        { "descendant", Step::DescendantAxis },
-        { "descendant-or-self", Step::DescendantOrSelfAxis },
-        { "following", Step::FollowingAxis },
-        { "following-sibling", Step::FollowingSiblingAxis },
-        { "namespace", Step::NamespaceAxis },
-        { "parent", Step::ParentAxis },
-        { "preceding", Step::PrecedingAxis },
-        { "preceding-sibling", Step::PrecedingSiblingAxis },
-        { "self", Step::SelfAxis }
+        { "ancestor"_s, Step::AncestorAxis },
+        { "ancestor-or-self"_s, Step::AncestorOrSelfAxis },
+        { "attribute"_s, Step::AttributeAxis },
+        { "child"_s, Step::ChildAxis },
+        { "descendant"_s, Step::DescendantAxis },
+        { "descendant-or-self"_s, Step::DescendantOrSelfAxis },
+        { "following"_s, Step::FollowingAxis },
+        { "following-sibling"_s, Step::FollowingSiblingAxis },
+        { "namespace"_s, Step::NamespaceAxis },
+        { "parent"_s, Step::ParentAxis },
+        { "preceding"_s, Step::PrecedingAxis },
+        { "preceding-sibling"_s, Step::PrecedingSiblingAxis },
+        { "self"_s, Step::SelfAxis }
     };
-    HashMap<String, Step::Axis> map;
+    MemoryCompactLookupOnlyRobinHoodHashMap<String, Step::Axis> map;
     for (auto& axisName : axisNameList)
         map.add(axisName.name, axisName.axis);
     return map;
@@ -105,7 +104,7 @@ static HashMap<String, Step::Axis> createAxisNamesMap()
 
 static bool parseAxisName(const String& name, Step::Axis& type)
 {
-    static const auto axisNames = makeNeverDestroyed(createAxisNamesMap());
+    static NeverDestroyed axisNames = createAxisNamesMap();
     auto it = axisNames.get().find(name);
     if (it == axisNames.get().end())
         return false;

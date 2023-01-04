@@ -32,6 +32,10 @@
 OBJC_CLASS NSView;
 #endif
 
+namespace PAL::WebGPU {
+class GPU;
+}
+
 namespace WebCore {
 
 class ChromeClient;
@@ -85,20 +89,23 @@ public:
     void setCursor(const Cursor&) override;
     void setCursorHiddenUntilMouseMoves(bool) override;
 
-    RefPtr<ImageBuffer> createImageBuffer(const FloatSize&, RenderingMode, RenderingPurpose, float resolutionScale, DestinationColorSpace, PixelFormat) const override;
+    RefPtr<ImageBuffer> createImageBuffer(const FloatSize&, RenderingMode, RenderingPurpose, float resolutionScale, const DestinationColorSpace&, PixelFormat) const override;
 
 #if ENABLE(WEBGL)
     RefPtr<GraphicsContextGL> createGraphicsContextGL(const GraphicsContextGLAttributes&) const override;
 #endif
 
+    RefPtr<PAL::WebGPU::GPU> createGPUForWebGPU() const;
+
     PlatformDisplayID displayID() const override;
-    void windowScreenDidChange(PlatformDisplayID, Optional<unsigned>) override;
+    void windowScreenDidChange(PlatformDisplayID, std::optional<FramesPerSecond>) override;
 
     FloatSize screenSize() const override;
     FloatSize availableScreenSize() const override;
     FloatSize overrideScreenSize() const override;
 
-    void scrollRectIntoView(const IntRect&) const;
+    void scrollContainingScrollViewsToRevealRect(const IntRect&) const;
+    void scrollMainFrameToRevealRect(const IntRect&) const;
 
     void contentsSizeChanged(Frame&, const IntSize&) const;
 
@@ -139,7 +146,7 @@ public:
     bool canRunBeforeUnloadConfirmPanel();
     bool runBeforeUnloadConfirmPanel(const String& message, Frame&);
 
-    void closeWindowSoon();
+    void closeWindow();
 
     void runJavaScriptAlert(Frame&, const String&);
     bool runJavaScriptConfirm(Frame&, const String&);
@@ -166,12 +173,12 @@ public:
 #endif
 
 #if ENABLE(APP_HIGHLIGHTS)
-    void storeAppHighlight(const AppHighlight&) const;
+    void storeAppHighlight(AppHighlight&&) const;
 #endif
 
     void runOpenPanel(Frame&, FileChooser&);
     void showShareSheet(ShareDataWithParsedURL&, CompletionHandler<void(bool)>&&);
-    void showContactPicker(const ContactsRequestData&, CompletionHandler<void(Optional<Vector<ContactInfo>>&&)>&&);
+    void showContactPicker(const ContactsRequestData&, CompletionHandler<void(std::optional<Vector<ContactInfo>>&&)>&&);
     void loadIconForFiles(const Vector<String>&, FileIconLoader&);
 
     void dispatchDisabledAdaptationsDidChange(const OptionSet<DisabledAdaptations>&) const;

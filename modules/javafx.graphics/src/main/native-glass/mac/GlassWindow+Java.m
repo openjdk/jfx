@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -109,36 +109,23 @@ extern NSSize maxScreenDimensions;
 
 #pragma mark --- Additions
 
-- (id)_initWithContentRect:(NSRect)contentRect styleMask:(NSUInteger)windowStyle screen:(NSScreen *)screen jwindow:(jobject)jwindow jIsChild:(jboolean)jIsChild
+- (id)_initWithContentRect:(NSRect)contentRect styleMask:(NSUInteger)windowStyle screen:(NSScreen *)screen jwindow:(jobject)jwindow
 {
     self = [super init];
     if (self == nil) {
         return nil;
     }
 
-    if (jIsChild == JNI_FALSE) {
-        if (windowStyle & (NSUtilityWindowMask | NSNonactivatingPanelMask)) {
-            self->nsWindow = [[GlassWindow_Panel alloc] initWithDelegate:self
-                                                               frameRect:contentRect
-                                                               styleMask:windowStyle
-                                                                  screen:screen];
-        } else {
-            self->nsWindow = [[GlassWindow_Normal alloc] initWithDelegate:self
-                                                                frameRect:contentRect
-                                                                styleMask:windowStyle
-                                                                   screen:screen];
-        }
+    if (windowStyle & (NSUtilityWindowMask | NSNonactivatingPanelMask)) {
+        self->nsWindow = [[GlassWindow_Panel alloc] initWithDelegate:self
+                                                           frameRect:contentRect
+                                                           styleMask:windowStyle
+                                                              screen:screen];
     } else {
-        GlassEmbeddedWindow *ewindow = [[GlassEmbeddedWindow alloc] initWithDelegate:self
-                                                             frameRect:contentRect
-                                                             styleMask:windowStyle
-                                                                screen:screen];
-        if (ewindow) {
-            ewindow->parent = nil;
-            ewindow->child = nil;
-
-            self->nsWindow = ewindow;
-        }
+        self->nsWindow = [[GlassWindow_Normal alloc] initWithDelegate:self
+                                                            frameRect:contentRect
+                                                            styleMask:windowStyle
+                                                               screen:screen];
     }
 
     if (self->nsWindow == nil) {

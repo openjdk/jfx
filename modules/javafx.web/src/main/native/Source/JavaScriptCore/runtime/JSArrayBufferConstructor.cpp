@@ -78,14 +78,12 @@ EncodedJSValue JSGenericArrayBufferConstructor<sharingMode>::constructImpl(JSGlo
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     JSObject* newTarget = asObject(callFrame->newTarget());
-    Structure* arrayBufferStructure = newTarget == callFrame->jsCallee()
-        ? globalObject->arrayBufferStructure(sharingMode)
-        : InternalFunction::createSubclassStructure(globalObject, newTarget, getFunctionRealm(vm, newTarget)->arrayBufferStructure(sharingMode));
+    Structure* structure = JSC_GET_DERIVED_STRUCTURE(vm, arrayBufferStructureWithSharingMode<sharingMode>, newTarget, callFrame->jsCallee());
     RETURN_IF_EXCEPTION(scope, { });
 
-    unsigned length;
+    size_t length;
     if (callFrame->argumentCount()) {
-        length = callFrame->uncheckedArgument(0).toIndex(globalObject, "length");
+        length = callFrame->uncheckedArgument(0).toTypedArrayIndex(globalObject, "length");
         RETURN_IF_EXCEPTION(scope, encodedJSValue());
     } else {
         // Although the documentation doesn't say so, it is in fact correct to say
@@ -102,7 +100,7 @@ EncodedJSValue JSGenericArrayBufferConstructor<sharingMode>::constructImpl(JSGlo
         buffer->makeShared();
     ASSERT(sharingMode == buffer->sharingMode());
 
-    JSArrayBuffer* result = JSArrayBuffer::create(vm, arrayBufferStructure, WTFMove(buffer));
+    JSArrayBuffer* result = JSArrayBuffer::create(vm, structure, WTFMove(buffer));
     return JSValue::encode(result);
 }
 

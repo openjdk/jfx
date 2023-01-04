@@ -25,13 +25,13 @@
 
 [
     Conditional=SERVICE_WORKER,
-    EnabledAtRuntime=ServiceWorker,
+    EnabledAtRuntime=ServiceWorkerEnabled,
     Exposed=ServiceWorker,
     InterfaceName=WindowClient,
 ] interface ServiceWorkerWindowClient : ServiceWorkerClient {
     readonly attribute VisibilityState visibilityState;
     [ImplementedAs=isFocused] readonly attribute boolean focused;
 
-    [NewObject] Promise<WindowClient> focus();
-    [NewObject] Promise<WindowClient> navigate(USVString url);
+    [NewObject] Promise<ServiceWorkerWindowClient> focus();
+    [NewObject] Promise<ServiceWorkerWindowClient> navigate(USVString url);
 };

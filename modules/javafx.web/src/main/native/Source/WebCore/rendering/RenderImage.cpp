@@ -4,7 +4,7 @@
  *           (C) 2000 Dirk Mueller (mueller@kde.org)
  *           (C) 2006 Allan Sandfeld Jensen (kde@carewolf.com)
  *           (C) 2006 Samuel Weinig (sam.weinig@gmail.com)
- * Copyright (C) 2003, 2004, 2005, 2006, 2008, 2009, 2010, 2011 Apple Inc. All rights reserved.
+ * Copyright (C) 2003-2021 Apple Inc. All rights reserved.
  * Copyright (C) 2010 Google Inc. All rights reserved.
  * Copyright (C) Research In Motion Limited 2011-2012. All rights reserved.
  *
@@ -31,6 +31,7 @@
 #include "AXObjectCache.h"
 #include "BitmapImage.h"
 #include "CachedImage.h"
+#include "DocumentInlines.h"
 #include "FocusController.h"
 #include "FontCache.h"
 #include "FontCascade.h"
@@ -44,9 +45,9 @@
 #include "HTMLMapElement.h"
 #include "HTMLNames.h"
 #include "HitTestResult.h"
-#include "InlineElementBox.h"
-#include "LayoutIntegrationLineIterator.h"
-#include "LayoutIntegrationRunIterator.h"
+#include "ImageOverlay.h"
+#include "InlineIteratorInlineBox.h"
+#include "InlineIteratorLine.h"
 #include "Page.h"
 #include "PaintInfo.h"
 #include "RenderChildIterator.h"
@@ -56,6 +57,7 @@
 #include "RenderTheme.h"
 #include "RenderView.h"
 #include "RuntimeEnabledFeatures.h"
+#include "SVGElementTypeHelpers.h"
 #include "SVGImage.h"
 #include "Settings.h"
 #include <wtf/IsoMallocInlines.h>
@@ -63,7 +65,7 @@
 
 #if PLATFORM(IOS_FAMILY)
 #include "LogicalSelectionOffsetCaches.h"
-#include "SelectionRect.h"
+#include "SelectionGeometry.h"
 #endif
 
 #if USE(CG)
@@ -80,19 +82,19 @@ WTF_MAKE_ISO_ALLOCATED_IMPL(RenderImage);
 // during selection creation yet anyway.
 // FIXME: We can't tell whether or not we contain the start or end of the selected Range using only the offsets
 // of the start and end, we need to know the whole Position.
-void RenderImage::collectSelectionRects(Vector<SelectionRect>& rects, unsigned, unsigned)
+void RenderImage::collectSelectionGeometries(Vector<SelectionGeometry>& geometries, unsigned, unsigned)
 {
     RenderBlock* containingBlock = this->containingBlock();
 
     IntRect imageRect;
-    // FIXME: It doesn't make sense to package line bounds into SelectionRects. We should find
+    // FIXME: It doesn't make sense to package line bounds into SelectionGeometry. We should find
     // the right and left extent of the selection once for the entire selected Range, perhaps
     // using the Range's common ancestor.
     IntRect lineExtentRect;
     bool isFirstOnLine = false;
     bool isLastOnLine = false;
 
-    auto run = LayoutIntegration::runFor(*this);
+    auto run = InlineIterator::boxFor(*this);
     if (!run) {
         // This is a block image.
         imageRect = IntRect(0, 0, width(), height());
@@ -107,11 +109,11 @@ void RenderImage::collectSelectionRects(Vector<SelectionRect>& rects, unsigned, 
             lineExtentRect.setHeight(containingBlock->height());
         }
     } else {
-        auto line = run.line();
+        auto line = run->line();
         LayoutUnit selectionTop = !containingBlock->style().isFlippedBlocksWritingMode() ? line->selectionTop() - logicalTop() : logicalBottom() - line->selectionBottom();
         imageRect = IntRect(0,  selectionTop, logicalWidth(), line->selectionHeight());
-        isFirstOnLine = !run.previousOnLine();
-        isLastOnLine = !run.nextOnLine();
+        isFirstOnLine = !run->previousOnLine();
+        isLastOnLine = !run->nextOnLine();
         LogicalSelectionOffsetCaches cache(*containingBlock);
         LayoutUnit leftOffset = containingBlock->logicalLeftSelectionOffset(*containingBlock, LayoutUnit(run->logicalTop()), cache);
         LayoutUnit rightOffset = containingBlock->logicalRightSelectionOffset(*containingBlock, LayoutUnit(run->logicalTop()), cache);
@@ -123,14 +125,14 @@ void RenderImage::collectSelectionRects(Vector<SelectionRect>& rects, unsigned, 
     }
 
     bool isFixed = false;
-    IntRect absoluteBounds = localToAbsoluteQuad(FloatRect(imageRect), UseTransforms, &isFixed).enclosingBoundingBox();
-    IntRect lineExtentBounds = localToAbsoluteQuad(FloatRect(lineExtentRect)).enclosingBoundingBox();
+    auto absoluteQuad = localToAbsoluteQuad(FloatRect(imageRect), UseTransforms, &isFixed);
+    auto lineExtentBounds = localToAbsoluteQuad(FloatRect(lineExtentRect)).enclosingBoundingBox();
     if (!containingBlock->isHorizontalWritingMode())
         lineExtentBounds = lineExtentBounds.transposedRect();
 
-    // FIXME: We should consider either making SelectionRect a struct or better organize its optional fields into
+    // FIXME: We should consider either making SelectionGeometry a struct or better organize its optional fields into
     // an auxiliary struct to simplify its initialization.
-    rects.append(SelectionRect(absoluteBounds, containingBlock->style().direction(), lineExtentBounds.x(), lineExtentBounds.maxX(), lineExtentBounds.maxY(), 0, false /* line break */, isFirstOnLine, isLastOnLine, false /* contains start */, false /* contains end */, containingBlock->style().isHorizontalWritingMode(), isFixed, false /* ruby text */, view().pageNumberForBlockProgressionOffset(absoluteBounds.x())));
+    geometries.append(SelectionGeometry(absoluteQuad, SelectionRenderingBehavior::CoalesceBoundingRects, containingBlock->style().direction(), lineExtentBounds.x(), lineExtentBounds.maxX(), lineExtentBounds.maxY(), 0, false /* line break */, isFirstOnLine, isLastOnLine, false /* contains start */, false /* contains end */, containingBlock->style().isHorizontalWritingMode(), isFixed, false /* ruby text */, view().pageNumberForBlockProgressionOffset(absoluteQuad.enclosingBoundingBox().x())));
 }
 #endif
 
@@ -139,10 +141,14 @@ using namespace HTMLNames;
 RenderImage::RenderImage(Element& element, RenderStyle&& style, StyleImage* styleImage, const float imageDevicePixelRatio)
     : RenderReplaced(element, WTFMove(style), IntSize())
     , m_imageResource(styleImage ? makeUnique<RenderImageResourceStyleImage>(*styleImage) : makeUnique<RenderImageResource>())
-    , m_hasImageOverlay(is<HTMLElement>(element) && downcast<HTMLElement>(element).hasImageOverlay())
+    , m_hasImageOverlay(is<HTMLElement>(element) && ImageOverlay::hasOverlay(downcast<HTMLElement>(element)))
     , m_imageDevicePixelRatio(imageDevicePixelRatio)
 {
     updateAltText();
+#if ENABLE(SERVICE_CONTROLS)
+    if (is<HTMLImageElement>(element))
+        m_hasShadowControls = downcast<HTMLImageElement>(element).imageMenuEnabled();
+#endif
 }
 
 RenderImage::RenderImage(Document& document, RenderStyle&& style, StyleImage* styleImage)
@@ -204,7 +210,7 @@ ImageSizeChangeType RenderImage::setImageSizeForAltText(CachedImage* newImage /*
     // we have an alt and the user meant it (its not a text we invented)
     if (!m_altText.isEmpty()) {
         const FontCascade& font = style().fontCascade();
-        IntSize paddedTextSize(paddingWidth + std::min(ceilf(font.width(RenderBlock::constructTextRun(m_altText, style()))), maxAltTextWidth), paddingHeight + std::min(font.fontMetrics().height(), maxAltTextHeight));
+        IntSize paddedTextSize(paddingWidth + std::min(ceilf(font.width(RenderBlock::constructTextRun(m_altText, style()))), maxAltTextWidth), paddingHeight + std::min(font.metricsOfPrimaryFont().height(), maxAltTextHeight));
         imageSize = imageSize.expandedTo(paddedTextSize);
     }
 
@@ -267,7 +273,7 @@ LayoutUnit RenderImage::computeReplacedLogicalWidth(ShouldComputePreferred shoul
     return RenderReplaced::computeReplacedLogicalWidth(shouldComputePreferred);
 }
 
-LayoutUnit RenderImage::computeReplacedLogicalHeight(Optional<LayoutUnit> estimatedUsedWidth) const
+LayoutUnit RenderImage::computeReplacedLogicalHeight(std::optional<LayoutUnit> estimatedUsedWidth) const
 {
     if (shouldCollapseToEmpty())
         return { };
@@ -325,7 +331,7 @@ void RenderImage::updateInnerContentRect()
     IntSize containerSize(replacedContentRect().size());
     if (!containerSize.isEmpty()) {
         URL imageSourceURL;
-        if (HTMLImageElement* imageElement = is<HTMLImageElement>(element()) ? downcast<HTMLImageElement>(element()) : nullptr)
+        if (auto* imageElement = dynamicDowncast<HTMLImageElement>(element()))
             imageSourceURL = document().completeURL(imageElement->imageSourceURL());
         imageResource().setContainerContext(containerSize, imageSourceURL);
     }
@@ -526,7 +532,7 @@ void RenderImage::paintReplaced(PaintInfo& paintInfo, const LayoutPoint& paintOf
                 String text = document().displayStringModifiedByEncoding(m_altText);
                 context.setFillColor(style().visitedDependentColorWithColorFilter(CSSPropertyColor));
                 const FontCascade& font = style().fontCascade();
-                const FontMetrics& fontMetrics = font.fontMetrics();
+                const FontMetrics& fontMetrics = font.metricsOfPrimaryFont();
                 LayoutUnit ascent = fontMetrics.ascent();
                 LayoutPoint altTextOffset = paintOffset;
                 altTextOffset.move(leftBorder + leftPad + (paddingWidth / 2) - missingImageBorderWidth, topBorder + topPad + ascent + (paddingHeight / 2) - missingImageBorderWidth);
@@ -537,9 +543,9 @@ void RenderImage::paintReplaced(PaintInfo& paintInfo, const LayoutPoint& paintOf
                 LayoutUnit textWidth { font.width(textRun) };
                 if (errorPictureDrawn) {
                     if (usableSize.width() >= textWidth && fontMetrics.height() <= imageOffset.height())
-                        context.drawText(font, textRun, altTextOffset);
+                        context.drawBidiText(font, textRun, altTextOffset);
                 } else if (usableSize.width() >= textWidth && usableSize.height() >= fontMetrics.height())
-                    context.drawText(font, textRun, altTextOffset);
+                    context.drawBidiText(font, textRun, altTextOffset);
             }
         }
         return;
@@ -660,7 +666,7 @@ ImageDrawResult RenderImage::paintIntoRect(PaintInfo& paintInfo, const FloatRect
     if (!img || img->isNull())
         return ImageDrawResult::DidNothing;
 
-    HTMLImageElement* imageElement = is<HTMLImageElement>(element()) ? downcast<HTMLImageElement>(element()) : nullptr;
+    auto* imageElement = dynamicDowncast<HTMLImageElement>(element());
 
     // FIXME: Document when image != img.get().
     Image* image = imageResource().image().get();
@@ -692,9 +698,9 @@ ImageDrawResult RenderImage::paintIntoRect(PaintInfo& paintInfo, const FloatRect
     return drawResult;
 }
 
-bool RenderImage::boxShadowShouldBeAppliedToBackground(const LayoutPoint& paintOffset, BackgroundBleedAvoidance bleedAvoidance, InlineFlowBox*) const
+bool RenderImage::boxShadowShouldBeAppliedToBackground(const LayoutPoint& paintOffset, BackgroundBleedAvoidance bleedAvoidance, const InlineIterator::InlineBoxIterator&) const
 {
-    if (!RenderBoxModelObject::boxShadowShouldBeAppliedToBackground(paintOffset, bleedAvoidance))
+    if (!RenderBoxModelObject::boxShadowShouldBeAppliedToBackground(paintOffset, bleedAvoidance, { }))
         return false;
 
     return !const_cast<RenderImage*>(this)->backgroundIsKnownToBeObscured(paintOffset);
@@ -844,6 +850,7 @@ void RenderImage::layoutShadowContent(const LayoutSize& oldSize)
 
 void RenderImage::computeIntrinsicRatioInformation(FloatSize& intrinsicSize, double& intrinsicRatio) const
 {
+    ASSERT(!shouldApplySizeContainment(*this));
     RenderReplaced::computeIntrinsicRatioInformation(intrinsicSize, intrinsicRatio);
 
     // Our intrinsicSize is empty if we're rendering generated images with relative width/height. Figure out the right intrinsic size to use.
@@ -858,7 +865,11 @@ void RenderImage::computeIntrinsicRatioInformation(FloatSize& intrinsicSize, dou
 
     // Don't compute an intrinsic ratio to preserve historical WebKit behavior if we're painting alt text and/or a broken image.
     if (shouldDisplayBrokenImageIcon()) {
-        intrinsicRatio = 1;
+        if (settings().aspectRatioOfImgFromWidthAndHeightEnabled()
+            && style().aspectRatioType() == AspectRatioType::AutoAndRatio && !isShowingAltText())
+            intrinsicRatio = style().logicalAspectRatio();
+        else
+            intrinsicRatio = 1;
         return;
     }
 }

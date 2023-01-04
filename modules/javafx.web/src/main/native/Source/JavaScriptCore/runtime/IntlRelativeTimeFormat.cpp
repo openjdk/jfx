@@ -42,7 +42,7 @@ namespace IntlRelativeTimeFormatInternal {
 
 IntlRelativeTimeFormat* IntlRelativeTimeFormat::create(VM& vm, Structure* structure)
 {
-    auto* format = new (NotNull, allocateCell<IntlRelativeTimeFormat>(vm.heap)) IntlRelativeTimeFormat(vm, structure);
+    auto* format = new (NotNull, allocateCell<IntlRelativeTimeFormat>(vm)) IntlRelativeTimeFormat(vm, structure);
     format->finishCreation(vm);
     return format;
 }
@@ -89,7 +89,7 @@ void IntlRelativeTimeFormat::initializeRelativeTimeFormat(JSGlobalObject* global
     Vector<String> requestedLocales = canonicalizeLocaleList(globalObject, locales);
     RETURN_IF_EXCEPTION(scope, void());
 
-    Optional<JSObject&> options = intlCoerceOptionsToObject(globalObject, optionsValue);
+    JSObject* options = intlCoerceOptionsToObject(globalObject, optionsValue);
     RETURN_IF_EXCEPTION(scope, void());
 
     ResolveLocaleOptions localeOptions;
@@ -106,7 +106,7 @@ void IntlRelativeTimeFormat::initializeRelativeTimeFormat(JSGlobalObject* global
         localeOptions[static_cast<unsigned>(RelevantExtensionKey::Nu)] = numberingSystem;
     }
 
-    const HashSet<String>& availableLocales = intlRelativeTimeFormatAvailableLocales();
+    const auto& availableLocales = intlRelativeTimeFormatAvailableLocales();
     auto resolved = resolveLocale(globalObject, availableLocales, requestedLocales, localeMatcher, localeOptions, { RelevantExtensionKey::Nu }, localeData);
     m_locale = resolved.locale;
     if (m_locale.isEmpty()) {
@@ -207,7 +207,7 @@ static StringView singularUnit(StringView unit)
 }
 
 // https://tc39.es/ecma402/#sec-singularrelativetimeunit
-static Optional<URelativeDateTimeUnit> relativeTimeUnitType(StringView unit)
+static std::optional<URelativeDateTimeUnit> relativeTimeUnitType(StringView unit)
 {
     StringView singular = singularUnit(unit);
 
@@ -228,7 +228,7 @@ static Optional<URelativeDateTimeUnit> relativeTimeUnitType(StringView unit)
     if (singular == "year")
         return UDAT_REL_UNIT_YEAR;
 
-    return WTF::nullopt;
+    return std::nullopt;
 }
 
 String IntlRelativeTimeFormat::formatInternal(JSGlobalObject* globalObject, double value, StringView unit) const
@@ -318,7 +318,7 @@ JSValue IntlRelativeTimeFormat::formatToParts(JSGlobalObject* globalObject, doub
         }
 
         IntlFieldIterator fieldIterator(*iterator.get());
-        IntlNumberFormat::formatToPartsInternal(globalObject, IntlNumberFormat::Style::Decimal, absValue, formattedNumber, fieldIterator, parts, jsString(vm, singularUnit(unit).toString()));
+        IntlNumberFormat::formatToPartsInternal(globalObject, IntlNumberFormat::Style::Decimal, std::signbit(absValue), IntlMathematicalValue::numberTypeFromDouble(absValue), formattedNumber, fieldIterator, parts, nullptr, jsString(vm, singularUnit(unit).toString()));
         RETURN_IF_EXCEPTION(scope, { });
     }
 

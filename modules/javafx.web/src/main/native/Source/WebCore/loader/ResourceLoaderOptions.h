@@ -32,6 +32,8 @@
 
 #include "ContentSecurityPolicyResponseHeaders.h"
 #include "CrossOriginAccessControl.h"
+#include "CrossOriginEmbedderPolicy.h"
+#include "FetchIdentifier.h"
 #include "FetchOptions.h"
 #include "HTTPHeaderNames.h"
 #include "ServiceWorkerTypes.h"
@@ -145,6 +147,12 @@ enum class LoadedFromOpaqueSource : uint8_t {
 };
 static constexpr unsigned bitWidthOfLoadedFromOpaqueSource = 1;
 
+enum class LoadedFromPluginElement : bool {
+    No,
+    Yes
+};
+static constexpr unsigned bitWidthOfLoadedFromPluginElement = 1;
+
 struct ResourceLoaderOptions : public FetchOptions {
     ResourceLoaderOptions()
         : ResourceLoaderOptions(FetchOptions())
@@ -170,6 +178,7 @@ struct ResourceLoaderOptions : public FetchOptions {
         , clientCredentialPolicy(ClientCredentialPolicy::CannotAskClientForCredentials)
         , preflightPolicy(PreflightPolicy::Consider)
         , loadedFromOpaqueSource(LoadedFromOpaqueSource::No)
+        , loadedFromPluginElement(LoadedFromPluginElement::No)
     { }
 
     ResourceLoaderOptions(SendCallbackPolicy sendLoadCallbacks, ContentSniffingPolicy sniffContent, DataBufferingPolicy dataBufferingPolicy, StoredCredentialsPolicy storedCredentialsPolicy, ClientCredentialPolicy credentialPolicy, FetchOptions::Credentials credentials, SecurityCheckPolicy securityCheck, FetchOptions::Mode mode, CertificateInfoPolicy certificateInfoPolicy, ContentSecurityPolicyImposition contentSecurityPolicyImposition, DefersLoadingPolicy defersLoadingPolicy, CachingPolicy cachingPolicy)
@@ -190,6 +199,7 @@ struct ResourceLoaderOptions : public FetchOptions {
         , clientCredentialPolicy(credentialPolicy)
         , preflightPolicy(PreflightPolicy::Consider)
         , loadedFromOpaqueSource(LoadedFromOpaqueSource::No)
+        , loadedFromPluginElement(LoadedFromPluginElement::No)
 
     {
         this->credentials = credentials;
@@ -200,8 +210,11 @@ struct ResourceLoaderOptions : public FetchOptions {
     Markable<ServiceWorkerRegistrationIdentifier, ServiceWorkerRegistrationIdentifier::MarkableTraits> serviceWorkerRegistrationIdentifier;
 #endif
     Markable<ContentSecurityPolicyResponseHeaders, ContentSecurityPolicyResponseHeaders::MarkableTraits> cspResponseHeaders;
+    std::optional<CrossOriginEmbedderPolicy> crossOriginEmbedderPolicy;
     OptionSet<HTTPHeadersToKeepFromCleaning> httpHeadersToKeep;
     uint8_t maxRedirectCount { 20 };
+    FetchIdentifier navigationPreloadIdentifier;
+    String nonce;
 
     SendCallbackPolicy sendLoadCallbacks : bitWidthOfSendCallbackPolicy;
     ContentSniffingPolicy sniffContent : bitWidthOfContentSniffingPolicy;
@@ -220,6 +233,7 @@ struct ResourceLoaderOptions : public FetchOptions {
     ClientCredentialPolicy clientCredentialPolicy : bitWidthOfClientCredentialPolicy;
     PreflightPolicy preflightPolicy : bitWidthOfPreflightPolicy;
     LoadedFromOpaqueSource loadedFromOpaqueSource : bitWidthOfLoadedFromOpaqueSource;
+    LoadedFromPluginElement loadedFromPluginElement : bitWidthOfLoadedFromPluginElement;
 };
 
 } // namespace WebCore

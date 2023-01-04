@@ -62,7 +62,7 @@ public:
     RenderTableRow* firstRow() const;
     RenderTableRow* lastRow() const;
 
-    Optional<int> firstLineBaseline() const override;
+    std::optional<LayoutUnit> firstLineBaseline() const override;
 
     void addCell(RenderTableCell*, RenderTableRow* row);
 
@@ -165,7 +165,7 @@ private:
 
     bool isTableSection() const override { return true; }
 
-    void willBeRemovedFromTree() override;
+    void willBeRemovedFromTree(IsInternalMove) override;
 
     void layout() override;
 

@@ -23,8 +23,9 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+// https://immersive-web.github.io/webxr/#dictdef-xrinputsourceschangeeventinit
 [
-    EnabledAtRuntime=WebXR,
+    EnabledBySetting=WebXREnabled,
     Conditional=WEBXR,
 ] dictionary XRInputSourcesChangeEventInit : EventInit {
     required WebXRSession session;
@@ -32,15 +33,15 @@
     required FrozenArray<WebXRInputSource> removed;
 };
 
+// https://immersive-web.github.io/webxr/#xrinputsourceschangeevent
 [
-    EnabledAtRuntime=WebXR,
+    EnabledBySetting=WebXREnabled,
     Conditional=WEBXR,
     SecureContext,
     Exposed=Window
 ] interface XRInputSourcesChangeEvent : Event {
     constructor(DOMString type, XRInputSourcesChangeEventInit eventInitDict);
-
     [SameObject] readonly attribute WebXRSession session;
-    [SameObject] readonly attribute FrozenArray<WebXRInputSource> added;
-    [SameObject] readonly attribute FrozenArray<WebXRInputSource> removed;
+    [CachedAttribute, SameObject] readonly attribute FrozenArray<WebXRInputSource> added;
+    [CachedAttribute, SameObject] readonly attribute FrozenArray<WebXRInputSource> removed;
 };

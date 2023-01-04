@@ -47,6 +47,7 @@ enum class PropertyAttribute : unsigned {
     CustomValue       = 1 << 6,
     CustomAccessorOrValue = CustomAccessor | CustomValue,
     AccessorOrCustomAccessorOrValue = Accessor | CustomAccessor | CustomValue,
+    ReadOnlyOrAccessorOrCustomAccessor = ReadOnly | Accessor | CustomAccessor,
 
     // Things that are used by static hashtables are not in the attributes byte in PropertyMapEntry.
     Function          = 1 << 8,  // property is a function - only used by static hashtables
@@ -87,8 +88,8 @@ inline unsigned attributesForStructure(unsigned attributes)
 using GetValueFunc = EncodedJSValue(JIT_OPERATION_ATTRIBUTES*)(JSGlobalObject*, EncodedJSValue thisValue, PropertyName);
 using GetValueFuncWithPtr = EncodedJSValue(JIT_OPERATION_ATTRIBUTES*)(JSGlobalObject*, EncodedJSValue thisValue, PropertyName, void*);
 
-using PutValueFunc = bool (*)(JSGlobalObject*, EncodedJSValue baseObject, EncodedJSValue value);
-using PutValueFuncWithPtr = bool (*)(JSGlobalObject*, EncodedJSValue baseObject, EncodedJSValue value, void*);
+using PutValueFunc = bool (JIT_OPERATION_ATTRIBUTES*)(JSGlobalObject*, EncodedJSValue baseObject, EncodedJSValue value, PropertyName);
+using PutValueFuncWithPtr = bool (JIT_OPERATION_ATTRIBUTES*)(JSGlobalObject*, EncodedJSValue baseObject, EncodedJSValue value, PropertyName, void*);
 
 class PropertySlot {
 
@@ -188,11 +189,11 @@ public:
         return m_watchpointSet;
     }
 
-    Optional<DOMAttributeAnnotation> domAttribute() const
+    std::optional<DOMAttributeAnnotation> domAttribute() const
     {
         if (m_additionalDataType == AdditionalDataType::DOMAttribute)
             return m_additionalData.domAttribute;
-        return WTF::nullopt;
+        return std::nullopt;
     }
 
     struct ModuleNamespaceSlot {
@@ -200,11 +201,11 @@ public:
         unsigned scopeOffset;
     };
 
-    Optional<ModuleNamespaceSlot> moduleNamespaceSlot() const
+    std::optional<ModuleNamespaceSlot> moduleNamespaceSlot() const
     {
         if (m_additionalDataType == AdditionalDataType::ModuleNamespace)
             return m_additionalData.moduleNamespaceSlot;
-        return WTF::nullopt;
+        return std::nullopt;
     }
 
     void setValue(JSObject* slotBase, unsigned attributes, JSValue value)
@@ -366,7 +367,7 @@ public:
 
 private:
     JS_EXPORT_PRIVATE JSValue functionGetter(JSGlobalObject*) const;
-    JS_EXPORT_PRIVATE JSValue customGetter(JSGlobalObject*, PropertyName) const;
+    JS_EXPORT_PRIVATE JSValue customGetter(VM&, PropertyName) const;
 
     union {
         EncodedJSValue value;
@@ -390,7 +391,7 @@ private:
     AdditionalDataType m_additionalDataType { AdditionalDataType::None };
     bool m_isTaintedByOpaqueObject { false };
 public:
-    Optional<DisallowVMEntry> disallowVMEntry;
+    std::optional<DisallowVMEntry> disallowVMEntry;
 private:
     union {
         DOMAttributeAnnotation domAttribute;
@@ -404,7 +405,7 @@ ALWAYS_INLINE JSValue PropertySlot::getValue(JSGlobalObject* globalObject, Prope
         return JSValue::decode(m_data.value);
     if (m_propertyType == TypeGetter)
         return functionGetter(globalObject);
-    return customGetter(globalObject, propertyName);
+    return customGetter(getVM(globalObject), propertyName);
 }
 
 ALWAYS_INLINE JSValue PropertySlot::getValue(JSGlobalObject* globalObject, uint64_t propertyName) const
@@ -414,7 +415,7 @@ ALWAYS_INLINE JSValue PropertySlot::getValue(JSGlobalObject* globalObject, uint6
         return JSValue::decode(m_data.value);
     if (m_propertyType == TypeGetter)
         return functionGetter(globalObject);
-    return customGetter(globalObject, Identifier::from(vm, propertyName));
+    return customGetter(getVM(globalObject), Identifier::from(vm, propertyName));
 }
 
 } // namespace JSC

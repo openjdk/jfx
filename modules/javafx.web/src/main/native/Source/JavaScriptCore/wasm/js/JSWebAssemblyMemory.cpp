@@ -50,7 +50,7 @@ JSWebAssemblyMemory* JSWebAssemblyMemory::tryCreate(JSGlobalObject* globalObject
     if (!globalObject->webAssemblyEnabled())
         return exception(createEvalError(globalObject, globalObject->webAssemblyDisabledErrorMessage()));
 
-    auto* memory = new (NotNull, allocateCell<JSWebAssemblyMemory>(vm.heap)) JSWebAssemblyMemory(vm, structure);
+    auto* memory = new (NotNull, allocateCell<JSWebAssemblyMemory>(vm)) JSWebAssemblyMemory(vm, structure);
     memory->finishCreation(vm);
     return memory;
 }
@@ -130,6 +130,27 @@ Wasm::PageCount JSWebAssemblyMemory::grow(VM& vm, JSGlobalObject* globalObject, 
 
     return grown.value();
 }
+
+JSObject* JSWebAssemblyMemory::type(JSGlobalObject* globalObject)
+{
+    VM& vm = globalObject->vm();
+
+    Wasm::PageCount minimum = m_memory->initial();
+    Wasm::PageCount maximum = m_memory->maximum();
+
+    JSObject* result;
+    if (maximum.isValid()) {
+        result = constructEmptyObject(globalObject, globalObject->objectPrototype(), 3);
+        result->putDirect(vm, Identifier::fromString(vm, "maximum"), jsNumber(maximum.pageCount()));
+    } else
+        result = constructEmptyObject(globalObject, globalObject->objectPrototype(), 2);
+
+    result->putDirect(vm, Identifier::fromString(vm, "minimum"), jsNumber(minimum.pageCount()));
+    result->putDirect(vm, Identifier::fromString(vm, "shared"), jsBoolean(m_memory->sharingMode() == Wasm::MemorySharingMode::Shared));
+
+    return result;
+}
+
 
 void JSWebAssemblyMemory::growSuccessCallback(VM& vm, Wasm::PageCount oldPageCount, Wasm::PageCount newPageCount)
 {

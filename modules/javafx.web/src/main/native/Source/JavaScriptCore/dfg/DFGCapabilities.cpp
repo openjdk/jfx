@@ -240,6 +240,7 @@ CapabilityLevel capabilityLevel(OpcodeID opcodeID, CodeBlock* codeBlock, const I
     case op_get_from_arguments:
     case op_put_to_arguments:
     case op_get_argument:
+    case op_jeq_ptr:
     case op_jneq_ptr:
     case op_typeof:
     case op_to_number:
@@ -250,19 +251,11 @@ CapabilityLevel capabilityLevel(OpcodeID opcodeID, CodeBlock* codeBlock, const I
     case op_switch_char:
     case op_in_by_val:
     case op_in_by_id:
+    case op_has_private_name:
+    case op_has_private_brand:
     case op_get_scope:
     case op_get_from_scope:
-    case op_get_enumerable_length:
-    case op_has_enumerable_indexed_property:
-    case op_has_enumerable_structure_property:
-    case op_has_enumerable_property:
-    case op_has_own_structure_property:
-    case op_in_structure_property:
-    case op_get_direct_pname:
     case op_get_property_enumerator:
-    case op_enumerator_structure_pname:
-    case op_enumerator_generic_pname:
-    case op_to_index_string:
     case op_new_func:
     case op_new_func_exp:
     case op_new_generator_func:
@@ -296,9 +289,13 @@ CapabilityLevel capabilityLevel(OpcodeID opcodeID, CodeBlock* codeBlock, const I
     case op_put_private_name:
     case op_set_private_brand:
     case op_check_private_brand:
+    case op_switch_string:
+    case op_enumerator_next:
+    case op_enumerator_get_by_val:
+    case op_enumerator_in_by_val:
+    case op_enumerator_has_own_property:
         return CanCompileAndInline;
 
-    case op_switch_string: // Don't inline because we don't want to copy string tables in the concurrent JIT.
     case op_call_eval:
         return CanCompile;
 
@@ -318,6 +315,10 @@ CapabilityLevel capabilityLevel(OpcodeID opcodeID, CodeBlock* codeBlock, const I
     case llint_native_construct_trampoline:
     case llint_internal_function_call_trampoline:
     case llint_internal_function_construct_trampoline:
+    case llint_link_call_trampoline:
+    case llint_virtual_call_trampoline:
+    case llint_virtual_construct_trampoline:
+    case llint_virtual_tail_call_trampoline:
     case llint_get_host_call_return_value:
     case llint_handle_uncaught_exception:
     case checkpoint_osr_exit_from_inlined_call_trampoline:
@@ -328,6 +329,8 @@ CapabilityLevel capabilityLevel(OpcodeID opcodeID, CodeBlock* codeBlock, const I
     case op_iterator_next_return_location:
     case op_call_return_location:
     case op_construct_return_location:
+    case op_call_varargs_return_location:
+    case op_construct_varargs_return_location:
     case op_call_varargs_slow_return_location:
     case op_construct_varargs_slow_return_location:
     case op_get_by_id_return_location:
@@ -338,7 +341,6 @@ CapabilityLevel capabilityLevel(OpcodeID opcodeID, CodeBlock* codeBlock, const I
     case op_construct_slow_return_location:
     case op_iterator_open_slow_return_location:
     case op_iterator_next_slow_return_location:
-    case op_tail_call_return_location:
     case op_tail_call_slow_return_location:
     case op_tail_call_forward_arguments_slow_return_location:
     case op_tail_call_varargs_slow_return_location:
@@ -346,8 +348,9 @@ CapabilityLevel capabilityLevel(OpcodeID opcodeID, CodeBlock* codeBlock, const I
     case wasm_function_prologue:
     case wasm_function_prologue_no_tls:
     case js_trampoline_op_call:
-    case js_trampoline_op_tail_call:
     case js_trampoline_op_construct:
+    case js_trampoline_op_call_varargs:
+    case js_trampoline_op_construct_varargs:
     case js_trampoline_op_iterator_next:
     case js_trampoline_op_iterator_open:
     case js_trampoline_op_call_slow:
@@ -368,6 +371,8 @@ CapabilityLevel capabilityLevel(OpcodeID opcodeID, CodeBlock* codeBlock, const I
     case wasm_trampoline_wasm_call_no_tls:
     case wasm_trampoline_wasm_call_indirect:
     case wasm_trampoline_wasm_call_indirect_no_tls:
+    case wasm_trampoline_wasm_call_ref:
+    case wasm_trampoline_wasm_call_ref_no_tls:
         return CannotCompile;
     }
     return CannotCompile;

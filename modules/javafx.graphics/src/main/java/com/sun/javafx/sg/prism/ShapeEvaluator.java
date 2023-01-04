@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2007, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2007, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -174,7 +174,7 @@ class ShapeEvaluator {
             bezierCoords[0] = curx = movx = coords[0];
             bezierCoords[1] = cury = movy = coords[1];
             float newx, newy;
-            Vector<Point2D> savedpathendpoints = new Vector<Point2D>();
+            Vector<Point2D> savedpathendpoints = new Vector<>();
             numCoords = 2;
             while (!pi.isDone()) {
                 switch (pi.currentSegment(coords)) {
@@ -562,6 +562,7 @@ class ShapeEvaluator {
             return new Rectangle(getBounds());
         }
 
+        @Override
         public RectBounds getBounds() {
             int n = geom0.getNumCoords();
             float xmin, ymin, xmax, ymax;
@@ -586,26 +587,32 @@ class ShapeEvaluator {
             return new RectBounds(xmin, ymin, xmax, ymax);
         }
 
+        @Override
         public boolean contains(float x, float y) {
             return Path2D.contains(getPathIterator(null), x, y);
         }
 
+        @Override
         public boolean intersects(float x, float y, float w, float h) {
             return Path2D.intersects(getPathIterator(null), x, y, w, h);
         }
 
+        @Override
         public boolean contains(float x, float y, float width, float height) {
             return Path2D.contains(getPathIterator(null), x, y, width, height);
         }
 
+        @Override
         public PathIterator getPathIterator(BaseTransform at) {
             return new Iterator(at, geom0, geom1, t);
         }
 
+        @Override
         public PathIterator getPathIterator(BaseTransform at, float flatness) {
             return new FlatteningPathIterator(getPathIterator(at), flatness);
         }
 
+        @Override
         public Shape copy() {
             return new Path2D(this);
         }
@@ -630,6 +637,7 @@ class ShapeEvaluator {
         /**
          * @{inheritDoc}
          */
+        @Override
         public int getWindingRule() {
             return (t < 0.5 ? g0.getWindingRule() : g1.getWindingRule());
         }
@@ -637,6 +645,7 @@ class ShapeEvaluator {
         /**
          * @{inheritDoc}
          */
+        @Override
         public boolean isDone() {
             return (cindex > g0.getNumCoords());
         }
@@ -644,6 +653,7 @@ class ShapeEvaluator {
         /**
          * @{inheritDoc}
          */
+        @Override
         public void next() {
             if (cindex == 0) {
                 cindex = 2;
@@ -655,6 +665,7 @@ class ShapeEvaluator {
         /**
          * @{inheritDoc}
          */
+        @Override
         public int currentSegment(float coords[]) {
             int type;
             int n;
@@ -670,9 +681,7 @@ class ShapeEvaluator {
             }
             if (n > 0) {
                 for (int i = 0; i < n; i++) {
-                    coords[i] = (float) interp(g0.getCoord(cindex + i),
-                                               g1.getCoord(cindex + i),
-                                               t);
+                    coords[i] = interp(g0.getCoord(cindex + i), g1.getCoord(cindex + i), t);
                 }
                 if (at != null) {
                     at.transform(coords, 0, coords, 0, n / 2);

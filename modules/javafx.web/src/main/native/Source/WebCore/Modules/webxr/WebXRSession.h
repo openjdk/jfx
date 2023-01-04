@@ -57,8 +57,9 @@ class WebXRSession final : public RefCounted<WebXRSession>, public EventTargetWi
 public:
     using RequestReferenceSpacePromise = DOMPromiseDeferred<IDLInterface<WebXRReferenceSpace>>;
     using EndPromise = DOMPromiseDeferred<void>;
+    using FeatureList = PlatformXR::Device::FeatureList;
 
-    static Ref<WebXRSession> create(Document&, WebXRSystem&, XRSessionMode, PlatformXR::Device&);
+    static Ref<WebXRSession> create(Document&, WebXRSystem&, XRSessionMode, PlatformXR::Device&, FeatureList&&);
     virtual ~WebXRSession();
 
     using RefCounted<WebXRSession>::ref;
@@ -72,6 +73,7 @@ public:
     XRVisibilityState visibilityState() const;
     const WebXRRenderState& renderState() const;
     const WebXRInputSourceArray& inputSources() const;
+    PlatformXR::Device* device() const { return m_device.get(); }
 
     ExceptionOr<void> updateRenderState(const XRRenderStateInit&);
     void requestReferenceSpace(XRReferenceSpaceType, RequestReferenceSpacePromise&&);
@@ -82,6 +84,7 @@ public:
     IntSize nativeWebGLFramebufferResolution() const;
     IntSize recommendedWebGLFramebufferResolution() const;
     bool supportsViewportScaling() const;
+    bool isPositionEmulated() const;
 
     // EventTarget.
     ScriptExecutionContext* scriptExecutionContext() const final { return ActiveDOMObject::scriptExecutionContext(); }
@@ -97,7 +100,7 @@ public:
     bool posesCanBeReported(const Document&) const;
 
 private:
-    WebXRSession(Document&, WebXRSystem&, XRSessionMode, PlatformXR::Device&);
+    WebXRSession(Document&, WebXRSystem&, XRSessionMode, PlatformXR::Device&, FeatureList&&);
 
     // EventTarget
     EventTargetInterface eventTargetInterface() const override { return WebXRSessionEventTargetInterfaceType; }
@@ -109,7 +112,9 @@ private:
     void stop() override;
 
     // PlatformXR::TrackingAndRenderingClient
+    void sessionDidInitializeInputSources(Vector<PlatformXR::Device::FrameData::InputSource>&&) final;
     void sessionDidEnd() final;
+    void updateSessionVisibilityState(PlatformXR::VisibilityState) final;
 
     enum class InitiatedBySystem : bool { No, Yes };
     void shutdown(InitiatedBySystem);
@@ -118,20 +123,21 @@ private:
     bool referenceSpaceIsSupported(XRReferenceSpaceType) const;
 
     bool frameShouldBeRendered() const;
-    void requestFrame();
+    void requestFrameIfNeeded();
     void onFrame(PlatformXR::Device::FrameData&&);
     void applyPendingRenderState();
 
-    XREnvironmentBlendMode m_environmentBlendMode;
-    XRInteractionMode m_interactionMode;
-    XRVisibilityState m_visibilityState;
-    Ref<WebXRInputSourceArray> m_inputSources;
+    XREnvironmentBlendMode m_environmentBlendMode { XREnvironmentBlendMode::Opaque };
+    XRInteractionMode m_interactionMode { XRInteractionMode::WorldSpace };
+    XRVisibilityState m_visibilityState { XRVisibilityState::Visible };
+    UniqueRef<WebXRInputSourceArray> m_inputSources;
     bool m_ended { false };
-    Optional<EndPromise> m_endPromise;
+    std::optional<EndPromise> m_endPromise;
 
     WebXRSystem& m_xrSystem;
     XRSessionMode m_mode;
     WeakPtr<PlatformXR::Device> m_device;
+    FeatureList m_requestedFeatures;
     RefPtr<WebXRRenderState> m_activeRenderState;
     RefPtr<WebXRRenderState> m_pendingRenderState;
     std::unique_ptr<WebXRViewerSpace> m_viewerReferenceSpace;
@@ -139,6 +145,7 @@ private:
 
     unsigned m_nextCallbackId { 1 };
     Vector<Ref<XRFrameRequestCallback>> m_callbacks;
+    bool m_isDeviceFrameRequestPending { false };
 
     Vector<PlatformXR::Device::ViewData> m_views;
     PlatformXR::Device::FrameData m_frameData;
@@ -149,6 +156,9 @@ private:
     // In meters.
     double m_minimumNearClipPlane { 0.1 };
     double m_maximumFarClipPlane { 1000.0 };
+
+    // https://immersive-web.github.io/webxr/#xrsession-promise-resolved
+    bool m_inputInitialized { false };
 };
 
 } // namespace WebCore

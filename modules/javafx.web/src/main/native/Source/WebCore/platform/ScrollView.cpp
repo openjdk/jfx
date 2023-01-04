@@ -26,6 +26,7 @@
 #include "config.h"
 #include "ScrollView.h"
 
+#include "FloatQuad.h"
 #include "GraphicsContext.h"
 #include "GraphicsLayer.h"
 #include "HostWindow.h"
@@ -66,12 +67,12 @@ void ScrollView::removeChild(Widget& child)
 
 bool ScrollView::setHasHorizontalScrollbar(bool hasBar, bool* contentSizeAffected)
 {
-    return setHasScrollbarInternal(m_horizontalScrollbar, HorizontalScrollbar, hasBar, contentSizeAffected);
+    return setHasScrollbarInternal(m_horizontalScrollbar, ScrollbarOrientation::Horizontal, hasBar, contentSizeAffected);
 }
 
 bool ScrollView::setHasVerticalScrollbar(bool hasBar, bool* contentSizeAffected)
 {
-    return setHasScrollbarInternal(m_verticalScrollbar, VerticalScrollbar, hasBar, contentSizeAffected);
+    return setHasScrollbarInternal(m_verticalScrollbar, ScrollbarOrientation::Vertical, hasBar, contentSizeAffected);
 }
 
 bool ScrollView::setHasScrollbarInternal(RefPtr<Scrollbar>& scrollbar, ScrollbarOrientation orientation, bool hasBar, bool* contentSizeAffected)
@@ -153,15 +154,15 @@ void ScrollView::setCanHaveScrollbars(bool canScroll)
 
     scrollbarModes(newHorizontalMode, newVerticalMode);
 
-    if (canScroll && newVerticalMode == ScrollbarAlwaysOff)
-        newVerticalMode = ScrollbarAuto;
+    if (canScroll && newVerticalMode == ScrollbarMode::AlwaysOff)
+        newVerticalMode = ScrollbarMode::Auto;
     else if (!canScroll)
-        newVerticalMode = ScrollbarAlwaysOff;
+        newVerticalMode = ScrollbarMode::AlwaysOff;
 
-    if (canScroll && newHorizontalMode == ScrollbarAlwaysOff)
-        newHorizontalMode = ScrollbarAuto;
+    if (canScroll && newHorizontalMode == ScrollbarMode::AlwaysOff)
+        newHorizontalMode = ScrollbarMode::Auto;
     else if (!canScroll)
-        newHorizontalMode = ScrollbarAlwaysOff;
+        newHorizontalMode = ScrollbarMode::AlwaysOff;
 
     setScrollbarModes(newHorizontalMode, newVerticalMode);
 }
@@ -411,18 +412,18 @@ ScrollPosition ScrollView::maximumScrollPosition() const
     return maximumPosition;
 }
 
-ScrollPosition ScrollView::adjustScrollPositionWithinRange(const ScrollPosition& scrollPoint) const
+ScrollPosition ScrollView::adjustScrollPositionWithinRange(const ScrollPosition& scrollPosition) const
 {
-    if (!constrainsScrollingToContentEdge() || m_allowsUnclampedScrollPosition)
-        return scrollPoint;
+    if (scrollClamping() == ScrollClamping::Unclamped || m_allowsUnclampedScrollPosition)
+        return scrollPosition;
 
-    return scrollPoint.constrainedBetween(minimumScrollPosition(), maximumScrollPosition());
+    return scrollPosition.constrainedBetween(minimumScrollPosition(), maximumScrollPosition());
 }
 
 ScrollPosition ScrollView::documentScrollPositionRelativeToViewOrigin() const
 {
     return scrollPosition() - IntSize(
-        shouldPlaceBlockDirectionScrollbarOnLeft() && m_verticalScrollbar ? m_verticalScrollbar->occupiedWidth() : 0,
+        shouldPlaceVerticalScrollbarOnLeft() && m_verticalScrollbar ? m_verticalScrollbar->occupiedWidth() : 0,
         headerHeight() + topContentInset(TopContentInsetType::WebCoreOrPlatformContentInset));
 }
 
@@ -431,17 +432,13 @@ ScrollPosition ScrollView::documentScrollPositionRelativeToScrollableAreaOrigin(
     return scrollPosition() - IntSize(0, headerHeight());
 }
 
-void ScrollView::notifyPageThatContentAreaWillPaint() const
-{
-}
-
 void ScrollView::setScrollOffset(const ScrollOffset& offset)
 {
-    LOG_WITH_STREAM(Scrolling, stream << "\nScrollView::setScrollOffset " << offset << " constrains " << constrainsScrollingToContentEdge());
+    LOG_WITH_STREAM(Scrolling, stream << "\nScrollView::setScrollOffset " << offset << " clamping " << scrollClamping());
 
-    IntPoint constrainedOffset = offset;
-    if (constrainsScrollingToContentEdge())
-        constrainedOffset = constrainedOffset.constrainedBetween(IntPoint(), maximumScrollOffset());
+    auto constrainedOffset = offset;
+    if (scrollClamping() == ScrollClamping::Clamped)
+        constrainedOffset = constrainedOffset.constrainedBetween(minimumScrollOffset(), maximumScrollOffset());
 
     scrollTo(scrollPositionFromOffset(constrainedOffset));
 }
@@ -457,6 +454,7 @@ void ScrollView::scrollOffsetChangedViaPlatformWidget(const ScrollOffset& oldOff
     }
 
     scrollOffsetChangedViaPlatformWidgetImpl(oldOffset, newOffset);
+    scrollAnimator().setCurrentPosition(scrollPosition());
 }
 
 void ScrollView::handleDeferredScrollUpdateAfterContentSizeChange()
@@ -473,8 +471,8 @@ void ScrollView::handleDeferredScrollUpdateAfterContentSizeChange()
     else if (m_deferredScrollOffsets)
         scrollOffsetChangedViaPlatformWidgetImpl(m_deferredScrollOffsets.value().first, m_deferredScrollOffsets.value().second);
 
-    m_deferredScrollDelta = WTF::nullopt;
-    m_deferredScrollOffsets = WTF::nullopt;
+    m_deferredScrollDelta = std::nullopt;
+    m_deferredScrollOffsets = std::nullopt;
 }
 
 void ScrollView::scrollTo(const ScrollPosition& newPosition)
@@ -484,6 +482,11 @@ void ScrollView::scrollTo(const ScrollPosition& newPosition)
     IntSize scrollDelta = newPosition - m_scrollPosition;
     if (scrollDelta.isZero())
         return;
+
+    if (platformWidget()) {
+        platformSetScrollPosition(newPosition);
+        return;
+    }
 
     m_scrollPosition = newPosition;
 
@@ -521,22 +524,24 @@ void ScrollView::setScrollPosition(const ScrollPosition& scrollPosition, const S
     if (prohibitsScrolling())
         return;
 
+    if (scrollAnimationStatus() == ScrollAnimationStatus::Animating) {
+        scrollAnimator().cancelAnimations();
+        stopAsyncAnimatedScroll();
+    }
+
     if (platformWidget()) {
         platformSetScrollPosition(scrollPosition);
         return;
     }
 
-    if (currentScrollBehaviorStatus() == ScrollBehaviorStatus::InNonNativeAnimation)
-        scrollAnimator().cancelAnimations();
-
     ScrollPosition newScrollPosition = (!delegatesScrolling() && options.clamping == ScrollClamping::Clamped) ? adjustScrollPositionWithinRange(scrollPosition) : scrollPosition;
-    if ((!delegatesScrolling() || currentScrollType() == ScrollType::User) && currentScrollBehaviorStatus() == ScrollBehaviorStatus::NotInAnimation && newScrollPosition == this->scrollPosition())
+    if ((!delegatesScrolling() || currentScrollType() == ScrollType::User) && newScrollPosition == this->scrollPosition()) {
+        LOG_WITH_STREAM(Scrolling, stream << "ScrollView::setScrollPosition " << scrollPosition << " return for no change");
         return;
+    }
 
     if (!requestScrollPositionUpdate(newScrollPosition, currentScrollType(), options.clamping))
         updateScrollbars(newScrollPosition);
-
-    setScrollBehaviorStatus(ScrollBehaviorStatus::NotInAnimation);
 }
 
 bool ScrollView::scroll(ScrollDirection direction, ScrollGranularity granularity)
@@ -629,14 +634,14 @@ void ScrollView::updateScrollbars(const ScrollPosition& desiredPosition)
     ScrollbarMode hScroll = m_horizontalScrollbarMode;
     ScrollbarMode vScroll = m_verticalScrollbarMode;
 
-    if (hScroll != ScrollbarAuto)
-        newHasHorizontalScrollbar = (hScroll == ScrollbarAlwaysOn);
-    if (vScroll != ScrollbarAuto)
-        newHasVerticalScrollbar = (vScroll == ScrollbarAlwaysOn);
+    if (hScroll != ScrollbarMode::Auto)
+        newHasHorizontalScrollbar = (hScroll == ScrollbarMode::AlwaysOn);
+    if (vScroll != ScrollbarMode::Auto)
+        newHasVerticalScrollbar = (vScroll == ScrollbarMode::AlwaysOn);
 
     bool scrollbarAddedOrRemoved = false;
 
-    if (m_scrollbarsSuppressed || (hScroll != ScrollbarAuto && vScroll != ScrollbarAuto)) {
+    if (m_scrollbarsSuppressed || (hScroll != ScrollbarMode::Auto && vScroll != ScrollbarMode::Auto)) {
         if (hasHorizontalScrollbar != newHasHorizontalScrollbar && (hasHorizontalScrollbar || !avoidScrollbarCreation())) {
             if (setHasHorizontalScrollbar(newHasHorizontalScrollbar))
                 scrollbarAddedOrRemoved = true;
@@ -652,9 +657,9 @@ void ScrollView::updateScrollbars(const ScrollPosition& desiredPosition)
         IntSize docSize = totalContentsSize();
         IntSize fullVisibleSize = unobscuredContentRectIncludingScrollbars().size();
 
-        if (hScroll == ScrollbarAuto)
+        if (hScroll == ScrollbarMode::Auto)
             newHasHorizontalScrollbar = docSize.width() > visibleWidth();
-        if (vScroll == ScrollbarAuto)
+        if (vScroll == ScrollbarMode::Auto)
             newHasVerticalScrollbar = docSize.height() > visibleHeight();
 
         bool needAnotherPass = false;
@@ -662,16 +667,16 @@ void ScrollView::updateScrollbars(const ScrollPosition& desiredPosition)
             // If we ever turn one scrollbar off, do not turn the other one on. Never ever
             // try to both gain/lose a scrollbar in the same pass.
             if (!m_updateScrollbarsPass && docSize.width() <= fullVisibleSize.width() && docSize.height() <= fullVisibleSize.height()) {
-                if (hScroll == ScrollbarAuto)
+                if (hScroll == ScrollbarMode::Auto)
                     newHasHorizontalScrollbar = false;
-                if (vScroll == ScrollbarAuto)
+                if (vScroll == ScrollbarMode::Auto)
                     newHasVerticalScrollbar = false;
             }
-            if (!newHasHorizontalScrollbar && hasHorizontalScrollbar && vScroll != ScrollbarAlwaysOn && !hasVerticalScrollbar) {
+            if (!newHasHorizontalScrollbar && hasHorizontalScrollbar && vScroll != ScrollbarMode::AlwaysOn && !hasVerticalScrollbar) {
                 newHasVerticalScrollbar = false;
                 needAnotherPass = true;
             }
-            if (!newHasVerticalScrollbar && hasVerticalScrollbar && hScroll != ScrollbarAlwaysOn && !hasHorizontalScrollbar) {
+            if (!newHasVerticalScrollbar && hasVerticalScrollbar && hScroll != ScrollbarMode::AlwaysOn && !hasHorizontalScrollbar) {
                 newHasHorizontalScrollbar = false;
                 needAnotherPass = true;
             }
@@ -732,7 +737,7 @@ void ScrollView::updateScrollbars(const ScrollPosition& desiredPosition)
     if (m_horizontalScrollbar) {
         int clientWidth = visibleWidth();
         IntRect oldRect(m_horizontalScrollbar->frameRect());
-        IntRect hBarRect(shouldPlaceBlockDirectionScrollbarOnLeft() && m_verticalScrollbar ? m_verticalScrollbar->occupiedWidth() : 0,
+        IntRect hBarRect(shouldPlaceVerticalScrollbarOnLeft() && m_verticalScrollbar ? m_verticalScrollbar->occupiedWidth() : 0,
             height() - m_horizontalScrollbar->height(),
             width() - (m_verticalScrollbar ? m_verticalScrollbar->occupiedWidth() : 0),
             m_horizontalScrollbar->height());
@@ -751,7 +756,7 @@ void ScrollView::updateScrollbars(const ScrollPosition& desiredPosition)
     if (m_verticalScrollbar) {
         int clientHeight = visibleHeight();
         IntRect oldRect(m_verticalScrollbar->frameRect());
-        IntRect vBarRect(shouldPlaceBlockDirectionScrollbarOnLeft() ? 0 : width() - m_verticalScrollbar->width(),
+        IntRect vBarRect(shouldPlaceVerticalScrollbarOnLeft() ? 0 : width() - m_verticalScrollbar->width(),
             topContentInset(),
             m_verticalScrollbar->width(),
             height() - topContentInset() - (m_horizontalScrollbar ? m_horizontalScrollbar->occupiedHeight() : 0));
@@ -890,8 +895,7 @@ FloatPoint ScrollView::contentsToView(const FloatPoint& point) const
 {
     if (delegatesScrolling())
         return point;
-
-    return contentsToView(IntPoint(point));
+    return point - toFloatSize(documentScrollPositionRelativeToViewOrigin());
 }
 
 IntRect ScrollView::viewToContents(IntRect rect) const
@@ -983,6 +987,30 @@ FloatRect ScrollView::rootViewToContents(const FloatRect& rootViewRect) const
 FloatRect ScrollView::contentsToRootView(const FloatRect& contentsRect) const
 {
     return convertToRootView(contentsToView(contentsRect));
+}
+
+FloatQuad ScrollView::rootViewToContents(const FloatQuad& quad) const
+{
+    // FIXME: This could be optimized by adding and adopting a version of rootViewToContents() that
+    // maps multiple FloatPoints to content coordinates at the same time.
+    auto result = quad;
+    result.setP1(rootViewToContents(result.p1()));
+    result.setP2(rootViewToContents(result.p2()));
+    result.setP3(rootViewToContents(result.p3()));
+    result.setP4(rootViewToContents(result.p4()));
+    return result;
+}
+
+FloatQuad ScrollView::contentsToRootView(const FloatQuad& quad) const
+{
+    // FIXME: This could be optimized by adding and adopting a version of contentsToRootView() that
+    // maps multiple FloatPoints to root view coordinates at the same time.
+    auto result = quad;
+    result.setP1(contentsToRootView(result.p1()));
+    result.setP2(contentsToRootView(result.p2()));
+    result.setP3(contentsToRootView(result.p3()));
+    result.setP4(contentsToRootView(result.p4()));
+    return result;
 }
 
 IntPoint ScrollView::rootViewToTotalContents(const IntPoint& rootViewPoint) const
@@ -1161,7 +1189,6 @@ void ScrollView::repaintContentRectangle(const IntRect& rect)
         return;
 
     if (platformWidget()) {
-        notifyPageThatContentAreaWillPaint();
         platformRepaintContentRectangle(paintRect);
         return;
     }
@@ -1180,14 +1207,14 @@ IntRect ScrollView::scrollCornerRect() const
     int heightTrackedByScrollbar = height() - topContentInset();
 
     if (m_horizontalScrollbar && width() - m_horizontalScrollbar->width() > 0) {
-        cornerRect.unite(IntRect(shouldPlaceBlockDirectionScrollbarOnLeft() ? 0 : m_horizontalScrollbar->width(),
+        cornerRect.unite(IntRect(shouldPlaceVerticalScrollbarOnLeft() ? 0 : m_horizontalScrollbar->width(),
             height() - m_horizontalScrollbar->height(),
             width() - m_horizontalScrollbar->width(),
             m_horizontalScrollbar->height()));
     }
 
     if (m_verticalScrollbar && heightTrackedByScrollbar - m_verticalScrollbar->height() > 0) {
-        cornerRect.unite(IntRect(shouldPlaceBlockDirectionScrollbarOnLeft() ? 0 : width() - m_verticalScrollbar->width(),
+        cornerRect.unite(IntRect(shouldPlaceVerticalScrollbarOnLeft() ? 0 : width() - m_verticalScrollbar->width(),
             m_verticalScrollbar->height() + topContentInset(),
             m_verticalScrollbar->width(),
             heightTrackedByScrollbar - m_verticalScrollbar->height()));
@@ -1213,7 +1240,7 @@ void ScrollView::scrollbarStyleChanged(ScrollbarStyle newStyle, bool forceUpdate
 
 void ScrollView::paintScrollCorner(GraphicsContext& context, const IntRect& cornerRect)
 {
-    ScrollbarTheme::theme().paintScrollCorner(context, cornerRect);
+    ScrollbarTheme::theme().paintScrollCorner(*this, context, cornerRect);
 }
 
 void ScrollView::paintScrollbar(GraphicsContext& context, Scrollbar& bar, const IntRect& rect)
@@ -1258,8 +1285,6 @@ void ScrollView::paint(GraphicsContext& context, const IntRect& rect, SecurityOr
     if (context.paintingDisabled() && !context.performingPaintInvalidation() && !eventRegionContext)
         return;
 
-    notifyPageThatContentAreaWillPaint();
-
     IntRect documentDirtyRect = rect;
     if (!paintsEntireContents()) {
         IntRect visibleAreaWithoutScrollbars(locationOfContents(), visibleContentRect(LegacyIOSDocumentVisibleRect).size());
@@ -1283,7 +1308,7 @@ void ScrollView::paint(GraphicsContext& context, const IntRect& rect, SecurityOr
         paintContents(context, documentDirtyRect, securityOriginPaintPolicy, eventRegionContext);
     }
 
-#if ENABLE(RUBBER_BANDING)
+#if HAVE(RUBBER_BANDING)
     if (!layerForOverhangAreas())
         calculateAndPaintOverhangAreas(context, rect);
 #else
@@ -1539,7 +1564,7 @@ void ScrollView::styleAndRenderTreeDidChange()
 IntPoint ScrollView::locationOfContents() const
 {
     IntPoint result = location();
-    if (shouldPlaceBlockDirectionScrollbarOnLeft() && m_verticalScrollbar)
+    if (shouldPlaceVerticalScrollbarOnLeft() && m_verticalScrollbar)
         result.move(m_verticalScrollbar->occupiedWidth(), 0);
     return result;
 }
@@ -1550,7 +1575,7 @@ std::unique_ptr<ScrollView::ProhibitScrollingWhenChangingContentSizeForScope> Sc
 }
 
 ScrollView::ProhibitScrollingWhenChangingContentSizeForScope::ProhibitScrollingWhenChangingContentSizeForScope(ScrollView& scrollView)
-    : m_scrollView(makeWeakPtr(scrollView))
+    : m_scrollView(scrollView)
 {
     scrollView.incrementProhibitsScrollingWhenChangingContentSizeCount();
 }
@@ -1594,8 +1619,8 @@ void ScrollView::platformSetScrollbarModes()
 
 void ScrollView::platformScrollbarModes(ScrollbarMode& horizontal, ScrollbarMode& vertical) const
 {
-    horizontal = ScrollbarAuto;
-    vertical = ScrollbarAuto;
+    horizontal = ScrollbarMode::Auto;
+    vertical = ScrollbarMode::Auto;
 }
 
 void ScrollView::platformSetCanBlitOnScroll(bool)

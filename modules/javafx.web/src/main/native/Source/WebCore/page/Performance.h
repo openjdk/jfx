@@ -39,8 +39,8 @@
 #include "ReducedResolutionSeconds.h"
 #include "ScriptExecutionContext.h"
 #include "Timer.h"
+#include <variant>
 #include <wtf/ListHashSet.h>
-#include <wtf/Variant.h>
 
 namespace JSC {
 class JSGlobalObject;
@@ -48,12 +48,17 @@ class JSGlobalObject;
 
 namespace WebCore {
 
-class LoadTiming;
+class CachedResource;
+class Document;
+class DocumentLoadTiming;
+class DocumentLoader;
+class NetworkLoadMetrics;
 class PerformanceUserTiming;
 class PerformanceEntry;
 class PerformanceMark;
 class PerformanceMeasure;
 class PerformanceNavigation;
+class PerformanceNavigationTiming;
 class PerformanceObserver;
 class PerformancePaintTiming;
 class PerformanceTiming;
@@ -70,6 +75,7 @@ public:
     ~Performance();
 
     DOMHighResTimeStamp now() const;
+    DOMHighResTimeStamp timeOrigin() const;
     ReducedResolutionSeconds nowInReducedResolutionSeconds() const;
 
     PerformanceNavigation* navigation();
@@ -78,18 +84,20 @@ public:
     Vector<RefPtr<PerformanceEntry>> getEntries() const;
     Vector<RefPtr<PerformanceEntry>> getEntriesByType(const String& entryType) const;
     Vector<RefPtr<PerformanceEntry>> getEntriesByName(const String& name, const String& entryType) const;
-    void appendBufferedEntriesByType(const String& entryType, Vector<RefPtr<PerformanceEntry>>&) const;
+    void appendBufferedEntriesByType(const String& entryType, Vector<RefPtr<PerformanceEntry>>&, PerformanceObserver&) const;
 
     void clearResourceTimings();
     void setResourceTimingBufferSize(unsigned);
 
-    ExceptionOr<Ref<PerformanceMark>> mark(JSC::JSGlobalObject&, const String& markName, Optional<PerformanceMarkOptions>&&);
+    ExceptionOr<Ref<PerformanceMark>> mark(JSC::JSGlobalObject&, const String& markName, std::optional<PerformanceMarkOptions>&&);
     void clearMarks(const String& markName);
 
-    using StartOrMeasureOptions = Variant<String, PerformanceMeasureOptions>;
-    ExceptionOr<Ref<PerformanceMeasure>> measure(JSC::JSGlobalObject&, const String& measureName, Optional<StartOrMeasureOptions>&&, const String& endMark);
+    using StartOrMeasureOptions = std::variant<String, PerformanceMeasureOptions>;
+    ExceptionOr<Ref<PerformanceMeasure>> measure(JSC::JSGlobalObject&, const String& measureName, std::optional<StartOrMeasureOptions>&&, const String& endMark);
     void clearMeasures(const String& measureName);
 
+    void addNavigationTiming(DocumentLoader&, Document&, CachedResource&, const DocumentLoadTiming&, const NetworkLoadMetrics&);
+    void navigationFinished(const NetworkLoadMetrics&);
     void addResourceTiming(ResourceTiming&&);
 
     void reportFirstContentfulPaint();
@@ -98,6 +106,7 @@ public:
     void registerPerformanceObserver(PerformanceObserver&);
     void unregisterPerformanceObserver(PerformanceObserver&);
 
+    static void allowHighPrecisionTime();
     static Seconds reduceTimeResolution(Seconds);
 
     DOMHighResTimeStamp relativeTimeFromTimeOriginInReducedResolution(MonotonicTime) const;
@@ -106,6 +115,10 @@ public:
 
     using RefCounted::ref;
     using RefCounted::deref;
+
+    void scheduleNavigationObservationTaskIfNeeded();
+
+    PerformanceNavigationTiming* navigationTiming() { return m_navigationTiming.get(); }
 
 private:
     Performance(ScriptExecutionContext*, MonotonicTime timeOrigin);
@@ -121,6 +134,7 @@ private:
     void resourceTimingBufferFullTimerFired();
 
     void queueEntry(PerformanceEntry&);
+    void scheduleTaskIfNeeded();
 
     mutable RefPtr<PerformanceNavigation> m_navigation;
     mutable RefPtr<PerformanceTiming> m_timing;
@@ -139,6 +153,7 @@ private:
 
     MonotonicTime m_timeOrigin;
 
+    RefPtr<PerformanceNavigationTiming> m_navigationTiming;
     RefPtr<PerformancePaintTiming> m_firstContentfulPaint;
     std::unique_ptr<PerformanceUserTiming> m_userTiming;
 

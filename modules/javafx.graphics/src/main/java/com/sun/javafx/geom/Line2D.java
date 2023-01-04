@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1997, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 1997, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -122,6 +122,7 @@ public class Line2D extends Shape {
     /**
      * {@inheritDoc}
      */
+    @Override
     public RectBounds getBounds() {
         RectBounds b = new RectBounds();
         b.setBoundsAndSort(x1, y1, x2, y2);
@@ -686,6 +687,7 @@ public class Line2D extends Shape {
      * @return a {@link PathIterator} that defines the boundary of this
      *      <code>Line2D</code>.
      */
+    @Override
     public PathIterator getPathIterator(BaseTransform tx) {
         return new LineIterator(this, tx);
     }
@@ -707,6 +709,7 @@ public class Line2D extends Shape {
      * @return a <code>PathIterator</code> that defines the boundary of the
      *          flattened <code>Line2D</code>
      */
+    @Override
     public PathIterator getPathIterator(BaseTransform tx, float flatness) {
         return new LineIterator(this, tx);
     }

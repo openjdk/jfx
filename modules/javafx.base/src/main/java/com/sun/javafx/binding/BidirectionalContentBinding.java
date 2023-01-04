@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -168,8 +168,8 @@ public abstract class BidirectionalContentBinding implements WeakListener {
 
 
         public ListContentBinding(ObservableList<E> list1, ObservableList<E> list2) {
-            propertyRef1 = new WeakReference<ObservableList<E>>(list1);
-            propertyRef2 = new WeakReference<ObservableList<E>>(list2);
+            propertyRef1 = new WeakReference<>(list1);
+            propertyRef2 = new WeakReference<>(list2);
         }
 
         @Override
@@ -263,8 +263,8 @@ public abstract class BidirectionalContentBinding implements WeakListener {
 
 
         public SetContentBinding(ObservableSet<E> list1, ObservableSet<E> list2) {
-            propertyRef1 = new WeakReference<ObservableSet<E>>(list1);
-            propertyRef2 = new WeakReference<ObservableSet<E>>(list2);
+            propertyRef1 = new WeakReference<>(list1);
+            propertyRef2 = new WeakReference<>(list2);
         }
 
         @Override
@@ -350,8 +350,8 @@ public abstract class BidirectionalContentBinding implements WeakListener {
 
 
         public MapContentBinding(ObservableMap<K, V> list1, ObservableMap<K, V> list2) {
-            propertyRef1 = new WeakReference<ObservableMap<K, V>>(list1);
-            propertyRef2 = new WeakReference<ObservableMap<K, V>>(list2);
+            propertyRef1 = new WeakReference<>(list1);
+            propertyRef2 = new WeakReference<>(list2);
         }
 
         @Override

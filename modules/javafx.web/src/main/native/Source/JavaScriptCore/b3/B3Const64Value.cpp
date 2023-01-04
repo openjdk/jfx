@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -75,7 +75,7 @@ Value* Const64Value::checkAddConstant(Procedure& proc, const Value* other) const
     CheckedInt64 result = CheckedInt64(m_value) + CheckedInt64(other->asInt64());
     if (result.hasOverflowed())
         return nullptr;
-    return proc.add<Const64Value>(origin(), result.unsafeGet());
+    return proc.add<Const64Value>(origin(), result);
 }
 
 Value* Const64Value::checkSubConstant(Procedure& proc, const Value* other) const
@@ -85,7 +85,7 @@ Value* Const64Value::checkSubConstant(Procedure& proc, const Value* other) const
     CheckedInt64 result = CheckedInt64(m_value) - CheckedInt64(other->asInt64());
     if (result.hasOverflowed())
         return nullptr;
-    return proc.add<Const64Value>(origin(), result.unsafeGet());
+    return proc.add<Const64Value>(origin(), result);
 }
 
 Value* Const64Value::checkMulConstant(Procedure& proc, const Value* other) const
@@ -95,12 +95,12 @@ Value* Const64Value::checkMulConstant(Procedure& proc, const Value* other) const
     CheckedInt64 result = CheckedInt64(m_value) * CheckedInt64(other->asInt64());
     if (result.hasOverflowed())
         return nullptr;
-    return proc.add<Const64Value>(origin(), result.unsafeGet());
+    return proc.add<Const64Value>(origin(), result);
 }
 
 Value* Const64Value::checkNegConstant(Procedure& proc) const
 {
-    if (m_value == -m_value)
+    if (m_value == std::numeric_limits<int64_t>::min())
         return nullptr;
     return negConstant(proc);
 }

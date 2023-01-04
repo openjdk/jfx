@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 1999 Lars Knoll (knoll@kde.org)
  *           (C) 1999 Antti Koivisto (koivisto@kde.org)
- * Copyright (C) 2004-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2021 Apple Inc. All rights reserved.
  * Copyright (C) 2009 Torch Mobile Inc. All rights reserved. (http://www.torchmobile.com/)
  * Copyright (C) 2011 Motorola Mobility. All rights reserved.
  *
@@ -28,6 +28,7 @@
 #include "CSSMarkup.h"
 #include "CSSPropertyNames.h"
 #include "CSSValueKeywords.h"
+#include "CSSValueList.h"
 #include "CSSValuePool.h"
 #include "Chrome.h"
 #include "ChromeClient.h"
@@ -38,6 +39,7 @@
 #include "Event.h"
 #include "EventHandler.h"
 #include "EventListener.h"
+#include "EventLoop.h"
 #include "EventNames.h"
 #include "Frame.h"
 #include "FrameLoader.h"
@@ -45,23 +47,24 @@
 #include "HTMLBDIElement.h"
 #include "HTMLBRElement.h"
 #include "HTMLButtonElement.h"
-#include "HTMLDivElement.h"
 #include "HTMLDocument.h"
 #include "HTMLElementFactory.h"
 #include "HTMLFieldSetElement.h"
 #include "HTMLFormElement.h"
 #include "HTMLInputElement.h"
+#include "HTMLMediaElement.h"
 #include "HTMLNames.h"
 #include "HTMLOptGroupElement.h"
 #include "HTMLOptionElement.h"
 #include "HTMLParserIdioms.h"
 #include "HTMLSelectElement.h"
-#include "HTMLStyleElement.h"
 #include "HTMLTextAreaElement.h"
 #include "HTMLTextFormControlElement.h"
+#include "ImageOverlay.h"
+#include "JSHTMLElement.h"
+#include "MediaControlsHost.h"
 #include "NodeTraversal.h"
 #include "RenderElement.h"
-#include "RenderImage.h"
 #include "ScriptController.h"
 #include "ScriptDisallowedScope.h"
 #include "ShadowRoot.h"
@@ -73,12 +76,13 @@
 #include "markup.h"
 #include <wtf/IsoMallocInlines.h>
 #include <wtf/NeverDestroyed.h>
+#include <wtf/Range.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/text/CString.h>
 #include <wtf/text/StringBuilder.h>
 
-#if ENABLE(IMAGE_EXTRACTION)
-#include "ImageExtractionResult.h"
+#if PLATFORM(IOS_FAMILY)
+#include "SelectionGeometry.h"
 #endif
 
 namespace WebCore {
@@ -123,26 +127,26 @@ unsigned HTMLElement::parseBorderWidthAttribute(const AtomString& value) const
 
 void HTMLElement::applyBorderAttributeToStyle(const AtomString& value, MutableStyleProperties& style)
 {
-    addPropertyToPresentationAttributeStyle(style, CSSPropertyBorderWidth, parseBorderWidthAttribute(value), CSSUnitType::CSS_PX);
-    addPropertyToPresentationAttributeStyle(style, CSSPropertyBorderStyle, CSSValueSolid);
+    addPropertyToPresentationalHintStyle(style, CSSPropertyBorderWidth, parseBorderWidthAttribute(value), CSSUnitType::CSS_PX);
+    addPropertyToPresentationalHintStyle(style, CSSPropertyBorderStyle, CSSValueSolid);
 }
 
 void HTMLElement::mapLanguageAttributeToLocale(const AtomString& value, MutableStyleProperties& style)
 {
     if (!value.isEmpty()) {
         // Have to quote so the locale id is treated as a string instead of as a CSS keyword.
-        addPropertyToPresentationAttributeStyle(style, CSSPropertyWebkitLocale, serializeString(value));
+        addPropertyToPresentationalHintStyle(style, CSSPropertyWebkitLocale, serializeString(value));
     } else {
         // The empty string means the language is explicitly unknown.
-        addPropertyToPresentationAttributeStyle(style, CSSPropertyWebkitLocale, CSSValueAuto);
+        addPropertyToPresentationalHintStyle(style, CSSPropertyWebkitLocale, CSSValueAuto);
     }
 }
 
-bool HTMLElement::isPresentationAttribute(const QualifiedName& name) const
+bool HTMLElement::hasPresentationalHintsForAttribute(const QualifiedName& name) const
 {
     if (name == alignAttr || name == contenteditableAttr || name == hiddenAttr || name == langAttr || name.matches(XMLNames::langAttr) || name == draggableAttr || name == dirAttr)
         return true;
-    return StyledElement::isPresentationAttribute(name);
+    return StyledElement::hasPresentationalHintsForAttribute(name);
 }
 
 static bool isLTROrRTLIgnoringCase(const AtomString& dirAttributeValue)
@@ -176,13 +180,13 @@ static ContentEditableType contentEditableType(const HTMLElement& element)
     return contentEditableType(element.attributeWithoutSynchronization(contenteditableAttr));
 }
 
-void HTMLElement::collectStyleForPresentationAttribute(const QualifiedName& name, const AtomString& value, MutableStyleProperties& style)
+void HTMLElement::collectPresentationalHintsForAttribute(const QualifiedName& name, const AtomString& value, MutableStyleProperties& style)
 {
     if (name == alignAttr) {
         if (equalLettersIgnoringASCIICase(value, "middle"))
-            addPropertyToPresentationAttributeStyle(style, CSSPropertyTextAlign, CSSValueCenter);
+            addPropertyToPresentationalHintStyle(style, CSSPropertyTextAlign, CSSValueCenter);
         else
-            addPropertyToPresentationAttributeStyle(style, CSSPropertyTextAlign, value);
+            addPropertyToPresentationalHintStyle(style, CSSPropertyTextAlign, value);
     } else if (name == contenteditableAttr) {
         CSSValueID userModifyValue = CSSValueReadWrite;
         switch (contentEditableType(value)) {
@@ -195,36 +199,37 @@ void HTMLElement::collectStyleForPresentationAttribute(const QualifiedName& name
             userModifyValue = CSSValueReadWritePlaintextOnly;
             FALLTHROUGH;
         case ContentEditableType::True:
-            addPropertyToPresentationAttributeStyle(style, CSSPropertyWordWrap, CSSValueBreakWord);
-            addPropertyToPresentationAttributeStyle(style, CSSPropertyWebkitNbspMode, CSSValueSpace);
-            addPropertyToPresentationAttributeStyle(style, CSSPropertyLineBreak, CSSValueAfterWhiteSpace);
+            addPropertyToPresentationalHintStyle(style, CSSPropertyWordWrap, CSSValueBreakWord);
+            addPropertyToPresentationalHintStyle(style, CSSPropertyWebkitNbspMode, CSSValueSpace);
+            addPropertyToPresentationalHintStyle(style, CSSPropertyLineBreak, CSSValueAfterWhiteSpace);
 #if PLATFORM(IOS_FAMILY)
-            addPropertyToPresentationAttributeStyle(style, CSSPropertyWebkitTextSizeAdjust, CSSValueNone);
+            addPropertyToPresentationalHintStyle(style, CSSPropertyWebkitTextSizeAdjust, CSSValueNone);
 #endif
             break;
         }
-        addPropertyToPresentationAttributeStyle(style, CSSPropertyWebkitUserModify, userModifyValue);
+        addPropertyToPresentationalHintStyle(style, CSSPropertyWebkitUserModify, userModifyValue);
     } else if (name == hiddenAttr) {
-        addPropertyToPresentationAttributeStyle(style, CSSPropertyDisplay, CSSValueNone);
+        addPropertyToPresentationalHintStyle(style, CSSPropertyDisplay, CSSValueNone);
     } else if (name == draggableAttr) {
         if (equalLettersIgnoringASCIICase(value, "true")) {
-            addPropertyToPresentationAttributeStyle(style, CSSPropertyWebkitUserDrag, CSSValueElement);
-            addPropertyToPresentationAttributeStyle(style, CSSPropertyWebkitUserSelect, CSSValueNone);
+            addPropertyToPresentationalHintStyle(style, CSSPropertyWebkitUserDrag, CSSValueElement);
+            if (!isDraggableIgnoringAttributes())
+                addPropertyToPresentationalHintStyle(style, CSSPropertyWebkitUserSelect, CSSValueNone);
         } else if (equalLettersIgnoringASCIICase(value, "false"))
-            addPropertyToPresentationAttributeStyle(style, CSSPropertyWebkitUserDrag, CSSValueNone);
+            addPropertyToPresentationalHintStyle(style, CSSPropertyWebkitUserDrag, CSSValueNone);
     } else if (name == dirAttr) {
         if (equalLettersIgnoringASCIICase(value, "auto"))
-            addPropertyToPresentationAttributeStyle(style, CSSPropertyUnicodeBidi, unicodeBidiAttributeForDirAuto(*this));
+            addPropertyToPresentationalHintStyle(style, CSSPropertyUnicodeBidi, unicodeBidiAttributeForDirAuto(*this));
         else {
             auto unicodeBidiValue = CSSValueEmbed;
 
             if (isLTROrRTLIgnoringCase(value)) {
-                addPropertyToPresentationAttributeStyle(style, CSSPropertyDirection, value);
+                addPropertyToPresentationalHintStyle(style, CSSPropertyDirection, value);
                 unicodeBidiValue = CSSValueIsolate;
             }
 
             if (!hasTagName(bdiTag) && !hasTagName(bdoTag) && !hasTagName(outputTag))
-                addPropertyToPresentationAttributeStyle(style, CSSPropertyUnicodeBidi, unicodeBidiValue);
+                addPropertyToPresentationalHintStyle(style, CSSPropertyUnicodeBidi, unicodeBidiValue);
         }
     } else if (name.matches(XMLNames::langAttr))
         mapLanguageAttributeToLocale(value, style);
@@ -233,167 +238,7 @@ void HTMLElement::collectStyleForPresentationAttribute(const QualifiedName& name
         if (!hasAttributeWithoutSynchronization(XMLNames::langAttr))
             mapLanguageAttributeToLocale(value, style);
     } else
-        StyledElement::collectStyleForPresentationAttribute(name, value, style);
-}
-
-HTMLElement::EventHandlerNameMap HTMLElement::createEventHandlerNameMap()
-{
-    EventHandlerNameMap map;
-
-    static const QualifiedName* const table[] = {
-        &onabortAttr.get(),
-        &onanimationendAttr.get(),
-        &onanimationiterationAttr.get(),
-        &onanimationstartAttr.get(),
-        &onanimationcancelAttr.get(),
-        &onautocompleteAttr.get(),
-        &onautocompleteerrorAttr.get(),
-        &onbeforecopyAttr.get(),
-        &onbeforecutAttr.get(),
-        &onbeforeinputAttr.get(),
-        &onbeforeloadAttr.get(),
-        &onbeforepasteAttr.get(),
-        &onblurAttr.get(),
-        &oncanplayAttr.get(),
-        &oncanplaythroughAttr.get(),
-        &onchangeAttr.get(),
-        &onclickAttr.get(),
-        &oncontextmenuAttr.get(),
-        &oncopyAttr.get(),
-        &oncutAttr.get(),
-        &ondblclickAttr.get(),
-        &ondragAttr.get(),
-        &ondragendAttr.get(),
-        &ondragenterAttr.get(),
-        &ondragleaveAttr.get(),
-        &ondragoverAttr.get(),
-        &ondragstartAttr.get(),
-        &ondropAttr.get(),
-        &ondurationchangeAttr.get(),
-        &onemptiedAttr.get(),
-        &onendedAttr.get(),
-        &onerrorAttr.get(),
-        &onfocusAttr.get(),
-        &onfocusinAttr.get(),
-        &onfocusoutAttr.get(),
-        &ongesturechangeAttr.get(),
-        &ongestureendAttr.get(),
-        &ongesturestartAttr.get(),
-        &ongotpointercaptureAttr.get(),
-        &oninputAttr.get(),
-        &oninvalidAttr.get(),
-        &onkeydownAttr.get(),
-        &onkeypressAttr.get(),
-        &onkeyupAttr.get(),
-        &onloadAttr.get(),
-        &onloadeddataAttr.get(),
-        &onloadedmetadataAttr.get(),
-        &onloadstartAttr.get(),
-        &onlostpointercaptureAttr.get(),
-        &onmousedownAttr.get(),
-        &onmouseenterAttr.get(),
-        &onmouseleaveAttr.get(),
-        &onmousemoveAttr.get(),
-        &onmouseoutAttr.get(),
-        &onmouseoverAttr.get(),
-        &onmouseupAttr.get(),
-        &onmousewheelAttr.get(),
-        &onpasteAttr.get(),
-        &onpauseAttr.get(),
-        &onplayAttr.get(),
-        &onplayingAttr.get(),
-        &onpointerdownAttr.get(),
-        &onpointermoveAttr.get(),
-        &onpointerupAttr.get(),
-        &onpointercancelAttr.get(),
-        &onpointeroverAttr.get(),
-        &onpointeroutAttr.get(),
-        &onpointerenterAttr.get(),
-        &onpointerleaveAttr.get(),
-        &onprogressAttr.get(),
-        &onratechangeAttr.get(),
-        &onresetAttr.get(),
-        &onresizeAttr.get(),
-        &onscrollAttr.get(),
-        &onsearchAttr.get(),
-        &onseekedAttr.get(),
-        &onseekingAttr.get(),
-        &onselectAttr.get(),
-        &onselectstartAttr.get(),
-        &onslotchangeAttr.get(),
-        &onstalledAttr.get(),
-        &onsubmitAttr.get(),
-        &onsuspendAttr.get(),
-        &ontimeupdateAttr.get(),
-        &ontoggleAttr.get(),
-        &ontouchcancelAttr.get(),
-        &ontouchendAttr.get(),
-        &ontouchforcechangeAttr.get(),
-        &ontouchmoveAttr.get(),
-        &ontouchstartAttr.get(),
-        &ontransitioncancelAttr.get(),
-        &ontransitionendAttr.get(),
-        &ontransitionrunAttr.get(),
-        &ontransitionstartAttr.get(),
-        &onvolumechangeAttr.get(),
-        &onwaitingAttr.get(),
-        &onwebkitbeginfullscreenAttr.get(),
-        &onwebkitcurrentplaybacktargetiswirelesschangedAttr.get(),
-        &onwebkitendfullscreenAttr.get(),
-        &onwebkitfullscreenchangeAttr.get(),
-        &onwebkitfullscreenerrorAttr.get(),
-        &onwebkitkeyaddedAttr.get(),
-        &onwebkitkeyerrorAttr.get(),
-        &onwebkitkeymessageAttr.get(),
-        &onwebkitmouseforcechangedAttr.get(),
-        &onwebkitmouseforcedownAttr.get(),
-        &onwebkitmouseforcewillbeginAttr.get(),
-        &onwebkitmouseforceupAttr.get(),
-        &onwebkitneedkeyAttr.get(),
-        &onwebkitplaybacktargetavailabilitychangedAttr.get(),
-        &onwebkitpresentationmodechangedAttr.get(),
-        &onwebkitwillrevealbottomAttr.get(),
-        &onwebkitwillrevealleftAttr.get(),
-        &onwebkitwillrevealrightAttr.get(),
-        &onwebkitwillrevealtopAttr.get(),
-        &onwheelAttr.get(),
-    };
-
-    populateEventHandlerNameMap(map, table);
-
-    struct UnusualMapping {
-        const QualifiedName& attributeName;
-        const AtomString& eventName;
-    };
-
-    const UnusualMapping unusualPairsTable[] = {
-        { onwebkitanimationendAttr, eventNames().webkitAnimationEndEvent },
-        { onwebkitanimationiterationAttr, eventNames().webkitAnimationIterationEvent },
-        { onwebkitanimationstartAttr, eventNames().webkitAnimationStartEvent },
-        { onwebkittransitionendAttr, eventNames().webkitTransitionEndEvent },
-    };
-
-    for (auto& entry : unusualPairsTable)
-        map.add(entry.attributeName.localName().impl(), entry.eventName);
-
-    return map;
-}
-
-void HTMLElement::populateEventHandlerNameMap(EventHandlerNameMap& map, const QualifiedName* const table[], size_t tableSize)
-{
-    for (size_t i = 0; i < tableSize; ++i) {
-        auto* entry = table[i];
-
-        // FIXME: Would be nice to check these against the actual event names in eventNames().
-        // Not obvious how to do that simply, though.
-        auto& attributeName = entry->localName();
-
-        // Remove the "on" prefix. Requires some memory allocation and computing a hash, but by not
-        // using pointers from eventNames(), the passed-in table can be initialized at compile time.
-        AtomString eventName = attributeName.string().substring(2);
-
-        map.add(attributeName.impl(), WTFMove(eventName));
-    }
+        StyledElement::collectPresentationalHintsForAttribute(name, value, style);
 }
 
 const AtomString& HTMLElement::eventNameForEventHandlerAttribute(const QualifiedName& attributeName, const EventHandlerNameMap& map)
@@ -415,12 +260,50 @@ const AtomString& HTMLElement::eventNameForEventHandlerAttribute(const Qualified
 
 const AtomString& HTMLElement::eventNameForEventHandlerAttribute(const QualifiedName& attributeName)
 {
-    static NeverDestroyed<EventHandlerNameMap> map = createEventHandlerNameMap();
-    return eventNameForEventHandlerAttribute(attributeName, map.get());
+    static NeverDestroyed map = [] {
+        EventHandlerNameMap map;
+        JSHTMLElement::forEachEventHandlerContentAttribute([&] (const AtomString& attributeName, const AtomString& eventName) {
+            // FIXME: Remove this special case. This has an [EventHandler] line in the IDL but was not historically in this map.
+            if (attributeName == oncuechangeAttr.get().localName())
+                return;
+            map.add(attributeName.impl(), eventName);
+        });
+        // FIXME: Remove these special cases. These are not in IDL with [EventHandler] but were historically in this map.
+        static constexpr std::array table {
+            &onautocompleteAttr,
+            &onautocompleteerrorAttr,
+            &onbeforeloadAttr,
+            &onfocusinAttr,
+            &onfocusoutAttr,
+            &ongesturechangeAttr,
+            &ongestureendAttr,
+            &ongesturestartAttr,
+            &onwebkitbeginfullscreenAttr,
+            &onwebkitcurrentplaybacktargetiswirelesschangedAttr,
+            &onwebkitendfullscreenAttr,
+            &onwebkitfullscreenchangeAttr,
+            &onwebkitfullscreenerrorAttr,
+            &onwebkitkeyaddedAttr,
+            &onwebkitkeyerrorAttr,
+            &onwebkitkeymessageAttr,
+            &onwebkitneedkeyAttr,
+            &onwebkitplaybacktargetavailabilitychangedAttr,
+            &onwebkitpresentationmodechangedAttr,
+        };
+        for (auto& entry : table) {
+            auto* name = entry->get().localName().impl();
+            map.add(name, AtomString { name, 2, String::MaxLength });
+        }
+        return map;
+    }();
+    return eventNameForEventHandlerAttribute(attributeName, map);
 }
 
-Node::Editability HTMLElement::editabilityFromContentEditableAttr(const Node& node)
+Node::Editability HTMLElement::editabilityFromContentEditableAttr(const Node& node, PageIsEditable pageIsEditable)
 {
+    if (pageIsEditable == PageIsEditable::Yes)
+        return Editability::CanEditRichly;
+
     if (auto* startElement = is<Element>(node) ? &downcast<Element>(node) : node.parentElement()) {
         for (auto& element : lineageOfType<HTMLElement>(*startElement)) {
             switch (contentEditableType(element)) {
@@ -436,20 +319,19 @@ Node::Editability HTMLElement::editabilityFromContentEditableAttr(const Node& no
         }
     }
 
-    auto containingShadowRoot = makeRefPtr(node.containingShadowRoot());
+    RefPtr containingShadowRoot { node.containingShadowRoot() };
     if (containingShadowRoot && containingShadowRoot->mode() == ShadowRootMode::UserAgent)
         return Editability::ReadOnly;
 
-    auto& document = node.document();
-    if (is<HTMLDocument>(document))
-        return downcast<HTMLDocument>(document).inDesignMode() ? Editability::CanEditRichly : Editability::ReadOnly;
+    if (node.document().inDesignMode())
+        return Editability::CanEditRichly;
 
     return Editability::ReadOnly;
 }
 
 bool HTMLElement::matchesReadWritePseudoClass() const
 {
-    return editabilityFromContentEditableAttr(*this) != Editability::ReadOnly;
+    return editabilityFromContentEditableAttr(*this, PageIsEditable::No) != Editability::ReadOnly;
 }
 
 void HTMLElement::parseAttribute(const QualifiedName& name, const AtomString& value)
@@ -463,9 +345,12 @@ void HTMLElement::parseAttribute(const QualifiedName& name, const AtomString& va
         if (auto optionalTabIndex = parseHTMLInteger(value))
             setTabIndexExplicitly(optionalTabIndex.value());
         else
-            setTabIndexExplicitly(WTF::nullopt);
+            setTabIndexExplicitly(std::nullopt);
         return;
     }
+
+    if (document().settings().inertAttributeEnabled() && name == inertAttr)
+        invalidateStyleInternal();
 
     if (name == inputmodeAttr) {
         auto& document = this->document();
@@ -478,6 +363,13 @@ void HTMLElement::parseAttribute(const QualifiedName& name, const AtomString& va
     auto& eventName = eventNameForEventHandlerAttribute(name);
     if (!eventName.isNull())
         setAttributeEventListener(eventName, name, value);
+}
+
+Node::InsertedIntoAncestorResult HTMLElement::insertedIntoAncestor(InsertionType insertionType, ContainerNode& containerNode)
+{
+    auto result = Element::insertedIntoAncestor(insertionType, containerNode);
+    hideNonce();
+    return result;
 }
 
 static Ref<DocumentFragment> textToFragment(Document& document, const String& text)
@@ -548,29 +440,25 @@ ExceptionOr<void> HTMLElement::setInnerText(const String& text)
     // FIXME: This doesn't take whitespace collapsing into account at all.
 
     if (!text.contains('\n') && !text.contains('\r')) {
-        replaceAllChildrenWithNewText(text);
+        stringReplaceAll(text);
         return { };
     }
 
-    // FIXME: Do we need to be able to detect preserveNewline style even when there's no renderer?
-    // FIXME: Can the renderer be out of date here? Do we need to call updateStyleIfNeeded?
-    // For example, for the contents of textarea elements that are display:none?
-    auto* r = renderer();
-    if ((r && r->style().preserveNewline()) || (isConnected() && isTextControlInnerTextElement())) {
+    if (isConnected() && isTextControlInnerTextElement()) {
         if (!text.contains('\r')) {
-            replaceAllChildrenWithNewText(text);
+            stringReplaceAll(text);
             return { };
         }
         String textWithConsistentLineBreaks = text;
         textWithConsistentLineBreaks.replace("\r\n", "\n");
         textWithConsistentLineBreaks.replace('\r', '\n');
-        replaceAllChildrenWithNewText(textWithConsistentLineBreaks);
+        stringReplaceAll(textWithConsistentLineBreaks);
         return { };
     }
 
+    // FIXME: This should use replaceAll(), after we fix that to work properly for DocumentFragment.
     // Add text nodes and <br> elements.
     auto fragment = textToFragment(document(), text);
-    // FIXME: This should use a variant of replaceAllChildrenWithNewText() which accepts DocumentFragments as input.
     // It's safe to dispatch events on the new fragment since author scripts have no access to it yet.
     ScriptDisallowedScope::EventAllowedScope allowedScope(fragment.get());
     return replaceChildrenWithFragment(*this, WTFMove(fragment));
@@ -613,6 +501,28 @@ ExceptionOr<void> HTMLElement::setOuterText(const String& text)
     return { };
 }
 
+void HTMLElement::applyAspectRatioFromWidthAndHeightAttributesToStyle(StringView widthAttribute, StringView heightAttribute, MutableStyleProperties& style)
+{
+    if (!document().settings().aspectRatioOfImgFromWidthAndHeightEnabled())
+        return;
+
+    auto dimensionWidth = parseHTMLDimension(widthAttribute);
+    if (!dimensionWidth || dimensionWidth->type != HTMLDimension::Type::Pixel)
+        return;
+    auto dimensionHeight = parseHTMLDimension(heightAttribute);
+    if (!dimensionHeight || dimensionHeight->type != HTMLDimension::Type::Pixel)
+        return;
+
+    auto ratioList = CSSValueList::createSlashSeparated();
+    ratioList->append(CSSValuePool::singleton().createValue(dimensionWidth->number, CSSUnitType::CSS_NUMBER));
+    ratioList->append(CSSValuePool::singleton().createValue(dimensionHeight->number, CSSUnitType::CSS_NUMBER));
+    auto list = CSSValueList::createSpaceSeparated();
+    list->append(CSSValuePool::singleton().createIdentifierValue(CSSValueAuto));
+    list->append(ratioList);
+
+    style.setProperty(CSSPropertyAspectRatio, RefPtr<CSSValue>(WTFMove(list)));
+}
+
 void HTMLElement::applyAlignmentAttributeToStyle(const AtomString& alignment, MutableStyleProperties& style)
 {
     // Vertical alignment with respect to the current baseline of the text
@@ -642,10 +552,10 @@ void HTMLElement::applyAlignmentAttributeToStyle(const AtomString& alignment, Mu
         verticalAlignValue = CSSValueTextTop;
 
     if (floatValue != CSSValueInvalid)
-        addPropertyToPresentationAttributeStyle(style, CSSPropertyFloat, floatValue);
+        addPropertyToPresentationalHintStyle(style, CSSPropertyFloat, floatValue);
 
     if (verticalAlignValue != CSSValueInvalid)
-        addPropertyToPresentationAttributeStyle(style, CSSPropertyVerticalAlign, verticalAlignValue);
+        addPropertyToPresentationalHintStyle(style, CSSPropertyVerticalAlign, verticalAlignValue);
 }
 
 bool HTMLElement::hasCustomFocusLogic() const
@@ -708,7 +618,11 @@ ExceptionOr<void> HTMLElement::setContentEditable(const String& enabled)
 
 bool HTMLElement::draggable() const
 {
-    return equalLettersIgnoringASCIICase(attributeWithoutSynchronization(draggableAttr), "true");
+    auto& value = attributeWithoutSynchronization(draggableAttr);
+    if (isDraggableIgnoringAttributes())
+        return !equalLettersIgnoringASCIICase(value, "false");
+
+    return equalLettersIgnoringASCIICase(value, "true");
 }
 
 void HTMLElement::setDraggable(bool value)
@@ -733,6 +647,8 @@ void HTMLElement::click()
 
 bool HTMLElement::accessKeyAction(bool sendMouseEvents)
 {
+    if (isFocusable())
+        focus();
     return dispatchSimulatedClick(nullptr, sendMouseEvents ? SendMouseUpDownEvents : SendNoEvents);
 }
 
@@ -978,45 +894,53 @@ void HTMLElement::adjustDirectionalityIfNeededAfterChildrenChanged(Element* befo
     }
 }
 
-void HTMLElement::addHTMLLengthToStyle(MutableStyleProperties& style, CSSPropertyID propertyID, const String& value)
+void HTMLElement::addHTMLLengthToStyle(MutableStyleProperties& style, CSSPropertyID propertyID, StringView value, AllowPercentage allowPercentage, UseCSSPXAsUnitType useCSSPX, IsMultiLength isMultiLength, AllowZeroValue allowZeroValue)
 {
-    // FIXME: This function should not spin up the CSS parser, but should instead just figure out the correct
-    // length unit and make the appropriate parsed value.
-
-    if (StringImpl* string = value.impl()) {
-        unsigned parsedLength = 0;
-
-        while (parsedLength < string->length() && (*string)[parsedLength] <= ' ')
-            ++parsedLength;
-
-        for (; parsedLength < string->length(); ++parsedLength) {
-            UChar cc = (*string)[parsedLength];
-            if (cc > '9')
-                break;
-            if (cc < '0') {
-                if (cc == '%' || cc == '*')
-                    ++parsedLength;
-                if (cc != '.')
-                    break;
-            }
-        }
-
-        if (parsedLength != string->length()) {
-            addPropertyToPresentationAttributeStyle(style, propertyID, string->substring(0, parsedLength));
-            return;
-        }
+    auto dimensionValue = isMultiLength == IsMultiLength::No ? parseHTMLDimension(value) : parseHTMLMultiLength(value);
+    if (!dimensionValue || (!dimensionValue->number && allowZeroValue == AllowZeroValue::No))
+        return;
+    if (dimensionValue->type == HTMLDimension::Type::Percentage) {
+        if (allowPercentage == AllowPercentage::Yes)
+            addPropertyToPresentationalHintStyle(style, propertyID, dimensionValue->number, CSSUnitType::CSS_PERCENTAGE);
+        return;
     }
+    if (useCSSPX == UseCSSPXAsUnitType::Yes)
+        addPropertyToPresentationalHintStyle(style, propertyID, dimensionValue->number, CSSUnitType::CSS_PX);
+    else
+        addPropertyToPresentationalHintStyle(style, propertyID, dimensionValue->number, CSSUnitType::CSS_NUMBER);
+}
 
-    addPropertyToPresentationAttributeStyle(style, propertyID, value);
+// https://www.w3.org/TR/html4/sgml/dtd.html#Length, including pixel and percentage values.
+void HTMLElement::addHTMLLengthToStyle(MutableStyleProperties& style, CSSPropertyID propertyID, StringView value, AllowZeroValue allowZeroValue)
+{
+    addHTMLLengthToStyle(style, propertyID, value, AllowPercentage::Yes, UseCSSPXAsUnitType::Yes, IsMultiLength::No, allowZeroValue);
+}
+
+// https://www.w3.org/TR/html4/sgml/dtd.html#MultiLength, including pixel, percentage, and relative values.
+void HTMLElement::addHTMLMultiLengthToStyle(MutableStyleProperties& style, CSSPropertyID propertyID, StringView value)
+{
+    addHTMLLengthToStyle(style, propertyID, value, AllowPercentage::Yes, UseCSSPXAsUnitType::Yes, IsMultiLength::Yes);
+}
+
+// https://www.w3.org/TR/html4/sgml/dtd.html#Pixels, including pixel value.
+void HTMLElement::addHTMLPixelsToStyle(MutableStyleProperties& style, CSSPropertyID propertyID, StringView value)
+{
+    addHTMLLengthToStyle(style, propertyID, value, AllowPercentage::No, UseCSSPXAsUnitType::Yes, IsMultiLength::No);
+}
+
+// This is specific to <marquee> attributes, including pixel and CSS_NUMBER values.
+void HTMLElement::addHTMLNumberToStyle(MutableStyleProperties& style, CSSPropertyID propertyID, StringView value)
+{
+    addHTMLLengthToStyle(style, propertyID, value, AllowPercentage::Yes, UseCSSPXAsUnitType::No, IsMultiLength::No);
 }
 
 // Color parsing that matches HTML's "rules for parsing a legacy color value"
 // https://html.spec.whatwg.org/#rules-for-parsing-a-legacy-colour-value
-static Optional<SRGBA<uint8_t>> parseLegacyColorValue(StringView string)
+static std::optional<SRGBA<uint8_t>> parseLegacyColorValue(StringView string)
 {
     // An empty string doesn't apply a color.
     if (string.isEmpty())
-        return WTF::nullopt;
+        return std::nullopt;
 
     string = string.stripLeadingAndTrailingMatchedCharacters(isHTMLSpace<UChar>);
     if (string.isEmpty())
@@ -1024,7 +948,7 @@ static Optional<SRGBA<uint8_t>> parseLegacyColorValue(StringView string)
 
     // "transparent" doesn't apply a color either.
     if (equalLettersIgnoringASCIICase(string, "transparent"))
-        return WTF::nullopt;
+        return std::nullopt;
 
     if (auto namedColor = CSSParser::parseNamedColor(string))
         return namedColor;
@@ -1194,104 +1118,22 @@ void HTMLElement::setEnterKeyHint(const String& value)
     setAttributeWithoutSynchronization(enterkeyhintAttr, value);
 }
 
-static const AtomString& imageOverlayElementIdentifier()
+bool HTMLElement::shouldExtendSelectionToTargetNode(const Node& targetNode, const VisibleSelection& selectionBeforeUpdate)
 {
-    static MainThreadNeverDestroyed<const AtomString> identifier("image-overlay", AtomString::ConstructFromLiteral);
-    return identifier;
-}
-
-bool HTMLElement::shouldUpdateSelectionForMouseDrag(const Node& targetNode, const VisibleSelection& selectionBeforeUpdate)
-{
-    if (!is<HTMLDivElement>(targetNode))
-        return true;
-
-    auto shadowHost = makeRefPtr(targetNode.shadowHost());
-    if (!is<HTMLElement>(shadowHost))
-        return true;
-
-    auto& host = downcast<HTMLElement>(*shadowHost);
-    if (!host.hasImageOverlay())
-        return true;
-
-    if (!targetNode.contains(selectionBeforeUpdate.start().containerNode()))
-        return true;
-
-    for (auto& child : childrenOfType<HTMLDivElement>(*host.userAgentShadowRoot())) {
-        if (child.getIdAttribute() == imageOverlayElementIdentifier())
-            return &targetNode != &child;
-    }
+    if (auto range = selectionBeforeUpdate.range(); range && ImageOverlay::isInsideOverlay(*range))
+        return ImageOverlay::isOverlayText(targetNode);
 
     return true;
 }
 
-bool HTMLElement::hasImageOverlay() const
-{
-    auto shadowRoot = userAgentShadowRoot();
-    if (LIKELY(!shadowRoot))
-        return false;
+#if PLATFORM(IOS_FAMILY)
 
-    return shadowRoot->hasElementWithId(*imageOverlayElementIdentifier().impl());
+SelectionRenderingBehavior HTMLElement::selectionRenderingBehavior(const Node* node)
+{
+    return ImageOverlay::isOverlayText(node) ? SelectionRenderingBehavior::UseIndividualQuads : SelectionRenderingBehavior::CoalesceBoundingRects;
 }
 
-#if ENABLE(IMAGE_EXTRACTION)
-
-void HTMLElement::updateWithImageExtractionResult(ImageExtractionResult&& result)
-{
-    if (result.isEmpty())
-        return;
-
-    if (auto* renderer = this->renderer()) {
-        if (!is<RenderImage>(renderer))
-            return;
-
-        downcast<RenderImage>(*renderer).setHasImageOverlay();
-    }
-
-    static NeverDestroyed<const String> shadowStyle(imageOverlayUserAgentStyleSheet, String::ConstructFromLiteral);
-    auto style = HTMLStyleElement::create(HTMLNames::styleTag, document(), false);
-    style->setTextContent(shadowStyle);
-
-    auto shadowRoot = makeRef(ensureUserAgentShadowRoot());
-    shadowRoot->appendChild(WTFMove(style));
-
-    auto container = HTMLDivElement::create(document());
-    container->setIdAttribute(imageOverlayElementIdentifier());
-    shadowRoot->appendChild(container);
-
-    static MainThreadNeverDestroyed<const AtomString> imageOverlayTextClass("image-overlay-text", AtomString::ConstructFromLiteral);
-
-    IntSize containerSize { offsetWidth(), offsetHeight() };
-    for (auto& data : result.textData) {
-        auto child = HTMLDivElement::create(document());
-        child->classList().add(imageOverlayTextClass);
-
-        container->appendChild(child);
-        child->appendChild(Text::create(document(), data.text));
-        child->appendChild(HTMLBRElement::create(document()));
-
-        IntSize originalSize { child->offsetWidth(), child->offsetHeight() };
-        if (originalSize.isEmpty())
-            continue;
-
-        auto targetRect = data.normalizedQuad.boundingBox();
-        targetRect.scale(containerSize);
-
-        IntPoint translationOffset {
-            static_cast<int>(targetRect.x() + (targetRect.width() - originalSize.width()) / 2),
-            static_cast<int>(targetRect.y() + (targetRect.height() - originalSize.height()) / 2)
-        };
-
-        child->setInlineStyleProperty(CSSPropertyTransform, makeString(
-            "translate("_s, translationOffset.x(), "px, "_s, translationOffset.y(), "px) "_s
-            "scale("_s, targetRect.width() / originalSize.width(), ", "_s, targetRect.height() / originalSize.height(), ")"_s
-        ));
-    }
-
-    if (auto frame = makeRefPtr(document().frame()))
-        frame->eventHandler().scheduleCursorUpdate();
-}
-
-#endif // ENABLE(IMAGE_EXTRACTION)
+#endif // PLATFORM(IOS_FAMILY)
 
 } // namespace WebCore
 

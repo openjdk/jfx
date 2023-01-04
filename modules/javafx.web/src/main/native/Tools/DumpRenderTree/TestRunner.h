@@ -36,6 +36,7 @@
 #include <string>
 #include <vector>
 #include <wtf/RefCounted.h>
+#include <wtf/text/WTFString.h>
 
 extern FILE* testResult;
 
@@ -75,6 +76,7 @@ public:
     void execCommand(JSStringRef name, JSStringRef value);
     bool findString(JSContextRef, JSStringRef, JSObjectRef optionsArray);
     void forceImmediateCompletion();
+    void stopLoading();
     void goBack();
     JSValueRef originsWithApplicationCache(JSContextRef);
     long long applicationCacheDiskUsageForOrigin(JSStringRef name);
@@ -134,10 +136,6 @@ public:
     void waitForPolicyDelegate();
     size_t webHistoryItemCount();
     int windowCount();
-
-#if ENABLE(TEXT_AUTOSIZING)
-    void setTextAutosizingEnabled(bool);
-#endif
 
     void setAccummulateLogsForChannel(JSStringRef);
 
@@ -233,9 +231,6 @@ public:
     bool canOpenWindows() const { return m_canOpenWindows; }
     void setCanOpenWindows(bool canOpenWindows) { m_canOpenWindows = canOpenWindows; }
 
-    bool closeRemainingWindowsWhenComplete() const { return m_closeRemainingWindowsWhenComplete; }
-    void setCloseRemainingWindowsWhenComplete(bool closeRemainingWindowsWhenComplete) { m_closeRemainingWindowsWhenComplete = closeRemainingWindowsWhenComplete; }
-
     bool newWindowsCopyBackForwardList() const { return m_newWindowsCopyBackForwardList; }
     void setNewWindowsCopyBackForwardList(bool newWindowsCopyBackForwardList) { m_newWindowsCopyBackForwardList = newWindowsCopyBackForwardList; }
 
@@ -303,8 +298,8 @@ public:
     const std::string& testURL() const { return m_testURL; }
     const std::string& expectedPixelHash() const { return m_expectedPixelHash; }
 
-    const std::vector<char>& audioResult() const { return m_audioResult; }
-    void setAudioResult(const std::vector<char>& audioData) { m_audioResult = audioData; }
+    const std::vector<uint8_t>& audioResult() const { return m_audioResult; }
+    void setAudioResult(const std::vector<uint8_t>& audioData) { m_audioResult = audioData; }
 
     void addOriginAccessAllowListEntry(JSStringRef sourceOrigin, JSStringRef destinationProtocol, JSStringRef destinationHost, bool allowDestinationSubdomains);
     void removeOriginAccessAllowListEntry(JSStringRef sourceOrigin, JSStringRef destinationProtocol, JSStringRef destinationHost, bool allowDestinationSubdomains);
@@ -331,11 +326,13 @@ public:
     void removeChromeInputField();
     void focusWebView();
 
+    void setTextInChromeInputField(const String&);
+    void selectChromeInputField();
+    String getSelectedTextInChromeInputField();
+
     void setBackingScaleFactor(double);
 
     void setPOSIXLocale(JSStringRef);
-
-    void setWebViewEditable(bool);
 
     void abortModal();
 
@@ -381,7 +378,7 @@ public:
     void setOpenPanelFiles(JSContextRef, JSValueRef);
 
 #if PLATFORM(IOS_FAMILY)
-    const std::vector<char>& openPanelFilesMediaIcon() const { return m_openPanelFilesMediaIcon; }
+    const std::vector<uint8_t>& openPanelFilesMediaIcon() const { return m_openPanelFilesMediaIcon; }
     void setOpenPanelFilesMediaIcon(JSContextRef, JSValueRef);
 #endif
 
@@ -427,8 +424,7 @@ private:
     bool m_dumpWillCacheResponse { false };
     bool m_generatePixelResults { true };
     bool m_callCloseOnWebViews { true };
-    bool m_canOpenWindows { false };
-    bool m_closeRemainingWindowsWhenComplete { true };
+    bool m_canOpenWindows { true };
     bool m_newWindowsCopyBackForwardList { false };
     bool m_stopProvisionalFrameLoads { false };
     bool m_testOnscreen { false };
@@ -472,7 +468,7 @@ private:
     std::set<std::string> m_willSendRequestClearHeaders;
     std::set<std::string> m_allowedHosts;
 
-    std::vector<char> m_audioResult;
+    std::vector<uint8_t> m_audioResult;
 
     std::map<std::string, std::string> m_URLsToRedirect;
 
@@ -486,7 +482,7 @@ private:
 
     std::vector<std::string> m_openPanelFiles;
 #if PLATFORM(IOS_FAMILY)
-    std::vector<char> m_openPanelFilesMediaIcon;
+    std::vector<uint8_t> m_openPanelFilesMediaIcon;
 #endif
 
     static JSRetainPtr<JSClassRef> createJSClass();

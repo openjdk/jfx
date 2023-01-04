@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -117,7 +117,7 @@ public class ToolBar extends Control {
         // makes it look to css like the user set the value and css will not
         // override. Initializing focusTraversable by calling set on the
         // CssMetaData ensures that css will be able to override the value.
-        ((StyleableProperty<Boolean>)(WritableValue<Boolean>)focusTraversableProperty()).applyStyle(null, Boolean.FALSE);
+        ((StyleableProperty<Boolean>)focusTraversableProperty()).applyStyle(null, Boolean.FALSE);
 
         // initialize css pseudo-class state
         pseudoClassStateChanged(HORIZONTAL_PSEUDOCLASS_STATE, true);
@@ -149,7 +149,7 @@ public class ToolBar extends Control {
     private ObjectProperty<Orientation> orientation;
     public final void setOrientation(Orientation value) {
         orientationProperty().set(value);
-    };
+    }
     public final Orientation getOrientation() {
         return orientation == null ? Orientation.HORIZONTAL : orientation.get();
     }
@@ -202,8 +202,8 @@ public class ToolBar extends Control {
 
     private static class StyleableProperties {
         private static final CssMetaData<ToolBar,Orientation> ORIENTATION =
-                new CssMetaData<ToolBar,Orientation>("-fx-orientation",
-                new EnumConverter<Orientation>(Orientation.class),
+                new CssMetaData<>("-fx-orientation",
+                new EnumConverter<>(Orientation.class),
                 Orientation.HORIZONTAL) {
 
             @Override
@@ -226,15 +226,16 @@ public class ToolBar extends Control {
         private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
         static {
             final List<CssMetaData<? extends Styleable, ?>> styleables =
-                new ArrayList<CssMetaData<? extends Styleable, ?>>(Control.getClassCssMetaData());
+                new ArrayList<>(Control.getClassCssMetaData());
             styleables.add(ORIENTATION);
             STYLEABLES = Collections.unmodifiableList(styleables);
         }
     }
 
     /**
-     * @return The CssMetaData associated with this class, which may include the
-     * CssMetaData of its superclasses.
+     * Gets the {@code CssMetaData} associated with this class, which may include the
+     * {@code CssMetaData} of its superclasses.
+     * @return the {@code CssMetaData}
      * @since JavaFX 8.0
      */
     public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -37,15 +37,8 @@ class GtkWindow extends Window {
         super(owner, screen, styleMask);
     }
 
-    protected GtkWindow(long parent) {
-        super(parent);
-    }
-
     @Override
     protected native long _createWindow(long ownerPtr, long screenPtr, int mask);
-
-    @Override
-    protected native long _createChildWindow(long parent);
 
     @Override
     protected native boolean _close(long ptr);
@@ -177,12 +170,6 @@ class GtkWindow extends Window {
 
     private native void _setCursorType(long ptr, int type);
     private native void _setCustomCursor(long ptr, Cursor cursor);
-
-    @Override
-    protected native int _getEmbeddedX(long ptr);
-
-    @Override
-    protected native int _getEmbeddedY(long ptr);
 
     /**
      * The lowest level (X11) window handle.

@@ -42,14 +42,14 @@ AudioNodeOutput::AudioNodeOutput(AudioNode* node, unsigned numberOfChannels)
     , m_numberOfChannels(numberOfChannels)
     , m_desiredNumberOfChannels(numberOfChannels)
 {
-    ASSERT(numberOfChannels <= AudioContext::maxNumberOfChannels());
+    ASSERT(numberOfChannels <= AudioContext::maxNumberOfChannels);
 
     m_internalBus = AudioBus::create(numberOfChannels, AudioUtilities::renderQuantumSize);
 }
 
 void AudioNodeOutput::setNumberOfChannels(unsigned numberOfChannels)
 {
-    ASSERT(numberOfChannels <= AudioContext::maxNumberOfChannels());
+    ASSERT(numberOfChannels <= AudioContext::maxNumberOfChannels);
     ASSERT(context().isGraphOwner());
 
     m_desiredNumberOfChannels = numberOfChannels;
@@ -68,6 +68,9 @@ void AudioNodeOutput::updateInternalBus()
     if (numberOfChannels() == m_internalBus->numberOfChannels())
         return;
 
+    // Heap allocations are forbidden on the audio thread for performance reasons so we need to
+    // explicitly allow the following allocation(s).
+    DisableMallocRestrictionsForCurrentThreadScope disableMallocRestrictions;
     m_internalBus = AudioBus::create(numberOfChannels(), AudioUtilities::renderQuantumSize);
 }
 

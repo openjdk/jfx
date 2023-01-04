@@ -32,6 +32,17 @@
 namespace WebCore {
 using namespace JSC;
 
+String identifierToString(JSGlobalObject& lexicalGlobalObject, const Identifier& identifier)
+{
+    if (UNLIKELY(identifier.isSymbol())) {
+        auto scope = DECLARE_THROW_SCOPE(lexicalGlobalObject.vm());
+        throwTypeError(&lexicalGlobalObject, scope, SymbolCoercionError);
+        return { };
+    }
+
+    return identifier.string();
+}
+
 static inline String stringToByteString(JSGlobalObject& lexicalGlobalObject, JSC::ThrowScope& scope, String&& string)
 {
     if (!string.isAllLatin1()) {
@@ -47,7 +58,8 @@ String identifierToByteString(JSGlobalObject& lexicalGlobalObject, const Identif
     VM& vm = lexicalGlobalObject.vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    auto string = identifier.string();
+    auto string = identifierToString(lexicalGlobalObject, identifier);
+    RETURN_IF_EXCEPTION(scope, { });
     return stringToByteString(lexicalGlobalObject, scope, WTFMove(string));
 }
 
@@ -62,30 +74,9 @@ String valueToByteString(JSGlobalObject& lexicalGlobalObject, JSValue value)
     return stringToByteString(lexicalGlobalObject, scope, WTFMove(string));
 }
 
-static inline String stringToUSVString(String&& string)
+String identifierToUSVString(JSGlobalObject& lexicalGlobalObject, const Identifier& identifier)
 {
-    // Fast path for the case where there are no unpaired surrogates.
-    if (!hasUnpairedSurrogate(string))
-        return WTFMove(string);
-
-    // Slow path: http://heycam.github.io/webidl/#dfn-obtain-unicode
-    // Replaces unpaired surrogates with the replacement character.
-    StringBuilder result;
-    result.reserveCapacity(string.length());
-    StringView view { string };
-    for (auto codePoint : view.codePoints()) {
-        if (U_IS_SURROGATE(codePoint))
-            result.append(replacementCharacter);
-        else
-            result.appendCharacter(codePoint);
-    }
-    return result.toString();
-}
-
-String identifierToUSVString(JSGlobalObject&, const Identifier& identifier)
-{
-    auto string = identifier.string();
-    return stringToUSVString(WTFMove(string));
+    return replaceUnpairedSurrogatesWithReplacementCharacter(identifierToString(lexicalGlobalObject, identifier));
 }
 
 String valueToUSVString(JSGlobalObject& lexicalGlobalObject, JSValue value)
@@ -96,7 +87,7 @@ String valueToUSVString(JSGlobalObject& lexicalGlobalObject, JSValue value)
     auto string = value.toWTFString(&lexicalGlobalObject);
     RETURN_IF_EXCEPTION(scope, { });
 
-    return stringToUSVString(WTFMove(string));
+    return replaceUnpairedSurrogatesWithReplacementCharacter(WTFMove(string));
 }
 
 } // namespace WebCore

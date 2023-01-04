@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2019 Apple, Inc. All rights reserved.
+ * Copyright (C) 2013-2021 Apple, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,16 +27,17 @@
 #include "WeakMapPrototype.h"
 
 #include "JSCInlines.h"
-#include "JSWeakMap.h"
+#include "JSWeakMapInlines.h"
 
 namespace JSC {
+
+const ASCIILiteral WeakMapNonObjectKeyError { "Attempted to set a non-object key in a WeakMap"_s };
 
 const ClassInfo WeakMapPrototype::s_info = { "WeakMap", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(WeakMapPrototype) };
 
 static JSC_DECLARE_HOST_FUNCTION(protoFuncWeakMapDelete);
 static JSC_DECLARE_HOST_FUNCTION(protoFuncWeakMapGet);
 static JSC_DECLARE_HOST_FUNCTION(protoFuncWeakMapHas);
-static JSC_DECLARE_HOST_FUNCTION(protoFuncWeakMapSet);
 
 void WeakMapPrototype::finishCreation(VM& vm, JSGlobalObject* globalObject)
 {
@@ -109,7 +110,7 @@ JSC_DEFINE_HOST_FUNCTION(protoFuncWeakMapSet, (JSGlobalObject* globalObject, Cal
         return JSValue::encode(jsUndefined());
     JSValue key = callFrame->argument(0);
     if (!key.isObject())
-        return JSValue::encode(throwTypeError(globalObject, scope, "Attempted to set a non-object key in a WeakMap"_s));
+        return JSValue::encode(throwTypeError(globalObject, scope, WeakMapNonObjectKeyError));
     map->set(vm, asObject(key), callFrame->argument(1));
     return JSValue::encode(callFrame->thisValue());
 }

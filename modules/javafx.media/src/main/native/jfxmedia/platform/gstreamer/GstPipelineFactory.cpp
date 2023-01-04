@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -45,6 +45,8 @@
 #define HLS_PROP_GET_MIMETYPE   3
 #define HLS_VALUE_MIMETYPE_MP2T 1
 #define HLS_VALUE_MIMETYPE_MP3  2
+#define HLS_VALUE_MIMETYPE_FMP4 3
+#define HLS_VALUE_MIMETYPE_AAC  4
 
 
 //*************************************************************************************************
@@ -208,7 +210,6 @@ uint32_t CGstPipelineFactory::CreateSourceElement(CLocator* locator, GstElement*
             g_signal_connect (javaSource, "seek-data", G_CALLBACK (SourceSeekData), callbacks);
             g_signal_connect (javaSource, "close-connection", G_CALLBACK (SourceCloseConnection), callbacks);
             g_signal_connect (javaSource, "property", G_CALLBACK (SourceProperty), callbacks);
-            g_signal_connect (javaSource, "get-stream-size", G_CALLBACK (SourceGetStreamSize), callbacks);
 
             if (isRandomAccess)
                 g_signal_connect (javaSource, "read-block", G_CALLBACK (SourceReadBlock), callbacks);
@@ -220,6 +221,10 @@ uint32_t CGstPipelineFactory::CreateSourceElement(CLocator* locator, GstElement*
                 g_object_set (javaSource, "mimetype", CONTENT_TYPE_MP2T, NULL);
             else if (streamMimeType == HLS_VALUE_MIMETYPE_MP3)
                 g_object_set (javaSource, "mimetype", CONTENT_TYPE_MPA, NULL);
+            else if (streamMimeType == HLS_VALUE_MIMETYPE_FMP4)
+                g_object_set (javaSource, "mimetype", CONTENT_TYPE_FMP4, NULL);
+            else if (streamMimeType == HLS_VALUE_MIMETYPE_AAC)
+                g_object_set (javaSource, "mimetype", CONTENT_TYPE_AAC, NULL);
 
             g_object_set (javaSource,
                 "size", (gint64)locator->GetSizeHint(),
@@ -307,11 +312,6 @@ int CGstPipelineFactory::SourceProperty(GstElement *src, int prop, int value, gp
     return ((CStreamCallbacks*)data)->Property(prop, value);
 }
 
-int CGstPipelineFactory::SourceGetStreamSize(GstElement *src, gpointer data)
-{
-    return ((CStreamCallbacks*)data)->GetStreamSize();
-}
-
 void CGstPipelineFactory::SourceCloseConnection(GstElement *src, gpointer data)
 {
     CStreamCallbacks* callbacks = (CStreamCallbacks*)data;
@@ -322,7 +322,6 @@ void CGstPipelineFactory::SourceCloseConnection(GstElement *src, gpointer data)
     g_signal_handlers_disconnect_by_func (src, (void*)G_CALLBACK (SourceSeekData), callbacks);
     g_signal_handlers_disconnect_by_func (src, (void*)G_CALLBACK (SourceCloseConnection), callbacks);
     g_signal_handlers_disconnect_by_func (src, (void*)G_CALLBACK (SourceProperty), callbacks);
-    g_signal_handlers_disconnect_by_func (src, (void*)G_CALLBACK (SourceGetStreamSize), callbacks);
     delete callbacks;
 }
 
@@ -481,7 +480,9 @@ uint32_t CGstPipelineFactory::CreateMP4Pipeline(GstElement* source, GstElement* 
                                                 CPipelineOptions* pOptions, CPipeline** ppPipeline)
 {
 #if TARGET_OS_WIN32
-    return CreateAVPipeline(source, "qtdemux", "dshowwrapper", true, "dshowwrapper", pVideoSink, pOptions, ppPipeline);
+    // We need to load dshowwrapper (H.264) or mfwrapper (H.265), but we do not know which one based on .mp4
+    // extension, so intead we will load video decoder dynamically when qtdemux will signal video pad added.
+    return CreateAVPipeline(source, "qtdemux", "dshowwrapper", true, NULL, pVideoSink, pOptions, ppPipeline);
 #elif TARGET_OS_MAC
     return CreateAVPipeline(source, "qtdemux", "audioconverter", true, "avcdecoder", pVideoSink, pOptions, ppPipeline);
 #elif TARGET_OS_LINUX
@@ -541,6 +542,11 @@ uint32_t CGstPipelineFactory::CreateHLSPipeline(GstElement* source, GstElement* 
         return CreateAVPipeline(source, "dshowwrapper", "dshowwrapper", true, "dshowwrapper", pVideoSink, pOptions, ppPipeline);
     else if (pOptions->GetStreamMimeType() == HLS_VALUE_MIMETYPE_MP3)
         return CreateAudioPipeline(source, "mpegaudioparse", "dshowwrapper", false, pOptions, ppPipeline);
+    else if (pOptions->GetStreamMimeType() == HLS_VALUE_MIMETYPE_AAC)
+        return CreateAudioPipeline(source, NULL, "dshowwrapper", false, pOptions, ppPipeline);
+    else if (pOptions->GetStreamMimeType() == HLS_VALUE_MIMETYPE_FMP4)
+        // Video decoder is loaded dynamically
+        return CreateAVPipeline(source, "qtdemux", "dshowwrapper", true, NULL, pVideoSink, pOptions, ppPipeline);
     else
         return ERROR_PLATFORM_UNSUPPORTED;
 #elif TARGET_OS_MAC
@@ -552,6 +558,10 @@ uint32_t CGstPipelineFactory::CreateHLSPipeline(GstElement* source, GstElement* 
         return CreateAVPipeline(source, "avmpegtsdemuxer", "avaudiodecoder", false, "avvideodecoder", pVideoSink, pOptions, ppPipeline);
     else if (pOptions->GetStreamMimeType() == HLS_VALUE_MIMETYPE_MP3)
         return CreateAudioPipeline(source, "mpegaudioparse", "avaudiodecoder", false, pOptions, ppPipeline);
+    else if (pOptions->GetStreamMimeType() == HLS_VALUE_MIMETYPE_AAC)
+        return CreateAudioPipeline(source, "aacparse", "avaudiodecoder", false, pOptions, ppPipeline);
+    else if (pOptions->GetStreamMimeType() == HLS_VALUE_MIMETYPE_FMP4)
+        return CreateAVPipeline(source, "qtdemux", "avaudiodecoder", true, "avvideodecoder", pVideoSink, pOptions, ppPipeline);
     else
         return ERROR_PLATFORM_UNSUPPORTED;
 #else
@@ -811,9 +821,9 @@ uint32_t CGstPipelineFactory::CreateVideoBin(const char* strDecoderName, GstElem
     if (NULL == *ppVideobin)
         return ERROR_GSTREAMER_BIN_CREATE;
 
-    GstElement *videodec   = CreateElement (strDecoderName);
+    GstElement *videodec   = strDecoderName != NULL ? CreateElement (strDecoderName) : NULL;
     GstElement *videoqueue = CreateElement ("queue");
-    if (NULL == videodec || NULL == videoqueue)
+    if ((NULL != strDecoderName && NULL == videodec) || NULL == videoqueue)
         return ERROR_GSTREAMER_ELEMENT_CREATE;
 
     if(NULL == pVideoSink)
@@ -839,14 +849,22 @@ uint32_t CGstPipelineFactory::CreateVideoBin(const char* strDecoderName, GstElem
             NULL);
     gst_app_sink_set_caps(GST_APP_SINK(pVideoSink), appSinkCaps);
 #endif
-
     gst_bin_add_many (GST_BIN (*ppVideobin), videoqueue, videodec, videoconv, pVideoSink, NULL);
     if(!gst_element_link_many (videoqueue, videodec, videoconv, pVideoSink, NULL))
         return ERROR_GSTREAMER_ELEMENT_LINK_VIDEO_BIN;
 #else
-    gst_bin_add_many (GST_BIN (*ppVideobin), videoqueue, videodec, pVideoSink, NULL);
-    if(!gst_element_link_many (videoqueue, videodec, pVideoSink, NULL))
-        return ERROR_GSTREAMER_ELEMENT_LINK_VIDEO_BIN;
+    if (videodec)
+    {
+        gst_bin_add_many(GST_BIN(*ppVideobin), videoqueue, videodec, pVideoSink, NULL);
+        if (!gst_element_link_many(videoqueue, videodec, pVideoSink, NULL))
+            return ERROR_GSTREAMER_ELEMENT_LINK_VIDEO_BIN;
+    }
+    else
+    {
+        gst_bin_add_many(GST_BIN(*ppVideobin), videoqueue, pVideoSink, NULL);
+        if (!gst_element_link_many(pVideoSink, NULL))
+            return ERROR_GSTREAMER_ELEMENT_LINK_VIDEO_BIN;
+    }
 #endif
     GstPad* sink_pad = gst_element_get_static_pad(videoqueue, "sink");
     if (NULL == sink_pad)

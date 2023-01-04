@@ -29,12 +29,12 @@ typedef (FetchRequest or USVString) RequestInfo;
     ActiveDOMObject,
     SecureContext,
     Exposed=(Window,Worker),
-    EnabledAtRuntime=CacheAPI,
+    EnabledAtRuntime=CacheAPIEnabled,
     InterfaceName=CacheStorage,
 ] interface DOMCacheStorage {
     [NewObject] Promise<any> match(RequestInfo request, optional CacheQueryOptions options);
     [NewObject] Promise<boolean> has(DOMString cacheName);
-    [NewObject] Promise<Cache> open(DOMString cacheName);
+    [NewObject] Promise<DOMCache> open(DOMString cacheName);
     [NewObject, ImplementedAs=remove] Promise<boolean> delete(DOMString cacheName);
     [NewObject] Promise<sequence<DOMString>> keys();
 };

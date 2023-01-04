@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -39,7 +39,6 @@
 #include <WebCore/Node.h>
 #include <WebCore/NodeList.h>
 #include <WebCore/ThreadCheck.h>
-
 #include <wtf/RefPtr.h>
 #include <wtf/GetPtr.h>
 #include <wtf/URL.h>
@@ -239,7 +238,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLSelectElementImpl_addImpl(JNI
     }
 
     auto& coreElement = *static_cast<HTMLElement*>(jlong_to_ptr(element));
-    Variant<RefPtr<WebCore::HTMLOptionElement>, RefPtr<WebCore::HTMLOptGroupElement>> variantElement;
+    std::variant<RefPtr<WebCore::HTMLOptionElement>, RefPtr<WebCore::HTMLOptGroupElement>> variantElement;
     if (is<WebCore::HTMLOptionElement>(coreElement))
         variantElement = &downcast<WebCore::HTMLOptionElement>(coreElement);
     else if (is<WebCore::HTMLOptGroupElement>(coreElement))

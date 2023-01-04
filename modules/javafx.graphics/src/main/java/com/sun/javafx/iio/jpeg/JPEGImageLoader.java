@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -194,6 +194,7 @@ public class JPEGImageLoader extends ImageLoaderImpl {
         }
     }
 
+    @Override
     public synchronized void dispose() {
         if(!accessLock.isLocked() && !isDisposed && structPointer != 0L) {
             isDisposed = true;
@@ -202,6 +203,7 @@ public class JPEGImageLoader extends ImageLoaderImpl {
         }
     }
 
+    @Override
     public ImageFrame load(int imageIndex, int width, int height, boolean preserveAspectRatio, boolean smooth) throws IOException {
         if (imageIndex != 0) {
             return null;

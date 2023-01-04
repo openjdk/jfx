@@ -37,17 +37,19 @@ namespace JSC { namespace Wasm {
 
 JSValue Global::get(JSGlobalObject* globalObject) const
 {
-    switch (m_type) {
-    case Wasm::Type::I32:
+    switch (m_type.kind) {
+    case TypeKind::I32:
         return jsNumber(bitwise_cast<int32_t>(static_cast<uint32_t>(m_value.m_primitive)));
-    case Wasm::Type::I64:
+    case TypeKind::I64:
         return JSBigInt::makeHeapBigIntOrBigInt32(globalObject, static_cast<int64_t>(m_value.m_primitive));
-    case Wasm::Type::F32:
+    case TypeKind::F32:
         return jsNumber(purifyNaN(static_cast<double>(bitwise_cast<float>(static_cast<uint32_t>(m_value.m_primitive)))));
-    case Wasm::Type::F64:
+    case TypeKind::F64:
         return jsNumber(purifyNaN(bitwise_cast<double>(m_value.m_primitive)));
-    case Wasm::Externref:
-    case Wasm::Funcref:
+    case TypeKind::Externref:
+    case TypeKind::Funcref:
+    case TypeKind::Ref:
+    case TypeKind::RefNull:
         return m_value.m_externref.get();
     default:
         return jsUndefined();
@@ -59,62 +61,68 @@ void Global::set(JSGlobalObject* globalObject, JSValue argument)
     VM& vm = globalObject->vm();
     auto throwScope = DECLARE_THROW_SCOPE(vm);
     ASSERT(m_mutability != Wasm::GlobalInformation::Immutable);
-    switch (m_type) {
-    case Wasm::Type::I32: {
+    switch (m_type.kind) {
+    case TypeKind::I32: {
         int32_t value = argument.toInt32(globalObject);
         RETURN_IF_EXCEPTION(throwScope, void());
         m_value.m_primitive = static_cast<uint64_t>(static_cast<uint32_t>(value));
         break;
     }
-    case Wasm::Type::I64: {
+    case TypeKind::I64: {
         int64_t value = argument.toBigInt64(globalObject);
         RETURN_IF_EXCEPTION(throwScope, void());
         m_value.m_primitive = static_cast<uint64_t>(value);
         break;
     }
-    case Wasm::Type::F32: {
+    case TypeKind::F32: {
         float value = argument.toFloat(globalObject);
         RETURN_IF_EXCEPTION(throwScope, void());
         m_value.m_primitive = static_cast<uint64_t>(bitwise_cast<uint32_t>(value));
         break;
     }
-    case Wasm::Type::F64: {
+    case TypeKind::F64: {
         double value = argument.toNumber(globalObject);
         RETURN_IF_EXCEPTION(throwScope, void());
         m_value.m_primitive = bitwise_cast<uint64_t>(value);
         break;
     }
-    case Wasm::Externref: {
-        RELEASE_ASSERT(m_owner);
-        m_value.m_externref.set(m_owner->vm(), m_owner, argument);
-        break;
-    }
-    case Wasm::Funcref: {
-        RELEASE_ASSERT(m_owner);
-        if (!isWebAssemblyHostFunction(vm, argument) && !argument.isNull()) {
-            throwException(globalObject, throwScope, createJSWebAssemblyRuntimeError(globalObject, vm, "Funcref must be an exported wasm function"));
-            return;
+    default: {
+        if (isExternref(m_type)) {
+            RELEASE_ASSERT(m_owner);
+            if (!m_type.isNullable() && argument.isNull()) {
+                throwException(globalObject, throwScope, createJSWebAssemblyRuntimeError(globalObject, vm, "Non-null Externref cannot be null"));
+                return;
+            }
+            m_value.m_externref.set(m_owner->vm(), m_owner, argument);
+        } else if (isFuncref(m_type) || isRefWithTypeIndex(m_type)) {
+            RELEASE_ASSERT(m_owner);
+            WebAssemblyFunction* wasmFunction = nullptr;
+            WebAssemblyWrapperFunction* wasmWrapperFunction = nullptr;
+            if (!isWebAssemblyHostFunction(vm, argument, wasmFunction, wasmWrapperFunction) && (!m_type.isNullable() || !argument.isNull())) {
+                throwException(globalObject, throwScope, createJSWebAssemblyRuntimeError(globalObject, vm, "Funcref must be an exported wasm function"));
+                return;
+            }
+
+            if (isRefWithTypeIndex(m_type) && !argument.isNull()) {
+                Wasm::SignatureIndex paramIndex = m_type.index;
+                Wasm::SignatureIndex argIndex = wasmFunction ? wasmFunction->signatureIndex() : wasmWrapperFunction->signatureIndex();
+                if (paramIndex != argIndex) {
+                    throwException(globalObject, throwScope, createJSWebAssemblyRuntimeError(globalObject, vm, "Argument function did not match the reference type"));
+                    return;
+                }
+            }
+            m_value.m_externref.set(m_owner->vm(), m_owner, argument);
         }
-        m_value.m_externref.set(m_owner->vm(), m_owner, argument);
-        break;
     }
-    default:
-        break;
     }
 }
 
 template<typename Visitor>
 void Global::visitAggregateImpl(Visitor& visitor)
 {
-    switch (m_type) {
-    case Wasm::Type::Externref:
-    case Wasm::Type::Funcref: {
+    if (isFuncref(m_type) || isExternref(m_type)) {
         RELEASE_ASSERT(m_owner);
         visitor.append(m_value.m_externref);
-        break;
-    }
-    default:
-        break;
     }
 }
 

@@ -26,8 +26,8 @@
 [
     ActiveDOMObject,
     Conditional=VIDEO,
-    GenerateIsReachable=ImplElementRoot,
-    JSCustomMarkFunction,
+    GenerateIsReachable,
+    GenerateAddOpaqueRoot,
     Exposed=Window
 ] interface VideoTrackList : EventTarget {
     readonly attribute unsigned long length;

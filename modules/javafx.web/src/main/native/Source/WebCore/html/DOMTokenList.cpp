@@ -44,7 +44,7 @@ DOMTokenList::DOMTokenList(Element& element, const QualifiedName& attributeName,
 
 static inline bool tokenContainsHTMLSpace(const String& token)
 {
-    return token.find(isHTMLSpace) != notFound;
+    return token.find(isHTMLSpace<UChar>) != notFound;
 }
 
 ExceptionOr<void> DOMTokenList::validateToken(const String& token)
@@ -97,7 +97,7 @@ inline ExceptionOr<void> DOMTokenList::addInternal(const String* newTokens, size
     return { };
 }
 
-ExceptionOr<void> DOMTokenList::add(const Vector<String>& tokens)
+ExceptionOr<void> DOMTokenList::add(const FixedVector<String>& tokens)
 {
     return addInternal(tokens.data(), tokens.size());
 }
@@ -122,7 +122,7 @@ inline ExceptionOr<void> DOMTokenList::removeInternal(const String* tokensToRemo
     return { };
 }
 
-ExceptionOr<void> DOMTokenList::remove(const Vector<String>& tokens)
+ExceptionOr<void> DOMTokenList::remove(const FixedVector<String>& tokens)
 {
     return removeInternal(tokens.data(), tokens.size());
 }
@@ -132,7 +132,7 @@ ExceptionOr<void> DOMTokenList::remove(const AtomString& token)
     return removeInternal(&token.string(), 1);
 }
 
-ExceptionOr<bool> DOMTokenList::toggle(const AtomString& token, Optional<bool> force)
+ExceptionOr<bool> DOMTokenList::toggle(const AtomString& token, std::optional<bool> force)
 {
     auto result = validateToken(token);
     if (result.hasException())
@@ -141,7 +141,7 @@ ExceptionOr<bool> DOMTokenList::toggle(const AtomString& token, Optional<bool> f
     auto& tokens = this->tokens();
 
     if (tokens.contains(token)) {
-        if (!force.valueOr(false)) {
+        if (!force.value_or(false)) {
             tokens.removeFirst(token);
             updateAssociatedAttributeFromTokens();
             return false;

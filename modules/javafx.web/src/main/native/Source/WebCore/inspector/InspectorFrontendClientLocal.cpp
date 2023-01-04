@@ -48,7 +48,6 @@
 #include "Page.h"
 #include "ScriptController.h"
 #include "ScriptSourceCode.h"
-#include "ScriptState.h"
 #include "Settings.h"
 #include "Timer.h"
 #include "UserGestureIndicator.h"
@@ -57,7 +56,7 @@
 #include <JavaScriptCore/InspectorBackendDispatchers.h>
 #include <wtf/Deque.h>
 #include <wtf/text/CString.h>
-
+#include <wtf/text/StringToIntegerConversion.h>
 
 namespace WebCore {
 
@@ -107,7 +106,7 @@ private:
 
         // The frontend can be closed and destroy the owning frontend client before or in the
         // process of dispatching the task, so keep a protector reference here.
-        RunLoop::current().dispatch([this, protectedThis = makeRef(*this)] {
+        RunLoop::current().dispatch([this, protectedThis = Ref { *this }] {
             m_hasScheduledTask = false;
             dispatchOneMessage();
         });
@@ -267,10 +266,11 @@ void InspectorFrontendClientLocal::openURLExternally(const String& url)
 {
     UserGestureIndicator indicator { ProcessingUserGesture };
     Frame& mainFrame = m_inspectedPageController->inspectedPage().mainFrame();
-    FrameLoadRequest frameLoadRequest { *mainFrame.document(), mainFrame.document()->securityOrigin(), { }, "_blank"_s, InitiatedByMainFrame::Unknown };
+    FrameLoadRequest frameLoadRequest { *mainFrame.document(), mainFrame.document()->securityOrigin(), { }, blankTargetFrameName(), InitiatedByMainFrame::Unknown };
 
     bool created;
-    auto frame = WebCore::createWindow(mainFrame, mainFrame, WTFMove(frameLoadRequest), { }, created);
+    WindowFeatures features;
+    auto frame = WebCore::createWindow(mainFrame, mainFrame, WTFMove(frameLoadRequest), features, created);
     if (!frame)
         return;
 
@@ -279,7 +279,7 @@ void InspectorFrontendClientLocal::openURLExternally(const String& url)
 
     // FIXME: Why do we compute the absolute URL with respect to |frame| instead of |mainFrame|?
     ResourceRequest resourceRequest { frame->document()->completeURL(url) };
-    FrameLoadRequest frameLoadRequest2 { *mainFrame.document(), mainFrame.document()->securityOrigin(), WTFMove(resourceRequest), "_self"_s, InitiatedByMainFrame::Unknown };
+    FrameLoadRequest frameLoadRequest2 { *mainFrame.document(), mainFrame.document()->securityOrigin(), WTFMove(resourceRequest), selfTargetFrameName(), InitiatedByMainFrame::Unknown };
     frame->loader().changeLocation(WTFMove(frameLoadRequest2));
 }
 
@@ -317,7 +317,7 @@ void InspectorFrontendClientLocal::restoreAttachedWindowHeight()
 {
     unsigned inspectedPageHeight = m_inspectedPageController->inspectedPage().mainFrame().view()->visibleHeight();
     String value = m_settings->getProperty(inspectorAttachedHeightSetting);
-    unsigned preferredHeight = value.isEmpty() ? defaultAttachedHeight : value.toUInt();
+    unsigned preferredHeight = value.isEmpty() ? defaultAttachedHeight : parseIntegerAllowingTrailingJunk<unsigned>(value).value_or(0);
 
     // This call might not go through (if the window starts out detached), but if the window is initially created attached,
     // InspectorController::attachWindow is never called, so we need to make sure to set the attachedWindowHeight.
@@ -325,15 +325,15 @@ void InspectorFrontendClientLocal::restoreAttachedWindowHeight()
     setAttachedWindowHeight(constrainedAttachedWindowHeight(preferredHeight, inspectedPageHeight));
 }
 
-Optional<bool> InspectorFrontendClientLocal::evaluationResultToBoolean(InspectorFrontendAPIDispatcher::EvaluationResult result)
+std::optional<bool> InspectorFrontendClientLocal::evaluationResultToBoolean(InspectorFrontendAPIDispatcher::EvaluationResult result)
 {
     if (!result)
-        return WTF::nullopt;
+        return std::nullopt;
 
     auto valueOrException = result.value();
     if (!valueOrException) {
         LOG(Inspector, "Encountered exception while evaluating upon the frontend: %s", valueOrException.error().message.utf8().data());
-        return WTF::nullopt;
+        return std::nullopt;
     }
 
     return valueOrException.value().toBoolean(m_frontendAPIDispatcher->frontendGlobalObject());
@@ -341,7 +341,7 @@ Optional<bool> InspectorFrontendClientLocal::evaluationResultToBoolean(Inspector
 
 bool InspectorFrontendClientLocal::isDebuggingEnabled()
 {
-    return evaluationResultToBoolean(m_frontendAPIDispatcher->dispatchCommandWithResultSync("isDebuggingEnabled"_s)).valueOr(false);
+    return evaluationResultToBoolean(m_frontendAPIDispatcher->dispatchCommandWithResultSync("isDebuggingEnabled"_s)).value_or(false);
 }
 
 void InspectorFrontendClientLocal::setDebuggingEnabled(bool enabled)
@@ -351,7 +351,7 @@ void InspectorFrontendClientLocal::setDebuggingEnabled(bool enabled)
 
 bool InspectorFrontendClientLocal::isTimelineProfilingEnabled()
 {
-    return evaluationResultToBoolean(m_frontendAPIDispatcher->dispatchCommandWithResultSync("isTimelineProfilingEnabled"_s)).valueOr(false);
+    return evaluationResultToBoolean(m_frontendAPIDispatcher->dispatchCommandWithResultSync("isTimelineProfilingEnabled"_s)).value_or(false);
 }
 
 void InspectorFrontendClientLocal::setTimelineProfilingEnabled(bool enabled)
@@ -361,7 +361,7 @@ void InspectorFrontendClientLocal::setTimelineProfilingEnabled(bool enabled)
 
 bool InspectorFrontendClientLocal::isProfilingJavaScript()
 {
-    return evaluationResultToBoolean(m_frontendAPIDispatcher->dispatchCommandWithResultSync("isProfilingJavaScript"_s)).valueOr(false);
+    return evaluationResultToBoolean(m_frontendAPIDispatcher->dispatchCommandWithResultSync("isProfilingJavaScript"_s)).value_or(false);
 }
 
 void InspectorFrontendClientLocal::startProfilingJavaScript()

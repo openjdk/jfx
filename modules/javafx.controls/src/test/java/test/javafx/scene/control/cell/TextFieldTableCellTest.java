@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -46,7 +46,7 @@ public class TextFieldTableCellTest {
     private StringConverter<Object> converter;
 
     @Before public void setup() {
-        converter = new StringConverter<Object>() {
+        converter = new StringConverter<>() {
             @Override public String toString(Object object) {
                 return null;
             }
@@ -199,7 +199,7 @@ public class TextFieldTableCellTest {
     @Test public void test_updateItem_isNotEmpty_textIsNotNull_nonNullConverter() {
         TextFieldTableCell<?,Object> cell = new TextFieldTableCell<>();
         cell.setConverter(
-                new StringConverter<Object>() {
+                new StringConverter<>() {
                     @Override public Object fromString(String string) {
                         return null;
                     }
@@ -238,13 +238,6 @@ public class TextFieldTableCellTest {
         cell.startEdit();
         assertFalse(cell.isEditing());
         assertNull(cell.getGraphic());
-    }
-
-    @Test(expected = NullPointerException.class)
-    public void test_startEdit_cellEditableIsTrue_tableColumnIsNull_isEmpty() {
-        TextFieldTableCell<Object,Object> cell = new TextFieldTableCell<>();
-        cell.setEditable(true);
-        cell.startEdit();
     }
 
     @Test public void test_startEdit_tableViewEditableIsTrue_isEmpty() {
@@ -299,14 +292,6 @@ public class TextFieldTableCellTest {
         cell.startEdit();
         assertFalse(cell.isEditing());
         assertNull(cell.getGraphic());
-    }
-
-    @Test(expected = NullPointerException.class)
-    public void test_startEdit_cellEditableIsTrue_tableColumnIsNull_isNotEmpty() {
-        TextFieldTableCell<Object,Object> cell = new TextFieldTableCell<>();
-        cell.updateItem("TEST", false);
-        cell.setEditable(true);
-        cell.startEdit();
     }
 
     @Test public void test_startEdit_tableViewEditableIsTrue_isNotEmpty() {

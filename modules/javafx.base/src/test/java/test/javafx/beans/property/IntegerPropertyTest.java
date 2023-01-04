@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -137,7 +137,7 @@ public class IntegerPropertyTest {
 
     @Test
     public void testObjectToInteger() {
-        final ObjectProperty<Integer> valueModel = new SimpleObjectProperty<Integer>(2);
+        final ObjectProperty<Integer> valueModel = new SimpleObjectProperty<>(2);
         final IntegerProperty exp = IntegerProperty.integerProperty(valueModel);
 
         assertEquals(2, exp.intValue());

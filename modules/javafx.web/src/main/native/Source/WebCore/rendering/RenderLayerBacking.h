@@ -240,8 +240,8 @@ public:
     bool getCurrentTransform(const GraphicsLayer*, TransformationMatrix&) const override;
 
     bool isTrackingRepaints() const override;
-    bool shouldSkipLayerInDump(const GraphicsLayer*, LayerTreeAsTextBehavior) const override;
-    bool shouldDumpPropertyForLayer(const GraphicsLayer*, const char* propertyName, LayerTreeAsTextBehavior) const override;
+    bool shouldSkipLayerInDump(const GraphicsLayer*, OptionSet<LayerTreeAsTextOptions>) const override;
+    bool shouldDumpPropertyForLayer(const GraphicsLayer*, const char* propertyName, OptionSet<LayerTreeAsTextOptions>) const override;
 
     bool shouldAggressivelyRetainTiles(const GraphicsLayer*) const override;
     bool shouldTemporarilyRetainTileCohorts(const GraphicsLayer*) const override;
@@ -355,6 +355,7 @@ private:
     void updateBlendMode(const RenderStyle&);
 #endif
     void updateCustomAppearance(const RenderStyle&);
+    void updateContentsScalingFilters(const RenderStyle&);
 
     // Return the opacity value that this layer should use for compositing.
     float compositingOpacity(float rendererOpacity) const;

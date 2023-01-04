@@ -44,6 +44,7 @@ class JSGlobalObject;
     v(setBucketNext, nullptr) \
     v(setBucketKey, nullptr) \
     v(setPrototypeDirect, nullptr) \
+    v(setPrototypeDirectOrThrow, nullptr) \
     v(copyDataProperties, nullptr) \
     v(enqueueJob, nullptr) \
     v(makeTypeError, nullptr) \
@@ -76,7 +77,11 @@ class JSGlobalObject;
     v(appendMemcpy, nullptr) \
     v(hostPromiseRejectionTracker, nullptr) \
     v(Set, nullptr) \
+    v(Map, nullptr) \
     v(thisTimeValue, nullptr) \
+    v(importInRealm, nullptr) \
+    v(evalInRealm, nullptr) \
+    v(moveFunctionToRealm, nullptr) \
     v(isConstructor, nullptr) \
     v(sameValue, nullptr) \
     v(regExpProtoFlagsGetter, nullptr) \
@@ -110,6 +115,10 @@ class JSGlobalObject;
     v(callFunction, nullptr) \
     v(hasOwnPropertyFunction, nullptr) \
     v(createPrivateSymbol, nullptr) \
+    v(emptyPropertyNameEnumerator, nullptr) \
+    v(sentinelString, nullptr) \
+    v(createRemoteFunction, nullptr) \
+    v(isRemoteFunction, nullptr) \
 
 
 #define DECLARE_LINK_TIME_CONSTANT(name, code) name,

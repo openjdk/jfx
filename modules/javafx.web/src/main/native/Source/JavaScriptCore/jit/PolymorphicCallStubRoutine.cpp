@@ -28,6 +28,7 @@
 
 #if ENABLE(JIT)
 
+#include "AccessCase.h"
 #include "CallLinkInfo.h"
 #include "CodeBlock.h"
 #include "FullCodeOrigin.h"
@@ -45,7 +46,7 @@ PolymorphicCallNode::~PolymorphicCallNode()
 void PolymorphicCallNode::unlink(VM& vm)
 {
     if (m_callLinkInfo) {
-        dataLogLnIf(Options::dumpDisassembly(), "Unlinking polymorphic call at ", m_callLinkInfo->callReturnLocation(), ", bc#", m_callLinkInfo->codeOrigin().bytecodeIndex());
+        dataLogLnIf(Options::dumpDisassembly(), "Unlinking polymorphic call at ", m_callLinkInfo->doneLocation(), ", bc#", m_callLinkInfo->codeOrigin().bytecodeIndex());
         m_callLinkInfo->unlink(vm);
     }
 
@@ -67,7 +68,7 @@ PolymorphicCallStubRoutine::PolymorphicCallStubRoutine(
     const MacroAssemblerCodeRef<JITStubRoutinePtrTag>& codeRef, VM& vm, const JSCell* owner, CallFrame* callerFrame,
     CallLinkInfo& info, const Vector<PolymorphicCallCase>& cases,
     UniqueArray<uint32_t>&& fastCounts)
-    : GCAwareJITStubRoutine(codeRef, vm)
+    : GCAwareJITStubRoutine(codeRef)
     , m_variants(cases.size())
     , m_fastCounts(WTFMove(fastCounts))
 {
@@ -80,6 +81,7 @@ PolymorphicCallStubRoutine::PolymorphicCallStubRoutine(
             codeBlock->linkIncomingPolymorphicCall(callerFrame, m_callNodes.add(&info));
     }
     WTF::storeStoreFence();
+    makeGCAware(vm);
 }
 
 PolymorphicCallStubRoutine::~PolymorphicCallStubRoutine() { }

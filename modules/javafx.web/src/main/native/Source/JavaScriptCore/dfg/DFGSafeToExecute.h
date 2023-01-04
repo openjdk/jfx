@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -92,6 +92,9 @@ public:
         case MiscUse:
         case AnyIntUse:
         case DoubleRepAnyIntUse:
+        case NotDoubleUse:
+        case NeitherDoubleNorHeapBigIntNorStringUse:
+        case NeitherDoubleNorHeapBigIntUse:
             return;
 
         case KnownInt32Use:
@@ -270,8 +273,10 @@ bool safeToExecute(AbstractStateType& state, Graph& graph, Node* node, bool igno
     case IsCellWithType:
     case IsTypedArrayView:
     case TypeOf:
+    case ToBoolean:
     case LogicalNot:
     case ToString:
+    case FunctionToString:
     case NumberToStringWithValidRadixConstant:
     case StrCat:
     case CallStringConstructor:
@@ -283,6 +288,7 @@ bool safeToExecute(AbstractStateType& state, Graph& graph, Node* node, bool igno
     case ExtractCatchLocal:
     case AssertInBounds:
     case CheckInBounds:
+    case CheckInBoundsInt52:
     case ConstantStoragePointer:
     case Check:
     case CheckVarargs:
@@ -292,10 +298,6 @@ bool safeToExecute(AbstractStateType& state, Graph& graph, Node* node, bool igno
     case BooleanToNumber:
     case FiatInt52:
     case HasIndexedProperty:
-    case HasEnumerableIndexedProperty:
-    case GetEnumeratorStructurePname:
-    case GetEnumeratorGenericPname:
-    case ToIndexString:
     case CheckStructureImmediate:
     case GetMyArgumentByVal:
     case GetMyArgumentByValOutOfBounds:
@@ -359,8 +361,8 @@ bool safeToExecute(AbstractStateType& state, Graph& graph, Node* node, bool igno
 
     case FilterCallLinkStatus:
     case FilterGetByStatus:
-    case FilterPutByIdStatus:
-    case FilterInByIdStatus:
+    case FilterPutByStatus:
+    case FilterInByStatus:
     case FilterDeleteByStatus:
     case FilterCheckPrivateBrandStatus:
     case FilterSetPrivateBrandStatus:
@@ -368,9 +370,11 @@ bool safeToExecute(AbstractStateType& state, Graph& graph, Node* node, bool igno
         // to capture "profiling" at the point in control flow here the user put them.
         return false;
 
+    case EnumeratorGetByVal:
     case GetByVal:
     case GetIndexedPropertyStorage:
     case GetArrayLength:
+    case GetTypedArrayLengthAsInt52:
     case GetVectorLength:
     case ArrayPop:
     case StringCharAt:
@@ -383,6 +387,7 @@ bool safeToExecute(AbstractStateType& state, Graph& graph, Node* node, bool igno
 
     case CheckDetached:
     case GetTypedArrayByteOffset:
+    case GetTypedArrayByteOffsetAsInt52:
         return !(state.forNode(node->child1()).m_type & ~(SpecTypedArrayView));
 
     case PutByValDirect:
@@ -492,11 +497,17 @@ bool safeToExecute(AbstractStateType& state, Graph& graph, Node* node, bool igno
         return isSafe;
     }
 
+    case EnumeratorNextUpdateIndexAndMode:
+    // These technically don't have effects but they'll only ever follow a EnumeratorNextUpdateIndexAndMode so we might as well return false.
+    case EnumeratorNextExtractMode:
+    case EnumeratorNextExtractIndex:
+    case EnumeratorNextUpdatePropertyName:
     case ToThis:
     case CreateThis:
     case CreatePromise:
     case CreateGenerator:
     case CreateAsyncGenerator:
+    case ObjectAssign:
     case ObjectCreate:
     case ObjectKeys:
     case ObjectGetOwnPropertyNames:
@@ -546,6 +557,7 @@ bool safeToExecute(AbstractStateType& state, Graph& graph, Node* node, bool igno
     case RegExpExec:
     case RegExpExecNonGlobalOrSticky:
     case RegExpTest:
+    case RegExpTestInline:
     case RegExpMatchFast:
     case RegExpMatchFastGlobal:
     case Call:
@@ -590,6 +602,10 @@ bool safeToExecute(AbstractStateType& state, Graph& graph, Node* node, bool igno
     case NewStringObject:
     case InByVal:
     case InById:
+    case EnumeratorInByVal:
+    case EnumeratorHasOwnProperty:
+    case HasPrivateName:
+    case HasPrivateBrand:
     case HasOwnProperty:
     case PushWithScope:
     case CreateActivation:
@@ -632,12 +648,6 @@ bool safeToExecute(AbstractStateType& state, Graph& graph, Node* node, bool igno
     case NotifyWrite:
     case MultiPutByOffset:
     case MultiDeleteByOffset:
-    case GetEnumerableLength:
-    case HasEnumerableStructureProperty:
-    case HasEnumerableProperty:
-    case HasOwnStructureProperty:
-    case InStructureProperty:
-    case GetDirectPname:
     case GetPropertyEnumerator:
     case PhantomNewObject:
     case PhantomNewFunction:

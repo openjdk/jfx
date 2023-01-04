@@ -122,6 +122,38 @@ WTF_EXPORT_PRIVATE void fastEnableMiniMode();
 
 WTF_EXPORT_PRIVATE void fastDisableScavenger();
 
+class ForbidMallocUseForCurrentThreadScope {
+public:
+#if ASSERT_ENABLED
+    WTF_EXPORT_PRIVATE ForbidMallocUseForCurrentThreadScope();
+    WTF_EXPORT_PRIVATE ~ForbidMallocUseForCurrentThreadScope();
+#else
+    ForbidMallocUseForCurrentThreadScope() = default;
+    ~ForbidMallocUseForCurrentThreadScope() { }
+#endif
+
+    ForbidMallocUseForCurrentThreadScope(const ForbidMallocUseForCurrentThreadScope&) = delete;
+    ForbidMallocUseForCurrentThreadScope(ForbidMallocUseForCurrentThreadScope&&) = delete;
+    ForbidMallocUseForCurrentThreadScope& operator=(const ForbidMallocUseForCurrentThreadScope&) = delete;
+    ForbidMallocUseForCurrentThreadScope& operator=(ForbidMallocUseForCurrentThreadScope&&) = delete;
+};
+
+class DisableMallocRestrictionsForCurrentThreadScope {
+public:
+#if ASSERT_ENABLED
+    WTF_EXPORT_PRIVATE DisableMallocRestrictionsForCurrentThreadScope();
+    WTF_EXPORT_PRIVATE ~DisableMallocRestrictionsForCurrentThreadScope();
+#else
+    DisableMallocRestrictionsForCurrentThreadScope() = default;
+    ~DisableMallocRestrictionsForCurrentThreadScope() { }
+#endif
+
+    DisableMallocRestrictionsForCurrentThreadScope(const DisableMallocRestrictionsForCurrentThreadScope&) = delete;
+    DisableMallocRestrictionsForCurrentThreadScope(DisableMallocRestrictionsForCurrentThreadScope&&) = delete;
+    DisableMallocRestrictionsForCurrentThreadScope& operator=(const DisableMallocRestrictionsForCurrentThreadScope&) = delete;
+    DisableMallocRestrictionsForCurrentThreadScope& operator=(DisableMallocRestrictionsForCurrentThreadScope&&) = delete;
+};
+
 struct FastMallocStatistics {
     size_t reservedVMBytes;
     size_t committedVMBytes;
@@ -171,67 +203,13 @@ public:
 
     T* allocate(size_t count)
     {
-        return reinterpret_cast<T*>(fastMalloc(sizeof(T) * count));
+        return static_cast<T*>(fastMalloc(sizeof(T) * count));
     }
 
     void deallocate(T* pointer, size_t)
     {
         fastFree(pointer);
     }
-
-#if defined(__GLIBCXX__) && (!defined(_GLIBCXX_RELEASE) || _GLIBCXX_RELEASE < 6)
-    // This allocator also supports pre-C++11 STL allocator interface. This is a workaround for GCC < 6, which std::list
-    // does not support C++11 allocator. Note that _GLIBCXX_RELEASE is only defined after GCC 7 release. So currently
-    // this workaround is enabled in GCC 6 too.
-    // https://gcc.gnu.org/bugzilla/show_bug.cgi?id=55409
-
-    using pointer = value_type*;
-    using const_pointer = typename std::pointer_traits<pointer>::template rebind<value_type const>;
-    using void_pointer = typename std::pointer_traits<pointer>::template rebind<void>;
-    using const_void_pointer = typename std::pointer_traits<pointer>::template rebind<const void>;
-
-    using reference = T&;
-    using const_reference = const T&;
-
-    using difference_type = typename std::pointer_traits<pointer>::difference_type;
-    using size_type = std::make_unsigned_t<difference_type>;
-
-    template <class U> struct rebind {
-        using other = FastAllocator<U>;
-    };
-
-    value_type* allocate(std::size_t count, const_void_pointer)
-    {
-        return allocate(count);
-    }
-
-    template <class U, class ...Args>
-    void construct(U* p, Args&& ...args)
-    {
-        new (const_cast<void*>(static_cast<const void*>(p))) U(std::forward<Args>(args)...);
-    }
-
-    template <class U>
-    void destroy(U* p)
-    {
-        p->~U();
-    }
-
-    std::size_t max_size() const
-    {
-        return std::numeric_limits<size_type>::max();
-    }
-
-    FastAllocator<T> select_on_container_copy_construction() const
-    {
-        return *this;
-    }
-
-    using propagate_on_container_copy_assignment = std::false_type;
-    using propagate_on_container_move_assignment = std::false_type;
-    using propagate_on_container_swap = std::false_type;
-    using is_always_equal = std::is_empty<FastAllocator>;
-#endif // defined(__GLIBCXX__) && (!defined(_GLIBCXX_RELEASE) || _GLIBCXX_RELEASE < 6)
 };
 
 template<typename T, typename U> inline bool operator==(const FastAllocator<T>&, const FastAllocator<U>&) { return true; }
@@ -300,9 +278,11 @@ struct FastFree<T[]> {
 using WTF::fastSetMaxSingleAllocationSize;
 #endif
 
+using WTF::DisableMallocRestrictionsForCurrentThreadScope;
 using WTF::FastAllocator;
 using WTF::FastMalloc;
 using WTF::FastFree;
+using WTF::ForbidMallocUseForCurrentThreadScope;
 using WTF::isFastMallocEnabled;
 using WTF::fastCalloc;
 using WTF::fastFree;
@@ -366,11 +346,11 @@ using WTF::fastAlignedFree;
 public: \
     WTF_MAKE_FAST_ALLOCATED_IMPL \
 private: \
-using __thisIsHereToForceASemicolonAfterThisMacro = int
+using __thisIsHereToForceASemicolonAfterThisMacro UNUSED_TYPE_ALIAS = int
 
 #define WTF_MAKE_STRUCT_FAST_ALLOCATED \
     WTF_MAKE_FAST_ALLOCATED_IMPL \
-using __thisIsHereToForceASemicolonAfterThisMacro = int
+using __thisIsHereToForceASemicolonAfterThisMacro UNUSED_TYPE_ALIAS = int
 
 #if ENABLE(MALLOC_HEAP_BREAKDOWN)
 
@@ -409,14 +389,14 @@ public: \
     WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER_IMPL(classname) \
 private: \
     WTF_EXPORT_PRIVATE static WTF::DebugHeap& debugHeap(const char*); \
-using __thisIsHereToForceASemicolonAfterThisMacro = int
+using __thisIsHereToForceASemicolonAfterThisMacro UNUSED_TYPE_ALIAS = int
 
 #define WTF_MAKE_STRUCT_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(className) \
 private: \
     WTF_EXPORT_PRIVATE static WTF::DebugHeap& debugHeap(const char*); \
 public: \
     WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER_IMPL(className) \
-using __thisIsHereToForceASemicolonAfterThisMacro = int
+using __thisIsHereToForceASemicolonAfterThisMacro UNUSED_TYPE_ALIAS = int
 
 #else
 
@@ -427,11 +407,11 @@ using __thisIsHereToForceASemicolonAfterThisMacro = int
 public: \
     WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER_IMPL(classname) \
 private: \
-using __thisIsHereToForceASemicolonAfterThisMacro = int
+using __thisIsHereToForceASemicolonAfterThisMacro UNUSED_TYPE_ALIAS = int
 
 #define WTF_MAKE_STRUCT_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(className) \
 public: \
     WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER_IMPL(className) \
-using __thisIsHereToForceASemicolonAfterThisMacro = int
+using __thisIsHereToForceASemicolonAfterThisMacro UNUSED_TYPE_ALIAS = int
 
 #endif

@@ -54,9 +54,6 @@ public:
 
     size_t codeSize() final;
     bool finalize() final;
-    bool finalizeFunction() final;
-
-    bool finalizeCommon();
 
     std::unique_ptr<LinkBuffer> b3CodeLinkBuffer;
 

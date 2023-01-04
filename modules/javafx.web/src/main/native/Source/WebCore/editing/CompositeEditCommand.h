@@ -30,6 +30,7 @@
 #include "CSSPropertyNames.h"
 #include "UndoStep.h"
 #include <wtf/Vector.h>
+#include <wtf/WeakPtr.h>
 
 namespace WebCore {
 
@@ -83,7 +84,7 @@ public:
     void setRangeDeletedByUnapply(const VisiblePositionIndexRange&);
 
 #ifndef NDEBUG
-    virtual void getNodesInCommand(HashSet<Node*>&);
+    virtual void getNodesInCommand(HashSet<Ref<Node>>&);
 #endif
 
 private:
@@ -91,6 +92,7 @@ private:
 
     String label() const final;
     void didRemoveFromUndoManager() final { }
+    bool areRootEditabledElementsConnected();
 
     RefPtr<Document> m_document;
     VisibleSelection m_startingSelection;
@@ -102,7 +104,7 @@ private:
     EditAction m_editAction;
 };
 
-class CompositeEditCommand : public EditCommand {
+class CompositeEditCommand : public EditCommand, public CanMakeWeakPtr<CompositeEditCommand> {
 public:
     virtual ~CompositeEditCommand();
 
@@ -152,7 +154,7 @@ protected:
     void insertNodeAfter(Ref<Node>&&, Node& refChild);
     void insertNodeAt(Ref<Node>&&, const Position&);
     void insertNodeAtTabSpanPosition(Ref<Node>&&, const Position&);
-    void insertNodeBefore(Ref<Node>&&, Node& refChild, ShouldAssumeContentIsAlwaysEditable = DoNotAssumeContentIsAlwaysEditable);
+    bool insertNodeBefore(Ref<Node>&&, Node& refChild, ShouldAssumeContentIsAlwaysEditable = DoNotAssumeContentIsAlwaysEditable);
     void insertParagraphSeparatorAtPosition(const Position&, bool useDefaultParagraphElement = false, bool pasteBlockqutoeIntoUnquotedArea = false);
     void insertParagraphSeparator(bool useDefaultParagraphElement = false, bool pasteBlockqutoeIntoUnquotedArea = false);
     void insertLineBreak();
@@ -162,7 +164,7 @@ protected:
     void rebalanceWhitespaceAt(const Position&);
     void rebalanceWhitespaceOnTextSubstring(Text&, int startOffset, int endOffset);
     void prepareWhitespaceAtPositionForSplit(Position&);
-    bool canRebalance(const Position&) const;
+    RefPtr<Text> textNodeForRebalance(const Position&) const;
     bool shouldRebalanceLeadingWhitespaceFor(const String&) const;
     void removeNodeAttribute(Element&, const QualifiedName& attribute);
     void removeChildrenInRange(Node&, unsigned from, unsigned to);
@@ -204,7 +206,7 @@ protected:
     void cloneParagraphUnderNewElement(const Position& start, const Position& end, Node* outerNode, Element* blockElement);
     void cleanupAfterDeletion(VisiblePosition destination = VisiblePosition());
 
-    Optional<VisibleSelection> shouldBreakOutOfEmptyListItem() const;
+    VisibleSelection shouldBreakOutOfEmptyListItem() const;
     bool breakOutOfEmptyListItem();
     bool breakOutOfEmptyMailBlockquotedParagraph();
 
@@ -219,12 +221,5 @@ private:
 
     RefPtr<EditCommandComposition> m_composition;
 };
-
-inline CompositeEditCommand* toCompositeEditCommand(EditCommand* command)
-{
-    ASSERT(command);
-    ASSERT_WITH_SECURITY_IMPLICATION(command->isCompositeEditCommand());
-    return static_cast<CompositeEditCommand*>(command);
-}
 
 } // namespace WebCore

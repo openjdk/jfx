@@ -72,7 +72,7 @@ struct _GstFlowCombiner
   GQueue pads;
 
   GstFlowReturn last_ret;
-  volatile gint ref_count;
+  gint ref_count;
 };
 
 GST_DEBUG_CATEGORY_STATIC (flowcombiner_dbg);
@@ -99,7 +99,7 @@ gst_flow_combiner_new (void)
 
   g_queue_init (&combiner->pads);
   combiner->last_ret = GST_FLOW_OK;
-  combiner->ref_count = 1;
+  g_atomic_int_set (&combiner->ref_count, 1);
 
   /* Make sure debug category is initialised */
   gst_flow_combiner_get_type ();

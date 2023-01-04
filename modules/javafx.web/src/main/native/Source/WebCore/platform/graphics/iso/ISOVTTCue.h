@@ -39,10 +39,16 @@ namespace WebCore {
 // N bytes : CueSettingsBox : box : optional
 // N bytes : CuePayloadBox : box : required
 
-class WEBCORE_EXPORT ISOWebVTTCue final : public ISOBox {
+class ISOWebVTTCue final : public ISOBox {
 public:
     ISOWebVTTCue(const MediaTime& presentationTime, const MediaTime& duration);
-    ISOWebVTTCue(MediaTime&& presentationTime, MediaTime&& duration, String&& sourceID, String&& id, String&& originalStartTime, String&& settings, String&& cueText);
+    WEBCORE_EXPORT ISOWebVTTCue(MediaTime&& presentationTime, MediaTime&& duration, String&& cueID, String&& cueText, String&& settings = { }, String&& sourceID = { }, String&& originalStartTime = { });
+    ISOWebVTTCue(const ISOWebVTTCue&) = default;
+    WEBCORE_EXPORT ISOWebVTTCue(ISOWebVTTCue&&);
+    WEBCORE_EXPORT ~ISOWebVTTCue();
+
+    ISOWebVTTCue& operator=(const ISOWebVTTCue&) = default;
+    ISOWebVTTCue& operator=(ISOWebVTTCue&&) = default;
 
     static FourCC boxTypeName() { return "vttc"; }
 
@@ -70,51 +76,51 @@ public:
     }
 
     template <class Decoder>
-    static Optional<ISOWebVTTCue> decode(Decoder& decoder)
+    static std::optional<ISOWebVTTCue> decode(Decoder& decoder)
     {
-        Optional<MediaTime> presentationTime;
+        std::optional<MediaTime> presentationTime;
         decoder >> presentationTime;
         if (!presentationTime)
-            return WTF::nullopt;
+            return std::nullopt;
 
-        Optional<MediaTime> duration;
+        std::optional<MediaTime> duration;
         decoder >> duration;
         if (!duration)
-            return WTF::nullopt;
+            return std::nullopt;
 
-        Optional<String> sourceID;
+        std::optional<String> sourceID;
         decoder >> sourceID;
         if (!sourceID)
-            return WTF::nullopt;
+            return std::nullopt;
 
-        Optional<String> identifier;
+        std::optional<String> identifier;
         decoder >> identifier;
         if (!identifier)
-            return WTF::nullopt;
+            return std::nullopt;
 
-        Optional<String> originalStartTime;
+        std::optional<String> originalStartTime;
         decoder >> originalStartTime;
         if (!originalStartTime)
-            return WTF::nullopt;
+            return std::nullopt;
 
-        Optional<String> settings;
+        std::optional<String> settings;
         decoder >> settings;
         if (!settings)
-            return WTF::nullopt;
+            return std::nullopt;
 
-        Optional<String> cueText;
+        std::optional<String> cueText;
         decoder >> cueText;
         if (!cueText)
-            return WTF::nullopt;
+            return std::nullopt;
 
         return {{
             WTFMove(*presentationTime),
             WTFMove(*duration),
-            WTFMove(*sourceID),
             WTFMove(*identifier),
-            WTFMove(*originalStartTime),
+            WTFMove(*cueText),
             WTFMove(*settings),
-            WTFMove(*cueText)
+            WTFMove(*sourceID),
+            WTFMove(*originalStartTime)
         }};
     }
 

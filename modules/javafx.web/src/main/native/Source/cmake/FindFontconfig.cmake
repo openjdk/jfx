@@ -57,7 +57,7 @@ This will define the following variables in your project:
 find_package(PkgConfig QUIET)
 pkg_check_modules(PC_FONTCONFIG QUIET fontconfig)
 set(Fontconfig_COMPILE_OPTIONS ${PC_FONTCONFIG_CFLAGS_OTHER})
-set(Fontconfig_VERSION ${PC_FONTCONFIG_CFLAGS_VERSION})
+set(Fontconfig_VERSION ${PC_FONTCONFIG_VERSION})
 
 find_path(Fontconfig_INCLUDE_DIR
     NAMES fontconfig/fontconfig.h
@@ -103,7 +103,7 @@ if (Fontconfig_LIBRARY AND NOT TARGET Fontconfig::Fontconfig)
     )
 endif ()
 
-mark_as_advanced(Fontconfig_INCLUDE_DIR Fontconfig_LIBRARIES)
+mark_as_advanced(Fontconfig_INCLUDE_DIR Fontconfig_LIBRARY)
 
 if (Fontconfig_FOUND)
     set(Fontconfig_LIBRARIES ${Fontconfig_LIBRARY})

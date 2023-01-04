@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -48,17 +48,17 @@ public class BooleanTypeTest {
         //System.out.println("convert");
         Font font = null;
 
-        ParsedValue< String,Boolean> value = new ParsedValueImpl<String,Boolean>("true", BooleanConverter.getInstance());
+        ParsedValue< String,Boolean> value = new ParsedValueImpl<>("true", BooleanConverter.getInstance());
         Boolean expResult = Boolean.TRUE;
         Boolean result = value.convert(font);
         assertEquals(expResult, result);
 
-        value = value = new ParsedValueImpl<String,Boolean>("false", BooleanConverter.getInstance());
+        value = new ParsedValueImpl<>("false", BooleanConverter.getInstance());
         expResult = Boolean.FALSE;
         result = value.convert(font);
         assertEquals(expResult, result);
 
-        value = new ParsedValueImpl<String,Boolean>(null, BooleanConverter.getInstance());
+        value = new ParsedValueImpl<>(null, BooleanConverter.getInstance());
         expResult = Boolean.FALSE;
         result = value.convert(font);
         assertEquals(expResult, result);

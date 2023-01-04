@@ -24,6 +24,7 @@
 #pragma once
 
 #include "HTMLTextFormControlElement.h"
+#include "SelectionRestorationMode.h"
 
 namespace WebCore {
 
@@ -56,6 +57,7 @@ public:
     bool isValidValue(const String&) const;
 
     WEBCORE_EXPORT RefPtr<TextControlInnerTextElement> innerTextElement() const final;
+    WEBCORE_EXPORT RefPtr<TextControlInnerTextElement> innerTextElementCreatingShadowSubtreeIfNeeded() final;
     RenderStyle createInnerTextStyle(const RenderStyle&) final;
     void copyNonAttributePropertiesFromElement(const Element&) final;
 
@@ -110,10 +112,10 @@ private:
 
     void childrenChanged(const ChildChange&) final;
     void parseAttribute(const QualifiedName&, const AtomString&) final;
-    bool isPresentationAttribute(const QualifiedName&) const final;
-    void collectStyleForPresentationAttribute(const QualifiedName&, const AtomString&, MutableStyleProperties&) final;
+    bool hasPresentationalHintsForAttribute(const QualifiedName&) const final;
+    void collectPresentationalHintsForAttribute(const QualifiedName&, const AtomString&, MutableStyleProperties&) final;
     RenderPtr<RenderElement> createElementRenderer(RenderStyle&&, const RenderTreePosition&) final;
-    bool appendFormData(DOMFormData&, bool) final;
+    bool appendFormData(DOMFormData&) final;
     void reset() final;
     bool hasCustomFocusLogic() const final;
     int defaultTabIndex() const final;

@@ -1,6 +1,6 @@
 /*
  *  Copyright (C) 1999-2000 Harri Porten (porten@kde.org)
- *  Copyright (C) 2003-2021 Apple Inc. All rights reserved.
+ *  Copyright (C) 2003-2022 Apple Inc. All rights reserved.
  *  Copyright (C) 2007 Cameron Zwarich (cwzwarich@uwaterloo.ca)
  *  Copyright (C) 2007 Maks Orlovich
  *
@@ -64,13 +64,13 @@ public:
     static constexpr uintptr_t rareDataTag = 0x1;
 
     template<typename CellType, SubspaceAccess>
-    static IsoSubspace* subspaceFor(VM& vm)
+    static GCClient::IsoSubspace* subspaceFor(VM& vm)
     {
-        return &vm.functionSpace;
+        return &vm.functionSpace();
     }
 
     typedef JSCallee Base;
-    static constexpr unsigned StructureFlags = Base::StructureFlags | OverridesGetOwnPropertySlot | OverridesGetOwnSpecialPropertyNames | OverridesGetCallData;
+    static constexpr unsigned StructureFlags = Base::StructureFlags | OverridesGetOwnPropertySlot | OverridesGetOwnSpecialPropertyNames | OverridesGetCallData | OverridesPut;
 
     static size_t allocationSize(Checked<size_t> inlineCapacity)
     {
@@ -90,6 +90,9 @@ public:
     JS_EXPORT_PRIVATE String name(VM&);
     JS_EXPORT_PRIVATE String displayName(VM&);
     JS_EXPORT_PRIVATE const String calculatedDisplayName(VM&);
+    JS_EXPORT_PRIVATE JSString* toString(JSGlobalObject*);
+
+    JSString* asStringConcurrently(VM&) const;
 
     ExecutableBase* executable() const
     {
@@ -147,6 +150,7 @@ public:
     bool isBuiltinFunction() const;
     JS_EXPORT_PRIVATE bool isHostFunctionNonInline() const;
     bool isClassConstructorFunction() const;
+    bool isRemoteFunction(VM&) const;
 
     void setFunctionName(JSGlobalObject*, JSValue name);
 
@@ -185,7 +189,7 @@ protected:
 private:
     static JSFunction* createImpl(VM& vm, FunctionExecutable* executable, JSScope* scope, Structure* structure)
     {
-        JSFunction* function = new (NotNull, allocateCell<JSFunction>(vm.heap)) JSFunction(vm, executable, scope, structure);
+        JSFunction* function = new (NotNull, allocateCell<JSFunction>(vm)) JSFunction(vm, executable, scope, structure);
         ASSERT(function->structure(vm)->globalObject());
         function->finishCreation(vm);
         return function;

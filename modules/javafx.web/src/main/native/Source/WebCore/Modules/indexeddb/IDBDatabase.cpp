@@ -26,11 +26,8 @@
 #include "config.h"
 #include "IDBDatabase.h"
 
-#if ENABLE(INDEXED_DATABASE)
-
 #include "DOMStringList.h"
 #include "EventNames.h"
-#include "EventQueue.h"
 #include "IDBConnectionProxy.h"
 #include "IDBConnectionToServer.h"
 #include "IDBIndex.h"
@@ -50,7 +47,9 @@ WTF_MAKE_ISO_ALLOCATED_IMPL(IDBDatabase);
 
 Ref<IDBDatabase> IDBDatabase::create(ScriptExecutionContext& context, IDBClient::IDBConnectionProxy& connectionProxy, const IDBResultData& resultData)
 {
-    return adoptRef(*new IDBDatabase(context, connectionProxy, resultData));
+    auto database = adoptRef(*new IDBDatabase(context, connectionProxy, resultData));
+    database->suspendIfNeeded();
+    return database;
 }
 
 IDBDatabase::IDBDatabase(ScriptExecutionContext& context, IDBClient::IDBConnectionProxy& connectionProxy, const IDBResultData& resultData)
@@ -61,7 +60,6 @@ IDBDatabase::IDBDatabase(ScriptExecutionContext& context, IDBClient::IDBConnecti
     , m_eventNames(eventNames())
 {
     LOG(IndexedDB, "IDBDatabase::IDBDatabase - Creating database %s with version %" PRIu64 " connection %" PRIu64 " (%p)", m_info.name().utf8().data(), m_info.version(), m_databaseConnectionIdentifier, this);
-    suspendIfNeeded();
     m_connectionProxy->registerDatabaseConnection(*this);
 }
 
@@ -154,7 +152,7 @@ ExceptionOr<Ref<IDBObjectStore>> IDBDatabase::createObjectStore(const String& na
     if (m_info.hasObjectStore(name))
         return Exception { ConstraintError, "Failed to execute 'createObjectStore' on 'IDBDatabase': An object store with the specified name already exists."_s };
 
-    if (keyPath && parameters.autoIncrement && ((WTF::holds_alternative<String>(keyPath.value()) && WTF::get<String>(keyPath.value()).isEmpty()) || WTF::holds_alternative<Vector<String>>(keyPath.value())))
+    if (keyPath && parameters.autoIncrement && ((std::holds_alternative<String>(keyPath.value()) && std::get<String>(keyPath.value()).isEmpty()) || std::holds_alternative<Vector<String>>(keyPath.value())))
         return Exception { InvalidAccessError, "Failed to execute 'createObjectStore' on 'IDBDatabase': The autoIncrement option was set but the keyPath option was empty or an array."_s };
 
     // Install the new ObjectStore into the connection's metadata.
@@ -164,7 +162,7 @@ ExceptionOr<Ref<IDBObjectStore>> IDBDatabase::createObjectStore(const String& na
     return m_versionChangeTransaction->createObjectStore(info);
 }
 
-ExceptionOr<Ref<IDBTransaction>> IDBDatabase::transaction(StringOrVectorOfStrings&& storeNames, IDBTransactionMode mode)
+ExceptionOr<Ref<IDBTransaction>> IDBDatabase::transaction(StringOrVectorOfStrings&& storeNames, IDBTransactionMode mode, TransactionOptions options)
 {
     LOG(IndexedDB, "IDBDatabase::transaction");
 
@@ -177,10 +175,10 @@ ExceptionOr<Ref<IDBTransaction>> IDBDatabase::transaction(StringOrVectorOfString
         return Exception { InvalidStateError, "Failed to execute 'transaction' on 'IDBDatabase': The database connection is closing."_s };
 
     Vector<String> objectStores;
-    if (WTF::holds_alternative<Vector<String>>(storeNames))
-        objectStores = WTFMove(WTF::get<Vector<String>>(storeNames));
+    if (std::holds_alternative<Vector<String>>(storeNames))
+        objectStores = WTFMove(std::get<Vector<String>>(storeNames));
     else
-        objectStores.append(WTFMove(WTF::get<String>(storeNames)));
+        objectStores.append(WTFMove(std::get<String>(storeNames)));
 
     // It is valid for javascript to pass in a list of object store names with the same name listed twice,
     // so we need to put them all in a set to get a unique list.
@@ -202,7 +200,7 @@ ExceptionOr<Ref<IDBTransaction>> IDBDatabase::transaction(StringOrVectorOfString
     if (mode != IDBTransactionMode::Readonly && mode != IDBTransactionMode::Readwrite)
         return Exception { TypeError };
 
-    auto info = IDBTransactionInfo::clientTransaction(m_connectionProxy.get(), objectStores, mode);
+    auto info = IDBTransactionInfo::clientTransaction(m_connectionProxy.get(), objectStores, mode, options.durability);
 
     LOG(IndexedDBOperations, "IDB creating transaction: %s", info.loggingString().utf8().data());
     auto transaction = IDBTransaction::create(*this, info);
@@ -319,15 +317,8 @@ void IDBDatabase::stop()
 
     removeAllEventListeners();
 
-    Vector<IDBResourceIdentifier> transactionIdentifiers;
-    transactionIdentifiers.reserveInitialCapacity(m_activeTransactions.size());
-
-    for (auto& id : m_activeTransactions.keys())
-        transactionIdentifiers.uncheckedAppend(id);
-
-    for (auto& id : transactionIdentifiers) {
-        IDBTransaction* transaction = m_activeTransactions.get(id);
-        if (transaction)
+    for (auto& id : copyToVector(m_activeTransactions.keys())) {
+        if (auto* transaction = m_activeTransactions.get(id))
             transaction->stop();
     }
 
@@ -358,8 +349,9 @@ void IDBDatabase::didStartTransaction(IDBTransaction& transaction)
     ASSERT(!m_versionChangeTransaction);
     ASSERT(canCurrentThreadAccessThreadLocalData(originThread()));
 
-    // It is possible for the client to have aborted a transaction before the server replies back that it has started.
-    if (m_abortingTransactions.contains(transaction.info().identifier()))
+    // It is possible for the client to have aborted or committed a transaction
+    // before the server replies back that it has started.
+    if (m_abortingTransactions.contains(transaction.info().identifier()) || m_committingTransactions.contains(transaction.info().identifier()))
         return;
 
     m_activeTransactions.set(transaction.info().identifier(), &transaction);
@@ -474,7 +466,7 @@ void IDBDatabase::dispatchEvent(Event& event)
     LOG(IndexedDB, "IDBDatabase::dispatchEvent (%" PRIu64 ") (%p)", m_databaseConnectionIdentifier, this);
     ASSERT(canCurrentThreadAccessThreadLocalData(originThread()));
 
-    auto protectedThis = makeRef(*this);
+    Ref protectedThis { *this };
 
     EventTargetWithInlineData::dispatchEvent(event);
 
@@ -501,5 +493,3 @@ void IDBDatabase::didDeleteIndexInfo(const IDBIndexInfo& info)
 }
 
 } // namespace WebCore
-
-#endif // ENABLE(INDEXED_DATABASE)

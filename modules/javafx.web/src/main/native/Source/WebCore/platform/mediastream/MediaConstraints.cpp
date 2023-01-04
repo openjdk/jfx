@@ -38,7 +38,7 @@
 
 namespace WebCore {
 
-const String& StringConstraint::find(const WTF::Function<bool(const String&)>& filter) const
+const String& StringConstraint::find(const Function<bool(const String&)>& filter) const
 {
     for (auto& constraint : m_exact) {
         if (filter(constraint))
@@ -180,7 +180,7 @@ const MediaConstraint* FlattenedConstraint::find(MediaConstraintType type) const
     return nullptr;
 }
 
-void MediaTrackConstraintSetMap::forEach(WTF::Function<void(const MediaConstraint&)>&& callback) const
+void MediaTrackConstraintSetMap::forEach(Function<void(const MediaConstraint&)>&& callback) const
 {
     filter([callback = WTFMove(callback)] (const MediaConstraint& constraint) mutable {
         callback(constraint);
@@ -188,7 +188,7 @@ void MediaTrackConstraintSetMap::forEach(WTF::Function<void(const MediaConstrain
     });
 }
 
-void MediaTrackConstraintSetMap::filter(const WTF::Function<bool(const MediaConstraint&)>& callback) const
+void MediaTrackConstraintSetMap::filter(const Function<bool(const MediaConstraint&)>& callback) const
 {
     if (m_width && !m_width->isEmpty() && callback(*m_width))
         return;
@@ -217,7 +217,7 @@ void MediaTrackConstraintSetMap::filter(const WTF::Function<bool(const MediaCons
         return;
 }
 
-void MediaTrackConstraintSetMap::set(MediaConstraintType constraintType, Optional<IntConstraint>&& constraint)
+void MediaTrackConstraintSetMap::set(MediaConstraintType constraintType, std::optional<IntConstraint>&& constraint)
 {
     switch (constraintType) {
     case MediaConstraintType::Width:
@@ -248,7 +248,7 @@ void MediaTrackConstraintSetMap::set(MediaConstraintType constraintType, Optiona
     }
 }
 
-void MediaTrackConstraintSetMap::set(MediaConstraintType constraintType, Optional<DoubleConstraint>&& constraint)
+void MediaTrackConstraintSetMap::set(MediaConstraintType constraintType, std::optional<DoubleConstraint>&& constraint)
 {
     switch (constraintType) {
     case MediaConstraintType::AspectRatio:
@@ -277,7 +277,7 @@ void MediaTrackConstraintSetMap::set(MediaConstraintType constraintType, Optiona
     }
 }
 
-void MediaTrackConstraintSetMap::set(MediaConstraintType constraintType, Optional<BooleanConstraint>&& constraint)
+void MediaTrackConstraintSetMap::set(MediaConstraintType constraintType, std::optional<BooleanConstraint>&& constraint)
 {
     switch (constraintType) {
     case MediaConstraintType::EchoCancellation:
@@ -306,7 +306,7 @@ void MediaTrackConstraintSetMap::set(MediaConstraintType constraintType, Optiona
     }
 }
 
-void MediaTrackConstraintSetMap::set(MediaConstraintType constraintType, Optional<StringConstraint>&& constraint)
+void MediaTrackConstraintSetMap::set(MediaConstraintType constraintType, std::optional<StringConstraint>&& constraint)
 {
     switch (constraintType) {
     case MediaConstraintType::FacingMode:
@@ -375,7 +375,7 @@ static inline void addDefaultVideoConstraints(MediaTrackConstraintSetMap& videoC
     }
 }
 
-bool MediaConstraints::isConstraintSet(const WTF::Function<bool(const MediaTrackConstraintSetMap&)>& callback)
+bool MediaConstraints::isConstraintSet(const Function<bool(const MediaTrackConstraintSetMap&)>& callback)
 {
     if (callback(mandatoryConstraints))
         return true;

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -262,7 +262,7 @@ public class ObservableMapWrapper<K, V> implements ObservableMap<K, V>{
 
         @Override
         public Iterator<K> iterator() {
-            return new Iterator<K>() {
+            return new Iterator<>() {
 
                 private Iterator<Entry<K, V>> entryIt = backingMap.entrySet().iterator();
                 private K lastKey;
@@ -385,7 +385,7 @@ public class ObservableMapWrapper<K, V> implements ObservableMap<K, V>{
 
         @Override
         public Iterator<V> iterator() {
-            return new Iterator<V>() {
+            return new Iterator<>() {
 
                 private Iterator<Entry<K, V>> entryIt = backingMap.entrySet().iterator();
                 private K lastKey;
@@ -573,7 +573,7 @@ public class ObservableMapWrapper<K, V> implements ObservableMap<K, V>{
 
         @Override
         public Iterator<Entry<K, V>> iterator() {
-            return new Iterator<Entry<K, V>>() {
+            return new Iterator<>() {
 
                 private Iterator<Entry<K,V>> backingIt = backingMap.entrySet().iterator();
                 private K lastKey;

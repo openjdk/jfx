@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,6 +29,7 @@ import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.List;
 
+import javafx.beans.property.SimpleStringProperty;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -74,9 +75,9 @@ public class TableCellTest {
             }
         });
 
-        cell = new TableCell<String,String>();
+        cell = new TableCell<>();
         model = FXCollections.observableArrayList("Four", "Five", "Fear"); // "Flop", "Food", "Fizz"
-        table = new TableView<String>(model);
+        table = new TableView<>(model);
         editingColumn = new TableColumn<>("TEST");
 
         row = new TableRow<>();
@@ -192,7 +193,7 @@ public class TableCellTest {
     private int rt_29923_count = 0;
     @Test public void test_rt_29923() {
         // setup test
-        cell = new TableCellShim<String,String>() {
+        cell = new TableCellShim<>() {
             @Override public void updateItem(String item, boolean empty) {
                 super.updateItem(item, empty);
                 rt_29923_count++;
@@ -339,6 +340,54 @@ public class TableCellTest {
     @Test public void test_jdk_8151524() {
         TableCell cell = new TableCell();
         cell.setSkin(new TableCellSkin(cell));
+    }
+
+    /**
+     * The {@link TableRow} should never be null inside the {@link TableCell} during auto sizing.
+     * Note: The auto sizing is triggered as soon as the table has a scene - so when the {@link StageLoader} is created.
+     * See also: JDK-8251481
+     */
+    @Test
+    public void testRowIsNotNullWhenAutoSizing() {
+        TableColumn<String, String> tableColumn = new TableColumn<>();
+        tableColumn.setCellFactory(col -> new TableCell<>() {
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+
+                assertNotNull(getTableRow());
+            }
+        });
+        table.getColumns().add(tableColumn);
+
+        stageLoader = new StageLoader(table);
+    }
+
+    /**
+     * The item of the {@link TableRow} should not be null, when the {@link TableCell} is not empty.
+     * See also: JDK-8251483
+     */
+    @Test
+    public void testRowItemIsNotNullForNonEmptyCell() {
+        TableColumn<String, String> tableColumn = new TableColumn<>();
+        tableColumn.setCellValueFactory(cc -> new SimpleStringProperty(cc.getValue()));
+        tableColumn.setCellFactory(col -> new TableCell<>() {
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+
+                if (!empty) {
+                    assertNotNull(getTableRow().getItem());
+                }
+            }
+        });
+        table.getColumns().add(tableColumn);
+
+        stageLoader = new StageLoader(table);
+
+        // Will create a new row and cell.
+        table.getItems().add("newItem");
+        Toolkit.getToolkit().firePulse();
     }
 
     /**
@@ -541,6 +590,28 @@ public class TableCellTest {
     }
 
     @Test
+    public void testEditStartOnCellUpdatesControl() {
+        setupForEditing();
+        int editingRow = 1;
+        cell.updateIndex(editingRow);
+        TablePosition<?, ?> editingCell = new TablePosition<>(table, editingRow, editingColumn);
+        cell.startEdit();
+        assertEquals("table must be editing at", editingCell, table.getEditingCell());
+    }
+
+    @Test
+    public void testEditStartOnCellNoColumnUpdatesControl() {
+        int editingRow = 1;
+        // note: cell index must be != -1 because table.edit(-1, null) sets editingCell to null
+        cell.updateIndex(editingRow);
+        setupForcedEditing(table, null);
+        TablePosition<?, ?> editingCell = new TablePosition<>(table, editingRow, null);
+        cell.startEdit();
+        assertTrue(cell.isEditing());
+        assertEquals("table must be editing at", editingCell, table.getEditingCell());
+    }
+
+    @Test
     public void testEditStartDoesNotFireEventWhileEditing() {
         setupForEditing();
         cell.updateIndex(1);
@@ -578,16 +649,35 @@ public class TableCellTest {
     }
 
 //------------- commitEdit
- // fix of JDK-8271474 changed the implementation of how the editing location is evaluated
+
+    @Test
+    public void testCommitEditMustNotFireCancel() {
+        setupForEditing();
+        // JDK-8187307: handler that resets control's editing state
+        editingColumn.setOnEditCommit(e -> {
+            table.getItems().set(e.getTablePosition().getRow(), e.getNewValue());
+            table.edit(-1, null);
+        });
+        int editingRow = 1;
+        cell.updateIndex(editingRow);
+        table.edit(editingRow, editingColumn);
+        List<CellEditEvent<?, ?>> events = new ArrayList<>();
+        editingColumn.setOnEditCancel(events::add);
+        String value = "edited";
+        cell.commitEdit(value);
+        assertEquals("sanity: value committed", value, table.getItems().get(editingRow));
+        assertEquals("commit must not have fired editCancel", 0, events.size());
+    }
+
+
+// fix of JDK-8271474 changed the implementation of how the editing location is evaluated
 
      @Test
      public void testEditCommitEvent() {
          setupForEditing();
          int editingIndex = 1;
          cell.updateIndex(editingIndex);
-         // FIXME JDK-8187474
-         // should use cell.startEdit for consistency with the following tests
-         table.edit(editingIndex, editingColumn);
+         cell.startEdit();
          TablePosition<?, ?> editingPosition = table.getEditingCell();
          List<CellEditEvent<?, ?>> events = new ArrayList<>();
          editingColumn.setOnEditCommit(events::add);
@@ -701,6 +791,28 @@ public class TableCellTest {
          cell.commitEdit("edited");
      }
 
+     @Test
+     public void testStartEditOffRangeMustNotFireStartEdit() {
+         setupForEditing();
+         int editingRow = table.getItems().size();
+         cell.updateIndex(editingRow);
+         List<CellEditEvent<?, ?>> events = new ArrayList<>();
+         editingColumn.addEventHandler(TableColumn.editStartEvent(), events::add);
+         cell.startEdit();
+         assertFalse("sanity: off-range cell must not be editing", cell.isEditing());
+         assertEquals("must not fire editStart", 0, events.size());
+     }
+
+     @Test
+     public void testStartEditOffRangeMustNotUpdateEditingLocation() {
+         setupForEditing();
+         int editingRow = table.getItems().size();
+         cell.updateIndex(editingRow);
+         cell.startEdit();
+         assertFalse("sanity: off-range cell must not be editing", cell.isEditing());
+         assertNull("table editing location must not be updated", table.getEditingCell());
+     }
+
  //--------- test the test setup
 
      @Test
@@ -748,7 +860,7 @@ public class TableCellTest {
      * Test that cell.cancelEdit can switch table editing off
      * even if a subclass violates its contract.
      *
-     * For details, see https://bugs.openjdk.java.net/browse/JDK-8265206
+     * For details, see https://bugs.openjdk.org/browse/JDK-8265206
      *
      */
     @Test

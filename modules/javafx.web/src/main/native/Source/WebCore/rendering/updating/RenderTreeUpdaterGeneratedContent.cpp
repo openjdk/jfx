@@ -62,11 +62,11 @@ void RenderTreeUpdater::GeneratedContent::updateQuotesUpTo(RenderQuote* lastQuot
         auto& quote = *it;
         // Quote character depends on quote depth so we chain the updates.
         quote.updateRenderer(m_updater.m_builder, m_previousUpdatedQuote.get());
-        m_previousUpdatedQuote = makeWeakPtr(quote);
+        m_previousUpdatedQuote = quote;
         if (&quote == lastQuote)
             return;
     }
-    ASSERT(!lastQuote);
+    ASSERT(!lastQuote || m_updater.m_builder.hasBrokenContinuation());
 }
 
 static bool elementIsTargetedByKeyframeEffectRequiringPseudoElement(const Element* element, PseudoId pseudoId)
@@ -121,7 +121,7 @@ void RenderTreeUpdater::GeneratedContent::updatePseudoElement(Element& current, 
         return nullptr;
     }();
 
-    if (!needsPseudoElement(update) && (!pseudoElement || !elementIsTargetedByKeyframeEffectRequiringPseudoElement(pseudoElement, pseudoId))) {
+    if (!needsPseudoElement(update) && !elementIsTargetedByKeyframeEffectRequiringPseudoElement(&current, pseudoId)) {
         if (pseudoElement) {
             if (pseudoId == PseudoId::Before)
                 removeBeforePseudoElement(current, m_updater.m_builder);
@@ -170,6 +170,29 @@ void RenderTreeUpdater::GeneratedContent::updatePseudoElement(Element& current, 
             updateQuotesUpTo(&child);
     }
     m_updater.m_builder.updateAfterDescendants(*pseudoElementRenderer);
+}
+
+void RenderTreeUpdater::GeneratedContent::updateBackdropRenderer(RenderElement& renderer)
+{
+    // ::backdrop does not inherit style, hence using the view style as parent style
+    auto style = renderer.getCachedPseudoStyle(PseudoId::Backdrop, &renderer.view().style());
+
+    // Destroy ::backdrop if new element no longer is in top layer, or if it is hidden
+    if ((renderer.element() && !renderer.element()->isInTopLayer()) || !style || style->display() == DisplayType::None) {
+        if (WeakPtr backdropRenderer = renderer.backdropRenderer())
+            m_updater.m_builder.destroy(*backdropRenderer);
+        return;
+    }
+
+    auto newStyle = RenderStyle::clone(*style);
+    if (auto backdropRenderer = renderer.backdropRenderer())
+        backdropRenderer->setStyle(WTFMove(newStyle));
+    else {
+        auto newBackdropRenderer = WebCore::createRenderer<RenderBlockFlow>(renderer.document(), WTFMove(newStyle));
+        newBackdropRenderer->initializeStyle();
+        renderer.setBackdropRenderer(*newBackdropRenderer.get());
+        m_updater.m_builder.attach(renderer, WTFMove(newBackdropRenderer), renderer.firstChild());
+    }
 }
 
 bool RenderTreeUpdater::GeneratedContent::needsPseudoElement(const Style::ElementUpdate* update)

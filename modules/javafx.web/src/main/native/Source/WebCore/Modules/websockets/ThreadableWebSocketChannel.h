@@ -33,6 +33,7 @@
 #include "WebSocketIdentifier.h"
 #include <wtf/Forward.h>
 #include <wtf/Noncopyable.h>
+#include <wtf/ObjectIdentifier.h>
 #include <wtf/URL.h>
 
 namespace JSC {
@@ -47,7 +48,10 @@ class ResourceRequest;
 class ResourceResponse;
 class ScriptExecutionContext;
 class SocketProvider;
+class WebSocketChannel;
 class WebSocketChannelClient;
+
+using WebSocketChannelIdentifier = ObjectIdentifier<WebSocketChannel>;
 
 class ThreadableWebSocketChannel {
     WTF_MAKE_NONCOPYABLE(ThreadableWebSocketChannel);
@@ -80,7 +84,7 @@ public:
     virtual void suspend() = 0;
     virtual void resume() = 0;
 
-    virtual unsigned long progressIdentifier() const = 0;
+    virtual WebSocketChannelIdentifier progressIdentifier() const = 0;
     virtual bool hasCreatedHandshake() const = 0;
     virtual bool isConnected() const = 0;
     using CookieGetter = Function<String(const URL&)>;
@@ -96,8 +100,8 @@ protected:
         URL url;
         bool areCookiesAllowed { true };
     };
-    static Optional<ValidatedURL> validateURL(Document&, const URL&);
-    WEBCORE_EXPORT static Optional<ResourceRequest> webSocketConnectRequest(Document&, const URL&);
+    static std::optional<ValidatedURL> validateURL(Document&, const URL&);
+    WEBCORE_EXPORT static std::optional<ResourceRequest> webSocketConnectRequest(Document&, const URL&);
 
     WebSocketIdentifier m_identifier;
 };

@@ -46,8 +46,7 @@ namespace WebCore {
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(TextTrackCueGeneric);
 
-// This default value must be the same as the one specified in mediaControlsApple.css for -webkit-media-controls-closed-captions-container
-static constexpr int DEFAULTCAPTIONFONTSIZE = 10;
+static constexpr int DEFAULTCAPTIONFONTSIZE = 22; // Keep in sync with `font-size` in `video::-webkit-media-text-track-display`.
 
 class TextTrackCueGenericBoxElement final : public VTTCueBox {
     WTF_MAKE_ISO_ALLOCATED_INLINE(TextTrackCueGenericBoxElement);
@@ -162,7 +161,9 @@ void TextTrackCueGenericBoxElement::applyCSSProperties(const IntSize& videoSize)
 
 Ref<TextTrackCueGeneric> TextTrackCueGeneric::create(ScriptExecutionContext& context, const MediaTime& start, const MediaTime& end, const String& content)
 {
-    return adoptRef(*new TextTrackCueGeneric(downcast<Document>(context), start, end, content));
+    auto cue = adoptRef(*new TextTrackCueGeneric(downcast<Document>(context), start, end, content));
+    cue->suspendIfNeeded();
+    return cue;
 }
 
 TextTrackCueGeneric::TextTrackCueGeneric(Document& document, const MediaTime& start, const MediaTime& end, const String& content)
@@ -193,10 +194,10 @@ ExceptionOr<void> TextTrackCueGeneric::setPosition(const LineAndPositionSetting&
 
 void TextTrackCueGeneric::setFontSize(int fontSize, const IntSize& videoSize, bool important)
 {
-    if (!hasDisplayTree() || !fontSize)
+    if (!fontSize)
         return;
 
-    if (important || !baseFontSizeRelativeToVideoHeight()) {
+    if (important || !hasDisplayTree() || !baseFontSizeRelativeToVideoHeight()) {
         VTTCue::setFontSize(fontSize, videoSize, important);
         return;
     }

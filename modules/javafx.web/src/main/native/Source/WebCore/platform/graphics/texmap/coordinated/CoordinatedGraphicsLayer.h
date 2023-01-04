@@ -97,6 +97,7 @@ public:
     void setShowRepaintCounter(bool) override;
     bool shouldDirectlyCompositeImage(Image*) const override;
     void setContentsToPlatformLayer(PlatformLayer*, ContentsLayerPurpose) override;
+    void setContentsDisplayDelegate(RefPtr<GraphicsLayerContentsDisplayDelegate>&&, ContentsLayerPurpose) override;
     void setMaskLayer(RefPtr<GraphicsLayer>&&) override;
     void setReplicatedByLayer(RefPtr<GraphicsLayer>&&) override;
     void setNeedsDisplay() override;
@@ -114,7 +115,7 @@ public:
     void suspendAnimations(MonotonicTime) override;
     void resumeAnimations() override;
     bool usesContentsLayer() const override;
-    void dumpAdditionalProperties(WTF::TextStream&, LayerTreeAsTextBehavior) const override;
+    void dumpAdditionalProperties(WTF::TextStream&, OptionSet<LayerTreeAsTextOptions>) const override;
 
 #if USE(NICOSIA)
     PlatformLayer* platformLayer() const override;

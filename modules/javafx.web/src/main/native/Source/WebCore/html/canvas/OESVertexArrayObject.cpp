@@ -28,7 +28,6 @@
 
 #if ENABLE(WEBGL)
 
-#include "ExtensionsGL.h"
 #include "WebGLRenderingContext.h"
 #include <wtf/IsoMallocInlines.h>
 #include <wtf/Lock.h>
@@ -63,7 +62,7 @@ void OESVertexArrayObject::deleteVertexArrayOES(WebGLVertexArrayObjectOES* array
     if (!m_context)
         return;
 
-    auto locker = holdLock(m_context->objectGraphLock());
+    Locker locker { m_context->objectGraphLock() };
 
     if (!arrayObject || m_context->isContextLost())
         return;
@@ -80,7 +79,7 @@ GCGLboolean OESVertexArrayObject::isVertexArrayOES(WebGLVertexArrayObjectOES* ar
         return false;
 
     return arrayObject && !m_context->isContextLost() && arrayObject->hasEverBeenBound()
-        && m_context->graphicsContextGL()->getExtensions().isVertexArrayOES(arrayObject->object());
+        && m_context->graphicsContextGL()->isVertexArray(arrayObject->object());
 }
 
 void OESVertexArrayObject::bindVertexArrayOES(WebGLVertexArrayObjectOES* arrayObject)
@@ -88,7 +87,7 @@ void OESVertexArrayObject::bindVertexArrayOES(WebGLVertexArrayObjectOES* arrayOb
     if (!m_context)
         return;
 
-    auto locker = holdLock(m_context->objectGraphLock());
+    Locker locker { m_context->objectGraphLock() };
 
     if (m_context->isContextLost())
         return;
@@ -98,14 +97,14 @@ void OESVertexArrayObject::bindVertexArrayOES(WebGLVertexArrayObjectOES* arrayOb
         return;
     }
 
-    auto& extensions = m_context->graphicsContextGL()->getExtensions();
+    auto* contextGL = m_context->graphicsContextGL();
     auto& context = downcast<WebGLRenderingContext>(*m_context);
     if (arrayObject && !arrayObject->isDefaultObject() && arrayObject->object()) {
-        extensions.bindVertexArrayOES(arrayObject->object());
+        contextGL->bindVertexArray(arrayObject->object());
         arrayObject->setHasEverBeenBound();
         context.setBoundVertexArrayObject(locker, arrayObject);
     } else {
-        extensions.bindVertexArrayOES(0);
+        contextGL->bindVertexArray(0);
         context.setBoundVertexArrayObject(locker, nullptr);
     }
 }

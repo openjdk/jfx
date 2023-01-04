@@ -28,6 +28,7 @@
 #include "IntSize.h"
 #include <wtf/HashSet.h>
 #include <wtf/TypeCasts.h>
+#include <wtf/WeakHashSet.h>
 
 namespace WebCore {
 
@@ -49,9 +50,16 @@ public:
 
     virtual bool isCanvasObserverProxy() const { return false; }
 
-    virtual void canvasChanged(CanvasBase&, const FloatRect& changedRect) = 0;
+    virtual void canvasChanged(CanvasBase&, const std::optional<FloatRect>& changedRect) = 0;
     virtual void canvasResized(CanvasBase&) = 0;
     virtual void canvasDestroyed(CanvasBase&) = 0;
+};
+
+class CanvasDisplayBufferObserver : public CanMakeWeakPtr<CanvasDisplayBufferObserver> {
+public:
+    virtual ~CanvasDisplayBufferObserver() = default;
+
+    virtual void canvasDisplayBufferPrepared(CanvasBase&) = 0;
 };
 
 class CanvasBase {
@@ -89,21 +97,25 @@ public:
 
     void addObserver(CanvasObserver&);
     void removeObserver(CanvasObserver&);
-    void notifyObserversCanvasChanged(const FloatRect&);
+    void notifyObserversCanvasChanged(const std::optional<FloatRect>&);
     void notifyObserversCanvasResized();
     void notifyObserversCanvasDestroyed(); // Must be called in destruction before clearing m_context.
+    void addDisplayBufferObserver(CanvasDisplayBufferObserver&);
+    void removeDisplayBufferObserver(CanvasDisplayBufferObserver&);
+    void notifyObserversCanvasDisplayBufferPrepared();
+    bool hasDisplayBufferObservers() const { return !m_displayBufferObservers.computesEmpty(); }
 
     HashSet<Element*> cssCanvasClients() const;
 
     virtual GraphicsContext* drawingContext() const;
     virtual GraphicsContext* existingDrawingContext() const;
 
-    virtual void didDraw(const FloatRect&) = 0;
+    virtual void didDraw(const std::optional<FloatRect>&) = 0;
 
     virtual Image* copiedImage() const = 0;
     virtual void clearCopiedImage() const = 0;
 
-    bool callTracingActive() const;
+    bool hasActiveInspectorCanvasCallTracer() const;
 
 protected:
     explicit CanvasBase(IntSize);
@@ -132,6 +144,7 @@ private:
     bool m_didNotifyObserversCanvasDestroyed { false };
 #endif
     HashSet<CanvasObserver*> m_observers;
+    WeakHashSet<CanvasDisplayBufferObserver> m_displayBufferObservers;
 };
 
 } // namespace WebCore

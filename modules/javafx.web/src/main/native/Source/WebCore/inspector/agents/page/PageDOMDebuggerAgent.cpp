@@ -31,7 +31,6 @@
 #include "InspectorDOMAgent.h"
 #include "InstrumentingAgents.h"
 #include "Node.h"
-#include <wtf/Optional.h>
 
 namespace WebCore {
 
@@ -158,7 +157,7 @@ void PageDOMDebuggerAgent::frameDocumentUpdated(Frame& frame)
 }
 
 
-static Optional<size_t> calculateDistance(Node& child, Node& ancestor)
+static std::optional<size_t> calculateDistance(Node& child, Node& ancestor)
 {
     size_t distance = 0;
 
@@ -168,7 +167,7 @@ static Optional<size_t> calculateDistance(Node& child, Node& ancestor)
 
         current = InspectorDOMAgent::innerParentNode(current);
         if (!current)
-            return WTF::nullopt;
+            return std::nullopt;
     }
 
     return distance;
@@ -182,7 +181,7 @@ void PageDOMDebuggerAgent::willInsertDOMNode(Node& parent)
     if (m_domSubtreeModifiedBreakpoints.isEmpty())
         return;
 
-    Optional<size_t> closestDistance;
+    std::optional<size_t> closestDistance;
     RefPtr<JSC::Breakpoint> closestBreakpoint;
     Node* closestBreakpointOwner = nullptr;
 
@@ -218,9 +217,9 @@ void PageDOMDebuggerAgent::willRemoveDOMNode(Node& node)
     if (m_domNodeRemovedBreakpoints.isEmpty() && m_domSubtreeModifiedBreakpoints.isEmpty())
         return;
 
-    Optional<size_t> closestDistance;
+    std::optional<size_t> closestDistance;
     RefPtr<JSC::Breakpoint> closestBreakpoint;
-    Optional<Protocol::DOMDebugger::DOMBreakpointType> closestBreakpointType;
+    std::optional<Protocol::DOMDebugger::DOMBreakpointType> closestBreakpointType;
     Node* closestBreakpointOwner = nullptr;
 
     for (auto [breakpointOwner, breakpoint] : m_domNodeRemovedBreakpoints) {
@@ -275,6 +274,13 @@ void PageDOMDebuggerAgent::didRemoveDOMNode(Node& node)
     m_domSubtreeModifiedBreakpoints.removeIf(nodeContainsBreakpointOwner);
     m_domAttributeModifiedBreakpoints.removeIf(nodeContainsBreakpointOwner);
     m_domNodeRemovedBreakpoints.removeIf(nodeContainsBreakpointOwner);
+}
+
+void PageDOMDebuggerAgent::willDestroyDOMNode(Node& node)
+{
+    // This can be called in response to GC.
+    // DOM Node destruction should be treated as if the node was removed from the DOM tree.
+    didRemoveDOMNode(node);
 }
 
 void PageDOMDebuggerAgent::willModifyDOMAttr(Element& element)

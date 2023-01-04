@@ -41,7 +41,7 @@ struct BackForwardItemIdentifier {
     explicit operator bool() const { return processIdentifier && itemIdentifier; }
 
     template<class Encoder> void encode(Encoder&) const;
-    template<class Decoder> static Optional<BackForwardItemIdentifier> decode(Decoder&);
+    template<class Decoder> static std::optional<BackForwardItemIdentifier> decode(Decoder&);
 
     String string() const { return makeString(processIdentifier.toUInt64(), '-', itemIdentifier.toUInt64()); }
 
@@ -78,21 +78,21 @@ void BackForwardItemIdentifier::encode(Encoder& encoder) const
 }
 
 template<class Decoder>
-Optional<BackForwardItemIdentifier> BackForwardItemIdentifier::decode(Decoder& decoder)
+std::optional<BackForwardItemIdentifier> BackForwardItemIdentifier::decode(Decoder& decoder)
 {
-    Optional<ProcessIdentifier> processIdentifier;
+    std::optional<ProcessIdentifier> processIdentifier;
     decoder >> processIdentifier;
     if (!processIdentifier)
-        return WTF::nullopt;
+        return std::nullopt;
 
-    Optional<ObjectIdentifier<ItemIdentifierType>> itemIdentifier;
+    std::optional<ObjectIdentifier<ItemIdentifierType>> itemIdentifier;
     decoder >> itemIdentifier;
     if (!itemIdentifier)
-        return WTF::nullopt;
+        return std::nullopt;
 
     BackForwardItemIdentifier result = { WTFMove(*processIdentifier), WTFMove(*itemIdentifier) };
     if (!result.isValid())
-        return WTF::nullopt;
+        return std::nullopt;
     return result;
 }
 
@@ -114,9 +114,9 @@ struct BackForwardItemIdentifierHash {
 template<> struct HashTraits<WebCore::BackForwardItemIdentifier> : GenericHashTraits<WebCore::BackForwardItemIdentifier> {
     static WebCore::BackForwardItemIdentifier emptyValue() { return { }; }
 
-    static void constructDeletedValue(WebCore::BackForwardItemIdentifier& slot) { slot.processIdentifier = ObjectIdentifier<WebCore::ProcessIdentifierType>(HashTableDeletedValue); }
+    static void constructDeletedValue(WebCore::BackForwardItemIdentifier& slot) { new (NotNull, &slot.processIdentifier) WebCore::ProcessIdentifier(WTF::HashTableDeletedValue); }
 
-    static bool isDeletedValue(const WebCore::BackForwardItemIdentifier& slot) { return slot.processIdentifier.toUInt64() == std::numeric_limits<uint64_t>::max(); }
+    static bool isDeletedValue(const WebCore::BackForwardItemIdentifier& slot) { return slot.processIdentifier.isHashTableDeletedValue(); }
 };
 
 template<> struct DefaultHash<WebCore::BackForwardItemIdentifier> : BackForwardItemIdentifierHash { };

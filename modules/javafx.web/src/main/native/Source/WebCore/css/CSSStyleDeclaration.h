@@ -66,7 +66,7 @@ public:
     // The CSSValue returned by this function should not be exposed to the web as it may be used by multiple documents at the same time.
     virtual RefPtr<CSSValue> getPropertyCSSValueInternal(CSSPropertyID) = 0;
     virtual String getPropertyValueInternal(CSSPropertyID) = 0;
-    virtual ExceptionOr<bool> setPropertyInternal(CSSPropertyID, const String& value, bool important) = 0;
+    virtual ExceptionOr<void> setPropertyInternal(CSSPropertyID, const String& value, bool important) = 0;
 
     virtual Ref<MutableStyleProperties> copyProperties() const = 0;
 
@@ -74,12 +74,29 @@ public:
 
     virtual const Settings* settings() const;
 
-    // Bindings support.
-    Optional<Variant<String, double>> namedItem(const AtomString&);
-    ExceptionOr<void> setNamedItem(const AtomString& name, String value, bool& propertySupported);
-    Vector<AtomString> supportedPropertyNames() const;
+    // FIXME: It would be more efficient, by virtue of avoiding the text transformation and hash lookup currently
+    // required in the implementation, if we could could smuggle the CSSPropertyID through the bindings, perhaps
+    // by encoding it into the HashTableValue and then passing it together with the PropertyName.
 
+    // Shared implementation for all properties that match https://drafts.csswg.org/cssom/#dom-cssstyledeclaration-camel_cased_attribute.
+    String propertyValueForCamelCasedIDLAttribute(const AtomString&);
+    ExceptionOr<void> setPropertyValueForCamelCasedIDLAttribute(const AtomString&, const String&);
+
+    // Shared implementation for all properties that match https://drafts.csswg.org/cssom/#dom-cssstyledeclaration-webkit_cased_attribute.
+    String propertyValueForWebKitCasedIDLAttribute(const AtomString&);
+    ExceptionOr<void> setPropertyValueForWebKitCasedIDLAttribute(const AtomString&, const String&);
+
+    // Shared implementation for all properties that match https://drafts.csswg.org/cssom/#dom-cssstyledeclaration-dashed_attribute.
+    String propertyValueForDashedIDLAttribute(const AtomString&);
+    ExceptionOr<void> setPropertyValueForDashedIDLAttribute(const AtomString&, const String&);
+
+    // Shared implementation for all properties that match non-standard Epub-cased.
+    String propertyValueForEpubCasedIDLAttribute(const AtomString&);
+    ExceptionOr<void> setPropertyValueForEpubCasedIDLAttribute(const AtomString&, const String&);
+
+    // FIXME: This needs to pass in a Settings& to work correctly.
     static CSSPropertyID getCSSPropertyIDFromJavaScriptPropertyName(const AtomString&);
+
 protected:
     CSSStyleDeclaration() = default;
 };

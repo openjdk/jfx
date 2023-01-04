@@ -29,6 +29,7 @@
 #include "CachedResourceHandle.h"
 #include "CachedResourceRequest.h"
 #include "ContentSecurityPolicy.h"
+#include "Document.h"
 #include "KeepaliveRequestTracker.h"
 #include "ResourceTimingInformation.h"
 #include "Timer.h"
@@ -136,8 +137,7 @@ public:
 
     Frame* frame() const; // Can be null
     Document* document() const { return m_document.get(); } // Can be null
-    void setDocument(Document* document) { m_document = makeWeakPtr(document); }
-    DocumentLoader* documentLoader() const { return m_documentLoader; }
+    void setDocument(Document* document) { m_document = document; }
     void clearDocumentLoader() { m_documentLoader = nullptr; }
 
     void loadDone(LoadCompletionType, bool shouldPerformPostLoadActions = true);
@@ -156,16 +156,14 @@ public:
     void warnUnusedPreloads();
     void stopUnusedPreloadsTimer();
 
-    bool updateRequestAfterRedirection(CachedResource::Type, ResourceRequest&, const ResourceLoaderOptions&);
-    bool allowedByContentSecurityPolicy(CachedResource::Type, const URL&, const ResourceLoaderOptions&, ContentSecurityPolicy::RedirectResponseReceived) const;
+    bool updateRequestAfterRedirection(CachedResource::Type, ResourceRequest&, const ResourceLoaderOptions&, const URL& preRedirectURL);
+    bool allowedByContentSecurityPolicy(CachedResource::Type, const URL&, const ResourceLoaderOptions&, ContentSecurityPolicy::RedirectResponseReceived, const URL& preRedirectURL = URL()) const;
 
     static const ResourceLoaderOptions& defaultCachedResourceOptions();
 
     void documentDidFinishLoadEvent();
 
     ResourceTimingInformation& resourceTimingInformation() { return m_resourceTimingInfo; }
-
-    bool isAlwaysOnLoggingAllowed() const;
 
     KeepaliveRequestTracker& keepaliveRequestTracker() { return m_keepaliveRequestTracker; }
 
@@ -189,7 +187,7 @@ private:
     RevalidationPolicy determineRevalidationPolicy(CachedResource::Type, CachedResourceRequest&, CachedResource* existingResource, ForPreload, ImageLoading) const;
 
     bool shouldUpdateCachedResourceWithCurrentRequest(const CachedResource&, const CachedResourceRequest&);
-    CachedResourceHandle<CachedResource> updateCachedResourceWithCurrentRequest(const CachedResource&, CachedResourceRequest&&, const PAL::SessionID&, const CookieJar&, const Settings&);
+    CachedResourceHandle<CachedResource> updateCachedResourceWithCurrentRequest(const CachedResource&, CachedResourceRequest&&, PAL::SessionID, const CookieJar&, const Settings&);
 
     bool shouldContinueAfterNotifyingLoadedFromMemoryCache(const CachedResourceRequest&, CachedResource&, ResourceError&);
     bool checkInsecureContent(CachedResource::Type, const URL&) const;
@@ -199,11 +197,11 @@ private:
     ImageLoading clientDefersImage(const URL&) const;
     void reloadImagesIfNotDeferred();
 
-    bool canRequestAfterRedirection(CachedResource::Type, const URL&, const ResourceLoaderOptions&) const;
+    bool canRequestAfterRedirection(CachedResource::Type, const URL&, const ResourceLoaderOptions&, const URL& preRedirectURL) const;
     bool canRequestInContentDispositionAttachmentSandbox(CachedResource::Type, const URL&) const;
 
-    HashSet<String> m_validatedURLs;
-    HashSet<String> m_cachedSVGImagesURLs;
+    HashSet<URL> m_validatedURLs;
+    HashSet<URL> m_cachedSVGImagesURLs;
     mutable DocumentResourceMap m_documentResources;
     WeakPtr<Document> m_document;
     DocumentLoader* m_documentLoader;

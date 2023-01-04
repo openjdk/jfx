@@ -136,6 +136,9 @@ constexpr inline double grad2rad(double g) { return deg2rad(grad2deg(g)); }
 constexpr inline float rad2grad(float r) { return deg2grad(rad2deg(r)); }
 constexpr inline float grad2rad(float g) { return deg2rad(grad2deg(g)); }
 
+inline double roundTowardsPositiveInfinity(double value) { return std::floor(value + 0.5); }
+inline float roundTowardsPositiveInfinity(float value) { return std::floor(value + 0.5f); }
+
 // std::numeric_limits<T>::min() returns the smallest positive value for floating point types
 template<typename T> constexpr T defaultMinimumForClamp() { return std::numeric_limits<T>::min(); }
 template<> constexpr float defaultMinimumForClamp() { return -std::numeric_limits<float>::max(); }
@@ -163,7 +166,8 @@ clampTo(SourceType value, TargetType min = defaultMinimumForClamp<TargetType>(),
 {
     if (value >= static_cast<SourceType>(max))
         return max;
-    if (value <= static_cast<SourceType>(min))
+    // This will return min if value is NaN.
+    if (!(value > static_cast<SourceType>(min)))
         return min;
     return static_cast<TargetType>(value);
 }
@@ -356,6 +360,7 @@ template<typename T> constexpr bool isLessThan(const T& a, const T& b) { return 
 template<typename T> constexpr bool isLessThanEqual(const T& a, const T& b) { return a <= b; }
 template<typename T> constexpr bool isGreaterThan(const T& a, const T& b) { return a > b; }
 template<typename T> constexpr bool isGreaterThanEqual(const T& a, const T& b) { return a >= b; }
+template<typename T> constexpr bool isInRange(const T& a, const T& min, const T& max) { return a >= min && a <= max; }
 
 #ifndef UINT64_C
 #if COMPILER(MSVC)
@@ -726,6 +731,60 @@ constexpr unsigned getMSBSetConstexpr(T t)
     return bitSize - 1 - clzConstexpr(t);
 }
 
+inline size_t countTrailingZeros(uint32_t v)
+{
+    static const unsigned Mod37BitPosition[] = {
+        32, 0, 1, 26, 2, 23, 27, 0, 3, 16, 24, 30, 28, 11, 0, 13,
+        4, 7, 17, 0, 25, 22, 31, 15, 29, 10, 12, 6, 0, 21, 14, 9,
+        5, 20, 8, 19, 18
+    };
+    return Mod37BitPosition[((1 + ~v) & v) % 37];
+}
+
+inline size_t countTrailingZeros(uint64_t v)
+{
+    static const unsigned Mod67Position[] = {
+        64, 0, 1, 39, 2, 15, 40, 23, 3, 12, 16, 59, 41, 19, 24, 54,
+        4, 64, 13, 10, 17, 62, 60, 28, 42, 30, 20, 51, 25, 44, 55,
+        47, 5, 32, 65, 38, 14, 22, 11, 58, 18, 53, 63, 9, 61, 27,
+        29, 50, 43, 46, 31, 37, 21, 57, 52, 8, 26, 49, 45, 36, 56,
+        7, 48, 35, 6, 34, 33, 0
+    };
+    return Mod67Position[((1 + ~v) & v) % 67];
+}
+
+inline uint32_t reverseBits32(uint32_t value)
+{
+#if COMPILER(GCC_COMPATIBLE) && CPU(ARM64)
+    uint32_t result;
+    asm ("rbit %w0, %w1"
+        : "=r"(result)
+        : "r"(value));
+    return result;
+#else
+    value = ((value & 0xaaaaaaaa) >> 1) | ((value & 0x55555555) << 1);
+    value = ((value & 0xcccccccc) >> 2) | ((value & 0x33333333) << 2);
+    value = ((value & 0xf0f0f0f0) >> 4) | ((value & 0x0f0f0f0f) << 4);
+    value = ((value & 0xff00ff00) >> 8) | ((value & 0x00ff00ff) << 8);
+    return (value >> 16) | (value << 16);
+#endif
+}
+
+// FIXME: Replace with std::isnan() once std::isnan() is constexpr.
+template<typename T> constexpr typename std::enable_if_t<std::is_floating_point_v<T>, bool> isNaNConstExpr(T value)
+{
+#if COMPILER_HAS_CLANG_BUILTIN(__builtin_isnan)
+    return __builtin_isnan(value);
+#else
+    return value != value;
+#endif
+}
+
+template<typename T> constexpr typename std::enable_if_t<std::is_integral_v<T>, bool> isNaNConstExpr(T)
+{
+    return false;
+}
+
 } // namespace WTF
 
 using WTF::shuffleVector;
@@ -733,3 +792,5 @@ using WTF::clz;
 using WTF::ctz;
 using WTF::getLSBSet;
 using WTF::getMSBSet;
+using WTF::isNaNConstExpr;
+using WTF::reverseBits32;

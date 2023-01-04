@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2019-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -38,6 +38,7 @@ namespace JSC {
 static JSC_DECLARE_HOST_FUNCTION(webAssemblyGlobalProtoFuncValueOf);
 static JSC_DECLARE_HOST_FUNCTION(webAssemblyGlobalProtoGetterFuncValue);
 static JSC_DECLARE_HOST_FUNCTION(webAssemblyGlobalProtoSetterFuncValue);
+static JSC_DECLARE_HOST_FUNCTION(webAssemblyGlobalProtoFuncType);
 }
 
 #include "WebAssemblyGlobalPrototype.lut.h"
@@ -49,6 +50,8 @@ const ClassInfo WebAssemblyGlobalPrototype::s_info = { "WebAssembly.Global", &Ba
 /* Source for WebAssemblyGlobalPrototype.lut.h
  @begin prototypeGlobalWebAssemblyGlobal
  valueOf webAssemblyGlobalProtoFuncValueOf Function 0
+ type    webAssemblyGlobalProtoFuncType    Function 0
+
  @end
  */
 
@@ -61,7 +64,7 @@ static ALWAYS_INLINE JSWebAssemblyGlobal* getGlobal(JSGlobalObject* globalObject
             createTypeError(globalObject, "expected |this| value to be an instance of WebAssembly.Global"_s));
         return nullptr;
     }
-    Integrity::auditStructureID(vm, result->structureID());
+    Integrity::auditStructureID(result->structureID());
     return result;
 }
 
@@ -76,7 +79,7 @@ JSC_DEFINE_HOST_FUNCTION(webAssemblyGlobalProtoFuncValueOf, (JSGlobalObject* glo
     RELEASE_AND_RETURN(throwScope, JSValue::encode(global->global()->get(globalObject)));
 }
 
-JSC_DEFINE_HOST_FUNCTION(webAssemblyGlobalProtoGetterFuncValue, (JSGlobalObject* globalObject, CallFrame* callFrame))
+JSC_DEFINE_HOST_FUNCTION(webAssemblyGlobalProtoFuncType, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     VM& vm = globalObject->vm();
     auto throwScope = DECLARE_THROW_SCOPE(vm);
@@ -84,6 +87,16 @@ JSC_DEFINE_HOST_FUNCTION(webAssemblyGlobalProtoGetterFuncValue, (JSGlobalObject*
     JSWebAssemblyGlobal* global = getGlobal(globalObject, vm, callFrame->thisValue());
     RETURN_IF_EXCEPTION(throwScope, encodedJSValue());
 
+    RELEASE_AND_RETURN(throwScope, JSValue::encode(global->type(globalObject)));
+}
+
+JSC_DEFINE_HOST_FUNCTION(webAssemblyGlobalProtoGetterFuncValue, (JSGlobalObject* globalObject, CallFrame* callFrame))
+{
+    VM& vm = globalObject->vm();
+    auto throwScope = DECLARE_THROW_SCOPE(vm);
+
+    JSWebAssemblyGlobal* global = getGlobal(globalObject, vm, callFrame->thisValue());
+    RETURN_IF_EXCEPTION(throwScope, encodedJSValue());
     RELEASE_AND_RETURN(throwScope, JSValue::encode(global->global()->get(globalObject)));
 }
 
@@ -108,7 +121,7 @@ JSC_DEFINE_HOST_FUNCTION(webAssemblyGlobalProtoSetterFuncValue, (JSGlobalObject*
 
 WebAssemblyGlobalPrototype* WebAssemblyGlobalPrototype::create(VM& vm, JSGlobalObject* globalObject, Structure* structure)
 {
-    auto* object = new (NotNull, allocateCell<WebAssemblyGlobalPrototype>(vm.heap)) WebAssemblyGlobalPrototype(vm, structure);
+    auto* object = new (NotNull, allocateCell<WebAssemblyGlobalPrototype>(vm)) WebAssemblyGlobalPrototype(vm, structure);
     object->finishCreation(vm, globalObject);
     return object;
 }

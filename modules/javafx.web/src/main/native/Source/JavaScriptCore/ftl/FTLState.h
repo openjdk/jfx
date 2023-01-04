@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -41,7 +41,9 @@ namespace JSC {
 
 namespace B3 {
 class PatchpointValue;
+namespace Air {
 class StackSlot;
+} // namespace Air
 } // namespace B3
 
 namespace FTL {
@@ -50,12 +52,12 @@ class PatchpointExceptionHandle;
 
 inline bool verboseCompilationEnabled()
 {
-    return DFG::verboseCompilationEnabled(DFG::FTLMode);
+    return DFG::verboseCompilationEnabled(JITCompilationMode::FTL);
 }
 
 inline bool shouldDumpDisassembly()
 {
-    return DFG::shouldDumpDisassembly(DFG::FTLMode);
+    return DFG::shouldDumpDisassembly(JITCompilationMode::FTL);
 }
 
 class State {
@@ -66,6 +68,8 @@ public:
     ~State();
 
     VM& vm() { return graph.m_vm; }
+
+    void dumpDisassembly(PrintStream&, const ScopedLambda<void(DFG::Node*)>& perDFGNodeCallback = scopedLambda<void(DFG::Node*)>([] (DFG::Node*) { }));
 
     // None of these things is owned by State. It is the responsibility of
     // FTL phases to properly manage the lifecycle of the module and function.
@@ -79,7 +83,7 @@ public:
     // are no applicable catch blocks anywhere in the Graph.
     RefPtr<PatchpointExceptionHandle> defaultExceptionHandle;
     Box<CCallHelpers::Label> exceptionHandler { Box<CCallHelpers::Label>::create() };
-    B3::StackSlot* capturedValue { nullptr };
+    B3::Air::StackSlot* capturedValue { nullptr };
 };
 
 } } // namespace JSC::FTL

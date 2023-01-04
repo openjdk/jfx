@@ -47,7 +47,8 @@ AudioNodeInput::AudioNodeInput(AudioNode* node)
 
 void AudioNodeInput::connect(AudioNodeOutput* output)
 {
-    ASSERT(context().isGraphOwner());
+    ASSERT(context());
+    ASSERT(context()->isGraphOwner());
 
     ASSERT(output && node());
     if (!output || !node())
@@ -65,7 +66,8 @@ void AudioNodeInput::connect(AudioNodeOutput* output)
 
 void AudioNodeInput::disconnect(AudioNodeOutput* output)
 {
-    ASSERT(context().isGraphOwner());
+    ASSERT(context());
+    ASSERT(context()->isGraphOwner());
 
     ASSERT(output && node());
     if (!output || !node())
@@ -88,15 +90,21 @@ void AudioNodeInput::disconnect(AudioNodeOutput* output)
 
 void AudioNodeInput::disable(AudioNodeOutput* output)
 {
-    ASSERT(context().isGraphOwner());
+    ASSERT(context());
+    ASSERT(context()->isGraphOwner());
 
     ASSERT(output && node());
     if (!output || !node())
         return;
 
-    m_disabledOutputs.add(output);
-    bool wasRemoved = removeOutput(*output);
-    ASSERT_UNUSED(wasRemoved, wasRemoved);
+    {
+        // Heap allocations are forbidden on the audio thread for performance reasons so we need to
+        // explicitly allow the following allocation(s).
+        DisableMallocRestrictionsForCurrentThreadScope disableMallocRestrictions;
+        m_disabledOutputs.add(output);
+        bool wasRemoved = removeOutput(*output);
+        ASSERT_UNUSED(wasRemoved, wasRemoved);
+    }
 
     // Propagate disabled state to outputs.
     node()->disableOutputsIfNecessary();
@@ -104,7 +112,8 @@ void AudioNodeInput::disable(AudioNodeOutput* output)
 
 void AudioNodeInput::enable(AudioNodeOutput* output)
 {
-    ASSERT(context().isGraphOwner());
+    ASSERT(context());
+    ASSERT(context()->isGraphOwner());
 
     ASSERT(output && node());
     if (!output || !node())
@@ -113,7 +122,12 @@ void AudioNodeInput::enable(AudioNodeOutput* output)
     ASSERT(m_disabledOutputs.contains(output));
 
     // Move output from disabled list to active list.
-    addOutput(*output);
+    {
+        // Heap allocations are forbidden on the audio thread for performance reasons so we need to
+        // explicitly allow the following allocation(s).
+        DisableMallocRestrictionsForCurrentThreadScope disableMallocRestrictions;
+        addOutput(*output);
+    }
     m_disabledOutputs.remove(output);
 
     // Propagate enabled state to outputs.
@@ -127,13 +141,17 @@ void AudioNodeInput::didUpdate()
 
 void AudioNodeInput::updateInternalBus()
 {
-    ASSERT(context().isAudioThread() && context().isGraphOwner());
+    ASSERT(context());
+    ASSERT(context()->isAudioThread() && context()->isGraphOwner());
 
     unsigned numberOfInputChannels = numberOfChannels();
 
     if (numberOfInputChannels == m_internalSummingBus->numberOfChannels())
         return;
 
+    // Heap allocations are forbidden on the audio thread for performance reasons so we need to
+    // explicitly allow the following allocation(s).
+    DisableMallocRestrictionsForCurrentThreadScope disableMallocRestrictions;
     m_internalSummingBus = AudioBus::create(numberOfInputChannels, AudioUtilities::renderQuantumSize);
 }
 
@@ -154,7 +172,8 @@ unsigned AudioNodeInput::numberOfChannels() const
 
 AudioBus* AudioNodeInput::bus()
 {
-    ASSERT(context().isAudioThread());
+    ASSERT(context());
+    ASSERT(context()->isAudioThread());
 
     // Handle single connection specially to allow for in-place processing.
     if (numberOfRenderingConnections() == 1 && node()->channelCountMode() == ChannelCountMode::Max)
@@ -166,14 +185,16 @@ AudioBus* AudioNodeInput::bus()
 
 AudioBus* AudioNodeInput::internalSummingBus()
 {
-    ASSERT(context().isAudioThread());
+    ASSERT(context());
+    ASSERT(context()->isAudioThread());
 
     return m_internalSummingBus.get();
 }
 
 void AudioNodeInput::sumAllConnections(AudioBus* summingBus, size_t framesToProcess)
 {
-    ASSERT(context().isAudioThread());
+    ASSERT(context());
+    ASSERT(context()->isAudioThread());
 
     // We shouldn't be calling this method if there's only one connection, since it's less efficient.
     ASSERT(numberOfRenderingConnections() > 1 || node()->channelCountMode() != ChannelCountMode::Max);
@@ -199,7 +220,8 @@ void AudioNodeInput::sumAllConnections(AudioBus* summingBus, size_t framesToProc
 
 AudioBus* AudioNodeInput::pull(AudioBus* inPlaceBus, size_t framesToProcess)
 {
-    ASSERT(context().isAudioThread());
+    ASSERT(context());
+    ASSERT(context()->isAudioThread());
 
     // Handle single connection case.
     if (numberOfRenderingConnections() == 1 && node()->channelCountMode() == ChannelCountMode::Max) {

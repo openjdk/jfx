@@ -31,6 +31,8 @@
 #if ENABLE(GEOLOCATION)
 
 #include "Document.h"
+#include "EventLoop.h"
+#include "FeaturePolicy.h"
 #include "Frame.h"
 #include "GeoNotifier.h"
 #include "GeolocationController.h"
@@ -55,12 +57,12 @@ static const ASCIILiteral originCannotRequestGeolocationErrorMessage { "Origin d
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(Geolocation);
 
-static RefPtr<GeolocationPosition> createGeolocationPosition(Optional<GeolocationPositionData>&& position)
+static RefPtr<GeolocationPosition> createGeolocationPosition(std::optional<GeolocationPositionData>&& position)
 {
     if (!position)
         return nullptr;
 
-    DOMTimeStamp timestamp = convertSecondsToDOMTimeStamp(position->timestamp);
+    EpochTimeStamp timestamp = convertSecondsToEpochTimeStamp(position->timestamp);
     return GeolocationPosition::create(GeolocationCoordinates::create(WTFMove(position.value())), timestamp);
 }
 
@@ -132,13 +134,13 @@ void Geolocation::Watchers::getNotifiersVector(GeoNotifierVector& copy) const
 Ref<Geolocation> Geolocation::create(Navigator& navigator)
 {
     auto geolocation = adoptRef(*new Geolocation(navigator));
-    geolocation.get().suspendIfNeeded();
+    geolocation->suspendIfNeeded();
     return geolocation;
 }
 
 Geolocation::Geolocation(Navigator& navigator)
     : ActiveDOMObject(navigator.scriptExecutionContext())
-    , m_navigator(makeWeakPtr(navigator))
+    , m_navigator(navigator)
     , m_resumeTimer(*this, &Geolocation::resumeTimerFired)
 {
 }
@@ -298,8 +300,14 @@ GeolocationPosition* Geolocation::lastPosition()
 
 void Geolocation::getCurrentPosition(Ref<PositionCallback>&& successCallback, RefPtr<PositionErrorCallback>&& errorCallback, PositionOptions&& options)
 {
-    if (!frame())
+    if (!document() || !document()->isFullyActive()) {
+        if (errorCallback && errorCallback->scriptExecutionContext()) {
+            errorCallback->scriptExecutionContext()->eventLoop().queueTask(TaskSource::Geolocation, [errorCallback] {
+                errorCallback->handleEvent(GeolocationPositionError::create(GeolocationPositionError::POSITION_UNAVAILABLE, "Document is not fully active"_s));
+            });
+        }
         return;
+    }
 
     auto notifier = GeoNotifier::create(*this, WTFMove(successCallback), WTFMove(errorCallback), WTFMove(options));
     startRequest(notifier.ptr());
@@ -309,8 +317,14 @@ void Geolocation::getCurrentPosition(Ref<PositionCallback>&& successCallback, Re
 
 int Geolocation::watchPosition(Ref<PositionCallback>&& successCallback, RefPtr<PositionErrorCallback>&& errorCallback, PositionOptions&& options)
 {
-    if (!frame())
+    if (!document() || !document()->isFullyActive()) {
+        if (errorCallback && errorCallback->scriptExecutionContext()) {
+            errorCallback->scriptExecutionContext()->eventLoop().queueTask(TaskSource::Geolocation, [errorCallback] {
+                errorCallback->handleEvent(GeolocationPositionError::create(GeolocationPositionError::POSITION_UNAVAILABLE, "Document is not fully active"_s));
+            });
+        }
         return 0;
+    }
 
     auto notifier = GeoNotifier::create(*this, WTFMove(successCallback), WTFMove(errorCallback), WTFMove(options));
     startRequest(notifier.ptr());
@@ -318,7 +332,7 @@ int Geolocation::watchPosition(Ref<PositionCallback>&& successCallback, RefPtr<P
     int watchID;
     // Keep asking for the next id until we're given one that we don't already have.
     do {
-        watchID = m_scriptExecutionContext->circularSequentialID();
+        watchID = scriptExecutionContext()->circularSequentialID();
     } while (!m_watchers.add(watchID, notifier.copyRef()));
     return watchID;
 }
@@ -343,17 +357,18 @@ static void logError(const String& target, const bool isSecure, const bool isMix
 // FIXME: remove this function when rdar://problem/32137821 is fixed.
 static bool isRequestFromIBooks()
 {
-#if PLATFORM(MAC)
-    return MacApplication::isIBooks();
-#elif PLATFORM(IOS_FAMILY)
-    return IOSApplication::isIBooks();
+#if PLATFORM(COCOA)
+    return CocoaApplication::isIBooks();
 #endif
     return false;
 }
 
 bool Geolocation::shouldBlockGeolocationRequests()
 {
-    bool isSecure = SecurityOrigin::isSecure(document()->url());
+    if (!isFeaturePolicyAllowedByDocumentAndAllOwners(FeaturePolicy::Type::Geolocation, *document(), LogFeaturePolicyFailure::Yes))
+        return true;
+
+    bool isSecure = SecurityOrigin::isSecure(document()->url()) || document()->isSecureContext();
     bool hasMixedContent = !document()->foundMixedContent().isEmpty();
     bool isLocalOrigin = securityOrigin()->isLocal();
     if (securityOrigin()->canRequestGeolocation()) {
@@ -464,7 +479,7 @@ bool Geolocation::haveSuitableCachedPosition(const PositionOptions& options)
         return false;
     if (!options.maximumAge)
         return false;
-    DOMTimeStamp currentTimeMillis = convertSecondsToDOMTimeStamp(WallTime::now().secondsSinceEpoch());
+    EpochTimeStamp currentTimeMillis = convertSecondsToEpochTimeStamp(WallTime::now().secondsSinceEpoch());
     return cachedPosition->timestamp() > currentTimeMillis - options.maximumAge;
 }
 
@@ -691,10 +706,8 @@ void Geolocation::positionChanged()
         return;
     }
 
-    RefPtr<GeolocationPosition> position = lastPosition();
-    ASSERT(position);
-
-    makeSuccessCallbacks(*position);
+    if (RefPtr position = lastPosition())
+        makeSuccessCallbacks(*position);
 }
 
 void Geolocation::setError(GeolocationError& error)

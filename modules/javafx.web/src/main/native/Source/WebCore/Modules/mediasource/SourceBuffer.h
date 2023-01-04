@@ -34,16 +34,16 @@
 #if ENABLE(MEDIA_SOURCE)
 
 #include "ActiveDOMObject.h"
-#include "AudioTrack.h"
+#include "AudioTrackClient.h"
 #include "EventTarget.h"
 #include "ExceptionOr.h"
-#include "GenericEventQueue.h"
 #include "SourceBufferPrivate.h"
 #include "SourceBufferPrivateClient.h"
-#include "TextTrack.h"
+#include "TextTrackClient.h"
 #include "Timer.h"
-#include "VideoTrack.h"
+#include "VideoTrackClient.h"
 #include <wtf/LoggerHelper.h>
+#include <wtf/Observer.h>
 
 namespace WebCore {
 
@@ -70,6 +70,9 @@ class SourceBuffer final
 {
     WTF_MAKE_ISO_ALLOCATED(SourceBuffer);
 public:
+    using WeakValueType = EventTarget::WeakValueType;
+    using EventTarget::weakPtrFactory;
+
     static Ref<SourceBuffer> create(Ref<SourceBufferPrivate>&&, MediaSource*);
     virtual ~SourceBuffer();
 
@@ -96,7 +99,7 @@ public:
     ExceptionOr<void> remove(const MediaTime&, const MediaTime&);
     ExceptionOr<void> changeType(const String&);
 
-    const TimeRanges& bufferedInternal() const { ASSERT(m_buffered); return *m_buffered; }
+    const TimeRanges& bufferedInternal() const { ASSERT(m_private->buffered()); return *m_private->buffered(); }
 
     void abortIfUpdating();
     void removedFromMediaSource();
@@ -136,6 +139,8 @@ public:
     WTFLogChannel& logChannel() const final;
 #endif
 
+    void* opaqueRoot() { return this; }
+
 private:
     SourceBuffer(Ref<SourceBufferPrivate>&&, MediaSource*);
 
@@ -157,21 +162,25 @@ private:
     void sourceBufferPrivateDidParseSample(double sampleDuration) final;
     void sourceBufferPrivateDidDropSample() final;
     void sourceBufferPrivateBufferedDirtyChanged(bool) final;
-    void sourceBufferPrivateBufferedRangesChanged(const PlatformTimeRanges&) final;
     void sourceBufferPrivateDidReceiveRenderingError(int64_t errorCode) final;
     void sourceBufferPrivateReportExtraMemoryCost(uint64_t) final;
 
     // AudioTrackClient
     void audioTrackEnabledChanged(AudioTrack&) final;
-    // VideoTrackClient
-    void videoTrackSelectedChanged(VideoTrack&) final;
+    void audioTrackKindChanged(AudioTrack&) final;
+    void audioTrackLabelChanged(AudioTrack&) final;
+    void audioTrackLanguageChanged(AudioTrack&) final;
+
     // TextTrackClient
     void textTrackKindChanged(TextTrack&) final;
     void textTrackModeChanged(TextTrack&) final;
-    void textTrackAddCues(TextTrack&, const TextTrackCueList&) final;
-    void textTrackRemoveCues(TextTrack&, const TextTrackCueList&) final;
-    void textTrackAddCue(TextTrack&, TextTrackCue&) final;
-    void textTrackRemoveCue(TextTrack&, TextTrackCue&) final;
+    void textTrackLanguageChanged(TextTrack&) final;
+
+    // VideoTrackClient
+    void videoTrackKindChanged(VideoTrack&) final;
+    void videoTrackLabelChanged(VideoTrack&) final;
+    void videoTrackLanguageChanged(VideoTrack&) final;
+    void videoTrackSelectedChanged(VideoTrack&) final;
 
     // EventTarget
     EventTargetInterface eventTargetInterface() const final { return SourceBufferEventTargetInterfaceType; }
@@ -203,16 +212,17 @@ private:
 
     friend class Internals;
     WEBCORE_EXPORT void bufferedSamplesForTrackId(const AtomString&, CompletionHandler<void(Vector<String>&&)>&&);
-    WEBCORE_EXPORT Vector<String> enqueuedSamplesForTrackID(const AtomString&);
+    WEBCORE_EXPORT void enqueuedSamplesForTrackID(const AtomString&, CompletionHandler<void(Vector<String>&&)>&&);
     WEBCORE_EXPORT MediaTime minimumUpcomingPresentationTimeForTrackID(const AtomString&);
     WEBCORE_EXPORT void setMaximumQueueDepthForTrackID(const AtomString&, uint64_t);
 
     Ref<SourceBufferPrivate> m_private;
     MediaSource* m_source;
-    UniqueRef<MainThreadGenericEventQueue> m_asyncEventQueue;
     AppendMode m_mode { AppendMode::Segments };
 
-    Vector<unsigned char> m_pendingAppendData;
+    WTF::Observer<void*()> m_opaqueRootProvider;
+
+    RefPtr<SharedBuffer> m_pendingAppendData;
     Timer m_appendBufferTimer;
 
     RefPtr<VideoTrackList> m_videoTracks;
@@ -234,7 +244,6 @@ private:
     double m_bufferedSinceLastMonitor { 0 };
     double m_averageBufferRate { 0 };
     bool m_bufferedDirty { true };
-    RefPtr<TimeRanges> m_buffered;
 
     uint64_t m_reportedExtraMemoryCost { 0 };
 

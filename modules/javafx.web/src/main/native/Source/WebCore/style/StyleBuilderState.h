@@ -28,7 +28,9 @@
 #include "CSSToLengthConversionData.h"
 #include "CSSToStyleMap.h"
 #include "CascadeLevel.h"
+#include "PropertyCascade.h"
 #include "RenderStyle.h"
+#include "RuleSet.h"
 #include "SelectorChecker.h"
 #include <wtf/Bitmap.h>
 
@@ -43,6 +45,11 @@ class Builder;
 class BuilderState;
 
 void maybeUpdateFontForLetterSpacing(BuilderState&, CSSValue&);
+
+enum class ForVisitedLink : bool {
+    No,
+    Yes
+};
 
 struct BuilderContext {
     Ref<const Document> document;
@@ -83,14 +90,14 @@ public:
 
     bool useSVGZoomRules() const;
     bool useSVGZoomRulesForLength() const;
-    ScopeOrdinal styleScopeOrdinal() const { return m_styleScopeOrdinal; }
+    ScopeOrdinal styleScopeOrdinal() const { return m_currentProperty->styleScopeOrdinal; }
 
     Ref<CSSValue> resolveImageStyles(CSSValue&);
     RefPtr<StyleImage> createStyleImage(CSSValue&);
     bool createFilterOperations(const CSSValue&, FilterOperations& outOperations);
 
     static bool isColorFromPrimitiveValueDerivedFromElement(const CSSPrimitiveValue&);
-    Color colorFromPrimitiveValue(const CSSPrimitiveValue&, bool forVisitedLink = false) const;
+    Color colorFromPrimitiveValue(const CSSPrimitiveValue&, ForVisitedLink = ForVisitedLink::No) const;
     // FIXME: Remove. 'currentcolor' should be resolved at use time. All call sites are broken with inheritance.
     Color colorFromPrimitiveValueWithResolvedCurrentColor(const CSSPrimitiveValue&) const;
 
@@ -129,8 +136,7 @@ private:
     Bitmap<numCSSProperties> m_inProgressProperties;
     HashSet<String> m_inProgressPropertiesCustom;
 
-    CascadeLevel m_cascadeLevel { };
-    ScopeOrdinal m_styleScopeOrdinal { };
+    const PropertyCascade::Property* m_currentProperty { nullptr };
     SelectorChecker::LinkMatchMask m_linkMatch { };
 
     bool m_fontDirty { false };

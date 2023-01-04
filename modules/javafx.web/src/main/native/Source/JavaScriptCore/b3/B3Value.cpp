@@ -38,7 +38,6 @@
 #include "B3OriginDump.h"
 #include "B3ProcedureInlines.h"
 #include "B3SlotBaseValue.h"
-#include "B3StackSlot.h"
 #include "B3ValueInlines.h"
 #include "B3ValueKeyInlines.h"
 #include "B3WasmBoundsCheckValue.h"
@@ -290,6 +289,16 @@ Value* Value::uModConstant(Procedure&, const Value*) const
     return nullptr;
 }
 
+Value* Value::fMinConstant(Procedure&, const Value*) const
+{
+    return nullptr;
+}
+
+Value* Value::fMaxConstant(Procedure&, const Value*) const
+{
+    return nullptr;
+}
+
 Value* Value::bitAndConstant(Procedure&, const Value*) const
 {
     return nullptr;
@@ -434,7 +443,7 @@ Value* Value::invertedCompare(Procedure& proc) const
 {
     if (numChildren() != 2)
         return nullptr;
-    if (Optional<Opcode> invertedOpcode = B3::invertedCompare(opcode(), child(0)->type())) {
+    if (std::optional<Opcode> invertedOpcode = B3::invertedCompare(opcode(), child(0)->type())) {
         ASSERT(!kind().hasExtraBits());
         return proc.add<Value>(*invertedOpcode, type(), origin(), child(0), child(1));
     }
@@ -524,7 +533,7 @@ TriState Value::asTriState() const
 
 Effects Value::effects() const
 {
-    Effects result;
+    Effects result = Effects::none();
     switch (opcode()) {
     case Nop:
     case Identity:
@@ -578,6 +587,8 @@ Effects Value::effects() const
     case Select:
     case Depend:
     case Extract:
+    case FMin:
+    case FMax:
         break;
     case Div:
     case UDiv:
@@ -718,6 +729,8 @@ ValueKey Value::key() const
     case UDiv:
     case Mod:
     case UMod:
+    case FMax:
+    case FMin:
     case BitAnd:
     case BitOr:
     case BitXor:
@@ -816,6 +829,8 @@ Type Value::typeFor(Kind kind, Value* firstChild, Value* secondChild)
     case UDiv:
     case Mod:
     case UMod:
+    case FMax:
+    case FMin:
     case Neg:
     case BitAnd:
     case BitOr:

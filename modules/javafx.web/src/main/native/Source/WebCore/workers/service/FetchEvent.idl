@@ -26,24 +26,24 @@
 [
     Conditional=SERVICE_WORKER,
     JSCustomMarkFunction,
-    EnabledAtRuntime=ServiceWorker,
+    EnabledAtRuntime=ServiceWorkerEnabled,
     ExportMacro=WEBCORE_EXPORT,
     Exposed=ServiceWorker,
     JSGenerateToNativeObject
 ] interface FetchEvent : ExtendableEvent {
-    constructor(DOMString type, FetchEventInit eventInitDict);
-
+    [CallWith=CurrentGlobalObject] constructor(DOMString type, FetchEventInit eventInitDict);
     [SameObject] readonly attribute FetchRequest request;
+    [CallWith=CurrentScriptExecutionContext, EnabledBySetting=ServiceWorkerNavigationPreloadEnabled] readonly attribute Promise<any> preloadResponse;
     readonly attribute DOMString clientId;
-    readonly attribute DOMString reservedClientId;
-    readonly attribute DOMString targetClientId;
+    readonly attribute DOMString resultingClientId;
+    readonly attribute Promise<undefined> handled;
 
-    [MayThrowException] undefined respondWith(Promise<FetchResponse> r);
+    undefined respondWith(Promise<FetchResponse> r);
 };
 
 dictionary FetchEventInit : ExtendableEventInit {
     required FetchRequest request;
     DOMString clientId = "";
-    DOMString reservedClientId = "";
-    DOMString targetClientId = "";
+    DOMString resultingClientId = "";
+    Promise<undefined> handled;
 };

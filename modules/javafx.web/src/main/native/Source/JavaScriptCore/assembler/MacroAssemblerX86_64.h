@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -97,12 +97,6 @@ public:
         or16(imm, Address(scratchRegister()));
     }
 
-    void or8(TrustedImm32 imm, AbsoluteAddress address)
-    {
-        move(TrustedImmPtr(address.m_ptr), scratchRegister());
-        or8(imm, Address(scratchRegister()));
-    }
-
     void sub32(TrustedImm32 imm, AbsoluteAddress address)
     {
         move(TrustedImmPtr(address.m_ptr), scratchRegister());
@@ -112,7 +106,7 @@ public:
     void load8(const void* address, RegisterID dest)
     {
         move(TrustedImmPtr(address), dest);
-        load8(dest, dest);
+        load8(Address(dest), dest);
     }
 
     void load16(ExtendedAddress address, RegisterID dest)
@@ -138,7 +132,7 @@ public:
             m_assembler.movl_mEAX(address);
         else {
             move(TrustedImmPtr(address), dest);
-            load32(dest, dest);
+            load32(Address(dest), dest);
         }
     }
 
@@ -157,7 +151,7 @@ public:
     void store32(TrustedImm32 imm, void* address)
     {
         move(TrustedImmPtr(address), scratchRegister());
-        store32(imm, scratchRegister());
+        store32(imm, Address(scratchRegister()));
     }
 
     void store32(RegisterID source, void* address)
@@ -166,7 +160,7 @@ public:
             m_assembler.movl_EAXm(address);
         else {
             move(TrustedImmPtr(address), scratchRegister());
-            store32(source, scratchRegister());
+            store32(source, Address(scratchRegister()));
         }
     }
 
@@ -587,6 +581,12 @@ public:
         }
     }
 
+    void rshift64(RegisterID src, TrustedImm32 imm, RegisterID dest)
+    {
+        move(src, dest);
+        rshift64(imm, dest);
+    }
+
     void urshift64(TrustedImm32 imm, RegisterID dest)
     {
         m_assembler.shrq_i8r(imm.m_value, dest);
@@ -790,6 +790,13 @@ public:
         m_assembler.subq_rr(src, dest);
     }
 
+    void sub64(RegisterID a, RegisterID b, RegisterID dest)
+    {
+        ASSERT(b != dest);
+        move(a, dest);
+        sub64(b, dest);
+    }
+
     void sub64(TrustedImm32 imm, RegisterID dest)
     {
         if (imm.m_value == 1)
@@ -890,6 +897,12 @@ public:
         m_assembler.xorq_ir(imm.m_value, srcDest);
     }
 
+    void xor64(TrustedImm32 imm, RegisterID src, RegisterID dest)
+    {
+        move(src, dest);
+        xor64(imm, dest);
+    }
+
     void xor64(TrustedImm64 imm, RegisterID srcDest)
     {
         move(imm, scratchRegister());
@@ -911,7 +924,7 @@ public:
         m_assembler.notq_m(dest.offset, dest.base, dest.index, dest.scale);
     }
 
-    void load64(ImplicitAddress address, RegisterID dest)
+    void load64(Address address, RegisterID dest)
     {
         m_assembler.movq_mr(address.offset, address.base, dest);
     }
@@ -927,7 +940,7 @@ public:
             m_assembler.movq_mEAX(address);
         else {
             move(TrustedImmPtr(address), dest);
-            load64(dest, dest);
+            load64(Address(dest), dest);
         }
     }
 
@@ -945,7 +958,7 @@ public:
         return DataLabelCompact(this);
     }
 
-    void store64(RegisterID src, ImplicitAddress address)
+    void store64(RegisterID src, Address address)
     {
         m_assembler.movq_rm(src, address.offset, address.base);
     }
@@ -961,11 +974,11 @@ public:
             m_assembler.movq_EAXm(address);
         else {
             move(TrustedImmPtr(address), scratchRegister());
-            store64(src, scratchRegister());
+            store64(src, Address(scratchRegister()));
         }
     }
 
-    void store64(TrustedImm32 imm, ImplicitAddress address)
+    void store64(TrustedImm32 imm, Address address)
     {
         m_assembler.movq_i32m(imm.m_value, address.offset, address.base);
     }
@@ -980,7 +993,7 @@ public:
         if (CAN_SIGN_EXTEND_32_64(imm.m_value)) {
             auto addressReg = scratchRegister();
             move(TrustedImmPtr(address), addressReg);
-            store64(TrustedImm32(static_cast<int32_t>(imm.m_value)), addressReg);
+            store64(TrustedImm32(static_cast<int32_t>(imm.m_value)), Address(addressReg));
             return;
         }
 
@@ -991,7 +1004,7 @@ public:
         swap(src, X86Registers::eax);
     }
 
-    void store64(TrustedImm64 imm, ImplicitAddress address)
+    void store64(TrustedImm64 imm, Address address)
     {
         if (CAN_SIGN_EXTEND_32_64(imm.m_value)) {
             store64(TrustedImm32(static_cast<int32_t>(imm.m_value)), address);
@@ -1006,16 +1019,6 @@ public:
     {
         move(imm, scratchRegister());
         m_assembler.movq_rm(scratchRegister(), address.offset, address.base, address.index, address.scale);
-    }
-
-    void storeZero64(ImplicitAddress address)
-    {
-        store64(TrustedImm32(0), address);
-    }
-
-    void storeZero64(BaseIndex address)
-    {
-        store64(TrustedImm32(0), address);
     }
 
     DataLabel32 store64WithAddressOffsetPatch(RegisterID src, Address address)
@@ -1527,7 +1530,7 @@ public:
         return branch32(cond, left, scratchRegister());
     }
 
-    DataLabelPtr storePtrWithPatch(TrustedImmPtr initialValue, ImplicitAddress address)
+    DataLabelPtr storePtrWithPatch(TrustedImmPtr initialValue, Address address)
     {
         DataLabelPtr label = moveWithPatch(initialValue, scratchRegister());
         store64(scratchRegister(), address);
@@ -1565,6 +1568,22 @@ public:
         TrustedImm32 mask8(static_cast<int8_t>(mask.m_value));
         MacroAssemblerX86Common::move(TrustedImmPtr(address.m_ptr), scratchRegister());
         return MacroAssemblerX86Common::branchTest8(cond, Address(scratchRegister()), mask8);
+    }
+
+    using MacroAssemblerX86Common::branchTest16;
+    Jump branchTest16(ResultCondition cond, ExtendedAddress address, TrustedImm32 mask = TrustedImm32(-1))
+    {
+        TrustedImm32 mask16(static_cast<int16_t>(mask.m_value));
+        TrustedImmPtr addr(reinterpret_cast<void*>(address.offset));
+        MacroAssemblerX86Common::move(addr, scratchRegister());
+        return MacroAssemblerX86Common::branchTest16(cond, BaseIndex(scratchRegister(), address.base, TimesOne), mask16);
+    }
+
+    Jump branchTest16(ResultCondition cond, AbsoluteAddress address, TrustedImm32 mask = TrustedImm32(-1))
+    {
+        TrustedImm32 mask16(static_cast<int16_t>(mask.m_value));
+        MacroAssemblerX86Common::move(TrustedImmPtr(address.m_ptr), scratchRegister());
+        return MacroAssemblerX86Common::branchTest16(cond, Address(scratchRegister()), mask16);
     }
 
     void xchg64(RegisterID reg, Address address)

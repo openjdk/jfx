@@ -28,6 +28,7 @@
 #include "RenderImageResource.h"
 #include "RenderSVGImage.h"
 #include "RenderSVGResource.h"
+#include "SVGElementInlines.h"
 #include "SVGNames.h"
 #include "XLinkNames.h"
 #include <wtf/IsoMallocInlines.h>
@@ -105,7 +106,7 @@ void SVGImageElement::svgAttributeChanged(const QualifiedName& attrName)
 
     if (attrName == SVGNames::widthAttr || attrName == SVGNames::heightAttr) {
         InstanceInvalidationGuard guard(*this);
-        invalidateSVGPresentationAttributeStyle();
+        invalidateSVGPresentationalHintStyle();
         return;
     }
 

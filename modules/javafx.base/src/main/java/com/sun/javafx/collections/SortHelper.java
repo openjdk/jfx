@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -53,7 +53,7 @@ public class SortHelper {
         ListIterator<T> i = list.listIterator();
         for (int j=0; j<a.length; j++) {
             i.next();
-            i.set((T)a[j]);
+            i.set(a[j]);
         }
         return result;
     }
@@ -74,7 +74,7 @@ public class SortHelper {
     }
 
     public <T> int[] sort(T[] a, Comparator<? super T> c) {
-        T[] aux = (T[]) a.clone();
+        T[] aux = a.clone();
         int[] result = initPermutation(a.length);
         if (c==null)
             mergeSort(aux, a, 0, a.length, 0);
@@ -88,7 +88,7 @@ public class SortHelper {
     public <T> int[] sort(T[] a, int fromIndex, int toIndex,
                 Comparator<? super T> c) {
         rangeCheck(a.length, fromIndex, toIndex);
-        T[] aux = (T[])copyOfRange(a, fromIndex, toIndex);
+        T[] aux = copyOfRange(a, fromIndex, toIndex);
         int[] result = initPermutation(a.length);
         if (c==null)
             mergeSort(aux, a, fromIndex, toIndex, -fromIndex);
@@ -101,7 +101,7 @@ public class SortHelper {
 
     public int[] sort(int[] a, int fromIndex, int toIndex) {
         rangeCheck(a.length, fromIndex, toIndex);
-        int[] aux = (int[])copyOfRange(a, fromIndex, toIndex);
+        int[] aux = copyOfRange(a, fromIndex, toIndex);
         int[] result = initPermutation(a.length);
         mergeSort(aux, a, fromIndex, toIndex, -fromIndex);
         reversePermutation = null;

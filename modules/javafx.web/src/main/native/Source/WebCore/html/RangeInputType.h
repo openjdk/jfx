@@ -52,7 +52,7 @@ private:
     void handleMouseDownEvent(MouseEvent&) final;
     ShouldCallBaseEventHandler handleKeydownEvent(KeyboardEvent&) final;
     RenderPtr<RenderElement> createInputRenderer(RenderStyle&&) final;
-    void createShadowSubtreeAndUpdateInnerTextElementEditability(ContainerNode::ChildChange::Source, bool) final;
+    void createShadowSubtree() final;
     Decimal parseToNumber(const String&, const Decimal&) const final;
     String serialize(const Decimal&) const final;
     bool accessKeyAction(bool sendMouseEvents) final;
@@ -69,7 +69,7 @@ private:
 #if ENABLE(DATALIST_ELEMENT)
     void dataListMayHaveChanged() final;
     void updateTickMarkValues();
-    Optional<Decimal> findClosestTickMarkValue(const Decimal&) final;
+    std::optional<Decimal> findClosestTickMarkValue(const Decimal&) final;
 
     bool m_tickMarkValuesDirty { true };
     Vector<Decimal> m_tickMarkValues;

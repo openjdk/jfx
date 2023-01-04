@@ -29,6 +29,7 @@
 #include "DOMRect.h"
 #include "DOMRectList.h"
 #include "DocumentFragment.h"
+#include "ElementInlines.h"
 #include "Event.h"
 #include "Frame.h"
 #include "FrameSelection.h"
@@ -37,6 +38,7 @@
 #include "HTMLBodyElement.h"
 #include "HTMLHtmlElement.h"
 #include "HTMLNames.h"
+#include "JSNode.h"
 #include "NodeTraversal.h"
 #include "NodeWithIndex.h"
 #include "ProcessingInstruction.h"
@@ -824,7 +826,7 @@ ExceptionOr<void> Range::surroundContents(Node& newParent)
 
     // Step 4: If newParent has children, replace all with null within newParent.
     if (newParent.hasChildNodes())
-        downcast<ContainerNode>(newParent).replaceAllChildren(nullptr);
+        downcast<ContainerNode>(newParent).replaceAll(nullptr);
 
     // Step 5: Insert newParent into context object.
     auto insertResult = insertNode(newParent);
@@ -1073,14 +1075,14 @@ SimpleRange makeSimpleRange(const Ref<Range>& range)
     return makeSimpleRange(range.get());
 }
 
-Optional<SimpleRange> makeSimpleRange(const Range* range)
+std::optional<SimpleRange> makeSimpleRange(const Range* range)
 {
     if (!range)
-        return WTF::nullopt;
+        return std::nullopt;
     return makeSimpleRange(*range);
 }
 
-Optional<SimpleRange> makeSimpleRange(const RefPtr<Range>& range)
+std::optional<SimpleRange> makeSimpleRange(const RefPtr<Range>& range)
 {
     return makeSimpleRange(range.get());
 }
@@ -1092,11 +1094,17 @@ Ref<Range> createLiveRange(const SimpleRange& range)
     return result;
 }
 
-RefPtr<Range> createLiveRange(const Optional<SimpleRange>& range)
+RefPtr<Range> createLiveRange(const std::optional<SimpleRange>& range)
 {
     if (!range)
         return nullptr;
     return createLiveRange(*range);
+}
+
+void Range::visitNodesConcurrently(JSC::AbstractSlotVisitor& visitor) const
+{
+    visitor.addOpaqueRoot(root(&m_start.container()));
+    visitor.addOpaqueRoot(root(&m_end.container()));
 }
 
 } // namespace WebCore

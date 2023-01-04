@@ -23,14 +23,20 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef PlatformDisplay_h
-#define PlatformDisplay_h
+#pragma once
 
 #include <wtf/Noncopyable.h>
 #include <wtf/TypeCasts.h>
+#include <wtf/text/WTFString.h>
 
 #if USE(EGL)
 typedef void *EGLDisplay;
+#endif
+
+#if PLATFORM(GTK)
+#include <wtf/glib/GRefPtr.h>
+
+typedef struct _GdkDisplay GdkDisplay;
 #endif
 
 #if ENABLE(VIDEO) && USE(GSTREAMER_GL)
@@ -39,6 +45,10 @@ typedef void *EGLDisplay;
 typedef struct _GstGLContext GstGLContext;
 typedef struct _GstGLDisplay GstGLDisplay;
 #endif // ENABLE(VIDEO) && USE(GSTREAMER_GL)
+
+#if USE(LCMS)
+#include "LCMSUniquePtr.h"
+#endif
 
 namespace WebCore {
 
@@ -70,6 +80,7 @@ public:
 
 #if USE(EGL) || USE(GLX)
     WEBCORE_EXPORT GLContext* sharingGLContext();
+    void clearSharingGLContext();
 #endif
 
 #if USE(EGL)
@@ -82,13 +93,28 @@ public:
     GstGLContext* gstGLContext() const;
 #endif
 
+#if USE(LCMS)
+    virtual cmsHPROFILE colorProfile() const;
+#endif
+
+#if USE(ATSPI) || USE(ATK)
+    void setAccessibilityBusAddress(String&& address) { m_accessibilityBusAddress = WTFMove(address); }
+    const String& accessibilityBusAddress() const;
+#endif
+
 protected:
-    enum class NativeDisplayOwned { No, Yes };
-    explicit PlatformDisplay(NativeDisplayOwned);
+    PlatformDisplay();
+#if PLATFORM(GTK)
+    explicit PlatformDisplay(GdkDisplay*);
+#endif
 
     static void setSharedDisplayForCompositing(PlatformDisplay&);
 
-    NativeDisplayOwned m_nativeDisplayOwned { NativeDisplayOwned::No };
+#if PLATFORM(GTK)
+    virtual void sharedDisplayDidClose();
+
+    GRefPtr<GdkDisplay> m_sharedDisplay;
+#endif
 
 #if USE(EGL)
     virtual void initializeEGLDisplay();
@@ -98,6 +124,16 @@ protected:
 
 #if USE(EGL) || USE(GLX)
     std::unique_ptr<GLContext> m_sharingGLContext;
+#endif
+
+#if USE(LCMS)
+    mutable LCMSProfilePtr m_iccProfile;
+#endif
+
+#if USE(ATSPI) || USE(ATK)
+    virtual String plartformAccessibilityBusAddress() const { return { }; }
+
+    mutable std::optional<String> m_accessibilityBusAddress;
 #endif
 
 private:
@@ -125,5 +161,3 @@ private:
 SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::ToClassName) \
     static bool isType(const WebCore::PlatformDisplay& display) { return display.type() == WebCore::PlatformDisplay::Type::DisplayType; } \
 SPECIALIZE_TYPE_TRAITS_END()
-
-#endif // PltformDisplay_h

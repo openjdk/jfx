@@ -1,6 +1,6 @@
 /*
  *  Copyright (C) 1999-2001 Harri Porten (porten@kde.org)
- *  Copyright (C) 2004-2020 Apple Inc. All rights reserved.
+ *  Copyright (C) 2004-2021 Apple Inc. All rights reserved.
  *  Copyright (C) 2007 Samuel Weinig <sam@webkit.org>
  *  Copyright (C) 2013 Michael Pruett <michael@68k.org>
  *
@@ -38,7 +38,7 @@
 namespace WebCore {
 using namespace JSC;
 
-void reportException(JSGlobalObject* lexicalGlobalObject, JSValue exceptionValue, CachedScript* cachedScript)
+void reportException(JSGlobalObject* lexicalGlobalObject, JSValue exceptionValue, CachedScript* cachedScript, bool fromModule)
 {
     VM& vm = lexicalGlobalObject->vm();
     RELEASE_ASSERT(vm.currentThreadIsHoldingAPILock());
@@ -49,7 +49,7 @@ void reportException(JSGlobalObject* lexicalGlobalObject, JSValue exceptionValue
             exception = JSC::Exception::create(lexicalGlobalObject->vm(), exceptionValue, JSC::Exception::DoNotCaptureStack);
     }
 
-    reportException(lexicalGlobalObject, exception, cachedScript);
+    reportException(lexicalGlobalObject, exception, cachedScript, fromModule);
 }
 
 String retrieveErrorMessageWithoutName(JSGlobalObject& lexicalGlobalObject, VM& vm, JSValue exception, CatchScope& catchScope)
@@ -88,14 +88,17 @@ String retrieveErrorMessage(JSGlobalObject& lexicalGlobalObject, VM& vm, JSValue
     return errorMessage;
 }
 
-void reportException(JSGlobalObject* lexicalGlobalObject, JSC::Exception* exception, CachedScript* cachedScript, ExceptionDetails* exceptionDetails)
+void reportException(JSGlobalObject* lexicalGlobalObject, JSC::Exception* exception, CachedScript* cachedScript, bool fromModule, ExceptionDetails* exceptionDetails)
 {
     VM& vm = lexicalGlobalObject->vm();
-    auto scope = DECLARE_CATCH_SCOPE(vm);
-
     RELEASE_ASSERT(vm.currentThreadIsHoldingAPILock());
-    if (isTerminatedExecutionException(vm, exception))
+    if (vm.isTerminationException(exception))
         return;
+
+    // We can declare a CatchScope here because we will clear the exception below if it's
+    // not a TerminationException. If it's a TerminationException, it'll remain sticky in
+    // the VM, but we have the check above to ensure that we do not re-enter this scope.
+    auto scope = DECLARE_CATCH_SCOPE(vm);
 
     ErrorHandlingScope errorScope(lexicalGlobalObject->vm());
 
@@ -119,7 +122,7 @@ void reportException(JSGlobalObject* lexicalGlobalObject, JSC::Exception* except
     }
 
     auto errorMessage = retrieveErrorMessage(*lexicalGlobalObject, vm, exception->value(), scope);
-    globalObject->scriptExecutionContext()->reportException(errorMessage, lineNumber, columnNumber, exceptionSourceURL, exception, callStack->size() ? callStack.ptr() : nullptr, cachedScript);
+    globalObject->scriptExecutionContext()->reportException(errorMessage, lineNumber, columnNumber, exceptionSourceURL, exception, callStack->size() ? callStack.ptr() : nullptr, cachedScript, fromModule);
 
     if (exceptionDetails) {
         exceptionDetails->message = errorMessage;
@@ -140,6 +143,10 @@ void reportCurrentException(JSGlobalObject* lexicalGlobalObject)
 
 JSValue createDOMException(JSGlobalObject* lexicalGlobalObject, ExceptionCode ec, const String& message)
 {
+    VM& vm = lexicalGlobalObject->vm();
+    if (UNLIKELY(vm.hasPendingTerminationException()))
+        return jsUndefined();
+
     switch (ec) {
     case ExistingExceptionError:
         return jsUndefined();
@@ -189,7 +196,7 @@ JSValue createDOMException(JSGlobalObject& lexicalGlobalObject, Exception&& exce
 
 void propagateExceptionSlowPath(JSC::JSGlobalObject& lexicalGlobalObject, JSC::ThrowScope& throwScope, Exception&& exception)
 {
-    throwScope.assertNoException();
+    throwScope.assertNoExceptionExceptTermination();
     throwException(&lexicalGlobalObject, throwScope, createDOMException(lexicalGlobalObject, WTFMove(exception)));
 }
 
@@ -209,19 +216,19 @@ template<typename... StringTypes> static String makeArgumentTypeErrorMessage(uns
 
 void throwNotSupportedError(JSC::JSGlobalObject& lexicalGlobalObject, JSC::ThrowScope& scope, ASCIILiteral message)
 {
-    scope.assertNoException();
+    scope.assertNoExceptionExceptTermination();
     throwException(&lexicalGlobalObject, scope, createDOMException(&lexicalGlobalObject, NotSupportedError, message));
 }
 
 void throwInvalidStateError(JSC::JSGlobalObject& lexicalGlobalObject, JSC::ThrowScope& scope, ASCIILiteral message)
 {
-    scope.assertNoException();
+    scope.assertNoExceptionExceptTermination();
     throwException(&lexicalGlobalObject, scope, createDOMException(&lexicalGlobalObject, InvalidStateError, message));
 }
 
 void throwSecurityError(JSC::JSGlobalObject& lexicalGlobalObject, JSC::ThrowScope& scope, const String& message)
 {
-    scope.assertNoException();
+    scope.assertNoExceptionExceptTermination();
     throwException(&lexicalGlobalObject, scope, createDOMException(&lexicalGlobalObject, SecurityError, message));
 }
 
@@ -270,30 +277,19 @@ void throwNonFiniteTypeError(JSGlobalObject& lexicalGlobalObject, JSC::ThrowScop
     throwTypeError(&lexicalGlobalObject, scope, "The provided value is non-finite"_s);
 }
 
-String makeGetterTypeErrorMessage(const char* interfaceName, const char* attributeName)
+JSC::EncodedJSValue rejectPromiseWithGetterTypeError(JSC::JSGlobalObject& lexicalGlobalObject, const JSC::ClassInfo* classInfo, JSC::PropertyName attributeName)
 {
-    return makeString("The ", interfaceName, '.', attributeName, " getter can only be used on instances of ", interfaceName);
-}
-
-JSC::EncodedJSValue throwGetterTypeError(JSC::JSGlobalObject& lexicalGlobalObject, JSC::ThrowScope& scope, const char* interfaceName, const char* attributeName)
-{
-    return throwVMGetterTypeError(&lexicalGlobalObject, scope, makeGetterTypeErrorMessage(interfaceName, attributeName));
-}
-
-JSC::EncodedJSValue rejectPromiseWithGetterTypeError(JSC::JSGlobalObject& lexicalGlobalObject, const char* interfaceName, const char* attributeName)
-{
-    return createRejectedPromiseWithTypeError(lexicalGlobalObject, makeGetterTypeErrorMessage(interfaceName, attributeName), RejectedPromiseWithTypeErrorCause::NativeGetter);
-}
-
-bool throwSetterTypeError(JSC::JSGlobalObject& lexicalGlobalObject, JSC::ThrowScope& scope, const char* interfaceName, const char* attributeName)
-{
-    throwTypeError(lexicalGlobalObject, scope, makeString("The ", interfaceName, '.', attributeName, " setter can only be used on instances of ", interfaceName));
-    return false;
+    return createRejectedPromiseWithTypeError(lexicalGlobalObject, JSC::makeDOMAttributeGetterTypeErrorMessage(classInfo->className, String(attributeName.uid())), RejectedPromiseWithTypeErrorCause::NativeGetter);
 }
 
 String makeThisTypeErrorMessage(const char* interfaceName, const char* functionName)
 {
     return makeString("Can only call ", interfaceName, '.', functionName, " on instances of ", interfaceName);
+}
+
+String makeUnsupportedIndexedSetterErrorMessage(const char* interfaceName)
+{
+    return makeString("Failed to set an indexed property on ", interfaceName, ": Indexed property setter is not supported.");
 }
 
 EncodedJSValue throwThisTypeError(JSC::JSGlobalObject& lexicalGlobalObject, JSC::ThrowScope& scope, const char* interfaceName, const char* functionName)
@@ -314,13 +310,13 @@ JSC::EncodedJSValue rejectPromiseWithThisTypeError(JSC::JSGlobalObject& lexicalG
 
 void throwDOMSyntaxError(JSC::JSGlobalObject& lexicalGlobalObject, JSC::ThrowScope& scope, ASCIILiteral message)
 {
-    scope.assertNoException();
+    scope.assertNoExceptionExceptTermination();
     throwException(&lexicalGlobalObject, scope, createDOMException(&lexicalGlobalObject, SyntaxError, message));
 }
 
 void throwDataCloneError(JSC::JSGlobalObject& lexicalGlobalObject, JSC::ThrowScope& scope)
 {
-    scope.assertNoException();
+    scope.assertNoExceptionExceptTermination();
     throwException(&lexicalGlobalObject, scope, createDOMException(&lexicalGlobalObject, DataCloneError));
 }
 

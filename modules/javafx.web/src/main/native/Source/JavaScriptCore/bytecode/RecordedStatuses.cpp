@@ -62,18 +62,18 @@ GetByStatus* RecordedStatuses::addGetByStatus(const CodeOrigin& codeOrigin, cons
     return result;
 }
 
-PutByIdStatus* RecordedStatuses::addPutByIdStatus(const CodeOrigin& codeOrigin, const PutByIdStatus& status)
+PutByStatus* RecordedStatuses::addPutByStatus(const CodeOrigin& codeOrigin, const PutByStatus& status)
 {
-    auto statusPtr = makeUnique<PutByIdStatus>(status);
-    PutByIdStatus* result = statusPtr.get();
+    auto statusPtr = makeUnique<PutByStatus>(status);
+    PutByStatus* result = statusPtr.get();
     puts.append(std::make_pair(codeOrigin, WTFMove(statusPtr)));
     return result;
 }
 
-InByIdStatus* RecordedStatuses::addInByIdStatus(const CodeOrigin& codeOrigin, const InByIdStatus& status)
+InByStatus* RecordedStatuses::addInByStatus(const CodeOrigin& codeOrigin, const InByStatus& status)
 {
-    auto statusPtr = makeUnique<InByIdStatus>(status);
-    InByIdStatus* result = statusPtr.get();
+    auto statusPtr = makeUnique<InByStatus>(status);
+    InByStatus* result = statusPtr.get();
     ins.append(std::make_pair(codeOrigin, WTFMove(statusPtr)));
     return result;
 }
@@ -106,6 +106,10 @@ template<typename Visitor>
 void RecordedStatuses::visitAggregateImpl(Visitor& visitor)
 {
     for (auto& pair : gets)
+        pair.second->visitAggregate(visitor);
+    for (auto& pair : puts)
+        pair.second->visitAggregate(visitor);
+    for (auto& pair : ins)
         pair.second->visitAggregate(visitor);
     for (auto& pair : deletes)
         pair.second->visitAggregate(visitor);

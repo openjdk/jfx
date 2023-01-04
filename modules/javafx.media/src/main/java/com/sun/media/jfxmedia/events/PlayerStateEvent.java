@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,8 +24,6 @@
  */
 package com.sun.media.jfxmedia.events;
 
-import com.sun.media.jfxmediaimpl.MediaUtils;
-
 /**
  * An event indicating a change in the state of a media player.
  */
@@ -34,7 +32,7 @@ public class PlayerStateEvent extends PlayerEvent {
     public enum PlayerState {
 
         UNKNOWN, READY, PLAYING, PAUSED, STOPPED, STALLED, FINISHED, HALTED
-    };
+    }
 
     private PlayerState playerState;
     private double playerTime;

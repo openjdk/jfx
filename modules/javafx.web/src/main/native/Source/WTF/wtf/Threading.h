@@ -38,6 +38,7 @@
 #include <wtf/Function.h>
 #include <wtf/HashMap.h>
 #include <wtf/HashSet.h>
+#include <wtf/Lock.h>
 #include <wtf/PlatformRegisters.h>
 #include <wtf/Ref.h>
 #include <wtf/RefPtr.h>
@@ -58,6 +59,12 @@
 
 #if HAVE(QOS_CLASSES)
 #include <dispatch/dispatch.h>
+#endif
+
+// X11 headers define a bunch of macros with common terms, interfering with WebCore and WTF enum values.
+// As a workaround, we explicitly undef them here.
+#if defined(None)
+#undef None
 #endif
 
 namespace WTF {
@@ -88,6 +95,13 @@ enum class ThreadType : uint8_t {
     Audio,
 };
 
+class ThreadSuspendLocker {
+    WTF_MAKE_NONCOPYABLE(ThreadSuspendLocker);
+public:
+    WTF_EXPORT_PRIVATE ThreadSuspendLocker();
+    WTF_EXPORT_PRIVATE ~ThreadSuspendLocker();
+};
+
 class Thread : public ThreadSafeRefCounted<Thread> {
     static std::atomic<uint32_t> s_uid;
 public:
@@ -116,8 +130,8 @@ public:
     static Thread& current();
 
     // Set of all WTF::Thread created threads.
-    WTF_EXPORT_PRIVATE static HashSet<Thread*>& allThreads(const LockHolder&);
-    WTF_EXPORT_PRIVATE static Lock& allThreadsMutex();
+    WTF_EXPORT_PRIVATE static HashSet<Thread*>& allThreads() WTF_REQUIRES_LOCK(allThreadsLock());
+    WTF_EXPORT_PRIVATE static Lock& allThreadsLock() WTF_RETURNS_LOCK(s_allThreadsLock);
 
     WTF_EXPORT_PRIVATE unsigned numberOfThreadGroups();
 
@@ -164,9 +178,9 @@ public:
     using PlatformSuspendError = DWORD;
 #endif
 
-    WTF_EXPORT_PRIVATE Expected<void, PlatformSuspendError> suspend();
-    WTF_EXPORT_PRIVATE void resume();
-    WTF_EXPORT_PRIVATE size_t getRegisters(PlatformRegisters&);
+    WTF_EXPORT_PRIVATE Expected<void, PlatformSuspendError> suspend(const ThreadSuspendLocker&);
+    WTF_EXPORT_PRIVATE void resume(const ThreadSuspendLocker&);
+    WTF_EXPORT_PRIVATE size_t getRegisters(const ThreadSuspendLocker&, PlatformRegisters&);
 
 #if USE(PTHREADS)
 #if OS(LINUX)
@@ -224,7 +238,7 @@ public:
     }
 #endif
 
-    void* savedStackPointerAtVMEntry()
+    void* savedStackPointerAtVMEntry() const
     {
         return m_savedStackPointerAtVMEntry;
     }
@@ -234,7 +248,7 @@ public:
         m_savedStackPointerAtVMEntry = stackPointerAtVMEntry;
     }
 
-    void* savedLastStackTop()
+    void* savedLastStackTop() const
     {
         return m_savedLastStackTop;
     }
@@ -259,7 +273,7 @@ protected:
     void initializeInThread();
 
     // Internal platform-specific Thread establishment implementation.
-    bool establishHandle(NewThreadContext*, Optional<size_t> stackSize, QOS);
+    bool establishHandle(NewThreadContext*, std::optional<size_t> stackSize, QOS);
 
 #if USE(PTHREADS)
     void establishPlatformSpecificHandle(PlatformThreadHandle);
@@ -327,6 +341,8 @@ protected:
 #else
     static Thread* currentMayBeNull();
 #endif
+
+    static Lock s_allThreadsLock;
 
     JoinableState m_joinableState { Joinable };
     bool m_isShuttingDown : 1;
@@ -413,6 +429,7 @@ inline Thread& Thread::current()
 
 } // namespace WTF
 
+using WTF::ThreadSuspendLocker;
 using WTF::Thread;
 using WTF::ThreadType;
 using WTF::GCThreadType;

@@ -30,6 +30,8 @@
 #include "CanvasRenderingContext.h"
 #include "Element.h"
 #include "FloatRect.h"
+#include "GraphicsContext.h"
+#include "ImageBuffer.h"
 #include "InspectorInstrumentation.h"
 #include <JavaScriptCore/JSCInlines.h>
 #include <JavaScriptCore/JSLock.h>
@@ -101,7 +103,7 @@ size_t CanvasBase::memoryCost() const
     // memoryCost() may be invoked concurrently from a GC thread, and we need to be careful
     // about what data we access here and how. We need to hold a lock to prevent m_imageBuffer
     // from being changed while we access it.
-    auto locker = holdLock(m_imageBufferAssignmentLock);
+    Locker locker { m_imageBufferAssignmentLock };
     if (!m_imageBuffer)
         return 0;
     return m_imageBuffer->memoryCost();
@@ -112,7 +114,7 @@ size_t CanvasBase::externalMemoryCost() const
     // externalMemoryCost() may be invoked concurrently from a GC thread, and we need to be careful
     // about what data we access here and how. We need to hold a lock to prevent m_imageBuffer
     // from being changed while we access it.
-    auto locker = holdLock(m_imageBufferAssignmentLock);
+    Locker locker { m_imageBufferAssignmentLock };
     if (!m_imageBuffer)
         return 0;
     return m_imageBuffer->externalMemoryCost();
@@ -134,7 +136,7 @@ void CanvasBase::removeObserver(CanvasObserver& observer)
         InspectorInstrumentation::didChangeCSSCanvasClientNodes(*this);
 }
 
-void CanvasBase::notifyObserversCanvasChanged(const FloatRect& rect)
+void CanvasBase::notifyObserversCanvasChanged(const std::optional<FloatRect>& rect)
 {
     for (auto& observer : m_observers)
         observer->canvasChanged(*this, rect);
@@ -160,6 +162,22 @@ void CanvasBase::notifyObserversCanvasDestroyed()
 #endif
 }
 
+void CanvasBase::addDisplayBufferObserver(CanvasDisplayBufferObserver& observer)
+{
+    m_displayBufferObservers.add(observer);
+}
+
+void CanvasBase::removeDisplayBufferObserver(CanvasDisplayBufferObserver& observer)
+{
+    m_displayBufferObservers.remove(observer);
+}
+
+void CanvasBase::notifyObserversCanvasDisplayBufferPrepared()
+{
+    for (auto& observer : m_displayBufferObservers)
+        observer.canvasDisplayBufferPrepared(*this);
+}
+
 HashSet<Element*> CanvasBase::cssCanvasClients() const
 {
     HashSet<Element*> cssCanvasClients;
@@ -176,23 +194,23 @@ HashSet<Element*> CanvasBase::cssCanvasClients() const
     return cssCanvasClients;
 }
 
-bool CanvasBase::callTracingActive() const
+bool CanvasBase::hasActiveInspectorCanvasCallTracer() const
 {
     auto* context = renderingContext();
-    return context && context->callTracingActive();
+    return context && context->hasActiveInspectorCanvasCallTracer();
 }
 
 RefPtr<ImageBuffer> CanvasBase::setImageBuffer(RefPtr<ImageBuffer>&& buffer) const
 {
     RefPtr<ImageBuffer> returnBuffer;
     {
-        auto locker = holdLock(m_imageBufferAssignmentLock);
+        Locker locker { m_imageBufferAssignmentLock };
         m_contextStateSaver = nullptr;
         returnBuffer = std::exchange(m_imageBuffer, WTFMove(buffer));
     }
 
-    if (m_imageBuffer && m_size != m_imageBuffer->logicalSize())
-        m_size = m_imageBuffer->logicalSize();
+    if (m_imageBuffer && m_size != m_imageBuffer->truncatedLogicalSize())
+        m_size = m_imageBuffer->truncatedLogicalSize();
 
     size_t previousMemoryCost = m_imageBufferCost;
     m_imageBufferCost = memoryCost();

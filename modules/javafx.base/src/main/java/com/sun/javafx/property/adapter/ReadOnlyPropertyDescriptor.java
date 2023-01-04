@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -40,7 +40,7 @@ import static java.util.Locale.ENGLISH;
 
 /**
  */
-public class ReadOnlyPropertyDescriptor {
+public class ReadOnlyPropertyDescriptor<T> {
 
     private static final String ADD_LISTENER_METHOD_NAME = "addPropertyChangeListener";
     private static final String REMOVE_LISTENER_METHOD_NAME = "removePropertyChangeListener";
@@ -149,7 +149,7 @@ public class ReadOnlyPropertyDescriptor {
         }
     }
 
-    public class ReadOnlyListener<T> implements PropertyChangeListener, WeakListener {
+    public class ReadOnlyListener implements PropertyChangeListener, WeakListener {
 
         protected final Object bean;
         private final WeakReference<ReadOnlyJavaBeanProperty<T>> propertyRef;
@@ -158,7 +158,7 @@ public class ReadOnlyPropertyDescriptor {
 
         public ReadOnlyListener(Object bean, ReadOnlyJavaBeanProperty<T> property) {
             this.bean = bean;
-            this.propertyRef = new WeakReference<ReadOnlyJavaBeanProperty<T>>(property);
+            this.propertyRef = new WeakReference<>(property);
         }
 
         protected ReadOnlyJavaBeanProperty<T> checkRef() {

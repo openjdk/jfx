@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -35,6 +35,7 @@ namespace WebCore {
 
 class CaptureDevice;
 class CaptureDeviceManager;
+class DisplayCaptureManager;
 class RealtimeMediaSource;
 
 struct CaptureSourceOrError;
@@ -63,7 +64,7 @@ public:
     virtual CaptureSourceOrError createAudioCaptureSource(const CaptureDevice&, String&&, const MediaConstraints*) = 0;
     virtual CaptureDeviceManager& audioCaptureDeviceManager() = 0;
     virtual const Vector<CaptureDevice>& speakerDevices() const = 0;
-    virtual void getSpeakerDevices(CompletionHandler<void(Vector<CaptureDevice>&&)>&& completion) const { completion(copyToVector(speakerDevices())); }
+    virtual void computeSpeakerDevices(CompletionHandler<void()>&& callback) const { callback(); }
 
     class ExtensiveObserver : public CanMakeWeakPtr<ExtensiveObserver> { };
     virtual void addExtensiveObserver(ExtensiveObserver&) { };
@@ -94,8 +95,8 @@ class DisplayCaptureFactory
 {
 public:
     virtual ~DisplayCaptureFactory() = default;
-    virtual CaptureSourceOrError createDisplayCaptureSource(const CaptureDevice&, const MediaConstraints*) = 0;
-    virtual CaptureDeviceManager& displayCaptureDeviceManager() = 0;
+    virtual CaptureSourceOrError createDisplayCaptureSource(const CaptureDevice&, String&&, const MediaConstraints*) = 0;
+    virtual DisplayCaptureManager& displayCaptureDeviceManager() = 0;
 
 protected:
     DisplayCaptureFactory() = default;

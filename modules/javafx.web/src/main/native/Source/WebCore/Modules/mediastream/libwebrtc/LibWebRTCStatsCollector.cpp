@@ -154,8 +154,6 @@ static inline void fillInboundRtpStreamStats(RTCStatsReport::InboundRtpStreamSta
         stats.pliCount = *rtcStats.pli_count;
     if (rtcStats.nack_count.is_defined())
         stats.nackCount = *rtcStats.nack_count;
-    if (rtcStats.sli_count.is_defined())
-        stats.sliCount = *rtcStats.sli_count;
     if (rtcStats.estimated_playout_timestamp.is_defined())
         stats.estimatedPlayoutTimestamp = *rtcStats.estimated_playout_timestamp;
     if (rtcStats.jitter_buffer_delay.is_defined())
@@ -275,8 +273,6 @@ static inline void fillOutboundRtpStreamStats(RTCStatsReport::OutboundRtpStreamS
         stats.firCount = *rtcStats.fir_count;
     if (rtcStats.pli_count.is_defined())
         stats.pliCount = *rtcStats.pli_count;
-    if (rtcStats.sli_count.is_defined())
-        stats.sliCount = *rtcStats.sli_count;
 
     if (rtcStats.track_id.is_defined())
         stats.trackId = fromStdString(*rtcStats.track_id);
@@ -434,7 +430,7 @@ static inline void fillRTCIceCandidatePairStats(RTCStatsReport::IceCandidatePair
         stats.consentResponsesSent = *rtcStats.responses_sent;
 }
 
-static inline Optional<RTCIceCandidateType> iceCandidateState(const std::string& state)
+static inline std::optional<RTCIceCandidateType> iceCandidateState(const std::string& state)
 {
     if (state == "host")
         return RTCIceCandidateType::Host;
@@ -473,8 +469,6 @@ static inline void fillRTCIceCandidateStats(RTCStatsReport::IceCandidateStats& s
         stats.priority = *rtcStats.priority;
     if (rtcStats.url.is_defined())
         stats.url = fromStdString(*rtcStats.url);
-    if (rtcStats.deleted.is_defined())
-        stats.deleted = *rtcStats.deleted;
 }
 
 static inline void fillRTCCertificateStats(RTCStatsReport::CertificateStats& stats, const webrtc::RTCCertificateStats& rtcStats)
@@ -640,10 +634,15 @@ static inline void initializeRTCStatsReportBackingMap(DOMMapAdapter& report, con
 void LibWebRTCStatsCollector::OnStatsDelivered(const rtc::scoped_refptr<const webrtc::RTCStatsReport>& rtcReport)
 {
     callOnMainThread([this, protectedThis = rtc::scoped_refptr<LibWebRTCStatsCollector>(this), rtcReport]() {
-        m_callback(RTCStatsReport::create([rtcReport](auto& mapAdapter) {
-            if (rtcReport)
-                initializeRTCStatsReportBackingMap(mapAdapter, *rtcReport);
-        }));
+        m_callback(rtcReport);
+    });
+}
+
+Ref<RTCStatsReport> LibWebRTCStatsCollector::createReport(const rtc::scoped_refptr<const webrtc::RTCStatsReport>& rtcReport)
+{
+    return RTCStatsReport::create([rtcReport](auto& mapAdapter) {
+        if (rtcReport)
+            initializeRTCStatsReportBackingMap(mapAdapter, *rtcReport);
     });
 }
 

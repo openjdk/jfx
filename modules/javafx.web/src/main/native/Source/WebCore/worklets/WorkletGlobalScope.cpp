@@ -64,7 +64,7 @@ WorkletGlobalScope::WorkletGlobalScope(WorkerOrWorkletThread& thread, Ref<JSC::V
 
 WorkletGlobalScope::WorkletGlobalScope(Document& document, Ref<JSC::VM>&& vm, ScriptSourceCode&& code)
     : WorkerOrWorkletGlobalScope(WorkerThreadType::Worklet, WTFMove(vm), nullptr)
-    , m_document(makeWeakPtr(document))
+    , m_document(document)
     , m_topOrigin(SecurityOrigin::createUnique())
     , m_url(code.url())
     , m_jsRuntimeFlags(document.settings().javaScriptRuntimeFlags())
@@ -155,7 +155,7 @@ ReferrerPolicy WorkletGlobalScope::referrerPolicy() const
     return ReferrerPolicy::NoReferrer;
 }
 
-void WorkletGlobalScope::fetchAndInvokeScript(const URL& moduleURL, FetchRequestCredentials credentials, CompletionHandler<void(Optional<Exception>&&)>&& completionHandler)
+void WorkletGlobalScope::fetchAndInvokeScript(const URL& moduleURL, FetchRequestCredentials credentials, CompletionHandler<void(std::optional<Exception>&&)>&& completionHandler)
 {
     ASSERT(!isMainThread());
     script()->loadAndEvaluateModule(moduleURL, credentials, WTFMove(completionHandler));

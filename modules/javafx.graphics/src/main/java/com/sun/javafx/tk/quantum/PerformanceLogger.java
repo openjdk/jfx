@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2002, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2002, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -42,12 +42,10 @@ import java.io.Writer;
  * analysis is interesting; this class is merely a central container
  * for those timing values.
  * Note that, due to the variables in this class being static,
- * use of particular time values by multiple applets will cause
- * confusing results.  For example, if plugin runs two applets
- * simultaneously, the initTime for those applets will collide
- * and the results may be undefined.
+ * use of particular time values by multiple applications would cause
+ * confusing results. This doesn't happen in practice.
  * <P>
- * To automatically track startup performance in an app or applet,
+ * To automatically track startup performance in an app,
  * use the command-line parameter sun.perflog as follows:<BR>
  * <pre>{@code
  *     -Dsun.perflog[=file:<filename>]
@@ -91,6 +89,7 @@ public class PerformanceLogger {
         String perfLoggingProp =
             java.security.AccessController.doPrivileged(
                     new java.security.PrivilegedAction<String>() {
+                        @Override
                         public String run() {
                             return System.getProperty("sun.perflog");
                         }
@@ -103,6 +102,7 @@ public class PerformanceLogger {
             String perfNanoProp =
                 java.security.AccessController.doPrivileged(
                     new java.security.PrivilegedAction<String>() {
+                        @Override
                         public String run() {
                             return System.getProperty("sun.perflog.nano");
                         }
@@ -120,6 +120,7 @@ public class PerformanceLogger {
                     @SuppressWarnings("removal")
                     var dummy = java.security.AccessController.doPrivileged(
                     new java.security.PrivilegedAction<Void>() {
+                        @Override
                         public Void run() {
                             try {
                                 File logFile = new File(logFileName);
@@ -139,7 +140,7 @@ public class PerformanceLogger {
                 logWriter = new OutputStreamWriter(System.out);
             }
         }
-        times = new Vector<TimeData>(10);
+        times = new Vector<>(10);
         // Reserve predefined slots
         for (int i = 0; i <= LAST_RESERVED; ++i) {
             times.add(new TimeData("Time " + i + " not set", 0));
@@ -191,9 +192,9 @@ public class PerformanceLogger {
 
     /**
      * Sets the start time.  Ideally, this is the earliest time available
-     * during the startup of a Java applet or application.  This time is
+     * during the startup of a Java application.  This time is
      * later used to analyze the difference between the initial startup
-     * time and other events in the system (such as an applet's init time).
+     * time and other events in the system (such as an app's init time).
      */
     public static void setStartTime(String message) {
         if (loggingEnabled()) {

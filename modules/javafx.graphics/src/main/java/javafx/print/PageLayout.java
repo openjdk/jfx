@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -120,6 +120,10 @@ public final class PageLayout {
         this.bMargin = bottomMargin;
     }
 
+    /**
+     * Gets the {@code PageOrientation}.
+     * @return the {@code PageOrientation}
+     */
     public PageOrientation getPageOrientation() {
         return orient;
     }

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2015 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,6 +33,7 @@
 #include "FunctionRareData.h"
 #include "HeapInlines.h"
 #include "LLIntPrototypeLoadAdaptiveStructureWatchpoint.h"
+#include "StructureRareDataInlines.h"
 #include "StructureStubClearingWatchpoint.h"
 #include "VM.h"
 
@@ -134,7 +135,7 @@ void WatchpointSet::fireAllWatchpoints(VM& vm, const FireDetail& detail)
     // for most Watchpoints to be destructed while they're in the middle of firing.
     // This GC could also destroy us, and we're not in a safe state to be destroyed.
     // The safest thing to do is to DeferGCForAWhile to prevent this GC from happening.
-    DeferGCForAWhile deferGC(vm.heap);
+    DeferGCForAWhile deferGC(vm);
 
     while (!m_set.isEmpty()) {
         Watchpoint* watchpoint = m_set.begin();
@@ -194,20 +195,9 @@ void InlineWatchpointSet::freeFat()
     fat()->deref();
 }
 
-DeferredWatchpointFire::DeferredWatchpointFire(VM& vm)
-    : m_vm(vm)
-    , m_watchpointsToFire(ClearWatchpoint)
+void DeferredWatchpointFire::fireAllSlow()
 {
-}
-
-DeferredWatchpointFire::~DeferredWatchpointFire()
-{
-}
-
-void DeferredWatchpointFire::fireAll()
-{
-    if (m_watchpointsToFire.state() == IsWatched)
-        m_watchpointsToFire.fireAll(m_vm, *this);
+    m_watchpointsToFire.fireAll(m_vm, *this);
 }
 
 void DeferredWatchpointFire::takeWatchpointsToFire(WatchpointSet* watchpointsToFire)

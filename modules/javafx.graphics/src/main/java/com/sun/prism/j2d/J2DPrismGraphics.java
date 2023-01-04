@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -335,8 +335,7 @@ public class J2DPrismGraphics
 
     private static ConcurrentHashMap<java.awt.Font,
                                      WeakReference<java.awt.Font>>
-        fontMap = new ConcurrentHashMap<java.awt.Font,
-                                        WeakReference<java.awt.Font>>();
+        fontMap = new ConcurrentHashMap<>();
     private static volatile int cleared = 0;
 
     private static java.awt.Font toJ2DFont(FontStrike strike) {
@@ -548,14 +547,17 @@ public class J2DPrismGraphics
         setStroke(DEFAULT_STROKE);
     }
 
+    @Override
     public RenderTarget getRenderTarget() {
         return target;
     }
 
+    @Override
     public Screen getAssociatedScreen() {
         return target.getAssociatedScreen();
     }
 
+    @Override
     public ResourceFactory getResourceFactory() {
         return target.getResourceFactory();
     }
@@ -563,18 +565,22 @@ public class J2DPrismGraphics
     public void reset() {
     }
 
+    @Override
     public Rectangle getClipRect() {
         return clipRect == null ? null : new Rectangle(clipRect);
     }
 
+    @Override
     public Rectangle getClipRectNoClone() {
         return clipRect;
     }
 
+    @Override
     public RectBounds getFinalClipNoClone() {
         return finalClipRect;
     }
 
+    @Override
     public void setClipRect(Rectangle clipRect) {
         this.finalClipRect.setBounds(devClipRect);
         if (clipRect == null) {
@@ -593,14 +599,17 @@ public class J2DPrismGraphics
         return (java.awt.AlphaComposite) g2d.getComposite();
     }
 
+    @Override
     public float getExtraAlpha() {
         return getAWTComposite().getAlpha();
     }
 
+    @Override
     public void setExtraAlpha(float extraAlpha) {
         g2d.setComposite(getAWTComposite().derive(extraAlpha));
     }
 
+    @Override
     public CompositeMode getCompositeMode() {
         int rule = getAWTComposite().getRule();
         switch (rule) {
@@ -615,6 +624,7 @@ public class J2DPrismGraphics
         }
     }
 
+    @Override
     public void setCompositeMode(CompositeMode mode) {
         java.awt.AlphaComposite awtComp = getAWTComposite();
         switch (mode) {
@@ -633,10 +643,12 @@ public class J2DPrismGraphics
         g2d.setComposite(awtComp);
     }
 
+    @Override
     public Paint getPaint() {
         return paint;
     }
 
+    @Override
     public void setPaint(Paint paint) {
         this.paint = paint;
         java.awt.Paint j2dpaint = toJ2DPaint(paint, null);
@@ -648,29 +660,35 @@ public class J2DPrismGraphics
         }
     }
 
+    @Override
     public BasicStroke getStroke() {
         return stroke;
     }
 
+    @Override
     public void setStroke(BasicStroke stroke) {
         this.stroke = stroke;
         g2d.setStroke(toJ2DStroke(stroke));
     }
 
+    @Override
     public BaseTransform getTransformNoClone() {
         return transform;
     }
 
+    @Override
     public void translate(float tx, float ty) {
         transform.translate(tx, ty);
         g2d.translate(tx, ty);
     }
 
+    @Override
     public void scale(float sx, float sy) {
         transform.scale(sx, sy);
         g2d.scale(sx, sy);
     }
 
+    @Override
     public void transform(BaseTransform xform) {
         if (!xform.is2D()) {
             // No-op until we support 3D
@@ -680,6 +698,7 @@ public class J2DPrismGraphics
         setTransformG2D(tmpJ2DTransform(transform));
     }
 
+    @Override
     public void setTransform(BaseTransform xform) {
         // TODO: Modify PrEffectHelper to not pass a null... (RT-27384)
         if (xform == null) xform = BaseTransform.IDENTITY_TRANSFORM;
@@ -687,6 +706,7 @@ public class J2DPrismGraphics
         setTransformG2D(tmpJ2DTransform(transform));
     }
 
+    @Override
     public void setTransform(double m00, double m10,
                              double m01, double m11,
                              double m02, double m12)
@@ -695,10 +715,12 @@ public class J2DPrismGraphics
         setTransformG2D(tmpJ2DTransform(transform));
     }
 
+    @Override
     public void clear() {
         clear(Color.TRANSPARENT);
     }
 
+    @Override
     public void clear(Color color) {
         this.getRenderTarget().setOpaque(color.isOpaque());
         clear(toJ2DColor(color));
@@ -713,6 +735,7 @@ public class J2DPrismGraphics
         gtmp.dispose();
     }
 
+    @Override
     public void clearQuad(float x1, float y1, float x2, float y2) {
         g2d.setComposite(java.awt.AlphaComposite.Clear);
         g2d.fill(tmpQuad(x1, y1, x2, y2));
@@ -747,24 +770,29 @@ public class J2DPrismGraphics
         g2d.fill(shape);
     }
 
+    @Override
     public void fill(Shape shape) {
         fill(tmpShape(shape));
     }
 
+    @Override
     public void fillRect(float x, float y, float width, float height) {
         fill(tmpRect(x, y, width, height));
     }
 
+    @Override
     public void fillRoundRect(float x, float y, float width, float height,
                               float arcw, float arch)
     {
         fill(tmpRRect(x, y, width, height, arcw, arch));
     }
 
+    @Override
     public void fillEllipse(float x, float y, float width, float height) {
         fill(tmpEllipse(x, y, width, height));
     }
 
+    @Override
     public void fillQuad(float x1, float y1, float x2, float y2) {
         fill(tmpQuad(x1, y1, x2, y2));
     }
@@ -787,28 +815,34 @@ public class J2DPrismGraphics
         }
     }
 
+    @Override
     public void draw(Shape shape) {
         draw(tmpShape(shape));
     }
 
+    @Override
     public void drawLine(float x1, float y1, float x2, float y2) {
         draw(tmpLine(x1, y1, x2, y2));
     }
 
+    @Override
     public void drawRect(float x, float y, float width, float height) {
         draw(tmpRect(x, y, width, height));
     }
 
+    @Override
     public void drawRoundRect(float x, float y, float width, float height, float arcw, float arch) {
         draw(tmpRRect(x, y, width, height, arcw, arch));
     }
 
+    @Override
     public void drawEllipse(float x, float y, float width, float height) {
         draw(tmpEllipse(x, y, width, height));
     }
 
     Rectangle2D nodeBounds = null;
 
+    @Override
     public void setNodeBounds(RectBounds bounds) {
         nodeBounds = bounds != null ?
                 new Rectangle2D.Float(bounds.getMinX(), bounds.getMinY(),
@@ -834,6 +868,7 @@ public class J2DPrismGraphics
         g2d.drawGlyphVector(gv, x, y);
     }
 
+    @Override
     public void drawString(GlyphList gl, FontStrike strike, float x, float y,
                            Color selectColor, int start, int end) {
 
@@ -945,6 +980,7 @@ public class J2DPrismGraphics
         return;
     }
 
+    @Override
     public void drawMappedTextureRaw(Texture tex,
                                      float dx1, float dy1, float dx2, float dy2,
                                      float tx11, float ty11, float tx21, float ty21,
@@ -972,11 +1008,13 @@ public class J2DPrismGraphics
         setTransform(transform);
     }
 
+    @Override
     public void drawTexture(Texture tex, float x, float y, float w, float h) {
         java.awt.Image img = ((J2DTexture) tex).getBufferedImage();
         g2d.drawImage(img, (int) x, (int) y, (int) (x+w), (int) (y+h), 0, 0, (int)w, (int) h, null);
     }
 
+    @Override
     public void drawTexture(Texture tex,
                             float dx1, float dy1, float dx2, float dy2,
                             float sx1, float sy1, float sx2, float sy2)
@@ -1042,6 +1080,7 @@ public class J2DPrismGraphics
         drawTexture(tex, dh2, dv2, dx2, dy2, sh2, sv2, sx2, sy2);
     }
 
+    @Override
     public void drawTextureRaw(Texture tex,
                                float dx1, float dy1, float dx2, float dy2,
                                float tx1, float ty1, float tx2, float ty2)
@@ -1055,6 +1094,7 @@ public class J2DPrismGraphics
         drawTexture(tex, dx1, dy1, dx2, dy2, tx1, ty1, tx2, ty2);
     }
 
+    @Override
     public void drawTextureVO(Texture tex,
                               float topopacity, float botopacity,
                               float dx1, float dy1, float dx2, float dy2,
@@ -1095,6 +1135,7 @@ public class J2DPrismGraphics
         g2d.setPaint(savepaint);
     }
 
+    @Override
     public void drawPixelsMasked(RTTexture imgtex, RTTexture masktex,
                                  int dx, int dy, int dw, int dh,
                                  int ix, int iy, int mx, int my)
@@ -1105,6 +1146,7 @@ public class J2DPrismGraphics
                           true);
     }
 
+    @Override
     public void maskInterpolatePixels(RTTexture imgtex, RTTexture masktex, int dx,
                                       int dy, int dw, int dh, int ix, int iy,
                                       int mx, int my) {
@@ -1260,10 +1302,12 @@ public class J2DPrismGraphics
         }
     }
 
+    @Override
     public boolean canReadBack() {
         return true;
     }
 
+    @Override
     public RTTexture readBack(Rectangle view) {
         J2DRTTexture rtt = target.getReadbackBuffer();
         java.awt.Graphics2D rttg2d = rtt.createAWTGraphics2D();
@@ -1281,28 +1325,34 @@ public class J2DPrismGraphics
         return rtt;
     }
 
+    @Override
     public void releaseReadBackBuffer(RTTexture view) {
         // This will be needed when we track LCD buffer locks and uses.
         // (See RT-29488)
 //        target.getReadbackBuffer().unlock();
     }
 
+    @Override
     public NGCamera getCameraNoClone() {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 
+    @Override
     public void setPerspectiveTransform(GeneralTransform3D transform) {
     }
 
 
+    @Override
     public boolean isDepthBuffer() {
         return false;
     }
 
+    @Override
     public boolean isDepthTest() {
         return false;
     }
 
+    @Override
     public boolean isAlphaTestShader() {
         if (PrismSettings.verbose && PrismSettings.forceAlphaTestShader) {
             System.out.println("J2D pipe doesn't support shader with alpha testing");
@@ -1310,6 +1360,7 @@ public class J2DPrismGraphics
         return false;
     }
 
+    @Override
     public void setAntialiasedShape(boolean aa) {
         antialiasedShape = aa;
         g2d.setRenderingHint(java.awt.RenderingHints.KEY_ANTIALIASING,
@@ -1317,14 +1368,17 @@ public class J2DPrismGraphics
                         : java.awt.RenderingHints.VALUE_ANTIALIAS_OFF);
     }
 
+    @Override
     public boolean isAntialiasedShape() {
         return antialiasedShape;
     }
 
+    @Override
     public void scale(float sx, float sy, float sz) {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 
+    @Override
     public void setTransform3D(double mxx, double mxy, double mxz, double mxt,
                                double myx, double myy, double myz, double myt,
                                double mzx, double mzy, double mzz, double mzt)
@@ -1337,6 +1391,7 @@ public class J2DPrismGraphics
         setTransform(mxx, myx, mxy, myy, mxt, myt);
     }
 
+    @Override
     public void setCamera(NGCamera camera) {
         // No-op until we support 3D
         /*
@@ -1347,17 +1402,21 @@ public class J2DPrismGraphics
         */
     }
 
+    @Override
     public void setDepthBuffer(boolean depthBuffer) {
         // No-op until we support 3D
     }
 
+    @Override
     public void setDepthTest(boolean depthTest) {
         // No-op until we support 3D
     }
 
+    @Override
     public void sync() {
     }
 
+    @Override
     public void translate(float tx, float ty, float tz) {
         throw new UnsupportedOperationException("Not supported yet.");
     }
@@ -1370,17 +1429,22 @@ public class J2DPrismGraphics
         return this.cull;
     }
 
- public void setClipRectIndex(int index) {
+    @Override
+    public void setClipRectIndex(int index) {
         this.clipRectIndex = index;
     }
+
+    @Override
     public int getClipRectIndex() {
         return this.clipRectIndex;
     }
 
+    @Override
     public void setHasPreCullingBits(boolean hasBits) {
         this.hasPreCullingBits = hasBits;
     }
 
+    @Override
     public boolean hasPreCullingBits() {
         return hasPreCullingBits;
     }
@@ -1396,13 +1460,16 @@ public class J2DPrismGraphics
         return renderRoot;
     }
 
+    @Override
     public void setState3D(boolean flag) {
     }
 
+    @Override
     public boolean isState3D() {
         return false;
     }
 
+    @Override
     public void setup3DRendering() {
     }
 
@@ -1436,34 +1503,42 @@ public class J2DPrismGraphics
             this.prshape = prshape;
         }
 
+        @Override
         public boolean contains(double x, double y) {
             return prshape.contains((float) x, (float) y);
         }
 
+        @Override
         public boolean contains(java.awt.geom.Point2D p) {
             return contains(p.getX(), p.getY());
         }
 
+        @Override
         public boolean contains(double x, double y, double w, double h) {
             return prshape.contains((float) x, (float) y, (float) w, (float) h);
         }
 
+        @Override
         public boolean contains(java.awt.geom.Rectangle2D r) {
             return contains(r.getX(), r.getY(), r.getWidth(), r.getHeight());
         }
 
+        @Override
         public boolean intersects(double x, double y, double w, double h) {
             return prshape.intersects((float) x, (float) y, (float) w, (float) h);
         }
 
+        @Override
         public boolean intersects(java.awt.geom.Rectangle2D r) {
             return intersects(r.getX(), r.getY(), r.getWidth(), r.getHeight());
         }
 
+        @Override
         public java.awt.Rectangle getBounds() {
             return getBounds2D().getBounds();
         }
 
+        @Override
         public java.awt.geom.Rectangle2D getBounds2D() {
             RectBounds b = prshape.getBounds();
             java.awt.geom.Rectangle2D r2d =
@@ -1479,6 +1554,7 @@ public class J2DPrismGraphics
             return tmpAdaptor;
         }
 
+        @Override
         public java.awt.geom.PathIterator
             getPathIterator(java.awt.geom.AffineTransform at)
         {
@@ -1486,6 +1562,7 @@ public class J2DPrismGraphics
             return tmpAdaptor(prshape.getPathIterator(tx));
         }
 
+        @Override
         public java.awt.geom.PathIterator
             getPathIterator(java.awt.geom.AffineTransform at,
                             double flatness)
@@ -1506,29 +1583,34 @@ public class J2DPrismGraphics
             this.priterator = priterator;
         }
 
+        @Override
         public int currentSegment(float[] coords) {
             return priterator.currentSegment(coords);
         }
 
+        @Override
         public int currentSegment(double[] coords) {
             if (tmpcoords == null) {
                 tmpcoords = new float[6];
             }
             int ret = priterator.currentSegment(tmpcoords);
             for (int i = 0; i < NUM_COORDS[ret]; i++) {
-                coords[i] = (double) tmpcoords[i];
+                coords[i] = tmpcoords[i];
             }
             return ret;
         }
 
+        @Override
         public int getWindingRule() {
             return priterator.getWindingRule();
         }
 
+        @Override
         public boolean isDone() {
             return priterator.isDone();
         }
 
+        @Override
         public void next() {
             priterator.next();
         }
@@ -1544,6 +1626,7 @@ public class J2DPrismGraphics
         abstract protected java.awt.Shape makeStrokedRect(java.awt.geom.Rectangle2D r);
         abstract protected java.awt.Shape makeStrokedShape(java.awt.Shape s);
 
+        @Override
         public java.awt.Shape createStrokedShape(java.awt.Shape p) {
             if (p instanceof java.awt.geom.Rectangle2D) {
                 java.awt.Shape s = makeStrokedRect((java.awt.geom.Rectangle2D) p);
@@ -1595,6 +1678,7 @@ public class J2DPrismGraphics
             super(stroke);
         }
 
+        @Override
         protected java.awt.Shape makeStrokedRect(java.awt.geom.Rectangle2D r) {
             if (stroke.getDashArray() != null) {
                 return null;
@@ -1686,6 +1770,7 @@ public class J2DPrismGraphics
             super(stroke);
         }
 
+        @Override
         protected java.awt.Shape makeStrokedRect(java.awt.geom.Rectangle2D r) {
             if (stroke.getDashArray() != null) {
                 return null;

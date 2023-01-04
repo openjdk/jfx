@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2014-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -23,8 +23,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef Algorithm_h
-#define Algorithm_h
+#pragma once
 
 #include "BAssert.h"
 #include <algorithm>
@@ -169,6 +168,23 @@ __forceinline constexpr unsigned long __builtin_clzl(unsigned long value)
 }
 #endif
 
+template <typename T>
+constexpr unsigned clzConstexpr(T value)
+{
+    constexpr unsigned bitSize = sizeof(T) * CHAR_BIT;
+
+    using UT = typename std::make_unsigned<T>::type;
+    UT uValue = value;
+
+    unsigned zeroCount = 0;
+    for (int i = bitSize - 1; i >= 0; i--) {
+        if (uValue >> i)
+            break;
+        zeroCount++;
+    }
+    return zeroCount;
+}
+
 constexpr unsigned long log2(unsigned long value)
 {
     return bitCount<unsigned long>() - 1 - __builtin_clzl(value);
@@ -262,6 +278,13 @@ constexpr unsigned getLSBSetNonZeroConstexpr(T t)
     return ctzConstexpr(t);
 }
 
+template<typename T>
+constexpr unsigned getMSBSetConstexpr(T t)
+{
+    constexpr unsigned bitSize = sizeof(T) * CHAR_BIT;
+    return bitSize - 1 - clzConstexpr(t);
+}
+
 // From http://graphics.stanford.edu/~seander/bithacks.html#RoundUpPowerOf2
 constexpr uint32_t roundUpToPowerOfTwo(uint32_t v)
 {
@@ -276,5 +299,3 @@ constexpr uint32_t roundUpToPowerOfTwo(uint32_t v)
 }
 
 } // namespace bmalloc
-
-#endif // Algorithm_h

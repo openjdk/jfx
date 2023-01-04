@@ -25,8 +25,6 @@
 
 #pragma once
 
-#if ENABLE(INDEXED_DATABASE)
-
 #include "ProcessIdentifier.h"
 #include <wtf/text/StringHash.h>
 
@@ -51,10 +49,7 @@ public:
     IDBResourceIdentifier(const IDBClient::IDBConnectionProxy&, const IDBRequest&);
     explicit IDBResourceIdentifier(const IDBServer::IDBConnectionToClient&);
 
-    static IDBResourceIdentifier deletedValue();
-    WEBCORE_EXPORT bool isHashTableDeletedValue() const;
-
-    static IDBResourceIdentifier emptyValue();
+    WEBCORE_EXPORT static IDBResourceIdentifier emptyValue();
     bool isEmpty() const
     {
         return !m_resourceNumber && !m_idbConnectionIdentifier;
@@ -66,6 +61,7 @@ public:
         return StringHasher::hashMemory<sizeof(hashCodes)>(hashCodes);
     }
 
+    bool operator!=(const IDBResourceIdentifier& other) const { return !(*this == other); }
     bool operator==(const IDBResourceIdentifier& other) const
     {
         return m_idbConnectionIdentifier == other.m_idbConnectionIdentifier
@@ -86,6 +82,8 @@ public:
     template<class Decoder> static WARN_UNUSED_RETURN bool decode(Decoder&, IDBResourceIdentifier&);
 
 private:
+    friend struct IDBResourceIdentifierHashTraits;
+
     IDBResourceIdentifier(IDBConnectionIdentifier, uint64_t resourceIdentifier);
     IDBConnectionIdentifier m_idbConnectionIdentifier;
     uint64_t m_resourceNumber { 0 };
@@ -113,12 +111,12 @@ struct IDBResourceIdentifierHashTraits : WTF::CustomHashTraits<IDBResourceIdenti
 
     static void constructDeletedValue(IDBResourceIdentifier& identifier)
     {
-        identifier = IDBResourceIdentifier::deletedValue();
+        new (NotNull, &identifier.m_idbConnectionIdentifier) IDBConnectionIdentifier(WTF::HashTableDeletedValue);
     }
 
     static bool isDeletedValue(const IDBResourceIdentifier& identifier)
     {
-        return identifier.isHashTableDeletedValue();
+        return identifier.m_idbConnectionIdentifier.isHashTableDeletedValue();
     }
 };
 
@@ -153,5 +151,3 @@ inline WebCore::IDBConnectionIdentifier crossThreadCopy(WebCore::IDBConnectionId
 }
 
 } // namespace WTF
-
-#endif // ENABLE(INDEXED_DATABASE)

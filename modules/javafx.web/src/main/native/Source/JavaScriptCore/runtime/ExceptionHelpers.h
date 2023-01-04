@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,6 +28,7 @@
 
 #pragma once
 
+#include "DeferTermination.h"
 #include "ErrorInstance.h"
 #include "Exception.h"
 #include "JSObject.h"
@@ -39,8 +40,6 @@ typedef JSObject* (*ErrorFactory)(JSGlobalObject*, const String&, ErrorInstance:
 
 String defaultSourceAppender(const String&, const String&, RuntimeType, ErrorInstance::SourceTextWhereErrorOccurred);
 
-JSObject* createTerminatedExecutionException(VM*);
-JS_EXPORT_PRIVATE bool isTerminatedExecutionException(VM&, Exception*);
 JS_EXPORT_PRIVATE JSObject* createError(JSGlobalObject*, JSValue, const String&, ErrorInstance::SourceAppender);
 JS_EXPORT_PRIVATE JSObject* createStackOverflowError(JSGlobalObject*);
 JSObject* createUndefinedVariableError(JSGlobalObject*, const Identifier&);
@@ -52,6 +51,7 @@ JSObject* createInvalidInstanceofParameterErrorNotFunction(JSGlobalObject*, JSVa
 JSObject* createInvalidInstanceofParameterErrorHasInstanceValueNotFunction(JSGlobalObject*, JSValue);
 JSObject* createNotAConstructorError(JSGlobalObject*, JSValue);
 JSObject* createNotAFunctionError(JSGlobalObject*, JSValue);
+JSObject* createInvalidPrototypeError(JSGlobalObject*, JSValue);
 JSObject* createErrorForInvalidGlobalAssignment(JSGlobalObject*, const String&);
 JSObject* createInvalidPrivateNameError(JSGlobalObject*);
 JSObject* createRedefinedPrivateNameError(JSGlobalObject*);
@@ -60,43 +60,34 @@ String errorDescriptionForValue(JSGlobalObject*, JSValue);
 JS_EXPORT_PRIVATE Exception* throwOutOfMemoryError(JSGlobalObject*, ThrowScope&);
 JS_EXPORT_PRIVATE Exception* throwOutOfMemoryError(JSGlobalObject*, ThrowScope&, const String&);
 JS_EXPORT_PRIVATE Exception* throwStackOverflowError(JSGlobalObject*, ThrowScope&);
-JS_EXPORT_PRIVATE Exception* throwTerminatedExecutionException(JSGlobalObject*, ThrowScope&);
 
+#if ASSERT_ENABLED
 
-class TerminatedExecutionError final : public JSNonFinalObject {
-public:
-    using Base = JSNonFinalObject;
-    static constexpr unsigned StructureFlags = Base::StructureFlags | StructureIsImmortal;
+#define DEFER_TERMINATION_AND_ASSERT(vm, assertion, ...) do { \
+        JSC::DeferTerminationForAWhile deferScope(vm); \
+        ASSERT(assertion, __VA_ARGS__); \
+    } while (false)
 
-    template<typename CellType, SubspaceAccess>
-    static IsoSubspace* subspaceFor(VM& vm)
-    {
-        STATIC_ASSERT_ISO_SUBSPACE_SHARABLE(TerminatedExecutionError, Base);
-        return &vm.plainObjectSpace;
-    }
+#define DEFER_TERMINATION_AND_ASSERT_WITH_MESSAGE(vm, assertion, ...) do { \
+        JSC::DeferTerminationForAWhile deferScope(vm); \
+        ASSERT_WITH_MESSAGE(assertion, __VA_ARGS__); \
+    } while (false)
 
-    static TerminatedExecutionError* create(VM& vm)
-    {
-        TerminatedExecutionError* error = new (NotNull, allocateCell<TerminatedExecutionError>(vm.heap)) TerminatedExecutionError(vm);
-        error->finishCreation(vm);
-        return error;
-    }
+#else
 
-    static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
-    {
-        return Structure::create(vm, globalObject, prototype, TypeInfo(ObjectType, StructureFlags), info());
-    }
+#define DEFER_TERMINATION_AND_ASSERT(vm, assertion, ...) UNUSED_PARAM(vm)
+#define DEFER_TERMINATION_AND_ASSERT_WITH_MESSAGE(vm, assertion, ...) UNUSED_PARAM(vm)
 
-    DECLARE_EXPORT_INFO;
+#endif // ASSERT_ENABLED
 
-private:
-    explicit TerminatedExecutionError(VM& vm)
-        : JSNonFinalObject(vm, vm.terminatedExecutionErrorStructure.get())
-    {
-    }
+#define DEFER_TERMINATION_AND_RELEASE_ASSERT(vm, assertion, ...) do { \
+        JSC::DeferTerminationForAWhile deferScope(vm); \
+        RELEASE_ASSERT(assertion, __VA_ARGS__); \
+    } while (false)
 
-    static JSValue defaultValue(const JSObject*, JSGlobalObject*, PreferredPrimitiveType);
-
-};
+#define DEFER_TERMINATION_AND_RELEASE_ASSERT_WITH_MESSAGE(vm, assertion, ...) do { \
+        JSC::DeferTerminationForAWhile deferScope(vm); \
+        RELEASE_ASSERT_WITH_MESSAGE(assertion, __VA_ARGS__); \
+    } while (false)
 
 } // namespace JSC

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -70,7 +70,7 @@ final class TextCodec {
      * @return  an array of charset alias/name pairs
      */
     private static String[] getEncodings() {
-        List<String> encodings = new ArrayList<String>();
+        List<String> encodings = new ArrayList<>();
         Map<String, Charset> ac = Charset.availableCharsets();
         for (Map.Entry<String, Charset> entry: ac.entrySet()) {
             String e = entry.getKey();

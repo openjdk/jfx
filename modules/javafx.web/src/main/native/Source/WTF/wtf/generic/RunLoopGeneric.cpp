@@ -50,12 +50,14 @@ public:
         if (!isActive())
             return false;
 
+        if (!m_isRepeating)
+            deactivate();
+
+        if (isActive())
+            updateReadyTime();
+
         m_function();
 
-        if (!m_isRepeating)
-            return false;
-
-        updateReadyTime();
         return isActive();
     }
 
@@ -103,7 +105,7 @@ RunLoop::RunLoop()
 
 RunLoop::~RunLoop()
 {
-    LockHolder locker(m_loopLock);
+    Locker locker { m_loopLock };
     m_shutdown = true;
     m_readyToRun.notifyOne();
 
@@ -114,7 +116,7 @@ RunLoop::~RunLoop()
 
 inline bool RunLoop::populateTasks(RunMode runMode, Status& statusOfThisLoop, Deque<RefPtr<TimerBase::ScheduledTask>>& firedTimers)
 {
-    LockHolder locker(m_loopLock);
+    Locker locker { m_loopLock };
 
     if (runMode == RunMode::Drain) {
         MonotonicTime sleepUntil = MonotonicTime::infinity();
@@ -156,7 +158,7 @@ void RunLoop::runImpl(RunMode runMode)
 
     Status statusOfThisLoop = Status::Clear;
     {
-        LockHolder locker(m_loopLock);
+        Locker locker { m_loopLock };
         m_mainLoops.append(&statusOfThisLoop);
     }
 
@@ -200,7 +202,7 @@ void RunLoop::setWakeUpCallback(WTF::Function<void()>&& function)
 
 void RunLoop::stop()
 {
-    LockHolder locker(m_loopLock);
+    Locker locker { m_loopLock };
     if (m_mainLoops.isEmpty())
         return;
 
@@ -211,7 +213,7 @@ void RunLoop::stop()
     }
 }
 
-void RunLoop::wakeUp(const AbstractLocker&)
+void RunLoop::wakeUpWithLock()
 {
     m_pendingTasks = true;
     m_readyToRun.notifyOne();
@@ -222,8 +224,8 @@ void RunLoop::wakeUp(const AbstractLocker&)
 
 void RunLoop::wakeUp()
 {
-    LockHolder locker(m_loopLock);
-    wakeUp(locker);
+    Locker locker { m_loopLock };
+    wakeUpWithLock();
 }
 
 RunLoop::CycleResult RunLoop::cycle(RunLoopMode)
@@ -232,7 +234,7 @@ RunLoop::CycleResult RunLoop::cycle(RunLoopMode)
     return CycleResult::Continue;
 }
 
-void RunLoop::schedule(const AbstractLocker&, Ref<TimerBase::ScheduledTask>&& task)
+void RunLoop::scheduleWithLock(Ref<TimerBase::ScheduledTask>&& task)
 {
     m_schedules.append(task.ptr());
     std::push_heap(m_schedules.begin(), m_schedules.end(), TimerBase::ScheduledTask::EarliestSchedule());
@@ -240,14 +242,14 @@ void RunLoop::schedule(const AbstractLocker&, Ref<TimerBase::ScheduledTask>&& ta
 
 void RunLoop::schedule(Ref<TimerBase::ScheduledTask>&& task)
 {
-    LockHolder locker(m_loopLock);
-    schedule(locker, WTFMove(task));
+    Locker locker { m_loopLock };
+    scheduleWithLock(WTFMove(task));
 }
 
-void RunLoop::scheduleAndWakeUp(const AbstractLocker& locker, Ref<TimerBase::ScheduledTask>&& task)
+void RunLoop::scheduleAndWakeUpWithLock(Ref<TimerBase::ScheduledTask>&& task)
 {
-    schedule(locker, WTFMove(task));
-    wakeUp(locker);
+    scheduleWithLock(WTFMove(task));
+    wakeUpWithLock();
 }
 
 // Since RunLoop does not own the registered TimerBase,
@@ -260,21 +262,21 @@ RunLoop::TimerBase::TimerBase(RunLoop& runLoop)
 
 RunLoop::TimerBase::~TimerBase()
 {
-    LockHolder locker(m_runLoop->m_loopLock);
-    stop(locker);
+    Locker locker { m_runLoop->m_loopLock };
+    stopWithLock();
 }
 
 void RunLoop::TimerBase::start(Seconds interval, bool repeating)
 {
-    LockHolder locker(m_runLoop->m_loopLock);
-    stop(locker);
+    Locker locker { m_runLoop->m_loopLock };
+    stopWithLock();
     m_scheduledTask = ScheduledTask::create([this] {
         fired();
     }, interval, repeating);
-    m_runLoop->scheduleAndWakeUp(locker, *m_scheduledTask);
+    m_runLoop->scheduleAndWakeUpWithLock(*m_scheduledTask);
 }
 
-void RunLoop::TimerBase::stop(const AbstractLocker&)
+void RunLoop::TimerBase::stopWithLock()
 {
     if (m_scheduledTask) {
         m_scheduledTask->deactivate();
@@ -284,25 +286,25 @@ void RunLoop::TimerBase::stop(const AbstractLocker&)
 
 void RunLoop::TimerBase::stop()
 {
-    LockHolder locker(m_runLoop->m_loopLock);
-    stop(locker);
+    Locker locker { m_runLoop->m_loopLock };
+    stopWithLock();
 }
 
 bool RunLoop::TimerBase::isActive() const
 {
-    LockHolder locker(m_runLoop->m_loopLock);
-    return isActive(locker);
+    Locker locker { m_runLoop->m_loopLock };
+    return isActiveWithLock();
 }
 
-bool RunLoop::TimerBase::isActive(const AbstractLocker&) const
+bool RunLoop::TimerBase::isActiveWithLock() const
 {
-    return m_scheduledTask;
+    return m_scheduledTask && m_scheduledTask->isActive();
 }
 
 Seconds RunLoop::TimerBase::secondsUntilFire() const
 {
-    LockHolder locker(m_runLoop->m_loopLock);
-    if (isActive(locker))
+    Locker locker { m_runLoop->m_loopLock };
+    if (isActiveWithLock())
         return std::max<Seconds>(m_scheduledTask->scheduledTimePoint() - MonotonicTime::now(), 0_s);
     return 0_s;
 }

@@ -46,14 +46,14 @@ public:
     const MessagePortIdentifier& port1() const { return m_ports[0]; }
     const MessagePortIdentifier& port2() const { return m_ports[1]; }
 
-    WEBCORE_EXPORT Optional<ProcessIdentifier> processForPort(const MessagePortIdentifier&);
+    WEBCORE_EXPORT std::optional<ProcessIdentifier> processForPort(const MessagePortIdentifier&);
     bool includesPort(const MessagePortIdentifier&);
     void entanglePortWithProcess(const MessagePortIdentifier&, ProcessIdentifier);
     void disentanglePort(const MessagePortIdentifier&);
     void closePort(const MessagePortIdentifier&);
     bool postMessageToRemote(MessageWithMessagePorts&&, const MessagePortIdentifier& remoteTarget);
 
-    void takeAllMessagesForPort(const MessagePortIdentifier&, CompletionHandler<void(Vector<MessageWithMessagePorts>&&, Function<void()>&&)>&&);
+    void takeAllMessagesForPort(const MessagePortIdentifier&, CompletionHandler<void(Vector<MessageWithMessagePorts>&&, CompletionHandler<void()>&&)>&&);
     void checkRemotePortForActivity(const MessagePortIdentifier&, CompletionHandler<void(MessagePortChannelProvider::HasActivity)>&& callback);
 
     WEBCORE_EXPORT bool hasAnyMessagesPendingOrInFlight() const;
@@ -69,7 +69,7 @@ private:
 
     MessagePortIdentifier m_ports[2];
     bool m_isClosed[2] { false, false };
-    Optional<ProcessIdentifier> m_processes[2];
+    std::optional<ProcessIdentifier> m_processes[2];
     RefPtr<MessagePortChannel> m_entangledToProcessProtectors[2];
     Vector<MessageWithMessagePorts> m_pendingMessages[2];
     HashSet<RefPtr<MessagePortChannel>> m_pendingMessagePortTransfers[2];

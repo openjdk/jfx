@@ -37,6 +37,7 @@
 #include "MIMETypeRegistry.h"
 #include "MemoryCache.h"
 #include "RenderElement.h"
+#include "SVGElementTypeHelpers.h"
 #include "SVGImage.h"
 #include "SecurityOrigin.h"
 #include "Settings.h"
@@ -55,7 +56,7 @@
 
 namespace WebCore {
 
-CachedImage::CachedImage(CachedResourceRequest&& request, const PAL::SessionID& sessionID, const CookieJar* cookieJar)
+CachedImage::CachedImage(CachedResourceRequest&& request, PAL::SessionID sessionID, const CookieJar* cookieJar)
     : CachedResource(WTFMove(request), Type::ImageResource, sessionID, cookieJar)
     , m_updateImageDataCount(0)
     , m_isManuallyCached(false)
@@ -65,7 +66,7 @@ CachedImage::CachedImage(CachedResourceRequest&& request, const PAL::SessionID& 
     setStatus(Unknown);
 }
 
-CachedImage::CachedImage(Image* image, const PAL::SessionID& sessionID, const CookieJar* cookieJar)
+CachedImage::CachedImage(Image* image, PAL::SessionID sessionID, const CookieJar* cookieJar)
     : CachedResource(URL(), Type::ImageResource, sessionID, cookieJar)
     , m_image(image)
     , m_updateImageDataCount(0)
@@ -75,7 +76,7 @@ CachedImage::CachedImage(Image* image, const PAL::SessionID& sessionID, const Co
 {
 }
 
-CachedImage::CachedImage(const URL& url, Image* image, const PAL::SessionID& sessionID, const CookieJar* cookieJar, const String& domainForCachePartition)
+CachedImage::CachedImage(const URL& url, Image* image, PAL::SessionID sessionID, const CookieJar* cookieJar, const String& domainForCachePartition)
     : CachedResource(url, Type::ImageResource, sessionID, cookieJar)
     , m_image(image)
     , m_updateImageDataCount(0)
@@ -97,7 +98,7 @@ CachedImage::~CachedImage()
 
 void CachedImage::load(CachedResourceLoader& loader)
 {
-    m_skippingRevalidationDocument = makeWeakPtr(loader.document());
+    m_skippingRevalidationDocument = loader.document();
     if (loader.shouldPerformImageLoad(url()))
         CachedResource::load(loader);
     else
@@ -234,7 +235,7 @@ bool CachedImage::willPaintBrokenImage() const
     return errorOccurred() && m_shouldPaintBrokenImage;
 }
 
-Image* CachedImage::image()
+Image* CachedImage::image() const
 {
     if (errorOccurred() && m_shouldPaintBrokenImage) {
         // Returning the 1x broken image is non-ideal, but we cannot reliably access the appropriate
@@ -261,7 +262,7 @@ Image* CachedImage::imageForRenderer(const RenderObject* renderer)
     if (!m_image)
         return &Image::nullImage();
 
-    if (m_image->isSVGImage()) {
+    if (m_image->drawsSVGImage()) {
         Image* image = m_svgImageCache->imageForRenderer(renderer);
         if (image != &Image::nullImage())
             return image;
@@ -271,7 +272,7 @@ Image* CachedImage::imageForRenderer(const RenderObject* renderer)
 
 bool CachedImage::hasSVGImage() const
 {
-    return m_image && m_image->isSVGImage();
+    return image() && image()->isSVGImage();
 }
 
 void CachedImage::setContainerContextForClient(const CachedImageClient& client, const LayoutSize& containerSize, float containerZoom, const URL& imageURL)
@@ -284,7 +285,7 @@ void CachedImage::setContainerContextForClient(const CachedImageClient& client, 
         return;
     }
 
-    if (!m_image->isSVGImage()) {
+    if (!m_image->drawsSVGImage()) {
         m_image->setContainerSize(containerSize);
         return;
     }
@@ -297,7 +298,7 @@ FloatSize CachedImage::imageSizeForRenderer(const RenderElement* renderer, SizeT
     if (!m_image)
         return { };
 
-    if (is<SVGImage>(*m_image) && sizeType == UsedSize)
+    if (m_image->drawsSVGImage() && sizeType == UsedSize)
         return m_svgImageCache->imageSizeForRenderer(renderer);
 
     return m_image->size(renderer ? renderer->imageOrientation() : ImageOrientation(ImageOrientation::FromImage));
@@ -467,9 +468,9 @@ inline void CachedImage::clearImage()
     m_updateImageDataCount = 0;
 }
 
-void CachedImage::updateBufferInternal(SharedBuffer& data)
+void CachedImage::updateBufferInternal(const SharedBuffer& data)
 {
-    m_data = &data;
+    m_data = data.makeContiguous();
     setEncodedSize(m_data->size());
     createImage();
 
@@ -522,17 +523,11 @@ bool CachedImage::shouldDeferUpdateImageData() const
     return (MonotonicTime::now() - m_lastUpdateImageDataTime).seconds() < updateImageDataBackoffIntervals[interval];
 }
 
-RefPtr<SharedBuffer> CachedImage::convertedDataIfNeeded(SharedBuffer* data) const
+RefPtr<SharedBuffer> CachedImage::convertedDataIfNeeded(const FragmentedSharedBuffer* data) const
 {
-    if (!data || !isPostScriptResource())
-        return data;
-#if PLATFORM(MAC) && !USE(WEBKIT_IMAGE_DECODERS)
-    return SharedBuffer::create(PDFDocumentImage::convertPostScriptDataToPDF(data->createCFData()).get());
-#else
-    // Loading the image should have been canceled if the system does not support converting PostScript to PDF.
-    ASSERT_NOT_REACHED();
-    return nullptr;
-#endif
+    if (!data)
+        return nullptr;
+    return data->makeContiguous();
 }
 
 void CachedImage::didUpdateImageData()
@@ -547,26 +542,26 @@ EncodedDataStatus CachedImage::updateImageData(bool allDataReceived)
 {
     if (!m_image || !m_data)
         return EncodedDataStatus::Error;
-    EncodedDataStatus result = m_image->setData(m_data.get(), allDataReceived);
+    EncodedDataStatus result = m_image->setData(m_data.copyRef(), allDataReceived);
     didUpdateImageData();
     return result;
 }
 
-void CachedImage::updateBuffer(SharedBuffer& data)
+void CachedImage::updateBuffer(const FragmentedSharedBuffer& buffer)
 {
     ASSERT(dataBufferingPolicy() == DataBufferingPolicy::BufferData);
-    updateBufferInternal(data);
-    CachedResource::updateBuffer(data);
+    updateBufferInternal(buffer.makeContiguous());
+    CachedResource::updateBuffer(buffer);
 }
 
-void CachedImage::updateData(const char* data, unsigned length)
+void CachedImage::updateData(const SharedBuffer& data)
 {
     ASSERT(dataBufferingPolicy() == DataBufferingPolicy::DoNotBufferData);
-    updateBufferInternal(SharedBuffer::create(data, length));
-    CachedResource::updateData(data, length);
+    updateBufferInternal(data);
+    CachedResource::updateData(data);
 }
 
-void CachedImage::finishLoading(SharedBuffer* data, const NetworkLoadMetrics& metrics)
+void CachedImage::finishLoading(const FragmentedSharedBuffer* data, const NetworkLoadMetrics& metrics)
 {
     m_data = convertedDataIfNeeded(data);
     if (m_data) {
@@ -584,6 +579,7 @@ void CachedImage::finishLoading(SharedBuffer* data, const NetworkLoadMetrics& me
         return;
     }
 
+    setLoading(false);
     notifyObservers();
     CachedResource::finishLoading(data, metrics);
 }
@@ -591,7 +587,7 @@ void CachedImage::finishLoading(SharedBuffer* data, const NetworkLoadMetrics& me
 void CachedImage::didReplaceSharedBufferContents()
 {
     if (m_image) {
-        // Let the Image know that the SharedBuffer has been rejigged, so it can let go of any references to the heap-allocated resource buffer.
+        // Let the Image know that the FragmentedSharedBuffer has been rejigged, so it can let go of any references to the heap-allocated resource buffer.
         // FIXME(rdar://problem/24275617): It would be better if we could somehow tell the Image's decoder to swap in the new contents without destroying anything.
         m_image->destroyDecodedData(true);
     }

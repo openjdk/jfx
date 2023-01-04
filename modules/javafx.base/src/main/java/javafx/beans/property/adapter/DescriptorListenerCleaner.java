@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,19 +28,19 @@ import java.lang.ref.WeakReference;
 
 import com.sun.javafx.property.adapter.ReadOnlyPropertyDescriptor;
 
-class DescriptorListenerCleaner implements Runnable{
+class DescriptorListenerCleaner<T> implements Runnable {
 
-    private final ReadOnlyPropertyDescriptor pd;
-    private final WeakReference<ReadOnlyPropertyDescriptor.ReadOnlyListener<?>> lRef;
+    private final ReadOnlyPropertyDescriptor<T> pd;
+    private final WeakReference<ReadOnlyPropertyDescriptor<T>.ReadOnlyListener> lRef;
 
-    DescriptorListenerCleaner(ReadOnlyPropertyDescriptor pd, ReadOnlyPropertyDescriptor.ReadOnlyListener<?> l) {
+    DescriptorListenerCleaner(ReadOnlyPropertyDescriptor<T> pd, ReadOnlyPropertyDescriptor<T>.ReadOnlyListener l) {
         this.pd = pd;
-        this.lRef = new WeakReference<ReadOnlyPropertyDescriptor.ReadOnlyListener<?>>(l);
+        this.lRef = new WeakReference<>(l);
     }
 
     @Override
     public void run() {
-        ReadOnlyPropertyDescriptor.ReadOnlyListener<?> l = lRef.get();
+        ReadOnlyPropertyDescriptor<T>.ReadOnlyListener l = lRef.get();
         if (l != null) {
             pd.removeListener(l);
         }

@@ -27,13 +27,13 @@
 #include "CSSValue.h"
 #include "ColorTypes.h"
 #include "WritingMode.h"
-#include <wtf/Optional.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
 class CSSParserObserver;
 class CSSSelectorList;
+class CSSValueList;
 class CSSValuePool;
 class Color;
 class Element;
@@ -64,7 +64,7 @@ public:
     WEBCORE_EXPORT ~CSSParser();
 
     enum class RuleParsing { Normal, Deferred };
-    void parseSheet(StyleSheetContents*, const String&, RuleParsing = RuleParsing::Normal);
+    void parseSheet(StyleSheetContents&, const String&, RuleParsing = RuleParsing::Normal);
 
     static RefPtr<StyleRuleBase> parseRule(const CSSParserContext&, StyleSheetContents*, const String&);
 
@@ -79,24 +79,21 @@ public:
     static ParseResult parseValue(MutableStyleProperties&, CSSPropertyID, const String&, bool important, const CSSParserContext&);
     static ParseResult parseCustomPropertyValue(MutableStyleProperties&, const AtomString& propertyName, const String&, bool important, const CSSParserContext&);
 
-    static RefPtr<CSSValue> parseFontFaceDescriptor(CSSPropertyID, const String&, const CSSParserContext&);
-
     static RefPtr<CSSValue> parseSingleValue(CSSPropertyID, const String&, const CSSParserContext& = strictCSSParserContext());
 
     WEBCORE_EXPORT bool parseDeclaration(MutableStyleProperties&, const String&);
     static Ref<ImmutableStyleProperties> parseInlineStyleDeclaration(const String&, const Element*);
 
-    Optional<CSSSelectorList> parseSelector(const String&);
+    std::optional<CSSSelectorList> parseSelector(const String&);
 
     RefPtr<CSSValue> parseValueWithVariableReferences(CSSPropertyID, const CSSValue&, Style::BuilderState&);
 
-    WEBCORE_EXPORT static Color parseColor(const String&, bool strict = false);
-    static Color parseColorWorkerSafe(const String&);
+    WEBCORE_EXPORT static Color parseColor(const String&, const CSSParserContext&);
+    // FIXME: All callers are not getting the right Settings for parsing due to lack of CSSParserContext and should switch to the parseColor function above.
+    WEBCORE_EXPORT static Color parseColorWithoutContext(const String&, bool strict = false);
     static Color parseSystemColor(StringView);
-    static Optional<SRGBA<uint8_t>> parseNamedColor(StringView);
-    static Optional<SRGBA<uint8_t>> parseHexColor(StringView);
-
-    static Optional<CSSPropertyParserHelpers::FontRaw> parseFontWorkerSafe(const String&, CSSParserMode = HTMLStandardMode);
+    static std::optional<SRGBA<uint8_t>> parseNamedColor(StringView);
+    static std::optional<SRGBA<uint8_t>> parseHexColor(StringView);
 
 private:
     ParseResult parseValue(MutableStyleProperties&, CSSPropertyID, const String&, bool important);

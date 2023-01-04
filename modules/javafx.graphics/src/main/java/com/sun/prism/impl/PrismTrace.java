@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -39,8 +39,8 @@ public class PrismTrace {
 
     static {
         if (enabled) {
-            texData = new HashMap<Long, Long>();
-            rttData = new HashMap<Long, Long>();
+            texData = new HashMap<>();
+            rttData = new HashMap<>();
             Runtime.getRuntime().addShutdownHook(new Thread("RTT printAlloc shutdown hook") {
                 @Override
                 public void run() {
@@ -53,7 +53,7 @@ public class PrismTrace {
         }
     }
 
-    private static enum SummaryType { TYPE_TEX, TYPE_RTT, TYPE_ALL };
+    private static enum SummaryType { TYPE_TEX, TYPE_RTT, TYPE_ALL }
     private static String summary(long count, long size, String label) {
         return String.format("%s=%d@%,dKB", label, count, size >> 10);
     }

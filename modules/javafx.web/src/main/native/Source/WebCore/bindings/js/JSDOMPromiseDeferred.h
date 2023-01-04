@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -147,9 +147,13 @@ public:
 
         ASSERT(deferred());
         ASSERT(globalObject());
-        JSC::JSGlobalObject* lexicalGlobalObject = globalObject();
-        JSC::JSLockHolder locker(lexicalGlobalObject);
+        auto* lexicalGlobalObject = globalObject();
+        JSC::VM& vm = lexicalGlobalObject->vm();
+        JSC::JSLockHolder locker(vm);
+        auto scope = DECLARE_CATCH_SCOPE(vm);
         resolve(*lexicalGlobalObject, callback(*globalObject()));
+        if (UNLIKELY(scope.exception()))
+            handleUncaughtException(scope, *lexicalGlobalObject);
     }
 
     template<typename Callback>
@@ -160,9 +164,13 @@ public:
 
         ASSERT(deferred());
         ASSERT(globalObject());
-        JSC::JSGlobalObject* lexicalGlobalObject = globalObject();
-        JSC::JSLockHolder locker(lexicalGlobalObject);
+        auto* lexicalGlobalObject = globalObject();
+        JSC::VM& vm = lexicalGlobalObject->vm();
+        JSC::JSLockHolder locker(vm);
+        auto scope = DECLARE_CATCH_SCOPE(vm);
         reject(*lexicalGlobalObject, callback(*globalObject()), rejectAsHandled);
+        if (UNLIKELY(scope.exception()))
+            handleUncaughtException(scope, *lexicalGlobalObject);
     }
 
     JSC::JSValue promise() const;
@@ -188,6 +196,9 @@ private:
     {
         callFunction(lexicalGlobalObject, rejectAsHandled == RejectAsHandled::Yes ? ResolveMode::RejectAsHandled : ResolveMode::Reject, resolution);
     }
+
+    bool handleTerminationExceptionIfNeeded(JSC::CatchScope&, JSDOMGlobalObject& lexicalGlobalObject);
+    void handleUncaughtException(JSC::CatchScope&, JSDOMGlobalObject& lexicalGlobalObject);
 
     Mode m_mode;
 };
@@ -263,7 +274,8 @@ public:
         m_promise->resolve<IDLType>(std::forward<typename IDLType::ParameterType>(value));
     }
 
-    void settle(ExceptionOr<typename IDLType::ParameterType>&& result)
+    template<typename U>
+    void settle(ExceptionOr<U>&& result)
     {
         if (result.hasException()) {
             reject(result.releaseException());
@@ -294,9 +306,6 @@ public:
         resolve();
     }
 };
-
-
-Ref<DeferredPromise> createDeferredPromise(JSC::JSGlobalObject&, JSDOMWindow&);
 
 void fulfillPromiseWithJSON(Ref<DeferredPromise>&&, const String&);
 void fulfillPromiseWithArrayBuffer(Ref<DeferredPromise>&&, ArrayBuffer*);

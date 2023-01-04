@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 # Copyright (c) 2014-2021 Apple Inc. All rights reserved.
 # Copyright (C) 2015 Canon Inc. All rights reserved.
@@ -85,7 +85,7 @@ ${macroPrefix}_FOREACH_${objectMacro}_BUILTIN_CODE(DECLARE_BUILTIN_GENERATOR)
 #define DEFINE_BUILTIN_GENERATOR(codeName, functionName, overriddenName, argumentCount) \\
 JSC::FunctionExecutable* codeName##Generator(JSC::VM& vm) \\
 {\\
-    return vm.builtinExecutables()->codeName##Executable()->link(vm, nullptr, vm.builtinExecutables()->codeName##Source(), WTF::nullopt, s_##codeName##Intrinsic); \
+    return vm.builtinExecutables()->codeName##Executable()->link(vm, nullptr, vm.builtinExecutables()->codeName##Source(), std::nullopt, s_##codeName##Intrinsic); \
 }
 ${macroPrefix}_FOREACH_BUILTIN_CODE(DEFINE_BUILTIN_GENERATOR)
 #undef DEFINE_BUILTIN_GENERATOR
@@ -96,7 +96,7 @@ ${macroPrefix}_FOREACH_BUILTIN_CODE(DEFINE_BUILTIN_GENERATOR)
 #define DEFINE_BUILTIN_GENERATOR(codeName, functionName, overriddenName, argumentCount) \\
 JSC::FunctionExecutable* codeName##Generator(JSC::VM& vm) \\
 {\\
-    return vm.builtinExecutables()->codeName##Executable()->link(vm, nullptr, vm.builtinExecutables()->codeName##Source(), WTF::nullopt, s_##codeName##Intrinsic); \
+    return vm.builtinExecutables()->codeName##Executable()->link(vm, nullptr, vm.builtinExecutables()->codeName##Source(), std::nullopt, s_##codeName##Intrinsic); \
 }
 ${macroPrefix}_FOREACH_${objectMacro}_BUILTIN_CODE(DEFINE_BUILTIN_GENERATOR)
 #undef DEFINE_BUILTIN_GENERATOR
@@ -108,7 +108,7 @@ ${macroPrefix}_FOREACH_${objectMacro}_BUILTIN_CODE(DEFINE_BUILTIN_GENERATOR)
 JSC::FunctionExecutable* codeName##Generator(JSC::VM& vm) \\
 {\\
     JSVMClientData* clientData = static_cast<JSVMClientData*>(vm.clientData); \\
-    return clientData->builtinFunctions().${objectNameLC}Builtins().codeName##Executable()->link(vm, nullptr, clientData->builtinFunctions().${objectNameLC}Builtins().codeName##Source(), WTF::nullopt, s_##codeName##Intrinsic); \\
+    return clientData->builtinFunctions().${objectNameLC}Builtins().codeName##Executable()->link(vm, nullptr, clientData->builtinFunctions().${objectNameLC}Builtins().codeName##Source(), std::nullopt, s_##codeName##Intrinsic); \\
 }
 ${macroPrefix}_FOREACH_BUILTIN_CODE(DEFINE_BUILTIN_GENERATOR)
 #undef DEFINE_BUILTIN_GENERATOR
@@ -120,7 +120,7 @@ ${macroPrefix}_FOREACH_BUILTIN_CODE(DEFINE_BUILTIN_GENERATOR)
 JSC::FunctionExecutable* codeName##Generator(JSC::VM& vm) \\
 {\\
     JSVMClientData* clientData = static_cast<JSVMClientData*>(vm.clientData); \\
-    return clientData->builtinFunctions().${objectNameLC}Builtins().codeName##Executable()->link(vm, nullptr, clientData->builtinFunctions().${objectNameLC}Builtins().codeName##Source(), WTF::nullopt, s_##codeName##Intrinsic); \\
+    return clientData->builtinFunctions().${objectNameLC}Builtins().codeName##Executable()->link(vm, nullptr, clientData->builtinFunctions().${objectNameLC}Builtins().codeName##Source(), std::nullopt, s_##codeName##Intrinsic); \\
 }
 ${macroPrefix}_FOREACH_${objectMacro}_BUILTIN_CODE(DEFINE_BUILTIN_GENERATOR)
 #undef DEFINE_BUILTIN_GENERATOR

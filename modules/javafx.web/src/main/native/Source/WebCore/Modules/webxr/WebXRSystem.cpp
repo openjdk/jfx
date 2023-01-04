@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2020 Igalia S.L. All rights reserved.
+ * Copyright (C) 2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,12 +29,16 @@
 
 #if ENABLE(WEBXR)
 
+#include "Chrome.h"
+#include "ChromeClient.h"
 #include "DOMWindow.h"
 #include "Document.h"
 #include "FeaturePolicy.h"
 #include "IDLTypes.h"
 #include "JSWebXRSession.h"
 #include "JSXRReferenceSpaceType.h"
+#include "Navigator.h"
+#include "Page.h"
 #include "PlatformXR.h"
 #include "RequestAnimationFrameCallback.h"
 #include "RuntimeEnabledFeatures.h"
@@ -50,20 +55,27 @@ namespace WebCore {
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(WebXRSystem);
 
-Ref<WebXRSystem> WebXRSystem::create(ScriptExecutionContext& scriptExecutionContext)
+Ref<WebXRSystem> WebXRSystem::create(Navigator& navigator)
 {
-    return adoptRef(*new WebXRSystem(scriptExecutionContext));
+    auto system = adoptRef(*new WebXRSystem(navigator));
+    system->suspendIfNeeded();
+    return system;
 }
 
-WebXRSystem::WebXRSystem(ScriptExecutionContext& scriptExecutionContext)
-    : ActiveDOMObject(&scriptExecutionContext)
-    , m_defaultInlineDevice(scriptExecutionContext)
+WebXRSystem::WebXRSystem(Navigator& navigator)
+    : ActiveDOMObject(navigator.scriptExecutionContext())
+    , m_navigator(navigator)
+    , m_defaultInlineDevice(*navigator.scriptExecutionContext())
 {
-    m_inlineXRDevice = makeWeakPtr(m_defaultInlineDevice);
-    suspendIfNeeded();
+    m_inlineXRDevice = m_defaultInlineDevice;
 }
 
 WebXRSystem::~WebXRSystem() = default;
+
+Navigator* WebXRSystem::navigator()
+{
+    return m_navigator.get();
+}
 
 // https://immersive-web.github.io/webxr/#ensures-an-immersive-xr-device-is-selected
 void WebXRSystem::ensureImmersiveXRDeviceIsSelected(CompletionHandler<void()>&& callback)
@@ -80,9 +92,14 @@ void WebXRSystem::ensureImmersiveXRDeviceIsSelected(CompletionHandler<void()>&& 
     }
 
     // https://immersive-web.github.io/webxr/#enumerate-immersive-xr-devices
-    auto& platformXR = PlatformXR::Instance::singleton();
+    auto document = downcast<Document>(scriptExecutionContext());
+    if (!document || !document->page()) {
+        callback();
+        return;
+    }
+
     bool isFirstXRDevicesEnumeration = !m_immersiveXRDevicesHaveBeenEnumerated;
-    platformXR.enumerateImmersiveXRDevices([this, protectedThis = makeRef(*this), isFirstXRDevicesEnumeration, callback = WTFMove(callback)](auto& immersiveXRDevices) mutable {
+    document->page()->chrome().client().enumerateImmersiveXRDevices([this, protectedThis = Ref { *this }, isFirstXRDevicesEnumeration, callback = WTFMove(callback)](auto& immersiveXRDevices) mutable {
         m_immersiveXRDevicesHaveBeenEnumerated = true;
 
         auto callbackOnExit = makeScopeExit([&]() {
@@ -96,15 +113,15 @@ void WebXRSystem::ensureImmersiveXRDeviceIsSelected(CompletionHandler<void()>&& 
             return;
         }
         if (immersiveXRDevices.size() == 1) {
-            m_activeImmersiveDevice = makeWeakPtr(immersiveXRDevices.first().get());
+            m_activeImmersiveDevice = immersiveXRDevices.first().get();
             return;
         }
 
-        if (m_activeImmersiveSession && oldDevice && immersiveXRDevices.findMatching([&](auto& entry) { return &entry == oldDevice; }) != notFound)
+        if (m_activeImmersiveSession && oldDevice && immersiveXRDevices.findIf([&](auto& entry) { return entry.ptr() == oldDevice; }) != notFound)
             ASSERT(m_activeImmersiveDevice.get() == oldDevice);
         else {
             // FIXME: implement a better UA selection mechanism if required.
-            m_activeImmersiveDevice = makeWeakPtr(immersiveXRDevices.first().get());
+            m_activeImmersiveDevice = immersiveXRDevices.first().get();
         }
 
         if (isFirstXRDevicesEnumeration || m_activeImmersiveDevice.get() == oldDevice) {
@@ -117,7 +134,7 @@ void WebXRSystem::ensureImmersiveXRDeviceIsSelected(CompletionHandler<void()>&& 
     });
 }
 
-void WebXRSystem::obtainCurrentDevice(XRSessionMode mode, const JSFeaturesArray& requiredFeatures, const JSFeaturesArray& optionalFeatures, CompletionHandler<void(PlatformXR::Device*)>&& callback)
+void WebXRSystem::obtainCurrentDevice(XRSessionMode mode, const JSFeatureList& requiredFeatures, const JSFeatureList& optionalFeatures, CompletionHandler<void(PlatformXR::Device*)>&& callback)
 {
     if (mode == XRSessionMode::ImmersiveAr || mode == XRSessionMode::ImmersiveVr) {
         ensureImmersiveXRDeviceIsSelected([this, callback = WTFMove(callback)]() mutable {
@@ -201,7 +218,7 @@ bool WebXRSystem::immersiveSessionRequestIsAllowedForGlobalObject(DOMWindow& glo
 // https://immersive-web.github.io/webxr/#inline-session-request-is-allowed
 bool WebXRSystem::inlineSessionRequestIsAllowedForGlobalObject(DOMWindow& globalObject, Document& document, const XRSessionInit& init) const
 {
-    auto isEmptyOrViewer = [&document](const JSFeaturesArray& features) {
+    auto isEmptyOrViewer = [&document](const JSFeatureList& features) {
         if (features.isEmpty())
             return true;
         if (features.size() == 1) {
@@ -227,9 +244,10 @@ bool WebXRSystem::inlineSessionRequestIsAllowedForGlobalObject(DOMWindow& global
 
 
 struct WebXRSystem::ResolvedRequestedFeatures {
-    FeaturesArray granted;
-    FeaturesArray consentRequired;
-    FeaturesArray consentOptional;
+    FeatureList granted;
+    FeatureList consentRequired;
+    FeatureList consentOptional;
+    FeatureList requested;
 };
 
 #define RETURN_FALSE_OR_CONTINUE(mustReturn) { \
@@ -240,7 +258,7 @@ struct WebXRSystem::ResolvedRequestedFeatures {
 }
 
 // https://immersive-web.github.io/webxr/#resolve-the-requested-features
-Optional<WebXRSystem::ResolvedRequestedFeatures> WebXRSystem::resolveRequestedFeatures(XRSessionMode mode, const XRSessionInit& init, PlatformXR::Device* device, JSC::JSGlobalObject& globalObject) const
+std::optional<WebXRSystem::ResolvedRequestedFeatures> WebXRSystem::resolveRequestedFeatures(XRSessionMode mode, const XRSessionInit& init, PlatformXR::Device* device, JSC::JSGlobalObject& globalObject) const
 {
     // 1. Let consentRequired be an empty list of DOMString.
     // 2. Let consentOptional be an empty list of DOMString.
@@ -268,12 +286,15 @@ Optional<WebXRSystem::ResolvedRequestedFeatures> WebXRSystem::resolveRequestedFe
     // We're merging both loops in a single lambda. The only difference is that a failure on any required features
     // implies cancelling the whole process while failures in optional features are just skipped.
     enum class ParsingMode { Strict, Loose };
-    auto parseFeatures = [&device, &globalObject, mode, &resolvedFeatures] (const JSFeaturesArray& sessionFeatures, ParsingMode parsingMode) -> bool {
+    auto parseFeatures = [&device, &globalObject, mode, &resolvedFeatures] (const JSFeatureList& sessionFeatures, ParsingMode parsingMode) -> bool {
         bool returnOnFailure = parsingMode == ParsingMode::Strict;
         for (const auto& sessionFeature : sessionFeatures) {
             // 1. If the feature is null, continue to the next entry.
             if (sessionFeature.isNull())
                 continue;
+
+            // FIXME: This is only testing for XRReferenceSpaceType features. It
+            // needs to handle optional features like "hand-tracking".
 
             // 2. If feature is not a valid feature descriptor, perform the following steps
             //   2.1. Let s be the result of calling ? ToString(feature).
@@ -284,33 +305,39 @@ Optional<WebXRSystem::ResolvedRequestedFeatures> WebXRSystem::resolveRequestedFe
                 RETURN_FALSE_OR_CONTINUE(returnOnFailure);
 
             // 3. If feature is already in granted, continue to the next entry.
-            if (resolvedFeatures.granted.contains(feature.value()))
+            if (resolvedFeatures.granted.contains(feature.value())) {
+                resolvedFeatures.requested.append(feature.value());
                 continue;
+            }
 
             // 4. If the requesting document's origin is not allowed to use any feature policy required by feature
             //    as indicated by the feature requirements table, (return null|continue to next entry).
 
             // 5. If session's XR device is not capable of supporting the functionality described by feature or the
             //    user agent has otherwise determined to reject the feature, (return null|continue to next entry).
-            if (!device->enabledFeatures(mode).contains(feature.value()))
+            if (!device->supportedFeatures(mode).contains(feature.value()))
                 RETURN_FALSE_OR_CONTINUE(returnOnFailure);
 
             // 6. If the functionality described by feature requires explicit consent, append it to (consentRequired|consentOptional).
             // 7. Else append feature to granted.
             resolvedFeatures.granted.append(feature.value());
+
+            // https://immersive-web.github.io/webxr/#requested-features
+            // The combined list of feature descriptors given by the requiredFeatures and optionalFeatures are collectively considered the requested features for an XRSession.
+            resolvedFeatures.requested.append(feature.value());
         }
         return true;
     };
 
     if (!parseFeatures(requiredFeaturesWithDefaultFeatures, ParsingMode::Strict))
-        return WTF::nullopt;
+        return std::nullopt;
 
     parseFeatures(init.optionalFeatures, ParsingMode::Loose);
     return resolvedFeatures;
 }
 
 // https://immersive-web.github.io/webxr/#request-the-xr-permission
-bool WebXRSystem::isXRPermissionGranted(XRSessionMode mode, const XRSessionInit& init, PlatformXR::Device* device, JSC::JSGlobalObject& globalObject) const
+void WebXRSystem::resolveFeaturePermissions(XRSessionMode mode, const XRSessionInit& init, PlatformXR::Device* device, JSC::JSGlobalObject& globalObject, CompletionHandler<void(std::optional<FeatureList>&&)>&& completionHandler) const
 {
     // 1. Set status's granted to an empty FrozenArray.
     // 2. Let requiredFeatures be descriptor's requiredFeatures.
@@ -323,8 +350,10 @@ bool WebXRSystem::isXRPermissionGranted(XRSessionMode mode, const XRSessionInit&
     // 6. If result is null, run the following steps:
     //  6.1. Set status's state to "denied".
     //  6.2. Abort these steps.
-    if (!resolvedFeatures)
-        return false;
+    if (!resolvedFeatures) {
+        completionHandler(std::nullopt);
+        return;
+    }
 
     // 7. Let (consentRequired, consentOptional, granted) be the fields of result.
     // 8. The user agent MAY at this point ask the user's permission for the calling algorithm to use any of the features
@@ -341,10 +370,26 @@ bool WebXRSystem::isXRPermissionGranted(XRSessionMode mode, const XRSessionInit&
     //        of these prompts should be included when determining if there is a clear signal of user intent to enable feature.
     //  10.2. If a clear signal of user intent to enable feature has not been determined, continue to the next entry.
     //  10.3. If feature is not in granted, append feature to granted.
-    // 11. Set status's granted to granted.
-    // 12. Set device's list of enabled features for mode to granted.
-    // 13. Set status's state to "granted".
-    return true;
+    auto document = downcast<Document>(scriptExecutionContext());
+    if (!document || !document->page()) {
+        completionHandler(std::nullopt);
+        return;
+    }
+
+    // FIXME: Replace with Permissions API implementation.
+    document->page()->chrome().client().requestPermissionOnXRSessionFeatures(document->securityOrigin().data(), mode, resolvedFeatures->granted, resolvedFeatures->consentRequired, resolvedFeatures->consentOptional, [device, mode, completionHandler = WTFMove(completionHandler)](std::optional<PlatformXR::Device::FeatureList>&& userGranted) mutable {
+        if (!userGranted) {
+            completionHandler(std::nullopt);
+            return;
+        }
+
+        // 11. Set status's granted to granted.
+        // 12. Set device's list of enabled features for mode to granted.
+        // 13. Set status's state to "granted".
+        device->setEnabledFeatures(mode, *userGranted);
+
+        completionHandler(*userGranted);
+    });
 }
 
 
@@ -382,7 +427,7 @@ void WebXRSystem::requestSession(Document& document, XRSessionMode mode, const X
     // 5.2 Let optionalFeatures be options' optionalFeatures.
     // 5.3 Set device to the result of obtaining the current device for mode, requiredFeatures, and optionalFeatures.
     // 5.4 Queue a task to perform the following steps:
-    obtainCurrentDevice(mode, init.requiredFeatures, init.optionalFeatures, [this, protectedDocument = makeRef(document), immersive, init, mode, promise = WTFMove(promise)](auto* device) mutable {
+    obtainCurrentDevice(mode, init.requiredFeatures, init.optionalFeatures, [this, protectedDocument = Ref { document }, immersive, init, mode, promise = WTFMove(promise)](auto* device) mutable {
         auto rejectPromiseWithNotSupportedError = makeScopeExit([&]() {
             promise.reject(Exception { NotSupportedError });
             m_pendingImmersiveSession = false;
@@ -399,43 +444,40 @@ void WebXRSystem::requestSession(Document& document, XRSessionMode mode, const X
         if (!globalObject)
             return;
 
+        rejectPromiseWithNotSupportedError.release();
+
         // WebKit does not currently support the Permissions API. https://w3c.github.io/permissions/
         // However we do implement here the permission request algorithm without the
         // Permissions API bits as it handles, among others, the session features parsing. We also
         // do it here before creating the session as there is no need to do it on advance.
-        // FIXME: we just perform basic checks without asking any permission to the user so far. Maybe we should implement
-        // a mechanism similar to what others do involving passing a message to the UI process.
 
         // 5.4.4 Let descriptor be an XRPermissionDescriptor initialized with session, requiredFeatures, and optionalFeatures
         // 5.4.5 Let status be an XRPermissionStatus, initially null
         // 5.4.6 Request the xr permission with descriptor and status.
         // 5.4.7 If status' state is "denied" run the following steps: (same as above in 5.4.1)
-        if (!isXRPermissionGranted(mode, init, device, *globalObject))
-            return;
+        resolveFeaturePermissions(mode, init, device, *globalObject, [this, weakThis = WeakPtr { *this }, protectedDocument, device, immersive, mode, promise](std::optional<FeatureList>&& requestedFeatures) mutable {
+            if (!weakThis || !requestedFeatures) {
+                promise.reject(Exception { NotSupportedError });
+                m_pendingImmersiveSession = false;
+                return;
+            }
 
-        // 5.4.2 Let session be a new XRSession object.
-        // 5.4.3 Initialize the session with session, mode, and device.
-        auto session = WebXRSession::create(protectedDocument.get(), *this, mode, *device);
+            // 5.4.2 Let session be a new XRSession object.
+            // 5.4.3 Initialize the session with session, mode, and device.
+            auto session = WebXRSession::create(protectedDocument.get(), *this, mode, *device, WTFMove(*requestedFeatures));
 
-        // 5.4.8 Potentially set the active immersive session as follows:
-        if (immersive) {
-            m_activeImmersiveSession = session.copyRef();
-            m_pendingImmersiveSession = false;
-        } else
-            m_inlineSessions.add(session.copyRef());
+            // 5.4.8 Potentially set the active immersive session as follows:
+            if (immersive) {
+                m_activeImmersiveSession = session.copyRef();
+                m_pendingImmersiveSession = false;
+            } else
+                m_inlineSessions.add(session.copyRef());
 
-        // 5.4.9 Resolve promise with session.
-        promise.resolve(WTFMove(session));
-        rejectPromiseWithNotSupportedError.release();
+            // 5.4.9 Resolve promise with session.
+            promise.resolve(WTFMove(session));
 
-        // FIXME:
-        // 5.4.10 Queue a task to perform the following steps: NOTE: These steps ensure that initial inputsourceschange
-        // events occur after the initial session is resolved.
-        //     1. Set session's promise resolved flag to true.
-        //     2. Let sources be any existing input sources attached to session.
-        //     3. If sources is non-empty, perform the following steps:
-        //        1. Set session's list of active XR input sources to sources.
-        //        2. Fire an XRInputSourcesChangeEvent named inputsourceschange on session with added set to sources.
+            // 5.4.10 is handled in WebXRSession::sessionDidInitializeInputSources.
+        });
     });
 }
 
@@ -450,28 +492,32 @@ void WebXRSystem::stop()
 
 void WebXRSystem::registerSimulatedXRDeviceForTesting(PlatformXR::Device& device)
 {
-    if (!RuntimeEnabledFeatures::sharedFeatures().webXREnabled())
+    auto scriptExecutionContext = this->scriptExecutionContext();
+    if (!scriptExecutionContext || !scriptExecutionContext->settingsValues().webXREnabled)
         return;
+
     m_testingDevices++;
     if (device.supports(XRSessionMode::ImmersiveVr) || device.supports(XRSessionMode::ImmersiveAr)) {
         m_immersiveDevices.add(device);
-        m_activeImmersiveDevice = makeWeakPtr(device);
+        m_activeImmersiveDevice = device;
     }
     if (device.supports(XRSessionMode::Inline))
-        m_inlineXRDevice = makeWeakPtr(device);
+        m_inlineXRDevice = device;
 }
 
 void WebXRSystem::unregisterSimulatedXRDeviceForTesting(PlatformXR::Device& device)
 {
-    if (!RuntimeEnabledFeatures::sharedFeatures().webXREnabled())
+    auto scriptExecutionContext = this->scriptExecutionContext();
+    if (!scriptExecutionContext || !scriptExecutionContext->settingsValues().webXREnabled)
         return;
+
     ASSERT(m_testingDevices);
     bool removed = m_immersiveDevices.remove(device);
     ASSERT_UNUSED(removed, removed || m_inlineXRDevice == &device);
     if (m_activeImmersiveDevice == &device)
         m_activeImmersiveDevice = nullptr;
     if (m_inlineXRDevice == &device)
-        m_inlineXRDevice = makeWeakPtr(m_defaultInlineDevice);
+        m_inlineXRDevice = m_defaultInlineDevice;
     m_testingDevices--;
 }
 
@@ -508,7 +554,7 @@ private:
 WebXRSystem::DummyInlineDevice::DummyInlineDevice(ScriptExecutionContext& scriptExecutionContext)
     : ContextDestructionObserver(&scriptExecutionContext)
 {
-    setEnabledFeatures(XRSessionMode::Inline, { XRReferenceSpaceType::Viewer });
+    setSupportedFeatures(XRSessionMode::Inline, { XRReferenceSpaceType::Viewer });
 }
 
 void WebXRSystem::DummyInlineDevice::requestFrame(PlatformXR::Device::RequestFrameCallback&& callback)
@@ -520,10 +566,11 @@ void WebXRSystem::DummyInlineDevice::requestFrame(PlatformXR::Device::RequestFra
     if (!document)
         return;
 
-    auto raf = InlineRequestAnimationFrameCallback::create(*m_scriptExecutionContext, [callback = WTFMove(callback)]() mutable {
+    auto raf = InlineRequestAnimationFrameCallback::create(*scriptExecutionContext(), [callback = WTFMove(callback)]() mutable {
         PlatformXR::Device::FrameData data;
         data.isTrackingValid = true;
         data.isPositionValid = true;
+        data.shouldRender = true;
         data.views.append({ });
         callback(WTFMove(data));
     });
@@ -533,7 +580,7 @@ void WebXRSystem::DummyInlineDevice::requestFrame(PlatformXR::Device::RequestFra
 
 Vector<PlatformXR::Device::ViewData> WebXRSystem::DummyInlineDevice::views(XRSessionMode) const
 {
-    return { { .active = true, PlatformXR::Eye::None } };
+    return { { .active = true, .eye = PlatformXR::Eye::None } };
 }
 
 

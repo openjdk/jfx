@@ -3,6 +3,7 @@ set(WTF_PUBLIC_HEADERS
     AggregateLogger.h
     Algorithms.h
     AnsiColors.h
+    ApproximateTime.h
     Assertions.h
     Atomics.h
     AutodrainedPool.h
@@ -26,8 +27,11 @@ set(WTF_PUBLIC_HEADERS
     CagedPtr.h
     CagedUniquePtr.h
     CallbackAggregator.h
+    CancellableTask.h
     CheckedArithmetic.h
     CheckedBoolean.h
+    CheckedPtr.h
+    CheckedRef.h
     ClockType.h
     CommaPrinter.h
     CompactPointerTuple.h
@@ -58,23 +62,28 @@ set(WTF_PUBLIC_HEADERS
     DisallowCType.h
     Dominators.h
     DoublyLinkedList.h
+    EmbeddedFixedVector.h
     EnumClassOperatorOverloads.h
     EnumTraits.h
     Expected.h
+    ExperimentalFeatureNames.h
     ExportMacros.h
     FailureAction.h
     FastBitVector.h
     FastMalloc.h
     FastTLS.h
-    FileMetadata.h
     FilePrintStream.h
     FileSystem.h
+    FixedVector.h
+    FixedWidthDouble.h
     FlipBytes.h
     ForbidHeapAllocation.h
     Forward.h
     Function.h
     FunctionDispatcher.h
     FunctionTraits.h
+    GenericHashKey.h
+    GenericTimeMixin.h
     GetPtr.h
     Gigacage.h
     GlobalVersion.h
@@ -100,8 +109,11 @@ set(WTF_PUBLIC_HEADERS
     InlineASM.h
     Insertion.h
     InstanceCounted.h
+    Int128.h
+    InterferenceGraph.h
     IsoMalloc.h
     IsoMallocInlines.h
+    IterationStatus.h
     IteratorAdaptors.h
     IteratorRange.h
     JSONValues.h
@@ -109,6 +121,7 @@ set(WTF_PUBLIC_HEADERS
     KeyValuePair.h
     LEBDecoder.h
     Language.h
+    LikelyDenseUnsignedIntegerSet.h
     ListDump.h
     ListHashSet.h
     Liveness.h
@@ -118,8 +131,11 @@ set(WTF_PUBLIC_HEADERS
     LockedPrintStream.h
     Locker.h
     LocklessBag.h
+    LogChannels.h
+    LogInitialization.h
     Logger.h
     LoggerHelper.h
+    Logging.h
     LoggingAccumulator.h
     LoggingHashID.h
     LoggingHashMap.h
@@ -158,7 +174,6 @@ set(WTF_PUBLIC_HEADERS
     Observer.h
     OptionSet.h
     OptionSetHash.h
-    Optional.h
     OrderMaker.h
     Packed.h
     PackedRef.h
@@ -208,14 +223,18 @@ set(WTF_PUBLIC_HEADERS
     RedBlackTree.h
     Ref.h
     RefCounted.h
-    RefCountedArray.h
+    RefCountedFixedVector.h
     RefCountedLeakCounter.h
     RefCounter.h
     RefPtr.h
     ResourceUsage.h
     RetainPtr.h
+    RobinHoodHashMap.h
+    RobinHoodHashSet.h
+    RobinHoodHashTable.h
     RunLoop.h
     SHA1.h
+    SafeStrerror.h
     SaturatedArithmetic.h
     SchedulePair.h
     Scope.h
@@ -225,13 +244,16 @@ set(WTF_PUBLIC_HEADERS
     SentinelLinkedList.h
     SetForScope.h
     SharedTask.h
+    SignedPtr.h
     SimpleStats.h
     SingleRootGraph.h
     SinglyLinkedList.h
     SinglyLinkedListWithTail.h
     SixCharacterHash.h
-    SmallPtrSet.h
+    SmallSet.h
     SoftLinking.h
+    SortedArrayMap.h
+    Span.h
     SpanningTree.h
     Spectrum.h
     StackBounds.h
@@ -254,12 +276,16 @@ set(WTF_PUBLIC_HEADERS
     StringExtras.h
     StringHashDumpContext.h
     StringPrintStream.h
+    SuspendableWorkQueue.h
     SynchronizedFixedQueue.h
     SystemFree.h
+    SystemMalloc.h
     SystemTracing.h
     TaggedArrayStoragePtr.h
+    ThreadAssertions.h
     ThreadGroup.h
     ThreadMessage.h
+    ThreadSafetyAnalysis.h
     ThreadSafeRefCounted.h
     ThreadSanitizerSupport.h
     ThreadSpecific.h
@@ -269,6 +295,7 @@ set(WTF_PUBLIC_HEADERS
     TimingScope.h
     TinyLRUCache.h
     TinyPtrSet.h
+    TrailingArray.h
     TranslatedProcess.h
     TriState.h
     TypeCasts.h
@@ -286,13 +313,13 @@ set(WTF_PUBLIC_HEADERS
     UnsafePointer.h
     VMTags.h
     ValueCheck.h
-    Variant.h
     Vector.h
     VectorHash.h
     VectorTraits.h
     WTFConfig.h
     WTFSemaphore.h
     WallTime.h
+    WeakHashMap.h
     WeakHashSet.h
     WeakPtr.h
     WeakRandom.h
@@ -337,6 +364,7 @@ set(WTF_PUBLIC_HEADERS
     text/OrdinalNumber.h
     text/StringBuffer.h
     text/StringBuilder.h
+    text/StringBuilderInternals.h
     text/StringCommon.h
     text/StringConcatenate.h
     text/StringConcatenateNumbers.h
@@ -374,6 +402,7 @@ set(WTF_PUBLIC_HEADERS
 
 set(WTF_SOURCES
     ASCIICType.cpp
+    ApproximateTime.cpp
     Assertions.cpp
     AutomaticThread.cpp
     Bag.cpp
@@ -402,12 +431,17 @@ set(WTF_SOURCES
     GregorianDateTime.cpp
     HashTable.cpp
     HexNumber.cpp
+    Int128.cpp
     JSONValues.cpp
     JSValueMalloc.cpp
     Language.cpp
+    LikelyDenseUnsignedIntegerSet.cpp
     Lock.cpp
     LockedPrintStream.cpp
+    LogChannels.cpp
+    LogInitialization.cpp
     Logger.cpp
+    Logging.cpp
     MainThread.cpp
     MediaTime.cpp
     MemoryPressureHandler.cpp
@@ -428,19 +462,20 @@ set(WTF_SOURCES
     RandomNumber.cpp
     ReadWriteLock.cpp
     RefCounted.cpp
-    RefCountedArray.cpp
     RefCountedLeakCounter.cpp
     RunLoop.cpp
     SHA1.cpp
+    SafeStrerror.cpp
     Seconds.cpp
     SegmentedVector.cpp
     SixCharacterHash.cpp
-    SmallPtrSet.cpp
+    SmallSet.cpp
     StackBounds.cpp
     StackPointer.cpp
     StackStats.cpp
     StackTrace.cpp
     StringPrintStream.cpp
+    SuspendableWorkQueue.cpp
     ThreadGroup.cpp
     ThreadMessage.cpp
     Threading.cpp
@@ -531,8 +566,14 @@ if (NOT USE_SYSTEM_MALLOC)
     set(WTF_FRAMEWORKS bmalloc)
 endif ()
 
-if (ATOMICS_REQUIRE_LIBATOMIC)
+if (NOT UNIX AND ATOMICS_REQUIRE_LIBATOMIC)
     list(APPEND WTF_LIBRARIES atomic)
+endif ()
+
+if (COMPILER_IS_GCC_OR_CLANG)
+    if (HAVE_STD_EXPERIMENTAL_FILESYSTEM)
+        list(APPEND WTF_LIBRARIES stdc++fs)
+    endif ()
 endif ()
 
 set(WTF_INTERFACE_LIBRARIES WTF)
@@ -569,13 +610,13 @@ if (USE_VERSION_STAMPER)
         VERBATIM)
 endif ()
 
-set(WTF_UNIFIED_SOURCES_SCRIPTS
-    ../Scripts/generate-unified-source-bundles.rb
-)
+file(MAKE_DIRECTORY ${WTF_SCRIPTS_DIR})
+
+message(STATUS "Copying generate-unified-source-bundles.rb to: ${WTF_SCRIPTS_DIR}")
 
 file(COPY
-     ${WTF_UNIFIED_SOURCES_SCRIPTS}
-     DESTINATION ${WTF_SCRIPTS_DIR}
+    ../Scripts/generate-unified-source-bundles.rb
+    DESTINATION ${WTF_SCRIPTS_DIR}
 )
 
 set(WTF_PREFERENCES

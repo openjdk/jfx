@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -38,8 +38,6 @@ import javafx.beans.property.SimpleDoubleProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
-import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.event.Event;
 import javafx.event.EventDispatchChain;
 import javafx.event.EventHandler;
@@ -64,45 +62,44 @@ import static javafx.concurrent.WorkerStateEvent.WORKER_STATE_SUCCEEDED;
 
 /**
  * <p>
- *     A Service is a non-visual component encapsulating the information required
+ *     A {@code Service} is a non-visual component encapsulating the information required
  *     to perform some work on one or more background threads. As part of the
- *     JavaFX UI library, the Service knows about the JavaFX Application thread
+ *     JavaFX UI library, the {@code Service} knows about the JavaFX Application thread
  *     and is designed to relieve the application developer from the burden
  *     of managing multithreaded code that interacts with the user interface. As
- *     such, all of the methods and state on the Service are intended to be
+ *     such, all of the methods and state on the {@code Service} are intended to be
  *     invoked exclusively from the JavaFX Application thread. The only exception
- *     to this, is when initially configuring a Service, which may safely be done
- *     from any thread, and initially starting a Service, which may also safely
- *     be done from any thread. However, once the Service has been initialized and
+ *     to this is when initially configuring a {@code Service}, which may safely be done
+ *     from any thread, and initially starting a {@code Service}, which may also safely
+ *     be done from any thread. However, once the {@code Service} has been initialized and
  *     started, it may only thereafter be used from the FX thread.
  * </p>
  * <p>
- *     A Service creates and manages a {@link Task} that performs the work
+ *     A {@code Service} creates and manages a {@link Task} that performs the work
  *     on the background thread.
  *     Service implements {@link Worker}. As such, you can observe the state of
  *     the background task and optionally cancel it. Service is a reusable
- *     Worker, meaning that it can be reset and restarted. Due to this, a Service
+ *     Worker, meaning that it can be reset and restarted. Due to this, a {@code Service}
  *     can be constructed declaratively and restarted on demand.
- *     Once a Service is started, it will schedule its Task and listen for
- *     changes to the state of the Task. A Task does not hold a reference to the
- *     Service that started it, meaning that a running Task will not prevent
- *     the Service from being garbage collected.
+ *     Once a {@code Service} is started, it will schedule its {@code Task} and listen for
+ *     changes to the state of the {@code Task}. A {@code Task} does not hold a reference to the
+ *     {@code Service} that started it, meaning that a running {@code Task} will not prevent
+ *     the {@code Service} from being garbage collected.
  * </p>
  * <p>
- *     If an {@link java.util.concurrent.Executor} is specified on the Service,
+ *     If an {@link java.util.concurrent.Executor} is specified on the {@code Service},
  *     then it will be used to actually execute the service. Otherwise,
  *     a daemon thread will be created and executed. If you wish to create
- *     non-daemon threads, then specify a custom Executor (for example,
+ *     non-daemon threads, then specify a custom {@code Executor} (for example,
  *     you could use a {@link ThreadPoolExecutor} with a custom
  *     {@link java.util.concurrent.ThreadFactory}).
  * </p>
  * <p>
- *     Because a Service is intended to simplify declarative use cases, subclasses
+ *     Because a {@code Service} is intended to simplify declarative use cases, subclasses
  *     should expose as properties the input parameters to the work to be done.
- *     For example, suppose I wanted to write a Service which read the first line
- *     from any URL and returned it as a String. Such a Service might be defined,
- *     such that it had a single property, {@code url}. It might be implemented
- *     as:
+ *     For example, to write a {@code Service} that reads the first line
+ *     from any URL and returns it as a {@code String}, it might be defined with
+ *     a single property, {@code url}, and might be implemented as:
  * </p>
  *     <pre><code>
  *     {@literal public static class FirstLineService extends Service<String>} {
@@ -127,7 +124,7 @@ import static javafx.concurrent.WorkerStateEvent.WORKER_STATE_SUCCEEDED;
  *     }
  *     </code></pre>
  * <p>
- *     The Service by default uses a thread pool Executor with some unspecified
+ *     The {@code Service} by default uses a {@code ThreadPoolExecutor} with some unspecified
  *     default or maximum thread pool size. This is done so that naive code
  *     will not completely swamp the system by creating thousands of Threads.
  * </p>
@@ -158,7 +155,7 @@ public abstract class Service<V> implements Worker<V>, EventTarget {
      * our queue has to be smart in that it will REJECT an item in the queue unless the
      * thread size in the EXECUTOR is > 32, in which case we will queue up.
      */
-    private static final BlockingQueue<Runnable> IO_QUEUE = new LinkedBlockingQueue<Runnable>() {
+    private static final BlockingQueue<Runnable> IO_QUEUE = new LinkedBlockingQueue<>() {
         @Override public boolean offer(Runnable runnable) {
             if (EXECUTOR.getPoolSize() < THREAD_POOL_SIZE) {
                 return false;
@@ -171,8 +168,7 @@ public abstract class Service<V> implements Worker<V>, EventTarget {
     @SuppressWarnings("removal")
     private static final ThreadGroup THREAD_GROUP = AccessController.doPrivileged((PrivilegedAction<ThreadGroup>) () -> new ThreadGroup("javafx concurrent thread pool"));
     private static final Thread.UncaughtExceptionHandler UNCAUGHT_HANDLER = (thread, throwable) -> {
-        // Ignore IllegalMonitorStateException, these are thrown from the ThreadPoolExecutor
-        // when a browser navigates away from a page hosting an applet that uses
+        // Ignore IllegalMonitorStateException which could be thrown from the ThreadPoolExecutor in certain cases when there are
         // asynchronous tasks. These exceptions generally do not cause loss of functionality.
         if (!(throwable instanceof IllegalMonitorStateException)) {
             LOG.warning("Uncaught throwable in " + THREAD_GROUP.getName(), throwable);

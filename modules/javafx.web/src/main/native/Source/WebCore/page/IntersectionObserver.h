@@ -25,27 +25,31 @@
 
 #pragma once
 
-#if ENABLE(INTERSECTION_OBSERVER)
-
-#include "ActiveDOMObject.h"
+#include "Document.h"
 #include "GCReachableRef.h"
 #include "IntersectionObserverCallback.h"
 #include "IntersectionObserverEntry.h"
 #include "LengthBox.h"
+#include "ReducedResolutionSeconds.h"
+#include <variant>
 #include <wtf/RefCounted.h>
-#include <wtf/Variant.h>
 #include <wtf/WeakPtr.h>
 #include <wtf/text/WTFString.h>
 
+namespace JSC {
+
+class AbstractSlotVisitor;
+
+}
+
 namespace WebCore {
 
-class Document;
 class Element;
 class ContainerNode;
 
 struct IntersectionObserverRegistration {
     WeakPtr<IntersectionObserver> observer;
-    Optional<size_t> previousThresholdIndex;
+    std::optional<size_t> previousThresholdIndex;
 };
 
 struct IntersectionObserverData {
@@ -60,12 +64,12 @@ struct IntersectionObserverData {
     Vector<IntersectionObserverRegistration> registrations;
 };
 
-class IntersectionObserver : public RefCounted<IntersectionObserver>, public ActiveDOMObject, public CanMakeWeakPtr<IntersectionObserver> {
+class IntersectionObserver : public RefCounted<IntersectionObserver>, public CanMakeWeakPtr<IntersectionObserver> {
 public:
     struct Init {
-        Optional<Variant<RefPtr<Element>, RefPtr<Document>>> root;
+        std::optional<std::variant<RefPtr<Element>, RefPtr<Document>>> root;
         String rootMargin;
-        Variant<double, Vector<double>> threshold;
+        std::variant<double, Vector<double>> threshold;
     };
 
     static ExceptionOr<Ref<IntersectionObserver>> create(Document&, Ref<IntersectionObserverCallback>&&, Init&&);
@@ -74,11 +78,13 @@ public:
 
     Document* trackingDocument() const { return m_root ? &m_root->document() : m_implicitRootDocument.get(); }
 
-    ContainerNode* root() const { return m_root; }
+    ContainerNode* root() const { return m_root.get(); }
     String rootMargin() const;
     const LengthBox& rootMarginBox() const { return m_rootMargin; }
     const Vector<double>& thresholds() const { return m_thresholds; }
-    const Vector<Element*> observationTargets() const { return m_observationTargets; }
+    const Vector<WeakPtr<Element>>& observationTargets() const { return m_observationTargets; }
+    bool hasObservationTargets() const { return m_observationTargets.size(); }
+    bool isObserving(const Element&) const;
 
     void observe(Element&);
     void unobserve(Element&);
@@ -91,38 +97,33 @@ public:
     TakenRecords takeRecords();
 
     void targetDestroyed(Element&);
-    bool hasObservationTargets() const { return m_observationTargets.size(); }
     void rootDestroyed();
 
-    Optional<ReducedResolutionSeconds> nowTimestamp() const;
+    std::optional<ReducedResolutionSeconds> nowTimestamp() const;
 
     void appendQueuedEntry(Ref<IntersectionObserverEntry>&&);
     void notify();
 
     IntersectionObserverCallback* callbackConcurrently() { return m_callback.get(); }
+    bool isReachableFromOpaqueRoots(JSC::AbstractSlotVisitor&) const;
 
 private:
     IntersectionObserver(Document&, Ref<IntersectionObserverCallback>&&, ContainerNode* root, LengthBox&& parsedRootMargin, Vector<double>&& thresholds);
 
-    // ActiveDOMObject.
-    bool virtualHasPendingActivity() const override;
-    const char* activeDOMObjectName() const override;
-    void stop() override;
-
     bool removeTargetRegistration(Element&);
     void removeAllTargets();
 
+    WeakPtr<Document> m_associatedDocument;
     WeakPtr<Document> m_implicitRootDocument;
-    ContainerNode* m_root;
+    WeakPtr<ContainerNode> m_root;
     LengthBox m_rootMargin;
     Vector<double> m_thresholds;
     RefPtr<IntersectionObserverCallback> m_callback;
-    Vector<Element*> m_observationTargets;
+    Vector<WeakPtr<Element>> m_observationTargets;
     Vector<GCReachableRef<Element>> m_pendingTargets;
     Vector<Ref<IntersectionObserverEntry>> m_queuedEntries;
+    Vector<GCReachableRef<Element>> m_targetsWaitingForFirstObservation;
 };
 
 
 } // namespace WebCore
-
-#endif // ENABLE(INTERSECTION_OBSERVER)

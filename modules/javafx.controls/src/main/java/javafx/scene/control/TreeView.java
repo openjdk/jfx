@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -46,7 +46,6 @@ import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.WeakChangeListener;
-import javafx.beans.value.WritableValue;
 import javafx.collections.ListChangeListener;
 import javafx.css.CssMetaData;
 import javafx.css.Styleable;
@@ -66,6 +65,7 @@ import java.lang.ref.SoftReference;
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -334,9 +334,11 @@ public class TreeView<T> extends Control {
 
         // install default selection and focus models - it's unlikely this will be changed
         // by many users.
-        MultipleSelectionModel<TreeItem<T>> sm = new TreeViewBitSetSelectionModel<T>(this);
+        MultipleSelectionModel<TreeItem<T>> sm = new TreeViewBitSetSelectionModel<>(this);
         setSelectionModel(sm);
-        setFocusModel(new TreeViewFocusModel<T>(this));
+        setFocusModel(new TreeViewFocusModel<>(this));
+
+        setOnEditCommit(DEFAULT_EDIT_COMMIT_HANDLER);
     }
 
 
@@ -434,14 +436,14 @@ public class TreeView<T> extends Control {
      */
     public final ObjectProperty<Callback<TreeView<T>, TreeCell<T>>> cellFactoryProperty() {
         if (cellFactory == null) {
-            cellFactory = new SimpleObjectProperty<Callback<TreeView<T>, TreeCell<T>>>(this, "cellFactory");
+            cellFactory = new SimpleObjectProperty<>(this, "cellFactory");
         }
         return cellFactory;
     }
 
 
     // --- Root
-    private ObjectProperty<TreeItem<T>> root = new SimpleObjectProperty<TreeItem<T>>(this, "root") {
+    private ObjectProperty<TreeItem<T>> root = new SimpleObjectProperty<>(this, "root") {
         private WeakReference<TreeItem<T>> weakOldItem;
 
         @Override protected void invalidated() {
@@ -567,7 +569,7 @@ public class TreeView<T> extends Control {
      */
     public final ObjectProperty<MultipleSelectionModel<TreeItem<T>>> selectionModelProperty() {
         if (selectionModel == null) {
-            selectionModel = new SimpleObjectProperty<MultipleSelectionModel<TreeItem<T>>>(this, "selectionModel");
+            selectionModel = new SimpleObjectProperty<>(this, "selectionModel");
         }
         return selectionModel;
     }
@@ -600,7 +602,7 @@ public class TreeView<T> extends Control {
      */
     public final ObjectProperty<FocusModel<TreeItem<T>>> focusModelProperty() {
         if (focusModel == null) {
-            focusModel = new SimpleObjectProperty<FocusModel<TreeItem<T>>>(this, "focusModel");
+            focusModel = new SimpleObjectProperty<>(this, "focusModel");
         }
         return focusModel;
     }
@@ -755,7 +757,7 @@ public class TreeView<T> extends Control {
 
     private ReadOnlyObjectWrapper<TreeItem<T>> editingItemPropertyImpl() {
         if (editingItem == null) {
-            editingItem = new ReadOnlyObjectWrapper<TreeItem<T>>(this, "editingItem");
+            editingItem = new ReadOnlyObjectWrapper<>(this, "editingItem");
         }
         return editingItem;
     }
@@ -790,7 +792,7 @@ public class TreeView<T> extends Control {
      */
     public final ObjectProperty<EventHandler<EditEvent<T>>> onEditStartProperty() {
         if (onEditStart == null) {
-            onEditStart = new SimpleObjectProperty<EventHandler<EditEvent<T>>>(this, "onEditStart") {
+            onEditStart = new SimpleObjectProperty<>(this, "onEditStart") {
                 @Override protected void invalidated() {
                     setEventHandler(TreeView.<T>editStartEvent(), get());
                 }
@@ -836,7 +838,7 @@ public class TreeView<T> extends Control {
      */
     public final ObjectProperty<EventHandler<EditEvent<T>>> onEditCommitProperty() {
         if (onEditCommit == null) {
-            onEditCommit = new SimpleObjectProperty<EventHandler<EditEvent<T>>>(this, "onEditCommit") {
+            onEditCommit = new SimpleObjectProperty<>(this, "onEditCommit") {
                 @Override protected void invalidated() {
                     setEventHandler(TreeView.<T>editCommitEvent(), get());
                 }
@@ -845,6 +847,11 @@ public class TreeView<T> extends Control {
         return onEditCommit;
     }
 
+    private EventHandler<TreeView.EditEvent<T>> DEFAULT_EDIT_COMMIT_HANDLER = t -> {
+        TreeItem<T> editedItem = t.getTreeItem();
+        if (editedItem == null) return;
+        editedItem.setValue(t.getNewValue());
+    };
 
     // --- On Edit Cancel
     private ObjectProperty<EventHandler<EditEvent<T>>> onEditCancel;
@@ -876,7 +883,7 @@ public class TreeView<T> extends Control {
      */
     public final ObjectProperty<EventHandler<EditEvent<T>>> onEditCancelProperty() {
         if (onEditCancel == null) {
-            onEditCancel = new SimpleObjectProperty<EventHandler<EditEvent<T>>>(this, "onEditCancel") {
+            onEditCancel = new SimpleObjectProperty<>(this, "onEditCancel") {
                 @Override protected void invalidated() {
                     setEventHandler(TreeView.<T>editCancelEvent(), get());
                 }
@@ -950,7 +957,7 @@ public class TreeView<T> extends Control {
 
     public ObjectProperty<EventHandler<ScrollToEvent<Integer>>> onScrollToProperty() {
         if( onScrollTo == null ) {
-            onScrollTo = new ObjectPropertyBase<EventHandler<ScrollToEvent<Integer>>>() {
+            onScrollTo = new ObjectPropertyBase<>() {
                 @Override
                 protected void invalidated() {
                     setEventHandler(ScrollToEvent.scrollToTopIndex(), get());
@@ -1105,7 +1112,7 @@ public class TreeView<T> extends Control {
 
     private static class StyleableProperties {
         private static final CssMetaData<TreeView<?>,Number> FIXED_CELL_SIZE =
-                new CssMetaData<TreeView<?>,Number>("-fx-fixed-cell-size",
+                new CssMetaData<>("-fx-fixed-cell-size",
                                                      SizeConverter.getInstance(),
                                                      Region.USE_COMPUTED_SIZE) {
 
@@ -1118,22 +1125,23 @@ public class TreeView<T> extends Control {
                     }
 
                     @Override public StyleableProperty<Number> getStyleableProperty(TreeView<?> n) {
-                        return (StyleableProperty<Number>)(WritableValue<Number>) n.fixedCellSizeProperty();
+                        return (StyleableProperty<Number>)n.fixedCellSizeProperty();
                     }
                 };
 
         private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
         static {
             final List<CssMetaData<? extends Styleable, ?>> styleables =
-                    new ArrayList<CssMetaData<? extends Styleable, ?>>(Control.getClassCssMetaData());
+                    new ArrayList<>(Control.getClassCssMetaData());
             styleables.add(FIXED_CELL_SIZE);
             STYLEABLES = Collections.unmodifiableList(styleables);
         }
     }
 
     /**
-     * @return The CssMetaData associated with this class, which may include the
-     * CssMetaData of its superclasses.
+     * Gets the {@code CssMetaData} associated with this class, which may include the
+     * {@code CssMetaData} of its superclasses.
+     * @return the {@code CssMetaData}
      * @since JavaFX 8.0
      */
     public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
@@ -1397,7 +1405,7 @@ public class TreeView<T> extends Control {
                     // no-op
                 } else if (e.wasAdded()) {
                     // shuffle selection by the number of added items
-                    shift += treeItem.isExpanded() ? addedSize : 0;
+                    shift += ControlUtils.isTreeItemIncludingAncestorsExpanded(treeItem) ? addedSize : 0;
 
                     // RT-32963: We were taking the startRow from the TreeItem
                     // in which the children were added, rather than from the
@@ -1407,9 +1415,6 @@ public class TreeView<T> extends Control {
                     // subsequently commented out due to RT-33894.
                     startRow = treeView.getRow(e.getChange().getAddedSubList().get(0));
                 } else if (e.wasRemoved()) {
-                    // shuffle selection by the number of removed items
-                    shift += treeItem.isExpanded() ? -removedSize : 0;
-
                     // the start row is incorrect - it is _not_ the index of the
                     // TreeItem in which the children were removed from (which is
                     // what it currently represents). We need to take the 'from'
@@ -1425,6 +1430,19 @@ public class TreeView<T> extends Control {
                     final List<TreeItem<T>> selectedItems = getSelectedItems();
                     final TreeItem<T> selectedItem = getSelectedItem();
                     final List<? extends TreeItem<T>> removedChildren = e.getChange().getRemoved();
+
+                    // shuffle selection by the number of removed items
+                    // only if removed items are before the current selection.
+                    if (ControlUtils.isTreeItemIncludingAncestorsExpanded(treeItem)) {
+                        int lastSelectedSiblingIndex = selectedItems.stream()
+                                .map(item -> ControlUtils.getIndexOfChildWithDescendant(treeItem, item))
+                                .max(Comparator.naturalOrder())
+                                .orElse(-1);
+                        // shift only if the last selected sibling index is after the first removed child
+                        if (e.getFrom() <= lastSelectedSiblingIndex || lastSelectedSiblingIndex == -1) {
+                            shift -= removedSize;
+                        }
+                    }
 
                     for (int i = 0; i < selectedIndices1.size() && !selectedItems.isEmpty(); i++) {
                         int index = selectedIndices1.get(i);
@@ -1635,7 +1653,7 @@ public class TreeView<T> extends Control {
             }
         }
 
-        private EventHandler<TreeModificationEvent<T>> treeItemListener = new EventHandler<TreeModificationEvent<T>>() {
+        private EventHandler<TreeModificationEvent<T>> treeItemListener = new EventHandler<>() {
             @Override public void handle(TreeModificationEvent<T> e) {
                 // don't shift focus if the event occurred on a tree item after
                 // the focused row, or if there is no focus index at present
@@ -1664,7 +1682,7 @@ public class TreeView<T> extends Control {
                         // get the TreeItem the event occurred on - we only need to
                         // shift if the tree item is expanded
                         TreeItem<T> eventTreeItem = e.getTreeItem();
-                        if (eventTreeItem.isExpanded()) {
+                        if (ControlUtils.isTreeItemIncludingAncestorsExpanded(eventTreeItem)) {
                             for (int i = 0; i < e.getAddedChildren().size(); i++) {
                                 // get the added item and determine the row it is in
                                 TreeItem<T> item = e.getAddedChildren().get(i);
@@ -1686,9 +1704,12 @@ public class TreeView<T> extends Control {
                             }
                         }
 
-                        if (row <= getFocusedIndex()) {
-                            // shuffle selection by the number of removed items
-                            shift += e.getTreeItem().isExpanded() ? -e.getRemovedSize() : 0;
+                        if (ControlUtils.isTreeItemIncludingAncestorsExpanded(e.getTreeItem())) {
+                            int focusedSiblingRow = ControlUtils.getIndexOfChildWithDescendant(e.getTreeItem(), getFocusedItem());
+                            if (e.getFrom() <= focusedSiblingRow) {
+                                // shuffle selection by the number of removed items
+                                shift -= e.getRemovedSize();
+                            }
                         }
                     }
                 } while (e.getChange() != null && e.getChange().next());

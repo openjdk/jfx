@@ -40,6 +40,7 @@
 #include "WebSocketHandshake.h"
 #include <wtf/Deque.h>
 #include <wtf/Forward.h>
+#include <wtf/ObjectIdentifier.h>
 #include <wtf/RefCounted.h>
 #include <wtf/TypeCasts.h>
 #include <wtf/Vector.h>
@@ -56,6 +57,8 @@ class SocketProvider;
 class SocketStreamHandle;
 class SocketStreamError;
 class WebSocketChannelClient;
+class WebSocketChannel;
+using WebSocketChannelIdentifier = ObjectIdentifier<WebSocketChannel>;
 
 class WebSocketChannel final : public RefCounted<WebSocketChannel>, public SocketStreamHandleClient, public ThreadableWebSocketChannel, public FileReaderLoaderClient
 {
@@ -64,7 +67,7 @@ public:
     static Ref<WebSocketChannel> create(Document& document, WebSocketChannelClient& client, SocketProvider& provider) { return adoptRef(*new WebSocketChannel(document, client, provider)); }
     virtual ~WebSocketChannel();
 
-    bool send(const char* data, int length);
+    bool send(const uint8_t* data, int length);
 
     // ThreadableWebSocketChannel functions.
     ConnectStatus connect(const URL&, const String& protocol) final;
@@ -84,7 +87,7 @@ public:
     // SocketStreamHandleClient functions.
     void didOpenSocketStream(SocketStreamHandle&) final;
     void didCloseSocketStream(SocketStreamHandle&) final;
-    void didReceiveSocketStreamData(SocketStreamHandle&, const char*, size_t) final;
+    void didReceiveSocketStreamData(SocketStreamHandle&, const uint8_t*, size_t) final;
     void didFailToReceiveSocketStreamData(SocketStreamHandle&) final;
     void didUpdateBufferedAmount(SocketStreamHandle&, size_t bufferedAmount) final;
     void didFailSocketStream(SocketStreamHandle&, const SocketStreamError&) final;
@@ -114,7 +117,7 @@ public:
     void didFinishLoading() override;
     void didFail(ExceptionCode errorCode) override;
 
-    unsigned long progressIdentifier() const final { return m_progressIdentifier; }
+    WebSocketChannelIdentifier progressIdentifier() const final { return m_progressIdentifier; }
     bool hasCreatedHandshake() const final { return !!m_handshake; }
     bool isConnected() const final { return m_handshake->mode() == WebSocketHandshake::Mode::Connected; }
     ResourceRequest clientHandshakeRequest(const CookieGetter&) const final;
@@ -131,7 +134,7 @@ private:
     void refThreadableWebSocketChannel() override { ref(); }
     void derefThreadableWebSocketChannel() override { deref(); }
 
-    bool appendToBuffer(const char* data, size_t len);
+    bool appendToBuffer(const uint8_t* data, size_t len);
     void skipBuffer(size_t len);
     bool processBuffer();
     void resumeTimerFired();
@@ -160,11 +163,11 @@ private:
         QueuedFrameType frameType;
         // Only one of the following items is used, according to the value of frameType.
         CString stringData;
-        Vector<char> vectorData;
+        Vector<uint8_t> vectorData;
         RefPtr<Blob> blobData;
     };
     void enqueueTextFrame(const CString&);
-    void enqueueRawFrame(WebSocketFrame::OpCode, const char* data, size_t dataLength);
+    void enqueueRawFrame(WebSocketFrame::OpCode, const uint8_t* data, size_t dataLength);
     void enqueueBlobFrame(WebSocketFrame::OpCode, Blob&);
 
     void processOutgoingFrameQueue();
@@ -184,7 +187,7 @@ private:
 
     // If you are going to send a hybi-10 frame, you need to use the outgoing frame queue
     // instead of call sendFrame() directly.
-    void sendFrame(WebSocketFrame::OpCode, const char* data, size_t dataLength, WTF::Function<void(bool)> completionHandler);
+    void sendFrame(WebSocketFrame::OpCode, const uint8_t* data, size_t dataLength, Function<void(bool)> completionHandler);
 
     enum BlobLoaderStatus {
         BlobLoaderNotStarted,
@@ -197,7 +200,7 @@ private:
     WeakPtr<WebSocketChannelClient> m_client;
     std::unique_ptr<WebSocketHandshake> m_handshake;
     RefPtr<SocketStreamHandle> m_handle;
-    Vector<char> m_buffer;
+    Vector<uint8_t> m_buffer;
 
     Timer m_resumeTimer;
     bool m_suspended { false };
@@ -209,7 +212,7 @@ private:
     bool m_shouldDiscardReceivedData { false };
     unsigned m_unhandledBufferedAmount { 0 };
 
-    unsigned m_progressIdentifier { 0 }; // m_progressIdentifier == 0 means that we could not obtain a progress identifier.
+    WebSocketChannelIdentifier m_progressIdentifier;
 
     // Private members only for hybi-10 protocol.
     bool m_hasContinuousFrame { false };

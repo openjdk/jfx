@@ -31,6 +31,10 @@
 #include "SubspaceInlines.h"
 #include "SuperSampler.h"
 
+#include <wtf/FunctionTraits.h>
+#include <wtf/Lock.h>
+#include <wtf/SimpleStats.h>
+
 namespace JSC {
 
 DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(BlockDirectory);
@@ -42,7 +46,7 @@ BlockDirectory::BlockDirectory(size_t cellSize)
 
 BlockDirectory::~BlockDirectory()
 {
-    auto locker = holdLock(m_localAllocatorsLock);
+    Locker locker { m_localAllocatorsLock };
     while (!m_localAllocators.isEmpty())
         m_localAllocators.begin()->remove();
 }
@@ -53,21 +57,35 @@ void BlockDirectory::setSubspace(Subspace* subspace)
     m_subspace = subspace;
 }
 
-bool BlockDirectory::isPagedOut(MonotonicTime deadline)
+void BlockDirectory::updatePercentageOfPagedOutPages(SimpleStats& stats)
 {
-    unsigned itersSinceLastTimeCheck = 0;
-    for (auto* block : m_blocks) {
-        if (block)
-            block->block().populatePage();
-        ++itersSinceLastTimeCheck;
-        if (itersSinceLastTimeCheck >= Heap::s_timeCheckResolution) {
-            MonotonicTime currentTime = MonotonicTime::now();
-            if (currentTime > deadline)
-                return true;
-            itersSinceLastTimeCheck = 0;
-        }
+    // FIXME: We should figure out a solution for Windows.
+#if OS(UNIX)
+    size_t pageSize = WTF::pageSize();
+    ASSERT(!(MarkedBlock::blockSize % pageSize));
+    auto numberOfPagesInMarkedBlock = MarkedBlock::blockSize / pageSize;
+    // For some reason this can be unsigned char or char on different OSes...
+    using MincoreBufferType = std::remove_pointer_t<FunctionTraits<decltype(mincore)>::ArgumentType<2>>;
+    static_assert(std::is_same_v<std::make_unsigned_t<MincoreBufferType>, unsigned char>);
+    // pageSize is effectively a constant so this isn't really variable.
+    IGNORE_CLANG_WARNINGS_BEGIN("vla")
+    MincoreBufferType pagedBits[numberOfPagesInMarkedBlock];
+    IGNORE_CLANG_WARNINGS_END
+
+    for (auto* handle : m_blocks) {
+        if (!handle)
+            continue;
+
+        auto markedBlockSizeInBytes = static_cast<size_t>(reinterpret_cast<char*>(handle->end()) - reinterpret_cast<char*>(handle->start()));
+        RELEASE_ASSERT(markedBlockSizeInBytes / pageSize <= numberOfPagesInMarkedBlock);
+        // We could cache this in bulk (e.g. 25 MB chunks) but we haven't seen any data that it actually matters.
+        auto result = mincore(handle->start(), markedBlockSizeInBytes, pagedBits);
+        RELEASE_ASSERT(!result);
+        constexpr unsigned pageIsResidentAndNotCompressed = 1;
+        for (unsigned i = 0; i < numberOfPagesInMarkedBlock; ++i)
+            stats.add(!(pagedBits[i] & pageIsResidentAndNotCompressed));
     }
-    return false;
+#endif
 }
 
 MarkedBlock::Handle* BlockDirectory::findEmptyBlockToSteal()
@@ -117,7 +135,7 @@ void BlockDirectory::addBlock(MarkedBlock::Handle* block)
             ASSERT(m_bits.numBits() == oldCapacity);
             ASSERT(m_blocks.capacity() > oldCapacity);
 
-            LockHolder locker(m_bitvectorLock);
+            Locker locker { m_bitvectorLock };
             subspace()->didResizeBits(m_blocks.capacity());
             m_bits.resize(m_blocks.capacity());
         }
@@ -140,7 +158,7 @@ void BlockDirectory::addBlock(MarkedBlock::Handle* block)
     setIsEmpty(NoLockingNecessary, index, true);
 }
 
-void BlockDirectory::removeBlock(MarkedBlock::Handle* block)
+void BlockDirectory::removeBlock(MarkedBlock::Handle* block, WillDeleteBlock willDelete)
 {
     ASSERT(block->directory() == this);
     ASSERT(m_blocks[block->index()] == block);
@@ -151,12 +169,13 @@ void BlockDirectory::removeBlock(MarkedBlock::Handle* block)
     m_freeBlockIndices.append(block->index());
 
     forEachBitVector(
-        holdLock(m_bitvectorLock),
+        Locker { m_bitvectorLock },
         [&](auto vectorRef) {
             vectorRef[block->index()] = false;
         });
 
-    block->didRemoveFromDirectory();
+    if (willDelete == WillDeleteBlock::No)
+        block->didRemoveFromDirectory();
 }
 
 void BlockDirectory::stopAllocating()
@@ -198,7 +217,7 @@ void BlockDirectory::stopAllocatingForGood()
             allocator->stopAllocatingForGood();
         });
 
-    auto locker = holdLock(m_localAllocatorsLock);
+    Locker locker { m_localAllocatorsLock };
     while (!m_localAllocators.isEmpty())
         m_localAllocators.begin()->remove();
 }
@@ -315,7 +334,7 @@ RefPtr<SharedTask<MarkedBlock::Handle*()>> BlockDirectory::parallelNotEmptyBlock
         {
             if (m_done)
                 return nullptr;
-            auto locker = holdLock(m_lock);
+            Locker locker { m_lock };
             m_index = m_directory.m_bits.markingNotEmpty().findBit(m_index, true);
             if (m_index >= m_directory.m_blocks.size()) {
                 m_done = true;
@@ -325,8 +344,8 @@ RefPtr<SharedTask<MarkedBlock::Handle*()>> BlockDirectory::parallelNotEmptyBlock
         }
 
     private:
-        BlockDirectory& m_directory;
-        size_t m_index { 0 };
+        BlockDirectory& m_directory WTF_GUARDED_BY_LOCK(m_lock);
+        size_t m_index WTF_GUARDED_BY_LOCK(m_lock) { 0 };
         Lock m_lock;
         bool m_done { false };
     };
