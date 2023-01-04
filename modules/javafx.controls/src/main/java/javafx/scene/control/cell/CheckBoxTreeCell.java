@@ -431,6 +431,7 @@ public class CheckBoxTreeCell<T> extends DefaultTreeCell<T> {
         if (empty) {
             setText(null);
             setGraphic(null);
+            checkBox.setGraphic(null); // release the graphic so it will serve only one CheckBox
         } else {
             StringConverter<TreeItem<T>> c = getConverter();
 
