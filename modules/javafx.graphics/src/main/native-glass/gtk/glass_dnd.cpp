@@ -501,10 +501,10 @@ static GdkWindow* get_dnd_window() {
         GdkWindowAttr attr;
         memset(&attr, 0, sizeof (GdkWindowAttr));
         attr.override_redirect = TRUE;
-        attr.window_type = GDK_WINDOW_TOPLEVEL;
+        attr.window_type = GDK_WINDOW_TEMP;
         attr.wclass = GDK_INPUT_OUTPUT;
         attr.event_mask = GDK_FILTERED_EVENTS_MASK;
-        dnd_window = gdk_window_new(NULL, &attr, GDK_WA_NOREDIR);
+        dnd_window = gdk_window_new(NULL, &attr, GDK_WA_TYPE_HINT);
         gdk_window_show(dnd_window);
     }
 
@@ -872,6 +872,16 @@ static void process_dnd_source_key_press_release(GdkWindow *window, GdkEvent *ev
     }
 }
 
+static GdkCursor* get_default_drag_cursor() {
+    GdkCursor* cursor = gdk_cursor_new_from_name(gdk_display_get_default(), "dnd-none");
+
+    if (cursor == NULL) {
+        cursor = gdk_cursor_new_from_name(gdk_display_get_default(), "grabbing");
+    }
+
+    return cursor;
+}
+
 static void process_dnd_source_drag_status(GdkWindow *window, GdkEvent *event) {
     (void)window;
 
@@ -909,11 +919,7 @@ static void process_dnd_source_drag_status(GdkWindow *window, GdkEvent *event) {
     }
 
     if (cursor == NULL) {
-        cursor = gdk_cursor_new_from_name(gdk_display_get_default(), "dnd-none");
-
-        if (cursor == NULL) {
-            cursor = gdk_cursor_new_from_name(gdk_display_get_default(), "grabbing");
-        }
+        cursor = get_default_drag_cursor();
     }
 
     dnd_pointer_grab(cursor);
@@ -994,7 +1000,7 @@ static void dnd_source_push_data(JNIEnv *env, jobject data, jint supported) {
     g_list_free(targets);
     g_object_set_data(G_OBJECT(src_window), SOURCE_DND_CONTEXT, ctx);
 
-    if (!dnd_pointer_grab(NULL)) {
+    if (!dnd_pointer_grab(get_default_drag_cursor())) {
        g_warning("Mouse grab failed.\n");
     }
 }
@@ -1216,6 +1222,7 @@ DragView::DragView(GdkPixbuf* _pixbuf, gboolean _is_raw_image,
     attrs.window_type = GDK_WINDOW_TEMP;
     attrs.type_hint = GDK_WINDOW_TYPE_HINT_DND;
     attrs.visual = gdk_screen_get_rgba_visual(screen);
+    attrs.event_mask = GDK_EXPOSURE_MASK | GDK_POINTER_MOTION_MASK;
 
     if (!attrs.visual) {
         attrs.visual = gdk_screen_get_system_visual(screen);
@@ -1233,6 +1240,8 @@ DragView::DragView(GdkPixbuf* _pixbuf, gboolean _is_raw_image,
     gdk_window_set_opaque_region(window, NULL);
     GdkRGBA rgba = {0, 0, 0, 0};
     gdk_window_set_background_rgba(window, &rgba);
+#else
+    gdk_window_set_opacity(window, .7);
 #endif
 }
 
@@ -1242,10 +1251,11 @@ void DragView::expose() {
     gdk_window_begin_paint_region(window, region);
 #endif
 
-    cairo_t *context = gdk_cairo_create(window);
-    gdk_cairo_set_source_pixbuf(context, pixbuf, 0, 0);
-    cairo_paint(context);
-    cairo_destroy(context);
+    cairo_t *cr = gdk_cairo_create(window);
+    cairo_set_operator(cr, CAIRO_OPERATOR_SOURCE);
+    gdk_cairo_set_source_pixbuf(cr, pixbuf, 0, 0);
+    cairo_paint(cr);
+    cairo_destroy(cr);
 
 #ifdef GLASS_GTK3
     gdk_window_end_paint(window);
