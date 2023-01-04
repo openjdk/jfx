@@ -59,6 +59,10 @@ public abstract class ReadOnlyMapProperty<K, V> extends MapExpression<K, V> impl
      * <p>
      * A bidirectional content binding ensures that the content of two maps is the same.
      * If the content of one of the maps changes, the content of the other map will be updated automatically.
+     * <p>
+     * If this property is already bidirectionally content-bound to the other property, the existing binding
+     * will be removed as if by calling {@link #unbindContentBidirectional(ObservableMap)} before the new
+     * binding is established.
      *
      * @param other the {@code ObservableMap} this property should be bound to
      * @throws NullPointerException if {@code other} is {@code null}
@@ -83,7 +87,7 @@ public abstract class ReadOnlyMapProperty<K, V> extends MapExpression<K, V> impl
      * @param other the {@code ObservableMap} to which the bidirectional content binding should be removed
      * @throws NullPointerException if {@code other} is {@code null}
      * @throws IllegalArgumentException if {@code other} is the map wrapped in this {@code ReadOnlyMapProperty}
-     * @since 18
+     * @since 21
      */
     public void unbindContentBidirectional(ObservableMap<K, V> other) {
         BidirectionalContentBinding.unbind(this, other);
@@ -106,7 +110,7 @@ public abstract class ReadOnlyMapProperty<K, V> extends MapExpression<K, V> impl
      * @throws IllegalArgumentException if {@code other} is the map wrapped in this {@code ReadOnlyMapProperty}
      * @deprecated use {@link #unbindContentBidirectional(ObservableMap)} instead
      */
-    @Deprecated(since = "18", forRemoval = true)
+    @Deprecated(since = "21")
     public void unbindContentBidirectional(Object other) {
         Objects.requireNonNull(other);
         if (other instanceof ObservableMap<?, ?>) {
@@ -126,8 +130,8 @@ public abstract class ReadOnlyMapProperty<K, V> extends MapExpression<K, V> impl
      * <p>
      * Once a content binding is established, the bound map becomes effectively read-only: any attempt to
      * change the content of the bound map by calling a mutating method of {@link ObservableMap} will cause
-     * the content binding to fail. In this case, the content binding is removed because the bound map and
-     * the source map may be out-of-sync.
+     * the content binding to fail. If the content binding fails, it is automatically removed because the
+     * bound map and the source map may be out of sync.
      *
      * @param source the source {@code ObservableMap} this property should be bound to
      * @throws NullPointerException if {@code source} is {@code null}
@@ -138,25 +142,29 @@ public abstract class ReadOnlyMapProperty<K, V> extends MapExpression<K, V> impl
     }
 
     /**
-     * Deletes a content binding between the {@link javafx.collections.ObservableMap}, that is
-     * wrapped in this {@code ReadOnlyMapProperty}, and another {@code Object}.
+     * Removes the content binding that was established with {@link #bindContent(ObservableMap)}.
+     * <p>
+     * The content of the wrapped map will remain unchanged.
+     * If this property is not content-bound, calling this method has no effect.
      *
-     * @since 18
+     * @since 21
      */
     public void unbindContent() {
         throw new UnsupportedOperationException();
     }
 
     /**
-     * Deletes a content binding between the {@link javafx.collections.ObservableMap}, that is
-     * wrapped in this {@code ReadOnlyMapProperty}, and another {@code Object}.
+     * Removes the content binding that was established with {@link #bindContent(ObservableMap)}.
+     * <p>
+     * The content of the wrapped map will remain unchanged.
+     * If this property is not content-bound, calling this method has no effect.
      *
      * @param object the {@code Object} to which the binding should be removed
      * @throws NullPointerException if {@code object} is {@code null}
      * @throws IllegalArgumentException if {@code object} is the same map that this {@code ReadOnlyMapProperty} points to
      * @deprecated use {@link #unbindContent()} instead
      */
-    @Deprecated(since = "18", forRemoval = true)
+    @Deprecated(since = "21")
     public void unbindContent(Object object) {
         throw new UnsupportedOperationException();
     }
@@ -169,7 +177,7 @@ public abstract class ReadOnlyMapProperty<K, V> extends MapExpression<K, V> impl
      * established by calling {@link #bindContentBidirectional(ObservableMap)}.
      *
      * @return whether this property is bound by a unidirectional content binding
-     * @since 18
+     * @since 21
      */
     public boolean isContentBound() {
         return false;

@@ -45,7 +45,7 @@ public interface Property<T> extends ReadOnlyProperty<T>, WritableValue<T> {
      * After establishing the binding, the value of the bound property is synchronized with the value
      * of the binding source: any change to the value of the binding source will immediately result in
      * the value of the bound property being changed accordingly. Furthermore, the bound property becomes
-     * effectively read-only: any call to {@link #setValue(Object)} will fail with an exception.
+     * effectively read-only: any call to {@link #setValue(Object)} will fail with {@code IllegalStateException}.
      * When the binding is first established, the value of the bound property is set to the current value
      * of the binding source.
      * <p>
@@ -59,7 +59,7 @@ public interface Property<T> extends ReadOnlyProperty<T>, WritableValue<T> {
      * <p>
      * If this method is called when the property is already bound, the previous binding is removed
      * as if by calling {@link #unbind()} before establishing the new binding. If this property is
-     * already bidirectionally bound, calling this method will fail with an exception.
+     * already bidirectionally bound, calling this method will fail with {@code IllegalStateException}.
      *
      * @param source the binding source
      * @throws NullPointerException if {@code source} is {@code null}
@@ -91,8 +91,8 @@ public interface Property<T> extends ReadOnlyProperty<T>, WritableValue<T> {
      * <p>
      * After establishing the binding, the values of both properties are synchronized: any change
      * to the value of one property will immediately result in the value of the other property being
-     * changed accordingly. When the binding is first established, the value of the this property
-     * is set to the current value of the other property.
+     * changed accordingly. When the binding is first established, the value of this property is
+     * set to the current value of the other property.
      * <p>
      * While it is not possible for a property to be bound by more than one unidirectional binding,
      * it is legal to establish multiple bidirectional bindings for the same property. However,
@@ -108,8 +108,8 @@ public interface Property<T> extends ReadOnlyProperty<T>, WritableValue<T> {
      * alive if the counterpart would otherwise become unreachable.
      * <p>
      * Bidirectional bindings and unidirectional bindings are mutually exclusive. If a property is
-     * unidirectionally bound, any attempt to establish a bidirectional binding will fail with an
-     * exception.
+     * unidirectionally bound, any attempt to establish a bidirectional binding will fail with
+     * {@code IllegalStateException}.
      * <p>
      * If this property is already bidirectionally bound to the other property, the existing binding
      * will be removed as if by calling {@link #unbindBidirectional(Property)} before the new binding

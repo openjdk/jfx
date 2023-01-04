@@ -957,7 +957,7 @@ public final class Bindings {
      * @since JavaFX 2.1
      * @deprecated use {@link #unbindBidirectional(Property, Property)} instead
      */
-    @Deprecated(since = "18", forRemoval = true)
+    @Deprecated(since = "21")
     public static void unbindBidirectional(Object property1, Object property2) {
         BidirectionalBinding.unbind((Property<?>)property1, (Property<?>)property2);
     }
@@ -1203,7 +1203,7 @@ public final class Bindings {
      *             {@link #unbindContentBidirectional(ObservableSet, ObservableSet)}, or
      *             {@link #unbindContentBidirectional(ObservableMap, ObservableMap)} instead
      */
-    @Deprecated(since = "18", forRemoval = true)
+    @Deprecated(since = "21")
     public static void unbindContentBidirectional(Object obj1, Object obj2) {
         if (obj1 instanceof ObservableList && obj2 instanceof ObservableList) {
             unbindContentBidirectional((ObservableList)obj1, (ObservableList)obj2);
@@ -1225,7 +1225,7 @@ public final class Bindings {
      *            if one of the lists is {@code null}
      * @throws IllegalArgumentException
      *            if {@code list1} == {@code list2}
-     * @since 18
+     * @since 21
      */
     public static <E> void unbindContentBidirectional(ObservableList<E> list1, ObservableList<E> list2) {
         BidirectionalContentBinding.unbind(list1, list2);
@@ -1242,7 +1242,7 @@ public final class Bindings {
      *            if one of the sets is {@code null}
      * @throws IllegalArgumentException
      *            if {@code set1} == {@code set2}
-     * @since 18
+     * @since 21
      */
     public static <E> void unbindContentBidirectional(ObservableSet<E> set1, ObservableSet<E> set2) {
         BidirectionalContentBinding.unbind(set1, set2);
@@ -1259,7 +1259,7 @@ public final class Bindings {
      *            if one of the maps is {@code null}
      * @throws IllegalArgumentException
      *            if {@code map1} == {@code map2}
-     * @since 18
+     * @since 21
      */
     public static <K, V> void unbindContentBidirectional(ObservableMap<K, V> map1, ObservableMap<K, V> map2) {
         BidirectionalContentBinding.unbind(map1, map2);
@@ -1380,7 +1380,7 @@ public final class Bindings {
      *            if one of the lists is {@code null}
      * @throws IllegalArgumentException
      *            if {@code list1} == {@code list2}
-     * @since 18
+     * @since 21
      */
     public static <E> void unbindContent(List<E> list1, ObservableList<E> list2) {
         ContentBinding.unbind(list1, list2);
@@ -1397,7 +1397,7 @@ public final class Bindings {
      *            if one of the sets is {@code null}
      * @throws IllegalArgumentException
      *            if {@code set1} == {@code set2}
-     * @since 18
+     * @since 21
      */
     public static <E> void unbindContent(Set<E> set1, ObservableSet<E> set2) {
         ContentBinding.unbind(set1, set2);
@@ -1414,7 +1414,7 @@ public final class Bindings {
      *            if one of the maps is {@code null}
      * @throws IllegalArgumentException
      *            if {@code map1} == {@code map2}
-     * @since 18
+     * @since 21
      */
     public static <K, V> void unbindContent(Map<K, V> map1, ObservableMap<K, V> map2) {
         ContentBinding.unbind(map1, map2);
@@ -1436,7 +1436,7 @@ public final class Bindings {
      *             {@link #unbindContent(Set, ObservableSet)} or
      *             {@link #unbindContent(Map, ObservableMap)} instead
      */
-    @Deprecated(since = "18", forRemoval = true)
+    @Deprecated(since = "21")
     public static void unbindContent(Object obj1, Object obj2) {
         if (obj1 instanceof List && obj2 instanceof ObservableList) {
             unbindContent((List)obj1, (ObservableList)obj2);

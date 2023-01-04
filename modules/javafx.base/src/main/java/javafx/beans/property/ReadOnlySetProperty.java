@@ -58,6 +58,10 @@ public abstract class ReadOnlySetProperty<E> extends SetExpression<E> implements
      * <p>
      * A bidirectional content binding ensures that the content of the two sets is the same.
      * If the content of one of the sets changes, the content of the other set will be updated automatically.
+     * <p>
+     * If this property is already bidirectionally content-bound to the other property, the existing binding
+     * will be removed as if by calling {@link #unbindContentBidirectional(ObservableSet)} before the new
+     * binding is established.
      *
      * @param other the {@code ObservableSet} this property should be bound to
      * @throws NullPointerException if {@code other} is {@code null}
@@ -82,7 +86,7 @@ public abstract class ReadOnlySetProperty<E> extends SetExpression<E> implements
      * @param other the {@code ObservableSet} to which the bidirectional content binding should be removed
      * @throws NullPointerException if {@code other} is {@code null}
      * @throws IllegalArgumentException if {@code other} is the set wrapped in this {@code ReadOnlySetProperty}
-     * @since 18
+     * @since 21
      */
     public void unbindContentBidirectional(ObservableSet<E> other) {
         BidirectionalContentBinding.unbind(this, other);
@@ -105,7 +109,7 @@ public abstract class ReadOnlySetProperty<E> extends SetExpression<E> implements
      * @throws IllegalArgumentException if {@code other} is the set wrapped in this {@code ReadOnlySetProperty}
      * @deprecated use {@link #unbindContentBidirectional(ObservableSet)} instead
      */
-    @Deprecated(since = "18", forRemoval = true)
+    @Deprecated(since = "21")
     public void unbindContentBidirectional(Object other) {
         Objects.requireNonNull(other);
         if (other instanceof ObservableSet<?>) {
@@ -125,8 +129,8 @@ public abstract class ReadOnlySetProperty<E> extends SetExpression<E> implements
      * <p>
      * Once a content binding is established, the bound set becomes effectively read-only: any attempt to
      * change the content of the bound set by calling a mutating method of {@link ObservableSet} will cause
-     * the content binding to fail. In this case, the content binding is removed because the bound set and
-     * the source set may be out-of-sync.
+     * the content binding to fail. If the content binding fails, it is automatically removed because the
+     * bound set and the source set may be out of sync.
      *
      * @param source the source {@code ObservableSet} this property should be bound to
      * @throws NullPointerException if {@code source} is {@code null}
@@ -142,7 +146,7 @@ public abstract class ReadOnlySetProperty<E> extends SetExpression<E> implements
      * The content of the wrapped set will remain unchanged.
      * If this property is not content-bound, calling this method has no effect.
      *
-     * @since 18
+     * @since 21
      */
     public void unbindContent() {
         throw new UnsupportedOperationException();
@@ -159,7 +163,7 @@ public abstract class ReadOnlySetProperty<E> extends SetExpression<E> implements
      * @throws IllegalArgumentException if {@code source} is the set wrapped in this {@code ReadOnlySetProperty}
      * @deprecated use {@link #unbindContent()}
      */
-    @Deprecated(since = "18", forRemoval = true)
+    @Deprecated(since = "21")
     public void unbindContent(Object source) {
         throw new UnsupportedOperationException();
     }
@@ -172,7 +176,7 @@ public abstract class ReadOnlySetProperty<E> extends SetExpression<E> implements
      * established by calling {@link #bindContentBidirectional(ObservableSet)}.
      *
      * @return whether this property is unidirectionally content-bound
-     * @since 18
+     * @since 21
      */
     public boolean isContentBound() {
         return false;

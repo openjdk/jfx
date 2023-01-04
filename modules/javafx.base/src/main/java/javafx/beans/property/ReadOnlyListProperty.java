@@ -60,6 +60,10 @@ public abstract class ReadOnlyListProperty<E> extends ListExpression<E>
      * <p>
      * A bidirectional content binding ensures that the content of the two lists is the same.
      * If the content of one of the lists changes, the content of the other list will be updated automatically.
+     * <p>
+     * If this property is already bidirectionally content-bound to the other property, the existing binding
+     * will be removed as if by calling {@link #unbindContentBidirectional(ObservableList)} before the new
+     * binding is established.
      *
      * @param other the {@code ObservableList} this property should be bound to
      * @throws NullPointerException if {@code other} is {@code null}
@@ -84,7 +88,7 @@ public abstract class ReadOnlyListProperty<E> extends ListExpression<E>
      * @param other the {@code ObservableList} to which the bidirectional content binding should be removed
      * @throws NullPointerException if {@code other} is {@code null}
      * @throws IllegalArgumentException if {@code other} is the list wrapped in this {@code ReadOnlyListProperty}
-     * @since 18
+     * @since 21
      */
     public void unbindContentBidirectional(ObservableList<E> other) {
         BidirectionalContentBinding.unbind(this, other);
@@ -107,7 +111,7 @@ public abstract class ReadOnlyListProperty<E> extends ListExpression<E>
      * @throws IllegalArgumentException if {@code other} is the list wrapped in this {@code ReadOnlyListProperty}
      * @deprecated use {@link #unbindContentBidirectional(ObservableList)} instead
      */
-    @Deprecated(since = "18", forRemoval = true)
+    @Deprecated(since = "21")
     public void unbindContentBidirectional(Object other) {
         Objects.requireNonNull(other);
         if (other instanceof ObservableList<?>) {
@@ -127,8 +131,8 @@ public abstract class ReadOnlyListProperty<E> extends ListExpression<E>
      * <p>
      * Once a content binding is established, the bound list becomes effectively read-only: any attempt to
      * change the content of the bound list by calling a mutating method of {@link ObservableList} will cause
-     * the content binding to fail. In this case, the content binding is removed because the bound list and
-     * the source list may be out-of-sync.
+     * the content binding to fail. If the content binding fails, it is automatically removed because the
+     * bound list and the source list may be out of sync.
      *
      * @param source the source {@code ObservableList} this property should be bound to
      * @throws NullPointerException if {@code source} is {@code null}
@@ -144,7 +148,7 @@ public abstract class ReadOnlyListProperty<E> extends ListExpression<E>
      * The content of the wrapped list will remain unchanged.
      * If this property is not content-bound, calling this method has no effect.
      *
-     * @since 18
+     * @since 21
      */
     public void unbindContent() {
         throw new UnsupportedOperationException();
@@ -159,7 +163,7 @@ public abstract class ReadOnlyListProperty<E> extends ListExpression<E>
      * @param source the content binding source
      * @deprecated use {@link #unbindContent()}
      */
-    @Deprecated(since = "18", forRemoval = true)
+    @Deprecated(since = "21")
     public void unbindContent(Object source) {
         throw new UnsupportedOperationException();
     }
@@ -172,7 +176,7 @@ public abstract class ReadOnlyListProperty<E> extends ListExpression<E>
      * established by calling {@link #bindContentBidirectional(ObservableList)}.
      *
      * @return whether this property is bound by a unidirectional content binding
-     * @since 18
+     * @since 21
      */
     public boolean isContentBound() {
         return false;

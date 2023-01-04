@@ -139,7 +139,7 @@ public abstract class StringProperty extends ReadOnlyStringProperty implements
      *             if {@code other} is {@code this}
      * @since JavaFX 2.1
      */
-    @Deprecated(since = "18", forRemoval = true)
+    @Deprecated(since = "21")
     public void unbindBidirectional(Object other) {
         if (other instanceof Property<?>) {
             BidirectionalBinding.unbind(this, (Property<?>)other);
