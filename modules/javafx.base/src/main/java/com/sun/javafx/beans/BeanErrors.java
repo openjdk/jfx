@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -41,9 +41,9 @@ public enum BeanErrors {
     BIND_CONFLICT_UNIDIRECTIONAL("Cannot bind a property that is targeted by a bidirectional binding."),
     CONTENT_BIND_CONFLICT_BIDIRECTIONAL("Bidirectional content binding cannot target a bound collection."),
     CONTENT_BIND_CONFLICT_UNIDIRECTIONAL("Cannot bind a collection that is targeted by a bidirectional content binding."),
-    ILLEGAL_LIST_MODIFICATION("Illegal list modification: Content binding was removed because the lists are out-of-sync."),
-    ILLEGAL_SET_MODIFICATION("Illegal set modification: Content binding was removed because the sets are out-of-sync."),
-    ILLEGAL_MAP_MODIFICATION("Illegal map modification: Content binding was removed because the maps are out-of-sync.");
+    ILLEGAL_LIST_MODIFICATION("Illegal list modification: Content binding was removed because the lists are out of sync."),
+    ILLEGAL_SET_MODIFICATION("Illegal set modification: Content binding was removed because the sets are out of sync."),
+    ILLEGAL_MAP_MODIFICATION("Illegal map modification: Content binding was removed because the maps are out of sync.");
 
     BeanErrors(String message) {
         this.message = message;

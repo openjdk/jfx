@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,17 +29,14 @@ import com.sun.javafx.beans.BeanErrors;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.BooleanPropertyBase;
 import javafx.beans.property.SimpleBooleanProperty;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-
 import test.javafx.beans.InvalidationListenerMock;
 import test.javafx.beans.value.ChangeListenerMock;
 import javafx.beans.value.ObservableBooleanValueStub;
 import javafx.beans.value.ObservableObjectValueStub;
-
 import org.junit.Before;
 import org.junit.Test;
+
+import static org.junit.Assert.*;
 
 public class BooleanPropertyBaseTest {
 
@@ -202,7 +199,7 @@ public class BooleanPropertyBaseTest {
         changeListener.check(property, false, true, 2);
     }
 
-    @Test(expected=RuntimeException.class)
+    @Test
     public void testSetBoundValue() {
         final BooleanProperty v = new SimpleBooleanProperty(true);
         property.bind(v);
@@ -350,7 +347,7 @@ public class BooleanPropertyBaseTest {
         changeListener.check(property, true, false, 1);
     }
 
-    @Test(expected=NullPointerException.class)
+    @Test
     public void testBindToNull() {
         var ex = assertThrows(NullPointerException.class, () -> property.bind(null));
         assertEquals(BeanErrors.BINDING_SOURCE_NULL.getMessage(property), ex.getMessage());
