@@ -233,8 +233,7 @@ public abstract class BidirectionalContentBinding implements WeakListener {
                 return false;
             }
 
-            if (obj instanceof ListContentBinding) {
-                final ListContentBinding otherBinding = (ListContentBinding) obj;
+            if (obj instanceof ListContentBinding otherBinding) {
                 final Object propertyB1 = otherBinding.propertyRef1.get();
                 final Object propertyB2 = otherBinding.propertyRef2.get();
                 if ((propertyB1 == null) || (propertyB2 == null)) {
@@ -320,8 +319,7 @@ public abstract class BidirectionalContentBinding implements WeakListener {
                 return false;
             }
 
-            if (obj instanceof SetContentBinding) {
-                final SetContentBinding otherBinding = (SetContentBinding) obj;
+            if (obj instanceof SetContentBinding otherBinding) {
                 final Object propertyB1 = otherBinding.propertyRef1.get();
                 final Object propertyB2 = otherBinding.propertyRef2.get();
                 if ((propertyB1 == null) || (propertyB2 == null)) {
@@ -408,8 +406,7 @@ public abstract class BidirectionalContentBinding implements WeakListener {
                 return false;
             }
 
-            if (obj instanceof MapContentBinding) {
-                final MapContentBinding otherBinding = (MapContentBinding) obj;
+            if (obj instanceof MapContentBinding otherBinding) {
                 final Object propertyB1 = otherBinding.propertyRef1.get();
                 final Object propertyB2 = otherBinding.propertyRef2.get();
                 if ((propertyB1 == null) || (propertyB2 == null)) {
