@@ -121,12 +121,14 @@ import java.util.function.Function;
  * <pre><code>
  public final class MyButton extends Button {
 
+     private static {@literal CssMetaData<MyButton, Boolean>} SELECTED;
+
      private static final {@literal StyleablePropertyFactory<MyButton>} FACTORY =
          new {@literal StyleablePropertyFactory<>}(Button.getClassCssMetaData()) {
          {
-             createBooleanCssMetaData("-my-selected", s {@literal ->} s.selected, false, false);
+             SELECTED = createBooleanCssMetaData("-my-selected", s {@literal ->} s.selected, false, false);
          }
-     }
+     };
 
 
      MyButton(String labelText) {
@@ -141,7 +143,7 @@ import java.util.function.Function;
 
      // StyleableProperty implementation reduced to one line
      private final {@literal StyleableProperty<Boolean>} selected =
-         new SimpleStyleableBooleanProperty(this, "selected", "my-selected");
+         new SimpleStyleableBooleanProperty(SELECTED, "selected", "my-selected");
 
      public static {@literal List<CssMetaData<? extends Styleable, ?>>} getClassCssMetaData() {
          return FACTORY.getCssMetaData();
