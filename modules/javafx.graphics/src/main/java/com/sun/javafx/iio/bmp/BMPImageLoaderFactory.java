@@ -124,10 +124,16 @@ final class BitmapInfoHeader {
         if (biWidth <= 0) {
             throw new IOException("Bad BMP image width, must be > 0!");
         }
-        if (biHeight <= 0) {
-            throw new IOException("Bad BMP image height, must be > 0!");
+        // If biHeight is negative, the bitmap is a top-down DIB
+        // See: https://learn.microsoft.com/en-us/windows/win32/api/wingdi/ns-wingdi-bitmapinfoheader
+
+        int height = Math.abs(biHeight);
+
+        if (height == 0) {
+            throw new IOException("Bad BMP image height, must be != 0!");
         }
-        if (biWidth >= (Integer.MAX_VALUE / biHeight)) {
+
+        if (biWidth >= (Integer.MAX_VALUE / height)) {
             throw new IOException("Bad BMP image size!");
         }
 
