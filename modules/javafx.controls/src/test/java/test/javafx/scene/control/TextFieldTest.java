@@ -547,9 +547,10 @@ public class TextFieldTest {
     }
 
     /**
-     * test for JDK-8178368: Right alignment of text fields works incorrectly
+     * test for JDK-8178368: Right and Center alignment of text field works incorrectly
      *
-     * Here we test that text aligns as expected when text width is more than TextField width
+     * Here we test that text aligns as expected when text width is more than TextField width.
+     * All three alignment types LEFT, RIGHT and CENTER are validated below.
      */
     @Test
     public void testTextFieldLeftAlignment() {
