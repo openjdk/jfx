@@ -2326,7 +2326,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         if (index > 0) {
             getOrCreateCellSize(index - 1);
         }
-        if (index < getCellCount() -1) {
+        if (index < getCellCount() - 1) {
             getOrCreateCellSize(index + 1);
         }
         double estlength = cellLength;

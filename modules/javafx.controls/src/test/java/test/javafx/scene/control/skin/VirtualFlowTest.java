@@ -1470,7 +1470,7 @@ assertEquals(0, firstCell.getIndex());
         assertEquals(300, thirdCell.getLayoutY(), 1.);
 
 
-        for (int i =0 ; i < heights.length; i++) {
+        for (int i = 0 ; i < heights.length; i++) {
             heights[i] = 220;
             flow.setCellDirty(i);
         }
