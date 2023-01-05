@@ -552,7 +552,26 @@ public class TextFieldTest {
      * Here we test that text aligns as expected when text width is more than TextField width
      */
     @Test
-    public void testTextFieldAlignment() {
+    public void testTextFieldLeftAlignment() {
+        initStage();
+        txtField.setSkin(new TextFieldSkin(txtField));
+        txtField.setText("A short text.");
+        txtField.setPrefColumnCount(20);
+        txtField.setAlignment(Pos.BASELINE_LEFT);
+
+        root.getChildren().add(txtField);
+        stage.show();
+
+        assertTrue(txtField.getWidth() > TextInputSkinShim.getTextNode(txtField).getLayoutBounds().getWidth());
+        assertEquals(TextInputSkinShim.getTextTranslateX(txtField), 0, 0.0);
+
+        txtField.setText("This is a long text. this is  long text.");
+        assertTrue(txtField.getWidth() < TextInputSkinShim.getTextNode(txtField).getLayoutBounds().getWidth());
+        assertEquals(0, TextInputSkinShim.getTextTranslateX(txtField), 0.0);
+    }
+
+    @Test
+    public void testTextFieldRightAlignment() {
         initStage();
         txtField.setSkin(new TextFieldSkin(txtField));
         txtField.setText("A short text.");
@@ -562,10 +581,31 @@ public class TextFieldTest {
         root.getChildren().add(txtField);
         stage.show();
 
-        double oldX = TextInputSkinShim.getTextTranslateX(txtField);
-        txtField.setText("This is a long text. this is a long text.");
+        assertTrue(txtField.getWidth() > TextInputSkinShim.getTextNode(txtField).getLayoutBounds().getWidth());
+        assertTrue(TextInputSkinShim.getTextTranslateX(txtField) > 0);
 
-        assertNotEquals(oldX, TextInputSkinShim.getTextTranslateX(txtField));
+        txtField.setText("This is a long text. this is  long text.");
+        assertTrue(txtField.getWidth() < TextInputSkinShim.getTextNode(txtField).getLayoutBounds().getWidth());
+        assertEquals(-(TextInputSkinShim.getTextNode(txtField).getLayoutBounds().getWidth())/2, TextInputSkinShim.getTextTranslateX(txtField), 0.0);
+    }
+
+    @Test
+    public void testTextFieldCenterAlignment() {
+        initStage();
+        txtField.setSkin(new TextFieldSkin(txtField));
+        txtField.setText("A short text.");
+        txtField.setPrefColumnCount(20);
+        txtField.setAlignment(Pos.BASELINE_CENTER);
+
+        root.getChildren().add(txtField);
+        stage.show();
+
+        assertTrue(txtField.getWidth() > TextInputSkinShim.getTextNode(txtField).getLayoutBounds().getWidth());
+        assertTrue(TextInputSkinShim.getTextTranslateX(txtField) > 0);
+
+        txtField.setText("This is a long text. this is  long text.");
+        assertTrue(txtField.getWidth() < TextInputSkinShim.getTextNode(txtField).getLayoutBounds().getWidth());
+        assertEquals(-(TextInputSkinShim.getTextNode(txtField).getLayoutBounds().getWidth())/4, TextInputSkinShim.getTextTranslateX(txtField), 0.0);
     }
 
     private Change upperCase(Change change) {

@@ -806,21 +806,12 @@ public class TextFieldSkin extends TextInputControlSkin<TextField> {
             } else {
                 newX = midPoint - textNodeWidth / 2;
             }
-            // Update if there is space on the right
-            if (newX + textNodeWidth <= textRight.get()) {
-                textTranslateX.set(newX);
-            }
+            textTranslateX.set(newX);
             break;
 
           case RIGHT:
             newX = textRight.get() - textNodeWidth - caretWidth / 2;
-            // Update if there is space on the right
-            if (newX > oldX || newX > 0) {
-                textTranslateX.set(newX);
-            }
-            else {
-                textTranslateX.set(caretWidth / 2);
-            }
+            textTranslateX.set(newX);
             if (usePromptText.get()) {
                 promptNode.setLayoutX(textRight.get() - promptNode.getLayoutBounds().getWidth() -
                                       caretWidth / 2);
@@ -861,13 +852,17 @@ public class TextFieldSkin extends TextInputControlSkin<TextField> {
         // to cause the text to scroll to the right. Vice-versa for positive.
         switch (getHAlignment()) {
           case CENTER:
-            textTranslateX.set(textTranslateX.get() - delta);
+            if (delta > 0) {
+                textTranslateX.set(textTranslateX.get() - delta);
+            }
             break;
 
           case RIGHT:
-            textTranslateX.set(Math.max(textTranslateX.get() - delta,
-                                        textRight.get() - textNode.getLayoutBounds().getWidth() -
-                                        caretWidth / 2));
+            if (delta > 0) {
+                textTranslateX.set(Math.max(textTranslateX.get() - delta,
+                                            textRight.get() - textNode.getLayoutBounds().getWidth() -
+                                            caretWidth / 2));
+            }
             break;
 
           case LEFT:
