@@ -131,4 +131,3 @@ class MacMenuDelegate implements MenuDelegate, MenuItemDelegate {
 
 }
 
-
