@@ -63,7 +63,7 @@ class MacMenuDelegate implements MenuDelegate, MenuItemDelegate {
                                             int shortcutKey, int shortcutModifiers, Pixels pixels,
                                             boolean enabled, boolean checked) {
         ptr = _createMenuItem(title, (char)shortcutKey, shortcutModifiers,
-                pixels, enabled, checked, callback);
+                              pixels, enabled, checked, callback);
         return ptr != 0;
     }
 
@@ -130,4 +130,5 @@ class MacMenuDelegate implements MenuDelegate, MenuItemDelegate {
     }
 
 }
+
 
