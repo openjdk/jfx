@@ -3063,7 +3063,7 @@ project(":media") {
                         libav.versions.each { version ->
                             def libavDir = "${libav.basedir}/libav-${version}"
                             for (File f : configurations.media.files) {
-                                if (f.name.startsWith("libav-${version}")) {
+                                if (f.name.startsWith("v${version}")) {
                                     File dir = file(libavDir)
                                     dir.mkdirs()
                                     def libavTar = "${libav.basedir}/libav-${version}.tar"
@@ -3124,7 +3124,7 @@ project(":media") {
                         libav.versions.each { version ->
                             def libavDir = "${libav.basedir}/libav-${version}"
                             for (File f : configurations.media.files) {
-                                if (f.name.startsWith("libav-${version}")) {
+                                if (f.name.startsWith("v${version}")) {
                                     File dir = file(libavDir)
                                     dir.mkdirs()
                                     def libavTar = "${libav.basedir}/libav-${version}.tar"
