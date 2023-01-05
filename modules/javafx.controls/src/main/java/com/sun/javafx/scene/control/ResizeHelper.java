@@ -24,21 +24,18 @@
  */
 package com.sun.javafx.scene.control;
 
-import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.List;
-
 import javafx.scene.control.ResizeFeaturesBase;
 import javafx.scene.control.TableColumnBase;
 import javafx.scene.layout.Region;
 
 /**
- * Helps resize Tree/TableView columns.
+ * Helper class for constrained column resize policies.
+ *
  * https://bugs.openjdk.org/browse/JDK-8293119
  */
 public class ResizeHelper {
-    private static final boolean LOG = true; // TODO remove once fully debugged
-    private static final boolean CHECK = true; // TODO remove once fully debugged
     private static final int SMALL_DELTA = 32;
     private static final double EPSILON = 0.000001;
     private final ResizeFeaturesBase rf;
@@ -61,7 +58,7 @@ public class ResizeHelper {
         this.snap = (rf.getTableControl().isSnapToPixel() ? rf.getTableControl() : null);
         this.columns = columns;
         this.mode = mode;
-        this.target = snap(target); // snap target to avoid problems later
+        this.target = snap(target);
         this.count = columns.size();
 
         size = new double[count];
@@ -156,7 +153,6 @@ public class ResizeHelper {
      * @return true if sum of columns equals or greater than the target width
      */
     public boolean applySizes() {
-        p("applySizes", d());
         double pos = 0.0;
         double prev = 0.0;
 
@@ -172,7 +168,6 @@ public class ResizeHelper {
             prev = pos;
         }
 
-        p("applySizes done", d());
         return (pos > target);
     }
 
@@ -311,7 +306,6 @@ public class ResizeHelper {
     }
 
     protected boolean distributeDelta(int ix, double delta) {
-        double w1; // remove
         int ct = count - skip.cardinality();
         switch(ct) {
         case 0:
@@ -322,9 +316,6 @@ public class ResizeHelper {
             size[oppx] -= delta;
             return true;
         default:
-            if (CHECK) {
-                w1 = sumSizes();
-            }
             size[ix] += delta;
             double adj;
 
@@ -346,20 +337,6 @@ public class ResizeHelper {
             }
 
             size[ix] += adj;
-
-            if (CHECK) {
-                double w2 = sumSizes();
-                if (Math.abs(w1 - w2) > 0.1) {
-                    // note: this might happen when snapping with a fractional scale
-                    System.err.println(
-                        "*** ERR sum sizes before=" + w1 +
-                        " after=" + w2 +
-                        " diff=" + Math.abs(w1 - w2) +
-                        " adj=" + adj +
-                        " delta=" + delta
-                    );
-                }
-            }
 
             return true;
         }
@@ -519,16 +496,10 @@ public class ResizeHelper {
      * each time favoring a column that is further away from its preferred width.
      */
     protected void distributeSmallDelta(double delta) {
-        p("delta", delta, "before", asList(size));
-        distributeSmallDelta2(delta);
-        p("     after", asList(size), d());
-    }
-    protected void distributeSmallDelta2(double delta) {
         if (delta < 0) {
             while (delta < 0.0) {
                 double d = Math.max(-1.0, delta);
                 double rem = shrinkSmall(d);
-                p("d", d, "rem", rem);
                 if (Double.isNaN(rem)) {
                     return;
                 }
@@ -539,7 +510,6 @@ public class ResizeHelper {
             while (delta > 0.0) {
                 double d = Math.min(1.0, delta);
                 double rem = expandSmall(d);
-                p("d", d, "rem", rem);
                 if (Double.isNaN(rem)) {
                     return;
                 }
@@ -574,7 +544,7 @@ public class ResizeHelper {
         double rem = 0.0;
         double w = size[ix] + delta;
         if (w < min[ix]) {
-            rem = (w - min[ix]); // TODO check sign
+            rem = (w - min[ix]);
             w = min[ix];
             skip.set(ix);
         }
@@ -607,7 +577,7 @@ public class ResizeHelper {
         double rem = 0.0;
         double w = size[ix] + delta;
         if (w > max[ix]) {
-            rem = (w - max[ix]); // TODO check sign
+            rem = (w - max[ix]);
             w = max[ix];
             skip.set(ix);
         }
@@ -640,49 +610,5 @@ public class ResizeHelper {
             return x;
         }
         return snap.snapSpaceX(x);
-    }
-
-    @Deprecated // TODO remove
-    protected static void p(Object... items) {
-        if (LOG) {
-            System.err.println(print(items));
-        }
-    }
-
-    @Deprecated // TODO remove
-    protected static String print(Object... items) {
-        if (LOG) {
-            StringBuilder sb = new StringBuilder();
-            for (Object x: items) {
-                if (sb.length() > 0) {
-                    sb.append(' ');
-                }
-                sb.append(x);
-            }
-            return sb.toString();
-        } else {
-            return "";
-        }
-    }
-
-    @Deprecated // TODO remove
-    protected List<Double> asList(double[] items) {
-        ArrayList<Double> a = new ArrayList<>(items.length);
-        for (int i = 0; i < items.length; i++) {
-            a.add(items[i]);
-        }
-        return a;
-    }
-
-    @Deprecated // TODO remove
-    protected String d() {
-        double sum = sumSizes();
-        boolean diff = !isZero(sum - target);
-
-        return print(
-            diff ? ("ERR(" + (target - sum) + ")") : "",
-            "target", target,
-            "sum", sum,
-            "sizes", asList(size));
     }
 }
