@@ -974,7 +974,7 @@ static void dnd_source_push_data(JNIEnv *env, jobject data, jint supported) {
     g_object_set_data(G_OBJECT(src_window), SOURCE_DND_ACTIONS, (gpointer)actions);
 
     if (!dnd_pointer_grab(NULL)) {
-       g_warning("Mouse grab failed.\n");
+        ERROR0("Mouse grab failed.\n");
     }
 
     ctx = gdk_drag_begin(src_window, targets);
