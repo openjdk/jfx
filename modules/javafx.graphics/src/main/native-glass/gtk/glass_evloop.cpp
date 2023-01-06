@@ -116,6 +116,11 @@ bool is_window_enabled_for_event(GdkWindow * window, WindowContext *ctx, gint ev
 
 void glass_evloop_process_events(GdkEvent* event, gpointer data) {
     GdkWindow* window = event->any.window;
+
+    if (is_in_drag()) {
+        process_dnd_source(window, event);
+    }
+
     WindowContext *ctx = window != NULL ? (WindowContext*)
         g_object_get_data(G_OBJECT(window), GDK_WINDOW_DATA_CONTEXT) : NULL;
 
@@ -129,10 +134,6 @@ void glass_evloop_process_events(GdkEvent* event, gpointer data) {
     }
 
     glass_evloop_call_hooks(event);
-
-    if (is_in_drag()) {
-        process_dnd_source(window, event);
-    }
 
     if (ctx != NULL) {
         EventsCounterHelper helper(ctx);

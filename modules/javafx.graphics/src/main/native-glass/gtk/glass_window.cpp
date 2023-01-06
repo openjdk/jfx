@@ -619,7 +619,7 @@ bool WindowContextBase::set_view(jobject view) {
 
 bool WindowContextBase::grab_mouse_drag_focus() {
     if (glass_gdk_mouse_devices_grab_with_cursor(
-            gdk_window, gdk_window_get_cursor(gdk_window), FALSE)) {
+            gdk_window, gdk_window_get_cursor(gdk_window), FALSE, TRUE)) {
         WindowContextBase::sm_mouse_drag_window = this;
         return true;
     } else {
@@ -662,11 +662,11 @@ void WindowContextBase::ungrab_focus() {
 void WindowContextBase::set_cursor(GdkCursor* cursor) {
     if (!is_in_drag()) {
         if (WindowContextBase::sm_mouse_drag_window) {
-            glass_gdk_mouse_devices_grab_with_cursor(
-                    WindowContextBase::sm_mouse_drag_window->get_gdk_window(), cursor, FALSE);
+            GdkWindow* window = WindowContextBase::sm_mouse_drag_window->get_gdk_window();
+            glass_gdk_mouse_devices_grab_with_cursor(window, cursor, FALSE, TRUE);
         } else if (WindowContextBase::sm_grab_window) {
-            glass_gdk_mouse_devices_grab_with_cursor(
-                    WindowContextBase::sm_grab_window->get_gdk_window(), cursor, TRUE);
+            GdkWindow* window = WindowContextBase::sm_grab_window->get_gdk_window();
+            glass_gdk_mouse_devices_grab_with_cursor(window, cursor, TRUE, TRUE);
         }
     }
     gdk_window_set_cursor(gdk_window, cursor);

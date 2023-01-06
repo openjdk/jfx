@@ -286,7 +286,7 @@ gboolean
 glass_gdk_mouse_devices_grab(GdkWindow * gdkWindow);
 
 gboolean
-glass_gdk_mouse_devices_grab_with_cursor(GdkWindow * gdkWindow, GdkCursor *cursor, gboolean owner_events);
+glass_gdk_mouse_devices_grab_with_cursor(GdkWindow * gdkWindow, GdkCursor *cursor, gboolean owner_events, gboolean obey_disable_grab);
 
 void
 glass_gdk_mouse_devices_ungrab();

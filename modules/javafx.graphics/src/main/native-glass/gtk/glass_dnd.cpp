@@ -178,8 +178,8 @@ static void process_dnd_target_drag_leave(WindowContext *ctx, GdkEventDND *event
 
 static void process_dnd_target_drop_start(WindowContext *ctx, GdkEventDND *event) {
     if (!enter_ctx.ctx || enter_ctx.just_entered) {
-        gdk_drop_reply(event->context, FALSE, event->time);
-        gdk_drop_finish(event->context, FALSE, event->time);
+        gdk_drop_finish(event->context, FALSE, GDK_CURRENT_TIME);
+        gdk_drop_reply(event->context, FALSE, GDK_CURRENT_TIME);
         return; // Do not process drop events if no enter event and subsequent motion event were received
     }
 
@@ -191,8 +191,8 @@ static void process_dnd_target_drop_start(WindowContext *ctx, GdkEventDND *event
             translate_gdk_action_to_glass(selected));
     LOG_EXCEPTION(mainEnv)
 
-    gdk_drop_reply(event->context, TRUE, event->time);
-    gdk_drop_finish(event->context, TRUE, event->time);
+    gdk_drop_finish(event->context, TRUE, GDK_CURRENT_TIME);
+    gdk_drop_reply(event->context, TRUE, GDK_CURRENT_TIME);
 }
 
 static gboolean check_state_in_drag(JNIEnv *env) {
@@ -524,22 +524,8 @@ static GdkDragContext *get_drag_context() {
 }
 
 static bool dnd_pointer_grab(GdkCursor *cursor) {
-    GdkGrabStatus status;
-
-    GdkEventMask mask = (GdkEventMask)
-                            (GDK_POINTER_MOTION_MASK
-                                | GDK_BUTTON_MOTION_MASK
-                                | GDK_BUTTON1_MOTION_MASK
-                                | GDK_BUTTON2_MOTION_MASK
-                                | GDK_BUTTON3_MOTION_MASK
-                                | GDK_BUTTON_PRESS_MASK
-                                | GDK_BUTTON_RELEASE_MASK);
-
-    status = gdk_pointer_grab(dnd_window, FALSE, mask, NULL, cursor, GDK_CURRENT_TIME);
-
-    return status == GDK_GRAB_SUCCESS;
+    return glass_gdk_mouse_devices_grab_with_cursor(dnd_window, cursor, FALSE, FALSE);
 }
-
 
 gboolean is_in_drag() {
     return dnd_window != NULL;
@@ -795,6 +781,7 @@ static void process_dnd_source_grab_broken(GdkWindow *window, GdkEvent *event) {
         return;
     }
 
+    g_print("grab broken\n");
     gdk_drag_abort(get_drag_context(), GDK_CURRENT_TIME);
     gdk_threads_add_idle((GSourceFunc) ungrab_destroy_callback, NULL);
 }
@@ -871,16 +858,6 @@ static void process_dnd_source_key_press_release(GdkWindow *window, GdkEvent *ev
     }
 }
 
-static GdkCursor* get_default_drag_cursor() {
-    GdkCursor* cursor = gdk_cursor_new_from_name(gdk_display_get_default(), "dnd-none");
-
-    if (cursor == NULL) {
-        cursor = gdk_cursor_new_from_name(gdk_display_get_default(), "grabbing");
-    }
-
-    return cursor;
-}
-
 static void process_dnd_source_drag_status(GdkWindow *window, GdkEvent *event) {
     (void)window;
 
@@ -918,7 +895,11 @@ static void process_dnd_source_drag_status(GdkWindow *window, GdkEvent *event) {
     }
 
     if (cursor == NULL) {
-        cursor = get_default_drag_cursor();
+        GdkCursor* cursor = gdk_cursor_new_from_name(gdk_display_get_default(), "dnd-none");
+
+        if (cursor == NULL) {
+            cursor = gdk_cursor_new_from_name(gdk_display_get_default(), "grabbing");
+        }
     }
 
     dnd_pointer_grab(cursor);
@@ -992,16 +973,16 @@ static void dnd_source_push_data(JNIEnv *env, jobject data, jint supported) {
     g_object_set_data_full(G_OBJECT(src_window), SOURCE_DND_DATA, data, clear_global_ref);
     g_object_set_data(G_OBJECT(src_window), SOURCE_DND_ACTIONS, (gpointer)actions);
 
-    ctx = gdk_drag_begin(src_window, targets);
+    if (!dnd_pointer_grab(NULL)) {
+       g_warning("Mouse grab failed.\n");
+    }
 
-    DragView::set_drag_view();
+    ctx = gdk_drag_begin(src_window, targets);
 
     g_list_free(targets);
     g_object_set_data(G_OBJECT(src_window), SOURCE_DND_CONTEXT, ctx);
 
-    if (!dnd_pointer_grab(get_default_drag_cursor())) {
-       g_warning("Mouse grab failed.\n");
-    }
+    DragView::set_drag_view();
 }
 
 jint execute_dnd(JNIEnv *env, jobject data, jint supported) {
