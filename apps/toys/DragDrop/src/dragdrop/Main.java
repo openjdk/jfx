@@ -66,6 +66,7 @@ public class Main extends Application {
         register("Text", DragDropText.class, DragDropText.info());
         register("Controls", DragDropWithControls.class, DragDropWithControls.info());
         register("Keys", DragDropKeys.class, DragDropKeys.info());
+        register("Drag Duke", DragDropDuke.class, DragDropDuke.info());
 
         stage.setScene(scene);
         stage.show();

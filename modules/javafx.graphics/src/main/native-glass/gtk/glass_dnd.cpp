@@ -787,7 +787,6 @@ static gboolean ungrab_destroy_callback(gpointer) {
     return FALSE;
 }
 
-
 static void process_dnd_source_grab_broken(GdkWindow *window, GdkEvent *event) {
     GdkEventGrabBroken *gb_event = &event->grab_broken;
 
