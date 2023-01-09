@@ -24,14 +24,10 @@
  */
 
 package test.javafx.scene.control;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import java.util.ArrayList;
 import java.util.List;
-import org.junit.After;
-import org.junit.Test;
-import com.sun.javafx.scene.control.ResizeHelper;
-import com.sun.javafx.tk.Toolkit;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.scene.control.ConstrainedColumnResizeBase;
 import javafx.scene.control.SelectionMode;
@@ -40,15 +36,17 @@ import javafx.scene.control.TableColumnBase;
 import javafx.scene.control.TableView;
 import javafx.scene.layout.BorderPane;
 import javafx.util.Callback;
+import org.junit.After;
+import org.junit.Test;
+import com.sun.javafx.tk.Toolkit;
 import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
 
 /**
  * Tests the new column resize policies with TableView.
  *
- * TODO rename
  * TODO parallel class with TreeTableView, or as part of each test?
  */
-public class ResizeHelperTest {
+public class ResizeHelperTestBase {
 
     public enum Cmd {
         ROWS,
@@ -59,6 +57,7 @@ public class ResizeHelperTest {
         COMBINE
     }
 
+    private static final double EPSILON = 0.000001;
     private StageLoader stageLoader;
 
     @After
@@ -191,7 +190,7 @@ public class ResizeHelperTest {
         Toolkit.getToolkit().firePulse();
 
         for (TableColumn<?, ?> c: table.getColumns()) {
-            assertEquals(WIDTH, c.getWidth());
+            assertEquals(WIDTH, c.getWidth(), EPSILON);
         }
 
         // resize and check again
@@ -199,7 +198,7 @@ public class ResizeHelperTest {
         Toolkit.getToolkit().firePulse();
 
         for (TableColumn<?, ?> c: table.getColumns()) {
-            assertEquals(WIDTH, c.getWidth());
+            assertEquals(WIDTH, c.getWidth(), EPSILON);
         }
     }
 
@@ -212,6 +211,9 @@ public class ResizeHelperTest {
      */
     //@Test // this test takes too much time!
     public void testWidthChange() {
+        int[] COLUMNS = {
+            0, 1, 2, 5
+        };
         long start = System.currentTimeMillis();
         for (int numCols: COLUMNS) {
             SpecGen gen = new SpecGen(numCols);
@@ -223,7 +225,7 @@ public class ResizeHelperTest {
                     for (int ip = 0; ip < POLICIES.length; ip++) {
                         Callback<TableView.ResizeFeatures, Boolean> policy = createPolicy(ip);
                         table.setColumnResizePolicy(policy);
-                        for (int width: WIDTHS) {
+                        for (int width: gen.WIDTHS) {
                             table.setPrefWidth(width);
                             Toolkit.getToolkit().firePulse();
                             checkInvariants(table);
@@ -251,15 +253,10 @@ public class ResizeHelperTest {
         return (Callback<TableView.ResizeFeatures, Boolean>)POLICIES[ix];
     }
 
-    protected static final int[] WIDTHS = {
-        0, 10, 100, 10_000, 200, 50
-    };
-
-    protected static final int[] COLUMNS = {
-        0, 1, 2, 5
-    };
-
     protected static class SpecGen {
+        public static final int[] WIDTHS = {
+            0, 10, 100, 10_000, 200, 50
+        };
         private static final int LAST = 8; // 2^3 min,pref,max + 1 fixed
         private final int[] phase;
 

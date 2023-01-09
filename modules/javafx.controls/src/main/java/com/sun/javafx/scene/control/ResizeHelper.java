@@ -31,9 +31,7 @@ import javafx.scene.control.TableColumnBase;
 import javafx.scene.layout.Region;
 
 /**
- * Helper class for constrained column resize policies.
- *
- * https://bugs.openjdk.org/browse/JDK-8293119
+ * Helper class for Tree/TableView constrained column resize policies.
  */
 public class ResizeHelper {
     private static final int SMALL_DELTA = 32;
@@ -307,7 +305,7 @@ public class ResizeHelper {
 
     protected boolean distributeDelta(int ix, double delta) {
         int ct = count - skip.cardinality();
-        switch(ct) {
+        switch (ct) {
         case 0:
             return false;
         case 1:
@@ -319,7 +317,7 @@ public class ResizeHelper {
             size[ix] += delta;
             double adj;
 
-            switch(mode) {
+            switch (mode) {
             case AUTO_RESIZE_FLEX_HEAD:
                 adj = distributeDeltaFlexHead(-delta);
                 break;
