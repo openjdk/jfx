@@ -24,29 +24,18 @@
  */
 
 package test.javafx.scene.control;
-import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import java.util.ArrayList;
 import java.util.List;
-import javafx.beans.property.SimpleStringProperty;
-import javafx.scene.control.ConstrainedColumnResizeBase;
-import javafx.scene.control.SelectionMode;
-import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableColumnBase;
-import javafx.scene.control.TableView;
-import javafx.scene.layout.BorderPane;
-import javafx.util.Callback;
 import org.junit.After;
-import org.junit.Test;
-import com.sun.javafx.tk.Toolkit;
 import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
 
 /**
- * Tests the new column resize policies with TableView.
- *
- * TODO parallel class with TreeTableView, or as part of each test?
+ * Base class for tests the new column resize policies.
+ * The two descendants are TableViewResizeTest and TreeTableViewResizeTest.
  */
-public class ResizeHelperTestBase {
+public abstract class ResizeHelperTestBase {
 
     public enum Cmd {
         ROWS,
@@ -57,8 +46,8 @@ public class ResizeHelperTestBase {
         COMBINE
     }
 
-    private static final double EPSILON = 0.000001;
-    private StageLoader stageLoader;
+    protected static final double EPSILON = 0.000001;
+    protected StageLoader stageLoader;
 
     @After
     public void after() {
@@ -67,190 +56,13 @@ public class ResizeHelperTestBase {
         }
     }
 
-    protected void checkInvariants(TableView<String> t) {
-        List<TableColumn<String,?>> cols = t.getColumns();
-        for (TableColumn<String,?> c: cols) {
+    protected void checkInvariants(List<? extends TableColumnBase<?,?>> cols) {
+        for (TableColumnBase<?,?> c: cols) {
             assertTrue("violated min constraint: w=" + c.getWidth() + " min=" + c.getMinWidth(),
                        c.getWidth() >= c.getMinWidth());
             assertTrue("violated max constraint: w=" + c.getWidth() + " max=" + c.getMaxWidth(),
                        c.getWidth() <= c.getMaxWidth());
         }
-    }
-
-    protected static TableView<String> createTable(Object[] spec) {
-        TableView<String> table = new TableView();
-        table.getSelectionModel().setCellSelectionEnabled(true);
-        table.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
-
-        TableColumn<String, String> lastColumn = null;
-        int id = 1;
-
-        for (int i = 0; i < spec.length;) {
-            Object x = spec[i++];
-            if (x instanceof Cmd cmd) {
-                switch (cmd) {
-                case COL:
-                    TableColumn<String, String> c = new TableColumn<>();
-                    table.getColumns().add(c);
-                    c.setText("C" + table.getColumns().size());
-                    c.setCellValueFactory((f) -> new SimpleStringProperty(" "));
-                    lastColumn = c;
-                    break;
-                case MAX:
-                    {
-                        int w = (int)(spec[i++]);
-                        lastColumn.setMaxWidth(w);
-                    }
-                    break;
-                case MIN:
-                    {
-                        int w = (int)(spec[i++]);
-                        lastColumn.setMinWidth(w);
-                    }
-                    break;
-                case PREF:
-                    {
-                        int w = (int)(spec[i++]);
-                        lastColumn.setPrefWidth(w);
-                    }
-                    break;
-                case ROWS:
-                    int n = (int)(spec[i++]);
-                    for (int j = 0; j < n; j++) {
-                        table.getItems().add(String.valueOf(n));
-                    }
-                    break;
-                case COMBINE:
-                    int ix = (int)(spec[i++]);
-                    int ct = (int)(spec[i++]);
-                    combineColumns(table, ix, ct, id++);
-                    break;
-                default:
-                    throw new Error("?" + cmd);
-                }
-            } else {
-                throw new Error("?" + x);
-            }
-        }
-
-        return table;
-    }
-
-    protected static void combineColumns(TableView<String> t, int ix, int count, int name) {
-        TableColumn<String,String> tc = new TableColumn<>();
-        tc.setText("N" + name);
-
-        for (int i = 0; i < count; i++) {
-            TableColumn<String, String> c = (TableColumn<String, String>)t.getColumns().remove(ix);
-            tc.getColumns().add(c);
-        }
-        t.getColumns().add(ix, tc);
-    }
-
-    /** verify that a custom constrained resize policy can indeed be implemented using public APIs */
-    @Test
-    public void testCanImplementCustomResizePolicy() {
-        double WIDTH = 15.0;
-
-        // constrained resize policy that simply sets all column widths to WIDTH
-        class UserPolicy
-            extends ConstrainedColumnResizeBase
-            implements Callback<TableView.ResizeFeatures, Boolean> {
-
-            @Override
-            public Boolean call(TableView.ResizeFeatures rf) {
-                List<? extends TableColumnBase<?, ?>> columns = rf.getTable().getVisibleLeafColumns();
-                int sz = columns.size();
-                // new public method getContentWidth() is visible
-                double w = rf.getContentWidth();
-                for (TableColumnBase<?, ?> c: columns) {
-                    // using added public method setColumnWidth()
-                    rf.setColumnWidth(c, WIDTH);
-                }
-                return false;
-            }
-        }
-
-        Object[] spec = {
-            Cmd.ROWS, 3,
-            Cmd.COL,
-            Cmd.COL,
-            Cmd.COL,
-            Cmd.COL
-        };
-        TableView<String> table = createTable(spec);
-
-        UserPolicy policy = new UserPolicy();
-        table.setColumnResizePolicy(policy);
-        table.setPrefWidth(10);
-
-        // verify the policy is in effect
-
-        stageLoader = new StageLoader(new BorderPane(table));
-        Toolkit.getToolkit().firePulse();
-
-        for (TableColumn<?, ?> c: table.getColumns()) {
-            assertEquals(WIDTH, c.getWidth(), EPSILON);
-        }
-
-        // resize and check again
-        table.setPrefWidth(10_000);
-        Toolkit.getToolkit().firePulse();
-
-        for (TableColumn<?, ?> c: table.getColumns()) {
-            assertEquals(WIDTH, c.getWidth(), EPSILON);
-        }
-    }
-
-    /**
-     * Exhausive behavioral test.
-     *
-     * Goes through all the policies, all valid combinations of constraints,
-     * and widths increasing to MAX_WIDTH and back,
-     * checkint that the initial resize does not violate (min,max) constraints.
-     */
-    //@Test // this test takes too much time!
-    public void testWidthChange() {
-        int[] COLUMNS = {
-            0, 1, 2, 5
-        };
-        long start = System.currentTimeMillis();
-        for (int numCols: COLUMNS) {
-            SpecGen gen = new SpecGen(numCols);
-            while (gen.hasNext()) {
-                Object[] spec = gen.next();
-                TableView<String> table = createTable(spec);
-                stageLoader = new StageLoader(new BorderPane(table));
-                try {
-                    for (int ip = 0; ip < POLICIES.length; ip++) {
-                        Callback<TableView.ResizeFeatures, Boolean> policy = createPolicy(ip);
-                        table.setColumnResizePolicy(policy);
-                        for (int width: gen.WIDTHS) {
-                            table.setPrefWidth(width);
-                            Toolkit.getToolkit().firePulse();
-                            checkInvariants(table);
-                        }
-                    }
-                } finally {
-                    stageLoader.dispose();
-                }
-            }
-        }
-
-        System.out.println("elapsed time = " + (System.currentTimeMillis() - start) / 60_000 + " minutes.");
-    }
-
-    protected static final Object[] POLICIES = {
-        TableView.CONSTRAINED_RESIZE_POLICY_FLEX_NEXT_COLUMN,
-        TableView.CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN,
-        TableView.CONSTRAINED_RESIZE_POLICY_ALL_COLUMNS,
-        TableView.CONSTRAINED_RESIZE_POLICY_LAST_COLUMN,
-        TableView.CONSTRAINED_RESIZE_POLICY_NEXT_COLUMN,
-        TableView.CONSTRAINED_RESIZE_POLICY_SUBSEQUENT_COLUMNS
-    };
-
-    protected static Callback<TableView.ResizeFeatures, Boolean> createPolicy(int ix) {
-        return (Callback<TableView.ResizeFeatures, Boolean>)POLICIES[ix];
     }
 
     protected static class SpecGen {
