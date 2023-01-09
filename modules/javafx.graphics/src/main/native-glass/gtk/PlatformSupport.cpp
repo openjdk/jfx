@@ -26,7 +26,6 @@
 #include "PlatformSupport.h"
 #include "glass_general.h"
 #include <gtk/gtk.h>
-#include <string>
 
 namespace
 {
@@ -34,7 +33,7 @@ namespace
         GdkColor color;
         if (gtk_style_lookup_color(style, colorName, &color)) {
             env->CallObjectMethod(preferences, jMapPut,
-                env->NewStringUTF((std::string("Linux.GTK.Colors.") + colorName).c_str()),
+                env->NewStringUTF(colorName),
                 env->CallStaticObjectMethod(
                     jColorCls, jColorRgb,
                     (int)(CLAMP((double)color.red / 65535.0, 0.0, 1.0) * 255.0),
@@ -48,7 +47,7 @@ namespace
 
     void putString(JNIEnv* env, jobject preferences, const char* name, const char* value) {
         env->CallObjectMethod(preferences, jMapPut,
-            env->NewStringUTF((std::string("Linux.GTK.") + name).c_str()),
+            env->NewStringUTF(name),
             env->NewStringUTF(value));
     }
 }
@@ -64,30 +63,30 @@ jobject PlatformSupport::collectPreferences() const {
     if (EXCEPTION_OCCURED(env)) return NULL;
 
     GtkStyle* style = gtk_style_new();
-    putColor(env, style, prefs, "theme_fg_color");
-    putColor(env, style, prefs, "theme_bg_color");
-    putColor(env, style, prefs, "theme_base_color");
-    putColor(env, style, prefs, "theme_selected_bg_color");
-    putColor(env, style, prefs, "theme_selected_fg_color");
-    putColor(env, style, prefs, "insensitive_bg_color");
-    putColor(env, style, prefs, "insensitive_fg_color");
-    putColor(env, style, prefs, "insensitive_base_color");
-    putColor(env, style, prefs, "theme_unfocused_fg_color");
-    putColor(env, style, prefs, "theme_unfocused_bg_color");
-    putColor(env, style, prefs, "theme_unfocused_base_color");
-    putColor(env, style, prefs, "theme_unfocused_selected_bg_color");
-    putColor(env, style, prefs, "theme_unfocused_selected_fg_color");
-    putColor(env, style, prefs, "borders");
-    putColor(env, style, prefs, "unfocused_borders");
-    putColor(env, style, prefs, "warning_color");
-    putColor(env, style, prefs, "error_color");
-    putColor(env, style, prefs, "success_color");
+    putColor(env, style, prefs, "GTK.theme_fg_color");
+    putColor(env, style, prefs, "GTK.theme_bg_color");
+    putColor(env, style, prefs, "GTK.theme_base_color");
+    putColor(env, style, prefs, "GTK.theme_selected_bg_color");
+    putColor(env, style, prefs, "GTK.theme_selected_fg_color");
+    putColor(env, style, prefs, "GTK.insensitive_bg_color");
+    putColor(env, style, prefs, "GTK.insensitive_fg_color");
+    putColor(env, style, prefs, "GTK.insensitive_base_color");
+    putColor(env, style, prefs, "GTK.theme_unfocused_fg_color");
+    putColor(env, style, prefs, "GTK.theme_unfocused_bg_color");
+    putColor(env, style, prefs, "GTK.theme_unfocused_base_color");
+    putColor(env, style, prefs, "GTK.theme_unfocused_selected_bg_color");
+    putColor(env, style, prefs, "GTK.theme_unfocused_selected_fg_color");
+    putColor(env, style, prefs, "GTK.borders");
+    putColor(env, style, prefs, "GTK.unfocused_borders");
+    putColor(env, style, prefs, "GTK.warning_color");
+    putColor(env, style, prefs, "GTK.error_color");
+    putColor(env, style, prefs, "GTK.success_color");
     g_object_unref(style);
 
     GtkSettings* settings = gtk_settings_get_default();
     gchar* themeName;
     g_object_get(settings, "gtk-theme-name", &themeName, NULL);
-    putString(env, prefs, "ThemeName", themeName);
+    putString(env, prefs, "GTK.theme_name", themeName);
     g_object_unref(settings);
 
     return prefs;

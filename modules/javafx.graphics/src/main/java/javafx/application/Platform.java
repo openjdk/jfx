@@ -518,25 +518,25 @@ public final class Platform {
      *         <tr></tr>
      *
      *         <tr><th colspan="2" scope="colgroup">Linux</th></tr>
-     *         <tr><td>{@code Linux.GTK.ThemeName}</td><td>{@link String}</td></tr>
-     *         <tr><td>{@code Linux.GTK.Colors.theme_fg_color}</td><td>{@link Color}</td></tr>
-     *         <tr><td>{@code Linux.GTK.Colors.theme_bg_color}</td><td>{@link Color}</td></tr>
-     *         <tr><td>{@code Linux.GTK.Colors.theme_base_color}</td><td>{@link Color}</td></tr>
-     *         <tr><td>{@code Linux.GTK.Colors.theme_selected_bg_color}</td><td>{@link Color}</td></tr>
-     *         <tr><td>{@code Linux.GTK.Colors.theme_selected_fg_color}</td><td>{@link Color}</td></tr>
-     *         <tr><td>{@code Linux.GTK.Colors.insensitive_bg_color}</td><td>{@link Color}</td></tr>
-     *         <tr><td>{@code Linux.GTK.Colors.insensitive_fg_color}</td><td>{@link Color}</td></tr>
-     *         <tr><td>{@code Linux.GTK.Colors.insensitive_base_color}</td><td>{@link Color}</td></tr>
-     *         <tr><td>{@code Linux.GTK.Colors.theme_unfocused_fg_color}</td><td>{@link Color}</td></tr>
-     *         <tr><td>{@code Linux.GTK.Colors.theme_unfocused_bg_color}</td><td>{@link Color}</td></tr>
-     *         <tr><td>{@code Linux.GTK.Colors.theme_unfocused_base_color}</td><td>{@link Color}</td></tr>
-     *         <tr><td>{@code Linux.GTK.Colors.theme_unfocused_selected_bg_color}</td><td>{@link Color}</td></tr>
-     *         <tr><td>{@code Linux.GTK.Colors.theme_unfocused_selected_fg_color}</td><td>{@link Color}</td></tr>
-     *         <tr><td>{@code Linux.GTK.Colors.borders}</td><td>{@link Color}</td></tr>
-     *         <tr><td>{@code Linux.GTK.Colors.unfocused_borders}</td><td>{@link Color}</td></tr>
-     *         <tr><td>{@code Linux.GTK.Colors.warning_color}</td><td>{@link Color}</td></tr>
-     *         <tr><td>{@code Linux.GTK.Colors.error_color}</td><td>{@link Color}</td></tr>
-     *         <tr><td>{@code Linux.GTK.Colors.success_color}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code GTK.theme_name}</td><td>{@link String}</td></tr>
+     *         <tr><td>{@code GTK.theme_fg_color}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code GTK.theme_bg_color}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code GTK.theme_base_color}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code GTK.theme_selected_bg_color}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code GTK.theme_selected_fg_color}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code GTK.insensitive_bg_color}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code GTK.insensitive_fg_color}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code GTK.insensitive_base_color}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code GTK.theme_unfocused_fg_color}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code GTK.theme_unfocused_bg_color}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code GTK.theme_unfocused_base_color}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code GTK.theme_unfocused_selected_bg_color}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code GTK.theme_unfocused_selected_fg_color}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code GTK.borders}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code GTK.unfocused_borders}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code GTK.warning_color}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code GTK.error_color}</td><td>{@link Color}</td></tr>
+     *         <tr><td>{@code GTK.success_color}</td><td>{@link Color}</td></tr>
      *         <tr></tr>
      *     </tbody>
      * </table>
