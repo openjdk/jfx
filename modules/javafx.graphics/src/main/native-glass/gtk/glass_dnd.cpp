@@ -500,10 +500,9 @@ static GdkWindow* get_dnd_window() {
     if (dnd_window == NULL) {
         GdkWindowAttr attr;
         memset(&attr, 0, sizeof (GdkWindowAttr));
-        attr.override_redirect = TRUE;
         attr.window_type = GDK_WINDOW_TEMP;
         attr.wclass = GDK_INPUT_OUTPUT;
-        attr.event_mask = GDK_FILTERED_EVENTS_MASK;
+        attr.event_mask = GDK_MOUSE_EVENTS_MASK;
         dnd_window = gdk_window_new(NULL, &attr, GDK_WA_TYPE_HINT);
         gdk_window_show(dnd_window);
     }
@@ -781,7 +780,6 @@ static void process_dnd_source_grab_broken(GdkWindow *window, GdkEvent *event) {
         return;
     }
 
-    g_print("grab broken\n");
     gdk_drag_abort(get_drag_context(), GDK_CURRENT_TIME);
     gdk_threads_add_idle((GSourceFunc) ungrab_destroy_callback, NULL);
 }

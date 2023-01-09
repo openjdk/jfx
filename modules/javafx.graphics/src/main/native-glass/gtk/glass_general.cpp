@@ -542,14 +542,6 @@ glass_gdk_mouse_devices_grab_with_cursor(GdkWindow *gdkWindow, GdkCursor *cursor
     }
 
     GdkGrabStatus status;
-    GdkEventMask events = (GdkEventMask)
-                                (GDK_POINTER_MOTION_MASK
-                                    | GDK_BUTTON_MOTION_MASK
-                                    | GDK_BUTTON1_MOTION_MASK
-                                    | GDK_BUTTON2_MOTION_MASK
-                                    | GDK_BUTTON3_MOTION_MASK
-                                    | GDK_BUTTON_PRESS_MASK
-                                    | GDK_BUTTON_RELEASE_MASK);
 
 #ifdef GLASS_GTK3
     GdkDevice *device = gdk_device_manager_get_client_pointer(
@@ -557,9 +549,10 @@ glass_gdk_mouse_devices_grab_with_cursor(GdkWindow *gdkWindow, GdkCursor *cursor
                                         gdk_display_get_default()));
 
     status = gdk_device_grab(device, gdkWindow, GDK_OWNERSHIP_APPLICATION,
-                                owner_events, events, cursor, GDK_CURRENT_TIME);
+                                owner_events, GDK_MOUSE_EVENTS_MASK,
+                                cursor, GDK_CURRENT_TIME);
 #else
-    status = gdk_pointer_grab(gdkWindow, owner_events, events,
+    status = gdk_pointer_grab(gdkWindow, owner_events, GDK_MOUSE_EVENTS_MASK,
                                     NULL, cursor, GDK_CURRENT_TIME);
 #endif
 
