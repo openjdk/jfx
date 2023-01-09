@@ -25,8 +25,9 @@
 
 package com.sun.javafx.application;
 
-import javafx.application.PlatformPreferences;
-import javafx.application.PlatformPreferencesListener;
+import javafx.application.Platform;
+import javafx.beans.InvalidationListener;
+import javafx.collections.MapChangeListener;
 import javafx.scene.paint.Color;
 import java.util.AbstractMap;
 import java.util.Collections;
@@ -36,11 +37,12 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 
-public final class PlatformPreferencesImpl extends AbstractMap<String, Object> implements PlatformPreferences {
+public final class PlatformPreferencesImpl extends AbstractMap<String, Object> implements Platform.Preferences {
 
     private final Map<String, Object> modifiableMap = new HashMap<>();
     private final Set<Entry<String, Object>> unmodifiableEntrySet = Collections.unmodifiableSet(modifiableMap.entrySet());
-    private final List<PlatformPreferencesListener> listeners = new CopyOnWriteArrayList<>();
+    private final List<InvalidationListener> invalidationListeners = new CopyOnWriteArrayList<>();
+    private final List<MapChangeListener<? super String, ? super Object>> changeListeners = new CopyOnWriteArrayList<>();
 
     public Map<String, Object> getModifiableMap() {
         return modifiableMap;
@@ -82,18 +84,52 @@ public final class PlatformPreferencesImpl extends AbstractMap<String, Object> i
     }
 
     @Override
-    public void addListener(PlatformPreferencesListener listener) {
-        listeners.add(listener);
+    public void addListener(InvalidationListener listener) {
+        invalidationListeners.add(listener);
     }
 
     @Override
-    public void removeListener(PlatformPreferencesListener listener) {
-        listeners.remove(listener);
+    public void removeListener(InvalidationListener listener) {
+        invalidationListeners.remove(listener);
+    }
+
+    @Override
+    public void addListener(MapChangeListener<? super String, ? super Object> listener) {
+        changeListeners.add(listener);
+    }
+
+    @Override
+    public void removeListener(MapChangeListener<? super String, ? super Object> listener) {
+        changeListeners.remove(listener);
     }
 
     void firePreferencesChanged(Map<String, Object> changed) {
-        for (PlatformPreferencesListener listener : listeners) {
-            listener.onPreferencesChanged(this, changed);
+        for (InvalidationListener listener : invalidationListeners) {
+            try {
+                listener.invalidated(this);
+            } catch (Exception e) {
+                Thread.currentThread().getUncaughtExceptionHandler().uncaughtException(Thread.currentThread(), e);
+            }
+        }
+
+        for (Map.Entry<String, Object> entry : changed.entrySet()) {
+            boolean keyExists = modifiableMap.containsKey(entry.getKey());
+            Object oldValue = keyExists ? modifiableMap.get(entry.getKey()) : null;
+            MapChangeListener.Change<String, Object> change = new MapChangeListener.Change<>(this) {
+                @Override public boolean wasAdded() { return true; }
+                @Override public boolean wasRemoved() { return keyExists; }
+                @Override public String getKey() { return entry.getKey(); }
+                @Override public Object getValueAdded() { return entry.getValue(); }
+                @Override public Object getValueRemoved() { return oldValue; }
+            };
+
+            for (MapChangeListener<? super String, ? super Object> listener : changeListeners) {
+                try {
+                    listener.onChanged(change);
+                } catch (Exception e) {
+                    Thread.currentThread().getUncaughtExceptionHandler().uncaughtException(Thread.currentThread(), e);
+                }
+            }
         }
     }
 

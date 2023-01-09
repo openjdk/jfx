@@ -57,7 +57,7 @@ import java.util.function.Predicate;
 
 import javafx.application.Application;
 import javafx.application.ConditionalFeature;
-import javafx.application.PlatformPreferences;
+import javafx.application.Platform;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleBooleanProperty;
@@ -992,7 +992,7 @@ public class PlatformImpl {
 
     private static final PlatformPreferencesImpl platformPreferences = new PlatformPreferencesImpl();
 
-    public static PlatformPreferences getPlatformPreferences() {
+    public static Platform.Preferences getPlatformPreferences() {
         return platformPreferences;
     }
 

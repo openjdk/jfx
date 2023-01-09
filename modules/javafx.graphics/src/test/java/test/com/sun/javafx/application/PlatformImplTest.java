@@ -30,16 +30,14 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
-import javafx.application.PlatformPreferences;
-import javafx.application.PlatformPreferencesListener;
-import java.util.ArrayList;
+import test.javafx.collections.MockMapObserver;
+import javafx.beans.InvalidationListener;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 import static com.sun.javafx.application.PlatformImpl.*;
 import static org.junit.jupiter.api.Assertions.*;
+import static test.javafx.collections.MockMapObserver.Tuple.*;
 
 public class PlatformImplTest {
 
@@ -71,37 +69,48 @@ public class PlatformImplTest {
     }
 
     @Test
-    public void testPreferencesChangedListener() {
-        List<String> trace = new ArrayList<>();
-        var listener = new PlatformPreferencesListener() {
-            @Override
-            public void onPreferencesChanged(PlatformPreferences preferences, Map<String, Object> changed) {
-                trace.add(changed.toString());
-            }
-        };
-
+    public void testPlatformPreferencesInvalidationListener() {
+        int[] count = new int[1];
+        InvalidationListener listener = observable -> count[0]++;
         getPlatformPreferences().addListener(listener);
+
+        updatePreferences(Map.of("foo", "bar"));
+        assertEquals(1, count[0]);
+
+        // InvalidationListener is invoked only once, even when multiple values are changed at the same time
+        updatePreferences(Map.of("qux", "quux", "quz", "quuz"));
+        assertEquals(2, count[0]);
+
+        getPlatformPreferences().removeListener(listener);
+    }
+
+    @Test
+    public void testPlatformPreferencesChangeListener() {
+        var observer = new MockMapObserver<String, Object>();
+        getPlatformPreferences().addListener(observer);
 
         // Two added keys are included in the change notification
         updatePreferences(Map.of("foo", "bar", "baz", "qux"));
-        assertEquals(1, trace.size());
-        assertEquals("{foo=bar, baz=qux}", trace.get(0));
+        observer.assertAdded(0, tup("foo", "bar"));
+        observer.assertAdded(1, tup("baz", "qux"));
+        observer.clear();
 
         // Mappings that haven't changed are not included in the change notification
         updatePreferences(Map.of("foo", "bar2", "baz", "qux"));
-        assertEquals(2, trace.size());
-        assertEquals("{foo=bar2}", trace.get(1));
+        observer.assertAdded(0, tup("foo", "bar2"));
+        observer.clear();
 
         // Change the second mapping
         updatePreferences(Map.of("baz", "qux2"));
-        assertEquals(3, trace.size());
-        assertEquals("{baz=qux2}", trace.get(2));
+        observer.assertAdded(0, tup("baz", "qux2"));
+        observer.clear();
 
         // If no mapping was changed, no change notification is fired
         updatePreferences(Map.of("foo", "bar2", "baz", "qux2"));
-        assertEquals(3, trace.size());
+        observer.check0();
+        observer.clear();
 
-        getPlatformPreferences().removeListener(listener);
+        getPlatformPreferences().removeListener(observer);
     }
 
 }

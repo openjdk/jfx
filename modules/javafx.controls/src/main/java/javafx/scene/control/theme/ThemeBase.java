@@ -26,12 +26,11 @@
 package javafx.scene.control.theme;
 
 import javafx.application.Platform;
-import javafx.application.PlatformPreferencesListener;
-import javafx.application.WeakPlatformPreferencesListener;
+import javafx.beans.InvalidationListener;
+import javafx.beans.WeakInvalidationListener;
 import javafx.beans.value.WritableValue;
 import javafx.collections.ObservableList;
 import javafx.css.StyleTheme;
-import java.util.Map;
 
 /**
  * {@link ThemeBase} is a {@link StyleTheme} implementation that simplifies toggling or modifying
@@ -47,10 +46,10 @@ public abstract class ThemeBase implements StyleTheme {
 
     private final StylesheetList stylesheetList = new StylesheetList();
 
-    private final PlatformPreferencesListener preferencesChanged = (preferences, changed) -> {
+    private final InvalidationListener preferencesChanged = observable -> {
         try {
             stylesheetList.lock();
-            onPreferencesChanged(changed);
+            onPreferencesChanged();
         } finally {
             stylesheetList.unlock();
         }
@@ -60,7 +59,7 @@ public abstract class ThemeBase implements StyleTheme {
      * Creates a new instance of the {@code ThemeBase} class.
      */
     protected ThemeBase() {
-        Platform.getPreferences().addListener(new WeakPlatformPreferencesListener(preferencesChanged));
+        Platform.getPreferences().addListener(new WeakInvalidationListener(preferencesChanged));
     }
 
     @Override
@@ -96,12 +95,7 @@ public abstract class ThemeBase implements StyleTheme {
 
     /**
      * Occurs when platform preferences have changed.
-     * <p>
-     * The {@code changed} map only contains platform preferences that have actually changed.
-     * Use {@link Platform#getPreferences()} to get a list of all platform preferences.
-     *
-     * @param changed the platform preferences that have changed
      */
-    protected void onPreferencesChanged(Map<String, Object> changed) {}
+    protected void onPreferencesChanged() {}
 
 }

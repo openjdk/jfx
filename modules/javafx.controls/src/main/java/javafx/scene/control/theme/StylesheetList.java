@@ -38,7 +38,6 @@ class StylesheetList extends ObservableListBase<String> {
 
     private final List<WritableValue<String>> elements;
     private final List<String> values;
-    private int lockCount;
 
     public StylesheetList() {
         elements = new ArrayList<>();
@@ -46,15 +45,11 @@ class StylesheetList extends ObservableListBase<String> {
     }
 
     public void lock() {
-        if (++lockCount == 1) {
-            beginChange();
-        };
+        beginChange();
     }
 
     public void unlock() {
-        if (--lockCount == 0) {
-            endChange();
-        }
+        endChange();
     }
 
     public WritableValue<String> addFirstElement(String value) {
@@ -115,9 +110,7 @@ class StylesheetList extends ObservableListBase<String> {
                 }
             }
 
-            if (lockCount == 0) {
-                beginChange();
-            }
+            beginChange();
 
             if (currentValue == null && newValue != null) {
                 nextAdd(index, index + 1);
@@ -132,9 +125,7 @@ class StylesheetList extends ObservableListBase<String> {
 
             currentValue = newValue;
 
-            if (lockCount == 0) {
-                endChange();
-            }
+            endChange();
         }
     }
 

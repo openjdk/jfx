@@ -28,9 +28,8 @@ package javafx.scene.control.theme;
 import com.sun.javafx.PlatformUtil;
 import com.sun.javafx.application.PlatformImpl;
 import javafx.application.ConditionalFeature;
-import javafx.application.PlatformPreferences;
+import javafx.application.Platform;
 import javafx.beans.value.WritableValue;
-import java.util.Map;
 
 /**
  * {@code Caspian} is a built-in JavaFX theme that shipped as default in JavaFX 2.
@@ -80,7 +79,7 @@ public class CaspianTheme extends ThemeBase {
     }
 
     @Override
-    protected void onPreferencesChanged(Map<String, Object> preferences) {
+    protected void onPreferencesChanged() {
         updateHighContrastTheme();
     }
 
@@ -92,7 +91,7 @@ public class CaspianTheme extends ThemeBase {
         }
 
         if (!enabled) {
-            PlatformPreferences preferences = PlatformImpl.getPlatformPreferences();
+            Platform.Preferences preferences = Platform.getPreferences();
             if (preferences.getBoolean("Windows.SPI.HighContrastOn", false)) {
                 enabled = preferences.getString("Windows.SPI.HighContrastColorScheme") != null;
             }

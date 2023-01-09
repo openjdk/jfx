@@ -28,7 +28,7 @@ package test.javafx.scene.control.theme;
 import com.sun.javafx.application.PlatformImpl;
 import org.junit.jupiter.api.Test;
 import javafx.scene.control.theme.ThemeBase;
-import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -36,22 +36,44 @@ import static org.junit.jupiter.api.Assertions.*;
 public class ThemeBaseTest {
 
     @Test
-    public void testOnPreferencesChanged() {
-        var trace = new ArrayList<Map<String, Object>>();
+    public void testOnPreferencesChangedIsInvokedWhenPreferencesAreInvalidated() {
+        int[] count = new int[1];
         var theme = new ThemeBase() {
             @Override
-            protected void onPreferencesChanged(Map<String, Object> changed) {
-                trace.add(Map.copyOf(changed));
+            protected void onPreferencesChanged() {
+                count[0]++;
             }
         };
 
         PlatformImpl.updatePreferences(Map.of("foo", "bar"));
-        assertEquals(1, trace.size());
-        assertEquals(Map.of("foo", "bar"), trace.get(0));
+        assertEquals(1, count[0]);
 
         PlatformImpl.updatePreferences(Map.of("foo", "baz", "qux", "quz"));
-        assertEquals(2, trace.size());
-        assertEquals(Map.of("foo", "baz", "qux", "quz"), trace.get(1));
+        assertEquals(2, count[0]);
+    }
+
+    @Test
+    public void testAddFirst() {
+        var theme = new ThemeBase() {
+            {
+                addFirst("foo");
+                addFirst("bar");
+            }
+        };
+
+        assertEquals(List.of("bar", "foo"), theme.getStylesheets());
+    }
+
+    @Test
+    public void testAddLast() {
+        var theme = new ThemeBase() {
+            {
+                addLast("foo");
+                addLast("bar");
+            }
+        };
+
+        assertEquals(List.of("foo", "bar"), theme.getStylesheets());
     }
 
 }
