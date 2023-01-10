@@ -236,27 +236,29 @@ public class TableViewResizeTest extends ResizeHelperTestBase {
         };
         // allow for borders
         double tolerance = 6.0;
-        TableView<String> table = createTable(spec);
-        stageLoader = new StageLoader(new BorderPane(table));
+
+        TableView<String> t = createTable(spec);
+
+        stageLoader = new StageLoader(new BorderPane(t));
         try {
             for (int ip = 0; ip < POLICIES.length; ip++) {
                 Callback<TableView.ResizeFeatures, Boolean> policy = createPolicy(ip);
-                table.setColumnResizePolicy(policy);
+                t.setColumnResizePolicy(policy);
 
                 // smaller than preferred
-                table.setPrefWidth(300);
+                t.setPrefWidth(300);
                 Toolkit.getToolkit().firePulse();
-                checkInvariants(table);
-                Assert.assertEquals(table.getWidth(), sumColumnWidths(table.getColumns()), tolerance);
+                checkInvariants(t);
+                Assert.assertEquals(t.getWidth(), sumColumnWidths(t.getColumns()), tolerance);
 
                 // clear items
-                table.getItems().clear();
+                t.getItems().clear();
 
                 // make it wider, check if resized correctly
-                table.setPrefWidth(1000);
+                t.setPrefWidth(1000);
                 Toolkit.getToolkit().firePulse();
-                checkInvariants(table);
-                Assert.assertEquals(table.getWidth(), sumColumnWidths(table.getColumns()), tolerance);
+                checkInvariants(t);
+                Assert.assertEquals(t.getWidth(), sumColumnWidths(t.getColumns()), tolerance);
             }
         } finally {
             stageLoader.dispose();

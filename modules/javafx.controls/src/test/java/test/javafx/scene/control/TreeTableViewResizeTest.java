@@ -237,27 +237,30 @@ public class TreeTableViewResizeTest extends ResizeHelperTestBase {
         };
         // allow for borders
         double tolerance = 6.0;
-        TreeTableView<String> table = createTable(spec);
-        stageLoader = new StageLoader(new BorderPane(table));
+
+        TreeTableView<String> t = createTable(spec);
+        t.setShowRoot(false);
+
+        stageLoader = new StageLoader(new BorderPane(t));
         try {
             for (int ip = 0; ip < POLICIES.length; ip++) {
                 Callback<TreeTableView.ResizeFeatures, Boolean> policy = createPolicy(ip);
-                table.setColumnResizePolicy(policy);
+                t.setColumnResizePolicy(policy);
 
                 // smaller than preferred
-                table.setPrefWidth(300);
+                t.setPrefWidth(300);
                 Toolkit.getToolkit().firePulse();
-                checkInvariants(table);
-                Assert.assertEquals(table.getWidth(), sumColumnWidths(table.getColumns()), tolerance);
+                checkInvariants(t);
+                Assert.assertEquals(t.getWidth(), sumColumnWidths(t.getColumns()), tolerance);
 
                 // clear items
-                table.getRoot().getChildren().clear();
+                t.getRoot().getChildren().clear();
 
                 // make it wider, check if resized correctly
-                table.setPrefWidth(1000);
+                t.setPrefWidth(1000);
                 Toolkit.getToolkit().firePulse();
-                checkInvariants(table);
-                Assert.assertEquals(table.getWidth(), sumColumnWidths(table.getColumns()), tolerance);
+                checkInvariants(t);
+                Assert.assertEquals(t.getWidth(), sumColumnWidths(t.getColumns()), tolerance);
             }
         } finally {
             stageLoader.dispose();
