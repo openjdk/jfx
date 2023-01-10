@@ -31,6 +31,7 @@ import javafx.application.Application;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
+import javafx.scene.control.CheckBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.Slider;
@@ -66,19 +67,17 @@ public class LightingSample extends Application {
         var stopButton = new Button("Stop");
         stopButton.setOnAction(e -> stopMeasurement());
 
-        var controls = new VBox(0, sphereControls, meshControls, new HBox(5, playButton, stopButton), boxesControls);
-        for (var light : environment.ambientLights) {
-            controls.getChildren().add(Controls.createLightControls(light, null));
-        }
-        for (var light : environment.pointLights) {
-            controls.getChildren().add(Controls.addPointLightControls(light));
-        }
-        for (var light : environment.spotLights) {
-            controls.getChildren().add(Controls.addSpotLightControls(light));
-        }
-        for (var light : environment.directionalLights) {
-            controls.getChildren().add(Controls.addDirectionalLightControls(light));
-        }
+        var animationControls = new HBox(5, playButton, stopButton);
+
+        var defaultLightButton = new CheckBox("Force default light");
+        defaultLightButton.setOnAction(e -> environment.forceDefaultLight(defaultLightButton.isSelected()));
+
+        var controls = new VBox(sphereControls, meshControls, animationControls, boxesControls, defaultLightButton);
+
+        environment.ambientLights.forEach(light -> controls.getChildren().add(Controls.createLightControls(light, null)));
+        environment.pointLights.forEach(light -> controls.getChildren().add(Controls.addPointLightControls(light)));
+        environment.spotLights.forEach(light -> controls.getChildren().add(Controls.addSpotLightControls(light)));
+        environment.directionalLights.forEach(light -> controls.getChildren().add(Controls.addDirectionalLightControls(light)));
 
         var hBox = new HBox(new ScrollPane(controls), environment);
         HBox.setHgrow(environment, Priority.ALWAYS);
