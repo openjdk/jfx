@@ -34,6 +34,7 @@ import javafx.scene.control.TableColumnBase;
 import javafx.scene.control.TableView;
 import javafx.scene.layout.BorderPane;
 import javafx.util.Callback;
+import org.junit.Assert;
 import org.junit.Test;
 import com.sun.javafx.tk.Toolkit;
 import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
@@ -221,5 +222,44 @@ public class TableViewResizeTest extends ResizeHelperTestBase {
 
     protected static Callback<TableView.ResizeFeatures, Boolean> createPolicy(int ix) {
         return (Callback<TableView.ResizeFeatures, Boolean>)POLICIES[ix];
+    }
+
+    /**
+     * Verifies that the constrained resize policy still works once all the items have been removed JDK-8137244.
+     */
+    @Test
+    public void testConstrainedResizeOfEmptyTable() {
+        Object[] spec = {
+            Cmd.ROWS, 5,
+            Cmd.COL, Cmd.PREF, 200,
+            Cmd.COL, Cmd.PREF, 200,
+        };
+        // allow for borders
+        double tolerance = 6.0;
+        TableView<String> table = createTable(spec);
+        stageLoader = new StageLoader(new BorderPane(table));
+        try {
+            for (int ip = 0; ip < POLICIES.length; ip++) {
+                Callback<TableView.ResizeFeatures, Boolean> policy = createPolicy(ip);
+                table.setColumnResizePolicy(policy);
+
+                // smaller than preferred
+                table.setPrefWidth(300);
+                Toolkit.getToolkit().firePulse();
+                checkInvariants(table);
+                Assert.assertEquals(table.getWidth(), sumColumnWidths(table.getColumns()), tolerance);
+
+                // clear items
+                table.getItems().clear();
+
+                // make it wider, check if resized correctly
+                table.setPrefWidth(1000);
+                Toolkit.getToolkit().firePulse();
+                checkInvariants(table);
+                Assert.assertEquals(table.getWidth(), sumColumnWidths(table.getColumns()), tolerance);
+            }
+        } finally {
+            stageLoader.dispose();
+        }
     }
 }
