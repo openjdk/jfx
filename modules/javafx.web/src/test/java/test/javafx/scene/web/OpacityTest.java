@@ -57,12 +57,12 @@ public class OpacityTest extends TestBase {
                 final BufferedImage img = WebPageShim.paint(webPage, 0, 0, 800, 600);
                 assertNotNull(img);
 
-                final Color pixelAt0x0 = new Color(img.getRGB(400, 50), true);
-                assertTrue("Color should be black:" + pixelAt0x0, isColorsSimilar(Color.BLACK, pixelAt0x0, 1));
-                final Color pixelAt0x100 = new Color(img.getRGB(400, 150), true);
-                assertTrue("Color should be gray:" + pixelAt0x100, isColorsSimilar(Color.GRAY, pixelAt0x100, 1));
-                final Color pixelAt0x200 = new Color(img.getRGB(400, 250), true);
-                assertTrue("Color should be white:" + pixelAt0x200, isColorsSimilar(Color.WHITE, pixelAt0x200, 1));
+                final Color pixelAt400x50 = new Color(img.getRGB(400, 50), true);
+                assertTrue("Color should be black:" + pixelAt400x50, isColorsSimilar(Color.BLACK, pixelAt400x50, 1));
+                final Color pixelAt400x150 = new Color(img.getRGB(400, 150), true);
+                assertTrue("Color should be gray:" + pixelAt400x150, isColorsSimilar(Color.GRAY, pixelAt400x150, 1));
+                final Color pixelAt400x250 = new Color(img.getRGB(400, 250), true);
+                assertTrue("Color should be white:" + pixelAt400x250, isColorsSimilar(Color.WHITE, pixelAt400x250, 1));
         });
     }
 }
