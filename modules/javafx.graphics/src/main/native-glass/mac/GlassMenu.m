@@ -164,12 +164,12 @@ static jfieldID  jPixelsScaleYField = 0;
 
 - (void)action:(id)sender
 {
-    if (self->jCallback != NULL)
-    {
-        GET_MAIN_JENV;
-        if (env != NULL)
-        {
-            (*env)->CallVoidMethod(env, self->jCallback, jMenuActionMethod, NULL);
+    GET_MAIN_JENV;
+    if (env != NULL) {
+        jobject jCallback = (*env)->NewLocalRef(env, self->jCallback);
+        if (jCallback != NULL) {
+            (*env)->CallVoidMethod(env, jCallback, jMenuActionMethod, NULL);
+            (*env)->DeleteLocalRef(env, jCallback);
         }
     }
 }
@@ -205,7 +205,12 @@ static jfieldID  jPixelsScaleYField = 0;
     if (env != NULL)
     {
         GlassMenu *glassTargetItem = (GlassMenu *)[menuItem target];
-        (*env)->CallVoidMethod(env, self->jCallback, jMenuValidateMethod, NULL);
+
+        jobject jCallback = (*env)->NewLocalRef(env, self->jCallback);
+        if (jCallback != NULL) {
+            (*env)->CallVoidMethod(env, jCallback, jMenuValidateMethod, NULL);
+            (*env)->DeleteLocalRef(env, jCallback);
+        }
 
         return ([glassTargetItem->item isEnabled]);
     }
