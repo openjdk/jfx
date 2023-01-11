@@ -41,6 +41,7 @@ public class OpacityTest extends TestBase {
      * summary
      * Loads black-background areas with different opacity values: 1.0, 0.5, and 0.0.
      * Checks if the areas are rendered with black, gray, and white colors accordigly.
+     * Colors are taken from the center of each area.
      */
     @Test public void testOpacity() {
         loadContent("<html>\n" +
@@ -56,11 +57,11 @@ public class OpacityTest extends TestBase {
                 final BufferedImage img = WebPageShim.paint(webPage, 0, 0, 800, 600);
                 assertNotNull(img);
 
-                final Color pixelAt0x0 = new Color(img.getRGB(0, 0), true);
+                final Color pixelAt0x0 = new Color(img.getRGB(400, 50), true);
                 assertTrue("Color should be black:" + pixelAt0x0, isColorsSimilar(Color.BLACK, pixelAt0x0, 1));
-                final Color pixelAt0x100 = new Color(img.getRGB(0, 100), true);
+                final Color pixelAt0x100 = new Color(img.getRGB(400, 150), true);
                 assertTrue("Color should be gray:" + pixelAt0x100, isColorsSimilar(Color.GRAY, pixelAt0x100, 1));
-                final Color pixelAt0x200 = new Color(img.getRGB(0, 200), true);
+                final Color pixelAt0x200 = new Color(img.getRGB(400, 250), true);
                 assertTrue("Color should be white:" + pixelAt0x200, isColorsSimilar(Color.WHITE, pixelAt0x200, 1));
         });
     }
