@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -8241,7 +8241,7 @@ public abstract class Node implements EventTarget, Styleable {
                 do {
                     node.focusWithin.set(value);
                     node = node.getParent();
-                } while (node != null && !node.focused.get());
+                } while (node != null);
             }
         }
     };
@@ -8296,6 +8296,8 @@ public abstract class Node implements EventTarget, Styleable {
      * @since 19
      */
     private final FocusPropertyBase focusWithin = new FocusPropertyBase() {
+        private int count; // the number of downstream focused nodes
+
         @Override
         protected PseudoClass getPseudoClass() {
             return FOCUS_WITHIN_PSEUDOCLASS_STATE;
@@ -8304,6 +8306,15 @@ public abstract class Node implements EventTarget, Styleable {
         @Override
         public String getName() {
             return "focusWithin";
+        }
+
+        @Override
+        public void set(boolean value) {
+            if (value && ++count == 1) {
+                super.set(true);
+            } else if (!value && --count == 0) {
+                super.set(false);
+            }
         }
     };
 
