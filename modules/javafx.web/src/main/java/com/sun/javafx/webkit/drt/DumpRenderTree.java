@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -91,7 +91,7 @@ public final class DumpRenderTree {
                     webPage.forceRepaint();
             });
         }
-    };
+    }
 
     static class ThemeClientImplStub extends ThemeClient {
         @Override
@@ -103,7 +103,7 @@ public final class DumpRenderTree {
         protected ScrollBarTheme createScrollBarTheme() {
             return new ScrollBarThemeStub();
         }
-    };
+    }
 
     static class RenderThemeStub extends RenderTheme {
         @Override

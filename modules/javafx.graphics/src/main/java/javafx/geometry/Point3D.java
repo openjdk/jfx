@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -410,10 +410,15 @@ public class Point3D implements Interpolatable<Point3D> {
     }
 
     /**
-     * Returns a hash code value for the point.
-     * @return a hash code value for the point.
+     * Indicates whether some other object is "equal to" this one.
+     * Two instances of {@code Point3D} are equal if the return values of their
+     * {@code getX}, {@code getY}, and {@code getZ} methods are equal.
+     *
+     * @param obj the reference object with which to compare
+     * @return {@code true} if this {@code Point3D} is the same as the {@code obj} argument; {@code false} otherwise
      */
-    @Override public boolean equals(Object obj) {
+    @Override
+    public boolean equals(Object obj) {
         if (obj == this) return true;
         if (obj instanceof Point3D) {
             Point3D other = (Point3D) obj;

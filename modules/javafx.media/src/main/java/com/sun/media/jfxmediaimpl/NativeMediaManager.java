@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -36,7 +36,6 @@ import java.security.AccessController;
 import java.security.PrivilegedActionException;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
@@ -125,6 +124,7 @@ public class NativeMediaManager {
                     dependencies.add("avplugin-ffmpeg-56");
                     dependencies.add("avplugin-ffmpeg-57");
                     dependencies.add("avplugin-ffmpeg-58");
+                    dependencies.add("avplugin-ffmpeg-59");
                 }
                 if (HostUtils.isMacOSX()) {
                     dependencies.add("fxplugins");
@@ -335,7 +335,7 @@ public class NativeMediaManager {
                 }
             }
 
-            this.errorListeners.add(new WeakReference<MediaErrorListener>(listener));
+            this.errorListeners.add(new WeakReference<>(listener));
         }
     }
 
@@ -378,7 +378,7 @@ public class NativeMediaManager {
         List<MediaPlayer> allPlayers = null;
 
         if (!allMediaPlayers.isEmpty()) {
-            allPlayers = new ArrayList<MediaPlayer>(allMediaPlayers.keySet());
+            allPlayers = new ArrayList<>(allMediaPlayers.keySet());
         }
 
         return allPlayers;
@@ -393,6 +393,7 @@ public class NativeMediaManager {
 
     private static class NativeMediaPlayerDisposer implements MediaDisposer.ResourceDisposer {
 
+        @Override
         public void disposeResource(Object resource) {
             // resource is a MediaPlayer
             MediaPlayer player = (MediaPlayer) resource;

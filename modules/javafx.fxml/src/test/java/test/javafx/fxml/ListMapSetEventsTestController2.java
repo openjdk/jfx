@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,10 +24,6 @@
  */
 package test.javafx.fxml;
 
-import javafx.collections.ListChangeListener;
-import javafx.collections.MapChangeListener;
-import javafx.collections.SetChangeListener;
-
 import java.net.URL;
 import java.util.ResourceBundle;
 import javafx.fxml.FXML;
@@ -46,19 +42,16 @@ public class ListMapSetEventsTestController2 implements Initializable {
     }
 
     @FXML
-    @SuppressWarnings("unchecked")
     protected void handleChildListChange() {
         listNoParamCalled = true;
     }
 
     @FXML
-    @SuppressWarnings("unchecked")
     protected void handlePropertiesChange() {
         mapNoParamCalled = true;
     }
 
     @FXML
-    @SuppressWarnings("unchecked")
     protected void handleSetChange() {
         setNoParamCalled = true;
     }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,6 +26,7 @@
 package test.javafx.concurrent;
 
 import javafx.concurrent.Task;
+import javafx.concurrent.Worker;
 import test.javafx.concurrent.mocks.EpicFailTask;
 import test.javafx.concurrent.mocks.InfiniteTask;
 import test.javafx.concurrent.mocks.RunAwayTask;
@@ -57,7 +58,7 @@ public class TaskCancelTest {
      */
     @Test public void cancellingA_READY_TaskShouldChangeStateTo_CANCELLED() {
         assertTrue(task.cancel());
-        assertEquals(Task.State.CANCELLED, task.getState());
+        assertEquals(Worker.State.CANCELLED, task.getState());
         assertTrue(task.isDone());
     }
 
@@ -69,7 +70,7 @@ public class TaskCancelTest {
     @Test public void cancellingA_SCHEDULED_TaskShouldChangeStateTo_CANCELLED() {
         task.simulateSchedule();
         assertTrue(task.cancel());
-        assertEquals(Task.State.CANCELLED, task.getState());
+        assertEquals(Worker.State.CANCELLED, task.getState());
         assertTrue(task.isDone());
     }
 
@@ -90,7 +91,7 @@ public class TaskCancelTest {
         assertTrue(task.cancel());
         th.join();
 
-        assertEquals(Task.State.CANCELLED, task.getState());
+        assertEquals(Worker.State.CANCELLED, task.getState());
         // TODO why is this commented out?
 //        assertNull(task.getException());
         assertNull(task.getValue());
@@ -105,7 +106,7 @@ public class TaskCancelTest {
         Task t = new SimpleTask();
         t.run();
         assertFalse(t.cancel());
-        assertEquals(Task.State.SUCCEEDED, t.getState());
+        assertEquals(Worker.State.SUCCEEDED, t.getState());
         assertTrue(t.isDone());
     }
 
@@ -117,7 +118,7 @@ public class TaskCancelTest {
         Task t = new EpicFailTask();
         t.run();
         assertFalse(t.cancel());
-        assertEquals(Task.State.FAILED, t.getState());
+        assertEquals(Worker.State.FAILED, t.getState());
         assertTrue(t.isDone());
     }
 
@@ -126,6 +127,7 @@ public class TaskCancelTest {
      */
     @Test public void aFreeRunningCancelledTaskReturnValueShouldBeIgnored() throws Exception {
         RunAwayTask runAway = new RunAwayTask() {
+                @Override
                 protected void loop(int count) throws Exception {
                 }
         };
@@ -136,7 +138,7 @@ public class TaskCancelTest {
         runAway.stopLooping.set(true);
         th.join();
 
-        assertEquals(Task.State.CANCELLED, runAway.getState());
+        assertEquals(Worker.State.CANCELLED, runAway.getState());
         // TODO why is this commented out?
 //        assertNull(task.getException());
         assertNull(runAway.getValue());

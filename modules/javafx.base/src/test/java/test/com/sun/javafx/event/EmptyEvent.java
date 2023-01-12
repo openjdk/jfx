@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,7 +30,7 @@ import javafx.event.EventType;
 
 public final class EmptyEvent extends Event {
     public static final EventType<EmptyEvent> EMPTY =
-            new EventType<EmptyEvent>(Event.ANY, "EMPTY");
+            new EventType<>(Event.ANY, "EMPTY");
 
     public EmptyEvent() {
         super(EMPTY);

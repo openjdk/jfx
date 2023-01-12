@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -51,9 +51,9 @@ public final class DirtyRegionPool {
 
     public DirtyRegionPool(int containerSize) {
         this.containerSize = containerSize;
-        fixed = new LinkedList<DirtyRegionContainer>();
-        unlocked = new LinkedList<PoolItem>();
-        locked = new LinkedList<PoolItem>();
+        fixed = new LinkedList<>();
+        unlocked = new LinkedList<>();
+        locked = new LinkedList<>();
         for (int i = 0; i < POOL_SIZE_MIN; ++i) {
             fixed.add(new DirtyRegionContainer(containerSize));
         }

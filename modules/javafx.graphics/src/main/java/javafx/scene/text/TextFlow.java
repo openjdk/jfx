@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -54,7 +54,6 @@ import com.sun.javafx.scene.text.TextLayoutFactory;
 import com.sun.javafx.scene.text.TextSpan;
 import com.sun.javafx.tk.Toolkit;
 import javafx.beans.property.IntegerProperty;
-import javafx.beans.property.IntegerPropertyBase;
 import javafx.css.Styleable;
 import javafx.css.StyleableIntegerProperty;
 import javafx.css.StyleableProperty;
@@ -545,8 +544,8 @@ public class TextFlow extends Pane {
 
         private static final
             CssMetaData<TextFlow, TextAlignment> TEXT_ALIGNMENT =
-                new CssMetaData<TextFlow,TextAlignment>("-fx-text-alignment",
-                new EnumConverter<TextAlignment>(TextAlignment.class),
+                new CssMetaData<>("-fx-text-alignment",
+                new EnumConverter<>(TextAlignment.class),
                 TextAlignment.LEFT) {
 
             @Override public boolean isSettable(TextFlow node) {
@@ -560,7 +559,7 @@ public class TextFlow extends Pane {
 
         private static final
             CssMetaData<TextFlow,Number> LINE_SPACING =
-                new CssMetaData<TextFlow,Number>("-fx-line-spacing",
+                new CssMetaData<>("-fx-line-spacing",
                 SizeConverter.getInstance(), 0) {
 
             @Override public boolean isSettable(TextFlow node) {
@@ -573,7 +572,7 @@ public class TextFlow extends Pane {
         };
 
         private static final CssMetaData<TextFlow, Number> TAB_SIZE =
-                new CssMetaData<TextFlow,Number>("-fx-tab-size",
+                new CssMetaData<>("-fx-tab-size",
                 SizeConverter.getInstance(), TextLayout.DEFAULT_TAB_SIZE) {
 
             @Override
@@ -590,7 +589,7 @@ public class TextFlow extends Pane {
         private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
         static {
             final List<CssMetaData<? extends Styleable, ?>> styleables =
-                new ArrayList<CssMetaData<? extends Styleable, ?>>(Pane.getClassCssMetaData());
+                new ArrayList<>(Pane.getClassCssMetaData());
             styleables.add(TEXT_ALIGNMENT);
             styleables.add(LINE_SPACING);
             styleables.add(TAB_SIZE);

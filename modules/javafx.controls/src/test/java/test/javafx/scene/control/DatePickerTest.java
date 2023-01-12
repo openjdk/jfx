@@ -379,7 +379,7 @@ public class DatePickerTest {
     }
 
     @Test public void checkValuePropertyBind() {
-        ObjectProperty<LocalDate> objPr = new SimpleObjectProperty<LocalDate>(today);
+        ObjectProperty<LocalDate> objPr = new SimpleObjectProperty<>(today);
         datePicker.valueProperty().bind(objPr);
         assertTrue("value cannot be bound", datePicker.getValue().equals(today));
         LocalDate tomorrow = today.plusDays(1);
@@ -388,7 +388,7 @@ public class DatePickerTest {
     }
 
     @Test public void checkChronologyPropertyBind() {
-        ObjectProperty<Chronology> objPr = new SimpleObjectProperty<Chronology>(IsoChronology.INSTANCE);
+        ObjectProperty<Chronology> objPr = new SimpleObjectProperty<>(IsoChronology.INSTANCE);
         datePicker.chronologyProperty().bind(objPr);
         assertTrue("Chronology cannot be bound", datePicker.getChronology().equals(IsoChronology.INSTANCE));
         objPr.setValue(JapaneseChronology.INSTANCE);

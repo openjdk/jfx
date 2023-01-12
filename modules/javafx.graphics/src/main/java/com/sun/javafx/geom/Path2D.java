@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2006, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2006, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -431,6 +431,7 @@ import java.util.Arrays;
      * @param x the specified X coordinate
      * @param y the specified Y coordinate
      */
+    @Override
     public final void moveTo(float x, float y) {
         if (numTypes > 0 && pointTypes[numTypes - 1] == SEG_MOVETO) {
             floatCoords[numCoords-2] = moveX = prevX = currX = x;
@@ -470,6 +471,7 @@ import java.util.Arrays;
      * @param x the specified X coordinate
      * @param y the specified Y coordinate
      */
+    @Override
     public final void lineTo(float x, float y) {
         needRoom(true, 2);
         pointTypes[numTypes++] = SEG_LINETO;
@@ -505,6 +507,7 @@ import java.util.Arrays;
      * @param x2 the X coordinate of the final end point
      * @param y2 the Y coordinate of the final end point
      */
+    @Override
     public final void quadTo(float x1, float y1,
                              float x2, float y2)
     {
@@ -620,6 +623,7 @@ import java.util.Arrays;
      * @param y3 the Y coordinate of the final end point
      * @see Path2D#curveTo
      */
+    @Override
     public final void curveTo(float x1, float y1,
                               float x2, float y2,
                               float x3, float y3)
@@ -1489,6 +1493,7 @@ import java.util.Arrays;
     /**
      * {@inheritDoc}
      */
+    @Override
     public final RectBounds getBounds() {
         float x1, y1, x2, y2;
         int i = numCoords;
@@ -1530,6 +1535,7 @@ import java.util.Arrays;
      * {@code Path2D} object do not affect any iterations of
      * that geometry that are already in process.
      */
+    @Override
     public PathIterator getPathIterator(BaseTransform tx) {
         if (tx == null) {
             return new CopyIterator(this);
@@ -1546,6 +1552,7 @@ import java.util.Arrays;
             this.floatCoords = p2df.floatCoords;
         }
 
+        @Override
         public int currentSegment(float[] coords) {
             int type = path.pointTypes[typeIdx];
             int numCoords = curvecoords[type];
@@ -1578,6 +1585,7 @@ import java.util.Arrays;
             this.transform = tx;
         }
 
+        @Override
         public int currentSegment(float[] coords) {
             int type = path.pointTypes[typeIdx];
             int numCoords = curvecoords[type];
@@ -1604,6 +1612,7 @@ import java.util.Arrays;
      * the coordinates of the last {@code moveTo}.  If the path is already
      * closed then this method has no effect.
      */
+    @Override
     public final void closePath() {
         if (numTypes == 0 || pointTypes[numTypes - 1] != SEG_CLOSE) {
             needRoom(true, 0);
@@ -1613,6 +1622,7 @@ import java.util.Arrays;
         }
     }
 
+    @Override
     public void pathDone() {
     }
 
@@ -2101,6 +2111,7 @@ import java.util.Arrays;
     /**
      * {@inheritDoc}
      */
+    @Override
     public final boolean contains(float x, float y) {
         if (x * 0f + y * 0f == 0f) {
             /* N * 0.0 is 0.0 only if N is finite.
@@ -2199,6 +2210,7 @@ import java.util.Arrays;
      * involving all of the segments of the path and the winding
      * rule and are thus beyond the scope of this implementation.
      */
+    @Override
     public final boolean contains(float x, float y, float w, float h) {
         if (java.lang.Float.isNaN(x+w) || java.lang.Float.isNaN(y+h)) {
             /* [xy]+[wh] is NaN if any of those values are NaN,
@@ -2290,6 +2302,7 @@ import java.util.Arrays;
      * involving all of the segments of the path and the winding
      * rule and are thus beyond the scope of this implementation.
      */
+    @Override
     public final boolean intersects(float x, float y, float w, float h) {
         if (java.lang.Float.isNaN(x+w) || java.lang.Float.isNaN(y+h)) {
             /* [xy]+[wh] is NaN if any of those values are NaN,
@@ -2320,6 +2333,7 @@ import java.util.Arrays;
      * {@code Path2D} object do not affect any iterations of
      * that geometry that are already in process.
      */
+    @Override
     public PathIterator getPathIterator(BaseTransform tx,
                                         float flatness)
     {
@@ -2335,14 +2349,17 @@ import java.util.Arrays;
             this.path = path;
         }
 
+        @Override
         public int getWindingRule() {
             return path.getWindingRule();
         }
 
+        @Override
         public boolean isDone() {
             return (typeIdx >= path.numTypes);
         }
 
+        @Override
         public void next() {
             int type = path.pointTypes[typeIdx++];
             pointIdx += curvecoords[type];

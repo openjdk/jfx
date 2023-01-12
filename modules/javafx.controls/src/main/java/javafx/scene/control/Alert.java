@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -285,7 +285,7 @@ public class Alert extends Dialog<ButtonType> {
      * a dialog of the given type.
      */
     // --- alertType
-    private final ObjectProperty<AlertType> alertType = new SimpleObjectProperty<AlertType>(null) {
+    private final ObjectProperty<AlertType> alertType = new SimpleObjectProperty<>(null) {
         final String[] styleClasses = new String[] { "information", "warning", "error", "confirmation" };
 
         @Override
@@ -408,6 +408,6 @@ public class Alert extends Dialog<ButtonType> {
             newPane.getButtonTypes().addListener(buttonsListener);
         }
 
-        dialogPaneRef = new WeakReference<DialogPane>(newPane);
+        dialogPaneRef = new WeakReference<>(newPane);
     }
 }

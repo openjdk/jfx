@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -117,6 +117,9 @@ JNIEXPORT jintArray JNICALL Java_com_sun_javafx_font_DFontDecoder_getCTFontTags
     CTFontRef fontRef = (CTFontRef)fontPtr;
     CTFontTableOptions  options = kCTFontTableOptionNoOptions;
     CFArrayRef tags = CTFontCopyAvailableTables(fontRef, options);
+    if (tags == NULL) {
+        return NULL;
+    }
     CFIndex count = CFArrayGetCount(tags);
     jintArray intArrObj = (*env)->NewIntArray(env, count);
     if (intArrObj == NULL) {

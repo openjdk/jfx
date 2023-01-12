@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -43,8 +43,7 @@ class ES2VramPool extends BaseResourcePool<ES2TextureData>
     public long estimateTextureSize(int width, int height,
                                     PixelFormat format)
     {
-        return ((long) width) * ((long) height) *
-               ((long) format.getBytesPerPixelUnit());
+        return (long) width * height * format.getBytesPerPixelUnit();
     }
 
     @Override
@@ -52,7 +51,7 @@ class ES2VramPool extends BaseResourcePool<ES2TextureData>
                                       boolean hasDepth)
     {
         // REMIND: need to deal with size of depth buffer, etc.
-        return ((long) width) * ((long) height) * 4L;
+        return 4L * width * height;
     }
 
     @Override

@@ -66,9 +66,9 @@ static inline ExceptionOr<JSObject*> invokeConstructor(JSC::JSGlobalObject& lexi
 
 ExceptionOr<Ref<ReadableStream>> ReadableStream::create(JSC::JSGlobalObject& lexicalGlobalObject, RefPtr<ReadableStreamSource>&& source)
 {
-    auto& clientData = *static_cast<JSVMClientData*>(lexicalGlobalObject.vm().clientData);
+    auto& builtinNames = WebCore::builtinNames(lexicalGlobalObject.vm());
 
-    auto objectOrException = invokeConstructor(lexicalGlobalObject, clientData.builtinNames().ReadableStreamPrivateName(), [&source](auto& args, auto& lexicalGlobalObject, auto& globalObject) {
+    auto objectOrException = invokeConstructor(lexicalGlobalObject, builtinNames.ReadableStreamPrivateName(), [&source](auto& args, auto& lexicalGlobalObject, auto& globalObject) {
         args.append(source ? toJSNewlyCreated(&lexicalGlobalObject, &globalObject, source.releaseNonNull()) : JSC::jsUndefined());
     });
 
@@ -130,8 +130,8 @@ std::optional<std::pair<Ref<ReadableStream>, Ref<ReadableStream>>> ReadableStrea
 
 void ReadableStream::lock()
 {
-    auto& clientData = *static_cast<JSVMClientData*>(m_globalObject->vm().clientData);
-    invokeConstructor(*m_globalObject, clientData.builtinNames().ReadableStreamDefaultReaderPrivateName(), [this](auto& args, auto&, auto&) {
+    auto& builtinNames = WebCore::builtinNames(m_globalObject->vm());
+    invokeConstructor(*m_globalObject, builtinNames.ReadableStreamDefaultReaderPrivateName(), [this](auto& args, auto&, auto&) {
         args.append(readableStream());
     });
 }

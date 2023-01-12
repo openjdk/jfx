@@ -39,18 +39,24 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 import javafx.beans.InvalidationListener;
+import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.SimpleBooleanProperty;
+import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 
 public class ObservableValueFluentBindingsTest {
+
     private int invalidations;
 
-    private final StringProperty property = new SimpleStringProperty("Initial");
     private final List<String> values = new ArrayList<>();
     private final ChangeListener<String> changeListener = (obs, old, current) -> values.add(current);
     private final InvalidationListener invalidationListener = obs -> invalidations++;
+
+    private StringProperty property = new SimpleStringProperty("Initial");
 
     @Nested
     class When_map_Called {
@@ -468,14 +474,14 @@ public class ObservableValueFluentBindingsTest {
                     super.addListener(listener);
 
                     subscribeCount++;
-                };
+                }
 
                 @Override
                 public void removeListener(InvalidationListener listener) {
                     super.removeListener(listener);
 
                     unsubscribeCount++;
-                };
+                }
             };
 
             private ObservableValue<String> observableValue =
@@ -878,6 +884,285 @@ public class ObservableValueFluentBindingsTest {
         }
     }
 
+    @Nested
+    class When_when_Called {
+
+        @Nested
+        class WithNull {
+
+            @Test
+            void shouldThrowNullPointerException() {
+                assertThrows(NullPointerException.class, () -> property.when(null));
+            }
+        }
+
+        @Nested
+        class WithNotNullAndInitiallyFalseConditionReturns_ObservableValue_Which {
+            private BooleanProperty condition = new SimpleBooleanProperty(false);
+            private ObservableValue<String> observableValue = property.when(condition);
+
+            @Test
+            void shouldNotBeNull() {
+                assertNotNull(observableValue);
+            }
+
+            @Test
+            void shouldNotBeStronglyReferenced() {
+                ReferenceAsserts.testIfNotStronglyReferenced(observableValue, () -> {
+                    observableValue = null;
+                    condition = null;
+                });
+            }
+
+            @Nested
+            class When_getValue_Called {
+
+                @Test
+                void shouldReturnInitialValueAtTimeOfCreation() {
+                    property.set("Not Initial");
+
+                    assertEquals("Initial", observableValue.getValue());
+                }
+            }
+        }
+
+        @Nested
+        class WithNotNullReturns_ObservableValue_Which {
+            // using object property here so it can be set to null for testing
+            private ObjectProperty<Boolean> condition = new SimpleObjectProperty<>(true);
+            private ObservableValue<String> observableValue = property.when(condition);
+
+            @Test
+            void shouldNotBeNull() {
+                assertNotNull(observableValue);
+            }
+
+            @Test
+            void shouldNotBeStronglyReferenced() {
+                ReferenceAsserts.testIfNotStronglyReferenced(observableValue, () -> {
+                    observableValue = null;
+                    condition = null;
+                });
+            }
+
+            @Nested
+            class When_getValue_Called {
+
+                @Test
+                void shouldReturnCurrentPropertyValuesWhileConditionIsTrue() {
+                    assertEquals("Initial", observableValue.getValue());
+
+                    property.set(null);
+
+                    assertNull(observableValue.getValue());
+
+                    property.set("Left");
+
+                    assertEquals("Left", observableValue.getValue());
+
+                    condition.set(false);
+
+                    property.set("Right");
+
+                    assertEquals("Left", observableValue.getValue());
+
+                    property.set("Middle");
+
+                    assertEquals("Left", observableValue.getValue());
+
+                    condition.set(true);
+
+                    assertEquals("Middle", observableValue.getValue());
+                }
+            }
+
+            @Nested
+            class WhenObservedForInvalidations {
+                {
+                    startObservingInvalidations(observableValue);
+                }
+
+                @Test
+                void shouldOnlyInvalidateOnce() {
+                    assertNotInvalidated();
+
+                    property.set("Left");
+
+                    assertInvalidated();
+
+                    property.set("Right");
+
+                    assertNotInvalidated();
+                }
+
+                @Test
+                void shouldOnlyInvalidateWhileConditionIsTrue() {
+                    assertNotInvalidated();
+
+                    property.set("Left");  // trigger invalidation
+
+                    assertInvalidated();
+
+                    condition.set(false);
+
+                    assertNotInvalidated();  // already invalid, changing condition won't change that
+
+                    observableValue.getValue();  // this would normally make the property valid, but not when condition is false
+
+                    property.set("Right");  // trigger invalidation
+
+                    assertNotInvalidated();  // nothing happened
+
+                    condition.setValue(null);  // null is false as well, should not change result
+
+                    assertNotInvalidated();  // nothing happened
+
+                    condition.set(true);
+
+                    assertInvalidated();
+
+                    observableValue.getValue();  // make property valid
+
+                    assertNotInvalidated();
+
+                    property.set("Middle");  // trigger invalidation
+
+                    assertInvalidated();
+                }
+
+                @Test
+                void shouldBeStronglyReferenced() {
+                    ReferenceAsserts.testIfStronglyReferenced(observableValue, () -> {
+                        observableValue = null;
+                        condition = null;
+                    });
+                }
+
+                @Test
+                void shouldNotBeStronglyReferencedWhenConditionIsFalse() {
+                    condition.set(false);
+
+                    ReferenceAsserts.testIfNotStronglyReferenced(observableValue, () -> {
+                        observableValue = null;
+                        condition = null;
+                    });
+                }
+
+                @Nested
+                class AndWhenUnobserved {
+                    {
+                        stopObservingInvalidations(observableValue);
+                    }
+
+                    @Test
+                    void shouldNoLongerBeCalled() {
+                        assertNotInvalidated();
+
+                        property.set("Left");
+                        property.set("Right");
+
+                        assertNotInvalidated();
+                    }
+
+                    @Test
+                    void shouldNoLongerBeStronglyReferenced() {
+                        ReferenceAsserts.testIfNotStronglyReferenced(observableValue, () -> {
+                            observableValue = null;
+                            condition = null;
+                        });
+                    }
+                }
+            }
+
+            @Nested
+            class WhenObservedForChanges {
+                {
+                    startObservingChanges(observableValue);
+                }
+
+                @Test
+                void shouldReceiveCurrentPropertyValues() {
+                    assertNothingIsObserved();
+
+                    property.set("Right");
+
+                    assertObserved("Right");
+                }
+
+                @Test
+                void shouldOnlyReceiveCurrentPropertyValuesWhileConditionIsTrue() {
+                    assertNothingIsObserved();
+
+                    property.set("Right");
+
+                    assertObserved("Right");
+
+                    condition.set(false);
+
+                    assertNothingIsObserved();
+
+                    property.set("Left");
+
+                    assertNothingIsObserved();
+
+                    property.set("Middle");
+
+                    assertNothingIsObserved();
+
+                    condition.setValue(null);  // null is false as well, should not change result
+
+                    assertNothingIsObserved();
+
+                    condition.set(true);
+
+                    assertObserved("Middle");
+                }
+
+                @Test
+                void shouldBeStronglyReferenced() {
+                    ReferenceAsserts.testIfStronglyReferenced(observableValue, () -> {
+                        observableValue = null;
+                        condition = null;
+                    });
+                }
+
+                @Test
+                void shouldNotBeStronglyReferencedWhenConditionIsFalse() {
+                    condition.set(false);
+
+                    ReferenceAsserts.testIfNotStronglyReferenced(observableValue, () -> {
+                        observableValue = null;
+                        condition = null;
+                    });
+                }
+
+                @Nested
+                class AndWhenUnobserved {
+                    {
+                        stopObservingChanges(observableValue);
+                    }
+
+                    @Test
+                    void shouldNoLongerBeCalled() {
+                        assertNothingIsObserved();
+
+                        property.set("Right");
+
+                        assertNothingIsObserved();
+                    }
+
+                    @Test
+                    void shouldNoLongerBeStronglyReferenced() {
+                        ReferenceAsserts.testIfNotStronglyReferenced(observableValue, () -> {
+                            observableValue = null;
+                            condition = null;
+                        });
+                    }
+                }
+            }
+        }
+    }
+
     /**
      * Ensures nothing has been observed since the last check.
      */
@@ -891,7 +1176,7 @@ public class ObservableValueFluentBindingsTest {
      * @param expectedValues an array of expected values
      */
     private void assertObserved(String... expectedValues) {
-        assertEquals(values, Arrays.asList(expectedValues));
+        assertEquals(Arrays.asList(expectedValues), values);
         values.clear();
     }
 

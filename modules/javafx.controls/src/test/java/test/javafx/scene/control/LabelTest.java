@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -38,12 +38,9 @@ import javafx.beans.property.SimpleObjectProperty;
 import javafx.css.StyleableProperty;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
-import javafx.scene.paint.Color;
-import javafx.scene.paint.Paint;
 import javafx.scene.shape.Rectangle;
 
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 public class LabelTest {
@@ -140,7 +137,7 @@ public class LabelTest {
 
     @Test public void labelForCanBeBound() {
         TextField textField = new TextField();
-        ObjectProperty<TextField> other = new SimpleObjectProperty<TextField>(textField);
+        ObjectProperty<TextField> other = new SimpleObjectProperty<>(textField);
         label.labelForProperty().bind(other);
         assertSame(textField, label.getLabelFor());
         other.set(null);
@@ -189,7 +186,7 @@ public class LabelTest {
 
     @Test public void settingLabelForShouldAddListenerToShowMnemonics_WhenBound() {
         TextField textField = new TextField();
-        ObjectProperty<TextField> other = new SimpleObjectProperty<TextField>(textField);
+        ObjectProperty<TextField> other = new SimpleObjectProperty<>(textField);
         label.labelForProperty().bind(other);
         assertEquals(1, getListenerCount(NodeHelper.showMnemonicsProperty(textField)));
     }
@@ -210,7 +207,7 @@ public class LabelTest {
 
     @Test public void clearingLabelForShouldRemoveListenerFromShowMnemonics_WhenBound() {
         TextField textField = new TextField();
-        ObjectProperty<TextField> other = new SimpleObjectProperty<TextField>(textField);
+        ObjectProperty<TextField> other = new SimpleObjectProperty<>(textField);
         label.labelForProperty().bind(other);
         other.set(null);
         assertEquals(0, getListenerCount(NodeHelper.showMnemonicsProperty(textField)));
@@ -237,7 +234,7 @@ public class LabelTest {
     @Test public void swappingLabelForShouldAddAndRemoveListenerFromShowMnemonics_WhenBound() {
         TextField a = new TextField();
         TextField b = new TextField();
-        ObjectProperty<TextField> other = new SimpleObjectProperty<TextField>(a);
+        ObjectProperty<TextField> other = new SimpleObjectProperty<>(a);
         label.labelForProperty().bind(other);
         other.set(b);
         assertEquals(0, getListenerCount(NodeHelper.showMnemonicsProperty(a)));

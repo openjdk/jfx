@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -59,7 +59,7 @@ public abstract class GraphicsPipeline {
         SM3
     }
     private FontFactory fontFactory;
-    private final Set<Runnable> disposeHooks = new HashSet<Runnable>();
+    private final Set<Runnable> disposeHooks = new HashSet<>();
 
     public abstract boolean init();
     public void dispose() {
@@ -84,7 +84,7 @@ public abstract class GraphicsPipeline {
     private void notifyDisposeHooks() {
         List<Runnable> hooks;
         synchronized (disposeHooks) {
-            hooks = new ArrayList<Runnable>(disposeHooks);
+            hooks = new ArrayList<>(disposeHooks);
             disposeHooks.clear();
         }
 

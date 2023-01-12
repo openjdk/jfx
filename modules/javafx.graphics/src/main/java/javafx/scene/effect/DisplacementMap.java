@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -105,7 +105,7 @@ public class DisplacementMap extends Effect {
         return new com.sun.scenario.effect.DisplacementMap(
                             new com.sun.scenario.effect.FloatMap(1, 1),
                             com.sun.scenario.effect.Effect.DefaultInput);
-    };
+    }
 
     /**
      * Creates a new instance of DisplacementMap with default parameters.
@@ -201,7 +201,7 @@ public class DisplacementMap extends Effect {
 
     public final ObjectProperty<FloatMap> mapDataProperty() {
         if (mapData == null) {
-            mapData = new ObjectPropertyBase<FloatMap>() {
+            mapData = new ObjectPropertyBase<>() {
 
                 @Override
                 public void invalidated() {
@@ -240,7 +240,7 @@ public class DisplacementMap extends Effect {
                 effectBoundsChanged();
             }
         }
-    };
+    }
 
     /**
      * The scale factor by which all x coordinate offset values in the

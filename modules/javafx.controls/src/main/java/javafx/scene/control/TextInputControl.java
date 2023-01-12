@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,7 +30,6 @@ import javafx.beans.DefaultProperty;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.binding.IntegerBinding;
-import javafx.beans.binding.StringBinding;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ObjectPropertyBase;
@@ -299,7 +298,7 @@ public abstract class TextInputControl extends Control {
      * @defaultValue null
      * @since JavaFX 8u40
      */
-    private final ObjectProperty<TextFormatter<?>> textFormatter = new ObjectPropertyBase<TextFormatter<?>>() {
+    private final ObjectProperty<TextFormatter<?>> textFormatter = new ObjectPropertyBase<>() {
 
         private TextFormatter<?> oldFormatter = null;
 
@@ -383,7 +382,7 @@ public abstract class TextInputControl extends Control {
     /**
      * The current selection.
      */
-    private ReadOnlyObjectWrapper<IndexRange> selection = new ReadOnlyObjectWrapper<IndexRange>(this, "selection", new IndexRange(0, 0));
+    private ReadOnlyObjectWrapper<IndexRange> selection = new ReadOnlyObjectWrapper<>(this, "selection", new IndexRange(0, 0));
     public final IndexRange getSelection() { return selection.getValue(); }
     public final ReadOnlyObjectProperty<IndexRange> selectionProperty() { return selection.getReadOnlyProperty(); }
 
@@ -1592,7 +1591,7 @@ public abstract class TextInputControl extends Control {
 
     private static class StyleableProperties {
         private static final FontCssMetaData<TextInputControl> FONT =
-            new FontCssMetaData<TextInputControl>("-fx-font", Font.getDefault()) {
+            new FontCssMetaData<>("-fx-font", Font.getDefault()) {
 
             @Override
             public boolean isSettable(TextInputControl n) {
@@ -1608,7 +1607,7 @@ public abstract class TextInputControl extends Control {
         private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
         static {
             final List<CssMetaData<? extends Styleable, ?>> styleables =
-                new ArrayList<CssMetaData<? extends Styleable, ?>>(Control.getClassCssMetaData());
+                new ArrayList<>(Control.getClassCssMetaData());
             styleables.add(FONT);
             STYLEABLES = Collections.unmodifiableList(styleables);
         }

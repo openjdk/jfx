@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -33,7 +33,6 @@ import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.BooleanPropertyBase;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
-import javafx.beans.value.WritableValue;
 import javafx.geometry.Orientation;
 import javafx.scene.AccessibleAction;
 import javafx.scene.AccessibleAttribute;
@@ -142,7 +141,7 @@ public class TitledPane extends Labeled {
      */
     public final ObjectProperty<Node> contentProperty() {
         if (content == null) {
-            content = new SimpleObjectProperty<Node>(this, "content");
+            content = new SimpleObjectProperty<>(this, "content");
         }
         return content;
     }
@@ -299,7 +298,7 @@ public class TitledPane extends Labeled {
     private static class StyleableProperties {
 
        private static final CssMetaData<TitledPane,Boolean> COLLAPSIBLE =
-           new CssMetaData<TitledPane,Boolean>("-fx-collapsible",
+           new CssMetaData<>("-fx-collapsible",
                BooleanConverter.getInstance(), Boolean.TRUE) {
 
             @Override
@@ -309,12 +308,12 @@ public class TitledPane extends Labeled {
 
             @Override
             public StyleableProperty<Boolean> getStyleableProperty(TitledPane n) {
-                return (StyleableProperty<Boolean>)(WritableValue<Boolean>)n.collapsibleProperty();
+                return (StyleableProperty<Boolean>)n.collapsibleProperty();
             }
         };
 
         private static final CssMetaData<TitledPane,Boolean> ANIMATED =
-           new CssMetaData<TitledPane,Boolean>("-fx-animated",
+           new CssMetaData<>("-fx-animated",
                BooleanConverter.getInstance(), Boolean.TRUE) {
 
             @Override
@@ -324,14 +323,14 @@ public class TitledPane extends Labeled {
 
             @Override
             public StyleableProperty<Boolean> getStyleableProperty(TitledPane n) {
-                return (StyleableProperty<Boolean>)(WritableValue<Boolean>)n.animatedProperty();
+                return (StyleableProperty<Boolean>)n.animatedProperty();
             }
         };
 
         private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
         static {
             final List<CssMetaData<? extends Styleable, ?>> styleables =
-                new ArrayList<CssMetaData<? extends Styleable, ?>>(Labeled.getClassCssMetaData());
+                new ArrayList<>(Labeled.getClassCssMetaData());
             styleables.add(COLLAPSIBLE);
             styleables.add(ANIMATED);
             STYLEABLES = Collections.unmodifiableList(styleables);

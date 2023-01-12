@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -76,8 +76,7 @@ public class PlatformImpl {
     private static volatile boolean firstWindowShown = false;
     private static volatile boolean lastWindowClosed = false;
     private static AtomicBoolean reallyIdle = new AtomicBoolean(false);
-    private static Set<FinishListener> finishListeners =
-            new CopyOnWriteArraySet<FinishListener>();
+    private static Set<FinishListener> finishListeners = new CopyOnWriteArraySet<>();
     private final static Object runLaterLock = new Object();
     private static Boolean isGraphicsSupported;
     private static Boolean isControlsSupported;

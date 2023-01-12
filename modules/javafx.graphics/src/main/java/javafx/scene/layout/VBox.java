@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -597,8 +597,8 @@ public class VBox extends Pane {
       */
      private static class StyleableProperties {
          private static final CssMetaData<VBox,Pos> ALIGNMENT =
-             new CssMetaData<VBox,Pos>("-fx-alignment",
-                 new EnumConverter<Pos>(Pos.class), Pos.TOP_LEFT){
+             new CssMetaData<>("-fx-alignment",
+                 new EnumConverter<>(Pos.class), Pos.TOP_LEFT){
 
             @Override
             public boolean isSettable(VBox node) {
@@ -612,7 +612,7 @@ public class VBox extends Pane {
         };
 
          private static final CssMetaData<VBox,Boolean> FILL_WIDTH =
-             new CssMetaData<VBox,Boolean>("-fx-fill-width",
+             new CssMetaData<>("-fx-fill-width",
                  BooleanConverter.getInstance(), Boolean.TRUE) {
 
             @Override
@@ -627,7 +627,7 @@ public class VBox extends Pane {
         };
 
          private static final CssMetaData<VBox,Number> SPACING =
-             new CssMetaData<VBox,Number>("-fx-spacing",
+             new CssMetaData<>("-fx-spacing",
                  SizeConverter.getInstance(), 0d) {
 
             @Override
@@ -644,7 +644,7 @@ public class VBox extends Pane {
          private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
          static {
             final List<CssMetaData<? extends Styleable, ?>> styleables =
-                new ArrayList<CssMetaData<? extends Styleable, ?>>(Region.getClassCssMetaData());
+                new ArrayList<>(Region.getClassCssMetaData());
             styleables.add(ALIGNMENT);
             styleables.add(FILL_WIDTH);
             styleables.add(SPACING);

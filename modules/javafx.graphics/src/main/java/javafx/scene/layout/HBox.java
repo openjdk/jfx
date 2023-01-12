@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -672,8 +672,8 @@ public class HBox extends Pane {
      private static class StyleableProperties {
 
          private static final CssMetaData<HBox,Pos> ALIGNMENT =
-             new CssMetaData<HBox,Pos>("-fx-alignment",
-                 new EnumConverter<Pos>(Pos.class),
+             new CssMetaData<>("-fx-alignment",
+                 new EnumConverter<>(Pos.class),
                  Pos.TOP_LEFT) {
 
             @Override
@@ -689,7 +689,7 @@ public class HBox extends Pane {
          };
 
          private static final CssMetaData<HBox,Boolean> FILL_HEIGHT =
-             new CssMetaData<HBox,Boolean>("-fx-fill-height",
+             new CssMetaData<>("-fx-fill-height",
                  BooleanConverter.getInstance(), Boolean.TRUE) {
 
             @Override
@@ -706,7 +706,7 @@ public class HBox extends Pane {
          };
 
          private static final CssMetaData<HBox,Number> SPACING =
-             new CssMetaData<HBox,Number>("-fx-spacing",
+             new CssMetaData<>("-fx-spacing",
                  SizeConverter.getInstance(), 0.0){
 
             @Override
@@ -724,7 +724,7 @@ public class HBox extends Pane {
          private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
          static {
             final List<CssMetaData<? extends Styleable, ?>> styleables =
-                new ArrayList<CssMetaData<? extends Styleable, ?>>(Pane.getClassCssMetaData());
+                new ArrayList<>(Pane.getClassCssMetaData());
             styleables.add(FILL_HEIGHT);
             styleables.add(ALIGNMENT);
             styleables.add(SPACING);

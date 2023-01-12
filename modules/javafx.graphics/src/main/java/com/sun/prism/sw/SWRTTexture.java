@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -108,10 +108,12 @@ class SWRTTexture extends SWArgbPreTexture implements RTTexture {
         return true;
     }
 
+    @Override
     public Screen getAssociatedScreen() {
         return getResourceFactory().getScreen();
     }
 
+    @Override
     public Graphics createGraphics() {
         if (pr == null) {
             pr = new PiscesRenderer(this.surface);
@@ -119,16 +121,19 @@ class SWRTTexture extends SWArgbPreTexture implements RTTexture {
         return new SWGraphics(this, getResourceFactory().getContext(), pr);
     }
 
+    @Override
     public boolean isOpaque() {
         return isOpaque;
     }
 
+    @Override
     public void setOpaque(boolean opaque) {
         this.isOpaque = opaque;
     }
 
     Rectangle getDimensions() { return dimensions; }
 
+    @Override
     public boolean isVolatile() {
         return false;
     }

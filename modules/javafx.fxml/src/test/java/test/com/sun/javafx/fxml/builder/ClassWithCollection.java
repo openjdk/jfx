@@ -36,7 +36,7 @@ public class ClassWithCollection {
     public double a;
     public double b;
     public List<Integer> list;
-    ObservableList<Integer> propertyList = new TrackableObservableList<Integer>() {
+    ObservableList<Integer> propertyList = new TrackableObservableList<>() {
         @Override
         protected void onChanged(ListChangeListener.Change<Integer> c) {}
     };

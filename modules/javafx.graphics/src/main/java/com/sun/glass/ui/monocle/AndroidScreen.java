@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -33,6 +33,7 @@ import java.nio.ByteBuffer;
 public class AndroidScreen implements NativeScreen {
 
     private float density = -1;
+    @Override
     public int getDepth() {
         return 24;
     }
@@ -41,6 +42,7 @@ public class AndroidScreen implements NativeScreen {
      * Returns the native format of the screen, as a constant from the Pixels
      * class.
      */
+    @Override
     public int getNativeFormat() {
         return Pixels.Format.BYTE_ARGB;
     }
@@ -48,6 +50,7 @@ public class AndroidScreen implements NativeScreen {
     /**
      * Returns the pixel width of the screen.
      */
+    @Override
     public int getWidth() {
         int answer = (int)(_getWidth()/getScale());
         return answer;
@@ -56,6 +59,7 @@ public class AndroidScreen implements NativeScreen {
     /**
      * Returns the pixel height of the screen.
      */
+    @Override
     public int getHeight() {
         return (int)(_getHeight()/getScale());
     }
@@ -63,6 +67,7 @@ public class AndroidScreen implements NativeScreen {
     /**
      * Returns the number of pixels per inch in the screen.
      */
+    @Override
     public int getDPI() {
         return 100;
     }
@@ -78,6 +83,7 @@ public class AndroidScreen implements NativeScreen {
     /**
      * Returns a native handle for the screen. The handle is platform-specific.
      */
+    @Override
     public long getNativeHandle() {
         long answer = _getNativeHandle();
         return answer;
@@ -86,6 +92,7 @@ public class AndroidScreen implements NativeScreen {
     /**
      * Called during JavaFX shutdown to release the screen. Called only once.
      */
+    @Override
     public void shutdown() {
         _shutdown();
     }
@@ -101,6 +108,7 @@ public class AndroidScreen implements NativeScreen {
      * @param alpha The alpha level to use to compose the data over existing
      *              pixels
      */
+    @Override
     public void uploadPixels(Buffer b,
                              int x, int y, int width, int height, float alpha) {
         _uploadPixels (b, x, y, width, height, alpha);
@@ -110,6 +118,7 @@ public class AndroidScreen implements NativeScreen {
      * Called on the JavaFX application thread when pixel data for all windows
      * has been uploaded.
      */
+    @Override
     public void swapBuffers() {
         _swapBuffers();
     }
@@ -118,6 +127,7 @@ public class AndroidScreen implements NativeScreen {
      * Returns a read-only ByteBuffer in the native pixel format containing the screen contents.
      * @return ByteBuffer a read-only ByteBuffer containing the screen contents
      */
+    @Override
     public ByteBuffer getScreenCapture() {
         return _getScreenCapture();
     }

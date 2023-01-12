@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -79,11 +79,11 @@ public class MapBindingTest {
         binding2 = new MapBindingImpl(dependency1, dependency2);
         emptyMap = FXCollections.observableMap(Collections.emptyMap());
         set1 = FXCollections.observableMap(Collections.singletonMap(KEY_1, DATA_1));
-        final Map<Object, Object> map = new HashMap<Object, Object>();
+        final Map<Object, Object> map = new HashMap<>();
         map.put(KEY_2_0, DATA_2_0);
         map.put(KEY_2_1, DATA_2_1);
         set2 = FXCollections.observableMap(map);
-        listener = new MockMapObserver<Object, Object>();
+        listener = new MockMapObserver<>();
         binding0.setValue(set2);
         binding1.setValue(set2);
         binding2.setValue(set2);
@@ -159,7 +159,7 @@ public class MapBindingTest {
         binding1.setValue(set1);
         dependency1.fireValueChangedEvent();
         assertEquals(1, binding1.getComputeValueCounter());
-        listener.assertMultipleCalls(new Call[]{new Call<Object, Object>(KEY_2_0, DATA_2_0, null), new Call<Object, Object>(KEY_2_1, DATA_2_1, null), new Call<Object, Object>(KEY_1, null, DATA_1)});
+        listener.assertMultipleCalls(new Call[]{new Call<>(KEY_2_0, DATA_2_0, null), new Call<>(KEY_2_1, DATA_2_1, null), new Call<>(KEY_1, null, DATA_1)});
         assertEquals(true, binding1.isValid());
         listener.clear();
 
@@ -190,7 +190,7 @@ public class MapBindingTest {
         binding1.setValue(set1);
         dependency1.fireValueChangedEvent();
         assertEquals(2, binding1.getComputeValueCounter());
-        listener.assertMultipleCalls(new Call[]{new Call<Object, Object>(KEY_2_0, DATA_2_0, null), new Call<Object, Object>(KEY_2_1, DATA_2_1, null), new Call<Object, Object>(KEY_1, null, DATA_1)});
+        listener.assertMultipleCalls(new Call[]{new Call<>(KEY_2_0, DATA_2_0, null), new Call<>(KEY_2_1, DATA_2_1, null), new Call<>(KEY_1, null, DATA_1)});
         assertEquals(true, binding1.isValid());
         listener.clear();
 
@@ -206,7 +206,7 @@ public class MapBindingTest {
         binding1.setValue(set2);
         dependency1.fireValueChangedEvent();
         assertEquals(2, binding1.getComputeValueCounter());
-        listener.assertMultipleCalls(new Call[] {new Call<Object, Object>(KEY_1, DATA_1, null), new Call<Object, Object>(KEY_2_0, null, DATA_2_0), new Call<Object, Object>(KEY_2_1, null, DATA_2_1)});
+        listener.assertMultipleCalls(new Call[] {new Call<>(KEY_1, DATA_1, null), new Call<>(KEY_2_0, null, DATA_2_0), new Call<>(KEY_2_1, null, DATA_2_1)});
         assertEquals(true, binding1.isValid());
         listener.clear();
 
@@ -300,6 +300,7 @@ public class MapBindingTest {
             return value;
         }
 
+        @Override
         public ObservableList<?> getDependencies() {
             fail("Should not reach here");
             return null;

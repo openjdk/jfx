@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,6 +27,7 @@ package javafx.scene.control.skin;
 
 import com.sun.javafx.scene.ParentHelper;
 import com.sun.javafx.scene.control.FakeFocusTextField;
+import com.sun.javafx.scene.control.ListenerHelper;
 import com.sun.javafx.scene.control.Properties;
 import com.sun.javafx.scene.control.behavior.TextInputControlBehavior;
 import com.sun.javafx.scene.input.ExtendedInputMethodRequests;
@@ -50,6 +51,7 @@ import javafx.scene.control.Skin;
 import javafx.scene.control.Skinnable;
 import javafx.scene.control.TextField;
 import javafx.scene.input.DragEvent;
+import javafx.scene.input.InputMethodEvent;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
@@ -104,6 +106,8 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
         }
     };
 
+    private EventHandler<? super InputMethodEvent> inputMethodTextChangedHandler;
+
 
 
     /* *************************************************************************
@@ -133,15 +137,17 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
             getChildren().add(textField);
         }
 
+        ListenerHelper lh = ListenerHelper.get(this);
+
         // move fake focus in to the textfield if the comboBox is editable
-        comboBoxBase.focusedProperty().addListener((ov, t, hasFocus) -> {
+        lh.addChangeListener(comboBoxBase.focusedProperty(), (ov, t, hasFocus) -> {
             if (getEditor() != null) {
                 // Fix for the regression noted in a comment in RT-29885.
                 ((FakeFocusTextField)textField).setFakeFocus(hasFocus);
             }
         });
 
-        comboBoxBase.addEventFilter(KeyEvent.ANY, ke -> {
+        lh.addEventFilter(comboBoxBase, KeyEvent.ANY, (ke) -> {
             if (textField == null || getEditor() == null) {
                 handleKeyEvent(ke, false);
             } else {
@@ -169,16 +175,20 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
                 }
             }
         });
+    }
 
+    @Override
+    public void install() {
         // RT-38978: Forward input method events to TextField if editable.
         if (comboBoxBase.getOnInputMethodTextChanged() == null) {
-            comboBoxBase.setOnInputMethodTextChanged(event -> {
+            inputMethodTextChangedHandler = event -> {
                 if (textField != null && getEditor() != null && comboBoxBase.getScene().getFocusOwner() == comboBoxBase) {
                     if (textField.getOnInputMethodTextChanged() != null) {
                         textField.getOnInputMethodTextChanged().handle(event);
                     }
                 }
-            });
+            };
+            comboBoxBase.setOnInputMethodTextChanged(inputMethodTextChangedHandler);
         }
 
         // Fix for RT-36902, where focus traversal was getting stuck inside the ComboBox
@@ -201,6 +211,18 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
         updateEditable();
     }
 
+    @Override
+    public void dispose() {
+        removeTextFieldEventFilters();
+
+        if (inputMethodTextChangedHandler != null) {
+            if (comboBoxBase.getOnInputMethodTextChanged() == inputMethodTextChangedHandler) {
+                comboBoxBase.setOnInputMethodTextChanged(null);
+            }
+        }
+
+        super.dispose();
+    }
 
 
     /* *************************************************************************
@@ -344,17 +366,21 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
         }
     }
 
+    private void removeTextFieldEventFilters() {
+        if (textField != null) {
+            textField.removeEventFilter(MouseEvent.DRAG_DETECTED, textFieldMouseEventHandler);
+            textField.removeEventFilter(DragEvent.ANY, textFieldDragEventHandler);
+
+            comboBoxBase.setInputMethodRequests(null);
+        }
+    }
+
     void updateEditable() {
         TextField newTextField = getEditor();
 
         if (getEditor() == null) {
             // remove event filters
-            if (textField != null) {
-                textField.removeEventFilter(MouseEvent.DRAG_DETECTED, textFieldMouseEventHandler);
-                textField.removeEventFilter(DragEvent.ANY, textFieldDragEventHandler);
-
-                comboBoxBase.setInputMethodRequests(null);
-            }
+            removeTextFieldEventFilters();
         } else if (newTextField != null) {
             // add event filters
 
@@ -474,38 +500,41 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
         popup.setAutoFix(true);
         popup.setHideOnEscape(true);
         popup.setOnAutoHide(e -> getBehavior().onAutoHide(popup));
-        popup.addEventHandler(MouseEvent.MOUSE_CLICKED, t -> {
+
+        ListenerHelper lh = ListenerHelper.get(this);
+        lh.addEventHandler(popup, MouseEvent.MOUSE_CLICKED, t -> {
             // RT-18529: We listen to mouse input that is received by the popup
             // but that is not consumed, and assume that this is due to the mouse
             // clicking outside of the node, but in areas such as the
             // dropshadow.
             getBehavior().onAutoHide(popup);
         });
-        popup.addEventHandler(WindowEvent.WINDOW_HIDDEN, t -> {
+        lh.addEventHandler(popup, WindowEvent.WINDOW_HIDDEN, t -> {
             // Make sure the accessibility focus returns to the combo box
             // after the window closes.
             getSkinnable().notifyAccessibleAttributeChanged(AccessibleAttribute.FOCUS_NODE);
         });
 
         // Fix for RT-21207
-        InvalidationListener layoutPosListener = o -> {
-            popupNeedsReconfiguring = true;
-            reconfigurePopup();
-        };
-        getSkinnable().layoutXProperty().addListener(layoutPosListener);
-        getSkinnable().layoutYProperty().addListener(layoutPosListener);
-        getSkinnable().widthProperty().addListener(layoutPosListener);
-        getSkinnable().heightProperty().addListener(layoutPosListener);
+        lh.addInvalidationListener(() -> {
+                popupNeedsReconfiguring = true;
+                reconfigurePopup();
+            },
+            getSkinnable().layoutXProperty(),
+            getSkinnable().layoutYProperty(),
+            getSkinnable().widthProperty(),
+            getSkinnable().heightProperty()
+        );
 
         // RT-36966 - if skinnable's scene becomes null, ensure popup is closed
-        getSkinnable().sceneProperty().addListener(o -> {
-            if (((ObservableValue)o).getValue() == null) {
+        // FIX npe
+        lh.addInvalidationListener(getSkinnable().sceneProperty(), (obs) -> {
+            if (((ObservableValue)obs).getValue() == null) {
                 hide();
             } else if (getSkinnable().isShowing()) {
                 show();
             }
         });
-
     }
 
     void reconfigurePopup() {

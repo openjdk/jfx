@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -198,7 +198,7 @@ public class LabeledTest {
     }
 
     @Test public void textFillCanBeBound() {
-        ObjectProperty<Paint> other = new SimpleObjectProperty<Paint>(Color.RED);
+        ObjectProperty<Paint> other = new SimpleObjectProperty<>(Color.RED);
         labeled.textFillProperty().bind(other);
         assertSame(Color.RED, labeled.getTextFill());
     }
@@ -206,7 +206,7 @@ public class LabeledTest {
     @Test public void whenTextFillIsBound_CssMetaData_isSettable_ReturnsFalse() {
         CssMetaData styleable = ((StyleableProperty)labeled.textFillProperty()).getCssMetaData();
         assertTrue(styleable.isSettable(labeled));
-        ObjectProperty<Paint> other = new SimpleObjectProperty<Paint>(Color.RED);
+        ObjectProperty<Paint> other = new SimpleObjectProperty<>(Color.RED);
         labeled.textFillProperty().bind(other);
         assertFalse(styleable.isSettable(labeled));
 
@@ -263,14 +263,14 @@ public class LabeledTest {
     }
 
     @Test public void alignmentCanBeBound() {
-        ObjectProperty<Pos> other = new SimpleObjectProperty<Pos>(Pos.BASELINE_RIGHT);
+        ObjectProperty<Pos> other = new SimpleObjectProperty<>(Pos.BASELINE_RIGHT);
         labeled.alignmentProperty().bind(other);
         assertEquals(Pos.BASELINE_RIGHT, labeled.getAlignment());
     }
 
     @Test public void whenAlignmentIsBound_CssMetaData_isSettable_ReturnsFalse() {
         CssMetaData styleable = ((StyleableProperty)labeled.alignmentProperty()).getCssMetaData();
-        ObjectProperty<Pos> other = new SimpleObjectProperty<Pos>(Pos.BASELINE_RIGHT);
+        ObjectProperty<Pos> other = new SimpleObjectProperty<>(Pos.BASELINE_RIGHT);
         labeled.alignmentProperty().bind(other);
         assertFalse(styleable.isSettable(labeled));
     }
@@ -319,7 +319,7 @@ public class LabeledTest {
     }
 
     @Test public void textAlignmentCanBeBound() {
-        ObjectProperty<TextAlignment> other = new SimpleObjectProperty<TextAlignment>(TextAlignment.RIGHT);
+        ObjectProperty<TextAlignment> other = new SimpleObjectProperty<>(TextAlignment.RIGHT);
         labeled.textAlignmentProperty().bind(other);
         assertEquals(TextAlignment.RIGHT, labeled.getTextAlignment());
     }
@@ -327,7 +327,7 @@ public class LabeledTest {
     @Test public void whenTextAlignmentIsBound_CssMetaData_isSettable_ReturnsFalse() {
         CssMetaData styleable = ((StyleableProperty)labeled.textAlignmentProperty()).getCssMetaData();
         assertTrue(styleable.isSettable(labeled));
-        ObjectProperty<TextAlignment> other = new SimpleObjectProperty<TextAlignment>(TextAlignment.RIGHT);
+        ObjectProperty<TextAlignment> other = new SimpleObjectProperty<>(TextAlignment.RIGHT);
         labeled.textAlignmentProperty().bind(other);
         assertFalse(styleable.isSettable(labeled));
     }
@@ -376,7 +376,7 @@ public class LabeledTest {
     }
 
     @Test public void textOverrunCanBeBound() {
-        ObjectProperty<OverrunStyle> other = new SimpleObjectProperty<OverrunStyle>(OverrunStyle.LEADING_WORD_ELLIPSIS);
+        ObjectProperty<OverrunStyle> other = new SimpleObjectProperty<>(OverrunStyle.LEADING_WORD_ELLIPSIS);
         labeled.textOverrunProperty().bind(other);
         assertEquals(OverrunStyle.LEADING_WORD_ELLIPSIS, labeled.getTextOverrun());
     }
@@ -384,7 +384,7 @@ public class LabeledTest {
     @Test public void whenTextOverrunIsBound_CssMetaData_isSettable_ReturnsFalse() {
         CssMetaData styleable = ((StyleableProperty)labeled.textOverrunProperty()).getCssMetaData();
         assertTrue(styleable.isSettable(labeled));
-        ObjectProperty<OverrunStyle> other = new SimpleObjectProperty<OverrunStyle>(OverrunStyle.LEADING_WORD_ELLIPSIS);
+        ObjectProperty<OverrunStyle> other = new SimpleObjectProperty<>(OverrunStyle.LEADING_WORD_ELLIPSIS);
         labeled.textOverrunProperty().bind(other);
         assertFalse(styleable.isSettable(labeled));
     }
@@ -498,7 +498,7 @@ public class LabeledTest {
 
     @Test public void fontCanBeBound() {
         final Font f = Font.font("Arial", 25);
-        ObjectProperty<Font> other = new SimpleObjectProperty<Font>(f);
+        ObjectProperty<Font> other = new SimpleObjectProperty<>(f);
         labeled.fontProperty().bind(other);
         assertEquals(f, labeled.getFont());
     }
@@ -507,7 +507,7 @@ public class LabeledTest {
         final Font f = Font.font("Arial", 25);
         CssMetaData styleable = ((StyleableProperty)labeled.fontProperty()).getCssMetaData();
         assertTrue(styleable.isSettable(labeled));
-        ObjectProperty<Font> other = new SimpleObjectProperty<Font>(f);
+        ObjectProperty<Font> other = new SimpleObjectProperty<>(f);
         labeled.fontProperty().bind(other);
         assertFalse(styleable.isSettable(labeled));
     }
@@ -562,7 +562,7 @@ public class LabeledTest {
 
     @Test public void graphicCanBeBound() {
         Rectangle r = new Rectangle();
-        ObjectProperty<Node> other = new SimpleObjectProperty<Node>(r);
+        ObjectProperty<Node> other = new SimpleObjectProperty<>(r);
         labeled.graphicProperty().bind(other);
         assertEquals(r, labeled.getGraphic());
     }
@@ -571,7 +571,7 @@ public class LabeledTest {
         CssMetaData styleable = ((StyleableProperty)labeled.graphicProperty()).getCssMetaData();
         assertTrue(styleable.isSettable(labeled));
         Rectangle r = new Rectangle();
-        ObjectProperty<Node> other = new SimpleObjectProperty<Node>(r);
+        ObjectProperty<Node> other = new SimpleObjectProperty<>(r);
         labeled.graphicProperty().bind(other);
         assertFalse(styleable.isSettable(labeled));
     }
@@ -672,7 +672,7 @@ public class LabeledTest {
     }
 
     @Test public void contentDisplayCanBeBound() {
-        ObjectProperty<ContentDisplay> other = new SimpleObjectProperty<ContentDisplay>(ContentDisplay.RIGHT);
+        ObjectProperty<ContentDisplay> other = new SimpleObjectProperty<>(ContentDisplay.RIGHT);
         labeled.contentDisplayProperty().bind(other);
         assertEquals(ContentDisplay.RIGHT, labeled.getContentDisplay());
     }
@@ -680,7 +680,7 @@ public class LabeledTest {
     @Test public void whenContentDisplayIsBound_CssMetaData_isSettable_ReturnsFalse() {
         CssMetaData styleable = ((StyleableProperty)labeled.contentDisplayProperty()).getCssMetaData();
         assertTrue(styleable.isSettable(labeled));
-        ObjectProperty<ContentDisplay> other = new SimpleObjectProperty<ContentDisplay>(ContentDisplay.RIGHT);
+        ObjectProperty<ContentDisplay> other = new SimpleObjectProperty<>(ContentDisplay.RIGHT);
         labeled.contentDisplayProperty().bind(other);
         assertFalse(styleable.isSettable(labeled));
     }

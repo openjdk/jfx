@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -68,8 +68,8 @@ public class ListPropertyBaseTest {
     public void setUp() throws Exception {
         property = new ListPropertyMock();
         invalidationListener = new InvalidationListenerMock();
-        changeListener = new ChangeListenerMock<ObservableList<Object>>(UNDEFINED);
-        listChangeListener = new MockListObserver<Object>();
+        changeListener = new ChangeListenerMock<>(UNDEFINED);
+        listChangeListener = new MockListObserver<>();
     }
 
     private void attachInvalidationListener() {
@@ -92,12 +92,12 @@ public class ListPropertyBaseTest {
 
     @Test
     public void testConstructor() {
-        final ListProperty<Object> p1 = new SimpleListProperty<Object>();
+        final ListProperty<Object> p1 = new SimpleListProperty<>();
         assertEquals(null, p1.get());
         assertEquals(null, p1.getValue());
         assertFalse(property.isBound());
 
-        final ListProperty<Object> p2 = new SimpleListProperty<Object>(VALUE_1b);
+        final ListProperty<Object> p2 = new SimpleListProperty<>(VALUE_1b);
         assertEquals(VALUE_1b, p2.get());
         assertEquals(VALUE_1b, p2.getValue());
         assertFalse(property.isBound());
@@ -481,7 +481,7 @@ public class ListPropertyBaseTest {
 
     @Test(expected = RuntimeException.class)
     public void testSetBoundValue() {
-        final ListProperty<Object> v = new SimpleListProperty<Object>(VALUE_1a);
+        final ListProperty<Object> v = new SimpleListProperty<>(VALUE_1a);
         property.bind(v);
         property.set(VALUE_1a);
     }
@@ -489,7 +489,7 @@ public class ListPropertyBaseTest {
     @Test
     public void testBind_Invalidation() {
         attachInvalidationListener();
-        final ObservableObjectValueStub<ObservableList<Object>> v = new ObservableObjectValueStub<ObservableList<Object>>(FXCollections.observableArrayList(VALUE_1a));
+        final ObservableObjectValueStub<ObservableList<Object>> v = new ObservableObjectValueStub<>(FXCollections.observableArrayList(VALUE_1a));
 
         property.bind(v);
         assertEquals(VALUE_1a, property.get());
@@ -521,7 +521,7 @@ public class ListPropertyBaseTest {
     @Test
     public void testBind_Change() {
         attachChangeListener();
-        final ObservableObjectValueStub<ObservableList<Object>> v = new ObservableObjectValueStub<ObservableList<Object>>(FXCollections.observableArrayList(VALUE_1a));
+        final ObservableObjectValueStub<ObservableList<Object>> v = new ObservableObjectValueStub<>(FXCollections.observableArrayList(VALUE_1a));
 
         property.bind(v);
         assertEquals(VALUE_1a, property.get());
@@ -553,7 +553,7 @@ public class ListPropertyBaseTest {
     @Test
     public void testBind_ListChange() {
         attachListChangeListener();
-        final ObservableObjectValueStub<ObservableList<Object>> v = new ObservableObjectValueStub<ObservableList<Object>>(FXCollections.observableArrayList(VALUE_1a));
+        final ObservableObjectValueStub<ObservableList<Object>> v = new ObservableObjectValueStub<>(FXCollections.observableArrayList(VALUE_1a));
 
         property.bind(v);
         assertEquals(VALUE_1a, property.get());
@@ -593,8 +593,8 @@ public class ListPropertyBaseTest {
     @Test
     public void testRebind() {
         attachInvalidationListener();
-        final ListProperty<Object> v1 = new SimpleListProperty<Object>(VALUE_1a);
-        final ListProperty<Object> v2 = new SimpleListProperty<Object>(VALUE_2a);
+        final ListProperty<Object> v1 = new SimpleListProperty<>(VALUE_1a);
+        final ListProperty<Object> v2 = new SimpleListProperty<>(VALUE_2a);
         property.bind(v1);
         property.get();
         property.reset();
@@ -670,7 +670,7 @@ public class ListPropertyBaseTest {
     @Test
     public void testUnbind() {
         attachInvalidationListener();
-        final ListProperty<Object> v = new SimpleListProperty<Object>(VALUE_1a);
+        final ListProperty<Object> v = new SimpleListProperty<>(VALUE_1a);
         property.bind(v);
         property.unbind();
         assertEquals(VALUE_1a, property.get());
@@ -694,7 +694,7 @@ public class ListPropertyBaseTest {
 
     @Test
     public void testAddingListenerWillAlwaysReceiveInvalidationEvent() {
-        final ListProperty<Object> v = new SimpleListProperty<Object>(VALUE_1a);
+        final ListProperty<Object> v = new SimpleListProperty<>(VALUE_1a);
         final InvalidationListenerMock listener2 = new InvalidationListenerMock();
         final InvalidationListenerMock listener3 = new InvalidationListenerMock();
 
@@ -772,7 +772,7 @@ public class ListPropertyBaseTest {
         final ObservableList<Object> value0 = null;
         final ObservableList<Object> value1 = FXCollections.observableArrayList(new Object(), new Object());
         final ObservableList<Object> value2 = FXCollections.observableArrayList();
-        final ListProperty<Object> v = new SimpleListProperty<Object>(value2);
+        final ListProperty<Object> v = new SimpleListProperty<>(value2);
 
         property.set(value1);
         assertEquals("ListProperty [value: " + value1 + "]", property.toString());
