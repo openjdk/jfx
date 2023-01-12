@@ -439,9 +439,6 @@ HRESULT PopImage(
         NULL,
         &spStorage))
 
-    STATSTG stgStats;
-    spStorage->Stat(&stgStats, STATFLAG_DEFAULT);
-    STRACE(stgStats.pwcsName);
     IViewObject2Ptr view;
     OLE_HRT(::OleCreateStaticFromData(
         p,
@@ -509,7 +506,6 @@ HRESULT PopImage(
                     SelectBitmap(hMemoryDC, hOldBM);
                 }
             }
-            
             ::DeleteDC(hMemoryDC);
         }
         STRACE(_T("IViewObject size: %08x %08x"), size.cx, size.cy);
