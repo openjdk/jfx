@@ -50,15 +50,15 @@ public:
     void render();
 
 private:
-    D3DContext *context;
-    D3DMesh *mesh;
-    D3DPhongMaterial *material;
+    D3DContext *context = NULL;
+    D3DMesh *mesh = NULL;
+    D3DPhongMaterial *material = NULL;
     D3DLight lights[MAX_NUM_LIGHTS];
-    float ambientLightColor[3];
-    int numLights;
-    bool lightsDirty;
-    int cullMode;
-    bool wireframe;
+    float ambientLightColor[3] = {0};
+    int numLights = 0;
+    bool lightsDirty = true;
+    int cullMode = D3DCULL_NONE;
+    bool wireframe = false;
 };
 
 #endif  /* D3DMESHVIEW_H */

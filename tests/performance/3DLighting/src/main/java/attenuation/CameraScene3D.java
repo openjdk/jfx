@@ -61,9 +61,6 @@ class CameraScene3D extends Pane {
     public DoubleProperty fieldOfView = new SimpleDoubleProperty(camera.getFieldOfView());
     public BooleanProperty verticalFOV = new SimpleBooleanProperty(camera.isVerticalFieldOfView());
 
-    protected PointLight camLight = new PointLight();
-    public BooleanProperty camLightOn = new SimpleBooleanProperty(camLight.isLightOn());
-
     public Group rootGroup = new Group();
 
     public CameraScene3D() {
@@ -93,12 +90,7 @@ class CameraScene3D extends Pane {
 
         camera.getTransforms().addAll(panTranslation, zRotation, isometricRotation, zoomTranslation);
 
-        camLight.lightOnProperty().bind(camLightOn);
-        camLight.getTransforms().addAll(camera.getTransforms());
-        camLightOn.set(false);
-
         rootGroup.getTransforms().addAll();
-        rootGroup.getChildren().add(camLight);
         rootGroup.setId("root group");
     }
 
@@ -118,11 +110,13 @@ class CameraScene3D extends Pane {
         setOnZoom(e -> zoom(isZoomTotal.get() ? e.getTotalZoomFactor() : e.getZoomFactor()));
         setOnScroll(e -> {
             // touch scroll for moving the board
-            if (e.getEventType() == ScrollEvent.SCROLL_STARTED)
+            if (e.getEventType() == ScrollEvent.SCROLL_STARTED) {
                 pan(e.getDeltaX(), e.getDeltaY());
+            }
             // mouse scroll for zoom
-            else
+            else {
                 zoom(e.getDeltaY());
+            }
         });
 
         setOnMousePressed(e -> {
