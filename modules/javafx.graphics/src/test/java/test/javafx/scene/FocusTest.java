@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -1011,7 +1011,7 @@ public class FocusTest {
      * cleared when a focused node is removed must only be cleared as long as we don't encounter
      * another focused node up the tree.
      */
-    @Test public void testMultiLevelFocusWithinIsPreserved() {
+    @Test public void testMultiLevelFocusWithinIsPreservedWhenFocusedNodeIsRemoved() {
         class N extends Group {
             N(Node... children) {
                 super(children);
@@ -1049,6 +1049,48 @@ public class FocusTest {
         assertIsFocused(node2);
         assertNotFocused(node3);
         assertIsFocused(node4);
+    }
+
+    /**
+     * When a scene graph contains multiple nested focused nodes, the focusWithin bits that would
+     * be cleared when a focused node is de-focused must not be cleared when we have another
+     * focused downstream node.
+     */
+    @Test public void testMultiLevelFocusWithinIsPreservedWhenIntermediateFocusedNodeIsDefocused() {
+        class N extends Group {
+            N(Node... children) { super(children); }
+            void _setFocused(boolean value) { setFocused(value); }
+        }
+
+        N node1, node2, node3, node4;
+
+        scene.setRoot(
+            node1 = new N(
+                node2 = new N(
+                    node3 = new N(
+                        node4 = new N()
+                    )
+                )
+            ));
+
+        node2._setFocused(true);
+        node4._setFocused(true);
+        assertIsFocusWithin(node1);
+        assertIsFocusWithin(node2);
+        assertIsFocusWithin(node3);
+        assertIsFocusWithin(node4);
+
+        node2._setFocused(false);
+        assertIsFocusWithin(node1);
+        assertIsFocusWithin(node2);
+        assertIsFocusWithin(node3);
+        assertIsFocusWithin(node4);
+
+        node4._setFocused(false);
+        assertNotFocusWithin(node1);
+        assertNotFocusWithin(node2);
+        assertNotFocusWithin(node3);
+        assertNotFocusWithin(node4);
     }
 
 }
