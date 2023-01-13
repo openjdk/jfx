@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -123,10 +123,11 @@ import java.lang.ref.WeakReference;
  * a different type is specified and the ComboBox is to be editable, it is
  * necessary to specify a custom {@link StringConverter}.
  *
- * <h2>A warning about inserting Nodes into the ComboBox items list</h2>
+ * <h2>Warning: Nodes should not be inserted directly into the ComboBox items list</h2>
  * ComboBox allows for the items list to contain elements of any type, including
  * {@link Node} instances. Putting nodes into
- * the items list is <strong>strongly not recommended</strong>. This is because
+ * the items list is <strong>strongly discouraged</strong>, as it can
+ * lead to unexpected results. This is because
  * the default {@link #cellFactoryProperty() cell factory} simply inserts Node
  * items directly into the cell, including in the ComboBox 'button' area too.
  * Because the scenegraph only allows for Nodes to be in one place at a time,

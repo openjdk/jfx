@@ -256,6 +256,95 @@ import javafx.util.Callback;
  * <p>See the {@link Cell} class documentation for a more complete
  * description of how to write custom Cells.
  *
+ * <h4>Warning: Nodes should not be inserted directly into the TableView cells</h4>
+ * TableView allows for it's cells to contain elements of any type, including
+ * {@link Node} instances. Putting nodes into
+ * the TableView cells is <strong>strongly discouraged</strong>, as it can
+ * lead to unexpected results.
+ * <p>The recommended approach is to put the relevant information into the items list, and
+ * provide a custom {@link TableColumn#cellFactoryProperty() cell factory} to create the nodes for a
+ * given cell and update them on demand using the data stored in the item for that cell.
+ *
+ * <p>For example, rather than use the following code:
+ * <pre>{@code  class CustomRectangle {
+ *   private SimpleObjectProperty<Rectangle> rect;
+ *
+ *   CustomRectangle(Color col) {
+ *       this.rect = new SimpleObjectProperty<Rectangle>(new Rectangle(10, 10, col));
+ *   }
+ *   public Rectangle getRect() { return rect.getValue(); }
+ *   public void setRect(Rectangle r) { rect.setValue(r); }
+ *   public SimpleObjectProperty<Rectangle> rectProperty() { return rect; }
+ * }
+ *
+ * TableView<CustomRectangle> tableview = new TableView<CustomRectangle>();
+ *
+ * ObservableList<CustomRectangle> rectList = FXCollections.observableArrayList();
+ * rectList.addAll(
+ *     new CustomRectangle(Color.RED),
+ *     new CustomRectangle(Color.GREEN),
+ *     new CustomRectangle(Color.BLUE));
+ *
+ * TableColumn<CustomRectangle, Rectangle> col = new TableColumn<CustomRectangle, Rectangle>("Color");
+ * col.setCellValueFactory(data -> data.getValue().rectProperty());
+ *
+ * tableview.getColumns().add(col);
+ * tableview.setItems(rectList);
+ * }</pre>
+ *
+ * <p>You should do the following:</p>
+ * <pre> {@code
+ *  class CustomColor {
+ *    private SimpleObjectProperty<Color> color;
+ *
+ *    CustomColor(Color col) {
+ *      this.color = new SimpleObjectProperty<Color>(col);
+ *    }
+ *    public Color getColor() { return color.getValue(); }
+ *    public void setColor(Color c) { color.setValue(c); }
+ *    public SimpleObjectProperty<Color> colorProperty() { return color; }
+ *  }
+ *
+ *  TableView<CustomColor> tableview = new TableView<CustomColor>();
+ *
+ *  ObservableList<CustomColor> colorList = FXCollections.observableArrayList();
+ *  colorList.addAll(
+ *      new CustomColor(Color.RED),
+ *      new CustomColor(Color.GREEN),
+ *      new CustomColor(Color.BLUE));
+ *
+ *  TableColumn<CustomColor, Color> col = new TableColumn<CustomColor, Color>("Color");
+ *  col.setCellValueFactory(data -> data.getValue().colorProperty());
+ *
+ *  col.setCellFactory(p -> {
+ *    return new TableCell<CustomColor, Color> () {
+ *        private final Rectangle rectangle;
+ *        {
+ *            setContentDisplay(ContentDisplay.GRAPHIC_ONLY);
+ *            rectangle = new Rectangle(10, 10);
+ *        }
+ *
+ *        @Override
+ *        protected void updateItem(Color item, boolean empty) {
+ *          super.updateItem(item, empty);
+ *
+ *          if (item == null || empty) {
+ *              setGraphic(null);
+ *          } else {
+ *              rectangle.setFill(item);
+ *              setGraphic(rectangle);
+ *          }
+ *        }
+ *     };
+ *  });
+ *
+ *  tableview.getColumns().add(col);
+ *  tableview.setItems(colorList); }</pre>
+ *
+ * <p> This example has an anonymous custom {@code TableCell} class in the custom cell factory.
+ * Note that the Rectangle (Node) object needs to be created in the custom {@code TableCell} class
+ * or in it's constructor and updated/used in it's updateItem method.</p>
+ *
  * <h3>Sorting</h3>
  * <p>Prior to JavaFX 8.0, the TableView control would treat the
  * {@link #getItems() items} list as the view model, meaning that any changes to

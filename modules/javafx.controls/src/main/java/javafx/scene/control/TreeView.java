@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -127,6 +127,60 @@ import java.util.Map;
  * generate {@link TreeCell} instances, which are used to represent an item in the
  * TreeView. See the {@link Cell} class documentation for a more complete
  * description of how to write custom Cells.
+ *
+ * <h3>Warning: Nodes should not be inserted directly into the TreeView cells</h3>
+ * TreeView allows for it's cells to contain elements of any type, including
+ * {@code Node} instances. Putting nodes into
+ * the TreeView cells is <strong>strongly discouraged</strong>, as it can
+ * lead to unexpected results.
+ * <p>The recommended approach is to put the relevant information into the items list, and
+ * provide a custom {@link #cellFactoryProperty() cell factory} to create the nodes for a
+ * given cell and update them on demand using the
+ * data stored in the item for that cell.
+ *
+ * <p>For example, rather than use the following code:
+ * <pre>{@code   TreeItem<Rectangle> treeRoot = new TreeItem<>();
+ *  treeRoot.setExpanded(true);
+ *  treeRoot.getChildren().addAll(
+ *      new TreeItem<>(new Rectangle(10, 10, Color.RED)),
+ *      new TreeItem<>(new Rectangle(10, 10, Color.GREEN)),
+ *      new TreeItem<>(new Rectangle(10, 10, Color.BLUE))
+ *  );
+ *  TreeView<Rectangle> treeView = new TreeView<>(treeRoot);}</pre>
+ *
+ * <p>You should do the following:</p>
+ * <pre> {@code  TreeItem<Color> treeRoot = new TreeItem<>();
+ *  treeRoot.setExpanded(true);
+ *  TreeView<Color> treeView = new TreeView<>(treeRoot);
+ *
+ *  treeRoot.getChildren().addAll(
+ *      new TreeItem<>(Color.RED),
+ *      new TreeItem<>(Color.GREEN),
+ *      new TreeItem<>(Color.BLUE));
+ *
+ *  treeView.setCellFactory(p -> {
+ *      return new TreeCell<Color>() {
+ *      private final Rectangle rectangle;
+ *      {
+ *          setContentDisplay(ContentDisplay.GRAPHIC_ONLY);
+ *          rectangle = new Rectangle(10, 10);
+ *      }
+ *
+ *      @Override
+ *      protected void updateItem(Color item, boolean empty) {
+ *          super.updateItem(item, empty);
+ *
+ *          if (item == null || empty) {
+ *              setGraphic(null);
+ *          } else {
+ *              rectangle.setFill(item);
+ *              setGraphic(rectangle);
+ *          }
+ *      }
+ *  };});}</pre>
+ * <p> This example has an anonymous custom {@code TreeCell} class in the custom cell factory.
+ * Note that the Rectangle (Node) object needs to be created in the custom {@code TreeCell} class
+ * or in it's constructor and updated/used in it's updateItem method.</p>
  *
  * <h2>Editing</h2>
  * <p>This control supports inline editing of values, and this section attempts to
