@@ -59,6 +59,11 @@ public class VirtualFlowShim<T extends IndexedCell> extends VirtualFlow<T> {
     }
 
     @Override
+    public void setCellDirty(int idx) {
+        super.setCellDirty(idx);
+    }
+
+    @Override
     public void recreateCells() {
         super.recreateCells();
     }

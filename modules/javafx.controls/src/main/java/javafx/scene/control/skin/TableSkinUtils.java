@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2016, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -31,6 +31,7 @@ import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.scene.Node;
+import javafx.scene.control.ConstrainedColumnResizeBase;
 import javafx.scene.control.Control;
 import javafx.scene.control.IndexedCell;
 import javafx.scene.control.ResizeFeaturesBase;
@@ -201,7 +202,6 @@ class TableSkinUtils {
 
     /** returns true if the column resize policy is constrained */
     public static boolean isConstrainedResizePolicy(Callback<? extends ResizeFeaturesBase, Boolean> x) {
-        return (x == TableView.CONSTRAINED_RESIZE_POLICY) ||
-               (x == TreeTableView.CONSTRAINED_RESIZE_POLICY);
+        return (x instanceof ConstrainedColumnResizeBase);
     }
 }

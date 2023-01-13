@@ -118,8 +118,8 @@ public:
     FloatRect roundToDevicePixels(const FloatRect& frect, RoundingMode) override;
 
     bool supportsTransparencyLayers() const override;
-    void beginPlatformTransparencyLayer(float opacity);
-    void endPlatformTransparencyLayer();
+    void beginTransparencyLayer(float opacity) override;
+    void endTransparencyLayer() override;
 
     void translate(float x, float y) override;
     void rotate(float radians) override;

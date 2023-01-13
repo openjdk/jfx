@@ -358,7 +358,7 @@ def javaVersionInfo = parseJavaVersion(javaRuntimeVersion)
 defineProperty("javaVersion", javaVersionInfo[0])
 defineProperty("javaBuildNumber", javaVersionInfo[1])
 
-defineProperty("libAVRepositoryURL", "https://libav.org/releases/")
+defineProperty("libAVRepositoryURL", "https://github.com/libav/libav/archive")
 defineProperty("FFmpegRepositoryURL", "https://www.ffmpeg.org/releases/")
 defineProperty("icuRepositoryURL", "https://github.com/unicode-org/icu/releases/")
 
@@ -2348,7 +2348,7 @@ project(":graphics") {
                         ["$FXC", "/nologo", "/T", "ps_3_0", "/Fh", "$buildDir/headers/PrismD3D/hlsl/Mtl1PS_b1mi.h", "/DSpec=1", "/DSType=3", "/DBump=1", "/DIllumMap=1", "$PS_3D_SRC"],
                         ["$FXC", "/nologo", "/T", "ps_3_0", "/Fh", "$buildDir/headers/PrismD3D/hlsl/Mtl1PS_b2mi.h", "/DSpec=2", "/DSType=3", "/DBump=1", "/DIllumMap=1", "$PS_3D_SRC"],
                         ["$FXC", "/nologo", "/T", "ps_3_0", "/Fh", "$buildDir/headers/PrismD3D/hlsl/Mtl1PS_b3mi.h", "/DSpec=3", "/DSType=3", "/DBump=1", "/DIllumMap=1", "$PS_3D_SRC"],
-                        ["$FXC", "/nologo", "/T", "vs_3_0", "/Fh", "$buildDir/headers/PrismD3D/hlsl/Mtl1VS_Obj.h", "/DVertexType=ObjVertex", "$VS_3D_SRC"]
+                        ["$FXC", "/nologo", "/T", "vs_3_0", "/Fh", "$buildDir/headers/PrismD3D/hlsl/Mtl1VS_Obj.h", "/DVertexType=VsInput", "$VS_3D_SRC"]
                 ]
                 final ExecutorService executor = Executors.newFixedThreadPool(Integer.parseInt(project.NUM_COMPILE_THREADS.toString()));
                 final CountDownLatch latch = new CountDownLatch(jobs.size());
@@ -2844,9 +2844,9 @@ project(":media") {
 
     dependencies {
         if (IS_BUILD_LIBAV_STUBS) {
-            media name: "libav-9.14", ext: "tar.gz"
-            media name: "libav-11.4", ext: "tar.gz"
-            media name: "libav-12.1", ext: "tar.gz"
+            media name: "v9.14", ext: "tar.gz"
+            media name: "v11.4", ext: "tar.gz"
+            media name: "v12.1", ext: "tar.gz"
             media name: "ffmpeg-3.3.3", ext: "tar.gz"
             media name: "ffmpeg-4.0.2", ext: "tar.gz"
             media name: "ffmpeg-5.1.2", ext: "tar.gz"
@@ -3063,7 +3063,7 @@ project(":media") {
                         libav.versions.each { version ->
                             def libavDir = "${libav.basedir}/libav-${version}"
                             for (File f : configurations.media.files) {
-                                if (f.name.startsWith("libav-${version}")) {
+                                if (f.name.startsWith("v${version}")) {
                                     File dir = file(libavDir)
                                     dir.mkdirs()
                                     def libavTar = "${libav.basedir}/libav-${version}.tar"
@@ -3124,7 +3124,7 @@ project(":media") {
                         libav.versions.each { version ->
                             def libavDir = "${libav.basedir}/libav-${version}"
                             for (File f : configurations.media.files) {
-                                if (f.name.startsWith("libav-${version}")) {
+                                if (f.name.startsWith("v${version}")) {
                                     File dir = file(libavDir)
                                     dir.mkdirs()
                                     def libavTar = "${libav.basedir}/libav-${version}.tar"

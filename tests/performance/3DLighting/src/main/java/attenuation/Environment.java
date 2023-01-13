@@ -53,24 +53,25 @@ class Environment extends CameraScene3D {
     private final AmbientLight ambientLight1 = new AmbientLight(Color.WHITE);
     private final AmbientLight ambientLight2 = new AmbientLight(Color.RED);
     private final AmbientLight ambientLight3 = new AmbientLight(Color.BLACK);
-    final AmbientLight[] ambientLights = new AmbientLight[] {ambientLight1, ambientLight2, ambientLight3};
+    final List<AmbientLight> ambientLights = List.of(ambientLight1, ambientLight2, ambientLight3);
 
     private final DirectionalLight directionalLight1 = new DirectionalLight(Color.RED);
     private final DirectionalLight directionalLight2 = new DirectionalLight(Color.BLUE);
     private final DirectionalLight directionalLight3 = new DirectionalLight(Color.MAGENTA);
-    final DirectionalLight[] directionalLights = new DirectionalLight[] {directionalLight1, directionalLight2, directionalLight3};
+    final List<DirectionalLight> directionalLights = List.of(directionalLight1, directionalLight2, directionalLight3);
 
     private final PointLight pointLight1 = new PointLight(Color.RED);
     private final PointLight pointLight2 = new PointLight(Color.BLUE);
     private final PointLight pointLight3 = new PointLight(Color.MAGENTA);
-    final PointLight[] pointLights = new PointLight[] {pointLight1, pointLight2, pointLight3};
+    final List<PointLight> pointLights = List.of(pointLight1, pointLight2, pointLight3);
 
     private final SpotLight spotLight1 = new SpotLight(Color.RED);
     private final SpotLight spotLight2 = new SpotLight(Color.BLUE);
     private final SpotLight spotLight3 = new SpotLight(Color.MAGENTA);
-    final SpotLight[] spotLights = new SpotLight[] {spotLight1, spotLight2, spotLight3};
+    final List<SpotLight> spotLights = List.of(spotLight1, spotLight2, spotLight3);
 
     private Group shapeGroup = new Group();
+    private Group lightsGroup = new Group();
 
     Environment() {
         setStyle("-fx-background-color: teal");
@@ -78,18 +79,10 @@ class Environment extends CameraScene3D {
         farClip.set(1000);
         zoom.set(-350);
 
-        for (var light : ambientLights) {
-            addLight(light);
-        }
-        for (var light : directionalLights) {
-            addLight(light);
-        }
-        for (var light : pointLights) {
-            setupLight(light);
-        }
-        for (var light : spotLights) {
-            setupLight(light);
-        }
+        ambientLights.forEach(this::addLight);
+        directionalLights.forEach(this::addLight);
+        pointLights.forEach(this::setupLight);
+        spotLights.forEach(this::setupLight);
 
         pointLight1.setTranslateX(LIGHT_X_DIST);
         spotLight1.setTranslateX(LIGHT_X_DIST);
@@ -99,7 +92,7 @@ class Environment extends CameraScene3D {
         directionalLight1.setDirection(new Point3D(-LIGHT_X_DIST, 0, LIGHT_Z_DIST));
         directionalLight2.setDirection(new Point3D(LIGHT_X_DIST, 0, LIGHT_Z_DIST));
 
-        rootGroup.getChildren().add(shapeGroup);
+        rootGroup.getChildren().addAll(lightsGroup, shapeGroup);
         rootGroup.setMouseTransparent(true);
     }
 
@@ -120,7 +113,15 @@ class Environment extends CameraScene3D {
 
     private void addLight(LightBase light) {
         light.getScope().add(shapeGroup);
-        rootGroup.getChildren().add(light);
+        lightsGroup.getChildren().add(light);
+    }
+
+    void forceDefaultLight(boolean force) {
+        if (force) {
+            rootGroup.getChildren().remove(lightsGroup);
+        } else {
+            rootGroup.getChildren().add(lightsGroup);
+        }
     }
 
     Group createBoxes() {
