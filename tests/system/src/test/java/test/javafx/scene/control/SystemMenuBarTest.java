@@ -33,7 +33,9 @@ import javafx.scene.control.MenuBar;
 import javafx.scene.control.MenuItem;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
-import org.junit.*;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.AfterAll;
 import test.com.sun.javafx.pgstub.StubToolkit;
 import test.util.Util;
 import test.util.memory.JMemoryBuddy;
@@ -45,14 +47,14 @@ import static org.junit.Assert.assertTrue;
 
 public class SystemMenuBarTest {
 
-    @BeforeClass
+    @BeforeAll
     public static void initFX() throws Exception {
         CountDownLatch startupLatch = new CountDownLatch(1);
         Platform.setImplicitExit(false);
         Util.startup(startupLatch, startupLatch::countDown);
     }
 
-    @AfterClass
+    @AfterAll
     public static void teardownOnce() {
         Util.shutdown();
     }
