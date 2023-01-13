@@ -1023,32 +1023,44 @@ public class FocusTest {
             }
         }
 
-        N node1, node2, node3, node4;
+        N node1, node2, node3, node4, node5;
 
         scene.setRoot(
-            node1 = new N(
-                node2 = new N(
-                    node3 = new N(
-                        node4 = new N()
+            node1 = new N(                  // focusWithin=3
+                node2 = new N(              // focusWithin=3, focused
+                    node3 = new N(          // focusWithin=2
+                        node4 = new N(      // focusWithin=2, focused
+                            node5 = new N() // focusWithin=1, focused
+                        )
                     )
                 )
             ));
 
         node2.setFocused();
         node4.setFocused();
+        node5.setFocused();
 
-        // Remove node4 from the scene graph
+        // Detach node4 from the scene graph:
+        //     node1           focusWithin=1
+        //     |--> node2      focusWithin=1, focused
+        //         |--> node3
+        //
+        //     node4           focusWithin=2, focused
+        //     |--> node5      focusWithin=1, focused
+        //
         node3.getChildren().clear();
 
         assertIsFocusWithin(node1);
         assertIsFocusWithin(node2);
         assertNotFocusWithin(node3);
         assertIsFocusWithin(node4);
+        assertIsFocusWithin(node5);
 
         assertNotFocused(node1);
         assertIsFocused(node2);
         assertNotFocused(node3);
         assertIsFocused(node4);
+        assertIsFocused(node5);
     }
 
     /**

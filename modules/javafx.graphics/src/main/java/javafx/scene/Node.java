@@ -8189,13 +8189,13 @@ public abstract class Node implements EventTarget, Styleable {
      * If the current node has the focusWithin bit, we also need to clear the focusWithin bits of this
      * node's parents. Note that a scene graph can have more than a single focused node, for example when
      * a PopupWindow is used to present a branch of the scene graph. Since we need to preserve multi-level
-     * focus, we need to stop clearing the focusWithin bits if we encounter a parent node that is focused.
+     * focus, we need to adjust the focus-within count on all parents of the node.
      */
     private void clearParentsFocusWithin(Node oldParent) {
         if (oldParent != null && focusWithin.get()) {
             Node node = oldParent;
-            while (node != null && !node.focused.get()) {
-                node.focusWithin.set(false);
+            while (node != null) {
+                node.focusWithin.adjust(-focusWithin.count);
                 node = node.getParent();
             }
 
@@ -8237,9 +8237,11 @@ public abstract class Node implements EventTarget, Styleable {
             if (get() != value) {
                 super.set(value);
 
+                int change = value ? 1 : -1;
                 Node node = Node.this;
+
                 do {
-                    node.focusWithin.set(value);
+                    node.focusWithin.adjust(change);
                     node = node.getParent();
                 } while (node != null);
             }
@@ -8295,8 +8297,10 @@ public abstract class Node implements EventTarget, Styleable {
      * @defaultValue false
      * @since 19
      */
-    private final FocusPropertyBase focusWithin = new FocusPropertyBase() {
-        private int count; // the number of downstream focused nodes
+    private final FocusWithinProperty focusWithin = new FocusWithinProperty();
+
+    private class FocusWithinProperty extends FocusPropertyBase {
+        int count;
 
         @Override
         protected PseudoClass getPseudoClass() {
@@ -8308,12 +8312,16 @@ public abstract class Node implements EventTarget, Styleable {
             return "focusWithin";
         }
 
-        @Override
-        public void set(boolean value) {
-            if (value && ++count == 1) {
-                super.set(true);
-            } else if (!value && --count == 0) {
-                super.set(false);
+        /**
+         * Adjusts the number of focused nodes within this node.
+         */
+        void adjust(int change) {
+            count += change;
+
+            if (count == 1) {
+                set(true);
+            } else if (count == 0) {
+                set(false);
             }
         }
     };
