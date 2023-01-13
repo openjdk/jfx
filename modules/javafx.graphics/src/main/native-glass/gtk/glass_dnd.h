@@ -36,7 +36,6 @@ jint dnd_target_get_supported_actions(JNIEnv *);
 jobjectArray dnd_target_get_mimes(JNIEnv *);
 jobject dnd_target_get_data(JNIEnv *, jstring);
 
-void process_dnd_source(GdkWindow *, GdkEvent *);
 jint execute_dnd(JNIEnv *, jobject, jint);
 
 gboolean is_in_drag();
@@ -61,15 +60,21 @@ public:
     void move(gint x, gint y);
     GdkWindow * get_window();
     ~DragView();
+    static gboolean get_drag_image_offset(jobject obj, int* x, int* y);
+    static GdkPixbuf* get_drag_image(jobject obj, gboolean* is_raw_image, gint* width, gint* height);
 
-    static void set_drag_view();
-    static void reset_drag_view();
 private:
     DragView(DragView&);
     DragView& operator=(const DragView&);
-
-    static gboolean get_drag_image_offset(int* x, int* y);
-    static GdkPixbuf* get_drag_image(gboolean* is_raw_image, gint* width, gint* height);
 };
+
+typedef struct {
+    GdkDragContext *dnd_ctx;
+    GdkWindow *dnd_window;
+    DragView *drag_view;
+    GdkDragAction actions;
+    jobject data;
+    jint performed_action;
+} DragSourceContext;
 
 #endif        /* GLASS_DND_H */

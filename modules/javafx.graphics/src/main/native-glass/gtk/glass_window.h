@@ -199,6 +199,7 @@ protected:
      */
     static WindowContext* sm_grab_window;
 
+public:
     /*
      * sm_mouse_drag_window points to a WindowContext from which a mouse drag started.
      * This WindowContext holding a mouse grab during this drag. After releasing
@@ -211,7 +212,6 @@ protected:
      * should be reported during this drag.
      */
     static WindowContext* sm_mouse_drag_window;
-public:
     bool isEnabled();
     bool hasIME();
     bool filterIME(GdkEvent *);

@@ -34,8 +34,8 @@ void glass_evloop_initialize();
 void glass_evloop_finalize();
 void glass_evloop_call_hooks(GdkEvent * event);
 
-GevlHookRegistration glass_evloop_hook_add(GevlHookFunction hookFn, void * data);
+GevlHookRegistration glass_evloop_hook_add(GevlHookFunction hookFn,
+                                           void * data);
 void glass_evloop_hook_remove(GevlHookRegistration hookReg);
-void glass_evloop_process_events(GdkEvent*, gpointer);
 
 #endif
