@@ -25,8 +25,21 @@
 
 #include "psMath.h"
 
+// lights number (not specular)
+#ifndef Spec
+    #define Spec 0
+#endif
+
 #ifndef SType
     #define SType 0
+#endif
+
+#ifndef Bump
+    #define Bump 0
+#endif
+
+#ifndef IllumMap
+    #define IllumMap 0
 #endif
 
 #define SpecNone 0
@@ -34,7 +47,11 @@
 #define SpecColor 2
 #define SpecMix 3
 
+static const int numShaderLights = Spec;
 static const int specType = SType;
+static const bool bump = Bump;
+static const bool isIlluminated = IllumMap;
+
 
 // sampler mapping see
 sampler mapDiffuse    : register(s0);
@@ -46,36 +63,37 @@ float4 debug() {
     return float4(0,0,1,1);
 }
 
-float4 main(ObjectPsIn objAttr, LocalBump  lSpace) : color {
+float4 main(PsInput psInput) : color {
 
     if (0) return debug();
-    // return retNormal(lSpace.debug);
+    // return retNormal(psInput.debug);
 
-    float4 tDiff = tex2D(mapDiffuse, objAttr.texD);
+    float2 texD = psInput.texD;
+
+    // diffuse
+    float4 tDiff = tex2D(mapDiffuse, texD);
     if (tDiff.a == 0.0) discard;
     tDiff = tDiff * gDiffuseColor;
 
     // return gDiffuseColor.aaaa;
 
-    float3 nEye = normalize(lSpace.eye);
+    float3 normal = float3(0, 0, 1);
 
-    float3 n = float3(0,0,1);
-
+    // bump
     if (bump) {
-        float4 BumpSpec = tex2D(mapBumpHeight, objAttr.texD);
-        n = normalize(BumpSpec.xyz*2-1);
+        float4 BumpSpec = tex2D(mapBumpHeight, texD);
+        normal = normalize(BumpSpec.xyz * 2 - 1);
     }
 
-    float4 ambColor = objAttr.ambient;
+    // specular
+    float4 tSpec = float4(0, 0, 0, 0);
+    float specPower = 0;
 
-    float4 tSpec = float4(0,0,0,0);
-    float sPower = 0;
-
-    if ( specType > 0 ) {
-        sPower = gSpecularColor.a;
+    if (specType > 0) {
+        specPower = gSpecularColor.a;
         if (specType != SpecColor) { // Texture or Mix
-            tSpec = tex2D(mapSpecular, objAttr.texD);
-            sPower *= NTSC_Gray(tSpec.rgb);
+            tSpec = tex2D(mapSpecular, texD);
+            specPower *= NTSC_Gray(tSpec.rgb);
         } else { // Color
             tSpec.rgb = gSpecularColor.rgb;
         }
@@ -85,15 +103,30 @@ float4 main(ObjectPsIn objAttr, LocalBump  lSpace) : color {
     }
     // return sPower.xxxx;
 
-    float3 diff = 0;
-    float3 spec = 0;
+    // lighting
+    float3 worldNormVecToEye = normalize(psInput.worldVecToEye);
+    float3 refl = reflect(worldNormVecToEye, normal);
+    float3 diffLightColor = 0;
+    float3 specLightColor = 0;
 
-    phong(n, nEye, sPower, lSpace.lights, lSpace.lightDirs, diff, spec, 0, nSpecular);
+    for (int i = 0; i < numLights; i++) {
+        //  needed for pixel lighting
+        //  float3 worldVecToLight = gLightsPos[i].xyz - worldPixelPos;
+        //  worldVecToLight = getLocalVector(worldVecToLight, worldNormals);
+        //
+        //  float3 worldNormLightDir = gLightsNormDirs[i].xyz;
+        //  worldNormLightDir = getLocalVector(worldNormLightDir, worldNormals); // renormalize?
+        computeLight(i, normal, refl, specPower, psInput.worldVecsToLights[i], psInput.worldNormLightDirs[i], diffLightColor, specLightColor);
+    }
 
-    float3 rez = (ambColor.xyz+diff)*tDiff.xyz + spec*tSpec.rgb;
+    float3 ambLightColor = gAmbientLightColor.rgb;
 
-    if (isIlluminated)
-        rez += tex2D(mapSelfIllum, objAttr.texD).xyz;
+    float3 rez = (ambLightColor + diffLightColor) * tDiff.rgb + specLightColor * tSpec.rgb;
 
-    return float4( saturate(rez), tDiff.a);
+    // self-illumination
+    if (isIlluminated) {
+        rez += tex2D(mapSelfIllum, texD).rgb;
+    }
+
+    return float4(saturate(rez), tDiff.a);
 }

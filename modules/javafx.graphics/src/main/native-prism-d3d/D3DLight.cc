@@ -31,38 +31,23 @@ using std::endl;
 
 // Destructor definition
 
-D3DLight::~D3DLight() {
-}
-
-D3DLight::D3DLight() :
-    color(),
-    position(),
-    w(0),
-    attenuation(),
-    maxRange(0),
-    direction(),
-    innerAngle(0),
-    outerAngle(0),
-    falloff(0)
-    {}
-
 bool D3DLight::isPointLight() {
     return falloff == 0 && outerAngle == 180 && attenuation[3] > 0.5;
 }
 
 bool D3DLight::isDirectionalLight() {
-    // testing if w is 0 or 1 using <0.5 since equality check for floating points might not work well
+    // testing if attenuation.w is 0 or 1 using <0.5 since equality check for floating points might not work well
     return attenuation[3] < 0.5;
 }
 
-void D3DLight::setColor(float r, float g, float b) {
-    color[0] = r;
-    color[1] = g;
-    color[2] = b;
-}
-
-void D3DLight::setPosition(float x, float y, float z) {
-    position[0] = x;
-    position[1] = y;
-    position[2] = z;
-}
+//void D3DLight::setColor(float r, float g, float b) {
+//    color[0] = r;
+//    color[1] = g;
+//    color[2] = b;
+//}
+//
+//void D3DLight::setPosition(float x, float y, float z) {
+//    position[0] = x;
+//    position[1] = y;
+//    position[2] = z;
+//}
