@@ -522,10 +522,6 @@ static GdkDragContext *get_drag_context() {
     return (GdkDragContext*)g_object_get_data(G_OBJECT(dnd_window), SOURCE_DND_CONTEXT);
 }
 
-static bool dnd_pointer_grab(GdkCursor *cursor) {
-    return glass_gdk_mouse_devices_grab_with_cursor(dnd_window, cursor, FALSE, FALSE);
-}
-
 gboolean is_in_drag() {
     return dnd_window != NULL;
 }
@@ -767,7 +763,12 @@ static gboolean ungrab_destroy_callback(gpointer) {
     }
 
     DragView::reset_drag_view();
+
+#ifdef GLASS_GTK3
+    glass_gdk_device_ungrab(gdk_drag_context_get_device(get_drag_context()));
+#else
     glass_gdk_mouse_devices_ungrab();
+#endif
 
     return FALSE;
 }
@@ -900,7 +901,13 @@ static void process_dnd_source_drag_status(GdkWindow *window, GdkEvent *event) {
         }
     }
 
-    dnd_pointer_grab(cursor);
+    GdkDevice *device;
+#ifdef GLASS_GTK3
+    device = gdk_drag_context_get_device(eventDnd->context);
+#else
+    device = NULL;
+#endif
+    glass_gdk_device_grab(device, dnd_window, cursor, FALSE);
 }
 
 static void process_dnd_source_drop_finished(GdkWindow *window, GdkEvent *event) {
@@ -971,11 +978,18 @@ static void dnd_source_push_data(JNIEnv *env, jobject data, jint supported) {
     g_object_set_data_full(G_OBJECT(src_window), SOURCE_DND_DATA, data, clear_global_ref);
     g_object_set_data(G_OBJECT(src_window), SOURCE_DND_ACTIONS, (gpointer)actions);
 
-    if (!dnd_pointer_grab(NULL)) {
+    ctx = gdk_drag_begin(src_window, targets);
+
+    GdkDevice *device;
+#ifdef GLASS_GTK3
+    device = gdk_drag_context_get_device(ctx);
+#else
+    device = NULL;
+#endif
+
+    if (!glass_gdk_device_grab(device, dnd_window, NULL, FALSE)) {
         ERROR0("Mouse grab failed.\n");
     }
-
-    ctx = gdk_drag_begin(src_window, targets);
 
     g_list_free(targets);
     g_object_set_data(G_OBJECT(src_window), SOURCE_DND_CONTEXT, ctx);
