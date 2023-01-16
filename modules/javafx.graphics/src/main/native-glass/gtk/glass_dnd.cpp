@@ -166,9 +166,7 @@ static void process_dnd_target_drag_motion(WindowContext *ctx, GdkEventDND *even
     gdk_drag_status(event->context, result, GDK_CURRENT_TIME);
 }
 
-static void process_dnd_target_drag_leave(WindowContext *ctx, GdkEventDND *event) {
-    (void)event;
-
+static void notify_drag_leave(WindowContext *ctx) {
     mainEnv->CallVoidMethod(ctx->get_jview(), jViewNotifyDragLeave, NULL);
     CHECK_JNI_EXCEPTION(mainEnv)
 }
@@ -229,7 +227,7 @@ void process_dnd_target(WindowContext *ctx, GdkEventDND *event) {
             process_dnd_target_drag_motion(ctx, event);
             break;
         case GDK_DRAG_LEAVE:
-            process_dnd_target_drag_leave(ctx, event);
+            notify_drag_leave(ctx);
             break;
         case GDK_DROP_START:
             process_dnd_target_drop_start(ctx, event);
@@ -740,19 +738,23 @@ static void process_dnd_source_grab_broken(DragSourceContext *ctx, GdkEvent *eve
 
 static void process_dnd_source_mouse_release(DragSourceContext *ctx, GdkEvent *event) {
     GdkDragAction selected = gdk_drag_context_get_selected_action(ctx->dnd_ctx);
-    if (selected) {
-        ctx->performed_action = translate_gdk_action_to_glass(selected);
 
-        if (is_dnd_owner) {
-            WindowContext *window_ctx = (WindowContext*)
-                g_object_get_data(G_OBJECT(ctx->dnd_window), GDK_WINDOW_DATA_CONTEXT);
+    if (is_dnd_owner) {
+        WindowContext *window_ctx = (WindowContext*)
+            g_object_get_data(G_OBJECT(ctx->dnd_window), GDK_WINDOW_DATA_CONTEXT);
 
+        if (selected) {
             notify_drag_drop(window_ctx, selected, event->button.x_root, event->button.y_root);
         } else {
-            gdk_drag_drop(ctx->dnd_ctx, GDK_CURRENT_TIME);
+            notify_drag_leave(window_ctx);
         }
     } else {
-        gdk_drag_abort(ctx->dnd_ctx, GDK_CURRENT_TIME);
+        if (selected) {
+            ctx->performed_action = translate_gdk_action_to_glass(selected);
+            gdk_drag_drop(ctx->dnd_ctx, GDK_CURRENT_TIME);
+        } else {
+            gdk_drag_abort(ctx->dnd_ctx, GDK_CURRENT_TIME);
+        }
     }
 
     // This is done to let mouse release event succeed on WindowContext
