@@ -185,6 +185,15 @@ static void wait_for_selection_data_hook(GdkEvent * event, void * data) {
     }
 }
 
+static void notify_drag_drop(WindowContext *ctx, GdkDragAction selected, GdkEventDND *event) {
+    g_print("jViewNotifyDragDrop\n");
+    mainEnv->CallIntMethod(ctx->get_jview(), jViewNotifyDragDrop,
+            (jint)event->x_root - enter_ctx.dx, (jint)event->y_root - enter_ctx.dy,
+            (jint)event->x_root, (jint)event->y_root,
+            translate_gdk_action_to_glass(selected));
+    LOG_EXCEPTION(mainEnv)
+}
+
 static void process_dnd_target_drop_start(WindowContext *ctx, GdkEventDND *event) {
     if (!enter_ctx.ctx || enter_ctx.just_entered) {
         gdk_drop_finish(event->context, FALSE, GDK_CURRENT_TIME);
@@ -193,11 +202,7 @@ static void process_dnd_target_drop_start(WindowContext *ctx, GdkEventDND *event
     }
 
     GdkDragAction selected = gdk_drag_context_get_selected_action(event->context);
-    mainEnv->CallIntMethod(ctx->get_jview(), jViewNotifyDragDrop,
-            (jint)event->x_root - enter_ctx.dx, (jint)event->y_root - enter_ctx.dy,
-            (jint)event->x_root, (jint)event->y_root,
-            translate_gdk_action_to_glass(selected));
-    LOG_EXCEPTION(mainEnv)
+    notify_drag_drop(ctx, selected, event);
 
     gdk_drop_finish(event->context, TRUE, GDK_CURRENT_TIME);
     gdk_drop_reply(event->context, TRUE, GDK_CURRENT_TIME);
@@ -717,6 +722,13 @@ static void process_dnd_source_selection_req(DragSourceContext *ctx, GdkEvent *g
                                (is_data_set) ? event->property : GDK_NONE, event->time);
 }
 
+static gboolean in_drag_end(gpointer data) {
+    in_drag = false;
+    g_print("in drag = false\n");
+
+    return G_SOURCE_REMOVE;
+}
+
 static void process_dnd_source_grab_broken(DragSourceContext *ctx, GdkEvent *event) {
     GdkEventGrabBroken *gb_event = &event->grab_broken;
 
@@ -726,18 +738,28 @@ static void process_dnd_source_grab_broken(DragSourceContext *ctx, GdkEvent *eve
     }
 
     gdk_drag_abort(ctx->dnd_ctx, GDK_CURRENT_TIME);
+    gdk_threads_add_idle_full(G_PRIORITY_DEFAULT, in_drag_end, ctx, NULL);
 }
 
 static void process_dnd_source_mouse_release(DragSourceContext *ctx, GdkEvent *event) {
-    if (gdk_drag_context_get_selected_action(ctx->dnd_ctx)) {
-        gdk_drag_drop(ctx->dnd_ctx, GDK_CURRENT_TIME);
-        ctx->performed_action = translate_gdk_action_to_glass(
-                    gdk_drag_context_get_selected_action(ctx->dnd_ctx));
+    GdkDragAction selected = gdk_drag_context_get_selected_action(ctx->dnd_ctx);
+    if (selected) {
+        ctx->performed_action = translate_gdk_action_to_glass(selected);
+
+        if (is_dnd_owner) {
+            WindowContext *window_ctx = (WindowContext*)
+                g_object_get_data(G_OBJECT(ctx->dnd_window), GDK_WINDOW_DATA_CONTEXT);
+
+            notify_drag_drop(window_ctx, selected, &event->dnd);
+        } else {
+            gdk_drag_drop(ctx->dnd_ctx, GDK_CURRENT_TIME);
+        }
     } else {
         gdk_drag_abort(ctx->dnd_ctx, GDK_CURRENT_TIME);
     }
 
-    in_drag = false;
+    // This is done to let mouse release event succeed on WindowContext
+    gdk_threads_add_idle_full(G_PRIORITY_DEFAULT, in_drag_end, ctx, NULL);
 }
 
 static void process_drag_motion(DragSourceContext *ctx, gint x_root, gint y_root, guint state) {
@@ -898,8 +920,6 @@ static void dnd_source_push_data(JNIEnv *env, jobject data, jint supported, Drag
 
     GdkDragAction actions = translate_glass_action_to_gdk(supported);
     ctx->actions = actions;
-    ctx->data = data;
-
     ctx->dnd_ctx = gdk_drag_begin(ctx->dnd_window, targets);
     if (!gdk_pointer_is_grabbed()) {
         // Grab will start on glass_window, unless disabled
@@ -911,12 +931,26 @@ static void dnd_source_push_data(JNIEnv *env, jobject data, jint supported, Drag
     gboolean is_raw_image = FALSE;
     gint w = 0, h = 0;
     GdkPixbuf* pixbuf = DragView::get_drag_image(data, &is_raw_image, &w, &h);
+    gint offset_x = -2;
+    gint offset_y = -2;
 
     if (GDK_IS_PIXBUF(pixbuf)) {
-        gint offset_x = w / 2;
-        gint offset_y = h / 2;
+        offset_x = w / 2;
+        offset_y = h / 2;
 
         DragView::get_drag_image_offset(data, &offset_x, &offset_y);
+    } else {
+        GError *error = NULL;
+
+        GtkIconTheme *icon_theme = gtk_icon_theme_get_default();
+        pixbuf = gtk_icon_theme_load_icon(icon_theme,
+                                         "text-x-generic",
+                                         GTK_ICON_SIZE_DND,
+                                         GTK_ICON_LOOKUP_USE_BUILTIN,
+                                         &error);
+    }
+
+    if (GDK_IS_PIXBUF(pixbuf)) {
         ctx->drag_view = new DragView(pixbuf, is_raw_image, offset_x, offset_y);
     }
 }
@@ -963,6 +997,7 @@ jint execute_dnd(JNIEnv *env, jobject data, jint supported) {
     GevlHookRegistration hookReg;
     DragSourceContext *ctx = new DragSourceContext();
     ctx->performed_action = com_sun_glass_ui_gtk_GtkDnDClipboard_ACTION_NONE;
+    ctx->data = data;
 
     try {
         dnd_source_push_data(env, data, supported, ctx);
@@ -979,16 +1014,9 @@ jint execute_dnd(JNIEnv *env, jobject data, jint supported) {
     glass_evloop_hook_remove(hookReg);
 
     end:
-
-    if (ctx->data) {
-        clear_global_ref(ctx->data);
-    }
-
     jint performed_action = ctx->performed_action;
-    if (ctx->drag_view) {
-        delete ctx->drag_view;
-    }
     delete ctx;
+    //TODO: should clear data?
 
     return performed_action;
 }

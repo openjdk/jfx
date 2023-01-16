@@ -68,13 +68,19 @@ private:
     DragView& operator=(const DragView&);
 };
 
-typedef struct {
+struct DragSourceContext {
     GdkDragContext *dnd_ctx;
     GdkWindow *dnd_window;
     DragView *drag_view;
     GdkDragAction actions;
     jobject data;
     jint performed_action;
-} DragSourceContext;
+
+    ~DragSourceContext() {
+        if (drag_view) {
+            delete drag_view;
+        }
+    };
+};
 
 #endif        /* GLASS_DND_H */
