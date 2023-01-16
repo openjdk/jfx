@@ -938,11 +938,10 @@ static void dnd_source_push_data(JNIEnv *env, jobject data, jint supported, Drag
         DragView::get_drag_image_offset(data, &offset_x, &offset_y);
     } else {
         GError *error = NULL;
-
         GtkIconTheme *icon_theme = gtk_icon_theme_get_default();
+        gtk_icon_size_lookup(GTK_ICON_SIZE_DND, &w, &h);
         pixbuf = gtk_icon_theme_load_icon(icon_theme,
-                                         "text-x-generic",
-                                         GTK_ICON_SIZE_DND,
+                                         "text-x-generic", w,
                                          GTK_ICON_LOOKUP_USE_BUILTIN,
                                          &error);
     }
