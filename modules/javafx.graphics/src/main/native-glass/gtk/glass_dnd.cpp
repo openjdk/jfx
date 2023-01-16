@@ -185,11 +185,10 @@ static void wait_for_selection_data_hook(GdkEvent * event, void * data) {
     }
 }
 
-static void notify_drag_drop(WindowContext *ctx, GdkDragAction selected, GdkEventDND *event) {
-    g_print("jViewNotifyDragDrop\n");
+static void notify_drag_drop(WindowContext *ctx, GdkDragAction selected, int x_root, int y_root) {
     mainEnv->CallIntMethod(ctx->get_jview(), jViewNotifyDragDrop,
-            (jint)event->x_root - enter_ctx.dx, (jint)event->y_root - enter_ctx.dy,
-            (jint)event->x_root, (jint)event->y_root,
+            (jint)x_root - enter_ctx.dx, (jint)y_root - enter_ctx.dy,
+            (jint)x_root, (jint)y_root,
             translate_gdk_action_to_glass(selected));
     LOG_EXCEPTION(mainEnv)
 }
@@ -202,7 +201,7 @@ static void process_dnd_target_drop_start(WindowContext *ctx, GdkEventDND *event
     }
 
     GdkDragAction selected = gdk_drag_context_get_selected_action(event->context);
-    notify_drag_drop(ctx, selected, event);
+    notify_drag_drop(ctx, selected, event->x_root, event->y_root);
 
     gdk_drop_finish(event->context, TRUE, GDK_CURRENT_TIME);
     gdk_drop_reply(event->context, TRUE, GDK_CURRENT_TIME);
@@ -750,7 +749,7 @@ static void process_dnd_source_mouse_release(DragSourceContext *ctx, GdkEvent *e
             WindowContext *window_ctx = (WindowContext*)
                 g_object_get_data(G_OBJECT(ctx->dnd_window), GDK_WINDOW_DATA_CONTEXT);
 
-            notify_drag_drop(window_ctx, selected, &event->dnd);
+            notify_drag_drop(window_ctx, selected, event->button.x_root, event->button.y_root);
         } else {
             gdk_drag_drop(ctx->dnd_ctx, GDK_CURRENT_TIME);
         }
