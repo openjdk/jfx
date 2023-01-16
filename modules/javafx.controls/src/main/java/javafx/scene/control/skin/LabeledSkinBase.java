@@ -377,14 +377,20 @@ public abstract class LabeledSkinBase<C extends Labeled> extends SkinBase<C> {
                 labeled.getLineSpacing(), text.getBoundsType());
 
         // Now we want to add on the graphic if necessary!
-        double h = textHeight;
-        if (!isIgnoreGraphic()) {
-            final Node graphic = labeled.getGraphic();
-            if (contentDisplay == TOP || contentDisplay == BOTTOM) {
-                h = graphic.prefHeight(width) + gap + textHeight;
-            } else {
-                h = Math.max(textHeight, graphic.prefHeight(width));
-            }
+        double graphicHeight = graphic == null ? 0.0 :
+                Utils.boundedSize(graphic.prefHeight(-1), graphic.minHeight(-1), graphic.maxHeight(-1));
+
+        // Now add on the graphic, gap, and padding as appropriate
+        final Node graphic = labeled.getGraphic();
+        double height;
+        if (isIgnoreGraphic()) {
+            height = textHeight;
+        } else if (isIgnoreText()) {
+            height = graphicHeight;
+        } else if (contentDisplay == TOP || contentDisplay == BOTTOM){
+            height = graphic.prefHeight(-1) + gap + textHeight;
+        } else {
+            height = Math.max(textHeight, graphic.prefHeight(-1));
         }
 
         double padding = topInset + bottomInset;
@@ -393,7 +399,7 @@ public abstract class LabeledSkinBase<C extends Labeled> extends SkinBase<C> {
             padding += topLabelPadding() + bottomLabelPadding();
         }
 
-        return  h + padding;
+        return  height + padding;
     }
 
     /** {@inheritDoc} */
