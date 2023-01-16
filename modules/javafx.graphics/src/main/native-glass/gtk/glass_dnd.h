@@ -80,6 +80,10 @@ struct DragSourceContext {
         if (drag_view) {
             delete drag_view;
         }
+
+        if (data) {
+            mainEnv->DeleteGlobalRef(data);
+        }
     };
 };
 

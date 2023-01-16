@@ -723,8 +723,6 @@ static void process_dnd_source_selection_req(DragSourceContext *ctx, GdkEvent *g
 
 static gboolean in_drag_end(gpointer data) {
     in_drag = false;
-    g_print("in drag = false\n");
-
     return G_SOURCE_REMOVE;
 }
 
@@ -915,7 +913,7 @@ static void dnd_source_push_data(JNIEnv *env, jobject data, jint supported, Drag
     }
 
     targets = data_to_targets(env, data);
-    data = env->NewGlobalRef(data);
+    ctx->data = env->NewGlobalRef(data);
 
     GdkDragAction actions = translate_glass_action_to_gdk(supported);
     ctx->actions = actions;
@@ -963,6 +961,12 @@ static void dnd_source_hook(GdkEvent *event, void * data) {
         return;
     }
 
+    if (event->type == GDK_DELETE && window == ctx->dnd_window) {
+        gdk_drag_abort(ctx->dnd_ctx, GDK_CURRENT_TIME);
+        in_drag = false;
+        return;
+    }
+
     switch(event->type) {
         case GDK_GRAB_BROKEN:
             process_dnd_source_grab_broken(ctx, event);
@@ -996,7 +1000,6 @@ jint execute_dnd(JNIEnv *env, jobject data, jint supported) {
     GevlHookRegistration hookReg;
     DragSourceContext *ctx = new DragSourceContext();
     ctx->performed_action = com_sun_glass_ui_gtk_GtkDnDClipboard_ACTION_NONE;
-    ctx->data = data;
 
     try {
         dnd_source_push_data(env, data, supported, ctx);

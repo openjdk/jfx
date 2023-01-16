@@ -423,7 +423,7 @@ static void process_events(GdkEvent* event, gpointer data) {
     WindowContext *ctx = window != NULL ? (WindowContext*)
         g_object_get_data(G_OBJECT(window), GDK_WINDOW_DATA_CONTEXT) : NULL;
 
-    if ((window != NULL && ctx != NULL)
+    if ((window != NULL)
             && !is_window_enabled_for_event(window, ctx, event->type)) {
         return;
     }
