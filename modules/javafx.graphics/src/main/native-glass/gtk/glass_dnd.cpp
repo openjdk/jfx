@@ -763,10 +763,6 @@ static void process_drag_motion(DragSourceContext *ctx, gint x_root, gint y_root
     GdkWindow *dest_window;
     GdkDragProtocol prot;
 
-    if (ctx->drag_view) {
-        ctx->drag_view->move(x_root, y_root);
-    }
-
     gdk_drag_find_window_for_screen(ctx->dnd_ctx, NULL, gdk_screen_get_default(),
             x_root, y_root, &dest_window, &prot);
 
@@ -847,7 +843,7 @@ static void process_dnd_source_drag_status(DragSourceContext *ctx, GdkEvent *eve
     }
 
     if (cursor == NULL) {
-        GdkCursor* cursor = gdk_cursor_new_from_name(gdk_display_get_default(), "dnd-none");
+        cursor = gdk_cursor_new_from_name(gdk_display_get_default(), "dnd-none");
 
         if (cursor == NULL) {
             cursor = gdk_cursor_new_from_name(gdk_display_get_default(), "grabbing");
@@ -955,14 +951,25 @@ static void dnd_source_hook(GdkEvent *event, void * data) {
     DragSourceContext *ctx = (DragSourceContext *) data;
     GdkWindow *window = event->any.window;
 
-    if (event->type == GDK_EXPOSE && ctx->drag_view != NULL && window == ctx->drag_view->get_window()) {
+    if (ctx->drag_view != NULL && event->type == GDK_EXPOSE &&
+        window == ctx->drag_view->get_window()) {
         ctx->drag_view->expose();
         return;
+    }
+
+    // dnd_window window will grab pointer motion, so it's delivered there
+    if (event->type == GDK_MOTION_NOTIFY && ctx->drag_view != NULL
+        && window == ctx->dnd_window) {
+        ctx->drag_view->move(event->motion.x_root, event->motion.y_root);
     }
 
     if (event->type == GDK_DELETE && window == ctx->dnd_window) {
         gdk_drag_abort(ctx->dnd_ctx, GDK_CURRENT_TIME);
         in_drag = false;
+        return;
+    }
+
+    if (window != ctx->dnd_window) {
         return;
     }
 
@@ -1017,7 +1024,6 @@ jint execute_dnd(JNIEnv *env, jobject data, jint supported) {
     end:
     jint performed_action = ctx->performed_action;
     delete ctx;
-    //TODO: should clear data?
 
     return performed_action;
 }
@@ -1154,7 +1160,7 @@ DragView::DragView(GdkPixbuf* _pixbuf, gboolean _is_raw_image,
     attrs.window_type = GDK_WINDOW_TEMP;
     attrs.type_hint = GDK_WINDOW_TYPE_HINT_DND;
     attrs.visual = gdk_screen_get_rgba_visual(screen);
-    attrs.event_mask = GDK_EXPOSURE_MASK | GDK_POINTER_MOTION_MASK;
+    attrs.event_mask = GDK_EXPOSURE_MASK;
 
     if (!attrs.visual) {
         attrs.visual = gdk_screen_get_system_visual(screen);
