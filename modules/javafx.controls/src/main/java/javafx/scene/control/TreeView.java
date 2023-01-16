@@ -133,22 +133,16 @@ import java.util.Map;
  * {@code Node} instances. Putting nodes into
  * the TreeView cells is <strong>strongly discouraged</strong>, as it can
  * lead to unexpected results.
- * <p>The recommended approach is to put the relevant information into the items list, and
+ * <p>Important points to note:
+ * <ul>
+ * <li>Avoid inserting {@code Node}  instances directly into the {@code TreeView} cells or its data model.</li>
+ * <li>The recommended approach is to put the relevant information into the items list, and
  * provide a custom {@link #cellFactoryProperty() cell factory} to create the nodes for a
- * given cell and update them on demand using the
- * data stored in the item for that cell.
+ * given cell and update them on demand using the data stored in the item for that cell.</li>
+ * <li>Avoid creating new {@code Node}s in custom {@link #cellFactoryProperty() cell factory} {@code updateItem} method.</li>
+ * </ul>
+ * <p>The following minimal example shows how to create a custom cell factory for {@code TreeView} containing {@code Node}s:
  *
- * <p>For example, rather than use the following code:
- * <pre>{@code   TreeItem<Rectangle> treeRoot = new TreeItem<>();
- *  treeRoot.setExpanded(true);
- *  treeRoot.getChildren().addAll(
- *      new TreeItem<>(new Rectangle(10, 10, Color.RED)),
- *      new TreeItem<>(new Rectangle(10, 10, Color.GREEN)),
- *      new TreeItem<>(new Rectangle(10, 10, Color.BLUE))
- *  );
- *  TreeView<Rectangle> treeView = new TreeView<>(treeRoot);}</pre>
- *
- * <p>You should do the following:</p>
  * <pre> {@code  TreeItem<Color> treeRoot = new TreeItem<>();
  *  treeRoot.setExpanded(true);
  *  TreeView<Color> treeView = new TreeView<>(treeRoot);
@@ -179,8 +173,8 @@ import java.util.Map;
  *      }
  *  };});}</pre>
  * <p> This example has an anonymous custom {@code TreeCell} class in the custom cell factory.
- * Note that the Rectangle (Node) object needs to be created in the custom {@code TreeCell} class
- * or in it's constructor and updated/used in it's updateItem method.</p>
+ * Note that the {@code Rectangle} ({@code Node}) object needs to be created in the custom {@code TreeCell} class
+ * or in its constructor and updated/used in its {@code updateItem} method.</p>
  *
  * <h2>Editing</h2>
  * <p>This control supports inline editing of values, and this section attempts to

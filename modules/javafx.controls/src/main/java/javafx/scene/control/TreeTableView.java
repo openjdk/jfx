@@ -288,48 +288,16 @@ import com.sun.javafx.scene.control.behavior.TreeTableCellBehavior;
  * {@link Node} instances. Putting nodes into
  * the TreeTableView cells is <strong>strongly discouraged</strong>, as it can
  * lead to unexpected results.
- * <p>The recommended approach is to put the relevant information into the items list, and
+ *
+ * <p>Important points to note:
+ * <ul>
+ * <li>Avoid inserting {@link Node}  instances directly into the {@code TreeTableView} cells or its data model.</li>
+ * <li>The recommended approach is to put the relevant information into the items list, and
  * provide a custom {@link TreeTableColumn#cellFactoryProperty() cell factory} to create the nodes for a
- * given cell and update them on demand using the data stored in the item for that cell.
- *
- * <p>For example, rather than use the following code:
- * <pre>{@code
- *  class ColorModel {
- *    private SimpleObjectProperty<Rectangle> rect;
- *    private StringProperty name;
- *
- *    public ColorModel (String name, Color col) {
- *      this.rect = new SimpleObjectProperty<Rectangle>(new Rectangle(10, 10, col));
- *      this.name = new SimpleStringProperty(name);
- *    }
- *
- *    public Rectangle getRect() { return rect.getValue(); }
- *    public void setRect(Rectangle r) { rect.setValue(r); }
- *    public SimpleObjectProperty<Rectangle> rectProperty() { return rect; }
- *
- *    public String getName() { return name.getValue(); }
- *    public void setName(String s) { name.setValue(s); }
- *    public StringProperty nameProperty() { return name; }
- *  }
- *
- *  ColorModel rootModel = new ColorModel("Color", Color.WHITE);
- *  TreeItem<ColorModel> treeRoot = new TreeItem<ColorModel>(rootModel);
- *  treeRoot.setExpanded(true);
- *  treeRoot.getChildren().addAll(
- *      new TreeItem<ColorModel>(new ColorModel("Red", Color.RED)),
- *      new TreeItem<ColorModel>(new ColorModel("Green", Color.GREEN)),
- *      new TreeItem<ColorModel>(new ColorModel("Blue", Color.BLUE)));
- *
- *  TreeTableView<ColorModel> treeTable = new TreeTableView<ColorModel>(treeRoot);
- *
- *  TreeTableColumn<ColorModel, String> nameCol = new TreeTableColumn<>("Color Name");
- *  TreeTableColumn<ColorModel, Rectangle> rectCol = new TreeTableColumn<>("Color");
- *
- *  treeTable.getColumns().setAll(nameCol, rectCol);
- *  rectCol.setCellValueFactory(p -> p.getValue().getValue().rectProperty());
- *  nameCol.setCellValueFactory(p -> p.getValue().getValue().nameProperty());}</pre>
- *
- * <p>You should do the following:</p>
+ * given cell and update them on demand using the data stored in the item for that cell.</li>
+ * <li>Avoid creating new {@link Node}s in custom {@link TreeTableColumn#cellFactoryProperty() cell factory} {@code updateItem} method.</li>
+ * </ul>
+ * <p>The following minimal example shows how to create a custom cell factory for {@code TreeTableView} containing {@link Node}s:
  * <pre> {@code
  *  class ColorModel {
  *    private SimpleObjectProperty<Color> color;
@@ -390,8 +358,8 @@ import com.sun.javafx.scene.control.behavior.TreeTableCellBehavior;
  *  });}</pre>
  *
  * <p> This example has an anonymous custom {@code TreeTableCell} class in the custom cell factory.
- * Note that the Rectangle (Node) object needs to be created in the custom {@code TreeTableCell} class
- * or in it's constructor and updated/used in it's updateItem method.</p>
+ * Note that the {@code Rectangle} ({@code Node}) object needs to be created in the custom {@code TreeTableCell} class
+ * or in its constructor and updated/used in its {@code updateItem} method.</p>
  *
  * <h3>Editing</h3>
  * <p>This control supports inline editing of values, and this section attempts to

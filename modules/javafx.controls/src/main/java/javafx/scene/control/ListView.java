@@ -152,20 +152,15 @@ import javafx.util.Pair;
  * {@link Node} instances. Putting nodes into
  * the items list is <strong>strongly discouraged</strong>, as it can
  * lead to unexpected results.
- * <p>The recommended approach is to put the relevant information into the items list, and
+ * <p>Important points to note:
+ * <ul>
+ * <li>Avoid inserting {@link Node}  instances directly into the items list or its data model.</li>
+ * <li>The recommended approach is to put the relevant information into the items list, and
  * provide a custom {@link #cellFactoryProperty() cell factory} to create the nodes for a
- * given cell and update them on demand using the
- * data stored in the item for that cell.
- *
- * <p>For example, rather than use the following code:
- *
- * <pre>{@code   ListView<Rectangle> lv = new ListView<>();
- *  lv.getItems().addAll(
- *      new Rectangle(10, 10, Color.RED),
- *      new Rectangle(10, 10, Color.GREEN),
- *      new Rectangle(10, 10, Color.BLUE));}}</pre>
- *
- * <p>You should do the following:</p>
+ * given cell and update them on demand using the data stored in the item for that cell.</li>
+ * <li>Avoid creating new {@link Node}s in custom {@link #cellFactoryProperty() cell factory} {@code updateItem} method.</li>
+ * </ul>
+ * <p>The following minimal example shows how to create a custom cell factory for {@code ListView} containing {@link Node}s:
  *
  * <pre>{@code   ListView<Color> lv = new ListView<>();
  *  lv.getItems().addAll(Color.RED, Color.GREEN, Color.BLUE);
@@ -192,8 +187,8 @@ import javafx.util.Pair;
  *     };
  * });}</pre>
  * <p> This example has an anonymous custom {@code ListCell} class in the custom cell factory.
- * Note that the Rectangle (Node) object needs to be created in the custom {@code ListCell} class
- * or in it's constructor and updated/used in it's updateItem method.
+ * Note that the {@code Rectangle} ({@code Node}) object needs to be created in the custom {@code ListCell} class
+ * or in its constructor and updated/used in its {@code updateItem} method.
  *
  * <h2>Editing</h2>
  * <p>This control supports inline editing of values, and this section attempts to
