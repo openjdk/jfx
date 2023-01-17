@@ -746,7 +746,7 @@ static void process_dnd_source_mouse_release(DragSourceContext *ctx, GdkEvent *e
         gdk_drag_abort(ctx->dnd_ctx, GDK_CURRENT_TIME);
     }
 
-    // the GDK_BUTTON_RELEASE will be put at the end of the queue bacause
+    // the GDK_BUTTON_RELEASE will be put at the end of the queue because
     // WindowContext mouse release would stop DND before it's completed
     gdk_display_put_event(gdk_display_get_default(), event);
     gdk_threads_add_idle_full(G_PRIORITY_DEFAULT, in_drag_end, ctx, NULL);
