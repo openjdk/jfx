@@ -724,13 +724,6 @@ static gboolean in_drag_end(gpointer data) {
     return G_SOURCE_REMOVE;
 }
 
-//static void send_drop_finished(GdkWindow *window) {
-//    GdkEvent* event = gdk_event_new(GDK_DROP_FINISHED);
-//    event->any.window = g_object_ref(window);
-//
-//    gdk_display_put_event(gdk_display_get_default(), event);
-//}
-
 static void process_dnd_source_grab_broken(DragSourceContext *ctx, GdkEvent *event) {
     GdkEventGrabBroken *gb_event = &event->grab_broken;
 
@@ -741,7 +734,6 @@ static void process_dnd_source_grab_broken(DragSourceContext *ctx, GdkEvent *eve
 
     gdk_drag_abort(ctx->dnd_ctx, GDK_CURRENT_TIME);
     gdk_threads_add_idle_full(G_PRIORITY_DEFAULT, in_drag_end, ctx, NULL);
-//    send_drop_finished(ctx->dnd_window);
 }
 
 static void process_dnd_source_mouse_release(DragSourceContext *ctx, GdkEvent *event) {
@@ -758,7 +750,6 @@ static void process_dnd_source_mouse_release(DragSourceContext *ctx, GdkEvent *e
     // WindowContext mouse release would stop DND before it's completed
     gdk_display_put_event(gdk_display_get_default(), event);
     gdk_threads_add_idle_full(G_PRIORITY_DEFAULT, in_drag_end, ctx, NULL);
-//    send_drop_finished(ctx->dnd_window);
 }
 
 static void process_drag_motion(DragSourceContext *ctx, gint x_root, gint y_root, guint state) {
