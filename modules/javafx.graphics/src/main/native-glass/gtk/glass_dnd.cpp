@@ -947,19 +947,14 @@ static void dnd_source_push_data(JNIEnv *env, jobject data, jint supported, Drag
 
 //true = continue
 bool process_dnd_source(GdkEvent *event) {
-    if (!in_drag) {
-        return true;
-    }
-
     GdkWindow* window = event->any.window;
 
-    if (!window) {
+    if (!in_drag || !window) {
         return true;
     }
 
     DragView *drag_view = (DragView *) g_object_get_data(G_OBJECT(window), SOURCE_DND_DRAG_VIEW);
-    if (drag_view != NULL && event->type == GDK_EXPOSE &&
-        window == drag_view->get_window()) {
+    if (drag_view != NULL && event->type == GDK_EXPOSE && window == drag_view->get_window()) {
         drag_view->expose();
         return true;
     }
@@ -967,7 +962,7 @@ bool process_dnd_source(GdkEvent *event) {
     DragSourceContext *ctx = (DragSourceContext*)
         g_object_get_data(G_OBJECT(window), SOURCE_DND_CONTEXT);
 
-    if (ctx == NULL) {
+    if (!ctx) {
         return true;
     }
 
