@@ -24,16 +24,24 @@
  */
 package com.sun.glass.ui.gtk;
 
-import com.sun.glass.ui.*;
+import com.sun.glass.ui.Application;
 import com.sun.glass.ui.CommonDialogs.ExtensionFilter;
 import com.sun.glass.ui.CommonDialogs.FileChooserResult;
-import com.sun.glass.utils.NativeLibLoader;
-import com.sun.javafx.logging.PlatformLogger;
+import com.sun.glass.ui.Cursor;
+import com.sun.glass.ui.GlassRobot;
+import com.sun.glass.ui.InvokeLaterDispatcher;
+import com.sun.glass.ui.Pixels;
+import com.sun.glass.ui.Screen;
+import com.sun.glass.ui.Size;
+import com.sun.glass.ui.Timer;
+import com.sun.glass.ui.View;
+import com.sun.glass.ui.Window;
 import com.sun.javafx.util.Logging;
+import com.sun.glass.utils.NativeLibLoader;
 import com.sun.prism.impl.PrismSettings;
+import com.sun.javafx.logging.PlatformLogger;
 
 import java.io.File;
-import java.lang.annotation.Native;
 import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
@@ -41,6 +49,7 @@ import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
+import java.lang.annotation.Native;
 
 final class GtkApplication extends Application implements
                                     InvokeLaterDispatcher.InvokeLaterSubmitter {
@@ -165,7 +174,9 @@ final class GtkApplication extends Application implements
 
         @SuppressWarnings("removal")
         boolean gtkVersionVerbose =
-                AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> Boolean.getBoolean("jdk.gtk.verbose"));
+                AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> {
+            return Boolean.getBoolean("jdk.gtk.verbose");
+        });
         if (PrismSettings.allowHiDPIScaling) {
             @SuppressWarnings("removal")
             float tmp = AccessController.doPrivileged((PrivilegedAction<Float>) () ->
