@@ -513,6 +513,8 @@ void WindowContextBase::process_key(GdkEventKey* event) {
 }
 
 void WindowContextBase::paint(void* data, jint width, jint height) {
+    fprintf(stderr, "paint -> %d, %d\n", width, height);
+    fflush(stderr);
 #ifdef GLASS_GTK3
     cairo_region_t *region = gdk_window_get_clip_region(gdk_window);
     gdk_window_begin_paint_region(gdk_window, region);
@@ -1127,6 +1129,9 @@ void WindowContextTop::set_visible(bool visible) {
 }
 
 void WindowContextTop::set_bounds(int x, int y, bool xSet, bool ySet, int w, int h, int cw, int ch) {
+    fprintf(stderr, "set_bounds -> w = %d, h = %d, cw = %d, ch = %d\n", w, h, cw, ch);
+    fflush(stderr);
+
     // newW / newH are view/content sizes
     int newW = 0;
     int newH = 0;
@@ -1387,9 +1392,15 @@ void WindowContextTop::notify_window_resize() {
                  com_sun_glass_events_WindowEvent_RESIZE, w, h);
     CHECK_JNI_EXCEPTION(mainEnv)
 
+    fprintf(stderr, "notify window size -> w = %d, h = %d\n", w, h);
+    fflush(stderr);
+
     if (jview) {
         int cw = geometry_get_content_width(&geometry);
         int ch = geometry_get_content_height(&geometry);
+
+        fprintf(stderr, "notify view size -> cw = %d, ch = %d\n", cw, ch);
+        fflush(stderr);
 
         mainEnv->CallVoidMethod(jview, jViewNotifyResize, cw, ch);
         CHECK_JNI_EXCEPTION(mainEnv)
