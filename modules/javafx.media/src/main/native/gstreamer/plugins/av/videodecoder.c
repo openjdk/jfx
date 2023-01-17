@@ -680,6 +680,8 @@ static GstFlowReturn videodecoder_chain(GstPad *pad, GstObject *parent, GstBuffe
     gboolean       unmap_buf = FALSE;
     gboolean       set_frame_values = TRUE;
     int64_t        reordered_opaque = AV_NOPTS_VALUE;
+    unsigned int   out_buf_size = 0;
+    gboolean       copy_error = FALSE;
     uint8_t*       data0 = NULL;
     uint8_t*       data1 = NULL;
     uint8_t*       data2 = NULL;
@@ -840,11 +842,58 @@ static GstFlowReturn videodecoder_chain(GstPad *pad, GstObject *parent, GstBuffe
                 }
 
                 // Copy image by parts from different arrays.
-                memcpy(info2.data,                     data0, decoder->u_offset);
-                memcpy(info2.data + decoder->u_offset, data1, decoder->uv_blocksize);
-                memcpy(info2.data + decoder->v_offset, data2, decoder->uv_blocksize);
+                if (decoder->frame_size > (unsigned int)info2.maxsize) // maxsize should be same or more due to alignment
+                {
+                    gst_buffer_unmap(outbuf, &info2);
+                    // INLINE - gst_buffer_unref()
+                    gst_buffer_unref(outbuf);
+                    gst_element_message_full(GST_ELEMENT(decoder), GST_MESSAGE_ERROR, GST_RESOURCE_ERROR, GST_RESOURCE_ERROR_NO_SPACE_LEFT,
+                                     g_strdup("Wrong buffer size"), NULL, ("videodecoder.c"), ("videodecoder_chain"), 0);
+                    goto _exit;
+                }
+
+                out_buf_size = decoder->frame_size;
+                if (out_buf_size >= decoder->u_offset)
+                {
+                    memcpy(info2.data, data0, decoder->u_offset);
+                    out_buf_size -= decoder->u_offset;
+                    if (out_buf_size >= decoder->uv_blocksize &&
+                        decoder->uv_blocksize <= decoder->frame_size &&
+                        decoder->u_offset <= (decoder->frame_size - decoder->uv_blocksize))
+                    {
+                        memcpy(info2.data + decoder->u_offset, data1, decoder->uv_blocksize);
+                        out_buf_size -= decoder->uv_blocksize;
+                        if (out_buf_size >= decoder->uv_blocksize &&
+                            decoder->uv_blocksize <= decoder->frame_size &&
+                            decoder->v_offset <= (decoder->frame_size - decoder->uv_blocksize))
+                        {
+                            memcpy(info2.data + decoder->v_offset, data2, decoder->uv_blocksize);
+                        }
+                        else
+                        {
+                            copy_error = TRUE;
+                        }
+                    }
+                    else
+                    {
+                        copy_error = TRUE;
+                    }
+                }
+                else
+                {
+                    copy_error = TRUE;
+                }
 
                 gst_buffer_unmap(outbuf, &info2);
+
+                if (copy_error)
+                {
+                    // INLINE - gst_buffer_unref()
+                    gst_buffer_unref(outbuf);
+                    gst_element_message_full(GST_ELEMENT(decoder), GST_MESSAGE_ERROR, GST_RESOURCE_ERROR, GST_RESOURCE_ERROR_NO_SPACE_LEFT,
+                                     g_strdup("Copy data failed"), NULL, ("videodecoder.c"), ("videodecoder_chain"), 0);
+                    goto _exit;
+                }
 
                 GST_BUFFER_OFFSET_END(outbuf) = GST_BUFFER_OFFSET_NONE;
 

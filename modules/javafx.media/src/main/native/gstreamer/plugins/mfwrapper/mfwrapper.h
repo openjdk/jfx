@@ -76,7 +76,7 @@ struct _GstMFWrapper
     IMFSample *pColorConvertOutput;
 
     BYTE *header;
-    guint header_size;
+    gsize header_size;
 
     guint width;
     guint height;

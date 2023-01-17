@@ -682,10 +682,10 @@ public class ImageTools {
 
 
             // clamp dimensions to positive values
-            if (finalWidth == 0) {
+            if (finalWidth <= 0) {
                 finalWidth = 1;
             }
-            if (finalHeight == 0) {
+            if (finalHeight <= 0) {
                 finalHeight = 1;
             }
         }
