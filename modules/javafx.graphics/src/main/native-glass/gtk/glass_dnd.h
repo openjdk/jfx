@@ -36,6 +36,7 @@ jint dnd_target_get_supported_actions(JNIEnv *);
 jobjectArray dnd_target_get_mimes(JNIEnv *);
 jobject dnd_target_get_data(JNIEnv *, jstring);
 
+bool process_dnd_source(GdkEvent *);
 jint execute_dnd(JNIEnv *, jobject, jint);
 
 gboolean is_in_drag();

@@ -166,7 +166,9 @@ static void process_dnd_target_drag_motion(WindowContext *ctx, GdkEventDND *even
     gdk_drag_status(event->context, result, GDK_CURRENT_TIME);
 }
 
-static void notify_drag_leave(WindowContext *ctx) {
+static void process_dnd_target_drag_leave(WindowContext *ctx, GdkEventDND *event) {
+    (void)event;
+
     mainEnv->CallVoidMethod(ctx->get_jview(), jViewNotifyDragLeave, NULL);
     CHECK_JNI_EXCEPTION(mainEnv)
 }
@@ -183,14 +185,6 @@ static void wait_for_selection_data_hook(GdkEvent * event, void * data) {
     }
 }
 
-static void notify_drag_drop(WindowContext *ctx, GdkDragAction selected, int x_root, int y_root) {
-    mainEnv->CallIntMethod(ctx->get_jview(), jViewNotifyDragDrop,
-            (jint)x_root - enter_ctx.dx, (jint)y_root - enter_ctx.dy,
-            (jint)x_root, (jint)y_root,
-            translate_gdk_action_to_glass(selected));
-    LOG_EXCEPTION(mainEnv)
-}
-
 static void process_dnd_target_drop_start(WindowContext *ctx, GdkEventDND *event) {
     if (!enter_ctx.ctx || enter_ctx.just_entered) {
         gdk_drop_finish(event->context, FALSE, GDK_CURRENT_TIME);
@@ -199,7 +193,11 @@ static void process_dnd_target_drop_start(WindowContext *ctx, GdkEventDND *event
     }
 
     GdkDragAction selected = gdk_drag_context_get_selected_action(event->context);
-    notify_drag_drop(ctx, selected, event->x_root, event->y_root);
+    mainEnv->CallIntMethod(ctx->get_jview(), jViewNotifyDragDrop,
+            (jint)event->x_root - enter_ctx.dx, (jint)event->y_root - enter_ctx.dy,
+            (jint)event->x_root, (jint)event->y_root,
+            translate_gdk_action_to_glass(selected));
+    LOG_EXCEPTION(mainEnv)
 
     gdk_drop_finish(event->context, TRUE, GDK_CURRENT_TIME);
     gdk_drop_reply(event->context, TRUE, GDK_CURRENT_TIME);
@@ -227,7 +225,7 @@ void process_dnd_target(WindowContext *ctx, GdkEventDND *event) {
             process_dnd_target_drag_motion(ctx, event);
             break;
         case GDK_DRAG_LEAVE:
-            notify_drag_leave(ctx);
+            process_dnd_target_drag_leave(ctx, event);
             break;
         case GDK_DROP_START:
             process_dnd_target_drop_start(ctx, event);
@@ -488,6 +486,8 @@ jobject dnd_target_get_data(JNIEnv *env, jstring mime) {
 
 /************************* SOURCE *********************************************/
 static bool in_drag = false;
+const char * const SOURCE_DND_CONTEXT = "fx-dnd-context";
+const char * const SOURCE_DND_DRAG_VIEW = "fx-dnd-drag-view";
 
 gboolean is_in_drag() {
     return in_drag;
@@ -724,6 +724,13 @@ static gboolean in_drag_end(gpointer data) {
     return G_SOURCE_REMOVE;
 }
 
+//static void send_drop_finished(GdkWindow *window) {
+//    GdkEvent* event = gdk_event_new(GDK_DROP_FINISHED);
+//    event->any.window = g_object_ref(window);
+//
+//    gdk_display_put_event(gdk_display_get_default(), event);
+//}
+
 static void process_dnd_source_grab_broken(DragSourceContext *ctx, GdkEvent *event) {
     GdkEventGrabBroken *gb_event = &event->grab_broken;
 
@@ -734,36 +741,33 @@ static void process_dnd_source_grab_broken(DragSourceContext *ctx, GdkEvent *eve
 
     gdk_drag_abort(ctx->dnd_ctx, GDK_CURRENT_TIME);
     gdk_threads_add_idle_full(G_PRIORITY_DEFAULT, in_drag_end, ctx, NULL);
+//    send_drop_finished(ctx->dnd_window);
 }
 
 static void process_dnd_source_mouse_release(DragSourceContext *ctx, GdkEvent *event) {
     GdkDragAction selected = gdk_drag_context_get_selected_action(ctx->dnd_ctx);
 
-    if (is_dnd_owner) {
-        WindowContext *window_ctx = (WindowContext*)
-            g_object_get_data(G_OBJECT(ctx->dnd_window), GDK_WINDOW_DATA_CONTEXT);
-
-        if (selected) {
-            notify_drag_drop(window_ctx, selected, event->button.x_root, event->button.y_root);
-        } else {
-            notify_drag_leave(window_ctx);
-        }
+    if (selected) {
+        ctx->performed_action = translate_gdk_action_to_glass(selected);
+        gdk_drag_drop(ctx->dnd_ctx, GDK_CURRENT_TIME);
     } else {
-        if (selected) {
-            ctx->performed_action = translate_gdk_action_to_glass(selected);
-            gdk_drag_drop(ctx->dnd_ctx, GDK_CURRENT_TIME);
-        } else {
-            gdk_drag_abort(ctx->dnd_ctx, GDK_CURRENT_TIME);
-        }
+        gdk_drag_abort(ctx->dnd_ctx, GDK_CURRENT_TIME);
     }
 
-    // This is done to let mouse release event succeed on WindowContext
+    // the GDK_BUTTON_RELEASE will be put at the end of the queue bacause
+    // WindowContext mouse release would stop DND before it's completed
+    gdk_display_put_event(gdk_display_get_default(), event);
     gdk_threads_add_idle_full(G_PRIORITY_DEFAULT, in_drag_end, ctx, NULL);
+//    send_drop_finished(ctx->dnd_window);
 }
 
 static void process_drag_motion(DragSourceContext *ctx, gint x_root, gint y_root, guint state) {
     GdkWindow *dest_window;
     GdkDragProtocol prot;
+
+    if (ctx->drag_view) {
+        ctx->drag_view->move(x_root, y_root);
+    }
 
     gdk_drag_find_window_for_screen(ctx->dnd_ctx, NULL, gdk_screen_get_default(),
             x_root, y_root, &dest_window, &prot);
@@ -921,6 +925,7 @@ static void dnd_source_push_data(JNIEnv *env, jobject data, jint supported, Drag
         gdk_pointer_grab(ctx->dnd_window, FALSE, GDK_MOUSE_EVENTS_MASK, NULL, NULL, GDK_CURRENT_TIME);
     }
 
+    g_object_set_data(G_OBJECT(ctx->dnd_window), SOURCE_DND_CONTEXT, ctx);
     g_list_free(targets);
 
     gboolean is_raw_image = FALSE;
@@ -949,30 +954,40 @@ static void dnd_source_push_data(JNIEnv *env, jobject data, jint supported, Drag
     }
 }
 
-static void dnd_source_hook(GdkEvent *event, void * data) {
-    DragSourceContext *ctx = (DragSourceContext *) data;
-    GdkWindow *window = event->any.window;
-
-    if (ctx->drag_view != NULL && event->type == GDK_EXPOSE &&
-        window == ctx->drag_view->get_window()) {
-        ctx->drag_view->expose();
-        return;
+//true = continue
+bool process_dnd_source(GdkEvent *event) {
+    if (!in_drag) {
+        return true;
     }
 
-    // dnd_window window will grab pointer motion, so it's delivered there
-    if (event->type == GDK_MOTION_NOTIFY && ctx->drag_view != NULL
-        && window == ctx->dnd_window) {
-        ctx->drag_view->move(event->motion.x_root, event->motion.y_root);
+    GdkWindow* window = event->any.window;
+
+    if (!window) {
+        return true;
+    }
+
+    DragView *drag_view = (DragView *) g_object_get_data(G_OBJECT(window), SOURCE_DND_DRAG_VIEW);
+    if (drag_view != NULL && event->type == GDK_EXPOSE &&
+        window == drag_view->get_window()) {
+        drag_view->expose();
+        return true;
+    }
+
+    DragSourceContext *ctx = (DragSourceContext*)
+        g_object_get_data(G_OBJECT(window), SOURCE_DND_CONTEXT);
+
+    if (ctx == NULL) {
+        return true;
     }
 
     if (event->type == GDK_DELETE && window == ctx->dnd_window) {
         gdk_drag_abort(ctx->dnd_ctx, GDK_CURRENT_TIME);
         in_drag = false;
-        return;
+        return true;
     }
 
     if (window != ctx->dnd_window) {
-        return;
+        return true;
     }
 
     switch(event->type) {
@@ -984,7 +999,7 @@ static void dnd_source_hook(GdkEvent *event, void * data) {
             break;
         case GDK_BUTTON_RELEASE:
             process_dnd_source_mouse_release(ctx, event);
-            break;
+            return false;
         case GDK_KEY_PRESS:
         case GDK_KEY_RELEASE:
             process_dnd_source_key_press_release(ctx, event);
@@ -1002,10 +1017,11 @@ static void dnd_source_hook(GdkEvent *event, void * data) {
         default:
             break;
     }
+
+    return true;
 }
 
 jint execute_dnd(JNIEnv *env, jobject data, jint supported) {
-    GevlHookRegistration hookReg;
     DragSourceContext *ctx = new DragSourceContext();
     ctx->performed_action = com_sun_glass_ui_gtk_GtkDnDClipboard_ACTION_NONE;
 
@@ -1015,13 +1031,9 @@ jint execute_dnd(JNIEnv *env, jobject data, jint supported) {
         goto end;
     }
 
-    hookReg = glass_evloop_hook_add((GevlHookFunction) dnd_source_hook, ctx);
-
     while (is_in_drag()) {
         gtk_main_iteration();
     }
-
-    glass_evloop_hook_remove(hookReg);
 
     end:
     jint performed_action = ctx->performed_action;
@@ -1175,6 +1187,7 @@ DragView::DragView(GdkPixbuf* _pixbuf, gboolean _is_raw_image,
     attrs.y -= offset_y;
 
     window = gdk_window_new(gdk_screen_get_root_window(screen), &attrs, mask);
+    g_object_set_data(G_OBJECT(window), SOURCE_DND_DRAG_VIEW, this);
 
 #ifdef GLASS_GTK3
     gdk_window_set_opaque_region(window, NULL);

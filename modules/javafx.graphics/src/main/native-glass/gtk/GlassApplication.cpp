@@ -434,6 +434,10 @@ static void process_events(GdkEvent* event, gpointer data) {
 
     glass_evloop_call_hooks(event);
 
+    if (!process_dnd_source(event)) {
+        return;
+    }
+
     if (ctx != NULL) {
         EventsCounterHelper helper(ctx);
         try {
