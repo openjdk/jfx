@@ -24,24 +24,16 @@
  */
 package com.sun.glass.ui.gtk;
 
-import com.sun.glass.ui.Application;
+import com.sun.glass.ui.*;
 import com.sun.glass.ui.CommonDialogs.ExtensionFilter;
 import com.sun.glass.ui.CommonDialogs.FileChooserResult;
-import com.sun.glass.ui.Cursor;
-import com.sun.glass.ui.GlassRobot;
-import com.sun.glass.ui.InvokeLaterDispatcher;
-import com.sun.glass.ui.Pixels;
-import com.sun.glass.ui.Screen;
-import com.sun.glass.ui.Size;
-import com.sun.glass.ui.Timer;
-import com.sun.glass.ui.View;
-import com.sun.glass.ui.Window;
-import com.sun.javafx.util.Logging;
 import com.sun.glass.utils.NativeLibLoader;
-import com.sun.prism.impl.PrismSettings;
 import com.sun.javafx.logging.PlatformLogger;
+import com.sun.javafx.util.Logging;
+import com.sun.prism.impl.PrismSettings;
 
 import java.io.File;
+import java.lang.annotation.Native;
 import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
@@ -49,7 +41,6 @@ import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
-import java.lang.annotation.Native;
 
 final class GtkApplication extends Application implements
                                     InvokeLaterDispatcher.InvokeLaterSubmitter {
@@ -57,15 +48,11 @@ final class GtkApplication extends Application implements
             "org.eclipse.swt.internal.gtk.OS";
     private static final int forcedGtkVersion;
     private static boolean gtk2WarningIssued = false;
-    private static final String GTK2_ALREADY_LOADED_WARNING =
-        "WARNING: Found GTK 2 library already loaded";
     private static final String GTK2_SPECIFIED_WARNING =
-        "WARNING: A command line option has enabled the GTK 2 library";
-    private static final String GTK2_FALLBACK_WARNING =
-        "WARNING: Using GTK 2 library because GTK 3 cannot be loaded ";
-    private static final String GTK2_DEPRECATION_WARNING =
-        "WARNING: The JavaFX GTK 2 library is deprecated and will be removed in a future release";
+        "WARNING: A command line option tried to enable the GTK 2 library";
 
+    private static final String GTK2_REMOVED_WARNING =
+        "WARNING: The JavaFX GTK 2 library was removed.";
 
     static  {
         //check for SWT-GTK lib presence
@@ -106,17 +93,12 @@ final class GtkApplication extends Application implements
                     ver = 3;
                 }
             }
-            if (ver < 2 || ver > 3) {
+            if (ver != 3) {
                 logger.warning("SWT-GTK uses unsupported major GTK version "
                         + ver + ". GTK3 will be used as default.");
                 ver = 3;
             }
             forcedGtkVersion = ver;
-            if (ver == 2 && !gtk2WarningIssued) {
-                System.err.println(GTK2_ALREADY_LOADED_WARNING);
-                System.err.println(GTK2_DEPRECATION_WARNING);
-                gtk2WarningIssued = true;
-            }
         } else {
             forcedGtkVersion = 0;
         }
@@ -162,7 +144,7 @@ final class GtkApplication extends Application implements
     GtkApplication() {
 
         @SuppressWarnings("removal")
-        final int gtkVersion = forcedGtkVersion == 0 ?
+        int gtkVersion = forcedGtkVersion == 0 ?
             AccessController.doPrivileged((PrivilegedAction<Integer>) () -> {
                 String v = System.getProperty("jdk.gtk.version","3");
                 int ret = 0;
@@ -176,15 +158,14 @@ final class GtkApplication extends Application implements
 
         if (gtkVersion == 2 && !gtk2WarningIssued) {
             System.err.println(GTK2_SPECIFIED_WARNING);
-            System.err.println(GTK2_DEPRECATION_WARNING);
+            System.err.println(GTK2_REMOVED_WARNING);
             gtk2WarningIssued = true;
+            gtkVersion = 3;
         }
 
         @SuppressWarnings("removal")
         boolean gtkVersionVerbose =
-                AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> {
-            return Boolean.getBoolean("jdk.gtk.verbose");
-        });
+                AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> Boolean.getBoolean("jdk.gtk.verbose"));
         if (PrismSettings.allowHiDPIScaling) {
             @SuppressWarnings("removal")
             float tmp = AccessController.doPrivileged((PrivilegedAction<Float>) () ->
@@ -203,16 +184,6 @@ final class GtkApplication extends Application implements
             } else if (libraryToLoad == QUERY_USE_CURRENT) {
                 if (gtkVersionVerbose) {
                     System.out.println("Glass GTK library to load is already loaded");
-                }
-            } else if (libraryToLoad == QUERY_LOAD_GTK2) {
-                if (gtkVersionVerbose) {
-                    System.out.println("Glass GTK library to load is glassgtk2");
-                }
-                NativeLibLoader.loadLibrary("glassgtk2");
-                if (!gtk2WarningIssued) {
-                    System.err.println(GTK2_FALLBACK_WARNING);
-                    System.err.println(GTK2_DEPRECATION_WARNING);
-                    gtk2WarningIssued = true;
                 }
             } else if (libraryToLoad == QUERY_LOAD_GTK3) {
                 if (gtkVersionVerbose) {

@@ -54,7 +54,6 @@ public class Gtk2Deprecation1Test extends Gtk2DeprecationCommon {
         final String output = out.toString();
         System.err.println(output);
         assertTrue("Missing warning message", output.contains("WARNING"));
-        assertTrue("Missing warning message", output.contains("deprecated"));
         assertTrue("Missing warning message", output.contains("removed"));
     }
 
