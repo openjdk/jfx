@@ -755,12 +755,14 @@ static void process_dnd_source_mouse_release(DragSourceContext *ctx, GdkEvent *e
 static void process_drag_motion(DragSourceContext *ctx, gint x_root, gint y_root, guint state) {
     GdkWindow *dest_window;
     GdkDragProtocol prot;
+    GdkWindow *ignore = NULL;
 
     if (ctx->drag_view) {
         ctx->drag_view->move(x_root, y_root);
+        ignore = ctx->drag_view->get_window();
     }
 
-    gdk_drag_find_window_for_screen(ctx->dnd_ctx, NULL, gdk_screen_get_default(),
+    gdk_drag_find_window_for_screen(ctx->dnd_ctx, ignore, gdk_screen_get_default(),
             x_root, y_root, &dest_window, &prot);
 
     if (prot != GDK_DRAG_PROTO_NONE) {
@@ -805,10 +807,8 @@ static void process_dnd_source_key_press_release(DragSourceContext *ctx, GdkEven
     }
 }
 
-static void process_dnd_source_drag_status(DragSourceContext *ctx, GdkEvent *event) {
-    GdkEventDND *eventDnd = &event->dnd;
-    GdkDragAction selected = gdk_drag_context_get_selected_action(eventDnd->context);
-    GdkCursor* cursor;
+static GdkCursor * get_action_cursor(GdkDragAction selected) {
+    GdkCursor* cursor = NULL;
 
     if (selected & GDK_ACTION_COPY) {
         cursor = gdk_cursor_new_from_name(gdk_display_get_default(), "dnd-copy");
@@ -831,7 +831,9 @@ static void process_dnd_source_drag_status(DragSourceContext *ctx, GdkEvent *eve
         if (cursor == NULL) {
             cursor = gdk_cursor_new_from_name(gdk_display_get_default(), "alias");
         }
-    } else {
+    }
+
+    if (cursor == NULL) {
         cursor = gdk_cursor_new_from_name(gdk_display_get_default(), "dnd-no-drop");
 
         if (cursor == NULL) {
@@ -839,15 +841,14 @@ static void process_dnd_source_drag_status(DragSourceContext *ctx, GdkEvent *eve
         }
     }
 
-    if (cursor == NULL) {
-        cursor = gdk_cursor_new_from_name(gdk_display_get_default(), "dnd-none");
+    return cursor;
+}
 
-        if (cursor == NULL) {
-            cursor = gdk_cursor_new_from_name(gdk_display_get_default(), "grabbing");
-        }
-    }
-
-    gdk_pointer_grab(ctx->dnd_window, FALSE, GDK_MOUSE_EVENTS_MASK, NULL, cursor, GDK_CURRENT_TIME);
+static void process_dnd_source_drag_status(DragSourceContext *ctx, GdkEvent *event) {
+    GdkEventDND *eventDnd = &event->dnd;
+    GdkDragAction selected = gdk_drag_context_get_selected_action(eventDnd->context);
+    gdk_pointer_grab(ctx->dnd_window, FALSE, GDK_MOUSE_EVENTS_MASK, NULL,
+                        get_action_cursor(selected), GDK_CURRENT_TIME);
 }
 
 static void add_target_from_jstring(JNIEnv *env, GList **list, jstring string) {
@@ -908,15 +909,17 @@ static void dnd_source_push_data(JNIEnv *env, jobject data, jint supported, Drag
     targets = data_to_targets(env, data);
     ctx->data = env->NewGlobalRef(data);
 
+    g_object_set_data(G_OBJECT(ctx->dnd_window), SOURCE_DND_CONTEXT, ctx);
+
     GdkDragAction actions = translate_glass_action_to_gdk(supported);
     ctx->actions = actions;
     ctx->dnd_ctx = gdk_drag_begin(ctx->dnd_window, targets);
     if (!gdk_pointer_is_grabbed()) {
         // Grab will start on glass_window, unless disabled
-        gdk_pointer_grab(ctx->dnd_window, FALSE, GDK_MOUSE_EVENTS_MASK, NULL, NULL, GDK_CURRENT_TIME);
+        gdk_pointer_grab(ctx->dnd_window, FALSE, GDK_MOUSE_EVENTS_MASK, NULL,
+                         get_action_cursor(GDK_ACTION_DEFAULT), GDK_CURRENT_TIME);
     }
 
-    g_object_set_data(G_OBJECT(ctx->dnd_window), SOURCE_DND_CONTEXT, ctx);
     g_list_free(targets);
 
     gboolean is_raw_image = FALSE;
@@ -972,6 +975,7 @@ bool process_dnd_source(GdkEvent *event) {
         return true;
     }
 
+    // the window has grab
     if (window != ctx->dnd_window) {
         return true;
     }
