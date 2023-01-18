@@ -264,7 +264,7 @@ import javafx.util.Callback;
  *
  * <p>Important points to note:
  * <ul>
- * <li>Avoid inserting {@link Node}  instances directly into the {@code TableView} cells or its data model.</li>
+ * <li>Avoid inserting {@link Node} instances directly into the {@code TableView} cells or its data model.</li>
  * <li>The recommended approach is to put the relevant information into the items list, and
  * provide a custom {@link TableColumn#cellFactoryProperty() cell factory} to create the nodes for a
  * given cell and update them on demand using the data stored in the item for that cell.</li>
