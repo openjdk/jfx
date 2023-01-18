@@ -376,9 +376,9 @@ public abstract class LabeledSkinBase<C extends Labeled> extends SkinBase<C> {
                 labeled.isWrapText() ? textWidth : 0,
                 labeled.getLineSpacing(), text.getBoundsType());
 
-        // Now we want to add on the graphic if necessary!
+        // Calculate the graphic height and use based on contentDisplay value
         double graphicHeight = graphic == null ? 0.0 :
-                Utils.boundedSize(graphic.prefHeight(-1), graphic.minHeight(-1), graphic.maxHeight(-1));
+                Utils.boundedSize(graphic.prefHeight(width), graphic.minHeight(width), graphic.maxHeight(width));
 
         // Now add on the graphic, gap, and padding as appropriate
         final Node graphic = labeled.getGraphic();
@@ -388,9 +388,9 @@ public abstract class LabeledSkinBase<C extends Labeled> extends SkinBase<C> {
         } else if (isIgnoreText()) {
             height = graphicHeight;
         } else if (contentDisplay == TOP || contentDisplay == BOTTOM){
-            height = graphic.prefHeight(-1) + gap + textHeight;
+            height = graphicHeight + gap + textHeight;
         } else {
-            height = Math.max(textHeight, graphic.prefHeight(-1));
+            height = Math.max(textHeight, graphicHeight);
         }
 
         double padding = topInset + bottomInset;
