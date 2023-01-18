@@ -6,6 +6,8 @@ The following notes describe important changes and information about this releas
 
 These notes document the JavaFX 19.0.2 update release. As such, they complement the [JavaFX 19](https://github.com/openjdk/jfx/blob/jfx19/doc-files/release-notes-19.md) release notes.
 
+## Important Changes
+
 ### FXML JavaScript Engine Disabled by Default
 
 The “JavaScript script engine” for FXML is now disabled by default. Any `.fxml` file that has a "javascript" Processing Instruction (PI) will no longer load by default, and an exception will be thrown.
@@ -16,12 +18,14 @@ If the JDK has a JavaScript script engine, it can be enabled by setting the syst
 -Djavafx.allowjs=true
 ```
 
-## List of Fixed Bugs
+## List of Security Fixes
 
 Issue key|Summary|Subcomponent
 ---------|-------|------------
-[JDK-8280841](https://bugs.openjdk.java.net/browse/JDK-8280841)|Update SQLite to 3.37.2|web
-[JDK-8282134](https://bugs.openjdk.java.net/browse/JDK-8282134)|Certain regex can cause a JS trap in WebView|web
-[JDK-8283328](https://bugs.openjdk.java.net/browse/JDK-8283328)|Update libxml2 to 2.9.13|web
-[JDK-8286256](https://bugs.openjdk.java.net/browse/JDK-8286256)|Update libxml2 to 2.9.14|web
-[JDK-8286257](https://bugs.openjdk.java.net/browse/JDK-8286257)|Update libxslt to 1.1.35|web
+JDK-8294779 (not public) | Improve FX pages | fxml
+JDK-8289336 (not public) | Better platform image support | graphics
+JDK-8289343 (not public) | Better GL support | graphics
+JDK-8299628 (not public) | BMP top-down images fail to load after JDK-8289336 | graphics
+JDK-8292097 (not public) | Better video decoding | media
+JDK-8292105 (not public) | Improve Robot functionality | window-toolkit
+JDK-8292112 (not public) | Better DragView handling | window-toolkit
