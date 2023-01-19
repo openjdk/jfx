@@ -95,7 +95,6 @@ public class TextLayoutTest {
         }
     }
 
-    @SuppressWarnings("deprecation")
     @Ignore("JDK-8087615")
     @Test public void buildRuns() {
 

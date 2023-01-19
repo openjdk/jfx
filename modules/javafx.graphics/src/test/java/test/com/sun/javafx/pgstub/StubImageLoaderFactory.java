@@ -80,7 +80,7 @@ public final class StubImageLoaderFactory {
             };
 
     public StubImageLoaderFactory() {
-        imageInfos = new HashMap<Object, StubPlatformImageInfo>();
+        imageInfos = new HashMap<>();
     }
 
     public void reset() {

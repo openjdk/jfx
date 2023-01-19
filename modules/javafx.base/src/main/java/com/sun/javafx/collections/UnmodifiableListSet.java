@@ -55,7 +55,7 @@ public final class UnmodifiableListSet<E> extends AbstractSet<E> {
      */
     @Override public Iterator<E> iterator() {
         final Iterator<E> itr = backingList.iterator();
-        return new Iterator<E>() {
+        return new Iterator<>() {
             @Override public boolean hasNext() {
                 return itr.hasNext();
             }

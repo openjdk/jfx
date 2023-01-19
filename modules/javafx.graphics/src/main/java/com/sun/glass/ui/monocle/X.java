@@ -176,6 +176,7 @@ class X {
         XDisplay(long p) {
             super(p);
         }
+        @Override
         native int sizeof();
     }
 

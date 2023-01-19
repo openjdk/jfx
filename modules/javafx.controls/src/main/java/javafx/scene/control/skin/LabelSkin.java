@@ -25,7 +25,6 @@
 
 package javafx.scene.control.skin;
 
-import javafx.scene.Node;
 import javafx.scene.control.Control;
 import javafx.scene.control.Label;
 

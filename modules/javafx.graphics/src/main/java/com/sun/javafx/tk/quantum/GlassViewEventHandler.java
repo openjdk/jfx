@@ -583,7 +583,7 @@ class GlassViewEventHandler extends View.EventHandler {
     private static ObservableList<InputMethodTextRun> inputMethodEventComposed(
             String text, int commitCount, int[] clauseBoundary, int[] attrBoundary, byte[] attrValue)
     {
-        ObservableList<InputMethodTextRun> composed = new TrackableObservableList<InputMethodTextRun>() {
+        ObservableList<InputMethodTextRun> composed = new TrackableObservableList<>() {
             @Override
             protected void onChanged(ListChangeListener.Change<InputMethodTextRun> c) {
             }

@@ -42,7 +42,7 @@ import static javafx.scene.input.KeyCode.RIGHT;
 import static javafx.scene.input.KeyCode.TAB;
 import static javafx.scene.input.KeyCode.UP;
 
-public class FocusTraversalInputMap<N extends Node> {
+public class FocusTraversalInputMap {
 
     private static final List<InputMap.Mapping<?>> MAPPINGS = List.of(
         new KeyMapping(UP, e -> traverseUp(e)),

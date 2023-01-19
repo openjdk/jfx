@@ -58,7 +58,7 @@ import java.lang.reflect.Method;
  */
 public final class ReadOnlyJavaBeanStringPropertyBuilder {
 
-    private final ReadOnlyJavaBeanPropertyBuilderHelper helper = new ReadOnlyJavaBeanPropertyBuilderHelper();
+    private final ReadOnlyJavaBeanPropertyBuilderHelper<String> helper = new ReadOnlyJavaBeanPropertyBuilderHelper<>();
 
     private ReadOnlyJavaBeanStringPropertyBuilder() {}
 
@@ -81,7 +81,7 @@ public final class ReadOnlyJavaBeanStringPropertyBuilder {
      * {@code String}
      */
     public ReadOnlyJavaBeanStringProperty build() throws NoSuchMethodException {
-        final ReadOnlyPropertyDescriptor descriptor = helper.getDescriptor();
+        final ReadOnlyPropertyDescriptor<String> descriptor = helper.getDescriptor();
         if (!String.class.equals(descriptor.getType())) {
             throw new IllegalArgumentException("Not a String property");
         }

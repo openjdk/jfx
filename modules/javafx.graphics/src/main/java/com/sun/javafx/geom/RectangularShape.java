@@ -256,6 +256,7 @@ public abstract class RectangularShape extends Shape {
     /**
      * {@inheritDoc}
      */
+    @Override
     public boolean contains(Point2D p) {
         return contains(p.x, p.y);
     }
@@ -263,6 +264,7 @@ public abstract class RectangularShape extends Shape {
     /**
      * {@inheritDoc}
      */
+    @Override
     public RectBounds getBounds() {
         float width = getWidth();
         float height = getHeight();
@@ -303,6 +305,7 @@ public abstract class RectangularShape extends Shape {
      * @return a <code>PathIterator</code> object that provides access to
      *      the <code>Shape</code> object's flattened geometry.
      */
+    @Override
     public PathIterator getPathIterator(BaseTransform tx, float flatness) {
         return new FlatteningPathIterator(getPathIterator(tx), flatness);
     }

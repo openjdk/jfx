@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2019, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,8 @@
 
 package test.robot.javafx.scene.dialog;
 
+import java.util.concurrent.CountDownLatch;
+
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.scene.Scene;
@@ -32,20 +34,18 @@ import javafx.scene.control.Button;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.Dialog;
 import javafx.scene.control.Label;
+import javafx.scene.input.MouseButton;
 import javafx.scene.robot.Robot;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 import javafx.stage.WindowEvent;
-import javafx.scene.input.MouseButton;
 
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import test.util.Util;
 
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
+import test.util.Util;
 
 //see JDK8193502
 public class DialogRepeatedShowHideTest {
@@ -78,26 +78,24 @@ public class DialogRepeatedShowHideTest {
         mouseClick(button.getLayoutX() + button.getWidth() / 2, button.getLayoutY() + button.getHeight() / 2);
 
         Thread.sleep(400);
-        waitForLatch(dialogShownLatch, 10, "Failed to show Dialog");
+        Util.waitForLatch(dialogShownLatch, 10, "Failed to show Dialog");
     }
 
     private void hide() throws Exception {
         dialogHideLatch = new CountDownLatch(1);
         Platform.runLater(() -> dialog.close());
         Thread.sleep(600);
-        waitForLatch(dialogHideLatch, 10, "Failed to hide Dialog");
+        Util.waitForLatch(dialogHideLatch, 10, "Failed to hide Dialog");
     }
 
     @BeforeClass
     public static void initFX() throws Exception {
-        new Thread(() -> Application.launch(TestApp.class, (String[]) null)).start();
-        waitForLatch(startupLatch, 10, "FX runtime failed to start.");
+        Util.launch(startupLatch, TestApp.class);
     }
 
     @AfterClass
     public static void exit() {
-        Platform.runLater(() -> stage.hide());
-        Platform.exit();
+        Util.shutdown(stage);
     }
 
     private void mouseClick(double x, double y) {
@@ -146,9 +144,5 @@ public class DialogRepeatedShowHideTest {
 
             return testDialog;
         }
-    }
-
-    public static void waitForLatch(CountDownLatch latch, int seconds, String msg) throws Exception {
-        Assert.assertTrue("Timeout: " + msg, latch.await(seconds, TimeUnit.SECONDS));
     }
 }

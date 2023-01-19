@@ -113,7 +113,7 @@ public  class Polygon extends Shape {
      *
      * @defaultValue empty
      */
-    private final ObservableList<Double> points = new TrackableObservableList<Double>() {
+    private final ObservableList<Double> points = new TrackableObservableList<>() {
         @Override
         protected void onChanged(Change<Double> c) {
             NodeHelper.markDirty(Polygon.this, DirtyBits.NODE_GEOMETRY);

@@ -30,8 +30,6 @@ import java.util.Collection;
 import javafx.scene.Group;
 import javafx.scene.Parent;
 
-import javafx.scene.effect.BlendMode;
-
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;

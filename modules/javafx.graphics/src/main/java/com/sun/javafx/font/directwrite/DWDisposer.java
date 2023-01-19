@@ -35,6 +35,7 @@ class DWDisposer implements DisposerRecord  {
         this.resource = resource;
     }
 
+    @Override
     public synchronized void dispose() {
         if (resource != null) {
             resource.Release();

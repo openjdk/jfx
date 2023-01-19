@@ -76,7 +76,7 @@ static const unsigned int std_luminance_quant_tbl[DCTSIZE2] = {
   72,  92,  95,  98, 112, 100, 103,  99
 };
 static const unsigned int std_chrominance_quant_tbl[DCTSIZE2] = {
-  17,  18,  24,  47,  99,  99,  99,  99,
+  16,  18,  24,  47,  99,  99,  99,  99,
   18,  21,  26,  66,  99,  99,  99,  99,
   24,  26,  56,  99,  99,  99,  99,  99,
   47,  66,  99,  99,  99,  99,  99,  99,
@@ -379,11 +379,13 @@ jpeg_set_colorspace (j_compress_ptr cinfo, J_COLOR_SPACE colorspace)
   case JCS_RGB:
     cinfo->write_Adobe_marker = TRUE; /* write Adobe marker to flag RGB */
     cinfo->num_components = 3;
-    SET_COMP(0, 0x52 /* 'R' */, 1,1, 0,
+    SET_COMP(0, 0x52 /* 'R' */, 1,1,
+        cinfo->color_transform == JCT_SUBTRACT_GREEN ? 1 : 0,
         cinfo->color_transform == JCT_SUBTRACT_GREEN ? 1 : 0,
         cinfo->color_transform == JCT_SUBTRACT_GREEN ? 1 : 0);
     SET_COMP(1, 0x47 /* 'G' */, 1,1, 0, 0,0);
-    SET_COMP(2, 0x42 /* 'B' */, 1,1, 0,
+    SET_COMP(2, 0x42 /* 'B' */, 1,1,
+        cinfo->color_transform == JCT_SUBTRACT_GREEN ? 1 : 0,
         cinfo->color_transform == JCT_SUBTRACT_GREEN ? 1 : 0,
         cinfo->color_transform == JCT_SUBTRACT_GREEN ? 1 : 0);
     break;
@@ -417,11 +419,13 @@ jpeg_set_colorspace (j_compress_ptr cinfo, J_COLOR_SPACE colorspace)
     cinfo->JFIF_major_version = 2;   /* Set JFIF major version = 2 */
     cinfo->num_components = 3;
     /* Add offset 0x20 to the normal R/G/B component IDs */
-    SET_COMP(0, 0x72 /* 'r' */, 1,1, 0,
+    SET_COMP(0, 0x72 /* 'r' */, 1,1,
+        cinfo->color_transform == JCT_SUBTRACT_GREEN ? 1 : 0,
         cinfo->color_transform == JCT_SUBTRACT_GREEN ? 1 : 0,
         cinfo->color_transform == JCT_SUBTRACT_GREEN ? 1 : 0);
     SET_COMP(1, 0x67 /* 'g' */, 1,1, 0, 0,0);
-    SET_COMP(2, 0x62 /* 'b' */, 1,1, 0,
+    SET_COMP(2, 0x62 /* 'b' */, 1,1,
+        cinfo->color_transform == JCT_SUBTRACT_GREEN ? 1 : 0,
         cinfo->color_transform == JCT_SUBTRACT_GREEN ? 1 : 0,
         cinfo->color_transform == JCT_SUBTRACT_GREEN ? 1 : 0);
     break;

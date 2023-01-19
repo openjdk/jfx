@@ -50,7 +50,7 @@ public class ImageData {
         @SuppressWarnings("removal")
         var dummy = AccessController.doPrivileged((PrivilegedAction) () -> {
             if (System.getProperty("decora.showleaks") != null) {
-                alldatas = new HashSet<ImageData>();
+                alldatas = new HashSet<>();
                 Runtime.getRuntime().addShutdownHook(new Thread() {
                     @Override
                     public void run() {

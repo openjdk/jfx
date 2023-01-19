@@ -46,17 +46,20 @@ public abstract class ImageLoaderImpl implements ImageLoader {
         this.formatDescription = formatDescription;
     }
 
+    @Override
     public final ImageFormatDescription getFormatDescription() {
         return formatDescription;
     }
 
+    @Override
     public final void addListener(ImageLoadListener listener) {
         if (listeners == null) {
-            listeners = new HashSet<ImageLoadListener>();
+            listeners = new HashSet<>();
         }
         listeners.add(listener);
     }
 
+    @Override
     public final void removeListener(ImageLoadListener listener) {
         if (listeners != null) {
             listeners.remove(listener);

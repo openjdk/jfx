@@ -38,7 +38,6 @@ import com.sun.javafx.image.impl.IntArgbPre;
 import com.sun.prism.MediaFrame;
 import com.sun.prism.PixelFormat;
 import com.sun.prism.Texture;
-import com.sun.prism.Texture.WrapMode;
 import com.sun.prism.impl.BaseTexture;
 import com.sun.prism.impl.ManagedResource;
 import com.sun.prism.impl.PrismSettings;

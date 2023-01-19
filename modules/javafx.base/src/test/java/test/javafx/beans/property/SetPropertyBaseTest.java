@@ -70,8 +70,8 @@ public class SetPropertyBaseTest {
     public void setUp() throws Exception {
         property = new SetPropertyMock();
         invalidationListener = new InvalidationListenerMock();
-        changeListener = new ChangeListenerMock<ObservableSet<Object>>(UNDEFINED);
-        setChangeListener = new MockSetObserver<Object>();
+        changeListener = new ChangeListenerMock<>(UNDEFINED);
+        setChangeListener = new MockSetObserver<>();
     }
 
     private void attachInvalidationListener() {
@@ -94,12 +94,12 @@ public class SetPropertyBaseTest {
 
     @Test
     public void testConstructor() {
-        final SetProperty<Object> p1 = new SimpleSetProperty<Object>();
+        final SetProperty<Object> p1 = new SimpleSetProperty<>();
         assertEquals(null, p1.get());
         assertEquals(null, p1.getValue());
         assertFalse(property.isBound());
 
-        final SetProperty<Object> p2 = new SimpleSetProperty<Object>(VALUE_1b);
+        final SetProperty<Object> p2 = new SimpleSetProperty<>(VALUE_1b);
         assertEquals(VALUE_1b, p2.get());
         assertEquals(VALUE_1b, p2.getValue());
         assertFalse(property.isBound());
@@ -442,7 +442,7 @@ public class SetPropertyBaseTest {
 
     @Test(expected = RuntimeException.class)
     public void testSetBoundValue() {
-        final SetProperty<Object> v = new SimpleSetProperty<Object>(VALUE_1a);
+        final SetProperty<Object> v = new SimpleSetProperty<>(VALUE_1a);
         property.bind(v);
         property.set(VALUE_1a);
     }
@@ -450,7 +450,7 @@ public class SetPropertyBaseTest {
     @Test
     public void testBind_Invalidation() {
         attachInvalidationListener();
-        final ObservableObjectValueStub<ObservableSet<Object>> v = new ObservableObjectValueStub<ObservableSet<Object>>(FXCollections.observableSet(VALUE_1a));
+        final ObservableObjectValueStub<ObservableSet<Object>> v = new ObservableObjectValueStub<>(FXCollections.observableSet(VALUE_1a));
 
         property.bind(v);
         assertEquals(VALUE_1a, property.get());
@@ -482,7 +482,7 @@ public class SetPropertyBaseTest {
     @Test
     public void testBind_Change() {
         attachChangeListener();
-        final ObservableObjectValueStub<ObservableSet<Object>> v = new ObservableObjectValueStub<ObservableSet<Object>>(FXCollections.observableSet(VALUE_1a));
+        final ObservableObjectValueStub<ObservableSet<Object>> v = new ObservableObjectValueStub<>(FXCollections.observableSet(VALUE_1a));
 
         property.bind(v);
         assertEquals(VALUE_1a, property.get());
@@ -514,7 +514,7 @@ public class SetPropertyBaseTest {
     @Test
     public void testBind_SetChange() {
         attachSetChangeListener();
-        final ObservableObjectValueStub<ObservableSet<Object>> v = new ObservableObjectValueStub<ObservableSet<Object>>(FXCollections.observableSet(VALUE_1a));
+        final ObservableObjectValueStub<ObservableSet<Object>> v = new ObservableObjectValueStub<>(FXCollections.observableSet(VALUE_1a));
 
         property.bind(v);
         assertEquals(VALUE_1a, property.get());
@@ -554,8 +554,8 @@ public class SetPropertyBaseTest {
     @Test
     public void testRebind() {
         attachInvalidationListener();
-        final SetProperty<Object> v1 = new SimpleSetProperty<Object>(VALUE_1a);
-        final SetProperty<Object> v2 = new SimpleSetProperty<Object>(VALUE_2a);
+        final SetProperty<Object> v1 = new SimpleSetProperty<>(VALUE_1a);
+        final SetProperty<Object> v2 = new SimpleSetProperty<>(VALUE_2a);
         property.bind(v1);
         property.get();
         property.reset();
@@ -629,7 +629,7 @@ public class SetPropertyBaseTest {
     @Test
     public void testUnbind() {
         attachInvalidationListener();
-        final SetProperty<Object> v = new SimpleSetProperty<Object>(VALUE_1a);
+        final SetProperty<Object> v = new SimpleSetProperty<>(VALUE_1a);
         property.bind(v);
         property.unbind();
         assertEquals(VALUE_1a, property.get());
@@ -653,7 +653,7 @@ public class SetPropertyBaseTest {
 
     @Test
     public void testAddingListenerWillAlwaysReceiveInvalidationEvent() {
-        final SetProperty<Object> v = new SimpleSetProperty<Object>(VALUE_1a);
+        final SetProperty<Object> v = new SimpleSetProperty<>(VALUE_1a);
         final InvalidationListenerMock listener2 = new InvalidationListenerMock();
         final InvalidationListenerMock listener3 = new InvalidationListenerMock();
 
@@ -679,7 +679,7 @@ public class SetPropertyBaseTest {
         final ObservableSet<Object> value0 = null;
         final ObservableSet<Object> value1 = FXCollections.observableSet(new Object(), new Object());
         final ObservableSet<Object> value2 = FXCollections.observableSet();
-        final SetProperty<Object> v = new SimpleSetProperty<Object>(value2);
+        final SetProperty<Object> v = new SimpleSetProperty<>(value2);
 
         property.set(value1);
         assertEquals("SetProperty [value: " + value1 + "]", property.toString());

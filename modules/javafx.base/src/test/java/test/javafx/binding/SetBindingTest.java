@@ -73,7 +73,7 @@ public class SetBindingTest {
         emptySet = FXCollections.observableSet();
         set1 = FXCollections.observableSet(DATA_1);
         set2 = FXCollections.observableSet(DATA_2_0, DATA_2_1);
-        listener = new MockSetObserver<Object>();
+        listener = new MockSetObserver<>();
         binding0.setValue(set2);
         binding1.setValue(set2);
         binding2.setValue(set2);
@@ -149,7 +149,7 @@ public class SetBindingTest {
         binding1.setValue(set1);
         dependency1.fireValueChangedEvent();
         assertEquals(1, binding1.getComputeValueCounter());
-        listener.assertMultipleCalls(new Call[]{new Call<Object>(DATA_2_0, null), new Call<Object>(DATA_2_1, null), new Call<Object>(null, DATA_1)});
+        listener.assertMultipleCalls(new Call[]{new Call<>(DATA_2_0, null), new Call<>(DATA_2_1, null), new Call<>(null, DATA_1)});
         assertEquals(true, binding1.isValid());
         listener.clear();
 
@@ -180,7 +180,7 @@ public class SetBindingTest {
         binding1.setValue(set1);
         dependency1.fireValueChangedEvent();
         assertEquals(2, binding1.getComputeValueCounter());
-        listener.assertMultipleCalls(new Call[]{new Call<Object>(DATA_2_0, null), new Call<Object>(DATA_2_1, null), new Call<Object>(null, DATA_1)});
+        listener.assertMultipleCalls(new Call[]{new Call<>(DATA_2_0, null), new Call<>(DATA_2_1, null), new Call<>(null, DATA_1)});
         assertEquals(true, binding1.isValid());
         listener.clear();
 
@@ -196,7 +196,7 @@ public class SetBindingTest {
         binding1.setValue(set2);
         dependency1.fireValueChangedEvent();
         assertEquals(2, binding1.getComputeValueCounter());
-        listener.assertMultipleCalls(new Call[] {new Call<Object>(DATA_1, null), new Call<Object>(null, DATA_2_0), new Call<Object>(null, DATA_2_1)});
+        listener.assertMultipleCalls(new Call[] {new Call<>(DATA_1, null), new Call<>(null, DATA_2_0), new Call<>(null, DATA_2_1)});
         assertEquals(true, binding1.isValid());
         listener.clear();
 
@@ -290,6 +290,7 @@ public class SetBindingTest {
             return value;
         }
 
+        @Override
         public ObservableList<?> getDependencies() {
             fail("Should not reach here");
             return null;

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,8 +29,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.function.Consumer;
 
-import com.sun.javafx.scene.control.LambdaMultiplePropertyChangeListenerHandler;
-
 import javafx.beans.Observable;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.ListChangeListener.Change;
@@ -48,6 +46,9 @@ import javafx.scene.Node;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.Region;
 
+import com.sun.javafx.scene.control.LambdaMultiplePropertyChangeListenerHandler;
+import com.sun.javafx.scene.control.ListenerHelper;
+
 /**
  * Base implementation class for defining the visual representation of user
  * interface controls by defining a scene graph of nodes to represent the
@@ -57,6 +58,11 @@ import javafx.scene.layout.Region;
  * @since JavaFX 8.0
  */
 public abstract class SkinBase<C extends Control> implements Skin<C> {
+
+    static {
+        // must be the first code to execute
+        ListenerHelper.setAccessor((skin) -> skin.listenerHelper());
+    }
 
     /* *************************************************************************
      *                                                                         *
@@ -81,10 +87,12 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
      * This is part of the workaround introduced during delomboking. We probably will
      * want to adjust the way listeners are added rather than continuing to use this
      * map (although it doesn't really do much harm).
+     *
+     * TODO remove after migration to ListenerHelper
      */
     private LambdaMultiplePropertyChangeListenerHandler lambdaChangeListenerHandler;
 
-
+    private ListenerHelper listenerHelper;
 
     /* *************************************************************************
      *                                                                         *
@@ -158,6 +166,10 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
             lambdaChangeListenerHandler.dispose();
         }
 
+        if (listenerHelper != null) {
+            listenerHelper.disconnect();
+        }
+
         this.control = null;
     }
 
@@ -207,6 +219,15 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
         }
     }
 
+    /**
+     * Returns the skin's instance of {@link ListenerHelper}, creating it if necessary.
+     */
+    ListenerHelper listenerHelper() {
+        if (listenerHelper == null) {
+            listenerHelper = new ListenerHelper();
+        }
+        return listenerHelper;
+    }
 
     /**
      * Registers an operation to perform when the given {@code observable} sends a change event.

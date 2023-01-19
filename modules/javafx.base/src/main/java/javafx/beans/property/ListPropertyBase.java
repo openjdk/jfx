@@ -105,6 +105,7 @@ public abstract class ListPropertyBase<E> extends ListProperty<E> {
             return "size";
         }
 
+        @Override
         protected void fireValueChangedEvent() {
             super.fireValueChangedEvent();
         }
@@ -145,6 +146,7 @@ public abstract class ListPropertyBase<E> extends ListProperty<E> {
             return "empty";
         }
 
+        @Override
         protected void fireValueChangedEvent() {
             super.fireValueChangedEvent();
         }
@@ -389,7 +391,7 @@ public abstract class ListPropertyBase<E> extends ListProperty<E> {
         private final WeakReference<ListPropertyBase<E>> wref;
 
         public Listener(ListPropertyBase<E> ref) {
-            this.wref = new WeakReference<ListPropertyBase<E>>(ref);
+            this.wref = new WeakReference<>(ref);
         }
 
         @Override

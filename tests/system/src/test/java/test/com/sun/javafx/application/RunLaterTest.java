@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,20 +25,20 @@
 
 package test.com.sun.javafx.application;
 
+import static org.junit.Assert.assertEquals;
+
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.stage.Stage;
-import junit.framework.AssertionFailedError;
+
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import test.util.Util;
 
-import static org.junit.Assert.*;
-import static test.util.Util.TIMEOUT;
+import test.util.Util;
 
 /**
  * Unit tests for Platform runLater.
@@ -60,23 +60,12 @@ public class RunLaterTest {
 
     @BeforeClass
     public static void setupOnce() {
-        // Start the Application
-        new Thread(() -> Application.launch(MyApp.class, (String[])null)).start();
-
-        try {
-            if (!launchLatch.await(TIMEOUT, TimeUnit.MILLISECONDS)) {
-                throw new AssertionFailedError("Timeout waiting for Application to launch");
-            }
-        } catch (InterruptedException ex) {
-            AssertionFailedError err = new AssertionFailedError("Unexpected exception");
-            err.initCause(ex);
-            throw err;
-        }
+        Util.launch(launchLatch, MyApp.class);
     }
 
     @AfterClass
     public static void teardownOnce() {
-        Platform.exit();
+        Util.shutdown();
     }
 
     private AtomicInteger seqNum = new AtomicInteger(0);

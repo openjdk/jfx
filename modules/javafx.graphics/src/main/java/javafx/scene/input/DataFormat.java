@@ -48,7 +48,7 @@ public class DataFormat {
      * (or other string based key), and we need to be able to map this back to the FX
      * DataFormat.
      */
-    private static final WeakReferenceQueue<DataFormat> DATA_FORMAT_LIST = new WeakReferenceQueue<DataFormat>();
+    private static final WeakReferenceQueue<DataFormat> DATA_FORMAT_LIST = new WeakReferenceQueue<>();
 
     /**
      * Represents a plain text string.
@@ -138,7 +138,7 @@ public class DataFormat {
                             "' already exists.");
                 }
             }
-            this.identifier = Collections.unmodifiableSet(new HashSet<String>(Arrays.asList(ids)));
+            this.identifier = Collections.unmodifiableSet(new HashSet<>(Arrays.asList(ids)));
         } else {
             this.identifier = Collections.<String>emptySet();
         }
