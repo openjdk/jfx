@@ -251,4 +251,12 @@ public interface ObservableValue<T> extends Observable {
     default <U> ObservableValue<U> flatMap(Function<? super T, ? extends ObservableValue<? extends U>> mapper) {
         return new FlatMappedBinding<>(this, mapper);
     }
+
+    /**
+     * Checks if this property is currently observed.
+     *
+     * @return {@code true} if this property currently has one or more
+     *     listeners registered on it, otherwise {@code false}
+     */
+    default boolean isObserved() { return true; }
 }

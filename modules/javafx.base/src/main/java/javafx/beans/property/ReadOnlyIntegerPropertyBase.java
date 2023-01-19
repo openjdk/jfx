@@ -49,23 +49,62 @@ public abstract class ReadOnlyIntegerPropertyBase extends ReadOnlyIntegerPropert
 
     @Override
     public void addListener(InvalidationListener listener) {
+        ExpressionHelper<?> oldHelper = helper;
+
         helper = ExpressionHelper.addListener(helper, this, listener);
+
+        if (helper != null && oldHelper == null) {
+            observed();
+        }
     }
 
     @Override
     public void removeListener(InvalidationListener listener) {
+        ExpressionHelper<?> oldHelper = helper;
+
         helper = ExpressionHelper.removeListener(helper, listener);
+
+        if (helper == null && oldHelper != null) {
+            unobserved();
+        }
     }
 
     @Override
     public void addListener(ChangeListener<? super Number> listener) {
+        ExpressionHelper<?> oldHelper = helper;
+
         helper = ExpressionHelper.addListener(helper, this, listener);
+
+        if (helper != null && oldHelper == null) {
+            observed();
+        }
     }
 
     @Override
     public void removeListener(ChangeListener<? super Number> listener) {
+        ExpressionHelper<?> oldHelper = helper;
+
         helper = ExpressionHelper.removeListener(helper, listener);
+
+        if (helper == null && oldHelper != null) {
+            unobserved();
+        }
     }
+
+    @Override
+    public final boolean isObserved() {
+        return helper != null;
+    }
+
+    /**
+     * Called when this property transitions from unobserved to observed.
+     */
+    protected void observed() {}
+
+    /**
+     * Called when this property transitions from observed to unobserved.
+     */
+    protected void unobserved() {}
 
     /**
      * Sends notifications to all attached

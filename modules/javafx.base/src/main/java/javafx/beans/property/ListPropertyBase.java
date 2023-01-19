@@ -25,8 +25,10 @@
 
 package javafx.beans.property;
 
-import com.sun.javafx.binding.ListExpressionHelper;
 import java.lang.ref.WeakReference;
+
+import com.sun.javafx.binding.ListExpressionHelper;
+
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.WeakListener;
@@ -51,15 +53,18 @@ import javafx.collections.ObservableList;
  */
 public abstract class ListPropertyBase<E> extends ListProperty<E> {
 
-    private final Listener<E> listener = new Listener<>(this);
+    private ListChangeListener<E> listChangeListener;
 
     private ObservableList<E> value;
-    private ObservableValue<? extends ObservableList<E>> observable = null;
+    private ObservableValue<? extends ObservableList<E>> observable = null;  // this is actually the bound observable when not null, not a delegate
+    private InvalidationListener listener = null;
     private boolean valid = true;
     private ListExpressionHelper<E> helper = null;
 
     private SizeProperty size0;
     private EmptyProperty empty0;
+
+    private boolean isObserved;
 
     /**
      * The Constructor of {@code ListPropertyBase}
@@ -74,9 +79,6 @@ public abstract class ListPropertyBase<E> extends ListProperty<E> {
      */
     public ListPropertyBase(ObservableList<E> initialValue) {
         this.value = initialValue;
-        if (initialValue != null) {
-            initialValue.addListener((ListChangeListener) listener);
-        }
     }
 
     @Override
@@ -105,6 +107,16 @@ public abstract class ListPropertyBase<E> extends ListProperty<E> {
 
         protected void fireValueChangedEvent() {
             super.fireValueChangedEvent();
+        }
+
+        @Override
+        public void observed() {
+            checkIfObserved();
+        }
+
+        @Override
+        public void unobserved() {
+            checkIfUnobserved();
         }
     }
 
@@ -136,36 +148,58 @@ public abstract class ListPropertyBase<E> extends ListProperty<E> {
         protected void fireValueChangedEvent() {
             super.fireValueChangedEvent();
         }
+
+        @Override
+        public void observed() {
+            checkIfObserved();
+        }
+
+        @Override
+        public void unobserved() {
+            checkIfUnobserved();
+        }
     }
 
     @Override
     public void addListener(InvalidationListener listener) {
         helper = ListExpressionHelper.addListener(helper, this, listener);
+
+        checkIfObserved();
     }
 
     @Override
     public void removeListener(InvalidationListener listener) {
         helper = ListExpressionHelper.removeListener(helper, listener);
+
+        checkIfUnobserved();
     }
 
     @Override
     public void addListener(ChangeListener<? super ObservableList<E>> listener) {
         helper = ListExpressionHelper.addListener(helper, this, listener);
+
+        checkIfObserved();
     }
 
     @Override
     public void removeListener(ChangeListener<? super ObservableList<E>> listener) {
         helper = ListExpressionHelper.removeListener(helper, listener);
+
+        checkIfUnobserved();
     }
 
     @Override
     public void addListener(ListChangeListener<? super E> listener) {
         helper = ListExpressionHelper.addListener(helper, this, listener);
+
+        checkIfObserved();
     }
 
     @Override
     public void removeListener(ListChangeListener<? super E> listener) {
         helper = ListExpressionHelper.removeListener(helper, listener);
+
+        checkIfUnobserved();
     }
 
     /**
@@ -208,7 +242,7 @@ public abstract class ListPropertyBase<E> extends ListProperty<E> {
     private void markInvalid(ObservableList<E> oldValue) {
         if (valid) {
             if (oldValue != null) {
-                oldValue.removeListener((ListChangeListener) listener);
+                oldValue.removeListener(getListChangeListener());  // FIXME harmless to do this every time, but only needed when wasObserved
             }
             valid = false;
             invalidateProperties();
@@ -216,8 +250,6 @@ public abstract class ListPropertyBase<E> extends ListProperty<E> {
             fireValueChangedEvent();
         }
     }
-
-
 
     /**
      * The method {@code invalidated()} can be overridden to receive
@@ -234,8 +266,8 @@ public abstract class ListPropertyBase<E> extends ListProperty<E> {
         if (!valid) {
             value = observable == null ? value : observable.getValue();
             valid = true;
-            if (value != null) {
-                value.addListener((ListChangeListener) listener);
+            if (value != null && isObserved()) {
+                value.addListener(getListChangeListener());
             }
         }
         return value;
@@ -267,8 +299,12 @@ public abstract class ListPropertyBase<E> extends ListProperty<E> {
 
         if (newObservable != observable) {
             unbind();
+
             observable = newObservable;
-            observable.addListener((InvalidationListener) listener);
+            if (listener == null) {
+                listener = new Listener<>(this);
+            }
+            observable.addListener(listener);
             markInvalid(value);
         }
     }
@@ -311,20 +347,54 @@ public abstract class ListPropertyBase<E> extends ListProperty<E> {
         return result.toString();
     }
 
-    private static class Listener<E> extends WeakReference<ListPropertyBase<E>> implements InvalidationListener, ListChangeListener<E>, WeakListener {
+    @Override
+    public boolean isObserved() {
+        return isObserved;
+    }
 
-        Listener(ListPropertyBase<E> ref) {
-            super(ref);
+    private void checkIfObserved() {
+        if (!isObserved) {
+            isObserved = true;
+
+            if(value != null) {
+                value.addListener(getListChangeListener());
+            }
+        }
+    }
+
+    private void checkIfUnobserved() {
+        if (helper == null && (size0 == null || !size0.isObserved()) && (empty0 == null || !empty0.isObserved())) {
+            isObserved = false;
+
+            if (value != null) {
+                value.removeListener(getListChangeListener());
+            }
+        }
+    }
+
+    private ListChangeListener<E> getListChangeListener() {
+        if (listChangeListener == null) {
+            listChangeListener = change -> {
+                invalidateProperties();
+                invalidated();
+                fireValueChangedEvent(change);
+            };
         }
 
-        @Override
-        public boolean wasGarbageCollected() {
-            return get() == null;
+        return listChangeListener;
+    }
+
+    private static class Listener<E> implements InvalidationListener, WeakListener {
+
+        private final WeakReference<ListPropertyBase<E>> wref;
+
+        public Listener(ListPropertyBase<E> ref) {
+            this.wref = new WeakReference<ListPropertyBase<E>>(ref);
         }
 
         @Override
         public void invalidated(Observable observable) {
-            ListPropertyBase<E> ref = get();
+            ListPropertyBase<E> ref = wref.get();
             if (ref == null) {
                 observable.removeListener(this);
             } else {
@@ -333,13 +403,8 @@ public abstract class ListPropertyBase<E> extends ListProperty<E> {
         }
 
         @Override
-        public void onChanged(Change<? extends E> change) {
-            ListPropertyBase<E> ref = get();
-            if (ref != null) {
-                ref.invalidateProperties();
-                ref.invalidated();
-                ref.fireValueChangedEvent(change);
-            }
+        public boolean wasGarbageCollected() {
+            return wref.get() == null;
         }
     }
 }

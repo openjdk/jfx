@@ -25,28 +25,35 @@
 
 package test.javafx.beans.property;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+
+import java.lang.ref.WeakReference;
+import java.util.ArrayList;
 import java.util.Arrays;
-import test.javafx.beans.InvalidationListenerMock;
-import test.javafx.beans.value.ChangeListenerMock;
-import javafx.beans.value.ObservableObjectValueStub;
-import javafx.collections.FXCollections;
-import test.javafx.collections.MockListObserver;
-import javafx.collections.ObservableList;
+import java.util.Collections;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
+
 import org.junit.Before;
 import org.junit.Test;
 
-import java.util.Collections;
-import java.util.List;
+import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.property.ListProperty;
 import javafx.beans.property.ListPropertyBase;
 import javafx.beans.property.SimpleListProperty;
+import javafx.beans.value.ObservableObjectValueStub;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
+import test.javafx.beans.InvalidationListenerMock;
+import test.javafx.beans.value.ChangeListenerMock;
+import test.javafx.collections.MockListObserver;
 import test.javafx.collections.Person;
 import test.util.memory.JMemoryBuddy;
-import java.lang.ref.WeakReference;
-import java.util.concurrent.atomic.AtomicReference;
-
-import static org.junit.Assert.*;
 
 public class ListPropertyBaseTest {
 
@@ -101,6 +108,188 @@ public class ListPropertyBaseTest {
         assertEquals(VALUE_1b, p2.get());
         assertEquals(VALUE_1b, p2.getValue());
         assertFalse(property.isBound());
+    }
+
+    @Test
+    public void testListPropertyIsObservedWithoutObservableList() {
+        assertFalse(property.isObserved());
+
+        property.addListener(invalidationListener);
+
+        assertTrue(property.isObserved());
+
+        property.removeListener(invalidationListener);
+
+        assertFalse(property.isObserved());
+    }
+
+    @Test
+    public void testSizePropertyKeepsWorking() {
+        List<Integer> sizes = new ArrayList<>();
+        ObservableList<Object> observableList = FXCollections.observableArrayList();
+
+        new SimpleListProperty<>(observableList).sizeProperty().addListener((obs, old, current) -> sizes.add(current.intValue()));
+
+        observableList.add("A");
+
+        assertEquals(List.of(1), sizes);
+
+        observableList.add("B");
+
+        assertEquals(List.of(1, 2), sizes);
+
+        System.gc();
+
+        observableList.add("C");
+
+        assertEquals(List.of(1, 2, 3), sizes);
+    }
+
+    @Test
+    public void testSizePropertyListener() {
+        AtomicInteger lastSize = new AtomicInteger();
+        InvalidationListener listener = obs -> lastSize.set(property.getSize());
+
+        assertFalse(property.isObserved());
+
+        property.sizeProperty().addListener(listener);
+
+        assertTrue(property.isObserved());
+
+        property.set(VALUE_2b);
+
+        assertEquals(3, lastSize.get());
+
+        property.set(null);
+
+        assertEquals(0, lastSize.get());
+
+        property.set(VALUE_2a);
+
+        assertEquals(2, lastSize.get());
+
+        property.sizeProperty().removeListener(listener);
+
+        assertFalse(property.isObserved());
+
+        property.set(null);
+
+        assertEquals(2, lastSize.get());  // unchanged as listener was removed
+    }
+
+    @Test
+    public void testEmptyPropertyListener() {
+        AtomicBoolean lastEmpty = new AtomicBoolean();
+        InvalidationListener listener = obs -> lastEmpty.set(property.isEmpty());
+
+        assertFalse(property.isObserved());
+
+        property.emptyProperty().addListener(listener);
+
+        assertTrue(property.isObserved());
+
+        property.set(VALUE_2b);
+
+        assertFalse(lastEmpty.get());
+
+        property.set(null);
+
+        assertTrue(lastEmpty.get());
+
+        property.set(VALUE_2a);
+
+        assertFalse(lastEmpty.get());
+
+        property.emptyProperty().removeListener(listener);
+
+        assertFalse(property.isObserved());
+
+        property.set(null);
+
+        assertFalse(lastEmpty.get());  // unchanged as listener was removed
+    }
+
+    @Test
+    public void testPropertyIsCollectableAfterUsingSizeProperty() {
+        ObservableList<Object> observableList = FXCollections.observableArrayList();
+
+        JMemoryBuddy.memoryTest(checker -> {
+            ListProperty<Object> property = new SimpleListProperty<>(observableList);
+
+            assertFalse(property.isObserved());
+
+            property.sizeProperty().addListener(invalidationListener);
+
+            assertTrue(property.isObserved());
+
+            property.sizeProperty().removeListener(invalidationListener);
+
+            assertFalse(property.isObserved());
+
+            checker.assertCollectable(property);
+        });
+    }
+
+    @Test
+    public void testPropertyIsCollectableAfterUsingEmptyProperty() {
+        ObservableList<Object> observableList = FXCollections.observableArrayList();
+
+        JMemoryBuddy.memoryTest(checker -> {
+            ListProperty<Object> property = new SimpleListProperty<>(observableList);
+
+            assertFalse(property.isObserved());
+
+            property.emptyProperty().addListener(invalidationListener);
+
+            assertTrue(property.isObserved());
+
+            property.emptyProperty().removeListener(invalidationListener);
+
+            assertFalse(property.isObserved());
+
+            checker.assertCollectable(property);
+        });
+    }
+
+    @Test
+    public void testWeakRefDoesntDisappearUnexpectedly() {
+        List<Object> changes = new ArrayList<>();
+
+        ObservableList<Object> observableList = FXCollections.observableArrayList();
+
+        SimpleListProperty<Object> simpleListProperty = new SimpleListProperty<>(observableList);
+        simpleListProperty.addListener((obs, old, current) -> changes.add(current));
+
+        observableList.add("A");
+
+        assertEquals(1, changes.size());
+
+        simpleListProperty = null;
+
+        System.gc();
+
+        observableList.add("B");
+
+        assertEquals(2, changes.size());
+    }
+
+    @Test
+    public void testListBindingPrematureCollection2() {
+        ListProperty<Object> listB = new SimpleListProperty<>(FXCollections.observableArrayList());
+        AtomicReference<WeakReference<ListProperty<Object>>> listAW = new AtomicReference<>(null);
+
+        JMemoryBuddy.memoryTest( checker -> {
+            ListProperty<Object> listA = new SimpleListProperty<>(FXCollections.observableArrayList());
+            listAW.set(new WeakReference<>(listA));
+            listB.bind(listA);
+            // Ensure that the list we are binding to still remains
+            checker.setAsReferenced(listB);
+            checker.assertNotCollectable(listA);
+        });
+
+        // ensure that the Binding still works after GC triggered by JMemoryBuddy
+        listAW.get().get().setAll(1);
+        assertEquals("Binding stopped working after GC", 1, listB.getValue().get(0));
     }
 
     @Test

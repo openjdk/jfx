@@ -205,7 +205,8 @@ public abstract class ObjectBinding<T> extends ObjectExpression<T> implements
      *     listeners registered on it, otherwise {@code false}
      * @since 19
      */
-    protected final boolean isObserved() {
+    @Override
+    public final boolean isObserved() {
         return helper != null;
     }
 
