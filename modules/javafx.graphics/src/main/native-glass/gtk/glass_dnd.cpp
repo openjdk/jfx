@@ -37,7 +37,8 @@
 #include <gdk/gdkkeysyms.h>
 
 /************************* COMMON *********************************************/
-static jint translate_gdk_action_to_glass(GdkDragAction action) {
+static jint translate_gdk_action_to_glass(GdkDragAction action)
+{
     jint result = 0;
     result |= (action & GDK_ACTION_COPY)? com_sun_glass_ui_gtk_GtkDnDClipboard_ACTION_COPY : 0;
     result |= (action & GDK_ACTION_MOVE)? com_sun_glass_ui_gtk_GtkDnDClipboard_ACTION_MOVE : 0;
@@ -45,7 +46,8 @@ static jint translate_gdk_action_to_glass(GdkDragAction action) {
     return result;
 }
 
-static GdkDragAction translate_glass_action_to_gdk(jint action) {
+static GdkDragAction translate_glass_action_to_gdk(jint action)
+{
     int result = 0;
     result |= (action & com_sun_glass_ui_gtk_GtkDnDClipboard_ACTION_COPY)? GDK_ACTION_COPY : 0;
     result |= (action & com_sun_glass_ui_gtk_GtkDnDClipboard_ACTION_MOVE)? GDK_ACTION_MOVE : 0;
@@ -58,7 +60,9 @@ static GdkAtom TARGET_UTF8_STRING_ATOM;
 static GdkAtom TARGET_MIME_TEXT_PLAIN_ATOM;
 static GdkAtom TARGET_COMPOUND_TEXT_ATOM;
 static GdkAtom TARGET_STRING_ATOM;
+
 static GdkAtom TARGET_MIME_URI_LIST_ATOM;
+
 static GdkAtom TARGET_MIME_PNG_ATOM;
 static GdkAtom TARGET_MIME_JPEG_ATOM;
 static GdkAtom TARGET_MIME_TIFF_ATOM;
@@ -84,7 +88,8 @@ static void init_target_atoms()
     target_atoms_initialized = TRUE;
 }
 
-static gboolean target_is_text(GdkAtom target) {
+static gboolean target_is_text(GdkAtom target)
+{
     init_target_atoms();
 
     return (target == TARGET_UTF8_STRING_ATOM ||
@@ -93,12 +98,14 @@ static gboolean target_is_text(GdkAtom target) {
             target == TARGET_COMPOUND_TEXT_ATOM*/);
 }
 
-static gboolean target_is_uri(GdkAtom target) {
+static gboolean target_is_uri(GdkAtom target)
+{
     init_target_atoms();
     return target == TARGET_MIME_URI_LIST_ATOM;
 }
 
-static gboolean target_is_image(GdkAtom target) {
+static gboolean target_is_image(GdkAtom target)
+{
     init_target_atoms();
     return (target == TARGET_MIME_PNG_ATOM ||
             target == TARGET_MIME_JPEG_ATOM ||
@@ -106,7 +113,8 @@ static gboolean target_is_image(GdkAtom target) {
             target == TARGET_MIME_BMP_ATOM);
 }
 
-static void clear_global_ref(gpointer data) {
+static void clear_global_ref(gpointer data)
+{
     mainEnv->DeleteGlobalRef((jobject)data);
 }
 
@@ -137,7 +145,8 @@ static void reset_enter_ctx() {
     memset(&enter_ctx, 0, sizeof(enter_ctx));
 }
 
-static void process_dnd_target_drag_enter(WindowContext *ctx, GdkEventDND *event) {
+static void process_dnd_target_drag_enter(WindowContext *ctx, GdkEventDND *event)
+{
     reset_enter_ctx();
     enter_ctx.ctx = event->context;
     enter_ctx.just_entered = TRUE;
@@ -145,12 +154,12 @@ static void process_dnd_target_drag_enter(WindowContext *ctx, GdkEventDND *event
     is_dnd_owner = is_in_drag();
 }
 
-static void process_dnd_target_drag_motion(WindowContext *ctx, GdkEventDND *event) {
+static void process_dnd_target_drag_motion(WindowContext *ctx, GdkEventDND *event)
+{
     if (!enter_ctx.ctx) {
         gdk_drag_status(event->context, static_cast<GdkDragAction>(0), GDK_CURRENT_TIME);
         return; // Do not process motion events if no enter event was received
     }
-
     jmethodID method = enter_ctx.just_entered ? jViewNotifyDragEnter : jViewNotifyDragOver;
     GdkDragAction suggested = gdk_drag_context_get_suggested_action(event->context);
     GdkDragAction result = translate_glass_action_to_gdk(mainEnv->CallIntMethod(ctx->get_jview(), method,
@@ -162,30 +171,19 @@ static void process_dnd_target_drag_motion(WindowContext *ctx, GdkEventDND *even
     if (enter_ctx.just_entered) {
         enter_ctx.just_entered = FALSE;
     }
-
     gdk_drag_status(event->context, result, GDK_CURRENT_TIME);
 }
 
-static void process_dnd_target_drag_leave(WindowContext *ctx, GdkEventDND *event) {
+static void process_dnd_target_drag_leave(WindowContext *ctx, GdkEventDND *event)
+{
     (void)event;
 
     mainEnv->CallVoidMethod(ctx->get_jview(), jViewNotifyDragLeave, NULL);
     CHECK_JNI_EXCEPTION(mainEnv)
 }
 
-static void wait_for_selection_data_hook(GdkEvent * event, void * data) {
-    selection_data_ctx *ctx = (selection_data_ctx*)data;
-    GdkWindow *dest = glass_gdk_drag_context_get_dest_window(enter_ctx.ctx);
-    if (event->type == GDK_SELECTION_NOTIFY &&
-            event->selection.window == dest) {
-        if (event->selection.property) { // if 0, that we received negative response
-            ctx->length = gdk_selection_property_get(dest, &(ctx->data), &(ctx->type), &(ctx->format));
-        }
-        ctx->received = TRUE;
-    }
-}
-
-static void process_dnd_target_drop_start(WindowContext *ctx, GdkEventDND *event) {
+static void process_dnd_target_drop_start(WindowContext *ctx, GdkEventDND *event)
+{
     if (!enter_ctx.ctx || enter_ctx.just_entered) {
         gdk_drop_finish(event->context, FALSE, GDK_CURRENT_TIME);
         gdk_drop_reply(event->context, FALSE, GDK_CURRENT_TIME);
@@ -203,7 +201,8 @@ static void process_dnd_target_drop_start(WindowContext *ctx, GdkEventDND *event
     gdk_drop_reply(event->context, TRUE, GDK_CURRENT_TIME);
 }
 
-static gboolean check_state_in_drag(JNIEnv *env) {
+static gboolean check_state_in_drag(JNIEnv *env)
+{
     if (!enter_ctx.ctx) {
         jclass jc = env->FindClass("java/lang/IllegalStateException");
         if (!env->ExceptionCheck()) {
@@ -216,7 +215,8 @@ static gboolean check_state_in_drag(JNIEnv *env) {
 }
 
 // Events coming from application that are related to us being a DnD target
-void process_dnd_target(WindowContext *ctx, GdkEventDND *event) {
+void process_dnd_target(WindowContext *ctx, GdkEventDND *event)
+{
     switch (event->type) {
         case GDK_DRAG_ENTER:
             process_dnd_target_drag_enter(ctx, event);
@@ -235,7 +235,8 @@ void process_dnd_target(WindowContext *ctx, GdkEventDND *event) {
     }
 }
 
-jobjectArray dnd_target_get_mimes(JNIEnv *env) {
+jobjectArray dnd_target_get_mimes(JNIEnv *env)
+{
     if (check_state_in_drag(env)) {
         return NULL;
     }
@@ -302,38 +303,56 @@ jobjectArray dnd_target_get_mimes(JNIEnv *env) {
     return enter_ctx.mimes;
 }
 
-jint dnd_target_get_supported_actions(JNIEnv *env) {
+jint dnd_target_get_supported_actions(JNIEnv *env)
+{
     if (check_state_in_drag(env)) {
         return 0;
     }
     return translate_gdk_action_to_glass(gdk_drag_context_get_actions(enter_ctx.ctx));
 }
 
-static gboolean dnd_target_receive_data(JNIEnv *env, GdkAtom target, selection_data_ctx *selection_ctx) {
-    GevlHookRegistration hookReg;
+static void wait_for_selection_data_hook(GdkEvent * event, void * data)
+{
+    selection_data_ctx *ctx = (selection_data_ctx*)data;
+    GdkWindow *dest = glass_gdk_drag_context_get_dest_window(enter_ctx.ctx);
+    if (event->type == GDK_SELECTION_NOTIFY &&
+            event->selection.window == dest) {
+        if (event->selection.property) { // if 0, that we received negative response
+            ctx->length = gdk_selection_property_get(dest, &(ctx->data), &(ctx->type), &(ctx->format));
+        }
+        ctx->received = TRUE;
+    }
+}
 
-    gdk_selection_convert(glass_gdk_drag_context_get_dest_window(enter_ctx.ctx),
-                          gdk_drag_get_selection(enter_ctx.ctx),
-                          target,
-                          GDK_CURRENT_TIME);
+static gboolean dnd_target_receive_data(JNIEnv *env, GdkAtom target, selection_data_ctx *selection_ctx)
+{
+    GevlHookRegistration hookReg;
 
     memset(selection_ctx, 0, sizeof(selection_data_ctx));
 
-    hookReg = glass_evloop_hook_add((GevlHookFunction) wait_for_selection_data_hook,
-                                  selection_ctx);
-    if (HANDLE_MEM_ALLOC_ERROR(env, hookReg, "Failed to allocate event hook")) {
-      return TRUE;
+    gdk_selection_convert(glass_gdk_drag_context_get_dest_window(enter_ctx.ctx), gdk_drag_get_selection(enter_ctx.ctx), target,
+                          GDK_CURRENT_TIME);
+
+    hookReg =
+            glass_evloop_hook_add(
+                    (GevlHookFunction) wait_for_selection_data_hook,
+                    selection_ctx);
+    if (HANDLE_MEM_ALLOC_ERROR(env, hookReg,
+                               "Failed to allocate event hook")) {
+        return TRUE;
     }
 
     do {
         gtk_main_iteration();
     } while (!(selection_ctx->received));
 
+
     glass_evloop_hook_remove(hookReg);
     return selection_ctx->data != NULL;
 }
 
-static jobject dnd_target_get_string(JNIEnv *env) {
+static jobject dnd_target_get_string(JNIEnv *env)
+{
     jobject result = NULL;
     selection_data_ctx ctx;
 
@@ -363,7 +382,8 @@ static jobject dnd_target_get_string(JNIEnv *env) {
     return result;
 }
 
-static jobject dnd_target_get_list(JNIEnv *env, gboolean files) {
+static jobject dnd_target_get_list(JNIEnv *env, gboolean files)
+{
     jobject result = NULL;
     selection_data_ctx ctx;
 
@@ -375,7 +395,8 @@ static jobject dnd_target_get_list(JNIEnv *env, gboolean files) {
     return result;
 }
 
-static jobject dnd_target_get_image(JNIEnv *env) {
+static jobject dnd_target_get_image(JNIEnv *env)
+{
     GdkPixbuf *buf;
     GInputStream *stream;
     jobject result = NULL;
@@ -445,7 +466,8 @@ static jobject dnd_target_get_image(JNIEnv *env) {
     return result;
 }
 
-static jobject dnd_target_get_raw(JNIEnv *env, GdkAtom target, gboolean string_data) {
+static jobject dnd_target_get_raw(JNIEnv *env, GdkAtom target, gboolean string_data)
+{
     selection_data_ctx ctx;
     jobject result = NULL;
     if (dnd_target_receive_data(env, target, &ctx)) {
@@ -471,11 +493,11 @@ static jobject dnd_target_get_raw(JNIEnv *env, GdkAtom target, gboolean string_d
     return result;
 }
 
-jobject dnd_target_get_data(JNIEnv *env, jstring mime) {
+jobject dnd_target_get_data(JNIEnv *env, jstring mime)
+{
     if (check_state_in_drag(env)) {
         return NULL;
     }
-
     const char *cmime = env->GetStringUTFChars(mime, NULL);
     jobject ret = NULL;
 
