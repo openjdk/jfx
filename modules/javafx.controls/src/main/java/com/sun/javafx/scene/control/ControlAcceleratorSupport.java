@@ -175,7 +175,12 @@ public class ControlAcceleratorSupport {
                         }
                         if (!menuitem.isDisable()) {
                             if (menuitem instanceof RadioMenuItem) {
-                                ((RadioMenuItem)menuitem).setSelected(!((RadioMenuItem)menuitem).isSelected());
+                                if(((RadioMenuItem)menuitem).getToggleGroup() == null){
+                                    ((RadioMenuItem)menuitem).setSelected(!((RadioMenuItem)menuitem).isSelected());
+                                }
+                                else {
+                                    ((RadioMenuItem)menuitem).setSelected(true);
+                                }
                             }
                             else if (menuitem instanceof CheckMenuItem) {
                                 ((CheckMenuItem)menuitem).setSelected(!((CheckMenuItem)menuitem).isSelected());
