@@ -757,11 +757,6 @@ static void process_dnd_source_selection_req(DragSourceContext *ctx, GdkEvent *g
                                (is_data_set) ? event->property : GDK_NONE, event->time);
 }
 
-static gboolean in_drag_end(gpointer data) {
-    in_drag = false;
-    return G_SOURCE_REMOVE;
-}
-
 static void process_dnd_source_grab_broken(DragSourceContext *ctx, GdkEvent *event) {
     GdkEventGrabBroken *gb_event = &event->grab_broken;
 
@@ -771,7 +766,6 @@ static void process_dnd_source_grab_broken(DragSourceContext *ctx, GdkEvent *eve
     }
 
     gdk_drag_abort(ctx->dnd_ctx, GDK_CURRENT_TIME);
-    gdk_threads_add_idle_full(G_PRIORITY_DEFAULT, in_drag_end, ctx, NULL);
 }
 
 static void process_dnd_source_mouse_release(DragSourceContext *ctx, GdkEvent *event) {
@@ -784,10 +778,14 @@ static void process_dnd_source_mouse_release(DragSourceContext *ctx, GdkEvent *e
         gdk_drag_abort(ctx->dnd_ctx, GDK_CURRENT_TIME);
     }
 
+    // if on the same window we must wait for drop do complete
+    if (ctx->dest_window != ctx->dnd_window) {
+        in_drag = false;
+    }
+
     // the GDK_BUTTON_RELEASE will be put at the end of the queue because
     // WindowContext mouse release would stop DND before it's completed
     gdk_display_put_event(gdk_display_get_default(), event);
-    gdk_threads_add_idle_full(G_PRIORITY_DEFAULT, in_drag_end, ctx, NULL);
 }
 
 static void process_drag_motion(DragSourceContext *ctx, gint x_root, gint y_root, guint state) {
@@ -802,6 +800,8 @@ static void process_drag_motion(DragSourceContext *ctx, gint x_root, gint y_root
 
     gdk_drag_find_window_for_screen(ctx->dnd_ctx, ignore, gdk_screen_get_default(),
             x_root, y_root, &dest_window, &prot);
+
+    ctx->dest_window = dest_window;
 
     if (prot != GDK_DRAG_PROTO_NONE) {
         GdkDragAction action, possible_actions;
@@ -1019,6 +1019,11 @@ bool process_dnd_source(GdkEvent *event) {
     }
 
     switch(event->type) {
+        // this event is for destination, but we use
+        // to end drag if same window
+        case GDK_DROP_START:
+            in_drag = false;
+            break;
         case GDK_GRAB_BROKEN:
             process_dnd_source_grab_broken(ctx, event);
             break;

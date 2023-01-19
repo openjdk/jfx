@@ -72,6 +72,7 @@ private:
 struct DragSourceContext {
     GdkDragContext *dnd_ctx;
     GdkWindow *dnd_window;
+    GdkWindow *dest_window;
     DragView *drag_view;
     GdkDragAction actions;
     jobject data;
