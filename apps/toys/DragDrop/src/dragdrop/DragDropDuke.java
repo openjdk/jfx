@@ -67,8 +67,9 @@ public class DragDropDuke extends Application {
                 "1. Wait for the image download.\n" +
                 "2. Drag image and notice it's a transparent png.\n" +
                 "3. Notice Position changes from \"Mouse Move\" to \"Mouse Drag\".\n" +
-                "4. Drag over and drop on the tomato square.\n" +
-                "5. While dragging image, press ALT+F4 (should stop Drag).");
+                "4. Drag over and drop on the tomato square (should change colors).\n" +
+                "5. Open another instance of this Window and drag from one\ninstance to another.\n" +
+                "6. While dragging image, press ALT+F4 (should stop Drag).");
 
         imageView = new ImageView(image);
         imageView.setFitHeight(200D);
