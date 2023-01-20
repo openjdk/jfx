@@ -139,7 +139,7 @@ import java.util.Map;
  * <li>The recommended approach is to put the relevant information into the items list, and
  * provide a custom {@link #cellFactoryProperty() cell factory} to create the nodes for a
  * given cell and update them on demand using the data stored in the item for that cell.</li>
- * <li>Avoid creating new {@code Node}s in custom {@link #cellFactoryProperty() cell factory} {@code updateItem} method.</li>
+ * <li>Avoid creating new {@code Node}s in the {@code updateItem} method of a custom {@link #cellFactoryProperty() cell factory}.</li>
  * </ul>
  * <p>The following minimal example shows how to create a custom cell factory for {@code TreeView} containing {@code Node}s:
  *
@@ -172,9 +172,10 @@ import java.util.Map;
  *          }
  *      }
  *  };});}</pre>
+ *
  * <p> This example has an anonymous custom {@code TreeCell} class in the custom cell factory.
- * Note that the {@code Rectangle} ({@code Node}) object needs to be created in the custom {@code TreeCell} class
- * or in its constructor and updated/used in its {@code updateItem} method.</p>
+ * Note that the {@code Rectangle} ({@code Node}) object needs to be created in the instance initialization block
+ * or the constructor of custom {@code TreeCell} class and updated/used in its {@code updateItem} method.
  *
  * <h2>Editing</h2>
  * <p>This control supports inline editing of values, and this section attempts to

@@ -135,18 +135,16 @@ import java.lang.ref.WeakReference;
  * list, and becomes visible in the button area. When selection changes the
  * previously selected item returns to the list and the new selection is removed.
  *
- * <p>The recommended approach, rather than inserting Node instances into the
- * items list, is to put the relevant information into the ComboBox, and then
- * provide a custom {@link #cellFactoryProperty() cell factory}. For example,
- * rather than use the following code:
- *
- * <pre> {@code ComboBox<Rectangle> cmb = new ComboBox<>();
- * cmb.getItems().addAll(
- *     new Rectangle(10, 10, Color.RED),
- *     new Rectangle(10, 10, Color.GREEN),
- *     new Rectangle(10, 10, Color.BLUE));}}</pre>
- *
- * <p>You should do the following:</p>
+ *<p>Important points to note:
+ * <ul>
+ * <li>Avoid inserting {@link Node} instances directly into the {@code ComboBox} items list or its data model.</li>
+ * <li>The recommended approach is to put the relevant information into the items list, and
+ * provide a custom {@link #cellFactoryProperty() cell factory} to create the nodes for a
+ * given cell and update them on demand using the data stored in the item for that cell.</li>
+ * <li>Avoid creating new {@link Node}s in the {@code updateItem} method of
+ * a custom {@link #cellFactoryProperty() cell factory}.</li>
+ * </ul>
+ * <p>The following minimal example shows how to create a custom cell factory for {@code ComboBox} containing {@link Node}s:
  *
  * <pre><code> ComboBox&lt;Color&gt; cmb = new ComboBox&lt;&gt;();
  * cmb.getItems().addAll(
