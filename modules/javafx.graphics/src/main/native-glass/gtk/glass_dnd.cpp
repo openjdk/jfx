@@ -135,9 +135,10 @@ static gboolean dnd_target_receive_data(JNIEnv *env, GdkAtom target, selection_d
 static struct {
     GdkDragContext *ctx;
     gboolean just_entered;
+    gboolean dropped;
     jobjectArray mimes;
     gint dx, dy;
-} enter_ctx = {NULL, FALSE, NULL, 0, 0};
+} enter_ctx = {NULL, FALSE, FALSE, NULL, 0, 0};
 
 gboolean is_dnd_owner = FALSE;
 
@@ -188,8 +189,12 @@ static void process_dnd_target_drag_leave(WindowContext *ctx, GdkEventDND *event
 {
     (void)event;
 
-    mainEnv->CallVoidMethod(ctx->get_jview(), jViewNotifyDragLeave, NULL);
-    CHECK_JNI_EXCEPTION(mainEnv)
+    // if there is a drop going on do not report drag leave to java because
+    // it will reset the drag gesture.
+    if (!enter_ctx.dropped) {
+        mainEnv->CallVoidMethod(ctx->get_jview(), jViewNotifyDragLeave, NULL);
+        CHECK_JNI_EXCEPTION(mainEnv)
+    }
 }
 
 static void process_dnd_target_drop_start(WindowContext *ctx, GdkEventDND *event)
@@ -200,7 +205,7 @@ static void process_dnd_target_drop_start(WindowContext *ctx, GdkEventDND *event
         return; // Do not process drop events if no enter event and subsequent motion event were received
     }
     GdkDragAction selected = gdk_drag_context_get_selected_action(event->context);
-
+    enter_ctx.dropped = TRUE;
     mainEnv->CallIntMethod(ctx->get_jview(), jViewNotifyDragDrop,
             (jint)event->x_root - enter_ctx.dx, (jint)event->y_root - enter_ctx.dy,
             (jint)event->x_root, (jint)event->y_root,
