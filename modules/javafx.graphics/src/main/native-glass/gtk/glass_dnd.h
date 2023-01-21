@@ -77,6 +77,7 @@ struct DragSourceContext {
     GdkDragAction actions;
     jobject data;
     jint performed_action;
+    gboolean device_released;
 
     ~DragSourceContext() {
         if (drag_view) {

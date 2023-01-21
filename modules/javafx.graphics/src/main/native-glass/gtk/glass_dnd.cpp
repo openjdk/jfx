@@ -774,7 +774,13 @@ static void process_dnd_source_grab_broken(DragSourceContext *ctx, GdkEvent *eve
     gdk_drag_abort(ctx->dnd_ctx, GDK_CURRENT_TIME);
 }
 
-static void process_dnd_source_mouse_release(DragSourceContext *ctx, GdkEvent *event) {
+static bool process_dnd_source_mouse_release(DragSourceContext *ctx, GdkEvent *event) {
+    // already processed
+    if (ctx->device_released) {
+        in_drag = false;
+        return true;
+    }
+
     GdkDragAction selected = gdk_drag_context_get_selected_action(ctx->dnd_ctx);
 
     if (selected) {
@@ -784,14 +790,18 @@ static void process_dnd_source_mouse_release(DragSourceContext *ctx, GdkEvent *e
         gdk_drag_abort(ctx->dnd_ctx, GDK_CURRENT_TIME);
     }
 
+    ctx->device_released = true;
+
     // if on the same window we must wait for drop do complete
     if (ctx->dest_window != ctx->dnd_window) {
         in_drag = false;
     }
 
-    // the GDK_BUTTON_RELEASE will be put at the end of the queue because
+    // the GDK_BUTTON_RELEASE will be re-inserted on the queue because
     // WindowContext mouse release would stop DND before it's completed
     gdk_display_put_event(gdk_display_get_default(), event);
+
+    return false;
 }
 
 static void process_drag_motion(DragSourceContext *ctx, gint x_root, gint y_root, guint state) {
@@ -945,6 +955,7 @@ static void dnd_source_push_data(JNIEnv *env, jobject data, jint supported, Drag
 
     in_drag = true;
     ctx->dnd_window = WindowContextBase:: sm_mouse_drag_window->get_gdk_window();
+    ctx->device_released = false;
 
     if (supported == 0) {
         return; // No supported actions, do nothing
@@ -1025,11 +1036,6 @@ bool process_dnd_source(GdkEvent *event) {
     }
 
     switch(event->type) {
-        // this event is for destination, but we use
-        // to end drag if same window
-        case GDK_DROP_START:
-            in_drag = false;
-            break;
         case GDK_GRAB_BROKEN:
             process_dnd_source_grab_broken(ctx, event);
             break;
@@ -1037,8 +1043,7 @@ bool process_dnd_source(GdkEvent *event) {
             process_dnd_source_mouse_motion(ctx, event);
             break;
         case GDK_BUTTON_RELEASE:
-            process_dnd_source_mouse_release(ctx, event);
-            return false;
+            return process_dnd_source_mouse_release(ctx, event);
         case GDK_KEY_PRESS:
         case GDK_KEY_RELEASE:
             process_dnd_source_key_press_release(ctx, event);
