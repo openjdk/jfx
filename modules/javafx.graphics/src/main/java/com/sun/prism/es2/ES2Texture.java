@@ -192,6 +192,15 @@ class ES2Texture<T extends ES2TextureData> extends BaseTexture<ES2TextureResourc
             texHeight = nextPowerOfTwo(texHeight, maxSize);
         }
 
+        if (texWidth <= 0 || texHeight <= 0) {
+            throw new RuntimeException("Illegal texture dimensions (" + texWidth + "x" + texHeight + ")");
+        }
+
+        int bpp = format.getBytesPerPixelUnit();
+        if (texWidth >= (Integer.MAX_VALUE / texHeight / bpp)) {
+            throw new RuntimeException("Illegal texture dimensions (" + texWidth + "x" + texHeight + ")");
+        }
+
         ES2VramPool pool = ES2VramPool.instance;
         long size = pool.estimateTextureSize(texWidth, texHeight, format);
         if (!pool.prepareForAllocation(size)) {
@@ -282,6 +291,17 @@ class ES2Texture<T extends ES2TextureData> extends BaseTexture<ES2TextureResourc
         if (!glCtx.canCreateNonPowTwoTextures()) {
             texWidth = nextPowerOfTwo(texWidth, maxSize);
             texHeight = nextPowerOfTwo(texHeight, maxSize);
+        }
+
+        if (texWidth <= 0 || texHeight <= 0) {
+            frame.releaseFrame();
+            throw new RuntimeException("Illegal texture dimensions (" + texWidth + "x" + texHeight + ")");
+        }
+
+        int bpp = format.getBytesPerPixelUnit();
+        if (texWidth >= (Integer.MAX_VALUE / texHeight / bpp)) {
+            frame.releaseFrame();
+            throw new RuntimeException("Illegal texture dimensions (" + texWidth + "x" + texHeight + ")");
         }
 
         ES2VramPool pool = ES2VramPool.instance;

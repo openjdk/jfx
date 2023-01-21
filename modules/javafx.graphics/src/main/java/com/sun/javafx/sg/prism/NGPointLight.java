@@ -90,22 +90,6 @@ public class NGPointLight extends NGLightBase {
         return SIMULATED_FALLOFF;
     }
 
-    public Point3D getDirection() {
-        return SIMULATED_DIRECTION;
-    }
-
-    public float getInnerAngle() {
-        return SIMULATED_INNER_ANGLE;
-    }
-
-    public float getOuterAngle() {
-        return SIMULATED_OUTER_ANGLE;
-    }
-
-    public float getFalloff() {
-        return SIMULATED_FALLOFF;
-    }
-
 
     private float ca = DEFAULT_CA;
 

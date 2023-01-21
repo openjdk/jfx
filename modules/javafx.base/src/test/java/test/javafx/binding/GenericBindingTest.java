@@ -38,10 +38,13 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+import java.lang.reflect.Constructor;
 import java.util.Arrays;
 import java.util.Collection;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 @RunWith(Parameterized.class)
@@ -49,32 +52,33 @@ public class GenericBindingTest<T> {
 
     private static final Object UNDEFINED = null;
 
-    private final ObservableStub dependency1;
-    private final ObservableStub dependency2;
-    private final BindingMock<T> binding0;
-    private final BindingMock<T> binding1;
-    private final BindingMock<T> binding2;
+    private final ObservableStub dependency1 = new ObservableStub();
+    private final ObservableStub dependency2 = new ObservableStub();
     private final T value1;
     private final T value2;
+    private final Constructor<BindingMock<T>> bindingMockClassConstructor;
+
+    private BindingMock<T> binding0;
+    private BindingMock<T> binding1;
+    private BindingMock<T> binding2;
     private InvalidationListenerMock invalidationListener;
     private ChangeListenerMock<Object> changeListener;
 
     public GenericBindingTest(
             T value1, T value2,
-            ObservableStub dependency1,
-            ObservableStub dependency2,
-            BindingMock<T> binding0, BindingMock<T> binding1, BindingMock<T> binding2) {
+            Class<BindingMock<T>> bindingMockClass) throws Exception {
         this.value1 = value1;
         this.value2 = value2;
-        this.dependency1 = dependency1;
-        this.dependency2 = dependency2;
-        this.binding0 = binding0;
-        this.binding1 = binding1;
-        this.binding2 = binding2;
+        this.bindingMockClassConstructor = bindingMockClass.getConstructor(Observable[].class);
     }
 
     @Before
-    public void setUp() {
+    public void setUp() throws Exception {
+        // Recreate bindings as they may have been altered by one of the tests
+        binding0 = bindingMockClassConstructor.newInstance((Object)new Observable[] {});
+        binding1 = bindingMockClassConstructor.newInstance((Object)new Observable[] {dependency1});
+        binding2 = bindingMockClassConstructor.newInstance((Object)new Observable[] {dependency1, dependency2});
+
         invalidationListener = new InvalidationListenerMock();
         changeListener = new ChangeListenerMock<>(UNDEFINED);
         binding0.setValue(value2);
@@ -292,67 +296,86 @@ public class GenericBindingTest<T> {
         assertEquals(true, binding2.isValid());
     }
 
+    @Test
+    public void testUnbindDependencies() {
+        // Start by making binding valid:
+        binding2.getValue();
+        assertTrue(binding2.isValid());
+
+        // Changing dependency1 should cause binding to become invalid:
+        dependency1.fireValueChangedEvent();
+        assertFalse(binding2.isValid());
+
+        // Make valid again:
+        binding2.getValue();
+        assertTrue(binding2.isValid());
+
+        // Changing dependency2 should cause binding to become invalid:
+        dependency2.fireValueChangedEvent();
+        assertFalse(binding2.isValid());
+
+        // Make valid again:
+        binding2.getValue();
+        assertTrue(binding2.isValid());
+
+        // Remove dependency1:
+        binding2.publicUnbind(dependency1);
+
+        // Check that binding2 is no longer affected by changes in dependency1:
+        dependency1.fireValueChangedEvent();
+        assertTrue(binding2.isValid());
+
+        // But still affected by changes in dependency2:
+        dependency2.fireValueChangedEvent();
+        assertFalse(binding2.isValid());
+
+        // Make valid again:
+        binding2.getValue();
+        assertTrue(binding2.isValid());
+
+        // Remove dependency2:
+        binding2.publicUnbind(dependency2);
+
+        // Check that binding2 is no longer affected by changes in dependency2:
+        dependency2.fireValueChangedEvent();
+        assertTrue(binding2.isValid());   // Fixed by 8243115
+    }
+
     @Parameterized.Parameters
     public static Collection<Object[]> parameters() {
-        final ObservableStub dependency1 = new ObservableStub();
-        final ObservableStub dependency2 = new ObservableStub();
         return Arrays.asList(new Object[][] {
             {
                 Float.MIN_VALUE, Float.MAX_VALUE,
-                dependency1, dependency2,
-                new FloatBindingImpl(),
-                new FloatBindingImpl(dependency1),
-                new FloatBindingImpl(dependency1, dependency2),
+                FloatBindingImpl.class
             },
             {
                 Double.MIN_VALUE, Double.MAX_VALUE,
-                dependency1, dependency2,
-                new DoubleBindingImpl(),
-                new DoubleBindingImpl(dependency1),
-                new DoubleBindingImpl(dependency1, dependency2),
+                DoubleBindingImpl.class
             },
             {
                 Long.MIN_VALUE, Long.MAX_VALUE,
-                dependency1, dependency2,
-                new LongBindingImpl(),
-                new LongBindingImpl(dependency1),
-                new LongBindingImpl(dependency1, dependency2),
+                LongBindingImpl.class
             },
             {
                 Integer.MIN_VALUE, Integer.MAX_VALUE,
-                dependency1, dependency2,
-                new IntegerBindingImpl(),
-                new IntegerBindingImpl(dependency1),
-                new IntegerBindingImpl(dependency1, dependency2),
+                IntegerBindingImpl.class
             },
             {
                 true, false,
-                dependency1, dependency2,
-                new BooleanBindingImpl(),
-                new BooleanBindingImpl(dependency1),
-                new BooleanBindingImpl(dependency1, dependency2),
+                BooleanBindingImpl.class
             },
             {
                 "Hello World", "Goodbye",
-                dependency1, dependency2,
-                new StringBindingImpl(),
-                new StringBindingImpl(dependency1),
-                new StringBindingImpl(dependency1, dependency2),
+                StringBindingImpl.class
             },
             {
-                    new Object(), new Object(),
-                    dependency1, dependency2,
-                    new ObjectBindingImpl(),
-                    new ObjectBindingImpl(dependency1),
-                    new ObjectBindingImpl(dependency1, dependency2),
+                new Object(), new Object(),
+                ObjectBindingImpl.class
             },
             {
-                    FXCollections.observableArrayList(), FXCollections.observableArrayList(),
-                    dependency1, dependency2,
-                    new ListBindingImpl(),
-                    new ListBindingImpl(dependency1),
-                    new ListBindingImpl(dependency1, dependency2),
-            },
+                FXCollections.observableArrayList(), FXCollections.observableArrayList(),
+                ListBindingImpl.class
+            }
         });
     }
 
@@ -369,6 +392,7 @@ public class GenericBindingTest<T> {
         int getComputeValueCounter();
         void reset();
         void setValue(T value);
+        void publicUnbind(Observable... observables);
     }
 
     private static class DoubleBindingImpl extends DoubleBinding implements BindingMock<Number> {
@@ -401,6 +425,10 @@ public class GenericBindingTest<T> {
         public ObservableList<?> getDependencies() {
             fail("Should not reach here");
             return null;
+        }
+
+        public void publicUnbind(Observable... observables) {
+            super.unbind(observables);
         }
     }
 
@@ -435,6 +463,10 @@ public class GenericBindingTest<T> {
             fail("Should not reach here");
             return null;
         }
+
+        public void publicUnbind(Observable... observables) {
+            super.unbind(observables);
+        }
     }
 
     private static class LongBindingImpl extends LongBinding implements BindingMock<Number> {
@@ -467,6 +499,10 @@ public class GenericBindingTest<T> {
         public ObservableList<?> getDependencies() {
             fail("Should not reach here");
             return null;
+        }
+
+        public void publicUnbind(Observable... observables) {
+            super.unbind(observables);
         }
     }
 
@@ -501,6 +537,10 @@ public class GenericBindingTest<T> {
             fail("Should not reach here");
             return null;
         }
+
+        public void publicUnbind(Observable... observables) {
+            super.unbind(observables);
+        }
     }
 
     private static class BooleanBindingImpl extends BooleanBinding implements BindingMock<Boolean> {
@@ -533,6 +573,10 @@ public class GenericBindingTest<T> {
         public ObservableList<?> getDependencies() {
             fail("Should not reach here");
             return null;
+        }
+
+        public void publicUnbind(Observable... observables) {
+            super.unbind(observables);
         }
     }
 
@@ -567,6 +611,10 @@ public class GenericBindingTest<T> {
             fail("Should not reach here");
             return null;
         }
+
+        public void publicUnbind(Observable... observables) {
+            super.unbind(observables);
+        }
     }
 
     private static class StringBindingImpl extends StringBinding implements BindingMock<String> {
@@ -600,6 +648,10 @@ public class GenericBindingTest<T> {
             fail("Should not reach here");
             return null;
         }
+
+        public void publicUnbind(Observable... observables) {
+            super.unbind(observables);
+        }
     }
 
     private static class ListBindingImpl extends ListBinding<Object> implements BindingMock<ObservableList<Object>> {
@@ -632,6 +684,10 @@ public class GenericBindingTest<T> {
         public ObservableList<?> getDependencies() {
             fail("Should not reach here");
             return null;
+        }
+
+        public void publicUnbind(Observable... observables) {
+            super.unbind(observables);
         }
     }
 
