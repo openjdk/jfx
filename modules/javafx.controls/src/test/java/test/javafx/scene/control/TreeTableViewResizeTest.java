@@ -26,6 +26,9 @@ package test.javafx.scene.control;
 
 import static org.junit.Assert.assertEquals;
 import java.util.List;
+import org.junit.Assert;
+import org.junit.Test;
+import com.sun.javafx.tk.Toolkit;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.scene.control.ConstrainedColumnResizeBase;
 import javafx.scene.control.SelectionMode;
@@ -35,8 +38,6 @@ import javafx.scene.control.TreeTableColumn;
 import javafx.scene.control.TreeTableView;
 import javafx.scene.layout.BorderPane;
 import javafx.util.Callback;
-import org.junit.Test;
-import com.sun.javafx.tk.Toolkit;
 import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
 
 /**
@@ -222,5 +223,47 @@ public class TreeTableViewResizeTest extends ResizeHelperTestBase {
 
     protected static Callback<TreeTableView.ResizeFeatures, Boolean> createPolicy(int ix) {
         return (Callback<TreeTableView.ResizeFeatures, Boolean>)POLICIES[ix];
+    }
+
+    /**
+     * Verifies that the constrained resize policy still works once all the items have been removed JDK-8137244.
+     */
+    @Test
+    public void testConstrainedResizeOfEmptyTable() {
+        Object[] spec = {
+            Cmd.ROWS, 5,
+            Cmd.COL, Cmd.PREF, 200,
+            Cmd.COL, Cmd.PREF, 200,
+        };
+        // allow for borders
+        double tolerance = 6.0;
+
+        TreeTableView<String> t = createTable(spec);
+        t.setShowRoot(false);
+
+        stageLoader = new StageLoader(new BorderPane(t));
+        try {
+            for (int ip = 0; ip < POLICIES.length; ip++) {
+                Callback<TreeTableView.ResizeFeatures, Boolean> policy = createPolicy(ip);
+                t.setColumnResizePolicy(policy);
+
+                // smaller than preferred
+                t.setPrefWidth(300);
+                Toolkit.getToolkit().firePulse();
+                checkInvariants(t);
+                Assert.assertEquals(t.getWidth(), sumColumnWidths(t.getColumns()), tolerance);
+
+                // clear items
+                t.getRoot().getChildren().clear();
+
+                // make it wider, check if resized correctly
+                t.setPrefWidth(1000);
+                Toolkit.getToolkit().firePulse();
+                checkInvariants(t);
+                Assert.assertEquals(t.getWidth(), sumColumnWidths(t.getColumns()), tolerance);
+            }
+        } finally {
+            stageLoader.dispose();
+        }
     }
 }
