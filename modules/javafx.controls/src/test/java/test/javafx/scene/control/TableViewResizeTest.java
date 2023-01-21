@@ -34,6 +34,7 @@ import javafx.scene.control.TableColumnBase;
 import javafx.scene.control.TableView;
 import javafx.scene.layout.BorderPane;
 import javafx.util.Callback;
+import org.junit.Assert;
 import org.junit.Test;
 import com.sun.javafx.tk.Toolkit;
 import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
@@ -221,5 +222,46 @@ public class TableViewResizeTest extends ResizeHelperTestBase {
 
     protected static Callback<TableView.ResizeFeatures, Boolean> createPolicy(int ix) {
         return (Callback<TableView.ResizeFeatures, Boolean>)POLICIES[ix];
+    }
+
+    /**
+     * Verifies that the constrained resize policy still works once all the items have been removed JDK-8137244.
+     */
+    @Test
+    public void testConstrainedResizeOfEmptyTable() {
+        Object[] spec = {
+            Cmd.ROWS, 5,
+            Cmd.COL, Cmd.PREF, 200,
+            Cmd.COL, Cmd.PREF, 200,
+        };
+        // allow for borders
+        double tolerance = 6.0;
+
+        TableView<String> t = createTable(spec);
+
+        stageLoader = new StageLoader(new BorderPane(t));
+        try {
+            for (int ip = 0; ip < POLICIES.length; ip++) {
+                Callback<TableView.ResizeFeatures, Boolean> policy = createPolicy(ip);
+                t.setColumnResizePolicy(policy);
+
+                // smaller than preferred
+                t.setPrefWidth(300);
+                Toolkit.getToolkit().firePulse();
+                checkInvariants(t);
+                Assert.assertEquals(t.getWidth(), sumColumnWidths(t.getColumns()), tolerance);
+
+                // clear items
+                t.getItems().clear();
+
+                // make it wider, check if resized correctly
+                t.setPrefWidth(1000);
+                Toolkit.getToolkit().firePulse();
+                checkInvariants(t);
+                Assert.assertEquals(t.getWidth(), sumColumnWidths(t.getColumns()), tolerance);
+            }
+        } finally {
+            stageLoader.dispose();
+        }
     }
 }
