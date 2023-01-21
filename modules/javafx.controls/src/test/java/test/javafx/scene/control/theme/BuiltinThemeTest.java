@@ -43,12 +43,12 @@ public class BuiltinThemeTest {
     @BeforeAll
     static void beforeAll() {
         originalUAStylesheet = platformUserAgentStylesheetProperty().get();
-        originalTheme = platformThemeProperty().get();
+        originalTheme = platformUserAgentStyleThemeProperty().get();
     }
 
     @AfterAll
     static void afterAll() {
-        platformThemeProperty().set(originalTheme);
+        platformUserAgentStyleThemeProperty().set(originalTheme);
         platformUserAgentStylesheetProperty().set(originalUAStylesheet);
     }
 
@@ -67,16 +67,16 @@ public class BuiltinThemeTest {
     @Test
     public void testThemeIsImplicitlySet() {
         platformUserAgentStylesheetProperty().set(null);
-        platformThemeProperty().set(null);
+        platformUserAgentStyleThemeProperty().set(null);
 
         platformUserAgentStylesheetProperty().set("foo.css");
-        assertNull(platformThemeProperty().get());
+        assertNull(platformUserAgentStyleThemeProperty().get());
 
         platformUserAgentStylesheetProperty().set("CASPIAN");
-        assertEquals("CaspianTheme", platformThemeProperty().get().getClass().getSimpleName());
+        assertEquals("CaspianTheme", platformUserAgentStyleThemeProperty().get().getClass().getSimpleName());
 
         platformUserAgentStylesheetProperty().set("MODENA");
-        assertEquals("ModenaTheme", platformThemeProperty().get().getClass().getSimpleName());
+        assertEquals("ModenaTheme", platformUserAgentStyleThemeProperty().get().getClass().getSimpleName());
     }
 
     /*
@@ -86,14 +86,14 @@ public class BuiltinThemeTest {
     @Test
     public void testUAConstantIsClearedWhenBuiltinThemeIsExplicitlySet() {
         platformUserAgentStylesheetProperty().set("CASPIAN");
-        platformThemeProperty().set(new CaspianTheme());
+        platformUserAgentStyleThemeProperty().set(new CaspianTheme());
         assertNull(platformUserAgentStylesheetProperty().get());
-        assertTrue(platformThemeProperty().get() instanceof CaspianTheme);
+        assertTrue(platformUserAgentStyleThemeProperty().get() instanceof CaspianTheme);
 
         platformUserAgentStylesheetProperty().set("MODENA");
-        platformThemeProperty().set(new ModenaTheme());
+        platformUserAgentStyleThemeProperty().set(new ModenaTheme());
         assertNull(platformUserAgentStylesheetProperty().get());
-        assertTrue(platformThemeProperty().get() instanceof ModenaTheme);
+        assertTrue(platformUserAgentStyleThemeProperty().get() instanceof ModenaTheme);
     }
 
     /*
@@ -103,9 +103,9 @@ public class BuiltinThemeTest {
     @Test
     public void testUAStylesheetIsNotClearedWhenBuiltinThemeIsExplicitlySet() {
         platformUserAgentStylesheetProperty().set("foo.css");
-        platformThemeProperty().set(new CaspianTheme());
+        platformUserAgentStyleThemeProperty().set(new CaspianTheme());
         assertEquals("foo.css", platformUserAgentStylesheetProperty().get());
-        assertTrue(platformThemeProperty().get() instanceof CaspianTheme);
+        assertTrue(platformUserAgentStyleThemeProperty().get() instanceof CaspianTheme);
     }
 
 }

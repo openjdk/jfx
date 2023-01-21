@@ -249,7 +249,8 @@
       <li><a href="#intro">Introduction</a>
         <ul>
           <li><a href="#introscenegraph">CSS and the JavaFX Scene Graph</a></li>
-          <li><a href="#introstylesheets">Scene, Parent and SubScene Stylesheets</a></li>
+          <li><a href="#introstylesheets">Stylesheets and inline styles</a></li>
+          <li><a href="#introstyletheme">Style themes</a></li>
           <li><a href="#intronaming">Naming Conventions</a></li>
           <li><a href="#intropublicapi">CSS Public API</a></li>
           <li><a href="#introinheritance">Inheritance</a></li>
@@ -549,60 +550,115 @@
         the appropriate type and is then assigned to an instance variable of the
         JavaFX object.
     </p>
-    <h3><a id="introstylesheets">Scene, Parent and SubScene Stylesheets</a></h3>
+    <h3><a id="introstylesheets">Stylesheets and inline styles</a></h3>
     <p>
-        CSS styles can come from style sheets or inline styles. Style sheets are
-        loaded from the URLs specified in the
-        <a href="../../../javafx/scene/Scene.html#getStylesheets--">getStylesheets</a>
-        property of the Scene object. If the scene&#8209;graph contains a Control, a
-        default user agent style sheet is loaded. Inline styles are specified via
-        the Node <span style="font-weight: bold;">setStyle</span> API. Inline
-        styles are analogous to the style="..." attribute of an HTML element.
-        Styles loaded from a Scene's style sheets take precedence over selectors from
-        the user agent style sheet. Inline styles take precedence over
-        styles originating elsewhere. The precedence order of style selectors can be
-        modified using "!important" in a style declaration.
+        CSS styles are specified as inline styles or in stylesheets.
+        Inline styles have the highest priority in the CSS cascade, and can be set using
+        <a href="../../../javafx/scene/Node.html#setStyle--">Node.setStyle</a>.
+        An inline style can only contain CSS declarations (property/value pairs).
+        This is analogous to the <code>style="..."</code> attribute of an HTML element.
     </p>
     <p>
-        Beginning with JavaFX 2.1, the Parent class has a
-        <a href="../../../javafx/scene/Parent.html#getStylesheets--">getStylesheets</a> property,
-        allowing style sheets to be set on a container. This allows for one branch
-        of of the scene&#8209;graph to have a distinct set of styles. Any instance of
-        Parent can have style sheets. A child will take its styles from its own
-        inline styles, the style sheets of all its ancestors, and any style sheets
-        from the Scene.
+        Stylesheets can be added to a JavaFX scene graph using a variety of APIs (see the table below).
+        Depending on the API, a stylesheet is either classified as an <span style="font-weight: bold;">author</span>
+        stylesheet or a <span style="font-weight: bold;">user-agent</span> stylesheet.
+        Property values specified in author stylesheets have a higher precedence in the CSS cascade than
+        property values set from code, while property values specified in user-agent stylesheets have a
+        lower precedence than property values set from code.
+        This makes user-agent stylesheets particularly useful to define the general appearance of an
+        application, while allowing user code to override individual property values to customize a
+        particular control in the scene graph.
     </p>
     <p>
-        Beginning with JavaFX 8u20, the Scene class has a
-        <a href="../../../javafx/scene/Scene.html#getUserAgentStylesheet--">getUserAgentStylesheet</a> property,
-        allowing a user&#8209;style sheet to be set on a Scene. This allows a Scene
-        to have a set of user&#8209;agent styles distinct from the platform default. When a user&#8209;agent
-        stylesheet is set on a Scene, the user&#8209;agent styles are used instead of the styles from the
-        platform default user&#8209;agent stylesheet.
+        Another important difference between an author stylesheet and a user-agent stylesheet is whether
+        the stylesheet is included in the CSS cascade for a styleable node. Since user-agent stylesheets
+        specify the general appearance of an application, only the user-agent stylesheet closest to the
+        styleable node is included in the CSS cascade; all other user-agent stylesheets are discarded.
+        A notable exception to this rule is the stylesheet returned from
+        <a href="../../../javafx/scene/layout/Region.html#getUserAgentStylesheet--">Region.getUserAgentStylesheet</a>,
+        which does not cause the next-closest user-agent stylesheet to be discarded. This allows control
+        authors to add a user-agent stylesheet that is only relevant for the particular control, without
+        discarding the user-agent stylesheet for the rest of the application.
+        <table class="cssmisctable">
+            <caption>Styling APIs<br/>(sorted by order of precedence, descending)</caption>
+            <thead>
+                <tr>
+                    <th scope="col"></th>
+                    <th scope="col">API</th>
+                    <th scope="col"><a href="../../../javafx/css/StyleOrigin.html">StyleOrigin</a></th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <th scope="row">1</th>
+                    <th><a href="../../../javafx/scene/Node.html#setStyle--">Node.style</a></th>
+                    <td><a href="../../../javafx/css/StyleOrigin.html#INLINE--">inline</a></td>
+                </tr>
+                <tr>
+                    <th scope="row">2</th>
+                    <td><a href="../../../javafx/scene/Parent.html#getStylesheets--">Parent.getStylesheets</a></td>
+                    <td><a href="../../../javafx/css/StyleOrigin.html#AUTHOR--">author</a></td>
+                </tr>
+                <tr>
+                    <th scope="row">3</th>
+                    <td><a href="../../../javafx/scene/Scene.html#getStylesheets--">Scene.getStylesheets</a></td>
+                    <td><a href="../../../javafx/css/StyleOrigin.html#AUTHOR--">author</a></td>
+                </tr>
+                <tr>
+                    <th scope="row">4</th>
+                    <td><a href="../../../javafx/css/StyleableProperty.html">StyleableProperty</a> values set from code</td>
+                    <td><a href="../../../javafx/css/StyleOrigin.html#USER--">user</a></td>
+                </tr>
+                <tr>
+                    <th scope="row">5</th>
+                    <td><a href="../../../javafx/scene/layout/Region.html#getUserAgentStylesheet--">Region.getUserAgentStylesheet</a></td>
+                    <td><a href="../../../javafx/css/StyleOrigin.html#USER_AGENT--">user-agent</a></td>
+                </tr>
+                <tr>
+                    <th scope="row">6</th>
+                    <td><a href="../../../javafx/scene/SubScene.html#userAgentStylesheetProperty--">SubScene.userAgentStylesheet</a></td>
+                    <td><a href="../../../javafx/css/StyleOrigin.html#USER_AGENT--">user-agent</a></td>
+                </tr>
+                <tr>
+                    <th scope="row">7</th>
+                    <td><a href="../../../javafx/scene/Scene.html#userAgentStylesheetProperty--">Scene.userAgentStylesheet</a></td>
+                    <td><a href="../../../javafx/css/StyleOrigin.html#USER_AGENT--">user-agent</a></td>
+                </tr>
+                <tr>
+                    <th scope="row">8</th>
+                    <td><a href="../../../javafx/application/Application.html#userAgentStylesheetProperty--">Application.userAgentStylesheet</a></td>
+                    <td><a href="../../../javafx/css/StyleOrigin.html#USER_AGENT--">user-agent</a></td>
+                </tr>
+                <tr>
+                    <th scope="row">9</th>
+                    <td><a href="../../../javafx/application/Application.html#userAgentStyleThemeProperty--">Application.userAgentStyleTheme</a></td>
+                    <td><a href="../../../javafx/css/StyleOrigin.html#USER_AGENT--">user-agent</a></td>
+                </tr>
+            </tbody>
+        </table>
+    </p>
+    <h3><a id="introstyletheme">Style themes</a></h3>
+    <p>
+        <a href="../../../javafx/css/StyleTheme.html">StyleThemes</a> are collections of user-agent
+        stylesheets that comprise a single application-wide theme. All stylesheets that are part of
+        a style theme are classified as user-agent stylesheets.
+        JavaFX ships with two themes, <a href="../../../javafx/scene/control/theme/CaspianTheme.html">Caspian</a>
+        and <a href="../../../javafx/scene/control/theme/ModenaTheme.html">Modena</a>, which are
+        implemented as extensible style themes.
+        The list of stylesheets that comprise a style theme can be modified while the application is
+        running, enabling applications to create dynamic themes that respond to changing user preferences.
     </p>
     <p>
-        Beginning with JavaFX 8u20, the SubScene class has a
-        <a href="../../../javafx/scene/SubScene.html#getUserAgentStylesheet--">getUserAgentStylesheet</a> property,
-        allowing a user&#8209;style sheet to be set on a SubScene. This allows a SubScene
-        of the scene&#8209;graph to have set of user&#8209;agent styles distinct from the platform default
-        or from the Scene in which the SubScene is contained. When a user&#8209;agent
-        stylesheet is set on a SubScene, the user&#8209;agent styles are used instead of the styles from the
-        platform default user&#8209;agent stylesheet or any user&#8209;agent stylesheet set on the Scene.
+        The application-wide style theme is set using the
+        <a href="../../../javafx/application/Application.html#userAgentStyleThemeProperty--">Application.userAgentStyleTheme</a>
+        property. Note that a style theme has the lowest precedence in the CSS cascade, and can be
+        replaced by user-agent stylesheets set for any of the following properties:
+        <ol>
+            <li><a href="../../../javafx/scene/SubScene.html#userAgentStylesheetProperty--">SubScene.userAgentStylesheet</a></li>
+            <li><a href="../../../javafx/scene/Scene.html#userAgentStylesheetProperty--">Scene.userAgentStylesheet</a></li>
+            <li><a href="../../../javafx/scene/Application.html#userAgentStylesheetProperty--">Application.userAgentStylesheet</a></li>
+        </ol>
     </p>
-    <p>It is important to note that styles from a stylesheet added to a Scene or Parent, do not affect
-        a SubScene which is a child or descendent of the Scene or Parent. Unless a user&#8209;agent has
-        been set on the SubScene, the SubScene will get styles
-        from the a Scene's user&#8209;agent stylesheet or the platform user&#8209;agent stylesheet.</p>
-    The implementation allows designers to style an application by using style
-    sheets to override property values set from code. For example, a call to <code>rectangle.setFill(Color.YELLOW)</code>
-    can be overridden by an inline&#8209;style or a style from an author stylesheet. This has implications for
-    the cascade; particularly, when does a style from a style sheet override a
-    value set from code? The JavaFX CSS implementation applies the following
-    order of precedence: <cite>a style from a user agent style sheet or a style theme has lower
-    priority than a value set from code, which has lower priority than a Scene
-    or Parent style sheet. Inline styles have highest precedence. Style sheets
-    from a Parent instance are considered to be more specific than those styles
-    from Scene style sheets.</cite>
     <h3><a id="intronaming">Naming Conventions</a></h3>
     <p>Naming conventions have been established for deriving CSS style&#8209;class
         names from JavaFX class names, and for deriving CSS property names from

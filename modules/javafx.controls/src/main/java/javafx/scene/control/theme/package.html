@@ -38,12 +38,12 @@
     <li>{@link javafx.scene.control.theme.CaspianTheme Caspian}, which is the default theme for JavaFX 2.X</li>
     <li>{@link javafx.scene.control.theme.ModenaTheme Modena}, which is the default theme for JavaFX 8.X and later</li>
 </ol>
-<p>Style themes can be applied using the {@link javafx.application.Application#setStyleTheme} method:</p>
+<p>Style themes can be applied using the {@link javafx.application.Application#setUserAgentStyleTheme} method:</p>
 <pre>{@code
     public class App extends Application {
         @Override
         public void start(Stage primaryStage) {
-            setStyleTheme(new CaspianTheme());
+            setUserAgentStyleTheme(new CaspianTheme());
 
             primaryStage.setScene(...);
             primaryStage.show();

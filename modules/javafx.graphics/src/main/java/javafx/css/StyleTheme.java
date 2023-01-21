@@ -27,33 +27,36 @@ package javafx.css;
 
 import javafx.application.Application;
 import javafx.collections.ObservableList;
+import javafx.scene.Scene;
+import javafx.scene.SubScene;
 import java.io.File;
 import java.util.List;
 
 /**
- * {@code StyleTheme} is a collection of stylesheets that specify the appearance of UI controls and other
- * nodes in the application. Like a user-agent stylesheet, a {@code StyleTheme} is implicitly used by all
- * JavaFX nodes in the scene graph.
+ * {@code StyleTheme} is a collection of user-agent stylesheets that specify the appearance of UI controls and
+ * other nodes in the application. {@code StyleTheme} is implicitly used by all JavaFX nodes in the scene graph,
+ * unless it is overridden by any of the following properties:
+ * <ul>
+ *     <li>{@link Application#userAgentStylesheetProperty() Application.userAgentStylesheet}
+ *     <li>{@link Scene#userAgentStylesheetProperty() Scene.userAgentStylesheet}
+ *     <li>{@link SubScene#userAgentStylesheetProperty() SubScene.userAgentStylesheet}
+ * </ul>
  * <p>
  * The list of stylesheets that comprise a {@code StyleTheme} can be modified while the application is running,
  * enabling applications to create dynamic themes that respond to changing user preferences.
  * <p>
- * A {@code StyleTheme} can be applied using the {@link Application#setStyleTheme(StyleTheme)} method:
+ * A {@code StyleTheme} can be applied using the {@link Application#setUserAgentStyleTheme(StyleTheme)} method:
  * <pre>{@code
  *     public class App extends Application {
  *         @Override
  *         public void start(Stage primaryStage) {
- *             setStyleTheme(new MyCustomTheme());
+ *             setUserAgentStyleTheme(new MyCustomTheme());
  *
  *             primaryStage.setScene(...);
  *             primaryStage.show();
  *         }
  *     }
  * }</pre>
- * <p>
- * In the CSS subsystem, stylesheets that comprise a {@code StyleTheme} are classified as
- * {@link StyleOrigin#USER_AGENT} stylesheets, but have a higher precedence in the CSS cascade
- * than a stylesheet referenced by {@link Application#userAgentStylesheetProperty()}.
  *
  * @since 21
  */

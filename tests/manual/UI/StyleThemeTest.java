@@ -36,7 +36,7 @@ public class StyleThemeTest extends Application {
 
     @Override
     public void start(Stage stage) {
-        setStyleTheme(new ModenaTheme());
+        setUserAgentStyleTheme(new ModenaTheme());
 
         var passButton = new Button("Pass");
         passButton.setOnAction(e -> Platform.exit());
@@ -50,12 +50,12 @@ public class StyleThemeTest extends Application {
         var toggleGroup = new ToggleGroup();
 
         var modenaButton = new RadioButton("Modena");
-        modenaButton.setOnAction(e -> setStyleTheme(new ModenaTheme()));
+        modenaButton.setOnAction(e -> setUserAgentStyleTheme(new ModenaTheme()));
         modenaButton.setToggleGroup(toggleGroup);
         modenaButton.setSelected(true);
 
         var caspianButton = new RadioButton("Caspian");
-        caspianButton.setOnAction(e -> setStyleTheme(new CaspianTheme()));
+        caspianButton.setOnAction(e -> setUserAgentStyleTheme(new CaspianTheme()));
         caspianButton.setToggleGroup(toggleGroup);
 
         var box = new VBox();

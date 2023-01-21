@@ -42,7 +42,6 @@ import java.security.AccessControlContext;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.Arrays;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -60,10 +59,10 @@ import javafx.application.ConditionalFeature;
 import javafx.application.Platform;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.ObjectPropertyBase;
 import javafx.beans.property.SimpleBooleanProperty;
-import javafx.beans.property.SimpleObjectProperty;
-import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
+import javafx.beans.property.StringPropertyBase;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.css.StyleTheme;
@@ -708,7 +707,7 @@ public class PlatformImpl {
         }
 
         public boolean isCurrent() {
-            StyleTheme currentTheme = platformTheme.get();
+            StyleTheme currentTheme = platformUserAgentStyleTheme.get();
             return currentTheme != null && currentTheme.getClass().getName().equals(className);
         }
     }
@@ -718,7 +717,7 @@ public class PlatformImpl {
      */
     @SuppressWarnings("deprecation")
     public static void ensureDefaultTheme() {
-        if (platformThemeProperty().get() == null) {
+        if (platformUserAgentStyleThemeProperty().get() == null) {
             platformUserAgentStylesheetProperty().set(Application.STYLESHEET_MODENA);
         }
     }
@@ -774,18 +773,28 @@ public class PlatformImpl {
         return null;
     }
 
-    private static final class UserAgentStylesheetProperty extends SimpleStringProperty {
+    private static final class UserAgentStylesheetProperty extends StringPropertyBase {
         boolean updating;
+
+        @Override
+        public Object getBean() {
+            return PlatformImpl.class;
+        }
+
+        @Override
+        public String getName() {
+            return "platformUserAgentStylesheet";
+        }
 
         @Override
         protected void invalidated() {
             BuiltinTheme builtinTheme = BuiltinTheme.fromName(get());
             if (builtinTheme == null) {
-                styleThemeChanged(get(), platformTheme.get());
+                platformUserAgentStyleThemeChanged(get(), platformUserAgentStyleTheme.get());
             } else if (!builtinTheme.isCurrent()) {
                 try {
                     updating = true;
-                    platformTheme.set(newThemeInstance(builtinTheme));
+                    platformUserAgentStyleTheme.set(newThemeInstance(builtinTheme));
                 } finally {
                     updating = false;
                 }
@@ -799,7 +808,17 @@ public class PlatformImpl {
         return platformUserAgentStylesheet;
     }
 
-    private static final ObjectProperty<StyleTheme> platformTheme = new SimpleObjectProperty<>() {
+    private static final ObjectProperty<StyleTheme> platformUserAgentStyleTheme = new ObjectPropertyBase<>() {
+        @Override
+        public Object getBean() {
+            return PlatformImpl.class;
+        }
+
+        @Override
+        public String getName() {
+            return "platformUserAgentStyleTheme";
+        }
+
         @Override
         protected void invalidated() {
             boolean clearBuiltinThemeUAConstant =
@@ -813,20 +832,20 @@ public class PlatformImpl {
                     BuiltinTheme.fromName(platformUserAgentStylesheet.get()) == null ?
                     platformUserAgentStylesheet.get() : null;
 
-                styleThemeChanged(userAgentStylesheet, get());
+                platformUserAgentStyleThemeChanged(userAgentStylesheet, get());
             }
         }
     };
 
-    public static ObjectProperty<StyleTheme> platformThemeProperty() {
-        return platformTheme;
+    public static ObjectProperty<StyleTheme> platformUserAgentStyleThemeProperty() {
+        return platformUserAgentStyleTheme;
     }
 
-    private static void styleThemeChanged(String userAgentStylesheet, StyleTheme theme) {
+    private static void platformUserAgentStyleThemeChanged(String userAgentStylesheet, StyleTheme theme) {
         if (!isFxApplicationThread()) {
             final String userAgentStylesheetCopy = userAgentStylesheet;
             final StyleTheme themeCopy = theme;
-            runLater(() -> styleThemeChanged(userAgentStylesheetCopy, themeCopy));
+            runLater(() -> platformUserAgentStyleThemeChanged(userAgentStylesheetCopy, themeCopy));
         } else {
             // If the javafx.userAgentStylesheetUrl system property is specified, we ignore the current theme
             // to maximize compatibility with earlier versions of JavaFX where setting a UA stylesheet replaces
@@ -858,9 +877,8 @@ public class PlatformImpl {
         };
 
     /**
-     * Updates the {@link StyleManager} with a new list of stylesheets that consist of the
-     * concatenation of the user-agent stylesheet and the list of stylesheets contained in
-     * the current {@link StyleTheme}.
+     * Updates the {@link StyleManager} with a new list of stylesheets that consist of the current
+     * user-agent stylesheet or the list of stylesheets contained in the current {@link StyleTheme}.
      * <p>
      * If {@code stylesheets} is an {@code ObservableList}, this method also registers a
      * {@code ListChangeListener} to update the {@code StyleManager} when the list is changed.
@@ -869,27 +887,24 @@ public class PlatformImpl {
      * @param stylesheets the stylesheets of the {@code StyleTheme}, or {@code null}
      */
     private static void updateStyleManager(String userAgentStylesheet, List<String> stylesheets) {
-        if (themeStylesheets instanceof ObservableList<String> list) {
-            list.removeListener(themeStylesheetsChanged);
-        }
+        if (themeStylesheets != stylesheets) {
+            if (themeStylesheets instanceof ObservableList<String> list) {
+                list.removeListener(themeStylesheetsChanged);
+            }
 
-        themeStylesheets = stylesheets;
+            themeStylesheets = stylesheets;
 
-        if (themeStylesheets instanceof ObservableList<String> list) {
-            list.addListener(themeStylesheetsChanged);
+            if (themeStylesheets instanceof ObservableList<String> list) {
+                list.addListener(themeStylesheetsChanged);
+            }
         }
 
         boolean hasUserAgentStylesheet = userAgentStylesheet != null && !userAgentStylesheet.isEmpty();
 
-        if (hasUserAgentStylesheet && themeStylesheets != null) {
-            List<String> list = new ArrayList<>(themeStylesheets.size() + 1);
-            list.add(userAgentStylesheet);
-            list.addAll(themeStylesheets);
-            StyleManager.getInstance().setUserAgentStylesheets(list);
+        if (hasUserAgentStylesheet) {
+            StyleManager.getInstance().setUserAgentStylesheets(List.of(userAgentStylesheet));
         } else if (themeStylesheets != null) {
             StyleManager.getInstance().setUserAgentStylesheets(themeStylesheets);
-        } else if (hasUserAgentStylesheet) {
-            StyleManager.getInstance().setUserAgentStylesheets(List.of(userAgentStylesheet));
         } else {
             StyleManager.getInstance().setUserAgentStylesheets(List.of());
         }

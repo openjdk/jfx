@@ -38,6 +38,8 @@ import javafx.css.StyleTheme;
 import javafx.css.Stylesheet;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
+import javafx.scene.SubScene;
+import javafx.scene.layout.Region;
 
 import com.sun.javafx.application.LauncherImpl;
 import com.sun.javafx.application.ParametersImpl;
@@ -187,7 +189,7 @@ public abstract class Application {
      *
      * @since JavaFX 8.0
      * @deprecated this constant is provided for backwards compatibility only,
-     *             call {@link #setStyleTheme(StyleTheme)} with an instance of
+     *             call {@link #setUserAgentStyleTheme(StyleTheme)} with an instance of
      *             {@link javafx.scene.control.theme.CaspianTheme} instead
      */
     @Deprecated(since = "21")
@@ -200,7 +202,7 @@ public abstract class Application {
      *
      * @since JavaFX 8.0
      * @deprecated this constant is provided for backwards compatibility only,
-     *             call {@link #setStyleTheme(StyleTheme)} with an instance of
+     *             call {@link #setUserAgentStyleTheme(StyleTheme)} with an instance of
      *             {@link javafx.scene.control.theme.ModenaTheme} instead
      */
     @Deprecated(since = "21")
@@ -504,12 +506,12 @@ public abstract class Application {
     }
 
     /**
-     * Specifies the user-agent stylesheet of the application.
+     * Specifies the single user-agent stylesheet of the application.
      * <p>
-     * A user-agent stylesheet is a global stylesheet that can be specified in addition to a
-     * {@link StyleTheme} and that is implicitly used by all JavaFX nodes in the scene graph.
-     * It can be used to provide default styling for UI controls and other nodes.
-     * A user-agent stylesheets has the lowest precedence in the CSS cascade.
+     * The user-agent stylesheet is a global stylesheet that defines the appearance of the application.
+     * It has the lowest precedence in the CSS cascade, and can be overridden in the scene graph by
+     * setting the {@link Scene#userAgentStylesheetProperty() Scene.userAgentStylesheet} or
+     * {@link SubScene#userAgentStylesheetProperty() SubScene.userAgentStylesheet} property.
      * <p>
      * This property can also be set on the command line with {@code -Djavafx.userAgentStylesheetUrl=[URL]}.
      * Setting it on the command line overrides the value of this property.
@@ -529,11 +531,11 @@ public abstract class Application {
      * Before JavaFX 21, built-in themes were selectable using the special user-agent stylesheet constants
      * {@link #STYLESHEET_CASPIAN} and {@link #STYLESHEET_MODENA}. For backwards compatibility, the meaning
      * of these special constants is retained: setting the user-agent stylesheet to either {@code STYLESHEET_CASPIAN}
-     * or {@code STYLESHEET_MODENA} will also set the value of the {@link #styleThemeProperty() styleTheme}
+     * or {@code STYLESHEET_MODENA} will also set the value of the {@link #userAgentStyleThemeProperty() styleTheme}
      * property to a new instance of the corresponding theme class.
      * <p>
      * Note: this property can be modified on any thread, but it is not thread-safe and must
-     *       not be concurrently modified with {@link #styleThemeProperty() styleTheme}.
+     *       not be concurrently modified with {@link #userAgentStyleThemeProperty() styleTheme}.
      *
      * @since 21
      */
@@ -556,36 +558,38 @@ public abstract class Application {
     }
 
     /**
-     * Specifies the {@link StyleTheme} of the application.
+     * Specifies the user-agent {@link StyleTheme} of the application.
      * <p>
-     * {@code StyleTheme} is a collection of stylesheets that define the appearance of the application.
-     * Like a user-agent stylesheet, a {@code StyleTheme} is implicitly used by all JavaFX nodes in the
-     * scene graph.
-     * <p>
-     * Stylesheets that comprise a {@code StyleTheme} have a higher precedence in the CSS cascade than a
-     * stylesheet referenced by the {@link #userAgentStylesheetProperty() userAgentStylesheet} property.
+     * {@code StyleTheme} is a collection of user-agent stylesheets that define the appearance of the application.
+     * {@code StyleTheme} has the lowest precedence in the CSS cascade, and can be overridden in the scene graph
+     * by setting any of the following properties:
+     * <ul>
+     *     <li>{@link #userAgentStylesheetProperty() Application.userAgentStylesheet}
+     *     <li>{@link Scene#userAgentStylesheetProperty() Scene.userAgentStylesheet}
+     *     <li>{@link SubScene#userAgentStylesheetProperty() SubScene.userAgentStylesheet}
+     * </ul>
      * <p>
      * Note: this property can be modified on any thread, but it is not thread-safe and must not be
      *       concurrently modified with {@link #userAgentStylesheetProperty() userAgentStylesheet}.
      *
      * @since 21
      */
-    private static ObjectProperty<StyleTheme> styleTheme;
+    private static ObjectProperty<StyleTheme> userAgentStyleTheme;
 
-    public static ObjectProperty<StyleTheme> styleThemeProperty() {
-        if (styleTheme == null) {
-            styleTheme = new SimpleObjectProperty<>(Application.class, "styleTheme");
-            styleTheme.bindBidirectional(PlatformImpl.platformThemeProperty());
+    public static ObjectProperty<StyleTheme> userAgentStyleThemeProperty() {
+        if (userAgentStyleTheme == null) {
+            userAgentStyleTheme = new SimpleObjectProperty<>(Application.class, "userAgentStyleTheme");
+            userAgentStyleTheme.bindBidirectional(PlatformImpl.platformUserAgentStyleThemeProperty());
         }
-        return styleTheme;
+        return userAgentStyleTheme;
     }
 
-    public static StyleTheme getStyleTheme() {
-        return styleThemeProperty().get();
+    public static StyleTheme getUserAgentStyleTheme() {
+        return userAgentStyleThemeProperty().get();
     }
 
-    public static void setStyleTheme(StyleTheme theme) {
-        styleThemeProperty().set(theme);
+    public static void setUserAgentStyleTheme(StyleTheme theme) {
+        userAgentStyleThemeProperty().set(theme);
     }
 
 }
