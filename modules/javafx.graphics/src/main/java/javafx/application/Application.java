@@ -531,11 +531,11 @@ public abstract class Application {
      * Before JavaFX 21, built-in themes were selectable using the special user-agent stylesheet constants
      * {@link #STYLESHEET_CASPIAN} and {@link #STYLESHEET_MODENA}. For backwards compatibility, the meaning
      * of these special constants is retained: setting the user-agent stylesheet to either {@code STYLESHEET_CASPIAN}
-     * or {@code STYLESHEET_MODENA} will also set the value of the {@link #userAgentStyleThemeProperty() styleTheme}
+     * or {@code STYLESHEET_MODENA} will also set the value of the {@link #userAgentStyleThemeProperty() userAgentStyleTheme}
      * property to a new instance of the corresponding theme class.
      * <p>
      * Note: this property can be modified on any thread, but it is not thread-safe and must
-     *       not be concurrently modified with {@link #userAgentStyleThemeProperty() styleTheme}.
+     *       not be concurrently modified with {@link #userAgentStyleThemeProperty() userAgentStyleTheme}.
      *
      * @since 21
      */
