@@ -509,8 +509,8 @@ public abstract class Application {
      * Specifies the single user-agent stylesheet of the application.
      * <p>
      * The user-agent stylesheet is a global stylesheet that defines the appearance of the application.
-     * It has the lowest precedence in the CSS cascade, and can be overridden in the scene graph by
-     * setting the {@link Scene#userAgentStylesheetProperty() Scene.userAgentStylesheet} or
+     * It has the second-lowest precedence in the CSS cascade, and can be overridden in the scene graph
+     * by setting the {@link Scene#userAgentStylesheetProperty() Scene.userAgentStylesheet} or
      * {@link SubScene#userAgentStylesheetProperty() SubScene.userAgentStylesheet} property.
      * <p>
      * This property can also be set on the command line with {@code -Djavafx.userAgentStylesheetUrl=[URL]}.
