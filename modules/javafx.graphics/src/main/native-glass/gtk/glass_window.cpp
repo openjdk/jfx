@@ -1221,7 +1221,8 @@ void WindowContextTop::set_minimized(bool minimize) {
         }
         gtk_window_iconify(GTK_WINDOW(gtk_widget));
     } else {
-        request_focus();
+        gtk_window_deiconify(GTK_WINDOW(gtk_widget));
+        gdk_window_focus(gdk_window, GDK_CURRENT_TIME);
     }
 }
 
