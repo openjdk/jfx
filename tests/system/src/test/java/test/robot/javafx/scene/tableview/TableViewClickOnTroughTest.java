@@ -87,7 +87,7 @@ public class TableViewClickOnTroughTest {
         Bounds verticalBarBoundsInScreen = verticalBar.localToScreen(verticalBar.getBoundsInLocal());
         Bounds thumbBoundsInScreen = thumb.localToScreen(thumb.getBoundsInLocal());
         double posX = verticalBarBoundsInScreen.getCenterX();
-        // set posY to point into the middle of the area of the verticalBar under the thumb. 
+        // set posY to point into the middle of the area of the verticalBar under the thumb.
         double posY = verticalBarBoundsInScreen.getMaxY() - ((verticalBarBoundsInScreen.getMaxY()-thumbBoundsInScreen.getMaxY())/2.0);
         double oldPosition = verticalBar.getValue();
 
