@@ -1,3 +1,7 @@
 <component name="CopyrightManager">
-  <settings default="" />
+  <settings default="OpenJFX GPL">
+    <module2copyright>
+      <element module="All" copyright="OpenJFX GPL" />
+    </module2copyright>
+  </settings>
 </component>
