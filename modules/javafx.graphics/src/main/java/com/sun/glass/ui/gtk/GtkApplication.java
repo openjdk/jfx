@@ -42,7 +42,6 @@ import com.sun.prism.impl.PrismSettings;
 import com.sun.javafx.logging.PlatformLogger;
 
 import java.io.File;
-import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
 import java.security.AccessController;
@@ -51,10 +50,9 @@ import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.lang.annotation.Native;
 
+
 final class GtkApplication extends Application implements
                                     InvokeLaterDispatcher.InvokeLaterSubmitter {
-    private static final String SWT_INTERNAL_CLASS =
-            "org.eclipse.swt.internal.gtk.OS";
     private static final int forcedGtkVersion;
     private static boolean gtk2WarningIssued = false;
     private static final String GTK2_SPECIFIED_WARNING =
@@ -64,49 +62,19 @@ final class GtkApplication extends Application implements
         "WARNING: The JavaFX GTK 2 library was removed.";
 
     static  {
-        //check for SWT-GTK lib presence
-        @SuppressWarnings("removal")
-        Class<?> OS = AccessController.
-                doPrivileged((PrivilegedAction<Class<?>>) () -> {
-                    try {
-                        return Class.forName(SWT_INTERNAL_CLASS, true,
-                                ClassLoader.getSystemClassLoader());
-                    } catch (Exception e) {}
-                    try {
-                        return Class.forName(SWT_INTERNAL_CLASS, true,
-                                Thread.currentThread().getContextClassLoader());
-                    } catch (Exception e) {}
-                    return null;
-                });
-        if (OS != null) {
+        String gtkVersion = System.getProperty("org.eclipse.swt.internal.gtk.version");
+        if (gtkVersion != null && gtkVersion.contains(".")) {
             PlatformLogger logger = Logging.getJavaFXLogger();
-            logger.fine("SWT-GTK library found. Try to obtain GTK version.");
-            @SuppressWarnings("removal")
-            Method method = AccessController.
-                    doPrivileged((PrivilegedAction<Method>) () -> {
-                        try {
-                            return OS.getMethod("gtk_major_version");
-                        } catch (Exception e) {
-                            return null;
-                        }
-                    });
-            int ver = 0;
-            if (method != null) {
-                try {
-                    ver = ((Number)method.invoke(OS)).intValue();
-                } catch (Exception e) {
-                    logger.warning("Method gtk_major_version() of " +
-                         "the org.eclipse.swt.internal.gtk.OS class " +
-                         "returns error. SWT GTK version cannot be detected. " +
-                         "GTK3 will be used as default.");
-                    ver = 3;
-                }
-            }
+            logger.fine(String.format("SWT-GTK library found. Gtk Version = %s.", gtkVersion));
+            String[] vers = gtkVersion.split("\\.");
+            int ver = Integer.parseInt(vers[0]);
+
             if (ver != 3) {
                 logger.warning("SWT-GTK uses unsupported major GTK version "
                         + ver + ". GTK3 will be used as default.");
                 ver = 3;
             }
+
             forcedGtkVersion = ver;
         } else {
             forcedGtkVersion = 0;
