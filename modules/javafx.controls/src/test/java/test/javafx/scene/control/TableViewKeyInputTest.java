@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -856,37 +856,36 @@ public class TableViewKeyInputTest {
      * Tests for cell-based multiple selection
      **************************************************************************/
 
-    @Ignore("Bug persists")
     @Test public void testSelectionPathDeviationWorks1() {
         // select horizontally, then select two items vertically, then go back
         // in opposite direction
         sm.setCellSelectionEnabled(true);
         sm.clearAndSelect(1, col0);
 
+        keyboard.doRightArrowPress(KeyModifier.SHIFT);   // select (1, col1)
         keyboard.doRightArrowPress(KeyModifier.SHIFT);   // select (1, col2)
-        keyboard.doRightArrowPress(KeyModifier.SHIFT);   // select (1, col3)
-        keyboard.doDownArrowPress(KeyModifier.SHIFT);    // select (2, col3)
-        keyboard.doDownArrowPress(KeyModifier.SHIFT);    // select (3, col3)
+        keyboard.doDownArrowPress(KeyModifier.SHIFT);    // select (2, col2)
+        keyboard.doDownArrowPress(KeyModifier.SHIFT);    // select (3, col2)
         assertTrue(sm.isSelected(1, col2));
         assertTrue(sm.isSelected(2, col2));
         assertTrue(sm.isSelected(3, col2));
 
-        keyboard.doUpArrowPress(KeyModifier.SHIFT);    // deselect (3, col3)
+        keyboard.doUpArrowPress(KeyModifier.SHIFT);    // deselect (3, col2)
         assertTrue(sm.isSelected(1, col2));
         assertTrue(sm.isSelected(2, col2));
         assertFalse(sm.isSelected(3, col2));
 
-        keyboard.doUpArrowPress(KeyModifier.SHIFT);    // deselect (2, col3)
+        keyboard.doUpArrowPress(KeyModifier.SHIFT);    // deselect (2, col2)
         assertTrue(sm.isSelected(1, col2));
         assertFalse(sm.isSelected(2, col2));
         assertFalse(sm.isSelected(3, col2));
 
-        keyboard.doUpArrowPress(KeyModifier.SHIFT);    // deselect (1, col3)
-        assertFalse(debug(), sm.isSelected(1, col2));
+        keyboard.doLeftArrowPress(KeyModifier.SHIFT);    // deselect (1, col2)
+        assertFalse(sm.isSelected(1, col2));
         assertFalse(sm.isSelected(2, col2));
         assertFalse(sm.isSelected(3, col2));
 
-        keyboard.doLeftArrowPress(KeyModifier.SHIFT);    // deselect (1, col2)
+        keyboard.doLeftArrowPress(KeyModifier.SHIFT);    // deselect (1, col1)
         assertFalse(sm.isSelected(1, col1));
     }
 
