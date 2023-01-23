@@ -67,7 +67,7 @@ enum BoundsType {
 
 struct WindowGeometry {
     WindowGeometry(): final_width(), final_height(),
-    size_assigned(false), refx(), refy(), gravity_x(), gravity_y(), extents() {}
+    size_assigned(false), x(), y(), gravity_x(), gravity_y(), extents() {}
     // estimate of the final width the window will get after all pending
     // configure requests are processed by the window manager
     struct {
