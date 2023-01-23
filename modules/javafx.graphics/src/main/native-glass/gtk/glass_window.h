@@ -82,8 +82,8 @@ struct WindowGeometry {
 
     bool size_assigned;
 
-    float refx;
-    float refy;
+    int x;
+    int y;
     float gravity_x;
     float gravity_y;
 
