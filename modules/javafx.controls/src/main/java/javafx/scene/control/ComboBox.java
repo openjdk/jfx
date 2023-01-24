@@ -124,7 +124,7 @@ import java.lang.ref.WeakReference;
  * necessary to specify a custom {@link StringConverter}.
  *
  * <h2>Warning: Nodes should not be inserted directly into the ComboBox items list</h2>
- * ComboBox allows for the items list to contain elements of any type, including
+ * {@code ComboBox} allows for the items list to contain elements of any type, including
  * {@link Node} instances. Putting nodes into
  * the items list is <strong>strongly discouraged</strong>, as it can
  * lead to unexpected results. This is because
@@ -137,14 +137,14 @@ import java.lang.ref.WeakReference;
  *
  *<p>Important points to note:
  * <ul>
- * <li>Avoid inserting {@link Node} instances directly into the {@code ComboBox} items list or its data model.</li>
+ * <li>Avoid inserting {@code Node} instances directly into the {@code ComboBox} items list or its data model.</li>
  * <li>The recommended approach is to put the relevant information into the items list, and
  * provide a custom {@link #cellFactoryProperty() cell factory} to create the nodes for a
  * given cell and update them on demand using the data stored in the item for that cell.</li>
- * <li>Avoid creating new {@link Node}s in the {@code updateItem} method of
+ * <li>Avoid creating new {@code Node}s in the {@code updateItem} method of
  * a custom {@link #cellFactoryProperty() cell factory}.</li>
  * </ul>
- * <p>The following minimal example shows how to create a custom cell factory for {@code ComboBox} containing {@link Node}s:
+ * <p>The following minimal example shows how to create a custom cell factory for {@code ComboBox} containing {@code Node}s:
  *
  * <pre><code> ComboBox&lt;Color&gt; cmb = new ComboBox&lt;&gt;();
  * cmb.getItems().addAll(
@@ -172,6 +172,9 @@ import java.lang.ref.WeakReference;
  *         }
  *     };
  * });</code></pre>
+ * <p> This example has an anonymous custom {@code ListCell} class in the custom cell factory.
+ * Note that the {@code Rectangle} ({@code Node}) object needs to be created in the instance initialization block
+ * or the constructor of the custom {@code ListCell} class and updated/used in its {@code updateItem} method.
  *
  * <img src="doc-files/ComboBox.png" alt="Image of the ComboBox control">
  *

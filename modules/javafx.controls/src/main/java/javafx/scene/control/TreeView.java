@@ -129,7 +129,7 @@ import java.util.Map;
  * description of how to write custom Cells.
  *
  * <h3>Warning: Nodes should not be inserted directly into the TreeView cells</h3>
- * TreeView allows for it's cells to contain elements of any type, including
+ * {@code TreeView} allows for it's cells to contain elements of any type, including
  * {@code Node} instances. Putting nodes into
  * the TreeView cells is <strong>strongly discouraged</strong>, as it can
  * lead to unexpected results.
@@ -175,7 +175,7 @@ import java.util.Map;
  *
  * <p> This example has an anonymous custom {@code TreeCell} class in the custom cell factory.
  * Note that the {@code Rectangle} ({@code Node}) object needs to be created in the instance initialization block
- * or the constructor of custom {@code TreeCell} class and updated/used in its {@code updateItem} method.
+ * or the constructor of the custom {@code TreeCell} class and updated/used in its {@code updateItem} method.
  *
  * <h2>Editing</h2>
  * <p>This control supports inline editing of values, and this section attempts to
