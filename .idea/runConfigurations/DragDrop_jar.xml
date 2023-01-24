@@ -1,0 +1,8 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="DragDrop.jar" type="JarApplication">
+    <option name="JAR_PATH" value="$PROJECT_DIR$/apps/toys/DragDrop/dist/DragDrop.jar" />
+    <option name="VM_PARAMETERS" value="@build/run.args" />
+    <option name="ALTERNATIVE_JRE_PATH" />
+    <method v="2" />
+  </configuration>
+</component>
