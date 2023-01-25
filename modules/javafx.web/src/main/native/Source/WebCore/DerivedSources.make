@@ -50,7 +50,7 @@ platform_h_compiler_command = $(CC) -std=c++2a -x c++ $(1) $(SDK_FLAGS) $(TARGET
 
 FEATURE_AND_PLATFORM_DEFINES := $(shell $(call platform_h_compiler_command,-E -P -dM) | $(PERL) -ne "print if s/\#define ((HAVE_|USE_|ENABLE_|WTF_PLATFORM_)\w+) 1/\1/")
 
-PLATFORM_HEADER_DIR := $(realpath $(BUILT_PRODUCTS_DIR)/usr/local/include)
+PLATFORM_HEADER_DIR := $(realpath $(BUILT_PRODUCTS_DIR)$(WK_LIBRARY_HEADERS_FOLDER_PATH))
 PLATFORM_HEADER_DEPENDENCIES := $(filter $(PLATFORM_HEADER_DIR)/%,$(realpath $(shell $(call platform_h_compiler_command,-M) | $(PERL) -e "local \$$/; my (\$$target, \$$deps) = split(/:/, <>); print split(/\\\\/, \$$deps);")))
 FEATURE_AND_PLATFORM_DEFINE_DEPENDENCIES = $(WebCore)/DerivedSources.make $(PLATFORM_HEADER_DEPENDENCIES)
 
@@ -195,6 +195,7 @@ JS_BINDING_IDLS := \
     $(WebCore)/Modules/WebGPU/GPUVertexStepMode.idl \
     $(WebCore)/Modules/WebGPU/NavigatorGPU.idl \
     $(WebCore)/Modules/airplay/WebKitPlaybackTargetAvailabilityEvent.idl \
+    $(WebCore)/Modules/applepay/ApplePayAutomaticReloadPaymentRequest.idl \
     $(WebCore)/Modules/applepay/ApplePayCancelEvent.idl \
     $(WebCore)/Modules/applepay/ApplePayContactField.idl \
     $(WebCore)/Modules/applepay/ApplePayCouponCodeChangedEvent.idl \
@@ -203,7 +204,6 @@ JS_BINDING_IDLS := \
     $(WebCore)/Modules/applepay/ApplePayDateComponents.idl \
     $(WebCore)/Modules/applepay/ApplePayDateComponentsRange.idl \
     $(WebCore)/Modules/applepay/ApplePayDetailsUpdateBase.idl \
-    $(WebCore)/Modules/applepay/ApplePayDetailsUpdateData.idl \
     $(WebCore)/Modules/applepay/ApplePayError.idl \
     $(WebCore)/Modules/applepay/ApplePayErrorCode.idl \
     $(WebCore)/Modules/applepay/ApplePayErrorContactField.idl \
@@ -221,10 +221,13 @@ JS_BINDING_IDLS := \
     $(WebCore)/Modules/applepay/ApplePayPaymentMethodSelectedEvent.idl \
     $(WebCore)/Modules/applepay/ApplePayPaymentMethodType.idl \
     $(WebCore)/Modules/applepay/ApplePayPaymentMethodUpdate.idl \
+    $(WebCore)/Modules/applepay/ApplePayPaymentOrderDetails.idl \
     $(WebCore)/Modules/applepay/ApplePayPaymentPass.idl \
     $(WebCore)/Modules/applepay/ApplePayPaymentRequest.idl \
     $(WebCore)/Modules/applepay/ApplePayPaymentTiming.idl \
+    $(WebCore)/Modules/applepay/ApplePayPaymentTokenContext.idl \
     $(WebCore)/Modules/applepay/ApplePayRecurringPaymentDateUnit.idl \
+    $(WebCore)/Modules/applepay/ApplePayRecurringPaymentRequest.idl \
     $(WebCore)/Modules/applepay/ApplePayRequestBase.idl \
     $(WebCore)/Modules/applepay/ApplePaySession.idl \
     $(WebCore)/Modules/applepay/ApplePaySessionError.idl \
@@ -252,6 +255,10 @@ JS_BINDING_IDLS := \
     $(WebCore)/Modules/cache/DOMCache.idl \
     $(WebCore)/Modules/cache/DOMCacheStorage.idl \
     $(WebCore)/Modules/cache/WindowOrWorkerGlobalScope+Caches.idl \
+    $(WebCore)/Modules/compression/CompressionStream.idl \
+    $(WebCore)/Modules/compression/CompressionStreamEncoder.idl \
+    $(WebCore)/Modules/compression/DecompressionStream.idl \
+    $(WebCore)/Modules/compression/DecompressionStreamDecoder.idl \
     $(WebCore)/Modules/contact-picker/ContactInfo.idl \
     $(WebCore)/Modules/contact-picker/ContactProperty.idl \
     $(WebCore)/Modules/contact-picker/ContactsManager.idl \
@@ -311,6 +318,7 @@ JS_BINDING_IDLS := \
     $(WebCore)/Modules/gamepad/GamepadButton.idl \
     $(WebCore)/Modules/gamepad/GamepadEvent.idl \
     $(WebCore)/Modules/gamepad/Navigator+Gamepad.idl \
+    $(WebCore)/Modules/gamepad/WindowEventHandlers+Gamepad.idl \
     $(WebCore)/Modules/geolocation/Geolocation.idl \
     $(WebCore)/Modules/geolocation/GeolocationCoordinates.idl \
     $(WebCore)/Modules/geolocation/GeolocationPosition.idl \
@@ -499,8 +507,8 @@ JS_BINDING_IDLS := \
     $(WebCore)/Modules/permissions/Permissions.idl \
     $(WebCore)/Modules/pictureinpicture/DocumentOrShadowRoot+PictureInPicture.idl \
     $(WebCore)/Modules/pictureinpicture/Document+PictureInPicture.idl \
-    $(WebCore)/Modules/pictureinpicture/EnterPictureInPictureEvent.idl \
     $(WebCore)/Modules/pictureinpicture/HTMLVideoElement+PictureInPicture.idl \
+    $(WebCore)/Modules/pictureinpicture/PictureInPictureEvent.idl \
     $(WebCore)/Modules/pictureinpicture/PictureInPictureWindow.idl \
     $(WebCore)/Modules/push-api/PushEncryptionKeyName.idl \
     $(WebCore)/Modules/push-api/PushEvent.idl \
@@ -521,7 +529,11 @@ JS_BINDING_IDLS := \
     $(WebCore)/Modules/remoteplayback/RemotePlaybackAvailabilityCallback.idl \
     $(WebCore)/Modules/speech/DOMWindow+SpeechSynthesis.idl \
     $(WebCore)/Modules/speech/SpeechSynthesis.idl \
+    $(WebCore)/Modules/speech/SpeechSynthesisErrorCode.idl \
+    $(WebCore)/Modules/speech/SpeechSynthesisErrorEvent.idl \
+    $(WebCore)/Modules/speech/SpeechSynthesisErrorEventInit.idl \
     $(WebCore)/Modules/speech/SpeechSynthesisEvent.idl \
+    $(WebCore)/Modules/speech/SpeechSynthesisEventInit.idl \
     $(WebCore)/Modules/speech/SpeechSynthesisUtterance.idl \
     $(WebCore)/Modules/speech/SpeechSynthesisVoice.idl \
     $(WebCore)/Modules/speech/SpeechRecognition.idl \
@@ -533,6 +545,7 @@ JS_BINDING_IDLS := \
     $(WebCore)/Modules/speech/SpeechRecognitionResultList.idl \
     $(WebCore)/Modules/streams/ByteLengthQueuingStrategy.idl \
     $(WebCore)/Modules/streams/CountQueuingStrategy.idl \
+    $(WebCore)/Modules/streams/GenericTransformStream.idl \
     $(WebCore)/Modules/streams/ReadableByteStreamController.idl \
     $(WebCore)/Modules/streams/ReadableStream.idl \
     $(WebCore)/Modules/streams/ReadableStreamBYOBReader.idl \
@@ -643,6 +656,7 @@ JS_BINDING_IDLS := \
     $(WebCore)/Modules/webauthn/PublicKeyCredentialDescriptor.idl \
     $(WebCore)/Modules/webauthn/PublicKeyCredentialRequestOptions.idl \
     $(WebCore)/Modules/webauthn/PublicKeyCredentialType.idl \
+    $(WebCore)/Modules/webauthn/ResidentKeyRequirement.idl \
     $(WebCore)/Modules/webauthn/UserVerificationRequirement.idl \
 	$(WebCore)/Modules/webcodecs/VideoColorPrimaries.idl \
 	$(WebCore)/Modules/webcodecs/VideoColorSpace.idl \
@@ -766,6 +780,7 @@ JS_BINDING_IDLS := \
     $(WebCore)/crypto/parameters/RsaOaepParams.idl \
     $(WebCore)/crypto/parameters/RsaPssParams.idl \
     $(WebCore)/css/CSSConditionRule.idl \
+    $(WebCore)/css/CSSContainerRule.idl \
     $(WebCore)/css/CSSCounterStyleRule.idl \
     $(WebCore)/css/CSSFontFaceRule.idl \
     $(WebCore)/css/CSSFontPaletteValuesRule.idl \
@@ -808,6 +823,7 @@ JS_BINDING_IDLS := \
     $(WebCore)/css/FontFace.idl \
     $(WebCore)/css/FontFaceSet.idl \
     $(WebCore)/css/FontFaceSource.idl \
+    $(WebCore)/css/LinkStyle.idl \
     $(WebCore)/css/MediaList.idl \
     $(WebCore)/css/MediaQueryList.idl \
     $(WebCore)/css/MediaQueryListEvent.idl \
@@ -823,6 +839,15 @@ JS_BINDING_IDLS := \
     $(WebCore)/css/typedom/CSSUnitValue.idl \
     $(WebCore)/css/typedom/CSSUnparsedValue.idl \
     $(WebCore)/css/typedom/CSSOMVariableReferenceValue.idl \
+    $(WebCore)/css/typedom/color/CSSColor.idl \
+    $(WebCore)/css/typedom/color/CSSColorValue.idl \
+    $(WebCore)/css/typedom/color/CSSHSL.idl \
+    $(WebCore)/css/typedom/color/CSSHWB.idl \
+    $(WebCore)/css/typedom/color/CSSLCH.idl \
+    $(WebCore)/css/typedom/color/CSSLab.idl \
+    $(WebCore)/css/typedom/color/CSSOKLCH.idl \
+    $(WebCore)/css/typedom/color/CSSOKLab.idl \
+    $(WebCore)/css/typedom/color/CSSRGB.idl \
     $(WebCore)/css/typedom/numeric/CSSMathInvert.idl \
     $(WebCore)/css/typedom/numeric/CSSMathMax.idl \
     $(WebCore)/css/typedom/numeric/CSSMathMin.idl \
@@ -898,6 +923,7 @@ JS_BINDING_IDLS := \
     $(WebCore)/dom/DocumentType.idl \
     $(WebCore)/dom/DragEvent.idl \
     $(WebCore)/dom/Element+CSSOMView.idl \
+    $(WebCore)/dom/Element+ComputedStyleMap.idl \
     $(WebCore)/dom/Element+DOMParsing.idl \
     $(WebCore)/dom/Element+Fullscreen.idl \
     $(WebCore)/dom/Element+PointerEvents.idl \
@@ -1122,13 +1148,16 @@ JS_BINDING_IDLS := \
     $(WebCore)/html/canvas/EXTFloatBlend.idl \
     $(WebCore)/html/canvas/EXTFragDepth.idl \
     $(WebCore)/html/canvas/EXTShaderTextureLOD.idl \
+    $(WebCore)/html/canvas/EXTTextureCompressionBPTC.idl \
     $(WebCore)/html/canvas/EXTTextureCompressionRGTC.idl \
     $(WebCore)/html/canvas/EXTTextureFilterAnisotropic.idl \
+    $(WebCore)/html/canvas/EXTTextureNorm16.idl \
     $(WebCore)/html/canvas/EXTsRGB.idl \
     $(WebCore)/html/canvas/ImageBitmapRenderingContext.idl \
     $(WebCore)/html/canvas/ImageBitmapRenderingContextSettings.idl \
     $(WebCore)/html/canvas/ImageSmoothingQuality.idl \
     $(WebCore)/html/canvas/KHRParallelShaderCompile.idl \
+    $(WebCore)/html/canvas/OESDrawBuffersIndexed.idl \
     $(WebCore)/html/canvas/OESElementIndexUint.idl \
     $(WebCore)/html/canvas/OESFBORenderMipmap.idl \
     $(WebCore)/html/canvas/OESStandardDerivatives.idl \
@@ -1158,9 +1187,11 @@ JS_BINDING_IDLS := \
     $(WebCore)/html/canvas/WebGLDebugShaders.idl \
     $(WebCore)/html/canvas/WebGLDepthTexture.idl \
     $(WebCore)/html/canvas/WebGLDrawBuffers.idl \
+    $(WebCore)/html/canvas/WebGLDrawInstancedBaseVertexBaseInstance.idl \
     $(WebCore)/html/canvas/WebGLFramebuffer.idl \
     $(WebCore)/html/canvas/WebGLLoseContext.idl \
     $(WebCore)/html/canvas/WebGLMultiDraw.idl \
+    $(WebCore)/html/canvas/WebGLMultiDrawInstancedBaseVertexBaseInstance.idl \
     $(WebCore)/html/canvas/WebGLProgram.idl \
     $(WebCore)/html/canvas/WebGLQuery.idl \
     $(WebCore)/html/canvas/WebGLRenderbuffer.idl \
@@ -1446,6 +1477,7 @@ JS_BINDING_IDLS := \
     $(WebCore)/testing/FakeXRBoundsPoint.idl \
     $(WebCore)/testing/FakeXRButtonStateInit.idl \
     $(WebCore)/testing/FakeXRInputSourceInit.idl \
+    $(WebCore)/testing/FakeXRJointStateInit.idl \
     $(WebCore)/testing/FakeXRRigidTransformInit.idl \
     $(WebCore)/testing/FakeXRViewInit.idl \
     $(WebCore)/testing/WebFakeXRDevice.idl \
@@ -1531,8 +1563,8 @@ ADDITIONAL_EVENT_TARGET_FACTORY =
 IDL_PATHS := $(sort $(foreach IDL_FILE, $(JS_BINDING_IDLS), $(realpath $(dir $(IDL_FILE)))))
 
 ADDITIONS_PATHS = \
-    $(BUILT_PRODUCTS_DIR)/usr/local/include/WebKitAdditions \
-    $(SDKROOT)/usr/local/include/WebKitAdditions
+    $(BUILT_PRODUCTS_DIR)$(WK_LIBRARY_HEADERS_FOLDER_PATH)/WebKitAdditions \
+    $(SDKROOT)$(WK_LIBRARY_HEADERS_FOLDER_PATH)/WebKitAdditions
 
 ADDITIONAL_BINDING_IDLS_PATHS = \
     $(ADDITIONS_PATHS) \
@@ -1583,7 +1615,6 @@ all : \
     JSSVGElementWrapperFactory.cpp \
     JSSVGElementWrapperFactory.h \
     LocalizableAdditions.strings.out \
-    PlugInsResources.h \
     SVGElementFactory.cpp \
     SVGElementFactory.h \
     SVGElementTypeHelpers.h \
@@ -1595,12 +1626,8 @@ all : \
     StylePropertyShorthandFunctions.cpp \
     StylePropertyShorthandFunctions.h \
     CSSStyleDeclaration+PropertyNames.idl \
-    UserAgentStyleSheets.h \
     WebKitFontFamilyNames.cpp \
     WebKitFontFamilyNames.h \
-    XLinkNames.cpp \
-    XMLNSNames.cpp \
-    XMLNames.cpp \
     MathMLElementFactory.cpp \
     MathMLElementFactory.h \
     MathMLElementTypeHelpers.h \
@@ -1744,12 +1771,13 @@ MODERN_MEDIA_CONTROLS_STYLE_SHEETS = \
     $(WebCore)/Modules/modern-media-controls/controls/buttons-container.css \
     $(WebCore)/Modules/modern-media-controls/controls/controls-bar.css \
     $(WebCore)/Modules/modern-media-controls/controls/inline-media-controls.css \
+    $(WebCore)/Modules/modern-media-controls/controls/ios-inline-media-controls.css \
     $(WebCore)/Modules/modern-media-controls/controls/macos-fullscreen-media-controls.css \
     $(WebCore)/Modules/modern-media-controls/controls/macos-inline-media-controls.css \
     $(WebCore)/Modules/modern-media-controls/controls/media-controls.css \
     $(WebCore)/Modules/modern-media-controls/controls/media-document.css \
     $(WebCore)/Modules/modern-media-controls/controls/placard.css \
-    $(WebCore)/Modules/modern-media-controls/controls/range-button.css \
+    $(WebCore)/Modules/modern-media-controls/controls/slider-base.css \
     $(WebCore)/Modules/modern-media-controls/controls/slider.css \
     $(WebCore)/Modules/modern-media-controls/controls/status-label.css \
     $(WebCore)/Modules/modern-media-controls/controls/text-tracks.css \
@@ -1792,8 +1820,13 @@ USER_AGENT_STYLE_SHEETS = \
     $(POSSIBLE_ADDITIONAL_USER_AGENT_STYLE_SHEETS) \
 #
 
-UserAgentStyleSheets.h : $(WebCore)/css/make-css-file-arrays.pl $(WebCore)/bindings/scripts/preprocessor.pm $(USER_AGENT_STYLE_SHEETS) $(FEATURE_AND_PLATFORM_DEFINE_DEPENDENCIES)
-	$(PERL) $< --defines "$(FEATURE_AND_PLATFORM_DEFINES)" $@ UserAgentStyleSheetsData.cpp $(USER_AGENT_STYLE_SHEETS)
+USER_AGENT_STYLE_SHEETS_FILES = UserAgentStyleSheets.h UserAgentStyleSheetsData.cpp
+USER_AGENT_STYLE_SHEETS_FILES_PATTERNS = $(subst .,%,$(USER_AGENT_STYLE_SHEETS_FILES))
+
+all : $(USER_AGENT_STYLE_SHEETS_FILES)
+
+$(USER_AGENT_STYLE_SHEETS_FILES_PATTERNS) : $(WebCore)/css/make-css-file-arrays.pl $(WebCore)/bindings/scripts/preprocessor.pm $(USER_AGENT_STYLE_SHEETS) $(FEATURE_AND_PLATFORM_DEFINE_DEPENDENCIES)
+	$(PERL) $< --defines "$(FEATURE_AND_PLATFORM_DEFINES)" $(USER_AGENT_STYLE_SHEETS_FILES) $(USER_AGENT_STYLE_SHEETS)
 
 # --------
 
@@ -1821,6 +1854,7 @@ MODERN_MEDIA_CONTROLS_SCRIPTS = \
     $(WebCore)/Modules/modern-media-controls/controls/background-tint.js \
     $(WebCore)/Modules/modern-media-controls/controls/time-control.js \
     $(WebCore)/Modules/modern-media-controls/controls/time-label.js \
+    $(WebCore)/Modules/modern-media-controls/controls/slider-base.js \
     $(WebCore)/Modules/modern-media-controls/controls/slider.js \
     $(WebCore)/Modules/modern-media-controls/controls/button.js \
     $(WebCore)/Modules/modern-media-controls/controls/play-pause-button.js \
@@ -1835,9 +1869,6 @@ MODERN_MEDIA_CONTROLS_SCRIPTS = \
     $(WebCore)/Modules/modern-media-controls/controls/rewind-button.js \
     $(WebCore)/Modules/modern-media-controls/controls/forward-button.js \
     $(WebCore)/Modules/modern-media-controls/controls/overflow-button.js \
-    $(WebCore)/Modules/modern-media-controls/controls/range-button.js \
-    $(WebCore)/Modules/modern-media-controls/controls/volume-button.js \
-    $(WebCore)/Modules/modern-media-controls/controls/brightness-button.js \
     $(WebCore)/Modules/modern-media-controls/controls/close-button.js \
     $(WebCore)/Modules/modern-media-controls/controls/buttons-container.js \
     $(WebCore)/Modules/modern-media-controls/controls/status-label.js \
@@ -1861,7 +1892,6 @@ MODERN_MEDIA_CONTROLS_SCRIPTS = \
     $(WebCore)/Modules/modern-media-controls/media/media-controller-support.js \
     $(WebCore)/Modules/modern-media-controls/media/airplay-support.js \
     $(WebCore)/Modules/modern-media-controls/media/audio-support.js \
-    $(WebCore)/Modules/modern-media-controls/media/brightness-support.js \
     $(WebCore)/Modules/modern-media-controls/media/close-support.js \
     $(WebCore)/Modules/modern-media-controls/media/controls-visibility-support.js \
     $(WebCore)/Modules/modern-media-controls/media/fullscreen-support.js \
@@ -1881,7 +1911,6 @@ MODERN_MEDIA_CONTROLS_SCRIPTS = \
     $(WebCore)/Modules/modern-media-controls/media/time-control-support.js \
     $(WebCore)/Modules/modern-media-controls/media/tracks-support.js \
     $(WebCore)/Modules/modern-media-controls/media/volume-support.js \
-    $(WebCore)/Modules/modern-media-controls/media/mute-and-volume-support.js \
     $(WebCore)/Modules/modern-media-controls/media/media-document-controller.js \
     $(WebCore)/Modules/modern-media-controls/media/watchos-media-controls-support.js \
     $(WebCore)/Modules/modern-media-controls/media/media-controller.js \
@@ -1916,8 +1945,14 @@ $(USER_AGENT_SCRIPTS_FILES_PATTERNS) : $(JavaScriptCore_SCRIPTS_DIR)/make-js-fil
 
 PLUG_INS_RESOURCES = $(WebCore)/Resources/plugIns.js
 
-PlugInsResources.h : $(WebCore)/css/make-css-file-arrays.pl $(WebCore)/bindings/scripts/preprocessor.pm $(PLUG_INS_RESOURCES) $(FEATURE_AND_PLATFORM_DEFINE_DEPENDENCIES)
-	$(PERL) $< --defines "$(FEATURE_AND_PLATFORM_DEFINES)" $@ PlugInsResourcesData.cpp $(PLUG_INS_RESOURCES)
+# order matters -- make-css-file-arrays.pl takes the header and then the source file path
+PLUG_INS_RESOURCES_FILES = PlugInsResources.h PlugInsResourcesData.cpp
+PLUG_INS_RESOURCES_FILES_PATTERNS = $(subst .,%,$(PLUG_INS_RESOURCES_FILES))
+
+all : $(PLUG_INS_RESOURCES_FILES)
+
+$(PLUG_INS_RESOURCES_FILES_PATTERNS) : $(WebCore)/css/make-css-file-arrays.pl $(WebCore)/bindings/scripts/preprocessor.pm $(PLUG_INS_RESOURCES) $(FEATURE_AND_PLATFORM_DEFINE_DEPENDENCIES)
+	$(PERL) $< --defines "$(FEATURE_AND_PLATFORM_DEFINES)" $(PLUG_INS_RESOURCES_FILES) $(PLUG_INS_RESOURCES)
 
 # --------
 
@@ -1949,10 +1984,20 @@ all : $(HTML_TAG_FILES)
 $(HTML_TAG_FILES_PATTERNS) : $(WebCore)/dom/make_names.pl $(WebCore)/bindings/scripts/Hasher.pm $(WebCore)/bindings/scripts/StaticString.pm $(WebCore)/html/HTMLTagNames.in $(WebCore)/html/HTMLAttributeNames.in $(FEATURE_AND_PLATFORM_DEFINE_DEPENDENCIES)
 	$(PERL) $< --tags $(WebCore)/html/HTMLTagNames.in --attrs $(WebCore)/html/HTMLAttributeNames.in --factory --wrapperFactory
 
-XMLNSNames.cpp : $(WebCore)/dom/make_names.pl $(WebCore)/bindings/scripts/Hasher.pm $(WebCore)/bindings/scripts/StaticString.pm $(WebCore)/xml/xmlnsattrs.in
-	$(PERL) $< --attrs $(WebCore)/xml/xmlnsattrs.in
+XML_NS_NAMES_FILES = XMLNSNames.cpp XMLNSNames.h
+XML_NS_NAMES_FILES_PATTERNS = $(subst .,%,$(XML_NS_NAMES_FILES))
 
-XMLNames.cpp : $(WebCore)/dom/make_names.pl $(WebCore)/bindings/scripts/Hasher.pm $(WebCore)/bindings/scripts/StaticString.pm $(WebCore)/xml/xmlattrs.in
+all : $(XML_NS_NAMES_FILES)
+
+$(XML_NS_NAMES_FILES_PATTERNS) : $(WebCore)/dom/make_names.pl $(WebCore)/bindings/scripts/Hasher.pm $(WebCore)/bindings/scripts/StaticString.pm $(WebCore)/xml/xmlnsattrs.in
+	$(PERL) $< --attrs $(WebCore)/xml/xmlnsattrs.in
+	
+XML_NAMES_FILES = XMLNames.cpp XMLNames.h
+XML_NAMES_FILES_PATTERNS = $(subst .,%,$(XML_NAMES_FILES))
+
+all : $(XML_NAMES_FILES)
+
+$(XML_NAMES_FILES_PATTERNS) : $(WebCore)/dom/make_names.pl $(WebCore)/bindings/scripts/Hasher.pm $(WebCore)/bindings/scripts/StaticString.pm $(WebCore)/xml/xmlattrs.in
 	$(PERL) $< --attrs $(WebCore)/xml/xmlattrs.in
 
 # --------
@@ -1975,7 +2020,12 @@ all : $(SVG_TAG_FILES)
 $(SVG_TAG_FILES_PATTERNS) : $(WebCore)/dom/make_names.pl $(WebCore)/bindings/scripts/Hasher.pm $(WebCore)/bindings/scripts/StaticString.pm $(WebCore)/svg/svgtags.in $(WebCore)/svg/svgattrs.in $(FEATURE_AND_PLATFORM_DEFINE_DEPENDENCIES)
 	$(PERL) $< --tags $(WebCore)/svg/svgtags.in --attrs $(WebCore)/svg/svgattrs.in --factory --wrapperFactory
 
-XLinkNames.cpp : $(WebCore)/dom/make_names.pl $(WebCore)/bindings/scripts/Hasher.pm $(WebCore)/bindings/scripts/StaticString.pm $(WebCore)/svg/xlinkattrs.in
+XLINK_NAMES_FILES = XLinkNames.cpp XLinkNames.h
+XLINK_NAMES_FILES_PATTERNS = $(subst .,%,$(XLINK_NAMES_FILES))
+
+all : $(XLINK_NAMES_FILES)
+
+$(XLINK_NAMES_FILES_PATTERNS) : $(WebCore)/dom/make_names.pl $(WebCore)/bindings/scripts/Hasher.pm $(WebCore)/bindings/scripts/StaticString.pm $(WebCore)/svg/xlinkattrs.in
 	$(PERL) $< --attrs $(WebCore)/svg/xlinkattrs.in
 
 # --------
@@ -2181,19 +2231,11 @@ ifneq ($(NO_SUPPLEMENTAL_FILES),1)
 -include $(JS_DOM_HEADERS:.h=.dep)
 endif
 
-# Inspector interfaces
-
-all : CommandLineAPIModuleSource.h
-
-CommandLineAPIModuleSource.h : $(WebCore)/inspector/CommandLineAPIModuleSource.js
-	echo "//# sourceURL=__InjectedScript_CommandLineAPIModuleSource.js" > CommandLineAPIModuleSource.min.js
-	$(PYTHON) $(JavaScriptCore_SCRIPTS_DIR)/jsmin.py < $(WebCore)/inspector/CommandLineAPIModuleSource.js >> CommandLineAPIModuleSource.min.js
-	$(PERL) $(JavaScriptCore_SCRIPTS_DIR)/xxd.pl CommandLineAPIModuleSource_js CommandLineAPIModuleSource.min.js CommandLineAPIModuleSource.h
-	$(DELETE) CommandLineAPIModuleSource.min.js
-
 # WebCore JS Builtins
 
 WebCore_BUILTINS_SOURCES = \
+    $(WebCore)/Modules/compression/CompressionStream.js \
+    $(WebCore)/Modules/compression/DecompressionStream.js \
     $(WebCore)/Modules/streams/ByteLengthQueuingStrategy.js \
     $(WebCore)/Modules/streams/CountQueuingStrategy.js \
     $(WebCore)/Modules/streams/ReadableByteStreamController.js \
@@ -2214,6 +2256,7 @@ WebCore_BUILTINS_SOURCES = \
     $(WebCore)/dom/TextDecoderStream.js \
     $(WebCore)/dom/TextEncoderStream.js \
     $(WebCore)/bindings/js/JSDOMBindingInternals.js \
+    $(WebCore)/inspector/CommandLineAPIModuleSource.js \
 #
 
 BUILTINS_GENERATOR_SCRIPTS = \
@@ -2233,7 +2276,8 @@ BUILTINS_GENERATOR_SCRIPTS = \
     $(JavaScriptCore_SCRIPTS_DIR)/lazywriter.py \
 #
 
-WebCore_BUILTINS_WRAPPERS = \
+WebCore_BUILTINS_WRAPPERS = $(addsuffix Builtins.cpp, $(notdir $(basename $(WebCore_BUILTINS_SOURCES))))
+WebCore_BUILTINS_WRAPPERS += \
     WebCoreJSBuiltins.h \
     WebCoreJSBuiltins.cpp \
     WebCoreJSBuiltinInternals.h \

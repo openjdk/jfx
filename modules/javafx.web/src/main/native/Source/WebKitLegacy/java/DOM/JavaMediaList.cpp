@@ -58,7 +58,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_MediaListImpl_getMediaTextImpl
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_MediaListImpl_setMediaTextImpl(JNIEnv* env, jclass, jlong peer, jstring value)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->setMediaText(String(env, value));
+    IMPL->setMediaText(AtomString {String(env, value)});
 }
 
 JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_MediaListImpl_getLengthImpl(JNIEnv*, jclass, jlong peer)
@@ -81,7 +81,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_dom_MediaListImpl_deleteMediumImpl(JN
     , jstring oldMedium)
 {
     WebCore::JSMainThreadNullState state;
-    raiseOnDOMError(env, IMPL->deleteMedium(String(env, oldMedium)));
+    raiseOnDOMError(env, IMPL->deleteMedium(AtomString {String(env, oldMedium)}));
 }
 
 
@@ -89,7 +89,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_dom_MediaListImpl_appendMediumImpl(JN
     , jstring newMedium)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->appendMedium(String(env, newMedium));
+    IMPL->appendMedium(AtomString{String(env, newMedium)});
 }
 
 

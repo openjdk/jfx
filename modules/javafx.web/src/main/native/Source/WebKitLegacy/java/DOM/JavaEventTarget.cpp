@@ -57,7 +57,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_dom_EventTargetImpl_addEventListenerI
     , jboolean useCapture)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->addEventListenerForBindings(String(env, type)
+    IMPL->addEventListenerForBindings(AtomString{String(env, type)}
             , static_cast<EventListener*>(jlong_to_ptr(listener))
             , static_cast<bool>(useCapture));
 }
@@ -69,7 +69,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_dom_EventTargetImpl_removeEventListen
     , jboolean useCapture)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->removeEventListenerForBindings(String(env, type)
+    IMPL->removeEventListenerForBindings(AtomString{String(env, type)}
             , static_cast<EventListener*>(jlong_to_ptr(listener))
             , static_cast<bool>(useCapture));
 }

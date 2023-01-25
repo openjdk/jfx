@@ -11,13 +11,13 @@
 # are met:
 #
 # 1.  Redistributions of source code must retain the above copyright
-#     notice, this list of conditions and the following disclaimer. 
+#     notice, this list of conditions and the following disclaimer.
 # 2.  Redistributions in binary form must reproduce the above copyright
 #     notice, this list of conditions and the following disclaimer in the
-#     documentation and/or other materials provided with the distribution. 
+#     documentation and/or other materials provided with the distribution.
 # 3.  Neither the name of Apple Inc. ("Apple") nor the names of
 #     its contributors may be used to endorse or promote products derived
-#     from this software without specific prior written permission. 
+#     from this software without specific prior written permission.
 #
 # THIS SOFTWARE IS PROVIDED BY APPLE AND ITS CONTRIBUTORS "AS IS" AND ANY
 # EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -47,8 +47,7 @@ sub defaultItemFactory
 {
     return (
         'interfaceName' => 0,
-        'conditional' => 0,
-        'runtimeEnabled' => 0
+        'conditional' => 0
     );
 }
 
@@ -112,7 +111,6 @@ sub generateImplementation()
 
     for my $eventName (sort keys %parsedEvents) {
         my $conditional = $parsedEvents{$eventName}{"conditional"};
-        my $runtimeEnabled = $parsedEvents{$eventName}{"runtimeEnabled"};
         my $interfaceName = $InCompiler->interfaceForItem($eventName);
 
         next if $generatedInterfaceNames{$interfaceName};
@@ -123,7 +121,6 @@ sub generateImplementation()
             $suffix = $namespace . $suffix;
         }
 
-        # FIXME: This should pay attention to $runtimeConditional so it can support RuntimeEnabledFeatures.
         if ($conditional) {
             my $conditionals = "#if ENABLE(" . join(") || ENABLE(", split("\\|", $conditional)) . ")";
             print F "$conditionals\n";

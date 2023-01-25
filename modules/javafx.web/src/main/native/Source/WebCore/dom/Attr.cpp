@@ -24,6 +24,7 @@
 #include "Attr.h"
 
 #include "AttributeChangeInvalidation.h"
+#include "CommonAtomStrings.h"
 #include "Document.h"
 #include "ElementInlines.h"
 #include "Event.h"
@@ -44,7 +45,7 @@ using namespace HTMLNames;
 
 Attr::Attr(Element& element, const QualifiedName& name)
     : Node(element.document(), CreateOther)
-    , m_element(&element)
+    , m_element(element)
     , m_name(name)
 {
 }
@@ -70,6 +71,8 @@ Attr::~Attr()
 {
     ASSERT_WITH_SECURITY_IMPLICATION(!isInShadowTree());
     ASSERT_WITH_SECURITY_IMPLICATION(treeScope().rootNode().isDocumentNode());
+
+    willBeDeletedFrom(document());
 }
 
 ExceptionOr<void> Attr::setPrefix(const AtomString& prefix)
@@ -82,25 +85,31 @@ ExceptionOr<void> Attr::setPrefix(const AtomString& prefix)
         return Exception { NamespaceError };
 
     const AtomString& newPrefix = prefix.isEmpty() ? nullAtom() : prefix;
-    if (m_element)
-        elementAttribute().setPrefix(newPrefix);
+    if (RefPtr element = m_element.get())
+        element->ensureUniqueElementData().findAttributeByName(qualifiedName())->setPrefix(newPrefix);
+
     m_name.setPrefix(newPrefix);
 
     return { };
 }
 
+#if PLATFORM(JAVA)
+Element* Attr::ownerElement() const {
+    return m_element.get();
+}
+#endif
+
 void Attr::setValue(const AtomString& value)
 {
-    if (m_element)
-        m_element->setAttribute(qualifiedName(), value);
+    if (RefPtr element = m_element.get())
+        element->setAttribute(qualifiedName(), value);
     else
         m_standaloneValue = value;
 }
 
-ExceptionOr<void> Attr::setNodeValue(const String& value)
+void Attr::setNodeValue(const String& value)
 {
-    setValue(value);
-    return { };
+    setValue(AtomString { value });
 }
 
 Ref<Node> Attr::cloneNodeInternal(Document& targetDocument, CloningOperation)
@@ -112,7 +121,7 @@ CSSStyleDeclaration* Attr::style()
 {
     // This is not part of the DOM API, and therefore not available to webpages. However, WebKit SPI
     // lets clients use this via the Objective-C and JavaScript bindings.
-    auto styledElement = dynamicDowncast<StyledElement>(m_element);
+    RefPtr styledElement = dynamicDowncast<StyledElement>(m_element.get());
     if (!styledElement)
         return nullptr;
     m_style = MutableStyleProperties::create();
@@ -120,18 +129,11 @@ CSSStyleDeclaration* Attr::style()
     return &m_style->ensureCSSStyleDeclaration();
 }
 
-const AtomString& Attr::value() const
+AtomString Attr::value() const
 {
-    if (m_element)
-        return m_element->getAttribute(qualifiedName());
+    if (RefPtr element = m_element.get())
+        return element->getAttributeForBindings(qualifiedName());
     return m_standaloneValue;
-}
-
-Attribute& Attr::elementAttribute()
-{
-    ASSERT(m_element);
-    ASSERT(m_element->elementData());
-    return *m_element->ensureUniqueElementData().findAttributeByName(qualifiedName());
 }
 
 void Attr::detachFromElementWithValue(const AtomString& value)
@@ -146,7 +148,7 @@ void Attr::detachFromElementWithValue(const AtomString& value)
 void Attr::attachToElement(Element& element)
 {
     ASSERT(!m_element);
-    m_element = &element;
+    m_element = element;
     m_standaloneValue = nullAtom();
     setTreeScopeRecursively(element.treeScope());
 }

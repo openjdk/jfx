@@ -48,10 +48,10 @@ bool DefaultFilterOperation::operator==(const FilterOperation& operation) const
     return representedType() == downcast<DefaultFilterOperation>(operation).representedType();
 }
 
-ReferenceFilterOperation::ReferenceFilterOperation(const String& url, const String& fragment)
+ReferenceFilterOperation::ReferenceFilterOperation(const String& url, AtomString&& fragment)
     : FilterOperation(REFERENCE)
     , m_url(url)
-    , m_fragment(fragment)
+    , m_fragment(WTFMove(fragment))
 {
 }
 
@@ -63,6 +63,13 @@ bool ReferenceFilterOperation::operator==(const FilterOperation& operation) cons
         return false;
 
     return m_url == downcast<ReferenceFilterOperation>(operation).m_url;
+}
+
+bool ReferenceFilterOperation::isIdentity() const
+{
+    // Answering this question requires access to the renderer and the referenced filterElement.
+    ASSERT_NOT_REACHED();
+    return false;
 }
 
 void ReferenceFilterOperation::loadExternalDocumentIfNeeded(CachedResourceLoader& cachedResourceLoader, const ResourceLoaderOptions& options)

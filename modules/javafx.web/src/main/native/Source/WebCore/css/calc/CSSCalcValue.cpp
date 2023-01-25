@@ -325,6 +325,8 @@ bool CSSCalcValue::equals(const CSSCalcValue& other) const
 
 inline double CSSCalcValue::clampToPermittedRange(double value) const
 {
+    if (primitiveType() == CSSUnitType::CSS_DEG && (isnan(value) || isinf(value)))
+        return 0;
     return m_shouldClampToNonNegative && value < 0 ? 0 : value;
 }
 
@@ -336,6 +338,11 @@ double CSSCalcValue::doubleValue() const
 double CSSCalcValue::computeLengthPx(const CSSToLengthConversionData& conversionData) const
 {
     return clampToPermittedRange(m_expression->computeLengthPx(conversionData));
+}
+
+bool CSSCalcValue::convertingToLengthRequiresNonNullStyle(int lengthConversion) const
+{
+    return m_expression->convertingToLengthRequiresNonNullStyle(lengthConversion);
 }
 
 bool CSSCalcValue::isCalcFunction(CSSValueID functionId)

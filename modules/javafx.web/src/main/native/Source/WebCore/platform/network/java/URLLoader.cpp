@@ -183,10 +183,11 @@ JLObject URLLoader::load(bool asynchronous,
 
     String headerString;
     for (const auto& header : request.httpHeaderFields()) {
-        headerString.append(header.key);
+        headerString = makeString(headerString, header.key, ": ", header.value, "\n");
+       /* headerString.append(header.key);
         headerString.append(": ");
         headerString.append(header.value);
-        headerString.append("\n");
+        headerString.append("\n");*/
     }
 
     JNIEnv* env = WTF::GetJavaEnv();
@@ -350,7 +351,7 @@ bool URLLoader::SynchronousTarget::willSendRequest(const ResourceResponse& respo
                 String(),
                 com_sun_webkit_LoadListenerClient_INVALID_RESPONSE,
                 m_request.url(),
-                "Illegal redirect"));
+                "Illegal redirect"_s));
         return false;
     }
     return true;
@@ -399,19 +400,19 @@ static WebCore::ResourceResponse setupResponse(JNIEnv* env,
     // does
     String contentTypeString(env, contentType);
     if (contentTypeString.isEmpty()) {
-        contentTypeString = "text/html";
+        contentTypeString = "text/html"_s;
     }
     if (!contentTypeString.isEmpty()) {
         response.setMimeType(
-                extractMIMETypeFromMediaType(contentTypeString).convertToLowercaseWithoutLocale());
+               AtomString{extractMIMETypeFromMediaType(contentTypeString).convertToLowercaseWithoutLocale()});
     }
 
     String contentEncodingString(env, contentEncoding);
     if (contentEncodingString.isEmpty() && !contentTypeString.isEmpty()) {
-        contentEncodingString = extractCharsetFromMediaType(contentTypeString);
+        contentEncodingString = extractCharsetFromMediaType(contentTypeString).toString();
     }
     if (!contentEncodingString.isEmpty()) {
-        response.setTextEncodingName(contentEncodingString);
+        response.setTextEncodingName(AtomString{contentEncodingString});
     }
 
     if (contentLength > 0) {
@@ -420,25 +421,25 @@ static WebCore::ResourceResponse setupResponse(JNIEnv* env,
     }
 
     String headersString(env, headers);
-    int splitPos = headersString.find("\n");
+    int splitPos = headersString.find("\n"_s);
     while (splitPos != -1) {
         String s = headersString.left(splitPos);
-        int j = s.find(":");
+        int j = s.find(":"_s);
         if (j != -1) {
             String key = s.left(j);
             String val = s.substring(j + 1);
             response.setHTTPHeaderField(key, val);
         }
         headersString = headersString.substring(splitPos + 1);
-        splitPos = headersString.find("\n");
+        splitPos = headersString.find("\n"_s);
     }
 
     URL kurl = URL(URL(), String(env, url));
     response.setURL(kurl);
 
     // Setup mime type for local resources
-    if (/*kurl.hasPath()*/kurl.pathEnd() != kurl.pathStart() && kurl.protocol() == String("file")) {
-        response.setMimeType(MIMETypeRegistry::mimeTypeForPath(kurl.path().toString()));
+    if (/*kurl.hasPath()*/kurl.pathEnd() != kurl.pathStart() && kurl.protocol() == String("file"_s)) {
+        response.setMimeType(AtomString{MIMETypeRegistry::mimeTypeForPath(kurl.path().toString())});
     }
     return response;
 }

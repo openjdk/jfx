@@ -25,40 +25,56 @@
 
 #pragma once
 
+#import "HardwareCapabilities.h"
+#import <wtf/CompletionHandler.h>
 #import <wtf/FastMalloc.h>
-#import <wtf/Function.h>
 #import <wtf/Ref.h>
 #import <wtf/RefCounted.h>
-#import <wtf/RefPtr.h>
+
+struct WGPUAdapterImpl {
+};
 
 namespace WebGPU {
 
 class Device;
+class Instance;
 
-class Adapter : public RefCounted<Adapter> {
+// https://gpuweb.github.io/gpuweb/#gpuadapter
+class Adapter : public WGPUAdapterImpl, public RefCounted<Adapter> {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    static Ref<Adapter> create(id <MTLDevice> device)
+    static Ref<Adapter> create(id<MTLDevice> device, Instance& instance, HardwareCapabilities&& capabilities)
     {
-        return adoptRef(*new Adapter(device));
+        return adoptRef(*new Adapter(device, instance, WTFMove(capabilities)));
+    }
+    static Ref<Adapter> createInvalid(Instance& instance)
+    {
+        return adoptRef(*new Adapter(instance));
     }
 
     ~Adapter();
 
     size_t enumerateFeatures(WGPUFeatureName* features);
-    bool getLimits(WGPUSupportedLimits*);
-    void getProperties(WGPUAdapterProperties*);
+    bool getLimits(WGPUSupportedLimits&);
+    void getProperties(WGPUAdapterProperties&);
     bool hasFeature(WGPUFeatureName);
-    void requestDevice(const WGPUDeviceDescriptor*, WTF::Function<void(WGPURequestDeviceStatus, RefPtr<Device>&&, const char*)>&& callback);
+    void requestDevice(const WGPUDeviceDescriptor&, CompletionHandler<void(WGPURequestDeviceStatus, Ref<Device>&&, String&&)>&& callback);
+    void requestInvalidDevice(CompletionHandler<void(Ref<Device>&&)>&&);
+
+    bool isValid() const { return m_device; }
+    void makeInvalid() { m_device = nil; }
+
+    Instance& instance() const { return m_instance; }
+
 
 private:
-    Adapter(id <MTLDevice>);
+    Adapter(id<MTLDevice>, Instance&, HardwareCapabilities&&);
+    Adapter(Instance&);
 
-    id <MTLDevice> m_device { nil };
+    id<MTLDevice> m_device { nil };
+    const Ref<Instance> m_instance;
+
+    HardwareCapabilities m_capabilities { };
 };
 
 } // namespace WebGPU
-
-struct WGPUAdapterImpl {
-    Ref<WebGPU::Adapter> adapter;
-};

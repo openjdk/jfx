@@ -53,7 +53,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLHeadElementImpl_getProfile
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLHeadElementImpl_setProfileImpl(JNIEnv* env, jclass, jlong peer, jstring value)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::profileAttr, String(env, value));
+    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::profileAttr, AtomString {String(env, value)});
 }
 
 }

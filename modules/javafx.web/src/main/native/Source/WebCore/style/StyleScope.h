@@ -40,6 +40,7 @@
 #include <wtf/RefPtr.h>
 #include <wtf/Vector.h>
 #include <wtf/WeakHashMap.h>
+#include <wtf/WeakHashSet.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
@@ -60,7 +61,7 @@ namespace Style {
 
 class Resolver;
 
-class Scope : public CanMakeCheckedPtr {
+class Scope : public CanMakeWeakPtr<Scope> {
     WTF_MAKE_FAST_ALLOCATED;
 public:
     explicit Scope(Document&);
@@ -107,6 +108,8 @@ public:
     // The change is assumed to potentially affect all author and user stylesheets including shadow roots.
     WEBCORE_EXPORT void didChangeStyleSheetEnvironment();
 
+    void didChangeViewportSize();
+
     void invalidateMatchedDeclarationsCache();
 
     bool hasPendingUpdate() const { return m_pendingUpdate || m_hasDescendantWithPendingUpdate; }
@@ -127,9 +130,13 @@ public:
     ShadowRoot* shadowRoot() { return m_shadowRoot; }
 
     static Scope& forNode(Node&);
+    static const Scope& forNode(const Node&);
     static Scope* forOrdinal(Element&, ScopeOrdinal);
 
-    bool updateQueryContainerState();
+    struct QueryContainerUpdateContext {
+        HashSet<Element*> invalidatedContainers;
+    };
+    bool updateQueryContainerState(QueryContainerUpdateContext&);
 
 private:
     Scope& documentScope();
@@ -141,14 +148,19 @@ private:
     void updateActiveStyleSheets(UpdateType);
     void scheduleUpdate(UpdateType);
 
-    using ResolverScopes = HashMap<Ref<Resolver>, Vector<CheckedPtr<Scope>>>;
+    using ResolverScopes = HashMap<Ref<Resolver>, Vector<WeakPtr<Scope>>>;
     ResolverScopes collectResolverScopes();
     template <typename TestFunction> void evaluateMediaQueries(TestFunction&&);
 
     WEBCORE_EXPORT void flushPendingSelfUpdate();
     WEBCORE_EXPORT void flushPendingDescendantUpdates();
 
-    void collectActiveStyleSheets(Vector<RefPtr<StyleSheet>>&);
+    struct ActiveStyleSheetCollection {
+        Vector<RefPtr<StyleSheet>> activeStyleSheets;
+        Vector<RefPtr<StyleSheet>> styleSheetsForStyleSheetList;
+    };
+
+    ActiveStyleSheetCollection collectActiveStyleSheets();
 
     enum class ResolverUpdateType {
         Reconstruct,
@@ -183,15 +195,15 @@ private:
 
     Timer m_pendingUpdateTimer;
 
-    mutable std::unique_ptr<HashSet<const CSSStyleSheet*>> m_weakCopyOfActiveStyleSheetListForFastLookup;
+    mutable HashSet<const CSSStyleSheet*> m_weakCopyOfActiveStyleSheetListForFastLookup;
 
     // Track the currently loading top-level stylesheets needed for rendering.
     // Sheets loaded using the @import directive are not included in this count.
     // We use this count of pending sheets to detect when we can begin attaching
     // elements and when it is safe to execute scripts.
-    HashSet<const ProcessingInstruction*> m_processingInstructionsWithPendingSheets;
-    HashSet<const Element*> m_elementsInHeadWithPendingSheets;
-    HashSet<const Element*> m_elementsInBodyWithPendingSheets;
+    WeakHashSet<const ProcessingInstruction> m_processingInstructionsWithPendingSheets;
+    WeakHashSet<const Element> m_elementsInHeadWithPendingSheets;
+    WeakHashSet<const Element> m_elementsInBodyWithPendingSheets;
 
     ListHashSet<Node*> m_styleSheetCandidateNodes;
 
@@ -213,21 +225,6 @@ private:
 
 HTMLSlotElement* assignedSlotForScopeOrdinal(const Element&, ScopeOrdinal);
 Element* hostForScopeOrdinal(const Element&, ScopeOrdinal);
-
-inline bool Scope::hasPendingSheets() const
-{
-    return hasPendingSheetsBeforeBody() || !m_elementsInBodyWithPendingSheets.isEmpty();
-}
-
-inline bool Scope::hasPendingSheetsBeforeBody() const
-{
-    return !m_elementsInHeadWithPendingSheets.isEmpty() || !m_processingInstructionsWithPendingSheets.isEmpty();
-}
-
-inline bool Scope::hasPendingSheetsInBody() const
-{
-    return !m_elementsInBodyWithPendingSheets.isEmpty();
-}
 
 inline void Scope::flushPendingUpdate()
 {

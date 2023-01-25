@@ -34,15 +34,15 @@
 namespace WebCore {
 
 struct SameSizeAsElementRareData : NodeRareData {
-    LayoutSize sizeForResizing;
     IntPoint savedLayerScrollPosition;
     Vector<std::unique_ptr<ElementAnimationRareData>> animationRareData;
     void* pointers[11];
     void* intersectionObserverData;
 #if ENABLE(CSS_TYPED_OM)
-    void* typedOMData;
+    void* typedOMData[2];
 #endif
     void* resizeObserverData;
+    ExplicitlySetAttrElementsMap explicitlySetAttrElementsMap;
 };
 
 static_assert(sizeof(ElementRareData) == sizeof(SameSizeAsElementRareData), "ElementRareData should stay small");

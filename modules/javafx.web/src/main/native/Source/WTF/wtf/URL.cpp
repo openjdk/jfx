@@ -64,7 +64,12 @@ void URL::invalidate()
 
 URL::URL(const URL& base, const String& relative, const URLTextEncoding* encoding)
 {
-    *this = URLParser(relative, base, encoding).result();
+    *this = URLParser(String { relative },  base, encoding).result();
+}
+
+URL::URL(String&& absoluteURL, const URLTextEncoding* encoding)
+{
+    *this = URLParser(WTFMove(absoluteURL), URL(), encoding).result();
 }
 
 static bool shouldTrimFromURL(UChar character)
@@ -82,7 +87,7 @@ URL URL::isolatedCopy() const &
 
 URL URL::isolatedCopy() &&
 {
-    URL result = *this;
+    URL result { WTFMove(*this) };
     result.m_string = WTFMove(result.m_string).isolatedCopy();
     return result;
 }
@@ -107,12 +112,12 @@ StringView URL::lastPathComponent() const
 bool URL::hasSpecialScheme() const
 {
     // https://url.spec.whatwg.org/#special-scheme
-    return protocolIs("ftp")
-        || protocolIs("file")
-        || protocolIs("http")
-        || protocolIs("https")
-        || protocolIs("ws")
-        || protocolIs("wss");
+    return protocolIs("ftp"_s)
+        || protocolIs("file"_s)
+        || protocolIs("http"_s)
+        || protocolIs("https"_s)
+        || protocolIs("ws"_s)
+        || protocolIs("wss"_s);
 }
 
 unsigned URL::pathStart() const
@@ -130,7 +135,7 @@ StringView URL::protocol() const
     if (!m_isValid)
         return { };
 
-    return StringView(m_string).substring(0, m_schemeEnd);
+    return StringView(m_string).left(m_schemeEnd);
 }
 
 StringView URL::host() const
@@ -157,10 +162,10 @@ String URL::hostAndPort() const
 String URL::protocolHostAndPort() const
 {
     if (!hasCredentials())
-        return m_string.substring(0, pathStart());
+        return m_string.left(pathStart());
 
     return makeString(
-        StringView(m_string).substring(0, m_userStart),
+        StringView(m_string).left(m_userStart),
         StringView(m_string).substring(hostStart(), pathStart() - hostStart())
     );
 }
@@ -235,7 +240,7 @@ StringView URL::fragmentIdentifier() const
 
 URL URL::truncatedForUseAsBase() const
 {
-    return URL(URL(), m_string.left(m_pathAfterLastSlash));
+    return URL(m_string.left(m_pathAfterLastSlash));
 }
 
 #if !USE(CF) || PLATFORM(JAVA)
@@ -312,7 +317,7 @@ std::optional<uint16_t> defaultPortForProtocol(StringView protocol)
     {
         Locker locker { defaultPortForProtocolMapForTestingLock };
         if (auto* overrideMap = defaultPortForProtocolMapForTesting()) {
-            auto iterator = overrideMap->find(protocol.toStringWithoutCopying());
+            auto iterator = overrideMap->find<StringViewHashTranslator>(protocol);
             if (iterator != overrideMap->end())
                 return iterator->value;
         }
@@ -333,25 +338,6 @@ bool URL::protocolIsJavaScript() const
 bool URL::protocolIsInFTPFamily() const
 {
     return WTF::protocolIsInFTPFamily(string());
-}
-
-bool URL::protocolIs(const char* protocol) const
-{
-    assertProtocolIsGood(protocol);
-
-    // JavaScript URLs are "valid" and should be executed even if URL decides they are invalid.
-    // The free function protocolIsJavaScript() should be used instead.
-    ASSERT(!equalLettersIgnoringASCIICase(StringView(protocol), "javascript"));
-
-    if (!m_isValid)
-        return false;
-
-    // Do the comparison without making a new string object.
-    for (unsigned i = 0; i < m_schemeEnd; ++i) {
-        if (!protocol[i] || !isASCIIAlphaCaselessEqual(m_string[i], protocol[i]))
-            return false;
-    }
-    return !protocol[m_schemeEnd]; // We should have consumed all characters in the argument.
 }
 
 bool URL::protocolIs(StringView protocol) const
@@ -391,7 +377,7 @@ StringView URL::path() const
 bool URL::setProtocol(StringView newProtocol)
 {
     // Firefox and IE remove everything after the first ':'.
-    auto newProtocolPrefix = newProtocol.substring(0, newProtocol.find(':'));
+    auto newProtocolPrefix = newProtocol.left(newProtocol.find(':'));
     auto newProtocolCanonicalized = URLParser::maybeCanonicalizeScheme(newProtocolPrefix);
     if (!newProtocolCanonicalized)
         return false;
@@ -401,7 +387,7 @@ bool URL::setProtocol(StringView newProtocol)
         return true;
     }
 
-    if ((m_passwordEnd != m_userStart || port()) && *newProtocolCanonicalized == "file")
+    if ((m_passwordEnd != m_userStart || port()) && *newProtocolCanonicalized == "file"_s)
         return true;
 
     if (isLocalFile() && host().isEmpty())
@@ -471,7 +457,7 @@ void URL::setHost(StringView newHost)
         return;
 
     if (auto index = newHost.find(hasSpecialScheme() ? slashHashOrQuestionMark : forwardSlashHashOrQuestionMark); index != notFound)
-        newHost = newHost.substring(0, index);
+        newHost = newHost.left(index);
 
     Vector<UChar, 512> encodedHostName;
     if (hasSpecialScheme() && !appendEncodedHostname(encodedHostName, newHost))
@@ -514,7 +500,7 @@ void URL::setHostAndPort(StringView hostAndPort)
     auto colonIndex = hostName.reverseFind(':');
     if (colonIndex != notFound) {
         portString = hostName.substring(colonIndex + 1);
-        hostName = hostName.substring(0, colonIndex);
+        hostName = hostName.left(colonIndex);
         // Multiple colons are acceptable only in case of IPv6.
         if (hostName.contains(':') && !hostName.startsWith('['))
             return;
@@ -571,9 +557,9 @@ static String percentEncodeCharacters(const StringType& input, bool(*shouldEncod
         return input;
 }
 
-void URL::parse(const String& string)
+void URL::parse(String&& string)
 {
-    *this = URLParser(string).result();
+    *this = URLParser(WTFMove(string)).result();
 }
 
 void URL::remove(unsigned start, unsigned length)
@@ -583,9 +569,8 @@ void URL::remove(unsigned start, unsigned length)
     ASSERT(start < m_string.length());
     ASSERT(length <= m_string.length() - start);
 
-    auto stringAfterRemoval = WTFMove(m_string);
-    stringAfterRemoval.remove(start, length);
-    parse(stringAfterRemoval);
+    auto stringAfterRemoval = makeStringByRemoving(std::exchange(m_string, { }), start, length);
+    parse(WTFMove(stringAfterRemoval));
 }
 
 void URL::setUser(StringView newUser)
@@ -696,14 +681,14 @@ void URL::setPath(StringView path)
 
     parse(makeString(
         StringView(m_string).left(pathStart()),
-        path.startsWith('/') || (path.startsWith('\\') && (hasSpecialScheme() || protocolIs("file"))) || (!hasSpecialScheme() && path.isEmpty() && m_schemeEnd + 1U < pathStart()) ? "" : "/",
-        !hasSpecialScheme() && host().isEmpty() && path.startsWith("//") && path.length() > 2 ? "/." : "",
+        path.startsWith('/') || (path.startsWith('\\') && (hasSpecialScheme() || protocolIs("file"_s))) || (!hasSpecialScheme() && path.isEmpty() && m_schemeEnd + 1U < pathStart()) ? ""_s : "/"_s,
+        !hasSpecialScheme() && host().isEmpty() && path.startsWith("//"_s) && path.length() > 2 ? "/."_s : ""_s,
         escapePathWithoutCopying(path),
         StringView(m_string).substring(m_pathEnd)
     ));
 }
 
-StringView URL::stringWithoutQueryOrFragmentIdentifier() const
+StringView URL::viewWithoutQueryOrFragmentIdentifier() const
 {
     if (!m_isValid)
         return m_string;
@@ -711,7 +696,7 @@ StringView URL::stringWithoutQueryOrFragmentIdentifier() const
     return StringView(m_string).left(pathEnd());
 }
 
-StringView URL::stringWithoutFragmentIdentifier() const
+StringView URL::viewWithoutFragmentIdentifier() const
 {
     if (!m_isValid)
         return m_string;
@@ -719,9 +704,17 @@ StringView URL::stringWithoutFragmentIdentifier() const
     return StringView(m_string).left(m_queryEnd);
 }
 
+String URL::stringWithoutFragmentIdentifier() const
+{
+    if (!m_isValid)
+        return m_string;
+
+    return m_string.left(m_queryEnd);
+}
+
 bool equalIgnoringFragmentIdentifier(const URL& a, const URL& b)
 {
-    return a.stringWithoutFragmentIdentifier() == b.stringWithoutFragmentIdentifier();
+    return a.viewWithoutFragmentIdentifier() == b.viewWithoutFragmentIdentifier();
 }
 
 bool protocolHostAndPortAreEqual(const URL& a, const URL& b)
@@ -788,9 +781,10 @@ bool URL::isHierarchical() const
     return m_string[m_schemeEnd + 1] == '/';
 }
 
-static bool protocolIsInternal(StringView string, const char* protocol)
+static bool protocolIsInternal(StringView string, ASCIILiteral protocolLiteral)
 {
-    assertProtocolIsGood(protocol);
+    assertProtocolIsGood(protocolLiteral);
+    auto* protocol = protocolLiteral.characters();
     bool isLeading = true;
     for (auto codeUnit : string.codeUnits()) {
         if (isLeading) {
@@ -813,7 +807,7 @@ static bool protocolIsInternal(StringView string, const char* protocol)
     return false;
 }
 
-bool protocolIs(StringView string, const char* protocol)
+bool protocolIs(StringView string, ASCIILiteral protocol)
 {
     return protocolIsInternal(string, protocol);
 }
@@ -843,7 +837,7 @@ String URL::strippedForUseAsReferrer() const
         return m_string;
 
     return makeString(
-        StringView(m_string).substring(0, m_userStart),
+        StringView(m_string).left(m_userStart),
         StringView(m_string).substring(end, m_queryEnd - end)
     );
 }
@@ -854,12 +848,12 @@ bool URL::isLocalFile() const
     // and including feed would allow feeds to potentially let someone's blog
     // read the contents of the clipboard on a drag, even without a drop.
     // Likewise with using the FrameLoader::shouldTreatURLAsLocal() function.
-    return protocolIs("file");
+    return protocolIs("file"_s);
 }
 
 bool protocolIsJavaScript(StringView string)
 {
-    return protocolIsInternal(string, "javascript");
+    return protocolIsInternal(string, "javascript"_s);
 }
 
 bool protocolIsInFTPFamily(StringView url)
@@ -892,7 +886,7 @@ const URL& aboutBlankURL()
     static LazyNeverDestroyed<URL> staticBlankURL;
     static std::once_flag onceFlag;
     std::call_once(onceFlag, [&] {
-        staticBlankURL.construct(URL(), &aboutBlankString);
+        staticBlankURL.construct(&aboutBlankString);
     });
     return staticBlankURL;
 }
@@ -903,14 +897,14 @@ const URL& aboutSrcDocURL()
     static LazyNeverDestroyed<URL> staticSrcDocURL;
     static std::once_flag onceFlag;
     std::call_once(onceFlag, [&] {
-        staticSrcDocURL.construct(URL(), &aboutSrcDocString);
+        staticSrcDocURL.construct(&aboutSrcDocString);
     });
     return staticSrcDocURL;
 }
 
 bool URL::protocolIsAbout() const
 {
-    return protocolIs("about");
+    return protocolIs("about"_s);
 }
 
 bool portAllowed(const URL& url)
@@ -1014,11 +1008,11 @@ bool portAllowed(const URL& url)
         return true;
 
     // Allow ports 21 and 22 for FTP URLs, as Mozilla does.
-    if ((port.value() == 21 || port.value() == 22) && url.protocolIs("ftp"))
+    if ((port.value() == 21 || port.value() == 22) && url.protocolIs("ftp"_s))
         return true;
 
     // Allow any port number in a file URL, since the port number is ignored.
-    if (url.protocolIs("file"))
+    if (url.protocolIs("file"_s))
         return true;
 
     return false;
@@ -1026,7 +1020,7 @@ bool portAllowed(const URL& url)
 
 String mimeTypeFromDataURL(StringView dataURL)
 {
-    ASSERT(protocolIsInternal(dataURL, "data"));
+    ASSERT(protocolIsInternal(dataURL, "data"_s));
 
     // FIXME: What's the right behavior when the URL has a comma first, but a semicolon later?
     // Currently this code will break at the semicolon in that case; should add a test.
@@ -1054,13 +1048,13 @@ String URL::stringCenterEllipsizedToLength(unsigned length) const
 
 URL URL::fakeURLWithRelativePart(StringView relativePart)
 {
-    return URL(URL(), makeString("webkit-fake-url://", createVersion4UUIDString(), '/', relativePart));
+    return URL(makeString("webkit-fake-url://"_s, UUID::createVersion4(), '/', relativePart));
 }
 
 URL URL::fileURLWithFileSystemPath(StringView path)
 {
-    return URL(URL(), makeString(
-        "file://",
+    return URL(makeString(
+        "file://"_s,
         path.startsWith('/') ? "" : "/",
         escapePathWithoutCopying(path)
     ));
@@ -1084,12 +1078,12 @@ StringView URL::fragmentIdentifierWithLeadingNumberSign() const
 
 bool URL::isAboutBlank() const
 {
-    return protocolIsAbout() && path() == "blank";
+    return protocolIsAbout() && path() == "blank"_s;
 }
 
 bool URL::isAboutSrcDoc() const
 {
-    return protocolIsAbout() && path() == "srcdoc";
+    return protocolIsAbout() && path() == "srcdoc"_s;
 }
 
 TextStream& operator<<(TextStream& ts, const URL& url)

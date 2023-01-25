@@ -44,6 +44,7 @@
 #include <wtf/MathExtras.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/text/AtomStringHash.h>
+#include <wtf/text/TextStream.h>
 
 #if ENABLE(OPENTYPE_VERTICAL)
 #include "OpenTypeVerticalData.h"
@@ -84,7 +85,7 @@ Font::Font(const FontPlatformData& platformData, Origin origin, Interstitial int
     , m_isTextOrientationFallback(orientationFallback == OrientationFallback::Yes)
     , m_isBrokenIdeographFallback(false)
     , m_hasVerticalGlyphs(false)
-    , m_isUsedInSystemFallbackCache(false)
+    , m_isUsedInSystemFallbackFontCache(false)
     , m_allowsAntialiasing(true)
 #if PLATFORM(IOS_FAMILY)
     , m_shouldNotBeUsedForArabic(false)
@@ -174,7 +175,7 @@ void Font::platformGlyphInit()
 
 Font::~Font()
 {
-    removeFromSystemFallbackCache();
+    SystemFallbackFontCache::forCurrentThread().remove(this);
 }
 
 RenderingResourceIdentifier Font::renderingResourceIdentifier() const
@@ -523,7 +524,7 @@ bool Font::isProbablyOnlyUsedToRenderIcons() const
 String Font::description() const
 {
     if (origin() == Origin::Remote)
-        return "[custom font]";
+        return "[custom font]"_s;
 
     return platformData().description();
 }
@@ -553,83 +554,9 @@ GlyphBufferAdvance Font::applyTransforms(GlyphBuffer&, unsigned, unsigned, bool,
 }
 #endif
 
-struct CharacterFallbackMapKey {
-    AtomString locale;
-    UChar32 character { 0 };
-    bool isForPlatformFont { false };
-};
-
-inline bool operator==(const CharacterFallbackMapKey& a, const CharacterFallbackMapKey& b)
-{
-    return a.locale == b.locale && a.character == b.character && a.isForPlatformFont == b.isForPlatformFont;
-}
-
-struct CharacterFallbackMapKeyHash {
-    static unsigned hash(const CharacterFallbackMapKey& key) { return computeHash(key.locale, key.character, key.isForPlatformFont); }
-    static bool equal(const CharacterFallbackMapKey& a, const CharacterFallbackMapKey& b) { return a == b; }
-    static const bool safeToCompareToEmptyOrDeleted = true;
-};
-
-struct CharacterFallbackMapKeyHashTraits : SimpleClassHashTraits<CharacterFallbackMapKey> {
-    static void constructDeletedValue(CharacterFallbackMapKey& slot) { new (NotNull, &slot) CharacterFallbackMapKey { { }, U_SENTINEL, { } }; }
-    static bool isDeletedValue(const CharacterFallbackMapKey& key) { return key.character == U_SENTINEL; }
-};
-
-// Fonts are not ref'd to avoid cycles.
-// FIXME: Consider changing these maps to use WeakPtr instead of raw pointers.
-using CharacterFallbackMap = HashMap<CharacterFallbackMapKey, Font*, CharacterFallbackMapKeyHash, CharacterFallbackMapKeyHashTraits>;
-using SystemFallbackCache = HashMap<const Font*, CharacterFallbackMap>;
-
-static SystemFallbackCache& systemFallbackCache()
-{
-    static NeverDestroyed<SystemFallbackCache> map;
-    return map.get();
-}
-
 RefPtr<Font> Font::systemFallbackFontForCharacter(UChar32 character, const FontDescription& description, IsForPlatformFont isForPlatformFont) const
 {
-    auto fontAddResult = systemFallbackCache().add(this, CharacterFallbackMap());
-
-    if (!character) {
-        UChar codeUnit = 0;
-        return FontCache::forCurrentThread().systemFallbackForCharacters(description, this, isForPlatformFont, FontCache::PreferColoredFont::No, &codeUnit, 1);
-    }
-
-    auto key = CharacterFallbackMapKey { description.computedLocale(), character, isForPlatformFont != IsForPlatformFont::No };
-    return fontAddResult.iterator->value.ensure(WTFMove(key), [&] {
-        UChar codeUnits[2];
-        unsigned codeUnitsLength;
-        if (U_IS_BMP(character)) {
-            codeUnits[0] = FontCascade::normalizeSpaces(character);
-            codeUnitsLength = 1;
-        } else {
-            codeUnits[0] = U16_LEAD(character);
-            codeUnits[1] = U16_TRAIL(character);
-            codeUnitsLength = 2;
-        }
-        auto font = FontCache::forCurrentThread().systemFallbackForCharacters(description, this, isForPlatformFont, FontCache::PreferColoredFont::No, codeUnits, codeUnitsLength).get();
-        if (font)
-            font->m_isUsedInSystemFallbackCache = true;
-        return font;
-    }).iterator->value;
-}
-
-void Font::removeFromSystemFallbackCache()
-{
-    systemFallbackCache().remove(this);
-
-    if (!m_isUsedInSystemFallbackCache)
-        return;
-
-    for (auto& characterMap : systemFallbackCache().values()) {
-        Vector<CharacterFallbackMapKey, 512> toRemove;
-        for (auto& entry : characterMap) {
-            if (entry.value == this)
-                toRemove.append(entry.key);
-        }
-        for (auto& key : toRemove)
-            characterMap.remove(key);
-    }
+    return SystemFallbackFontCache::forCurrentThread().systemFallbackFontForCharacter(this, character, description, isForPlatformFont);
 }
 
 #if !PLATFORM(COCOA) && !USE(FREETYPE)
@@ -704,5 +631,13 @@ const Path& Font::pathForGlyph(Glyph glyph) const
     m_glyphPathMap.setMetricsForGlyph(glyph, path);
     return *m_glyphPathMap.existingMetricsForGlyph(glyph);
 }
+
+#if !LOG_DISABLED
+TextStream& operator<<(TextStream& ts, const Font& font)
+{
+    ts << font.description();
+    return ts;
+}
+#endif
 
 } // namespace WebCore

@@ -47,6 +47,7 @@ bool isValidMarkerStyleProperty(CSSPropertyID id)
     case CSSPropertyFont:
     case CSSPropertyFontFamily:
     case CSSPropertyFontFeatureSettings:
+    case CSSPropertyFontKerning:
     case CSSPropertyFontSize:
     case CSSPropertyFontStretch:
     case CSSPropertyFontStyle:
@@ -132,7 +133,7 @@ bool isValidCueStyleProperty(CSSPropertyID id)
     case CSSPropertyOutlineWidth:
     case CSSPropertyVisibility:
     case CSSPropertyWhiteSpace:
-    case CSSPropertyTextDecoration:
+    case CSSPropertyTextDecorationLine:
     case CSSPropertyTextShadow:
     case CSSPropertyBorderStyle:
     case CSSPropertyPaintOrder:

@@ -70,16 +70,18 @@ FontDescription::FontDescription()
 
 static AtomString computeSpecializedChineseLocale()
 {
+    // FIXME: This is not passing ShouldMinimizeLanguages::No and then getting minimized languages,
+    // which may cause the matching below to fail.
     for (auto& language : userPreferredLanguages()) {
-        if (startsWithLettersIgnoringASCIICase(language, "zh-"))
-            return language;
+        if (startsWithLettersIgnoringASCIICase(language, "zh-"_s))
+            return AtomString { language };
     }
-    return AtomString("zh-hans", AtomString::ConstructFromLiteral); // We have no signal. Pick one option arbitrarily.
+    return "zh-hans"_s; // We have no signal. Pick one option arbitrarily.
 }
 
 static AtomString& cachedSpecializedChineseLocale()
 {
-    static NeverDestroyed<AtomString> specializedChineseLocale;
+    static MainThreadNeverDestroyed<AtomString> specializedChineseLocale;
     return specializedChineseLocale.get();
 }
 
@@ -101,6 +103,7 @@ static const AtomString& specializedChineseLocale()
 
 void FontDescription::setSpecifiedLocale(const AtomString& locale)
 {
+    ASSERT(isMainThread());
     m_specifiedLocale = locale;
     m_script = localeToScriptCodeForFontSelection(m_specifiedLocale);
     m_locale = m_script == USCRIPT_HAN ? specializedChineseLocale() : m_specifiedLocale;

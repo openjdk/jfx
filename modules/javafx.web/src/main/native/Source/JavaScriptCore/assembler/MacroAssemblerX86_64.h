@@ -268,6 +268,7 @@ public:
 
     Call threadSafePatchableNearCall()
     {
+        padBeforePatch();
         const size_t nearCallOpcodeSize = 1;
         const size_t nearCallRelativeLocationSize = sizeof(int32_t);
         // We want to make sure the 32-bit near call immediate is 32-bit aligned.
@@ -805,6 +806,12 @@ public:
             m_assembler.subq_ir(imm.m_value, dest);
     }
 
+    void sub64(RegisterID a, TrustedImm32 imm, RegisterID dest)
+    {
+        move(a, dest);
+        sub64(imm, dest);
+    }
+
     void sub64(TrustedImm64 imm, RegisterID dest)
     {
         if (imm.m_value == 1)
@@ -1015,10 +1022,27 @@ public:
         store64(scratchRegister(), address);
     }
 
+    void store64(TrustedImmPtr imm, Address address)
+    {
+        move(imm, scratchRegister());
+        store64(scratchRegister(), address);
+    }
+
     void store64(TrustedImm64 imm, BaseIndex address)
     {
         move(imm, scratchRegister());
         m_assembler.movq_rm(scratchRegister(), address.offset, address.base, address.index, address.scale);
+    }
+
+    void transfer64(Address src, Address dest)
+    {
+        load64(src, scratchRegister());
+        store64(scratchRegister(), dest);
+    }
+
+    void transferPtr(Address src, Address dest)
+    {
+        transfer64(src, dest);
     }
 
     DataLabel32 store64WithAddressOffsetPatch(RegisterID src, Address address)
@@ -1129,6 +1153,12 @@ public:
         return Jump(m_assembler.jCC(x86Condition(cond)));
     }
 
+    Jump branch64(RelationalCondition cond, Address left, Address right)
+    {
+        load64(right, scratchRegister());
+        return branch64(cond, left, scratchRegister());
+    }
+
     Jump branch32(RelationalCondition cond, AbsoluteAddress left, RegisterID right)
     {
         load32(left.m_ptr, scratchRegister());
@@ -1144,6 +1174,11 @@ public:
     {
         move(right, scratchRegister());
         return branchPtr(cond, left, scratchRegister());
+    }
+
+    Jump branchPtr(RelationalCondition cond, Address left, Address right)
+    {
+        return branch64(cond, left, right);
     }
 
     Jump branchTest64(ResultCondition cond, RegisterID reg, RegisterID mask)
@@ -1539,11 +1574,13 @@ public:
 
     PatchableJump patchableBranch64(RelationalCondition cond, RegisterID reg, TrustedImm64 imm)
     {
+        padBeforePatch();
         return PatchableJump(branch64(cond, reg, imm));
     }
 
     PatchableJump patchableBranch64(RelationalCondition cond, RegisterID left, RegisterID right)
     {
+        padBeforePatch();
         return PatchableJump(branch64(cond, left, right));
     }
 

@@ -33,6 +33,7 @@
 #include "CSSAnimation.h"
 #include "CSSPropertyAnimation.h"
 #include "CSSTransition.h"
+#include "CommonAtomStrings.h"
 #include "DeclarativeAnimation.h"
 #include "Document.h"
 #include "DocumentTimeline.h"
@@ -239,33 +240,6 @@ void Styleable::animationWasRemoved(WebAnimation& animation) const
         removeDeclarativeAnimationFromListsForOwningElement(animation);
 }
 
-static void removeCSSAnimationCreatedByMarkup(const Styleable& styleable, CSSAnimation& cssAnimation)
-{
-    styleable.animationsCreatedByMarkup().remove(&cssAnimation);
-
-    if (!styleable.hasKeyframeEffects())
-        return;
-
-    auto& keyframeEffectStack = styleable.ensureKeyframeEffectStack();
-    auto* cssAnimationList = keyframeEffectStack.cssAnimationList();
-    if (!cssAnimationList || cssAnimationList->isEmpty())
-        return;
-
-    auto& backingAnimation = cssAnimation.backingAnimation();
-    for (size_t i = 0; i < cssAnimationList->size(); ++i) {
-        if (cssAnimationList->animation(i) == backingAnimation) {
-            // It is important we do not make a clone of the Animation references contained
-            // within cssAnimationList since sorting animations in compareCSSAnimations()
-            // makes pointer comparisons to distinguish between backing animations of various
-            // CSSAnimation objects.
-            auto newAnimationList = cssAnimationList->shallowCopy();
-            newAnimationList->remove(i);
-            keyframeEffectStack.setCSSAnimationList(WTFMove(newAnimationList));
-            return;
-        }
-    }
-}
-
 void Styleable::elementWasRemoved() const
 {
     cancelDeclarativeAnimations();
@@ -283,13 +257,15 @@ void Styleable::cancelDeclarativeAnimations() const
 {
     if (auto* animations = this->animations()) {
         for (auto& animation : *animations) {
-            if (is<DeclarativeAnimation>(animation)) {
-                if (is<CSSAnimation>(animation))
-                    removeCSSAnimationCreatedByMarkup(*this, downcast<CSSAnimation>(*animation));
+            if (is<DeclarativeAnimation>(animation))
                 downcast<DeclarativeAnimation>(*animation).cancelFromStyle();
             }
         }
-    }
+
+    if (auto* effectStack = keyframeEffectStack())
+        effectStack->setCSSAnimationList(nullptr);
+
+    setAnimationsCreatedByMarkup({ });
 }
 
 static bool keyframesRuleExistsForAnimation(Element& element, const Animation& animation, const String& animationName)
@@ -306,7 +282,7 @@ bool Styleable::animationListContainsNewlyValidAnimation(const AnimationList& an
 
     for (auto& animation : animations) {
         auto& name = animation->name().string;
-        if (name != "none" && !name.isEmpty() && keyframeEffectStack.containsInvalidCSSAnimationName(name) && keyframesRuleExistsForAnimation(element, animation.get(), name))
+        if (name != noneAtom() && !name.isEmpty() && keyframeEffectStack.containsInvalidCSSAnimationName(name) && keyframesRuleExistsForAnimation(element, animation.get(), name))
             return true;
     }
 
@@ -322,6 +298,7 @@ void Styleable::updateCSSAnimations(const RenderStyle* currentStyle, const Rende
         for (auto& cssAnimation : animationsCreatedByMarkup())
             cssAnimation->cancelFromStyle();
         keyframeEffectStack.setCSSAnimationList(nullptr);
+        setAnimationsCreatedByMarkup({ });
         return;
     }
 
@@ -350,7 +327,7 @@ void Styleable::updateCSSAnimations(const RenderStyle* currentStyle, const Rende
                 continue;
 
             auto& animationName = currentAnimation->name().string;
-            if (animationName == "none" || animationName.isEmpty())
+            if (animationName == noneAtom() || animationName.isEmpty())
                 continue;
 
             if (!keyframesRuleExistsForAnimation(element, currentAnimation.get(), animationName)) {
@@ -490,6 +467,14 @@ static void updateCSSTransitionsForStyleableAndProperty(const Styleable& styleab
         }
     }
 
+    auto effectTargetsProperty = [property](KeyframeEffect& effect) {
+        if (effect.animatedProperties().contains(property))
+            return true;
+        if (auto* transition = dynamicDowncast<CSSTransition>(effect.animation()))
+            return transition->property() == property;
+        return false;
+    };
+
     // https://drafts.csswg.org/css-transitions-1/#before-change-style
     // Define the before-change style as the computed values of all properties on the element as of the previous style change event, except with
     // any styles derived from declarative animations such as CSS Transitions, CSS Animations, and SMIL Animations updated to the current time.
@@ -498,6 +483,8 @@ static void updateCSSTransitionsForStyleableAndProperty(const Styleable& styleab
             auto style = RenderStyle::clone(*lastStyleChangeEventStyle);
             if (auto* keyframeEffectStack = styleable.keyframeEffectStack()) {
                 for (const auto& effect : keyframeEffectStack->sortedEffects()) {
+                    if (!effectTargetsProperty(*effect))
+                        continue;
                     auto* effectAnimation = effect->animation();
                     bool shouldUseTimelineTimeAtCreation = is<CSSTransition>(effectAnimation) && (!effectAnimation->startTime() || *effectAnimation->startTime() == styleable.element.document().timeline().currentTime());
                     effectAnimation->resolve(style, { nullptr }, shouldUseTimelineTimeAtCreation ? downcast<CSSTransition>(*effectAnimation).timelineTimeAtCreation() : std::nullopt);
@@ -660,6 +647,21 @@ void Styleable::updateCSSTransitions(const RenderStyle& currentStyle, const Rend
 
     for (auto property : transitionProperties)
         updateCSSTransitionsForStyleableAndProperty(*this, property, currentStyle, newStyle, generationTime);
+}
+
+void Styleable::queryContainerDidChange() const
+{
+    auto* animations = this->animations();
+    if (!animations)
+        return;
+    for (auto animation : *animations) {
+        auto* cssAnimation = dynamicDowncast<CSSAnimation>(animation.get());
+        if (!cssAnimation)
+            continue;
+        auto* keyframeEffect = dynamicDowncast<KeyframeEffect>(cssAnimation->effect());
+        if (keyframeEffect && keyframeEffect->blendingKeyframes().usesContainerUnits())
+            cssAnimation->keyframesRuleDidChange();
+    }
 }
 
 } // namespace WebCore

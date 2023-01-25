@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2003 Lars Knoll (knoll@kde.org)
  * Copyright (C) 2005 Allan Sandfeld Jensen (kde@carewolf.com)
- * Copyright (C) 2004-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2022 Apple Inc. All rights reserved.
  * Copyright (C) 2007 Nicholas Shanks <webkit@nickshanks.com>
  * Copyright (C) 2008 Eric Seidel <eric@webkit.org>
  * Copyright (C) 2009 Torch Mobile Inc. All rights reserved. (http://www.torchmobile.com/)
@@ -65,9 +65,9 @@ CSSParser::CSSParser(const CSSParserContext& context)
 
 CSSParser::~CSSParser() = default;
 
-void CSSParser::parseSheet(StyleSheetContents& sheet, const String& string, RuleParsing ruleParsing)
+void CSSParser::parseSheet(StyleSheetContents& sheet, const String& string)
 {
-    return CSSParserImpl::parseStyleSheet(string, m_context, sheet, ruleParsing);
+    return CSSParserImpl::parseStyleSheet(string, m_context, sheet);
 }
 
 void CSSParser::parseSheetForInspector(const CSSParserContext& context, StyleSheetContents* sheet, const String& string, CSSParserObserver& observer)
@@ -192,17 +192,12 @@ void CSSParser::parseDeclarationForInspector(const CSSParserContext& context, co
 RefPtr<CSSValue> CSSParser::parseValueWithVariableReferences(CSSPropertyID propID, const CSSValue& value, Style::BuilderState& builderState)
 {
     ASSERT((propID == CSSPropertyCustom && value.isCustomPropertyValue()) || (propID != CSSPropertyCustom && !value.isCustomPropertyValue()));
-    auto& style = builderState.style();
-    auto direction = style.direction();
-    auto writingMode = style.writingMode();
 
     if (is<CSSPendingSubstitutionValue>(value)) {
         // FIXME: Should have a resolvedShorthands cache to stop this from being done over and over for each longhand value.
         auto& substitution = downcast<CSSPendingSubstitutionValue>(value);
 
         auto shorthandID = substitution.shorthandPropertyId();
-        if (CSSProperty::isDirectionAwareProperty(shorthandID))
-            shorthandID = CSSProperty::resolveDirectionAwareProperty(shorthandID, direction, writingMode);
 
         auto resolvedData = substitution.shorthandValue().resolveVariableReferences(builderState);
         if (!resolvedData)
@@ -213,10 +208,7 @@ RefPtr<CSSValue> CSSParser::parseValueWithVariableReferences(CSSPropertyID propI
             return nullptr;
 
         for (auto& property : parsedProperties) {
-            CSSPropertyID currentId = property.id();
-            if (CSSProperty::isDirectionAwareProperty(currentId))
-                currentId = CSSProperty::resolveDirectionAwareProperty(currentId, direction, writingMode);
-            if (currentId == propID)
+            if (property.id() == propID)
                 return property.value();
         }
 
@@ -248,7 +240,7 @@ RefPtr<CSSValue> CSSParser::parseValueWithVariableReferences(CSSPropertyID propI
     for (auto id : dependencies)
         builderState.builder().applyProperty(id);
 
-    return CSSPropertyParser::parseTypedCustomPropertyValue(name, syntax, resolvedData->tokens(), builderState, valueWithReferences.context());
+    return CSSPropertyParser::parseTypedCustomPropertyValue(AtomString { name }, syntax, resolvedData->tokens(), builderState, valueWithReferences.context());
 }
 
 Vector<double> CSSParser::parseKeyframeKeyList(const String& selector)

@@ -1,7 +1,7 @@
 /*
  *  Copyright (C) 1999-2001 Harri Porten (porten@kde.org)
  *  Copyright (C) 2001 Peter Kelly (pmk@post.com)
- *  Copyright (C) 2003-2021 Apple Inc. All rights reserved.
+ *  Copyright (C) 2003-2022 Apple Inc. All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Library General Public
@@ -23,6 +23,7 @@
 #pragma once
 
 #include "AbstractPC.h"
+#include "CPU.h"
 #include "CalleeBits.h"
 #include "MacroAssemblerCodeRef.h"
 #include "Register.h"
@@ -32,6 +33,10 @@
 
 namespace JSC  {
 
+template<typename> struct BaseInstruction;
+struct JSOpcodeTraits;
+using JSInstruction = BaseInstruction<JSOpcodeTraits>;
+
     class Arguments;
     class CallFrame;
     class Interpreter;
@@ -39,8 +44,6 @@ namespace JSC  {
     class JSScope;
     class SourceOrigin;
     class VirtualRegister;
-
-    struct Instruction;
 
     class CallSiteIndex {
     public:
@@ -106,6 +109,41 @@ namespace JSC  {
         static constexpr int sizeInRegisters = 2 * sizeof(CPURegister) / sizeof(Register);
     };
     static_assert(CallerFrameAndPC::sizeInRegisters == sizeof(CallerFrameAndPC) / sizeof(Register), "CallerFrameAndPC::sizeInRegisters is incorrect.");
+    static_assert(sizeof(CallerFrameAndPC) >= prologueStackPointerDelta());
+#if !CPU(X86_64)
+    // Only x86_64 "call" pushes return address on the stack. Other architecture pushes in the function prologue after the call.
+    static_assert(sizeof(CallerFrameAndPC) == prologueStackPointerDelta());
+#endif
+
+    //      Layout of CallFrame
+    //
+    //   |          ......            |   |
+    //   +----------------------------+   |
+    //   |           argN             |   v  lower address
+    //   +----------------------------+
+    //   |           arg1             |
+    //   +----------------------------+
+    //   |           arg0             |
+    //   +----------------------------+
+    //   |           this             |
+    //   +----------------------------+
+    //   | argumentCountIncludingThis |
+    //   +----------------------------+
+    //   |          callee            |
+    //   +----------------------------+
+    //   |        codeBlock           |
+    //   +----------------------------+
+    //   |      return-address        |
+    //   +----------------------------+
+    //   |       callerFrame          |
+    //   +----------------------------+  <- callee's cfr is pointing this address
+    //   |          local0            |
+    //   +----------------------------+
+    //   |          local1            |
+    //   +----------------------------+
+    //   |          localN            |
+    //   +----------------------------+
+    //   |          ......            |
 
     enum class CallFrameSlot {
         codeBlock = CallerFrameAndPC::sizeInRegisters,
@@ -133,8 +171,8 @@ namespace JSC  {
         // to see if it's a cell, and if it's not, we throw an exception.
         inline JSValue guaranteedJSValueCallee() const;
         inline JSObject* jsCallee() const;
-        CalleeBits callee() const { return CalleeBits(this[static_cast<int>(CallFrameSlot::callee)].pointer()); }
-        SUPPRESS_ASAN CalleeBits unsafeCallee() const { return CalleeBits(this[static_cast<int>(CallFrameSlot::callee)].asanUnsafePointer()); }
+        CalleeBits callee() const { return CalleeBits(this[static_cast<int>(CallFrameSlot::callee)].unboxedInt64()); }
+        SUPPRESS_ASAN CalleeBits unsafeCallee() const { return CalleeBits(this[static_cast<int>(CallFrameSlot::callee)].asanUnsafeUnboxedInt64()); }
         CodeBlock* codeBlock() const;
         CodeBlock** addressOfCodeBlock() const { return bitwise_cast<CodeBlock**>(this + static_cast<int>(CallFrameSlot::codeBlock)); }
         inline SUPPRESS_ASAN CodeBlock* unsafeCodeBlock() const;
@@ -200,13 +238,11 @@ namespace JSC  {
 
         inline Register* topOfFrame();
 
-        const Instruction* currentVPC() const; // This only makes sense in the LLInt and baseline.
-        void setCurrentVPC(const Instruction*);
+        const JSInstruction* currentVPC() const; // This only makes sense in the LLInt and baseline.
+        void setCurrentVPC(const JSInstruction*);
 
         void setCallerFrame(CallFrame* frame) { callerFrameAndPC().callerFrame = frame; }
         inline void setScope(int scopeRegisterOffset, JSScope*);
-
-        static void initDeprecatedCallFrameForDebugger(CallFrame* globalExec, JSCallee* globalCallee);
 
         // Read a register from the codeframe (or constant from the CodeBlock).
         Register& r(VirtualRegister);
@@ -267,7 +303,8 @@ namespace JSC  {
         static int offsetFor(size_t argumentCountIncludingThis) { return CallFrameSlot::thisArgument + argumentCountIncludingThis - 1; }
 
         static CallFrame* noCaller() { return nullptr; }
-        bool isDeprecatedCallFrameForDebugger() const
+
+        bool isEmptyTopLevelCallFrameForDebugger() const
         {
             return callerFrameAndPC().callerFrame == noCaller() && callerFrameAndPC().returnPC == nullptr;
         }
@@ -285,7 +322,7 @@ namespace JSC  {
         String friendlyFunctionName();
 
         // CallFrame::iterate() expects a Functor that implements the following method:
-        //     StackVisitor::Status operator()(StackVisitor&) const;
+        //     IterationStatus operator()(StackVisitor&) const;
         // FIXME: This method is improper. We rely on the fact that we can call it with a null
         // receiver. We should always be using StackVisitor directly.
         // It's only valid to call this from a non-wasm top frame.

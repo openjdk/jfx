@@ -40,7 +40,6 @@ namespace WebCore {
 
 class FloatPoint;
 class GraphicsContextStateSaver;
-class RenderSVGPath;
 class RenderSVGResource;
 class SVGGraphicsElement;
 
@@ -82,6 +81,8 @@ public:
 
     FloatRect computeMarkerBoundingBox(const SVGBoundingBoxComputation::DecorationOptions&) const;
 
+    void applyTransform(TransformationMatrix&, const RenderStyle&, const FloatRect& boundingBox, OptionSet<RenderStyle::TransformOperationOption> = RenderStyle::allTransformOperations) const final;
+
 protected:
     void element() const = delete;
 
@@ -106,7 +107,7 @@ private:
 
     bool isSVGShape() const final { return true; }
     bool canHaveChildren() const final { return false; }
-    const char* renderName() const override { return "RenderSVGShape"; }
+    ASCIILiteral renderName() const override { return "RenderSVGShape"_s; }
 
     void layout() final;
     void paint(PaintInfo&, const LayoutPoint&) final;

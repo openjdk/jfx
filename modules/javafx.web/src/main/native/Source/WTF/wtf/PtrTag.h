@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -128,10 +128,10 @@ constexpr uintptr_t makePtrTagHash(const char (&str)[N])
 
 #define WTF_DECLARE_PTRTAG(tag) \
     constexpr PtrTag tag = static_cast<PtrTag>(WTF_PTRTAG_HASH(#tag)); \
-    static_assert(tag != NoPtrTag && tag != CFunctionPtrTag, "");
+    static_assert(tag != NoPtrTag && tag != CFunctionPtrTag);
 
-static_assert(static_cast<uintptr_t>(NoPtrTag) == static_cast<uintptr_t>(0), "");
-static_assert(static_cast<uintptr_t>(CFunctionPtrTag) == static_cast<uintptr_t>(1), "");
+static_assert(static_cast<uintptr_t>(NoPtrTag) == static_cast<uintptr_t>(0));
+static_assert(static_cast<uintptr_t>(CFunctionPtrTag) == static_cast<uintptr_t>(1));
 
 #if COMPILER(MSVC)
 #pragma warning(push)
@@ -491,6 +491,10 @@ inline bool usesPointerTagging() { return true; }
 #define WTF_VTBL_FUNCPTR_PTRAUTH_STR(discriminatorStr) \
     __ptrauth(ptrauth_key_process_independent_code, 1, ptrauth_string_discriminator(discriminatorStr))
 
+#define WTF_FUNCPTR_PTRAUTH(discriminator) WTF_FUNCPTR_PTRAUTH_STR(#discriminator)
+#define WTF_FUNCPTR_PTRAUTH_STR(discriminatorStr) \
+    __ptrauth(ptrauth_key_process_dependent_code, 1, ptrauth_string_discriminator(discriminatorStr))
+
 #else // not CPU(ARM64E)
 
 inline const void* untagReturnPC(const void* pc, const void*)
@@ -532,7 +536,7 @@ inline T* retagArrayPtr(T* ptr, size_t, size_t)
 template <PtrTag, typename IntType>
 inline IntType tagInt(IntType ptrInt)
 {
-    static_assert(sizeof(IntType) == sizeof(uintptr_t), "");
+    static_assert(sizeof(IntType) == sizeof(uintptr_t));
     return ptrInt;
 }
 
@@ -554,6 +558,8 @@ inline bool usesPointerTagging() { return false; }
 
 #define WTF_VTBL_FUNCPTR_PTRAUTH(discriminator)
 #define WTF_VTBL_FUNCPTR_PTRAUTH_STR(discriminatorStr)
+#define WTF_FUNCPTR_PTRAUTH(discriminator)
+#define WTF_FUNCPTR_PTRAUTH_STR(discriminatorStr)
 
 #endif // CPU(ARM64E)
 

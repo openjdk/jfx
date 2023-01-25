@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2019 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2008-2022 Apple Inc. All Rights Reserved.
  * Copyright (C) 2013 Patrick Gansterer <paroga@paroga.com>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -172,28 +172,32 @@ template<typename T> char (&ArrayLengthHelperFunction(T (&)[0]))[0];
 #endif
 #define WTF_ARRAY_LENGTH(array) sizeof(::WTF::ArrayLengthHelperFunction(array))
 
-ALWAYS_INLINE constexpr size_t roundUpToMultipleOfImpl(size_t divisor, size_t x)
+inline constexpr bool isPowerOfTwo(size_t size) { return !(size & (size - 1)); }
+
+template<typename T, typename U>
+ALWAYS_INLINE constexpr T roundUpToMultipleOfImpl(U divisor, T x)
 {
-    size_t remainderMask = divisor - 1;
+    T remainderMask = static_cast<T>(divisor) - 1;
     return (x + remainderMask) & ~remainderMask;
 }
 
 // Efficient implementation that takes advantage of powers of two.
-inline size_t roundUpToMultipleOf(size_t divisor, size_t x)
+template<typename T, typename U>
+inline constexpr T roundUpToMultipleOf(U divisor, T x)
 {
-    ASSERT(divisor && !(divisor & (divisor - 1)));
-    return roundUpToMultipleOfImpl(divisor, x);
+    ASSERT_UNDER_CONSTEXPR_CONTEXT(divisor && isPowerOfTwo(divisor));
+    return roundUpToMultipleOfImpl<T, U>(divisor, x);
 }
 
 template<size_t divisor> constexpr size_t roundUpToMultipleOf(size_t x)
 {
-    static_assert(divisor && !(divisor & (divisor - 1)), "divisor must be a power of two!");
+    static_assert(divisor && isPowerOfTwo(divisor));
     return roundUpToMultipleOfImpl(divisor, x);
 }
 
-template<size_t divisor, typename T> inline T* roundUpToMultipleOf(T* x)
+template<size_t divisor, typename T> inline constexpr T* roundUpToMultipleOf(T* x)
 {
-    static_assert(sizeof(T*) == sizeof(size_t), "");
+    static_assert(sizeof(T*) == sizeof(size_t));
     return reinterpret_cast<T*>(roundUpToMultipleOf<divisor>(reinterpret_cast<size_t>(x)));
 }
 
@@ -604,6 +608,19 @@ template<typename OptionalType> auto valueOrDefault(OptionalType&& optionalValue
 } // namespace WTF
 
 #define WTFMove(value) std::move<WTF::CheckMoveParameter>(value)
+
+// FIXME: Needed for GCC<=9.3. Remove it after Ubuntu 20.04 end of support (May 2023).
+#if defined(__GLIBCXX__) && !defined(HAVE_STD_REMOVE_CVREF) && !COMPILER(CLANG)
+namespace std {
+template <typename T>
+struct remove_cvref {
+    using type = typename std::remove_cv<typename std::remove_reference<T>::type>::type;
+};
+
+template <typename T>
+using remove_cvref_t = typename remove_cvref<T>::type;
+}
+#endif
 
 using WTF::GB;
 using WTF::KB;

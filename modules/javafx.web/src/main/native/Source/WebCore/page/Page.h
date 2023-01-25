@@ -23,11 +23,14 @@
 #include "ActivityState.h"
 #include "AnimationFrameRate.h"
 #include "Color.h"
+#include "ContentSecurityPolicy.h"
 #include "DisabledAdaptations.h"
 #include "Document.h"
+#include "EventTrackingRegions.h"
 #include "FindOptions.h"
 #include "FrameLoaderTypes.h"
 #include "IntRectHash.h"
+#include "KeyboardScrollingAnimator.h"
 #include "LayoutMilestone.h"
 #include "LayoutRect.h"
 #include "LengthBox.h"
@@ -56,6 +59,7 @@
 #include <wtf/Noncopyable.h>
 #include <wtf/OptionSet.h>
 #include <wtf/Ref.h>
+#include <wtf/RobinHoodHashSet.h>
 #include <wtf/UniqueRef.h>
 #include <wtf/WeakHashMap.h>
 #include <wtf/WeakHashSet.h>
@@ -123,7 +127,7 @@ class ImageOverlayController;
 class InspectorClient;
 class InspectorController;
 class IntSize;
-class LibWebRTCProvider;
+class WebRTCProvider;
 class LowPowerModeNotifier;
 class MediaCanStartListener;
 class MediaPlaybackTarget;
@@ -142,7 +146,6 @@ class PerformanceMonitor;
 class PermissionController;
 class PluginData;
 class PluginInfoProvider;
-class PluginViewBase;
 class PointerCaptureController;
 class PointerLockController;
 class ProgressTracker;
@@ -169,10 +172,10 @@ class ValidationMessageClient;
 class VisibleSelection;
 class VisitedLinkStore;
 class WebGLStateTracker;
-class WebLockRegistry;
 class WheelEventDeltaFilter;
 class WheelEventTestMonitor;
 
+struct AXTreeData;
 struct ApplePayAMSUIRequest;
 struct SimpleRange;
 struct TextRecognitionResult;
@@ -206,7 +209,7 @@ enum class FinalizeRenderingUpdateFlags : uint8_t {
     InvalidateImagesWithAsyncDecodes    = 1 << 1,
 };
 
-enum class RenderingUpdateStep : uint16_t {
+enum class RenderingUpdateStep : uint32_t {
     Resize                          = 1 << 0,
     Scroll                          = 1 << 1,
     MediaQueryEvaluation            = 1 << 2,
@@ -225,6 +228,7 @@ enum class RenderingUpdateStep : uint16_t {
 #endif
     FlushAutofocusCandidates        = 1 << 14,
     VideoFrameCallbacks             = 1 << 15,
+    PrepareCanvasesForDisplay       = 1 << 16,
 };
 
 constexpr OptionSet<RenderingUpdateStep> updateRenderingSteps = {
@@ -241,6 +245,7 @@ constexpr OptionSet<RenderingUpdateStep> updateRenderingSteps = {
     RenderingUpdateStep::WheelEventMonitorCallbacks,
     RenderingUpdateStep::CursorUpdate,
     RenderingUpdateStep::EventRegionUpdate,
+    RenderingUpdateStep::PrepareCanvasesForDisplay,
 };
 
 constexpr auto allRenderingUpdateSteps = updateRenderingSteps | OptionSet<RenderingUpdateStep> {
@@ -305,8 +310,6 @@ public:
     BroadcastChannelRegistry& broadcastChannelRegistry() { return m_broadcastChannelRegistry; }
     WEBCORE_EXPORT void setBroadcastChannelRegistry(Ref<BroadcastChannelRegistry>&&); // Only used by WebKitLegacy.
 
-    WebLockRegistry& webLockRegistry() { return m_webLockRegistry; }
-
     WEBCORE_EXPORT static void forEachPage(const Function<void(Page&)>&);
     WEBCORE_EXPORT static unsigned nonUtilityPageCount();
 
@@ -316,6 +319,10 @@ public:
     void decrementNestedRunLoopCount();
     bool insideNestedRunLoop() const { return m_nestedRunLoopCount > 0; }
     WEBCORE_EXPORT void whenUnnested(Function<void()>&&);
+
+    void setCurrentKeyboardScrollingAnimator(KeyboardScrollingAnimator*);
+    KeyboardScrollingAnimator* currentKeyboardScrollingAnimator() const { return m_currentKeyboardScrollingAnimator.get(); }
+
 
 #if ENABLE(REMOTE_INSPECTOR)
     WEBCORE_EXPORT bool remoteInspectionAllowed() const;
@@ -340,7 +347,7 @@ public:
 #if ENABLE(POINTER_LOCK)
     PointerLockController& pointerLockController() const { return *m_pointerLockController; }
 #endif
-    LibWebRTCProvider& libWebRTCProvider() { return m_libWebRTCProvider.get(); }
+    WebRTCProvider& webRTCProvider() { return m_webRTCProvider.get(); }
     RTCController& rtcController() { return m_rtcController; }
     WEBCORE_EXPORT void disableICECandidateFiltering();
     WEBCORE_EXPORT void enableICECandidateFiltering();
@@ -360,7 +367,7 @@ public:
     WEBCORE_EXPORT String synchronousScrollingReasonsAsText();
     WEBCORE_EXPORT Ref<DOMRectList> nonFastScrollableRectsForTesting();
 
-    WEBCORE_EXPORT Ref<DOMRectList> touchEventRectsForEventForTesting(const String& eventName);
+    WEBCORE_EXPORT Ref<DOMRectList> touchEventRectsForEventForTesting(EventTrackingRegions::EventType);
     WEBCORE_EXPORT Ref<DOMRectList> passiveTouchEventListenerRectsForTesting();
 
     WEBCORE_EXPORT void settingsDidChange();
@@ -588,6 +595,8 @@ public:
 
     bool isServiceWorkerPage() const { return m_isServiceWorkerPage; }
     void markAsServiceWorkerPage() { m_isServiceWorkerPage = true; }
+
+    WEBCORE_EXPORT static Page* serviceWorkerPage(ScriptExecutionContextIdentifier);
 
 #if ENABLE(SERVICE_WORKER)
     // Service worker pages have an associated ServiceWorkerGlobalScope on the main thread.
@@ -899,6 +908,10 @@ public:
 
     WEBCORE_EXPORT Vector<Ref<Element>> editableElementsInRect(const FloatRect&) const;
 
+#if ENABLE(INTERACTION_REGIONS_IN_EVENT_REGION)
+    bool shouldBuildInteractionRegions() const;
+#endif
+
 #if ENABLE(DEVICE_ORIENTATION) && PLATFORM(IOS_FAMILY)
     DeviceOrientationUpdateProvider* deviceOrientationUpdateProvider() const { return m_deviceOrientationUpdateProvider.get(); }
 #endif
@@ -909,6 +922,7 @@ public:
     void forEachFrame(const Function<void(Frame&)>&);
 
     bool shouldDisableCorsForRequestTo(const URL&) const;
+    const HashSet<String>& maskedURLSchemes() const { return m_maskedURLSchemes; }
 
     WEBCORE_EXPORT void injectUserStyleSheet(UserStyleSheet&);
     WEBCORE_EXPORT void removeInjectedUserStyleSheet(UserStyleSheet&);
@@ -943,6 +957,7 @@ public:
     AttachmentElementClient* attachmentElementClient() { return m_attachmentElementClient.get(); }
 #endif
 
+    WEBCORE_EXPORT std::optional<AXTreeData> accessibilityTreeData() const;
 #if USE(ATSPI)
     AccessibilityRootAtspi* accessibilityRootObject() const { return m_accessibilityRootObject; }
     void setAccessibilityRootObject(AccessibilityRootAtspi* rootObject) { m_accessibilityRootObject = rootObject; }
@@ -955,12 +970,21 @@ public:
 
     void timelineControllerMaximumAnimationFrameRateDidChange(DocumentTimelinesController&);
 
+    ContentSecurityPolicyModeForExtension contentSecurityPolicyModeForExtension() const { return m_contentSecurityPolicyModeForExtension; }
+
+    WEBCORE_EXPORT void forceRepaintAllFrames();
+
+#if ENABLE(IMAGE_ANALYSIS)
+    WEBCORE_EXPORT void analyzeImagesForFindInPage();
+#endif
 private:
     struct Navigation {
         RegistrableDomain domain;
         FrameLoadType type;
     };
     void logNavigation(const Navigation&);
+
+    static void firstTimeInitialization();
 
     WEBCORE_EXPORT void initGroup();
 
@@ -980,8 +1004,6 @@ private:
 #if ENABLE(VIDEO)
     void playbackControlsManagerUpdateTimerFired();
 #endif
-
-    Vector<Ref<PluginViewBase>> pluginViews();
 
     void handleLowModePowerChange(bool);
 
@@ -1049,7 +1071,7 @@ private:
     UniqueRef<SpeechRecognitionProvider> m_speechRecognitionProvider;
 
     UniqueRef<MediaRecorderProvider> m_mediaRecorderProvider;
-    UniqueRef<LibWebRTCProvider> m_libWebRTCProvider;
+    UniqueRef<WebRTCProvider> m_webRTCProvider;
     RTCController m_rtcController;
 
     PlatformDisplayID m_displayID { 0 };
@@ -1157,8 +1179,8 @@ private:
 
     RefPtr<IDBClient::IDBConnectionToServer> m_idbConnectionToServer;
 
-    HashSet<String> m_seenPlugins;
-    HashSet<String> m_seenMediaEngines;
+    MemoryCompactRobinHoodHashSet<String> m_seenPlugins;
+    MemoryCompactRobinHoodHashSet<String> m_seenMediaEngines;
 
     unsigned m_lastSpatialNavigationCandidatesCount { 0 };
     unsigned m_forbidPromptsDepth { 0 };
@@ -1174,7 +1196,6 @@ private:
     Ref<UserContentProvider> m_userContentProvider;
     Ref<VisitedLinkStore> m_visitedLinkStore;
     Ref<BroadcastChannelRegistry> m_broadcastChannelRegistry;
-    Ref<WebLockRegistry> m_webLockRegistry;
     RefPtr<WheelEventTestMonitor> m_wheelEventTestMonitor;
     WeakHashSet<ActivityStateChangeObserver> m_activityStateChangeObservers;
 
@@ -1279,8 +1300,9 @@ private:
 #endif
 
     Vector<UserContentURLPattern> m_corsDisablingPatterns;
+    HashSet<String> m_maskedURLSchemes;
     Vector<UserStyleSheet> m_userStyleSheetsPendingInjection;
-    std::optional<HashSet<String>> m_allowedNetworkHosts;
+    std::optional<MemoryCompactLookupOnlyRobinHoodHashSet<String>> m_allowedNetworkHosts;
     bool m_isTakingSnapshotsForApplicationSuspension { false };
     bool m_loadsSubresources { true };
     bool m_canUseCredentialStorage { true };
@@ -1301,6 +1323,8 @@ private:
     UniqueRef<StorageProvider> m_storageProvider;
     UniqueRef<ModelPlayerProvider> m_modelPlayerProvider;
 
+    WeakPtr<KeyboardScrollingAnimator> m_currentKeyboardScrollingAnimator;
+
 #if ENABLE(ATTACHMENT_ELEMENT)
     std::unique_ptr<AttachmentElementClient> m_attachmentElementClient;
 #endif
@@ -1313,6 +1337,8 @@ private:
 #if USE(ATSPI)
     AccessibilityRootAtspi* m_accessibilityRootObject { nullptr };
 #endif
+
+    ContentSecurityPolicyModeForExtension m_contentSecurityPolicyModeForExtension { ContentSecurityPolicyModeForExtension::None };
 };
 
 inline PageGroup& Page::group()

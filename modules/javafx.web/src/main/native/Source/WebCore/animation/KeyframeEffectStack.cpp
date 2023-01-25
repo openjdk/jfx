@@ -27,6 +27,7 @@
 #include "KeyframeEffectStack.h"
 
 #include "CSSAnimation.h"
+#include "CSSPropertyAnimation.h"
 #include "CSSTransition.h"
 #include "KeyframeEffect.h"
 #include "WebAnimation.h"
@@ -53,12 +54,18 @@ bool KeyframeEffectStack::addEffect(KeyframeEffect& effect)
     effect.invalidate();
     m_effects.append(effect);
     m_isSorted = false;
+
+    if (m_effects.size() > 1 && effect.preventsAcceleration())
+        stopAcceleratedAnimations();
+
     return true;
 }
 
 void KeyframeEffectStack::removeEffect(KeyframeEffect& effect)
 {
-    m_effects.removeFirst(&effect);
+    auto removedEffect = m_effects.removeFirst(&effect);
+    if (removedEffect && !m_effects.isEmpty() && !effect.canBeAccelerated())
+        startAcceleratedAnimationsIfPossible();
 }
 
 bool KeyframeEffectStack::requiresPseudoElement() const
@@ -122,27 +129,39 @@ void KeyframeEffectStack::setCSSAnimationList(RefPtr<const AnimationList>&& cssA
     m_isSorted = false;
 }
 
-OptionSet<AnimationImpact> KeyframeEffectStack::applyKeyframeEffects(RenderStyle& targetStyle, const RenderStyle& previousLastStyleChangeEventStyle, const Style::ResolutionContext& resolutionContext)
+OptionSet<AnimationImpact> KeyframeEffectStack::applyKeyframeEffects(RenderStyle& targetStyle, const RenderStyle* previousLastStyleChangeEventStyle, const Style::ResolutionContext& resolutionContext)
 {
     OptionSet<AnimationImpact> impact;
 
+    auto& previousStyle = previousLastStyleChangeEventStyle ? *previousLastStyleChangeEventStyle : RenderStyle::defaultStyle();
+
     auto transformRelatedPropertyChanged = [&]() -> bool {
-        return !arePointingToEqualData(targetStyle.translate(), previousLastStyleChangeEventStyle.translate())
-            || !arePointingToEqualData(targetStyle.scale(), previousLastStyleChangeEventStyle.scale())
-            || !arePointingToEqualData(targetStyle.rotate(), previousLastStyleChangeEventStyle.rotate())
-            || targetStyle.transform() != previousLastStyleChangeEventStyle.transform();
+        return !arePointingToEqualData(targetStyle.translate(), previousStyle.translate())
+            || !arePointingToEqualData(targetStyle.scale(), previousStyle.scale())
+            || !arePointingToEqualData(targetStyle.rotate(), previousStyle.rotate())
+            || targetStyle.transform() != previousStyle.transform();
     }();
 
-    auto propertyAffectingLogicalPropertiesChanged = previousLastStyleChangeEventStyle.direction() != targetStyle.direction()
-        || previousLastStyleChangeEventStyle.writingMode() != targetStyle.writingMode();
+    auto fontSizeChanged = previousLastStyleChangeEventStyle && previousLastStyleChangeEventStyle->computedFontSize() != targetStyle.computedFontSize();
+    auto propertyAffectingLogicalPropertiesChanged = previousLastStyleChangeEventStyle && (previousLastStyleChangeEventStyle->direction() != targetStyle.direction() || previousLastStyleChangeEventStyle->writingMode() != targetStyle.writingMode());
 
     auto unanimatedStyle = RenderStyle::clone(targetStyle);
 
     for (const auto& effect : sortedEffects()) {
         ASSERT(effect->animation());
 
-        if (propertyAffectingLogicalPropertiesChanged)
-            effect->propertyAffectingLogicalPropertiesDidChange(unanimatedStyle, resolutionContext);
+        auto inheritedPropertyChanged = [&]() {
+            if (previousLastStyleChangeEventStyle) {
+                for (auto property : effect->inheritedProperties()) {
+                    if (!CSSPropertyAnimation::propertiesEqual(property, *previousLastStyleChangeEventStyle, targetStyle))
+                        return true;
+                }
+            }
+            return false;
+        };
+
+        if (propertyAffectingLogicalPropertiesChanged || fontSizeChanged || inheritedPropertyChanged())
+            effect->propertyAffectingKeyframeResolutionDidChange(unanimatedStyle, resolutionContext);
 
         effect->animation()->resolve(targetStyle, resolutionContext);
 
@@ -157,12 +176,6 @@ OptionSet<AnimationImpact> KeyframeEffectStack::applyKeyframeEffects(RenderStyle
     }
 
     return impact;
-}
-
-void KeyframeEffectStack::stopAcceleratingTransformRelatedProperties(UseAcceleratedAction useAcceleratedAction)
-{
-    for (auto& effect : m_effects)
-        effect->stopAcceleratingTransformRelatedProperties(useAcceleratedAction);
 }
 
 void KeyframeEffectStack::clearInvalidCSSAnimationNames()
@@ -185,18 +198,50 @@ void KeyframeEffectStack::addInvalidCSSAnimationName(const String& name)
     m_invalidCSSAnimationNames.add(name);
 }
 
-bool KeyframeEffectStack::containsEffectThatPreventsAccelerationOfEffect(const KeyframeEffect& potentiallyAcceleratedEffect)
+void KeyframeEffectStack::effectAbilityToBeAcceleratedDidChange(const KeyframeEffect& effect)
 {
-    ensureEffectsAreSorted();
+    ASSERT(m_effects.contains(&effect));
+    if (effect.preventsAcceleration())
+        stopAcceleratedAnimations();
+    else
+        startAcceleratedAnimationsIfPossible();
+}
 
+bool KeyframeEffectStack::allowsAcceleration() const
+{
+    // We could try and be a lot smarter here and do this on a per-property basis and
+    // account for fully replacing effects which could co-exist with effects that
+    // don't support acceleration lower in the stack, etc. But, if we are not able to run
+    // all effects that could support acceleration using acceleration, then we might
+    // as well not run any at all since we'll be updating effects for this stack
+    // for each animation frame. So for now, we simply return false if any effect in the
+    // stack is unable to be accelerated.
     for (auto& effect : m_effects) {
-        if (effect.get() == &potentiallyAcceleratedEffect)
-            continue;
         if (effect->preventsAcceleration())
-            return true;
+            return false;
     }
+    return true;
+}
 
-    return false;
+void KeyframeEffectStack::startAcceleratedAnimationsIfPossible()
+{
+    if (!allowsAcceleration())
+        return;
+
+    for (auto& effect : m_effects)
+        effect->effectStackNoLongerPreventsAcceleration();
+}
+
+void KeyframeEffectStack::stopAcceleratedAnimations()
+{
+    for (auto& effect : m_effects)
+        effect->effectStackNoLongerAllowsAcceleration();
+}
+
+void KeyframeEffectStack::lastStyleChangeEventStyleDidChange(const RenderStyle* previousStyle, const RenderStyle* currentStyle)
+{
+    for (auto& effect : m_effects)
+        effect->lastStyleChangeEventStyleDidChange(previousStyle, currentStyle);
 }
 
 } // namespace WebCore

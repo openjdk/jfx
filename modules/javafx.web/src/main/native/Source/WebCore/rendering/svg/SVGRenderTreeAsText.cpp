@@ -40,7 +40,6 @@
 #include "RenderSVGGradientStopInlines.h"
 #include "RenderSVGImage.h"
 #include "RenderSVGInlineText.h"
-#include "RenderSVGPath.h"
 #include "RenderSVGResourceClipperInlines.h"
 #include "RenderSVGResourceFilterInlines.h"
 #include "RenderSVGResourceLinearGradientInlines.h"
@@ -75,7 +74,7 @@ namespace WebCore {
  */
 class TextStreamSeparator {
 public:
-    TextStreamSeparator(const String& s)
+    TextStreamSeparator(UChar s)
         : m_separator(s)
         , m_needToSeparate(false)
     {
@@ -84,7 +83,7 @@ public:
 private:
     friend TextStream& operator<<(TextStream&, TextStreamSeparator&);
 
-    String m_separator;
+    UChar m_separator;
     bool m_needToSeparate;
 };
 
@@ -175,7 +174,7 @@ static void writeSVGPaintingResource(TextStream& ts, const RenderSVGResource& re
 
 static void writeSVGFillPaintingResource(TextStream& ts, const RenderElement& renderer, const RenderSVGResource& fillPaintingResource)
 {
-    TextStreamSeparator s(" ");
+    TextStreamSeparator s(' ');
     ts << " [fill={" << s;
     writeSVGPaintingResource(ts, fillPaintingResource);
 
@@ -187,7 +186,7 @@ static void writeSVGFillPaintingResource(TextStream& ts, const RenderElement& re
 
 static void writeSVGStrokePaintingResource(TextStream& ts, const RenderElement& renderer, const RenderSVGResource& strokePaintingResource, const SVGGraphicsElement& shape)
 {
-    TextStreamSeparator s(" ");
+    TextStreamSeparator s(' ');
     ts << " [stroke={" << s;
     writeSVGPaintingResource(ts, strokePaintingResource);
 
@@ -197,11 +196,9 @@ static void writeSVGStrokePaintingResource(TextStream& ts, const RenderElement& 
     SVGLengthContext lengthContext(&shape);
     double dashOffset = lengthContext.valueForLength(svgStyle.strokeDashOffset());
     double strokeWidth = lengthContext.valueForLength(style.strokeWidth());
-    const auto& dashes = svgStyle.strokeDashArray();
-
-    DashArray dashArray;
-    for (auto& length : dashes)
-        dashArray.append(length.value(lengthContext));
+    auto dashArray = svgStyle.strokeDashArray().map([&](auto& length) -> DashArrayElement {
+        return length.value(lengthContext);
+    });
 
     writeIfNotDefault(ts, "opacity", svgStyle.strokeOpacity(), 1.0f);
     writeIfNotDefault(ts, "stroke width", strokeWidth, 1.0);
@@ -220,7 +217,7 @@ static void writeSVGStrokePaintingResource(TextStream& ts, const RenderElement& 
     ts << "}]";
 }
 
-static void writeStyle(TextStream& ts, const RenderElement& renderer)
+void writeSVGPaintingFeatures(TextStream& ts, const RenderElement& renderer, OptionSet<RenderAsTextFlag>)
 {
     const RenderStyle& style = renderer.style();
     const SVGRenderStyle& svgStyle = style.svgStyle();
@@ -244,7 +241,7 @@ static void writeStyle(TextStream& ts, const RenderElement& renderer)
     }
 
 #if ENABLE(LAYER_BASED_SVG_ENGINE)
-    else if (is<LegacyRenderSVGShape>(renderer)) {
+    else if (is<RenderSVGShape>(renderer)) {
         const auto& shape = downcast<RenderSVGShape>(renderer);
 
         Color fallbackColor;
@@ -276,11 +273,11 @@ static TextStream& writePositionAndStyle(TextStream& ts, const RenderElement& re
 
     ts << " " << enclosingIntRect(renderer.absoluteClippedOverflowRectForRepaint());
 
-    writeStyle(ts, renderer);
+    writeSVGPaintingFeatures(ts, renderer, behavior);
     return ts;
 }
 
-static void writeSVGGraphicsElement(TextStream& ts, SVGGraphicsElement& svgElement)
+void writeSVGGraphicsElement(TextStream& ts, const SVGGraphicsElement& svgElement)
 {
     SVGLengthContext lengthContext(&svgElement);
 
@@ -326,15 +323,6 @@ static TextStream& operator<<(TextStream& ts, const LegacyRenderSVGShape& shape)
     writeSVGGraphicsElement(ts, shape.graphicsElement());
     return ts;
 }
-
-#if ENABLE(LAYER_BASED_SVG_ENGINE)
-static TextStream& operator<<(TextStream& ts, const RenderSVGShape& shape)
-{
-    writePositionAndStyle(ts, shape);
-    writeSVGGraphicsElement(ts, shape.graphicsElement());
-    return ts;
-}
-#endif
 
 static void writeRenderSVGTextBox(TextStream& ts, const RenderSVGText& text)
 {
@@ -424,7 +412,7 @@ static void writeStandardPrefix(TextStream& ts, const RenderObject& object, Opti
     if (writeIndent == WriteIndentOrNot::Yes)
         ts << indent;
 
-    ts << object.renderName();
+    ts << object.renderName().characters();
 
     if (behavior.contains(RenderAsTextFlag::ShowAddresses))
         ts << " " << &object;
@@ -439,8 +427,13 @@ static void writeChildren(TextStream& ts, const RenderElement& parent, OptionSet
 {
     TextStream::IndentScope indentScope(ts);
 
-    for (const auto& child : childrenOfType<RenderObject>(parent))
+    for (const auto& child : childrenOfType<RenderObject>(parent)) {
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
+        if (parent.document().settings().layerBasedSVGEngineEnabled() && child.hasLayer())
+            continue;
+#endif
         write(ts, child, behavior);
+    }
 }
 
 static inline void writeCommonGradientProperties(TextStream& ts, SVGSpreadMethodType spreadMethod, const AffineTransform& gradientTransform, SVGUnitTypes::SVGUnitType gradientUnits)
@@ -474,8 +467,7 @@ void writeSVGResourceContainer(TextStream& ts, const RenderSVGResourceContainer&
         // Creating a placeholder filter which is passed to the builder.
         FloatRect dummyRect;
         FloatSize dummyScale(1, 1);
-        SVGFilterBuilder builder;
-        auto dummyFilter = SVGFilter::create(filter.filterElement(), builder, RenderingMode::Unaccelerated, dummyScale, Filter::ClipOperation::Intersect, dummyRect, dummyRect);
+        auto dummyFilter = SVGFilter::create(filter.filterElement(), RenderingMode::Unaccelerated, dummyScale, Filter::ClipOperation::Intersect, dummyRect, dummyRect, NullGraphicsContext());
         if (dummyFilter) {
             TextStream::IndentScope indentScope(ts);
             dummyFilter->externalRepresentation(ts, FilterRepresentation::TestOutput);
@@ -538,17 +530,6 @@ void writeSVGResourceContainer(TextStream& ts, const RenderSVGResourceContainer&
     writeChildren(ts, resource, behavior);
 }
 
-#if ENABLE(LAYER_BASED_SVG_ENGINE)
-void writeSVGContainer(TextStream& ts, const RenderSVGContainer& container, OptionSet<RenderAsTextFlag> behavior)
-{
-    writeStandardPrefix(ts, container, behavior);
-    writePositionAndStyle(ts, container, behavior);
-    ts << "\n";
-    writeResources(ts, container, behavior);
-    writeChildren(ts, container, behavior);
-}
-#endif
-
 void writeSVGContainer(TextStream& ts, const LegacyRenderSVGContainer& container, OptionSet<RenderAsTextFlag> behavior)
 {
     // Currently RenderSVGResourceFilterPrimitive has no meaningful output.
@@ -560,16 +541,6 @@ void writeSVGContainer(TextStream& ts, const LegacyRenderSVGContainer& container
     writeResources(ts, container, behavior);
     writeChildren(ts, container, behavior);
 }
-
-#if ENABLE(LAYER_BASED_SVG_ENGINE)
-void write(TextStream& ts, const RenderSVGRoot& root, OptionSet<RenderAsTextFlag> behavior)
-{
-    writeStandardPrefix(ts, root, behavior);
-    writePositionAndStyle(ts, root, behavior);
-    ts << "\n";
-    writeChildren(ts, root, behavior);
-}
-#endif
 
 void write(TextStream& ts, const LegacyRenderSVGRoot& root, OptionSet<RenderAsTextFlag> behavior)
 {
@@ -603,15 +574,6 @@ void writeSVGImage(TextStream& ts, const RenderSVGImage& image, OptionSet<Render
     ts << "\n";
     writeResources(ts, image, behavior);
 }
-
-#if ENABLE(LAYER_BASED_SVG_ENGINE)
-void write(TextStream& ts, const RenderSVGShape& shape, OptionSet<RenderAsTextFlag> behavior)
-{
-    writeStandardPrefix(ts, shape, behavior);
-    ts << shape << "\n";
-    writeResources(ts, shape, behavior);
-}
-#endif
 
 void write(TextStream& ts, const LegacyRenderSVGShape& shape, OptionSet<RenderAsTextFlag> behavior)
 {

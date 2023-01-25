@@ -25,6 +25,7 @@
 
 #include "config.h"
 #include "WasmCallee.h"
+#include "runtime/VM.h"
 
 #if ENABLE(WEBASSEMBLY)
 
@@ -100,9 +101,9 @@ LLIntCallee::LLIntCallee(FunctionCodeBlockGenerator& generator, size_t index, st
             auto& instruction = *m_instructions->at(unlinkedHandler.m_target).ptr();
             CodeLocationLabel<ExceptionHandlerPtrTag> target;
             if (unlinkedHandler.m_type == HandlerType::Catch)
-                target = CodeLocationLabel<ExceptionHandlerPtrTag>(LLInt::handleWasmCatch(instruction.width<WasmOpcodeTraits>()).code());
+                target = CodeLocationLabel<ExceptionHandlerPtrTag>(LLInt::handleWasmCatch(instruction.width()).code());
             else
-                target = CodeLocationLabel<ExceptionHandlerPtrTag>(LLInt::handleWasmCatchAll(instruction.width<WasmOpcodeTraits>()).code());
+                target = CodeLocationLabel<ExceptionHandlerPtrTag>(LLInt::handleWasmCatchAll(instruction.width()).code());
 
             handler.initialize(unlinkedHandler, target);
         }
@@ -130,6 +131,8 @@ RegisterAtOffsetList* LLIntCallee::calleeSaveRegisters()
         registers.set(GPRInfo::regCS2); // PB
 #elif CPU(ARM64) || CPU(RISCV64)
         registers.set(GPRInfo::regCS7); // PB
+#elif CPU(ARM)
+        registers.set(GPRInfo::regCS1); // PB
 #else
 #error Unsupported architecture.
 #endif
@@ -144,19 +147,20 @@ std::tuple<void*, void*> LLIntCallee::range() const
     return { nullptr, nullptr };
 }
 
-InstructionStream::Offset LLIntCallee::outOfLineJumpOffset(InstructionStream::Offset bytecodeOffset)
+WasmInstructionStream::Offset LLIntCallee::outOfLineJumpOffset(WasmInstructionStream::Offset bytecodeOffset)
 {
     ASSERT(m_outOfLineJumpTargets.contains(bytecodeOffset));
     return m_outOfLineJumpTargets.get(bytecodeOffset);
 }
 
-const Instruction* LLIntCallee::outOfLineJumpTarget(const Instruction* pc)
+const WasmInstruction* LLIntCallee::outOfLineJumpTarget(const WasmInstruction* pc)
 {
     int offset = bytecodeOffset(pc);
     int target = outOfLineJumpOffset(offset);
     return m_instructions->at(offset + target).ptr();
 }
 
+#if ENABLE(WEBASSEMBLY_B3JIT)
 void OptimizingJITCallee::linkExceptionHandlers(Vector<UnlinkedHandlerInfo> unlinkedExceptionHandlers, Vector<CodeLocationLabel<ExceptionHandlerPtrTag>> exceptionHandlerLocations)
 {
     size_t count = unlinkedExceptionHandlers.size();
@@ -183,7 +187,7 @@ const StackMap& OptimizingJITCallee::stackmap(CallSiteIndex callSiteIndex) const
     RELEASE_ASSERT(iter != m_stackmaps.end());
     return iter->value;
 }
-
+#endif
 
 } } // namespace JSC::Wasm
 

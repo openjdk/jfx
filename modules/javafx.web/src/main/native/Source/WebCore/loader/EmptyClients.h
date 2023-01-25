@@ -83,6 +83,7 @@ class EmptyChromeClient : public ChromeClient {
     void setResizable(bool) final { }
 
     void addMessageToConsole(MessageSource, MessageLevel, const String&, unsigned, unsigned, const String&) final { }
+    void addMessageWithArgumentsToConsole(MessageSource, MessageLevel, const String&, Span<const String>, unsigned, unsigned, const String&) final { }
 
     bool canRunBeforeUnloadConfirmPanel() final { return false; }
     bool runBeforeUnloadConfirmPanel(const String&, Frame&) final { return true; }
@@ -157,7 +158,7 @@ class EmptyChromeClient : public ChromeClient {
     void showShareSheet(ShareDataWithParsedURL&, CompletionHandler<void(bool)>&&) final;
     void loadIconForFiles(const Vector<String>&, FileIconLoader&) final { }
 
-    void elementDidFocus(Element&) final { }
+    void elementDidFocus(Element&, const FocusOptions&) final { }
     void elementDidBlur(Element&) final { }
 
     void setCursor(const Cursor&) final { }

@@ -24,15 +24,18 @@
  */
 
 #include "config.h"
+#include "FunctionExecutable.h"
 
 #include "CodeBlock.h"
 #include "FunctionCodeBlock.h"
+#include "FunctionExecutableInlines.h"
 #include "FunctionOverrides.h"
+#include "IsoCellSetInlines.h"
 #include "JSCJSValueInlines.h"
 
 namespace JSC {
 
-const ClassInfo FunctionExecutable::s_info = { "FunctionExecutable", &ScriptExecutable::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(FunctionExecutable) };
+const ClassInfo FunctionExecutable::s_info = { "FunctionExecutable"_s, &ScriptExecutable::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(FunctionExecutable) };
 
 FunctionExecutable::FunctionExecutable(VM& vm, const SourceCode& source, UnlinkedFunctionExecutable* unlinkedExecutable, Intrinsic intrinsic, bool isInsideOrdinaryFunction)
     : ScriptExecutable(vm.functionExecutableStructure.get(), vm, source, unlinkedExecutable->lexicalScopeFeatures(), unlinkedExecutable->derivedContextType(), false, isInsideOrdinaryFunction || !unlinkedExecutable->isArrowFunction(), EvalContextType::None, intrinsic)
@@ -55,27 +58,33 @@ void FunctionExecutable::destroy(JSCell* cell)
 
 FunctionCodeBlock* FunctionExecutable::baselineCodeBlockFor(CodeSpecializationKind kind)
 {
-    ExecutableToCodeBlockEdge* edge;
+    CodeBlock* codeBlock = nullptr;
     if (kind == CodeForCall)
-        edge = m_codeBlockForCall.get();
+        codeBlock = codeBlockForCall();
     else {
         RELEASE_ASSERT(kind == CodeForConstruct);
-        edge = m_codeBlockForConstruct.get();
+        codeBlock = codeBlockForConstruct();
     }
-    if (!edge)
+    if (!codeBlock)
         return nullptr;
-    return static_cast<FunctionCodeBlock*>(edge->codeBlock()->baselineAlternative());
+    return static_cast<FunctionCodeBlock*>(codeBlock->baselineAlternative());
+}
+
+template<typename Visitor>
+static inline bool shouldKeepInConstraintSet(Visitor& visitor, CodeBlock* codeBlockForCall, CodeBlock* codeBlockForConstruct)
+{
+    // If either CodeBlock is not marked yet, we will run output-constraints.
+    return (codeBlockForCall && !visitor.isMarked(codeBlockForCall)) || (codeBlockForConstruct && !visitor.isMarked(codeBlockForConstruct));
 }
 
 template<typename Visitor>
 void FunctionExecutable::visitChildrenImpl(JSCell* cell, Visitor& visitor)
 {
+    VM& vm = visitor.vm();
     FunctionExecutable* thisObject = jsCast<FunctionExecutable*>(cell);
     ASSERT_GC_OBJECT_INHERITS(thisObject, info());
     Base::visitChildren(thisObject, visitor);
     visitor.append(thisObject->m_topLevelExecutable);
-    visitor.append(thisObject->m_codeBlockForCall);
-    visitor.append(thisObject->m_codeBlockForConstruct);
     visitor.append(thisObject->m_unlinkedExecutable);
     if (RareData* rareData = thisObject->m_rareData.get()) {
         visitor.append(rareData->m_cachedPolyProtoStructureID);
@@ -86,9 +95,42 @@ void FunctionExecutable::visitChildrenImpl(JSCell* cell, Visitor& visitor)
                 visitor.append(entry.value);
         }
     }
+
+    // Since FunctionExecutable's finalizer always needs to be run, we do not track FunctionExecutable via finalizerSet.
+    auto* codeBlockForCall = thisObject->m_codeBlockForCall.get();
+    if (codeBlockForCall)
+        visitCodeBlockEdge(visitor, codeBlockForCall);
+    auto* codeBlockForConstruct = thisObject->m_codeBlockForConstruct.get();
+    if (codeBlockForConstruct)
+        visitCodeBlockEdge(visitor, codeBlockForConstruct);
+
+    if (shouldKeepInConstraintSet(visitor, codeBlockForCall, codeBlockForConstruct))
+        vm.heap.functionExecutableSpaceAndSet.outputConstraintsSet.add(thisObject);
 }
 
 DEFINE_VISIT_CHILDREN(FunctionExecutable);
+
+template<typename Visitor>
+void FunctionExecutable::visitOutputConstraintsImpl(JSCell* cell, Visitor& visitor)
+{
+    VM& vm = visitor.vm();
+    auto* executable = jsCast<FunctionExecutable*>(cell);
+    auto* codeBlockForCall = executable->m_codeBlockForCall.get();
+    if (codeBlockForCall) {
+        if (!visitor.isMarked(codeBlockForCall))
+            runConstraint(NoLockingNecessary, visitor, codeBlockForCall);
+    }
+    auto* codeBlockForConstruct = executable->codeBlockForConstruct();
+    if (codeBlockForConstruct) {
+        if (!visitor.isMarked(codeBlockForConstruct))
+            runConstraint(NoLockingNecessary, visitor, codeBlockForConstruct);
+    }
+
+    if (!shouldKeepInConstraintSet(visitor, codeBlockForCall, codeBlockForConstruct))
+        vm.heap.functionExecutableSpaceAndSet.outputConstraintsSet.remove(executable);
+}
+
+DEFINE_VISIT_OUTPUT_CONSTRAINTS(FunctionExecutable);
 
 FunctionExecutable* FunctionExecutable::fromGlobalCode(
     const Identifier& name, JSGlobalObject* globalObject, const SourceCode& source,
@@ -139,13 +181,13 @@ JSString* FunctionExecutable::toStringSlow(JSGlobalObject* globalObject)
         return cacheIfNoException(jsMakeNontrivialString(globalObject, "function ", name().string(), "() {\n    [native code]\n}"));
 
     if (isClass())
-        return cache(jsString(vm, classSource().view().toString()));
+        return cache(jsString(vm, classSource().view()));
 
-    String functionHeader;
+    ASCIILiteral functionHeader = ""_s;
     switch (parseMode()) {
     case SourceParseMode::GeneratorWrapperFunctionMode:
     case SourceParseMode::GeneratorWrapperMethodMode:
-        functionHeader = "function* ";
+        functionHeader = "function* "_s;
         break;
 
     case SourceParseMode::NormalFunctionMode:
@@ -159,26 +201,25 @@ JSString* FunctionExecutable::toStringSlow(JSGlobalObject* globalObject)
     case SourceParseMode::AsyncGeneratorBodyMode:
     case SourceParseMode::AsyncFunctionBodyMode:
     case SourceParseMode::AsyncArrowFunctionBodyMode:
-        functionHeader = "function ";
+        functionHeader = "function "_s;
         break;
 
     case SourceParseMode::ArrowFunctionMode:
     case SourceParseMode::ClassFieldInitializerMode:
-        functionHeader = "";
         break;
 
     case SourceParseMode::AsyncFunctionMode:
     case SourceParseMode::AsyncMethodMode:
-        functionHeader = "async function ";
+        functionHeader = "async function "_s;
         break;
 
     case SourceParseMode::AsyncArrowFunctionMode:
-        functionHeader = "async ";
+        functionHeader = "async "_s;
         break;
 
     case SourceParseMode::AsyncGeneratorWrapperFunctionMode:
     case SourceParseMode::AsyncGeneratorWrapperMethodMode:
-        functionHeader = "async function* ";
+        functionHeader = "async function* "_s;
         break;
     }
 
@@ -186,10 +227,10 @@ JSString* FunctionExecutable::toStringSlow(JSGlobalObject* globalObject)
         parametersStartOffset(),
         parametersStartOffset() + source().length());
 
-    String name = this->name().string();
+    auto name = this->name().string();
     if (name == vm.propertyNames->starDefaultPrivateName.string())
-        name = emptyString();
-    return cacheIfNoException(jsMakeNontrivialString(globalObject, functionHeader, name, src));
+        name = emptyAtom();
+    return cacheIfNoException(jsMakeNontrivialString(globalObject, functionHeader, WTFMove(name), src));
 }
 
 void FunctionExecutable::overrideInfo(const FunctionOverrideInfo& overrideInfo)

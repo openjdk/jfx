@@ -33,42 +33,42 @@
 namespace WebCore {
 
 struct ExtensionMap {
-    const char* extension;
-    const char* mimeType;
+    ASCIILiteral extension;
+    ASCIILiteral mimeType;
 };
 
 static const ExtensionMap extensionMap [] = {
-    { "bmp", "image/bmp" },
-    { "css", "text/css" },
-    { "cur", "image/x-icon" },
-    { "gif", "image/gif" },
-    { "html", "text/html" },
-    { "htm", "text/html" },
-    { "ico", "image/x-icon" },
-    { "jpeg", "image/jpeg" },
-    { "jpg", "image/jpeg" },
-    { "js", "application/x-javascript" },
-    { "mp3", "audio/mpeg"},
-    { "pdf", "application/pdf" },
-    { "png", "image/png" },
-    { "rss", "application/rss+xml" },
-    { "svg", "image/svg+xml" },
-    { "svgz", "image/svg+xml" },
-    { "swf", "application/x-shockwave-flash" },
-    { "text", "text/plain" },
-    { "tif", "image/tiff" },
-    { "tiff", "image/tiff" },
-    { "txt", "text/plain" },
-    { "xbm", "image/x-xbitmap" },
-    { "xml", "text/xml" },
-    { "xsl", "text/xsl" },
-    { "xht", "application/xhtml+xml" },
-    { "xhtml", "application/xhtml+xml" },
-    { "wml", "text/vnd.wap.wml" },
-    { "wmlc", "application/vnd.wap.wmlc" },
+    { "bmp"_s, "image/bmp"_s },
+    { "css"_s, "text/css"_s },
+    { "cur"_s, "image/x-icon"_s },
+    { "gif"_s, "image/gif"_s },
+    { "html"_s, "text/html"_s },
+    { "htm"_s, "text/html"_s },
+    { "ico"_s, "image/x-icon"_s },
+    { "jpeg"_s, "image/jpeg"_s },
+    { "jpg"_s, "image/jpeg"_s },
+    { "js"_s, "application/x-javascript"_s },
+    { "mp3"_s, "audio/mpeg"_s },
+    { "pdf"_s, "application/pdf"_s },
+    { "png"_s, "image/png"_s },
+    { "rss"_s, "application/rss+xml"_s },
+    { "svg"_s, "image/svg+xml"_s },
+    { "svgz"_s, "image/svg+xml"_s },
+    { "swf"_s, "application/x-shockwave-flash"_s },
+    { "text"_s, "text/plain"_s },
+    { "tif"_s, "image/tiff"_s },
+    { "tiff"_s, "image/tiff"_s },
+    { "txt"_s, "text/plain"_s },
+    { "xbm"_s, "image/x-xbitmap"_s },
+    { "xml"_s, "text/xml"_s },
+    { "xsl"_s, "text/xsl"_s },
+    { "xht"_s, "application/xhtml+xml"_s },
+    { "xhtml"_s, "application/xhtml+xml"_s },
+    { "wml"_s, "text/vnd.wap.wml"_s },
+    { "wmlc"_s, "application/vnd.wap.wmlc"_s },
 };
 
-String MIMETypeRegistry::mimeTypeForExtension(const String& extension)
+String MIMETypeRegistry::mimeTypeForExtension(const StringView extension)
 {
     for (auto& entry : extensionMap) {
         if (equalIgnoringASCIICase(extension, entry.extension))

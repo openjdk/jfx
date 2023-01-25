@@ -77,10 +77,16 @@ static PAS_ALWAYS_INLINE void pas_local_allocator_commit_if_necessary_impl(pas_l
        And then we end up in here.
 
        Therefore, we cannot assert that is_in_use is true. But, when we return from here, it must be true. */
-    if (PAS_LIKELY(allocator->scavenger_data.kind == pas_local_allocator_allocator_kind))
+    if (PAS_LIKELY(allocator->scavenger_data.kind == pas_local_allocator_allocator_kind)) {
+        /* This is safe. Once is_in_use = true is set, the scavenger will not stop this local allocator.
+         * Whenever the scavenger stops a local allocator, it first checks if is_in_use is false and then sets scavenger_data.kind to
+         * non pas_local_allocator_allocator_kind. If we set is_in_use = true before and kind is pas_local_allocator_allocator_kind,
+         * it ensures that (1) this allocator is not stopped and (2) this allocator will not be stopped until we put is_in_use = false */
         return;
+    }
 
     if (config.kind == pas_heap_config_kind_pas_utility) {
+        /* This is safe. We never stop local allocators for pas_heap_config_kind_pas_utility. */
         allocator->scavenger_data.kind = pas_local_allocator_allocator_kind;
         return;
     }
@@ -320,13 +326,11 @@ static PAS_ALWAYS_INLINE void pas_local_allocator_scan_bits_to_set_up_free_bits(
 
     switch (view_kind) {
     case pas_segregated_exclusive_view_kind:
-        page->num_non_empty_words =
-            pas_segregated_size_directory_data_ptr_load_non_null(
-                &directory->data)->full_num_non_empty_words;
+        page->emptiness.num_non_empty_words = pas_segregated_size_directory_data_ptr_load_non_null(&directory->data)->full_num_non_empty_words;
         break;
 
     case pas_segregated_partial_view_kind:
-        page->num_non_empty_words += num_denullified_words;
+        page->emptiness.num_non_empty_words += num_denullified_words;
         break;
 
     default:
@@ -434,7 +438,7 @@ pas_local_allocator_prepare_to_allocate(
 
     page_boundary = (uintptr_t)pas_segregated_page_boundary(page, page_config);
 
-    if (view_kind == pas_segregated_exclusive_view_kind && !page->num_non_empty_words) {
+    if (view_kind == pas_segregated_exclusive_view_kind && !page->emptiness.num_non_empty_words) {
         uintptr_t payload_begin;
         uintptr_t payload_end;
         pas_segregated_size_directory_data* data;
@@ -450,7 +454,7 @@ pas_local_allocator_prepare_to_allocate(
         payload_begin = page_boundary + data->offset_from_page_boundary_to_first_object;
         payload_end = page_boundary + data->offset_from_page_boundary_to_end_of_last_object;
 
-        page->num_non_empty_words = data->full_num_non_empty_words;
+        page->emptiness.num_non_empty_words = data->full_num_non_empty_words;
 
         pas_local_allocator_make_bump(
             allocator, page_boundary, payload_begin, payload_end, page_config);
@@ -565,7 +569,7 @@ pas_local_allocator_set_up_primordial_bump(
                     handle->partial_views + word_index, view);
             }
 
-            page->num_non_empty_words++;
+            page->emptiness.num_non_empty_words++;
         }
         if (page_config.sharing_shift != PAS_BITVECTOR_WORD_SHIFT) {
             pas_compact_atomic_segregated_partial_view_ptr* ptr;
@@ -1068,6 +1072,7 @@ pas_local_allocator_refill_with_known_config(
                          anymore. */
         if (view_cache_result.did_succeed) {
             pas_local_view_cache* view_cache;
+            bool has_view_to_pop;
 
             view_cache = (pas_local_view_cache*)view_cache_result.allocator;
 
@@ -1076,9 +1081,19 @@ pas_local_allocator_refill_with_known_config(
             view_cache->scavenger_data.is_in_use = true;
             pas_compiler_fence();
 
+            /* Setting is_in_use = true here is insufficient by itself to prevent the cache from being decommitted.
+               Consider this: just before we set is_in_use to true, the scavenger runs and puts the cache in the
+               "stopped" state. Once the cache is "stopped", the is_in_use flag does not prevent the scavenger from
+               further putting the view_cache in the "decommitted" state. Being in the "decommitted" state gives the
+               scavenger license to decommit the cache. Calling pas_local_view_cache_prepare_to_pop here will ensure
+               that the view_cache is committed. */
+            has_view_to_pop = pas_local_view_cache_prepare_to_pop(view_cache);
+            PAS_TESTING_ASSERT(view_cache->scavenger_data.is_in_use);
+
+            /* pas_local_view_cache_prepare_to_pop ensures view_cache is committed. We mark it after this. */
             pas_local_allocator_scavenger_data_did_use_for_allocation(&view_cache->scavenger_data);
 
-            if (pas_local_view_cache_prepare_to_pop(view_cache)) {
+            if (has_view_to_pop) {
                 new_view = pas_segregated_exclusive_view_as_view(pas_local_view_cache_pop(view_cache));
 
                 PAS_TESTING_ASSERT(pas_segregated_view_is_some_exclusive(new_view));
@@ -1117,8 +1132,8 @@ pas_local_allocator_refill_with_known_config(
         if (verbose) {
             pas_log("And after will_start got a new view %p, page = %p, boundary = %p\n",
                     new_view,
-                    pas_segregated_view_get_page(new_view),
-                    pas_segregated_view_get_page_boundary(new_view));
+                    new_view ? pas_segregated_view_get_page(new_view) : NULL,
+                    new_view ? pas_segregated_view_get_page_boundary(new_view) : NULL);
         }
     }
 
@@ -1668,7 +1683,7 @@ pas_local_allocator_try_allocate_slow_impl(pas_local_allocator* allocator,
     for (;;) {
         pas_fast_path_allocation_result fast_result;
         pas_allocation_result result;
-        pas_segregated_page_config* page_config;
+        const pas_segregated_page_config* page_config;
 
         fast_result = pas_local_allocator_try_allocate_out_of_line_cases(
             allocator, size, alignment, config);

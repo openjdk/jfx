@@ -102,7 +102,7 @@ public:
         MayResumePlaying = 1 << 0,
     };
 
-    void clientCharacteristicsChanged();
+    virtual void clientCharacteristicsChanged(bool);
 
     void beginInterruption(InterruptionType);
     void endInterruption(EndInterruptionFlags);
@@ -179,6 +179,7 @@ public:
 
     bool activeAudioSessionRequired() const;
     bool canProduceAudio() const;
+    bool hasMediaStreamSource() const;
     void canProduceAudioChanged();
 
     virtual void resetPlaybackSessionState() { }

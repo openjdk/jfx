@@ -48,7 +48,7 @@ CrossOriginPreflightResultCache::CrossOriginPreflightResultCache()
 static bool parseAccessControlMaxAge(const String& string, Seconds& expiryDelta)
 {
     // FIXME: This should probably reject strings that have a leading "+".
-    auto parsedInteger = parseInteger<uint64_t>(string);
+    auto parsedInteger = parseInteger<int64_t>(string);
     expiryDelta = Seconds(static_cast<double>(parsedInteger.value_or(0)));
     return parsedInteger.has_value();
 }
@@ -85,12 +85,12 @@ std::optional<String> CrossOriginPreflightResultCacheItem::validateMethodAndHead
 
 bool CrossOriginPreflightResultCacheItem::allowsCrossOriginMethod(const String& method, StoredCredentialsPolicy storedCredentialsPolicy) const
 {
-    return m_methods.contains(method) || (m_methods.contains("*") && storedCredentialsPolicy != StoredCredentialsPolicy::Use) || isOnAccessControlSimpleRequestMethodAllowlist(method);
+    return m_methods.contains(method) || (m_methods.contains<HashTranslatorASCIILiteral>("*"_s) && storedCredentialsPolicy != StoredCredentialsPolicy::Use) || isOnAccessControlSimpleRequestMethodAllowlist(method);
 }
 
 std::optional<String> CrossOriginPreflightResultCacheItem::validateCrossOriginHeaders(const HTTPHeaderMap& requestHeaders, StoredCredentialsPolicy storedCredentialsPolicy) const
 {
-    bool validWildcard = m_headers.contains("*") && storedCredentialsPolicy != StoredCredentialsPolicy::Use;
+    bool validWildcard = m_headers.contains<HashTranslatorASCIILiteral>("*"_s) && storedCredentialsPolicy != StoredCredentialsPolicy::Use;
     for (const auto& header : requestHeaders) {
         if (header.keyAsHTTPHeaderName && isCrossOriginSafeRequestHeader(header.keyAsHTTPHeaderName.value(), header.value))
             continue;

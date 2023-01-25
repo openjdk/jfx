@@ -46,7 +46,7 @@ public:
 
     bool isFlexibleBox() const override { return true; }
 
-    const char* renderName() const override;
+    ASCIILiteral renderName() const override;
 
     bool avoidsFloats() const final { return true; }
     bool canDropAnonymousBlockChild() const final { return false; }
@@ -89,6 +89,8 @@ public:
 
     enum class GapType { BetweenLines, BetweenItems };
     LayoutUnit computeGap(GapType) const;
+
+    bool shouldApplyMinBlockSizeAutoForChild(const RenderBox&) const;
 
 protected:
     void computeIntrinsicLogicalWidths(LayoutUnit& minLogicalWidth, LayoutUnit& maxLogicalWidth) const override;
@@ -207,6 +209,10 @@ private:
     bool childHasPercentHeightDescendants(const RenderBox&) const;
 
     void resetHasDefiniteHeight() { m_hasDefiniteHeight = SizeDefiniteness::Unknown; }
+
+#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
+    void layoutUsingFlexFormattingContext();
+#endif
 
     // This is used to cache the preferred size for orthogonal flow children so we
     // don't have to relayout to get it

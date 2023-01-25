@@ -37,7 +37,7 @@ using namespace WebCore;
 
 namespace JSC {
 
-const ClassInfo RuntimeArray::s_info = { "RuntimeArray", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(RuntimeArray) };
+const ClassInfo RuntimeArray::s_info = { "RuntimeArray"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(RuntimeArray) };
 
 static JSC_DECLARE_CUSTOM_GETTER(arrayLengthGetter);
 
@@ -50,7 +50,7 @@ RuntimeArray::RuntimeArray(VM& vm, Structure* structure)
 void RuntimeArray::finishCreation(VM& vm, Bindings::Array* array)
 {
     Base::finishCreation(vm);
-    ASSERT(inherits(vm, info()));
+    ASSERT(inherits(info()));
     m_array = array;
 }
 
@@ -69,7 +69,7 @@ JSC_DEFINE_CUSTOM_GETTER(arrayLengthGetter, (JSGlobalObject* lexicalGlobalObject
     VM& vm = lexicalGlobalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    RuntimeArray* thisObject = jsDynamicCast<RuntimeArray*>(vm, JSValue::decode(thisValue));
+    RuntimeArray* thisObject = jsDynamicCast<RuntimeArray*>(JSValue::decode(thisValue));
     if (!thisObject)
         return throwVMTypeError(lexicalGlobalObject, scope);
     return JSValue::encode(jsNumber(thisObject->getLength()));
@@ -127,7 +127,7 @@ bool RuntimeArray::put(JSCell* cell, JSGlobalObject* lexicalGlobalObject, Proper
 
     RuntimeArray* thisObject = jsCast<RuntimeArray*>(cell);
     if (propertyName == vm.propertyNames->length) {
-        throwException(lexicalGlobalObject, scope, createRangeError(lexicalGlobalObject, "Range error"));
+        throwException(lexicalGlobalObject, scope, createRangeError(lexicalGlobalObject, "Range error"_s));
         return false;
     }
 
@@ -144,7 +144,7 @@ bool RuntimeArray::putByIndex(JSCell* cell, JSGlobalObject* lexicalGlobalObject,
 
     RuntimeArray* thisObject = jsCast<RuntimeArray*>(cell);
     if (index >= thisObject->getLength()) {
-        throwException(lexicalGlobalObject, scope, createRangeError(lexicalGlobalObject, "Range error"));
+        throwException(lexicalGlobalObject, scope, createRangeError(lexicalGlobalObject, "Range error"_s));
         return false;
     }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,6 +28,7 @@
 
 #include "ClonedArguments.h"
 #include "DebuggerPrimitives.h"
+#include "ExecutableBaseInlines.h"
 #include "InlineCallFrame.h"
 #include "JSCInlines.h"
 #include "RegisterAtOffsetList.h"
@@ -267,7 +268,7 @@ std::optional<RegisterAtOffsetList> StackVisitor::Frame::calleeSaveRegistersForU
     }
 
     if (callee().isCell()) {
-        if (auto* jsToWasmICCallee = jsDynamicCast<JSToWasmICCallee*>(callee().asCell()->vm(), callee().asCell()))
+        if (auto* jsToWasmICCallee = jsDynamicCast<JSToWasmICCallee*>(callee().asCell()))
             return jsToWasmICCallee->function()->usedCalleeSaveRegisters();
     }
 #endif // ENABLE(WEBASSEMBLY)
@@ -422,6 +423,37 @@ void StackVisitor::Frame::setToEnd()
     m_isWasmFrame = false;
 }
 
+bool StackVisitor::Frame::isImplementationVisibilityPrivate() const
+{
+    auto* executable = [&] () -> ExecutableBase* {
+        if (auto* codeBlock = this->codeBlock())
+            return codeBlock->ownerExecutable();
+
+        if (callee().isCell()) {
+            if (auto* callee = this->callee().asCell()) {
+                if (auto* jsFunction = jsDynamicCast<JSFunction*>(callee))
+                    return jsFunction->executable();
+            }
+        }
+
+        return nullptr;
+    }();
+    if (!executable)
+        return false;
+
+    switch (executable->implementationVisibility()) {
+    case ImplementationVisibility::Public:
+        return false;
+
+    case ImplementationVisibility::Private:
+    case ImplementationVisibility::PrivateRecursive:
+        return true;
+    }
+
+    ASSERT_NOT_REACHED();
+    return false;
+}
+
 void StackVisitor::Frame::dump(PrintStream& out, Indenter indent) const
 {
     dump(out, indent, [] (PrintStream&) { });
@@ -462,7 +494,7 @@ void StackVisitor::Frame::dump(PrintStream& out, Indenter indent, WTF::Function<
         out.print(indent, "callerFrame: ", RawPointer(callerFrame), "\n");
         uintptr_t locationRawBits = callFrame->callSiteAsRawBits();
         out.print(indent, "rawLocationBits: ", locationRawBits,
-            " ", RawPointer(reinterpret_cast<void*>(locationRawBits)), "\n");
+            " ", RawHex(locationRawBits), "\n");
         out.print(indent, "codeBlock: ", RawPointer(codeBlock));
         if (codeBlock)
             out.print(" ", *codeBlock);

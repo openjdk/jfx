@@ -33,6 +33,7 @@
 #include "Document.h"
 #include "SecurityOrigin.h"
 #include <JavaScriptCore/ConsoleMessage.h>
+#include <wtf/SortedArrayMap.h>
 
 namespace WebCore {
 
@@ -145,16 +146,16 @@ ApplicationManifest::Display ApplicationManifestParser::parseDisplay(const JSON:
         return ApplicationManifest::Display::Browser;
     }
 
-    stringValue = stringValue.stripWhiteSpace().convertToASCIILowercase();
+    static constexpr std::pair<ComparableLettersLiteral, ApplicationManifest::Display> displayValueMappings[] = {
+        { "browser", ApplicationManifest::Display::Browser },
+        { "fullscreen", ApplicationManifest::Display::Fullscreen },
+        { "minimal-ui", ApplicationManifest::Display::MinimalUI },
+        { "standalone", ApplicationManifest::Display::Standalone },
+    };
+    static constexpr SortedArrayMap displayValues { displayValueMappings };
 
-    if (stringValue == "fullscreen")
-        return ApplicationManifest::Display::Fullscreen;
-    if (stringValue == "standalone")
-        return ApplicationManifest::Display::Standalone;
-    if (stringValue == "minimal-ui")
-        return ApplicationManifest::Display::MinimalUI;
-    if (stringValue == "browser")
-        return ApplicationManifest::Display::Browser;
+    if (auto* displayValue = displayValues.tryGet(StringView(stringValue).stripWhiteSpace()))
+        return *displayValue;
 
     logDeveloperWarning(makeString("\""_s, stringValue, "\" is not a valid display mode."_s));
     return ApplicationManifest::Display::Browser;
@@ -230,19 +231,17 @@ Vector<ApplicationManifest::Icon> ApplicationManifestParser::parseIcons(const JS
                 purposes.add(ApplicationManifest::Icon::Purpose::Any);
                 currentIcon.purposes = purposes;
             } else {
-                purposeStringValue = purposeStringValue.stripWhiteSpace().convertToASCIILowercase();
-                Vector<String> keywords = purposeStringValue.splitAllowingEmptyEntries(" ");
-
-                for (const auto& keyword : keywords) {
-                    if (keyword == "monochrome")
+                for (auto keyword : StringView(purposeStringValue).stripWhiteSpace().splitAllowingEmptyEntries(' ')) {
+                    if (equalLettersIgnoringASCIICase(keyword, "monochrome"_s))
                         purposes.add(ApplicationManifest::Icon::Purpose::Monochrome);
-                    else if (keyword == "maskable")
+                    else if (equalLettersIgnoringASCIICase(keyword, "maskable"_s))
                         purposes.add(ApplicationManifest::Icon::Purpose::Maskable);
-                    else if (keyword == "any")
+                    else if (equalLettersIgnoringASCIICase(keyword, "any"_s))
                         purposes.add(ApplicationManifest::Icon::Purpose::Any);
                     else
                         logDeveloperWarning(makeString("\""_s, purposeStringValue, "\" is not a valid purpose."_s));
                 }
+
                 if (purposes.isEmpty())
                     continue;
 
@@ -282,9 +281,9 @@ static bool isInScope(const URL& scopeURL, const URL& targetURL)
 
 URL ApplicationManifestParser::parseScope(const JSON::Object& manifest, const URL& documentURL, const URL& startURL)
 {
-    URL defaultScope { startURL, "./" };
+    URL defaultScope { startURL, "./"_s };
 
-    auto value = manifest.getValue("scope");
+    auto value = manifest.getValue("scope"_s);
     if (!value)
         return defaultScope;
 
