@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,13 +25,10 @@
 
 package javafx.util.converter;
 
-import java.time.DateTimeException;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.LocalDateTime;
 import java.time.chrono.Chronology;
-import java.time.chrono.ChronoLocalDate;
-import java.time.chrono.ChronoLocalDateTime;
 import java.time.chrono.IsoChronology;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
@@ -42,8 +39,6 @@ import java.time.temporal.TemporalAccessor;
 import java.util.Locale;
 
 import javafx.util.StringConverter;
-
-import com.sun.javafx.binding.Logging;
 
 /**
  * <p>{@link StringConverter} implementation for {@link LocalDateTime} values.</p>
@@ -76,7 +71,7 @@ public class LocalDateTimeStringConverter extends StringConverter<LocalDateTime>
      * parsed as expected in these locales.</p>
      */
     public LocalDateTimeStringConverter() {
-        ldtConverter = new LdtConverter<LocalDateTime>(LocalDateTime.class, null, null,
+        ldtConverter = new LdtConverter<>(LocalDateTime.class, null, null,
                                                        null, null, null, null);
     }
 
@@ -94,7 +89,7 @@ public class LocalDateTimeStringConverter extends StringConverter<LocalDateTime>
      * will be used.
      */
     public LocalDateTimeStringConverter(FormatStyle dateStyle, FormatStyle timeStyle) {
-        ldtConverter = new LdtConverter<LocalDateTime>(LocalDateTime.class, null, null,
+        ldtConverter = new LdtConverter<>(LocalDateTime.class, null, null,
                                                        dateStyle, timeStyle, null, null);
     }
 
@@ -122,7 +117,7 @@ public class LocalDateTimeStringConverter extends StringConverter<LocalDateTime>
      * then a default parser will be used.
      */
     public LocalDateTimeStringConverter(DateTimeFormatter formatter, DateTimeFormatter parser) {
-        ldtConverter = new LdtConverter<LocalDateTime>(LocalDateTime.class, formatter, parser,
+        ldtConverter = new LdtConverter<>(LocalDateTime.class, formatter, parser,
                                                        null, null, null, null);
     }
 
@@ -146,7 +141,7 @@ public class LocalDateTimeStringConverter extends StringConverter<LocalDateTime>
      */
     public LocalDateTimeStringConverter(FormatStyle dateStyle, FormatStyle timeStyle,
                                         Locale locale, Chronology chronology) {
-        ldtConverter = new LdtConverter<LocalDateTime>(LocalDateTime.class, null, null,
+        ldtConverter = new LdtConverter<>(LocalDateTime.class, null, null,
                                                        dateStyle, timeStyle, locale, chronology);
     }
 

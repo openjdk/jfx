@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -66,7 +66,7 @@ public abstract class FontCssMetaData<S extends Styleable> extends CssMetaData<S
         final Font defaultFont = initial != null ? initial : Font.getDefault();
 
         final CssMetaData<S, String> FAMILY =
-                new CssMetaData<S, String>(property.concat("-family"),
+                new CssMetaData<>(property.concat("-family"),
                 StringConverter.getInstance(), defaultFont.getFamily(), true) {
             @Override
             public boolean isSettable(S styleable) {
@@ -81,7 +81,7 @@ public abstract class FontCssMetaData<S extends Styleable> extends CssMetaData<S
         subProperties.add(FAMILY);
 
         final CssMetaData<S, Number> SIZE =
-                new CssMetaData<S, Number>(property.concat("-size"),
+                new CssMetaData<>(property.concat("-size"),
                 SizeConverter.getInstance(), defaultFont.getSize(), true) {
             @Override
             public boolean isSettable(S styleable) {
@@ -96,7 +96,7 @@ public abstract class FontCssMetaData<S extends Styleable> extends CssMetaData<S
         subProperties.add(SIZE);
 
         final CssMetaData<S, FontPosture> STYLE =
-                new CssMetaData<S, FontPosture>(property.concat("-style"),
+                new CssMetaData<>(property.concat("-style"),
                 FontConverter.FontStyleConverter.getInstance(), FontPosture.REGULAR, true) {
             @Override
             public boolean isSettable(S styleable) {
@@ -111,7 +111,7 @@ public abstract class FontCssMetaData<S extends Styleable> extends CssMetaData<S
         subProperties.add(STYLE);
 
         final CssMetaData<S, FontWeight> WEIGHT =
-                new CssMetaData<S, FontWeight>(property.concat("-weight"),
+                new CssMetaData<>(property.concat("-weight"),
                 FontConverter.FontWeightConverter.getInstance(), FontWeight.NORMAL, true) {
             @Override
             public boolean isSettable(S styleable) {

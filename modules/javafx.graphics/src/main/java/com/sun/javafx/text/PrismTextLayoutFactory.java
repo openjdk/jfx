@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -36,10 +36,12 @@ public class PrismTextLayoutFactory implements TextLayoutFactory {
     private PrismTextLayoutFactory() {
     }
 
+    @Override
     public com.sun.javafx.scene.text.TextLayout createLayout() {
         return new PrismTextLayout();
     }
 
+    @Override
     public com.sun.javafx.scene.text.TextLayout getLayout() {
         if (inUse) {
             return new PrismTextLayout();
@@ -59,6 +61,7 @@ public class PrismTextLayoutFactory implements TextLayoutFactory {
         }
     }
 
+    @Override
     public void disposeLayout(com.sun.javafx.scene.text.TextLayout layout) {
         if (layout == reusableTL) {
             inUse = false;

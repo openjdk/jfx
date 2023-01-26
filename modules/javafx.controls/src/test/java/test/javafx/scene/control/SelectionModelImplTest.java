@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -43,7 +43,6 @@ import javafx.scene.control.IndexedCell;
 import javafx.scene.control.ListView;
 import javafx.scene.control.ListViewShim;
 import javafx.scene.control.MultipleSelectionModel;
-import javafx.scene.control.MultipleSelectionModelShim;
 import javafx.scene.control.SelectionMode;
 import javafx.scene.control.SelectionModel;
 import javafx.scene.control.SelectionModelShim;

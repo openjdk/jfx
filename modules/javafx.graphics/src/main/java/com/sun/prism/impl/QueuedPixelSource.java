@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -62,7 +62,7 @@ public class QueuedPixelSource implements PixelSource {
     private volatile Pixels beingConsumed;
     private volatile Pixels enqueued;
     private final List<WeakReference<Pixels>> saved =
-         new ArrayList<WeakReference<Pixels>>(3);
+         new ArrayList<>(3);
     private final boolean useDirectBuffers;
 
     public QueuedPixelSource(boolean useDirectBuffers) {

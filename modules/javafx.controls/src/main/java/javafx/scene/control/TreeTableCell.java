@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -173,7 +173,7 @@ public class TreeTableCell<S,T> extends IndexedCell<T> {
     };
 
     private final WeakListChangeListener<TreeTablePosition<S,?>> weakSelectedListener =
-            new WeakListChangeListener<TreeTablePosition<S,?>>(selectedListener);
+            new WeakListChangeListener<>(selectedListener);
     private final WeakInvalidationListener weakFocusedListener =
             new WeakInvalidationListener(focusedListener);
     private final WeakInvalidationListener weaktableRowUpdateObserver =
@@ -181,9 +181,9 @@ public class TreeTableCell<S,T> extends IndexedCell<T> {
     private final WeakInvalidationListener weakEditingListener =
             new WeakInvalidationListener(editingListener);
     private final WeakListChangeListener<TreeTableColumn<S,?>> weakVisibleLeafColumnsListener =
-            new WeakListChangeListener<TreeTableColumn<S,?>>(visibleLeafColumnsListener);
+            new WeakListChangeListener<>(visibleLeafColumnsListener);
     private final WeakListChangeListener<String> weakColumnStyleClassListener =
-            new WeakListChangeListener<String>(columnStyleClassListener);
+            new WeakListChangeListener<>(columnStyleClassListener);
     private final WeakInvalidationListener weakColumnStyleListener =
             new WeakInvalidationListener(columnStyleListener);
     private final WeakInvalidationListener weakColumnIdListener =
@@ -203,7 +203,7 @@ public class TreeTableCell<S,T> extends IndexedCell<T> {
      * The {@code TreeTableColumn} instance that backs this {@code TreeTableCell}.
      */
     private ReadOnlyObjectWrapper<TreeTableColumn<S,T>> tableColumn =
-            new ReadOnlyObjectWrapper<TreeTableColumn<S,T>>(this, "tableColumn") {
+            new ReadOnlyObjectWrapper<>(this, "tableColumn") {
         @Override protected void invalidated() {
             updateColumnIndex();
         }
@@ -230,7 +230,7 @@ public class TreeTableCell<S,T> extends IndexedCell<T> {
 
     private ReadOnlyObjectWrapper<TreeTableView<S>> treeTableViewPropertyImpl() {
         if (treeTableView == null) {
-            treeTableView = new ReadOnlyObjectWrapper<TreeTableView<S>>(this, "treeTableView") {
+            treeTableView = new ReadOnlyObjectWrapper<>(this, "treeTableView") {
                 private WeakReference<TreeTableView<S>> weakTableViewRef;
                 @Override protected void invalidated() {
                     TreeTableView.TreeTableViewSelectionModel<S> sm;
@@ -271,7 +271,7 @@ public class TreeTableCell<S,T> extends IndexedCell<T> {
                         newTreeTableView.getVisibleLeafColumns().addListener(weakVisibleLeafColumnsListener);
                         newTreeTableView.rootProperty().addListener(weakRootPropertyListener);
 
-                        weakTableViewRef = new WeakReference<TreeTableView<S>>(newTreeTableView);
+                        weakTableViewRef = new WeakReference<>(newTreeTableView);
                     }
 
                     updateColumnIndex();
@@ -287,7 +287,7 @@ public class TreeTableCell<S,T> extends IndexedCell<T> {
      * The {@code TreeTableRow} that this {@code TreeTableCell} currently finds itself placed within.
      */
     private ReadOnlyObjectWrapper<TreeTableRow<S>> tableRow =
-            new ReadOnlyObjectWrapper<TreeTableRow<S>>(this, "tableRow");
+            new ReadOnlyObjectWrapper<>(this, "tableRow");
     private void setTableRow(TreeTableRow<S> value) { tableRow.set(value); }
     /**
      * Gets the value of the property {@code tableRow}.
@@ -381,7 +381,7 @@ public class TreeTableCell<S,T> extends IndexedCell<T> {
         // JDK-8187307: fire the commit after updating cell's editing state
         if (getTableColumn() != null) {
             // Inform the TreeTableColumn of the edit being ready to be committed.
-            CellEditEvent<S,T> editEvent = new CellEditEvent<S,T>(
+            CellEditEvent<S,T> editEvent = new CellEditEvent<>(
                     table,
                     editingCellAtStartEdit,
                     TreeTableColumn.<S,T>editCommitEvent(),
@@ -424,7 +424,7 @@ public class TreeTableCell<S,T> extends IndexedCell<T> {
         }
 
         if (getTableColumn() != null) {
-            CellEditEvent<S,T> editEvent = new CellEditEvent<S,T>(
+            CellEditEvent<S,T> editEvent = new CellEditEvent<>(
                     table,
                     editingCellAtStartEdit,
                     TreeTableColumn.<S,T>editCancelEvent(),
@@ -826,7 +826,7 @@ public class TreeTableCell<S,T> extends IndexedCell<T> {
 
     /** {@inheritDoc} */
     @Override protected Skin<?> createDefaultSkin() {
-        return new TreeTableCellSkin<S,T>(this);
+        return new TreeTableCellSkin<>(this);
     }
 
     private void possiblySetId(String idCandidate) {
@@ -852,10 +852,22 @@ public class TreeTableCell<S,T> extends IndexedCell<T> {
     @Override
     public Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
         switch (attribute) {
-            case ROW_INDEX: return getIndex();
-            case COLUMN_INDEX: return columnIndex;
-            case SELECTED: return isInCellSelectionMode() ? isSelected() : getTableRow().isSelected();
-            default: return super.queryAccessibleAttribute(attribute, parameters);
+        case ROW_INDEX:
+            return getIndex();
+        case COLUMN_INDEX:
+            return columnIndex;
+        case SELECTED:
+            if (isInCellSelectionMode()) {
+                return isSelected();
+            } else {
+                if (getTableRow() == null) {
+                    return null;
+                } else {
+                    return getTableRow().isSelected();
+                }
+            }
+        default:
+            return super.queryAccessibleAttribute(attribute, parameters);
         }
     }
 

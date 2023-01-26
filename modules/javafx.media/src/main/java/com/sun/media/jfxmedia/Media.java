@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -41,7 +41,7 @@ import com.sun.media.jfxmedia.track.Track;
 public abstract class Media {
 
     private Locator locator;
-    private final List<Track> tracks = new ArrayList<Track>();
+    private final List<Track> tracks = new ArrayList<>();
 
     /**
      * Create a <code>Media</code> object.
@@ -98,7 +98,7 @@ public abstract class Media {
             if (tracks.isEmpty()) {
                 returnValue = null;
             } else {
-                returnValue = Collections.unmodifiableList(new ArrayList<Track>(tracks));
+                returnValue = Collections.unmodifiableList(new ArrayList<>(tracks));
             }
         }
         return returnValue;

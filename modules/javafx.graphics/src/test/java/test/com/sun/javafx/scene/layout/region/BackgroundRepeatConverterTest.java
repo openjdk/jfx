@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -43,7 +43,7 @@ public class BackgroundRepeatConverterTest {
      */
     @Test public void scenario1() {
         ParsedValueImpl<ParsedValue<String,BackgroundRepeat>[][], RepeatStruct[]> value =
-                new ParsedValueImpl<ParsedValue<String,BackgroundRepeat>[][], RepeatStruct[]>(
+                new ParsedValueImpl<>(
                         new ParsedValueImpl[0][0], null
                 );
         RepeatStruct[] results = RepeatStructConverter.getInstance().convert(value, null);
@@ -60,7 +60,7 @@ public class BackgroundRepeatConverterTest {
         };
 
         ParsedValueImpl<ParsedValue<String,BackgroundRepeat>[][], RepeatStruct[]> value =
-                new ParsedValueImpl<ParsedValue<String,BackgroundRepeat>[][], RepeatStruct[]>(
+                new ParsedValueImpl<>(
                         values, null
                 );
         try {
@@ -80,7 +80,7 @@ public class BackgroundRepeatConverterTest {
         };
 
         ParsedValue<ParsedValue<String,BackgroundRepeat>[][], RepeatStruct[]> value =
-                new ParsedValueImpl<ParsedValue<String,BackgroundRepeat>[][], RepeatStruct[]>(
+                new ParsedValueImpl<>(
                         values, null
                 );
         RepeatStruct[] results = RepeatStructConverter.getInstance().convert(value, null);
@@ -98,7 +98,7 @@ public class BackgroundRepeatConverterTest {
         };
 
         ParsedValue<ParsedValue<String,BackgroundRepeat>[][], RepeatStruct[]> value =
-                new ParsedValueImpl<ParsedValue<String,BackgroundRepeat>[][], RepeatStruct[]>(
+                new ParsedValueImpl<>(
                         values, null
                 );
         RepeatStruct[] results = RepeatStructConverter.getInstance().convert(value, null);
@@ -117,7 +117,7 @@ public class BackgroundRepeatConverterTest {
         };
 
         ParsedValue<ParsedValue<String,BackgroundRepeat>[][], RepeatStruct[]> value =
-                new ParsedValueImpl<ParsedValue<String,BackgroundRepeat>[][], RepeatStruct[]>(
+                new ParsedValueImpl<>(
                         values, null
                 );
         RepeatStruct[] results = RepeatStructConverter.getInstance().convert(value, null);

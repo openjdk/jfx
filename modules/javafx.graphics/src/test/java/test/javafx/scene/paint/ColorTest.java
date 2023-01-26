@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -106,7 +106,7 @@ public class ColorTest {
     public void testOfTheWayAll()
         throws IllegalArgumentException, IllegalAccessException
     {
-        ArrayList<Color> colors = new ArrayList<Color>();
+        ArrayList<Color> colors = new ArrayList<>();
         for (Field f : Color.class.getDeclaredFields()) {
             if (Modifier.isStatic(f.getModifiers()) &&
                 f.getType() == Color.class)

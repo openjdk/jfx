@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -63,7 +63,7 @@ import org.junit.Ignore;
 import org.junit.Test;
 
 public class ChoiceBoxTest {
-    private final ChoiceBox<String> box = new ChoiceBox<String>();
+    private final ChoiceBox<String> box = new ChoiceBox<>();
     private Toolkit tk;
     private Scene scene;
     private Stage stage;
@@ -77,8 +77,9 @@ public class ChoiceBoxTest {
             }
         });
 
-        //This step is not needed (Just to make sure StubToolkit is loaded into VM)
-        tk = (StubToolkit)Toolkit.getToolkit();
+        tk = Toolkit.getToolkit();
+
+        assertTrue(tk instanceof StubToolkit);  // Ensure it's StubToolkit
     }
 
     @After public void cleanUp() {
@@ -121,38 +122,38 @@ public class ChoiceBoxTest {
     }
 
     @Test public void singleArgConstructorSetsTheStyleClass() {
-        final ChoiceBox<String> b2 = new ChoiceBox<String>(FXCollections.observableArrayList("Hi"));
+        final ChoiceBox<String> b2 = new ChoiceBox<>(FXCollections.observableArrayList("Hi"));
         assertStyleClassContains(b2, "choice-box");
     }
 
     @Test public void singleArgConstructorSetsNonNullSelectionModel() {
-        final ChoiceBox<String> b2 = new ChoiceBox<String>(FXCollections.observableArrayList("Hi"));
+        final ChoiceBox<String> b2 = new ChoiceBox<>(FXCollections.observableArrayList("Hi"));
         assertNotNull(b2.getSelectionModel());
     }
 
     @Test public void singleArgConstructorAllowsNullItems() {
-        final ChoiceBox<String> b2 = new ChoiceBox<String>(null);
+        final ChoiceBox<String> b2 = new ChoiceBox<>(null);
         assertNull(b2.getItems());
     }
 
     @Test public void singleArgConstructorTakesItems() {
         ObservableList<String> items = FXCollections.observableArrayList("Hi");
-        final ChoiceBox<String> b2 = new ChoiceBox<String>(items);
+        final ChoiceBox<String> b2 = new ChoiceBox<>(items);
         assertSame(items, b2.getItems());
     }
 
     @Test public void singleArgConstructor_selectedItemIsNull() {
-        final ChoiceBox<String> b2 = new ChoiceBox<String>(FXCollections.observableArrayList("Hi"));
+        final ChoiceBox<String> b2 = new ChoiceBox<>(FXCollections.observableArrayList("Hi"));
         assertNull(b2.getSelectionModel().getSelectedItem());
     }
 
     @Test public void singleArgConstructor_selectedIndexIsNegativeOne() {
-        final ChoiceBox<String> b2 = new ChoiceBox<String>(FXCollections.observableArrayList("Hi"));
+        final ChoiceBox<String> b2 = new ChoiceBox<>(FXCollections.observableArrayList("Hi"));
         assertEquals(-1, b2.getSelectionModel().getSelectedIndex());
     }
 
     @Test public void singleArgConstructor_converterIsNotNull() {
-        final ChoiceBox<String> b2 = new ChoiceBox<String>(FXCollections.observableArrayList("Hi"));
+        final ChoiceBox<String> b2 = new ChoiceBox<>(FXCollections.observableArrayList("Hi"));
         assertNull(b2.getConverter());
     }
 
@@ -180,7 +181,7 @@ public class ChoiceBoxTest {
 
     @Test public void selectionModelCanBeBound() {
         SingleSelectionModel<String> sm = ChoiceBoxShim.<String>get_ChoiceBoxSelectionModel(box);
-        ObjectProperty<SingleSelectionModel<String>> other = new SimpleObjectProperty<SingleSelectionModel<String>>(sm);
+        ObjectProperty<SingleSelectionModel<String>> other = new SimpleObjectProperty<>(sm);
         box.selectionModelProperty().bind(other);
         assertSame(sm, box.getSelectionModel());
     }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -90,8 +90,8 @@ import java.security.PrivilegedAction;
  */
 public final class JavaBeanBooleanProperty extends BooleanProperty implements JavaBeanProperty<Boolean> {
 
-    private final PropertyDescriptor descriptor;
-    private final PropertyDescriptor.Listener<Boolean> listener;
+    private final PropertyDescriptor<Boolean> descriptor;
+    private final PropertyDescriptor<Boolean>.Listener listener;
 
     private ObservableValue<? extends Boolean> observable = null;
     private ExpressionHelper<Boolean> helper = null;
@@ -99,11 +99,11 @@ public final class JavaBeanBooleanProperty extends BooleanProperty implements Ja
     @SuppressWarnings("removal")
     private final AccessControlContext acc = AccessController.getContext();
 
-    JavaBeanBooleanProperty(PropertyDescriptor descriptor, Object bean) {
+    JavaBeanBooleanProperty(PropertyDescriptor<Boolean> descriptor, Object bean) {
         this.descriptor = descriptor;
-        this.listener = descriptor.new Listener<Boolean>(bean, this);
+        this.listener = descriptor.new Listener(bean, this);
         descriptor.addListener(listener);
-        Disposer.addRecord(this, new DescriptorListenerCleaner(descriptor, listener));
+        Disposer.addRecord(this, new DescriptorListenerCleaner<>(descriptor, listener));
     }
 
     /**

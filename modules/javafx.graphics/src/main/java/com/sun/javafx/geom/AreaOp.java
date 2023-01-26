@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 1998, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -36,12 +36,14 @@ public abstract class AreaOp {
         boolean inRight;
         boolean inResult;
 
+        @Override
         public void newRow() {
             inLeft = false;
             inRight = false;
             inResult = false;
         }
 
+        @Override
         public int classify(Edge e) {
             if (e.getCurveTag() == CTAG_LEFT) {
                 inLeft = !inLeft;
@@ -56,6 +58,7 @@ public abstract class AreaOp {
             return (newClass ? ETAG_ENTER : ETAG_EXIT);
         }
 
+        @Override
         public int getState() {
             return (inResult ? RSTAG_INSIDE : RSTAG_OUTSIDE);
         }
@@ -65,24 +68,28 @@ public abstract class AreaOp {
     }
 
     public static class AddOp extends CAGOp {
+        @Override
         public boolean newClassification(boolean inLeft, boolean inRight) {
             return (inLeft || inRight);
         }
     }
 
     public static class SubOp extends CAGOp {
+        @Override
         public boolean newClassification(boolean inLeft, boolean inRight) {
             return (inLeft && !inRight);
         }
     }
 
     public static class IntOp extends CAGOp {
+        @Override
         public boolean newClassification(boolean inLeft, boolean inRight) {
             return (inLeft && inRight);
         }
     }
 
     public static class XorOp extends CAGOp {
+        @Override
         public boolean newClassification(boolean inLeft, boolean inRight) {
             return (inLeft != inRight);
         }
@@ -91,10 +98,12 @@ public abstract class AreaOp {
     public static class NZWindOp extends AreaOp {
         private int count;
 
+        @Override
         public void newRow() {
             count = 0;
         }
 
+        @Override
         public int classify(Edge e) {
             // Note: the right curves should be an empty set with this op...
             // assert(e.getCurveTag() == CTAG_LEFT);
@@ -105,6 +114,7 @@ public abstract class AreaOp {
             return (newCount == 0 ? ETAG_EXIT : type);
         }
 
+        @Override
         public int getState() {
             return ((count == 0) ? RSTAG_OUTSIDE : RSTAG_INSIDE);
         }
@@ -113,10 +123,12 @@ public abstract class AreaOp {
     public static class EOWindOp extends AreaOp {
         private boolean inside;
 
+        @Override
         public void newRow() {
             inside = false;
         }
 
+        @Override
         public int classify(Edge e) {
             // Note: the right curves should be an empty set with this op...
             // assert(e.getCurveTag() == CTAG_LEFT);
@@ -125,6 +137,7 @@ public abstract class AreaOp {
             return (newInside ? ETAG_ENTER : ETAG_EXIT);
         }
 
+        @Override
         public int getState() {
             return (inside ? RSTAG_INSIDE : RSTAG_OUTSIDE);
         }

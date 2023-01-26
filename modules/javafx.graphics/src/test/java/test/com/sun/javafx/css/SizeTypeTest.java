@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -50,7 +50,7 @@ public class SizeTypeTest {
     public void testConvert() {
         //System.out.println("convert");
         Size size = new Size(2.0f, SizeUnits.EM);
-        ParsedValue<Size, Size> value = new ParsedValueImpl<Size,Size>(size,null);
+        ParsedValue<Size, Size> value = new ParsedValueImpl<>(size,null);
         Font font = null;
         Size result = value.convert(font);
         assertEquals(size, result);

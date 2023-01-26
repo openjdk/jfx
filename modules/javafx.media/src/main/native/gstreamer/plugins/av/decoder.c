@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,6 +23,7 @@
  * questions.
  */
 
+#include <stdio.h>
 #include "decoder.h"
 #include <libavutil/mem.h>
 
@@ -76,7 +77,9 @@ static void basedecoder_init(BaseDecoder *self)
 
 static void basedecoder_class_init(BaseDecoderClass *g_class)
 {
+#if !NO_REGISTER_ALL
     avcodec_register_all();
+#endif
 
     g_class->init_context = basedecoder_init_context_default;
 }
@@ -104,8 +107,9 @@ gboolean basedecoder_open_decoder(BaseDecoder *decoder, CodecIDType id)
 #else
     decoder->frame = avcodec_alloc_frame();
 #endif
-    if (!decoder->frame)
+    if (!decoder->frame) {
         return FALSE; // Can't create frame
+    }
 
     G_LOCK(avlib_lock);
 

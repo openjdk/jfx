@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -171,9 +171,9 @@ abstract public class Selector {
         }
 
         // A very primitive parser
-        List<SimpleSelector> selectors = new ArrayList<SimpleSelector>();
-        List<Combinator> combinators = new ArrayList<Combinator>();
-        List<String> parts = new ArrayList<String>();
+        List<SimpleSelector> selectors = new ArrayList<>();
+        List<Combinator> combinators = new ArrayList<>();
+        List<String> parts = new ArrayList<>();
         int start = 0;
         int end = -1;
         char combinator = '\0';
@@ -201,7 +201,7 @@ abstract public class Selector {
             if (part != null && !part.equals("")) {
                 // Now we have the parts, we can split off the pseudo classes
                 String[] pseudoClassParts = part.split(":");
-                List<String> pseudoClasses = new ArrayList<String>();
+                List<String> pseudoClasses = new ArrayList<>();
                 for (int j=1; j<pseudoClassParts.length; j++) {
                     if (pseudoClassParts[j] != null && !pseudoClassParts[j].equals("")) {
                         pseudoClasses.add(pseudoClassParts[j].trim());
@@ -213,7 +213,7 @@ abstract public class Selector {
                 final String selector = pseudoClassParts[0].trim();
                 // There might be style classes, so lets peel those off next
                 String[] styleClassParts = selector.split("\\.");
-                List<String> styleClasses = new ArrayList<String>();
+                List<String> styleClasses = new ArrayList<>();
 
                 // If the first one is an empty string, then it started with a pseudo class
                 // If the first one starts with a #, it was an id

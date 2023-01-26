@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,11 +29,11 @@ import javafx.beans.NamedArg;
 
 
 /**
- * An immutable wrapper class for use by the column resize policies offered by
+ * A wrapper class for use by the column resize policies offered by
  * controls such as {@link TableView} and {@link TreeTableView}.
  * @since JavaFX 8.0
  */
-public class ResizeFeaturesBase<S> {
+public abstract class ResizeFeaturesBase<S> {
   private final TableColumnBase<S,?> column;
   private final Double delta;
 
@@ -53,6 +53,24 @@ public class ResizeFeaturesBase<S> {
   }
 
   /**
+   * Returns the width of the area available for columns.
+   *
+   * @return the width availabe for columns
+   *
+   * @since 20
+   */
+  public abstract double getContentWidth();
+
+  /**
+   * Returns the associated TreeView or TreeTableView control.
+   *
+   * @return the control in which the resize is occurring
+   *
+   * @since 20
+   */
+  public abstract Control getTableControl();
+
+  /**
    * Returns the column upon which the resize is occurring, or null
    * if this ResizeFeatures instance was created as a result of a
    * resize operation.
@@ -67,4 +85,16 @@ public class ResizeFeaturesBase<S> {
    * resize operation
    */
   public Double getDelta() { return delta; }
+
+  /**
+   * Sets the column width during the resizing pass.
+   *
+   * @param col column being changed
+   * @param width desired column width
+   *
+   * @since 20
+   */
+  public void setColumnWidth(TableColumnBase<S,?> col, double width) {
+      col.doSetWidth(width);
+  }
 }

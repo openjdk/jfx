@@ -367,7 +367,7 @@ public class Scene implements EventTarget {
         EventHandler<InputEvent> pressedHandler = event -> {
             Node focusOwner = getFocusOwner();
             if (focusOwner != null) {
-                getKeyHandler().setFocusVisible(focusOwner, false);
+                setFocusOwner(focusOwner, false);
             }
         };
 
@@ -377,11 +377,13 @@ public class Scene implements EventTarget {
 
     static {
             PerformanceTracker.setSceneAccessor(new PerformanceTracker.SceneAccessor() {
+                @Override
                 public void setPerfTracker(Scene scene, PerformanceTracker tracker) {
                     synchronized (trackerMonitor) {
                         scene.tracker = tracker;
                     }
                 }
+                @Override
                 public PerformanceTracker getPerfTracker(Scene scene) {
                     synchronized (trackerMonitor) {
                         return scene.tracker;
@@ -787,12 +789,12 @@ public class Scene implements EventTarget {
 
     private ReadOnlyObjectWrapper<Window> windowPropertyImpl() {
         if (window == null) {
-            window = new ReadOnlyObjectWrapper<Window>() {
+            window = new ReadOnlyObjectWrapper<>() {
                 private Window oldWindow;
 
                 @Override protected void invalidated() {
                     final Window newWindow = get();
-                    getKeyHandler().windowForSceneChanged(oldWindow, newWindow);
+                    windowForSceneChanged(oldWindow, newWindow);
                     if (oldWindow != null) {
                         disposePeer();
                     }
@@ -1072,7 +1074,7 @@ public class Scene implements EventTarget {
 
     public final ObjectProperty<Camera> cameraProperty() {
         if (camera == null) {
-            camera = new ObjectPropertyBase<Camera>() {
+            camera = new ObjectPropertyBase<>() {
                 Camera oldCamera = null;
 
                 @Override
@@ -1218,7 +1220,7 @@ public class Scene implements EventTarget {
     Parent oldRoot;
     public final ObjectProperty<Parent> rootProperty() {
         if (root == null) {
-            root = new ObjectPropertyBase<Parent>() {
+            root = new ObjectPropertyBase<>() {
 
                 private void forceUnbind() {
                     System.err.println("Unbinding illegal root.");
@@ -1427,8 +1429,8 @@ public class Scene implements EventTarget {
         Toolkit.getToolkit().checkFxUserThread();
 
         if (snapshotPulseListener == null) {
-            snapshotRunnableListA = new ArrayList<Runnable>();
-            snapshotRunnableListB = new ArrayList<Runnable>();
+            snapshotRunnableListA = new ArrayList<>();
+            snapshotRunnableListB = new ArrayList<>();
             snapshotRunnableList = snapshotRunnableListA;
 
             snapshotPulseListener = () -> {
@@ -1591,7 +1593,7 @@ public class Scene implements EventTarget {
 
     public final ObjectProperty<Cursor> cursorProperty() {
         if (cursor == null) {
-            cursor = new ObjectPropertyBase<Cursor>() {
+            cursor = new ObjectPropertyBase<>() {
                          @Override
                          protected void invalidated() {
                              markCursorDirty();
@@ -1630,7 +1632,7 @@ public class Scene implements EventTarget {
      * scene graph, see the <a href="doc-files/cssref.html">CSS Reference
      * Guide</a>.
      */
-    private final ObservableList<String> stylesheets  = new TrackableObservableList<String>() {
+    private final ObservableList<String> stylesheets  = new TrackableObservableList<>() {
         @Override
         protected void onChanged(Change<String> c) {
             StyleManager.getInstance().stylesheetsChanged(Scene.this, c);
@@ -1703,7 +1705,7 @@ public class Scene implements EventTarget {
      */
     public final ObjectProperty<String> userAgentStylesheetProperty() {
         if (userAgentStylesheet == null) {
-            userAgentStylesheet = new SimpleObjectProperty<String>(Scene.this, "userAgentStylesheet", null) {
+            userAgentStylesheet = new SimpleObjectProperty<>(Scene.this, "userAgentStylesheet", null) {
                 @Override protected void invalidated() {
                     StyleManager.getInstance().forget(Scene.this);
                     getRoot().reapplyCSS();
@@ -1901,7 +1903,7 @@ public class Scene implements EventTarget {
     private int touchEventSetId = 0;
     private int touchPointIndex = 0;
     private Map<Integer, EventTarget> touchTargets =
-            new HashMap<Integer, EventTarget>();
+            new HashMap<>();
 
     void processMouseEvent(MouseEvent e) {
         mouseHandler.process(e, false);
@@ -2034,7 +2036,7 @@ public class Scene implements EventTarget {
             EventTarget grabbed = tp.getGrabbed();
             if (grabbed != null) {
                 touchTargets.put(tp.getId(), grabbed);
-            };
+            }
 
             if (grabbed == null || tp.getState() == TouchPoint.State.RELEASED) {
                 touchTargets.remove(tp.getId());
@@ -2107,19 +2109,41 @@ public class Scene implements EventTarget {
      *                                                                         *
      **************************************************************************/
 
-    /*
-     * We cannot initialize keyHandler in init because some of the triggers
-     * access it before the init block.
-     * No clue why def keyHandler = bind lazy {KeyHandler{scene:this};}
-     * does not compile.
-     */
-    private KeyHandler keyHandler = null;
-    private KeyHandler getKeyHandler() {
-        if (keyHandler == null) {
-            keyHandler = new KeyHandler();
+    private void windowForSceneChanged(Window oldWindow, Window newWindow) {
+        if (oldWindow != null) {
+            oldWindow.focusedProperty().removeListener(sceneWindowFocusedListener);
         }
-        return keyHandler;
+
+        if (newWindow != null) {
+            newWindow.focusedProperty().addListener(sceneWindowFocusedListener);
+            setWindowFocused(newWindow.isFocused());
+        } else {
+            setWindowFocused(false);
+        }
     }
+
+    private final InvalidationListener sceneWindowFocusedListener =
+            valueModel -> setWindowFocused(((ReadOnlyBooleanProperty)valueModel).get());
+
+    /**
+     * Stores whether the window associated with this scene is currently focused.
+     */
+    private boolean windowFocused;
+
+    private void setWindowFocused(boolean value) {
+        windowFocused = value;
+
+        Node node = getFocusOwner();
+        if (node != null) {
+            node.setFocusQuietly(windowFocused, focusOwner.focusVisible);
+            node.notifyFocusListeners();
+        }
+
+        if (windowFocused && accessible != null) {
+            accessible.sendNotification(AccessibleAttribute.FOCUS_NODE);
+        }
+    }
+
     /**
      * Set to true if something has happened to the focused node that makes
      * it no longer eligible to have the focus.
@@ -2176,14 +2200,22 @@ public class Scene implements EventTarget {
             }
         }
 
-        getKeyHandler().process(e);
+        final Node sceneFocusOwner = getFocusOwner();
+        final EventTarget eventTarget =
+                (sceneFocusOwner != null && sceneFocusOwner.getScene() == Scene.this) ? sceneFocusOwner : Scene.this;
+
+        // send the key event to the current focus owner or to scene if
+        // the focus owner is not set
+        Event.fireEvent(eventTarget, e);
     }
 
     void requestFocus(Node node, boolean focusVisible) {
-        getKeyHandler().requestFocus(node, focusVisible);
+        if (node == null) {
+            setFocusOwner(null, false);
+        } else if (node.isCanReceiveFocus()) {
+            setFocusOwner(node, focusVisible);
+        }
     }
-
-    private Node oldFocusOwner;
 
     /**
       * The scene's current focus owner node. This node's "focused"
@@ -2191,7 +2223,27 @@ public class Scene implements EventTarget {
       * window is inactive (window.focused == false).
       * @since JavaFX 2.2
       */
-    private ReadOnlyObjectWrapper<Node> focusOwner = new ReadOnlyObjectWrapper<Node>(this, "focusOwner") {
+    private FocusOwnerProperty focusOwner = new FocusOwnerProperty();
+
+    private class FocusOwnerProperty extends ReadOnlyObjectWrapper<Node> {
+        Node oldFocusOwner;
+
+        /**
+         * Stores whether the current focus owner visibly indicates focus.
+         * This value is used to restore visible focus when a window loses
+         * and re-gains focus.
+         */
+        boolean focusVisible;
+
+        @Override
+        public Object getBean() {
+            return Scene.this;
+        }
+
+        @Override
+        public String getName() {
+            return "focusOwner";
+        }
 
         @Override
         protected void invalidated() {
@@ -2200,7 +2252,7 @@ public class Scene implements EventTarget {
             }
             Node value = get();
             if (value != null) {
-                value.setFocusQuietly(keyHandler.windowFocused, keyHandler.focusVisible);
+                value.setFocusQuietly(windowFocused, focusVisible);
                 if (value != oldFocusOwner) {
                     value.getScene().enableInputMethodEvents(
                             value.getInputMethodRequests() != null
@@ -2235,12 +2287,43 @@ public class Scene implements EventTarget {
         }
     };
 
+    public final ReadOnlyObjectProperty<Node> focusOwnerProperty() {
+        return focusOwner.getReadOnlyProperty();
+    }
+
     public final Node getFocusOwner() {
         return focusOwner.get();
     }
 
-    public final ReadOnlyObjectProperty<Node> focusOwnerProperty() {
-        return focusOwner.getReadOnlyProperty();
+    private void setFocusOwner(Node node, boolean focusVisible) {
+        // Cancel IM composition if there is one in progress.
+        // This needs to be done before the focus owner is switched as it
+        // generates event that needs to be delivered to the old focus owner.
+        if (focusOwner.oldFocusOwner != null) {
+            final Scene s = focusOwner.oldFocusOwner.getScene();
+            if (s != null) {
+                final TKScene peer = s.getPeer();
+                if (peer != null) {
+                    peer.finishInputMethodComposition();
+                }
+            }
+        }
+
+        // Store the current focusVisible state of the focus owner in case it needs to be
+        // restored when a window loses and re-gains focus.
+        focusOwner.focusVisible = focusVisible;
+
+        if (focusOwner.get() != node) {
+            // If the focus owner has changed, FocusOwnerProperty::invalidated will update
+            // the node's focusVisible flag.
+            focusOwner.set(node);
+        } else if (node != null) {
+            // If the focus owner has not changed (i.e. only focusVisible has changed),
+            // FocusOwnerProperty::invalidated will not be called, therefore we need to
+            // update the node's focusVisible flag manually.
+            node.focusVisible.set(focusVisible);
+            node.focusVisible.notifyListeners();
+        }
     }
 
     // For testing.
@@ -2657,6 +2740,7 @@ public class Scene implements EventTarget {
             processInputMethodEvent(inputMethodEvent);
         }
 
+        @Override
         public void menuEvent(double x, double y, double xAbs, double yAbs,
                 boolean isKeyboardTrigger) {
             Scene.this.processMenuEvent(x, y, xAbs,yAbs, isKeyboardTrigger);
@@ -3067,8 +3151,8 @@ public class Scene implements EventTarget {
         private DragDetectedState dragDetected = DragDetectedState.NOT_YET;
         private double pressedX;
         private double pressedY;
-        private List<EventTarget> currentTargets = new ArrayList<EventTarget>();
-        private List<EventTarget> newTargets = new ArrayList<EventTarget>();
+        private List<EventTarget> currentTargets = new ArrayList<>();
+        private List<EventTarget> newTargets = new ArrayList<>();
         private EventTarget fullPDRSource = null;
 
         /**
@@ -3545,9 +3629,9 @@ public class Scene implements EventTarget {
         private ClickCounter lastPress = null;
 
         private Map<MouseButton, ClickCounter> counters =
-                new EnumMap<MouseButton, ClickCounter>(MouseButton.class);
-        private List<EventTarget> pressedTargets = new ArrayList<EventTarget>();
-        private List<EventTarget> releasedTargets = new ArrayList<EventTarget>();
+                new EnumMap<>(MouseButton.class);
+        private List<EventTarget> pressedTargets = new ArrayList<>();
+        private List<EventTarget> releasedTargets = new ArrayList<>();
 
         public ClickGenerator() {
             for (MouseButton mb : MouseButton.values()) {
@@ -3650,12 +3734,12 @@ public class Scene implements EventTarget {
         private TargetWrapper fullPDRTmpTargetWrapper = new TargetWrapper();
 
         /* lists needed for enter/exit events generation */
-        private final List<EventTarget> pdrEventTargets = new ArrayList<EventTarget>();
-        private final List<EventTarget> currentEventTargets = new ArrayList<EventTarget>();
-        private final List<EventTarget> newEventTargets = new ArrayList<EventTarget>();
+        private final List<EventTarget> pdrEventTargets = new ArrayList<>();
+        private final List<EventTarget> currentEventTargets = new ArrayList<>();
+        private final List<EventTarget> newEventTargets = new ArrayList<>();
 
-        private final List<EventTarget> fullPDRCurrentEventTargets = new ArrayList<EventTarget>();
-        private final List<EventTarget> fullPDRNewEventTargets = new ArrayList<EventTarget>();
+        private final List<EventTarget> fullPDRCurrentEventTargets = new ArrayList<>();
+        private final List<EventTarget> fullPDRNewEventTargets = new ArrayList<>();
         private EventTarget fullPDRCurrentTarget = null;
 
         private Cursor currCursor;
@@ -3687,6 +3771,7 @@ public class Scene implements EventTarget {
                     ? currentEventTargets.get(0) : null;
             pdrEventTarget.clear();
             pdrEventTargets.clear();
+            fullPDRTmpTargetWrapper.clear();
         }
 
         public void enterFullPDR(EventTarget gestureSource) {
@@ -4059,97 +4144,6 @@ public class Scene implements EventTarget {
         }
     }
 
-    /* *****************************************************************************
-     *                                                                             *
-     * Key Event Handling                                                          *
-     *                                                                             *
-     ******************************************************************************/
-
-    class KeyHandler {
-        boolean focusVisible;
-
-        private void setFocusOwner(Node value, boolean focusVisible) {
-            this.focusVisible = focusVisible;
-
-            // Cancel IM composition if there is one in progress.
-            // This needs to be done before the focus owner is switched as it
-            // generates event that needs to be delivered to the old focus owner.
-            if (oldFocusOwner != null) {
-                final Scene s = oldFocusOwner.getScene();
-                if (s != null) {
-                    final TKScene peer = s.getPeer();
-                    if (peer != null) {
-                        peer.finishInputMethodComposition();
-                    }
-                }
-            }
-            focusOwner.set(value);
-        }
-
-        private void setFocusVisible(Node node, boolean focusVisible) {
-            this.focusVisible = focusVisible;
-            node.focusVisible.set(focusVisible);
-            node.focusVisible.notifyListeners();
-        }
-
-        private boolean windowFocused;
-        protected boolean isWindowFocused() { return windowFocused; }
-        protected void setWindowFocused(boolean value) {
-            windowFocused = value;
-            if (getFocusOwner() != null) {
-                getFocusOwner().setFocusQuietly(windowFocused, focusVisible);
-                getFocusOwner().notifyFocusListeners();
-            }
-            if (windowFocused) {
-                if (accessible != null) {
-                    accessible.sendNotification(AccessibleAttribute.FOCUS_NODE);
-                }
-            }
-        }
-
-        private void windowForSceneChanged(Window oldWindow, Window window) {
-            if (oldWindow != null) {
-                oldWindow.showingProperty().removeListener(sceneWindowShowingListener);
-                oldWindow.focusedProperty().removeListener(sceneWindowFocusedListener);
-            }
-
-            if (window != null) {
-                window.showingProperty().addListener(sceneWindowShowingListener);
-                window.focusedProperty().addListener(sceneWindowFocusedListener);
-                setWindowFocused(window.isFocused());
-            } else {
-                setWindowFocused(false);
-            }
-
-            checkCleanDirtyNodes();
-        }
-
-        private final ChangeListener<Boolean> sceneWindowShowingListener = (p, o, n) -> {checkCleanDirtyNodes(); } ;
-        private final InvalidationListener sceneWindowFocusedListener = valueModel -> setWindowFocused(((ReadOnlyBooleanProperty)valueModel).get());
-
-        private void process(KeyEvent e) {
-            final Node sceneFocusOwner = getFocusOwner();
-            final EventTarget eventTarget =
-                    (sceneFocusOwner != null && sceneFocusOwner.getScene() == Scene.this) ? sceneFocusOwner
-                                              : Scene.this;
-
-            // send the key event to the current focus owner or to scene if
-            // the focus owner is not set
-            Event.fireEvent(eventTarget, e);
-        }
-
-        private void requestFocus(Node node, boolean focusVisible) {
-            if (node == null) {
-                setFocusOwner(null, false);
-            } else if (node.isCanReceiveFocus()) {
-                if (node != getFocusOwner()) {
-                    setFocusOwner(node, focusVisible);
-                } else {
-                    setFocusVisible(node, focusVisible);
-                }
-            }
-        }
-    }
     /* *************************************************************************
      *                                                                         *
      *                         Event Dispatch                                  *
@@ -4357,7 +4351,7 @@ public class Scene implements EventTarget {
     final void initializeInternalEventDispatcher() {
         if (internalEventDispatcher == null) {
             internalEventDispatcher = createInternalEventDispatcher();
-            eventDispatcher = new SimpleObjectProperty<EventDispatcher>(
+            eventDispatcher = new SimpleObjectProperty<>(
                                           this,
                                           "eventDispatcher",
                                           internalEventDispatcher);
@@ -4464,7 +4458,7 @@ public class Scene implements EventTarget {
 
     public final ObjectProperty<EventHandler<? super ContextMenuEvent>> onContextMenuRequestedProperty() {
         if (onContextMenuRequested == null) {
-            onContextMenuRequested = new ObjectPropertyBase<EventHandler<? super ContextMenuEvent>>() {
+            onContextMenuRequested = new ObjectPropertyBase<>() {
 
                 @Override
                 protected void invalidated() {
@@ -4507,7 +4501,7 @@ public class Scene implements EventTarget {
 
     public final ObjectProperty<EventHandler<? super MouseEvent>> onMouseClickedProperty() {
         if (onMouseClicked == null) {
-            onMouseClicked = new ObjectPropertyBase<EventHandler<? super MouseEvent>>() {
+            onMouseClicked = new ObjectPropertyBase<>() {
 
                 @Override
                 protected void invalidated() {
@@ -4544,7 +4538,7 @@ public class Scene implements EventTarget {
 
     public final ObjectProperty<EventHandler<? super MouseEvent>> onMouseDraggedProperty() {
         if (onMouseDragged == null) {
-            onMouseDragged = new ObjectPropertyBase<EventHandler<? super MouseEvent>>() {
+            onMouseDragged = new ObjectPropertyBase<>() {
 
                 @Override
                 protected void invalidated() {
@@ -4580,7 +4574,7 @@ public class Scene implements EventTarget {
 
     public final ObjectProperty<EventHandler<? super MouseEvent>> onMouseEnteredProperty() {
         if (onMouseEntered == null) {
-            onMouseEntered = new ObjectPropertyBase<EventHandler<? super MouseEvent>>() {
+            onMouseEntered = new ObjectPropertyBase<>() {
 
                 @Override
                 protected void invalidated() {
@@ -4616,7 +4610,7 @@ public class Scene implements EventTarget {
 
     public final ObjectProperty<EventHandler<? super MouseEvent>> onMouseExitedProperty() {
         if (onMouseExited == null) {
-            onMouseExited = new ObjectPropertyBase<EventHandler<? super MouseEvent>>() {
+            onMouseExited = new ObjectPropertyBase<>() {
 
                 @Override
                 protected void invalidated() {
@@ -4653,7 +4647,7 @@ public class Scene implements EventTarget {
 
     public final ObjectProperty<EventHandler<? super MouseEvent>> onMouseMovedProperty() {
         if (onMouseMoved == null) {
-            onMouseMoved = new ObjectPropertyBase<EventHandler<? super MouseEvent>>() {
+            onMouseMoved = new ObjectPropertyBase<>() {
 
                 @Override
                 protected void invalidated() {
@@ -4690,7 +4684,7 @@ public class Scene implements EventTarget {
 
     public final ObjectProperty<EventHandler<? super MouseEvent>> onMousePressedProperty() {
         if (onMousePressed == null) {
-            onMousePressed = new ObjectPropertyBase<EventHandler<? super MouseEvent>>() {
+            onMousePressed = new ObjectPropertyBase<>() {
 
                 @Override
                 protected void invalidated() {
@@ -4727,7 +4721,7 @@ public class Scene implements EventTarget {
 
     public final ObjectProperty<EventHandler<? super MouseEvent>> onMouseReleasedProperty() {
         if (onMouseReleased == null) {
-            onMouseReleased = new ObjectPropertyBase<EventHandler<? super MouseEvent>>() {
+            onMouseReleased = new ObjectPropertyBase<>() {
 
                 @Override
                 protected void invalidated() {
@@ -4764,7 +4758,7 @@ public class Scene implements EventTarget {
 
     public final ObjectProperty<EventHandler<? super MouseEvent>> onDragDetectedProperty() {
         if (onDragDetected == null) {
-            onDragDetected = new ObjectPropertyBase<EventHandler<? super MouseEvent>>() {
+            onDragDetected = new ObjectPropertyBase<>() {
 
                 @Override
                 protected void invalidated() {
@@ -4802,7 +4796,7 @@ public class Scene implements EventTarget {
 
     public final ObjectProperty<EventHandler<? super MouseDragEvent>> onMouseDragOverProperty() {
         if (onMouseDragOver == null) {
-            onMouseDragOver = new ObjectPropertyBase<EventHandler<? super MouseDragEvent>>() {
+            onMouseDragOver = new ObjectPropertyBase<>() {
 
                 @Override
                 protected void invalidated() {
@@ -4840,7 +4834,7 @@ public class Scene implements EventTarget {
 
     public final ObjectProperty<EventHandler<? super MouseDragEvent>> onMouseDragReleasedProperty() {
         if (onMouseDragReleased == null) {
-            onMouseDragReleased = new ObjectPropertyBase<EventHandler<? super MouseDragEvent>>() {
+            onMouseDragReleased = new ObjectPropertyBase<>() {
 
                 @Override
                 protected void invalidated() {
@@ -4878,7 +4872,7 @@ public class Scene implements EventTarget {
 
     public final ObjectProperty<EventHandler<? super MouseDragEvent>> onMouseDragEnteredProperty() {
         if (onMouseDragEntered == null) {
-            onMouseDragEntered = new ObjectPropertyBase<EventHandler<? super MouseDragEvent>>() {
+            onMouseDragEntered = new ObjectPropertyBase<>() {
 
                 @Override
                 protected void invalidated() {
@@ -4916,7 +4910,7 @@ public class Scene implements EventTarget {
 
     public final ObjectProperty<EventHandler<? super MouseDragEvent>> onMouseDragExitedProperty() {
         if (onMouseDragExited == null) {
-            onMouseDragExited = new ObjectPropertyBase<EventHandler<? super MouseDragEvent>>() {
+            onMouseDragExited = new ObjectPropertyBase<>() {
 
                 @Override
                 protected void invalidated() {
@@ -4960,7 +4954,7 @@ public class Scene implements EventTarget {
 
     public final ObjectProperty<EventHandler<? super ScrollEvent>> onScrollStartedProperty() {
         if (onScrollStarted == null) {
-            onScrollStarted = new ObjectPropertyBase<EventHandler<? super ScrollEvent>>() {
+            onScrollStarted = new ObjectPropertyBase<>() {
 
                 @Override
                 protected void invalidated() {
@@ -4996,7 +4990,7 @@ public class Scene implements EventTarget {
 
     public final ObjectProperty<EventHandler<? super ScrollEvent>> onScrollProperty() {
         if (onScroll == null) {
-            onScroll = new ObjectPropertyBase<EventHandler<? super ScrollEvent>>() {
+            onScroll = new ObjectPropertyBase<>() {
 
                 @Override
                 protected void invalidated() {
@@ -5033,7 +5027,7 @@ public class Scene implements EventTarget {
 
     public final ObjectProperty<EventHandler<? super ScrollEvent>> onScrollFinishedProperty() {
         if (onScrollFinished == null) {
-            onScrollFinished = new ObjectPropertyBase<EventHandler<? super ScrollEvent>>() {
+            onScrollFinished = new ObjectPropertyBase<>() {
 
                 @Override
                 protected void invalidated() {
@@ -5070,7 +5064,7 @@ public class Scene implements EventTarget {
 
     public final ObjectProperty<EventHandler<? super RotateEvent>> onRotationStartedProperty() {
         if (onRotationStarted == null) {
-            onRotationStarted = new ObjectPropertyBase<EventHandler<? super RotateEvent>>() {
+            onRotationStarted = new ObjectPropertyBase<>() {
 
                 @Override
                 protected void invalidated() {
@@ -5107,7 +5101,7 @@ public class Scene implements EventTarget {
 
     public final ObjectProperty<EventHandler<? super RotateEvent>> onRotateProperty() {
         if (onRotate == null) {
-            onRotate = new ObjectPropertyBase<EventHandler<? super RotateEvent>>() {
+            onRotate = new ObjectPropertyBase<>() {
 
                 @Override
                 protected void invalidated() {
@@ -5144,7 +5138,7 @@ public class Scene implements EventTarget {
 
     public final ObjectProperty<EventHandler<? super RotateEvent>> onRotationFinishedProperty() {
         if (onRotationFinished == null) {
-            onRotationFinished = new ObjectPropertyBase<EventHandler<? super RotateEvent>>() {
+            onRotationFinished = new ObjectPropertyBase<>() {
 
                 @Override
                 protected void invalidated() {
@@ -5181,7 +5175,7 @@ public class Scene implements EventTarget {
 
     public final ObjectProperty<EventHandler<? super ZoomEvent>> onZoomStartedProperty() {
         if (onZoomStarted == null) {
-            onZoomStarted = new ObjectPropertyBase<EventHandler<? super ZoomEvent>>() {
+            onZoomStarted = new ObjectPropertyBase<>() {
 
                 @Override
                 protected void invalidated() {
@@ -5218,7 +5212,7 @@ public class Scene implements EventTarget {
 
     public final ObjectProperty<EventHandler<? super ZoomEvent>> onZoomProperty() {
         if (onZoom == null) {
-            onZoom = new ObjectPropertyBase<EventHandler<? super ZoomEvent>>() {
+            onZoom = new ObjectPropertyBase<>() {
 
                 @Override
                 protected void invalidated() {
@@ -5255,7 +5249,7 @@ public class Scene implements EventTarget {
 
     public final ObjectProperty<EventHandler<? super ZoomEvent>> onZoomFinishedProperty() {
         if (onZoomFinished == null) {
-            onZoomFinished = new ObjectPropertyBase<EventHandler<? super ZoomEvent>>() {
+            onZoomFinished = new ObjectPropertyBase<>() {
 
                 @Override
                 protected void invalidated() {
@@ -5293,7 +5287,7 @@ public class Scene implements EventTarget {
 
     public final ObjectProperty<EventHandler<? super SwipeEvent>> onSwipeUpProperty() {
         if (onSwipeUp == null) {
-            onSwipeUp = new ObjectPropertyBase<EventHandler<? super SwipeEvent>>() {
+            onSwipeUp = new ObjectPropertyBase<>() {
 
                 @Override
                 protected void invalidated() {
@@ -5331,7 +5325,7 @@ public class Scene implements EventTarget {
 
     public final ObjectProperty<EventHandler<? super SwipeEvent>> onSwipeDownProperty() {
         if (onSwipeDown == null) {
-            onSwipeDown = new ObjectPropertyBase<EventHandler<? super SwipeEvent>>() {
+            onSwipeDown = new ObjectPropertyBase<>() {
 
                 @Override
                 protected void invalidated() {
@@ -5369,7 +5363,7 @@ public class Scene implements EventTarget {
 
     public final ObjectProperty<EventHandler<? super SwipeEvent>> onSwipeLeftProperty() {
         if (onSwipeLeft == null) {
-            onSwipeLeft = new ObjectPropertyBase<EventHandler<? super SwipeEvent>>() {
+            onSwipeLeft = new ObjectPropertyBase<>() {
 
                 @Override
                 protected void invalidated() {
@@ -5407,7 +5401,7 @@ public class Scene implements EventTarget {
 
     public final ObjectProperty<EventHandler<? super SwipeEvent>> onSwipeRightProperty() {
         if (onSwipeRight == null) {
-            onSwipeRight = new ObjectPropertyBase<EventHandler<? super SwipeEvent>>() {
+            onSwipeRight = new ObjectPropertyBase<>() {
 
                 @Override
                 protected void invalidated() {
@@ -5450,7 +5444,7 @@ public class Scene implements EventTarget {
 
     public final ObjectProperty<EventHandler<? super TouchEvent>> onTouchPressedProperty() {
         if (onTouchPressed == null) {
-            onTouchPressed = new ObjectPropertyBase<EventHandler<? super TouchEvent>>() {
+            onTouchPressed = new ObjectPropertyBase<>() {
 
                 @Override
                 protected void invalidated() {
@@ -5487,7 +5481,7 @@ public class Scene implements EventTarget {
 
     public final ObjectProperty<EventHandler<? super TouchEvent>> onTouchMovedProperty() {
         if (onTouchMoved == null) {
-            onTouchMoved = new ObjectPropertyBase<EventHandler<? super TouchEvent>>() {
+            onTouchMoved = new ObjectPropertyBase<>() {
 
                 @Override
                 protected void invalidated() {
@@ -5524,7 +5518,7 @@ public class Scene implements EventTarget {
 
     public final ObjectProperty<EventHandler<? super TouchEvent>> onTouchReleasedProperty() {
         if (onTouchReleased == null) {
-            onTouchReleased = new ObjectPropertyBase<EventHandler<? super TouchEvent>>() {
+            onTouchReleased = new ObjectPropertyBase<>() {
 
                 @Override
                 protected void invalidated() {
@@ -5562,7 +5556,7 @@ public class Scene implements EventTarget {
 
     public final ObjectProperty<EventHandler<? super TouchEvent>> onTouchStationaryProperty() {
         if (onTouchStationary == null) {
-            onTouchStationary = new ObjectPropertyBase<EventHandler<? super TouchEvent>>() {
+            onTouchStationary = new ObjectPropertyBase<>() {
 
                 @Override
                 protected void invalidated() {
@@ -5599,9 +5593,9 @@ public class Scene implements EventTarget {
     private static class TouchMap {
         private static final int FAST_THRESHOLD = 10;
         int[] fastMap = new int[] {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-        Map<Long, Integer> slowMap = new HashMap<Long, Integer>();
-        List<Integer> order = new LinkedList<Integer>();
-        List<Long> removed = new ArrayList<Long>(10);
+        Map<Long, Integer> slowMap = new HashMap<>();
+        List<Integer> order = new LinkedList<>();
+        List<Long> removed = new ArrayList<>(10);
         int counter = 0;
         int active = 0;
 
@@ -5689,7 +5683,7 @@ public class Scene implements EventTarget {
      */
     public final ObjectProperty<EventHandler<? super DragEvent>> onDragEnteredProperty() {
         if (onDragEntered == null) {
-            onDragEntered = new ObjectPropertyBase<EventHandler<? super DragEvent>>() {
+            onDragEntered = new ObjectPropertyBase<>() {
 
                 @Override
                 protected void invalidated() {
@@ -5727,7 +5721,7 @@ public class Scene implements EventTarget {
      */
     public final ObjectProperty<EventHandler<? super DragEvent>> onDragExitedProperty() {
         if (onDragExited == null) {
-            onDragExited = new ObjectPropertyBase<EventHandler<? super DragEvent>>() {
+            onDragExited = new ObjectPropertyBase<>() {
 
                 @Override
                 protected void invalidated() {
@@ -5766,7 +5760,7 @@ public class Scene implements EventTarget {
      */
     public final ObjectProperty<EventHandler<? super DragEvent>> onDragOverProperty() {
         if (onDragOver == null) {
-            onDragOver = new ObjectPropertyBase<EventHandler<? super DragEvent>>() {
+            onDragOver = new ObjectPropertyBase<>() {
 
                 @Override
                 protected void invalidated() {
@@ -5838,7 +5832,7 @@ public class Scene implements EventTarget {
      */
     public final ObjectProperty<EventHandler<? super DragEvent>> onDragDroppedProperty() {
         if (onDragDropped == null) {
-            onDragDropped = new ObjectPropertyBase<EventHandler<? super DragEvent>>() {
+            onDragDropped = new ObjectPropertyBase<>() {
 
                 @Override
                 protected void invalidated() {
@@ -5887,7 +5881,7 @@ public class Scene implements EventTarget {
      */
     public final ObjectProperty<EventHandler<? super DragEvent>> onDragDoneProperty() {
         if (onDragDone == null) {
-            onDragDone = new ObjectPropertyBase<EventHandler<? super DragEvent>>() {
+            onDragDone = new ObjectPropertyBase<>() {
 
                 @Override
                 protected void invalidated() {
@@ -6003,7 +5997,7 @@ public class Scene implements EventTarget {
 
     public final ObjectProperty<EventHandler<? super KeyEvent>> onKeyPressedProperty() {
         if (onKeyPressed == null) {
-            onKeyPressed = new ObjectPropertyBase<EventHandler<? super KeyEvent>>() {
+            onKeyPressed = new ObjectPropertyBase<>() {
 
                 @Override
                 protected void invalidated() {
@@ -6042,7 +6036,7 @@ public class Scene implements EventTarget {
 
     public final ObjectProperty<EventHandler<? super KeyEvent>> onKeyReleasedProperty() {
         if (onKeyReleased == null) {
-            onKeyReleased = new ObjectPropertyBase<EventHandler<? super KeyEvent>>() {
+            onKeyReleased = new ObjectPropertyBase<>() {
 
                 @Override
                 protected void invalidated() {
@@ -6085,7 +6079,7 @@ public class Scene implements EventTarget {
     public final ObjectProperty<EventHandler<? super KeyEvent>> onKeyTypedProperty(
     ) {
         if (onKeyTyped == null) {
-            onKeyTyped = new ObjectPropertyBase<EventHandler<? super KeyEvent>>() {
+            onKeyTyped = new ObjectPropertyBase<>() {
 
                 @Override
                 protected void invalidated() {
@@ -6135,7 +6129,7 @@ public class Scene implements EventTarget {
 
     public final ObjectProperty<EventHandler<? super InputMethodEvent>> onInputMethodTextChangedProperty() {
         if (onInputMethodTextChanged == null) {
-            onInputMethodTextChanged = new ObjectPropertyBase<EventHandler<? super InputMethodEvent>>() {
+            onInputMethodTextChanged = new ObjectPropertyBase<>() {
 
                 @Override
                 protected void invalidated() {
@@ -6260,7 +6254,7 @@ public class Scene implements EventTarget {
       */
      public final ObservableMap<Object, Object> getProperties() {
         if (properties == null) {
-            properties = FXCollections.observableMap(new HashMap<Object, Object>());
+            properties = FXCollections.observableMap(new HashMap<>());
         }
         return properties;
     }
@@ -6464,7 +6458,7 @@ public class Scene implements EventTarget {
 
     void addAccessible(Node node, Accessible acc) {
         if (accMap == null) {
-            accMap = new HashMap<Node, Accessible>();
+            accMap = new HashMap<>();
         }
         accMap.put(node, acc);
     }
@@ -6546,7 +6540,13 @@ public class Scene implements EventTarget {
                             }
                             return getRoot();//not sure
                         }
-                        case ROLE: return AccessibleRole.PARENT;
+                        case ROLE: {
+                            if (getRoot() != null && getRoot().getAccessibleRole() == AccessibleRole.DIALOG) {
+                                return AccessibleRole.DIALOG;
+                            } else {
+                                return AccessibleRole.PARENT;
+                            }
+                        }
                         case SCENE: return Scene.this;
                         case FOCUS_NODE: {
                             if (transientFocusContainer != null) {

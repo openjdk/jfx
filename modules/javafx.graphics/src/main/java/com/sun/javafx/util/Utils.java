@@ -168,7 +168,7 @@ public class Utils {
         if (separator == null || separator.length() == 0) return new String[] { };
         if (separator.length() > str.length()) return new String[] { };
 
-        java.util.List<String> result = new java.util.ArrayList<String>();
+        java.util.List<String> result = new java.util.ArrayList<>();
 
         int index = str.indexOf(separator);
         while (index >= 0) {
@@ -387,7 +387,7 @@ public class Utils {
 
         brightness = cmax;
         if (cmax != 0)
-            saturation = (double) (cmax - cmin) / cmax;
+            saturation = (cmax - cmin) / cmax;
         else
             saturation = 0;
 

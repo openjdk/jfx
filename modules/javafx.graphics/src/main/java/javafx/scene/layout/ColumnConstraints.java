@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -308,7 +308,7 @@ public class ColumnConstraints extends ConstraintsBase {
 
     public final ObjectProperty<Priority> hgrowProperty() {
         if (hgrow == null) {
-            hgrow = new ObjectPropertyBase<Priority>() {
+            hgrow = new ObjectPropertyBase<>() {
 
                 @Override
                 protected void invalidated() {
@@ -348,7 +348,7 @@ public class ColumnConstraints extends ConstraintsBase {
 
     public final ObjectProperty<HPos> halignmentProperty() {
         if (halignment == null) {
-            halignment = new ObjectPropertyBase<HPos>() {
+            halignment = new ObjectPropertyBase<>() {
 
                 @Override
                 protected void invalidated() {

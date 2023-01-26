@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -138,7 +138,7 @@ public class PhongMaterial extends Material {
 
     public final ObjectProperty<Color> diffuseColorProperty() {
         if (diffuseColor == null) {
-            diffuseColor = new SimpleObjectProperty<Color>(PhongMaterial.this,
+            diffuseColor = new SimpleObjectProperty<>(PhongMaterial.this,
                     "diffuseColor") {
                 @Override
                 protected void invalidated() {
@@ -167,7 +167,7 @@ public class PhongMaterial extends Material {
 
     public final ObjectProperty<Color> specularColorProperty() {
         if (specularColor == null) {
-            specularColor = new SimpleObjectProperty<Color>(PhongMaterial.this,
+            specularColor = new SimpleObjectProperty<>(PhongMaterial.this,
                     "specularColor") {
                 @Override
                 protected void invalidated() {
@@ -247,7 +247,7 @@ public class PhongMaterial extends Material {
     private Image oldDiffuseMap;
     public final ObjectProperty<Image> diffuseMapProperty() {
         if (diffuseMap == null) {
-            diffuseMap = new SimpleObjectProperty<Image>(PhongMaterial.this,
+            diffuseMap = new SimpleObjectProperty<>(PhongMaterial.this,
                     "diffuseMap") {
 
                 private boolean needsListeners = false;
@@ -296,7 +296,7 @@ public class PhongMaterial extends Material {
     private Image oldSpecularMap;
     public final ObjectProperty<Image> specularMapProperty() {
         if (specularMap == null) {
-            specularMap = new SimpleObjectProperty<Image>(PhongMaterial.this,
+            specularMap = new SimpleObjectProperty<>(PhongMaterial.this,
                     "specularMap") {
 
                 private boolean needsListeners = false;
@@ -347,7 +347,7 @@ public class PhongMaterial extends Material {
     private Image oldBumpMap;
     public final ObjectProperty<Image> bumpMapProperty() {
         if (bumpMap == null) {
-            bumpMap = new SimpleObjectProperty<Image>(PhongMaterial.this,
+            bumpMap = new SimpleObjectProperty<>(PhongMaterial.this,
                     "bumpMap") {
 
                 private boolean needsListeners = false;
@@ -397,7 +397,7 @@ public class PhongMaterial extends Material {
     private Image oldSelfIlluminationMap;
     public final ObjectProperty<Image> selfIlluminationMapProperty() {
         if (selfIlluminationMap == null) {
-            selfIlluminationMap = new SimpleObjectProperty<Image>(PhongMaterial.this,
+            selfIlluminationMap = new SimpleObjectProperty<>(PhongMaterial.this,
                     "selfIlluminationMap") {
 
                 private boolean needsListeners = false;

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -65,7 +65,7 @@ public abstract class BaseMesh extends BaseGraphicsResource implements Mesh {
     //    int  smGroup;
     public static enum FaceMembers {
         POINT0, TEXCOORD0, POINT1, TEXCOORD1, POINT2, TEXCOORD2, SMOOTHING_GROUP
-    };
+    }
     public static final int FACE_MEMBERS_SIZE = 7;
 
     protected BaseMesh(Disposer.Record disposerRecord) {
@@ -345,7 +345,7 @@ public abstract class BaseMesh extends BaseGraphicsResource implements Mesh {
         if (numPoints > 0) {
             for (int i = 0; i < numPoints; i++) {
                 int pointOffset = (startPoint + i) * POINT_SIZE;
-                MeshGeomComp2VB mp2vb = (MeshGeomComp2VB) point2vbMap.get(pointOffset);
+                MeshGeomComp2VB mp2vb = point2vbMap.get(pointOffset);
                 assert mp2vb != null;
                 // mp2vb shouldn't be null. We can't have a point referred by
                 // the faces array that isn't in the vertexBuffer.
@@ -381,7 +381,7 @@ public abstract class BaseMesh extends BaseGraphicsResource implements Mesh {
         if (numTexCoords > 0) {
             for (int i = 0; i < numTexCoords; i++) {
                 int texCoordOffset = (startTexCoord + i) * TEXCOORD_SIZE;
-                MeshGeomComp2VB mt2vb = (MeshGeomComp2VB) texCoord2vbMap.get(texCoordOffset);
+                MeshGeomComp2VB mt2vb = texCoord2vbMap.get(texCoordOffset);
                 assert mt2vb != null;
                 // mt2vb shouldn't be null. We can't have a texCoord referred by
                 // the faces array that isn't in the vertexBuffer.
@@ -416,7 +416,7 @@ public abstract class BaseMesh extends BaseGraphicsResource implements Mesh {
             MeshTempState instance = MeshTempState.getInstance();
             for (int i = 0; i < numNormals; i++) {
                 int normalOffset = (startNormal + i) * NORMAL_SIZE;
-                MeshGeomComp2VB mn2vb = (MeshGeomComp2VB) normal2vbMap.get(normalOffset);
+                MeshGeomComp2VB mn2vb = normal2vbMap.get(normalOffset);
                 assert mn2vb != null;
                 // mn2vb shouldn't be null. We can't have a normal referred by
                 // the faces array that isn't in the vertexBuffer.

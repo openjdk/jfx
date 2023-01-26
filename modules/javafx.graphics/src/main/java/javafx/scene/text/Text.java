@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -1305,7 +1305,7 @@ public class Text extends Shape {
     private static class StyleableProperties {
 
         private static final CssMetaData<Text,Font> FONT =
-            new FontCssMetaData<Text>("-fx-font", Font.getDefault()) {
+            new FontCssMetaData<>("-fx-font", Font.getDefault()) {
 
             @Override
             public boolean isSettable(Text node) {
@@ -1319,7 +1319,7 @@ public class Text extends Shape {
         };
 
         private static final CssMetaData<Text,Boolean> UNDERLINE =
-            new CssMetaData<Text,Boolean>("-fx-underline",
+            new CssMetaData<>("-fx-underline",
                 BooleanConverter.getInstance(), Boolean.FALSE) {
 
             @Override
@@ -1336,7 +1336,7 @@ public class Text extends Shape {
         };
 
         private static final CssMetaData<Text,Boolean> STRIKETHROUGH =
-            new CssMetaData<Text,Boolean>("-fx-strikethrough",
+            new CssMetaData<>("-fx-strikethrough",
                 BooleanConverter.getInstance(), Boolean.FALSE) {
 
             @Override
@@ -1354,8 +1354,8 @@ public class Text extends Shape {
 
         private static final
             CssMetaData<Text,TextAlignment> TEXT_ALIGNMENT =
-                new CssMetaData<Text,TextAlignment>("-fx-text-alignment",
-                new EnumConverter<TextAlignment>(TextAlignment.class),
+                new CssMetaData<>("-fx-text-alignment",
+                new EnumConverter<>(TextAlignment.class),
                 TextAlignment.LEFT) {
 
             @Override
@@ -1372,8 +1372,8 @@ public class Text extends Shape {
         };
 
         private static final CssMetaData<Text,VPos> TEXT_ORIGIN =
-                new CssMetaData<Text,VPos>("-fx-text-origin",
-                new EnumConverter<VPos>(VPos.class),
+                new CssMetaData<>("-fx-text-origin",
+                new EnumConverter<>(VPos.class),
                 VPos.BASELINE) {
 
             @Override
@@ -1391,9 +1391,9 @@ public class Text extends Shape {
 
         private static final CssMetaData<Text,FontSmoothingType>
             FONT_SMOOTHING_TYPE =
-            new CssMetaData<Text,FontSmoothingType>(
+            new CssMetaData<>(
                 "-fx-font-smoothing-type",
-                new EnumConverter<FontSmoothingType>(FontSmoothingType.class),
+                new EnumConverter<>(FontSmoothingType.class),
                 FontSmoothingType.GRAY) {
 
             @Override
@@ -1412,7 +1412,7 @@ public class Text extends Shape {
 
         private static final
             CssMetaData<Text,Number> LINE_SPACING =
-                new CssMetaData<Text,Number>("-fx-line-spacing",
+                new CssMetaData<>("-fx-line-spacing",
                 SizeConverter.getInstance(), 0) {
 
             @Override
@@ -1430,9 +1430,9 @@ public class Text extends Shape {
 
         private static final CssMetaData<Text, TextBoundsType>
             BOUNDS_TYPE =
-            new CssMetaData<Text,TextBoundsType>(
+            new CssMetaData<>(
                 "-fx-bounds-type",
-                new EnumConverter<TextBoundsType>(TextBoundsType.class),
+                new EnumConverter<>(TextBoundsType.class),
                 DEFAULT_BOUNDS_TYPE) {
 
             @Override
@@ -1447,7 +1447,7 @@ public class Text extends Shape {
         };
 
         private static final CssMetaData<Text, Number> TAB_SIZE =
-                new CssMetaData<Text,Number>("-fx-tab-size",
+                new CssMetaData<>("-fx-tab-size",
                 SizeConverter.getInstance(), TextLayout.DEFAULT_TAB_SIZE) {
 
             @Override
@@ -1466,7 +1466,7 @@ public class Text extends Shape {
     private final static List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
         static {
             final List<CssMetaData<? extends Styleable, ?>> styleables =
-                new ArrayList<CssMetaData<? extends Styleable, ?>>(Shape.getClassCssMetaData());
+                new ArrayList<>(Shape.getClassCssMetaData());
             styleables.add(FONT);
             styleables.add(UNDERLINE);
             styleables.add(STRIKETHROUGH);
@@ -1502,7 +1502,6 @@ public class Text extends Shape {
         return getClassCssMetaData();
     }
 
-    @SuppressWarnings("deprecation")
     private void updatePGText() {
         final NGText peer = NodeHelper.getPeer(this);
         if (NodeHelper.isDirty(this, DirtyBits.TEXT_ATTRS)) {
@@ -1735,7 +1734,7 @@ public class Text extends Shape {
 
         final ReadOnlyObjectProperty<PathElement[]> selectionShapeProperty() {
             if (selectionShape == null) {
-                selectionBinding = new ObjectBinding<PathElement[]>() {
+                selectionBinding = new ObjectBinding<>() {
                     {bind(selectionStartProperty(), selectionEndProperty());}
                     @Override protected PathElement[] computeValue() {
                         int start = getSelectionStart();
@@ -1743,7 +1742,7 @@ public class Text extends Shape {
                         return getRange(start, end, TextLayout.TYPE_TEXT);
                     }
               };
-              selectionShape = new SimpleObjectProperty<PathElement[]>(Text.this, "selectionShape");
+              selectionShape = new SimpleObjectProperty<>(Text.this, "selectionShape");
               selectionShape.bind(selectionBinding);
             }
             return selectionShape;
@@ -1812,7 +1811,7 @@ public class Text extends Shape {
 
         final ReadOnlyObjectProperty<PathElement[]> caretShapeProperty() {
             if (caretShape == null) {
-                caretBinding = new ObjectBinding<PathElement[]>() {
+                caretBinding = new ObjectBinding<>() {
                     {bind(caretPositionProperty(), caretBiasProperty());}
                     @Override protected PathElement[] computeValue() {
                         int pos = getCaretPosition();
@@ -1827,7 +1826,7 @@ public class Text extends Shape {
                         return EMPTY_PATH_ELEMENT_ARRAY;
                     }
                 };
-                caretShape = new SimpleObjectProperty<PathElement[]>(Text.this, "caretShape");
+                caretShape = new SimpleObjectProperty<>(Text.this, "caretShape");
                 caretShape.bind(caretBinding);
             }
             return caretShape;

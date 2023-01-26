@@ -29,14 +29,12 @@ import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.scene.SceneHelper;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
-import javafx.concurrent.Task;
 import javafx.scene.input.MouseButton;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.TilePane;
 import javafx.scene.layout.VBox;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.transform.Scale;
-import javafx.stage.PopupWindow;
 import javafx.stage.Stage;
 
 import test.com.sun.javafx.pgstub.StubScene;
@@ -46,8 +44,6 @@ import test.com.sun.javafx.test.MouseEventGenerator;
 import com.sun.javafx.tk.Toolkit;
 
 import javafx.application.Platform;
-import javafx.beans.InvalidationListener;
-import javafx.beans.Observable;
 import javafx.scene.input.MouseEvent;
 
 import org.junit.After;
@@ -55,8 +51,6 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.lang.ref.WeakReference;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import javafx.scene.Camera;
@@ -1028,6 +1022,47 @@ public class SceneTest {
         pane = null;
 
         // Verify TilePane was GC'd:
+        JMemoryBuddy.assertCollectable(ref);
+    }
+
+    @Test public void testNoReferencesRemainToRemovedNodeAfterStartingFullDrag() {
+        TilePane pane = new TilePane();
+        pane.setMinSize(200, 200);
+
+        WeakReference<TilePane> ref = new WeakReference<>(pane);
+
+        Group root = new Group(pane);
+        final Scene scene = new Scene(root, 400, 400);
+        stage.setScene(scene);
+
+        pane.setOnDragDetected(event -> ((Node) event.getSource()).startFullDrag());
+
+        // Simulate a drag operation from the user
+        SceneHelper.processMouseEvent(scene,
+                MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_PRESSED, 50, 50));
+
+        SceneHelper.processMouseEvent(scene,
+                MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_DRAGGED, 70, 70));
+
+        SceneHelper.processMouseEvent(scene,
+                MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_RELEASED, 50, 50));
+
+        root.getChildren().setAll(new StackPane());
+
+        // Generate a MOUSE_EXITED event for the removed node and a pulse as otherwise many unrelated Scene references
+        // hang around to the removed node:
+        SceneHelper.processMouseEvent(
+                scene,
+                new MouseEvent(
+                        MouseEvent.MOUSE_EXITED, 50, 50, 50, 50, MouseButton.NONE, 0, false, false, false,
+                        false, false, false, false, false, false, true, null
+                )
+        );
+
+        Toolkit.getToolkit().firePulse();
+
+        pane = null;
+
         JMemoryBuddy.assertCollectable(ref);
     }
 }

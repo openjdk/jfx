@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -223,7 +223,7 @@ public class ImageView extends Node {
     private Image oldImage;
     public final ObjectProperty<Image> imageProperty() {
         if (image == null) {
-            image = new ObjectPropertyBase<Image>() {
+            image = new ObjectPropertyBase<>() {
 
                 private boolean needsListeners = false;
 
@@ -638,7 +638,7 @@ public class ImageView extends Node {
 
     public final ObjectProperty<Rectangle2D> viewportProperty() {
         if (viewport == null) {
-            viewport = new ObjectPropertyBase<Rectangle2D>() {
+            viewport = new ObjectPropertyBase<>() {
 
                 @Override
                 protected void invalidated() {
@@ -811,7 +811,7 @@ public class ImageView extends Node {
         // TODO
         // "preserve-ratio","smooth","viewport","fit-width","fit-height"
          private static final CssMetaData<ImageView, String> IMAGE =
-            new CssMetaData<ImageView,String>("-fx-image",
+            new CssMetaData<>("-fx-image",
                 URLConverter.getInstance()) {
 
             @Override
@@ -829,7 +829,7 @@ public class ImageView extends Node {
          private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
          static {
             final List<CssMetaData<? extends Styleable, ?>> styleables =
-                new ArrayList<CssMetaData<? extends Styleable, ?>>(Node.getClassCssMetaData());
+                new ArrayList<>(Node.getClassCssMetaData());
             styleables.add(IMAGE);
             STYLEABLES = Collections.unmodifiableList(styleables);
          }

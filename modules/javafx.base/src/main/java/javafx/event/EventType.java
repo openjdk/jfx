@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -65,7 +65,7 @@ public final class EventType<T extends Event> implements Serializable{
      * has its super event type set to {@code null}.
      */
     public static final EventType<Event> ROOT =
-            new EventType<Event>("EVENT", null);
+            new EventType<>("EVENT", null);
 
     private WeakHashMap<EventType<? extends T>, Void> subTypes;
 
@@ -178,7 +178,7 @@ public final class EventType<T extends Event> implements Serializable{
 
     private void register(javafx.event.EventType<? extends T> subType) {
         if (subTypes == null) {
-            subTypes = new WeakHashMap<EventType<? extends T>, Void>();
+            subTypes = new WeakHashMap<>();
         }
         for (EventType<? extends T> t : subTypes.keySet()) {
             if (((t.name == null && subType.name == null) || (t.name != null && t.name.equals(subType.name)))) {
@@ -189,14 +189,14 @@ public final class EventType<T extends Event> implements Serializable{
         subTypes.put(subType, null);
     }
 
-    private Object writeReplace() throws ObjectStreamException {
-        Deque<String> path = new LinkedList<String>();
+    private Object writeReplace() {
+        Deque<String> path = new LinkedList<>();
         EventType<?> t = this;
         while (t != ROOT) {
             path.addFirst(t.name);
             t = t.superType;
         }
-        return new EventTypeSerialization(new ArrayList<String>(path));
+        return new EventTypeSerialization(new ArrayList<>(path));
     }
 
     static class EventTypeSerialization implements Serializable {

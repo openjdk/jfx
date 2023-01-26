@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -41,16 +41,24 @@ class LinuxEventBuffer {
     }
 
     class EventStruct32Bit implements EventStruct {
+        @Override
         public int getTypeIndex() { return 8; }
+        @Override
         public int getCodeIndex() { return 10; }
+        @Override
         public int getValueIndex() { return 12; }
+        @Override
         public int getSize() { return 16; }
     }
 
     class EventStruct64Bit implements EventStruct {
+        @Override
         public int getTypeIndex() { return 16; }
+        @Override
         public int getCodeIndex() { return 18; }
+        @Override
         public int getValueIndex() { return 20; }
+        @Override
         public int getSize() { return 24; }
     }
 

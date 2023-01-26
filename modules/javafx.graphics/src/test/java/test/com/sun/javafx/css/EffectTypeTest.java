@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -69,9 +69,9 @@ public class EffectTypeTest {
                 new ParsedValueImpl<Color,Color>(is.getColor(),null),
                 new ParsedValueImpl<Size,Size>(makeSize(0.5f),null)
             };
-            colorVal = new ParsedValueImpl<ParsedValue[],Color>(values, DeriveColorConverter.getInstance());
+            colorVal = new ParsedValueImpl<>(values, DeriveColorConverter.getInstance());
         } else {
-            colorVal = new ParsedValueImpl<Color,Color>(is.getColor(),null);
+            colorVal = new ParsedValueImpl<>(is.getColor(),null);
         }
 
         BlurType blurType = is.getBlurType();
@@ -85,7 +85,7 @@ public class EffectTypeTest {
             new ParsedValueImpl<Size,Size>(offsetY, null)
         };
 
-        return new ParsedValueImpl<ParsedValue[],Effect>(vals, EffectConverter.InnerShadowConverter.getInstance());
+        return new ParsedValueImpl<>(vals, EffectConverter.InnerShadowConverter.getInstance());
     }
 
     DropShadow getDropShadow() {
@@ -105,9 +105,9 @@ public class EffectTypeTest {
                 new ParsedValueImpl<Color,Color>(ds.getColor(),null),
                 new ParsedValueImpl<Size,Size>(makeSize(0.5f),null)
             };
-            colorVal = new ParsedValueImpl<ParsedValue[],Color>(values, DeriveColorConverter.getInstance());
+            colorVal = new ParsedValueImpl<>(values, DeriveColorConverter.getInstance());
         } else {
-            colorVal = new ParsedValueImpl<Color,Color>(ds.getColor(),null);
+            colorVal = new ParsedValueImpl<>(ds.getColor(),null);
         }
 
         BlurType blurType = ds.getBlurType();
@@ -121,7 +121,7 @@ public class EffectTypeTest {
             new ParsedValueImpl<Size,Size>(offsetY, null)
         };
 
-        return new ParsedValueImpl<ParsedValue[],Effect>(vals, EffectConverter.DropShadowConverter.getInstance());
+        return new ParsedValueImpl<>(vals, EffectConverter.DropShadowConverter.getInstance());
     }
 
     void checkColor(String msg, Color c1, Color c2) {

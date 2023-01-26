@@ -26,19 +26,12 @@
 #include "vsDecl.h"
 #include "vsMath.h"
 
+// VertexType = VsInput, as defined in the build.gradle file
+VsOutput main(VertexType vsInput) {
+    VsOutput vsOutput;
 
-float2 transformTexture(float2 t) { return t; }
+    vsOutput.texD = vsInput.texD;
+    transformVertexAttributes(vsInput.modelVertexPos, vsInput.modelVertexNormal, vsOutput);
 
-ObjVsOutput main(VertexType i) {
-    ObjVsOutput o;
-
-    float4 _tangent = i.Tangent;
-    float4 _pos = i.Pos;
-
-    calcLocalBump(_pos, _tangent, mWorld, o.light);
-
-    o.objAttr.ambient = gAmbinet;
-    o.objAttr.texD = transformTexture(i.TexD);
-
-    return o;
+    return vsOutput;
 }

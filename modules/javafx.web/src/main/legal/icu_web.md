@@ -1,11 +1,10 @@
-## IBM International Components for Unicode (ICU4C) v68.2
+## IBM International Components for Unicode (ICU4C) v71.1
 
 ### ICU License
 ```
+COPYRIGHT AND PERMISSION NOTICE
 
-COPYRIGHT AND PERMISSION NOTICE (ICU 58 and later)
-
-Copyright © 1991-2020 Unicode, Inc. All rights reserved.
+Copyright © 1991-2022 Unicode, Inc. All rights reserved.
 Distributed under the Terms of Use in https://www.unicode.org/copyright.html.
 
 Permission is hereby granted, free of charge, to any person obtaining
@@ -37,7 +36,7 @@ shall not be used in advertising or otherwise to promote the sale,
 use or other dealings in these Data Files or Software without prior
 written authorization of the copyright holder.
 
----------------------
+----------------------------------------------------------------------
 
 Third-Party Software Licenses
 
@@ -45,7 +44,9 @@ This section contains third-party software notices and/or additional
 terms for licensed third-party software components included within ICU
 libraries.
 
-1. ICU License - ICU 1.8.1 to ICU 57.1
+----------------------------------------------------------------------
+
+ICU License - ICU 1.8.1 to ICU 57.1
 
 COPYRIGHT AND PERMISSION NOTICE
 
@@ -80,7 +81,9 @@ of the copyright holder.
 All trademarks and registered trademarks mentioned herein are the
 property of their respective owners.
 
-2. Chinese/Japanese Word Break Dictionary Data (cjdict.txt)
+----------------------------------------------------------------------
+
+Chinese/Japanese Word Break Dictionary Data (cjdict.txt)
 
  #     The Google Chrome software developed by Google is licensed under
  # the BSD license. Other software included in this distribution is
@@ -284,33 +287,33 @@ property of their respective owners.
  #
  #  ---------------COPYING.ipadic-----END----------------------------------
 
-3. Lao Word Break Dictionary Data (laodict.txt)
+----------------------------------------------------------------------
 
- #  Copyright (c) 2013 International Business Machines Corporation
- #  and others. All Rights Reserved.
+Lao Word Break Dictionary Data (laodict.txt)
+
+ # Copyright (C) 2016 and later: Unicode, Inc. and others.
+ # License & terms of use: http://www.unicode.org/copyright.html
+ # Copyright (c) 2015 International Business Machines Corporation
+ # and others. All Rights Reserved.
  #
- # Project: https://github.com/veer66/lao-dictionary
- # Dictionary: https://github.com/veer66/lao-dictionary/blob/master/Lao-Dictionary.txt
- # License: https://github.com/veer66/lao-dictionary/blob/master/Lao-Dictionary-LICENSE.txt
- #              (copied below)
+ # Project: https://github.com/rober42539/lao-dictionary
+ # Dictionary: https://github.com/rober42539/lao-dictionary/laodict.txt
+ # License: https://github.com/rober42539/lao-dictionary/LICENSE.txt
+ #          (copied below)
  #
- #  This file is derived from the above dictionary, with slight
- #  modifications.
+ #	This file is derived from the above dictionary version of Nov 22, 2020
  #  ----------------------------------------------------------------------
  #  Copyright (C) 2013 Brian Eugene Wilson, Robert Martin Campbell.
  #  All rights reserved.
  #
  #  Redistribution and use in source and binary forms, with or without
- #  modification,
- #  are permitted provided that the following conditions are met:
+ #  modification, are permitted provided that the following conditions are met:
  #
- #
- # Redistributions of source code must retain the above copyright notice, this
- #  list of conditions and the following disclaimer. Redistributions in
- #  binary form must reproduce the above copyright notice, this list of
- #  conditions and the following disclaimer in the documentation and/or
- #  other materials provided with the distribution.
- #
+ #  Redistributions of source code must retain the above copyright notice, this
+ #  list of conditions and the following disclaimer. Redistributions in binary
+ #  form must reproduce the above copyright notice, this list of conditions and
+ #  the following disclaimer in the documentation and/or other materials
+ #  provided with the distribution.
  #
  # THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  # "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
@@ -326,7 +329,9 @@ property of their respective owners.
  # OF THE POSSIBILITY OF SUCH DAMAGE.
  #  --------------------------------------------------------------------------
 
-4. Burmese Word Break Dictionary Data (burmesedict.txt)
+----------------------------------------------------------------------
+
+Burmese Word Break Dictionary Data (burmesedict.txt)
 
  #  Copyright (c) 2014 International Business Machines Corporation
  #  and others. All Rights Reserved.
@@ -366,7 +371,9 @@ property of their respective owners.
  #  SUCH DAMAGE.
  #  --------------------------------------------------------------------------
 
-5. Time Zone Database
+----------------------------------------------------------------------
+
+Time Zone Database
 
   ICU uses the public domain data and code derived from Time Zone
 Database for its time zone support. The ownership of the TZ database
@@ -389,7 +396,9 @@ Database section 7.
  #    making a contribution to the database or code waives all rights to
  #    future claims in that contribution or in the TZ Database.
 
-6. Google double-conversion
+----------------------------------------------------------------------
+
+Google double-conversion
 
 Copyright 2006-2011, the V8 project authors. All rights reserved.
 Redistribution and use in source and binary forms, with or without
@@ -417,5 +426,61 @@ DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
 THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+----------------------------------------------------------------------
+
+File: install-sh (only for ICU4C)
+
+
+Copyright 1991 by the Massachusetts Institute of Technology
+
+Permission to use, copy, modify, distribute, and sell this software and its
+documentation for any purpose is hereby granted without fee, provided that
+the above copyright notice appear in all copies and that both that
+copyright notice and this permission notice appear in supporting
+documentation, and that the name of M.I.T. not be used in advertising or
+publicity pertaining to distribution of the software without specific,
+written prior permission.  M.I.T. makes no representations about the
+suitability of this software for any purpose.  It is provided "as is"
+without express or implied warranty.
+
+----------------------------------------------------------------------
+
+File: selfmt.cpp
+File: selfmt.h
+File: selfmtimpl.h
+File: umsg.h
+
+Copyright (c) 1995-2016 International Business Machines Corporation and others
+All rights reserved.
+Copyright (C) 2010 , Yahoo! Inc.
+
+Permission is hereby granted, free of charge, to any person obtaining
+a copy of this software and associated documentation files (the
+"Software"), to deal in the Software without restriction, including
+without limitation the rights to use, copy, modify, merge, publish,
+distribute, and/or sell copies of the Software, and to permit persons
+to whom the Software is furnished to do so, provided that the above
+copyright notice(s) and this permission notice appear in all copies of
+the Software and that both the above copyright notice(s) and this
+permission notice appear in supporting documentation.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT
+OF THIRD PARTY RIGHTS. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR
+HOLDERS INCLUDED IN THIS NOTICE BE LIABLE FOR ANY CLAIM, OR ANY
+SPECIAL INDIRECT OR CONSEQUENTIAL DAMAGES, OR ANY DAMAGES WHATSOEVER
+RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF
+CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
+CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+
+Except as contained in this notice, the name of a copyright holder
+shall not be used in advertising or otherwise to promote the sale, use
+or other dealings in this Software without prior written authorization
+of the copyright holder.
+
+All trademarks and registered trademarks mentioned herein are the
+property of their respective owners.
 
 ```

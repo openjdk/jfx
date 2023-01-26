@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -50,10 +50,10 @@ public class CustomMenuItemTest {
     private CustomMenuItem customMenuItemOneArg;
     private CustomMenuItem customMenuItemTwoArg;
     private Node node;
-    private Toolkit tk;
 
     @Before public void setup() {
-        tk = (StubToolkit)Toolkit.getToolkit();//This step is not needed (Just to make sure StubToolkit is loaded into VM)
+        assertTrue(Toolkit.getToolkit() instanceof StubToolkit);  // Ensure StubToolkit is loaded
+
         node = new Rectangle();
         customMenuItem = cmi = new CustomMenuItem();
         customMenuItemOneArg = new CustomMenuItem(node);
@@ -271,7 +271,7 @@ public class CustomMenuItemTest {
 
     @Test public void contentCanBeBound() {
         Rectangle rect = new Rectangle();
-        SimpleObjectProperty<Node> other = new SimpleObjectProperty<Node>(cmi, "content", rect);
+        SimpleObjectProperty<Node> other = new SimpleObjectProperty<>(cmi, "content", rect);
         cmi.contentProperty().bind(other);
         assertEquals(rect, cmi.getContent());
     }

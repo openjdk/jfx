@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -34,11 +34,13 @@ public class ES2ShaderSource implements ShaderSource {
     public ES2ShaderSource() {
     }
 
+    @Override
     public InputStream loadSource(String name) {
         return ES2ShaderSource.class.
             getResourceAsStream("glsl/" + name + ".frag");
     }
 
+    @Override
     public AccelType getAccelType() {
         return AccelType.OPENGL;
     }

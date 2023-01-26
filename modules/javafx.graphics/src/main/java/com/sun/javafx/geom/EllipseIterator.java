@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1997, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 1997, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -57,6 +57,7 @@ class EllipseIterator implements PathIterator {
      * @see #WIND_EVEN_ODD
      * @see #WIND_NON_ZERO
      */
+    @Override
     public int getWindingRule() {
         return WIND_NON_ZERO;
     }
@@ -65,6 +66,7 @@ class EllipseIterator implements PathIterator {
      * Tests if there are more points to read.
      * @return true if there are more points to read
      */
+    @Override
     public boolean isDone() {
         return index > 5;
     }
@@ -74,6 +76,7 @@ class EllipseIterator implements PathIterator {
      * along the primary direction of traversal as long as there are
      * more points in that direction.
      */
+    @Override
     public void next() {
         ++index;
     }
@@ -113,6 +116,7 @@ class EllipseIterator implements PathIterator {
      * @see #SEG_CUBICTO
      * @see #SEG_CLOSE
      */
+    @Override
     public int currentSegment(float[] coords) {
         if (isDone()) {
             throw new NoSuchElementException("ellipse iterator out of bounds");

@@ -729,7 +729,7 @@ void *SpoofData::reserveSpace(int32_t numBytes,  UErrorCode &status) {
         return NULL;
     }
     if (!fDataOwned) {
-        UPRV_UNREACHABLE;
+        UPRV_UNREACHABLE_EXIT;
     }
 
     numBytes = (numBytes + 15) & ~15;   // Round up to a multiple of 16
@@ -945,7 +945,7 @@ uspoof_swap(const UDataSwapper *ds, const void *inData, int32_t length, void *ou
     uint32_t magic = ds->readUInt32(spoofDH->fMagic);
     ds->writeUInt32((uint32_t *)&outputDH->fMagic, magic);
 
-    if (outputDH->fFormatVersion != spoofDH->fFormatVersion) {
+    if (inBytes != outBytes) {
         uprv_memcpy(outputDH->fFormatVersion, spoofDH->fFormatVersion, sizeof(spoofDH->fFormatVersion));
     }
     // swap starting at fLength

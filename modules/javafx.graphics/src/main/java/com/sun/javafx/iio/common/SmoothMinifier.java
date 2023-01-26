@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -155,6 +155,7 @@ public class SmoothMinifier implements PushbroomScaler {
      *
      * @return The destination buffer.
      */
+    @Override
     public ByteBuffer getDestination() {
         return this.destBuf;
     }
@@ -168,6 +169,7 @@ public class SmoothMinifier implements PushbroomScaler {
      * @throws IllegalArgumentException if <code>off&nbsp;&lt;&nbsp;0</code>.
      * @return Whether the destination image is complete.
      */
+    @Override
     public boolean putSourceScanline(byte[] scanline, int off) {
         if (off < 0) {
             throw new IllegalArgumentException("off < 0!");

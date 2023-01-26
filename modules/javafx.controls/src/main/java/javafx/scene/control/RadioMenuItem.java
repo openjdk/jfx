@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -143,7 +143,7 @@ public class RadioMenuItem extends MenuItem implements Toggle {
 
     @Override public final ObjectProperty<ToggleGroup> toggleGroupProperty() {
         if (toggleGroup == null) {
-            toggleGroup = new ObjectPropertyBase<ToggleGroup>() {
+            toggleGroup = new ObjectPropertyBase<>() {
                 private ToggleGroup old;
                 @Override protected void invalidated() {
                     if (old != null) {

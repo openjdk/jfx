@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -33,10 +33,9 @@ import java.util.NoSuchElementException;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.collections.ModifiableObservableListBase;
-import javafx.collections.ObservableList;
 import javafx.util.Callback;
 
-public final class ObservableSequentialListWrapper<E> extends ModifiableObservableListBase<E> implements ObservableList<E>, SortableList<E>{
+public final class ObservableSequentialListWrapper<E> extends ModifiableObservableListBase<E> implements SortableList<E>{
     private final List<E> backingList;
     private final ElementObserver elementObserver;
     private SortHelper helper;
@@ -96,7 +95,7 @@ public final class ObservableSequentialListWrapper<E> extends ModifiableObservab
 
     @Override
     public ListIterator<E> listIterator(final int index) {
-        return new ListIterator<E>() {
+        return new ListIterator<>() {
 
             private final ListIterator<E> backingIt = backingList.listIterator(index);
             private E lastReturned;
@@ -237,7 +236,7 @@ public final class ObservableSequentialListWrapper<E> extends ModifiableObservab
             return;
         }
         int[] perm = getSortHelper().sort((List<? extends Comparable>)backingList);
-        fireChange(new NonIterableChange.SimplePermutationChange<E>(0, size(), perm, this));
+        fireChange(new NonIterableChange.SimplePermutationChange<>(0, size(), perm, this));
     }
 
     @Override
@@ -246,7 +245,7 @@ public final class ObservableSequentialListWrapper<E> extends ModifiableObservab
             return;
         }
         int[] perm = getSortHelper().sort(backingList, comparator);
-        fireChange(new NonIterableChange.SimplePermutationChange<E>(0, size(), perm, this));
+        fireChange(new NonIterableChange.SimplePermutationChange<>(0, size(), perm, this));
     }
 
     private SortHelper getSortHelper() {

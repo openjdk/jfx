@@ -30,11 +30,20 @@ import static org.junit.Assert.assertEquals;
 import org.junit.Before;
 import org.junit.Test;
 
+import javafx.animation.Animation.Status;
 import javafx.geometry.BoundingBox;
 import javafx.geometry.Insets;
 import javafx.scene.control.Spinner;
+import javafx.scene.control.SpinnerShim;
 import javafx.scene.control.skin.SpinnerSkin;
+import javafx.scene.control.skin.SpinnerSkinShim;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.Region;
+import javafx.scene.Scene;
+import javafx.stage.Stage;
+
+import com.sun.javafx.scene.control.behavior.SpinnerBehavior;
+import com.sun.javafx.scene.control.behavior.SpinnerBehaviorShim;
 
 /**
  * Tests for SpinnerSkin
@@ -140,5 +149,34 @@ public class SpinnerSkinTest {
 
         assertEquals(new BoundingBox(PADDING_LEFT, PADDING_TOP + HEIGHT - tallest, WIDTH, tallest), decrementArrowButton.getBoundsInParent());
         assertEquals(new BoundingBox(PADDING_LEFT, PADDING_TOP, WIDTH, tallest), incrementArrowButton.getBoundsInParent());
+    }
+
+    /** Tests JDK-8245145: IAE when replacing skins */
+    @Test
+    public void testSpinnerSkin() {
+        Spinner<?> spinner = new Spinner<>();
+        spinner.setSkin(new SpinnerSkin<>(spinner));
+        spinner.setSkin(new SpinnerSkin<>(spinner));
+    }
+
+    @Test
+    public void testSpinnerIncrementOnRemovingFromScene() {
+        spinner = new Spinner<>(0, 1000, 0);
+        spinner.setSkin(new SpinnerSkin<>(spinner));
+
+        HBox root = new HBox(spinner);
+        Scene scene = new Scene(root);
+        Stage stage = new Stage();
+        stage.setScene(scene);
+        stage.show();
+
+        SpinnerBehavior behavior = SpinnerSkinShim.getSpinnerBehavior((SpinnerSkin)spinner.getSkin());
+        behavior.startSpinning(true);
+
+        assertEquals(Status.RUNNING, SpinnerBehaviorShim.getTimeline(behavior).getStatus());
+        root.getChildren().clear();
+        assertEquals(Status.STOPPED, SpinnerBehaviorShim.getTimeline(behavior).getStatus());
+        root.getChildren().setAll(spinner);
+        assertEquals(Status.STOPPED, SpinnerBehaviorShim.getTimeline(behavior).getStatus());
     }
 }

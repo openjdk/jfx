@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -87,7 +87,7 @@ abstract class BitSet<T> implements ObservableSet<T> {
     @Override
     public Iterator<T> iterator() {
 
-        return new Iterator<T>() {
+        return new Iterator<>() {
             int next = -1;
             int element = 0;
             int index = -1;

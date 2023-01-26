@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -48,10 +48,10 @@ public class BidirectionalContentBindingSetTest {
 
     @Before
     public void setUp() {
-        set0 = new HashSet<Integer>();
-        set1 = new HashSet<Integer>();
+        set0 = new HashSet<>();
+        set1 = new HashSet<>();
         set1.add(-1);
-        set2 = new HashSet<Integer>();
+        set2 = new HashSet<>();
         set2.add(2);
         set2.add(1);
 

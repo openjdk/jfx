@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -131,6 +131,7 @@ public class BoxShadow extends AbstractShadow {
      *
      * @return the input for this {@code Effect}
      */
+    @Override
     public final Effect getInput() {
         return getInputs().get(0);
     }
@@ -143,6 +144,7 @@ public class BoxShadow extends AbstractShadow {
      *
      * @param input the input for this {@code Effect}
      */
+    @Override
     public void setInput(Effect input) {
         setInput(0, input);
     }
@@ -234,6 +236,7 @@ public class BoxShadow extends AbstractShadow {
      *
      * @return the shadow color
      */
+    @Override
     public Color4f getColor() {
         return state.getShadowColor();
     }
@@ -250,6 +253,7 @@ public class BoxShadow extends AbstractShadow {
      * @param color the shadow color
      * @throws IllegalArgumentException if {@code color} is null
      */
+    @Override
     public final void setColor(Color4f color) {
         state.setShadowColor(color);
     }
@@ -259,6 +263,7 @@ public class BoxShadow extends AbstractShadow {
      *
      * @return the spread of the shadow effect
      */
+    @Override
     public float getSpread() {
         return state.getSpread();
     }
@@ -285,40 +290,48 @@ public class BoxShadow extends AbstractShadow {
      * @throws IllegalArgumentException if {@code spread} is outside the
      * allowable range
      */
+    @Override
     public final void setSpread(float spread) {
         state.setSpread(spread);
     }
 
+    @Override
     public float getGaussianRadius() {
         float d = (getHorizontalSize() + getVerticalSize()) / 2.0f;
         d *= 3.0f;
         return (d < 1.0f ? 0.0f : ((d - 1.0f) / 2.0f));
     }
 
+    @Override
     public float getGaussianWidth() {
         return getHorizontalSize() * 3.0f;
     }
 
+    @Override
     public float getGaussianHeight() {
         return getVerticalSize() * 3.0f;
     }
 
+    @Override
     public void setGaussianRadius(float r) {
         float d = r * 2.0f + 1.0f;
         setGaussianWidth(d);
         setGaussianHeight(d);
     }
 
+    @Override
     public void setGaussianWidth(float w) {
         w /= 3.0f;
         setHorizontalSize(Math.round(w));
     }
 
+    @Override
     public void setGaussianHeight(float h) {
         h /= 3.0f;
         setVerticalSize(Math.round(h));
     }
 
+    @Override
     public ShadowMode getMode() {
         switch (getPasses()) {
             case 1:
@@ -330,6 +343,7 @@ public class BoxShadow extends AbstractShadow {
         }
     }
 
+    @Override
     public AbstractShadow implFor(ShadowMode mode) {
         switch (mode) {
             case GAUSSIAN:

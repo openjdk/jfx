@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -78,10 +78,12 @@ public class PSWDrawable extends PrDrawable implements HeapImage {
         return new PSWDrawable(rtt, false);
     }
 
+    @Override
     public boolean isLost() {
         return rtt == null || rtt.isSurfaceLost();
     }
 
+    @Override
     public void flush() {
         if (rtt != null) {
             rtt.dispose();
@@ -90,50 +92,61 @@ public class PSWDrawable extends PrDrawable implements HeapImage {
         }
     }
 
+    @Override
     public Object getData() {
         return this;
     }
 
+    @Override
     public int getContentWidth() {
         return rtt.getContentWidth();
     }
 
+    @Override
     public int getContentHeight() {
         return rtt.getContentHeight();
     }
 
+    @Override
     public int getMaxContentWidth() {
         return rtt.getMaxContentWidth();
     }
 
+    @Override
     public int getMaxContentHeight() {
         return rtt.getMaxContentHeight();
     }
 
+    @Override
     public void setContentWidth(int contentW) {
         rtt.setContentWidth(contentW);
     }
 
+    @Override
     public void setContentHeight(int contentH) {
         rtt.setContentHeight(contentH);
     }
 
+    @Override
     public int getPhysicalWidth() {
         // physical width in this case refers to the size of the system
         // memory copy, which is the size of the content region of the rtt
         return rtt.getContentWidth();
     }
 
+    @Override
     public int getPhysicalHeight() {
         // physical height in this case refers to the size of the system
         // memory copy, which is the size of the content region of the rtt
         return rtt.getContentHeight();
     }
 
+    @Override
     public int getScanlineStride() {
         return rtt.getContentWidth();
     }
 
+    @Override
     public int[] getPixelArray() {
         int pixels[] = rtt.getPixels();
         if (pixels != null) {
@@ -177,9 +190,10 @@ public class PSWDrawable extends PrDrawable implements HeapImage {
         return rtt;
     }
 
+    @Override
     public Graphics createGraphics() {
         vramDirty = true;
-        return (Graphics)rtt.createGraphics();
+        return rtt.createGraphics();
     }
 
     @Override

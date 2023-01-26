@@ -208,4 +208,9 @@ IGNORE_WARNINGS_END
     return clientSpace;
 }
 
+ALWAYS_INLINE WebCoreBuiltinNames& builtinNames(JSC::VM& vm)
+{
+    return static_cast<JSVMClientData*>(vm.clientData)->builtinNames();
+}
+
 } // namespace WebCore

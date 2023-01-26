@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -41,7 +41,7 @@ public class MediaErrorEvent extends Event {
      * The only valid event type for the <code>MediaErrorEvent</code>.
      */
     public static final EventType<MediaErrorEvent> MEDIA_ERROR =
-            new EventType<MediaErrorEvent>(Event.ANY, "Media Error Event");
+            new EventType<>(Event.ANY, "Media Error Event");
 
     /**
      * The {@link MediaException} which provoked this error event.

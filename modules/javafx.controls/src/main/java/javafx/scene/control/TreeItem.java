@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -363,7 +363,7 @@ public class TreeItem<T> implements EventTarget { //, Comparable<TreeItem<T>> {
     }
 
     private final EventHandler<TreeModificationEvent<Object>> itemListener =
-        new EventHandler<TreeModificationEvent<Object>>() {
+        new EventHandler<>() {
             @Override public void handle(TreeModificationEvent<Object> event) {
                 expandedDescendentCountDirty = true;
             }
@@ -456,9 +456,9 @@ public class TreeItem<T> implements EventTarget { //, Comparable<TreeItem<T>> {
      */
     public final ObjectProperty<T> valueProperty() {
         if (value == null) {
-            value = new ObjectPropertyBase<T>() {
+            value = new ObjectPropertyBase<>() {
                 @Override protected void invalidated() {
-                    fireEvent(new TreeModificationEvent<T>(VALUE_CHANGED_EVENT, TreeItem.this, get()));
+                    fireEvent(new TreeModificationEvent<>(VALUE_CHANGED_EVENT, TreeItem.this, get()));
                 }
 
                 @Override public Object getBean() {
@@ -500,9 +500,9 @@ public class TreeItem<T> implements EventTarget { //, Comparable<TreeItem<T>> {
      */
     public final ObjectProperty<Node> graphicProperty() {
         if (graphic == null) {
-            graphic = new ObjectPropertyBase<Node>() {
+            graphic = new ObjectPropertyBase<>() {
                 @Override protected void invalidated() {
-                    fireEvent(new TreeModificationEvent<T>(GRAPHIC_CHANGED_EVENT, TreeItem.this));
+                    fireEvent(new TreeModificationEvent<>(GRAPHIC_CHANGED_EVENT, TreeItem.this));
                 }
 
                 @Override
@@ -560,7 +560,7 @@ public class TreeItem<T> implements EventTarget { //, Comparable<TreeItem<T>> {
                     EventType<?> evtType = isExpanded() ?
                         BRANCH_EXPANDED_EVENT : BRANCH_COLLAPSED_EVENT;
 
-                    fireEvent(new TreeModificationEvent<T>(evtType, TreeItem.this, isExpanded()));
+                    fireEvent(new TreeModificationEvent<>(evtType, TreeItem.this, isExpanded()));
                 }
 
                 @Override
@@ -612,7 +612,7 @@ public class TreeItem<T> implements EventTarget { //, Comparable<TreeItem<T>> {
 
 
     // --- Parent
-    private ReadOnlyObjectWrapper<TreeItem<T>> parent = new ReadOnlyObjectWrapper<TreeItem<T>>(this, "parent");
+    private ReadOnlyObjectWrapper<TreeItem<T>> parent = new ReadOnlyObjectWrapper<>(this, "parent");
     private void setParent(TreeItem<T> value) { parent.setValue(value); }
 
     /**
@@ -840,7 +840,7 @@ public class TreeItem<T> implements EventTarget { //, Comparable<TreeItem<T>> {
         // if we're at the root node, we'll fire an event so that the control
         // can update its display
         if (getParent() == null) {
-            TreeModificationEvent<T> e = new TreeModificationEvent<T>(TreeItem.childrenModificationEvent(), this);
+            TreeModificationEvent<T> e = new TreeModificationEvent<>(TreeItem.childrenModificationEvent(), this);
             e.wasPermutated = true;
             fireEvent(e);
         }
@@ -940,7 +940,7 @@ public class TreeItem<T> implements EventTarget { //, Comparable<TreeItem<T>> {
 
         // fire an event up the parent hierarchy such that any listening
         // TreeViews (which only listen to their root node) can redraw
-        fireEvent(new TreeModificationEvent<T>(
+        fireEvent(new TreeModificationEvent<>(
                 CHILDREN_MODIFICATION_EVENT, this, added, removed, c));
     }
 

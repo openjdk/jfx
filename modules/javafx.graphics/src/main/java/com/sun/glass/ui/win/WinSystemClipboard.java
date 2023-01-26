@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,8 +29,6 @@ import com.sun.glass.ui.Pixels;
 import com.sun.glass.ui.SystemClipboard;
 import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Set;
@@ -53,6 +51,7 @@ class WinSystemClipboard extends SystemClipboard {
         return ptr;
     }
 
+    @Override
     protected native boolean isOwner();
 
     protected native void create();
@@ -218,9 +217,10 @@ class WinSystemClipboard extends SystemClipboard {
         }
     }
 
+    @Override
     protected final void pushToSystem(HashMap<String, Object> cacheData, int supportedActions) {
         Set<String> mimes = cacheData.keySet();
-        Set<String> mimesForSystem = new HashSet<String>();
+        Set<String> mimesForSystem = new HashSet<>();
         MimeTypeParser parser = new MimeTypeParser();
         for (String mime : mimes) {
             parser.parse(mime);
@@ -235,6 +235,7 @@ class WinSystemClipboard extends SystemClipboard {
     }
 
     private native byte[] popBytes(String mime, long index);
+    @Override
     protected final Object popFromSystem(String mimeFull) {
         //we have to syncronize with system ones per
         //a popFromSystem function call, because
@@ -322,6 +323,7 @@ class WinSystemClipboard extends SystemClipboard {
     }
 
     private native String[] popMimesFromSystem();
+    @Override
     protected final String[] mimesFromSystem() {
         //we have to syncronize with system
         //if we heed to do it. DnD clipboard need not.
