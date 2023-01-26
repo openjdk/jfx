@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -58,13 +58,14 @@ public final class InputMethodClientImpl
     private boolean state;
 
     public InputMethodClientImpl(WebView wv, WebPage webPage) {
-        this.wvRef = new WeakReference<WebView>(wv);
+        this.wvRef = new WeakReference<>(wv);
         this.webPage = webPage;
         if (webPage != null) {
             webPage.setInputMethodClient(this);
         }
     }
 
+    @Override
     public void activateInputMethods(final boolean doActivate) {
         WebView wv = wvRef.get();
         if (wv != null && wv.getScene() != null) {
@@ -81,7 +82,7 @@ public final class InputMethodClientImpl
      * Converts the given InputMethodEvent to a WCInputMethodEvent.
      */
     public static WCInputMethodEvent convertToWCInputMethodEvent(InputMethodEvent ie) {
-        List<Integer> underlines = new ArrayList<Integer>();
+        List<Integer> underlines = new ArrayList<>();
         StringBuilder composed = new StringBuilder();
         int pos = 0;
 
@@ -122,6 +123,7 @@ public final class InputMethodClientImpl
     }
 
     // InputMethodRequests implementation
+    @Override
     public Point2D getTextLocation(int offset) {
         FutureTask<Point2D> f = new FutureTask<>(() -> {
             int[] loc = webPage.getClientTextLocation(offset);
@@ -143,6 +145,7 @@ public final class InputMethodClientImpl
         return result;
     }
 
+    @Override
     public int getLocationOffset(int x, int y) {
         FutureTask<Integer> f = new FutureTask<>(() -> {
             WCPoint point = webPage.getPageClient().windowToScreen(new WCPoint(0, 0));
@@ -161,10 +164,12 @@ public final class InputMethodClientImpl
         return location;
     }
 
+    @Override
     public void cancelLatestCommittedText() {
         // "Undo commit" is not supported.
     }
 
+    @Override
     public String getSelectedText() {
         return webPage.getClientSelectedText();
     }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -46,17 +46,20 @@ public abstract class ImageLoaderImpl implements ImageLoader {
         this.formatDescription = formatDescription;
     }
 
+    @Override
     public final ImageFormatDescription getFormatDescription() {
         return formatDescription;
     }
 
+    @Override
     public final void addListener(ImageLoadListener listener) {
         if (listeners == null) {
-            listeners = new HashSet<ImageLoadListener>();
+            listeners = new HashSet<>();
         }
         listeners.add(listener);
     }
 
+    @Override
     public final void removeListener(ImageLoadListener listener) {
         if (listeners != null) {
             listeners.remove(listener);

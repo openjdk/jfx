@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -44,7 +44,7 @@ public enum VideoFormat {
     YCbCr_422(FormatTypes.FORMAT_TYPE_YCBCR_422);
 
     private int nativeType; // value passed down to native code to represent this format
-    private static final Map<Integer, VideoFormat> lookupMap = new HashMap<Integer, VideoFormat>();
+    private static final Map<Integer, VideoFormat> lookupMap = new HashMap<>();
     static {
         for (VideoFormat fmt : VideoFormat.values()) {
             lookupMap.put(fmt.getNativeType(), fmt);

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,7 +28,7 @@ import java.util.HashMap;
 
 public class ClipboardAssistance {
 
-    private final HashMap <String, Object> cacheData  =  new HashMap <String, Object> ();
+    private final HashMap<String, Object> cacheData = new HashMap<>();
     private final Clipboard clipboard;
     private int supportedActions = Clipboard.ACTION_ANY;
 

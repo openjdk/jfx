@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2021, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,13 +25,13 @@
 package test.javafx.scene.control;
 
 import com.sun.javafx.tk.Toolkit;
+import javafx.scene.AccessibleRole;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.Dialog;
 import javafx.scene.layout.StackPane;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-
 import static org.junit.Assert.assertEquals;
 
 /** Tests for the {@link Dialog} class. */
@@ -78,6 +78,11 @@ public class DialogTest {
         assertDialogPaneHeightEquals(minHeight);
 
         assertEquals(minHeight, dialog.getDialogPane().getMinHeight(), 0);
+    }
+
+    @Test
+    public void testAccessibleRole() {
+        assertEquals(AccessibleRole.DIALOG, dialog.getDialogPane().getAccessibleRole());
     }
 
     @Test

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -58,7 +58,7 @@ public class CompositeGlyphMapper extends CharToGlyphMapper {
     public CompositeGlyphMapper(CompositeFontResource compFont) {
         font = compFont;
         missingGlyph = 0; // TrueType font standard, avoids lookup.
-        glyphMap = new HashMap<Integer, Integer>();
+        glyphMap = new HashMap<>();
         slotMappers = new CharToGlyphMapper[compFont.getNumSlots()];
         asciiCacheOK = true;
     }
@@ -77,6 +77,7 @@ public class CompositeGlyphMapper extends CharToGlyphMapper {
         return mapper;
     }
 
+    @Override
     public int getMissingGlyphCode() {
         return missingGlyph;
     }
@@ -139,6 +140,7 @@ public class CompositeGlyphMapper extends CharToGlyphMapper {
         return charToGlyph[index];
     }
 
+    @Override
     public int getGlyphCode(int charCode) {
         // If ASCII then array lookup, else use glyphMap
         int retVal = getAsciiGlyphCode(charCode);

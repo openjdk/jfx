@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -46,7 +46,8 @@ final class OSXMediaPlayer extends NativeMediaPlayer {
         init();
         mediaLocator = sourceMedia.getLocator();
         // This will throw an exception if we can't create the player
-        osxCreatePlayer(mediaLocator.getStringLocation());
+        osxCreatePlayer(mediaLocator, mediaLocator.getContentType(),
+                mediaLocator.getContentLength());
         audioEq = createNativeAudioEqualizer(osxGetAudioEqualizerRef());
         audioSpectrum = createNativeAudioSpectrum(osxGetAudioSpectrumRef());
     }
@@ -169,7 +170,9 @@ final class OSXMediaPlayer extends NativeMediaPlayer {
     public void playerInit() throws MediaException {
     }
 
-    private native void osxCreatePlayer(String sourceURI) throws MediaException;
+    private native void osxCreatePlayer(Locator locator,
+                                        String contentType,
+                                        long sizeHint) throws MediaException;
     // Have to use native references for these two things
     private native long osxGetAudioEqualizerRef();
     private native long osxGetAudioSpectrumRef();
@@ -191,4 +194,5 @@ final class OSXMediaPlayer extends NativeMediaPlayer {
     private native double osxGetDuration() throws MediaException;
     private native void osxSeek(double streamTime) throws MediaException;
     private native void osxDispose();
+    private native boolean osxNeedsLocator() throws MediaException;
 }

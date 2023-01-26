@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -33,7 +33,7 @@ public final class FocusUngrabEvent extends Event {
     private static final long serialVersionUID = 20121107L;
 
     public static final EventType<FocusUngrabEvent> FOCUS_UNGRAB =
-            new EventType<FocusUngrabEvent>(Event.ANY, "FOCUS_UNGRAB");
+            new EventType<>(Event.ANY, "FOCUS_UNGRAB");
 
     public static final EventType<FocusUngrabEvent> ANY = FOCUS_UNGRAB;
 

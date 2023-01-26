@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -86,7 +86,7 @@ public class ValueAxisTest {
             };
         }
 
-        formatter = new StringConverter<Number>() {
+        formatter = new StringConverter<>() {
             @Override
             public String toString(Number object) { return null; }
             @Override
@@ -168,6 +168,7 @@ public class ValueAxisTest {
         assertEquals("minorTickCountProperty cannot be bound", axis.minorTickCountProperty().getValue(),23.0,0.0);
     }
 
+    @SuppressWarnings("cast")
     @Test public void checkScaleIsReadOnlyPropertyAndHenceCannotBeBound() {
         assertTrue(axis.scaleProperty() instanceof ReadOnlyDoubleProperty);
     }

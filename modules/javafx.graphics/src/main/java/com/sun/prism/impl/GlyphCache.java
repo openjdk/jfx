@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -71,7 +71,7 @@ public class GlyphCache {
     private static final int SEGSIZE  = 1 << SEGSHIFT;
     private static final int SEGMASK  = SEGSIZE - 1;
     HashMap<Integer, GlyphData[]>
-        glyphDataMap = new HashMap<Integer, GlyphData[]>();
+        glyphDataMap = new HashMap<>();
 
     // Because of SEGSHIFT the 5 high bit in the key to glyphDataMap are unused
     // Using them for subpixel
@@ -85,10 +85,10 @@ public class GlyphCache {
      * for all uses on a particular screen.
      */
     static WeakHashMap<BaseContext, RectanglePacker> greyPackerMap =
-        new WeakHashMap<BaseContext, RectanglePacker>();
+        new WeakHashMap<>();
 
     static WeakHashMap<BaseContext, RectanglePacker> lcdPackerMap =
-        new WeakHashMap<BaseContext, RectanglePacker>();
+        new WeakHashMap<>();
 
     public GlyphCache(BaseContext context, FontStrike strike) {
         this.context = context;

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -196,7 +196,7 @@ public class ComboBox<T> extends ComboBoxBase<T> {
      **************************************************************************/
 
     private static <T> StringConverter<T> defaultStringConverter() {
-        return new StringConverter<T>() {
+        return new StringConverter<>() {
             @Override public String toString(T t) {
                 return t == null ? null : t.toString();
             }
@@ -233,7 +233,7 @@ public class ComboBox<T> extends ComboBoxBase<T> {
         getStyleClass().add(DEFAULT_STYLE_CLASS);
         setAccessibleRole(AccessibleRole.COMBO_BOX);
         setItems(items);
-        setSelectionModel(new ComboBoxSelectionModel<T>(this));
+        setSelectionModel(new ComboBoxSelectionModel<>(this));
 
         // listen to the value property input by the user, and if the value is
         // set to something that exists in the items list, we should update the
@@ -306,7 +306,7 @@ public class ComboBox<T> extends ComboBoxBase<T> {
     /**
      * The list of items to show within the ComboBox popup.
      */
-    private ObjectProperty<ObservableList<T>> items = new SimpleObjectProperty<ObservableList<T>>(this, "items");
+    private ObjectProperty<ObservableList<T>> items = new SimpleObjectProperty<>(this, "items");
     public final void setItems(ObservableList<T> value) { itemsProperty().set(value); }
     public final ObservableList<T> getItems() {return items.get(); }
     public ObjectProperty<ObservableList<T>> itemsProperty() { return items; }
@@ -321,7 +321,7 @@ public class ComboBox<T> extends ComboBoxBase<T> {
      */
     public ObjectProperty<StringConverter<T>> converterProperty() { return converter; }
     private ObjectProperty<StringConverter<T>> converter =
-            new SimpleObjectProperty<StringConverter<T>>(this, "converter", ComboBox.<T>defaultStringConverter());
+            new SimpleObjectProperty<>(this, "converter", ComboBox.<T>defaultStringConverter());
     public final void setConverter(StringConverter<T> value) { converterProperty().set(value); }
     public final StringConverter<T> getConverter() {return converterProperty().get(); }
 
@@ -333,7 +333,7 @@ public class ComboBox<T> extends ComboBoxBase<T> {
      * for more information on cell factories.
      */
     private ObjectProperty<Callback<ListView<T>, ListCell<T>>> cellFactory =
-            new SimpleObjectProperty<Callback<ListView<T>, ListCell<T>>>(this, "cellFactory");
+            new SimpleObjectProperty<>(this, "cellFactory");
     public final void setCellFactory(Callback<ListView<T>, ListCell<T>> value) { cellFactoryProperty().set(value); }
     public final Callback<ListView<T>, ListCell<T>> getCellFactory() {return cellFactoryProperty().get(); }
     public ObjectProperty<Callback<ListView<T>, ListCell<T>>> cellFactoryProperty() { return cellFactory; }
@@ -350,7 +350,7 @@ public class ComboBox<T> extends ComboBoxBase<T> {
      */
     public ObjectProperty<ListCell<T>> buttonCellProperty() { return buttonCell; }
     private ObjectProperty<ListCell<T>> buttonCell =
-            new SimpleObjectProperty<ListCell<T>>(this, "buttonCell");
+            new SimpleObjectProperty<>(this, "buttonCell");
     public final void setButtonCell(ListCell<T> value) { buttonCellProperty().set(value); }
     public final ListCell<T> getButtonCell() {return buttonCellProperty().get(); }
 
@@ -360,7 +360,7 @@ public class ComboBox<T> extends ComboBoxBase<T> {
      * The selection model for the ComboBox. A ComboBox only supports
      * single selection.
      */
-    private ObjectProperty<SingleSelectionModel<T>> selectionModel = new SimpleObjectProperty<SingleSelectionModel<T>>(this, "selectionModel") {
+    private ObjectProperty<SingleSelectionModel<T>> selectionModel = new SimpleObjectProperty<>(this, "selectionModel") {
         private SingleSelectionModel<T> oldSM = null;
         @Override protected void invalidated() {
             if (oldSM != null) {
@@ -423,7 +423,7 @@ public class ComboBox<T> extends ComboBoxBase<T> {
      */
     public final ObjectProperty<Node> placeholderProperty() {
         if (placeholder == null) {
-            placeholder = new SimpleObjectProperty<Node>(this, "placeholder");
+            placeholder = new SimpleObjectProperty<>(this, "placeholder");
         }
         return placeholder;
     }
@@ -444,7 +444,7 @@ public class ComboBox<T> extends ComboBoxBase<T> {
 
     /** {@inheritDoc} */
     @Override protected Skin<?> createDefaultSkin() {
-        return new ComboBoxListViewSkin<T>(this);
+        return new ComboBoxListViewSkin<>(this);
     }
 
     /**
@@ -487,7 +487,7 @@ public class ComboBox<T> extends ComboBoxBase<T> {
 
     // Listen to changes in the selectedItem property of the SelectionModel.
     // When it changes, set the selectedItem in the value property.
-    private ChangeListener<T> selectedItemListener = new ChangeListener<T>() {
+    private ChangeListener<T> selectedItemListener = new ChangeListener<>() {
         @Override public void changed(ObservableValue<? extends T> ov, T t, T t1) {
             if (wasSetAllCalled && t1 == null) {
                 // no-op: fix for RT-22572 where the developer was completely
@@ -585,7 +585,7 @@ public class ComboBox<T> extends ComboBoxBase<T> {
         }
 
         // watching for changes to the items list content
-        private final ListChangeListener<T> itemsContentObserver = new ListChangeListener<T>() {
+        private final ListChangeListener<T> itemsContentObserver = new ListChangeListener<>() {
             @Override public void onChanged(Change<? extends T> c) {
                 if (comboBox.getItems() == null || comboBox.getItems().isEmpty()) {
                     setSelectedIndex(-1);
@@ -632,7 +632,7 @@ public class ComboBox<T> extends ComboBoxBase<T> {
         private final InvalidationListener itemsObserver;
 
         private WeakListChangeListener<T> weakItemsContentObserver =
-                new WeakListChangeListener<T>(itemsContentObserver);
+                new WeakListChangeListener<>(itemsContentObserver);
 
 
         private void updateItemsObserver(ObservableList<T> oldList, ObservableList<T> newList) {

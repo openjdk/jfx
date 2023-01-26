@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -33,7 +33,7 @@ import static org.junit.Assert.*;
 
 public class MockMapObserver<K, V> implements MapChangeListener<K, V> {
 
-    private List<Call> calls = new ArrayList<Call>();
+    private List<Call> calls = new ArrayList<>();
 
     @Override
     public void onChanged(Change<? extends K,? extends V> c) {
@@ -72,7 +72,7 @@ public class MockMapObserver<K, V> implements MapChangeListener<K, V> {
     public void assertMultipleRemove(Tuple<K, V>... tuples) {
         assertEquals(this.calls.size(), tuples.length);
         for (Tuple<K,V> t : tuples) {
-            assertTrue(calls + " doesn't contain "  + t, this.calls.contains(new Call<K,V>(t.key, t.val, null)));
+            assertTrue(calls + " doesn't contain "  + t, this.calls.contains(new Call<>(t.key, t.val, null)));
         }
     }
 
@@ -112,7 +112,7 @@ public class MockMapObserver<K, V> implements MapChangeListener<K, V> {
         }
 
         public static<K, V> Call<K, V> call(K k, V o, V n) {
-            return new Call<K, V>(k, o, n);
+            return new Call<>(k, o, n);
         }
 
         @Override
@@ -163,7 +163,7 @@ public class MockMapObserver<K, V> implements MapChangeListener<K, V> {
         }
 
         public static<K, V> Tuple<K, V> tup(K k, V v) {
-            return new Tuple<K, V>(k, v);
+            return new Tuple<>(k, v);
         }
     }
 

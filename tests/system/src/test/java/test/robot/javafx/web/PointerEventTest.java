@@ -24,40 +24,29 @@
 
 package test.robot.javafx.web;
 
-import com.sun.javafx.PlatformUtil;
+import static org.junit.Assert.assertEquals;
+
+import java.util.concurrent.CountDownLatch;
 
 import javafx.application.Application;
-import javafx.application.Platform;
-import javafx.beans.value.ObservableValue;
-import javafx.concurrent.Worker.State;
 import javafx.concurrent.Worker;
+import javafx.scene.Scene;
+import javafx.scene.input.KeyCode;
 import javafx.scene.input.MouseButton;
 import javafx.scene.layout.StackPane;
 import javafx.scene.robot.Robot;
-import javafx.scene.Scene;
 import javafx.scene.web.WebEngine;
 import javafx.scene.web.WebView;
-import javafx.scene.input.KeyCode;
 import javafx.stage.Stage;
-
-import java.lang.Integer;
-import java.lang.Number;
-
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
 
 import org.junit.After;
 import org.junit.AfterClass;
-import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
 
 import test.util.Util;
-
-import static org.junit.Assert.*;
 
 /*
  * Tests for validating the buttons property received in "pointermove" event,
@@ -85,7 +74,7 @@ public class PointerEventTest {
     private final int DX = 125;
     private final int DY = 125;
 
-    private static CountDownLatch startupLatch;
+    private static CountDownLatch startupLatch = new CountDownLatch(2);
 
     static Document document;
     static Element element;
@@ -192,17 +181,12 @@ public class PointerEventTest {
 
     @BeforeClass
     public static void initFX() {
-        startupLatch = new CountDownLatch(2);
-        new Thread(() -> Application.launch(TestApp.class, (String[])null)).start();
-        waitForLatch(startupLatch, 15, "Timeout waiting for FX runtime to start");
+        Util.launch(startupLatch, TestApp.class);
     }
 
     @AfterClass
     public static void exit() {
-        Platform.runLater(() -> {
-            stage.hide();
-        });
-        Platform.exit();
+        Util.shutdown(stage);
     }
 
     @After
@@ -211,15 +195,5 @@ public class PointerEventTest {
             robot.mouseRelease(MouseButton.PRIMARY, MouseButton.MIDDLE, MouseButton.SECONDARY);
             robot.keyType(KeyCode.ESCAPE);
         });
-    }
-
-    public static void waitForLatch(CountDownLatch latch, int seconds, String msg) {
-        try {
-            if (!latch.await(seconds, TimeUnit.SECONDS)) {
-                fail(msg);
-            }
-        } catch (Exception ex) {
-            fail("Unexpected exception: " + ex);
-        }
     }
 }

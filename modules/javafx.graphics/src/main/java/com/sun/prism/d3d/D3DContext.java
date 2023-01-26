@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -503,15 +503,15 @@ class D3DContext extends BaseShaderContext {
 
     public static String hResultToString(long hResult) {
         switch ((int)hResult) {
-            case (int)D3DERR_DEVICENOTRESET:
+            case D3DERR_DEVICENOTRESET:
                 return "D3DERR_DEVICENOTRESET";
-            case (int)D3DERR_DEVICELOST:
+            case D3DERR_DEVICELOST:
                 return "D3DERR_DEVICELOST";
-            case (int)D3DERR_OUTOFVIDEOMEMORY:
+            case D3DERR_OUTOFVIDEOMEMORY:
                 return "D3DERR_OUTOFVIDEOMEMORY";
-            case (int)D3DERR_DEVICEREMOVED:
+            case D3DERR_DEVICEREMOVED:
                 return "D3DERR_DEVICEREMOVED";
-            case (int)D3D_OK:
+            case D3D_OK:
                 return "D3D_OK";
             default:
                 return "D3D_ERROR " + Long.toHexString(hResult);

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -45,7 +45,7 @@ public class PaintUtil {
                                              float bx, float by,
                                              float bw, float bh)
     {
-        Gradient mgrad = (Gradient)grad;
+        Gradient mgrad = grad;
         int numStops = mgrad.getNumStops();
         float[] fractions = new float[numStops];
         Color[] colors = new Color[numStops];

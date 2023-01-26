@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -32,7 +32,7 @@ package com.sun.prism;
 
 public interface PhongMaterial extends Material {
 
-    public enum MapType {DIFFUSE, SPECULAR, BUMP, SELF_ILLUM};
+    public enum MapType {DIFFUSE, SPECULAR, BUMP, SELF_ILLUM}
     public static final int DIFFUSE = MapType.DIFFUSE.ordinal();
     public static final int SPECULAR = MapType.SPECULAR.ordinal();
     public static final int BUMP = MapType.BUMP.ordinal();

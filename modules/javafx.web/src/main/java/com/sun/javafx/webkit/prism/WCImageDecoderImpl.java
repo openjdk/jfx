@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -126,9 +126,11 @@ final class WCImageDecoderImpl extends WCImageDecoder {
 
     private void startLoader() {
         if (this.loader == null) {
-            this.loader = new Service<ImageFrame[]>() {
+            this.loader = new Service<>() {
+                @Override
                 protected Task<ImageFrame[]> createTask() {
-                    return new Task<ImageFrame[]>() {
+                    return new Task<>() {
+                        @Override
                         protected ImageFrame[] call() throws Exception {
                             return loadFrames();
                         }
@@ -300,7 +302,7 @@ final class WCImageDecoderImpl extends WCImageDecoder {
 
     // Per thread array cache to avoid repeated creation of int[]
     private static final ThreadLocal<int[]> THREAD_LOCAL_SIZE_ARRAY =
-        new ThreadLocal<int[]> () {
+        new ThreadLocal<> () {
             @Override protected int[] initialValue() {
                 return new int[2];
             }

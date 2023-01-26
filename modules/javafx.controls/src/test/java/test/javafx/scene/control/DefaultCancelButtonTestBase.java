@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2019, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -301,7 +301,7 @@ public abstract class DefaultCancelButtonTestBase<C extends Control> {
     protected abstract C createControl();
     protected C getControl() {
         return control;
-    };
+    }
 
     protected void show() {
         stage.show();
@@ -312,9 +312,8 @@ public abstract class DefaultCancelButtonTestBase<C extends Control> {
     }
 
     private void initStage() {
-        //This step is not needed (Just to make sure StubToolkit is loaded into VM)
-        @SuppressWarnings("unused")
-        Toolkit tk = (StubToolkit)Toolkit.getToolkit();
+        assertTrue(Toolkit.getToolkit() instanceof StubToolkit);  // Ensure StubToolkit is loaded
+
         root = new VBox();
         scene = new Scene(root);
         stage = new Stage();

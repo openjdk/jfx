@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -75,37 +75,37 @@ class EventHelper {
 
     EventHelper(EventTarget bean) {
         this.target = bean;
-        onReady = new SimpleObjectProperty<EventHandler<WorkerStateEvent>>(bean, "onReady") {
+        onReady = new SimpleObjectProperty<>(bean, "onReady") {
             @Override protected void invalidated() {
                 EventHandler<WorkerStateEvent> handler = get();
                 setEventHandler(WORKER_STATE_READY, handler);
             }
         };
-        onScheduled = new SimpleObjectProperty<EventHandler<WorkerStateEvent>>(bean, "onScheduled") {
+        onScheduled = new SimpleObjectProperty<>(bean, "onScheduled") {
             @Override protected void invalidated() {
                 EventHandler<WorkerStateEvent> handler = get();
                 setEventHandler(WORKER_STATE_SCHEDULED, handler);
             }
         };
-        onRunning = new SimpleObjectProperty<EventHandler<WorkerStateEvent>>(bean, "onRunning") {
+        onRunning = new SimpleObjectProperty<>(bean, "onRunning") {
             @Override protected void invalidated() {
                 EventHandler<WorkerStateEvent> handler = get();
                 setEventHandler(WORKER_STATE_RUNNING, handler);
             }
         };
-        onSucceeded = new SimpleObjectProperty<EventHandler<WorkerStateEvent>>(bean, "onSucceeded") {
+        onSucceeded = new SimpleObjectProperty<>(bean, "onSucceeded") {
             @Override protected void invalidated() {
                 EventHandler<WorkerStateEvent> handler = get();
                 setEventHandler(WORKER_STATE_SUCCEEDED, handler);
             }
         };
-        onCancelled = new SimpleObjectProperty<EventHandler<WorkerStateEvent>>(bean, "onCancelled") {
+        onCancelled = new SimpleObjectProperty<>(bean, "onCancelled") {
             @Override protected void invalidated() {
                 EventHandler<WorkerStateEvent> handler = get();
                 setEventHandler(WORKER_STATE_CANCELLED, handler);
             }
         };
-        onFailed = new SimpleObjectProperty<EventHandler<WorkerStateEvent>>(bean, "onFailed") {
+        onFailed = new SimpleObjectProperty<>(bean, "onFailed") {
             @Override protected void invalidated() {
                 EventHandler<WorkerStateEvent> handler = get();
                 setEventHandler(WORKER_STATE_FAILED, handler);

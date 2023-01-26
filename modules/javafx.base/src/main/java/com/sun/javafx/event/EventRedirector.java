@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -66,7 +66,7 @@ public class EventRedirector extends BasicEventDispatcher {
      *      ({@code RedirectedEvent} event source)
      */
     public EventRedirector(final Object eventSource) {
-        this.eventDispatchers = new CopyOnWriteArrayList<EventDispatcher>();
+        this.eventDispatchers = new CopyOnWriteArrayList<>();
         this.eventDispatchChain = new EventDispatchChainImpl();
         this.eventSource = eventSource;
     }

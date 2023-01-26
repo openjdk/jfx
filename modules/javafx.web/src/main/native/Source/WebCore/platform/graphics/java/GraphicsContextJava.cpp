@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -610,8 +610,10 @@ bool GraphicsContextJava::supportsTransparencyLayers() const
     return true;
 }
 
-void GraphicsContextJava::beginPlatformTransparencyLayer(float opacity)
+void GraphicsContextJava::beginTransparencyLayer(float opacity)
 {
+    GraphicsContext::beginTransparencyLayer(opacity);
+
     if (paintingDisabled())
       return;
 
@@ -620,13 +622,15 @@ void GraphicsContextJava::beginPlatformTransparencyLayer(float opacity)
     << opacity;
 }
 
-void GraphicsContextJava::endPlatformTransparencyLayer()
+void GraphicsContextJava::endTransparencyLayer()
 {
     if (paintingDisabled())
       return;
 
     platformContext()->rq().freeSpace(4)
     << (jint)com_sun_webkit_graphics_GraphicsDecoder_ENDTRANSPARENCYLAYER;
+
+    GraphicsContext::endTransparencyLayer();
 }
 
 void GraphicsContextJava::clearRect(const FloatRect& rect)

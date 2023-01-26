@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -83,21 +83,21 @@ public class Person {
     public void setSomething(double value) {something.set(value);}
     public DoubleProperty somethingProperty() {return something;}
 
-    private final ObjectProperty<Object> data = new SimpleObjectProperty<Object>();
+    private final ObjectProperty<Object> data = new SimpleObjectProperty<>();
     public final Object getData() {return data.get();}
     public void setData(Object value) {data.set(value);}
     public ObjectProperty<Object> dataProperty() {return data;}
 
     public final ReadOnlyIntegerWrapper noWrite = new ReadOnlyIntegerWrapper();
-    public static final PropertyReference<Integer> NO_WRITE = new PropertyReference<Integer>(Person.class, "noWrite");
+    public static final PropertyReference<Integer> NO_WRITE = new PropertyReference<>(Person.class, "noWrite");
     public final int getNoWrite() { return noWrite.get(); }
     public ReadOnlyIntegerProperty noWriteProperty() {return noWrite.getReadOnlyProperty();}
 
     public final IntegerProperty noRead = new SimpleIntegerProperty(); // do not expect it back
-    public static final PropertyReference<Integer> NO_READ = new PropertyReference<Integer>(Person.class, "noRead");
+    public static final PropertyReference<Integer> NO_READ = new PropertyReference<>(Person.class, "noRead");
     public void setNoRead(int value) {noRead.set(value);}
 
     int noReadWrite;
-    public static final PropertyReference<Integer> NO_READ_WRITE = new PropertyReference<Integer>(Person.class, "noReadWrite");
+    public static final PropertyReference<Integer> NO_READ_WRITE = new PropertyReference<>(Person.class, "noReadWrite");
 
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -56,10 +56,10 @@ public class ListExpressionTest {
 
     @Before
     public void setUp() {
-        opNull = new SimpleListProperty<Integer>();
-        opEmpty = new SimpleListProperty<Integer>(FXCollections.<Integer>observableArrayList());
-        op1 = new SimpleListProperty<Integer>(FXCollections.observableArrayList(data1_0));
-        op2 = new SimpleListProperty<Integer>(FXCollections.observableArrayList(data2_0, data2_1));
+        opNull = new SimpleListProperty<>();
+        opEmpty = new SimpleListProperty<>(FXCollections.<Integer>observableArrayList());
+        op1 = new SimpleListProperty<>(FXCollections.observableArrayList(data1_0));
+        op2 = new SimpleListProperty<>(FXCollections.observableArrayList(data2_0, data2_1));
     }
 
     @BeforeClass

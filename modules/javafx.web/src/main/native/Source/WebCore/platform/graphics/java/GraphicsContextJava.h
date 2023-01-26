@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -118,8 +118,8 @@ public:
     FloatRect roundToDevicePixels(const FloatRect& frect, RoundingMode) override;
 
     bool supportsTransparencyLayers() const override;
-    void beginPlatformTransparencyLayer(float opacity);
-    void endPlatformTransparencyLayer();
+    void beginTransparencyLayer(float opacity) override;
+    void endTransparencyLayer() override;
 
     void translate(float x, float y) override;
     void rotate(float radians) override;

@@ -82,6 +82,7 @@ set(ICU_COMMON_SOURCES
     source/common/dictionarydata.cpp
     source/common/dtintrv.cpp
     source/common/edits.cpp
+    source/common/emojiprops.cpp
     source/common/errorcode.cpp
     source/common/filteredbrk.cpp
     source/common/filterednormalizer2.cpp
@@ -103,6 +104,7 @@ set(ICU_COMMON_SOURCES
     source/common/locresdata.cpp
     source/common/locutil.cpp
     source/common/lsr.cpp
+    source/common/lstmbe.cpp
     source/common/messagepattern.cpp
     source/common/normalizer2.cpp
     source/common/normalizer2impl.cpp
@@ -582,7 +584,7 @@ target_link_libraries(data_as_asm icuuc icui18n)
 file(GLOB ICU_DATA_ZIP_FILE "${CMAKE_BINARY_DIR}/icu/data/icu4c-*.zip")
 
 # Get just file name without extension
-set(ICU_DATA_FILE_NAME "icudt68l")
+set(ICU_DATA_FILE_NAME "icudt71l")
 
 # Use jar instead of unzip, it will be helpful to get rid of cygwin dependency
 find_package(Java)

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,8 +27,6 @@ package javafx.print;
 
 import java.util.Set;
 
-import javafx.beans.property.BooleanProperty;
-import javafx.beans.property.BooleanPropertyBase;
 import javafx.beans.property.IntegerProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.Property;
@@ -724,7 +722,7 @@ public final class JobSettings {
      * @param pages null or a varargs array as specified above
      */
     public final void setPageRanges(PageRange... pages) {
-        pageRangesProperty().set((PageRange[])pages);
+        pageRangesProperty().set(pages);
     }
 
     ///////////////////////  END PAGE RANGES /////////////////////
@@ -740,7 +738,7 @@ public final class JobSettings {
      */
     public final ObjectProperty<PrintSides> printSidesProperty() {
          if (sides == null) {
-             sides = new SimpleObjectProperty<PrintSides>
+             sides = new SimpleObjectProperty<>
                  (JobSettings.this, "printSides",
                   printerCaps.getDefaultPrintSides()) {
 
@@ -822,7 +820,7 @@ public final class JobSettings {
     public final ObjectProperty<Collation> collationProperty() {
          if (collation == null) {
              Collation coll = printerCaps.getDefaultCollation();
-             collation = new SimpleObjectProperty<Collation>
+             collation = new SimpleObjectProperty<>
                 (JobSettings.this, "collation", coll) {
 
                 @Override
@@ -891,7 +889,7 @@ public final class JobSettings {
      */
     public final ObjectProperty<PrintColor> printColorProperty() {
          if (color == null) {
-            color = new SimpleObjectProperty<PrintColor>
+            color = new SimpleObjectProperty<>
                 (JobSettings.this, "printColor",
                  printerCaps.getDefaultPrintColor()) {
 
@@ -969,7 +967,7 @@ public final class JobSettings {
      */
     public final ObjectProperty<PrintQuality> printQualityProperty() {
          if (quality == null) {
-            quality = new SimpleObjectProperty<PrintQuality>
+            quality = new SimpleObjectProperty<>
                 (JobSettings.this, "printQuality",
                  printerCaps.getDefaultPrintQuality()) {
 
@@ -1049,7 +1047,7 @@ public final class JobSettings {
      */
     public final ObjectProperty<PrintResolution> printResolutionProperty() {
          if (resolution == null) {
-            resolution = new SimpleObjectProperty<PrintResolution>
+            resolution = new SimpleObjectProperty<>
                 (JobSettings.this, "printResolution",
                  printerCaps.getDefaultPrintResolution()) {
 
@@ -1122,7 +1120,7 @@ public final class JobSettings {
      */
     public final ObjectProperty<PaperSource> paperSourceProperty() {
          if (paperSource == null) {
-            paperSource = new SimpleObjectProperty<PaperSource>
+            paperSource = new SimpleObjectProperty<>
                 (JobSettings.this, "paperSource",
                  printerCaps.getDefaultPaperSource()) {
 
@@ -1200,7 +1198,7 @@ public final class JobSettings {
      */
     public final ObjectProperty<PageLayout> pageLayoutProperty() {
          if (layout == null) {
-             layout = new SimpleObjectProperty<PageLayout>
+             layout = new SimpleObjectProperty<>
                  (JobSettings.this, "pageLayout",
                   printer.getDefaultPageLayout()) {
 

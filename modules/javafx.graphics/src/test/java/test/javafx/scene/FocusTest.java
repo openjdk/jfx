@@ -117,16 +117,24 @@ public class FocusTest {
         return n(T, T, T);
     }
 
-    private void assertIsFocused(Scene s, Node n) {
-        assertEquals(n, s.getFocusOwner());
+    private void assertIsFocused(Node n) {
         assertTrue(n.isFocused());
         assertTrue(n.getPseudoClassStates().stream().anyMatch(pc -> pc.getPseudoClassName().equals("focused")));
     }
 
-    private void assertNotFocused(Scene s, Node n) {
-        assertTrue(n != s.getFocusOwner());
+    private void assertIsFocused(Scene s, Node n) {
+        assertEquals(n, s.getFocusOwner());
+        assertIsFocused(n);
+    }
+
+    private void assertNotFocused(Node n) {
         assertFalse(n.isFocused());
         assertFalse(n.getPseudoClassStates().stream().anyMatch(pc -> pc.getPseudoClassName().equals("focused")));
+    }
+
+    private void assertNotFocused(Scene s, Node n) {
+        assertTrue(n != s.getFocusOwner());
+        assertNotFocused(n);
     }
 
     private void assertNullFocus(Scene s) {
@@ -996,6 +1004,51 @@ public class FocusTest {
         g2.getChildren().remove(0);
         assertNotFocusWithin(g1);
         assertNotFocusWithin(g2);
+    }
+
+    /**
+     * When a scene graph contains multiple nested focused nodes, the focusWithin bits that are
+     * cleared when a focused node is removed must only be cleared as long as we don't encounter
+     * another focused node up the tree.
+     */
+    @Test public void testMultiLevelFocusWithinIsPreserved() {
+        class N extends Group {
+            N(Node... children) {
+                super(children);
+                setFocusTraversable(true);
+            }
+
+            void setFocused() {
+                setFocused(true);
+            }
+        }
+
+        N node1, node2, node3, node4;
+
+        scene.setRoot(
+            node1 = new N(
+                node2 = new N(
+                    node3 = new N(
+                        node4 = new N()
+                    )
+                )
+            ));
+
+        node2.setFocused();
+        node4.setFocused();
+
+        // Remove node4 from the scene graph
+        node3.getChildren().clear();
+
+        assertIsFocusWithin(node1);
+        assertIsFocusWithin(node2);
+        assertNotFocusWithin(node3);
+        assertIsFocusWithin(node4);
+
+        assertNotFocused(node1);
+        assertIsFocused(node2);
+        assertNotFocused(node3);
+        assertIsFocused(node4);
     }
 
 }

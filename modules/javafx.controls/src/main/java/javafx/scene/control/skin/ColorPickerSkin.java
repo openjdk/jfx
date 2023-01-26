@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,47 +25,42 @@
 
 package javafx.scene.control.skin;
 
-import com.sun.javafx.css.StyleManager;
-
-import com.sun.javafx.scene.control.Properties;
-import com.sun.javafx.scene.control.behavior.ComboBoxBaseBehavior;
-import com.sun.javafx.scene.control.skin.Utils;
-import javafx.beans.property.StringProperty;
-import javafx.css.StyleOrigin;
-import javafx.css.StyleableBooleanProperty;
-import javafx.css.CssMetaData;
-
-import javafx.css.converter.BooleanConverter;
+import static javafx.scene.paint.Color.*;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-
-import javafx.css.StyleableDoubleProperty;
-import javafx.css.StyleableStringProperty;
-import javafx.geometry.Pos;
-import javafx.scene.Node;
-import javafx.scene.control.Control;
-import javafx.scene.image.ImageView;
-import javafx.scene.layout.StackPane;
-import javafx.scene.shape.Rectangle;
-
-import javafx.css.converter.SizeConverter;
-import javafx.css.converter.StringConverter;
-import com.sun.javafx.scene.control.behavior.ColorPickerBehavior;
-
 import java.util.Map;
 
-import javafx.scene.control.ColorPicker;
-import javafx.scene.control.TextField;
 import javafx.beans.property.BooleanProperty;
-import javafx.beans.value.WritableValue;
+import javafx.beans.property.StringProperty;
+import javafx.css.CssMetaData;
+import javafx.css.StyleOrigin;
 import javafx.css.Styleable;
+import javafx.css.StyleableBooleanProperty;
+import javafx.css.StyleableDoubleProperty;
 import javafx.css.StyleableProperty;
+import javafx.css.StyleableStringProperty;
+import javafx.css.converter.BooleanConverter;
+import javafx.css.converter.SizeConverter;
+import javafx.css.converter.StringConverter;
+import javafx.geometry.Pos;
+import javafx.scene.Node;
+import javafx.scene.control.ColorPicker;
+import javafx.scene.control.Control;
 import javafx.scene.control.Label;
+import javafx.scene.control.TextField;
+import javafx.scene.image.ImageView;
+import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
+import javafx.scene.shape.Rectangle;
 
-import static javafx.scene.paint.Color.*;
+import com.sun.javafx.css.StyleManager;
+import com.sun.javafx.scene.control.ListenerHelper;
+import com.sun.javafx.scene.control.Properties;
+import com.sun.javafx.scene.control.behavior.ColorPickerBehavior;
+import com.sun.javafx.scene.control.behavior.ComboBoxBaseBehavior;
+import com.sun.javafx.scene.control.skin.Utils;
 
 /**
  * Default skin implementation for the {@link ColorPicker} control.
@@ -108,10 +103,10 @@ public class ColorPickerSkin extends ComboBoxPopupControl<Color> {
 
         // install default input map for the control
         this.behavior = new ColorPickerBehavior(control);
-//        control.setInputMap(behavior.getInputMap());
 
         updateComboBoxMode();
-        registerChangeListener(control.valueProperty(), e -> updateColor());
+
+        ListenerHelper.get(this).addChangeListener(control.valueProperty(), (ev) -> updateColor());
 
         // create displayNode
         displayNode = new Label();
@@ -617,7 +612,7 @@ public class ColorPickerSkin extends ComboBoxPopupControl<Color> {
 
      private static class StyleableProperties {
         private static final CssMetaData<ColorPicker,Boolean> COLOR_LABEL_VISIBLE =
-                new CssMetaData<ColorPicker,Boolean>("-fx-color-label-visible",
+                new CssMetaData<>("-fx-color-label-visible",
                 BooleanConverter.getInstance(), Boolean.TRUE) {
 
             @Override public boolean isSettable(ColorPicker n) {
@@ -627,11 +622,11 @@ public class ColorPickerSkin extends ComboBoxPopupControl<Color> {
 
             @Override public StyleableProperty<Boolean> getStyleableProperty(ColorPicker n) {
                 final ColorPickerSkin skin = (ColorPickerSkin) n.getSkin();
-                return (StyleableProperty<Boolean>)(WritableValue<Boolean>)skin.colorLabelVisible;
+                return (StyleableProperty<Boolean>)skin.colorLabelVisible;
             }
         };
         private static final CssMetaData<ColorPicker,Number> COLOR_RECT_WIDTH =
-                new CssMetaData<ColorPicker,Number>("-fx-color-rect-width", SizeConverter.getInstance(), 12d) {
+                new CssMetaData<>("-fx-color-rect-width", SizeConverter.getInstance(), 12d) {
                     @Override public boolean isSettable(ColorPicker n) {
                         final ColorPickerSkin skin = (ColorPickerSkin) n.getSkin();
                         return !skin.colorRectWidth.isBound();
@@ -642,7 +637,7 @@ public class ColorPickerSkin extends ComboBoxPopupControl<Color> {
                     }
                 };
         private static final CssMetaData<ColorPicker,Number> COLOR_RECT_HEIGHT =
-                new CssMetaData<ColorPicker,Number>("-fx-color-rect-height", SizeConverter.getInstance(), 12d) {
+                new CssMetaData<>("-fx-color-rect-height", SizeConverter.getInstance(), 12d) {
                     @Override public boolean isSettable(ColorPicker n) {
                         final ColorPickerSkin skin = (ColorPickerSkin) n.getSkin();
                         return !skin.colorRectHeight.isBound();
@@ -653,7 +648,7 @@ public class ColorPickerSkin extends ComboBoxPopupControl<Color> {
                     }
                 };
         private static final CssMetaData<ColorPicker,Number> COLOR_RECT_X =
-                new CssMetaData<ColorPicker,Number>("-fx-color-rect-x", SizeConverter.getInstance(), 0) {
+                new CssMetaData<>("-fx-color-rect-x", SizeConverter.getInstance(), 0) {
                     @Override public boolean isSettable(ColorPicker n) {
                         final ColorPickerSkin skin = (ColorPickerSkin) n.getSkin();
                         return !skin.colorRectX.isBound();
@@ -664,7 +659,7 @@ public class ColorPickerSkin extends ComboBoxPopupControl<Color> {
                     }
                 };
         private static final CssMetaData<ColorPicker,Number> COLOR_RECT_Y =
-                new CssMetaData<ColorPicker,Number>("-fx-color-rect-y", SizeConverter.getInstance(), 0) {
+                new CssMetaData<>("-fx-color-rect-y", SizeConverter.getInstance(), 0) {
                     @Override public boolean isSettable(ColorPicker n) {
                         final ColorPickerSkin skin = (ColorPickerSkin) n.getSkin();
                         return !skin.colorRectY.isBound();
@@ -675,7 +670,7 @@ public class ColorPickerSkin extends ComboBoxPopupControl<Color> {
                     }
                 };
         private static final CssMetaData<ColorPicker,String> GRAPHIC =
-            new CssMetaData<ColorPicker,String>("-fx-graphic", StringConverter.getInstance()) {
+            new CssMetaData<>("-fx-graphic", StringConverter.getInstance()) {
                 @Override public boolean isSettable(ColorPicker n) {
                     final ColorPickerSkin skin = (ColorPickerSkin) n.getSkin();
                     return !skin.imageUrl.isBound();
@@ -688,7 +683,7 @@ public class ColorPickerSkin extends ComboBoxPopupControl<Color> {
         private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
         static {
             final List<CssMetaData<? extends Styleable, ?>> styleables =
-                new ArrayList<CssMetaData<? extends Styleable, ?>>(ComboBoxBaseSkin.getClassCssMetaData());
+                new ArrayList<>(ComboBoxBaseSkin.getClassCssMetaData());
             styleables.add(COLOR_LABEL_VISIBLE);
             styleables.add(COLOR_RECT_WIDTH);
             styleables.add(COLOR_RECT_HEIGHT);

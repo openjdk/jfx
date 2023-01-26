@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -43,7 +43,6 @@ import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ObjectPropertyBase;
 import javafx.beans.property.SimpleDoubleProperty;
-import javafx.beans.value.WritableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
@@ -51,9 +50,7 @@ import javafx.scene.AccessibleRole;
 import javafx.scene.Node;
 import javafx.scene.layout.StackPane;
 import javafx.scene.shape.LineTo;
-import javafx.scene.shape.MoveTo;
 import javafx.scene.shape.Path;
-import javafx.scene.shape.PathElement;
 import javafx.scene.shape.StrokeLineJoin;
 import javafx.util.Duration;
 
@@ -85,8 +82,7 @@ public class LineChart<X,Y> extends XYChart<X,Y> {
     private Series<X,Y> seriesOfDataRemoved = null;
     private Data<X,Y> dataItemBeingRemoved = null;
     private FadeTransition fadeSymbolTransition = null;
-    private Map<Data<X,Y>, Double> XYValueMap =
-                                new HashMap<Data<X,Y>, Double>();
+    private Map<Data<X,Y>, Double> XYValueMap = new HashMap<>();
     private Timeline seriesRemoveTimeline = null;
     // -------------- PUBLIC PROPERTIES ----------------------------------------
 
@@ -111,14 +107,17 @@ public class LineChart<X,Y> extends XYChart<X,Y> {
             requestChartLayout();
         }
 
+        @Override
         public Object getBean() {
             return LineChart.this;
         }
 
+        @Override
         public String getName() {
             return "createSymbols";
         }
 
+        @Override
         public CssMetaData<LineChart<?,?>,Boolean> getCssMetaData() {
             return StyleableProperties.CREATE_SYMBOLS;
         }
@@ -147,10 +146,12 @@ public class LineChart<X,Y> extends XYChart<X,Y> {
             requestChartLayout();
         }
 
+        @Override
         public Object getBean() {
             return LineChart.this;
         }
 
+        @Override
         public String getName() {
             return "axisSortingPolicy";
         }
@@ -193,8 +194,8 @@ public class LineChart<X,Y> extends XYChart<X,Y> {
         final Axis<Y> ya = getYAxis();
         List<X> xData = null;
         List<Y> yData = null;
-        if(xa.isAutoRanging()) xData = new ArrayList<X>();
-        if(ya.isAutoRanging()) yData = new ArrayList<Y>();
+        if(xa.isAutoRanging()) xData = new ArrayList<>();
+        if(ya.isAutoRanging()) yData = new ArrayList<>();
         if(xData != null || yData != null) {
             for(Series<X,Y> series : getData()) {
                 for(Data<X,Y> data: series.getData()) {
@@ -404,7 +405,7 @@ public class LineChart<X,Y> extends XYChart<X,Y> {
         }
         getPlotChildren().add(seriesLine);
 
-        List<KeyFrame> keyFrames = new ArrayList<KeyFrame>();
+        List<KeyFrame> keyFrames = new ArrayList<>();
         if (shouldAnimate()) {
             // animate in new series
             keyFrames.add(new KeyFrame(Duration.ZERO,
@@ -546,7 +547,7 @@ public class LineChart<X,Y> extends XYChart<X,Y> {
 
     private static class StyleableProperties {
         private static final CssMetaData<LineChart<?,?>,Boolean> CREATE_SYMBOLS =
-            new CssMetaData<LineChart<?,?>,Boolean>("-fx-create-symbols",
+            new CssMetaData<>("-fx-create-symbols",
                 BooleanConverter.getInstance(), Boolean.TRUE) {
 
             @Override
@@ -556,14 +557,14 @@ public class LineChart<X,Y> extends XYChart<X,Y> {
 
             @Override
             public StyleableProperty<Boolean> getStyleableProperty(LineChart<?,?> node) {
-                return (StyleableProperty<Boolean>)(WritableValue<Boolean>)node.createSymbolsProperty();
+                return (StyleableProperty<Boolean>)node.createSymbolsProperty();
             }
         };
 
         private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
         static {
             final List<CssMetaData<? extends Styleable, ?>> styleables =
-                new ArrayList<CssMetaData<? extends Styleable, ?>>(XYChart.getClassCssMetaData());
+                new ArrayList<>(XYChart.getClassCssMetaData());
             styleables.add(CREATE_SYMBOLS);
             STYLEABLES = Collections.unmodifiableList(styleables);
         }

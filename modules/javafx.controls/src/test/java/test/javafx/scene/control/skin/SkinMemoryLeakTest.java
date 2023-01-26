@@ -25,9 +25,29 @@
 
 package test.javafx.scene.control.skin;
 
+import static javafx.scene.control.ControlShim.installDefaultSkin;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertTrue;
+import static test.com.sun.javafx.scene.control.infrastructure.ControlSkinFactory.asArrays;
+import static test.com.sun.javafx.scene.control.infrastructure.ControlSkinFactory.attemptGC;
+import static test.com.sun.javafx.scene.control.infrastructure.ControlSkinFactory.createControl;
+import static test.com.sun.javafx.scene.control.infrastructure.ControlSkinFactory.getControlClasses;
+import static test.com.sun.javafx.scene.control.infrastructure.ControlSkinFactory.replaceSkin;
+
 import java.lang.ref.WeakReference;
 import java.util.Collection;
 import java.util.List;
+
+import javafx.scene.Scene;
+import javafx.scene.control.Control;
+import javafx.scene.control.Skin;
+import javafx.scene.layout.Pane;
+import javafx.scene.layout.VBox;
+import javafx.stage.Stage;
 
 import org.junit.After;
 import org.junit.Before;
@@ -36,33 +56,6 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import com.sun.javafx.tk.Toolkit;
-
-import static javafx.scene.control.ControlShim.*;
-import static org.junit.Assert.*;
-import static test.com.sun.javafx.scene.control.infrastructure.ControlSkinFactory.*;
-
-import javafx.scene.Scene;
-import javafx.scene.control.Accordion;
-import javafx.scene.control.ButtonBar;
-import javafx.scene.control.ColorPicker;
-import javafx.scene.control.ComboBox;
-import javafx.scene.control.Control;
-import javafx.scene.control.DatePicker;
-import javafx.scene.control.MenuBar;
-import javafx.scene.control.MenuButton;
-import javafx.scene.control.Pagination;
-import javafx.scene.control.PasswordField;
-import javafx.scene.control.ScrollBar;
-import javafx.scene.control.ScrollPane;
-import javafx.scene.control.Skin;
-import javafx.scene.control.Spinner;
-import javafx.scene.control.SplitMenuButton;
-import javafx.scene.control.SplitPane;
-import javafx.scene.control.TableView;
-import javafx.scene.control.TreeTableView;
-import javafx.scene.layout.Pane;
-import javafx.scene.layout.VBox;
-import javafx.stage.Stage;
 
 /**
  * Test memory leaks in Skin implementations.
@@ -84,10 +77,33 @@ public class SkinMemoryLeakTest {
     public void testMemoryLeakSameSkinClass() {
         installDefaultSkin(control);
         Skin<?> skin = control.getSkin();
+        WeakReference<?> weakRef = new WeakReference<>(skin);
+
         installDefaultSkin(control);
 
-        WeakReference<?> weakRef = new WeakReference<>(skin);
         skin = null;
+        Toolkit.getToolkit().firePulse();
+
+        attemptGC(weakRef);
+        assertNull("Unused Skin must be gc'ed", weakRef.get());
+    }
+
+    /**
+     * default skin -> set another instance of default skin,
+     * with scene property set.
+     */
+    @Test
+    public void testMemoryLeakSameSkinClassWithScene() {
+        showControl(control, true);
+        installDefaultSkin(control);
+        Skin<?> skin = control.getSkin();
+        WeakReference<?> weakRef = new WeakReference<>(skin);
+
+        installDefaultSkin(control);
+
+        skin = null;
+        Toolkit.getToolkit().firePulse();
+
         attemptGC(weakRef);
         assertNull("Unused Skin must be gc'ed", weakRef.get());
     }
@@ -117,9 +133,34 @@ public class SkinMemoryLeakTest {
     @Test
     public void testMemoryLeakAlternativeSkin() {
         installDefaultSkin(control);
-        // FIXME: JDK-8265406 - fragile test pattern
-        WeakReference<?> weakRef = new WeakReference<>(replaceSkin(control));
+        Skin<?> replacedSkin = replaceSkin(control);
+        WeakReference<?> weakRef = new WeakReference<>(replacedSkin);
         assertNotNull(weakRef.get());
+
+        // beware: this is important - we might get false reds without!
+        replacedSkin = null;
+        Toolkit.getToolkit().firePulse();
+
+        attemptGC(weakRef);
+        assertEquals("Skin must be gc'ed", null, weakRef.get());
+    }
+
+    /**
+     * default skin -> set alternative,
+     * with scene property set
+     */
+    @Test
+    public void testMemoryLeakAlternativeSkinWithScene() {
+        showControl(control, true);
+        installDefaultSkin(control);
+        Skin<?> replacedSkin = replaceSkin(control);
+        WeakReference<?> weakRef = new WeakReference<>(replacedSkin);
+        assertNotNull(weakRef.get());
+
+        // beware: this is important - we might get false reds without!
+        replacedSkin = null;
+        Toolkit.getToolkit().firePulse();
+
         attemptGC(weakRef);
         assertEquals("Skin must be gc'ed", null, weakRef.get());
     }
@@ -133,9 +174,11 @@ public class SkinMemoryLeakTest {
         Skin<?> replacedSkin = replaceSkin(control);
         WeakReference<?> weakRef = new WeakReference<>(replacedSkin);
         assertNotNull(weakRef.get());
+
         // beware: this is important - we might get false reds without!
-        Toolkit.getToolkit().firePulse();
         replacedSkin = null;
+        Toolkit.getToolkit().firePulse();
+
         attemptGC(weakRef);
         assertEquals("Skin must be gc'ed", null, weakRef.get());
     }
@@ -156,31 +199,6 @@ public class SkinMemoryLeakTest {
     @Parameterized.Parameters //(name = "{index}: {0} ")
     public static Collection<Object[]> data() {
         List<Class<Control>> controlClasses = getControlClasses();
-        // FIXME as part of JDK-8241364
-        // The default skins of these controls are leaking
-        // step 1: file issues (where not yet done), add informal ignore to entry
-        // step 2: fix and remove from list
-        List<Class<? extends Control>> leakingClasses = List.of(
-                Accordion.class,
-                ButtonBar.class,
-                ColorPicker.class,
-                ComboBox.class,
-                DatePicker.class,
-                MenuBar.class,
-                MenuButton.class,
-                Pagination.class,
-                PasswordField.class,
-                ScrollBar.class,
-                ScrollPane.class,
-                // @Ignore("8245145")
-                Spinner.class,
-                SplitMenuButton.class,
-                SplitPane.class,
-                TableView.class,
-                TreeTableView.class
-        );
-        // remove the known issues to make the test pass
-        controlClasses.removeAll(leakingClasses);
         return asArrays(controlClasses);
     }
 

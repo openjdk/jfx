@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2021, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,21 +26,19 @@
 package test.javafx.scene.lighting3D;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 import static org.junit.Assume.assumeTrue;
 
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
+
+import javafx.application.ConditionalFeature;
+import javafx.application.Platform;
+import javafx.scene.SpotLight;
+import javafx.scene.paint.Color;
 
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import javafx.application.Application;
-import javafx.application.ConditionalFeature;
-import javafx.application.Platform;
-import javafx.scene.SpotLight;
-import javafx.scene.paint.Color;
 import test.util.Util;
 
 public class SpotLightAttenuationTest extends LightingTest {
@@ -64,8 +62,8 @@ public class SpotLightAttenuationTest extends LightingTest {
     public static void initFX() throws Exception {
         startupLatch = new CountDownLatch(1);
         LightingTest.light = LIGHT;
-        new Thread(() -> Application.launch(TestApp.class, (String[]) null)).start();
-        assertTrue("Timeout waiting for FX runtime to start", startupLatch.await(15, TimeUnit.SECONDS));
+
+        Util.launch(startupLatch, TestApp.class);
     }
 
     @Before

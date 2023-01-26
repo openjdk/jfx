@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2021, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -164,13 +164,13 @@ public class TreeTableCellEditingTest {
 
     @Before
     public void setup() {
-        cell = new TreeTableCell<String,String>();
+        cell = new TreeTableCell<>();
         model = FXCollections.observableArrayList(new TreeItem<>("Four"),
                 new TreeItem<>("Five"), new TreeItem<>("Fear")); // "Flop", "Food", "Fizz"
         TreeItem<String> root = new TreeItem<>("root");
         root.getChildren().addAll(model);
         root.setExpanded(true);
-        table = new TreeTableView<String>(root);
+        table = new TreeTableView<>(root);
         table.setEditable(true);
         editingColumn = new TreeTableColumn<>("TEST");
         editingColumn.setCellValueFactory(param -> null);

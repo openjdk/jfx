@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -66,14 +66,14 @@ public class ListListenerHelperTest {
                 new InvalidationListenerMock()
         };
         changeListenerMock = new MockListObserver[] {
-                new MockListObserver<Object>(),
-                new MockListObserver<Object>(),
-                new MockListObserver<Object>(),
-                new MockListObserver<Object>()
+                new MockListObserver<>(),
+                new MockListObserver<>(),
+                new MockListObserver<>(),
+                new MockListObserver<>()
         };
         helper = null;
         list = FXCollections.emptyObservableList();
-        change = new NonIterableChange.SimpleRemovedChange<Object>(0, 1, new Object(), list);
+        change = new NonIterableChange.SimpleRemovedChange<>(0, 1, new Object(), list);
     }
 
     private void resetAllListeners() {
@@ -252,7 +252,7 @@ public class ListListenerHelperTest {
 
     @Test
     public void testGeneric_AddInvalidationInPulse() {
-        final ListChangeListener<Object> addListener = new ListChangeListener<Object>() {
+        final ListChangeListener<Object> addListener = new ListChangeListener<>() {
             int counter;
             @Override
             public void onChanged(Change<? extends Object> c) {
@@ -363,7 +363,7 @@ public class ListListenerHelperTest {
 
     @Test
     public void testGeneric_RemoveInvalidationInPulse() {
-        final ListChangeListener<Object> removeListener = new ListChangeListener<Object>() {
+        final ListChangeListener<Object> removeListener = new ListChangeListener<>() {
             int counter;
             @Override
             public void onChanged(Change<? extends Object> c) {

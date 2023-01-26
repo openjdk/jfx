@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -32,16 +32,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
-import java.io.File;
-
-import java.net.URL;
-
 import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.SortedMap;
-import java.util.ArrayList;
 
 final class WinHTMLCodec {
     public static final String defaultCharset = "UTF-8";
@@ -166,8 +157,8 @@ class HTMLCodec extends InputStream {
                 if( -1 == stUpContext.indexOf("<BODY") ) {
                     htmlPrefix = htmlPrefix +"<BODY>";
                     htmlSuffix = "</BODY>" + htmlSuffix;
-                };
-            };
+                }
+            }
             htmlPrefix = htmlPrefix + START_FRAGMENT_CMT;
             htmlSuffix = END_FRAGMENT_CMT + htmlSuffix;
         }
@@ -278,7 +269,7 @@ class HTMLCodec extends InputStream {
 
     public HTMLCodec(
         InputStream _bytestream,
-        EHTMLReadMode _readMode) throws IOException
+        EHTMLReadMode _readMode)
     {
         bufferedStream = new BufferedInputStream(_bytestream, BYTE_BUFFER_LEN);
         readMode = _readMode;
@@ -381,7 +372,7 @@ class HTMLCodec extends InputStream {
                         case 7:
                             stBaseURL = stValue;
                             break;
-                        };
+                        }
                     } catch ( NumberFormatException e ) {
                         throw new IOException(FAILURE_MSG + astEntries[iEntry]+ " value " + e + INVALID_MSG);
                     }
@@ -437,6 +428,7 @@ class HTMLCodec extends InputStream {
         descriptionParsed = true;
     }
 
+    @Override
     public synchronized int read() throws IOException {
         if( closed ){
             throw new IOException("Stream closed");
@@ -457,6 +449,7 @@ class HTMLCodec extends InputStream {
         return retval;
     }
 
+    @Override
     public synchronized void close() throws IOException {
         if( !closed ){
             closed = true;
