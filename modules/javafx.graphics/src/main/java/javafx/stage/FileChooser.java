@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,7 +26,6 @@
 package javafx.stage;
 
 import java.io.File;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
@@ -113,8 +112,7 @@ public final class FileChooser {
             validateArgs(description, extensions);
 
             this.description = description;
-            this.extensions = Collections.unmodifiableList(
-                                      Arrays.asList(extensions.clone()));
+            this.extensions = List.of(extensions);
         }
 
         /**
@@ -140,8 +138,7 @@ public final class FileChooser {
             validateArgs(description, extensionsArray);
 
             this.description = description;
-            this.extensions = Collections.unmodifiableList(
-                                      Arrays.asList(extensionsArray));
+            this.extensions = List.of(extensionsArray);
         }
 
         /**
