@@ -821,7 +821,6 @@ public class ListPropertyBaseTest {
     public void testBindingLeak() {
         JMemoryBuddy.memoryTest(checker -> {
             // given
-            System.out.println("Start collection: " + FXCollections.observableArrayList());
             ListProperty<Object> listA = new SimpleListProperty<>(FXCollections.observableArrayList());
             ListProperty<Object> listB = new SimpleListProperty<>(FXCollections.observableArrayList());
 

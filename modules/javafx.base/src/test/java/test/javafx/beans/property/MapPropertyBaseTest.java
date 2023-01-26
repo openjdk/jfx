@@ -792,7 +792,6 @@ public class MapPropertyBaseTest {
     public void testBindingLeak() {
         JMemoryBuddy.memoryTest(checker -> {
             // given
-            System.out.println("Start collection: " + FXCollections.observableArrayList());
             MapProperty<Object, Object> listA = new SimpleMapProperty<>(FXCollections.observableHashMap());
             MapProperty<Object, Object> listB = new SimpleMapProperty<>(FXCollections.observableHashMap());
 

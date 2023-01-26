@@ -728,7 +728,6 @@ public class SetPropertyBaseTest {
     public void testBindingLeak() {
         JMemoryBuddy.memoryTest(checker -> {
             // given
-            System.out.println("Start collection: " + FXCollections.observableArrayList());
             SetProperty<Object> listA = new SimpleSetProperty<>(FXCollections.observableSet(new HashSet()));
             SetProperty<Object> listB = new SimpleSetProperty<>(FXCollections.observableSet(new HashSet()));
 
