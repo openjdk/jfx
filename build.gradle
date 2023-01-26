@@ -3697,6 +3697,34 @@ project(":web") {
     addValidateSourceSets(project, sourceSets)
 }
 
+project(":manualTests") {
+    apply plugin: "idea"
+    idea.module.sourceDirs = [
+        file("controls"),
+        file("desktop"),
+        file("dnd"),
+        file("events"),
+        file("graphics"),
+        file("media"),
+        file("printing"),
+        file("swing"),
+        file("swt"),
+        file("text"),
+        file("web")
+    ]
+
+    dependencies {
+        implementation project(':base')
+        implementation project(':graphics')
+        implementation project(':controls')
+        implementation project(':media')
+        implementation project(':web')
+        implementation project(':swing')
+        implementation project(':fxml')
+        implementation project(':swt')
+    }
+}
+
 // This project is for system tests that need to run with a full SDK.
 // Most of them display a stage or do other things that preclude running
 // them in a shared JVM or as part of the "smoke test" run (which must
