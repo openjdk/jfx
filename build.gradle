@@ -3710,6 +3710,7 @@ project(":manualTests") {
         file("swing"),
         file("swt"),
         file("text"),
+        file("UI"),
         file("web")
     ]
 
