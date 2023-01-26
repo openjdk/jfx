@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -8524,7 +8524,7 @@ public abstract class Node implements EventTarget, Styleable {
         return isTreeVisible() && isWindowShowing();
     }
 
-    private void updateTreeVisible(boolean parentChanged, boolean underConstruction) {
+    private void updateTreeVisible(boolean parentChanged, boolean underInitialization) {
         boolean isTreeVisible = isVisible();
         final Node parentNode = getParent() != null ? getParent() :
                     clipParent != null ? clipParent :
@@ -8539,13 +8539,22 @@ public abstract class Node implements EventTarget, Styleable {
                 && isDirty(DirtyBits.NODE_VISIBLE)) {
             addToSceneDirtyList();
         }
-        setTreeVisible(isTreeVisible, underConstruction);
+        setTreeVisible(isTreeVisible, underInitialization);
     }
 
     private boolean treeVisible;
     private TreeVisiblePropertyReadOnly treeVisibleRO;
 
-    final void setTreeVisible(boolean value, boolean underConstruction) {
+    final void setTreeVisible(boolean value) {
+        setTreeVisible(value, false);
+    }
+
+    /**
+     * When this method is called from the initializer of this class, the {@code underInitialization}
+     * flag must be set. In this case, the calls to overridden methods are elided to prevent leaking
+     * the partially initialized object instance to subclasses.
+     */
+    private void setTreeVisible(boolean value, boolean underInitialization) {
         if (treeVisible != value) {
             treeVisible = value;
             updateCanReceiveFocus();
@@ -8558,9 +8567,9 @@ public abstract class Node implements EventTarget, Styleable {
             }
             ((TreeVisiblePropertyReadOnly) treeVisibleProperty()).invalidate();
 
-            // We can only treat this node as an instance of a derived class after the constructor
+            // We can only treat this node as an instance of a derived class after the initializer
             // has run to completion, as otherwise several methods of derived classes return 'null'.
-            if (!underConstruction) {
+            if (!underInitialization) {
                 if (Node.this instanceof SubScene subScene) {
                     Node subSceneRoot = subScene.getRoot();
                     subSceneRoot.setTreeVisible(value && subSceneRoot.isVisible(), false);
