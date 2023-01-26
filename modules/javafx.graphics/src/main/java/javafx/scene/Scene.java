@@ -1298,7 +1298,7 @@ public class Scene implements EventTarget {
         // because this scene can be stage-less
         doLayoutPass();
 
-         synchronizeSceneNodesWithLock();
+        synchronizeSceneNodesWithLock();
     }
 
     private void synchronizeSceneNodesWithLock() {
@@ -2109,19 +2109,24 @@ public class Scene implements EventTarget {
      *                                                                         *
      **************************************************************************/
 
-    private void windowForSceneChanged(Window oldWindow, Window newWindow) {
+    private void windowForSceneChanged(Window oldWindow, Window window) {
         if (oldWindow != null) {
+            oldWindow.showingProperty().removeListener(sceneWindowShowingListener);
             oldWindow.focusedProperty().removeListener(sceneWindowFocusedListener);
         }
 
-        if (newWindow != null) {
-            newWindow.focusedProperty().addListener(sceneWindowFocusedListener);
-            setWindowFocused(newWindow.isFocused());
+        if (window != null) {
+            window.showingProperty().addListener(sceneWindowShowingListener);
+            window.focusedProperty().addListener(sceneWindowFocusedListener);
+            setWindowFocused(window.isFocused());
         } else {
             setWindowFocused(false);
         }
+
+        checkCleanDirtyNodes();
     }
 
+    private final ChangeListener<Boolean> sceneWindowShowingListener = (p, o, n) -> {checkCleanDirtyNodes(); } ;
     private final InvalidationListener sceneWindowFocusedListener =
             valueModel -> setWindowFocused(((ReadOnlyBooleanProperty)valueModel).get());
 
