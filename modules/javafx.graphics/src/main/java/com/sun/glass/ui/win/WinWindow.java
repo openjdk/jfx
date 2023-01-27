@@ -55,6 +55,21 @@ class WinWindow extends Window {
     }
 
     @Override
+    protected void _beginMoveDrag(long ptr, int button, double screenX, double screenY) {
+
+    }
+
+    @Override
+    protected void _beginResizeDrag(long ptr, int edge, int button, double screenX, double screenY) {
+
+    }
+
+    @Override
+    protected void _setShadowInsets(long ptr, double top, double right, double bottom, double left) {
+
+    }
+
+    @Override
     public void setBounds(float x, float y, boolean xSet, boolean ySet,
                           float w, float h, float cw, float ch,
                           float xGravity, float yGravity)

@@ -52,6 +52,22 @@ final class MacWindow extends Window {
     @Override native protected boolean _setMenubar(long ptr, long menubarPtr);
     @Override native protected boolean _minimize(long ptr, boolean minimize);
     @Override native protected boolean _maximize(long ptr, boolean maximize, boolean wasMaximized);
+
+    @Override
+    protected void _beginMoveDrag(long ptr, int button, double screenX, double screenY) {
+
+    }
+
+    @Override
+    protected void _beginResizeDrag(long ptr, int edge, int button, double screenX, double screenY) {
+
+    }
+
+    @Override
+    protected void _setShadowInsets(long ptr, double top, double right, double bottom, double left) {
+
+    }
+
     @Override protected void _setBounds(long ptr,
                                         int x, int y, boolean xSet, boolean ySet,
                                         int w, int h, int cw, int ch,

@@ -217,6 +217,15 @@ class GtkWindow extends Window {
     }
 
     @Override
+    protected native void _beginMoveDrag(long ptr, int button, double screenX, double screenY);
+
+    @Override
+    protected native void _beginResizeDrag(long ptr, int edge, int button, double screenX, double screenY);
+
+    @Override
+    protected native void _setShadowInsets(long ptr, double top, double right, double bottom, double left);
+
+    @Override
     public long getRawHandle() {
         long ptr = super.getRawHandle();
         return ptr == 0L ? 0L : _getNativeWindowImpl(ptr);

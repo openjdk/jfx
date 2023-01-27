@@ -1,0 +1,24 @@
+
+l	java:S117Ð"QRename this local variable to match the regular expression '^[a-z][a-zA-Z0-9]*$'.(Á‹ÖÕýÿÿÿÿ
+l	java:S117Ð"QRename this local variable to match the regular expression '^[a-z][a-zA-Z0-9]*$'.(Á‹ÖÕýÿÿÿÿ
+l	java:S117Ð"QRename this local variable to match the regular expression '^[a-z][a-zA-Z0-9]*$'.(Á‹ÖÕýÿÿÿÿ
+l	java:S117Ð"QRename this local variable to match the regular expression '^[a-z][a-zA-Z0-9]*$'.(Á‹ÖÕýÿÿÿÿ
+g	java:S117Ñ"QRename this local variable to match the regular expression '^[a-z][a-zA-Z0-9]*$'.(‚šþÔ
+g	java:S117Ñ"QRename this local variable to match the regular expression '^[a-z][a-zA-Z0-9]*$'.(‚šþÔ
+g	java:S117Ñ"QRename this local variable to match the regular expression '^[a-z][a-zA-Z0-9]*$'.(‚šþÔ
+g	java:S117Ñ"QRename this local variable to match the regular expression '^[a-z][a-zA-Z0-9]*$'.(‚šþÔ
+g	java:S117Ò"QRename this local variable to match the regular expression '^[a-z][a-zA-Z0-9]*$'.(™‹¦é
+g	java:S117Ò"QRename this local variable to match the regular expression '^[a-z][a-zA-Z0-9]*$'.(™‹¦é
+g	java:S117Ò"QRename this local variable to match the regular expression '^[a-z][a-zA-Z0-9]*$'.(™‹¦é
+g	java:S117Ò"QRename this local variable to match the regular expression '^[a-z][a-zA-Z0-9]*$'.(™‹¦é
+V	java:S107;"<Method has 9 parameters, which is greater than 7 authorized.(ô¾öúýÿÿÿÿ
+H
+java:S11353"2Complete the task associated to this TODO comment.(£Žß–
+i	java:S100Ž"NRename this method name to match the regular expression '^[a-z][a-zA-Z0-9]*$'.(ÞÕˆûþÿÿÿÿ
+T	java:S106"9Replace this use of System.out or System.err by a logger.(ÜÍËæþÿÿÿÿ
+d	java:S100«"NRename this method name to match the regular expression '^[a-z][a-zA-Z0-9]*$'.(»–ž¢
+i	java:S100¬"NRename this method name to match the regular expression '^[a-z][a-zA-Z0-9]*$'.(âÖÐ±úÿÿÿÿ
+d	java:S100¸"NRename this method name to match the regular expression '^[a-z][a-zA-Z0-9]*$'.(§ÙÒ‚
+W	java:S125Ã"<This block of commented-out lines of code should be removed.(”õÂúÿÿÿÿ
+N
+java:S1135Ã"2Complete the task associated to this TODO comment.(”õÂúÿÿÿÿ

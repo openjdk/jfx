@@ -28,6 +28,9 @@ package com.sun.javafx.stage;
 import com.sun.javafx.tk.TKStage;
 import com.sun.javafx.util.Utils;
 import javafx.beans.property.ReadOnlyObjectProperty;
+import javafx.geometry.Insets;
+import javafx.scene.input.MouseButton;
+import javafx.scene.input.WindowEdge;
 import javafx.stage.Screen;
 import javafx.stage.Window;
 
@@ -172,5 +175,11 @@ public class WindowHelper {
 
         @SuppressWarnings("removal")
         AccessControlContext getAccessControlContext(Window window);
+
+        void setShadowInsets(Window window, Insets insets);
+
+        void beginMoveDrag(Window window, MouseButton button, double screenX, double screenY);
+
+        void beginResizeDrag(Window window, WindowEdge edge, MouseButton button, double screenX, double screenY);
     }
 }

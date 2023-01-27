@@ -26,9 +26,13 @@
 package com.sun.javafx.tk;
 
 import java.security.AccessControlContext;
+
+import javafx.geometry.Insets;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyCodeCombination;
 import javafx.scene.input.KeyCombination.ModifierValue;
+import javafx.scene.input.MouseButton;
+import javafx.scene.input.WindowEdge;
 
 /**
  * TKStage - Peer interface for a Stage
@@ -229,6 +233,12 @@ public interface TKStage {
      * @return platform window id, or 0L if there is none.
      */
     public long getRawHandle();
+
+    public void beginResizeDrag(WindowEdge edge, MouseButton button, double screenX, double screenY);
+
+    public void beginMoveDrag(MouseButton button, double screenX, double screenY);
+
+    public void setShadowInsets(Insets insets);
 
     public static final KeyCodeCombination defaultFullScreenExitKeycombo =
             new KeyCodeCombination(KeyCode.ESCAPE,

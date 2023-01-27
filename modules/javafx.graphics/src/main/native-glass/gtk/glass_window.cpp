@@ -1175,6 +1175,20 @@ void WindowContextTop::set_visible(bool visible)
     }
 }
 
+void WindowContextTop::begin_move_drag(int button, int x, int y) {
+    gtk_window_begin_move_drag(GTK_WINDOW(gtk_widget), button, x, y, GDK_CURRENT_TIME);
+}
+
+void WindowContextTop::begin_resize_drag(GdkWindowEdge edge, int button, int x, int y) {
+    gtk_window_begin_resize_drag(GTK_WINDOW(gtk_widget), edge, button, x, y, GDK_CURRENT_TIME);
+}
+
+void WindowContextTop::set_shadow_insets(int top, int right, int bottom, int left) {
+#ifdef GLASS_GTK3
+    gdk_window_set_shadow_width(gdk_window, left, right, top, bottom);
+#endif
+}
+
 void WindowContextTop::set_bounds(int x, int y, bool xSet, bool ySet, int w, int h, int cw, int ch) {
     requested_bounds.width = w;
     requested_bounds.height = h;

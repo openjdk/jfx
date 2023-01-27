@@ -1,0 +1,127 @@
+/*******************************************************************************
+ *                                                                             *
+ * Scene Decoration                                                            *
+ *                                                                             *
+ ******************************************************************************/
+.decoration {
+    -fx-background-color: -fx-background;
+    -fx-background-radius: 1em;
+    -fx-border-color: -fx-outer-border;
+    -fx-border-radius: 1em;
+    -fx-border-width: 0.083333em;
+    -fx-effect: dropshadow(gaussian, black, 20, 0, 0, 0);
+    -fx-title-bar-spacing: 0.666666em;
+
+    /* Insets must be the same */
+    -fx-shadow-insets: 1.666666667em;
+    -fx-background-insets: 1.666666667em;
+    -fx-border-insets: 1.666666667em;;
+}
+
+
+.decoration > .container {
+    -fx-background-color: transparent;
+}
+
+.decoration > .container > .header {
+    -fx-background-color: -fx-background; /*non-focused*/
+    -fx-background-radius: 1em 1em 0 0;
+    -fx-min-height: 3.083333333em;
+    -fx-max-height: 3.083333333em;
+    -fx-padding: 0.333333em 0.666666em 0.333333em 0.666666em;
+    -fx-border-width: 0 0 0.083333em 0;
+    -fx-border-color: -fx-outer-border;
+    -fx-alignment: center-left;
+}
+
+.decoration:focused > .container > .header {
+    TOP-COLOR: ladder(
+            -fx-base,
+            derive(-fx-base,0%) 0%,
+            derive(-fx-base,46%) 100%
+    );
+    -fx-background-color:
+            linear-gradient(to bottom, derive(TOP-COLOR, 25%) 0%, -fx-outer-border 90%),
+            linear-gradient(to bottom, TOP-COLOR 2%, derive(-fx-base, -2.1%) 95%);
+}
+
+.decoration:solid,
+.decoration:maximized,
+.decoration:full-screen,
+.decoration:solid > .container > .header,
+.decoration:maximized > .container > .header,
+.decoration:full-screen > .container > .header {
+    -fx-background-radius: 0;
+    -fx-border-radius: 0;
+    -fx-shadow-insets: 0;
+    -fx-background-insets: 0;
+    -fx-border-insets: 0;
+}
+
+.decoration > .container > .header > .icon {
+}
+
+.decoration > .container > .header .title {
+    -fx-alignment: center;
+    -fx-font-weight: bold;
+    -fx-wrap-text: false;
+    -fx-text-overrun: ellipsis;
+    -fx-text-fill: -fx-text-base-color;
+    -fx-min-width: 2em;
+}
+
+.decoration > .container > .header > .header-buttons {
+    -fx-spacing: 0.666667em;
+    -fx-alignment: center-right;
+}
+
+.decoration > .container > .header > .header-buttons > .button {
+    -fx-background-insets: 0;
+    -fx-padding: 0;
+    -fx-alignment: CENTER;
+    -fx-background-radius: 100%;
+    -fx-content-display: graphic-only;
+    -fx-min-width: 1.833333333em;
+    -fx-max-width: 1.833333333em;
+    -fx-min-height: 1.833333333em;
+    -fx-max-height: 1.833333333em;
+}
+
+.decoration > .container > .header > .header-buttons > .button > .icon {
+    -fx-background-color: derive(-fx-base, -90%);
+    -fx-scale-y: 0.4;
+    -fx-scale-x: 0.4;
+}
+
+.decoration > .container > .header > .header-buttons > .maximize > .icon {
+    -fx-shape: "m 2.1151164,2.1089152 v 0.00103 h -0.0031 v 0.2651001 h 0.0031 v 1.5869833 0.2640665 0.00103 H 4.231783 V 3.9620321 h -0.00155 V 2.1089152 H 3.9651326 v 0.00103 H 2.3802165 v -0.00103 z M 2.3802165,2.3750488 H 3.9651326 V 3.9620321 H 2.3802165 Z"
+}
+
+.decoration:maximized .container > .header > .header-buttons > .maximize > .icon {
+    -fx-shape: "M 2.642,2.38 V 2.115 H 4.2296 V 2.38 Z M 4.23,3.7 H 3.965 V 2.377 H 4.23 Z M 2.112,2.908 V 2.643 H 3.6996 V 2.908 Z M 2.38,3.964 H 2.115 V 2.9056 H 2.38 Z m 1.32,0.00497 H 3.435 V 2.9084259 H 3.7 Z M 2.114,4.227 V 3.962 h 1.5876 v 0.265 z";
+}
+
+.decoration > .container > .header > .header-buttons > .iconify > .icon {
+    -fx-shape: "M 2.112,3.962 V 3.697 h 2.1168 v 0.265 z";
+    -fx-scale-y: 0.04;
+    -fx-translate-y: 0.25em;
+}
+
+.decoration > .container > .header > .header-buttons > .close > .icon {
+    -fx-shape: "m2.3037 2.1167-0.18707 0.18707 0.87023 0.86971-0.87023 0.87023 0.18707 0.18707 0.87023-0.87023 0.86971 0.87023 0.18707-0.18707-0.86971-0.87023 0.86971-0.86971-0.18707-0.18707-0.86971 0.86971z"
+}
+
+.decoration > .container > .header > .left {
+    -fx-alignment: center-left;
+}
+
+.decoration .container > .header > .right {
+    -fx-alignment: center-right;
+}
+
+/*PREDICT CONTROLS INSIDE HEADER*/
+
+.decoration > .container > .header > .left .button,
+.decoration > .container > .header > .right .button {
+    -fx-padding: 0.666667em;
+}

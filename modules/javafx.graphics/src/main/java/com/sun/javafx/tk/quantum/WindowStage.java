@@ -35,7 +35,10 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
+import javafx.geometry.Insets;
 import javafx.scene.input.KeyCombination;
+import javafx.scene.input.MouseButton;
+import javafx.scene.input.WindowEdge;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
@@ -932,4 +935,18 @@ public class WindowStage extends GlassStage {
         rtl = b;
     }
 
+    @Override
+    public void beginResizeDrag(WindowEdge edge, MouseButton button, double screenX, double screenY) {
+        platformWindow.beginResizeDrag(edge, button, screenX, screenY);
+    }
+
+    @Override
+    public void beginMoveDrag(MouseButton button, double screenX, double screenY) {
+        platformWindow.beginMoveDrag(button, screenX, screenY);
+    }
+
+    @Override
+    public void setShadowInsets(Insets insets) {
+        platformWindow.setShadowInsets(insets);
+    }
 }

@@ -67,6 +67,21 @@ final class IosWindow extends Window {
     @Override native protected boolean _grabFocus(long ptr);
     @Override native protected void _ungrabFocus(long ptr);
 
+    @Override
+    protected void _beginMoveDrag(long ptr, int button, double screenX, double screenY) {
+
+    }
+
+    @Override
+    protected void _beginResizeDrag(long ptr, int edge, int button, double screenX, double screenY) {
+
+    }
+
+    @Override
+    protected void _setShadowInsets(long ptr, double top, double right, double bottom, double left) {
+
+    }
+
     //No cursor on iOS. API compatibility call.
     @Override
     protected void _setCursor(long ptr, Cursor cursor) {

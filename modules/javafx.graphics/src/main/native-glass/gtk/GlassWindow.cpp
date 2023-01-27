@@ -25,6 +25,7 @@
 #include <com_sun_glass_ui_gtk_GtkWindow.h>
 #include <com_sun_glass_events_WindowEvent.h>
 #include <com_sun_glass_events_ViewEvent.h>
+#include <com_sun_glass_events_MouseEvent.h>
 
 #include <cstdlib>
 #include <cstring>
@@ -68,6 +69,45 @@ static GdkWMFunction glass_mask_to_wm_function(jint mask) {
     }
 
     return (GdkWMFunction) func;
+}
+
+static int glass_mouse_button_to_gtk_button(jint button) {
+    switch (button) {
+        case com_sun_glass_events_MouseEvent_BUTTON_OTHER:
+            return 2;
+        case com_sun_glass_events_MouseEvent_BUTTON_RIGHT:
+            return 3;
+        case com_sun_glass_events_MouseEvent_BUTTON_BACK:
+            return 4;
+        case com_sun_glass_events_MouseEvent_BUTTON_FORWARD:
+            return 5;
+        case com_sun_glass_events_MouseEvent_BUTTON_LEFT:
+        default:
+            return 1;
+    }
+}
+
+static GdkWindowEdge glass_edge_to_gtk_edge(jint edge) {
+    switch (edge) {
+        case 0:
+            return GDK_WINDOW_EDGE_NORTH_WEST;
+        case 1:
+            return GDK_WINDOW_EDGE_NORTH;
+        case 2:
+            return GDK_WINDOW_EDGE_NORTH_EAST;
+        case 3:
+            return GDK_WINDOW_EDGE_WEST;
+        case 4:
+            return GDK_WINDOW_EDGE_EAST;
+        case 5:
+            return GDK_WINDOW_EDGE_SOUTH_WEST;
+        case 6:
+            return GDK_WINDOW_EDGE_SOUTH;
+        case 7:
+            return GDK_WINDOW_EDGE_SOUTH_EAST;
+    }
+
+    return GDK_WINDOW_EDGE_NORTH_WEST;
 }
 
 extern "C" {
@@ -168,6 +208,51 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkWindow_maximizeImpl
 
     WindowContext* ctx = JLONG_TO_WINDOW_CTX(ptr);
     ctx->set_maximized(maximize);
+}
+
+/*
+ * Class:     com_sun_glass_ui_gtk_GtkWindow
+ * Method:    _beginMoveDrag
+ * Signature: (JIDD)V
+ */
+JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkWindow__1beginMoveDrag
+    (JNIEnv *env, jobject obj, jlong ptr, jint button, jdouble x, jdouble y) {
+
+    (void)env;
+    (void)obj;
+
+    WindowContext* ctx = JLONG_TO_WINDOW_CTX(ptr);
+    ctx->begin_move_drag(glass_mouse_button_to_gtk_button(button), x, y);
+}
+
+/*
+ * Class:     com_sun_glass_ui_gtk_GtkWindow
+ * Method:    _beginResizeDrag
+ * Signature: (JIIDD)V
+ */
+JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkWindow__1beginResizeDrag
+    (JNIEnv *env, jobject obj, jlong ptr, jint edge, jint button, jdouble x, jdouble y) {
+
+    (void)env;
+    (void)obj;
+
+    WindowContext* ctx = JLONG_TO_WINDOW_CTX(ptr);
+    ctx->begin_resize_drag(glass_edge_to_gtk_edge(edge), glass_mouse_button_to_gtk_button(button), x, y);
+}
+
+/*
+ * Class:     com_sun_glass_ui_gtk_GtkWindow
+ * Method:    _setShadowInsets
+ * Signature: (JDDDD)V
+ */
+JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkWindow__1setShadowInsets
+    (JNIEnv *env, jobject obj, jlong ptr, jdouble top, jdouble right, jdouble bottom, jdouble left) {
+
+    (void)env;
+    (void)obj;
+
+    WindowContext* ctx = JLONG_TO_WINDOW_CTX(ptr);
+    ctx->set_shadow_insets(top, left, bottom, left);
 }
 
 /*

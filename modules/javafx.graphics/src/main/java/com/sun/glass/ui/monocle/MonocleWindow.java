@@ -454,4 +454,15 @@ final class MonocleWindow extends Window {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 
+    @Override
+    protected void _beginMoveDrag(long ptr, int button, double screenX, double screenY) {
+    }
+
+    @Override
+    protected void _beginResizeDrag(long ptr, int edge, int button, double screenX, double screenY) {
+    }
+
+    @Override
+    protected void _setShadowInsets(long ptr, double top, double right, double bottom, double left) {
+    }
 }

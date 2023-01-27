@@ -34,6 +34,9 @@ import com.sun.javafx.tk.FocusCause;
 import com.sun.javafx.tk.TKScene;
 import com.sun.javafx.tk.TKStage;
 import com.sun.javafx.tk.TKStageListener;
+import javafx.geometry.Insets;
+import javafx.scene.input.MouseButton;
+import javafx.scene.input.WindowEdge;
 
 /**
  * @author Richard Bair
@@ -77,6 +80,7 @@ public class StubStage implements TKStage {
 
     public boolean visible;
     public float opacity;
+
 
     @Override
     public void setBounds(float x, float y, boolean xSet, boolean ySet,
@@ -440,6 +444,18 @@ public class StubStage implements TKStage {
 
     @Override
     public void setEnabled(boolean b) {
+    }
+
+    @Override
+    public void beginResizeDrag(WindowEdge edge, MouseButton button, double screenX, double screenY) {
+    }
+
+    @Override
+    public void beginMoveDrag(MouseButton button, double screenX, double screenY) {
+    }
+
+    @Override
+    public void setShadowInsets(Insets insets) {
     }
 
     @Override

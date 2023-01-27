@@ -1,0 +1,28 @@
+
+i
+java:S1192"RDefine a constant instead of duplicating this literal "color-picker-grid" 3 times.(œ¬•¶
+K
+java:S1066ê"/Merge this if statement with the enclosing one.(øµî¥ûÿÿÿÿ
+l	java:S117Ğ"QRename this local variable to match the regular expression '^[a-z][a-zA-Z0-9]*$'.(í¾©õıÿÿÿÿ
+d
+java:S2184ğ"HCast one of the operands of this multiplication operation to a "double".(‹Ùòúÿÿÿÿ
+d
+java:S2184ô"HCast one of the operands of this multiplication operation to a "double".(¹šòæÿÿÿÿÿ
+q
+java:S3008ù"URename this field "RAW_VALUES" to match the regular expression '^[a-z][a-zA-Z0-9]*$'.(èµ†Àüÿÿÿÿ
+B
+java:S1602s",Remove useless curly braces around statement(ÇÒî
+n
+java:S3776¢"RRefactor this method to reduce its Cognitive Complexity from 85 to the 15 allowed.(†Éà«ùÿÿÿÿ
+[
+java:S3358ê"DExtract this nested ternary operation into an independent statement.(»ğ Ø
+i
+java:S3776Í"RRefactor this method to reduce its Cognitive Complexity from 28 to the 15 allowed.(É“˜¶
+H
+java:S1602Ó",Remove useless curly braces around statement(şÉÊ²ÿÿÿÿÿ
+H
+java:S1602×",Remove useless curly braces around statement(¡ÈÖŞüÿÿÿÿ
+H
+java:S1602Ú",Remove useless curly braces around statement(ç£¯—ûÿÿÿÿ
+B
+java:S1659º"&Declare "rowIndex" on a separate line.(˜üˆ÷úÿÿÿÿ

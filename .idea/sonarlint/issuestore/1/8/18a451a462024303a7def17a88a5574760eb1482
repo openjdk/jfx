@@ -1,0 +1,177 @@
+
+a	java:S112õ"FDefine and throw a dedicated exception instead of using a generic one.(ÇŒàşÿÿÿÿ
+\	java:S112ı"FDefine and throw a dedicated exception instead of using a generic one.(ş‰¯
+\	java:S112š"FDefine and throw a dedicated exception instead of using a generic one.(†’Óå
+F
+java:S1066ˆ"/Merge this if statement with the enclosing one.(¥¿Õ
+K
+java:S1066‡"/Merge this if statement with the enclosing one.(”Ôÿôüÿÿÿÿ
+K
+java:S1066³"/Merge this if statement with the enclosing one.(¡øö²øÿÿÿÿ
+l	java:S117ü"QRename this local variable to match the regular expression '^[a-z][a-zA-Z0-9]*$'.(Á‹ÖÕıÿÿÿÿ
+l	java:S117ü"QRename this local variable to match the regular expression '^[a-z][a-zA-Z0-9]*$'.(Á‹ÖÕıÿÿÿÿ
+l	java:S117ü"QRename this local variable to match the regular expression '^[a-z][a-zA-Z0-9]*$'.(Á‹ÖÕıÿÿÿÿ
+l	java:S117ü"QRename this local variable to match the regular expression '^[a-z][a-zA-Z0-9]*$'.(Á‹ÖÕıÿÿÿÿ
+g	java:S117ı"QRename this local variable to match the regular expression '^[a-z][a-zA-Z0-9]*$'.(‚šşÔ
+g	java:S117ı"QRename this local variable to match the regular expression '^[a-z][a-zA-Z0-9]*$'.(‚šşÔ
+g	java:S117ı"QRename this local variable to match the regular expression '^[a-z][a-zA-Z0-9]*$'.(‚šşÔ
+g	java:S117ı"QRename this local variable to match the regular expression '^[a-z][a-zA-Z0-9]*$'.(‚šşÔ
+g	java:S117ş"QRename this local variable to match the regular expression '^[a-z][a-zA-Z0-9]*$'.(™‹¦é
+g	java:S117ş"QRename this local variable to match the regular expression '^[a-z][a-zA-Z0-9]*$'.(™‹¦é
+g	java:S117ş"QRename this local variable to match the regular expression '^[a-z][a-zA-Z0-9]*$'.(™‹¦é
+g	java:S117ş"QRename this local variable to match the regular expression '^[a-z][a-zA-Z0-9]*$'.(™‹¦é
+l	java:S117"QRename this local variable to match the regular expression '^[a-z][a-zA-Z0-9]*$'.(Á‹ÖÕıÿÿÿÿ
+l	java:S117"QRename this local variable to match the regular expression '^[a-z][a-zA-Z0-9]*$'.(Á‹ÖÕıÿÿÿÿ
+l	java:S117"QRename this local variable to match the regular expression '^[a-z][a-zA-Z0-9]*$'.(Á‹ÖÕıÿÿÿÿ
+l	java:S117"QRename this local variable to match the regular expression '^[a-z][a-zA-Z0-9]*$'.(Á‹ÖÕıÿÿÿÿ
+g	java:S117‘"QRename this local variable to match the regular expression '^[a-z][a-zA-Z0-9]*$'.(‚šşÔ
+g	java:S117‘"QRename this local variable to match the regular expression '^[a-z][a-zA-Z0-9]*$'.(‚šşÔ
+g	java:S117‘"QRename this local variable to match the regular expression '^[a-z][a-zA-Z0-9]*$'.(‚šşÔ
+g	java:S117‘"QRename this local variable to match the regular expression '^[a-z][a-zA-Z0-9]*$'.(‚šşÔ
+l	java:S117’"QRename this local variable to match the regular expression '^[a-z][a-zA-Z0-9]*$'.(…­Ùÿÿÿÿÿ
+l	java:S117’"QRename this local variable to match the regular expression '^[a-z][a-zA-Z0-9]*$'.(…­Ùÿÿÿÿÿ
+l	java:S117’"QRename this local variable to match the regular expression '^[a-z][a-zA-Z0-9]*$'.(…­Ùÿÿÿÿÿ
+l	java:S117’"QRename this local variable to match the regular expression '^[a-z][a-zA-Z0-9]*$'.(…­Ùÿÿÿÿÿ
+G
+java:S1659ç"+Declare "minimumHeight" on a separate line.(ª¯½úşÿÿÿÿ
+G
+java:S1659è"+Declare "maximumHeight" on a separate line.(®¢Ó‰şÿÿÿÿ
+R	java:S107•"=Method has 11 parameters, which is greater than 7 authorized.(èä‘C
+S	java:S107³"=Method has 10 parameters, which is greater than 7 authorized.(ˆ÷¯‚
+S	java:S107û"=Method has 16 parameters, which is greater than 7 authorized.(­²·
+R	java:S107"=Method has 17 parameters, which is greater than 7 authorized.(Ç¹åq
+œ
+java:S1186("€Add a nested comment explaining why this method is empty, throw an UnsupportedOperationException or complete the implementation.(øõûÚıÿÿÿÿ
+œ
+java:S1186B"€Add a nested comment explaining why this method is empty, throw an UnsupportedOperationException or complete the implementation.(¨­Œúùÿÿÿÿ
+—
+java:S1186K"€Add a nested comment explaining why this method is empty, throw an UnsupportedOperationException or complete the implementation.(Ë Ïà
+`
+java:S1124V"EReorder the modifiers to comply with the Java Language Specification.(¢‰×ªÿÿÿÿÿ
+[
+java:S1124Y"EReorder the modifiers to comply with the Java Language Specification.(¨ÊÚ
+[
+java:S1124^"EReorder the modifiers to comply with the Java Language Specification.(ö×ş
+[
+java:S1124d"EReorder the modifiers to comply with the Java Language Specification.(ñ®¼¸
+[
+java:S1124h"EReorder the modifiers to comply with the Java Language Specification.(ºëºˆ
+`
+java:S1124m"EReorder the modifiers to comply with the Java Language Specification.(€ôÜÊüÿÿÿÿ
+Q
+java:S1118§":Add a private constructor to hide the implicit public one.(˜‹—
+\
+java:S1124§"EReorder the modifiers to comply with the Java Language Specification.(˜‹—
+p	java:S115¶"ZRename this constant name to match the regular expression '^[A-Z][A-Z0-9]*(_[A-Z0-9]+)*$'.(€¸óô
+u	java:S115Á"ZRename this constant name to match the regular expression '^[A-Z][A-Z0-9]*(_[A-Z0-9]+)*$'.(àˆª—şÿÿÿÿ
+V
+java:S1118µ":Add a private constructor to hide the implicit public one.(—ÆÉÿÿÿÿÿ
+d	java:S100ì"NRename this method name to match the regular expression '^[a-z][a-zA-Z0-9]*$'.(à¡Êœ
+i	java:S100©"NRename this method name to match the regular expression '^[a-z][a-zA-Z0-9]*$'.(˜áÄ¨şÿÿÿÿ
+i	java:S100İ"NRename this method name to match the regular expression '^[a-z][a-zA-Z0-9]*$'.(†ÊÅ›øÿÿÿÿ
+C
+java:S1125ó"'Remove the unnecessary boolean literal.(š‡ô¾şÿÿÿÿ
+c	java:S100™"NRename this method name to match the regular expression '^[a-z][a-zA-Z0-9]*$'.(ğÎ3
+i	java:S100¬"NRename this method name to match the regular expression '^[a-z][a-zA-Z0-9]*$'.(šêÇêüÿÿÿÿ
+d	java:S100º"NRename this method name to match the regular expression '^[a-z][a-zA-Z0-9]*$'.(Â¾¢Ê
+c	java:S100•"NRename this method name to match the regular expression '^[a-z][a-zA-Z0-9]*$'.(èä‘C
+U
+java:S1117ß"9Rename "view" which hides the field declared at line 201.(À¤¬øÿÿÿÿ
+d	java:S100å"NRename this method name to match the regular expression '^[a-z][a-zA-Z0-9]*$'.(È‘ü²
+d	java:S100‚"NRename this method name to match the regular expression '^[a-z][a-zA-Z0-9]*$'.(‚½µ
+i	java:S100£"NRename this method name to match the regular expression '^[a-z][a-zA-Z0-9]*$'.(³ğñ¾ûÿÿÿÿ
+c	java:S100Ï"NRename this method name to match the regular expression '^[a-z][a-zA-Z0-9]*$'.(ÛĞë2
+d	java:S100Ş"NRename this method name to match the regular expression '^[a-z][a-zA-Z0-9]*$'.(ÂÊ¼¶
+i	java:S100ß"NRename this method name to match the regular expression '^[a-z][a-zA-Z0-9]*$'.(²´‚‹ÿÿÿÿÿ
+i	java:S100«"NRename this method name to match the regular expression '^[a-z][a-zA-Z0-9]*$'.(ÏÂêøÿÿÿÿ
+d	java:S100¹"NRename this method name to match the regular expression '^[a-z][a-zA-Z0-9]*$'.(ô×¸»
+U
+java:S1117Ò"9Rename "view" which hides the field declared at line 201.(À¤¬øÿÿÿÿ
+>
+java:S1125Ó"'Remove the unnecessary boolean literal.(üÔ‰ß
+V
+java:S1117Ø":Rename "alpha" which hides the field declared at line 213.(„»²Ïıÿÿÿÿ
+d	java:S100ä"NRename this method name to match the regular expression '^[a-z][a-zA-Z0-9]*$'.(“Îû¶
+i	java:S100ƒ"NRename this method name to match the regular expression '^[a-z][a-zA-Z0-9]*$'.(·­›ıøÿÿÿÿ
+i	java:S100›"NRename this method name to match the regular expression '^[a-z][a-zA-Z0-9]*$'.(ø§¨¤ûÿÿÿÿ
+]
+java:S3078º"AUse an "AtomicInteger" for this field; its operations are atomic.(ñóÖ¢øÿÿÿÿ
+X
+java:S3078Ã"AUse an "AtomicInteger" for this field; its operations are atomic.(ºœ‹
+W	java:S125É"<This block of commented-out lines of code should be removed.(ÓÁéøıÿÿÿÿ
+N
+java:S1135É"2Complete the task associated to this TODO comment.(ÓÁéøıÿÿÿÿ
+d	java:S100á"NRename this method name to match the regular expression '^[a-z][a-zA-Z0-9]*$'.(½Ë˜
+i	java:S100ö"NRename this method name to match the regular expression '^[a-z][a-zA-Z0-9]*$'.(—¢®°şÿÿÿÿ
+d	java:S100"NRename this method name to match the regular expression '^[a-z][a-zA-Z0-9]*$'.(óİª˜
+d	java:S100š"NRename this method name to match the regular expression '^[a-z][a-zA-Z0-9]*$'.(½ı±„
+d	java:S100§"NRename this method name to match the regular expression '^[a-z][a-zA-Z0-9]*$'.(±Ş¬¡
+i	java:S100³"NRename this method name to match the regular expression '^[a-z][a-zA-Z0-9]*$'.(£˜Ÿâÿÿÿÿÿ
+i	java:S100Ã"NRename this method name to match the regular expression '^[a-z][a-zA-Z0-9]*$'.(œ„Ä›ùÿÿÿÿ
+C
+java:S1125É"'Remove the unnecessary boolean literal.(ÑÌğ•ıÿÿÿÿ
+i	java:S100Ï"NRename this method name to match the regular expression '^[a-z][a-zA-Z0-9]*$'.(´ƒ€ïşÿÿÿÿ
+C
+java:S1125Ö"'Remove the unnecessary boolean literal.(ÑÌğ•ıÿÿÿÿ
+i	java:S100Ü"NRename this method name to match the regular expression '^[a-z][a-zA-Z0-9]*$'.(îÌœûıÿÿÿÿ
+>
+java:S1125ß"'Remove the unnecessary boolean literal.(¢œôø
+>
+java:S1125î	"'Remove the unnecessary boolean literal.(áŞÍ¬
+T	java:S106ğ	"9Replace this use of System.out or System.err by a logger.(ÉÁªıÿÿÿÿ
+W	java:S125ï	"<This block of commented-out lines of code should be removed.(ÛÌÆ›ıÿÿÿÿ
+>
+java:S1125€
+"'Remove the unnecessary boolean literal.(›¦«‹
+>
+java:S1125ƒ
+"'Remove the unnecessary boolean literal.(áŞÍ¬
+C
+java:S1125–
+"'Remove the unnecessary boolean literal.(ªå‡®ÿÿÿÿÿ
+C
+java:S1125–
+"'Remove the unnecessary boolean literal.(ªå‡®ÿÿÿÿÿ
+T	java:S106˜
+"9Replace this use of System.out or System.err by a logger.(±„»€ıÿÿÿÿ
+R	java:S125—
+"<This block of commented-out lines of code should be removed.(Æİó
+C
+java:S1125©
+"'Remove the unnecessary boolean literal.(ªå‡®ÿÿÿÿÿ
+C
+java:S1125©
+"'Remove the unnecessary boolean literal.(ªå‡®ÿÿÿÿÿ
+C
+java:S1125½
+"'Remove the unnecessary boolean literal.(š‡ô¾şÿÿÿÿ
+U
+java:S1659×
+">Declare "y" and all following declarations on a separate line.(®ÛÃö
+\
+java:S1124Õ
+"EReorder the modifiers to comply with the Java Language Specification.(ÍÑ€Á
+m
+java:S1845ƒ"QRename method "inMove" to prevent any misunderstanding/clash with field "inMove".(„ˆÿşÿÿÿÿ
+k
+java:S1845ª"URename method "inResize" to prevent any misunderstanding/clash with field "inResize".(ùÍÂB
+E
+java:S1659í
+")Declare "startMouseY" on a separate line.(áÉ»¾şÿÿÿÿ
+;
+java:S1659î
+"$Declare "startY" on a separate line.(ğ•‰¶
+@
+java:S1659ï
+")Declare "startHeight" on a separate line.(¼È–¼
+8	java:S131Í""Add a default case to this switch.(ÜŸ•
+C
+java:S1125Ğ"'Remove the unnecessary boolean literal.(âîò¶ûÿÿÿÿ
+C
+java:S1125Ó"'Remove the unnecessary boolean literal.(¸°ŠĞÿÿÿÿÿ
+C
+java:S1125Ü"'Remove the unnecessary boolean literal.(Î»úêşÿÿÿÿ
+C
+java:S1125ß"'Remove the unnecessary boolean literal.(ÑìëÜûÿÿÿÿ
+c	java:S100"NRename this method name to match the regular expression '^[a-z][a-zA-Z0-9]*$'.(Ç¹åq
+d	java:S100”"NRename this method name to match the regular expression '^[a-z][a-zA-Z0-9]*$'.(İ÷ª’

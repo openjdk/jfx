@@ -36,6 +36,9 @@ import com.sun.javafx.embed.HostInterface;
 import com.sun.javafx.tk.TKScene;
 import com.sun.javafx.tk.Toolkit;
 import javafx.application.Platform;
+import javafx.geometry.Insets;
+import javafx.scene.input.MouseButton;
+import javafx.scene.input.WindowEdge;
 
 final class EmbeddedStage extends GlassStage implements EmbeddedStageInterface {
 
@@ -312,6 +315,18 @@ final class EmbeddedStage extends GlassStage implements EmbeddedStageInterface {
 
     @Override
     public void setEnabled(boolean enabled) {
+    }
+
+    @Override
+    public void beginResizeDrag(WindowEdge edge, MouseButton button, double screenX, double screenY) {
+    }
+
+    @Override
+    public void beginMoveDrag(MouseButton button, double screenX, double screenY) {
+    }
+
+    @Override
+    public void setShadowInsets(Insets insets) {
     }
 
     @Override

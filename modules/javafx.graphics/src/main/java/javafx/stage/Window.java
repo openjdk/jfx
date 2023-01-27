@@ -51,6 +51,7 @@ import javafx.event.EventDispatcher;
 import javafx.event.EventHandler;
 import javafx.event.EventTarget;
 import javafx.event.EventType;
+import javafx.geometry.Insets;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.Scene;
 
@@ -70,6 +71,8 @@ import javafx.beans.property.SimpleBooleanProperty;
 import static com.sun.javafx.FXPermissions.ACCESS_WINDOW_LIST_PERMISSION;
 import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.scene.SceneHelper;
+import javafx.scene.input.MouseButton;
+import javafx.scene.input.WindowEdge;
 
 
 /**
@@ -214,7 +217,35 @@ public class Window implements EventTarget {
                     public AccessControlContext getAccessControlContext(Window window) {
                         return window.acc;
                     }
+
+                    @Override
+                    public void setShadowInsets(Window window, Insets insets) {
+                        window.setShadowInsets(insets);
+                    }
+
+                    @Override
+                    public void beginMoveDrag(Window window, MouseButton button, double screenX, double screenY) {
+                        window.beginMoveDrag(button, screenX, screenY);
+                    }
+
+                    @Override
+                    public void beginResizeDrag(Window window, WindowEdge edge, MouseButton button, double screenX,
+                                                double screenY) {
+                        window.beginResizeDrag(edge, button, screenX, screenY);
+                    }
                 });
+    }
+
+    private void beginResizeDrag(WindowEdge edge, MouseButton button, double screenX, double screenY) {
+        getPeer().beginResizeDrag(edge, button, screenX, screenY);
+    }
+
+    private void beginMoveDrag(MouseButton button, double screenX, double screenY) {
+        getPeer().beginMoveDrag(button, screenX, screenY);
+    }
+
+    private void setShadowInsets(Insets insets) {
+        getPeer().setShadowInsets(insets);
     }
 
     /**
@@ -1507,6 +1538,7 @@ public class Window implements EventTarget {
     private void notifyScreenChanged(Object from, Object to) {
         screen.set(Screen.getScreenForNative(to));
     }
+
 
     /**
      * Caches all requested bounds settings and applies them at once during

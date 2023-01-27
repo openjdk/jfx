@@ -1,0 +1,104 @@
+
+K
+java:S3740ë"/Provide the parametrized type for this generic.(£âŞûÿÿÿÿ
+F
+java:S3740¾"/Provide the parametrized type for this generic.(°Õ¨‘
+E
+java:S3740Ò"/Provide the parametrized type for this generic.(ìãÜM
+K
+java:S3740¶"/Provide the parametrized type for this generic.(÷ÑáÙùÿÿÿÿ
+F
+java:S3740ı"/Provide the parametrized type for this generic.(†§ûå
+F
+java:S3740Æ"/Provide the parametrized type for this generic.(ÕúÚÔ
+F
+java:S3740Æ"/Provide the parametrized type for this generic.(ÕúÚÔ
+K
+java:S3740é"/Provide the parametrized type for this generic.(Á»Îèÿÿÿÿÿ
+o
+java:S1192
+"SDefine a constant instead of duplicating this literal "Attempt to insert " 5 times.(û÷®ßûÿÿÿÿ
+s	java:S127ó"XRefactor the code in order to not assign to this loop counter from within the loop body.(×ÃıÀùÿÿÿÿ
+{
+java:S3008ë"_Rename this field "EMPTY_OBSERVABLE_MAP" to match the regular expression '^[a-z][a-zA-Z0-9]*$'.(£âŞûÿÿÿÿ
+|
+java:S3008¶"`Rename this field "EMPTY_OBSERVABLE_LIST" to match the regular expression '^[a-z][a-zA-Z0-9]*$'.(÷ÑáÙùÿÿÿÿ
+v
+java:S3008ı"_Rename this field "EMPTY_OBSERVABLE_SET" to match the regular expression '^[a-z][a-zA-Z0-9]*$'.(†§ûå
+F
+java:S1197"*Move the array designators [] to the type.(æªÁ¡ûÿÿÿÿ
+˜
+java:S1186ú"€Add a nested comment explaining why this method is empty, throw an UnsupportedOperationException or complete the implementation.(¤Ş‰©
+
+java:S1186ş"€Add a nested comment explaining why this method is empty, throw an UnsupportedOperationException or complete the implementation.(æëå¼øÿÿÿÿ
+˜
+java:S1186ƒ"€Add a nested comment explaining why this method is empty, throw an UnsupportedOperationException or complete the implementation.(ÃÔû¯
+
+java:S1186‡"€Add a nested comment explaining why this method is empty, throw an UnsupportedOperationException or complete the implementation.(ïÔ¥˜ıÿÿÿÿ
+˜
+java:S1186ö"€Add a nested comment explaining why this method is empty, throw an UnsupportedOperationException or complete the implementation.(ª×ò
+˜
+java:S1186"€Add a nested comment explaining why this method is empty, throw an UnsupportedOperationException or complete the implementation.(Œñ¯¦
+˜
+java:S1186’"€Add a nested comment explaining why this method is empty, throw an UnsupportedOperationException or complete the implementation.(…ê½Ô
+˜
+java:S1186–"€Add a nested comment explaining why this method is empty, throw an UnsupportedOperationException or complete the implementation.(ÃÔû¯
+
+java:S1186š"€Add a nested comment explaining why this method is empty, throw an UnsupportedOperationException or complete the implementation.(ïÔ¥˜ıÿÿÿÿ
+G
+java:S2160ä"+Override the "equals" method in this class.(ˆÚØèúÿÿÿÿ
+H
+java:S1602½",Remove useless curly braces around statement(ÈÛììşÿÿÿÿ
+G
+java:S2160±	"+Override the "equals" method in this class.(§˜åÆøÿÿÿÿ
+H
+java:S1602»	",Remove useless curly braces around statement(ÈÛììşÿÿÿÿ
+H
+java:S1602–
+",Remove useless curly braces around statement(ÈÛììşÿÿÿÿ
+˜
+java:S1186¸"€Add a nested comment explaining why this method is empty, throw an UnsupportedOperationException or complete the implementation.(Œñ¯¦
+˜
+java:S1186¼"€Add a nested comment explaining why this method is empty, throw an UnsupportedOperationException or complete the implementation.(…ê½Ô
+
+java:S1186À"€Add a nested comment explaining why this method is empty, throw an UnsupportedOperationException or complete the implementation.(¹åùÌşÿÿÿÿ
+˜
+java:S1186Ä"€Add a nested comment explaining why this method is empty, throw an UnsupportedOperationException or complete the implementation.(ıùôï
+˜
+java:S1186´"€Add a nested comment explaining why this method is empty, throw an UnsupportedOperationException or complete the implementation.(ÃİÔ£
+B
+java:S2160ş"+Override the "equals" method in this class.(âÎÿĞ
+H
+java:S1602‹",Remove useless curly braces around statement(ÈÛììşÿÿÿÿ
+B
+java:S2160ä"+Override the "equals" method in this class.(â¬‡¢
+H
+java:S1602í",Remove useless curly braces around statement(ÈÛììşÿÿÿÿ
+H
+java:S1602œ",Remove useless curly braces around statement(ÈÛììşÿÿÿÿ
+˜
+java:S1186¯"€Add a nested comment explaining why this method is empty, throw an UnsupportedOperationException or complete the implementation.(Œñ¯¦
+˜
+java:S1186³"€Add a nested comment explaining why this method is empty, throw an UnsupportedOperationException or complete the implementation.(…ê½Ô
+
+java:S1186·"€Add a nested comment explaining why this method is empty, throw an UnsupportedOperationException or complete the implementation.(œ¹¦Ôûÿÿÿÿ
+—
+java:S1186»"€Add a nested comment explaining why this method is empty, throw an UnsupportedOperationException or complete the implementation.(‚ßÕ]
+˜
+java:S1186«"€Add a nested comment explaining why this method is empty, throw an UnsupportedOperationException or complete the implementation.(¿î„ª
+H
+java:S1602ı",Remove useless curly braces around statement(ÈÛììşÿÿÿÿ
+[
+java:S1117µ"?Rename "valueType" which hides the field declared at line 2312.(úÆ¸®ûÿÿÿÿ
+s
+java:S6202Ò"WReplace this usage of "CheckedEntry.class.isInstance()" with "instanceof CheckedEntry".( ·‡Çøÿÿÿÿ
+G
+java:S2065À"0Remove the "transient" modifier from this field.(Ã®Ëˆ
+L
+java:S2065Á"0Remove the "transient" modifier from this field.(Õşİóøÿÿÿÿ
+G
+java:S2065Â"0Remove the "transient" modifier from this field.(ƒ›·ş
+G
+java:S2160Ú"+Override the "equals" method in this class.(õÔ‹ùÿÿÿÿ
+H
+java:S1602ã",Remove useless curly braces around statement(ÈÛììşÿÿÿÿ
