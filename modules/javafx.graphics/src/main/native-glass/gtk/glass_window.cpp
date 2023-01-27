@@ -1175,6 +1175,10 @@ void WindowContextTop::set_visible(bool visible)
     }
 }
 
+void WindowContextTop::begin_move_drag(int button, int x, int y) {
+    gdk_window_begin_move_drag(gdk_window, button, x, y, GDK_CURRENT_TIME);
+}
+
 void WindowContextTop::set_bounds(int x, int y, bool xSet, bool ySet, int w, int h, int cw, int ch) {
     requested_bounds.width = w;
     requested_bounds.height = h;

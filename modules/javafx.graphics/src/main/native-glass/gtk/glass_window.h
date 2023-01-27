@@ -115,6 +115,7 @@ public:
     virtual void show_or_hide_children(bool) = 0;
     virtual void set_visible(bool) = 0;
     virtual bool is_visible() = 0;
+    virtual void begin_move_drag(int button, int x, int y) = 0;
     virtual void set_bounds(int, int, bool, bool, int, int, int, int) = 0;
     virtual void set_resizable(bool) = 0;
     virtual void request_focus() = 0;
@@ -312,6 +313,7 @@ public:
 
     void set_minimized(bool);
     void set_maximized(bool);
+    void begin_move_drag(int button, int x, int y);
     void set_bounds(int, int, bool, bool, int, int, int, int);
     void set_resizable(bool);
     void request_focus();

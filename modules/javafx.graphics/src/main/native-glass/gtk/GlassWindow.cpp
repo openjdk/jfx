@@ -70,6 +70,22 @@ static GdkWMFunction glass_mask_to_wm_function(jint mask) {
     return (GdkWMFunction) func;
 }
 
+static int glass_mouse_button_to_gtk_button(jint button) {
+    switch (button) {
+        case com_sun_glass_events_MouseEvent_BUTTON_OTHER:
+            return 2;
+        case com_sun_glass_events_MouseEvent_BUTTON_RIGHT:
+            return 3;
+        case com_sun_glass_events_MouseEvent_BUTTON_BACK:
+            return MOUSE_BACK_BTN;
+        case com_sun_glass_events_MouseEvent_BUTTON_FORWARD:
+            return MOUSE_FORWARD_BTN;
+        case com_sun_glass_events_MouseEvent_BUTTON_LEFT:
+        default:
+            return 1;
+    }
+}
+
 extern "C" {
 
 /*
@@ -168,6 +184,21 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkWindow_maximizeImpl
 
     WindowContext* ctx = JLONG_TO_WINDOW_CTX(ptr);
     ctx->set_maximized(maximize);
+}
+
+/*
+ * Class:     com_sun_glass_ui_gtk_GtkWindow
+ * Method:    beginMoveDragImpl
+ * Signature: (JIII)V
+ */
+JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkWindow_beginMoveDragImpl
+  (JNIEnv * env, jobject obj, jlong ptr, jint button, jint x, jint y)
+{
+    (void)env;
+    (void)obj;
+
+    WindowContext* ctx = JLONG_TO_WINDOW_CTX(ptr);
+    ctx->begin_move_drag(glass_mouse_button_to_gtk_button(button), x, y);
 }
 
 /*

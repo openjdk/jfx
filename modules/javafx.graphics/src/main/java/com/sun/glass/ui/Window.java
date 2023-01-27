@@ -27,9 +27,9 @@ package com.sun.glass.ui;
 import com.sun.glass.events.MouseEvent;
 import com.sun.glass.events.WindowEvent;
 import com.sun.prism.impl.PrismSettings;
+import javafx.scene.input.MouseButton;
 
 import java.lang.annotation.Native;
-
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
@@ -530,6 +530,8 @@ public abstract class Window {
         return this.height;
     }
 
+    protected abstract void _beginMoveDrag(long ptr, MouseButton button, int x, int y);
+
     protected abstract void _setBounds(long ptr, int x, int y, boolean xSet, boolean ySet,
                                        int w, int h, int cw, int ch,
                                        float xGravity, float yGravity);
@@ -575,6 +577,12 @@ public abstract class Window {
         int pcw = (int) (cw > 0 ? Math.ceil(cw * pScaleX) : cw);
         int pch = (int) (ch > 0 ? Math.ceil(ch * pScaleY) : ch);
         _setBounds(ptr, px, py, xSet, ySet, pw, ph, pcw, pch, xGravity, yGravity);
+    }
+
+    public void beginMoveDrag(final MouseButton button, final int x, final int y) {
+        Application.checkEventThread();
+        checkNotClosed();
+        _beginMoveDrag(ptr, button, x, y);
     }
 
     public void setPosition(int x, int y) {
