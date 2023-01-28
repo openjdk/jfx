@@ -866,33 +866,14 @@ static GdkCursor * get_action_cursor(GdkDragAction selected) {
 
     if (selected & GDK_ACTION_COPY) {
         cursor = gdk_cursor_new_from_name(gdk_display_get_default(), "dnd-copy");
-        if (cursor == NULL) {
-            cursor = gdk_cursor_new_from_name(gdk_display_get_default(), "copy");
-        }
     } else if (selected & (GDK_ACTION_MOVE | GDK_ACTION_PRIVATE)) {
         cursor = gdk_cursor_new_from_name(gdk_display_get_default(), "dnd-move");
-
-        if (cursor == NULL) {
-            cursor = gdk_cursor_new_from_name(gdk_display_get_default(), "pointer-move");
-        }
     } else if (selected & GDK_ACTION_LINK) {
         cursor = gdk_cursor_new_from_name(gdk_display_get_default(), "dnd-link");
-
-        if (cursor == NULL) {
-            cursor = gdk_cursor_new_from_name(gdk_display_get_default(), "link");
-        }
-
-        if (cursor == NULL) {
-            cursor = gdk_cursor_new_from_name(gdk_display_get_default(), "alias");
-        }
     }
 
     if (cursor == NULL) {
-        cursor = gdk_cursor_new_from_name(gdk_display_get_default(), "dnd-no-drop");
-
-        if (cursor == NULL) {
-            cursor = gdk_cursor_new_from_name(gdk_display_get_default(), "no-drop");
-        }
+        cursor = gdk_cursor_new_from_name(gdk_display_get_default(), "dnd-none");
     }
 
     return cursor;
