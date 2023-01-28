@@ -82,10 +82,6 @@ public class NodeShim {
         return n.pseudoClassStates;
     }
 
-    public static boolean isTreeVisible(Node n) {
-        return n.isTreeVisible();
-    }
-
     public static void setTreeVisible(Node n, boolean visible) {
         n.setTreeVisible(visible);
     }

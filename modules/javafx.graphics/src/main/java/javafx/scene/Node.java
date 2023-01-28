@@ -984,7 +984,7 @@ public abstract class Node implements EventTarget, Styleable {
                         // notifyParentsOfInvalidatedCSS() will be skipped thus leaving the node un-styled.
                         cssFlag = CssFlags.CLEAN;
                     }
-                    updateTreeVisible(true, false);
+                    updateTreeVisible(true);
                     oldParent = newParent;
                     invalidateLocalToSceneTransform();
                     parentResolvedOrientationInvalidated();
@@ -1368,7 +1368,7 @@ public abstract class Node implements EventTarget, Styleable {
                     if (oldValue != get()) {
                         NodeHelper.markDirty(Node.this, DirtyBits.NODE_VISIBLE);
                         NodeHelper.geomChanged(Node.this);
-                        updateTreeVisible(false, false);
+                        updateTreeVisible(false);
                         if (getParent() != null) {
                             // notify the parent of the potential change in visibility
                             // of this node, since visibility affects bounds of the
@@ -2595,16 +2595,7 @@ public abstract class Node implements EventTarget, Styleable {
     /**
      * Creates a new instance of Node.
      */
-    protected Node() {
-        //if (PerformanceTracker.isLoggingEnabled()) {
-        //    PerformanceTracker.logEvent("Node.init for [{this}, id=\"{id}\"]");
-        //}
-        updateTreeVisible(false, true);
-        //if (PerformanceTracker.isLoggingEnabled()) {
-        //    PerformanceTracker.logEvent("Node.postinit " +
-        //                                "for [{this}, id=\"{id}\"] finished");
-        //}
-    }
+    protected Node() {}
 
     /* *************************************************************************
      *                                                                         *
@@ -6958,13 +6949,13 @@ public abstract class Node implements EventTarget, Styleable {
                             if (oldClip != null) {
                                 oldClip.clipParent = null;
                                 oldClip.setScenes(null, null);
-                                oldClip.updateTreeVisible(false, false);
+                                oldClip.updateTreeVisible(false);
                             }
 
                             if (newClip != null) {
                                 newClip.clipParent = Node.this;
                                 newClip.setScenes(getScene(), getSubScene());
-                                newClip.updateTreeVisible(true, false);
+                                newClip.updateTreeVisible(true);
                             }
 
                             NodeHelper.markDirty(Node.this, DirtyBits.NODE_CLIP);
@@ -8524,7 +8515,7 @@ public abstract class Node implements EventTarget, Styleable {
         return isTreeVisible() && isWindowShowing();
     }
 
-    private void updateTreeVisible(boolean parentChanged, boolean underInitialization) {
+    private void updateTreeVisible(boolean parentChanged) {
         boolean isTreeVisible = isVisible();
         final Node parentNode = getParent() != null ? getParent() :
                     clipParent != null ? clipParent :
@@ -8539,46 +8530,34 @@ public abstract class Node implements EventTarget, Styleable {
                 && isDirty(DirtyBits.NODE_VISIBLE)) {
             addToSceneDirtyList();
         }
-        setTreeVisible(isTreeVisible, underInitialization);
+        setTreeVisible(isTreeVisible);
     }
 
-    private boolean treeVisible;
+    private boolean treeVisible = true;
     private TreeVisiblePropertyReadOnly treeVisibleRO;
 
     final void setTreeVisible(boolean value) {
-        setTreeVisible(value, false);
-    }
-
-    /**
-     * When this method is called from the initializer of this class, the {@code underInitialization}
-     * flag must be set. In this case, the calls to overridden methods are elided to prevent leaking
-     * the partially initialized object instance to subclasses.
-     */
-    private void setTreeVisible(boolean value, boolean underInitialization) {
         if (treeVisible != value) {
             treeVisible = value;
             updateCanReceiveFocus();
             focusSetDirty(getScene());
             if (getClip() != null) {
-                getClip().updateTreeVisible(true, false);
+                getClip().updateTreeVisible(true);
             }
             if (treeVisible && !isDirtyEmpty()) {
                 addToSceneDirtyList();
             }
             ((TreeVisiblePropertyReadOnly) treeVisibleProperty()).invalidate();
-
-            // We can only treat this node as an instance of a derived class after the initializer
-            // has run to completion, as otherwise several methods of derived classes return 'null'.
-            if (!underInitialization) {
-                if (Node.this instanceof SubScene subScene) {
-                    Node subSceneRoot = subScene.getRoot();
-                    subSceneRoot.setTreeVisible(value && subSceneRoot.isVisible(), false);
+            if (Node.this instanceof Parent parent) {
+                for (Node child : parent.getChildren()) {
+                    child.updateTreeVisible(true);
                 }
-
-                if (Node.this instanceof Parent parent) {
-                    for (Node child : parent.getChildren()) {
-                        child.updateTreeVisible(true, false);
-                    }
+            } else if (Node.this instanceof SubScene subScene) {
+                Node subSceneRoot = subScene.getRoot();
+                if (subSceneRoot != null) {
+                    // SubScene.getRoot() is only null if it's constructor
+                    // has not finished.
+                    subSceneRoot.setTreeVisible(value && subSceneRoot.isVisible());
                 }
             }
         }

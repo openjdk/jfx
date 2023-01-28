@@ -2044,13 +2044,13 @@ public class NodeTest {
         var n1 = new Rectangle();
         var n2 = new Rectangle();
         g.getChildren().addAll(n1, n2);
-        assertTrue(NodeShim.isTreeVisible(g));
-        assertTrue(NodeShim.isTreeVisible(n1));
-        assertTrue(NodeShim.isTreeVisible(n2));
+        assertTrue(NodeHelper.isTreeVisible(g));
+        assertTrue(NodeHelper.isTreeVisible(n1));
+        assertTrue(NodeHelper.isTreeVisible(n2));
 
         NodeShim.setTreeVisible(g, false);
-        assertFalse(NodeShim.isTreeVisible(g));
-        assertFalse(NodeShim.isTreeVisible(n1));
-        assertFalse(NodeShim.isTreeVisible(n2));
+        assertFalse(NodeHelper.isTreeVisible(g));
+        assertFalse(NodeHelper.isTreeVisible(n1));
+        assertFalse(NodeHelper.isTreeVisible(n2));
     }
 }
