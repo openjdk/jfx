@@ -1176,11 +1176,11 @@ void WindowContextTop::set_visible(bool visible)
 }
 
 void WindowContextTop::begin_move_drag(int button, int x, int y) {
-    gdk_window_begin_move_drag(gdk_window, button, x, y, GDK_CURRENT_TIME);
+    gtk_window_begin_move_drag(GTK_WINDOW(gtk_widget), button, x, y, GDK_CURRENT_TIME);
 }
 
 void WindowContextTop::begin_resize_drag(GdkWindowEdge edge, int button, int x, int y) {
-    gdk_window_begin_move_drag(gdk_window, edge, button, x, y, GDK_CURRENT_TIME);
+    gtk_window_begin_resize_drag(GTK_WINDOW(gtk_widget), edge, button, x, y, GDK_CURRENT_TIME);
 }
 
 void WindowContextTop::set_bounds(int x, int y, bool xSet, bool ySet, int w, int h, int cw, int ch) {
