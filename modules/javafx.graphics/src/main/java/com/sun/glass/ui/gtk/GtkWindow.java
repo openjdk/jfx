@@ -30,7 +30,6 @@ import com.sun.glass.ui.Pixels;
 import com.sun.glass.ui.Screen;
 import com.sun.glass.ui.View;
 import com.sun.glass.ui.Window;
-import javafx.scene.input.MouseButton;
 
 class GtkWindow extends Window {
 
@@ -186,10 +185,10 @@ class GtkWindow extends Window {
 
     private native void _setGravity(long ptr, float xGravity, float yGravity);
 
-    @Override
-    protected void _beginMoveDrag(long ptr, MouseButton button, int x, int y) {
-        beginMoveDragImpl(ptr, button.ordinal(), x, y);
-    }
+//    @Override
+//    public void beginMoveDrag(MouseButton button) {
+//        beginMoveDragImpl(getNativeWindow(), button.ordinal(), getX(), getY());
+//    }
 
     @Override
     protected void _setBounds(long ptr, int x, int y, boolean xSet, boolean ySet, int w, int h, int cw, int ch, float xGravity, float yGravity) {

@@ -25,15 +25,17 @@
 
 package test.com.sun.javafx.pgstub;
 
-import java.security.AccessControlContext;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Queue;
-
 import com.sun.javafx.tk.FocusCause;
 import com.sun.javafx.tk.TKScene;
 import com.sun.javafx.tk.TKStage;
 import com.sun.javafx.tk.TKStageListener;
+import javafx.scene.input.MouseButton;
+import javafx.scene.input.WindowEdge;
+
+import java.security.AccessControlContext;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Queue;
 
 /**
  * @author Richard Bair
@@ -77,6 +79,16 @@ public class StubStage implements TKStage {
 
     public boolean visible;
     public float opacity;
+
+    @Override
+    public void beginMoveDrag(MouseButton button) {
+
+    }
+
+    @Override
+    public void beginResizeDrag(MouseButton button, WindowEdge edge) {
+
+    }
 
     @Override
     public void setBounds(float x, float y, boolean xSet, boolean ySet,

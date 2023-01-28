@@ -25,17 +25,19 @@
 
 package com.sun.javafx.tk.quantum;
 
-import java.security.AccessControlContext;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
-import java.util.List;
-
 import com.sun.javafx.embed.AbstractEvents;
 import com.sun.javafx.embed.EmbeddedStageInterface;
 import com.sun.javafx.embed.HostInterface;
 import com.sun.javafx.tk.TKScene;
 import com.sun.javafx.tk.Toolkit;
 import javafx.application.Platform;
+import javafx.scene.input.MouseButton;
+import javafx.scene.input.WindowEdge;
+
+import java.security.AccessControlContext;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
+import java.util.List;
 
 final class EmbeddedStage extends GlassStage implements EmbeddedStageInterface {
 
@@ -60,6 +62,16 @@ final class EmbeddedStage extends GlassStage implements EmbeddedStageInterface {
             assert scene instanceof EmbeddedScene;
         }
         super.setScene(scene);
+    }
+
+    @Override
+    public void beginMoveDrag(MouseButton button) {
+        //?
+    }
+
+    @Override
+    public void beginResizeDrag(MouseButton button, WindowEdge edge) {
+
     }
 
     @Override

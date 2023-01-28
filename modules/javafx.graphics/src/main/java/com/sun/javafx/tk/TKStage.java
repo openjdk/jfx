@@ -25,10 +25,13 @@
 
 package com.sun.javafx.tk;
 
-import java.security.AccessControlContext;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyCodeCombination;
 import javafx.scene.input.KeyCombination.ModifierValue;
+import javafx.scene.input.MouseButton;
+import javafx.scene.input.WindowEdge;
+
+import java.security.AccessControlContext;
 
 /**
  * TKStage - Peer interface for a Stage
@@ -55,6 +58,10 @@ public interface TKStage {
      * @param scene The peer of the scene to be displayed
      */
     public void setScene(TKScene scene);
+
+    void beginMoveDrag(MouseButton button);
+
+    void beginResizeDrag(MouseButton button, WindowEdge edge);
 
     /**
      * Sets the window bounds to the specified values.

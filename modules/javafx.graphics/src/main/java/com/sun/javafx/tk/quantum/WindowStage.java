@@ -25,23 +25,11 @@
 
 package com.sun.javafx.tk.quantum;
 
-import java.nio.ByteBuffer;
-import java.security.AccessController;
-import java.security.Permission;
-import java.security.PrivilegedAction;
-import java.security.AccessControlContext;
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-
-import javafx.scene.input.KeyCombination;
-import javafx.stage.Modality;
-import javafx.stage.Stage;
-import javafx.stage.StageStyle;
-
 import com.sun.glass.events.WindowEvent;
-import com.sun.glass.ui.*;
+import com.sun.glass.ui.Application;
+import com.sun.glass.ui.Screen;
+import com.sun.glass.ui.View;
+import com.sun.glass.ui.Window;
 import com.sun.glass.ui.Window.Level;
 import com.sun.javafx.PlatformUtil;
 import com.sun.javafx.iio.common.PushbroomScaler;
@@ -51,9 +39,27 @@ import com.sun.javafx.tk.TKScene;
 import com.sun.javafx.tk.TKStage;
 import com.sun.prism.Image;
 import com.sun.prism.PixelFormat;
+import javafx.scene.input.KeyCombination;
+import javafx.scene.input.MouseButton;
+import javafx.scene.input.WindowEdge;
+import javafx.stage.Modality;
+import javafx.stage.Stage;
+import javafx.stage.StageStyle;
+
+import java.nio.ByteBuffer;
+import java.security.AccessControlContext;
+import java.security.AccessController;
+import java.security.Permission;
+import java.security.PrivilegedAction;
+import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.ResourceBundle;
-import static com.sun.javafx.FXPermissions.*;
+
+import static com.sun.javafx.FXPermissions.SET_WINDOW_ALWAYS_ON_TOP_PERMISSION;
+import static com.sun.javafx.FXPermissions.UNRESTRICTED_FULL_SCREEN_PERMISSION;
 
 public class WindowStage extends GlassStage {
 
@@ -290,6 +296,16 @@ public class WindowStage extends GlassStage {
             ViewPainter painter = ((ViewScene)oldScene).getPainter();
             QuantumRenderer.getInstance().disposePresentable(painter.presentable);   // latched on RT
         }
+    }
+
+    @Override
+    public void beginMoveDrag(MouseButton button) {
+        platformWindow.beginMoveDrag(button);
+    }
+
+    @Override
+    public void beginResizeDrag(MouseButton button, WindowEdge edge) {
+        platformWindow.beginResizeDrag(button, edge);
     }
 
     @Override public void setBounds(float x, float y, boolean xSet, boolean ySet,

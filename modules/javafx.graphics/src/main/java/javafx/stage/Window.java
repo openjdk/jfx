@@ -25,23 +25,33 @@
 
 package javafx.stage;
 
-import java.security.AccessControlContext;
-import java.security.AccessController;
-import java.util.HashMap;
-
+import com.sun.javafx.css.StyleManager;
+import com.sun.javafx.scene.NodeHelper;
+import com.sun.javafx.scene.SceneHelper;
+import com.sun.javafx.stage.EmbeddedWindow;
+import com.sun.javafx.stage.WindowEventDispatcher;
+import com.sun.javafx.stage.WindowHelper;
+import com.sun.javafx.stage.WindowPeerListener;
+import com.sun.javafx.tk.TKPulseListener;
+import com.sun.javafx.tk.TKScene;
+import com.sun.javafx.tk.TKStage;
+import com.sun.javafx.tk.Toolkit;
+import com.sun.javafx.util.Utils;
 import javafx.application.Platform;
+import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.DoublePropertyBase;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ObjectPropertyBase;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
-import javafx.beans.property.ReadOnlyObjectProperty;
-import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.beans.property.ReadOnlyDoubleProperty;
 import javafx.beans.property.ReadOnlyDoubleWrapper;
-import javafx.beans.property.SimpleObjectProperty;
+import javafx.beans.property.ReadOnlyObjectProperty;
+import javafx.beans.property.ReadOnlyObjectWrapper;
+import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleDoubleProperty;
+import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.collections.ObservableMap;
@@ -53,23 +63,14 @@ import javafx.event.EventTarget;
 import javafx.event.EventType;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.Scene;
+import javafx.scene.input.MouseButton;
+import javafx.scene.input.WindowEdge;
 
-import com.sun.javafx.util.Utils;
-import com.sun.javafx.css.StyleManager;
-import com.sun.javafx.stage.EmbeddedWindow;
-import com.sun.javafx.stage.WindowEventDispatcher;
-import com.sun.javafx.stage.WindowHelper;
-import com.sun.javafx.stage.WindowPeerListener;
-import com.sun.javafx.tk.TKPulseListener;
-import com.sun.javafx.tk.TKScene;
-import com.sun.javafx.tk.TKStage;
-import com.sun.javafx.tk.Toolkit;
-import javafx.beans.property.BooleanProperty;
-import javafx.beans.property.SimpleBooleanProperty;
+import java.security.AccessControlContext;
+import java.security.AccessController;
+import java.util.HashMap;
 
 import static com.sun.javafx.FXPermissions.ACCESS_WINDOW_LIST_PERMISSION;
-import com.sun.javafx.scene.NodeHelper;
-import com.sun.javafx.scene.SceneHelper;
 
 
 /**
@@ -528,6 +529,22 @@ public class Window implements EventTarget {
     }
     public final DoubleProperty renderScaleYProperty() {
         return renderScaleY;
+    }
+
+    /**
+     * Begins a window move operation for a toplevel window.
+     *
+     * {@link javafx.scene.input.MouseButton#NONE} will start a keyboard move.
+     *
+     * @param button The device button used to begin the drag. The button
+     * release will stop the move operation.
+     */
+    public final void beginMoveDrag(MouseButton button) {
+        getPeer().beginMoveDrag(button);
+    }
+
+    public final void beginResizeDrag(MouseButton button, WindowEdge edge) {
+        getPeer().beginResizeDrag(button, edge);
     }
 
     private boolean xExplicit = false;

@@ -25,6 +25,7 @@
 #include <com_sun_glass_ui_gtk_GtkWindow.h>
 #include <com_sun_glass_events_WindowEvent.h>
 #include <com_sun_glass_events_ViewEvent.h>
+#include <com_sun_glass_events_MouseEvent.h>
 
 #include <cstdlib>
 #include <cstring>
@@ -77,9 +78,9 @@ static int glass_mouse_button_to_gtk_button(jint button) {
         case com_sun_glass_events_MouseEvent_BUTTON_RIGHT:
             return 3;
         case com_sun_glass_events_MouseEvent_BUTTON_BACK:
-            return MOUSE_BACK_BTN;
+            return 4;
         case com_sun_glass_events_MouseEvent_BUTTON_FORWARD:
-            return MOUSE_FORWARD_BTN;
+            return 5;
         case com_sun_glass_events_MouseEvent_BUTTON_LEFT:
         default:
             return 1;
