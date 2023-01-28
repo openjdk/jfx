@@ -27,9 +27,9 @@
 import javafx.application.Application;
 import javafx.scene.Group;
 import javafx.scene.Scene;
-import javafx.scene.input.MouseButton;
 import javafx.scene.paint.Color;
 import javafx.stage.Stage;
+import javafx.stage.StageStyle;
 
 public class StageBeginMoveDragTest extends Application {
     public static void main(String[] args) {
@@ -40,7 +40,9 @@ public class StageBeginMoveDragTest extends Application {
     public void start(Stage primaryStage) throws Exception {
         var scene = new Scene(new Group(), 400, 200, Color.TURQUOISE);
         primaryStage.setScene(scene);
-        scene.setOnMouseDragged(e -> primaryStage.beginMoveDrag(MouseButton.PRIMARY));
+        primaryStage.initStyle(StageStyle.UNDECORATED);
+
+        scene.setOnMouseDragged(e -> primaryStage.beginMoveDrag(e.getButton(), e.getScreenX(), e.getScreenY()));
 
         primaryStage.show();
     }

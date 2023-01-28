@@ -58,6 +58,8 @@ class GtkWindow extends Window {
 
     private native void beginMoveDragImpl(long ptr, int button, int x, int y);
 
+    private native void beginResizeDragImpl(long nativeHandle, int edge, int button, int x, int y);
+
     private native void setBoundsImpl(long ptr, int x, int y, boolean xSet, boolean ySet, int w, int h, int cw, int ch);
 
     private native void setVisibleImpl(long ptr, boolean visible);
@@ -185,10 +187,15 @@ class GtkWindow extends Window {
 
     private native void _setGravity(long ptr, float xGravity, float yGravity);
 
-//    @Override
-//    public void beginMoveDrag(MouseButton button) {
-//        beginMoveDragImpl(getNativeWindow(), button.ordinal(), getX(), getY());
-//    }
+    @Override
+    protected void _beginMoveDrag(int button, double screenX, double screenY) {
+        beginMoveDragImpl(getNativeHandle(), button, (int) screenX, (int) screenY);
+    }
+
+    @Override
+    protected void _beginResizeDrag(int edge, int button, double screenX, double screenY) {
+        beginResizeDragImpl(getNativeHandle(), edge, button, (int) screenX, (int) screenY);
+    }
 
     @Override
     protected void _setBounds(long ptr, int x, int y, boolean xSet, boolean ySet, int w, int h, int cw, int ch, float xGravity, float yGravity) {

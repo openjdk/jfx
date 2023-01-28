@@ -536,15 +536,16 @@ public class Window implements EventTarget {
      *
      * {@link javafx.scene.input.MouseButton#NONE} will start a keyboard move.
      *
-     * @param button The device button used to begin the drag. The button
-     * release will stop the move operation.
+     * @param button The device button used to begin the drag.
+     * @param screenX The screen X coordinate.
+     * @param screenY The screen Y coordinate.
      */
-    public final void beginMoveDrag(MouseButton button) {
-        getPeer().beginMoveDrag(button);
+    public final void beginMoveDrag(MouseButton button, double screenX, double screenY) {
+        getPeer().beginMoveDrag(button, screenX, screenY);
     }
 
-    public final void beginResizeDrag(MouseButton button, WindowEdge edge) {
-        getPeer().beginResizeDrag(button, edge);
+    public final void beginResizeDrag(MouseButton button, WindowEdge edge, double screenX, double screenY) {
+        getPeer().beginResizeDrag(edge, button, screenX, screenY);
     }
 
     private boolean xExplicit = false;

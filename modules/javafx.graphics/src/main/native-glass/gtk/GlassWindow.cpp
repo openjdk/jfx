@@ -193,14 +193,29 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkWindow_maximizeImpl
  * Signature: (JIII)V
  */
 JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkWindow_beginMoveDragImpl
-  (JNIEnv * env, jobject obj, jlong ptr, jint button, jint x, jint y)
-{
+  (JNIEnv *env, jobject obj, jlong ptr, jint button, jint x, jint y) {
     (void)env;
     (void)obj;
 
     WindowContext* ctx = JLONG_TO_WINDOW_CTX(ptr);
     ctx->begin_move_drag(glass_mouse_button_to_gtk_button(button), x, y);
 }
+
+
+/*
+ * Class:     com_sun_glass_ui_gtk_GtkWindow
+ * Method:    beginResizeDragImpl
+ * Signature: (JIIII)V
+ */
+JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkWindow_beginResizeDragImpl
+  (JNIEnv *env, jobject obj, jlong ptr, jint edge, jint button, jint x, jint y) {
+    (void)env;
+    (void)obj;
+
+    WindowContext* ctx = JLONG_TO_WINDOW_CTX(ptr);
+//    ctx->begin_resize_drag(glass_mouse_button_to_gtk_button(button), x, y);
+}
+
 
 /*
  * Class:     com_sun_glass_ui_gtk_GtkWindow

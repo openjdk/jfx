@@ -81,12 +81,12 @@ public class StubStage implements TKStage {
     public float opacity;
 
     @Override
-    public void beginMoveDrag(MouseButton button) {
+    public void beginMoveDrag(MouseButton button, double screenX, double screenY) {
 
     }
 
     @Override
-    public void beginResizeDrag(MouseButton button, WindowEdge edge) {
+    public void beginResizeDrag(WindowEdge edge, MouseButton button, double screenX, double screenY) {
 
     }
 

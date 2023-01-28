@@ -59,9 +59,9 @@ public interface TKStage {
      */
     public void setScene(TKScene scene);
 
-    void beginMoveDrag(MouseButton button);
+    void beginMoveDrag(MouseButton button, double screenX, double screenY);
 
-    void beginResizeDrag(MouseButton button, WindowEdge edge);
+    void beginResizeDrag(WindowEdge edge, MouseButton button, double screenX, double screenY);
 
     /**
      * Sets the window bounds to the specified values.

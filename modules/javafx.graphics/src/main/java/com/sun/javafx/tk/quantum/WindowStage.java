@@ -299,13 +299,13 @@ public class WindowStage extends GlassStage {
     }
 
     @Override
-    public void beginMoveDrag(MouseButton button) {
-        platformWindow.beginMoveDrag(button);
+    public void beginMoveDrag(MouseButton button, double screenX, double screenY) {
+        platformWindow.beginMoveDrag(button.ordinal(), screenX, screenY);
     }
 
     @Override
-    public void beginResizeDrag(MouseButton button, WindowEdge edge) {
-        platformWindow.beginResizeDrag(button, edge);
+    public void beginResizeDrag(WindowEdge edge, MouseButton button, double screenX, double screenY) {
+        platformWindow.beginResizeDrag(edge.ordinal(), button.ordinal(), screenX, screenY);
     }
 
     @Override public void setBounds(float x, float y, boolean xSet, boolean ySet,

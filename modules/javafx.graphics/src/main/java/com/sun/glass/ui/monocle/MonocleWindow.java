@@ -34,6 +34,7 @@ import com.sun.glass.ui.Pixels;
 import com.sun.glass.ui.Screen;
 import com.sun.glass.ui.View;
 import com.sun.glass.ui.Window;
+import javafx.scene.input.WindowEdge;
 
 
 final class MonocleWindow extends Window {
@@ -63,6 +64,16 @@ final class MonocleWindow extends Window {
     @Override
     protected void _toBack(long ptr) {
         MonocleWindowManager.getInstance().toBack(this);
+
+    }
+
+    @Override
+    public void _beginMoveDrag(int button) {
+
+    }
+
+    @Override
+    public void _beginResizeDrag(WindowEdge edge, int button) {
 
     }
 

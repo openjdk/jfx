@@ -24,17 +24,13 @@
  */
 package com.sun.glass.ui;
 
-import com.sun.glass.events.MouseEvent;
 import com.sun.glass.events.WindowEvent;
 import com.sun.prism.impl.PrismSettings;
-import javafx.scene.input.MouseButton;
-import javafx.scene.input.WindowEdge;
 
 import java.lang.annotation.Native;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Objects;
 
 public abstract class Window {
 
@@ -203,13 +199,6 @@ public abstract class Window {
     protected Screen screen = null;
     private MenuBar menubar = null;
     private String title = "";
-
-    //-1 means not dragging
-    private int moveDragButton = -1;
-    private int resizeDragButton = -1;
-    private int mouseDownButton = 0;
-    private WindowEdge resizeEdge;
-
     private int state = State.NORMAL;
     private int level = Level.NORMAL;
     protected int x = 0;
@@ -580,56 +569,17 @@ public abstract class Window {
         _setBounds(ptr, px, py, xSet, ySet, pw, ph, pcw, pch, xGravity, yGravity);
     }
 
-
-    public void beginMoveDrag(final MouseButton button) {
-        Objects.requireNonNull(button, "button cannot be null");
-        Application.checkEventThread();
-        checkNotClosed();
-        checkMoveResizeDrag();
-
-        if (resizeDragButton >= 0) {
-            throw new IllegalStateException("Cannot move while resizing");
-        }
-
-        int btn = button.ordinal();
-//
-//        if (btn != 0 && btn != mouseDownButton) {
-//            return;
-//        }
-
-        moveDragButton = btn;
+    public void beginMoveDrag(final int button, final double screenX, final double screenY) {
+        _beginMoveDrag(button, screenX, screenY);
     }
 
-    public void beginResizeDrag(final MouseButton button, final WindowEdge edge) {
-        Objects.requireNonNull(button, "button cannot be null");
-        Objects.requireNonNull(edge, "Window edge cannot be null");
-        Application.checkEventThread();
-        checkNotClosed();
-        checkMoveResizeDrag();
+    protected abstract void _beginMoveDrag(final int button, final double screenX, final double screenY);
 
-        if (moveDragButton >= 0) {
-            throw new IllegalStateException("Cannot resize while dragging");
-        }
-
-        int btn = button.ordinal();
-
-        if (btn != 0 && btn != mouseDownButton) {
-            return;
-        }
-
-        resizeDragButton = btn;
-        resizeEdge = edge;
+    public void beginResizeDrag(final int edge, final int button, final double screenX, final double screenY) {
+        _beginResizeDrag(edge, button, screenX, screenY);
     }
 
-    private void checkMoveResizeDrag() {
-        if (isMaximized()) {
-            throw new IllegalStateException("Cannot move/resize drag a maximized window");
-        }
-
-        if (isInFullscreen()) {
-            throw new IllegalStateException("Cannot move/resize drag a fullscreen window");
-        }
-    }
+    protected abstract void _beginResizeDrag(int edge, int button, final double screenX, final double screenY);
 
     public void setPosition(int x, int y) {
         Application.checkEventThread();
@@ -1288,36 +1238,6 @@ public abstract class Window {
         }
     }
 
-
-    boolean handleMouseEvent(int type, int button, int x, int y, int xAbs, int yAbs) {
-        if (type == MouseEvent.DOWN) {
-            mouseDownButton = button;
-        } else if (type == MouseEvent.UP && mouseDownButton == button) {
-            mouseDownButton = 0;
-        }
-
-        dragMove(type, button, xAbs, yAbs);
-        dragResize(type, button, xAbs, yAbs);
-
-        return false;
-    }
-
-    private void dragMove(int type, int button, int xAbs, int yAbs) {
-        if (moveDragButton < 0) {
-            return;
-        }
-
-        if (type == MouseEvent.MOVE || type == MouseEvent.DRAG) {
-            setPosition(xAbs - view.getX(), yAbs - view.getY());
-        } else if (type == MouseEvent.UP && button == moveDragButton) {
-            moveDragButton = -1;
-        }
-    }
-
-    private void dragResize(int type, int button, int xAbs, int yAbs) {
-
-    }
-
     @Override
     public String toString() {
         Application.checkEventThread();
@@ -1332,18 +1252,6 @@ public abstract class Window {
                 + "    state: " + state + "\n"
                 + "    x: " + getX() + ", y: " + getY() + ", w: " + getWidth() + ", h: " + getHeight() + "\n"
                 + "";
-    }
-
-    // "programmical" move/resize support for undecorated windows
-
-    static private class TrackingRectangle {
-        int size = 0;
-        int x = 0, y = 0, width = 0, height = 0;
-        boolean contains(final int x, final int y) {
-            return ((size > 0) &&
-                    (x >= this.x) && (x < (this.x + this.width)) &&
-                        (y >= this.y) && (y < (this.y + this.height)));
-        }
     }
 
     protected void notifyLevelChanged(int level) {
