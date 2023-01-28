@@ -66,8 +66,8 @@ public class StageBeginMoveDragTest extends Application {
 
         private static final Map<WindowEdge, Cursor> CURSOR_MAP = Map.of(WindowEdge.LEFT, Cursor.W_RESIZE,
                 WindowEdge.RIGHT, Cursor.E_RESIZE,
-                WindowEdge.BOTTOM, Cursor.V_RESIZE,
-                WindowEdge.TOP, Cursor.V_RESIZE,
+                WindowEdge.BOTTOM, Cursor.S_RESIZE,
+                WindowEdge.TOP, Cursor.N_RESIZE,
                 WindowEdge.BOTTOM_LEFT, Cursor.SW_RESIZE,
                 WindowEdge.BOTTOM_RIGHT, Cursor.SE_RESIZE,
                 WindowEdge.TOP_LEFT, Cursor.NW_RESIZE,
