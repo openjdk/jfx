@@ -544,7 +544,7 @@ public class Window implements EventTarget {
         getPeer().beginMoveDrag(button, screenX, screenY);
     }
 
-    public final void beginResizeDrag(MouseButton button, WindowEdge edge, double screenX, double screenY) {
+    public final void beginResizeDrag(WindowEdge edge, MouseButton button, double screenX, double screenY) {
         getPeer().beginResizeDrag(edge, button, screenX, screenY);
     }
 

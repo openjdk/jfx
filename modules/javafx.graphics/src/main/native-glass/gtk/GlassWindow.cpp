@@ -87,6 +87,29 @@ static int glass_mouse_button_to_gtk_button(jint button) {
     }
 }
 
+static GdkWindowEdge glass_edge_to_gtk_edge(jint edge) {
+    switch (edge) {
+        case 0:
+            return GDK_WINDOW_EDGE_NORTH_WEST;
+        case 1:
+            return GDK_WINDOW_EDGE_NORTH;
+        case 2:
+            return GDK_WINDOW_EDGE_NORTH_EAST;
+        case 3:
+            return GDK_WINDOW_EDGE_WEST;
+        case 4:
+            return GDK_WINDOW_EDGE_EAST;
+        case 5:
+            return GDK_WINDOW_EDGE_SOUTH_WEST;
+        case 6:
+            return GDK_WINDOW_EDGE_SOUTH;
+        case 7:
+            return GDK_WINDOW_EDGE_SOUTH_EAST;
+    }
+
+    return GDK_WINDOW_EDGE_NORTH_WEST;
+}
+
 extern "C" {
 
 /*
@@ -213,7 +236,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkWindow_beginResizeDragImpl
     (void)obj;
 
     WindowContext* ctx = JLONG_TO_WINDOW_CTX(ptr);
-//    ctx->begin_resize_drag(glass_mouse_button_to_gtk_button(button), x, y);
+    ctx->begin_resize_drag(glass_edge_to_gtk_edge(edge), glass_mouse_button_to_gtk_button(button), x, y);
 }
 
 

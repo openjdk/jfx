@@ -25,25 +25,81 @@
  */
 
 import javafx.application.Application;
-import javafx.scene.Group;
+import javafx.scene.Cursor;
 import javafx.scene.Scene;
+import javafx.scene.input.WindowEdge;
+import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
+import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
+
+import java.util.Map;
 
 public class StageBeginMoveDragTest extends Application {
     public static void main(String[] args) {
         launch(StageBeginMoveDragTest.class, args);
     }
 
+    private static final Map<WindowEdge, Cursor> CURSOR_MAP = Map.of(WindowEdge.LEFT, Cursor.W_RESIZE,
+            WindowEdge.RIGHT, Cursor.E_RESIZE,
+            WindowEdge.BOTTOM, Cursor.V_RESIZE,
+            WindowEdge.TOP, Cursor.V_RESIZE,
+            WindowEdge.BOTTOM_LEFT, Cursor.SW_RESIZE,
+            WindowEdge.BOTTOM_RIGHT, Cursor.SE_RESIZE,
+            WindowEdge.TOP_LEFT, Cursor.NW_RESIZE,
+            WindowEdge.TOP_RIGHT, Cursor.NE_RESIZE);
+
+    private WindowEdge currentEdge;
+
     @Override
     public void start(Stage primaryStage) throws Exception {
-        var scene = new Scene(new Group(), 400, 200, Color.TURQUOISE);
+        var rect = new Rectangle(100, 100, Color.TOMATO);
+        var scene = new Scene(new StackPane(rect), 400, 200, Color.TURQUOISE);
+
         primaryStage.setScene(scene);
         primaryStage.initStyle(StageStyle.UNDECORATED);
 
-        scene.setOnMouseDragged(e -> primaryStage.beginMoveDrag(e.getButton(), e.getScreenX(), e.getScreenY()));
+        scene.setOnMouseMoved(e -> {
+            currentEdge = detectEdge(primaryStage, e.getSceneX(), e.getSceneY());
+
+            if (currentEdge != null) {
+                scene.setCursor(CURSOR_MAP.get(currentEdge));
+            } else {
+                scene.setCursor(null);
+            }
+        });
+
+        scene.setOnMouseDragged(e -> {
+            if (currentEdge == null) {
+                return;
+            }
+
+            primaryStage.beginResizeDrag(currentEdge, e.getButton(), e.getScreenX(), e.getScreenY());
+        });
+
+        rect.setOnMouseDragged(e -> primaryStage.beginMoveDrag(e.getButton(), e.getScreenX(), e.getScreenY()));
 
         primaryStage.show();
+    }
+
+    private WindowEdge detectEdge(Stage stage, double x, double y) {
+        if (x <= 1) {
+            return WindowEdge.LEFT;
+        }
+
+        if (x >= stage.getWidth() - 1) {
+            return WindowEdge.RIGHT;
+        }
+
+        if (y <= 1) {
+            return WindowEdge.TOP;
+        }
+
+        if (y >= stage.getHeight() - 1) {
+            return WindowEdge.BOTTOM;
+        }
+
+        return null;
     }
 }

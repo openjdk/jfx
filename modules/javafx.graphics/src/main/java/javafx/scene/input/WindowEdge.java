@@ -34,5 +34,5 @@ public enum WindowEdge {
     RIGHT,
     BOTTOM_LEFT,
     BOTTOM,
-    BOTTOM_RIGHT
+    BOTTOM_RIGHT;
 }
