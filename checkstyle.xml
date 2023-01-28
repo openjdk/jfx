@@ -120,7 +120,9 @@
     <module name="LocalFinalVariableName"/>
     <module name="LocalVariableName"/>
     <module name="MemberName"/>
-    <module name="MethodName"/>
+    <module name="MethodName">
+      <property name="format" value="^[a-z_][a-zA-Z0-9]*$"/>
+    </module>
     <module name="PackageName"/>
     <module name="ParameterName"/>
     <module name="StaticVariableName"/>
@@ -138,7 +140,9 @@
     <!-- Checks for Size Violations.                    -->
     <!-- See https://checkstyle.org/config_sizes.html -->
     <module name="MethodLength"/>
-    <module name="ParameterNumber"/>
+    <module name="ParameterNumber">
+      <property name="max" value="20"/>
+    </module>
 
     <!-- Checks for whitespace                               -->
     <!-- See https://checkstyle.org/config_whitespace.html -->
