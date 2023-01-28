@@ -174,8 +174,13 @@ public class ControlAcceleratorSupport {
                             Event.fireEvent(target, new Event(MenuItem.MENU_VALIDATION_EVENT));
                         }
                         if (!menuitem.isDisable()) {
-                            if (menuitem instanceof RadioMenuItem) {
-                                ((RadioMenuItem)menuitem).setSelected(!((RadioMenuItem)menuitem).isSelected());
+                            if (menuitem instanceof RadioMenuItem radioMenuItem) {
+                                if (radioMenuItem.getToggleGroup() == null) {
+                                    radioMenuItem.setSelected(!radioMenuItem.isSelected());
+                                }
+                                else {
+                                    radioMenuItem.setSelected(true);
+                                }
                             }
                             else if (menuitem instanceof CheckMenuItem) {
                                 ((CheckMenuItem)menuitem).setSelected(!((CheckMenuItem)menuitem).isSelected());
