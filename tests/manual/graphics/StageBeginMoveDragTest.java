@@ -27,8 +27,7 @@
 import javafx.application.Application;
 import javafx.scene.Cursor;
 import javafx.scene.Scene;
-import javafx.scene.input.MouseEvent;
-import javafx.scene.input.WindowEdge;
+import javafx.scene.input.*;
 import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
@@ -45,18 +44,30 @@ public class StageBeginMoveDragTest extends Application {
     @Override
     public void start(Stage primaryStage) throws Exception {
         var rect = new Rectangle(100, 100, Color.TOMATO);
-        var scene = new Scene(new StackPane(rect), 400, 200, Color.TURQUOISE);
+        var pane = new StackPane(rect);
+        var scene = new Scene(pane, 400, 200, Color.TRANSPARENT);
 
         primaryStage.setScene(scene);
-        primaryStage.initStyle(StageStyle.UNDECORATED);
+        primaryStage.initStyle(StageStyle.TRANSPARENT);
+
+        pane.setStyle("-fx-background-color: linear-gradient(to bottom, derive(cadetblue, 20%), cadetblue);" +
+                      "-fx-border-color: derive(cadetblue, -20%);" +
+                      "-fx-effect: dropshadow(three-pass-box, derive(cadetblue, -20%), 10, 0, 4, 4);" +
+                      "-fx-border-width: 5;" +
+                      "-fx-background-insets: 12;" +
+                      "-fx-border-insets: 10;" +
+                      "-fx-border-radius: 6;" +
+                      "-fx-background-radius: 6;");
 
         rect.setOnMouseDragged(e -> primaryStage.beginMoveDrag(e.getButton(), e.getScreenX(), e.getScreenY()));
 
-        new SceneEdgeDetector(scene, 3);
+        SceneResizer sceneResizer = new SceneResizer(scene, 3);
+        sceneResizer.watch();
+
         primaryStage.show();
     }
 
-    static class SceneEdgeDetector {
+    static class SceneResizer {
         private final Scene scene;
         private final int thresholdPixels;
 
@@ -73,13 +84,31 @@ public class StageBeginMoveDragTest extends Application {
                 WindowEdge.TOP_LEFT, Cursor.NW_RESIZE,
                 WindowEdge.TOP_RIGHT, Cursor.NE_RESIZE);
 
-        public SceneEdgeDetector(final Scene scene, int thresholdPixels) {
+        private SceneResizer(final Scene scene, int thresholdPixels) {
             this.scene = scene;
             this.thresholdPixels = thresholdPixels;
-
-            scene.addEventHandler(MouseEvent.MOUSE_MOVED, this::detect);
-            scene.addEventHandler(MouseEvent.MOUSE_DRAGGED, this::resize);
         }
+
+        public void watch() {
+            scene.addEventHandler(MouseEvent.MOUSE_MOVED, this::detect);
+            scene.addEventHandler(MouseEvent.MOUSE_PRESSED, e -> {
+                x = e.getScreenX();
+                y = e.getScreenY();
+            });
+            scene.addEventHandler(MouseEvent.MOUSE_DRAGGED, this::resize);
+
+//            scene.getAccelerators().put(new KeyCodeCombination(KeyCode.F8, KeyCombination.ALT_DOWN),
+//                                        this::keyboardResize);
+        }
+
+//        private void keyboardResize() {
+//            if (scene.getWindow() != null) {
+//                double middleX = scene.getWindow().getX() + scene.getX() + (scene.getWidth() / 2);
+//                double middleY = scene.getWindow().getY() + scene.getY() + (scene.getHeight() / 2);
+//
+//                scene.getWindow().beginResizeDrag(WindowEdge.BOTTOM, MouseButton.NONE, middleX, middleY);
+//            }
+//        }
 
         private void resize(MouseEvent e) {
             if (currentEdge != null && scene.getWindow() != null) {
@@ -91,41 +120,39 @@ public class StageBeginMoveDragTest extends Application {
             //mouse is on left side
             if (e.getX() <= thresholdPixels) {
                 if (e.getY() >= scene.getHeight() - thresholdPixels) {
-                    setEdge(WindowEdge.BOTTOM_LEFT, e.getScreenX(), e.getScreenY());
+                    setEdge(WindowEdge.BOTTOM_LEFT);
                     return;
                 }
 
                 if (e.getY() <= thresholdPixels) {
-                    setEdge(WindowEdge.TOP_LEFT, e.getScreenX(), e.getScreenY());
+                    setEdge(WindowEdge.TOP_LEFT);
                     return;
                 }
 
-                setEdge(WindowEdge.LEFT, e.getScreenX(), e.getScreenY());
+                setEdge(WindowEdge.LEFT);
             } else if (e.getX() >= scene.getWidth() - thresholdPixels) {
                 if (e.getY() >= scene.getHeight() - thresholdPixels) {
-                    setEdge(WindowEdge.BOTTOM_RIGHT, e.getScreenX(), e.getScreenY());
+                    setEdge(WindowEdge.BOTTOM_RIGHT);
                     return;
                 }
 
                 if (e.getY() <= thresholdPixels) {
-                    setEdge(WindowEdge.TOP_RIGHT, e.getScreenX(), e.getScreenY());
+                    setEdge(WindowEdge.TOP_RIGHT);
                     return;
                 }
 
-                setEdge(WindowEdge.RIGHT, e.getScreenX(), e.getScreenY());
+                setEdge(WindowEdge.RIGHT);
             } else if (e.getY() <= thresholdPixels) {
-                setEdge(WindowEdge.TOP, e.getScreenX(), e.getScreenY());
+                setEdge(WindowEdge.TOP);
             } else if (e.getY() >= scene.getHeight() - thresholdPixels) {
-                setEdge(WindowEdge.BOTTOM, e.getScreenX(), e.getScreenY());
+                setEdge(WindowEdge.BOTTOM);
             } else {
-                setEdge(null, 0, 0);
+                setEdge(null);
             }
         }
 
-        private void setEdge(WindowEdge edge, double x, double y) {
+        private void setEdge(WindowEdge edge) {
             currentEdge = edge;
-            this.x = x;
-            this.y = y;
             scene.setCursor((edge == null) ? null : CURSOR_MAP.get(edge));
         }
     }
