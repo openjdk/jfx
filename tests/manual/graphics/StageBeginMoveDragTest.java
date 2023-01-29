@@ -25,9 +25,12 @@
  */
 
 import javafx.application.Application;
+import javafx.geometry.Bounds;
 import javafx.scene.Cursor;
 import javafx.scene.Scene;
-import javafx.scene.input.*;
+import javafx.scene.input.MouseButton;
+import javafx.scene.input.MouseEvent;
+import javafx.scene.input.WindowEdge;
 import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
@@ -72,8 +75,10 @@ public class StageBeginMoveDragTest extends Application {
         private final int thresholdPixels;
 
         private WindowEdge currentEdge;
-        private double x;
-        private double y;
+        private double pressedX;
+        private double pressedY;
+
+        private Bounds rootBounds;
 
         private static final Map<WindowEdge, Cursor> CURSOR_MAP = Map.of(WindowEdge.LEFT, Cursor.W_RESIZE,
                 WindowEdge.RIGHT, Cursor.E_RESIZE,
@@ -92,27 +97,30 @@ public class StageBeginMoveDragTest extends Application {
         public void watch() {
             scene.addEventHandler(MouseEvent.MOUSE_MOVED, this::detect);
             scene.addEventHandler(MouseEvent.MOUSE_PRESSED, e -> {
-                x = e.getScreenX();
-                y = e.getScreenY();
+                pressedX = e.getScreenX();
+                pressedY = e.getScreenY();
             });
             scene.addEventHandler(MouseEvent.MOUSE_DRAGGED, this::resize);
-
-//            scene.getAccelerators().put(new KeyCodeCombination(KeyCode.F8, KeyCombination.ALT_DOWN),
-//                                        this::keyboardResize);
+            scene.addPostLayoutPulseListener(this::layout);
         }
 
-//        private void keyboardResize() {
-//            if (scene.getWindow() != null) {
-//                double middleX = scene.getWindow().getX() + scene.getX() + (scene.getWidth() / 2);
-//                double middleY = scene.getWindow().getY() + scene.getY() + (scene.getHeight() / 2);
-//
-//                scene.getWindow().beginResizeDrag(WindowEdge.BOTTOM, MouseButton.NONE, middleX, middleY);
-//            }
-//        }
+        private void layout() {
+            rootBounds = scene.getRoot().getBoundsInParent();
+            System.out.println("bounds: %s\n".formatted(rootBounds));
+        }
+
+        private void beginKeyboardResize() {
+            if (scene.getWindow() != null) {
+                double middleX = scene.getWindow().getX() + scene.getX() + (scene.getWidth() / 2);
+                double middleY = scene.getWindow().getY() + scene.getY() + (scene.getHeight() / 2);
+
+                scene.getWindow().beginResizeDrag(WindowEdge.BOTTOM, MouseButton.NONE, middleX, middleY);
+            }
+        }
 
         private void resize(MouseEvent e) {
             if (currentEdge != null && scene.getWindow() != null) {
-                scene.getWindow().beginResizeDrag(currentEdge, e.getButton(), x, y);
+                scene.getWindow().beginResizeDrag(currentEdge, e.getButton(), pressedX, pressedY);
             }
         }
 
