@@ -242,9 +242,11 @@ void ImageSource::setNativeImage(Ref<NativeImage>&& nativeImage)
     frame.m_nativeImage = WTFMove(nativeImage);
 
     frame.m_decodingStatus = DecodingStatus::Complete;
+
 /*   In the case of the canvas pattern having transform property filled with SVGMatrix()
     created by SVG element, the frame.m_nativeImage->size()  is calling NativeImageJava.cpp
     class NativeImage::size() method, where *m_platformImage->getImage().get() looks invalid */
+
 #if PLATFORM(JAVA)
     /* Image decoder has already filing frame.m_size during caching Image MetaData*/
     /* So , Frame might have already native image , do not override size again */
