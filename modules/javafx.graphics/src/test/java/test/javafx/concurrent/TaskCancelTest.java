@@ -127,6 +127,7 @@ public class TaskCancelTest {
      */
     @Test public void aFreeRunningCancelledTaskReturnValueShouldBeIgnored() throws Exception {
         RunAwayTask runAway = new RunAwayTask() {
+                @Override
                 protected void loop(int count) throws Exception {
                 }
         };

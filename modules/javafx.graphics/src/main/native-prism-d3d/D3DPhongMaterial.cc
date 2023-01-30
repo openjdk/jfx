@@ -40,22 +40,9 @@ D3DPhongMaterial::~D3DPhongMaterial() {
     map[SELFILLUMINATION] = NULL;
 }
 
-D3DPhongMaterial::D3DPhongMaterial(D3DContext *ctx) {
-    context = ctx;
-    diffuseColor[0] = 0;
-    diffuseColor[1] = 0;
-    diffuseColor[2] = 0;
-    diffuseColor[3] = 0;
-    specularColorSet = false;
-    specularColor[0] = 1;
-    specularColor[1] = 1;
-    specularColor[2] = 1;
-    specularColor[3] = 32;
-    map[DIFFUSE] = NULL;
-    map[SPECULAR] = NULL;
-    map[BUMP] = NULL;
-    map[SELFILLUMINATION] = NULL;
-}
+D3DPhongMaterial::D3DPhongMaterial(D3DContext *ctx) :
+    context(ctx)
+{}
 
 void D3DPhongMaterial::setDiffuseColor(float r, float g, float b, float a) {
     diffuseColor[0] = r;

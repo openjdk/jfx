@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -62,6 +62,7 @@ import javafx.collections.ObservableList;
 import javafx.collections.transformation.SortedList;
 import javafx.event.EventHandler;
 import javafx.geometry.Orientation;
+import javafx.scene.AccessibleAttribute;
 import javafx.scene.Group;
 import javafx.scene.Scene;
 import javafx.scene.control.cell.*;
@@ -113,7 +114,6 @@ import test.com.sun.javafx.scene.control.test.Person;
 import test.com.sun.javafx.scene.control.test.RT_22463_Person;
 
 import javafx.scene.control.skin.TableHeaderRowShim;
-import static org.junit.Assert.assertEquals;
 import test.com.sun.javafx.scene.control.infrastructure.TableColumnHeaderUtil;
 
 public class TableViewTest {
@@ -5978,5 +5978,28 @@ public class TableViewTest {
 
         hbar = VirtualFlowTestUtils.getVirtualFlowHorizontalScrollbar(table);
         assertFalse(hbar.isVisible()); // used to fail here
+    }
+
+    @Test
+    public void testQueryAccessibleAttributeSelectedItemsWithNullSelectionModel() {
+        table.getItems().addAll("1", "2");
+        table.setSelectionModel(null);
+        stageLoader = new StageLoader(table);
+
+        Object result = table.queryAccessibleAttribute(AccessibleAttribute.SELECTED_ITEMS);
+        // Should be an empty observable array list
+        assertEquals(FXCollections.observableArrayList(), result);
+    }
+
+    @Test
+    public void testQueryAccessibleAttributeFocusItemWithNullFocusModel() {
+        table.getItems().addAll("1", "2");
+        table.setFocusModel(null);
+
+        stageLoader = new StageLoader(table);
+
+        Object result = table.queryAccessibleAttribute(AccessibleAttribute.FOCUS_ITEM);
+
+        assertNull(result);
     }
 }

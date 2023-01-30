@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -48,7 +48,7 @@ import java.util.Set;
 class VNCScreen extends HeadlessScreen {
 
     private ServerSocketChannel server;
-    private Set<ClientConnection> clients = new HashSet<ClientConnection>();
+    private Set<ClientConnection> clients = new HashSet<>();
 
     VNCScreen() {
         super(1024, 600, 32);

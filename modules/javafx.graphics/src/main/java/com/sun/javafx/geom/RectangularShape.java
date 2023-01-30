@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1997, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 1997, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -256,6 +256,7 @@ public abstract class RectangularShape extends Shape {
     /**
      * {@inheritDoc}
      */
+    @Override
     public boolean contains(Point2D p) {
         return contains(p.x, p.y);
     }
@@ -263,6 +264,7 @@ public abstract class RectangularShape extends Shape {
     /**
      * {@inheritDoc}
      */
+    @Override
     public RectBounds getBounds() {
         float width = getWidth();
         float height = getHeight();
@@ -303,6 +305,7 @@ public abstract class RectangularShape extends Shape {
      * @return a <code>PathIterator</code> object that provides access to
      *      the <code>Shape</code> object's flattened geometry.
      */
+    @Override
     public PathIterator getPathIterator(BaseTransform tx, float flatness) {
         return new FlatteningPathIterator(getPathIterator(tx), flatness);
     }

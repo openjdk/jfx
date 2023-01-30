@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -36,16 +36,21 @@ import java.util.List;
 import java.util.Set;
 import java.util.WeakHashMap;
 import java.util.function.IntPredicate;
-
+import com.sun.javafx.collections.MappingChange;
+import com.sun.javafx.collections.NonIterableChange;
 import com.sun.javafx.logging.PlatformLogger.Level;
+import com.sun.javafx.scene.control.ConstrainedColumnResize;
 import com.sun.javafx.scene.control.Logging;
 import com.sun.javafx.scene.control.Properties;
+import com.sun.javafx.scene.control.ReadOnlyUnbackedObservableList;
 import com.sun.javafx.scene.control.SelectedCellsMap;
+import com.sun.javafx.scene.control.TableColumnComparatorBase.TableColumnComparator;
 import com.sun.javafx.scene.control.behavior.TableCellBehavior;
 import com.sun.javafx.scene.control.behavior.TableCellBehaviorBase;
-
-import javafx.beans.*;
+import javafx.beans.DefaultProperty;
+import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
+import javafx.beans.WeakInvalidationListener;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
@@ -66,20 +71,15 @@ import javafx.css.PseudoClass;
 import javafx.css.Styleable;
 import javafx.css.StyleableDoubleProperty;
 import javafx.css.StyleableProperty;
+import javafx.css.converter.SizeConverter;
 import javafx.event.EventHandler;
 import javafx.event.EventType;
 import javafx.scene.AccessibleAttribute;
 import javafx.scene.AccessibleRole;
 import javafx.scene.Node;
+import javafx.scene.control.skin.TableViewSkin;
 import javafx.scene.layout.Region;
 import javafx.util.Callback;
-
-import com.sun.javafx.collections.MappingChange;
-import com.sun.javafx.collections.NonIterableChange;
-import javafx.css.converter.SizeConverter;
-import com.sun.javafx.scene.control.ReadOnlyUnbackedObservableList;
-import com.sun.javafx.scene.control.TableColumnComparatorBase.TableColumnComparator;
-import javafx.scene.control.skin.TableViewSkin;
 
 /**
  * The TableView control is designed to visualize an unlimited number of rows
@@ -396,6 +396,86 @@ public class TableView<S> extends Control {
     };
 
     /**
+     * A resize policy that adjusts other columns in order to fit the table width.
+     * During UI adjustment, proportionately resizes all columns to preserve the total width.
+     * <p>
+     * When column constraints make it impossible to fit all the columns into the allowed area,
+     * the columns are either clipped, or an empty space appears.  This policy disables the horizontal
+     * scroll bar.
+     *
+     * @since 20
+     */
+    public static final Callback<TableView.ResizeFeatures, Boolean> CONSTRAINED_RESIZE_POLICY_ALL_COLUMNS =
+        ConstrainedColumnResize.forTable(ConstrainedColumnResize.ResizeMode.AUTO_RESIZE_ALL_COLUMNS);
+
+    /**
+     * A resize policy that adjusts the last column in order to fit the table width.
+     * During UI adjustment, resizes the last column only to preserve the total width.
+     * <p>
+     * When column constraints make it impossible to fit all the columns into the allowed area,
+     * the columns are either clipped, or an empty space appears.  This policy disables the horizontal
+     * scroll bar.
+     *
+     * @since 20
+     */
+    public static final Callback<TableView.ResizeFeatures, Boolean> CONSTRAINED_RESIZE_POLICY_LAST_COLUMN =
+        ConstrainedColumnResize.forTable(ConstrainedColumnResize.ResizeMode.AUTO_RESIZE_LAST_COLUMN);
+
+    /**
+     * A resize policy that adjusts the next column in order to fit the table width.
+     * During UI adjustment, resizes the next column the opposite way.
+     * <p>
+     * When column constraints make it impossible to fit all the columns into the allowed area,
+     * the columns are either clipped, or an empty space appears.  This policy disables the horizontal
+     * scroll bar.
+     *
+     * @since 20
+     */
+    public static final Callback<TableView.ResizeFeatures, Boolean> CONSTRAINED_RESIZE_POLICY_NEXT_COLUMN =
+        ConstrainedColumnResize.forTable(ConstrainedColumnResize.ResizeMode.AUTO_RESIZE_NEXT_COLUMN);
+
+    /**
+     * A resize policy that adjusts subsequent columns in order to fit the table width.
+     * During UI adjustment, proportionally resizes subsequent columns to preserve the total width.
+     * <p>
+     * When column constraints make it impossible to fit all the columns into the allowed area,
+     * the columns are either clipped, or an empty space appears.  This policy disables the horizontal
+     * scroll bar.
+     *
+     * @since 20
+     */
+    public static final Callback<TableView.ResizeFeatures, Boolean> CONSTRAINED_RESIZE_POLICY_SUBSEQUENT_COLUMNS =
+        ConstrainedColumnResize.forTable(ConstrainedColumnResize.ResizeMode.AUTO_RESIZE_SUBSEQUENT_COLUMNS);
+
+    /**
+     * A resize policy that adjusts columns, starting with the next one, in order to fit the table width.
+     * During UI adjustment, resizes the next column to preserve the total width.  When the next column
+     * cannot be further resized due to a constraint, the following column gets resized, and so on.
+     * <p>
+     * When column constraints make it impossible to fit all the columns into the allowed area,
+     * the columns are either clipped, or an empty space appears.  This policy disables the horizontal
+     * scroll bar.
+     *
+     * @since 20
+     */
+    public static final Callback<TableView.ResizeFeatures, Boolean> CONSTRAINED_RESIZE_POLICY_FLEX_NEXT_COLUMN =
+        ConstrainedColumnResize.forTable(ConstrainedColumnResize.ResizeMode.AUTO_RESIZE_FLEX_HEAD);
+
+    /**
+     * A resize policy that adjusts columns, starting with the last one, in order to fit the table width.
+     * During UI adjustment, resizes the last column to preserve the total width.  When the last column
+     * cannot be further resized due to a constraint, the column preceding the last one gets resized, and so on.
+     * <p>
+     * When column constraints make it impossible to fit all the columns into the allowed area,
+     * the columns are either clipped, or an empty space appears.  This policy disables the horizontal
+     * scroll bar.
+     *
+     * @since 20
+     */
+    public static final Callback<TableView.ResizeFeatures, Boolean> CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN =
+        ConstrainedColumnResize.forTable(ConstrainedColumnResize.ResizeMode.AUTO_RESIZE_FLEX_TAIL);
+
+    /**
      * <p>Simple policy that ensures the width of all visible leaf columns in
      * this table sum up to equal the width of the table itself.
      *
@@ -406,26 +486,12 @@ public class TableView<S> extends Control {
      * rightmost column until it reaches minimum width and so on. When all right
      * hand side columns reach minimum size, the user cannot increase the size of
      * resized column any more.
+     *
+     * @deprecated Use {@link #CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN} instead.
      */
-    public static final Callback<ResizeFeatures, Boolean> CONSTRAINED_RESIZE_POLICY = new Callback<>() {
-
-        private boolean isFirstRun = true;
-
-        @Override public String toString() {
-            return "constrained-resize";
-        }
-
-        @Override public Boolean call(ResizeFeatures prop) {
-            TableView<?> table = prop.getTable();
-            List<? extends TableColumnBase<?,?>> visibleLeafColumns = table.getVisibleLeafColumns();
-            Boolean result = TableUtil.constrainedResize(prop,
-                                               isFirstRun,
-                                               table.contentWidth,
-                                               visibleLeafColumns);
-            isFirstRun = ! isFirstRun ? false : ! result;
-            return result;
-        }
-    };
+    @Deprecated(since="20")
+    public static final Callback<ResizeFeatures, Boolean> CONSTRAINED_RESIZE_POLICY =
+        CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN;
 
     /**
      * The default {@link #sortPolicyProperty() sort policy} that this TableView
@@ -437,7 +503,8 @@ public class TableView<S> extends Control {
      * @since JavaFX 8.0
      */
     public static final Callback<TableView, Boolean> DEFAULT_SORT_POLICY = new Callback<>() {
-        @Override public Boolean call(TableView table) {
+        @Override
+        public Boolean call(TableView table) {
             try {
                 ObservableList<?> itemsList = table.getItems();
                 if (itemsList instanceof SortedList) {
@@ -995,6 +1062,7 @@ public class TableView<S> extends Control {
         @Override protected void invalidated() {
 
             if (oldValue != null) {
+                oldValue.clearSelection();
                 oldValue.cellSelectionEnabledProperty().removeListener(weakCellSelectionModelInvalidationListener);
 
                 if (oldValue instanceof TableViewArrayListSelectionModel) {
@@ -1567,20 +1635,26 @@ public class TableView<S> extends Control {
             return;
         }
 
-        final List<TablePosition> prevState = new ArrayList<>(getSelectionModel().getSelectedCells());
-        final int itemCount = prevState.size();
+        TableViewSelectionModel<S> selectionModel = getSelectionModel();
+        final List<TablePosition> prevState = selectionModel == null ?
+                null :
+                new ArrayList<>(selectionModel.getSelectedCells());
 
         // we set makeAtomic to true here, so that we don't fire intermediate
         // sort events - instead we send a single permutation event at the end
         // of this method.
-        getSelectionModel().startAtomic();
+        if (selectionModel != null) {
+            selectionModel.startAtomic();
+        }
 
         // get the sort policy and run it
         Callback<TableView<S>, Boolean> sortPolicy = getSortPolicy();
         if (sortPolicy == null) return;
         Boolean success = sortPolicy.call(this);
 
-        getSelectionModel().stopAtomic();
+        if (selectionModel != null) {
+            selectionModel.stopAtomic();
+        }
 
         if (success == null || ! success) {
             // the sort was a failure. Need to backout if possible
@@ -1593,15 +1667,16 @@ public class TableView<S> extends Control {
             // selection model that the items list has 'permutated' to a new ordering
 
             // FIXME we should support alternative selection model implementations!
-            if (getSelectionModel() instanceof TableViewArrayListSelectionModel) {
-                final TableViewArrayListSelectionModel<S> sm = (TableViewArrayListSelectionModel<S>) getSelectionModel();
+            if (selectionModel instanceof TableViewArrayListSelectionModel) {
+                final TableViewArrayListSelectionModel<S> sm = (TableViewArrayListSelectionModel<S>)selectionModel;
                 final ObservableList<TablePosition<S,?>> newState = (ObservableList<TablePosition<S,?>>)(Object)sm.getSelectedCells();
 
                 List<TablePosition<S, ?>> removed = new ArrayList<>();
-                for (int i = 0; i < itemCount; i++) {
-                    TablePosition<S, ?> prevItem = prevState.get(i);
-                    if (!newState.contains(prevItem)) {
-                        removed.add(prevItem);
+                if (prevState != null) {
+                    for (TablePosition<S, ?> prevItem : prevState) {
+                        if (!newState.contains(prevItem)) {
+                            removed.add(prevItem);
+                        }
                     }
                 }
 
@@ -1611,6 +1686,7 @@ public class TableView<S> extends Control {
                     // TablePosition's changing (which may reside in the same list
                     // position before and after the sort). Therefore, we need to fire
                     // a single add/remove event to cover the added and removed positions.
+                    int itemCount = prevState == null ? 0 : prevState.size();
                     ListChangeListener.Change<TablePosition<S, ?>> c = new NonIterableChange.GenericAddRemoveChange<>(0, itemCount, removed, newState);
                     sm.fireCustomSelectedCellsListChangeEvent(c);
                 }
@@ -1782,10 +1858,15 @@ public class TableView<S> extends Control {
                 @SuppressWarnings("unchecked")
                 ObservableList<TableRow<S>> rows = (ObservableList<TableRow<S>>)super.queryAccessibleAttribute(attribute, parameters);
                 List<Node> selection = new ArrayList<>();
-                for (TableRow<S> row : rows) {
-                    @SuppressWarnings("unchecked")
-                    ObservableList<Node> cells = (ObservableList<Node>)row.queryAccessibleAttribute(attribute, parameters);
-                    if (cells != null) selection.addAll(cells);
+                if (rows != null) {
+                    for (TableRow<S> row: rows) {
+                        @SuppressWarnings("unchecked")
+                        ObservableList<Node> cells =
+                            (ObservableList<Node>)row.queryAccessibleAttribute(attribute, parameters);
+                        if (cells != null) {
+                            selection.addAll(cells);
+                        }
+                    }
                 }
                 return FXCollections.observableArrayList(selection);
             }
@@ -1856,6 +1937,16 @@ public class TableView<S> extends Control {
          */
         public TableView<S> getTable() {
             return table;
+        }
+
+        @Override
+        public Control getTableControl() {
+            return table;
+        }
+
+        @Override
+        public double getContentWidth() {
+            return table.contentWidth;
         }
     }
 

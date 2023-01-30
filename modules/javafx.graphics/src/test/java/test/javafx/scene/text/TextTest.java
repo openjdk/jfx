@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,15 +30,13 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assume.assumeTrue;
-import javafx.geometry.VPos;
-import test.javafx.scene.NodeTest;
 import javafx.scene.text.Font;
 import javafx.scene.text.Text;
 import javafx.scene.layout.HBox;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
-
 import test.com.sun.javafx.pgstub.StubToolkit;
+
 import com.sun.javafx.tk.Toolkit;
 
 import org.junit.Test;
@@ -239,7 +237,10 @@ public class TextTest {
         // Test is unstable until JDK-8236728 is fixed
         assumeTrue(Boolean.getBoolean("unstable.test"));
 
-        Toolkit tk = (StubToolkit)Toolkit.getToolkit();
+        Toolkit tk = Toolkit.getToolkit();
+
+        assertTrue(tk instanceof StubToolkit);  // Ensure it's StubToolkit
+
         HBox root = new HBox();
         Scene scene = new Scene(root);
         Stage stage = new Stage();

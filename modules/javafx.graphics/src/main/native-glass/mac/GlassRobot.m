@@ -434,6 +434,13 @@ JNIEXPORT jobject JNICALL Java_com_sun_glass_ui_mac_MacRobot__1getScreenCapture
 {
     LOG("Java_com_sun_glass_ui_mac_MacRobot__1getScreenCapture");
 
+    if (width <= 0 || height <= 0) {
+        return NULL;
+    }
+    if (width >= INT_MAX / height) {
+        return NULL;
+    }
+
     jobject pixels = NULL;
 
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
@@ -448,6 +455,12 @@ JNIEXPORT jobject JNICALL Java_com_sun_glass_ui_mac_MacRobot__1getScreenCapture
             if (!scaleToFit) {
                 pixWidth = (jint)CGImageGetWidth(screenImage);
                 pixHeight = (jint)CGImageGetHeight(screenImage);
+                if (pixWidth <= 0 || pixHeight <= 0) {
+                    return NULL;
+                }
+                if (pixWidth >= INT_MAX / pixHeight) {
+                    return NULL;
+                }
             } else {
                 pixWidth = width;
                 pixHeight = height;

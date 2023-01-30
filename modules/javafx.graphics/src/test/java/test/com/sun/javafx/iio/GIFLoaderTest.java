@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -45,7 +45,7 @@ class TestStream extends InputStream {
 
     @Override
     public int read() throws IOException {
-        return p < data.length ? (int)data[p++] & 0xff : -1;
+        return p < data.length ? data[p++] & 0xff : -1;
     }
 }
 

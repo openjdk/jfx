@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -35,6 +35,7 @@ import javafx.scene.chart.NumberAxis;
 import javafx.scene.control.Control;
 import javafx.scene.control.SkinBase;
 import javafx.scene.control.Slider;
+import javafx.scene.control.Tooltip;
 import javafx.scene.layout.StackPane;
 import javafx.util.Duration;
 import javafx.util.StringConverter;
@@ -61,6 +62,9 @@ public class SliderSkin extends SkinBase<Slider> {
     private double trackToTickGap = 2;
 
     private boolean showTickMarks;
+
+    // Used to save and restore consumeAutoHidingEvents property of the tooltip to original value.
+    private boolean tooltipConsumeAutoHidingEvents;
     private double thumbWidth;
     private double thumbHeight;
 
@@ -388,6 +392,24 @@ public class SliderSkin extends SkinBase<Slider> {
             double dragPos = (getSkinnable().getOrientation() == Orientation.HORIZONTAL) ?
                     cur.getX() - dragStart.getX() : -(cur.getY() - dragStart.getY());
             behavior.thumbDragged(me, preDragThumbPos + dragPos / trackLength);
+        });
+
+        thumb.setOnMouseEntered(me -> {
+            Tooltip t = getSkinnable().getTooltip();
+            if (t != null && t.isAutoHide() && !t.consumeAutoHidingEventsProperty().isBound()) {
+                tooltipConsumeAutoHidingEvents = t.getConsumeAutoHidingEvents();
+                // Temporarily disable consuming auto hiding events from tooltip.
+                // This is done to receive mouse pressed event on thumb and
+                // inturn to detect start of drag.
+                t.setConsumeAutoHidingEvents(false);
+            }
+        });
+
+        thumb.setOnMouseExited(me -> {
+            Tooltip t = getSkinnable().getTooltip();
+            if (t != null && t.isAutoHide() && !t.consumeAutoHidingEventsProperty().isBound()) {
+                t.setConsumeAutoHidingEvents(tooltipConsumeAutoHidingEvents);
+            }
         });
     }
 

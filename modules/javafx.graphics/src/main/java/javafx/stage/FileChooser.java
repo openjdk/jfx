@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -242,7 +242,7 @@ public final class FileChooser {
     public final ObjectProperty<File> initialDirectoryProperty() {
         if (initialDirectory == null) {
             initialDirectory =
-                    new SimpleObjectProperty<File>(this, "initialDirectory");
+                    new SimpleObjectProperty<>(this, "initialDirectory");
         }
 
         return initialDirectory;
@@ -273,7 +273,7 @@ public final class FileChooser {
     public final ObjectProperty<String> initialFileNameProperty() {
         if (initialFileName == null) {
             initialFileName =
-                    new SimpleObjectProperty<String>(this, "initialFileName");
+                    new SimpleObjectProperty<>(this, "initialFileName");
         }
 
         return initialFileName;
@@ -322,7 +322,7 @@ public final class FileChooser {
     public final ObjectProperty<ExtensionFilter> selectedExtensionFilterProperty() {
         if (selectedExtensionFilter == null) {
             selectedExtensionFilter =
-                    new SimpleObjectProperty<ExtensionFilter>(this,
+                    new SimpleObjectProperty<>(this,
                     "selectedExtensionFilter");
         }
         return selectedExtensionFilter;

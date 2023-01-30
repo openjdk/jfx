@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -54,7 +54,7 @@ class LinuxAbsoluteInputCapabilities {
 
     private LinuxAbsoluteInputCapabilities(LinuxSystem system,
                                            LinuxSystem.InputAbsInfo info,
-                                           long fd, int axis) throws IOException {
+                                           long fd, int axis) {
         system.ioctl(fd, system.EVIOCGABS(axis), info.p);
         value = LinuxSystem.InputAbsInfo.getValue(info.p);
         minimum = LinuxSystem.InputAbsInfo.getMinimum(info.p);
@@ -81,8 +81,7 @@ class LinuxAbsoluteInputCapabilities {
         if (fd == -1) {
             throw new IOException(system.getErrorMessage());
         }
-        Map<Integer, LinuxAbsoluteInputCapabilities> caps =
-                new HashMap<Integer, LinuxAbsoluteInputCapabilities>();
+        Map<Integer, LinuxAbsoluteInputCapabilities> caps = new HashMap<>();
         for (int i = 0; (i = axes.nextSetBit(i)) != -1; i++) {
             caps.put(i, new LinuxAbsoluteInputCapabilities(system, info, fd, i));
         }

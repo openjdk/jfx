@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -827,10 +827,22 @@ public class TableCell<S,T> extends IndexedCell<T> {
     @Override
     public Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
         switch (attribute) {
-            case ROW_INDEX: return getIndex();
-            case COLUMN_INDEX: return columnIndex;
-            case SELECTED: return isInCellSelectionMode() ? isSelected() : getTableRow().isSelected();
-            default: return super.queryAccessibleAttribute(attribute, parameters);
+        case ROW_INDEX:
+            return getIndex();
+        case COLUMN_INDEX:
+            return columnIndex;
+        case SELECTED:
+            if (isInCellSelectionMode()) {
+                return isSelected();
+            } else {
+                if(getTableRow() == null) {
+                    return null;
+                } else {
+                    return getTableRow().isSelected();
+                }
+            }
+        default:
+            return super.queryAccessibleAttribute(attribute, parameters);
         }
     }
 

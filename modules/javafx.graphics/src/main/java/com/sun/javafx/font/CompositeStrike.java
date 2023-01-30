@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -44,6 +44,7 @@ public class CompositeStrike implements FontStrike {
     private FontStrikeDesc desc;
     DisposerRecord disposer;
 
+    @Override
     public void clearDesc() {
         fontResource.getStrikeMap().remove(desc);
         // For a composite strike, you also need to remove the strike
@@ -82,6 +83,7 @@ public class CompositeStrike implements FontStrike {
         disposer = new CompositeStrikeDisposer(fontResource, desc);
     }
 
+    @Override
     public int getAAMode() {
         PrismFontFactory factory = PrismFontFactory.getFontFactory();
         if (factory.isLCDTextSupported()) {
@@ -95,6 +97,7 @@ public class CompositeStrike implements FontStrike {
      * Trusting caller to NOT mutate the returned result, to
      * avoid a clone.
      */
+    @Override
     public BaseTransform getTransform() {
         return transform;
     }
@@ -126,6 +129,7 @@ public class CompositeStrike implements FontStrike {
         }
     }
 
+    @Override
     public FontResource getFontResource() {
         return fontResource;
     }
@@ -134,16 +138,19 @@ public class CompositeStrike implements FontStrike {
         return (glyphCode >>> 24);
     }
 
+    @Override
     public float getSize() {
         return size;
     }
 
+    @Override
     public boolean drawAsShapes() {
         return getStrikeSlot(0).drawAsShapes();
     }
 
     private PrismMetrics metrics;
 
+    @Override
     public Metrics getMetrics() {
         if (metrics == null) {
             PrismFontFile fr = (PrismFontFile)fontResource.getSlotResource(0);
@@ -152,11 +159,13 @@ public class CompositeStrike implements FontStrike {
         return metrics;
     }
 
+    @Override
     public Glyph getGlyph(char symbol) {
         int glyphCode = fontResource.getGlyphMapper().charToGlyph(symbol);
         return getGlyph(glyphCode);
     }
 
+    @Override
     public Glyph getGlyph(int glyphCode) {
         int slot = (glyphCode >>> 24);
         int slotglyphCode = glyphCode & CompositeGlyphMapper.GLYPHMASK;
@@ -170,6 +179,7 @@ public class CompositeStrike implements FontStrike {
      * @param ch char
      * @return advance of single char
      */
+    @Override
     public float getCharAdvance(char ch) {
         int glyphCode = fontResource.getGlyphMapper().charToGlyph((int)ch);
         return fontResource.getAdvance(glyphCode, size);
@@ -180,6 +190,7 @@ public class CompositeStrike implements FontStrike {
         return getStrikeSlot(0).getQuantizedPosition(point);
     }
 
+    @Override
     public Shape getOutline(GlyphList gl, BaseTransform transform) {
 
         Path2D result = new Path2D();

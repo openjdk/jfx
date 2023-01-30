@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -38,7 +38,7 @@ class DummyTexture extends BaseTexture  {
         DummyManagedResource() {
             super(new Object(), DummyTexturePool.instance);
         }
-    };
+    }
 
     DummyContext context;
 
@@ -69,10 +69,12 @@ class DummyTexture extends BaseTexture  {
         return context;
     }
 
+    @Override
     public void update(Buffer buffer, PixelFormat format, int dstx, int dsty, int srcx, int srcy, int srcw, int srch, int srcscan, boolean skipFlush) {
 
     }
 
+    @Override
     public void update(MediaFrame frame, boolean skipFlush) {
     }
 

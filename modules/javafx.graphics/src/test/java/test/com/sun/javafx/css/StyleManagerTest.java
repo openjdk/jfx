@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -1004,7 +1004,7 @@ public class StyleManagerTest {
         final StyleManagerShim sm = StyleManagerShim.getInstance();
 
         // 1 - overwrite default user agent stylesheet
-        sm.platformUserAgentStylesheetContainers_clear();;
+        sm.platformUserAgentStylesheetContainers_clear();
         sm.setDefaultUserAgentStylesheet("/test/com/sun/javafx/css/ua1.css");
         assertEquals(1, sm.platformUserAgentStylesheetContainers_size());
         assertEquals("/test/com/sun/javafx/css/ua1.css", sm.platformUserAgentStylesheetContainers_getfname(0));
@@ -1014,7 +1014,7 @@ public class StyleManagerTest {
         assertEquals("/test/com/sun/javafx/css/ua0.css", sm.platformUserAgentStylesheetContainers_getfname(0));
 
         // 2 - overwrite other user-agent stylesheets
-        sm.platformUserAgentStylesheetContainers_clear();;
+        sm.platformUserAgentStylesheetContainers_clear();
         sm.addUserAgentStylesheet("/test/com/sun/javafx/css/ua1.css");
         assertEquals(1, sm.platformUserAgentStylesheetContainers_size());
 
