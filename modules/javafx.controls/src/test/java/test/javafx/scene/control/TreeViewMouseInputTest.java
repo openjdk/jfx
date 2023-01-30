@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -76,20 +76,20 @@ public class TreeViewMouseInputTest {
         private TreeItem<String> child10;           // 13
 
     @Before public void setup() {
-        root = new TreeItem<String>("Root");             // 0
-        child1 = new TreeItem<String>("Child 1");        // 1
-        child2 = new TreeItem<String>("Child 2");        // 2
-        child3 = new TreeItem<String>("Child 3");        // 3
-        subchild1 = new TreeItem<String>("Subchild 1");  // 4
-        subchild2 = new TreeItem<String>("Subchild 2");  // 5
-        subchild3 = new TreeItem<String>("Subchild 3");  // 6
-        child4 = new TreeItem<String>("Child 4");        // 7
-        child5 = new TreeItem<String>("Child 5");        // 8
-        child6 = new TreeItem<String>("Child 6");        // 9
-        child7 = new TreeItem<String>("Child 7");        // 10
-        child8 = new TreeItem<String>("Child 8");        // 11
-        child9 = new TreeItem<String>("Child 9");        // 12
-        child10 = new TreeItem<String>("Child 10");      // 13
+        root = new TreeItem<>("Root");             // 0
+        child1 = new TreeItem<>("Child 1");        // 1
+        child2 = new TreeItem<>("Child 2");        // 2
+        child3 = new TreeItem<>("Child 3");        // 3
+        subchild1 = new TreeItem<>("Subchild 1");  // 4
+        subchild2 = new TreeItem<>("Subchild 2");  // 5
+        subchild3 = new TreeItem<>("Subchild 3");  // 6
+        child4 = new TreeItem<>("Child 4");        // 7
+        child5 = new TreeItem<>("Child 5");        // 8
+        child6 = new TreeItem<>("Child 6");        // 9
+        child7 = new TreeItem<>("Child 7");        // 10
+        child8 = new TreeItem<>("Child 8");        // 11
+        child9 = new TreeItem<>("Child 9");        // 12
+        child10 = new TreeItem<>("Child 10");      // 13
 
         // reset tree structure
         root.getChildren().clear();
@@ -118,7 +118,7 @@ public class TreeViewMouseInputTest {
         child10.setExpanded(false);
 
         // recreate treeview and gather models
-        treeView = new TreeView<String>();
+        treeView = new TreeView<>();
         treeView.setRoot(root);
         sm = treeView.getSelectionModel();
         sm.setSelectionMode(SelectionMode.MULTIPLE);

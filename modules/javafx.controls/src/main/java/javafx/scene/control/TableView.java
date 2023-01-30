@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -36,16 +36,21 @@ import java.util.List;
 import java.util.Set;
 import java.util.WeakHashMap;
 import java.util.function.IntPredicate;
-
+import com.sun.javafx.collections.MappingChange;
+import com.sun.javafx.collections.NonIterableChange;
 import com.sun.javafx.logging.PlatformLogger.Level;
+import com.sun.javafx.scene.control.ConstrainedColumnResize;
 import com.sun.javafx.scene.control.Logging;
 import com.sun.javafx.scene.control.Properties;
+import com.sun.javafx.scene.control.ReadOnlyUnbackedObservableList;
 import com.sun.javafx.scene.control.SelectedCellsMap;
+import com.sun.javafx.scene.control.TableColumnComparatorBase.TableColumnComparator;
 import com.sun.javafx.scene.control.behavior.TableCellBehavior;
 import com.sun.javafx.scene.control.behavior.TableCellBehaviorBase;
-
-import javafx.beans.*;
+import javafx.beans.DefaultProperty;
+import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
+import javafx.beans.WeakInvalidationListener;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
@@ -66,20 +71,15 @@ import javafx.css.PseudoClass;
 import javafx.css.Styleable;
 import javafx.css.StyleableDoubleProperty;
 import javafx.css.StyleableProperty;
+import javafx.css.converter.SizeConverter;
 import javafx.event.EventHandler;
 import javafx.event.EventType;
 import javafx.scene.AccessibleAttribute;
 import javafx.scene.AccessibleRole;
 import javafx.scene.Node;
+import javafx.scene.control.skin.TableViewSkin;
 import javafx.scene.layout.Region;
 import javafx.util.Callback;
-
-import com.sun.javafx.collections.MappingChange;
-import com.sun.javafx.collections.NonIterableChange;
-import javafx.css.converter.SizeConverter;
-import com.sun.javafx.scene.control.ReadOnlyUnbackedObservableList;
-import com.sun.javafx.scene.control.TableColumnComparatorBase.TableColumnComparator;
-import javafx.scene.control.skin.TableViewSkin;
 
 /**
  * The TableView control is designed to visualize an unlimited number of rows
@@ -384,7 +384,7 @@ public class TableView<S> extends Control {
      * Of course, the immediate children may themselves be nested, and they would
      * then use this policy on their children.
      */
-    public static final Callback<ResizeFeatures, Boolean> UNCONSTRAINED_RESIZE_POLICY = new Callback<ResizeFeatures, Boolean>() {
+    public static final Callback<ResizeFeatures, Boolean> UNCONSTRAINED_RESIZE_POLICY = new Callback<>() {
         @Override public String toString() {
             return "unconstrained-resize";
         }
@@ -394,6 +394,86 @@ public class TableView<S> extends Control {
             return Double.compare(result, 0.0) == 0;
         }
     };
+
+    /**
+     * A resize policy that adjusts other columns in order to fit the table width.
+     * During UI adjustment, proportionately resizes all columns to preserve the total width.
+     * <p>
+     * When column constraints make it impossible to fit all the columns into the allowed area,
+     * the columns are either clipped, or an empty space appears.  This policy disables the horizontal
+     * scroll bar.
+     *
+     * @since 20
+     */
+    public static final Callback<TableView.ResizeFeatures, Boolean> CONSTRAINED_RESIZE_POLICY_ALL_COLUMNS =
+        ConstrainedColumnResize.forTable(ConstrainedColumnResize.ResizeMode.AUTO_RESIZE_ALL_COLUMNS);
+
+    /**
+     * A resize policy that adjusts the last column in order to fit the table width.
+     * During UI adjustment, resizes the last column only to preserve the total width.
+     * <p>
+     * When column constraints make it impossible to fit all the columns into the allowed area,
+     * the columns are either clipped, or an empty space appears.  This policy disables the horizontal
+     * scroll bar.
+     *
+     * @since 20
+     */
+    public static final Callback<TableView.ResizeFeatures, Boolean> CONSTRAINED_RESIZE_POLICY_LAST_COLUMN =
+        ConstrainedColumnResize.forTable(ConstrainedColumnResize.ResizeMode.AUTO_RESIZE_LAST_COLUMN);
+
+    /**
+     * A resize policy that adjusts the next column in order to fit the table width.
+     * During UI adjustment, resizes the next column the opposite way.
+     * <p>
+     * When column constraints make it impossible to fit all the columns into the allowed area,
+     * the columns are either clipped, or an empty space appears.  This policy disables the horizontal
+     * scroll bar.
+     *
+     * @since 20
+     */
+    public static final Callback<TableView.ResizeFeatures, Boolean> CONSTRAINED_RESIZE_POLICY_NEXT_COLUMN =
+        ConstrainedColumnResize.forTable(ConstrainedColumnResize.ResizeMode.AUTO_RESIZE_NEXT_COLUMN);
+
+    /**
+     * A resize policy that adjusts subsequent columns in order to fit the table width.
+     * During UI adjustment, proportionally resizes subsequent columns to preserve the total width.
+     * <p>
+     * When column constraints make it impossible to fit all the columns into the allowed area,
+     * the columns are either clipped, or an empty space appears.  This policy disables the horizontal
+     * scroll bar.
+     *
+     * @since 20
+     */
+    public static final Callback<TableView.ResizeFeatures, Boolean> CONSTRAINED_RESIZE_POLICY_SUBSEQUENT_COLUMNS =
+        ConstrainedColumnResize.forTable(ConstrainedColumnResize.ResizeMode.AUTO_RESIZE_SUBSEQUENT_COLUMNS);
+
+    /**
+     * A resize policy that adjusts columns, starting with the next one, in order to fit the table width.
+     * During UI adjustment, resizes the next column to preserve the total width.  When the next column
+     * cannot be further resized due to a constraint, the following column gets resized, and so on.
+     * <p>
+     * When column constraints make it impossible to fit all the columns into the allowed area,
+     * the columns are either clipped, or an empty space appears.  This policy disables the horizontal
+     * scroll bar.
+     *
+     * @since 20
+     */
+    public static final Callback<TableView.ResizeFeatures, Boolean> CONSTRAINED_RESIZE_POLICY_FLEX_NEXT_COLUMN =
+        ConstrainedColumnResize.forTable(ConstrainedColumnResize.ResizeMode.AUTO_RESIZE_FLEX_HEAD);
+
+    /**
+     * A resize policy that adjusts columns, starting with the last one, in order to fit the table width.
+     * During UI adjustment, resizes the last column to preserve the total width.  When the last column
+     * cannot be further resized due to a constraint, the column preceding the last one gets resized, and so on.
+     * <p>
+     * When column constraints make it impossible to fit all the columns into the allowed area,
+     * the columns are either clipped, or an empty space appears.  This policy disables the horizontal
+     * scroll bar.
+     *
+     * @since 20
+     */
+    public static final Callback<TableView.ResizeFeatures, Boolean> CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN =
+        ConstrainedColumnResize.forTable(ConstrainedColumnResize.ResizeMode.AUTO_RESIZE_FLEX_TAIL);
 
     /**
      * <p>Simple policy that ensures the width of all visible leaf columns in
@@ -406,26 +486,12 @@ public class TableView<S> extends Control {
      * rightmost column until it reaches minimum width and so on. When all right
      * hand side columns reach minimum size, the user cannot increase the size of
      * resized column any more.
+     *
+     * @deprecated Use {@link #CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN} instead.
      */
-    public static final Callback<ResizeFeatures, Boolean> CONSTRAINED_RESIZE_POLICY = new Callback<ResizeFeatures, Boolean>() {
-
-        private boolean isFirstRun = true;
-
-        @Override public String toString() {
-            return "constrained-resize";
-        }
-
-        @Override public Boolean call(ResizeFeatures prop) {
-            TableView<?> table = prop.getTable();
-            List<? extends TableColumnBase<?,?>> visibleLeafColumns = table.getVisibleLeafColumns();
-            Boolean result = TableUtil.constrainedResize(prop,
-                                               isFirstRun,
-                                               table.contentWidth,
-                                               visibleLeafColumns);
-            isFirstRun = ! isFirstRun ? false : ! result;
-            return result;
-        }
-    };
+    @Deprecated(since="20")
+    public static final Callback<ResizeFeatures, Boolean> CONSTRAINED_RESIZE_POLICY =
+        CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN;
 
     /**
      * The default {@link #sortPolicyProperty() sort policy} that this TableView
@@ -436,8 +502,9 @@ public class TableView<S> extends Control {
      * be considered to represent failure.
      * @since JavaFX 8.0
      */
-    public static final Callback<TableView, Boolean> DEFAULT_SORT_POLICY = new Callback<TableView, Boolean>() {
-        @Override public Boolean call(TableView table) {
+    public static final Callback<TableView, Boolean> DEFAULT_SORT_POLICY = new Callback<>() {
+        @Override
+        public Boolean call(TableView table) {
             try {
                 ObservableList<?> itemsList = table.getItems();
                 if (itemsList instanceof SortedList) {
@@ -532,8 +599,8 @@ public class TableView<S> extends Control {
 
         // install default selection and focus models
         // it's unlikely this will be changed by many users.
-        setSelectionModel(new TableViewArrayListSelectionModel<S>(this));
-        setFocusModel(new TableViewFocusModel<S>(this));
+        setSelectionModel(new TableViewArrayListSelectionModel<>(this));
+        setFocusModel(new TableViewFocusModel<>(this));
 
         // we watch the columns list, such that when it changes we can update
         // the leaf columns and visible leaf columns lists (which are read-only).
@@ -548,7 +615,7 @@ public class TableView<S> extends Control {
         // We're watching for changes to the content width such
         // that the resize policy can be run if necessary. This comes from
         // TreeViewSkin.
-        getProperties().addListener(new MapChangeListener<Object, Object>() {
+        getProperties().addListener(new MapChangeListener<>() {
             @Override
             public void onChanged(Change<? extends Object, ? extends Object> c) {
                 if (c.wasAdded() && SET_CONTENT_WIDTH.equals(c.getKey())) {
@@ -604,7 +671,7 @@ public class TableView<S> extends Control {
      *                                                                         *
      **************************************************************************/
 
-    private final ListChangeListener<TableColumn<S,?>> columnsObserver = new ListChangeListener<TableColumn<S,?>>() {
+    private final ListChangeListener<TableColumn<S,?>> columnsObserver = new ListChangeListener<>() {
         @Override public void onChanged(Change<? extends TableColumn<S,?>> c) {
             final List<TableColumn<S,?>> columns = getColumns();
 
@@ -819,7 +886,7 @@ public class TableView<S> extends Control {
             new WeakInvalidationListener(columnComparatorObserver);
 
     private final WeakListChangeListener<TableColumn<S,?>> weakColumnsObserver =
-            new WeakListChangeListener<TableColumn<S,?>>(columnsObserver);
+            new WeakListChangeListener<>(columnsObserver);
 
     private final WeakInvalidationListener weakCellSelectionModelInvalidationListener =
             new WeakInvalidationListener(cellSelectionModelInvalidationListener);
@@ -841,7 +908,7 @@ public class TableView<S> extends Control {
      */
     public final ObjectProperty<ObservableList<S>> itemsProperty() { return items; }
     private ObjectProperty<ObservableList<S>> items =
-        new SimpleObjectProperty<ObservableList<S>>(this, "items") {
+        new SimpleObjectProperty<>(this, "items") {
             WeakReference<ObservableList<S>> oldItemsRef;
 
             @Override protected void invalidated() {
@@ -905,7 +972,7 @@ public class TableView<S> extends Control {
      */
     public final ObjectProperty<Callback<ResizeFeatures, Boolean>> columnResizePolicyProperty() {
         if (columnResizePolicy == null) {
-            columnResizePolicy = new SimpleObjectProperty<Callback<ResizeFeatures, Boolean>>(this, "columnResizePolicy", UNCONSTRAINED_RESIZE_POLICY) {
+            columnResizePolicy = new SimpleObjectProperty<>(this, "columnResizePolicy", UNCONSTRAINED_RESIZE_POLICY) {
                 private Callback<ResizeFeatures, Boolean> oldPolicy;
 
                 @Override protected void invalidated() {
@@ -950,7 +1017,7 @@ public class TableView<S> extends Control {
      */
     public final ObjectProperty<Callback<TableView<S>, TableRow<S>>> rowFactoryProperty() {
         if (rowFactory == null) {
-            rowFactory = new SimpleObjectProperty<Callback<TableView<S>, TableRow<S>>>(this, "rowFactory");
+            rowFactory = new SimpleObjectProperty<>(this, "rowFactory");
         }
         return rowFactory;
     }
@@ -974,7 +1041,7 @@ public class TableView<S> extends Control {
      */
     public final ObjectProperty<Node> placeholderProperty() {
         if (placeholder == null) {
-            placeholder = new SimpleObjectProperty<Node>(this, "placeholder");
+            placeholder = new SimpleObjectProperty<>(this, "placeholder");
         }
         return placeholder;
     }
@@ -988,13 +1055,14 @@ public class TableView<S> extends Control {
 
     // --- Selection Model
     private ObjectProperty<TableViewSelectionModel<S>> selectionModel
-            = new SimpleObjectProperty<TableViewSelectionModel<S>>(this, "selectionModel") {
+            = new SimpleObjectProperty<>(this, "selectionModel") {
 
         TableViewSelectionModel<S> oldValue = null;
 
         @Override protected void invalidated() {
 
             if (oldValue != null) {
+                oldValue.clearSelection();
                 oldValue.cellSelectionEnabledProperty().removeListener(weakCellSelectionModelInvalidationListener);
 
                 if (oldValue instanceof TableViewArrayListSelectionModel) {
@@ -1047,7 +1115,7 @@ public class TableView<S> extends Control {
      */
     public final ObjectProperty<TableViewFocusModel<S>> focusModelProperty() {
         if (focusModel == null) {
-            focusModel = new SimpleObjectProperty<TableViewFocusModel<S>>(this, "focusModel");
+            focusModel = new SimpleObjectProperty<>(this, "focusModel");
         }
         return focusModel;
     }
@@ -1191,7 +1259,7 @@ public class TableView<S> extends Control {
 
     private ReadOnlyObjectWrapper<TablePosition<S,?>> editingCellPropertyImpl() {
         if (editingCell == null) {
-            editingCell = new ReadOnlyObjectWrapper<TablePosition<S,?>>(this, "editingCell");
+            editingCell = new ReadOnlyObjectWrapper<>(this, "editingCell");
         }
         return editingCell;
     }
@@ -1217,7 +1285,7 @@ public class TableView<S> extends Control {
     }
     private ReadOnlyObjectWrapper<Comparator<S>> comparatorPropertyImpl() {
         if (comparator == null) {
-            comparator = new ReadOnlyObjectWrapper<Comparator<S>>(this, "comparator");
+            comparator = new ReadOnlyObjectWrapper<>(this, "comparator");
         }
         return comparator;
     }
@@ -1252,7 +1320,7 @@ public class TableView<S> extends Control {
     @SuppressWarnings("unchecked")
     public final ObjectProperty<Callback<TableView<S>, Boolean>> sortPolicyProperty() {
         if (sortPolicy == null) {
-            sortPolicy = new SimpleObjectProperty<Callback<TableView<S>, Boolean>>(
+            sortPolicy = new SimpleObjectProperty<>(
                     this, "sortPolicy", (Callback<TableView<S>, Boolean>)(Object) DEFAULT_SORT_POLICY) {
                 @Override protected void invalidated() {
                     sort();
@@ -1283,7 +1351,7 @@ public class TableView<S> extends Control {
 
     public ObjectProperty<EventHandler<SortEvent<TableView<S>>>> onSortProperty() {
         if( onSort == null ) {
-            onSort = new ObjectPropertyBase<EventHandler<SortEvent<TableView<S>>>>() {
+            onSort = new ObjectPropertyBase<>() {
                 @Override protected void invalidated() {
                     EventType<SortEvent<TableView<S>>> eventType = SortEvent.sortEvent();
                     EventHandler<SortEvent<TableView<S>>> eventHandler = get();
@@ -1384,7 +1452,7 @@ public class TableView<S> extends Control {
 
     public ObjectProperty<EventHandler<ScrollToEvent<Integer>>> onScrollToProperty() {
         if( onScrollTo == null ) {
-            onScrollTo = new ObjectPropertyBase<EventHandler<ScrollToEvent<Integer>>>() {
+            onScrollTo = new ObjectPropertyBase<>() {
                 @Override
                 protected void invalidated() {
                     setEventHandler(ScrollToEvent.scrollToTopIndex(), get());
@@ -1443,7 +1511,7 @@ public class TableView<S> extends Control {
 
     public ObjectProperty<EventHandler<ScrollToEvent<TableColumn<S, ?>>>> onScrollToColumnProperty() {
         if( onScrollToColumn == null ) {
-            onScrollToColumn = new ObjectPropertyBase<EventHandler<ScrollToEvent<TableColumn<S, ?>>>>() {
+            onScrollToColumn = new ObjectPropertyBase<>() {
                 @Override protected void invalidated() {
                     EventType<ScrollToEvent<TableColumn<S, ?>>> type = ScrollToEvent.scrollToColumn();
                     setEventHandler(type, get());
@@ -1471,7 +1539,7 @@ public class TableView<S> extends Control {
     public boolean resizeColumn(TableColumn<S,?> column, double delta) {
         if (column == null || Double.compare(delta, 0.0) == 0) return false;
 
-        boolean allowed = getColumnResizePolicy().call(new ResizeFeatures<S>(TableView.this, column, delta));
+        boolean allowed = getColumnResizePolicy().call(new ResizeFeatures<>(TableView.this, column, delta));
         if (!allowed) return false;
 
         return true;
@@ -1532,7 +1600,7 @@ public class TableView<S> extends Control {
 
     /** {@inheritDoc} */
     @Override protected Skin<?> createDefaultSkin() {
-        return new TableViewSkin<S>(this);
+        return new TableViewSkin<>(this);
     }
 
     /**
@@ -1567,20 +1635,26 @@ public class TableView<S> extends Control {
             return;
         }
 
-        final List<TablePosition> prevState = new ArrayList<>(getSelectionModel().getSelectedCells());
-        final int itemCount = prevState.size();
+        TableViewSelectionModel<S> selectionModel = getSelectionModel();
+        final List<TablePosition> prevState = selectionModel == null ?
+                null :
+                new ArrayList<>(selectionModel.getSelectedCells());
 
         // we set makeAtomic to true here, so that we don't fire intermediate
         // sort events - instead we send a single permutation event at the end
         // of this method.
-        getSelectionModel().startAtomic();
+        if (selectionModel != null) {
+            selectionModel.startAtomic();
+        }
 
         // get the sort policy and run it
         Callback<TableView<S>, Boolean> sortPolicy = getSortPolicy();
         if (sortPolicy == null) return;
         Boolean success = sortPolicy.call(this);
 
-        getSelectionModel().stopAtomic();
+        if (selectionModel != null) {
+            selectionModel.stopAtomic();
+        }
 
         if (success == null || ! success) {
             // the sort was a failure. Need to backout if possible
@@ -1593,15 +1667,16 @@ public class TableView<S> extends Control {
             // selection model that the items list has 'permutated' to a new ordering
 
             // FIXME we should support alternative selection model implementations!
-            if (getSelectionModel() instanceof TableViewArrayListSelectionModel) {
-                final TableViewArrayListSelectionModel<S> sm = (TableViewArrayListSelectionModel<S>) getSelectionModel();
+            if (selectionModel instanceof TableViewArrayListSelectionModel) {
+                final TableViewArrayListSelectionModel<S> sm = (TableViewArrayListSelectionModel<S>)selectionModel;
                 final ObservableList<TablePosition<S,?>> newState = (ObservableList<TablePosition<S,?>>)(Object)sm.getSelectedCells();
 
                 List<TablePosition<S, ?>> removed = new ArrayList<>();
-                for (int i = 0; i < itemCount; i++) {
-                    TablePosition<S, ?> prevItem = prevState.get(i);
-                    if (!newState.contains(prevItem)) {
-                        removed.add(prevItem);
+                if (prevState != null) {
+                    for (TablePosition<S, ?> prevItem : prevState) {
+                        if (!newState.contains(prevItem)) {
+                            removed.add(prevItem);
+                        }
                     }
                 }
 
@@ -1611,6 +1686,7 @@ public class TableView<S> extends Control {
                     // TablePosition's changing (which may reside in the same list
                     // position before and after the sort). Therefore, we need to fire
                     // a single add/remove event to cover the added and removed positions.
+                    int itemCount = prevState == null ? 0 : prevState.size();
                     ListChangeListener.Change<TablePosition<S, ?>> c = new NonIterableChange.GenericAddRemoveChange<>(0, itemCount, removed, newState);
                     sm.fireCustomSelectedCellsListChangeEvent(c);
                 }
@@ -1665,7 +1741,7 @@ public class TableView<S> extends Control {
             // so we short-circuit the resize function and just go straight there
             // with a null TableColumn, which indicates to the resize policy function
             // that it shouldn't actually do anything specific to one column.
-            getColumnResizePolicy().call(new ResizeFeatures<S>(TableView.this, null, 0.0));
+            getColumnResizePolicy().call(new ResizeFeatures<>(TableView.this, null, 0.0));
         }
     }
 
@@ -1674,7 +1750,7 @@ public class TableView<S> extends Control {
      */
     private void updateVisibleLeafColumns() {
         // update visible leaf columns list
-        List<TableColumn<S,?>> cols = new ArrayList<TableColumn<S,?>>();
+        List<TableColumn<S,?>> cols = new ArrayList<>();
         buildVisibleLeafColumns(getColumns(), cols);
         visibleLeafColumns.setAll(cols);
 
@@ -1683,7 +1759,7 @@ public class TableView<S> extends Control {
         // so we short-circuit the resize function and just go straight there
         // with a null TableColumn, which indicates to the resize policy function
         // that it shouldn't actually do anything specific to one column.
-        getColumnResizePolicy().call(new ResizeFeatures<S>(TableView.this, null, 0.0));
+        getColumnResizePolicy().call(new ResizeFeatures<>(TableView.this, null, 0.0));
     }
 
     private void buildVisibleLeafColumns(List<TableColumn<S,?>> cols, List<TableColumn<S,?>> vlc) {
@@ -1717,7 +1793,7 @@ public class TableView<S> extends Control {
 
     private static class StyleableProperties {
         private static final CssMetaData<TableView<?>,Number> FIXED_CELL_SIZE =
-                new CssMetaData<TableView<?>,Number>("-fx-fixed-cell-size",
+                new CssMetaData<>("-fx-fixed-cell-size",
                                                     SizeConverter.getInstance(),
                                                     Region.USE_COMPUTED_SIZE) {
 
@@ -1737,7 +1813,7 @@ public class TableView<S> extends Control {
         private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
         static {
             final List<CssMetaData<? extends Styleable, ?>> styleables =
-                    new ArrayList<CssMetaData<? extends Styleable, ?>>(Control.getClassCssMetaData());
+                    new ArrayList<>(Control.getClassCssMetaData());
             styleables.add(FIXED_CELL_SIZE);
             STYLEABLES = Collections.unmodifiableList(styleables);
         }
@@ -1782,10 +1858,15 @@ public class TableView<S> extends Control {
                 @SuppressWarnings("unchecked")
                 ObservableList<TableRow<S>> rows = (ObservableList<TableRow<S>>)super.queryAccessibleAttribute(attribute, parameters);
                 List<Node> selection = new ArrayList<>();
-                for (TableRow<S> row : rows) {
-                    @SuppressWarnings("unchecked")
-                    ObservableList<Node> cells = (ObservableList<Node>)row.queryAccessibleAttribute(attribute, parameters);
-                    if (cells != null) selection.addAll(cells);
+                if (rows != null) {
+                    for (TableRow<S> row: rows) {
+                        @SuppressWarnings("unchecked")
+                        ObservableList<Node> cells =
+                            (ObservableList<Node>)row.queryAccessibleAttribute(attribute, parameters);
+                        if (cells != null) {
+                            selection.addAll(cells);
+                        }
+                    }
                 }
                 return FXCollections.observableArrayList(selection);
             }
@@ -1856,6 +1937,16 @@ public class TableView<S> extends Control {
          */
         public TableView<S> getTable() {
             return table;
+        }
+
+        @Override
+        public Control getTableControl() {
+            return table;
+        }
+
+        @Override
+        public double getContentWidth() {
+            return table.contentWidth;
         }
     }
 
@@ -2111,13 +2202,13 @@ public class TableView<S> extends Control {
             };
             this.tableView.itemsProperty().addListener(itemsPropertyListener);
 
-            selectedCellsMap = new SelectedCellsMap<TablePosition<S,?>>(this::fireCustomSelectedCellsListChangeEvent) {
+            selectedCellsMap = new SelectedCellsMap<>(c -> fireCustomSelectedCellsListChangeEvent(c)) {  // Note: use of method reference causes javac compilation error (see JDK-8297428)
                 @Override public boolean isCellSelectionEnabled() {
                     return TableViewArrayListSelectionModel.this.isCellSelectionEnabled();
                 }
             };
 
-            selectedCellsSeq = new ReadOnlyUnbackedObservableList<TablePosition<S,?>>() {
+            selectedCellsSeq = new ReadOnlyUnbackedObservableList<>() {
                 @Override public TablePosition<S,?> get(int i) {
                     return selectedCellsMap.get(i);
                 }
@@ -2351,7 +2442,7 @@ public class TableView<S> extends Control {
                 }
             }
 
-            shiftSelection(startRow, shift, new Callback<ShiftParams, Void>() {
+            shiftSelection(startRow, shift, new Callback<>() {
                 @Override public Void call(ShiftParams param) {
 
                     // we make the shifts atomic, as otherwise listeners to
@@ -2796,7 +2887,7 @@ public class TableView<S> extends Control {
                 focus(-1);
 
                 if (!removed.isEmpty()) {
-                    ListChangeListener.Change<TablePosition<S, ?>> c = new NonIterableChange<TablePosition<S, ?>>(0, 0, selectedCellsSeq) {
+                    ListChangeListener.Change<TablePosition<S, ?>> c = new NonIterableChange<>(0, 0, selectedCellsSeq) {
                         @Override public List<TablePosition<S, ?>> getRemoved() {
                             return removed;
                         }
@@ -3171,7 +3262,7 @@ public class TableView<S> extends Control {
 
         private ReadOnlyObjectWrapper<TablePosition> focusedCellPropertyImpl() {
             if (focusedCell == null) {
-                focusedCell = new ReadOnlyObjectWrapper<TablePosition>(EMPTY_CELL) {
+                focusedCell = new ReadOnlyObjectWrapper<>(EMPTY_CELL) {
                     private TablePosition old;
                     @Override protected void invalidated() {
                         if (get() == null) return;

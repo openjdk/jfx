@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -47,7 +47,6 @@ import com.sun.javafx.charts.Legend.LegendItem;
 import javafx.css.converter.BooleanConverter;
 
 import javafx.beans.property.BooleanProperty;
-import javafx.beans.value.WritableValue;
 import javafx.css.CssMetaData;
 import javafx.css.Styleable;
 import javafx.css.StyleableBooleanProperty;
@@ -103,14 +102,17 @@ public class StackedAreaChart<X,Y> extends XYChart<X,Y> {
             requestChartLayout();
         }
 
+        @Override
         public Object getBean() {
             return this;
         }
 
+        @Override
         public String getName() {
             return "createSymbols";
         }
 
+        @Override
         public CssMetaData<StackedAreaChart<?, ?>,Boolean> getCssMetaData() {
             return StyleableProperties.CREATE_SYMBOLS;
         }
@@ -352,7 +354,7 @@ public class StackedAreaChart<X,Y> extends XYChart<X,Y> {
             seriesYAnimMultiplier.setValue(1d);
         }
         getPlotChildren().add(areaGroup);
-        List<KeyFrame> keyFrames = new ArrayList<KeyFrame>();
+        List<KeyFrame> keyFrames = new ArrayList<>();
         if (shouldAnimate()) {
             // animate in new series
             keyFrames.add(new KeyFrame(Duration.ZERO,
@@ -861,7 +863,7 @@ public class StackedAreaChart<X,Y> extends XYChart<X,Y> {
     private static class StyleableProperties {
 
         private static final CssMetaData<StackedAreaChart<?, ?>, Boolean> CREATE_SYMBOLS =
-                new CssMetaData<StackedAreaChart<?, ?>, Boolean>("-fx-create-symbols",
+                new CssMetaData<>("-fx-create-symbols",
                 BooleanConverter.getInstance(), Boolean.TRUE) {
             @Override
             public boolean isSettable(StackedAreaChart<?,?> node) {
@@ -870,7 +872,7 @@ public class StackedAreaChart<X,Y> extends XYChart<X,Y> {
 
             @Override
             public StyleableProperty<Boolean> getStyleableProperty(StackedAreaChart<?,?> node) {
-                return (StyleableProperty<Boolean>)(WritableValue<Boolean>)node.createSymbolsProperty();
+                return (StyleableProperty<Boolean>)node.createSymbolsProperty();
             }
         };
 
@@ -878,7 +880,7 @@ public class StackedAreaChart<X,Y> extends XYChart<X,Y> {
 
         static {
             final List<CssMetaData<? extends Styleable, ?>> styleables =
-                new ArrayList<CssMetaData<? extends Styleable, ?>>(XYChart.getClassCssMetaData());
+                new ArrayList<>(XYChart.getClassCssMetaData());
             styleables.add(CREATE_SYMBOLS);
             STYLEABLES = Collections.unmodifiableList(styleables);
 

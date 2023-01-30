@@ -144,6 +144,7 @@ class IntSet {
         }
     }
 
+    @Override
     public boolean equals(Object o) {
         if (o instanceof IntSet) {
             return equals((IntSet) o);
@@ -161,6 +162,7 @@ class IntSet {
         return h;
     }
 
+    @Override
     public String toString() {
         StringBuffer sb = new StringBuffer("IntSet[");
         for (int i = 0; i < size; i++) {

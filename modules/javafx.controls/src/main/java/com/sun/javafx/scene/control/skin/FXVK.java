@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -49,7 +49,7 @@ public class FXVK extends Control {
 
 
     private final ObjectProperty<EventHandler<KeyEvent>> onAction =
-            new SimpleObjectProperty<EventHandler<KeyEvent>>(this, "onAction");
+            new SimpleObjectProperty<>(this, "onAction");
     public final void setOnAction(EventHandler<KeyEvent> value) { onAction.set(value); }
     public final EventHandler<KeyEvent> getOnAction() { return onAction.get(); }
     public final ObjectProperty<EventHandler<KeyEvent>> onActionProperty() { return onAction; }
@@ -67,7 +67,7 @@ public class FXVK extends Control {
 
     final ObjectProperty<Node> attachedNodeProperty() {
         if (attachedNode == null) {
-            attachedNode = new ObjectPropertyBase<Node>() {
+            attachedNode = new ObjectPropertyBase<>() {
                 @Override public Object getBean() {
                     return FXVK.this;
                 }

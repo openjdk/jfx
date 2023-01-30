@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -52,7 +52,7 @@ public final class WeakEventHandler<T extends Event>
      *      notifications
      */
     public WeakEventHandler(final @NamedArg("eventHandler") EventHandler<T> eventHandler) {
-        weakRef = new WeakReference<EventHandler<T>>(eventHandler);
+        weakRef = new WeakReference<>(eventHandler);
     }
 
     /**

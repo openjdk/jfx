@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -63,8 +63,8 @@ public class ReadOnlyFloatWrapperTest {
         readOnlyProperty = property.getReadOnlyProperty();
         internalInvalidationListener = new InvalidationListenerMock();
         publicInvalidationListener = new InvalidationListenerMock();
-        internalChangeListener = new ChangeListenerMock<Number>(UNDEFINED);
-        publicChangeListener = new ChangeListenerMock<Number>(UNDEFINED);
+        internalChangeListener = new ChangeListenerMock<>(UNDEFINED);
+        publicChangeListener = new ChangeListenerMock<>(UNDEFINED);
     }
 
     private void attachInvalidationListeners() {
@@ -92,13 +92,13 @@ public class ReadOnlyFloatWrapperTest {
     public void testConstructor_NoArguments() {
         final ReadOnlyFloatWrapper p1 = new ReadOnlyFloatWrapper();
         assertEquals(DEFAULT, p1.get(), EPSILON);
-        assertEquals((Float)DEFAULT, p1.getValue(), EPSILON);
+        assertEquals(DEFAULT, p1.getValue(), EPSILON);
         assertFalse(property.isBound());
         assertEquals(null, p1.getBean());
         assertEquals("", p1.getName());
         final ReadOnlyFloatProperty r1 = p1.getReadOnlyProperty();
         assertEquals(DEFAULT, r1.get(), EPSILON);
-        assertEquals((Float)DEFAULT, r1.getValue(), EPSILON);
+        assertEquals(DEFAULT, r1.getValue(), EPSILON);
         assertEquals(null, r1.getBean());
         assertEquals("", r1.getName());
     }
@@ -107,13 +107,13 @@ public class ReadOnlyFloatWrapperTest {
     public void testConstructor_InitialValue() {
         final ReadOnlyFloatWrapper p1 = new ReadOnlyFloatWrapper(VALUE_1);
         assertEquals(VALUE_1, p1.get(), EPSILON);
-        assertEquals((Float)VALUE_1, p1.getValue(), EPSILON);
+        assertEquals(VALUE_1, p1.getValue(), EPSILON);
         assertFalse(property.isBound());
         assertEquals(null, p1.getBean());
         assertEquals("", p1.getName());
         final ReadOnlyFloatProperty r1 = p1.getReadOnlyProperty();
         assertEquals(VALUE_1, r1.get(), EPSILON);
-        assertEquals((Float)VALUE_1, r1.getValue(), EPSILON);
+        assertEquals(VALUE_1, r1.getValue(), EPSILON);
         assertEquals(null, r1.getBean());
         assertEquals("", r1.getName());
     }
@@ -124,13 +124,13 @@ public class ReadOnlyFloatWrapperTest {
         final String name = "My name";
         final ReadOnlyFloatWrapper p1 = new ReadOnlyFloatWrapper(bean, name);
         assertEquals(DEFAULT, p1.get(), EPSILON);
-        assertEquals((Float)DEFAULT, p1.getValue(), EPSILON);
+        assertEquals(DEFAULT, p1.getValue(), EPSILON);
         assertFalse(property.isBound());
         assertEquals(bean, p1.getBean());
         assertEquals(name, p1.getName());
         final ReadOnlyFloatProperty r1 = p1.getReadOnlyProperty();
         assertEquals(DEFAULT, r1.get(), EPSILON);
-        assertEquals((Float)DEFAULT, r1.getValue(), EPSILON);
+        assertEquals(DEFAULT, r1.getValue(), EPSILON);
         assertEquals(bean, r1.getBean());
         assertEquals(name, r1.getName());
     }
@@ -141,13 +141,13 @@ public class ReadOnlyFloatWrapperTest {
         final String name = "My name";
         final ReadOnlyFloatWrapper p1 = new ReadOnlyFloatWrapper(bean, name, VALUE_1);
         assertEquals(VALUE_1, p1.get(), EPSILON);
-        assertEquals((Float)VALUE_1, p1.getValue(), EPSILON);
+        assertEquals(VALUE_1, p1.getValue(), EPSILON);
         assertFalse(property.isBound());
         assertEquals(bean, p1.getBean());
         assertEquals(name, p1.getName());
         final ReadOnlyFloatProperty r1 = p1.getReadOnlyProperty();
         assertEquals(VALUE_1, r1.get(), EPSILON);
-        assertEquals((Float)VALUE_1, r1.getValue(), EPSILON);
+        assertEquals(VALUE_1, r1.getValue(), EPSILON);
         assertEquals(bean, r1.getBean());
         assertEquals(name, r1.getName());
     }
@@ -442,7 +442,7 @@ public class ReadOnlyFloatWrapperTest {
     @Test
     public void testLazyBind_generic() {
         attachInvalidationListeners();
-        final ObservableObjectValueStub<Float> v = new ObservableObjectValueStub<Float>(VALUE_1);
+        final ObservableObjectValueStub<Float> v = new ObservableObjectValueStub<>(VALUE_1);
 
         property.bind(v);
         assertEquals(VALUE_1, property.get(), EPSILON);
@@ -482,7 +482,7 @@ public class ReadOnlyFloatWrapperTest {
     @Test
     public void testInternalEagerBind_generic() {
         attachInternalChangeListener();
-        final ObservableObjectValueStub<Float> v = new ObservableObjectValueStub<Float>(VALUE_1);
+        final ObservableObjectValueStub<Float> v = new ObservableObjectValueStub<>(VALUE_1);
 
         property.bind(v);
         assertEquals(VALUE_1, property.get(), EPSILON);
@@ -518,7 +518,7 @@ public class ReadOnlyFloatWrapperTest {
     @Test
     public void testPublicEagerBind_generic() {
         attachPublicChangeListener();
-        final ObservableObjectValueStub<Float> v = new ObservableObjectValueStub<Float>(VALUE_1);
+        final ObservableObjectValueStub<Float> v = new ObservableObjectValueStub<>(VALUE_1);
 
         property.bind(v);
         assertEquals(VALUE_1, property.get(), EPSILON);

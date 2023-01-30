@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -403,7 +403,7 @@ public class ProgressIndicatorSkin extends SkinBase<ProgressIndicator> {
      **************************************************************************/
 
     private static final CssMetaData<ProgressIndicator,Paint> PROGRESS_COLOR =
-            new CssMetaData<ProgressIndicator,Paint>("-fx-progress-color",
+            new CssMetaData<>("-fx-progress-color",
                     PaintConverter.getInstance(), null) {
 
                 @Override
@@ -420,7 +420,7 @@ public class ProgressIndicatorSkin extends SkinBase<ProgressIndicator> {
                 }
             };
     private static final CssMetaData<ProgressIndicator,Number> INDETERMINATE_SEGMENT_COUNT =
-            new CssMetaData<ProgressIndicator,Number>("-fx-indeterminate-segment-count",
+            new CssMetaData<>("-fx-indeterminate-segment-count",
                     SizeConverter.getInstance(), 8) {
 
                 @Override public boolean isSettable(ProgressIndicator n) {
@@ -431,11 +431,11 @@ public class ProgressIndicatorSkin extends SkinBase<ProgressIndicator> {
 
                 @Override public StyleableProperty<Number> getStyleableProperty(ProgressIndicator n) {
                     final ProgressIndicatorSkin skin = (ProgressIndicatorSkin) n.getSkin();
-                    return (StyleableProperty<Number>)(WritableValue<Number>)skin.indeterminateSegmentCount;
+                    return (StyleableProperty<Number>)skin.indeterminateSegmentCount;
                 }
             };
     private static final CssMetaData<ProgressIndicator,Boolean> SPIN_ENABLED =
-            new CssMetaData<ProgressIndicator,Boolean>("-fx-spin-enabled", BooleanConverter.getInstance(), Boolean.FALSE) {
+            new CssMetaData<>("-fx-spin-enabled", BooleanConverter.getInstance(), Boolean.FALSE) {
 
                 @Override public boolean isSettable(ProgressIndicator node) {
                     final ProgressIndicatorSkin skin = (ProgressIndicatorSkin) node.getSkin();
@@ -444,14 +444,14 @@ public class ProgressIndicatorSkin extends SkinBase<ProgressIndicator> {
 
                 @Override public StyleableProperty<Boolean> getStyleableProperty(ProgressIndicator node) {
                     final ProgressIndicatorSkin skin = (ProgressIndicatorSkin) node.getSkin();
-                    return (StyleableProperty<Boolean>)(WritableValue<Boolean>)skin.spinEnabled;
+                    return (StyleableProperty<Boolean>)skin.spinEnabled;
                 }
             };
 
     private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
     static {
         final List<CssMetaData<? extends Styleable, ?>> styleables =
-                new ArrayList<CssMetaData<? extends Styleable, ?>>(SkinBase.getClassCssMetaData());
+                new ArrayList<>(SkinBase.getClassCssMetaData());
         styleables.add(PROGRESS_COLOR);
         styleables.add(INDETERMINATE_SEGMENT_COUNT);
         styleables.add(SPIN_ENABLED);

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,7 +25,14 @@
 
 package test.javafx.stage;
 
-import javafx.stage.StageShim;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+import static org.junit.Assume.assumeNotNull;
+import static test.util.Util.TIMEOUT;
+
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
@@ -33,6 +40,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
+
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.application.Application;
@@ -48,7 +56,7 @@ import javafx.stage.Stage;
 import javafx.stage.StageShim;
 import javafx.stage.Window;
 import javafx.util.Duration;
-import junit.framework.AssertionFailedError;
+
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -57,11 +65,9 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
-import test.util.Util;
 
-import static org.junit.Assert.*;
-import static org.junit.Assume.*;
-import static test.util.Util.TIMEOUT;
+import junit.framework.AssertionFailedError;
+import test.util.Util;
 
 /**
  * Test program for showAndWait functionality.
@@ -126,23 +132,12 @@ public class ShowAndWaitTest {
 
     @BeforeClass
     public static void setupOnce() {
-        // Start the Application
-        new Thread(() -> Application.launch(MyApp.class, (String[])null)).start();
-
-        try {
-            if (!launchLatch.await(TIMEOUT, TimeUnit.MILLISECONDS)) {
-                throw new AssertionFailedError("Timeout waiting for Application to launch");
-            }
-        } catch (InterruptedException ex) {
-            AssertionFailedError err = new AssertionFailedError("Unexpected exception");
-            err.initCause(ex);
-            throw err;
-        }
+        Util.launch(launchLatch, MyApp.class);
     }
 
     @AfterClass
     public static void teardownOnce() {
-        Platform.exit();
+        Util.shutdown();
     }
 
     // Modality of the secondary stage(s) for a particular tests

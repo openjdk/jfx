@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -31,7 +31,7 @@ import java.util.HashMap;
  * Provides a mapping from HTML ISO-8859-1 character entity names to Unicode.
  */
 class FXVKCharEntities  {
-    private static final HashMap<String, Character> map = new HashMap<String, Character>();
+    private static final HashMap<String, Character> map = new HashMap<>();
 
     public static String get(String name) {
         Character c = map.get(name);

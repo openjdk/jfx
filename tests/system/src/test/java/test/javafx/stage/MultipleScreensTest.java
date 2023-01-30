@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2019, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,9 +25,11 @@
 
 package test.javafx.stage;
 
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assume.assumeTrue;
+
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-import javafx.application.Application;
+
 import javafx.application.Platform;
 import javafx.collections.ObservableList;
 import javafx.geometry.Rectangle2D;
@@ -36,15 +38,14 @@ import javafx.scene.Scene;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
 import javafx.stage.WindowEvent;
+
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import test.util.Util;
 
-import static org.junit.Assert.*;
-import static org.junit.Assume.*;
+import test.util.Util;
 
 public class MultipleScreensTest {
     static CountDownLatch startupLatch = new CountDownLatch(1);
@@ -54,15 +55,10 @@ public class MultipleScreensTest {
 
     Stage stage;
 
-    private static void waitForLatch(CountDownLatch latch, int seconds, String msg) throws Exception {
-        assertTrue("Timeout: " + msg, latch.await(seconds, TimeUnit.SECONDS));
-    }
-
     @BeforeClass
     public static void initFX() throws Exception {
         Platform.setImplicitExit(false);
-        Platform.startup(startupLatch::countDown);
-        waitForLatch(startupLatch, 10, "FX runtime failed to start");
+        Util.startup(startupLatch, startupLatch::countDown);
 
         // Get primary screen and list of all screens, skip tests if there is only one
         primaryScreen = Screen.getPrimary();
@@ -81,7 +77,7 @@ public class MultipleScreensTest {
 
     @AfterClass
     public static void exitFX() {
-        Platform.exit();
+        Util.shutdown();
     }
 
     @Before
@@ -120,7 +116,7 @@ public class MultipleScreensTest {
             stage.show();
         });
 
-        waitForLatch(shownLatch, 5, "Stage failed to show");
+        Util.waitForLatch(shownLatch, 5, "Stage failed to show");
     }
 
     @Test(timeout = 15000)

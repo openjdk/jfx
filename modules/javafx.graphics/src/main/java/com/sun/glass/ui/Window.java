@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -33,7 +33,6 @@ import java.lang.annotation.Native;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
 
 public abstract class Window {
 
@@ -84,7 +83,7 @@ public abstract class Window {
     private volatile long delegatePtr = 0L;
 
     // window list
-    static private final LinkedList<Window> visibleWindows = new LinkedList<Window>();
+    static private final LinkedList<Window> visibleWindows = new LinkedList<>();
      // Return a list of all visible windows.  Note that on platforms without a native window manager,
      // this list will be sorted in proper z-order
     static public synchronized List<Window> getWindows() {

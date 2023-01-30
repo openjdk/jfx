@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -52,7 +52,6 @@ import org.junit.Ignore;
 import org.junit.Test;
 
 
-import java.util.ArrayList;
 import java.util.List;
 import javafx.scene.control.IndexedCellShim;
 import javafx.scene.control.ScrollBar;
@@ -77,7 +76,7 @@ public class VirtualFlowTest {
 
 
     @Before public void setUp() {
-        list = new ArrayLinkedListShim<CellStub>();
+        list = new ArrayLinkedListShim<>();
         a = new CellStub(flow, "A");
         b = new CellStub(flow, "B");
         c = new CellStub(flow, "C");
@@ -140,7 +139,7 @@ public class VirtualFlowTest {
         Iterator<IndexedCell> itr = control.iterator();
         while (itr.hasNext()) {
             IndexedCell cell = itr.next();
-            IndexedCell cell2 = (IndexedCell)list.get(index);
+            IndexedCell cell2 = list.get(index);
             assertSame("The control and list did not have the same item at " +
                        "index " + index + ". Expected " + cell + " but was " + cell2,
                        cell, cell2);
@@ -764,7 +763,7 @@ public class VirtualFlowTest {
      * took place.
      */
     @Test public void testCellLayout_LayoutWithoutChangingThingsUsesCellsInSameOrderAsBefore() {
-        List<IndexedCell> cells = new LinkedList<IndexedCell>();
+        List<IndexedCell> cells = new LinkedList<>();
         for (int i = 0; i < VirtualFlowShim.cells_size(flow.cells); i++) {
             cells.add(VirtualFlowShim.<IndexedCell>cells_get(flow.cells, i));
         }
@@ -1288,7 +1287,7 @@ public class VirtualFlowTest {
         pulse();
     }
 
-    private ArrayLinkedListShim<GraphicalCellStub> circlelist = new ArrayLinkedListShim<GraphicalCellStub>();
+    private ArrayLinkedListShim<GraphicalCellStub> circlelist = new ArrayLinkedListShim<>();
 
     private VirtualFlowShim createCircleFlow() {
         // The second VirtualFlow we are going to test, with 7 cells. Each cell
@@ -1425,6 +1424,73 @@ public class VirtualFlowTest {
         scene.setRoot(flow);
         assertEquals(flow.shim_getHbar().getValue(), flow.get_clipView_getX(), 0);
     }
+
+    @Test public void testChangingCellSize() {
+        int[] heights = {100, 100, 100, 100, 100, 100, 100, 100, 100};
+        VirtualFlowShim<IndexedCell> flow = new VirtualFlowShim();
+        flow.setVertical(true);
+        flow.setCellFactory(p -> new CellStub(flow) {
+            @Override public void updateIndex(int i) {
+                super.updateIndex(i);
+                if ((i > -1) &&(i < heights.length)){
+                    this.setPrefHeight(heights[i]);
+                }
+            }
+           @Override public void updateItem(Object ic, boolean empty) {
+               super.updateItem(ic, empty);
+               if (ic instanceof Integer) {
+                   Integer idx = (Integer)ic;
+                   if (idx > -1) {
+                       this.setMinHeight(heights[idx]);
+                       this.setPrefHeight(heights[idx]);
+                   }
+               }
+            }
+        });
+        flow.setCellCount(heights.length);
+        flow.setViewportLength(400);
+        flow.resize(400, 400);
+        flow.layout();
+IndexedCell firstCell = VirtualFlowShim.cells_getFirst(flow.cells);
+        // Before scrolling, top-cell must have index 0
+assertEquals(0, firstCell.getIndex());
+        // We now scroll to item with index 3
+        flow.scrollToTop(3);
+        flow.layout();
+        firstCell = VirtualFlowShim.cells_getFirst(flow.cells);
+        // After scrolling, top-cell must have index 3
+        // index(pixel);
+        // 3 (0); 4 (100); 5 (200); 6 (300)
+        assertEquals(3, firstCell.getIndex());
+        IndexedCell thirdCell = VirtualFlowShim.cells_get(flow.cells, 3);
+        double l3y = thirdCell.getLayoutY();
+        // the third visible cell must be at 3 x 100 = 300
+        assertEquals(l3y, 300, 0.1);
+        assertEquals(6, thirdCell.getIndex());
+        assertEquals(300, thirdCell.getLayoutY(), 1.);
+
+
+        for (int i = 0 ; i < heights.length; i++) {
+            heights[i] = 220;
+            flow.setCellDirty(i);
+        }
+        flow.setCellCount(heights.length);
+        flow.layout();
+        firstCell = VirtualFlowShim.cells_get(flow.cells, 0);
+        // After resizing, top-cell must still have index 3
+        assertEquals(3, firstCell.getIndex());
+        assertEquals(0, firstCell.getLayoutY(),1);
+        IndexedCell secondCell = VirtualFlowShim.cells_get(flow.cells, 1);
+        assertEquals(4, secondCell.getIndex());
+        assertEquals(220, secondCell.getLayoutY(),1);
+        // And now scroll down 10 pixels
+        flow.scrollPixels(10);
+        flow.layout();
+        firstCell = VirtualFlowShim.cells_get(flow.cells, 0);
+        // After resizing, top-cell must still have index 3
+        assertEquals(3, firstCell.getIndex());
+        assertEquals(-10, firstCell.getLayoutY(),1);
+    }
 }
 
 class GraphicalCellStub extends IndexedCellShim<Node> {
@@ -1445,7 +1511,7 @@ class GraphicalCellStub extends IndexedCellShim<Node> {
 
     private void init() {
         // System.err.println("Init vf cell "+this);
-        setSkin(new SkinStub<GraphicalCellStub>(this));
+        setSkin(new SkinStub<>(this));
     }
 
     @Override
@@ -1487,14 +1553,14 @@ class GraphicalCellStub extends IndexedCellShim<Node> {
 
 class CellStub extends IndexedCellShim {
     String s;
-   // VirtualFlowShim flow;
+    VirtualFlowShim flow;
 
     public CellStub(VirtualFlowShim flow) { init(flow); }
     public CellStub(VirtualFlowShim flow, String s) { init(flow); this.s = s; }
 
     private void init(VirtualFlowShim flow) {
-     //   this.flow = flow;
-        setSkin(new SkinStub<CellStub>(this));
+        this.flow = flow;
+        setSkin(new SkinStub<>(this));
         updateItem(this, false);
     }
 
@@ -1503,6 +1569,6 @@ class CellStub extends IndexedCellShim {
         super.updateIndex(i);
 
         s = "Item " + getIndex();
-//        updateItem(getIndex(), getIndex() >= flow.getCellCount());
+        updateItem(getIndex(), getIndex() >= flow.getCellCount());
     }
 }

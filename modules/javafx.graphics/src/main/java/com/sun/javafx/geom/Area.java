@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 1998, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -450,6 +450,7 @@ public class Area extends Shape {
      * @return    the bounding <code>RectBounds</code> for the
      * <code>Area</code>.
      */
+    @Override
     public RectBounds getBounds() {
         return new RectBounds(getCachedBounds());
     }
@@ -514,6 +515,7 @@ public class Area extends Shape {
     /**
      * {@inheritDoc}
      */
+    @Override
     public boolean contains(float x, float y) {
         if (!getCachedBounds().contains(x, y)) {
             return false;
@@ -538,6 +540,7 @@ public class Area extends Shape {
     /**
      * {@inheritDoc}
      */
+    @Override
     public boolean contains(float x, float y, float w, float h) {
         if (w < 0 || h < 0) {
             return false;
@@ -552,6 +555,7 @@ public class Area extends Shape {
     /**
      * {@inheritDoc}
      */
+    @Override
     public boolean intersects(float x, float y, float w, float h) {
         if (w < 0 || h < 0) {
             return false;
@@ -573,6 +577,7 @@ public class Area extends Shape {
      *          geometry of the outline of this <code>Area</code>, one
      *          segment at a time.
      */
+    @Override
     public PathIterator getPathIterator(BaseTransform tx) {
         return new AreaIterator(curves, tx);
     }
@@ -594,6 +599,7 @@ public class Area extends Shape {
      * geometry of the outline of this <code>Area</code>, one segment
      * at a time.
      */
+    @Override
     public PathIterator getPathIterator(BaseTransform tx, float flatness) {
         return new FlatteningPathIterator(getPathIterator(tx), flatness);
     }
@@ -619,6 +625,7 @@ class AreaIterator implements PathIterator {
         }
     }
 
+    @Override
     public int getWindingRule() {
         // REMIND: Which is better, EVEN_ODD or NON_ZERO?
         //         The paths calculated could be classified either way.
@@ -626,10 +633,12 @@ class AreaIterator implements PathIterator {
         return WIND_NON_ZERO;
     }
 
+    @Override
     public boolean isDone() {
         return (prevcurve == null && thiscurve == null);
     }
 
+    @Override
     public void next() {
         if (prevcurve != null) {
             prevcurve = null;
@@ -650,6 +659,7 @@ class AreaIterator implements PathIterator {
         }
     }
 
+    @Override
     public int currentSegment(float coords[]) {
         int segtype;
         int numpoints;

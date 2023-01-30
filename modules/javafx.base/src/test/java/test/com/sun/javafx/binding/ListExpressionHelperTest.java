@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -36,7 +36,6 @@ import javafx.beans.property.SimpleListProperty;
 import javafx.beans.value.ChangeListener;
 import test.javafx.beans.value.ChangeListenerMock;
 import javafx.beans.value.ObservableValue;
-import javafx.beans.value.ObservableValueStub;
 import test.javafx.beans.value.WeakChangeListenerMock;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
@@ -76,7 +75,7 @@ public class ListExpressionHelperTest {
 //        change_1_2 = new NonIterableChange.SimpleAddChange(0, 1, data2);
 //        change_2_1 = new NonIterableChange.SimpleRemovedChange(0, 1, listItem, data1);
         helper = null;
-        observable = new SimpleListProperty<Object>(data1);
+        observable = new SimpleListProperty<>(data1);
 
         invalidationListener = new InvalidationListenerMock[] {
                 new InvalidationListenerMock(), new InvalidationListenerMock(), new InvalidationListenerMock(), new InvalidationListenerMock()
@@ -85,7 +84,7 @@ public class ListExpressionHelperTest {
                 new ChangeListenerMock(UNDEFINED), new ChangeListenerMock(UNDEFINED), new ChangeListenerMock(UNDEFINED), new ChangeListenerMock(UNDEFINED)
         };
         listChangeListener = new MockListObserver[] {
-                new MockListObserver<Object>(), new MockListObserver<Object>(), new MockListObserver<Object>(), new MockListObserver<Object>()
+                new MockListObserver<>(), new MockListObserver<>(), new MockListObserver<>(), new MockListObserver<>()
         };
     }
 

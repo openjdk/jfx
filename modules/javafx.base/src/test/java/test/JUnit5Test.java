@@ -25,9 +25,13 @@
 
 package test;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.junit.jupiter.api.Test;
 
 public class JUnit5Test {
@@ -38,5 +42,30 @@ public class JUnit5Test {
 
         assertNotNull(this);
         System.err.println("JUnit 5 test working!");
+    }
+
+    static int callCount;
+    static int[] intValues = {1, 2, 3};
+
+    @ValueSource(ints = {1, 2, 3})
+    @ParameterizedTest
+    void testParameterizedTest(int value) {
+        boolean match = false;
+        for (int i = 0; i < intValues.length; i++) {
+            if (value == intValues[i]) {
+                match = true;
+                intValues[i] = 0;
+                break;
+            }
+        }
+        callCount++;
+
+        assertTrue(match, "Received incorrect value as parameter");
+        assertTrue(callCount <= intValues.length, "Test function called more than number of ValueSources");
+        if (callCount == intValues.length) {
+            for (int i : intValues) {
+                assertEquals(0, i, "Test method not called for Value " + i);
+            }
+        }
     }
 }

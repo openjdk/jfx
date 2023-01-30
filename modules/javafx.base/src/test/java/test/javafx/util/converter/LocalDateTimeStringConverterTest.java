@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -40,6 +40,8 @@ import javafx.util.StringConverter;
 import javafx.util.converter.LocalDateTimeStringConverter;
 import javafx.util.converter.LocalDateTimeStringConverterShim;
 
+import org.junit.AfterClass;
+import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -54,44 +56,98 @@ public class LocalDateTimeStringConverterTest {
     private static final LocalDateTime VALID_LDT_WITH_SECONDS    = LocalDateTime.of(1985, 1, 12, 12, 34, 56);
     private static final LocalDateTime VALID_LDT_WITHOUT_SECONDS = LocalDateTime.of(1985, 1, 12, 12, 34, 0);
 
-    private static final DateTimeFormatter aFormatter = DateTimeFormatter.ofPattern("dd MM yyyy HH mm ss");
-    private static final DateTimeFormatter aParser = DateTimeFormatter.ofPattern("yyyy MM dd hh mm ss a");
+    private static DateTimeFormatter aFormatter;
+    private static DateTimeFormatter aParser;
+    private static Locale oldLocale;
+
+    // We can only create LocalDateTimeStringConverter object after Locale is set.
+    // Unfortunately, due to unpredictability of @Parameterized.Parameters methods
+    // in JUnit, we have to allocate it after @BeforeClass sets up Locale and
+    // necessary static fields. Otherwise, the test may collide with other
+    // Local*StringConverter tests and cause unpredictable results.
+    private enum LocalDateTimeStringConverterVariant {
+        NO_PARAM,
+        WITH_FORMATTER_PARSER,
+        WITH_FORMAT_STYLES,
+    };
 
     @Parameterized.Parameters public static Collection implementations() {
-        // Tests require that default locale is en_US
-        Locale.setDefault(Locale.US);
-
         return Arrays.asList(new Object[][] {
-            { new LocalDateTimeStringConverter(),
-              Locale.getDefault(Locale.Category.FORMAT), FormatStyle.SHORT, FormatStyle.SHORT,
-              VALID_LDT_WITHOUT_SECONDS, null, null },
+            { LocalDateTimeStringConverterVariant.NO_PARAM,
+              FormatStyle.SHORT, FormatStyle.SHORT, VALID_LDT_WITHOUT_SECONDS},
 
-            { new LocalDateTimeStringConverter(aFormatter, aParser),
-              Locale.getDefault(Locale.Category.FORMAT), null, null,
-              VALID_LDT_WITH_SECONDS, aFormatter, aParser },
+            { LocalDateTimeStringConverterVariant.WITH_FORMATTER_PARSER,
+              null, null, VALID_LDT_WITH_SECONDS},
 
-            { new LocalDateTimeStringConverter(FormatStyle.SHORT, FormatStyle.SHORT, Locale.UK, IsoChronology.INSTANCE),
-              Locale.UK, FormatStyle.SHORT, FormatStyle.SHORT,
-              VALID_LDT_WITHOUT_SECONDS, null, null },
+            { LocalDateTimeStringConverterVariant.WITH_FORMAT_STYLES,
+              FormatStyle.SHORT, FormatStyle.SHORT, VALID_LDT_WITHOUT_SECONDS},
         });
     }
 
-    private LocalDateTimeStringConverter converter;
-    private Locale locale;
+    private LocalDateTimeStringConverterVariant converterVariant;
     private FormatStyle dateStyle;
     private FormatStyle timeStyle;
-    private DateTimeFormatter formatter, parser;
-
     private LocalDateTime validDateTime;
 
-    public LocalDateTimeStringConverterTest(LocalDateTimeStringConverter converter, Locale locale, FormatStyle dateStyle, FormatStyle timeStyle, LocalDateTime validDateTime, DateTimeFormatter formatter, DateTimeFormatter parser) {
-        this.converter = converter;
-        this.locale = locale;
+    private LocalDateTimeStringConverter converter;
+    private Locale locale;
+    private DateTimeFormatter formatter, parser;
+
+
+    public LocalDateTimeStringConverterTest(LocalDateTimeStringConverterVariant converterVariant, FormatStyle dateStyle, FormatStyle timeStyle, LocalDateTime validDateTime) {
+        this.converterVariant = converterVariant;
         this.dateStyle = dateStyle;
         this.timeStyle = timeStyle;
         this.validDateTime = validDateTime;
-        this.formatter = formatter;
-        this.parser = parser;
+
+        this.converter = null;
+        this.locale = null;
+        this.formatter = null;
+        this.parser = null;
+    }
+
+    @BeforeClass
+    public static void setupBeforeAll() {
+        // Tests require that default locale is en_US
+        oldLocale = Locale.getDefault();
+        Locale.setDefault(Locale.US);
+
+        // DateTimeFormatter uses default locale, so we can init this after updating locale
+        aFormatter = DateTimeFormatter.ofPattern("dd MM yyyy HH mm ss");
+        aParser = DateTimeFormatter.ofPattern("yyyy MM dd hh mm ss a");
+    }
+
+    @AfterClass
+    public static void teardownAfterAll() {
+        // Restore VM's old locale
+        Locale.setDefault(oldLocale);
+    }
+
+    @Before
+    public void setup() {
+        // Locale is established now, so we can allocate objects depending on it
+        switch (this.converterVariant) {
+        case NO_PARAM:
+            this.converter = new LocalDateTimeStringConverter();
+            this.locale = Locale.getDefault(Locale.Category.FORMAT);
+            this.formatter = null;
+            this.parser = null;
+            break;
+        case WITH_FORMATTER_PARSER:
+            this.converter = new LocalDateTimeStringConverter(aFormatter, aParser);
+            this.locale = Locale.getDefault(Locale.Category.FORMAT);
+            this.formatter = aFormatter;
+            this.parser = aParser;
+            break;
+        case WITH_FORMAT_STYLES:
+            this.converter = new LocalDateTimeStringConverter(FormatStyle.SHORT, FormatStyle.SHORT, Locale.UK, IsoChronology.INSTANCE);
+            this.locale = Locale.UK;
+            this.formatter = null;
+            this.parser = null;
+            break;
+        default:
+            fail("Invalid converter variant: " + this.converterVariant.toString());
+        }
     }
 
     /*********************************************************************

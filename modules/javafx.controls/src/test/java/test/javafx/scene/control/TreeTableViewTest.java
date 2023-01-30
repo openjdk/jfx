@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -71,6 +71,7 @@ import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.collections.transformation.FilteredList;
 import javafx.event.EventHandler;
+import javafx.scene.AccessibleAttribute;
 import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.Scene;
@@ -78,6 +79,7 @@ import javafx.scene.control.Button;
 import javafx.scene.control.Cell;
 import javafx.scene.control.FocusModel;
 import javafx.scene.control.IndexedCell;
+import javafx.scene.control.Label;
 import javafx.scene.control.MultipleSelectionModel;
 import javafx.scene.control.MultipleSelectionModelBaseShim;
 import javafx.scene.control.ScrollBar;
@@ -154,24 +156,24 @@ public class TreeTableViewTest {
             private TreeItem<String> gregorySmith;
 
     @Before public void setup() {
-        treeTableView = new TreeTableView<String>();
+        treeTableView = new TreeTableView<>();
         sm = treeTableView.getSelectionModel();
         fm = treeTableView.getFocusModel();
 
         // build sample data #2, even though it may not be used...
-        myCompanyRootNode = new TreeItem<String>("MyCompany Human Resources");
-        salesDepartment = new TreeItem<String>("Sales Department");
-            ethanWilliams = new TreeItem<String>("Ethan Williams");
-            emmaJones = new TreeItem<String>("Emma Jones");
-            michaelBrown = new TreeItem<String>("Michael Brown");
-            annaBlack = new TreeItem<String>("Anna Black");
-            rodgerYork = new TreeItem<String>("Rodger York");
-            susanCollins = new TreeItem<String>("Susan Collins");
+        myCompanyRootNode = new TreeItem<>("MyCompany Human Resources");
+        salesDepartment = new TreeItem<>("Sales Department");
+            ethanWilliams = new TreeItem<>("Ethan Williams");
+            emmaJones = new TreeItem<>("Emma Jones");
+            michaelBrown = new TreeItem<>("Michael Brown");
+            annaBlack = new TreeItem<>("Anna Black");
+            rodgerYork = new TreeItem<>("Rodger York");
+            susanCollins = new TreeItem<>("Susan Collins");
 
-        itSupport = new TreeItem<String>("IT Support");
-            mikeGraham = new TreeItem<String>("Mike Graham");
-            judyMayer = new TreeItem<String>("Judy Mayer");
-            gregorySmith = new TreeItem<String>("Gregory Smith");
+        itSupport = new TreeItem<>("IT Support");
+            mikeGraham = new TreeItem<>("Mike Graham");
+            judyMayer = new TreeItem<>("Judy Mayer");
+            gregorySmith = new TreeItem<>("Gregory Smith");
 
         myCompanyRootNode.getChildren().setAll(
             salesDepartment,
@@ -200,10 +202,10 @@ public class TreeTableViewTest {
     }
 
     private void installChildren() {
-        root = new TreeItem<String>("Root");
-        child1 = new TreeItem<String>("Child 1");
-        child2 = new TreeItem<String>("Child 2");
-        child3 = new TreeItem<String>("Child 3");
+        root = new TreeItem<>("Root");
+        child1 = new TreeItem<>("Child 1");
+        child2 = new TreeItem<>("Child 2");
+        child3 = new TreeItem<>("Child 3");
         root.setExpanded(true);
         root.getChildren().setAll(child1, child2, child3);
         treeTableView.setRoot(root);
@@ -291,28 +293,28 @@ public class TreeTableViewTest {
     }
 
 //    @Test public void singleArgConstructorSetsNonNullSelectionModel() {
-//        final TreeTableView<String> b2 = new TreeTableView<String>(FXCollections.observableArrayList("Hi"));
+//        final TreeTableView<String> b2 = new TreeTableView<>(FXCollections.observableArrayList("Hi"));
 //        assertNotNull(b2.getSelectionModel());
 //    }
 //
 //    @Test public void singleArgConstructorAllowsNullItems() {
-//        final TreeTableView<String> b2 = new TreeTableView<String>(null);
+//        final TreeTableView<String> b2 = new TreeTableView<>(null);
 //        assertNull(b2.getItems());
 //    }
 //
 //    @Test public void singleArgConstructorTakesItems() {
 //        ObservableList<String> items = FXCollections.observableArrayList("Hi");
-//        final TreeTableView<String> b2 = new TreeTableView<String>(items);
+//        final TreeTableView<String> b2 = new TreeTableView<>(items);
 //        assertSame(items, b2.getItems());
 //    }
 //
 //    @Test public void singleArgConstructor_selectedItemIsNull() {
-//        final TreeTableView<String> b2 = new TreeTableView<String>(FXCollections.observableArrayList("Hi"));
+//        final TreeTableView<String> b2 = new TreeTableView<>(FXCollections.observableArrayList("Hi"));
 //        assertNull(b2.getSelectionModel().getSelectedItem());
 //    }
 //
 //    @Test public void singleArgConstructor_selectedIndexIsNegativeOne() {
-//        final TreeTableView<String> b2 = new TreeTableView<String>(FXCollections.observableArrayList("Hi"));
+//        final TreeTableView<String> b2 = new TreeTableView<>(FXCollections.observableArrayList("Hi"));
 //        assertEquals(-1, b2.getSelectionModel().getSelectedIndex());
 //    }
 
@@ -348,9 +350,9 @@ public class TreeTableViewTest {
 
     @Test public void testSortOrderCleanup() {
         TreeTableView treeTableView = new TreeTableView();
-        TreeTableColumn<String,String> first = new TreeTableColumn<String,String>("first");
+        TreeTableColumn<String,String> first = new TreeTableColumn<>("first");
         first.setCellValueFactory(new PropertyValueFactory("firstName"));
-        TreeTableColumn<String,String> second = new TreeTableColumn<String,String>("second");
+        TreeTableColumn<String,String> second = new TreeTableColumn<>("second");
         second.setCellValueFactory(new PropertyValueFactory("lastName"));
         treeTableView.getColumns().addAll(first, second);
         treeTableView.getSortOrder().setAll(first, second);
@@ -374,7 +376,7 @@ public class TreeTableViewTest {
     private static final Callback<TreeTableView<String>, Boolean> SORT_SUCCESS_ASCENDING_SORT_POLICY =
             treeTableView1 -> {
                 if (treeTableView1.getSortOrder().isEmpty()) return true;
-                FXCollections.sort(treeTableView1.getRoot().getChildren(), new Comparator<TreeItem<String>>() {
+                FXCollections.sort(treeTableView1.getRoot().getChildren(), new Comparator<>() {
                     @Override public int compare(TreeItem<String> o1, TreeItem<String> o2) {
                         return o1.getValue().compareTo(o2.getValue());
                     }
@@ -383,12 +385,12 @@ public class TreeTableViewTest {
             };
 
     private TreeTableColumn<String, String> initSortTestStructure() {
-        TreeTableColumn<String, String> col = new TreeTableColumn<String, String>("column");
+        TreeTableColumn<String, String> col = new TreeTableColumn<>("column");
         col.setSortType(ASCENDING);
-        col.setCellValueFactory(param -> new ReadOnlyObjectWrapper<String>(param.getValue().getValue()));
+        col.setCellValueFactory(param -> new ReadOnlyObjectWrapper<>(param.getValue().getValue()));
         treeTableView.getColumns().add(col);
 
-        TreeItem<String> newRoot = new TreeItem<String>("root");
+        TreeItem<String> newRoot = new TreeItem<>("root");
         newRoot.setExpanded(true);
         newRoot.getChildren().addAll(
                 apple  = new TreeItem("Apple"),
@@ -507,12 +509,12 @@ public class TreeTableViewTest {
         expectedCountSelectedIndicesChangeEvent = 1;
         expectedCountSelectedItemsChangeEvent = 1;
 
-        TreeTableColumn<String, String> col = new TreeTableColumn<String, String>("column");
+        TreeTableColumn<String, String> col = new TreeTableColumn<>("column");
         col.setSortType(DESCENDING);
-        col.setCellValueFactory(param -> new ReadOnlyObjectWrapper<String>(param.getValue().getValue()));
+        col.setCellValueFactory(param -> new ReadOnlyObjectWrapper<>(param.getValue().getValue()));
         treeTableView.getColumns().add(col);
 
-        TreeItem<String> treeRoot = new TreeItem<String>("root");
+        TreeItem<String> treeRoot = new TreeItem<>("root");
         treeRoot.setExpanded(true);
         treeTableView.setRoot(treeRoot);
 
@@ -1094,7 +1096,7 @@ public class TreeTableViewTest {
 //    }
 
     @Test public void test_rt18339_onlyEditWhenTableViewIsEditable_tableEditableIsFalse_columnEditableIsFalse() {
-        TreeTableColumn<String,String> first = new TreeTableColumn<String,String>("first");
+        TreeTableColumn<String,String> first = new TreeTableColumn<>("first");
         first.setEditable(false);
         treeTableView.getColumns().add(first);
         treeTableView.setEditable(false);
@@ -1103,7 +1105,7 @@ public class TreeTableViewTest {
     }
 
     @Test public void test_rt18339_onlyEditWhenTableViewIsEditable_tableEditableIsFalse_columnEditableIsTrue() {
-        TreeTableColumn<String,String> first = new TreeTableColumn<String,String>("first");
+        TreeTableColumn<String,String> first = new TreeTableColumn<>("first");
         first.setEditable(true);
         treeTableView.getColumns().add(first);
         treeTableView.setEditable(false);
@@ -1112,7 +1114,7 @@ public class TreeTableViewTest {
     }
 
     @Test public void test_rt18339_onlyEditWhenTableViewIsEditable_tableEditableIsTrue_columnEditableIsFalse() {
-        TreeTableColumn<String,String> first = new TreeTableColumn<String,String>("first");
+        TreeTableColumn<String,String> first = new TreeTableColumn<>("first");
         first.setEditable(false);
         treeTableView.getColumns().add(first);
         treeTableView.setEditable(true);
@@ -1121,7 +1123,7 @@ public class TreeTableViewTest {
     }
 
     @Test public void test_rt18339_onlyEditWhenTableViewIsEditable_tableEditableIsTrue_columnEditableIsTrue() {
-        TreeTableColumn<String,String> first = new TreeTableColumn<String,String>("first");
+        TreeTableColumn<String,String> first = new TreeTableColumn<>("first");
         first.setEditable(true);
         treeTableView.getColumns().add(first);
         treeTableView.setEditable(true);
@@ -1185,7 +1187,7 @@ public class TreeTableViewTest {
     }
 
     @Test public void singleArgConstructorSetsTheStyleClass() {
-        final TreeTableView<String> b2 = new TreeTableView<String>(new TreeItem<String>("Hi"));
+        final TreeTableView<String> b2 = new TreeTableView<>(new TreeItem<>("Hi"));
         assertStyleClassContains(b2, "tree-table-view");
     }
 
@@ -1215,7 +1217,7 @@ public class TreeTableViewTest {
     }
 
     @Test public void canSetSelectedItemToAnItemEvenWhenThereAreNoItems() {
-        TreeItem<String> element = new TreeItem<String>("I AM A CRAZY RANDOM STRING");
+        TreeItem<String> element = new TreeItem<>("I AM A CRAZY RANDOM STRING");
         treeTableView.getSelectionModel().select(element);
         assertEquals(-1, treeTableView.getSelectionModel().getSelectedIndex());
         assertSame(element, treeTableView.getSelectionModel().getSelectedItem());
@@ -1223,7 +1225,7 @@ public class TreeTableViewTest {
 
     @Test public void canSetSelectedItemToAnItemNotInTheDataModel() {
         installChildren();
-        TreeItem<String> element = new TreeItem<String>("I AM A CRAZY RANDOM STRING");
+        TreeItem<String> element = new TreeItem<>("I AM A CRAZY RANDOM STRING");
         treeTableView.getSelectionModel().select(element);
         assertEquals(-1, treeTableView.getSelectionModel().getSelectedIndex());
         assertSame(element, treeTableView.getSelectionModel().getSelectedItem());
@@ -1270,10 +1272,10 @@ public class TreeTableViewTest {
         assertNull(treeTableView.getSelectionModel().getSelectedItem());
         assertEquals(-1, treeTableView.getSelectionModel().getSelectedIndex());
 
-        TreeItem<String> newRoot = new TreeItem<String>("New Root");
-        TreeItem<String> newChild1 = new TreeItem<String>("New Child 1");
-        TreeItem<String> newChild2 = new TreeItem<String>("New Child 2");
-        TreeItem<String> newChild3 = new TreeItem<String>("New Child 3");
+        TreeItem<String> newRoot = new TreeItem<>("New Root");
+        TreeItem<String> newChild1 = new TreeItem<>("New Child 1");
+        TreeItem<String> newChild2 = new TreeItem<>("New Child 2");
+        TreeItem<String> newChild3 = new TreeItem<>("New Child 3");
         newRoot.setExpanded(true);
         newRoot.getChildren().setAll(newChild1, newChild2, newChild3);
         treeTableView.setRoot(root);
@@ -1287,7 +1289,7 @@ public class TreeTableViewTest {
         treeTableView.getSelectionModel().select(0);
         assertEquals(root, treeTableView.getSelectionModel().getSelectedItem());
 
-        TreeItem newRoot = new TreeItem<String>("New Root");
+        TreeItem newRoot = new TreeItem<>("New Root");
         treeTableView.setRoot(newRoot);
         assertEquals(-1, treeTableView.getSelectionModel().getSelectedIndex());
         assertNull(treeTableView.getSelectionModel().getSelectedItem());
@@ -1359,7 +1361,7 @@ public class TreeTableViewTest {
 //    @Test public void removingLastTest() {
 //        TreeTableView tree_view = new TreeTableView();
 //        MultipleSelectionModel sm = tree_view.getSelectionModel();
-//        TreeItem<String> tree_model = new TreeItem<String>("Root");
+//        TreeItem<String> tree_model = new TreeItem<>("Root");
 //        TreeItem node = new TreeItem("Data item");
 //        tree_model.getChildren().add(node);
 //        tree_view.setRoot(tree_model);
@@ -1376,7 +1378,7 @@ public class TreeTableViewTest {
      * Tests from bug reports                                            *
      ********************************************************************/
     @Ignore @Test public void test_rt17112() {
-        TreeItem<String> root1 = new TreeItem<String>("Root");
+        TreeItem<String> root1 = new TreeItem<>("Root");
         root1.setExpanded(true);
         addChildren(root1, "child");
         for (TreeItem child : root1.getChildren()) {
@@ -1419,7 +1421,7 @@ public class TreeTableViewTest {
     }
     private void addChildren(TreeItem parent, String name) {
         for (int i=0; i<3; i++) {
-            TreeItem<String> ti = new TreeItem<String>(name+"-"+i);
+            TreeItem<String> ti = new TreeItem<>(name+"-"+i);
             parent.getChildren().add(ti);
         }
     }
@@ -1515,10 +1517,10 @@ public class TreeTableViewTest {
                 new TreeItem(new Person("Michael", "Brown", "michael.brown@example.com")));
         root.setExpanded(true);
 
-        TreeTableView<Person> table = new TreeTableView<Person>(root);
+        TreeTableView<Person> table = new TreeTableView<>(root);
 
         TreeTableColumn firstNameCol = new TreeTableColumn("First Name");
-        firstNameCol.setCellValueFactory(new TreeItemPropertyValueFactory<Person, String>("firstName"));
+        firstNameCol.setCellValueFactory(new TreeItemPropertyValueFactory<>("firstName"));
 
         table.setEditable(false);
         table.edit(0,firstNameCol);
@@ -1535,10 +1537,10 @@ public class TreeTableViewTest {
                 new TreeItem(new Person("Michael", "Brown", "michael.brown@example.com")));
         root.setExpanded(true);
 
-        TreeTableView<Person> table = new TreeTableView<Person>(root);
+        TreeTableView<Person> table = new TreeTableView<>(root);
 
         TreeTableColumn firstNameCol = new TreeTableColumn("First Name");
-        firstNameCol.setCellValueFactory(new TreeItemPropertyValueFactory<Person, String>("firstName"));
+        firstNameCol.setCellValueFactory(new TreeItemPropertyValueFactory<>("firstName"));
 
         table.setEditable(true);
         table.edit(0,firstNameCol);
@@ -1558,10 +1560,10 @@ public class TreeTableViewTest {
         assertEquals(1, treeTableView.getSelectionModel().getSelectedIndex());
         assertEquals(child1, treeTableView.getSelectionModel().getSelectedItem());
 
-        TreeItem root = new TreeItem<String>("New Root");
-        TreeItem child1 = new TreeItem<String>("New Child 1");
-        TreeItem child2 = new TreeItem<String>("New Child 2");
-        TreeItem child3 = new TreeItem<String>("New Child 3");
+        TreeItem root = new TreeItem<>("New Root");
+        TreeItem child1 = new TreeItem<>("New Child 1");
+        TreeItem child2 = new TreeItem<>("New Child 2");
+        TreeItem child3 = new TreeItem<>("New Child 3");
         root.setExpanded(true);
         root.getChildren().setAll(child1, child2, child3);
         treeTableView.setRoot(root);
@@ -1699,16 +1701,16 @@ public class TreeTableViewTest {
                 new TreeItem(new Person("Michael", "Brown", "michael.brown@example.com")));
         root.setExpanded(true);
 
-        TreeTableView<Person> table = new TreeTableView<Person>(root);
+        TreeTableView<Person> table = new TreeTableView<>(root);
 
         TreeTableColumn firstNameCol = new TreeTableColumn("First Name");
-        firstNameCol.setCellValueFactory(new TreeItemPropertyValueFactory<Person, String>("firstName"));
+        firstNameCol.setCellValueFactory(new TreeItemPropertyValueFactory<>("firstName"));
 
         TreeTableColumn lastNameCol = new TreeTableColumn("Last Name");
-        lastNameCol.setCellValueFactory(new TreeItemPropertyValueFactory<Person, String>("lastName"));
+        lastNameCol.setCellValueFactory(new TreeItemPropertyValueFactory<>("lastName"));
 
         TreeTableColumn emailCol = new TreeTableColumn("Email");
-        emailCol.setCellValueFactory(new TreeItemPropertyValueFactory<Person, String>("email"));
+        emailCol.setCellValueFactory(new TreeItemPropertyValueFactory<>("email"));
 
         table.getColumns().addAll(firstNameCol, lastNameCol, emailCol);
 
@@ -1726,17 +1728,17 @@ public class TreeTableViewTest {
     }
 
     @Test public void test_rt22463() {
-        final TreeTableView<RT_22463_Person> table = new TreeTableView<RT_22463_Person>();
+        final TreeTableView<RT_22463_Person> table = new TreeTableView<>();
         table.setTableMenuButtonVisible(true);
         TreeTableColumn c1 = new TreeTableColumn("Id");
         TreeTableColumn c2 = new TreeTableColumn("Name");
-        c1.setCellValueFactory(new TreeItemPropertyValueFactory<Person, Long>("id"));
-        c2.setCellValueFactory(new TreeItemPropertyValueFactory<Person, String>("name"));
+        c1.setCellValueFactory(new TreeItemPropertyValueFactory<>("id"));
+        c2.setCellValueFactory(new TreeItemPropertyValueFactory<>("name"));
         table.getColumns().addAll(c1, c2);
 
         RT_22463_Person rootPerson = new RT_22463_Person();
         rootPerson.setName("Root");
-        TreeItem<RT_22463_Person> root = new TreeItem<RT_22463_Person>(rootPerson);
+        TreeItem<RT_22463_Person> root = new TreeItem<>(rootPerson);
         root.setExpanded(true);
 
         table.setRoot(root);
@@ -1749,8 +1751,8 @@ public class TreeTableViewTest {
         p2.setId(2l);
         p2.setName("name2");
         root.getChildren().addAll(
-                new TreeItem<RT_22463_Person>(p1),
-                new TreeItem<RT_22463_Person>(p2));
+                new TreeItem<>(p1),
+                new TreeItem<>(p2));
         VirtualFlowTestUtils.assertCellTextEquals(table, 1, "1", "name1");
         VirtualFlowTestUtils.assertCellTextEquals(table, 2, "2", "name2");
 
@@ -1764,8 +1766,8 @@ public class TreeTableViewTest {
         new_p2.setName("updated name2");
         root.getChildren().clear();
         root.getChildren().setAll(
-                new TreeItem<RT_22463_Person>(new_p1),
-                new TreeItem<RT_22463_Person>(new_p2));
+                new TreeItem<>(new_p1),
+                new TreeItem<>(new_p2));
         VirtualFlowTestUtils.assertCellTextEquals(table, 1, "1", "updated name1");
         VirtualFlowTestUtils.assertCellTextEquals(table, 2, "2", "updated name2");
     }
@@ -1773,27 +1775,27 @@ public class TreeTableViewTest {
     @Test public void test_rt28637() {
         TreeItem<String> s1, s2, s3, s4;
         ObservableList<TreeItem<String>> items = FXCollections.observableArrayList(
-                s1 = new TreeItem<String>("String1"),
-                s2 = new TreeItem<String>("String2"),
-                s3 = new TreeItem<String>("String3"),
-                s4 = new TreeItem<String>("String4"));
+                s1 = new TreeItem<>("String1"),
+                s2 = new TreeItem<>("String2"),
+                s3 = new TreeItem<>("String3"),
+                s4 = new TreeItem<>("String4"));
 
-        final TreeTableView<String> treeTableView = new TreeTableView<String>();
+        final TreeTableView<String> treeTableView = new TreeTableView<>();
 
-        TreeItem<String> root = new TreeItem<String>("Root");
+        TreeItem<String> root = new TreeItem<>("Root");
         root.setExpanded(true);
         treeTableView.setRoot(root);
         treeTableView.setShowRoot(false);
         root.getChildren().addAll(items);
 
         treeTableView.getSelectionModel().select(0);
-        assertEquals((Object)s1, treeTableView.getSelectionModel().getSelectedItem());
-        assertEquals((Object)s1, treeTableView.getSelectionModel().getSelectedItems().get(0));
+        assertEquals(s1, treeTableView.getSelectionModel().getSelectedItem());
+        assertEquals(s1, treeTableView.getSelectionModel().getSelectedItems().get(0));
         assertEquals(0, treeTableView.getSelectionModel().getSelectedIndex());
 
         root.getChildren().remove(treeTableView.getSelectionModel().getSelectedItem());
-        assertEquals((Object)s2, treeTableView.getSelectionModel().getSelectedItem());
-        assertEquals((Object)s2, treeTableView.getSelectionModel().getSelectedItems().get(0));
+        assertEquals(s2, treeTableView.getSelectionModel().getSelectedItem());
+        assertEquals(s2, treeTableView.getSelectionModel().getSelectedItems().get(0));
         assertEquals(0, treeTableView.getSelectionModel().getSelectedIndex());
     }
 
@@ -1802,22 +1804,22 @@ public class TreeTableViewTest {
         TreeItem<Person> p0, p1, p2, p3, p4;
 
         ObservableList<TreeItem<Person>> persons = FXCollections.observableArrayList(
-            p3 = new TreeItem<Person>(new Person("Jacob", "Smith", "jacob.smith@example.com")),
-            p2 = new TreeItem<Person>(new Person("Isabella", "Johnson", "isabella.johnson@example.com")),
-            p1 = new TreeItem<Person>(new Person("Ethan", "Williams", "ethan.williams@example.com")),
-            p0 = new TreeItem<Person>(new Person("Emma", "Jones", "emma.jones@example.com")),
-            p4 = new TreeItem<Person>(new Person("Michael", "Brown", "michael.brown@example.com")));
+            p3 = new TreeItem<>(new Person("Jacob", "Smith", "jacob.smith@example.com")),
+            p2 = new TreeItem<>(new Person("Isabella", "Johnson", "isabella.johnson@example.com")),
+            p1 = new TreeItem<>(new Person("Ethan", "Williams", "ethan.williams@example.com")),
+            p0 = new TreeItem<>(new Person("Emma", "Jones", "emma.jones@example.com")),
+            p4 = new TreeItem<>(new Person("Michael", "Brown", "michael.brown@example.com")));
 
         TreeTableView<Person> table = new TreeTableView<>();
 
-        TreeItem<Person> root = new TreeItem<Person>(new Person("Root", null, null));
+        TreeItem<Person> root = new TreeItem<>(new Person("Root", null, null));
         root.setExpanded(true);
         table.setRoot(root);
         table.setShowRoot(false);
         root.getChildren().setAll(persons);
 
         TreeTableColumn firstNameCol = new TreeTableColumn("First Name");
-        firstNameCol.setCellValueFactory(new TreeItemPropertyValueFactory<Person, String>("firstName"));
+        firstNameCol.setCellValueFactory(new TreeItemPropertyValueFactory<>("firstName"));
 
         // set dummy comparator to lock items in place until new comparator is set
         firstNameCol.setComparator((t, t1) -> 0);
@@ -1844,19 +1846,19 @@ public class TreeTableViewTest {
     }
 
     @Test public void test_rt29331() {
-        TreeTableView<Person> table = new TreeTableView<Person>();
+        TreeTableView<Person> table = new TreeTableView<>();
 
         // p1 == lowest first name
         TreeItem<Person> p0, p1, p2, p3, p4;
 
         TreeTableColumn firstNameCol = new TreeTableColumn("First Name");
-        firstNameCol.setCellValueFactory(new PropertyValueFactory<Person, String>("firstName"));
+        firstNameCol.setCellValueFactory(new PropertyValueFactory<>("firstName"));
 
         TreeTableColumn lastNameCol = new TreeTableColumn("Last Name");
-        lastNameCol.setCellValueFactory(new PropertyValueFactory<Person, String>("lastName"));
+        lastNameCol.setCellValueFactory(new PropertyValueFactory<>("lastName"));
 
         TreeTableColumn emailCol = new TreeTableColumn("Email");
-        emailCol.setCellValueFactory(new PropertyValueFactory<Person, String>("email"));
+        emailCol.setCellValueFactory(new PropertyValueFactory<>("email"));
 
         TreeTableColumn parentColumn = new TreeTableColumn<>("Parent");
         parentColumn.getColumns().addAll(firstNameCol, lastNameCol, emailCol);
@@ -1877,15 +1879,15 @@ public class TreeTableViewTest {
     private int rt29330_count = 0;
     @Test public void test_rt29330_1() {
         ObservableList<TreeItem<Person>> persons = FXCollections.observableArrayList(
-                new TreeItem<Person>(new Person("Jacob", "Smith", "jacob.smith@example.com")),
-                new TreeItem<Person>(new Person("Isabella", "Johnson", "isabella.johnson@example.com")),
-                new TreeItem<Person>(new Person("Ethan", "Williams", "ethan.williams@example.com")),
-                new TreeItem<Person>(new Person("Emma", "Jones", "emma.jones@example.com")),
-                new TreeItem<Person>(new Person("Michael", "Brown", "michael.brown@example.com")));
+                new TreeItem<>(new Person("Jacob", "Smith", "jacob.smith@example.com")),
+                new TreeItem<>(new Person("Isabella", "Johnson", "isabella.johnson@example.com")),
+                new TreeItem<>(new Person("Ethan", "Williams", "ethan.williams@example.com")),
+                new TreeItem<>(new Person("Emma", "Jones", "emma.jones@example.com")),
+                new TreeItem<>(new Person("Michael", "Brown", "michael.brown@example.com")));
 
         TreeTableView<Person> table = new TreeTableView<>();
 
-        TreeItem<Person> root = new TreeItem<Person>(new Person("Root", null, null));
+        TreeItem<Person> root = new TreeItem<>(new Person("Root", null, null));
         root.setExpanded(true);
         table.setRoot(root);
         table.setShowRoot(false);
@@ -1895,10 +1897,10 @@ public class TreeTableViewTest {
         table.getColumns().addAll(parentColumn);
 
         TreeTableColumn firstNameCol = new TreeTableColumn("First Name");
-        firstNameCol.setCellValueFactory(new TreeItemPropertyValueFactory<Person, String>("firstName"));
+        firstNameCol.setCellValueFactory(new TreeItemPropertyValueFactory<>("firstName"));
 
         TreeTableColumn lastNameCol = new TreeTableColumn("Last Name");
-        lastNameCol.setCellValueFactory(new TreeItemPropertyValueFactory<Person, String>("lastName"));
+        lastNameCol.setCellValueFactory(new TreeItemPropertyValueFactory<>("lastName"));
 
         parentColumn.getColumns().addAll(firstNameCol, lastNameCol);
 
@@ -1925,25 +1927,25 @@ public class TreeTableViewTest {
 
     @Test public void test_rt29330_2() {
         ObservableList<TreeItem<Person>> persons = FXCollections.observableArrayList(
-                new TreeItem<Person>(new Person("Jacob", "Smith", "jacob.smith@example.com")),
-                new TreeItem<Person>(new Person("Isabella", "Johnson", "isabella.johnson@example.com")),
-                new TreeItem<Person>(new Person("Ethan", "Williams", "ethan.williams@example.com")),
-                new TreeItem<Person>(new Person("Emma", "Jones", "emma.jones@example.com")),
-                new TreeItem<Person>(new Person("Michael", "Brown", "michael.brown@example.com")));
+                new TreeItem<>(new Person("Jacob", "Smith", "jacob.smith@example.com")),
+                new TreeItem<>(new Person("Isabella", "Johnson", "isabella.johnson@example.com")),
+                new TreeItem<>(new Person("Ethan", "Williams", "ethan.williams@example.com")),
+                new TreeItem<>(new Person("Emma", "Jones", "emma.jones@example.com")),
+                new TreeItem<>(new Person("Michael", "Brown", "michael.brown@example.com")));
 
         TreeTableView<Person> table = new TreeTableView<>();
 
-        TreeItem<Person> root = new TreeItem<Person>(new Person("Root", null, null));
+        TreeItem<Person> root = new TreeItem<>(new Person("Root", null, null));
         root.setExpanded(true);
         table.setRoot(root);
         table.setShowRoot(false);
         root.getChildren().setAll(persons);
 
         TreeTableColumn firstNameCol = new TreeTableColumn("First Name");
-        firstNameCol.setCellValueFactory(new TreeItemPropertyValueFactory<Person, String>("firstName"));
+        firstNameCol.setCellValueFactory(new TreeItemPropertyValueFactory<>("firstName"));
 
         TreeTableColumn lastNameCol = new TreeTableColumn("Last Name");
-        lastNameCol.setCellValueFactory(new TreeItemPropertyValueFactory<Person, String>("lastName"));
+        lastNameCol.setCellValueFactory(new TreeItemPropertyValueFactory<>("lastName"));
 
         // this test differs from the previous one by installing the parent column
         // into the tableview after it has the children added into it
@@ -1974,15 +1976,15 @@ public class TreeTableViewTest {
 
     @Test public void test_rt29313_selectedIndices() {
         ObservableList<TreeItem<Person>> persons = FXCollections.observableArrayList(
-                new TreeItem<Person>(new Person("Jacob", "Smith", "jacob.smith@example.com")),
-                new TreeItem<Person>(new Person("Isabella", "Johnson", "isabella.johnson@example.com")),
-                new TreeItem<Person>(new Person("Ethan", "Williams", "ethan.williams@example.com")),
-                new TreeItem<Person>(new Person("Emma", "Jones", "emma.jones@example.com")),
-                new TreeItem<Person>(new Person("Michael", "Brown", "michael.brown@example.com")));
+                new TreeItem<>(new Person("Jacob", "Smith", "jacob.smith@example.com")),
+                new TreeItem<>(new Person("Isabella", "Johnson", "isabella.johnson@example.com")),
+                new TreeItem<>(new Person("Ethan", "Williams", "ethan.williams@example.com")),
+                new TreeItem<>(new Person("Emma", "Jones", "emma.jones@example.com")),
+                new TreeItem<>(new Person("Michael", "Brown", "michael.brown@example.com")));
 
         TreeTableView<Person> table = new TreeTableView<>();
 
-        TreeItem<Person> root = new TreeItem<Person>(new Person("Root", null, null));
+        TreeItem<Person> root = new TreeItem<>(new Person("Root", null, null));
         root.setExpanded(true);
         table.setRoot(root);
         table.setShowRoot(false);
@@ -1991,13 +1993,13 @@ public class TreeTableViewTest {
         TableSelectionModel sm = table.getSelectionModel();
 
         TreeTableColumn firstNameCol = new TreeTableColumn("First Name");
-        firstNameCol.setCellValueFactory(new TreeItemPropertyValueFactory<Person, String>("firstName"));
+        firstNameCol.setCellValueFactory(new TreeItemPropertyValueFactory<>("firstName"));
 
         TreeTableColumn lastNameCol = new TreeTableColumn("Last Name");
-        lastNameCol.setCellValueFactory(new TreeItemPropertyValueFactory<Person, String>("lastName"));
+        lastNameCol.setCellValueFactory(new TreeItemPropertyValueFactory<>("lastName"));
 
         TreeTableColumn emailCol = new TreeTableColumn("Email");
-        emailCol.setCellValueFactory(new TreeItemPropertyValueFactory<Person, String>("email"));
+        emailCol.setCellValueFactory(new TreeItemPropertyValueFactory<>("email"));
 
         table.getColumns().addAll(firstNameCol, lastNameCol, emailCol);
         sm.setCellSelectionEnabled(true);
@@ -2025,15 +2027,15 @@ public class TreeTableViewTest {
     @Test public void test_rt29313_selectedItems() {
         TreeItem<Person> p0, p1;
         ObservableList<TreeItem<Person>> persons = FXCollections.observableArrayList(
-                p0 = new TreeItem<Person>(new Person("Jacob", "Smith", "jacob.smith@example.com")),
-                p1 = new TreeItem<Person>(new Person("Isabella", "Johnson", "isabella.johnson@example.com")),
-                new TreeItem<Person>(new Person("Ethan", "Williams", "ethan.williams@example.com")),
-                new TreeItem<Person>(new Person("Emma", "Jones", "emma.jones@example.com")),
-                new TreeItem<Person>(new Person("Michael", "Brown", "michael.brown@example.com")));
+                p0 = new TreeItem<>(new Person("Jacob", "Smith", "jacob.smith@example.com")),
+                p1 = new TreeItem<>(new Person("Isabella", "Johnson", "isabella.johnson@example.com")),
+                new TreeItem<>(new Person("Ethan", "Williams", "ethan.williams@example.com")),
+                new TreeItem<>(new Person("Emma", "Jones", "emma.jones@example.com")),
+                new TreeItem<>(new Person("Michael", "Brown", "michael.brown@example.com")));
 
         TreeTableView<Person> table = new TreeTableView<>();
 
-        TreeItem<Person> root = new TreeItem<Person>(new Person("Root", null, null));
+        TreeItem<Person> root = new TreeItem<>(new Person("Root", null, null));
         root.setExpanded(true);
         table.setRoot(root);
         table.setShowRoot(false);
@@ -2042,13 +2044,13 @@ public class TreeTableViewTest {
         TableSelectionModel sm = table.getSelectionModel();
 
         TreeTableColumn firstNameCol = new TreeTableColumn("First Name");
-        firstNameCol.setCellValueFactory(new TreeItemPropertyValueFactory<Person, String>("firstName"));
+        firstNameCol.setCellValueFactory(new TreeItemPropertyValueFactory<>("firstName"));
 
         TreeTableColumn lastNameCol = new TreeTableColumn("Last Name");
-        lastNameCol.setCellValueFactory(new TreeItemPropertyValueFactory<Person, String>("lastName"));
+        lastNameCol.setCellValueFactory(new TreeItemPropertyValueFactory<>("lastName"));
 
         TreeTableColumn emailCol = new TreeTableColumn("Email");
-        emailCol.setCellValueFactory(new TreeItemPropertyValueFactory<Person, String>("email"));
+        emailCol.setCellValueFactory(new TreeItemPropertyValueFactory<>("email"));
 
         table.getColumns().addAll(firstNameCol, lastNameCol, emailCol);
         sm.setCellSelectionEnabled(true);
@@ -2075,15 +2077,15 @@ public class TreeTableViewTest {
 
     @Test public void test_rt29566() {
         ObservableList<TreeItem<Person>> persons = FXCollections.observableArrayList(
-                new TreeItem<Person>(new Person("Jacob", "Smith", "jacob.smith@example.com")),
-                new TreeItem<Person>(new Person("Isabella", "Johnson", "isabella.johnson@example.com")),
-                new TreeItem<Person>(new Person("Ethan", "Williams", "ethan.williams@example.com")),
-                new TreeItem<Person>(new Person("Emma", "Jones", "emma.jones@example.com")),
-                new TreeItem<Person>(new Person("Michael", "Brown", "michael.brown@example.com")));
+                new TreeItem<>(new Person("Jacob", "Smith", "jacob.smith@example.com")),
+                new TreeItem<>(new Person("Isabella", "Johnson", "isabella.johnson@example.com")),
+                new TreeItem<>(new Person("Ethan", "Williams", "ethan.williams@example.com")),
+                new TreeItem<>(new Person("Emma", "Jones", "emma.jones@example.com")),
+                new TreeItem<>(new Person("Michael", "Brown", "michael.brown@example.com")));
 
         TreeTableView<Person> table = new TreeTableView<>();
 
-        TreeItem<Person> root = new TreeItem<Person>(new Person("Root", null, null));
+        TreeItem<Person> root = new TreeItem<>(new Person("Root", null, null));
         root.setExpanded(true);
         table.setRoot(root);
         table.setShowRoot(false);
@@ -2092,13 +2094,13 @@ public class TreeTableViewTest {
         TableSelectionModel sm = table.getSelectionModel();
 
         TreeTableColumn firstNameCol = new TreeTableColumn("First Name");
-        firstNameCol.setCellValueFactory(new TreeItemPropertyValueFactory<Person, String>("firstName"));
+        firstNameCol.setCellValueFactory(new TreeItemPropertyValueFactory<>("firstName"));
 
         TreeTableColumn lastNameCol = new TreeTableColumn("Last Name");
-        lastNameCol.setCellValueFactory(new TreeItemPropertyValueFactory<Person, String>("lastName"));
+        lastNameCol.setCellValueFactory(new TreeItemPropertyValueFactory<>("lastName"));
 
         TreeTableColumn emailCol = new TreeTableColumn("Email");
-        emailCol.setCellValueFactory(new TreeItemPropertyValueFactory<Person, String>("email"));
+        emailCol.setCellValueFactory(new TreeItemPropertyValueFactory<>("email"));
 
         table.getColumns().addAll(firstNameCol, lastNameCol, emailCol);
 
@@ -2132,36 +2134,36 @@ public class TreeTableViewTest {
 
     @Test public void test_rt29390() {
         ObservableList<TreeItem<Person>> persons = FXCollections.observableArrayList(
-                new TreeItem<Person>(new Person("Jacob", "Smith", "jacob.smith@example.com")),
-                new TreeItem<Person>(new Person("Isabella", "Johnson", "isabella.johnson@example.com")),
-                new TreeItem<Person>(new Person("Ethan", "Williams", "ethan.williams@example.com")),
-                new TreeItem<Person>(new Person("Emma", "Jones", "emma.jones@example.com")),
-                new TreeItem<Person>(new Person("Jacob", "Smith", "jacob.smith@example.com")),
-                new TreeItem<Person>(new Person("Isabella", "Johnson", "isabella.johnson@example.com")),
-                new TreeItem<Person>(new Person("Ethan", "Williams", "ethan.williams@example.com")),
-                new TreeItem<Person>(new Person("Emma", "Jones", "emma.jones@example.com")),
-                new TreeItem<Person>(new Person("Jacob", "Smith", "jacob.smith@example.com")),
-                new TreeItem<Person>(new Person("Isabella", "Johnson", "isabella.johnson@example.com")),
-                new TreeItem<Person>(new Person("Ethan", "Williams", "ethan.williams@example.com")),
-                new TreeItem<Person>(new Person("Emma", "Jones", "emma.jones@example.com")),
-                new TreeItem<Person>(new Person("Jacob", "Smith", "jacob.smith@example.com")),
-                new TreeItem<Person>(new Person("Isabella", "Johnson", "isabella.johnson@example.com")),
-                new TreeItem<Person>(new Person("Ethan", "Williams", "ethan.williams@example.com")),
-                new TreeItem<Person>(new Person("Emma", "Jones", "emma.jones@example.com")
+                new TreeItem<>(new Person("Jacob", "Smith", "jacob.smith@example.com")),
+                new TreeItem<>(new Person("Isabella", "Johnson", "isabella.johnson@example.com")),
+                new TreeItem<>(new Person("Ethan", "Williams", "ethan.williams@example.com")),
+                new TreeItem<>(new Person("Emma", "Jones", "emma.jones@example.com")),
+                new TreeItem<>(new Person("Jacob", "Smith", "jacob.smith@example.com")),
+                new TreeItem<>(new Person("Isabella", "Johnson", "isabella.johnson@example.com")),
+                new TreeItem<>(new Person("Ethan", "Williams", "ethan.williams@example.com")),
+                new TreeItem<>(new Person("Emma", "Jones", "emma.jones@example.com")),
+                new TreeItem<>(new Person("Jacob", "Smith", "jacob.smith@example.com")),
+                new TreeItem<>(new Person("Isabella", "Johnson", "isabella.johnson@example.com")),
+                new TreeItem<>(new Person("Ethan", "Williams", "ethan.williams@example.com")),
+                new TreeItem<>(new Person("Emma", "Jones", "emma.jones@example.com")),
+                new TreeItem<>(new Person("Jacob", "Smith", "jacob.smith@example.com")),
+                new TreeItem<>(new Person("Isabella", "Johnson", "isabella.johnson@example.com")),
+                new TreeItem<>(new Person("Ethan", "Williams", "ethan.williams@example.com")),
+                new TreeItem<>(new Person("Emma", "Jones", "emma.jones@example.com")
         ));
 
         TreeTableView<Person> table = new TreeTableView<>();
         table.setMaxHeight(50);
         table.setPrefHeight(50);
 
-        TreeItem<Person> root = new TreeItem<Person>(new Person("Root", null, null));
+        TreeItem<Person> root = new TreeItem<>(new Person("Root", null, null));
         root.setExpanded(true);
         table.setRoot(root);
         table.setShowRoot(false);
         root.getChildren().setAll(persons);
 
         TreeTableColumn firstNameCol = new TreeTableColumn("First Name");
-        firstNameCol.setCellValueFactory(new TreeItemPropertyValueFactory<Person, String>("firstName"));
+        firstNameCol.setCellValueFactory(new TreeItemPropertyValueFactory<>("firstName"));
 
         table.getColumns().add(firstNameCol);
 
@@ -2182,15 +2184,15 @@ public class TreeTableViewTest {
 
     @Test public void test_rt29676_withText() {
         // set up test
-        TreeTableView<Data> treeTableView = new TreeTableView<Data>();
+        TreeTableView<Data> treeTableView = new TreeTableView<>();
         treeTableView.setMaxWidth(100);
 
-        TreeItem<Data> root = new TreeItem<Data>(new Data("Root"));
+        TreeItem<Data> root = new TreeItem<>(new Data("Root"));
         treeTableView.setRoot(root);
         addLevel(root, 0, 30);
 
         treeTableView.getRoot().setExpanded(true);
-        TreeTableColumn<Data, String> column = new TreeTableColumn<Data, String>("Items' name");
+        TreeTableColumn<Data, String> column = new TreeTableColumn<>("Items' name");
         column.setCellValueFactory(p -> new ReadOnlyStringWrapper(p.getValue().getValue().getData()));
         treeTableView.getColumns().add(column);
 
@@ -2249,7 +2251,7 @@ public class TreeTableViewTest {
                 builder.append("ng");
             }
             String itemString = builder.toString();
-            TreeItem<Data> child = new TreeItem<Data>(new Data(itemString));
+            TreeItem<Data> child = new TreeItem<>(new Data(itemString));
             if (level < 3 - 1) {
                 addLevel(child, level + 1, length);
             }
@@ -2372,7 +2374,7 @@ public class TreeTableViewTest {
     @Test public void test_rt30400() {
         // create a treetableview that'll render cells using the check box cell factory
         TreeItem<String> rootItem = new TreeItem<>("root");
-        final TreeTableView<String> tableView = new TreeTableView<String>(rootItem);
+        final TreeTableView<String> tableView = new TreeTableView<>(rootItem);
         tableView.setMinHeight(100);
         tableView.setPrefHeight(100);
 
@@ -2509,17 +2511,15 @@ public class TreeTableViewTest {
         firstNameCol.setCellValueFactory(param -> new ReadOnlyStringWrapper(param.getValue().getValue()));
         treeTableView.getColumns().add(firstNameCol);
 
-        firstNameCol.setCellFactory(new Callback<TreeTableColumn<String, String>, TreeTableCell<String, String>>() {
+        firstNameCol.setCellFactory(new Callback<>() {
             @Override
             public TreeTableCell<String, String> call(TreeTableColumn<String, String> param) {
-                return new TreeTableCellShim<String, String>() {
+                return new TreeTableCellShim<>() {
                     ImageView view = new ImageView();
 
                     {
                         setGraphic(view);
                     }
-
-                    ;
 
                     @Override
                     public void updateItem(String item, boolean empty) {
@@ -2562,17 +2562,15 @@ public class TreeTableViewTest {
         firstNameCol.setCellValueFactory(param -> new ReadOnlyStringWrapper(param.getValue().getValue()));
         treeTableView.getColumns().add(firstNameCol);
 
-        treeTableView.setRowFactory(new Callback<TreeTableView<String>, TreeTableRow<String>>() {
+        treeTableView.setRowFactory(new Callback<>() {
             @Override
             public TreeTableRow<String> call(TreeTableView<String> param) {
-                return new TreeTableRowShim<String>() {
+                return new TreeTableRowShim<>() {
                     ImageView view = new ImageView();
 
                     {
                         setGraphic(view);
                     }
-
-                    ;
 
                     @Override
                     public void updateItem(String item, boolean empty) {
@@ -2593,14 +2591,14 @@ public class TreeTableViewTest {
 
         StageLoader sl = new StageLoader(treeTableView);
 
-        assertEquals(21, rt_31200_count);
+        assertEquals(22, rt_31200_count);
 
         // resize the stage
         sl.getStage().setHeight(250);
         Toolkit.getToolkit().firePulse();
         sl.getStage().setHeight(50);
         Toolkit.getToolkit().firePulse();
-        assertEquals(21, rt_31200_count);
+        assertEquals(22, rt_31200_count);
 
         sl.dispose();
     }
@@ -2638,9 +2636,9 @@ public class TreeTableViewTest {
         installChildren();
 
 //        final TableSelectionModel sm = t.getSelectionModel();
-        TreeTableColumn<String, String> col = new TreeTableColumn<String, String>("column");
+        TreeTableColumn<String, String> col = new TreeTableColumn<>("column");
         col.setSortType(ASCENDING);
-        col.setCellValueFactory(param -> new ReadOnlyObjectWrapper<String>(param.getValue().getValue()));
+        col.setCellValueFactory(param -> new ReadOnlyObjectWrapper<>(param.getValue().getValue()));
         treeTableView.getColumns().add(col);
 
         // test pre-conditions
@@ -2705,17 +2703,17 @@ public class TreeTableViewTest {
     @Test public void test_rt_30484_treeTableCell() {
         installChildren();
 
-        TreeTableColumn<String, String> col = new TreeTableColumn<String, String>("column");
+        TreeTableColumn<String, String> col = new TreeTableColumn<>("column");
         col.setSortType(ASCENDING);
-        col.setCellValueFactory(param -> new ReadOnlyObjectWrapper<String>(param.getValue().getValue()));
+        col.setCellValueFactory(param -> new ReadOnlyObjectWrapper<>(param.getValue().getValue()));
         treeTableView.getColumns().add(col);
 
-        col.setCellFactory(new Callback<TreeTableColumn<String, String>, TreeTableCell<String, String>>() {
+        col.setCellFactory(new Callback<>() {
             @Override
             public TreeTableCell<String, String> call(TreeTableColumn<String, String> param) {
-                return new TreeTableCellShim<String, String>() {
+                return new TreeTableCellShim<>() {
                     Rectangle graphic = new Rectangle(10, 10, Color.RED);
-                    { setGraphic(graphic); };
+                    { setGraphic(graphic); }
 
                     @Override public void updateItem(String item, boolean empty) {
                         super.updateItem(item, empty);
@@ -2745,16 +2743,16 @@ public class TreeTableViewTest {
     @Test public void test_rt_30484_treeTableRow() {
         installChildren();
 
-        TreeTableColumn<String, String> col = new TreeTableColumn<String, String>("column");
+        TreeTableColumn<String, String> col = new TreeTableColumn<>("column");
         col.setSortType(ASCENDING);
-        col.setCellValueFactory(param -> new ReadOnlyObjectWrapper<String>(param.getValue().getValue()));
+        col.setCellValueFactory(param -> new ReadOnlyObjectWrapper<>(param.getValue().getValue()));
         treeTableView.getColumns().add(col);
 
-        treeTableView.setRowFactory(new Callback<TreeTableView<String>, TreeTableRow<String>>() {
+        treeTableView.setRowFactory(new Callback<>() {
             @Override public TreeTableRow<String> call(TreeTableView<String> param) {
-                return new TreeTableRowShim<String>() {
+                return new TreeTableRowShim<>() {
                     Rectangle graphic = new Rectangle(10, 10, Color.RED);
-                    { setGraphic(graphic); };
+                    { setGraphic(graphic); }
 
                     @Override public void updateItem(String item, boolean empty) {
                         super.updateItem(item, empty);
@@ -2787,14 +2785,15 @@ public class TreeTableViewTest {
         root.getChildren().clear();
         treeTableView.setEditable(true);
 
-        TreeTableColumn<String, String> col = new TreeTableColumn<String, String>("column");
-        col.setCellValueFactory(param -> new ReadOnlyObjectWrapper<String>(param.getValue().getValue()));
+        TreeTableColumn<String, String> col = new TreeTableColumn<>("column");
+        col.setCellValueFactory(param -> new ReadOnlyObjectWrapper<>(param.getValue().getValue()));
         treeTableView.getColumns().add(col);
 
         //Set cell factory for cells that allow editing
-        Callback<TreeTableColumn<String,String>, TreeTableCell<String, String>> cellFactory = new Callback<TreeTableColumn<String,String>, TreeTableCell<String, String>>() {
+        Callback<TreeTableColumn<String,String>, TreeTableCell<String, String>> cellFactory = new Callback<>() {
+            @Override
             public TreeTableCell<String, String> call(TreeTableColumn<String, String> p) {
-                return new TreeTableCell<String, String>() {
+                return new TreeTableCell<>() {
                     @Override public void cancelEdit() {
                         super.cancelEdit();
                         rt_31015_count++;
@@ -2999,25 +2998,25 @@ public class TreeTableViewTest {
 //    @Ignore("Test started intermittently failing, most probably due to RT-36855 changeset")
     @Test public void test_rt_34493() {
         ObservableList<TreeItem<Person>> persons = FXCollections.observableArrayList(
-            new TreeItem<Person>(new Person("Jacob", "Smith", "jacob.smith@example.com"))
+            new TreeItem<>(new Person("Jacob", "Smith", "jacob.smith@example.com"))
         );
 
         TreeTableView<Person> table = new TreeTableView<>();
 
-        TreeItem<Person> root = new TreeItem<Person>(new Person("Root", null, null));
+        TreeItem<Person> root = new TreeItem<>(new Person("Root", null, null));
         root.setExpanded(true);
         table.setRoot(root);
         table.setShowRoot(false);
         root.getChildren().setAll(persons);
 
         TreeTableColumn first = new TreeTableColumn("First Name");
-        first.setCellValueFactory(new TreeItemPropertyValueFactory<Person, String>("firstName"));
+        first.setCellValueFactory(new TreeItemPropertyValueFactory<>("firstName"));
 
         TreeTableColumn last = new TreeTableColumn("Last Name");
-        last.setCellValueFactory(new TreeItemPropertyValueFactory<Person, String>("lastName"));
+        last.setCellValueFactory(new TreeItemPropertyValueFactory<>("lastName"));
 
         TreeTableColumn email = new TreeTableColumn("Email");
-        email.setCellValueFactory(new TreeItemPropertyValueFactory<Person, String>("email"));
+        email.setCellValueFactory(new TreeItemPropertyValueFactory<>("email"));
 
         table.getColumns().addAll(first, last, email);
 
@@ -3194,14 +3193,14 @@ public class TreeTableViewTest {
         table.getSelectionModel().setSelectionMode(SelectionMode.SINGLE);
         table.setEditable(true);
 
-        TreeItem<Person> root = new TreeItem<Person>(new Person("Root", null, null));
+        TreeItem<Person> root = new TreeItem<>(new Person("Root", null, null));
         root.setExpanded(true);
         table.setRoot(root);
         table.setShowRoot(false);
         root.getChildren().setAll(persons);
 
         TreeTableColumn first = new TreeTableColumn("First Name");
-        first.setCellValueFactory(new TreeItemPropertyValueFactory<Person, String>("firstName"));
+        first.setCellValueFactory(new TreeItemPropertyValueFactory<>("firstName"));
         first.setCellFactory(TextFieldTreeTableCell.forTreeTableColumn());
 
         EventHandler<TreeTableColumn.CellEditEvent<Person, String>> onEditCommit = first.getOnEditCommit();
@@ -3362,10 +3361,10 @@ public class TreeTableViewTest {
     }
 
     @Test public void test_rt23245_itemIsInTree() {
-        final TreeTableView<String> view = new TreeTableView<String>();
+        final TreeTableView<String> view = new TreeTableView<>();
         final List<TreeItem<String>> items = new ArrayList<>();
         for (int i = 0; i < 10; i++) {
-            final TreeItem<String> item = new TreeItem<String>("Item" + i);
+            final TreeItem<String> item = new TreeItem<>("Item" + i);
             item.setExpanded(true);
             items.add(item);
         }
@@ -3397,10 +3396,10 @@ public class TreeTableViewTest {
     }
 
     @Test public void test_rt23245_itemIsNotInTree_noRootNode() {
-        final TreeView<String> view = new TreeView<String>();
+        final TreeView<String> view = new TreeView<>();
         final List<TreeItem<String>> items = new ArrayList<>();
         for (int i = 0; i < 10; i++) {
-            final TreeItem<String> item = new TreeItem<String>("Item" + i);
+            final TreeItem<String> item = new TreeItem<>("Item" + i);
             item.setExpanded(true);
             items.add(item);
         }
@@ -3423,10 +3422,10 @@ public class TreeTableViewTest {
     }
 
     @Test public void test_rt23245_itemIsNotInTree_withUnrelatedRootNode() {
-        final TreeView<String> view = new TreeView<String>();
+        final TreeView<String> view = new TreeView<>();
         final List<TreeItem<String>> items = new ArrayList<>();
         for (int i = 0; i < 10; i++) {
-            final TreeItem<String> item = new TreeItem<String>("Item" + i);
+            final TreeItem<String> item = new TreeItem<>("Item" + i);
             item.setExpanded(true);
             items.add(item);
         }
@@ -3563,7 +3562,7 @@ public class TreeTableViewTest {
      */
     @Test
     public void test_rt35857_selectLast_retainAllSelected() {
-        TreeTableView<String> treeView = new TreeTableView<String>(createTreeItem());
+        TreeTableView<String> treeView = new TreeTableView<>(createTreeItem());
         treeView.getSelectionModel().select(treeView.getRoot().getChildren().size());
 
         assert_rt35857(treeView.getRoot().getChildren(), treeView.getSelectionModel(), true);
@@ -3571,7 +3570,7 @@ public class TreeTableViewTest {
 
     @Test
     public void test_rt35857_selectLast_removeAllSelected() {
-        TreeTableView<String> treeView = new TreeTableView<String>(createTreeItem());
+        TreeTableView<String> treeView = new TreeTableView<>(createTreeItem());
         treeView.getSelectionModel().select(treeView.getRoot().getChildren().size());
 
         assert_rt35857(treeView.getRoot().getChildren(), treeView.getSelectionModel(), false);
@@ -3579,7 +3578,7 @@ public class TreeTableViewTest {
 
     @Test
     public void test_rt35857_selectFirst_retainAllSelected() {
-        TreeTableView<String> treeView = new TreeTableView<String>(createTreeItem());
+        TreeTableView<String> treeView = new TreeTableView<>(createTreeItem());
         treeView.getSelectionModel().select(1);
 
         assert_rt35857(treeView.getRoot().getChildren(), treeView.getSelectionModel(), true);
@@ -3623,7 +3622,7 @@ public class TreeTableViewTest {
         TreeItem c = new TreeItem("C");
         root.getChildren().setAll(a, b, c);
 
-        final TreeTableView<String> treeTableView = new TreeTableView<String>(root);
+        final TreeTableView<String> treeTableView = new TreeTableView<>(root);
 
         treeTableView.getSelectionModel().select(1);
 
@@ -3640,9 +3639,9 @@ public class TreeTableViewTest {
 
     private int rt36452_instanceCount = 0;
     @Test public void test_rt36452() {
-        TreeTableColumn<String, String> myColumn = new TreeTableColumn<String,String>();
+        TreeTableColumn<String, String> myColumn = new TreeTableColumn<>();
         myColumn.setCellValueFactory((item)->(new ReadOnlyObjectWrapper<>(item.getValue().getValue())));
-        myColumn.setCellFactory(column -> new TreeTableCell<String, String>() {
+        myColumn.setCellFactory(column -> new TreeTableCell<>() {
             {
                 rt36452_instanceCount++;
             }
@@ -3833,7 +3832,7 @@ public class TreeTableViewTest {
     }
 
     private void test_rt_37054(boolean scroll) {
-        ObjectProperty<Integer> offset = new SimpleObjectProperty<Integer>(0);
+        ObjectProperty<Integer> offset = new SimpleObjectProperty<>(0);
 
         // create table with a bunch of rows and 1 column...
         TreeItem<Integer> root = new TreeItem<>(0);
@@ -3849,7 +3848,7 @@ public class TreeTableViewTest {
         column.setPrefWidth( 150 );
 
         // each cell displays x, where x = "cell row number + offset"
-        column.setCellValueFactory( cdf -> new ObjectBinding<Integer>() {
+        column.setCellValueFactory( cdf -> new ObjectBinding<>() {
             { super.bind( offset ); }
 
             @Override protected Integer computeValue() {
@@ -4132,7 +4131,7 @@ public class TreeTableViewTest {
         }
 
         final TreeTableColumn<Integer, Integer> column = new TreeTableColumn<>("Column");
-        column.setCellValueFactory( cdf -> new ReadOnlyObjectWrapper<Integer>(cdf.getValue().getValue()));
+        column.setCellValueFactory( cdf -> new ReadOnlyObjectWrapper<>(cdf.getValue().getValue()));
 
         final TreeTableView<Integer> table = new TreeTableView<>(root);
         table.getColumns().add( column );
@@ -4236,7 +4235,7 @@ public class TreeTableViewTest {
         if (useFixedCellSize) {
             treeTableView.setFixedCellSize(24);
         }
-        treeTableView.setRowFactory(tv -> new TreeTableRowShim<String>() {
+        treeTableView.setRowFactory(tv -> new TreeTableRowShim<>() {
             @Override public void updateItem(String color, boolean empty) {
                 rt_35395_counter += testCell ? 0 : 1;
                 super.updateItem(color, empty);
@@ -4245,7 +4244,7 @@ public class TreeTableViewTest {
 
         TreeTableColumn<String,String> column = new TreeTableColumn<>("Column");
         column.setCellValueFactory(param -> new ReadOnlyStringWrapper(param.getValue().getValue()));
-        column.setCellFactory(tv -> new TreeTableCellShim<String,String>() {
+        column.setCellFactory(tv -> new TreeTableCellShim<>() {
             @Override public void updateItem(String color, boolean empty) {
                 rt_35395_counter += testCell ? 1 : 0;
                 super.updateItem(color, empty);
@@ -4342,10 +4341,10 @@ public class TreeTableViewTest {
 
 
         TreeTableColumn firstNameCol = new TreeTableColumn("First Name");
-        firstNameCol.setCellValueFactory(new TreeItemPropertyValueFactory<Person, String>("firstName"));
+        firstNameCol.setCellValueFactory(new TreeItemPropertyValueFactory<>("firstName"));
 
         TreeTableColumn lastNameCol = new TreeTableColumn("Last Name");
-        lastNameCol.setCellValueFactory(new TreeItemPropertyValueFactory<Person, String>("lastName"));
+        lastNameCol.setCellValueFactory(new TreeItemPropertyValueFactory<>("lastName"));
 
         table.getColumns().addAll(firstNameCol, lastNameCol);
 
@@ -4641,7 +4640,7 @@ public class TreeTableViewTest {
 
     private final Supplier<TreeTableColumn<Person,String>> columnCallable = () -> {
         TreeTableColumn<Person,String> column = new TreeTableColumn<>("Last Name");
-        column.setCellValueFactory(new TreeItemPropertyValueFactory<Person,String>("lastName"));
+        column.setCellValueFactory(new TreeItemPropertyValueFactory<>("lastName"));
         return column;
     };
 
@@ -4770,10 +4769,10 @@ public class TreeTableViewTest {
         TreeItem<String> root = new TreeItem<>("Root");
         root.setExpanded(true);
         root.getChildren().addAll(
-                a = new TreeItem<String>("a"),
-                b = new TreeItem<String>("b"),
-                c = new TreeItem<String>("c"),
-                d = new TreeItem<String>("d")
+                a = new TreeItem<>("a"),
+                b = new TreeItem<>("b"),
+                c = new TreeItem<>("c"),
+                d = new TreeItem<>("d")
         );
 
         TreeTableView<String> stringTreeTableView = new TreeTableView<>(root);
@@ -4820,7 +4819,7 @@ public class TreeTableViewTest {
             return root;
         };
 
-        final TreeItem<String> root = new TreeItem<String>();
+        final TreeItem<String> root = new TreeItem<>();
         root.setExpanded(true);
         root.getChildren().addAll(callback.call(1), callback.call(2));
 
@@ -5579,7 +5578,7 @@ public class TreeTableViewTest {
         ObservableList<String> rawItems = test_rt_39661_setup();
         int index = 2;
 
-        TreeItem child = (TreeItem) root.getChildren().get(index);
+        TreeItem child = root.getChildren().get(index);
         assertEquals(index + 1, treeTableView.getRow(child));
     }
 
@@ -5655,10 +5654,10 @@ public class TreeTableViewTest {
         test_rt_39842_count = 0;
 
         TreeTableColumn firstNameCol = new TreeTableColumn("First Name");
-        firstNameCol.setCellValueFactory(new TreeItemPropertyValueFactory<Person, String>("firstName"));
+        firstNameCol.setCellValueFactory(new TreeItemPropertyValueFactory<>("firstName"));
 
         TreeTableColumn lastNameCol = new TreeTableColumn("Last Name");
-        lastNameCol.setCellValueFactory(new TreeItemPropertyValueFactory<Person, String>("lastName"));
+        lastNameCol.setCellValueFactory(new TreeItemPropertyValueFactory<>("lastName"));
 
         TreeItem root = new TreeItem("root");
         root.getChildren().setAll(
@@ -6110,7 +6109,7 @@ public class TreeTableViewTest {
         root.setExpanded(true);
 
         for (int i = 0; i < 10; i++) {
-            root.getChildren().add(new TreeItem<Integer>(i));
+            root.getChildren().add(new TreeItem<>(i));
         }
 
         final TreeTableView<Integer> view = new TreeTableView<>(root);
@@ -6203,7 +6202,7 @@ public class TreeTableViewTest {
 
         TreeTableColumn<Number, Number> column = new TreeTableColumn<>("Column");
         column.setCellValueFactory(cdf -> new ReadOnlyIntegerWrapper(0));
-        column.setCellFactory( ttc -> new TreeTableCell<Number,Number>() {
+        column.setCellFactory( ttc -> new TreeTableCell<>() {
             @Override protected void updateItem(Number item, boolean empty) {
                 cellUpdateCount.incrementAndGet();
                 super.updateItem(item, empty);
@@ -7124,5 +7123,59 @@ public class TreeTableViewTest {
 
         hbar = VirtualFlowTestUtils.getVirtualFlowHorizontalScrollbar(table);
         assertFalse(hbar.isVisible()); // used to fail here
+    }
+
+    @Test
+    public void testQueryAccessibleAttributeSelectedItemsWithNullSelectionModel() {
+        treeTableView.setSelectionModel(null);
+        stageLoader = new StageLoader(treeTableView);
+
+        Object result = treeTableView.queryAccessibleAttribute(AccessibleAttribute.SELECTED_ITEMS);
+        // Should be an empty observable array list
+        assertEquals(FXCollections.observableArrayList(), result);
+    }
+
+    @Test
+    public void testQueryAccessibleAttributeSelectedItemsWithNullSelectionModel_Placeholder() {
+        treeTableView.setSelectionModel(null);
+        stageLoader = new StageLoader(treeTableView);
+
+        Object result = treeTableView.queryAccessibleAttribute(AccessibleAttribute.FOCUS_ITEM);
+        // Should be a placeholder label
+        assertTrue(result instanceof Label);
+    }
+
+    @Test
+    public void testQueryAccessibleAttributeFocusItemWithNullFocusModel() {
+        // with rows
+        treeTableView.setRoot(new TreeItem("Root"));
+        treeTableView.getRoot().setExpanded(true);
+        for (int i = 0; i < 4; i++) {
+            TreeItem parent = new TreeItem("item - " + i);
+            treeTableView.getRoot().getChildren().add(parent);
+        }
+
+        // with columns
+        for (int i = 0; i < 10; i++) {
+            TreeTableColumn<String, String> c = new TreeTableColumn<>("C" + i);
+            c.setCellValueFactory(value -> new SimpleStringProperty(value.getValue().getValue()));
+            treeTableView.getColumns().add(c);
+        }
+
+        treeTableView.setFocusModel(null);
+
+        stageLoader = new StageLoader(treeTableView);
+
+        Object result = treeTableView.queryAccessibleAttribute(AccessibleAttribute.FOCUS_ITEM);
+        assertNull(result);
+    }
+
+    @Test
+    public void testQueryAccessibleAttributeFocusItemWithNullFocusModelPlaceholder() {
+        treeTableView.setFocusModel(null);
+        stageLoader = new StageLoader(treeTableView);
+
+        Object result = treeTableView.queryAccessibleAttribute(AccessibleAttribute.FOCUS_ITEM);
+        assertNull(result);
     }
 }

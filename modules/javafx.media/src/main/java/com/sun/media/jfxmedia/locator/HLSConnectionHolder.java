@@ -73,7 +73,7 @@ final class HLSConnectionHolder extends ConnectionHolder {
     private static final String CHARSET_UTF_8 = "UTF-8";
     private static final String CHARSET_US_ASCII = "US-ASCII";
 
-    HLSConnectionHolder(URI uri) throws IOException {
+    HLSConnectionHolder(URI uri) {
         playlistThread.setPlaylistURI(uri);
         init();
     }

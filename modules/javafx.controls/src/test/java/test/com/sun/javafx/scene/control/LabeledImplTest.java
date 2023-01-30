@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,7 +30,6 @@ import test.com.sun.javafx.pgstub.StubPlatformImageInfo;
 import test.com.sun.javafx.pgstub.StubToolkit;
 import com.sun.javafx.scene.control.LabeledImpl;
 import com.sun.javafx.scene.control.LabeledImplShim;
-import com.sun.javafx.scene.control.skin.FXVK;
 import com.sun.javafx.tk.Toolkit;
 import javafx.css.CssMetaData;
 import java.util.ArrayList;
@@ -161,7 +160,7 @@ public class LabeledImplTest {
     @Parameters
     public static Collection<Configuration[]> data() {
 
-        Collection<Configuration[]> data = new ArrayList<Configuration[]>();
+        Collection<Configuration[]> data = new ArrayList<>();
 
         List<CssMetaData<? extends Styleable, ?>> styleables = LabeledImplShim.STYLEABLES_TO_MIRROR;
         for(CssMetaData<? extends Styleable, ?> styleable : styleables) {

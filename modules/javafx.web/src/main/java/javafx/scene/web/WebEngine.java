@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -367,7 +367,7 @@ final public class WebEngine {
      * between the WebView and its WebEngine (although not all WebEngines have
      * a WebView, every WebView has one and only one WebEngine).
      */
-    private final ObjectProperty<WebView> view = new SimpleObjectProperty<WebView>(this, "view");
+    private final ObjectProperty<WebView> view = new SimpleObjectProperty<>(this, "view");
 
     /**
      * The Worker which shows progress of the web engine as it loads pages.
@@ -688,7 +688,7 @@ final public class WebEngine {
     }
 
     private final ObjectProperty<EventHandler<WebEvent<String>>> onAlert
-            = new SimpleObjectProperty<EventHandler<WebEvent<String>>>(this, "onAlert");
+            = new SimpleObjectProperty<>(this, "onAlert");
 
     public final EventHandler<WebEvent<String>> getOnAlert() { return onAlert.get(); }
 
@@ -703,7 +703,7 @@ final public class WebEngine {
 
 
     private final ObjectProperty<EventHandler<WebEvent<String>>> onStatusChanged
-            = new SimpleObjectProperty<EventHandler<WebEvent<String>>>(this, "onStatusChanged");
+            = new SimpleObjectProperty<>(this, "onStatusChanged");
 
     public final EventHandler<WebEvent<String>> getOnStatusChanged() { return onStatusChanged.get(); }
 
@@ -718,7 +718,7 @@ final public class WebEngine {
 
 
     private final ObjectProperty<EventHandler<WebEvent<Rectangle2D>>> onResized
-            = new SimpleObjectProperty<EventHandler<WebEvent<Rectangle2D>>>(this, "onResized");
+            = new SimpleObjectProperty<>(this, "onResized");
 
     public final EventHandler<WebEvent<Rectangle2D>> getOnResized() { return onResized.get(); }
 
@@ -734,7 +734,7 @@ final public class WebEngine {
 
 
     private final ObjectProperty<EventHandler<WebEvent<Boolean>>> onVisibilityChanged
-            = new SimpleObjectProperty<EventHandler<WebEvent<Boolean>>>(this, "onVisibilityChanged");
+            = new SimpleObjectProperty<>(this, "onVisibilityChanged");
 
     public final EventHandler<WebEvent<Boolean>> getOnVisibilityChanged() { return onVisibilityChanged.get(); }
 
@@ -750,7 +750,7 @@ final public class WebEngine {
 
 
     private final ObjectProperty<Callback<PopupFeatures, WebEngine>> createPopupHandler
-            = new SimpleObjectProperty<Callback<PopupFeatures, WebEngine>>(this, "createPopupHandler",
+            = new SimpleObjectProperty<>(this, "createPopupHandler",
             p -> WebEngine.this);
 
     public final Callback<PopupFeatures, WebEngine> getCreatePopupHandler() { return createPopupHandler.get(); }
@@ -775,7 +775,7 @@ final public class WebEngine {
 
 
     private final ObjectProperty<Callback<String, Boolean>> confirmHandler
-            = new SimpleObjectProperty<Callback<String, Boolean>>(this, "confirmHandler");
+            = new SimpleObjectProperty<>(this, "confirmHandler");
 
     public final Callback<String, Boolean> getConfirmHandler() { return confirmHandler.get(); }
 
@@ -793,7 +793,7 @@ final public class WebEngine {
 
 
     private final ObjectProperty<Callback<PromptData, String>> promptHandler
-            = new SimpleObjectProperty<Callback<PromptData, String>>(this, "promptHandler");
+            = new SimpleObjectProperty<>(this, "promptHandler");
 
     public final Callback<PromptData, String> getPromptHandler() { return promptHandler.get(); }
 
@@ -1142,7 +1142,7 @@ final public class WebEngine {
         private final WeakReference<WebEngine> engine;
 
         private AccessorImpl(WebEngine w) {
-            this.engine = new WeakReference<WebEngine>(w);
+            this.engine = new WeakReference<>(w);
         }
 
         @Override public WebEngine getEngine() {
@@ -1232,7 +1232,7 @@ final public class WebEngine {
 
 
         private PageLoadListener(WebEngine engine) {
-            this.engine = new WeakReference<WebEngine>(engine);
+            this.engine = new WeakReference<>(engine);
         }
 
 
@@ -1256,7 +1256,7 @@ final public class WebEngine {
 
     private final class LoadWorker implements Worker<Void> {
 
-        private final ReadOnlyObjectWrapper<State> state = new ReadOnlyObjectWrapper<State>(this, "state", State.READY);
+        private final ReadOnlyObjectWrapper<State> state = new ReadOnlyObjectWrapper<>(this, "state", State.READY);
         @Override public final State getState() { checkThread(); return state.get(); }
         @Override public final ReadOnlyObjectProperty<State> stateProperty() { checkThread(); return state.getReadOnlyProperty(); }
         private void updateState(State value) {
@@ -1268,14 +1268,14 @@ final public class WebEngine {
         /**
          * @InheritDoc
          */
-        private final ReadOnlyObjectWrapper<Void> value = new ReadOnlyObjectWrapper<Void>(this, "value", null);
+        private final ReadOnlyObjectWrapper<Void> value = new ReadOnlyObjectWrapper<>(this, "value", null);
         @Override public final Void getValue() { checkThread(); return value.get(); }
         @Override public final ReadOnlyObjectProperty<Void> valueProperty() { checkThread(); return value.getReadOnlyProperty(); }
 
         /**
          * @InheritDoc
          */
-        private final ReadOnlyObjectWrapper<Throwable> exception = new ReadOnlyObjectWrapper<Throwable>(this, "exception");
+        private final ReadOnlyObjectWrapper<Throwable> exception = new ReadOnlyObjectWrapper<>(this, "exception");
         @Override public final Throwable getException() { checkThread(); return exception.get(); }
         @Override public final ReadOnlyObjectProperty<Throwable> exceptionProperty() { checkThread(); return exception.getReadOnlyProperty(); }
 
@@ -1460,6 +1460,7 @@ final public class WebEngine {
             }
         }
 
+        @Override
         public Document get() {
             if (!this.available) {
                 return null;
@@ -1473,10 +1474,12 @@ final public class WebEngine {
             return this.document;
         }
 
+        @Override
         public Object getBean() {
             return WebEngine.this;
         }
 
+        @Override
         public String getName() {
             return "document";
         }
@@ -1565,7 +1568,7 @@ final public class WebEngine {
 
 
         private InspectorClientImpl(WebEngine engine) {
-            this.engine = new WeakReference<WebEngine>(engine);
+            this.engine = new WeakReference<>(engine);
         }
 
 

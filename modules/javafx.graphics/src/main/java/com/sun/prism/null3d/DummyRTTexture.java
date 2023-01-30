@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -44,22 +44,27 @@ class DummyRTTexture extends DummyTexture implements RTTexture {
               contentWidth, contentHeight, true);
     }
 
+    @Override
     public Graphics createGraphics() {
         return DummyGraphics.create(this, getContext());
     }
 
+    @Override
     public int[] getPixels() {
         return null;
     }
 
+    @Override
     public boolean readPixels(Buffer pixels, int x, int y, int width, int height) {
         return false;
     }
 
+    @Override
     public boolean readPixels(Buffer pixels) {
         return false;
     }
 
+    @Override
     public Screen getAssociatedScreen() {
         return getContext().getAssociatedScreen();
     }
@@ -88,17 +93,21 @@ class DummyRTTexture extends DummyTexture implements RTTexture {
     {
     }
 
+    @Override
     public void update(MediaFrame frame, boolean skipFlush) {
     }
 
+    @Override
     public boolean isOpaque() {
         return opaque;
     }
 
+    @Override
     public void setOpaque(boolean opaque) {
         this.opaque = opaque;
     }
 
+    @Override
     public boolean isVolatile() {
         return false;
     }

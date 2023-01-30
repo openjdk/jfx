@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -49,7 +49,6 @@ import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.beans.property.StringProperty;
 import javafx.beans.property.StringPropertyBase;
-import javafx.beans.value.WritableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
@@ -182,7 +181,7 @@ public class PieChart extends Chart {
     // -------------- PUBLIC PROPERTIES ----------------------------------------
 
     /** PieCharts data */
-    private ObjectProperty<ObservableList<Data>> data = new ObjectPropertyBase<ObservableList<Data>>() {
+    private ObjectProperty<ObservableList<Data>> data = new ObjectPropertyBase<>() {
         private ObservableList<Data> old;
         @Override protected void invalidated() {
             final ObservableList<Data> current = getValue();
@@ -195,7 +194,7 @@ public class PieChart extends Chart {
                 final int toIndex = (current != null) ? current.size() : 0;
                 // let data listener know all old data have been removed and new data that has been added
                 if (toIndex > 0 || !removed.isEmpty()) {
-                    dataChangeListener.onChanged(new NonIterableChange<Data>(0, toIndex, current){
+                    dataChangeListener.onChanged(new NonIterableChange<>(0, toIndex, current){
                         @Override public List<Data> getRemoved() { return removed; }
                         @Override public boolean wasPermutated() { return false; }
                         @Override protected int[] getPermutation() {
@@ -205,7 +204,7 @@ public class PieChart extends Chart {
                 }
             } else if (old != null && old.size() > 0) {
                 // let series listener know all old series have been removed
-                dataChangeListener.onChanged(new NonIterableChange<Data>(0, 0, current){
+                dataChangeListener.onChanged(new NonIterableChange<>(0, 0, current){
                     @Override public List<Data> getRemoved() { return old; }
                     @Override public boolean wasPermutated() { return false; }
                     @Override protected int[] getPermutation() {
@@ -245,6 +244,7 @@ public class PieChart extends Chart {
             return "startAngle";
         }
 
+        @Override
         public CssMetaData<PieChart,Number> getCssMetaData() {
             return StyleableProperties.START_ANGLE;
         }
@@ -270,6 +270,7 @@ public class PieChart extends Chart {
             return "clockwise";
         }
 
+        @Override
         public CssMetaData<PieChart,Boolean> getCssMetaData() {
             return StyleableProperties.CLOCKWISE;
         }
@@ -296,6 +297,7 @@ public class PieChart extends Chart {
             return "labelLineLength";
         }
 
+        @Override
         public CssMetaData<PieChart,Number> getCssMetaData() {
             return StyleableProperties.LABEL_LINE_LENGTH;
         }
@@ -321,6 +323,7 @@ public class PieChart extends Chart {
             return "labelsVisible";
         }
 
+        @Override
         public CssMetaData<PieChart,Boolean> getCssMetaData() {
             return StyleableProperties.LABELS_VISIBLE;
         }
@@ -768,11 +771,11 @@ public class PieChart extends Chart {
     }
 
     private static double calcX(double angle, double radius, double centerX) {
-        return (double)(centerX + radius * Math.cos(Math.toRadians(-angle)));
+        return centerX + radius * Math.cos(Math.toRadians(-angle));
     }
 
     private static double calcY(double angle, double radius, double centerY) {
-        return (double)(centerY + radius * Math.sin(Math.toRadians(-angle)));
+        return centerY + radius * Math.sin(Math.toRadians(-angle));
     }
 
      /** Normalize any angle into -180 to 180 deg range */
@@ -851,7 +854,7 @@ public class PieChart extends Chart {
         /**
          * The chart which this data belongs to.
          */
-        private ReadOnlyObjectWrapper<PieChart> chart = new ReadOnlyObjectWrapper<PieChart>(this, "chart");
+        private ReadOnlyObjectWrapper<PieChart> chart = new ReadOnlyObjectWrapper<>(this, "chart");
 
         public final PieChart getChart() {
             return chart.getValue();
@@ -1029,7 +1032,7 @@ public class PieChart extends Chart {
      */
      private static class StyleableProperties {
          private static final CssMetaData<PieChart,Boolean> CLOCKWISE =
-             new CssMetaData<PieChart,Boolean>("-fx-clockwise",
+             new CssMetaData<>("-fx-clockwise",
                  BooleanConverter.getInstance(), Boolean.TRUE) {
 
             @Override
@@ -1039,12 +1042,12 @@ public class PieChart extends Chart {
 
             @Override
             public StyleableProperty<Boolean> getStyleableProperty(PieChart node) {
-                return (StyleableProperty<Boolean>)(WritableValue<Boolean>)node.clockwiseProperty();
+                return (StyleableProperty<Boolean>)node.clockwiseProperty();
             }
         };
 
          private static final CssMetaData<PieChart,Boolean> LABELS_VISIBLE =
-             new CssMetaData<PieChart,Boolean>("-fx-pie-label-visible",
+             new CssMetaData<>("-fx-pie-label-visible",
                  BooleanConverter.getInstance(), Boolean.TRUE) {
 
             @Override
@@ -1054,12 +1057,12 @@ public class PieChart extends Chart {
 
             @Override
             public StyleableProperty<Boolean> getStyleableProperty(PieChart node) {
-                return (StyleableProperty<Boolean>)(WritableValue<Boolean>)node.labelsVisibleProperty();
+                return (StyleableProperty<Boolean>)node.labelsVisibleProperty();
             }
         };
 
          private static final CssMetaData<PieChart,Number> LABEL_LINE_LENGTH =
-             new CssMetaData<PieChart,Number>("-fx-label-line-length",
+             new CssMetaData<>("-fx-label-line-length",
                  SizeConverter.getInstance(), 20d) {
 
             @Override
@@ -1069,12 +1072,12 @@ public class PieChart extends Chart {
 
             @Override
             public StyleableProperty<Number> getStyleableProperty(PieChart node) {
-                return (StyleableProperty<Number>)(WritableValue<Number>)node.labelLineLengthProperty();
+                return (StyleableProperty<Number>)node.labelLineLengthProperty();
             }
         };
 
          private static final CssMetaData<PieChart,Number> START_ANGLE =
-             new CssMetaData<PieChart,Number>("-fx-start-angle",
+             new CssMetaData<>("-fx-start-angle",
                  SizeConverter.getInstance(), 0d) {
 
             @Override
@@ -1084,7 +1087,7 @@ public class PieChart extends Chart {
 
             @Override
             public StyleableProperty<Number> getStyleableProperty(PieChart node) {
-                return (StyleableProperty<Number>)(WritableValue<Number>)node.startAngleProperty();
+                return (StyleableProperty<Number>)node.startAngleProperty();
             }
         };
 
@@ -1092,7 +1095,7 @@ public class PieChart extends Chart {
          static {
 
             final List<CssMetaData<? extends Styleable, ?>> styleables =
-                new ArrayList<CssMetaData<? extends Styleable, ?>>(Chart.getClassCssMetaData());
+                new ArrayList<>(Chart.getClassCssMetaData());
             styleables.add(CLOCKWISE);
             styleables.add(LABELS_VISIBLE);
             styleables.add(LABEL_LINE_LENGTH);

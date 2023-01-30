@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,7 +30,7 @@ import com.sun.javafx.property.PropertyReference;
 // NOTE: Foo must be a public interface, otherwise the test in PropertySupportTest
 // that uses Foo will fail.
 public interface Foo  {
-    public static final PropertyReference<String> NAME = new PropertyReference<String>(Foo.class, "name");
+    public static final PropertyReference<String> NAME = new PropertyReference<>(Foo.class, "name");
     public void setName(String name);
     public String getName();
 }

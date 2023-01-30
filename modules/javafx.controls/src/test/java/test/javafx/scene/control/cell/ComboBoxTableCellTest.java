@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -44,7 +44,7 @@ public class ComboBoxTableCellTest {
     private StringConverter<Object> converter;
 
     @Before public void setup() {
-        converter = new StringConverter<Object>() {
+        converter = new StringConverter<>() {
             @Override public String toString(Object object) {
                 return null;
             }
@@ -267,7 +267,7 @@ public class ComboBoxTableCellTest {
     @Test public void test_updateItem_isNotEmpty_textIsNotNull_nonNullConverter() {
         ComboBoxTableCell<Object, Object> cell = new ComboBoxTableCell<>();
         cell.setConverter(
-                new StringConverter<Object>() {
+                new StringConverter<>() {
                     @Override public Object fromString(String string) {
                         return null;
                     }
@@ -452,7 +452,7 @@ public class ComboBoxTableCellTest {
         cell.setConverter(null);
         assertNull(cb.getConverter());
 
-        StringConverter<Object> customConverter = new StringConverter<Object>() {
+        StringConverter<Object> customConverter = new StringConverter<>() {
             @Override public String toString(Object object) { return null; }
             @Override public Object fromString(String string) { return null; }
         };

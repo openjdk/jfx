@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -75,7 +75,7 @@ public abstract class Effect {
      * @param input the input {@code Effect}
      */
     protected Effect(Effect input) {
-        this.inputs = new ArrayList<Effect>(1);
+        this.inputs = new ArrayList<>(1);
         this.unmodifiableInputs = Collections.unmodifiableList(inputs);
         this.maxInputs = 1;
         setInput(0, input);
@@ -88,7 +88,7 @@ public abstract class Effect {
      * @param input2 the second input {@code Effect}
      */
     protected Effect(Effect input1, Effect input2) {
-        this.inputs = new ArrayList<Effect>(2);
+        this.inputs = new ArrayList<>(2);
         this.unmodifiableInputs = Collections.unmodifiableList(inputs);
         this.maxInputs = 2;
         setInput(0, input1);

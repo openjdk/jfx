@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -58,7 +58,7 @@ public class ProgressBarTableCell<S> extends TableCell<S, Double> {
      *      from 0.0 to 1.0.
      */
     public static <S> Callback<TableColumn<S,Double>, TableCell<S,Double>> forTableColumn() {
-        return param -> new ProgressBarTableCell<S>();
+        return param -> new ProgressBarTableCell<>();
     }
 
 

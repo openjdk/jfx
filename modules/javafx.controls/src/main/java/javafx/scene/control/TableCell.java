@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -184,7 +184,7 @@ public class TableCell<S,T> extends IndexedCell<T> {
     private final WeakListChangeListener<TableColumn<S,?>> weakVisibleLeafColumnsListener =
             new WeakListChangeListener<>(visibleLeafColumnsListener);
     private final WeakListChangeListener<String> weakColumnStyleClassListener =
-            new WeakListChangeListener<String>(columnStyleClassListener);
+            new WeakListChangeListener<>(columnStyleClassListener);
 
 
     /* *************************************************************************
@@ -194,7 +194,7 @@ public class TableCell<S,T> extends IndexedCell<T> {
      **************************************************************************/
 
     // --- TableColumn
-    private ReadOnlyObjectWrapper<TableColumn<S,T>> tableColumn = new ReadOnlyObjectWrapper<TableColumn<S,T>>() {
+    private ReadOnlyObjectWrapper<TableColumn<S,T>> tableColumn = new ReadOnlyObjectWrapper<>() {
         @Override protected void invalidated() {
             updateColumnIndex();
         }
@@ -235,7 +235,7 @@ public class TableCell<S,T> extends IndexedCell<T> {
 
     private ReadOnlyObjectWrapper<TableView<S>> tableViewPropertyImpl() {
         if (tableView == null) {
-            tableView = new ReadOnlyObjectWrapper<TableView<S>>() {
+            tableView = new ReadOnlyObjectWrapper<>() {
                 private WeakReference<TableView<S>> weakTableViewRef;
                 @Override protected void invalidated() {
                     TableView.TableViewSelectionModel<S> sm;
@@ -259,7 +259,7 @@ public class TableCell<S,T> extends IndexedCell<T> {
                         get().editingCellProperty().addListener(weakEditingListener);
                         get().getVisibleLeafColumns().addListener(weakVisibleLeafColumnsListener);
 
-                        weakTableViewRef = new WeakReference<TableView<S>>(get());
+                        weakTableViewRef = new WeakReference<>(get());
                     }
 
                     updateColumnIndex();
@@ -438,7 +438,7 @@ public class TableCell<S,T> extends IndexedCell<T> {
 
     /** {@inheritDoc} */
     @Override protected Skin<?> createDefaultSkin() {
-        return new TableCellSkin<S,T>(this);
+        return new TableCellSkin<>(this);
     }
 
 //    @Override public void dispose() {
@@ -827,10 +827,22 @@ public class TableCell<S,T> extends IndexedCell<T> {
     @Override
     public Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
         switch (attribute) {
-            case ROW_INDEX: return getIndex();
-            case COLUMN_INDEX: return columnIndex;
-            case SELECTED: return isInCellSelectionMode() ? isSelected() : getTableRow().isSelected();
-            default: return super.queryAccessibleAttribute(attribute, parameters);
+        case ROW_INDEX:
+            return getIndex();
+        case COLUMN_INDEX:
+            return columnIndex;
+        case SELECTED:
+            if (isInCellSelectionMode()) {
+                return isSelected();
+            } else {
+                if(getTableRow() == null) {
+                    return null;
+                } else {
+                    return getTableRow().isSelected();
+                }
+            }
+        default:
+            return super.queryAccessibleAttribute(attribute, parameters);
         }
     }
 

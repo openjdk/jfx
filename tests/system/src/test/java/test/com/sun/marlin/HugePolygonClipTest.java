@@ -24,6 +24,9 @@
  */
 package test.com.sun.marlin;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
+
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.FileOutputStream;
@@ -31,10 +34,14 @@ import java.io.IOException;
 import java.util.Iterator;
 import java.util.Locale;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
+
+import javax.imageio.IIOImage;
+import javax.imageio.ImageIO;
+import javax.imageio.ImageWriteParam;
+import javax.imageio.ImageWriter;
+import javax.imageio.stream.ImageOutputStream;
 
 import javafx.application.Application;
-import javafx.application.Platform;
 import javafx.embed.swing.SwingFXUtils;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.Group;
@@ -47,22 +54,12 @@ import javafx.scene.shape.Polygon;
 import javafx.scene.transform.Translate;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
-import javax.imageio.IIOImage;
-import javax.imageio.ImageIO;
-import javax.imageio.ImageWriteParam;
-import javax.imageio.ImageWriter;
-import javax.imageio.stream.ImageOutputStream;
 
-import junit.framework.AssertionFailedError;
 import org.junit.AfterClass;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
 import test.util.Util;
-import static test.util.Util.TIMEOUT;
 
 /**
  * Clip rendering test
@@ -134,18 +131,13 @@ public class HugePolygonClipTest {
 
     @BeforeClass
     public static void setupOnce() throws Exception {
-        // Start the Application
-        new Thread(() -> Application.launch(MyApp.class, (String[]) null)).start();
-
-        assertTrue("Timeout waiting for Application to launch",
-                launchLatch.await(TIMEOUT, TimeUnit.MILLISECONDS));
-
+        Util.launch(launchLatch, MyApp.class);
         assertEquals(0, launchLatch.getCount());
     }
 
     @AfterClass
     public static void teardownOnce() {
-        Platform.exit();
+        Util.shutdown();
     }
 
     @Test(timeout = 10000)

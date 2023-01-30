@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -52,11 +52,11 @@ public class CharacterStringConverterTest {
     }
 
     @Test public void fromString_testValidStringInput_differentCase_one() {
-        assertNotSame((Object)char_C, converter.fromString("c"));
+        assertNotSame(char_C, converter.fromString("c"));
     }
 
     @Test public void fromString_testValidStringInput_differentCase_two() {
-        assertNotSame((Object)char_c, converter.fromString("C"));
+        assertNotSame(char_c, converter.fromString("C"));
     }
 
     @Test public void fromString_testValidStringInputWithWhiteSpace_lowercase() {

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -34,10 +34,12 @@ public class JSWRendererDelegate implements RendererDelegate {
     public JSWRendererDelegate() {
     }
 
+    @Override
     public AccelType getAccelType() {
         return AccelType.NONE;
     }
 
+    @Override
     public String getPlatformPeerName(String name, int unrollCount) {
         return Renderer.rootPkg + ".impl.sw.java.JSW" + name + "Peer";
     }

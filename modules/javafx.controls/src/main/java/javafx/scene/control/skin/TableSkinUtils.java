@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2016, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,35 +24,26 @@
  */
 package javafx.scene.control.skin;
 
-import com.sun.javafx.scene.control.Properties;
-import com.sun.javafx.scene.control.TableColumnBaseHelper;
 import com.sun.javafx.scene.control.TreeTableViewBackingList;
-import com.sun.javafx.scene.control.skin.Utils;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.scene.Node;
+import javafx.scene.control.ConstrainedColumnResizeBase;
 import javafx.scene.control.Control;
 import javafx.scene.control.IndexedCell;
 import javafx.scene.control.ResizeFeaturesBase;
-import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableColumnBase;
 import javafx.scene.control.TableFocusModel;
 import javafx.scene.control.TablePositionBase;
 import javafx.scene.control.TableSelectionModel;
 import javafx.scene.control.TableView;
-import javafx.scene.control.TreeTableCell;
 import javafx.scene.control.TreeTableColumn;
-import javafx.scene.control.TreeTableRow;
 import javafx.scene.control.TreeTableView;
-import javafx.scene.layout.Region;
 import javafx.util.Callback;
-
-import java.util.List;
-import java.util.Optional;
 
 // NOT PUBLIC API
 class TableSkinUtils {
@@ -211,7 +202,17 @@ class TableSkinUtils {
 
     /** returns true if the column resize policy is constrained */
     public static boolean isConstrainedResizePolicy(Callback<? extends ResizeFeaturesBase, Boolean> x) {
-        return (x == TableView.CONSTRAINED_RESIZE_POLICY) ||
-               (x == TreeTableView.CONSTRAINED_RESIZE_POLICY);
+        return (x instanceof ConstrainedColumnResizeBase);
+    }
+
+    /** returns the number of visible rows in Tree/TableView */
+    public static int getItemCount(TableViewSkinBase<?,?,?,?,?> skin) {
+        Object control = skin.getSkinnable();
+        if (control instanceof TableView table) {
+            return table.getItems().size();
+        } else if (control instanceof TreeTableView tree) {
+            return tree.getExpandedItemCount();
+        }
+        return 0;
     }
 }

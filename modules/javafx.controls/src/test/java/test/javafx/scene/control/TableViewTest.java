@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -41,11 +41,9 @@ import com.sun.javafx.scene.control.ReadOnlyUnbackedObservableList;
 import com.sun.javafx.scene.control.SelectedCellsMap;
 import com.sun.javafx.scene.control.TableColumnBaseHelper;
 import com.sun.javafx.scene.control.behavior.TableCellBehavior;
-import javafx.beans.InvalidationListener;
 import javafx.collections.ObservableSet;
 import javafx.collections.SetChangeListener;
 import javafx.css.PseudoClass;
-import javafx.scene.Node;
 import javafx.scene.control.Slider;
 import javafx.scene.layout.Region;
 import org.junit.After;
@@ -64,6 +62,7 @@ import javafx.collections.ObservableList;
 import javafx.collections.transformation.SortedList;
 import javafx.event.EventHandler;
 import javafx.geometry.Orientation;
+import javafx.scene.AccessibleAttribute;
 import javafx.scene.Group;
 import javafx.scene.Scene;
 import javafx.scene.control.cell.*;
@@ -115,7 +114,6 @@ import test.com.sun.javafx.scene.control.test.Person;
 import test.com.sun.javafx.scene.control.test.RT_22463_Person;
 
 import javafx.scene.control.skin.TableHeaderRowShim;
-import static org.junit.Assert.assertEquals;
 import test.com.sun.javafx.scene.control.infrastructure.TableColumnHeaderUtil;
 
 public class TableViewTest {
@@ -237,7 +235,7 @@ public class TableViewTest {
 
     @Test public void selectionModelCanBeBound() {
         TableView.TableViewSelectionModel<String> sm = TableViewShim.<String>get_TableViewArrayListSelectionModel(table);
-        ObjectProperty<TableView.TableViewSelectionModel<String>> other = new SimpleObjectProperty<TableView.TableViewSelectionModel<String>>(sm);
+        ObjectProperty<TableView.TableViewSelectionModel<String>> other = new SimpleObjectProperty<>(sm);
         table.selectionModelProperty().bind(other);
         assertSame(sm, sm);
     }
@@ -303,8 +301,8 @@ public class TableViewTest {
         assertEquals("Pineapple", sm.getSelectedItem());
     }
 
-    @Ignore("Not fixed yet")
-    @Test public void ensureSelectionShiftsDownWhenOneNewItemIsAdded() {
+    @Test
+    public void ensureSelectionShiftsDownWhenOneNewItemIsAdded() {
         table.getItems().addAll("Apple", "Orange", "Banana");
         sm.select(1);
         assertEquals(1, sm.getSelectedIndex());
@@ -315,8 +313,8 @@ public class TableViewTest {
         assertEquals("Orange", sm.getSelectedItem());
     }
 
-    @Ignore("Not fixed yet")
-    @Test public void ensureSelectionShiftsDownWhenMultipleNewItemAreAdded() {
+    @Test
+    public void ensureSelectionShiftsDownWhenMultipleNewItemAreAdded() {
         table.getItems().addAll("Apple", "Orange", "Banana");
         sm.select(1);
         assertEquals(1, sm.getSelectedIndex());
@@ -327,8 +325,8 @@ public class TableViewTest {
         assertEquals(4, sm.getSelectedIndex());
     }
 
-    @Ignore("Not fixed yet")
-    @Test public void ensureSelectionShiftsDownWhenOneItemIsRemoved() {
+    @Test
+    public void ensureSelectionShiftsDownWhenOneItemIsRemoved() {
         table.getItems().addAll("Apple", "Orange", "Banana");
         sm.select(1);
         assertEquals(1, sm.getSelectedIndex());
@@ -339,8 +337,8 @@ public class TableViewTest {
         assertEquals("Orange", sm.getSelectedItem());
     }
 
-    @Ignore("Not fixed yet")
-    @Test public void ensureSelectionShiftsDownWheMultipleItemsAreRemoved() {
+    @Test
+    public void ensureSelectionShiftsDownWheMultipleItemsAreRemoved() {
         table.getItems().addAll("Apple", "Orange", "Banana");
         sm.select(2);
         assertEquals(2, sm.getSelectedIndex());
@@ -437,12 +435,12 @@ public class TableViewTest {
         assertEquals(0, table.getVisibleLeafColumns().size());
     }
 
-    @Test public void testSortOrderCleanup() {
-//        ObservableList<ObservablePerson> persons = ObservablePerson.createFXPersonList();
+    @Test
+    public void testSortOrderCleanup() {
         TableView table = new TableView();
-        TableColumn<String,String> first = new TableColumn<String,String>("first");
+        TableColumn<String,String> first = new TableColumn<>("first");
         first.setCellValueFactory(new PropertyValueFactory("firstName"));
-        TableColumn<String,String> second = new TableColumn<String,String>("second");
+        TableColumn<String,String> second = new TableColumn<>("second");
         second.setCellValueFactory(new PropertyValueFactory("lastName"));
         table.getColumns().addAll(first, second);
         table.getSortOrder().setAll(first, second);
@@ -465,7 +463,7 @@ public class TableViewTest {
     private static final Callback<TableView<String>, Boolean> SORT_SUCCESS_ASCENDING_SORT_POLICY =
             tableView -> {
                 if (tableView.getSortOrder().isEmpty()) return true;
-                FXCollections.sort(tableView.getItems(), new Comparator<String>() {
+                FXCollections.sort(tableView.getItems(), new Comparator<>() {
                     @Override public int compare(String o1, String o2) {
                         return o1.compareTo(o2);
                     }
@@ -474,9 +472,9 @@ public class TableViewTest {
             };
 
     private TableColumn<String, String> initSortTestStructure() {
-        TableColumn<String, String> col = new TableColumn<String, String>("column");
+        TableColumn<String, String> col = new TableColumn<>("column");
         col.setSortType(ASCENDING);
-        col.setCellValueFactory(param -> new ReadOnlyObjectWrapper<String>(param.getValue()));
+        col.setCellValueFactory(param -> new ReadOnlyObjectWrapper<>(param.getValue()));
         table.getColumns().add(col);
         table.getItems().addAll("Apple", "Orange", "Banana");
         return col;
@@ -728,8 +726,8 @@ public class TableViewTest {
         VirtualFlowTestUtils.assertListContainsItemsInOrder(c.getColumns(), col);
     }
 
-    @Ignore
-    @Test public void testComparatorChangesInSyncWithSortOrder_2() {
+    @Test
+    public void testComparatorChangesInSyncWithSortOrder_2() {
         // same as test above
         TableColumn<String, String> col = initSortTestStructure();
         assertNull(table.getComparator());
@@ -818,13 +816,13 @@ public class TableViewTest {
         StageLoader sl = new StageLoader(table);
 
         TableColumn firstNameCol = new TableColumn("First Name");
-        firstNameCol.setCellValueFactory(new PropertyValueFactory<Person, String>("firstName"));
+        firstNameCol.setCellValueFactory(new PropertyValueFactory<>("firstName"));
 
         TableColumn lastNameCol = new TableColumn("Last Name");
-        lastNameCol.setCellValueFactory(new PropertyValueFactory<Person, String>("lastName"));
+        lastNameCol.setCellValueFactory(new PropertyValueFactory<>("lastName"));
 
         TableColumn emailCol = new TableColumn("Email");
-        emailCol.setCellValueFactory(new PropertyValueFactory<Person, String>("email"));
+        emailCol.setCellValueFactory(new PropertyValueFactory<>("email"));
 
         table.getColumns().addAll(firstNameCol, lastNameCol, emailCol);
         table.setItems(personTestData);
@@ -865,8 +863,12 @@ public class TableViewTest {
         assertEquals(-1, tv.getSelectionModel().getSelectedIndex());
     }
 
-    @Ignore("Started failing recently, but manual tests seem to indicate the functionality is intact")
-    @Test public void test_rt17522_focusShouldMoveWhenItemAddedAtFocusIndex() {
+    /**
+     * JDK-8119787
+     * @ Ignore("Started failing recently, but manual tests seem to indicate the functionality is intact")
+     */
+    @Test
+    public void test_rt17522_focusShouldMoveWhenItemAddedAtFocusIndex() {
         final TableView lv = new TableView();
         StageLoader sl = new StageLoader(lv);
         FocusModel fm = lv.getFocusModel();
@@ -957,7 +959,7 @@ public class TableViewTest {
     }
 
     @Test public void test_rt18339_onlyEditWhenTableViewIsEditable_tableEditableIsFalse_columnEditableIsFalse() {
-        TableColumn<String,String> first = new TableColumn<String,String>("first");
+        TableColumn<String,String> first = new TableColumn<>("first");
         first.setEditable(false);
         table.getColumns().add(first);
         table.setEditable(false);
@@ -966,7 +968,7 @@ public class TableViewTest {
     }
 
     @Test public void test_rt18339_onlyEditWhenTableViewIsEditable_tableEditableIsFalse_columnEditableIsTrue() {
-        TableColumn<String,String> first = new TableColumn<String,String>("first");
+        TableColumn<String,String> first = new TableColumn<>("first");
         first.setEditable(true);
         table.getColumns().add(first);
         table.setEditable(false);
@@ -975,7 +977,7 @@ public class TableViewTest {
     }
 
     @Test public void test_rt18339_onlyEditWhenTableViewIsEditable_tableEditableIsTrue_columnEditableIsFalse() {
-        TableColumn<String,String> first = new TableColumn<String,String>("first");
+        TableColumn<String,String> first = new TableColumn<>("first");
         first.setEditable(false);
         table.getColumns().add(first);
         table.setEditable(true);
@@ -984,7 +986,7 @@ public class TableViewTest {
     }
 
     @Test public void test_rt18339_onlyEditWhenTableViewIsEditable_tableEditableIsTrue_columnEditableIsTrue() {
-        TableColumn<String,String> first = new TableColumn<String,String>("first");
+        TableColumn<String,String> first = new TableColumn<>("first");
         first.setEditable(true);
         table.getColumns().add(first);
         table.setEditable(true);
@@ -1035,17 +1037,17 @@ public class TableViewTest {
     }
 
     @Test public void test_rt28534() {
-        TableView<Person> table = new TableView<Person>();
+        TableView<Person> table = new TableView<>();
         table.setItems(personTestData);
 
         TableColumn firstNameCol = new TableColumn("First Name");
-        firstNameCol.setCellValueFactory(new PropertyValueFactory<Person, String>("firstName"));
+        firstNameCol.setCellValueFactory(new PropertyValueFactory<>("firstName"));
 
         TableColumn lastNameCol = new TableColumn("Last Name");
-        lastNameCol.setCellValueFactory(new PropertyValueFactory<Person, String>("lastName"));
+        lastNameCol.setCellValueFactory(new PropertyValueFactory<>("lastName"));
 
         TableColumn emailCol = new TableColumn("Email");
-        emailCol.setCellValueFactory(new PropertyValueFactory<Person, String>("email"));
+        emailCol.setCellValueFactory(new PropertyValueFactory<>("email"));
 
         table.getColumns().addAll(firstNameCol, lastNameCol, emailCol);
 
@@ -1063,12 +1065,12 @@ public class TableViewTest {
     }
 
     @Test public void test_rt22463() {
-        final TableView<RT_22463_Person> table = new TableView<RT_22463_Person>();
+        final TableView<RT_22463_Person> table = new TableView<>();
         table.setTableMenuButtonVisible(true);
         TableColumn c1 = new TableColumn("Id");
         TableColumn c2 = new TableColumn("Name");
-        c1.setCellValueFactory(new PropertyValueFactory<Person, Long>("id"));
-        c2.setCellValueFactory(new PropertyValueFactory<Person, String>("name"));
+        c1.setCellValueFactory(new PropertyValueFactory<>("id"));
+        c2.setCellValueFactory(new PropertyValueFactory<>("name"));
         table.getColumns().addAll(c1, c2);
 
         // before the change things display fine
@@ -1099,7 +1101,7 @@ public class TableViewTest {
     @Test public void test_rt28637() {
         ObservableList<String> items = FXCollections.observableArrayList("String1", "String2", "String3", "String4");
 
-        final TableView<String> tableView = new TableView<String>();
+        final TableView<String> tableView = new TableView<>();
         final MultipleSelectionModel sm = tableView.getSelectionModel();
         tableView.setItems(items);
 
@@ -1120,7 +1122,7 @@ public class TableViewTest {
         // p1 == lowest first name
         Person p0, p1, p2, p3, p4;
 
-        TableView<Person> table = new TableView<Person>();
+        TableView<Person> table = new TableView<>();
         table.setItems(FXCollections.observableArrayList(
             p3 = new Person("Jacob", "Smith", "jacob.smith@example.com"),
             p2 = new Person("Isabella", "Johnson", "isabella.johnson@example.com"),
@@ -1129,7 +1131,7 @@ public class TableViewTest {
             p4 = new Person("Michael", "Brown", "michael.brown@example.com")));
 
         TableColumn firstNameCol = new TableColumn("First Name");
-        firstNameCol.setCellValueFactory(new PropertyValueFactory<Person, String>("firstName"));
+        firstNameCol.setCellValueFactory(new PropertyValueFactory<>("firstName"));
 
         // set dummy comparator to lock items in place until new comparator is set
         firstNameCol.setComparator((t, t1) -> 0);
@@ -1161,16 +1163,16 @@ public class TableViewTest {
     }
 
     @Test public void test_rt29331() {
-        TableView<Person> table = new TableView<Person>();
+        TableView<Person> table = new TableView<>();
 
         TableColumn firstNameCol = new TableColumn("First Name");
-        firstNameCol.setCellValueFactory(new PropertyValueFactory<Person, String>("firstName"));
+        firstNameCol.setCellValueFactory(new PropertyValueFactory<>("firstName"));
 
         TableColumn lastNameCol = new TableColumn("Last Name");
-        lastNameCol.setCellValueFactory(new PropertyValueFactory<Person, String>("lastName"));
+        lastNameCol.setCellValueFactory(new PropertyValueFactory<>("lastName"));
 
         TableColumn emailCol = new TableColumn("Email");
-        emailCol.setCellValueFactory(new PropertyValueFactory<Person, String>("email"));
+        emailCol.setCellValueFactory(new PropertyValueFactory<>("email"));
 
         TableColumn parentColumn = new TableColumn<>("Parent");
         parentColumn.getColumns().addAll(firstNameCol, lastNameCol, emailCol);
@@ -1196,10 +1198,10 @@ public class TableViewTest {
         table.getColumns().addAll(parentColumn);
 
         TableColumn firstNameCol = new TableColumn("First Name");
-        firstNameCol.setCellValueFactory(new PropertyValueFactory<Person, String>("firstName"));
+        firstNameCol.setCellValueFactory(new PropertyValueFactory<>("firstName"));
 
         TableColumn lastNameCol = new TableColumn("Last Name");
-        lastNameCol.setCellValueFactory(new PropertyValueFactory<Person, String>("lastName"));
+        lastNameCol.setCellValueFactory(new PropertyValueFactory<>("lastName"));
 
         parentColumn.getColumns().addAll(firstNameCol, lastNameCol);
 
@@ -1228,10 +1230,10 @@ public class TableViewTest {
         TableView<Person> table = new TableView<>(personTestData);
 
         TableColumn firstNameCol = new TableColumn("First Name");
-        firstNameCol.setCellValueFactory(new PropertyValueFactory<Person, String>("firstName"));
+        firstNameCol.setCellValueFactory(new PropertyValueFactory<>("firstName"));
 
         TableColumn lastNameCol = new TableColumn("Last Name");
-        lastNameCol.setCellValueFactory(new PropertyValueFactory<Person, String>("lastName"));
+        lastNameCol.setCellValueFactory(new PropertyValueFactory<>("lastName"));
 
         // this test differs from the previous one by installing the parent column
         // into the tableview after it has the children added into it
@@ -1266,13 +1268,13 @@ public class TableViewTest {
         TableSelectionModel sm = table.getSelectionModel();
 
         TableColumn firstNameCol = new TableColumn("First Name");
-        firstNameCol.setCellValueFactory(new PropertyValueFactory<Person, String>("firstName"));
+        firstNameCol.setCellValueFactory(new PropertyValueFactory<>("firstName"));
 
         TableColumn lastNameCol = new TableColumn("Last Name");
-        lastNameCol.setCellValueFactory(new PropertyValueFactory<Person, String>("lastName"));
+        lastNameCol.setCellValueFactory(new PropertyValueFactory<>("lastName"));
 
         TableColumn emailCol = new TableColumn("Email");
-        emailCol.setCellValueFactory(new PropertyValueFactory<Person, String>("email"));
+        emailCol.setCellValueFactory(new PropertyValueFactory<>("email"));
 
         table.getColumns().addAll(firstNameCol, lastNameCol, emailCol);
         sm.setCellSelectionEnabled(true);
@@ -1310,13 +1312,13 @@ public class TableViewTest {
         TableSelectionModel sm = table.getSelectionModel();
 
         TableColumn firstNameCol = new TableColumn("First Name");
-        firstNameCol.setCellValueFactory(new PropertyValueFactory<Person, String>("firstName"));
+        firstNameCol.setCellValueFactory(new PropertyValueFactory<>("firstName"));
 
         TableColumn lastNameCol = new TableColumn("Last Name");
-        lastNameCol.setCellValueFactory(new PropertyValueFactory<Person, String>("lastName"));
+        lastNameCol.setCellValueFactory(new PropertyValueFactory<>("lastName"));
 
         TableColumn emailCol = new TableColumn("Email");
-        emailCol.setCellValueFactory(new PropertyValueFactory<Person, String>("email"));
+        emailCol.setCellValueFactory(new PropertyValueFactory<>("email"));
 
         table.getColumns().addAll(firstNameCol, lastNameCol, emailCol);
         sm.setCellSelectionEnabled(true);
@@ -1347,13 +1349,13 @@ public class TableViewTest {
         TableSelectionModel sm = table.getSelectionModel();
 
         TableColumn firstNameCol = new TableColumn("First Name");
-        firstNameCol.setCellValueFactory(new PropertyValueFactory<Person, String>("firstName"));
+        firstNameCol.setCellValueFactory(new PropertyValueFactory<>("firstName"));
 
         TableColumn lastNameCol = new TableColumn("Last Name");
-        lastNameCol.setCellValueFactory(new PropertyValueFactory<Person, String>("lastName"));
+        lastNameCol.setCellValueFactory(new PropertyValueFactory<>("lastName"));
 
         TableColumn emailCol = new TableColumn("Email");
-        emailCol.setCellValueFactory(new PropertyValueFactory<Person, String>("email"));
+        emailCol.setCellValueFactory(new PropertyValueFactory<>("email"));
 
         table.getColumns().addAll(firstNameCol, lastNameCol, emailCol);
 
@@ -1386,7 +1388,7 @@ public class TableViewTest {
     }
 
     @Test public void test_rt29390() {
-        final TableView<Person> tableView = new TableView<Person>();
+        final TableView<Person> tableView = new TableView<>();
         tableView.setMaxHeight(50);
         tableView.setPrefHeight(50);
         tableView.setItems(FXCollections.observableArrayList(
@@ -1409,7 +1411,7 @@ public class TableViewTest {
         ));
 
         TableColumn firstNameCol = new TableColumn("First Name");
-        firstNameCol.setCellValueFactory(new PropertyValueFactory<Person, String>("firstName"));
+        firstNameCol.setCellValueFactory(new PropertyValueFactory<>("firstName"));
 
         tableView.getColumns().add(firstNameCol);
 
@@ -1428,7 +1430,7 @@ public class TableViewTest {
 
     @Test public void test_rt30400() {
         // create a listview that'll render cells using the check box cell factory
-        final TableView<Person> tableView = new TableView<Person>();
+        final TableView<Person> tableView = new TableView<>();
         tableView.setMinHeight(100);
         tableView.setPrefHeight(100);
         tableView.setItems(FXCollections.observableArrayList(
@@ -1436,7 +1438,7 @@ public class TableViewTest {
         ));
 
         TableColumn firstNameCol = new TableColumn("First Name");
-        firstNameCol.setCellValueFactory(new PropertyValueFactory<Person, String>("firstName"));
+        firstNameCol.setCellValueFactory(new PropertyValueFactory<>("firstName"));
         firstNameCol.setCellFactory(CheckBoxTableCell.forTableColumn(param -> new ReadOnlyBooleanWrapper(true)));
         tableView.getColumns().add(firstNameCol);
 
@@ -1452,7 +1454,7 @@ public class TableViewTest {
     @Test public void test_rt31165() {
         final ObservableList names = FXCollections.observableArrayList("Adam", "Alex", "Alfred", "Albert");
 
-        final TableView<Person> tableView = new TableView<Person>();
+        final TableView<Person> tableView = new TableView<>();
         tableView.setEditable(true);
         tableView.setItems(FXCollections.observableArrayList(
             new Person("Jacob", "Smith", "jacob.smith@example.com"),
@@ -1460,7 +1462,7 @@ public class TableViewTest {
         ));
 
         TableColumn firstNameCol = new TableColumn("First Name");
-        firstNameCol.setCellValueFactory(new PropertyValueFactory<Person, String>("firstName"));
+        firstNameCol.setCellValueFactory(new PropertyValueFactory<>("firstName"));
         firstNameCol.setCellFactory(ChoiceBoxTableCell.forTableColumn(names));
         firstNameCol.setEditable(true);
 
@@ -1488,14 +1490,14 @@ public class TableViewTest {
 
     @Test public void test_rt31471() {
         Person jacobSmith;
-        final TableView<Person> tableView = new TableView<Person>();
+        final TableView<Person> tableView = new TableView<>();
         tableView.setItems(FXCollections.observableArrayList(
                 jacobSmith = new Person("Jacob", "Smith", "jacob.smith@example.com"),
                 new Person("Jim", "Bob", "jim.bob@example.com")
         ));
 
         TableColumn firstNameCol = new TableColumn("First Name");
-        firstNameCol.setCellValueFactory(new PropertyValueFactory<Person, String>("firstName"));
+        firstNameCol.setCellValueFactory(new PropertyValueFactory<>("firstName"));
         tableView.getColumns().add(firstNameCol);
 
         IndexedCell cell = VirtualFlowTestUtils.getCell(tableView, 0);
@@ -1513,7 +1515,7 @@ public class TableViewTest {
     private int rt_31200_count = 0;
     @Test public void test_rt_31200_tableCell() {
         rt_31200_count = 0;
-        final TableView<Person> tableView = new TableView<Person>();
+        final TableView<Person> tableView = new TableView<>();
         tableView.setItems(FXCollections.observableArrayList(
                 new Person("Jacob", "Smith", "jacob.smith@example.com"),
                 new Person("Jim", "Bob", "jim.bob@example.com")
@@ -1526,9 +1528,9 @@ public class TableViewTest {
         firstNameCol.setCellFactory(new Callback<TableColumn<Person,String>, TableCell<Person, String>>() {
             @Override
             public TableCell<Person, String> call(TableColumn<Person,String> param) {
-                return new TableCellShim<Person, String>() {
+                return new TableCellShim<>() {
                     ImageView view = new ImageView();
-                    { setGraphic(view); };
+                    { setGraphic(view); }
 
                     @Override
                     public void updateItem(String item, boolean empty) {
@@ -1565,22 +1567,22 @@ public class TableViewTest {
 
     @Test public void test_rt_31200_tableRow() {
         rt_31200_count = 0;
-        final TableView<Person> tableView = new TableView<Person>();
+        final TableView<Person> tableView = new TableView<>();
         tableView.setItems(FXCollections.observableArrayList(
                 new Person("Jacob", "Smith", "jacob.smith@example.com"),
                 new Person("Jim", "Bob", "jim.bob@example.com")
         ));
 
         TableColumn<Person,String> firstNameCol = new TableColumn("First Name");
-        firstNameCol.setCellValueFactory(new PropertyValueFactory<Person, String>("firstName"));
+        firstNameCol.setCellValueFactory(new PropertyValueFactory<>("firstName"));
         tableView.getColumns().add(firstNameCol);
 
         tableView.setRowFactory(new Callback<TableView<Person>, TableRow<Person>>() {
             @Override
             public TableRow<Person> call(TableView<Person> param) {
-                return new TableRowShim<Person>() {
+                return new TableRowShim<>() {
                     ImageView view = new ImageView();
-                    { setGraphic(view); };
+                    { setGraphic(view); }
 
                     @Override
                     public void updateItem(Person item, boolean empty) {
@@ -1615,9 +1617,9 @@ public class TableViewTest {
 
     @Test public void test_rt_31727() {
         TableView table = new TableView();
-        TableColumn<String,String> first = new TableColumn<String,String>("first");
+        TableColumn<String,String> first = new TableColumn<>("first");
         first.setCellValueFactory(new PropertyValueFactory("firstName"));
-        TableColumn<String,String> second = new TableColumn<String,String>("second");
+        TableColumn<String,String> second = new TableColumn<>("second");
         second.setCellValueFactory(new PropertyValueFactory("lastName"));
         table.getColumns().addAll(first, second);
 
@@ -1646,9 +1648,9 @@ public class TableViewTest {
 
     @Test public void test_rt_21517() {
         TableView table = new TableView();
-        TableColumn<String,String> first = new TableColumn<String,String>("first");
+        TableColumn<String,String> first = new TableColumn<>("first");
         first.setCellValueFactory(new PropertyValueFactory("firstName"));
-        TableColumn<String,String> second = new TableColumn<String,String>("second");
+        TableColumn<String,String> second = new TableColumn<>("second");
         second.setCellValueFactory(new PropertyValueFactory("lastName"));
         table.getColumns().addAll(first, second);
 
@@ -1734,9 +1736,9 @@ public class TableViewTest {
         first.setCellFactory(new Callback<TableColumn<Person, String>, TableCell<Person, String>>() {
             @Override
             public TableCell<Person, String> call(TableColumn<Person, String> param) {
-                return new TableCellShim<Person, String>() {
+                return new TableCellShim<>() {
                     Rectangle graphic = new Rectangle(10, 10, Color.RED);
-                    { setGraphic(graphic); };
+                    { setGraphic(graphic); }
 
                     @Override public void updateItem(String item, boolean empty) {
                         super.updateItem(item, empty);
@@ -1765,7 +1767,7 @@ public class TableViewTest {
 
     @Test public void test_rt_30484_tableRow() {
         TableView<Person> table = new TableView<>();
-        TableColumn<Person,String> first = new TableColumn<Person,String>("first");
+        TableColumn<Person,String> first = new TableColumn<>("first");
         first.setCellValueFactory(new PropertyValueFactory("firstName"));
         table.getColumns().addAll(first);
 
@@ -1776,9 +1778,9 @@ public class TableViewTest {
 
         table.setRowFactory(new Callback<TableView<Person>, TableRow<Person>>() {
             @Override public TableRow<Person> call(TableView<Person> param) {
-                return new TableRowShim<Person>() {
+                return new TableRowShim<>() {
                     Rectangle graphic = new Rectangle(10, 10, Color.RED);
-                    { setGraphic(graphic); };
+                    { setGraphic(graphic); }
 
                     @Override public void updateItem(Person item, boolean empty) {
                         super.updateItem(item, empty);
@@ -1854,7 +1856,7 @@ public class TableViewTest {
     @Test public void test_rt_31015() {
         TableView<Person> table = new TableView<>();
         table.setEditable(true);
-        TableColumn<Person,String> first = new TableColumn<Person,String>("first");
+        TableColumn<Person,String> first = new TableColumn<>("first");
         first.setCellValueFactory(new PropertyValueFactory("firstName"));
         table.getColumns().addAll(first);
 
@@ -1863,9 +1865,10 @@ public class TableViewTest {
         ));
 
         //Set cell factory for cells that allow editing
-        Callback<TableColumn<Person,String>, TableCell<Person, String>> cellFactory = new Callback<TableColumn<Person,String>, TableCell<Person, String>>() {
+        Callback<TableColumn<Person,String>, TableCell<Person, String>> cellFactory = new Callback<>() {
+            @Override
             public TableCell<Person, String> call(TableColumn<Person, String> p) {
-                return new TableCell<Person, String>() {
+                return new TableCell<>() {
                     @Override public void cancelEdit() {
                         super.cancelEdit();
                         rt_31015_count++;
@@ -1890,7 +1893,7 @@ public class TableViewTest {
 
     @Test public void test_rt_31653() {
         TableView<Person> table = new TableView<>();
-        TableColumn<Person,String> first = new TableColumn<Person,String>("first");
+        TableColumn<Person,String> first = new TableColumn<>("first");
         first.setCellValueFactory(new PropertyValueFactory("firstName"));
         table.getColumns().addAll(first);
 
@@ -1918,7 +1921,7 @@ public class TableViewTest {
                 new Person("John", "Smith", "jacob.smith@example.com")
         ));
 
-        TableColumn<Person,String> first = new TableColumn<Person,String>("first");
+        TableColumn<Person,String> first = new TableColumn<>("first");
         first.setCellValueFactory(new PropertyValueFactory("firstName"));
         Callback<TableColumn<Person, String>, TableCell<Person, String>> factory = TextFieldTableCell.forTableColumn();
         first.setCellFactory(factory);
@@ -1961,7 +1964,7 @@ public class TableViewTest {
             new Person("John", "Smith", "jacob.smith@example.com")
         ));
 
-        TableColumn<Person,String> first = new TableColumn<Person,String>("first");
+        TableColumn<Person,String> first = new TableColumn<>("first");
         first.setCellValueFactory(new PropertyValueFactory("firstName"));
         Callback<TableColumn<Person, String>, TableCell<Person, String>> factory = TextFieldTableCell.forTableColumn();
         first.setCellFactory(factory);
@@ -1992,11 +1995,11 @@ public class TableViewTest {
                 new Person("John", "Smith", "jacob.smith@example.com")
         ));
 
-        TableColumn<Person,String> first = new TableColumn<Person,String>("first");
+        TableColumn<Person,String> first = new TableColumn<>("first");
         first.setCellValueFactory(new PropertyValueFactory("firstName"));
-        TableColumn<Person,String> last = new TableColumn<Person,String>("last");
+        TableColumn<Person,String> last = new TableColumn<>("last");
         first.setCellValueFactory(new PropertyValueFactory("lastName"));
-        TableColumn<Person,String> email = new TableColumn<Person,String>("email");
+        TableColumn<Person,String> email = new TableColumn<>("email");
         first.setCellValueFactory(new PropertyValueFactory("email"));
         table.getColumns().addAll(first, last, email);
 
@@ -2023,11 +2026,11 @@ public class TableViewTest {
                 new Person("John", "Smith", "jacob.smith@example.com")
         ));
 
-        TableColumn<Person,String> first = new TableColumn<Person,String>("first");
+        TableColumn<Person,String> first = new TableColumn<>("first");
         first.setCellValueFactory(new PropertyValueFactory("firstName"));
-        TableColumn<Person,String> last = new TableColumn<Person,String>("last");
+        TableColumn<Person,String> last = new TableColumn<>("last");
         first.setCellValueFactory(new PropertyValueFactory("lastName"));
-        TableColumn<Person,String> email = new TableColumn<Person,String>("email");
+        TableColumn<Person,String> email = new TableColumn<>("email");
         first.setCellValueFactory(new PropertyValueFactory("email"));
         table.getColumns().addAll(first, last, email);
 
@@ -2047,18 +2050,22 @@ public class TableViewTest {
         sl.dispose();
     }
 
-//    @Ignore("Test started intermittently failing, most probably due to RT-36855 changeset")
-    @Test public void test_rt_34493() {
+    /**
+     * JDK-8093986
+     * @ Ignore("Test started intermittently failing, most probably due to RT-36855/JDK-8096512 changeset")
+     */
+    @Test
+    public void noAutoresizeOnColumnRemoval() {
         TableView<Person> table = new TableView<>();
         table.setItems(FXCollections.observableArrayList(
                 new Person("John", "Smith", "jacob.smith@example.com")
         ));
 
-        TableColumn<Person,String> first = new TableColumn<Person,String>("first");
+        TableColumn<Person,String> first = new TableColumn<>("first");
         first.setCellValueFactory(new PropertyValueFactory("firstName"));
-        TableColumn<Person,String> last = new TableColumn<Person,String>("last");
+        TableColumn<Person,String> last = new TableColumn<>("last");
         first.setCellValueFactory(new PropertyValueFactory("lastName"));
-        TableColumn<Person,String> email = new TableColumn<Person,String>("email");
+        TableColumn<Person,String> email = new TableColumn<>("email");
         first.setCellValueFactory(new PropertyValueFactory("email"));
         table.getColumns().addAll(first, last, email);
 
@@ -2116,7 +2123,7 @@ public class TableViewTest {
             new Person("Jim", "Bob", "jim.bob@example.com")
         ));
 
-        TableColumn<Person,String> first = new TableColumn<Person,String>("first");
+        TableColumn<Person,String> first = new TableColumn<>("first");
         first.setCellValueFactory(new PropertyValueFactory("firstName"));
         Callback<TableColumn<Person, String>, TableCell<Person, String>> factory = TextFieldTableCell.forTableColumn();
         first.setCellFactory(factory);       // note that only the first name col is editable
@@ -2638,7 +2645,7 @@ public class TableViewTest {
         treeTableView.getColumns().addAll(temp, temp2, temp3);
 
         //TABLE
-        TableView<Person> table = new TableView<Person>();
+        TableView<Person> table = new TableView<>();
         table.setEditable(true);
         table.getSelectionModel().setCellSelectionEnabled(true);
         TableColumn firstNameCol = new TableColumn("First Name");
@@ -2828,12 +2835,12 @@ public class TableViewTest {
     }
 
     private void readOnlyUnbackedObservableListSubListTest(int from, int to) {
-        final SelectedCellsMap<TablePosition> selectedCellsMap = new SelectedCellsMap<TablePosition>(c -> { /* Do nothing */}) {
+        final SelectedCellsMap<TablePosition> selectedCellsMap = new SelectedCellsMap<>(c -> { /* Do nothing */}) {
             @Override public boolean isCellSelectionEnabled() {
                 return false;
             }
         };
-        ReadOnlyUnbackedObservableList<TablePosition<Object, ?>> selectedCellsSeq = new ReadOnlyUnbackedObservableList<TablePosition<Object, ?>>() {
+        ReadOnlyUnbackedObservableList<TablePosition<Object, ?>> selectedCellsSeq = new ReadOnlyUnbackedObservableList<>() {
             @Override public TablePosition<Object, ?> get(int i) {
                 return selectedCellsMap.get(i);
             }
@@ -2851,7 +2858,7 @@ public class TableViewTest {
 
     @Test
     public void test_rt35857_selectLast_retainAllSelected() {
-        TableView<String> tableView = new TableView<String>(observableArrayList("A", "B", "C"));
+        TableView<String> tableView = new TableView<>(observableArrayList("A", "B", "C"));
         tableView.getSelectionModel().select(tableView.getItems().size() - 1);
 
         assert_rt35857(tableView.getItems(), tableView.getSelectionModel(), true);
@@ -2859,7 +2866,7 @@ public class TableViewTest {
 
     @Test
     public void test_rt35857_selectLast_removeAllSelected() {
-        TableView<String> tableView = new TableView<String>(observableArrayList("A", "B", "C"));
+        TableView<String> tableView = new TableView<>(observableArrayList("A", "B", "C"));
         tableView.getSelectionModel().select(tableView.getItems().size() - 1);
 
         assert_rt35857(tableView.getItems(), tableView.getSelectionModel(), false);
@@ -2867,7 +2874,7 @@ public class TableViewTest {
 
     @Test
     public void test_rt35857_selectFirst_retainAllSelected() {
-        TableView<String> tableView = new TableView<String>(observableArrayList("A", "B", "C"));
+        TableView<String> tableView = new TableView<>(observableArrayList("A", "B", "C"));
         tableView.getSelectionModel().select(0);
 
         assert_rt35857(tableView.getItems(), tableView.getSelectionModel(), true);
@@ -2895,7 +2902,7 @@ public class TableViewTest {
 
     @Test public void test_rt35857() {
         ObservableList<String> fxList = FXCollections.observableArrayList("A", "B", "C");
-        final TableView<String> tableView = new TableView<String>(fxList);
+        final TableView<String> tableView = new TableView<>(fxList);
 
         tableView.getSelectionModel().select(0);
 
@@ -2917,9 +2924,9 @@ public class TableViewTest {
                 new Person("John", "Smith", "jacob.smith@example.com")
         ));
 
-        TableColumn<Person,String> first = new TableColumn<Person,String>("first");
+        TableColumn<Person,String> first = new TableColumn<>("first");
         first.setCellValueFactory(new PropertyValueFactory("firstName"));
-        TableColumn<Person,String> last = new TableColumn<Person,String>("last");
+        TableColumn<Person,String> last = new TableColumn<>("last");
         first.setCellValueFactory(new PropertyValueFactory("lastName"));
 
         TableColumn name = new TableColumn("Name");
@@ -3185,7 +3192,7 @@ public class TableViewTest {
         tableView.setRowFactory(new Callback<TableView<String>, TableRow<String>>() {
             @Override public TableRow<String> call(TableView<String> param) {
                 rt36556_instanceCount++;
-                return new TableRow<String>();
+                return new TableRow<>();
             }
         });
 
@@ -3227,7 +3234,7 @@ public class TableViewTest {
     }
 
     private void test_rt_36656(boolean removeFromSortOrder, boolean removeFromColumns, boolean setInvisible) {
-        TableView<Person> table = new TableView<Person>();
+        TableView<Person> table = new TableView<>();
         table.setItems(personTestData);
 
         TableColumn firstNameCol = new TableColumn("First Name");
@@ -3683,7 +3690,7 @@ public class TableViewTest {
     }
 
     private void test_rt_37054(boolean scroll) {
-        ObjectProperty<Integer> offset = new SimpleObjectProperty<Integer>(0);
+        ObjectProperty<Integer> offset = new SimpleObjectProperty<>(0);
 
         // create table with a bunch of rows and 1 column...
         TableView<Integer> table = new TableView<>();
@@ -3695,7 +3702,7 @@ public class TableViewTest {
         column.setPrefWidth( 150 );
 
         // each cell displays x, where x = "cell row number + offset"
-        column.setCellValueFactory( cdf -> new ObjectBinding<Integer>() {
+        column.setCellValueFactory( cdf -> new ObjectBinding<>() {
             { super.bind( offset ); }
 
             @Override protected Integer computeValue() {
@@ -3838,7 +3845,7 @@ public class TableViewTest {
         }
         final TableColumn<Integer, Integer> column = new TableColumn<>("Column");
         table.getColumns().add(column);
-        column.setCellValueFactory( cdf -> new ReadOnlyObjectWrapper<Integer>(cdf.getValue()));
+        column.setCellValueFactory( cdf -> new ReadOnlyObjectWrapper<>(cdf.getValue()));
 
         table.getSelectionModel().getSelectedItems().addListener((ListChangeListener.Change<? extends Integer> c) -> {
             if (callCNextOnce) {
@@ -3897,7 +3904,7 @@ public class TableViewTest {
         if (useFixedCellSize) {
             tableView.setFixedCellSize(24);
         }
-        tableView.setRowFactory(tv -> new TableRowShim<String>() {
+        tableView.setRowFactory(tv -> new TableRowShim<>() {
             @Override public void updateItem(String color, boolean empty) {
                 rt_35395_counter += testCell ? 0 : 1;
                 super.updateItem(color, empty);
@@ -3906,7 +3913,7 @@ public class TableViewTest {
 
         TableColumn<String,String> column = new TableColumn<>("Column");
         column.setCellValueFactory(param -> new ReadOnlyStringWrapper(param.getValue()));
-        column.setCellFactory(tv -> new TableCellShim<String,String>() {
+        column.setCellFactory(tv -> new TableCellShim<>() {
             @Override public void updateItem(String color, boolean empty) {
                 rt_35395_counter += testCell ? 1 : 0;
                 super.updateItem(color, empty);
@@ -5971,5 +5978,28 @@ public class TableViewTest {
 
         hbar = VirtualFlowTestUtils.getVirtualFlowHorizontalScrollbar(table);
         assertFalse(hbar.isVisible()); // used to fail here
+    }
+
+    @Test
+    public void testQueryAccessibleAttributeSelectedItemsWithNullSelectionModel() {
+        table.getItems().addAll("1", "2");
+        table.setSelectionModel(null);
+        stageLoader = new StageLoader(table);
+
+        Object result = table.queryAccessibleAttribute(AccessibleAttribute.SELECTED_ITEMS);
+        // Should be an empty observable array list
+        assertEquals(FXCollections.observableArrayList(), result);
+    }
+
+    @Test
+    public void testQueryAccessibleAttributeFocusItemWithNullFocusModel() {
+        table.getItems().addAll("1", "2");
+        table.setFocusModel(null);
+
+        stageLoader = new StageLoader(table);
+
+        Object result = table.queryAccessibleAttribute(AccessibleAttribute.FOCUS_ITEM);
+
+        assertNull(result);
     }
 }

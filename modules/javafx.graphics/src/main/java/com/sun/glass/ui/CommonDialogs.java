@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -251,7 +251,7 @@ public class CommonDialogs {
     protected static FileChooserResult createFileChooserResult(String[] files,
             ExtensionFilter[] extensionFilters, int index)
     {
-        List<File> list = new ArrayList<File>();
+        List<File> list = new ArrayList<>();
         for (String s : files) {
             if (s != null) {
                 list.add(new File(s));

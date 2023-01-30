@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -76,7 +76,7 @@ public final class MappingChange<E, F> extends Change<F>{
     @Override
     public List<F> getRemoved() {
         if (removed == null) {
-            removed = new AbstractList<F>() {
+            removed = new AbstractList<>() {
 
                 @Override
                 public F get(int index) {

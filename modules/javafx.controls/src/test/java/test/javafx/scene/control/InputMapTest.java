@@ -1,7 +1,7 @@
 package test.javafx.scene.control;
 
 /*
- * Copyright (c) 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2015, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,18 +25,7 @@ package test.javafx.scene.control;
  * questions.
  */
 
-import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
-import com.sun.javafx.scene.control.inputmap.InputMap;
 import org.junit.Test;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-
-import static javafx.scene.input.KeyCode.*;
 
 public class InputMapTest {
 

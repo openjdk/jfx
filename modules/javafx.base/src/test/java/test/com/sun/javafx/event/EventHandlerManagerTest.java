@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -204,7 +204,7 @@ public final class EventHandlerManagerTest {
                 new EventChangingHandler(Operation.mul(7)));
 
         final EventCountingHandler<EmptyEvent> emptyEventCountingHandler =
-                new EventCountingHandler<EmptyEvent>();
+                new EventCountingHandler<>();
         eventHandlerManager.setEventHandler(
                 EmptyEvent.EMPTY,
                 emptyEventCountingHandler);
@@ -268,7 +268,7 @@ public final class EventHandlerManagerTest {
                 new EventChangingHandler(Operation.mul(6)));
 
         final EventCountingHandler<EmptyEvent> emptyEventCountingHandler =
-                new EventCountingHandler<EmptyEvent>();
+                new EventCountingHandler<>();
         eventHandlerManager.addEventHandler(
                 EmptyEvent.EMPTY,
                 emptyEventCountingHandler);
@@ -311,7 +311,7 @@ public final class EventHandlerManagerTest {
                 new EventChangingHandler(Operation.mul(6)));
 
         final EventCountingHandler<EmptyEvent> emptyEventCountingHandler =
-                new EventCountingHandler<EmptyEvent>();
+                new EventCountingHandler<>();
         eventHandlerManager.addEventFilter(
                 EmptyEvent.EMPTY,
                 emptyEventCountingHandler);
@@ -448,15 +448,15 @@ public final class EventHandlerManagerTest {
     @Test
     public void shouldCallHandlersForSuperTypes() {
         final EventCountingHandler<Event> rootEventCounter =
-                new EventCountingHandler<Event>();
+                new EventCountingHandler<>();
         final EventCountingHandler<ValueEvent> valueEventCounter =
-                new EventCountingHandler<ValueEvent>();
+                new EventCountingHandler<>();
         final EventCountingHandler<ValueEvent> valueAEventCounter =
-                new EventCountingHandler<ValueEvent>();
+                new EventCountingHandler<>();
         final EventCountingHandler<Event> valueBEventCounter =
-                new EventCountingHandler<Event>();
+                new EventCountingHandler<>();
         final EventCountingHandler<Event> emptyEventCounter =
-                new EventCountingHandler<Event>();
+                new EventCountingHandler<>();
 
         eventHandlerManager.addEventHandler(
                 EventType.ROOT, rootEventCounter);
@@ -485,15 +485,15 @@ public final class EventHandlerManagerTest {
     @Test
     public void shouldCallFiltersForSuperTypes() {
         final EventCountingHandler<Event> rootEventCounter =
-                new EventCountingHandler<Event>();
+                new EventCountingHandler<>();
         final EventCountingHandler<ValueEvent> valueEventCounter =
-                new EventCountingHandler<ValueEvent>();
+                new EventCountingHandler<>();
         final EventCountingHandler<ValueEvent> valueAEventCounter =
-                new EventCountingHandler<ValueEvent>();
+                new EventCountingHandler<>();
         final EventCountingHandler<Event> valueBEventCounter =
-                new EventCountingHandler<Event>();
+                new EventCountingHandler<>();
         final EventCountingHandler<Event> emptyEventCounter =
-                new EventCountingHandler<Event>();
+                new EventCountingHandler<>();
 
         eventHandlerManager.addEventFilter(
                 EventType.ROOT, rootEventCounter);
@@ -529,9 +529,9 @@ public final class EventHandlerManagerTest {
                                       .append(eventCountingDispatcher);
 
         final EventCountingHandler<Event> eventCountingFilter =
-                new EventCountingHandler<Event>();
+                new EventCountingHandler<>();
         final EventCountingHandler<Event> eventCountingHandler =
-                new EventCountingHandler<Event>();
+                new EventCountingHandler<>();
         final EventConsumingHandler eventConsumingHandler =
                 new EventConsumingHandler();
 
@@ -573,11 +573,11 @@ public final class EventHandlerManagerTest {
                                       .append(eventCountingDispatcher);
 
         final EventCountingHandler<Event> eventCountingFilter =
-                new EventCountingHandler<Event>();
+                new EventCountingHandler<>();
         final EventConsumingHandler eventConsumingFilter =
                 new EventConsumingHandler();
         final EventCountingHandler<Event> eventCountingHandler =
-                new EventCountingHandler<Event>();
+                new EventCountingHandler<>();
 
         eventHandlerManager.addEventHandler(Event.ANY, eventCountingHandler);
 

@@ -126,7 +126,7 @@ public class TreeTableRow<T> extends IndexedCell<T> {
     };
 
     private final WeakListChangeListener<Integer> weakSelectedListener =
-            new WeakListChangeListener<Integer>(selectedListener);
+            new WeakListChangeListener<>(selectedListener);
     private final WeakInvalidationListener weakFocusedListener =
             new WeakInvalidationListener(focusedListener);
     private final WeakInvalidationListener weakEditingListener =
@@ -146,7 +146,7 @@ public class TreeTableRow<T> extends IndexedCell<T> {
 
     // --- TreeItem
     private ReadOnlyObjectWrapper<TreeItem<T>> treeItem =
-        new ReadOnlyObjectWrapper<TreeItem<T>>(this, "treeItem") {
+        new ReadOnlyObjectWrapper<>(this, "treeItem") {
 
             TreeItem<T> oldValue = null;
 
@@ -185,7 +185,7 @@ public class TreeTableRow<T> extends IndexedCell<T> {
 
 
     // --- Disclosure Node
-    private ObjectProperty<Node> disclosureNode = new SimpleObjectProperty<Node>(this, "disclosureNode");
+    private ObjectProperty<Node> disclosureNode = new SimpleObjectProperty<>(this, "disclosureNode");
 
     /**
      * The node to use as the "disclosure" triangle, or toggle, used for
@@ -213,7 +213,7 @@ public class TreeTableRow<T> extends IndexedCell<T> {
 
 
     // --- TreeView
-    private ReadOnlyObjectWrapper<TreeTableView<T>> treeTableView = new ReadOnlyObjectWrapper<TreeTableView<T>>(this, "treeTableView") {
+    private ReadOnlyObjectWrapper<TreeTableView<T>> treeTableView = new ReadOnlyObjectWrapper<>(this, "treeTableView") {
         private WeakReference<TreeTableView<T>> weakTreeTableViewRef;
         @Override protected void invalidated() {
             TreeTableViewSelectionModel<T> sm;
@@ -255,7 +255,7 @@ public class TreeTableRow<T> extends IndexedCell<T> {
 
                 get().editingCellProperty().addListener(weakEditingListener);
 
-                weakTreeTableViewRef = new WeakReference<TreeTableView<T>>(get());
+                weakTreeTableViewRef = new WeakReference<>(get());
             }
 
             updateItem();
@@ -316,7 +316,7 @@ public class TreeTableRow<T> extends IndexedCell<T> {
 
          // Inform the TreeView of the edit starting.
         if (treeTable != null) {
-            treeTable.fireEvent(new TreeTableView.EditEvent<T>(treeTable,
+            treeTable.fireEvent(new TreeTableView.EditEvent<>(treeTable,
                     TreeTableView.<T>editStartEvent(),
                     getTreeItem(),
                     getItem(),
@@ -333,7 +333,7 @@ public class TreeTableRow<T> extends IndexedCell<T> {
         final TreeTableView<T> treeTable = getTreeTableView();
         if (treeTable != null) {
             // Inform the TreeView of the edit being ready to be committed.
-            treeTable.fireEvent(new TreeTableView.EditEvent<T>(treeTable,
+            treeTable.fireEvent(new TreeTableView.EditEvent<>(treeTable,
                     TreeTableView.<T>editCommitEvent(),
                     treeItem,
                     getItem(),
@@ -364,7 +364,7 @@ public class TreeTableRow<T> extends IndexedCell<T> {
 
         TreeTableView<T> treeTable = getTreeTableView();
         if (treeTable != null) {
-            treeTable.fireEvent(new TreeTableView.EditEvent<T>(treeTable,
+            treeTable.fireEvent(new TreeTableView.EditEvent<>(treeTable,
                     TreeTableView.<T>editCancelEvent(),
                     getTreeItem(),
                     getItem(),
@@ -442,6 +442,9 @@ public class TreeTableRow<T> extends IndexedCell<T> {
 
         TreeTableViewSelectionModel<T> sm = getTreeTableView().getSelectionModel();
         if (sm == null) {
+            if (isSelected()) {
+                updateSelected(false);
+            }
             return;
         }
 
@@ -530,7 +533,7 @@ public class TreeTableRow<T> extends IndexedCell<T> {
 
     /** {@inheritDoc} */
     @Override protected Skin<?> createDefaultSkin() {
-        return new TreeTableRowSkin<T>(this);
+        return new TreeTableRowSkin<>(this);
     }
 
 

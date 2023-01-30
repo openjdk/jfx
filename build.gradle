@@ -358,7 +358,7 @@ def javaVersionInfo = parseJavaVersion(javaRuntimeVersion)
 defineProperty("javaVersion", javaVersionInfo[0])
 defineProperty("javaBuildNumber", javaVersionInfo[1])
 
-defineProperty("libAVRepositoryURL", "https://libav.org/releases/")
+defineProperty("libAVRepositoryURL", "https://github.com/libav/libav/archive")
 defineProperty("FFmpegRepositoryURL", "https://www.ffmpeg.org/releases/")
 defineProperty("icuRepositoryURL", "https://github.com/unicode-org/icu/releases/")
 
@@ -608,12 +608,6 @@ ext.CROSS_TOOLS_DIR = file(crossToolsDir)
 // Specifies whether to run tests with the existing javafx.* modules instead of compiling a new one
 defineProperty("BUILD_SDK_FOR_TEST", "true")
 ext.DO_BUILD_SDK_FOR_TEST = Boolean.parseBoolean(BUILD_SDK_FOR_TEST)
-
-// All "classes" and "jar" tasks and their dependencies would be disabled
-// when running with DO_BUILD_SDK_FOR_TEST=false as they're unneeded for running tests
-if (!DO_BUILD_SDK_FOR_TEST) {
-    gradle.taskGraph.useFilter({ task -> !task.name.equals("classes") && !task.name.equals("jar") })
-}
 
 // Make sure JDK_HOME/bin/java exists
 if (!file(JAVA).exists()) throw new Exception("Missing or incorrect path to 'java': '$JAVA'. Perhaps bad JDK_HOME? $JDK_HOME")
@@ -1988,10 +1982,10 @@ allprojects {
         testImplementation group: "org.hamcrest", name: "hamcrest-core", version: "1.3"
         testImplementation group: "org.junit.jupiter", name: "junit-jupiter", version: "5.8.1"
         testImplementation group: "org.junit.jupiter", name: "junit-jupiter-api", version: "5.8.1"
+        testImplementation group: "org.junit.jupiter", name: "junit-jupiter-params", version: "5.8.1"
         testImplementation group: "org.opentest4j", name: "opentest4j", version: "1.2.0"
         testRuntimeOnly group: "org.apiguardian", name: "apiguardian-api", version: "1.1.2"
         testRuntimeOnly group: "org.junit.jupiter", name: "junit-jupiter-engine", version: "5.8.1"
-        testRuntimeOnly group: "org.junit.jupiter", name: "junit-jupiter-params", version: "5.8.1"
         testRuntimeOnly group: "org.junit.platform", name: "junit-platform-commons", version: "1.8.1"
         testRuntimeOnly group: "org.junit.platform", name: "junit-platform-engine", version: "1.8.1"
         testRuntimeOnly group: "org.junit.vintage", name: "junit-vintage-engine", version: "5.8.1"
@@ -2354,7 +2348,7 @@ project(":graphics") {
                         ["$FXC", "/nologo", "/T", "ps_3_0", "/Fh", "$buildDir/headers/PrismD3D/hlsl/Mtl1PS_b1mi.h", "/DSpec=1", "/DSType=3", "/DBump=1", "/DIllumMap=1", "$PS_3D_SRC"],
                         ["$FXC", "/nologo", "/T", "ps_3_0", "/Fh", "$buildDir/headers/PrismD3D/hlsl/Mtl1PS_b2mi.h", "/DSpec=2", "/DSType=3", "/DBump=1", "/DIllumMap=1", "$PS_3D_SRC"],
                         ["$FXC", "/nologo", "/T", "ps_3_0", "/Fh", "$buildDir/headers/PrismD3D/hlsl/Mtl1PS_b3mi.h", "/DSpec=3", "/DSType=3", "/DBump=1", "/DIllumMap=1", "$PS_3D_SRC"],
-                        ["$FXC", "/nologo", "/T", "vs_3_0", "/Fh", "$buildDir/headers/PrismD3D/hlsl/Mtl1VS_Obj.h", "/DVertexType=ObjVertex", "$VS_3D_SRC"]
+                        ["$FXC", "/nologo", "/T", "vs_3_0", "/Fh", "$buildDir/headers/PrismD3D/hlsl/Mtl1VS_Obj.h", "/DVertexType=VsInput", "$VS_3D_SRC"]
                 ]
                 final ExecutorService executor = Executors.newFixedThreadPool(Integer.parseInt(project.NUM_COMPILE_THREADS.toString()));
                 final CountDownLatch latch = new CountDownLatch(jobs.size());
@@ -2850,11 +2844,12 @@ project(":media") {
 
     dependencies {
         if (IS_BUILD_LIBAV_STUBS) {
-            media name: "libav-9.14", ext: "tar.gz"
-            media name: "libav-11.4", ext: "tar.gz"
-            media name: "libav-12.1", ext: "tar.gz"
+            media name: "v9.14", ext: "tar.gz"
+            media name: "v11.4", ext: "tar.gz"
+            media name: "v12.1", ext: "tar.gz"
             media name: "ffmpeg-3.3.3", ext: "tar.gz"
             media name: "ffmpeg-4.0.2", ext: "tar.gz"
+            media name: "ffmpeg-5.1.2", ext: "tar.gz"
         }
         implementation project(":base")
         implementation project(":graphics")
@@ -3003,10 +2998,12 @@ project(":media") {
                 def copyLibAVStubs = {String fromDir, String toDir ->
                     FileCollection config = files("config.h")
                     FileCollection libavcodec = files("avcodec.h", "avfft.h", "dxva2.h", "vaapi.h", "vda.h",
-                                                      "vdpau.h", "version.h", "xvmc.h", "old_codec_ids.h")
+                                                      "vdpau.h", "version.h", "xvmc.h", "old_codec_ids.h",
+                                                      "codec.h", "codec_desc.h", "codec_par.h", "codec_id.h",
+                                                      "defs.h", "packet.h", "version_major.h")
                     FileCollection libavdevice = files("avdevice.h", "version.h")
                     FileCollection libavfilter = files("avfiltergraph.h", "avfilter.h", "buffersink.h", "buffersrc.h", "version.h");
-                    FileCollection libavformat = files("avformat.h", "avio.h", "version.h")
+                    FileCollection libavformat = files("avformat.h", "avio.h", "version.h", "version_major.h")
                     FileCollection libavresample = files("avresample.h", "version.h")
                     FileCollection libavutil = files("adler32.h", "blowfish.h", "error.h", "log.h", "pixfmt.h",
                                                      "aes.h", "bswap.h", "eval.h", "lzo.h", "random_seed.h",
@@ -3019,7 +3016,7 @@ project(":media") {
                                                      "dict.h", "lfg.h", "pixdesc.h", "intfloat_readwrite.h", "old_pix_fmts.h", "audioconvert.h",
                                                      "cpu.h", "hwcontext.h")
                     FileCollection libavutil_x86 = files("cpu.h") // Use cpu.h from x86 instead of libavutil root if exist
-                    FileCollection libswscale = files("swscale.h", "version.h")
+                    FileCollection libswscale = files("swscale.h", "version.h", "version_major.h")
 
                     def copyLibAVFiles = {FileCollection files, String fDir, String tDir ->
                         File dir = file(tDir)
@@ -3066,7 +3063,7 @@ project(":media") {
                         libav.versions.each { version ->
                             def libavDir = "${libav.basedir}/libav-${version}"
                             for (File f : configurations.media.files) {
-                                if (f.name.startsWith("libav-${version}")) {
+                                if (f.name.startsWith("v${version}")) {
                                     File dir = file(libavDir)
                                     dir.mkdirs()
                                     def libavTar = "${libav.basedir}/libav-${version}.tar"
@@ -3127,7 +3124,7 @@ project(":media") {
                         libav.versions.each { version ->
                             def libavDir = "${libav.basedir}/libav-${version}"
                             for (File f : configurations.media.files) {
-                                if (f.name.startsWith("libav-${version}")) {
+                                if (f.name.startsWith("v${version}")) {
                                     File dir = file(libavDir)
                                     dir.mkdirs()
                                     def libavTar = "${libav.basedir}/libav-${version}.tar"
@@ -3199,8 +3196,8 @@ project(":media") {
                     doLast {
                         project.ext.libav = [:]
                         project.ext.libav.basedir = "${buildDir}/native/linux/ffmpeg"
-                        project.ext.libav.versions = [ "3.3.3", "4.0.2" ]
-                        project.ext.libav.versionmap = [ "3.3.3" : "57", "4.0.2" : "58" ]
+                        project.ext.libav.versions = [ "3.3.3", "4.0.2", "5.1.2" ]
+                        project.ext.libav.versionmap = [ "3.3.3" : "57", "4.0.2" : "58", "5.1.2" : "59" ]
 
                         libav.versions.each { version ->
                             def libavDir = "${libav.basedir}/ffmpeg-${version}"
@@ -3280,7 +3277,7 @@ project(":media") {
                             project.ext.libav.libavffmpeg.versions = [ "56" ]
                             project.ext.libav.ffmpeg = [:]
                             project.ext.libav.ffmpeg.basedir = "${buildDir}/native/linux/ffmpeg/ffmpeg"
-                            project.ext.libav.ffmpeg.versions = [ "57", "58" ]
+                            project.ext.libav.ffmpeg.versions = [ "57", "58", "59" ]
 
                             project.ext.libav.versions.each { version ->
                                 def libavDir = "${project.ext.libav.basedir}-${version}"

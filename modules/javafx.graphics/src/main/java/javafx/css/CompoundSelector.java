@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -311,14 +311,14 @@ final public class CompoundSelector extends Selector {
     {
 
         final int nSelectors = is.readShort();
-        final List<SimpleSelector> selectors = new ArrayList<SimpleSelector>();
+        final List<SimpleSelector> selectors = new ArrayList<>();
         for (int n=0; n<nSelectors; n++) {
             selectors.add((SimpleSelector)Selector.readBinary(bssVersion, is,strings));
         }
 
         final int nRelationships = is.readShort();
 
-        final List<Combinator> relationships = new ArrayList<Combinator>();
+        final List<Combinator> relationships = new ArrayList<>();
         for (int n=0; n<nRelationships; n++) {
             final int ordinal = is.readByte();
             if (ordinal == Combinator.CHILD.ordinal())
