@@ -135,9 +135,10 @@ static gboolean dnd_target_receive_data(JNIEnv *env, GdkAtom target, selection_d
 static struct {
     GdkDragContext *ctx;
     gboolean just_entered;
+    gboolean dropped;
     jobjectArray mimes;
     gint dx, dy;
-} enter_ctx = {NULL, FALSE, NULL, 0, 0};
+} enter_ctx = {NULL, FALSE, FALSE, NULL, 0, 0};
 
 gboolean is_dnd_owner = FALSE;
 
@@ -188,8 +189,12 @@ static void process_dnd_target_drag_leave(WindowContext *ctx, GdkEventDND *event
 {
     (void)event;
 
-    mainEnv->CallVoidMethod(ctx->get_jview(), jViewNotifyDragLeave, NULL);
-    CHECK_JNI_EXCEPTION(mainEnv)
+    // if there is a drop going on do not report drag leave to java because
+    // it will reset the drag gesture.
+    if (!enter_ctx.dropped) {
+        mainEnv->CallVoidMethod(ctx->get_jview(), jViewNotifyDragLeave, NULL);
+        CHECK_JNI_EXCEPTION(mainEnv)
+    }
 }
 
 static void process_dnd_target_drop_start(WindowContext *ctx, GdkEventDND *event)
@@ -200,7 +205,7 @@ static void process_dnd_target_drop_start(WindowContext *ctx, GdkEventDND *event
         return; // Do not process drop events if no enter event and subsequent motion event were received
     }
     GdkDragAction selected = gdk_drag_context_get_selected_action(event->context);
-
+    enter_ctx.dropped = TRUE;
     mainEnv->CallIntMethod(ctx->get_jview(), jViewNotifyDragDrop,
             (jint)event->x_root - enter_ctx.dx, (jint)event->y_root - enter_ctx.dy,
             (jint)event->x_root, (jint)event->y_root,
@@ -421,7 +426,11 @@ static jobject dnd_target_get_image(JNIEnv *env)
 
     while(*cur_target != 0 && result == NULL) {
         if (dnd_target_receive_data(env, *cur_target, &ctx)) {
-            stream = g_memory_input_stream_new_from_data(ctx.data, ctx.length * (ctx.format / 8),
+            const gint fmtDiv8 = ctx.format / 8;
+            if (ctx.length <= 0 || fmtDiv8 <= 0 || ctx.length >= INT_MAX / fmtDiv8) {
+                continue;
+            }
+            stream = g_memory_input_stream_new_from_data(ctx.data, ctx.length * fmtDiv8,
                     (GDestroyNotify)g_free);
             buf = gdk_pixbuf_new_from_stream(stream, NULL, NULL);
             if (buf) {
@@ -441,6 +450,13 @@ static jobject dnd_target_get_image(JNIEnv *env)
                 w = gdk_pixbuf_get_width(buf);
                 h = gdk_pixbuf_get_height(buf);
                 stride = gdk_pixbuf_get_rowstride(buf);
+
+                if (h <= 0 || stride <= 0 || h >= INT_MAX / stride) {
+                    g_object_unref(buf);
+                    g_object_unref(stream);
+                    continue;
+                }
+
                 data = gdk_pixbuf_get_pixels(buf);
 
                 //Actually, we are converting RGBA to BGRA, but that's the same operation
@@ -474,7 +490,12 @@ static jobject dnd_target_get_raw(JNIEnv *env, GdkAtom target, gboolean string_d
              result = env->NewStringUTF((char *)ctx.data);
              EXCEPTION_OCCURED(env);
         } else {
-            jsize length = ctx.length * (ctx.format / 8);
+            const gint fmtDiv8 = ctx.format / 8;
+            if (ctx.length <= 0 || fmtDiv8 <= 0 || ctx.length >= INT_MAX / fmtDiv8) {
+                g_free(ctx.data);
+                return result;
+            }
+            jsize length = ctx.length * fmtDiv8;
             jbyteArray array = env->NewByteArray(length);
             EXCEPTION_OCCURED(env);
             env->SetByteArrayRegion(array, 0, length, (const jbyte*)ctx.data);
@@ -907,7 +928,8 @@ GdkPixbuf* DragView::get_drag_image(GtkWidget *widget, gboolean* is_raw_image, g
                 h = BSWAP_32(int_raw[1]);
 
                 // We should have enough pixels for requested width and height
-                if ((nraw - whsz) / 4 - w * h >= 0 ) {
+                if (w > 0 && h > 0 &&  w < (INT_MAX / 4) / h &&
+                        (nraw - whsz) / 4 - w * h >= 0) {
                     guchar* data = (guchar*) g_try_malloc0(nraw - whsz);
                     if (data) {
                         memcpy(data, (raw + whsz), nraw - whsz);

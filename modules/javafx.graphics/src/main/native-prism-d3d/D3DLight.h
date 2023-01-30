@@ -26,28 +26,26 @@
 #ifndef D3DLIGHT_H
 #define D3DLIGHT_H
 
-#include "D3DContext.h"
-
 // See     Light.h
 
 class D3DLight {
 public:
-    D3DLight();
-    virtual ~D3DLight();
+    D3DLight() = default;
+    virtual ~D3DLight() = default;
     bool isPointLight();
     bool isDirectionalLight();
-    void setColor(float r, float g, float b);
-    void setPosition(float x, float y, float z);
+//    void setColor(float r, float g, float b);
+//    void setPosition(float x, float y, float z);
 
-    float position[3];
-    float color[3];
-    float w;
-    float attenuation[4]; // ca, la, qa, isAttenuated
-    float maxRange;
-    float direction[3];
-    float innerAngle;
-    float outerAngle;
-    float falloff;
+    float position[3] = {0};
+    float color[3] = {0};
+    float lightOn = 0;
+    float attenuation[4] = {0}; // ca, la, qa, isAttenuated
+    float maxRange = 0;
+    float direction[3] = {0};
+    float innerAngle = 0;
+    float outerAngle = 0;
+    float falloff = 0;
 
 private:
 
