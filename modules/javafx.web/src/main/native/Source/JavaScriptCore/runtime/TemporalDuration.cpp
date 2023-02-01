@@ -37,7 +37,7 @@ namespace JSC {
 
 static constexpr double nanosecondsPerDay = 24.0 * 60 * 60 * 1000 * 1000 * 1000;
 
-const ClassInfo TemporalDuration::s_info = { "Object", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(TemporalDuration) };
+const ClassInfo TemporalDuration::s_info = { "Object"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(TemporalDuration) };
 
 TemporalDuration* TemporalDuration::create(VM& vm, Structure* structure, ISO8601::Duration&& duration)
 {
@@ -60,7 +60,7 @@ TemporalDuration::TemporalDuration(VM& vm, Structure* structure, ISO8601::Durati
 void TemporalDuration::finishCreation(VM& vm)
 {
     Base::finishCreation(vm);
-    ASSERT(inherits(vm, info()));
+    ASSERT(inherits(info()));
 }
 
 // CreateTemporalDuration ( years, months, weeks, days, hours, minutes, seconds, milliseconds, microseconds, nanoseconds [ , newTarget ] )
@@ -85,7 +85,7 @@ ISO8601::Duration TemporalDuration::fromDurationLike(JSGlobalObject* globalObjec
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    if (durationLike->inherits<TemporalDuration>(vm))
+    if (durationLike->inherits<TemporalDuration>())
         return jsCast<TemporalDuration*>(durationLike)->m_duration;
 
     ISO8601::Duration result;
@@ -94,13 +94,11 @@ ISO8601::Duration TemporalDuration::fromDurationLike(JSGlobalObject* globalObjec
         JSValue value = durationLike->get(globalObject, temporalUnitPluralPropertyName(vm, unit));
         RETURN_IF_EXCEPTION(scope, { });
 
-        if (value.isUndefined()) {
-            result[unit] = 0;
+        if (value.isUndefined())
             continue;
-        }
 
         hasRelevantProperty = true;
-        result[unit] = value.toNumber(globalObject);
+        result[unit] = value.toIntegerWithoutRounding(globalObject);
         RETURN_IF_EXCEPTION(scope, { });
 
         if (!isInteger(result[unit])) {
@@ -157,7 +155,7 @@ TemporalDuration* TemporalDuration::toTemporalDuration(JSGlobalObject* globalObj
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    if (itemValue.inherits<TemporalDuration>(vm))
+    if (itemValue.inherits<TemporalDuration>())
         return jsCast<TemporalDuration*>(itemValue);
 
     auto result = toISO8601Duration(globalObject, itemValue);
@@ -195,7 +193,7 @@ TemporalDuration* TemporalDuration::from(JSGlobalObject* globalObject, JSValue i
 {
     VM& vm = globalObject->vm();
 
-    if (itemValue.inherits<TemporalDuration>(vm)) {
+    if (itemValue.inherits<TemporalDuration>()) {
         ISO8601::Duration cloned = jsCast<TemporalDuration*>(itemValue)->m_duration;
         return TemporalDuration::create(vm, globalObject->durationStructure(), WTFMove(cloned));
     }
@@ -462,26 +460,39 @@ ISO8601::Duration TemporalDuration::round(JSGlobalObject* globalObject, JSValue 
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    JSObject* options = intlGetOptionsObject(globalObject, optionsValue);
-    RETURN_IF_EXCEPTION(scope, { });
-
-    auto smallest = temporalSmallestUnit(globalObject, options, { });
-    RETURN_IF_EXCEPTION(scope, { });
-
+    JSObject* options = nullptr;
+    std::optional<TemporalUnit> smallest;
+    std::optional<TemporalUnit> largest;
     TemporalUnit defaultLargestUnit = largestSubduration(m_duration);
-    auto largest = temporalLargestUnit(globalObject, options, { }, defaultLargestUnit);
-    RETURN_IF_EXCEPTION(scope, { });
+    if (optionsValue.isString()) {
+        auto string = optionsValue.toWTFString(globalObject);
+        RETURN_IF_EXCEPTION(scope, { });
 
-    if (!smallest && !largest) {
-        throwRangeError(globalObject, scope, "Cannot round without a smallestUnit or largestUnit option"_s);
-        return { };
+        smallest = temporalUnitType(string);
+        if (!smallest) {
+            throwRangeError(globalObject, scope, "smallestUnit is an invalid Temporal unit"_s);
+            return { };
+        }
+    } else {
+        options = intlGetOptionsObject(globalObject, optionsValue);
+        RETURN_IF_EXCEPTION(scope, { });
+
+        smallest = temporalSmallestUnit(globalObject, options, { });
+        RETURN_IF_EXCEPTION(scope, { });
+
+        largest = temporalLargestUnit(globalObject, options, { }, defaultLargestUnit);
+        RETURN_IF_EXCEPTION(scope, { });
+
+        if (!smallest && !largest) {
+            throwRangeError(globalObject, scope, "Cannot round without a smallestUnit or largestUnit option"_s);
+            return { };
+        }
+
+        if (smallest && largest && smallest.value() < largest.value()) {
+            throwRangeError(globalObject, scope, "smallestUnit must be smaller than largestUnit"_s);
+            return { };
+        }
     }
-
-    if (smallest && largest && smallest.value() < largest.value()) {
-        throwRangeError(globalObject, scope, "smallestUnit must be smaller than largestUnit"_s);
-        return { };
-    }
-
     TemporalUnit smallestUnit = smallest.value_or(TemporalUnit::Nanosecond);
     TemporalUnit largestUnit = largest.value_or(std::min(defaultLargestUnit, smallestUnit));
 
@@ -512,11 +523,17 @@ double TemporalDuration::total(JSGlobalObject* globalObject, JSValue optionsValu
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    JSObject* options = intlGetOptionsObject(globalObject, optionsValue);
-    RETURN_IF_EXCEPTION(scope, 0);
+    String unitString;
+    if (optionsValue.isString()) {
+        unitString = optionsValue.toWTFString(globalObject);
+        RETURN_IF_EXCEPTION(scope, 0);
+    } else {
+        JSObject* options = intlGetOptionsObject(globalObject, optionsValue);
+        RETURN_IF_EXCEPTION(scope, 0);
 
-    String unitString = intlStringOption(globalObject, options, vm.propertyNames->unit, { }, nullptr, nullptr);
-    RETURN_IF_EXCEPTION(scope, 0);
+        unitString = intlStringOption(globalObject, options, vm.propertyNames->unit, { }, { }, { });
+        RETURN_IF_EXCEPTION(scope, 0);
+    }
 
     auto unitType = temporalUnitType(unitString);
     if (!unitType) {
@@ -546,7 +563,7 @@ String TemporalDuration::toString(JSGlobalObject* globalObject, JSValue optionsV
     RETURN_IF_EXCEPTION(scope, { });
 
     if (!options)
-        return toString();
+        RELEASE_AND_RETURN(scope, toString(globalObject));
 
     PrecisionData data = secondsStringPrecision(globalObject, options);
     RETURN_IF_EXCEPTION(scope, { });
@@ -560,18 +577,43 @@ String TemporalDuration::toString(JSGlobalObject* globalObject, JSValue optionsV
 
     // No need to make a new object if we were given explicit defaults.
     if (std::get<0>(data.precision) == Precision::Auto && roundingMode == RoundingMode::Trunc)
-        return toString();
+        RELEASE_AND_RETURN(scope, toString(globalObject));
 
     ISO8601::Duration newDuration = m_duration;
     round(newDuration, data.increment, data.unit, roundingMode);
-    return toString(newDuration, data.precision);
+    RELEASE_AND_RETURN(scope, toString(globalObject, newDuration, data.precision));
+}
+
+static void appendInteger(JSGlobalObject* globalObject, StringBuilder& builder, double value)
+{
+    ASSERT(std::isfinite(value));
+
+    VM& vm = globalObject->vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    double absValue = std::abs(value);
+    if (LIKELY(absValue <= maxSafeInteger())) {
+        builder.append(absValue);
+        return;
+    }
+
+    auto* bigint = JSBigInt::createFrom(globalObject, absValue);
+    RETURN_IF_EXCEPTION(scope, void());
+
+    String string = bigint->toString(globalObject, 10);
+    RETURN_IF_EXCEPTION(scope, void());
+
+    builder.append(string);
 }
 
 // TemporalDurationToString ( years, months, weeks, days, hours, minutes, seconds, milliseconds, microseconds, nanoseconds, precision )
 // https://tc39.es/proposal-temporal/#sec-temporal-temporaldurationtostring
-String TemporalDuration::toString(const ISO8601::Duration& duration, std::tuple<Precision, unsigned> precision)
+String TemporalDuration::toString(JSGlobalObject* globalObject, const ISO8601::Duration& duration, std::tuple<Precision, unsigned> precision)
 {
     ASSERT(std::get<0>(precision) == Precision::Auto || std::get<1>(precision) < 10);
+
+    VM& vm = globalObject->vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
 
     auto balancedMicroseconds = duration.microseconds() + std::trunc(duration.nanoseconds() / 1000);
     auto balancedNanoseconds = std::fmod(duration.nanoseconds(), 1000);
@@ -580,14 +622,6 @@ String TemporalDuration::toString(const ISO8601::Duration& duration, std::tuple<
     auto balancedSeconds = duration.seconds() + std::trunc(balancedMilliseconds / 1000);
     balancedMilliseconds = std::fmod(balancedMilliseconds, 1000);
 
-    // TEMPORARY! (pending spec discussion about maximum values @ https://github.com/tc39/proposal-temporal/issues/1604)
-    // We *must* avoid printing a number in scientific notation, which is currently only possible for numbers < 1e21
-    // (a value originating in the Number#toFixed spec and upheld by our NumberToStringBuffer).
-    auto formatInteger = [](double value) -> double {
-        auto absValue = std::abs(value);
-        return LIKELY(absValue < 1e21) ? absValue : 1e21 - 65537;
-    };
-
     StringBuilder builder;
 
     auto sign = TemporalDuration::sign(duration);
@@ -595,27 +629,55 @@ String TemporalDuration::toString(const ISO8601::Duration& duration, std::tuple<
         builder.append('-');
 
     builder.append('P');
-    if (duration.years())
-        builder.append(formatInteger(duration.years()), 'Y');
-    if (duration.months())
-        builder.append(formatInteger(duration.months()), 'M');
-    if (duration.weeks())
-        builder.append(formatInteger(duration.weeks()), 'W');
-    if (duration.days())
-        builder.append(formatInteger(duration.days()), 'D');
+    if (duration.years()) {
+        appendInteger(globalObject, builder, duration.years());
+        RETURN_IF_EXCEPTION(scope, { });
+        builder.append('Y');
+    }
+    if (duration.months()) {
+        appendInteger(globalObject, builder, duration.months());
+        RETURN_IF_EXCEPTION(scope, { });
+        builder.append('M');
+    }
+    if (duration.weeks()) {
+        appendInteger(globalObject, builder, duration.weeks());
+        RETURN_IF_EXCEPTION(scope, { });
+        builder.append('W');
+    }
+    if (duration.days()) {
+        appendInteger(globalObject, builder, duration.days());
+        RETURN_IF_EXCEPTION(scope, { });
+        builder.append('D');
+    }
 
     // The zero value is displayed in seconds.
-    auto usesSeconds = balancedSeconds || balancedMilliseconds || balancedMicroseconds || balancedNanoseconds || !sign;
+    auto usesSeconds = balancedSeconds || balancedMilliseconds || balancedMicroseconds || balancedNanoseconds || !sign || std::get<0>(precision) != Precision::Auto;
     if (!duration.hours() && !duration.minutes() && !usesSeconds)
         return builder.toString();
 
     builder.append('T');
-    if (duration.hours())
-        builder.append(formatInteger(duration.hours()), 'H');
-    if (duration.minutes())
-        builder.append(formatInteger(duration.minutes()), 'M');
+    if (duration.hours()) {
+        appendInteger(globalObject, builder, duration.hours());
+        RETURN_IF_EXCEPTION(scope, { });
+        builder.append('H');
+    }
+    if (duration.minutes()) {
+        appendInteger(globalObject, builder, duration.minutes());
+        RETURN_IF_EXCEPTION(scope, { });
+        builder.append('M');
+    }
     if (usesSeconds) {
-        builder.append(formatInteger(balancedSeconds));
+        // TEMPORARY! (pending spec discussion about rebalancing @ https://github.com/tc39/proposal-temporal/issues/2195)
+        // Although we must be able to display Number values beyond MAX_SAFE_INTEGER, it does not seem reasonable
+        // to require that calculations be performed outside of double space purely to support a case like
+        // `Temporal.Duration.from({ microseconds: Number.MAX_VALUE, nanoseconds: Number.MAX_VALUE }).toString()`.
+        if (UNLIKELY(!std::isfinite(balancedSeconds))) {
+            throwRangeError(globalObject, scope, "Cannot display infinite seconds!"_s);
+            return { };
+        }
+
+        appendInteger(globalObject, builder, balancedSeconds);
+        RETURN_IF_EXCEPTION(scope, { });
 
         auto fraction = std::abs(balancedMilliseconds) * 1e6 + std::abs(balancedMicroseconds) * 1e3 + std::abs(balancedNanoseconds);
         formatSecondsStringFraction(builder, fraction, precision);

@@ -291,6 +291,8 @@ public:
     virtual void mediaPlayerOnNewVideoFrameMetadata(VideoFrameMetadata&&, RetainPtr<CVPixelBufferRef>&&) { }
 #endif
 
+    virtual bool mediaPlayerPrefersSandboxedParsing() const { return false; }
+
 #if !RELEASE_LOG_DISABLED
     virtual const void* mediaPlayerLogIdentifier() { return nullptr; }
     virtual const Logger& mediaPlayerLogger() = 0;
@@ -356,7 +358,7 @@ public:
 
     bool load(const URL&, const ContentType&, const String& keySystem);
 #if ENABLE(MEDIA_SOURCE)
-    bool load(const URL&, const ContentType&, MediaSourcePrivateClient*);
+    bool load(const URL&, const ContentType&, MediaSourcePrivateClient&);
 #endif
 #if ENABLE(MEDIA_STREAM)
     bool load(MediaStreamPrivate&);
@@ -365,6 +367,7 @@ public:
 
     void setPageIsVisible(bool);
     void setVisibleForCanvas(bool);
+    bool isVisibleForCanvas() const { return m_visibleForCanvas; }
 
     void setVisibleInViewport(bool);
     bool isVisibleInViewport() const { return m_visibleInViewport; }
@@ -381,7 +384,7 @@ public:
     // This is different from the asynchronous MediaKeyError.
     enum MediaKeyException { NoError, InvalidPlayerState, KeySystemNotSupported };
 
-    std::unique_ptr<LegacyCDMSession> createSession(const String& keySystem, LegacyCDMSessionClient*);
+    std::unique_ptr<LegacyCDMSession> createSession(const String& keySystem, LegacyCDMSessionClient&);
     void setCDM(LegacyCDM*);
     void setCDMSession(LegacyCDMSession*);
     void keyAdded();
@@ -471,9 +474,15 @@ public:
 #if !USE(AVFOUNDATION)
     bool copyVideoTextureToPlatformTexture(GraphicsContextGL*, PlatformGLObject texture, GCGLenum target, GCGLint level, GCGLenum internalFormat, GCGLenum format, GCGLenum type, bool premultiplyAlpha, bool flipY);
 #endif
+
+#if PLATFORM(COCOA) && !HAVE(AVSAMPLEBUFFERDISPLAYLAYER_COPYDISPLAYEDPIXELBUFFER)
+    void willBeAskedToPaintGL();
+#endif
+
     RefPtr<VideoFrame> videoFrameForCurrentTime();
     RefPtr<NativeImage> nativeImageForCurrentTime();
     DestinationColorSpace colorSpace();
+    bool shouldGetNativeImageForCanvasDrawing() const;
 
     using MediaPlayerEnums::NetworkState;
     NetworkState networkState();
@@ -695,6 +704,14 @@ public:
     void startVideoFrameMetadataGathering();
     void stopVideoFrameMetadataGathering();
 
+    void playerContentBoxRectChanged(const LayoutRect&);
+
+    String lastErrorMessage() const;
+
+    bool prefersSandboxedParsing() const { return client().mediaPlayerPrefersSandboxedParsing(); }
+
+    void renderVideoWillBeDestroyed();
+
 private:
     MediaPlayer(MediaPlayerClient&);
     MediaPlayer(MediaPlayerClient&, MediaPlayerEnums::MediaEngineIdentifier);
@@ -710,6 +727,7 @@ private:
     Timer m_reloadTimer;
     std::unique_ptr<MediaPlayerPrivateInterface> m_private;
     const MediaPlayerFactory* m_currentMediaEngine { nullptr };
+    HashSet<const MediaPlayerFactory*> m_attemptedEngines;
     URL m_url;
     ContentType m_contentType;
     String m_keySystem;
@@ -719,6 +737,7 @@ private:
     Preload m_preload { Preload::Auto };
     double m_volume { 1 };
     bool m_pageIsVisible { false };
+    bool m_visibleForCanvas { false };
     bool m_visibleInViewport { false };
     bool m_muted { false };
     bool m_preservesPitch { true };
@@ -730,7 +749,7 @@ private:
     PitchCorrectionAlgorithm m_pitchCorrectionAlgorithm { PitchCorrectionAlgorithm::BestAllAround };
 
 #if ENABLE(MEDIA_SOURCE)
-    RefPtr<MediaSourcePrivateClient> m_mediaSource;
+    WeakPtr<MediaSourcePrivateClient> m_mediaSource;
 #endif
 #if ENABLE(MEDIA_STREAM)
     RefPtr<MediaStreamPrivate> m_mediaStream;
@@ -739,6 +758,7 @@ private:
     bool m_shouldContinueAfterKeyNeeded { false };
 #endif
     bool m_isGatheringVideoFrameMetadata { false };
+    String m_lastErrorMessage;
 };
 
 class MediaPlayerFactory {

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -40,6 +40,7 @@
 #include "JSCJSValueInlines.h"
 #include "LinkBuffer.h"
 #include "MaxFrameExtentForSlowPathCall.h"
+#include "ProbeContext.h"
 #include "ThunkGenerators.h"
 #include "VM.h"
 
@@ -48,7 +49,7 @@ namespace JSC { namespace DFG {
 JITCompiler::JITCompiler(Graph& dfg)
     : CCallHelpers(dfg.m_codeBlock)
     , m_graph(dfg)
-    , m_jitCode(adoptRef(new JITCode()))
+    , m_jitCode(adoptRef(new JITCode(m_graph.m_plan.isUnlinked())))
     , m_blockHeads(dfg.numBlocks())
     , m_pcToCodeOriginMapBuilder(dfg.m_vm)
 {
@@ -87,6 +88,8 @@ void JITCompiler::linkOSRExits()
         }
     }
 
+    JumpList dispatchCases;
+    JumpList dispatchCasesWithoutLinkedFailures;
     for (unsigned i = 0; i < m_osrExit.size(); ++i) {
         OSRExitCompilationInfo& info = m_exitCompilationInfo[i];
         JumpList& failureJumps = info.m_failureJumps;
@@ -96,9 +99,47 @@ void JITCompiler::linkOSRExits()
             info.m_replacementDestination = label();
 
         jitAssertHasValidCallFrame();
+#if USE(JSVALUE64)
+        if (m_graph.m_plan.isUnlinked()) {
+            move(TrustedImm32(i), GPRInfo::numberTagRegister);
+            if (info.m_replacementDestination.isSet())
+                dispatchCasesWithoutLinkedFailures.append(jump());
+            else
+                dispatchCases.append(jump());
+            continue;
+        }
+#endif
+        UNUSED_VARIABLE(dispatchCases);
+        UNUSED_VARIABLE(dispatchCasesWithoutLinkedFailures);
         store32(TrustedImm32(i), &vm().osrExitIndex);
         info.m_patchableJump = patchableJump();
     }
+
+#if USE(JSVALUE64)
+    if (m_graph.m_plan.isUnlinked()) {
+        // When jumping to OSR exit handler via exception, we do not have proper callFrameRegister and constantsRegister.
+        // We should reload appropriate callFrameRegister from VM::callFrameForCatch to materialize constants buffer register.
+        // FIXME: The following code can be a DFG Thunk.
+        if (!dispatchCasesWithoutLinkedFailures.empty()) {
+            dispatchCasesWithoutLinkedFailures.link(this);
+            loadPtr(vm().addressOfCallFrameForCatch(), GPRInfo::notCellMaskRegister);
+            MacroAssembler::Jump didNotHaveException = branchTestPtr(MacroAssembler::Zero, GPRInfo::notCellMaskRegister);
+            move(GPRInfo::notCellMaskRegister, GPRInfo::constantsRegister);
+            emitGetFromCallFrameHeaderPtr(CallFrameSlot::codeBlock, GPRInfo::constantsRegister, GPRInfo::constantsRegister);
+            loadPtr(Address(GPRInfo::constantsRegister, CodeBlock::offsetOfJITData()), GPRInfo::constantsRegister);
+            didNotHaveException.link(this);
+        }
+        dispatchCases.link(this);
+        store32(GPRInfo::numberTagRegister, &vm().osrExitIndex);
+        loadPtr(Address(GPRInfo::constantsRegister, JITData::offsetOfExits()), GPRInfo::constantsRegister);
+        static_assert(sizeof(JITData::ExitVector::value_type) == 16);
+        ASSERT(!JITData::ExitVector::value_type::offsetOfCodePtr());
+        lshiftPtr(TrustedImm32(4), GPRInfo::numberTagRegister);
+        addPtr(GPRInfo::numberTagRegister, GPRInfo::constantsRegister);
+        emitMaterializeTagCheckRegisters();
+        farJump(Address(GPRInfo::constantsRegister, JITData::ExitVector::Storage::offsetOfData()), OSRExitPtrTag);
+    }
+#endif
 }
 
 void JITCompiler::compileEntry()
@@ -110,13 +151,19 @@ void JITCompiler::compileEntry()
     // check) which will be dependent on stack layout. (We'd need to account for this in
     // both normal return code and when jumping to an exception handler).
     emitFunctionPrologue();
-    emitPutToCallFrameHeader(m_codeBlock, CallFrameSlot::codeBlock);
+    jitAssertCodeBlockOnCallFrameWithType(GPRInfo::regT2, JITType::DFGJIT);
 }
 
 void JITCompiler::compileSetupRegistersForEntry()
 {
     emitSaveCalleeSaves();
     emitMaterializeTagCheckRegisters();
+#if USE(JSVALUE64)
+    if (m_graph.m_plan.isUnlinked()) {
+        emitGetFromCallFrameHeaderPtr(CallFrameSlot::codeBlock, GPRInfo::constantsRegister);
+        loadPtr(Address(GPRInfo::constantsRegister, CodeBlock::offsetOfJITData()), GPRInfo::constantsRegister);
+    }
+#endif
 }
 
 void JITCompiler::compileEntryExecutionFlag()
@@ -134,40 +181,6 @@ void JITCompiler::compileBody()
 
     bool compiledSpeculative = m_speculative->compile();
     ASSERT_UNUSED(compiledSpeculative, compiledSpeculative);
-}
-
-void JITCompiler::compileExceptionHandlers()
-{
-#if !ENABLE(EXTRA_CTI_THUNKS)
-    if (!m_exceptionChecksWithCallFrameRollback.empty()) {
-        m_exceptionChecksWithCallFrameRollback.link(this);
-
-        copyCalleeSavesToEntryFrameCalleeSavesBuffer(vm().topEntryFrame);
-
-        // operationLookupExceptionHandlerFromCallerFrame is passed one argument, the VM*.
-        move(TrustedImmPtr(&vm()), GPRInfo::argumentGPR0);
-        prepareCallOperation(vm());
-        addPtr(TrustedImm32(m_graph.stackPointerOffset() * sizeof(Register)), GPRInfo::callFrameRegister, stackPointerRegister);
-
-        appendCall(operationLookupExceptionHandlerFromCallerFrame);
-
-        jumpToExceptionHandler(vm());
-    }
-
-    if (!m_exceptionChecks.empty()) {
-        m_exceptionChecks.link(this);
-
-        copyCalleeSavesToEntryFrameCalleeSavesBuffer(vm().topEntryFrame);
-
-        // operationLookupExceptionHandler is passed one argument, the VM*.
-        move(TrustedImmPtr(&vm()), GPRInfo::argumentGPR0);
-        prepareCallOperation(vm());
-
-        appendCall(operationLookupExceptionHandler);
-
-        jumpToExceptionHandler(vm());
-    }
-#endif // ENABLE(EXTRA_CTI_THUNKS)
 }
 
 void JITCompiler::link(LinkBuffer& linkBuffer)
@@ -259,6 +272,13 @@ void JITCompiler::link(LinkBuffer& linkBuffer)
     finalizeInlineCaches(m_instanceOfs, linkBuffer);
     finalizeInlineCaches(m_privateBrandAccesses, linkBuffer);
 
+    if (m_graph.m_plan.isUnlinked()) {
+        m_jitCode->m_unlinkedStubInfos = FixedVector<UnlinkedStructureStubInfo>(m_unlinkedStubInfos.size());
+        if (m_jitCode->m_unlinkedStubInfos.size())
+            std::move(m_unlinkedStubInfos.begin(), m_unlinkedStubInfos.end(), m_jitCode->m_unlinkedStubInfos.begin());
+        ASSERT(m_jitCode->common.m_stubInfos.isEmpty());
+    }
+
     for (auto& record : m_jsCalls) {
         auto& info = *record.info;
         info.setCodeLocations(
@@ -273,28 +293,37 @@ void JITCompiler::link(LinkBuffer& linkBuffer)
             CodeLocationLabel<JSInternalPtrTag>());
     }
 
-#if ENABLE(EXTRA_CTI_THUNKS)
     if (!m_exceptionChecks.empty())
         linkBuffer.link(m_exceptionChecks, CodeLocationLabel(vm().getCTIStub(handleExceptionGenerator).retaggedCode<NoPtrTag>()));
     if (!m_exceptionChecksWithCallFrameRollback.empty())
         linkBuffer.link(m_exceptionChecksWithCallFrameRollback, CodeLocationLabel(vm().getCTIStub(handleExceptionWithCallFrameRollbackGenerator).retaggedCode<NoPtrTag>()));
-#endif // ENABLE(EXTRA_CTI_THUNKS)
 
-    MacroAssemblerCodeRef<JITThunkPtrTag> osrExitThunk = vm().getCTIStub(osrExitGenerationThunkGenerator);
-    auto target = CodeLocationLabel<JITThunkPtrTag>(osrExitThunk.code());
-    for (unsigned i = 0; i < m_osrExit.size(); ++i) {
-        OSRExitCompilationInfo& info = m_exitCompilationInfo[i];
-        if (!Options::useProbeOSRExit()) {
+    if (!m_graph.m_plan.isUnlinked()) {
+        MacroAssemblerCodeRef<JITThunkPtrTag> osrExitThunk = vm().getCTIStub(osrExitGenerationThunkGenerator);
+        auto target = CodeLocationLabel<JITThunkPtrTag>(osrExitThunk.code());
+        Vector<JumpReplacement> jumpReplacements;
+        for (unsigned i = 0; i < m_osrExit.size(); ++i) {
+            OSRExitCompilationInfo& info = m_exitCompilationInfo[i];
             linkBuffer.link(info.m_patchableJump.m_jump, target);
             OSRExit& exit = m_osrExit[i];
             exit.m_patchableJumpLocation = linkBuffer.locationOf<JSInternalPtrTag>(info.m_patchableJump);
+            if (info.m_replacementSource.isSet()) {
+                jumpReplacements.append(JumpReplacement(
+                    linkBuffer.locationOf<JSInternalPtrTag>(info.m_replacementSource),
+                    linkBuffer.locationOf<OSRExitPtrTag>(info.m_replacementDestination)));
+            }
         }
-        if (info.m_replacementSource.isSet()) {
-            m_jitCode->common.m_jumpReplacements.append(JumpReplacement(
-                linkBuffer.locationOf<JSInternalPtrTag>(info.m_replacementSource),
-                linkBuffer.locationOf<OSRExitPtrTag>(info.m_replacementDestination)));
-        }
+        m_jitCode->common.m_jumpReplacements = WTFMove(jumpReplacements);
     }
+
+#if ASSERT_ENABLED
+    for (auto& info : m_exitCompilationInfo) {
+        if (info.m_replacementSource.isSet())
+            ASSERT(!m_graph.m_plan.isUnlinked());
+    }
+    if (m_graph.m_plan.isUnlinked())
+        ASSERT(m_jitCode->common.m_jumpReplacements.isEmpty());
+#endif
 
     if (UNLIKELY(m_graph.compilation())) {
         ASSERT(m_exitSiteLabels.size() == m_osrExit.size());
@@ -333,6 +362,8 @@ void JITCompiler::link(LinkBuffer& linkBuffer)
 
     if (m_pcToCodeOriginMapBuilder.didBuildMapping())
         m_jitCode->common.m_pcToCodeOriginMap = makeUnique<PCToCodeOriginMap>(WTFMove(m_pcToCodeOriginMapBuilder), linkBuffer);
+
+    m_jitCode->m_linkerIR = LinkerIR(WTFMove(m_constantPool));
 }
 
 static void emitStackOverflowCheck(JITCompiler& jit, MacroAssembler::JumpList& stackOverflow)
@@ -376,13 +407,13 @@ void JITCompiler::compile()
     if (maxFrameExtentForSlowPathCall)
         addPtr(TrustedImm32(-static_cast<int32_t>(maxFrameExtentForSlowPathCall)), stackPointerRegister);
 
-    m_speculative->callOperationWithCallFrameRollbackOnException(operationThrowStackOverflowError, m_codeBlock);
+    emitGetFromCallFrameHeaderPtr(CallFrameSlot::codeBlock, GPRInfo::argumentGPR0);
+    m_speculative->callOperationWithCallFrameRollbackOnException(operationThrowStackOverflowError, GPRInfo::argumentGPR0);
 
     // Generate slow path code.
     m_speculative->runSlowPathGenerators(m_pcToCodeOriginMapBuilder);
     m_pcToCodeOriginMapBuilder.appendItem(labelIgnoringWatchpoints(), PCToCodeOriginMapBuilder::defaultCodeOrigin());
 
-    compileExceptionHandlers();
     linkOSRExits();
 
     // Create OSR entry trampolines if necessary.
@@ -402,6 +433,7 @@ void JITCompiler::compile()
 
     auto codeRef = FINALIZE_DFG_CODE(*linkBuffer, JSEntryPtrTag, "DFG JIT code for %s", toCString(CodeBlockWithJITType(m_codeBlock, JITType::DFGJIT)).data());
     m_jitCode->initializeCodeRefForDFG(codeRef, codeRef.code());
+    m_jitCode->variableEventStream = m_speculative->finalizeEventStream();
 
     auto finalizer = makeUnique<JITFinalizer>(m_graph.m_plan, m_jitCode.releaseNonNull(), WTFMove(linkBuffer));
     m_graph.m_plan.setFinalizer(WTFMove(finalizer));
@@ -450,7 +482,8 @@ void JITCompiler::compileFunction()
     if (maxFrameExtentForSlowPathCall)
         addPtr(TrustedImm32(-static_cast<int32_t>(maxFrameExtentForSlowPathCall)), stackPointerRegister);
 
-    m_speculative->callOperationWithCallFrameRollbackOnException(operationThrowStackOverflowError, m_codeBlock);
+    emitGetFromCallFrameHeaderPtr(CallFrameSlot::codeBlock, GPRInfo::argumentGPR0);
+    m_speculative->callOperationWithCallFrameRollbackOnException(operationThrowStackOverflowError, GPRInfo::argumentGPR0);
 
     // The fast entry point into a function does not check the correct number of arguments
     // have been passed to the call (we only use the fast entry point where we can statically
@@ -469,7 +502,9 @@ void JITCompiler::compileFunction()
         emitStoreCodeOrigin(CodeOrigin(BytecodeIndex(0)));
         if (maxFrameExtentForSlowPathCall)
             addPtr(TrustedImm32(-static_cast<int32_t>(maxFrameExtentForSlowPathCall)), stackPointerRegister);
-        m_speculative->callOperationWithCallFrameRollbackOnException(m_codeBlock->isConstructor() ? operationConstructArityCheck : operationCallArityCheck, GPRInfo::regT0, m_codeBlock->globalObject());
+        emitGetFromCallFrameHeaderPtr(CallFrameSlot::codeBlock, GPRInfo::argumentGPR0);
+        loadPtr(Address(GPRInfo::argumentGPR0, CodeBlock::offsetOfGlobalObject()), GPRInfo::argumentGPR0);
+        m_speculative->callOperationWithCallFrameRollbackOnException(m_codeBlock->isConstructor() ? operationConstructArityCheck : operationCallArityCheck, GPRInfo::returnValueGPR, GPRInfo::argumentGPR0);
         if (maxFrameExtentForSlowPathCall)
             addPtr(TrustedImm32(maxFrameExtentForSlowPathCall), stackPointerRegister);
         branchTest32(Zero, GPRInfo::returnValueGPR).linkTo(fromArityCheck, this);
@@ -484,7 +519,6 @@ void JITCompiler::compileFunction()
     m_speculative->runSlowPathGenerators(m_pcToCodeOriginMapBuilder);
     m_pcToCodeOriginMapBuilder.appendItem(labelIgnoringWatchpoints(), PCToCodeOriginMapBuilder::defaultCodeOrigin());
 
-    compileExceptionHandlers();
     linkOSRExits();
 
     // Create OSR entry trampolines if necessary.
@@ -510,6 +544,7 @@ void JITCompiler::compileFunction()
     m_jitCode->initializeCodeRefForDFG(
         FINALIZE_DFG_CODE(*linkBuffer, JSEntryPtrTag, "DFG JIT code for %s", toCString(CodeBlockWithJITType(m_codeBlock, JITType::DFGJIT)).data()),
         withArityCheck);
+    m_jitCode->variableEventStream = m_speculative->finalizeEventStream();
 
     auto finalizer = makeUnique<JITFinalizer>(m_graph.m_plan, m_jitCode.releaseNonNull(), WTFMove(linkBuffer), withArityCheck);
     m_graph.m_plan.setFinalizer(WTFMove(finalizer));
@@ -638,7 +673,7 @@ void JITCompiler::exceptionCheck()
     HandlerInfo* exceptionHandler;
     bool willCatchException = m_graph.willCatchExceptionInMachineFrame(m_speculative->m_currentNode->origin.forExit, opCatchOrigin, exceptionHandler);
     if (willCatchException) {
-        unsigned streamIndex = m_speculative->m_outOfLineStreamIndex ? *m_speculative->m_outOfLineStreamIndex : m_speculative->m_stream->size();
+        unsigned streamIndex = m_speculative->m_outOfLineStreamIndex ? *m_speculative->m_outOfLineStreamIndex : m_speculative->m_stream.size();
         MacroAssembler::Jump hadException = emitNonPatchableExceptionCheck(vm());
         // We assume here that this is called after callOpeartion()/appendCall() is called.
         appendExceptionHandlingOSRExit(ExceptionCheck, streamIndex, opCatchOrigin, exceptionHandler, m_jitCode->common.codeOrigins->lastCallSite(), hadException);
@@ -679,6 +714,89 @@ void JITCompiler::makeCatchOSREntryBuffer()
         uint32_t numberOfLiveLocals = std::max(*m_graph.m_maxLocalsForCatchOSREntry, 1u); // Make sure we always allocate a non-null catchOSREntryBuffer.
         m_jitCode->common.catchOSREntryBuffer = vm().scratchBufferForSize(sizeof(JSValue) * numberOfLiveLocals);
     }
+}
+
+void JITCompiler::loadConstant(LinkerIR::Constant index, GPRReg dest)
+{
+#if USE(JSVALUE64)
+    loadPtr(Address(GPRInfo::constantsRegister, JITData::offsetOfData() + sizeof(void*) * index), dest);
+#else
+    UNUSED_PARAM(index);
+    UNUSED_PARAM(dest);
+    RELEASE_ASSERT_NOT_REACHED();
+#endif
+}
+
+void JITCompiler::loadLinkableConstant(LinkableConstant constant, GPRReg dest)
+{
+    constant.materialize(*this, dest);
+}
+
+void JITCompiler::storeLinkableConstant(LinkableConstant constant, Address dest)
+{
+    constant.store(*this, dest);
+}
+
+JITCompiler::LinkableConstant::LinkableConstant(JITCompiler& jit, JSCell* cell)
+{
+    jit.m_graph.m_plan.weakReferences().addLazily(cell);
+    if (jit.m_graph.m_plan.isUnlinked()) {
+        m_index = jit.addToConstantPool(LinkerIR::Type::CellPointer, cell);
+        return;
+    }
+    m_pointer = cell;
+}
+
+JITCompiler::LinkableConstant::LinkableConstant(JITCompiler& jit, void* pointer, NonCellTag)
+{
+    if (jit.m_graph.m_plan.isUnlinked()) {
+        m_index = jit.addToConstantPool(LinkerIR::Type::NonCellPointer, pointer);
+        return;
+    }
+    m_pointer = pointer;
+}
+
+void JITCompiler::LinkableConstant::materialize(CCallHelpers& jit, GPRReg resultGPR)
+{
+#if USE(JSVALUE64)
+    if (isUnlinked()) {
+        jit.loadPtr(unlinkedAddress(), resultGPR);
+        return;
+    }
+#endif
+    jit.move(TrustedImmPtr(m_pointer), resultGPR);
+}
+
+void JITCompiler::LinkableConstant::store(CCallHelpers& jit, CCallHelpers::Address address)
+{
+#if USE(JSVALUE64)
+    if (isUnlinked()) {
+        jit.transferPtr(unlinkedAddress(), address);
+        return;
+    }
+#endif
+    jit.storePtr(TrustedImmPtr(m_pointer), address);
+}
+
+LinkerIR::Constant JITCompiler::addToConstantPool(LinkerIR::Type type, void* payload)
+{
+    LinkerIR::Value value { payload, type };
+    auto result = m_constantPoolMap.add(value, m_constantPoolMap.size());
+    if (result.isNewEntry)
+        m_constantPool.append(value);
+    return result.iterator->value;
+}
+
+std::tuple<CompileTimeStructureStubInfo, JITCompiler::LinkableConstant> JITCompiler::addStructureStubInfo()
+{
+    if (m_graph.m_plan.isUnlinked()) {
+        void* unlinkedStubInfoIndex = bitwise_cast<void*>(static_cast<uintptr_t>(m_unlinkedStubInfos.size()));
+        UnlinkedStructureStubInfo* stubInfo = &m_unlinkedStubInfos.alloc();
+        LinkerIR::Constant stubInfoIndex = addToConstantPool(LinkerIR::Type::StructureStubInfo, unlinkedStubInfoIndex);
+        return std::tuple { stubInfo, LinkableConstant(stubInfoIndex) };
+    }
+    StructureStubInfo* stubInfo = jitCode()->common.m_stubInfos.add();
+    return std::tuple { stubInfo, LinkableConstant() };
 }
 
 } } // namespace JSC::DFG

@@ -51,7 +51,7 @@ Ref<JSON::Object> TimelineRecordFactory::createGenericRecord(double startTime, i
     if (maxCallStackDepth) {
         Ref<ScriptCallStack> stackTrace = createScriptCallStack(JSExecState::currentState(), maxCallStackDepth);
         if (stackTrace->size())
-            record->setValue("stackTrace"_s, stackTrace->buildInspectorArray());
+            record->setValue("stackTrace"_s, stackTrace->buildInspectorObject());
     }
     return record;
 }
@@ -158,6 +158,13 @@ Ref<JSON::Object> TimelineRecordFactory::createPaintData(const FloatQuad& quad)
 {
     Ref<JSON::Object> data = JSON::Object::create();
     data->setArray("clip"_s, createQuad(quad));
+    return data;
+}
+
+Ref<JSON::Object> TimelineRecordFactory::createScreenshotData(const String& imageData)
+{
+    Ref<JSON::Object> data = JSON::Object::create();
+    data->setString("imageData"_s, imageData);
     return data;
 }
 

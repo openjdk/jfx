@@ -27,6 +27,7 @@
 
 #if USE(LIBWEBRTC)
 
+#include "DeprecatedGlobalSettings.h"
 #include "EventNames.h"
 #include "JSDOMPromiseDeferred.h"
 #include "JSRTCStatsReport.h"
@@ -53,7 +54,6 @@
 #include "RealtimeIncomingVideoSource.h"
 #include "RealtimeOutgoingAudioSource.h"
 #include "RealtimeOutgoingVideoSource.h"
-#include "RuntimeEnabledFeatures.h"
 #include <webrtc/rtc_base/physical_socket_server.h>
 #include <webrtc/p2p/base/basic_packet_socket_factory.h>
 #include <webrtc/p2p/client/basic_port_allocator.h>
@@ -79,7 +79,7 @@ LibWebRTCMediaEndpoint::LibWebRTCMediaEndpoint(LibWebRTCPeerConnectionBackend& p
     ASSERT(isMainThread());
     ASSERT(client.factory());
 
-    if (RuntimeEnabledFeatures::sharedFeatures().webRTCH264SimulcastEnabled())
+    if (DeprecatedGlobalSettings::webRTCH264SimulcastEnabled())
         webrtc::field_trial::InitFieldTrialsFromString("WebRTC-H264Simulcast/Enabled/");
 }
 
@@ -204,12 +204,6 @@ bool LibWebRTCMediaEndpoint::addTrack(LibWebRTCRtpSenderBackend& sender, MediaSt
         source = WTFMove(videoSource);
         break;
     }
-    case RealtimeMediaSource::Type::Screen:
-    case RealtimeMediaSource::Type::Window:
-    case RealtimeMediaSource::Type::SystemAudio:
-    case RealtimeMediaSource::Type::None:
-        ASSERT_NOT_REACHED();
-        return false;
     }
 
     sender.setSource(WTFMove(source));
@@ -407,7 +401,7 @@ ExceptionOr<LibWebRTCMediaEndpoint::Backends> LibWebRTCMediaEndpoint::createTran
 
 ExceptionOr<LibWebRTCMediaEndpoint::Backends> LibWebRTCMediaEndpoint::addTransceiver(const String& trackKind, const RTCRtpTransceiverInit& init)
 {
-    auto type = trackKind == "audio" ? cricket::MediaType::MEDIA_TYPE_AUDIO : cricket::MediaType::MEDIA_TYPE_VIDEO;
+    auto type = trackKind == "audio"_s ? cricket::MediaType::MEDIA_TYPE_AUDIO : cricket::MediaType::MEDIA_TYPE_VIDEO;
     return createTransceiverBackends(type, fromRtpTransceiverInit(init, type), nullptr);
 }
 
@@ -416,18 +410,12 @@ std::pair<LibWebRTCRtpSenderBackend::Source, rtc::scoped_refptr<webrtc::MediaStr
     LibWebRTCRtpSenderBackend::Source source;
     rtc::scoped_refptr<webrtc::MediaStreamTrackInterface> rtcTrack;
     switch (track.privateTrack().type()) {
-    case RealtimeMediaSource::Type::None:
-        ASSERT_NOT_REACHED();
-        break;
-    case RealtimeMediaSource::Type::SystemAudio:
     case RealtimeMediaSource::Type::Audio: {
         auto audioSource = RealtimeOutgoingAudioSource::create(track.privateTrack());
         rtcTrack = m_peerConnectionFactory->CreateAudioTrack(track.id().utf8().data(), audioSource.ptr());
         source = WTFMove(audioSource);
         break;
     }
-    case RealtimeMediaSource::Type::Screen:
-    case RealtimeMediaSource::Type::Window:
     case RealtimeMediaSource::Type::Video: {
         auto videoSource = RealtimeOutgoingVideoSource::create(track.privateTrack());
         rtcTrack = m_peerConnectionFactory->CreateVideoTrack(track.id().utf8().data(), videoSource.ptr());
@@ -705,7 +693,7 @@ void LibWebRTCMediaEndpoint::createSessionDescriptionSucceeded(std::unique_ptr<w
 
 void LibWebRTCMediaEndpoint::createSessionDescriptionFailed(ExceptionCode errorCode, const char* errorMessage)
 {
-    callOnMainThread([protectedThis = Ref { *this }, errorCode, errorMessage = String(errorMessage)] () mutable {
+    callOnMainThread([protectedThis = Ref { *this }, errorCode, errorMessage = String::fromLatin1(errorMessage)] () mutable {
         if (protectedThis->isStopped())
             return;
         if (protectedThis->m_isInitiator)
@@ -750,7 +738,7 @@ void LibWebRTCMediaEndpoint::setLocalSessionDescriptionSucceeded()
 
 void LibWebRTCMediaEndpoint::setLocalSessionDescriptionFailed(ExceptionCode errorCode, const char* errorMessage)
 {
-    callOnMainThread([protectedThis = Ref { *this }, errorCode, errorMessage = String(errorMessage)]() mutable {
+    callOnMainThread([protectedThis = Ref { *this }, errorCode, errorMessage = String::fromLatin1(errorMessage)]() mutable {
         if (protectedThis->isStopped())
             return;
         protectedThis->m_peerConnectionBackend.setLocalDescriptionFailed(Exception { errorCode, WTFMove(errorMessage) });
@@ -768,7 +756,7 @@ void LibWebRTCMediaEndpoint::setRemoteSessionDescriptionSucceeded()
 
 void LibWebRTCMediaEndpoint::setRemoteSessionDescriptionFailed(ExceptionCode errorCode, const char* errorMessage)
 {
-    callOnMainThread([protectedThis = Ref { *this }, errorCode, errorMessage = String(errorMessage)] () mutable {
+    callOnMainThread([protectedThis = Ref { *this }, errorCode, errorMessage = String::fromLatin1(errorMessage)] () mutable {
         if (protectedThis->isStopped())
             return;
         protectedThis->m_peerConnectionBackend.setRemoteDescriptionFailed(Exception { errorCode, WTFMove(errorMessage) });
@@ -787,7 +775,7 @@ public:
     {
     }
 
-    String toJSONString() const { return String(m_stats.ToJson().c_str()); }
+    String toJSONString() const { return String::fromLatin1(m_stats.ToJson().c_str()); }
 
 private:
     const webrtc::RTCStats& m_stats;

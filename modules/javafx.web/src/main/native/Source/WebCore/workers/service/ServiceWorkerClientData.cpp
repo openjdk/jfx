@@ -32,7 +32,10 @@
 #include "Document.h"
 #include "DocumentLoader.h"
 #include "Frame.h"
+#include "FrameDestructionObserverInlines.h"
 #include "SWClientConnection.h"
+#include "WorkerGlobalScope.h"
+#include <wtf/CrossThreadCopier.h>
 
 namespace WebCore {
 
@@ -56,24 +59,58 @@ static ServiceWorkerClientFrameType toServiceWorkerClientFrameType(ScriptExecuti
     return ServiceWorkerClientFrameType::Nested;
 }
 
-ServiceWorkerClientData ServiceWorkerClientData::isolatedCopy() const
+ServiceWorkerClientData ServiceWorkerClientData::isolatedCopy() const &
 {
-    return { identifier, type, frameType, url.isolatedCopy(), lastNavigationWasAppInitiated };
+    return { identifier, type, frameType, url.isolatedCopy(), ownerURL.isolatedCopy(), pageIdentifier, frameIdentifier, lastNavigationWasAppInitiated, isVisible, isFocused, focusOrder, crossThreadCopy(ancestorOrigins) };
+}
+
+ServiceWorkerClientData ServiceWorkerClientData::isolatedCopy() &&
+{
+    return { identifier, type, frameType, WTFMove(url).isolatedCopy(), WTFMove(ownerURL).isolatedCopy(), pageIdentifier, frameIdentifier, lastNavigationWasAppInitiated, isVisible, isFocused, focusOrder, crossThreadCopy(WTFMove(ancestorOrigins)) };
 }
 
 ServiceWorkerClientData ServiceWorkerClientData::from(ScriptExecutionContext& context)
 {
-    bool isDocument = is<Document>(context);
-    RELEASE_ASSERT(isDocument); // We do not support dedicated workers as clients yet.
+    if (auto* document = dynamicDowncast<Document>(context)) {
+        auto lastNavigationWasAppInitiated = document->loader() && document->loader()->lastNavigationWasAppInitiated() ? LastNavigationWasAppInitiated::Yes : LastNavigationWasAppInitiated::No;
 
-    auto& document = downcast<Document>(context);
-    auto lastNavigationWasAppInitiated = document.loader() && document.loader()->lastNavigationWasAppInitiated() ? LastNavigationWasAppInitiated::Yes : LastNavigationWasAppInitiated::No;
+        Vector<String> ancestorOrigins;
+        if (auto* frame = document->frame()) {
+            for (auto* ancestor = frame->tree().parent(); ancestor; ancestor = ancestor->tree().parent())
+                ancestorOrigins.append(ancestor->document()->securityOrigin().toString());
+        }
 
+        return {
+            context.identifier(),
+            ServiceWorkerClientType::Window,
+            toServiceWorkerClientFrameType(context),
+            document->creationURL(),
+            URL(),
+            document->pageID(),
+            document->frameID(),
+            lastNavigationWasAppInitiated,
+            !document->hidden(),
+            document->hasFocus(),
+            0,
+            WTFMove(ancestorOrigins)
+        };
+    }
+
+    RELEASE_ASSERT(is<WorkerGlobalScope>(context));
+    auto& scope = downcast<WorkerGlobalScope>(context);
     return {
-        context.identifier(),
-        isDocument ? ServiceWorkerClientType::Window : ServiceWorkerClientType::Worker,
-        toServiceWorkerClientFrameType(context),
-        context.url(), lastNavigationWasAppInitiated
+        scope.identifier(),
+        scope.type() == WebCore::WorkerGlobalScope::Type::SharedWorker ? ServiceWorkerClientType::Sharedworker : ServiceWorkerClientType::Worker,
+        ServiceWorkerClientFrameType::None,
+        scope.url(),
+        scope.ownerURL(),
+        { },
+        { },
+        LastNavigationWasAppInitiated::No,
+        false,
+        false,
+        0,
+        { }
     };
 }
 

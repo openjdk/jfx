@@ -49,6 +49,7 @@
 #include "DisplayListRecorder.h"
 #include "DisplayListReplayer.h"
 #include "FloatQuad.h"
+#include "GeometryUtilities.h"
 #include "Gradient.h"
 #include "HTMLCanvasElement.h"
 #include "HTMLImageElement.h"
@@ -85,7 +86,7 @@ WTF_MAKE_ISO_ALLOCATED_IMPL(CanvasRenderingContext2DBase);
 static constexpr ImageSmoothingQuality defaultSmoothingQuality = ImageSmoothingQuality::Low;
 
 const int CanvasRenderingContext2DBase::DefaultFontSize = 10;
-const char* const CanvasRenderingContext2DBase::DefaultFontFamily = "sans-serif";
+const ASCIILiteral CanvasRenderingContext2DBase::DefaultFontFamily = "sans-serif"_s;
 static constexpr ASCIILiteral DefaultFont = "10px sans-serif"_s;
 
 static CanvasLineCap toCanvasLineCap(LineCap lineCap)
@@ -306,7 +307,7 @@ String CanvasRenderingContext2DBase::State::fontString() const
 
     for (unsigned i = 0; i < font.familyCount(); ++i) {
         StringView family = font.familyAt(i);
-        if (family.startsWith("-webkit-"))
+        if (family.startsWith("-webkit-"_s))
             family = family.substring(8);
 
         auto separator = i ? ", " : " ";
@@ -545,11 +546,11 @@ void CanvasRenderingContext2DBase::setLineCap(CanvasLineCap canvasLineCap)
 void CanvasRenderingContext2DBase::setLineCap(const String& stringValue)
 {
     CanvasLineCap cap;
-    if (stringValue == "butt")
+    if (stringValue == "butt"_s)
         cap = CanvasLineCap::Butt;
-    else if (stringValue == "round")
+    else if (stringValue == "round"_s)
         cap = CanvasLineCap::Round;
-    else if (stringValue == "square")
+    else if (stringValue == "square"_s)
         cap = CanvasLineCap::Square;
     else
         return;
@@ -573,11 +574,11 @@ void CanvasRenderingContext2DBase::setLineJoin(CanvasLineJoin canvasLineJoin)
 void CanvasRenderingContext2DBase::setLineJoin(const String& stringValue)
 {
     CanvasLineJoin join;
-    if (stringValue == "round")
+    if (stringValue == "round"_s)
         join = CanvasLineJoin::Round;
-    else if (stringValue == "bevel")
+    else if (stringValue == "bevel"_s)
         join = CanvasLineJoin::Bevel;
-    else if (stringValue == "miter")
+    else if (stringValue == "miter"_s)
         join = CanvasLineJoin::Miter;
     else
         return;
@@ -1494,34 +1495,46 @@ ExceptionOr<void> CanvasRenderingContext2DBase::drawImage(CSSStyleImageValue& im
 }
 #endif
 
+static std::pair<FloatRect, FloatRect> normalizeSourceAndDestination(const FloatRect& imageRect, const FloatRect& srcRect, const FloatRect& dstRect)
+{
+    std::pair<FloatRect, FloatRect> srcDstRect { normalizeRect(srcRect), normalizeRect(dstRect) };
+
+    // When the source rectangle is outside the source image, the source rectangle must be clipped
+    // to the source image and the destination rectangle must be clipped in the same proportion.
+    FloatRect originalNormalizedSrcRect = srcDstRect.first;
+    srcDstRect.first.intersect(imageRect);
+    if (srcDstRect.first.isEmpty())
+        return srcDstRect;
+
+    if (srcDstRect.first != originalNormalizedSrcRect) {
+        srcDstRect.second.setWidth(srcDstRect.second.width() * srcDstRect.first.width() / originalNormalizedSrcRect.width());
+        srcDstRect.second.setHeight(srcDstRect.second.height() * srcDstRect.first.height() / originalNormalizedSrcRect.height());
+    }
+
+    return srcDstRect;
+}
+
 ExceptionOr<void> CanvasRenderingContext2DBase::drawImage(Document& document, CachedImage* cachedImage, const RenderObject* renderer, const FloatRect& imageRect, const FloatRect& srcRect, const FloatRect& dstRect, const CompositeOperator& op, const BlendMode& blendMode, ImageOrientation orientation)
 {
     if (!std::isfinite(dstRect.x()) || !std::isfinite(dstRect.y()) || !std::isfinite(dstRect.width()) || !std::isfinite(dstRect.height())
         || !std::isfinite(srcRect.x()) || !std::isfinite(srcRect.y()) || !std::isfinite(srcRect.width()) || !std::isfinite(srcRect.height()))
         return { };
 
+    if (!srcRect.width() || !srcRect.height())
+        return { };
+
     if (!dstRect.width() || !dstRect.height())
         return { };
 
-    FloatRect normalizedSrcRect = normalizeRect(srcRect);
-    FloatRect normalizedDstRect = normalizeRect(dstRect);
+    auto normalizedSrcDstRect = normalizeSourceAndDestination(imageRect, srcRect, dstRect);
+    FloatRect normalizedSrcRect = normalizedSrcDstRect.first;
+    FloatRect normalizedDstRect = normalizedSrcDstRect.second;
 
-    if (!srcRect.width() || !srcRect.height())
-        return Exception { IndexSizeError };
-
-    // When the source rectangle is outside the source image, the source rectangle must be clipped
-    // to the source image and the destination rectangle must be clipped in the same proportion.
-    FloatRect originalNormalizedSrcRect = normalizedSrcRect;
-    normalizedSrcRect.intersect(imageRect);
     if (normalizedSrcRect.isEmpty())
         return { };
 
-    if (normalizedSrcRect != originalNormalizedSrcRect) {
-        normalizedDstRect.setWidth(normalizedDstRect.width() * normalizedSrcRect.width() / originalNormalizedSrcRect.width());
-        normalizedDstRect.setHeight(normalizedDstRect.height() * normalizedSrcRect.height() / originalNormalizedSrcRect.height());
         if (normalizedDstRect.isEmpty())
             return { };
-    }
 
     GraphicsContext* c = drawingContext();
     if (!c)
@@ -1545,8 +1558,11 @@ ExceptionOr<void> CanvasRenderingContext2DBase::drawImage(Document& document, Ca
 
     if (image->isBitmapImage()) {
         // Drawing an animated image to a canvas should draw the first frame (except for a few layout tests)
-        if (image->isAnimated() && !document.settings().animatedImageDebugCanvasDrawingEnabled())
+        if (image->isAnimated() && !document.settings().animatedImageDebugCanvasDrawingEnabled()) {
             image = BitmapImage::create(image->nativeImage());
+            if (!image)
+                return { };
+        }
         downcast<BitmapImage>(*image).updateFromSettings(document.settings());
     }
 
@@ -1582,9 +1598,16 @@ ExceptionOr<void> CanvasRenderingContext2DBase::drawImage(CanvasBase& sourceCanv
         return Exception { InvalidStateError };
 
     if (!srcRect.width() || !srcRect.height())
-        return Exception { IndexSizeError };
+        return { };
 
-    if (!srcCanvasRect.contains(normalizeRect(srcRect)) || !dstRect.width() || !dstRect.height())
+    auto normalizedSrcDstRect = normalizeSourceAndDestination(srcCanvasRect, srcRect, dstRect);
+    FloatRect normalizedSrcRect = normalizedSrcDstRect.first;
+    FloatRect normalizedDstRect = normalizedSrcDstRect.second;
+
+    if (normalizedSrcRect.isEmpty())
+        return { };
+
+    if (normalizedDstRect.isEmpty())
         return { };
 
     GraphicsContext* c = drawingContext();
@@ -1603,28 +1626,28 @@ ExceptionOr<void> CanvasRenderingContext2DBase::drawImage(CanvasBase& sourceCanv
     sourceCanvas.makeRenderingResultsAvailable();
 
     bool repaintEntireCanvas = false;
-    if (rectContainsCanvas(dstRect)) {
-        c->drawImageBuffer(*buffer, dstRect, srcRect, { state().globalComposite, state().globalBlend });
+    if (rectContainsCanvas(normalizedDstRect)) {
+        c->drawImageBuffer(*buffer, normalizedDstRect, normalizedSrcRect, { state().globalComposite, state().globalBlend });
         repaintEntireCanvas = true;
     } else if (isFullCanvasCompositeMode(state().globalComposite)) {
-        fullCanvasCompositedDrawImage(*buffer, dstRect, srcRect, state().globalComposite);
+        fullCanvasCompositedDrawImage(*buffer, normalizedDstRect, normalizedSrcRect, state().globalComposite);
         repaintEntireCanvas = true;
     } else if (state().globalComposite == CompositeOperator::Copy) {
         if (&sourceCanvas == &canvasBase()) {
-            if (auto copy = c->createCompatibleImageBuffer(srcRect.size(), colorSpace())) {
-                copy->context().drawImageBuffer(*buffer, -srcRect.location());
+            if (auto copy = c->createAlignedImageBuffer(normalizedSrcRect.size(), colorSpace())) {
+                copy->context().drawImageBuffer(*buffer, -normalizedSrcRect.location());
                 clearCanvas();
-                c->drawImageBuffer(*copy, dstRect, { { }, srcRect.size() }, { state().globalComposite, state().globalBlend });
+                c->drawImageBuffer(*copy, normalizedDstRect, { { }, normalizedSrcRect.size() }, { state().globalComposite, state().globalBlend });
             }
         } else {
             clearCanvas();
-            c->drawImageBuffer(*buffer, dstRect, srcRect, { state().globalComposite, state().globalBlend });
+            c->drawImageBuffer(*buffer, normalizedDstRect, normalizedSrcRect, { state().globalComposite, state().globalBlend });
         }
         repaintEntireCanvas = true;
     } else
-        c->drawImageBuffer(*buffer, dstRect, srcRect, { state().globalComposite, state().globalBlend });
+        c->drawImageBuffer(*buffer, normalizedDstRect, normalizedSrcRect, { state().globalComposite, state().globalBlend });
 
-    didDraw(repaintEntireCanvas, dstRect);
+    didDraw(repaintEntireCanvas, normalizedDstRect);
 
     return { };
 }
@@ -1638,9 +1661,16 @@ ExceptionOr<void> CanvasRenderingContext2DBase::drawImage(HTMLVideoElement& vide
 
     FloatRect videoRect = FloatRect(FloatPoint(), size(video));
     if (!srcRect.width() || !srcRect.height())
-        return Exception { IndexSizeError };
+        return { };
 
-    if (!videoRect.contains(normalizeRect(srcRect)) || !dstRect.width() || !dstRect.height())
+    auto normalizedSrcDstRect = normalizeSourceAndDestination(videoRect, srcRect, dstRect);
+    FloatRect normalizedSrcRect = normalizedSrcDstRect.first;
+    FloatRect normalizedDstRect = normalizedSrcDstRect.second;
+
+    if (normalizedSrcRect.isEmpty())
+        return { };
+
+    if (normalizedDstRect.isEmpty())
         return { };
 
     GraphicsContext* c = drawingContext();
@@ -1651,14 +1681,14 @@ ExceptionOr<void> CanvasRenderingContext2DBase::drawImage(HTMLVideoElement& vide
 
     checkOrigin(&video);
 
-    bool repaintEntireCanvas = rectContainsCanvas(dstRect);
+    bool repaintEntireCanvas = rectContainsCanvas(normalizedDstRect);
 
 #if USE(CG)
-    if (c->hasPlatformContext()) {
+    if (c->hasPlatformContext() && video.shouldGetNativeImageForCanvasDrawing()) {
     if (auto image = video.nativeImageForCurrentTime()) {
-        c->drawNativeImage(*image, FloatSize(video.videoWidth(), video.videoHeight()), dstRect, srcRect);
+            c->drawNativeImage(*image, FloatSize(video.videoWidth(), video.videoHeight()), normalizedDstRect, normalizedSrcRect);
 
-            didDraw(repaintEntireCanvas, dstRect);
+            didDraw(repaintEntireCanvas, normalizedDstRect);
 
         return { };
     }
@@ -1666,14 +1696,14 @@ ExceptionOr<void> CanvasRenderingContext2DBase::drawImage(HTMLVideoElement& vide
 #endif
 
     GraphicsContextStateSaver stateSaver(*c);
-    c->clip(dstRect);
-    c->translate(dstRect.location());
-    c->scale(FloatSize(dstRect.width() / srcRect.width(), dstRect.height() / srcRect.height()));
-    c->translate(-srcRect.location());
+    c->clip(normalizedDstRect);
+    c->translate(normalizedDstRect.location());
+    c->scale(FloatSize(normalizedDstRect.width() / normalizedSrcRect.width(), normalizedDstRect.height() / normalizedSrcRect.height()));
+    c->translate(-normalizedSrcRect.location());
     video.paintCurrentFrameInContext(*c, FloatRect(FloatPoint(), size(video)));
     stateSaver.restore();
 
-    didDraw(repaintEntireCanvas, dstRect);
+    didDraw(repaintEntireCanvas, normalizedDstRect);
 
     return { };
 }
@@ -1782,11 +1812,6 @@ template<class T> IntRect CanvasRenderingContext2DBase::calculateCompositingBuff
     return bufferRect;
 }
 
-RefPtr<ImageBuffer> CanvasRenderingContext2DBase::createCompositingBuffer(const IntRect& bufferRect)
-{
-    return ImageBuffer::create(bufferRect.size(), isAccelerated() ? RenderingMode::Accelerated : RenderingMode::Unaccelerated, 1, colorSpace(), pixelFormat());
-}
-
 void CanvasRenderingContext2DBase::compositeBuffer(ImageBuffer& buffer, const IntRect& bufferRect, CompositeOperator op)
 {
     IntRect canvasRect(0, 0, canvasBase().width(), canvasBase().height());
@@ -1829,12 +1854,12 @@ template<class T> void CanvasRenderingContext2DBase::fullCanvasCompositedDrawIma
         return;
     }
 
-    auto buffer = createCompositingBuffer(bufferRect);
-    if (!buffer)
-        return;
-
     auto* c = drawingContext();
     if (!c)
+        return;
+
+    auto buffer = c->createImageBuffer(bufferRect.size());
+    if (!buffer)
         return;
 
     FloatRect adjustedDest = dest;
@@ -1891,7 +1916,7 @@ ExceptionOr<Ref<CanvasGradient>> CanvasRenderingContext2DBase::createLinearGradi
     if (!std::isfinite(x0) || !std::isfinite(y0) || !std::isfinite(x1) || !std::isfinite(y1))
         return Exception { NotSupportedError };
 
-    return CanvasGradient::create(FloatPoint(x0, y0), FloatPoint(x1, y1), canvasBase());
+    return CanvasGradient::create(FloatPoint(x0, y0), FloatPoint(x1, y1), *this);
 }
 
 ExceptionOr<Ref<CanvasGradient>> CanvasRenderingContext2DBase::createRadialGradient(float x0, float y0, float r0, float x1, float y1, float r1)
@@ -1902,7 +1927,7 @@ ExceptionOr<Ref<CanvasGradient>> CanvasRenderingContext2DBase::createRadialGradi
     if (r0 < 0 || r1 < 0)
         return Exception { IndexSizeError };
 
-    return CanvasGradient::create(FloatPoint(x0, y0), r0, FloatPoint(x1, y1), r1, canvasBase());
+    return CanvasGradient::create(FloatPoint(x0, y0), r0, FloatPoint(x1, y1), r1, *this);
 }
 
 ExceptionOr<Ref<CanvasGradient>> CanvasRenderingContext2DBase::createConicGradient(float angleInRadians, float x, float y)
@@ -1910,7 +1935,9 @@ ExceptionOr<Ref<CanvasGradient>> CanvasRenderingContext2DBase::createConicGradie
     if (!std::isfinite(angleInRadians) || !std::isfinite(x) || !std::isfinite(y))
         return Exception { NotSupportedError };
 
-    return CanvasGradient::create(FloatPoint(x, y), angleInRadians, canvasBase());
+    // Angle starts from x-axis for consistency within canvas methods. See https://html.spec.whatwg.org/multipage/canvas.html#dom-context-2d-createconicgradient
+    angleInRadians = normalizeAngleInRadians(angleInRadians) + piOverTwoFloat;
+    return CanvasGradient::create(FloatPoint(x, y), angleInRadians , *this);
 }
 
 ExceptionOr<RefPtr<CanvasPattern>> CanvasRenderingContext2DBase::createPattern(CanvasImageSource&& image, const String& repetition)
@@ -2190,7 +2217,7 @@ ExceptionOr<Ref<ImageData>> CanvasRenderingContext2DBase::getImageData(int sx, i
 
     PixelBufferFormat format { AlphaPremultiplication::Unpremultiplied, PixelFormat::RGBA8, toDestinationColorSpace(computedColorSpace) };
     auto pixelBuffer = buffer->getPixelBuffer(format, imageDataRect);
-    if (!pixelBuffer) {
+    if (!is<ByteArrayPixelBuffer>(pixelBuffer)) {
         canvasBase().scriptExecutionContext()->addConsoleMessage(MessageSource::Rendering, MessageLevel::Error,
             makeString("Unable to get image data from canvas. Requested size was ", imageDataRect.width(), " x ", imageDataRect.height()));
         return Exception { InvalidStateError };
@@ -2198,7 +2225,7 @@ ExceptionOr<Ref<ImageData>> CanvasRenderingContext2DBase::getImageData(int sx, i
 
     ASSERT(pixelBuffer->format().colorSpace == toDestinationColorSpace(computedColorSpace));
 
-    return { { ImageData::create(WTFMove(*pixelBuffer)) } };
+    return { { ImageData::create(static_reference_cast<ByteArrayPixelBuffer>(pixelBuffer.releaseNonNull())) } };
 }
 
 void CanvasRenderingContext2DBase::putImageData(ImageData& data, int dx, int dy)
@@ -2402,7 +2429,7 @@ void CanvasRenderingContext2DBase::drawText(const String& text, double x, double
 
     String normalizedText = normalizeSpaces(text);
     auto direction = (state().direction == Direction::Rtl) ? TextDirection::RTL : TextDirection::LTR;
-    TextRun textRun(normalizedText, 0, 0, AllowRightExpansion, direction, false, true);
+    TextRun textRun(normalizedText, 0, 0, ExpansionBehavior::allowRightOnly(), direction, false, true);
     drawTextUnchecked(textRun, x, y, fill, maxWidth);
 }
 
@@ -2461,7 +2488,7 @@ void CanvasRenderingContext2DBase::drawTextUnchecked(const TextRun& textRun, dou
             fontProxy.drawBidiText(*c, textRun, location + offset, FontCascade::UseFallbackIfFontNotReady);
         }
 
-        auto maskImage = c->createCompatibleImageBuffer(maskRect.size());
+        auto maskImage = c->createAlignedImageBuffer(maskRect.size());
         if (!maskImage)
             return;
 
@@ -2524,7 +2551,7 @@ Ref<TextMetrics> CanvasRenderingContext2DBase::measureTextInternal(const String&
 {
     String normalizedText = normalizeSpaces(text);
     auto direction = (state().direction == Direction::Rtl) ? TextDirection::RTL : TextDirection::LTR;
-    TextRun textRun(normalizedText, 0, 0, AllowRightExpansion, direction, false, true);
+    TextRun textRun(normalizedText, 0, 0, ExpansionBehavior::allowRightOnly(), direction, false, true);
     return measureTextInternal(textRun);
 }
 

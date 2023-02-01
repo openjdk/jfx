@@ -77,7 +77,6 @@ message(STATUS "  Linker supports thin archives - ${LD_SUPPORTS_THIN_ARCHIVES}")
 message(STATUS "  Linker supports split debug info - ${LD_SUPPORTS_SPLIT_DEBUG}")
 message(STATUS "  Linker supports --gdb-index - ${LD_SUPPORTS_GDB_INDEX}")
 message(STATUS "  Linker supports --disable-new-dtags - ${LD_SUPPORTS_DISABLE_NEW_DTAGS}")
-
 # Determine whether the archiver in use supports thin archives.
 separate_arguments(AR_VERSION_COMMAND UNIX_COMMAND "${CMAKE_AR} -V")
 execute_process(
@@ -240,4 +239,8 @@ if (STD_FILESYSTEM_IS_AVAILABLE)
 elseif (STD_EXPERIMENTAL_FILESYSTEM_IS_AVAILABLE)
     SET_AND_EXPOSE_TO_BUILD(HAVE_STD_EXPERIMENTAL_FILESYSTEM TRUE)
 endif ()
+endif()
+
+if (STD_REMOVE_CVREF_IS_AVAILABLE)
+    SET_AND_EXPOSE_TO_BUILD(HAVE_STD_REMOVE_CVREF TRUE)
 endif ()

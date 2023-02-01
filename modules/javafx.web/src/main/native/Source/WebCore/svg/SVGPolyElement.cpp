@@ -23,6 +23,7 @@
 #include "SVGPolyElement.h"
 
 #include "Document.h"
+#include "LegacyRenderSVGPath.h"
 #include "RenderSVGPath.h"
 #include "RenderSVGResource.h"
 #include "SVGDocumentExtensions.h"
@@ -55,12 +56,23 @@ void SVGPolyElement::parseAttribute(const QualifiedName& name, const AtomString&
 
 void SVGPolyElement::svgAttributeChanged(const QualifiedName& attrName)
 {
-    if (attrName == SVGNames::pointsAttr) {
-        if (auto* renderer = downcast<RenderSVGPath>(this->renderer())) {
-            InstanceInvalidationGuard guard(*this);
-            renderer->setNeedsShapeUpdate();
-            RenderSVGResource::markForLayoutAndParentResourceInvalidation(*renderer);
+    if (PropertyRegistry::isKnownAttribute(attrName)) {
+        ASSERT(attrName == SVGNames::pointsAttr);
+        InstanceInvalidationGuard guard(*this);
+
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
+        if (auto* renderer = this->renderer()) {
+            if (document().settings().layerBasedSVGEngineEnabled())
+                static_cast<RenderSVGPath*>(renderer)->setNeedsShapeUpdate();
+            else
+                static_cast<LegacyRenderSVGPath*>(renderer)->setNeedsShapeUpdate();
         }
+#else
+        if (auto* renderer = this->renderer())
+            static_cast<LegacyRenderSVGPath*>(renderer)->setNeedsShapeUpdate();
+#endif
+
+        updateSVGRendererForElementChange();
         return;
     }
 
@@ -70,8 +82,16 @@ void SVGPolyElement::svgAttributeChanged(const QualifiedName& attrName)
 size_t SVGPolyElement::approximateMemoryCost() const
 {
     size_t pointsCost = m_points->baseVal()->items().size() * sizeof(FloatPoint);
-    // We need to account for the memory which is allocated by the RenderSVGPath::m_path.
-    return sizeof(*this) + (renderer() ? pointsCost * 2 + sizeof(RenderSVGPath) : pointsCost);
+
+#if ENABLE(LAYER_BASED_SVG_ENGINE)
+    if (document().settings().layerBasedSVGEngineEnabled()) {
+        // We need to account for the memory which is allocated by the RenderSVGPath::m_path.
+        return sizeof(*this) + (renderer() ? pointsCost * 2 + sizeof(RenderSVGPath) : pointsCost);
+    }
+#endif
+
+    // We need to account for the memory which is allocated by the LegacyRenderSVGPath::m_path.
+    return sizeof(*this) + (renderer() ? pointsCost * 2 + sizeof(LegacyRenderSVGPath) : pointsCost);
 }
 
 }

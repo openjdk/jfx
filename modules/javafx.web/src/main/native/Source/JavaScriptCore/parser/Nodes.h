@@ -26,6 +26,7 @@
 #pragma once
 
 #include "BytecodeIntrinsicRegistry.h"
+#include "ImplementationVisibility.h"
 #include "JITCode.h"
 #include "Label.h"
 #include "ParserArena.h"
@@ -410,7 +411,7 @@ namespace JSC {
             ASSERT(m_divotEnd.offset >= m_divot.offset);
         }
     protected:
-        RegisterID* emitThrowReferenceError(BytecodeGenerator&, const String& message, RegisterID* dst = nullptr);
+        RegisterID* emitThrowReferenceError(BytecodeGenerator&, ASCIILiteral message, RegisterID* dst = nullptr);
 
     private:
         JSTextPosition m_divot;
@@ -2190,13 +2191,13 @@ namespace JSC {
         FunctionMetadataNode(
             ParserArena&, const JSTokenLocation& start, const JSTokenLocation& end,
             unsigned startColumn, unsigned endColumn, int functionKeywordStart,
-            int functionNameStart, int parametersStart, LexicalScopeFeatures,
+            int functionNameStart, int parametersStart, ImplementationVisibility, LexicalScopeFeatures,
             ConstructorKind, SuperBinding, unsigned parameterCount,
             SourceParseMode, bool isArrowFunctionBodyExpression);
         FunctionMetadataNode(
             const JSTokenLocation& start, const JSTokenLocation& end,
             unsigned startColumn, unsigned endColumn, int functionKeywordStart,
-            int functionNameStart, int parametersStart, LexicalScopeFeatures,
+            int functionNameStart, int parametersStart, ImplementationVisibility, LexicalScopeFeatures,
             ConstructorKind, SuperBinding, unsigned parameterCount,
             SourceParseMode, bool isArrowFunctionBodyExpression);
 
@@ -2229,6 +2230,7 @@ namespace JSC {
         void setClassSource(const SourceCode& source) { m_classSource = source; }
 
         int startStartOffset() const { return m_startStartOffset; }
+        ImplementationVisibility implementationVisibility() const { return static_cast<ImplementationVisibility>(m_implementationVisibility); }
         LexicalScopeFeatures lexicalScopeFeatures() const { return static_cast<LexicalScopeFeatures>(m_lexicalScopeFeatures); }
         SuperBinding superBinding() { return static_cast<SuperBinding>(m_superBinding); }
         ConstructorKind constructorKind() { return static_cast<ConstructorKind>(m_constructorKind); }
@@ -2255,7 +2257,8 @@ namespace JSC {
         }
 
     public:
-        unsigned m_lexicalScopeFeatures : 4;
+        unsigned m_implementationVisibility : bitWidthOfImplementationVisibility;
+        unsigned m_lexicalScopeFeatures : bitWidthOfLexicalScopeFeatures;
         unsigned m_superBinding : 1;
         unsigned m_constructorKind : 2;
         unsigned m_needsClassFieldInitializer : 1;

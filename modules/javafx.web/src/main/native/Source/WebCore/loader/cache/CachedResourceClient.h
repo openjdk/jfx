@@ -21,14 +21,20 @@
     This class provides all functionality needed for loading images, style sheets and html
     pages from the web. It has a memory cache for these objects.
 */
+
 #pragma once
+
+#include <wtf/HashSet.h>
+#include <wtf/Noncopyable.h>
+#include <wtf/WeakPtr.h>
 
 namespace WebCore {
 
 class CachedResource;
 class NetworkLoadMetrics;
 
-class CachedResourceClient {
+class CachedResourceClient : public CanMakeWeakPtr<CachedResourceClient> {
+    WTF_MAKE_NONCOPYABLE(CachedResourceClient);
 public:
     enum CachedResourceClientType {
         BaseResourceType,
@@ -39,7 +45,11 @@ public:
         RawResourceType
     };
 
-    virtual ~CachedResourceClient() = default;
+    virtual ~CachedResourceClient()
+    {
+        ASSERT(m_associatedResources.isEmpty());
+    }
+
     virtual void notifyFinished(CachedResource&, const NetworkLoadMetrics&) { }
     virtual void deprecatedDidReceiveCachedResource(CachedResource&) { }
 
@@ -47,8 +57,30 @@ public:
     virtual CachedResourceClientType resourceClientType() const { return expectedType(); }
     virtual bool shouldMarkAsReferenced() const { return true; }
 
+#if ASSERT_ENABLED
+    void addAssociatedResource(CachedResource& resource)
+    {
+        m_associatedResources.add(&resource);
+    }
+
+    void removeAssociatedResource(CachedResource& resource)
+    {
+        m_associatedResources.remove(&resource);
+    }
+#endif
+
 protected:
     CachedResourceClient() = default;
+
+private:
+#if ASSERT_ENABLED
+    HashSet<CachedResource*> m_associatedResources;
+#endif
 };
 
-}
+} // namespace WebCore
+
+#define SPECIALIZE_TYPE_TRAITS_CACHED_RESOURCE_CLIENT(ToClassName, CachedResourceTypeValue) \
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::ToClassName) \
+    static bool isType(const WebCore::CachedResourceClient& client) { return client.resourceClientType() == WebCore::CachedResourceClient::CachedResourceTypeValue; } \
+SPECIALIZE_TYPE_TRAITS_END()

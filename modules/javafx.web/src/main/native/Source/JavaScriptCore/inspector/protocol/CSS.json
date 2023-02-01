@@ -55,6 +55,20 @@
             "description": "Pseudo-style identifier (see <code>enum PseudoId</code> in <code>RenderStyleConstants.h</code>)."
         },
         {
+            "id": "ForceablePseudoClass",
+            "type": "string",
+            "enum": [
+                "active",
+                "focus",
+                "focus-visible",
+                "focus-within",
+                "hover",
+                "target",
+                "visited"
+            ],
+            "description": "Pseudo-style identifier (see <code>enum PseudoId</code> in <code>RenderStyleConstants.h</code>)."
+        },
+        {
             "id": "PseudoIdMatches",
             "type": "object",
             "description": "CSS rule collection for a single pseudo style.",
@@ -228,8 +242,8 @@
             "type": "object",
             "description": "CSS @media (as well as other users of media queries, like @import, <style>, <link>, etc.), @supports, and @layer descriptor.",
             "properties": [
-                { "name": "type", "type": "string", "enum": ["media-rule", "media-import-rule", "media-link-node", "media-style-node", "supports-rule", "layer-rule", "layer-import-rule"], "description": "Source of the media query: \"media-rule\" if specified by a @media rule, \"media-import-rule\" if specified by an @import rule, \"media-link-node\" if specified by a \"media\" attribute in a linked style sheet's LINK tag, \"media-style-node\" if specified by a \"media\" attribute in an inline style sheet's STYLE tag, \"supports-rule\" if specified by an @supports rule, \"layer-rule\" if specified by an @layer rule." },
-                { "name": "text", "type": "string", "optional": true, "description": "Query text if specified by a @media or @supports rule. Layer name (or not present for anonymous layers) for @layer rules." },
+                { "name": "type", "type": "string", "enum": ["media-rule", "media-import-rule", "media-link-node", "media-style-node", "supports-rule", "layer-rule", "layer-import-rule", "container-rule"], "description": "Source of the media query: \"media-rule\" if specified by a @media rule, \"media-import-rule\" if specified by an @import rule, \"media-link-node\" if specified by a \"media\" attribute in a linked style sheet's LINK tag, \"media-style-node\" if specified by a \"media\" attribute in an inline style sheet's STYLE tag, \"supports-rule\" if specified by an @supports rule, \"layer-rule\" if specified by an @layer rule, \"container-rule\" if specified by an @container rule." },
+                { "name": "text", "type": "string", "optional": true, "description": "Query text if specified by a @media, @supports, or @container rule. Layer name (or not present for anonymous layers) for @layer rules." },
                 { "name": "sourceURL", "type": "string", "optional": true, "description": "URL of the document containing the CSS grouping." }
             ]
         },
@@ -255,10 +269,14 @@
             ]
         },
         {
-            "id": "LayoutContextType",
+            "id": "LayoutFlag",
             "type": "string",
-            "enum": ["flex", "grid"],
-            "description": "The layout context type of a node."
+            "enum": [
+                "rendered",
+                "flex",
+                "grid"
+            ],
+            "description": "Relevant layout information about the node. Things not in this list are not important to Web Inspector."
         },
         {
             "id": "LayoutContextTypeChangedMode",
@@ -424,7 +442,7 @@
             "targetTypes": ["page"],
             "parameters": [
                 { "name": "nodeId", "$ref": "DOM.NodeId", "description": "The element id for which to force the pseudo state." },
-                { "name": "forcedPseudoClasses", "type": "array", "items": { "type": "string", "enum": ["active", "focus", "hover", "visited"] }, "description": "Element pseudo classes to force when computing the element's style." }
+                { "name": "forcedPseudoClasses", "type": "array", "items": { "$ref": "ForceablePseudoClass" }, "description": "Element pseudo classes to force when computing the element's style." }
             ]
         },
         {
@@ -465,12 +483,12 @@
             ]
         },
         {
-            "name": "nodeLayoutContextTypeChanged",
-            "description": "Called when a node's layout context type has changed.",
+            "name": "nodeLayoutFlagsChanged",
+            "description": "Called when the layout of a node changes in a way that is important to Web Inspector.",
             "targetTypes": ["page"],
             "parameters": [
-                { "name": "nodeId", "$ref": "DOM.NodeId", "description": "Identifier of the node whose layout context type changed." },
-                { "name": "layoutContextType", "$ref": "LayoutContextType", "optional": true, "description": "The new layout context type of the node. When not provided, the <code>LayoutContextType</code> of the node is not a context for which Web Inspector has specific functionality." }
+                { "name": "nodeId", "$ref": "DOM.NodeId", "description": "Identifier of the node whose layout changed." },
+                { "name": "layoutFlags", "type": "array", "items": { "type": "string", "description": "CSS.LayoutFlag" }, "optional": true, "description": "Relevant information about the layout of the node. When not provided, the layout of the node is not important to Web Inspector." }
             ]
         }
     ]

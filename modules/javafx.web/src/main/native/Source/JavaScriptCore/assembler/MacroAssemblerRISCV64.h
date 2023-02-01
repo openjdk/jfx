@@ -44,6 +44,8 @@ public:
     static constexpr unsigned numGPRs = 32;
     static constexpr unsigned numFPRs = 32;
 
+    static constexpr size_t nearJumpRange = 2 * GB;
+
     static constexpr RegisterID dataTempRegister = RISCV64Registers::x30;
     static constexpr RegisterID memoryTempRegister = RISCV64Registers::x31;
 
@@ -1145,6 +1147,15 @@ public:
         m_assembler.sdInsn(resolution.base, immRegister, Imm::S(resolution.offset));
     }
 
+    void store64(TrustedImmPtr imm, Address address)
+    {
+        intptr_t value = imm.asIntptr();
+        if constexpr (sizeof(intptr_t) == sizeof(int64_t))
+            store64(TrustedImm64(int64_t(value)), address);
+        else
+            store64(TrustedImm32(int32_t(value)), address);
+    }
+
     void store64(TrustedImm64 imm, BaseIndex address)
     {
         auto temp = temps<Data, Memory>();
@@ -1169,6 +1180,18 @@ public:
 
         loadImmediate(TrustedImmPtr(address), temp.memory());
         m_assembler.sdInsn(temp.memory(), immRegister, Imm::S<0>());
+    }
+
+    void transfer64(Address src, Address dest)
+    {
+        auto temp = temps<Data>();
+        load64(src, temp.data());
+        store64(temp.data(), dest);
+    }
+
+    void transferPtr(Address src, Address dest)
+    {
+        transfer64(src, dest);
     }
 
     void storePair32(RegisterID src1, RegisterID src2, RegisterID dest)
@@ -2154,6 +2177,16 @@ public:
         return makeBranch(cond, temp.data(), rhs);
     }
 
+    Jump branch64(RelationalCondition cond, Address left, Address right)
+    {
+        auto temp = temps<Data, Memory>();
+        auto leftResolution = resolveAddress(left, temp.memory());
+        m_assembler.ldInsn(temp.data(), leftResolution.base, Imm::I(leftResolution.offset));
+        auto rightResolution = resolveAddress(right, temp.memory());
+        m_assembler.ldInsn(temp.memory(), rightResolution.base, Imm::I(rightResolution.offset));
+        return makeBranch(cond, temp.data(), temp.memory());
+    }
+
     Jump branch32WithUnalignedHalfWords(RelationalCondition cond, BaseIndex address, TrustedImm32 imm)
     {
         return branch32(cond, address, imm);
@@ -2643,6 +2676,11 @@ public:
     Jump branchPtr(RelationalCondition cond, BaseIndex address, RegisterID rhs)
     {
         return branch64(cond, address, rhs);
+    }
+
+    Jump branchPtr(RelationalCondition cond, Address left, Address right)
+    {
+        return branch64(cond, left, right);
     }
 
     DataLabel32 moveWithPatch(TrustedImm32 imm, RegisterID dest)
@@ -3247,27 +3285,434 @@ public:
         m_assembler.addiInsn(RISCV64Registers::zero, RISCV64Registers::zero, Imm::I<0>());
     }
 
-    void memoryFence() { }
-    void storeFence() { }
-    void loadFence() { }
+    void memoryFence()
+    {
+        m_assembler.fenceInsn({ RISCV64Assembler::MemoryOperation::RW }, { RISCV64Assembler::MemoryOperation::RW });
+    }
 
-    MACRO_ASSEMBLER_RISCV64_TEMPLATED_NOOP_METHOD_WITH_RETURN(branchAtomicWeakCAS8, JumpList);
-    MACRO_ASSEMBLER_RISCV64_TEMPLATED_NOOP_METHOD_WITH_RETURN(branchAtomicWeakCAS16, JumpList);
-    MACRO_ASSEMBLER_RISCV64_TEMPLATED_NOOP_METHOD_WITH_RETURN(branchAtomicWeakCAS32, JumpList);
-    MACRO_ASSEMBLER_RISCV64_TEMPLATED_NOOP_METHOD_WITH_RETURN(branchAtomicWeakCAS64, JumpList);
+    void storeFence()
+    {
+        m_assembler.fenceInsn({ RISCV64Assembler::MemoryOperation::W }, { RISCV64Assembler::MemoryOperation::RW });
+    }
 
-    MACRO_ASSEMBLER_RISCV64_TEMPLATED_NOOP_METHOD(moveConditionally32);
-    MACRO_ASSEMBLER_RISCV64_TEMPLATED_NOOP_METHOD(moveConditionally64);
-    MACRO_ASSEMBLER_RISCV64_TEMPLATED_NOOP_METHOD(moveConditionallyFloat);
-    MACRO_ASSEMBLER_RISCV64_TEMPLATED_NOOP_METHOD(moveConditionallyDouble);
-    MACRO_ASSEMBLER_RISCV64_TEMPLATED_NOOP_METHOD(moveConditionallyTest32);
-    MACRO_ASSEMBLER_RISCV64_TEMPLATED_NOOP_METHOD(moveConditionallyTest64);
-    MACRO_ASSEMBLER_RISCV64_TEMPLATED_NOOP_METHOD(moveDoubleConditionally32);
-    MACRO_ASSEMBLER_RISCV64_TEMPLATED_NOOP_METHOD(moveDoubleConditionally64);
-    MACRO_ASSEMBLER_RISCV64_TEMPLATED_NOOP_METHOD(moveDoubleConditionallyFloat);
-    MACRO_ASSEMBLER_RISCV64_TEMPLATED_NOOP_METHOD(moveDoubleConditionallyDouble);
-    MACRO_ASSEMBLER_RISCV64_TEMPLATED_NOOP_METHOD(moveDoubleConditionallyTest32);
-    MACRO_ASSEMBLER_RISCV64_TEMPLATED_NOOP_METHOD(moveDoubleConditionallyTest64);
+    void loadFence()
+    {
+        m_assembler.fenceInsn({ RISCV64Assembler::MemoryOperation::R }, { RISCV64Assembler::MemoryOperation::RW });
+    }
+
+    template<unsigned bitSize>
+    JumpList branchAtomicWeakCASImpl(StatusCondition cond, RegisterID expectedAndClobbered, RegisterID newValue, BaseIndex address)
+    {
+        static_assert(bitSize == 8 || bitSize == 16);
+        // There's no 8-bit or 16-bit load-reserved and store-conditional instructions in RISC-V,
+        // so we have to implement the operations through the 32-bit versions, with a limited amount
+        // of usable registers.
+
+        auto temp = temps<Data, Memory>();
+        JumpList failure;
+
+        // We clobber the expected-value register with the XOR difference between the expected
+        // and the new value, also clipping the result to the desired number of bits.
+        m_assembler.xorInsn(expectedAndClobbered, expectedAndClobbered, newValue);
+        m_assembler.zeroExtend<bitSize>(expectedAndClobbered);
+
+        // The BaseIndex address is resolved into the memory temp. The address is aligned to the 4-byte
+        // boundary, and the remainder is used to calculate the shift amount for the exact position
+        // in the 32-bit word where the target bit pattern is located.
+        auto resolution = resolveAddress(address, temp.memory());
+        m_assembler.addiInsn(temp.memory(), resolution.base, Imm::I(resolution.offset));
+        m_assembler.andiInsn(temp.data(), temp.memory(), Imm::I<0b11>());
+        m_assembler.andiInsn(temp.memory(), temp.memory(), Imm::I<~0b11>());
+        m_assembler.slliInsn<3>(temp.data(), temp.data());
+        m_assembler.addiInsn(temp.data(), temp.data(), Imm::I<32>());
+
+        // The XOR value in the expected-value register is shifted into the appropriate position in
+        // the upper half of the register. The shift value is OR-ed into the lower half.
+        m_assembler.sllInsn(expectedAndClobbered, expectedAndClobbered, temp.data());
+        m_assembler.orInsn(expectedAndClobbered, expectedAndClobbered, temp.data());
+
+        // The 32-bit value is loaded through the load-reserve instruction, and then shifted into the
+        // upper 32 bits of the register. XOR against the expected-value register will, in the upper
+        // 32 bits of the register, produce the 32-bit word with the expected value replaced by the new one.
+        m_assembler.lrwInsn(temp.data(), temp.memory(), { RISCV64Assembler::MemoryAccess::Acquire });
+        m_assembler.slliInsn<32>(temp.data(), temp.data());
+        m_assembler.xorInsn(expectedAndClobbered, temp.data(), expectedAndClobbered);
+
+        // We still have to validate that the expected value, after XOR, matches the new one. The upper
+        // 32 bits of the expected-value register are shifted by the pre-prepared shift amount stored
+        // in the lower half of that same register. This works becasue the shift amount is read only from
+        // the bottom 6 bits of the shift-amount register. XOR-ing against the new-value register and shifting
+        // back left should leave is with a zero value, in which case the expected-value bit pattern matched
+        // the one that was loaded from memory. If non-zero, the failure branch is taken.
+        m_assembler.srlInsn(temp.data(), expectedAndClobbered, expectedAndClobbered);
+        m_assembler.xorInsn(temp.data(), temp.data(), newValue);
+        m_assembler.slliInsn<64 - bitSize>(temp.data(), temp.data());
+        failure.append(makeBranch(NotEqual, temp.data(), RISCV64Registers::zero));
+
+        // The corresponding store-conditional remains. The 32-bit word, containing the new value after
+        // the XOR, is located in the upper 32 bits of the expected-value register. That can be shifted
+        // down and then used in the store-conditional instruction.
+        m_assembler.srliInsn<32>(expectedAndClobbered, expectedAndClobbered);
+        m_assembler.scwInsn(temp.data(), temp.memory(), expectedAndClobbered, { RISCV64Assembler::MemoryAccess::AcquireRelease });
+
+        // On successful store, the temp register will have a zero value, and a non-zero value otherwise.
+        // Branches are produced accordingly.
+        switch (cond) {
+        case Success: {
+            Jump success = makeBranch(Equal, temp.data(), RISCV64Registers::zero);
+            failure.link(this);
+            return JumpList(success);
+        }
+        case Failure:
+            failure.append(makeBranch(NotEqual, temp.data(), RISCV64Registers::zero));
+            break;
+        }
+
+        return failure;
+    }
+
+    JumpList branchAtomicWeakCAS8(StatusCondition cond, RegisterID expectedAndClobbered, RegisterID newValue, BaseIndex address)
+    {
+        return branchAtomicWeakCASImpl<8>(cond, expectedAndClobbered, newValue, address);
+    }
+
+    JumpList branchAtomicWeakCAS16(StatusCondition cond, RegisterID expectedAndClobbered, RegisterID newValue, BaseIndex address)
+    {
+        return branchAtomicWeakCASImpl<16>(cond, expectedAndClobbered, newValue, address);
+    }
+
+    JumpList branchAtomicWeakCAS32(StatusCondition cond, RegisterID expectedAndClobbered, RegisterID newValue, BaseIndex address)
+    {
+        auto temp = temps<Data, Memory>();
+        JumpList failure;
+
+        auto resolution = resolveAddress(address, temp.memory());
+        m_assembler.addiInsn(temp.memory(), resolution.base, Imm::I(resolution.offset));
+        m_assembler.zeroExtend<32>(expectedAndClobbered, expectedAndClobbered);
+
+        m_assembler.lrwInsn(temp.data(), temp.memory(), { RISCV64Assembler::MemoryAccess::Acquire });
+        m_assembler.xorInsn(temp.data(), temp.data(), expectedAndClobbered);
+        failure.append(makeBranch(NotEqual, temp.data(), RISCV64Registers::zero));
+        m_assembler.scwInsn(temp.data(), temp.memory(), newValue, { RISCV64Assembler::MemoryAccess::AcquireRelease });
+
+        switch (cond) {
+        case Success: {
+            Jump success = makeBranch(Equal, temp.data(), RISCV64Registers::zero);
+            failure.link(this);
+            return JumpList(success);
+        }
+        case Failure:
+            failure.append(makeBranch(NotEqual, temp.data(), RISCV64Registers::zero));
+            break;
+        }
+
+        return failure;
+    }
+
+    JumpList branchAtomicWeakCAS64(StatusCondition cond, RegisterID expectedAndClobbered, RegisterID newValue, BaseIndex address)
+    {
+        auto temp = temps<Data, Memory>();
+        JumpList failure;
+
+        auto resolution = resolveAddress(address, temp.memory());
+        m_assembler.addiInsn(temp.memory(), resolution.base, Imm::I(resolution.offset));
+
+        m_assembler.lrdInsn(temp.data(), temp.memory(), { RISCV64Assembler::MemoryAccess::Acquire });
+        failure.append(makeBranch(NotEqual, temp.data(), expectedAndClobbered));
+        m_assembler.scdInsn(temp.data(), temp.memory(), newValue, { RISCV64Assembler::MemoryAccess::AcquireRelease });
+
+        switch (cond) {
+        case Success: {
+            Jump success = makeBranch(Equal, temp.data(), RISCV64Registers::zero);
+            failure.link(this);
+            return JumpList(success);
+        }
+        case Failure:
+            failure.append(makeBranch(NotEqual, temp.data(), RISCV64Registers::zero));
+            break;
+        }
+
+        return failure;
+    }
+
+    void moveConditionally32(RelationalCondition cond, RegisterID lhs, RegisterID rhs, RegisterID src, RegisterID dest)
+    {
+        auto temp = temps<Data, Memory>();
+        m_assembler.signExtend<32>(temp.data(), lhs);
+        m_assembler.signExtend<32>(temp.memory(), rhs);
+
+        branchForMoveConditionally(invert(cond), temp.data(), temp.memory(), Imm::B<8>());
+        m_assembler.addiInsn(dest, src, Imm::I<0>());
+    }
+
+    void moveConditionally32(RelationalCondition cond, RegisterID lhs, RegisterID rhs, RegisterID trueSrc, RegisterID falseSrc, RegisterID dest)
+    {
+        auto temp = temps<Data, Memory>();
+        m_assembler.signExtend<32>(temp.data(), lhs);
+        m_assembler.signExtend<32>(temp.memory(), rhs);
+
+        branchForMoveConditionally(invert(cond), temp.data(), temp.memory(), Imm::B<12>());
+        m_assembler.addiInsn(dest, trueSrc, Imm::I<0>());
+        m_assembler.jalInsn(RISCV64Registers::zero, Imm::J<8>());
+        m_assembler.addiInsn(dest, falseSrc, Imm::I<0>());
+    }
+
+    void moveConditionally32(RelationalCondition cond, RegisterID lhs, TrustedImm32 imm, RegisterID trueSrc, RegisterID falseSrc, RegisterID dest)
+    {
+        auto temp = temps<Data, Memory>();
+        m_assembler.signExtend<32>(temp.data(), lhs);
+        loadImmediate(imm, temp.memory());
+
+        branchForMoveConditionally(invert(cond), temp.data(), temp.memory(), Imm::B<12>());
+        m_assembler.addiInsn(dest, trueSrc, Imm::I<0>());
+        m_assembler.jalInsn(RISCV64Registers::zero, Imm::J<8>());
+        m_assembler.addiInsn(dest, falseSrc, Imm::I<0>());
+    }
+
+    void moveConditionally64(RelationalCondition cond, RegisterID lhs, RegisterID rhs, RegisterID src, RegisterID dest)
+    {
+        branchForMoveConditionally(invert(cond), lhs, rhs, Imm::B<8>());
+        m_assembler.addiInsn(dest, src, Imm::I<0>());
+    }
+
+    void moveConditionally64(RelationalCondition cond, RegisterID lhs, RegisterID rhs, RegisterID trueSrc, RegisterID falseSrc, RegisterID dest)
+    {
+        branchForMoveConditionally(invert(cond), lhs, rhs, Imm::B<12>());
+        m_assembler.addiInsn(dest, trueSrc, Imm::I<0>());
+        m_assembler.jalInsn(RISCV64Registers::zero, Imm::J<8>());
+        m_assembler.addiInsn(dest, falseSrc, Imm::I<0>());
+    }
+
+    void moveConditionally64(RelationalCondition cond, RegisterID lhs, TrustedImm32 imm, RegisterID trueSrc, RegisterID falseSrc, RegisterID dest)
+    {
+        auto temp = temps<Data>();
+        loadImmediate(imm, temp.data());
+        branchForMoveConditionally(invert(cond), lhs, temp.data(), Imm::B<12>());
+        m_assembler.addiInsn(dest, trueSrc, Imm::I<0>());
+        m_assembler.jalInsn(RISCV64Registers::zero, Imm::J<8>());
+        m_assembler.addiInsn(dest, falseSrc, Imm::I<0>());
+    }
+
+    void moveConditionallyFloat(DoubleCondition cond, FPRegisterID lhs, FPRegisterID rhs, RegisterID src, RegisterID dest)
+    {
+        Jump invcondBranch = branchFP<32, true>(cond, lhs, rhs);
+        m_assembler.addiInsn(dest, src, Imm::I<0>());
+        invcondBranch.link(this);
+    }
+
+    void moveConditionallyFloat(DoubleCondition cond, FPRegisterID lhs, FPRegisterID rhs, RegisterID trueSrc, RegisterID falseSrc, RegisterID dest)
+    {
+        Jump invcondBranch = branchFP<32, true>(cond, lhs, rhs);
+        m_assembler.addiInsn(dest, trueSrc, Imm::I<0>());
+        Jump end = jump();
+        invcondBranch.link(this);
+        m_assembler.addiInsn(dest, falseSrc, Imm::I<0>());
+        end.link(this);
+    }
+
+    void moveConditionallyDouble(DoubleCondition cond, FPRegisterID lhs, FPRegisterID rhs, RegisterID src, RegisterID dest)
+    {
+        Jump invcondBranch = branchFP<64, true>(cond, lhs, rhs);
+        m_assembler.addiInsn(dest, src, Imm::I<0>());
+        invcondBranch.link(this);
+    }
+
+    void moveConditionallyDouble(DoubleCondition cond, FPRegisterID lhs, FPRegisterID rhs, RegisterID trueSrc, RegisterID falseSrc, RegisterID dest)
+    {
+        Jump invcondBranch = branchFP<64, true>(cond, lhs, rhs);
+        m_assembler.addiInsn(dest, trueSrc, Imm::I<0>());
+        Jump end = jump();
+        invcondBranch.link(this);
+        m_assembler.addiInsn(dest, falseSrc, Imm::I<0>());
+        end.link(this);
+    }
+
+    void moveConditionallyTest32(ResultCondition cond, RegisterID value, RegisterID mask, RegisterID src, RegisterID dest)
+    {
+        auto temp = temps<Data>();
+        m_assembler.andInsn(temp.data(), value, mask);
+        m_assembler.signExtend<32>(temp.data());
+        testFinalize(cond, temp.data(), temp.data());
+
+        m_assembler.beqInsn(temp.data(), RISCV64Registers::zero, Imm::B<8>());
+        m_assembler.addiInsn(dest, src, Imm::I<0>());
+    }
+
+    void moveConditionallyTest32(ResultCondition cond, RegisterID value, RegisterID mask, RegisterID trueSrc, RegisterID falseSrc, RegisterID dest)
+    {
+        auto temp = temps<Data>();
+        m_assembler.andInsn(temp.data(), value, mask);
+        m_assembler.signExtend<32>(temp.data());
+        testFinalize(cond, temp.data(), temp.data());
+
+        m_assembler.beqInsn(temp.data(), RISCV64Registers::zero, Imm::B<12>());
+        m_assembler.addiInsn(dest, trueSrc, Imm::I<0>());
+        m_assembler.jalInsn(RISCV64Registers::zero, Imm::J<8>());
+        m_assembler.addiInsn(dest, falseSrc, Imm::I<0>());
+    }
+
+    void moveConditionallyTest32(ResultCondition cond, RegisterID value, TrustedImm32 mask, RegisterID trueSrc, RegisterID falseSrc, RegisterID dest)
+    {
+        auto temp = temps<Data>();
+        loadImmediate(mask, temp.data());
+        m_assembler.andInsn(temp.data(), value, temp.data());
+        m_assembler.signExtend<32>(temp.data());
+        testFinalize(cond, temp.data(), temp.data());
+
+        m_assembler.beqInsn(temp.data(), RISCV64Registers::zero, Imm::B<12>());
+        m_assembler.addiInsn(dest, trueSrc, Imm::I<0>());
+        m_assembler.jalInsn(RISCV64Registers::zero, Imm::J<8>());
+        m_assembler.addiInsn(dest, falseSrc, Imm::I<0>());
+    }
+
+    void moveConditionallyTest64(ResultCondition cond, RegisterID value, RegisterID mask, RegisterID src, RegisterID dest)
+    {
+        auto temp = temps<Data>();
+        m_assembler.andInsn(temp.data(), value, mask);
+        testFinalize(cond, temp.data(), temp.data());
+
+        m_assembler.beqInsn(temp.data(), RISCV64Registers::zero, Imm::B<8>());
+        m_assembler.addiInsn(dest, src, Imm::I<0>());
+    }
+
+    void moveConditionallyTest64(ResultCondition cond, RegisterID value, RegisterID mask, RegisterID trueSrc, RegisterID falseSrc, RegisterID dest)
+    {
+        auto temp = temps<Data>();
+        m_assembler.andInsn(temp.data(), value, mask);
+        testFinalize(cond, temp.data(), temp.data());
+
+        m_assembler.beqInsn(temp.data(), RISCV64Registers::zero, Imm::B<12>());
+        m_assembler.addiInsn(dest, trueSrc, Imm::I<0>());
+        m_assembler.jalInsn(RISCV64Registers::zero, Imm::J<8>());
+        m_assembler.addiInsn(dest, falseSrc, Imm::I<0>());
+    }
+
+    void moveConditionallyTest64(ResultCondition cond, RegisterID value, TrustedImm32 mask, RegisterID trueSrc, RegisterID falseSrc, RegisterID dest)
+    {
+        auto temp = temps<Data>();
+        loadImmediate(mask, temp.data());
+        m_assembler.andInsn(temp.data(), value, temp.data());
+        testFinalize(cond, temp.data(), temp.data());
+
+        m_assembler.beqInsn(temp.data(), RISCV64Registers::zero, Imm::B<12>());
+        m_assembler.addiInsn(dest, trueSrc, Imm::I<0>());
+        m_assembler.jalInsn(RISCV64Registers::zero, Imm::J<8>());
+        m_assembler.addiInsn(dest, falseSrc, Imm::I<0>());
+    }
+
+    void moveDoubleConditionally32(RelationalCondition cond, RegisterID lhs, RegisterID rhs, FPRegisterID trueSrc, FPRegisterID falseSrc, FPRegisterID dest)
+    {
+        auto temp = temps<Data, Memory>();
+        m_assembler.signExtend<32>(temp.data(), lhs);
+        m_assembler.signExtend<32>(temp.memory(), rhs);
+
+        branchForMoveConditionally(invert(cond), temp.data(), temp.memory(), Imm::B<12>());
+        m_assembler.fsgnjInsn<64>(dest, trueSrc, trueSrc);
+        m_assembler.jalInsn(RISCV64Registers::zero, Imm::J<8>());
+        m_assembler.fsgnjInsn<64>(dest, falseSrc, falseSrc);
+    }
+
+    void moveDoubleConditionally32(RelationalCondition cond, RegisterID lhs, TrustedImm32 imm, FPRegisterID trueSrc, FPRegisterID falseSrc, FPRegisterID dest)
+    {
+        auto temp = temps<Data, Memory>();
+        m_assembler.signExtend<32>(temp.data(), lhs);
+        loadImmediate(imm, temp.memory());
+
+        branchForMoveConditionally(invert(cond), temp.data(), temp.memory(), Imm::B<12>());
+        m_assembler.fsgnjInsn<64>(dest, trueSrc, trueSrc);
+        m_assembler.jalInsn(RISCV64Registers::zero, Imm::J<8>());
+        m_assembler.fsgnjInsn<64>(dest, falseSrc, falseSrc);
+    }
+
+    void moveDoubleConditionally64(RelationalCondition cond, RegisterID lhs, RegisterID rhs, FPRegisterID trueSrc, FPRegisterID falseSrc, FPRegisterID dest)
+    {
+        branchForMoveConditionally(invert(cond), lhs, rhs, Imm::B<12>());
+        m_assembler.fsgnjInsn<64>(dest, trueSrc, trueSrc);
+        m_assembler.jalInsn(RISCV64Registers::zero, Imm::J<8>());
+        m_assembler.fsgnjInsn<64>(dest, falseSrc, falseSrc);
+    }
+
+    void moveDoubleConditionally64(RelationalCondition cond, RegisterID lhs, TrustedImm32 imm, FPRegisterID trueSrc, FPRegisterID falseSrc, FPRegisterID dest)
+    {
+        auto temp = temps<Data>();
+        loadImmediate(imm, temp.data());
+        branchForMoveConditionally(invert(cond), lhs, temp.data(), Imm::B<12>());
+        m_assembler.fsgnjInsn<64>(dest, trueSrc, trueSrc);
+        m_assembler.jalInsn(RISCV64Registers::zero, Imm::J<8>());
+        m_assembler.fsgnjInsn<64>(dest, falseSrc, falseSrc);
+    }
+
+    void moveDoubleConditionallyFloat(DoubleCondition cond, FPRegisterID lhs, FPRegisterID rhs, FPRegisterID trueSrc, FPRegisterID falseSrc, FPRegisterID dest)
+    {
+        Jump invcondBranch = branchFP<32, true>(cond, lhs, rhs);
+        m_assembler.fsgnjInsn<64>(dest, trueSrc, trueSrc);
+        Jump end = jump();
+        invcondBranch.link(this);
+        m_assembler.fsgnjInsn<64>(dest, falseSrc, falseSrc);
+        end.link(this);
+    }
+
+    void moveDoubleConditionallyDouble(DoubleCondition cond, FPRegisterID lhs, FPRegisterID rhs, FPRegisterID trueSrc, FPRegisterID falseSrc, FPRegisterID dest)
+    {
+        Jump invcondBranch = branchFP<64, true>(cond, lhs, rhs);
+        m_assembler.fsgnjInsn<64>(dest, trueSrc, trueSrc);
+        Jump end = jump();
+        invcondBranch.link(this);
+        m_assembler.fsgnjInsn<64>(dest, falseSrc, falseSrc);
+        end.link(this);
+    }
+
+    void moveDoubleConditionallyTest32(ResultCondition cond, RegisterID value, RegisterID mask, FPRegisterID trueSrc, FPRegisterID falseSrc, FPRegisterID dest)
+    {
+        auto temp = temps<Data>();
+        m_assembler.andInsn(temp.data(), value, mask);
+        m_assembler.signExtend<32>(temp.data());
+        testFinalize(cond, temp.data(), temp.data());
+
+        m_assembler.beqInsn(temp.data(), RISCV64Registers::zero, Imm::B<12>());
+        m_assembler.fsgnjInsn<64>(dest, trueSrc, trueSrc);
+        m_assembler.jalInsn(RISCV64Registers::zero, Imm::J<8>());
+        m_assembler.fsgnjInsn<64>(dest, falseSrc, falseSrc);
+    }
+
+    void moveDoubleConditionallyTest32(ResultCondition cond, RegisterID value, TrustedImm32 mask, FPRegisterID trueSrc, FPRegisterID falseSrc, FPRegisterID dest)
+    {
+        auto temp = temps<Data>();
+        loadImmediate(mask, temp.data());
+        m_assembler.andInsn(temp.data(), value, temp.data());
+        m_assembler.signExtend<32>(temp.data());
+        testFinalize(cond, temp.data(), temp.data());
+
+        m_assembler.beqInsn(temp.data(), RISCV64Registers::zero, Imm::B<12>());
+        m_assembler.fsgnjInsn<64>(dest, trueSrc, trueSrc);
+        m_assembler.jalInsn(RISCV64Registers::zero, Imm::J<8>());
+        m_assembler.fsgnjInsn<64>(dest, falseSrc, falseSrc);
+    }
+
+    void moveDoubleConditionallyTest64(ResultCondition cond, RegisterID value, RegisterID mask, FPRegisterID trueSrc, FPRegisterID falseSrc, FPRegisterID dest)
+    {
+        auto temp = temps<Data>();
+        m_assembler.andInsn(temp.data(), value, mask);
+        testFinalize(cond, temp.data(), temp.data());
+
+        m_assembler.beqInsn(temp.data(), RISCV64Registers::zero, Imm::B<12>());
+        m_assembler.fsgnjInsn<64>(dest, trueSrc, trueSrc);
+        m_assembler.jalInsn(RISCV64Registers::zero, Imm::J<8>());
+        m_assembler.fsgnjInsn<64>(dest, falseSrc, falseSrc);
+    }
+
+    void moveDoubleConditionallyTest64(ResultCondition cond, RegisterID value, TrustedImm32 mask, FPRegisterID trueSrc, FPRegisterID falseSrc, FPRegisterID dest)
+    {
+        auto temp = temps<Data>();
+        loadImmediate(mask, temp.data());
+        m_assembler.andInsn(temp.data(), value, temp.data());
+        testFinalize(cond, temp.data(), temp.data());
+
+        m_assembler.beqInsn(temp.data(), RISCV64Registers::zero, Imm::B<12>());
+        m_assembler.fsgnjInsn<64>(dest, trueSrc, trueSrc);
+        m_assembler.jalInsn(RISCV64Registers::zero, Imm::J<8>());
+        m_assembler.fsgnjInsn<64>(dest, falseSrc, falseSrc);
+    }
 
 private:
     enum class ArithmeticOperation {
@@ -3553,6 +3998,34 @@ private:
             m_assembler.sraiInsn<0x3f>(temp.memory(), dest);
             return makeBranch(NotEqual, temp.data(), temp.memory());
         }
+    }
+
+    void branchForMoveConditionally(RelationalCondition condition, RegisterID lhs, RegisterID rhs, RISCV64Assembler::BImmediate offset)
+    {
+        switch (condition) {
+        case Equal:
+            return m_assembler.beqInsn(lhs, rhs, offset);
+        case NotEqual:
+            return m_assembler.bneInsn(lhs, rhs, offset);
+        case Above:
+            return m_assembler.bltuInsn(rhs, lhs, offset);
+        case AboveOrEqual:
+            return m_assembler.bgeuInsn(lhs, rhs, offset);
+        case Below:
+            return m_assembler.bltuInsn(lhs, rhs, offset);
+        case BelowOrEqual:
+            return m_assembler.bgeuInsn(rhs, lhs, offset);
+        case GreaterThan:
+            return m_assembler.bltInsn(rhs, lhs, offset);
+        case GreaterThanOrEqual:
+            return m_assembler.bgeInsn(lhs, rhs, offset);
+        case LessThan:
+            return m_assembler.bltInsn(lhs, rhs, offset);
+        case LessThanOrEqual:
+            return m_assembler.bgeInsn(rhs, lhs, offset);
+        }
+
+        RELEASE_ASSERT_NOT_REACHED();
     }
 
     void compareFinalize(RelationalCondition cond, RegisterID lhs, RegisterID rhs, RegisterID dest)

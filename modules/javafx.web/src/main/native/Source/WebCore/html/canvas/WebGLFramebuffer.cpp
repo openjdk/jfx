@@ -28,6 +28,7 @@
 
 #if ENABLE(WEBGL)
 
+#include "WebCoreOpaqueRoot.h"
 #include "WebGLContextGroup.h"
 #include "WebGLDrawBuffers.h"
 #include "WebGLRenderingContextBase.h"
@@ -146,7 +147,7 @@ namespace {
 
     void WebGLRenderbufferAttachment::addMembersToOpaqueRoots(const AbstractLocker&, JSC::AbstractSlotVisitor& visitor)
     {
-        visitor.addOpaqueRoot(m_renderbuffer.get());
+        addWebCoreOpaqueRoot(visitor, m_renderbuffer.get());
     }
 
     class WebGLTextureAttachment : public WebGLFramebuffer::WebGLAttachment {
@@ -268,7 +269,7 @@ namespace {
 
     void WebGLTextureAttachment::addMembersToOpaqueRoots(const AbstractLocker&, JSC::AbstractSlotVisitor& visitor)
     {
-        visitor.addOpaqueRoot(m_texture.get());
+        addWebCoreOpaqueRoot(visitor, m_texture.get());
     }
 
 } // anonymous namespace
@@ -528,6 +529,10 @@ void WebGLFramebuffer::removeAttachmentFromBoundFramebuffer(const AbstractLocker
     RefPtr<WebGLAttachment> attachmentObject = getAttachment(attachment);
     if (attachmentObject) {
         attachmentObject->onDetached(locker, context()->graphicsContextGL());
+        if (attachment == GraphicsContextGL::DEPTH_STENCIL_ATTACHMENT && context()->isWebGL2()) {
+            m_attachments.remove(GraphicsContextGL::DEPTH_ATTACHMENT);
+            m_attachments.remove(GraphicsContextGL::STENCIL_ATTACHMENT);
+        }
         m_attachments.remove(attachment);
         drawBuffersIfNecessary(false);
 #if !USE(ANGLE)
@@ -864,7 +869,12 @@ void WebGLFramebuffer::setAttachmentInternal(GCGLenum attachment, GCGLenum texTa
 
     removeAttachmentInternal(locker, attachment);
     if (texture && texture->object()) {
-        m_attachments.set(attachment, WebGLTextureAttachment::create(texture, texTarget, level, layer));
+        auto textureAttachment = WebGLTextureAttachment::create(texture, texTarget, level, layer);
+        if (attachment == GraphicsContextGL::DEPTH_STENCIL_ATTACHMENT && context()->isWebGL2()) {
+            m_attachments.set(GraphicsContextGL::DEPTH_ATTACHMENT, textureAttachment.ptr());
+            m_attachments.set(GraphicsContextGL::STENCIL_ATTACHMENT, textureAttachment.ptr());
+        }
+        m_attachments.set(attachment, WTFMove(textureAttachment));
         drawBuffersIfNecessary(false);
         texture->onAttached();
     }
@@ -880,7 +890,12 @@ void WebGLFramebuffer::setAttachmentInternal(GCGLenum attachment, WebGLRenderbuf
 
     removeAttachmentInternal(locker, attachment);
     if (renderbuffer && renderbuffer->object()) {
-        m_attachments.set(attachment, WebGLRenderbufferAttachment::create(renderbuffer));
+        auto renderbufferAttachment = WebGLRenderbufferAttachment::create(renderbuffer);
+        if (attachment == GraphicsContextGL::DEPTH_STENCIL_ATTACHMENT && context()->isWebGL2()) {
+            m_attachments.set(GraphicsContextGL::DEPTH_ATTACHMENT, renderbufferAttachment.ptr());
+            m_attachments.set(GraphicsContextGL::STENCIL_ATTACHMENT, renderbufferAttachment.ptr());
+        }
+        m_attachments.set(attachment, WTFMove(renderbufferAttachment));
         drawBuffersIfNecessary(false);
         renderbuffer->onAttached();
     }
@@ -891,6 +906,10 @@ void WebGLFramebuffer::removeAttachmentInternal(const AbstractLocker& locker, GC
     WebGLAttachment* attachmentObject = getAttachment(attachment);
     if (attachmentObject) {
         attachmentObject->onDetached(locker, context()->graphicsContextGL());
+        if (attachment == GraphicsContextGL::DEPTH_STENCIL_ATTACHMENT && context()->isWebGL2()) {
+            m_attachments.remove(GraphicsContextGL::DEPTH_ATTACHMENT);
+            m_attachments.remove(GraphicsContextGL::STENCIL_ATTACHMENT);
+        }
         m_attachments.remove(attachment);
         drawBuffersIfNecessary(false);
     }

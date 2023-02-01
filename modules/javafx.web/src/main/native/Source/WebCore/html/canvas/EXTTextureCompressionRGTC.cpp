@@ -37,7 +37,7 @@ WTF_MAKE_ISO_ALLOCATED_IMPL(EXTTextureCompressionRGTC);
 EXTTextureCompressionRGTC::EXTTextureCompressionRGTC(WebGLRenderingContextBase& context)
     : WebGLExtension(context)
 {
-    context.graphicsContextGL()->ensureExtensionEnabled("GL_EXT_texture_compression_rgtc");
+    context.graphicsContextGL()->ensureExtensionEnabled("GL_EXT_texture_compression_rgtc"_s);
 
     context.addCompressedTextureFormat(GraphicsContextGL::COMPRESSED_RED_RGTC1_EXT);
     context.addCompressedTextureFormat(GraphicsContextGL::COMPRESSED_SIGNED_RED_RGTC1_EXT);
@@ -50,6 +50,12 @@ EXTTextureCompressionRGTC::~EXTTextureCompressionRGTC() = default;
 WebGLExtension::ExtensionName EXTTextureCompressionRGTC::getName() const
 {
     return EXTTextureCompressionRGTCName;
+}
+
+bool EXTTextureCompressionRGTC::supported(GraphicsContextGL& context)
+{
+    return context.supportsExtension("GL_EXT_texture_compression_rgtc"_s)
+        || context.supportsExtension("GL_ARB_texture_compression_rgtc"_s);
 }
 
 } // namespace WebCore

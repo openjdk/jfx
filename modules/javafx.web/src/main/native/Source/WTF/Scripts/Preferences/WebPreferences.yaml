@@ -1,4 +1,4 @@
-# Copyright (c) 2020-2021 Apple Inc. All rights reserved.
+# Copyright (c) 2020-2022 Apple Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -31,17 +31,6 @@ AVFoundationEnabled:
       default: true
     WebKit:
       "PLATFORM(WATCHOS)": false
-      default: true
-
-AVFoundationNSURLSessionEnabled:
-  type: bool
-  getter: isAVFoundationNSURLSessionEnabled
-  webcoreBinding: DeprecatedGlobalSettings
-  condition: USE(AVFOUNDATION)
-  defaultValue:
-    WebKitLegacy:
-      default: true
-    WebKit:
       default: true
 
 AcceleratedCompositingEnabled:
@@ -243,12 +232,14 @@ AlternateFormControlDesignEnabled:
     WebCore:
       default: false
 
-AlwaysUseAcceleratedOverflowScroll:
+AlternateFullScreenControlDesignEnabled:
   type: bool
+  condition: PLATFORM(IOS_FAMILY)
   defaultValue:
     WebKitLegacy:
       default: false
     WebKit:
+      "HAVE(UIKIT_WEBKIT_INTERNALS)": true
       default: false
     WebCore:
       default: false
@@ -324,7 +315,7 @@ AsynchronousSpellCheckingEnabled:
 
 AttachmentElementEnabled:
   type: bool
-  webcoreBinding: RuntimeEnabledFeatures
+  webcoreBinding: DeprecatedGlobalSettings
   condition: ENABLE(ATTACHMENT_ELEMENT)
   defaultValue:
     WebKitLegacy:
@@ -377,14 +368,14 @@ CSSTransformStyleOptimized3DEnabled:
     WebKitLegacy:
       default: false
     WebKit:
-      default: true
+      default: false
     WebCore:
-      default: true
+      default: false
 
 # FIXME: This is not relevent for WebKitLegacy, so should be excluded from WebKitLegacy entirely (though we should still set the default value to false when initializing settings).
 CacheAPIEnabled:
   type: bool
-  webcoreBinding: RuntimeEnabledFeatures
+  webcoreBinding: DeprecatedGlobalSettings
   defaultValue:
     WebKitLegacy:
       default: false
@@ -493,7 +484,7 @@ CustomPasteboardDataEnabled:
   type: bool
   humanReadableName: "Custom pasteboard data"
   humanReadableDescription: "Enable custom clipboard types and better security model for clipboard API."
-  webcoreBinding: RuntimeEnabledFeatures
+  webcoreBinding: DeprecatedGlobalSettings
   defaultValue:
     WebKitLegacy:
       default: false
@@ -600,16 +591,6 @@ DefaultTextEncodingName:
     WebCore:
       default: '{ }'
 
-DeferredCSSParserEnabled:
-  type: bool
-  defaultValue:
-    WebKitLegacy:
-      default: false
-    WebKit:
-      default: false
-    WebCore:
-      default: false
-
 DeviceHeight:
   type: uint32_t
   defaultValue:
@@ -666,7 +647,7 @@ DirectoryUploadEnabled:
   type: bool
   humanReadableName: "Directory Upload"
   humanReadableDescription: "input.webkitdirectory / dataTransferItem.webkitGetAsEntry()"
-  webcoreBinding: RuntimeEnabledFeatures
+  webcoreBinding: DeprecatedGlobalSettings
   defaultValue:
     WebKitLegacy:
       default: false
@@ -929,6 +910,18 @@ IncompleteImageBorderEnabled:
     WebCore:
       default: false
 
+IncrementalPDFLoadingEnabled:
+  type: bool
+  condition: HAVE(INCREMENTAL_PDF_APIS)
+  webcoreBinding: DeprecatedGlobalSettings
+  defaultValue:
+    WebKitLegacy:
+      "PLATFORM(MAC)": true
+      default: false
+    WebKit:
+      "PLATFORM(MAC)": true
+      default: false
+
 IncrementalRenderingSuppressionTimeout:
   type: double
   webKitLegacyPreferenceKey: WebKitIncrementalRenderingSuppressionTimeoutInSeconds
@@ -952,17 +945,6 @@ InlineMediaPlaybackRequiresPlaysInlineAttribute:
       default: false
     WebCore:
       "PLATFORM(IOS_FAMILY)": true
-      default: false
-
-InspectorAdditionsEnabled:
-  type: bool
-  humanReadableName: "Web Inspector Additions"
-  humanReadableDescription: "Enable additional page APIs used by the Web Inspector frontend page"
-  webcoreBinding: RuntimeEnabledFeatures
-  defaultValue:
-    WebKitLegacy:
-      default: false
-    WebKit:
       default: false
 
 InspectorAttachedHeight:
@@ -1047,7 +1029,7 @@ IsAccessibilityIsolatedTreeEnabled:
   type: bool
   humanReadableName: "Isolated Accessibility Tree Mode"
   humanReadableDescription: "Enable an accessibility hierarchy for VoiceOver that can be accessed on a secondary thread for improved performance"
-  webcoreBinding: RuntimeEnabledFeatures
+  webcoreBinding: DeprecatedGlobalSettings
   condition: ENABLE(ACCESSIBILITY_ISOLATED_TREE)
   defaultValue:
     WebKitLegacy:
@@ -1063,7 +1045,7 @@ ItpDebugModeEnabled:
   type: bool
   humanReadableName: "ITP Debug Mode"
   humanReadableDescription: "Intelligent Tracking Prevention Debug Mode"
-  webcoreBinding: RuntimeEnabledFeatures
+  webcoreBinding: DeprecatedGlobalSettings
   defaultValue:
     WebKitLegacy:
       default: false
@@ -1332,7 +1314,7 @@ MediaAudioCodecIDsAllowedInCaptivePortalMode:
   exposed: [ WebKit ]
   defaultValue:
     WebKit:
-      default: '"aac ,zaac,qaac,caac,.mp3"'
+      default: '"aac ,zaac,qaac,caac,.mp3,mp4a"'
 
 MediaCapabilitiesEnabled:
   type: bool
@@ -1366,7 +1348,7 @@ MediaContainerTypesAllowedInCaptivePortalMode:
   exposed: [ WebKit ]
   defaultValue:
     WebKit:
-      default: '"video/mp4,audio/mp4,video/x-m4v,audio/x-m4a,audio/mp3,application/x-mpegURL,vnd.apple.mpegURL"'
+      default: '"video/mp4,audio/mp4,video/x-m4v,audio/x-m4a,audio/mp3,application/x-mpegURL,application/vnd.apple.mpegURL,video/mp2t,video/iso.segment,audio/aac,audio/mpeg,audio/ac3,audio/eac3,video/mpeg2,text/vtt"'
 
 MediaContentTypesRequiringHardwareSupport:
   type: String
@@ -1497,7 +1479,7 @@ MediaVideoCodecIDsAllowedInCaptivePortalMode:
 
 MenuItemElementEnabled:
   type: bool
-  webcoreBinding: RuntimeEnabledFeatures
+  webcoreBinding: DeprecatedGlobalSettings
   defaultValue:
     WebKitLegacy:
       default: false
@@ -1722,7 +1704,9 @@ PeerConnectionEnabled:
     WebKitLegacy:
       default: true
     WebKit:
-      default: WebCore::LibWebRTCProvider::webRTCAvailable()
+      "USE(LIBWEBRTC)": WebCore::LibWebRTCProvider::webRTCAvailable()
+      "USE(GSTREAMER_WEBRTC)": true
+      default: false
     WebCore:
       default: true
 
@@ -1925,16 +1909,6 @@ SelectTrailingWhitespaceEnabled:
     WebKit:
       default: false
     WebKitLegacy:
-      default: false
-    WebCore:
-      default: false
-
-SelectionPaintingWithoutSelectionGapsEnabled:
-  type: bool
-  defaultValue:
-    WebKitLegacy:
-      default: false
-    WebKit:
       default: false
     WebCore:
       default: false
@@ -2176,8 +2150,10 @@ SourceBufferChangeTypeEnabled:
     WebKitLegacy:
       default: true
     WebKit:
+      "USE(GSTREAMER)": false
       default: true
     WebCore:
+      "USE(GSTREAMER)": false
       default: true
 
 SpatialNavigationEnabled:
@@ -2445,6 +2421,27 @@ UsesEncodingDetector:
     WebCore:
       default: false
 
+VP8DecoderEnabled:
+  type: bool
+  webcoreBinding: none
+  condition: ENABLE(VP9)
+  defaultValue:
+    WebKitLegacy:
+      default: true
+    WebKit:
+      default: true
+
+VP9DecoderEnabled:
+  type: bool
+  condition: ENABLE(VP9)
+  defaultValue:
+    WebCore:
+      default: false
+    WebKitLegacy:
+      default: true
+    WebKit:
+      default: true
+
 VideoQualityIncludesDisplayCompositingEnabled:
   type: bool
   condition: ENABLE(VIDEO)
@@ -2462,18 +2459,6 @@ ViewGestureDebuggingEnabled:
   exposed: [ WebKit ]
   defaultValue:
     WebKit:
-      default: false
-
-ViewportFitEnabled:
-  type: bool
-  humanReadableName: "Viewport Fit"
-  humanReadableDescription: "Enable viewport-fit viewport parameter"
-  defaultValue:
-    WebKitLegacy:
-      default: true
-    WebKit:
-      default: true
-    WebCore:
       default: false
 
 VisualViewportEnabled:
@@ -2501,6 +2486,17 @@ WantsBalancedSetDefersLoadingBehavior:
 WebArchiveDebugModeEnabled:
   type: bool
   webKitLegacyPreferenceKey: WebKitWebArchiveDebugModeEnabledPreferenceKey
+  condition: ENABLE(WEB_ARCHIVE)
+  defaultValue:
+    WebKitLegacy:
+      default: false
+    WebKit:
+      default: false
+    WebCore:
+      default: false
+
+WebArchiveTestingModeEnabled:
+  type: bool
   condition: ENABLE(WEB_ARCHIVE)
   defaultValue:
     WebKitLegacy:
@@ -2542,6 +2538,25 @@ WebGPU:
     WebCore:
       default: false
 
+WebMFormatReaderEnabled:
+  type: bool
+  webcoreBinding: DeprecatedGlobalSettings
+  condition: ENABLE(WEBM_FORMAT_READER)
+  defaultValue:
+    WebKit:
+      default: true
+
+# FIXME: Is this implemented for WebKitLegacy? If not, this should be excluded from WebKitLegacy entirely.
+WebMParserEnabled:
+  type: bool
+  webcoreBinding: DeprecatedGlobalSettings
+  condition: ENABLE(MEDIA_SOURCE)
+  defaultValue:
+    WebKitLegacy:
+      default: true
+    WebKit:
+      default: true
+
 WebSecurityEnabled:
   type: bool
   inspectorOverride: true
@@ -2579,13 +2594,3 @@ WindowFocusRestricted:
       default: true
     WebCore:
       default: true
-
-XSSAuditorEnabled:
-  type: bool
-  defaultValue:
-    WebKitLegacy:
-      default: false
-    WebKit:
-      default: false
-    WebCore:
-      default: false

@@ -27,6 +27,7 @@
 #include "StyleSharingResolver.h"
 
 #include "ElementInlines.h"
+#include "ElementRareData.h"
 #include "ElementRuleCollector.h"
 #include "FullscreenManager.h"
 #include "HTMLDialogElement.h"
@@ -101,7 +102,7 @@ std::unique_ptr<RenderStyle> SharingResolver::resolve(const Styleable& searchSty
         return nullptr;
     if (elementHasDirectionAuto(element))
         return nullptr;
-    if (element.shadowRoot() && !element.shadowRoot()->styleScope().resolver().ruleSets().authorStyle().hostPseudoClassRules().isEmpty())
+    if (element.shadowRoot() && element.shadowRoot()->styleScope().resolver().ruleSets().hasMatchingUserOrAuthorStyle([] (auto& style) { return !style.hostPseudoClassRules().isEmpty(); }))
         return nullptr;
     if (auto* keyframeEffectStack = searchStyleable.keyframeEffectStack()) {
         if (keyframeEffectStack->hasEffectWithImplicitKeyframes())
@@ -179,33 +180,6 @@ Node* SharingResolver::locateCousinList(const Element* parent) const
     return nullptr;
 }
 
-static bool canShareStyleWithControl(const HTMLFormControlElement& element, const HTMLFormControlElement& formElement)
-{
-    if (!is<HTMLInputElement>(formElement) || !is<HTMLInputElement>(element))
-        return false;
-
-    auto& thisInputElement = downcast<HTMLInputElement>(formElement);
-    auto& otherInputElement = downcast<HTMLInputElement>(element);
-
-    if (thisInputElement.isAutoFilled() != otherInputElement.isAutoFilled())
-        return false;
-    if (thisInputElement.shouldAppearChecked() != otherInputElement.shouldAppearChecked())
-        return false;
-    if (thisInputElement.isRequired() != otherInputElement.isRequired())
-        return false;
-
-    if (formElement.isDisabledFormControl() != element.isDisabledFormControl())
-        return false;
-
-    if (formElement.isInRange() != element.isInRange())
-        return false;
-
-    if (formElement.isOutOfRange() != element.isOutOfRange())
-        return false;
-
-    return true;
-}
-
 bool SharingResolver::canShareStyleWithElement(const Context& context, const StyledElement& candidateElement) const
 {
     auto& element = context.element;
@@ -255,12 +229,19 @@ bool SharingResolver::canShareStyleWithElement(const Context& context, const Sty
     if (!candidateElementId.isNull() && m_ruleSets.features().idsInRules.contains(candidateElementId))
         return false;
 
-    bool isControl = is<HTMLFormControlElement>(candidateElement);
-
-    if (isControl != is<HTMLFormControlElement>(element))
+    if (is<HTMLFormControlElement>(candidateElement) || is<HTMLFormControlElement>(element))
         return false;
 
-    if (isControl && !canShareStyleWithControl(downcast<HTMLFormControlElement>(element), downcast<HTMLFormControlElement>(candidateElement)))
+    // HTMLFormElement can get the :valid/invalid pseudo classes
+    if (candidateElement.matchesValidPseudoClass() != element.matchesValidPseudoClass())
+        return false;
+
+    // HTMLProgressElement is not a HTMLFormControlElement
+    if (candidateElement.matchesIndeterminatePseudoClass() != element.matchesIndeterminatePseudoClass())
+        return false;
+
+    // HTMLOptionElement is not a HTMLFormControlElement
+    if (candidateElement.matchesDefaultPseudoClass() != element.matchesDefaultPseudoClass())
         return false;
 
     if (candidateElement.hasKeyframeEffects(PseudoId::None))
@@ -280,10 +261,12 @@ bool SharingResolver::canShareStyleWithElement(const Context& context, const Sty
     if (candidateElement.isLink() && context.elementLinkState != style->insideLink())
         return false;
 
+    if (style->containerType() != ContainerType::Normal)
+        return false;
+
     if (candidateElement.elementData() != element.elementData()) {
+        // Attributes that are optimized as "common attribute selectors".
         if (candidateElement.attributeWithoutSynchronization(HTMLNames::readonlyAttr) != element.attributeWithoutSynchronization(HTMLNames::readonlyAttr))
-            return false;
-        if (m_document.settings().inertAttributeEnabled() && candidateElement.attributeWithoutSynchronization(HTMLNames::inertAttr) != element.attributeWithoutSynchronization(HTMLNames::inertAttr))
             return false;
         if (candidateElement.isSVGElement()) {
             if (candidateElement.getAttribute(HTMLNames::typeAttr) != element.getAttribute(HTMLNames::typeAttr))
@@ -292,21 +275,13 @@ bool SharingResolver::canShareStyleWithElement(const Context& context, const Sty
             if (candidateElement.attributeWithoutSynchronization(HTMLNames::typeAttr) != element.attributeWithoutSynchronization(HTMLNames::typeAttr))
                 return false;
         }
+
+        // Elements that may get StyleAdjuster's inert attribute adjustment.
+        if (m_document.settings().inertAttributeEnabled() && candidateElement.hasAttributeWithoutSynchronization(HTMLNames::inertAttr) != element.hasAttributeWithoutSynchronization(HTMLNames::inertAttr))
+            return false;
     }
 
-    if (candidateElement.matchesValidPseudoClass() != element.matchesValidPseudoClass())
-        return false;
-
-    if (element.matchesInvalidPseudoClass() != element.matchesValidPseudoClass())
-        return false;
-
-    if (candidateElement.matchesIndeterminatePseudoClass() != element.matchesIndeterminatePseudoClass())
-        return false;
-
-    if (candidateElement.matchesDefaultPseudoClass() != element.matchesDefaultPseudoClass())
-        return false;
-
-    if (candidateElement.shadowRoot() && !candidateElement.shadowRoot()->styleScope().resolver().ruleSets().authorStyle().hostPseudoClassRules().isEmpty())
+    if (candidateElement.shadowRoot() && candidateElement.shadowRoot()->styleScope().resolver().ruleSets().hasMatchingUserOrAuthorStyle([] (auto& style) { return !style.hostPseudoClassRules().isEmpty(); }))
         return false;
 
 #if ENABLE(WHEEL_EVENT_REGIONS)
@@ -321,6 +296,7 @@ bool SharingResolver::canShareStyleWithElement(const Context& context, const Sty
     if (&candidateElement == m_document.fullscreenManager().currentFullscreenElement() || &element == m_document.fullscreenManager().currentFullscreenElement())
         return false;
 #endif
+
     return true;
 }
 

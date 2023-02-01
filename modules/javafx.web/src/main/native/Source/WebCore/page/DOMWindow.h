@@ -85,6 +85,7 @@ class Screen;
 class Storage;
 class StyleMedia;
 class VisualViewport;
+class WebCoreOpaqueRoot;
 class WebKitNamespace;
 class WebKitPoint;
 
@@ -183,7 +184,7 @@ public:
     void setLastActivationTimestamp(MonotonicTime lastActivationTimestamp) { m_lastActivationTimestamp = lastActivationTimestamp; }
     MonotonicTime lastActivationTimestamp() const { return m_lastActivationTimestamp; }
     void notifyActivated(MonotonicTime);
-    bool hasTransientActivation() const;
+    WEBCORE_EXPORT bool hasTransientActivation() const;
     bool consumeTransientActivation();
 
     WEBCORE_EXPORT Location& location();
@@ -230,8 +231,8 @@ public:
 
     unsigned length() const;
 
-    String name() const;
-    void setName(const String&);
+    AtomString name() const;
+    void setName(const AtomString&);
 
     String status() const;
     void setStatus(const String&);
@@ -410,6 +411,9 @@ public:
     void setMayReuseForNavigation(bool mayReuseForNavigation) { m_mayReuseForNavigation = mayReuseForNavigation; }
     bool mayReuseForNavigation() const { return m_mayReuseForNavigation; }
 
+    Page* page() const;
+    WEBCORE_EXPORT static void forEachWindowInterestedInStorageEvents(const Function<void(DOMWindow&)>&);
+
 private:
     explicit DOMWindow(Document&);
 
@@ -417,8 +421,8 @@ private:
 
     bool isLocalDOMWindow() const final { return true; }
     bool isRemoteDOMWindow() const final { return false; }
+    void eventListenersDidChange() final;
 
-    Page* page() const;
     bool allowedToChangeWindowGeometry() const;
 
     static ExceptionOr<RefPtr<Frame>> createWindow(const String& urlString, const AtomString& frameName, const WindowFeatures&, DOMWindow& activeWindow, Frame& firstFrame, Frame& openerFrame, const Function<void(DOMWindow&)>& prepareDialogFunction = nullptr);
@@ -509,6 +513,8 @@ inline String DOMWindow::defaultStatus() const
 {
     return m_defaultStatus;
 }
+
+WebCoreOpaqueRoot root(DOMWindow*);
 
 } // namespace WebCore
 

@@ -38,6 +38,7 @@ namespace WebCore {
 
 class AbortAlgorithm;
 class ScriptExecutionContext;
+class WebCoreOpaqueRoot;
 
 class AbortSignal final : public RefCounted<AbortSignal>, public EventTargetWithInlineData, private ContextDestructionObserver {
     WTF_MAKE_ISO_ALLOCATED_EXPORT(AbortSignal, WEBCORE_EXPORT);
@@ -62,7 +63,7 @@ public:
     using RefCounted::ref;
     using RefCounted::deref;
 
-    using Algorithm = Function<void()>;
+    using Algorithm = Function<void(JSC::JSValue reason)>;
     void addAlgorithm(Algorithm&& algorithm) { m_algorithms.append(WTFMove(algorithm)); }
 
     bool isFollowingSignal() const { return !!m_followingSignal; }
@@ -90,5 +91,7 @@ private:
     bool m_hasAbortEventListener { false };
 };
 
-}
+WebCoreOpaqueRoot root(AbortSignal*);
+
+} // namespace WebCore
 

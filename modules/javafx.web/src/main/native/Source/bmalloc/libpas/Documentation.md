@@ -30,18 +30,18 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 # Introduction
 
-This document describes how libpas works as of a361efa96ca4b2ff6bdfc28bc7eb1a678cde75be, so a bit ahead of
-where WebKit was as of r289146. Libpas is a fast and memory-efficient memory allocation toolkit capable of
-supporting many heaps at once, engineered with the hopes that someday it'll be used for comprehensive isoheaping
-of all malloc/new callsites in C/C++ programs.
+This document describes how libpas works as of [247029@main](https://commits.webkit.org/247029@main), so a bit ahead of
+where WebKit was as of [246842@main](https://commits.webkit.org/246842@main). Libpas is a fast and memory-efficient
+memory allocation toolkit capable of supporting many heaps at once, engineered with the hopes that someday it'll be used
+for comprehensive isoheaping of all malloc/new callsites in C/C++ programs.
 
-Since WebKit r213753, we've been steadily enabling libpas as a replacement for WebKit's bmalloc and
-MetaAllocator. This has so far added up to a ~2% Speedometer2 speed-up and a ~8% memory improvement (on multiple
-memory benchmarks). Half of the speed-up comes from replacing the MetaAllocator, which was JavaScriptCore's old
-way of managing executable memory. Now, JSC uses libpas's jit_heap to manage executable memory. The other half
-of the speed-up comes from replacing everything that bmalloc provided -- the fastMalloc API, the Gigacage API,
-and the IsoHeap<> API. All of the memory improvement comes from replacing bmalloc (the MetaAllocator was already
-fairly memory-efficient).
+Since WebKit [186504@main](https://commits.webkit.org/186504@main), we've been steadily enabling libpas as a
+replacement for WebKit's bmalloc and MetaAllocator. This has so far added up to a ~2% Speedometer2 speed-up and
+a ~8% memory improvement (on multiple memory benchmarks). Half of the speed-up comes from replacing the MetaAllocator,
+which was JavaScriptCore's old way of managing executable memory. Now, JSC uses libpas's jit_heap to manage executable
+memory. The other half of the speed-up comes from replacing everything that bmalloc provided -- the fastMalloc API, the
+Gigacage API, and the IsoHeap<> API. All of the memory improvement comes from replacing bmalloc (the MetaAllocator was
+already fairly memory-efficient).
 
 This document is structured as follows. First I describe the goals of libpas; these are the things that a
 malloc-like API created out of libpas should be able to expose as fast and memory-efficient functions. Then I
@@ -194,7 +194,7 @@ Is an out-of-line direct function call to the specialization of
 `pas_local_allocator_try_allocate_small_segregated_slow`. And this would be a virtual call to the same
 function:
 
-    pas_heap_config* config = ...;
+    const pas_heap_config* config = ...;
     config->specialized_local_allocator_try_allocate_small_segregated_slow(...);
 
 Note that in many cases where you have a `pas_heap_config`, you are in specialized code and the heap config is
@@ -427,7 +427,7 @@ used in single-heap applications, these overheads don't matter -- they end up be
 daemons). But when used for many heaps, these overheads are substantial. Given thousands or tens of thousands
 of heaps, TLCs account for as much as 1% of memory. So, TLCs support partial decommit. Those pages that only
 have allocators that are inactive get decommitted. Note that TLC decommit has landed in the libpas.git repo
-as of a361efa96ca4b2ff6bdfc28bc7eb1a678cde75be, but hasn't yet been merged into WebKit.
+as of [247029@main](https://commits.webkit.org/247029@main), but hasn't yet been merged into WebKit.
 
 The TLC deallocation log flush algorithm is designed to achieve two performance optimizations:
 
@@ -1178,9 +1178,10 @@ The header file usually looks like this:
         .medium_bitfit_min_align_shift = PAS_MIN_MEDIUM_ALIGN_SHIFT, \
         .use_marge_bitfit = true, \
         .marge_bitfit_min_align_shift = PAS_MIN_MARGE_ALIGN_SHIFT, \
-        .marge_bitfit_page_size = PAS_MARGE_PAGE_DEFAULT_SIZE)
+        .marge_bitfit_page_size = PAS_MARGE_PAGE_DEFAULT_SIZE, \
+        .pgm_enabled = false)
     
-    PAS_API extern pas_heap_config iso_heap_config;
+    PAS_API extern const pas_heap_config iso_heap_config;
     
     PAS_BASIC_HEAP_CONFIG_DECLARATIONS(iso, ISO);
 
@@ -1188,7 +1189,7 @@ Note the use of `PAS_BASIC_HEAP_CONFIG`, which creates a config literal that aut
 heap config, segregated page config, and bitfit page config fields based on the arguments you pass to
 `PAS_BASIC_HEAP_CONFIG`. The corresponding `.c` file looks like this:
 
-    pas_heap_config iso_heap_config = ISO_HEAP_CONFIG;
+    const pas_heap_config iso_heap_config = ISO_HEAP_CONFIG;
     
     PAS_BASIC_HEAP_CONFIG_DEFINITIONS(
         iso, ISO,
@@ -1235,6 +1236,28 @@ The large heap trivially supports both requirements. The bitfit heap trivially s
 and can be made to support the first requirement if we use page header tables for all kinds of memory, not just
 medium or marge. So, the JIT heap config focuses on just using bitfit and large and it forces bitfit to use
 page header tables even for the small bitfit page config.
+
+## Security Considerations
+
+### Probabilistic Guard Malloc
+
+ Probabilistic Guard Malloc (PGM) is a new allocator designed to catch use after free attempts and out of bounds accesses.
+ It behaves similarly to AddressSanitizer (ASAN), but aims to have minimal runtime overhead.
+
+ The design of PGM is quite simple. Each time an allocation is performed an additional guard page is added above and below the newly
+ allocated page(s). An allocation may span multiple pages. When a deallocation is performed, the page(s) allocated will be protected
+ using mprotect to ensure that any use after frees will trigger a crash. Virtual memory addresses are never reused, so we will never run
+ into a case where object 1 is freed, object 2 is allocated over the same address space, and object 1 then accesses the memory address
+ space of now object 2.
+
+ PGM does add notable memory overhead. Each allocation, no matter the size, adds an additional 2 guard pages (8KB for X86_64 and 32KB
+ for ARM64). In addition, there may be free memory left over in the page(s) allocated for the user. This memory may not be used by any
+ other allocation.
+
+ We added limits on virtual memory and wasted memory to help limit the memory impact on the overall system. Virtual memory for this
+ allocator is limited to 1GB. Wasted memory, which is the unused memory in the page(s) allocated by the user, is limited to 1MB.
+ These overall limits should ensure that the memory impact on the system is minimal, while helping to tackle the problems of catching
+ use after frees and out of bounds accesses.
 
 ## The Fast Paths
 

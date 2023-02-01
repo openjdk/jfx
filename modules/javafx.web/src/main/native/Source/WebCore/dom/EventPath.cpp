@@ -22,6 +22,7 @@
 #include "EventPath.h"
 
 #include "DOMWindow.h"
+#include "ElementRareData.h"
 #include "Event.h"
 #include "EventContext.h"
 #include "EventNames.h"
@@ -274,11 +275,11 @@ Vector<Ref<EventTarget>> EventPath::computePathUnclosedToTarget(const EventTarge
 
 EventPath::EventPath(const Vector<EventTarget*>& targets)
 {
-    for (auto* target : targets) {
+    m_path = targets.map([&](auto* target) {
         ASSERT(target);
         ASSERT(!is<Node>(target));
-        m_path.append(EventContext { EventContext::Type::Normal, nullptr, target, *targets.begin(), 0 });
-    }
+        return EventContext { EventContext::Type::Normal, nullptr, target, *targets.begin(), 0 };
+    });
 }
 
 static Node* moveOutOfAllShadowRoots(Node& startingNode)
@@ -298,7 +299,8 @@ RelatedNodeRetargeter::RelatedNodeRetargeter(Node& relatedNode, Node& target)
     if (LIKELY(currentTreeScope == &targetTreeScope && target.isConnected() && m_relatedNode->isConnected()))
         return;
 
-    if (&currentTreeScope->documentScope() != &targetTreeScope.documentScope()) {
+    if (&currentTreeScope->documentScope() != &targetTreeScope.documentScope()
+        || (relatedNode.hasBeenInUserAgentShadowTree() && !relatedNode.isConnected())) {
         m_hasDifferentTreeRoot = true;
         m_retargetedRelatedNode = nullptr;
         return;

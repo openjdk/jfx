@@ -81,6 +81,7 @@ JS_EXPORT_PRIVATE const ClassInfo* getBigUint64ArrayClassInfo();
 //     static int8_t toNativeFromInt32(int32_t);
 //     static int8_t toNativeFromUint32(uint32_t);
 //     static int8_t toNativeFromDouble(double);
+//     static int8_t toNativeFromUndefined();
 //     static JSValue toJSValue(int8_t);
 //     template<T> static T::Type convertTo(uint8_t);
 // };
@@ -170,7 +171,10 @@ public:
         typename Adaptor::Type value = toNativeFromValue<Adaptor>(globalObject, jsValue);
         RETURN_IF_EXCEPTION(scope, false);
 
-        if (isDetached() || i >= m_length)
+        if (isDetached())
+            return true;
+
+        if (i >= m_length)
             return false;
 
         setIndexQuicklyToNativeValue(i, value);
@@ -381,9 +385,9 @@ private:
 };
 
 template<typename Adaptor>
-inline RefPtr<typename Adaptor::ViewType> toPossiblySharedNativeTypedView(VM& vm, JSValue value)
+inline RefPtr<typename Adaptor::ViewType> toPossiblySharedNativeTypedView(VM&, JSValue value)
 {
-    typename Adaptor::JSViewType* wrapper = jsDynamicCast<typename Adaptor::JSViewType*>(vm, value);
+    typename Adaptor::JSViewType* wrapper = jsDynamicCast<typename Adaptor::JSViewType*>(value);
     if (!wrapper)
         return nullptr;
     return wrapper->possiblySharedTypedImpl();

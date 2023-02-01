@@ -98,7 +98,7 @@ struct Styleable {
         return element.hasKeyframeEffects(pseudoId);
     }
 
-    OptionSet<AnimationImpact> applyKeyframeEffects(RenderStyle& targetStyle, const RenderStyle& previousLastStyleChangeEventStyle, const Style::ResolutionContext& resolutionContext) const
+    OptionSet<AnimationImpact> applyKeyframeEffects(RenderStyle& targetStyle, const RenderStyle* previousLastStyleChangeEventStyle, const Style::ResolutionContext& resolutionContext) const
     {
         return element.ensureKeyframeEffectStack(pseudoId).applyKeyframeEffects(targetStyle, previousLastStyleChangeEventStyle, resolutionContext);
     }
@@ -162,6 +162,8 @@ struct Styleable {
     {
         element.keyframesRuleDidChange(pseudoId);
     }
+
+    void queryContainerDidChange() const;
 
     bool animationListContainsNewlyValidAnimation(const AnimationList&) const;
 

@@ -70,6 +70,12 @@ static const void* CVPixelBufferGetBytePointerCallback(void* refcon)
 
     ++info->lockCount;
     void* address = CVPixelBufferGetBaseAddress(info->pixelBuffer.get());
+    if (!address) {
+        RELEASE_LOG_ERROR(Media, "CVPixelBufferGetBaseAddress returned null");
+        RELEASE_LOG_STACKTRACE(Media);
+        return nullptr;
+    }
+
     size_t byteLength = CVPixelBufferGetBytesPerRow(info->pixelBuffer.get()) * CVPixelBufferGetHeight(info->pixelBuffer.get());
 
     verifyImageBufferIsBigEnough(address, byteLength);
@@ -147,8 +153,6 @@ RetainPtr<CVPixelBufferRef> PixelBufferConformerCV::convert(CVPixelBufferRef raw
 RetainPtr<CGImageRef> PixelBufferConformerCV::createImageFromPixelBuffer(CVPixelBufferRef rawBuffer)
 {
     RetainPtr<CVPixelBufferRef> buffer { rawBuffer };
-    size_t width = CVPixelBufferGetWidth(buffer.get());
-    size_t height = CVPixelBufferGetHeight(buffer.get());
 
     if (!VTPixelBufferConformerIsConformantPixelBuffer(m_pixelConformer.get(), buffer.get())) {
         CVPixelBufferRef outputBuffer = nullptr;
@@ -158,6 +162,15 @@ RetainPtr<CGImageRef> PixelBufferConformerCV::createImageFromPixelBuffer(CVPixel
         buffer = adoptCF(outputBuffer);
     }
 
+    auto colorSpace = createCGColorSpaceForCVPixelBuffer(rawBuffer);
+    return imageFrom32BGRAPixelBuffer(WTFMove(buffer), colorSpace.get());
+}
+
+RetainPtr<CGImageRef> PixelBufferConformerCV::imageFrom32BGRAPixelBuffer(RetainPtr<CVPixelBufferRef>&& buffer, CGColorSpaceRef colorSpace)
+{
+    size_t width = CVPixelBufferGetWidth(buffer.get());
+    size_t height = CVPixelBufferGetHeight(buffer.get());
+
     CGBitmapInfo bitmapInfo = static_cast<CGBitmapInfo>(kCGBitmapByteOrder32Little) | static_cast<CGBitmapInfo>(kCGImageAlphaFirst);
     size_t bytesPerRow = CVPixelBufferGetBytesPerRow(buffer.get());
     size_t byteLength = bytesPerRow * height;
@@ -166,8 +179,6 @@ RetainPtr<CGImageRef> PixelBufferConformerCV::createImageFromPixelBuffer(CVPixel
     if (!byteLength)
         return nullptr;
 
-    auto colorSpace = createCGColorSpaceForCVPixelBuffer(rawBuffer);
-
     CVPixelBufferInfo* info = new CVPixelBufferInfo();
     info->pixelBuffer = WTFMove(buffer);
     info->lockCount = 0;
@@ -175,7 +186,7 @@ RetainPtr<CGImageRef> PixelBufferConformerCV::createImageFromPixelBuffer(CVPixel
     CGDataProviderDirectCallbacks providerCallbacks = { 0, CVPixelBufferGetBytePointerCallback, CVPixelBufferReleaseBytePointerCallback, 0, CVPixelBufferReleaseInfoCallback };
     RetainPtr<CGDataProviderRef> provider = adoptCF(CGDataProviderCreateDirect(info, byteLength, &providerCallbacks));
 
-    return adoptCF(CGImageCreate(width, height, 8, 32, bytesPerRow, colorSpace.get(), bitmapInfo, provider.get(), nullptr, false, kCGRenderingIntentDefault));
+    return adoptCF(CGImageCreate(width, height, 8, 32, bytesPerRow, colorSpace, bitmapInfo, provider.get(), nullptr, false, kCGRenderingIntentDefault));
 }
 
 }

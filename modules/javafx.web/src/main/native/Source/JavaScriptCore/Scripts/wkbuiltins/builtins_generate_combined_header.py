@@ -80,6 +80,7 @@ class VM;
 
 enum class ConstructAbility : uint8_t;
 enum class ConstructorKind : uint8_t;
+enum class ImplementationVisibility : uint8_t;
 }"""
 
     def generate_section_for_object(self, object):
@@ -101,7 +102,8 @@ enum class ConstructorKind : uint8_t;
             lines.append("""extern const char* const s_%(codeName)s;
 extern const int s_%(codeName)sLength;
 extern const JSC::ConstructAbility s_%(codeName)sConstructAbility;
-extern const JSC::ConstructorKind s_%(codeName)sConstructorKind;""" % function_args)
+extern const JSC::ConstructorKind s_%(codeName)sConstructorKind;
+extern const JSC::ImplementationVisibility s_%(codeName)sImplementationVisibility;""" % function_args)
 
         return lines
 
@@ -167,8 +169,8 @@ extern const JSC::ConstructorKind s_%(codeName)sConstructorKind;""" % function_a
         }
 
         lines = []
-        lines.append("#define %(macroPrefix)s_FOREACH_BUILTIN_FUNCTION_PRIVATE_GLOBAL_NAME(macro) \\" % args)
-        functions = [function for function in self.model().all_functions() if function.is_global_private]
+        lines.append("#define %(macroPrefix)s_FOREACH_BUILTIN_LINK_TIME_CONSTANT(macro) \\" % args)
+        functions = [function for function in self.model().all_functions() if function.is_link_time_constant]
         functions.sort(key=lambda x: x.function_name)
         for function in functions:
             function_args = {

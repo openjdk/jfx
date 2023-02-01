@@ -270,6 +270,7 @@ struct Thread::ThreadHolder {
         if (isMainThread())
             return;
         if (thread) {
+            thread->m_clientData = nullptr;
             thread->specificStorage().destroySlots();
             thread->didExit();
         }

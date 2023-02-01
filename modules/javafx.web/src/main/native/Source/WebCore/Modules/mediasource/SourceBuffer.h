@@ -55,6 +55,7 @@ class SourceBufferPrivate;
 class TextTrackList;
 class TimeRanges;
 class VideoTrackList;
+class WebCoreOpaqueRoot;
 
 class SourceBuffer final
     : public RefCounted<SourceBuffer>
@@ -130,6 +131,8 @@ public:
     MediaTime highestPresentationTimestamp() const;
     void readyStateChanged();
 
+    size_t memoryCost() const;
+
     void setMediaSourceEnded(bool isEnded);
 
 #if !RELEASE_LOG_DISABLED
@@ -139,7 +142,7 @@ public:
     WTFLogChannel& logChannel() const final;
 #endif
 
-    void* opaqueRoot() { return this; }
+    WebCoreOpaqueRoot opaqueRoot();
 
 private:
     SourceBuffer(Ref<SourceBufferPrivate>&&, MediaSource*);
@@ -153,7 +156,7 @@ private:
     bool virtualHasPendingActivity() const final;
 
     // SourceBufferPrivateClient
-    void sourceBufferPrivateDidReceiveInitializationSegment(InitializationSegment&&, CompletionHandler<void()>&&) final;
+    void sourceBufferPrivateDidReceiveInitializationSegment(InitializationSegment&&, CompletionHandler<void(ReceiveResult)>&&) final;
     void sourceBufferPrivateStreamEndedWithDecodeError() final;
     void sourceBufferPrivateAppendError(bool decodeError) final;
     void sourceBufferPrivateAppendComplete(AppendResult) final;
@@ -220,7 +223,7 @@ private:
     MediaSource* m_source;
     AppendMode m_mode { AppendMode::Segments };
 
-    WTF::Observer<void*()> m_opaqueRootProvider;
+    WTF::Observer<WebCoreOpaqueRoot()> m_opaqueRootProvider;
 
     RefPtr<SharedBuffer> m_pendingAppendData;
     Timer m_appendBufferTimer;
@@ -245,7 +248,10 @@ private:
     double m_averageBufferRate { 0 };
     bool m_bufferedDirty { true };
 
+    // Can only grow.
     uint64_t m_reportedExtraMemoryCost { 0 };
+    // Can grow and shrink.
+    uint64_t m_extraMemoryCost { 0 };
 
     MediaTime m_pendingRemoveStart;
     MediaTime m_pendingRemoveEnd;

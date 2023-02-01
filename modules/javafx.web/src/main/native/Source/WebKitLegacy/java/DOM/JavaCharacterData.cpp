@@ -54,7 +54,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_CharacterDataImpl_getDataImpl(
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_CharacterDataImpl_setDataImpl(JNIEnv* env, jclass, jlong peer, jstring value)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->setData(String(env, value));
+    IMPL->setData(AtomString {String(env, value)});
 }
 
 JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_CharacterDataImpl_getLengthImpl(JNIEnv*, jclass, jlong peer)
@@ -91,7 +91,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_dom_CharacterDataImpl_appendDataImpl(
     , jstring data)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->appendData(String(env, data));
+    IMPL->appendData(AtomString {String(env, data)});
 }
 
 
@@ -101,7 +101,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_dom_CharacterDataImpl_insertDataImpl(
 {
     WebCore::JSMainThreadNullState state;
     raiseOnDOMError(env, IMPL->insertData(offset
-            , String(env, data)));
+            , AtomString {String(env, data)}));
 }
 
 
@@ -123,7 +123,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_dom_CharacterDataImpl_replaceDataImpl
     WebCore::JSMainThreadNullState state;
     raiseOnDOMError(env, IMPL->replaceData(offset
             , length
-            , String(env, data)));
+            , AtomString {String(env, data)}));
 }
 
 

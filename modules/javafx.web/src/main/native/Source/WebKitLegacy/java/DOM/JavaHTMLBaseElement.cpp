@@ -53,7 +53,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLBaseElementImpl_getHrefImp
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLBaseElementImpl_setHrefImpl(JNIEnv* env, jclass, jlong peer, jstring value)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->setHref(String(env, value));
+    IMPL->setHref(AtomString{String(env, value)});
 }
 
 JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLBaseElementImpl_getTargetImpl(JNIEnv* env, jclass, jlong peer)
@@ -65,7 +65,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLBaseElementImpl_getTargetI
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLBaseElementImpl_setTargetImpl(JNIEnv* env, jclass, jlong peer, jstring value)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::targetAttr, String(env, value));
+    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::targetAttr, AtomString {String(env, value)} );
 }
 
 }

@@ -27,6 +27,7 @@
 
 #if ENABLE(CSS_TYPED_OM)
 
+#include "CSSNumericType.h"
 #include "CSSStyleValue.h"
 #include <variant>
 #include <wtf/FixedVector.h>
@@ -36,43 +37,58 @@ namespace WebCore {
 class CSSNumericValue;
 class CSSUnitValue;
 class CSSMathSum;
-struct CSSNumericType;
 
 template<typename> class ExceptionOr;
+
+using CSSNumberish = std::variant<double, RefPtr<CSSNumericValue>>;
 
 class CSSNumericValue : public CSSStyleValue {
     WTF_MAKE_ISO_ALLOCATED(CSSNumericValue);
 public:
-    using CSSNumberish = std::variant<double, RefPtr<CSSNumericValue>>;
 
-    Ref<CSSNumericValue> add(FixedVector<CSSNumberish>&&);
-    Ref<CSSNumericValue> sub(FixedVector<CSSNumberish>&&);
-    Ref<CSSNumericValue> mul(FixedVector<CSSNumberish>&&);
-    Ref<CSSNumericValue> div(FixedVector<CSSNumberish>&&);
-    Ref<CSSNumericValue> min(FixedVector<CSSNumberish>&&);
-    Ref<CSSNumericValue> max(FixedVector<CSSNumberish>&&);
+    ExceptionOr<Ref<CSSNumericValue>> add(FixedVector<CSSNumberish>&&);
+    ExceptionOr<Ref<CSSNumericValue>> sub(FixedVector<CSSNumberish>&&);
+    ExceptionOr<Ref<CSSNumericValue>> mul(FixedVector<CSSNumberish>&&);
+    ExceptionOr<Ref<CSSNumericValue>> div(FixedVector<CSSNumberish>&&);
+    ExceptionOr<Ref<CSSNumericValue>> min(FixedVector<CSSNumberish>&&);
+    ExceptionOr<Ref<CSSNumericValue>> max(FixedVector<CSSNumberish>&&);
 
     bool equals(FixedVector<CSSNumberish>&&);
 
-    Ref<CSSUnitValue> to(String&&);
-    Ref<CSSMathSum> toSum(FixedVector<String>&&);
-    CSSNumericType type();
+    ExceptionOr<Ref<CSSUnitValue>> to(String&&);
+    ExceptionOr<Ref<CSSUnitValue>> to(CSSUnitType);
+    ExceptionOr<Ref<CSSMathSum>> toSum(FixedVector<String>&&);
+
+    const CSSNumericType& type() const { return m_type; }
 
     static ExceptionOr<Ref<CSSNumericValue>> parse(String&&);
     static Ref<CSSNumericValue> rectifyNumberish(CSSNumberish&&);
 
-    CSSStyleValueType getType() const override { return CSSStyleValueType::CSSNumericValue; }
+    // https://drafts.css-houdini.org/css-typed-om/#sum-value-value
+    using UnitMap = HashMap<CSSUnitType, int, WTF::IntHash<CSSUnitType>, WTF::StrongEnumHashTraits<CSSUnitType>>;
+    struct Addend {
+        double value;
+        UnitMap units;
+    };
+    using SumValue = Vector<Addend>;
+    virtual std::optional<SumValue> toSumValue() const = 0;
+    virtual bool equals(const CSSNumericValue&) const = 0;
 
 protected:
-    CSSNumericValue() = default;
-};
+    ExceptionOr<Ref<CSSNumericValue>> addInternal(Vector<Ref<CSSNumericValue>>&&);
+    ExceptionOr<Ref<CSSNumericValue>> multiplyInternal(Vector<Ref<CSSNumericValue>>&&);
+    template<typename T> Vector<Ref<CSSNumericValue>> prependItemsOfTypeOrThis(Vector<Ref<CSSNumericValue>>&&);
 
-using CSSNumberish = CSSNumericValue::CSSNumberish;
+    CSSNumericValue(CSSNumericType type = { })
+        : m_type(WTFMove(type)) { }
+
+    CSSNumericType m_type;
+};
 
 } // namespace WebCore
 
 SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::CSSNumericValue)
-    static bool isType(const WebCore::CSSStyleValue& styleValue) { return styleValue.getType() == WebCore::CSSStyleValueType::CSSNumericValue; }
+    static bool isType(const WebCore::CSSStyleValue& styleValue) { return isCSSNumericValue(styleValue.getType()); }
 SPECIALIZE_TYPE_TRAITS_END()
 
 #endif

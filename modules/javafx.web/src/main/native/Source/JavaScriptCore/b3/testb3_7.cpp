@@ -596,6 +596,7 @@ void testLICMPureSideExits()
         [&] (BasicBlock* loop, Value*) -> Value* {
             Effects effects = Effects::none();
             effects.exitsSideways = true;
+            effects.reads = HeapRange::top();
             loop->appendNew<CCallValue>(
                 proc, Void, Origin(), effects,
                 loop->appendNew<ConstPtrValue>(proc, Origin(), tagCFunction<OperationPtrTag>(noOpFunction)));
@@ -789,6 +790,7 @@ void testLICMExitsSideways()
         [&] (BasicBlock* loop, Value*) -> Value* {
             Effects effects = Effects::none();
             effects.exitsSideways = true;
+            effects.reads = HeapRange::top();
             return loop->appendNew<CCallValue>(
                 proc, Int32, Origin(), effects,
                 loop->appendNew<ConstPtrValue>(proc, Origin(), tagCFunction<OperationPtrTag>(oneFunction)),
@@ -927,6 +929,7 @@ void testLICMControlDependentSideExits()
         [&] (BasicBlock* loop, Value*) -> Value* {
             Effects effects = Effects::none();
             effects.exitsSideways = true;
+            effects.reads = HeapRange::top();
             loop->appendNew<CCallValue>(
                 proc, Void, Origin(), effects,
                 loop->appendNew<ConstPtrValue>(proc, Origin(), tagCFunction<OperationPtrTag>(noOpFunction)));
@@ -1554,7 +1557,7 @@ void testInfiniteLoopDoesntCauseBadHoisting()
 
     // The patchpoint early ret() works because we don't have callee saves.
     auto code = compileProc(proc);
-    RELEASE_ASSERT(!proc.calleeSaveRegisterAtOffsetList().size());
+    RELEASE_ASSERT(!proc.calleeSaveRegisterAtOffsetList().registerCount());
     invoke<void>(*code, static_cast<uint64_t>(55)); // Shouldn't crash dereferncing 55.
 }
 

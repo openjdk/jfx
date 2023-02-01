@@ -48,7 +48,7 @@ namespace JSC {
 @end
 */
 
-const ClassInfo TemporalNow::s_info = { "Temporal.Now", &Base::s_info, &temporalNowTable, nullptr, CREATE_METHOD_TABLE(TemporalNow) };
+const ClassInfo TemporalNow::s_info = { "Temporal.Now"_s, &Base::s_info, &temporalNowTable, nullptr, CREATE_METHOD_TABLE(TemporalNow) };
 
 TemporalNow::TemporalNow(VM& vm, Structure* structure)
     : Base(vm, structure)
@@ -70,7 +70,7 @@ Structure* TemporalNow::createStructure(VM& vm, JSGlobalObject* globalObject)
 void TemporalNow::finishCreation(VM& vm)
 {
     Base::finishCreation(vm);
-    ASSERT(inherits(vm, info()));
+    ASSERT(inherits(info()));
     JSC_TO_STRING_TAG_WITHOUT_TRANSITION();
 }
 

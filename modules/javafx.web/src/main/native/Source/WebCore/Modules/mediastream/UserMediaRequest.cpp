@@ -52,18 +52,20 @@
 
 namespace WebCore {
 
-Ref<UserMediaRequest> UserMediaRequest::create(Document& document, MediaStreamRequest&& request, DOMPromiseDeferred<IDLInterface<MediaStream>>&& promise)
+Ref<UserMediaRequest> UserMediaRequest::create(Document& document, MediaStreamRequest&& request, TrackConstraints&& audioConstraints, TrackConstraints&& videoConstraints, DOMPromiseDeferred<IDLInterface<MediaStream>>&& promise)
 {
-    auto result = adoptRef(*new UserMediaRequest(document, WTFMove(request), WTFMove(promise)));
+    auto result = adoptRef(*new UserMediaRequest(document, WTFMove(request), WTFMove(audioConstraints), WTFMove(videoConstraints), WTFMove(promise)));
     result->suspendIfNeeded();
     return result;
 }
 
-UserMediaRequest::UserMediaRequest(Document& document, MediaStreamRequest&& request, DOMPromiseDeferred<IDLInterface<MediaStream>>&& promise)
+UserMediaRequest::UserMediaRequest(Document& document, MediaStreamRequest&& request, TrackConstraints&& audioConstraints, TrackConstraints&& videoConstraints, DOMPromiseDeferred<IDLInterface<MediaStream>>&& promise)
     : ActiveDOMObject(document)
     , m_identifier(UserMediaRequestIdentifier::generate())
     , m_promise(makeUniqueRef<DOMPromiseDeferred<IDLInterface<MediaStream>>>(WTFMove(promise)))
     , m_request(WTFMove(request))
+    , m_audioConstraints(WTFMove(audioConstraints))
+    , m_videoConstraints(WTFMove(videoConstraints))
 {
 }
 
@@ -178,6 +180,15 @@ void UserMediaRequest::allow(CaptureDevice&& audioDevice, CaptureDevice&& videoD
                 return;
             }
 
+            if (auto* audioTrack = stream->getFirstAudioTrack()) {
+                if (std::holds_alternative<MediaTrackConstraints>(m_audioConstraints))
+                    audioTrack->setConstraints(std::get<MediaTrackConstraints>(WTFMove(m_audioConstraints)));
+            }
+            if (auto* videoTrack = stream->getFirstVideoTrack()) {
+                if (std::holds_alternative<MediaTrackConstraints>(m_videoConstraints))
+                    videoTrack->setConstraints(std::get<MediaTrackConstraints>(WTFMove(m_videoConstraints)));
+            }
+
             ASSERT(document.isCapturing());
             stream->document()->setHasCaptureMediaStreamTrack();
             m_promise->resolve(WTFMove(stream));
@@ -258,33 +269,6 @@ const char* UserMediaRequest::activeDOMObjectName() const
 Document* UserMediaRequest::document() const
 {
     return downcast<Document>(scriptExecutionContext());
-}
-
-void UserMediaRequest::mediaStreamDidFail(RealtimeMediaSource::Type type)
-{
-    RELEASE_LOG(MediaStream, "UserMediaRequest::mediaStreamDidFail");
-    const char* typeDescription = "";
-    switch (type) {
-    case RealtimeMediaSource::Type::Audio:
-        typeDescription = "audio";
-        break;
-    case RealtimeMediaSource::Type::Video:
-        typeDescription = "video";
-        break;
-    case RealtimeMediaSource::Type::Screen:
-        typeDescription = "screen";
-        break;
-    case RealtimeMediaSource::Type::Window:
-        typeDescription = "window";
-        break;
-    case RealtimeMediaSource::Type::SystemAudio:
-        typeDescription = "system audio";
-        break;
-    case RealtimeMediaSource::Type::None:
-        typeDescription = "unknown";
-        break;
-    }
-    m_promise->reject(NotReadableError, makeString("Failed starting capture of a "_s, typeDescription, " track"_s));
 }
 
 } // namespace WebCore

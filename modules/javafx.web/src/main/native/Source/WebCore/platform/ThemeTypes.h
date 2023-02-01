@@ -40,77 +40,42 @@ enum ControlPart {
     PushButtonPart,
     SquareButtonPart,
     ButtonPart,
-    ButtonBevelPart,
     DefaultButtonPart,
-    InnerSpinButtonPart,
     ListboxPart,
-    ListItemPart,
-    MediaControlsBackgroundPart,
-    MediaControlsDarkBarBackgroundPart,
-    MediaControlsFullscreenBackgroundPart,
-    MediaControlsLightBarBackgroundPart,
-    MediaCurrentTimePart,
-    MediaEnterFullscreenButtonPart,
-    MediaExitFullscreenButtonPart,
-    MediaFullScreenVolumeSliderPart,
-    MediaFullScreenVolumeSliderThumbPart,
-    MediaMuteButtonPart,
-    MediaOverlayPlayButtonPart,
-    MediaPlayButtonPart,
-    MediaReturnToRealtimeButtonPart,
-    MediaRewindButtonPart,
-    MediaSeekBackButtonPart,
-    MediaSeekForwardButtonPart,
-    MediaSliderPart,
-    MediaSliderThumbPart,
-    MediaTimeRemainingPart,
-    MediaToggleClosedCaptionsButtonPart,
-    MediaVolumeSliderPart,
-    MediaVolumeSliderContainerPart,
-    MediaVolumeSliderMuteButtonPart,
-    MediaVolumeSliderThumbPart,
     MenulistPart,
     MenulistButtonPart,
-    MenulistTextPart,
-    MenulistTextFieldPart,
     MeterPart,
     ProgressBarPart,
-    ProgressBarValuePart,
     SliderHorizontalPart,
     SliderVerticalPart,
-    SliderThumbHorizontalPart,
-    SliderThumbVerticalPart,
-    CaretPart,
     SearchFieldPart,
-    SearchFieldDecorationPart,
-    SearchFieldResultsDecorationPart,
-    SearchFieldResultsButtonPart,
-    SearchFieldCancelButtonPart,
-    TextFieldPart,
-    RelevancyLevelIndicatorPart,
-    ContinuousCapacityLevelIndicatorPart,
-    DiscreteCapacityLevelIndicatorPart,
-    RatingLevelIndicatorPart,
 #if ENABLE(APPLE_PAY)
     ApplePayButtonPart,
 #endif
-#if ENABLE(INPUT_TYPE_COLOR)
-    ColorWellPart,
-#endif
-#if ENABLE(DATALIST_ELEMENT)
-    ListButtonPart,
-#endif
-    TextAreaPart,
 #if ENABLE(ATTACHMENT_ELEMENT)
     AttachmentPart,
     BorderlessAttachmentPart,
 #endif
-    CapsLockIndicatorPart,
+    TextAreaPart,
+    TextFieldPart,
     // Internal-only Values
-#if ENABLE(SERVICE_CONTROLS)
-    ImageControlsButtonPart
+    CapsLockIndicatorPart,
+#if ENABLE(INPUT_TYPE_COLOR)
+    ColorWellPart,
 #endif
-
+#if ENABLE(SERVICE_CONTROLS)
+    ImageControlsButtonPart,
+#endif
+    InnerSpinButtonPart,
+#if ENABLE(DATALIST_ELEMENT)
+    ListButtonPart,
+#endif
+    SearchFieldDecorationPart,
+    SearchFieldResultsDecorationPart,
+    SearchFieldResultsButtonPart,
+    SearchFieldCancelButtonPart,
+    SliderThumbHorizontalPart,
+    SliderThumbVerticalPart
 };
 
 #if ENABLE(SERVICE_CONTROLS)

@@ -26,6 +26,7 @@
 #include "FilterEffectApplier.h"
 #include "IntPoint.h"
 #include "IntSize.h"
+#include "PixelBuffer.h"
 #include <JavaScriptCore/TypedArrayAdaptersForwardDeclarations.h>
 #include <wtf/Vector.h>
 
@@ -45,8 +46,8 @@ private:
     bool apply(const Filter&, const FilterImageVector& inputs, FilterImage& result) const final;
 
     struct PaintingData {
-        const Uint8ClampedArray& srcPixelArray;
-        Uint8ClampedArray& dstPixelArray;
+        const PixelBuffer& sourcePixelBuffer;
+        PixelBuffer& destinationPixelBuffer;
         int width;
         int height;
 
@@ -60,7 +61,7 @@ private:
     };
 
     static inline uint8_t clampRGBAValue(float channel, uint8_t max = 255);
-    static inline void setDestinationPixels(const Uint8ClampedArray& sourcePixels, Uint8ClampedArray& destPixels, int& pixel, float* totals, float divisor, float bias, bool preserveAlphaValues);
+    static inline void setDestinationPixels(const PixelBuffer& sourcePixelBuffer, PixelBuffer& destinationPixelBuffer, int& pixel, float* totals, float divisor, float bias, bool preserveAlphaValues);
 
     static inline int getPixelValue(const PaintingData&, int x, int y);
 
