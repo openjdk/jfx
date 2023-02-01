@@ -741,11 +741,11 @@ public class Scene implements EventTarget {
         synchronizeSceneNodesWithLock();
     };
     private void checkCleanDirtyNodes() {
-        if(!cleanupAdded) {
-            if((window.get() == null || !window.get().isShowing()) && dirtyNodesSize > 0) {
-                Toolkit.getToolkit().addCleanupListener(cleanupListener);
-                cleanupAdded = true;
-            }
+        if (!cleanupAdded
+                && (window.get() == null || !window.get().isShowing())
+                && dirtyNodesSize > 0) {
+            Toolkit.getToolkit().addCleanupListener(cleanupListener);
+            cleanupAdded = true;
         }
     }
 
@@ -2109,16 +2109,16 @@ public class Scene implements EventTarget {
      *                                                                         *
      **************************************************************************/
 
-    private void windowForSceneChanged(Window oldWindow, Window window) {
+    private void windowForSceneChanged(Window oldWindow, Window newWindow) {
         if (oldWindow != null) {
             oldWindow.showingProperty().removeListener(sceneWindowShowingListener);
             oldWindow.focusedProperty().removeListener(sceneWindowFocusedListener);
         }
 
-        if (window != null) {
-            window.showingProperty().addListener(sceneWindowShowingListener);
-            window.focusedProperty().addListener(sceneWindowFocusedListener);
-            setWindowFocused(window.isFocused());
+        if (newWindow != null) {
+            newWindow.showingProperty().addListener(sceneWindowShowingListener);
+            newWindow.focusedProperty().addListener(sceneWindowFocusedListener);
+            setWindowFocused(newWindow.isFocused());
         } else {
             setWindowFocused(false);
         }
@@ -2126,7 +2126,7 @@ public class Scene implements EventTarget {
         checkCleanDirtyNodes();
     }
 
-    private final ChangeListener<Boolean> sceneWindowShowingListener = (p, o, n) -> {checkCleanDirtyNodes(); } ;
+    private final ChangeListener<Boolean> sceneWindowShowingListener = (p, o, n) -> checkCleanDirtyNodes();
     private final InvalidationListener sceneWindowFocusedListener =
             valueModel -> setWindowFocused(((ReadOnlyBooleanProperty)valueModel).get());
 

@@ -30,9 +30,9 @@ import javafx.scene.Scene;
 import javafx.scene.control.Label;
 import javafx.scene.layout.StackPane;
 import javafx.stage.Stage;
-import junit.framework.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.BeforeAll;
 import test.util.Util;
 import test.util.memory.JMemoryBuddy;
 
@@ -43,13 +43,13 @@ import static test.util.Util.TIMEOUT;
 
 public class DirtyNodesLeakTest {
 
-    @BeforeClass
+    @BeforeAll
     public static void initFX() throws Exception {
         CountDownLatch startupLatch = new CountDownLatch(1);
         Platform.setImplicitExit(false);
         Platform.startup(startupLatch::countDown);
-        Assert.assertTrue("Timeout waiting for FX runtime to start",
-                startupLatch.await(TIMEOUT, TimeUnit.MILLISECONDS));
+        Assertions.assertTrue(startupLatch.await(TIMEOUT, TimeUnit.MILLISECONDS),
+                "Timeout waiting for FX runtime to start");
     }
 
     @Test
@@ -75,7 +75,7 @@ public class DirtyNodesLeakTest {
                 stage.show();
             });
             try {
-                Assert.assertTrue("Timeout waiting for setOnShown", showingLatch.await(15, TimeUnit.SECONDS));
+                Assertions.assertTrue(showingLatch.await(15, TimeUnit.SECONDS), "Timeout waiting for setOnShown");
             } catch (InterruptedException e) {
                 throw new RuntimeException(e);
             }

@@ -59,6 +59,7 @@ import java.security.AccessControlContext;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -89,7 +90,6 @@ import com.sun.scenario.effect.AbstractShadow.ShadowMode;
 import com.sun.scenario.effect.Color4f;
 import com.sun.scenario.effect.FilterContext;
 import com.sun.scenario.effect.Filterable;
-import java.util.Optional;
 
 
 public abstract class Toolkit {
@@ -381,7 +381,7 @@ public abstract class Toolkit {
     @SuppressWarnings("removal")
     private final Map<TKPulseListener,AccessControlContext> postScenePulseListeners = new WeakHashMap<>();
     @SuppressWarnings("removal")
-    private final Map<TKPulseListener,AccessControlContext> cleanupListeners = new WeakHashMap<>();
+    private final HashMap<TKPulseListener,AccessControlContext> cleanupListeners = new HashMap<>();
     @SuppressWarnings("removal")
     private final Map<TKListener,AccessControlContext> toolkitListeners = new WeakHashMap<>();
 
@@ -417,7 +417,7 @@ public abstract class Toolkit {
         final Map<TKPulseListener,AccessControlContext> postScenePulseList =
                 new WeakHashMap<>();
         final Map<TKPulseListener,AccessControlContext> cleanupList =
-                new WeakHashMap<>();
+                new HashMap<>();
 
         synchronized (this) {
             stagePulseList.putAll(stagePulseListeners);
@@ -498,9 +498,11 @@ public abstract class Toolkit {
         if (listener == null) {
             return;
         }
-        @SuppressWarnings("removal")
-        AccessControlContext acc = AccessController.getContext();
-        toolkitListeners.put(listener, acc);
+        synchronized (this) {
+            @SuppressWarnings("removal")
+            AccessControlContext acc = AccessController.getContext();
+            toolkitListeners.put(listener, acc);
+        }
     }
 
     public void removeTkListener(TKListener listener) {
