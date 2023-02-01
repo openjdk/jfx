@@ -85,12 +85,14 @@ import com.sun.javafx.tk.Toolkit;
  * @since JavaFX 2.0
  */
 public final class FileChooser {
+
     /**
      * Defines an extension filter, used for filtering which files can be chosen
      * in a FileDialog based on the file name extensions.
      * @since JavaFX 2.0
      */
     public static final class ExtensionFilter {
+
         private final String description;
         private final List<String> extensions;
 
@@ -108,8 +110,7 @@ public final class FileChooser {
          * @throws IllegalArgumentException if the description or the extensions
          *      are empty
          */
-        public ExtensionFilter(final String description,
-                               final String... extensions) {
+        public ExtensionFilter(final String description, final String... extensions) {
             this(description, List.of(extensions));
         }
 
@@ -127,8 +128,7 @@ public final class FileChooser {
          * @throws IllegalArgumentException if the description or the extensions
          *      are empty
          */
-        public ExtensionFilter(final String description,
-                               final List<String> extensions) {
+        public ExtensionFilter(final String description, final List<String> extensions) {
             var extensionsList = List.copyOf(extensions);
             validateArgs(description, extensionsList);
 
@@ -157,24 +157,20 @@ public final class FileChooser {
             return extensions;
         }
 
-        private static void validateArgs(final String description,
-                                         final List<String> extensions) {
+        private static void validateArgs(final String description, final List<String> extensions) {
             Objects.requireNonNull(description, "Description must not be null");
 
             if (description.isEmpty()) {
-                throw new IllegalArgumentException(
-                        "Description must not be empty");
+                throw new IllegalArgumentException("Description must not be empty");
             }
 
             if (extensions.isEmpty()) {
-                throw new IllegalArgumentException(
-                        "At least one extension must be defined");
+                throw new IllegalArgumentException("At least one extension must be defined");
             }
 
             for (String extension : extensions) {
                 if (extension.isEmpty()) {
-                    throw new IllegalArgumentException(
-                            "Extension must not be empty");
+                    throw new IllegalArgumentException("Extension must not be empty");
                 }
             }
         }
