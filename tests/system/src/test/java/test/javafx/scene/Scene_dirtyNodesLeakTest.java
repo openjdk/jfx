@@ -41,7 +41,7 @@ import java.util.concurrent.TimeUnit;
 
 import static test.util.Util.TIMEOUT;
 
-public class DirtyNodesLeakTest {
+public class Scene_dirtyNodesLeakTest {
 
     @BeforeAll
     public static void initFX() throws Exception {
