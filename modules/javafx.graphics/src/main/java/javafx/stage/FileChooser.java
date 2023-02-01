@@ -28,6 +28,7 @@ package javafx.stage;
 import java.io.File;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
@@ -109,10 +110,7 @@ public final class FileChooser {
          */
         public ExtensionFilter(final String description,
                                final String... extensions) {
-            validateArgs(description, extensions);
-
-            this.description = description;
-            this.extensions = List.of(extensions);
+            this(description, List.of(extensions));
         }
 
         /**
@@ -131,14 +129,11 @@ public final class FileChooser {
          */
         public ExtensionFilter(final String description,
                                final List<String> extensions) {
-            final String[] extensionsArray =
-                    (extensions != null) ? extensions.toArray(
-                                               new String[extensions.size()])
-                                         : null;
-            validateArgs(description, extensionsArray);
+            var extensionsList = List.copyOf(extensions);
+            validateArgs(description, extensionsList);
 
             this.description = description;
-            this.extensions = List.of(extensionsArray);
+            this.extensions = extensionsList;
         }
 
         /**
@@ -163,31 +158,20 @@ public final class FileChooser {
         }
 
         private static void validateArgs(final String description,
-                                         final String[] extensions) {
-            if (description == null) {
-                throw new NullPointerException("Description must not be null");
-            }
+                                         final List<String> extensions) {
+            Objects.requireNonNull(description, "Description must not be null");
 
             if (description.isEmpty()) {
                 throw new IllegalArgumentException(
                         "Description must not be empty");
             }
 
-            if (extensions == null) {
-                throw new NullPointerException("Extensions must not be null");
-            }
-
-            if (extensions.length == 0) {
+            if (extensions.isEmpty()) {
                 throw new IllegalArgumentException(
                         "At least one extension must be defined");
             }
 
             for (String extension : extensions) {
-                if (extension == null) {
-                    throw new NullPointerException(
-                            "Extension must not be null");
-                }
-
                 if (extension.isEmpty()) {
                     throw new IllegalArgumentException(
                             "Extension must not be empty");
