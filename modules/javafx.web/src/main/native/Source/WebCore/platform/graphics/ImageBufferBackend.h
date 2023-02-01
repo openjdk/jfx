@@ -137,9 +137,7 @@ public:
 
 #if PLATFORM(JAVA)
     virtual Vector<uint8_t> toDataJava(const String& mimeType, std::optional<double> quality)
-    {   //hima:revisit this.Need to remove log
-        fprintf(stderr,"ImageBufferBackend::toDataJava called");
-        fflush(stderr);
+    {
         return { };
     };
 #endif
