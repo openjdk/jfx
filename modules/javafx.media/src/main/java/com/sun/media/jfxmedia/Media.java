@@ -87,20 +87,14 @@ public abstract class Media {
     /**
      * Gets the tracks found in the media. The returned value will be
      * <code>null</code> if no tracks have yet been encountered while scanning
-     * the media. The returned <code>List</code> us unmodifiable.
+     * the media. The returned <code>List</code> is unmodifiable.
      *
      * @return the tracks in the media or <code>null</code> if no tracks found.
      */
     public List<Track> getTracks() {
-        List<Track> returnValue;
         synchronized(tracks) {
-            if (tracks.isEmpty()) {
-                returnValue = null;
-            } else {
-                returnValue = List.copyOf(tracks);
-            }
+            return tracks.isEmpty() ? null : List.copyOf(tracks);
         }
-        return returnValue;
     }
 
     /**
