@@ -256,6 +256,73 @@ import javafx.util.Callback;
  * <p>See the {@link Cell} class documentation for a more complete
  * description of how to write custom Cells.
  *
+ * <h4>Warning: Nodes should not be inserted directly into the TableView cells</h4>
+ * {@code TableView} allows for it's cells to contain elements of any type, including
+ * {@link Node} instances. Putting nodes into
+ * the TableView cells is <strong>strongly discouraged</strong>, as it can
+ * lead to unexpected results.
+ *
+ * <p>Important points to note:
+ * <ul>
+ * <li>Avoid inserting {@code Node} instances directly into the {@code TableView} cells or its data model.</li>
+ * <li>The recommended approach is to put the relevant information into the items list, and
+ * provide a custom {@link TableColumn#cellFactoryProperty() cell factory} to create the nodes for a
+ * given cell and update them on demand using the data stored in the item for that cell.</li>
+ * <li>Avoid creating new {@code Node}s in the {@code updateItem} method of a custom {@link TableColumn#cellFactoryProperty() cell factory}.</li>
+ * </ul>
+ * <p>The following minimal example shows how to create a custom cell factory for {@code TableView} containing {@code Node}s:
+ * <pre> {@code
+ *  class CustomColor {
+ *    private SimpleObjectProperty<Color> color;
+ *
+ *    CustomColor(Color col) {
+ *      this.color = new SimpleObjectProperty<Color>(col);
+ *    }
+ *    public Color getColor() { return color.getValue(); }
+ *    public void setColor(Color c) { color.setValue(c); }
+ *    public SimpleObjectProperty<Color> colorProperty() { return color; }
+ *  }
+ *
+ *  TableView<CustomColor> tableview = new TableView<CustomColor>();
+ *
+ *  ObservableList<CustomColor> colorList = FXCollections.observableArrayList();
+ *  colorList.addAll(
+ *      new CustomColor(Color.RED),
+ *      new CustomColor(Color.GREEN),
+ *      new CustomColor(Color.BLUE));
+ *
+ *  TableColumn<CustomColor, Color> col = new TableColumn<CustomColor, Color>("Color");
+ *  col.setCellValueFactory(data -> data.getValue().colorProperty());
+ *
+ *  col.setCellFactory(p -> {
+ *    return new TableCell<CustomColor, Color> () {
+ *        private final Rectangle rectangle;
+ *        {
+ *            setContentDisplay(ContentDisplay.GRAPHIC_ONLY);
+ *            rectangle = new Rectangle(10, 10);
+ *        }
+ *
+ *        @Override
+ *        protected void updateItem(Color item, boolean empty) {
+ *          super.updateItem(item, empty);
+ *
+ *          if (item == null || empty) {
+ *              setGraphic(null);
+ *          } else {
+ *              rectangle.setFill(item);
+ *              setGraphic(rectangle);
+ *          }
+ *        }
+ *     };
+ *  });
+ *
+ *  tableview.getColumns().add(col);
+ *  tableview.setItems(colorList); }</pre>
+ *
+ * <p> This example has an anonymous custom {@code TableCell} class in the custom cell factory.
+ * Note that the {@code Rectangle} ({@code Node}) object needs to be created in the instance initialization block
+ * or the constructor of the custom {@code TableCell} class and updated/used in its {@code updateItem} method.
+ *
  * <h3>Sorting</h3>
  * <p>Prior to JavaFX 8.0, the TableView control would treat the
  * {@link #getItems() items} list as the view model, meaning that any changes to
