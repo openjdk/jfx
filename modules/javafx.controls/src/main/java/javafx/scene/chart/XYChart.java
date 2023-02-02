@@ -1400,7 +1400,6 @@ public abstract class XYChart<X,Y> extends Chart {
                             MessageFormat mf = new MessageFormat(format);
                             Object[] args = {seriesName, xAxisName, getCurrentX(), yAxisName, getCurrentY()};
                             String retVal = mf.format(args);
-                            System.out.println("result = " + retVal);
                             return retVal;
                         }
                     });
