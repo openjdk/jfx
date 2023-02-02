@@ -738,13 +738,13 @@ public class Scene implements EventTarget {
     private TKPulseListener cleanupListener = () -> {
         cleanupAdded = false;
         // JDK-8269907 - This is important, to avoid memoryleaks in dirtyNodes and Parent.removed
-        synchronizeSceneNodesWithLock();
+        synchronizeSceneNodes();
     };
     private void checkCleanDirtyNodes() {
         if (!cleanupAdded
                 && (window.get() == null || !window.get().isShowing())
                 && dirtyNodesSize > 0) {
-            Toolkit.getToolkit().addCleanupListener(cleanupListener);
+            Toolkit.getToolkit().addCleanupTaskx(cleanupListener);
             cleanupAdded = true;
         }
     }
@@ -1298,10 +1298,10 @@ public class Scene implements EventTarget {
         // because this scene can be stage-less
         doLayoutPass();
 
-        synchronizeSceneNodesWithLock();
+        synchronizeSceneNodes();
     }
 
-    private void synchronizeSceneNodesWithLock() {
+    private void synchronizeSceneNodes() {
         getRoot().updateBounds();
         if (peer != null) {
             peer.waitForRenderingToComplete();
