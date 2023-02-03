@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -2036,6 +2036,11 @@ public class NodeTest {
         assertTrue(g.isDisabled());
         assertTrue(n2.isDisabled());
         assertTrue(n2.isDisabled());
+
+        g.setDisable(false);
+        assertFalse(g.isDisabled());
+        assertFalse(n2.isDisabled());
+        assertFalse(n2.isDisabled());
     }
 
     @Test
@@ -2052,5 +2057,10 @@ public class NodeTest {
         assertFalse(NodeHelper.isTreeVisible(g));
         assertFalse(NodeHelper.isTreeVisible(n1));
         assertFalse(NodeHelper.isTreeVisible(n2));
+
+        NodeShim.setTreeVisible(g, true);
+        assertTrue(NodeHelper.isTreeVisible(g));
+        assertTrue(NodeHelper.isTreeVisible(n1));
+        assertTrue(NodeHelper.isTreeVisible(n2));
     }
 }

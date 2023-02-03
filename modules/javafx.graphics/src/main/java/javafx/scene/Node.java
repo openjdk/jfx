@@ -1912,9 +1912,7 @@ public abstract class Node implements EventTarget, Styleable {
                     focusSetDirty(getScene());
 
                     if (Node.this instanceof Parent parent) {
-                        for (Node child : parent.getChildren()) {
-                            child.updateDisabled();
-                        }
+                        parent.getChildren().forEach(Node::updateDisabled);
                     }
                 }
 
