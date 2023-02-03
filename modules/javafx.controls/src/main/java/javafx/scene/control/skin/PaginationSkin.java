@@ -194,6 +194,7 @@ public class PaginationSkin extends SkinBase<Pagination> {
         nextStackPane.getStyleClass().add("page");
         nextStackPane.setVisible(false);
 
+        // sets the current page index property in control to the same value (no-op)
         resetIndexes(true);
 
         this.navigation = new NavigationControl();
@@ -237,7 +238,6 @@ public class PaginationSkin extends SkinBase<Pagination> {
     @Override
     public void install() {
         getSkinnable().setClip(clipRect);
-        getSkinnable().setCurrentPageIndex(currentIndex);
     }
 
 
@@ -651,11 +651,7 @@ public class PaginationSkin extends SkinBase<Pagination> {
         currentStackPane.getChildren().clear();
         nextStackPane.getChildren().clear();
 
-        if (usePageIndex) {
-            // avoid setting skinnable properties in the constructor
-            getSkinnable().setCurrentPageIndex(currentIndex);
-        }
-
+        getSkinnable().setCurrentPageIndex(currentIndex);
         createPage(currentStackPane, currentIndex);
 
         if (isAnimate) {
