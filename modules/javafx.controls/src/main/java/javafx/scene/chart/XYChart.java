@@ -1267,10 +1267,6 @@ public abstract class XYChart<X,Y> extends Chart {
             this.seriesProperty.set(series);
         }
 
-        Series<X, Y> getSeries() {
-            return seriesProperty.get();
-        }
-
         /** The generic data value to be plotted on the X axis */
         private ObjectProperty<X> xValue = new SimpleObjectProperty<>(Data.this, "XValue") {
             @Override protected void invalidated() {
