@@ -36,19 +36,12 @@
 #include <wtf/FastMalloc.h>
 #include <wtf/HashMap.h>
 #include <wtf/HashSet.h>
+#include <wtf/Span.h>
 #include <wtf/UniqueRef.h>
 #include <wtf/Vector.h>
 #include <wtf/WorkQueue.h>
 
 namespace WebCore {
-
-// Wake state that applies for devices that race-to-sleep.
-enum class PushWakeState : uint8_t {
-    Waking, // All pushes will wake device.
-    Opportunistic, // Low priority pushes may not wake device.
-    NonWaking, // No pushes will wake device.
-    NumberOfStates
-};
 
 struct PushRecord {
     PushSubscriptionIdentifier identifier;
@@ -62,10 +55,26 @@ struct PushRecord {
     Vector<uint8_t> clientPrivateKey;
     Vector<uint8_t> sharedAuthSecret;
     std::optional<EpochTimeStamp> expirationTime { };
-    PushWakeState wakeState { PushWakeState::Waking };
 
     WEBCORE_EXPORT PushRecord isolatedCopy() const &;
     WEBCORE_EXPORT PushRecord isolatedCopy() &&;
+};
+
+struct RemovedPushRecord {
+    PushSubscriptionIdentifier identifier;
+    String topic;
+    Vector<uint8_t> serverVAPIDPublicKey;
+
+    WEBCORE_EXPORT RemovedPushRecord isolatedCopy() const &;
+    WEBCORE_EXPORT RemovedPushRecord isolatedCopy() &&;
+};
+
+struct PushTopics {
+    Vector<String> enabledTopics;
+    Vector<String> ignoredTopics;
+
+    WEBCORE_EXPORT PushTopics isolatedCopy() const &;
+    WEBCORE_EXPORT PushTopics isolatedCopy() &&;
 };
 
 class PushDatabase {
@@ -76,19 +85,32 @@ public:
     WEBCORE_EXPORT static void create(const String& path, CreationHandler&&);
     WEBCORE_EXPORT ~PushDatabase();
 
+    enum class PublicTokenChanged : bool { No, Yes };
+    WEBCORE_EXPORT void updatePublicToken(Span<const uint8_t>, CompletionHandler<void(PublicTokenChanged)>&&);
+    WEBCORE_EXPORT void getPublicToken(CompletionHandler<void(Vector<uint8_t>&&)>&&);
+
     WEBCORE_EXPORT void insertRecord(const PushRecord&, CompletionHandler<void(std::optional<PushRecord>&&)>&&);
     WEBCORE_EXPORT void removeRecordByIdentifier(PushSubscriptionIdentifier, CompletionHandler<void(bool)>&&);
     WEBCORE_EXPORT void getRecordByTopic(const String& topic, CompletionHandler<void(std::optional<PushRecord>&&)>&&);
     WEBCORE_EXPORT void getRecordByBundleIdentifierAndScope(const String& bundleID, const String& scope, CompletionHandler<void(std::optional<PushRecord>&&)>&&);
     WEBCORE_EXPORT void getIdentifiers(CompletionHandler<void(HashSet<PushSubscriptionIdentifier>&&)>&&);
+    WEBCORE_EXPORT void getTopics(CompletionHandler<void(PushTopics&&)>&&);
 
-    using PushWakeStateToTopicMap = HashMap<PushWakeState, Vector<String>, WTF::IntHash<PushWakeState>, WTF::StrongEnumHashTraits<PushWakeState>>;
-    WEBCORE_EXPORT void getTopicsByWakeState(CompletionHandler<void(PushWakeStateToTopicMap&&)>&&);
+    WEBCORE_EXPORT void getOriginsWithPushSubscriptions(const String& bundleID, CompletionHandler<void(Vector<String>&&)>&&);
+
+    WEBCORE_EXPORT void incrementSilentPushCount(const String& bundleID, const String& securityOrigin, CompletionHandler<void(unsigned)>&&);
+
+    WEBCORE_EXPORT void removeRecordsByBundleIdentifier(const String& bundleID, CompletionHandler<void(Vector<RemovedPushRecord>&&)>&&);
+    WEBCORE_EXPORT void removeRecordsByBundleIdentifierAndSecurityOrigin(const String& bundleID, const String& securityOrigin, CompletionHandler<void(Vector<RemovedPushRecord>&&)>&&);
+
+    WEBCORE_EXPORT void setPushesEnabledForOrigin(const String& bundleID, const String& securityOrigin, bool, CompletionHandler<void(bool recordsChanged)>&&);
 
 private:
     PushDatabase(Ref<WorkQueue>&&, UniqueRef<WebCore::SQLiteDatabase>&&);
     WebCore::SQLiteStatementAutoResetScope cachedStatementOnQueue(ASCIILiteral query);
     void dispatchOnWorkQueue(Function<void()>&&);
+
+    enum class SubscriptionSetState { Enabled, Ignored };
 
     Ref<WorkQueue> m_queue;
     UniqueRef<WebCore::SQLiteDatabase> m_db;

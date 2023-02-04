@@ -51,16 +51,19 @@ class Recorder : public GraphicsContext {
     WTF_MAKE_FAST_ALLOCATED;
     WTF_MAKE_NONCOPYABLE(Recorder);
 public:
-    WEBCORE_EXPORT Recorder(const GraphicsContextState&, const FloatRect& initialClip, const AffineTransform&, DrawGlyphsRecorder::DeconstructDrawGlyphs = DrawGlyphsRecorder::DeconstructDrawGlyphs::Yes);
+    enum class DrawGlyphsMode {
+        Normal,
+        DeconstructUsingDrawGlyphsCommands,
+        DeconstructUsingDrawDecomposedGlyphsCommands,
+    };
+
+    WEBCORE_EXPORT Recorder(const GraphicsContextState&, const FloatRect& initialClip, const AffineTransform&, DrawGlyphsMode = DrawGlyphsMode::Normal);
     WEBCORE_EXPORT virtual ~Recorder();
 
     virtual void convertToLuminanceMask() = 0;
     virtual void transformToColorSpace(const DestinationColorSpace&) = 0;
-    virtual void flushContext(GraphicsContextFlushIdentifier) = 0;
 
 protected:
-    WEBCORE_EXPORT Recorder(Recorder& parent, const GraphicsContextState&, const FloatRect& initialClip, const AffineTransform& initialCTM);
-
     virtual void recordSave() = 0;
     virtual void recordRestore() = 0;
     virtual void recordTranslate(float x, float y) = 0;
@@ -71,7 +74,7 @@ protected:
     virtual void recordSetInlineFillColor(SRGBA<uint8_t>) = 0;
     virtual void recordSetInlineStrokeColor(SRGBA<uint8_t>) = 0;
     virtual void recordSetStrokeThickness(float) = 0;
-    virtual void recordSetState(const GraphicsContextState&, GraphicsContextState::StateChangeFlags) = 0;
+    virtual void recordSetState(const GraphicsContextState&) = 0;
     virtual void recordSetLineCap(LineCap) = 0;
     virtual void recordSetLineDash(const DashArray&, float dashOffset) = 0;
     virtual void recordSetLineJoin(LineJoin) = 0;
@@ -84,14 +87,16 @@ protected:
     virtual void recordClipPath(const Path&, WindRule) = 0;
     virtual void recordDrawFilteredImageBuffer(ImageBuffer*, const FloatRect& sourceImageRect, Filter&) = 0;
     virtual void recordDrawGlyphs(const Font&, const GlyphBufferGlyph*, const GlyphBufferAdvance*, unsigned count, const FloatPoint& localAnchor, FontSmoothingMode) = 0;
+    virtual void recordDrawDecomposedGlyphs(const Font&, const DecomposedGlyphs&) = 0;
     virtual void recordDrawImageBuffer(ImageBuffer&, const FloatRect& destRect, const FloatRect& srcRect, const ImagePaintingOptions&) = 0;
     virtual void recordDrawNativeImage(RenderingResourceIdentifier imageIdentifier, const FloatSize& imageSize, const FloatRect& destRect, const FloatRect& srcRect, const ImagePaintingOptions&) = 0;
+    virtual void recordDrawSystemImage(SystemImage&, const FloatRect&) = 0;
     virtual void recordDrawPattern(RenderingResourceIdentifier, const FloatRect& destRect, const FloatRect& tileRect, const AffineTransform&, const FloatPoint& phase, const FloatSize& spacing, const ImagePaintingOptions& = { }) = 0;
     virtual void recordBeginTransparencyLayer(float) = 0;
     virtual void recordEndTransparencyLayer() = 0;
     virtual void recordDrawRect(const FloatRect&, float) = 0;
     virtual void recordDrawLine(const FloatPoint& point1, const FloatPoint& point2) = 0;
-    virtual void recordDrawLinesForText(const FloatPoint& blockLocation, const FloatSize& localAnchor, float thickness, const DashArray& widths, bool printing, bool doubleLines) = 0;
+    virtual void recordDrawLinesForText(const FloatPoint& blockLocation, const FloatSize& localAnchor, float thickness, const DashArray& widths, bool printing, bool doubleLines, StrokeStyle) = 0;
     virtual void recordDrawDotsForDocumentMarker(const FloatRect&, const DocumentMarkerLineStyle&) = 0;
     virtual void recordDrawEllipse(const FloatRect&) = 0;
     virtual void recordDrawPath(const Path&) = 0;
@@ -117,6 +122,7 @@ protected:
     virtual void recordStrokeRect(const FloatRect&, float) = 0;
 #if ENABLE(INLINE_PATH_DATA)
     virtual void recordStrokeLine(const LineData&) = 0;
+    virtual void recordStrokeLineWithColorAndThickness(SRGBA<uint8_t>, float, const LineData&) = 0;
     virtual void recordStrokeArc(const ArcData&) = 0;
     virtual void recordStrokeQuadCurve(const QuadCurveData&) = 0;
     virtual void recordStrokeBezierCurve(const BezierCurveData&) = 0;
@@ -134,32 +140,28 @@ protected:
     virtual bool recordResourceUse(ImageBuffer&) = 0;
     virtual bool recordResourceUse(const SourceImage&) = 0;
     virtual bool recordResourceUse(Font&) = 0;
+    virtual bool recordResourceUse(DecomposedGlyphs&) = 0;
 
     struct ContextState {
+        GraphicsContextState state;
+        std::optional<GraphicsContextState> lastDrawingState;
         AffineTransform ctm;
         FloatRect clipBounds;
-        GraphicsContextStateChange stateChange;
-        GraphicsContextState lastDrawingState;
 
-        ContextState(const GraphicsContextState& state, const AffineTransform& transform, const FloatRect& clip)
-            : ctm(transform)
-            , clipBounds(clip)
-            , lastDrawingState(state)
+        ContextState(const GraphicsContextState& state, const AffineTransform& ctm, const FloatRect& clipBounds)
+            : state(state)
+            , ctm(ctm)
+            , clipBounds(clipBounds)
         {
-        }
-
-        ContextState cloneForSave() const
-        {
-            ContextState state(lastDrawingState, ctm, clipBounds);
-            state.stateChange = stateChange;
-            return state;
         }
 
         ContextState cloneForTransparencyLayer() const
         {
-            auto state = cloneForSave();
-            state.lastDrawingState.alpha = 1;
-            return state;
+            auto copy = *this;
+            copy.state.didBeginTransparencyLayer();
+            if (copy.lastDrawingState)
+                copy.lastDrawingState->didBeginTransparencyLayer();
+            return copy;
         }
 
         void translate(float x, float y);
@@ -174,7 +176,7 @@ protected:
     const ContextState& currentState() const;
     ContextState& currentState();
 
-    WEBCORE_EXPORT RefPtr<ImageBuffer> createImageBuffer(const FloatSize&, const DestinationColorSpace&, RenderingMode, RenderingMethod) const override;
+    WEBCORE_EXPORT RefPtr<ImageBuffer> createImageBuffer(const FloatSize&, float resolutionScale, const DestinationColorSpace&, std::optional<RenderingMode>, std::optional<RenderingMethod>) const override;
 
 private:
     bool hasPlatformContext() const final { return false; }
@@ -190,7 +192,7 @@ private:
 
     WEBCORE_EXPORT const GraphicsContextState& state() const final;
 
-    WEBCORE_EXPORT void didUpdateState(const GraphicsContextState&, GraphicsContextState::StateChangeFlags) final;
+    WEBCORE_EXPORT void didUpdateState(GraphicsContextState&) final;
 
     WEBCORE_EXPORT void setLineCap(LineCap) final;
     WEBCORE_EXPORT void setLineDash(const DashArray&, float dashOffset) final;
@@ -218,10 +220,12 @@ private:
     WEBCORE_EXPORT void drawFilteredImageBuffer(ImageBuffer* sourceImage, const FloatRect& sourceImageRect, Filter&, FilterResults&) final;
 
     WEBCORE_EXPORT void drawGlyphs(const Font&, const GlyphBufferGlyph*, const GlyphBufferAdvance*, unsigned numGlyphs, const FloatPoint& anchorPoint, FontSmoothingMode) final;
-    WEBCORE_EXPORT void drawGlyphsAndCacheFont(const Font&, const GlyphBufferGlyph*, const GlyphBufferAdvance*, unsigned count, const FloatPoint& localAnchor, FontSmoothingMode) final;
+    WEBCORE_EXPORT void drawDecomposedGlyphs(const Font&, const DecomposedGlyphs&) override;
+    WEBCORE_EXPORT void drawGlyphsAndCacheResources(const Font&, const GlyphBufferGlyph*, const GlyphBufferAdvance*, unsigned count, const FloatPoint& localAnchor, FontSmoothingMode) final;
 
     WEBCORE_EXPORT void drawImageBuffer(ImageBuffer&, const FloatRect& destination, const FloatRect& source, const ImagePaintingOptions&) final;
     WEBCORE_EXPORT void drawNativeImage(NativeImage&, const FloatSize& imageSize, const FloatRect& destRect, const FloatRect& srcRect, const ImagePaintingOptions&) final;
+    WEBCORE_EXPORT void drawSystemImage(SystemImage&, const FloatRect&) final;
     WEBCORE_EXPORT void drawPattern(NativeImage&, const FloatRect& destRect, const FloatRect& tileRect, const AffineTransform&, const FloatPoint& phase, const FloatSize& spacing, const ImagePaintingOptions&) final;
     WEBCORE_EXPORT void drawPattern(ImageBuffer&, const FloatRect& destRect, const FloatRect& tileRect, const AffineTransform&, const FloatPoint& phase, const FloatSize& spacing, const ImagePaintingOptions&) final;
 
@@ -270,12 +274,16 @@ private:
     WEBCORE_EXPORT FloatRect roundToDevicePixels(const FloatRect&, GraphicsContext::RoundingMode) final;
 
     void appendStateChangeItemIfNecessary();
-    void appendStateChangeItem(const GraphicsContextStateChange&, GraphicsContextState::StateChangeFlags);
+    void appendStateChangeItem(const GraphicsContextState&);
 
     const AffineTransform& ctm() const;
 
+    bool shouldDeconstructDrawGlyphs() const;
+
     Vector<ContextState, 4> m_stateStack;
-    DrawGlyphsRecorder m_drawGlyphsRecorder;
+    std::unique_ptr<DrawGlyphsRecorder> m_drawGlyphsRecorder;
+    float m_initialScale { 1 };
+    const DrawGlyphsMode m_drawGlyphsMode { DrawGlyphsMode::Normal };
 };
 
 } // namespace DisplayList

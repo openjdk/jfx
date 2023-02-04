@@ -1,4 +1,4 @@
-# Copyright (C) 2012-2021 Apple Inc. All rights reserved.
+# Copyright (C) 2012-2022 Apple Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -22,12 +22,13 @@
 # THE POSSIBILITY OF SUCH DAMAGE.
 
 buildProductsDirectory = ENV['BUILT_PRODUCTS_DIR'];
-if buildProductsDirectory and File.exists?(buildProductsDirectory)
-    $: << "#{buildProductsDirectory}/usr/local/include/WebKitAdditions/Scripts"
+headersFolderPath = ENV['WK_LIBRARY_HEADERS_FOLDER_PATH'];
+if buildProductsDirectory and File.exist?(buildProductsDirectory)
+    $: << "#{buildProductsDirectory}#{headersFolderPath}/WebKitAdditions/Scripts"
 end
 sdkRootDirectory = ENV['SDKROOT'];
-if sdkRootDirectory and File.exists?(sdkRootDirectory)
-    $: << "#{sdkRootDirectory}/usr/local/include/WebKitAdditions/Scripts"
+if sdkRootDirectory and File.exist?(sdkRootDirectory)
+    $: << "#{sdkRootDirectory}#{headersFolderPath}/WebKitAdditions/Scripts"
 end
 
 
@@ -39,7 +40,7 @@ $preferredDebugAnnotationColumns = 18
 # For example,  the output will look like this:
 #
 #    ...
-#    OFFLINE_ASM_LOCAL_LABEL(_offlineasm_4_functionArityCheck__continue)  // Local Label 24 .
+#    OFFLINE_ASM_LOCAL_LABEL(jsc_llint_4_functionArityCheck__continue)  // Local Label 24 .
 #    ...
 #    OFFLINE_ASM_GLOBAL_LABEL(llint_op_enter)  // Global Label 8 .
 #    ...

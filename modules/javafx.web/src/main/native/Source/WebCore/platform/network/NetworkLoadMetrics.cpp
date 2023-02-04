@@ -30,15 +30,56 @@
 
 namespace WebCore {
 
-NetworkLoadMetrics::NetworkLoadMetrics()
-    : complete(false)
-    , cellular(false)
-    , expensive(false)
-    , constrained(false)
-    , multipath(false)
-    , isReusedConnection(false)
-    , failsTAOCheck(false)
-    , hasCrossOriginRedirect(false) { }
+NetworkLoadMetrics::NetworkLoadMetrics() : complete(false), cellular(false)
+                                         , expensive(false), constrained(false)
+                                         , multipath(false), isReusedConnection(false)
+                                         , failsTAOCheck(false), hasCrossOriginRedirect(false)
+    { }
+
+
+void NetworkLoadMetrics::updateFromFinalMetrics(const NetworkLoadMetrics& other)
+{
+    MonotonicTime originalRedirectStart = redirectStart;
+    MonotonicTime originalFetchStart = fetchStart;
+    MonotonicTime originalDomainLookupStart = domainLookupStart;
+    MonotonicTime originalDomainLookupEnd = domainLookupEnd;
+    MonotonicTime originalConnectStart = connectStart;
+    MonotonicTime originalSecureConnectionStart = secureConnectionStart;
+    MonotonicTime originalConnectEnd = connectEnd;
+    MonotonicTime originalRequestStart = requestStart;
+    MonotonicTime originalResponseStart = responseStart;
+    MonotonicTime originalResponseEnd = responseEnd;
+    MonotonicTime originalWorkerStart = workerStart;
+
+    *this = other;
+
+    if (!redirectStart)
+        redirectStart = originalRedirectStart;
+    if (!fetchStart)
+        fetchStart = originalFetchStart;
+    if (!domainLookupStart)
+        domainLookupStart = originalDomainLookupStart;
+    if (!domainLookupEnd)
+        domainLookupEnd = originalDomainLookupEnd;
+    if (!connectStart)
+        connectStart = originalConnectStart;
+    if (!secureConnectionStart)
+        secureConnectionStart = originalSecureConnectionStart;
+    if (!connectEnd)
+        connectEnd = originalConnectEnd;
+    if (!requestStart)
+        requestStart = originalRequestStart;
+    if (!responseStart)
+        responseStart = originalResponseStart;
+    if (!responseEnd)
+        responseEnd = originalResponseEnd;
+    if (!workerStart)
+        workerStart = originalWorkerStart;
+
+    if (!responseEnd)
+        responseEnd = MonotonicTime::now();
+    complete = true;
+}
 
 const NetworkLoadMetrics& NetworkLoadMetrics::emptyMetrics()
 {
@@ -58,6 +99,7 @@ Ref<AdditionalNetworkLoadMetricsForWebInspector> AdditionalNetworkLoadMetricsFor
     copy->requestHeaderBytesSent = requestHeaderBytesSent;
     copy->responseHeaderBytesReceived = responseHeaderBytesReceived;
     copy->requestBodyBytesSent = requestBodyBytesSent;
+    copy->isProxyConnection = isProxyConnection;
     return copy;
 }
 
@@ -75,6 +117,7 @@ NetworkLoadMetrics NetworkLoadMetrics::isolatedCopy() const
     copy.requestStart = requestStart.isolatedCopy();
     copy.responseStart = responseStart.isolatedCopy();
     copy.responseEnd = responseEnd.isolatedCopy();
+    copy.workerStart = workerStart.isolatedCopy();
 
     copy.protocol = protocol.isolatedCopy();
 

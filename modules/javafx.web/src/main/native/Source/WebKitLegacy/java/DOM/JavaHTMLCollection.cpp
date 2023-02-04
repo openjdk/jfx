@@ -77,7 +77,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_HTMLCollectionImpl_namedItemImpl
     , jstring name)
 {
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<Node>(env, WTF::getPtr(IMPL->namedItem(String(env, name))));
+    return JavaReturn<Node>(env, WTF::getPtr(IMPL->namedItem(AtomString {String(env, name)})));
 }
 
 

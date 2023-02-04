@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2020-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,7 +27,7 @@
 
 namespace JSC {
 
-#if ENABLE(JIT_OPERATION_VALIDATION) || CPU(ARM64E)
+#if ENABLE(JIT_OPERATION_VALIDATION) || ENABLE(JIT_OPERATION_DISASSEMBLY) || CPU(ARM64E)
 
 #define JSC_UTILITY_GATES(v) \
     v(jitCagePtr, NoPtrTag) \
@@ -95,9 +95,12 @@ static constexpr unsigned numberOfGates = (JSC_UTILITY_GATES(JSC_COUNT)) + (JSC_
 #endif
 #undef JSC_COUNT
 #undef JSC_OPCODE_COUNT
-#else
+
+#else // not (ENABLE(JIT_OPERATION_VALIDATION) || ENABLE(JIT_OPERATION_DISASSEMBLY) || CPU(ARM64E))
+
 // Keep it non-zero to make JSCConfig's array not [0].
 static constexpr unsigned numberOfGates = 1;
-#endif
 
-}
+#endif // ENABLE(JIT_OPERATION_VALIDATION) || ENABLE(JIT_OPERATION_DISASSEMBLY) || CPU(ARM64E)
+
+} // namespace JSC

@@ -46,7 +46,7 @@ public:
     // before liveness data is cleared to be accurate.
     template<typename Func>
     static void findGCObjectPointersForMarking(
-        Heap& heap, HeapVersion markingVersion, HeapVersion newlyAllocatedVersion, TinyBloomFilter filter,
+        Heap& heap, HeapVersion markingVersion, HeapVersion newlyAllocatedVersion, TinyBloomFilter<uintptr_t> filter,
         void* passedPointer, const Func& func)
     {
         const HashSet<MarkedBlock*>& set = heap.objectSpace().blocks().set();
@@ -86,7 +86,7 @@ public:
             // We may be interested in the last cell of the previous MarkedBlock.
             char* previousPointer = bitwise_cast<char*>(bitwise_cast<uintptr_t>(pointer) - sizeof(IndexingHeader) - 1);
             MarkedBlock* previousCandidate = MarkedBlock::blockFor(previousPointer);
-            if (!filter.ruleOut(bitwise_cast<Bits>(previousCandidate))
+            if (!filter.ruleOut(bitwise_cast<uintptr_t>(previousCandidate))
                 && set.contains(previousCandidate)
                 && mayHaveIndexingHeader(previousCandidate->handle().cellKind())) {
                 previousPointer = static_cast<char*>(previousCandidate->handle().cellAlign(previousPointer));
@@ -95,7 +95,7 @@ public:
             }
         }
 
-        if (filter.ruleOut(bitwise_cast<Bits>(candidate))) {
+        if (filter.ruleOut(bitwise_cast<uintptr_t>(candidate))) {
             ASSERT(!candidate || !set.contains(candidate));
             return;
         }
@@ -134,7 +134,7 @@ public:
             tryPointer(alignedPointer - candidate->cellSize());
     }
 
-    static bool isPointerGCObjectJSCell(Heap& heap, TinyBloomFilter filter, JSCell* pointer)
+    static bool isPointerGCObjectJSCell(Heap& heap, TinyBloomFilter<uintptr_t> filter, JSCell* pointer)
     {
         // It could point to a large allocation.
         if (pointer->isPreciseAllocation()) {
@@ -142,13 +142,19 @@ public:
             ASSERT(set);
             if (set->isEmpty())
                 return false;
+#if USE(JSVALUE32_64)
+            // In 32bit systems a cell pointer can be 0xFFFFFFFF (an entries in the call frame), and this
+            // value clashes with the deletedValue in a set<JSCell*>.
+            if (!set->isValidValue(pointer))
+                return false;
+#endif
             return set->contains(pointer);
         }
 
         const HashSet<MarkedBlock*>& set = heap.objectSpace().blocks().set();
 
         MarkedBlock* candidate = MarkedBlock::blockFor(pointer);
-        if (filter.ruleOut(bitwise_cast<Bits>(candidate))) {
+        if (filter.ruleOut(bitwise_cast<uintptr_t>(candidate))) {
             ASSERT(!candidate || !set.contains(candidate));
             return false;
         }
@@ -170,7 +176,7 @@ public:
 
     // This does not find the cell if the pointer is pointing at the middle of a JSCell.
     static bool isValueGCObject(
-        Heap& heap, TinyBloomFilter filter, JSValue value)
+        Heap& heap, TinyBloomFilter<uintptr_t> filter, JSValue value)
     {
         ASSERT(heap.objectSpace().preciseAllocationSet());
         if (!value.isCell())

@@ -50,7 +50,7 @@ static bool isListOrIndentBlockquote(const Node* node)
 }
 
 IndentOutdentCommand::IndentOutdentCommand(Document& document, EIndentType typeOfAction)
-    : ApplyBlockElementCommand(document, blockquoteTag, "margin: 0 0 0 40px; border: none; padding: 0px;")
+    : ApplyBlockElementCommand(document, blockquoteTag, "margin: 0 0 0 40px; border: none; padding: 0px;"_s)
     , m_typeOfAction(typeOfAction)
 {
 }
@@ -164,6 +164,7 @@ void IndentOutdentCommand::outdentParagraph()
             if (ContainerNode* splitPointParent = splitPoint->parentNode()) {
                 if (splitPointParent->hasTagName(blockquoteTag)
                     && !splitPoint->hasTagName(blockquoteTag)
+                    && splitPointParent->parentNode()
                     && splitPointParent->parentNode()->hasEditableStyle()) // We can't outdent if there is no place to go!
                     splitElement(downcast<Element>(*splitPointParent), *splitPoint);
             }

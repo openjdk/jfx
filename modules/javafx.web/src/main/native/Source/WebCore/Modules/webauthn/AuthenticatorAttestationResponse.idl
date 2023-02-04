@@ -23,6 +23,8 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+typedef long COSEAlgorithmIdentifier;
+
 [
     Conditional=WEB_AUTHN,
     EnabledBySetting=WebAuthenticationEnabled,
@@ -30,4 +32,8 @@
     SecureContext
 ] interface AuthenticatorAttestationResponse : AuthenticatorResponse {
     [SameObject] readonly attribute ArrayBuffer attestationObject;
+    sequence<AuthenticatorTransport> getTransports();
+    ArrayBuffer getAuthenticatorData();
+    ArrayBuffer? getPublicKey();
+    COSEAlgorithmIdentifier getPublicKeyAlgorithm();
 };

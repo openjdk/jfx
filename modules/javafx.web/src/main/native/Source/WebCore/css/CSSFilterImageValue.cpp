@@ -31,8 +31,8 @@
 #include "CSSFilter.h"
 #include "CachedImage.h"
 #include "CachedResourceLoader.h"
-#include "GraphicsContext.h"
 #include "ImageBuffer.h"
+#include "NullGraphicsContext.h"
 #include "RenderElement.h"
 #include "StyleBuilderState.h"
 #include "StyleCachedImage.h"
@@ -114,16 +114,15 @@ RefPtr<Image> CSSFilterImageValue::image(RenderElement& renderer, const FloatSiz
     if (!image)
         return &Image::nullImage();
 
-    // Transform Image into ImageBuffer.
     auto renderingMode = renderer.page().acceleratedFiltersEnabled() ? RenderingMode::Accelerated : RenderingMode::Unaccelerated;
-    auto sourceImage = ImageBuffer::create(size, renderingMode, ShouldUseDisplayList::No, RenderingPurpose::DOM, 1, DestinationColorSpace::SRGB(), PixelFormat::BGRA8, renderer.hostWindow());
+    auto sourceImage = ImageBuffer::create(size, RenderingPurpose::DOM, 1, DestinationColorSpace::SRGB(), PixelFormat::BGRA8, bufferOptionsForRendingMode(renderingMode), { renderer.hostWindow() });
     if (!sourceImage)
         return &Image::nullImage();
 
     auto sourceImageRect = FloatRect { { }, size };
     sourceImage->context().drawImage(*image, sourceImageRect);
 
-    auto cssFilter = CSSFilter::create(renderer, m_filterOperations, renderingMode, FloatSize { 1, 1 }, Filter::ClipOperation::Intersect, sourceImageRect);
+    auto cssFilter = CSSFilter::create(renderer, m_filterOperations, renderingMode, FloatSize { 1, 1 }, Filter::ClipOperation::Intersect, sourceImageRect, NullGraphicsContext());
     if (!cssFilter)
         return &Image::nullImage();
 

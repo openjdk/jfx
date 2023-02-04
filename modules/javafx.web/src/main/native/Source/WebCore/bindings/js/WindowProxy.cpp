@@ -145,7 +145,7 @@ void WindowProxy::clearJSWindowProxiesNotMatchingDOMWindow(AbstractDOMWindow* ne
         // Clear the debugger and console from the current window before setting the new window.
         windowProxy->attachDebugger(nullptr);
         windowProxy->window()->setConsoleClient(nullptr);
-        if (auto* jsDOMWindow = jsDynamicCast<JSDOMWindowBase*>(windowProxy->vm(), windowProxy->window()))
+        if (auto* jsDOMWindow = jsDynamicCast<JSDOMWindowBase*>(windowProxy->window()))
             jsDOMWindow->willRemoveFromWindowProxy();
     }
 
@@ -186,9 +186,10 @@ void WindowProxy::setDOMWindow(AbstractDOMWindow* newDOMWindow)
             cacheableBindingRootObject->updateGlobalObject(windowProxy->window());
 
         windowProxy->attachDebugger(page ? page->debugger() : nullptr);
-        if (page)
+        if (page) {
             windowProxy->window()->setProfileGroup(page->group().identifier());
         windowProxy->window()->setConsoleClient(page->console());
+    }
     }
 }
 

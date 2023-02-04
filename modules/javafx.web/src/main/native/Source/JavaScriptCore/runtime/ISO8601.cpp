@@ -70,50 +70,38 @@ static int32_t parseDecimalInt32(const CharType* characters, unsigned length)
 // https://tc39.es/proposal-temporal/#sec-temporal-durationhandlefractions
 static void handleFraction(Duration& duration, int factor, StringView fractionString, TemporalUnit fractionType)
 {
-    ASSERT(fractionString.length() && fractionString.length() <= 9 && fractionString.isAllASCII());
+    auto fractionLength = fractionString.length();
+    ASSERT(fractionLength && fractionLength <= 9 && fractionString.isAllASCII());
     ASSERT(fractionType == TemporalUnit::Hour || fractionType == TemporalUnit::Minute || fractionType == TemporalUnit::Second);
 
-    if (fractionType == TemporalUnit::Second) {
-        Vector<LChar, 9> padded(9, '0');
-        for (unsigned i = 0; i < fractionString.length(); i++)
-            padded[i] = fractionString[i];
-        duration.setMilliseconds(factor * parseDecimalInt32(padded.data(), 3));
-        duration.setMicroseconds(factor * parseDecimalInt32(padded.data() + 3, 3));
-        duration.setNanoseconds(factor * parseDecimalInt32(padded.data() + 6, 3));
-        return;
-    }
+    Vector<LChar, 9> padded(9, '0');
+    for (unsigned i = 0; i < fractionLength; i++)
+        padded[i] = fractionString[i];
 
-    double fraction = factor * parseInt(fractionString, 10) / std::pow(10, fractionString.length());
+    int64_t fraction = static_cast<int64_t>(factor) * parseDecimalInt32(padded.data(), 9);
     if (!fraction)
         return;
 
+    static constexpr int64_t divisor = 1'000'000'000LL;
     if (fractionType == TemporalUnit::Hour) {
         fraction *= 60;
-        duration.setMinutes(std::trunc(fraction));
-        fraction = std::fmod(fraction, 1);
+        duration.setMinutes(fraction / divisor);
+        fraction %= divisor;
         if (!fraction)
             return;
     }
 
-    fraction *= 60;
-    duration.setSeconds(std::trunc(fraction));
-    fraction = std::fmod(fraction, 1);
-    if (!fraction)
-        return;
+    if (fractionType != TemporalUnit::Second) {
+        fraction *= 60;
+        duration.setSeconds(fraction / divisor);
+        fraction %= divisor;
+        if (!fraction)
+            return;
+    }
 
-    fraction *= 1000;
-    duration.setMilliseconds(std::trunc(fraction));
-    fraction = std::fmod(fraction, 1);
-    if (!fraction)
-        return;
-
-    fraction *= 1000;
-    duration.setMicroseconds(std::trunc(fraction));
-    fraction = std::fmod(fraction, 1);
-    if (!fraction)
-        return;
-
-    duration.setNanoseconds(std::trunc(fraction * 1000));
+    duration.setMilliseconds(fraction / nsPerMillisecond);
+    duration.setMicroseconds(fraction % nsPerMillisecond / nsPerMicrosecond);
+    duration.setNanoseconds(fraction % nsPerMicrosecond);
 }
 
 // ParseTemporalDurationString ( isoString )
@@ -782,31 +770,6 @@ static std::optional<std::tuple<PlainTime, std::optional<TimeZoneRecord>>> parse
     return std::tuple { WTFMove(plainTime.value()), std::nullopt };
 }
 
-// https://tc39.es/proposal-temporal/#sec-temporal-isodaysinmonth
-unsigned daysInMonth(int32_t year, unsigned month)
-{
-    switch (month) {
-    case 1:
-    case 3:
-    case 5:
-    case 7:
-    case 8:
-    case 10:
-    case 12:
-        return 31;
-    case 4:
-    case 6:
-    case 9:
-    case 11:
-        return 30;
-    case 2:
-        if (isLeapYear(year))
-            return 29;
-        return 28;
-    }
-    return 0;
-}
-
 template<typename CharacterType>
 static std::optional<PlainDate> parseDate(StringParsingBuffer<CharacterType>& buffer)
 {
@@ -862,6 +825,8 @@ static std::optional<PlainDate> parseDate(StringParsingBuffer<CharacterType>& bu
                 return std::nullopt;
         }
         year = parseDecimalInt32(buffer.position(), 6) * yearFactor;
+        if (!year && yearFactor < 0)
+            return std::nullopt;
         buffer.advanceBy(6);
     } else {
         if (buffer.lengthRemaining() < 4)
@@ -1037,14 +1002,76 @@ std::optional<std::tuple<PlainTime, std::optional<TimeZoneRecord>>> parseTime(St
     });
 }
 
+template<typename CharacterType>
+static bool isAmbiguousCalendarTime(StringParsingBuffer<CharacterType>& buffer)
+{
+    auto length = buffer.lengthRemaining();
+    ASSERT(length > 1);
+
+    // There is no ambiguity if we have a TimeDesignator.
+    if (toASCIIUpper(*buffer) == 'T')
+        return false;
+
+    // The string is known to be valid as `TimeSpec TimeZone[opt]`, so DateExtendedYear and TwoDashes are not possible.
+    // Actual possibilities are `DateFourDigitYear -[opt] DateMonth` and `DateMonth -[opt] DateDay`, i.e. YYYY-MM, YYYYMM, MM-DD, MMDD.
+    ASSERT(isASCIIDigit(buffer[0]) && isASCIIDigit(buffer[1]));
+
+    unsigned monthPartLength = 2;
+    switch (length) {
+    case 7:
+        if (!isASCIIDigit(buffer[2]) || !isASCIIDigit(buffer[3]) || buffer[4] != '-' || !isASCIIDigit(buffer[5]) || !isASCIIDigit(buffer[6]))
+            return false;
+        buffer.advanceBy(5);
+        break;
+    case 6:
+        if (!isASCIIDigit(buffer[2]) || !isASCIIDigit(buffer[3]) || !isASCIIDigit(buffer[4]) || !isASCIIDigit(buffer[5]))
+            return false;
+        buffer.advanceBy(4);
+        break;
+    case 5:
+        if (buffer[2] != '-' || !isASCIIDigit(buffer[3]) || !isASCIIDigit(buffer[4]))
+            return false;
+        monthPartLength++;
+        break;
+    case 4:
+        if (!isASCIIDigit(buffer[2]) || !isASCIIDigit(buffer[3]))
+            return false;
+        break;
+    default:
+        return false;
+    }
+
+    // Any YYYY is valid, we just need to check the MM and DD.
+    unsigned month = (buffer[0] - '0') * 10 + (buffer[1] - '0');
+    if (!month || month > 12)
+        return false;
+
+    buffer.advanceBy(monthPartLength);
+    if (buffer.hasCharactersRemaining()) {
+        unsigned day = (buffer[0] - '0') * 10 + (buffer[1] - '0');
+        if (!day || day > daysInMonth(month))
+            return false;
+    }
+
+    return true;
+}
+
 std::optional<std::tuple<PlainTime, std::optional<TimeZoneRecord>, std::optional<CalendarRecord>>> parseCalendarTime(StringView string)
 {
-    return readCharactersForParsing(string, [](auto buffer) -> std::optional<std::tuple<PlainTime, std::optional<TimeZoneRecord>, std::optional<CalendarRecord>>> {
+    auto tuple = readCharactersForParsing(string, [](auto buffer) -> std::optional<std::tuple<PlainTime, std::optional<TimeZoneRecord>, std::optional<CalendarRecord>>> {
         auto result = parseCalendarTime(buffer);
         if (!buffer.atEnd())
             return std::nullopt;
         return result;
     });
+
+    // Without a calendar, we need to verify that the parse isn't ambiguous with DateSpecYearMonth or DateSpecMonthDay.
+    if (tuple && !std::get<2>(tuple.value())) {
+        if (readCharactersForParsing(string, [](auto buffer) -> bool { return isAmbiguousCalendarTime(buffer); }))
+            return std::nullopt;
+    }
+
+    return tuple;
 }
 
 std::optional<std::tuple<PlainDate, std::optional<PlainTime>, std::optional<TimeZoneRecord>>> parseDateTime(StringView string)
@@ -1093,6 +1120,75 @@ std::optional<ExactTime> parseInstant(StringView string)
         int64_t offset = timeZoneOptional->m_z ? 0 : *timeZoneOptional->m_offset;
         return { ExactTime::fromISOPartsAndOffset(plainDate.year(), plainDate.month(), plainDate.day(), plainTime.hour(), plainTime.minute(), plainTime.second(), plainTime.millisecond(), plainTime.microsecond(), plainTime.nanosecond(), offset) };
     });
+}
+
+uint8_t dayOfWeek(PlainDate plainDate)
+{
+    Int128 dateDays = static_cast<Int128>(dateToDaysFrom1970(plainDate.year(), plainDate.month() - 1, plainDate.day()));
+    int weekDay = static_cast<int>((dateDays + 4) % 7);
+    if (weekDay < 0)
+        weekDay += 7;
+    return !weekDay ? 7 : weekDay;
+}
+
+uint16_t dayOfYear(PlainDate plainDate)
+{
+    return dayInYear(plainDate.year(), plainDate.month() - 1, plainDate.day()) + 1; // Always start with 1 (1/1 is 1).
+}
+
+uint8_t weekOfYear(PlainDate plainDate)
+{
+    int32_t dayOfYear = ISO8601::dayOfYear(plainDate);
+    int32_t dayOfWeek = ISO8601::dayOfWeek(plainDate);
+
+    // ISO week 1 is the week containing the first Thursday (4) of the year.
+    // https://en.wikipedia.org/wiki/ISO_week_date#Algorithms
+    int32_t week = (dayOfYear - dayOfWeek + 10) / 7;
+    if (week <= 0) {
+        // Previous year's last week. Thus, 52 or 53 weeks. Getting weeks in the previous year.
+        //
+        // https://en.wikipedia.org/wiki/ISO_week_date#Weeks_per_year
+        // > The long years, with 53 weeks in them, can be described by any of the following equivalent definitions:
+        // >  - any year ending on Thursday (D, ED) and any leap year ending on Friday (DC)
+
+        int32_t dayOfWeekForJanuaryFirst = ISO8601::dayOfWeek(PlainDate { plainDate.year(), 1, 1 });
+
+        // Any year ending on Thursday (D, ED) -> this year's 1/1 is Friday.
+        if (dayOfWeekForJanuaryFirst == 5)
+            return 53;
+
+        // Any leap year ending on Friday (DC) -> this year's 1/1 is Saturday and previous year is a leap year.
+        if (dayOfWeekForJanuaryFirst == 6 && isLeapYear(plainDate.year() - 1))
+            return 53;
+
+        return 52;
+    }
+
+    if (week == 53) {
+        // Check whether this is in next year's week 1.
+        int32_t daysInYear = isLeapYear(plainDate.year()) ? 366 : 365;
+        if ((daysInYear - dayOfYear) < (4 - dayOfWeek))
+            return 1;
+    }
+
+    return week;
+}
+
+static constexpr uint8_t daysInMonths[2][12] = {
+    { 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 },
+    { 31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 }
+};
+
+// https://tc39.es/proposal-temporal/#sec-temporal-isodaysinmonth
+uint8_t daysInMonth(int32_t year, uint8_t month)
+{
+    return daysInMonths[isLeapYear(year)][month - 1];
+}
+
+uint8_t daysInMonth(uint8_t month)
+{
+    constexpr unsigned isLeapYear = 1;
+    return daysInMonths[isLeapYear][month - 1];
 }
 
 // https://tc39.es/proposal-temporal/#sec-temporal-formattimezoneoffsetstring
@@ -1174,6 +1270,11 @@ String temporalTimeToString(PlainTime plainTime, std::tuple<Precision, unsigned>
 String temporalDateToString(PlainDate plainDate)
 {
     return makeString(pad('0', 4, plainDate.year()), '-', pad('0', 2, plainDate.month()), '-', pad('0', 2, plainDate.day()));
+}
+
+String monthCode(uint32_t month)
+{
+    return makeString('M', pad('0', 2, month));
 }
 
 // IsValidDuration ( years, months, weeks, days, hours, minutes, seconds, milliseconds, microseconds, nanoseconds )

@@ -111,7 +111,7 @@ static RefPtr<HTMLElement> firstInSpecialElement(const Position& position)
         VisiblePosition firstInElement = firstPositionInOrBeforeNode(node.get());
         if ((isRenderedTable(node.get()) && visiblePosition == firstInElement.next()) || visiblePosition == firstInElement) {
             RELEASE_ASSERT(is<HTMLElement>(node));
-            return static_pointer_cast<HTMLElement>(node);
+            return static_pointer_cast<HTMLElement>(WTFMove(node));
         }
     }
     return nullptr;
@@ -127,7 +127,7 @@ static RefPtr<HTMLElement> lastInSpecialElement(const Position& position)
         VisiblePosition lastInElement = lastPositionInOrAfterNode(node.get());
         if ((isRenderedTable(node.get()) && visiblePosition == lastInElement.previous()) || visiblePosition == lastInElement) {
             RELEASE_ASSERT(is<HTMLElement>(node));
-            return static_pointer_cast<HTMLElement>(node);
+            return static_pointer_cast<HTMLElement>(WTFMove(node));
         }
     }
     return nullptr;
@@ -419,6 +419,10 @@ void DeleteSelectionCommand::saveTypingStyleState()
         document().selection().clearTypingStyle();
         return;
     }
+
+    RefPtr<Node> startNode = m_selectionToDelete.start().deprecatedNode();
+    if (!startNode->isTextNode() && !startNode->hasTagName(imgTag) && !startNode->hasTagName(brTag))
+        return;
 
     // Figure out the typing style in effect before the delete is done.
     m_typingStyle = EditingStyle::create(m_selectionToDelete.start(), EditingStyle::EditingPropertiesInEffect);
@@ -984,7 +988,7 @@ void DeleteSelectionCommand::doApply()
     // If the deletion is occurring in a text field, and we're not deleting to replace the selection, then let the frame call across the bridge to notify the form delegate.
     if (!m_replace) {
         if (RefPtr textControl = enclosingTextFormControl(m_selectionToDelete.start()); textControl && textControl->focused())
-            document().editor().textWillBeDeletedInTextField(textControl.get());
+            document().editor().textWillBeDeletedInTextField(*textControl);
     }
 
     // save this to later make the selection with

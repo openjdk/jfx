@@ -70,6 +70,22 @@ public:
         return presenceWithoutBarrier(object, uid, offset, attributes);
     }
 
+    static ObjectPropertyCondition replacementWithoutBarrier(JSObject* object, UniquedStringImpl* uid, PropertyOffset offset, unsigned attributes)
+    {
+        ObjectPropertyCondition result;
+        result.m_object = object;
+        result.m_condition = PropertyCondition::replacementWithoutBarrier(uid, offset, attributes);
+        return result;
+    }
+
+    static ObjectPropertyCondition replacement(VM& vm, JSCell* owner, JSObject* object, UniquedStringImpl* uid, PropertyOffset offset,
+        unsigned attributes)
+    {
+        if (owner)
+            vm.writeBarrier(owner);
+        return replacementWithoutBarrier(object, uid, offset, attributes);
+    }
+
     // NOTE: The prototype is the storedPrototype, not the prototypeForLookup.
     static ObjectPropertyCondition absenceWithoutBarrier(
         JSObject* object, UniquedStringImpl* uid, JSObject* prototype)
@@ -103,6 +119,21 @@ public:
         if (owner)
             vm.writeBarrier(owner);
         return absenceOfSetEffectWithoutBarrier(object, uid, prototype);
+    }
+
+    static ObjectPropertyCondition absenceOfIndexedPropertiesWithoutBarrier(JSObject* object, JSObject* prototype)
+    {
+        ObjectPropertyCondition result;
+        result.m_object = object;
+        result.m_condition = PropertyCondition::absenceOfIndexedPropertiesWithoutBarrier(prototype);
+        return result;
+    }
+
+    static ObjectPropertyCondition absenceOfIndexedProperties(VM& vm, JSCell* owner, JSObject* object, JSObject* prototype)
+    {
+        if (owner)
+            vm.writeBarrier(owner);
+        return absenceOfIndexedPropertiesWithoutBarrier(object, prototype);
     }
 
     static ObjectPropertyCondition equivalenceWithoutBarrier(
@@ -204,7 +235,7 @@ public:
 
     // Checks if the object's structure claims that the property won't be intercepted. Validity
     // does not require watchpoints on the object.
-    bool structureEnsuresValidityAssumingImpurePropertyWatchpoint() const;
+    bool structureEnsuresValidityAssumingImpurePropertyWatchpoint(Concurrency) const;
 
     // Returns true if we need an impure property watchpoint to ensure validity even if
     // isStillValidAccordingToStructure() returned true.
@@ -213,36 +244,36 @@ public:
 
     // Checks if the condition still holds setting aside the need for an impure property watchpoint.
     // Validity might still require watchpoints on the object.
-    bool isStillValidAssumingImpurePropertyWatchpoint(Structure*) const;
-    bool isStillValidAssumingImpurePropertyWatchpoint() const;
+    bool isStillValidAssumingImpurePropertyWatchpoint(Concurrency, Structure*) const;
+    bool isStillValidAssumingImpurePropertyWatchpoint(Concurrency) const;
 
     // Checks if the condition still holds. May conservatively return false, if the object and
     // structure alone don't guarantee the condition. Note that this may return true if the
     // condition still requires some watchpoints on the object in addition to checking the
     // structure. If you want to check if the condition holds by using the structure alone,
     // use structureEnsuresValidity().
-    bool isStillValid(Structure*) const;
-    bool isStillValid() const;
+    bool isStillValid(Concurrency, Structure*) const;
+    bool isStillValid(Concurrency) const;
 
     // Shorthand for condition().isStillValid(structure).
-    bool structureEnsuresValidity(Structure*) const;
-    bool structureEnsuresValidity() const;
+    bool structureEnsuresValidity(Concurrency, Structure*) const;
+    bool structureEnsuresValidity(Concurrency) const;
 
     // This means that it's still valid and we could enforce validity by setting a transition
     // watchpoint on the structure and possibly an impure property watchpoint.
     bool isWatchableAssumingImpurePropertyWatchpoint(
         Structure*,
-        PropertyCondition::WatchabilityEffort = PropertyCondition::MakeNoChanges) const;
+        PropertyCondition::WatchabilityEffort) const;
     bool isWatchableAssumingImpurePropertyWatchpoint(
-        PropertyCondition::WatchabilityEffort = PropertyCondition::MakeNoChanges) const;
+        PropertyCondition::WatchabilityEffort) const;
 
     // This means that it's still valid and we could enforce validity by setting a transition
     // watchpoint on the structure, and a value change watchpoint if we're Equivalence.
     bool isWatchable(
         Structure*,
-        PropertyCondition::WatchabilityEffort = PropertyCondition::MakeNoChanges) const;
+        PropertyCondition::WatchabilityEffort) const;
     bool isWatchable(
-        PropertyCondition::WatchabilityEffort = PropertyCondition::MakeNoChanges) const;
+        PropertyCondition::WatchabilityEffort) const;
 
     bool watchingRequiresStructureTransitionWatchpoint() const
     {
@@ -265,12 +296,13 @@ public:
 
     void validateReferences(const TrackedReferences&) const;
 
-    bool isValidValueForPresence(VM& vm, JSValue value) const
+    bool isValidValueForPresence(JSValue value) const
     {
-        return condition().isValidValueForPresence(vm, value);
+        return condition().isValidValueForPresence(value);
     }
 
-    ObjectPropertyCondition attemptToMakeEquivalenceWithoutBarrier(VM&) const;
+    ObjectPropertyCondition attemptToMakeEquivalenceWithoutBarrier() const;
+    ObjectPropertyCondition attemptToMakeReplacementWithoutBarrier() const;
 
 private:
     JSObject* m_object;

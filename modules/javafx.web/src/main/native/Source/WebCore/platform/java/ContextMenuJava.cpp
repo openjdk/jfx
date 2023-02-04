@@ -243,7 +243,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_ContextMenu_twkHandleItemSelected
 {
     using namespace WebCore;
     ContextMenuController* cmc = static_cast<ContextMenuController*>jlong_to_ptr(menuCtrlPData);
-    cmc->contextMenuItemSelected((ContextMenuAction)itemAction, "aux");
+    cmc->contextMenuItemSelected((ContextMenuAction)itemAction, "aux"_s);
 }
 
 }

@@ -21,11 +21,13 @@
 #pragma once
 
 #include "CSSRuleList.h"
+#include "CommonAtomStrings.h"
 #include "ExceptionOr.h"
 #include "StyleSheet.h"
 #include <memory>
 #include <wtf/Noncopyable.h>
 #include <wtf/TypeCasts.h>
+#include <wtf/WeakPtr.h>
 #include <wtf/text/AtomStringHash.h>
 #include <wtf/text/TextPosition.h>
 
@@ -55,10 +57,10 @@ public:
     virtual ~CSSStyleSheet();
 
     CSSStyleSheet* parentStyleSheet() const final;
-    Node* ownerNode() const final;
+    Node* ownerNode() const final { return m_ownerNode; }
     MediaList* media() const final;
     String href() const final;
-    String title() const final { return m_title; }
+    String title() const final { return !m_title.isEmpty() ? m_title : String(); }
     bool disabled() const final { return m_isDisabled; }
     void setDisabled(bool) final;
 
@@ -77,11 +79,11 @@ public:
     CSSRule* item(unsigned index);
 
     void clearOwnerNode() final;
-    WEBCORE_EXPORT CSSImportRule* ownerRule() const final;
+    CSSImportRule* ownerRule() const final { return m_ownerRule; }
     URL baseURL() const final;
     bool isLoading() const final;
 
-    void clearOwnerRule() { m_ownerRule = nullptr; }
+    void clearOwnerRule() { m_ownerRule = 0; }
 
     Document* ownerDocument() const;
     CSSStyleSheet& rootStyleSheet();
@@ -126,7 +128,7 @@ public:
     bool isInline() const { return m_isInlineStylesheet; }
     TextPosition startPosition() const { return m_startPosition; }
 
-    void detachFromDocument() { clearOwnerNode(); }
+    void detachFromDocument() { m_ownerNode = nullptr; }
 
     bool canAccessRules() const;
 
@@ -138,7 +140,7 @@ private:
     CSSStyleSheet(Ref<StyleSheetContents>&&, Node& ownerNode, const TextPosition& startPosition, bool isInlineStylesheet, const std::optional<bool>&);
 
     bool isCSSStyleSheet() const final { return true; }
-    String type() const final { return "text/css"_s; }
+    String type() const final { return cssContentTypeAtom(); }
 
     Ref<StyleSheetContents> m_contents;
     bool m_isInlineStylesheet { false };
@@ -147,9 +149,10 @@ private:
     std::optional<bool> m_isOriginClean;
     String m_title;
     RefPtr<MediaQuerySet> m_mediaQueries;
+    WeakPtr<Style::Scope> m_styleScope;
 
-    WeakPtr<Node> m_ownerNode;
-    WeakPtr<CSSImportRule> m_ownerRule;
+    Node* m_ownerNode { nullptr };
+    CSSImportRule* m_ownerRule { nullptr };
 
     TextPosition m_startPosition;
 

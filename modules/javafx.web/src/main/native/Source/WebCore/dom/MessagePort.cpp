@@ -34,6 +34,7 @@
 #include "MessagePortChannelProvider.h"
 #include "MessageWithMessagePorts.h"
 #include "StructuredSerializeOptions.h"
+#include "WebCoreOpaqueRoot.h"
 #include "WorkerGlobalScope.h"
 #include "WorkerThread.h"
 #include <wtf/CompletionHandler.h>
@@ -49,6 +50,12 @@ static Lock allMessagePortsLock;
 static HashMap<MessagePortIdentifier, MessagePort*>& allMessagePorts() WTF_REQUIRES_LOCK(allMessagePortsLock)
 {
     static NeverDestroyed<HashMap<MessagePortIdentifier, MessagePort*>> map;
+    return map;
+}
+
+static HashMap<MessagePortIdentifier, ScriptExecutionContextIdentifier>& portToContextIdentifier() WTF_REQUIRES_LOCK(allMessagePortsLock)
+{
+    static NeverDestroyed<HashMap<MessagePortIdentifier, ScriptExecutionContextIdentifier>> map;
     return map;
 }
 
@@ -69,8 +76,10 @@ void MessagePort::deref() const
             return;
 
         auto iterator = allMessagePorts().find(m_identifier);
-        if (iterator != allMessagePorts().end() && iterator->value == this)
+        if (iterator != allMessagePorts().end() && iterator->value == this) {
             allMessagePorts().remove(iterator);
+            portToContextIdentifier().remove(m_identifier);
+        }
 
         delete this;
     }
@@ -85,10 +94,24 @@ bool MessagePort::isExistingMessagePortLocallyReachable(const MessagePortIdentif
 
 void MessagePort::notifyMessageAvailable(const MessagePortIdentifier& identifier)
 {
-    Locker locker { allMessagePortsLock };
-    if (auto* port = allMessagePorts().get(identifier))
-        port->messageAvailable();
+    ASSERT(isMainThread());
+    ScriptExecutionContextIdentifier scriptExecutionContextIdentifier;
+    {
+        Locker locker { allMessagePortsLock };
+        scriptExecutionContextIdentifier = portToContextIdentifier().get(identifier);
+    }
+    if (!scriptExecutionContextIdentifier)
+        return;
 
+    ScriptExecutionContext::ensureOnContextThread(scriptExecutionContextIdentifier, [identifier](auto&) {
+        RefPtr<MessagePort> port;
+        {
+            Locker locker { allMessagePortsLock };
+            port = allMessagePorts().get(identifier);
+        }
+        if (port)
+            port->messageAvailable();
+    });
 }
 
 Ref<MessagePort> MessagePort::create(ScriptExecutionContext& scriptExecutionContext, const MessagePortIdentifier& local, const MessagePortIdentifier& remote)
@@ -107,6 +130,7 @@ MessagePort::MessagePort(ScriptExecutionContext& scriptExecutionContext, const M
 
     Locker locker { allMessagePortsLock };
     allMessagePorts().set(m_identifier, this);
+    portToContextIdentifier().set(m_identifier, scriptExecutionContext.identifier());
 
     // Make sure the WeakPtrFactory gets initialized eagerly on the thread the MessagePort gets constructed on for thread-safety reasons.
     initializeWeakPtrFactory();
@@ -284,7 +308,7 @@ void MessagePort::dispatchMessages()
                 return;
             auto ports = MessagePort::entanglePorts(*context, WTFMove(message.transferredPorts));
             // Per specification, each MessagePort object has a task source called the port message queue.
-            queueTaskToDispatchEvent(*this, TaskSource::PostedMessageQueue, MessageEvent::create(WTFMove(ports), message.message.releaseNonNull()));
+            queueTaskToDispatchEvent(*this, TaskSource::PostedMessageQueue, MessageEvent::create(message.message.releaseNonNull(), { }, { }, { }, WTFMove(ports)));
         }
     };
 
@@ -435,6 +459,11 @@ bool MessagePort::removeEventListener(const AtomString& eventType, EventListener
 const char* MessagePort::activeDOMObjectName() const
 {
     return "MessagePort";
+}
+
+WebCoreOpaqueRoot root(MessagePort* port)
+{
+    return WebCoreOpaqueRoot { port };
 }
 
 } // namespace WebCore

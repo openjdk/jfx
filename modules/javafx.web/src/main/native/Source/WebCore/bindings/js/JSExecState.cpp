@@ -39,7 +39,8 @@ void JSExecState::didLeaveScriptContext(JSC::JSGlobalObject* lexicalGlobalObject
     if (!context)
         return;
     context->eventLoop().performMicrotaskCheckpoint();
-    context->ensureRejectedPromiseTracker().processQueueSoon();
+    if (auto rejectedPromiseTracker = context->ensureRejectedPromiseTracker())
+        rejectedPromiseTracker->processQueueSoon();
 }
 
 JSC::JSValue functionCallHandlerFromAnyThread(JSC::JSGlobalObject* lexicalGlobalObject, JSC::JSValue functionObject, const JSC::CallData& callData, JSC::JSValue thisValue, const JSC::ArgList& args, NakedPtr<JSC::Exception>& returnedException)
@@ -54,7 +55,7 @@ JSC::JSValue evaluateHandlerFromAnyThread(JSC::JSGlobalObject* lexicalGlobalObje
 
 ScriptExecutionContext* executionContext(JSC::JSGlobalObject* globalObject)
 {
-    if (!globalObject || !globalObject->inherits<JSDOMGlobalObject>(globalObject->vm()))
+    if (!globalObject || !globalObject->inherits<JSDOMGlobalObject>())
         return nullptr;
     return JSC::jsCast<JSDOMGlobalObject*>(globalObject)->scriptExecutionContext();
 }

@@ -27,7 +27,7 @@
     Conditional=TOUCH_EVENTS,
     Exposed=Window
 ] interface TouchEvent : UIEvent {
-    constructor(DOMString type, optional TouchEventInit eventInitDict);
+    constructor([AtomString] DOMString type, optional TouchEventInit eventInitDict);
 
     readonly attribute TouchList touches;
     readonly attribute TouchList targetTouches;
@@ -40,7 +40,7 @@
     undefined initTouchEvent(optional TouchList? touches = null,
                         optional TouchList? targetTouches = null,
                         optional TouchList? changedTouches = null,
-                        optional DOMString type,
+                        optional [AtomString] DOMString type,
                         optional WindowProxy? view = null,
                         optional long screenX = 0,
                         optional long screenY = 0,

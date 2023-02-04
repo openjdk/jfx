@@ -77,7 +77,8 @@ public:
         {
         }
 
-        SourceSite isolatedCopy() const { return SourceSite { registrableDomain.isolatedCopy() }; }
+        SourceSite isolatedCopy() const & { return SourceSite { registrableDomain.isolatedCopy() }; }
+        SourceSite isolatedCopy() && { return SourceSite { WTFMove(registrableDomain).isolatedCopy() }; }
 
         bool operator==(const SourceSite& other) const
         {
@@ -123,7 +124,8 @@ public:
         {
         }
 
-        AttributionDestinationSite isolatedCopy() const { return AttributionDestinationSite { registrableDomain.isolatedCopy() }; }
+        AttributionDestinationSite isolatedCopy() const & { return AttributionDestinationSite { registrableDomain.isolatedCopy() }; }
+        AttributionDestinationSite isolatedCopy() && { return AttributionDestinationSite { WTFMove(registrableDomain).isolatedCopy() }; }
 
         bool operator==(const AttributionDestinationSite& other) const
         {
@@ -171,7 +173,8 @@ public:
     struct EphemeralNonce {
         String nonce;
 
-        EphemeralNonce isolatedCopy() const;
+        EphemeralNonce isolatedCopy() const & { return { nonce.isolatedCopy() }; }
+        EphemeralNonce isolatedCopy() &&  { return { WTFMove(nonce).isolatedCopy() }; }
 
         WEBCORE_EXPORT bool isValid() const;
 
@@ -187,31 +190,37 @@ public:
 #endif
         String valueBase64URL;
 
-        UnlinkableToken isolatedCopy() const;
+        UnlinkableToken isolatedCopy() const &;
+        UnlinkableToken isolatedCopy() &&;
     };
 
     struct SourceUnlinkableToken : UnlinkableToken {
-        SourceUnlinkableToken isolatedCopy() const;
+        SourceUnlinkableToken isolatedCopy() const & { return { UnlinkableToken::isolatedCopy() }; }
+        SourceUnlinkableToken isolatedCopy() && { return { UnlinkableToken::isolatedCopy() }; }
     };
 
     struct DestinationUnlinkableToken : UnlinkableToken {
-        DestinationUnlinkableToken isolatedCopy() const;
+        DestinationUnlinkableToken isolatedCopy() const & { return { UnlinkableToken::isolatedCopy() }; }
+        DestinationUnlinkableToken isolatedCopy() && { return { UnlinkableToken::isolatedCopy() }; }
     };
 
     struct SecretToken {
         String tokenBase64URL;
         String signatureBase64URL;
         String keyIDBase64URL;
-        SecretToken isolatedCopy() const;
+        SecretToken isolatedCopy() const & { return { tokenBase64URL.isolatedCopy(), signatureBase64URL.isolatedCopy(), keyIDBase64URL.isolatedCopy() }; }
+        SecretToken isolatedCopy() && { return { WTFMove(tokenBase64URL).isolatedCopy(), WTFMove(signatureBase64URL).isolatedCopy(), WTFMove(keyIDBase64URL).isolatedCopy() }; }
         bool isValid() const;
     };
 
     struct SourceSecretToken : SecretToken {
-        SourceSecretToken isolatedCopy() const;
+        SourceSecretToken isolatedCopy() const & { return { SecretToken::isolatedCopy() }; }
+        SourceSecretToken isolatedCopy() && { return { SecretToken::isolatedCopy() }; }
     };
 
     struct DestinationSecretToken : SecretToken {
-        WEBCORE_EXPORT DestinationSecretToken isolatedCopy() const;
+        DestinationSecretToken isolatedCopy() const & { return { SecretToken::isolatedCopy() }; }
+        DestinationSecretToken isolatedCopy() && { return { SecretToken::isolatedCopy() }; }
     };
 
     struct AttributionTriggerData {
@@ -425,11 +434,16 @@ public:
     WEBCORE_EXPORT void setSourceSecretToken(SourceSecretToken&&);
     WEBCORE_EXPORT void setDestinationSecretToken(DestinationSecretToken&&);
 
+    static std::optional<uint64_t> appStoreURLAdamID(const URL&);
+    bool isSKAdNetworkAttribution() const { return !!m_adamID; }
+    std::optional<uint64_t> adamID() const { return m_adamID; };
+    void setAdamID(uint64_t adamID) { m_adamID = adamID; };
 
     template<class Encoder> void encode(Encoder&) const;
     template<class Decoder> static std::optional<PrivateClickMeasurement> decode(Decoder&);
 
-    WEBCORE_EXPORT PrivateClickMeasurement isolatedCopy() const;
+    WEBCORE_EXPORT PrivateClickMeasurement isolatedCopy() const &;
+    WEBCORE_EXPORT PrivateClickMeasurement isolatedCopy() &&;
 
 private:
     static Expected<AttributionTriggerData, String> parseAttributionRequestQuery(const URL&);
@@ -445,6 +459,7 @@ private:
     AttributionDestinationSite m_destinationSite;
     WallTime m_timeOfAdClick;
     AttributionEphemeral m_isEphemeral;
+    std::optional<uint64_t> m_adamID;
 
     std::optional<AttributionTriggerData> m_attributionTriggerData;
     AttributionTimeToSendData m_timesToSend;
@@ -466,7 +481,8 @@ void PrivateClickMeasurement::encode(Encoder& encoder) const
         << m_isEphemeral
         << m_attributionTriggerData
         << m_sourceApplicationBundleID
-        << m_timesToSend;
+        << m_timesToSend
+        << m_adamID;
 }
 
 template<class Decoder>
@@ -517,6 +533,11 @@ std::optional<PrivateClickMeasurement> PrivateClickMeasurement::decode(Decoder& 
     if (!timesToSend)
         return std::nullopt;
 
+    std::optional<std::optional<uint64_t>> adamID;
+    decoder >> adamID;
+    if (!adamID)
+        return std::nullopt;
+
     PrivateClickMeasurement attribution {
         SourceID { WTFMove(*sourceID) },
         SourceSite { WTFMove(*sourceRegistrableDomain) },
@@ -528,6 +549,7 @@ std::optional<PrivateClickMeasurement> PrivateClickMeasurement::decode(Decoder& 
     attribution.m_ephemeralSourceNonce = WTFMove(*ephemeralSourceNonce);
     attribution.m_attributionTriggerData = WTFMove(*attributionTriggerData);
     attribution.m_timesToSend = WTFMove(*timesToSend);
+    attribution.m_adamID = WTFMove(*adamID);
 
     return attribution;
 }

@@ -203,8 +203,7 @@ static AppHighlightRangeData::NodePath makeNodePath(RefPtr<Node>&& node)
 
 static AppHighlightRangeData createAppHighlightRangeData(const StaticRange& range)
 {
-    auto text = plainText(range);
-    text.truncate(textPreviewLength);
+    auto text = plainText(range).left(textPreviewLength);
     auto identifier = createVersion4UUIDString();
 
     return {
@@ -272,7 +271,7 @@ bool AppHighlightStorage::attemptToRestoreHighlightAndScroll(AppHighlightRangeDa
         if (textIndicator)
             m_document->page()->chrome().client().setTextIndicator(textIndicator->data());
 
-        TemporarySelectionChange selectionChange(*strongDocument, { range.value() }, { TemporarySelectionOption::DelegateMainFrameScroll, TemporarySelectionOption::SmoothScroll, TemporarySelectionOption::RevealSelectionBounds });
+        TemporarySelectionChange selectionChange(*strongDocument, { *range }, { TemporarySelectionOption::DelegateMainFrameScroll, TemporarySelectionOption::SmoothScroll, TemporarySelectionOption::RevealSelectionBounds, TemporarySelectionOption::UserTriggered });
     }
 
     return true;

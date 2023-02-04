@@ -92,6 +92,9 @@ CSSStyleSheet::CSSStyleSheet(Ref<StyleSheetContents>&& contents, CSSImportRule* 
     : m_contents(WTFMove(contents))
     , m_ownerRule(ownerRule)
 {
+    if (auto* parent = parentStyleSheet())
+        m_styleScope = parent->styleScope();
+
     m_contents->registerClient(this);
 }
 
@@ -99,7 +102,8 @@ CSSStyleSheet::CSSStyleSheet(Ref<StyleSheetContents>&& contents, Node& ownerNode
     : m_contents(WTFMove(contents))
     , m_isInlineStylesheet(isInlineStylesheet)
     , m_isOriginClean(isOriginClean)
-    , m_ownerNode(ownerNode)
+    , m_styleScope(Style::Scope::forNode(ownerNode))
+    , m_ownerNode(&ownerNode)
     , m_startPosition(startPosition)
 {
     ASSERT(isAcceptableCSSStyleSheetParent(&ownerNode));
@@ -119,11 +123,6 @@ CSSStyleSheet::~CSSStyleSheet()
         m_mediaCSSOMWrapper->clearParentStyleSheet();
 
     m_contents->unregisterClient(this);
-}
-
-Node* CSSStyleSheet::ownerNode() const
-{
-    return m_ownerNode.get();
 }
 
 CSSStyleSheet::WhetherContentsWereClonedForMutation CSSStyleSheet::willMutateRules()
@@ -198,11 +197,6 @@ void CSSStyleSheet::clearOwnerNode()
     m_ownerNode = nullptr;
 }
 
-CSSImportRule* CSSStyleSheet::ownerRule() const
-{
-    return m_ownerRule.get();
-}
-
 void CSSStyleSheet::reattachChildRuleCSSOMWrappers()
 {
     for (unsigned i = 0; i < m_childRuleCSSOMWrappers.size(); ++i) {
@@ -227,7 +221,6 @@ void CSSStyleSheet::setMediaQueries(Ref<MediaQuerySet>&& mediaQueries)
     m_mediaQueries = WTFMove(mediaQueries);
     if (m_mediaCSSOMWrapper && m_mediaQueries)
         m_mediaCSSOMWrapper->reattach(m_mediaQueries.get());
-    reportMediaQueryWarningIfNeeded(ownerDocument(), m_mediaQueries.get());
 }
 
 unsigned CSSStyleSheet::length() const
@@ -365,8 +358,7 @@ MediaList* CSSStyleSheet::media() const
 
 CSSStyleSheet* CSSStyleSheet::parentStyleSheet() const
 {
-    RefPtr ownerRule = m_ownerRule.get();
-    return ownerRule ? ownerRule->parentStyleSheet() : nullptr;
+    return m_ownerRule ? m_ownerRule->parentStyleSheet() : nullptr;
 }
 
 CSSStyleSheet& CSSStyleSheet::rootStyleSheet()
@@ -390,10 +382,7 @@ Document* CSSStyleSheet::ownerDocument() const
 
 Style::Scope* CSSStyleSheet::styleScope()
 {
-    auto* ownerNode = rootStyleSheet().ownerNode();
-    if (!ownerNode)
-        return nullptr;
-    return &Style::Scope::forNode(*ownerNode);
+    return m_styleScope.get();
 }
 
 void CSSStyleSheet::clearChildRuleCSSOMWrappers()
@@ -420,7 +409,7 @@ CSSStyleSheet::RuleMutationScope::RuleMutationScope(CSSRule* rule)
     , m_mutationType(is<CSSKeyframesRule>(rule) ? KeyframesRuleMutation : OtherMutation)
     , m_contentsWereClonedForMutation(ContentsWereNotClonedForMutation)
     , m_insertedKeyframesRule(nullptr)
-    , m_modifiedKeyframesRuleName(is<CSSKeyframesRule>(rule) ? downcast<CSSKeyframesRule>(*rule).name() : emptyString())
+    , m_modifiedKeyframesRuleName(is<CSSKeyframesRule>(rule) ? downcast<CSSKeyframesRule>(*rule).name() : emptyAtom())
 {
     if (m_styleSheet)
         m_contentsWereClonedForMutation = m_styleSheet->willMutateRules();

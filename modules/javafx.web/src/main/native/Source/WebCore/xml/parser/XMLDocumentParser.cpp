@@ -28,6 +28,7 @@
 
 #include "CDATASection.h"
 #include "Comment.h"
+#include "CommonAtomStrings.h"
 #include "Document.h"
 #include "DocumentFragment.h"
 #include "DocumentType.h"
@@ -147,7 +148,7 @@ void XMLDocumentParser::createLeafTextNode()
 
     ASSERT(m_bufferedText.size() == 0);
     ASSERT(!m_leafTextNode);
-    m_leafTextNode = Text::create(m_currentNode->document(), "");
+    m_leafTextNode = Text::create(m_currentNode->document(), String { emptyString() });
     m_currentNode->parserAppendChild(*m_leafTextNode);
 }
 
@@ -270,17 +271,11 @@ static XMLParsingNamespaces findXMLParsingNamespaces(Element* contextElement)
 
     XMLParsingNamespaces result;
 
-    bool stopLookingForDefaultNamespace = false;
+    result.defaultNamespace = contextElement->lookupNamespaceURI(nullAtom());
 
     for (auto& element : lineageOfType<Element>(*contextElement)) {
-        if (is<SVGForeignObjectElement>(element))
-            stopLookingForDefaultNamespace = true;
-        else if (!stopLookingForDefaultNamespace)
-            result.defaultNamespace = element.namespaceURI();
-
         if (!element.hasAttributes())
             continue;
-
         for (auto& attribute : element.attributesIterator()) {
             if (attribute.prefix() == xmlnsAtom())
                 result.prefixNamespaces.set(attribute.localName(), attribute.value());
@@ -299,7 +294,7 @@ bool XMLDocumentParser::parseDocumentFragment(const String& chunk, DocumentFragm
     // http://www.whatwg.org/specs/web-apps/current-work/multipage/the-xhtml-syntax.html#xml-fragment-parsing-algorithm
     // For now we have a hack for script/style innerHTML support:
     if (contextElement && (contextElement->hasLocalName(HTMLNames::scriptTag->localName()) || contextElement->hasLocalName(HTMLNames::styleTag->localName()))) {
-        fragment.parserAppendChild(fragment.document().createTextNode(chunk));
+        fragment.parserAppendChild(fragment.document().createTextNode(String { chunk }));
         return true;
     }
 

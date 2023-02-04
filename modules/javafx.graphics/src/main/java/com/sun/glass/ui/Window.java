@@ -265,6 +265,7 @@ public abstract class Window {
         this.owner = owner;
         this.styleMask = styleMask;
         this.isDecorated = (this.styleMask & Window.TITLED) != 0;
+        this.isPopup = (this.styleMask & Window.POPUP) != 0;
 
         this.screen = screen != null ? screen : Screen.getMainScreen();
         if (PrismSettings.allowHiDPIScaling) {
@@ -413,6 +414,11 @@ public abstract class Window {
     public boolean isDecorated() {
         Application.checkEventThread();
         return this.isDecorated;
+    }
+
+    public boolean isPopup() {
+        Application.checkEventThread();
+        return this.isPopup;
     }
 
     public boolean isMinimized() {

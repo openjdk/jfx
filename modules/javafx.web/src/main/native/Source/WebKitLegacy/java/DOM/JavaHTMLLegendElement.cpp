@@ -60,7 +60,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLLegendElementImpl_getAlign
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLLegendElementImpl_setAlignImpl(JNIEnv* env, jclass, jlong peer, jstring value)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::alignAttr, String(env, value));
+    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::alignAttr, AtomString {String(env, value)});
 }
 
 JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLLegendElementImpl_getAccessKeyImpl(JNIEnv* env, jclass, jlong peer)
@@ -72,7 +72,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLLegendElementImpl_getAcces
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLLegendElementImpl_setAccessKeyImpl(JNIEnv* env, jclass, jlong peer, jstring value)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::accesskeyAttr, String(env, value));
+    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::accesskeyAttr, AtomString {String(env, value)});
 }
 
 }

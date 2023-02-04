@@ -539,7 +539,7 @@ private:
     FixedPositionViewportConstraints computeFixedViewportConstraints(RenderLayer&) const;
     StickyPositionViewportConstraints computeStickyViewportConstraints(RenderLayer&) const;
 
-    LayoutRect parentRelativeScrollableRect(const RenderLayer&, const RenderLayer* ancestorLayer) const;
+    RoundedRect parentRelativeScrollableRect(const RenderLayer&, const RenderLayer* ancestorLayer) const;
 
     // Returns list of layers and their clip rects required to clip the given layer, which include clips in the
     // containing block chain between the given layer and its composited ancestor.
@@ -643,7 +643,7 @@ private:
 #endif
 };
 
-void paintScrollbar(Scrollbar*, GraphicsContext&, const IntRect& clip);
+void paintScrollbar(Scrollbar*, GraphicsContext&, const IntRect& clip, const Color& backgroundColor = Color());
 
 WTF::TextStream& operator<<(WTF::TextStream&, CompositingUpdateType);
 WTF::TextStream& operator<<(WTF::TextStream&, CompositingPolicy);

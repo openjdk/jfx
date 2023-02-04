@@ -47,10 +47,10 @@
 #include "ColorInterpolation.h"
 #include "ColorLuminance.h"
 #include "ColorNormalization.h"
+#include "DeprecatedGlobalSettings.h"
 #include "Logging.h"
 #include "Pair.h"
 #include "RenderStyleConstants.h"
-#include "RuntimeEnabledFeatures.h"
 #include "StyleColor.h"
 #include "WebKitFontFamilyNames.h"
 #include <wtf/SortedArrayMap.h>
@@ -191,6 +191,10 @@ static constexpr double computeMinimumValue(IntegerRange range)
     case IntegerRange::OneAndGreater:
         return 1.0;
     }
+
+    RELEASE_ASSERT_NOT_REACHED_UNDER_CONSTEXPR_CONTEXT();
+
+    return 0.0;
 }
 // MARK: Integer (Raw)
 
@@ -519,6 +523,12 @@ struct LengthRawKnownTokenTypeDimensionConsumer {
         case CSSUnitType::CSS_DVB:
         case CSSUnitType::CSS_DVI:
         case CSSUnitType::CSS_Q:
+        case CSSUnitType::CSS_CQW:
+        case CSSUnitType::CSS_CQH:
+        case CSSUnitType::CSS_CQI:
+        case CSSUnitType::CSS_CQB:
+        case CSSUnitType::CSS_CQMIN:
+        case CSSUnitType::CSS_CQMAX:
             break;
         default:
             return std::nullopt;
@@ -1638,7 +1648,7 @@ RefPtr<CSSPrimitiveValue> consumeCustomIdent(CSSParserTokenRange& range, bool sh
 RefPtr<CSSPrimitiveValue> consumeDashedIdent(CSSParserTokenRange& range, bool shouldLowercase)
 {
     auto result = consumeCustomIdent(range, shouldLowercase);
-    if (result && result->stringValue().startsWith("--"))
+    if (result && result->stringValue().startsWith("--"_s))
         return result;
     return nullptr;
 }
@@ -3912,7 +3922,7 @@ static RefPtr<CSSValue> consumeFilterImage(CSSParserTokenRange& args, const CSSP
 #if ENABLE(CSS_PAINTING_API)
 static RefPtr<CSSValue> consumeCustomPaint(CSSParserTokenRange& args)
 {
-    if (!RuntimeEnabledFeatures::sharedFeatures().cssPaintingAPIEnabled())
+    if (!DeprecatedGlobalSettings::cssPaintingAPIEnabled())
         return nullptr;
     if (args.peek().type() != IdentToken)
         return nullptr;
@@ -4281,13 +4291,19 @@ AtomString consumeCounterStyleNameInPrelude(CSSParserTokenRange& prelude)
 
 RefPtr<CSSPrimitiveValue> consumeSingleContainerName(CSSParserTokenRange& range)
 {
-    if (range.peek().id() == CSSValueNone)
+    switch (range.peek().id()) {
+    case CSSValueNormal:
+    case CSSValueNone:
+    case CSSValueAuto:
+    case CSSValueAnd:
+    case CSSValueOr:
+    case CSSValueNot:
         return nullptr;
-    if (auto ident = consumeCustomIdent(range))
-        return ident;
-    if (auto string = consumeString(range))
-        return string;
-    return nullptr;
+    default:
+        if (auto ident = consumeCustomIdent(range))
+            return ident;
+        return nullptr;
+    }
 }
 
 std::optional<CSSValueID> consumeFontVariantCSS21Raw(CSSParserTokenRange& range)
@@ -4344,7 +4360,7 @@ std::optional<FontStyleRaw> consumeFontStyleRaw(CSSParserTokenRange& range, CSSP
     return { { CSSValueOblique, std::nullopt } };
 }
 
-String concatenateFamilyName(CSSParserTokenRange& range)
+AtomString concatenateFamilyName(CSSParserTokenRange& range)
 {
     StringBuilder builder;
     bool addedSpace = false;
@@ -4357,16 +4373,16 @@ String concatenateFamilyName(CSSParserTokenRange& range)
         builder.append(range.consumeIncludingWhitespace().value());
     }
     if (!addedSpace && !isValidCustomIdentifier(firstToken.id()))
-        return String();
-    return builder.toString();
+        return nullAtom();
+    return builder.toAtomString();
 }
 
-String consumeFamilyNameRaw(CSSParserTokenRange& range)
+AtomString consumeFamilyNameRaw(CSSParserTokenRange& range)
 {
     if (range.peek().type() == StringToken)
-        return range.consumeIncludingWhitespace().value().toString();
+        return range.consumeIncludingWhitespace().value().toAtomString();
     if (range.peek().type() != IdentToken)
-        return String();
+        return nullAtom();
     return concatenateFamilyName(range);
 }
 

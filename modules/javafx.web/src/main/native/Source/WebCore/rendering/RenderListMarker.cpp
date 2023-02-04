@@ -499,7 +499,7 @@ static StringView listMarkerSuffix(ListStyleType type)
     case ListStyleType::UpperNorwegian:
     case ListStyleType::UpperRoman:
     case ListStyleType::Urdu:
-        return ". ";
+        return ". "_s;
     case ListStyleType::CJKDecimal:
     case ListStyleType::CJKEarthlyBranch:
     case ListStyleType::CJKHeavenlyStem:
@@ -516,18 +516,18 @@ static StringView listMarkerSuffix(ListStyleType type)
     case ListStyleType::TraditionalChineseInformal:
         return { &ideographicComma, 1 };
     case ListStyleType::EthiopicNumeric:
-        return "/ ";
+        return "/ "_s;
     case ListStyleType::KoreanHangulFormal:
     case ListStyleType::KoreanHanjaInformal:
     case ListStyleType::KoreanHanjaFormal:
-        return ", ";
+        return ", "_s;
     case ListStyleType::String:
         ASSERT_NOT_REACHED();
         break;
     }
 
     ASSERT_NOT_REACHED();
-    return ". ";
+    return ". "_s;
 }
 
 String listMarkerText(ListStyleType type, int value)
@@ -1562,13 +1562,13 @@ auto RenderListMarker::textRun() const -> TextRunWithUnderlyingString
             if (style().listStyleType() == ListStyleType::DisclosureClosed)
                 textForRun = { &blackLeftPointingSmallTriangle, 1 };
             else
-                textForRun = makeString(reversed(m_textWithSuffix.substring(m_textWithoutSuffixLength)), m_textWithSuffix.left(m_textWithoutSuffixLength));
+                textForRun = makeString(reversed(StringView(m_textWithSuffix).substring(m_textWithoutSuffixLength)), m_textWithSuffix.left(m_textWithoutSuffixLength));
         }
     } else {
         if (!style().isLeftToRightDirection())
             textForRun = reversed(m_textWithSuffix);
         else
-            textForRun = makeString(reversed(m_textWithSuffix.left(m_textWithoutSuffixLength)), m_textWithSuffix.substring(m_textWithoutSuffixLength));
+            textForRun = makeString(reversed(StringView(m_textWithSuffix).left(m_textWithoutSuffixLength)), m_textWithSuffix.substring(m_textWithoutSuffixLength));
     }
     auto textRun = RenderBlock::constructTextRun(textForRun, style());
     return { WTFMove(textRun), WTFMove(textForRun) };

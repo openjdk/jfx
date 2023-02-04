@@ -49,6 +49,7 @@ struct IDBKeyRangeData;
 namespace IDBServer {
 
 class IDBServer;
+class UniqueIDBDatabase;
 class UniqueIDBDatabaseConnection;
 
 class UniqueIDBDatabaseTransaction : public CanMakeWeakPtr<UniqueIDBDatabaseTransaction>, public RefCounted<UniqueIDBDatabaseTransaction> {
@@ -57,7 +58,8 @@ public:
 
     ~UniqueIDBDatabaseTransaction();
 
-    UniqueIDBDatabaseConnection& databaseConnection();
+    UniqueIDBDatabaseConnection* databaseConnection() const;
+    UniqueIDBDatabase* database() const;
     const IDBTransactionInfo& info() const { return m_transactionInfo; }
     WEBCORE_EXPORT bool isVersionChange() const;
     bool isReadOnly() const;
@@ -87,8 +89,8 @@ public:
 
     const Vector<uint64_t>& objectStoreIdentifiers();
 
-    void setMainThreadAbortResult(const IDBError& error) { m_mainThreadAbortResult = { error }; }
-    const std::optional<IDBError>& mainThreadAbortResult() const { return m_mainThreadAbortResult; }
+    void setSuspensionAbortResult(const IDBError& error) { m_suspensionAbortResult = { error }; }
+    const std::optional<IDBError>& suspensionAbortResult() const { return m_suspensionAbortResult; }
 
 private:
     UniqueIDBDatabaseTransaction(UniqueIDBDatabaseConnection&, const IDBTransactionInfo&);
@@ -100,7 +102,7 @@ private:
 
     Vector<uint64_t> m_objectStoreIdentifiers;
 
-    std::optional<IDBError> m_mainThreadAbortResult;
+    std::optional<IDBError> m_suspensionAbortResult;
     Deque<IDBError> m_requestResults;
 };
 

@@ -39,6 +39,11 @@ class ScrollingTree;
 class ScrollingStateScrollingNode;
 struct WheelEventHandlingResult;
 
+struct ScrollPropagationInfo {
+    bool shouldBlockScrollPropagation { false };
+    bool isHandled { false };
+};
+
 class WEBCORE_EXPORT ScrollingTreeScrollingNode : public ScrollingTreeNode {
     friend class ScrollingTreeScrollingNodeDelegate;
 #if PLATFORM(MAC)
@@ -115,6 +120,9 @@ public:
     const LayerRepresentation& scrollContainerLayer() const { return m_scrollContainerLayer; }
     const LayerRepresentation& scrolledContentsLayer() const { return m_scrolledContentsLayer; }
 
+    OverscrollBehavior horizontalOverscrollBehavior() const { return m_scrollableAreaParameters.horizontalOverscrollBehavior; }
+    OverscrollBehavior verticalOverscrollBehavior() const { return m_scrollableAreaParameters.verticalOverscrollBehavior; }
+
 protected:
     ScrollingTreeScrollingNode(ScrollingTree&, ScrollingNodeType, ScrollingNodeID);
 
@@ -159,12 +167,10 @@ protected:
 
     bool allowsHorizontalScrolling() const { return m_scrollableAreaParameters.allowsHorizontalScrolling; }
     bool allowsVerticalScrolling() const { return m_scrollableAreaParameters.allowsVerticalScrolling; }
-    OverscrollBehavior horizontalOverscrollBehavior() const { return m_scrollableAreaParameters.horizontalOverscrollBehavior; }
-    OverscrollBehavior verticalOverscrollBehavior() const { return m_scrollableAreaParameters.verticalOverscrollBehavior; }
     bool horizontalOverscrollBehaviorPreventsPropagation() const { return m_scrollableAreaParameters.horizontalOverscrollBehavior != OverscrollBehavior::Auto; }
     bool verticalOverscrollBehaviorPreventsPropagation() const { return m_scrollableAreaParameters.verticalOverscrollBehavior != OverscrollBehavior::Auto; }
     PlatformWheelEvent eventForPropagation(const PlatformWheelEvent&) const;
-    bool shouldBlockScrollPropagation(const FloatSize&) const;
+    ScrollPropagationInfo computeScrollPropagation(const FloatSize&) const;
     bool overscrollBehaviorAllowsRubberBand() const { return m_scrollableAreaParameters.horizontalOverscrollBehavior != OverscrollBehavior::None ||  m_scrollableAreaParameters.verticalOverscrollBehavior != OverscrollBehavior::None; }
     bool shouldRubberBand(const PlatformWheelEvent&, EventTargeting) const;
     void dumpProperties(WTF::TextStream&, OptionSet<ScrollingStateTreeAsTextBehavior>) const override;

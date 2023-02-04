@@ -77,7 +77,7 @@ TokenPreloadScanner::TagId TokenPreloadScanner::tagIdFor(const HTMLToken::DataVe
     return TagId::Unknown;
 }
 
-String TokenPreloadScanner::initiatorFor(TagId tagId)
+ASCIILiteral TokenPreloadScanner::initiatorFor(TagId tagId)
 {
     switch (tagId) {
     case TagId::Source:
@@ -124,14 +124,14 @@ public:
 
         for (auto& attribute : attributes) {
             AtomString attributeName(attribute.name);
-            String attributeValue = StringImpl::create8BitIfPossible(attribute.value);
-            processAttribute(attributeName, attributeValue, pictureState);
+            AtomString attributeValue(attribute.value);
+            processAttribute(WTFMove(attributeName), WTFMove(attributeValue), pictureState);
         }
 
         if (m_tagId == TagId::Source && !pictureState.isEmpty() && !pictureState.last() && m_mediaMatched && m_typeMatched && !m_srcSetAttribute.isEmpty()) {
 
             auto sourceSize = SizesAttributeParser(m_sizesAttribute, m_document).length();
-            ImageCandidate imageCandidate = bestFitSourceForImageAttributes(m_deviceScaleFactor, m_urlToLoad, m_srcSetAttribute, sourceSize);
+            ImageCandidate imageCandidate = bestFitSourceForImageAttributes(m_deviceScaleFactor, AtomString { m_urlToLoad }, m_srcSetAttribute, sourceSize);
             if (!imageCandidate.isEmpty()) {
                 pictureState.last() = true;
                 setUrlToLoad(imageCandidate.string.toString(), true);
@@ -141,7 +141,7 @@ public:
         // Resolve between src and srcSet if we have them and the tag is img.
         if (m_tagId == TagId::Img && !m_srcSetAttribute.isEmpty()) {
             auto sourceSize = SizesAttributeParser(m_sizesAttribute, m_document).length();
-            ImageCandidate imageCandidate = bestFitSourceForImageAttributes(m_deviceScaleFactor, m_urlToLoad, m_srcSetAttribute, sourceSize);
+            ImageCandidate imageCandidate = bestFitSourceForImageAttributes(m_deviceScaleFactor, AtomString { m_urlToLoad }, m_srcSetAttribute, sourceSize);
             setUrlToLoad(imageCandidate.string.toString(), true);
         }
 
@@ -197,7 +197,7 @@ private:
             m_charset = attributeValue;
     }
 
-    void processAttribute(const AtomString& attributeName, const String& attributeValue, const Vector<bool>& pictureState)
+    void processAttribute(AtomString&& attributeName, AtomString&& attributeValue, const Vector<bool>& pictureState)
     {
         bool inPicture = !pictureState.isEmpty();
         bool alreadyMatchedSource = inPicture && pictureState.last();
@@ -207,16 +207,16 @@ private:
             if (inPicture && alreadyMatchedSource)
                 break;
             if (match(attributeName, srcsetAttr) && m_srcSetAttribute.isNull()) {
-                m_srcSetAttribute = attributeValue;
+                m_srcSetAttribute = WTFMove(attributeValue);
                 break;
             }
             if (match(attributeName, sizesAttr) && m_sizesAttribute.isNull()) {
-                m_sizesAttribute = attributeValue;
+                m_sizesAttribute = WTFMove(attributeValue);
                 break;
             }
             if (m_document.settings().lazyImageLoadingEnabled()) {
                 if (match(attributeName, loadingAttr) && m_lazyloadAttribute.isNull()) {
-                    m_lazyloadAttribute = attributeValue;
+                    m_lazyloadAttribute = WTFMove(attributeValue);
                     break;
                 }
             }
@@ -226,11 +226,11 @@ private:
             if (inPicture && alreadyMatchedSource)
                 break;
             if (match(attributeName, srcsetAttr) && m_srcSetAttribute.isNull()) {
-                m_srcSetAttribute = attributeValue;
+                m_srcSetAttribute = WTFMove(attributeValue);
                 break;
             }
             if (match(attributeName, sizesAttr) && m_sizesAttribute.isNull()) {
-                m_sizesAttribute = attributeValue;
+                m_sizesAttribute = WTFMove(attributeValue);
                 break;
             }
             if (match(attributeName, mediaAttr) && m_mediaAttribute.isNull()) {
@@ -238,20 +238,20 @@ private:
                 auto mediaSet = MediaQuerySet::create(attributeValue, MediaQueryParserContext(m_document));
                 RefPtr documentElement = m_document.documentElement();
                 LOG(MediaQueries, "HTMLPreloadScanner %p processAttribute evaluating media queries", this);
-                m_mediaMatched = MediaQueryEvaluator { m_document.printing() ? "print" : "screen", m_document, documentElement ? documentElement->computedStyle() : nullptr }.evaluate(mediaSet.get());
+                m_mediaMatched = MediaQueryEvaluator { m_document.printing() ? "print"_s : "screen"_s, m_document, documentElement ? documentElement->computedStyle() : nullptr }.evaluate(mediaSet.get());
             }
             if (match(attributeName, typeAttr) && m_typeAttribute.isNull()) {
                 // when multiple type attributes present: first value wins, ignore subsequent (to match ImageElement parser and Blink behaviours)
-                m_typeAttribute = attributeValue;
+                m_typeAttribute = WTFMove(attributeValue);
                 m_typeMatched &= MIMETypeRegistry::isSupportedImageVideoOrSVGMIMEType(m_typeAttribute);
             }
             break;
         case TagId::Script:
             if (match(attributeName, typeAttr)) {
-                m_moduleScript = equalLettersIgnoringASCIICase(attributeValue, "module") ? PreloadRequest::ModuleScript::Yes : PreloadRequest::ModuleScript::No;
+                m_moduleScript = equalLettersIgnoringASCIICase(attributeValue, "module"_s) ? PreloadRequest::ModuleScript::Yes : PreloadRequest::ModuleScript::No;
                 break;
             } else if (match(attributeName, nonceAttr)) {
-                m_nonceAttribute = attributeValue;
+                m_nonceAttribute = WTFMove(attributeValue);
                 break;
             } else if (match(attributeName, referrerpolicyAttr)) {
                 m_referrerPolicy = parseReferrerPolicy(attributeValue, ReferrerPolicySource::ReferrerPolicyAttribute).value_or(ReferrerPolicy::EmptyString);
@@ -273,17 +273,17 @@ private:
                 m_linkIsStyleSheet = relAttributeIsStyleSheet(parsedAttribute);
                 m_linkIsPreload = parsedAttribute.isLinkPreload;
             } else if (match(attributeName, mediaAttr))
-                m_mediaAttribute = attributeValue;
+                m_mediaAttribute = WTFMove(attributeValue);
             else if (match(attributeName, charsetAttr))
-                m_charset = attributeValue;
+                m_charset = WTFMove(attributeValue);
             else if (match(attributeName, crossoriginAttr))
                 m_crossOriginMode = stripLeadingAndTrailingHTMLSpaces(attributeValue);
             else if (match(attributeName, nonceAttr))
-                m_nonceAttribute = attributeValue;
+                m_nonceAttribute = WTFMove(attributeValue);
             else if (match(attributeName, asAttr))
-                m_asAttribute = attributeValue;
+                m_asAttribute = WTFMove(attributeValue);
             else if (match(attributeName, typeAttr))
-                m_typeAttribute = attributeValue;
+                m_typeAttribute = WTFMove(attributeValue);
             else if (match(attributeName, referrerpolicyAttr))
                 m_referrerPolicy = parseReferrerPolicy(attributeValue, ReferrerPolicySource::ReferrerPolicyAttribute).value_or(ReferrerPolicy::EmptyString);
             break;
@@ -291,15 +291,15 @@ private:
             if (match(attributeName, srcAttr))
                 setUrlToLoad(attributeValue);
             else if (match(attributeName, typeAttr))
-                m_inputIsImage = equalLettersIgnoringASCIICase(attributeValue, "image");
+                m_inputIsImage = equalLettersIgnoringASCIICase(attributeValue, "image"_s);
             break;
         case TagId::Meta:
             if (match(attributeName, contentAttr))
-                m_metaContent = attributeValue;
+                m_metaContent = WTFMove(attributeValue);
             else if (match(attributeName, nameAttr))
-                m_metaIsViewport = equalLettersIgnoringASCIICase(attributeValue, "viewport");
+                m_metaIsViewport = equalLettersIgnoringASCIICase(attributeValue, "viewport"_s);
             else if (m_document.settings().disabledAdaptationsMetaTagEnabled() && match(attributeName, nameAttr))
-                m_metaIsDisabledAdaptations = equalLettersIgnoringASCIICase(attributeValue, "disabled-adaptations");
+                m_metaIsDisabledAdaptations = equalLettersIgnoringASCIICase(attributeValue, "disabled-adaptations"_s);
             break;
         case TagId::Base:
         case TagId::Style:
@@ -365,7 +365,7 @@ private:
         if (m_urlToLoad.isEmpty())
             return false;
 
-        if (protocolIs(m_urlToLoad, "data") || protocolIs(m_urlToLoad, "about"))
+        if (protocolIs(m_urlToLoad, "data"_s) || protocolIs(m_urlToLoad, "about"_s))
             return false;
 
         if (m_tagId == TagId::Link && !m_linkIsStyleSheet && !m_linkIsPreload)
@@ -383,20 +383,20 @@ private:
     Document& m_document;
     TagId m_tagId;
     String m_urlToLoad;
-    String m_srcSetAttribute;
-    String m_sizesAttribute;
+    AtomString m_srcSetAttribute;
+    AtomString m_sizesAttribute;
     bool m_mediaMatched { true };
     bool m_typeMatched { true };
     String m_charset;
     String m_crossOriginMode;
     bool m_linkIsStyleSheet;
     bool m_linkIsPreload;
-    String m_mediaAttribute;
-    String m_nonceAttribute;
+    AtomString m_mediaAttribute;
+    AtomString m_nonceAttribute;
     String m_metaContent;
-    String m_asAttribute;
-    String m_typeAttribute;
-    String m_lazyloadAttribute;
+    AtomString m_asAttribute;
+    AtomString m_typeAttribute;
+    AtomString m_lazyloadAttribute;
     bool m_metaIsViewport;
     bool m_metaIsDisabledAdaptations;
     bool m_inputIsImage;
@@ -416,13 +416,13 @@ TokenPreloadScanner::TokenPreloadScanner(const URL& documentURL, float deviceSca
 void TokenPreloadScanner::scan(const HTMLToken& token, Vector<std::unique_ptr<PreloadRequest>>& requests, Document& document)
 {
     switch (token.type()) {
-    case HTMLToken::Character:
+    case HTMLToken::Type::Character:
         if (!m_inStyle)
             return;
         m_cssScanner.scan(token.characters(), requests);
         return;
 
-    case HTMLToken::EndTag: {
+    case HTMLToken::Type::EndTag: {
         TagId tagId = tagIdFor(token.name());
         if (tagId == TagId::Template) {
             if (m_templateCount)
@@ -439,7 +439,7 @@ void TokenPreloadScanner::scan(const HTMLToken& token, Vector<std::unique_ptr<Pr
         return;
     }
 
-    case HTMLToken::StartTag: {
+    case HTMLToken::Type::StartTag: {
         if (m_templateCount)
             return;
         TagId tagId = tagIdFor(token.name());
@@ -478,12 +478,13 @@ void TokenPreloadScanner::scan(const HTMLToken& token, Vector<std::unique_ptr<Pr
 void TokenPreloadScanner::updatePredictedBaseURL(const HTMLToken& token, bool shouldRestrictBaseURLSchemes)
 {
     ASSERT(m_predictedBaseElementURL.isEmpty());
-    auto* hrefAttribute = findAttribute(token.attributes(), hrefAttr->localName().string());
+    static constexpr UChar hrefAsUChar[] = { 'h', 'r', 'e', 'f' };
+    auto* hrefAttribute = findAttribute(token.attributes(), hrefAsUChar);
     if (!hrefAttribute)
         return;
     URL temp { m_documentURL, stripLeadingAndTrailingHTMLSpaces(StringImpl::create8BitIfPossible(hrefAttribute->value)) };
     if (!shouldRestrictBaseURLSchemes || SecurityPolicy::isBaseURLSchemeAllowed(temp))
-        m_predictedBaseElementURL = temp.isolatedCopy();
+        m_predictedBaseElementURL = WTFMove(temp).isolatedCopy();
 }
 
 HTMLPreloadScanner::HTMLPreloadScanner(const HTMLParserOptions& options, const URL& documentURL, float deviceScaleFactor)
@@ -510,7 +511,7 @@ void HTMLPreloadScanner::scan(HTMLResourcePreloader& preloader, Document& docume
     PreloadRequestStream requests;
 
     while (auto token = m_tokenizer.nextToken(m_source)) {
-        if (token->type() == HTMLToken::StartTag)
+        if (token->type() == HTMLToken::Type::StartTag)
             m_tokenizer.updateStateFor(AtomString(token->name()));
         m_scanner.scan(*token, requests, document);
     }
@@ -524,7 +525,7 @@ bool testPreloadScannerViewportSupport(Document* document)
     HTMLParserOptions options(*document);
     HTMLPreloadScanner scanner(options, document->url());
     HTMLResourcePreloader preloader(*document);
-    scanner.appendToEnd(String("<meta name=viewport content='width=400'>"));
+    scanner.appendToEnd(String("<meta name=viewport content='width=400'>"_s));
     scanner.scan(preloader, *document);
     return (document->viewportArguments().width == 400);
 }

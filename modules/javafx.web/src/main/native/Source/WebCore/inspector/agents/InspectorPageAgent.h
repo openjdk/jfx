@@ -36,7 +36,7 @@
 #include "LayoutRect.h"
 #include <JavaScriptCore/InspectorBackendDispatchers.h>
 #include <JavaScriptCore/InspectorFrontendDispatchers.h>
-#include <wtf/HashMap.h>
+#include <wtf/RobinHoodHashMap.h>
 #include <wtf/Seconds.h>
 #include <wtf/text/WTFString.h>
 
@@ -72,6 +72,7 @@ public:
 #if ENABLE(APPLICATION_MANIFEST)
         ApplicationManifestResource,
 #endif
+        EventSourceResource,
         OtherResource,
     };
 
@@ -79,7 +80,7 @@ public:
     static Vector<CachedResource*> cachedResourcesForFrame(Frame*);
     static void resourceContent(Inspector::Protocol::ErrorString&, Frame*, const URL&, String* result, bool* base64Encoded);
     static String sourceMapURLForResource(CachedResource*);
-    static CachedResource* cachedResource(Frame*, const URL&);
+    static CachedResource* cachedResource(const Frame*, const URL&);
     static Inspector::Protocol::Page::ResourceType resourceTypeJSON(ResourceType);
     static ResourceType inspectorResourceType(CachedResource::Type);
     static ResourceType inspectorResourceType(const CachedResource&);
@@ -167,7 +168,7 @@ private:
 
     // FIXME: Make a WeakHashMap and use it for m_frameToIdentifier and m_loaderToIdentifier.
     HashMap<Frame*, String> m_frameToIdentifier;
-    HashMap<String, WeakPtr<Frame>> m_identifierToFrame;
+    MemoryCompactRobinHoodHashMap<String, WeakPtr<Frame>> m_identifierToFrame;
     HashMap<DocumentLoader*, String> m_loaderToIdentifier;
     String m_userAgentOverride;
     String m_emulatedMedia;

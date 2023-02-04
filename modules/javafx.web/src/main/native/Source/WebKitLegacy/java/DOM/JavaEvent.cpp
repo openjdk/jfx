@@ -175,7 +175,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_dom_EventImpl_initEventImpl(JNIEnv* e
     , jboolean cancelableArg)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->initEvent(String(env, eventTypeArg)
+    IMPL->initEvent(AtomString{ String(env, eventTypeArg) }
             , canBubbleArg
             , cancelableArg);
 }

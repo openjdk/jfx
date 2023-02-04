@@ -60,7 +60,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_CSSStyleDeclarationImpl_getCss
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_CSSStyleDeclarationImpl_setCssTextImpl(JNIEnv* env, jclass, jlong peer, jstring value)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->setCssText(String(env, value));
+    IMPL->setCssText(AtomString {String(env, value)});
 }
 
 JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_CSSStyleDeclarationImpl_getLengthImpl(JNIEnv*, jclass, jlong peer)
@@ -81,7 +81,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_CSSStyleDeclarationImpl_getPro
     , jstring propertyName)
 {
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<String>(env, IMPL->getPropertyValue(String(env, propertyName)));
+    return JavaReturn<String>(env, IMPL->getPropertyValue(AtomString {String(env, propertyName)}));
 }
 
 
@@ -89,7 +89,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_CSSStyleDeclarationImpl_getPrope
     , jstring propertyName)
 {
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<DeprecatedCSSOMValue>(env, WTF::getPtr(IMPL->getPropertyCSSValue(String(env, propertyName))));
+    return JavaReturn<DeprecatedCSSOMValue>(env, WTF::getPtr(IMPL->getPropertyCSSValue(AtomString {String(env, propertyName)})));
 }
 
 
@@ -97,7 +97,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_CSSStyleDeclarationImpl_remove
     , jstring propertyName)
 {
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<String>(env, raiseOnDOMError(env, IMPL->removeProperty(String(env, propertyName))));
+    return JavaReturn<String>(env, raiseOnDOMError(env, IMPL->removeProperty(AtomString {String(env, propertyName)})));
 }
 
 
@@ -105,7 +105,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_CSSStyleDeclarationImpl_getPro
     , jstring propertyName)
 {
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<String>(env, IMPL->getPropertyPriority(String(env, propertyName)));
+    return JavaReturn<String>(env, IMPL->getPropertyPriority(AtomString {String(env, propertyName)}));
 }
 
 
@@ -115,9 +115,9 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_dom_CSSStyleDeclarationImpl_setProper
     , jstring priority)
 {
     WebCore::JSMainThreadNullState state;
-    raiseOnDOMError(env, IMPL->setProperty(String(env, propertyName)
-            , String(env, value)
-            , String(env, priority)));
+    raiseOnDOMError(env, IMPL->setProperty(AtomString {String(env, propertyName)}
+            , AtomString{String(env, value)}
+            , AtomString{String(env, priority)}));
 }
 
 
@@ -133,7 +133,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_CSSStyleDeclarationImpl_getPro
     , jstring propertyName)
 {
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<String>(env, IMPL->getPropertyShorthand(String(env, propertyName)));
+    return JavaReturn<String>(env, IMPL->getPropertyShorthand(AtomString{String(env, propertyName)}));
 }
 
 
@@ -141,7 +141,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_CSSStyleDeclarationImpl_isPro
     , jstring propertyName)
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->isPropertyImplicit(String(env, propertyName));
+    return IMPL->isPropertyImplicit(AtomString{String(env, propertyName)});
 }
 
 

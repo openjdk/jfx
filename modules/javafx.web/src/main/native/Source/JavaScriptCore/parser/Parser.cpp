@@ -127,12 +127,13 @@ void Parser<LexerType>::logError(bool shouldPrintToken, Args&&... args)
 }
 
 template <typename LexerType>
-Parser<LexerType>::Parser(VM& vm, const SourceCode& source, JSParserBuiltinMode builtinMode, JSParserStrictMode strictMode, JSParserScriptMode scriptMode, SourceParseMode parseMode, SuperBinding superBinding, ConstructorKind defaultConstructorKindForTopLevelFunction, DerivedContextType derivedContextType, bool isEvalContext, EvalContextType evalContextType, DebuggerParseData* debuggerParseData, bool isInsideOrdinaryFunction)
+Parser<LexerType>::Parser(VM& vm, const SourceCode& source, ImplementationVisibility implementationVisibility, JSParserBuiltinMode builtinMode, JSParserStrictMode strictMode, JSParserScriptMode scriptMode, SourceParseMode parseMode, SuperBinding superBinding, ConstructorKind defaultConstructorKindForTopLevelFunction, DerivedContextType derivedContextType, bool isEvalContext, EvalContextType evalContextType, DebuggerParseData* debuggerParseData, bool isInsideOrdinaryFunction)
     : m_vm(vm)
     , m_source(&source)
     , m_hasStackOverflow(false)
     , m_allowsIn(true)
     , m_statementDepth(0)
+    , m_implementationVisibility(implementationVisibility)
     , m_parsingBuiltin(builtinMode == JSParserBuiltinMode::Builtin)
     , m_parseMode(parseMode)
     , m_scriptMode(scriptMode)
@@ -199,7 +200,7 @@ private:
 struct DepthManager : private SetForScope<int> {
 public:
     DepthManager(int* depth)
-        : SetForScope<int>(*depth, *depth)
+        : SetForScope(*depth, *depth)
     {
     }
 };
@@ -234,7 +235,7 @@ Expected<typename Parser<LexerType>::ParseInnerResult, String> Parser<LexerType>
         scope->lexicalVariables().addPrivateNamesFrom(parentScopePrivateNames);
     }
 
-    SetForScope<FunctionParsePhase> functionParsePhasePoisoner(m_parserState.functionParsePhase, FunctionParsePhase::Body);
+    SetForScope functionParsePhasePoisoner(m_parserState.functionParsePhase, FunctionParsePhase::Body);
 
     FunctionParameters* parameters = nullptr;
     bool isArrowFunctionBodyExpression = parseMode == SourceParseMode::AsyncArrowFunctionBodyMode && !match(OPENBRACE);
@@ -367,7 +368,9 @@ template <class TreeBuilder> bool Parser<LexerType>::isArrowFunctionParameters(T
             SyntaxChecker syntaxChecker(const_cast<VM&>(m_vm), m_lexer.get());
             // We make fake scope, otherwise parseFormalParameters will add variable to current scope that lead to errors
             AutoPopScopeRef fakeScope(this, pushScope());
+
             fakeScope->setSourceParseMode(SourceParseMode::ArrowFunctionMode);
+            resetImplementationVisibilityIfNeeded();
 
             unsigned parametersCount = 0;
             bool isArrowFunctionParameterList = true;
@@ -542,7 +545,10 @@ template <class TreeBuilder> TreeSourceElements Parser<LexerType>::parseGenerato
 
     {
         AutoPopScopeRef generatorBodyScope(this, pushScope());
+
         generatorBodyScope->setSourceParseMode(SourceParseMode::GeneratorBodyMode);
+        resetImplementationVisibilityIfNeeded();
+
         generatorBodyScope->setConstructorKind(ConstructorKind::None);
         generatorBodyScope->setExpectedSuperBinding(m_superBinding);
 
@@ -550,7 +556,7 @@ template <class TreeBuilder> TreeSourceElements Parser<LexerType>::parseGenerato
         failIfFalse(parseSourceElements(generatorFunctionContext, mode), "Cannot parse the body of a generator");
         popScope(generatorBodyScope, TreeBuilder::NeedsFreeVariableInfo);
     }
-    info.body = context.createFunctionMetadata(startLocation, tokenLocation(), startColumn, tokenColumn(), functionKeywordStart, functionNameStart, parametersStart, lexicalScopeFeatures(), ConstructorKind::None, m_superBinding, info.parameterCount, SourceParseMode::GeneratorBodyMode, false);
+    info.body = context.createFunctionMetadata(startLocation, tokenLocation(), startColumn, tokenColumn(), functionKeywordStart, functionNameStart, parametersStart, implementationVisibility(), lexicalScopeFeatures(), ConstructorKind::None, m_superBinding, info.parameterCount, SourceParseMode::GeneratorBodyMode, false);
 
     info.endLine = tokenLine();
     info.endOffset = m_token.m_data.offset;
@@ -583,10 +589,13 @@ template <class TreeBuilder> TreeSourceElements Parser<LexerType>::parseAsyncFun
     info.startLine = tokenLine();
 
     SourceParseMode parseMode = getAsynFunctionBodyParseMode(sourceParseMode());
-    SetForScope<SourceParseMode> innerParseMode(m_parseMode, parseMode);
+    SetForScope innerParseMode(m_parseMode, parseMode);
     {
         AutoPopScopeRef asyncFunctionBodyScope(this, pushScope());
+
         asyncFunctionBodyScope->setSourceParseMode(sourceParseMode());
+        resetImplementationVisibilityIfNeeded();
+
         SyntaxChecker syntaxChecker(const_cast<VM&>(m_vm), m_lexer.get());
         if (isArrowFunctionBodyExpression) {
             if (m_debuggerParseData)
@@ -601,7 +610,7 @@ template <class TreeBuilder> TreeSourceElements Parser<LexerType>::parseAsyncFun
         }
         popScope(asyncFunctionBodyScope, TreeBuilder::NeedsFreeVariableInfo);
     }
-    info.body = context.createFunctionMetadata(startLocation, tokenLocation(), startColumn, tokenColumn(), functionKeywordStart, functionNameStart, parametersStart, lexicalScopeFeatures(), ConstructorKind::None, m_superBinding, info.parameterCount, sourceParseMode(), isArrowFunctionBodyExpression);
+    info.body = context.createFunctionMetadata(startLocation, tokenLocation(), startColumn, tokenColumn(), functionKeywordStart, functionNameStart, parametersStart, implementationVisibility(), lexicalScopeFeatures(), ConstructorKind::None, m_superBinding, info.parameterCount, sourceParseMode(), isArrowFunctionBodyExpression);
 
     info.endLine = tokenLine();
     info.endOffset = isArrowFunctionBodyExpression ? tokenLocation().endOffset : m_token.m_data.offset;
@@ -634,10 +643,13 @@ template <class TreeBuilder> TreeSourceElements Parser<LexerType>::parseAsyncGen
     info.startLine = tokenLine();
 
     SourceParseMode parseMode = SourceParseMode::AsyncGeneratorBodyMode;
-    SetForScope<SourceParseMode> innerParseMode(m_parseMode, parseMode);
+    SetForScope innerParseMode(m_parseMode, parseMode);
     {
         AutoPopScopeRef asyncFunctionBodyScope(this, pushScope());
+
         asyncFunctionBodyScope->setSourceParseMode(sourceParseMode());
+        resetImplementationVisibilityIfNeeded();
+
         SyntaxChecker syntaxChecker(const_cast<VM&>(m_vm), m_lexer.get());
         if (isArrowFunctionBodyExpression) {
             if (m_debuggerParseData)
@@ -652,7 +664,7 @@ template <class TreeBuilder> TreeSourceElements Parser<LexerType>::parseAsyncGen
         }
         popScope(asyncFunctionBodyScope, TreeBuilder::NeedsFreeVariableInfo);
     }
-    info.body = context.createFunctionMetadata(startLocation, tokenLocation(), startColumn, tokenColumn(), functionKeywordStart, functionNameStart, parametersStart, lexicalScopeFeatures(), ConstructorKind::None, m_superBinding, info.parameterCount, parseMode, isArrowFunctionBodyExpression);
+    info.body = context.createFunctionMetadata(startLocation, tokenLocation(), startColumn, tokenColumn(), functionKeywordStart, functionNameStart, parametersStart, implementationVisibility(), lexicalScopeFeatures(), ConstructorKind::None, m_superBinding, info.parameterCount, parseMode, isArrowFunctionBodyExpression);
 
     info.endLine = tokenLine();
     info.endOffset = isArrowFunctionBodyExpression ? tokenLocation().endOffset : m_token.m_data.offset;
@@ -2155,14 +2167,14 @@ template <class TreeBuilder> TreeFunctionBody Parser<LexerType>::parseFunctionBo
     TreeBuilder& context, SyntaxChecker& syntaxChecker, const JSTokenLocation& startLocation, int startColumn, int functionKeywordStart, int functionNameStart, int parametersStart,
     ConstructorKind constructorKind, SuperBinding superBinding, FunctionBodyType bodyType, unsigned parameterCount)
 {
-    SetForScope<bool> overrideParsingClassFieldInitializer(m_parserState.isParsingClassFieldInitializer, bodyType == StandardFunctionBodyBlock ? false : m_parserState.isParsingClassFieldInitializer);
+    SetForScope overrideParsingClassFieldInitializer(m_parserState.isParsingClassFieldInitializer, bodyType == StandardFunctionBodyBlock ? false : m_parserState.isParsingClassFieldInitializer);
     bool isArrowFunctionBodyExpression = bodyType == ArrowFunctionBodyExpression;
     if (!isArrowFunctionBodyExpression) {
         next();
         if (match(CLOSEBRACE)) {
             unsigned endColumn = tokenColumn();
             SuperBinding functionSuperBinding = adjustSuperBindingForBaseConstructor(constructorKind, superBinding, currentScope());
-            return context.createFunctionMetadata(startLocation, tokenLocation(), startColumn, endColumn, functionKeywordStart, functionNameStart, parametersStart, lexicalScopeFeatures(), constructorKind, functionSuperBinding, parameterCount, sourceParseMode(), isArrowFunctionBodyExpression);
+            return context.createFunctionMetadata(startLocation, tokenLocation(), startColumn, endColumn, functionKeywordStart, functionNameStart, parametersStart, implementationVisibility(), lexicalScopeFeatures(), constructorKind, functionSuperBinding, parameterCount, sourceParseMode(), isArrowFunctionBodyExpression);
         }
     }
 
@@ -2181,7 +2193,7 @@ template <class TreeBuilder> TreeFunctionBody Parser<LexerType>::parseFunctionBo
     }
     unsigned endColumn = tokenColumn();
     SuperBinding functionSuperBinding = adjustSuperBindingForBaseConstructor(constructorKind, superBinding, currentScope());
-    return context.createFunctionMetadata(startLocation, tokenLocation(), startColumn, endColumn, functionKeywordStart, functionNameStart, parametersStart, lexicalScopeFeatures(), constructorKind, functionSuperBinding, parameterCount, sourceParseMode(), isArrowFunctionBodyExpression);
+    return context.createFunctionMetadata(startLocation, tokenLocation(), startColumn, endColumn, functionKeywordStart, functionNameStart, parametersStart, implementationVisibility(), lexicalScopeFeatures(), constructorKind, functionSuperBinding, parameterCount, sourceParseMode(), isArrowFunctionBodyExpression);
 }
 
 static const char* stringArticleForFunctionMode(SourceParseMode mode)
@@ -2263,7 +2275,7 @@ template <typename LexerType> template <class TreeBuilder, class FunctionInfoTyp
     auto mode = sourceParseMode();
     RELEASE_ASSERT(!(SourceParseModeSet(SourceParseMode::ProgramMode, SourceParseMode::ModuleAnalyzeMode, SourceParseMode::ModuleEvaluateMode).contains(mode)));
     TreeFormalParameterList parameterList = context.createFormalParameterList();
-    SetForScope<FunctionParsePhase> functionParsePhasePoisoner(m_parserState.functionParsePhase, FunctionParsePhase::Parameters);
+    SetForScope functionParsePhasePoisoner(m_parserState.functionParsePhase, FunctionParsePhase::Parameters);
 
     if (UNLIKELY((SourceParseModeSet(SourceParseMode::ArrowFunctionMode, SourceParseMode::AsyncArrowFunctionMode).contains(mode)))) {
         if (!matchSpecIdentifier() && !match(OPENPAREN)) {
@@ -2372,10 +2384,14 @@ template <class TreeBuilder> bool Parser<LexerType>::parseFunctionInfo(TreeBuild
     const char* isDisallowedAwaitFunctionNameReason = functionNameIsAwait && !canUseIdentifierAwait() ? disallowedIdentifierAwaitReason() : nullptr;
 
     AutoPopScopeRef functionScope(this, pushScope());
+
     functionScope->setSourceParseMode(mode);
+    resetImplementationVisibilityIfNeeded();
+
     functionScope->setExpectedSuperBinding(expectedSuperBinding);
     functionScope->setConstructorKind(constructorKind);
-    SetForScope<FunctionParsePhase> functionParsePhasePoisoner(m_parserState.functionParsePhase, FunctionParsePhase::Body);
+
+    SetForScope functionParsePhasePoisoner(m_parserState.functionParsePhase, FunctionParsePhase::Body);
     int functionNameStart = m_token.m_location.startOffset;
     const Identifier* lastFunctionName = m_parserState.lastFunctionName;
     m_parserState.lastFunctionName = nullptr;
@@ -2422,9 +2438,13 @@ template <class TreeBuilder> bool Parser<LexerType>::parseFunctionInfo(TreeBuild
 
             SuperBinding functionSuperBinding = adjustSuperBindingForBaseConstructor(constructorKind, expectedSuperBinding, cachedInfo->needsSuperBinding, cachedInfo->usesEval, cachedInfo->innerArrowFunctionFeatures);
 
+            // Grab this from the current `Scope` instead of saving it to `SourceProviderCacheItem`
+            // since it's trivial to compute each time.
+            auto implementationVisibility = this->implementationVisibility();
+
             functionInfo.body = context.createFunctionMetadata(
                 startLocation, endLocation, startColumn, bodyEndColumn,
-                functionKeywordStart, functionNameStart, parametersStart,
+                functionKeywordStart, functionNameStart, parametersStart, implementationVisibility,
                 cachedInfo->lexicalScopeFeatures(), constructorKind, functionSuperBinding,
                 cachedInfo->parameterCount,
                 mode, functionBodyType == ArrowFunctionBodyExpression);
@@ -2478,7 +2498,7 @@ template <class TreeBuilder> bool Parser<LexerType>::parseFunctionInfo(TreeBuild
             // Parse formal parameters with [+Yield] parameterization, in order to ban YieldExpressions
             // in ArrowFormalParameters, per ES6 #sec-arrow-function-definitions-static-semantics-early-errors.
             Scope::MaybeParseAsGeneratorForScope parseAsGenerator(functionScope, parentScope->isGenerator());
-            SetForScope<bool> overrideAllowAwait(m_parserState.allowAwait, !parentScope->isAsyncFunction() && !isAsyncFunctionParseMode(mode));
+            SetForScope overrideAllowAwait(m_parserState.allowAwait, !parentScope->isAsyncFunction() && !isAsyncFunctionParseMode(mode));
             parseFunctionParameters(syntaxChecker, functionInfo);
             propagateError();
         }
@@ -2552,7 +2572,7 @@ template <class TreeBuilder> bool Parser<LexerType>::parseFunctionInfo(TreeBuild
         if (loadCachedFunction())
             return true;
         {
-            SetForScope<bool> overrideAllowAwait(m_parserState.allowAwait, !isAsyncFunctionParseMode(mode));
+            SetForScope overrideAllowAwait(m_parserState.allowAwait, !isAsyncFunctionParseMode(mode));
             parseFunctionParameters(syntaxChecker, functionInfo);
             propagateError();
         }
@@ -2614,6 +2634,8 @@ template <class TreeBuilder> bool Parser<LexerType>::parseFunctionInfo(TreeBuild
             innerParseMode = getAsynFunctionBodyParseMode(mode);
 
         generatorBodyScope->setSourceParseMode(innerParseMode);
+        resetImplementationVisibilityIfNeeded();
+
         generatorBodyScope->setConstructorKind(ConstructorKind::None);
         generatorBodyScope->setExpectedSuperBinding(expectedSuperBinding);
 
@@ -2719,7 +2741,7 @@ template <class TreeBuilder> TreeStatement Parser<LexerType>::parseFunctionDecla
         next();
         parseMode = SourceParseMode::GeneratorWrapperFunctionMode;
     }
-    SetForScope<SourceParseMode> innerParseMode(m_parseMode, parseMode);
+    SetForScope innerParseMode(m_parseMode, parseMode);
 
     ParserFunctionInfo<TreeBuilder> functionInfo;
     FunctionNameRequirements requirements = FunctionNameRequirements::Named;
@@ -2779,7 +2801,7 @@ template <class TreeBuilder> TreeStatement Parser<LexerType>::parseAsyncFunction
     SourceParseMode parseMode = SourceParseMode::AsyncFunctionMode;
     if (consume(TIMES))
         parseMode = SourceParseMode::AsyncGeneratorWrapperFunctionMode;
-    SetForScope<SourceParseMode> innerParseMode(m_parseMode, parseMode);
+    SetForScope innerParseMode(m_parseMode, parseMode);
 
     FunctionNameRequirements requirements = FunctionNameRequirements::Named;
     if (declarationDefaultContext == DeclarationDefaultContext::ExportDefault) {
@@ -3110,12 +3132,14 @@ parseMethod:
 
             TreeExpression initializer = 0;
             if (consume(EQUAL)) {
-                SetForScope<bool> overrideParsingClassFieldInitializer(m_parserState.isParsingClassFieldInitializer, true);
+                size_t usedVariablesSize = currentScope()->currentUsedVariablesSize();
+                currentScope()->pushUsedVariableSet();
+                SetForScope overrideParsingClassFieldInitializer(m_parserState.isParsingClassFieldInitializer, true);
                 classScope->setExpectedSuperBinding(SuperBinding::Needed);
                 initializer = parseAssignmentExpression(context);
                 classScope->setExpectedSuperBinding(SuperBinding::NotNeeded);
                 failIfFalse(initializer, "Cannot parse initializer for class field");
-                classScope->markLastUsedVariablesSetAsCaptured();
+                classScope->markLastUsedVariablesSetAsCaptured(usedVariablesSize);
             }
             failIfFalse(autoSemiColon(), "Expected a ';' following a class field");
             auto inferName = initializer ? InferName::Allowed : InferName::Disallowed;
@@ -3130,7 +3154,7 @@ parseMethod:
                 "Cannot declare ", stringArticleForFunctionMode(parseMode), stringForFunctionMode(parseMode), " named 'constructor'");
 
             methodInfo.name = isConstructor ? info.className : ident;
-            SetForScope<SourceParseMode> innerParseMode(m_parseMode, parseMode);
+            SetForScope innerParseMode(m_parseMode, parseMode);
             failIfFalse((parseFunctionInfo(context, FunctionNameRequirements::Unnamed, false, isConstructor ? constructorKind : ConstructorKind::None, SuperBinding::Needed, methodStart, methodInfo, FunctionDefinitionType::Method)), "Cannot parse this method");
 
             TreeExpression method = context.createMethodDefinition(methodLocation, methodInfo);
@@ -4437,7 +4461,7 @@ namedProperty:
         }
 
         if (match(OPENPAREN)) {
-            SetForScope<SourceParseMode> innerParseMode(m_parseMode, parseMode);
+            SetForScope innerParseMode(m_parseMode, parseMode);
             auto method = parsePropertyMethod(context, ident);
             propagateError();
             return context.createProperty(ident, method, PropertyNode::Constant, SuperBinding::Needed, InferName::Allowed, ClassElementTag::No);
@@ -4477,7 +4501,7 @@ namedProperty:
         next();
 
         if (match(OPENPAREN)) {
-            SetForScope<SourceParseMode> innerParseMode(m_parseMode, parseMode);
+            SetForScope innerParseMode(m_parseMode, parseMode);
             const Identifier& ident = m_parserArena.identifierArena().makeNumericIdentifier(const_cast<VM&>(m_vm), propertyName);
             auto method = parsePropertyMethod(context, &ident);
             propagateError();
@@ -4496,7 +4520,7 @@ namedProperty:
         next();
 
         if (match(OPENPAREN)) {
-            SetForScope<SourceParseMode> innerParseMode(m_parseMode, parseMode);
+            SetForScope innerParseMode(m_parseMode, parseMode);
             auto method = parsePropertyMethod(context, ident);
             propagateError();
             return context.createProperty(ident, method, PropertyNode::Constant, SuperBinding::Needed, InferName::Allowed, ClassElementTag::No);
@@ -4516,7 +4540,7 @@ namedProperty:
         handleProductionOrFail(CLOSEBRACKET, "]", "end", "computed property name");
 
         if (match(OPENPAREN)) {
-            SetForScope<SourceParseMode> innerParseMode(m_parseMode, parseMode);
+            SetForScope innerParseMode(m_parseMode, parseMode);
             auto method = parsePropertyMethod(context, &m_vm.propertyNames->nullIdentifier);
             propagateError();
             return context.createProperty(propertyName, method, static_cast<PropertyNode::Type>(PropertyNode::Constant | PropertyNode::Computed), SuperBinding::Needed, ClassElementTag::No);
@@ -4597,19 +4621,19 @@ template <class TreeBuilder> TreeProperty Parser<LexerType>::parseGetterSetter(T
     ParserFunctionInfo<TreeBuilder> info;
     if (type & PropertyNode::Getter) {
         failIfFalse(match(OPENPAREN), "Expected a parameter list for getter definition");
-        SetForScope<SourceParseMode> innerParseMode(m_parseMode, SourceParseMode::GetterMode);
+        SetForScope innerParseMode(m_parseMode, SourceParseMode::GetterMode);
         failIfFalse((parseFunctionInfo(context, FunctionNameRequirements::Unnamed, false, constructorKind, SuperBinding::Needed, getterOrSetterStartOffset, info, FunctionDefinitionType::Method)), "Cannot parse getter definition");
     } else if (type & PropertyNode::Setter) {
         failIfFalse(match(OPENPAREN), "Expected a parameter list for setter definition");
-        SetForScope<SourceParseMode> innerParseMode(m_parseMode, SourceParseMode::SetterMode);
+        SetForScope innerParseMode(m_parseMode, SourceParseMode::SetterMode);
         failIfFalse((parseFunctionInfo(context, FunctionNameRequirements::Unnamed, false, constructorKind, SuperBinding::Needed, getterOrSetterStartOffset, info, FunctionDefinitionType::Method)), "Cannot parse setter definition");
     } else if (type & PropertyNode::PrivateSetter) {
         failIfFalse(match(OPENPAREN), "Expected a parameter list for private setter definition");
-        SetForScope<SourceParseMode> innerParseMode(m_parseMode, SourceParseMode::SetterMode);
+        SetForScope innerParseMode(m_parseMode, SourceParseMode::SetterMode);
         failIfFalse((parseFunctionInfo(context, FunctionNameRequirements::Unnamed, false, constructorKind, SuperBinding::Needed, getterOrSetterStartOffset, info, FunctionDefinitionType::Method)), "Cannot parse private setter definition");
     } else if (type & PropertyNode::PrivateGetter) {
         failIfFalse(match(OPENPAREN), "Expected a parameter list for private getter definition");
-        SetForScope<SourceParseMode> innerParseMode(m_parseMode, SourceParseMode::GetterMode);
+        SetForScope innerParseMode(m_parseMode, SourceParseMode::GetterMode);
         failIfFalse((parseFunctionInfo(context, FunctionNameRequirements::Unnamed, false, constructorKind, SuperBinding::Needed, getterOrSetterStartOffset, info, FunctionDefinitionType::Method)), "Cannot parse private getter definition");
     }
 
@@ -4709,7 +4733,7 @@ template <class TreeBuilder> TreeExpression Parser<LexerType>::parseArrayLiteral
     }
     if (match(CLOSEBRACKET)) {
         JSTokenLocation location(tokenLocation());
-        next(TreeBuilder::DontBuildStrings);
+        next();
         return context.createArray(location, elisions);
     }
 
@@ -4739,7 +4763,7 @@ template <class TreeBuilder> TreeExpression Parser<LexerType>::parseArrayLiteral
 
         if (match(CLOSEBRACKET)) {
             JSTokenLocation location(tokenLocation());
-            next(TreeBuilder::DontBuildStrings);
+            next();
             return context.createArray(location, elisions, elementList);
         }
         if (UNLIKELY(match(DOTDOTDOT))) {
@@ -4790,7 +4814,7 @@ template <class TreeBuilder> TreeExpression Parser<LexerType>::parseFunctionExpr
     SourceParseMode parseMode = SourceParseMode::NormalFunctionMode;
     if (consume(TIMES))
         parseMode = SourceParseMode::GeneratorWrapperFunctionMode;
-    SetForScope<SourceParseMode> setInnerParseMode(m_parseMode, parseMode);
+    SetForScope setInnerParseMode(m_parseMode, parseMode);
     failIfFalse((parseFunctionInfo(context, FunctionNameRequirements::None, false, ConstructorKind::None, SuperBinding::NotNeeded, functionKeywordStart, functionInfo, FunctionDefinitionType::Expression)), "Cannot parse function expression");
     return context.createFunctionExpr(location, functionInfo);
 }
@@ -4806,7 +4830,7 @@ template <class TreeBuilder> TreeExpression Parser<LexerType>::parseAsyncFunctio
 
     if (consume(TIMES))
         parseMode = SourceParseMode::AsyncGeneratorWrapperFunctionMode;
-    SetForScope<SourceParseMode> setInnerParseMode(m_parseMode, parseMode);
+    SetForScope setInnerParseMode(m_parseMode, parseMode);
 
     ParserFunctionInfo<TreeBuilder> functionInfo;
     functionInfo.name = &m_vm.propertyNames->nullIdentifier;
@@ -5007,7 +5031,7 @@ template <class TreeBuilder> TreeExpression Parser<LexerType>::parsePrimaryExpre
         TreeExpression re = context.createRegExp(location, *pattern, *flags, start);
         if (!re) {
             Yarr::ErrorCode errorCode = Yarr::checkSyntax(pattern->string(), flags->string());
-            regexFail(Yarr::errorMessage(errorCode));
+            regexFail(String::fromLatin1(Yarr::errorMessage(errorCode)));
         }
         return re;
     }
@@ -5383,7 +5407,7 @@ template <class TreeBuilder> TreeExpression Parser<LexerType>::parseArrowFunctio
     ParserFunctionInfo<TreeBuilder> info;
     info.name = &m_vm.propertyNames->nullIdentifier;
 
-    SetForScope<SourceParseMode> innerParseMode(m_parseMode, isAsync ? SourceParseMode::AsyncArrowFunctionMode : SourceParseMode::ArrowFunctionMode);
+    SetForScope innerParseMode(m_parseMode, isAsync ? SourceParseMode::AsyncArrowFunctionMode : SourceParseMode::ArrowFunctionMode);
     failIfFalse((parseFunctionInfo(context, FunctionNameRequirements::Unnamed, true, ConstructorKind::None, SuperBinding::NotNeeded, functionKeywordStart, info, FunctionDefinitionType::Expression)), "Cannot parse arrow function expression");
 
     return context.createArrowFunctionExpr(location, info);

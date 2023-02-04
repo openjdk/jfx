@@ -45,9 +45,6 @@ private:
 
     std::unique_ptr<FilterEffectApplier> createSoftwareApplier() const override;
 
-    void platformApplyNEON(unsigned char* srcPixelArrayA, unsigned char* srcPixelArrayB, unsigned char* dstPixelArray,
-                           unsigned colorArrayLength);
-
     WTF::TextStream& externalRepresentation(WTF::TextStream&, FilterRepresentation) const override;
 
     BlendMode m_mode;

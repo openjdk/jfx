@@ -28,6 +28,7 @@
 #include "FilterEffectApplier.h"
 #include "FloatPoint.h"
 #include "IntRect.h"
+#include "PixelBuffer.h"
 #include <JavaScriptCore/Forward.h>
 
 namespace WebCore {
@@ -93,7 +94,7 @@ private:
     struct ApplyParameters {
         IntRect filterRegion;
         FloatSize filterScale;
-        Uint8ClampedArray* pixelArray;
+        PixelBuffer* pixelBuffer;
         PaintingData* paintingData;
         StitchData stitchData;
         int startY;
@@ -110,9 +111,9 @@ private:
     static ColorComponents<uint8_t, 4> toIntBasedColorComponents(const ColorComponents<float, 4>& floatComponents);
     static ColorComponents<uint8_t, 4> calculateTurbulenceValueForPoint(const PaintingData&, StitchData, const FloatPoint&);
 
-    static void applyPlatformGeneric(const IntRect& filterRegion, const FloatSize& filterScale, Uint8ClampedArray& pixelArray, const PaintingData&, StitchData, int startY, int endY);
+    static void applyPlatformGeneric(const IntRect& filterRegion, const FloatSize& filterScale, PixelBuffer&, const PaintingData&, StitchData, int startY, int endY);
     static void applyPlatformWorker(ApplyParameters*);
-    static void applyPlatform(const IntRect& filterRegion, const FloatSize& filterScale, Uint8ClampedArray& pixelArray, PaintingData&, StitchData&);
+    static void applyPlatform(const IntRect& filterRegion, const FloatSize& filterScale, PixelBuffer&, PaintingData&, StitchData&);
 };
 
 } // namespace WebCore

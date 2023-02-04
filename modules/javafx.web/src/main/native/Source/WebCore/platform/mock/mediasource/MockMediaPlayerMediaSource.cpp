@@ -64,8 +64,8 @@ void MockMediaPlayerMediaSource::registerMediaEngine(MediaEngineRegistrar regist
 static const HashSet<String, ASCIICaseInsensitiveHash>& mimeTypeCache()
 {
     static NeverDestroyed cache = HashSet<String, ASCIICaseInsensitiveHash> {
-        "video/mock",
-        "audio/mock",
+        "video/mock"_s,
+        "audio/mock"_s,
     };
     return cache;
 }
@@ -88,7 +88,7 @@ MediaPlayer::SupportsType MockMediaPlayerMediaSource::supportsType(const MediaEn
     if (codecs.isEmpty())
         return MediaPlayer::SupportsType::MayBeSupported;
 
-    if (codecs == "mock" || codecs == "kcom")
+    if (codecs == "mock"_s || codecs == "kcom"_s)
         return MediaPlayer::SupportsType::IsSupported;
 
     return MediaPlayer::SupportsType::MayBeSupported;
@@ -111,9 +111,9 @@ void MockMediaPlayerMediaSource::load(const String&)
     ASSERT_NOT_REACHED();
 }
 
-void MockMediaPlayerMediaSource::load(const URL&, const ContentType&, MediaSourcePrivateClient* source)
+void MockMediaPlayerMediaSource::load(const URL&, const ContentType&, MediaSourcePrivateClient& source)
 {
-    m_mediaSourcePrivate = MockMediaSourcePrivate::create(*this, *source);
+    m_mediaSourcePrivate = MockMediaSourcePrivate::create(*this, source);
 }
 
 void MockMediaPlayerMediaSource::cancelLoad()

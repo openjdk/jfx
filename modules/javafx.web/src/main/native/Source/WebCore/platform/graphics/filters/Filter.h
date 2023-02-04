@@ -23,6 +23,7 @@
 
 #include "FilterEffectVector.h"
 #include "FilterFunction.h"
+#include "FloatPoint3D.h"
 #include "FloatRect.h"
 #include "GraphicsTypes.h"
 #include "ImageBuffer.h"
@@ -36,7 +37,6 @@ class FilterResults;
 
 class Filter : public FilterFunction {
     using FilterFunction::apply;
-    using FilterFunction::outsets;
 
 public:
     enum class ClipOperation { Intersect, Unite };
@@ -54,6 +54,7 @@ public:
     void setClipOperation(ClipOperation clipOperation) { m_clipOperation = clipOperation; }
 
     virtual FloatSize resolvedSize(const FloatSize& size) const { return size; }
+    virtual FloatPoint3D resolvedPoint3D(const FloatPoint3D& point) const { return point; }
 
     FloatPoint scaledByFilterScale(const FloatPoint&) const;
     FloatSize scaledByFilterScale(const FloatSize&) const;
@@ -66,7 +67,6 @@ public:
 
     bool clampFilterRegionIfNeeded();
 
-    virtual IntOutsets outsets() const = 0;
     virtual RefPtr<FilterImage> apply(FilterImage* sourceImage, FilterResults&) = 0;
     WEBCORE_EXPORT RefPtr<FilterImage> apply(ImageBuffer* sourceImage, const FloatRect& sourceImageRect, FilterResults&);
 

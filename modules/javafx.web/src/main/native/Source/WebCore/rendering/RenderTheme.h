@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2005-2022 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -95,6 +95,9 @@ public:
 #if ENABLE(FULLSCREEN_API)
     virtual String extraFullScreenStyleSheet() { return String(); }
 #endif
+#if ENABLE(ATTACHMENT_ELEMENT)
+    virtual String attachmentStyleSheet() const;
+#endif
 #if ENABLE(DATALIST_ELEMENT)
     String dataListStyleSheet() const;
 #endif
@@ -184,7 +187,6 @@ public:
     virtual Seconds caretBlinkInterval() const { return 500_ms; }
 
     // System fonts and colors for CSS.
-    void systemFont(CSSValueID, FontCascadeDescription&) const;
     virtual Color systemColor(CSSValueID, OptionSet<StyleColorOptions>) const;
 
     virtual int minimumMenuListSize(const RenderStyle&) const { return 0; }
@@ -202,23 +204,6 @@ public:
     // Returns the duration of the animation for the progress bar.
     virtual Seconds animationDurationForProgressBar(const RenderProgress&) const;
     virtual IntRect progressBarRectForBounds(const RenderObject&, const IntRect&) const;
-
-#if ENABLE(VIDEO)
-    // Media controls
-    virtual bool supportsClosedCaptioning() const { return false; }
-    virtual bool hasOwnDisabledStateHandlingFor(ControlPart) const { return false; }
-    virtual bool usesMediaControlStatusDisplay() { return false; }
-    virtual bool usesMediaControlVolumeSlider() const { return true; }
-    virtual bool usesVerticalVolumeSlider() const { return true; }
-    virtual double mediaControlsFadeInDuration() { return 0.1; }
-    virtual Seconds mediaControlsFadeOutDuration() { return 300_ms; }
-    virtual String formatMediaControlsTime(float time) const;
-    virtual String formatMediaControlsCurrentTime(float currentTime, float duration) const;
-    virtual String formatMediaControlsRemainingTime(float currentTime, float duration) const;
-
-    // Returns the media volume slider container's offset from the mute button.
-    virtual LayoutPoint volumeSliderOffsetFromMuteButton(const RenderBox&, const LayoutSize&) const;
-#endif
 
     virtual IntSize meterSizeForBounds(const RenderMeter&, const IntRect&) const;
     virtual bool supportsMeter(ControlPart, const HTMLMeterElement&) const;
@@ -261,17 +246,12 @@ public:
     enum class InnerSpinButtonLayout { Vertical, HorizontalUpLeft, HorizontalUpRight };
     virtual InnerSpinButtonLayout innerSpinButtonLayout(const RenderObject&) const { return InnerSpinButtonLayout::Vertical; }
 
-    virtual bool shouldMockBoldSystemFontForAccessibility() const { return false; }
-    virtual void setShouldMockBoldSystemFontForAccessibility(bool) { }
-
 #if USE(SYSTEM_PREVIEW)
     virtual void paintSystemPreviewBadge(Image&, const PaintInfo&, const FloatRect&);
 #endif
 
 protected:
     virtual bool canPaint(const PaintInfo&, const Settings&) const { return true; }
-    virtual FontCascadeDescription& cachedSystemFontDescription(CSSValueID systemFontID) const;
-    virtual void updateCachedSystemFontDescription(CSSValueID systemFontID, FontCascadeDescription&) const = 0;
 
     // The platform selection color.
     virtual Color platformActiveSelectionBackgroundColor(OptionSet<StyleColorOptions>) const;
@@ -351,7 +331,6 @@ protected:
 #endif
 
 #if ENABLE(ATTACHMENT_ELEMENT)
-    virtual void adjustAttachmentStyle(RenderStyle&, const Element*) const;
     virtual bool paintAttachment(const RenderObject&, const PaintInfo&, const IntRect&);
 #endif
 
@@ -391,27 +370,6 @@ protected:
 
     virtual void adjustSearchFieldResultsButtonStyle(RenderStyle&, const Element*) const;
     virtual bool paintSearchFieldResultsButton(const RenderBox&, const PaintInfo&, const IntRect&) { return true; }
-
-    virtual void adjustMediaControlStyle(RenderStyle&, const Element*) const;
-    virtual bool paintMediaFullscreenButton(const RenderObject&, const PaintInfo&, const IntRect&) { return true; }
-    virtual bool paintMediaPlayButton(const RenderObject&, const PaintInfo&, const IntRect&) { return true; }
-    virtual bool paintMediaOverlayPlayButton(const RenderObject&, const PaintInfo&, const IntRect&) { return true; }
-    virtual bool paintMediaMuteButton(const RenderObject&, const PaintInfo&, const IntRect&) { return true; }
-    virtual bool paintMediaSeekBackButton(const RenderObject&, const PaintInfo&, const IntRect&) { return true; }
-    virtual bool paintMediaSeekForwardButton(const RenderObject&, const PaintInfo&, const IntRect&) { return true; }
-    virtual bool paintMediaSliderTrack(const RenderObject&, const PaintInfo&, const IntRect&) { return true; }
-    virtual bool paintMediaSliderThumb(const RenderObject&, const PaintInfo&, const IntRect&) { return true; }
-    virtual bool paintMediaVolumeSliderContainer(const RenderObject&, const PaintInfo&, const IntRect&) { return true; }
-    virtual bool paintMediaVolumeSliderTrack(const RenderObject&, const PaintInfo&, const IntRect&) { return true; }
-    virtual bool paintMediaVolumeSliderThumb(const RenderObject&, const PaintInfo&, const IntRect&) { return true; }
-    virtual bool paintMediaRewindButton(const RenderObject&, const PaintInfo&, const IntRect&) { return true; }
-    virtual bool paintMediaReturnToRealtimeButton(const RenderObject&, const PaintInfo&, const IntRect&) { return true; }
-    virtual bool paintMediaToggleClosedCaptionsButton(const RenderObject&, const PaintInfo&, const IntRect&) { return true; }
-    virtual bool paintMediaControlsBackground(const RenderObject&, const PaintInfo&, const IntRect&) { return true; }
-    virtual bool paintMediaCurrentTime(const RenderObject&, const PaintInfo&, const IntRect&) { return true; }
-    virtual bool paintMediaTimeRemaining(const RenderObject&, const PaintInfo&, const IntRect&) { return true; }
-    virtual bool paintMediaFullScreenVolumeSliderTrack(const RenderObject&, const PaintInfo&, const IntRect&) { return true; }
-    virtual bool paintMediaFullScreenVolumeSliderThumb(const RenderObject&, const PaintInfo&, const IntRect&) { return true; }
 
 public:
     void updateControlStatesForRenderer(const RenderBox&, ControlStates&) const;
@@ -459,9 +417,7 @@ protected:
 
 private:
     ControlPart autoAppearanceForElement(const Element*) const;
-    ControlPart adjustAppearanceForElement(RenderStyle&, const Element*) const;
-
-    void adjustSearchFieldDecorationStyle(RenderStyle&, const Element*) const;
+    ControlPart adjustAppearanceForElement(RenderStyle&, const Element*, ControlPart) const;
 
     mutable HashMap<uint8_t, ColorCache, DefaultHash<uint8_t>, WTF::UnsignedWithZeroKeyHashTraits<uint8_t>> m_colorCacheMap;
 };

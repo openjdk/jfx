@@ -37,6 +37,7 @@
 #include "AudioTrackList.h"
 #include "ContentType.h"
 #include "ContentTypeUtilities.h"
+#include "DeprecatedGlobalSettings.h"
 #include "Event.h"
 #include "EventNames.h"
 #include "HTMLMediaElement.h"
@@ -44,7 +45,6 @@
 #include "MediaSourcePrivate.h"
 #include "MediaSourceRegistry.h"
 #include "Quirks.h"
-#include "RuntimeEnabledFeatures.h"
 #include "Settings.h"
 #include "SourceBuffer.h"
 #include "SourceBufferList.h"
@@ -331,7 +331,7 @@ const MediaTime& MediaSource::currentTimeFudgeFactor()
 
 bool MediaSource::contentTypeShouldGenerateTimestamps(const ContentType& contentType)
 {
-    return contentType.containerType() == "audio/aac" || contentType.containerType() == "audio/mpeg";
+    return contentType.containerType() == "audio/aac"_s || contentType.containerType() == "audio/mpeg"_s;
 }
 
 bool MediaSource::hasBufferedTime(const MediaTime& time)
@@ -641,7 +641,7 @@ static ContentType addVP9FullRangeVideoFlagToContentType(const ContentType& type
     };
 
     for (auto codec : type.codecs()) {
-        if (!codec.startsWith("vp09") || countPeriods(codec) != 7)
+        if (!codec.startsWith("vp09"_s) || countPeriods(codec) != 7)
             continue;
 
         auto rawType = type.raw();
@@ -650,8 +650,7 @@ static ContentType addVP9FullRangeVideoFlagToContentType(const ContentType& type
         if (position == notFound)
             continue;
 
-        rawType.insert(".00", position + codec.length());
-        return ContentType(rawType);
+        return ContentType(makeStringByInserting(rawType, ".00"_s, position + codec.length()));
     }
     return type;
 }
@@ -895,7 +894,7 @@ bool MediaSource::isTypeSupported(ScriptExecutionContext& context, const String&
     if (context.isDocument() && downcast<Document>(context).quirks().needsVP9FullRangeFlagQuirk())
         contentType = addVP9FullRangeVideoFlagToContentType(contentType);
 
-    String codecs = contentType.parameter("codecs");
+    String codecs = contentType.parameter("codecs"_s);
 
     // 2. If type does not contain a valid MIME type string, then return false.
     if (contentType.containerType().isEmpty())
@@ -1051,10 +1050,9 @@ void MediaSource::onReadyStateChange(ReadyState oldState, ReadyState newState)
 
 Vector<PlatformTimeRanges> MediaSource::activeRanges() const
 {
-    Vector<PlatformTimeRanges> activeRanges;
-    for (auto& sourceBuffer : *m_activeSourceBuffers)
-        activeRanges.append(sourceBuffer->bufferedInternal().ranges());
-    return activeRanges;
+    return WTF::map(*m_activeSourceBuffers, [](auto& sourceBuffer) {
+        return sourceBuffer->bufferedInternal().ranges();
+    });
 }
 
 ExceptionOr<Ref<SourceBufferPrivate>> MediaSource::createSourceBufferPrivate(const ContentType& incomingType)
@@ -1066,7 +1064,7 @@ ExceptionOr<Ref<SourceBufferPrivate>> MediaSource::createSourceBufferPrivate(con
         type = addVP9FullRangeVideoFlagToContentType(incomingType);
 
     RefPtr<SourceBufferPrivate> sourceBufferPrivate;
-    switch (m_private->addSourceBuffer(type, RuntimeEnabledFeatures::sharedFeatures().webMParserEnabled(), sourceBufferPrivate)) {
+    switch (m_private->addSourceBuffer(type, DeprecatedGlobalSettings::webMParserEnabled(), sourceBufferPrivate)) {
     case MediaSourcePrivate::AddStatus::Ok:
         return sourceBufferPrivate.releaseNonNull();
     case MediaSourcePrivate::AddStatus::NotSupported:

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -145,7 +145,50 @@ import javafx.util.Pair;
  * default {@link #cellFactoryProperty() cell factory}. A cell factory is used to
  * generate {@link ListCell} instances, which are used to represent an item in the
  * ListView. See the {@link Cell} class documentation for a more complete
- * description of how to write custom Cells.
+ * description of how to write custom Cells.</p>
+ *
+ * <h3>Warning: Nodes should not be inserted directly into the items list</h3>
+ * {@code ListView} allows for the items list to contain elements of any type, including
+ * {@link Node} instances. Putting nodes into
+ * the items list is <strong>strongly discouraged</strong>, as it can
+ * lead to unexpected results.
+ * <p>Important points to note:
+ * <ul>
+ * <li>Avoid inserting {@code Node} instances directly into the items list or its data model.</li>
+ * <li>The recommended approach is to put the relevant information into the items list, and
+ * provide a custom {@link #cellFactoryProperty() cell factory} to create the nodes for a
+ * given cell and update them on demand using the data stored in the item for that cell.</li>
+ * <li>Avoid creating new {@code Node}s in the {@code updateItem} method of a custom {@link #cellFactoryProperty() cell factory}.</li>
+ * </ul>
+ * <p>The following minimal example shows how to create a custom cell factory for {@code ListView} containing {@code Node}s:
+ *
+ * <pre>{@code   ListView<Color> lv = new ListView<>();
+ *  lv.getItems().addAll(Color.RED, Color.GREEN, Color.BLUE);
+ *
+ *  lv.setCellFactory(p -> {
+ *    return new ListCell<>() {
+ *        private final Rectangle rectangle;
+ *        {
+ *            setContentDisplay(ContentDisplay.GRAPHIC_ONLY);
+ *            rectangle = new Rectangle(10, 10);
+ *        }
+ *
+ *        @Override
+ *        protected void updateItem(Color item, boolean empty) {
+ *            super.updateItem(item, empty);
+ *
+ *            if (item == null || empty) {
+ *                setGraphic(null);
+ *            } else {
+ *                rectangle.setFill(item);
+ *                setGraphic(rectangle);
+ *            }
+ *         }
+ *     };
+ * });}</pre>
+ * <p> This example has an anonymous custom {@code ListCell} class in the custom cell factory.
+ * Note that the {@code Rectangle} ({@code Node}) object needs to be created in the instance initialization block
+ * or the constructor of the custom {@code ListCell} class and updated/used in its {@code updateItem} method.
  *
  * <h2>Editing</h2>
  * <p>This control supports inline editing of values, and this section attempts to

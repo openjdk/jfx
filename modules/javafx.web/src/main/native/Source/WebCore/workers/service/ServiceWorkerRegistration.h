@@ -49,6 +49,7 @@ class NavigationPreloadManager;
 class ScriptExecutionContext;
 class ServiceWorker;
 class ServiceWorkerContainer;
+class WebCoreOpaqueRoot;
 
 class ServiceWorkerRegistration final : public RefCounted<ServiceWorkerRegistration>, public Supplementable<ServiceWorkerRegistration>, public EventTargetWithInlineData, public ActiveDOMObject {
     WTF_MAKE_ISO_ALLOCATED_EXPORT(ServiceWorkerRegistration, WEBCORE_EXPORT);
@@ -99,12 +100,8 @@ public:
         String tag;
     };
 
-    void showNotification(ScriptExecutionContext&, const String& title, const NotificationOptions&, DOMPromiseDeferred<void>&&);
-    void getNotifications(ScriptExecutionContext&, const GetNotificationOptions& filter, DOMPromiseDeferred<IDLSequence<IDLInterface<Notification>>>);
-
-    void addNotificationToList(Notification&);
-    void removeNotificationFromList(Notification&);
-    Vector<Ref<Notification>> filteredNotificationList(const String& filteredTag);
+    void showNotification(ScriptExecutionContext&, String&& title, NotificationOptions&&, Ref<DeferredPromise>&&);
+    void getNotifications(const GetNotificationOptions& filter, DOMPromiseDeferred<IDLSequence<IDLInterface<Notification>>>);
 #endif
 
 private:
@@ -128,12 +125,9 @@ private:
     RefPtr<ServiceWorker> m_activeWorker;
 
     std::unique_ptr<NavigationPreloadManager> m_navigationPreload;
-
-#if ENABLE(NOTIFICATION_EVENT)
-    ListHashSet<Notification*> m_notificationList;
-    WeakHashSet<Notification> m_notificationSet;
-#endif
 };
+
+WebCoreOpaqueRoot root(ServiceWorkerRegistration*);
 
 } // namespace WebCore
 

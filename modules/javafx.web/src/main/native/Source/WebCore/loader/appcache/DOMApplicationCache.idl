@@ -29,7 +29,8 @@
     DoNotCheckConstants,
     GenerateIsReachable=ReachableFromDOMWindow,
     InterfaceName=ApplicationCache,
-    Exposed=Window
+    Exposed=Window,
+    EnabledByQuirk=shouldEnableApplicationCache
 ] interface DOMApplicationCache : EventTarget {
     // update status
     const unsigned short UNCACHED = 0;

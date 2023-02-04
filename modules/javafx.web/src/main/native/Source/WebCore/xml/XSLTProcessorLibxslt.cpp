@@ -29,6 +29,7 @@
 #include "CachedResourceLoader.h"
 #include "Document.h"
 #include "Frame.h"
+#include "FrameDestructionObserverInlines.h"
 #include "FrameLoader.h"
 #include "Page.h"
 #include "PageConsoleClient.h"
@@ -83,7 +84,7 @@ void XSLTProcessor::parseErrorFunc(void* userData, xmlError* error)
     }
 
     // xmlError->int2 is the column number of the error or 0 if N/A.
-    console->addMessage(MessageSource::XML, level, error->message, error->file, error->line, error->int2);
+    console->addMessage(MessageSource::XML, level, String::fromLatin1(error->message), String::fromLatin1(error->file), error->line, error->int2);
 }
 
 // FIXME: There seems to be no way to control the ctxt pointer for loading here, thus we have globals.
@@ -102,7 +103,7 @@ static xmlDocPtr docLoaderFunc(const xmlChar* uri,
     case XSLT_LOAD_DOCUMENT: {
         xsltTransformContextPtr context = (xsltTransformContextPtr)ctxt;
         xmlChar* base = xmlNodeGetBase(context->document->doc, context->node);
-        URL url(URL({ }, reinterpret_cast<const char*>(base)), reinterpret_cast<const char*>(uri));
+        URL url(URL({ }, String::fromLatin1(reinterpret_cast<const char*>(base))), String::fromLatin1(reinterpret_cast<const char*>(uri)));
         xmlFree(base);
         ResourceError error;
         ResourceResponse response;
@@ -300,11 +301,11 @@ static inline String resultMIMEType(xmlDocPtr resultDoc, xsltStylesheetPtr sheet
         resultType = (const xmlChar*)"html";
 
     if (xmlStrEqual(resultType, (const xmlChar*)"html"))
-        return "text/html";
+        return "text/html"_s;
     if (xmlStrEqual(resultType, (const xmlChar*)"text"))
-        return "text/plain";
+        return "text/plain"_s;
 
-    return "application/xml";
+    return "application/xml"_s;
 }
 
 bool XSLTProcessor::transformToString(Node& sourceNode, String& mimeType, String& resultString, String& resultEncoding)
@@ -329,7 +330,7 @@ bool XSLTProcessor::transformToString(Node& sourceNode, String& mimeType, String
 #endif
 
     xmlChar* origMethod = sheet->method;
-    if (!origMethod && mimeType == "text/html")
+    if (!origMethod && mimeType == "text/html"_s)
         sheet->method = reinterpret_cast<xmlChar*>(const_cast<char*>("html"));
 
     bool success = false;
@@ -374,7 +375,7 @@ bool XSLTProcessor::transformToString(Node& sourceNode, String& mimeType, String
 
         if ((success = saveResultToString(resultDoc, sheet, resultString))) {
             mimeType = resultMIMEType(resultDoc, sheet);
-            resultEncoding = reinterpret_cast<const char*>(resultDoc->encoding);
+            resultEncoding = String::fromLatin1(reinterpret_cast<const char*>(resultDoc->encoding));
         }
         xmlFreeDoc(resultDoc);
     }

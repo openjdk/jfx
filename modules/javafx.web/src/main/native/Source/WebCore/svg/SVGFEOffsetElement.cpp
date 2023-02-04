@@ -70,16 +70,46 @@ void SVGFEOffsetElement::parseAttribute(const QualifiedName& name, const AtomStr
 
 void SVGFEOffsetElement::svgAttributeChanged(const QualifiedName& attrName)
 {
-    if (PropertyRegistry::isKnownAttribute(attrName)) {
+    if (attrName == SVGNames::inAttr) {
         InstanceInvalidationGuard guard(*this);
-        invalidate();
+        updateSVGRendererForElementChange();
+        return;
+    }
+
+    if (attrName == SVGNames::dxAttr || attrName == SVGNames::dyAttr) {
+        InstanceInvalidationGuard guard(*this);
+        primitiveAttributeChanged(attrName);
         return;
     }
 
     SVGFilterPrimitiveStandardAttributes::svgAttributeChanged(attrName);
 }
 
-RefPtr<FilterEffect> SVGFEOffsetElement::filterEffect(const SVGFilterBuilder&, const FilterEffectVector&) const
+bool SVGFEOffsetElement::setFilterEffectAttribute(FilterEffect& effect, const QualifiedName& attrName)
+{
+    auto& offset = downcast<FEOffset>(effect);
+
+    if (attrName == SVGNames::dxAttr)
+        return offset.setDx(dx());
+    if (attrName == SVGNames::dyAttr)
+        return offset.setDy(dy());
+
+    ASSERT_NOT_REACHED();
+    return false;
+}
+
+bool SVGFEOffsetElement::isIdentity() const
+{
+    return !dx() && !dy();
+}
+
+IntOutsets SVGFEOffsetElement::outsets(const FloatRect& targetBoundingBox, SVGUnitTypes::SVGUnitType primitiveUnits) const
+{
+    auto offset = SVGFilter::calculateResolvedSize({ dx(), dy() }, targetBoundingBox, primitiveUnits);
+    return FEOffset::calculateOutsets(offset);
+}
+
+RefPtr<FilterEffect> SVGFEOffsetElement::createFilterEffect(const FilterEffectVector&, const GraphicsContext&) const
 {
     return FEOffset::create(dx(), dy());
 }

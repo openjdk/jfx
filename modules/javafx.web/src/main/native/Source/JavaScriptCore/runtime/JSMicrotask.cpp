@@ -64,7 +64,7 @@ void JSMicrotask::run(JSGlobalObject* globalObject)
     VM& vm = globalObject->vm();
     auto scope = DECLARE_CATCH_SCOPE(vm);
 
-    auto handlerCallData = getCallData(vm, m_job.get());
+    auto handlerCallData = JSC::getCallData(m_job.get());
     ASSERT(handlerCallData.type != CallData::Type::None);
 
     MarkedArgumentBuffer handlerArguments;
@@ -78,13 +78,13 @@ void JSMicrotask::run(JSGlobalObject* globalObject)
         return;
 
     if (UNLIKELY(globalObject->hasDebugger()))
-        globalObject->debugger()->willRunMicrotask();
+        globalObject->debugger()->willRunMicrotask(globalObject, *this);
 
     profiledCall(globalObject, ProfilingReason::Microtask, m_job.get(), handlerCallData, jsUndefined(), handlerArguments);
     scope.clearException();
 
     if (UNLIKELY(globalObject->hasDebugger()))
-        globalObject->debugger()->didRunMicrotask();
+        globalObject->debugger()->didRunMicrotask(globalObject, *this);
 }
 
 } // namespace JSC

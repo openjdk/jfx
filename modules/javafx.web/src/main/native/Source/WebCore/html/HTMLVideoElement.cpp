@@ -70,7 +70,7 @@ inline HTMLVideoElement::HTMLVideoElement(const QualifiedName& tagName, Document
 {
     ASSERT(hasTagName(videoTag));
     setHasCustomStyleResolveCallbacks();
-    m_defaultPosterURL = document.settings().defaultVideoPosterURL();
+    m_defaultPosterURL = AtomString { document.settings().defaultVideoPosterURL() };
 }
 
 Ref<HTMLVideoElement> HTMLVideoElement::create(const QualifiedName& tagName, Document& document, bool createdByParser)
@@ -146,17 +146,13 @@ void HTMLVideoElement::parseAttribute(const QualifiedName& name, const AtomStrin
             }
         }
     }
-#if ENABLE(WIRELESS_PLAYBACK_TARGET)
-    else if (name == webkitwirelessvideoplaybackdisabledAttr)
-        mediaSession().setWirelessVideoPlaybackDisabled(true);
-#endif
     else {
         HTMLMediaElement::parseAttribute(name, value);
 
 #if PLATFORM(IOS_FAMILY) && ENABLE(WIRELESS_PLAYBACK_TARGET)
         if (name == webkitairplayAttr) {
             bool disabled = false;
-            if (equalLettersIgnoringASCIICase(attributeWithoutSynchronization(HTMLNames::webkitairplayAttr), "deny"))
+            if (equalLettersIgnoringASCIICase(attributeWithoutSynchronization(HTMLNames::webkitairplayAttr), "deny"_s))
                 disabled = true;
             mediaSession().setWirelessVideoPlaybackDisabled(disabled);
         }
@@ -271,7 +267,7 @@ bool HTMLVideoElement::shouldDisplayPosterImage() const
 
 void HTMLVideoElement::mediaPlayerFirstVideoFrameAvailable()
 {
-    INFO_LOG(LOGIDENTIFIER, "m_showPoster = ", showPosterFlag());
+    ALWAYS_LOG(LOGIDENTIFIER, "m_showPoster = ", showPosterFlag());
 
     if (showPosterFlag())
         return;
@@ -297,8 +293,12 @@ std::optional<DestinationColorSpace> HTMLVideoElement::colorSpace() const
 RefPtr<ImageBuffer> HTMLVideoElement::createBufferForPainting(const FloatSize& size, RenderingMode renderingMode, const DestinationColorSpace& colorSpace, PixelFormat pixelFormat) const
 {
     auto* hostWindow = document().view() && document().view()->root() ? document().view()->root()->hostWindow() : nullptr;
-    auto shouldUseDisplayList = document().settings().displayListDrawingEnabled() ? ShouldUseDisplayList::Yes : ShouldUseDisplayList::No;
-    return ImageBuffer::create(size, renderingMode, shouldUseDisplayList, RenderingPurpose::MediaPainting, 1, colorSpace, pixelFormat, hostWindow);
+
+    auto bufferOptions = bufferOptionsForRendingMode(renderingMode);
+    if (document().settings().displayListDrawingEnabled())
+        bufferOptions.add(ImageBufferOptions::UseDisplayList);
+
+    return ImageBuffer::create(size, RenderingPurpose::MediaPainting, 1, colorSpace, pixelFormat, bufferOptions, { hostWindow });
 }
 
 void HTMLVideoElement::paintCurrentFrameInContext(GraphicsContext& context, const FloatRect& destRect)
@@ -307,7 +307,10 @@ void HTMLVideoElement::paintCurrentFrameInContext(GraphicsContext& context, cons
     if (!player)
         return;
 
-    player->setVisibleForCanvas(true); // Make player visible or it won't draw.
+    if (!player->isVisibleForCanvas()) {
+        player->setVisibleForCanvas(true); // Make player visible or it won't draw.
+        visibilityStateChanged();
+    }
     context.paintFrameForMedia(*player, destRect);
 }
 
@@ -317,6 +320,14 @@ bool HTMLVideoElement::hasAvailableVideoFrame() const
         return false;
 
     return player()->hasVideo() && player()->hasAvailableVideoFrame();
+}
+
+bool HTMLVideoElement::shouldGetNativeImageForCanvasDrawing() const
+{
+    if (!player())
+        return false;
+
+    return player()->shouldGetNativeImageForCanvasDrawing();
 }
 
 RefPtr<NativeImage> HTMLVideoElement::nativeImageForCurrentTime()

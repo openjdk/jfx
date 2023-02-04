@@ -45,6 +45,7 @@
 #include <wtf/IsoMallocInlines.h>
 #include <wtf/MainThread.h>
 #include <wtf/NeverDestroyed.h>
+#include <wtf/RobinHoodHashSet.h>
 
 namespace WebCore {
 
@@ -90,7 +91,7 @@ ExceptionOr<void> MutationObserver::observe(Node& node, const Init& init)
     if (init.characterDataOldValue.value_or(false))
         options.add(OptionType::CharacterDataOldValue);
 
-    HashSet<AtomString> attributeFilter;
+    MemoryCompactLookupOnlyRobinHoodHashSet<AtomString> attributeFilter;
     if (init.attributeFilter) {
         for (auto& value : init.attributeFilter.value())
             attributeFilter.add(value);
@@ -192,7 +193,7 @@ void MutationObserver::deliver()
     // Calling takeTransientRegistrations() can modify m_registrations, so it's necessary
     // to make a copy of the transient registrations before operating on them.
     Vector<MutationObserverRegistration*, 1> transientRegistrations;
-    Vector<std::unique_ptr<HashSet<GCReachableRef<Node>>>, 1> nodesToKeepAlive;
+    Vector<HashSet<GCReachableRef<Node>>, 1> nodesToKeepAlive;
     HashSet<GCReachableRef<Node>> pendingTargets;
     pendingTargets.swap(m_pendingTargets);
     for (auto& registration : m_registrations) {
