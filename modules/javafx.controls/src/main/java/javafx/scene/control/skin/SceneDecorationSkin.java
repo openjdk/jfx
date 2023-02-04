@@ -99,6 +99,8 @@ public class SceneDecorationSkin extends SkinBase<SceneDecoration> {
         lh.addEventHandler(stage, WindowEvent.WINDOW_SHOWN,
                 e -> pseudoClassStateChanged(PSEUDO_CLASS_SOLID, stage.getStyle() != StageStyle.TRANSPARENT));
 
+        lh.addEventHandler(stage, WindowEvent.WINDOW_SHOWN, e-> updateShadow());
+
         lh.addChangeListener(this::updateShadow, control.shadowInsetsProperty());
     }
 

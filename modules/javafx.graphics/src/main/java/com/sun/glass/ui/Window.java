@@ -197,6 +197,7 @@ public abstract class Window {
     private final Window owner;
     private final int styleMask;
     private final boolean isDecorated;
+    private final boolean isPopup;
 
     protected View view = null;
     protected Screen screen = null;
