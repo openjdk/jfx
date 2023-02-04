@@ -25,18 +25,20 @@
 
 #pragma once
 
-#include "GraphicsContextGL.h"
 #include "Widget.h"
 
 namespace WebCore {
 
 class Cursor;
 class DestinationColorSpace;
+class GraphicsContextGL;
 class ImageBuffer;
 
 enum class PixelFormat : uint8_t;
 enum class RenderingMode : bool;
 enum class RenderingPurpose : uint8_t;
+
+struct GraphicsContextGLAttributes;
 
 using FramesPerSecond = unsigned;
 
@@ -64,7 +66,7 @@ public:
     virtual IntPoint accessibilityScreenToRootView(const IntPoint&) const = 0;
     virtual IntRect rootViewToAccessibilityScreen(const IntRect&) const = 0;
 
-    virtual RefPtr<ImageBuffer> createImageBuffer(const FloatSize&, RenderingMode, RenderingPurpose, float resolutionScale, const DestinationColorSpace&, PixelFormat) const = 0;
+    virtual RefPtr<ImageBuffer> createImageBuffer(const FloatSize&, RenderingMode, RenderingPurpose, float resolutionScale, const DestinationColorSpace&, PixelFormat, bool avoidBackendSizeCheck = false) const = 0;
 
 #if ENABLE(WEBGL)
     virtual RefPtr<GraphicsContextGL> createGraphicsContextGL(const GraphicsContextGLAttributes&) const = 0;

@@ -29,6 +29,8 @@
 #include "JSCustomElementInterface.h"
 
 #include "DOMWrapperWorld.h"
+#include "ElementRareData.h"
+#include "EventLoop.h"
 #include "HTMLUnknownElement.h"
 #include "JSDOMBinding.h"
 #include "JSDOMConvertNullable.h"
@@ -56,11 +58,11 @@ JSCustomElementInterface::JSCustomElementInterface(const QualifiedName& name, JS
 
 JSCustomElementInterface::~JSCustomElementInterface() = default;
 
-static RefPtr<Element> constructCustomElementSynchronously(Document&, VM&, JSGlobalObject&, JSObject* constructor, const AtomString& localName);
+static RefPtr<Element> constructCustomElementSynchronously(Document&, VM&, JSGlobalObject&, JSObject* constructor, const AtomString& localName, ParserConstructElementWithEmptyStack);
 
-Ref<Element> JSCustomElementInterface::constructElementWithFallback(Document& document, const AtomString& localName)
+Ref<Element> JSCustomElementInterface::constructElementWithFallback(Document& document, const AtomString& localName, ParserConstructElementWithEmptyStack parserConstructElementWithEmptyStack)
 {
-    if (auto element = tryToConstructCustomElement(document, localName))
+    if (auto element = tryToConstructCustomElement(document, localName, parserConstructElementWithEmptyStack))
         return element.releaseNonNull();
 
     auto element = HTMLUnknownElement::create(QualifiedName(nullAtom(), localName, HTMLNames::xhtmlNamespaceURI), document);
@@ -72,7 +74,7 @@ Ref<Element> JSCustomElementInterface::constructElementWithFallback(Document& do
 
 Ref<Element> JSCustomElementInterface::constructElementWithFallback(Document& document, const QualifiedName& name)
 {
-    if (auto element = tryToConstructCustomElement(document, name.localName())) {
+    if (auto element = tryToConstructCustomElement(document, name.localName(), ParserConstructElementWithEmptyStack::No)) {
         if (!name.prefix().isNull())
             element->setPrefix(name.prefix());
         return element.releaseNonNull();
@@ -85,7 +87,7 @@ Ref<Element> JSCustomElementInterface::constructElementWithFallback(Document& do
     return element;
 }
 
-RefPtr<Element> JSCustomElementInterface::tryToConstructCustomElement(Document& document, const AtomString& localName)
+RefPtr<Element> JSCustomElementInterface::tryToConstructCustomElement(Document& document, const AtomString& localName, ParserConstructElementWithEmptyStack parserConstructElementWithEmptyStack)
 {
     if (!canInvokeCallback())
         return nullptr;
@@ -104,7 +106,7 @@ RefPtr<Element> JSCustomElementInterface::tryToConstructCustomElement(Document& 
     ASSERT(lexicalGlobalObject);
     if (!lexicalGlobalObject)
         return nullptr;
-    auto element = constructCustomElementSynchronously(document, vm, *lexicalGlobalObject, m_constructor.get(), localName);
+    auto element = constructCustomElementSynchronously(document, vm, *lexicalGlobalObject, m_constructor.get(), localName, parserConstructElementWithEmptyStack);
     EXCEPTION_ASSERT(!!scope.exception() == !element);
     if (!element) {
         auto* exception = scope.exception();
@@ -118,10 +120,10 @@ RefPtr<Element> JSCustomElementInterface::tryToConstructCustomElement(Document& 
 
 // https://dom.spec.whatwg.org/#concept-create-element
 // 6. 1. If the synchronous custom elements flag is set
-static RefPtr<Element> constructCustomElementSynchronously(Document& document, VM& vm, JSGlobalObject& lexicalGlobalObject, JSObject* constructor, const AtomString& localName)
+static RefPtr<Element> constructCustomElementSynchronously(Document& document, VM& vm, JSGlobalObject& lexicalGlobalObject, JSObject* constructor, const AtomString& localName, ParserConstructElementWithEmptyStack parserConstructElementWithEmptyStack)
 {
     auto scope = DECLARE_THROW_SCOPE(vm);
-    auto constructData = getConstructData(vm, constructor);
+    auto constructData = JSC::getConstructData(constructor);
     if (constructData.type == CallData::Type::None) {
         ASSERT_NOT_REACHED();
         return nullptr;
@@ -133,6 +135,9 @@ static RefPtr<Element> constructCustomElementSynchronously(Document& document, V
     JSValue newElement = construct(&lexicalGlobalObject, constructor, constructData, args);
     InspectorInstrumentation::didCallFunction(&document);
     RETURN_IF_EXCEPTION(scope, nullptr);
+
+    if (parserConstructElementWithEmptyStack == ParserConstructElementWithEmptyStack::Yes)
+        document.eventLoop().performMicrotaskCheckpoint();
 
     ASSERT(!newElement.isEmpty());
     HTMLElement* wrappedElement = JSHTMLElement::toWrapped(vm, newElement);
@@ -169,7 +174,7 @@ static RefPtr<Element> constructCustomElementSynchronously(Document& document, V
 // https://html.spec.whatwg.org/multipage/custom-elements.html#concept-upgrade-an-element
 void JSCustomElementInterface::upgradeElement(Element& element)
 {
-    ASSERT(element.tagQName() == name());
+    ASSERT(element.tagQName().matches(name()));
 
     if (element.isDefinedCustomElement() || element.isFailedCustomElement())
         return; // If element's custom element state is not "undefined" or "uncustomized", then return.
@@ -194,7 +199,7 @@ void JSCustomElementInterface::upgradeElement(Element& element)
         return;
     JSGlobalObject* lexicalGlobalObject = globalObject;
 
-    auto constructData = getConstructData(vm, m_constructor.get());
+    auto constructData = JSC::getConstructData(m_constructor.get());
     if (constructData.type == CallData::Type::None) {
         ASSERT_NOT_REACHED();
         return;
@@ -210,7 +215,7 @@ void JSCustomElementInterface::upgradeElement(Element& element)
 
     if (m_isShadowDisabled && element.shadowRoot()) {
         element.clearReactionQueueFromFailedCustomElement();
-        reportException(lexicalGlobalObject, createDOMException(lexicalGlobalObject, NotSupportedError, "Failed to upgrade an element with shadow root: the custom element definition disallows shadow roots."));
+        reportException(lexicalGlobalObject, createDOMException(lexicalGlobalObject, NotSupportedError, "Failed to upgrade an element with shadow root: the custom element definition disallows shadow roots."_s));
         return;
     }
 
@@ -231,7 +236,7 @@ void JSCustomElementInterface::upgradeElement(Element& element)
     Element* wrappedElement = JSElement::toWrapped(vm, returnedElement);
     if (!wrappedElement || wrappedElement != &element) {
         element.clearReactionQueueFromFailedCustomElement();
-        reportException(lexicalGlobalObject, createDOMException(lexicalGlobalObject, TypeError, "Custom element constructor returned a wrong element"));
+        reportException(lexicalGlobalObject, createDOMException(lexicalGlobalObject, TypeError, "Custom element constructor returned a wrong element"_s));
         return;
     }
     element.setIsDefinedCustomElement(*this);
@@ -257,7 +262,7 @@ void JSCustomElementInterface::invokeCallback(Element& element, JSObject* callba
 
     JSObject* jsElement = asObject(toJS(lexicalGlobalObject, globalObject, element));
 
-    auto callData = getCallData(vm, callback);
+    auto callData = JSC::getCallData(callback);
     ASSERT(callData.type != CallData::Type::None);
 
     MarkedArgumentBuffer args;
@@ -308,12 +313,12 @@ void JSCustomElementInterface::invokeAdoptedCallback(Element& element, Document&
     });
 }
 
-void JSCustomElementInterface::setAttributeChangedCallback(JSC::JSObject* callback, const Vector<String>& observedAttributes)
+void JSCustomElementInterface::setAttributeChangedCallback(JSC::JSObject* callback, Vector<AtomString>&& observedAttributes)
 {
     m_attributeChangedCallback = callback;
     m_observedAttributes.clear();
-    for (auto& name : observedAttributes)
-        m_observedAttributes.add(name);
+    for (auto&& name : WTFMove(observedAttributes))
+        m_observedAttributes.add(WTFMove(name));
 }
 
 void JSCustomElementInterface::invokeAttributeChangedCallback(Element& element, const QualifiedName& attributeName, const AtomString& oldValue, const AtomString& newValue)

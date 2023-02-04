@@ -33,7 +33,7 @@
 
 namespace JSC {
 
-const ClassInfo MapConstructor::s_info = { "Function", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(MapConstructor) };
+const ClassInfo MapConstructor::s_info = { "Function"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(MapConstructor) };
 
 void MapConstructor::finishCreation(VM& vm, MapPrototype* mapPrototype, GetterSetter* speciesSymbol)
 {
@@ -71,7 +71,7 @@ JSC_DEFINE_HOST_FUNCTION(constructMap, (JSGlobalObject* globalObject, CallFrame*
         return JSValue::encode(JSMap::create(vm, mapStructure));
 
     bool canPerformFastSet = JSMap::isSetFastAndNonObservable(mapStructure);
-    if (auto* iterableMap = jsDynamicCast<JSMap*>(vm, iterable)) {
+    if (auto* iterableMap = jsDynamicCast<JSMap*>(iterable)) {
         if (canPerformFastSet && iterableMap->isIteratorProtocolFastAndNonObservable())
             RELEASE_AND_RETURN(scope, JSValue::encode(iterableMap->clone(globalObject, vm, mapStructure)));
     }
@@ -84,7 +84,7 @@ JSC_DEFINE_HOST_FUNCTION(constructMap, (JSGlobalObject* globalObject, CallFrame*
         adderFunction = map->JSObject::get(globalObject, vm.propertyNames->set);
         RETURN_IF_EXCEPTION(scope, { });
 
-        adderFunctionCallData = getCallData(vm, adderFunction);
+        adderFunctionCallData = JSC::getCallData(adderFunction);
         if (UNLIKELY(adderFunctionCallData.type == CallData::Type::None))
             return throwVMTypeError(globalObject, scope, "'set' property of a Map should be callable."_s);
     }
@@ -121,9 +121,9 @@ JSC_DEFINE_HOST_FUNCTION(constructMap, (JSGlobalObject* globalObject, CallFrame*
     return JSValue::encode(map);
 }
 
-JSC_DEFINE_HOST_FUNCTION(mapPrivateFuncMapBucketHead, (JSGlobalObject* globalObject, CallFrame* callFrame))
+JSC_DEFINE_HOST_FUNCTION(mapPrivateFuncMapBucketHead, (JSGlobalObject*, CallFrame* callFrame))
 {
-    ASSERT_UNUSED(globalObject, jsDynamicCast<JSMap*>(globalObject->vm(), callFrame->argument(0)));
+    ASSERT(jsDynamicCast<JSMap*>(callFrame->argument(0)));
     JSMap* map = jsCast<JSMap*>(callFrame->uncheckedArgument(0));
     auto* head = map->head();
     ASSERT(head);
@@ -132,7 +132,7 @@ JSC_DEFINE_HOST_FUNCTION(mapPrivateFuncMapBucketHead, (JSGlobalObject* globalObj
 
 JSC_DEFINE_HOST_FUNCTION(mapPrivateFuncMapBucketNext, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
-    ASSERT(jsDynamicCast<JSMap::BucketType*>(globalObject->vm(), callFrame->argument(0)));
+    ASSERT(jsDynamicCast<JSMap::BucketType*>(callFrame->argument(0)));
     auto* bucket = jsCast<JSMap::BucketType*>(callFrame->uncheckedArgument(0));
     ASSERT(bucket);
     bucket = bucket->next();
@@ -144,17 +144,17 @@ JSC_DEFINE_HOST_FUNCTION(mapPrivateFuncMapBucketNext, (JSGlobalObject* globalObj
     return JSValue::encode(globalObject->vm().sentinelMapBucket());
 }
 
-JSC_DEFINE_HOST_FUNCTION(mapPrivateFuncMapBucketKey, (JSGlobalObject* globalObject, CallFrame* callFrame))
+JSC_DEFINE_HOST_FUNCTION(mapPrivateFuncMapBucketKey, (JSGlobalObject*, CallFrame* callFrame))
 {
-    ASSERT_UNUSED(globalObject, jsDynamicCast<JSMap::BucketType*>(globalObject->vm(), callFrame->argument(0)));
+    ASSERT(jsDynamicCast<JSMap::BucketType*>(callFrame->argument(0)));
     auto* bucket = jsCast<JSMap::BucketType*>(callFrame->uncheckedArgument(0));
     ASSERT(bucket);
     return JSValue::encode(bucket->key());
 }
 
-JSC_DEFINE_HOST_FUNCTION(mapPrivateFuncMapBucketValue, (JSGlobalObject* globalObject, CallFrame* callFrame))
+JSC_DEFINE_HOST_FUNCTION(mapPrivateFuncMapBucketValue, (JSGlobalObject*, CallFrame* callFrame))
 {
-    ASSERT_UNUSED(globalObject, jsDynamicCast<JSMap::BucketType*>(globalObject->vm(), callFrame->argument(0)));
+    ASSERT(jsDynamicCast<JSMap::BucketType*>(callFrame->argument(0)));
     auto* bucket = jsCast<JSMap::BucketType*>(callFrame->uncheckedArgument(0));
     ASSERT(bucket);
     return JSValue::encode(bucket->value());

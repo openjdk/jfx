@@ -57,19 +57,9 @@ class MacOSLayoutTraits extends LayoutTraits
         return this.isFullscreen;
     }
 
-    knobStyleForScrubber()
-    {
-        return Slider.KnobStyle.Bar;
-    }
-
     supportsDurationTimeLabel()
     {
         return true;
-    }
-
-    playPauseButtonScaleFactor()
-    {
-        return this.isFullscreen ? 2 : 1;
     }
 
     controlsDependOnPageScaleFactor()
@@ -77,11 +67,31 @@ class MacOSLayoutTraits extends LayoutTraits
         return false;
     }
 
+    skipDuration()
+    {
+        return 15;
+    }
+
     promoteSubMenusWhenShowingMediaControlsContextMenu()
     {
         return true;
     }
-    
+
+    supportsTouches()
+    {
+        return false;
+    }
+
+    supportsAirPlay()
+    {
+        return true;
+    }
+
+    supportsPiP()
+    {
+        return true;
+    }
+
     toString()
     {
         const mode = this.isFullscreen ? "Fullscreen" : "Inline";

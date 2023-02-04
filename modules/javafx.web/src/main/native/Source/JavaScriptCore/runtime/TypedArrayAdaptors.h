@@ -46,10 +46,13 @@ struct IntegralTypedArrayAdaptor {
     static constexpr TypeArg maxValue = std::numeric_limits<TypeArg>::max();
     static constexpr bool canConvertToJSQuickly = true;
     static constexpr TypedArrayContentType contentType = JSC::contentType(typeValue);
+    static constexpr bool isInteger = true;
+    static constexpr bool isFloat = false;
+    static constexpr bool isBigInt = false;
 
     static JSValue toJSValue(JSGlobalObject*, Type value)
     {
-        static_assert(!std::is_floating_point<Type>::value, "");
+        static_assert(!std::is_floating_point<Type>::value);
         return jsNumber(value);
     }
 
@@ -69,6 +72,11 @@ struct IntegralTypedArrayAdaptor {
         if (static_cast<double>(result) != value)
             result = toInt32(value);
         return static_cast<Type>(result);
+    }
+
+    static constexpr Type toNativeFromUndefined()
+    {
+        return 0;
     }
 
     template<typename OtherAdaptor>
@@ -119,6 +127,9 @@ struct FloatTypedArrayAdaptor {
     static constexpr TypeArg maxValue = std::numeric_limits<TypeArg>::max();
     static constexpr bool canConvertToJSQuickly = true;
     static constexpr TypedArrayContentType contentType = JSC::contentType(typeValue);
+    static constexpr bool isInteger = false;
+    static constexpr bool isFloat = true;
+    static constexpr bool isBigInt = false;
 
     static JSValue toJSValue(JSGlobalObject*, Type value)
     {
@@ -138,6 +149,11 @@ struct FloatTypedArrayAdaptor {
     static Type toNativeFromDouble(double value)
     {
         return static_cast<Type>(value);
+    }
+
+    static Type toNativeFromUndefined()
+    {
+        return PNaN;
     }
 
     template<typename OtherAdaptor>
@@ -180,6 +196,9 @@ struct BigIntTypedArrayAdaptor {
     static constexpr TypeArg maxValue = std::numeric_limits<TypeArg>::max();
     static constexpr bool canConvertToJSQuickly = false;
     static constexpr TypedArrayContentType contentType = JSC::contentType(typeValue);
+    static constexpr bool isInteger = true;
+    static constexpr bool isFloat = false;
+    static constexpr bool isBigInt = true;
 
     static JSValue toJSValue(JSGlobalObject* globalObject, Type value)
     {
@@ -200,6 +219,12 @@ struct BigIntTypedArrayAdaptor {
     static Type toNativeFromDouble(double value)
     {
         return static_cast<Type>(value);
+    }
+
+    static Type toNativeFromUndefined()
+    {
+        // This function is a stub since undefined->BigInt conversion throws an error.
+        return 0;
     }
 
     template<typename OtherAdaptor>
@@ -242,6 +267,9 @@ struct Uint8ClampedAdaptor {
     static constexpr uint8_t maxValue = std::numeric_limits<uint8_t>::max();
     static constexpr bool canConvertToJSQuickly = true;
     static constexpr TypedArrayContentType contentType = JSC::contentType(typeValue);
+    static constexpr bool isInteger = true;
+    static constexpr bool isFloat = false;
+    static constexpr bool isBigInt = false;
 
     static JSValue toJSValue(JSGlobalObject*, uint8_t value)
     {
@@ -265,6 +293,11 @@ struct Uint8ClampedAdaptor {
         if (value > 255)
             return 255;
         return static_cast<uint8_t>(lrint(value));
+    }
+
+    static constexpr Type toNativeFromUndefined()
+    {
+        return 0;
     }
 
     template<typename OtherAdaptor>

@@ -21,6 +21,7 @@
 #include "config.h"
 #include "SVGFEConvolveMatrixElement.h"
 
+#include "CommonAtomStrings.h"
 #include "FEConvolveMatrix.h"
 #include "SVGNames.h"
 #include "SVGParserUtilities.h"
@@ -122,9 +123,9 @@ void SVGFEConvolveMatrixElement::parseAttribute(const QualifiedName& name, const
     }
 
     if (name == SVGNames::preserveAlphaAttr) {
-        if (value == "true")
+        if (value == trueAtom())
             m_preserveAlpha->setBaseValInternal(true);
-        else if (value == "false")
+        else if (value == falseAtom())
             m_preserveAlpha->setBaseValInternal(false);
         else
             document().accessSVGExtensions().reportWarning("feConvolveMatrix: problem parsing preserveAlphaAttr=\"" + value  + "\". Filtered element will not be displayed.");
@@ -134,23 +135,23 @@ void SVGFEConvolveMatrixElement::parseAttribute(const QualifiedName& name, const
     SVGFilterPrimitiveStandardAttributes::parseAttribute(name, value);
 }
 
-bool SVGFEConvolveMatrixElement::setFilterEffectAttribute(FilterEffect* effect, const QualifiedName& attrName)
+bool SVGFEConvolveMatrixElement::setFilterEffectAttribute(FilterEffect& effect, const QualifiedName& attrName)
 {
-    FEConvolveMatrix* convolveMatrix = static_cast<FEConvolveMatrix*>(effect);
+    auto& feConvolveMatrix = downcast<FEConvolveMatrix>(effect);
     if (attrName == SVGNames::edgeModeAttr)
-        return convolveMatrix->setEdgeMode(edgeMode());
+        return feConvolveMatrix.setEdgeMode(edgeMode());
     if (attrName == SVGNames::divisorAttr)
-        return convolveMatrix->setDivisor(divisor());
+        return feConvolveMatrix.setDivisor(divisor());
     if (attrName == SVGNames::biasAttr)
-        return convolveMatrix->setBias(bias());
+        return feConvolveMatrix.setBias(bias());
     if (attrName == SVGNames::targetXAttr)
-        return convolveMatrix->setTargetOffset(IntPoint(targetX(), targetY()));
+        return feConvolveMatrix.setTargetOffset(IntPoint(targetX(), targetY()));
     if (attrName == SVGNames::targetYAttr)
-        return convolveMatrix->setTargetOffset(IntPoint(targetX(), targetY()));
+        return feConvolveMatrix.setTargetOffset(IntPoint(targetX(), targetY()));
     if (attrName == SVGNames::kernelUnitLengthAttr)
-        return convolveMatrix->setKernelUnitLength(FloatPoint(kernelUnitLengthX(), kernelUnitLengthY()));
+        return feConvolveMatrix.setKernelUnitLength(FloatPoint(kernelUnitLengthX(), kernelUnitLengthY()));
     if (attrName == SVGNames::preserveAlphaAttr)
-        return convolveMatrix->setPreserveAlpha(preserveAlpha());
+        return feConvolveMatrix.setPreserveAlpha(preserveAlpha());
 
     ASSERT_NOT_REACHED();
     return false;
@@ -160,34 +161,36 @@ void SVGFEConvolveMatrixElement::setOrder(float x, float y)
 {
     m_orderX->setBaseValInternal(x);
     m_orderY->setBaseValInternal(y);
-    invalidate();
+    updateSVGRendererForElementChange();
 }
 
 void SVGFEConvolveMatrixElement::setKernelUnitLength(float x, float y)
 {
     m_kernelUnitLengthX->setBaseValInternal(x);
     m_kernelUnitLengthY->setBaseValInternal(y);
-    invalidate();
+    updateSVGRendererForElementChange();
 }
 
 void SVGFEConvolveMatrixElement::svgAttributeChanged(const QualifiedName& attrName)
 {
-    if (attrName == SVGNames::edgeModeAttr || attrName == SVGNames::divisorAttr || attrName == SVGNames::biasAttr || attrName == SVGNames::targetXAttr || attrName == SVGNames::targetYAttr || attrName == SVGNames::kernelUnitLengthAttr || attrName == SVGNames::preserveAlphaAttr) {
+    if (attrName == SVGNames::inAttr || attrName == SVGNames::orderAttr || attrName == SVGNames::kernelMatrixAttr) {
         InstanceInvalidationGuard guard(*this);
-        primitiveAttributeChanged(attrName);
+        updateSVGRendererForElementChange();
         return;
     }
 
-    if (attrName == SVGNames::inAttr || attrName == SVGNames::orderAttr || attrName == SVGNames::kernelMatrixAttr) {
+    if (attrName == SVGNames::edgeModeAttr || attrName == SVGNames::divisorAttr || attrName == SVGNames::biasAttr
+        || attrName == SVGNames::targetXAttr || attrName == SVGNames::targetYAttr
+        || attrName == SVGNames::kernelUnitLengthAttr || attrName == SVGNames::preserveAlphaAttr) {
         InstanceInvalidationGuard guard(*this);
-        invalidate();
+        primitiveAttributeChanged(attrName);
         return;
     }
 
     SVGFilterPrimitiveStandardAttributes::svgAttributeChanged(attrName);
 }
 
-RefPtr<FilterEffect> SVGFEConvolveMatrixElement::filterEffect(const SVGFilterBuilder&, const FilterEffectVector&) const
+RefPtr<FilterEffect> SVGFEConvolveMatrixElement::createFilterEffect(const FilterEffectVector&, const GraphicsContext&) const
 {
     int orderXValue = orderX();
     int orderYValue = orderY();

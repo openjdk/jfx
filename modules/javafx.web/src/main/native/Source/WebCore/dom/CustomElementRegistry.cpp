@@ -29,6 +29,7 @@
 #include "CustomElementReactionQueue.h"
 #include "DOMWindow.h"
 #include "Document.h"
+#include "ElementRareData.h"
 #include "JSCustomElementInterface.h"
 #include "JSDOMPromiseDeferred.h"
 #include "MathMLNames.h"
@@ -57,7 +58,7 @@ CustomElementRegistry::~CustomElementRegistry() = default;
 static void enqueueUpgradeInShadowIncludingTreeOrder(ContainerNode& node, JSCustomElementInterface& elementInterface)
 {
     for (Element* element = ElementTraversal::firstWithin(node); element; element = ElementTraversal::next(*element)) {
-        if (element->isCustomElementUpgradeCandidate() && element->tagQName() == elementInterface.name())
+        if (element->isCustomElementUpgradeCandidate() && element->tagQName().matches(elementInterface.name()))
             element->enqueueToUpgrade(elementInterface);
         if (auto* shadowRoot = element->shadowRoot()) {
             if (shadowRoot->mode() != ShadowRootMode::UserAgent)

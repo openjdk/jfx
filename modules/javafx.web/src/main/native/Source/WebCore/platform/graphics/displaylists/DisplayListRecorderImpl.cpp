@@ -42,8 +42,8 @@
 namespace WebCore {
 namespace DisplayList {
 
-RecorderImpl::RecorderImpl(DisplayList& displayList, const GraphicsContextState& state, const FloatRect& initialClip, const AffineTransform& initialCTM, DrawGlyphsRecorder::DeconstructDrawGlyphs deconstructDrawGlyphs)
-    : Recorder(state, initialClip, initialCTM, deconstructDrawGlyphs)
+RecorderImpl::RecorderImpl(DisplayList& displayList, const GraphicsContextState& state, const FloatRect& initialClip, const AffineTransform& initialCTM, DrawGlyphsMode drawGlyphsMode)
+    : Recorder(state, initialClip, initialCTM, drawGlyphsMode)
     , m_displayList(displayList)
 {
     LOG_WITH_STREAM(DisplayLists, stream << "\nRecording with clip " << initialClip);
@@ -104,9 +104,9 @@ void RecorderImpl::recordSetStrokeThickness(float thickness)
     append<SetStrokeThickness>(thickness);
 }
 
-void RecorderImpl::recordSetState(const GraphicsContextState& state, GraphicsContextState::StateChangeFlags changeFlags)
+void RecorderImpl::recordSetState(const GraphicsContextState& state)
 {
-    append<SetState>(state, changeFlags);
+    append<SetState>(state);
 }
 
 void RecorderImpl::recordSetLineCap(LineCap lineCap)
@@ -172,6 +172,11 @@ void RecorderImpl::recordDrawGlyphs(const Font& font, const GlyphBufferGlyph* gl
     append<DrawGlyphs>(font, glyphs, advances, count, localAnchor, mode);
 }
 
+void RecorderImpl::recordDrawDecomposedGlyphs(const Font& font, const DecomposedGlyphs& decomposedGlyphs)
+{
+    append<DrawDecomposedGlyphs>(font.renderingResourceIdentifier(), decomposedGlyphs.renderingResourceIdentifier());
+}
+
 void RecorderImpl::recordDrawImageBuffer(ImageBuffer& imageBuffer, const FloatRect& destRect, const FloatRect& srcRect, const ImagePaintingOptions& options)
 {
     append<DrawImageBuffer>(imageBuffer.renderingResourceIdentifier(), destRect, srcRect, options);
@@ -180,6 +185,11 @@ void RecorderImpl::recordDrawImageBuffer(ImageBuffer& imageBuffer, const FloatRe
 void RecorderImpl::recordDrawNativeImage(RenderingResourceIdentifier imageIdentifier, const FloatSize& imageSize, const FloatRect& destRect, const FloatRect& srcRect, const ImagePaintingOptions& options)
 {
     append<DrawNativeImage>(imageIdentifier, imageSize, destRect, srcRect, options);
+}
+
+void RecorderImpl::recordDrawSystemImage(SystemImage& systemImage, const FloatRect& destinationRect)
+{
+    append<DrawSystemImage>(systemImage, destinationRect);
 }
 
 void RecorderImpl::recordDrawPattern(RenderingResourceIdentifier imageIdentifier, const FloatRect& destRect, const FloatRect& tileRect, const AffineTransform& transform, const FloatPoint& phase, const FloatSize& spacing, const ImagePaintingOptions& options)
@@ -207,9 +217,9 @@ void RecorderImpl::recordDrawLine(const FloatPoint& point1, const FloatPoint& po
     append<DrawLine>(point1, point2);
 }
 
-void RecorderImpl::recordDrawLinesForText(const FloatPoint& blockLocation, const FloatSize& localAnchor, float thickness, const DashArray& widths, bool printing, bool doubleLines)
+void RecorderImpl::recordDrawLinesForText(const FloatPoint& blockLocation, const FloatSize& localAnchor, float thickness, const DashArray& widths, bool printing, bool doubleLines, StrokeStyle style)
 {
-    append<DrawLinesForText>(blockLocation, localAnchor, thickness, widths, printing, doubleLines);
+    append<DrawLinesForText>(blockLocation, localAnchor, thickness, widths, printing, doubleLines, style);
 }
 
 void RecorderImpl::recordDrawDotsForDocumentMarker(const FloatRect& rect, const DocumentMarkerLineStyle& style)
@@ -320,6 +330,13 @@ void RecorderImpl::recordStrokeLine(const LineData& line)
     append<StrokeLine>(line);
 }
 
+void RecorderImpl::recordStrokeLineWithColorAndThickness(SRGBA<uint8_t> color, float thickness, const LineData& line)
+{
+    append<SetInlineStrokeColor>(color);
+    append<SetStrokeThickness>(thickness);
+    append<StrokeLine>(line);
+}
+
 void RecorderImpl::recordStrokeArc(const ArcData& arc)
 {
     append<StrokeArc>(arc);
@@ -400,6 +417,12 @@ bool RecorderImpl::recordResourceUse(Font& font)
     return true;
 }
 
+bool RecorderImpl::recordResourceUse(DecomposedGlyphs& decomposedGlyphs)
+{
+    m_displayList.cacheDecomposedGlyphs(decomposedGlyphs);
+    return true;
+}
+
 // FIXME: share with ShadowData
 static inline float shadowPaintingExtent(float blurRadius)
 {
@@ -408,24 +431,6 @@ static inline float shadowPaintingExtent(float blurRadius)
     // undetectable at around 1.4x the radius.
     const float radiusExtentMultiplier = 1.4;
     return ceilf(blurRadius * radiusExtentMultiplier);
-}
-
-FloatRect RecorderImpl::extentFromLocalBounds(const FloatRect& rect) const
-{
-    FloatRect bounds = rect;
-    auto& state = currentState();
-
-    FloatSize shadowOffset;
-    float shadowRadius;
-    Color shadowColor;
-    if (getShadow(shadowOffset, shadowRadius, shadowColor)) {
-        FloatRect shadowExtent = bounds;
-        shadowExtent.move(shadowOffset);
-        shadowExtent.inflate(shadowPaintingExtent(shadowRadius));
-        bounds.unite(shadowExtent);
-    }
-
-    return intersection(state.clipBounds, state.ctm.mapRect(bounds));
 }
 
 } // namespace DisplayList

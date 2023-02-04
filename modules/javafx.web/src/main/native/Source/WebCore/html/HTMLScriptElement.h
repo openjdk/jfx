@@ -34,7 +34,7 @@ public:
     static Ref<HTMLScriptElement> create(const QualifiedName&, Document&, bool wasInsertedByParser, bool alreadyStarted = false);
 
     String text() const { return scriptContent(); }
-    WEBCORE_EXPORT void setText(const String&);
+    WEBCORE_EXPORT void setText(String&&);
 
     URL src() const;
 
@@ -51,7 +51,7 @@ public:
     using HTMLElement::ref;
     using HTMLElement::deref;
 
-    static bool supports(StringView type) { return type == "classic" || type == "module"; }
+    static bool supports(StringView type) { return type == "classic"_s || type == "module"_s; }
 
 private:
     HTMLScriptElement(const QualifiedName&, Document&, bool wasInsertedByParser, bool alreadyStarted);

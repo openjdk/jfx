@@ -74,7 +74,7 @@ bool ExtensionsGLOpenGLES::isEnabled(const String& name)
         return false;
 
     // For GL_EXT_robustness, check that the context supports robust access.
-    if (name == "GL_EXT_robustness")
+    if (name == "GL_EXT_robustness"_s)
         return m_context->getInteger(GraphicsContextGL::CONTEXT_ROBUST_ACCESS) == GL_TRUE;
 
     return true;
@@ -166,26 +166,6 @@ void ExtensionsGLOpenGLES::drawBuffersEXT(GCGLSpan<const GCGLenum> /* bufs */)
     notImplemented();
 }
 
-int ExtensionsGLOpenGLES::getGraphicsResetStatusARB()
-{
-    // FIXME: This does not call getGraphicsResetStatusARB, but instead getGraphicsResetStatusEXT.
-    // The return codes from the two extensions are identical and their purpose is the same, so it
-    // may be best to rename getGraphicsResetStatusARB() to getGraphicsResetStatus().
-    if (m_contextResetStatus != GL_NO_ERROR)
-        return m_contextResetStatus;
-    if (m_glGetGraphicsResetStatusEXT) {
-        int reasonForReset = GraphicsContextGL::UNKNOWN_CONTEXT_RESET_ARB;
-        if (m_context->makeContextCurrent())
-            reasonForReset = m_glGetGraphicsResetStatusEXT();
-        if (reasonForReset != GL_NO_ERROR)
-            m_contextResetStatus = reasonForReset;
-        return reasonForReset;
-    }
-
-    m_context->synthesizeGLError(GL_INVALID_OPERATION);
-    return false;
-}
-
 void ExtensionsGLOpenGLES::readnPixelsEXT(int x, int y, GCGLsizei width, GCGLsizei height, GCGLenum format, GCGLenum type, GCGLsizei bufSize, void *data)
 {
     if (m_glReadnPixelsEXT) {
@@ -272,7 +252,7 @@ void ExtensionsGLOpenGLES::vertexAttribDivisorANGLE(GCGLuint index, GCGLuint div
 
 bool ExtensionsGLOpenGLES::platformSupportsExtension(const String& name)
 {
-    if (name == "GL_ANGLE_instanced_arrays") {
+    if (name == "GL_ANGLE_instanced_arrays"_s) {
         auto majorVersion = []() {
             GLint version = 0;
             ::glGetIntegerv(GL_MAJOR_VERSION, &version);
@@ -284,7 +264,7 @@ bool ExtensionsGLOpenGLES::platformSupportsExtension(const String& name)
             m_glDrawArraysInstancedANGLE = reinterpret_cast<PFNGLDRAWARRAYSINSTANCEDANGLEPROC >(eglGetProcAddress("glDrawArraysInstancedANGLE"));
             m_glDrawElementsInstancedANGLE = reinterpret_cast<PFNGLDRAWELEMENTSINSTANCEDANGLEPROC >(eglGetProcAddress("glDrawElementsInstancedANGLE"));
             m_supportsANGLEinstancedArrays = true;
-        } else if (majorVersion() >= 3 || (m_availableExtensions.contains("GL_EXT_instanced_arrays") && m_availableExtensions.contains("GL_EXT_draw_instanced"))) {
+        } else if (majorVersion() >= 3 || (m_availableExtensions.contains("GL_EXT_instanced_arrays"_s) && m_availableExtensions.contains("GL_EXT_draw_instanced"_s))) {
             m_glVertexAttribDivisorANGLE = ::glVertexAttribDivisor;
             m_glDrawArraysInstancedANGLE = ::glDrawArraysInstanced;
             m_glDrawElementsInstancedANGLE = ::glDrawElementsInstanced;
@@ -294,22 +274,22 @@ bool ExtensionsGLOpenGLES::platformSupportsExtension(const String& name)
     }
 
     if (m_availableExtensions.contains(name)) {
-        if (!m_supportsOESvertexArrayObject && name == "GL_OES_vertex_array_object") {
+        if (!m_supportsOESvertexArrayObject && name == "GL_OES_vertex_array_object"_s) {
             m_glBindVertexArrayOES = reinterpret_cast<PFNGLBINDVERTEXARRAYOESPROC>(eglGetProcAddress("glBindVertexArrayOES"));
             m_glGenVertexArraysOES = reinterpret_cast<PFNGLGENVERTEXARRAYSOESPROC>(eglGetProcAddress("glGenVertexArraysOES"));
             m_glDeleteVertexArraysOES = reinterpret_cast<PFNGLDELETEVERTEXARRAYSOESPROC>(eglGetProcAddress("glDeleteVertexArraysOES"));
             m_glIsVertexArrayOES = reinterpret_cast<PFNGLISVERTEXARRAYOESPROC>(eglGetProcAddress("glIsVertexArrayOES"));
             m_supportsOESvertexArrayObject = true;
-        } else if (!m_supportsIMGMultisampledRenderToTexture && name == "GL_IMG_multisampled_render_to_texture") {
+        } else if (!m_supportsIMGMultisampledRenderToTexture && name == "GL_IMG_multisampled_render_to_texture"_s) {
             m_glFramebufferTexture2DMultisampleIMG = reinterpret_cast<PFNGLFRAMEBUFFERTEXTURE2DMULTISAMPLEIMGPROC>(eglGetProcAddress("glFramebufferTexture2DMultisampleIMG"));
             m_glRenderbufferStorageMultisampleIMG = reinterpret_cast<PFNGLRENDERBUFFERSTORAGEMULTISAMPLEIMGPROC>(eglGetProcAddress("glRenderbufferStorageMultisampleIMG"));
             m_supportsIMGMultisampledRenderToTexture = true;
-        } else if (!m_glGetGraphicsResetStatusEXT && name == "GL_EXT_robustness") {
+        } else if (!m_glGetGraphicsResetStatusEXT && name == "GL_EXT_robustness"_s) {
             m_glGetGraphicsResetStatusEXT = reinterpret_cast<PFNGLGETGRAPHICSRESETSTATUSEXTPROC>(eglGetProcAddress("glGetGraphicsResetStatusEXT"));
             m_glReadnPixelsEXT = reinterpret_cast<PFNGLREADNPIXELSEXTPROC>(eglGetProcAddress("glReadnPixelsEXT"));
             m_glGetnUniformfvEXT = reinterpret_cast<PFNGLGETNUNIFORMFVEXTPROC>(eglGetProcAddress("glGetnUniformfvEXT"));
             m_glGetnUniformivEXT = reinterpret_cast<PFNGLGETNUNIFORMIVEXTPROC>(eglGetProcAddress("glGetnUniformivEXT"));
-        } else if (name == "GL_EXT_draw_buffers") {
+        } else if (name == "GL_EXT_draw_buffers"_s) {
             // FIXME: implement the support.
             return false;
         }
@@ -321,7 +301,7 @@ bool ExtensionsGLOpenGLES::platformSupportsExtension(const String& name)
 
 String ExtensionsGLOpenGLES::getExtensions()
 {
-    return String(reinterpret_cast<const char*>(::glGetString(GL_EXTENSIONS)));
+    return String::fromLatin1(reinterpret_cast<const char*>(::glGetString(GL_EXTENSIONS)));
 }
 
 } // namespace WebCore

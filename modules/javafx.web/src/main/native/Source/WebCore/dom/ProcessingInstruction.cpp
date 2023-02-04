@@ -27,6 +27,7 @@
 #include "CachedResourceLoader.h"
 #include "CachedResourceRequest.h"
 #include "CachedXSLStyleSheet.h"
+#include "CommonAtomStrings.h"
 #include "DocumentInlines.h"
 #include "Frame.h"
 #include "FrameLoader.h"
@@ -43,15 +44,15 @@ namespace WebCore {
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(ProcessingInstruction);
 
-inline ProcessingInstruction::ProcessingInstruction(Document& document, const String& target, const String& data)
-    : CharacterData(document, data)
-    , m_target(target)
+inline ProcessingInstruction::ProcessingInstruction(Document& document, String&& target, String&& data)
+    : CharacterData(document, WTFMove(data))
+    , m_target(WTFMove(target))
 {
 }
 
-Ref<ProcessingInstruction> ProcessingInstruction::create(Document& document, const String& target, const String& data)
+Ref<ProcessingInstruction> ProcessingInstruction::create(Document& document, String&& target, String&& data)
 {
-    return adoptRef(*new ProcessingInstruction(document, target, data));
+    return adoptRef(*new ProcessingInstruction(document, WTFMove(target), WTFMove(data)));
 }
 
 ProcessingInstruction::~ProcessingInstruction()
@@ -80,34 +81,34 @@ Ref<Node> ProcessingInstruction::cloneNodeInternal(Document& targetDocument, Clo
 {
     // FIXME: Is it a problem that this does not copy m_localHref?
     // What about other data members?
-    return create(targetDocument, m_target, data());
+    return create(targetDocument, String { m_target }, String { data() });
 }
 
 void ProcessingInstruction::checkStyleSheet()
 {
-    if (m_target == "xml-stylesheet" && document().frame() && parentNode() == &document()) {
+    if (m_target == "xml-stylesheet"_s && document().frame() && parentNode() == &document()) {
         // see http://www.w3.org/TR/xml-stylesheet/
         // ### support stylesheet included in a fragment of this (or another) document
         // ### make sure this gets called when adding from javascript
         auto attributes = parseAttributes(data());
         if (!attributes)
             return;
-        String type = attributes->get("type");
+        String type = attributes->get<HashTranslatorASCIILiteral>("type"_s);
 
-        m_isCSS = type.isEmpty() || type == "text/css";
+        m_isCSS = type.isEmpty() || type == cssContentTypeAtom();
 #if ENABLE(XSLT)
-        m_isXSL = type == "text/xml" || type == "text/xsl" || type == "application/xml" || type == "application/xhtml+xml" || type == "application/rss+xml" || type == "application/atom+xml";
+        m_isXSL = type == "text/xml"_s || type == "text/xsl"_s || type == "application/xml"_s || type == "application/xhtml+xml"_s || type == "application/rss+xml"_s || type == "application/atom+xml"_s;
         if (!m_isCSS && !m_isXSL)
 #else
         if (!m_isCSS)
 #endif
             return;
 
-        String href = attributes->get("href");
-        String alternate = attributes->get("alternate");
-        m_alternate = alternate == "yes";
-        m_title = attributes->get("title");
-        m_media = attributes->get("media");
+        String href = attributes->get<HashTranslatorASCIILiteral>("href"_s);
+        String alternate = attributes->get<HashTranslatorASCIILiteral>("alternate"_s);
+        m_alternate = alternate == "yes"_s;
+        m_title = attributes->get<HashTranslatorASCIILiteral>("title"_s);
+        m_media = attributes->get<HashTranslatorASCIILiteral>("media"_s);
 
         if (m_alternate && m_title.isEmpty())
             return;
@@ -156,7 +157,7 @@ void ProcessingInstruction::checkStyleSheet()
             } else
 #endif
             {
-                String charset = attributes->get("charset");
+                String charset = attributes->get<HashTranslatorASCIILiteral>("charset"_s);
                 CachedResourceRequest request(document().completeURL(href), CachedResourceLoader::defaultCachedResourceOptions(), std::nullopt, charset.isEmpty() ? document().charset() : WTFMove(charset));
 
                 m_cachedSheet = document().cachedResourceLoader().requestCSSStyleSheet(WTFMove(request)).value_or(nullptr);

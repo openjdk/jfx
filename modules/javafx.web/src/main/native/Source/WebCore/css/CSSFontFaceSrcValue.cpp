@@ -40,9 +40,11 @@
 
 namespace WebCore {
 
+CSSFontFaceSrcValue::~CSSFontFaceSrcValue() = default;
+
 bool CSSFontFaceSrcValue::isSVGFontFaceSrc() const
 {
-    return equalLettersIgnoringASCIICase(m_format, "svg");
+    return equalLettersIgnoringASCIICase(m_format, "svg"_s);
 }
 
 bool CSSFontFaceSrcValue::isSVGFontTarget() const
@@ -56,12 +58,22 @@ bool CSSFontFaceSrcValue::isSupportedFormat() const
     // we will also check to see if the URL ends with .eot. If so, we'll assume that we shouldn't load it.
     if (m_format.isEmpty()) {
         // Check for .eot.
-        if (!protocolIs(m_resource, "data") && m_resource.endsWithIgnoringASCIICase(".eot"))
+        if (!protocolIs(m_resource, "data"_s) && m_resource.endsWithIgnoringASCIICase(".eot"_s))
             return false;
         return true;
     }
 
     return FontCustomPlatformData::supportsFormat(m_format) || isSVGFontFaceSrc();
+}
+
+SVGFontFaceElement* CSSFontFaceSrcValue::svgFontFaceElement() const
+{
+    return m_svgFontFaceElement.get();
+}
+
+void CSSFontFaceSrcValue::setSVGFontFaceElement(SVGFontFaceElement* element)
+{
+    m_svgFontFaceElement = element;
 }
 
 String CSSFontFaceSrcValue::customCSSText() const

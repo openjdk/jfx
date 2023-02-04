@@ -67,8 +67,8 @@ JS_EXPORT_PRIVATE JSObject* createError(JSGlobalObject*, ErrorType, const String
 JS_EXPORT_PRIVATE JSObject* createError(JSGlobalObject*, ErrorTypeWithExtension, const String&);
 
 std::unique_ptr<Vector<StackFrame>> getStackTrace(JSGlobalObject*, VM&, JSObject*, bool useCurrentFrame);
-void getBytecodeIndex(VM&, CallFrame*, Vector<StackFrame>*, CallFrame*&, BytecodeIndex&);
-bool getLineColumnAndSource(Vector<StackFrame>* stackTrace, unsigned& line, unsigned& column, String& sourceURL);
+std::tuple<CodeBlock*, BytecodeIndex> getBytecodeIndex(VM&, CallFrame*);
+bool getLineColumnAndSource(VM&, Vector<StackFrame>* stackTrace, unsigned& line, unsigned& column, String& sourceURL);
 bool addErrorInfo(VM&, Vector<StackFrame>*, JSObject*);
 JS_EXPORT_PRIVATE void addErrorInfo(JSGlobalObject*, JSObject*, bool);
 JSObject* addErrorInfo(VM&, JSObject* error, int line, const SourceCode&);
@@ -93,7 +93,7 @@ JS_EXPORT_PRIVATE JSValue throwDOMAttributeSetterTypeError(JSGlobalObject*, Thro
 // Convenience wrappers, wrap result as an EncodedJSValue.
 inline void throwVMError(JSGlobalObject* globalObject, ThrowScope& scope, Exception* exception) { throwException(globalObject, scope, exception); }
 inline EncodedJSValue throwVMError(JSGlobalObject* globalObject, ThrowScope& scope, JSValue error) { return JSValue::encode(throwException(globalObject, scope, error)); }
-inline EncodedJSValue throwVMError(JSGlobalObject* globalObject, ThrowScope& scope, const char* errorMessage) { return JSValue::encode(throwException(globalObject, scope, createError(globalObject, errorMessage))); }
+inline EncodedJSValue throwVMError(JSGlobalObject* globalObject, ThrowScope& scope, const String& errorMessage) { return JSValue::encode(throwException(globalObject, scope, createError(globalObject, errorMessage))); }
 inline EncodedJSValue throwVMTypeError(JSGlobalObject* globalObject, ThrowScope& scope) { return JSValue::encode(throwTypeError(globalObject, scope)); }
 inline EncodedJSValue throwVMTypeError(JSGlobalObject* globalObject, ThrowScope& scope, ASCIILiteral errorMessage) { return JSValue::encode(throwTypeError(globalObject, scope, errorMessage)); }
 inline EncodedJSValue throwVMTypeError(JSGlobalObject* globalObject, ThrowScope& scope, const String& errorMessage) { return JSValue::encode(throwTypeError(globalObject, scope, errorMessage)); }

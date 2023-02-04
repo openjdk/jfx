@@ -207,9 +207,9 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_dom_DOMSelectionImpl_modifyImpl(JNIEn
     , jstring granularity)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->modify(String(env, alter)
-            , String(env, direction)
-            , String(env, granularity));
+    IMPL->modify(AtomString {String(env, alter)}
+            , AtomString {String(env, direction)}
+            , AtomString {String(env, granularity)});
 }
 
 

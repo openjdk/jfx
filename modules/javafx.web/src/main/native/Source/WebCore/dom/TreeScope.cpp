@@ -56,7 +56,7 @@ struct SameSizeAsTreeScope {
     void* pointers[10];
 };
 
-COMPILE_ASSERT(sizeof(TreeScope) == sizeof(SameSizeAsTreeScope), treescope_should_stay_small);
+static_assert(sizeof(TreeScope) == sizeof(SameSizeAsTreeScope), "treescope should stay small");
 
 using namespace HTMLNames;
 
@@ -123,8 +123,8 @@ Element* TreeScope::getElementById(StringView elementId) const
     if (!m_elementsById)
         return nullptr;
 
-    if (auto atomElementId = elementId.toExistingAtomString())
-        return m_elementsById->getElementById(*atomElementId, *this);
+    if (auto atomElementId = elementId.toExistingAtomString(); !atomElementId.isNull())
+        return m_elementsById->getElementById(*atomElementId.impl(), *this);
 
     return nullptr;
 }
@@ -380,7 +380,7 @@ RefPtr<Element> TreeScope::elementFromPoint(double clientX, double clientY)
         node = retargetToScope(*node);
     }
 
-    return static_pointer_cast<Element>(node);
+    return static_pointer_cast<Element>(WTFMove(node));
 }
 
 Vector<RefPtr<Element>> TreeScope::elementsFromPoint(double clientX, double clientY)

@@ -31,7 +31,7 @@
 // to look up their default constructor, which is expensive. If we used the
 // normal speciesConstructor helper we would need to look up the default
 // constructor every time.
-@globalPrivate
+@linkTimeConstant
 function typedArraySpeciesConstructor(value)
 {
     "use strict";
@@ -166,20 +166,7 @@ function some(callback /* [, thisArg] */)
     return false;
 }
 
-@globalPrivate
-function typedArrayElementCompare(array, a, b, comparator)
-{
-    "use strict";
-
-    var result = @toNumber(comparator(a, b));
-
-    if (@isDetached(array))
-        @throwTypeError("Underlying ArrayBuffer has been detached from the view");
-
-    return result;
-}
-
-@globalPrivate
+@linkTimeConstant
 function typedArrayMerge(array, dst, src, srcIndex, srcEnd, width, comparator)
 {
     "use strict";
@@ -191,7 +178,7 @@ function typedArrayMerge(array, dst, src, srcIndex, srcEnd, width, comparator)
 
     for (var dstIndex = left; dstIndex < rightEnd; ++dstIndex) {
         if (right < rightEnd) {
-            if (left >= leftEnd || @typedArrayElementCompare(array, src[right], src[left], comparator) < 0) {
+            if (left >= leftEnd || @toNumber(comparator(src[right], src[left])) < 0) {
                 dst[dstIndex] = src[right++];
                 continue;
             }
@@ -201,7 +188,7 @@ function typedArrayMerge(array, dst, src, srcIndex, srcEnd, width, comparator)
     }
 }
 
-@globalPrivate
+@linkTimeConstant
 function typedArrayMergeSort(array, valueCount, comparator)
 {
     "use strict";
@@ -247,23 +234,6 @@ function sort(comparator)
         @typedArraySort(this);
 
     return this;
-}
-
-function subarray(begin, end)
-{
-    "use strict";
-
-    if (!@isTypedArrayView(this))
-        @throwTypeError("|this| should be a typed array view");
-
-    var start = @toIntegerOrInfinity(begin);
-    var finish;
-    if (end !== @undefined)
-        finish = @toIntegerOrInfinity(end);
-
-    var constructor = @typedArraySpeciesConstructor(this);
-
-    return @typedArraySubarrayCreate.@call(this, start, finish, constructor);
 }
 
 function reduce(callback /* [, initialValue] */)
@@ -403,4 +373,30 @@ function at(index)
         k += length;
 
     return (k >= 0 && k < length) ? this[k] : @undefined;
+}
+
+function toSorted(comparator)
+{
+    "use strict";
+
+    // Step 1.
+    if (comparator !== @undefined && !@isCallable(comparator))
+        @throwTypeError("TypedArray.prototype.toSorted requires the comparator argument to be a function or undefined");
+
+    var result = @typedArrayClone.@call(this);
+
+    var length = @typedArrayLength(result);
+    if (length < 2)
+        return result;
+
+    // typedArraySort is not safe when the other thread is modifying content. So if |result| is SharedArrayBuffer,
+    // use JS-implemented sorting.
+    if (comparator !== @undefined || @isSharedTypedArrayView(result)) {
+        if (comparator === @undefined)
+            comparator = @typedArrayDefaultComparator;
+        @typedArrayMergeSort(result, length, comparator);
+    } else
+        @typedArraySort(result);
+
+    return result;
 }

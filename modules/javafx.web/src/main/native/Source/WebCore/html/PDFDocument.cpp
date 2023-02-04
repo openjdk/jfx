@@ -25,16 +25,21 @@
 #include "config.h"
 #include "PDFDocument.h"
 
+#if ENABLE(PDFJS)
+
 #include "AddEventListenerOptions.h"
 #include "DOMWindow.h"
 #include "DocumentLoader.h"
 #include "EventListener.h"
 #include "EventNames.h"
 #include "Frame.h"
+#include "FrameDestructionObserverInlines.h"
 #include "HTMLAnchorElement.h"
 #include "HTMLBodyElement.h"
+#include "HTMLHeadElement.h"
 #include "HTMLHtmlElement.h"
 #include "HTMLIFrameElement.h"
+#include "HTMLLinkElement.h"
 #include "HTMLNames.h"
 #include "HTMLScriptElement.h"
 #include "RawDataDocumentParser.h"
@@ -109,7 +114,7 @@ private:
 void PDFDocumentEventListener::handleEvent(ScriptExecutionContext&, Event& event)
 {
     if (is<HTMLIFrameElement>(event.target()) && event.type() == eventNames().loadEvent) {
-        m_document->injectContentScript();
+        m_document->injectStyleAndContentScript();
     } else if (is<HTMLScriptElement>(event.target()) && event.type() == eventNames().loadEvent) {
         m_document->setContentScriptLoaded(true);
         if (m_document->isFinishedParsing())
@@ -138,8 +143,10 @@ Ref<DocumentParser> PDFDocument::createParser()
 
 void PDFDocument::createDocumentStructure()
 {
-    // The empty file parameter prevents default pdf from loading.
-    auto viewerURL = "webkit-pdfjs-viewer://pdfjs/web/viewer.html?file=";
+    // Description of parameters:
+    // - `#pagemode=none` prevents the sidebar from showing on load.
+    // - Empty `?file=` parameter prevents default pdf from loading.
+    auto viewerURL = "webkit-pdfjs-viewer://pdfjs/web/viewer.html?file=#pagemode=none"_s;
     auto rootElement = HTMLHtmlElement::create(*this);
     appendChild(rootElement);
     rootElement->insertedByParser();
@@ -147,15 +154,15 @@ void PDFDocument::createDocumentStructure()
     frame()->injectUserScripts(UserScriptInjectionTime::DocumentStart);
 
     auto body = HTMLBodyElement::create(*this);
-    body->setAttribute(styleAttr, AtomString("margin: 0px;height: 100vh;", AtomString::ConstructFromLiteral));
+    body->setAttribute(styleAttr, "margin: 0px;height: 100vh;"_s);
     rootElement->appendChild(body);
 
     m_iframe = HTMLIFrameElement::create(HTMLNames::iframeTag, *this);
     m_iframe->setAttribute(srcAttr, AtomString(viewerURL));
-    m_iframe->setAttribute(styleAttr, AtomString("width: 100%; height: 100%; border: 0; display: block;", AtomString::ConstructFromLiteral));
+    m_iframe->setAttribute(styleAttr, "width: 100%; height: 100%; border: 0; display: block;"_s);
 
     m_listener = PDFDocumentEventListener::create(*this);
-    m_iframe->addEventListener("load", *m_listener, false);
+    m_iframe->addEventListener(eventNames().loadEvent, *m_listener, false);
 
     body->appendChild(*m_iframe);
 }
@@ -180,13 +187,13 @@ void PDFDocument::sendPDFArrayBuffer()
 
     auto* frame = m_iframe->contentFrame();
     // FIXME: https://bugs.webkit.org/show_bug.cgi?id=236668 - Use postMessage
-    auto openFunction = frame->script().executeScriptIgnoringException("PDFJSContentScript.open").getObject();
+    auto openFunction = frame->script().executeScriptIgnoringException("PDFJSContentScript.open"_s).getObject();
 
     auto globalObject = this->globalObject();
     auto& vm = globalObject->vm();
 
     JSLockHolder lock(vm);
-    auto callData = getCallData(vm, openFunction);
+    auto callData = JSC::getCallData(openFunction);
     ASSERT(callData.type != CallData::Type::None);
     MarkedArgumentBuffer arguments;
     auto arrayBuffer = loader()->mainResourceData()->tryCreateArrayBuffer();
@@ -202,16 +209,27 @@ void PDFDocument::sendPDFArrayBuffer()
     call(globalObject, openFunction, callData, globalObject, arguments);
 }
 
-void PDFDocument::injectContentScript()
+void PDFDocument::injectStyleAndContentScript()
 {
-    auto contentDocument = m_iframe->contentDocument();
+    auto* contentDocument = m_iframe->contentDocument();
+    ASSERT(contentDocument->head());
+    auto link = HTMLLinkElement::create(HTMLNames::linkTag, *contentDocument, false);
+    link->setAttribute(relAttr, "stylesheet"_s);
+#if PLATFORM(COCOA)
+    link->setAttribute(hrefAttr, "webkit-pdfjs-viewer://pdfjs/extras/cocoa/style.css"_s);
+#elif PLATFORM(GTK) || PLATFORM(WPE)
+    link->setAttribute(hrefAttr, "webkit-pdfjs-viewer://pdfjs/extras/adwaita/style.css"_s);
+#endif
+    contentDocument->head()->appendChild(link);
+
     ASSERT(contentDocument->body());
-
     auto script = HTMLScriptElement::create(scriptTag, *contentDocument, false);
-    script->addEventListener("load", m_listener.releaseNonNull(), false);
+    script->addEventListener(eventNames().loadEvent, m_listener.releaseNonNull(), false);
 
-    script->setAttribute(srcAttr, "webkit-pdfjs-viewer://pdfjs/extras/content-script.js");
+    script->setAttribute(srcAttr, "webkit-pdfjs-viewer://pdfjs/extras/content-script.js"_s);
     contentDocument->body()->appendChild(script);
 }
 
-}
+} // namepsace WebCore
+
+#endif // ENABLE(PDFJS)

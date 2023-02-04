@@ -57,7 +57,6 @@
 #include "RenderStyleConstants.h"
 #include "RenderView.h"
 #include "RuleSet.h"
-#include "RuntimeEnabledFeatures.h"
 #include "SVGDocumentExtensions.h"
 #include "SVGElement.h"
 #include "SVGFontFaceElement.h"
@@ -269,7 +268,7 @@ ElementStyle Resolver::styleForElement(const Element& element, const ResolutionC
     Adjuster adjuster(document(), *state.parentStyle(), context.parentBoxStyle, &element);
     adjuster.adjust(*state.style(), state.userAgentAppearanceStyle());
 
-    if (state.style()->hasViewportUnits())
+    if (state.style()->usesViewportUnits())
         document().setHasStyleWithViewportUnits();
 
     return { state.takeStyle(), WTFMove(elementStyleRelations) };
@@ -277,30 +276,47 @@ ElementStyle Resolver::styleForElement(const Element& element, const ResolutionC
 
 std::unique_ptr<RenderStyle> Resolver::styleForKeyframe(const Element& element, const RenderStyle& elementStyle, const ResolutionContext& context, const StyleRuleKeyframe& keyframe, KeyframeValue& keyframeValue)
 {
-    MatchResult result;
-    result.authorDeclarations.append({ &keyframe.properties(), SelectorChecker::MatchAll, propertyAllowlistForPseudoId(elementStyle.styleType()) });
+    // Add all the animating properties to the keyframe.
+    unsigned propertyCount = keyframe.properties().propertyCount();
+    bool hasRevert = false;
+    for (unsigned i = 0; i < propertyCount; ++i) {
+        auto propertyReference = keyframe.properties().propertyAt(i);
+        auto property = CSSProperty::resolveDirectionAwareProperty(propertyReference.id(), elementStyle.direction(), elementStyle.writingMode());
+        // The animation-composition and animation-timing-function within keyframes are special
+        // because they are not animated; they just describe the composite operation and timing
+        // function between this keyframe and the next.
+        bool isAnimatableValue = property != CSSPropertyAnimationTimingFunction && property != CSSPropertyAnimationComposition;
+        if (isAnimatableValue)
+            keyframeValue.addProperty(property);
+        if (auto* value = propertyReference.value()) {
+            if (isAnimatableValue && value->isCustomPropertyValue())
+                keyframeValue.addCustomProperty(downcast<CSSCustomPropertyValue>(*value).name());
+            if (value->isRevertValue())
+                hasRevert = true;
+        }
+    }
 
     auto state = State(element, nullptr, context.documentElementStyle);
 
     state.setStyle(RenderStyle::clonePtr(elementStyle));
     state.setParentStyle(RenderStyle::clonePtr(context.parentStyle ? *context.parentStyle : elementStyle));
 
-    Builder builder(*state.style(), builderContext(state), result, CascadeLevel::Author);
+    ElementRuleCollector collector(element, m_ruleSets, context.selectorMatchingState);
+    collector.setPseudoElementRequest({ elementStyle.styleType() });
+    if (hasRevert) {
+        // In the animation origin, 'revert' rolls back the cascaded value to the user level.
+        // Therefore, we need to collect UA and user rules.
+        collector.setMedium(&m_mediaQueryEvaluator);
+        collector.matchUARules();
+        collector.matchUserRules();
+    }
+    collector.addAuthorKeyframeRules(keyframe);
+    Builder builder(*state.style(), builderContext(state), collector.matchResult(), CascadeLevel::Author);
+    builder.state().setIsBuildingKeyframeStyle();
     builder.applyAllProperties();
 
     Adjuster adjuster(document(), *state.parentStyle(), nullptr, nullptr);
     adjuster.adjust(*state.style(), state.userAgentAppearanceStyle());
-
-    // Add all the animating properties to the keyframe.
-    unsigned propertyCount = keyframe.properties().propertyCount();
-    for (unsigned i = 0; i < propertyCount; ++i) {
-        auto property = CSSProperty::resolveDirectionAwareProperty(keyframe.properties().propertyAt(i).id(), elementStyle.direction(), elementStyle.writingMode());
-        // The animation-composition and animation-timing-function within keyframes are special
-        // because they are not animated; they just describe the composite operation and timing
-        // function between this keyframe and the next.
-        if (property != CSSPropertyAnimationTimingFunction && property != CSSPropertyAnimationComposition)
-            keyframeValue.addProperty(property);
-    }
 
     return state.takeStyle();
 }
@@ -453,7 +469,7 @@ std::unique_ptr<RenderStyle> Resolver::pseudoStyleForElement(const Element& elem
     Adjuster adjuster(document(), *state.parentStyle(), context.parentBoxStyle, nullptr);
     adjuster.adjust(*state.style(), state.userAgentAppearanceStyle());
 
-    if (state.style()->hasViewportUnits())
+    if (state.style()->usesViewportUnits())
         document().setHasStyleWithViewportUnits();
 
     return state.takeStyle();
@@ -559,9 +575,9 @@ void Resolver::clearCachedDeclarationsAffectedByViewportUnits()
     m_matchedDeclarationsCache.clearEntriesAffectedByViewportUnits();
 }
 
-void Resolver::applyMatchedProperties(State& state, const MatchResult& matchResult, UseMatchedDeclarationsCache useMatchedDeclarationsCache)
+void Resolver::applyMatchedProperties(State& state, const MatchResult& matchResult)
 {
-    unsigned cacheHash = useMatchedDeclarationsCache == UseMatchedDeclarationsCache::Yes ? MatchedDeclarationsCache::computeHash(matchResult) : 0;
+    unsigned cacheHash = MatchedDeclarationsCache::computeHash(matchResult);
     auto includedProperties = PropertyCascade::IncludedProperties::All;
 
     auto& style = *state.style();
@@ -583,6 +599,10 @@ void Resolver::applyMatchedProperties(State& state, const MatchResult& matchResu
 
             // Unfortunately the link status is treated like an inherited property. We need to explicitly restore it.
             style.setInsideLink(linkStatus);
+
+            if (cacheEntry->userAgentAppearanceStyle && elementTypeHasAppearanceFromUAStyle(element))
+                state.setUserAgentAppearanceStyle(RenderStyle::clonePtr(*cacheEntry->userAgentAppearanceStyle));
+
             return;
         }
 
@@ -602,16 +622,20 @@ void Resolver::applyMatchedProperties(State& state, const MatchResult& matchResu
 
     Builder builder(*state.style(), builderContext(state), matchResult, CascadeLevel::Author, includedProperties);
 
+    // Top priority properties may affect resolution of high priority ones.
+    builder.applyTopPriorityProperties();
+
     // High priority properties may affect resolution of other properties (they are mostly font related).
     builder.applyHighPriorityProperties();
 
     if (cacheEntry && !cacheEntry->isUsableAfterHighPriorityProperties(style)) {
-        // We need to resolve all properties without caching.
-        applyMatchedProperties(state, matchResult, UseMatchedDeclarationsCache::No);
+        // High-priority properties may affect resolution of other properties. Kick out the existing cache entry and try again.
+        m_matchedDeclarationsCache.remove(cacheHash);
+        applyMatchedProperties(state, matchResult);
         return;
     }
 
-    builder.applyLowPriorityProperties();
+    builder.applyNonHighPriorityProperties();
 
     for (auto& contentAttribute : builder.state().registeredContentAttributes())
         ruleSets().mutableFeatures().registerContentAttribute(contentAttribute);
@@ -620,7 +644,7 @@ void Resolver::applyMatchedProperties(State& state, const MatchResult& matchResu
         return;
 
     if (MatchedDeclarationsCache::isCacheable(element, style, parentStyle))
-        m_matchedDeclarationsCache.add(style, parentStyle, cacheHash, matchResult);
+        m_matchedDeclarationsCache.add(style, parentStyle, state.userAgentAppearanceStyle(), cacheHash, matchResult);
 }
 
 bool Resolver::hasViewportDependentMediaQueries() const

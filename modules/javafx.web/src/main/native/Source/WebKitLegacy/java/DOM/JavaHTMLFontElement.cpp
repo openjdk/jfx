@@ -53,7 +53,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLFontElementImpl_getColorIm
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLFontElementImpl_setColorImpl(JNIEnv* env, jclass, jlong peer, jstring value)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::colorAttr, String(env, value));
+    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::colorAttr, AtomString {String(env, value)});
 }
 
 JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLFontElementImpl_getFaceImpl(JNIEnv* env, jclass, jlong peer)
@@ -65,7 +65,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLFontElementImpl_getFaceImp
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLFontElementImpl_setFaceImpl(JNIEnv* env, jclass, jlong peer, jstring value)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::faceAttr, String(env, value));
+    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::faceAttr, AtomString {String(env, value)});
 }
 
 JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLFontElementImpl_getSizeImpl(JNIEnv* env, jclass, jlong peer)
@@ -77,7 +77,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLFontElementImpl_getSizeImp
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLFontElementImpl_setSizeImpl(JNIEnv* env, jclass, jlong peer, jstring value)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::sizeAttr, String(env, value));
+    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::sizeAttr, AtomString {String(env, value)});
 }
 
 }

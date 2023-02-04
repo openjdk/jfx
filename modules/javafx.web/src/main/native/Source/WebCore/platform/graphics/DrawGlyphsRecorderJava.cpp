@@ -34,14 +34,14 @@
 #include "GlyphBuffer.h"
 
 namespace WebCore {
-DrawGlyphsRecorder::DrawGlyphsRecorder(GraphicsContext& owner, DeconstructDrawGlyphs, DeriveFontFromContext)
-    : m_owner(owner)
+DrawGlyphsRecorder::DrawGlyphsRecorder(GraphicsContext& owner, float scaleFactor, DeriveFontFromContext deriveFontFromContext)
+    : m_owner(owner) , m_deriveFontFromContext(deriveFontFromContext)
 {
 }
 
 void DrawGlyphsRecorder::drawGlyphs(const Font& font, const GlyphBufferGlyph* glyphs, const GlyphBufferAdvance* advances, unsigned numGlyphs, const FloatPoint& startPoint, FontSmoothingMode smoothingMode)
 {
-    m_owner.drawGlyphsAndCacheFont(font, glyphs, advances, numGlyphs, startPoint, m_smoothingMode);
+    m_owner.drawGlyphsAndCacheResources(font, glyphs, advances, numGlyphs, startPoint, m_smoothingMode);
 }
 
 } // namespace WebCore

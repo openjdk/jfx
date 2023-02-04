@@ -246,7 +246,8 @@ const ContentSecurityPolicyDirective* ContentSecurityPolicyDirectiveList::violat
     if (checkHashes(operativeDirective, hashes)
         || checkNonParserInsertedScripts(operativeDirective, parserInserted)
         || checkNonce(operativeDirective, nonce)
-        || checkSource(operativeDirective, url))
+        || (checkSource(operativeDirective, url) && !strictDynamicIncluded())
+        || (url.isEmpty() && checkInline(operativeDirective)))
         return nullptr;
     return operativeDirective;
 }
@@ -407,12 +408,12 @@ const ContentSecurityPolicyDirective* ContentSecurityPolicyDirectiveList::violat
 
 const ContentSecurityPolicyDirective* ContentSecurityPolicyDirectiveList::violatedDirectiveForScript(const URL& url, bool didReceiveRedirectResponse, const Vector<ResourceCryptographicDigest>& subResourceIntegrityDigests, const String& nonce) const
 {
-    auto* operativeDirective = this->operativeDirective(m_scriptSrc.get(), ContentSecurityPolicyDirectiveNames::scriptSrcElem);
+    auto* operativeDirective = this->operativeDirectiveScript(m_scriptSrcElem.get(), ContentSecurityPolicyDirectiveNames::scriptSrcElem);
 
     if (!operativeDirective
         || operativeDirective->containsAllHashes(subResourceIntegrityDigests)
         || checkNonce(operativeDirective, nonce)
-        || checkSource(operativeDirective, url, didReceiveRedirectResponse))
+        || (checkSource(operativeDirective, url, didReceiveRedirectResponse) && !strictDynamicIncluded()))
         return nullptr;
 
     return operativeDirective;
@@ -662,7 +663,7 @@ void ContentSecurityPolicyDirectiveList::addDirective(ParsedDirective&& directiv
         m_policy.reportUnsupportedDirective(WTFMove(directive.name));
 }
 
-bool ContentSecurityPolicyDirectiveList::strictDynamicIncluded()
+bool ContentSecurityPolicyDirectiveList::strictDynamicIncluded() const
 {
     ContentSecurityPolicySourceListDirective* directive = this->operativeDirectiveScript(m_scriptSrcElem.get(), ContentSecurityPolicyDirectiveNames::scriptSrc);
     return directive && directive->allowNonParserInsertedScripts();
@@ -671,9 +672,9 @@ bool ContentSecurityPolicyDirectiveList::strictDynamicIncluded()
 bool ContentSecurityPolicyDirectiveList::shouldReportSample(const String& violatedDirective) const
 {
     ContentSecurityPolicySourceListDirective* directive = nullptr;
-    if (violatedDirective.startsWith(ContentSecurityPolicyDirectiveNames::styleSrc))
+    if (violatedDirective.startsWith(StringView { ContentSecurityPolicyDirectiveNames::styleSrc }))
         directive = m_styleSrc.get();
-    else if (violatedDirective.startsWith(ContentSecurityPolicyDirectiveNames::scriptSrc))
+    else if (violatedDirective.startsWith(StringView { ContentSecurityPolicyDirectiveNames::scriptSrc }))
         directive = m_scriptSrc.get();
 
     return directive && directive->shouldReportSample();

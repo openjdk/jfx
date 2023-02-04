@@ -40,6 +40,8 @@
 #include "Styleable.h"
 #include "WebAnimationTypes.h"
 #include <wtf/Ref.h>
+#include <wtf/text/AtomString.h>
+#include <wtf/text/AtomStringHash.h>
 
 namespace WebCore {
 
@@ -54,7 +56,7 @@ class KeyframeEffect : public AnimationEffect
     , public CSSPropertyBlendingClient {
 public:
     static ExceptionOr<Ref<KeyframeEffect>> create(JSC::JSGlobalObject&, Document&, Element*, JSC::Strong<JSC::JSObject>&&, std::optional<std::variant<double, KeyframeEffectOptions>>&&);
-    static ExceptionOr<Ref<KeyframeEffect>> create(Ref<KeyframeEffect>&&);
+    static Ref<KeyframeEffect> create(Ref<KeyframeEffect>&&);
     static Ref<KeyframeEffect> create(const Element&, PseudoId);
     ~KeyframeEffect() { }
 
@@ -66,12 +68,13 @@ public:
 
     struct BaseKeyframe {
         MarkableDouble offset;
-        String easing { "linear" };
+        String easing { "linear"_s };
         CompositeOperationOrAuto composite { CompositeOperationOrAuto::Auto };
     };
 
     struct PropertyAndValues {
         CSSPropertyID property;
+        AtomString customProperty;
         Vector<String> values;
     };
 
@@ -86,6 +89,7 @@ public:
 
     struct ComputedKeyframe : BaseComputedKeyframe {
         HashMap<CSSPropertyID, String> styleStrings;
+        HashMap<AtomString, String> customStyleStrings;
     };
 
     struct ParsedKeyframe : ComputedKeyframe {
@@ -116,7 +120,7 @@ public:
     IterationCompositeOperation iterationComposite() const { return m_iterationCompositeOperation; }
     void setIterationComposite(IterationCompositeOperation iterationCompositeOperation) { m_iterationCompositeOperation = iterationCompositeOperation; }
     CompositeOperation composite() const { return m_compositeOperation; }
-    void setComposite(CompositeOperation compositeOperation) { m_compositeOperation = compositeOperation; }
+    void setComposite(CompositeOperation);
     CompositeOperation bindingsComposite() const;
     void setBindingsComposite(CompositeOperation);
 
@@ -126,8 +130,8 @@ public:
 
     void animationTimingDidChange();
     void transformRelatedPropertyDidChange();
-    void propertyAffectingLogicalPropertiesDidChange(RenderStyle&, const Style::ResolutionContext&);
-    OptionSet<AcceleratedActionApplicationResult> applyPendingAcceleratedActions();
+    void propertyAffectingKeyframeResolutionDidChange(RenderStyle&, const Style::ResolutionContext&);
+    void applyPendingAcceleratedActions();
 
     void willChangeRenderer();
 
@@ -140,7 +144,14 @@ public:
     bool isAboutToRunAccelerated() const { return m_acceleratedPropertiesState != AcceleratedProperties::None && m_lastRecordedAcceleratedAction != AcceleratedAction::Stop; }
 
     bool filterFunctionListsMatch() const override { return m_filterFunctionListsMatch; }
-    bool transformFunctionListsMatch() const override { return m_transformFunctionListsMatch; }
+
+    // The CoreAnimation animation code can only use direct function interpolation when all keyframes share the same
+    // prefix of shared transform function primitives, whereas software animations simply calls blend(...) which can do
+    // direct interpolation based on the function list of any two particular keyframes. The prefix serves as a way to
+    // make sure that the results of blend(...) can be made to return the same results as rendered by the hardware
+    // animation code.
+    std::optional<unsigned> transformFunctionListPrefix() const override { return (!preventsAcceleration()) ? std::optional<unsigned>(m_transformFunctionListsMatchPrefix) : std::nullopt; }
+
 #if ENABLE(FILTERS_LEVEL_2)
     bool backdropFilterFunctionListsMatch() const override { return m_backdropFilterFunctionListsMatch; }
 #endif
@@ -149,6 +160,8 @@ public:
     void computeDeclarativeAnimationBlendingKeyframes(const RenderStyle* oldStyle, const RenderStyle& newStyle, const Style::ResolutionContext&);
     const KeyframeList& blendingKeyframes() const { return m_blendingKeyframes; }
     const HashSet<CSSPropertyID>& animatedProperties();
+    const HashSet<AtomString>& animatedCustomProperties();
+    const HashSet<CSSPropertyID>& inheritedProperties() const { return m_inheritedProperties; }
     bool animatesProperty(CSSPropertyID) const;
 
     bool computeExtentOfTransformAnimation(LayoutRect&) const;
@@ -164,11 +177,14 @@ public:
     bool requiresPseudoElement() const;
     bool hasImplicitKeyframes() const;
 
-    void stopAcceleratingTransformRelatedProperties(UseAcceleratedAction);
-
     void keyframesRuleDidChange();
 
+    bool canBeAccelerated() const;
     bool preventsAcceleration() const;
+    void effectStackNoLongerPreventsAcceleration();
+    void effectStackNoLongerAllowsAcceleration();
+
+    void lastStyleChangeEventStyleDidChange(const RenderStyle* previousStyle, const RenderStyle* currentStyle);
 
     static String CSSPropertyIDToIDLAttributeName(CSSPropertyID);
 
@@ -178,7 +194,18 @@ private:
     enum class AcceleratedAction : uint8_t { Play, Pause, UpdateTiming, TransformChange, Stop };
     enum class BlendingKeyframesSource : uint8_t { CSSAnimation, CSSTransition, WebAnimation };
     enum class AcceleratedProperties : uint8_t { None, Some, All };
-    enum class RunningAccelerated : uint8_t { NotStarted, Yes, No };
+    enum class RunningAccelerated : uint8_t { NotStarted, Yes, Prevented, Failed };
+
+    class CanBeAcceleratedMutationScope {
+        WTF_MAKE_NONCOPYABLE(CanBeAcceleratedMutationScope);
+    public:
+        CanBeAcceleratedMutationScope(KeyframeEffect*);
+        ~CanBeAcceleratedMutationScope();
+
+    private:
+        KeyframeEffect* m_effect;
+        bool m_couldOriginallyPreventAcceleration;
+    };
 
     Document* document() const;
     void updateEffectStackMembership();
@@ -186,7 +213,6 @@ private:
     void didChangeTargetStyleable(const std::optional<const Styleable>&);
     ExceptionOr<void> processKeyframes(JSC::JSGlobalObject&, Document&, JSC::Strong<JSC::JSObject>&&);
     void addPendingAcceleratedAction(AcceleratedAction);
-    bool canBeAccelerated() const;
     bool isCompletelyAccelerated() const { return m_acceleratedPropertiesState == AcceleratedProperties::All; }
     void updateAcceleratedActions();
     void setAnimatedPropertiesInStyle(RenderStyle&, double);
@@ -212,6 +238,7 @@ private:
 #endif
     void computeHasImplicitKeyframeForAcceleratedProperty();
     void computeHasKeyframeComposingAcceleratedProperty();
+    void abilityToBeAcceleratedDidChange();
 
     // AnimationEffect
     bool isKeyframeEffect() const final { return true; }
@@ -225,8 +252,11 @@ private:
     bool ticksContinouslyWhileActive() const final;
     std::optional<double> progressUntilNextStep(double) const final;
 
-    KeyframeList m_blendingKeyframes { emptyString() };
+    AtomString m_keyframesName;
+    KeyframeList m_blendingKeyframes { emptyAtom() };
     HashSet<CSSPropertyID> m_animatedProperties;
+    HashSet<AtomString> m_animatedCustomProperties;
+    HashSet<CSSPropertyID> m_inheritedProperties;
     Vector<ParsedKeyframe> m_parsedKeyframes;
     Vector<AcceleratedAction> m_pendingAcceleratedActions;
     RefPtr<Element> m_target;
@@ -238,10 +268,10 @@ private:
     CompositeOperation m_compositeOperation { CompositeOperation::Replace };
     AcceleratedProperties m_acceleratedPropertiesState { AcceleratedProperties::None };
     AnimationEffectPhase m_phaseAtLastApplication { AnimationEffectPhase::Idle };
-    RunningAccelerated m_runningAccelerated;
+    RunningAccelerated m_runningAccelerated { RunningAccelerated::NotStarted };
     bool m_needsForcedLayout { false };
     bool m_triggersStackingContext { false };
-    bool m_transformFunctionListsMatch { false };
+    size_t m_transformFunctionListsMatchPrefix { 0 };
     bool m_filterFunctionListsMatch { false };
 #if ENABLE(FILTERS_LEVEL_2)
     bool m_backdropFilterFunctionListsMatch { false };

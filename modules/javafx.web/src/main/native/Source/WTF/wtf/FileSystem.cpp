@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2007-2022 Apple Inc. All rights reserved.
  * Copyright (C) 2015 Canon Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -37,6 +37,7 @@
 #include <sys/mman.h>
 #include <sys/param.h>
 #include <sys/stat.h>
+#include <unistd.h>
 #endif
 
 #if USE(GLIB)
@@ -286,16 +287,13 @@ bool appendFileContentsToFileHandle(const String& path, PlatformFileHandle& targ
 
 bool filesHaveSameVolume(const String& fileA, const String& fileB)
 {
-    auto fsRepFileA = fileSystemRepresentation(fileA);
-    auto fsRepFileB = fileSystemRepresentation(fileB);
-
-    if (fsRepFileA.isNull() || fsRepFileB.isNull())
+    if (fileA.isNull() || fileB.isNull())
         return false;
 
     bool result = false;
 
-    auto fileADev = getFileDeviceId(fsRepFileA);
-    auto fileBDev = getFileDeviceId(fsRepFileB);
+    auto fileADev = getFileDeviceId(fileA);
+    auto fileBDev = getFileDeviceId(fileB);
 
     if (fileADev && fileBDev)
         result = (fileADev == fileBDev);
@@ -415,8 +413,9 @@ bool isSafeToUseMemoryMapForPath(const String&)
     return true;
 }
 
-void makeSafeToUseMemoryMapForPath(const String&)
+bool makeSafeToUseMemoryMapForPath(const String&)
 {
+    return true;
 }
 #endif
 
@@ -427,7 +426,7 @@ String createTemporaryZipArchive(const String&)
     return { };
 }
 
-bool excludeFromBackup(const String&)
+bool setExcludedFromBackup(const String&, bool)
 {
     return false;
 }
@@ -443,7 +442,11 @@ MappedFileData mapToFile(const String& path, size_t bytesSize, Function<void(con
         return { };
     }
 
-    FileSystem::makeSafeToUseMemoryMapForPath(path);
+    if (!FileSystem::makeSafeToUseMemoryMapForPath(path)) {
+        FileSystem::closeFile(handle);
+        return { };
+    }
+
     bool success;
     FileSystem::MappedFileData mappedFile(handle, FileSystem::FileOpenMode::ReadWrite, FileSystem::MappedFileMode::Shared, success);
     if (!success) {
@@ -818,7 +821,7 @@ bool makeAllDirectories(const String& path)
     return !ec;
 }
 
-String pathByAppendingComponent(const String& path, const String& component)
+String pathByAppendingComponent(StringView path, StringView component)
 {
     return fromStdFileSystemPath(toStdFileSystemPath(path) / toStdFileSystemPath(component));
 }
@@ -832,6 +835,26 @@ String pathByAppendingComponents(StringView path, const Vector<StringView>& comp
 }
 
 #endif
+
+#if !OS(WINDOWS) && !PLATFORM(COCOA) && !PLATFORM(PLAYSTATION)
+
+String createTemporaryDirectory()
+{
+    std::error_code ec;
+    std::string tempDir = std::filesystem::temp_directory_path(ec);
+    if (ec)
+        return String();
+
+    std::string newTempDirTemplate = tempDir + "XXXXXXXX";
+
+    Vector<char> newTempDir(newTempDirTemplate.c_str(), newTempDirTemplate.size());
+    if (!mkdtemp(newTempDir.data()))
+        return String();
+
+    return stringFromFileSystemRepresentation(newTempDir.data());
+}
+
+#endif // !OS(WINDOWS) && !PLATFORM(COCOA)
 
 #endif // HAVE(STD_FILESYSTEM) || HAVE(STD_EXPERIMENTAL_FILESYSTEM)
 

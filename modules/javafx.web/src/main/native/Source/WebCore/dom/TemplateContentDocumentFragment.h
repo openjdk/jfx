@@ -28,6 +28,7 @@
 #pragma once
 
 #include "DocumentFragment.h"
+#include "Element.h"
 
 namespace WebCore {
 
@@ -55,3 +56,12 @@ private:
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::TemplateContentDocumentFragment)
+    static bool isType(const WebCore::Node& node)
+    {
+        auto* fragment = dynamicDowncast<WebCore::DocumentFragment>(node);
+        return fragment && is<WebCore::TemplateContentDocumentFragment>(*fragment);
+    }
+    static bool isType(const WebCore::DocumentFragment& node) { return node.isTemplateContent(); }
+SPECIALIZE_TYPE_TRAITS_END()

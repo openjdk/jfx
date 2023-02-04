@@ -44,7 +44,7 @@ static JSC_DECLARE_HOST_FUNCTION(temporalPlainDateConstructorFuncCompare);
 
 namespace JSC {
 
-const ClassInfo TemporalPlainDateConstructor::s_info = { "Function", &Base::s_info, &temporalPlainDateConstructorTable, nullptr, CREATE_METHOD_TABLE(TemporalPlainDateConstructor) };
+const ClassInfo TemporalPlainDateConstructor::s_info = { "Function"_s, &Base::s_info, &temporalPlainDateConstructorTable, nullptr, CREATE_METHOD_TABLE(TemporalPlainDateConstructor) };
 
 /* Source for TemporalPlainDateConstructor.lut.h
 @begin temporalPlainDateConstructorTable
@@ -141,7 +141,7 @@ JSC_DEFINE_HOST_FUNCTION(temporalPlainDateConstructorFuncFrom, (JSGlobalObject* 
 
     JSValue itemValue = callFrame->argument(0);
 
-    if (itemValue.inherits<TemporalPlainDate>(vm))
+    if (itemValue.inherits<TemporalPlainDate>())
         RELEASE_AND_RETURN(scope, JSValue::encode(TemporalPlainDate::create(vm, globalObject->plainDateStructure(), jsCast<TemporalPlainDate*>(itemValue)->plainDate())));
 
     RELEASE_AND_RETURN(scope, JSValue::encode(TemporalPlainDate::from(globalObject, itemValue, overflow)));

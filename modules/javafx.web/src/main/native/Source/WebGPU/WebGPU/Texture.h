@@ -28,36 +28,76 @@
 #import <wtf/FastMalloc.h>
 #import <wtf/Ref.h>
 #import <wtf/RefCounted.h>
-#import <wtf/RefPtr.h>
+#import <wtf/Vector.h>
+
+struct WGPUTextureImpl {
+};
 
 namespace WebGPU {
 
+class Device;
 class TextureView;
 
-class Texture : public RefCounted<Texture> {
+// https://gpuweb.github.io/gpuweb/#gputexture
+class Texture : public WGPUTextureImpl, public RefCounted<Texture> {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    static Ref<Texture> create(id <MTLTexture> texture)
+    static Ref<Texture> create(id<MTLTexture> texture, const WGPUTextureDescriptor& descriptor, Vector<WGPUTextureFormat>&& viewFormats, Device& device)
     {
-        return adoptRef(*new Texture(texture));
+        return adoptRef(*new Texture(texture, descriptor, WTFMove(viewFormats), device));
+    }
+    static Ref<Texture> createInvalid(Device& device)
+    {
+        return adoptRef(*new Texture(device));
     }
 
     ~Texture();
 
-    RefPtr<TextureView> createView(const WGPUTextureViewDescriptor*);
+    Ref<TextureView> createView(const WGPUTextureViewDescriptor&);
     void destroy();
-    void setLabel(const char*);
+    void setLabel(String&&);
 
-    id <MTLTexture> texture() const { return m_texture; }
+    bool isValid() const { return m_texture; }
+
+    static uint32_t texelBlockWidth(WGPUTextureFormat); // Texels
+    static uint32_t texelBlockHeight(WGPUTextureFormat); // Texels
+    // For depth-stencil textures, the input value to texelBlockSize()
+    // needs to be the output of aspectSpecificFormat().
+    static uint32_t texelBlockSize(WGPUTextureFormat); // Bytes
+    static bool containsDepthAspect(WGPUTextureFormat);
+    static bool containsStencilAspect(WGPUTextureFormat);
+    static bool isDepthOrStencilFormat(WGPUTextureFormat);
+    static WGPUTextureFormat aspectSpecificFormat(WGPUTextureFormat, WGPUTextureAspect);
+    static bool validateImageCopyTexture(const WGPUImageCopyTexture&, const WGPUExtent3D&);
+    static bool validateTextureCopyRange(const WGPUImageCopyTexture&, const WGPUExtent3D&);
+    static bool refersToSingleAspect(WGPUTextureFormat, WGPUTextureAspect);
+    static bool isValidImageCopySource(WGPUTextureFormat, WGPUTextureAspect);
+    static bool isValidImageCopyDestination(WGPUTextureFormat, WGPUTextureAspect);
+    static bool validateLinearTextureData(const WGPUTextureDataLayout&, uint64_t, WGPUTextureFormat, WGPUExtent3D);
+    static WGPUTextureFormat removeSRGBSuffix(WGPUTextureFormat);
+
+    WGPUExtent3D logicalMiplevelSpecificTextureExtent(uint32_t mipLevel);
+    WGPUExtent3D physicalMiplevelSpecificTextureExtent(uint32_t mipLevel);
+
+    id<MTLTexture> texture() const { return m_texture; }
+    const WGPUTextureDescriptor& descriptor() const { return m_descriptor; }
+
+    Device& device() const { return m_device; }
 
 private:
-    Texture(id <MTLTexture>);
+    Texture(id<MTLTexture>, const WGPUTextureDescriptor&, Vector<WGPUTextureFormat>&& viewFormats, Device&);
+    Texture(Device&);
 
-    id <MTLTexture> m_texture { nil };
+    std::optional<WGPUTextureViewDescriptor> resolveTextureViewDescriptorDefaults(const WGPUTextureViewDescriptor&) const;
+    uint32_t arrayLayerCount() const;
+    bool validateCreateView(const WGPUTextureViewDescriptor&) const;
+
+    id<MTLTexture> m_texture { nil };
+
+    const WGPUTextureDescriptor m_descriptor { };
+    const Vector<WGPUTextureFormat> m_viewFormats;
+
+    const Ref<Device> m_device;
 };
 
 } // namespace WebGPU
-
-struct WGPUTextureImpl {
-    Ref<WebGPU::Texture> texture;
-};

@@ -33,16 +33,22 @@ namespace JSC {
 
 class CallFrame;
 class VM;
-struct Instruction;
 template<PtrTag> class MacroAssemblerCodeRef;
+
+template<typename> struct BaseInstruction;
+struct JSOpcodeTraits;
+struct WasmOpcodeTraits;
+
+using JSInstruction = BaseInstruction<JSOpcodeTraits>;
+using WasmInstruction = BaseInstruction<WasmOpcodeTraits>;
 
 namespace LLInt {
 
 // Gives you a PC that you can tell the interpreter to go to, which when advanced
 // between 1 and 9 slots will give you an "instruction" that threads to the
 // interpreter's exception handler.
-Instruction* returnToThrow(VM&);
-Instruction* wasmReturnToThrow(VM&);
+JSInstruction* returnToThrow(VM&);
+WasmInstruction* wasmReturnToThrow(VM&);
 
 // Use this when you're throwing to a call thunk.
 MacroAssemblerCodeRef<ExceptionHandlerPtrTag> callToThrow(VM&);

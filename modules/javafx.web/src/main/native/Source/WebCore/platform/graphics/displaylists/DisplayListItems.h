@@ -28,18 +28,20 @@
 #include "AlphaPremultiplication.h"
 #include "DisplayListItemBufferIdentifier.h"
 #include "DisplayListItemType.h"
+#include "DisplayListResourceHeap.h"
 #include "FloatRoundedRect.h"
 #include "Font.h"
 #include "GlyphBuffer.h"
 #include "Gradient.h"
 #include "GraphicsContext.h"
-#include "GraphicsContextFlushIdentifier.h"
 #include "Image.h"
 #include "MediaPlayerIdentifier.h"
 #include "Pattern.h"
 #include "PixelBuffer.h"
+#include "PositionedGlyphs.h"
 #include "RenderingResourceIdentifier.h"
 #include "SharedBuffer.h"
+#include "SystemImage.h"
 #include <variant>
 #include <wtf/EnumTraits.h>
 #include <wtf/TypeCasts.h>
@@ -55,6 +57,7 @@ struct ImagePaintingOptions;
 
 namespace DisplayList {
 
+enum class AsTextFlag : uint8_t;
 struct ItemHandle;
 
 /* isInlineItem indicates whether the object needs to be passed through IPC::Encoder in order to serialize,
@@ -246,10 +249,9 @@ public:
     static constexpr bool isInlineItem = false;
     static constexpr bool isDrawingItem = false;
 
-    WEBCORE_EXPORT SetState(const GraphicsContextState&, GraphicsContextState::StateChangeFlags);
+    WEBCORE_EXPORT SetState(const GraphicsContextState&);
 
-    const GraphicsContextStateChange& stateChange() const { return m_stateChange; }
-    GraphicsContextStateChange& stateChange() { return m_stateChange; }
+    const GraphicsContextState& state() const { return m_state; }
 
     template<class Encoder> void encode(Encoder&) const;
     template<class Decoder> static std::optional<SetState> decode(Decoder&);
@@ -257,288 +259,24 @@ public:
     WEBCORE_EXPORT void apply(GraphicsContext&);
 
 private:
-    WEBCORE_EXPORT SetState(const GraphicsContextStateChange&);
-
-    GraphicsContextStateChange m_stateChange;
+    GraphicsContextState m_state;
 };
 
 template<class Encoder>
 void SetState::encode(Encoder& encoder) const
 {
-    auto changeFlags = m_stateChange.m_changeFlags;
-    encoder << changeFlags;
-
-    auto& state = m_stateChange.m_state;
-
-    if (changeFlags.contains(GraphicsContextState::StrokeGradientChange)) {
-        ASSERT(state.strokeGradient);
-        encoder << *state.strokeGradient;
-    }
-
-    if (changeFlags.contains(GraphicsContextState::StrokePatternChange)) {
-        ASSERT(state.strokePattern);
-        encoder << *state.strokePattern;
-    }
-
-    if (changeFlags.contains(GraphicsContextState::FillGradientChange)) {
-        ASSERT(state.fillGradient);
-        encoder << *state.fillGradient;
-    }
-
-    if (changeFlags.contains(GraphicsContextState::FillPatternChange)) {
-        ASSERT(state.fillPattern);
-        encoder << *state.fillPattern;
-    }
-
-    if (changeFlags.contains(GraphicsContextState::ShadowChange)) {
-        encoder << state.shadowOffset;
-        encoder << state.shadowBlur;
-        encoder << state.shadowColor;
-        encoder << state.shadowRadiusMode;
-    }
-
-    if (changeFlags.contains(GraphicsContextState::StrokeThicknessChange))
-        encoder << state.strokeThickness;
-
-    if (changeFlags.contains(GraphicsContextState::TextDrawingModeChange))
-        encoder << state.textDrawingMode;
-
-    if (changeFlags.contains(GraphicsContextState::StrokeColorChange))
-        encoder << state.strokeColor;
-
-    if (changeFlags.contains(GraphicsContextState::FillColorChange))
-        encoder << state.fillColor;
-
-    if (changeFlags.contains(GraphicsContextState::StrokeStyleChange))
-        encoder << state.strokeStyle;
-
-    if (changeFlags.contains(GraphicsContextState::FillRuleChange))
-        encoder << state.fillRule;
-
-    if (changeFlags.contains(GraphicsContextState::CompositeOperationChange))
-        encoder << state.compositeOperator;
-
-    if (changeFlags.contains(GraphicsContextState::BlendModeChange))
-        encoder << state.blendMode;
-
-    if (changeFlags.contains(GraphicsContextState::ImageInterpolationQualityChange))
-        encoder << state.imageInterpolationQuality;
-
-    if (changeFlags.contains(GraphicsContextState::AlphaChange))
-        encoder << state.alpha;
-
-    if (changeFlags.contains(GraphicsContextState::ShouldAntialiasChange))
-        encoder << state.shouldAntialias;
-
-    if (changeFlags.contains(GraphicsContextState::ShouldSmoothFontsChange))
-        encoder << state.shouldSmoothFonts;
-
-    if (changeFlags.contains(GraphicsContextState::ShouldSubpixelQuantizeFontsChange))
-        encoder << state.shouldSubpixelQuantizeFonts;
-
-    if (changeFlags.contains(GraphicsContextState::ShadowsIgnoreTransformsChange))
-        encoder << state.shadowsIgnoreTransforms;
+    encoder << m_state;
 }
 
 template<class Decoder>
 std::optional<SetState> SetState::decode(Decoder& decoder)
 {
-    std::optional<GraphicsContextState::StateChangeFlags> changeFlags;
-    decoder >> changeFlags;
-    if (!changeFlags)
-        return std::nullopt;
-
-    GraphicsContextStateChange stateChange;
-    stateChange.m_changeFlags = *changeFlags;
-
-    if (stateChange.m_changeFlags.contains(GraphicsContextState::StrokeGradientChange)) {
-        auto strokeGradient = Gradient::decode(decoder);
-        if (!strokeGradient)
+    std::optional<GraphicsContextState> state;
+    decoder >> state;
+    if (!state)
             return std::nullopt;
 
-        stateChange.m_state.strokeGradient = WTFMove(*strokeGradient);
-    }
-
-    if (stateChange.m_changeFlags.contains(GraphicsContextState::StrokePatternChange)) {
-        auto strokePattern = Pattern::decode(decoder);
-        if (!strokePattern)
-            return std::nullopt;
-
-        stateChange.m_state.strokePattern = WTFMove(*strokePattern);
-    }
-
-    if (stateChange.m_changeFlags.contains(GraphicsContextState::FillGradientChange)) {
-        auto fillGradient = Gradient::decode(decoder);
-        if (!fillGradient)
-            return std::nullopt;
-
-        stateChange.m_state.fillGradient = WTFMove(*fillGradient);
-    }
-
-    if (stateChange.m_changeFlags.contains(GraphicsContextState::FillPatternChange)) {
-        auto fillPattern = Pattern::decode(decoder);
-        if (!fillPattern)
-            return std::nullopt;
-
-        stateChange.m_state.fillPattern = WTFMove(*fillPattern);
-    }
-
-    if (stateChange.m_changeFlags.contains(GraphicsContextState::ShadowChange)) {
-        std::optional<FloatSize> shadowOffset;
-        decoder >> shadowOffset;
-        if (!shadowOffset)
-            return std::nullopt;
-
-        stateChange.m_state.shadowOffset = *shadowOffset;
-
-        std::optional<float> shadowBlur;
-        decoder >> shadowBlur;
-        if (!shadowBlur)
-            return std::nullopt;
-
-        stateChange.m_state.shadowBlur = *shadowBlur;
-
-        std::optional<Color> shadowColor;
-        decoder >> shadowColor;
-        if (!shadowColor)
-            return std::nullopt;
-
-        stateChange.m_state.shadowColor = *shadowColor;
-
-        std::optional<ShadowRadiusMode> shadowRadiusMode;
-        decoder >> shadowRadiusMode;
-        if (!shadowRadiusMode)
-            return std::nullopt;
-
-        stateChange.m_state.shadowRadiusMode = WTFMove(*shadowRadiusMode);
-    }
-
-    if (stateChange.m_changeFlags.contains(GraphicsContextState::StrokeThicknessChange)) {
-        std::optional<float> strokeThickness;
-        decoder >> strokeThickness;
-        if (!strokeThickness)
-            return std::nullopt;
-
-        stateChange.m_state.strokeThickness = *strokeThickness;
-    }
-
-    if (stateChange.m_changeFlags.contains(GraphicsContextState::TextDrawingModeChange)) {
-        std::optional<TextDrawingModeFlags> textDrawingMode;
-        decoder >> textDrawingMode;
-        if (!textDrawingMode)
-            return std::nullopt;
-
-        stateChange.m_state.textDrawingMode = WTFMove(*textDrawingMode);
-    }
-
-    if (stateChange.m_changeFlags.contains(GraphicsContextState::StrokeColorChange)) {
-        std::optional<Color> strokeColor;
-        decoder >> strokeColor;
-        if (!strokeColor)
-            return std::nullopt;
-
-        stateChange.m_state.strokeColor = *strokeColor;
-    }
-
-    if (stateChange.m_changeFlags.contains(GraphicsContextState::FillColorChange)) {
-        std::optional<Color> fillColor;
-        decoder >> fillColor;
-        if (!fillColor)
-            return std::nullopt;
-
-        stateChange.m_state.fillColor = *fillColor;
-    }
-
-    if (stateChange.m_changeFlags.contains(GraphicsContextState::StrokeStyleChange)) {
-        StrokeStyle strokeStyle;
-        if (!decoder.decode(strokeStyle))
-            return std::nullopt;
-
-        stateChange.m_state.strokeStyle = strokeStyle;
-    }
-
-    if (stateChange.m_changeFlags.contains(GraphicsContextState::FillRuleChange)) {
-        std::optional<WindRule> fillRule;
-        decoder >> fillRule;
-        if (!fillRule)
-            return std::nullopt;
-
-        stateChange.m_state.fillRule = *fillRule;
-    }
-
-    if (stateChange.m_changeFlags.contains(GraphicsContextState::CompositeOperationChange)) {
-        std::optional<CompositeOperator> compositeOperator;
-        decoder >> compositeOperator;
-        if (!compositeOperator)
-            return std::nullopt;
-
-        stateChange.m_state.compositeOperator = *compositeOperator;
-    }
-
-    if (stateChange.m_changeFlags.contains(GraphicsContextState::BlendModeChange)) {
-        std::optional<BlendMode> blendMode;
-        decoder >> blendMode;
-        if (!blendMode)
-            return std::nullopt;
-
-        stateChange.m_state.blendMode = *blendMode;
-    }
-
-    if (stateChange.m_changeFlags.contains(GraphicsContextState::ImageInterpolationQualityChange)) {
-        std::optional<InterpolationQuality> imageInterpolationQuality;
-        decoder >> imageInterpolationQuality;
-        if (!imageInterpolationQuality)
-            return std::nullopt;
-
-        stateChange.m_state.imageInterpolationQuality = *imageInterpolationQuality;
-    }
-
-    if (stateChange.m_changeFlags.contains(GraphicsContextState::AlphaChange)) {
-        std::optional<float> alpha;
-        decoder >> alpha;
-        if (!alpha)
-            return std::nullopt;
-
-        stateChange.m_state.alpha = *alpha;
-    }
-
-    if (stateChange.m_changeFlags.contains(GraphicsContextState::ShouldAntialiasChange)) {
-        std::optional<bool> shouldAntialias;
-        decoder >> shouldAntialias;
-        if (!shouldAntialias)
-            return std::nullopt;
-
-        stateChange.m_state.shouldAntialias = *shouldAntialias;
-    }
-
-    if (stateChange.m_changeFlags.contains(GraphicsContextState::ShouldSmoothFontsChange)) {
-        std::optional<bool> shouldSmoothFonts;
-        decoder >> shouldSmoothFonts;
-        if (!shouldSmoothFonts)
-            return std::nullopt;
-
-        stateChange.m_state.shouldSmoothFonts = *shouldSmoothFonts;
-    }
-
-    if (stateChange.m_changeFlags.contains(GraphicsContextState::ShouldSubpixelQuantizeFontsChange)) {
-        std::optional<bool> shouldSubpixelQuantizeFonts;
-        decoder >> shouldSubpixelQuantizeFonts;
-        if (!shouldSubpixelQuantizeFonts)
-            return std::nullopt;
-
-        stateChange.m_state.shouldSubpixelQuantizeFonts = *shouldSubpixelQuantizeFonts;
-    }
-
-    if (stateChange.m_changeFlags.contains(GraphicsContextState::ShadowsIgnoreTransformsChange)) {
-        std::optional<bool> shadowsIgnoreTransforms;
-        decoder >> shadowsIgnoreTransforms;
-        if (!shadowsIgnoreTransforms)
-            return std::nullopt;
-
-        stateChange.m_state.shadowsIgnoreTransforms = *shadowsIgnoreTransforms;
-    }
-
-    return { { stateChange } };
+    return SetState(*state);
 }
 
 class SetLineCap {
@@ -712,8 +450,6 @@ public:
 
     WEBCORE_EXPORT void apply(GraphicsContext&, ImageBuffer&) const;
 
-    NO_RETURN_DUE_TO_ASSERT void apply(GraphicsContext&) const;
-
 private:
     RenderingResourceIdentifier m_imageBufferIdentifier;
     FloatRect m_destinationRect;
@@ -828,11 +564,7 @@ public:
     std::optional<RenderingResourceIdentifier> sourceImageIdentifier() const { return m_sourceImageIdentifier; }
     FloatRect sourceImageRect() const { return m_sourceImageRect; }
 
-    NO_RETURN_DUE_TO_ASSERT void apply(GraphicsContext&) const;
     WEBCORE_EXPORT void apply(GraphicsContext&, ImageBuffer* sourceImage, FilterResults&);
-
-    std::optional<FloatRect> globalBounds() const { return std::nullopt; }
-    std::optional<FloatRect> localBounds(const GraphicsContext&) const { return m_sourceImageRect; }
 
 private:
     std::optional<RenderingResourceIdentifier> m_sourceImageIdentifier;
@@ -847,41 +579,28 @@ public:
     static constexpr bool isDrawingItem = true;
 
     RenderingResourceIdentifier fontIdentifier() { return m_fontIdentifier; }
-    const FloatPoint& localAnchor() const { return m_localAnchor; }
-    FloatPoint anchorPoint() const { return m_localAnchor; }
-    const Vector<GlyphBufferGlyph, 16>& glyphs() const { return m_glyphs; }
+    const FloatPoint& localAnchor() const { return m_positionedGlyphs.localAnchor; }
+    FloatPoint anchorPoint() const { return m_positionedGlyphs.localAnchor; }
+    const Vector<GlyphBufferGlyph>& glyphs() const { return m_positionedGlyphs.glyphs; }
 
     template<class Encoder> void encode(Encoder&) const;
     template<class Decoder> static std::optional<DrawGlyphs> decode(Decoder&);
 
     WEBCORE_EXPORT DrawGlyphs(const Font&, const GlyphBufferGlyph*, const GlyphBufferAdvance*, unsigned count, const FloatPoint& localAnchor, FontSmoothingMode);
-    WEBCORE_EXPORT DrawGlyphs(RenderingResourceIdentifier, Vector<GlyphBufferGlyph, 128>&&, Vector<GlyphBufferAdvance, 128>&&, const FloatRect&, const FloatPoint& localAnchor, FontSmoothingMode);
+    WEBCORE_EXPORT DrawGlyphs(RenderingResourceIdentifier, PositionedGlyphs&&);
 
     WEBCORE_EXPORT void apply(GraphicsContext&, const Font&) const;
 
-    std::optional<FloatRect> globalBounds() const { return std::nullopt; }
-    std::optional<FloatRect> localBounds(const GraphicsContext&) const { return m_bounds; }
-
 private:
-    void computeBounds(const Font&);
-
     RenderingResourceIdentifier m_fontIdentifier;
-    Vector<GlyphBufferGlyph, 16> m_glyphs;
-    Vector<GlyphBufferAdvance, 16> m_advances;
-    FloatRect m_bounds;
-    FloatPoint m_localAnchor;
-    FontSmoothingMode m_smoothingMode;
+    PositionedGlyphs m_positionedGlyphs;
 };
 
 template<class Encoder>
 void DrawGlyphs::encode(Encoder& encoder) const
 {
     encoder << m_fontIdentifier;
-    encoder << m_glyphs;
-    encoder << m_advances;
-    encoder << m_bounds;
-    encoder << m_localAnchor;
-    encoder << m_smoothingMode;
+    encoder << m_positionedGlyphs;
 }
 
 template<class Decoder>
@@ -892,36 +611,35 @@ std::optional<DrawGlyphs> DrawGlyphs::decode(Decoder& decoder)
     if (!fontIdentifier)
         return std::nullopt;
 
-    std::optional<Vector<GlyphBufferGlyph, 128>> glyphs;
-    decoder >> glyphs;
-    if (!glyphs)
+    std::optional<PositionedGlyphs> positionedGlyphs;
+    decoder >> positionedGlyphs;
+    if (!positionedGlyphs)
         return std::nullopt;
 
-    std::optional<Vector<GlyphBufferAdvance, 128>> advances;
-    decoder >> advances;
-    if (!advances)
-        return std::nullopt;
-
-    if (glyphs->size() != advances->size())
-        return std::nullopt;
-
-    std::optional<FloatRect> bounds;
-    decoder >> bounds;
-    if (!bounds)
-        return std::nullopt;
-
-    std::optional<FloatPoint> localAnchor;
-    decoder >> localAnchor;
-    if (!localAnchor)
-        return std::nullopt;
-
-    std::optional<FontSmoothingMode> smoothingMode;
-    decoder >> smoothingMode;
-    if (!smoothingMode)
-        return std::nullopt;
-
-    return {{ *fontIdentifier, WTFMove(*glyphs), WTFMove(*advances), *bounds, *localAnchor, *smoothingMode }};
+    return { { *fontIdentifier, WTFMove(*positionedGlyphs) } };
 }
+
+class DrawDecomposedGlyphs {
+public:
+    static constexpr ItemType itemType = ItemType::DrawDecomposedGlyphs;
+    static constexpr bool isInlineItem = true;
+    static constexpr bool isDrawingItem = true;
+
+    DrawDecomposedGlyphs(RenderingResourceIdentifier fontIdentifier, RenderingResourceIdentifier decomposedGlyphsIdentifier)
+        : m_fontIdentifier(fontIdentifier)
+        , m_decomposedGlyphsIdentifier(decomposedGlyphsIdentifier)
+    {
+    }
+
+    RenderingResourceIdentifier fontIdentifier() const { return m_fontIdentifier; }
+    RenderingResourceIdentifier decomposedGlyphsIdentifier() const { return m_decomposedGlyphsIdentifier; }
+
+    WEBCORE_EXPORT void apply(GraphicsContext&, const Font&, const DecomposedGlyphs&) const;
+
+private:
+    RenderingResourceIdentifier m_fontIdentifier;
+    RenderingResourceIdentifier m_decomposedGlyphsIdentifier;
+};
 
 class DrawImageBuffer {
 public:
@@ -945,11 +663,6 @@ public:
     bool isValid() const { return m_imageBufferIdentifier.isValid(); }
 
     WEBCORE_EXPORT void apply(GraphicsContext&, ImageBuffer&) const;
-
-    NO_RETURN_DUE_TO_ASSERT void apply(GraphicsContext&) const;
-
-    std::optional<FloatRect> globalBounds() const { return std::nullopt; }
-    std::optional<FloatRect> localBounds(const GraphicsContext&) const { return m_destinationRect; }
 
 private:
     RenderingResourceIdentifier m_imageBufferIdentifier;
@@ -979,11 +692,7 @@ public:
     // FIXME: We might want to validate ImagePaintingOptions.
     bool isValid() const { return m_imageIdentifier.isValid(); }
 
-    NO_RETURN_DUE_TO_ASSERT void apply(GraphicsContext&) const;
     WEBCORE_EXPORT void apply(GraphicsContext&, NativeImage&) const;
-
-    std::optional<FloatRect> globalBounds() const { return std::nullopt; }
-    std::optional<FloatRect> localBounds(const GraphicsContext&) const { return m_destinationRect; }
 
 private:
     RenderingResourceIdentifier m_imageIdentifier;
@@ -992,6 +701,58 @@ private:
     FloatRect m_srcRect;
     ImagePaintingOptions m_options;
 };
+
+class DrawSystemImage {
+public:
+    static constexpr ItemType itemType = ItemType::DrawSystemImage;
+    static constexpr bool isInlineItem = false;
+    static constexpr bool isDrawingItem = true;
+
+    DrawSystemImage(SystemImage& systemImage, const FloatRect& destinationRect)
+        : m_systemImage(systemImage)
+        , m_destinationRect(destinationRect)
+    {
+    }
+
+    const Ref<SystemImage>& systemImage() const { return m_systemImage; }
+    const FloatRect& destinationRect() const { return m_destinationRect; }
+
+    WEBCORE_EXPORT void apply(GraphicsContext&) const;
+
+    template<class Encoder> void encode(Encoder&) const;
+    template<class Decoder> static std::optional<DrawSystemImage> decode(Decoder&);
+
+private:
+    Ref<SystemImage> m_systemImage;
+    FloatRect m_destinationRect;
+};
+
+template<class Encoder>
+void DrawSystemImage::encode(Encoder& encoder) const
+{
+    encoder << m_systemImage;
+    encoder << m_destinationRect;
+}
+
+template<class Decoder>
+std::optional<DrawSystemImage> DrawSystemImage::decode(Decoder& decoder)
+{
+#define DECODE(name, type) \
+    std::optional<type> name; \
+    decoder >> name; \
+    if (!name) \
+        return std::nullopt; \
+
+    DECODE(systemImage, Ref<SystemImage>)
+    DECODE(destinationRect, FloatRect)
+
+#undef DECODE
+
+    return { {
+        WTFMove(*systemImage),
+        WTFMove(*destinationRect),
+    } };
+}
 
 class DrawPattern {
 public:
@@ -1010,11 +771,7 @@ public:
     // FIXME: We might want to validate ImagePaintingOptions.
     bool isValid() const { return m_imageIdentifier.isValid(); }
 
-    NO_RETURN_DUE_TO_ASSERT void apply(GraphicsContext&) const;
     WEBCORE_EXPORT void apply(GraphicsContext&, SourceImage&) const;
-
-    std::optional<FloatRect> globalBounds() const { return std::nullopt; }
-    std::optional<FloatRect> localBounds(const GraphicsContext&) const { return m_destination; }
 
 private:
     RenderingResourceIdentifier m_imageIdentifier;
@@ -1041,9 +798,6 @@ public:
 
     WEBCORE_EXPORT void apply(GraphicsContext&) const;
 
-    std::optional<FloatRect> localBounds(const GraphicsContext&) const { return std::nullopt; }
-    std::optional<FloatRect> globalBounds() const { return std::nullopt; }
-
 private:
     float m_opacity;
 };
@@ -1056,10 +810,7 @@ public:
 
     WEBCORE_EXPORT void apply(GraphicsContext&) const;
 
-    std::optional<FloatRect> localBounds(const GraphicsContext&) const { return std::nullopt; }
-    std::optional<FloatRect> globalBounds() const { return std::nullopt; }
 };
-
 class DrawRect {
 public:
     static constexpr ItemType itemType = ItemType::DrawRect;
@@ -1076,9 +827,6 @@ public:
     float borderThickness() const { return m_borderThickness; }
 
     WEBCORE_EXPORT void apply(GraphicsContext&) const;
-
-    std::optional<FloatRect> globalBounds() const { return std::nullopt; }
-    std::optional<FloatRect> localBounds(const GraphicsContext&) const { return m_rect; }
 
 private:
     FloatRect m_rect;
@@ -1102,9 +850,6 @@ public:
 
     WEBCORE_EXPORT void apply(GraphicsContext&) const;
 
-    std::optional<FloatRect> globalBounds() const { return std::nullopt; }
-    std::optional<FloatRect> localBounds(const GraphicsContext&) const;
-
 private:
     FloatPoint m_point1;
     FloatPoint m_point2;
@@ -1116,7 +861,7 @@ public:
     static constexpr bool isInlineItem = false;
     static constexpr bool isDrawingItem = true;
 
-    WEBCORE_EXPORT DrawLinesForText(const FloatPoint& blockLocation, const FloatSize& localAnchor, float thickness, const DashArray& widths, bool printing, bool doubleLines);
+    WEBCORE_EXPORT DrawLinesForText(const FloatPoint& blockLocation, const FloatSize& localAnchor, float thickness, const DashArray& widths, bool printing, bool doubleLines, StrokeStyle);
 
     void setBlockLocation(const FloatPoint& blockLocation) { m_blockLocation = blockLocation; }
     const FloatPoint& blockLocation() const { return m_blockLocation; }
@@ -1126,11 +871,9 @@ public:
     const DashArray& widths() const { return m_widths; }
     bool isPrinting() const { return m_printing; }
     bool doubleLines() const { return m_doubleLines; }
+    StrokeStyle style() const { return m_style; }
 
     WEBCORE_EXPORT void apply(GraphicsContext&) const;
-
-    std::optional<FloatRect> globalBounds() const { return std::nullopt; }
-    std::optional<FloatRect> localBounds(const GraphicsContext&) const;
 
     template<class Encoder> void encode(Encoder&) const;
     template<class Decoder> static std::optional<DrawLinesForText> decode(Decoder&);
@@ -1142,6 +885,7 @@ private:
     float m_thickness;
     bool m_printing;
     bool m_doubleLines;
+    StrokeStyle m_style;
 };
 
 template<class Encoder>
@@ -1153,6 +897,7 @@ void DrawLinesForText::encode(Encoder& encoder) const
     encoder << m_thickness;
     encoder << m_printing;
     encoder << m_doubleLines;
+    encoder << m_style;
 }
 
 template<class Decoder>
@@ -1188,7 +933,12 @@ std::optional<DrawLinesForText> DrawLinesForText::decode(Decoder& decoder)
     if (!doubleLines)
         return std::nullopt;
 
-    return {{ *blockLocation, *localAnchor, *thickness, *widths, *printing, *doubleLines }};
+    std::optional<StrokeStyle> style;
+    decoder >> style;
+    if (!style)
+        return std::nullopt;
+
+    return { { *blockLocation, *localAnchor, *thickness, *widths, *printing, *doubleLines, *style } };
 }
 
 class DrawDotsForDocumentMarker {
@@ -1219,9 +969,6 @@ public:
 
     WEBCORE_EXPORT void apply(GraphicsContext&) const;
 
-    std::optional<FloatRect> globalBounds() const { return std::nullopt; }
-    std::optional<FloatRect> localBounds(const GraphicsContext&) const;
-
 private:
     FloatRect m_rect;
     UnderlyingDocumentMarkerLineStyleType m_styleMode { 0 };
@@ -1242,9 +989,6 @@ public:
     FloatRect rect() const { return m_rect; }
 
     WEBCORE_EXPORT void apply(GraphicsContext&) const;
-
-    std::optional<FloatRect> globalBounds() const { return std::nullopt; }
-    std::optional<FloatRect> localBounds(const GraphicsContext&) const { return m_rect; }
 
 private:
     FloatRect m_rect;
@@ -1272,9 +1016,6 @@ public:
     template<class Decoder> static std::optional<DrawPath> decode(Decoder&);
 
     WEBCORE_EXPORT void apply(GraphicsContext&) const;
-
-    std::optional<FloatRect> globalBounds() const { return std::nullopt; }
-    std::optional<FloatRect> localBounds(const GraphicsContext&) const { return m_path.fastBoundingRect(); }
 
 private:
     Path m_path;
@@ -1328,9 +1069,6 @@ public:
     template<class Decoder> static std::optional<DrawFocusRingPath> decode(Decoder&);
 
     WEBCORE_EXPORT void apply(GraphicsContext&) const;
-
-    std::optional<FloatRect> globalBounds() const { return std::nullopt; }
-    std::optional<FloatRect> localBounds(const GraphicsContext&) const;
 
 private:
     Path m_path;
@@ -1388,9 +1126,6 @@ public:
     const Color& color() const { return m_color; }
 
     WEBCORE_EXPORT void apply(GraphicsContext&) const;
-
-    std::optional<FloatRect> globalBounds() const { return std::nullopt; }
-    std::optional<FloatRect> localBounds(const GraphicsContext&) const;
 
     template<class Encoder> void encode(Encoder&) const;
     template<class Decoder> static std::optional<DrawFocusRingRects> decode(Decoder&);
@@ -1452,9 +1187,6 @@ public:
 
     WEBCORE_EXPORT void apply(GraphicsContext&) const;
 
-    std::optional<FloatRect> globalBounds() const { return std::nullopt; }
-    std::optional<FloatRect> localBounds(const GraphicsContext&) const { return m_rect; }
-
 private:
     FloatRect m_rect;
 };
@@ -1475,9 +1207,6 @@ public:
     const Color& color() const { return m_color; }
 
     WEBCORE_EXPORT void apply(GraphicsContext&) const;
-
-    std::optional<FloatRect> globalBounds() const { return std::nullopt; }
-    std::optional<FloatRect> localBounds(const GraphicsContext&) const { return m_rect; }
 
     template<class Encoder> void encode(Encoder&) const;
     template<class Decoder> static std::optional<FillRectWithColor> decode(Decoder&);
@@ -1522,9 +1251,6 @@ public:
     const Gradient& gradient() const { return m_gradient.get(); }
 
     WEBCORE_EXPORT void apply(GraphicsContext&) const;
-
-    std::optional<FloatRect> globalBounds() const { return std::nullopt; }
-    std::optional<FloatRect> localBounds(const GraphicsContext&) const { return m_rect; }
 
     template<class Encoder> void encode(Encoder&) const;
     template<class Decoder> static std::optional<FillRectWithGradient> decode(Decoder&);
@@ -1576,9 +1302,6 @@ public:
     BlendMode blendMode() const { return m_blendMode; }
 
     WEBCORE_EXPORT void apply(GraphicsContext&) const;
-
-    std::optional<FloatRect> globalBounds() const { return std::nullopt; }
-    std::optional<FloatRect> localBounds(const GraphicsContext&) const { return m_rect; }
 
     template<class Encoder> void encode(Encoder&) const;
     template<class Decoder> static std::optional<FillCompositedRect> decode(Decoder&);
@@ -1647,9 +1370,6 @@ public:
 
     WEBCORE_EXPORT void apply(GraphicsContext&) const;
 
-    std::optional<FloatRect> globalBounds() const { return std::nullopt; }
-    std::optional<FloatRect> localBounds(const GraphicsContext&) const { return m_rect.rect(); }
-
 private:
     FloatRoundedRect m_rect;
     Color m_color;
@@ -1707,9 +1427,6 @@ public:
 
     WEBCORE_EXPORT void apply(GraphicsContext&) const;
 
-    std::optional<FloatRect> globalBounds() const { return std::nullopt; }
-    std::optional<FloatRect> localBounds(const GraphicsContext&) const { return m_rect; }
-
 private:
     FloatRect m_rect;
     FloatRoundedRect m_roundedHoleRect;
@@ -1760,9 +1477,6 @@ public:
 
     Path path() const { return Path::from({m_lineData}); }
     WEBCORE_EXPORT void apply(GraphicsContext&) const;
-    std::optional<FloatRect> globalBounds() const { return std::nullopt; }
-    std::optional<FloatRect> localBounds(const GraphicsContext&) const { return path().fastBoundingRect(); }
-
 private:
     LineData m_lineData;
 };
@@ -1779,9 +1493,6 @@ public:
 
     Path path() const { return Path::from({m_arcData}); }
     WEBCORE_EXPORT void apply(GraphicsContext&) const;
-    std::optional<FloatRect> globalBounds() const { return std::nullopt; }
-    std::optional<FloatRect> localBounds(const GraphicsContext&) const { return path().fastBoundingRect(); }
-
 private:
     ArcData m_arcData;
 };
@@ -1799,9 +1510,6 @@ public:
 
     Path path() const { return Path::from({m_quadCurveData}); }
     WEBCORE_EXPORT void apply(GraphicsContext&) const;
-    std::optional<FloatRect> globalBounds() const { return std::nullopt; }
-    std::optional<FloatRect> localBounds(const GraphicsContext&) const { return path().fastBoundingRect(); }
-
 private:
     QuadCurveData m_quadCurveData;
 };
@@ -1819,9 +1527,6 @@ public:
 
     Path path() const { return Path::from({m_bezierCurveData}); }
     WEBCORE_EXPORT void apply(GraphicsContext&) const;
-    std::optional<FloatRect> globalBounds() const { return std::nullopt; }
-    std::optional<FloatRect> localBounds(const GraphicsContext&) const { return path().fastBoundingRect(); }
-
 private:
     BezierCurveData m_bezierCurveData;
 };
@@ -1850,9 +1555,6 @@ public:
     template<class Decoder> static std::optional<FillPath> decode(Decoder&);
 
     WEBCORE_EXPORT void apply(GraphicsContext&) const;
-
-    std::optional<FloatRect> globalBounds() const { return std::nullopt; }
-    std::optional<FloatRect> localBounds(const GraphicsContext&) const { return m_path.fastBoundingRect(); }
 
 private:
     Path m_path;
@@ -1890,9 +1592,6 @@ public:
 
     WEBCORE_EXPORT void apply(GraphicsContext&) const;
 
-    std::optional<FloatRect> globalBounds() const { return std::nullopt; }
-    std::optional<FloatRect> localBounds(const GraphicsContext&) const { return m_rect; }
-
 private:
     FloatRect m_rect;
 };
@@ -1910,11 +1609,6 @@ public:
     MediaPlayerIdentifier identifier() const { return m_identifier; }
 
     bool isValid() const { return m_identifier.isValid(); }
-
-    NO_RETURN_DUE_TO_ASSERT void apply(GraphicsContext&) const;
-
-    std::optional<FloatRect> localBounds(const GraphicsContext&) const { return std::nullopt; }
-    std::optional<FloatRect> globalBounds() const { return { m_destination }; }
 
 private:
     MediaPlayerIdentifier m_identifier;
@@ -1938,9 +1632,6 @@ public:
     float lineWidth() const { return m_lineWidth; }
 
     WEBCORE_EXPORT void apply(GraphicsContext&) const;
-
-    std::optional<FloatRect> globalBounds() const { return std::nullopt; }
-    std::optional<FloatRect> localBounds(const GraphicsContext&) const;
 
 private:
     FloatRect m_rect;
@@ -1971,9 +1662,6 @@ public:
 
     WEBCORE_EXPORT void apply(GraphicsContext&) const;
 
-    std::optional<FloatRect> globalBounds() const { return std::nullopt; }
-    std::optional<FloatRect> localBounds(const GraphicsContext&) const;
-
 private:
     FloatPoint m_start;
     FloatPoint m_end;
@@ -1994,9 +1682,6 @@ public:
 
     Path path() const { return Path::from({m_arcData}); }
     WEBCORE_EXPORT void apply(GraphicsContext&) const;
-    std::optional<FloatRect> globalBounds() const { return std::nullopt; }
-    std::optional<FloatRect> localBounds(const GraphicsContext&) const;
-
 private:
     ArcData m_arcData;
 };
@@ -2014,9 +1699,6 @@ public:
 
     Path path() const { return Path::from({m_quadCurveData}); }
     WEBCORE_EXPORT void apply(GraphicsContext&) const;
-    std::optional<FloatRect> globalBounds() const { return std::nullopt; }
-    std::optional<FloatRect> localBounds(const GraphicsContext&) const;
-
 private:
     QuadCurveData m_quadCurveData;
 };
@@ -2034,9 +1716,6 @@ public:
 
     Path path() const { return Path::from({m_bezierCurveData}); }
     WEBCORE_EXPORT void apply(GraphicsContext&) const;
-    std::optional<FloatRect> globalBounds() const { return std::nullopt; }
-    std::optional<FloatRect> localBounds(const GraphicsContext&) const;
-
 private:
     BezierCurveData m_bezierCurveData;
 };
@@ -2065,9 +1744,6 @@ public:
     template<class Decoder> static std::optional<StrokePath> decode(Decoder&);
 
     WEBCORE_EXPORT void apply(GraphicsContext&) const;
-
-    std::optional<FloatRect> globalBounds() const { return std::nullopt; }
-    std::optional<FloatRect> localBounds(const GraphicsContext&) const;
 
 private:
     Path m_path;
@@ -2105,9 +1781,6 @@ public:
 
     WEBCORE_EXPORT void apply(GraphicsContext&) const;
 
-    std::optional<FloatRect> globalBounds() const { return std::nullopt; }
-    std::optional<FloatRect> localBounds(const GraphicsContext&) const;
-
 private:
     FloatRect m_rect;
 };
@@ -2126,9 +1799,6 @@ public:
     const FloatRect& rect() const { return m_rect; }
 
     WEBCORE_EXPORT void apply(GraphicsContext&) const;
-
-    std::optional<FloatRect> globalBounds() const { return std::nullopt; }
-    std::optional<FloatRect> localBounds(const GraphicsContext&) const { return m_rect; }
 
 private:
     FloatRect m_rect;
@@ -2175,26 +1845,6 @@ private:
     float m_scaleFactor { 1 };
 };
 
-class FlushContext {
-public:
-    static constexpr ItemType itemType = ItemType::FlushContext;
-    static constexpr bool isInlineItem = true;
-    static constexpr bool isDrawingItem = false;
-
-    explicit FlushContext(GraphicsContextFlushIdentifier identifier)
-        : m_identifier(identifier)
-    {
-    }
-
-    GraphicsContextFlushIdentifier identifier() const { return m_identifier; }
-    bool isValid() const { return m_identifier.isValid(); }
-
-    WEBCORE_EXPORT void apply(GraphicsContext&) const;
-
-private:
-    GraphicsContextFlushIdentifier m_identifier;
-};
-
 using DisplayListItem = std::variant
     < ApplyDeviceScaleFactor
     , BeginTransparencyLayer
@@ -2212,6 +1862,7 @@ using DisplayListItem = std::variant
     , DrawFocusRingPath
     , DrawFocusRingRects
     , DrawGlyphs
+    , DrawDecomposedGlyphs
     , DrawImageBuffer
     , DrawLine
     , DrawLinesForText
@@ -2219,6 +1870,7 @@ using DisplayListItem = std::variant
     , DrawPath
     , DrawPattern
     , DrawRect
+    , DrawSystemImage
     , EndTransparencyLayer
     , FillCompositedRect
     , FillEllipse
@@ -2228,7 +1880,6 @@ using DisplayListItem = std::variant
     , FillRectWithGradient
     , FillRectWithRoundedHole
     , FillRoundedRect
-    , FlushContext
     , Restore
     , Rotate
     , Save
@@ -2271,7 +1922,86 @@ using DisplayListItem = std::variant
 size_t paddedSizeOfTypeAndItemInBytes(const DisplayListItem&);
 ItemType displayListItemType(const DisplayListItem&);
 
-TextStream& operator<<(TextStream&, ItemHandle);
+#if !LOG_DISABLED
+WEBCORE_EXPORT void dumpItem(TextStream&, const Translate&, OptionSet<AsTextFlag>);
+WEBCORE_EXPORT void dumpItem(TextStream&, const Rotate&, OptionSet<AsTextFlag>);
+WEBCORE_EXPORT void dumpItem(TextStream&, const Scale&, OptionSet<AsTextFlag>);
+WEBCORE_EXPORT void dumpItem(TextStream&, const SetCTM&, OptionSet<AsTextFlag>);
+WEBCORE_EXPORT void dumpItem(TextStream&, const ConcatenateCTM&, OptionSet<AsTextFlag>);
+WEBCORE_EXPORT void dumpItem(TextStream&, const SetInlineFillColor&, OptionSet<AsTextFlag>);
+WEBCORE_EXPORT void dumpItem(TextStream&, const SetInlineStrokeColor&, OptionSet<AsTextFlag>);
+WEBCORE_EXPORT void dumpItem(TextStream&, const SetStrokeThickness&, OptionSet<AsTextFlag>);
+WEBCORE_EXPORT void dumpItem(TextStream&, const SetState&, OptionSet<AsTextFlag>);
+WEBCORE_EXPORT void dumpItem(TextStream&, const SetLineCap&, OptionSet<AsTextFlag>);
+WEBCORE_EXPORT void dumpItem(TextStream&, const SetLineDash&, OptionSet<AsTextFlag>);
+WEBCORE_EXPORT void dumpItem(TextStream&, const SetLineJoin&, OptionSet<AsTextFlag>);
+WEBCORE_EXPORT void dumpItem(TextStream&, const SetMiterLimit&, OptionSet<AsTextFlag>);
+WEBCORE_EXPORT void dumpItem(TextStream&, const Clip&, OptionSet<AsTextFlag>);
+WEBCORE_EXPORT void dumpItem(TextStream&, const ClipOut&, OptionSet<AsTextFlag>);
+WEBCORE_EXPORT void dumpItem(TextStream&, const ClipToImageBuffer&, OptionSet<AsTextFlag>);
+WEBCORE_EXPORT void dumpItem(TextStream&, const ClipOutToPath&, OptionSet<AsTextFlag>);
+WEBCORE_EXPORT void dumpItem(TextStream&, const ClipPath&, OptionSet<AsTextFlag>);
+WEBCORE_EXPORT void dumpItem(TextStream&, const DrawFilteredImageBuffer&, OptionSet<AsTextFlag>);
+WEBCORE_EXPORT void dumpItem(TextStream&, const DrawGlyphs&, OptionSet<AsTextFlag>);
+WEBCORE_EXPORT void dumpItem(TextStream&, const DrawDecomposedGlyphs&, OptionSet<AsTextFlag>);
+WEBCORE_EXPORT void dumpItem(TextStream&, const DrawImageBuffer&, OptionSet<AsTextFlag>);
+WEBCORE_EXPORT void dumpItem(TextStream&, const DrawNativeImage&, OptionSet<AsTextFlag>);
+WEBCORE_EXPORT void dumpItem(TextStream&, const DrawSystemImage&, OptionSet<AsTextFlag>);
+WEBCORE_EXPORT void dumpItem(TextStream&, const DrawPattern&, OptionSet<AsTextFlag>);
+WEBCORE_EXPORT void dumpItem(TextStream&, const DrawRect&, OptionSet<AsTextFlag>);
+WEBCORE_EXPORT void dumpItem(TextStream&, const DrawLine&, OptionSet<AsTextFlag>);
+WEBCORE_EXPORT void dumpItem(TextStream&, const DrawLinesForText&, OptionSet<AsTextFlag>);
+WEBCORE_EXPORT void dumpItem(TextStream&, const DrawDotsForDocumentMarker&, OptionSet<AsTextFlag>);
+WEBCORE_EXPORT void dumpItem(TextStream&, const DrawEllipse&, OptionSet<AsTextFlag>);
+WEBCORE_EXPORT void dumpItem(TextStream&, const DrawPath&, OptionSet<AsTextFlag>);
+WEBCORE_EXPORT void dumpItem(TextStream&, const DrawFocusRingPath&, OptionSet<AsTextFlag>);
+WEBCORE_EXPORT void dumpItem(TextStream&, const DrawFocusRingRects&, OptionSet<AsTextFlag>);
+WEBCORE_EXPORT void dumpItem(TextStream&, const FillRect&, OptionSet<AsTextFlag>);
+WEBCORE_EXPORT void dumpItem(TextStream&, const FillRectWithColor&, OptionSet<AsTextFlag>);
+WEBCORE_EXPORT void dumpItem(TextStream&, const FillRectWithGradient&, OptionSet<AsTextFlag>);
+WEBCORE_EXPORT void dumpItem(TextStream&, const FillCompositedRect&, OptionSet<AsTextFlag>);
+WEBCORE_EXPORT void dumpItem(TextStream&, const FillRoundedRect&, OptionSet<AsTextFlag>);
+WEBCORE_EXPORT void dumpItem(TextStream&, const FillRectWithRoundedHole&, OptionSet<AsTextFlag>);
+#if ENABLE(INLINE_PATH_DATA)
+WEBCORE_EXPORT void dumpItem(TextStream&, const FillLine&, OptionSet<AsTextFlag>);
+WEBCORE_EXPORT void dumpItem(TextStream&, const FillArc&, OptionSet<AsTextFlag>);
+WEBCORE_EXPORT void dumpItem(TextStream&, const FillQuadCurve&, OptionSet<AsTextFlag>);
+WEBCORE_EXPORT void dumpItem(TextStream&, const FillBezierCurve&, OptionSet<AsTextFlag>);
+WEBCORE_EXPORT void dumpItem(TextStream&, const StrokeArc&, OptionSet<AsTextFlag>);
+WEBCORE_EXPORT void dumpItem(TextStream&, const StrokeQuadCurve&, OptionSet<AsTextFlag>);
+WEBCORE_EXPORT void dumpItem(TextStream&, const StrokeBezierCurve&, OptionSet<AsTextFlag>);
+#endif // ENABLE(INLINE_PATH_DATA)
+WEBCORE_EXPORT void dumpItem(TextStream&, const FillPath&, OptionSet<AsTextFlag>);
+WEBCORE_EXPORT void dumpItem(TextStream&, const FillEllipse&, OptionSet<AsTextFlag>);
+#if ENABLE(VIDEO)
+WEBCORE_EXPORT void dumpItem(TextStream&, const PaintFrameForMedia&, OptionSet<AsTextFlag>);
+#endif // ENABLE(VIDEO)
+WEBCORE_EXPORT void dumpItem(TextStream&, const StrokeRect&, OptionSet<AsTextFlag>);
+WEBCORE_EXPORT void dumpItem(TextStream&, const StrokePath&, OptionSet<AsTextFlag>);
+WEBCORE_EXPORT void dumpItem(TextStream&, const StrokeEllipse&, OptionSet<AsTextFlag>);
+WEBCORE_EXPORT void dumpItem(TextStream&, const StrokeLine&, OptionSet<AsTextFlag>);
+WEBCORE_EXPORT void dumpItem(TextStream&, const ClearRect&, OptionSet<AsTextFlag>);
+WEBCORE_EXPORT void dumpItem(TextStream&, const BeginTransparencyLayer&, OptionSet<AsTextFlag>);
+WEBCORE_EXPORT void dumpItem(TextStream&, const ApplyDeviceScaleFactor&, OptionSet<AsTextFlag>);
+
+template <typename T>
+TextStream& operator<<(TextStream& ts, const T& item)
+{
+    dumpItem(ts, item, { AsTextFlag::IncludePlatformOperations, AsTextFlag::IncludeResourceIdentifiers });
+    return ts;
+}
+
+void dumpItemHandle(TextStream&, const ItemHandle&, OptionSet<AsTextFlag>);
+
+inline TextStream& operator<<(TextStream& ts, const ItemHandle& itemHandle)
+{
+    dumpItemHandle(ts, itemHandle, { AsTextFlag::IncludePlatformOperations, AsTextFlag::IncludeResourceIdentifiers });
+    return ts;
+}
+
+TextStream& operator<<(TextStream&, ItemType);
+
+#endif
 
 } // namespace DisplayList
 } // namespace WebCore
@@ -2303,8 +2033,10 @@ template<> struct EnumTraits<WebCore::DisplayList::ItemType> {
     WebCore::DisplayList::ItemType::ClipOutToPath,
     WebCore::DisplayList::ItemType::ClipPath,
     WebCore::DisplayList::ItemType::DrawGlyphs,
+    WebCore::DisplayList::ItemType::DrawDecomposedGlyphs,
     WebCore::DisplayList::ItemType::DrawImageBuffer,
     WebCore::DisplayList::ItemType::DrawNativeImage,
+    WebCore::DisplayList::ItemType::DrawSystemImage,
     WebCore::DisplayList::ItemType::DrawPattern,
     WebCore::DisplayList::ItemType::DrawRect,
     WebCore::DisplayList::ItemType::DrawLine,
@@ -2328,7 +2060,6 @@ template<> struct EnumTraits<WebCore::DisplayList::ItemType> {
 #endif
     WebCore::DisplayList::ItemType::FillPath,
     WebCore::DisplayList::ItemType::FillEllipse,
-    WebCore::DisplayList::ItemType::FlushContext,
 #if ENABLE(VIDEO)
     WebCore::DisplayList::ItemType::PaintFrameForMedia,
 #endif

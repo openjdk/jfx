@@ -39,7 +39,7 @@
 
 namespace JSC {
 
-const ClassInfo StructureRareData::s_info = { "StructureRareData", nullptr, nullptr, nullptr, CREATE_METHOD_TABLE(StructureRareData) };
+const ClassInfo StructureRareData::s_info = { "StructureRareData"_s, nullptr, nullptr, nullptr, CREATE_METHOD_TABLE(StructureRareData) };
 
 Structure* StructureRareData::createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
 {
@@ -150,7 +150,7 @@ void StructureRareData::cacheSpecialPropertySlow(JSGlobalObject* globalObject, V
         // We don't handle the own property case of special properties (toString, valueOf, @@toPrimitive, @@toStringTag) because we would never know if a new
         // object transitioning to the same structure had the same value stored in that property.
         // Additionally, this is a super unlikely case anyway.
-        if (!slot.isCacheable() || slot.slotBase()->structure(vm) == ownStructure)
+        if (!slot.isCacheable() || slot.slotBase()->structure() == ownStructure)
             return;
 
         // This will not create a condition for the current structure but that is good because we know that property
@@ -186,15 +186,15 @@ void StructureRareData::cacheSpecialPropertySlow(JSGlobalObject* globalObject, V
     for (const ObjectPropertyCondition& condition : conditionSet) {
         if (condition.condition().kind() == PropertyCondition::Presence) {
             ASSERT(isValidOffset(condition.offset()));
-            condition.object()->structure(vm)->startWatchingPropertyForReplacements(vm, condition.offset());
-            equivCondition = condition.attemptToMakeEquivalenceWithoutBarrier(vm);
+            condition.object()->structure()->startWatchingPropertyForReplacements(vm, condition.offset());
+            equivCondition = condition.attemptToMakeEquivalenceWithoutBarrier();
 
             // The equivalence condition won't be watchable if we have already seen a replacement.
-            if (!equivCondition.isWatchable()) {
+            if (!equivCondition.isWatchable(PropertyCondition::MakeNoChanges)) {
                 giveUpOnSpecialPropertyCache(key);
                 return;
             }
-        } else if (!condition.isWatchable()) {
+        } else if (!condition.isWatchable(PropertyCondition::MakeNoChanges)) {
             giveUpOnSpecialPropertyCache(key);
             return;
         }

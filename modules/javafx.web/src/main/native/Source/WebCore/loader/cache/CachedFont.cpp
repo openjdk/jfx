@@ -61,7 +61,7 @@ void CachedFont::didAddClient(CachedResourceClient& client)
 {
     ASSERT(client.resourceClientType() == CachedFontClient::expectedType());
     if (!isLoading())
-        static_cast<CachedFontClient&>(client).fontLoaded(*this);
+        downcast<CachedFontClient>(client).fontLoaded(*this);
 }
 
 void CachedFont::finishLoading(const FragmentedSharedBuffer* data, const NetworkLoadMetrics& metrics)
@@ -149,7 +149,7 @@ void CachedFont::checkNotify(const NetworkLoadMetrics&)
     if (isLoading())
         return;
 
-    CachedResourceClientWalker<CachedFontClient> walker(m_clients);
+    CachedResourceClientWalker<CachedFontClient> walker(*this);
     while (CachedFontClient* client = walker.next())
         client->fontLoaded(*this);
 }

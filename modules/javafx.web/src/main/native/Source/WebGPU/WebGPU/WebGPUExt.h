@@ -39,12 +39,28 @@ typedef void (^WGPUErrorBlockCallback)(WGPUErrorType type, char const * message)
 typedef void (^WGPUQueueWorkDoneBlockCallback)(WGPUQueueWorkDoneStatus status);
 typedef void (^WGPURequestAdapterBlockCallback)(WGPURequestAdapterStatus status, WGPUAdapter adapter, char const * message);
 typedef void (^WGPURequestDeviceBlockCallback)(WGPURequestDeviceStatus status, WGPUDevice device, char const * message);
+typedef void (^WGPURequestInvalidDeviceBlockCallback)(WGPUDevice device);
+typedef void (^WGPUWorkItem)(void);
+typedef void (^WGPUScheduleWorkBlock)(WGPUWorkItem workItem);
 
 typedef enum WGPUSTypeExtended {
     WGPUSTypeExtended_ShaderModuleDescriptorHints = 0x348970F3, // Random
     WGPUSTypeExtended_TextureDescriptorViewFormats = 0x1D5BC57, // Random
+    WGPUSTypeExtended_InstanceCocoaDescriptor = 0x151BBC00, // Random
     WGPUSTypeExtended_Force32 = 0x7FFFFFFF
 } WGPUSTypeExtended;
+
+typedef struct WGPUInstanceCocoaDescriptor {
+    WGPUChainedStruct chain;
+    // The API contract is: callers must call WebGPU's functions in a non-racey way with respect
+    // to each other. This scheduleWorkBlock will execute on a background thread, and it must
+    // schedule the block it's passed to be run in a non-racey way with regards to all the other
+    // WebGPU calls. If calls to scheduleWorkBlock are ordered (e.g. multiple calls on the same
+    // thread), then the work that is scheduled must also be ordered in the same order.
+    // It's fine to pass NULL here, but if you do, you must periodically call
+    // wgpuInstanceProcessEvents() to synchronously run the queued callbacks.
+    __unsafe_unretained WGPUScheduleWorkBlock scheduleWorkBlock;
+} WGPUInstanceCocoaDescriptor;
 
 typedef struct WGPUShaderModuleCompilationHint {
     WGPUPipelineLayout layout;
@@ -168,6 +184,7 @@ WGPU_EXPORT void wgpuTextureSetLabel(WGPUTexture sampler, char const * label);
 WGPU_EXPORT void wgpuTextureViewSetLabel(WGPUTextureView sampler, char const * label);
 
 WGPU_EXPORT void wgpuAdapterRequestDeviceWithBlock(WGPUAdapter adapter, WGPUDeviceDescriptor const * descriptor, WGPURequestDeviceBlockCallback callback);
+WGPU_EXPORT void wgpuAdapterRequestInvalidDeviceWithBlock(WGPUAdapter adapter, WGPURequestInvalidDeviceBlockCallback callback);
 WGPU_EXPORT void wgpuBufferMapAsyncWithBlock(WGPUBuffer buffer, WGPUMapModeFlags mode, size_t offset, size_t size, WGPUBufferMapBlockCallback callback);
 WGPU_EXPORT void wgpuDeviceCreateComputePipelineAsyncWithBlock(WGPUDevice device, WGPUComputePipelineDescriptor const * descriptor, WGPUCreateComputePipelineAsyncBlockCallback callback);
 WGPU_EXPORT void wgpuDeviceCreateRenderPipelineAsyncWithBlock(WGPUDevice device, WGPURenderPipelineDescriptor const * descriptor, WGPUCreateRenderPipelineAsyncBlockCallback callback);

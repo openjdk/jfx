@@ -82,20 +82,6 @@ protected:
     virtual Vector<String, 2> mediaControlsScripts() override;
     String extraMediaControlsStyleSheet() override;
 
-    String formatMediaControlsCurrentTime(float currentTime, float duration) const override;
-    String formatMediaControlsRemainingTime(float currentTime, float duration) const override;
-
-    bool paintMediaPlayButton(const RenderObject&, const PaintInfo&, const IntRect&) override;
-    bool paintMediaMuteButton(const RenderObject&, const PaintInfo&, const IntRect&) override;
-    bool paintMediaSliderTrack(const RenderObject&, const PaintInfo&, const IntRect&) override;
-    bool paintMediaSliderThumb(const RenderObject&, const PaintInfo&, const IntRect&) override;
-    bool paintMediaVolumeSliderContainer(const RenderObject&, const PaintInfo&, const IntRect&) override;
-    bool paintMediaVolumeSliderTrack(const RenderObject&, const PaintInfo&, const IntRect&) override;
-    bool paintMediaVolumeSliderThumb(const RenderObject&, const PaintInfo&, const IntRect&) override;
-    bool paintMediaControlsBackground(const RenderObject&, const PaintInfo&, const IntRect&) override;
-    bool paintMediaCurrentTime(const RenderObject&, const PaintInfo&, const IntRect&) override;
-    bool paintMediaTimeRemaining(const RenderObject&, const PaintInfo&, const IntRect&) override;
-
 #endif
 
     Seconds animationRepeatIntervalForProgressBar(const RenderProgress&) const override;
@@ -122,8 +108,6 @@ protected:
 
 
 private:
-    virtual void updateCachedSystemFontDescription(CSSValueID, FontCascadeDescription&) const override;
-
     int createWidgetState(const RenderObject& o);
     bool paintWidget(int widgetIndex, const RenderObject& o,
                      const PaintInfo& i, const IntRect& rect);

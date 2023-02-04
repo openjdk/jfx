@@ -26,10 +26,11 @@
 
 #pragma once
 
+#include "ContentSecurityPolicy.h"
 #include "ContentSecurityPolicyHash.h"
 #include "ContentSecurityPolicySource.h"
-#include <wtf/HashSet.h>
 #include <wtf/OptionSet.h>
+#include <wtf/RobinHoodHashSet.h>
 #include <wtf/text/StringHash.h>
 #include <wtf/text/WTFString.h>
 
@@ -76,7 +77,7 @@ private:
     };
 
     bool isProtocolAllowedByStar(const URL&) const;
-
+    bool isValidSourceForExtensionMode(const ContentSecurityPolicySourceList::Source&);
     template<typename CharacterType> void parse(StringParsingBuffer<CharacterType>);
     template<typename CharacterType> std::optional<Source> parseSource(StringParsingBuffer<CharacterType>);
     template<typename CharacterType> StringView parseScheme(StringParsingBuffer<CharacterType>);
@@ -88,10 +89,11 @@ private:
 
     const ContentSecurityPolicy& m_policy;
     Vector<ContentSecurityPolicySource> m_list;
-    HashSet<String> m_nonces;
+    MemoryCompactLookupOnlyRobinHoodHashSet<String> m_nonces;
     HashSet<ContentSecurityPolicyHash> m_hashes;
     OptionSet<ContentSecurityPolicyHashAlgorithm> m_hashAlgorithmsUsed;
     String m_directiveName;
+    ContentSecurityPolicyModeForExtension m_contentSecurityPolicyModeForExtension { ContentSecurityPolicyModeForExtension::None };
     bool m_allowSelf { false };
     bool m_allowStar { false };
     bool m_allowInline { false };

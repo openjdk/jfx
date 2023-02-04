@@ -55,7 +55,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLElementImpl_getIdImpl(JNIE
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLElementImpl_setIdImpl(JNIEnv* env, jclass, jlong peer, jstring value)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::idAttr, String(env, value));
+    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::idAttr, AtomString{String(env, value)});
 }
 
 JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLElementImpl_getTitleImpl(JNIEnv* env, jclass, jlong peer)
@@ -67,7 +67,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLElementImpl_getTitleImpl(J
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLElementImpl_setTitleImpl(JNIEnv* env, jclass, jlong peer, jstring value)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::titleAttr, String(env, value));
+    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::titleAttr, AtomString{String(env, value)});
 }
 
 JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLElementImpl_getLangImpl(JNIEnv* env, jclass, jlong peer)
@@ -79,7 +79,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLElementImpl_getLangImpl(JN
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLElementImpl_setLangImpl(JNIEnv* env, jclass, jlong peer, jstring value)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::langAttr, String(env, value));
+    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::langAttr, AtomString{String(env, value)});
 }
 
 JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_HTMLElementImpl_getTranslateImpl(JNIEnv*, jclass, jlong peer)
@@ -103,7 +103,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLElementImpl_getDirImpl(JNI
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLElementImpl_setDirImpl(JNIEnv* env, jclass, jlong peer, jstring value)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->setDir(String(env, value));
+    IMPL->setDir(AtomString{String(env, value)});
 }
 
 JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_HTMLElementImpl_getDraggableImpl(JNIEnv*, jclass, jlong peer)
@@ -127,7 +127,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLElementImpl_getWebkitdropz
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLElementImpl_setWebkitdropzoneImpl(JNIEnv* env, jclass, jlong peer, jstring value)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::webkitdropzoneAttr, String(env, value));
+    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::webkitdropzoneAttr, AtomString{String(env, value)});
 }
 
 JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_HTMLElementImpl_getHiddenImpl(JNIEnv*, jclass, jlong peer)
@@ -151,7 +151,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLElementImpl_getAccessKeyIm
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLElementImpl_setAccessKeyImpl(JNIEnv* env, jclass, jlong peer, jstring value)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::accesskeyAttr, String(env, value));
+    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::accesskeyAttr, AtomString{String(env, value)});
 }
 
 JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLElementImpl_getInnerTextImpl(JNIEnv* env, jclass, jlong peer)
@@ -240,8 +240,8 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLElementImpl_insertAdjacentHTM
     , jstring html)
 {
     WebCore::JSMainThreadNullState state;
-    raiseOnDOMError(env, IMPL->insertAdjacentHTML(String(env, where)
-            , String(env, html)));
+    raiseOnDOMError(env, IMPL->insertAdjacentHTML(AtomString{String(env, where)}
+            , AtomString{String(env, html)}));
 }
 
 

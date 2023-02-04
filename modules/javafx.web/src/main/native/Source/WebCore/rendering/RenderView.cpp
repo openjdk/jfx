@@ -329,12 +329,12 @@ RenderElement* RenderView::rendererForRootBackground() const
     if (!is<HTMLHtmlElement>(documentRenderer.element()))
         return &documentRenderer;
 
-    if (shouldApplyAnyContainment(documentRenderer))
+    if (documentRenderer.shouldApplyAnyContainment())
         return nullptr;
 
     if (auto* body = document().body()) {
         if (auto* renderer = body->renderer()) {
-            if (!shouldApplyAnyContainment(*renderer))
+            if (!renderer->shouldApplyAnyContainment())
                 return renderer;
         }
     }
@@ -380,7 +380,7 @@ void RenderView::paintBoxDecorations(PaintInfo& paintInfo, const LayoutPoint&)
             break;
         }
 
-        if (RenderLayer* compositingLayer = layer->enclosingCompositingLayerForRepaint()) {
+        if (auto* compositingLayer = layer->enclosingCompositingLayerForRepaint().layer) {
             if (!compositingLayer->backing()->paintsIntoWindow()) {
                 frameView().setCannotBlitToWindow();
                 break;
@@ -396,12 +396,14 @@ void RenderView::paintBoxDecorations(PaintInfo& paintInfo, const LayoutPoint&)
 
     bool rootFillsViewport = false;
     bool rootObscuresBackground = false;
+    auto shouldPropagateBackgroundPaintingToInitialContainingBlock = true;
     Element* documentElement = document().documentElement();
     if (RenderElement* rootRenderer = documentElement ? documentElement->renderer() : nullptr) {
         // The document element's renderer is currently forced to be a block, but may not always be.
         auto* rootBox = dynamicDowncast<RenderBox>(*rootRenderer);
         rootFillsViewport = rootBox && !rootBox->x() && !rootBox->y() && rootBox->width() >= width() && rootBox->height() >= height();
         rootObscuresBackground = rendererObscuresBackground(*rootRenderer);
+        shouldPropagateBackgroundPaintingToInitialContainingBlock = !!rendererForRootBackground();
     }
 
     compositor().rootBackgroundColorOrTransparencyChanged();
@@ -423,7 +425,7 @@ void RenderView::paintBoxDecorations(PaintInfo& paintInfo, const LayoutPoint&)
         frameView().setCannotBlitToWindow(); // The parent must show behind the child.
     else {
         const Color& documentBackgroundColor = frameView().documentBackgroundColor();
-        const Color& backgroundColor = (settings().backgroundShouldExtendBeyondPage() && documentBackgroundColor.isValid()) ? documentBackgroundColor : frameView().baseBackgroundColor();
+        const Color& backgroundColor = (shouldPropagateBackgroundPaintingToInitialContainingBlock && settings().backgroundShouldExtendBeyondPage() && documentBackgroundColor.isValid()) ? documentBackgroundColor : frameView().baseBackgroundColor();
         if (backgroundColor.isVisible()) {
             CompositeOperator previousOperator = paintInfo.context().compositeOperation();
             paintInfo.context().setCompositeOperation(CompositeOperator::Copy);
@@ -448,7 +450,7 @@ void RenderView::repaintRootContents()
 
     // Always use layoutOverflowRect() to fix rdar://problem/27182267.
     // This should be cleaned up via webkit.org/b/159913 and webkit.org/b/159914.
-    RenderLayerModelObject* repaintContainer = containerForRepaint();
+    auto* repaintContainer = containerForRepaint().renderer;
     repaintUsingContainer(repaintContainer, computeRectForRepaint(layoutOverflowRect(), repaintContainer));
 }
 

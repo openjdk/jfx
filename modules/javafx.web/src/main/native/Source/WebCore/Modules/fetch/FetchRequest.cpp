@@ -37,6 +37,7 @@
 #include "ScriptExecutionContext.h"
 #include "SecurityOrigin.h"
 #include "Settings.h"
+#include "WebCoreOpaqueRoot.h"
 
 namespace WebCore {
 
@@ -60,7 +61,7 @@ static ExceptionOr<String> computeReferrer(ScriptExecutionContext& context, cons
     if (!referrerURL.isValid())
         return Exception { TypeError, "Referrer is not a valid URL."_s };
 
-    if (referrerURL.protocolIsAbout() && referrerURL.path() == "client")
+    if (referrerURL.protocolIsAbout() && referrerURL.path() == "client"_s)
         return "client"_str;
 
     if (!(context.securityOrigin() && context.securityOrigin()->canRequest(referrerURL)))
@@ -124,7 +125,7 @@ static std::optional<Exception> buildOptions(FetchOptions& options, ResourceRequ
 
 static bool methodCanHaveBody(const ResourceRequest& request)
 {
-    return request.httpMethod() != "GET" && request.httpMethod() != "HEAD";
+    return request.httpMethod() != "GET"_s && request.httpMethod() != "HEAD"_s;
 }
 
 ExceptionOr<void> FetchRequest::initializeOptions(const Init& init)
@@ -137,7 +138,7 @@ ExceptionOr<void> FetchRequest::initializeOptions(const Init& init)
 
     if (m_options.mode == FetchOptions::Mode::NoCors) {
         const String& method = m_request.httpMethod();
-        if (method != "GET" && method != "POST" && method != "HEAD")
+        if (method != "GET"_s && method != "POST"_s && method != "HEAD"_s)
             return Exception { TypeError, "Method must be GET, POST or HEAD in no-cors mode."_s };
         m_headers->setGuard(FetchHeaders::Guard::RequestNoCors);
     }
@@ -305,9 +306,9 @@ Ref<FetchRequest> FetchRequest::create(ScriptExecutionContext& context, std::opt
 
 String FetchRequest::referrer() const
 {
-    if (m_referrer == "no-referrer")
+    if (m_referrer == "no-referrer"_s)
         return String();
-    if (m_referrer == "client")
+    if (m_referrer == "client"_s)
         return "about:client"_s;
     return m_referrer;
 }
@@ -354,6 +355,11 @@ void FetchRequest::stop()
 const char* FetchRequest::activeDOMObjectName() const
 {
     return "Request";
+}
+
+WebCoreOpaqueRoot root(FetchRequest* request)
+{
+    return WebCoreOpaqueRoot { request };
 }
 
 } // namespace WebCore

@@ -167,8 +167,8 @@ public:
     LayoutRect contentBoxRect() const;
     LayoutPoint contentBoxLocation() const;
 
-    // .https://drafts.csswg.org/css-transforms-1/#reference-box
-    LayoutRect referenceBox(CSSBoxType) const;
+    // https://www.w3.org/TR/css-transforms-1/#reference-box
+    FloatRect referenceBoxRect(CSSBoxType) const final;
 
     // The content box in absolute coords. Ignores transforms.
     IntRect absoluteContentBox() const;
@@ -218,8 +218,7 @@ public:
     void addOverflowFromChild(const RenderBox* child) { addOverflowFromChild(child, child->locationOffset()); }
     void addOverflowFromChild(const RenderBox* child, const LayoutSize& delta);
 
-    void updateLayerTransform();
-    void applyTransform(TransformationMatrix&, const FloatRect& boundingBox, OptionSet<RenderStyle::TransformOperationOption> = RenderStyle::allTransformOperations) const override;
+    void applyTransform(TransformationMatrix&, const RenderStyle&, const FloatRect& boundingBox, OptionSet<RenderStyle::TransformOperationOption> = RenderStyle::allTransformOperations) const override;
 
     LayoutSize contentSize() const { return { contentWidth(), contentHeight() }; }
     LayoutUnit contentWidth() const { return std::max(0_lu, paddingBoxWidth() - paddingLeft() - paddingRight()); }
@@ -372,6 +371,7 @@ public:
     // Overridden by fieldsets to subtract out the intrinsic border.
     virtual LayoutUnit adjustBorderBoxLogicalHeightForBoxSizing(LayoutUnit height) const;
     virtual LayoutUnit adjustContentBoxLogicalHeightForBoxSizing(std::optional<LayoutUnit> height) const;
+    virtual LayoutUnit adjustIntrinsicLogicalHeightForBoxSizing(LayoutUnit height) const;
 
     struct ComputedMarginValues {
         LayoutUnit m_before;
@@ -572,11 +572,6 @@ override;
 
     virtual void markForPaginationRelayoutIfNeeded() { }
 
-    bool isWritingModeRoot() const { return !parent() || parent()->style().writingMode() != style().writingMode(); }
-
-    bool isDeprecatedFlexItem() const { return !isInline() && !isFloatingOrOutOfFlowPositioned() && parent() && parent()->isDeprecatedFlexibleBox(); }
-    bool isFlexItemIncludingDeprecated() const { return !isInline() && !isFloatingOrOutOfFlowPositioned() && parent() && parent()->isFlexibleBoxIncludingDeprecated(); }
-
     LayoutUnit lineHeight(bool firstLine, LineDirectionMode, LinePositionMode = PositionOnContainingLine) const override;
     LayoutUnit baselinePosition(FontBaseline, bool firstLine, LineDirectionMode, LinePositionMode = PositionOnContainingLine) const override;
 
@@ -619,7 +614,7 @@ override;
 
     // Returns false if the rect has no intersection with the applied clip rect. When the context specifies edge-inclusive
     // intersection, this return value allows distinguishing between no intersection and zero-area intersection.
-    bool applyCachedClipAndScrollPosition(LayoutRect&, const RenderLayerModelObject* container, VisibleRectContext) const;
+    bool applyCachedClipAndScrollPosition(LayoutRect&, const RenderLayerModelObject* container, VisibleRectContext) const final;
 
     virtual bool hasRelativeDimensions() const;
     virtual bool hasRelativeLogicalHeight() const;
@@ -630,9 +625,9 @@ override;
         if (!m_overflow)
             return false;
 
-        LayoutRect layoutOverflowRect = m_overflow->layoutOverflowRect();
-        flipForWritingMode(layoutOverflowRect);
-        return layoutOverflowRect.x() < x() || layoutOverflowRect.maxX() > x() + logicalWidth();
+        auto layoutOverflowRect = m_overflow->layoutOverflowRect();
+        auto paddingBoxRect = flippedClientBoxRect();
+        return layoutOverflowRect.x() < paddingBoxRect.x() || layoutOverflowRect.maxX() > paddingBoxRect.maxX();
     }
 
     bool hasVerticalLayoutOverflow() const
@@ -640,9 +635,9 @@ override;
         if (!m_overflow)
             return false;
 
-        LayoutRect layoutOverflowRect = m_overflow->layoutOverflowRect();
-        flipForWritingMode(layoutOverflowRect);
-        return layoutOverflowRect.y() < y() || layoutOverflowRect.maxY() > y() + logicalHeight();
+        auto layoutOverflowRect = m_overflow->layoutOverflowRect();
+        auto paddingBoxRect = flippedClientBoxRect();
+        return layoutOverflowRect.y() < paddingBoxRect.y() || layoutOverflowRect.maxY() > paddingBoxRect.maxY();
     }
 
     virtual RenderPtr<RenderBox> createAnonymousBoxWithSameTypeAs(const RenderBox&) const
@@ -683,7 +678,7 @@ protected:
 
     void willBeDestroyed() override;
 
-    bool createsNewFormattingContext() const;
+    bool establishesIndependentFormattingContext() const override;
 
     virtual bool shouldResetLogicalHeightBeforeLayout() const { return false; }
     void resetLogicalHeightBeforeLayoutIfNeeded();
@@ -708,7 +703,7 @@ protected:
     void computePositionedLogicalWidth(LogicalExtentComputedValues&, RenderFragmentContainer* = nullptr) const;
 
     LayoutUnit computeIntrinsicLogicalWidthUsing(Length logicalWidthLength, LayoutUnit availableLogicalWidth, LayoutUnit borderAndPadding) const;
-    virtual std::optional<LayoutUnit> computeIntrinsicLogicalContentHeightUsing(Length logicalHeightLength, std::optional<LayoutUnit> intrinsicContentHeight, LayoutUnit borderAndPadding) const;
+    std::optional<LayoutUnit> computeIntrinsicLogicalContentHeightUsing(Length logicalHeightLength, std::optional<LayoutUnit> intrinsicContentHeight, LayoutUnit borderAndPadding) const;
 
     virtual bool shouldComputeSizeAsReplaced() const { return isReplacedOrInlineBlock() && !isInlineBlockOrInlineTable(); }
 
@@ -731,11 +726,13 @@ protected:
     static LayoutUnit blockSizeFromAspectRatio(LayoutUnit borderPaddingInlineSum, LayoutUnit borderPaddingBlockSum, double aspectRatio, BoxSizing boxSizing, LayoutUnit inlineSize)
     {
         if (boxSizing == BoxSizing::BorderBox)
-            return LayoutUnit(inlineSize / aspectRatio);
+            return std::max(borderPaddingBlockSum, LayoutUnit(inlineSize / aspectRatio));
         return LayoutUnit((inlineSize - borderPaddingInlineSum) / aspectRatio) + borderPaddingBlockSum;
     }
 
     void computePreferredLogicalWidths(const Length& minWidth, const Length& maxWidth, LayoutUnit borderAndPadding);
+
+    bool isAspectRatioDegenerate(double aspectRatio) const { return !aspectRatio || isnan(aspectRatio); }
 
 private:
     bool replacedMinMaxLogicalHeightComputesAsNone(SizeType) const;

@@ -67,7 +67,8 @@ void RTCRtpTransform::attachToReceiver(RTCRtpReceiver& receiver, RTCRtpTransform
         m_backend = previousTransform->takeBackend();
     else if (auto* backend = receiver.backend())
         m_backend = backend->rtcRtpTransformBackend();
-    else
+
+    if (!m_backend)
         return;
 
     switchOn(m_transform, [&](RefPtr<RTCRtpSFrameTransform>& sframeTransform) {
@@ -85,7 +86,8 @@ void RTCRtpTransform::attachToSender(RTCRtpSender& sender, RTCRtpTransform* prev
         m_backend = previousTransform->takeBackend();
     else if (auto* backend = sender.backend())
         m_backend = backend->rtcRtpTransformBackend();
-    else
+
+    if (!m_backend)
         return;
 
     switchOn(m_transform, [&](RefPtr<RTCRtpSFrameTransform>& sframeTransform) {

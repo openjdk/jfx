@@ -35,7 +35,7 @@
 
 namespace JSC {
 
-const ClassInfo JSRemoteFunction::s_info = { "Function", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSRemoteFunction) };
+const ClassInfo JSRemoteFunction::s_info = { "Function"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSRemoteFunction) };
 
 JSRemoteFunction::JSRemoteFunction(VM& vm, NativeExecutable* executable, JSGlobalObject* globalObject, Structure* structure, JSObject* targetFunction)
     : Base(vm, executable, globalObject, structure)
@@ -51,9 +51,9 @@ static JSValue wrapValue(JSGlobalObject* globalObject, JSGlobalObject* targetGlo
     if (value.isPrimitive())
         return value;
 
-    if (value.isCallable(vm)) {
+    if (value.isCallable()) {
         JSObject* targetFunction = static_cast<JSObject*>(value.asCell());
-        return JSRemoteFunction::create(vm, targetGlobalObject, targetFunction);
+        return JSRemoteFunction::tryCreate(targetGlobalObject, vm, targetFunction);
     }
 
     return JSValue();
@@ -66,7 +66,7 @@ static inline JSValue wrapArgument(JSGlobalObject* globalObject, JSGlobalObject*
     JSValue result = wrapValue(globalObject, targetGlobalObject, value);
     RETURN_IF_EXCEPTION(scope, { });
     if (!result)
-        throwTypeError(globalObject, scope, "value passing between realms must be callable or primitive");
+        throwTypeError(globalObject, scope, "value passing between realms must be callable or primitive"_s);
     RELEASE_AND_RETURN(scope, result);
 }
 
@@ -77,7 +77,7 @@ static inline JSValue wrapReturnValue(JSGlobalObject* globalObject, JSGlobalObje
     JSValue result = wrapValue(globalObject, targetGlobalObject, value);
     RETURN_IF_EXCEPTION(scope, { });
     if (!result)
-        throwTypeError(globalObject, scope, "value passing between realms must be callable or primitive");
+        throwTypeError(globalObject, scope, "value passing between realms must be callable or primitive"_s);
     RELEASE_AND_RETURN(scope, result);
 }
 
@@ -86,14 +86,22 @@ JSC_DEFINE_HOST_FUNCTION(remoteFunctionCallForJSFunction, (JSGlobalObject* globa
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
     JSRemoteFunction* remoteFunction = jsCast<JSRemoteFunction*>(callFrame->jsCallee());
-    ASSERT(remoteFunction->isRemoteFunction(vm));
+    ASSERT(remoteFunction->isRemoteFunction());
     JSFunction* targetFunction = jsCast<JSFunction*>(remoteFunction->targetFunction());
     JSGlobalObject* targetGlobalObject = targetFunction->globalObject();
 
     MarkedArgumentBuffer args;
+    auto clearArgOverflowCheckAndReturnAbortValue = [&] () -> EncodedJSValue {
+        // This is only called because we'll be imminently returning due to an
+        // exception i.e. we won't be using the args, and we don't care if they
+        // overflowed. However, we still need to call overflowCheckNotNeeded()
+        // to placate an ASSERT in the MarkedArgumentBuffer destructor.
+        args.overflowCheckNotNeeded();
+        return { };
+    };
     for (unsigned i = 0; i < callFrame->argumentCount(); ++i) {
         JSValue wrappedValue = wrapArgument(globalObject, targetGlobalObject, callFrame->uncheckedArgument(i));
-        RETURN_IF_EXCEPTION(scope, { });
+        RETURN_IF_EXCEPTION(scope, clearArgOverflowCheckAndReturnAbortValue());
         args.append(wrappedValue);
     }
     if (UNLIKELY(args.hasOverflowed())) {
@@ -106,7 +114,7 @@ JSC_DEFINE_HOST_FUNCTION(remoteFunctionCallForJSFunction, (JSGlobalObject* globa
         executable->entrypointFor(CodeForCall, MustCheckArity);
     }
 
-    auto callData = getCallData(vm, targetFunction);
+    auto callData = JSC::getCallData(targetFunction);
     ASSERT(callData.type != CallData::Type::None);
     auto result = call(targetGlobalObject, targetFunction, callData, jsUndefined(), args);
     RETURN_IF_EXCEPTION(scope, { });
@@ -119,7 +127,7 @@ JSC_DEFINE_HOST_FUNCTION(remoteFunctionCallGeneric, (JSGlobalObject* globalObjec
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
     JSRemoteFunction* remoteFunction = jsCast<JSRemoteFunction*>(callFrame->jsCallee());
-    ASSERT(remoteFunction->isRemoteFunction(vm));
+    ASSERT(remoteFunction->isRemoteFunction());
     JSObject* targetFunction = remoteFunction->targetFunction();
     JSGlobalObject* targetGlobalObject = targetFunction->globalObject();
 
@@ -134,7 +142,7 @@ JSC_DEFINE_HOST_FUNCTION(remoteFunctionCallGeneric, (JSGlobalObject* globalObjec
         return { };
     }
 
-    auto callData = getCallData(vm, targetFunction);
+    auto callData = JSC::getCallData(targetFunction);
     ASSERT(callData.type != CallData::Type::None);
     auto result = call(targetGlobalObject, targetFunction, callData, jsUndefined(), args);
     RETURN_IF_EXCEPTION(scope, { });
@@ -142,11 +150,11 @@ JSC_DEFINE_HOST_FUNCTION(remoteFunctionCallGeneric, (JSGlobalObject* globalObjec
     RELEASE_AND_RETURN(scope, JSValue::encode(wrapReturnValue(globalObject, targetGlobalObject, result)));
 }
 
-JSC_DEFINE_HOST_FUNCTION(isRemoteFunction, (JSGlobalObject* globalObject, CallFrame* callFrame))
+JSC_DEFINE_HOST_FUNCTION(isRemoteFunction, (JSGlobalObject*, CallFrame* callFrame))
 {
     ASSERT(callFrame->argumentCount() == 1);
     JSValue value = callFrame->uncheckedArgument(0);
-    return JSValue::encode(jsBoolean(JSC::isRemoteFunction(globalObject->vm(), value)));
+    return JSValue::encode(jsBoolean(JSC::isRemoteFunction(value)));
 }
 
 JSC_DEFINE_HOST_FUNCTION(createRemoteFunction, (JSGlobalObject* globalObject, CallFrame* callFrame))
@@ -156,18 +164,18 @@ JSC_DEFINE_HOST_FUNCTION(createRemoteFunction, (JSGlobalObject* globalObject, Ca
 
     ASSERT(callFrame->argumentCount() == 2);
     JSValue targetFunction = callFrame->uncheckedArgument(0);
-    ASSERT(targetFunction.isCallable(vm));
+    ASSERT(targetFunction.isCallable());
 
     JSObject* targetCallable = jsCast<JSObject*>(targetFunction.asCell());
     JSGlobalObject* destinationGlobalObject = globalObject;
     if (!callFrame->uncheckedArgument(1).isUndefinedOrNull()) {
-        if (auto shadowRealm = jsDynamicCast<ShadowRealmObject*>(vm, callFrame->uncheckedArgument(1)))
+        if (auto shadowRealm = jsDynamicCast<ShadowRealmObject*>(callFrame->uncheckedArgument(1)))
             destinationGlobalObject = shadowRealm->globalObject();
         else
             destinationGlobalObject = jsCast<JSGlobalObject*>(callFrame->uncheckedArgument(1));
     }
 
-    RELEASE_AND_RETURN(scope, JSValue::encode(JSRemoteFunction::create(vm, destinationGlobalObject, targetCallable)));
+    RELEASE_AND_RETURN(scope, JSValue::encode(JSRemoteFunction::tryCreate(destinationGlobalObject, vm, targetCallable)));
 }
 
 inline Structure* getRemoteFunctionStructure(JSGlobalObject* globalObject)
@@ -176,12 +184,12 @@ inline Structure* getRemoteFunctionStructure(JSGlobalObject* globalObject)
     return globalObject->remoteFunctionStructure();
 }
 
-JSRemoteFunction* JSRemoteFunction::create(VM& vm, JSGlobalObject* globalObject, JSObject* targetCallable)
+JSRemoteFunction* JSRemoteFunction::tryCreate(JSGlobalObject* globalObject, VM& vm, JSObject* targetCallable)
 {
-    ASSERT(targetCallable && targetCallable->isCallable(vm));
-    if (auto remote = jsDynamicCast<JSRemoteFunction*>(vm, targetCallable)) {
+    ASSERT(targetCallable && targetCallable->isCallable());
+    if (auto remote = jsDynamicCast<JSRemoteFunction*>(targetCallable)) {
         targetCallable = remote->targetFunction();
-        ASSERT(!JSC::isRemoteFunction(vm, targetCallable));
+        ASSERT(!JSC::isRemoteFunction(targetCallable));
     }
 
     bool isJSFunction = getJSFunction(targetCallable);
@@ -189,18 +197,15 @@ JSRemoteFunction* JSRemoteFunction::create(VM& vm, JSGlobalObject* globalObject,
     Structure* structure = getRemoteFunctionStructure(globalObject);
     JSRemoteFunction* function = new (NotNull, allocateCell<JSRemoteFunction>(vm)) JSRemoteFunction(vm, executable, globalObject, structure, targetCallable);
 
-    function->finishCreation(vm);
+    function->finishCreation(globalObject, vm);
     return function;
 }
 
-void JSRemoteFunction::finishCreation(VM& vm)
+// https://tc39.es/proposal-shadowrealm/#sec-copynameandlength
+void JSRemoteFunction::copyNameAndLength(JSGlobalObject* globalObject)
 {
-    Base::finishCreation(vm);
-    ASSERT(inherits(vm, info()));
-
-    // 3.1.2: CopyNameAndLength
+    VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
-    JSGlobalObject* globalObject = this->globalObject();
 
     PropertySlot slot(m_targetFunction.get(), PropertySlot::InternalMethodType::Get);
     bool targetHasLength = m_targetFunction->getOwnPropertySlotInline(globalObject, vm.propertyNames->length, slot);
@@ -214,12 +219,30 @@ void JSRemoteFunction::finishCreation(VM& vm)
         m_length = std::max(targetLengthAsInt, 0.0);
     }
 
-    JSValue targetName = JSValue(m_targetFunction.get()).get(globalObject, vm.propertyNames->name);
+    JSValue targetName = m_targetFunction->get(globalObject, vm.propertyNames->name);
     RETURN_IF_EXCEPTION(scope, void());
-    if (targetName.isString())
-        m_nameMayBeNull.set(vm, this, asString(targetName));
+    if (targetName.isString()) {
+        auto* targetString = asString(targetName);
+        targetString->value(globalObject); // Resolving rope.
+        RETURN_IF_EXCEPTION(scope, void());
+        m_nameMayBeNull.set(vm, this, targetString);
+    }
+    ASSERT(!m_nameMayBeNull || !m_nameMayBeNull->isRope());
+}
 
-    scope.release();
+void JSRemoteFunction::finishCreation(JSGlobalObject* globalObject, VM& vm)
+{
+    Base::finishCreation(vm);
+    ASSERT(inherits(info()));
+
+    auto scope = DECLARE_THROW_SCOPE(vm);
+    copyNameAndLength(globalObject);
+
+    auto* exception = scope.exception();
+    if (UNLIKELY(exception && !vm.isTerminationException(exception))) {
+        scope.clearException();
+        throwTypeError(globalObject, scope, "wrapping returned function throws an error"_s);
+    }
 }
 
 template<typename Visitor>

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -58,15 +58,17 @@
 
 namespace JSC {
 
+bool useOSLogOptionHasChanged = false;
+
 template<typename T>
 std::optional<T> parse(const char* string);
 
 template<>
 std::optional<OptionsStorage::Bool> parse(const char* string)
 {
-    if (equalLettersIgnoringASCIICase(string, "true") || equalLettersIgnoringASCIICase(string, "yes") || !strcmp(string, "1"))
+    if (equalLettersIgnoringASCIICase(string, "true"_s) || equalLettersIgnoringASCIICase(string, "yes"_s) || !strcmp(string, "1"))
         return true;
-    if (equalLettersIgnoringASCIICase(string, "false") || equalLettersIgnoringASCIICase(string, "no") || !strcmp(string, "0"))
+    if (equalLettersIgnoringASCIICase(string, "false"_s) || equalLettersIgnoringASCIICase(string, "no"_s) || !strcmp(string, "0"))
         return false;
     return std::nullopt;
 }
@@ -134,16 +136,93 @@ std::optional<OptionsStorage::OptionString> parse(const char* string)
 template<>
 std::optional<OptionsStorage::GCLogLevel> parse(const char* string)
 {
-    if (equalLettersIgnoringASCIICase(string, "none") || equalLettersIgnoringASCIICase(string, "no") || equalLettersIgnoringASCIICase(string, "false") || !strcmp(string, "0"))
+    if (equalLettersIgnoringASCIICase(string, "none"_s) || equalLettersIgnoringASCIICase(string, "no"_s) || equalLettersIgnoringASCIICase(string, "false"_s) || !strcmp(string, "0"))
         return GCLogging::None;
 
-    if (equalLettersIgnoringASCIICase(string, "basic") || equalLettersIgnoringASCIICase(string, "yes") || equalLettersIgnoringASCIICase(string, "true") || !strcmp(string, "1"))
+    if (equalLettersIgnoringASCIICase(string, "basic"_s) || equalLettersIgnoringASCIICase(string, "yes"_s) || equalLettersIgnoringASCIICase(string, "true"_s) || !strcmp(string, "1"))
         return GCLogging::Basic;
 
-    if (equalLettersIgnoringASCIICase(string, "verbose") || !strcmp(string, "2"))
+    if (equalLettersIgnoringASCIICase(string, "verbose"_s) || !strcmp(string, "2"))
         return GCLogging::Verbose;
 
     return std::nullopt;
+}
+
+template<>
+std::optional<OptionsStorage::OSLogType> parse(const char* string)
+{
+    std::optional<OptionsStorage::OSLogType> result;
+
+    if (equalLettersIgnoringASCIICase(string, "none"_s) || equalLettersIgnoringASCIICase(string, "false"_s) || !strcmp(string, "0"))
+        result = OSLogType::None;
+    else if (equalLettersIgnoringASCIICase(string, "true"_s) || !strcmp(string, "1"))
+        result = OSLogType::Error;
+    else if (equalLettersIgnoringASCIICase(string, "default"_s))
+        result = OSLogType::Default;
+    else if (equalLettersIgnoringASCIICase(string, "info"_s))
+        result = OSLogType::Info;
+    else if (equalLettersIgnoringASCIICase(string, "debug"_s))
+        result = OSLogType::Debug;
+    else if (equalLettersIgnoringASCIICase(string, "error"_s))
+        result = OSLogType::Error;
+    else if (equalLettersIgnoringASCIICase(string, "fault"_s))
+        result = OSLogType::Fault;
+
+    if (result && result.value() != Options::useOSLog())
+        useOSLogOptionHasChanged = true;
+    return result;
+}
+
+#if OS(DARWIN)
+static os_log_type_t asDarwinOSLogType(OSLogType type)
+{
+    switch (type) {
+    case OSLogType::None:
+        RELEASE_ASSERT_NOT_REACHED();
+    case OSLogType::Default:
+        return OS_LOG_TYPE_DEFAULT;
+    case OSLogType::Info:
+        return OS_LOG_TYPE_INFO;
+    case OSLogType::Debug:
+        return OS_LOG_TYPE_DEBUG;
+    case OSLogType::Error:
+        return OS_LOG_TYPE_ERROR;
+    case OSLogType::Fault:
+        return OS_LOG_TYPE_FAULT;
+    }
+    RELEASE_ASSERT_NOT_REACHED();
+    return OS_LOG_TYPE_DEFAULT;
+}
+
+static void initializeDatafileToUseOSLog()
+{
+    static bool alreadyInitialized = false;
+    RELEASE_ASSERT(!alreadyInitialized);
+    WTF::setDataFile(OSLogPrintStream::open("com.apple.JavaScriptCore", "DataLog", asDarwinOSLogType(Options::useOSLog())));
+    alreadyInitialized = true;
+    // Make sure no one jumped here for nefarious reasons...
+    RELEASE_ASSERT(Options::useOSLog() != OSLogType::None);
+}
+#endif // OS(DARWIN)
+
+static const char* asString(OSLogType type)
+{
+    switch (type) {
+    case OSLogType::None:
+        return "none";
+    case OSLogType::Default:
+        return "default";
+    case OSLogType::Info:
+        return "info";
+    case OSLogType::Debug:
+        return "debug";
+    case OSLogType::Error:
+        return "error";
+    case OSLogType::Fault:
+        return "fault";
+    }
+    RELEASE_ASSERT_NOT_REACHED();
+    return nullptr;
 }
 
 bool Options::isAvailable(Options::ID id, Options::Availability availability)
@@ -171,6 +250,8 @@ bool Options::isAvailable(Options::ID id, Options::Availability availability)
         return !!LLINT_TRACING;
     return false;
 }
+
+#if !PLATFORM(COCOA)
 
 template<typename T>
 bool overrideOptionWithHeuristic(T& variable, Options::ID id, const char* name, Options::Availability availability)
@@ -200,14 +281,15 @@ bool Options::overrideAliasedOptionWithHeuristic(const char* name)
     if (!stringValue)
         return false;
 
-    String aliasedOption;
-    aliasedOption = String(&name[4]) + "=" + stringValue;
+    auto aliasedOption = makeString(&name[4], '=', stringValue);
     if (Options::setOption(aliasedOption.utf8().data()))
         return true;
 
     fprintf(stderr, "WARNING: failed to parse %s=%s\n", name, stringValue);
     return false;
 }
+
+#endif // !PLATFORM(COCOA)
 
 static unsigned computeNumberOfWorkerThreads(int maxNumberOfWorkerThreads, int minimum = 1)
 {
@@ -353,9 +435,18 @@ static void overrideDefaults()
     }
 
 #if PLATFORM(MAC) && CPU(ARM64)
-    Options::numberOfGCMarkers() = 4;
+    Options::numberOfGCMarkers() = 3;
     Options::numberOfDFGCompilerThreads() = 3;
     Options::numberOfFTLCompilerThreads() = 3;
+#endif
+
+#if OS(LINUX) && CPU(ARM)
+    Options::maximumFunctionForCallInlineCandidateBytecodeCost() = 77;
+    Options::maximumOptimizationCandidateBytecodeCost() = 42403;
+    Options::maximumFunctionForClosureCallInlineCandidateBytecodeCost() = 68;
+    Options::maximumInliningCallerBytecodeCost() = 9912;
+    Options::maximumInliningDepth() = 8;
+    Options::maximumInliningRecursion() = 3;
 #endif
 
 #if USE(BMALLOC_MEMORY_FOOTPRINT_API)
@@ -430,12 +521,18 @@ void Options::recomputeDependentOptions()
     Options::useFTLJIT() = false;
 #endif
 
-#if !CPU(X86_64) && !CPU(ARM64)
-    Options::useConcurrentGC() = false;
+#if CPU(RISCV64)
+    // On RISCV64, JIT levels are enabled at build-time to simplify building JSC, avoiding
+    // otherwise rare combinations of build-time configuration. FTL on RISCV64 is disabled
+    // at runtime for now, until it gets int a proper working state.
+    // https://webkit.org/b/239707
+    Options::useFTLJIT() = false;
 #endif
 
-    if (!Options::useDataIC())
-        Options::useDataICInOptimizingJIT() = false;
+#if !CPU(X86_64) && !CPU(ARM64)
+    Options::useConcurrentGC() = false;
+    Options::forceUnlinkedDFG() = false;
+#endif
 
     // At initialization time, we may decide that useJIT should be false for any
     // number of reasons (including failing to allocate JIT memory), and therefore,
@@ -460,10 +557,18 @@ void Options::recomputeDependentOptions()
     if (!Options::useWebAssembly())
         Options::useFastTLSForWasmContext() = false;
 
-    if (Options::logJIT()
-        || Options::dumpDisassembly()
+    if (Options::dumpDisassembly()
+        || Options::asyncDisassembly()
         || Options::dumpDFGDisassembly()
         || Options::dumpFTLDisassembly()
+        || Options::dumpRegExpDisassembly()
+        || Options::dumpWasmDisassembly()
+        || Options::dumpBBQDisassembly()
+        || Options::dumpOMGDisassembly())
+        Options::needDisassemblySupport() = true;
+
+    if (Options::logJIT()
+        || Options::needDisassemblySupport()
         || Options::dumpBytecodeAtDFGTime()
         || Options::dumpGraphAtEachPhase()
         || Options::dumpDFGGraphAtEachPhase()
@@ -541,10 +646,6 @@ void Options::recomputeDependentOptions()
     if (Options::softReservedZoneSize() < Options::reservedZoneSize() + minimumReservedZoneSize)
         Options::softReservedZoneSize() = Options::reservedZoneSize() + minimumReservedZoneSize;
 
-    // FIXME: Make probe OSR exit work on 32-bit:
-    // https://bugs.webkit.org/show_bug.cgi?id=177956
-    Options::useProbeOSRExit() = false;
-
     if (!Options::useCodeCache())
         Options::diskCachePath() = nullptr;
 
@@ -565,6 +666,13 @@ void Options::recomputeDependentOptions()
 
         FOR_EACH_JSC_EXPERIMENTAL_OPTION(DISABLE_TIERS);
     }
+
+#if OS(DARWIN)
+    if (useOSLogOptionHasChanged) {
+        initializeDatafileToUseOSLog();
+        useOSLogOptionHasChanged = false;
+    }
+#endif
 
     if (Options::verboseVerifyGC())
         Options::verifyGC() = true;
@@ -642,12 +750,13 @@ void Options::initialize()
             overrideOptionWithHeuristic(name_(), name_##ID, "JSC_" #name_, Availability::availability_);
             FOR_EACH_JSC_OPTION(OVERRIDE_OPTION_WITH_HEURISTICS)
 #undef OVERRIDE_OPTION_WITH_HEURISTICS
-#endif // PLATFORM(COCOA)
 
 #define OVERRIDE_ALIASED_OPTION_WITH_HEURISTICS(aliasedName_, unaliasedName_, equivalence_) \
             overrideAliasedOptionWithHeuristic("JSC_" #aliasedName_);
             FOR_EACH_JSC_ALIASED_OPTION(OVERRIDE_ALIASED_OPTION_WITH_HEURISTICS)
 #undef OVERRIDE_ALIASED_OPTION_WITH_HEURISTICS
+
+#endif // PLATFORM(COCOA)
 
 #if 0
                 ; // Deconfuse editors that do auto indentation
@@ -666,14 +775,6 @@ void Options::initialize()
 #if HAVE(MACH_EXCEPTIONS)
             if (Options::useMachForExceptions())
                 handleSignalsWithMach();
-#endif
-
-#if OS(DARWIN)
-            if (Options::useOSLog()) {
-                WTF::setDataFile(OSLogPrintStream::open("com.apple.JavaScriptCore", "DataLog", OS_LOG_TYPE_INFO));
-                // Make sure no one jumped here for nefarious reasons...
-                RELEASE_ASSERT(useOSLog());
-            }
 #endif
 
 #if ASAN_ENABLED && OS(LINUX) && ENABLE(WEBASSEMBLY_SIGNALING_MEMORY)
@@ -844,7 +945,7 @@ bool Options::setOptionWithoutAlias(const char* arg)
         if (Availability::availability_ != Availability::Normal    \
             && !isAvailable(name_##ID, Availability::availability_)) \
             return false;                                          \
-        std::optional<OptionsStorage::type_> value;                     \
+        std::optional<OptionsStorage::type_> value;                \
         value = parse<OptionsStorage::type_>(valueStr);            \
         if (value) {                                               \
             name_() = value.value();                               \
@@ -885,7 +986,7 @@ bool Options::setAliasedOption(const char* arg)
 #define FOR_EACH_OPTION(aliasedName_, unaliasedName_, equivalence) \
     if (strlen(#aliasedName_) == static_cast<size_t>(equalStr - arg)    \
         && !strncasecmp(arg, #aliasedName_, equalStr - arg)) {          \
-        String unaliasedOption(#unaliasedName_);                        \
+        auto unaliasedOption = String::fromLatin1(#unaliasedName_);     \
         if (equivalence == SameOption)                                  \
             unaliasedOption = unaliasedOption + equalStr;               \
         else {                                                          \
@@ -937,11 +1038,11 @@ void Options::dumpAllOptionsInALine(StringBuilder& builder)
     dumpAllOptions(builder, DumpLevel::All, nullptr, " ", nullptr, nullptr, DontDumpDefaults);
 }
 
-void Options::dumpAllOptions(FILE* stream, DumpLevel level, const char* title)
+void Options::dumpAllOptions(DumpLevel level, const char* title)
 {
     StringBuilder builder;
     dumpAllOptions(builder, level, title, nullptr, "   ", "\n", DumpDefaults);
-    fprintf(stream, "%s", builder.toString().utf8().data());
+    dataLog(builder.toString().utf8().data());
 }
 
 struct OptionReader {
@@ -977,6 +1078,7 @@ struct OptionReader {
             OptionRange m_optionRange;
             const char* m_optionString;
             GCLogging::Level m_gcLogLevel;
+            OSLogType m_osLogType;
         };
 
         friend struct OptionReader;
@@ -1078,6 +1180,9 @@ void OptionReader::Option::initValue(void* addressOfValue)
     case Options::Type::GCLogLevel:
         memcpy(&m_gcLogLevel, addressOfValue, sizeof(OptionsStorage::GCLogLevel));
         break;
+    case Options::Type::OSLogType:
+        memcpy(&m_osLogType, addressOfValue, sizeof(OptionsStorage::OSLogType));
+        break;
     }
 }
 
@@ -1108,6 +1213,9 @@ void OptionReader::Option::dump(StringBuilder& builder) const
     case Options::Type::GCLogLevel:
         builder.append(GCLogging::levelAsString(m_gcLogLevel));
         break;
+    case Options::Type::OSLogType:
+        builder.append(asString(m_osLogType));
+        break;
     }
 }
 
@@ -1132,16 +1240,18 @@ bool OptionReader::Option::operator==(const Option& other) const
             || (m_optionString && other.m_optionString && !strcmp(m_optionString, other.m_optionString));
     case Options::Type::GCLogLevel:
         return m_gcLogLevel == other.m_gcLogLevel;
+    case Options::Type::OSLogType:
+        return m_osLogType == other.m_osLogType;
     }
     return false;
 }
 
 #if ENABLE(JIT_CAGE)
-bool canUseJITCage()
+SUPPRESS_ASAN bool canUseJITCage()
 {
     if (JSC_FORCE_USE_JIT_CAGE)
         return true;
-    return JSC_JIT_CAGE_VERSION() && WTF::processHasEntitlement("com.apple.private.verified-jit");
+    return JSC_JIT_CAGE_VERSION() && WTF::processHasEntitlement("com.apple.private.verified-jit"_s);
 }
 #else
 bool canUseJITCage() { return false; }

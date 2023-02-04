@@ -26,31 +26,42 @@
 #include "config.h"
 #include "WGSL.h"
 
-#include "AST.h"
-#include "Lexer.h"
+#include "Parser.h"
 
 namespace WGSL {
 
-std::variant<SuccessfulCheck, FailedCheck> staticCheck(const String& str, const std::optional<SourceMap>&)
+std::variant<SuccessfulCheck, FailedCheck> staticCheck(const String& wgsl, const std::optional<SourceMap>&)
 {
-    // Making sure that the lexer builds correctly, will be removed in later patches
-    Lexer<LChar> lexer(str);
-    lexer.lex();
-    return FailedCheck { { }, { } };
+    Expected<AST::ShaderModule, Error> parserResult = wgsl.is8Bit() ? parseLChar(wgsl) : parseUChar(wgsl);
+    if (!parserResult.has_value()) {
+        // FIXME: Add support for returning multiple errors from the parser.
+        return FailedCheck { { parserResult.error() }, { /* warnings */ } };
+    }
+    UniqueRef<AST::ShaderModule> shader = makeUniqueRef<AST::ShaderModule>(WTFMove(parserResult.value()));
+
+    Vector<Warning> warnings { };
+    // FIXME: add validation
+    return std::variant<SuccessfulCheck, FailedCheck>(std::in_place_type<SuccessfulCheck>, WTFMove(warnings), WTFMove(shader));
 }
 
 SuccessfulCheck::SuccessfulCheck(SuccessfulCheck&&) = default;
 
+SuccessfulCheck::SuccessfulCheck(Vector<Warning>&& messages, UniqueRef<AST::ShaderModule>&& shader)
+    : warnings(WTFMove(messages))
+    , ast(WTFMove(shader))
+{
+}
+
 SuccessfulCheck::~SuccessfulCheck() = default;
 
-PrepareResult prepare(const AST& ast, const HashMap<String, PipelineLayout>& pipelineLayouts)
+PrepareResult prepare(const AST::ShaderModule& ast, const HashMap<String, PipelineLayout>& pipelineLayouts)
 {
     UNUSED_PARAM(ast);
     UNUSED_PARAM(pipelineLayouts);
     return { String(), { } };
 }
 
-PrepareResult prepare(const AST& ast, const String& entryPointName, const std::optional<PipelineLayout>& pipelineLayouts)
+PrepareResult prepare(const AST::ShaderModule& ast, const String& entryPointName, const std::optional<PipelineLayout>& pipelineLayouts)
 {
     UNUSED_PARAM(ast);
     UNUSED_PARAM(entryPointName);

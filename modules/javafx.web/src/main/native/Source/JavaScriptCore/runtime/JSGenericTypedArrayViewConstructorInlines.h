@@ -105,43 +105,6 @@ inline JSObject* constructGenericTypedArrayViewFromIterator(JSGlobalObject* glob
     return result;
 }
 
-inline JSArrayBuffer* constructCustomArrayBufferIfNeeded(JSGlobalObject* globalObject, JSArrayBufferView* view)
-{
-    VM& vm = globalObject->vm();
-    auto scope = DECLARE_THROW_SCOPE(vm);
-
-    JSArrayBuffer* source = view->possiblySharedJSBuffer(globalObject);
-    RETURN_IF_EXCEPTION(scope, nullptr);
-    if (source->isShared())
-        return nullptr;
-
-    std::optional<JSValue> species = arrayBufferSpeciesConstructor(globalObject, source, ArrayBufferSharingMode::Default);
-    RETURN_IF_EXCEPTION(scope, nullptr);
-    if (!species)
-        return nullptr;
-
-    if (!species->isConstructor(vm)) {
-        throwTypeError(globalObject, scope, "species is not a constructor"_s);
-        return nullptr;
-    }
-
-    JSValue prototype = species->get(globalObject, vm.propertyNames->prototype);
-    RETURN_IF_EXCEPTION(scope, nullptr);
-
-    auto buffer = ArrayBuffer::tryCreate(source->impl()->byteLength(), 1);
-    if (!buffer) {
-        throwOutOfMemoryError(globalObject, scope);
-        return nullptr;
-    }
-
-    JSGlobalObject* functionGlobalObject = getFunctionRealm(globalObject, asObject(species.value()));
-    RETURN_IF_EXCEPTION(scope, nullptr);
-    auto result = JSArrayBuffer::create(vm, functionGlobalObject->arrayBufferStructure(ArrayBufferSharingMode::Default), WTFMove(buffer));
-    if (prototype.isObject())
-        result->setPrototypeDirect(vm, prototype);
-    return result;
-}
-
 template<typename ViewClass>
 inline JSObject* constructGenericTypedArrayViewWithArguments(JSGlobalObject* globalObject, Structure* structure, EncodedJSValue firstArgument, size_t offset, std::optional<size_t> lengthOpt)
 {
@@ -150,7 +113,7 @@ inline JSObject* constructGenericTypedArrayViewWithArguments(JSGlobalObject* glo
 
     JSValue firstValue = JSValue::decode(firstArgument);
 
-    if (JSArrayBuffer* jsBuffer = jsDynamicCast<JSArrayBuffer*>(vm, firstValue)) {
+    if (JSArrayBuffer* jsBuffer = jsDynamicCast<JSArrayBuffer*>(firstValue)) {
         RefPtr<ArrayBuffer> buffer = jsBuffer->impl();
         if (buffer->isDetached()) {
             throwTypeError(globalObject, scope, "Buffer is already detached"_s);
@@ -181,21 +144,18 @@ inline JSObject* constructGenericTypedArrayViewWithArguments(JSGlobalObject* glo
     // - Another array. This creates a copy of the of that array.
     // - A primitive. This creates a new typed array of that length and zero-initializes it.
 
-    if (JSObject* object = jsDynamicCast<JSObject*>(vm, firstValue)) {
+    if (JSObject* object = jsDynamicCast<JSObject*>(firstValue)) {
         size_t length;
-        JSArrayBuffer* customBuffer = nullptr;
 
-        if (isTypedView(object->classInfo(vm)->typedArrayStorageType)) {
+        if (isTypedView(object->type())) {
             auto* view = jsCast<JSArrayBufferView*>(object);
 
-            customBuffer = constructCustomArrayBufferIfNeeded(globalObject, view);
-            RETURN_IF_EXCEPTION(scope, nullptr);
             if (view->isDetached()) {
                 throwTypeError(globalObject, scope, "Underlying ArrayBuffer has been detached from the view"_s);
                 return nullptr;
             }
 
-            if (contentType(object->classInfo(vm)->typedArrayStorageType) != ViewClass::contentType) {
+            if (contentType(object->type()) != ViewClass::contentType) {
                 throwTypeError(globalObject, scope, "Content types of source and new typed array are different"_s);
                 return nullptr;
             }
@@ -219,7 +179,7 @@ inline JSObject* constructGenericTypedArrayViewWithArguments(JSGlobalObject* glo
             // it should not be observable that we do not use the iterator.
 
             if (!iteratorFunc.isUndefinedOrNull()
-                && (iteratorFunc != object->globalObject(vm)->arrayProtoValuesFunction()
+                && (iteratorFunc != object->globalObject()->arrayProtoValuesFunction()
                     || lengthSlot.isAccessor() || lengthSlot.isCustom() || lengthSlot.isTaintedByOpaqueObject()
                     || hasAnyArrayStorage(object->indexingType()))) {
 
@@ -236,9 +196,7 @@ inline JSObject* constructGenericTypedArrayViewWithArguments(JSGlobalObject* glo
             }
         }
 
-        ViewClass* result = customBuffer
-            ? ViewClass::create(globalObject, structure, customBuffer->impl(), 0, length)
-            : ViewClass::createUninitialized(globalObject, structure, length);
+        ViewClass* result = ViewClass::createUninitialized(globalObject, structure, length);
         EXCEPTION_ASSERT(!!scope.exception() == !result);
         if (UNLIKELY(!result))
             return nullptr;
@@ -277,7 +235,7 @@ ALWAYS_INLINE EncodedJSValue constructGenericTypedArrayViewImpl(JSGlobalObject* 
     JSValue firstValue = callFrame->uncheckedArgument(0);
     size_t offset = 0;
     std::optional<size_t> length = std::nullopt;
-    if (jsDynamicCast<JSArrayBuffer*>(vm, firstValue) && argCount > 1) {
+    if (jsDynamicCast<JSArrayBuffer*>(firstValue) && argCount > 1) {
         offset = callFrame->uncheckedArgument(1).toTypedArrayIndex(globalObject, "byteOffset");
         RETURN_IF_EXCEPTION(scope, encodedJSValue());
 

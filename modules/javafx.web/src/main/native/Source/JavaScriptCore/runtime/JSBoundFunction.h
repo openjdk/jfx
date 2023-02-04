@@ -40,7 +40,7 @@ class JSBoundFunction final : public JSFunction {
 public:
     typedef JSFunction Base;
     static constexpr unsigned StructureFlags = Base::StructureFlags & ~ImplementsDefaultHasInstance;
-    static_assert(StructureFlags & ImplementsHasInstance, "");
+    static_assert(StructureFlags & ImplementsHasInstance);
 
     template<typename CellType, SubspaceAccess mode>
     static GCClient::IsoSubspace* subspaceFor(VM& vm)
@@ -57,7 +57,7 @@ public:
     JSImmutableButterfly* boundArgs() { return m_boundArgs.get(); } // DO NOT allow this array to be mutated!
     JSArray* boundArgsCopy(JSGlobalObject*);
     JSString* nameMayBeNull() { return m_nameMayBeNull.get(); }
-    const String& nameString()
+    String nameString()
     {
         if (!m_nameMayBeNull)
             return emptyString();

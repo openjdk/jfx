@@ -52,7 +52,14 @@ public:
 
     JS_EXPORT_PRIVATE Structure* emptyObjectStructureForPrototype(JSGlobalObject*, JSObject*, unsigned inlineCapacity, bool makePolyProtoStructure = false, FunctionExecutable* = nullptr);
     JS_EXPORT_PRIVATE Structure* emptyStructureForPrototypeFromBaseStructure(JSGlobalObject*, JSObject*, Structure*);
-    JS_EXPORT_PRIVATE Structure* emptyObjectStructureConcurrently(JSGlobalObject*, JSObject* prototype, unsigned inlineCapacity);
+    JS_EXPORT_PRIVATE Structure* emptyObjectStructureConcurrently(JSObject* prototype, unsigned inlineCapacity);
+
+    template<typename Func>
+    void forEach(Func func)
+    {
+        Locker locker { m_lock };
+        m_structures.forEach(func);
+    }
 
 private:
     Structure* createEmptyStructure(JSGlobalObject*, JSObject* prototype, const TypeInfo&, const ClassInfo*, IndexingType, unsigned inlineCapacity, bool makePolyProtoStructure, FunctionExecutable*);

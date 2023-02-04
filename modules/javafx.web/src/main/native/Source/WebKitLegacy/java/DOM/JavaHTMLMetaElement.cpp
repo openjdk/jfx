@@ -53,7 +53,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLMetaElementImpl_getContent
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLMetaElementImpl_setContentImpl(JNIEnv* env, jclass, jlong peer, jstring value)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::contentAttr, String(env, value));
+    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::contentAttr, AtomString {String(env, value)});
 }
 
 JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLMetaElementImpl_getHttpEquivImpl(JNIEnv* env, jclass, jlong peer)
@@ -65,7 +65,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLMetaElementImpl_getHttpEqu
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLMetaElementImpl_setHttpEquivImpl(JNIEnv* env, jclass, jlong peer, jstring value)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::http_equivAttr, String(env, value));
+    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::http_equivAttr, AtomString {String(env, value)});
 }
 
 JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLMetaElementImpl_getNameImpl(JNIEnv* env, jclass, jlong peer)
@@ -77,7 +77,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLMetaElementImpl_getNameImp
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLMetaElementImpl_setNameImpl(JNIEnv* env, jclass, jlong peer, jstring value)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::nameAttr, String(env, value));
+    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::nameAttr, AtomString{String(env, value)});
 }
 
 JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLMetaElementImpl_getSchemeImpl(JNIEnv* env, jclass, jlong peer)
@@ -89,7 +89,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLMetaElementImpl_getSchemeI
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLMetaElementImpl_setSchemeImpl(JNIEnv* env, jclass, jlong peer, jstring value)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::schemeAttr, String(env, value));
+    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::schemeAttr, AtomString{String(env, value)});
 }
 
 }

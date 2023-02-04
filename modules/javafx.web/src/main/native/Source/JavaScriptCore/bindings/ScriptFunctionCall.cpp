@@ -51,7 +51,7 @@ void ScriptCallArgumentHandler::appendArgument(const char* argument)
 {
     VM& vm = m_globalObject->vm();
     JSLockHolder lock(vm);
-    m_arguments.append(jsString(vm, argument));
+    m_arguments.append(jsString(vm, String::fromLatin1(argument)));
 }
 
 void ScriptCallArgumentHandler::appendArgument(JSValue argument)
@@ -124,7 +124,7 @@ Expected<JSValue, NakedPtr<Exception>> ScriptFunctionCall::call()
         return makeExceptionResult(exception);
     }
 
-    auto callData = getCallData(vm, function);
+    auto callData = JSC::getCallData(function);
     if (callData.type == CallData::Type::None)
         return { };
 

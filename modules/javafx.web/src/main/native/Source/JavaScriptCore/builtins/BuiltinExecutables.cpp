@@ -36,7 +36,7 @@ namespace JSC {
 
 BuiltinExecutables::BuiltinExecutables(VM& vm)
     : m_vm(vm)
-    , m_combinedSourceProvider(StringSourceProvider::create(StringImpl::createFromLiteral(s_JSCCombinedCode, s_JSCCombinedCodeLength), { }, String()))
+    , m_combinedSourceProvider(StringSourceProvider::create(StringImpl::createWithoutCopying(s_JSCCombinedCode, s_JSCCombinedCodeLength), { }, String()))
 {
 }
 
@@ -67,18 +67,18 @@ UnlinkedFunctionExecutable* BuiltinExecutables::createDefaultConstructor(Constru
         break;
     case ConstructorKind::Base:
     case ConstructorKind::Extends:
-        return createExecutable(m_vm, defaultConstructorSourceCode(constructorKind), name, constructorKind, ConstructAbility::CanConstruct, needsClassFieldInitializer, privateBrandRequirement);
+        return createExecutable(m_vm, defaultConstructorSourceCode(constructorKind), name, ImplementationVisibility::Public, constructorKind, ConstructAbility::CanConstruct, needsClassFieldInitializer, privateBrandRequirement);
     }
     ASSERT_NOT_REACHED();
     return nullptr;
 }
 
-UnlinkedFunctionExecutable* BuiltinExecutables::createBuiltinExecutable(const SourceCode& code, const Identifier& name, ConstructorKind constructorKind, ConstructAbility constructAbility)
+UnlinkedFunctionExecutable* BuiltinExecutables::createBuiltinExecutable(const SourceCode& code, const Identifier& name, ImplementationVisibility implementationVisibility, ConstructorKind constructorKind, ConstructAbility constructAbility)
 {
-    return createExecutable(m_vm, code, name, constructorKind, constructAbility, NeedsClassFieldInitializer::No);
+    return createExecutable(m_vm, code, name, implementationVisibility, constructorKind, constructAbility, NeedsClassFieldInitializer::No);
 }
 
-UnlinkedFunctionExecutable* BuiltinExecutables::createExecutable(VM& vm, const SourceCode& source, const Identifier& name, ConstructorKind constructorKind, ConstructAbility constructAbility, NeedsClassFieldInitializer needsClassFieldInitializer, PrivateBrandRequirement privateBrandRequirement)
+UnlinkedFunctionExecutable* BuiltinExecutables::createExecutable(VM& vm, const SourceCode& source, const Identifier& name, ImplementationVisibility implementationVisibility, ConstructorKind constructorKind, ConstructAbility constructAbility, NeedsClassFieldInitializer needsClassFieldInitializer, PrivateBrandRequirement privateBrandRequirement)
 {
     // FIXME: Can we just make MetaData computation be constexpr and have the compiler do this for us?
     // https://bugs.webkit.org/show_bug.cgi?id=193272
@@ -106,6 +106,7 @@ UnlinkedFunctionExecutable* BuiltinExecutables::createExecutable(VM& vm, const S
     {
         unsigned i = parametersStart + 1;
         unsigned commas = 0;
+        bool insideCurlyBrackets = false;
         bool sawOneParam = false;
         bool hasRestParam = false;
         while (true) {
@@ -113,7 +114,13 @@ UnlinkedFunctionExecutable* BuiltinExecutables::createExecutable(VM& vm, const S
             if (characters[i] == ')')
                 break;
 
-            if (characters[i] == ',')
+            if (characters[i] == '}')
+                insideCurlyBrackets = false;
+            else if (characters[i] == '{' || insideCurlyBrackets) {
+                insideCurlyBrackets = true;
+                ++i;
+                continue;
+            } else if (characters[i] == ',')
                 ++commas;
             else if (!Lexer<LChar>::isWhiteSpace(characters[i]))
                 sawOneParam = true;
@@ -197,7 +204,7 @@ UnlinkedFunctionExecutable* BuiltinExecutables::createExecutable(VM& vm, const S
     end.endOffset = std::numeric_limits<unsigned>::max();
 
     FunctionMetadataNode metadata(
-        start, end, startColumn, endColumn, source.startOffset() + functionKeywordStart, source.startOffset() + functionNameStart, source.startOffset() + parametersStart,
+        start, end, startColumn, endColumn, source.startOffset() + functionKeywordStart, source.startOffset() + functionNameStart, source.startOffset() + parametersStart, implementationVisibility,
         isInStrictContext ? StrictModeLexicalFeature : NoLexicalFeatures, constructorKind, constructorKind == ConstructorKind::Extends ? SuperBinding::Needed : SuperBinding::NotNeeded,
         parameterCount, parseMode, isArrowFunctionBodyExpression);
 
@@ -210,7 +217,7 @@ UnlinkedFunctionExecutable* BuiltinExecutables::createExecutable(VM& vm, const S
         ParserError error;
         JSParserBuiltinMode builtinMode = isBuiltinDefaultClassConstructor ? JSParserBuiltinMode::NotBuiltin : JSParserBuiltinMode::Builtin;
         std::unique_ptr<ProgramNode> program = parse<ProgramNode>(
-            vm, source, Identifier(), builtinMode,
+            vm, source, Identifier(), implementationVisibility, builtinMode,
             JSParserStrictMode::NotStrict, JSParserScriptMode::Classic, SourceParseMode::ProgramMode, SuperBinding::NotNeeded, error,
             &positionBeforeLastNewlineFromParser, constructorKind);
 
@@ -276,7 +283,7 @@ UnlinkedFunctionExecutable* BuiltinExecutables::name##Executable() \
         Identifier executableName = m_vm.propertyNames->builtinNames().functionName##PublicName();\
         if (overrideName)\
             executableName = Identifier::fromString(m_vm, overrideName);\
-        m_unlinkedExecutables[index] = createBuiltinExecutable(name##Source(), executableName, s_##name##ConstructorKind, s_##name##ConstructAbility);\
+        m_unlinkedExecutables[index] = createBuiltinExecutable(name##Source(), executableName, s_##name##ImplementationVisibility, s_##name##ConstructorKind, s_##name##ConstructAbility);\
     }\
     return m_unlinkedExecutables[index];\
 }

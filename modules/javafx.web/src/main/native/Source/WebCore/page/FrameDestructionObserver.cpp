@@ -42,11 +42,6 @@ FrameDestructionObserver::~FrameDestructionObserver()
 
 }
 
-Frame* FrameDestructionObserver::frame() const
-{
-    return m_frame.get();
-}
-
 void FrameDestructionObserver::observeFrame(Frame* frame)
 {
     if (m_frame)

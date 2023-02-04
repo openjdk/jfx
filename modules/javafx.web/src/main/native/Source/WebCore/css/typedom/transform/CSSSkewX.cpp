@@ -40,25 +40,30 @@ namespace WebCore {
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(CSSSkewX);
 
-Ref<CSSSkewX> CSSSkewX::create(Ref<CSSNumericValue>&& ax)
+ExceptionOr<Ref<CSSSkewX>> CSSSkewX::create(Ref<CSSNumericValue> ax)
 {
+    if (!ax->type().matches<CSSNumericBaseType::Angle>())
+        return Exception { TypeError };
     return adoptRef(*new CSSSkewX(WTFMove(ax)));
 }
 
-CSSSkewX::CSSSkewX(Ref<CSSNumericValue>&& ax)
-    : m_ax(WTFMove(ax))
+CSSSkewX::CSSSkewX(Ref<CSSNumericValue> ax)
+    : CSSTransformComponent(Is2D::Yes)
+    , m_ax(WTFMove(ax))
 {
 }
 
-// FIXME: Fix all the following virtual functions
-
-String CSSSkewX::toString() const
+void CSSSkewX::serialize(StringBuilder& builder) const
 {
-    return emptyString();
+    // https://drafts.css-houdini.org/css-typed-om/#serialize-a-cssskewx
+    builder.append("skewX(");
+    m_ax->serialize(builder);
+    builder.append(')');
 }
 
 ExceptionOr<Ref<DOMMatrix>> CSSSkewX::toMatrix()
 {
+    // FIXME: Implement.
     return DOMMatrix::fromMatrix(DOMMatrixInit { });
 }
 

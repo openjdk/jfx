@@ -33,6 +33,7 @@
 #include "BreakBlockquoteCommand.h"
 #include "CSSComputedStyleDeclaration.h"
 #include "CSSStyleDeclaration.h"
+#include "CommonAtomStrings.h"
 #include "DOMWrapperWorld.h"
 #include "DataTransfer.h"
 #include "Document.h"
@@ -114,13 +115,13 @@ private:
 
 static bool isInterchangeNewlineNode(const Node* node)
 {
-    static NeverDestroyed<String> interchangeNewlineClassString(AppleInterchangeNewline);
+    static NeverDestroyed<String> interchangeNewlineClassString = AppleInterchangeNewline ""_s;
     return is<HTMLBRElement>(node) && downcast<HTMLBRElement>(*node).attributeWithoutSynchronization(classAttr) == interchangeNewlineClassString;
 }
 
 static bool isInterchangeConvertedSpaceSpan(const Node* node)
 {
-    static NeverDestroyed<String> convertedSpaceSpanClassString(AppleConvertedSpace);
+    static NeverDestroyed<String> convertedSpaceSpanClassString = AppleConvertedSpace ""_s;
     return is<HTMLElement>(node) && downcast<HTMLElement>(*node).attributeWithoutSynchronization(classAttr) == convertedSpaceSpanClassString;
 }
 
@@ -184,7 +185,7 @@ ReplacementFragment::ReplacementFragment(DocumentFragment* fragment, const Visib
     ASSERT(stagingDocument->body());
 
     ComputedStyleExtractor computedStyleOfEditableRoot(editableRoot.get());
-    stagingDocument->body()->setAttributeWithoutSynchronization(styleAttr, computedStyleOfEditableRoot.copyProperties()->asText());
+    stagingDocument->body()->setAttributeWithoutSynchronization(styleAttr, computedStyleOfEditableRoot.copyProperties()->asTextAtom());
 
     RefPtr<StyledElement> holder = insertFragmentForTestRendering(stagingDocument->body());
     if (!holder) {
@@ -237,7 +238,7 @@ void ReplacementFragment::removeContentsWithSideEffects()
         }
         if (element->hasAttributes()) {
             for (auto& attribute : element->attributesIterator()) {
-                if (element->isEventHandlerAttribute(attribute) || element->isJavaScriptURLAttribute(attribute))
+                if (element->isEventHandlerAttribute(attribute) || element->attributeContainsJavaScriptURL(attribute))
                     attributesToRemove.append({ element.copyRef(), attribute.name() });
             }
         }
@@ -622,7 +623,7 @@ void ReplaceSelectionCommand::inverseTransformColor(InsertedNodes& insertedNodes
         if (editingStyle.ptr() == transformedStyle.ptr())
             continue;
 
-        setNodeAttribute(element, styleAttr, transformedStyle->style()->asText());
+        setNodeAttribute(element, styleAttr, transformedStyle->style()->asTextAtom());
     }
 }
 
@@ -685,7 +686,7 @@ void ReplaceSelectionCommand::removeRedundantStylesAndKeepStyleSpanInline(Insert
             }
             removeNodeAttribute(*element, styleAttr);
         } else if (newInlineStyle->style()->propertyCount() != inlineStyle->propertyCount())
-            setNodeAttribute(*element, styleAttr, newInlineStyle->style()->asText());
+            setNodeAttribute(*element, styleAttr, newInlineStyle->style()->asTextAtom());
 
         // FIXME: Tolerate differences in id, class, and style attributes.
         if (element->parentNode() && isNonTableCellHTMLBlockElement(element) && areIdenticalElements(*element, *element->parentNode())
@@ -716,9 +717,9 @@ void ReplaceSelectionCommand::removeRedundantStylesAndKeepStyleSpanInline(Insert
 
             // Mutate using the CSSOM wrapper so we get the same event behavior as a script.
             if (isBlock(element))
-                element->cssomStyle().setPropertyInternal(CSSPropertyDisplay, "inline", false);
+                element->cssomStyle().setPropertyInternal(CSSPropertyDisplay, "inline"_s, false);
             if (element->renderer() && element->renderer()->style().isFloating())
-                element->cssomStyle().setPropertyInternal(CSSPropertyFloat, "none", false);
+                element->cssomStyle().setPropertyInternal(CSSPropertyFloat, noneAtom(), false);
         }
     }
 }
@@ -726,7 +727,7 @@ void ReplaceSelectionCommand::removeRedundantStylesAndKeepStyleSpanInline(Insert
 static bool isProhibitedParagraphChild(const AtomString& name)
 {
     static NeverDestroyed localNames = [] {
-    // https://dvcs.w3.org/hg/editing/raw-file/57abe6d3cb60/editing.html#prohibited-paragraph-child
+        // https://dvcs.w3.org/hg/editing/raw-file/57abe6d3cb60/editing.html#prohibited-paragraph-child
         static constexpr std::array tags {
             &addressTag,
             &articleTag,
@@ -989,7 +990,7 @@ void ReplaceSelectionCommand::handleStyleSpans(InsertedNodes& insertedNodes)
         insertedNodes.willRemoveNodePreservingChildren(wrappingStyleSpan.get());
         removeNodePreservingChildren(*wrappingStyleSpan);
     } else
-        setNodeAttribute(*wrappingStyleSpan, styleAttr, style->style()->asText());
+        setNodeAttribute(*wrappingStyleSpan, styleAttr, style->style()->asTextAtom());
 }
 
 void ReplaceSelectionCommand::mergeEndIfNeeded()
@@ -1070,7 +1071,7 @@ static bool isInlineNodeWithStyle(const Node* node)
     const HTMLElement* element = static_cast<const HTMLElement*>(node);
     const AtomString& classAttributeValue = element->attributeWithoutSynchronization(classAttr);
     if (classAttributeValue == AppleTabSpanClass
-        || classAttributeValue == AppleConvertedSpace
+        || classAttributeValue == AppleConvertedSpace ""_s
         || classAttributeValue == ApplePasteAsQuotation)
         return true;
 
@@ -1121,8 +1122,8 @@ void ReplaceSelectionCommand::doApply()
         return;
 
     // We can skip matching the style if the selection is plain text.
-    if ((selection.start().deprecatedNode()->renderer() && selection.start().deprecatedNode()->renderer()->style().userModify() == UserModify::ReadWritePlaintextOnly)
-        && (selection.end().deprecatedNode()->renderer() && selection.end().deprecatedNode()->renderer()->style().userModify() == UserModify::ReadWritePlaintextOnly))
+    if ((selection.start().deprecatedNode()->renderer() && selection.start().deprecatedNode()->renderer()->style().effectiveUserModify() == UserModify::ReadWritePlaintextOnly)
+        && (selection.end().deprecatedNode()->renderer() && selection.end().deprecatedNode()->renderer()->style().effectiveUserModify() == UserModify::ReadWritePlaintextOnly))
         m_matchStyle = false;
 
     if (m_matchStyle) {
@@ -1594,11 +1595,11 @@ void ReplaceSelectionCommand::addSpacesForSmartReplace()
     if (needsTrailingSpace && endNode) {
         bool collapseWhiteSpace = !endNode->renderer() || endNode->renderer()->style().collapseWhiteSpace();
         if (is<Text>(*endNode)) {
-            insertTextIntoNode(downcast<Text>(*endNode), endOffset, collapseWhiteSpace ? nonBreakingSpaceString() : " ");
+            insertTextIntoNode(downcast<Text>(*endNode), endOffset, collapseWhiteSpace ? nonBreakingSpaceString() : " "_s);
             if (m_endOfInsertedContent.containerNode() == endNode)
                 m_endOfInsertedContent.moveToOffset(m_endOfInsertedContent.offsetInContainerNode() + 1);
         } else {
-            auto node = document().createEditingTextNode(collapseWhiteSpace ? nonBreakingSpaceString() : " ");
+            auto node = document().createEditingTextNode(collapseWhiteSpace ? String { nonBreakingSpaceString() } : " "_s);
             insertNodeAfter(node.copyRef(), *endNode);
             updateNodesInserted(node.ptr());
         }
@@ -1618,11 +1619,11 @@ void ReplaceSelectionCommand::addSpacesForSmartReplace()
     if (needsLeadingSpace && startNode) {
         bool collapseWhiteSpace = !startNode->renderer() || startNode->renderer()->style().collapseWhiteSpace();
         if (is<Text>(*startNode)) {
-            insertTextIntoNode(downcast<Text>(*startNode), startOffset, collapseWhiteSpace ? nonBreakingSpaceString() : " ");
+            insertTextIntoNode(downcast<Text>(*startNode), startOffset, collapseWhiteSpace ? nonBreakingSpaceString() : " "_s);
             if (m_endOfInsertedContent.containerNode() == startNode && m_endOfInsertedContent.offsetInContainerNode())
                 m_endOfInsertedContent.moveToOffset(m_endOfInsertedContent.offsetInContainerNode() + 1);
         } else {
-            auto node = document().createEditingTextNode(collapseWhiteSpace ? nonBreakingSpaceString() : " ");
+            auto node = document().createEditingTextNode(collapseWhiteSpace ? String { nonBreakingSpaceString() } : " "_s);
             // Don't updateNodesInserted. Doing so would set m_endOfInsertedContent to be the node containing the leading space,
             // but m_endOfInsertedContent is supposed to mark the end of pasted content.
             insertNodeBefore(node, *startNode);

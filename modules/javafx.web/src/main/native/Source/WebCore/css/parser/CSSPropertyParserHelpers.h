@@ -1,5 +1,5 @@
 // Copyright 2016 The Chromium Authors. All rights reserved.
-// Copyright (C) 2016 Apple Inc. All rights reserved.
+// Copyright (C) 2016-2022 Apple Inc. All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
@@ -37,6 +37,7 @@
 #include "CSSValuePool.h"
 #include "Length.h" // For ValueRange
 #include "StyleColor.h"
+#include "SystemFontDatabase.h"
 #include <variant>
 #include <wtf/OptionSet.h>
 #include <wtf/Vector.h>
@@ -178,7 +179,7 @@ struct FontStyleRaw {
 using FontWeightRaw = std::variant<CSSValueID, double>;
 using FontSizeRaw = std::variant<CSSValueID, CSSPropertyParserHelpers::LengthOrPercentRaw>;
 using LineHeightRaw = std::variant<CSSValueID, double, CSSPropertyParserHelpers::LengthOrPercentRaw>;
-using FontFamilyRaw = std::variant<CSSValueID, String>;
+using FontFamilyRaw = std::variant<CSSValueID, AtomString>;
 
 struct FontRaw {
     std::optional<FontStyleRaw> style;
@@ -201,8 +202,8 @@ std::optional<FontWeightRaw> consumeFontWeightRaw(CSSParserTokenRange&);
 std::optional<CSSValueID> consumeFontStretchKeywordValueRaw(CSSParserTokenRange&);
 std::optional<CSSValueID> consumeFontStyleKeywordValueRaw(CSSParserTokenRange&);
 std::optional<FontStyleRaw> consumeFontStyleRaw(CSSParserTokenRange&, CSSParserMode);
-String concatenateFamilyName(CSSParserTokenRange&);
-String consumeFamilyNameRaw(CSSParserTokenRange&);
+AtomString concatenateFamilyName(CSSParserTokenRange&);
+AtomString consumeFamilyNameRaw(CSSParserTokenRange&);
 std::optional<CSSValueID> consumeGenericFamilyRaw(CSSParserTokenRange&);
 std::optional<Vector<FontFamilyRaw>> consumeFontFamilyRaw(CSSParserTokenRange&);
 std::optional<FontSizeRaw> consumeFontSizeRaw(CSSParserTokenRange&, CSSParserMode, UnitlessQuirk = UnitlessQuirk::Forbid);
@@ -247,6 +248,19 @@ inline bool isFontStyleAngleInRange(double angleInDegrees)
     return angleInDegrees > -90 && angleInDegrees < 90;
 }
 
+inline bool isSystemFontShorthand(CSSValueID valueID)
+{
+    // This needs to stay in sync with SystemFontDatabase::FontShorthand.
+    static_assert(CSSValueStatusBar - CSSValueCaption == static_cast<SystemFontDatabase::FontShorthandUnderlyingType>(SystemFontDatabase::FontShorthand::StatusBar));
+    return valueID >= CSSValueCaption && valueID <= CSSValueStatusBar;
+}
+
+inline SystemFontDatabase::FontShorthand lowerFontShorthand(CSSValueID valueID)
+{
+    // This needs to stay in sync with SystemFontDatabase::FontShorthand.
+    ASSERT(isSystemFontShorthand(valueID));
+    return static_cast<SystemFontDatabase::FontShorthand>(valueID - CSSValueCaption);
+}
 
 } // namespace CSSPropertyParserHelpers
 

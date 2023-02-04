@@ -51,7 +51,8 @@ enum AutoFillButtonType {
     "Contacts",
     "Credentials",
     "StrongPassword",
-    "CreditCard"
+    "CreditCard",
+    "Loading"
 };
 
 enum UserInterfaceLayoutDirection {
@@ -103,6 +104,23 @@ enum TreeType {
     "ContextChange",
     "GPUStatusFailure",
     "Timeout"
+};
+
+enum AudioSessionCategory {
+    "None",
+    "AmbientSound",
+    "SoloAmbientSound",
+    "MediaPlayback",
+    "RecordAudio",
+    "PlayAndRecord",
+    "AudioProcessing"
+};
+
+enum RouteSharingPolicy {
+    "Default",
+    "LongFormAudio",
+    "Independent",
+    "LongFormVideo"
 };
 
 enum AutoplayPolicy {
@@ -269,6 +287,15 @@ enum HEVCParameterCodec {
     boolean useBoundingRectAndPaintAllContentForComplexRanges = false;
     boolean computeEstimatedBackgroundColor = false;
     boolean respectTextColor = false;
+    boolean useUserSelectAllCommonAncestor = false;
+};
+
+[
+    ExportMacro=WEBCORE_TESTSUPPORT_EXPORT,
+    JSGenerateToJSObject,
+] dictionary TextIteratorState {
+    DOMString text;
+    Range range;
 };
 
 [
@@ -361,14 +388,9 @@ typedef (FetchRequest or FetchResponse) FetchObject;
     Node ensureUserAgentShadowRoot(Element host);
     Node shadowRoot(Element host);
 
-    // CSS Deferred Parsing Testing.
-    long deferredStyleRulesCount(StyleSheet sheet);
-    long deferredGroupRulesCount(StyleSheet sheet);
-    long deferredKeyframesRulesCount(StyleSheet sheet);
-
     DOMString shadowRootType(Node root);
     DOMString shadowPseudoId(Element element);
-    undefined setShadowPseudoId(Element element, DOMString id);
+    undefined setShadowPseudoId(Element element, [AtomString] DOMString id);
     Node treeScopeRootNode(Node node);
     Node parentTreeScope(Node node);
 
@@ -395,8 +417,8 @@ typedef (FetchRequest or FetchResponse) FetchObject;
 
     DOMString visiblePlaceholder(Element element);
     undefined selectColorInColorChooser(HTMLInputElement element, DOMString colorValue);
-    sequence<DOMString> formControlStateOfPreviousHistoryItem();
-    undefined setFormControlStateOfPreviousHistoryItem(sequence<DOMString> values);
+    sequence<[AtomString] DOMString> formControlStateOfPreviousHistoryItem();
+    undefined setFormControlStateOfPreviousHistoryItem(sequence<[AtomString] DOMString> values);
 
     DOMRect absoluteLineRectFromPoint(long x, long y);
 
@@ -437,6 +459,7 @@ typedef (FetchRequest or FetchResponse) FetchObject;
 
     undefined setPagination(DOMString mode, long gap, optional long pageLength = 0);
     undefined setPaginationLineGridEnabled(boolean enabled);
+    unsigned long long lineIndexAfterPageBreak(Element element);
 
     DOMString configurationForViewport(unrestricted float devicePixelRatio, long deviceWidth, long deviceHeight, long availableWidth, long availableHeight);
 
@@ -466,13 +489,14 @@ typedef (FetchRequest or FetchResponse) FetchObject;
     undefined scrollElementToRect(Element element, long x, long y, long w, long h);
 
     Range? rangeFromLocationAndLength(Element scope, unsigned long rangeLocation, unsigned long rangeLength);
-    unsigned long locationFromRange(Element scope, Range range);
-    unsigned long lengthFromRange(Element scope, Range range);
+    unsigned long locationFromRange(Element scope, Range range, optional sequence<DOMString> behaviors = []);
+    unsigned long lengthFromRange(Element scope, Range range, optional sequence<DOMString> behaviors = []);
     DOMString rangeAsText(Range range);
     DOMString rangeAsTextUsingBackwardsTextIterator(Range range);
     Range subrange(Range range, unsigned long rangeLocation, unsigned long rangeLength);
     Range? rangeForDictionaryLookupAtLocation(long x, long y);
     Range? rangeOfStringNearLocation(Range range, DOMString text, long targetOffset);
+    sequence<TextIteratorState> statesOfTextIterator(Range range, optional sequence<DOMString> behaviors = []);
 
     undefined setDelegatesScrolling(boolean enabled);
 
@@ -560,6 +584,7 @@ typedef (FetchRequest or FetchResponse) FetchObject;
     const unsigned short LAYER_TREE_INCLUDES_ROOT_LAYER_PROPERTIES = 256;
     const unsigned short LAYER_TREE_INCLUDES_EVENT_REGION = 512;
     const unsigned short LAYER_TREE_INCLUDES_DEEP_COLOR = 1024;
+    const unsigned short LAYER_TREE_INCLUDES_DEVICE_SCALE = 2048;
     DOMString layerTreeAsText(Document document, optional unsigned short flags = 0);
 
     unsigned long long layerIDForElement(Element element);
@@ -587,11 +612,16 @@ typedef (FetchRequest or FetchResponse) FetchObject;
     undefined setElementTracksDisplayListReplay(Element element, boolean trackReplay);
 
     // Flags for displayListForElement.
-    const unsigned short DISPLAY_LIST_INCLUDES_PLATFORM_OPERATIONS = 1;
+    const unsigned short DISPLAY_LIST_INCLUDE_PLATFORM_OPERATIONS = 1;
+    const unsigned short DISPLAY_LIST_INCLUDE_RESOURCE_IDENTIFIERS = 2;
     // Returns the recorded display list.
     DOMString displayListForElement(Element element, optional unsigned short flags = 0);
     // Returns the display list that was actually painted.
     DOMString replayDisplayListForElement(Element element, optional unsigned short flags = 0);
+
+    undefined setForceUseGlyphDisplayListForTesting(boolean enabled);
+    DOMString cachedGlyphDisplayListsForTextNode(Node node, optional unsigned short flags = 0);
+    undefined clearGlyphDisplayListCacheForTesting();
 
     undefined garbageCollectDocumentResources();
 
@@ -773,17 +803,16 @@ typedef (FetchRequest or FetchResponse) FetchObject;
     boolean isPluginUnavailabilityIndicatorObscured(Element element);
     DOMString unavailablePluginReplacementText(Element element);
     boolean isPluginSnapshotted(Element element);
-    boolean pluginIsBelowSizeThreshold(Element element);
 
     DOMRect selectionBounds();
     undefined setSelectionWithoutValidation(Node baseNode, unsigned long baseOffset, Node? extentNode, unsigned long extentOffset);
 
     [Conditional=MEDIA_SOURCE] undefined initializeMockMediaSource();
-    [Conditional=MEDIA_SOURCE] Promise<sequence<DOMString>> bufferedSamplesForTrackId(SourceBuffer buffer, DOMString trackId);
-    [Conditional=MEDIA_SOURCE] Promise<sequence<DOMString>> enqueuedSamplesForTrackID(SourceBuffer buffer, DOMString trackID);
+    [Conditional=MEDIA_SOURCE] Promise<sequence<DOMString>> bufferedSamplesForTrackId(SourceBuffer buffer, [AtomString] DOMString trackId);
+    [Conditional=MEDIA_SOURCE] Promise<sequence<DOMString>> enqueuedSamplesForTrackID(SourceBuffer buffer, [AtomString] DOMString trackID);
     [Conditional=MEDIA_SOURCE] undefined setShouldGenerateTimestamps(SourceBuffer buffer, boolean flag);
-    [Conditional=MEDIA_SOURCE] double minimumUpcomingPresentationTimeForTrackID(SourceBuffer buffer, DOMString trackID);
-    [Conditional=MEDIA_SOURCE] undefined setMaximumQueueDepthForTrackID(SourceBuffer buffer, DOMString trackID, unsigned long maxQueueDepth);
+    [Conditional=MEDIA_SOURCE] double minimumUpcomingPresentationTimeForTrackID(SourceBuffer buffer, [AtomString] DOMString trackID);
+    [Conditional=MEDIA_SOURCE] undefined setMaximumQueueDepthForTrackID(SourceBuffer buffer, [AtomString] DOMString trackID, unsigned long maxQueueDepth);
 
     [Conditional=VIDEO] undefined beginMediaSessionInterruption(DOMString interruptionType);
     [Conditional=VIDEO] undefined endMediaSessionInterruption(DOMString flags);
@@ -797,6 +826,8 @@ typedef (FetchRequest or FetchResponse) FetchObject;
     [Conditional=WEB_AUDIO] undefined setAudioContextRestrictions(AudioContext context, DOMString restrictions);
     [Conditional=VIDEO] undefined postRemoteControlCommand(DOMString command, optional unrestricted float argument = 0);
     [Conditional=VIDEO] undefined activeAudioRouteDidChange(boolean shouldPause);
+    [Conditional=VIDEO] undefined beginAudioSessionInterruption();
+    [Conditional=VIDEO] undefined endAudioSessionInterruption();
 
     [Conditional=WIRELESS_PLAYBACK_TARGET] undefined setMockMediaPlaybackTargetPickerEnabled(boolean enabled);
     [Conditional=WIRELESS_PLAYBACK_TARGET] undefined setMockMediaPlaybackTargetPickerState(DOMString deviceName, DOMString deviceState);
@@ -818,6 +849,7 @@ typedef (FetchRequest or FetchResponse) FetchObject;
     [Conditional=VIDEO] undefined simulateSystemWake();
     [Conditional=VIDEO] boolean elementIsBlockingDisplaySleep(HTMLMediaElement element);
     [Conditional=VIDEO] boolean isPlayerVisibleInViewport(HTMLMediaElement element);
+    [Conditional=VIDEO] boolean isPlayerMuted(HTMLMediaElement element);
 
     MockPageOverlay installMockPageOverlay(PageOverlayType type);
     DOMString pageOverlayLayerTreeAsText(optional unsigned short flags = 0);
@@ -829,6 +861,8 @@ typedef (FetchRequest or FetchResponse) FetchObject;
     boolean pageDefersLoading();
 
     File? createFile(DOMString url);
+    DOMString createTemporaryFile(DOMString name, DOMString contents);
+
     undefined queueMicroTask(long testNumber);
     boolean testPreloaderSettingViewport();
 
@@ -866,6 +900,8 @@ typedef (FetchRequest or FetchResponse) FetchObject;
     undefined withoutUserGesture(VoidCallback callback);
 
     boolean userIsInteracting();
+
+    boolean hasTransientActivation();
 
     GCObservation? observeGC(any observed);
 
@@ -917,6 +953,7 @@ typedef (FetchRequest or FetchResponse) FetchObject;
     [Conditional=MEDIA_STREAM] undefined setCameraMediaStreamTrackOrientation(MediaStreamTrack track, short orientation);
     [Conditional=MEDIA_STREAM] undefined observeMediaStreamTrack(MediaStreamTrack track);
     [Conditional=MEDIA_STREAM] Promise<ImageData> grabNextMediaStreamTrackFrame();
+    [Conditional=MEDIA_STREAM] Promise<short> mediaStreamTrackVideoFrameRotation();
     [Conditional=MEDIA_STREAM] readonly attribute unsigned long trackAudioSampleCount;
     [Conditional=MEDIA_STREAM] readonly attribute unsigned long trackVideoSampleCount;
     [Conditional=MEDIA_STREAM] undefined delayMediaStreamTrackSamples(MediaStreamTrack track, float delay);
@@ -936,7 +973,7 @@ typedef (FetchRequest or FetchResponse) FetchObject;
     readonly attribute unsigned long long storageAreaMapCount;
 
     unsigned long long elementIdentifier(Element element);
-    [CallWith=CurrentDocument] boolean isElementAlive(unsigned long long documentIdentifier);
+    boolean isElementAlive(unsigned long long elementIdentifier);
     unsigned long long frameIdentifier(Document document);
     unsigned long long pageIdentifier(Document document);
 
@@ -961,7 +998,10 @@ typedef (FetchRequest or FetchResponse) FetchObject;
     undefined setConsoleMessageListener(StringCallback callback);
 
     readonly attribute boolean supportsAudioSession;
-    DOMString audioSessionCategory();
+    AudioSessionCategory audioSessionCategory();
+    [Conditional=VIDEO] AudioSessionCategory categoryAtMostRecentPlayback(HTMLMediaElement element);
+    RouteSharingPolicy routeSharingPolicy();
+
     double preferredAudioBufferSize();
     double currentAudioBufferSize();
     boolean audioSessionActive();
@@ -978,8 +1018,6 @@ typedef (FetchRequest or FetchResponse) FetchObject;
     [Conditional=IMAGE_ANALYSIS] readonly attribute Element? textRecognitionCandidate;
     [Conditional=IMAGE_ANALYSIS] undefined requestTextRecognition(Element element, VoidCallback callback);
     undefined installImageOverlay(Element element, sequence<ImageOverlayLine> lines, optional sequence<ImageOverlayBlock> blocks = [], optional sequence<ImageOverlayDataDetector> dataDetectors = []);
-    undefined installCroppedImageOverlay(Element element, DOMRectReadOnly normalizedCropRect);
-    undefined uninstallCroppedImageOverlay();
     readonly attribute boolean hasActiveDataDetectorHighlight;
 
     boolean usingAppleInternalSDK();
@@ -1051,7 +1089,7 @@ typedef (FetchRequest or FetchResponse) FetchObject;
     InternalsMapLike createInternalsMapLike();
     InternalsSetLike createInternalsSetLike();
 
-    DOMString highlightPseudoElementColor(DOMString highlightName, Element element);
+    DOMString highlightPseudoElementColor([AtomString] DOMString highlightName, Element element);
 
     boolean hasSandboxMachLookupAccessToGlobalName(DOMString process, DOMString service);
     boolean hasSandboxMachLookupAccessToXPCServiceName(DOMString process, DOMString service);
@@ -1119,5 +1157,9 @@ typedef (FetchRequest or FetchResponse) FetchObject;
 
     [Conditional=SERVICE_WORKER] PushSubscription createPushSubscription(USVString endpoint, EpochTimeStamp? expirationTime, ArrayBuffer serverVAPIDPublicKey, ArrayBuffer clientECDHPublicKey, ArrayBuffer auth);
 
-    undefined overrideModalContainerSearchTermForTesting(DOMString term);
+    undefined overrideModalContainerSearchTermForTesting([AtomString] DOMString term);
+
+    [Conditional=ARKIT_INLINE_PREVIEW_MAC] Promise<sequence<DOMString>> modelInlinePreviewUUIDs();
+    [Conditional=ARKIT_INLINE_PREVIEW_MAC] DOMString modelInlinePreviewUUIDForModelElement(HTMLModelElement modelElement);
+    undefined avoidIOSurfaceSizeCheckInWebProcess(HTMLCanvasElement element);
 };

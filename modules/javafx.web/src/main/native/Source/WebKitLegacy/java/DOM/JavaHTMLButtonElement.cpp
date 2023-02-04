@@ -85,7 +85,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLButtonElementImpl_getFormA
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLButtonElementImpl_setFormActionImpl(JNIEnv* env, jclass, jlong peer, jstring value)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->setFormAction(String(env, value));
+    IMPL->setFormAction(AtomString {String(env, value)});
 }
 
 JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLButtonElementImpl_getFormEnctypeImpl(JNIEnv* env, jclass, jlong peer)
@@ -97,7 +97,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLButtonElementImpl_getFormE
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLButtonElementImpl_setFormEnctypeImpl(JNIEnv* env, jclass, jlong peer, jstring value)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->setFormEnctype(String(env, value));
+    IMPL->setFormEnctype(AtomString {String(env, value)});
 }
 
 JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLButtonElementImpl_getFormMethodImpl(JNIEnv* env, jclass, jlong peer)
@@ -109,7 +109,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLButtonElementImpl_getFormM
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLButtonElementImpl_setFormMethodImpl(JNIEnv* env, jclass, jlong peer, jstring value)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->setFormMethod(String(env, value));
+    IMPL->setFormMethod(AtomString {String(env, value)});
 }
 
 JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLButtonElementImpl_getTypeImpl(JNIEnv* env, jclass, jlong peer)
@@ -121,7 +121,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLButtonElementImpl_getTypeI
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLButtonElementImpl_setTypeImpl(JNIEnv* env, jclass, jlong peer, jstring value)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->setType(String(env, value));
+    IMPL->setType(AtomString {String(env, value)});
 }
 
 JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_HTMLButtonElementImpl_getFormNoValidateImpl(JNIEnv*, jclass, jlong peer)
@@ -145,7 +145,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLButtonElementImpl_getFormT
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLButtonElementImpl_setFormTargetImpl(JNIEnv* env, jclass, jlong peer, jstring value)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::formtargetAttr, String(env, value));
+    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::formtargetAttr, AtomString {String(env, value)});
 }
 
 JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLButtonElementImpl_getNameImpl(JNIEnv* env, jclass, jlong peer)
@@ -157,7 +157,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLButtonElementImpl_getNameI
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLButtonElementImpl_setNameImpl(JNIEnv* env, jclass, jlong peer, jstring value)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::nameAttr, String(env, value));
+    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::nameAttr, AtomString {String(env, value)});
 }
 
 JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLButtonElementImpl_getValueImpl(JNIEnv* env, jclass, jlong peer)
@@ -169,7 +169,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLButtonElementImpl_getValue
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLButtonElementImpl_setValueImpl(JNIEnv* env, jclass, jlong peer, jstring value)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::valueAttr, String(env, value));
+    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::valueAttr, AtomString {String(env, value)});
 }
 
 JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_HTMLButtonElementImpl_getWillValidateImpl(JNIEnv*, jclass, jlong peer)
@@ -199,7 +199,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLButtonElementImpl_getAcces
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLButtonElementImpl_setAccessKeyImpl(JNIEnv* env, jclass, jlong peer, jstring value)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::accesskeyAttr, String(env, value));
+    IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::accesskeyAttr, AtomString {String(env, value)});
 }
 
 
@@ -215,7 +215,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLButtonElementImpl_setCustomVa
     , jstring error)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->setCustomValidity(String(env, error));
+    IMPL->setCustomValidity(AtomString {String(env, error)});
 }
 
 

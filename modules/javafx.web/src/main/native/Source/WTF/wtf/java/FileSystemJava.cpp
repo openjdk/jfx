@@ -164,6 +164,26 @@ String pathByAppendingComponent(const String& path, const String& component)
     return String(env, result);
 }
 
+String pathByAppendingComponent(StringView path, StringView component)
+{
+    JNIEnv* env = WTF::GetJavaEnv();
+
+    static jmethodID mid = env->GetStaticMethodID(
+            comSunWebkitFileSystem,
+            "fwkPathByAppendingComponent",
+            "(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;");
+    ASSERT(mid);
+
+    JLString result = static_cast<jstring>(env->CallStaticObjectMethod(
+            comSunWebkitFileSystem,
+            mid,
+            (jstring)path.toString().toJavaString(env),
+            (jstring)component.toString().toJavaString(env)));
+    WTF::CheckAndClearException(env);
+
+    return String(env, result);
+}
+
 bool makeAllDirectories(const String& path)
 {
     JNIEnv* env = WTF::GetJavaEnv();
@@ -311,7 +331,7 @@ std::optional<WallTime> fileCreationTime(const String&) // Not all platforms sto
 String homeDirectoryPath()
 {
     fprintf(stderr, "homeDirectoryPath() NOT IMPLEMENTED\n");
-    return "";
+    return String();
 }
 
 String directoryName(String const &)
@@ -352,9 +372,9 @@ bool truncateFile(PlatformFileHandle, long long offset)
     return false;
 }
 
-std::optional<int32_t> getFileDeviceId(const CString&)
+std::optional<int32_t> getFileDeviceId(const String&)
 {
-    fprintf(stderr, "getFileDeviceId(const CString&) NOT IMPLEMENTED\n");
+    fprintf(stderr, "getFileDeviceId(const String&) NOT IMPLEMENTED\n");
     return {};
 }
 
@@ -389,7 +409,7 @@ bool deleteEmptyDirectory(String const &)
     return false;
 }
 
-String openTemporaryFile(const String&, PlatformFileHandle& handle, const String&)
+String openTemporaryFile(StringView prefix, PlatformFileHandle& handle, StringView suffix)
 {
     fprintf(stderr, "openTemporaryFile(const String&, PlatformFileHandle& handle, const String&) NOT IMPLEMENTED\n");
     handle = invalidPlatformFileHandle;
@@ -400,7 +420,7 @@ String parentPath(const String& path)
 {
     fprintf(stderr, "parentPath(const String& path) NOT IMPLEMENTED\n");
     UNUSED_PARAM(path);
-    return "";
+    return String();
 }
 
 bool moveFile(const String& oldPath, const String& newPath)
@@ -421,7 +441,8 @@ bool isHiddenFile(const String& path)
 
 String pathFileName(const String& path)
 {
-    return path.substring(path.reverseFind('/') + 1);
+   // return path.substring(path.reverseFind('/') + 1);
+   return nullString();
 }
 
 bool hardLinkOrCopyFile(const String& targetPath, const String& linkPath)

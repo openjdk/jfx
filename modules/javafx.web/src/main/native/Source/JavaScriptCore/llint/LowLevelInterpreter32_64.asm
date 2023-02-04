@@ -34,20 +34,36 @@ macro getOperandNarrow(opcodeStruct, fieldName, dst)
     loadbsi constexpr %opcodeStruct%_%fieldName%_index + OpcodeIDNarrowSize[PB, PC, 1], dst
 end
 
-macro getuOperandWide16(opcodeStruct, fieldName, dst)
-    loadh constexpr %opcodeStruct%_%fieldName%_index * 2 + OpcodeIDWide16Size[PB, PC, 1], dst
+macro getuOperandWide16JS(opcodeStruct, fieldName, dst)
+    loadh constexpr %opcodeStruct%_%fieldName%_index * 2 + OpcodeIDWide16SizeJS[PB, PC, 1], dst
 end
 
-macro getOperandWide16(opcodeStruct, fieldName, dst)
-    loadhsi constexpr %opcodeStruct%_%fieldName%_index * 2 + OpcodeIDWide16Size[PB, PC, 1], dst
+macro getuOperandWide16Wasm(opcodeStruct, fieldName, dst)
+    loadh constexpr %opcodeStruct%_%fieldName%_index * 2 + OpcodeIDWide16SizeWasm[PB, PC, 1], dst
 end
 
-macro getuOperandWide32(opcodeStruct, fieldName, dst)
-    loadi constexpr %opcodeStruct%_%fieldName%_index * 4 + OpcodeIDWide32Size[PB, PC, 1], dst
+macro getOperandWide16JS(opcodeStruct, fieldName, dst)
+    loadhsi constexpr %opcodeStruct%_%fieldName%_index * 2 + OpcodeIDWide16SizeJS[PB, PC, 1], dst
 end
 
-macro getOperandWide32(opcodeStruct, fieldName, dst)
-    loadis constexpr %opcodeStruct%_%fieldName%_index * 4 + OpcodeIDWide32Size[PB, PC, 1], dst
+macro getOperandWide16Wasm(opcodeStruct, fieldName, dst)
+    loadhsi constexpr %opcodeStruct%_%fieldName%_index * 2 + OpcodeIDWide16SizeWasm[PB, PC, 1], dst
+end
+
+macro getuOperandWide32JS(opcodeStruct, fieldName, dst)
+    loadi constexpr %opcodeStruct%_%fieldName%_index * 4 + OpcodeIDWide32SizeJS[PB, PC, 1], dst
+end
+
+macro getuOperandWide32Wasm(opcodeStruct, fieldName, dst)
+    loadi constexpr %opcodeStruct%_%fieldName%_index * 4 + OpcodeIDWide32SizeWasm[PB, PC, 1], dst
+end
+
+macro getOperandWide32JS(opcodeStruct, fieldName, dst)
+    loadis constexpr %opcodeStruct%_%fieldName%_index * 4 + OpcodeIDWide32SizeJS[PB, PC, 1], dst
+end
+
+macro getOperandWide32Wasm(opcodeStruct, fieldName, dst)
+    loadis constexpr %opcodeStruct%_%fieldName%_index * 4 + OpcodeIDWide32SizeWasm[PB, PC, 1], dst
 end
 
 macro makeReturn(get, dispatch, fn)
@@ -81,8 +97,8 @@ macro dispatchAfterCall(size, opcodeStruct, valueProfileName, dstVirtualRegister
     loadi ArgumentCountIncludingThis + TagOffset[cfr], PC
     if C_LOOP or C_LOOP_WIN
         # On non C_LOOP builds, CSR restore takes care of this.
-    loadp CodeBlock[cfr], PB
-    loadp CodeBlock::m_instructionsRawPointer[PB], PB
+        loadp CodeBlock[cfr], PB
+        loadp CodeBlock::m_instructionsRawPointer[PB], PB
     end
     get(size, opcodeStruct, dstVirtualRegister, t3)
     storei r1, TagOffset[cfr, t3, 8]
@@ -401,7 +417,7 @@ macro makeHostFunctionCall(entry, protoCallFrame, temp1, temp2)
         move sp, a1
         # We need to allocate stack space for 16 bytes (8-byte aligned)
         # for 4 arguments, since callee can use this space.
-        subp 16, sp
+        subp 16, sp 
         loadp ProtoCallFrame::globalObject[protoCallFrame], a0
         call temp1
         addp 16, sp
@@ -1511,7 +1527,7 @@ end)
 macro performGetByIDHelper(opcodeStruct, modeMetadataName, valueProfileName, slowLabel, size, metadata, return)
     metadata(t2, t1)
     loadb %opcodeStruct%::Metadata::%modeMetadataName%.mode[t2], t1
-
+        
 .opGetByIdDefault:
     bbneq t1, constexpr GetByIdMode::Default, .opGetByIdProtoLoad
     loadi JSCell::m_structureID[t3], t1 # assumes base object in t3
@@ -1544,7 +1560,7 @@ macro performGetByIDHelper(opcodeStruct, modeMetadataName, valueProfileName, slo
     bilt t0, 0, slowLabel
     valueProfile(opcodeStruct, valueProfileName, t2, Int32Tag, t0)
     return(Int32Tag, t0)
-
+    
 .opGetByIdUnset:
     loadi JSCell::m_structureID[t3], t1
     loadi %opcodeStruct%::Metadata::%modeMetadataName%.unsetMode.structureID[t2], t0
@@ -2259,7 +2275,10 @@ macro callHelper(opcodeName, slowPath, opcodeStruct, valueProfileName, dstVirtua
 
 .notPolymorphic:
     bpneq t0, t3, .opCallSlow
-    prepareCall(t2, t3, t4, t1)
+    prepareCall(t2, t3, t4, t1, macro(address)
+        loadp %opcodeStruct%::Metadata::m_callLinkInfo.u.dataIC.m_codeBlock[t5], t2
+        storep t2, address
+    end)
 
 .goPolymorphic:
     loadp %opcodeStruct%::Metadata::m_callLinkInfo.u.dataIC.m_monomorphicCallDestination[t5], t5
@@ -2276,7 +2295,7 @@ macro callHelper(opcodeName, slowPath, opcodeStruct, valueProfileName, dstVirtua
     prepareSlowCall()
     callTargetFunction(%opcodeName%_slow, size, opcodeStruct, valueProfileName, dstVirtualRegister, dispatch, t5, JSEntryPtrTag)
 end
-
+        
 macro commonCallOp(opcodeName, slowPath, opcodeStruct, prepareCall, invokeCall, preparePolymorphic, prepareSlowCall, prologue)
     llintOpWithMetadata(opcodeName, opcodeStruct, macro (size, get, dispatch, metadata, return)
         metadata(t5, t0)
@@ -2296,7 +2315,7 @@ macro commonCallOp(opcodeName, slowPath, opcodeStruct, prepareCall, invokeCall, 
         macro getArgumentCount(dst)
             getu(size, opcodeStruct, m_argc, dst)
         end
-
+        
         # t5 holds metadata
         callHelper(opcodeName, slowPath, opcodeStruct, m_profile, m_dst, prepareCall, invokeCall, preparePolymorphic, prepareSlowCall, size, dispatch, metadata, getCallee, getArgumentStart, getArgumentCount)
     end)
@@ -2338,7 +2357,10 @@ macro doCallVarargs(opcodeName, size, get, opcodeStruct, valueProfileName, dstVi
 
         .notPolymorphic:
             bpneq t0, t3, .opCallSlow
-            prepareCall(t2, t3, t4, t1)
+            prepareCall(t2, t3, t4, t1, macro(address)
+                loadp %opcodeStruct%::Metadata::m_callLinkInfo.u.dataIC.m_codeBlock[t5], t2
+                storep t2, address
+            end)
 
         .goPolymorphic:
             loadp %opcodeStruct%::Metadata::m_callLinkInfo.u.dataIC.m_monomorphicCallDestination[t5], t5
@@ -2356,7 +2378,7 @@ macro doCallVarargs(opcodeName, size, get, opcodeStruct, valueProfileName, dstVi
             callTargetFunction(%opcodeName%_slow, size, opcodeStruct, valueProfileName, dstVirtualRegister, dispatch, t5, JSEntryPtrTag)
         .dontUpdateSP:
             jmp _llint_throw_from_slow_path_trampoline
-    end)
+        end)
 end
 
 llintOp(op_ret, OpRet, macro (size, get, dispatch)
@@ -3036,7 +3058,7 @@ llintOpWithMetadata(op_iterator_open, OpIteratorOpen, macro (size, get, dispatch
     end
 
     # We need to load m_iterator into t3 because that's where
-    # performGetByIDHelper expects the base object
+    # performGetByIDHelper expects the base object    
     loadVariable(get, m_iterator, t3, t0, t3)
     bineq t0, CellTag, .iteratorOpenGenericGetNextSlow
     performGetByIDHelper(OpIteratorOpen, m_modeMetadata, m_nextProfile, .iteratorOpenGenericGetNextSlow, size, metadata, storeNextAndDispatch)
@@ -3047,7 +3069,7 @@ llintOpWithMetadata(op_iterator_open, OpIteratorOpen, macro (size, get, dispatch
 end)
 
 llintOpWithMetadata(op_iterator_next, OpIteratorNext, macro (size, get, dispatch, metadata, return)
-
+        
     loadVariable(get, m_next, t0, t1, t0)
     bineq t1, EmptyValueTag, .iteratorNextGeneric
 

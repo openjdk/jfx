@@ -29,10 +29,11 @@
 #include "Error.h"
 #include "JSCInlines.h"
 #include "JSFinalizationRegistry.h"
+#include "WeakMapImplInlines.h"
 
 namespace JSC {
 
-const ClassInfo FinalizationRegistryPrototype::s_info = { "FinalizationRegistry", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(FinalizationRegistryPrototype) };
+const ClassInfo FinalizationRegistryPrototype::s_info = { "FinalizationRegistry"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(FinalizationRegistryPrototype) };
 
 static JSC_DECLARE_HOST_FUNCTION(protoFuncFinalizationRegistryRegister);
 static JSC_DECLARE_HOST_FUNCTION(protoFuncFinalizationRegistryUnregister);
@@ -40,11 +41,11 @@ static JSC_DECLARE_HOST_FUNCTION(protoFuncFinalizationRegistryUnregister);
 void FinalizationRegistryPrototype::finishCreation(VM& vm, JSGlobalObject* globalObject)
 {
     Base::finishCreation(vm);
-    ASSERT(inherits(vm, info()));
+    ASSERT(inherits(info()));
 
     // We can't make this a property name because it's a resevered word in C++...
-    JSC_NATIVE_FUNCTION_WITHOUT_TRANSITION(Identifier::fromString(vm, "register"), protoFuncFinalizationRegistryRegister, static_cast<unsigned>(PropertyAttribute::DontEnum), 2);
-    JSC_NATIVE_FUNCTION_WITHOUT_TRANSITION(Identifier::fromString(vm, "unregister"), protoFuncFinalizationRegistryUnregister, static_cast<unsigned>(PropertyAttribute::DontEnum), 1);
+    JSC_NATIVE_FUNCTION_WITHOUT_TRANSITION(Identifier::fromString(vm, "register"_s), protoFuncFinalizationRegistryRegister, static_cast<unsigned>(PropertyAttribute::DontEnum), 2, ImplementationVisibility::Public);
+    JSC_NATIVE_FUNCTION_WITHOUT_TRANSITION(Identifier::fromString(vm, "unregister"_s), protoFuncFinalizationRegistryUnregister, static_cast<unsigned>(PropertyAttribute::DontEnum), 1, ImplementationVisibility::Public);
     JSC_TO_STRING_TAG_WITHOUT_TRANSITION();
 }
 
@@ -57,7 +58,7 @@ ALWAYS_INLINE static JSFinalizationRegistry* getFinalizationRegistry(VM& vm, JSG
         return nullptr;
     }
 
-    auto* group = jsDynamicCast<JSFinalizationRegistry*>(vm, asObject(value));
+    auto* group = jsDynamicCast<JSFinalizationRegistry*>(asObject(value));
     if (LIKELY(group))
         return group;
 
@@ -74,18 +75,18 @@ JSC_DEFINE_HOST_FUNCTION(protoFuncFinalizationRegistryRegister, (JSGlobalObject*
     RETURN_IF_EXCEPTION(scope, { });
 
     JSValue target = callFrame->argument(0);
-    if (!target.isObject())
-        return throwVMTypeError(globalObject, scope, "register requires an object as the target"_s);
+    if (UNLIKELY(!canBeHeldWeakly(target)))
+        return throwVMTypeError(globalObject, scope, "register requires an object or a non-registered symbol as the target"_s);
 
     JSValue holdings = callFrame->argument(1);
-    if (target == holdings)
+    if (UNLIKELY(target == holdings))
         return throwVMTypeError(globalObject, scope, "register expects the target object and the holdings parameter are not the same. Otherwise, the target can never be collected"_s);
 
     JSValue unregisterToken = callFrame->argument(2);
-    if (!unregisterToken.isUndefined() && !unregisterToken.isObject())
-        return throwVMTypeError(globalObject, scope, "register requires an object as the unregistration token"_s);
+    if (UNLIKELY(!unregisterToken.isUndefined() && !canBeHeldWeakly(unregisterToken)))
+        return throwVMTypeError(globalObject, scope, "register requires an object or a non-registered symbol as the unregistration token"_s);
 
-    group->registerTarget(vm, target.getObject(), holdings, unregisterToken);
+    group->registerTarget(vm, target.asCell(), holdings, unregisterToken);
     return encodedJSUndefined();
 }
 
@@ -97,12 +98,12 @@ JSC_DEFINE_HOST_FUNCTION(protoFuncFinalizationRegistryUnregister, (JSGlobalObjec
     auto* group = getFinalizationRegistry(vm, globalObject, callFrame->thisValue());
     RETURN_IF_EXCEPTION(scope, { });
 
-    if (auto* token = jsDynamicCast<JSObject*>(vm, callFrame->argument(0))) {
-        bool result = group->unregister(vm, token);
-        return JSValue::encode(jsBoolean(result));
-    }
+    JSValue token = callFrame->argument(0);
+    if (UNLIKELY(!canBeHeldWeakly(token)))
+        return throwVMTypeError(globalObject, scope, "unregister requires an object or a non-registered symbol as the unregistration token"_s);
 
-    return throwVMTypeError(globalObject, scope, "unregister requires an object is the unregistration token"_s);
+    bool result = group->unregister(vm, token.asCell());
+    return JSValue::encode(jsBoolean(result));
 }
 
 }

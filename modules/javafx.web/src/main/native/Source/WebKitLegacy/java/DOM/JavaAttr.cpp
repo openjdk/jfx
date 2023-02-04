@@ -66,7 +66,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_AttrImpl_getValueImpl(JNIEnv* 
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_AttrImpl_setValueImpl(JNIEnv* env, jclass, jlong peer, jstring value)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->setValue(String(env, value));
+    IMPL->setValue(AtomString{String(env, value)});
 }
 
 JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_AttrImpl_getOwnerElementImpl(JNIEnv* env, jclass, jlong peer)

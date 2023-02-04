@@ -23,6 +23,7 @@
 #include "SVGAnimateMotionElement.h"
 
 #include "AffineTransform.h"
+#include "CommonAtomStrings.h"
 #include "ElementIterator.h"
 #include "PathTraversalState.h"
 #include "RenderElement.h"
@@ -110,10 +111,9 @@ void SVGAnimateMotionElement::parseAttribute(const QualifiedName& name, const At
 
 SVGAnimateMotionElement::RotateMode SVGAnimateMotionElement::rotateMode() const
 {
-    static MainThreadNeverDestroyed<const AtomString> autoVal("auto", AtomString::ConstructFromLiteral);
-    static MainThreadNeverDestroyed<const AtomString> autoReverse("auto-reverse", AtomString::ConstructFromLiteral);
-    const AtomString& rotate = getAttribute(SVGNames::rotateAttr);
-    if (rotate == autoVal)
+    static MainThreadNeverDestroyed<const AtomString> autoReverse("auto-reverse"_s);
+    auto& rotate = getAttribute(SVGNames::rotateAttr);
+    if (rotate == autoAtom())
         return RotateAuto;
     if (rotate == autoReverse)
         return RotateAutoReverse;
@@ -250,10 +250,13 @@ void SVGAnimateMotionElement::applyResultsToTarget()
     if (!targetElement)
         return;
 
-    if (RenderElement* renderer = targetElement->renderer()) {
-        renderer->setNeedsTransformUpdate();
-        RenderSVGResource::markForLayoutAndParentResourceInvalidation(*renderer);
-    }
+    auto updateTargetElement = [](SVGElement& element) {
+        if (auto renderer = element.renderer())
+            renderer->setNeedsTransformUpdate();
+        element.updateSVGRendererForElementChange();
+    };
+
+    updateTargetElement(*targetElement);
 
     AffineTransform* targetSupplementalTransform = targetElement->supplementalTransform();
     if (!targetSupplementalTransform)
@@ -265,10 +268,7 @@ void SVGAnimateMotionElement::applyResultsToTarget()
         if (!transform || *transform == *targetSupplementalTransform)
             continue;
         *transform = *targetSupplementalTransform;
-        if (RenderElement* renderer = instance->renderer()) {
-            renderer->setNeedsTransformUpdate();
-            RenderSVGResource::markForLayoutAndParentResourceInvalidation(*renderer);
-        }
+        updateTargetElement(instance);
     }
 }
 

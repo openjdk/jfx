@@ -32,10 +32,13 @@
 #include "CSSTokenizer.h"
 #include "DOMWindow.h"
 #include "Element.h"
+#include "FrameDestructionObserverInlines.h"
 #include "InspectorInstrumentation.h"
 #include "IntersectionObserverCallback.h"
 #include "IntersectionObserverEntry.h"
+#include "JSNodeCustom.h"
 #include "Performance.h"
+#include "WebCoreOpaqueRoot.h"
 #include <JavaScriptCore/AbstractSlotVisitorInlines.h>
 #include <wtf/Vector.h>
 
@@ -48,16 +51,16 @@ static ExceptionOr<LengthBox> parseRootMargin(String& rootMargin)
     Vector<Length, 4> margins;
     while (!tokenRange.atEnd()) {
         if (margins.size() == 4)
-            return Exception { SyntaxError, "Failed to construct 'IntersectionObserver': Extra text found at the end of rootMargin." };
+            return Exception { SyntaxError, "Failed to construct 'IntersectionObserver': Extra text found at the end of rootMargin."_s };
         RefPtr<CSSPrimitiveValue> parsedValue = CSSPropertyParserHelpers::consumeLengthOrPercent(tokenRange, HTMLStandardMode, ValueRange::All);
         if (!parsedValue || parsedValue->isCalculated())
-            return Exception { SyntaxError, "Failed to construct 'IntersectionObserver': rootMargin must be specified in pixels or percent." };
+            return Exception { SyntaxError, "Failed to construct 'IntersectionObserver': rootMargin must be specified in pixels or percent."_s };
         if (parsedValue->isPercentage())
             margins.append(Length(parsedValue->doubleValue(), LengthType::Percent));
         else if (parsedValue->isPx())
             margins.append(Length(parsedValue->intValue(), LengthType::Fixed));
         else
-            return Exception { SyntaxError, "Failed to construct 'IntersectionObserver': rootMargin must be specified in pixels or percent." };
+            return Exception { SyntaxError, "Failed to construct 'IntersectionObserver': rootMargin must be specified in pixels or percent."_s };
     }
     switch (margins.size()) {
     case 0:
@@ -108,15 +111,14 @@ ExceptionOr<Ref<IntersectionObserver>> IntersectionObserver::create(Document& do
 
     for (auto threshold : thresholds) {
         if (!(threshold >= 0 && threshold <= 1))
-            return Exception { RangeError, "Failed to construct 'IntersectionObserver': all thresholds must lie in the range [0.0, 1.0]." };
+            return Exception { RangeError, "Failed to construct 'IntersectionObserver': all thresholds must lie in the range [0.0, 1.0]."_s };
     }
 
     return adoptRef(*new IntersectionObserver(document, WTFMove(callback), root.get(), rootMarginOrException.releaseReturnValue(), WTFMove(thresholds)));
 }
 
 IntersectionObserver::IntersectionObserver(Document& document, Ref<IntersectionObserverCallback>&& callback, ContainerNode* root, LengthBox&& parsedRootMargin, Vector<double>&& thresholds)
-    : m_associatedDocument(&document)
-    , m_root(root)
+    : m_root(root)
     , m_rootMargin(WTFMove(parsedRootMargin))
     , m_thresholds(WTFMove(thresholds))
     , m_callback(WTFMove(callback))
@@ -202,8 +204,10 @@ void IntersectionObserver::unobserve(Element& target)
 
 void IntersectionObserver::disconnect()
 {
-    if (!hasObservationTargets())
+    if (!hasObservationTargets()) {
+        ASSERT(m_targetsWaitingForFirstObservation.isEmpty());
         return;
+    }
 
     removeAllTargets();
     if (auto* document = trackingDocument())
@@ -256,10 +260,17 @@ void IntersectionObserver::rootDestroyed()
 
 std::optional<ReducedResolutionSeconds> IntersectionObserver::nowTimestamp() const
 {
-    if (auto* document = m_associatedDocument.get()) {
-        if (auto* window = document->domWindow())
+    if (!m_callback)
+        return std::nullopt;
+
+    auto* context = m_callback->scriptExecutionContext();
+    if (!context)
+        return std::nullopt;
+
+    ASSERT(context->isDocument());
+    auto& document = downcast<Document>(*context);
+    if (auto* window = document.domWindow())
         return window->frozenNowTimestamp();
-    }
 
     return std::nullopt;
 }
@@ -298,11 +309,11 @@ void IntersectionObserver::notify()
 bool IntersectionObserver::isReachableFromOpaqueRoots(JSC::AbstractSlotVisitor& visitor) const
 {
     for (auto& target : m_observationTargets) {
-        if (auto* element = target.get(); element && visitor.containsOpaqueRoot(element->opaqueRoot()))
+        if (auto* element = target.get(); containsWebCoreOpaqueRoot(visitor, element))
             return true;
     }
     for (auto& target : m_pendingTargets) {
-        if (visitor.containsOpaqueRoot(target->opaqueRoot()))
+        if (containsWebCoreOpaqueRoot(visitor, target.get()))
             return true;
     }
     return !m_targetsWaitingForFirstObservation.isEmpty();
